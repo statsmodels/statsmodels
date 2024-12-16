@@ -878,7 +878,7 @@ class ArmaProcess:
                 mapolyoth = np.polynomial.Polynomial(maoth)
                 ar = (self.arpoly * arpolyoth).coef
                 ma = (self.mapoly * mapolyoth).coef
-            except:
+            except Exception:
                 raise TypeError("Other type is not a valid type")
         return self.__class__(ar, ma, nobs=self.nobs)
 

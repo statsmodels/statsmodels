@@ -1,8 +1,9 @@
-import pytest
 import numpy as np
 import numpy.testing as npt
+import pytest
 
 import statsmodels.api as sm
+
 nparam = sm.nonparametric
 
 
@@ -189,9 +190,11 @@ class TestKernelReg(KernelRegressionTestBase):
         Y = b0+ b1 * C1 * C2 + b3 * C3 + noise
         model = nparam.KernelReg(endog=[Y], exog=[C1, C2, C3],
                                  reg_type='ll', var_type='ccc', bw='cv_ls')
-        sm_bw = model.bw
+        # Smoke test
+        assert isinstance(model.bw, float)
         sm_mean, sm_mfx = model.fit()
         sm_R2 = model.r_squared()
+        assert isinstance(sm_R2, float)
         # Theoretical marginal effects
         mfx1 = b1 * C2
         mfx2 = b1 * C1

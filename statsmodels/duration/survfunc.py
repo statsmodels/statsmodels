@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats.distributions import chi2, norm
+
 from statsmodels.graphics import utils
 
 
@@ -246,7 +247,10 @@ class CumIncidenceRight:
             exog = self.exog = np.asarray(exog)
             nobs = exog.shape[0]
             kw = nobs**(-1/3.0) * bw_factor
-            kfunc = lambda x: np.exp(-x**2 / kw**2).sum(1)
+
+            def kfunc(x):
+                return np.exp(-x ** 2 / kw ** 2).sum(1)
+
             x = _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
                                      dimred)
             self.times = x[0]
@@ -347,7 +351,10 @@ class SurvfuncRight:
             exog = self.exog = np.asarray(exog)
             nobs = exog.shape[0]
             kw = nobs**(-1/3.0) * bw_factor
-            kfunc = lambda x: np.exp(-x**2 / kw**2).sum(1)
+
+            def kfunc(x):
+                return np.exp(-x ** 2 / kw ** 2).sum(1)
+
             x = _kernel_survfunc(time, status, exog, kfunc, freq_weights)
             self.surv_prob = x[0]
             self.surv_times = x[1]
@@ -451,20 +458,38 @@ class SurvfuncRight:
 
         method = method.lower()
         if method == "cloglog":
-            g = lambda x: np.log(-np.log(x))
-            gprime = lambda x: -1 / (x * np.log(x))
+
+            def g(x):
+                return np.log(-np.log(x))
+
+            def gprime(x):
+                return -1 / (x * np.log(x))
         elif method == "linear":
-            g = lambda x: x
-            gprime = lambda x: 1
+
+            def g(x):
+                return x
+
+            def gprime(x):
+                return 1
         elif method == "log":
             g = np.log
-            gprime = lambda x: 1 / x
+
+            def gprime(x):
+                return 1 / x
         elif method == "logit":
-            g = lambda x: np.log(x / (1 - x))
-            gprime = lambda x: 1 / (x * (1 - x))
+
+            def g(x):
+                return np.log(x / (1 - x))
+
+            def gprime(x):
+                return 1 / (x * (1 - x))
         elif method == "asinsqrt":
-            g = lambda x: np.arcsin(np.sqrt(x))
-            gprime = lambda x: 1 / (2 * np.sqrt(x) * np.sqrt(1 - x))
+
+            def g(x):
+                return np.arcsin(np.sqrt(x))
+
+            def gprime(x):
+                return 1 / (2 * np.sqrt(x) * np.sqrt(1 - x))
         else:
             raise ValueError("unknown method")
 
@@ -782,7 +807,7 @@ def plot_survfunc(survfuncs, ax=None):
     # a list.
     try:
         assert type(survfuncs[0]) is SurvfuncRight
-    except:
+    except TypeError:
         survfuncs = [survfuncs]
 
     for gx, sf in enumerate(survfuncs):

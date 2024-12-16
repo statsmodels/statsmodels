@@ -3,13 +3,16 @@ from statsmodels.compat.platform import PLATFORM_WIN32
 import warnings
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal, assert_raises
 import pandas as pd
 import pytest
-from numpy.testing import assert_allclose, assert_equal, assert_raises
 
 from statsmodels.multivariate.pca import PCA, pca
-from statsmodels.multivariate.tests.results.datamlw import (data, princomp1,
-                                                            princomp2)
+from statsmodels.multivariate.tests.results.datamlw import (
+    data,
+    princomp1,
+    princomp2,
+)
 from statsmodels.tools.sm_exceptions import EstimationWarning
 
 DECIMAL_5 = .00001
@@ -48,12 +51,12 @@ class TestPCA:
     @pytest.mark.matplotlib
     def test_smoke_plot_and_repr(self, close_figures):
         pc = PCA(self.x)
-        fig = pc.plot_scree()
-        fig = pc.plot_scree(ncomp=10)
-        fig = pc.plot_scree(log_scale=False)
-        fig = pc.plot_scree(cumulative=True)
-        fig = pc.plot_rsquare()
-        fig = pc.plot_rsquare(ncomp=5)
+        pc.plot_scree()
+        pc.plot_scree(ncomp=10)
+        pc.plot_scree(log_scale=False)
+        pc.plot_scree(cumulative=True)
+        pc.plot_rsquare()
+        pc.plot_rsquare(ncomp=5)
         # Additional smoke test
         pc.__repr__()
         pc = PCA(self.x, standardize=False)
@@ -169,13 +172,13 @@ class TestPCA:
 
     def test_warnings_and_errors(self):
         with warnings.catch_warnings(record=True) as w:
-            pc = PCA(self.x, ncomp=300)
+            PCA(self.x, ncomp=300)
             assert_equal(len(w), 1)
 
         with warnings.catch_warnings(record=True) as w:
             rs = self.rs
             x = rs.standard_normal((200, 1)) * np.ones(200)
-            pc = PCA(x, method='eig')
+            PCA(x, method='eig')
             assert_equal(len(w), 1)
 
         assert_raises(ValueError, PCA, self.x, method='unknown')
@@ -188,12 +191,12 @@ class TestPCA:
         pc = PCA(pd.DataFrame(self.x))
         pc1 = PCA(self.x)
         assert_allclose(pc.factors.values, pc1.factors)
-        fig = pc.plot_scree()
-        fig = pc.plot_scree(ncomp=10)
-        fig = pc.plot_scree(log_scale=False)
-        fig = pc.plot_rsquare()
-        fig = pc.plot_rsquare(ncomp=5)
-        proj = pc.project(2)
+        pc.plot_scree()
+        pc.plot_scree(ncomp=10)
+        pc.plot_scree(log_scale=False)
+        pc.plot_rsquare()
+        pc.plot_rsquare(ncomp=5)
+        pc.project(2)
         PCA(pd.DataFrame(self.x), ncomp=4, gls=True)
         PCA(pd.DataFrame(self.x), ncomp=4, standardize=False)
 

@@ -8,8 +8,8 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
-from statsmodels.sandbox.nonparametric import smoothers
 from statsmodels.regression.linear_model import OLS, WLS
+from statsmodels.sandbox.nonparametric import smoothers
 
 
 class CheckSmoother:
@@ -46,7 +46,7 @@ class BasePolySmoother:
         cls.exog = exog = x[:,None]**np.arange(order+1)
         y_true = exog.sum(1)
         np.random.seed(987567)
-        cls.y = y = y_true + sigma_noise * np.random.randn(nobs)
+        cls.y = y_true + sigma_noise * np.random.randn(nobs)
 
 
 class TestPolySmoother1(BasePolySmoother, CheckSmoother):

@@ -74,8 +74,9 @@ class TryCLogit:
         self.beta_indices = beta_indices
 
         #for testing only
-        beta = np.arange(7)
-        betaidx_bychoices = [beta[idx] for idx in beta_indices]
+        # Unused code commented out
+        # beta = np.arange(7)
+        # betaidx_bychoices = [beta[idx] for idx in beta_indices]
 
 
     def xbetas(self, params):
@@ -92,7 +93,8 @@ class TryCLogit:
         #normalization ?
         xb = self.xbetas(params)
         expxb = np.exp(xb)
-        sumexpxb = expxb.sum(1)#[:,None]
+        # Unused code commented out
+        # sumexpxb = expxb.sum(1)#[:,None]
         probs = expxb/expxb.sum(1)[:,None]  #we do not really need this for all
         loglike = (self.endog * np.log(probs)).sum(1)
         #is this the same: YES
@@ -130,8 +132,9 @@ class TryNCLogit:
         self.beta_indices = beta_indices
 
         #for testing only
-        beta = np.arange(7)
-        betaidx_bychoices = [beta[idx] for idx in beta_indices]
+        # Unused code commented out
+        # beta = np.arange(7)
+        # betaidx_bychoices = [beta[idx] for idx in beta_indices]
 
 
     def xbetas(self, params):
@@ -150,8 +153,9 @@ class TryNCLogit:
         xb = self.xbetas(params)
         expxb = np.exp(xb/tau)
         sumexpxb = expxb.sum(1)#[:,None]
-        logsumexpxb = np.log(sumexpxb)
-        #loglike = (self.endog * xb).sum(1) - logsumexpxb
+        # Unused code commented out
+        # logsumexpxb = np.log(sumexpxb)
+        # loglike = (self.endog * xb).sum(1) - logsumexpxb
         probs = expxb/sumexpxb[:,None]
         return probs, logsumexpxp  # noqa:F821  See GH#5756
         #if self.endog where index then xb[self.endog]
@@ -165,11 +169,12 @@ class TryNCLogit:
             ivs.append(iv)
 
         #ivs = np.array(ivs)   #note ivs is (nobs,nbranchchoices)
-        ivs = np.column_stack(ivs) # this way ?
-        exptiv = np.exp(tau*ivs)
-        sumexptiv = exptiv.sum(1)
-        logsumexpxb = np.log(sumexpxb)  # noqa:F821  See GH#5756
-        probs = exptiv/sumexptiv[:,None]
+        # Unused code commented out
+        # ivs = np.column_stack(ivs) # this way ?
+        # exptiv = np.exp(tau*ivs)
+        # sumexptiv = exptiv.sum(1)
+        # logsumexpxb = np.log(sumexpxb)  # noqa:F821  See GH#5756
+        # probs = exptiv/sumexptiv[:,None]
 
 
 ####### obsolete version to try out attaching data,
@@ -194,11 +199,7 @@ class RU2NMNL:
     def calc_prob(self, tree, keys=None):
         '''walking a tree bottom-up based on dictionary
         '''
-        endog = self.endog
         datadict = self.datadict
-        paramsind = self.paramsind
-        branchsum = self.branchsum
-
 
         if isinstance(tree, tuple):   #assumes leaves are int for choice index
             name, subtree = tree

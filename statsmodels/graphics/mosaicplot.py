@@ -634,14 +634,18 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     # if there is no specified way to create the labels
     # create a default one
     if labelizer is None:
-        labelizer = lambda k: "\n".join(k)
+        def labelizer(k):
+            return "\n".join(k)
     if statistic:
         default_props = _statistical_coloring(data)
     else:
         default_props = _create_default_properties(data)
     if isinstance(properties, dict):
         color_dict = properties
-        properties = lambda key: color_dict.get(key, None)
+
+        def properties(key):
+            return color_dict.get(key, None)
+
     for k, v in rects.items():
         # create each rectangle and put a label on it
         x, y, w, h = v
@@ -659,7 +663,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
             rotation = label_rotation
         else:
             rotation = [label_rotation] * 4
-        labels = _create_labels(rects, horizontal, ax, rotation)
+        _create_labels(rects, horizontal, ax, rotation)
     else:
         ax.set_xticks([])
         ax.set_xticklabels([])

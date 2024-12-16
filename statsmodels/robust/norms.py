@@ -1,6 +1,6 @@
 import numpy as np
 
-from . import tools as rtools
+from . import _tables
 
 
 def _cabs(x):
@@ -923,9 +923,9 @@ class TukeyBiweight(RobustNorm):
             raise ValueError("exactly one of bp and eff needs to be provided")
 
         if bp is not None:
-            return rtools.tukeybiweight_bp[bp]
+            return _tables.tukeybiweight_bp[bp]
         elif eff is not None:
-            return rtools.tukeybiweight_eff[eff]
+            return _tables.tukeybiweight_eff[eff]
 
     def _set_tuning_param(self, c, inplace=False):
         """Set and change the tuning parameter of the Norm.

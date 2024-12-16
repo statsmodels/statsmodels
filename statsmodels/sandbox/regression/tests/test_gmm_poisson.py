@@ -5,15 +5,15 @@ TestGMMMultTwostepDefault() has lower precision
 '''
 
 from statsmodels.compat.python import lmap
+
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas
-from scipy import stats
 import pytest
+from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression import gmm
-
-from numpy.testing import assert_allclose, assert_equal
 
 
 def get_data():
@@ -136,12 +136,12 @@ class TestGMMAddOnestep(CheckGMM):
         exog = DATA[exog_names]
         instrument = DATA[instrument_names]
 
-        asarray = lambda x: np.asarray(x, float)
+        def asarray(x):
+            return np.asarray(x, float)
         endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
 
         cls.bse_tol = [5e-6, 5e-7]
-        q_tol = [0.04, 0]
         # compare to Stata default options, iterative GMM
         # with const at end
         start = OLS(np.log(endog+1), exog).fit().params
@@ -172,7 +172,9 @@ class TestGMMAddTwostep(CheckGMM):
         exog = DATA[exog_names]
         instrument = DATA[instrument_names]
 
-        asarray = lambda x: np.asarray(x, float)
+        def asarray(x):
+            return np.asarray(x, float)
+
         endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
 
@@ -209,7 +211,9 @@ class TestGMMMultOnestep(CheckGMM):
         exog = DATA[exog_names]
         instrument = DATA[instrument_names]
 
-        asarray = lambda x: np.asarray(x, float)
+        def asarray(x):
+            return np.asarray(x, float)
+
         endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
         # Need to add all data into exog
@@ -251,7 +255,8 @@ class TestGMMMultTwostep(CheckGMM):
         exog = DATA[exog_names]
         instrument = DATA[instrument_names]
 
-        asarray = lambda x: np.asarray(x, float)
+        def asarray(x):
+            return np.asarray(x, float)
         endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
         # Need to add all data into exog
@@ -293,7 +298,8 @@ class TestGMMMultTwostepDefault(CheckGMM):
         exog = DATA[exog_names]
         instrument = DATA[instrument_names]
 
-        asarray = lambda x: np.asarray(x, float)
+        def asarray(x):
+            return np.asarray(x, float)
         endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
         # Need to add all data into exog
@@ -336,7 +342,8 @@ class TestGMMMultTwostepCenter(CheckGMM):
         exog = DATA[exog_names]
         instrument = DATA[instrument_names]
 
-        asarray = lambda x: np.asarray(x, float)
+        def asarray(x):
+            return np.asarray(x, float)
         endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
         # Need to add all data into exog
@@ -346,7 +353,6 @@ class TestGMMMultTwostepCenter(CheckGMM):
 
         cls.bse_tol = [5e-4, 5e-5]
         cls.params_tol = [5e-5, 5e-5]
-        q_tol = [5e-5, 1e-8]
         # compare to Stata default options, iterative GMM
         # with const at end
         start = OLS(endog, exog).fit().params
@@ -366,11 +372,9 @@ class TestGMMMultTwostepCenter(CheckGMM):
     def test_more(self):
 
         # from Stata `overid`
-        J_df = 1
         J_p = 0.332254330027383
-        J = 0.940091427212973
 
-        j, jpval, jdf = self.res1.jtest()
+        _, jpval, _ = self.res1.jtest()
 
         assert_allclose(jpval, J_p, rtol=5e-5, atol=0)
 

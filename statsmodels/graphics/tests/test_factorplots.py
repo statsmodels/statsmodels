@@ -22,12 +22,12 @@ class TestInteractionPlot:
 
     @pytest.mark.matplotlib
     def test_plot_both(self, close_figures):
-        fig = interaction_plot(self.weight, self.duration, self.days,
+        interaction_plot(self.weight, self.duration, self.days,
                  colors=['red','blue'], markers=['D','^'], ms=10)
 
     @pytest.mark.matplotlib
     def test_plot_rainbow(self, close_figures):
-        fig = interaction_plot(self.weight, self.duration, self.days,
+        interaction_plot(self.weight, self.duration, self.days,
                  markers=['D','^'], ms=10)
 
     @pytest.mark.matplotlib

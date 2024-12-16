@@ -12,8 +12,14 @@ import copy
 import warnings
 
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
-                           assert_equal, assert_warns, assert_array_equal)
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_equal,
+    assert_equal,
+    assert_raises,
+    assert_warns,
+)
 import pytest
 
 import statsmodels.stats.power as smp
@@ -393,10 +399,8 @@ class TestTTPowerTwoS6(CheckPowerMixin):
 
 def test_normal_power_explicit():
     # a few initial test cases for NormalIndPower
-    sigma = 1
     d = 0.3
     nobs = 80
-    alpha = 0.05
     res1 = smp.normal_power(d, nobs/2., 0.05)
     res2 = smp.NormalIndPower().power(d, nobs, 0.05)
     res3 = smp.NormalIndPower().solve_power(effect_size=0.3, nobs1=80, alpha=0.05, power=None)

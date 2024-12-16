@@ -15,6 +15,7 @@ Notes
 """
 
 import numpy as np
+
 from . import correlation_structures as cs
 
 
@@ -121,7 +122,6 @@ class PanelSample:
 
         '''
 
-        random = self.random_state
 
         if self.y_true is None:
             self.get_y_true()

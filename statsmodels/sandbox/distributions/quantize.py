@@ -3,7 +3,9 @@
 Author: josef-pktd
 '''
 from statsmodels.compat.python import lmap
+
 import numpy as np
+
 
 def prob_bv_rectangle(lower, upper, cdf):
     '''helper function for probability of a rectangle in a bivariate distribution
@@ -74,7 +76,10 @@ def prob_quantize_cdf(binsx, binsy, cdf):
     ny = len(binsy) - 1
     probs = np.nan * np.ones((nx, ny)) #np.empty(nx,ny)
     cdf_values = cdf(binsx[:,None], binsy)
-    cdf_func = lambda x, y: cdf_values[x,y]
+
+    def cdf_func(x, y):
+        return cdf_values[x, y]
+
     for xind in range(1, nx+1):
         for yind in range(1, ny+1):
             upper = (xind, yind)
@@ -116,7 +121,8 @@ def prob_quantize_cdf_old(binsx, binsy, cdf):
 
 if __name__ == '__main__':
     from numpy.testing import assert_almost_equal
-    unif_2d = lambda x,y: x*y
+    def unif_2d(x, y):
+        return x * y
     assert_almost_equal(prob_bv_rectangle([0,0], [1,0.5], unif_2d), 0.5, 14)
     assert_almost_equal(prob_bv_rectangle([0,0], [0.5,0.5], unif_2d), 0.25, 14)
 

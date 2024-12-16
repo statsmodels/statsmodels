@@ -16,11 +16,12 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 # pylint: disable-msg=W0142
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
-from statsmodels.compat.python import lzip, lfilter
+from statsmodels.compat.python import lfilter, lzip
+
 import numpy as np
+from numpy import divide, exp, inf, multiply, square, subtract
 import scipy.integrate
 from scipy.special import factorial
-from numpy import exp, multiply, square, divide, subtract, inf
 
 
 class NdKernel:
@@ -67,7 +68,7 @@ class NdKernel:
 
     def density(self, xs, x):
 
-        n = len(xs)
+        len(xs)
         #xs = self.in_domain( xs, xs, x )[0]
 
         if len(xs)>0:  ## Need to do product of marginal distributions
@@ -320,7 +321,8 @@ class CustomKernel:
     def L2Norm(self):
         """Returns the integral of the square of the kernal from -inf to inf"""
         if self._L2Norm is None:
-            L2Func = lambda x: (self.norm_const*self._shape(x))**2
+            def L2Func(x):
+                return (self.norm_const * self._shape(x)) ** 2
             if self.domain is None:
                 self._L2Norm = scipy.integrate.quad(L2Func, -inf, inf)[0]
             else:
@@ -346,7 +348,8 @@ class CustomKernel:
     def kernel_var(self):
         """Returns the second moment of the kernel"""
         if self._kernel_var is None:
-            func = lambda x: x**2 * self.norm_const * self._shape(x)
+            def func(x):
+                return x ** 2 * self.norm_const * self._shape(x)
             if self.domain is None:
                 self._kernel_var = scipy.integrate.quad(func, -inf, inf)[0]
             else:

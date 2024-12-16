@@ -7,8 +7,9 @@ manually, at least in my setup.
 uncomment plt.show() to show all plot windows
 
 '''
-from statsmodels.compat.python import lzip, input
-import matplotlib.pyplot as plt #matplotlib is required for many examples
+from statsmodels.compat.python import input, lzip
+
+import matplotlib.pyplot as plt  # matplotlib is required for many examples
 
 stop_on_error = True
 
@@ -51,7 +52,7 @@ if 'y' in cont.lower():
             print("-----------------------" + "-"*len(run_all_f))
             with open(run_all_f, encoding="utf-8") as f:
                 exec(f.read())
-        except:
+        except Exception:
             #f might be overwritten in the executed file
             print("**********************" + "*"*len(run_all_f))
             print("ERROR in example file", run_all_f)

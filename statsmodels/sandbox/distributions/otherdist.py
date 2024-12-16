@@ -24,6 +24,7 @@ existing distributions by transformation, mixing, compounding
 import numpy as np
 from scipy import stats
 
+
 class ParametricMixtureD:
     '''mixtures with a discrete distribution
 
@@ -95,7 +96,7 @@ class ParametricMixtureD:
         #TODO: check strange cases ? this assumes continous integers
         mrvs_idx = (np.clip(mrvs, self.ma, self.mb) - self.ma).astype(int)
 
-        bd_args = tuple(md[mrvs_idx] for md in self.bd_args)
+        tuple(md[mrvs_idx] for md in self.bd_args)
         bd_kwds = {k: self.bd_kwds[k][mrvs_idx] for k in self.bd_kwds}
         kwds = {'size':size}
         kwds.update(bd_kwds)
@@ -234,6 +235,7 @@ class ClippedContinuous:
         mass = self.pdf(clip_lower, *args, **kwds)
         xr = np.concatenate(([clip_lower+1e-6], x[x>clip_lower]))
         import matplotlib.pyplot as plt
+
         #x = np.linspace(-4, 4, 21)
         #plt.figure()
         plt.xlim(clip_lower-0.1, x.max())
@@ -256,9 +258,11 @@ if __name__ == '__main__':
     #*********** Poisson-Normal Mixture
     mdist = stats.poisson(2.)
     bdist = stats.norm
-    bd_args_fn = lambda x: ()
+    def bd_args_fn(x):
+        return ()
     #bd_kwds_fn = lambda x: {'loc': np.atleast_2d(10./(1+x))}
-    bd_kwds_fn = lambda x: {'loc': x, 'scale': 0.1*np.ones_like(x)} #10./(1+x)}
+    def bd_kwds_fn(x):
+        return {'loc': x, 'scale': 0.1 * np.ones_like(x)} #10./(1+x)}
 
 
     pd = ParametricMixtureD(mdist, bdist, bd_args_fn, bd_kwds_fn)

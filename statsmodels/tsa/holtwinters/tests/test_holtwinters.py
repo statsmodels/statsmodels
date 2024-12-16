@@ -971,11 +971,11 @@ def test_direct_holt_add():
     assert isinstance(res.summary().as_text(), str)
     x = np.squeeze(np.asarray(mod.endog))
     alpha = res.params["smoothing_level"]
-    l, b, f, _, xhat = _simple_dbl_exp_smoother(
+    lvl, b, f, _, xhat = _simple_dbl_exp_smoother(
         x, alpha, beta=0.0, l0=res.params["initial_level"], b0=0.0, nforecast=5
     )
 
-    assert_allclose(l, res.level)
+    assert_allclose(lvl, res.level)
     assert_allclose(f, res.level.iloc[-1] * np.ones(5))
     assert_allclose(f, res.forecast(5))
 
@@ -986,7 +986,7 @@ def test_direct_holt_add():
     x = np.squeeze(np.asarray(mod.endog))
     alpha = res.params["smoothing_level"]
     beta = res.params["smoothing_trend"]
-    l, b, f, _, xhat = _simple_dbl_exp_smoother(
+    lvl, b, f, _, xhat = _simple_dbl_exp_smoother(
         x,
         alpha,
         beta=beta,
@@ -996,8 +996,8 @@ def test_direct_holt_add():
     )
 
     assert_allclose(xhat, res.fittedvalues)
-    assert_allclose(l + b, res.level + res.trend)
-    assert_allclose(l, res.level)
+    assert_allclose(lvl + b, res.level + res.trend)
+    assert_allclose(lvl, res.level)
     assert_allclose(b, res.trend)
     assert_allclose(
         f, res.level.iloc[-1] + res.trend.iloc[-1] * np.array([1, 2, 3, 4, 5])

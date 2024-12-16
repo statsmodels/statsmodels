@@ -208,7 +208,7 @@ def hypothesis_test_table(results, title, null_hyp):
 def pprint_matrix(values, rlabels, clabels, col_space=None):
     buf = StringIO()
 
-    T, K = len(rlabels), len(clabels)
+    K = len(clabels)
 
     if col_space is None:
         min_space = 10

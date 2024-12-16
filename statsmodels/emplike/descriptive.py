@@ -15,11 +15,13 @@ General References:
 Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 
 """
+import itertools
+
 import numpy as np
 from scipy import optimize
-from scipy.stats import chi2, skew, kurtosis
+from scipy.stats import chi2, kurtosis, skew
+
 from statsmodels.base.optimizer import _fit_newton
-import itertools
 from statsmodels.graphics import utils
 
 
@@ -184,9 +186,15 @@ class _OptFuncts:
             Lagrange multiplier that maximizes the log-likelihood
         """
         nobs = len(est_vect)
-        f = lambda x0: - np.sum(self._log_star(x0, est_vect, weights, nobs))
-        grad = lambda x0: - self._grad(x0, est_vect, weights, nobs)
-        hess = lambda x0: - self._hess(x0, est_vect, weights, nobs)
+
+        def f(x0):
+            return -np.sum(self._log_star(x0, est_vect, weights, nobs))
+
+        def grad(x0):
+            return -self._grad(x0, est_vect, weights, nobs)
+
+        def hess(x0):
+            return -self._hess(x0, est_vect, weights, nobs)
         kwds = {'tol': 1e-8}
         eta = eta.squeeze()
         res = _fit_newton(f, grad, eta, (), kwds, hess=hess, maxiter=50, \

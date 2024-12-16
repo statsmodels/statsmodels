@@ -8,7 +8,7 @@ def _import_mpl():
     """This function is not needed outside this utils module."""
     try:
         import matplotlib.pyplot as plt
-    except:
+    except ImportError:
         raise ImportError("Matplotlib is not found.")
 
     return plt

@@ -19,7 +19,8 @@ beta = np.array((3.5, 5.7, 150))
 Y = np.dot(X,beta) + np.random.standard_normal(40)
 mod2 = sm.OLS(Y,X)
 res2 = mod2.fit()
-f2 = lambda params: -1*mod2.loglike(params)
+def f2(params):
+    return -1 * mod2.loglike(params)
 resfmin = optimize.fmin(f2, np.ones(3), ftol=1e-10)
 print('OLS')
 print(res2.params)
@@ -34,8 +35,10 @@ print('-----------------------------------------------\n')
 data = load()
 data.exog = sm.add_constant(data.exog, prepend=False)
 mod = sm.OLS(data.endog, data.exog)
-f = lambda params: -1*mod.loglike(params)
-score = lambda params: -1*mod.score(params)
+def f(params):
+    return -1 * mod.loglike(params)
+def score(params):
+    return -1 * mod.score(params)
 
 #now you're set up to try and minimize or root find, but I couldn't get this one to work
 #note that if you want to get the results, it's also a property of mod, so you can do

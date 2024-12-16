@@ -5,6 +5,10 @@ echo "inside $0"
 RET=0
 
 if [ "$LINT" == true ]; then
+    echo "Running ruff check"
+    ruff check statsmodels
+
+    echo "Running flake8 linting"
     echo "Linting all files with limited rules"
     flake8 statsmodels
     if [ $? -ne "0" ]; then
@@ -332,7 +336,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/regime_switching \
         statsmodels/tsa/regime_switching/tests \
         statsmodels/tsa/regime_switching/tests/results \
-        statsmodels/tsa/seasonal.py \
+        statsmodels/tsa/seasonal \
         statsmodels/tsa/statespace \
         statsmodels/tsa/statespace/_filters \
         statsmodels/tsa/statespace/_smoothers \

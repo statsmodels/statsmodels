@@ -32,9 +32,9 @@ import numpy as np
 import numpy.fft as fft
 #import scipy.fftpack as fft
 from scipy import signal
+
 #from try_var_convolve import maxabs
 from statsmodels.tsa.arima_process import ArmaProcess
-
 
 #trying to convert old experiments to a class
 
@@ -205,7 +205,7 @@ class ArmaFft(ArmaProcess):
         hw = fft.fft(fft.fftshift(mapadded)) / fft.fft(fft.fftshift(arpadded))
         #return np.abs(spd)[n//2-1:]
         w = fft.fftfreq(n) * 2 * np.pi
-        wslice = slice(n//2-1, None, None)
+        slice(n//2-1, None, None)
         #return (hw*hw.conj()).real[wslice], w[wslice]
         return (hw*hw.conj()).real, w
 
@@ -218,8 +218,6 @@ class ArmaFft(ArmaProcess):
         #abs looks wrong
         hw = fft.fft(self.ma, n) / fft.fft(self.ar, n)
         w = fft.fftfreq(n) * 2 * np.pi
-        wslice = slice(None, n//2, None)
-        #return (np.abs(hw)**2)[wslice], w[wslice]
         return (np.abs(hw)**2) * 0.5/np.pi, w
 
     def _spddirect2(self, n):
@@ -523,6 +521,7 @@ if __name__ == '__main__':
     plt.title('matplotlib')
 
     from nitime.algorithms import LD_AR_est
+
     #yule_AR_est(s, order, Nfreqs)
     wnt, spdnt = LD_AR_est(rvs, 10, 512)
     plt.figure()

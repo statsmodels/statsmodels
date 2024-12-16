@@ -11,9 +11,9 @@ Author: josef-pktd
 License: Simplified BSD
 '''
 from statsmodels.compat.python import lmap
-import numpy as np
-from scipy import stats, optimize, integrate
 
+import numpy as np
+from scipy import integrate, optimize, stats
 
 ########## patching scipy
 
@@ -641,7 +641,6 @@ def printresults(sample, arg, bres, kind='bootstrap'):
     print(argest)
     if kind == 'bootstrap':
         #bootstrap compares to estimate from sample
-        argorig = arg
         arg = argest
 
     print('%s distribution of parameter estimate (nrepl=%d)'% (kind, nrepl))

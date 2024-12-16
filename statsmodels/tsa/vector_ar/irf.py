@@ -120,8 +120,6 @@ class BaseIRAnalysis:
             np.random.seed for Monte Carlo replications
         component: array or vector of principal component indices
         """
-        periods = self.periods
-        model = self.model
         svar = self.svar
 
         if orth and svar:
@@ -484,7 +482,6 @@ class IRAnalysis(BaseIRAnalysis):
 
         gamma = np.zeros((repl, periods+1, neqs, neqs))
         for p in range(repl):
-            c = 0
             for j in range(neqs):
                 for i in range(neqs):
                     gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]

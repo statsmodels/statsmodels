@@ -5,19 +5,20 @@ Note: uncomment plt.show() to display graphs
 
 import time
 
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.random as R
-import matplotlib.pyplot as plt
 import scipy.stats
 
-from statsmodels.sandbox.gam import AdditiveModel
-from statsmodels.sandbox.gam import Model as GAM #?
 from statsmodels.genmod.families import family
+from statsmodels.sandbox.gam import AdditiveModel, Model as GAM  # ?
 
 example = 2  # 1,2 or 3
 
-standardize = lambda x: (x - x.mean()) / x.std()
-demean = lambda x: (x - x.mean())
+def standardize(x):
+    return (x - x.mean()) / x.std()
+def demean(x):
+    return x - x.mean()
 nobs = 150
 x1 = R.standard_normal(nobs)
 x1.sort()
@@ -25,8 +26,10 @@ x2 = R.standard_normal(nobs)
 x2.sort()
 y = R.standard_normal((nobs,))
 
-f1 = lambda x1: (x1 + x1**2 - 3 - 1 * x1**3 + 0.1 * np.exp(-x1/4.))
-f2 = lambda x2: (x2 + x2**2 - 0.1 * np.exp(x2/4.))
+def f1(x1):
+    return x1 + x1 ** 2 - 3 - 1 * x1 ** 3 + 0.1 * np.exp(-x1 / 4.0)
+def f2(x2):
+    return x2 + x2 ** 2 - 0.1 * np.exp(x2 / 4.0)
 z = standardize(f1(x1)) + standardize(f2(x2))
 z = standardize(z) * 2 # 0.1
 

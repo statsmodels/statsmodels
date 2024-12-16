@@ -188,12 +188,16 @@ def test_axes_labeling(close_figures):
     # the complete set of categories
     keys = list(product(*key_set))
     data = dict(zip(keys, rand(len(keys))))
-    lab = lambda k: ''.join(s[0] for s in k)
+
+    def labelizer(k):
+        return ''.join(s[0] for s in k)
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
-    mosaic(data, ax=ax1, labelizer=lab, horizontal=True, label_rotation=45)
-    mosaic(data, ax=ax2, labelizer=lab, horizontal=False,
+    mosaic(
+        data, ax=ax1, labelizer=labelizer, horizontal=True, label_rotation=45
+    )
+    mosaic(data, ax=ax2, labelizer=labelizer, horizontal=False,
            label_rotation=[0, 45, 90, 0])
-    #fig.tight_layout()
     fig.suptitle("correct alignment of the axes labels")
 
 
@@ -220,7 +224,8 @@ def test_mosaic_empty_cells(close_figures):
     _, vals = mosaic(mydata, ['id1','id2'])
 
 
-eq = lambda x, y: assert_(np.allclose(x, y))
+def eq(x, y):
+    return assert_(np.allclose(x, y))
 
 
 def test_recursive_split():

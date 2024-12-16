@@ -8,9 +8,9 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pytest
 
-from statsmodels.discrete.discrete_model import Poisson
 import statsmodels.discrete._diagnostics_count as dia
 from statsmodels.discrete.diagnostic import PoissonDiagnostic
+from statsmodels.discrete.discrete_model import Poisson
 
 
 class TestCountDiagnostic:
@@ -81,7 +81,6 @@ class TestPoissonDiagnosticClass():
         n_groups = 2
         labels = np.arange(n_groups)
         x = np.repeat(labels, np.array([40, 60]) * nr)
-        nobs = x.shape[0]
         exog = (x[:, None] == labels).astype(np.float64)
         # reparameterize to explicit constant
         # exog[:, 1] = 1

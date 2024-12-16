@@ -6,12 +6,11 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-import warnings
-
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
 from collections import defaultdict
+import warnings
 
 import numpy as np
 
@@ -1480,7 +1479,9 @@ class GLMInfluence(MLEInfluence):
         add options.
         """
         from statsmodels.sandbox.tools.cross_val import LeaveOneOut
-        get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
+
+        def get_det_cov_params(res):
+            return np.linalg.det(res.cov_params())
 
         endog = self.results.model.endog
         exog = self.results.model.exog

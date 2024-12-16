@@ -14,13 +14,13 @@ B Gillespie (2006).  Checking the assumptions in the Cox proportional
 hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.compat.pandas import Appender
-
 
 _predict_docstring = """
     Returns predicted values from the proportional hazards
@@ -683,7 +683,7 @@ class PHReg(model.LikelihoodModel):
         for stx in range(surv.nstrat):
 
             # Indices of subjects in the stratum
-            strat_ix = surv.stratum_rows[stx]
+            # strat_ix = surv.stratum_rows[stx]
 
             # Unique failure times in the stratum
             uft_ix = surv.ufailt_ix[stx]
@@ -736,7 +736,7 @@ class PHReg(model.LikelihoodModel):
         for stx in range(surv.nstrat):
 
             # Indices of cases in the stratum
-            strat_ix = surv.stratum_rows[stx]
+            # strat_ix = surv.stratum_rows[stx]
 
             # exog and linear predictor of the stratum
             exog_s = surv.exog_s[stx]

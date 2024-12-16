@@ -10,16 +10,19 @@ License: BSD-3
 import os
 
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal,
-                           assert_allclose, assert_array_less)
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_less,
+    assert_equal,
+)
 
-from statsmodels.regression.linear_model import OLS, GLSAR
-from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
-
-import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.regression.linear_model import GLSAR, OLS
 import statsmodels.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
+import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.tools.tools import add_constant
 
 
 def compare_ftest(contrast_res, other, decimal=(5,4)):
@@ -41,10 +44,6 @@ class TestGLSARGretl:
         #growth rates
         gs_l_realinv = 400 * np.diff(np.log(d['realinv'].values))
         gs_l_realgdp = 400 * np.diff(np.log(d['realgdp'].values))
-
-        #simple diff, not growthrate, I want heteroscedasticity later for testing
-        endogd = np.diff(d['realinv'])
-        exogd = add_constant(np.c_[np.diff(d['realgdp'].values), d['realint'][:-1].values])
 
         endogg = gs_l_realinv
         exogg = add_constant(np.c_[gs_l_realgdp, d['realint'][:-1].values])
@@ -87,18 +86,12 @@ class TestGLSARGretl:
         #fstatistic, p-value, df1, df2
         reset_2_3 = [5.219019, 0.00619, 2, 197, "f"]
         reset_2 = [7.268492, 0.00762, 1, 198, "f"]
-        reset_3 = [5.248951, 0.023, 1, 198, "f"]
         #LM-statistic, p-value, df
         arch_4 = [7.30776, 0.120491, 4, "chi2"]
 
         #multicollinearity
-        vif = [1.002, 1.002]
-        cond_1norm = 6862.0664
-        determinant = 1.0296049e+009
-        reciprocal_condition_number = 0.013819244
 
         #Chi-square(2): test-statistic, pvalue, df
-        normality = [20.2792, 3.94837e-005, 2]
 
         #tests
         res = res_g1  #with rho from Gretl
@@ -305,39 +298,25 @@ class TestGLSARGretl:
                     resid_acf1 = ("rho",                 -0.107341),
                     dw = ("Durbin-Watson",        2.213805))
 
-        linear_logs = [1.68351, 0.430953, 2, "chi2"]
         #for logs: dropping 70 nan or incomplete observations, T=133
         #(res_ols.model.exog <=0).any(1).sum() = 69  ?not 70
         linear_squares = [7.52477, 0.0232283, 2, "chi2"]
 
         #Autocorrelation, Breusch-Godfrey test for autocorrelation up to order 4
-        lm_acorr4 = [1.17928, 0.321197, 4, 195, "F"]
-        lm2_acorr4 = [4.771043, 0.312, 4, "chi2"]
-        acorr_ljungbox4 = [5.23587, 0.264, 4, "chi2"]
 
         #break
-        cusum_Harvey_Collier  = [0.494432, 0.621549, 198, "t"] #stats.t.sf(0.494432, 198)*2
         #see cusum results in files
-        break_qlr = [3.01985, 0.1, 3, 196, "maxF"]  #TODO check this, max at 2001:4
-        break_chow = [13.1897, 0.00424384, 3, "chi2"] # break at 1984:1
 
         arch_4 = [3.43473, 0.487871, 4, "chi2"]
 
-        normality = [23.962, 0.00001, 2, "chi2"]
 
         het_white = [33.503723, 0.000003, 5, "chi2"]
-        het_breusch_pagan = [1.302014, 0.521520, 2, "chi2"]  #TODO: not available
         het_breusch_pagan_konker = [0.709924, 0.701200, 2, "chi2"]
 
 
         reset_2_3 = [5.219019, 0.00619, 2, 197, "f"]
         reset_2 = [7.268492, 0.00762, 1, 198, "f"]
-        reset_3 = [5.248951, 0.023, 1, 198, "f"]  #not available
 
-        cond_1norm = 5984.0525
-        determinant = 7.1087467e+008
-        reciprocal_condition_number = 0.013826504
-        vif = [1.001, 1.001]
 
         names = 'date   residual        leverage       influence        DFFITS'.split()
         cur_dir = os.path.abspath(os.path.dirname(__file__))
@@ -395,7 +374,7 @@ class TestGLSARGretl:
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=5)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 
-        vif2 = [oi.variance_inflation_factor(res.model.exog, k) for k in [1,2]]
+        [oi.variance_inflation_factor(res.model.exog, k) for k in [1,2]]
 
         infl = oi.OLSInfluence(res_ols)
         #print np.max(np.abs(lev['DFFITS'] - infl.dffits[0]))

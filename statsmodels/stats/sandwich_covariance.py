@@ -102,8 +102,8 @@ Statistics 90, no. 3 (2008): 414–427.
 """
 import numpy as np
 
-from statsmodels.tools.grouputils import combine_indices, group_sums
 from statsmodels.stats.moment_helpers import se_cov
+from statsmodels.tools.grouputils import combine_indices, group_sums
 
 __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
            'cov_white_simple',
@@ -698,14 +698,13 @@ def lagged_groups(x, lag, groupidx):
     '''
     out0 = []
     out_lagged = []
-    for l,u in groupidx:
-        if l+lag < u: #group is longer than lag
-            out0.append(x[l+lag:u])
-            out_lagged.append(x[l:u-lag])
+    for lo, up in groupidx:
+        if lo+lag < up: #group is longer than lag
+            out0.append(x[lo+lag:up])
+            out_lagged.append(x[lo:up-lag])
 
     if out0 == []:
         raise ValueError('all groups are empty taking lags')
-    #return out0, out_lagged
     return np.vstack(out0), np.vstack(out_lagged)
 
 

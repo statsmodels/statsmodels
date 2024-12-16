@@ -51,13 +51,12 @@ License: BSD
 """
 
 import numpy as np
-from numpy import poly1d, sqrt, exp
-
+from numpy import exp, poly1d, sqrt
 import scipy
-from scipy import stats, special
+from scipy import special, stats
 from scipy.stats import distributions
 
-from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
+from statsmodels.stats.moment_helpers import mc2mvsk, mvsk2mc
 
 try:
     from scipy.stats._mvn import mvndst
@@ -538,7 +537,7 @@ class Transf_gen(distributions.rv_continuous):
         # print self.numargs
         name = kwargs.pop('name', 'transfdist')
         longname = kwargs.pop('longname', 'Non-linear transformed distribution')
-        extradoc = kwargs.pop('extradoc', None)
+        kwargs.pop('extradoc', None)
         a = kwargs.pop('a', -np.inf)
         b = kwargs.pop('b', np.inf)
         self.decr = kwargs.pop('decr', False)
@@ -631,10 +630,6 @@ class ExpTransf_gen(distributions.rv_continuous):
             name = kwargs['name']
         else:
             name = 'Log transformed distribution'
-        if 'a' in kwargs:
-            a = kwargs['a']
-        else:
-            a = 0
         super().__init__(a=0, name=name)
         self.kls = kls
 
@@ -753,7 +748,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         # print self.numargs
         name = kwargs.pop('name', 'transfdist')
         longname = kwargs.pop('longname', 'Non-linear transformed distribution')
-        extradoc = kwargs.pop('extradoc', None)
+        kwargs.pop('extradoc', None)
         a = kwargs.pop('a', -np.inf)  # attached to self in super
         b = kwargs.pop('b', np.inf)  # self.a, self.b would be overwritten
         self.shape = kwargs.pop('shape', False)

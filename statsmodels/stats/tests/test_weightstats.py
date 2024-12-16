@@ -16,12 +16,17 @@ License: BSD (3-clause)
 '''
 
 import numpy as np
-from scipy import stats
+from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pandas as pd
-from numpy.testing import assert_, assert_almost_equal, assert_allclose
+from scipy import stats
 
-from statsmodels.stats.weightstats import (DescrStatsW, CompareMeans,
-                                           ttest_ind, ztest, zconfint)
+from statsmodels.stats.weightstats import (
+    CompareMeans,
+    DescrStatsW,
+    ttest_ind,
+    zconfint,
+    ztest,
+)
 from statsmodels.tools.testing import Holder
 
 
@@ -182,11 +187,9 @@ class TestWeightstats:
 
     def test_weightstats_1(self):
         x1, x2 = self.x1, self.x2
-        w1, w2 = self.w1, self.w2
         w1_ = 2. * np.ones(len(x1))
         w2_ = 2. * np.ones(len(x2))
 
-        d1 = DescrStatsW(x1)
         #        print ttest_ind(x1, x2)
         #        print ttest_ind(x1, x2, usevar='unequal')
         #        #print ttest_ind(x1, x2, usevar='unequal')

@@ -1,12 +1,21 @@
 import unittest
+
 import numpy as np
 
-from statsmodels.multivariate.factor_rotation._wrappers import rotate_factors
-from statsmodels.multivariate.factor_rotation._gpa_rotation import (
-    ff_partial_target, vgQ_partial_target, ff_target, vgQ_target, CF_objective,
-    orthomax_objective, oblimin_objective, GPA)
 from statsmodels.multivariate.factor_rotation._analytic_rotation import (
-    target_rotation)
+    target_rotation,
+)
+from statsmodels.multivariate.factor_rotation._gpa_rotation import (
+    GPA,
+    CF_objective,
+    ff_partial_target,
+    ff_target,
+    oblimin_objective,
+    orthomax_objective,
+    vgQ_partial_target,
+    vgQ_target,
+)
+from statsmodels.multivariate.factor_rotation._wrappers import rotate_factors
 
 
 class TestAnalyticRotation(unittest.TestCase):
@@ -83,7 +92,10 @@ class TestAnalyticRotation(unittest.TestCase):
           .5  .4
           .6  .3
         """)
-        vgQ = lambda L=None, A=None, T=None: vgQ_target(H, L=L, A=A, T=T)
+
+        def vgQ(L=None, A=None, T=None):
+            return vgQ_target(H, L=L, A=A, T=T)
+
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method='orthogonal')
         T_analytic = target_rotation(A, H)
         self.assertTrue(np.allclose(T, T_analytic, atol=1e-05))
@@ -249,8 +261,10 @@ class TestGPARotation(unittest.TestCase):
         http://www.stat.ucla.edu/research/gpa
         """
         A = self.get_A()
-        vgQ = lambda L=None, A=None, T=None: orthomax_objective(
-            L=L, A=A, T=T, gamma=0, return_gradient=True)
+
+        def vgQ(L=None, A=None, T=None):
+            return orthomax_objective(L=L, A=A, T=T, gamma=0, return_gradient=True)
+
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method='orthogonal')
         table_required = self.str2matrix("""
          0.00000   -0.72073   -0.65498    1.00000
@@ -279,17 +293,20 @@ class TestGPARotation(unittest.TestCase):
         self.assertTrue(np.allclose(table, table_required, atol=1e-05))
         self.assertTrue(np.allclose(L, L_required, atol=1e-05))
         # oblimin criterion gives same result
-        vgQ = lambda L=None, A=None, T=None: oblimin_objective(
-            L=L, A=A, T=T, gamma=0, rotation_method='orthogonal',
-            return_gradient=True)
+
+        def vgQ(L=None, A=None, T=None):
+            return oblimin_objective(L=L, A=A, T=T, gamma=0, rotation_method='orthogonal', return_gradient=True)
+
         L_oblimin, phi2, T2, table2 = GPA(A, vgQ=vgQ,
                                           rotation_method='orthogonal')
         self.assertTrue(np.allclose(L, L_oblimin, atol=1e-05))
         # derivative free quartimax
         out = self.get_quartimax_example_derivative_free()
         A, table_required, L_required = out
-        ff = lambda L=None, A=None, T=None: orthomax_objective(
-            L=L, A=A, T=T, gamma=0, return_gradient=False)
+
+        def ff(L=None, A=None, T=None):
+            return orthomax_objective(L=L, A=A, T=T, gamma=0, return_gradient=False)
+
         L, phi, T, table = GPA(A, ff=ff, rotation_method='orthogonal')
         self.assertTrue(np.allclose(table, table_required, atol=1e-05))
         self.assertTrue(np.allclose(L, L_required, atol=1e-05))
@@ -302,24 +319,30 @@ class TestGPARotation(unittest.TestCase):
         """
         A = self.get_A()
         gamma = 0  # quartimax
-        vgQ = lambda L=None, A=None, T=None: orthomax_objective(
-            L=L, A=A, T=T, gamma=gamma, return_gradient=True)
+
+        def vgQ(L=None, A=None, T=None):
+            return orthomax_objective(L=L, A=A, T=T, gamma=gamma, return_gradient=True)
+
         L_orthomax, phi, T, table = GPA(
             A, vgQ=vgQ, rotation_method='orthogonal')
-        vgQ = lambda L=None, A=None, T=None: oblimin_objective(
-            L=L, A=A, T=T, gamma=gamma, rotation_method='orthogonal',
-            return_gradient=True)
+
+        def vgQ(L=None, A=None, T=None):
+            return oblimin_objective(L=L, A=A, T=T, gamma=gamma, rotation_method='orthogonal', return_gradient=True)
+
         L_oblimin, phi2, T2, table2 = GPA(A, vgQ=vgQ,
                                           rotation_method='orthogonal')
         self.assertTrue(np.allclose(L_orthomax, L_oblimin, atol=1e-05))
         gamma = 1  # varimax
-        vgQ = lambda L=None, A=None, T=None: orthomax_objective(
-            L=L, A=A, T=T, gamma=gamma, return_gradient=True)
+
+        def vgQ(L=None, A=None, T=None):
+            return orthomax_objective(L=L, A=A, T=T, gamma=gamma, return_gradient=True)
+
         L_orthomax, phi, T, table = GPA(
             A, vgQ=vgQ, rotation_method='orthogonal')
-        vgQ = lambda L=None, A=None, T=None: oblimin_objective(
-            L=L, A=A, T=T, gamma=gamma, rotation_method='orthogonal',
-            return_gradient=True)
+
+        def vgQ(L=None, A=None, T=None):
+            return oblimin_objective(L=L, A=A, T=T, gamma=gamma, rotation_method='orthogonal', return_gradient=True)
+
         L_oblimin, phi2, T2, table2 = GPA(
             A, vgQ=vgQ, rotation_method='orthogonal')
         self.assertTrue(np.allclose(L_orthomax, L_oblimin, atol=1e-05))
@@ -340,7 +363,10 @@ class TestGPARotation(unittest.TestCase):
           .5  .4
           .6  .3
         """)
-        vgQ = lambda L=None, A=None, T=None: vgQ_target(H, L=L, A=A, T=T)
+
+        def vgQ(L=None, A=None, T=None):
+            return vgQ_target(H, L=L, A=A, T=T)
+
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method='orthogonal')
         table_required = self.str2matrix("""
         0.00000   0.05925  -0.61244   1.00000
@@ -366,15 +392,22 @@ class TestGPARotation(unittest.TestCase):
         """)
         self.assertTrue(np.allclose(table, table_required, atol=1e-05))
         self.assertTrue(np.allclose(L, L_required, atol=1e-05))
-        ff = lambda L=None, A=None, T=None: ff_target(H, L=L, A=A, T=T)
+
+        def ff(L=None, A=None, T=None):
+            return ff_target(H, L=L, A=A, T=T)
+
         L2, phi, T2, table = GPA(A, ff=ff, rotation_method='orthogonal')
         self.assertTrue(np.allclose(L, L2, atol=1e-05))
         self.assertTrue(np.allclose(T, T2, atol=1e-05))
-        vgQ = lambda L=None, A=None, T=None: vgQ_target(
-            H, L=L, A=A, T=T, rotation_method='oblique')
+
+        def vgQ(L=None, A=None, T=None):
+            return vgQ_target(H, L=L, A=A, T=T, rotation_method='oblique')
+
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method='oblique')
-        ff = lambda L=None, A=None, T=None: ff_target(
-            H, L=L, A=A, T=T, rotation_method='oblique')
+
+        def ff(L=None, A=None, T=None):
+            return ff_target(H, L=L, A=A, T=T, rotation_method='oblique')
+
         L2, phi, T2, table = GPA(A, ff=ff, rotation_method='oblique')
         self.assertTrue(np.allclose(L, L2, atol=1e-05))
         self.assertTrue(np.allclose(T, T2, atol=1e-05))
@@ -405,8 +438,10 @@ class TestGPARotation(unittest.TestCase):
         0 1
         1 0
         """)
-        vgQ = lambda L=None, A=None, T=None: vgQ_partial_target(
-            H, W, L=L, A=A, T=T)
+
+        def vgQ(L=None, A=None, T=None):
+            return vgQ_partial_target(H, W, L=L, A=A, T=T)
+
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method='orthogonal')
         table_required = self.str2matrix("""
          0.00000    0.02559   -0.84194    1.00000
@@ -433,8 +468,10 @@ class TestGPARotation(unittest.TestCase):
         """)
         self.assertTrue(np.allclose(table, table_required, atol=1e-05))
         self.assertTrue(np.allclose(L, L_required, atol=1e-05))
-        ff = lambda L=None, A=None, T=None: ff_partial_target(
-            H, W, L=L, A=A, T=T)
+
+        def ff(L=None, A=None, T=None):
+            return ff_partial_target(H, W, L=L, A=A, T=T)
+
         L2, phi, T2, table = GPA(A, ff=ff, rotation_method='orthogonal')
         self.assertTrue(np.allclose(L, L2, atol=1e-05))
         self.assertTrue(np.allclose(T, T2, atol=1e-05))
@@ -442,31 +479,37 @@ class TestGPARotation(unittest.TestCase):
     def test_oblimin(self):
         # quartimin
         A, table_required, L_required = self.get_quartimin_example()
-        vgQ = lambda L=None, A=None, T=None: oblimin_objective(
-            L=L, A=A, T=T, gamma=0, rotation_method='oblique')
+
+        def vgQ(L=None, A=None, T=None):
+            return oblimin_objective(L=L, A=A, T=T, gamma=0, rotation_method='oblique')
+
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method='oblique')
         self.assertTrue(np.allclose(table, table_required, atol=1e-05))
         self.assertTrue(np.allclose(L, L_required, atol=1e-05))
         # quartimin derivative free
-        ff = lambda L=None, A=None, T=None: oblimin_objective(
-            L=L, A=A, T=T, gamma=0, rotation_method='oblique',
-            return_gradient=False)
+
+        def ff(L=None, A=None, T=None):
+            return oblimin_objective(L=L, A=A, T=T, gamma=0, rotation_method='oblique', return_gradient=False)
+
         L, phi, T, table = GPA(A, ff=ff, rotation_method='oblique')
         self.assertTrue(np.allclose(L, L_required, atol=1e-05))
         self.assertTrue(np.allclose(table, table_required, atol=1e-05))
         # biquartimin
         A, table_required, L_required = self.get_biquartimin_example()
-        vgQ = lambda L=None, A=None, T=None: oblimin_objective(
-            L=L, A=A, T=T, gamma=1/2, rotation_method='oblique')
+
+        def vgQ(L=None, A=None, T=None):
+            return oblimin_objective(L=L, A=A, T=T, gamma=1 / 2, rotation_method='oblique')
+
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method='oblique')
         self.assertTrue(np.allclose(table, table_required, atol=1e-05))
         self.assertTrue(np.allclose(L, L_required, atol=1e-05))
         # quartimin derivative free
         out = self.get_biquartimin_example_derivative_free()
         A, table_required, L_required = out
-        ff = lambda L=None, A=None, T=None: oblimin_objective(
-            L=L, A=A, T=T, gamma=1/2, rotation_method='oblique',
-            return_gradient=False)
+
+        def ff(L=None, A=None, T=None):
+            return oblimin_objective(L=L, A=A, T=T, gamma=1 / 2, rotation_method='oblique', return_gradient=False)
+
         L, phi, T, table = GPA(A, ff=ff, rotation_method='oblique')
         self.assertTrue(np.allclose(L, L_required, atol=1e-05))
         self.assertTrue(np.allclose(table, table_required, atol=1e-05))
@@ -475,29 +518,35 @@ class TestGPARotation(unittest.TestCase):
         # quartimax
         out = self.get_quartimax_example_derivative_free()
         A, table_required, L_required = out
-        vgQ = lambda L=None, A=None, T=None: CF_objective(
-            L=L, A=A, T=T, kappa=0, rotation_method='orthogonal',
-            return_gradient=True)
+
+        def vgQ(L=None, A=None, T=None):
+            return CF_objective(L=L, A=A, T=T, kappa=0, rotation_method='orthogonal', return_gradient=True)
+
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method='orthogonal')
         self.assertTrue(np.allclose(L, L_required, atol=1e-05))
         # quartimax derivative free
-        ff = lambda L=None, A=None, T=None: CF_objective(
-            L=L, A=A, T=T, kappa=0, rotation_method='orthogonal',
-            return_gradient=False)
+
+        def ff(L=None, A=None, T=None):
+            return CF_objective(L=L, A=A, T=T, kappa=0, rotation_method='orthogonal', return_gradient=False)
+
         L, phi, T, table = GPA(A, ff=ff, rotation_method='orthogonal')
         self.assertTrue(np.allclose(L, L_required, atol=1e-05))
         # varimax
         p, k = A.shape
-        vgQ = lambda L=None, A=None, T=None: orthomax_objective(
-            L=L, A=A, T=T, gamma=1, return_gradient=True)
+
+        def vgQ(L=None, A=None, T=None):
+            return orthomax_objective(L=L, A=A, T=T, gamma=1, return_gradient=True)
+
         L_vm, phi, T, table = GPA(A, vgQ=vgQ, rotation_method='orthogonal')
-        vgQ = lambda L=None, A=None, T=None: CF_objective(
-            L=L, A=A, T=T, kappa=1/p, rotation_method='orthogonal',
-            return_gradient=True)
+
+        def vgQ(L=None, A=None, T=None):
+            return CF_objective(L=L, A=A, T=T, kappa=1 / p, rotation_method='orthogonal', return_gradient=True)
+
         L_CF, phi, T, table = GPA(A, vgQ=vgQ, rotation_method='orthogonal')
-        ff = lambda L=None, A=None, T=None: CF_objective(
-            L=L, A=A, T=T, kappa=1/p, rotation_method='orthogonal',
-            return_gradient=False)
+
+        def ff(L=None, A=None, T=None):
+            return CF_objective(L=L, A=A, T=T, kappa=1 / p, rotation_method='orthogonal', return_gradient=False)
+
         L_CF_df, phi, T, table = GPA(A, ff=ff, rotation_method='orthogonal')
         self.assertTrue(np.allclose(L_vm, L_CF, atol=1e-05))
         self.assertTrue(np.allclose(L_CF, L_CF_df, atol=1e-05))

@@ -8,6 +8,7 @@ uncomment plt.show() to show all plot windows
 
 '''
 from statsmodels.compat.python import input
+
 stop_on_error = True
 
 
@@ -25,13 +26,13 @@ if 'y' in cont.lower():
             print("-----------------------" + "-"*len(run_all_f))
             with open(run_all_f, encoding="utf-8") as f:
                 exec(f.read())
-        except:
+        except Exception as exc:
             #f might be overwritten in the executed file
             print("*********************")
             print("ERROR in example file", run_all_f)
             print("**********************" + "*"*len(run_all_f))
             if stop_on_error:
-                raise
+                raise exc
 #plt.show()
 #plt.close('all')
 #close does not work because I never get here without closing plots manually

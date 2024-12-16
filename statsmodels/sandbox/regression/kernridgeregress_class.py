@@ -1,9 +1,9 @@
 '''Kernel Ridge Regression for local non-parametric regression'''
 
 
+import matplotlib.pylab as plt
 import numpy as np
 from scipy import spatial as ssp
-import matplotlib.pylab as plt
 
 
 def kernel_rbf(x,y,scale=1, **kwds):
@@ -171,7 +171,6 @@ def example2(m=100, scale=0.01, stride=2):
     y1true = np.sum(np.sin(xs1**2),1)[:,np.newaxis]/xs1
     y1 = y1true + 0.05*np.random.randn(m,1)
 
-    ridgecoeff = 1e-10
     #stride = 2 #use only some points as trainig points e.g 2 means every 2nd
     gp1 = GaussProcess(xs1[::stride,:],y1[::stride,:], kernel=kernel_euclid,
                        ridgecoeff=1e-10)

@@ -2,6 +2,7 @@
 Holds files for l1 regularization of LikelihoodModel, using cvxopt.
 """
 import numpy as np
+
 import statsmodels.base.l1_solvers_common as l1_solvers_common
 
 
@@ -53,7 +54,7 @@ def fit_l1_cvxopt_cp(
         number of iterative refinement steps when solving KKT equations
         (default: 1).
     """
-    from cvxopt import solvers, matrix
+    from cvxopt import matrix, solvers
 
     start_params = np.array(start_params).ravel('F')
 
@@ -70,11 +71,17 @@ def fit_l1_cvxopt_cp(
     assert alpha.min() >= 0
 
     ## Wrap up functions for cvxopt
-    f_0 = lambda x: _objective_func(f, x, k_params, alpha, *args)
-    Df = lambda x: _fprime(score, x, k_params, alpha)
+    def f_0(x):
+        return _objective_func(f, x, k_params, alpha, *args)
+
+    def Df(x):
+        return _fprime(score, x, k_params, alpha)
+
     G = _get_G(k_params)  # Inequality constraint matrix, Gx \leq h
     h = matrix(0.0, (2 * k_params, 1))  # RHS in inequality constraint
-    H = lambda x, z: _hessian_wrapper(hess, x, z, k_params)
+
+    def H(x, z):
+        return _hessian_wrapper(hess, x, z, k_params)
 
     ## Define the optimization function
     def F(x=None, z=None):

@@ -16,8 +16,8 @@ MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with Multiple
 Seasonal Patterns
 https://arxiv.org/pdf/2107.13462.pdf
 """
-from typing import Optional, Union
 from collections.abc import Sequence
+from typing import Optional, Union
 import warnings
 
 import numpy as np
@@ -25,6 +25,7 @@ import pandas as pd
 from scipy.stats import boxcox
 
 from statsmodels.tools.typing import ArrayLike1D
+from statsmodels.tsa.seasonal._seasonal import DecomposeResult
 from statsmodels.tsa.stl._stl import STL
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -181,9 +182,6 @@ class MSTL:
                 seasonal = pd.Series(seasonal, index=index, name="seasonal")
             else:
                 seasonal = pd.DataFrame(seasonal, index=index, columns=cols)
-
-        # Avoid circular imports
-        from statsmodels.tsa.seasonal import DecomposeResult
 
         return DecomposeResult(y, seasonal, trend, resid, rw)
 

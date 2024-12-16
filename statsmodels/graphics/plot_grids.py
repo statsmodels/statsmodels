@@ -108,14 +108,10 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
     dcov = np.cov(data, rowvar=0)
 
     for i in range(1, nvars):
-        #print '---'
-        ax_last=None
         for j in range(i):
-            #print i,j, i*(nvars-1)+j+1
             ax = fig.add_subplot(nvars-1, nvars-1, (i-1)*(nvars-1)+j+1)
 ##                                 #sharey=ax_last) #sharey does not allow empty ticks?
 ##            if j == 0:
-##                print 'new ax_last', j
 ##                ax_last = ax
 ##                ax.set_ylabel(varnames[i])
             #TODO: make sure we have same xlim and ylim

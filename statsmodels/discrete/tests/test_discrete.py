@@ -1706,7 +1706,7 @@ def test_mnlogit_factor():
     res = mod.fit(disp=0)
     # smoke tests
     params = res.params
-    summary = res.summary()
+    res.summary()
     predicted = res.predict(exog.iloc[:5, :])
     # check endog is series with no name #8672
     endogn = dta['endog']
@@ -1717,7 +1717,7 @@ def test_mnlogit_factor():
     mod = smf.mnlogit('PID ~ ' + ' + '.join(dta.exog.columns), dta.data)
     res2 = mod.fit(disp=0)
     params_f = res2.params
-    summary = res2.summary()
+    res2.summary()
     assert_allclose(params_f, params, rtol=1e-10)
     predicted_f = res2.predict(dta.exog.iloc[:5, :])
     assert_allclose(predicted_f, predicted, rtol=1e-10)

@@ -243,7 +243,6 @@ class TestNanDot:
         assert_array_equal(test_res, expected_res)
 
     def test_13(self):
-        nan = np.nan
         test_res = tools.nan_dot(self.mx_1, self.mx_3)
         expected_res = np.array([[0.0, 0.0], [0.0, 0.0]])
         assert_array_equal(test_res, expected_res)
@@ -261,13 +260,11 @@ class TestNanDot:
         assert_array_equal(test_res, expected_res)
 
     def test_23(self):
-        nan = np.nan
         test_res = tools.nan_dot(self.mx_2, self.mx_3)
         expected_res = np.array([[0.0, 0.0], [0.0, 0.0]])
         assert_array_equal(test_res, expected_res)
 
     def test_32(self):
-        nan = np.nan
         test_res = tools.nan_dot(self.mx_3, self.mx_2)
         expected_res = np.array([[0.0, 0.0], [0.0, 0.0]])
         assert_array_equal(test_res, expected_res)
@@ -285,7 +282,6 @@ class TestNanDot:
         assert_array_equal(test_res, expected_res)
 
     def test_66(self):
-        nan = np.nan
         test_res = tools.nan_dot(self.mx_6, self.mx_6)
         expected_res = np.array([[7.0, 10.0], [15.0, 22.0]])
         assert_array_equal(test_res, expected_res)

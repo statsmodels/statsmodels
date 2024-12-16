@@ -2178,7 +2178,7 @@ class VECMResults:
         )
 
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
-        k, t, p = self.neqs, self.nobs, self.k_ar
+        p =self.k_ar
         # fit with trend "n" because all trend information is already in exog
         var_results = VAR(self.y_all.T, exog).fit(maxlags=p, trend="n")
         var_results._results.names = self.names

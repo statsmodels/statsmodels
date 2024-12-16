@@ -1,17 +1,16 @@
 import warnings
 
 import numpy as np
-from numpy.linalg import eigh, inv, norm, matrix_rank
+from numpy.linalg import eigh, inv, matrix_rank, norm
 import pandas as pd
 from scipy.optimize import minimize
 
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base.model import Model
-from statsmodels.iolib import summary2
 from statsmodels.graphics.utils import _import_mpl
+from statsmodels.iolib import summary2
+from statsmodels.tools.decorators import cache_readonly
 
-from .factor_rotation import rotate_factors, promax
-
+from .factor_rotation import promax, rotate_factors
 
 _opt_defaults = {'gtol': 1e-7}
 
@@ -655,7 +654,6 @@ class FactorResults:
         statsmodels.multivariate.factor.FactorResults.factor_scoring
         """
         L = self.loadings
-        T = self.rotation_matrix.T
         #TODO: check row versus column convention for T
         uni = 1 - self.communality #self.uniqueness
 
