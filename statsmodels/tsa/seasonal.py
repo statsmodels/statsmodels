@@ -1,13 +1,14 @@
 """
 Seasonal Decomposition by Moving Averages
 """
+
 import numpy as np
 import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
 
 from statsmodels.tools.validation import PandasWrapper, array_like
-from statsmodels.tsa.stl._stl import STL
 from statsmodels.tsa.filters.filtertools import convolution_filter
+from statsmodels.tsa.stl._stl import STL
 from statsmodels.tsa.stl.mstl import MSTL
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -25,17 +26,11 @@ def _extrapolate_trend(trend, npoints):
     Replace nan values on trend's end-points with least-squares extrapolated
     values with regression considering npoints closest defined points.
     """
-    front = next(
-        i for i, vals in enumerate(trend) if not np.any(np.isnan(vals))
-    )
+    front = next(i for i, vals in enumerate(trend) if not np.any(np.isnan(vals)))
     back = (
         trend.shape[0]
         - 1
-        - next(
-            i
-            for i, vals in enumerate(trend[::-1])
-            if not np.any(np.isnan(vals))
-        )
+        - next(i for i, vals in enumerate(trend[::-1]) if not np.any(np.isnan(vals)))
     )
     front_last = min(front + npoints, back)
     back_first = max(front, back - npoints)
@@ -145,7 +140,14 @@ def seasonal_decompose(
     pfreq = period
     pw = PandasWrapper(x)
     if period is None:
-        pfreq = getattr(getattr(x, "index", None), "inferred_freq", None)
+        if isinstance(x, (pd.Series, pd.DataFrame)):
+            index = x.index
+            if isinstance(index, pd.PeriodIndex):
+                pfreq = index.freq
+            else:
+                pfreq = getattr(index, "freq", None) or getattr(
+                    index, "inferred_freq", None
+                )
 
     x = array_like(x, "x", maxdim=2)
     nobs = len(x)
@@ -245,9 +247,7 @@ class DecomposeResult:
         if weights is None:
             weights = np.ones_like(observed)
             if isinstance(observed, pd.Series):
-                weights = pd.Series(
-                    weights, index=observed.index, name="weights"
-                )
+                weights = pd.Series(weights, index=observed.index, name="weights")
         self._weights = weights
         self._resid = resid
         self._observed = observed
@@ -325,14 +325,10 @@ class DecomposeResult:
         elif self.seasonal.ndim > 1:
             if isinstance(self.seasonal, pd.DataFrame):
                 for col in self.seasonal.columns:
-                    series += (
-                        [(self.seasonal[col], "seasonal")] if seasonal else []
-                    )
+                    series += [(self.seasonal[col], "seasonal")] if seasonal else []
             else:
                 for i in range(self.seasonal.shape[1]):
-                    series += (
-                        [(self.seasonal[:, i], "seasonal")] if seasonal else []
-                    )
+                    series += [(self.seasonal[:, i], "seasonal")] if seasonal else []
 
         series += [(self.resid, "residual")] if resid else []
         series += [(self.weights, "weights")] if weights else []
