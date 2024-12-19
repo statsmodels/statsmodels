@@ -581,7 +581,6 @@ class LikelihoodModel(Model):
         # args in most (any?) of the optimize function
 
         nobs = self.endog.shape[0]
-        # f = lambda params, *args: -self.loglike(params, *args) / nobs
 
         def f(params, *args):
             return -self.loglike(params, *args) / nobs
@@ -638,8 +637,8 @@ class LikelihoodModel(Model):
         cov_params_func = kwargs.setdefault("cov_params_func", None)
         if cov_params_func:
             Hinv = cov_params_func(self, xopt, retvals)
-        elif method == "newton" and full_output:
-            Hinv = np.linalg.inv(-retvals["Hessian"]) / nobs
+        elif method == 'newton' and full_output:
+            Hinv = np.linalg.inv(retvals['Hessian']) / nobs
         elif not skip_hessian:
             H = -1 * self.hessian(xopt)
             invertible = False
