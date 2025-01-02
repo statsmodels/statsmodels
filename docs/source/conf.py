@@ -85,7 +85,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'statsmodels'
-copyright = '2009-2023, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+copyright = '2009-2025, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 autosummary_generate = True
 autoclass_content = 'class'
