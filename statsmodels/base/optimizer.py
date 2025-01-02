@@ -417,8 +417,9 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
         Set to True to have all available output in the Results object's
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
-    hess : str, optional
-        Method for computing the Hessian matrix, if applicable.
+    hess : function
+        Returns Hessian matrix of negative log likelihood with respect to
+        params.
     ridge_factor : float
         Regularization factor for Hessian matrix.
 
