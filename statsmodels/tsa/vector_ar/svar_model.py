@@ -78,12 +78,14 @@ class SVAR(tsbase.TimeSeriesModel):
             A = np.identity(self.neqs)
             self.A_mask = A_mask = np.zeros(A.shape, dtype=bool)
         else:
+            A = A.astype("U")
             A_mask = np.logical_or(A == 'E', A == 'e')
             self.A_mask = A_mask
         if B is None:
             B = np.identity(self.neqs)
             self.B_mask = B_mask = np.zeros(B.shape, dtype=bool)
         else:
+            B = B.astype("U")
             B_mask = np.logical_or(B == 'E', B == 'e')
             self.B_mask = B_mask
 
@@ -308,13 +310,22 @@ class SVAR(tsbase.TimeSeriesModel):
         Return numerical gradient
         """
         loglike = self.loglike
-        return approx_fprime(AB_mask, loglike, epsilon=1e-8)
+        if AB_mask.ndim > 1:
+            AB_mask = AB_mask.ravel()
+        grad = approx_fprime(AB_mask, loglike, epsilon=1e-8)
+
+        # workaround shape of grad if only one parameter #9302
+        if AB_mask.size == 1 and grad.ndim == 2:
+            grad = grad.ravel()
+        return grad
 
     def hessian(self, AB_mask):
         """
         Returns numerical hessian.
         """
         loglike = self.loglike
+        if AB_mask.ndim > 1:
+            AB_mask = AB_mask.ravel()
         return approx_hess(AB_mask, loglike)
 
     def _solve_AB(self, start_params, maxiter, override=False, solver='bfgs'):
@@ -359,6 +370,8 @@ class SVAR(tsbase.TimeSeriesModel):
                               method=solver, maxiter=maxiter,
                               gtol=1e-20, disp=False).params
 
+        if retvals.ndim > 1:
+            retvals = retvals.ravel()
         A[A_mask] = retvals[:A_len]
         B[B_mask] = retvals[A_len:]
 
