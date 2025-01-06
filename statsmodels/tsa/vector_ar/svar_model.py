@@ -366,9 +366,13 @@ class SVAR(tsbase.TimeSeriesModel):
         else: #TODO: change to a warning?
             print("Order/rank conditions have not been checked")
 
+        if solver == "bfgs":
+            kwargs = {"gtol": 1e-5}
+        else:
+            kwargs = {}
         retvals = super().fit(start_params=start_params,
                               method=solver, maxiter=maxiter,
-                              gtol=1e-20, disp=False).params
+                              disp=False, **kwargs).params
 
         if retvals.ndim > 1:
             retvals = retvals.ravel()
