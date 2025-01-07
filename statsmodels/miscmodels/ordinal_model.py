@@ -21,6 +21,7 @@ from statsmodels.base.model import (
     Model,
 )
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula.formulatools import advance_eval_env
 # for results wrapper:
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
@@ -251,7 +252,7 @@ class OrderedModel(GenericLikelihoodModel):
 
         endog_name = formula.split("~")[0].strip()
         original_endog = data[endog_name]
-
+        advance_eval_env(kwargs)
         model = super().from_formula(
             formula, data=data, drop_cols=["Intercept"], *args, **kwargs)
 

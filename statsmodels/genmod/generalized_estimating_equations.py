@@ -46,6 +46,7 @@ from statsmodels.discrete.discrete_margins import (
     margeff_cov_with_se,
 )
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.genmod import cov_struct as cov_structs, families
 from statsmodels.genmod.families.links import Link
 import statsmodels.genmod.families.varfuncs as varfuncs
@@ -762,6 +763,7 @@ class GEE(GLM):
             family = kwargs["family"]
             del kwargs["family"]
 
+        advance_eval_env(kwargs)
         model = super().from_formula(formula, data=data, subset=subset,
                                      groups=groups, time=time,
                                      offset=offset,

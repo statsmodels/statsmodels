@@ -1245,6 +1245,46 @@ class TestGEE:
 
         check_wrapper(rslt2)
 
+    def test_formula_environment(self):
+        """Test that GEE uses the right environment for formulas."""
+
+        n = 100
+        rng = np.random.default_rng(34234)
+        X1 = rng.normal(size=n)
+        Y = X1 + rng.normal(size=n)
+        Time = rng.uniform(size=n)
+        groups = np.kron(lrange(20), np.ones(5))
+
+        data = pd.DataFrame({"Y": Y, "X1": X1, "Time": Time, "groups": groups})
+
+        va = cov_struct.Autoregressive(grid=False)
+        family = families.Gaussian()
+
+        def times_two(x):
+            return 2 * x
+
+        mat = np.concatenate((np.ones((n, 1)), times_two(X1[:, None])), axis=1)
+        result_direct = gee.GEE(
+            Y, mat, groups, time=Time, family=family, cov_struct=va
+        ).fit()
+        assert result_direct is not None
+
+        result_formula = gee.GEE.from_formula(
+            "Y ~ times_two(X1)",
+            groups,
+            data,
+            time=Time,
+            family=family,
+            cov_struct=va,
+        ).fit()
+        assert result_formula is not None
+
+        assert_almost_equal(
+            result_direct.params,
+            result_formula.params,
+            decimal=8,
+        )
+
     def test_compare_logit(self):
 
         vs = cov_struct.Independence()

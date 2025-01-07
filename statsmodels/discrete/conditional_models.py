@@ -7,8 +7,8 @@ import itertools
 import warnings
 
 import numpy as np
-import statsmodels.base.model as base
 
+import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.discrete.discrete_model import (
     MultinomialResults,
@@ -16,7 +16,6 @@ from statsmodels.discrete.discrete_model import (
 )
 from statsmodels.formula.formulatools import advance_eval_env
 import statsmodels.regression.linear_model as lm
-from scipy.special import logsumexp
 
 
 class _ConditionalModel(base.LikelihoodModel):
@@ -214,7 +213,7 @@ class _ConditionalModel(base.LikelihoodModel):
 
         if "0+" not in formula.replace(" ", ""):
             warnings.warn("Conditional models should not include an intercept")
-
+        advance_eval_env(kwargs)
         model = super().from_formula(
             formula, data=data, groups=groups, *args, **kwargs)
 
