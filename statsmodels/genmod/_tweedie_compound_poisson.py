@@ -92,4 +92,4 @@ if __name__ == '__main__':
     import time
     t = time.time()
     out = series_density(y=y, mu=mu, p=1.5, phi=20)
-    print('That took {} seconds'.format(time.time() - t))
+    print(f'That took {time.time() - t} seconds')

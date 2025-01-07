@@ -471,7 +471,7 @@ def randmvn(rho, size=(1, 2), standardize=False):
     nobs, nvars = size
     if 0 < rho and rho < 1:
         rvs = np.random.randn(nobs, nvars+1)
-        rvs2 = rvs[:,:-1] * np.sqrt((1-rho)) + rvs[:,-1:] * np.sqrt(rho)
+        rvs2 = rvs[:,:-1] * np.sqrt(1-rho) + rvs[:,-1:] * np.sqrt(rho)
     elif rho ==0:
         rvs2 = np.random.randn(nobs, nvars)
     elif rho < 0:
@@ -1746,8 +1746,8 @@ def set_partition(ssli):
             part.append(s)
         #else: print(part
 
-    missing = list(set(i for ll in ssli for i in ll)
-                   - set(i for ll in part for i in ll))
+    missing = list({i for ll in ssli for i in ll}
+                   - {i for ll in part for i in ll})
     return part, missing
 
 

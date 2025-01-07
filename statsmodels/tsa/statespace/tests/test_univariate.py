@@ -241,8 +241,7 @@ class TestClark1989:
 class TestClark1989Alternate(TestClark1989):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestClark1989Alternate, cls).setup_class(alternate_timing=True,
-                                                       *args, **kwargs)
+        super().setup_class(alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -440,7 +439,7 @@ class TestMultivariateGeneralObsCov(MultivariateMissingGeneralObsCov):
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateGeneralObsCov, cls).setup_class('none')
+        super().setup_class('none')
 
 
 class TestMultivariateAllMissingGeneralObsCov(
@@ -453,7 +452,7 @@ class TestMultivariateAllMissingGeneralObsCov(
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateAllMissingGeneralObsCov, cls).setup_class('all')
+        super().setup_class('all')
 
 
 class TestMultivariatePartialMissingGeneralObsCov(
@@ -466,8 +465,7 @@ class TestMultivariatePartialMissingGeneralObsCov(
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariatePartialMissingGeneralObsCov,
-              cls).setup_class('partial')
+        super().setup_class('partial')
 
     def test_forecasts(self):
         assert_almost_equal(
@@ -493,8 +491,7 @@ class TestMultivariateMixedMissingGeneralObsCov(
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateMixedMissingGeneralObsCov,
-              cls).setup_class('mixed')
+        super().setup_class('mixed')
 
     def test_forecasts(self):
         assert_almost_equal(

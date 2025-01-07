@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Example for gam.AdditiveModel and PolynomialSmoother
 
 This example was written as a test case.

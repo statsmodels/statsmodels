@@ -34,7 +34,7 @@ for dataset in datasets:
     last_mod_time[dataset] = mtime
 
 doc_template = Template(
-    u"""$TITLE
+    """$TITLE
 $title_
 
 Description
@@ -69,7 +69,7 @@ if __name__ == "__main__":
             rst_mtime = os.path.getmtime(write_pth)
             if rst_mtime > last_mod_time[dataset]:
                 print(
-                    "Skipping creation of {0} since the rst file is newer "
+                    "Skipping creation of {} since the rst file is newer "
                     "than the data files.".format(rst_file_name)
                 )
                 continue
@@ -87,7 +87,7 @@ if __name__ == "__main__":
             SOURCE=source,
             COPYRIGHT=copyr,
         )
-        print("Writing {0}.".format(rst_file_name))
+        print(f"Writing {rst_file_name}.")
         with open(
                 os.path.realpath(write_pth), "w", encoding="utf-8"
         ) as rst_file:

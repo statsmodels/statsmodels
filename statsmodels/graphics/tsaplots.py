@@ -17,7 +17,7 @@ def _prepare_data_corr_plot(x, lags, zero):
     if lags is None:
         # GH 4663 - use a sensible default value
         nobs = x.shape[0]
-        lim = min(int(np.ceil(10 * np.log10(nobs))), nobs - 1)
+        lim = min(int(np.ceil(10 * np.log10(nobs))), nobs // 2)
         lags = np.arange(not zero, lim + 1)
     elif np.isscalar(lags):
         lags = np.arange(not zero, int(lags) + 1)  # +1 for zero lag
@@ -118,7 +118,9 @@ def plot_acf(
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
-        Bartlett's formula. If None, no confidence intervals are plotted.
+        Bartlett's formula. The confidence intervals centered at 0 to simplify
+        detecting which estaimated autocorrelations are significantly
+        different from 0. If None, no confidence intervals are plotted.
     use_vlines : bool, optional
         If True, vertical lines and markers are plotted.
         If False, only markers are plotted.  The default marker is 'o'; it can
@@ -170,6 +172,7 @@ def plot_acf(
 
     See Also
     --------
+    statsmodels.tsa.stattools.acf
     matplotlib.pyplot.xcorr
     matplotlib.pyplot.acorr
 
@@ -312,6 +315,7 @@ def plot_pacf(
 
     See Also
     --------
+    statsmodels.tsa.stattools.pacf
     matplotlib.pyplot.xcorr
     matplotlib.pyplot.acorr
 
@@ -437,7 +441,7 @@ def plot_ccf(
 
     See Also
     --------
-    See notes and references for statsmodels.graphics.tsaplots.plot_acf
+    statsmodels.graphics.tsaplots.plot_acf
 
     Examples
     --------
@@ -568,7 +572,8 @@ def plot_accf_grid(
 
     See Also
     --------
-    See notes and references for statsmodels.graphics.tsaplots
+    statsmodels.graphics.tsaplots.plot_acf
+    statsmodels.graphics.tsaplots.plot_ccf
 
     Examples
     --------
@@ -852,7 +857,7 @@ def plot_predict(
         mean.plot(ax=ax, label="forecast")
     else:
         x = np.arange(mean.shape[0])
-        ax.plot(x, mean)
+        ax.plot(x, mean, label="forecast")
 
     if alpha is not None:
         label = f"{1-alpha:.0%} confidence interval"

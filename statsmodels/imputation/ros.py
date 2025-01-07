@@ -363,8 +363,7 @@ def plotting_positions(df, censorship, cohn):
 
     # correctly sort the plotting positions of the ND data:
     ND_plotpos = plot_pos[df[censorship]]
-    ND_plotpos_arr = np.require(ND_plotpos, requirements="W")
-    ND_plotpos_arr.sort()
+    ND_plotpos_arr = np.sort(np.array(ND_plotpos))
     plot_pos.loc[df[censorship].index[df[censorship]]] = ND_plotpos_arr
 
     return plot_pos

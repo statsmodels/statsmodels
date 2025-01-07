@@ -2,6 +2,7 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
+from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.pytest import pytest_warns
 
 import os
@@ -108,7 +109,7 @@ def ses():
     for i in range(1, 1200):
         y[i] = y[i - 1] + e[i] - 0.2 * e[i - 1]
     y = y[200:]
-    index = pd.date_range("2000-1-1", periods=y.shape[0], freq="M")
+    index = pd.date_range("2000-1-1", periods=y.shape[0], freq=MONTH_END)
     return pd.Series(y, index=index, name="y")
 
 
@@ -489,10 +490,10 @@ class TestHoltWinters:
         fit5 = mod5.fit()
         # We accept the below values as we getting a better SSE than text book
         assert_almost_equal(fit1.params["smoothing_level"], 1.00, 2)
-        assert_almost_equal(fit1.params["smoothing_trend"], np.NaN, 2)
-        assert_almost_equal(fit1.params["damping_trend"], np.NaN, 2)
+        assert_almost_equal(fit1.params["smoothing_trend"], np.nan, 2)
+        assert_almost_equal(fit1.params["damping_trend"], np.nan, 2)
         assert_almost_equal(fit1.params["initial_level"], 263.96, 1)
-        assert_almost_equal(fit1.params["initial_trend"], np.NaN, 2)
+        assert_almost_equal(fit1.params["initial_trend"], np.nan, 2)
         assert_almost_equal(fit1.sse, 6761.35, 2)  # 6080.26
         assert isinstance(fit1.summary().as_text(), str)
 
@@ -947,7 +948,7 @@ def test_equivalence_cython_python(trend, seasonal):
     p[:6] = alpha, beta, gamma, l0, b0, phi
     if seasonal:
         p[6:] = params["initial_seasons"]
-    xi = np.ones_like(p).astype(int)
+    xi = np.ones_like(p).astype(np.int64)
 
     p_copy = p.copy()
 
@@ -1758,7 +1759,7 @@ def test_to_restricted_equiv(params):
     bounds = np.array([[0.0, 1.0]] * 3)
     assert_allclose(
         to_restricted(params, sel, bounds),
-        _test_to_restricted(params, sel.astype(int), bounds),
+        _test_to_restricted(params, sel.astype(np.int64), bounds),
     )
 
 
@@ -1990,19 +1991,20 @@ def test_simulate(ses):
 def test_forecast_index_types(ses, index_typ):
     nobs = ses.shape[0]
     kwargs = {}
-    warning = None
+    model_warning = forecast_warning = None
     fcast_index = None
     if index_typ == "period":
         index = pd.period_range("2000-1-1", periods=nobs + 36, freq="M")
     elif index_typ == "date_range":
-        index = pd.date_range("2000-1-1", periods=nobs + 36, freq="M")
+        index = pd.date_range("2000-1-1", periods=nobs + 36, freq=MONTH_END)
     elif index_typ == "range":
         index = pd.RangeIndex(nobs + 36)
         kwargs["seasonal_periods"] = 12
     elif index_typ == "irregular":
         rs = np.random.RandomState(0)
         index = pd.Index(np.cumsum(rs.randint(0, 4, size=nobs + 36)))
-        warning = ValueWarning
+        model_warning = ValueWarning
+        forecast_warning = FutureWarning
         kwargs["seasonal_periods"] = 12
         fcast_index = pd.RangeIndex(start=1000, stop=1036, step=1)
     if fcast_index is None:
@@ -2010,7 +2012,7 @@ def test_forecast_index_types(ses, index_typ):
     ses = ses.copy()
     ses.index = index[:-36]
 
-    with pytest_warns(warning):
+    with pytest_warns(model_warning):
         res = ExponentialSmoothing(
             ses,
             trend="add",
@@ -2018,7 +2020,7 @@ def test_forecast_index_types(ses, index_typ):
             initialization_method="heuristic",
             **kwargs
         ).fit()
-    with pytest_warns(warning):
+    with pytest_warns(forecast_warning):
         fcast = res.forecast(36)
     assert isinstance(fcast, pd.Series)
     pd.testing.assert_index_equal(fcast.index, fcast_index)
@@ -2112,7 +2114,7 @@ def test_invalid_index(reset_randomstate):
             initialization_method="heuristic",
         )
     fitted = model.fit(optimized=True, use_brute=True)
-    with pytest.warns(ValueWarning, match="No supported"):
+    with pytest.warns(FutureWarning, match="No supported"):
         fitted.forecast(steps=157200)
 
 

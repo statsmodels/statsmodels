@@ -269,19 +269,19 @@ class RU2NMNL:
         #unique, parameter array names,
         #sorted alphabetically, order is/should be only internal
 
-        self.paramsnames = (sorted(set([i for j in paramsind.values()
-                                       for i in j])) +
+        self.paramsnames = (sorted({i for j in paramsind.values()
+                                       for i in j}) +
                             ['tau_%s' % bname for bname in self.branches])
 
         self.nparams = len(self.paramsnames)
 
         #mapping coefficient names to indices to unique/parameter array
-        self.paramsidx = dict((name, idx) for (idx,name) in
-                              enumerate(self.paramsnames))
+        self.paramsidx = {name: idx for (idx,name) in
+                              enumerate(self.paramsnames)}
 
         #mapping branch and leaf names to index in parameter array
-        self.parinddict = dict((k, [self.paramsidx[j] for j in v])
-                               for k,v in self.paramsind.items())
+        self.parinddict = {k: [self.paramsidx[j] for j in v]
+                               for k,v in self.paramsind.items()}
 
         self.recursionparams = 1. + np.arange(len(self.paramsnames))
         #for testing that individual parameters are used in the right place

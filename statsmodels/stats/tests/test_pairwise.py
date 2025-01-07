@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Wed Mar 28 15:34:18 2012
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import asbytes
 
 from io import BytesIO
 import warnings
@@ -16,6 +14,7 @@ import pytest
 from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_equal, \
     assert_raises
 
+from statsmodels.compat.python import asbytes
 from statsmodels.stats.libqsturng import qsturng
 from statsmodels.stats.multicomp import (tukeyhsd, pairwise_tukeyhsd,
                                          MultiComparison)
@@ -250,7 +249,7 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
 
     @classmethod
     def setup_class(cls):
-        super(TestTuckeyHSD2Pandas, cls).setup_class()
+        super().setup_class()
 
         cls.endog = pd.Series(cls.endog)
         # we are working with bytes on python 3, not with strings in this case

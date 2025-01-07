@@ -95,7 +95,7 @@ class TVPVAR(mlemodel.MLEModel):
         for i in range(self.k_endog):
             endog_name = self.endog_names[i]
             state_names += ['intercept.%s' % endog_name]
-            state_names += ['L1.%s->%s' % (other_name, endog_name)
+            state_names += [f'L1.{other_name}->{endog_name}'
                             for other_name in self.endog_names]
         return state_names
 

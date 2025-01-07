@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Mon Dec 14 19:53:25 2009
 
@@ -67,7 +66,7 @@ class ArmaFft(ArmaProcess):
 
     def __init__(self, ar, ma, n):
         #duplicates now that are subclassing ArmaProcess
-        super(ArmaFft, self).__init__(ar, ma)
+        super().__init__(ar, ma)
 
         self.ar = np.asarray(ar)
         self.ma = np.asarray(ma)
@@ -375,19 +374,19 @@ class ArmaFft(ArmaProcess):
             fig = plt.figure()
         ax = fig.add_subplot(2,2,1)
         ax.plot(rvs)
-        ax.set_title('Random Sample \nar=%s, ma=%s' % (self.ar, self.ma))
+        ax.set_title(f'Random Sample \nar={self.ar}, ma={self.ma}')
 
         ax = fig.add_subplot(2,2,2)
         ax.plot(acf)
-        ax.set_title('Autocorrelation \nar=%s, ma=%rs' % (self.ar, self.ma))
+        ax.set_title(f'Autocorrelation \nar={self.ar}, ma={self.ma!r}s')
 
         ax = fig.add_subplot(2,2,3)
         ax.plot(wr, spdr)
-        ax.set_title('Power Spectrum \nar=%s, ma=%s' % (self.ar, self.ma))
+        ax.set_title(f'Power Spectrum \nar={self.ar}, ma={self.ma}')
 
         ax = fig.add_subplot(2,2,4)
         ax.plot(pacf)
-        ax.set_title('Partial Autocorrelation \nar=%s, ma=%s' % (self.ar, self.ma))
+        ax.set_title(f'Partial Autocorrelation \nar={self.ar}, ma={self.ma}')
 
         return fig
 

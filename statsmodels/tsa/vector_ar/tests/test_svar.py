@@ -74,3 +74,32 @@ class TestSVAR:
         # Windows precision limits require non-zero atol
         atol = 1e-6 if PLATFORM_WIN else 1e-8
         assert_allclose(errband1, errband2, rtol=1e-8, atol=atol)
+
+
+def test_oneparam():
+    # regression test, one parameter in A, B, issue #9302
+    np.random.seed(873562)
+    lags = 2
+    nobs = 200
+    y = np.random.randn(nobs, 3)
+    y[1:] += 0.5 * y[:-1]
+    A = np.asarray([[1, "E"], [0, 1.]])
+    # A_guess = np.asarray([[1, 0.2], [0, 1.]])
+    B = np.eye(2, dtype=object)
+
+    k=2
+    model = SVAR(y[:, :k], svar_type="AB", A=A, B=B)
+    model.k_exog_user = 0
+    results = model.fit(maxlags=lags, solver="bfgs")  # "newton")
+    results.k_exog_user = 0
+    results.summary()
+
+    # regression number
+    assert_allclose(results.A[0, 1], -0.075818, atol=1e-5)
+
+    results = model.fit(maxlags=lags, solver="newton")
+    results.k_exog_user = 0
+    results.summary()
+
+    # regression number
+    assert_allclose(results.A[0, 1], -0.075818, atol=1e-5)

@@ -65,8 +65,7 @@ class KernelSmoother:
         is denser.
         """
         if isinstance(x, int):
-            sorted_x = np.array(self.x)
-            sorted_x.sort()
+            sorted_x = np.sort(np.array(self.x))
             confx = sorted_x[::x]
             conffit = self.conf(confx)
             return (confx, conffit)

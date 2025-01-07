@@ -54,7 +54,7 @@ class GenericZeroInflated(CountModel):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None,
                  inflation='logit', exposure=None, missing='none', **kwargs):
-        super(GenericZeroInflated, self).__init__(endog, exog, offset=offset,
+        super().__init__(endog, exog, offset=offset,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
 
@@ -184,7 +184,7 @@ class GenericZeroInflated(CountModel):
             # work around perfect separation callback #3895
             callback = lambda *x: x
 
-        mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
+        mlefit = super().fit(start_params=start_params,
                        maxiter=maxiter, disp=disp, method=method,
                        full_output=full_output, callback=callback,
                        **kwargs)
@@ -460,7 +460,7 @@ class GenericZeroInflated(CountModel):
         tmp_offset = getattr(self.model_main, 'offset', False)
         tmp_exposure = getattr(self.model_main, 'exposure', False)
         self.model_main.exog = exog
-        self.model_main.endog = np.zeros((exog.shape[0]))
+        self.model_main.endog = np.zeros(exog.shape[0])
         self.model_main.offset = offset
         self.model_main.exposure = exposure
         llf = self.model_main.loglikeobs(params_main)
@@ -598,7 +598,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', missing='none', **kwargs):
-        super(ZeroInflatedPoisson, self).__init__(endog, exog, offset=offset,
+        super().__init__(endog, exog, offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
@@ -758,7 +758,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', p=2, missing='none', **kwargs):
-        super(ZeroInflatedGeneralizedPoisson, self).__init__(endog, exog,
+        super().__init__(endog, exog,
                                                   offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
@@ -776,7 +776,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         self.result_class_reg_wrapper = L1ZeroInflatedGeneralizedPoissonResultsWrapper
 
     def _get_init_kwds(self):
-        kwds = super(ZeroInflatedGeneralizedPoisson, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
         kwds['p'] = self.model_main.parameterization + 1
         return kwds
 
@@ -875,7 +875,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', p=2, missing='none', **kwargs):
-        super(ZeroInflatedNegativeBinomialP, self).__init__(endog, exog,
+        super().__init__(endog, exog,
                                                   offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
@@ -893,7 +893,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         self.result_class_reg_wrapper = L1ZeroInflatedNegativeBinomialResultsWrapper
 
     def _get_init_kwds(self):
-        kwds = super(ZeroInflatedNegativeBinomialP, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
         kwds['p'] = self.model_main.parameterization
         return kwds
 

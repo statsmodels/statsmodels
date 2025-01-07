@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Package with factor rotation algorithms.
 
@@ -25,7 +24,7 @@ References
 from ._wrappers import rotate_factors
 
 from ._analytic_rotation import target_rotation, procrustes, promax
-from statsmodels.tools._testing import PytestTester
+from statsmodels.tools._test_runner import PytestTester
 
 __all__ = ['rotate_factors', 'target_rotation', 'procrustes', 'promax',
            'test']

@@ -324,8 +324,8 @@ class _OptFuncts:
         nobs = self.nobs
         mu_data = endog - nuis_params[0]
         sig_data = ((endog - nuis_params[0]) ** 2) - nuis_params[1]
-        skew_data = ((((endog - nuis_params[0]) ** 3) /
-                    (nuis_params[1] ** 1.5))) - self.skew0
+        skew_data = (((endog - nuis_params[0]) ** 3) /
+                    (nuis_params[1] ** 1.5)) - self.skew0
         est_vect = np.column_stack((mu_data, sig_data, skew_data))
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
@@ -356,8 +356,8 @@ class _OptFuncts:
         nobs = self.nobs
         mu_data = endog - nuis_params[0]
         sig_data = ((endog - nuis_params[0]) ** 2) - nuis_params[1]
-        kurt_data = (((((endog - nuis_params[0]) ** 4) / \
-                    (nuis_params[1] ** 2))) - 3) - self.kurt0
+        kurt_data = ((((endog - nuis_params[0]) ** 4) / \
+                    (nuis_params[1] ** 2)) - 3) - self.kurt0
         est_vect = np.column_stack((mu_data, sig_data, kurt_data))
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
@@ -388,10 +388,10 @@ class _OptFuncts:
         nobs = self.nobs
         mu_data = endog - nuis_params[0]
         sig_data = ((endog - nuis_params[0]) ** 2) - nuis_params[1]
-        skew_data = ((((endog - nuis_params[0]) ** 3) / \
-                    (nuis_params[1] ** 1.5))) - self.skew0
-        kurt_data = (((((endog - nuis_params[0]) ** 4) / \
-                    (nuis_params[1] ** 2))) - 3) - self.kurt0
+        skew_data = (((endog - nuis_params[0]) ** 3) / \
+                    (nuis_params[1] ** 1.5)) - self.skew0
+        kurt_data = ((((endog - nuis_params[0]) ** 4) / \
+                    (nuis_params[1] ** 2)) - 3) - self.kurt0
         est_vect = np.column_stack((mu_data, sig_data, skew_data, kurt_data))
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,

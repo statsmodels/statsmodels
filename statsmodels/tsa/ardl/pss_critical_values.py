@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 """
 Critical value polynomials and related quantities for the bounds test of

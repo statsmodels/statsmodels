@@ -96,7 +96,7 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
     return sample_scale_sub, bw_sub
 
 
-class GenericKDE (object):
+class GenericKDE :
     """
     Base class for density estimation and regression KDE classes.
     """

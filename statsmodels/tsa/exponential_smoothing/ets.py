@@ -652,11 +652,13 @@ class ETSModel(base.StateSpaceMLEModel):
         """
         Prepare data for use in the state space representation
         """
-        endog = np.array(data.orig_endog, order="C")
+        endog = np.require(data.orig_endog, requirements="WC")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         if endog.dtype != np.double:
-            endog = np.asarray(data.orig_endog, order="C", dtype=float)
+            endog = np.require(
+                data.orig_endog, requirements="WC", dtype=float
+            )
         return endog, None
 
     @property
@@ -1036,7 +1038,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
             # check if we have fixed parameters and remove them from the
             # parameter vector
-            is_fixed = np.zeros(self._k_params_internal, dtype=int)
+            is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
             fixed_values = np.empty_like(internal_start_params)
             params_without_fixed = []
             kwargs["bounds"] = []
@@ -1142,10 +1144,12 @@ class ETSModel(base.StateSpaceMLEModel):
             data = self.endog
 
         if is_fixed is None:
-            is_fixed = np.zeros(self._k_params_internal, dtype=int)
+            is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
             fixed_values = np.empty(
                 self._k_params_internal, dtype=params.dtype
             )
+        else:
+            is_fixed = np.ascontiguousarray(is_fixed, dtype=np.int64)
 
         self._smoothing_func(
             params,
@@ -1160,13 +1164,14 @@ class ETSModel(base.StateSpaceMLEModel):
         res = self._residuals(yhat, data=data)
         logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
         if self.error == "mul":
-            # GH-7331: in some cases, yhat can become negative, so that a
-            # multiplicative model is no longer well-defined. To avoid these
-            # parameterizations, we clip negative values to very small positive
-            # values so that the log-transformation yields very large negative
-            # values.
-            yhat[yhat <= 0] = 1 / (1e-8 * (1 + np.abs(yhat[yhat <= 0])))
-            logL -= np.sum(np.log(yhat))
+            # In some cases, yhat can become negative or zero, so that a
+            # multiplicative model is no longer well-defined. Zero values
+            # are replaced with 10^-32 (a very small number). For more
+            # information on the derivation of the log-likelihood for the
+            # multiplicative error models see:
+            # https://openforecast.org/adam/ADAMETSEstimationLikelihood.html
+            yhat[yhat == 0] = 1e-32
+            logL -= np.sum(np.log(np.abs(yhat)))
         return logL
 
     @contextlib.contextmanager
@@ -1250,7 +1255,7 @@ class ETSModel(base.StateSpaceMLEModel):
         internal_params = self._internal_params(params)
         yhat = np.zeros(self.nobs)
         xhat = np.zeros((self.nobs, self._k_states_internal))
-        is_fixed = np.zeros(self._k_params_internal, dtype=int)
+        is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
         fixed_values = np.empty(self._k_params_internal, dtype=params.dtype)
         self._smoothing_func(
             internal_params, self.endog, yhat, xhat, is_fixed, fixed_values
@@ -1772,7 +1777,7 @@ class ETSResults(base.StateSpaceMLEResults):
         start_params = self._get_prediction_params(start_idx)
         x = np.zeros((nsimulations, self.model._k_states_internal))
         # is fixed and fixed values are dummy arguments
-        is_fixed = np.zeros(len(start_params), dtype=int)
+        is_fixed = np.zeros(len(start_params), dtype=np.int64)
         fixed_values = np.zeros_like(start_params)
         (
             alpha,
@@ -2306,7 +2311,7 @@ class PredictionResults:
                 self.simulation_results = pd.concat(sim_results, axis=0)
             else:
                 self.simulation_results = np.concatenate(sim_results, axis=0)
-            self.forecast_variance = self.simulation_results.var(1)
+            self.forecast_variance = self.simulation_results.var(axis=1)
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:

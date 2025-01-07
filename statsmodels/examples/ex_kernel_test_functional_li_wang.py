@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Example TestFForm with Li Wang DGP1
 
 Created on Tue Jan 08 19:03:20 2013

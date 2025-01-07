@@ -248,6 +248,9 @@
   - img: ../_static/images/pca_fertility_factors.png
     target: notebooks/generated/pca_fertility_factors.html
     text: Principal Component Analysis
+  - img: ../_static/images/multivariate_ls.png
+    target: notebooks/generated/multivariate_ls.html
+    text: Multivariate Least Squares
 - header: User Notes
   id: user
   links:

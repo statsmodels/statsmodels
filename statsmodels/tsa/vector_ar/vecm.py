@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from collections import defaultdict
 
 import numpy as np
@@ -100,10 +99,10 @@ def select_order(
     # -1+1 in the following line is only here for clarification.
     # -1 because k_ar_VECM == k_ar_VAR - 1
     # +1 because p == index +1 (we start with p=1, not p=0)
-    selected_orders = dict(
-        (ic_name, np.array(ic_value).argmin() - 1 + 1)
+    selected_orders = {
+        ic_name: np.array(ic_value).argmin() - 1 + 1
         for ic_name, ic_value in ic.items()
-    )
+    }
 
     return LagOrderResults(ic, selected_orders, True)
 
@@ -343,7 +342,7 @@ def _endog_matrices(
         y_lag1_stack.append(_linear_trend(T, p, coint=True))
     if exog_coint is not None:
         y_lag1_stack.append(exog_coint[-T - 1 : -1].T)
-    y_lag1 = np.row_stack(y_lag1_stack)
+    y_lag1 = np.vstack(y_lag1_stack)
 
     # p. 286:
     delta_x = np.zeros((diff_lags * K, T))
@@ -369,7 +368,7 @@ def _endog_matrices(
         delta_x_stack.append(_linear_trend(T, p))
     if exog is not None:
         delta_x_stack.append(exog[-T:].T)
-    delta_x = np.row_stack(delta_x_stack)
+    delta_x = np.vstack(delta_x_stack)
 
     return y_1_T, delta_y_1_T, y_lag1, delta_x
 
@@ -501,7 +500,7 @@ class CointRankResults:
         title = (
             "Johansen cointegration test using "
             + ("trace" if self.method == "trace" else "maximum eigenvalue")
-            + " test statistic with {:.0%}".format(self.signif)
+            + f" test statistic with {self.signif:.0%}"
             + " significance level"
         )
         num_tests = min(self.rank, self.neqs - 1)
@@ -995,7 +994,7 @@ class VECM(tsbase.TimeSeriesModel):
             return self._estimate_vecm_ml()
         else:
             raise ValueError(
-                "%s not recognized, must be among %s" % (method, "ml")
+                "{} not recognized, must be among {}".format(method, "ml")
             )
 
     def _estimate_vecm_ml(self):
@@ -1916,7 +1915,7 @@ class VECMResults:
         # glueing all deterministics together
         exog = np.column_stack(exog) if exog != [] else None
         if trend_coefs != []:
-            trend_coefs = np.row_stack(trend_coefs)
+            trend_coefs = np.vstack(trend_coefs)
         else:
             trend_coefs = None
 
@@ -2087,7 +2086,7 @@ class VECMResults:
         x_min_p[-k:, :] = y[:, :-p]  # fill last rows of x_min_p
         x_min_p_components.append(x_min_p)
 
-        x_min_p = np.row_stack(x_min_p_components)
+        x_min_p = np.vstack(x_min_p_components)
         x_x = np.dot(x_min_p, x_min_p.T)  # k*k_ar x k*k_ar
         x_x_11 = inv(x_x)[
             : k * (p - 1) + num_det_terms, : k * (p - 1) + num_det_terms

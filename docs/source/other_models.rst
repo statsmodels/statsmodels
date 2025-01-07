@@ -7,7 +7,7 @@
 
 
 Other Models :mod:`othermod`
-==============================
+============================
 
 :mod:`statsmodels.othermod` contains model classes that do not fit into
 any other category, for example models for a response variable ``endog`` that

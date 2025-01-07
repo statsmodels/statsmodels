@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A collection of smooth penalty functions.
 
@@ -321,8 +320,8 @@ class SCADSmoothed(SCAD):
         # need to temporarily override weights for call to super
         weights = self.weights
         self.weights = 1.
-        deriv_c0 = super(SCADSmoothed, self).deriv(c0)
-        value_c0 = super(SCADSmoothed, self).func(c0)
+        deriv_c0 = super().deriv(c0)
+        value_c0 = super().func(c0)
         self.weights = weights
 
         self.aq1 = value_c0 - 0.5 * deriv_c0 * c0
@@ -339,7 +338,7 @@ class SCADSmoothed(SCAD):
         # Note: we have the same problem with `restriction`
         self_weights = self.weights
         self.weights = 1.
-        value = super(SCADSmoothed, self).func(params[None, ...])
+        value = super().func(params[None, ...])
         self.weights = self_weights
 
         # shift down so func(0) == 0
@@ -360,7 +359,7 @@ class SCADSmoothed(SCAD):
         # need to temporarily override weights for call to super
         self_weights = self.weights
         self.weights = 1.
-        value = super(SCADSmoothed, self).deriv(params)
+        value = super().deriv(params)
         self.weights = self_weights
 
         #change the segment corrsponding to quadratic approximation
@@ -381,7 +380,7 @@ class SCADSmoothed(SCAD):
         # need to temporarily override weights for call to super
         self_weights = self.weights
         self.weights = 1.
-        value = super(SCADSmoothed, self).deriv2(params)
+        value = super().deriv2(params)
         self.weights = self_weights
 
         # change the segment corrsponding to quadratic approximation
@@ -523,7 +522,7 @@ class L2ConstraintsPenalty(ConstraintsPenalty):
 
         penalty = L2Univariate()
 
-        super(L2ConstraintsPenalty, self).__init__(penalty, weights=weights,
+        super().__init__(penalty, weights=weights,
                                                   restriction=restriction)
 
 

@@ -5,19 +5,23 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 import pandas as pd
 
-from statsmodels.compat.pandas import Appender
-
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tsa.statespace.mlemodel import (
-    MLEModel, MLEResults, MLEResultsWrapper, PredictionResults,
-    PredictionResultsWrapper)
-from statsmodels.tsa.statespace.tools import concat
-from statsmodels.tools.tools import Bunch
-from statsmodels.tools.decorators import cache_readonly
 import statsmodels.base.wrapper as wrap
+from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.statespace.mlemodel import (
+    MLEModel,
+    MLEResults,
+    MLEResultsWrapper,
+    PredictionResults,
+    PredictionResultsWrapper,
+)
+from statsmodels.tsa.statespace.tools import concat
 
 # Columns are alpha = 0.1, 0.05, 0.025, 0.01, 0.005
 _cusum_squares_scalars = np.array([
@@ -83,12 +87,12 @@ class RecursiveLS(MLEModel):
         self.k_constraints = 0
         self._r_matrix = self._q_matrix = None
         if constraints is not None:
-            from patsy import DesignInfo
             from statsmodels.base.data import handle_data
+            from statsmodels.formula._manager import FormulaManager
             data = handle_data(endog, exog, **kwargs)
             names = data.param_names
-            LC = DesignInfo(names).linear_constraint(constraints)
-            self._r_matrix, self._q_matrix = LC.coefs, LC.constants
+            lc = FormulaManager().get_linear_constraints(constraints, names)
+            self._r_matrix, self._q_matrix = lc.constraint_matrix, lc.constraint_values
             self.k_constraints = self._r_matrix.shape[0]
 
             nobs = len(endog)
@@ -107,13 +111,13 @@ class RecursiveLS(MLEModel):
         kwargs.setdefault('initialization', 'diffuse')
 
         # Remove some formula-specific kwargs
-        formula_kwargs = ['missing', 'missing_idx', 'formula', 'design_info']
+        formula_kwargs = ['missing', 'missing_idx', 'formula', 'model_spec']
         for name in formula_kwargs:
             if name in kwargs:
                 del kwargs[name]
 
         # Initialize the state space representation
-        super(RecursiveLS, self).__init__(
+        super().__init__(
             endog, k_states=self.k_exog, exog=exog, **kwargs)
 
         # Use univariate filtering by default
@@ -168,9 +172,9 @@ class RecursiveLS(MLEModel):
 
     def filter(self, return_ssm=False, **kwargs):
         # Get the state space output
-        result = super(RecursiveLS, self).filter([], transformed=True,
-                                                 cov_type='none',
-                                                 return_ssm=True, **kwargs)
+        result = super().filter([], transformed=True,
+                                cov_type='none',
+                                return_ssm=True, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
@@ -191,9 +195,9 @@ class RecursiveLS(MLEModel):
 
     def smooth(self, return_ssm=False, **kwargs):
         # Get the state space output
-        result = super(RecursiveLS, self).smooth([], transformed=True,
-                                                 cov_type='none',
-                                                 return_ssm=True, **kwargs)
+        result = super().smooth([], transformed=True,
+                                cov_type='none',
+                                return_ssm=True, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
@@ -214,7 +218,7 @@ class RecursiveLS(MLEModel):
 
     @property
     def endog_names(self):
-        endog_names = super(RecursiveLS, self).endog_names
+        endog_names = super().endog_names
         return endog_names[0] if isinstance(endog_names, list) else endog_names
 
     @property
@@ -272,7 +276,7 @@ class RecursiveLSResults(MLEResults):
 
     def __init__(self, model, params, filter_results, cov_type='opg',
                  **kwargs):
-        super(RecursiveLSResults, self).__init__(
+        super().__init__(
             model, params, filter_results, cov_type, **kwargs)
 
         # Since we are overriding params with things that are not MLE params,
@@ -588,6 +592,7 @@ class RecursiveLSResults(MLEResults):
 
         # Create the plot
         from scipy.stats import norm
+
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         plt = _import_mpl()
         fig = create_mpl_fig(fig, figsize)

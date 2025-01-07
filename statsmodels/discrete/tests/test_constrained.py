@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri May 30 16:22:29 2014
 
@@ -11,12 +10,12 @@ from io import StringIO
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
-import patsy
 import pytest
 
 from statsmodels import datasets
 from statsmodels.base._constraints import fit_constrained
-from statsmodels.discrete.discrete_model import Poisson, Logit
+from statsmodels.discrete.discrete_model import Logit, Poisson
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
@@ -145,8 +144,10 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         #                2.71338891, 0.57966535,  0.97254074])
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(constr, mod.exog_names)
+
+        cls.res1 = fit_constrained(mod, lc.constraint_matrix, lc.constraint_values,
                                    start_params=start_params,
                                    fit_kwds={'method': 'bfgs', 'disp': 0})
         # TODO: Newton fails
@@ -183,10 +184,13 @@ class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
         mod = Poisson.from_formula(formula, data=data,
                                    exposure=data['pyears'].values)
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                   fit_kwds={'method': 'newton',
-                                             'disp': 0})
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(constr, mod.exog_names)
+        cls.res1 = fit_constrained(
+            mod, lc.constraint_matrix,
+            lc.constraint_values,
+            fit_kwds={'method': 'newton', 'disp': 0},
+        )
         cls.constraints = lc
         # TODO: bfgs fails
         # test method of Poisson, not monkey patched
@@ -207,10 +211,14 @@ class TestPoissonConstrained1c(CheckPoissonConstrainedMixin):
         mod = Poisson.from_formula(formula, data=data,
                                    offset=np.log(data['pyears'].values))
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                   fit_kwds={'method': 'newton',
-                                             'disp': 0})
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(constr, mod.exog_names)
+        cls.res1 = fit_constrained(
+            mod,
+            lc.constraint_matrix,
+            lc.constraint_values,
+            fit_kwds={'method': 'newton', 'disp': 0}
+        )
         cls.constraints = lc
         # TODO: bfgs fails
 
@@ -258,10 +266,15 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
         #                4.08730007,  1.15987869,  0.12111539])
 
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                   start_params=start_params,
-                                   fit_kwds={'method': 'bfgs', 'disp': 0})
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(constr, mod.exog_names)
+        cls.res1 = fit_constrained(
+            mod,
+            lc.constraint_matrix,
+            lc.constraint_values,
+            start_params=start_params,
+            fit_kwds={'method': 'bfgs', 'disp': 0}
+        )
         # TODO: Newton fails
 
         # test method of Poisson, not monkey patched
@@ -282,10 +295,14 @@ class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
         mod = Poisson.from_formula(formula, data=data,
                                    exposure=data['pyears'].values)
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                   fit_kwds={'method': 'newton',
-                                             'disp': 0})
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(constr, mod.exog_names)
+        cls.res1 = fit_constrained(
+            mod,
+            lc.constraint_matrix,
+            lc.constraint_values,
+            fit_kwds={'method': 'newton', 'disp': 0}
+        )
         cls.constraints = lc
         # TODO: bfgs fails to converge. overflow somewhere?
 
@@ -308,9 +325,14 @@ class TestPoissonConstrained2c(CheckPoissonConstrainedMixin):
                                    offset=np.log(data['pyears'].values))
 
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                   fit_kwds={'method': 'newton', 'disp': 0})
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(constr, mod.exog_names)
+        cls.res1 = fit_constrained(
+            mod,
+            lc.constraint_matrix,
+            lc.constraint_values,
+            fit_kwds={'method': 'newton', 'disp': 0}
+        )
         cls.constraints = lc
         # TODO: bfgs fails
 
@@ -336,9 +358,14 @@ class TestGLMPoissonConstrained1a(CheckPoissonConstrainedMixin):
                                family=families.Poisson())
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                   fit_kwds={'atol': 1e-10})
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(constr, mod.exog_names)
+        cls.res1 = fit_constrained(
+            mod,
+            lc.constraint_matrix,
+            lc.constraint_values,
+            fit_kwds={'atol': 1e-10}
+        )
         cls.constraints = lc
         cls.res1m = mod.fit_constrained(constr, atol=1e-10)
 
@@ -361,10 +388,15 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
                                offset=np.log(data['pyears'].values))
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(constr, mod.exog_names)
 
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                   fit_kwds={'atol': 1e-10})
+        cls.res1 = fit_constrained(
+            mod,
+            lc.constraint_matrix,
+            lc.constraint_values,
+            fit_kwds={'atol': 1e-10}
+        )
         cls.constraints = lc
         cls.res1m = mod.fit_constrained(constr, atol=1e-10)._results
 
@@ -504,7 +536,7 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         assert_('linear equality constraints' in summ.extra_txt)
 
         lc_string = str(self.res1m.constraints)
-        assert lc_string == "x1 - x3 = 0.0"
+        assert lc_string.startswith("x1 - x3 = 0")
 
     @pytest.mark.smoke
     def test_summary2(self):
@@ -600,8 +632,8 @@ def junk():  # FIXME: make this into a test, or move/remove
 
     constraints = 'C(smokes)[T.1]:C(agecat)[3] = C(smokes)[T.1]:C(agec`at)[4]'
 
-    import patsy
-    lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constraints)
+    mgr = FormulaManager()
+    lc = mgr.get_linear_constraints(mod.exog_names).linear_constraint(constraints)
     R, q = lc.coefs, lc.constants
 
     mod.fit_constrained(R, q, fit_kwds={'method': 'bfgs'})
@@ -611,7 +643,7 @@ def junk():  # FIXME: make this into a test, or move/remove
     mod1a = Poisson.from_formula(formula1a, data=data)
 
     mod1a.fit()
-    lc_1a = patsy.DesignInfo(mod1a.exog_names).linear_constraint(
-        'C(agecat)[T.4] = C(agecat)[T.5]')
+    constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+    lc_1a = mgr.get_linear_constraints(constr, mod1a.exog_names)
     mod1a.fit_constrained(lc_1a.coefs, lc_1a.constants,
                           fit_kwds={'method': 'newton'})

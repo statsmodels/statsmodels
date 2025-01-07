@@ -20,6 +20,7 @@ from scipy.linalg import toeplitz
 from scipy.stats import t as student_t
 
 from statsmodels.datasets import longley
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.linear_model import (
     GLS,
     OLS,
@@ -833,7 +834,7 @@ class TestNonFit:
 
     def test_df_resid(self):
         df_resid = self.endog.shape[0] - self.exog.shape[1]
-        assert_equal(self.ols_model.df_resid, 9)
+        assert_equal(self.ols_model.df_resid, df_resid)
 
 
 class TestWLS_CornerCases:
@@ -1040,7 +1041,7 @@ class TestDataDimensions(CheckRegressionResults):
 class TestGLS_large_data(TestDataDimensions):
     @classmethod
     def setup_class(cls):
-        super(TestGLS_large_data, cls).setup_class()
+        super().setup_class()
         nobs = 1000
         y = np.random.randn(nobs, 1)
         x = np.random.randn(nobs, 20)
@@ -1067,7 +1068,7 @@ class TestGLS_large_data(TestDataDimensions):
 class TestNxNx(TestDataDimensions):
     @classmethod
     def setup_class(cls):
-        super(TestNxNx, cls).setup_class()
+        super().setup_class()
         cls.mod2 = OLS(cls.endog_n_, cls.exog_n_)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
@@ -1076,7 +1077,7 @@ class TestNxNx(TestDataDimensions):
 class TestNxOneNx(TestDataDimensions):
     @classmethod
     def setup_class(cls):
-        super(TestNxOneNx, cls).setup_class()
+        super().setup_class()
         cls.mod2 = OLS(cls.endog_n_one, cls.exog_n_)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
@@ -1085,7 +1086,7 @@ class TestNxOneNx(TestDataDimensions):
 class TestNxNxOne(TestDataDimensions):
     @classmethod
     def setup_class(cls):
-        super(TestNxNxOne, cls).setup_class()
+        super().setup_class()
         cls.mod2 = OLS(cls.endog_n_, cls.exog_n_one)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
@@ -1326,8 +1327,6 @@ class TestRegularizedFit:
 def test_formula_missing_cat():
     # gh-805
 
-    from patsy import PatsyError
-
     import statsmodels.api as sm
     from statsmodels.formula.api import ols
 
@@ -1339,18 +1338,18 @@ def test_formula_missing_cat():
     )
     res = mod.fit()
 
+    mgr = FormulaManager()
     mod2 = ols(formula="value ~ invest + capital + firm + year", data=dta)
     res2 = mod2.fit()
 
     assert_almost_equal(res.params.values, res2.params.values)
+    if mgr.engine == "patsy":
+        error = mgr.factor_evaluation_error
+    else:
+        error = ValueError
 
-    assert_raises(
-        PatsyError,
-        ols,
-        "value ~ invest + capital + firm + year",
-        data=dta,
-        missing="raise",
-    )
+    with pytest.raises(error):
+        ols("value ~ invest + capital + firm + year", data=dta,missing="raise")
 
 
 def test_missing_formula_predict():
@@ -1600,7 +1599,7 @@ def test_bool_regressor(reset_randomstate):
 
 
 def test_ols_constant(reset_randomstate):
-    y = np.random.standard_normal((200))
+    y = np.random.standard_normal(200)
     x = np.ones((200, 1))
     res = OLS(y, x).fit()
     with warnings.catch_warnings(record=True) as recording:

@@ -413,7 +413,7 @@ class Poisson(Family):
     def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.Log()
-        super(Poisson, self).__init__(
+        super().__init__(
             link=link,
             variance=Poisson.variance,
             check_link=check_link
@@ -569,7 +569,7 @@ class Gaussian(Family):
     def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.Identity()
-        super(Gaussian, self).__init__(
+        super().__init__(
             link=link,
             variance=Gaussian.variance,
             check_link=check_link
@@ -742,7 +742,7 @@ class Gamma(Family):
     def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.InversePower()
-        super(Gamma, self).__init__(
+        super().__init__(
             link=link,
             variance=Gamma.variance,
             check_link=check_link
@@ -929,7 +929,7 @@ class Binomial(Family):
         self.n = 1
         # overwritten by initialize if needed but always used to initialize
         # variance since endog is assumed/forced to be (0,1)
-        super(Binomial, self).__init__(
+        super().__init__(
             link=link,
             variance=V.Binomial(n=self.n),
             check_link=check_link
@@ -1187,7 +1187,7 @@ class InverseGaussian(Family):
     def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.InverseSquared()
-        super(InverseGaussian, self).__init__(
+        super().__init__(
             link=link,
             variance=InverseGaussian.variance,
             check_link=check_link
@@ -1369,7 +1369,7 @@ class NegativeBinomial(Family):
                           ValueWarning)
         if link is None:
             link = L.Log()
-        super(NegativeBinomial, self).__init__(
+        super().__init__(
             link=link,
             variance=V.NegativeBinomial(alpha=self.alpha),
             check_link=check_link
@@ -1585,7 +1585,7 @@ class Tweedie(Family):
                              "between 1 and 2")
         if link is None:
             link = L.Log()
-        super(Tweedie, self).__init__(
+        super().__init__(
             link=link,
             variance=V.Power(power=var_power * 1.),
             check_link=check_link

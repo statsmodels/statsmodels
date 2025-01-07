@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Mon Jul 26 08:34:59 2010
 
@@ -114,7 +113,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
             self.offset = offset.ravel()
         else:
             self.offset = 0.
-        super(PoissonOffsetGMLE, self).__init__(endog, exog, missing=missing,
+        super().__init__(endog, exog, missing=missing,
                 **kwds)
 
 #this was added temporarily for bug-hunting, but should not be needed
@@ -163,7 +162,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
     def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
         # let them be none in case user wants to use inheritance
         self.k_extra = 1
-        super(PoissonZiGMLE, self).__init__(endog, exog, missing=missing,
+        super().__init__(endog, exog, missing=missing,
                 extra_params_names=["zi"], **kwds)
         if offset is not None:
             if offset.ndim == 1:

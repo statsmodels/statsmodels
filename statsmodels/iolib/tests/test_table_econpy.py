@@ -115,7 +115,7 @@ class TestSimpleTable:
         #the previous has significant trailing whitespace that got removed
         #desired = '''\n<table class="simpletable">\n<tr>\n    <td></td>    <th>header1</th> <th>header2</th>\n</tr>\n<tr>\n  <th>stub1</th>   <td>0.0</td>      <td>1</td>   \n</tr>\n<tr>\n  <th>stub2</th>    <td>2</td>     <td>3.333</td> \n</tr>\n</table>\n'''
         actual = '\n%s\n' % tbl.as_html()
-        actual = '\n'.join((line.rstrip() for line in actual.split('\n')))
+        actual = '\n'.join(line.rstrip() for line in actual.split('\n'))
         #print(actual)
         #print(desired)
         #print len(actual), len(desired)

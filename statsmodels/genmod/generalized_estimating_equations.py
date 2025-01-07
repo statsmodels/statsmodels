@@ -22,41 +22,48 @@ http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
 LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
-from statsmodels.compat.python import lzip
 from statsmodels.compat.pandas import Appender
+from statsmodels.compat.python import lzip
 
-import numpy as np
-from scipy import stats
-import pandas as pd
-import patsy
 from collections import defaultdict
-from statsmodels.tools.decorators import cache_readonly
-import statsmodels.base.model as base
-# used for wrapper:
-import statsmodels.regression.linear_model as lm
-import statsmodels.base.wrapper as wrap
-
-from statsmodels.genmod import families
-from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
-from statsmodels.genmod import cov_struct as cov_structs
-
-import statsmodels.genmod.families.varfuncs as varfuncs
-from statsmodels.genmod.families.links import Link
-
-from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
-                                             DomainWarning,
-                                             IterationLimitWarning,
-                                             ValueWarning)
 import warnings
 
+import numpy as np
+import pandas as pd
+from scipy import stats
+
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.discrete.discrete_margins import (
+    _check_at_is_all,
+    _check_discrete_args,
+    _check_margeff_args,
+    _effects_at,
+    _get_count_index,
+    _get_dummy_index,
+    _get_margeff_exog,
+    _transform_names,
+    margeff_cov_with_se,
+)
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.genmod import cov_struct as cov_structs, families
+from statsmodels.genmod.families.links import Link
+import statsmodels.genmod.families.varfuncs as varfuncs
+from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
+    _plot_ceres_residuals_doc,
     _plot_partial_residuals_doc,
-    _plot_ceres_residuals_doc)
-from statsmodels.discrete.discrete_margins import (
-    _get_margeff_exog, _check_margeff_args, _effects_at, margeff_cov_with_se,
-    _check_at_is_all, _transform_names, _check_discrete_args,
-    _get_dummy_index, _get_count_index)
+)
+# used for wrapper:
+import statsmodels.regression.linear_model as lm
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    DomainWarning,
+    IterationLimitWarning,
+    ValueWarning,
+)
 
 
 class ParameterConstraint:
@@ -534,11 +541,11 @@ class GEE(GLM):
         # Calling super creates self.exog, self.endog, etc. as
         # ndarrays and the original exog, endog, etc. are
         # self.data.endog, etc.
-        super(GEE, self).__init__(endog, exog, groups=groups,
-                                  time=time, offset=offset,
-                                  exposure=exposure, weights=weights,
-                                  dep_data=dep_data, missing=missing,
-                                  family=family, **kwargs)
+        super().__init__(endog, exog, groups=groups,
+                         time=time, offset=offset,
+                         exposure=exposure, weights=weights,
+                         dep_data=dep_data, missing=missing,
+                         family=family, **kwargs)
 
         _check_args(
             self.endog,
@@ -690,7 +697,7 @@ class GEE(GLM):
             is added to the offset (if any).  If a string, this is the
             name of a variable in `data` that contains the offset
             values.
-        %(missing_param_doc)s
+        {missing_param_doc}
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
@@ -723,7 +730,7 @@ class GEE(GLM):
         terms args and kwargs are passed on to the model
         instantiation. E.g., a numpy structured or rec array, a
         dictionary, or a pandas DataFrame.
-        """ % {'missing_param_doc': base._missing_param_doc}
+        """.format(missing_param_doc=base._missing_param_doc)
 
         groups_name = "Groups"
         if isinstance(groups, str):
@@ -743,8 +750,7 @@ class GEE(GLM):
         dep_data_names = None
         if dep_data is not None:
             if isinstance(dep_data, str):
-                dep_data = patsy.dmatrix(dep_data, data,
-                                         return_type='dataframe')
+                dep_data = FormulaManager().get_matrices(dep_data, data, pandas=True)
                 dep_data_names = dep_data.columns.tolist()
             else:
                 dep_data_names = list(dep_data)
@@ -756,12 +762,12 @@ class GEE(GLM):
             family = kwargs["family"]
             del kwargs["family"]
 
-        model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
-                                             groups=groups, time=time,
-                                             offset=offset,
-                                             exposure=exposure,
-                                             family=family,
-                                             *args, **kwargs)
+        model = super().from_formula(formula, data=data, subset=subset,
+                                     groups=groups, time=time,
+                                     offset=offset,
+                                     exposure=exposure,
+                                     family=family,
+                                     *args, **kwargs)
 
         if dep_data_names is not None:
             model._dep_data_names = dep_data_names
@@ -1660,12 +1666,14 @@ class GEE(GLM):
             margeff /= self.predict(params, exog)[:, None]
         if count_idx is not None:
             from statsmodels.discrete.discrete_margins import (
-                _get_count_effects)
+                _get_count_effects,
+            )
             margeff = _get_count_effects(margeff, exog, count_idx, transform,
                                          self, params)
         if dummy_idx is not None:
             from statsmodels.discrete.discrete_margins import (
-                _get_dummy_effects)
+                _get_dummy_effects,
+            )
             margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
                                          self, params)
         return margeff
@@ -1771,7 +1779,7 @@ class GEEResults(GLMResults):
                  cov_type='robust', use_t=False, regularized=False,
                  **kwds):
 
-        super(GEEResults, self).__init__(
+        super().__init__(
             model, params, normalized_cov_params=cov_params,
             scale=scale)
 
@@ -2340,9 +2348,9 @@ class OrdinalGEE(GEE):
         endog, exog, groups, time, offset = self.setup_ordinal(
             endog, exog, groups, time, offset)
 
-        super(OrdinalGEE, self).__init__(endog, exog, groups, time,
-                                         family, cov_struct, missing,
-                                         offset, dep_data, constraint)
+        super().__init__(endog, exog, groups, time,
+                         family, cov_struct, missing,
+                         offset, dep_data, constraint)
 
     def setup_ordinal(self, endog, exog, groups, time, offset):
         """
@@ -2430,12 +2438,12 @@ class OrdinalGEE(GEE):
             params_niter=1, first_dep_update=0,
             cov_type='robust'):
 
-        rslt = super(OrdinalGEE, self).fit(maxiter, ctol, start_params,
-                                           params_niter, first_dep_update,
-                                           cov_type=cov_type)
+        rslt = super().fit(maxiter, ctol, start_params,
+                           params_niter, first_dep_update,
+                           cov_type=cov_type)
 
         rslt = rslt._results   # use unwrapped instance
-        res_kwds = dict(((k, getattr(rslt, k)) for k in rslt._props))
+        res_kwds = {k: getattr(rslt, k) for k in rslt._props}
         # Convert the GEEResults to an OrdinalGEEResults
         ord_rslt = OrdinalGEEResults(self, rslt.params,
                                      rslt.cov_params() / rslt.scale,
@@ -2622,7 +2630,7 @@ class NominalGEE(GEE):
         if cov_struct is None:
             cov_struct = cov_structs.NominalIndependence()
 
-        super(NominalGEE, self).__init__(
+        super().__init__(
             endog, exog, groups, time, family, cov_struct, missing,
             offset, dep_data, constraint)
 
@@ -2699,7 +2707,7 @@ class NominalGEE(GEE):
             xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
         xnames = []
         for tr in endog_cuts:
-            xnames.extend(["%s[%.1f]" % (v, tr) for v in xnames_in])
+            xnames.extend([f"{v}[{tr:.1f}]" for v in xnames_in])
         exog_out = pd.DataFrame(exog_out, columns=xnames)
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
@@ -2815,16 +2823,16 @@ class NominalGEE(GEE):
             params_niter=1, first_dep_update=0,
             cov_type='robust'):
 
-        rslt = super(NominalGEE, self).fit(maxiter, ctol, start_params,
-                                           params_niter, first_dep_update,
-                                           cov_type=cov_type)
+        rslt = super().fit(maxiter, ctol, start_params,
+                           params_niter, first_dep_update,
+                           cov_type=cov_type)
         if rslt is None:
             warnings.warn("GEE updates did not converge",
                           ConvergenceWarning)
             return None
 
         rslt = rslt._results   # use unwrapped instance
-        res_kwds = dict(((k, getattr(rslt, k)) for k in rslt._props))
+        res_kwds = {k: getattr(rslt, k) for k in rslt._props}
         # Convert the GEEResults to a NominalGEEResults
         nom_rslt = NominalGEEResults(self, rslt.params,
                                      rslt.cov_params() / rslt.scale,
@@ -3113,8 +3121,11 @@ class GEEMargins:
                     ('Method:', [method]),
                     ('At:', [self.margeff_options['at']]), ]
 
-        from statsmodels.iolib.summary import (Summary, summary_params,
-                                               table_extend)
+        from statsmodels.iolib.summary import (
+            Summary,
+            summary_params,
+            table_extend,
+        )
         exog_names = model.exog_names[:]  # copy
         smry = Summary()
 

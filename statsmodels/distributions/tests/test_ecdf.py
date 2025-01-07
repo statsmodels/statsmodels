@@ -3,6 +3,8 @@ import numpy.testing as npt
 from numpy.testing import assert_raises
 from statsmodels.distributions import StepFunction, monotone_fn_inverter
 from statsmodels.distributions import ECDFDiscrete
+from statsmodels.distributions.empirical_distribution import ECDF
+import pandas as pd
 
 
 class TestDistributions:
@@ -54,3 +56,16 @@ class TestDistributions:
         e2 = ECDFDiscrete([3.5, 1.5, 1, 4], freq_weights=[2, 1, 1, 1])
         npt.assert_array_equal(e1.x, e2.x)
         npt.assert_array_equal(e1.y, e2.y)
+
+    def test_ecdf_data_modification(self):
+        # GH9383
+        now = pd.to_datetime('2024-01-01')
+        weeks = 2
+        testdata = pd.DataFrame(columns=['dates', 'values', 'othervalues'])
+        testdata['dates'] = pd.date_range(start=now, periods=weeks * 7, freq='D')
+        testdata['values'] = np.random.randint(0, 100, size=(weeks * 7))
+        testdata['othervalues'] = np.random.randint(0, 100, size=(weeks * 7))
+        orig_testadata = testdata.copy()
+
+        ECDF(testdata['values'])
+        pd.testing.assert_frame_equal(orig_testadata, testdata)

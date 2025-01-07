@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
     Using a model built from the the state crime dataset, plot the influence in
     regression.  Observations with high leverage, or large residuals will be

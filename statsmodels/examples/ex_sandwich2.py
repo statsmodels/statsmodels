@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Cluster robust standard errors for OLS
 
 Created on Fri Dec 16 12:52:13 2011
@@ -19,7 +18,7 @@ import statsmodels.iolib.foreign as dta
 try:
     srs = dta.genfromdta("srs.dta")
     print('using local file')
-except IOError:
+except OSError:
     urlretrieve('http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/srs.dta', 'srs.dta')
     print('downloading file')
     srs = dta.genfromdta("srs.dta")

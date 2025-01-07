@@ -399,7 +399,7 @@ class MultivariateVARKnown:
 class TestMultivariateVARKnown(MultivariateVARKnown):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARKnown, cls).setup_class()
+        super().setup_class()
         cls.true_llf = 39.01246166
 
 
@@ -416,7 +416,7 @@ class TestMultivariateVARKnownMissingAll(MultivariateVARKnown):
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARKnownMissingAll, cls).setup_class(
+        super().setup_class(
             missing='all', test_against_KFAS=False)
         cls.true_llf = 1305.739288
 
@@ -424,7 +424,7 @@ class TestMultivariateVARKnownMissingAll(MultivariateVARKnown):
 class TestMultivariateVARKnownMissingPartial(MultivariateVARKnown):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARKnownMissingPartial, cls).setup_class(
+        super().setup_class(
             missing='partial', test_against_KFAS=False)
         cls.true_llf = 1518.449598
 
@@ -432,7 +432,7 @@ class TestMultivariateVARKnownMissingPartial(MultivariateVARKnown):
 class TestMultivariateVARKnownMissingMixed(MultivariateVARKnown):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARKnownMissingMixed, cls).setup_class(
+        super().setup_class(
             missing='mixed', test_against_KFAS=False)
         cls.true_llf = 1117.265303
 
@@ -573,7 +573,7 @@ class MultivariateVAR:
 class TestMultivariateVAR(MultivariateVAR):
     @classmethod
     def setup_class(cls):
-        super(TestMultivariateVAR, cls).setup_class()
+        super().setup_class()
         path = os.path.join(current_path, 'results',
                             'results_simulation_smoothing3_variates.csv')
         cls.variates = pd.read_csv(path).values.squeeze()

@@ -40,13 +40,13 @@ class RLM(base.LikelihoodModel):
     Estimate a robust linear model via iteratively reweighted least squares
     given a robust criterion estimator.
 
-    %(params)s
+    {params}
     M : statsmodels.robust.norms.RobustNorm, optional
         The robust criterion function for downweighting outliers.
         The current options are LeastSquares, HuberT, RamsayE, AndrewWave,
         TrimmedMean, Hampel, and TukeyBiweight.  The default is HuberT().
         See statsmodels.robust.norms for more information.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -102,8 +102,10 @@ class RLM(base.LikelihoodModel):
     >>> rlm_hamp_hub = mod.fit(scale_est=sm.robust.scale.HuberScale())
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc}
+    """.format(
+        params=base._model_params_doc,
+        extra_params=base._missing_param_doc
+    )
 
     def __init__(self, endog, exog, M=None, missing='none',
                  **kwargs):
@@ -189,10 +191,12 @@ class RLM(base.LikelihoodModel):
         elif isinstance(self.scale_est, scale.HuberScale):
             return self.scale_est(self.df_resid, self.nobs, resid)
         else:
-            return scale.scale_est(self, resid) ** 2
+            # use df correction to match HuberScale
+            return self.scale_est(resid) * np.sqrt(self.nobs / self.df_resid)
 
     def fit(self, maxiter=50, tol=1e-8, scale_est='mad', init=None, cov='H1',
-            update_scale=True, conv='dev', start_params=None):
+            update_scale=True, conv='dev', start_params=None, start_scale=None,
+            ):
         """
         Fits the model using iteratively reweighted least squares.
 
@@ -215,6 +219,7 @@ class RLM(base.LikelihoodModel):
             Specifies method for the initial estimates of the parameters.
             Default is None, which means that the least squares estimate
             is used.  Currently it is the only available choice.
+            Deprecated and will be removed. There is no choice here.
         maxiter : int
             The maximum number of iterations to try. Default is 50.
         scale_est : str or HuberScale()
@@ -234,6 +239,11 @@ class RLM(base.LikelihoodModel):
         start_params : array_like, optional
             Initial guess of the solution of the optimizer. If not provided,
             the initial parameters are computed using OLS.
+        start_scale : float, optional
+            Initial scale. If update_scale is False, then the scale will be
+            fixed at this level for the estimation of the mean parameters.
+            during iteration. If not provided, then the initial scale is
+            estimated from the OLS residuals
 
         Returns
         -------
@@ -253,17 +263,22 @@ class RLM(base.LikelihoodModel):
             wls_results = lm.WLS(self.endog, self.exog).fit()
         else:
             start_params = np.asarray(start_params, dtype=np.double).squeeze()
+            start_params = np.atleast_1d(start_params)
             if (start_params.shape[0] != self.exog.shape[1] or
                     start_params.ndim != 1):
-                raise ValueError('start_params must by a 1-d array with {0} '
+                raise ValueError('start_params must by a 1-d array with {} '
                                  'values'.format(self.exog.shape[1]))
             fake_wls = reg_tools._MinimalWLS(self.endog, self.exog,
                                              weights=np.ones_like(self.endog),
                                              check_weights=False)
             wls_results = fake_wls.results(start_params)
 
-        if not init:
+        if not init and not start_scale:
             self.scale = self._estimate_scale(wls_results.resid)
+        elif start_scale:
+            self.scale = start_scale
+            if not update_scale:
+                self.scale_est = scale_est = "fixed"
 
         history = dict(params=[np.inf], scale=[])
         if conv == 'coefs':
@@ -400,8 +415,7 @@ class RLMResults(base.LikelihoodModelResults):
     """
 
     def __init__(self, model, params, normalized_cov_params, scale):
-        super(RLMResults, self).__init__(model, params,
-                                         normalized_cov_params, scale)
+        super().__init__(model, params, normalized_cov_params, scale)
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid

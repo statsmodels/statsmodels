@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Treatment effect estimators
 
 follows largely Stata's teffects in Stata 13 manual
@@ -142,7 +141,7 @@ class _TEGMMGeneric1(GMM):
 
     def __init__(self, endog, res_select, mom_outcome, exclude_tmoms=False,
                  **kwargs):
-        super(_TEGMMGeneric1, self).__init__(endog, None, None)
+        super().__init__(endog, None, None)
         self.results_select = res_select
         self.mom_outcome = mom_outcome
         self.exclude_tmoms = exclude_tmoms
@@ -201,7 +200,7 @@ class _TEGMM(GMM):
     """
 
     def __init__(self, endog, res_select, mom_outcome):
-        super(_TEGMM, self).__init__(endog, None, None)
+        super().__init__(endog, None, None)
         self.results_select = res_select
         self.mom_outcome = mom_outcome
 
@@ -603,7 +602,7 @@ TreatmentEffectsResults instance or tuple (ATE, POM0, POM1)
 """
 
 
-class TreatmentEffect(object):
+class TreatmentEffect:
     """
     Estimate average treatment effect under conditional independence
 

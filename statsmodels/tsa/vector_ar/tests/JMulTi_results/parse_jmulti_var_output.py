@@ -1,4 +1,3 @@
-from io import open
 import os
 import re
 

@@ -24,7 +24,7 @@ filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.d
 def getnist(filename):
     here = os.path.dirname(__file__)
     fname = os.path.abspath(os.path.join(here, 'data', filename))
-    with open(fname, 'r', encoding="utf-8") as fd:
+    with open(fname, encoding="utf-8") as fd:
         content = fd.read().split('\n')
 
     data = [line.split() for line in content[60:]]

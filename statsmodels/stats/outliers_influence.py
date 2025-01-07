@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Influence and Outlier Measures
 
 Created on Sun Jan 29 11:16:09 2012

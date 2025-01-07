@@ -72,9 +72,11 @@ class Mediation:
 
     >>> import statsmodels.api as sm
     >>> import statsmodels.genmod.families.links as links
-    >>> probit = links.probit
+    >>> from statsmodels.stats.mediation import Mediation
+    >>> data = sm.datasets.get_rdataset("framing", "mediation")
+    >>> probit = links.probit()
     >>> outcome_model = sm.GLM.from_formula("cong_mesg ~ emo + treat + age + educ + gender + income",
-    ...                                     data, family=sm.families.Binomial(link=Probit()))
+    ...                                     data, family=sm.families.Binomial(link=probit))
     >>> mediator_model = sm.OLS.from_formula("emo ~ treat + age + educ + gender + income", data)
     >>> med = Mediation(outcome_model, mediator_model, "treat", "emo").fit()
     >>> med.summary()

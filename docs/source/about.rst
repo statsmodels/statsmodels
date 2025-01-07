@@ -53,7 +53,7 @@ statsmodels and its dependencies.
 .. autosummary::
    :toctree: generated/
 
-   ~statsmodels.tools.print_version.show_versions
+   ~tools.print_version.show_versions
 
 
 Financial Support

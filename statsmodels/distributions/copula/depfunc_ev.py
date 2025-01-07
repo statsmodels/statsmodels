@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Pickand's dependence functions as generators for EV-copulas
 
 

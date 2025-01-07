@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Examples for Regression Plots
 
 Author: Josef Perktold

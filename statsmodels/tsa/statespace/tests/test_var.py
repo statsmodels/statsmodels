@@ -60,19 +60,19 @@ def check_irf(test, mod, results, params=None):
         impulse_to = endog.columns[i]
 
         # Non-orthogonalized
-        columns = ['%s.irf.%s.%s' % (test, impulse_to, name)
+        columns = [f'{test}.irf.{impulse_to}.{name}'
                    for name in endog.columns]
         assert_allclose(res.impulse_responses(10, i),
                         results_var_R_output[columns])
 
         # Orthogonalized
-        columns = ['%s.irf.ortho.%s.%s' % (test, impulse_to, name)
+        columns = [f'{test}.irf.ortho.{impulse_to}.{name}'
                    for name in endog.columns]
         assert_allclose(res.impulse_responses(10, i, orthogonalized=True),
                         results_var_R_output[columns])
 
         # Orthogonalized, cumulated
-        columns = ['%s.irf.cumu.%s.%s' % (test, impulse_to, name)
+        columns = [f'{test}.irf.cumu.{impulse_to}.{name}'
                    for name in endog.columns]
         result = res.impulse_responses(10, i,
                                        orthogonalized=True, cumulative=True)
@@ -91,7 +91,7 @@ def test_var_basic():
     assert_allclose(res.llf, results['llf'])
 
     # Forecast
-    columns = ['%s.fcast.%s.fcst' % (test, name) for name in endog.columns]
+    columns = [f'{test}.fcast.{name}.fcst' for name in endog.columns]
     assert_allclose(res.forecast(10), results_var_R_output[columns].iloc[:10])
 
     # IRF
@@ -111,7 +111,7 @@ def test_var_c():
     assert_allclose(res.llf, results['llf'])
 
     # Forecast
-    columns = ['%s.fcast.%s.fcst' % (test, name) for name in endog.columns]
+    columns = [f'{test}.fcast.{name}.fcst' for name in endog.columns]
     assert_allclose(res.forecast(10), results_var_R_output[columns].iloc[:10])
 
     # IRF
@@ -131,7 +131,7 @@ def test_var_ct():
     assert_allclose(res.llf, results['llf'])
 
     # Forecast
-    columns = ['%s.fcast.%s.fcst' % (test, name) for name in endog.columns]
+    columns = [f'{test}.fcast.{name}.fcst' for name in endog.columns]
     assert_allclose(res.forecast(10), results_var_R_output[columns].iloc[:10])
 
     # IRF
@@ -153,7 +153,7 @@ def test_var_ct_as_exog0():
     assert_allclose(res.llf, results['llf'])
 
     # Forecast
-    columns = ['%s.fcast.%s.fcst' % (test, name) for name in endog.columns]
+    columns = [f'{test}.fcast.{name}.fcst' for name in endog.columns]
     assert_allclose(res.forecast(10, exog=exog0_fcast[:, :2]),
                     results_var_R_output[columns].iloc[:10])
 
@@ -181,7 +181,7 @@ def test_var_ct_as_exog1():
     assert_allclose(res.llf, results['llf'])
 
     # Forecast
-    columns = ['%s.fcast.%s.fcst' % (test, name) for name in endog.columns]
+    columns = [f'{test}.fcast.{name}.fcst' for name in endog.columns]
     assert_allclose(res.forecast(10, exog=exog1_fcast[:, :2]),
                     results_var_R_output[columns].iloc[:10])
 
@@ -207,7 +207,7 @@ def test_var_ctt():
     assert_allclose(res.llf, results['llf'])
 
     # Forecast
-    columns = ['%s.fcast.%s.fcst' % (test, name) for name in endog.columns]
+    columns = [f'{test}.fcast.{name}.fcst' for name in endog.columns]
     assert_allclose(res.forecast(10), results_var_R_output[columns].iloc[:10])
 
     # IRF
@@ -230,7 +230,7 @@ def test_var_ct_exog():
     assert_allclose(res.llf, results['llf'])
 
     # Forecast
-    columns = ['%s.fcast.%s.fcst' % (test, name) for name in endog.columns]
+    columns = [f'{test}.fcast.{name}.fcst' for name in endog.columns]
     assert_allclose(res.forecast(10, exog=exog_fcast),
                     results_var_R_output[columns].iloc[:10])
 
@@ -254,7 +254,7 @@ def test_var_c_2exog():
     assert_allclose(res.llf, results['llf'])
 
     # Forecast
-    columns = ['%s.fcast.%s.fcst' % (test, name) for name in endog.columns]
+    columns = [f'{test}.fcast.{name}.fcst' for name in endog.columns]
     assert_allclose(res.forecast(10, exog=exog_fcast),
                     results_var_R_output[columns].iloc[:10])
 

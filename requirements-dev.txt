@@ -1,7 +1,6 @@
 # build
-cython>=0.29.28,<3.0.0
-setuptools_scm[toml]~=7.0
-oldest-supported-numpy>=2022.4.18
+cython>=3.0.10,<4
+setuptools_scm[toml]~=8.0
 
 # run
 matplotlib>=3
@@ -11,9 +10,10 @@ joblib
 # cvxopt; os_name != "win32"
 
 # test
-pytest>=7.3.0
+pytest>=7.3.0,<8
 pytest-randomly
 pytest-xdist
+pytest-cov
 
 # Pin on Win32
 pywinpty; os_name == "nt"

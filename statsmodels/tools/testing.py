@@ -31,9 +31,9 @@ def bunch_factory(attribute, columns):
     """
     class FactoryBunch(Bunch):
         def __init__(self, *args, **kwargs):
-            super(FactoryBunch, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
             if not hasattr(self, attribute):
-                raise AttributeError('{0} is required and must be passed to '
+                raise AttributeError('{} is required and must be passed to '
                                      'the constructor'.format(attribute))
             for i, att in enumerate(columns):
                 self[att] = getattr(self, attribute)[:, i]

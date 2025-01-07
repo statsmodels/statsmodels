@@ -1,14 +1,15 @@
 """
 Statistical tools for time series analysis
 """
+
 from __future__ import annotations
 
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import Literal, lzip
+from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
 
-from typing import Tuple
+from typing import Literal, Union
 import warnings
 
 import numpy as np
@@ -37,8 +38,11 @@ from statsmodels.tools.validation import (
 )
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
+import statsmodels.tsa._leybourne
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
 from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
+
+ArrayLike1D = Union[np.ndarray, pd.Series, list[float]]
 
 __all__ = [
     "acovf",
@@ -61,6 +65,7 @@ __all__ = [
     "levinson_durbin",
     "zivot_andrews",
     "range_unit_root_test",
+    "leybourne",
 ]
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
@@ -260,9 +265,7 @@ def adfuller(
     """
     x = array_like(x, "x")
     maxlag = int_like(maxlag, "maxlag", optional=True)
-    regression = string_like(
-        regression, "regression", options=("c", "ct", "ctt", "n")
-    )
+    regression = string_like(regression, "regression", options=("c", "ct", "ctt", "n"))
     autolag = string_like(
         autolag, "autolag", optional=True, options=("aic", "bic", "t-stat")
     )
@@ -289,8 +292,7 @@ def adfuller(
         maxlag = min(nobs // 2 - ntrend - 1, maxlag)
         if maxlag < 0:
             raise ValueError(
-                "sample size is too short to use selected "
-                "regression component"
+                "sample size is too short to use selected " "regression component"
             )
     elif maxlag > nobs // 2 - ntrend - 1:
         raise ValueError(
@@ -321,9 +323,7 @@ def adfuller(
         # aic and bic: smaller is better
 
         if not regresults:
-            icbest, bestlag = _autolag(
-                OLS, xdshort, fullRHS, startlag, maxlag, autolag
-            )
+            icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag, maxlag, autolag)
         else:
             icbest, bestlag, alres = _autolag(
                 OLS,
@@ -348,9 +348,7 @@ def adfuller(
         usedlag = maxlag
         icbest = None
     if regression != "n":
-        resols = OLS(
-            xdshort, add_trend(xdall[:, : usedlag + 1], regression)
-        ).fit()
+        resols = OLS(xdshort, add_trend(xdall[:, : usedlag + 1], regression)).fit()
     else:
         resols = OLS(xdshort, xdall[:, : usedlag + 1]).fit()
 
@@ -376,9 +374,7 @@ def adfuller(
         resstore.adfstat = adfstat
         resstore.critvalues = critvalues
         resstore.nobs = nobs
-        resstore.H0 = (
-            "The coefficient on the lagged level equals 1 - " "unit root"
-        )
+        resstore.H0 = "The coefficient on the lagged level equals 1 - unit root"
         resstore.HA = "The coefficient on the lagged level < 1 - stationary"
         resstore.icbest = icbest
         resstore._str = "Augmented Dickey-Fuller Test Results"
@@ -493,9 +489,7 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
                 divisor = np.empty(lag_len + 1, dtype=np.int64)
                 divisor[0] = notmask_int.sum()
                 for i in range(lag_len):
-                    divisor[i + 1] = notmask_int[i + 1 :].dot(
-                        notmask_int[: -(i + 1)]
-                    )
+                    divisor[i + 1] = notmask_int[i + 1 :].dot(notmask_int[: -(i + 1)])
                 divisor[divisor == 0] = 1
                 acov /= divisor
             else:  # biased, missing data but npt "drop"
@@ -563,9 +557,7 @@ def q_stat(x, nobs):
     nobs = int_like(nobs, "nobs")
 
     ret = (
-        nobs
-        * (nobs + 2)
-        * np.cumsum((1.0 / (nobs - np.arange(1, len(x) + 1))) * x ** 2)
+        nobs * (nobs + 2) * np.cumsum((1.0 / (nobs - np.arange(1, len(x) + 1))) * x**2)
     )
     chi2 = stats.chi2.sf(ret, np.arange(1, len(x) + 1))
     return ret, chi2
@@ -643,7 +635,9 @@ def acf(
         (nlags+1,).
     confint : ndarray, optional
         Confidence intervals for the ACF at lags 0, 1, ..., nlags. Shape
-        (nlags + 1, 2). Returned if alpha is not None.
+        (nlags + 1, 2). Returned if alpha is not None. The confidence
+        intervals are centered on the estimated ACF values. This behavior
+        differs from plot_acf which centers the confidence intervals on 0.
     qstat : ndarray, optional
         The Ljung-Box Q-Statistic for lags 1, 2, ..., nlags (excludes lag
         zero). Returned if q_stat is True.
@@ -672,6 +666,13 @@ def acf(
     .. [2] Brockwell and Davis, 1987. Time Series Theory and Methods
     .. [3] Brockwell and Davis, 2010. Introduction to Time Series and
        Forecasting, 2nd edition.
+
+    See Also
+    --------
+    statsmodels.tsa.stattools.acf
+        Estimate the autocorrelation function.
+    statsmodels.graphics.tsaplots.plot_acf
+        Plot autocorrelations and confidence intervals.
     """
     adjusted = bool_like(adjusted, "adjusted")
     nlags = int_like(nlags, "nlags", optional=True)
@@ -710,7 +711,11 @@ def acf(
         return acf, qstat, pvalue
 
 
-def pacf_yw(x, nlags=None, method="adjusted"):
+def pacf_yw(
+    x: ArrayLike1D,
+    nlags: int | None = None,
+    method: Literal["adjusted", "mle"] = "adjusted",
+) -> np.ndarray:
     """
     Partial autocorrelation estimated with non-recursive yule_walker.
 
@@ -747,8 +752,7 @@ def pacf_yw(x, nlags=None, method="adjusted"):
     nlags = int_like(nlags, "nlags", optional=True)
     nobs = x.shape[0]
     if nlags is None:
-        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
-
+        nlags = max(min(int(10 * np.log10(nobs)), nobs - 1), 1)
     method = string_like(method, "method", options=("adjusted", "mle"))
     pacf = [1.0]
     with warnings.catch_warnings():
@@ -758,7 +762,9 @@ def pacf_yw(x, nlags=None, method="adjusted"):
     return np.array(pacf)
 
 
-def pacf_burg(x, nlags=None, demean=True):
+def pacf_burg(
+    x: ArrayLike1D, nlags: int | None = None, demean: bool = True
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Calculate Burg"s partial autocorrelation estimator.
 
@@ -800,6 +806,7 @@ def pacf_burg(x, nlags=None, demean=True):
         x = x - x.mean()
     nobs = x.shape[0]
     p = nlags if nlags is not None else min(int(10 * np.log10(nobs)), nobs - 1)
+    p = max(p, 1)
     if p > nobs - 1:
         raise ValueError("nlags must be smaller than nobs - 1")
     d = np.zeros(p + 1)
@@ -818,14 +825,19 @@ def pacf_burg(x, nlags=None, demean=True):
         v[1:] = last_v[1:] - pacf[i] * last_u[:-1]
         d[i + 1] = (1 - pacf[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
         pacf[i + 1] = 2 / d[i + 1] * v[i + 1 :].dot(u[i:-1])
-    sigma2 = (1 - pacf ** 2) * d / (2.0 * (nobs - np.arange(0, p + 1)))
+    sigma2 = (1 - pacf**2) * d / (2.0 * (nobs - np.arange(0, p + 1)))
     pacf[0] = 1  # Insert the 0 lag partial autocorrel
 
     return pacf, sigma2
 
 
 @deprecate_kwarg("unbiased", "adjusted")
-def pacf_ols(x, nlags=None, efficient=True, adjusted=False):
+def pacf_ols(
+    x: ArrayLike1D,
+    nlags: int | None = None,
+    efficient: bool = True,
+    adjusted: bool = False,
+) -> np.ndarray:
     """
     Calculate partial autocorrelations via OLS.
 
@@ -885,8 +897,9 @@ def pacf_ols(x, nlags=None, efficient=True, adjusted=False):
     adjusted = bool_like(adjusted, "adjusted")
     nobs = x.shape[0]
     if nlags is None:
-        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
-
+        nlags = max(min(int(10 * np.log10(nobs)), nobs // 2), 1)
+    if nlags > nobs // 2:
+        raise ValueError(f"nlags must be smaller than nobs // 2 ({nobs//2})")
     pacf = np.empty(nlags + 1)
     pacf[0] = 1.0
     if efficient:
@@ -903,14 +916,30 @@ def pacf_ols(x, nlags=None, efficient=True, adjusted=False):
             params = lstsq(xlags[:, :k], x0, rcond=None)[0]
             # Last coefficient corresponds to PACF value (see [1])
             pacf[k] = np.squeeze(params[-1])
-
     if adjusted:
         pacf *= nobs / (nobs - np.arange(nlags + 1))
-
     return pacf
 
 
-def pacf(x, nlags=None, method="ywadjusted", alpha=None):
+def pacf(
+    x: ArrayLike1D,
+    nlags: int | None = None,
+    method: Literal[
+        "yw",
+        "ywadjusted",
+        "ols",
+        "ols-inefficient",
+        "ols-adjusted",
+        "ywm",
+        "ywmle",
+        "ld",
+        "ldadjusted",
+        "ldb",
+        "ldbiased",
+        "burg",
+    ] = "ywadjusted",
+    alpha: float | None = None,
+) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
     """
     Partial autocorrelation estimate.
 
@@ -965,7 +994,9 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     statsmodels.tsa.stattools.pacf_ols
         Partial autocorrelation estimation using OLS.
     statsmodels.tsa.stattools.pacf_burg
-        Partial autocorrelation estimation using Burg"s method.
+        Partial autocorrelation estimation using Burg's method.
+    statsmodels.graphics.tsaplots.plot_pacf
+        Plot partial autocorrelations and confidence intervals.
 
     Notes
     -----
@@ -996,7 +1027,7 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
         "ldb",
         "ldbiased",
         "ld_biased",
-        "burg"
+        "burg",
     )
     x = array_like(x, "x", maxdim=2)
     method = string_like(method, "method", options=methods)
@@ -1005,13 +1036,13 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     nobs = x.shape[0]
     if nlags is None:
         nlags = min(int(10 * np.log10(nobs)), nobs // 2 - 1)
-    if nlags >= x.shape[0] // 2:
+    nlags = max(nlags, 1)
+    if nlags > x.shape[0] // 2:
         raise ValueError(
             "Can only compute partial correlations for lags up to 50% of the "
             f"sample size. The requested nlags {nlags} must be < "
             f"{x.shape[0] // 2}."
         )
-
     if method in ("ols", "ols-inefficient", "ols-adjusted"):
         efficient = "inefficient" not in method
         adjusted = "adjusted" in method
@@ -1031,7 +1062,6 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
         acv = acovf(x, adjusted=False, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
-
     if alpha is not None:
         varacf = 1.0 / len(x)  # for all lags >=1
         interval = stats.norm.ppf(1.0 - alpha / 2.0) * np.sqrt(varacf)
@@ -1063,8 +1093,9 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     -------
     ndarray
         The estimated cross-covariance function: the element at index k
-        is the covariance between {x[k], x[k+1], ..., x[n]} and {y[0], y[1], ..., y[m-k]},
-        where n and m are the lengths of x and y, respectively.
+        is the covariance between {x[k], x[k+1], ..., x[n]} and
+        {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and y,
+        respectively.
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
@@ -1085,7 +1116,7 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
         d = n
 
     method = "fft" if fft else "direct"
-    return correlate(xo, yo, "full", method=method)[n - 1:] / d
+    return correlate(xo, yo, "full", method=method)[n - 1 :] / d
 
 
 @deprecate_kwarg("unbiased", "adjusted")
@@ -1115,12 +1146,13 @@ def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
     -------
     ndarray
         The cross-correlation function of x and y: the element at index k
-        is the correlation between {x[k], x[k+1], ..., x[n]} and {y[0], y[1], ..., y[m-k]},
-        where n and m are the lengths of x and y, respectively.
+        is the correlation between {x[k], x[k+1], ..., x[n]} and
+        {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and y,
+        respectively.
     confint : ndarray, optional
-        Confidence intervals for the CCF at lags 0, 1, ..., nlags-1 using the level given by
-        alpha and the standard deviation calculated as 1/sqrt(len(x)) [1]. Shape (nlags, 2).
-        Returned if alpha is not None.
+        Confidence intervals for the CCF at lags 0, 1, ..., nlags-1 using the
+        level given by alpha and the standard deviation calculated as
+        1/sqrt(len(x)) [1]. Shape (nlags, 2). Returned if alpha is not None.
 
     Notes
     -----
@@ -1207,9 +1239,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
     phi[1, 1] = sxx_m[1] / sxx_m[0]
     sig[1] = sxx_m[0] - phi[1, 1] * sxx_m[1]
     for k in range(2, order + 1):
-        phi[k, k] = (
-            sxx_m[k] - np.dot(phi[1:k, k - 1], sxx_m[1:k][::-1])
-        ) / sig[k - 1]
+        phi[k, k] = (sxx_m[k] - np.dot(phi[1:k, k - 1], sxx_m[1:k][::-1])) / sig[k - 1]
         for j in range(1, k):
             phi[j, k] = phi[j, k - 1] - phi[k, k] * phi[k - j, k - 1]
         sig[k] = sig[k - 1] * (1 - phi[k, k] ** 2)
@@ -1252,8 +1282,7 @@ def levinson_durbin_pacf(pacf, nlags=None):
 
     if pacf[0] != 1:
         raise ValueError(
-            "The first entry of the pacf corresponds to lags 0 "
-            "and so must be 1."
+            "The first entry of the pacf corresponds to lags 0 " "and so must be 1."
         )
     pacf = pacf[1:]
     n = pacf.shape[0]
@@ -1268,7 +1297,7 @@ def levinson_durbin_pacf(pacf, nlags=None):
 
     acf = np.zeros(n + 1)
     acf[1] = pacf[0]
-    nu = np.cumprod(1 - pacf ** 2)
+    nu = np.cumprod(1 - pacf**2)
     arcoefs = pacf.copy()
     for i in range(1, n):
         prev = arcoefs[: -(n - i)].copy()
@@ -1419,9 +1448,7 @@ def breakvar_heteroskedasticity_test(
         test_statistic = 1.0 / test_statistic
         p_value = pval_upper(test_statistic)
     elif alternative in ["2", "2-sided", "two-sided"]:
-        p_value = 2 * np.minimum(
-            pval_lower(test_statistic), pval_upper(test_statistic)
-        )
+        p_value = 2 * np.minimum(pval_lower(test_statistic), pval_upper(test_statistic))
     else:
         raise ValueError("Invalid alternative.")
 
@@ -1531,14 +1558,13 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
         maxlag = lags.max()
         if lags.min() <= 0 or lags.size == 0:
             raise ValueError(
-                "maxlag must be a non-empty list containing only "
-                "positive integers"
+                "maxlag must be a non-empty list containing only " "positive integers"
             )
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError(
             "Insufficient observations. Maximum allowable "
-            "lag is {0}".format(int((x.shape[0] - int(addconst)) / 3) - 1)
+            "lag is {}".format(int((x.shape[0] - int(addconst)) / 3) - 1)
         )
 
     resli = {}
@@ -1592,7 +1618,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
             or res2djoint.params.shape[0] != dtajoint.shape[1]
         ):
             raise InfeasibleTestError(
-                "The Granger causality test statistic cannot be compute "
+                "The Granger causality test statistic cannot be computed "
                 "because the VAR has a perfect fit of the data."
             )
         fgc1 = (
@@ -1775,9 +1801,7 @@ def coint(
     res_co = OLS(y0, xx).fit()
 
     if res_co.rsquared < 1 - 100 * SQRTEPS:
-        res_adf = adfuller(
-            res_co.resid, maxlag=maxlag, autolag=autolag, regression="n"
-        )
+        res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=autolag, regression="n")
     else:
         warnings.warn(
             "y0 and y1 are (almost) perfectly colinear."
@@ -1820,12 +1844,10 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
             start_params = [0.1] * sum(order)
             if trend == "c":
                 start_params = [0.1] + start_params
-            return _safe_arma_fit(
-                y, order, model_kw, trend, fit_kw, start_params
-            )
+            return _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params)
         else:
             return
-    except:  # no idea what happened
+    except Exception:  # no idea what happened
         return
 
 
@@ -1915,9 +1937,7 @@ def arma_order_select_ic(
             for i, criteria in enumerate(ic):
                 results[i, ar, ma] = getattr(mod, criteria)
 
-    dfs = [
-        pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results
-    ]
+    dfs = [pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results]
 
     res = dict(zip(ic, dfs))
 
@@ -1945,7 +1965,7 @@ def kpss(
     regression: Literal["c", "ct"] = "c",
     nlags: Literal["auto", "legacy"] | int = "auto",
     store: bool = False,
-) -> Tuple[float, float, int, dict[str, float]]:
+) -> tuple[float, float, int, dict[str, float]]:
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
 
@@ -2032,7 +2052,7 @@ def kpss(
 
     # if m is not one, n != m * n
     if nobs != x.size:
-        raise ValueError("x of shape {0} not understood".format(x.shape))
+        raise ValueError(f"x of shape {x.shape} not understood")
 
     if hypo == "ct":
         # p. 162 Kwiatkowski et al. (1992): y_t = beta * t + r_t + e_t,
@@ -2073,7 +2093,7 @@ def kpss(
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
-    eta = np.sum(resids.cumsum() ** 2) / (nobs ** 2)  # eq. 11, p. 165
+    eta = np.sum(resids.cumsum() ** 2) / (nobs**2)  # eq. 11, p. 165
     s_hat = _sigma_est_kpss(resids, nobs, nlags)
 
     kpss_stat = eta / s_hat
@@ -2106,8 +2126,8 @@ look-up table. The actual p-value is {direction} than the p-value returned.
         rstore.nobs = nobs
 
         stationary_type = "level" if hypo == "c" else "trend"
-        rstore.H0 = "The series is {0} stationary".format(stationary_type)
-        rstore.HA = "The series is not {0} stationary".format(stationary_type)
+        rstore.H0 = f"The series is {stationary_type} stationary"
+        rstore.HA = f"The series is not {stationary_type} stationary"
 
         return kpss_stat, p_value, crit_dict, rstore
     else:
@@ -2119,7 +2139,7 @@ def _sigma_est_kpss(resids, nobs, lags):
     Computes equation 10, p. 164 of Kwiatkowski et al. (1992). This is the
     consistent estimator for the variance.
     """
-    s_hat = np.sum(resids ** 2)
+    s_hat = np.sum(resids**2)
     for i in range(1, lags + 1):
         resids_prod = np.dot(resids[i:], resids[: nobs - i])
         s_hat += 2 * resids_prod * (1.0 - (i / (lags + 1.0)))
@@ -2133,7 +2153,7 @@ def _kpss_autolag(resids, nobs):
     (1994), and Schwert (1989). Assumes Bartlett / Newey-West kernel.
     """
     covlags = int(np.power(nobs, 2.0 / 9.0))
-    s0 = np.sum(resids ** 2) / nobs
+    s0 = np.sum(resids**2) / nobs
     s1 = 0
     for i in range(1, covlags + 1):
         resids_prod = np.dot(resids[i:], resids[: nobs - i])
@@ -2200,14 +2220,12 @@ def range_unit_root_test(x, store=False):
 
     # if m is not one, n != m * n
     if nobs != x.size:
-        raise ValueError("x of shape {0} not understood".format(x.shape))
+        raise ValueError(f"x of shape {x.shape} not understood")
 
     # Table from [1] has been replicated using 200,000 samples
     # Critical values for new n_obs values have been identified
     pvals = [0.01, 0.025, 0.05, 0.10, 0.90, 0.95]
-    n = np.array(
-        [25, 50, 100, 150, 200, 250, 500, 1000, 2000, 3000, 4000, 5000]
-    )
+    n = np.array([25, 50, 100, 150, 200, 250, 500, 1000, 2000, 3000, 4000, 5000])
     crit = np.array(
         [
             [0.6626, 0.8126, 0.9192, 1.0712, 2.4863, 2.7312],
@@ -2517,15 +2535,13 @@ class ZivotAndrewsUnitRoot:
         # first-diff y and standardize for numerical stability
         endog = np.diff(series, axis=0)
         endog /= np.sqrt(endog.T.dot(endog))
-        series /= np.sqrt(series.T.dot(series))
+        series = series / np.sqrt(series.T.dot(series))
         # reserve exog space
         exog = np.zeros((endog[lags:].shape[0], cols + lags))
         exog[:, 0] = const
         # lagged y and dy
         exog[:, cols - 1] = series[lags : (nobs - 1)]
-        exog[:, cols:] = lagmat(endog, lags, trim="none")[
-            lags : exog.shape[0] + lags
-        ]
+        exog[:, cols:] = lagmat(endog, lags, trim="none")[lags : exog.shape[0] + lags]
         return endog, exog
 
     def _update_regression_exog(
@@ -2625,12 +2641,10 @@ class ZivotAndrewsUnitRoot:
            great crash, the oil-price shock, and the unit-root hypothesis.
            Journal of Business & Economic Studies, 10: 251-270.
         """
-        x = array_like(x, "x")
+        x = array_like(x, "x", dtype=np.double, ndim=1)
         trim = float_like(trim, "trim")
         maxlag = int_like(maxlag, "maxlag", optional=True)
-        regression = string_like(
-            regression, "regression", options=("c", "t", "ct")
-        )
+        regression = string_like(regression, "regression", options=("c", "t", "ct"))
         autolag = string_like(
             autolag, "autolag", options=("aic", "bic", "t-stat"), optional=True
         )
@@ -2638,9 +2652,7 @@ class ZivotAndrewsUnitRoot:
             raise ValueError("trim value must be a float in range [0, 1/3)")
         nobs = x.shape[0]
         if autolag:
-            adf_res = adfuller(
-                x, maxlag=maxlag, regression="ct", autolag=autolag
-            )
+            adf_res = adfuller(x, maxlag=maxlag, regression="ct", autolag=autolag)
             baselags = adf_res[2]
         elif maxlag:
             baselags = maxlag
@@ -2687,9 +2699,7 @@ class ZivotAndrewsUnitRoot:
                     )
                 stats[bp] = o.tvalues[basecols - 1]
             else:
-                stats[bp] = self._quick_ols(endog[baselags:], exog)[
-                    basecols - 1
-                ]
+                stats[bp] = self._quick_ols(endog[baselags:], exog)[basecols - 1]
         # return best seen
         zastat = np.min(stats)
         bpidx = np.argmin(stats) - 1
@@ -2698,9 +2708,7 @@ class ZivotAndrewsUnitRoot:
         cvdict = crit[1]
         return zastat, pval, cvdict, baselags, bpidx
 
-    def __call__(
-        self, x, trim=0.15, maxlag=None, regression="c", autolag="AIC"
-    ):
+    def __call__(self, x, trim=0.15, maxlag=None, regression="c", autolag="AIC"):
         return self.run(
             x, trim=trim, maxlag=maxlag, regression=regression, autolag=autolag
         )
@@ -2708,3 +2716,285 @@ class ZivotAndrewsUnitRoot:
 
 zivot_andrews = ZivotAndrewsUnitRoot()
 zivot_andrews.__doc__ = zivot_andrews.run.__doc__
+
+
+class LeybourneMcCabeStationarity:
+    """
+    Class wrapper for Leybourne-McCabe stationarity test
+    """
+
+    def __init__(self):
+        """
+        Asymptotic critical values for the two different models specified
+        for the Leybourne-McCabe stationarity test. Asymptotic CVs are the
+        same as the asymptotic CVs for the KPSS stationarity test.
+
+        Notes
+        -----
+        The p-values are generated through Monte Carlo simulation using
+        1,000,000 replications and 10,000 data points.
+        """
+        self.__leybourne_critical_values = {
+            # constant-only model
+            "c": statsmodels.tsa._leybourne.c,
+            # constant-trend model
+            "ct": statsmodels.tsa._leybourne.ct,
+        }
+
+    def __leybourne_crit(self, stat, model="c"):
+        """
+        Linear interpolation for Leybourne p-values and critical values
+
+        Parameters
+        ----------
+        stat : float
+            The Leybourne-McCabe test statistic
+        model : {'c','ct'}
+            The model used when computing the test statistic. 'c' is default.
+
+        Returns
+        -------
+        pvalue : float
+            The interpolated p-value
+        cvdict : dict
+            Critical values for the test statistic at the 1%, 5%, and 10%
+            levels
+
+        Notes
+        -----
+        The p-values are linear interpolated from the quantiles of the
+        simulated Leybourne-McCabe (KPSS) test statistic distribution
+        """
+        table = self.__leybourne_critical_values[model]
+        # reverse the order
+        y = table[:, 0]
+        x = table[:, 1]
+        # LM cv table contains quantiles multiplied by 100
+        pvalue = np.interp(stat, x, y) / 100.0
+        cv = [1.0, 5.0, 10.0]
+        crit_value = np.interp(cv, np.flip(y), np.flip(x))
+        cvdict = {"1%": crit_value[0], "5%": crit_value[1], "10%": crit_value[2]}
+        return pvalue, cvdict
+
+    def _tsls_arima(self, x, arlags, model):
+        """
+        Two-stage least squares approach for estimating ARIMA(p, 1, 1)
+        parameters as an alternative to MLE estimation in the case of
+        solver non-convergence
+
+        Parameters
+        ----------
+        x : array_like
+            data series
+        arlags : int
+            AR(p) order
+        model : {'c','ct'}
+            Constant and trend order to include in regression
+            * 'c'  : constant only
+            * 'ct' : constant and trend
+
+        Returns
+        -------
+        arparams : int
+            AR(1) coefficient plus constant
+        theta : int
+            MA(1) coefficient
+        olsfit.resid : ndarray
+            residuals from second-stage regression
+        """
+        endog = np.diff(x, axis=0)
+        exog = lagmat(endog, arlags, trim="both")
+        # add constant if requested
+        if model == "ct":
+            exog = add_constant(exog)
+        # remove extra terms from front of endog
+        endog = endog[arlags:]
+        if arlags > 0:
+            resids = lagmat(OLS(endog, exog).fit().resid, 1, trim="forward")
+        else:
+            resids = lagmat(-endog, 1, trim="forward")
+        # add negated residuals column to exog as MA(1) term
+        exog = np.append(exog, -resids, axis=1)
+        olsfit = OLS(endog, exog).fit()
+        if model == "ct":
+            arparams = olsfit.params[1 : (len(olsfit.params) - 1)]
+        else:
+            arparams = olsfit.params[0 : (len(olsfit.params) - 1)]
+        theta = olsfit.params[len(olsfit.params) - 1]
+        return arparams, theta, olsfit.resid
+
+    def _autolag(self, x):
+        """
+        Empirical method for Leybourne-McCabe auto AR lag detection.
+        Set number of AR lags equal to the first PACF falling within the
+        95% confidence interval. Maximum nuber of AR lags is limited to
+        the smaller of 10 or 1/2 series length. Minimum is zero lags.
+
+        Parameters
+        ----------
+        x : array_like
+            data series
+
+        Returns
+        -------
+        arlags : int
+            AR(p) order
+        """
+        p = pacf(x, nlags=min(len(x) // 2, 10), method="ols")
+        ci = 1.960 / np.sqrt(len(x))
+        arlags = max(
+            0, ([n - 1 for n, i in enumerate(p) if abs(i) < ci] + [len(p) - 1])[0]
+        )
+        return arlags
+
+    def run(self, x, arlags=1, regression="c", method="mle", varest="var94"):
+        """
+        Leybourne-McCabe stationarity test
+
+        The Leybourne-McCabe test can be used to test for stationarity in a
+        univariate process.
+
+        Parameters
+        ----------
+        x : array_like
+            data series
+        arlags : int
+            number of autoregressive terms to include, default=None
+        regression : {'c','ct'}
+            Constant and trend order to include in regression
+            * 'c'  : constant only (default)
+            * 'ct' : constant and trend
+        method : {'mle','ols'}
+            Method used to estimate ARIMA(p, 1, 1) filter model
+            * 'mle' : condition sum of squares maximum likelihood
+            * 'ols' : two-stage least squares (default)
+        varest : {'var94','var99'}
+            Method used for residual variance estimation
+            * 'var94' : method used in original Leybourne-McCabe paper (1994)
+                        (default)
+            * 'var99' : method used in follow-up paper (1999)
+
+        Returns
+        -------
+        lmstat : float
+            test statistic
+        pvalue : float
+            based on MC-derived critical values
+        arlags : int
+            AR(p) order used to create the filtered series
+        cvdict : dict
+            critical values for the test statistic at the 1%, 5%, and 10%
+            levels
+
+        Notes
+        -----
+        H0 = series is stationary
+
+        Basic process is to create a filtered series which removes the AR(p)
+        effects from the series under test followed by an auxiliary regression
+        similar to that of Kwiatkowski et al (1992). The AR(p) coefficients
+        are obtained by estimating an ARIMA(p, 1, 1) model. Two methods are
+        provided for ARIMA estimation: MLE and two-stage least squares.
+
+        Two methods are provided for residual variance estimation used in the
+        calculation of the test statistic. The first method ('var94') is the
+        mean of the squared residuals from the filtered regression. The second
+        method ('var99') is the MA(1) coefficient times the mean of the squared
+        residuals from the ARIMA(p, 1, 1) filtering model.
+
+        An empirical autolag procedure is provided. In this context, the number
+        of lags is equal to the number of AR(p) terms used in the filtering
+        step. The number of AR(p) terms is set equal to the to the first PACF
+        falling within the 95% confidence interval. Maximum nuber of AR lags is
+        limited to 1/2 series length.
+
+        References
+        ----------
+        Kwiatkowski, D., Phillips, P.C.B., Schmidt, P. & Shin, Y. (1992).
+        Testing the null hypothesis of stationarity against the alternative of
+        a unit root. Journal of Econometrics, 54: 159–178.
+
+        Leybourne, S.J., & McCabe, B.P.M. (1994). A consistent test for a
+        unit root. Journal of Business and Economic Statistics, 12: 157–166.
+
+        Leybourne, S.J., & McCabe, B.P.M. (1999). Modified stationarity tests
+        with data-dependent model-selection rules. Journal of Business and
+        Economic Statistics, 17: 264-270.
+
+        Schwert, G W. (1987). Effects of model specification on tests for unit
+        roots in macroeconomic data. Journal of Monetary Economics, 20: 73–103.
+        """
+        if regression not in ["c", "ct"]:
+            raise ValueError("LM: regression option '%s' not understood" % regression)
+        if method not in ["mle", "ols"]:
+            raise ValueError("LM: method option '%s' not understood" % method)
+        if varest not in ["var94", "var99"]:
+            raise ValueError("LM: varest option '%s' not understood" % varest)
+        x = np.asarray(x)
+        if x.ndim > 2 or (x.ndim == 2 and x.shape[1] != 1):
+            raise ValueError(
+                "LM: x must be a 1d array or a 2d array with a single column"
+            )
+        x = np.reshape(x, (-1, 1))
+        # determine AR order if not specified
+        if arlags is None:
+            arlags = self._autolag(x)
+        elif not isinstance(arlags, int) or arlags < 0 or arlags > int(len(x) / 2):
+            raise ValueError(
+                "LM: arlags must be an integer in range [0..%s]" % str(int(len(x) / 2))
+            )
+        # estimate the reduced ARIMA(p, 1, 1) model
+        if method == "mle":
+            if regression == "ct":
+                reg = "t"
+            else:
+                reg = None
+
+            from statsmodels.tsa.arima.model import ARIMA
+
+            arima = ARIMA(
+                x, order=(arlags, 1, 1), trend=reg, enforce_invertibility=False
+            )
+            arfit = arima.fit()
+            resids = arfit.resid
+            arcoeffs = []
+            if arlags > 0:
+                arcoeffs = arfit.arparams
+            theta = arfit.maparams[0]
+        else:
+            arcoeffs, theta, resids = self._tsls_arima(x, arlags, model=regression)
+        # variance estimator from (1999) LM paper
+        var99 = abs(theta * np.sum(resids**2) / len(resids))
+        # create the filtered series:
+        #   z(t) = x(t) - arcoeffs[0]*x(t-1) - ... - arcoeffs[p-1]*x(t-p)
+        z = np.full(len(x) - arlags, np.inf)
+        for i in range(len(z)):
+            z[i] = x[i + arlags, 0]
+            for j in range(len(arcoeffs)):
+                z[i] -= arcoeffs[j] * x[i + arlags - j - 1, 0]
+        # regress the filtered series against a constant and
+        # trend term (if requested)
+        if regression == "c":
+            resids = z - z.mean()
+        else:
+            resids = OLS(z, add_constant(np.arange(1, len(z) + 1))).fit().resid
+        # variance estimator from (1994) LM paper
+        var94 = np.sum(resids**2) / len(resids)
+        # compute test statistic with specified variance estimator
+        eta = np.sum(resids.cumsum() ** 2) / (len(resids) ** 2)
+        if varest == "var99":
+            lmstat = eta / var99
+        else:
+            lmstat = eta / var94
+        # calculate pval
+        lmpval, cvdict = self.__leybourne_crit(lmstat, regression)
+        return lmstat, lmpval, arlags, cvdict
+
+    def __call__(self, x, arlags=None, regression="c", method="ols", varest="var94"):
+        return self.run(
+            x, arlags=arlags, regression=regression, method=method, varest=varest
+        )
+
+
+leybourne = LeybourneMcCabeStationarity()
+leybourne.__doc__ = leybourne.run.__doc__

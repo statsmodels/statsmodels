@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This file contains a Python version of the gradient projection rotation
 algorithms (GPA) developed by Bernaards, C.A. and Jennrich, R.I.

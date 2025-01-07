@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test for short_panel and panel sandwich
 
 Created on Fri May 18 13:05:47 2012

@@ -324,7 +324,7 @@ class HoltWintersResults(Results):
             transform if isinstance(transform, str) else self.params["lamda"]
         )
         if isinstance(box_cox_coeff, float):
-            box_cox_coeff = "{:>10.5f}".format(box_cox_coeff)
+            box_cox_coeff = f"{box_cox_coeff:>10.5f}"
         top_left = [
             ("Dep. Variable:", [dep_variable]),
             ("Model:", [model.__class__.__name__]),
@@ -338,10 +338,10 @@ class HoltWintersResults(Results):
 
         top_right = [
             ("No. Observations:", [str(len(self.model.endog))]),
-            ("SSE", ["{:5.3f}".format(self.sse)]),
-            ("AIC", ["{:5.3f}".format(self.aic)]),
-            ("BIC", ["{:5.3f}".format(self.bic)]),
-            ("AICC", ["{:5.3f}".format(self.aicc)]),
+            ("SSE", [f"{self.sse:5.3f}"]),
+            ("AIC", [f"{self.aic:5.3f}"]),
+            ("BIC", [f"{self.bic:5.3f}"]),
+            ("AICC", [f"{self.aicc:5.3f}"]),
             ("Date:", None),
             ("Time:", None),
         ]
@@ -360,9 +360,9 @@ class HoltWintersResults(Results):
             if abs_x != 0:
                 scale = int(np.log10(abs_x))
             if scale > 4 or scale < -3:
-                return "{:>20.5g}".format(x)
+                return f"{x:>20.5g}"
             dec = min(7 - scale, 7)
-            fmt = "{{:>20.{0}f}}".format(dec)
+            fmt = f"{{:>20.{dec}f}}"
             return fmt.format(x)
 
         tab = []
@@ -370,8 +370,8 @@ class HoltWintersResults(Results):
             tab.append(
                 [
                     _fmt(vals.iloc[1]),
-                    "{0:>20}".format(vals.iloc[0]),
-                    "{0:>20}".format(str(bool(vals.iloc[2]))),
+                    f"{vals.iloc[0]:>20}",
+                    f"{str(bool(vals.iloc[2])):>20}",
                 ]
             )
         params_table = SimpleTable(

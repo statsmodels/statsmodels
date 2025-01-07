@@ -222,7 +222,7 @@ class RU2NMNL:
             self.probs[tree] = [tree + '-prob' +
                                 '(%s)' % ', '.join(self.paramsind[tree])]
             if testxb:
-                leavessum = sum((datadict[bi] for bi in tree))
+                leavessum = sum(datadict[bi] for bi in tree)
                 print('final branch with', tree, ''.join(tree), leavessum) #sum(tree)
                 return leavessum  #sum(xb[tree])
             else:

@@ -96,7 +96,7 @@ class ParametricMixtureD:
         mrvs_idx = (np.clip(mrvs, self.ma, self.mb) - self.ma).astype(int)
 
         bd_args = tuple(md[mrvs_idx] for md in self.bd_args)
-        bd_kwds = dict((k, self.bd_kwds[k][mrvs_idx]) for k in self.bd_kwds)
+        bd_kwds = {k: self.bd_kwds[k][mrvs_idx] for k in self.bd_kwds}
         kwds = {'size':size}
         kwds.update(bd_kwds)
         rvs = self.base_dist.rvs(*self.bd_args, **kwds)

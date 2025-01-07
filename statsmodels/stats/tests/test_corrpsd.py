@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for finding a positive semi-definite correlation or covariance matrix
 
 Created on Mon May 27 12:07:02 2013

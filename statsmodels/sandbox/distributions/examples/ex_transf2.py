@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sun May 09 22:23:22 2010
 Author: josef-pktd

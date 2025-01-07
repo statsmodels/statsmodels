@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from statsmodels.sandbox.tools import cross_val

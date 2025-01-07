@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Linear Filters for time series analysis and testing
 
 

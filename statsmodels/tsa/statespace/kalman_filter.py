@@ -392,7 +392,7 @@ class KalmanFilter(Representation):
                                 if key in kwargs}
 
         # Initialize the base class
-        super(KalmanFilter, self).__init__(
+        super().__init__(
             k_endog, k_states, k_posdef, **kwargs
         )
 
@@ -432,7 +432,7 @@ class KalmanFilter(Representation):
 
     def _clone_kwargs(self, endog, **kwargs):
         # See Representation._clone_kwargs for docstring
-        kwargs = super(KalmanFilter, self)._clone_kwargs(endog, **kwargs)
+        kwargs = super()._clone_kwargs(endog, **kwargs)
 
         # Get defaults for options
         kwargs.setdefault('filter_method', self.filter_method)
@@ -1470,7 +1470,7 @@ class FilterResults(FrozenRepresentation):
     _attributes = FrozenRepresentation._model_attributes + _filter_attributes
 
     def __init__(self, model):
-        super(FilterResults, self).__init__(model)
+        super().__init__(model)
 
         # Setup caches for uninitialized objects
         self._kalman_gain = None
@@ -1493,7 +1493,7 @@ class FilterResults(FrozenRepresentation):
         This method is rarely required except for internal usage.
         """
         if not only_options:
-            super(FilterResults, self).update_representation(model)
+            super().update_representation(model)
 
         # Save the options as boolean variables
         for name in self._filter_options:

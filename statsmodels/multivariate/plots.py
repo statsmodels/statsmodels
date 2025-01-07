@@ -121,8 +121,8 @@ def plot_loadings(loadings, col_names=None, row_names=None,
         ax.plot(loadings[:, i], loadings[:, j], 'bo')
         ax.set_title(title)
         if percent_variance is not None:
-            x_str = '%s (%.1f%%)' % (col_names[i], percent_variance[i])
-            y_str = '%s (%.1f%%)' % (col_names[j], percent_variance[j])
+            x_str = f'{col_names[i]} ({percent_variance[i]:.1f}%)'
+            y_str = f'{col_names[j]} ({percent_variance[j]:.1f}%)'
             ax.set_xlabel(x_str)
             ax.set_ylabel(y_str)
         else:

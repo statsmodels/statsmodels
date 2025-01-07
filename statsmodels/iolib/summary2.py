@@ -1,3 +1,4 @@
+from statsmodels.compat.pandas import FUTURE_STACK
 from statsmodels.compat.python import lzip
 
 import datetime
@@ -416,7 +417,7 @@ def _col_params(result, float_format='%.4f', stars=True, include_r2=False):
         res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
     # Stack Coefs and Std.Errors
     res = res.iloc[:, :2]
-    res = res.stack()
+    res = res.stack(**FUTURE_STACK)
 
     # Add R-squared
     if include_r2:
@@ -470,7 +471,8 @@ def _make_unique(list_of_names):
 
 def summary_col(results, float_format='%.4f', model_names=(), stars=False,
                 info_dict=None, regressor_order=(), drop_omitted=False,
-                include_r2=True):
+                include_r2=True, fixed_effects=None, fe_present='Yes',
+                fe_absent=''):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
 
@@ -503,6 +505,14 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         If True, only regressors in regressor_order will be included.
     include_r2 : bool, optional
         Includes R2 and adjusted R2 in the summary table.
+    fixed_effects : list[str], optional
+        List of categorical variables for which to indicate presence of
+        fixed effects.
+    fe_present : str, optional
+        String to indicate the presence of fixed effects. Default is "Yes".
+    fe_absent : str, optional
+        String to indicate the absence of fixed effects. Default is empty
+        string.
     """
 
     if not isinstance(results, list):
@@ -520,10 +530,21 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         cols[i].columns = [colnames[i]]
 
     def merg(x, y):
-        return x.merge(y, how='outer', right_index=True,
-                       left_index=True)
+        return x.merge(y, how='outer', right_index=True, left_index=True)
+
+    # Changes due to how pandas 2.2.0 handles merge
+    index = list(cols[0].index)
+    for col in cols[1:]:
+        for key in col.index:
+            if key not in index:
+                index.append(key)
+    for special in (('R-squared', ''), ('R-squared Adj.', '')):
+        if special in index:
+            index.remove(special)
+            index.insert(len(index), special)
 
     summ = reduce(merg, cols)
+    summ = summ.reindex(index)
 
     if regressor_order:
         varnames = summ.index.get_level_values(0).tolist()
@@ -538,7 +559,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         if drop_omitted:
             for uo in unordered:
                 new_order.remove(uo)
-        summ = summ.loc[new_order]
+        summ = summ.reindex(new_order, level=0)
 
     idx = []
     index = summ.index.get_level_values(0)
@@ -549,6 +570,19 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         else:
             idx.append(index[i + 1])
     summ.index = idx
+
+    # add fixed effects info
+    if fixed_effects:
+        if not info_dict:
+            info_dict = {}
+
+        for fe in fixed_effects:
+            info_dict[fe + ' FE'] = (
+                lambda x, fe=fe, fe_present=fe_present, fe_absent=fe_absent:
+                    fe_present
+                    if any((f'C({fe})' in param) for param in x.params.index)
+                    else fe_absent
+                )
 
     # add infos about the models.
     if info_dict:
@@ -561,10 +595,6 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     for df, name in zip(cols, _make_unique([df.columns[0] for df in cols])):
         df.columns = [name]
 
-    def merg(x, y):
-        return x.merge(y, how='outer', right_index=True,
-                       left_index=True)
-
     info = reduce(merg, cols)
     dat = pd.DataFrame(np.vstack([summ, info]))  # pd.concat better, but error
     dat.columns = summ.columns
@@ -572,6 +602,21 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     summ = dat
 
     summ = summ.fillna('')
+
+    # fixed effects processing
+    if fixed_effects:
+        index_series = pd.Series(summ.index, index=summ.index)
+        skip_flag = index_series.apply(
+            lambda x: any((f'C({fe})' in x) for fe in fixed_effects)
+            )
+        skip_next_flag = skip_flag.shift(fill_value=False)
+        final_skip = skip_flag | skip_next_flag
+        summ = summ[~final_skip]
+
+        r_squared_rows = summ.index[summ.index.str.contains('R-squared')]
+        r_squared_section = summ.loc[r_squared_rows]
+        summ = summ.drop(index=r_squared_rows)
+        summ = pd.concat([summ, r_squared_section])
 
     smry = Summary()
     smry._merge_latex = True

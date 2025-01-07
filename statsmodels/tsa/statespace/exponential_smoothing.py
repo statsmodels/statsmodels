@@ -204,7 +204,7 @@ class ExponentialSmoothing(MLEModel):
 
         init = ss_init.Initialization(k_states, 'known',
                                       constant=[0] * k_states)
-        super(ExponentialSmoothing, self).__init__(
+        super().__init__(
             endog, k_states=k_states, k_posdef=k_posdef,
             initialization=init, dates=dates, freq=freq)
 
@@ -701,7 +701,7 @@ class ExponentialSmoothingResults(MLEResults):
 
         model_name = 'ETS(' + ', '.join(specification) + ')'
 
-        summary = super(ExponentialSmoothingResults, self).summary(
+        summary = super().summary(
             alpha=alpha, start=start, title='Exponential Smoothing Results',
             model_name=model_name)
 

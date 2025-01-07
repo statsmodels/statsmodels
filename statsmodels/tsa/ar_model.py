@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from statsmodels.compat.pandas import (
@@ -12,7 +11,8 @@ from collections.abc import Iterable
 import datetime
 import datetime as dt
 from types import SimpleNamespace
-from typing import Any, Literal, Sequence, cast
+from typing import Any, Literal, cast
+from collections.abc import Sequence
 import warnings
 
 import numpy as np
@@ -144,7 +144,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         If 'raise', an error is raised. Default is 'none'.
     deterministic : DeterministicProcess
         A deterministic process.  If provided, trend and seasonal are ignored.
-        A warning is raised if trend is not "n" and seasonal is not False.
+        A warning is raised if trend is not "n" or seasonal is not False.
     old_names : bool
         Flag indicating whether to use the v0.11 names or the v0.12+ names.
 
@@ -354,7 +354,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         endog_names = self.endog_names
         x, y = lagmat(self.endog, maxlag, original="sep")
         exog_names.extend(
-            [endog_names + ".L{0}".format(lag) for lag in self._lags]
+            [endog_names + f".L{lag}" for lag in self._lags]
         )
         if len(self._lags) < maxlag:
             x = x[:, np.asarray(self._lags) - 1]
@@ -371,7 +371,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 if self._seasonal:
                     period = self._period
                     assert isinstance(period, int)
-                    names = ["seasonal.{0}".format(i) for i in range(period)]
+                    names = [f"seasonal.{i}" for i in range(period)]
                     if "c" in self._trend:
                         names = names[1:]
                     deterministic_names.extend(names)
@@ -1497,12 +1497,12 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 "in_sample is False but there are no"
                 "out-of-sample forecasts to plot."
             )
-        ax.plot(mean, zorder=2)
+        ax.plot(mean, zorder=2, label="Forecast")
 
         if oos and alpha is not None:
             ci = np.asarray(predictions.conf_int(alpha))
             lower, upper = ci[-oos:, 0], ci[-oos:, 1]
-            label = "{0:.0%} confidence interval".format(1 - alpha)
+            label = f"{1 - alpha:.0%} confidence interval"
             x = ax.get_lines()[-1].get_xdata()
             ax.fill_between(
                 x[-oos:],
@@ -1688,7 +1688,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         if self.model.exog is not None:
             model += "-X"
 
-        order = "({0})".format(self._max_lag)
+        order = f"({self._max_lag})"
         dep_name = str(self.model.endog_names)
         top_left = [
             ("Dep. Variable:", [dep_name]),
@@ -1799,7 +1799,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         --------
         >>> import pandas as pd
         >>> from statsmodels.tsa.ar_model import AutoReg
-        >>> index = pd.period_range(start='2000', periods=3, freq='A')
+        >>> index = pd.period_range(start='2000', periods=3, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.5, 1.8], index=index)
         >>> mod = AutoReg(original_observations, lags=1, trend="n")
         >>> res = mod.fit()
@@ -1814,7 +1814,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         2003    2.195122
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='1980', periods=3, freq='A')
+        >>> new_index = pd.period_range(start='1980', periods=3, freq='Y')
         >>> new_observations = pd.Series([1.4, 0.3, 1.2], index=new_index)
         >>> new_res = res.apply(new_observations)
         >>> print(new_res.params)
@@ -1940,7 +1940,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         --------
         >>> import pandas as pd
         >>> from statsmodels.tsa.ar_model import AutoReg
-        >>> index = pd.period_range(start='2000', periods=3, freq='A')
+        >>> index = pd.period_range(start='2000', periods=3, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.4, 1.8], index=index)
         >>> mod = AutoReg(original_observations, lags=1, trend="n")
         >>> res = mod.fit()
@@ -1955,7 +1955,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         2003    2.223529
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='2003', periods=3, freq='A')
+        >>> new_index = pd.period_range(start='2003', periods=3, freq='Y')
         >>> new_observations = pd.Series([2.1, 2.4, 2.7], index=new_index)
         >>> updated_res = res.append(new_observations)
         >>> print(updated_res.params)
@@ -2217,11 +2217,11 @@ class AROrderSelectionResults:
         self._seasonal = seasonal
         self._period = period
         aic = sorted(ics, key=lambda r: r[1][0])
-        self._aic = dict([(key, val[0]) for key, val in aic])
+        self._aic = {key: val[0] for key, val in aic}
         bic = sorted(ics, key=lambda r: r[1][1])
-        self._bic = dict([(key, val[1]) for key, val in bic])
+        self._bic = {key: val[1] for key, val in bic}
         hqic = sorted(ics, key=lambda r: r[1][2])
-        self._hqic = dict([(key, val[2]) for key, val in hqic])
+        self._hqic = {key: val[2] for key, val in hqic}
 
     @property
     def model(self) -> AutoReg:

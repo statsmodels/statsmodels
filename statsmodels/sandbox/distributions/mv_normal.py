@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Multivariate Normal and t distributions
 
 
@@ -1025,7 +1024,7 @@ class MVT(MVElliptical):
             currently not used
 
         '''
-        super(MVT, self).__init__(mean, sigma)
+        super().__init__(mean, sigma)
         self.extra_args = ['df']  #overwrites extra_args of super
         self.df = df
 

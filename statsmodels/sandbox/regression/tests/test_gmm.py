@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Fri Oct 04 13:19:01 2013
@@ -349,7 +348,7 @@ class TestGMMStOnestep(CheckGMM):
         res1, res2 = self.res1, self.res2
         # try other versions for bse,
         # TODO: next two produce the same as before (looks like)
-        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False))))
+        bse = np.sqrt(np.diag(res1._cov_params(has_optimal_weights=False)))
                                             #weights=res1.weights))))
         # TODO: does not look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
@@ -361,7 +360,7 @@ class TestGMMStOnestep(CheckGMM):
     @pytest.mark.xfail(reason="q vs Q comparison fails",
                        raises=AssertionError, strict=True)
     def test_other(self):
-        super(TestGMMStOnestep, self).test_other()
+        super().test_other()
 
 
 class TestGMMStOnestepNO(CheckGMM):
@@ -390,7 +389,7 @@ class TestGMMStOnestepNO(CheckGMM):
     @pytest.mark.xfail(reason="q vs Q comparison fails",
                        raises=AssertionError, strict=True)
     def test_other(self):
-        super(TestGMMStOnestepNO, self).test_other()
+        super().test_other()
 
 
 class TestGMMStOneiter(CheckGMM):
@@ -418,7 +417,7 @@ class TestGMMStOneiter(CheckGMM):
     @pytest.mark.xfail(reason="q vs Q comparison fails",
                        raises=AssertionError, strict=True)
     def test_other(self):
-        super(TestGMMStOneiter, self).test_other()
+        super().test_other()
 
     def test_bse_other(self):
         res1, res2 = self.res1, self.res2
@@ -427,11 +426,11 @@ class TestGMMStOneiter(CheckGMM):
         w = res1.model.calc_weightmatrix(moms)
         # try other versions for bse,
         # TODO: next two produce the same as before (looks like)
-        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False,
-                                            weights=res1.weights))))
+        bse = np.sqrt(np.diag(res1._cov_params(has_optimal_weights=False,
+                                            weights=res1.weights)))
         # TODO: does not look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
-        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False))))
+        bse = np.sqrt(np.diag(res1._cov_params(has_optimal_weights=False)))
                                                 #use_weights=True #weights=w
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
 
@@ -468,7 +467,7 @@ class TestGMMStOneiterNO(CheckGMM):
     @pytest.mark.xfail(reason="q vs Q comparison fails",
                        raises=AssertionError, strict=True)
     def test_other(self):
-        super(TestGMMStOneiterNO, self).test_other()
+        super().test_other()
 
 
 #------------ Crosscheck subclasses
@@ -505,7 +504,7 @@ class TestGMMStOneiterNO_Linear(CheckGMM):
     @pytest.mark.xfail(reason="q vs Q comparison fails",
                        raises=AssertionError, strict=True)
     def test_other(self):
-        super(TestGMMStOneiterNO_Linear, self).test_other()
+        super().test_other()
 
 
 class TestGMMStOneiterNO_Nonlinear(CheckGMM):
@@ -543,7 +542,7 @@ class TestGMMStOneiterNO_Nonlinear(CheckGMM):
     @pytest.mark.xfail(reason="q vs Q comparison fails",
                        raises=AssertionError, strict=True)
     def test_other(self):
-        super(TestGMMStOneiterNO_Nonlinear, self).test_other()
+        super().test_other()
 
     def test_score(self):
         params = self.res1.params * 1.1
@@ -594,7 +593,7 @@ class TestGMMStOneiterOLS_Linear(CheckGMM):
     @pytest.mark.xfail(reason="RegressionResults has no `Q` attribute",
                        raises=AttributeError, strict=True)
     def test_other(self):
-        super(TestGMMStOneiterOLS_Linear, self).test_other()
+        super().test_other()
 
 
 # ------------------
@@ -644,13 +643,13 @@ class TestGMMSt2:
 
         # try other versions for bse,
         # TODO: next two produce the same as before (looks like)
-        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=True,
-                                            weights=res1.weights))))
+        bse = np.sqrt(np.diag(res1._cov_params(has_optimal_weights=True,
+                                            weights=res1.weights)))
         assert_allclose(res1.bse, res2.bse, rtol=5e-01, atol=0)
 
-        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=True,
+        bse = np.sqrt(np.diag(res1._cov_params(has_optimal_weights=True,
                                                weights=res1.weights,
-                                               use_weights=True))))
+                                               use_weights=True)))
         assert_allclose(res1.bse, res2.bse, rtol=5e-02, atol=0)
 
         # TODO: resolve this
