@@ -1,10 +1,12 @@
+import warnings
+
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
-from statsmodels.imputation import mice
+
 import statsmodels.api as sm
-from numpy.testing import assert_equal, assert_allclose
-import warnings
+from statsmodels.imputation import mice
 
 try:
     import matplotlib.pyplot as plt
@@ -212,8 +214,12 @@ class TestMICEData:
     def test_set_imputer(self):
         # Test with specified perturbation method.
 
-        from statsmodels.regression.linear_model import RegressionResultsWrapper
-        from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
+        from statsmodels.genmod.generalized_linear_model import (
+            GLMResultsWrapper,
+        )
+        from statsmodels.regression.linear_model import (
+            RegressionResultsWrapper,
+        )
 
         df = gendat()
         orig = df.copy()
@@ -328,7 +334,7 @@ class TestMICE:
         assert issubclass(result.__class__, mice.MICEResults)
 
         # Smoke test for results
-        smr = result.summary()
+        result.summary()
 
 
     def test_MICE1(self):
@@ -337,7 +343,9 @@ class TestMICE:
         imp_data = mice.MICEData(df)
         mi = mice.MICE("y ~ x1 + x2 + x1:x2", sm.OLS, imp_data)
 
-        from statsmodels.regression.linear_model import RegressionResultsWrapper
+        from statsmodels.regression.linear_model import (
+            RegressionResultsWrapper,
+        )
 
         for j in range(3):
             x = mi.next_sample()
@@ -354,7 +362,9 @@ class TestMICE:
 
     def test_MICE2(self):
 
-        from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
+        from statsmodels.genmod.generalized_linear_model import (
+            GLMResultsWrapper,
+        )
 
         df = gendat()
         imp_data = mice.MICEData(df)

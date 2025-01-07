@@ -13,7 +13,6 @@ from typing import Literal, Union
 import warnings
 
 import numpy as np
-from numpy.linalg import LinAlgError
 import pandas as pd
 from scipy import stats
 from scipy.interpolate import interp1d
@@ -27,24 +26,25 @@ from statsmodels.tools.sm_exceptions import (
     MissingDataError,
     ValueWarning,
 )
-from statsmodels.tools.tools import Bunch, add_constant
+from statsmodels.stats._results_store import ResultsStore
+from statsmodels.tools.tools import add_constant
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
-    dict_like,
     float_like,
     int_like,
     string_like,
 )
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
-import statsmodels.tsa._leybourne
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
 from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
 ArrayLike1D = Union[np.ndarray, pd.Series, list[float]]
 
 __all__ = [
+    "breakvar_heteroskedasticity_test",
+    "grangercausalitytests",
     "acovf",
     "acf",
     "pacf",
@@ -54,18 +54,17 @@ __all__ = [
     "ccf",
     "q_stat",
     "coint",
-    "arma_order_select_ic",
     "adfuller",
     "kpss",
     "bds",
     "pacf_burg",
     "innovations_algo",
     "innovations_filter",
+    "lagmat",
     "levinson_durbin_pacf",
     "levinson_durbin",
     "zivot_andrews",
     "range_unit_root_test",
-    "leybourne",
 ]
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
@@ -308,8 +307,6 @@ def adfuller(
     xdshort = xdiff[-nobs:]
 
     if store:
-        from statsmodels.stats.diagnostic import ResultsStore
-
         resstore = ResultsStore()
     if autolag:
         if regression != "n":
@@ -1824,135 +1821,6 @@ def coint(
     return res_adf[0], pval_asy, crit
 
 
-def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
-    from statsmodels.tsa.arima.model import ARIMA
-
-    try:
-        return ARIMA(y, order=order, **model_kw, trend=trend).fit(
-            start_params=start_params, **fit_kw
-        )
-    except LinAlgError:
-        # SVD convergence failure on badly misspecified models
-        return
-
-    except ValueError as error:
-        if start_params is not None:  # do not recurse again
-            # user supplied start_params only get one chance
-            return
-        # try a little harder, should be handled in fit really
-        elif "initial" not in error.args[0] or "initial" in str(error):
-            start_params = [0.1] * sum(order)
-            if trend == "c":
-                start_params = [0.1] + start_params
-            return _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params)
-        else:
-            return
-    except Exception:  # no idea what happened
-        return
-
-
-def arma_order_select_ic(
-    y, max_ar=4, max_ma=2, ic="bic", trend="c", model_kw=None, fit_kw=None
-):
-    """
-    Compute information criteria for many ARMA models.
-
-    Parameters
-    ----------
-    y : array_like
-        Array of time-series data.
-    max_ar : int
-        Maximum number of AR lags to use. Default 4.
-    max_ma : int
-        Maximum number of MA lags to use. Default 2.
-    ic : str, list
-        Information criteria to report. Either a single string or a list
-        of different criteria is possible.
-    trend : str
-        The trend to use when fitting the ARMA models.
-    model_kw : dict
-        Keyword arguments to be passed to the ``ARMA`` model.
-    fit_kw : dict
-        Keyword arguments to be passed to ``ARMA.fit``.
-
-    Returns
-    -------
-    Bunch
-        Dict-like object with attribute access. Each ic is an attribute with a
-        DataFrame for the results. The AR order used is the row index. The ma
-        order used is the column index. The minimum orders are available as
-        ``ic_min_order``.
-
-    Notes
-    -----
-    This method can be used to tentatively identify the order of an ARMA
-    process, provided that the time series is stationary and invertible. This
-    function computes the full exact MLE estimate of each model and can be,
-    therefore a little slow. An implementation using approximate estimates
-    will be provided in the future. In the meantime, consider passing
-    {method : "css"} to fit_kw.
-
-    Examples
-    --------
-
-    >>> from statsmodels.tsa.arima_process import arma_generate_sample
-    >>> import statsmodels.api as sm
-    >>> import numpy as np
-
-    >>> arparams = np.array([.75, -.25])
-    >>> maparams = np.array([.65, .35])
-    >>> arparams = np.r_[1, -arparams]
-    >>> maparam = np.r_[1, maparams]
-    >>> nobs = 250
-    >>> np.random.seed(2014)
-    >>> y = arma_generate_sample(arparams, maparams, nobs)
-    >>> res = sm.tsa.arma_order_select_ic(y, ic=["aic", "bic"], trend="n")
-    >>> res.aic_min_order
-    >>> res.bic_min_order
-    """
-    max_ar = int_like(max_ar, "max_ar")
-    max_ma = int_like(max_ma, "max_ma")
-    trend = string_like(trend, "trend", options=("n", "c"))
-    model_kw = dict_like(model_kw, "model_kw", optional=True)
-    fit_kw = dict_like(fit_kw, "fit_kw", optional=True)
-
-    ar_range = [i for i in range(max_ar + 1)]
-    ma_range = [i for i in range(max_ma + 1)]
-    if isinstance(ic, str):
-        ic = [ic]
-    elif not isinstance(ic, (list, tuple)):
-        raise ValueError("Need a list or a tuple for ic if not a string.")
-
-    results = np.zeros((len(ic), max_ar + 1, max_ma + 1))
-    model_kw = {} if model_kw is None else model_kw
-    fit_kw = {} if fit_kw is None else fit_kw
-    y_arr = array_like(y, "y", contiguous=True)
-    for ar in ar_range:
-        for ma in ma_range:
-            mod = _safe_arma_fit(y_arr, (ar, 0, ma), model_kw, trend, fit_kw)
-            if mod is None:
-                results[:, ar, ma] = np.nan
-                continue
-
-            for i, criteria in enumerate(ic):
-                results[i, ar, ma] = getattr(mod, criteria)
-
-    dfs = [pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results]
-
-    res = dict(zip(ic, dfs))
-
-    # add the minimums to the results dict
-    min_res = {}
-    for i, result in res.items():
-        delta = np.ascontiguousarray(np.abs(result.min().min() - result))
-        ncols = delta.shape[1]
-        loc = np.argmin(delta)
-        min_res.update({i + "_min_order": (loc // ncols, loc % ncols)})
-    res.update(min_res)
-
-    return Bunch(**res)
-
-
 def has_missing(data):
     """
     Returns True if "data" contains missing entries, otherwise False
@@ -2119,8 +1987,6 @@ look-up table. The actual p-value is {direction} than the p-value returned.
     crit_dict = {"10%": crit[0], "5%": crit[1], "2.5%": crit[2], "1%": crit[3]}
 
     if store:
-        from statsmodels.stats.diagnostic import ResultsStore
-
         rstore = ResultsStore()
         rstore.lags = nlags
         rstore.nobs = nobs
@@ -2291,8 +2157,6 @@ look-up table. The actual p-value is {direction} than the p-value returned.
     }
 
     if store:
-        from statsmodels.stats.diagnostic import ResultsStore
-
         rstore = ResultsStore()
         rstore.nobs = nobs
 
@@ -2716,285 +2580,3 @@ class ZivotAndrewsUnitRoot:
 
 zivot_andrews = ZivotAndrewsUnitRoot()
 zivot_andrews.__doc__ = zivot_andrews.run.__doc__
-
-
-class LeybourneMcCabeStationarity:
-    """
-    Class wrapper for Leybourne-McCabe stationarity test
-    """
-
-    def __init__(self):
-        """
-        Asymptotic critical values for the two different models specified
-        for the Leybourne-McCabe stationarity test. Asymptotic CVs are the
-        same as the asymptotic CVs for the KPSS stationarity test.
-
-        Notes
-        -----
-        The p-values are generated through Monte Carlo simulation using
-        1,000,000 replications and 10,000 data points.
-        """
-        self.__leybourne_critical_values = {
-            # constant-only model
-            "c": statsmodels.tsa._leybourne.c,
-            # constant-trend model
-            "ct": statsmodels.tsa._leybourne.ct,
-        }
-
-    def __leybourne_crit(self, stat, model="c"):
-        """
-        Linear interpolation for Leybourne p-values and critical values
-
-        Parameters
-        ----------
-        stat : float
-            The Leybourne-McCabe test statistic
-        model : {'c','ct'}
-            The model used when computing the test statistic. 'c' is default.
-
-        Returns
-        -------
-        pvalue : float
-            The interpolated p-value
-        cvdict : dict
-            Critical values for the test statistic at the 1%, 5%, and 10%
-            levels
-
-        Notes
-        -----
-        The p-values are linear interpolated from the quantiles of the
-        simulated Leybourne-McCabe (KPSS) test statistic distribution
-        """
-        table = self.__leybourne_critical_values[model]
-        # reverse the order
-        y = table[:, 0]
-        x = table[:, 1]
-        # LM cv table contains quantiles multiplied by 100
-        pvalue = np.interp(stat, x, y) / 100.0
-        cv = [1.0, 5.0, 10.0]
-        crit_value = np.interp(cv, np.flip(y), np.flip(x))
-        cvdict = {"1%": crit_value[0], "5%": crit_value[1], "10%": crit_value[2]}
-        return pvalue, cvdict
-
-    def _tsls_arima(self, x, arlags, model):
-        """
-        Two-stage least squares approach for estimating ARIMA(p, 1, 1)
-        parameters as an alternative to MLE estimation in the case of
-        solver non-convergence
-
-        Parameters
-        ----------
-        x : array_like
-            data series
-        arlags : int
-            AR(p) order
-        model : {'c','ct'}
-            Constant and trend order to include in regression
-            * 'c'  : constant only
-            * 'ct' : constant and trend
-
-        Returns
-        -------
-        arparams : int
-            AR(1) coefficient plus constant
-        theta : int
-            MA(1) coefficient
-        olsfit.resid : ndarray
-            residuals from second-stage regression
-        """
-        endog = np.diff(x, axis=0)
-        exog = lagmat(endog, arlags, trim="both")
-        # add constant if requested
-        if model == "ct":
-            exog = add_constant(exog)
-        # remove extra terms from front of endog
-        endog = endog[arlags:]
-        if arlags > 0:
-            resids = lagmat(OLS(endog, exog).fit().resid, 1, trim="forward")
-        else:
-            resids = lagmat(-endog, 1, trim="forward")
-        # add negated residuals column to exog as MA(1) term
-        exog = np.append(exog, -resids, axis=1)
-        olsfit = OLS(endog, exog).fit()
-        if model == "ct":
-            arparams = olsfit.params[1 : (len(olsfit.params) - 1)]
-        else:
-            arparams = olsfit.params[0 : (len(olsfit.params) - 1)]
-        theta = olsfit.params[len(olsfit.params) - 1]
-        return arparams, theta, olsfit.resid
-
-    def _autolag(self, x):
-        """
-        Empirical method for Leybourne-McCabe auto AR lag detection.
-        Set number of AR lags equal to the first PACF falling within the
-        95% confidence interval. Maximum nuber of AR lags is limited to
-        the smaller of 10 or 1/2 series length. Minimum is zero lags.
-
-        Parameters
-        ----------
-        x : array_like
-            data series
-
-        Returns
-        -------
-        arlags : int
-            AR(p) order
-        """
-        p = pacf(x, nlags=min(len(x) // 2, 10), method="ols")
-        ci = 1.960 / np.sqrt(len(x))
-        arlags = max(
-            0, ([n - 1 for n, i in enumerate(p) if abs(i) < ci] + [len(p) - 1])[0]
-        )
-        return arlags
-
-    def run(self, x, arlags=1, regression="c", method="mle", varest="var94"):
-        """
-        Leybourne-McCabe stationarity test
-
-        The Leybourne-McCabe test can be used to test for stationarity in a
-        univariate process.
-
-        Parameters
-        ----------
-        x : array_like
-            data series
-        arlags : int
-            number of autoregressive terms to include, default=None
-        regression : {'c','ct'}
-            Constant and trend order to include in regression
-            * 'c'  : constant only (default)
-            * 'ct' : constant and trend
-        method : {'mle','ols'}
-            Method used to estimate ARIMA(p, 1, 1) filter model
-            * 'mle' : condition sum of squares maximum likelihood
-            * 'ols' : two-stage least squares (default)
-        varest : {'var94','var99'}
-            Method used for residual variance estimation
-            * 'var94' : method used in original Leybourne-McCabe paper (1994)
-                        (default)
-            * 'var99' : method used in follow-up paper (1999)
-
-        Returns
-        -------
-        lmstat : float
-            test statistic
-        pvalue : float
-            based on MC-derived critical values
-        arlags : int
-            AR(p) order used to create the filtered series
-        cvdict : dict
-            critical values for the test statistic at the 1%, 5%, and 10%
-            levels
-
-        Notes
-        -----
-        H0 = series is stationary
-
-        Basic process is to create a filtered series which removes the AR(p)
-        effects from the series under test followed by an auxiliary regression
-        similar to that of Kwiatkowski et al (1992). The AR(p) coefficients
-        are obtained by estimating an ARIMA(p, 1, 1) model. Two methods are
-        provided for ARIMA estimation: MLE and two-stage least squares.
-
-        Two methods are provided for residual variance estimation used in the
-        calculation of the test statistic. The first method ('var94') is the
-        mean of the squared residuals from the filtered regression. The second
-        method ('var99') is the MA(1) coefficient times the mean of the squared
-        residuals from the ARIMA(p, 1, 1) filtering model.
-
-        An empirical autolag procedure is provided. In this context, the number
-        of lags is equal to the number of AR(p) terms used in the filtering
-        step. The number of AR(p) terms is set equal to the to the first PACF
-        falling within the 95% confidence interval. Maximum nuber of AR lags is
-        limited to 1/2 series length.
-
-        References
-        ----------
-        Kwiatkowski, D., Phillips, P.C.B., Schmidt, P. & Shin, Y. (1992).
-        Testing the null hypothesis of stationarity against the alternative of
-        a unit root. Journal of Econometrics, 54: 159–178.
-
-        Leybourne, S.J., & McCabe, B.P.M. (1994). A consistent test for a
-        unit root. Journal of Business and Economic Statistics, 12: 157–166.
-
-        Leybourne, S.J., & McCabe, B.P.M. (1999). Modified stationarity tests
-        with data-dependent model-selection rules. Journal of Business and
-        Economic Statistics, 17: 264-270.
-
-        Schwert, G W. (1987). Effects of model specification on tests for unit
-        roots in macroeconomic data. Journal of Monetary Economics, 20: 73–103.
-        """
-        if regression not in ["c", "ct"]:
-            raise ValueError("LM: regression option '%s' not understood" % regression)
-        if method not in ["mle", "ols"]:
-            raise ValueError("LM: method option '%s' not understood" % method)
-        if varest not in ["var94", "var99"]:
-            raise ValueError("LM: varest option '%s' not understood" % varest)
-        x = np.asarray(x)
-        if x.ndim > 2 or (x.ndim == 2 and x.shape[1] != 1):
-            raise ValueError(
-                "LM: x must be a 1d array or a 2d array with a single column"
-            )
-        x = np.reshape(x, (-1, 1))
-        # determine AR order if not specified
-        if arlags is None:
-            arlags = self._autolag(x)
-        elif not isinstance(arlags, int) or arlags < 0 or arlags > int(len(x) / 2):
-            raise ValueError(
-                "LM: arlags must be an integer in range [0..%s]" % str(int(len(x) / 2))
-            )
-        # estimate the reduced ARIMA(p, 1, 1) model
-        if method == "mle":
-            if regression == "ct":
-                reg = "t"
-            else:
-                reg = None
-
-            from statsmodels.tsa.arima.model import ARIMA
-
-            arima = ARIMA(
-                x, order=(arlags, 1, 1), trend=reg, enforce_invertibility=False
-            )
-            arfit = arima.fit()
-            resids = arfit.resid
-            arcoeffs = []
-            if arlags > 0:
-                arcoeffs = arfit.arparams
-            theta = arfit.maparams[0]
-        else:
-            arcoeffs, theta, resids = self._tsls_arima(x, arlags, model=regression)
-        # variance estimator from (1999) LM paper
-        var99 = abs(theta * np.sum(resids**2) / len(resids))
-        # create the filtered series:
-        #   z(t) = x(t) - arcoeffs[0]*x(t-1) - ... - arcoeffs[p-1]*x(t-p)
-        z = np.full(len(x) - arlags, np.inf)
-        for i in range(len(z)):
-            z[i] = x[i + arlags, 0]
-            for j in range(len(arcoeffs)):
-                z[i] -= arcoeffs[j] * x[i + arlags - j - 1, 0]
-        # regress the filtered series against a constant and
-        # trend term (if requested)
-        if regression == "c":
-            resids = z - z.mean()
-        else:
-            resids = OLS(z, add_constant(np.arange(1, len(z) + 1))).fit().resid
-        # variance estimator from (1994) LM paper
-        var94 = np.sum(resids**2) / len(resids)
-        # compute test statistic with specified variance estimator
-        eta = np.sum(resids.cumsum() ** 2) / (len(resids) ** 2)
-        if varest == "var99":
-            lmstat = eta / var99
-        else:
-            lmstat = eta / var94
-        # calculate pval
-        lmpval, cvdict = self.__leybourne_crit(lmstat, regression)
-        return lmstat, lmpval, arlags, cvdict
-
-    def __call__(self, x, arlags=None, regression="c", method="ols", varest="var94"):
-        return self.run(
-            x, arlags=arlags, regression=regression, method=method, varest=varest
-        )
-
-
-leybourne = LeybourneMcCabeStationarity()
-leybourne.__doc__ = leybourne.run.__doc__

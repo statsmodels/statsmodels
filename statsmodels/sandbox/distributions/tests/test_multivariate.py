@@ -3,10 +3,12 @@ Created on Sat Apr 16 15:02:13 2011
 @author: Josef Perktold
 """
 import numpy as np
-from numpy.testing import assert_almost_equal,  assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
 
 from statsmodels.sandbox.distributions.multivariate import (
-    mvstdtprob, mvstdnormcdf)
+    mvstdnormcdf,
+    mvstdtprob,
+)
 from statsmodels.sandbox.distributions.mv_normal import MVT, MVNormal
 
 
@@ -74,7 +76,7 @@ class Test_MVN_MVT_prob:
         assert_allclose(probmvn_R, probmvn, atol=1e-4)
 
     def test_mvn_mvt_4(self):
-        a, bl = self.a, self.b
+        a = self.a
         df = self.df
         corr2 = self.corr2
 
@@ -90,7 +92,6 @@ class Test_MVN_MVT_prob:
                                          maxpts=100000, abseps=1e-5), 4)
 
     def test_mvn_mvt_5(self):
-        a, bl = self.a, self.b
         df = self.df
         corr2 = self.corr2
 
@@ -109,7 +110,6 @@ class TestMVDistributions:
 
     @classmethod
     def setup_class(cls):
-        covx = np.array([[1.0, 0.5], [0.5, 1.0]])
         mu3 = [-1, 0., 2.]
         cov3 = np.array([[ 1.  ,  0.5 ,  0.75],
                          [ 0.5 ,  1.5 ,  0.6 ],

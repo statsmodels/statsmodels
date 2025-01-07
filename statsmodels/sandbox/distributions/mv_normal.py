@@ -147,6 +147,7 @@ import numpy as np
 from scipy import special
 
 from statsmodels.sandbox.distributions.multivariate import mvstdtprob
+
 from .extras import mvnormcdf
 
 
@@ -368,11 +369,13 @@ class BivariateNormal:
         limits currently hardcoded
 
         '''
-        fun = lambda x : self.logpdf(x) - other.logpdf(x)
+        def fun(x):
+            return self.logpdf(x) - other.logpdf(x)
         return self.expect(fun)
 
     def kl_mc(self, other, size=500000):
-        fun = lambda x : self.logpdf(x) - other.logpdf(x)
+        def fun(x):
+            return self.logpdf(x) - other.logpdf(x)
         rvs = self.rvs(size=size)
         return fun(rvs).mean()
 
@@ -1203,7 +1206,8 @@ if __name__ == '__main__':
         print(bvn.cdf([0,0]))
         bvn1 = BivariateNormal(mu, np.eye(2))
         bvn2 = BivariateNormal(mu, 4*np.eye(2))
-        fun = lambda x : np.log(bvn1.pdf(x)) - np.log(bvn.pdf(x))
+        def fun(x):
+            return np.log(bvn1.pdf(x)) - np.log(bvn.pdf(x))
         print(bvn1.expect(fun))
         print(bvn1.kl(bvn2), bvn1.kl_mc(bvn2))
         print(bvn2.kl(bvn1), bvn2.kl_mc(bvn1))
@@ -1243,7 +1247,8 @@ if __name__ == '__main__':
         assert_array_almost_equal( mvn3c.pdf(cov3), r_val, decimal = 16)
 
         mvn3b = MVNormal((0,0,0), 1)
-        fun = lambda x : np.log(mvn3.pdf(x)) - np.log(mvn3b.pdf(x))
+        def fun(x):
+            return np.log(mvn3.pdf(x)) - np.log(mvn3b.pdf(x))
         print(mvn3.expect_mc(fun))
         print(mvn3.expect_mc(fun, size=200000))
 

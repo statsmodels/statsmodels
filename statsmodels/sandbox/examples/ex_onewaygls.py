@@ -7,6 +7,7 @@ Author: josef-pktd
 
 import numpy as np
 from scipy import stats
+
 #from numpy.testing import assert_almost_equal
 import statsmodels.api as sm
 from statsmodels.sandbox.regression.onewaygls import OneWayLS
@@ -61,13 +62,13 @@ def print_results(res):
     ft = res.ftest_summary()
     #print ft[0]  #skip because table is nicer
     print('\nTable of F-tests for overall or pairwise equality of coefficients')
-##    print 'hypothesis F-statistic         p-value  df_denom df_num  reject'
-##    for row in ft[1]:
-##        print row,
-##        if row[1][1]<0.05:
-##            print '*'
-##        else:
-##            print ''
+    # print 'hypothesis F-statistic         p-value  df_denom df_num  reject'
+    for row in ft[1]:
+        val = str(row)
+        if row[1][1]<0.05:
+            print(f'{val}*')
+        else:
+            print(val)
     from statsmodels.iolib import SimpleTable
     print(SimpleTable([([f'{row[0]!r}']
                         + list(row[1])
@@ -106,7 +107,6 @@ def print_results2(res):
     groupind = res.groups
     #res.fitjoint()  #not really necessary, because called by ftest_summary
     ft = res.ftest_summary()
-    txt = ''
     #print ft[0]  #skip because table is nicer
     templ = \
 '''Table of F-tests for overall or pairwise equality of coefficients'

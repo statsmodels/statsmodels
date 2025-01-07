@@ -46,14 +46,17 @@ benchmark against the parametric GLM results.
 # NOTE: example script is now in examples folder
 #update: I did some of the above, see module docstring
 
+import warnings
+
 import numpy as np
 
 from statsmodels.genmod import families
-from statsmodels.sandbox.nonparametric.smoothers import PolySmoother
 from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.tools.sm_exceptions import IterationLimitWarning, iteration_limit_doc
-
-import warnings
+from statsmodels.sandbox.nonparametric.smoothers import PolySmoother
+from statsmodels.tools.sm_exceptions import (
+    IterationLimitWarning,
+    iteration_limit_doc,
+)
 
 DEBUG = False
 
@@ -83,7 +86,7 @@ def default_smoother(x, s_arg=None):
             nknots = 2**(a3 + (a4 - a3) * (n - 800)/2400.)
         else:
             nknots = 200 + (n - 3200.)**0.2
-    knots = _x[np.linspace(0, n-1, nknots).astype(np.int32)]
+    _x[np.linspace(0, n-1, nknots).astype(np.int32)]
 
     #s = SmoothingSpline(knots, x=x.copy())
     #when I set order=2, I get nans in the GAM prediction

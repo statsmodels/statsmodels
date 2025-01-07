@@ -24,9 +24,11 @@ two-sided tests basend on t or normal distribution use the absolute value.
 
 '''
 from statsmodels.compat.python import lrange
+
 import numpy as np
 
 from statsmodels.iolib.table import SimpleTable
+
 
 #copied from stattools
 class StatTestMC:
@@ -230,11 +232,11 @@ class StatTestMC:
 
         if self.mcres.ndim == 2:
             if idx is not None:
-                mcres = self.mcres[:,idx]
+                self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')
         else:
-            mcres = self.mcres
+            pass
 
         self.frac = frac = np.asarray(frac)
 
@@ -329,11 +331,12 @@ class StatTestMC:
 
 
         import matplotlib.pyplot as plt
+
         #I do not want to figure this out now
 #        if ax=None:
 #            fig = plt.figure()
 #            ax = fig.addaxis()
-        fig = plt.figure()
+        plt.figure()
         plt.hist(mcres, bins=bins, normed=True, **kwds[0])
         plt.plot(lsp, distpdf(lsp), 'r', **kwds[1])
 

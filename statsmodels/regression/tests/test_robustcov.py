@@ -69,7 +69,7 @@ class CheckOLSRobust:
         res1 = self.res1
         res2 = self.res2
         rtol = getattr(self, "rtol", 1e-10)
-        rtolh = getattr(self, "rtolh", 1e-12)
+        getattr(self, "rtolh", 1e-12)
         mat = np.eye(len(res1.params))
         tt = res1.t_test(mat, cov_p=self.cov_robust)
         # has 'effect', 'pvalue', 'sd', 'tvalue'
@@ -450,7 +450,7 @@ class TestOLSRobustCluster2Input(
 
         long_groups = self.groups.reshape(-1, 1)
         groups2 = pd.DataFrame(np.hstack((long_groups, long_groups)))
-        res = self.res1.get_robustcov_results(
+        self.res1.get_robustcov_results(
             "cluster", groups=groups2, use_correction=True, use_t=True
         )
 

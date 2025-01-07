@@ -195,10 +195,10 @@ def getnodes(tree):
             adeg = []
 
         for st in subtree:
-            b, l, d = getnodes(st)
-            ab.extend(b)
-            al.extend(l)
-            adeg.extend(d)
+            b_val, l_val, d_val = getnodes(st)
+            ab.extend(b_val)
+            al.extend(l_val)
+            adeg.extend(d_val)
         return ab, al, adeg
     return [], [tree], []
 
@@ -329,9 +329,7 @@ class RU2NMNL:
 
         #0.5#2 #placeholder for now
         #should be tau=self.taus[name] but as part of params for optimization
-        endog = self.endog
         datadict = self.datadict
-        paramsind = self.paramsind
         branchsum = self.branchsum
 
 
@@ -378,7 +376,7 @@ class RU2NMNL:
                     #similar to this is now also in return branch values
                     #depends on what will be returned
                     tmpsum += self.probs[k]
-                    iv = np.log(tmpsum)
+                    np.log(tmpsum)
 
                 for k in self.branchleaves[name]:
                     self.probstxt[k] = self.probstxt[k] + ['*' + name + '-prob' +
@@ -443,7 +441,8 @@ class RU2NMNL:
                     tau = self.recursionparams[self.paramsidx['tau_'+name]]
                 else:
                     tau = 1
-                iv = branchxb + tau * branchsum #which tau: name or parent???
+                # Unused result commented out
+                # branchxb + tau * branchsum #which tau: name or parent???
                 return branchxb + tau * np.log(branchsum) #iv
                 #branchsum is now IV, TODO: add effect of branch variables
 

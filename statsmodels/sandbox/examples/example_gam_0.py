@@ -10,22 +10,22 @@ Note: uncomment plt.show() to display graphs
 
 import time
 
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.random as R
-import matplotlib.pyplot as plt
 import scipy.stats
 
-from statsmodels.sandbox.gam import AdditiveModel
-from statsmodels.sandbox.gam import Model as GAM #?
 from statsmodels.genmod import families
-
+from statsmodels.sandbox.gam import AdditiveModel, Model as GAM  # ?
 
 example = 2 #3  # 1,2 or 3
 
 #np.random.seed(987654)
 
-standardize = lambda x: (x - x.mean()) / x.std()
-demean = lambda x: (x - x.mean())
+def standardize(x):
+    return (x - x.mean()) / x.std()
+def demean(x):
+    return x - x.mean()
 nobs = 500
 lb, ub = -1., 1. #for Poisson
 #lb, ub = -0.75, 2 #0.75 #for Binomial
@@ -40,8 +40,10 @@ x2 = x2 + np.exp(x2/2.)
 #x2 = np.log(x2-x2.min()+0.1)
 y = 0.5 * R.uniform(lb, ub, nobs)   #R.standard_normal((nobs,))
 
-f1 = lambda x1: (2*x1 - 0.5 * x1**2  - 0.75 * x1**3) # + 0.1 * np.exp(-x1/4.))
-f2 = lambda x2: (x2 - 1* x2**2) # - 0.75 * np.exp(x2))
+def f1(x1):
+    return 2 * x1 - 0.5 * x1 ** 2 - 0.75 * x1 ** 3 # + 0.1 * np.exp(-x1/4.))
+def f2(x2):
+    return x2 - 1 * x2 ** 2 # - 0.75 * np.exp(x2))
 z = standardize(f1(x1)) + standardize(f2(x2))
 z = standardize(z) + 1 # 0.1
 #try this

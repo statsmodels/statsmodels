@@ -1,6 +1,7 @@
 #### Convenience Functions to be moved to kerneltools ####
 import numpy as np
 
+
 def forrt(X, m=None):
     """
     RFFT with order like Munro (1976) FORTT routine.
@@ -45,11 +46,8 @@ def counts(x, v):
     Using np.digitize and np.bincount
     """
     idx = np.digitize(x, v)
-    try: # numpy 1.6
-        return np.bincount(idx, minlength=len(v))
-    except:
-        bc = np.bincount(idx)
-        return np.r_[bc, np.zeros(len(v) - len(bc))]
+    return np.bincount(idx, minlength=len(v))
+
 
 def kdesum(x, axis=0):
     return np.asarray([np.sum(x[i] - x, axis) for i in range(len(x))])

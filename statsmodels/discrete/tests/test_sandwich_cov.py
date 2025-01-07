@@ -6,23 +6,21 @@ Author: Josef Perktold
 """
 
 import os
+
 import numpy as np
+from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.base.covtype import get_robustcov_results
 import statsmodels.discrete.discrete_model as smd
-from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 from statsmodels.genmod.families import links
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
-from statsmodels.base.covtype import get_robustcov_results
 import statsmodels.stats.sandwich_covariance as sw
-from statsmodels.tools.tools import add_constant
-
-
-from numpy.testing import assert_allclose, assert_equal, assert_
 import statsmodels.tools._testing as smt
-
+from statsmodels.tools.tools import add_constant
 
 # get data and results as module global for now, TODO: move to class
 from .results import results_count_robust_cluster as results_st
@@ -120,17 +118,17 @@ class TestPoissonCluGeneric(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_clu
         mod = smd.Poisson(endog, exog)
-        cls.res1 = res1 = mod.fit(disp=False)
+        cls.res1 = mod.fit(disp=False)
 
         debug = False
         if debug:
             # for debugging
             cls.bse_nonrobust = cls.res1.bse.copy()
-            cls.res1 = res1 = mod.fit(disp=False)
+            cls.res1 = mod.fit(disp=False)
             cls.get_robust_clu()
             cls.res3 = cls.res1
             cls.bse_rob3 = cls.bse_rob.copy()
-            cls.res1 = res1 = mod.fit(disp=False)
+            cls.res1 = mod.fit(disp=False)
 
         from statsmodels.base.covtype import get_robustcov_results
 
@@ -253,7 +251,7 @@ class TestPoissonCluExposureGeneric(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_exposure_clu #nonrobust
         mod = smd.Poisson(endog, exog, exposure=exposure)
-        cls.res1 = res1 = mod.fit(disp=False)
+        cls.res1 = mod.fit(disp=False)
 
         from statsmodels.base.covtype import get_robustcov_results
 
@@ -286,7 +284,7 @@ class TestGLMPoissonCluGeneric(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_clu
         mod = GLM(endog, exog, family=families.Poisson())
-        cls.res1 = res1 = mod.fit()
+        cls.res1 = mod.fit()
 
         get_robustcov_results(cls.res1._results, 'cluster',
                                                   groups=group,
@@ -321,16 +319,18 @@ class TestGLMPoissonCluFit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_clu
         mod = GLM(endog, exog, family=families.Poisson())
-        cls.res1 = res1 = mod.fit(cov_type='cluster',
-                                  cov_kwds=dict(groups=group,
-                                                use_correction=True,
-                                                df_correction=True),  #TODO has no effect
-                                  use_t=False, #True,
-                                  )
+        cls.res1 = mod.fit(
+            cov_type="cluster",
+            cov_kwds=dict(
+                groups=group, use_correction=True, df_correction=True
+            ),  # TODO has no effect
+            use_t=False,  # True,
+        )
 
         # The model results, t_test, ... should also work without
         # normalized_cov_params, see #2209
         # Note: we cannot set on the wrapper res1, we need res1._results
+
         cls.res1._results.normalized_cov_params = None
 
         cls.bse_rob = cls.res1.bse
@@ -391,7 +391,7 @@ class TestNegbinCluGeneric(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_negbin_clu
         mod = smd.NegativeBinomial(endog, exog)
-        cls.res1 = res1 = mod.fit(disp=False, gtol=1e-7)
+        cls.res1 = mod.fit(disp=False, gtol=1e-7)
 
         get_robustcov_results(cls.res1._results, 'cluster',
                                                   groups=group,
@@ -410,7 +410,7 @@ class TestNegbinCluFit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_negbin_clu
         mod = smd.NegativeBinomial(endog, exog)
-        cls.res1 = res1 = mod.fit(disp=False, cov_type='cluster',
+        cls.res1 = mod.fit(disp=False, cov_type='cluster',
                                   cov_kwds=dict(groups=group,
                                                 use_correction=True,
                                                 df_correction=True),  #TODO has no effect
@@ -425,14 +425,16 @@ class TestNegbinCluExposureFit(CheckCountRobustMixin):
 
     @classmethod
     def setup_class(cls):
-        cls.res2 = results_st.results_negbin_exposure_clu #nonrobust
+        cls.res2 = results_st.results_negbin_exposure_clu  # nonrobust
         mod = smd.NegativeBinomial(endog, exog, exposure=exposure)
-        cls.res1 = res1 = mod.fit(disp=False, cov_type='cluster',
-                                  cov_kwds=dict(groups=group,
-                                                use_correction=True,
-                                                df_correction=True),  #TODO has no effect
-                                  use_t=False, #True,
-                                  )
+        cls.res1 = mod.fit(
+            disp=False,
+            cov_type="cluster",
+            cov_kwds=dict(
+                groups=group, use_correction=True, df_correction=True
+            ),  # TODO has no effect
+            use_t=False,  # True,
+        )
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1)
@@ -737,7 +739,7 @@ class TestGLMGaussHACUniform2(TestGLMGaussHACUniform):
         # check kernel as string
         mod2 = OLS(endog, exog)
         kwds2 = {'kernel': 'uniform', 'maxlags': 2}
-        cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds)
+        cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds2)
 
 
 class TestGLMGaussHACPanel(CheckDiscreteGLM):

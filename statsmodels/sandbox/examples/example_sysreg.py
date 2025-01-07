@@ -150,7 +150,7 @@ if run_greene:
     try:
         data3 = np.genfromtxt('/home/skipper/school/MetricsII/Greene \
 TableF5-1.txt', names=True)
-    except:
+    except Exception:
         raise ValueError("Based on Greene TableF5-1.  You should download it "
                          "from his web site and edit this script accordingly.")
 

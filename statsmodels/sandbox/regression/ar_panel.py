@@ -30,7 +30,7 @@ from statsmodels.regression.linear_model import OLS
 class PanelAR1:
     def __init__(self, endog, exog=None, groups=None):
         #take this from a super class, no checking is done here
-        nobs = endog.shape[0]
+        endog.shape[0]
         self.endog = endog
         if exog is not None:
             self.exog = exog

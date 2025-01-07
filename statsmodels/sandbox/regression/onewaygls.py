@@ -52,6 +52,7 @@ Author: josef-pktd
 """
 import numpy as np
 from scipy import stats
+
 from statsmodels.regression.linear_model import OLS, WLS
 
 
@@ -292,7 +293,6 @@ class OneWayLS:
             summtable = self.summarytable
         else:
             _, summtable = res.ftest_summary()
-        txt = ''
         #print ft[0]  #skip because table is nicer
         templ = \
 '''Table of F-tests for overall or pairwise equality of coefficients'

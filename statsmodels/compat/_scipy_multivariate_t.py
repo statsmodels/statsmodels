@@ -4,12 +4,10 @@
 #
 
 import numpy as np
-import scipy.linalg
 from scipy._lib import doccer
-from scipy.special import gammaln
-
 from scipy._lib._util import check_random_state
-
+import scipy.linalg
+from scipy.special import gammaln
 from scipy.stats import mvn
 
 _LOG_2PI = np.log(2 * np.pi)
@@ -539,8 +537,8 @@ class multivariate_normal_gen(multi_rv_generic):
         """
         lower = np.full(mean.shape, -np.inf)
         # mvnun expects 1-d arguments, so process points sequentially
-        func1d = lambda x_slice: mvn.mvnun(lower, x_slice, mean, cov,
-                                           maxpts, abseps, releps)[0]
+        def func1d(x_slice):
+            return mvn.mvnun(lower, x_slice, mean, cov, maxpts, abseps, releps)[0]
         out = np.apply_along_axis(func1d, -1, x)
         return _squeeze_output(out)
 

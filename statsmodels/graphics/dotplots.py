@@ -128,7 +128,10 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
     # Convert to numpy arrays if that is not what we are given.
     points = np.asarray(points)
-    asarray_or_none = lambda x : None if x is None else np.asarray(x)
+
+    def asarray_or_none(x):
+        return None if x is None else np.asarray(x)
+
     intervals = asarray_or_none(intervals)
     lines = asarray_or_none(lines)
     sections = asarray_or_none(sections)
@@ -169,7 +172,8 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
         nsect_title = nsect if nsect > 1 else 0
 
     # The total vertical space devoted to section titles.
-    section_space_total = section_title_space * nsect_title
+    # Unused, commented out
+    # section_title_space * nsect_title
 
     # Add a bit of room so that points that fall at the axis limits
     # are not cut in half.

@@ -13,9 +13,9 @@ Modified: Kevin Sheppard
 """
 from statsmodels.compat.pandas import deprecate_kwarg
 
+from collections.abc import Hashable, Sequence
 import contextlib
 from typing import Any
-from collections.abc import Hashable, Sequence
 import warnings
 
 import numpy as np
@@ -1325,10 +1325,10 @@ class ExponentialSmoothing(TimeSeriesModel):
             if damped
             else np.arange(1, h + 1 + 1)
         )
-        trended = {"mul": np.multiply, "add": np.add, None: lambda l, b: l}[
+        trended = {"mul": np.multiply, "add": np.add, None: lambda lvl, b: lvl}[
             trend
         ]
-        detrend = {"mul": np.divide, "add": np.subtract, None: lambda l, b: 0}[
+        detrend = {"mul": np.divide, "add": np.subtract, None: lambda lvl, b: 0}[
             trend
         ]
         dampen = {"mul": np.power, "add": np.multiply, None: lambda b, phi: 0}[

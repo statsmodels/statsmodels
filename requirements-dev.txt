@@ -21,3 +21,4 @@ pywinpty; os_name == "nt"
 # code quality
 flake8
 isort
+ruff

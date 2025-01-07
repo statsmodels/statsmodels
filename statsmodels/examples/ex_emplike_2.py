@@ -4,6 +4,7 @@ likelihood estimation and inference in linear regression models.
 """
 
 import numpy as np
+
 import statsmodels.api as sm
 
 # Let's generate some regression data
@@ -87,5 +88,5 @@ print(ci_beta2)
 # Finally, since we initiated an EL model, normal inference is not available
 try:
     originfit.conf_int()
-except:
+except Exception:
     print('No normal inference available')

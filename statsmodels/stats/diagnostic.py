@@ -38,6 +38,7 @@ from statsmodels.stats._lilliefors import (
     kstest_normal,
     lilliefors,
 )
+from statsmodels.stats._results_store import ResultsStore
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -102,11 +103,6 @@ def _check_nested_results(results_x, results_z):
     else:
         nested = nested or _check_nested_exog(z, x)
     return nested
-
-
-class ResultsStore:
-    def __str__(self):
-        return getattr(self, '_str', self.__class__.__name__)
 
 
 def compare_cox(results_x, results_z, store=False):
@@ -410,7 +406,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     10  214.106992  1.827374e-40
     """
     # Avoid cyclic import
-    from statsmodels.tsa.stattools import acf
+    from statsmodels.tsa.stattools._stattools import acf
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
     model_df = int_like(model_df, "model_df", optional=False)

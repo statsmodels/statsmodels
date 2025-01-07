@@ -657,12 +657,10 @@ class SVARResults(SVARProcess, VARResults):
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
         """
         neqs = self.neqs
-        mean = self.mean()
         k_ar = self.k_ar
         coefs = self.coefs
         sigma_u = self.sigma_u
         intercept = self.intercept
-        df_model = self.df_model
         nobs = self.nobs
 
         ma_coll = np.zeros((repl, steps + 1, neqs, neqs))

@@ -7,14 +7,21 @@ Author: Josef Perktold
 import warnings
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
-import scipy.sparse as sparse
+from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
+import scipy.sparse as sparse
 
 from statsmodels.stats.correlation_tools import (
-    corr_nearest, corr_clipped, cov_nearest,
-    _project_correlation_factors, corr_nearest_factor, _spg_optim,
-    corr_thresholded, cov_nearest_factor_homog, FactoredPSDMatrix)
+    FactoredPSDMatrix,
+    _project_correlation_factors,
+    _spg_optim,
+    corr_clipped,
+    corr_nearest,
+    corr_nearest_factor,
+    corr_thresholded,
+    cov_nearest,
+    cov_nearest_factor_homog,
+)
 from statsmodels.tools.testing import Holder
 
 
@@ -449,13 +456,8 @@ class Test_Factor:
 
     def test_corr_thresholded(self, reset_randomstate):
 
-        import datetime
-
-        t1 = datetime.datetime.now()
         X = np.random.normal(size=(2000,10))
         tcor = corr_thresholded(X, 0.2, max_elt=4e6)
-        t2 = datetime.datetime.now()
-        ss = (t2-t1).seconds
 
         fcor = np.corrcoef(X)
         fcor *= (np.abs(fcor) >= 0.2)

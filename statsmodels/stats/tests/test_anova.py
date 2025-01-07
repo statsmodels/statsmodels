@@ -1,10 +1,10 @@
 from io import StringIO
 
 import numpy as np
-
-from statsmodels.stats.anova import anova_lm
-from statsmodels.formula.api import ols
 from pandas import read_csv
+
+from statsmodels.formula.api import ols
+from statsmodels.stats.anova import anova_lm
 
 kidney_table = StringIO("""Days      Duration Weight ID
     0.0      1      1      1
@@ -84,7 +84,7 @@ class TestAnovaLM:
     def test_results(self):
         Df = np.array([1, 2, 2, 54])
         sum_sq = np.array([2.339693, 16.97129, 0.6356584, 28.9892])
-        mean_sq = np.array([2.339693, 8.485645, 0.3178292, 0.536837])
+        # mean_sq = np.array([2.339693, 8.485645, 0.3178292, 0.536837])
         f_value = np.array([4.358293, 15.80674, 0.5920404, np.nan])
         pr_f = np.array([0.0415617, 3.944502e-06, 0.5567479, np.nan])
 
@@ -107,7 +107,7 @@ class TestAnovaLMNoconstant:
     def test_results(self):
         Df = np.array([2, 2, 2, 54])
         sum_sq = np.array([158.6415227, 16.97129, 0.6356584, 28.9892])
-        mean_sq = np.array([79.3207613, 8.485645, 0.3178292, 0.536837])
+        # mean_sq = np.array([79.3207613, 8.485645, 0.3178292, 0.536837])
         f_value = np.array([147.7557648, 15.80674, 0.5920404, np.nan])
         pr_f = np.array([1.262324e-22, 3.944502e-06, 0.5567479, np.nan])
 
@@ -277,9 +277,9 @@ class TestAnova2HC0(TestAnovaLM):
         anova_ii = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
                                 data).fit()
 
-        Sum_Sq = np.array([
-             151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
-            ])
+        # Sum_Sq = np.array([
+        #      151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
+        #     ])
         Df = np.array([
              1, 2, 2, 51
             ])
@@ -304,9 +304,9 @@ class TestAnova2HC1(TestAnovaLM):
         anova_ii = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
                                 data).fit()
 
-        Sum_Sq = np.array([
-             151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
-            ])
+        # Sum_Sq = np.array([
+        #      151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
+        #     ])
         Df = np.array([
              1, 2, 2, 51
             ])
@@ -331,9 +331,9 @@ class TestAnova2HC2(TestAnovaLM):
         anova_ii = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
                                 data).fit()
 
-        Sum_Sq = np.array([
-             151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
-            ])
+        # Sum_Sq = np.array([
+        #      151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
+        #     ])
         Df = np.array([
              1, 2, 2, 51
             ])
@@ -359,9 +359,9 @@ class TestAnova2HC3(TestAnovaLM):
         anova_ii = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
                                 data).fit()
 
-        Sum_Sq = np.array([
-             151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
-            ])
+        # Sum_Sq = np.array([
+        #      151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
+        #     ])
         Df = np.array([
              1, 2, 2, 51
             ])
@@ -414,9 +414,9 @@ class TestAnova3HC0(TestAnovaLM):
         anova_iii = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
                                 data).fit()
 
-        Sum_Sq = np.array([
-             151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
-            ])
+        # Sum_Sq = np.array([
+        #      151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
+        #     ])
         Df = np.array([
              1, 1, 2, 2, 51
             ])
@@ -441,9 +441,9 @@ class TestAnova3HC1(TestAnovaLM):
         anova_iii = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
                                 data).fit()
 
-        Sum_Sq = np.array([
-             151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
-            ])
+        # Sum_Sq = np.array([
+        #      151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
+        #     ])
         Df = np.array([
              1, 1, 2, 2, 51
             ])
@@ -468,9 +468,9 @@ class TestAnova3HC2(TestAnovaLM):
         anova_iii = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
                                 data).fit()
 
-        Sum_Sq = np.array([
-             151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
-            ])
+        # Sum_Sq = np.array([
+        #      151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
+        #     ])
         Df = np.array([
              1, 1, 2, 2, 51
             ])
@@ -495,9 +495,9 @@ class TestAnova3HC3(TestAnovaLM):
         anova_iii = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
                                 data).fit()
 
-        Sum_Sq = np.array([
-             151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
-            ])
+        # Sum_Sq = np.array([
+        #      151.4065, 2.904723, 13.45718, 0.1905093, 27.60181
+        #     ])
         Df = np.array([
              1, 1, 2, 2, 51
             ])

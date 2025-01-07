@@ -4,18 +4,16 @@ Created on Wed Jul 28 08:28:04 2010
 Author: josef-pktd
 """
 import numpy as np
+from scipy import optimize, special, stats
 
-from scipy import stats, special, optimize
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.tools.numdiff import approx_hess
-
 #import for kstest based estimation
 #should be replace
 # FIXME: importing these patches scipy distribution classes in-place.
 #  Do not do this.
 import statsmodels.sandbox.distributions.sppatch  # noqa:F401
-
+from statsmodels.tools.numdiff import approx_hess
 
 #redefine some shortcuts
 np_log = np.log
@@ -226,7 +224,6 @@ class MyPareto(GenericLikelihoodModel):
         '''
         self.nobs = self.endog.shape[0]
         rvs = np.sort(self.endog)
-        rvsmin = rvs.min()
 
         def pareto_ks(loc, rvs):
             #start_scale = rvs.min() - loc # not used yet
@@ -238,7 +235,7 @@ class MyPareto(GenericLikelihoodModel):
         maxind = min(np.floor(self.nobs*0.95).astype(int), self.nobs-10)
         res = []
         for trimidx in range(self.nobs//2, maxind):
-            xmin = loc = rvs[trimidx]
+            loc = rvs[trimidx]
             res.append([trimidx, pareto_ks(loc-1e-10, rvs[trimidx:])])
         res = np.array(res)
         bestidx = res[np.argmin(res[:,1]),0].astype(int)

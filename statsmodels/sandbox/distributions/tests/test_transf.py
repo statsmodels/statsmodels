@@ -14,13 +14,18 @@ Warning: The algorithm does not converge.  Roundoff error is detected
   the best which can be obtained.
 array(2981.0032380193438)
 """
-import warnings # for silencing, see above...
+import warnings  # for silencing, see above...
+
 import numpy as np
 from numpy.testing import assert_almost_equal
-from scipy import stats, special
-from statsmodels.sandbox.distributions.extras import (
-    squarenormalg, absnormalg, negsquarenormalg, squaretg)
+from scipy import special, stats
 
+from statsmodels.sandbox.distributions.extras import (
+    absnormalg,
+    negsquarenormalg,
+    squarenormalg,
+    squaretg,
+)
 
 # some patches to scipy.stats.distributions so tests work and pass
 # this should be necessary only for older scipy
@@ -30,7 +35,7 @@ stats.distributions.rv_frozen.name = property(lambda self: self.dist.name)
 
 #patch f distribution, correct skew and maybe kurtosis
 def f_stats(self, dfn, dfd):
-    arr, where, inf, sqrt, nan = np.array, np.where, np.inf, np.sqrt, np.nan
+    arr, where, inf, _sqrt, nan = np.array, np.where, np.inf, np.sqrt, np.nan
     v2 = arr(dfd*1.0)
     v1 = arr(dfn*1.0)
     mu = where(v2 > 2, v2 / arr(v2 - 2), inf)
@@ -50,7 +55,7 @@ stats.f.__class__._stats = f_stats
 #correct kurtosis by subtracting 3 (Fisher)
 #after this it matches halfnorm for arg close to zero
 def foldnorm_stats(self, c):
-    arr, where, inf, sqrt, nan = np.array, np.where, np.inf, np.sqrt, np.nan
+    sqrt = np.sqrt
     exp = np.exp
     pi = np.pi
 
@@ -93,7 +98,6 @@ class Test_Transf2:
             (squaretg(10), stats.f(1, 10))
         ]      #try both frozen
 
-        l,s = 0.0, 1.0
         cls.ppfq = [0.1,0.5,0.9]
         cls.xx = [0.95,1.0,1.1]
         cls.nxx = [-0.95,-1.0,-1.1]

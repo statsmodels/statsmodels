@@ -3,11 +3,15 @@
 compares my implementations, stats.f_oneway and anova using statsmodels.OLS
 '''
 from statsmodels.compat.python import lmap
+
 import os
+
 import numpy as np
 from scipy import stats
-from statsmodels.tools.tools import add_constant
+
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.tools import add_constant
+
 from .try_ols_anova import data2dummy
 
 filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.dat',
@@ -27,7 +31,7 @@ def getnist(filename):
     with open(fname, encoding="utf-8") as fd:
         content = fd.read().split('\n')
 
-    data = [line.split() for line in content[60:]]
+    [line.split() for line in content[60:]]
     certified = [line.split() for line in content[40:48] if line]
     dataf = np.loadtxt(fname, skiprows=60)
     y,x = dataf.T

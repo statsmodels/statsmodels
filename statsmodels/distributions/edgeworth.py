@@ -2,9 +2,9 @@ import warnings
 
 import numpy as np
 from numpy.polynomial.hermite_e import HermiteE
+import scipy.special as special
 from scipy.special import factorial
 from scipy.stats import rv_continuous
-import scipy.special as special
 
 # TODO:
 # * actually solve (31) of Blinnikov & Moessner
@@ -188,7 +188,7 @@ class ExpandedNormal(rv_continuous):
         # scale cumulants by \sigma
         mu, sigma = cum[0], np.sqrt(cum[1])
         lam = np.asarray(cum)
-        for j, l in enumerate(lam):
+        for j in range(lam.shape[0]):
             lam[j] /= cum[1]**j
 
         coef = np.zeros(lam.size * 3 - 5)

@@ -19,7 +19,8 @@ class ResultsWrapper:
         return [x for x in dir(self._results)]
 
     def __getattribute__(self, attr):
-        get = lambda name: object.__getattribute__(self, name)
+        def get(name):
+            return object.__getattribute__(self, name)
 
         try:
             results = get('_results')

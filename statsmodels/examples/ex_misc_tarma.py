@@ -5,18 +5,21 @@ Created on Wed Jul 03 23:01:44 2013
 Author: Josef Perktold
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
-from statsmodels.tsa.arima_process import arma_generate_sample, ArmaProcess
 from statsmodels.miscmodels.tmodel import TArma
 from statsmodels.tsa.arima_model import ARMA
+from statsmodels.tsa.arima_process import ArmaProcess, arma_generate_sample
 from statsmodels.tsa.arma_mle import Arma
 
 nobs = 500
 ar = [1, -0.6, -0.1]
 ma = [1, 0.7]
-dist = lambda n: np.random.standard_t(3, size=n)
+
+def dist(n):
+    return np.random.standard_t(3, size=n)
+
 np.random.seed(8659567)
 x = arma_generate_sample(ar, ma, nobs, scale=1, distrvs=dist,
                          burnin=500)

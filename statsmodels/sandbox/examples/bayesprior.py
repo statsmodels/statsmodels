@@ -6,16 +6,16 @@
 try:
     import pymc
     pymc_installed = 1
-except:
+except ImportError:
     print("pymc not imported")
     pymc_installed = 0
 
-import numpy as np
 from matplotlib import pyplot as plt
-from scipy import stats, integrate
+import numpy as np
+from numpy import exp, log
+from scipy import integrate, stats
+from scipy.special import gammainc, gammaincinv, gammaln
 from scipy.stats import rv_continuous
-from scipy.special import gammaln, gammaincinv, gammainc
-from numpy import log,exp
 
 #np.random.seed(12345)
 

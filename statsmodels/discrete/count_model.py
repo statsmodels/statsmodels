@@ -1,24 +1,32 @@
 __all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson",
            "ZeroInflatedNegativeBinomialP"]
 
-import warnings
-import numpy as np
-import statsmodels.base.model as base
-import statsmodels.base.wrapper as wrap
-import statsmodels.regression.linear_model as lm
-from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
-                                                 Poisson, Logit, CountResults,
-                                                 L1CountResults, Probit,
-                                                 _discrete_results_docs,
-                                                 _validate_l1_method,
-                                                 GeneralizedPoisson,
-                                                 NegativeBinomialP)
-from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
-from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.compat.pandas import Appender
 
+import warnings
+
+import numpy as np
+
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.discrete.discrete_model import (
+    CountModel,
+    CountResults,
+    DiscreteModel,
+    GeneralizedPoisson,
+    L1CountResults,
+    Logit,
+    NegativeBinomialP,
+    Poisson,
+    Probit,
+    _discrete_results_docs,
+    _validate_l1_method,
+)
+from statsmodels.distributions import zigenpoisson, zinegbin, zipoisson
+import statsmodels.regression.linear_model as lm
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 _doc_zi_params = """
     exog_infl : array_like or None
@@ -182,7 +190,8 @@ class GenericZeroInflated(CountModel):
 
         if callback is None:
             # work around perfect separation callback #3895
-            callback = lambda *x: x
+            def callback(*x):
+                return x
 
         mlefit = super().fit(start_params=start_params,
                        maxiter=maxiter, disp=disp, method=method,
@@ -260,7 +269,8 @@ class GenericZeroInflated(CountModel):
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
 
-        mu = self.model_main.predict(params_main)
+        # Unused, commented out
+        # mu = self.model_main.predict(params_main)
 
         # TODO: need to allow for complex to use CS numerical derivatives
         dldp = np.zeros((self.exog.shape[0], self.k_exog), dtype=np.float64)
@@ -618,7 +628,8 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         y = self.endog
         w = self.model_infl.predict(params_infl)
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
-        score = self.score(params)
+        # Unused, commented out
+        # score = self.score(params)
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
 

@@ -103,8 +103,9 @@ def mvn_nloglike_obs(x, sigma):
     #logdetsigma = 2 * np.sum(np.log(np.diagonal(cholsigmainv)))
     x_whitened = np.dot(cholsigmainv, x)
 
-    #sigmainv = linalg.cholesky(sigma)
-    logdetsigma = np.log(np.linalg.det(sigma))
+    # Unused, commented out
+    # sigmainv = linalg.cholesky(sigma)
+    # logdetsigma = np.log(np.linalg.det(sigma))
 
     sigma2 = 1. # error variance is included in sigma
 

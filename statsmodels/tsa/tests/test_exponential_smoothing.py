@@ -1030,7 +1030,7 @@ def test_one_step_ahead(setup_model):
 
     pred1 = res.get_prediction(start=model2.nobs, end=model2.nobs,
                                simulate_repetitions=2)
-    pred2 = res.get_prediction(start=model2.nobs, end=model2.nobs + 1,
+    res.get_prediction(start=model2.nobs, end=model2.nobs + 1,
                                simulate_repetitions=2)
     df1 = pred1.summary_frame(alpha=0.05)
     df2 = pred1.summary_frame(alpha=0.05)

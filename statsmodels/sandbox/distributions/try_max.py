@@ -22,8 +22,6 @@ class MaxDist(stats.rv_continuous):
     def __init__(self, dist, n):
         self.dist = dist
         self.n = n
-        extradoc = 'maximumdistribution is the distribution of the ' \
-                   + 'maximum of n i.i.d. random variable'
         super().__init__(name='maxdist', a=dist.a, b=dist.b,
                          longname='A maximumdistribution',
                          # extradoc = extradoc

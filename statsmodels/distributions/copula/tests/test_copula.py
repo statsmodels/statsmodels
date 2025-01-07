@@ -5,10 +5,10 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-import warnings
 from statsmodels.compat.pytest import pytest_warns
-
 from statsmodels.compat.scipy import SP_LT_15
+
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_almost_equal
@@ -188,7 +188,8 @@ extrali = [
 def test_ev_copula(case):
     # check ev copulas, cdf and transform against R `evd` package
     ev_tr, v1, v2, args, res1 = case
-    res = copula_bv_ev([v1, v2], ev_tr, args=args)
+    # Smoke test
+    copula_bv_ev([v1, v2], ev_tr, args=args)
     # assert_allclose(res, res1, rtol=1e-13)
 
     # check derivatives of dependence function
