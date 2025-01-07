@@ -305,6 +305,25 @@ class TestProbitModel(CheckOrdinalModelMixin):
                     distr="probit",
                 )
 
+    def test_formula_eval_env(self):
+        def times_two(x):
+            return 2 * x
+
+        resp = self.resp
+        data = ds.df
+
+        formula = "apply ~ times_two(pared) + public + gpa - 1"
+        modf2 = OrderedModel.from_formula(formula,
+                                          data, distr='probit')
+        resf2 = modf2.fit(method='bfgs', disp=False)
+
+        # Transform original params to reflext rescale
+        trans_params = resp.params.copy()
+        trans_params["pared"] = trans_params["pared"] / 2
+        # Loose check that transformation worked
+        assert_allclose(resf2.params, trans_params , atol=1e-2)
+        assert "times_two(pared)" in resf2.model.exog_names
+
     def test_offset(self):
 
         resp = self.resp

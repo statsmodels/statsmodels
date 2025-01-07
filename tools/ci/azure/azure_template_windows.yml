@@ -41,9 +41,7 @@ jobs:
       python -m pip install --upgrade pip setuptools wheel
     displayName: 'Update essentials'
 
-  # TODO Remove hatchling and hatch-vcs after formulaic is 1.1.0
   - script: |
-      python -m pip install hatchling hatch-vcs
       python -m pip install -r requirements.txt
       python -m pip install -r requirements-dev.txt
     displayName: 'Install dependencies'

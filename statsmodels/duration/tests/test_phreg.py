@@ -160,6 +160,26 @@ class TestPHReg:
         assert_allclose(rslt1.bse, rslt2.bse)
         assert_allclose(rslt1.bse, rslt3.bse)
 
+    def test_formula_environment(self):
+        """Test that PHReg uses the right environment for formulas."""
+
+        def times_two(x):
+            return 2 * x
+
+        rng = np.random.default_rng(0)
+
+        exog = rng.uniform(size=100)
+        endog = np.exp(exog) * -np.log(rng.uniform(size=len(exog)))
+        data = pd.DataFrame({"endog": endog, "exog": exog})
+
+        result_direct = PHReg(endog, times_two(exog)).fit()
+
+        result_formula = PHReg.from_formula("endog ~ times_two(exog)", data=data).fit()
+
+        assert_allclose(result_direct.params, result_formula.params)
+        assert_allclose(result_direct.bse, result_formula.bse)
+
+
     def test_formula_cat_interactions(self):
 
         time = np.r_[1, 2, 3, 4, 5, 6, 7, 8, 9]

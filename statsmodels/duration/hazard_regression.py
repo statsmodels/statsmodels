@@ -20,6 +20,7 @@ import numpy as np
 
 from statsmodels.base import model
 import statsmodels.base.model as base
+from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools.decorators import cache_readonly
 
 _predict_docstring = """
@@ -423,7 +424,7 @@ class PHReg(model.LikelihoodModel):
             if term in ("0", "1"):
                 import warnings
                 warnings.warn("PHReg formulas should not include any '0' or '1' terms")
-
+        advance_eval_env(kwargs)
         mod = super().from_formula(formula, data,
                     status=status, entry=entry, strata=strata,
                     offset=offset, subset=subset, ties=ties,

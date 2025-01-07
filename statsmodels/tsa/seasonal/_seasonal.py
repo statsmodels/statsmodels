@@ -136,7 +136,14 @@ def seasonal_decompose(
     pfreq = period
     pw = PandasWrapper(x)
     if period is None:
-        pfreq = getattr(getattr(x, "index", None), "inferred_freq", None)
+        if isinstance(x, (pd.Series, pd.DataFrame)):
+            index = x.index
+            if isinstance(index, pd.PeriodIndex):
+                pfreq = index.freq
+            else:
+                pfreq = getattr(index, "freq", None) or getattr(
+                    index, "inferred_freq", None
+                )
 
     x = array_like(x, "x", maxdim=2)
     nobs = len(x)
