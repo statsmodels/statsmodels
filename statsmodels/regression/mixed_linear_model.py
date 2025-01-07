@@ -152,6 +152,7 @@ from scipy.stats.distributions import norm
 from statsmodels.base._penalties import Penalty
 import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools import data as data_tools
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
@@ -1020,7 +1021,6 @@ class MixedLM(base.LikelihoodModel):
             vcf = sorted(vc_formula.keys())
             mgr = FormulaManager()
             for vc_name in vcf:
-                # TODO: patsy migration
                 model_spec = mgr.get_spec(vc_formula[vc_name])
                 vc_names.append(vc_name)
                 evc_mats, evc_colnames = [], []
@@ -1044,6 +1044,7 @@ class MixedLM(base.LikelihoodModel):
         kwargs["exog_re"] = exog_re
         kwargs["exog_vc"] = exog_vc
         kwargs["groups"] = groups
+        advance_eval_env(kwargs)
         mod = super().from_formula(
             formula, data, *args, **kwargs)
 

@@ -1,12 +1,14 @@
-import numpy as np
 from collections import defaultdict
+
+import numpy as np
+
 import statsmodels.base.model as base
-from statsmodels.genmod import families
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.genmod.families import links
-from statsmodels.genmod.families import varfuncs
-import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula.formulatools import advance_eval_env
+from statsmodels.genmod import families
+from statsmodels.genmod.families import links, varfuncs
+from statsmodels.genmod.generalized_linear_model import GLM
+import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
 
 
@@ -329,7 +331,7 @@ class QIF(base.Model):
 
         if isinstance(groups, str):
             groups = data[groups]
-
+        advance_eval_env(kwargs)
         model = super().from_formula(
                    formula, data=data, subset=subset,
                    groups=groups, *args, **kwargs)

@@ -74,6 +74,12 @@ class TestBetaModel:
         model = "I(food/income) ~ income + persons"
         cls.income_fit = BetaModel.from_formula(model, income).fit()
 
+        def times_two(x):
+            return 2 * x
+
+        model = "I(food/income) ~ times_two(income) + persons"
+        cls.income_fit_eval_env = BetaModel.from_formula(model, income).fit()
+
         model = cls.model = "methylation ~ gender + CpG"
         mgr = FormulaManager()
         Z = cls.Z = mgr.get_matrices("~ age", methylation, pandas=False)
@@ -160,6 +166,15 @@ class TestBetaModel:
         resid = rslt.model.endog - mean
         assert_allclose(rslt.resid, resid, rtol=1e-12)
         assert_allclose(rslt.resid_pearson, resid / np.sqrt(var), rtol=1e-12)
+
+    def test_eval_env(self):
+        assert "times_two(income)" in self.income_fit_eval_env.params.index
+        # Loose check that the eval env scaler worked
+        assert_allclose(
+            self.income_fit.params["income"],
+            2 * self.income_fit_eval_env.params["times_two(income)"],
+            rtol=1e-02
+        )
 
 
 class TestBetaMeth():

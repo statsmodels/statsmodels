@@ -325,6 +325,21 @@ class TestMixedLM:
             data=df)
         result1 = model1.fit()
 
+        def times_two(x):
+            return 2 * x
+        model1_env = MixedLM.from_formula(
+            "y ~ times_two(x1) + x2",
+            groups=groups,
+            re_formula="0+z1+z2",
+            vc_formula=vcf,
+            data=df)
+        result1_env = model1_env.fit()
+        # Loose check that the evan env has worked
+        assert "times_two(x1)" in result1_env.model.exog_names
+        assert_allclose(
+            result1.params["x1"], 2*result1_env.params["times_two(x1)"], rtol=1e-3
+        )
+
         # Compare to R
         assert_allclose(
             result1.fe_params, [0.16527, 0.99911, 0.96217], rtol=1e-4)

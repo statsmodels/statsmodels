@@ -14,13 +14,14 @@ B Gillespie (2006).  Checking the assumptions in the Cox proportional
 hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 
 from statsmodels.base import model
 import statsmodels.base.model as base
+from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.compat.pandas import Appender
-
 
 _predict_docstring = """
     Returns predicted values from the proportional hazards
@@ -423,7 +424,7 @@ class PHReg(model.LikelihoodModel):
             if term in ("0", "1"):
                 import warnings
                 warnings.warn("PHReg formulas should not include any '0' or '1' terms")
-
+        advance_eval_env(kwargs)
         mod = super().from_formula(formula, data,
                     status=status, entry=entry, strata=strata,
                     offset=offset, subset=subset, ties=ties,
