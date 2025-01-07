@@ -5,6 +5,8 @@ from statsmodels.formula._manager import FormulaManager
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
 
+__all__ = ["handle_formula_data", "formula_handler", "advance_eval_env"]
+
 # this is a mutable object, so editing it should show up in the below
 formula_handler = {}
 
@@ -77,3 +79,21 @@ def make_hypotheses_matrices(model_results, test_formula):
     exog_names = model_results.model.exog_names
     lc = mgr.get_linear_constraints(test_formula, exog_names)
     return lc
+
+
+def advance_eval_env(kwargs):
+    """
+    Adjusts the keyword arguments for from_formula to account for the patsy
+    eval environment being passed down once on the stack. Adjustments are
+    made in place.
+    Parameters
+    ----------
+    kwargs : dict
+        The dictionary of keyword arguments passed to `from_formula`.
+    """
+
+    eval_env = kwargs.get("eval_env", None)
+    if eval_env is None:
+        kwargs["eval_env"] = 2
+    elif eval_env == -1:
+        kwargs["eval_env"] = FormulaManager().get_empty_eval_env()

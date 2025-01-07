@@ -40,6 +40,31 @@ def test_logit_1d():
     assert_allclose(result.bse, np.r_[1.295155], rtol=1e-5)
 
 
+def test_logit_formula():
+    """Test that ConditionalLogit uses the right environment for formulas."""
+
+    def times_two(x):
+        return 2 * x
+
+    groups = np.repeat([0, 1], 50)
+    exog = np.linspace(-2, 2, len(groups))
+
+    error = np.linspace(-1, 1, len(groups)) # Needed for within-group variance
+    logit_link = 1 / (1 + np.exp(exog + groups)) + error
+    endog = (logit_link > 0.5).astype(int)
+
+    data = pd.DataFrame({"exog": exog, "groups": groups, "endog": endog})
+
+    result_direct = ConditionalLogit(endog, times_two(exog), groups=groups).fit()
+
+    result_formula = ConditionalLogit.from_formula(
+        "endog ~ 0 + times_two(exog)", groups="groups", data=data
+    ).fit()
+
+    assert_allclose(result_direct.params, result_formula.params)
+    assert_allclose(result_direct.bse, result_formula.bse)
+
+
 def test_logit_2d():
 
     y = np.r_[0, 1, 0, 1, 0, 1, 0, 1, 1, 1]

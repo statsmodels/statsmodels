@@ -22,6 +22,7 @@ from statsmodels.base.model import (
 )
 import statsmodels.base.wrapper as wrap
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.genmod import families
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
@@ -151,7 +152,7 @@ class BetaModel(GenericLikelihoodModel):
             else:
                 Z = mgr.get_matrices(exog_precision_formula, data, pandas=False)
             kwargs['exog_precision'] = Z
-
+        advance_eval_env(kwargs)
         return super().from_formula(formula, data, *args,
                                     **kwargs)
 
