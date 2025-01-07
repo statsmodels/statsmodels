@@ -6,8 +6,10 @@ import numpy as np
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
-from statsmodels.discrete.discrete_model import (MultinomialResults,
-      MultinomialResultsWrapper)
+from statsmodels.discrete.discrete_model import (
+    MultinomialResults,
+    MultinomialResultsWrapper,
+)
 from scipy.special import logsumexp
 import collections
 import warnings
