@@ -617,23 +617,23 @@ class ConditionalMNLogit(_ConditionalModel):
             denomg = np.zeros((q, c)).T
 
             # Extract itertools.permutations(y) to the list
-            iter_ = list(itertools.permutations(y))
+            iter_ = np.array(list(itertools.permutations(y)))
 
-            # Exponential values of sums of selected elements.
-            # Calculation everything at once and get the required
-            # values in a loop by number 'p'.
+            #Instead of iterative exponential value of sums of
+            # selected elements and their product by selected
+            # elements from self.exog, we calculate them at
+            # once (exp_sum, exog_exp_multy).
             exp_sum = np.exp(np.sum(x[jj, iter_], axis=1))
             denom = np.sum(exp_sum)
 
-            iter_np = np.array(iter_)
-            ind_exog = np.arange(iter_np.shape[1], dtype=np.int64)
-            hist = len(iter_np)
-            mask = iter_np != 0
+            ind_exog = np.arange(iter_.shape[1], dtype=np.int32)
+            hist = len(iter_)
+            mask = iter_ != 0
             iexog = np.take(ind_exog, mask.nonzero()[1])
             iexog = iexog.reshape((hist, int(len(iexog) / hist)))
             ii_ = np.take(ii, iexog)
             exog_exp_multy = self.exog[ii_, :] * exp_sum[:, np.newaxis, np.newaxis]
-            ind_iter = iter_np[mask].reshape((hist, int(len(iter_np[mask]) / hist))) - 1
+            ind_iter = iter_[mask].reshape((hist, int(len(iter_[mask]) / hist))) - 1
             np.add.at(denomg, ind_iter, exog_exp_multy)
             denomg = denomg.T
 
