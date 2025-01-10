@@ -84,7 +84,9 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
     are less problematic. The weights downgrade the influence of
     points with large residuals. In the extreme case, points whose
     residuals are larger than 6 times the median absolute residual
-    are given weight 0.
+    are given weight 0. If during iterations, the median absolute
+    residual becomes less than 1e-7 (basically zero), iterations
+    are stopped as the algorithm becomes unstable.
 
     `delta` can be used to save computations. For each `x_i`, regressions
     are skipped for points closer than `delta`. The next regression is
