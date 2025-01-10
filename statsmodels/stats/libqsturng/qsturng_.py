@@ -498,7 +498,7 @@ def _select_ps(p):
         return .975, .990, .995
     elif p >= .95:
         return .950, .975, .990
-    elif p >= .9125:
+    elif p >= .900:
         return .900, .950, .975
     elif p >= .875:
         return .850, .900, .950
