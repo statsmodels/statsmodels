@@ -142,7 +142,7 @@ class SlicedInverseReg(_DimReductionRegression):
                 umat = np.dot(covx2a.T, jm)
                 umat += umat.T
                 umat = -np.dot(Qi, np.dot(umat, Qi))
-                fmat = np.dot(np.dot(covx, jm), qcv)
+                fmat = np.linalg.multi_dot([covx, jm, qcv])
                 fmat += np.dot(covxa, np.dot(umat, covxa.T))
                 fmat += np.dot(covxa, np.linalg.solve(Q, np.dot(jm.T, covx)))
                 ft[q*ndim + r] = fmat
