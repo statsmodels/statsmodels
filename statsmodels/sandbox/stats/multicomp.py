@@ -1051,14 +1051,24 @@ class MultiComparison:
         alpha : float, optional
             Value of FWER at which to calculate HSD.
         use_var : {"unequal", "equal"}
-            If ``use_var`` is "unequal", then degrees of freedom is
-            scalar, also known as Games-Howell Test.
+            If ``use_var`` is "equal", then the Tukey-hsd pvalues are returned.
+            Tukey-hsd assumes that (within) variances are the same across groups.
+            If ``use_var`` is "unequal", then the Games-Howell pvalues are
+            returned. This uses Welch's t-test for unequal variances with
+            Satterthwait's corrected degrees of freedom for each pairwise
+            comparison.
 
         Returns
         -------
         results : TukeyHSDResults instance
             A results class containing relevant data and some post-hoc
             calculations
+
+        Notes
+        -----
+
+        .. versionadded:: 0.15
+   `       The `use_var` keyword and option for Games-Howell test.
         """
         self.groupstats = GroupsStats(
             np.column_stack([self.data, self.groupintlab]), useranks=False
