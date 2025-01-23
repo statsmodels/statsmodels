@@ -646,6 +646,7 @@ class TukeyHSDResults:
         reject2=None,
         variance=None,
         pvalues=None,
+        alpha=None,
     ):
         self._multicomp = mc_object
         self._results_table = results_table
@@ -658,10 +659,21 @@ class TukeyHSDResults:
         self.reject2 = reject2
         self.variance = variance
         self.pvalues = pvalues
+        self.alpha = alpha
         # Taken out of _multicomp for ease of access for unknowledgeable users
         self.data = self._multicomp.data
         self.groups = self._multicomp.groups
         self.groupsunique = self._multicomp.groupsunique
+
+        if np.size(df_total) > 1:  # or should it be np.isscalar
+            # assume we have Games-Howell, unequal var case
+            self._qcrit_hsd = None
+        else:
+            self._qcrit_hsd = q_crit
+
+        nobs_group = self._multicomp.groupstats.groupnobs
+        self.df_total_hsd = np.sum(nobs_group - 1)
+
 
     def __str__(self):
         return str(self._results_table)
@@ -670,10 +682,32 @@ class TukeyHSDResults:
         """Summary table that can be printed"""
         return self._results_table
 
+    def _get_q_crit(self, hsd=True, alpha=None):
+        n_means = len(self.groupsunique)
+
+        if alpha is None:
+            alpha = self.alpha
+            use_attr = True
+
+        if hsd is True:
+            if use_attr and self._qcrit_hsd is not None:
+                q_crit = self._qcrit_hsd
+            else:  # compute it
+                q_crit = get_tukeyQcrit2(n_means, self.df_total_hsd, alpha=alpha)
+            if use_attr:
+                self._qcrit_hsd = q_crit
+        else:
+            raise NotImplementedError("not yet")
+
+        return q_crit
+
     def _simultaneous_ci(self):
         """Compute simultaneous confidence intervals for comparison of means."""
+
+        q_crit_hsd = self._get_q_crit(hsd=True)
+
         self.halfwidths = simultaneous_ci(
-            self.q_crit,
+            q_crit_hsd,
             self.variance,
             self._multicomp.groupstats.groupnobs,
             self._multicomp.pairindices,
@@ -1113,18 +1147,19 @@ class MultiComparison:
         )
 
         return TukeyHSDResults(
-            self,
+            self,  # mc_object, attached as _multicomp
             results_table,
-            res[5],
-            res[1],
-            res[2],
-            res[3],
-            res[4],
-            res[6],
-            res[7],
-            var_,
-            res[8],
-        )
+            res[5],  # q_crit, positional
+            reject=res[1],
+            meandiffs=res[2],
+            std_pairs=res[3],
+            confint=res[4],
+            df_total=res[6],
+            reject2=res[7],
+            variance=var_,
+            pvalues=res[8],
+            alpha=alpha,
+            )
 
 
 def rankdata(x):
