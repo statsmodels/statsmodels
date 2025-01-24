@@ -71,6 +71,7 @@ import math
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 from scipy import interpolate, stats
+import pandas as pd
 
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
@@ -647,6 +648,8 @@ class TukeyHSDResults:
         variance=None,
         pvalues=None,
         alpha=None,
+        group_t=None,
+        group_c=None,
     ):
         self._multicomp = mc_object
         self._results_table = results_table
@@ -660,6 +663,8 @@ class TukeyHSDResults:
         self.variance = variance
         self.pvalues = pvalues
         self.alpha = alpha
+        self.group_t = group_t
+        self.group_c = group_c
         # Taken out of _multicomp for ease of access for unknowledgeable users
         self.data = self._multicomp.data
         self.groups = self._multicomp.groups
@@ -681,6 +686,34 @@ class TukeyHSDResults:
     def summary(self):
         """Summary table that can be printed"""
         return self._results_table
+
+    def summary_frame(self):
+        """Summary DataFrame
+
+        The group columns are labeled as "group_t" and "group_c" with mean
+        difference defined as treatment minus control.
+        This should be less confusing than numeric labels group1 and group2.
+
+        Returns
+        -------
+        pandas.DataFrame
+
+        Notes
+        -----
+        The number of columns will likely increase in a future version of
+        statsmodels. Do not use numeric indices for the DataFrame in order
+        to be robust to the addition of columns.
+        """
+        frame = pd.DataFrame({
+            "group_t": self.group_t,
+            "group_c": self.group_c,
+            "meandiff": self.meandiffs,
+            "p-adj": self.pvalues,
+            "lower": self.confint[:, 0],
+            "upper": self.confint[:, 1],
+            "reject": self.reject,
+            })
+        return frame
 
     def _get_q_crit(self, hsd=True, alpha=None):
         n_means = len(self.groupsunique)
@@ -753,6 +786,16 @@ class TukeyHSDResults:
         Unlike plotting the differences in the means and their respective
         confidence intervals, any two pairs can be compared for significance
         by looking for overlap.
+
+        The derivation in Hochberg and Tamhane is under the equal variance
+        assumption. We use the same computation in the case of unequal
+        variances, however, with replacement of the common pooled variance
+        by the unequal estimates of the whithin group variances.
+        This provides a plot that looks more informative and plausible in the
+        case where there are large differences in variances. In the equal
+        sample size and equal variance case, the confidence intervals computed
+        by the two methods, equal and unequal variance, are very close to
+        each other in larger samples.
 
         References
         ----------
@@ -1159,6 +1202,8 @@ class MultiComparison:
             variance=var_,
             pvalues=res[8],
             alpha=alpha,
+            group_t=self.groupsunique[res[0][1]],
+            group_c=self.groupsunique[res[0][0]],
             )
 
 
@@ -1645,7 +1690,10 @@ def contrast_diff_mean(nm):
 
 
 def tukey_pvalues(std_range, nm, df):
+    """compute tukey p-values by numerical integration of multivariate-t distribution
+    """
     # corrected but very slow with warnings about integration
+    # need to increase maxiter or similar
     # nm = len(std_range)
     contr = contrast_allpairs(nm)
     corr = np.dot(contr, contr.T) / 2.0
@@ -1654,7 +1702,11 @@ def tukey_pvalues(std_range, nm, df):
 
 
 def multicontrast_pvalues(tstat, tcorr, df=None, dist="t", alternative="two-sided"):
-    """pvalues for simultaneous tests"""
+    """pvalues for simultaneous tests
+
+    currently only for t distribution, normal distribution not added yet
+    alternative is ignored
+    """
     from statsmodels.sandbox.distributions.multivariate import mvstdtprob
 
     if (df is None) and (dist == "t"):

@@ -265,6 +265,15 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin):
             second_group = t[i][1].data
             assert_((first_group, second_group) == expected_order[i - 1])
 
+        frame = res.summary_frame()
+        assert_equal(frame["p-adj"], res.pvalues)
+        assert_equal(frame["meandiff"], res.meandiffs)
+        # Why are we working with binary strings, old time numpy?
+        group_t = [b"medical", b"mental", b"mental"]
+        group_c = [b"physical", b"physical", b"medical"]
+        assert frame["group_t"].to_list() == group_t
+        assert frame["group_c"].to_list() == group_c
+
 
 class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
 
@@ -403,3 +412,18 @@ class TestTuckeyHSD4(CheckTuckeyHSDMixin):
 
     def test_hochberg_intervals(self):
         assert_almost_equal(self.res.halfwidths, self.halfwidth2, 4)
+
+
+@pytest.mark.smoke
+@pytest.mark.matplotlib
+def test_plot(close_figures):
+    # SMOKE test
+    cylinders_adj = cylinders.astype(float)
+    # avoid zero division, zero within variance in France and Sweden
+    cylinders_adj[[10, 28]] += 0.05
+    alpha = 0.05
+    mc = MultiComparison(cylinders_adj, cyl_labels)
+    resth = mc.tukeyhsd(alpha=alpha, use_var="equal")
+    resgh = mc.tukeyhsd(alpha=alpha, use_var="unequal")
+    resth.plot_simultaneous()
+    resgh.plot_simultaneous()
