@@ -71,6 +71,7 @@ import math
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 from scipy import interpolate, stats
+import pandas as pd
 
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
@@ -646,6 +647,9 @@ class TukeyHSDResults:
         reject2=None,
         variance=None,
         pvalues=None,
+        alpha=None,
+        group_t=None,
+        group_c=None,
     ):
         self._multicomp = mc_object
         self._results_table = results_table
@@ -658,10 +662,23 @@ class TukeyHSDResults:
         self.reject2 = reject2
         self.variance = variance
         self.pvalues = pvalues
+        self.alpha = alpha
+        self.group_t = group_t
+        self.group_c = group_c
         # Taken out of _multicomp for ease of access for unknowledgeable users
         self.data = self._multicomp.data
         self.groups = self._multicomp.groups
         self.groupsunique = self._multicomp.groupsunique
+
+        if np.size(df_total) > 1:  # or should it be np.isscalar
+            # assume we have Games-Howell, unequal var case
+            self._qcrit_hsd = None
+        else:
+            self._qcrit_hsd = q_crit
+
+        nobs_group = self._multicomp.groupstats.groupnobs
+        self.df_total_hsd = np.sum(nobs_group - 1)
+
 
     def __str__(self):
         return str(self._results_table)
@@ -670,10 +687,60 @@ class TukeyHSDResults:
         """Summary table that can be printed"""
         return self._results_table
 
+    def summary_frame(self):
+        """Summary DataFrame
+
+        The group columns are labeled as "group_t" and "group_c" with mean
+        difference defined as treatment minus control.
+        This should be less confusing than numeric labels group1 and group2.
+
+        Returns
+        -------
+        pandas.DataFrame
+
+        Notes
+        -----
+        The number of columns will likely increase in a future version of
+        statsmodels. Do not use numeric indices for the DataFrame in order
+        to be robust to the addition of columns.
+        """
+        frame = pd.DataFrame({
+            "group_t": self.group_t,
+            "group_c": self.group_c,
+            "meandiff": self.meandiffs,
+            "p-adj": self.pvalues,
+            "lower": self.confint[:, 0],
+            "upper": self.confint[:, 1],
+            "reject": self.reject,
+            })
+        return frame
+
+    def _get_q_crit(self, hsd=True, alpha=None):
+        n_means = len(self.groupsunique)
+
+        if alpha is None:
+            alpha = self.alpha
+            use_attr = True
+
+        if hsd is True:
+            if use_attr and self._qcrit_hsd is not None:
+                q_crit = self._qcrit_hsd
+            else:  # compute it
+                q_crit = get_tukeyQcrit2(n_means, self.df_total_hsd, alpha=alpha)
+            if use_attr:
+                self._qcrit_hsd = q_crit
+        else:
+            raise NotImplementedError("not yet")
+
+        return q_crit
+
     def _simultaneous_ci(self):
         """Compute simultaneous confidence intervals for comparison of means."""
+
+        q_crit_hsd = self._get_q_crit(hsd=True)
+
         self.halfwidths = simultaneous_ci(
-            self.q_crit,
+            q_crit_hsd,
             self.variance,
             self._multicomp.groupstats.groupnobs,
             self._multicomp.pairindices,
@@ -719,6 +786,16 @@ class TukeyHSDResults:
         Unlike plotting the differences in the means and their respective
         confidence intervals, any two pairs can be compared for significance
         by looking for overlap.
+
+        The derivation in Hochberg and Tamhane is under the equal variance
+        assumption. We use the same computation in the case of unequal
+        variances, however, with replacement of the common pooled variance
+        by the unequal estimates of the whithin group variances.
+        This provides a plot that looks more informative and plausible in the
+        case where there are large differences in variances. In the equal
+        sample size and equal variance case, the confidence intervals computed
+        by the two methods, equal and unequal variance, are very close to
+        each other in larger samples.
 
         References
         ----------
@@ -1042,7 +1119,7 @@ class MultiComparison:
             resarr,
         )
 
-    def tukeyhsd(self, alpha=0.05):
+    def tukeyhsd(self, alpha=0.05, use_var='equal'):
         """
         Tukey's range test to compare means of all pairs of groups
 
@@ -1050,12 +1127,25 @@ class MultiComparison:
         ----------
         alpha : float, optional
             Value of FWER at which to calculate HSD.
+        use_var : {"unequal", "equal"}
+            If ``use_var`` is "equal", then the Tukey-hsd pvalues are returned.
+            Tukey-hsd assumes that (within) variances are the same across groups.
+            If ``use_var`` is "unequal", then the Games-Howell pvalues are
+            returned. This uses Welch's t-test for unequal variances with
+            Satterthwait's corrected degrees of freedom for each pairwise
+            comparison.
 
         Returns
         -------
         results : TukeyHSDResults instance
             A results class containing relevant data and some post-hoc
             calculations
+
+        Notes
+        -----
+
+        .. versionadded:: 0.15
+   `       The `use_var` keyword and option for Games-Howell test.
         """
         self.groupstats = GroupsStats(
             np.column_stack([self.data, self.groupintlab]), useranks=False
@@ -1063,9 +1153,13 @@ class MultiComparison:
 
         gmeans = self.groupstats.groupmean
         gnobs = self.groupstats.groupnobs
-        # var_ = self.groupstats.groupvarwithin()
-        # #possibly an error in varcorrection in this case
-        var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
+        if use_var == 'unequal':
+            var_ = self.groupstats.groupvarwithin()
+        elif use_var == 'equal':
+            var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
+        else:
+            raise ValueError('use_var should be "unequal" or "equal"')
+
         # res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs,
         # 4:confint, 5:q_crit, 6:df_total, 7:reject2, 8: pvals
         res = tukeyhsd(gmeans, gnobs, var_, df=None, alpha=alpha, q_crit=None)
@@ -1096,18 +1190,21 @@ class MultiComparison:
         )
 
         return TukeyHSDResults(
-            self,
+            self,  # mc_object, attached as _multicomp
             results_table,
-            res[5],
-            res[1],
-            res[2],
-            res[3],
-            res[4],
-            res[6],
-            res[7],
-            var_,
-            res[8],
-        )
+            res[5],  # q_crit, positional
+            reject=res[1],
+            meandiffs=res[2],
+            std_pairs=res[3],
+            confint=res[4],
+            df_total=res[6],
+            reject2=res[7],
+            variance=var_,
+            pvalues=res[8],
+            alpha=alpha,
+            group_t=self.groupsunique[res[0][1]],
+            group_c=self.groupsunique[res[0][0]],
+            )
 
 
 def rankdata(x):
@@ -1326,7 +1423,6 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
     error, MSE. To obtain the correction factor for the standard deviation,
     square root needs to be taken.
 
-    TODO: something looks wrong with dfjoint, is formula from SPSS
     """
     # TODO: test and replace with broadcasting
     v1, v2 = np.meshgrid(var_all, var_all)
@@ -1334,8 +1430,7 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
     df1, df2 = np.meshgrid(df_all, df_all)
 
     varjoint = v1 / n1 + v2 / n2
-
-    dfjoint = varjoint**2 / (df1 * (v1 / n1) ** 2 + df2 * (v2 / n2) ** 2)
+    dfjoint = varjoint**2 / ((v1 / n1) ** 2 / df1 + (v2 / n2) ** 2 / df2)
 
     return varjoint, dfjoint
 
@@ -1368,6 +1463,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
     else:
         df_total = np.sum(df)
 
+    df_pairs_ = None
     if (np.size(nobs_all) == 1) and (np.size(var_all) == 1):
         # balanced sample sizes and homogenous variance
         var_pairs = 1.0 * var_all / nobs_all * np.ones((n_means, n_means))
@@ -1376,8 +1472,8 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
         # unequal sample sizes and homogenous variance
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all, srange=True)
     elif np.size(var_all) > 1:
-        var_pairs, df_sum = varcorrection_pairs_unequal(nobs_all, var_all, df)
-        var_pairs /= 2.0
+        var_pairs, df_pairs_ = varcorrection_pairs_unequal(var_all, nobs_all, df)
+        var_pairs /= 2.
         # check division by two for studentized range
 
     else:
@@ -1391,10 +1487,13 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
     idx1, idx2 = np.triu_indices(n_means, 1)
     meandiffs = meandiffs_[idx1, idx2]
     std_pairs = std_pairs_[idx1, idx2]
+    if df_pairs_ is not None:
+        df_total = df_pairs_[idx1, idx2]
 
     st_range = np.abs(meandiffs) / std_pairs  # studentized range statistic
 
-    max(df_total, 5)  # TODO: smallest df in table
+    # df_total_ = np.maximum(df_total, 5)  # TODO: smallest df in table
+
     if q_crit is None:
         q_crit = get_tukeyQcrit2(n_means, df_total, alpha=alpha)
 
@@ -1513,10 +1612,9 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
         # unequal sample sizes and homogenous variance
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all, srange=True)
     elif np.size(var_all) > 1:
-        var_pairs, df_sum = varcorrection_pairs_unequal(nobs_all, var_all, df)
-        var_pairs /= 2.0
+        var_pairs, df_sum = varcorrection_pairs_unequal(var_all, nobs_all, df)
+        var_pairs /= 2.
         # check division by two for studentized range
-
     else:
         raise ValueError("not supposed to be here")
 
@@ -1592,7 +1690,10 @@ def contrast_diff_mean(nm):
 
 
 def tukey_pvalues(std_range, nm, df):
+    """compute tukey p-values by numerical integration of multivariate-t distribution
+    """
     # corrected but very slow with warnings about integration
+    # need to increase maxiter or similar
     # nm = len(std_range)
     contr = contrast_allpairs(nm)
     corr = np.dot(contr, contr.T) / 2.0
@@ -1601,7 +1702,11 @@ def tukey_pvalues(std_range, nm, df):
 
 
 def multicontrast_pvalues(tstat, tcorr, df=None, dist="t", alternative="two-sided"):
-    """pvalues for simultaneous tests"""
+    """pvalues for simultaneous tests
+
+    currently only for t distribution, normal distribution not added yet
+    alternative is ignored
+    """
     from statsmodels.sandbox.distributions.multivariate import mvstdtprob
 
     if (df is None) and (dist == "t"):
