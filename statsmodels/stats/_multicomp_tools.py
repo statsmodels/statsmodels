@@ -129,11 +129,9 @@ def group_pairwise(edges, distance_matrix=None, k_groups=None, names=None,
         if not to_remove(s, d):
             all_.append(s)
 
-    # sort by smallest element to get deterministic representation
-    # sort by len first to break ties in min
-    # no sorting if both len and min are equal for several groupings
-    all_.sort(key=len, reverse=True)
-    all_.sort(key=min)
+    # sort lexicographic to get deterministic representation
+    # forces unique ordering
+    all_.sort(key=lambda x: sorted(list(x)))
 
     # assigning letters
     alphabet = 'abcdefghijklmnop'
