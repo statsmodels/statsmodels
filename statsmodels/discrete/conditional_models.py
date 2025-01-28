@@ -16,6 +16,7 @@ from statsmodels.discrete.discrete_model import (
 )
 from statsmodels.formula.formulatools import advance_eval_env
 import statsmodels.regression.linear_model as lm
+from scipy.special import logsumexp
 
 
 class _ConditionalModel(base.LikelihoodModel):
@@ -591,14 +592,15 @@ class ConditionalMNLogit(_ConditionalModel):
         lpr = np.dot(self.exog, pmat)
 
         ll = 0.0
+
+        # denom - immediately calculate the sums for the selected elements
+
         for ii in self._grp_ix:
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
-            denom = 0.0
-            for p in itertools.permutations(y):
-                denom += np.exp(x[(jj, p)].sum())
-            ll += x[(jj, y)].sum() - np.log(denom)
+            denom = np.sum(x[jj, list(itertools.permutations(y))], axis=1)
+            ll += x[(jj, y)].sum() - logsumexp(denom)
 
         return ll
 
@@ -613,18 +615,32 @@ class ConditionalMNLogit(_ConditionalModel):
         lpr = np.dot(self.exog, pmat)
 
         grad = np.zeros((q, c))
-        for ii in self._grp_ix:
+        for ii in np.array(self._grp_ix):
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
-            denom = 0.0
-            denomg = np.zeros((q, c))
-            for p in itertools.permutations(y):
-                v = np.exp(x[(jj, p)].sum())
-                denom += v
-                for i, r in enumerate(p):
-                    if r != 0:
-                        denomg[:, r - 1] += v * self.exog[ii[i], :]
+            denomg = np.zeros((q, c)).T
+
+            # Extract itertools.permutations(y) to the list
+            iter_ = np.array(list(itertools.permutations(y)))
+
+            #Instead of iterative exponential value of sums of
+            # selected elements and their product by selected
+            # elements from self.exog, we calculate them at
+            # once (exp_sum, exog_exp_multy).
+            exp_sum = np.exp(np.sum(x[jj, iter_], axis=1))
+            denom = np.sum(exp_sum)
+
+            ind_exog = np.arange(iter_.shape[1], dtype=np.int32)
+            hist = len(iter_)
+            mask = iter_ != 0
+            iexog = np.take(ind_exog, mask.nonzero()[1])
+            iexog = iexog.reshape((hist, int(len(iexog) / hist)))
+            ii_ = np.take(ii, iexog)
+            exog_exp_multy = self.exog[ii_, :] * exp_sum[:, np.newaxis, np.newaxis]
+            ind_iter = iter_[mask].reshape((hist, int(len(iter_[mask]) / hist))) - 1
+            np.add.at(denomg, ind_iter, exog_exp_multy)
+            denomg = denomg.T
 
             for i, r in enumerate(y):
                 if r != 0:
