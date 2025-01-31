@@ -97,4 +97,4 @@ def test_log_diagnostics_false(dataset):
     res = x13_arima_analysis(dataset,log_diagnostics=False)
     assert isinstance(res.x13_diagnostic,dict)
     assert list(res.x13_diagnostic.keys())[0] == "F-D8"
-    assert isinstance(list(res.x13_diagnostic.values())[0],str)
+    assert isinstance(list(res.x13_diagnostic.values())[0],str) 

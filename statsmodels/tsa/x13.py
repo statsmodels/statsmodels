@@ -516,7 +516,7 @@ def x13_arima_analysis(
 
         if log_diagnostics:
             # read f8d m7 and q diagnostics from log
-            x13_logs = _open_and_read(ftempout.name + ".log")
+            x13_logs = _open_and_read(ftempout.name + ".log") 
             x13_diagnostic = {
             "F-D8": float(re.search(r"D8 table\s*:\s*([\d.]+)", x13_logs).group(1)),
             "M07": float(re.search(r"M07\s*:\s*([\d.]+)", x13_logs).group(1)),
