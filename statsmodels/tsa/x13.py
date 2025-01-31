@@ -368,7 +368,7 @@ def x13_arima_analysis(
     print_stdout=False,
     x12path=None,
     prefer_x13=True,
-    logdiagnostics=False,
+    log_diagnostics=False,
     tempdir=None,
 ):
     """
@@ -432,7 +432,7 @@ def x13_arima_analysis(
         environmental variable. If False, will look for x12a first and will
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
-    logdiagnostics : bool
+    log_diagnostics : bool
         If True, returns D8 F-Test, M07, and Q diagnostics from the X13 
         savelog. Set to False by default.
     tempdir : str
@@ -457,6 +457,9 @@ def x13_arima_analysis(
         - spec : str, optional
           Returned if ``retspec`` is True. The only thing returned if
           ``speconly`` is True.
+        - x13_diagnostic : dict
+          Returns F-D8, M07, and Q metrics if True. Returns dict with no
+          metrics if False
 
     Notes
     -----
@@ -511,7 +514,7 @@ def x13_arima_analysis(
         trend = _open_and_read(ftempout.name + ".d12")
         irregular = _open_and_read(ftempout.name + ".d13")
 
-        if logdiagnostics == True:
+        if log_diagnostics:
             # read f8d m7 and q diagnostics from log
             x13_logs = _open_and_read(ftempout.name + ".log")
             x13_diagnostic = {
