@@ -15,7 +15,6 @@ import re
 import subprocess
 import tempfile
 from warnings import warn
-import re
 
 import pandas as pd
 
