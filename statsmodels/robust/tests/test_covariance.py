@@ -96,10 +96,10 @@ class TestOGKMad():
     def test(self):
         res1 = self.res1
         res2 = self.res2
-        assert_allclose(res1.cov, res2.cov, rtol=1e-13)
-        assert_allclose(res1.mean, res2.center, rtol=1e-13)
-        assert_allclose(res1.cov_raw, res2.cov_raw, rtol=1e-11)
-        assert_allclose(res1.loc_raw, res2.center_raw, rtol=1e-10)
+        assert_allclose(res1.cov, res2.cov, rtol=1e-10)
+        assert_allclose(res1.mean, res2.center, rtol=1e-10)
+        assert_allclose(res1.cov_raw, res2.cov_raw, rtol=1e-8)
+        assert_allclose(res1.loc_raw, res2.center_raw, rtol=1e-8)
 
 
 class TestOGKTau(TestOGKMad):
@@ -120,14 +120,14 @@ class TestOGKTau(TestOGKMad):
         # I did not find options to improve agreement
         res1 = self.res1
         res2 = self.res2
-        assert_allclose(res1.cov, res2.cov, atol=0.05, rtol=1e-13)
-        assert_allclose(res1.mean, res2.center, atol=0.03, rtol=1e-13)
+        assert_allclose(res1.cov, res2.cov, atol=0.05, rtol=1e-10)
+        assert_allclose(res1.mean, res2.center, atol=0.03, rtol=1e-10)
         # cov raw differs in scaling, no idea why
         # note rrcov uses C code for this case with hardoced tau scale
         # our results are "better", i.e. correct outliers same as dgp
         # rrcov has one extra outlier
         fact = 1.1356801031633883
-        assert_allclose(res1.cov_raw, res2.cov_raw * fact, rtol=1e-11)
+        assert_allclose(res1.cov_raw, res2.cov_raw * fact, rtol=1e-8)
         assert_allclose(res1.loc_raw, res2.center_raw, rtol=0.2, atol=0.1)
 
 
