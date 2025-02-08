@@ -432,7 +432,7 @@ def x13_arima_analysis(
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
     log_diagnostics : bool
-        If True, returns D8 F-Test, M07, and Q diagnostics from the X13 
+        If True, returns D8 F-Test, M07, and Q diagnostics from the X13
         savelog. Set to False by default.
     tempdir : str
         The path to where temporary files are created by the function.
@@ -515,16 +515,16 @@ def x13_arima_analysis(
 
         if log_diagnostics:
             # read f8d m7 and q diagnostics from log
-            x13_logs = _open_and_read(ftempout.name + ".log") 
+            x13_logs = _open_and_read(ftempout.name + ".log")
             x13_diagnostic = {
                 "F-D8": float(re.search(r"D8 table\s*:\s*([\d.]+)", x13_logs).group(1)),
                 "M07": float(re.search(r"M07\s*:\s*([\d.]+)", x13_logs).group(1)),
                 "Q": float(re.search(r"Q\s*:\s*([\d.]+)", x13_logs).group(1))
             }
         else:
-            x13_diagnostic = {"F-D8":"Log diagnostics not retrieved.",
-                              "M07":"Log diagnostics not retrieved.",
-                              "Q":"Log diagnostics not retrieved."}
+            x13_diagnostic = {"F-D8": "Log diagnostics not retrieved.",
+                              "M07": "Log diagnostics not retrieved.",
+                              "Q": "Log diagnostics not retrieved."}
 
     finally:
         try:  # sometimes this gives a permission denied error?
