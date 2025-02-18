@@ -1,6 +1,7 @@
 """
 Seasonal Decomposition by Moving Averages
 """
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -101,6 +102,10 @@ def seasonal_decompose(
         If set to 'period', use `period` closest points. Setting this parameter
         results in no NaN values in trend or resid components. The default is 0.
 
+        .. deprecated: 0.14
+            `extrapolate_trend="freq"` is deprecated and will be removed,
+            use `extrapolate_trend=period` instead.
+
     Returns
     -------
     DecomposeResult
@@ -181,7 +186,13 @@ def seasonal_decompose(
     nsides = int(two_sided) + 1
     trend = convolution_filter(x, filt, nsides)
 
-    # 'freq' is still accepted for legacy purposes
+    if extrapolate_trend == "freq":
+        warnings.warn(
+            "`extrapolate_trend='freq'` is deprecated and will be "
+            "removed in 0.16, use `extrapolate_trend='freq'` instead.",
+            FutureWarning
+        )
+
     if extrapolate_trend in ("freq", "period"):
         extrapolate_trend = period - 1
 
