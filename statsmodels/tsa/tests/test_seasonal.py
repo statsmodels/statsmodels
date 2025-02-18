@@ -802,7 +802,7 @@ class TestDecompose:
         trend = seasonal_decompose(x, period=freq, extrapolate_trend=5).trend
         assert_almost_equal(trend, x)
 
-        trend = seasonal_decompose(x, period=freq, extrapolate_trend="freq").trend
+        trend = seasonal_decompose(x, period=freq, extrapolate_trend="period").trend
         assert_almost_equal(trend, x)
 
         trend = seasonal_decompose(x[:, None], period=freq, extrapolate_trend=5).trend
@@ -813,7 +813,7 @@ class TestDecompose:
         trend = seasonal_decompose(x, period=freq, extrapolate_trend=1).trend
         assert_almost_equal(trend, x)
 
-        trend = seasonal_decompose(x, period=freq, extrapolate_trend="freq").trend
+        trend = seasonal_decompose(x, period=freq, extrapolate_trend="period").trend
         assert_almost_equal(trend, x)
 
     def test_raises(self):
@@ -935,7 +935,7 @@ def test_seasonal_decompose_multiple():
 
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("model", ["additive", "multiplicative"])
-@pytest.mark.parametrize("freq", [4, 12])
+@pytest.mark.parametrize("period", [4, 12])
 @pytest.mark.parametrize("two_sided", [True, False])
 @pytest.mark.parametrize("extrapolate_trend", [True, False])
 def test_seasonal_decompose_plot(
