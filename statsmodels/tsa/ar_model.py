@@ -1053,7 +1053,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         r"""
         Akaike Information Criterion using Lutkepohl's definition.
 
-        :math:`-2 llf + \ln(nobs) (1 + df_{model})`
+        :math:`-2 llf + \ln(nobs) (df_{model})`
         """
         # This is based on loglike with dropped constant terms ?
         # Lutkepohl
@@ -1062,7 +1062,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         # Stata defintion
         # nobs = self.nobs
         # return -2 * self.llf/nobs + 2 * (self.k_ar+self.k_trend)/nobs
-        return eval_measures.aic(self.llf, self.nobs, self.df_model + 1)
+        return eval_measures.aic(self.llf, self.nobs, self.df_model)
 
     @cache_readonly
     def hqic(self):
