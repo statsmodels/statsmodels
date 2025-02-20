@@ -364,6 +364,49 @@ cdef class STL(object):
 
         return DecomposeResult(self.endog, season, trend, resid, rw)
 
+
+    def _estimate(self, y, xs, nleft, nright, ideg=1, userw=False, rw=None):
+        """
+        This is a convenience method to test the cython function _est.
+
+        Parameters
+        ----------
+        y : array_like
+            The observed series from which the point in the loess regression
+            is estimated.
+        xs : int
+            The index of the value to estimate.
+        nleft : int
+            The index of the leftmost value to use in the estimate (included).
+        nright : int
+            The index of the rightmost value to use in the estimate (excluded).
+        ideg : int, optional
+            The degree of the regression to fit. If not 0, assumed to be 1. 
+        userw : bool, optional
+            Whether or not to use weighted least squares. 
+        rw
+           The weights for weighted least squares.
+
+        Returns
+        -------
+        Returns the loess estimated value at xs. Should be compared to y[xs].
+
+        """
+
+        y = array_like(y, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
+        if rw is None:
+            rw = [1 for _ in y]
+            rw = array_like(rw, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
+        n = y.shape[0]
+        len = nright - nleft
+        w = array_like(range(len), "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
+
+        # The _est code uses 1-indexed values so we shift `xs` and `nleft` to the right.
+        # But the _est code uses inclusive bounds so we don't shift `nright`. 
+        ys = self._est(y, n, len, ideg, xs+1, nleft+1, nright, w, userw, rw)
+        return ys
+
+
     cdef void _onestp(self, int inner_iter):
         """
         y, n, np, ns, nt, nl, isdeg, itdeg, ildeg, nsjump,
@@ -430,6 +473,8 @@ cdef class STL(object):
                     w[j] = (1.0 - (r / h) ** 3) ** 3
                 if userw:
                     w[j] = w[j] * rw[j]
+                if isnan(y[j]):
+                    continue
                 a = a + w[j]
         if a <= 0:
             return NAN
@@ -438,17 +483,25 @@ cdef class STL(object):
         if h > 0 and ideg > 0:
             a = 0.0
             for j in range(nleft - 1, nright):
+                if isnan(y[j]):
+                    continue
                 a = a + w[j] * (j + 1)
             b = xs - a
             c = 0.0
             for j in range(nleft - 1, nright):
+                if isnan(y[j]):
+                    continue
                 c = c + w[j] * (j + 1 - a) ** 2
             if sqrt(c) > .001 * rng:
                 b = b / c
                 for j in range(nleft - 1, nright):
+                    if isnan(y[j]):
+                        continue
                     w[j] = w[j] * (b * (j + 1 - a) + 1.0)
         ys = 0.0
         for j in range(nleft - 1, nright):
+            if isnan(y[j]):
+                continue
             ys = ys + w[j] * y[j]
 
         return ys
