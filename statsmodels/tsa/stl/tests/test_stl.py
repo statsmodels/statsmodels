@@ -303,6 +303,40 @@ def test_plot(default_kwargs, close_figures):
     res.plot()
 
 
+def estimate(y_, x, X_):
+    X = X_[~np.isnan(y_)]
+    y = y_[~np.isnan(y_)]
+    x0, xmin, xmax = X_[x,1], X_[0,1], X_[-1,1]
+    h = max(x0-xmin, xmax-x0)
+    wi = [(1-(np.abs(xi-x0)/h)**3)**3 for xi in X[:,1].A1]
+    W = np.diag(wi) #/sum(wi)
+    inv = X.T.dot(W).dot(X).I
+    H = X_[x].dot(inv).dot(X.T)
+    return H.dot(W).dot(y).item()
+
+
+def test_est(default_kwargs):
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs)
+
+    y = np.array([1,2,4,8,16])
+    X = np.matrix([np.ones(5), [0,1,2,3,4]]).T
+    ys_expect = [estimate(y, xs, X) for xs in range(5)]
+    ys = [res._estimate(y, xs, 0, 5) for xs in range(5)]
+    assert_allclose(ys, ys_expect)
+
+
+def test_est_nans(default_kwargs):
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs)
+
+    y = np.array([1,2,4,np.nan,16,32])
+    X = np.matrix([np.ones(6), [0,1,2,3,4,5]]).T
+    ys_expect = np.array([estimate(y, xs, X) for xs in range(6)])
+    ys = [res._estimate(y, xs, 0, 6) for xs in range(6)]
+    assert_allclose(ys, ys_expect)
+
+
 def test_default_trend(default_kwargs):
     # GH 6686
     class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
