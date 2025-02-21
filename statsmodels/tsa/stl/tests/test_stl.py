@@ -337,6 +337,113 @@ def test_est_nans(default_kwargs):
     assert_allclose(ys, ys_expect)
 
 
+def test_get_maxmin_0_nan(default_kwargs):
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs)
+
+    X = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
+    max=len(X)
+    tests = [
+        (1, 1, 5), (2, 1, 5), (3, 1, 5), (4, 2, 6),
+        (11, 9, 13), (12, 10, 14), (13, 11, 15), (14, 12, 16), (15, 13, 17),
+        (25, 21, 25), (24, 21, 25), (23, 21, 25), (22, 20, 24),
+    ]
+
+    for (xs, xmin_exp, xmax_exp) in tests:
+        xmin, xmax = res._get_maxmin(X, xs, 5)
+        assert (xmin, xmax) == (xmin_exp, xmax_exp)
+
+
+def test_get_maxmin_1_nan(default_kwargs):
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs)
+
+    X = [1,2,3,np.nan,5,6,7,8,9,10,11,np.nan,13,14,15,16,17,18,19,20,np.nan,22,23,24,25]
+    max=len(X)
+    tests = [
+        (1, 1, 6), (2, 1, 6), (3, 1, 6), (4, 2, 7), (5, 2, 7),
+        (11, 9, 14), (12, 10, 15), (13, 10, 15), (14, 11, 16), (15, 13, 17),
+        (25, 20, 25), (24, 20, 25), (23, 20, 25), (22, 19, 24), (21, 19, 24)
+    ]
+
+    for (xs, xmin_exp, xmax_exp) in tests:
+        xmin, xmax = res._get_maxmin(X, xs, 5)
+        assert (xmin, xmax) == (xmin_exp, xmax_exp)
+
+
+def test_get_maxmin_more_nan(default_kwargs):
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs)
+
+    X = [1,2,3,np.nan,np.nan,6,7,8,9,np.nan,11,np.nan,13,14,
+         np.nan,np.nan,17,np.nan,19,20,np.nan,22,23,24,np.nan]
+    max=len(X)
+    tests = [
+        (-1, 1, 7), (0, 1, 7),
+        (1, 1, 7), (2, 1, 7), (3, 1, 7), (4, 1, 7), (5, 2, 8),
+        (6, 3, 9), (7, 3, 9), (8, 6, 11), (9, 6, 11), (10, 7, 13),
+        (11, 8, 14), (12, 8, 14), (13, 9, 17), (14, 11, 19), (15, 11, 19),
+        (16, 13, 20), (17, 13, 20), (18, 14, 22), (19, 17, 23), (20, 17, 23),
+        (21, 19, 24), (22, 19, 24), (23, 19, 24), (24, 19, 24), (25, 19, 24),
+        (26,19,24), (27, 19, 24)
+    ]
+
+    for (xs, xmin_exp, xmax_exp) in tests:
+        xmin, xmax = res._get_maxmin(X, xs, 5)
+        assert (xmin, xmax) == (xmin_exp, xmax_exp)
+
+
+def test_endog_with_nulls(default_kwargs):
+    class_kwargs, inner, outer = _to_class_kwargs(default_kwargs)
+
+    len_ = class_kwargs['trend']
+    Y = class_kwargs['endog']
+    for i in [2, 11, 16, 90, 104, 107, 124, 125, 174, 216, 287, 340, ]:
+        Y[i] = np.nan
+
+    mod = STL(**class_kwargs)
+
+    nsh = (len_ + 2) // 2
+    nleft = 0
+    nright = len_
+    res = []
+    for i in range(len(Y)):
+        if (i+1)>nsh and nright!=len(Y):
+            nleft +=1
+            nright +=1
+        res.append( mod._estimate(Y, i, nleft, nright) )
+    assert not any(np.isnan(res))
+
+
+def test_decomp_with_nulls(default_kwargs):
+    class_kwargs, inner_iter, outer_iter = _to_class_kwargs(default_kwargs)
+
+    for i in [2, 11, 16, 90, 104, 107, 124, 125, 174, 216, 287, 340, ]:
+        class_kwargs['endog'][i] = np.nan
+
+
+    mod=STL(**class_kwargs)
+    res = mod.fit(inner_iter=5, outer_iter=0)
+
+    assert not any(np.isnan(res.seasonal))
+
+
+def test_decomp_with_nulls_is_close(default_kwargs):
+    class_kwargs, inner_iter, outer_iter = _to_class_kwargs(default_kwargs)
+
+    res = STL(**class_kwargs).fit(inner_iter, outer_iter)
+    for i in [2, 11, 16, 90, 104, 107, 124, 125, 174, 216, 287, 340, ]:
+        class_kwargs['endog'][i] = np.nan
+
+    res_nulls=STL(**class_kwargs).fit(inner_iter, outer_iter)
+
+    # Because the input series are not equal, we only expect the output
+    # decomposition to be roughly equal. Here we test whether at each
+    # point, `x1 > 0.5 + (1.05 * x2)` and the other way around.
+    assert_allclose(res.seasonal, res_nulls.seasonal, rtol=1.05, atol=0.5)
+    assert_allclose(res.trend, res_nulls.trend, rtol=1.05, atol=0.5)
+
+
 def test_default_trend(default_kwargs):
     # GH 6686
     class_kwargs, _, _ = _to_class_kwargs(default_kwargs)

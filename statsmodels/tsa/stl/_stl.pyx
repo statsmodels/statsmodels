@@ -365,6 +365,53 @@ cdef class STL(object):
         return DecomposeResult(self.endog, season, trend, resid, rw)
 
 
+    def _get_maxmin(self, X, xs, neigh_size):
+        return self._get_maxmin_(X, xs, neigh_size)
+
+
+    cdef (int, int) _get_maxmin_(self, X, xs, neigh_size):
+        if xs>len(X):
+            xs = len(X)
+        if xs<1:
+            xs = 1
+        if isnan(X[xs-1]):
+            valid=0
+            xmin=xs+1
+            xmax=xs-1
+        else:
+            valid=1
+            xmin = xmax = xs
+        series_min, series_max = 1, len(X)
+        valid_over = valid_under = 0
+        distance = 0
+        while valid < neigh_size:
+            distance += 1
+            if xs+distance <= series_max and not isnan(X[xs+distance-1]):
+                xmax = xs + distance
+                valid += 1
+                valid_over += 1
+
+            if xs-distance >= series_min and not isnan(X[xs-distance-1]):
+                xmin = xs - distance
+                valid += 1
+                valid_under +=1
+
+        if valid == neigh_size:
+            return (xmin, xmax)
+        # Note that if valid > neigh_size, the last iteration of the while
+        # loop must have produced two valid observations. 
+        elif valid_over <= valid_under:
+            xmin += 1
+            while isnan(X[xmin-1]):
+                xmin += 1
+            return (xmin, xmax)
+        else:
+            xmax -= 1
+            while isnan(X[xmax-1]):
+                xmax -= 1
+            return (xmin, xmax)
+
+
     def _estimate(self, y, xs, nleft, nright, ideg=1, userw=False, rw=None):
         """
         This is a convenience method to test the cython function _est.
@@ -402,7 +449,7 @@ cdef class STL(object):
         w = array_like(range(len), "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
 
         # The _est code uses 1-indexed values so we shift `xs` and `nleft` to the right.
-        # But the _est code uses inclusive bounds so we don't shift `nright`. 
+        # But the _est code uses inclusive bounds so we don't shift `nright`.
         ys = self._est(y, n, len, ideg, xs+1, nleft+1, nright, w, userw, rw)
         return ys
 
@@ -450,10 +497,13 @@ cdef class STL(object):
                       trend, work[2, :])
 
     cdef double _est(self, double[::1] y, int n, int len_, int ideg, int xs,
-                     int nleft, int nright, double[::1] w, bint userw,
+                     int nleft_old, int nright_old, double[::1] w, bint userw,
                      double[::1] rw):
         cdef double rng, a, b, c, h, h1, h9, r, ys
         cdef Py_ssize_t j
+        cdef int nleft, nright
+
+        (nleft, nright) = self._get_maxmin(y, xs, len_)
 
         # Removed ok and ys, which are scalar return values
         rng = n - 1.0
