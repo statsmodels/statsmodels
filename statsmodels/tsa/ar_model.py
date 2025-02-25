@@ -209,9 +209,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
     ):
         super().__init__(endog, exog, None, None, missing=missing)
         self._trend = cast(
-            Literal["n", "c", "t", "ct"],
+            Literal["n", "c", "t", "ct","ctt"],
             string_like(
-                trend, "trend", options=("n", "c", "t", "ct"), optional=False
+                trend, "trend", options=("n", "c", "t", "ct","ctt"), optional=False
             ),
         )
         self._seasonal = bool_like(seasonal, "seasonal")
