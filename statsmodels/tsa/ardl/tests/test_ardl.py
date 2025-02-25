@@ -821,3 +821,10 @@ def test_resids_ardl_uecm():
     uecm_res = uecm_mod.fit()
 
     assert_allclose(uecm_res.resid, ardl_res.resid)
+
+
+def test_ardl_trend_ctt(data):
+    """Test ARDL with trend='ctt'."""
+    res = ARDL(data.y, None, data.x, None, trend="ctt").fit()
+    assert res.params.shape[0] == 3  # Should include constant, trend, and trend^2
+    check_results(res)
