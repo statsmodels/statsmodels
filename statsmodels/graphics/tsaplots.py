@@ -5,6 +5,7 @@ import calendar
 
 import numpy as np
 import pandas as pd
+import matplotlib as mpl
 
 from statsmodels.graphics import utils
 from statsmodels.tools.validation import array_like
@@ -875,4 +876,73 @@ def plot_predict(
 
     ax.legend(loc="best")
 
+    return fig
+
+
+def seasonal_diagnostic_plot(x, period_length, select=None, subseries_labels=None, nrows=1, **kwargs):
+    """
+    Seasonal-Diagnostic Plot, as described by [1]_.
+
+
+    Parameters
+    ----------
+    x : DecomposeResult
+        The result of your seasonal decomposition.
+    period_length : int
+        The length of the period. Should match the `period` parameter used to
+        decompose the series.
+    select : int
+        The number of periods to plot. The periods are selected evenly from
+        `range(period_length)`. By default, all periods are displayed.
+    subseries_labels : array of str
+        Labels for the displayed period subplots.
+    nrows : int
+        The number of rows on which to display the plots.
+
+
+    Returns
+    -------
+    fig : Figure
+        Returns an matplotlib object of type Figure with the
+        Seasonal-Diagnostic Plot.
+
+
+    References
+    ----------
+    Cleveland, Robert B., William S. Cleveland, Jean E. McRage, Irma
+    Terpenning (1990) "STL: A Seasonal-Trend Decomposition Procedure
+    Based on Loess". Journal of Official Statistics, 6 (1), 3-33.
+
+    """
+    import math
+
+    def seasonplot(x, period, period_length, ax=None):
+
+        where = [period_length * i + period
+                 for i in range(x.seasonal.size // period_length)]
+        seasonal_k = x.seasonal.iloc[where]
+        residual_k = x.resid.iloc[where]
+        mean = seasonal_k.mean()
+
+        ax.plot(seasonal_k.index, seasonal_k + residual_k - mean, '.')
+        ax.plot(seasonal_k.index, seasonal_k - mean)
+        return ax
+
+    if select is None:
+        select = period_length
+    kwargs.setdefault('ncols', math.ceil(select / nrows))
+    kwargs.setdefault('figsize', (kwargs['ncols'] * 2, nrows * 2 + 0.5))
+    fig, axs = mpl.pyplot.subplots(sharex=True, sharey=True,
+                                   squeeze=False, nrows=nrows, **kwargs)
+
+    p_to_plot = [math.floor(i*period_length / select) for i in range(select)]
+    if subseries_labels is None:
+        subseries_labels = [f'Cycle-subseries {i + 1}' for i in p_to_plot]
+
+    for ax, k in zip(fig.get_axes(), p_to_plot):
+        ax = seasonplot(x, k, period_length, ax=ax)
+        ax.set_title(subseries_labels[k])
+        ax.set(xlabel="", ylabel="")
+
+    fig.tight_layout(w_pad=0.1)
     return fig
