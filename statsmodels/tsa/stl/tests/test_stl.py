@@ -341,24 +341,27 @@ def test_get_maxmin_0_nan(default_kwargs):
     class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
     res = STL(**class_kwargs)
 
-    X = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
+    X = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,0,0,0,0,0,0,0,0,0]
     max=len(X)
     tests = [
         (1, 1, 5), (2, 1, 5), (3, 1, 5), (4, 2, 6),
         (11, 9, 13), (12, 10, 14), (13, 11, 15), (14, 12, 16), (15, 13, 17),
-        (25, 21, 25), (24, 21, 25), (23, 21, 25), (22, 20, 24),
+        (22, 20, 24), (23, 21, 25), (24, 21, 25), (25, 21, 25), (26, 21, 25)   
     ]
 
     for (xs, xmin_exp, xmax_exp) in tests:
-        xmin, xmax = res._get_maxmin(X, xs, 5)
+        xmin, xmax = res._get_maxmin(X, 25, xs, 5)
         assert (xmin, xmax) == (xmin_exp, xmax_exp)
+
+    xmin, xmax = res._get_maxmin(X, 25, 1, 35)
+    assert (xmin, xmax) == (1, 25)
 
 
 def test_get_maxmin_1_nan(default_kwargs):
     class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
     res = STL(**class_kwargs)
 
-    X = [1,2,3,np.nan,5,6,7,8,9,10,11,np.nan,13,14,15,16,17,18,19,20,np.nan,22,23,24,25]
+    X = [1,2,3,np.nan,5,6,7,8,9,10,11,np.nan,13,14,15,16,17,18,19,20,np.nan,22,23,24,25,0,0,0]
     max=len(X)
     tests = [
         (1, 1, 6), (2, 1, 6), (3, 1, 6), (4, 2, 7), (5, 2, 7),
@@ -367,7 +370,7 @@ def test_get_maxmin_1_nan(default_kwargs):
     ]
 
     for (xs, xmin_exp, xmax_exp) in tests:
-        xmin, xmax = res._get_maxmin(X, xs, 5)
+        xmin, xmax = res._get_maxmin(X, 25, xs, 5)
         assert (xmin, xmax) == (xmin_exp, xmax_exp)
 
 
@@ -389,7 +392,7 @@ def test_get_maxmin_more_nan(default_kwargs):
     ]
 
     for (xs, xmin_exp, xmax_exp) in tests:
-        xmin, xmax = res._get_maxmin(X, xs, 5)
+        xmin, xmax = res._get_maxmin(X, 25, xs, 5)
         assert (xmin, xmax) == (xmin_exp, xmax_exp)
 
 
