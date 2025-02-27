@@ -937,7 +937,7 @@ def seasonal_diagnostic_plot(x, period_length, select=None, subseries_labels=Non
 
     p_to_plot = [math.floor(i*period_length / select) for i in range(select)]
     if subseries_labels is None:
-        subseries_labels = [f'Cycle-subseries {i + 1}' for i in p_to_plot]
+        subseries_labels = [f'Cycle-subseries {i + 1}' for i in period_length]
 
     for ax, k in zip(fig.get_axes(), p_to_plot):
         ax = seasonplot(x, k, period_length, ax=ax)
