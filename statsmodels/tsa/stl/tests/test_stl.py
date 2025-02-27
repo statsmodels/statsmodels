@@ -419,7 +419,7 @@ def test_endog_with_nulls(default_kwargs):
 
 
 def test_decomp_with_nulls(default_kwargs):
-    class_kwargs, inner_iter, outer_iter = _to_class_kwargs(default_kwargs)
+    class_kwargs, outer_iter, inner_iter = _to_class_kwargs(default_kwargs)
 
     for i in [2, 11, 16, 90, 104, 107, 124, 125, 174, 216, 287, 340, ]:
         class_kwargs['endog'][i] = np.nan
@@ -432,7 +432,7 @@ def test_decomp_with_nulls(default_kwargs):
 
 
 def test_decomp_with_nulls_is_close(default_kwargs):
-    class_kwargs, inner_iter, outer_iter = _to_class_kwargs(default_kwargs)
+    class_kwargs, outer_iter, inner_iter = _to_class_kwargs(default_kwargs)
 
     res = STL(**class_kwargs).fit(inner_iter, outer_iter)
     for i in [2, 11, 16, 90, 104, 107, 124, 125, 174, 216, 287, 340, ]:
@@ -442,9 +442,44 @@ def test_decomp_with_nulls_is_close(default_kwargs):
 
     # Because the input series are not equal, we only expect the output
     # decomposition to be roughly equal. Here we test whether at each
-    # point, `x1 > 0.5 + (1.05 * x2)` and the other way around.
-    assert_allclose(res.seasonal, res_nulls.seasonal, rtol=1.05, atol=0.5)
-    assert_allclose(res.trend, res_nulls.trend, rtol=1.05, atol=0.5)
+    # point, `x1 > 0.1 + (1.001 * x2)` and the other way around. Because
+    # res.seasonal has some values very close to 0, we need atol as well.
+    assert_allclose(res.seasonal, res_nulls.seasonal, rtol=0.001, atol=0.1)
+    assert_allclose(res.trend, res_nulls.trend, rtol=0.001)
+
+
+# Values produced by R standard function STL().
+def test_r_is_close(default_kwargs):
+    r_res_path = os.path.join(cur_dir, "results", "stl_co2_r_result.csv")
+    r_res = pd.read_csv(r_res_path, sep=r'\s+', header=6,
+            names = ['m', 'y', 'seasonal', 'trend', 'remainder'],
+            usecols=['seasonal', 'trend', 'remainder'])
+    class_kwargs, outer_iter, inner_iter = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs).fit(inner_iter=inner_iter, outer_iter=outer_iter)
+
+    # Values produced by R are very close but don't match exactly.
+    assert_allclose(res.seasonal, r_res['seasonal'], rtol=1e-6, atol=1e-5)
+    assert_allclose(res.trend, r_res['trend'], rtol=1e-6, atol=1e-5)
+
+
+# The R stlplus package performs STL decomposition allowing missing values.
+def test_r_stlplus_is_close(default_kwargs):
+    r_res_path = os.path.join(cur_dir, "results", "stl_co2_weekly_r_result.csv")
+
+    r_res = pd.read_csv(r_res_path, sep=r'\s+', header=1,
+                        nrows=2276,
+                        names=['rowno', 'raw', 'seasonal', 'trend', 'resid',
+                               'weights', 'ss', 'subseries'])
+
+    data = (co2.load().data
+            .pipe(lambda df: df[df.index.isocalendar().week < 53])
+            )
+    res = STL(data, period=52, seasonal=35).fit()
+
+    # Values produced by R are very close but don't match exactly.
+    # Note that for seasonal, we are using rtol 10 times bigger.
+    assert_allclose(res.seasonal, r_res['seasonal'], rtol=1e-5, atol=1e-5)
+    assert_allclose(res.trend, r_res['trend'], rtol=1e-6, atol=1e-5)
 
 
 def test_default_trend(default_kwargs):
