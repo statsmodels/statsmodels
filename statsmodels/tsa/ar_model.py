@@ -210,7 +210,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
     ):
         super().__init__(endog, exog, None, None, missing=missing)
         self._trend = cast(
-            Literal["n", "c", "t", "ct","ctt"],
+            Literal["n", "c", "t", "ct", "ctt"],
             string_like(
                 trend, "trend", options=("n", "c", "t", "ct", "ctt"), optional=False
             ),
