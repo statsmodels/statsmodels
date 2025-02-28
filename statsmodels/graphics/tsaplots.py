@@ -881,7 +881,6 @@ def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **k
     """
     Seasonal-Diagnostic Plot, as described by [1]_.
 
-
     Parameters
     ----------
     x : DecomposeResult
