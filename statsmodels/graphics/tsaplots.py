@@ -879,7 +879,8 @@ def plot_predict(
     return fig
 
 
-def seasonal_diagnostic_plot(x, period_length, select=None, subseries_labels=None, nrows=1, **kwargs):
+def seasonal_diagnostic_plot(x, period_length, select=None, 
+                             subseries_labels=None, nrows=1, **kwargs):
     """
     Seasonal-Diagnostic Plot, as described by [1]_.
 
