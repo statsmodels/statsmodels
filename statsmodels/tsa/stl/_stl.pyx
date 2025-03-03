@@ -555,7 +555,7 @@ cdef class STL(object):
         if len is None:
             len = nright - nleft
         if w is None:
-            w = array_like(range(len), "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
+            w = array_like(range(n), "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
 
         # The _est code uses 1-indexed values so we shift `xs` and `nleft` to the right.
         # But the _est code uses inclusive bounds so we don't shift `nright`.
