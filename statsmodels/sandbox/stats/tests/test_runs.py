@@ -27,3 +27,10 @@ def test_numeric_cutoff():
     expected = (-3.944254410803499, 8.004864125547193e-05)
     results = runstest_1samp(x, cutoff=cutoff, correction=False)
     assert_almost_equal(expected, results)
+
+def test_single_run():
+    x = [1] * 10
+    expected = (-2.8856349,  0.0039062)
+    results = runstest_1samp(x)
+    assert_almost_equal(expected, results)
+
