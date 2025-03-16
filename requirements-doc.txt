@@ -21,5 +21,6 @@ pickleshare
 # https://pyodide.org/en/0.27.2/usage/packages-in-pyodide.html and
 # https://jupyterlite-pyodide-kernel.readthedocs.io/en/stable/#with-pyodide
 # for information on updating
+pyodide-http
 jupyterlite-sphinx>=0.19.0
 jupyterlite-pyodide-kernel==0.5.2

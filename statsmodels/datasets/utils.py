@@ -132,12 +132,27 @@ def _open_cache(cache_path):
         return zlib.decompress(zf.read())
 
 
+def _is_jupyterlite() -> bool:
+    try:
+        import pyodide_kernel
+    except (ImportError, ModuleNotFoundError):
+        return False
+    return True
+
+
 def _urlopen_cached(url, cache):
     """
     Tries to load data from cache location otherwise downloads it. If it
     downloads the data and cache is not None then it will put the downloaded
     data in the cache path.
     """
+
+    # if we are in a jupyterlite environment, we will want
+    # to patch urllib, requests, etc. for usage in Pyodide
+    if _is_jupyterlite():
+        import pyodide_http
+        pyodide_http.patch_all()
+
     from_cache = False
     if cache is not None:
         file_name = url.split("://")[-1].replace('/', ',')
