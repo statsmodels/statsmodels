@@ -109,8 +109,12 @@ categories) rather than an explicit constant (e.g., a column of 1s).
 
 Examples
 --------
+
+..try_examples::
+
 >>> from statsmodels.regression.rolling import Rolling%(model)s
 >>> from statsmodels.datasets import longley
+>>> from statsmodels.tools import add_constant
 >>> data = longley.load()
 >>> exog = add_constant(data.exog, prepend=False)
 >>> mod = Rolling%(model)s(data.endog, exog)
