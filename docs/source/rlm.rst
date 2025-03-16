@@ -13,17 +13,17 @@ See `Module Reference`_ for commands and arguments.
 Examples
 --------
 
-.. ipython:: python
+.. try_examples::
 
-    # Load modules and data
-    import statsmodels.api as sm
-    data = sm.datasets.stackloss.load()
-    data.exog = sm.add_constant(data.exog)
+   >>> # Load modules and data
+   >>> import statsmodels.api as sm
+   >>> data = sm.datasets.stackloss.load()
+   >>> data.exog = sm.add_constant(data.exog)
 
-    # Fit model and print summary
-    rlm_model = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
-    rlm_results = rlm_model.fit()
-    print(rlm_results.params)
+   >>> # Fit model and print summary
+   >>> rlm_model = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
+   >>> rlm_results = rlm_model.fit()
+   >>> print(rlm_results.params)
 
 Detailed examples can be found here:
 
