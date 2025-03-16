@@ -13,18 +13,17 @@ See `Module Reference`_ for commands and arguments.
 Examples
 --------
 
-.. ipython:: python
-   :okwarning:
+.. try_examples::
 
-   # Load modules and data
-   import statsmodels.api as sm
-   data = sm.datasets.scotland.load()
-   data.exog = sm.add_constant(data.exog)
+   >>> # Load modules and data
+   >>> import statsmodels.api as sm
+   >>> data = sm.datasets.scotland.load()
+   >>> data.exog = sm.add_constant(data.exog)
 
-   # Instantiate a gamma family model with the default link function.
-   gamma_model = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
-   gamma_results = gamma_model.fit()
-   print(gamma_results.summary())
+   >>> # Instantiate a gamma family model with the default link function.
+   >>> gamma_model = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
+   >>> gamma_results = gamma_model.fit()
+   >>> print(gamma_results.summary())
 
 Detailed examples can be found here:
 
