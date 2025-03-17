@@ -136,7 +136,7 @@ def _open_cache(cache_path):
 
 def _is_jupyterlite() -> bool:
     try:
-        import pyodide_kernel
+        import pyodide_kernel # noqa: F401
     except (ImportError, ModuleNotFoundError):
         return False
     return True
