@@ -26,6 +26,7 @@ Examples
    >>> from statsmodels.gam.api import GLMGam, BSplines
 
    >>> # import data
+   >>> import pytest
    >>> from statsmodels.gam.tests.test_penalized import df_autos
 
    >>> # create spline basis for weight and hp
@@ -33,6 +34,7 @@ Examples
    >>> bs = BSplines(x_spline, df=[12, 10], degree=[3, 3])
 
    >>> # penalization weight
+   >>> import numpy as np
    >>> alpha = np.array([21833888.8, 6460.38479])
 
    >>> gam_bs = GLMGam.from_formula('city_mpg ~ fuel + drive', data=df_autos,
