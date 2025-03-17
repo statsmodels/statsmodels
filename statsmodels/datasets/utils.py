@@ -32,6 +32,8 @@ def webuse(data, baseurl='https://www.stata-press.com/data/r11/', as_df=True):
 
     Examples
     --------
+    ..! disable_try_examples
+
     >>> dta = webuse('auto')
 
     Notes
