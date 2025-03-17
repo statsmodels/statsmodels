@@ -29,7 +29,7 @@ within clusters using data on epilepsy seizures.
    >>> fam = sm.families.Poisson()
    >>> ind = sm.cov_struct.Exchangeable()
    >>> mod = smf.gee("y ~ age + trt + base", "subject", data,
-                  cov_struct=ind, family=fam)
+   >>>               cov_struct=ind, family=fam)
    >>> res = mod.fit()
    >>> print(res.summary())
 
