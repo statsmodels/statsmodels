@@ -36,7 +36,7 @@ Examples
    >>> alpha = np.array([21833888.8, 6460.38479])
 
    >>> gam_bs = GLMGam.from_formula('city_mpg ~ fuel + drive', data=df_autos,
-                                 smoother=bs, alpha=alpha)
+   >>>                              smoother=bs, alpha=alpha)
    >>> res_bs = gam_bs.fit()
    >>> print(res_bs.summary())
 
@@ -47,8 +47,8 @@ Examples
 
    >>> alpha = np.array([8283989284.5829611, 14628207.58927821])
    >>> gam_bs = GLMGam.from_formula('city_mpg ~ fuel + drive', data=df_autos,
-                                 smoother=bs, alpha=alpha,
-                                 family=sm.families.Poisson())
+   >>>                              smoother=bs, alpha=alpha,
+   >>>                              family=sm.families.Poisson())
    >>> res_bs = gam_bs.fit()
    >>> print(res_bs.summary())
 
