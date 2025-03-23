@@ -117,7 +117,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         * 'c' - Constant only.
         * 't' - Time trend only.
         * 'ct' - Constant and linear time trend.
-        * 'ctt' - Constant and quadratic time trend.
+        * 'ctt' - Constant and linear and quadratic time trends.
 
     seasonal : bool
         Flag indicating whether to include seasonal dummies in the model. If

@@ -823,8 +823,10 @@ def test_resids_ardl_uecm():
     assert_allclose(uecm_res.resid, ardl_res.resid)
 
 
-def test_ardl_trend_ctt(data):
+@pytest.mark.parameterize("y_lags",[None, 1, 2])
+@pytest.mark.parameterize("x_lags",[None, 1, 2])
+def test_ardl_trend_ctt(data, y_lags, x_lags):
     """Test ARDL with trend='ctt'."""
     res = ARDL(data.y, None, data.x, None, trend="ctt").fit()
-    assert res.params.shape[0] == 3  # Should include constant, trend, and trend^2
+    assert res.params.shape[0] == (3 + y_lags if y_lags else 0 + x_lags if x_lags else 0)
     check_results(res)
