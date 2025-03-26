@@ -3,9 +3,7 @@ from numpy.testing import assert_allclose, assert_array_equal, assert_equal
 import pytest
 import statsmodels.api as sm
 from statsmodels.stats import knockoff_regeffects as kr
-from statsmodels.stats._knockoff import (RegressionFDR,
-                                         _design_knockoff_equi,
-                                         _design_knockoff_sdp)
+from statsmodels.stats._knockoff import RegressionFDR
 
 try:
     import cvxopt  # noqa:F401
@@ -18,9 +16,11 @@ def test_equi():
     # Test the structure of the equivariant knockoff construction.
 
     np.random.seed(2342)
+    endog = np.zeros(10)
     exog = np.random.normal(size=(10, 4))
 
-    exog1, exog2, sl = _design_knockoff_equi(exog)
+    r = RegressionFDR(endog, exog, kr.OLSEffects())
+    exog1, exog2, sl = r._design_knockoff_equi(exog)
 
     exoga = np.concatenate((exog1, exog2), axis=1)
 
