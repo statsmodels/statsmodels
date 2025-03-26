@@ -684,7 +684,7 @@ def qqplot(
     return fig
 
 
-def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None, **plotkwargs):
+def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None, **kwargs):
     """
     Q-Q Plot of two samples' quantiles.
 
@@ -722,7 +722,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None, 
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    **plotkwargs
+    **kwargs
         Additional keyword arguments to be passed to the underlying plot function.
 
     Returns
@@ -767,7 +767,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None, 
     if not isinstance(data2, ProbPlot):
         data2 = ProbPlot(data2)
     if data2.data.shape[0] > data1.data.shape[0]:
-        fig = data1.qqplot(xlabel=xlabel, ylabel=ylabel, line=line, other=data2, ax=ax, **plotkwargs)
+        fig = data1.qqplot(xlabel=xlabel, ylabel=ylabel, line=line, other=data2, ax=ax, **kwargs)
     else:
         fig = data2.qqplot(
             xlabel=ylabel,
@@ -776,7 +776,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None, 
             other=data1,
             ax=ax,
             swap=True,
-            **plotkwargs
+            **kwargs
         )
 
     return fig
