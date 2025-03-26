@@ -4,7 +4,7 @@ Created on Mon May 05 17:29:56 2014
 Author: Josef Perktold
 """
 
-from statsmodels.compat.pandas import PD_LT_2, PD_LT_3
+from statsmodels.compat.pandas import PD_LT_3
 
 import os
 
