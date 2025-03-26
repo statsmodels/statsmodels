@@ -1,24 +1,24 @@
-import numpy as np
+from statsmodels.compat.scipy import apply_where
 
-from scipy.stats import rv_discrete, poisson, nbinom
+import numpy as np
 from scipy.special import gammaln
-from scipy._lib._util import _lazywhere
+from scipy.stats import nbinom, poisson, rv_discrete
 
 from statsmodels.base.model import GenericLikelihoodModel
 
 
 class genpoisson_p_gen(rv_discrete):
-    '''Generalized Poisson distribution
-    '''
+    """Generalized Poisson distribution"""
+
     def _argcheck(self, mu, alpha, p):
-        return (mu >= 0) & (alpha==alpha) & (p > 0)
+        return (mu >= 0) & (alpha == alpha) & (p > 0)
 
     def _logpmf(self, x, mu, alpha, p):
-        mu_p = mu ** (p - 1.)
+        mu_p = mu ** (p - 1.0)
         a1 = np.maximum(np.nextafter(0, 1), 1 + alpha * mu_p)
-        a2 = np.maximum(np.nextafter(0, 1), mu + (a1 - 1.) * x)
-        logpmf_ = np.log(mu) + (x - 1.) * np.log(a2)
-        logpmf_ -=  x * np.log(a1) + gammaln(x + 1.) + a2 / a1
+        a2 = np.maximum(np.nextafter(0, 1), mu + (a1 - 1.0) * x)
+        logpmf_ = np.log(mu) + (x - 1.0) * np.log(a2)
+        logpmf_ -= x * np.log(a1) + gammaln(x + 1.0) + a2 / a1
         return logpmf_
 
     def _pmf(self, x, mu, alpha, p):
@@ -28,26 +28,27 @@ class genpoisson_p_gen(rv_discrete):
         return mu
 
     def var(self, mu, alpha, p):
-        dispersion_factor = (1 + alpha * mu**(p - 1))**2
+        dispersion_factor = (1 + alpha * mu ** (p - 1)) ** 2
         var = dispersion_factor * mu
         return var
 
 
-genpoisson_p = genpoisson_p_gen(name='genpoisson_p',
-                                longname='Generalized Poisson')
+genpoisson_p = genpoisson_p_gen(name="genpoisson_p", longname="Generalized Poisson")
 
 
 class zipoisson_gen(rv_discrete):
-    '''Zero Inflated Poisson distribution
-    '''
+    """Zero Inflated Poisson distribution"""
+
     def _argcheck(self, mu, w):
-        return (mu > 0) & (w >= 0) & (w<=1)
+        return (mu > 0) & (w >= 0) & (w <= 1)
 
     def _logpmf(self, x, mu, w):
-        return _lazywhere(x != 0, (x, mu, w),
-                          (lambda x, mu, w: np.log(1. - w) + x * np.log(mu) -
-                          gammaln(x + 1.) - mu),
-                          np.log(w + (1. - w) * np.exp(-mu)))
+        return apply_where(
+            x != 0,
+            (x, mu, w),
+            (lambda x, mu, w: np.log(1.0 - w) + x * np.log(mu) - gammaln(x + 1.0) - mu),
+            fill_value=np.log(w + (1.0 - w) * np.exp(-mu)),
+        )
 
     def _pmf(self, x, mu, w):
         return np.exp(self._logpmf(x, mu, w))
@@ -72,28 +73,32 @@ class zipoisson_gen(rv_discrete):
 
     def var(self, mu, w):
         dispersion_factor = 1 + w * mu
-        var = (dispersion_factor * self.mean(mu, w))
+        var = dispersion_factor * self.mean(mu, w)
         return var
 
     def _moment(self, n, mu, w):
         return (1 - w) * poisson.moment(n, mu)
 
 
-zipoisson = zipoisson_gen(name='zipoisson',
-                          longname='Zero Inflated Poisson')
+zipoisson = zipoisson_gen(name="zipoisson", longname="Zero Inflated Poisson")
+
 
 class zigeneralizedpoisson_gen(rv_discrete):
-    '''Zero Inflated Generalized Poisson distribution
-    '''
+    """Zero Inflated Generalized Poisson distribution"""
+
     def _argcheck(self, mu, alpha, p, w):
-        return (mu > 0) & (w >= 0) & (w<=1)
+        return (mu > 0) & (w >= 0) & (w <= 1)
 
     def _logpmf(self, x, mu, alpha, p, w):
-        return _lazywhere(x != 0, (x, mu, alpha, p, w),
-                          (lambda x, mu, alpha, p, w: np.log(1. - w) +
-                          genpoisson_p.logpmf(x, mu, alpha, p)),
-                          np.log(w + (1. - w) *
-                          genpoisson_p.pmf(x, mu, alpha, p)))
+        return apply_where(
+            x != 0,
+            (x, mu, alpha, p, w),
+            (
+                lambda x, mu, alpha, p, w: np.log(1.0 - w)
+                + genpoisson_p.logpmf(x, mu, alpha, p)
+            ),
+            fill_value=np.log(w + (1.0 - w) * genpoisson_p.pmf(x, mu, alpha, p)),
+        )
 
     def _pmf(self, x, mu, alpha, p, w):
         return np.exp(self._logpmf(x, mu, alpha, p, w))
@@ -103,29 +108,30 @@ class zigeneralizedpoisson_gen(rv_discrete):
 
     def var(self, mu, alpha, p, w):
         p = p - 1
-        dispersion_factor = (1 + alpha * mu ** p) ** 2 + w * mu
-        var = (dispersion_factor * self.mean(mu, alpha, p, w))
+        dispersion_factor = (1 + alpha * mu**p) ** 2 + w * mu
+        var = dispersion_factor * self.mean(mu, alpha, p, w)
         return var
 
 
 zigenpoisson = zigeneralizedpoisson_gen(
-    name='zigenpoisson',
-    longname='Zero Inflated Generalized Poisson')
+    name="zigenpoisson", longname="Zero Inflated Generalized Poisson"
+)
 
 
 class zinegativebinomial_gen(rv_discrete):
-    '''Zero Inflated Generalized Negative Binomial distribution
-    '''
+    """Zero Inflated Generalized Negative Binomial distribution"""
+
     def _argcheck(self, mu, alpha, p, w):
-        return (mu > 0) & (w >= 0) & (w<=1)
+        return (mu > 0) & (w >= 0) & (w <= 1)
 
     def _logpmf(self, x, mu, alpha, p, w):
         s, p = self.convert_params(mu, alpha, p)
-        return _lazywhere(x != 0, (x, s, p, w),
-                          (lambda x, s, p, w: np.log(1. - w) +
-                          nbinom.logpmf(x, s, p)),
-                          np.log(w + (1. - w) *
-                          nbinom.pmf(x, s, p)))
+        return apply_where(
+            x != 0,
+            (x, s, p, w),
+            (lambda x, s, p, w: np.log(1.0 - w) + nbinom.logpmf(x, s, p)),
+            fill_value=np.log(w + (1.0 - w) * nbinom.pmf(x, s, p)),
+        )
 
     def _pmf(self, x, mu, alpha, p, w):
         return np.exp(self._logpmf(x, mu, alpha, p, w))
@@ -153,7 +159,7 @@ class zinegativebinomial_gen(rv_discrete):
 
     def var(self, mu, alpha, p, w):
         dispersion_factor = 1 + alpha * mu ** (p - 1) + w * mu
-        var = (dispersion_factor * self.mean(mu, alpha, p, w))
+        var = dispersion_factor * self.mean(mu, alpha, p, w)
         return var
 
     def _moment(self, n, mu, alpha, p, w):
@@ -161,17 +167,19 @@ class zinegativebinomial_gen(rv_discrete):
         return (1 - w) * nbinom.moment(n, s, p)
 
     def convert_params(self, mu, alpha, p):
-        size = 1. / alpha * mu**(2-p)
+        size = 1.0 / alpha * mu ** (2 - p)
         prob = size / (size + mu)
         return (size, prob)
 
-zinegbin = zinegativebinomial_gen(name='zinegbin',
-    longname='Zero Inflated Generalized Negative Binomial')
+
+zinegbin = zinegativebinomial_gen(
+    name="zinegbin", longname="Zero Inflated Generalized Negative Binomial"
+)
 
 
 class truncatedpoisson_gen(rv_discrete):
-    '''Truncated Poisson discrete random variable
-    '''
+    """Truncated Poisson discrete random variable"""
+
     # TODO: need cdf, and rvs
 
     def _argcheck(self, mu, truncation):
@@ -195,18 +203,21 @@ class truncatedpoisson_gen(rv_discrete):
         loc = pmf < 1
         log_1_m_pmf[loc] = np.log(1 - pmf[loc])
         logpmf_ = poisson.logpmf(x, mu) - log_1_m_pmf
-        #logpmf_[x < truncation + 1] = - np.inf
+        # logpmf_[x < truncation + 1] = - np.inf
         return logpmf_
 
     def _pmf(self, x, mu, truncation):
         return np.exp(self._logpmf(x, mu, truncation))
 
-truncatedpoisson = truncatedpoisson_gen(name='truncatedpoisson',
-                                        longname='Truncated Poisson')
+
+truncatedpoisson = truncatedpoisson_gen(
+    name="truncatedpoisson", longname="Truncated Poisson"
+)
+
 
 class truncatednegbin_gen(rv_discrete):
-    '''Truncated Generalized Negative Binomial (NB-P) discrete random variable
-    '''
+    """Truncated Generalized Negative Binomial (NB-P) discrete random variable"""
+
     def _argcheck(self, mu, alpha, p, truncation):
         return (mu >= 0) & (truncation >= -1)
 
@@ -233,12 +244,15 @@ class truncatednegbin_gen(rv_discrete):
         return np.exp(self._logpmf(x, mu, alpha, p, truncation))
 
     def convert_params(self, mu, alpha, p):
-        size = 1. / alpha * mu**(2-p)
+        size = 1.0 / alpha * mu ** (2 - p)
         prob = size / (size + mu)
         return (size, prob)
 
-truncatednegbin = truncatednegbin_gen(name='truncatednegbin',
-    longname='Truncated Generalized Negative Binomial')
+
+truncatednegbin = truncatednegbin_gen(
+    name="truncatednegbin", longname="Truncated Generalized Negative Binomial"
+)
+
 
 class DiscretizedCount(rv_discrete):
     """Count distribution based on discretized distribution
@@ -330,9 +344,10 @@ class DiscretizedCount(rv_discrete):
         args, scale = self._unpack_args(args)
         if size is None:
             size = getattr(self, "_size", 1)
-        rv = np.trunc(self.distr.rvs(*args, scale=scale, size=size,
-                                     random_state=random_state) +
-                      self.d_offset)
+        rv = np.trunc(
+            self.distr.rvs(*args, scale=scale, size=size, random_state=random_state)
+            + self.d_offset
+        )
         return rv
 
     def _pmf(self, x, *args):
@@ -342,8 +357,7 @@ class DiscretizedCount(rv_discrete):
 
         args, scale = self._unpack_args(args)
 
-        p = (distr.sf(x, *args, scale=scale) -
-             distr.sf(x + 1, *args, scale=scale))
+        p = distr.sf(x, *args, scale=scale) - distr.sf(x + 1, *args, scale=scale)
         return p
 
     def _cdf(self, x, *args):
@@ -416,12 +430,13 @@ class DiscretizedModel(GenericLikelihoodModel):
     >>> probs = res.predict(which="probs", k_max=5)
 
     """
+
     def __init__(self, endog, exog=None, distr=None):
         if exog is not None:
             raise ValueError("exog is not supported")
 
         super().__init__(endog, exog, distr=distr)
-        self._init_keys.append('distr')
+        self._init_keys.append("distr")
         self.df_resid = len(endog) - distr.k_shapes
         self.df_model = 0
         self.k_extra = distr.k_shapes  # no constant subtracted
@@ -451,8 +466,7 @@ class DiscretizedModel(GenericLikelihoodModel):
             raise ValueError('only which="probs" is currently implemented')
 
     def get_distr(self, params):
-        """frozen distribution instance of the discrete distribution.
-        """
+        """frozen distribution instance of the discrete distribution."""
         args = params
         distr = self.distr(*args)
         return distr
