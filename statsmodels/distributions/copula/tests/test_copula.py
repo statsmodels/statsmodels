@@ -42,7 +42,6 @@ from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
 
 uniform = stats.uniform
 
-
 ev_list = [
     [trev.transform_bilogistic, 0.5, 0.9, (0.25, 0.05), 0.5],
     [trev.transform_tawn, 0.5, 0.9, (0.5, 0.5, 0.5), 0.4724570876035117],
@@ -87,8 +86,7 @@ ev_dep_list = [
     # [1] 0.9139915932031195 0.8803412942173715 0.8993537417026507
     [trev.transform_joe, 0.5, 0.9, (0.5, 0.75, 1/0.75), 0.,
      [0.9139915932031195, 0.8803412942173715, 0.8993537417026507]]
-    ]
-
+]
 
 cop_list = [
     [tra.TransfFrank, [0.5, 0.9], (2,), 0.4710805107852225,
@@ -98,8 +96,7 @@ cop_list = [
     [tra.TransfClayton, [0.5, 0.9], (2,), 0.485954322440435,
      0.8921974147432954, ClaytonCopula],
     [tra.TransfIndep, [0.5, 0.5], (), 0.25, 1, IndependenceCopula],
-    ]
-
+]
 
 # separate mv list because test_copulas_distr not yet adjusted
 copk_list = [
@@ -118,7 +115,7 @@ copk_list = [
     [tra.TransfFrank, [0.6, 0.5, 0.9, 0.1], (2,), 0.05456579067435671,
      0.4089534511841545, FrankCopula],
     [tra.TransfIndep, [0.5, 0.5, 0.5, 0.5], (), 0.0625, 1, IndependenceCopula],
-    ]
+]
 
 # archimedean with pdf only for k_dim <= 4
 cop_2d = [
@@ -126,7 +123,7 @@ cop_2d = [
     [tra.TransfGumbel, (2,), GumbelCopula],
     # [tra.TransfClayton, (2,), ClaytonCopula],
     # [tra.TransfIndep, (), IndependenceCopula],
-    ]
+]
 
 gev_list = [
     # [cop.transform_tawn, 0.5, 0.9, (0.5, 0.5, 0.5), 0.4724570876035117],
@@ -148,7 +145,7 @@ gev_list = [
     # 0.08992436735088952],
     [trev.transform_joe, 0.4, 0.9, (0.5, 0.75, 1/0.25),
      0.36391125216656162, 0.34752631779552950, 0.09316705199822513],
-    ]
+]
 
 
 def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True):
@@ -655,3 +652,144 @@ class TestGumbelCopula(CheckModernCopula):
 class TestGumbelCopula_3d(CheckRvsDim):
     copula = GumbelCopula(theta=1.5, k_dim=3)
     dim = 3
+
+
+class TestGumbelCopulaD3(CheckModernCopula):
+    copula = GumbelCopula(theta=2, k_dim=3)
+    dim = 3
+
+    def test_rvs(self):
+        pass  # not yet implemented
+
+    def test_seed(self):
+        pass
+
+    u = np.array([[.5, .4, .3],
+                  [.9, .5, .1], ])
+    pdf_u = [2.03436834, 0.06673331]
+    cdf_u = [0.18934033, 0.09008883]
+
+
+class TestClaytonCopulaD3(CheckModernCopula):
+    copula = ClaytonCopula(theta=1.7, k_dim=3)
+    dim = 3
+
+    def test_rvs(self):
+        pass  # not yet implemented
+
+    def test_seed(self):
+        pass
+
+    u = np.array([[.5, .4, .3],
+                  [.9, .5, .1], ])
+    pdf_u = [1.95204437203, 0.0344279435]
+    cdf_u = [0.21409353072, 0.097236851]
+
+
+class TestFrankCopulaD3(CheckModernCopula):
+    copula = FrankCopula(theta=3, k_dim=3)
+    dim = 3
+
+    def test_rvs(self):
+        pass  # not yet implemented
+
+    def test_seed(self):
+        pass
+
+    u = np.array([[.5, .4, .3],
+                  [.9, .5, .1], ])
+    pdf_u = [1.388779278, 0.269276846]
+    cdf_u = [0.147103167, 0.0777380469]
+
+
+class TestGumbelCopulaD8(CheckModernCopula):
+    copula = GumbelCopula(theta=3, k_dim=8)
+    dim = 8
+
+    def test_rvs(self):
+        pass  # not yet implemented
+
+    def test_seed(self):
+        pass
+
+    u = np.array([[.5, .5, .5, .5, .4, .4, .4, .4],
+                  [.8, .7, .6, .5, .4, .3, .2, .1], ])
+    pdf_u = [473.687022030, 0.00726884101]
+    cdf_u = [0.19401890066, 0.0680400887]
+
+
+class TestClaytonCopulaD8(CheckModernCopula):
+    copula = ClaytonCopula(theta=2, k_dim=8)
+    dim = 8
+
+    def test_rvs(self):
+        pass  # not yet implemented
+
+    def test_seed(self):
+        pass
+
+    u = np.array([[.5, .5, .5, .5, .4, .4, .4, .4],
+                  [.8, .7, .6, .5, .4, .3, .2, .1], ])
+    pdf_u = [47.52568248, 0.01258410039]
+    cdf_u = [0.1714985851, 0.0828337516]
+
+
+class TestFrankCopulaD8(CheckModernCopula):
+    copula = FrankCopula(theta=3, k_dim=8)
+    dim = 8
+
+    def test_rvs(self):
+        pass  # not yet implemented
+
+    def test_seed(self):
+        pass
+
+    u = np.array([[.5, .5, .5, .5, .4, .4, .4, .4],
+                  [.8, .7, .6, .5, .4, .3, .2, .1], ])
+    pdf_u = [7.219982067995, 0.5939099303643]
+    cdf_u = [0.0442004940577, 0.01217801374828]
+
+
+class TestGumbelCopulaD25(CheckModernCopula):
+    copula = GumbelCopula(theta=1.5, k_dim=25)
+    dim = 25
+
+    def test_rvs(self):
+        pass  # not yet implemented
+
+    def test_seed(self):
+        pass
+
+    u = np.array([[.1] * 25])
+    pdf_u = [324389652.15763295]
+    cdf_u = [2.819163517e-09]
+
+
+class TestClaytonCopulaD25(CheckModernCopula):
+    copula = ClaytonCopula(theta=2, k_dim=25)
+    dim = 25
+
+    def test_rvs(self):
+        pass  # not yet implemented
+
+    def test_seed(self):
+        pass
+
+    u = np.array([[.1] * 25])
+    pdf_u = [1.6828211945245055e+20]
+    cdf_u = [0.0200966967764]
+
+
+class TestFrankCopulaD25(CheckModernCopula):
+    copula = FrankCopula(theta=4, k_dim=25)
+    dim = 25
+
+    def test_rvs(self):
+        pass  # not yet implemented
+
+    def test_seed(self):
+        pass
+
+    u = np.array([[.1] * 25])
+    pdf_u = [19914995288.162113]
+    cdf_u = [3.4908187451800855e-13]
