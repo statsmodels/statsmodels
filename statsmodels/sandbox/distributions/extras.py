@@ -61,9 +61,14 @@ from statsmodels.stats.moment_helpers import mc2mvsk, mvsk2mc
 try:
     from scipy.stats._mvn import mvndst
 except ImportError:
-    # Must be using SciPy <1.8.0 where this function was moved (it's not a
-    # public SciPy function, but we need it here)
-    from scipy.stats.mvn import mvndst
+    try:
+        # Must be using SciPy <1.8.0 where this function was moved (it's not a
+        # public SciPy function, but we need it here)
+        from scipy.stats.mvn import mvndst
+    except ImportError:
+
+        def mvndst(*args, **kwargs):
+            raise ImportError("mvndst not available. Much use SciPy < 1.16.0")
 
 
 # note copied from distr_skewnorm_0.py
@@ -80,19 +85,21 @@ class SkewNorm_gen(distributions.rv_continuous):
 
     def __init__(self):
         # super(SkewNorm_gen,self).__init__(
-        distributions.rv_continuous.__init__(self,
-                                             name='Skew Normal distribution', shapes='alpha',
-                                             # extradoc = """ """
-                                             )
+        distributions.rv_continuous.__init__(
+            self,
+            name="Skew Normal distribution",
+            shapes="alpha",
+            # extradoc = """ """
+        )
 
     def _argcheck(self, alpha):
         return 1  # (alpha >= 0)
 
     def _rvs(self, alpha):
         # see http://azzalini.stat.unipd.it/SN/faq.html
-        delta = alpha / np.sqrt(1 + alpha ** 2)
+        delta = alpha / np.sqrt(1 + alpha**2)
         u0 = stats.norm.rvs(size=self._size)
-        u1 = delta * u0 + np.sqrt(1 - delta ** 2) * stats.norm.rvs(size=self._size)
+        u1 = delta * u0 + np.sqrt(1 - delta**2) * stats.norm.rvs(size=self._size)
         return np.where(u0 > 0, u1, -u1)
 
     def _munp(self, n, alpha):
@@ -102,9 +109,11 @@ class SkewNorm_gen(distributions.rv_continuous):
 
     def _pdf(self, x, alpha):
         # 2*normpdf(x)*normcdf(alpha*x)
-        return 2.0 / np.sqrt(2 * np.pi) * np.exp(-x ** 2 / 2.0) * special.ndtr(alpha * x)
+        return (
+            2.0 / np.sqrt(2 * np.pi) * np.exp(-(x**2) / 2.0) * special.ndtr(alpha * x)
+        )
 
-    def _stats_skip(self, x, alpha, moments='mvsk'):
+    def _stats_skip(self, x, alpha, moments="mvsk"):
         # skip for now to force moment integration as check
         pass
 
@@ -125,12 +134,16 @@ class SkewNorm2_gen(distributions.rv_continuous):
 
     def _pdf(self, x, alpha):
         # 2*normpdf(x)*normcdf(alpha*x
-        return 2.0 / np.sqrt(2 * np.pi) * np.exp(-x ** 2 / 2.0) * special.ndtr(alpha * x)
+        return (
+            2.0 / np.sqrt(2 * np.pi) * np.exp(-(x**2) / 2.0) * special.ndtr(alpha * x)
+        )
 
 
-skewnorm2 = SkewNorm2_gen(name='Skew Normal distribution', shapes='alpha',
-                          # extradoc = """  -inf < alpha < inf"""
-                          )
+skewnorm2 = SkewNorm2_gen(
+    name="Skew Normal distribution",
+    shapes="alpha",
+    # extradoc = """  -inf < alpha < inf"""
+)
 
 
 class ACSkewT_gen(distributions.rv_continuous):
@@ -142,9 +155,11 @@ class ACSkewT_gen(distributions.rv_continuous):
 
     def __init__(self):
         # super(SkewT_gen,self).__init__(
-        distributions.rv_continuous.__init__(self,
-                                             name='Skew T distribution', shapes='df, alpha',
-                                             )
+        distributions.rv_continuous.__init__(
+            self,
+            name="Skew T distribution",
+            shapes="df, alpha",
+        )
 
     #             extradoc = """
     # Skewed T distribution by Azzalini, A. & Capitanio, A. (2003)_
@@ -184,8 +199,11 @@ class ACSkewT_gen(distributions.rv_continuous):
 
     def _pdf(self, x, df, alpha):
         # 2*normpdf(x)*normcdf(alpha*x)
-        return 2.0 * distributions.t._pdf(x, df) * special.stdtr(df + 1, alpha * x * np.sqrt(
-            (1 + df) / (x ** 2 + df)))
+        return (
+            2.0
+            * distributions.t._pdf(x, df)
+            * special.stdtr(df + 1, alpha * x * np.sqrt((1 + df) / (x**2 + df)))
+        )
 
 
 ##
@@ -250,8 +268,9 @@ def pdf_moments_st(cnt):
 
     N = len(cnt)
     if N < 2:
-        raise ValueError("At least two moments must be given to "
-                         "approximate the pdf.")
+        raise ValueError(
+            "At least two moments must be given to " "approximate the pdf."
+        )
 
     totp = poly1d(1)
     sig = sqrt(cnt[1])
@@ -267,7 +286,7 @@ def pdf_moments_st(cnt):
                 momdiff = cnt[m - 1]
             else:
                 momdiff = cnt[m - 1] - sig * sig * scipy.factorial2(m - 1)
-            Ck += Dvals[k][m] / sig ** m * momdiff
+            Ck += Dvals[k][m] / sig**m * momdiff
         # Add to totp
         raise SystemError
         print(Dvals)
@@ -323,8 +342,7 @@ def pdf_mvsk(mvsk):
     """
     N = len(mvsk)
     if N < 4:
-        raise ValueError("Four moments must be given to "
-                         "approximate the pdf.")
+        raise ValueError("Four moments must be given to " "approximate the pdf.")
 
     mu, mc2, skew, kurt = mvsk
 
@@ -373,12 +391,13 @@ def pdf_moments(cnt):
     """
     N = len(cnt)
     if N < 2:
-        raise ValueError("At least two moments must be given to "
-                         "approximate the pdf.")
+        raise ValueError(
+            "At least two moments must be given to " "approximate the pdf."
+        )
 
     mc, mc2, mc3, mc4 = cnt
-    skew = mc3 / mc2 ** 1.5
-    kurt = mc4 / mc2 ** 2.0 - 3.0  # Fisher kurtosis, excess kurtosis
+    skew = mc3 / mc2**1.5
+    kurt = mc4 / mc2**2.0 - 3.0  # Fisher kurtosis, excess kurtosis
 
     totp = poly1d(1)
     sig = sqrt(cnt[1])
@@ -421,9 +440,11 @@ class NormExpan_gen(distributions.rv_continuous):
 
     def __init__(self, args, **kwds):
         # todo: replace with super call
-        distributions.rv_continuous.__init__(self,
-                                             name='Normal Expansion distribution', shapes=' ',
-                                             )
+        distributions.rv_continuous.__init__(
+            self,
+            name="Normal Expansion distribution",
+            shapes=" ",
+        )
         #     extradoc = """
         # The distribution is defined as the Gram-Charlier expansion of
         # the normal distribution using the first four moments. The pdf
@@ -442,16 +463,16 @@ class NormExpan_gen(distributions.rv_continuous):
         # to the initialized distribution.
         # """  )
         # print args, kwds
-        mode = kwds.get('mode', 'sample')
+        mode = kwds.get("mode", "sample")
 
-        if mode == 'sample':
+        if mode == "sample":
             mu, sig, sk, kur = stats.describe(args)[2:]
             self.mvsk = (mu, sig, sk, kur)
             cnt = mvsk2mc((mu, sig, sk, kur))
-        elif mode == 'mvsk':
+        elif mode == "mvsk":
             cnt = mvsk2mc(args)
             self.mvsk = args
-        elif mode == 'centmom':
+        elif mode == "centmom":
             cnt = args
             self.mvsk = mc2mvsk(cnt)
         else:
@@ -514,16 +535,15 @@ License: BSD
 
 def get_u_argskwargs(**kwargs):
     # Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
-    u_kwargs = {k.replace('u_', '', 1): v for k, v in kwargs.items()
-                    if k.startswith('u_')}
-    u_args = u_kwargs.pop('u_args', None)
+    u_kwargs = {
+        k.replace("u_", "", 1): v for k, v in kwargs.items() if k.startswith("u_")
+    }
+    u_args = u_kwargs.pop("u_args", None)
     return u_args, u_kwargs
 
 
 class Transf_gen(distributions.rv_continuous):
-    """a class for non-linear monotonic transformation of a continuous random variable
-
-    """
+    """a class for non-linear monotonic transformation of a continuous random variable"""
 
     def __init__(self, kls, func, funcinv, *args, **kwargs):
         # print args
@@ -533,14 +553,14 @@ class Transf_gen(distributions.rv_continuous):
         self.funcinv = funcinv
         # explicit for self.__dict__.update(kwargs)
         # need to set numargs because inspection does not work
-        self.numargs = kwargs.pop('numargs', 0)
+        self.numargs = kwargs.pop("numargs", 0)
         # print self.numargs
-        name = kwargs.pop('name', 'transfdist')
-        longname = kwargs.pop('longname', 'Non-linear transformed distribution')
-        kwargs.pop('extradoc', None)
-        a = kwargs.pop('a', -np.inf)
-        b = kwargs.pop('b', np.inf)
-        self.decr = kwargs.pop('decr', False)
+        name = kwargs.pop("name", "transfdist")
+        longname = kwargs.pop("longname", "Non-linear transformed distribution")
+        kwargs.pop("extradoc", None)
+        a = kwargs.pop("a", -np.inf)
+        b = kwargs.pop("b", np.inf)
+        self.decr = kwargs.pop("decr", False)
         # defines whether it is a decreasing (True)
         #       or increasing (False) monotonic transformation
 
@@ -590,16 +610,28 @@ def identit(x):
     return x
 
 
-invdnormalg = Transf_gen(stats.norm, inversew, inversew_inv, decr=True,  # a=-np.inf,
-                         numargs=0, name='discf', longname='normal-based discount factor',
-                         extradoc='\ndistribution of discount factor y=1/(1+x)) with x N(0.05,0.1**2)')
+invdnormalg = Transf_gen(
+    stats.norm,
+    inversew,
+    inversew_inv,
+    decr=True,  # a=-np.inf,
+    numargs=0,
+    name="discf",
+    longname="normal-based discount factor",
+    extradoc="\ndistribution of discount factor y=1/(1+x)) with x N(0.05,0.1**2)",
+)
 
-lognormalg = Transf_gen(stats.norm, np.exp, np.log,
-                        numargs=2, a=0, name='lnnorm',
-                        longname='Exp transformed normal',
-                        # extradoc = '\ndistribution of y = exp(x), with x standard normal'
-                        # 'precision for moment andstats is not very high, 2-3 decimals'
-                        )
+lognormalg = Transf_gen(
+    stats.norm,
+    np.exp,
+    np.log,
+    numargs=2,
+    a=0,
+    name="lnnorm",
+    longname="Exp transformed normal",
+    # extradoc = '\ndistribution of y = exp(x), with x standard normal'
+    # 'precision for moment andstats is not very high, 2-3 decimals'
+)
 
 loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
 
@@ -622,14 +654,14 @@ class ExpTransf_gen(distributions.rv_continuous):
         # print args
         # print kwargs
         # explicit for self.__dict__.update(kwargs)
-        if 'numargs' in kwargs:
-            self.numargs = kwargs['numargs']
+        if "numargs" in kwargs:
+            self.numargs = kwargs["numargs"]
         else:
             self.numargs = 1
-        if 'name' in kwargs:
-            name = kwargs['name']
+        if "name" in kwargs:
+            name = kwargs["name"]
         else:
-            name = 'Log transformed distribution'
+            name = "Log transformed distribution"
         super().__init__(a=0, name=name)
         self.kls = kls
 
@@ -652,16 +684,16 @@ class LogTransf_gen(distributions.rv_continuous):
 
     def __init__(self, kls, *args, **kwargs):
         # explicit for self.__dict__.update(kwargs)
-        if 'numargs' in kwargs:
-            self.numargs = kwargs['numargs']
+        if "numargs" in kwargs:
+            self.numargs = kwargs["numargs"]
         else:
             self.numargs = 1
-        if 'name' in kwargs:
-            name = kwargs['name']
+        if "name" in kwargs:
+            name = kwargs["name"]
         else:
-            name = 'Log transformed distribution'
-        if 'a' in kwargs:
-            a = kwargs['a']
+            name = "Log transformed distribution"
+        if "a" in kwargs:
+            a = kwargs["a"]
         else:
             a = 0
 
@@ -732,8 +764,17 @@ class TransfTwo_gen(distributions.rv_continuous):
     """
 
     # a class for non-linear non-monotonic transformation of a continuous random variable
-    def __init__(self, kls, func, funcinvplus, funcinvminus, derivplus,
-                 derivminus, *args, **kwargs):
+    def __init__(
+        self,
+        kls,
+        func,
+        funcinvplus,
+        funcinvminus,
+        derivplus,
+        derivminus,
+        *args,
+        **kwargs
+    ):
         # print args
         # print kwargs
 
@@ -744,14 +785,14 @@ class TransfTwo_gen(distributions.rv_continuous):
         self.derivminus = derivminus
         # explicit for self.__dict__.update(kwargs)
         # need to set numargs because inspection does not work
-        self.numargs = kwargs.pop('numargs', 0)
+        self.numargs = kwargs.pop("numargs", 0)
         # print self.numargs
-        name = kwargs.pop('name', 'transfdist')
-        longname = kwargs.pop('longname', 'Non-linear transformed distribution')
-        kwargs.pop('extradoc', None)
-        a = kwargs.pop('a', -np.inf)  # attached to self in super
-        b = kwargs.pop('b', np.inf)  # self.a, self.b would be overwritten
-        self.shape = kwargs.pop('shape', False)
+        name = kwargs.pop("name", "transfdist")
+        longname = kwargs.pop("longname", "Non-linear transformed distribution")
+        kwargs.pop("extradoc", None)
+        a = kwargs.pop("a", -np.inf)  # attached to self in super
+        b = kwargs.pop("b", np.inf)  # self.a, self.b would be overwritten
+        self.shape = kwargs.pop("shape", False)
         # defines whether it is a `u` shaped or `hump' shaped
         #       transformation
 
@@ -759,17 +800,26 @@ class TransfTwo_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super().__init__(a=a, b=b, name=name,
-                         shapes=kls.shapes,
-                         longname=longname,
-                         # extradoc = extradoc
-                         )
+        super().__init__(
+            a=a,
+            b=b,
+            name=name,
+            shapes=kls.shapes,
+            longname=longname,
+            # extradoc = extradoc
+        )
 
         # add enough info for self.freeze() to be able to reconstruct the instance
         self._ctor_param.update(
-            dict(kls=kls, func=func, funcinvplus=funcinvplus,
-                 funcinvminus=funcinvminus, derivplus=derivplus,
-                 derivminus=derivminus, shape=self.shape)
+            dict(
+                kls=kls,
+                func=func,
+                funcinvplus=funcinvplus,
+                funcinvminus=funcinvminus,
+                derivplus=derivplus,
+                derivminus=derivminus,
+                shape=self.shape,
+            )
         )
 
     def _rvs(self, *args):
@@ -778,32 +828,35 @@ class TransfTwo_gen(distributions.rv_continuous):
 
     def _pdf(self, x, *args, **kwargs):
         # print args
-        if self.shape == 'u':
+        if self.shape == "u":
             signpdf = 1
-        elif self.shape == 'hump':
+        elif self.shape == "hump":
             signpdf = -1
         else:
-            raise ValueError('shape can only be `u` or `hump`')
+            raise ValueError("shape can only be `u` or `hump`")
 
-        return signpdf * (self.derivplus(x) * self.kls._pdf(self.funcinvplus(x), *args, **kwargs) -
-                          self.derivminus(x) * self.kls._pdf(self.funcinvminus(x), *args,
-                                                             **kwargs))
+        return signpdf * (
+            self.derivplus(x) * self.kls._pdf(self.funcinvplus(x), *args, **kwargs)
+            - self.derivminus(x) * self.kls._pdf(self.funcinvminus(x), *args, **kwargs)
+        )
         # note scipy _cdf only take *args not *kwargs
 
     def _cdf(self, x, *args, **kwargs):
         # print args
-        if self.shape == 'u':
-            return self.kls._cdf(self.funcinvplus(x), *args, **kwargs) - \
-                self.kls._cdf(self.funcinvminus(x), *args, **kwargs)
+        if self.shape == "u":
+            return self.kls._cdf(self.funcinvplus(x), *args, **kwargs) - self.kls._cdf(
+                self.funcinvminus(x), *args, **kwargs
+            )
             # note scipy _cdf only take *args not *kwargs
         else:
             return 1.0 - self._sf(x, *args, **kwargs)
 
     def _sf(self, x, *args, **kwargs):
         # print args
-        if self.shape == 'hump':
-            return self.kls._cdf(self.funcinvplus(x), *args, **kwargs) - \
-                self.kls._cdf(self.funcinvminus(x), *args, **kwargs)
+        if self.shape == "hump":
+            return self.kls._cdf(self.funcinvplus(x), *args, **kwargs) - self.kls._cdf(
+                self.funcinvminus(x), *args, **kwargs
+            )
             # note scipy _cdf only take *args not *kwargs
         else:
             return 1.0 - self._cdf(x, *args, **kwargs)
@@ -825,6 +878,7 @@ class TransfTwo_gen(distributions.rv_continuous):
 #            return self.func(self.kls._ppf(1-q,*args, **kwargs))
 
 # TODO: rename these functions to have unique names
+
 
 class SquareFunc:
     """class to hold quadratic function with inverse function and derivative
@@ -851,21 +905,39 @@ class SquareFunc:
 
 sqfunc = SquareFunc()
 
-squarenormalg = TransfTwo_gen(stats.norm, sqfunc.squarefunc, sqfunc.inverseplus,
-                              sqfunc.inverseminus, sqfunc.derivplus, sqfunc.derivminus,
-                              shape='u', a=0.0, b=np.inf,
-                              numargs=0, name='squarenorm', longname='squared normal distribution',
-                              # extradoc = '\ndistribution of the square of a normal random variable' +\
-                              #           ' y=x**2 with x N(0.0,1)'
-                              )
+squarenormalg = TransfTwo_gen(
+    stats.norm,
+    sqfunc.squarefunc,
+    sqfunc.inverseplus,
+    sqfunc.inverseminus,
+    sqfunc.derivplus,
+    sqfunc.derivminus,
+    shape="u",
+    a=0.0,
+    b=np.inf,
+    numargs=0,
+    name="squarenorm",
+    longname="squared normal distribution",
+    # extradoc = '\ndistribution of the square of a normal random variable' +\
+    #           ' y=x**2 with x N(0.0,1)'
+)
 # u_loc=l, u_scale=s)
-squaretg = TransfTwo_gen(stats.t, sqfunc.squarefunc, sqfunc.inverseplus,
-                         sqfunc.inverseminus, sqfunc.derivplus, sqfunc.derivminus,
-                         shape='u', a=0.0, b=np.inf,
-                         numargs=1, name='squarenorm', longname='squared t distribution',
-                         # extradoc = '\ndistribution of the square of a t random variable' +\
-                         #            ' y=x**2 with x t(dof,0.0,1)'
-                         )
+squaretg = TransfTwo_gen(
+    stats.t,
+    sqfunc.squarefunc,
+    sqfunc.inverseplus,
+    sqfunc.inverseminus,
+    sqfunc.derivplus,
+    sqfunc.derivminus,
+    shape="u",
+    a=0.0,
+    b=np.inf,
+    numargs=1,
+    name="squarenorm",
+    longname="squared t distribution",
+    # extradoc = '\ndistribution of the square of a t random variable' +\
+    #            ' y=x**2 with x t(dof,0.0,1)'
+)
 
 
 def inverseplus(x):
@@ -888,16 +960,26 @@ def negsquarefunc(x):
     return -np.power(x, 2)
 
 
-negsquarenormalg = TransfTwo_gen(stats.norm, negsquarefunc, inverseplus, inverseminus,
-                                 derivplus, derivminus, shape='hump', a=-np.inf, b=0.0,
-                                 numargs=0, name='negsquarenorm',
-                                 longname='negative squared normal distribution',
-                                 # extradoc = '\ndistribution of the negative square of a normal random variable' +\
-                                 #            ' y=-x**2 with x N(0.0,1)'
-                                 )
+negsquarenormalg = TransfTwo_gen(
+    stats.norm,
+    negsquarefunc,
+    inverseplus,
+    inverseminus,
+    derivplus,
+    derivminus,
+    shape="hump",
+    a=-np.inf,
+    b=0.0,
+    numargs=0,
+    name="negsquarenorm",
+    longname="negative squared normal distribution",
+    # extradoc = '\ndistribution of the negative square of a normal random variable' +\
+    #            ' y=-x**2 with x N(0.0,1)'
+)
 
 
 # u_loc=l, u_scale=s)
+
 
 def inverseplus(x):
     return x
@@ -919,12 +1001,22 @@ def absfunc(x):
     return np.abs(x)
 
 
-absnormalg = TransfTwo_gen(stats.norm, np.abs, inverseplus, inverseminus,
-                           derivplus, derivminus, shape='u', a=0.0, b=np.inf,
-                           numargs=0, name='absnorm', longname='absolute of normal distribution',
-                           # extradoc = '\ndistribution of the absolute value of a normal random variable' +\
-                           #            ' y=abs(x) with x N(0,1)'
-                           )
+absnormalg = TransfTwo_gen(
+    stats.norm,
+    np.abs,
+    inverseplus,
+    inverseminus,
+    derivplus,
+    derivminus,
+    shape="u",
+    a=0.0,
+    b=np.inf,
+    numargs=0,
+    name="absnorm",
+    longname="absolute of normal distribution",
+    # extradoc = '\ndistribution of the absolute value of a normal random variable' +\
+    #            ' y=abs(x) with x N(0,1)'
+)
 
 # copied from mvncdf.py
 """multivariate normal probabilities and cumulative distribution function
@@ -1006,10 +1098,12 @@ a wrapper for scipy.stats._mvn.mvndst
 (2e-016, 0.47747329317779391, 0)
 """
 
-informcode = {0: 'normal completion with ERROR < EPS',
-              1: """completion with ERROR > EPS and MAXPTS function values used;
+informcode = {
+    0: "normal completion with ERROR < EPS",
+    1: """completion with ERROR > EPS and MAXPTS function values used;
                     increase MAXPTS to decrease ERROR;""",
-              2: 'N > 500 or N < 1'}
+    2: "N > 500 or N < 1",
+}
 
 
 def mvstdnormcdf(lower, upper, corrcoef, **kwds):
@@ -1085,9 +1179,9 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     correl = np.zeros(int(n * (n - 1) / 2.0))  # dtype necessary?
 
     if (lower.ndim != 1) or (upper.ndim != 1):
-        raise ValueError('can handle only 1D bounds')
+        raise ValueError("can handle only 1D bounds")
     if len(upper) != n:
-        raise ValueError('bounds have different lengths')
+        raise ValueError("bounds have different lengths")
     if n == 2 and corrcoef.size == 1:
         correl = corrcoef
         # print 'case scalar rho', n
@@ -1101,11 +1195,11 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     #            for jj in range(ii):
     #                correl[ jj + ((ii-2)*(ii-1))/2] = corrcoef[ii,jj]
     else:
-        raise ValueError('corrcoef has incorrect dimension')
+        raise ValueError("corrcoef has incorrect dimension")
 
-    if 'maxpts' not in kwds:
+    if "maxpts" not in kwds:
         if n > 2:
-            kwds['maxpts'] = 10000 * n
+            kwds["maxpts"] = 10000 * n
 
     lowinf = np.isneginf(lower)
     uppinf = np.isposinf(upper)
@@ -1125,7 +1219,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     # print kwds.items()
     error, cdfvalue, inform = mvndst(lower, upper, infin, correl, **kwds)
     if inform:
-        print('something wrong', informcode[inform], error)
+        print("something wrong", informcode[inform], error)
     return cdfvalue
 
 
