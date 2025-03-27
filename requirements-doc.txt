@@ -17,3 +17,10 @@ pymc3; os_name != "nt"
 arviz; os_name != "nt"
 jinja2==3.0.3
 pickleshare
+# Pyodide kernel 0.5.2 comes with Pyodide 0.27.2; see
+# https://pyodide.org/en/0.27.2/usage/packages-in-pyodide.html and
+# https://jupyterlite-pyodide-kernel.readthedocs.io/en/stable/#with-pyodide
+# for information on updating
+pyodide-http
+jupyterlite-sphinx>=0.19.0
+jupyterlite-pyodide-kernel==0.5.2
