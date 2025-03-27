@@ -112,3 +112,7 @@ statsmodels/LICENSE.txt
 
 # Dataset downloads
 statsmodels/datasets/tests/*.zip
+
+# Interactive documentation + Pyodide testing components
+.pyodide-xbuildenv-*
+docs/source/_contents
