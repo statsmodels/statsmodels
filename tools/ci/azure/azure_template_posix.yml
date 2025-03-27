@@ -59,8 +59,8 @@ jobs:
           SCIPY: 1.9.3
           PANDAS: 1.5.3
           MATPLOTLIB: 3.6.0
-        python_312_copy_on_write:
-          python.version: '3.12'
+        python_313_copy_on_write:
+          python.version: '3.13'
           SM_TEST_COPY_ON_WRITE: 1
         python_312_pre:
           python.version: '3.12'
@@ -81,8 +81,8 @@ jobs:
           python.version: '3.11'
         python312_macos_latest:
           python.version: '3.12'
-        python312_macos_latest_install:
-          python.version: '3.12'
+        python313_macos_latest_install:
+          python.version: '3.13'
           test.install: true
     maxParallel: 10
 
