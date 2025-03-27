@@ -22,11 +22,11 @@ jobs:
       python310_win_latest:
         python.version: '3.10'
         python.architecture: 'x64'
-      python311_win_latest:
-        python.version: '3.11'
-        python.architecture: 'x64'
       python312_win_latest:
         python.version: '3.12'
+        python.architecture: 'x64'
+      python313_win_latest:
+        python.version: '3.13'
         python.architecture: 'x64'
     maxParallel: 10
 

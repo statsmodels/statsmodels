@@ -110,13 +110,14 @@ class AutoReg(tsa_model.TimeSeriesModel):
         list of lag indices to include.  For example, [1, 4] will only
         include lags 1 and 4 while lags=4 will include lags 1, 2, 3, and 4.
         None excludes all AR lags, and behave identically to 0.
-    trend : {'n', 'c', 't', 'ct'}
+    trend : {'n', 'c', 't', 'ct', 'ctt'}
         The trend to include in the model:
 
         * 'n' - No trend.
         * 'c' - Constant only.
         * 't' - Time trend only.
-        * 'ct' - Constant and time trend.
+        * 'ct' - Constant and linear time trend.
+        * 'ctt' - Constant and linear and quadratic time trends.
 
     seasonal : bool
         Flag indicating whether to include seasonal dummies in the model. If
@@ -209,9 +210,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
     ):
         super().__init__(endog, exog, None, None, missing=missing)
         self._trend = cast(
-            Literal["n", "c", "t", "ct"],
+            Literal["n", "c", "t", "ct", "ctt"],
             string_like(
-                trend, "trend", options=("n", "c", "t", "ct"), optional=False
+                trend, "trend", options=("n", "c", "t", "ct", "ctt"), optional=False
             ),
         )
         self._seasonal = bool_like(seasonal, "seasonal")

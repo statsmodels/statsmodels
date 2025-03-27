@@ -821,3 +821,17 @@ def test_resids_ardl_uecm():
     uecm_res = uecm_mod.fit()
 
     assert_allclose(uecm_res.resid, ardl_res.resid)
+
+
+@pytest.mark.parametrize("y_lags", [None, 1, 2])
+@pytest.mark.parametrize("x_lags", [None, 1, 2])
+@pytest.mark.parametrize("causal", [True, False])
+def test_ardl_trend_ctt(data, y_lags, x_lags, causal):
+    """Test ARDL with trend='ctt'."""
+    res = ARDL(data.y, y_lags, data.x, x_lags, trend="ctt", causal=causal).fit()
+    n_x = data.x.shape[1]
+    n_params = 3
+    n_params += y_lags if y_lags else 0
+    n_params += n_x * (int(not causal) + x_lags) if x_lags else 0
+    assert res.params.shape[0] == n_params
+    check_results(res)

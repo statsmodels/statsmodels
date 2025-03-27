@@ -1,7 +1,9 @@
 """
 Test functions for models.regression
 """
+
 # TODO: Test for LM
+from statsmodels.compat.pandas import PD_LT_3
 from statsmodels.compat.python import lrange
 
 import warnings
@@ -54,16 +56,12 @@ class CheckRegressionResults:
     decimal_params = DECIMAL_4
 
     def test_params(self):
-        assert_almost_equal(
-            self.res1.params, self.res2.params, self.decimal_params
-        )
+        assert_almost_equal(self.res1.params, self.res2.params, self.decimal_params)
 
     decimal_standarderrors = DECIMAL_4
 
     def test_standarderrors(self):
-        assert_allclose(
-            self.res1.bse, self.res2.bse, self.decimal_standarderrors
-        )
+        assert_allclose(self.res1.bse, self.res2.bse, self.decimal_standarderrors)
 
     decimal_confidenceintervals = DECIMAL_4
 
@@ -75,12 +73,12 @@ class CheckRegressionResults:
             assert_allclose(
                 conf1[i][0],
                 conf2[i][0],
-                rtol=10 ** -self.decimal_confidenceintervals,
+                rtol=10**-self.decimal_confidenceintervals,
             )
             assert_allclose(
                 conf1[i][1],
                 conf2[i][1],
-                rtol=10 ** -self.decimal_confidenceintervals,
+                rtol=10**-self.decimal_confidenceintervals,
             )
 
     decimal_conf_int_subset = DECIMAL_4
@@ -97,9 +95,7 @@ class CheckRegressionResults:
     decimal_scale = DECIMAL_4
 
     def test_scale(self):
-        assert_almost_equal(
-            self.res1.scale, self.res2.scale, self.decimal_scale
-        )
+        assert_almost_equal(self.res1.scale, self.res2.scale, self.decimal_scale)
 
     decimal_rsquared = DECIMAL_4
 
@@ -162,9 +158,7 @@ class CheckRegressionResults:
     def test_fvalue(self):
         # did not change this, not sure it should complain -inf not equal -inf
         # if not (np.isinf(self.res1.fvalue) and np.isinf(self.res2.fvalue)):
-        assert_almost_equal(
-            self.res1.fvalue, self.res2.fvalue, self.decimal_fvalue
-        )
+        assert_almost_equal(self.res1.fvalue, self.res2.fvalue, self.decimal_fvalue)
 
     decimal_loglike = DECIMAL_4
 
@@ -193,23 +187,17 @@ class CheckRegressionResults:
     decimal_pvalues = DECIMAL_4
 
     def test_pvalues(self):
-        assert_almost_equal(
-            self.res1.pvalues, self.res2.pvalues, self.decimal_pvalues
-        )
+        assert_almost_equal(self.res1.pvalues, self.res2.pvalues, self.decimal_pvalues)
 
     decimal_wresid = DECIMAL_4
 
     def test_wresid(self):
-        assert_almost_equal(
-            self.res1.wresid, self.res2.wresid, self.decimal_wresid
-        )
+        assert_almost_equal(self.res1.wresid, self.res2.wresid, self.decimal_wresid)
 
     decimal_resids = DECIMAL_4
 
     def test_resids(self):
-        assert_almost_equal(
-            self.res1.resid, self.res2.resid, self.decimal_resids
-        )
+        assert_almost_equal(self.res1.resid, self.res2.resid, self.decimal_resids)
 
     decimal_norm_resids = DECIMAL_4
 
@@ -252,9 +240,7 @@ class TestOLS(CheckRegressionResults):
         cls.res_qr_manual = res_qr2
 
     def test_eigenvalues(self):
-        eigenval_perc_diff = (
-            self.res_qr.eigenvals - self.res_qr_manual.eigenvals
-        )
+        eigenval_perc_diff = self.res_qr.eigenvals - self.res_qr_manual.eigenvals
         eigenval_perc_diff /= self.res_qr.eigenvals
         zeros = np.zeros_like(eigenval_perc_diff)
         assert_almost_equal(eigenval_perc_diff, zeros, DECIMAL_7)
@@ -263,33 +249,23 @@ class TestOLS(CheckRegressionResults):
     def test_HC0_errors(self):
         # They are split up because the copied results do not have any
         # DECIMAL_4 places for the last place.
-        assert_almost_equal(
-            self.res1.HC0_se[:-1], self.res2.HC0_se[:-1], DECIMAL_4
-        )
+        assert_almost_equal(self.res1.HC0_se[:-1], self.res2.HC0_se[:-1], DECIMAL_4)
         assert_allclose(np.round(self.res1.HC0_se[-1]), self.res2.HC0_se[-1])
 
     def test_HC1_errors(self):
-        assert_almost_equal(
-            self.res1.HC1_se[:-1], self.res2.HC1_se[:-1], DECIMAL_4
-        )
+        assert_almost_equal(self.res1.HC1_se[:-1], self.res2.HC1_se[:-1], DECIMAL_4)
         # Note: tolerance is tight; rtol=3e-7 fails while 4e-7 passes
         assert_allclose(self.res1.HC1_se[-1], self.res2.HC1_se[-1], rtol=4e-7)
 
     def test_HC2_errors(self):
-        assert_almost_equal(
-            self.res1.HC2_se[:-1], self.res2.HC2_se[:-1], DECIMAL_4
-        )
+        assert_almost_equal(self.res1.HC2_se[:-1], self.res2.HC2_se[:-1], DECIMAL_4)
         # Note: tolerance is tight; rtol=4e-7 fails while 5e-7 passes
         assert_allclose(self.res1.HC2_se[-1], self.res2.HC2_se[-1], rtol=5e-7)
 
     def test_HC3_errors(self):
-        assert_almost_equal(
-            self.res1.HC3_se[:-1], self.res2.HC3_se[:-1], DECIMAL_4
-        )
+        assert_almost_equal(self.res1.HC3_se[:-1], self.res2.HC3_se[:-1], DECIMAL_4)
         # Note: tolerance is tight; rtol=1e-7 fails while 1.5e-7 passes
-        assert_allclose(
-            self.res1.HC3_se[-1], self.res2.HC3_se[-1], rtol=1.5e-7
-        )
+        assert_allclose(self.res1.HC3_se[-1], self.res2.HC3_se[-1], rtol=1.5e-7)
 
     def test_qr_params(self):
         assert_almost_equal(self.res1.params, self.res_qr.params, 6)
@@ -298,8 +274,7 @@ class TestOLS(CheckRegressionResults):
         # todo: need assert_close
         assert_almost_equal(
             np.ones_like(self.res1.normalized_cov_params),
-            self.res1.normalized_cov_params
-            / self.res_qr.normalized_cov_params,
+            self.res1.normalized_cov_params / self.res_qr.normalized_cov_params,
             5,
         )
 
@@ -323,13 +298,11 @@ class TestOLS(CheckRegressionResults):
             assert_equal(rsquared_adj, np.nan)
 
     def test_qr_alternatives(self):
-        assert_allclose(
-            self.res_qr.params, self.res_qr_manual.params, rtol=5e-12
-        )
+        assert_allclose(self.res_qr.params, self.res_qr_manual.params, rtol=5e-12)
 
     def test_norm_resid(self):
         resid = self.res1.wresid
-        norm_resid = resid / np.sqrt(np.sum(resid ** 2.0) / self.res1.df_resid)
+        norm_resid = resid / np.sqrt(np.sum(resid**2.0) / self.res1.df_resid)
         model_norm_resid = self.res1.resid_pearson
         assert_almost_equal(model_norm_resid, norm_resid, DECIMAL_7)
 
@@ -337,8 +310,7 @@ class TestOLS(CheckRegressionResults):
         # check that slim summary is smaller, does not verify content
         with warnings.catch_warnings():
             msg = "kurtosistest only valid for n>=20"
-            warnings.filterwarnings("ignore", message=msg,
-                                    category=UserWarning)
+            warnings.filterwarnings("ignore", message=msg, category=UserWarning)
 
             summ = self.res1.summary(slim=True)
         assert len(summ.tables) == 2
@@ -424,9 +396,7 @@ class TestFTest2:
         assert_almost_equal(self.Ftest1.fvalue, 9.7404618732968196, DECIMAL_4)
 
     def test_pvalue(self):
-        assert_almost_equal(
-            self.Ftest1.pvalue, 0.0056052885317493459, DECIMAL_4
-        )
+        assert_almost_equal(self.Ftest1.pvalue, 0.0056052885317493459, DECIMAL_4)
 
     def test_df_denom(self):
         assert_equal(self.Ftest1.df_denom, 9)
@@ -501,8 +471,7 @@ class TestTtest:
     def test_pvalue(self):
         assert_almost_equal(
             self.Ttest.pvalue,
-            student_t.sf(np.abs(self.res1.tvalues), self.res1.model.df_resid)
-            * 2,
+            student_t.sf(np.abs(self.res1.tvalues), self.res1.model.df_resid) * 2,
             DECIMAL_4,
         )
 
@@ -537,9 +506,7 @@ class TestTtest2:
         assert_almost_equal(self.Ttest1.sd, 455.39079425195314, DECIMAL_4)
 
     def test_pvalue(self):
-        assert_almost_equal(
-            self.Ttest1.pvalue, 2 * 0.0015163772380932246, DECIMAL_4
-        )
+        assert_almost_equal(self.Ttest1.pvalue, 2 * 0.0015163772380932246, DECIMAL_4)
 
     def test_df_denom(self):
         assert_equal(self.Ttest1.df_denom, 9)
@@ -567,7 +534,7 @@ class TestGLS:
             1
         ]  # by assumption
         order = toeplitz(np.arange(16))
-        sigma = rho ** order
+        sigma = rho**order
         GLS_results = GLS(data.endog, exog, sigma=sigma).fit()
         cls.res1 = GLS_results
         cls.res2 = LongleyGls()
@@ -603,9 +570,7 @@ class TestGLS:
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
 
     def test_fittedvalues(self):
-        assert_almost_equal(
-            self.res1.fittedvalues, self.res2.fittedvalues, DECIMAL_4
-        )
+        assert_almost_equal(self.res1.fittedvalues, self.res2.fittedvalues, DECIMAL_4)
 
     def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
@@ -643,9 +608,7 @@ class TestGLS_alt_sigma(CheckRegressionResults):
 
     def test_wrong_size_sigma_1d(self):
         n = len(self.endog)
-        assert_raises(
-            ValueError, GLS, self.endog, self.exog, sigma=np.ones(n - 1)
-        )
+        assert_raises(ValueError, GLS, self.endog, self.exog, sigma=np.ones(n - 1))
 
     def test_wrong_size_sigma_2d(self):
         n = len(self.endog)
@@ -714,9 +677,7 @@ class TestLM:
         Sinv = np.linalg.inv(S)
         s = np.mean(scores, 0)
         LMstat = n * np.dot(np.dot(s, Sinv), s.T)
-        LMstat_OLS = self.res2_full.compare_lm_test(
-            self.res2_restricted, demean=False
-        )
+        LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted, demean=False)
         LMstat2 = LMstat_OLS[0]
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
@@ -745,16 +706,12 @@ class TestLM:
         S = np.dot(scores.T, scores) / n
         Sinv = np.linalg.inv(S)
         LMstat = n * np.dot(np.dot(s, Sinv), s.T)
-        LMstat_OLS = self.res2_full.compare_lm_test(
-            self.res2_restricted, use_lr=True
-        )
+        LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted, use_lr=True)
         LMstat2 = LMstat_OLS[0]
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
     def test_LM_nonnested(self):
-        assert_raises(
-            ValueError, self.res2_restricted.compare_lm_test, self.res2_full
-        )
+        assert_raises(ValueError, self.res2_restricted.compare_lm_test, self.res2_full)
 
 
 class TestOLS_GLS_WLS_equivalence:
@@ -871,7 +828,7 @@ class TestWLSExogWeights(CheckRegressionResults):
 
         cls.res1 = WLS(endog, exog, weights=scaled_weights).fit()
         cls.res2 = CCardWLS()
-        cls.res2.wresid = scaled_weights ** 0.5 * cls.res2.resid
+        cls.res2.wresid = scaled_weights**0.5 * cls.res2.resid
 
         # correction because we use different definition for loglike/llf
         corr_ic = 2 * (cls.res1.llf - cls.res2.llf)
@@ -889,7 +846,7 @@ def test_wls_example():
     wls_model = WLS(Y, x, weights=lrange(1, 8)).fit()
     # taken from R lm.summary
     assert_almost_equal(wls_model.fvalue, 0.127337843215, 6)
-    assert_almost_equal(wls_model.scale, 2.44608530786 ** 2, 6)
+    assert_almost_equal(wls_model.scale, 2.44608530786**2, 6)
 
 
 def test_wls_tss():
@@ -944,9 +901,7 @@ def test_wls_missing():
     data = load()
     endog = data.endog
     endog[[10, 25]] = np.nan
-    mod = WLS(
-        data.endog, data.exog, weights=1 / data.exog.iloc[:, 2], missing="drop"
-    )
+    mod = WLS(data.endog, data.exog, weights=1 / data.exog.iloc[:, 2], missing="drop")
     assert_equal(mod.endog.shape[0], 70)
     assert_equal(mod.exog.shape[0], 70)
     assert_equal(mod.weights.shape[0], 70)
@@ -1052,17 +1007,13 @@ class TestGLS_large_data(TestDataDimensions):
         cls.ols_res = OLS(y, x).fit()
 
     def test_large_equal_params(self):
-        assert_almost_equal(
-            self.ols_res.params, self.gls_res.params, DECIMAL_7
-        )
+        assert_almost_equal(self.ols_res.params, self.gls_res.params, DECIMAL_7)
 
     def test_large_equal_loglike(self):
         assert_almost_equal(self.ols_res.llf, self.gls_res.llf, DECIMAL_7)
 
     def test_large_equal_params_none(self):
-        assert_almost_equal(
-            self.gls_res.params, self.gls_res_none.params, DECIMAL_7
-        )
+        assert_almost_equal(self.gls_res.params, self.gls_res_none.params, DECIMAL_7)
 
 
 class TestNxNx(TestDataDimensions):
@@ -1101,8 +1052,7 @@ def test_bad_size():
 def test_const_indicator():
     rs = np.random.RandomState(12345)
     x = rs.randint(0, 3, size=30)
-    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False,
-                       dtype=float)
+    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False, dtype=float)
     y = np.dot(x, [1.0, 2.0, 3.0]) + rs.normal(size=30)
     resc = OLS(y, add_constant(x.iloc[:, 1:], prepend=True)).fit()
     res = OLS(y, x, hasconst=True).fit()
@@ -1114,8 +1064,7 @@ def test_const_indicator():
 def test_fvalue_const_only():
     rs = np.random.RandomState(12345)
     x = rs.randint(0, 3, size=30)
-    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False,
-                       dtype=float)
+    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False, dtype=float)
     x[x.columns[0]] = 1
     y = np.dot(x, [1.0, 2.0, 3.0]) + rs.normal(size=30)
     res = OLS(y, x, hasconst=True).fit(cov_type="HC1")
@@ -1144,7 +1093,10 @@ def test_summary_as_latex():
     x["constant"] = 1
     y = dta.endog
     res = OLS(y, x).fit()
-    with pytest.warns(UserWarning):
+    if PD_LT_3:
+        with pytest.warns(UserWarning):
+            table = res.summary().as_latex()
+    else:
         table = res.summary().as_latex()
     # replace the date and time
     table = re.sub(
@@ -1333,9 +1285,7 @@ def test_formula_missing_cat():
     dta = sm.datasets.grunfeld.load_pandas().data
     dta.loc[dta.index[0], "firm"] = np.nan
 
-    mod = ols(
-        formula="value ~ invest + capital + firm + year", data=dta.dropna()
-    )
+    mod = ols(formula="value ~ invest + capital + firm + year", data=dta.dropna())
     res = mod.fit()
 
     mgr = FormulaManager()
@@ -1349,7 +1299,7 @@ def test_formula_missing_cat():
         error = ValueError
 
     with pytest.raises(error):
-        ols("value ~ invest + capital + firm + year", data=dta,missing="raise")
+        ols("value ~ invest + capital + firm + year", data=dta, missing="raise")
 
 
 def test_missing_formula_predict():
@@ -1495,9 +1445,7 @@ def test_regularized_options():
     model1 = OLS(yvec - 1, xmat)
     result1 = model1.fit_regularized(alpha=1.0, L1_wt=0.5)
     model2 = OLS(yvec, xmat, offset=1)
-    result2 = model2.fit_regularized(
-        alpha=1.0, L1_wt=0.5, start_params=np.zeros(5)
-    )
+    result2 = model2.fit_regularized(alpha=1.0, L1_wt=0.5, start_params=np.zeros(5))
     assert_allclose(result1.params, result2.params)
 
 
@@ -1560,17 +1508,13 @@ def test_sqrt_lasso():
 
     # Used for regression testing
     expected_params = {
-        False: np.r_[
-            0.87397122, 0.96051874, 0.9905915, 0.93868953, 0.90771773
-        ],
+        False: np.r_[0.87397122, 0.96051874, 0.9905915, 0.93868953, 0.90771773],
         True: np.r_[0.95114241, 1.0302987, 1.01723074, 0.97587343, 0.99846403],
     }
 
     for refit in False, True:
 
-        rslt = OLS(y, x).fit_regularized(
-            method="sqrt_lasso", alpha=alpha, refit=refit
-        )
+        rslt = OLS(y, x).fit_regularized(method="sqrt_lasso", alpha=alpha, refit=refit)
         err = rslt.params - b
         numer = np.sqrt(np.dot(err, np.dot(cx, err)))
 
@@ -1580,14 +1524,10 @@ def test_sqrt_lasso():
         denom = np.sqrt(np.dot(oracle_err, np.dot(cx, oracle_err)))
 
         # Check performance relative to oracle, should be around
-        assert_allclose(
-            numer / denom, expected_oracle[refit], rtol=0.5, atol=0.1
-        )
+        assert_allclose(numer / denom, expected_oracle[refit], rtol=0.5, atol=0.1)
 
         # Regression test the parameters
-        assert_allclose(
-            rslt.params[0:5], expected_params[refit], rtol=1e-5, atol=1e-5
-        )
+        assert_allclose(rslt.params[0:5], expected_params[refit], rtol=1e-5, atol=1e-5)
 
 
 def test_bool_regressor(reset_randomstate):
@@ -1631,6 +1571,7 @@ def test_slim_summary(reset_randomstate):
     x = x + np.random.standard_normal((100, 5))
     res = OLS(y, x).fit()
     import copy
+
     summ = copy.deepcopy(res.summary())
     slim_summ = copy.deepcopy(res.summary(slim=True))
     assert len(summ.tables) == 3
