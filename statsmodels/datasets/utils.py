@@ -134,12 +134,19 @@ def _open_cache(cache_path):
         return zlib.decompress(zf.read())
 
 
+# Sourced from Holoviews:
+# https://github.com/holoviz/holoviews/blob/74fda3fb832257357c48eda1be0a73eb523966a7/holoviews/pyodide.py#L78-L81
+# License: BSD-3-Clause
 def _in_jupyterlite() -> bool:
-    try:
-        import pyodide_kernel # noqa: F401
-    except (ImportError, ModuleNotFoundError):
-        return False
-    return True
+    import sys
+    if "pyodide" in sys.modules:
+        import js
+        return (
+            hasattr(js, "_JUPYTERLAB") or
+            hasattr(js, "webpackChunk_jupyterlite_pyodide_kernel_extension") or
+            not hasattr(js, "document")
+        )
+    return False
 
 
 def _urlopen_cached(url, cache):
