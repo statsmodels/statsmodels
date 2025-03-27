@@ -134,7 +134,7 @@ def _open_cache(cache_path):
         return zlib.decompress(zf.read())
 
 
-def _is_jupyterlite() -> bool:
+def _in_jupyterlite() -> bool:
     try:
         import pyodide_kernel # noqa: F401
     except (ImportError, ModuleNotFoundError):
@@ -148,13 +148,6 @@ def _urlopen_cached(url, cache):
     downloads the data and cache is not None then it will put the downloaded
     data in the cache path.
     """
-
-    # if we are in a jupyterlite environment, we will want
-    # to patch urllib, requests, etc. for usage in Pyodide
-    if _is_jupyterlite():
-        import pyodide_http
-        pyodide_http.patch_all()
-
     from_cache = False
     if cache is not None:
         file_name = url.split("://")[-1].replace('/', ',')
@@ -174,7 +167,20 @@ def _urlopen_cached(url, cache):
 
     # not using the cache or did not find it in cache
     if not from_cache:
-        data = urlopen(url, timeout=3).read()
+        if _in_jupyterlite():
+            try:
+                import pyodide.http
+                stringio = pyodide.http.open_url(url)
+                data = stringio.read().encode("utf-8")
+            except Exception as e:
+                # Convert Pyodide errors to appropriate urllib errors
+                if "404" in str(e):
+                    raise HTTPError(url, 404, "Not Found", None, None)
+                else:
+                    raise URLError(str(e))
+        else:
+            data = urlopen(url, timeout=3).read()
+
         if cache is not None:  # then put it in the cache
             _cache_it(data, cache_path)
     return data, from_cache
