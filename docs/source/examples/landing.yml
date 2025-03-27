@@ -64,7 +64,7 @@
     text: Ordinal Regression
   - img: ../_static/images/count_hurdle.png
     target: notebooks/generated/count_hurdle.html
-    text: Hurdel count Models
+    text: Hurdle Count Models
   - img: ../_static/images/post_estimation.png
     target: notebooks/generated/postestimation_poisson.html
     text: Post-estimation for Poisson Regression
