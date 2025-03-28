@@ -140,9 +140,12 @@ def _in_jupyterlite() -> bool:
     if "pyodide" in sys.modules:
         import js
         return (
+            # running in a browser
+            not hasattr(js, "document") or
+            # running in JupyterLite
             hasattr(js, "_JUPYTERLAB") or
-            hasattr(js, "webpackChunk_jupyterlite_pyodide_kernel_extension") or
-            not hasattr(js, "document")
+            # using Pyodide in JupyterLite
+            hasattr(js, "webpackChunk_jupyterlite_pyodide_kernel_extension")
         )
     return False
 
