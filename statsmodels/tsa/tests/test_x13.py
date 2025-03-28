@@ -3,6 +3,8 @@ from statsmodels.compat.pandas import MONTH_END
 import numpy as np
 import pandas as pd
 import pytest
+import tempfile
+import os
 
 from statsmodels.datasets import co2, macrodata
 from statsmodels.tsa.x13 import (
@@ -81,6 +83,7 @@ def test_x13_arima_plot(dataset):
     res.plot()
 
 
+
 def test_x13_arima_plot_no_pandas(dataset):
     res = x13_arima_analysis(dataset)
     res.plot()
@@ -100,3 +103,56 @@ def test_log_diagnostics_false(dataset):
     assert isinstance(res.x13_diagnostic, dict)
     assert list(res.x13_diagnostic.keys())[0] == "F-D8"
     assert list(res.x13_diagnostic.values())[0] == "Log diagnostics not retrieved."
+
+    
+def test_x13_arima_rawspec_arg():
+    with pytest.raises(ValueError):
+        # error because both param and rawspec are specified
+        x13_arima_analysis(dataset, outlier=True, rawspec="/fake/path.spc")
+
+    with pytest.raises(ValueError):
+        # error because of fake path
+        x13_arima_analysis(dataset, rawspec="/fake/path.spc")
+
+
+def test_x13_arima_rawspec_run(dataset):
+    # example rawspec file string
+    raw_spec_file = """
+series { 
+    modelspan=(,) 
+    save=(B1) 
+    span=(,) 
+    type=(flow) 
+}
+x11 { 
+    seasonalma=(  msr) 
+    appendfcst=yes 
+    mode=(mult) 
+    print=( seasadj seasonal adjustfac) 
+    save=(seasadj seasonal adjustfac) 
+    savelog=(  alldiagnostics) 
+} 
+arima {model=(0 1 0)(1 0 1)} 
+transform { 
+    function=log 
+} 
+regression { 
+    savelog=(  aictest) 
+ } 
+estimate {save=mdl} 
+slidingspans { } 
+history { 
+    estimates=(sadj seasonal fcst) 
+    fixmdl=yes
+}
+"""
+
+    # pass rawspec as string
+    x13_arima_analysis(dataset, rawspec=raw_spec_file)
+
+    # pass rawspec as file path
+    with tempfile.NamedTemporaryFile(suffix='.spc') as ft:
+        ft.write(raw_spec_file.encode('utf8'))
+        ft.seek(0)
+
+        x13_arima_analysis(dataset, rawspec=ft.name)
