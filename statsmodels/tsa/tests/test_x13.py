@@ -13,6 +13,10 @@ from statsmodels.tsa.x13 import (
     x13_arima_select_order,
 )
 
+from statsmodels.tools.sm_exceptions import (
+    X13Error,
+)
+
 x13path = _find_x12()
 
 pytestmark = pytest.mark.skipif(x13path is False, reason="X13/X12 not available")
@@ -156,3 +160,27 @@ history {
         ft.seek(0)
 
         x13_arima_analysis(dataset, rawspec=ft.name)
+
+def test_x13_arima_invalid_rawspec(dataset):
+    # bad rawspec file string ("series" misspelled, no closing "}" on "x11")
+    raw_spec_file = """
+seri es { 
+    modelspan=(,) 
+}
+x11 { 
+    seasonalma=(  msr) 
+"""
+
+    # pass rawspec as string
+    with pytest.raises(X13Error):
+
+        x13_arima_analysis(dataset, rawspec=raw_spec_file)
+
+    # pass rawspec as file path
+    with tempfile.NamedTemporaryFile(suffix='.spc') as ft:
+        ft.write(raw_spec_file.encode('utf8'))
+        ft.seek(0)
+
+        with pytest.raises(X13Error):
+
+            x13_arima_analysis(dataset, rawspec=ft.name)

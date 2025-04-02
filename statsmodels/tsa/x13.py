@@ -185,9 +185,11 @@ def _make_forecast_options(forecast_periods):
     return forecast_spec
 
 
-def _check_errors(errors):
+def _check_errors(errors, rawspec_text):
     errors = errors[errors.find("spc:") + 4 :].strip()
     if errors and "ERROR" in errors:
+        if rawspec_text is not None:
+            warn("User-provided rawspec file has errors. Please check.")
         raise X13Error(errors)
     elif errors and "WARNING" in errors:
         warn(errors, X13Warning)
@@ -313,7 +315,7 @@ def pandas_to_series_spec(x):
     # check_period_index(x)
     if hasattr(x, "columns"):  # convert to series
         if len(x.columns) > 1:
-            raise ValueError("Does not handle DataFrame with more than one " "column")
+            raise ValueError("Does not handle DataFrame with more than one column")
         x = x[x.columns[0]]
 
     data = "({})".format("\n".join(map(str, x.values.tolist())))
@@ -490,14 +492,25 @@ def x13_arima_analysis(
     spec = spec_obj.create_spec()
 
     # if specfile string (or path) is passed
-    if rawspec is not None:
+    if rawspec is None:
+
+        spec += f"transform{{function={_log_to_x12[log]}}}\n"
+        if outlier:
+            spec += "outlier{}\n"
+        options = _make_automdl_options(maxorder, maxdiff, diff)
+        spec += f"automdl{{{options}}}\n"
+        spec += _make_regression_options(trading, exog)
+        spec += _make_forecast_options(forecast_periods)
+        spec += "x11{ save=(d11 d12 d13) \n savelog=(fd8 m7 q)}"
+
+    else:
 
         if ((not None) in [diff, exog, start, freq]): # or (not outlier) or trading:
-            print([diff, exog, start, freq])
-            print(outlier)
 
-            raise ValueError("other arguments not allowed when rawspec is"
-                             "specified")
+            raise ValueError("other arguments not allowed for diff, exog, start, freq"
+                             "when rawspec is specified")
+
+        rawspec_text = None
 
         if os.path.exists(rawspec):
             # path exists, read in file
@@ -512,30 +525,27 @@ def x13_arima_analysis(
                              " or spec string")
 
         # merge series {} properties created above into raw spec file       
-        spec = re.sub(r'series\s*\{\s*', spec.replace("}\n", ''), rawspec_text, flags=re.IGNORECASE)
-        output = re.search(r"x1[123]\s?\{[^}]*save\s*=\s*\(", spec, flags=re.DOTALL | re.IGNORECASE)
+        spec = re.sub(
+                r'series\s*\{\s*',
+                spec.replace("}\n", ''),
+                rawspec_text,
+                flags=re.IGNORECASE)
+        spec_outputs = re.search(
+                r"x1[123]\s?\{[^}]*save\s*=\s*\(",
+                spec,
+                flags=re.DOTALL | re.IGNORECASE)
 
         # merge in expected types of output
         # (d11=final seasonally adjusted series)
         # (d12=final trend cycle)
         # (d13=final irregular component)
-        if output:
-            pos = output.span()[1]
+        if spec_outputs:
+            pos = spec_outputs.span()[1]
             spec = spec[:pos] + " d11 d12 d13 " + spec[pos:]
-
-    else:
-        spec += f"transform{{function={_log_to_x12[log]}}}\n"
-        if outlier:
-            spec += "outlier{}\n"
-        options = _make_automdl_options(maxorder, maxdiff, diff)
-        spec += f"automdl{{{options}}}\n"
-        spec += _make_regression_options(trading, exog)
-        spec += _make_forecast_options(forecast_periods)
-        spec += "x11{ save=(d11 d12 d13) }"
-        spec += "x11{ save=(d11 d12 d13) \n savelog=(fd8 m7 q)}"
 
     if speconly:
         return spec
+
     # write it to a tempfile
     # TODO: make this more robust - give the user some control?
     ftempin = tempfile.NamedTemporaryFile(delete=False, suffix=".spc", dir=tempdir)
@@ -552,7 +562,7 @@ def x13_arima_analysis(
             print(p.stdout.read())
         # check for errors
         errors = _open_and_read(ftempout.name + ".err")
-        _check_errors(errors)
+        _check_errors(errors, rawspec)
 
         # read in results
         results = _open_and_read(ftempout.name + ".out")
