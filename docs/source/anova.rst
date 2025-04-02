@@ -12,21 +12,21 @@ balanced data.
 Examples
 --------
 
-.. ipython:: python
+.. try_examples::
 
-    import statsmodels.api as sm
-    from statsmodels.formula.api import ols
+   >>> import statsmodels.api as sm
+   >>> from statsmodels.formula.api import ols
 
-    moore = sm.datasets.get_rdataset("Moore", "carData",
-                                     cache=True) # load data
-    data = moore.data
-    data = data.rename(columns={"partner.status":
-                                "partner_status"}) # make name pythonic
-    moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
-                    data=data).fit()
+   >>> moore = sm.datasets.get_rdataset("Moore", "carData",
+   >>>                                  cache=True) # load data
+   >>> data = moore.data
+   >>> data = data.rename(columns={"partner.status":
+   >>>                             "partner_status"}) # make name pythonic
+   >>> moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
+   >>>                 data=data).fit()
 
-    table = sm.stats.anova_lm(moore_lm, typ=2) # Type 2 ANOVA DataFrame
-    print(table)
+   >>> table = sm.stats.anova_lm(moore_lm, typ=2) # Type 2 ANOVA DataFrame
+   >>> print(table)
 
 A more detailed example for `anova_lm` can be found here:
 
