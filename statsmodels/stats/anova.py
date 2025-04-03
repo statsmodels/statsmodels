@@ -199,7 +199,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         L2 = np.eye(model.model.exog.shape[1])[L2]
 
         if L2.size:
-            LVL = np.dot(np.dot(L1,robust_cov),L2.T)
+            LVL = np.linalg.multi_dot([L1,robust_cov,L2.T])
             from scipy import linalg
             orth_compl,_ = linalg.qr(LVL)
             r = L1.shape[0] - L2.shape[0]
