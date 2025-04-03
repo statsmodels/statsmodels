@@ -136,16 +136,31 @@ class RLS(GLS):
             self._coeffs = betaLambda[:self.ncoeffs]
         return self._coeffs
 
-    def fit(self):
-        rncp = self.wrnorm_cov_params
+    def fit(self, cov_type='nonrobust'):
+        if cov_type == 'nonrobust':
+            rncp = self.rnorm_cov_params
+        elif cov_type == 'HC':
+            rncp = self.wrnorm_cov_params
+        else:
+            raise ValueError('cov_type not recognised or not implemented')
         lfit = RegressionResults(self, self.coeffs, normalized_cov_params=rncp)
         return lfit
 
 if __name__=="__main__":
     import statsmodels.api as sm
-    dta = np.genfromtxt('./rlsdata.txt', names=True)
+    dta = np.genfromtxt('tests/rlsdata.txt', names=True)
     design = np.column_stack((dta['Y'],dta['Y']**2,dta[['NE','NC','W','S']].view(float).reshape(dta.shape[0],-1)))
     design = sm.add_constant(design, prepend=True)
     rls_mod = RLS(dta['G'],design, constr=[0,0,0,1,1,1,1])
     rls_fit = rls_mod.fit()
     print(rls_fit.params)
+
+    # with standardizing the polynomial variable to avoid an ill conditioned X'X
+    scale_y = dta['Y'].std(ddof=1)
+    mean_y = dta['Y'].mean()
+    ys = (dta['Y']-mean_y)/scale_y
+    design = np.column_stack((ys, ys**2,dta[['NE','NC','W','S']].view(float).reshape(dta.shape[0],-1)))
+    design = sm.add_constant(design, prepend=False)
+    rls_mod2 = RLS(dta['G'],design, constr=[0,0,1,1,1,1,0])
+    res_rls2 = rls_mod2.fit()
+    print(res_rls2.params)
