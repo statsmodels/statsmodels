@@ -269,6 +269,7 @@ Submodules
 - BUG/REF copula another round for 0.13  (:pr:`7648`)
 - Temporarily change the default RNG in check_random_state  (:pr:`7652`)
 - More copula improvements for 0.13  (:pr:`7723`)
+- Add multivariate pdf (dim>2) for Frank and Gumbel copula
 
 
 
