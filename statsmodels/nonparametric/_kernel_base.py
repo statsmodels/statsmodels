@@ -5,7 +5,7 @@ regression, plus some utilities.
 import copy
 
 import numpy as np
-from scipy import optimize
+from scipy import optimize, spatial
 from scipy.stats.mstats import mquantiles
 
 try:
@@ -516,3 +516,64 @@ def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
         return dens.sum(axis=0)
     else:
         return dens
+
+
+def pairwise_product_kernel(bw, data, var_type, ckertype='gaussian',
+         okertype='wangryzin', ukertype='aitchisonaitken'):
+    r"""
+    Returns the pairwise product kernel function for each pair of data points
+    in `data` as a 2-D array. Summing row-wise or col-wise gives the `gpke`
+    evaluated at each data point in `data`.
+
+    Parameters
+    ----------
+    bw : 1-D ndarray, shape (k_vars,)
+        Bandwidth parameters for the kernel functions.
+    data : 2-D ndarray, shape (nobs, k_vars)
+        Points at which the kernel function is evaluated.
+    var_type : str
+        The type of the variables, one character per variable:
+
+            - c: continuous
+            - u: unordered (discrete)
+            - o: ordered (discrete)
+
+    ckertype : TYPE, optional
+        The kernel used for the continuous variables. The default is
+        'gaussian'.
+    okertype : TYPE, optional
+        The kernel used for the ordered discrete variables. The default is
+        'wangryzin'.
+    ukertype : TYPE, optional
+        The kernel used for the unordered discrete variables. The default is
+        'aitchisonaitken'.
+
+    Returns
+    -------
+    K : 2-D ndarray, shape (nobs, nobs)
+        A 2-D array.where the (i, j) component is K(x_i, x_j) where K
+        is the product kernel function.
+
+    """
+    nobs, k_vars = np.shape(data)
+    # full vectorization only for continuous gaussian kernel
+    if (ckertype == 'gaussian') and (set(var_type) == set('c')):
+        VI = np.diag(1 / bw) ** 2
+        D = spatial.distance.squareform(
+            spatial.distance.pdist(data, metric='mahalanobis', VI=VI)
+            ) ** 2
+        K = np.exp(-0.5 * D) * (1. / np.sqrt(2 * np.pi)) ** k_vars
+        K = K / np.prod(bw)
+    else:
+        K = np.empty((nobs, nobs))
+        for ii in range(nobs):
+            ker_ii = gpke(bw, data=data, data_predict=data[ii, :],
+                          var_type=var_type,
+                          ckertype=ckertype,
+                          ukertype=ukertype,
+                          okertype=okertype,
+                          tosum=False)
+
+            K[:, ii] = ker_ii
+
+    return K
