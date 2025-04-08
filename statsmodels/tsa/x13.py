@@ -491,7 +491,6 @@ def x13_arima_analysis(
     spec_obj = pandas_to_series_spec(endog)
     spec = spec_obj.create_spec()
 
-    # if specfile string (or path) is passed
     if rawspec is None:
 
         spec += f"transform{{function={_log_to_x12[log]}}}\n"
@@ -503,6 +502,7 @@ def x13_arima_analysis(
         spec += _make_forecast_options(forecast_periods)
         spec += "x11{ save=(d11 d12 d13) \n savelog=(fd8 m7 q)}"
 
+    # if specfile string (or path) is passed
     else:
 
         if ((not None) in [diff, exog, start, freq]): # or (not outlier) or trading:
