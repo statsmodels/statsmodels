@@ -1271,7 +1271,7 @@ class VARResults(VARProcess):
 
     Attributes
     ----------
-    params : ndarray (p x K x K)
+    coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]
     dates
     endog
