@@ -64,7 +64,7 @@ Please use following citation to cite statsmodels in scientific publications:
 
 
 Seabold, Skipper, and Josef Perktold. "`statsmodels: Econometric and statistical modeling with
-python. <http://conference.scipy.org/proceedings/scipy2010/pdfs/seabold.pdf>`_" *Proceedings
+python. <https://proceedings.scipy.org/articles/proceedings-2010.pdf>`_" *Proceedings
 of the 9th Python in Science Conference.* 2010.
 
 Bibtex entry::
