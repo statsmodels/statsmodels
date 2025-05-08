@@ -55,7 +55,10 @@ extensions = ['sphinx.ext.autodoc',
               'matplotlib.sphinxext.plot_directive',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
+              # docs theme
               "sphinx_immaterial",
+              # interactive docs utilities
+              'jupyterlite_sphinx',
               ]
 
 try:
@@ -422,6 +425,20 @@ with open("examples/index.rst", "w") as example_index:
     example_index.write(example_tmpl.render(examples=example_context))
 
 # html_context.update({'examples': example_context})
+
+# Configuration for interactive documentation using jupyterlite-sphinx and
+# Pyodide. See https://jupyterlite-sphinx.readthedocs.io/en/stable/ for
+# more options.
+jupyterlite_bind_ipynb_suffix = False
+global_enable_try_examples = True
+try_examples_global_button_text = "Try it!"
+try_examples_global_warning_text = (
+    "Interactive examples for statsmodels are experimental and may not always work "
+    "as expected. If you encounter any issues, please report them on the [statsmodels "
+    "issue tracker](https://github.com/statsmodels/statsmodels/issues/new)."
+)
+# uncomment to ease debugging JupyterLite
+jupyterlite_silence = False  # temporary, for debugging
 
 # --------------- DOCTEST -------------------
 doctest_global_setup = """
