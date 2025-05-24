@@ -14,6 +14,7 @@ docs/source/examples/notebooks/generated
 docs/source/datasets/statsmodels.datasets.*
 docs/source/savefig
 docs/gettingstarted_0.png
+docs/source/.jupyterlite.doit.db
 examples/executed
 
 #setuptools-scm generated version file
@@ -111,3 +112,7 @@ statsmodels/LICENSE.txt
 
 # Dataset downloads
 statsmodels/datasets/tests/*.zip
+
+# Interactive documentation + Pyodide testing components
+.pyodide-xbuildenv-*
+docs/source/_contents

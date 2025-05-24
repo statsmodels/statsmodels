@@ -32,6 +32,8 @@ def webuse(data, baseurl='https://www.stata-press.com/data/r11/', as_df=True):
 
     Examples
     --------
+    ..! disable_try_examples
+
     >>> dta = webuse('auto')
 
     Notes
@@ -132,6 +134,21 @@ def _open_cache(cache_path):
         return zlib.decompress(zf.read())
 
 
+# Sourced from Holoviews:
+# https://github.com/holoviz/holoviews/blob/74fda3fb832257357c48eda1be0a73eb523966a7/holoviews/pyodide.py#L78-L81
+# License: BSD-3-Clause
+def _in_jupyterlite() -> bool:
+    import sys
+    if "pyodide" in sys.modules:
+        import js
+        return (
+            hasattr(js, "_JUPYTERLAB") or
+            hasattr(js, "webpackChunk_jupyterlite_pyodide_kernel_extension") or
+            not hasattr(js, "document")
+        )
+    return False
+
+
 def _urlopen_cached(url, cache):
     """
     Tries to load data from cache location otherwise downloads it. If it
@@ -157,7 +174,20 @@ def _urlopen_cached(url, cache):
 
     # not using the cache or did not find it in cache
     if not from_cache:
-        data = urlopen(url, timeout=3).read()
+        if _in_jupyterlite():
+            try:
+                import pyodide.http
+                stringio = pyodide.http.open_url(url)
+                data = stringio.read().encode("utf-8")
+            except Exception as e:
+                # Convert Pyodide errors to appropriate urllib errors
+                if "404" in str(e):
+                    raise HTTPError(url, 404, "Not Found", None, None)
+                else:
+                    raise URLError(str(e))
+        else:
+            data = urlopen(url, timeout=3).read()
+
         if cache is not None:  # then put it in the cache
             _cache_it(data, cache_path)
     return data, from_cache
