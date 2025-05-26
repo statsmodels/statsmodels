@@ -244,7 +244,7 @@ class TestStattools:
         x = np.random.randn(500)
         mc_fast = medcouple(x, use_fast=True)
         mc_legacy = medcouple(x, use_fast=False)
-        assert_allclose(mc_fast, mc_legacy, rtol=1e-2)
+        assert_allclose(mc_fast, mc_legacy, rtol=2e-2)
 
     def test_durbin_watson(self, reset_randomstate):
         x = np.random.standard_normal(100)

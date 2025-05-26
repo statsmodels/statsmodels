@@ -383,7 +383,7 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
 def _medcouple_1d_legacy(y):
     """
     Calculates the medcouple robust measure of skew. Less efficient version of
-    the algorithm which computes in O(N**2) time. Useful for validating the 
+    the algorithm which computes in O(N**2) time. Useful for validating the
     O(N log N) version and for applications requiring legacy behavior.
 
     Parameters
@@ -539,14 +539,16 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
 
     if n < 3:
         from warnings import warn
-        warn("medcouple is undefined for input with less than 3 elements. Returning NaN.", ValueWarning)
+        warn("medcouple is undefined for input with less than 3 elements." \
+        "Returning NaN.", ValueWarning)
         return np.nan
 
     if n < 10:
         from warnings import warn
         warn(
-            "Fast medcouple algorithm (use_fast=True) is not recommended for small datasets (N < 10). "
-            "Results may be unstable. Consider using use_fast=False for accuracy.",
+            "Fast medcouple algorithm (use_fast=True) is not recommended"
+            "for small datasets (N < 10). Results may be unstable. Consider" \
+            "using use_fast=False for accuracy.",
             UserWarning
         )
 
@@ -619,8 +621,8 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
             return h_med
 
     A = []
-    for i, (l, r) in enumerate(zip(L, R)):
-        A.extend(h_kern(i, j) for j in range(l, r + 1))
+    for i, (left, right) in enumerate(zip(L, R)):
+        A.extend(h_kern(i, j) for j in range(left, right + 1))
 
     A.sort(reverse=True)
     return A[medc_idx - Ltot]
