@@ -382,7 +382,9 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
 
 def _medcouple_1d_legacy(y):
     """
-    Calculates the medcouple robust measure of skew. Less efficient version of the algorithm which computes in O(N**2) time. Mainly useful for validating the N log N version.
+    Calculates the medcouple robust measure of skew. Less efficient version of
+    the algorithm which computes in O(N**2) time. Useful for validating the 
+    O(N log N) version and for applications requiring legacy behavior.
 
     Parameters
     ----------
@@ -505,9 +507,10 @@ def _wmedian(A, W):
             return trial
 
 
-def _medcouple_nlogn(X, eps1 = 2**-52, eps2 = 2**-1022):
+def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
     r"""
-    Calculates the medcouple robust measure of skewness. Faster version of the algorithm which computes in O(N log N) time.
+    Calculates the medcouple robust measure of skewness. Faster version of the
+    algorithm which computes in O(N log N) time.
 
     Parameters
     ----------
