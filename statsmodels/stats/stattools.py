@@ -9,6 +9,7 @@ These functions have not been formally tested.
 from scipy import stats
 import numpy as np
 from statsmodels.tools.sm_exceptions import ValueWarning
+from itertools import tee
 
 
 def durbin_watson(resids, axis=0):
@@ -379,9 +380,9 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     return kr1, kr2, kr3, kr4
 
 
-def _medcouple_1d(y):
+def _medcouple_1d_legacy(y):
     """
-    Calculates the medcouple robust measure of skew.
+    Calculates the medcouple robust measure of skew. Less efficient version of the algorithm which computes in O(N**2) time. Mainly useful for validating the N log N version.
 
     Parameters
     ----------
@@ -395,7 +396,7 @@ def _medcouple_1d(y):
 
     Notes
     -----
-    The current algorithm requires a O(N**2) memory allocations, and so may
+    This version of the algorithm requires a O(N**2) memory allocations, and so may
     not work for very large arrays (N>10000).
 
     .. [*] M. Hubert and E. Vandervieren, "An adjusted boxplot for skewed
@@ -441,7 +442,214 @@ def _medcouple_1d(y):
     return np.median(h)
 
 
-def medcouple(y, axis=0):
+def _signum(x):
+    r"""
+    Sign function that returns -1, 0, or 1 based on the input.
+
+    Parameters
+    ----------
+    x : int
+        A signed integer value.
+
+    Returns
+    -------
+    int
+        -1 if x < 0, 0 if x == 0, 1 if x > 0.
+
+    Notes
+    -----
+    This function is used in the fast medcouple implementation to
+    handle tie-breaking when two values are numerically close.
+    """
+    return (x > 0) - (x < 0)
+
+
+def _wmedian(A, W):
+    r"""
+    Compute the weighted median of the values in A using the associated weights in W.
+
+    Parameters
+    ----------
+    A : list of float
+        The list of numeric values for which the weighted median is to be computed.
+    W : list of int
+        The corresponding non-negative integer weights for each value in A.
+
+    Returns
+    -------
+    float
+        The weighted median of A. If there are multiple medians due to tied weights,
+        the lower median is returned.
+
+    Notes
+    -----
+    This is a helper function for the O(N log N) medcouple algorithm.
+    """
+    AW = sorted(zip(A, W), key=lambda x: x[0])
+    wtot = sum(W)
+    beg = 0
+    end = len(AW) - 1
+
+    while True:
+        mid = (beg + end) // 2
+        trial = AW[mid][0]
+
+        wleft = sum(w for a, w in AW if a < trial)
+        wright = sum(w for a, w in AW if a >= trial)
+
+        if 2 * wleft > wtot:
+            end = mid
+        elif 2 * wright < wtot:
+            beg = mid
+        else:
+            return trial
+
+
+def _medcouple_nlogn(X, eps1 = 2**-52, eps2 = 2**-1022):
+    r"""
+    Calculates the medcouple robust measure of skewness. Faster version of the algorithm which computes in O(N log N) time.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Input 1D array of numeric values.
+
+    Returns
+    -------
+    float
+        The medcouple statistic.
+
+    Notes
+    -----
+
+    NaNs are not automatically removed. If present in the input, the result
+    will be NaN.
+
+    .. [*] Guy Brys, Mia Hubert and Anja Struyf (2004) A Robust Measure 
+       of Skewness; JCGS 13 (4), 996-1017. 
+    """
+
+    if np.any(np.isnan(X)):
+        return np.nan
+
+    n = len(X)
+
+    if n < 3:
+        from warnings import warn
+        warn("medcouple is undefined for input with less than 3 elements. Returning NaN.", ValueWarning)
+        return np.nan
+    
+    if n < 10:
+        from warnings import warn
+        warn(
+            "Fast medcouple algorithm (use_fast=True) is not recommended for small datasets (N < 10). "
+            "Results may be unstable. Consider using use_fast=False for accuracy.",
+            UserWarning
+        )
+
+    Z = np.sort(X)[::-1]
+    n2 = (n - 1) // 2
+    Zmed = Z[n2] if n % 2 else (Z[n2] + Z[n2 + 1]) / 2
+
+    if np.abs(Z[0] - Zmed) < eps1 * (eps1 + np.abs(Zmed)):
+        return -1.0
+    if np.abs(Z[-1] - Zmed) < eps1 * (eps1 + np.abs(Zmed)):
+        return 1.0
+
+    Z -= Zmed
+    Zden = 2 * max(Z[0], -Z[-1])
+    Z /= Zden
+    Zmed /= Zden
+    Zeps = eps1 * (eps1 + np.abs(Zmed))
+
+    Zplus = Z[Z >= -Zeps]
+    Zminus = Z[Z <= Zeps]
+    n_plus = len(Zplus)
+    n_minus = len(Zminus)
+
+    def h_kern(i: int, j: int) -> float:
+        a = Zplus[i]
+        b = Zminus[j]
+        if abs(a - b) <= 2 * eps2:
+            return _signum(n_plus - 1 - i - j)
+        return (a + b) / (a - b)
+
+    L = [0] * n_plus
+    R = [n_minus - 1] * n_plus
+    Ltot = 0
+    Rtot = n_minus * n_plus
+    medc_idx = Rtot // 2
+
+    while Rtot - Ltot > n_plus:
+        valid_i = [i for i in range(n_plus) if L[i] <= R[i]]
+        I1, I2 = tee(valid_i)
+
+        A = [h_kern(i, (L[i] + R[i]) // 2) for i in I1]
+        W = [R[i] - L[i] + 1 for i in I2]
+        h_med = _wmedian(A, W)
+        Am_eps = eps1 * (eps1 + abs(h_med))
+
+        P, Q = [], []
+        j = 0
+        for i in reversed(range(n_plus)):
+            while j < n_minus and h_kern(i, j) - h_med > Am_eps:
+                j += 1
+            P.append(j - 1)
+        P.reverse()
+
+        j = n_minus - 1
+        for i in range(n_plus):
+            while j >= 0 and h_kern(i, j) - h_med < -Am_eps:
+                j -= 1
+            Q.append(j + 1)
+
+        sumP = sum(P) + len(P)
+        sumQ = sum(Q)
+
+        if medc_idx <= sumP - 1:
+            R = P
+            Rtot = sumP
+        elif medc_idx > sumQ - 1:
+            L = Q
+            Ltot = sumQ
+        else:
+            return h_med
+
+    A = []
+    for i, (l, r) in enumerate(zip(L, R)):
+        A.extend(h_kern(i, j) for j in range(l, r + 1))
+
+    A.sort(reverse=True)
+    return A[medc_idx - Ltot]
+
+
+def _medcouple_1d(y, use_fast=True):
+    """
+    Calculates the medcouple robust measure of skew.
+
+    Parameters
+    ----------
+    y : array_like, 1-d
+        Data to compute use in the estimator.
+    use_fast : bool
+        Whether to use the O(n log n) implementation. Defaults to True.
+
+    Returns
+    -------
+    mc : float
+        The medcouple statistic
+    """
+    y = np.squeeze(np.asarray(y))
+    if y.ndim != 1:
+        raise ValueError("y must be squeezable to a 1-d array")
+
+    if use_fast:
+        return _medcouple_nlogn(y)
+    else:
+        return _medcouple_1d_legacy(y)
+
+
+def medcouple(y, axis=0, use_fast=True):
     """
     Calculate the medcouple robust measure of skew.
 
@@ -452,17 +660,40 @@ def medcouple(y, axis=0):
     axis : {int, None}
         Axis along which the medcouple statistic is computed.  If `None`, the
         entire array is used.
+    use_fast : bool
+        Whether to use the faster O(N log N) implementation. Default is True.
+        To use the legacy O(N**2) version, set to False.
 
     Returns
     -------
-    mc : ndarray
-        The medcouple statistic with the same shape as `y`, with the specified
-        axis removed.
+    mc : float or ndarray
+        The medcouple statistic.
 
     Notes
     -----
-    The current algorithm requires a O(N**2) memory allocations, and so may
-    not work for very large arrays (N>10000).
+    The legacy algorithm (``use_fast=False``) uses an O(N**2) implementation 
+    which provides exact results and is reliable for all dataset sizes, 
+    including small inputs and cases with ties. However, it requires a O(N**2)
+    memory allocations, and so may not work for very large arrays (N>10000).
+
+    The fast algorithm (``use_fast=True``) implements an O(N log N) 
+    approximation which is optimized for large datasets. **It is not intended 
+    for small sample sizes (N < 10)** or datasets with a high proportion of 
+    ties, as it may yield numerically unstable or inaccurate results in these
+    cases. For such inputs, prefer ``use_fast=False`` to ensure correctness.
+
+    If NaNs are present in the input when use_fast=True, the result will be
+    NaN. To preserve legacy behavior, a number may be returned when 
+    use_fast=False.
+
+    If the size of ``y`` is less than 3 and ``use_fast=True``, the result will
+    be NaN. To preserve legacy behavior, a value may be returned when 
+    ``use_fast=False``.
+    
+    Small numerical differences are possible based on the choice of algorithm.
+
+    .. [*] Guy Brys, Mia Hubert and Anja Struyf (2004) A Robust Measure 
+       of Skewness; JCGS 13 (4), 996-1017. 
 
     .. [*] M. Hubert and E. Vandervieren, "An adjusted boxplot for skewed
        distributions" Computational Statistics & Data Analysis, vol. 52, pp.
@@ -470,6 +701,6 @@ def medcouple(y, axis=0):
     """
     y = np.asarray(y, dtype=np.double)  # GH 4243
     if axis is None:
-        return _medcouple_1d(y.ravel())
+        return _medcouple_1d(y.ravel(), use_fast=use_fast)
 
-    return np.apply_along_axis(_medcouple_1d, axis, y)
+    return np.apply_along_axis(_medcouple_1d, axis, y, use_fast=use_fast)
