@@ -545,12 +545,12 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
 
     if n < 10:
         from warnings import warn
-        warn(
+        msg = (
             "Fast medcouple algorithm (use_fast=True) is not recommended "
             "for small datasets (N < 10). Results may be unstable. Consider "
-            "using use_fast=False for accuracy.",
-            UserWarning
+            "using use_fast=False for accuracy."
         )
+        warn(msg, UserWarning)
 
     Z = np.sort(X)[::-1]
     n2 = (n - 1) // 2
