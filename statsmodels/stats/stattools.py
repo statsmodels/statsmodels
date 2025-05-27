@@ -539,15 +539,15 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
 
     if n < 3:
         from warnings import warn
-        warn("medcouple is undefined for input with less than 3 elements." \
+        warn("medcouple is undefined for input with less than 3 elements."
         "Returning NaN.", ValueWarning)
         return np.nan
 
     if n < 10:
         from warnings import warn
         warn(
-            "Fast medcouple algorithm (use_fast=True) is not recommended"
-            "for small datasets (N < 10). Results may be unstable. Consider" \
+            "Fast medcouple algorithm (use_fast=True) is not recommended "
+            "for small datasets (N < 10). Results may be unstable. Consider "
             "using use_fast=False for accuracy.",
             UserWarning
         )
