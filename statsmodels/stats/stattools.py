@@ -539,8 +539,11 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
 
     if n < 3:
         from warnings import warn
-        warn("medcouple is undefined for input with less than 3 elements."
-        "Returning NaN.", ValueWarning)
+        msg = (
+            "medcouple is undefined for input with less than 3 elements. "
+            "Returning NaN."
+        )
+        warn(msg, ValueWarning)
         return np.nan
 
     if n < 10:
