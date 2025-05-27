@@ -525,7 +525,7 @@ def _construct_A_W(L, R, Zplus, Zminus, n_plus, eps2):
     L_valid = L[valid_i]
     R_valid = R[valid_i]
     mid_indices = (L_valid + R_valid) // 2
-    
+
     A = np.empty_like(valid_i, dtype=float)
     for k in range(valid_i.size):
         A[k] = _h_kern(valid_i[k], mid_indices[k], Zplus, Zminus, n_plus, eps2)
@@ -558,7 +558,7 @@ def _h_kern(index_plus, index_minus, Zplus, Zminus, n_plus, eps2):
 
     zp_i = Zplus[index_plus]
     zm_i = Zminus[index_minus]
-    
+
     # tie breaker: np.sign functionally equivalent to signum
     if abs(zp_i - zm_i) <= 2 * eps2:
         return np.sign(n_plus - 1 - index_plus - index_minus)
@@ -590,18 +590,18 @@ def _finalize_h_kernel_sweep(L, R, Zplus, Zminus, n_plus, eps2):
 
     # Determine total number of h_kern values.
     total_count = int(np.sum(R - L + 1))
-    
+
     # Preallocate an array for the results.
     A = np.empty(total_count, dtype=np.float64)
-    
+
     # Position to insert next block of values.
     pos = 0
-    
+
     # Loop over each index_plus element.
     for i in range(L.shape[0]):
         left = L[i]
         right = R[i]
-        
+
         # Loop over each corresponding index_minus.
         for j in range(left, right + 1):
 
@@ -714,7 +714,7 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
 
             # Increase j until the condition is no longer met.
             while j < n_minus and \
-                _h_kern(i, j, Zplus, Zminus, n_plus, eps2) - h_med > Am_eps:
+                    _h_kern(i, j, Zplus, Zminus, n_plus, eps2) - h_med > Am_eps:
                 j += 1
 
             # j-1 is our current value for that i.
@@ -728,7 +728,7 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
         j = n_minus - 1
         for i in range(n_plus):
             while j >= 0 and \
-                _h_kern(i, j, Zplus, Zminus, n_plus, eps2) - h_med < -Am_eps:
+                    _h_kern(i, j, Zplus, Zminus, n_plus, eps2) - h_med < -Am_eps:
                 j -= 1
             Q[i] = j + 1
 
