@@ -76,6 +76,7 @@ import pandas as pd
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.sm_exceptions import ValueWarning
+from itertools import combinations
 
 try:
     # Studentized Range in SciPy 1.7+
@@ -679,7 +680,6 @@ class TukeyHSDResults:
         nobs_group = self._multicomp.groupstats.groupnobs
         self.df_total_hsd = np.sum(nobs_group - 1)
 
-
     def __str__(self):
         return str(self._results_table)
 
@@ -704,15 +704,17 @@ class TukeyHSDResults:
         statsmodels. Do not use numeric indices for the DataFrame in order
         to be robust to the addition of columns.
         """
-        frame = pd.DataFrame({
-            "group_t": self.group_t,
-            "group_c": self.group_c,
-            "meandiff": self.meandiffs,
-            "p-adj": self.pvalues,
-            "lower": self.confint[:, 0],
-            "upper": self.confint[:, 1],
-            "reject": self.reject,
-            })
+        frame = pd.DataFrame(
+            {
+                "group_t": self.group_t,
+                "group_c": self.group_c,
+                "meandiff": self.meandiffs,
+                "p-adj": self.pvalues,
+                "lower": self.confint[:, 0],
+                "upper": self.confint[:, 1],
+                "reject": self.reject,
+            }
+        )
         return frame
 
     def _get_q_crit(self, hsd=True, alpha=None):
@@ -913,6 +915,103 @@ class TukeyHSDResults:
         ax1.set_xlabel(xlabel if xlabel is not None else "")
         ax1.set_ylabel(ylabel if ylabel is not None else "")
         return fig
+
+    def create_homogeneous_subsets_dataframe(self):
+        """
+        Constructs a DataFrame displaying homogeneous subsets of group means based on
+        Tukey's HSD (Honestly Significant Difference) test results.
+
+        Groups are considered part of the same subset if their mean differences are
+        not statistically significant (p > alpha). The resulting table contains:
+        - Each group listed once, with its mean value placed under all subsets it belongs to.
+        - A final row indicating the minimum p-value among all pairwise comparisons
+        within each subset.
+
+        Returns
+        -------
+            pd.DataFrame: A DataFrame where each column S1, S2, ..., Sn represents a
+            homogeneous subset of groups. The 'Group' index lists the group names, and
+            a final row 'min p-value' contains the minimum p-value within each subset.
+        """
+        endog = self.data
+        groups = self.groups
+
+        df = pd.DataFrame({"endog": endog, "groups": groups})
+        means = df.groupby("groups")["endog"].mean().sort_values()
+
+        # Tukey HSD test
+        tukey_df = pd.DataFrame(
+            data=self._results_table.data[1:], columns=self._results_table.data[0]
+        )
+
+        # Unique sorted groups and index mapping
+        unique_groups = means.index.tolist()
+        idx_map = {g: i for i, g in enumerate(unique_groups)}
+        n = len(unique_groups)
+        adj = np.eye(n, dtype=bool)
+
+        # Populate adjacency and p-value dict
+        pval_dict = {}
+        for _, row in tukey_df.iterrows():
+            g1, g2 = row["group1"], row["group2"]
+            i, j = idx_map[g1], idx_map[g2]
+            pval = row["p-adj"]
+            if not row["reject"]:
+                adj[i, j] = adj[j, i] = True
+            pval_dict[frozenset((g1, g2))] = pval
+
+        # Find homogeneous subsets
+        def find_subsets(adj, labels):
+            subsets = []
+            for size in range(n, 0, -1):
+                for comb in combinations(range(n), size):
+                    if all(adj[i, j] for i, j in combinations(comb, 2)):
+                        subset = set(labels[i] for i in comb)
+                        if not any(subset <= s for s in subsets):
+                            subsets.append(subset)
+            return subsets
+
+        subsets = find_subsets(adj, unique_groups)
+
+        # Get min p-value for each subset
+        subset_results = []
+        for subset in subsets:
+            pairs = combinations(sorted(subset), 2)
+            min_p = min(
+                (pval_dict.get(frozenset(pair), 1.0) for pair in pairs), default=1.0
+            )
+            subset_results.append((sorted(subset), min_p))
+
+        # Build table
+        columns = ["Group"] + [f"S{i+1}" for i in range(len(subsets))]
+        data = {col: [] for col in columns}
+        for g in unique_groups:
+            data["Group"].append(g)
+            for i, subset in enumerate(subsets):
+                data[f"S{i+1}"].append(means[g] if g in subset else np.nan)
+
+        # Add min p-value row
+        data["Group"].append("min p-value")
+        for i, (_, min_p) in enumerate(subset_results):
+            data[f"S{i+1}"].append(min_p)
+
+        hs_df = pd.DataFrame(data)
+
+        # Reorder subset columns so that groups are consecutively grouped
+        subset_columns = []
+        for _, row in hs_df.iterrows():
+            for col in hs_df.columns[1:]:
+                if pd.notna(row[col]) and col not in subset_columns:
+                    subset_columns.append(col)
+        hs_df = hs_df[["Group"] + subset_columns]
+
+        # Ensure column names match
+        hs_df.columns = ["Group"] + [f"S{i+1}" for i in range(len(subset_columns))]
+
+        # Set index to Group
+        hs_df.set_index("Group", inplace=True)
+
+        return hs_df
 
 
 class MultiComparison:
@@ -1119,33 +1218,33 @@ class MultiComparison:
             resarr,
         )
 
-    def tukeyhsd(self, alpha=0.05, use_var='equal'):
+    def tukeyhsd(self, alpha=0.05, use_var="equal"):
         """
-        Tukey's range test to compare means of all pairs of groups
+             Tukey's range test to compare means of all pairs of groups
 
-        Parameters
-        ----------
-        alpha : float, optional
-            Value of FWER at which to calculate HSD.
-        use_var : {"unequal", "equal"}
-            If ``use_var`` is "equal", then the Tukey-hsd pvalues are returned.
-            Tukey-hsd assumes that (within) variances are the same across groups.
-            If ``use_var`` is "unequal", then the Games-Howell pvalues are
-            returned. This uses Welch's t-test for unequal variances with
-            Satterthwait's corrected degrees of freedom for each pairwise
-            comparison.
+             Parameters
+             ----------
+             alpha : float, optional
+                 Value of FWER at which to calculate HSD.
+             use_var : {"unequal", "equal"}
+                 If ``use_var`` is "equal", then the Tukey-hsd pvalues are returned.
+                 Tukey-hsd assumes that (within) variances are the same across groups.
+                 If ``use_var`` is "unequal", then the Games-Howell pvalues are
+                 returned. This uses Welch's t-test for unequal variances with
+                 Satterthwait's corrected degrees of freedom for each pairwise
+                 comparison.
 
-        Returns
-        -------
-        results : TukeyHSDResults instance
-            A results class containing relevant data and some post-hoc
-            calculations
+             Returns
+             -------
+             results : TukeyHSDResults instance
+                 A results class containing relevant data and some post-hoc
+                 calculations
 
-        Notes
-        -----
+             Notes
+             -----
 
-        .. versionadded:: 0.15
-   `       The `use_var` keyword and option for Games-Howell test.
+             .. versionadded:: 0.15
+        `       The `use_var` keyword and option for Games-Howell test.
         """
         self.groupstats = GroupsStats(
             np.column_stack([self.data, self.groupintlab]), useranks=False
@@ -1153,9 +1252,9 @@ class MultiComparison:
 
         gmeans = self.groupstats.groupmean
         gnobs = self.groupstats.groupnobs
-        if use_var == 'unequal':
+        if use_var == "unequal":
             var_ = self.groupstats.groupvarwithin()
-        elif use_var == 'equal':
+        elif use_var == "equal":
             var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
         else:
             raise ValueError('use_var should be "unequal" or "equal"')
@@ -1204,7 +1303,7 @@ class MultiComparison:
             alpha=alpha,
             group_t=self.groupsunique[res[0][1]],
             group_c=self.groupsunique[res[0][0]],
-            )
+        )
 
 
 def rankdata(x):
@@ -1473,7 +1572,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all, srange=True)
     elif np.size(var_all) > 1:
         var_pairs, df_pairs_ = varcorrection_pairs_unequal(var_all, nobs_all, df)
-        var_pairs /= 2.
+        var_pairs /= 2.0
         # check division by two for studentized range
 
     else:
@@ -1613,7 +1712,7 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all, srange=True)
     elif np.size(var_all) > 1:
         var_pairs, df_sum = varcorrection_pairs_unequal(var_all, nobs_all, df)
-        var_pairs /= 2.
+        var_pairs /= 2.0
         # check division by two for studentized range
     else:
         raise ValueError("not supposed to be here")
@@ -1690,8 +1789,7 @@ def contrast_diff_mean(nm):
 
 
 def tukey_pvalues(std_range, nm, df):
-    """compute tukey p-values by numerical integration of multivariate-t distribution
-    """
+    """compute tukey p-values by numerical integration of multivariate-t distribution"""
     # corrected but very slow with warnings about integration
     # need to increase maxiter or similar
     # nm = len(std_range)
