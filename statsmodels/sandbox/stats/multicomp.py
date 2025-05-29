@@ -65,6 +65,7 @@ TODO
 from statsmodels.compat.python import lrange, lzip
 
 from collections import namedtuple
+from itertools import combinations
 import copy
 import math
 
@@ -76,7 +77,6 @@ import pandas as pd
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.sm_exceptions import ValueWarning
-from itertools import combinations
 
 try:
     # Studentized Range in SciPy 1.7+
@@ -680,6 +680,7 @@ class TukeyHSDResults:
         nobs_group = self._multicomp.groupstats.groupnobs
         self.df_total_hsd = np.sum(nobs_group - 1)
 
+
     def __str__(self):
         return str(self._results_table)
 
@@ -704,17 +705,15 @@ class TukeyHSDResults:
         statsmodels. Do not use numeric indices for the DataFrame in order
         to be robust to the addition of columns.
         """
-        frame = pd.DataFrame(
-            {
-                "group_t": self.group_t,
-                "group_c": self.group_c,
-                "meandiff": self.meandiffs,
-                "p-adj": self.pvalues,
-                "lower": self.confint[:, 0],
-                "upper": self.confint[:, 1],
-                "reject": self.reject,
-            }
-        )
+        frame = pd.DataFrame({
+            "group_t": self.group_t,
+            "group_c": self.group_c,
+            "meandiff": self.meandiffs,
+            "p-adj": self.pvalues,
+            "lower": self.confint[:, 0],
+            "upper": self.confint[:, 1],
+            "reject": self.reject,
+            })
         return frame
 
     def _get_q_crit(self, hsd=True, alpha=None):
@@ -929,9 +928,9 @@ class TukeyHSDResults:
 
         Returns
         -------
-            pd.DataFrame: A DataFrame where each column S1, S2, ..., Sn represents a
-            homogeneous subset of groups. The 'Group' index lists the group names, and
-            a final row 'min p-value' contains the minimum p-value within each subset.
+        pd.DataFrame: A DataFrame where each column S1, S2, ..., Sn represents a
+        homogeneous subset of groups. The 'Group' index lists the group names, and
+        a final row 'min p-value' contains the minimum p-value within each subset.
         """
         endog = self.data
         groups = self.groups
@@ -1218,33 +1217,33 @@ class MultiComparison:
             resarr,
         )
 
-    def tukeyhsd(self, alpha=0.05, use_var="equal"):
+    def tukeyhsd(self, alpha=0.05, use_var='equal'):
         """
-             Tukey's range test to compare means of all pairs of groups
+        Tukey's range test to compare means of all pairs of groups
 
-             Parameters
-             ----------
-             alpha : float, optional
-                 Value of FWER at which to calculate HSD.
-             use_var : {"unequal", "equal"}
-                 If ``use_var`` is "equal", then the Tukey-hsd pvalues are returned.
-                 Tukey-hsd assumes that (within) variances are the same across groups.
-                 If ``use_var`` is "unequal", then the Games-Howell pvalues are
-                 returned. This uses Welch's t-test for unequal variances with
-                 Satterthwait's corrected degrees of freedom for each pairwise
-                 comparison.
+        Parameters
+        ----------
+        alpha : float, optional
+            Value of FWER at which to calculate HSD.
+        use_var : {"unequal", "equal"}
+            If ``use_var`` is "equal", then the Tukey-hsd pvalues are returned.
+            Tukey-hsd assumes that (within) variances are the same across groups.
+            If ``use_var`` is "unequal", then the Games-Howell pvalues are
+            returned. This uses Welch's t-test for unequal variances with
+            Satterthwait's corrected degrees of freedom for each pairwise
+            comparison.
 
-             Returns
-             -------
-             results : TukeyHSDResults instance
-                 A results class containing relevant data and some post-hoc
-                 calculations
+        Returns
+        -------
+        results : TukeyHSDResults instance
+            A results class containing relevant data and some post-hoc
+            calculations
 
-             Notes
-             -----
+        Notes
+        -----
 
-             .. versionadded:: 0.15
-        `       The `use_var` keyword and option for Games-Howell test.
+        .. versionadded:: 0.15
+   `       The `use_var` keyword and option for Games-Howell test.
         """
         self.groupstats = GroupsStats(
             np.column_stack([self.data, self.groupintlab]), useranks=False
@@ -1252,9 +1251,9 @@ class MultiComparison:
 
         gmeans = self.groupstats.groupmean
         gnobs = self.groupstats.groupnobs
-        if use_var == "unequal":
+        if use_var == 'unequal':
             var_ = self.groupstats.groupvarwithin()
-        elif use_var == "equal":
+        elif use_var == 'equal':
             var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
         else:
             raise ValueError('use_var should be "unequal" or "equal"')
@@ -1303,7 +1302,7 @@ class MultiComparison:
             alpha=alpha,
             group_t=self.groupsunique[res[0][1]],
             group_c=self.groupsunique[res[0][0]],
-        )
+            )
 
 
 def rankdata(x):
@@ -1572,7 +1571,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all, srange=True)
     elif np.size(var_all) > 1:
         var_pairs, df_pairs_ = varcorrection_pairs_unequal(var_all, nobs_all, df)
-        var_pairs /= 2.0
+        var_pairs /= 2.
         # check division by two for studentized range
 
     else:
@@ -1712,7 +1711,7 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all, srange=True)
     elif np.size(var_all) > 1:
         var_pairs, df_sum = varcorrection_pairs_unequal(var_all, nobs_all, df)
-        var_pairs /= 2.0
+        var_pairs /= 2.
         # check division by two for studentized range
     else:
         raise ValueError("not supposed to be here")
@@ -1789,7 +1788,8 @@ def contrast_diff_mean(nm):
 
 
 def tukey_pvalues(std_range, nm, df):
-    """compute tukey p-values by numerical integration of multivariate-t distribution"""
+    """compute tukey p-values by numerical integration of multivariate-t distribution
+    """
     # corrected but very slow with warnings about integration
     # need to increase maxiter or similar
     # nm = len(std_range)
