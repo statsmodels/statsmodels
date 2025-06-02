@@ -1380,8 +1380,8 @@ class GLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        method : {'elastic_net'}
-            Only the `elastic_net` approach is currently implemented.
+        method : {'elastic_net', 'l1'}
+            'l1' only supports L1_wt = 1.0.
         alpha : scalar or array_like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
@@ -1421,16 +1421,41 @@ class GLM(base.LikelihoodModel):
 
         The elastic_net method uses the following keyword arguments:
 
-        maxiter : int
+        maxiter : int = 50
             Maximum number of iterations
-        L1_wt  : float
+        L1_wt  : float = 1.0
             Must be in [0, 1].  The L1 penalty has weight L1_wt and the
             L2 penalty has weight 1 - L1_wt.
-        cnvrg_tol : float
+        cnvrg_tol : float = 1e-10
             Convergence threshold for maximum parameter change after
             one sweep through all coefficients.
-        zero_tol : float
+        zero_tol : float = 1e-10
             Coefficients below this threshold are treated as zero.
+        max_iter : bool = True
+            If True, check that the first step is an improvement and
+            use bisection if it is not.  If False, return after the
+            first step regardless.
+
+        The l1_slsqp method uses the following keyword arguments:
+
+        maxiter : int = 1000
+            Maximum number of iterations
+        trim_mode : 'auto, 'size', or 'off'
+            If not 'off', trim (set to zero) parameters that would have been zero
+                if the solver reached the theoretical minimum.
+            If 'auto', trim params using the Theory above.
+            If 'size', trim params if they have very small absolute value
+        size_trim_tol : float or 'auto' (default = 'auto')
+            For use when trim_mode === 'size'
+        auto_trim_tol : float
+            For sue when trim_mode == 'auto'.  Use
+        qc_tol : float
+            Print warning and do not allow auto trim when (ii) in "Theory" (above)
+            is violated by this much.
+        qc_verbose : bool
+            If true, print out a full QC report upon failure
+        acc : float (default 1e-6)
+            Requested accuracy as used by slsqp
         """
 
         if kwargs.get("L1_wt", 1) == 0:
@@ -1438,9 +1463,19 @@ class GLM(base.LikelihoodModel):
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
-
+        if method == "l1":
+            defaults = {"maxiter": 1000}
+            method = "l1_slsqp"
+        elif method == "elastic_net":
+            defaults = {
+                "maxiter": 50,
+                "L1_wt": 1,
+                "cnvrg_tol": 1e-10,
+                "zero_tol": 1e-10,
+            }
+        else:
+            raise ValueError("method for fit_regularized must be elastic_net or l1")
+        
         defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10,
                     "zero_tol": 1e-10}
         defaults.update(kwargs)
