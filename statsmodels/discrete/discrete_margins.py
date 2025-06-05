@@ -330,7 +330,7 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
         jacobian_mat = derivative
 
     #NOTE: this will not go through for at == 'all'
-    return np.dot(np.dot(jacobian_mat, cov_params), jacobian_mat.T)
+    return np.linalg.multi_dot([jacobian_mat, cov_params, jacobian_mat.T])
 
 def margeff_cov_with_se(model, params, exog, cov_params, at, derivative,
                         dummy_ind, count_ind, method, J):
