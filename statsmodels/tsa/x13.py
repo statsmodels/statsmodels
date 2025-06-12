@@ -185,9 +185,11 @@ def _make_forecast_options(forecast_periods):
     return forecast_spec
 
 
-def _check_errors(errors):
+def _check_errors(errors, rawspec_text):
     errors = errors[errors.find("spc:") + 4 :].strip()
     if errors and "ERROR" in errors:
+        if rawspec_text is not None:
+            warn("User-provided rawspec file has errors. Please check.")
         raise X13Error(errors)
     elif errors and "WARNING" in errors:
         warn(errors, X13Warning)
@@ -252,7 +254,7 @@ class SeriesSpec(Spec):
     span
     start
     title
-    type
+    series_type
 
     Notes
     -----
@@ -313,7 +315,7 @@ def pandas_to_series_spec(x):
     # check_period_index(x)
     if hasattr(x, "columns"):  # convert to series
         if len(x.columns) > 1:
-            raise ValueError("Does not handle DataFrame with more than one " "column")
+            raise ValueError("Does not handle DataFrame with more than one column")
         x = x[x.columns[0]]
 
     data = "({})".format("\n".join(map(str, x.values.tolist())))
@@ -364,6 +366,7 @@ def x13_arima_analysis(
     speconly=False,
     start=None,
     freq=None,
+    rawspec=None,
     print_stdout=False,
     x12path=None,
     prefer_x13=True,
@@ -419,6 +422,16 @@ def x13_arima_analysis(
     freq : str
         Must be givein if ``endog`` does not have date information in its
         index. Anything accepted by pandas.DatetimeIndex for the freq value.
+    rawspec : str or Path
+        As this wrapper does not provide all the available parameter
+        options, users can provide a full spec file instead.
+        If valid Path, will read in contents of file, otherwise string will 
+        be treated as a valid spec file. Other parameters for the spec file
+        will be IGNORED.
+        Series data and required output formats (`x11{save=(d11 d12 d13)}`)
+        are spliced into spec file before it is passed to x12/x13. Spec
+        file must not contain `series{data=()}` or `series{file="" format=""}`
+        parameters. See tests/x13_test.py for example test files.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True. Default is False.
@@ -472,23 +485,76 @@ def x13_arima_analysis(
     if not isinstance(endog, (pd.DataFrame, pd.Series)):
         if start is None or freq is None:
             raise ValueError(
-                "start and freq cannot be none if endog is not " "a pandas object"
+                "start and freq cannot be none if endog is not a pandas object"
             )
         idx = pd.date_range(start=start, periods=len(endog), freq=freq)
         endog = pd.Series(endog, index=idx)
 
     spec_obj = pandas_to_series_spec(endog)
     spec = spec_obj.create_spec()
-    spec += f"transform{{function={_log_to_x12[log]}}}\n"
-    if outlier:
-        spec += "outlier{}\n"
-    options = _make_automdl_options(maxorder, maxdiff, diff)
-    spec += f"automdl{{{options}}}\n"
-    spec += _make_regression_options(trading, exog)
-    spec += _make_forecast_options(forecast_periods)
-    spec += "x11{ save=(d11 d12 d13) \n savelog=(fd8 m7 q)}"
+
+    if rawspec is None:
+
+        spec += f"transform{{function={_log_to_x12[log]}}}\n"
+        if outlier:
+            spec += "outlier{}\n"
+        options = _make_automdl_options(maxorder, maxdiff, diff)
+        spec += f"automdl{{{options}}}\n"
+        spec += _make_regression_options(trading, exog)
+        spec += _make_forecast_options(forecast_periods)
+        spec += "x11{ save=(d11 d12 d13) \n savelog=(fd8 m7 q)}"
+
+    # if specfile string (or path) is passed
+    else:
+
+        if any([diff, exog, start, freq]):
+
+            raise ValueError("other arguments not allowed for diff, exog, start, freq"
+                             "when rawspec is specified")
+
+        rawspec_text = None
+
+        try:
+            with open(rawspec) as f:
+                rawspec_text = f.read()
+        except (OSError, FileNotFoundError):
+            if "{" in rawspec:
+                 rawspec_text = rawspec
+            else:
+                 raise ValueError("rawspec argument provided but not valid path"
+                                              " or spec string")
+
+        # merge series {} properties created above into raw spec file       
+        spec = re.sub(
+                r'series\s*\{\s*',
+                spec.replace("}\n", ''),
+                rawspec_text,
+                flags=re.IGNORECASE)
+        spec_outputs = re.search(
+                r"x1[123]\s?\{[^}]*save\s*=\s*\(",
+                spec,
+                flags=re.DOTALL | re.IGNORECASE)
+        spec_x_block = re.search(
+                r"x1[123]\s?\{",
+                spec,
+                flags=re.DOTALL | re.IGNORECASE)
+
+        # merge in expected types of output
+        # (d11=final seasonally adjusted series)
+        # (d12=final trend cycle)
+        # (d13=final irregular component)
+        if spec_outputs:
+            pos = spec_outputs.span()[1]
+            spec = spec[:pos] + " d11 d12 d13 " + spec[pos:]
+        elif spec_x_block:
+            pos = spec_x_block.span()[1]
+            spec = spec[:pos] + "\nsave=(d11 d12 d13)\n" + spec[pos:]
+        else:
+            spec = spec + "\nx11 {save=(d11 d12 d13)}"
+
     if speconly:
         return spec
+
     # write it to a tempfile
     # TODO: make this more robust - give the user some control?
     ftempin = tempfile.NamedTemporaryFile(delete=False, suffix=".spc", dir=tempdir)
@@ -505,7 +571,7 @@ def x13_arima_analysis(
             print(p.stdout.read())
         # check for errors
         errors = _open_and_read(ftempout.name + ".err")
-        _check_errors(errors)
+        _check_errors(errors, rawspec)
 
         # read in results
         results = _open_and_read(ftempout.name + ".out")
