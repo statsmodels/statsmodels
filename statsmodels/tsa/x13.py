@@ -428,8 +428,10 @@ def x13_arima_analysis(
         If valid Path, will read in contents of file, otherwise string will 
         be treated as a valid spec file. Other parameters for the spec file
         will be IGNORED.
-        Series data and required output formats are spliced into spec file
-        before it is passed to x12/x13.
+        Series data and required output formats (`x11{save=(d11 d12 d13)}`)
+        are spliced into spec file before it is passed to x12/x13. Spec
+        file must not contain `series{data=()}` or `series{file="" format=""}`
+        parameters. See tests/x13_test.py for example test files.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True. Default is False.
@@ -505,24 +507,22 @@ def x13_arima_analysis(
     # if specfile string (or path) is passed
     else:
 
-        if ((not None) in [diff, exog, start, freq]): # or (not outlier) or trading:
+        if any([diff, exog, start, freq]):
 
             raise ValueError("other arguments not allowed for diff, exog, start, freq"
                              "when rawspec is specified")
 
         rawspec_text = None
 
-        if os.path.exists(rawspec):
-            # path exists, read in file
+        try:
             with open(rawspec) as f:
                 rawspec_text = f.read()
-
-        elif "{" in rawspec:
-            rawspec_text = rawspec
-
-        else:
-            raise ValueError("rawspec argument provided but not valid path"
-                             " or spec string")
+        except (OSError, FileNotFoundError):
+            if "{" in rawspec:
+                 rawspec_text = rawspec
+            else:
+                 raise ValueError("rawspec argument provided but not valid path"
+                                              " or spec string")
 
         # merge series {} properties created above into raw spec file       
         spec = re.sub(
@@ -534,6 +534,10 @@ def x13_arima_analysis(
                 r"x1[123]\s?\{[^}]*save\s*=\s*\(",
                 spec,
                 flags=re.DOTALL | re.IGNORECASE)
+        spec_x_block = re.search(
+                r"x1[123]\s?\{",
+                spec,
+                flags=re.DOTALL | re.IGNORECASE)
 
         # merge in expected types of output
         # (d11=final seasonally adjusted series)
@@ -542,6 +546,11 @@ def x13_arima_analysis(
         if spec_outputs:
             pos = spec_outputs.span()[1]
             spec = spec[:pos] + " d11 d12 d13 " + spec[pos:]
+        elif spec_x_block:
+            pos = spec_x_block.span()[1]
+            spec = spec[:pos] + "\nsave=(d11 d12 d13)\n" + spec[pos:]
+        else:
+            spec = spec + "\nx11 {save=(d11 d12 d13)}"
 
     if speconly:
         return spec

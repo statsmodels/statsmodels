@@ -161,6 +161,83 @@ history {
 
         x13_arima_analysis(dataset, rawspec=ft.name)
 
+
+def test_x13_arima_rawspec_no_save(dataset):
+    # example rawspec file string
+    raw_spec_file = """
+series { 
+    modelspan=(,) 
+    save=(B1) 
+    span=(,) 
+    type=(flow) 
+}
+x11 { 
+    seasonalma=(  msr) 
+    appendfcst=yes 
+    mode=(mult) 
+    print=( seasadj seasonal adjustfac) 
+    savelog=(  alldiagnostics) 
+} 
+arima {model=(0 1 0)(1 0 1)} 
+transform { 
+    function=log 
+} 
+regression { 
+    savelog=(  aictest) 
+ } 
+estimate {save=mdl} 
+slidingspans { } 
+history { 
+    estimates=(sadj seasonal fcst) 
+    fixmdl=yes
+}
+"""
+
+    # pass rawspec as string
+    x13_arima_analysis(dataset, rawspec=raw_spec_file)
+
+    # pass rawspec as file path
+    with tempfile.NamedTemporaryFile(suffix='.spc') as ft:
+        ft.write(raw_spec_file.encode('utf8'))
+        ft.seek(0)
+
+        x13_arima_analysis(dataset, rawspec=ft.name)
+
+
+def test_x13_arima_rawspec_no_x11(dataset):
+    # example rawspec file string
+    raw_spec_file = """
+series { 
+    modelspan=(,) 
+    save=(B1) 
+    span=(,) 
+    type=(flow) 
+}
+arima {model=(0 1 0)(1 0 1)} 
+transform { 
+    function=log 
+} 
+regression { 
+    savelog=(  aictest) 
+ } 
+estimate {save=mdl} 
+slidingspans { } 
+history { 
+    estimates=(sadj seasonal fcst) 
+    fixmdl=yes
+}
+"""
+
+    # pass rawspec as string
+    x13_arima_analysis(dataset, rawspec=raw_spec_file)
+
+    # pass rawspec as file path
+    with tempfile.NamedTemporaryFile(suffix='.spc') as ft:
+        ft.write(raw_spec_file.encode('utf8'))
+        ft.seek(0)
+
+        x13_arima_analysis(dataset, rawspec=ft.name)
+
 def test_x13_arima_invalid_rawspec(dataset):
     # bad rawspec file string ("series" misspelled, no closing "}" on "x11")
     raw_spec_file = """
