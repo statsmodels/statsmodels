@@ -6,7 +6,7 @@ import warnings
 import pytest
 
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
 
 from scipy import integrate
 
@@ -15,7 +15,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
     )
 import statsmodels.genmod.families as F
-from statsmodels.genmod.families.family import Tweedie
+from statsmodels.genmod.families.family import Tweedie, Binomial
 import statsmodels.genmod.families.links as L
 
 all_links = {
@@ -107,3 +107,15 @@ def test_tweedie_loglike_obs(power):
         )
 
     assert_allclose(pdf(0) + integrate.quad(pdf, 0, 1e2)[0], 1, atol=1e-4)
+
+
+@pytest.mark.parametrize("mu", [0,1])
+@pytest.mark.parametrize("endog", [0,1])
+def test_binomial_loglike_obs(mu, endog):
+    """Test Binomial loglike with extreme values"""
+    ll = Binomial().loglike_obs(endog=endog, mu=mu)
+    if mu == endog:
+        assert_almost_equal(ll, 0)
+    else:
+        # For our purposes, -40 is "approximately" -inf
+        assert ll < -40
