@@ -108,11 +108,19 @@ def _is_using_ndarray_type(endog, exog):
 def _is_using_ndarray(endog, exog):
     return (isinstance(endog, np.ndarray) and
             (isinstance(exog, np.ndarray) or exog is None))
+    
+    
+def _is_using_ndarray_like(endog, exog):
+    return hasattr(endog, '__array__') and hasattr(exog, '__array__')
 
 
 def _is_using_pandas(endog, exog):
     from statsmodels.compat.pandas import data_klasses as klasses
     return (isinstance(endog, klasses) or isinstance(exog, klasses))
+    
+
+def _is_using_pandas_like(endog, exog):
+    return hasattr(endog, '__dataframe__') or hasattr(exog, '__dataframe__')
 
 
 def _is_using_patsy(endog, exog):

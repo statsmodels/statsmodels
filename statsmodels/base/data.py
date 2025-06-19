@@ -333,10 +333,12 @@ class ModelData:
     def _convert_endog_exog(self, endog, exog):
 
         # for consistent outputs if endog is (n,1)
-        yarr = self._get_yarr(endog)
+        # We call __array__() to convert to an array if the object is array-like
+        # but not yet an array. For actual ndarrays, this does nothing.
+        yarr = self._get_yarr(endog.__array__())
         xarr = None
         if exog is not None:
-            xarr = self._get_xarr(exog)
+            xarr = self._get_xarr(exog.__array__())
             if xarr.ndim == 1:
                 xarr = xarr[:, None]
             if xarr.ndim != 2:
@@ -681,6 +683,10 @@ def handle_data_class_factory(endog, exog):
         klass = PatsyData
     elif data_util._is_using_formulaic(endog, exog):
         klass = FormulaicData
+    elif data_util._is_using_ndarray_like(endog, exog):
+        klass = ModelData
+    elif data_util._is_using_pandas_like(endog, exog):
+        klass = PandasData
     # keep this check last
     elif data_util._is_using_ndarray(endog, exog):
         klass = ModelData
