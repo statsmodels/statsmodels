@@ -921,7 +921,7 @@ class MultiComparison:
     Parameters
     ----------
     data : ndarray
-        independent data samples
+        dependent data samples
     groups : ndarray
         group labels corresponding to each data point
     group_order : list[str], optional
