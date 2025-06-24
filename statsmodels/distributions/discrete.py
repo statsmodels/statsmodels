@@ -1,8 +1,9 @@
+from statsmodels.compat.scipy import apply_where
+
 import numpy as np
 
 from scipy.stats import rv_discrete, poisson, nbinom
 from scipy.special import gammaln
-from scipy._lib._util import _lazywhere
 
 from statsmodels.base.model import GenericLikelihoodModel
 
@@ -44,10 +45,12 @@ class zipoisson_gen(rv_discrete):
         return (mu > 0) & (w >= 0) & (w<=1)
 
     def _logpmf(self, x, mu, w):
-        return _lazywhere(x != 0, (x, mu, w),
-                          (lambda x, mu, w: np.log(1. - w) + x * np.log(mu) -
-                          gammaln(x + 1.) - mu),
-                          np.log(w + (1. - w) * np.exp(-mu)))
+        return apply_where(
+            x != 0,
+            (x, mu, w),
+            (lambda x, mu, w: np.log(1.0 - w) + x * np.log(mu) - gammaln(x + 1.0) - mu),
+            fill_value=np.log(w + (1.0 - w) * np.exp(-mu)),
+        )
 
     def _pmf(self, x, mu, w):
         return np.exp(self._logpmf(x, mu, w))
@@ -89,11 +92,15 @@ class zigeneralizedpoisson_gen(rv_discrete):
         return (mu > 0) & (w >= 0) & (w<=1)
 
     def _logpmf(self, x, mu, alpha, p, w):
-        return _lazywhere(x != 0, (x, mu, alpha, p, w),
-                          (lambda x, mu, alpha, p, w: np.log(1. - w) +
-                          genpoisson_p.logpmf(x, mu, alpha, p)),
-                          np.log(w + (1. - w) *
-                          genpoisson_p.pmf(x, mu, alpha, p)))
+        return apply_where(
+            x != 0,
+            (x, mu, alpha, p, w),
+            (
+                lambda x, mu, alpha, p, w: np.log(1.0 - w)
+                + genpoisson_p.logpmf(x, mu, alpha, p)
+            ),
+            fill_value=np.log(w + (1.0 - w) * genpoisson_p.pmf(x, mu, alpha, p)),
+        )
 
     def _pmf(self, x, mu, alpha, p, w):
         return np.exp(self._logpmf(x, mu, alpha, p, w))
@@ -121,11 +128,12 @@ class zinegativebinomial_gen(rv_discrete):
 
     def _logpmf(self, x, mu, alpha, p, w):
         s, p = self.convert_params(mu, alpha, p)
-        return _lazywhere(x != 0, (x, s, p, w),
-                          (lambda x, s, p, w: np.log(1. - w) +
-                          nbinom.logpmf(x, s, p)),
-                          np.log(w + (1. - w) *
-                          nbinom.pmf(x, s, p)))
+        return apply_where(
+            x != 0,
+            (x, s, p, w),
+            (lambda x, s, p, w: np.log(1.0 - w) + nbinom.logpmf(x, s, p)),
+            fill_value=np.log(w + (1.0 - w) * nbinom.pmf(x, s, p)),
+        )
 
     def _pmf(self, x, mu, alpha, p, w):
         return np.exp(self._logpmf(x, mu, alpha, p, w))
