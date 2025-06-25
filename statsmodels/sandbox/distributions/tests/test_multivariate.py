@@ -2,11 +2,16 @@
 Created on Sat Apr 16 15:02:13 2011
 @author: Josef Perktold
 """
+from statsmodels.compat.scipy import SP_LT_116
+
 import numpy as np
-from numpy.testing import assert_almost_equal,  assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
+import pytest
 
 from statsmodels.sandbox.distributions.multivariate import (
-    mvstdtprob, mvstdnormcdf)
+    mvstdnormcdf,
+    mvstdtprob,
+)
 from statsmodels.sandbox.distributions.mv_normal import MVT, MVNormal
 
 
@@ -25,6 +30,7 @@ class Test_MVN_MVT_prob:
         corr2[2,1] = -0.5
         cls.corr2 = corr2
 
+    @pytest.mark.skipif(SP_LT_116, reason="SciPy < 1.16.0 required")
     def test_mvn_mvt_1(self):
         a, b = self.a, self.b
         df = self.df

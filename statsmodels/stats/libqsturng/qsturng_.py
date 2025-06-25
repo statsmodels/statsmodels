@@ -671,8 +671,6 @@ def _qsturng(p, r, v):
 ##    print 'q',p
     # r is interpolated through the q to y here we only need to
     # account for when p and/or v are not found in the table.
-    global A, p_keys, v_keys
-
     if p < .1 or p > .999:
         raise ValueError('p must be between .1 and .999')
 
