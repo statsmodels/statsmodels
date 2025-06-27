@@ -64,7 +64,7 @@ def fit_l1_slsqp(
     # Convert display parameters to scipy.optimize form
     disp_slsqp = _get_disp_slsqp(disp, retall)
     # Set/retrieve the desired accuracy
-    acc = kwargs.setdefault('acc', 1e-10)
+    acc = kwargs.setdefault('acc', 1e-12)
 
     ### Wrap up for use in fmin_slsqp
     func = lambda x_full: _objective_func(f, x_full, k_params, alpha, *args)
