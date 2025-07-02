@@ -11,7 +11,7 @@ import pytest
 from statsmodels.sandbox.stats.multicomp import tukey_pvalues
 
 
-@pytest.mark.skipif(not SP_LT_116, reason="requires scipy >= 1.16.0")
+@pytest.mark.skipif(not SP_LT_116, reason="SciPy < 1.16.0 required")
 def test_tukey_pvalues():
     # TODO: testcase with 3 is not good because all pairs
     #  has also 3*(3-1)/2=3 elements
