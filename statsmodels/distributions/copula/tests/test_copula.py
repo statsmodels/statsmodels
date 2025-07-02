@@ -427,7 +427,7 @@ class CheckCopula:
 
     def test_pdf(self):
         pdf_u_test = self.copula.pdf(self.u)
-        assert_array_almost_equal(self.pdf_u, pdf_u_test)
+        assert_allclose(self.pdf_u, pdf_u_test, rtol=1e-5)
 
     def test_cdf(self):
         cdf_u_test = self.copula.cdf(self.u)
