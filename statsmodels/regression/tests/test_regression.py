@@ -20,7 +20,6 @@ import pytest
 from scipy.linalg import toeplitz
 from scipy.stats import t as student_t
 
-from statsmodels.compat.scipy import SP_LT_116
 from statsmodels.datasets import longley
 from statsmodels.regression.linear_model import (
     GLS,
