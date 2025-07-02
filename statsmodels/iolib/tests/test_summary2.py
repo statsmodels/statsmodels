@@ -197,6 +197,7 @@ def test_ols_summary_rsquared_label():
         assert r2_str in str(reg_without_constant.summary2())
         assert r2_str in str(reg_without_constant.summary())
 
+
 class TestSummaryLabels:
     """
     Test that the labels are correctly set in the summary table"""

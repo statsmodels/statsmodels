@@ -16,7 +16,7 @@ import pandas as pd
 import pytest
 import scipy.stats
 
-from statsmodels.tools.sm_exceptions import ConvergenceWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.holtwinters import (
     PY_SMOOTHERS,
     SMOOTHERS,
