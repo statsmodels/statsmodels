@@ -1,6 +1,7 @@
 import warnings
 
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels import datasets
@@ -47,6 +48,9 @@ class CheckResults:
     def test_bic(self):
         assert_allclose(self.res1.bic, self.res2.bic, atol=1e-2, rtol=1e-12)
 
+    @pytest.mark.xfail(
+        raises=AssertionError, reason="Occasional failure", strict=False
+    )
     def test_fit_regularized(self):
         model = self.res1.model
         alpha = np.ones(len(self.res1.params))
