@@ -2,6 +2,7 @@
 Test functions for models.regression
 """
 # TODO: Test for LM
+from statsmodels.compat.scipy import SP_LT_116
 from statsmodels.compat.python import lrange
 
 import warnings
@@ -1143,7 +1144,10 @@ def test_summary_as_latex():
     x["constant"] = 1
     y = dta.endog
     res = OLS(y, x).fit()
-    with pytest.warns(UserWarning):
+    if SP_LT_116:
+        with pytest.warns(UserWarning):
+            table = res.summary().as_latex()
+    else:
         table = res.summary().as_latex()
     # replace the date and time
     table = re.sub(

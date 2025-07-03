@@ -144,7 +144,11 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
         _single_violin(ax, pos, pos_data, width, side, plot_opts)
 
     if show_boxplot:
-        ax.boxplot(data, notch=1, positions=positions, vert=1)
+        try:
+            ax.boxplot(data, notch=1, positions=positions, orientation="vertical")
+        except TypeError:
+            # Deprecated in MPL 3.10
+            ax.boxplot(data, notch=1, positions=positions, vert=1)
 
     # Set ticks and tick labels of horizontal axis.
     _set_ticks_labels(ax, data, labels, positions, plot_opts)

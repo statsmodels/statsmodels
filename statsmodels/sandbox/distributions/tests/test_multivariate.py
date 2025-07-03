@@ -2,11 +2,16 @@
 Created on Sat Apr 16 15:02:13 2011
 @author: Josef Perktold
 """
+from statsmodels.compat.scipy import SP_LT_116
+
 import numpy as np
-from numpy.testing import assert_almost_equal,  assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
+import pytest
 
 from statsmodels.sandbox.distributions.multivariate import (
-    mvstdtprob, mvstdnormcdf)
+    mvstdnormcdf,
+    mvstdtprob,
+)
 from statsmodels.sandbox.distributions.mv_normal import MVT, MVNormal
 
 
@@ -25,6 +30,7 @@ class Test_MVN_MVT_prob:
         corr2[2,1] = -0.5
         cls.corr2 = corr2
 
+    @pytest.mark.skipif(not SP_LT_116, reason="SciPy < 1.16.0 required")
     def test_mvn_mvt_1(self):
         a, b = self.a, self.b
         df = self.df
@@ -46,6 +52,7 @@ class Test_MVN_MVT_prob:
         #>>> assert_almost_equal(0.67396999999999996, 0.67397072627419408, 6)
         #Fail
 
+    @pytest.mark.skipif(not SP_LT_116, reason="SciPy < 1.16.0 required")
     def test_mvn_mvt_2(self):
         a, b = self.a, self.b
         df = self.df
@@ -56,6 +63,7 @@ class Test_MVN_MVT_prob:
         assert_almost_equal(probmvt_R, mvstdtprob(a, b, corr2, df), 4)
         assert_almost_equal(probmvn_R, mvstdnormcdf(a, b, corr2, abseps=1e-5), 4)
 
+    @pytest.mark.skipif(not SP_LT_116, reason="SciPy < 1.16.0 required")
     def test_mvn_mvt_3(self):
         a, b = self.a, self.b
         df = self.df
@@ -73,6 +81,7 @@ class Test_MVN_MVT_prob:
         probmvn = mvstdnormcdf(a2, b, corr2, maxpts=100000, abseps=1e-5)
         assert_allclose(probmvn_R, probmvn, atol=1e-4)
 
+    @pytest.mark.skipif(not SP_LT_116, reason="SciPy < 1.16.0 required")
     def test_mvn_mvt_4(self):
         a, bl = self.a, self.b
         df = self.df
@@ -89,6 +98,7 @@ class Test_MVN_MVT_prob:
                             mvstdnormcdf(np.zeros(3), -a2, corr2,
                                          maxpts=100000, abseps=1e-5), 4)
 
+    @pytest.mark.skipif(not SP_LT_116, reason="SciPy < 1.16.0 required")
     def test_mvn_mvt_5(self):
         a, bl = self.a, self.b
         df = self.df

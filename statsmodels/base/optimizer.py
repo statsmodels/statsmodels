@@ -4,11 +4,13 @@ to untie these from LikelihoodModel so that they may be re-used generally.
 """
 from __future__ import annotations
 
-from typing import Any
+from statsmodels.compat.scipy import SP_LT_15, SP_LT_17, SP_LT_116
+
 from collections.abc import Sequence
+from typing import Any
+
 import numpy as np
 from scipy import optimize
-from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
 
 
 def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
@@ -657,10 +659,19 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
     elif approx_grad:
         func = f
 
-    retvals = optimize.fmin_l_bfgs_b(func, start_params, maxiter=maxiter,
-                                     callback=callback, args=fargs,
-                                     bounds=bounds, disp=disp,
-                                     **extra_kwargs)
+    extended_kwargs = extra_kwargs.copy()
+    if SP_LT_116:
+        extended_kwargs["disp"]=disp
+    retvals = optimize.fmin_l_bfgs_b(
+        func,
+        start_params,
+        maxiter=maxiter,
+        callback=callback,
+        args=fargs,
+        bounds=bounds,
+        **extended_kwargs
+    )
+
 
     if full_output:
         xopt, fopt, d = retvals

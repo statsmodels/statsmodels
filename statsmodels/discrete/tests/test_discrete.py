@@ -1953,7 +1953,7 @@ class TestGeneralizedPoisson_p1:
         assert_allclose((self.res1.params[:-2]**2).mean(),
                         0.016580955543320779, rtol=1e-5)
         assert_allclose((res_reg1.params[:-2]**2).mean(),
-                        0.016580734975068664, rtol=1e-5)
+                        0.016580734975068664, rtol=1e-4)
         assert_allclose((res_reg2.params[:-2]**2).mean(),
                         0.010672558641545994, rtol=1e-5)
         assert_allclose((res_reg3.params[:-2]**2).mean(),

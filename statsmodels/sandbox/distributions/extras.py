@@ -62,9 +62,14 @@ from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
 try:
     from scipy.stats._mvn import mvndst
 except ImportError:
-    # Must be using SciPy <1.8.0 where this function was moved (it's not a
-    # public SciPy function, but we need it here)
-    from scipy.stats.mvn import mvndst
+    try:
+        # Must be using SciPy <1.8.0 where this function was moved (it's not a
+        # public SciPy function, but we need it here)
+        from scipy.stats.mvn import mvndst
+    except ImportError:
+
+        def mvndst(*args, **kwargs):
+            raise ImportError("mvndst not available. Much use SciPy < 1.16.0")
 
 
 # note copied from distr_skewnorm_0.py
