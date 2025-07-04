@@ -932,8 +932,10 @@ class NewsResults:
         else:
             impacts = impacts.reset_index()
             try:
-                impacts.iloc[:, :2] = impacts.iloc[:, :2].map(str)
-                impacts.iloc[:, 2:] = impacts.iloc[:, 2:].map(
+                cols = impacts.columns[:2]
+                impacts[cols] = impacts[cols].map(str)
+                cols = impacts.columns[2:]
+                impacts[cols] = impacts[cols].map(
                     lambda num: '' if pd.isnull(num) else float_format % num)
             except AttributeError:
                 impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
@@ -1325,7 +1327,8 @@ class NewsResults:
         try:
             data[['update date', 'updated variable']] = (
                 data[['update date', 'updated variable']].map(str))
-            data.iloc[:, 2:] = data.iloc[:, 2:].map(
+            cols = data.columns[2:]
+            data[cols] = data[cols].map(
                 lambda num: '' if pd.isnull(num) else '%.2f' % num)
         except AttributeError:
             data[['update date', 'updated variable']] = (

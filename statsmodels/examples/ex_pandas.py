@@ -123,7 +123,7 @@ plt.plot(y)
 # we'll use a pandas time series.
 dates = sm.tsa.datetools.dates_from_range('1980m1', length=nobs)
 y = Series(y, index=dates)
-arma_mod = sm.tsa.ARMA(y, order=(2, 2), freq='M')
+arma_mod = sm.tsa.ARMA(y, order=(2, 2), freq='ME')
 arma_res = arma_mod.fit(trend='nc', disp=-1)
 print(arma_res.params)
 
