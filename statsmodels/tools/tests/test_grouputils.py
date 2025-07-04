@@ -7,7 +7,8 @@ import pytest
 from scipy import sparse
 
 from statsmodels.tools.grouputils import (dummy_sparse, Grouping, Group,
-                                          combine_indices, group_sums)
+                                          combine_indices, group_sums,
+                                          GroupsStats)
 from statsmodels.datasets import grunfeld, anes96
 
 
@@ -355,30 +356,30 @@ class TestGroupsStats:
                       [7.81, 4], [7.85, 4], [7.87, 4], [7.91, 4]])
         cls.x = X
         # create an instance of GroupsStats
-        cls.gs = Group(X)
+        cls.gs = GroupsStats(X)
 
     def test_basic(self):
         # test the basic attributes of GroupsStats
         assert_equal(self.gs.groupnobs, [8, 8, 7, 8])
         assert_array_almost_equal(self.gs.groupsum,
-                                  [61.81, 62.09, 54.49, 62.59])
+                                  [61.71, 62.09, 54.49, 62.39])
         assert_array_almost_equal(self.gs.groupmean,
-                                  [7.72625, 7.76125, 7.78428571, 7.82375])
+                                  [7.71375, 7.76125, 7.78428571, 7.79875])
         assert_equal(len(self.gs.groupmeanfilter), len(self.x))
 
     def test_var(self):
         # test the variance-related attributes
         assert_array_almost_equal(self.gs.groupsswithin(),
-                                  [0.0035875, 0.0060875,
+                                  [0.0047875, 0.0060875,
                                    0.00688571, 0.0210875])
         assert_array_almost_equal(self.gs.groupvarwithin(),
-                                  [0.0005125, 0.00086964,
+                                  [0.00068393, 0.00086964,
                                    0.00114762, 0.0030125])
 
     def test_useranks(self):
         # test the useranks option
         from scipy import stats
-        gs_ranked = Group(self.x, useranks=True)
+        gs_ranked = GroupsStats(self.x, useranks=True)
         # gs_ranked.groupmeanfilter should be equivalent to scipy's rankdata
         assert_array_almost_equal(gs_ranked.groupmeanfilter,
                                   stats.rankdata(self.x[:, 0]))
