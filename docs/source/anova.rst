@@ -43,3 +43,22 @@ Module Reference
 
    anova_lm
    AnovaRM
+
+Post-Hoc Testing
+----------------
+
+The :class:`AnovaResults` object returned by `AnovaRM.fit` provides methods for post-hoc testing, including Tukey's HSD and general pairwise t-tests with multiple comparison correction.
+
+.. code-block:: python
+
+    # perform repeated measures anova
+    res = AnovaRM(data, 'DV', 'id', within=['A', 'B']).fit()
+
+    # perform Tukey's HSD post-hoc test
+    tukey_res = res.pairwise_tukeyhsd()
+    print(tukey_res)
+
+    # perform pairwise t-tests
+    from scipy import stats
+    ttest_res = res.allpairtest(stats.ttest_ind, method="bonf")
+    print(ttest_res[0])
