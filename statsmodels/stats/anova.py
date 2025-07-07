@@ -526,16 +526,25 @@ class AnovaRM:
         for wi in self.within:
             factor_levels *= len(self.data[wi].unique())
 
-        # create group labels
-        groups_as_array = self.data[self.within].values
-        # combine_indices returns integer labels for unique groups
-        group_labels, _, _ = combine_indices(groups_as_array)
+        # -----------------------------------------------------------------
+        # Determine cell membership *robustly* for arbitrary dtypes.
+        # Using ``np.unique`` with ``axis`` fails on object dtype (e.g. string
+        # labels) starting with NumPy 2.0 and raises
+        # ``TypeError: The axis argument to unique is not supported for dtype
+        # object``.  Instead, we build a ``pandas.MultiIndex`` from the
+        # within-subject factor columns and *factorize* it.  ``factorize``
+        # assigns consecutive integer codes (0..k-1) to each distinct
+        # combination of factor levels, exactly what is needed here, and works
+        # independently of the underlying dtype of the factors.
+        # -----------------------------------------------------------------
+        groups_df = self.data[self.within]
+        # ``pd.MultiIndex.from_frame`` preserves the row order, so the codes
+        # returned by ``pd.factorize`` align with the original observations.
+        labels = pd.factorize(pd.MultiIndex.from_frame(groups_df))[0]
 
-        # use GroupsStats to get group counts
-        # The data column (first) does not affect `groupnobs`
-        d_dummy = np.arange(len(group_labels))
-        gs_input = np.column_stack([d_dummy, group_labels])
-        gs = GroupsStats(gs_input)
+        # Use GroupsStats to count observations in each cell.
+        d_dummy = np.arange(len(labels))           # 1st column = irrelevant
+        gs = GroupsStats(np.column_stack([d_dummy, labels]))
 
         error_message = "Data is unbalanced."
         # `len(gs.groupnobs)` is number of cells that have observations

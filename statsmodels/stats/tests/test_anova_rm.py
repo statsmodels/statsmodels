@@ -2,6 +2,7 @@ from statsmodels.compat.pandas import assert_frame_equal
 
 from numpy.testing import (
     assert_array_almost_equal,
+    assert_array_equal,
     assert_equal,
     assert_raises,
 )
@@ -229,10 +230,10 @@ class TestAnovaPostHoc:
         from statsmodels.stats.multicomp import MultiComparison
         from scipy import stats
         df = AnovaRM(data, 'DV', 'id', within=['A', 'B', 'D']).fit()
-        res_table, _, _ = df.allpairtest(stats.ttest_ind, method="bonf")
+        _, _, resarr1 = df.allpairtest(stats.ttest_ind, method="bonf")
         mc = MultiComparison(data['DV'], data['A'])
-        res_table2, _, _ = mc.allpairtest(stats.ttest_ind, method="bonf")
+        _, _, resarr2 = mc.allpairtest(stats.ttest_ind, method="bonf")
 
-        # res_table is a SimpleTable object, convert to numpy array to compare
-        assert_array_almost_equal(np.array(res_table.data),
-                                  np.array(res_table2.data))
+        # The data in the SimpleTable is stringified, so direct comparison
+        # can fail. Instead we compare the returned structured arrays.
+        assert_array_equal(resarr1, resarr2)
