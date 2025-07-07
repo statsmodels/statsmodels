@@ -40,7 +40,8 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc',
               # numpydoc or sphinx.ext.napoleon, but not both
-              'numpydoc',
+              # 'numpydoc',
+              'sphinx.ext.napoleon',
               'sphinx.ext.doctest',
               'sphinx.ext.extlinks',
               'sphinx.ext.intersphinx',
@@ -50,7 +51,7 @@ extensions = ['sphinx.ext.autodoc',
               'nbsphinx',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
-              # 'sphinx.ext.autosummary',
+              'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
               'IPython.sphinxext.ipython_console_highlighting',

@@ -397,7 +397,7 @@ endog2 = pd.Series([1, 2, 3, 4], index=index)
 print(endog2.index)
 
 # Monthly frequency, using a DatetimeIndex
-index = pd.date_range(start='2000', periods=4, freq='M')
+index = pd.date_range(start='2000', periods=4, freq='ME')
 endog3 = pd.Series([1, 2, 3, 4], index=index)
 print(endog3.index)
 

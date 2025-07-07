@@ -6,6 +6,7 @@ setuptools_scm[toml]~=8.0
 matplotlib>=3
 colorama
 joblib
+jinja2
 # Remove due to failures on azure CI
 # cvxopt; os_name != "win32"
 
