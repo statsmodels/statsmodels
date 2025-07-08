@@ -2,9 +2,9 @@
 Test functions for models.regression
 """
 
-# TODO: Test for LM
-from statsmodels.compat.pandas import PD_LT_3
 from statsmodels.compat.python import lrange
+# TODO: Test for LM
+from statsmodels.compat.scipy import SP_LT_116
 
 import warnings
 
@@ -1093,7 +1093,7 @@ def test_summary_as_latex():
     x["constant"] = 1
     y = dta.endog
     res = OLS(y, x).fit()
-    if PD_LT_3:
+    if SP_LT_116:
         with pytest.warns(UserWarning):
             table = res.summary().as_latex()
     else:
