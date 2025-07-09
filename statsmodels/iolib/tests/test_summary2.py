@@ -1,4 +1,4 @@
-from statsmodels.compat.pandas import PD_LT_3
+from statsmodels.compat.scipy import SP_LT_116
 
 import warnings
 
@@ -251,7 +251,7 @@ def test_ols_summary_rsquared_label():
     y = [6, 4, 2, 7, 4, 9, 10, 2]
     reg_with_constant = OLS(y, add_constant(x)).fit()
     r2_str = "R-squared:"
-    if PD_LT_3:
+    if SP_LT_116:
         with pytest.warns(UserWarning):
             assert r2_str in str(reg_with_constant.summary2())
         with pytest.warns(UserWarning):
@@ -262,7 +262,7 @@ def test_ols_summary_rsquared_label():
 
     reg_without_constant = OLS(y, x, hasconst=False).fit()
     r2_str = "R-squared (uncentered):"
-    if PD_LT_3:
+    if SP_LT_116:
         with pytest.warns(UserWarning):
             assert r2_str in str(reg_without_constant.summary2())
         with pytest.warns(UserWarning):

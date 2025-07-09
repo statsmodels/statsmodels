@@ -4,7 +4,7 @@ Created on Mon May 05 17:29:56 2014
 Author: Josef Perktold
 """
 
-from statsmodels.compat.pandas import PD_LT_3
+from statsmodels.compat.scipy import SP_LT_116
 
 import os
 
@@ -120,7 +120,7 @@ class TestTheilTextile:
 
     @pytest.mark.smoke
     def test_summary(self):
-        if PD_LT_3:
+        if SP_LT_116:
             with pytest.warns(UserWarning):
                 self.res1.summary()
         else:
