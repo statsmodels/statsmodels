@@ -425,7 +425,7 @@ def x13_arima_analysis(
     rawspec : str or Path
         As this wrapper does not provide all the available parameter
         options, users can provide a full spec file instead.
-        If valid Path, will read in contents of file, otherwise string will 
+        If valid Path, will read in contents of file, otherwise string will
         be treated as a valid spec file. Other parameters for the spec file
         will be IGNORED.
         Series data and required output formats (`x11{save=(d11 d12 d13)}`)
@@ -509,8 +509,10 @@ def x13_arima_analysis(
 
         if any([diff, exog, start, freq]):
 
-            raise ValueError("other arguments not allowed for diff, exog, start, freq"
-                             "when rawspec is specified")
+            raise ValueError(
+                "other arguments not allowed for diff, exog, start, freq"
+                "when rawspec is specified"
+            )
 
         rawspec_text = None
 
@@ -519,25 +521,23 @@ def x13_arima_analysis(
                 rawspec_text = f.read()
         except (OSError, FileNotFoundError):
             if "{" in rawspec:
-                 rawspec_text = rawspec
+                rawspec_text = rawspec
             else:
-                 raise ValueError("rawspec argument provided but not valid path"
-                                              " or spec string")
+                raise ValueError(
+                    "rawspec argument provided but not valid path" " or spec string"
+                )
 
-        # merge series {} properties created above into raw spec file       
+        # merge series {} properties created above into raw spec file
         spec = re.sub(
-                r'series\s*\{\s*',
-                spec.replace("}\n", ''),
-                rawspec_text,
-                flags=re.IGNORECASE)
+            r"series\s*\{\s*",
+            spec.replace("}\n", ""),
+            rawspec_text,
+            flags=re.IGNORECASE,
+        )
         spec_outputs = re.search(
-                r"x1[123]\s?\{[^}]*save\s*=\s*\(",
-                spec,
-                flags=re.DOTALL | re.IGNORECASE)
-        spec_x_block = re.search(
-                r"x1[123]\s?\{",
-                spec,
-                flags=re.DOTALL | re.IGNORECASE)
+            r"x1[123]\s?\{[^}]*save\s*=\s*\(", spec, flags=re.DOTALL | re.IGNORECASE
+        )
+        spec_x_block = re.search(r"x1[123]\s?\{", spec, flags=re.DOTALL | re.IGNORECASE)
 
         # merge in expected types of output
         # (d11=final seasonally adjusted series)
@@ -585,12 +585,14 @@ def x13_arima_analysis(
             x13_diagnostic = {
                 "F-D8": float(re.search(r"D8 table\s*:\s*([\d.]+)", x13_logs).group(1)),
                 "M07": float(re.search(r"M07\s*:\s*([\d.]+)", x13_logs).group(1)),
-                "Q": float(re.search(r"Q\s*:\s*([\d.]+)", x13_logs).group(1))
+                "Q": float(re.search(r"Q\s*:\s*([\d.]+)", x13_logs).group(1)),
             }
         else:
-            x13_diagnostic = {"F-D8": "Log diagnostics not retrieved.",
-                              "M07": "Log diagnostics not retrieved.",
-                              "Q": "Log diagnostics not retrieved."}
+            x13_diagnostic = {
+                "F-D8": "Log diagnostics not retrieved.",
+                "M07": "Log diagnostics not retrieved.",
+                "Q": "Log diagnostics not retrieved.",
+            }
 
     finally:
         try:  # sometimes this gives a permission denied error?

@@ -51,10 +51,10 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
             attach_spec=True,
         )
     else:
-        # Objects that support the dataframe API should be converted to a 
-        # dataframe to avoid problems with patsy. (This also works for 
+        # Objects that support the dataframe API should be converted to a
+        # dataframe to avoid problems with patsy. (This also works for
         # dataframes themselves.)
-        if hasattr(Y, '__dataframe__'):
+        if hasattr(Y, "__dataframe__"):
             Y = Y.__dataframe__()._df
         result = mgr.get_matrices(
             formula,
