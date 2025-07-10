@@ -1,20 +1,18 @@
 from statsmodels.compat.pandas import MONTH_END
 
+import os
+import tempfile
+
 import numpy as np
 import pandas as pd
 import pytest
-import tempfile
-import os
 
 from statsmodels.datasets import co2, macrodata
+from statsmodels.tools.sm_exceptions import X13Error
 from statsmodels.tsa.x13 import (
     _find_x12,
     x13_arima_analysis,
     x13_arima_select_order,
-)
-
-from statsmodels.tools.sm_exceptions import (
-    X13Error,
 )
 
 x13path = _find_x12()
@@ -87,7 +85,6 @@ def test_x13_arima_plot(dataset):
     res.plot()
 
 
-
 def test_x13_arima_plot_no_pandas(dataset):
     res = x13_arima_analysis(dataset)
     res.plot()
@@ -108,7 +105,7 @@ def test_log_diagnostics_false(dataset):
     assert list(res.x13_diagnostic.keys())[0] == "F-D8"
     assert list(res.x13_diagnostic.values())[0] == "Log diagnostics not retrieved."
 
-    
+
 def test_x13_arima_rawspec_arg():
     with pytest.raises(ValueError):
         # error because both param and rawspec are specified
@@ -155,8 +152,8 @@ history {
     x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix='.spc') as ft:
-        ft.write(raw_spec_file.encode('utf8'))
+    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+        ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
 
         x13_arima_analysis(dataset, rawspec=ft.name)
@@ -197,8 +194,8 @@ history {
     x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix='.spc') as ft:
-        ft.write(raw_spec_file.encode('utf8'))
+    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+        ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
 
         x13_arima_analysis(dataset, rawspec=ft.name)
@@ -232,11 +229,12 @@ history {
     x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix='.spc') as ft:
-        ft.write(raw_spec_file.encode('utf8'))
+    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+        ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
 
         x13_arima_analysis(dataset, rawspec=ft.name)
+
 
 def test_x13_arima_invalid_rawspec(dataset):
     # bad rawspec file string ("series" misspelled, no closing "}" on "x11")
@@ -254,8 +252,8 @@ x11 {
         x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix='.spc') as ft:
-        ft.write(raw_spec_file.encode('utf8'))
+    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+        ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
 
         with pytest.raises(X13Error):
