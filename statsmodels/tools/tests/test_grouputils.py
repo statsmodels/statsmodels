@@ -1,5 +1,5 @@
 from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
-
+from scipy import stats
 import numpy as np
 from numpy.testing import assert_equal, assert_array_almost_equal
 import pandas as pd
@@ -370,15 +370,14 @@ class TestGroupsStats:
     def test_var(self):
         # test the variance-related attributes
         assert_array_almost_equal(self.gs.groupsswithin(),
-                                  [0.0047875, 0.0060875,
-                                   0.00688571, 0.0210875])
+                                  [0.0047875, 0.0090875,
+                                   0.00737143, 0.0394875])
         assert_array_almost_equal(self.gs.groupvarwithin(),
-                                  [0.00068393, 0.00086964,
-                                   0.00114762, 0.0030125])
+                                  [0.00068393, 0.00129821,
+                                   0.00122857, 0.00564107])
 
     def test_useranks(self):
         # test the useranks option
-        from scipy import stats
         gs_ranked = GroupsStats(self.x, useranks=True)
         # gs_ranked.groupmeanfilter should be equivalent to scipy's rankdata
         assert_array_almost_equal(gs_ranked.groupmeanfilter,

@@ -29,6 +29,7 @@ need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 from statsmodels.compat.python import lrange, lzip
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 import statsmodels.tools.data as data_util
 from pandas import Index, MultiIndex
@@ -585,9 +586,9 @@ class GroupsStats:
         """
         self.x = np.asarray(x)
         if intlab is None:
-            uni, intlab = np.unique(x[:, 1], return_inverse=True)
+            uni, intlab = np.unique(self.x[:, 1], return_inverse=True)
         elif uni is None:
-            uni = np.unique(x[:, 1])
+            uni = np.unique(self.x[:, 1])
 
         self.useranks = useranks
 
@@ -624,8 +625,10 @@ class GroupsStats:
         # groupxmean = groupxsum * 1.0 / groupnobs
         x = self.x
         if useranks:
+            # this is stats.rankdata:
             xuni, xintlab = np.unique(x[:, 0], return_inverse=True)
-            ranksraw = x[:, 0].argsort().argsort() + 1  # rankraw
+            ranksraw = x[:, 0].argsort().argsort() + 1
+            # `xx` are the ranks with ties handled
             self.xx = GroupsStats(
                 np.column_stack([ranksraw, xintlab]), useranks=False
             ).groupmeanfilter
@@ -635,7 +638,10 @@ class GroupsStats:
         # print('groupranksum', groupranksum, groupranksum.shape, self.groupnobs.shape
         # start at 1 for stats.rankdata :
         self.groupmean = grouprankmean = groupranksum * 1.0 / self.groupnobs  # + 1
-        self.groupmeanfilter = grouprankmean[self.intlab]
+        if useranks:
+            self.groupmeanfilter = self.xx
+        else:
+            self.groupmeanfilter = grouprankmean[self.intlab]
         # return grouprankmean[intlab]
 
     def groupdemean(self):
