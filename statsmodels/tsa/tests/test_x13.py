@@ -1,6 +1,5 @@
 from statsmodels.compat.pandas import MONTH_END
 
-import os
 import tempfile
 
 import numpy as np
@@ -119,31 +118,31 @@ def test_x13_arima_rawspec_arg():
 def test_x13_arima_rawspec_run(dataset):
     # example rawspec file string
     raw_spec_file = """
-series { 
-    modelspan=(,) 
-    save=(B1) 
-    span=(,) 
-    type=(flow) 
+series {
+    modelspan=(,)
+    save=(B1)
+    span=(,)
+    type=(flow)
 }
-x11 { 
-    seasonalma=(  msr) 
-    appendfcst=yes 
-    mode=(mult) 
-    print=( seasadj seasonal adjustfac) 
-    save=(seasadj seasonal adjustfac) 
-    savelog=(  alldiagnostics) 
-} 
-arima {model=(0 1 0)(1 0 1)} 
-transform { 
-    function=log 
-} 
-regression { 
-    savelog=(  aictest) 
- } 
-estimate {save=mdl} 
-slidingspans { } 
-history { 
-    estimates=(sadj seasonal fcst) 
+x11 {
+    seasonalma=(  msr)
+    appendfcst=yes
+    mode=(mult)
+    print=( seasadj seasonal adjustfac)
+    save=(seasadj seasonal adjustfac)
+    savelog=(  alldiagnostics)
+}
+arima {model=(0 1 0)(1 0 1)}
+transform {
+    function=log
+}
+regression {
+    savelog=(  aictest)
+ }
+estimate {save=mdl}
+slidingspans { }
+history {
+    estimates=(sadj seasonal fcst)
     fixmdl=yes
 }
 """
@@ -162,30 +161,30 @@ history {
 def test_x13_arima_rawspec_no_save(dataset):
     # example rawspec file string
     raw_spec_file = """
-series { 
-    modelspan=(,) 
-    save=(B1) 
-    span=(,) 
-    type=(flow) 
+series {
+    modelspan=(,)
+    save=(B1)
+    span=(,)
+    type=(flow)
 }
-x11 { 
-    seasonalma=(  msr) 
-    appendfcst=yes 
-    mode=(mult) 
-    print=( seasadj seasonal adjustfac) 
-    savelog=(  alldiagnostics) 
-} 
-arima {model=(0 1 0)(1 0 1)} 
-transform { 
-    function=log 
-} 
-regression { 
-    savelog=(  aictest) 
- } 
-estimate {save=mdl} 
-slidingspans { } 
-history { 
-    estimates=(sadj seasonal fcst) 
+x11 {
+    seasonalma=(  msr)
+    appendfcst=yes
+    mode=(mult)
+    print=( seasadj seasonal adjustfac)
+    savelog=(  alldiagnostics)
+}
+arima {model=(0 1 0)(1 0 1)}
+transform {
+    function=log
+}
+regression {
+    savelog=(  aictest)
+ }
+estimate {save=mdl}
+slidingspans { }
+history {
+    estimates=(sadj seasonal fcst)
     fixmdl=yes
 }
 """
@@ -204,23 +203,23 @@ history {
 def test_x13_arima_rawspec_no_x11(dataset):
     # example rawspec file string
     raw_spec_file = """
-series { 
-    modelspan=(,) 
-    save=(B1) 
-    span=(,) 
-    type=(flow) 
+series {
+    modelspan=(,)
+    save=(B1)
+    span=(,)
+    type=(flow)
 }
-arima {model=(0 1 0)(1 0 1)} 
-transform { 
-    function=log 
-} 
-regression { 
-    savelog=(  aictest) 
- } 
-estimate {save=mdl} 
-slidingspans { } 
-history { 
-    estimates=(sadj seasonal fcst) 
+arima {model=(0 1 0)(1 0 1)}
+transform {
+    function=log
+}
+regression {
+    savelog=(  aictest)
+ }
+estimate {save=mdl}
+slidingspans { }
+history {
+    estimates=(sadj seasonal fcst)
     fixmdl=yes
 }
 """
@@ -239,11 +238,11 @@ history {
 def test_x13_arima_invalid_rawspec(dataset):
     # bad rawspec file string ("series" misspelled, no closing "}" on "x11")
     raw_spec_file = """
-seri es { 
-    modelspan=(,) 
+seri es {
+    modelspan=(,)
 }
-x11 { 
-    seasonalma=(  msr) 
+x11 {
+    seasonalma=(  msr)
 """
 
     # pass rawspec as string
