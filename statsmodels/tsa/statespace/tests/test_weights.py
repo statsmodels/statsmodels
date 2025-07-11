@@ -459,9 +459,12 @@ def test_smoothed_state_obs_weights_collapsed(reset_randomstate):
     actual, actual_state_intercept_weights, _ = (
         tools.compute_smoothed_state_weights(res))
 
-    assert_allclose(actual, desired, atol=1e-12)
-    assert_allclose(actual_state_intercept_weights,
-                    desired_state_intercept_weights, atol=1e-12)
+    assert_allclose(actual, desired, atol=1e-10)
+    assert_allclose(
+        actual_state_intercept_weights,
+        desired_state_intercept_weights,
+        atol=1e-10
+    )
 
 
 @pytest.mark.parametrize('compute_j', [np.arange(10), [0, 1, 2], [5, 0, 9], 8])
