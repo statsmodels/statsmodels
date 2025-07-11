@@ -1053,7 +1053,7 @@ class Binomial(Family):
         # note that mu is still in (0,1), i.e. not converted back
         return (
             special.gammaln(n + 1) - special.gammaln(y + 1) -
-            special.gammaln(n - y + 1) + y * np.log(mu / (1 - mu + 1e-20)) +
+            special.gammaln(n - y + 1) + y * np.log((mu + 1e-20) / (1 - mu + 1e-20)) +
             n * np.log(1 - mu + 1e-20)) * var_weights
 
     def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
