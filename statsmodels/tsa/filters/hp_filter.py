@@ -97,7 +97,7 @@ def hpfilter(x, lamb=1600):
     K = sparse.dia_matrix((data, offsets), shape=(nobs - 2, nobs))
 
     use_umfpack = True
-    trend = spsolve(I+lamb*K.T.dot(K), x, use_umfpack=use_umfpack)
+    trend = spsolve((I+lamb*K.T.dot(K)).tocsc(), x, use_umfpack=use_umfpack)
 
     cycle = x - trend
     return pw.wrap(cycle, append='cycle'), pw.wrap(trend, append='trend')

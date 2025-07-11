@@ -8,6 +8,7 @@ SCIPY_GT_14 = not SP_LT_15
 SP_LT_16 = SP_VERSION < Version("1.5.99")
 SP_LT_17 = SP_VERSION < Version("1.6.99")
 SP_LT_19 = SP_VERSION < Version("1.8.99")
+SP_LT_115 = SP_VERSION < Version("1.14.99")
 SP_LT_116 = SP_VERSION < Version("1.15.99")
 
 
