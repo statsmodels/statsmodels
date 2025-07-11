@@ -4,7 +4,7 @@ to untie these from LikelihoodModel so that they may be re-used generally.
 """
 from __future__ import annotations
 
-from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
+from statsmodels.compat.scipy import SP_LT_15, SP_LT_17, SP_LT_115
 
 from collections.abc import Sequence
 from typing import Any
@@ -659,10 +659,11 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
         extra_kwargs['fprime'] = score
     elif approx_grad:
         func = f
-
+    if SP_LT_115:
+        extra_kwargs["disp"] = disp
     retvals = optimize.fmin_l_bfgs_b(func, start_params, maxiter=maxiter,
                                      callback=callback, args=fargs,
-                                     bounds=bounds, disp=disp,
+                                     bounds=bounds,
                                      **extra_kwargs)
 
     if full_output:

@@ -1028,6 +1028,9 @@ def _do_plot(x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs)
     fig, ax = utils.create_mpl_ax(ax)
     ax.set_xmargin(0.02)
 
+    if "color" in plot_style and fmt:
+        if fmt[0] in ("b", "g", "r", "c", "m", "y", "k", "w"):
+            fmt = fmt[1:]
     if step:
         ax.step(x, y, fmt, where=where, **plot_style)
     else:
