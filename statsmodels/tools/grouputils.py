@@ -29,7 +29,6 @@ need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 from statsmodels.compat.python import lrange, lzip
 import numpy as np
 import pandas as pd
-from scipy import stats
 
 import statsmodels.tools.data as data_util
 from pandas import Index, MultiIndex

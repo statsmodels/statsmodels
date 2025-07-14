@@ -9,7 +9,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multicomp import MultiComparison
-from statsmodels.tools.grouputils import GroupsStats, combine_indices
+from statsmodels.tools.grouputils import GroupsStats
 
 
 def _get_covariance(model, robust):
