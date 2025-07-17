@@ -859,7 +859,7 @@ def test_bking_pandas():
     assert_equal(filtered.values, nd_filtered)
     assert_equal(filtered.index[0], datetime(1962, 3, 31))
     assert_equal(filtered.index[-1], datetime(2006, 9, 30))
-    assert_equal(filtered.columns.values.to_numpy(), ["infl_cycle", "unemp_cycle"])
+    assert_equal(np.asarray(filtered.columns.values), ["infl_cycle", "unemp_cycle"])
 
 
 def test_cfitz_pandas():
@@ -880,7 +880,7 @@ def test_cfitz_pandas():
     assert_allclose(cycle.values, ndcycle, rtol=1e-14)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
-    assert_equal(cycle.columns.values.to_numpy(), ["infl_cycle", "unemp_cycle"])
+    assert_equal(np.asarray(cycle.columns.values), ["infl_cycle", "unemp_cycle"])
 
 
 def test_hpfilter_pandas():

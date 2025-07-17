@@ -779,21 +779,21 @@ class TestMixedLMSummary:
         desired = ["const", "x1", "x2", "Group Var"]
         # Second table is summary of params
         actual = summ.tables[1].index.values
-        assert_equal(actual.to_numpy(), desired)
+        assert_equal(np.asarray(actual), desired)
 
     def test_summary_xname_fe(self):
         # Test that the `xname_fe` argument is reflected in the summary table.
         summ = self.res.summary(xname_fe=["Constant", "Age", "Weight"])
         desired = ["Constant", "Age", "Weight", "Group Var"]
         actual = summ.tables[1].index.values  # Second table is summary of params
-        assert_equal(actual.to_numpy(), desired)
+        assert_equal(np.asarray(actual), desired)
 
     def test_summary_xname_re(self):
         # Test that the `xname_re` argument is reflected in the summary table.
         summ = self.res.summary(xname_re=["Random Effects"])
         desired = ["const", "x1", "x2", "Random Effects"]
         actual = summ.tables[1].index.values  # Second table is summary of params
-        assert_equal(actual.to_numpy(), desired)
+        assert_equal(np.asarray(actual), desired)
 
 
 # ------------------------------------------------------------------
