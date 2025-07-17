@@ -1432,8 +1432,8 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
 
     where md is the mean, expected value of the difference x1 - x2
 
-    If the pvalue is smaller than a threshold,say 0.05, then we reject the
-    hypothesis that the difference between the two samples is larger than the
+    If the pvalue is smaller than a threshold, say 0.05, then we reject the
+    hypothesis that the difference between the two samples is larger than
     the thresholds given by low and upp.
 
     Parameters
