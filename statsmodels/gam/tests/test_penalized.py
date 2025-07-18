@@ -53,7 +53,7 @@ data_mcycle = pd.read_csv(file_path)
 
 file_path = os.path.join(cur_dir, "results", "autos.csv")
 df_autos_ = pd.read_csv(file_path)
-df_autos = df_autos_[['city_mpg', 'fuel', 'drive', 'weight', 'hp']].dropna()
+df_autos = df_autos_[["city_mpg", "fuel", "drive", "weight", "hp"]].dropna()
 
 
 class CheckGAMMixin:
@@ -61,7 +61,7 @@ class CheckGAMMixin:
     @classmethod
     def _init(cls):
         # TODO: CyclicCubicSplines raises when using pandas
-        cc_h = CyclicCubicSplines(np.asarray(data_mcycle['times']), df=[6])
+        cc_h = CyclicCubicSplines(np.asarray(data_mcycle["times"]), df=[6])
 
         constraints = np.atleast_2d(cc_h.basis.mean(0))
         transf = transf_constraints(constraints)
@@ -75,21 +75,26 @@ class CheckGAMMixin:
         res1 = self.res1
         res2 = self.res2
         assert_allclose(res1.params, res2.params, rtol=1e-5)
-        assert_allclose(np.asarray(res1.cov_params()),
-                        res2.Vp * self.covp_corrfact, rtol=1e-6, atol=1e-9)
+        assert_allclose(
+            np.asarray(res1.cov_params()),
+            res2.Vp * self.covp_corrfact,
+            rtol=1e-6,
+            atol=1e-9,
+        )
 
-        assert_allclose(res1.scale, res2.scale * self.covp_corrfact,
-                        rtol=1e-8)
+        assert_allclose(res1.scale, res2.scale * self.covp_corrfact, rtol=1e-8)
 
-        assert_allclose(np.asarray(res1.bse),
-                        res2.se * np.sqrt(self.covp_corrfact),
-                        rtol=1e-6, atol=1e-9)
+        assert_allclose(
+            np.asarray(res1.bse),
+            res2.se * np.sqrt(self.covp_corrfact),
+            rtol=1e-6,
+            atol=1e-9,
+        )
 
     def test_fitted(self):
         res1 = self.res1
         res2 = self.res2
-        assert_allclose(res1.fittedvalues, res2.fitted_values,
-                        rtol=self.rtol_fitted)
+        assert_allclose(res1.fittedvalues, res2.fitted_values, rtol=self.rtol_fitted)
 
     @pytest.mark.smoke
     def test_null_smoke(self):
@@ -98,12 +103,12 @@ class CheckGAMMixin:
 
 class TestTheilPLS5(CheckGAMMixin):
 
-    cov_type = 'data-prior'
+    cov_type = "data-prior"
 
     @classmethod
     def setup_class(cls):
         exog, penalty_matrix, restriction = cls._init()
-        endog = data_mcycle['accel']
+        endog = data_mcycle["accel"]
         modp = TheilGLS(endog, exog, r_matrix=restriction)
         # scaling of penweith in R mgcv
         s_scale_r = 0.02630734
@@ -120,9 +125,10 @@ class TestTheilPLS5(CheckGAMMixin):
         res1 = self.res1
         res2 = self.res2
         pw = res1.penalization_factor
-        res1 = res1.model.fit(pen_weight=pw, cov_type='sandwich')
-        assert_allclose(np.asarray(res1.cov_params()),
-                        res2.Ve * self.covp_corrfact, rtol=1e-4)
+        res1 = res1.model.fit(pen_weight=pw, cov_type="sandwich")
+        assert_allclose(
+            np.asarray(res1.cov_params()), res2.Ve * self.covp_corrfact, rtol=1e-4
+        )
 
     def test_null_smoke(self):
         pytest.skip("llnull not available")
@@ -130,21 +136,26 @@ class TestTheilPLS5(CheckGAMMixin):
 
 class TestGLMPenalizedPLS5(CheckGAMMixin):
 
-    cov_type = 'nonrobust'
+    cov_type = "nonrobust"
 
     @classmethod
     def setup_class(cls):
         exog, penalty_matrix, restriction = cls._init()
-        endog = data_mcycle['accel']
+        endog = data_mcycle["accel"]
         pen = smpen.L2ConstraintsPenalty(restriction=restriction)
-        mod = GLMPenalized(endog, exog, family=family.Gaussian(),
-                           penal=pen)
+        mod = GLMPenalized(endog, exog, family=family.Gaussian(), penal=pen)
         # scaling of penweight in R mgcv
         s_scale_r = 0.02630734
         # set pen_weight to correspond to R mgcv example
         cls.pw = mod.pen_weight = 1 / s_scale_r / 2
-        cls.res1 = mod.fit(cov_type=cls.cov_type, method='bfgs', maxiter=100,
-                           disp=0, trim=False, scale='x2')
+        cls.res1 = mod.fit(
+            cov_type=cls.cov_type,
+            method="bfgs",
+            maxiter=100,
+            disp=0,
+            trim=False,
+            scale="x2",
+        )
         cls.res2 = results_pls.pls5
 
         cls.rtol_fitted = 1e-5
@@ -157,22 +168,23 @@ class TestGLMPenalizedPLS5(CheckGAMMixin):
         res1 = self.res1
         res2 = self.res2
         pw = res1.model.pen_weight
-        res1 = res1.model.fit(pen_weight=pw, cov_type='HC0')
-        assert_allclose(np.asarray(res1.cov_params()),
-                        res2.Ve * self.covp_corrfact, rtol=1e-4)
+        res1 = res1.model.fit(pen_weight=pw, cov_type="HC0")
+        assert_allclose(
+            np.asarray(res1.cov_params()), res2.Ve * self.covp_corrfact, rtol=1e-4
+        )
 
 
 class TestGAM5Pirls(CheckGAMMixin):
 
-    cov_type = 'nonrobust'
+    cov_type = "nonrobust"
 
     @classmethod
     def setup_class(cls):
         s_scale = 0.0263073404164214
 
-        x = data_mcycle['times'].values
-        endog = data_mcycle['accel']
-        cc = CyclicCubicSplines(x, df=[6], constraints='center')
+        x = data_mcycle["times"].values
+        endog = data_mcycle["accel"]
+        cc = CyclicCubicSplines(x, df=[6], constraints="center")
         gam_cc = GLMGam(endog, smoother=cc, alpha=1 / s_scale / 2)
         cls.res1 = gam_cc.fit()
         cls.res2 = results_pls.pls5
@@ -185,17 +197,17 @@ class TestGAM5Pirls(CheckGAMMixin):
 
 class TestGAM5Bfgs(CheckGAMMixin):
 
-    cov_type = 'nonrobust'
+    cov_type = "nonrobust"
 
     @classmethod
     def setup_class(cls):
         s_scale = 0.0263073404164214
 
-        x = data_mcycle['times'].values
-        endog = data_mcycle['accel']
-        cc = CyclicCubicSplines(x, df=[6], constraints='center')
+        x = data_mcycle["times"].values
+        endog = data_mcycle["accel"]
+        cc = CyclicCubicSplines(x, df=[6], constraints="center")
         gam_cc = GLMGam(endog, smoother=cc, alpha=1 / s_scale / 2)
-        cls.res1 = gam_cc.fit(method='bfgs')
+        cls.res1 = gam_cc.fit(method="bfgs")
         cls.res2 = results_pls.pls5
 
         cls.rtol_fitted = 1e-5
@@ -207,10 +219,8 @@ class TestGAM5Bfgs(CheckGAMMixin):
         res1 = self.res1
         res2 = self.res2
         predicted = res1.predict(None, res1.model.smoother.x[2:4])
-        assert_allclose(predicted, res1.fittedvalues[2:4],
-                        rtol=1e-13)
-        assert_allclose(predicted, res2.fitted_values[2:4],
-                        rtol=self.rtol_fitted)
+        assert_allclose(predicted, res1.fittedvalues[2:4], rtol=1e-13)
+        assert_allclose(predicted, res2.fitted_values[2:4], rtol=self.rtol_fitted)
 
 
 class TestGAM6Pirls:
@@ -219,29 +229,42 @@ class TestGAM6Pirls:
     def setup_class(cls):
         s_scale = 0.0263073404164214
 
-        cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
-        gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,
-                        alpha=1 / s_scale / 2)
+        cc = CyclicCubicSplines(data_mcycle["times"].values, df=[6])
+        gam_cc = GLMGam(data_mcycle["accel"], smoother=cc, alpha=1 / s_scale / 2)
         cls.res1 = gam_cc.fit()
 
     def test_fitted(self):
         res1 = self.res1
         pred = res1.get_prediction()
         self.rtol_fitted = 1e-7
-        pls6_fittedvalues = np.array([
-            2.45008146537851, 3.14145063965465, 5.24130119353225,
-            6.63476330674223, 7.99704341866374, 13.9351103077006,
-            14.5508371638833, 14.785647621276, 15.1176070735895,
-            14.8053514054347, 13.790412967255, 13.790412967255,
-            11.2997845518655, 9.51681958051473, 8.4811626302547])
-        assert_allclose(res1.fittedvalues[:15], pls6_fittedvalues,
-                        rtol=self.rtol_fitted)
-        assert_allclose(pred.predicted_mean[:15], pls6_fittedvalues,
-                        rtol=self.rtol_fitted)
+        pls6_fittedvalues = np.array(
+            [
+                2.45008146537851,
+                3.14145063965465,
+                5.24130119353225,
+                6.63476330674223,
+                7.99704341866374,
+                13.9351103077006,
+                14.5508371638833,
+                14.785647621276,
+                15.1176070735895,
+                14.8053514054347,
+                13.790412967255,
+                13.790412967255,
+                11.2997845518655,
+                9.51681958051473,
+                8.4811626302547,
+            ]
+        )
+        assert_allclose(
+            res1.fittedvalues[:15], pls6_fittedvalues, rtol=self.rtol_fitted
+        )
+        assert_allclose(
+            pred.predicted_mean[:15], pls6_fittedvalues, rtol=self.rtol_fitted
+        )
 
         predicted = res1.predict(None, res1.model.smoother.x[2:4])
-        assert_allclose(predicted, pls6_fittedvalues[2:4],
-                        rtol=self.rtol_fitted)
+        assert_allclose(predicted, pls6_fittedvalues[2:4], rtol=self.rtol_fitted)
 
 
 class TestGAM6Bfgs:
@@ -250,25 +273,39 @@ class TestGAM6Bfgs:
     def setup_class(cls):
         s_scale = 0.0263073404164214
 
-        cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
-        gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,
-                        alpha=1 / s_scale / 2)
-        cls.res1 = gam_cc.fit(method='bfgs')
+        cc = CyclicCubicSplines(data_mcycle["times"].values, df=[6])
+        gam_cc = GLMGam(data_mcycle["accel"], smoother=cc, alpha=1 / s_scale / 2)
+        cls.res1 = gam_cc.fit(method="bfgs")
 
     def test_fitted(self):
         res1 = self.res1
         pred = res1.get_prediction()
         self.rtol_fitted = 1e-5
-        pls6_fittedvalues = np.array([
-            2.45008146537851, 3.14145063965465, 5.24130119353225,
-            6.63476330674223, 7.99704341866374, 13.9351103077006,
-            14.5508371638833, 14.785647621276, 15.1176070735895,
-            14.8053514054347, 13.790412967255, 13.790412967255,
-            11.2997845518655, 9.51681958051473, 8.4811626302547])
-        assert_allclose(res1.fittedvalues[:15], pls6_fittedvalues,
-                        rtol=self.rtol_fitted)
-        assert_allclose(pred.predicted_mean[:15], pls6_fittedvalues,
-                        rtol=self.rtol_fitted)
+        pls6_fittedvalues = np.array(
+            [
+                2.45008146537851,
+                3.14145063965465,
+                5.24130119353225,
+                6.63476330674223,
+                7.99704341866374,
+                13.9351103077006,
+                14.5508371638833,
+                14.785647621276,
+                15.1176070735895,
+                14.8053514054347,
+                13.790412967255,
+                13.790412967255,
+                11.2997845518655,
+                9.51681958051473,
+                8.4811626302547,
+            ]
+        )
+        assert_allclose(
+            res1.fittedvalues[:15], pls6_fittedvalues, rtol=self.rtol_fitted
+        )
+        assert_allclose(
+            pred.predicted_mean[:15], pls6_fittedvalues, rtol=self.rtol_fitted
+        )
 
 
 class TestGAM6Bfgs0:
@@ -277,53 +314,125 @@ class TestGAM6Bfgs0:
     def setup_class(cls):
         s_scale = 0.0263073404164214  # noqa: F841
 
-        cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
-        gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,
-                        alpha=0)
-        cls.res1 = gam_cc.fit(method='bfgs')
+        cc = CyclicCubicSplines(data_mcycle["times"].values, df=[6])
+        gam_cc = GLMGam(data_mcycle["accel"], smoother=cc, alpha=0)
+        cls.res1 = gam_cc.fit(method="bfgs")
 
     def test_fitted(self):
         res1 = self.res1
         pred = res1.get_prediction()
         self.rtol_fitted = 1e-5
-        pls6_fittedvalues = np.array([
-            2.63203377595747, 3.41285892739456, 5.78168657308338,
-            7.35344779586831, 8.89178704316853, 15.7035642157176,
-            16.4510219628328, 16.7474993878412, 17.3397025587698,
-            17.1062522298643, 16.1786066072489, 16.1786066072489,
-            13.7402485937614, 11.9531909618517, 10.9073964111009])
-        assert_allclose(res1.fittedvalues[:15], pls6_fittedvalues,
-                        rtol=self.rtol_fitted)
-        assert_allclose(pred.predicted_mean[:15], pls6_fittedvalues,
-                        rtol=self.rtol_fitted)
+        pls6_fittedvalues = np.array(
+            [
+                2.63203377595747,
+                3.41285892739456,
+                5.78168657308338,
+                7.35344779586831,
+                8.89178704316853,
+                15.7035642157176,
+                16.4510219628328,
+                16.7474993878412,
+                17.3397025587698,
+                17.1062522298643,
+                16.1786066072489,
+                16.1786066072489,
+                13.7402485937614,
+                11.9531909618517,
+                10.9073964111009,
+            ]
+        )
+        assert_allclose(
+            res1.fittedvalues[:15], pls6_fittedvalues, rtol=self.rtol_fitted
+        )
+        assert_allclose(
+            pred.predicted_mean[:15], pls6_fittedvalues, rtol=self.rtol_fitted
+        )
 
 
-pls6_fittedvalues = np.array([
-    2.45008146537851, 3.14145063965465, 5.24130119353225,
-    6.63476330674223, 7.99704341866374, 13.9351103077006,
-    14.5508371638833, 14.785647621276, 15.1176070735895,
-    14.8053514054347, 13.790412967255, 13.790412967255,
-    11.2997845518655, 9.51681958051473, 8.4811626302547])
+pls6_fittedvalues = np.array(
+    [
+        2.45008146537851,
+        3.14145063965465,
+        5.24130119353225,
+        6.63476330674223,
+        7.99704341866374,
+        13.9351103077006,
+        14.5508371638833,
+        14.785647621276,
+        15.1176070735895,
+        14.8053514054347,
+        13.790412967255,
+        13.790412967255,
+        11.2997845518655,
+        9.51681958051473,
+        8.4811626302547,
+    ]
+)
 
-pls6_exog = np.array([
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -0.334312615555276, -0.302733562622373,
-    -0.200049479196403, -0.12607681525989, -0.0487229716135211,
-    0.397628373646056, 0.475396222437879, 0.51311526571058,
-    0.685638355361239, 0.745083051531164, -0.633518318499726,
-    -0.634362488928233, -0.635472088268483, -0.634802453890957,
-    -0.632796625534419, -0.589886140629009, -0.574834708734556,
-    -0.566315983948608, -0.51289784236512, -0.486061743835595,
-    -0.353449234316442, -0.348107090921062, -0.328814083307981,
-    -0.313617048982477, -0.296913301955505, -0.191949693921079,
-    -0.173001127145111, -0.163813487426548, -0.12229019995063,
-    -0.108463798212062, -0.33613551740577, -0.327911471033406,
-    -0.303620832999443, -0.287786799373968, -0.272279566127816,
-    -0.194325957984873, -0.18175817334823, -0.175688807660186,
-    -0.147654475500976, -0.137597948224942, -0.406564043706154,
-    -0.409594429953082, -0.412391645561287, -0.409453786864986,
-    -0.403086590828732, -0.322579243114146, -0.302545882788086,
-    -0.29221622484174, -0.239207291311699, -0.218194346676734
-    ]).reshape(10, 6, order='F')
+pls6_exog = np.array(
+    [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        -0.334312615555276,
+        -0.302733562622373,
+        -0.200049479196403,
+        -0.12607681525989,
+        -0.0487229716135211,
+        0.397628373646056,
+        0.475396222437879,
+        0.51311526571058,
+        0.685638355361239,
+        0.745083051531164,
+        -0.633518318499726,
+        -0.634362488928233,
+        -0.635472088268483,
+        -0.634802453890957,
+        -0.632796625534419,
+        -0.589886140629009,
+        -0.574834708734556,
+        -0.566315983948608,
+        -0.51289784236512,
+        -0.486061743835595,
+        -0.353449234316442,
+        -0.348107090921062,
+        -0.328814083307981,
+        -0.313617048982477,
+        -0.296913301955505,
+        -0.191949693921079,
+        -0.173001127145111,
+        -0.163813487426548,
+        -0.12229019995063,
+        -0.108463798212062,
+        -0.33613551740577,
+        -0.327911471033406,
+        -0.303620832999443,
+        -0.287786799373968,
+        -0.272279566127816,
+        -0.194325957984873,
+        -0.18175817334823,
+        -0.175688807660186,
+        -0.147654475500976,
+        -0.137597948224942,
+        -0.406564043706154,
+        -0.409594429953082,
+        -0.412391645561287,
+        -0.409453786864986,
+        -0.403086590828732,
+        -0.322579243114146,
+        -0.302545882788086,
+        -0.29221622484174,
+        -0.239207291311699,
+        -0.218194346676734,
+    ]
+).reshape(10, 6, order="F")
 
 
 class TestGAM6ExogBfgs:
@@ -331,27 +440,30 @@ class TestGAM6ExogBfgs:
     @classmethod
     def setup_class(cls):
         s_scale = 0.0263073404164214
-        nobs = data_mcycle['times'].shape[0]
-        cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6],
-                                constraints='center')
-        gam_cc = GLMGam(data_mcycle['accel'], np.ones(nobs),
-                        smoother=cc, alpha=1 / s_scale / 2)
-        cls.res1 = gam_cc.fit(method='bfgs')
+        nobs = data_mcycle["times"].shape[0]
+        cc = CyclicCubicSplines(
+            data_mcycle["times"].values, df=[6], constraints="center"
+        )
+        gam_cc = GLMGam(
+            data_mcycle["accel"], np.ones(nobs), smoother=cc, alpha=1 / s_scale / 2
+        )
+        cls.res1 = gam_cc.fit(method="bfgs")
 
     def test_fitted(self):
         res1 = self.res1
         pred = res1.get_prediction()
         self.rtol_fitted = 1e-5
 
-        assert_allclose(res1.fittedvalues[:15], pls6_fittedvalues,
-                        rtol=self.rtol_fitted)
-        assert_allclose(pred.predicted_mean[:15], pls6_fittedvalues,
-                        rtol=self.rtol_fitted)
+        assert_allclose(
+            res1.fittedvalues[:15], pls6_fittedvalues, rtol=self.rtol_fitted
+        )
+        assert_allclose(
+            pred.predicted_mean[:15], pls6_fittedvalues, rtol=self.rtol_fitted
+        )
 
     def test_exog(self):
         exog = self.res1.model.exog
-        assert_allclose(exog[:10], pls6_exog,
-                        rtol=1e-13)
+        assert_allclose(exog[:10], pls6_exog, rtol=1e-13)
 
 
 class TestGAM6ExogPirls:
@@ -359,27 +471,30 @@ class TestGAM6ExogPirls:
     @classmethod
     def setup_class(cls):
         s_scale = 0.0263073404164214
-        nobs = data_mcycle['times'].shape[0]
-        cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6],
-                                constraints='center')
-        gam_cc = GLMGam(data_mcycle['accel'], np.ones((nobs, 1)),
-                        smoother=cc, alpha=1 / s_scale / 2)
-        cls.res1 = gam_cc.fit(method='pirls')
+        nobs = data_mcycle["times"].shape[0]
+        cc = CyclicCubicSplines(
+            data_mcycle["times"].values, df=[6], constraints="center"
+        )
+        gam_cc = GLMGam(
+            data_mcycle["accel"], np.ones((nobs, 1)), smoother=cc, alpha=1 / s_scale / 2
+        )
+        cls.res1 = gam_cc.fit(method="pirls")
 
     def test_fitted(self):
         res1 = self.res1
         pred = res1.get_prediction()
         self.rtol_fitted = 1e-5
 
-        assert_allclose(res1.fittedvalues[:15], pls6_fittedvalues,
-                        rtol=self.rtol_fitted)
-        assert_allclose(pred.predicted_mean[:15], pls6_fittedvalues,
-                        rtol=self.rtol_fitted)
+        assert_allclose(
+            res1.fittedvalues[:15], pls6_fittedvalues, rtol=self.rtol_fitted
+        )
+        assert_allclose(
+            pred.predicted_mean[:15], pls6_fittedvalues, rtol=self.rtol_fitted
+        )
 
     def test_exog(self):
         exog = self.res1.model.exog
-        assert_allclose(exog[:10], pls6_exog,
-                        rtol=1e-13)
+        assert_allclose(exog[:10], pls6_exog, rtol=1e-13)
 
 
 class TestGAMMPG:
@@ -390,19 +505,27 @@ class TestGAMMPG:
         sp = np.array([6.46225497484073, 0.81532465890585])
         s_scale = np.array([2.95973613706629e-07, 0.000126203730141359])
 
-        x_spline = df_autos[['weight', 'hp']].values
+        x_spline = df_autos[["weight", "hp"]].values
         mgr = FormulaManager()
         exog = mgr.get_matrices(
-            'fuel + drive', data=df_autos, pandas=mgr.engine == "formulaic"
+            "fuel + drive", data=df_autos, pandas=mgr.engine == "formulaic"
         )
-        cc = CyclicCubicSplines(x_spline, df=[6, 5], constraints='center')
+        cc = CyclicCubicSplines(x_spline, df=[6, 5], constraints="center")
         # TODO alpha needs to be list
-        gam_cc = GLMGam(df_autos['city_mpg'], exog=exog, smoother=cc,
-                        alpha=(1 / s_scale * sp / 2).tolist())
+        gam_cc = GLMGam(
+            df_autos["city_mpg"],
+            exog=exog,
+            smoother=cc,
+            alpha=(1 / s_scale * sp / 2).tolist(),
+        )
         cls.res1a = gam_cc.fit()
-        gam_cc = GLMGam(df_autos['city_mpg'], exog=exog, smoother=cc,
-                        alpha=(1 / s_scale * sp / 2).tolist())
-        cls.res1b = gam_cc.fit(method='newton')
+        gam_cc = GLMGam(
+            df_autos["city_mpg"],
+            exog=exog,
+            smoother=cc,
+            alpha=(1 / s_scale * sp / 2).tolist(),
+        )
+        cls.res1b = gam_cc.fit(method="newton")
 
     def test_exog(self):
         file_path = os.path.join(cur_dir, "results", "autos_exog.csv")
@@ -423,10 +546,8 @@ class TestGAMMPG:
             pred = res1.get_prediction()
             self.rtol_fitted = 1e-5
 
-            assert_allclose(res1.fittedvalues, res2_fittedvalues,
-                            rtol=1e-10)
-            assert_allclose(pred.predicted_mean, res2_fittedvalues,
-                            rtol=1e-10)
+            assert_allclose(res1.fittedvalues, res2_fittedvalues, rtol=1e-10)
+            assert_allclose(pred.predicted_mean, res2_fittedvalues, rtol=1e-10)
 
             # TODO: no edf, edf corrected df_resid
             # scale estimate differs
@@ -445,23 +566,28 @@ class TestGAMMPGBS(CheckGAMMixin):
         sp = np.array([0.830689464223685, 425.361212061649])
         cls.s_scale = s_scale = np.array([2.443955e-06, 0.007945455])
 
-        x_spline = df_autos[['weight', 'hp']].values
+        x_spline = df_autos[["weight", "hp"]].values
         # We need asarray to remove the formula's custom class
         # If model_spec is attached,
         #     then exog_linear will also be transformed in predict.
         mgr = FormulaManager()
-        cls.exog = np.asarray(mgr.get_matrices('fuel + drive', data=df_autos))
-        bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],
-                      variable_names=['weight', 'hp'],
-                      constraints='center',
-                      include_intercept=True)
+        cls.exog = np.asarray(mgr.get_matrices("fuel + drive", data=df_autos))
+        bs = BSplines(
+            x_spline,
+            df=[12, 10],
+            degree=[3, 3],
+            variable_names=["weight", "hp"],
+            constraints="center",
+            include_intercept=True,
+        )
         # TODO alpha needs to be list
         alpha0 = 1 / s_scale * sp / 2
-        gam_bs = GLMGam(df_autos['city_mpg'], exog=cls.exog, smoother=bs,
-                        alpha=(alpha0).tolist())
+        gam_bs = GLMGam(
+            df_autos["city_mpg"], exog=cls.exog, smoother=bs, alpha=(alpha0).tolist()
+        )
         cls.res1a = gam_bs.fit(use_t=True)
 
-        cls.res1b = gam_bs.fit(method='newton', use_t=True)
+        cls.res1b = gam_bs.fit(method="newton", use_t=True)
         cls.res1 = cls.res1a._results
         cls.res2 = results_mpg_bs.mpg_bs
 
@@ -487,17 +613,14 @@ class TestGAMMPGBS(CheckGAMMixin):
         res2 = self.res2
         smoothers = res1.model.smoother.smoothers
         pen_matrix0 = smoothers[0].cov_der2
-        assert_allclose(pen_matrix0, res2.smooth0.S * res2.smooth0.S_scale,
-                        rtol=1e-6)
+        assert_allclose(pen_matrix0, res2.smooth0.S * res2.smooth0.S_scale, rtol=1e-6)
 
     def test_predict(self):
         res1 = self.res1
         res2 = self.res2
         predicted = res1.predict(self.exog[2:4], res1.model.smoother.x[2:4])
-        assert_allclose(predicted, res1.fittedvalues[2:4],
-                        rtol=1e-13)
-        assert_allclose(predicted, res2.fitted_values[2:4],
-                        rtol=self.rtol_fitted)
+        assert_allclose(predicted, res1.fittedvalues[2:4], rtol=1e-13)
+        assert_allclose(predicted, res2.fitted_values[2:4], rtol=self.rtol_fitted)
 
     def test_crossval(self):
         # includes some checks that penalization in the model is unchanged
@@ -537,26 +660,34 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         # s_scale is same as before
         cls.s_scale = s_scale = np.array([2.443955e-06, 0.007945455])
 
-        x_spline = df_autos[['weight', 'hp']].values
+        x_spline = df_autos[["weight", "hp"]].values
         mgr = FormulaManager()
         cls.exog = mgr.get_matrices(
-            'fuel + drive',
-            data=df_autos,
-            pandas=mgr.engine == "formulaic")
-        bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],
-                      variable_names=['weight', 'hp'],
-                      constraints='center',
-                      include_intercept=True)
+            "fuel + drive", data=df_autos, pandas=mgr.engine == "formulaic"
+        )
+        bs = BSplines(
+            x_spline,
+            df=[12, 10],
+            degree=[3, 3],
+            variable_names=["weight", "hp"],
+            constraints="center",
+            include_intercept=True,
+        )
         # TODO alpha needs to be list
         alpha0 = 1 / s_scale * sp / 2
-        gam_bs = GLMGam(df_autos['city_mpg'], exog=cls.exog, smoother=bs,
-                        family=family.Poisson(), alpha=alpha0)
+        gam_bs = GLMGam(
+            df_autos["city_mpg"],
+            exog=cls.exog,
+            smoother=bs,
+            family=family.Poisson(),
+            alpha=alpha0,
+        )
 
         xnames = mgr.get_column_names(cls.exog) + gam_bs.smoother.col_names
         gam_bs.exog_names[:] = xnames
         cls.res1a = gam_bs.fit(use_t=False)
 
-        cls.res1b = gam_bs.fit(method='newton', use_t=True)
+        cls.res1b = gam_bs.fit(method="newton", use_t=True)
         cls.res1 = cls.res1a._results
         cls.res2 = results_mpg_bs_poisson.mpg_bs_poisson
 
@@ -583,28 +714,22 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
 
         smoothers = res1.model.smoother.smoothers
         pen_matrix0 = smoothers[0].cov_der2
-        assert_allclose(pen_matrix0, res2.smooth0.S * res2.smooth0.S_scale,
-                        rtol=1e-6)
+        assert_allclose(pen_matrix0, res2.smooth0.S * res2.smooth0.S_scale, rtol=1e-6)
 
     def test_predict(self):
         res1 = self.res1
         res2 = self.res2
         # this uses transform also for exog_linear
         # predicted = res1.predict(self.exog[2:4], res1.model.smoother.x[2:4])
-        predicted = res1.predict(df_autos.iloc[2:4],
-                                 res1.model.smoother.x[2:4])
-        assert_allclose(predicted, res1.fittedvalues[2:4],
-                        rtol=1e-13)
-        assert_allclose(predicted, res2.fitted_values[2:4],
-                        rtol=self.rtol_fitted)
+        predicted = res1.predict(df_autos.iloc[2:4], res1.model.smoother.x[2:4])
+        assert_allclose(predicted, res1.fittedvalues[2:4], rtol=1e-13)
+        assert_allclose(predicted, res2.fitted_values[2:4], rtol=self.rtol_fitted)
 
         # linpred = res1.predict(self.exog[2:4], res1.model.smoother.x[2:4],
         #                        linear=True)
         xp = pd.DataFrame(res1.model.smoother.x[2:4])
-        linpred = res1.predict(df_autos.iloc[2:4], xp,
-                               which="linear")
-        assert_allclose(linpred, res2.linear_predictors[2:4],
-                        rtol=self.rtol_fitted)
+        linpred = res1.predict(df_autos.iloc[2:4], xp, which="linear")
+        assert_allclose(linpred, res2.linear_predictors[2:4], rtol=self.rtol_fitted)
 
         assert_equal(predicted.index.values, [2, 3])
         assert_equal(linpred.index.values, [2, 3])
@@ -612,10 +737,11 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
     def test_wald(self):
         res1 = self.res1
         res2 = self.res2
-        wtt = res1.wald_test_terms(skip_single=True,
-                                   combine_terms=['fuel', 'drive',
-                                                  'weight', 'hp'],
-                                   scalar=True)
+        wtt = res1.wald_test_terms(
+            skip_single=True,
+            combine_terms=["fuel", "drive", "weight", "hp"],
+            scalar=True,
+        )
         # mgcv has term test for linear part
         assert_allclose(wtt.statistic[:2], res2.pTerms_chi_sq, rtol=1e-7)
         assert_allclose(wtt.pvalues[:2], res2.pTerms_pv, rtol=1e-6)
@@ -640,23 +766,31 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
 
         mgr = FormulaManager()
         cls.exog = mgr.get_matrices(
-            'fuel + drive', data=df_autos, pandas=mgr.engine == "formulaic"
+            "fuel + drive", data=df_autos, pandas=mgr.engine == "formulaic"
         )
 
-        x_spline = df_autos[['weight', 'hp']].values
-        bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],
-                      variable_names=['weight', 'hp'],
-                      constraints='center',
-                      include_intercept=True)
+        x_spline = df_autos[["weight", "hp"]].values
+        bs = BSplines(
+            x_spline,
+            df=[12, 10],
+            degree=[3, 3],
+            variable_names=["weight", "hp"],
+            constraints="center",
+            include_intercept=True,
+        )
 
         alpha0 = 1 / s_scale * sp / 2
-        gam_bs = GLMGam.from_formula('city_mpg ~ fuel + drive', df_autos,
-                                     smoother=bs, family=family.Poisson(),
-                                     alpha=alpha0)
+        gam_bs = GLMGam.from_formula(
+            "city_mpg ~ fuel + drive",
+            df_autos,
+            smoother=bs,
+            family=family.Poisson(),
+            alpha=alpha0,
+        )
 
         cls.res1a = gam_bs.fit(use_t=False)
 
-        cls.res1b = gam_bs.fit(method='newton', use_t=True)
+        cls.res1b = gam_bs.fit(method="newton", use_t=True)
         cls.res1 = cls.res1a._results
         cls.res2 = results_mpg_bs_poisson.mpg_bs_poisson
 
@@ -665,19 +799,38 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
 
     def test_names_wrapper(self):
         res1a = self.res1a
-        xnames = ['Intercept', 'fuel[T.gas]', 'drive[T.fwd]', 'drive[T.rwd]',
-                  'weight_s0', 'weight_s1', 'weight_s2', 'weight_s3',
-                  'weight_s4', 'weight_s5', 'weight_s6', 'weight_s7',
-                  'weight_s8', 'weight_s9', 'weight_s10',
-                  'hp_s0', 'hp_s1', 'hp_s2', 'hp_s3', 'hp_s4', 'hp_s5',
-                  'hp_s6', 'hp_s7', 'hp_s8']
+        xnames = [
+            "Intercept",
+            "fuel[T.gas]",
+            "drive[T.fwd]",
+            "drive[T.rwd]",
+            "weight_s0",
+            "weight_s1",
+            "weight_s2",
+            "weight_s3",
+            "weight_s4",
+            "weight_s5",
+            "weight_s6",
+            "weight_s7",
+            "weight_s8",
+            "weight_s9",
+            "weight_s10",
+            "hp_s0",
+            "hp_s1",
+            "hp_s2",
+            "hp_s3",
+            "hp_s4",
+            "hp_s5",
+            "hp_s6",
+            "hp_s7",
+            "hp_s8",
+        ]
 
         assert_equal(res1a.model.exog_names, xnames)
-        assert_equal(res1a.model.model_spec_linear.column_names,
-                     xnames[:4])
+        assert_equal(res1a.model.model_spec_linear.column_names, xnames[:4])
 
         assert_equal(res1a.fittedvalues.iloc[2:4].index.values, [2, 3])
-        assert_equal(res1a.params.index.values, xnames)
+        assert_equal(np.asarray(res1a.params.index), xnames)
         assert_(isinstance(res1a.params, pd.Series))
 
         assert_(isinstance(res1a, GLMGamResultsWrapper))

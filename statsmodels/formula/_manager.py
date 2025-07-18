@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from statsmodels.compat.pandas import PD_LT_3
+
 from collections import defaultdict
 import os
 from typing import Any, Literal, Mapping, NamedTuple, Sequence
@@ -29,8 +31,7 @@ try:
                 total_mask |= is_NA
             good_mask = ~total_mask
             self.missing_mask = total_mask
-            # "..." to handle 1- versus 2-dim indexing
-            return [v[good_mask, ...] for v in values]
+            return [v[good_mask, ...] if v.ndim > 1 else v[good_mask] for v in values]
 
     HAVE_PATSY = True
 
@@ -80,6 +81,20 @@ def _check_data(data):
             "DataFrames are the only supported data structure.",
             DeprecationWarning,
         )
+
+
+def _maybe_convert_data(data):
+    if (
+        not isinstance(data, pd.DataFrame)
+        or PD_LT_3
+        or not any([isinstance(dt, pd.StringDtype) for dt in data.dtypes])
+    ):
+        return data
+    data = data.copy()
+    for col in data:
+        if isinstance(data[col].dtype, pd.StringDtype):
+            data[col] = data[col].astype(object)
+    return data
 
 
 class _FormulaOption:
@@ -434,6 +449,7 @@ class FormulaManager:
             returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
         """
         _check_data(data)
+        data = _maybe_convert_data(data)
         if isinstance(eval_env, (int, np.integer)):
             eval_env = int(eval_env) + 1
         if self._using_patsy:

@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 
 if [[ ${USE_CONDA} == "true" ]]; then
+  conda config --add channels defaults
+  conda tos accept
   conda config --set always_yes true
   conda update --all --quiet
+  conda tos accept
   conda create -n statsmodels-test python=${PYTHON_VERSION} -y
   conda init
   echo ${PATH}
   source activate statsmodels-test
   echo ${PATH}
   which python
+  conda config --add channels conda-forge
+  conda tos accept
   CMD="conda install -c conda-forge numpy"
 else
   CMD="python -m pip install numpy"
