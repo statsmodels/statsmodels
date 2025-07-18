@@ -14,14 +14,12 @@ import pytest
 from scipy.stats import norm
 
 from statsmodels.datasets import macrodata
-from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.api import GLM
 from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from statsmodels.tools.eval_measures import aic, bic
-from statsmodels.tools.sm_exceptions import ValueWarning
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -333,7 +331,6 @@ def test_plots(close_figures):
 
 
 def test_from_formula():
-    mgr = FormulaManager()
     mod = RecursiveLS.from_formula("cpi ~ m1", data=dta)
 
     res = mod.fit()
