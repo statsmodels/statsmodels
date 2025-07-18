@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 if [[ ${USE_CONDA} == "true" ]]; then
+  conda tos accept
   conda config --set always_yes true
   conda update --all --quiet
   conda create -n statsmodels-test python=${PYTHON_VERSION} -y
-  conda tos accept
   conda init
   echo ${PATH}
   source activate statsmodels-test
