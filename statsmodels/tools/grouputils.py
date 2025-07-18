@@ -550,3 +550,108 @@ class Grouping:
         """
         indi = dummy_sparse(self.labels[level])
         self._dummies = indi
+
+
+# from multicomp
+class GroupsStats:
+    """
+    statistics by groups (another version)
+
+    groupstats as a class with lazy evaluation (not yet - decorators are still
+    missing)
+
+    written this time as equivalent of scipy.stats.rankdata
+    gs = GroupsStats(X, useranks=True)
+    assert_almost_equal(gs.groupmeanfilter, stats.rankdata(X[:,0]), 15)
+
+    TODO: incomplete doc strings
+
+    """
+
+    def __init__(self, x, useranks=False, uni=None, intlab=None):
+        """descriptive statistics by groups
+
+        Parameters
+        ----------
+        x : ndarray, 2d
+            first column data, second column group labels
+        useranks : bool
+            if true, then use ranks as data corresponding to the
+            scipy.stats.rankdata definition (start at 1, ties get mean)
+        uni, intlab : arrays (optional)
+            to avoid call to unique, these can be given as inputs
+
+
+        """
+        self.x = np.asarray(x)
+        if intlab is None:
+            uni, intlab = np.unique(self.x[:, 1], return_inverse=True)
+        elif uni is None:
+            uni = np.unique(self.x[:, 1])
+
+        self.useranks = useranks
+
+        self.uni = uni
+        self.intlab = intlab
+        self.groupnobs = np.bincount(intlab)
+
+        # temporary until separated and made all lazy
+        self.runbasic(useranks=useranks)
+
+    def runbasic_old(self, useranks=False):
+        """runbasic_old"""
+        # check: refactoring screwed up case useranks=True
+
+        # groupxsum = np.bincount(intlab, weights=X[:,0])
+        # groupxmean = groupxsum * 1.0 / groupnobs
+        x = self.x
+        if useranks:
+            self.xx = x[:, 1].argsort().argsort() + 1  # rankraw
+        else:
+            self.xx = x[:, 0]
+        self.groupsum = groupranksum = np.bincount(self.intlab, weights=self.xx)
+        # print('groupranksum', groupranksum, groupranksum.shape, self.groupnobs.shape
+        # start at 1 for stats.rankdata :
+        self.groupmean = grouprankmean = groupranksum * 1.0 / self.groupnobs  # + 1
+        self.groupmeanfilter = grouprankmean[self.intlab]
+        # return grouprankmean[intlab]
+
+    def runbasic(self, useranks=False):
+        """runbasic"""
+        # check: refactoring screwed up case useranks=True
+
+        # groupxsum = np.bincount(intlab, weights=X[:,0])
+        # groupxmean = groupxsum * 1.0 / groupnobs
+        x = self.x
+        if useranks:
+            # this is stats.rankdata:
+            xuni, xintlab = np.unique(x[:, 0], return_inverse=True)
+            ranksraw = x[:, 0].argsort().argsort() + 1
+            # `xx` are the ranks with ties handled
+            self.xx = GroupsStats(
+                np.column_stack([ranksraw, xintlab]), useranks=False
+            ).groupmeanfilter
+        else:
+            self.xx = x[:, 0]
+        self.groupsum = groupranksum = np.bincount(self.intlab, weights=self.xx)
+        # print('groupranksum', groupranksum, groupranksum.shape, self.groupnobs.shape
+        # start at 1 for stats.rankdata :
+        self.groupmean = grouprankmean = groupranksum * 1.0 / self.groupnobs  # + 1
+        if useranks:
+            self.groupmeanfilter = self.xx
+        else:
+            self.groupmeanfilter = grouprankmean[self.intlab]
+        # return grouprankmean[intlab]
+
+    def groupdemean(self):
+        """groupdemean"""
+        return self.xx - self.groupmeanfilter
+
+    def groupsswithin(self):
+        """groupsswithin"""
+        xtmp = self.groupdemean()
+        return np.bincount(self.intlab, weights=xtmp**2)
+
+    def groupvarwithin(self):
+        """groupvarwithin"""
+        return self.groupsswithin() / (self.groupnobs - 1)  # .sum()
