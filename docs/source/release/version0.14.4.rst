@@ -43,3 +43,14 @@ Merged Pull Requests
 The following Pull Requests were merged since the last release:
 
 - :pr:`9365`: Backport of #9270: add Pyodide support and CI jobs for v0.14.x
+
+The main enhancements and new features are listed below.
+
+Enhancements
+------------
+
+* Post-hoc methods (`pairwise_tukeyhsd` and `allpairtest`) can now be directly called from the results of a repeated measures ANOVA (`AnovaRM`). (:issue:`9491`)
+
+The main bug fixes are listed below.
+
+Bug Fixes
