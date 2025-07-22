@@ -371,9 +371,19 @@ def lagmat(x,
     """
     if isinstance(maxlag, int):
         maxlag = int_like(maxlag, "maxlag")
+        if maxlag < 0:
+            raise ValueError(f"`maxlag` must be greater than 0. Got {maxlag}.")
     elif isinstance(maxlag, list) or isinstance(maxlag, np.ndarray):
-        maxlag = array_like(maxlag, "maxlag")
-        maxlag = [np.int32(lag) for lag in maxlag]
+        maxlag_array = array_like(maxlag, "maxlag")
+        if maxlag_array.ndim != 1:
+            raise ValueError(f"`maxlag` must be 1-dimensional. Got shape {maxlag_array.shape}.")
+        if not np.issubdtype(maxlag_array.dtype, np.integer):
+            raise ValueError("All `maxlag` values must be integers.")
+        if not np.all(maxlag_array > 0):
+            raise ValueError(f"All values in `maxlag` must be greater than 0. Got {maxlag_array}.")
+        if len(np.unique(maxlag_array)) != len(maxlag_array):
+            raise ValueError(f"`maxlag` must contain unique values. Got duplicates in {maxlag_array}.")
+        maxlag = [np.int32(lag) for lag in maxlag_array]
     use_pandas = bool_like(use_pandas, "use_pandas")
     trim = string_like(
         trim,
