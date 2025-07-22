@@ -17,18 +17,18 @@ See `Module Reference`_ for commands and arguments.
 Examples
 --------
 
-.. ipython:: python
+.. try_examples::
 
-    # Load modules and data
-    import numpy as np
-    import statsmodels.api as sm
-    spector_data = sm.datasets.spector.load()
-    spector_data.exog = sm.add_constant(spector_data.exog, prepend=False)
+   >>> # Load modules and data
+   >>> import numpy as np
+   >>> import statsmodels.api as sm
+   >>> spector_data = sm.datasets.spector.load()
+   >>> spector_data.exog = sm.add_constant(spector_data.exog, prepend=False)
 
-    # Fit and summarize OLS model
-    mod = sm.OLS(spector_data.endog, spector_data.exog)
-    res = mod.fit()
-    print(res.summary())
+   >>> # Fit and summarize OLS model
+   >>> mod = sm.OLS(spector_data.endog, spector_data.exog)
+   >>> res = mod.fit()
+   >>> print(res.summary())
 
 Detailed examples can be found here:
 
