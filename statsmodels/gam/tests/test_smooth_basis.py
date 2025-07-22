@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 unit test for spline and other smoother classes
 

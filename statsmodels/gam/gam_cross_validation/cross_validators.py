@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Cross-validation iterators for GAM
 

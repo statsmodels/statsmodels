@@ -17,17 +17,25 @@ import os
 import warnings
 
 import numpy as np
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_equal,
+    assert_raises,
+)
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.statespace.representation import Representation
+from statsmodels.tsa.statespace import sarimax, tools
 from statsmodels.tsa.statespace.kalman_filter import (
-    KalmanFilter, FilterResults, PredictionResults)
+    FilterResults,
+    KalmanFilter,
+    PredictionResults,
+)
+from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.simulation_smoother import SimulationSmoother
-from statsmodels.tsa.statespace import tools, sarimax
+
 from .results import results_kalman_filter
-from numpy.testing import (
-    assert_equal, assert_almost_equal, assert_raises, assert_allclose)
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -123,7 +131,7 @@ class TestClark1987Single(Clark1987):
     @classmethod
     def setup_class(cls):
         pytest.skip('Not implemented')
-        super(TestClark1987Single, cls).setup_class(
+        super().setup_class(
             dtype=np.float32, conserve_memory=0
         )
         cls.results = cls.run_filter()
@@ -135,7 +143,7 @@ class TestClark1987Double(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1987Double, cls).setup_class(
+        super().setup_class(
             dtype=float, conserve_memory=0
         )
         cls.results = cls.run_filter()
@@ -149,7 +157,7 @@ class TestClark1987SingleComplex(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1987SingleComplex, cls).setup_class(
+        super().setup_class(
             dtype=np.complex64, conserve_memory=0
         )
         cls.results = cls.run_filter()
@@ -162,7 +170,7 @@ class TestClark1987DoubleComplex(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1987DoubleComplex, cls).setup_class(
+        super().setup_class(
             dtype=complex, conserve_memory=0
         )
         cls.results = cls.run_filter()
@@ -174,7 +182,7 @@ class TestClark1987Conserve(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1987Conserve, cls).setup_class(
+        super().setup_class(
             dtype=float, conserve_memory=0x01 | 0x02
         )
         cls.results = cls.run_filter()
@@ -186,7 +194,7 @@ class Clark1987Forecast(Clark1987):
     """
     @classmethod
     def setup_class(cls, dtype=float, nforecast=100, conserve_memory=0):
-        super(Clark1987Forecast, cls).setup_class(
+        super().setup_class(
             dtype=dtype, conserve_memory=conserve_memory
         )
         cls.nforecast = nforecast
@@ -219,7 +227,7 @@ class TestClark1987ForecastDouble(Clark1987Forecast):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1987ForecastDouble, cls).setup_class()
+        super().setup_class()
         cls.results = cls.run_filter()
 
 
@@ -230,7 +238,7 @@ class TestClark1987ForecastDoubleComplex(Clark1987Forecast):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1987ForecastDoubleComplex, cls).setup_class(
+        super().setup_class(
             dtype=complex
         )
         cls.results = cls.run_filter()
@@ -243,7 +251,7 @@ class TestClark1987ForecastConserve(Clark1987Forecast):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1987ForecastConserve, cls).setup_class(
+        super().setup_class(
             dtype=float, conserve_memory=0x01 | 0x02
         )
         cls.results = cls.run_filter()
@@ -256,7 +264,7 @@ class TestClark1987ConserveAll(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1987ConserveAll, cls).setup_class(
+        super().setup_class(
             dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08
         )
         cls.model.loglikelihood_burn = cls.true['start']
@@ -382,7 +390,7 @@ class TestClark1989(Clark1989):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1989, cls).setup_class(dtype=float, conserve_memory=0)
+        super().setup_class(dtype=float, conserve_memory=0)
         cls.results = cls.run_filter()
 
     def test_kalman_gain(self):
@@ -397,7 +405,7 @@ class TestClark1989Conserve(Clark1989):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1989Conserve, cls).setup_class(
+        super().setup_class(
             dtype=float, conserve_memory=0x01 | 0x02
         )
         cls.results = cls.run_filter()
@@ -410,7 +418,7 @@ class Clark1989Forecast(Clark1989):
     """
     @classmethod
     def setup_class(cls, dtype=float, nforecast=100, conserve_memory=0):
-        super(Clark1989Forecast, cls).setup_class(
+        super().setup_class(
             dtype=dtype, conserve_memory=conserve_memory
         )
         cls.nforecast = nforecast
@@ -452,7 +460,7 @@ class TestClark1989ForecastDouble(Clark1989Forecast):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1989ForecastDouble, cls).setup_class()
+        super().setup_class()
         cls.results = cls.run_filter()
 
 
@@ -463,7 +471,7 @@ class TestClark1989ForecastDoubleComplex(Clark1989Forecast):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1989ForecastDoubleComplex, cls).setup_class(
+        super().setup_class(
             dtype=complex
         )
         cls.results = cls.run_filter()
@@ -476,7 +484,7 @@ class TestClark1989ForecastConserve(Clark1989Forecast):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1989ForecastConserve, cls).setup_class(
+        super().setup_class(
             dtype=float, conserve_memory=0x01 | 0x02
         )
         cls.results = cls.run_filter()
@@ -489,7 +497,7 @@ class TestClark1989ConserveAll(Clark1989):
     """
     @classmethod
     def setup_class(cls):
-        super(TestClark1989ConserveAll, cls).setup_class(
+        super().setup_class(
             dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08
         )
         # cls.model.loglikelihood_burn = cls.true['start']
@@ -524,9 +532,9 @@ class TestClark1989ConserveAll(Clark1989):
 class TestClark1989PartialMissing(Clark1989):
     @classmethod
     def setup_class(cls):
-        super(TestClark1989PartialMissing, cls).setup_class()
+        super().setup_class()
         endog = cls.model.endog
-        endog[1, -51:] = np.NaN
+        endog[1, -51:] = np.nan
         cls.model.bind(endog)
 
         cls.results = cls.run_filter()

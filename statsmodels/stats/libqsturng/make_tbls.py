@@ -1,12 +1,13 @@
 """this script builds the T table and A table for the upper
    quantile stundentized range algorithm"""
-from statsmodels.compat.python import lrange, lmap
+from statsmodels.compat.python import lmap, lrange
+
 import math
-import scipy.stats
-from scipy.optimize import leastsq
 
 import numpy as np
 from numpy.random import random
+from scipy.optimize import leastsq
+import scipy.stats
 
 # The values for p in [.5, .75, .9, .95, .975, .99, .995, .999]
 # were pulled from:
@@ -383,30 +384,30 @@ q0999 = """\
 
 #                 [alpha keys]        [v keys]
 #                   [table values as lists of floats]
-T = dict([(0.100, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0100.split('\n')])),
-          (0.500, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0500.split('\n')])),
-          (0.675, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0675.split('\n')])),
-          (0.750, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0750.split('\n')])),
-          (0.800, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0800.split('\n')])),
-          (0.850, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0850.split('\n')])),
-          (0.900, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0900.split('\n')])),
-          (0.950, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0950.split('\n')])),
-          (0.975, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0975.split('\n')])),
-          (0.990, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0990.split('\n')])),
-          (0.995, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0995.split('\n')])),
-          (0.999, dict([(float(L.split()[0]),
-                         lmap(float, L.split()[1:])) for L in q0999.split('\n')]))])
+T = dict([(0.100, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0100.split('\n')}),
+          (0.500, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0500.split('\n')}),
+          (0.675, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0675.split('\n')}),
+          (0.750, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0750.split('\n')}),
+          (0.800, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0800.split('\n')}),
+          (0.850, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0850.split('\n')}),
+          (0.900, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0900.split('\n')}),
+          (0.950, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0950.split('\n')}),
+          (0.975, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0975.split('\n')}),
+          (0.990, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0990.split('\n')}),
+          (0.995, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0995.split('\n')}),
+          (0.999, {float(L.split()[0]):
+                         lmap(float, L.split()[1:]) for L in q0999.split('\n')})])
 
 # This dict maps r values to the correct list index
 R = dict(zip([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
@@ -442,7 +443,8 @@ def qhat(a, p, r, v):
 
     return math.sqrt(2) * (f - 1.) * _tinv(p_, v)
 
-errfunc = lambda a, p, r, v, q: qhat(a, p, r, v) - q
+def errfunc(a, p, r, v, q):
+    return qhat(a, p, r, v) - q
 
 A = {} # this is the error matrix
 for p in T:

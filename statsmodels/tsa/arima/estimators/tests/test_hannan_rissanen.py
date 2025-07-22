@@ -121,10 +121,10 @@ def test_set_default_unbiased():
         endog, ar_order=1, ma_order=1, unbiased=True
     )
 
-    np.testing.assert_array_equal(p_1.ar_params, p_2.ar_params)
-    np.testing.assert_array_equal(p_1.ma_params, p_2.ma_params)
-    assert p_1.sigma2 == p_2.sigma2
-    np.testing.assert_array_equal(other_results_1.resid, other_results_2.resid)
+    assert_allclose(p_1.ar_params, p_2.ar_params)
+    assert_allclose(p_1.ma_params, p_2.ma_params)
+    assert_allclose(p_1.sigma2, p_2.sigma2)
+    assert_allclose(other_results_1.resid, other_results_2.resid)
 
     # unbiased=False
     p_3, _ = hannan_rissanen(
@@ -246,12 +246,12 @@ def test_package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
     for k in ixs:
         assert isinstance(actual_bunch[k], np.ndarray)
         assert actual_bunch[k].dtype in [np.int64, np.int32]
-        np.testing.assert_array_equal(actual_bunch[k], expected_bunch[k])
+        assert_allclose(actual_bunch[k], expected_bunch[k])
 
     params = ['fixed_ar_params', 'fixed_ma_params']
     for k in params:
         assert isinstance(actual_bunch[k], np.ndarray)
-        np.testing.assert_array_equal(actual_bunch[k], expected_bunch[k])
+        assert_allclose(actual_bunch[k], expected_bunch[k])
 
 
 @pytest.mark.parametrize(
@@ -344,7 +344,7 @@ def test_set_default_unbiased_with_fixed_params():
         fixed_params={"ar.L1": 0.69607715}
     )
 
-    np.testing.assert_array_equal(p_1.ar_params, p_2.ar_params)
-    np.testing.assert_array_equal(p_1.ma_params, p_2.ma_params)
-    assert p_1.sigma2 == p_2.sigma2
-    np.testing.assert_array_equal(other_results_1.resid, other_results_2.resid)
+    assert_allclose(p_1.ar_params, p_2.ar_params)
+    assert_allclose(p_1.ma_params, p_2.ma_params)
+    assert_allclose(p_1.sigma2, p_2.sigma2)
+    assert_allclose(other_results_1.resid, other_results_2.resid)

@@ -1,4 +1,3 @@
-
 import numpy as np
 from numpy import (dot, eye, diag_indices, zeros, ones, diag,
         asarray, r_)

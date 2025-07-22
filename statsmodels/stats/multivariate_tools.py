@@ -18,6 +18,7 @@ import numpy as np
 
 from statsmodels.tools.tools import Bunch
 
+
 def partial_project(endog, exog):
     '''helper function to get linear projection or partialling out of variables
 
@@ -220,12 +221,7 @@ def cc_stats(x1, x2, demean=True):
     #          but df will depend on rank
     df_model = k1 * k2  # df_hypothesis (we do not include mean in x1, x2)
     df_resid = k1 * (nobs1 - k2 - demean)
-    s = min(df_model, k1)
     m = 0.5 * (df_model - k1)
-    n = 0.5 * (df_resid - k1 - 1)
-
-    df1 = k1 * df_model
-    df2 = k2
 
 
     pt_value = cc2.sum()    # Pillai's trace

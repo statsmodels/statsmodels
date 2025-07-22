@@ -2,15 +2,20 @@
 Conditional logistic, Poisson, and multinomial logit regression
 """
 
-import numpy as np
-import statsmodels.base.model as base
-import statsmodels.regression.linear_model as lm
-import statsmodels.base.wrapper as wrap
-from statsmodels.discrete.discrete_model import (MultinomialResults,
-      MultinomialResultsWrapper)
 import collections
-import warnings
 import itertools
+import warnings
+
+import numpy as np
+
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.discrete.discrete_model import (
+    MultinomialResults,
+    MultinomialResultsWrapper,
+)
+from statsmodels.formula.formulatools import advance_eval_env
+import statsmodels.regression.linear_model as lm
 
 
 class _ConditionalModel(base.LikelihoodModel):
@@ -29,7 +34,7 @@ class _ConditionalModel(base.LikelihoodModel):
             msg = "The leading dimension of 'exog' should equal the length of 'endog'"
             raise ValueError(msg)
 
-        super(_ConditionalModel, self).__init__(
+        super().__init__(
             endog, exog, missing=missing, **kwargs)
 
         if self.data.const_idx is not None:
@@ -114,7 +119,7 @@ class _ConditionalModel(base.LikelihoodModel):
             skip_hessian=False,
             **kwargs):
 
-        rslt = super(_ConditionalModel, self).fit(
+        rslt = super().fit(
             start_params=start_params,
             method=method,
             maxiter=maxiter,
@@ -122,7 +127,12 @@ class _ConditionalModel(base.LikelihoodModel):
             disp=disp,
             skip_hessian=skip_hessian)
 
-        crslt = ConditionalResults(self, rslt.params, rslt.cov_params(), 1)
+        if skip_hessian:
+            cov_params = None
+        else:
+            cov_params = rslt.cov_params()
+
+        crslt = ConditionalResults(self, rslt.params, cov_params, 1)
         crslt.method = method
         crslt.nobs = self.nobs
         crslt.n_groups = self._n_groups
@@ -203,8 +213,8 @@ class _ConditionalModel(base.LikelihoodModel):
 
         if "0+" not in formula.replace(" ", ""):
             warnings.warn("Conditional models should not include an intercept")
-
-        model = super(_ConditionalModel, cls).from_formula(
+        advance_eval_env(kwargs)
+        model = super().from_formula(
             formula, data=data, groups=groups, *args, **kwargs)
 
         return model
@@ -232,8 +242,7 @@ class ConditionalLogit(_ConditionalModel):
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
-        super(ConditionalLogit, self).__init__(
-            endog, exog, missing=missing, **kwargs)
+        super().__init__(endog, exog, missing=missing, **kwargs)
 
         if np.any(np.unique(self.endog) != np.r_[0, 1]):
             msg = "endog must be coded as 0, 1"
@@ -414,7 +423,7 @@ class ConditionalPoisson(_ConditionalModel):
 class ConditionalResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale):
 
-        super(ConditionalResults, self).__init__(
+        super().__init__(
             model,
             params,
             normalized_cov_params=normalized_cov_params,
@@ -511,7 +520,7 @@ class ConditionalMNLogit(_ConditionalModel):
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
-        super(ConditionalMNLogit, self).__init__(
+        super().__init__(
             endog, exog, missing=missing, **kwargs)
 
         # endog must be integers

@@ -18,17 +18,6 @@ def asstr2(s):
         return str(s)
 
 
-def _make_dictnames(tmp_arr, offset=0):
-    """
-    Helper function to create a dictionary mapping a column number
-    to the name in tmp_arr.
-    """
-    col_map = {}
-    for i, col_name in enumerate(tmp_arr):
-        col_map[i + offset] = col_name
-    return col_map
-
-
 def drop_missing(Y, X=None, axis=1):
     """
     Returns views on the arrays Y and X where missing observations are dropped.
@@ -271,7 +260,7 @@ def pinv_extended(x, rcond=1e-15):
             s[i] = 1./s[i]
         else:
             s[i] = 0.
-    res = np.dot(np.transpose(vt), np.multiply(s[:, np.core.newaxis],
+    res = np.dot(np.transpose(vt), np.multiply(s[:, np.newaxis],
                                                np.transpose(u)))
     return res, s_orig
 
@@ -457,7 +446,7 @@ class Bunch(dict):
         Keyword agument passed to dict constructor, key=value.
     """
     def __init__(self, *args, **kwargs):
-        super(Bunch, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.__dict__ = self
 
 

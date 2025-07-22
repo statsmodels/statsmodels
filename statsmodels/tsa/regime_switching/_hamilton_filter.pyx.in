@@ -114,7 +114,7 @@ cdef void {{prefix}}hamilton_filter_log_iteration(int t, int k_regimes, int orde
                               {{cython_type}} [:] curr_predicted_joint_probabilities,
                               {{cython_type}} [:] prev_filtered_joint_probabilities,
                               {{cython_type}} [:] curr_filtered_joint_probabilities,
-                              {{cython_type}} [:] tmp_predicted_joint_probabilities) nogil:
+                              {{cython_type}} [:] tmp_predicted_joint_probabilities) noexcept nogil:
     cdef int i, j, k, ix
     cdef:
         int k_regimes_order_m1 = k_regimes**(order - 1)

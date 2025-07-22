@@ -118,7 +118,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
             self._k_exog += self.k_trend
 
         # Initialize the base model
-        super(MarkovRegression, self).__init__(
+        super().__init__(
             endog, k_regimes, order=order, exog_tvtp=exog_tvtp, exog=exog,
             dates=dates, freq=freq, missing=missing)
 
@@ -208,7 +208,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         regression coefficients and variances.
         """
         # Inherited parameters
-        result, params1 = super(MarkovRegression, self)._em_iteration(params0)
+        result, params1 = super()._em_iteration(params0)
 
         tmp = np.sqrt(result.smoothed_marginal_probabilities)
 
@@ -373,7 +373,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
             evaluation.
         """
         # Inherited parameters
-        constrained = super(MarkovRegression, self).transform_params(
+        constrained = super().transform_params(
             unconstrained)
 
         # Nothing to do for regression coefficients
@@ -403,7 +403,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
             Array of unconstrained parameters used by the optimizer.
         """
         # Inherited parameters
-        unconstrained = super(MarkovRegression, self).untransform_params(
+        unconstrained = super().untransform_params(
             constrained)
 
         # Nothing to do for regression coefficients

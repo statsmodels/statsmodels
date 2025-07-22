@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Nonlinear Transformation classes
 
 

@@ -88,7 +88,7 @@ added Maximum Product-of-Spacings 2010-05-12
 '''
 
 import numpy as np
-from scipy import stats, optimize, special
+from scipy import optimize, special, stats
 
 cache = {}   #module global storage for temp results, not used
 
@@ -341,7 +341,10 @@ def hess_ndt(fun, pars, args, options):
     import numdifftools as ndt
     if not ('stepMax' in options or 'stepFix' in options):
         options['stepMax'] = 1e-5
-    f = lambda params: fun(params, *args)
+
+    def f(params):
+        return fun(params, *args)
+
     h = ndt.Hessian(f, **options)
     return h(pars), h
 
@@ -443,9 +446,9 @@ if __name__ == '__main__':
     pq = [0.1, 0.9]
     print(stats.gamma.ppf(pq, alpha))
     xq = stats.gamma.ppf(pq, alpha)
-    print(np.diff((stats.gamma.ppf(pq, np.linspace(0.01,4,10)[:,None])*xq[::-1])))
+    print(np.diff(stats.gamma.ppf(pq, np.linspace(0.01,4,10)[:,None])*xq[::-1]))
     #optimize.bisect(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])))
-    print(optimize.fsolve(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])), 3.))
+    print(optimize.fsolve(lambda alpha: np.diff(stats.gamma.ppf(pq, alpha)*xq[::-1]), 3.))
 
     distfn = stats.gamma
     mcond = gammamomentcond(distfn, [5.,10], mom2=stats.gamma.stats(alpha, 0.,1.), quantile=None)
@@ -655,7 +658,8 @@ if __name__ == '__main__':
     #the results for the following look strange, maybe refactoring error
     he, h = hess_ndt(logmps, parsgpd, argsgpd, options)
     print(np.linalg.eigh(he)[0])
-    f = lambda params: logmps(params, *argsgpd)
+    def f(params):
+        return logmps(params, *argsgpd)
     print(f(parsgpd))
     #add binned
     fp2, bp2 = np.histogram(p2rvs, bins=50)

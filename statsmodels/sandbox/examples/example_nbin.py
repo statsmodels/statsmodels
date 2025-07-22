@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Author: Vincent Arel-Bundock <varel@umich.edu>
 Date: 2012-08-25
@@ -24,13 +23,15 @@ from urllib.request import urlopen
 
 import numpy as np
 from numpy.testing import assert_almost_equal
+import pandas
 from scipy.special import digamma
 from scipy.stats import nbinom
-import pandas
-import patsy
 
-from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.base.model import GenericLikelihoodModelResults
+from statsmodels.base.model import (
+    GenericLikelihoodModel,
+    GenericLikelihoodModelResults,
+)
+from statsmodels.formula._manager import FormulaManager
 
 
 #### Negative Binomial Log-likelihoods ####
@@ -126,7 +127,7 @@ class NBin(GenericLikelihoodModel):
         self.exog = np.array(exog)
         self.endog = np.array(endog)
         self.C = C
-        super(NBin, self).__init__(endog, exog, **kwds)
+        super().__init__(endog, exog, **kwds)
         # Check user input
         if ll_type not in ['nb2', 'nb1', 'nbp', 'nbt', 'geom']:
             raise NameError('Valid ll_type are: nb2, nb1, nbp,  nbt, geom')
@@ -169,10 +170,10 @@ class NBin(GenericLikelihoodModel):
 
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
         if start_params is None:
-            countfit = super(NBin, self).fit(start_params=self.start_params_default,
+            countfit = super().fit(start_params=self.start_params_default,
                                              maxiter=maxiter, maxfun=maxfun, **kwds)
         else:
-            countfit = super(NBin, self).fit(start_params=start_params,
+            countfit = super().fit(start_params=start_params,
                                              maxiter=maxiter, maxfun=maxfun, **kwds)
         countfit = CountResults(self, countfit)
         return countfit
@@ -235,7 +236,6 @@ def _score_nbp(y, X, beta, thet, Q):
     lamb = np.exp(np.dot(X, beta))
     g = thet * lamb**Q
     w = g / (g + lamb)
-    r = thet / (thet+lamb)
     A = digamma(y+g) - digamma(g) + np.log(w)
     B = g*(1-w) - y*w
     dl = (A+B) * Q/lamb - B * 1/lamb
@@ -294,15 +294,23 @@ Number of Fisher Scoring iterations: 1
 '''
 
 def test_nb2():
-    y, X = patsy.dmatrices('los ~ C(type) + hmo + white', medpar)
-    y = np.array(y)[:,0]
-    nb2 = NBin(y,X,'nb2').fit(maxiter=10000, maxfun=5000)
-    assert_almost_equal(nb2.params,
-                        [2.31027893349935, 0.221248978197356, 0.706158824346228,
-                         -0.067955221930748, -0.129065442248951, 0.4457567],
-                        decimal=2)
+    y, X = FormulaManager().get_matrices("los ~ C(type) + hmo + white", medpar)
+    y = np.array(y)[:, 0]
+    nb2 = NBin(y, X, "nb2").fit(maxiter=10000, maxfun=5000)
+    assert_almost_equal(
+        nb2.params,
+        [
+            2.31027893349935,
+            0.221248978197356,
+            0.706158824346228,
+            -0.067955221930748,
+            -0.129065442248951,
+            0.4457567,
+        ],
+        decimal=2,
+    )
 
-# NB-1
+    # NB-1
 '''
 # R v2.15.1
 # COUNT v1.2.3

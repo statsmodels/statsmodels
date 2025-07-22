@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Testing GLSAR against STATA
 
 Created on Wed May 30 09:25:24 2012

@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 News for state space models
 
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.pandas import FUTURE_STACK
 
 import numpy as np
 import pandas as pd
 
-from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.summary import Summary
+from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 
 
@@ -180,19 +180,23 @@ class NewsResults:
         # E[y^i | revisions] - E[y^i | grouped revisions]
         self.revision_detailed_impacts = pd.DataFrame(
             news_results.revision_detailed_impacts,
-            index=self.row_labels, columns=columns).rename_axis(
-                index='impact date', columns='impacted variable')
+            index=self.row_labels,
+            columns=columns,
+            dtype=float,
+        ).rename_axis(index="impact date", columns="impacted variable")
         # E[y^i | revisions] - E[y^i | previous]
         self.revision_impacts = pd.DataFrame(
             news_results.revision_impacts,
-            index=self.row_labels, columns=columns).rename_axis(
-                index='impact date', columns='impacted variable')
+            index=self.row_labels,
+            columns=columns,
+            dtype=float,
+        ).rename_axis(index="impact date", columns="impacted variable")
         # E[y^i | grouped revisions] - E[y^i | previous]
         self.revision_grouped_impacts = (
             self.revision_impacts
             - self.revision_detailed_impacts.fillna(0))
         if self.n_revisions_grouped == 0:
-            self.revision_grouped_impacts[:] = 0
+            self.revision_grouped_impacts.loc[:] = 0
 
         # E[y^i | post] - E[y^i | previous]
         self.total_impacts = (self.post_impacted_forecasts -
@@ -463,7 +467,8 @@ class NewsResults:
         revision_details_by_update
         impacts
         """
-        df = self.weights.stack(level=[0, 1]).rename('weight').to_frame()
+        s = self.weights.stack(level=[0, 1], **FUTURE_STACK)
+        df = s.rename('weight').to_frame()
         if len(self.updates_iloc):
             df['forecast (prev)'] = self.update_forecasts
             df['observed'] = self.update_realized
@@ -485,7 +490,8 @@ class NewsResults:
 
     @property
     def _revision_grouped_impacts(self):
-        df = self.revision_grouped_impacts.stack().rename('impact').to_frame()
+        s = self.revision_grouped_impacts.stack(**FUTURE_STACK)
+        df = s.rename('impact').to_frame()
         df = df.reindex(['revision date', 'revised variable', 'impact'],
                         axis=1)
         if self.revisions_details_start > 0:
@@ -559,7 +565,7 @@ class NewsResults:
         details_by_impact
         impacts
         """
-        weights = self.revision_weights.stack(level=[0, 1])
+        weights = self.revision_weights.stack(level=[0, 1], **FUTURE_STACK)
         df = pd.concat([
             self.revised.reindex(weights.index),
             self.revised_prev.rename('observed (prev)').reindex(weights.index),
@@ -640,7 +646,8 @@ class NewsResults:
         details_by_impact
         impacts
         """
-        df = self.weights.stack(level=[0, 1]).rename('weight').to_frame()
+        s = self.weights.stack(level=[0, 1], **FUTURE_STACK)
+        df = s.rename('weight').to_frame()
         if len(self.updates_iloc):
             df['forecast (prev)'] = self.update_forecasts
             df['observed'] = self.update_realized
@@ -727,7 +734,7 @@ class NewsResults:
         details_by_impact
         impacts
         """
-        weights = self.revision_weights.stack(level=[0, 1])
+        weights = self.revision_weights.stack(level=[0, 1], **FUTURE_STACK)
 
         df = pd.concat([
             self.revised_prev.rename('observed (prev)').reindex(weights.index),
@@ -807,9 +814,9 @@ class NewsResults:
             self.post_impacted_forecasts.unstack().rename('estimate (new)')],
             axis=1)
         impacts['impact of revisions'] = (
-            impacts['impact of revisions'].fillna(0))
+            impacts['impact of revisions'].astype(float).fillna(0))
         impacts['impact of news'] = (
-            impacts['impact of news'].fillna(0))
+            impacts['impact of news'].astype(float).fillna(0))
         impacts['total impact'] = (impacts['impact of revisions'] +
                                    impacts['impact of news'])
         impacts = impacts.reorder_levels([1, 0]).sort_index()
@@ -911,16 +918,27 @@ class NewsResults:
             value = tmp_index.levels[1][0]
             removed_level = f'{name} = {value}'
             impacts.index = tmp_index.droplevel(1)
-            impacts = impacts.applymap(
-                lambda num: '' if pd.isnull(num) else float_format % num)
+            try:
+                impacts = impacts.map(
+                    lambda num: '' if pd.isnull(num) else float_format % num)
+            except AttributeError:
+                impacts = impacts.applymap(
+                    lambda num: '' if pd.isnull(num) else float_format % num)
             impacts = impacts.reset_index()
-            impacts.iloc[:, 0] = impacts.iloc[:, 0].map(str)
+            try:
+                impacts.iloc[:, 0] = impacts.iloc[:, 0].map(str)
+            except AttributeError:
+                impacts.iloc[:, 0] = impacts.iloc[:, 0].applymap(str)
         else:
             impacts = impacts.reset_index()
-            impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
-            impacts.iloc[:, 2:] = impacts.iloc[:, 2:].applymap(
-                lambda num: '' if pd.isnull(num) else float_format % num)
-
+            try:
+                impacts.iloc[:, :2] = impacts.iloc[:, :2].map(str)
+                impacts.iloc[:, 2:] = impacts.iloc[:, 2:].map(
+                    lambda num: '' if pd.isnull(num) else float_format % num)
+            except AttributeError:
+                impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
+                impacts.iloc[:, 2:] = impacts.iloc[:, 2:].applymap(
+                    lambda num: '' if pd.isnull(num) else float_format % num)
         # Sparsify the groupby column
         if sparsify and groupby in impacts:
             mask = impacts[groupby] == impacts[groupby].shift(1)
@@ -1246,10 +1264,16 @@ class NewsResults:
             right_index=True).sort_index().reset_index()
         data = data[['revision date', 'revised variable', 'observed (prev)',
                      'revision', 'detailed impacts computed']]
-        data[['revision date', 'revised variable']] = (
-            data[['revision date', 'revised variable']].applymap(str))
-        data.iloc[:, 2:-1] = data.iloc[:, 2:-1].applymap(
-            lambda num: '' if pd.isnull(num) else '%.2f' % num)
+        try:
+            data[['revision date', 'revised variable']] = (
+                data[['revision date', 'revised variable']].map(str))
+            data.iloc[:, 2:-1] = data.iloc[:, 2:-1].map(
+                lambda num: '' if pd.isnull(num) else '%.2f' % num)
+        except AttributeError:
+            data[['revision date', 'revised variable']] = (
+                data[['revision date', 'revised variable']].applymap(str))
+            data.iloc[:, 2:-1] = data.iloc[:, 2:-1].applymap(
+                lambda num: '' if pd.isnull(num) else '%.2f' % num)
 
         # Sparsify the date column
         if sparsify:
@@ -1298,10 +1322,16 @@ class NewsResults:
         data = pd.merge(
             self.data_updates, self.news, left_index=True,
             right_index=True).sort_index().reset_index()
-        data[['update date', 'updated variable']] = (
-            data[['update date', 'updated variable']].applymap(str))
-        data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
-            lambda num: '' if pd.isnull(num) else '%.2f' % num)
+        try:
+            data[['update date', 'updated variable']] = (
+                data[['update date', 'updated variable']].map(str))
+            data.iloc[:, 2:] = data.iloc[:, 2:].map(
+                lambda num: '' if pd.isnull(num) else '%.2f' % num)
+        except AttributeError:
+            data[['update date', 'updated variable']] = (
+                data[['update date', 'updated variable']].applymap(str))
+            data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
+                lambda num: '' if pd.isnull(num) else '%.2f' % num)
 
         # Sparsify the date column
         if sparsify:

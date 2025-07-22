@@ -14,7 +14,7 @@ class _DimReductionRegression(model.Model):
     """
 
     def __init__(self, endog, exog, **kwargs):
-        super(_DimReductionRegression, self).__init__(endog, exog, **kwargs)
+        super().__init__(endog, exog, **kwargs)
 
     def _prep(self, n_slice):
 
@@ -437,7 +437,7 @@ class DimReductionResults(model.Results):
     """
 
     def __init__(self, model, params, eigs):
-        super(DimReductionResults, self).__init__(
+        super().__init__(
               model, params)
         self.eigs = eigs
 
@@ -575,7 +575,7 @@ class CovarianceReduction(_DimReductionRegression):
 
     def __init__(self, endog, exog, dim):
 
-        super(CovarianceReduction, self).__init__(endog, exog)
+        super().__init__(endog, exog)
 
         covs, ns = [], []
         df = pd.DataFrame(self.exog, index=self.endog)

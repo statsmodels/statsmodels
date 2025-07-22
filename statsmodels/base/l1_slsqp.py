@@ -4,6 +4,7 @@ scipy.optimize.slsqp
 """
 import numpy as np
 from scipy.optimize import fmin_slsqp
+
 import statsmodels.base.l1_solvers_common as l1_solvers_common
 
 
@@ -67,10 +68,18 @@ def fit_l1_slsqp(
     acc = kwargs.setdefault('acc', 1e-10)
 
     ### Wrap up for use in fmin_slsqp
-    func = lambda x_full: _objective_func(f, x_full, k_params, alpha, *args)
-    f_ieqcons_wrap = lambda x_full: _f_ieqcons(x_full, k_params)
-    fprime_wrap = lambda x_full: _fprime(score, x_full, k_params, alpha)
-    fprime_ieqcons_wrap = lambda x_full: _fprime_ieqcons(x_full, k_params)
+
+    def func(x_full):
+        return _objective_func(f, x_full, k_params, alpha, *args)
+
+    def f_ieqcons_wrap(x_full):
+        return _f_ieqcons(x_full, k_params)
+
+    def fprime_wrap(x_full):
+        return _fprime(score, x_full, k_params, alpha)
+
+    def fprime_ieqcons_wrap(x_full):
+        return _fprime_ieqcons(x_full, k_params)
 
     ### Call the solver
     results = fmin_slsqp(

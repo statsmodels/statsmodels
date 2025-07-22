@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """script to try out Censored kernel regression
 
 Created on Wed Jan 02 13:43:44 2013

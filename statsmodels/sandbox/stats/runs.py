@@ -77,18 +77,23 @@ class Runs:
             does not use any correction.
 
         pvalue based on normal distribution, with integer correction
+        if a single run is detected, pvalue is based on the Binomial distribition
 
         '''
         self.npo = npo = (self.runs_pos).sum()
         self.nne = nne = (self.runs_neg).sum()
 
-        #n_r = self.n_runs
+        n_r = self.n_runs
         n = npo + nne
+        if n_r == 1:
+            pval = 1 / (2.0 ** (min(n,1024) - 1))
+            z = -stats.norm.isf(pval)
+            return z, pval*2
         npn = npo * nne
         rmean = 2. * npn / n + 1
         rvar = 2. * npn * (2.*npn - n) / n**2. / (n-1.)
         rstd = np.sqrt(rvar)
-        rdemean = self.n_runs - rmean
+        rdemean = n_r - rmean
         if n >= 50 or not correction:
             z = rdemean
         else:

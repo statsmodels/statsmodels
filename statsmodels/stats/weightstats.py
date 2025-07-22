@@ -305,7 +305,7 @@ class DescrStatsW:
         df = pd.DataFrame(index=np.arange(len(self.weights)))
         df["weights"] = self.weights
         df["vec"] = vec
-        dfg = df.groupby("vec").agg(np.sum)
+        dfg = df.groupby("vec").agg("sum")
         weights = dfg.values[:, 0]
         values = np.asarray(dfg.index)
 
@@ -498,7 +498,7 @@ class DescrStatsW:
         tstat : float
             test statistic
         pvalue : float
-            pvalue of the t-test
+            pvalue of the z-test
 
         Notes
         -----
@@ -935,8 +935,6 @@ class CompareMeans:
 
         d1 = self.d1
         d2 = self.d2
-
-        confint_percents = 100 - alpha * 100
 
         if use_t:
             tstat, pvalue, _ = self.ttest_ind(usevar=usevar, value=value)
@@ -1434,8 +1432,8 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
 
     where md is the mean, expected value of the difference x1 - x2
 
-    If the pvalue is smaller than a threshold,say 0.05, then we reject the
-    hypothesis that the difference between the two samples is larger than the
+    If the pvalue is smaller than a threshold, say 0.05, then we reject the
+    hypothesis that the difference between the two samples is larger than
     the thresholds given by low and upp.
 
     Parameters
@@ -1524,7 +1522,7 @@ def ztest(
     tstat : float
         test statistic
     pvalue : float
-        pvalue of the t-test
+        pvalue of the z-test
 
     Notes
     -----

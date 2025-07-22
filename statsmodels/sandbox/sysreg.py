@@ -1,7 +1,8 @@
-from statsmodels.regression.linear_model import GLS
 import numpy as np
-from statsmodels.base.model import LikelihoodModelResults
 from scipy import sparse
+
+from statsmodels.base.model import LikelihoodModelResults
+from statsmodels.regression.linear_model import GLS
 
 # http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
 
@@ -94,7 +95,7 @@ class SUR:
             raise ValueError("sys must be a list of pairs of endogenous and \
 exogenous variables.  Got length %s" % len(sys))
         if dfk:
-            if not dfk.lower() in ['dfk1','dfk2']:
+            if dfk.lower() not in ['dfk1','dfk2']:
                 raise ValueError("dfk option %s not understood" % (dfk))
         self._dfk = dfk
         M = len(sys[1::2])
@@ -309,7 +310,7 @@ exogenous variables.  Got length %s" % len(sys))
         for eq_key in indep_endog:
             try:
                 iter(indep_endog[eq_key])
-            except:
+            except Exception:
 #                eq_key = [eq_key]
                 raise TypeError("The values of the indep_exog dict must be "
                                 "iterable. Got type %s for converter %s"
@@ -340,7 +341,6 @@ exogenous variables.  Got length %s" % len(sys))
         wexog = []
         indep_endog = self._indep_endog # this has the col mapping
 #        fullexog = self.fullexog
-        instruments = self.instruments
         for eq in range(self._M): # need to go through all equations regardless
             instr_eq = Y.get(eq, None) # Y has the eq to ind endog array map
             newRHS = self.exog[eq].copy()
@@ -368,7 +368,7 @@ class SysResults(LikelihoodModelResults):
     Not implemented yet.
     """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
-        super(SysResults, self).__init__(model, params,
+        super().__init__(model, params,
                 normalized_cov_params, scale)
         self._get_results()
 

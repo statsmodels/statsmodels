@@ -506,7 +506,7 @@ and Synthesis")
     print("H(Pe) + Pe*log(K-1) = %0.4g >= H(X|Y) = %0.4g" % \
             (H_pe+pe*np.log2(2), H_XgivenY))
     print("or using the weaker inequality")
-    print("Pe = %0.4g >= [H(X) - 1]/log(K) = %0.4g" % (pe, (H_X - 1)/np.log2(3)))
+    print(f"Pe = {pe:0.4g} >= [H(X) - 1]/log(K) = {(H_X - 1)/np.log2(3):0.4g}")
     print("Consider now, table 3.5, where there is additional information")
     print("The conditional probabilities of P(X|Y=y) are ")
     w2 = np.array([[0.,0.,1.],[1/3.,1/3.,1/3.],[1/6.,1/3.,1/2.]])

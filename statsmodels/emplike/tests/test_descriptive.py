@@ -25,7 +25,7 @@ class GenRes:
 class TestDescriptiveStatistics(GenRes):
     @classmethod
     def setup_class(cls):
-        super(TestDescriptiveStatistics, cls).setup_class()
+        super().setup_class()
 
     def test_test_mean(self):
         assert_almost_equal(self.res1.test_mean(14),

@@ -32,13 +32,21 @@ __all__ = [
     "call_cached_func",
     "PD_LT_1_4",
     "PD_LT_2",
+    "MONTH_END",
+    "QUARTER_END",
+    "YEAR_END",
+    "FUTURE_STACK",
+    "PD_LT_3",
 ]
 
 version = parse(pd.__version__)
 
-PD_LT_1_0_0 = version < Version("1.0.0")
+PD_LT_2_2_0 = version < Version("2.1.99")
+PD_LT_2_1_0 = version < Version("2.0.99")
+PD_LT_1_0_0 = version < Version("0.99.0")
 PD_LT_1_4 = version < Version("1.3.99")
-PD_LT_2 = version < Version("1.9.99")
+PD_LT_2 = version < Version("1.99.99")
+PD_LT_3 = version < Version("2.99.99")
 
 try:
     from pandas.api.types import is_numeric_dtype
@@ -174,3 +182,9 @@ def call_cached_func(cached_prop, *args, **kwargs):
 
 def get_cached_doc(cached_prop) -> Optional[str]:
     return get_cached_func(cached_prop).__doc__
+
+
+MONTH_END = "M" if PD_LT_2_2_0 else "ME"
+QUARTER_END = "Q" if PD_LT_2_2_0 else "QE"
+YEAR_END = "Y" if PD_LT_2_2_0 else "YE"
+FUTURE_STACK = {} if PD_LT_2_1_0 else {"future_stack": True}

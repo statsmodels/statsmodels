@@ -11,10 +11,12 @@ practice. OTexts, 2014.
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
+
 from statsmodels.compat.pandas import deprecate_kwarg
 
+from collections.abc import Hashable, Sequence
 import contextlib
-from typing import Any, Hashable, Sequence
+from typing import Any
 import warnings
 
 import numpy as np
@@ -233,9 +235,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             trend = {"additive": "add", "multiplicative": "mul"}[trend]
         self.trend = trend
         self.damped_trend = bool_like(damped_trend, "damped_trend")
-        seasonal = string_like(
-            seasonal, "seasonal", options=options, optional=True
-        )
+        seasonal = string_like(seasonal, "seasonal", options=options, optional=True)
         if seasonal in ["additive", "multiplicative"]:
             seasonal = {"additive": "add", "multiplicative": "mul"}[seasonal]
         self.seasonal = seasonal
@@ -276,12 +276,8 @@ class ExponentialSmoothing(TimeSeriesModel):
             optional=False,
             options=options,
         )
-        self._initial_level = float_like(
-            initial_level, "initial_level", optional=True
-        )
-        self._initial_trend = float_like(
-            initial_trend, "initial_trend", optional=True
-        )
+        self._initial_level = float_like(initial_level, "initial_level", optional=True)
+        self._initial_trend = float_like(initial_trend, "initial_trend", optional=True)
         self._initial_seasonal = array_like(
             initial_seasonal, "initial_seasonal", optional=True
         )
@@ -323,9 +319,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             if ("smoothing" in key or "damp" in key) and (
                 bound[0] < 0.0 or bound[1] > 1.0
             ):
-                raise ValueError(
-                    f"{key} must have a lower bound >= 0.0 and <= 1.0"
-                )
+                raise ValueError(f"{key} must have a lower bound >= 0.0 and <= 1.0")
         return bounds
 
     def _boxcox(self):
@@ -402,9 +396,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 raise ValueError("smoothing_trend must be <= smoothing_level")
             gamma = values.get("smoothing_seasonal", 0.0)
             if gamma > 1 - alpha:
-                raise ValueError(
-                    "smoothing_seasonal must be <= 1 - smoothing_level"
-                )
+                raise ValueError("smoothing_seasonal must be <= 1 - smoothing_level")
 
         try:
             self._fixed_parameters = values
@@ -503,9 +495,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 start = self._index.shape[0]
             else:
                 start = self._index[-1] + freq
-        start, end, out_of_sample, _ = self._get_prediction_index(
-            start=start, end=end
-        )
+        start, end, out_of_sample, _ = self._get_prediction_index(start=start, end=end)
         if out_of_sample > 0:
             res = self._predict(h=out_of_sample, **params)
         else:
@@ -531,9 +521,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         return initial_p
 
     @staticmethod
-    def _check_blocked_keywords(
-        d: dict, keys: Sequence[Hashable], name="kwargs"
-    ):
+    def _check_blocked_keywords(d: dict, keys: Sequence[Hashable], name="kwargs"):
         for key in keys:
             if key in d:
                 raise ValueError(f"{name} must not contain '{key}'")
@@ -736,7 +724,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             sv_sel = np.array([False] * (6 + m))
             sv_sel[:3] = True
             sv_sel &= sel
-            hw_args.xi = sv_sel.astype(int)
+            hw_args.xi = sv_sel.astype(np.int64)
             hw_args.transform = False
             # Setup the grid points, respecting constraints
             points = self._setup_brute(sv_sel, bounds, alpha)
@@ -833,9 +821,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         orig_bounds = self._construct_bounds()
 
         bounds = np.array(orig_bounds[:3], dtype=float)
-        hw_args = HoltWintersArgs(
-            sel.astype(int), params, bounds, y, m, self.nobs
-        )
+        hw_args = HoltWintersArgs(sel.astype(np.int64), params, bounds, y, m, self.nobs)
         params = self._get_starting_values(
             params,
             start_params,
@@ -854,7 +840,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         lb, ub = bounds.T
         lb[np.isnan(lb)] = -np.inf
         ub[np.isnan(ub)] = np.inf
-        hw_args.xi = sel.astype(int)
+        hw_args.xi = sel.astype(np.int64)
 
         # Ensure strictly inbounds
         initial_p = self._enforce_bounds(params, sel, lb, ub)
@@ -975,9 +961,9 @@ class ExponentialSmoothing(TimeSeriesModel):
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data. See
             the notes for the structure of the model parameters.
-        method : str, default "L-BFGS-B"
-            The minimizer used. Valid options are "L-BFGS-B" , "TNC",
-            "SLSQP" (default), "Powell", "trust-constr", "basinhopping" (also
+        method : str, optional
+            The minimizer used. Valid options are "L-BFGS-B" (default),
+            "TNC", "SLSQP", "Powell", "trust-constr", "basinhopping" (also
             "bh") and "least_squares" (also "ls"). basinhopping tries multiple
             starting values in an attempt to find a global minimizer in
             non-convex problems, and so is slower than the others.
@@ -1063,9 +1049,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         initial_level = float_like(initial_level, "initial_level", True)
         initial_trend = float_like(initial_trend, "initial_trend", True)
         start_params = array_like(start_params, "start_params", optional=True)
-        minimize_kwargs = dict_like(
-            minimize_kwargs, "minimize_kwargs", optional=True
-        )
+        minimize_kwargs = dict_like(minimize_kwargs, "minimize_kwargs", optional=True)
         minimize_kwargs = {} if minimize_kwargs is None else minimize_kwargs
         use_basinhopping = bool_like(
             use_basinhopping, "use_basinhopping", optional=True
@@ -1094,8 +1078,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             )
         if use_boxcox is not None:
             raise ValueError(
-                "use_boxcox was set at model initialization and cannot "
-                "be changed"
+                "use_boxcox was set at model initialization and cannot " "be changed"
             )
         elif self._use_boxcox is None:
             use_boxcox = False
@@ -1138,11 +1121,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         res.y = y
         res.params = start_params
         res.mle_retvals = res.mask = None
-        method = "SLSQP" if method is None else method
+        method = "L-BFGS-B" if method is None else method
         if optimized:
-            res = self._optimize_parameters(
-                res, use_brute, method, minimize_kwargs
-            )
+            res = self._optimize_parameters(res, use_brute, method, minimize_kwargs)
         else:
             l0, b0, s0 = self.initial_values(
                 initial_level=initial_level, initial_trend=initial_trend
@@ -1176,9 +1157,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         hwfit._results.mle_retvals = res.mle_retvals
         return hwfit
 
-    def initial_values(
-        self, initial_level=None, initial_trend=None, force=False
-    ):
+    def initial_values(self, initial_level=None, initial_trend=None, force=False):
         """
         Compute initial values used in the exponential smoothing recursions.
 
@@ -1324,15 +1303,9 @@ class ExponentialSmoothing(TimeSeriesModel):
             if damped
             else np.arange(1, h + 1 + 1)
         )
-        trended = {"mul": np.multiply, "add": np.add, None: lambda l, b: l}[
-            trend
-        ]
-        detrend = {"mul": np.divide, "add": np.subtract, None: lambda l, b: 0}[
-            trend
-        ]
-        dampen = {"mul": np.power, "add": np.multiply, None: lambda b, phi: 0}[
-            trend
-        ]
+        trended = {"mul": np.multiply, "add": np.add, None: lambda lvl, b: lvl}[trend]
+        detrend = {"mul": np.divide, "add": np.subtract, None: lambda lvl, b: 0}[trend]
+        dampen = {"mul": np.power, "add": np.multiply, None: lambda b, phi: 0}[trend]
         nobs = self.nobs
         if seasonal == "mul":
             for i in range(1, nobs + 1):
@@ -1353,9 +1326,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 b[:nobs] = dampen(b[:nobs], phi)
                 b[nobs:] = dampen(b[nobs], phi_h)
             trend = trended(lvls, b)
-            s[nobs + m - 1 :] = [
-                s[(nobs - 1) + j % m] for j in range(h + 1 + 1)
-            ]
+            s[nobs + m - 1 :] = [s[(nobs - 1) + j % m] for j in range(h + 1 + 1)]
             fitted = trend * s[:-m]
         elif seasonal == "add":
             for i in range(1, nobs + 1):
@@ -1380,9 +1351,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 b[:nobs] = dampen(b[:nobs], phi)
                 b[nobs:] = dampen(b[nobs], phi_h)
             trend = trended(lvls, b)
-            s[nobs + m - 1 :] = [
-                s[(nobs - 1) + j % m] for j in range(h + 1 + 1)
-            ]
+            s[nobs + m - 1 :] = [s[(nobs - 1) + j % m] for j in range(h + 1 + 1)]
             fitted = trend + s[:-m]
         else:
             for i in range(1, nobs + 1):
@@ -1434,7 +1403,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         # Format parameters into a DataFrame
         codes = ["alpha", "beta", "gamma", "l.0", "b.0", "phi"]
-        codes += ["s.{0}".format(i) for i in range(m)]
+        codes += [f"s.{i}" for i in range(m)]
         idx = [
             "smoothing_level",
             "smoothing_trend",
@@ -1443,7 +1412,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             "initial_trend",
             "damping_trend",
         ]
-        idx += ["initial_seasons.{0}".format(i) for i in range(m)]
+        idx += [f"initial_seasons.{i}" for i in range(m)]
 
         formatted = [alpha, beta, gamma, lvls[0], b[0], phi]
         formatted += s[:m].tolist()

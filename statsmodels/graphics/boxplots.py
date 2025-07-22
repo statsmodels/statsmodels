@@ -144,7 +144,13 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
         _single_violin(ax, pos, pos_data, width, side, plot_opts)
 
     if show_boxplot:
-        ax.boxplot(data, notch=1, positions=positions, vert=1)
+        try:
+            ax.boxplot(
+                data, notch=1, positions=positions, orientation='vertical'
+            )
+        except TypeError:
+            # Remove after Matplotlib 3.10 is the minimum
+            ax.boxplot(data, notch=1, positions=positions, vert=1)
 
     # Set ticks and tick labels of horizontal axis.
     _set_ticks_labels(ax, data, labels, positions, plot_opts)
@@ -412,7 +418,7 @@ def _show_legend(ax):
                     borderpad=0.15)
     ltext  = leg.get_texts()
     llines = leg.get_lines()
-    frame  = leg.get_frame()
+    leg.get_frame()
 
     from matplotlib.artist import setp
     setp(ltext, fontsize='small')

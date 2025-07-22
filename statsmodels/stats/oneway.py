@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Mar 18 10:33:38 2020
 
@@ -586,7 +585,7 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
             This is the default.
         "equal" : Variances are assumed to be equal across samples.
             This is the standard Anova.
-        "bf: Variances are not assumed to be equal across samples.
+        "bf" : Variances are not assumed to be equal across samples.
             The method is Browne-Forsythe (1971) for testing equality of means
             with the corrected degrees of freedom by Merothra. The original BF
             degrees of freedom are available as additional attributes in the
@@ -1015,8 +1014,8 @@ def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
     reject_mc = []
     other_mc = []
     for _ in range(k_mc):
-        y0, y1, y2, y3 = [m + std * np.random.randn(n)
-                          for (n, m, std) in zip(nobs, means, stds)]
+        y0, y1, y2, y3 = (m + std * np.random.randn(n)
+                          for (n, m, std) in zip(nobs, means, stds))
 
         res_i = []
         f_i = []

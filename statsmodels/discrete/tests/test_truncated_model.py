@@ -1,43 +1,41 @@
-
 import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 
 from statsmodels import datasets
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.testing import Holder
-from statsmodels.tools.sm_exceptions import (
-    ConvergenceWarning,
-    )
-
-from statsmodels.distributions.discrete import (
-    truncatedpoisson,
-    truncatednegbin,
-    )
 from statsmodels.discrete.truncated_model import (
-    TruncatedLFPoisson,
-    TruncatedLFNegativeBinomialP,
     HurdleCountModel,
-    )
-
+    TruncatedLFNegativeBinomialP,
+    TruncatedLFPoisson,
+)
+from statsmodels.distributions.discrete import (
+    truncatednegbin,
+    truncatedpoisson,
+)
 from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.testing import Holder
+from statsmodels.tools.tools import add_constant
+
+from ...compat.scipy import SP_LT_116
+from .results import (
+    results_truncated as results_t,
+    results_truncated_st as results_ts,
+)
 from .results.results_discrete import RandHIE
-from .results import results_truncated as results_t
-from .results import results_truncated_st as results_ts
 
 
 class CheckResults:
     def test_params(self):
-        assert_allclose(self.res1.params, self.res2.params,
-                        atol=1e-5, rtol=1e-5)
+        assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
 
     def test_llf(self):
         assert_allclose(self.res1.llf, self.res2.llf, atol=1e-5, rtol=1e-7)
 
     def test_conf_int(self):
-        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
-                        atol=1e-3, rtol=1e-5)
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int, atol=1e-3, rtol=1e-5)
 
     def test_bse(self):
         assert_allclose(self.res1.bse, self.res2.bse, atol=1e-3)
@@ -55,12 +53,14 @@ class CheckResults:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
             # This does not catch all Convergence warnings, why?
-            res_reg = model.fit_regularized(alpha=alpha*0.01, disp=0)
+            res_reg = model.fit_regularized(alpha=alpha * 0.01, disp=0)
 
-        assert_allclose(res_reg.params, self.res1.params,
-                        rtol=1e-3, atol=5e-3)
-        assert_allclose(res_reg.bse, self.res1.bse,
-                        rtol=1e-3, atol=5e-3)
+        if self.__class__.__name__ == "TestTruncatedLFPoissonModel" and not SP_LT_116:
+            pytest.xfail(
+                "TruncatedLFPoissonModel fails regularized fit when using SciPy 1.16+"
+            )
+        assert_allclose(res_reg.params, self.res1.params, rtol=1e-3, atol=5e-3)
+        assert_allclose(res_reg.bse, self.res1.bse, rtol=1e-3, atol=5e-3)
 
 
 class TestTruncatedLFPoissonModel(CheckResults):
@@ -109,30 +109,35 @@ class TestTruncatedLFPoisson_predict:
         np.random.seed(123)
         nobs = 200
         exog = np.ones((nobs, 2))
-        exog[:nobs//2, 1] = 2
+        exog[: nobs // 2, 1] = 2
         mu_true = exog.dot(cls.expected_params)
         cls.endog = truncatedpoisson.rvs(mu_true, 0, size=mu_true.shape)
         model = TruncatedLFPoisson(cls.endog, exog, truncation=0)
-        cls.res = model.fit(method='bfgs', maxiter=5000)
+        cls.res = model.fit(method="bfgs", maxiter=5000)
 
     def test_mean(self):
-        assert_allclose(self.res.predict().mean(), self.endog.mean(),
-                        atol=2e-1, rtol=2e-1)
+        assert_allclose(
+            self.res.predict().mean(), self.endog.mean(), atol=2e-1, rtol=2e-1
+        )
 
     def test_var(self):
         v = self.res.predict(which="var").mean()
         assert_allclose(v, self.endog.var(), atol=2e-1, rtol=2e-1)
         return
-        assert_allclose((self.res.predict().mean() *
-                        self.res._dispersion_factor.mean()),
-                        self.endog.var(), atol=5e-2, rtol=5e-2)
+        assert_allclose(
+            (self.res.predict().mean() * self.res._dispersion_factor.mean()),
+            self.endog.var(),
+            atol=5e-2,
+            rtol=5e-2,
+        )
 
     def test_predict_prob(self):
         res = self.res
 
-        pr = res.predict(which='prob')
+        pr = res.predict(which="prob")
         pr2 = truncatedpoisson.pmf(
-            np.arange(8), res.predict(which="mean-main")[:, None], 0)
+            np.arange(8), res.predict(which="mean-main")[:, None], 0
+        )
         assert_allclose(pr, pr2, rtol=1e-10, atol=1e-10)
 
 
@@ -143,37 +148,41 @@ class TestTruncatedNBP_predict:
         np.random.seed(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
-        exog[:nobs//2, 1] = 2
+        exog[: nobs // 2, 1] = 2
         mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
         cls.endog = truncatednegbin.rvs(
-            mu_true, cls.expected_params[-1], 2, 0, size=mu_true.shape)
-        model = TruncatedLFNegativeBinomialP(cls.endog, exog,
-                                             truncation=0, p=2)
-        cls.res = model.fit(method='nm', maxiter=5000, maxfun=5000)
+            mu_true, cls.expected_params[-1], 2, 0, size=mu_true.shape
+        )
+        model = TruncatedLFNegativeBinomialP(cls.endog, exog, truncation=0, p=2)
+        cls.res = model.fit(method="nm", maxiter=5000, maxfun=5000)
 
     def test_mean(self):
-        assert_allclose(self.res.predict().mean(), self.endog.mean(),
-                        atol=2e-1, rtol=2e-1)
+        assert_allclose(
+            self.res.predict().mean(), self.endog.mean(), atol=2e-1, rtol=2e-1
+        )
 
     def test_var(self):
         v = self.res.predict(which="var").mean()
         assert_allclose(v, self.endog.var(), atol=1e-1, rtol=1e-2)
         return
-        assert_allclose((self.res.predict().mean() *
-                        self.res._dispersion_factor.mean()),
-                        self.endog.var(), atol=5e-2, rtol=5e-2)
+        assert_allclose(
+            (self.res.predict().mean() * self.res._dispersion_factor.mean()),
+            self.endog.var(),
+            atol=5e-2,
+            rtol=5e-2,
+        )
 
     def test_predict_prob(self):
         res = self.res
 
-        pr = res.predict(which='prob')
+        pr = res.predict(which="prob")
         pr2 = truncatednegbin.pmf(
-            np.arange(29),
-            res.predict(which="mean-main")[:, None], res.params[-1], 2, 0)
+            np.arange(29), res.predict(which="mean-main")[:, None], res.params[-1], 2, 0
+        )
         assert_allclose(pr, pr2, rtol=1e-10, atol=1e-10)
 
 
-class CheckTruncatedST():
+class CheckTruncatedST:
 
     def test_basic(self):
         res1 = self.res1
@@ -241,8 +250,7 @@ class CheckTruncatedST():
         k = rdf.shape[0] + res1.model.truncation
         pred = res1.get_prediction(which="prob", average=True)
         assert_allclose(pred.predicted[start_idx:k], rdf[:-1, 0], rtol=5e-5)
-        assert_allclose(pred.se[start_idx:k], rdf[:-1, 1],
-                        rtol=5e-4, atol=1e-10)
+        assert_allclose(pred.se[start_idx:k], rdf[:-1, 1], rtol=5e-4, atol=1e-10)
         ci = pred.conf_int()[start_idx:k]
         assert_allclose(ci[:, 0], rdf[:-1, 4], rtol=5e-5, atol=1e-10)
         assert_allclose(ci[:, 1], rdf[:-1, 5], rtol=5e-5, atol=1e-10)
@@ -253,8 +261,7 @@ class CheckTruncatedST():
         k = rdf.shape[0] - 1
         pred = res1.get_prediction(which="prob-base", average=True)
         assert_allclose(pred.predicted[:k], rdf[:-1, 0], rtol=5e-5)
-        assert_allclose(pred.se[:k], rdf[:-1, 1],
-                        rtol=8e-4, atol=1e-10)
+        assert_allclose(pred.se[:k], rdf[:-1, 1], rtol=8e-4, atol=1e-10)
         ci = pred.conf_int()[:k]
         assert_allclose(ci[:, 0], rdf[:-1, 4], rtol=5e-4, atol=1e-10)
         assert_allclose(ci[:, 1], rdf[:-1, 5], rtol=5e-4, atol=1e-10)
@@ -265,10 +272,9 @@ class TestTruncatedLFPoissonSt(CheckTruncatedST):
     @classmethod
     def setup_class(cls):
         endog = DATA["docvis"]
-        exog_names = ['aget', 'totchr', 'const']
+        exog_names = ["aget", "totchr", "const"]
         exog = DATA[exog_names]
-        cls.res1 = TruncatedLFPoisson(endog, exog).fit(method="bfgs",
-                                                       maxiter=300)
+        cls.res1 = TruncatedLFPoisson(endog, exog).fit(method="bfgs", maxiter=300)
         cls.res2 = results_ts.results_trunc_poisson
 
         mod_offset = TruncatedLFPoisson(endog, exog, offset=DATA["aget"])
@@ -298,14 +304,14 @@ class TestTruncatedNegBinSt(CheckTruncatedST):
     @classmethod
     def setup_class(cls):
         endog = DATA["docvis"]
-        exog_names = ['aget', 'totchr', 'const']
+        exog_names = ["aget", "totchr", "const"]
         exog = DATA[exog_names]
-        cls.res1 = TruncatedLFNegativeBinomialP(endog, exog).fit(method="bfgs",
-                                                                 maxiter=300)
+        cls.res1 = TruncatedLFNegativeBinomialP(endog, exog).fit(
+            method="bfgs", maxiter=300
+        )
         cls.res2 = results_ts.results_trunc_negbin
 
-        mod_offset = TruncatedLFNegativeBinomialP(endog, exog,
-                                                  offset=DATA["aget"])
+        mod_offset = TruncatedLFNegativeBinomialP(endog, exog, offset=DATA["aget"])
         cls.res_offset = mod_offset.fit(method="bfgs", maxiter=300)
 
     def test_offset(self):
@@ -333,11 +339,11 @@ class TestTruncatedLFPoisson1St(CheckTruncatedST):
     @classmethod
     def setup_class(cls):
         endog = DATA["docvis"]
-        exog_names = ['aget', 'totchr', 'const']
+        exog_names = ["aget", "totchr", "const"]
         exog = DATA[exog_names]
-        cls.res1 = TruncatedLFPoisson(
-            endog, exog, truncation=1
-            ).fit(method="bfgs", maxiter=300)
+        cls.res1 = TruncatedLFPoisson(endog, exog, truncation=1).fit(
+            method="bfgs", maxiter=300
+        )
         cls.res2 = results_ts.results_trunc_poisson1
 
 
@@ -346,23 +352,22 @@ class TestTruncatedNegBin1St(CheckTruncatedST):
     @classmethod
     def setup_class(cls):
         endog = DATA["docvis"]
-        exog_names = ['aget', 'totchr', 'const']
+        exog_names = ["aget", "totchr", "const"]
         exog = DATA[exog_names]
-        cls.res1 = TruncatedLFNegativeBinomialP(
-            endog, exog, truncation=1
-            ).fit(method="newton", maxiter=300)  # "bfgs" is not close enough
+        cls.res1 = TruncatedLFNegativeBinomialP(endog, exog, truncation=1).fit(
+            method="newton", maxiter=300
+        )  # "bfgs" is not close enough
         cls.res2 = results_ts.results_trunc_negbin1
 
 
-class TestHurdlePoissonR():
+class TestHurdlePoissonR:
     # test against R pscl
     @classmethod
     def setup_class(cls):
         endog = DATA["docvis"]
-        exog_names = ['const', 'aget', 'totchr']
+        exog_names = ["const", "aget", "totchr"]
         exog = DATA[exog_names]
-        cls.res1 = HurdleCountModel(endog, exog).fit(method="newton",
-                                                     maxiter=300)
+        cls.res1 = HurdleCountModel(endog, exog).fit(method="newton", maxiter=300)
         cls.res2 = results_t.hurdle_poisson
 
     def test_basic(self):
@@ -383,8 +388,7 @@ class TestHurdlePoissonR():
         # we have zero model first
         idx = np.concatenate((np.arange(3, 6), np.arange(3)))
         vcov = res2.vcov[idx[:, None], idx]
-        assert_allclose(np.asarray(res1.cov_params()), vcov,
-                        rtol=1e-4, atol=1e-8)
+        assert_allclose(np.asarray(res1.cov_params()), vcov, rtol=1e-4, atol=1e-8)
 
     def test_predict(self):
         res1 = self.res1
@@ -399,15 +403,13 @@ class TestHurdlePoissonR():
         assert_allclose(prob_nz_, res2.predict_zero, rtol=5e-4, atol=5e-4)
 
         mean_main = res1.results_count.predict(ex, which="mean-main")
-        assert_allclose(mean_main, res2.predict_mean_main,
-                        rtol=5e-4, atol=5e-4)
+        assert_allclose(mean_main, res2.predict_mean_main, rtol=5e-4, atol=5e-4)
 
         prob_main = res1.results_count.predict(ex, which="prob")[0] * prob_nz
         prob_main[0] = np.squeeze(prob_zero)
         assert_allclose(prob_main[:4], res2.predict_prob, rtol=5e-4, atol=5e-4)
 
-        assert_allclose(mean_main * prob_nz, res2.predict_mean,
-                        rtol=1e-3, atol=5e-4)
+        assert_allclose(mean_main * prob_nz, res2.predict_mean, rtol=1e-3, atol=5e-4)
 
         # with corresponding predict `which`
         m = res1.predict(ex)
@@ -415,12 +417,12 @@ class TestHurdlePoissonR():
         mm = res1.predict(ex, which="mean-main")
         assert_allclose(mm, res2.predict_mean_main, rtol=1e-7, atol=1e-7)
         mnz = res1.predict(ex, which="mean-nonzero")
-        assert_allclose(mnz, res2.predict_mean / (1 - res2.predict_prob[0]),
-                        rtol=5e-7, atol=5e-7)
+        assert_allclose(
+            mnz, res2.predict_mean / (1 - res2.predict_prob[0]), rtol=5e-7, atol=5e-7
+        )
         prob_main = res1.predict(ex, which="prob-main")
         pt = res1.predict(ex, which="prob-trunc")
-        assert_allclose(prob_main / (1 - pt), res2.predict_zero,
-                        rtol=5e-4, atol=5e-4)
+        assert_allclose(prob_main / (1 - pt), res2.predict_zero, rtol=5e-4, atol=5e-4)
         probs = res1.predict(ex, which="prob")[0]  # return is 2-dim
         assert_allclose(probs[:4], res2.predict_prob, rtol=1e-5, atol=1e-6)
 
@@ -434,8 +436,7 @@ class TestHurdlePoissonR():
         # assert p1b.summary_frame().shape == (4, 4)
 
         p2a = res1.predict(which="prob", y_values=np.arange(3))
-        p2b = res1.get_prediction(which="prob", y_values=np.arange(3),
-                                  average=True)
+        p2b = res1.get_prediction(which="prob", y_values=np.arange(3), average=True)
         assert_allclose(p2a.mean(0), p2b.predicted, rtol=1e-10, atol=1e-10)
 
         # TODO: which="var" raises AttributeError
@@ -447,14 +448,19 @@ class TestHurdlePoissonR():
 
         # var1 = res1.predict(which="var")
         resid_p1 = res1.resid_pearson[:5]
-        resid_p2 = np.asarray([
-            -1.5892397298897, -0.3239276467705, -1.5878941800178,
-            0.6613236544236, -0.6690997162962,
-            ])
+        resid_p2 = np.asarray(
+            [
+                -1.5892397298897,
+                -0.3239276467705,
+                -1.5878941800178,
+                0.6613236544236,
+                -0.6690997162962,
+            ]
+        )
         assert_allclose(resid_p1, resid_p2, rtol=1e-5, atol=1e-5)
 
 
-class CheckHurdlePredict():
+class CheckHurdlePredict:
 
     def test_basic(self):
         res1 = self.res1
@@ -483,8 +489,7 @@ class CheckHurdlePredict():
         assert_allclose(pred_mean_nz, mean_nz, rtol=0.05)
         # Note: the Truncated model is based on different exog
         # prediction for nonzero part is better in nonzero sample than full
-        pred_mean_nnz = res1.predict(exog=exog[mask_nz],
-                                     which="mean-nonzero").mean()
+        pred_mean_nnz = res1.predict(exog=exog[mask_nz], which="mean-nonzero").mean()
         assert_allclose(pred_mean_nnz, mean_nz, rtol=5e-4)
 
         pred_mean_nzm = res1.results_count.predict(which="mean").mean()
@@ -537,8 +542,7 @@ class TestHurdleNegbinSimulated(CheckHurdlePredict):
         u = rng.random((n, 1))
         endog = np.argmin(cdf < u, axis=1)
 
-        mod_hnb = HurdleCountModel(endog, exog,
-                                   dist="negbin", zerodist="negbin")
+        mod_hnb = HurdleCountModel(endog, exog, dist="negbin", zerodist="negbin")
         cls.res1 = mod_hnb.fit(maxiter=300)
 
         df_null = 4
@@ -547,8 +551,7 @@ class TestHurdleNegbinSimulated(CheckHurdlePredict):
             k_params=6,
             df_model=2,
             df_null=df_null,
-            df_resid=nobs-6,
+            df_resid=nobs - 6,
             k_extra=df_null - 1,
-            exog_names=['zm_const', 'zm_x1', 'zm_alpha', 'const', 'x1',
-                        'alpha'],
-            )
+            exog_names=["zm_const", "zm_x1", "zm_alpha", "const", "x1", "alpha"],
+        )

@@ -15,9 +15,9 @@ TODO:
 *
 
 '''
-from scipy import stats
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy import stats
 
 #stats.distributions.beta_gen._fitstart = lambda self, data : (5,5,0,1)
 
@@ -38,13 +38,13 @@ def plothist(x,distfn, args, loc, scale, right=1):
     #yt = stats.norm.pdf( bins, loc=loc, scale=scale)
     yt = distfn.pdf( bins, loc=loc, scale=scale, *args)
     yt[yt>maxheight]=maxheight
-    lt = plt.plot(bins, yt, 'r--', linewidth=1)
+    plt.plot(bins, yt, 'r--', linewidth=1)
     ys = stats.t.pdf( bins, 10,scale=10,)*right
-    ls = plt.plot(bins, ys, 'b-', linewidth=1)
+    plt.plot(bins, ys, 'b-', linewidth=1)
 
     plt.xlabel('Smarts')
     plt.ylabel('Probability')
-    plt.title(r'$\mathrm{Testing: %s :}\ \mu=%f,\ \sigma=%f$' % (distfn.name,loc,scale))
+    plt.title(fr'$\mathrm{{Testing: {distfn.name} :}}\ \mu={loc:f},\ \sigma={scale:f}$')
 
     #plt.axis([bins[0], bins[-1], 0, 0.134+0.05])
 

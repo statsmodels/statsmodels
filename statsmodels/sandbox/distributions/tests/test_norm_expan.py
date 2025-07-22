@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for Gram-Charlier exansion
 
 No reference results, test based on consistency and normal case.

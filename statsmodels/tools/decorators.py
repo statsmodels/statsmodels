@@ -10,7 +10,7 @@ __all__ = ['cache_readonly', 'cache_writable', 'deprecated_alias',
 class ResettableCache(dict):
     """DO NOT USE. BACKWARD COMPAT ONLY"""
     def __init__(self, *args, **kwargs):
-        super(ResettableCache, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.__dict__ = self
 
 
@@ -56,7 +56,7 @@ def deprecated_alias(old_name, new_name, remove_version=None, msg=None,
     """
 
     if msg is None:
-        msg = '%s is a deprecated alias for %s' % (old_name, new_name)
+        msg = f'{old_name} is a deprecated alias for {new_name}'
         if remove_version is not None:
             msg += ', will be removed in version %s' % remove_version
 

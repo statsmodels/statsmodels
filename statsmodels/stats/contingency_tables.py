@@ -458,7 +458,7 @@ class SquareTable(Table):
         if k1 != k2:
             raise ValueError('table must be square')
 
-        super(SquareTable, self).__init__(table, shift_zeros)
+        super().__init__(table, shift_zeros)
 
     def symmetry(self, method="bowker"):
         """
@@ -673,7 +673,7 @@ class Table2x2(SquareTable):
         if (table.ndim != 2) or (table.shape[0] != 2) or (table.shape[1] != 2):
             raise ValueError("Table2x2 takes a 2x2 table as input.")
 
-        super(Table2x2, self).__init__(table, shift_zeros)
+        super().__init__(table, shift_zeros)
 
     @classmethod
     def from_data(cls, data, shift_zeros=True):

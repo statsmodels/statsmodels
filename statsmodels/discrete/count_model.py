@@ -1,24 +1,32 @@
 __all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson",
            "ZeroInflatedNegativeBinomialP"]
 
-import warnings
-import numpy as np
-import statsmodels.base.model as base
-import statsmodels.base.wrapper as wrap
-import statsmodels.regression.linear_model as lm
-from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
-                                                 Poisson, Logit, CountResults,
-                                                 L1CountResults, Probit,
-                                                 _discrete_results_docs,
-                                                 _validate_l1_method,
-                                                 GeneralizedPoisson,
-                                                 NegativeBinomialP)
-from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
-from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.compat.pandas import Appender
 
+import warnings
+
+import numpy as np
+
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.discrete.discrete_model import (
+    CountModel,
+    CountResults,
+    DiscreteModel,
+    GeneralizedPoisson,
+    L1CountResults,
+    Logit,
+    NegativeBinomialP,
+    Poisson,
+    Probit,
+    _discrete_results_docs,
+    _validate_l1_method,
+)
+from statsmodels.distributions import zigenpoisson, zinegbin, zipoisson
+import statsmodels.regression.linear_model as lm
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 _doc_zi_params = """
     exog_infl : array_like or None
@@ -54,7 +62,7 @@ class GenericZeroInflated(CountModel):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None,
                  inflation='logit', exposure=None, missing='none', **kwargs):
-        super(GenericZeroInflated, self).__init__(endog, exog, offset=offset,
+        super().__init__(endog, exog, offset=offset,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
 
@@ -182,9 +190,10 @@ class GenericZeroInflated(CountModel):
 
         if callback is None:
             # work around perfect separation callback #3895
-            callback = lambda *x: x
+            def callback(*x):
+                return x
 
-        mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
+        mlefit = super().fit(start_params=start_params,
                        maxiter=maxiter, disp=disp, method=method,
                        full_output=full_output, callback=callback,
                        **kwargs)
@@ -260,7 +269,8 @@ class GenericZeroInflated(CountModel):
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
 
-        mu = self.model_main.predict(params_main)
+        # Unused, commented out
+        # mu = self.model_main.predict(params_main)
 
         # TODO: need to allow for complex to use CS numerical derivatives
         dldp = np.zeros((self.exog.shape[0], self.k_exog), dtype=np.float64)
@@ -460,7 +470,7 @@ class GenericZeroInflated(CountModel):
         tmp_offset = getattr(self.model_main, 'offset', False)
         tmp_exposure = getattr(self.model_main, 'exposure', False)
         self.model_main.exog = exog
-        self.model_main.endog = np.zeros((exog.shape[0]))
+        self.model_main.endog = np.zeros(exog.shape[0])
         self.model_main.offset = offset
         self.model_main.exposure = exposure
         llf = self.model_main.loglikeobs(params_main)
@@ -598,7 +608,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', missing='none', **kwargs):
-        super(ZeroInflatedPoisson, self).__init__(endog, exog, offset=offset,
+        super().__init__(endog, exog, offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
@@ -618,7 +628,8 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         y = self.endog
         w = self.model_infl.predict(params_infl)
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
-        score = self.score(params)
+        # Unused, commented out
+        # score = self.score(params)
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
 
@@ -758,7 +769,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', p=2, missing='none', **kwargs):
-        super(ZeroInflatedGeneralizedPoisson, self).__init__(endog, exog,
+        super().__init__(endog, exog,
                                                   offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
@@ -776,7 +787,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         self.result_class_reg_wrapper = L1ZeroInflatedGeneralizedPoissonResultsWrapper
 
     def _get_init_kwds(self):
-        kwds = super(ZeroInflatedGeneralizedPoisson, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
         kwds['p'] = self.model_main.parameterization + 1
         return kwds
 
@@ -875,7 +886,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', p=2, missing='none', **kwargs):
-        super(ZeroInflatedNegativeBinomialP, self).__init__(endog, exog,
+        super().__init__(endog, exog,
                                                   offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
@@ -893,7 +904,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         self.result_class_reg_wrapper = L1ZeroInflatedNegativeBinomialResultsWrapper
 
     def _get_init_kwds(self):
-        kwds = super(ZeroInflatedNegativeBinomialP, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
         kwds['p'] = self.model_main.parameterization
         return kwds
 

@@ -1,12 +1,14 @@
-import numpy as np
 from collections import defaultdict
+
+import numpy as np
+
 import statsmodels.base.model as base
-from statsmodels.genmod import families
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.genmod.families import links
-from statsmodels.genmod.families import varfuncs
-import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula.formulatools import advance_eval_env
+from statsmodels.genmod import families
+from statsmodels.genmod.families import links, varfuncs
+from statsmodels.genmod.generalized_linear_model import GLM
+import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
 
 
@@ -151,8 +153,8 @@ class QIF(base.Model):
 
         groups = np.asarray(groups)
 
-        super(QIF, self).__init__(endog, exog, groups=groups,
-                                  missing=missing, **kwargs)
+        super().__init__(endog, exog, groups=groups,
+                         missing=missing, **kwargs)
 
         self.group_names = list(set(groups))
         self.nobs = len(self.endog)
@@ -329,8 +331,8 @@ class QIF(base.Model):
 
         if isinstance(groups, str):
             groups = data[groups]
-
-        model = super(QIF, cls).from_formula(
+        advance_eval_env(kwargs)
+        model = super().from_formula(
                    formula, data=data, subset=subset,
                    groups=groups, *args, **kwargs)
 
@@ -408,7 +410,7 @@ class QIFResults(base.LikelihoodModelResults):
     def __init__(self, model, params, cov_params, scale,
                  use_t=False, **kwds):
 
-        super(QIFResults, self).__init__(
+        super().__init__(
             model, params, normalized_cov_params=cov_params,
             scale=scale)
 

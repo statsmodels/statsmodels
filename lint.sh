@@ -5,6 +5,10 @@ echo "inside $0"
 RET=0
 
 if [ "$LINT" == true ]; then
+    echo "Running ruff check"
+    ruff check statsmodels
+
+    echo "Running flake8 linting"
     echo "Linting all files with limited rules"
     flake8 statsmodels
     if [ $? -ne "0" ]; then
@@ -17,7 +21,9 @@ if [ "$LINT" == true ]; then
     # pass _all_ flake8 checks
     echo "Linting known clean files with strict rules"
     # Default flake8 rules plus the additional rules from setup.cfg
-    flake8 --isolated --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 \
+    flake8 --isolated  \
+        --max-line-length 88 \
+        --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 \
         examples \
         setup.py \
         statsmodels/__init__.py \
@@ -330,7 +336,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/regime_switching \
         statsmodels/tsa/regime_switching/tests \
         statsmodels/tsa/regime_switching/tests/results \
-        statsmodels/tsa/seasonal.py \
+        statsmodels/tsa/seasonal \
         statsmodels/tsa/statespace \
         statsmodels/tsa/statespace/_filters \
         statsmodels/tsa/statespace/_smoothers \
@@ -377,7 +383,7 @@ if [ "$LINT" == true ]; then
     if [ -n "$NEW_FILES" ]; then
         echo "Linting newly added files with strict rules"
         echo "New files: $NEW_FILES"
-        flake8 --isolated --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 $(eval echo $NEW_FILES)
+        flake8 --isolated --max-line-length 88 --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 $(eval echo $NEW_FILES)
         if [ $? -ne "0" ]; then
             echo "New files failed linting."
             RET=1

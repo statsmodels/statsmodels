@@ -19,7 +19,8 @@ class ResultsWrapper:
         return [x for x in dir(self._results)]
 
     def __getattribute__(self, attr):
-        get = lambda name: object.__getattribute__(self, name)
+        def get(name):
+            return object.__getattribute__(self, name)
 
         try:
             results = get('_results')
@@ -117,7 +118,7 @@ def make_wrapper(func, how):
     formatted = str(sig)
 
     doc = dedent(wrapper.__doc__) if wrapper.__doc__ else ''
-    wrapper.__doc__ = "\n%s%s\n%s" % (func.__name__, formatted, doc)
+    wrapper.__doc__ = f"\n{func.__name__}{formatted}\n{doc}"
 
     return wrapper
 

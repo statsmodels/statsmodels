@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Periodograms for ARMA and time series
 
 theoretical periodogram of ARMA process and different version

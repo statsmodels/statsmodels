@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test values for multinomial_proportion_confint.
 
 Author: Sébastien Lerique

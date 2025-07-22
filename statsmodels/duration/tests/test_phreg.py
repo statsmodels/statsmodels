@@ -2,18 +2,19 @@ import itertools
 import os
 
 import numpy as np
-from statsmodels.duration.hazard_regression import PHReg
-from numpy.testing import (assert_allclose,
-                           assert_equal, assert_)
+from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
+
+from statsmodels.duration.hazard_regression import PHReg
+from statsmodels.formula._manager import FormulaManager
+
+# All the R results
+from .results import survival_enet_r_results, survival_r_results
 
 # TODO: Include some corner cases: data sets with empty strata, strata
 #      with no events, entry times after censoring times, etc.
 
-# All the R results
-from .results import survival_r_results
-from .results import survival_enet_r_results
 
 """
 Tests of PHReg against R coxph.
@@ -159,6 +160,26 @@ class TestPHReg:
         assert_allclose(rslt1.bse, rslt2.bse)
         assert_allclose(rslt1.bse, rslt3.bse)
 
+    def test_formula_environment(self):
+        """Test that PHReg uses the right environment for formulas."""
+
+        def times_two(x):
+            return 2 * x
+
+        rng = np.random.default_rng(0)
+
+        exog = rng.uniform(size=100)
+        endog = np.exp(exog) * -np.log(rng.uniform(size=len(exog)))
+        data = pd.DataFrame({"endog": endog, "exog": exog})
+
+        result_direct = PHReg(endog, times_two(exog)).fit()
+
+        result_formula = PHReg.from_formula("endog ~ times_two(exog)", data=data).fit()
+
+        assert_allclose(result_direct.params, result_formula.params)
+        assert_allclose(result_direct.bse, result_formula.bse)
+
+
     def test_formula_cat_interactions(self):
 
         time = np.r_[1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -184,12 +205,12 @@ class TestPHReg:
                            "exog1": exog[:, 0], "exog2": exog[:, 1]})
 
         # Works with "0 +" on RHS but issues warning
-        fml = "time ~ exog1 + np.log(exog2) + exog1*exog2"
+        fml = "time ~ 0 + exog1 + np.log(exog2) + exog1*exog2"
         model1 = PHReg.from_formula(fml, df, status=status)
         result1 = model1.fit()
 
-        from patsy import dmatrix
-        dfp = dmatrix(model1.data.design_info, df)
+        mgr = FormulaManager()
+        dfp = mgr.get_matrices(model1.data.model_spec, df)
 
         pr1 = result1.predict()
         pr2 = result1.predict(exog=df)
@@ -356,11 +377,11 @@ class TestPHReg:
 
         dist = rslt.get_distribution()
 
-        fitted_means = dist.mean()
-        true_means = elin_pred
-        fitted_var = dist.var()
-        fitted_sd = dist.std()
-        sample = dist.rvs()
+        # Smoke checks
+        dist.mean()
+        dist.var()
+        dist.std()
+        dist.rvs()
 
     def test_fit_regularized(self):
 

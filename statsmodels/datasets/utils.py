@@ -57,7 +57,8 @@ class Dataset(dict):
         # attribute you must create this in the dataset's load function.
         try:  # some datasets have string variables
             self.raw_data = self.data.astype(float)
-        except:
+        except Exception:
+            # Some datasets will not have raw data
             pass
 
     def __repr__(self):
@@ -125,6 +126,7 @@ def _cache_it(data, cache_path):
 
 def _open_cache(cache_path):
     import zlib
+
     # return as bytes object encoded in utf-8 for cross-compat of cached
     with open(cache_path, 'rb') as zf:
         return zlib.decompress(zf.read())
@@ -149,7 +151,8 @@ def _urlopen_cached(url, cache):
         try:
             data = _open_cache(cache_path)
             from_cache = True
-        except:
+        except Exception:
+            # Hit this if not in cache
             pass
 
     # not using the cache or did not find it in cache
@@ -282,7 +285,7 @@ def check_internet(url=None):
     url = "https://github.com" if url is None else url
     try:
         urlopen(url)
-    except URLError as err:
+    except URLError:
         return False
     return True
 

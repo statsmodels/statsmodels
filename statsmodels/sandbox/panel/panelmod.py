@@ -31,7 +31,7 @@ def group(X):
     uniq_dict = {}
     group = np.zeros(len(X))
     for i in range(len(X)):
-        if not X[i] in uniq_dict:
+        if X[i] not in uniq_dict:
             uniq_dict.update({X[i] : len(uniq_dict)})
         group[i] = uniq_dict[X[i]]
     return group

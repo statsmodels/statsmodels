@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for generic score/LM tests and conditional moment tests
 
 Created on Mon Nov 17 08:44:06 2014
@@ -12,8 +11,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats._diagnostic_other import CMTNewey, CMTTauchen
 import statsmodels.stats._diagnostic_other as diao
+from statsmodels.stats._diagnostic_other import CMTNewey, CMTTauchen
 
 
 class CheckCMT:
@@ -113,10 +112,7 @@ class TestCMTOLS(CheckCMT):
         res_ols = self.res_ols
         nobs = self.nobs
         moms = self.moms
-        moms_obs = self.moms_obs
         cov_moms = self.cov_moms
-        covm = self.covm
-        moms_deriv = self.moms_deriv
         weights = self.weights
         L = self.L
         x = self.exog_full  # for auxiliary regression only
@@ -149,7 +145,6 @@ class TestCMTOLS(CheckCMT):
         moms = self.moms
         moms_obs = self.moms_obs
         covm = self.covm
-        moms_deriv = self.moms_deriv
         weights = self.weights
         L = self.L
         x = self.exog_full
@@ -189,7 +184,6 @@ class TestCMTOLS(CheckCMT):
 
     def res_hc0(self):
         res_ols = self.res_ols
-        nobs = self.nobs
         moms = self.moms
         moms_obs = self.moms_obs
         cov_moms = self.cov_moms   # Hessian with scale

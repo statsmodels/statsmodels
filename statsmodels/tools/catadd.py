@@ -23,7 +23,6 @@ def add_indep(x, varnames, dtype=None):
     rank_old = 0
     varnames_new = []
     varnames_dropped = []
-    keepindx = []
     for (xi, ni) in zip(x, varnames):
         xout[:, count] = xi
         rank_new = np.linalg.matrix_rank(xout)

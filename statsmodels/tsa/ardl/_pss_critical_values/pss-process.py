@@ -1,3 +1,5 @@
+from statsmodels.compat.pandas import FUTURE_STACK
+
 from collections import defaultdict
 import glob
 import os
@@ -45,7 +47,7 @@ if __name__ == "__main__":
         crit_vals[key] = [round(val, 7) for val in list(row)]
 
     def setup_regressors(df, low_pow=3, high_pow=3, cut=70, log=False):
-        s = df.stack().reset_index()
+        s = df.stack(**FUTURE_STACK).reset_index()
         q = s.level_0 / 10000
         y = stats.norm.ppf(q)
         cv = s[0]
@@ -156,7 +158,7 @@ crit_percentiles = {quantiles}
 crit_vals = {crit_vals}
 """
 
-    targets = {TargetVersion.PY37, TargetVersion.PY38, TargetVersion.PY39}
+    targets = {TargetVersion.PY38, TargetVersion.PY39}
     fm = FileMode(target_versions=targets, line_length=79)
     formatted_code = format_file_contents(raw_code, fast=False, mode=fm)
 

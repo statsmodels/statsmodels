@@ -36,15 +36,15 @@ Author: josef-pktd
 License: BSD
 
 '''
+import numpy as np
 from scipy import stats
 from scipy.stats import distributions
-import numpy as np
 
 
 def get_u_argskwargs(**kwargs):
     # Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
-    u_kwargs = dict((k.replace('u_', '', 1), v) for k, v in kwargs.items()
-                    if k.startswith('u_'))
+    u_kwargs = {k.replace('u_', '', 1): v for k, v in kwargs.items()
+                    if k.startswith('u_')}
     u_args = u_kwargs.pop('u_args', None)
     return u_args, u_kwargs
 
@@ -66,7 +66,7 @@ class Transf_gen(distributions.rv_continuous):
         # print(self.numargs
         name = kwargs.pop('name', 'transfdist')
         longname = kwargs.pop('longname', 'Non-linear transformed distribution')
-        extradoc = kwargs.pop('extradoc', None)
+        kwargs.pop('extradoc', None)
         a = kwargs.pop('a', -np.inf)
         b = kwargs.pop('b', np.inf)
         self.decr = kwargs.pop('decr', False)
@@ -77,11 +77,11 @@ class Transf_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super(Transf_gen, self).__init__(a=a, b=b, name=name,
-                                         shapes=kls.shapes,
-                                         longname=longname,
-                                         # extradoc = extradoc
-                                         )
+        super().__init__(a=a, b=b, name=name,
+                         shapes=kls.shapes,
+                         longname=longname,
+                         # extradoc = extradoc
+                         )
 
     def _cdf(self, x, *args, **kwargs):
         # print(args
@@ -164,7 +164,7 @@ class ExpTransf_gen(distributions.rv_continuous):
             a = kwargs['a']
         else:
             a = 0
-        super(ExpTransf_gen, self).__init__(a=a, name=name)
+        super().__init__(a=a, name=name)
         self.kls = kls
 
     def _cdf(self, x, *args):
@@ -198,7 +198,7 @@ class LogTransf_gen(distributions.rv_continuous):
         else:
             a = 0
 
-        super(LogTransf_gen, self).__init__(a=a, name=name)
+        super().__init__(a=a, name=name)
         self.kls = kls
 
     def _cdf(self, x, *args):
@@ -320,7 +320,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         # print(self.numargs
         name = kwargs.pop('name', 'transfdist')
         longname = kwargs.pop('longname', 'Non-linear transformed distribution')
-        extradoc = kwargs.pop('extradoc', None)
+        kwargs.pop('extradoc', None)
         a = kwargs.pop('a', -np.inf)  # attached to self in super
         b = kwargs.pop('b', np.inf)  # self.a, self.b would be overwritten
         self.shape = kwargs.pop('shape', False)
@@ -331,12 +331,12 @@ class TransfTwo_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super(TransfTwo_gen, self).__init__(a=a, b=b,
-                                            name=name,
-                                            shapes=kls.shapes,
-                                            longname=longname,
-                                            # extradoc = extradoc
-                                            )
+        super().__init__(a=a, b=b,
+                         name=name,
+                         shapes=kls.shapes,
+                         longname=longname,
+                         # extradoc = extradoc
+                         )
 
     def _rvs(self, *args):
         self.kls._size = self._size  # size attached to self, not function argument

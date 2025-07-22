@@ -1,8 +1,10 @@
 #Splitting out maringal effects to see if they can be generalized
 
 from statsmodels.compat.python import lzip
+
 import numpy as np
 from scipy.stats import norm
+
 from statsmodels.tools.decorators import cache_readonly
 
 #### margeff helper functions ####
@@ -124,9 +126,10 @@ def _get_margeff_exog(exog, at, atexog, ind):
                 k_vars = atexog.shape[1]
             try:
                 assert k_vars == exog.shape[1]
-            except:
-                raise ValueError("atexog does not have the same number "
-                        "of variables as exog")
+            except AssertionError:
+                raise ValueError(
+                    "atexog does not have the same number of variables as exog"
+                )
             exog = atexog
 
     #NOTE: we should fill in atexog after we process at
@@ -541,8 +544,11 @@ class DiscreteMargins:
                 ('Method:', [method]),
                 ('At:', [self.margeff_options['at']]),]
 
-        from statsmodels.iolib.summary import (Summary, summary_params,
-                                                table_extend)
+        from statsmodels.iolib.summary import (
+            Summary,
+            summary_params,
+            table_extend,
+        )
         exog_names = model.exog_names[:] # copy
         smry = Summary()
 

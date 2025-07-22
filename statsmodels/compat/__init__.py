@@ -1,7 +1,6 @@
-from statsmodels.tools._testing import PytestTester
+from statsmodels.tools._test_runner import PytestTester
 
 from .python import (
-    PY37,
     asunicode,
     asbytes,
     asstr,
@@ -12,7 +11,6 @@ from .python import (
 )
 
 __all__ = [
-    "PY37",
     "asunicode",
     "asbytes",
     "asstr",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test for a helper function for PanelHAC robust covariance
 
 the functions should be rewritten to make it more efficient

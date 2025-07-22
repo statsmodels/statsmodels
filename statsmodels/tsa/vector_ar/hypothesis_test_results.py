@@ -39,7 +39,7 @@ class HypothesisTestResults:
         self.title = title
         self.h0 = h0
         self.conclusion_str = "Conclusion: %s H_0" % self.conclusion
-        self.signif_str = " at {:.0%} significance level".format(self.signif)
+        self.signif_str = f" at {self.signif:.0%} significance level"
 
     def summary(self):
         """Return summary"""
@@ -62,9 +62,9 @@ class HypothesisTestResults:
         return "<" + self.__module__ + "." + self.__class__.__name__ \
                    + " object. " + self.h0 + ": " + self.conclusion \
                    + self.signif_str \
-                   + ". Test statistic: {:.3f}".format(self.test_statistic) \
-                   + ", critical value: {:.3f}>".format(self.crit_value) \
-                   + ", p-value: {:.3f}>".format(self.pvalue)
+                   + f". Test statistic: {self.test_statistic:.3f}" \
+                   + f", critical value: {self.crit_value:.3f}>" \
+                   + f", p-value: {self.pvalue:.3f}>"
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -113,9 +113,9 @@ class CausalityTestResults(HypothesisTestResults):
         title += " causality %s-test" % method
         h0 = "H_0: "
         if len(self.causing) == 1:
-            h0 += "{} does not ".format(self.causing[0])
+            h0 += f"{self.causing[0]} does not "
         else:
-            h0 += "{} do not ".format(self.causing)
+            h0 += f"{self.causing} do not "
         h0 += "Granger-" if self.test == "granger" else "instantaneously "
         h0 += "cause "
         if len(self.caused) == 1:
@@ -192,10 +192,10 @@ class WhitenessTestResults(HypothesisTestResults):
         self.lags = nlags
         self.adjusted = adjusted
         method = "Portmanteau"
-        title = "{}-test for residual autocorrelation".format(method)
+        title = f"{method}-test for residual autocorrelation"
         if adjusted:
             title = "Adjusted " + title
-        h0 = "H_0: residual autocorrelation up to lag {} is zero".format(nlags)
+        h0 = f"H_0: residual autocorrelation up to lag {nlags} is zero"
         super().__init__(
             test_statistic,
             crit_value,

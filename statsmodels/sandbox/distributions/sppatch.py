@@ -11,9 +11,9 @@ Author: josef-pktd
 License: Simplified BSD
 '''
 from statsmodels.compat.python import lmap
-import numpy as np
-from scipy import stats, optimize, integrate
 
+import numpy as np
+from scipy import integrate, optimize, stats
 
 ########## patching scipy
 
@@ -641,11 +641,10 @@ def printresults(sample, arg, bres, kind='bootstrap'):
     print(argest)
     if kind == 'bootstrap':
         #bootstrap compares to estimate from sample
-        argorig = arg
         arg = argest
 
     print('%s distribution of parameter estimate (nrepl=%d)'% (kind, nrepl))
-    print('mean = %f, bias=%f' % (bres.mean(0), bres.mean(0)-arg))
+    print(f'mean = {bres.mean(0):f}, bias={bres.mean(0)-arg:f}')
     print('median', np.median(bres, axis=0))
     print('var and std', bres.var(0), np.sqrt(bres.var(0)))
     bmse = ((bres - arg)**2).mean(0)
@@ -688,7 +687,7 @@ if __name__ == '__main__':
             x = distr.rvs(arg, loc=loc, scale=scale, size=nobs)
             print('\nnobs:', nobs)
             print('true parameter')
-            print('%f, loc=%f, scale=%f' % (arg, loc, scale))
+            print(f'{arg:f}, loc={loc:f}, scale={scale:f}')
             print('unconstrained')
             print(distr.fit(x))
             print(distr.fit_fr(x, frozen=[np.nan, np.nan, np.nan]))

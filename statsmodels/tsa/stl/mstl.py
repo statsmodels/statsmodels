@@ -16,7 +16,8 @@ MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with Multiple
 Seasonal Patterns
 https://arxiv.org/pdf/2107.13462.pdf
 """
-from typing import Dict, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 import warnings
 
 import numpy as np
@@ -24,6 +25,7 @@ import pandas as pd
 from scipy.stats import boxcox
 
 from statsmodels.tools.typing import ArrayLike1D
+from statsmodels.tsa.seasonal._seasonal import DecomposeResult
 from statsmodels.tsa.stl._stl import STL
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -85,7 +87,7 @@ class MSTL:
     >>> weekly_seasonality = 10 * np.sin(2 * np.pi * t / (24 * 7))
     >>> noise = np.random.randn(len(t))
     >>> y = trend + daily_seasonality + weekly_seasonality + noise
-    >>> index = pd.date_range(start='2000-01-01', periods=len(t), freq='H')
+    >>> index = pd.date_range(start='2000-01-01', periods=len(t), freq='h')
     >>> data = pd.DataFrame(data=y, index=index)
 
     Use MSTL to decompose the time series into two seasonal components
@@ -108,7 +110,7 @@ class MSTL:
         windows: Optional[Union[int, Sequence[int]]] = None,
         lmbda: Optional[Union[float, str]] = None,
         iterate: int = 2,
-        stl_kwargs: Optional[Dict[str, Union[int, bool, None]]] = None,
+        stl_kwargs: Optional[dict[str, Union[int, bool, None]]] = None,
     ):
         self.endog = endog
         self._y = self._to_1d_array(endog)
@@ -181,9 +183,6 @@ class MSTL:
             else:
                 seasonal = pd.DataFrame(seasonal, index=index, columns=cols)
 
-        # Avoid circular imports
-        from statsmodels.tsa.seasonal import DecomposeResult
-
         return DecomposeResult(y, seasonal, trend, resid, rw)
 
     def __str__(self):
@@ -199,7 +198,7 @@ class MSTL:
         self,
         periods: Union[int, Sequence[int], None],
         windows: Union[int, Sequence[int], None],
-    ) -> Tuple[Sequence[int], Sequence[int]]:
+    ) -> tuple[Sequence[int], Sequence[int]]:
         periods = self._process_periods(periods)
 
         if windows:
@@ -216,7 +215,7 @@ class MSTL:
         if any(period >= self.nobs / 2 for period in periods):
             warnings.warn(
                 "A period(s) is larger than half the length of time series."
-                " Removing these period(s)."
+                " Removing these period(s).", UserWarning
             )
             periods = tuple(
                 period for period in periods if period < self.nobs / 2
@@ -261,14 +260,14 @@ class MSTL:
     @staticmethod
     def _sort_periods_and_windows(
         periods, windows
-    ) -> Tuple[Sequence[int], Sequence[int]]:
+    ) -> tuple[Sequence[int], Sequence[int]]:
         if len(periods) != len(windows):
             raise ValueError("Periods and windows must have same length")
         periods, windows = zip(*sorted(zip(periods, windows)))
         return periods, windows
 
     @staticmethod
-    def _remove_overloaded_stl_kwargs(stl_kwargs: Dict) -> Dict:
+    def _remove_overloaded_stl_kwargs(stl_kwargs: dict) -> dict:
         args = ["endog", "period", "seasonal"]
         for arg in args:
             stl_kwargs.pop(arg, None)

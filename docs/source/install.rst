@@ -15,7 +15,7 @@ Instructions for installing from PyPI, source or a development version are also 
 Python Support
 --------------
 
-statsmodels supports Python 3.8, 3.9, and 3.10.
+statsmodels supports Python 3.9, 3.10, 3.11, 3.12, and 3.13.
 
 Anaconda
 --------
@@ -76,7 +76,7 @@ If your system is already set up with pip, a compiler, and git, you can try:
 
     python -m pip install git+https://github.com/statsmodels/statsmodels
 
-If you do not have pip installed or want to do the installation more manually,
+If you do not have git installed or want to do the installation more manually,
 you can also type:
 
 .. code-block:: bash
@@ -114,27 +114,31 @@ Python has been built using a variety of different Windows C compilers.
 `This guide <https://wiki.python.org/moin/WindowsCompilers>`_ should help
 clarify which version of Python uses which compiler by default.
 
-Mac
+macOS
 ^^^
 
-Installing statsmodels on MacOS requires installing `gcc` which provides
+Installing statsmodels on macOS requires installing `gcc` which provides
 a suitable C compiler. We recommend installing Xcode and the Command Line
-Tools.
+Tools, which can be done through the following command:
+
+.. code-block:: bash
+
+    xcode-select --install
 
 Dependencies
 ------------
 
 The current minimum dependencies are:
 
-* `Python <https://www.python.org>`__ >= 3.8
-* `NumPy <https://www.scipy.org/>`__ >= 1.18
-* `SciPy <https://www.scipy.org/>`__ >= 1.4
-* `Pandas <https://pandas.pydata.org/>`__ >= 1.0
-* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.2
+* `Python <https://www.python.org>`__ >= 3.9
+* `NumPy <https://www.scipy.org/>`__ >= 1.22.3
+* `SciPy <https://www.scipy.org/>`__ >= 1.8
+* `Pandas <https://pandas.pydata.org/>`__ >= 1.4
+* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.6
 
 Cython is required to build from a git checkout but not to run or install from PyPI:
 
-* `Cython <https://cython.org/>`__ >= 0.29.26 is required to build the code from
+* `Cython <https://cython.org/>`__ >= 3.0.10 is required to build the code from
   github but not from a source distribution.
 
 Given the long release cycle, statsmodels follows a loose time-based policy for
@@ -159,3 +163,13 @@ Optional Dependencies
 * `joblib <https://joblib.readthedocs.io/>`__ >= 1.0can be used to accelerate distributed
   estimation for certain models.
 * `jupyter <https://jupyter.org/>`__ is needed to run the notebooks.
+
+The optional dependencies can be installed along with `statsmodels` by modifying
+the installation command:
+
+.. code-block:: bash
+
+    python -m pip install statsmodels[extras]
+
+where ``<extras>`` is a comma-separated list of extras to install (``build``,
+``develop``, ``docs``).

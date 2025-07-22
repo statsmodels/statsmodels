@@ -1,4 +1,3 @@
-from io import open
 import itertools
 import os
 import re

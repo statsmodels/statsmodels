@@ -1,19 +1,16 @@
-# -*- coding: utf-8 -*-
-
 import warnings
 
 import numpy as np
-from numpy.linalg import eigh, inv, norm, matrix_rank
+from numpy.linalg import eigh, inv, matrix_rank, norm
 import pandas as pd
 from scipy.optimize import minimize
 
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base.model import Model
-from statsmodels.iolib import summary2
 from statsmodels.graphics.utils import _import_mpl
+from statsmodels.iolib import summary2
+from statsmodels.tools.decorators import cache_readonly
 
-from .factor_rotation import rotate_factors, promax
-
+from .factor_rotation import promax, rotate_factors
 
 _opt_defaults = {'gtol': 1e-7}
 
@@ -110,7 +107,7 @@ class Factor(Model):
         _check_args_1(endog, n_factor, corr, nobs)
 
         if endog is not None:
-            super(Factor, self).__init__(endog, exog=None, missing=missing)
+            super().__init__(endog, exog=None, missing=missing)
             endog = self.endog   # after preprocessing like missing, asarray
             k_endog = endog.shape[1]
             nobs = endog.shape[0]
@@ -657,12 +654,11 @@ class FactorResults:
         statsmodels.multivariate.factor.FactorResults.factor_scoring
         """
         L = self.loadings
-        T = self.rotation_matrix.T
         #TODO: check row versus column convention for T
         uni = 1 - self.communality #self.uniqueness
 
         if method == 'bartlett':
-            s_mat = np.linalg.inv(L.T.dot(L/(uni[:,None]))).dot((L.T / uni)).T
+            s_mat = np.linalg.inv(L.T.dot(L/(uni[:,None]))).dot(L.T / uni).T
         elif method.startswith('reg'):
             corr = self.model.corr
             corr_f = self._corr_factors()

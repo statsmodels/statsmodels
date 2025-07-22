@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 State Space Model
 
@@ -16,6 +15,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+from statsmodels.tsa.stattools._stattools import breakvar_heteroskedasticity_test
 from statsmodels.tools.tools import pinv_extended, Bunch
 from statsmodels.tools.sm_exceptions import PrecisionWarning, ValueWarning
 from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
@@ -135,9 +135,9 @@ class MLEModel(tsbase.TimeSeriesModel):
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  **kwargs):
         # Initialize the model base
-        super(MLEModel, self).__init__(endog=endog, exog=exog,
-                                       dates=dates, freq=freq,
-                                       missing='none')
+        super().__init__(endog=endog, exog=exog,
+                         dates=dates, freq=freq,
+                         missing='none')
 
         # Store kwargs to recreate model
         self._init_kwargs = kwargs
@@ -163,7 +163,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         Prepare data for use in the state space representation
         """
-        endog = np.array(self.data.orig_endog, order='C')
+        endog = np.require(
+            np.array(self.data.orig_endog, copy=True), requirements="CW"
+        ).copy()
         exog = self.data.orig_exog
         if exog is not None:
             exog = np.array(exog)
@@ -243,7 +245,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     def _get_init_kwds(self):
         # Get keywords based on model attributes
-        kwds = super(MLEModel, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
 
         for key, value in kwds.items():
             if value is None and hasattr(self.ssm, key):
@@ -502,9 +504,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Set the new fixed parameters, keeping the order as given by
         # param_names
         self._fixed_params.update(params)
-        self._fixed_params = dict([
-            (name, self._fixed_params[name]) for name in self.param_names
-            if name in self._fixed_params])
+        self._fixed_params = {
+            name: self._fixed_params[name] for name in self.param_names
+            if name in self._fixed_params}
 
         # Update associated values
         self._has_fixed_params = True
@@ -620,7 +622,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             approximating the score; if False, finite difference approximation
             is used. Default is True. This keyword is only relevant if
             `optim_score` is set to 'harvey' or 'approx'.
-        optim_hessian : {'opg','oim','approx'}, optional
+        optim_hessian : {'opg', 'oim', 'approx'}, optional
             The method by which the Hessian is numerically approximated. 'opg'
             uses outer product of gradients, 'oim' uses the information
             matrix formula from Harvey (1989), and 'approx' uses numerical
@@ -701,12 +703,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             if optim_hessian is not None:
                 flags['hessian_method'] = optim_hessian
             fargs = (flags,)
-            mlefit = super(MLEModel, self).fit(start_params, method=method,
-                                               fargs=fargs,
-                                               maxiter=maxiter,
-                                               full_output=full_output,
-                                               disp=disp, callback=callback,
-                                               skip_hessian=True, **kwargs)
+            mlefit = super().fit(start_params, method=method,
+                                 fargs=fargs,
+                                 maxiter=maxiter,
+                                 full_output=full_output,
+                                 disp=disp, callback=callback,
+                                 skip_hessian=True, **kwargs)
 
         # Just return the fitted parameters if requested
         if return_params:
@@ -3141,9 +3143,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                              ' forecast errors have not been computed.')
 
         if method == 'breakvar':
-            from statsmodels.tsa.stattools import (
-                breakvar_heteroskedasticity_test
-                )
             # Store some values
             resid = self.filter_results.standardized_forecasts_error
             d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
@@ -3180,7 +3179,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : {'ljungbox','boxpierece', None}
+        method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
         lags : None, int or array_like
@@ -3645,6 +3644,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if iloc > self.nobs:
             raise ValueError('Cannot anchor simulation outside of the sample.')
 
+        # GH 9162
+        from statsmodels.tsa.statespace import simulation_smoother
+        random_state = simulation_smoother.check_random_state(random_state)
+
         # Setup the initial state
         if initial_state is None:
             initial_state_moments = (
@@ -3653,7 +3656,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
             _repetitions = 1 if repetitions is None else repetitions
 
-            initial_state = np.random.multivariate_normal(
+            initial_state = random_state.multivariate_normal(
                 *initial_state_moments, size=_repetitions).T
 
         scale = self.scale if self.filter_results.filter_concentrated else None
@@ -4271,7 +4274,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Examples
         --------
-        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> index = pd.period_range(start='2000', periods=2, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.5], index=index)
         >>> mod = sm.tsa.SARIMAX(original_observations)
         >>> res = mod.fit()
@@ -4287,7 +4290,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         2002    1.4634
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='2002', periods=1, freq='A')
+        >>> new_index = pd.period_range(start='2002', periods=1, freq='Y')
         >>> new_observations = pd.Series([0.9], index=new_index)
         >>> updated_res = res.append(new_observations)
         >>> print(updated_res.params)
@@ -4397,7 +4400,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Examples
         --------
-        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> index = pd.period_range(start='2000', periods=2, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.5], index=index)
         >>> mod = sm.tsa.SARIMAX(original_observations)
         >>> res = mod.fit()
@@ -4413,7 +4416,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         2002    1.4634
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='2002', periods=1, freq='A')
+        >>> new_index = pd.period_range(start='2002', periods=1, freq='Y')
         >>> new_observations = pd.Series([0.9], index=new_index)
         >>> updated_res = res.extend(new_observations)
         >>> print(updated_res.params)
@@ -4498,7 +4501,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Examples
         --------
-        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> index = pd.period_range(start='2000', periods=2, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.5], index=index)
         >>> mod = sm.tsa.SARIMAX(original_observations)
         >>> res = mod.fit()
@@ -4514,7 +4517,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         2002    1.4634
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='1980', periods=3, freq='A')
+        >>> new_index = pd.period_range(start='1980', periods=3, freq='Y')
         >>> new_observations = pd.Series([1.4, 0.3, 1.2], index=new_index)
         >>> new_res = res.apply(new_observations)
         >>> print(new_res.params)
@@ -4821,9 +4824,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 jb = np.zeros((self.model.k_endog, 4)) * np.nan
 
             if self.model.k_endog <= display_max_endog:
-                format_str = lambda array: [  # noqa:E731
-                    ', '.join(['{0:.2f}'.format(i) for i in array])
-                ]
+
+                def format_str(array):
+                    return [', '.join([f'{i:.2f}' for i in array])]
+
                 diagn_left = [
                     ('Ljung-Box (L1) (Q):', format_str(lb[:, 0, -1])),
                     ('Prob(Q):', format_str(lb[:, 1, -1])),
@@ -4844,8 +4848,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                            'Jarque\nBera(JB)', 'Prob(JB)', 'Skew', 'Kurtosis']
                 data = pd.DataFrame(
                     np.c_[lb[:, :2, -1], het[:, :2], jb[:, :4]],
-                    index=endog_names, columns=columns).applymap(
-                        lambda num: '' if pd.isnull(num) else '%.2f' % num)
+                    index=endog_names, columns=columns)
+                try:
+                    data = data.map(
+                        lambda num: '' if pd.isnull(num) else '%.2f' % num
+                    )
+                except AttributeError:
+                    data = data.applymap(
+                        lambda num: '' if pd.isnull(num) else '%.2f' % num
+                    )
                 data.index.name = 'Residual of\nDep. variable'
                 data = data.reset_index()
 
@@ -4873,7 +4884,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                          " unstable." % _safe_cond(cov_params))
 
         if etext:
-            etext = ["[{0}] {1}".format(i + 1, text)
+            etext = [f"[{i + 1}] {text}"
                      for i, text in enumerate(etext)]
             etext.insert(0, "Warnings:")
             summary.add_extra_txt(etext)
@@ -5000,9 +5011,9 @@ class PredictionResults(pred.PredictionResults):
             var_pred_mean = var_pred_mean.transpose()
 
         # Initialize
-        super(PredictionResults, self).__init__(predicted_mean, var_pred_mean,
-                                                dist='norm',
-                                                row_labels=row_labels)
+        super().__init__(predicted_mean, var_pred_mean,
+                         dist='norm',
+                         row_labels=row_labels)
 
     @property
     def se_mean(self):
@@ -5021,7 +5032,7 @@ class PredictionResults(pred.PredictionResults):
         #       this use case.
         _use_pandas = self._use_pandas
         self._use_pandas = False
-        conf_int = super(PredictionResults, self).conf_int(alpha, **kwds)
+        conf_int = super().conf_int(alpha, **kwds)
         self._use_pandas = _use_pandas
 
         # Create a dataframe
@@ -5032,8 +5043,8 @@ class PredictionResults(pred.PredictionResults):
             ynames = self.model.data.ynames
             if type(ynames) is not list:
                 ynames = [ynames]
-            names = (['lower {0}'.format(name) for name in ynames] +
-                     ['upper {0}'.format(name) for name in ynames])
+            names = ([f'lower {name}' for name in ynames] +
+                     [f'upper {name}' for name in ynames])
             conf_int.columns = names
 
         return conf_int

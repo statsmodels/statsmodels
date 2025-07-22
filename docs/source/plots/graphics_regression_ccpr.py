@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Using the state crime dataset plot the effect of the rate of single
 households ('single') on the murder rate while accounting for high school

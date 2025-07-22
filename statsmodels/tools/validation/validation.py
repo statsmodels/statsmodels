@@ -143,7 +143,7 @@ def array_like(
     arr = np.require(obj, dtype=dtype, requirements=reqs)
     if maxdim is not None:
         if arr.ndim > maxdim:
-            msg = "{0} must have ndim <= {1}".format(name, maxdim)
+            msg = f"{name} must have ndim <= {maxdim}"
             raise ValueError(msg)
     elif ndim is not None:
         if arr.ndim > ndim:
@@ -267,7 +267,7 @@ def bool_like(value, name, optional=False, strict=False):
         if isinstance(value, bool):
             return value
         else:
-            raise TypeError("{0} must be a bool{1}".format(name, extra_text))
+            raise TypeError(f"{name} must be a bool{extra_text}")
 
     if hasattr(value, "squeeze") and callable(value.squeeze):
         value = value.squeeze()
@@ -275,8 +275,8 @@ def bool_like(value, name, optional=False, strict=False):
         return bool(value)
     except Exception:
         raise TypeError(
-            "{0} must be a bool (or bool-compatible)"
-            "{1}".format(name, extra_text)
+            "{} must be a bool (or bool-compatible)"
+            "{}".format(name, extra_text)
         )
 
 
@@ -320,8 +320,8 @@ def int_like(
             pass
     extra_text = " or None" if optional else ""
     raise TypeError(
-        "{0} must be integer_like (int or np.integer, but not bool"
-        " or timedelta64){1}".format(name, extra_text)
+        "{} must be integer_like (int or np.integer, but not bool"
+        " or timedelta64){}".format(name, extra_text)
     )
 
 
@@ -396,8 +396,8 @@ def float_like(value, name, optional=False, strict=False):
             pass
     extra_text = " or None" if optional else ""
     raise TypeError(
-        "{0} must be float_like (float or np.inexact)"
-        "{1}".format(name, extra_text)
+        "{} must be float_like (float or np.inexact)"
+        "{}".format(name, extra_text)
     )
 
 
@@ -434,13 +434,13 @@ def string_like(value, name, optional=False, options=None, lower=True):
         return None
     if not isinstance(value, str):
         extra_text = " or None" if optional else ""
-        raise TypeError("{0} must be a string{1}".format(name, extra_text))
+        raise TypeError(f"{name} must be a string{extra_text}")
     if lower:
         value = value.lower()
     if options is not None and value not in options:
         extra_text = "If not None, " if optional else ""
         options_text = "'" + "', '".join(options) + "'"
-        msg = "{0}{1} must be one of: {2}".format(
+        msg = "{}{} must be one of: {}".format(
             extra_text, name, options_text
         )
         raise ValueError(msg)
@@ -474,6 +474,6 @@ def dict_like(value, name, optional=False, strict=True):
     ):
         extra_text = "If not None, " if optional else ""
         strict_text = " or dict_like (i.e., a Mapping)" if strict else ""
-        msg = "{0}{1} must be a dict{2}".format(extra_text, name, strict_text)
+        msg = f"{extra_text}{name} must be a dict{strict_text}"
         raise TypeError(msg)
     return value

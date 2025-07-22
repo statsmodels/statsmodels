@@ -542,7 +542,7 @@ class Docstring:
                         params.append(param)
                     return tuple([param.name for param in doc["Parameters"]])
             except Exception as exc:
-                print("!! numpydoc failed  on {0}!!".format(str(self.obj)))
+                print(f"!! numpydoc failed  on {str(self.obj)}!!")
                 print(exc)
                 return ()
         params = list(sig.parameters.keys())
@@ -606,7 +606,7 @@ class Docstring:
         desc = self.doc_parameters[param][1]
         # Find and strip out any sphinx directives
         for directive in DIRECTIVES:
-            full_directive = ".. {}".format(directive)
+            full_directive = f".. {directive}"
             if full_directive in desc:
                 # Only retain any description before the directive
                 desc = desc[: desc.index(full_directive)]
@@ -951,14 +951,14 @@ def get_validation_data(doc):
                     "EX03",
                     error_code=err.error_code,
                     error_message=err.message,
-                    times_happening=" ({} times)".format(err.count)
+                    times_happening=f" ({err.count} times)"
                     if err.count > 1
                     else "",
                 )
             )
         examples_source_code = "".join(doc.examples_source_code)
         for wrong_import in ("numpy", "pandas"):
-            if "import {}".format(wrong_import) in examples_source_code:
+            if f"import {wrong_import}" in examples_source_code:
                 errs.append(error("EX04", imported_library=wrong_import))
     return errs, wrns, examples_errs
 
@@ -1095,7 +1095,7 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
                 )
             else:
                 raise ValueError(
-                    'Unknown output_format "{}"'.format(output_format)
+                    f'Unknown output_format "{output_format}"'
                 )
 
             output = []
@@ -1113,7 +1113,7 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
                             path=res["file"],
                             row=res["file_line"],
                             code=err_code,
-                            text="{}: {}".format(name, err_desc),
+                            text=f"{name}: {err_desc}",
                         )
                     )
         output = "".join(sorted(output))
@@ -1121,7 +1121,7 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
 
     else:
         result = validate_one(func_name)
-        sys.stderr.write(header("Docstring ({})".format(func_name)))
+        sys.stderr.write(header(f"Docstring ({func_name})"))
         sys.stderr.write("{}\n".format(result["docstring"]))
         sys.stderr.write(header("Validation"))
         if result["errors"]:
@@ -1133,17 +1133,17 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
                 if err_code == "EX02":
                     sys.stderr.write("\tExamples do not pass tests\n")
                     continue
-                sys.stderr.write("\t{}\n".format(err_desc))
+                sys.stderr.write(f"\t{err_desc}\n")
         if result["warnings"]:
             sys.stderr.write(
                 "{} Warnings found:\n".format(len(result["warnings"]))
             )
             for wrn_code, wrn_desc in result["warnings"]:
-                sys.stderr.write("\t{}\n".format(wrn_desc))
+                sys.stderr.write(f"\t{wrn_desc}\n")
 
         if not result["errors"]:
             sys.stderr.write(
-                'Docstring for "{}" correct. :)\n'.format(func_name)
+                f'Docstring for "{func_name}" correct. :)\n'
             )
 
         if result["examples_errors"]:

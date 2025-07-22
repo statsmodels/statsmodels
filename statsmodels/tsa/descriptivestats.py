@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Descriptive Statistics for Time Series
 
 Created on Sat Oct 30 14:24:08 2010
@@ -7,7 +6,6 @@ Author: josef-pktd
 License: BSD(3clause)
 """
 
-import numpy as np
 from . import stattools as stt
 
 
@@ -54,7 +52,6 @@ class TsaDescriptive:
         data = self.data
         acf = self.acf(nacf)
         pacf = self.pacf(nacf)
-        w = np.linspace(0, np.pi, nfreq, endpoint=False)
         spdr = self.periodogram()[:nfreq] #(w)
 
         if fig is None:

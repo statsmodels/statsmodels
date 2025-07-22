@@ -1162,7 +1162,7 @@ class TestPoissonNewton(CheckModelResults):
     @pytest.mark.xfail(reason="res2.cov_params is a zero-dim array of None",
                        strict=True)
     def test_cov_params(self):
-        super(TestPoissonNewton, self).test_cov_params()
+        super().test_cov_params()
 
 
 class CheckNegBinMixin:
@@ -1516,7 +1516,7 @@ class CheckMNLogitBaseZero(CheckModelResults):
     @pytest.mark.xfail(reason="res2.cov_params is a zero-dim array of None",
                        strict=True)
     def test_cov_params(self):
-        super(CheckMNLogitBaseZero, self).test_cov_params()
+        super().test_cov_params()
 
     @pytest.mark.xfail(reason="Test has not been implemented for this class.",
                        strict=True, raises=NotImplementedError)
@@ -1634,7 +1634,7 @@ def test_issue_339():
     smry = "\n".join(res1.summary().as_text().split('\n')[9:])
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     test_case_file = os.path.join(cur_dir, 'results', 'mn_logit_summary.txt')
-    with open(test_case_file, 'r', encoding="utf-8") as fd:
+    with open(test_case_file, encoding="utf-8") as fd:
         test_case = fd.read()
     np.testing.assert_equal(smry, test_case[:-1])
     # smoke test for summary2
@@ -1659,7 +1659,9 @@ def test_negative_binomial_default_alpha_param():
         sm.families.NegativeBinomial()
     with pytest.warns(UserWarning, match='Negative binomial'
                       ' dispersion parameter alpha not set'):
-        sm.families.NegativeBinomial(link=sm.families.links.nbinom(alpha=1.0))
+        sm.families.NegativeBinomial(
+            link=sm.families.links.NegativeBinomial(alpha=1.0)
+        )
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         sm.families.NegativeBinomial(alpha=1.0)
@@ -1704,7 +1706,7 @@ def test_mnlogit_factor():
     res = mod.fit(disp=0)
     # smoke tests
     params = res.params
-    summary = res.summary()
+    res.summary()
     predicted = res.predict(exog.iloc[:5, :])
     # check endog is series with no name #8672
     endogn = dta['endog']
@@ -1715,7 +1717,7 @@ def test_mnlogit_factor():
     mod = smf.mnlogit('PID ~ ' + ' + '.join(dta.exog.columns), dta.data)
     res2 = mod.fit(disp=0)
     params_f = res2.params
-    summary = res2.summary()
+    res2.summary()
     assert_allclose(params_f, params, rtol=1e-10)
     predicted_f = res2.predict(dta.exog.iloc[:5, :])
     assert_allclose(predicted_f, predicted, rtol=1e-10)

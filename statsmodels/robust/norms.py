@@ -1,6 +1,6 @@
 import numpy as np
 
-# TODO: add plots to weighting functions for online docs.
+from . import _tables
 
 
 def _cabs(x):
@@ -38,6 +38,11 @@ class RobustNorm:
     R Venables, B Ripley. 'Modern Applied Statistics in S'
         Springer, New York, 2002.
     """
+
+    continuous = 1
+
+    def __repr__(self):
+        return self.__class__.__name__
 
     def rho(self, z):
         """
@@ -96,6 +101,12 @@ class LeastSquares(RobustNorm):
     --------
     statsmodels.robust.norms.RobustNorm
     """
+
+    continuous = 2
+    redescending = "not"
+
+    def max_rho(self):
+        return np.inf
 
     def rho(self, z):
         """
@@ -166,6 +177,7 @@ class LeastSquares(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
+        z = np.asarray(z)
         return np.ones(z.shape, np.float64)
 
 
@@ -184,8 +196,25 @@ class HuberT(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
+    continuous = 1
+    redescending = "not"
+
     def __init__(self, t=1.345):
         self.t = t
+
+    def _set_tuning_param(self, c, inplace=False):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        if inplace:
+            self.t = c
+            return self
+        else:
+            return self.__class__(t=c)
+
+    def max_rho(self):
+        return np.inf
 
     def _subset(self, z):
         """
@@ -294,8 +323,26 @@ class RamsayE(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
+    continuous = 2
+    redescending = "soft"
+
     def __init__(self, a=.3):
         self.a = a
+
+    def _set_tuning_param(self, c, inplace=False):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        # todo : change default to inplace=False, when tools are fixed
+        if inplace:
+            self.a = c
+            return self
+        else:
+            return self.__class__(a=c)
+
+    def max_rho(self):
+        return np.inf
 
     def rho(self, z):
         r"""
@@ -384,8 +431,26 @@ class AndrewWave(RobustNorm):
     --------
     statsmodels.robust.norms.RobustNorm
     """
+
+    continuous = 1
+    redescending = "hard"
+
     def __init__(self, a=1.339):
         self.a = a
+
+    def _set_tuning_param(self, c, inplace=False):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        if inplace:
+            self.a = c
+            return self
+        else:
+            return self.__class__(a=c)
+
+    def max_rho(self):
+        return 2 * self.a**2
 
     def _subset(self, z):
         """
@@ -411,7 +476,7 @@ class AndrewWave(RobustNorm):
             .. math::
 
                 rho(z) & = a^2 *(1-cos(z/a)), |z| \leq a\pi \\
-                rho(z) & = 2a, |z|>q\pi
+                rho(z) & = 2a^2, |z|>a\pi
         """
 
         a = self.a
@@ -505,8 +570,25 @@ class TrimmedMean(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
+    continuous = 0
+    redescending = "hard"
+
     def __init__(self, c=2.):
         self.c = c
+
+    def _set_tuning_param(self, c, inplace=False):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        if inplace:
+            self.c = c
+            return self
+        else:
+            return self.__class__(c=c)
+
+    def max_rho(self):
+        return self.rho(self.c)
 
     def _subset(self, z):
         """
@@ -611,10 +693,31 @@ class Hampel(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
+    continuous = 1
+    redescending = "hard"
+
     def __init__(self, a=2., b=4., c=8.):
         self.a = a
         self.b = b
         self.c = c
+
+    def _set_tuning_param(self, c, inplace=False):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        a = c / 4
+        b = c / 2
+        if inplace:
+            self.c = c
+            self.a = a
+            self.b = b
+            return self
+        else:
+            return self.__class__(a=a, b=b, c=c)
+
+    def max_rho(self):
+        return self.rho(self.c)
 
     def _subset(self, z):
         """
@@ -786,8 +889,58 @@ class TukeyBiweight(RobustNorm):
     Tukey's biweight is sometime's called bisquare.
     """
 
+    continuous = 2
+    redescending = "hard"
+
     def __init__(self, c=4.685):
         self.c = c
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(c={self.c})"
+
+    @classmethod
+    def get_tuning(cls, bp=None, eff=None):
+        """Tuning parameter for given breakdown point or efficiency.
+
+        This currently only return values from a table.
+
+        Parameters
+        ----------
+        bp : float in [0.05, 0.5] or None
+            Required breakdown point
+            Either bp or eff has to be specified, but not both.
+        eff : float or None
+            Required asymptotic efficiency.
+            Either bp or eff has to be specified, but not both.
+
+        Returns
+        -------
+        float : tuning parameter.
+
+        """
+        if ((bp is None and eff is None) or
+                (bp is not None and eff is not None)):
+            raise ValueError("exactly one of bp and eff needs to be provided")
+
+        if bp is not None:
+            return _tables.tukeybiweight_bp[bp]
+        elif eff is not None:
+            return _tables.tukeybiweight_eff[eff]
+
+    def _set_tuning_param(self, c, inplace=False):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        # todo : change default to inplace=False, when tools are fixed
+        if inplace:
+            self.c = c
+            return self
+        else:
+            return self.__class__(c=c)
+
+    def max_rho(self):
+        return self.rho(self.c)
 
     def _subset(self, z):
         """
@@ -808,7 +961,7 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = -(1 - (z/c)**2)**3 * c**2/6.   for \|z\| <= R
+            rho(z) = -(1 - (z/c)**2)**3 * c**2/6 + c**2/6   for \|z\| <= R
 
             rho(z) = 0                              for \|z\| > R
         """
@@ -857,7 +1010,7 @@ class TukeyBiweight(RobustNorm):
 
             psi(z) = 0                          for \|z\| > R
         """
-
+        z = np.asarray(z)
         subset = self._subset(z)
         return (1 - (z / self.c)**2)**2 * subset
 
@@ -872,6 +1025,272 @@ class TukeyBiweight(RobustNorm):
         subset = self._subset(z)
         return subset * ((1 - (z/self.c)**2)**2
                          - (4*z**2/self.c**2) * (1-(z/self.c)**2))
+
+
+class TukeyQuartic(RobustNorm):
+    """
+
+    Varinant of Tukey's biweight function with power 4 for M-estimation.
+
+    Parameters
+    ----------
+    c : float, optional
+        The tuning constant for Tukey's Biweight.  The default value is
+        c = ???.
+
+    Notes
+    -----
+    This is a variation of Tukey's biweight (bisquare) function where
+    the weight function has power 4 instead of power 2 in the inner term.
+    """
+
+    continuous = 2
+    redescending = "hard"
+
+    def __init__(self, c=3.61752, k=4):
+        # TODO: c needs to be changed if k != 4
+        # also, I think implementation assumes k is even integer
+        self.c = c
+        self.k = k
+
+    def _set_tuning_param(self, c, inplace=False):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        if inplace:
+            self.c = c
+            return self
+        else:
+            return self.__class__(c=c, k=self.k)
+
+    def max_rho(self):
+        return self.rho(self.c)
+
+    def _subset(self, z):
+        """
+        TukeyQuartic is defined piecewise over the range of z
+        """
+        z = np.abs(np.asarray(z))
+        return np.less_equal(z, self.c)
+
+    def rho(self, z):
+        r"""
+        The robust criterion function for TukeyQuartic norm.
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        rho : ndarray
+            rho(z) = 1 / 2 * z**2 * (1 - 4 / (k + 2) * x**k +
+                     1 / (k + 1) * x**(2 * k))   for \|z\| <= c
+
+            rho(z) = 0                              for \|z\| > c
+
+            where x = z / c
+        """
+        c = self.c
+        k = self.k
+        subset = self._subset(z)
+        x = z / c
+        rhoc = 1 / 2 * c**2 * (1 - 4 / (k + 2) + 1 / (k + 1))
+        # integral x (1 - x^k)^2 dx =
+        #     1/2 x^2 (x^(2 k)/(k + 1) - (4 x^k)/(k + 2) + 1) + constant
+        # integral x (1 - (x/c)^k)^2 dx =
+        #     1/2 x^2 (-(4 (x/c)^k)/(k + 2) + (x/c)^(2 k)/(k + 1) + 1) +
+        #     constant
+        rh = (
+            subset * 1 / 2 * z**2 *
+                (1 - 4 / (k + 2) * x**k + 1 / (k + 1) * x**(2 * k)) +  # noqa
+            (1 - subset) * rhoc
+            )
+        return rh
+
+    def psi(self, z):
+        r"""
+        The psi function of TukeyQuartic norm.
+
+        The analytic derivative of rho.
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        psi : ndarray
+            psi(z) = z*(1 - (z/c)**4)**2        for \|z\| <= c
+
+            psi(z) = psi(c)                     for \|z\| > c
+        """
+        k = self.k
+        z = np.asarray(z)
+        subset = self._subset(z)
+        return z * (1 - (z / self.c)**k)**2 * subset
+
+    def weights(self, z):
+        r"""
+         TukeyQuartic weighting function for the IRLS algorithm.
+
+        The psi function scaled by z.
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        weights : ndarray
+            psi(z) = (1 - (z/c)**4)**2          for \|z\| <= R
+
+            psi(z) = 0                          for \|z\| > R
+        """
+        k = self.k
+        z = np.asarray(z)
+        subset = self._subset(z)
+        return (1 - (z / self.c)**k)**2 * subset
+
+    def psi_deriv(self, z):
+        """
+        The derivative of the TukeyQuartic psi function.
+
+        Notes
+        -----
+        Used to estimate the robust covariance matrix.
+        """
+        c = self.c
+        k = self.k
+        subset = self._subset(z)
+        x = z / c
+
+        # d/dx(x (1 - (x/c)^k)^2) = -(1 - (x/c)^k) (2 k (x/c)^k + (x/c)^k - 1)
+        return subset * (1 - x**k) * (1 - (2 * k + 1) * x**k)
+
+
+class StudentT(RobustNorm):
+    """Robust norm based on t distribution.
+
+    Rho is a rescaled version of the t-loglikelihood function after dropping
+    constant terms.
+    The norms are rescaled so that the largest weights are 1 and
+    the second derivative of the rho function at zero is equal to 1.
+
+    The maximum likelihood estimator based on the loglikelihood
+    function of the t-distribution is available in
+    ``statsmodels.miscmodels`, which can be used to also
+    estimate scale and degrees of freedom by MLE.
+
+    """
+
+    continuous = 2
+    redescending = "soft"
+
+    def __init__(self, c=2.3849, df=4):
+        self.c = c
+        self.df = df
+
+    def _set_tuning_param(self, c, inplace=False):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        if inplace:
+            self.c = c
+            return self
+        else:
+            return self.__class__(c=c, df=self.df)
+
+    def max_rho(self):
+        return np.inf
+
+    def rho(self, z):
+        """
+        The rho function of the StudentT norm.
+
+        Parameters
+        ----------
+        z : ndarray
+            1d array
+
+        Returns
+        -------
+        rho : ndarray
+            rho(z) = (c**2 * df / 2.) * log(df + (z / c)**2) - const
+            The ``const`` shifts the rho function so that rho(0) = 0.
+        """
+        c = self.c
+        df = self.df
+        z = np.asarray(z)
+        const = (c**2 * df / 2.) * np.log(df) if df != 0 else 0
+        return (c**2 * df / 2.) * np.log(df + (z / c)**2) - const
+
+    def psi(self, z):
+        """
+        The psi function of the StudentT norm.
+
+        The analytic derivative of rho.
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        psi : ndarray
+            psi(z) = z
+        """
+
+        c = self.c
+        df = self.df
+        z = np.asarray(z)
+        return z * df / (df + (z / c)**2)
+
+    def weights(self, z):
+        """
+        The weighting function for the IRLS algorithm of the StudentT norm.
+
+        The psi function scaled by the input z
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        weights : ndarray
+            weights(z) = np.ones(z.shape)
+        """
+
+        c = self.c
+        df = self.df
+        z = np.asarray(z)
+        return df / (df + (z / c)**2)
+
+    def psi_deriv(self, z):
+        """
+        The derivative of the psi function of the StudentT norm.
+
+        Returns
+        -------
+        psi_deriv : ndarray
+            ones(z.shape)
+
+        Notes
+        -----
+        Used to estimate the robust covariance matrix.
+        """
+        c = self.c
+        df = self.df
+        x = np.asarray(z) / c
+        return - 2 * df * x**2 / (df + x**2)**2 + df / (df + x**2)
 
 
 class MQuantileNorm(RobustNorm):
@@ -923,6 +1342,8 @@ class MQuantileNorm(RobustNorm):
        Squares Estimation and Testing.” Econometrica 55 (4): 819–47.
        doi:10.2307/1911031.
     """
+
+    continuous = 1
 
     def __init__(self, q, base_norm):
         self.q = q

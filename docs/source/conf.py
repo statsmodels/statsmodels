@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # statsmodels documentation build configuration file, created by
 # sphinx-quickstart on Sat Jan 22 11:17:58 2011.
@@ -86,7 +85,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'statsmodels'
-copyright = '2009-2023, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+copyright = '2009-2025, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 autosummary_generate = True
 autoclass_content = 'class'
@@ -178,7 +177,6 @@ html_theme_options = {
     "site_url": site_url,
     "repo_url": "https://github.com/statsmodels/statsmodels/",
     "repo_name": "statsmodels",
-    "repo_type": "github",
     "palette": {"primary": "indigo", "accent": "blue"},
     "globaltoc_collapse": True,
     "toc_title": "Contents",
@@ -297,8 +295,8 @@ htmlhelp_basename = 'statsmodelsdoc'
 # (source start file, target name, title, author,
 # documentclass [howto/manual]).
 latex_documents = [
-    ('index', 'statsmodels.tex', u'statsmodels Documentation',
-     u'Josef Perktold, Skipper Seabold', 'manual'),
+    ('index', 'statsmodels.tex', 'statsmodels Documentation',
+     'Josef Perktold, Skipper Seabold', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -334,18 +332,18 @@ imgmath_use_preview = True
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'statsmodels', u'statsmodels Documentation',
-     [u'Josef Perktold, Skipper Seabold, Jonathan Taylor'], 1)
+    ('index', 'statsmodels', 'statsmodels Documentation',
+     ['Josef Perktold, Skipper Seabold, Jonathan Taylor'], 1)
 ]
 
 # Options for Epub output
 
 # Bibliographic Dublin Core info.
-epub_title = u'statsmodels'
-epub_author = u'Josef Perktold, Skipper Seabold'
-epub_publisher = u'Josef Perktold, Skipper Seabold'
-epub_copyright = u'2009-2023, Josef Perktold, Skipper Seabold, ' \
-                 u'Jonathan Taylor, statsmodels-developers'
+epub_title = 'statsmodels'
+epub_author = 'Josef Perktold, Skipper Seabold'
+epub_publisher = 'Josef Perktold, Skipper Seabold'
+epub_copyright = '2009-2023, Josef Perktold, Skipper Seabold, ' \
+                 'Jonathan Taylor, statsmodels-developers'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

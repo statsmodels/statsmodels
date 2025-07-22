@@ -1,13 +1,13 @@
-import statsmodels.regression.linear_model as lm_
-import statsmodels.discrete.discrete_model as dm_
 import statsmodels.discrete.conditional_models as dcm_
-import statsmodels.regression.mixed_linear_model as mlm_
-import statsmodels.genmod.generalized_linear_model as glm_
-import statsmodels.robust.robust_linear_model as roblm_
-import statsmodels.regression.quantile_regression as qr_
+import statsmodels.discrete.discrete_model as dm_
 import statsmodels.duration.hazard_regression as hr_
-import statsmodels.genmod.generalized_estimating_equations as gee_
 import statsmodels.gam.generalized_additive_model as gam_
+import statsmodels.genmod.generalized_estimating_equations as gee_
+import statsmodels.genmod.generalized_linear_model as glm_
+import statsmodels.regression.linear_model as lm_
+import statsmodels.regression.mixed_linear_model as mlm_
+import statsmodels.regression.quantile_regression as qr_
+import statsmodels.robust.robust_linear_model as roblm_
 
 gls = lm_.GLS.from_formula
 wls = lm_.WLS.from_formula

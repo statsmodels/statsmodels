@@ -100,7 +100,7 @@ class BoxCox:
             else:
                 y = np.power(lmbda * x + 1, 1. / lmbda)
         else:
-            raise ValueError("Method '{0}' not understood.".format(method))
+            raise ValueError(f"Method '{method}' not understood.")
 
         return y
 
@@ -134,7 +134,7 @@ class BoxCox:
         method = method.lower()
 
         if len(bounds) != 2:
-            raise ValueError("Bounds of length {0} not understood."
+            raise ValueError("Bounds of length {} not understood."
                              .format(len(bounds)))
         elif bounds[0] >= bounds[1]:
             raise ValueError("Lower bound exceeds upper bound.")
@@ -144,7 +144,7 @@ class BoxCox:
         elif method == 'loglik':
             lmbda = self._loglik_boxcox(x, bounds=bounds, **kwargs)
         else:
-            raise ValueError("Method '{0}' not understood.".format(method))
+            raise ValueError(f"Method '{method}' not understood.")
 
         return lmbda
 
@@ -188,7 +188,7 @@ class BoxCox:
         elif scale == 'mad':
             dispersion = mad(grouped_data, axis=1)
         else:
-            raise ValueError("Scale '{0}' not understood.".format(scale))
+            raise ValueError(f"Scale '{scale}' not understood.")
 
         def optim(lmbda):
             rat = np.divide(dispersion, np.power(mean, 1 - lmbda))  # eq 6, p 40

@@ -383,13 +383,13 @@ class TestHamiltonAR2Short(MarkovAutoregression):
             'llf_fit': -4.0523073,
             'llf_fit_em': -8.885836
         }
-        super(TestHamiltonAR2Short, cls).setup_class(
+        super().setup_class(
             true, rgnp[-10:], k_regimes=2, order=2, switching_ar=False)
 
     def test_fit_em(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            super(TestHamiltonAR2Short, self).test_fit_em()
+            super().test_fit_em()
 
     def test_filter_output(self, **kwargs):
         res = self.result
@@ -506,7 +506,7 @@ class TestHamiltonAR4(MarkovAutoregression):
             'bse_oim': np.r_[.0965189, .0377362, .2645396, .0745187, np.nan,
                              .1199942, .137663, .1069103, .1105311, ]
         }
-        super(TestHamiltonAR4, cls).setup_class(
+        super().setup_class(
             true, rgnp, k_regimes=2, order=4, switching_ar=False)
 
     def test_filtered_regimes(self):
@@ -556,7 +556,7 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
             'predict_filtered': results.iloc[3:]['switchar2_fyhat'],
             'predict_smoothed': results.iloc[3:]['switchar2_syhat'],
         }
-        super(TestHamiltonAR2Switch, cls).setup_class(
+        super().setup_class(
             true, rgnp, k_regimes=2, order=2)
 
     def test_smoothed_marginal_probabilities(self):
@@ -659,7 +659,7 @@ class TestHamiltonAR1Switch(MarkovAutoregression):
             'llf_fit': -186.7575,
             'llf_fit_em': -189.25446
         }
-        super(TestHamiltonAR1Switch, cls).setup_class(
+        super().setup_class(
             true, rgnp, k_regimes=2, order=1)
 
     def test_filtered_regimes(self):
@@ -797,7 +797,7 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
             'llf_fit_em': -163.914049
         }
         exog_tvtp = np.c_[np.ones(len(rgnp)), rec]
-        super(TestHamiltonAR1SwitchTVTP, cls).setup_class(
+        super().setup_class(
             true, rgnp, k_regimes=2, order=1, exog_tvtp=exog_tvtp)
 
     @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
@@ -834,7 +834,7 @@ class TestFilardo(MarkovAutoregression):
         endog = cls.mar_filardo['dlip'].iloc[1:].values
         exog_tvtp = add_constant(
             cls.mar_filardo['dmdlleading'].iloc[:-1].values)
-        super(TestFilardo, cls).setup_class(
+        super().setup_class(
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
@@ -879,7 +879,7 @@ class TestFilardoPandas(MarkovAutoregression):
         endog = cls.mar_filardo['dlip'].iloc[1:]
         exog_tvtp = add_constant(
             cls.mar_filardo['dmdlleading'].iloc[:-1])
-        super(TestFilardoPandas, cls).setup_class(
+        super().setup_class(
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 

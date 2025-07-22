@@ -31,7 +31,7 @@ def test_pickle():
         os.remove(path_str)
         os.remove(path_pathlib)
         os.rmdir(tmpdir)
-    except (OSError, IOError):
+    except OSError:
         pass
     assert not os.path.exists(tmpdir)
 

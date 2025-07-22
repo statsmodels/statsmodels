@@ -385,7 +385,7 @@ class MIResults(LikelihoodModelResults):
 
     def __init__(self, mi, model, params, normalized_cov_params):
 
-        super(MIResults, self).__init__(model, params, normalized_cov_params)
+        super().__init__(model, params, normalized_cov_params)
         self.mi = mi
         self._model = model
 

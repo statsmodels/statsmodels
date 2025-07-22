@@ -47,7 +47,6 @@ def test_all(close_figures, reset_randomstate):
     # Tall and skinny
     plt.figure(figsize=(4,12))
     ax = plt.axes()
-    vals = np.arange(40)
     fig = dot_plot(points, ax=ax)
     ax.set_title("Tall and skinny dotplot")
     ax.set_xlabel("x axis label")
@@ -56,7 +55,6 @@ def test_all(close_figures, reset_randomstate):
     # Short and wide
     plt.figure(figsize=(12,4))
     ax = plt.axes()
-    vals = np.arange(40)
     fig = dot_plot(points, ax=ax, horizontal=False)
     ax.set_title("Short and wide dotplot")
     ax.set_ylabel("y axis label")
@@ -251,7 +249,7 @@ def test_all(close_figures, reset_randomstate):
                   horizontal=False, styles_order=styles_order)
     handles, labels = ax.get_legend_handles_labels()
     lh = dict(zip(labels, handles))
-    handles = [lh[l] for l in styles_order]
+    handles = [lh[idx] for idx in styles_order]
     leg = plt.figlegend(handles, styles_order, loc="center right", numpoints=1,
                         handletextpad=0.0001)
     leg.draw_frame(False)
@@ -373,8 +371,12 @@ def test_all(close_figures, reset_randomstate):
     plt.clf()
     points = range(20)
     lines = ["%d::%d" % (i, 100+i) for i in range(20)]
-    fmt_left = lambda x : "lft_" + x
-    fmt_right = lambda x : "rgt_" + x
+
+    def fmt_left(x):
+        return "lft_" + x
+
+    def fmt_right(x):
+        return "rgt_" + x
     ax = plt.axes()
     fig = dot_plot(points, lines=lines, ax=ax, split_names="::",
                    fmt_left_name=fmt_left, fmt_right_name=fmt_right)

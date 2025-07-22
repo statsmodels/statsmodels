@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This file contains a Python version of the gradient projection rotation
 algorithms (GPA) developed by Bernaards, C.A. and Jennrich, R.I.
@@ -68,7 +67,10 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         if ff is None:
             raise ValueError('ff should be provided if vgQ is not')
         derivative_free = True
-        Gff = lambda x: Gf(x, lambda y: ff(T=y, A=A, L=None))
+
+        def Gff(x):
+            return Gf(x, lambda y: ff(T=y, A=A, L=None))
+
     else:
         derivative_free = False
     if T is None:

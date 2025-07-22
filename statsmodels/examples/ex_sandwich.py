@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """examples for sandwich estimators of covariance
 
 Author: Josef Perktold

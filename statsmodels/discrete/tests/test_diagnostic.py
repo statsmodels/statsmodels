@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Sep 15 13:38:13 2017
 
@@ -9,9 +8,9 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pytest
 
-from statsmodels.discrete.discrete_model import Poisson
 import statsmodels.discrete._diagnostics_count as dia
 from statsmodels.discrete.diagnostic import PoissonDiagnostic
+from statsmodels.discrete.discrete_model import Poisson
 
 
 class TestCountDiagnostic:
@@ -82,7 +81,6 @@ class TestPoissonDiagnosticClass():
         n_groups = 2
         labels = np.arange(n_groups)
         x = np.repeat(labels, np.array([40, 60]) * nr)
-        nobs = x.shape[0]
         exog = (x[:, None] == labels).astype(np.float64)
         # reparameterize to explicit constant
         # exog[:, 1] = 1
@@ -117,7 +115,7 @@ class TestPoissonDiagnosticClass():
         respoi = Poisson(self.endog, self.exog).fit(disp=0)
         dia = PoissonDiagnostic(respoi)
         t_disp = dia.test_dispersion()
-        res_disp = np.column_stack(((t_disp.statistic, t_disp.pvalue)))
+        res_disp = np.column_stack((t_disp.statistic, t_disp.pvalue))
         assert_allclose(res_disp, res_dispersion, rtol=1e-8)
 
         nobs = self.endog.shape[0]

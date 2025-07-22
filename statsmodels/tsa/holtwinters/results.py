@@ -1,11 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.special import inv_boxcox
-from scipy.stats import (
-    boxcox,
-    rv_continuous,
-    rv_discrete,
-)
+from scipy.stats import boxcox, rv_continuous, rv_discrete
 from scipy.stats.distributions import rv_frozen
 
 from statsmodels.base.data import PandasData
@@ -307,9 +303,7 @@ class HoltWintersResults(Results):
         elif isinstance(orig_endog, pd.Series):
             dep_variable = orig_endog.name
         seasonal_periods = (
-            None
-            if self.model.seasonal is None
-            else self.model.seasonal_periods
+            None if self.model.seasonal is None else self.model.seasonal_periods
         )
         lookup = {
             "add": "Additive",
@@ -324,7 +318,7 @@ class HoltWintersResults(Results):
             transform if isinstance(transform, str) else self.params["lamda"]
         )
         if isinstance(box_cox_coeff, float):
-            box_cox_coeff = "{:>10.5f}".format(box_cox_coeff)
+            box_cox_coeff = f"{box_cox_coeff:>10.5f}"
         top_left = [
             ("Dep. Variable:", [dep_variable]),
             ("Model:", [model.__class__.__name__]),
@@ -338,18 +332,16 @@ class HoltWintersResults(Results):
 
         top_right = [
             ("No. Observations:", [str(len(self.model.endog))]),
-            ("SSE", ["{:5.3f}".format(self.sse)]),
-            ("AIC", ["{:5.3f}".format(self.aic)]),
-            ("BIC", ["{:5.3f}".format(self.bic)]),
-            ("AICC", ["{:5.3f}".format(self.aicc)]),
+            ("SSE", [f"{self.sse:5.3f}"]),
+            ("AIC", [f"{self.aic:5.3f}"]),
+            ("BIC", [f"{self.bic:5.3f}"]),
+            ("AICC", [f"{self.aicc:5.3f}"]),
             ("Date:", None),
             ("Time:", None),
         ]
 
         smry = Summary()
-        smry.add_table_2cols(
-            self, gleft=top_left, gright=top_right, title=title
-        )
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, title=title)
         formatted = self.params_formatted  # type: pd.DataFrame
 
         def _fmt(x):
@@ -360,9 +352,9 @@ class HoltWintersResults(Results):
             if abs_x != 0:
                 scale = int(np.log10(abs_x))
             if scale > 4 or scale < -3:
-                return "{:>20.5g}".format(x)
+                return f"{x:>20.5g}"
             dec = min(7 - scale, 7)
-            fmt = "{{:>20.{0}f}}".format(dec)
+            fmt = f"{{:>20.{dec}f}}"
             return fmt.format(x)
 
         tab = []
@@ -370,8 +362,8 @@ class HoltWintersResults(Results):
             tab.append(
                 [
                     _fmt(vals.iloc[1]),
-                    "{0:>20}".format(vals.iloc[0]),
-                    "{0:>20}".format(str(bool(vals.iloc[2]))),
+                    f"{vals.iloc[0]:>20}",
+                    f"{str(bool(vals.iloc[2])):>20}",
                 ]
             )
         params_table = SimpleTable(
@@ -595,10 +587,7 @@ class HoltWintersResults(Results):
         # if model has no seasonal component, use 1 as period length
         m = max(self.model.seasonal_periods, 1)
         n_params = (
-            2
-            + 2 * self.model.has_trend
-            + (m + 1) * self.model.has_seasonal
-            + damped
+            2 + 2 * self.model.has_trend + (m + 1) * self.model.has_seasonal + damped
         )
         mul_seasonal = seasonal == "mul"
         mul_trend = trend == "mul"
@@ -639,14 +628,10 @@ class HoltWintersResults(Results):
             b[-1, :] = _trend[start_idx - 1]
         if 0 <= start_idx and start_idx <= m:
             initial_seasons = self.params["initial_seasons"]
-            _s = np.concatenate(
-                (initial_seasons[start_idx:], season[:start_idx])
-            )
+            _s = np.concatenate((initial_seasons[start_idx:], season[:start_idx]))
             s[-m:, :] = np.tile(_s, (repetitions, 1)).T
         else:
-            s[-m:, :] = np.tile(
-                season[start_idx - m : start_idx], (repetitions, 1)
-            ).T
+            s[-m:, :] = np.tile(season[start_idx - m : start_idx], (repetitions, 1)).T
 
         # set neutral values for unused features
         if trend is None:
@@ -717,9 +702,7 @@ class HoltWintersResults(Results):
                 eta = y0
                 kappa_l = 0 if mul_seasonal else s0
                 kappa_b = (
-                    kappa_l / lvl[t - 1, :]
-                    if mul_trend
-                    else kappa_l + lvl[t - 1, :]
+                    kappa_l / lvl[t - 1, :] if mul_trend else kappa_l + lvl[t - 1, :]
                 )
                 kappa_s = 0 if mul_seasonal else l0
 

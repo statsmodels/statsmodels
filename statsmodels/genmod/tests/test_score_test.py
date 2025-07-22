@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Thu May 31 15:39:15 2018
 
@@ -189,7 +188,7 @@ class TestScoreTestPoisson(TestScoreTest):
         cls.model_drop = Poisson(y, x)
 
     def test_wald_score(self):
-        super(TestScoreTestPoisson, self).test_wald_score()
+        super().test_wald_score()
 
 
 class TestScoreTestPoissonDispersed(TestScoreTestPoisson):

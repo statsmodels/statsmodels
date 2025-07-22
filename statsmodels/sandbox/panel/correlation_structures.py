@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Correlation and Covariance Structures
 
 Created on Sat Dec 17 20:46:05 2011

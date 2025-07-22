@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for fit_constrained
 Tests for Poisson and Binomial are in discrete

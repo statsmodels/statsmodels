@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Lowess - wrapper for cythonized extension
 
 Author : Chris Jordan-Squire

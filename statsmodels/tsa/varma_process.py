@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Helper and filter functions for VAR and VARMA, and basic VAR class
 
 Created on Mon Jan 11 11:04:23 2010
@@ -294,7 +293,6 @@ def trimone(x, front=0, back=0, axis=0):
     shape = np.array(x.shape)
     shape[axis] -= (front + back)
     #print(shape, front, back
-    shapearr = np.array(x.shape)
     startind = np.zeros(x.ndim)
     startind[axis] = front
     endind = startind + shape

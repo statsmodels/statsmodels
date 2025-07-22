@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Testing OLS robust covariance matrices against STATA
 
 Created on Mon Oct 28 15:25:14 2013
@@ -70,7 +69,7 @@ class CheckOLSRobust:
         res1 = self.res1
         res2 = self.res2
         rtol = getattr(self, "rtol", 1e-10)
-        rtolh = getattr(self, "rtolh", 1e-12)
+        getattr(self, "rtolh", 1e-12)
         mat = np.eye(len(res1.params))
         tt = res1.t_test(mat, cov_p=self.cov_robust)
         # has 'effect', 'pvalue', 'sd', 'tvalue'
@@ -344,11 +343,11 @@ class TestOLSRobust2LargeNew(TestOLSRobust1, CheckOLSRobustNewMixin):
 
     @pytest.mark.skip(reason="not refactored yet for `large`")
     def test_fvalue(self):
-        super(TestOLSRobust2LargeNew, self).test_fvalue()
+        super().test_fvalue()
 
     @pytest.mark.skip(reason="not refactored yet for `large`")
     def test_confint(self):
-        super(TestOLSRobust2LargeNew, self).test_confint()
+        super().test_confint()
 
 
 #######################################################
@@ -451,7 +450,7 @@ class TestOLSRobustCluster2Input(
 
         long_groups = self.groups.reshape(-1, 1)
         groups2 = pd.DataFrame(np.hstack((long_groups, long_groups)))
-        res = self.res1.get_robustcov_results(
+        self.res1.get_robustcov_results(
             "cluster", groups=groups2, use_correction=True, use_t=True
         )
 
@@ -520,7 +519,7 @@ class TestOLSRobustCluster2Large(
 
     @pytest.mark.skip(reason="GH#1189 issuecomment-29141741")
     def test_f_value(self):
-        super(TestOLSRobustCluster2Large, self).test_fvalue()
+        super().test_fvalue()
 
 
 class TestOLSRobustCluster2LargeFit(
@@ -557,7 +556,7 @@ class TestOLSRobustCluster2LargeFit(
 
     @pytest.mark.skip(reason="GH#1189 issuecomment-29141741")
     def test_fvalue(self):
-        super(TestOLSRobustCluster2LargeFit, self).test_fvalue()
+        super().test_fvalue()
 
 
 class TestOLSRobustClusterGS(CheckOLSRobustCluster, CheckOLSRobustNewMixin):

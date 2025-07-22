@@ -82,7 +82,7 @@ class SimulationSmoother(KalmanSmoother):
     def __init__(self, k_endog, k_states, k_posdef=None,
                  simulation_smooth_results_class=None,
                  simulation_smoother_classes=None, **kwargs):
-        super(SimulationSmoother, self).__init__(
+        super().__init__(
             k_endog, k_states, k_posdef, **kwargs
         )
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """F test for null hypothesis that coefficients in two regressions are the same
 
 see discussion in http://mail.scipy.org/pipermail/scipy-user/2010-March/024851.html
