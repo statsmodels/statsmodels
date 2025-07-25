@@ -247,12 +247,16 @@ class TestGEE:
         results = model.fit(cov_type='naive', start_params=[
                             3.295837, -2.197225])
 
-        logit_model = gee.GEE(endog, exog, groups,
-                              family=families.Binomial())
-        logit_results = logit_model.fit(cov_type='naive')
+        for k in 0,1:
+            # Check that groups can be strings
+            logit_model = gee.GEE(endog, exog, groups,
+                                  family=families.Binomial())
+            logit_results = logit_model.fit(cov_type='naive')
 
-        assert_allclose(results.params, -logit_results.params, rtol=1e-5)
-        assert_allclose(results.bse, logit_results.bse, rtol=1e-5)
+            assert_allclose(results.params, -logit_results.params, rtol=1e-5)
+            assert_allclose(results.bse, logit_results.bse, rtol=1e-5)
+
+            groups = groups.astype(str)
 
     def test_weighted(self):
 
