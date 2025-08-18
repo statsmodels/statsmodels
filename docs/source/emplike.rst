@@ -39,22 +39,22 @@ The main reference for empirical likelihood is::
 Examples
 --------
 
-.. ipython:: python
+.. try_examples::
 
-  import numpy as np
-  import statsmodels.api as sm
+  >>> import numpy as np
+  >>> import statsmodels.api as sm
 
-  # Generate Data
-  x = np.random.standard_normal(50)
+  >>> # Generate Data
+  >>> x = np.random.standard_normal(50)
 
-  # initiate EL
-  el = sm.emplike.DescStat(x)
+  >>> # initiate EL
+  >>> el = sm.emplike.DescStat(x)
 
-  # confidence interval for the mean
-  el.ci_mean()
+  >>> # confidence interval for the mean
+  >>> el.ci_mean()
 
-  # test variance is 1
-  el.test_var(1)
+  >>> # test variance is 1
+  >>> el.test_var(1)
 
 
 Module Reference

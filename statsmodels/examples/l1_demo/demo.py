@@ -10,7 +10,7 @@ Demonstrates l1 regularization for likelihood models.
 Use different models by setting mode = mnlogit, logit, or probit.
 
 Examples
--------
+--------
 $ python demo.py --get_l1_slsqp_results  logit
 
 >>> import demo

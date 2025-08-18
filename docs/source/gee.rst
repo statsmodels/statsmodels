@@ -19,19 +19,19 @@ Examples
 The following illustrates a Poisson regression with exchangeable correlation
 within clusters using data on epilepsy seizures.
 
-.. ipython:: python
+.. try_examples::
 
-    import statsmodels.api as sm
-    import statsmodels.formula.api as smf
+   >>> import statsmodels.api as sm
+   >>> import statsmodels.formula.api as smf
 
-    data = sm.datasets.get_rdataset('epil', package='MASS').data
+   >>> data = sm.datasets.get_rdataset('epil', package='MASS').data
 
-    fam = sm.families.Poisson()
-    ind = sm.cov_struct.Exchangeable()
-    mod = smf.gee("y ~ age + trt + base", "subject", data,
-                  cov_struct=ind, family=fam)
-    res = mod.fit()
-    print(res.summary())
+   >>> fam = sm.families.Poisson()
+   >>> ind = sm.cov_struct.Exchangeable()
+   >>> mod = smf.gee("y ~ age + trt + base", "subject", data,
+   >>>               cov_struct=ind, family=fam)
+   >>> res = mod.fit()
+   >>> print(res.summary())
 
 
 Several notebook examples of the use of GEE can be found on the Wiki:

@@ -78,16 +78,16 @@ profile likelihood analysis, likelihood ratio testing, and AIC.
 Examples
 --------
 
-.. ipython:: python
+.. try_examples::
 
-  import statsmodels.api as sm
-  import statsmodels.formula.api as smf
+  >>> import statsmodels.api as sm
+  >>> import statsmodels.formula.api as smf
 
-  data = sm.datasets.get_rdataset("dietox", "geepack").data
+  >>> data = sm.datasets.get_rdataset("dietox", "geepack").data
 
-  md = smf.mixedlm("Weight ~ Time", data, groups=data["Pig"])
-  mdf = md.fit()
-  print(mdf.summary())
+  >>> md = smf.mixedlm("Weight ~ Time", data, groups=data["Pig"])
+  >>> mdf = md.fit()
+  >>> print(mdf.summary())
 
 Detailed examples can be found here
 

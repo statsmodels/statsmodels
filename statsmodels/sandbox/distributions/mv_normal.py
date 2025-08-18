@@ -241,6 +241,7 @@ def expect_mc_bounds(dist, func=lambda x: 1, size=50000, lower=None, upper=None,
 
     Examples
     --------
+    >>> from statsmodels.sandbox.distributions import mv_normal as mve
     >>> mvn = mve.MVNormal([0,0],2.)
     >>> mve.expect_mc_bounds(mvn, lambda x: np.ones(x.shape[0]),
                                 lower=[-10,-10],upper=[0,0])
