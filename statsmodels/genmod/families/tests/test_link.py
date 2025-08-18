@@ -29,8 +29,8 @@ Links = [logit, inverse_power, sqrt, inverse_squared, identity,
          log, logc, probit, cauchy, cloglog, loglog, negbinom]
 
 # links with defined second derivative of inverse link.
-LinksISD = [inverse_power, sqrt, inverse_squared, identity,
-            logc, cauchy, probit, loglog]
+LinksISD = [logit, inverse_power, sqrt, inverse_squared, identity,
+            log, logc, probit, cauchy, cloglog, loglog]
 
 
 def get_domainvalue(link):
