@@ -71,11 +71,12 @@ class CheckGenericMixin:
         ss = "[0.05       0.95]"   # different formatting
         assert_(ss in str(summ))
 
-        summf = tt.summary_frame(alpha=0.1)
+        alpha = 0.1
+        summf = tt.summary_frame(alpha=alpha)
         pvstring_use_t = 'P>|z|' if res.use_t is False else 'P>|t|'
         tstring_use_t = 'z' if res.use_t is False else 't'
         cols = ['coef', 'std err', tstring_use_t, pvstring_use_t,
-                'Conf. Int. Low', 'Conf. Int. Upp.']
+                '[' + str(alpha/2), str(1-alpha/2) + ']']
         assert_array_equal(summf.columns.values, cols)
 
     def test_ftest_pvalues(self):

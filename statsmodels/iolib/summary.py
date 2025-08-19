@@ -521,10 +521,10 @@ def summary_params_frame(results, yname=None, xname=None, alpha=.05,
     # summary table. look up by modeltype
     if use_t:
         param_header = ['coef', 'std err', 't', 'P>|t|',
-                        'Conf. Int. Low', 'Conf. Int. Upp.']
+                        '[' + str(alpha/2), str(1-alpha/2) + ']']
     else:
         param_header = ['coef', 'std err', 'z', 'P>|z|',
-                        'Conf. Int. Low', 'Conf. Int. Upp.']
+                        '[' + str(alpha/2), str(1-alpha/2) + ']']
 
     _, xname = _getnames(results, yname=yname, xname=xname)
 

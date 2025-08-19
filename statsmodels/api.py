@@ -56,6 +56,9 @@ __all__ = [
     "iolib",
     "load",
     "load_pickle",
+    "add_params_summary",
+    "multi_model_summary",
+    "mosaic_model_summary",
     "multivariate",
     "nonparametric",
     "qqline",
@@ -125,6 +128,11 @@ from .graphics.gofplots import ProbPlot, qqline, qqplot, qqplot_2samples
 from .imputation.bayes_mi import MI, BayesGaussMI
 from .imputation.mice import MICE, MICEData
 from .iolib.smpickle import load_pickle
+from .iolib.summary_multi import (
+    add_params_summary,
+    multi_model_summary,
+    mosaic_model_summary,
+)
 from .multivariate import api as multivariate
 from .multivariate.factor import Factor
 from .multivariate.manova import MANOVA
