@@ -5,6 +5,9 @@ contains
 fleiss_kappa
 cohens_kappa
 
+gwets_ac1
+gwets_ac1_multiple
+
 aggregate_raters:
     helper function to get data into fleiss_kappa format
 to_table:
@@ -25,6 +28,7 @@ see also R package irr
 TODO
 ----
 standard errors and hypothesis tests for fleiss_kappa
+standard errors and hypothesis tests for gwets_ac1_multiple, gwets_ac1
 other statistics and tests,
    in R package irr, SAS has more
 inconsistent internal naming, changed variable names as I added more
@@ -191,6 +195,46 @@ def to_table(data, bins=None):
 
     return tt[0], bins_
 
+def gwets_ac1_multiple(table):
+    """Gwet's AC1 multi-rater agreement measure
+
+    Parameters
+    ----------
+    table : array_like, 2-D
+        assumes subjects in rows and categories in columns. Convert raw data
+    into this format by using
+    :func:`statsmodels.stats.inter_rater.aggregate_raters`
+
+    Returns
+    -------
+    ac1 : float
+        Gwet's AC1 statistic for inter rater agreement
+
+    Notes
+    -----
+    no variance or hypothesis tests yet
+
+    References
+    ----------
+
+    Gwet, K. L. 2008. "Computing inter-rater reliability and its
+    variance in the presence of high agreement." British Journal of
+    Mathematical and Statistical Psychology 61 (1):29–48.
+    https://doi.org/10.1348/000711006X126600.
+    """
+
+    table = np.asarray(table, float)
+    n, q = table.shape
+    n_prime = table[table.sum(axis=1) > 1].shape[0]
+    r_i = table.sum(axis=1)
+    r_i_mat = np.repeat(r_i, q).reshape(table.shape)
+    r_2 = (table * (table - 1))[r_i > 1]
+    r_i_sq = (r_i_mat * (r_i_mat - 1))[r_i > 1]
+    p_a = (1 / n_prime) * (r_2 / r_i_sq).sum()
+    pi_k = (table / r_i_mat).sum(axis=0)/n
+    p_e = (1 / (q - 1)) * (pi_k * (1 - pi_k)).sum()
+    return (p_a - p_e) / (1 - p_e)
+
 def fleiss_kappa(table, method='fleiss'):
     """Fleiss' and Randolph's kappa multi-rater agreement measure
 
@@ -266,6 +310,46 @@ def fleiss_kappa(table, method='fleiss'):
     kappa = (p_mean - p_mean_exp) / (1- p_mean_exp)
     return kappa
 
+
+def gwets_ac1(table):
+    """Gwet's AC1 multi-rater agreement measure
+
+    Parameters
+    ----------
+    table : array_like, 2-D
+        square array with results of two raters, one rater in rows,
+        second rater in columns. Raw data may be transformed into this
+        format by using
+        :func:`statsmodels.stats.inter_rater.to_table`
+
+    Returns
+    -------
+    ac1 : float
+        Gwet's AC1 statistic for inter rater agreement
+
+    Notes
+    -----
+    no variance or hypothesis tests yet
+
+    References
+    ----------
+
+    Gwet, K. L. 2008. "Computing inter-rater reliability and its
+    variance in the presence of high agreement." British Journal of
+    Mathematical and Statistical Psychology 61 (1):29–48.
+    https://doi.org/10.1348/000711006X126600.
+    """
+
+    table = np.asarray(table, float)
+    n = table.sum()
+    q = table.shape[0]
+    p_a = np.trace(table) / n
+    p_k_plus = table.sum(axis=0) / n
+    p_plus_k = table.sum(axis=1) / n
+    pi_k = (p_k_plus + p_plus_k) / 2
+    p_e = (1 / (q - 1)) * (pi_k * (1 - pi_k)).sum()
+
+    return (p_a - p_e) / (1 - p_e)
 
 def cohens_kappa(table, weights=None, return_results=True, wt=None):
     '''Compute Cohen's kappa with variance and equal-zero test
