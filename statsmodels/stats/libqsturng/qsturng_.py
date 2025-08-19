@@ -679,10 +679,10 @@ def _qsturng(p, r, v):
 
     if p < .9:
         if v < 2:
-            raise ValueError('v must be > 2 when p < .9')
+            raise ValueError('v must be >= 2 when p < .9')
     else:
         if v < 1:
-            raise ValueError('v must be > 1 when p >= .9')
+            raise ValueError('v must be >= 1 when p >= .9')
 
     # The easy case. A tabled value is requested.
 
@@ -825,19 +825,29 @@ def _psturng(q, r, v):
     def opt_func(p, r, v):
         return np.squeeze(abs(_qsturng(p, r, v) - q))
 
-    if v == 1:
-        if q < _qsturng(.9, r, 1):
-            return .1
-        elif q > _qsturng(.999, r, 1):
+    if 1 <= v < 2:
+        if q < _qsturng(.9, r, v):
+            # qtukey in R does not cover v < 2 for any p. And the papers referenced all
+            # assume p >= 0.9 for 1 <= v < 2.  In this case, where q < the critical value
+            # for p = 0.9 and v < 2, we cannot return a p-value as it could be anything
+            # more than 0.1 and existing sources, including the R implementations do not
+            # support this computation.
+            raise ValueError(
+                f"v must be >= 2 when p < 0.9 and the q passed {q} is less than"
+                f" {_qsturng(0.9, r, v)} which is the q corresponding to p = 0.9,"
+                f" r = {r} and v = {v}."
+            )
+        elif q > _qsturng(0.999, r, 1):
+            # Setting p = 0.001 = 1-0.999 for all q larger than when p
             return .001
-        soln = 1. - fminbound(opt_func, .9, .999, args=(r,v))
+        soln = 1. - fminbound(opt_func, 0.9, 0.999, args=(r,v))
         return np.atleast_1d(soln)
     else:
-        if q < _qsturng(.1, r, v):
-            return .9
-        elif q > _qsturng(.999, r, v):
-            return .001
-        soln = 1. - fminbound(opt_func, .1, .999, args=(r,v))
+        if q < _qsturng(0.1, r, v):
+            return 0.9
+        elif q > _qsturng(0.999, r, v):
+            return 0.001
+        soln = 1. - fminbound(opt_func, 0.1, 0.999, args=(r,v))
         return np.atleast_1d(soln)
 
 def _psturng_scalar(q, r, v):

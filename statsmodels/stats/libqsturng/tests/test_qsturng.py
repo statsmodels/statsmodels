@@ -150,11 +150,30 @@ class TestPsturng:
                                           [6, 6, 6]),
                                   5)
 
-    def test_v_equal_one(self):
-        assert_almost_equal(.1, psturng(.2,5,1), 5)
+    def test_v_less_than_two(self):
+        assert_almost_equal(.001, psturng(198, 4, 1.5), 5)
+
+        # 1 <= v < 2 and q < qstrung(0.9, r, v), e.g. p < 0.9
+        # test both v == 1 and 1 < v < 2 as both are changes from
+        # original code
+        msg_v_1 = (
+            "v must be >= 2 when p < 0.9 and the q passed 1 is less "
+            "than 16.361992909976326 which is the q corresponding "
+            "to p = 0.9, r = 4 and v = 1."
+        )
+        with pytest.raises(ValueError, match=msg_v_1):
+            psturng(1, 4, 1)
+
+        msg_v_15 = (
+            "v must be >= 2 when p < 0.9 and the q passed 1 is less "
+            "than 8.965056833713536 which is the q corresponding "
+            "to p = 0.9, r = 4 and v = 1.5."
+        )
+        with pytest.raises(ValueError, match=msg_v_15):
+            psturng(1, 4, 1.5)
 
     def test_invalid_parameters(self):
-        # q < .1
+        # q < 0
         assert_raises(ValueError, psturng, -.1,5,6)
         # r < 2
         assert_raises((ValueError, OverflowError), psturng, .9,1,2)
