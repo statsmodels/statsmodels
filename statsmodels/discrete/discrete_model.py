@@ -628,7 +628,7 @@ class BinaryModel(DiscreteModel):
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
-            margeff /= self.predict(params, exog)[:, None]
+            margeff /= self.predict(params, exog, offset=offset)[:, None]
 
         return self._derivative_exog_helper(margeff, params, exog,
                                             dummy_idx, count_idx, transform)
@@ -1097,7 +1097,8 @@ class CountModel(DiscreteModel):
         return dF
 
     def _derivative_exog(self, params, exog=None, transform="dydx",
-                         dummy_idx=None, count_idx=None):
+                         dummy_idx=None, count_idx=None,
+                         offset=None, exposure=None):
         """
         For computing marginal effects. These are the marginal effects
         d F(XB) / dX
@@ -1110,15 +1111,19 @@ class CountModel(DiscreteModel):
         but checks are done in the results in get_margeff.
         """
         # group 3 poisson, nbreg, zip, zinb
+
+        # compute predict before we redefine exog
+        # we need exog is None, so predict can default for offset, exposure
+        mean = self.predict(params, exog, offset=offset, exposure=exposure)
         if exog is None:
             exog = self.exog
         k_extra = getattr(self, 'k_extra', 0)
         params_exog = params if k_extra == 0 else params[:-k_extra]
-        margeff = self.predict(params, exog)[:,None] * params_exog[None,:]
+        margeff = mean[:,None] * params_exog[None,:]
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
-            margeff /= self.predict(params, exog)[:,None]
+            margeff /= mean[:,None]
 
         return self._derivative_exog_helper(margeff, params, exog,
                                             dummy_idx, count_idx, transform)
