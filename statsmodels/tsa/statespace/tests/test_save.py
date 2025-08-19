@@ -1,16 +1,24 @@
 """
 Tests of save / load / remove_data state space functionality.
 """
-import pickle
+
+from statsmodels.compat.numpy import NP_LT_24
+
 import os
+import pickle
 import tempfile
 
+import numpy as np
+from numpy.testing import assert_allclose
 import pytest
 
 from statsmodels import datasets
-from statsmodels.tsa.statespace import (sarimax, structural, varmax,
-                                        dynamic_factor)
-from numpy.testing import assert_allclose
+from statsmodels.tsa.statespace import (
+    dynamic_factor,
+    sarimax,
+    structural,
+    varmax,
+)
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 macrodata = datasets.macrodata.load_pandas().data
@@ -24,12 +32,11 @@ def temp_filename():
         os.close(fd)
         os.unlink(filename)
     except Exception:
-        print("Couldn't close or delete file "
-              "{filename}.".format(filename=filename))
+        print("Couldn't close or delete file " "{filename}.".format(filename=filename))
 
 
 def test_sarimax(temp_filename):
-    mod = sarimax.SARIMAX(macrodata['realgdp'].values, order=(4, 1, 0))
+    mod = sarimax.SARIMAX(macrodata["realgdp"].values, order=(4, 1, 0))
     res = mod.smooth(mod.start_params)
     res.summary()
     res.save(temp_filename)
@@ -53,7 +60,7 @@ def test_sarimax_save_remove_data(temp_filename, order):
 
 
 def test_sarimax_pickle():
-    mod = sarimax.SARIMAX(macrodata['realgdp'].values, order=(4, 1, 0))
+    mod = sarimax.SARIMAX(macrodata["realgdp"].values, order=(4, 1, 0))
     pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.smooth(mod.start_params)
@@ -65,8 +72,7 @@ def test_sarimax_pickle():
 
 
 def test_structural(temp_filename):
-    mod = structural.UnobservedComponents(
-        macrodata['realgdp'].values, 'llevel')
+    mod = structural.UnobservedComponents(macrodata["realgdp"].values, "llevel")
     res = mod.smooth(mod.start_params)
     res.summary()
     res.save(temp_filename)
@@ -77,8 +83,7 @@ def test_structural(temp_filename):
 
 
 def test_structural_pickle():
-    mod = structural.UnobservedComponents(
-        macrodata['realgdp'].values, 'llevel')
+    mod = structural.UnobservedComponents(macrodata["realgdp"].values, "llevel")
     pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.smooth(mod.start_params)
@@ -91,8 +96,10 @@ def test_structural_pickle():
 
 def test_dynamic_factor(temp_filename):
     mod = dynamic_factor.DynamicFactor(
-        macrodata[['realgdp', 'realcons']].diff().iloc[1:].values, k_factors=1,
-        factor_order=1)
+        macrodata[["realgdp", "realcons"]].diff().iloc[1:].values,
+        k_factors=1,
+        factor_order=1,
+    )
     res = mod.smooth(mod.start_params)
     res.summary()
     res.save(temp_filename)
@@ -104,8 +111,8 @@ def test_dynamic_factor(temp_filename):
 
 def test_dynamic_factor_pickle(temp_filename):
     mod = varmax.VARMAX(
-        macrodata[['realgdp', 'realcons']].diff().iloc[1:].values,
-        order=(1, 0))
+        macrodata[["realgdp", "realcons"]].diff().iloc[1:].values, order=(1, 0)
+    )
     pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.smooth(mod.start_params)
@@ -125,8 +132,8 @@ def test_dynamic_factor_pickle(temp_filename):
 
 def test_varmax(temp_filename):
     mod = varmax.VARMAX(
-        macrodata[['realgdp', 'realcons']].diff().iloc[1:].values,
-        order=(1, 0))
+        macrodata[["realgdp", "realcons"]].diff().iloc[1:].values, order=(1, 0)
+    )
     res = mod.smooth(mod.start_params)
     res.summary()
     res.save(temp_filename)
@@ -138,8 +145,8 @@ def test_varmax(temp_filename):
 
 def test_varmax_pickle(temp_filename):
     mod = varmax.VARMAX(
-        macrodata[['realgdp', 'realcons']].diff().iloc[1:].values,
-        order=(1, 0))
+        macrodata[["realgdp", "realcons"]].diff().iloc[1:].values, order=(1, 0)
+    )
     res = mod.smooth(mod.start_params)
 
     res.summary()
@@ -151,6 +158,10 @@ def test_varmax_pickle(temp_filename):
 
 
 def test_existing_pickle():
-    pkl_file = os.path.join(current_path, 'results', 'sm-0.9-sarimax.pkl')
-    loaded = sarimax.SARIMAXResults.load(pkl_file)
+    pkl_file = os.path.join(current_path, "results", "sm-0.9-sarimax.pkl")
+    if not NP_LT_24:
+        with pytest.warns(np.exceptions.VisibleDeprecationWarning):
+            loaded = sarimax.SARIMAXResults.load(pkl_file)
+    else:
+        loaded = sarimax.SARIMAXResults.load(pkl_file)
     assert isinstance(loaded, sarimax.SARIMAXResultsWrapper)
