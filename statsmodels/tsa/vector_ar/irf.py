@@ -204,10 +204,16 @@ class BaseIRAnalysis:
             np.random.seed for Monte Carlo replications
         """
 
+        svar = self.svar
+                             
         if orth:
-            title = 'Cumulative responses responses (orthogonalized)'
+            title = 'Cumulative responses (orthogonalized)'
             cum_effects = self.orth_cum_effects
             lr_effects = self.orth_lr_effects
+        elif svar:
+            title = 'Cumulative responses (structural)'
+            cum_effects = self.svar_cum_effects
+            lr_effects = self.svar_lr_effects
         else:
             title = 'Cumulative responses'
             cum_effects = self.cum_effects
@@ -232,7 +238,6 @@ class BaseIRAnalysis:
                                      figsize=figsize,
                                      stderr_type=stderr_type)
         return fig
-
 
 class IRAnalysis(BaseIRAnalysis):
     """
