@@ -141,13 +141,13 @@ def normal_dh(data):
 
     """
     nobs = data.shape[0]
-    ds = standardize(data)
+    ds = standardize(data, use_corr=True)
     sk = stats.skew(ds)
     ks = stats.kurtosis(ds, fisher=False)
     return normal_dhm(sk, ks, nobs)
 
 
-def standardize(data, cov=None, demean=True):
+def standardize(data, cov=None, demean=True, use_corr=False, ddof = 1):
     """transform data to identity correlation
 
     Parameters
@@ -167,17 +167,22 @@ def standardize(data, cov=None, demean=True):
     """
     # the transformed will have fewer columns in the case of perfect collinearity
     # not implemented yet
+    nobs = data.shape[0]
     if cov is None:
         if demean:
             data = data - data.mean(0)
-            # demean doesn't make sense in this case, because cov demeans anyway
-        cov = np.cov(data, rowvar=0)
+            #demean doesn't make sense in this case, because cov demeans anyway
+
+        if use_corr:
+            std = np.sqrt((data * data).sum(0) / (nobs - ddof))
+            data = data / std
+
+        cov = data.T @ data / (nobs - ddof)
     evals, evecs = linalg.eigh(cov)
     if evals.min() < 1e-13:
         import warnings
         warnings.warn("cov is(almost) singular")
-
-    sigma_inv_half = evecs / np.sqrt(evals)
+    sigma_inv_half = evecs / np.sqrt(evals) @ evecs.T
     data_stzd = np.dot(data, sigma_inv_half)
     return data_stzd
 
