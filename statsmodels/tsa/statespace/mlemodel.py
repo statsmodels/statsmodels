@@ -3016,6 +3016,85 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
+    def get_rsquared(self, baseline="rwdrift", **kwargs):
+        # calc sse finite estimation
+        d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+        srss = np.sum(self.standardized_forecasts_error[:, d:]**2, axis=1).T
+        f_T = np.array([self.forecasts_error_cov[i, i, -1]
+                       for i in range(self.model.k_endog)])
+        sse = f_T * srss
+        endog = self.model.endog
+
+        # calc rsquared wrt different baseline models
+        if baseline == "rwdrift":
+            ssdm = np.var(np.diff(endog, axis=0), axis=0) * (len(endog) - 1)
+            rsquared = 1. - sse / ssdm
+        elif baseline == "mean":
+            ssm = np.var(endog, axis=0) * len(endog)
+            rsquared = 1. - sse / ssm
+        elif baseline == "seasonal":
+            from statsmodels.regression.linear_model import OLS
+            from statsmodels.tools.tools import add_constant
+            if 'seasonal' not in kwargs:
+                raise ValueError(
+                    "kwarg seasonal required for rsquared_seasonal.")
+            seasonal = kwargs['seasonal']
+            x = np.zeros((len(endog), seasonal-1))
+            idx = [(i, j) for j in range(seasonal-1)
+                   for i in range(j, len(endog), seasonal)]
+            x[tuple(np.array(idx).T)] = 1
+            ssdsm = np.zeros(self.model.k_endog)
+            for i in range(self.model.k_endog):
+                seasonalmodel = OLS(endog[:, i], add_constant(x)).fit()
+                ssdsm[i] = seasonalmodel.ssr
+            rsquared = 1. - sse / ssdsm
+        else:
+            raise NotImplementedError(
+                "In state space models there is not a single baseline " +
+                "model that will always be useful for rsquared computation. " +
+                "baseline must be in ['rwdrift', 'mean', 'seasonal']" +
+                "It is recommended to use MLEResult.rsquared_rwdrift "
+                )
+        # return float if k_endog == 1
+        if self.model.k_endog == 1:
+            return rsquared[0]
+        else:
+            return rsquared
+
+    def rsquared(self):
+        """
+        In state space models there is not a single comparison
+        model that will always be useful for rsquared computation.
+        However, we have implmented `rsquared_rwdrift` and `rsquared_mean`
+        It is recommended to use `rsquared_rwdrift`
+        """
+        return self.get_rsquared('')
+
+    @cache_readonly
+    def rsquared_mean(self):
+        """
+        (float or array) conventional R-squared, 1 - sse/ssm
+        """
+        return self.get_rsquared('mean')
+
+    @cache_readonly
+    def rsquared_rwdrift(self):
+        """
+        (float or array) R-squared, 1 - SSE / SSDM
+        SSDM = sum of squares of first differences around mean
+        see eq. 5.5.14 in "Forecasting, structural time series
+        models and the Kalman filter" (Harvey, 1989)
+        """
+        return self.get_rsquared('rwdrift')
+
+    def rsquared_seasonal(self, **kwargs):
+        """
+        (float or array) R-squared, 1 - SSE / SSDSM
+        see eq. 5.5.16 in "Forecasting, structural time series
+        models and the Kalman filter" (Harvey, 1989)
+        """
+        return self.get_rsquared('seasonal', **kwargs)
+
     def test_normality(self, method):
         """
         Test for normality of standardized residuals.
@@ -4778,8 +4857,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('No. Observations:', [self.nobs]),
             ('Log Likelihood', ["%#5.3f" % self.llf]),
         ]
-        if hasattr(self, 'rsquared'):
-            top_right.append(('R-squared:', ["%#8.3f" % self.rsquared]))
+        if hasattr(self, 'rsquared_rwdrift'):
+            r2 = self.rsquared_rwdrift
+            r2_str = ("%#8.3f" % r2
+                      if isinstance(r2, float)
+                      else np.array_str(r2, precision=3))
+            top_right.append(('R-squared:',
+                              [r2_str]))
+
         top_right += [
             ('AIC', ["%#5.3f" % self.aic]),
             ('BIC', ["%#5.3f" % self.bic]),
