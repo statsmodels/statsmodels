@@ -85,7 +85,7 @@ from .multivariate import (
 
 from .power import (TTestPower, TTestIndPower, GofChisquarePower,
                     NormalIndPower, FTestAnovaPower, FTestPower,
-                    tt_solve_power, tt_ind_solve_power, zt_ind_solve_power)
+                    tt_solve_power, tt_ind_solve_power, zt_ind_solve_power, prop_ind_solve_power)
 
 from .descriptivestats import Describe
 
