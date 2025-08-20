@@ -45,6 +45,17 @@ class RegressionFDR:
         The approach used to assess and control FDR, currently
         must be 'knockoff'.
 
+    Optional keyword arguments
+    --------------------------
+    design_method : string or callable
+        The method used to construct the design matrix for the knockoff
+        filter.  If a string, should be 'equi', for 'equivariant', or
+        'sdp', for 'semidefinite programming'.  If a callable, this should
+        be a function that takes the observed exog matrix and returns
+        three values (exogs, exogn, sl).  The array exogs is a scaled/centered
+        version of the input matrix exog, exogn is another matrix of the same
+        shape with cov(exogn) = cov(exogs).
+
     Returns
     -------
     Returns an instance of the RegressionFDR class.  The `fdr` attribute
@@ -78,26 +89,41 @@ class RegressionFDR:
         else:
             self.xnames = ["x%d" % j for j in range(exog.shape[1])]
 
-        exog = np.asarray(exog)
+        # Center endog
         endog = np.asarray(endog)
-
-        if "design_method" not in kwargs:
-            kwargs["design_method"] = "equi"
-
-        nobs, nvar = exog.shape
-
-        if kwargs["design_method"] == "equi":
-            exog1, exog2, _ = _design_knockoff_equi(exog)
-        elif kwargs["design_method"] == "sdp":
-            exog1, exog2, _ = _design_knockoff_sdp(exog)
         endog = endog - np.mean(endog)
-
         self.endog = endog
+
+        # Standardize exog
+        exog = np.asarray(exog)
+        xnm = np.sum(exog**2, 0)
+        xnm = np.sqrt(xnm)
+        self._exog_orig = exog / xnm
+
+        self._design_method = kwargs.get("design_method", None)
+        self._regeffects = regeffects
+
+        if method != "knockoff":
+            raise ValueError("method must equal 'knockoff'")
+
+        self._fit()
+
+    def _fit(self):
+
+        if self._design_method is None or self._design_method == "equi":
+            exog1, exog2, _ = self._design_knockoff_equi(self._exog_orig)
+        elif callable(self._design_method):
+            exog1, exog2, _ = self._design_method(self._exog_orig)
+        elif self._design_method == "sdp":
+            exog1, exog2, _ = self._design_knockoff_sdp(self._exog_orig)
+        else:
+            raise ValueError("Invalid design_method")
+
         self.exog = np.concatenate((exog1, exog2), axis=1)
         self.exog1 = exog1
         self.exog2 = exog2
 
-        self.stats = regeffects.stats(self)
+        self.stats = self._regeffects.stats(self)
 
         unq, inv, cnt = np.unique(self.stats, return_inverse=True,
                                   return_counts=True)
@@ -147,110 +173,106 @@ class RegressionFDR:
 
         return summ
 
+    def _design_knockoff_sdp(self, exog):
+        """
+        Use semidefinite programming to construct a knockoff design
+        matrix.
 
-def _design_knockoff_sdp(exog):
-    """
-    Use semidefinite programming to construct a knockoff design
-    matrix.
+        Requires cvxopt to be installed.
+        """
 
-    Requires cvxopt to be installed.
-    """
+        try:
+            from cvxopt import solvers, matrix
+        except ImportError:
+            raise ValueError("SDP knockoff designs require installation of cvxopt")
 
-    try:
-        from cvxopt import solvers, matrix
-    except ImportError:
-        raise ValueError("SDP knockoff designs require installation of cvxopt")
+        nobs, nvar = exog.shape
 
-    nobs, nvar = exog.shape
+        Sigma = np.dot(exog.T, exog)
 
-    # Standardize exog
-    xnm = np.sum(exog**2, 0)
-    xnm = np.sqrt(xnm)
-    exog = exog / xnm
+        c = matrix(-np.ones(nvar))
 
-    Sigma = np.dot(exog.T, exog)
+        h0 = np.concatenate((np.zeros(nvar), np.ones(nvar)))
+        h0 = matrix(h0)
+        G0 = np.concatenate((-np.eye(nvar), np.eye(nvar)), axis=0)
+        G0 = matrix(G0)
 
-    c = matrix(-np.ones(nvar))
+        h1 = 2 * Sigma
+        h1 = matrix(h1)
+        i, j = np.diag_indices(nvar)
+        G1 = np.zeros((nvar*nvar, nvar))
+        G1[i*nvar + j, i] = 1
+        G1 = matrix(G1)
 
-    h0 = np.concatenate((np.zeros(nvar), np.ones(nvar)))
-    h0 = matrix(h0)
-    G0 = np.concatenate((-np.eye(nvar), np.eye(nvar)), axis=0)
-    G0 = matrix(G0)
+        solvers.options['show_progress'] = False
+        sol = solvers.sdp(c, G0, h0, [G1], [h1])
+        sl = np.asarray(sol['x']).ravel()
 
-    h1 = 2 * Sigma
-    h1 = matrix(h1)
-    i, j = np.diag_indices(nvar)
-    G1 = np.zeros((nvar*nvar, nvar))
-    G1[i*nvar + j, i] = 1
-    G1 = matrix(G1)
+        xcov = np.dot(exog.T, exog)
+        exogn = self._get_komat(exog, xcov, sl)
 
-    solvers.options['show_progress'] = False
-    sol = solvers.sdp(c, G0, h0, [G1], [h1])
-    sl = np.asarray(sol['x']).ravel()
+        return exog, exogn, sl
 
-    xcov = np.dot(exog.T, exog)
-    exogn = _get_knmat(exog, xcov, sl)
+    def _design_knockoff_equi(self, exog):
+        """
+        Construct an equivariant design matrix for knockoff analysis.
 
-    return exog, exogn, sl
+        Follows the 'equi-correlated knockoff approach of equation 2.4 in
+        Barber and Candes.
 
+        Constructs a pair of design matrices exogs, exogn such that exogs
+        is a scaled/centered version of the input matrix exog, exogn is
+        another matrix of the same shape with cov(exogn) = cov(exogs), and
+        the covariances between corresponding columns of exogn and exogs
+        are as small as possible.
+        """
 
-def _design_knockoff_equi(exog):
-    """
-    Construct an equivariant design matrix for knockoff analysis.
+        nobs, nvar = exog.shape
 
-    Follows the 'equi-correlated knockoff approach of equation 2.4 in
-    Barber and Candes.
+        if nobs < 2*nvar:
+            msg = "The equivariant knockoff can ony be used when n >= 2*p"
+            raise ValueError(msg)
 
-    Constructs a pair of design matrices exogs, exogn such that exogs
-    is a scaled/centered version of the input matrix exog, exogn is
-    another matrix of the same shape with cov(exogn) = cov(exogs), and
-    the covariances between corresponding columns of exogn and exogs
-    are as small as possible.
-    """
+        xcov = np.dot(exog.T, exog)
+        ev, _ = np.linalg.eig(xcov)
+        evmin = np.min(ev)
 
-    nobs, nvar = exog.shape
+        sl = min(2*evmin, 1)
+        sl = sl * np.ones(nvar)
 
-    if nobs < 2*nvar:
-        msg = "The equivariant knockoff can ony be used when n >= 2*p"
-        raise ValueError(msg)
+        exogn = self._get_komat(exog, xcov, sl)
 
-    # Standardize exog
-    xnm = np.sum(exog**2, 0)
-    xnm = np.sqrt(xnm)
-    exog = exog / xnm
+        return exog, exogn, sl
 
-    xcov = np.dot(exog.T, exog)
-    ev, _ = np.linalg.eig(xcov)
-    evmin = np.min(ev)
+    def _get_komat(self, exog, xcov, sl):
+        # Generate the knockoff design matrix using the equivariant
+        # approach, equation 2.2 of Barber & Candes.
 
-    sl = min(2*evmin, 1)
-    sl = sl * np.ones(nvar)
+        nobs, nvar = exog.shape
 
-    exogn = _get_knmat(exog, xcov, sl)
+        ash = np.linalg.inv(xcov)
+        ash *= -np.outer(sl, sl)
+        ash.flat[::ash.shape[0] + 1] += 2 *sl
 
-    return exog, exogn, sl
+        umat = self._get_orthog(exog)
+        self._umat = umat
 
+        ashr, xc, _ = np.linalg.svd(ash, 0)
+        ashr *= np.sqrt(xc)
+        ashr = ashr.T
 
-def _get_knmat(exog, xcov, sl):
-    # Utility function, see equation 2.2 of Barber & Candes.
+        ex = (sl[:, None] * np.linalg.solve(xcov, exog.T)).T
+        exogn = exog - ex + np.dot(umat, ashr)
 
-    nobs, nvar = exog.shape
+        return exogn
 
-    ash = np.linalg.inv(xcov)
-    ash *= -np.outer(sl, sl)
-    i, j = np.diag_indices(nvar)
-    ash[i, j] += 2 * sl
+    def _get_orthog(self, exog):
+        # Return an orthogonal matrix having the same shape as
+        # exog that is orthogonal to col(exog).
 
-    umat = np.random.normal(size=(nobs, nvar))
-    u, _ = np.linalg.qr(exog)
-    umat -= np.dot(u, np.dot(u.T, umat))
-    umat, _ = np.linalg.qr(umat)
-
-    ashr, xc, _ = np.linalg.svd(ash, 0)
-    ashr *= np.sqrt(xc)
-    ashr = ashr.T
-
-    ex = (sl[:, None] * np.linalg.solve(xcov, exog.T)).T
-    exogn = exog - ex + np.dot(umat, ashr)
-
-    return exogn
+        nobs, nvar = exog.shape
+        umat = np.random.normal(size=(nobs, nvar))
+        u, _ = np.linalg.qr(exog)
+        umat -= np.dot(u, np.dot(u.T, umat))
+        umat, _ = np.linalg.qr(umat)
+        return umat
