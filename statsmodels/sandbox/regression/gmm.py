@@ -1486,6 +1486,60 @@ class LinearIVGMM(IVGMM):
 
         return np.dot(exog, params)
 
+    def compare_j(self, weights=None, var=None):
+        # The function computes the C statistic which compare the two nested linear GMM
+        # models. We use the same weight matrix so that the difference is always
+        # positive.
+        # var takes a list giving the position of the variable to be
+        # removed in the second regression. Example: var=[2,5,8]
+        # If var is None we just return the J-test
+        y, x, z = self.endog, self.exog, self.instrument
+
+        if weights is None:
+            weights = self.start_weights(inv=False)
+
+        # compute jstat1
+        zTx = np.dot(z.T, x)
+        zTy = np.dot(z.T, y)
+        # normal equation, solved with pinv
+        part0 = zTx.T.dot(weights)
+        part1 = part0.dot(zTx)
+        part2 = part0.dot(zTy)
+        params = np.linalg.pinv(part1).dot(part2)
+
+        zy = np.dot(z.T, y)
+        zx = np.dot(z.T.dot(x), params)
+        diff = (zy - zx)/(x.shape[0])
+        jint = np.dot(diff.T.dot(weights), diff)
+        jstat1 = (x.shape[0])*jint
+
+        if var is None:
+            df = z.shape[1] - x.shape[1]
+            return jstat1, stats.chi2.sf(jstat1, df), df
+
+        weights2 = np.delete(np.delete(weights, var, axis=1), var, axis=0)
+
+        w = np.delete(z, var, axis=1)
+
+        # compute jstat2
+        wTx = np.dot(w.T, x)
+        wTy = np.dot(w.T, y)
+        # normal equation, solved with pinv
+        part0 = wTx.T.dot(weights2)
+        part1 = part0.dot(wTx)
+        part2 = part0.dot(wTy)
+        params2 = np.linalg.pinv(part1).dot(part2)
+
+        wy = np.dot(w.T, y)
+        wxx = np.dot(w.T, x)
+        wx = wxx.dot(params2)
+        diff2 = (wy - wx)/(x.shape[0])
+        jint2 = np.dot(diff2.T.dot(weights2), diff2)
+        jstat2 = (x.shape[0])*jint2
+
+        jdiff = jstat1 - jstat2
+        df = z.shape[1] - w.shape[1]
+        return jdiff, stats.chi2.sf(jdiff, df), df
 
     def gradient_momcond(self, params, **kwds):
         # **kwds for compatibility not used
