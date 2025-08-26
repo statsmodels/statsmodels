@@ -10,7 +10,7 @@ joblib
 # cvxopt; os_name != "win32"
 
 # test
-pytest>=7.3.0,<8
+pytest>=8.4.1,<9
 pytest-randomly
 pytest-xdist
 pytest-cov
