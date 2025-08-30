@@ -49,7 +49,7 @@ for dname in [EXECUTED_DIR, DST_DIR]:
         os.makedirs(dname)
 
 
-def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
+def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None, nb_string=None):
     """
     Execute notebook in `src` and write the output to `dst`
 
@@ -66,8 +66,11 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     -------
     dst: str
     """
-    with open(src, encoding="utf-8") as f:
-        nb = nbformat.read(f, as_version=4)
+    if nb_string:
+        nb = nbformat.reads(nb_string, as_version=4)
+    else:
+        with open(src, encoding="utf-8") as f:
+            nb = nbformat.read(f, as_version=4)
 
     ep = ExecutePreprocessor(
         allow_errors=False, timeout=timeout, kernel_name=kernel_name
@@ -103,7 +106,7 @@ def find_notebooks(directory=None):
     if directory is None:
         directory = SOURCE_DIR
     nbs = (
-        os.path.join(directory, x)
+        os.path.abspath(os.path.join(directory, x))
         for x in os.listdir(directory)
         if x.endswith(".ipynb")
     )
@@ -120,11 +123,11 @@ def do_one(
     error_fail=False,
     skip_existing=False,
     execute_only=False,
+    nb_string=None,
 ):
     import jupyter_client
     from traitlets.traitlets import TraitError
 
-    os.chdir(SOURCE_DIR)
     name = os.path.basename(nb)
     dst = os.path.join(EXECUTED_DIR, name)
     hash_file = f"{os.path.splitext(dst)[0]}.json"
@@ -132,8 +135,11 @@ def do_one(
     if os.path.exists(hash_file):
         with open(hash_file, encoding="utf-8") as hf:
             existing_hash = json.load(hf)
-    with open(nb, mode="rb") as f:
-        current_hash = hashlib.sha512(f.read()).hexdigest()
+    if nb_string:
+        current_hash = hashlib.sha512(nb_string.encode("utf-8")).hexdigest()
+    else:
+        with open(nb, mode="rb") as f:
+            current_hash = hashlib.sha512(f.read()).hexdigest()
     update_needed = existing_hash != current_hash
     # Update if dst missing
     update_needed = update_needed or not os.path.exists(dst)
@@ -144,7 +150,7 @@ def do_one(
     if execute and update_needed:
         print(f"Executing {nb} to {dst}")
         try:
-            nb = execute_nb(nb, dst, timeout=timeout, kernel_name=kernel_name)
+            nb = execute_nb(nb, dst, timeout=timeout, kernel_name=kernel_name, nb_string=nb_string)
         except Exception as e:
             if report_error:
                 print(
@@ -196,11 +202,14 @@ def do(
     skip_existing=False,
     execute_only=False,
     skip_specific=(),
+    nb_string=None,
 ):
-    if fp is None:
+    if nb_string:
+        nbs = [fp]
+    elif fp is None:
         nbs = find_notebooks(directory)
     else:
-        nbs = [fp]
+        nbs = [os.path.abspath(fp)]
 
     nbs = list(nbs)
     skip = set()
@@ -223,6 +232,7 @@ def do(
         error_fail=error_fail,
         skip_existing=skip_existing,
         execute_only=execute_only,
+        nb_string=nb_string,
     )
 
     if parallel and has_futures:
@@ -336,6 +346,12 @@ parser.add_argument(
     help="Comma separated list of notebook names to skip, e.g,"
     "slow-notebook.ipynb,other-notebook.ipynb",
 )
+parser.add_argument(
+    "--notebook-string",
+    type=str,
+    default=None,
+    help="Notebook content as a string.",
+)
 
 parser.set_defaults(
     parallel=True,
@@ -363,6 +379,7 @@ def main():
         skip_existing=args.skip_existing,
         execute_only=args.execute_only,
         skip_specific=skip_specific,
+        nb_string=args.notebook_string,
     )
 
 
