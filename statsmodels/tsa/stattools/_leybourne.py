@@ -150,14 +150,19 @@ class LeybourneMcCabeStationarity:
             number of autoregressive terms to include, default=None
         regression : {'c','ct'}
             Constant and trend order to include in regression
+
             * 'c'  : constant only (default)
             * 'ct' : constant and trend
+
         method : {'mle','ols'}
             Method used to estimate ARIMA(p, 1, 1) filter model
+
             * 'mle' : condition sum of squares maximum likelihood
             * 'ols' : two-stage least squares (default)
+
         varest : {'var94','var99'}
             Method used for residual variance estimation
+
             * 'var94' : method used in original Leybourne-McCabe paper (1994)
                         (default)
             * 'var99' : method used in follow-up paper (1999)
@@ -176,11 +181,11 @@ class LeybourneMcCabeStationarity:
 
         Notes
         -----
-        H0 = series is stationary
+        The null, H0 is that the series is stationary.
 
         Basic process is to create a filtered series which removes the AR(p)
         effects from the series under test followed by an auxiliary regression
-        similar to that of Kwiatkowski et al (1992). The AR(p) coefficients
+        similar to that of Kwiatkowski et. al. (1992). The AR(p) coefficients
         are obtained by estimating an ARIMA(p, 1, 1) model. Two methods are
         provided for ARIMA estimation: MLE and two-stage least squares.
 

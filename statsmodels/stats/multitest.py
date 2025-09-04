@@ -22,7 +22,13 @@ __all__ = ['fdrcorrection', 'fdrcorrection_twostage', 'local_fdr',
 
 
 def _ecdf(x):
-    '''no frills empirical cdf used in fdrcorrection
+    '''
+    No frills empirical cdf used in fdrcorrection
+
+    Parameters
+    ----------
+    x : ndarray
+        The data to use
     '''
     nobs = len(x)
     return np.arange(1,nobs+1)/float(nobs)
