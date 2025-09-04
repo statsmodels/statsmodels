@@ -48,7 +48,8 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var='equal'):
     small.
 
     .. versionadded:: 0.15
-   `   The `use_var` keyword and option for Games-Howell test.
+
+        The `use_var` keyword and option for Games-Howell test.
 
     See Also
     --------
