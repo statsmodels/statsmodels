@@ -1137,15 +1137,15 @@ class MultiComparison:
 
         Returns
         -------
-        results : TukeyHSDResults instance
+        results : TukeyHSDResults
             A results class containing relevant data and some post-hoc
             calculations
 
         Notes
         -----
+        The ``use_var`` keyword and option for Games-Howell test.
 
-        .. versionadded:: 0.15
-   `       The `use_var` keyword and option for Games-Howell test.
+        .. versionadded:: 0.15.0
         """
         self.groupstats = GroupsStats(
             np.column_stack([self.data, self.groupintlab]), useranks=False
@@ -1436,8 +1436,8 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
 
 
 def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
-    """simultaneous Tukey HSD
-
+    """
+    simultaneous Tukey HSD
 
     check: instead of sorting, I use absolute value of pairwise differences
     in means. That's irrelevant for the test, but maybe reporting actual
