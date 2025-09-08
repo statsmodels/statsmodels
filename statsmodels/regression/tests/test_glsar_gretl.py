@@ -10,6 +10,7 @@ License: BSD-3
 import os
 
 import numpy as np
+import pandas as pd
 from numpy.testing import (
     assert_allclose,
     assert_almost_equal,
@@ -321,12 +322,10 @@ class TestGLSARGretl:
         names = 'date   residual        leverage       influence        DFFITS'.split()
         cur_dir = os.path.abspath(os.path.dirname(__file__))
         fpath = os.path.join(cur_dir, 'results/leverage_influence_ols_nostars.txt')
-        lev = np.genfromtxt(fpath, skip_header=3, skip_footer=1,
-                            converters={0:lambda s: s})
+        lev = pd.read_csv(fpath, delim_whitespace=True, skiprows=3, skipfooter=1, engine='python', header=None)
         #either numpy 1.6 or python 3.2 changed behavior
-        if np.isnan(lev[-1]['f1']):
-            lev = np.genfromtxt(fpath, skip_header=3, skip_footer=2,
-                                converters={0:lambda s: s})
+        if np.isnan(lev[-1][1]):
+            lev = pd.read_csv(fpath, delim_whitespace=True, skiprows=3, skipfooter=2, engine='python', header=None)
 
         lev.dtype.names = names
 

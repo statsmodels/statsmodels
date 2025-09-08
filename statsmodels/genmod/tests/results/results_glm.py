@@ -1194,10 +1194,9 @@ class InvGauss:
         # set up data #
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "inv_gaussian.csv")
-        with open(filename, encoding="utf-8") as fd:
-            data = np.genfromtxt(fd, delimiter=",", dtype=float)[1:]
-        self.endog = data[:5000, 0]
-        self.exog = data[:5000, 1:]
+        df = pd.read_csv(filename)
+        self.endog = df.iloc[:5000, 0].values
+        self.exog = df.iloc[:5000, 1:].values
         self.exog = add_constant(self.exog, prepend=False)
 
         # Results

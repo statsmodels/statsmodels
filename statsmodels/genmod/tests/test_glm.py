@@ -70,11 +70,9 @@ def teardown_module():
 @pytest.fixture(scope="module")
 def iris():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    return np.genfromtxt(
+    return pd.read_csv(
         os.path.join(cur_dir, "results", "iris.csv"),
-        delimiter=",",
-        skip_header=1,
-    )
+    ).values
 
 
 class CheckModelResultsMixin:

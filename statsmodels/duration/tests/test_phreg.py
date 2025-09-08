@@ -55,12 +55,11 @@ class TestPHReg:
     @staticmethod
     def load_file(fname):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
-        data = np.genfromtxt(os.path.join(cur_dir, 'results', fname),
-                             delimiter=" ")
-        time = data[:,0]
-        status = data[:,1]
-        entry = data[:,2]
-        exog = data[:,3:]
+        df = pd.read_csv(os.path.join(cur_dir, 'results', fname), delim_whitespace=True, header=None)
+        time = df.iloc[:, 0].values
+        status = df.iloc[:, 1].values
+        entry = df.iloc[:, 2].values
+        exog = df.iloc[:, 3:].values
 
         return time, status, entry, exog
 

@@ -60,12 +60,12 @@ def load_data(fname, icept=True):
     """
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    Z = np.genfromtxt(os.path.join(cur_dir, 'results', fname),
+    Z = pd.read_csv(os.path.join(cur_dir, 'results', fname),
                       delimiter=",")
 
-    group = Z[:, 0]
-    endog = Z[:, 1]
-    exog = Z[:, 2:]
+    group = Z.iloc[:, 0].values
+    endog = Z.iloc[:, 1].values
+    exog = Z.iloc[:, 2:].values
 
     if icept:
         exog = np.concatenate((np.ones((exog.shape[0], 1)), exog),

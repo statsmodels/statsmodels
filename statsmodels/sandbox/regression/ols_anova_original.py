@@ -8,6 +8,7 @@ in ANOVA
 
 import numpy as np
 import numpy.lib.recfunctions
+import pandas as pd
 
 from statsmodels.compat.python import lmap
 from statsmodels.regression.linear_model import OLS
@@ -23,7 +24,7 @@ dta_use = np.ma.column_stack[[dta[col] for col in 'y sex age'.split()]]
 '''
 
 
-dta = np.genfromtxt('dftest3.data')
+dta = pd.read_csv('dftest3.data', header=None).values
 print(dta.shape)
 mask = np.isnan(dta)
 print("rows with missing values", mask.any(1).sum())
@@ -289,13 +290,12 @@ print(anova_str % anovadict(rest1))
 # -------------------
 
 # read data set and drop rows with missing data
-dta = np.genfromtxt('dftest3.data', dt_b,missing='.', usemask=True)
-print('missing', [dta.mask[k].sum() for k in dta.dtype.names])
-m = dta.mask.view(bool)
-droprows = m.reshape(-1,len(dta.dtype.names)).any(1)
+dta = pd.read_csv('dftest3.data', header=None, na_values='.')
+print('missing', dta.isna().sum().tolist())
+droprows = dta.isna().any(axis=1)
 # get complete data as plain structured array
 # maybe does not work with masked arrays
-dta_use_b1 = dta[~droprows,:].data
+dta_use_b1 = dta.loc[~droprows].to_records(index=False)
 print(dta_use_b1.shape)
 print(dta_use_b1.dtype)
 

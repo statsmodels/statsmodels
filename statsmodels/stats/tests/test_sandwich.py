@@ -10,6 +10,7 @@ Author: Josef Perktold
 """
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
+import pandas as pd
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
@@ -24,7 +25,7 @@ def test_cov_cluster_2groups():
     import os
     cur_dir = os.path.abspath(os.path.dirname(__file__))
     fpath = os.path.join(cur_dir, "test_data.txt")
-    pet = np.genfromtxt(fpath)
+    pet = pd.read_csv(fpath, header=None).values
     endog = pet[:, -1]
     group = pet[:, 0].astype(int)
     time = pet[:, 1].astype(int)
