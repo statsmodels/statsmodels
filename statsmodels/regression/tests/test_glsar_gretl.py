@@ -324,7 +324,7 @@ class TestGLSARGretl:
         fpath = os.path.join(cur_dir, 'results/leverage_influence_ols_nostars.txt')
         lev = pd.read_csv(fpath, delim_whitespace=True, skiprows=3, skipfooter=1, engine='python', header=None)
         #either numpy 1.6 or python 3.2 changed behavior
-        if np.isna(lev.iloc[-1, 1]):
+        if pd.isna(lev.iloc[-1, 1]):
             lev = pd.read_csv(fpath, delim_whitespace=True, skiprows=3, skipfooter=2, engine='python', header=None)
 
         lev.dtype.names = names
