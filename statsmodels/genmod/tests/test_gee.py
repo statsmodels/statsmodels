@@ -64,8 +64,8 @@ def load_data(fname, icept=True):
                       delimiter=",")
 
     group = Z.iloc[:, 0].values
-    endog = Z.iloc[:, 1].values
-    exog = Z.iloc[:, 2:].values
+    endog = Z.iloc[:, 1].values.astype(float)
+    exog = Z.iloc[:, 2:].values.astype(float)
 
     if icept:
         exog = np.concatenate((np.ones((exog.shape[0], 1)), exog),
