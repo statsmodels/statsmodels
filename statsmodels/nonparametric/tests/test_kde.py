@@ -74,12 +74,12 @@ class CheckKDE:
         # added it as test method to TestKDEGauss below
         # inDomain is not vectorized
         # kde_vals = self.res1.evaluate(self.res1.support)
-        kde_vals = [np.squeeze(self.res1.evaluate(xi)) for xi in self.res1.support]
+        kde_vals = [np.squeeze(self.res1.evaluate(np.asarray(xi))) for xi in self.res1.support]
         kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(kde_vals, self.res_density,
+        npt.assert_almost_equal(kde_vals, self.res_density.ravel(),
                                 self.decimal_density)
 
 
@@ -240,7 +240,7 @@ class CheckKDEWeights:
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(self.res1.density, kde_vals,
+        npt.assert_almost_equal(self.res1.density.ravel(), kde_vals,
                                 self.decimal_density)
 
         # regression test, not compared to another package
