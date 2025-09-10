@@ -1593,6 +1593,142 @@ class _GofChisquareIndPower(Power):
                                                       ratio=ratio,
                                                       alternative=alternative)
 
+
+def chisquare_power_noncent(noncent_n, nobs, df, alpha=0.05):
+    '''Power of chisquare test based on normalized noncentrality.
+
+    The effect size is the chisquare noncentrality parameter divided by nobs.
+
+    Parameters
+    ----------
+    noncent_n : float
+        This is the deviation from the Null of the normalized chi_square
+        statistic divided by number of observations, ``nobs``.
+    nobs : int or float
+        number of observations
+    df : int (or float)
+        degrees of freedom. This is in general the number of constraints
+        in the hypothesis test.
+    alpha : float in (0,1)
+        significance level of the test, default alpha=0.05
+
+    Returns
+    -------
+    power : float
+        power of the test at given significance level at effect size
+
+    Notes
+    -----
+    This function also works vectorized if all arguments broadcast.
+
+
+    References
+    ----------
+    ...
+
+    See Also
+    --------
+    chisquare_effectsize
+    statsmodels.stats.GofChisquarePower
+
+    '''
+    crit = stats.chi2.isf(alpha, df)
+    power = stats.ncx2.sf(crit, df, noncent_n * nobs)
+    return power
+
+
+class ChisquareNoncentPower(Power):
+    '''Statistical Power calculations for chisquare test with noncentrality.
+
+    The effect_size is the normalized noncentrality parameter, nc / nobs.
+
+    '''
+
+    def power(self, effect_size, nobs, df, alpha):#alternative='two-sided'):
+        '''Calculate the power of a chisquare test
+
+        Parameters
+        ----------
+        effect_size : float
+            standardized effect size, according to Cohen's definition.
+            see :func:`statsmodels.stats.gof.chisquare_effectsize`
+        nobs : int or float
+            sample size, number of observations.
+        df : int (or float)
+            degrees of freedom. This is in general the number of constraints
+            in the hypothesis test.
+        alpha : float in interval (0,1)
+            significance level, e.g. 0.05, is the probability of a type I
+            error, that is wrong rejections if the Null Hypothesis is true.
+
+        Returns
+        -------
+        power : float
+            Power of the test, e.g. 0.8, is one minus the probability of a
+            type II error. Power is the probability that the test correctly
+            rejects the Null Hypothesis if the Alternative Hypothesis is true.
+
+       '''
+
+        return chisquare_power_noncent(effect_size, nobs, df, alpha)
+
+    # method is only added to have explicit keywords and docstring
+    def solve_power(self, effect_size=None, nobs=None, alpha=None,
+                    power=None, df=None):
+        '''Solve for any one parameter of the power of a chisquare-test.
+
+        for the chisquare-test the keywords are:
+            effect_size, nobs, alpha, power
+
+        Exactly one needs to be ``None``, all others need numeric values.
+
+        ``df`` is required.
+
+
+        Parameters
+        ----------
+        effect_size : float
+            standardized effect size, according to Cohen's definition.
+            see :func:`statsmodels.stats.gof.chisquare_effectsize`
+        nobs : int or float
+            sample size, number of observations.
+        alpha : float in interval (0,1)
+            significance level, e.g. 0.05, is the probability of a type I
+            error, that is wrong rejections if the Null Hypothesis is true.
+        power : float in interval (0,1)
+            power of the test, e.g. 0.8, is one minus the probability of a
+            type II error. Power is the probability that the test correctly
+            rejects the Null Hypothesis if the Alternative Hypothesis is true.
+        df : int (or float)
+            degrees of freedom. This is in general the number of constraints
+            in the hypothesis test.
+
+        Returns
+        -------
+        value : float
+            The value of the parameter that was set to None in the call. The
+            value solves the power equation given the remaining parameters.
+
+
+        Notes
+        -----
+        The function uses scipy.optimize for finding the value that satisfies
+        the power equation. It first uses ``brentq`` with a prior search for
+        bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
+        also fails, then, for ``alpha``, ``power`` and ``effect_size``,
+        ``brentq`` with fixed bounds is used. However, there can still be cases
+        where this fails.
+
+        '''
+        return super().solve_power(
+            effect_size=effect_size,
+            nobs=nobs,
+            df=df,
+            alpha=alpha,
+            power=power
+            )
+
+
 #shortcut functions
 tt_solve_power = TTestPower().solve_power
 tt_ind_solve_power = TTestIndPower().solve_power
