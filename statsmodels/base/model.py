@@ -1915,7 +1915,11 @@ class LikelihoodModelResults(Results):
         else:
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
-        df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+        # Added a try and except statement
+        try:
+            df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+        except:
+            df_resid = getattr(self, 'df_resid_inference', self.resid)
         if scalar is None:
             warnings.warn(
                 "The behavior of wald_test will change after 0.14 to returning "
