@@ -327,7 +327,7 @@ class TestGLSARGretl:
         if pd.isna(lev.iloc[-1, 1]):
             lev = pd.read_csv(fpath, delim_whitespace=True, skiprows=3, skipfooter=2, engine='python', header=None)
 
-        lev.dtype.names = names
+        lev.columns = names
 
         res = res_ols #for easier copying
 
