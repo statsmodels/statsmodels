@@ -10,6 +10,8 @@ License: BSD-3
 import numpy as np
 
 from statsmodels.stats._knockoff import RegressionFDR
+from scipy.optimize import isotonic_regression
+from statsmodels.tools.testing import Holder
 
 __all__ = ['fdrcorrection', 'fdrcorrection_twostage', 'local_fdr',
            'multipletests', 'NullDistribution', 'RegressionFDR']
@@ -43,7 +45,8 @@ multitest_methods_names = {'b': 'Bonferroni',
                            'fdr_by': 'FDR Benjamini-Yekutieli',
                            'fdr_tsbh': 'FDR 2-stage Benjamini-Hochberg',
                            'fdr_tsbky': 'FDR 2-stage Benjamini-Krieger-Yekutieli',
-                           'fdr_gbs': 'FDR adaptive Gavrilov-Benjamini-Sarkar'
+                           'fdr_gbs': 'FDR adaptive Gavrilov-Benjamini-Sarkar',
+                           'lfdr' : 'lfdr support line procedure',
                            }
 
 _alias_list = [['b', 'bonf', 'bonferroni'],
@@ -56,7 +59,8 @@ _alias_list = [['b', 'bonf', 'bonferroni'],
                ['fdr_by', 'fdr_n', 'fdr_c', 'fdrn', 'fdrcorr'],
                ['fdr_tsbh', 'fdr_2sbh'],
                ['fdr_tsbky', 'fdr_2sbky', 'fdr_twostage'],
-               ['fdr_gbs']
+               ['fdr_gbs'],
+               ['lfdr', 'lfdr_sl'],
                ]
 
 
@@ -93,6 +97,7 @@ def multipletests(pvals, alpha=0.05, method='hs',
         - `fdr_by` : Benjamini/Yekutieli (negative)
         - `fdr_tsbh` : two stage fdr correction (non-negative)
         - `fdr_tsbky` : two stage fdr correction (non-negative)
+        - `lfdr` : support line
 
     maxiter : int or bool
         Maximum number of iterations for two-stage fdr, `fdr_tsbh` and
@@ -267,6 +272,10 @@ def multipletests(pvals, alpha=0.05, method='hs',
         del pvals_corrected_raw
         reject = pvals_corrected <= alpha
 
+    elif method.lower() in ['lfdr', 'lfdr_sl']:
+        pvals_corrected = lfdrcorrection(pvals, is_sorted=True).lfdr
+        reject = pvals_corrected <= alpha
+
     else:
         raise ValueError('method not recognized')
 
@@ -372,6 +381,102 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     else:
         return reject, pvals_corrected
 
+def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
+    '''
+    Estimate local and tail FDR values for a list of p-values.
+
+    Estimates the marginal density of the p-values using the Grenander estimator
+    of a monotone density. Combined with an estimate of the null proportion, 
+    this yields (by Bayes' rule) estimates of two posterior quantities:
+    1. The tail false discovery rate, given by fdr(t) = Prob{null | p ≤ t}
+    2. The local false discovery rate, given by lfdr(t) = Prob{null | p = t}
+    This function estimates fdr and lfdr for each input p-value.
+
+    Parameters
+    ----------
+    pvals : array_like, 1d
+        List of p-values of the individual tests.
+    null_proportion : float, optional
+        estimate of the null proportion. Defaults to conservative choice ``1.``.
+    is_sorted : bool, optional
+        If False (default), the p-values will be sorted, but the corrected
+        p-values are in the original order. If True, then it assumed that the
+        p-values are already sorted in ascending order.
+
+    Returns
+    -------
+    results : Holder
+        contains estimated tail FDR values (`results.fdr`) and estimated local
+        FDR values (`results.lfdr`)
+
+    See also
+    --------
+    local_fdr
+
+    Notes
+    -----
+    Assumes p-values are independent, uniformly distributed under the null and
+    have decreasing densities under the alternative.
+
+    References
+    ----------
+    U Grenander (1956). On the theory of mortality measurement: part II.
+    Scandinavian Actuarial Journal, 39, 125-153.
+
+    B Efron, R Tibshirani, J D Storey, and V Tusher (2001). Empirical Bayes
+    analysis of a microarray experiment. Journal of the American Statistical
+    Association, 96:456, 1151-1160.
+
+    B Efron (2007). Size, Power and False Discovery Rates. The Annals of
+    Statistics, 35:4, 1351-1377.
+
+    K Strimmer (2008). A unified approach to false discovery rate estimation.
+    BMC Bioinformatics, 9, 1-14.
+
+    J A Soloff, D Xiang, and W Fithian (2024). The edge of discovery:
+    Controlling the local false discovery rate at the margin. The Annals of
+    Statistics, 52:2, 580-601.
+
+    Examples
+    --------
+    >>> from statsmodels.stats.multitest import lfdrcorrection
+    >>> import numpy as np
+    >>> pvals = np.random.rand(30)
+    >>> lfdr = lfdrcorrection(pvals).lfdr
+    '''
+    pvals = np.asarray(pvals)
+    assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
+
+    nobs = len(pvals)
+
+    if not is_sorted:
+        pvals_sortind = np.argsort(pvals)
+        pvals_sorted = np.take(pvals, pvals_sortind)
+    else:
+        pvals_sorted = pvals  # alias
+
+    # compute left-hand slopes of least concave majorant of empirical cdf
+    gaps = np.diff(pvals_sorted, prepend=0)
+    slopes = isotonic_regression(np.ones(nobs)/(nobs*gaps),
+                                weights=gaps.copy(),
+                                increasing=False).x
+
+    # compute LCM of empirical cdf
+    keep = np.ones(nobs, dtype=bool)
+    keep[:-1] = ~np.isclose(slopes[:-1], slopes[1:])
+    knots_  = np.hstack([0, pvals_sorted[keep]])
+    heights_= np.hstack([0, (np.where(keep)[0]+1)/m])
+    lcm_cdf = np.interp(pvals_sorted, knots_, heights_)
+
+    # return fitted values in original order
+    if not is_sorted:
+        pvals_unsortind = pvals_sortind.argsort()
+        slopes = np.take(slopes, pvals_unsortind)
+        lcm_cdf = np.take(lcm_cdf, pvals_unsortind)
+    lfdr = np.minimum(1, null_proportion/slopes)
+    fdr = np.minimum(1, null_proportion*pvals/lcm_cdf)
+
+    return Holder(fdr=fdr, lfdr=lfdr)
 
 def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
                            maxiter=1,
