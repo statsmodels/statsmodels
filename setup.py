@@ -172,6 +172,7 @@ exts = dict(
     _smoothers_lowess={
         "source": "statsmodels/nonparametric/_smoothers_lowess.pyx"
     },  # noqa: E501
+    _tbats_tools={"source": "statsmodels/tsa/statespace/_tbats_tools.pyx"},  # noqa: E501
 )
 
 statespace_exts = [
