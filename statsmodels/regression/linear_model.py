@@ -367,7 +367,14 @@ class RegressionModel(base.LikelihoodModel):
         if self._df_resid is None:
             self.df_resid = self.nobs - self.rank
 
-        if isinstance(self, OLS):
+        results_class = getattr(self, '_results_class', None)
+        if results_class is not None:
+            lfit = results_class(
+                self, beta,
+                normalized_cov_params=self.normalized_cov_params,
+                cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
+                **kwargs)
+        elif isinstance(self, OLS):
             lfit = OLSResults(
                 self, beta,
                 normalized_cov_params=self.normalized_cov_params,
@@ -949,7 +956,7 @@ class OLS(WLS):
         resid = self.endog - np.dot(self.exog, params)
         if hasattr(self, 'offset'):
             resid -= self.offset
-        ssr = np.sum(resid**2)
+        ssr = np.sum(resid**2, axis=0)
         if scale is None:
             # profile log likelihood
             llf = -nobs2*np.log(2*np.pi) - nobs2*np.log(ssr / nobs) - nobs2
@@ -1715,7 +1722,7 @@ class RegressionResults(base.LikelihoodModelResults):
         is often called the standard error of the regression.
         """
         wresid = self.wresid
-        return np.dot(wresid, wresid) / self.df_resid
+        return wresid.T.dot(wresid) / self.df_resid
 
     @cache_readonly
     def ssr(self):
@@ -1730,8 +1737,8 @@ class RegressionResults(base.LikelihoodModelResults):
         weights = getattr(model, 'weights', None)
         sigma = getattr(model, 'sigma', None)
         if weights is not None:
-            mean = np.average(model.endog, weights=weights)
-            return np.sum(weights * (model.endog - mean)**2)
+            mean = np.average(model.endog, weights=weights, axis=0)
+            return np.sum(weights * (model.endog - mean).T**2, axis=-1)
         elif sigma is not None:
             # Exactly matches WLS when sigma is diagonal
             iota = np.ones_like(model.endog)
@@ -1741,7 +1748,7 @@ class RegressionResults(base.LikelihoodModelResults):
             err = model.whiten(err)
             return np.sum(err**2)
         else:
-            centered_endog = model.wendog - model.wendog.mean()
+            centered_endog = model.wendog - model.wendog.mean(0)
             return np.dot(centered_endog, centered_endog)
 
     @cache_readonly
