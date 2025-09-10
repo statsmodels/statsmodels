@@ -85,7 +85,7 @@ class Unit:
         W - W X Sinv X' W'
         """
         t = np.dot(self.W, self.X)
-        self.P = self.W - np.dot(np.dot(t, Sinv), t.T)
+        self.P = self.W - np.linalg.multi_dot([t, Sinv, t.T])
 
     def _compute_r(self, alpha):
         """residual after removing fixed effects
@@ -100,7 +100,7 @@ class Unit:
 
         D Z' W r
         """
-        self.b = np.dot(D, np.dot(np.dot(self.Z.T, self.W), self.r))
+        self.b = np.dot(D, np.linalg.multi_dot([self.Z.T, self.W, self.r]))
 
     def fit(self, a, D, sigma):
         """
@@ -119,13 +119,13 @@ class Unit:
         """
         Utility function to compute X^tWY (transposed ?) for Unit instance.
         """
-        return np.dot(np.dot(self.W, self.Y), self.X) #is this transposed ?
+        return np.linalg.multi_dot([self.W, self.Y, self.X]) #is this transposed ?
 
     def compute_xtwx(self):
         """
         Utility function to compute X^tWX for Unit instance.
         """
-        return np.dot(np.dot(self.X.T, self.W), self.X)
+        return np.linalg.multi_dot([self.X.T, self.W, self.X])
 
     def cov_random(self, D, Sinv=None):
         """
@@ -142,7 +142,7 @@ class Unit:
         if Sinv is not None:
             self.compute_P(Sinv)
         t = np.dot(self.Z, D)
-        return D - np.dot(np.dot(t.T, self.P), t)
+        return D - np.linalg.multi_dot([t.T, self.P, t])
 
     def logL(self, a, ML=False):
         """
@@ -324,7 +324,7 @@ class OneWayMixed:
                 W = unit.P
             D += np.multiply.outer(unit.b, unit.b)
             t = np.dot(unit.Z, self.D)
-            D += self.D - np.dot(np.dot(t.T, W), t)
+            D += self.D - np.linalg.multi_dot([t.T, W, t])
 
         self.D = D / self.m
 

@@ -94,7 +94,7 @@ class NonlinearDeltaCov:
         """Covariance matrix of the transformed random variable.
         """
         g = self.grad()
-        covar = np.dot(np.dot(g, self.cov_params), g.T)
+        covar = np.linalg.multi_dot([g, self.cov_params, g.T])
         return covar
 
     def predicted(self):

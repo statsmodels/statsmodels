@@ -309,7 +309,7 @@ def _HCCM2(hessian_inv, scale):
         scale = scale[:,None]
 
     xxi = hessian_inv
-    H = np.dot(np.dot(xxi, scale), xxi.T)
+    H = np.linalg.multi_dot([xxi, scale, xxi.T])
     return H
 
 #TODO: other kernels, move ?
