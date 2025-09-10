@@ -2680,7 +2680,7 @@ class NominalGEE(GEE):
         ncols = len(endog_cuts) * exog.shape[1]
         exog_out = np.zeros((nrows, ncols), dtype=np.float64)
         endog_out = np.zeros(nrows, dtype=np.float64)
-        groups_out = np.zeros(nrows, dtype=np.float64)
+        groups_out = np.zeros(nrows, dtype=groups.dtype)
         time_out = np.zeros((nrows, time.shape[1]),
                             dtype=np.float64)
         offset_out = np.zeros(nrows, dtype=np.float64)
