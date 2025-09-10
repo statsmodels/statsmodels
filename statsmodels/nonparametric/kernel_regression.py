@@ -36,7 +36,8 @@ from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
 from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
-    LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR, kernel_func
+    LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR, \
+    kernel_func, pairwise_product_kernel
 
 
 __all__ = ['KernelReg', 'KernelCensoredReg']
@@ -131,7 +132,8 @@ class KernelReg(GenericKDE):
             self._bw_method = bw
             # Workaround to avoid instance methods in __dict__
             if bw == 'cv_ls':
-                res = self.cv_loo
+                res = (
+                    self.cv_loo_fast if self.reg_type == 'lc' else self.cv_loo)
             else:  # bw == 'aic'
                 res = self.aic_hurvich
             X = np.std(self.exog, axis=0)
@@ -335,6 +337,38 @@ class KernelReg(GenericKDE):
 
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.nobs
+
+    def cv_loo_fast(self, bw, func=None):
+        r"""
+        The cross-validation function with leave-one-out estimator. Vectorized
+        version of `cv_loo` function for local constant estimator.
+
+        Parameters
+        ----------
+        bw : array_like
+            Vector of bandwidth values.
+        func : callable function
+            Unused for this function.
+
+        Returns
+        -------
+        L : float
+            The value of the CV function.
+
+        """
+        endog = self.endog
+        exog = self.exog
+        K = pairwise_product_kernel(bw, data=exog,
+                          var_type=self.var_type,
+                          ckertype=self.ckertype,
+                          ukertype=self.ukertype,
+                          okertype=self.okertype)
+        Kzerodiag = K - np.diag(np.diag(K))
+        k = np.sum(Kzerodiag, axis=1)
+        Y = endog.flatten()
+        G = np.dot(Kzerodiag, Y) / k
+        L = np.mean((G - Y) ** 2)
+        return L
 
     def r_squared(self):
         r"""
