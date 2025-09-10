@@ -533,24 +533,15 @@ class LikelihoodModel(Model):
         # args in most (any?) of the optimize function
 
         nobs = self.endog.shape[0]
-        # f = lambda params, *args: -self.loglike(params, *args) / nobs
 
         def f(params, *args):
             return -self.loglike(params, *args) / nobs
 
-        if method == 'newton':
-            # TODO: why are score and hess positive?
-            def score(params, *args):
-                return self.score(params, *args) / nobs
+        def score(params, *args):
+            return -self.score(params, *args) / nobs
 
-            def hess(params, *args):
-                return self.hessian(params, *args) / nobs
-        else:
-            def score(params, *args):
-                return -self.score(params, *args) / nobs
-
-            def hess(params, *args):
-                return -self.hessian(params, *args) / nobs
+        def hess(params, *args):
+            return -self.hessian(params, *args) / nobs
 
         warn_convergence = kwargs.pop('warn_convergence', True)
 
@@ -584,7 +575,7 @@ class LikelihoodModel(Model):
         if cov_params_func:
             Hinv = cov_params_func(self, xopt, retvals)
         elif method == 'newton' and full_output:
-            Hinv = np.linalg.inv(-retvals['Hessian']) / nobs
+            Hinv = np.linalg.inv(retvals['Hessian']) / nobs
         elif not skip_hessian:
             H = -1 * self.hessian(xopt)
             invertible = False
