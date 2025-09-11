@@ -182,7 +182,7 @@ class TestKdeWeights(CheckKDE):
                  bw="silverman")
         cls.res1 = res1
         fname = os.path.join(curdir, 'results', 'results_kde_weights.csv')
-        cls.res_density = pd.read_csv(fname, skiprows=1, header=None).values
+        cls.res_density = pd.read_csv(fname, skiprows=1, header=None).values.ravel()
 
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
@@ -222,7 +222,7 @@ class CheckKDEWeights:
     @pytest.mark.xfail(reason="Not almost equal to 7 decimals",
                        raises=AssertionError, strict=True)
     def test_density(self):
-        npt.assert_almost_equal(self.res1.density, self.res_density,
+        npt.assert_almost_equal(self.res1.density, self.res_density.ravel(),
                                 self.decimal_density)
 
     def test_evaluate(self):
@@ -230,7 +230,7 @@ class CheckKDEWeights:
             pytest.skip("Cosine kernel fails against Stata")
         kde_vals = [self.res1.evaluate(np.asarray(xi)) for xi in self.x]
         kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
-        npt.assert_almost_equal(kde_vals, self.res_density,
+        npt.assert_almost_equal(kde_vals, self.res_density.ravel(),
                                 self.decimal_density)
 
     def test_compare(self):
