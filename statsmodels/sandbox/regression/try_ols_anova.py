@@ -14,6 +14,7 @@ TODO:
 
 from statsmodels.compat.python import lmap
 import numpy as np
+import pandas as pd
 #from scipy import stats
 import statsmodels.api as sm
 
@@ -234,16 +235,16 @@ if __name__ == '__main__':
     # requires file 'dftest3.data' posted by Bruce
 
     # read data set and drop rows with missing data
+    colnames = ['breed', 'sex', 'litter', 'pen', 'pig', 'age', 'bage', 'y']
     dt_b = np.dtype([('breed', int), ('sex', int), ('litter', int),
                    ('pen', int), ('pig', int), ('age', float),
                    ('bage', float), ('y', float)])
-    dta = np.genfromtxt('dftest3.data', dt_b,missing='.', usemask=True)
-    print('missing', [dta.mask[k].sum() for k in dta.dtype.names])
-    m = dta.mask.view(bool)
-    droprows = m.reshape(-1,len(dta.dtype.names)).any(1)
+    df = pd.read_csv('dftest3.data', header=None, names=colnames, na_values='.')
+    print('missing', [df[col].isna().sum() for col in colnames])
+    droprows = df.isna().any(axis=1)
     # get complete data as plain structured array
     # maybe does not work with masked arrays
-    dta_use_b1 = dta[~droprows,:].data
+    dta_use_b1 = df[~droprows].to_records(index=False)
     print(dta_use_b1.shape)
     print(dta_use_b1.dtype)
 

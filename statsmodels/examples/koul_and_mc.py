@@ -1,5 +1,6 @@
 import statsmodels.api as sm
 import numpy as np
+import pandas as pd
 
 ##################
 #Monte Carlo test#
@@ -27,7 +28,7 @@ mc_est = np.mean(params, axis=0)  # Gives MC parameter estimate
 #Koul replication#
 ##################
 
-koul_data = np.genfromtxt('/home/justin/rverify.csv', delimiter=';')
+koul_data = pd.read_csv('/home/justin/rverify.csv', delimiter=';').values
 # ^ Change path to where file is located.
 koul_y = np.log10(koul_data[:, 0])
 koul_x = sm.add_constant(koul_data[:, 2])

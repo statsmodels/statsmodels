@@ -16,16 +16,16 @@ import statsmodels.nonparametric.bandwidths as bandwidths
 curdir = os.path.dirname(os.path.abspath(__file__))
 rfname = os.path.join(curdir, 'results', 'results_kde.csv')
 # print rfname
-KDEResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
+KDEResults = pd.read_csv(rfname)
 
 rfname = os.path.join(curdir, 'results', 'results_kde_univ_weights.csv')
-KDEWResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
+KDEWResults = pd.read_csv(rfname)
 
 # get results from R
 curdir = os.path.dirname(os.path.abspath(__file__))
 rfname = os.path.join(curdir, 'results', 'results_kcde.csv')
 # print rfname
-KCDEResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
+KCDEResults = pd.read_csv(rfname)
 
 # setup test data
 
@@ -65,7 +65,7 @@ class CheckKDE:
     decimal_density = 7
 
     def test_density(self):
-        npt.assert_almost_equal(self.res1.density, self.res_density,
+        npt.assert_almost_equal(self.res1.density, self.res_density.ravel(),
                                 self.decimal_density)
 
     def test_evaluate(self):
@@ -74,12 +74,12 @@ class CheckKDE:
         # added it as test method to TestKDEGauss below
         # inDomain is not vectorized
         # kde_vals = self.res1.evaluate(self.res1.support)
-        kde_vals = [np.squeeze(self.res1.evaluate(xi)) for xi in self.res1.support]
+        kde_vals = [np.squeeze(self.res1.evaluate(np.asarray(xi))) for xi in self.res1.support]
         kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(kde_vals, self.res_density,
+        npt.assert_almost_equal(kde_vals, self.res_density.ravel(),
                                 self.decimal_density)
 
 
@@ -93,12 +93,12 @@ class TestKDEGauss(CheckKDE):
 
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
-        kde_vals = [self.res1.evaluate(xi) for xi in self.res1.support]
+        kde_vals = [self.res1.evaluate(np.asarray(xi)) for xi in self.res1.support]
         kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(kde_vals, self.res_density,
+        npt.assert_almost_equal(kde_vals, self.res_density.ravel(),
                                 self.decimal_density)
 
     # The following tests are regression tests
@@ -182,16 +182,16 @@ class TestKdeWeights(CheckKDE):
                  bw="silverman")
         cls.res1 = res1
         fname = os.path.join(curdir, 'results', 'results_kde_weights.csv')
-        cls.res_density = np.genfromtxt(open(fname, 'rb'), skip_header=1)
+        cls.res_density = pd.read_csv(fname, skiprows=1, header=None).values.ravel()
 
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
-        kde_vals = [self.res1.evaluate(xi) for xi in self.res1.support]
+        kde_vals = [self.res1.evaluate(np.asarray(xi)) for xi in self.res1.support]
         kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(kde_vals, self.res_density,
+        npt.assert_almost_equal(kde_vals, self.res_density.ravel(),
                                 self.decimal_density)
 
 
@@ -203,8 +203,7 @@ class TestKDEGaussFFT(CheckKDE):
         res1.fit(kernel="gau", fft=True, bw="silverman")
         cls.res1 = res1
         rfname2 = os.path.join(curdir, 'results', 'results_kde_fft.csv')
-        cls.res_density = np.genfromtxt(open(rfname2, 'rb'))
-
+        cls.res_density = pd.read_csv(rfname2, header=None).values
 
 class CheckKDEWeights:
 
@@ -216,32 +215,32 @@ class CheckKDEWeights:
         # default kernel was scott when reference values computed
         res1.fit(kernel=cls.kernel_name, weights=weights, fft=False, bw="scott")
         cls.res1 = res1
-        cls.res_density = KDEWResults[cls.res_kernel_name]
+        cls.res_density = KDEWResults[cls.res_kernel_name].values.ravel()
 
     decimal_density = 7
 
     @pytest.mark.xfail(reason="Not almost equal to 7 decimals",
                        raises=AssertionError, strict=True)
     def test_density(self):
-        npt.assert_almost_equal(self.res1.density, self.res_density,
+        npt.assert_almost_equal(self.res1.density, self.res_density.ravel(),
                                 self.decimal_density)
 
     def test_evaluate(self):
         if self.kernel_name == 'cos':
             pytest.skip("Cosine kernel fails against Stata")
-        kde_vals = [self.res1.evaluate(xi) for xi in self.x]
-        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
-        npt.assert_almost_equal(kde_vals, self.res_density,
+        kde_vals = [self.res1.evaluate(np.asarray(xi)) for xi in self.x]
+        kde_vals = np.array(kde_vals).ravel()  # kde_vals is a "column_list"
+        npt.assert_almost_equal(kde_vals, self.res_density.ravel(),
                                 self.decimal_density)
 
     def test_compare(self):
         xx = self.res1.support
-        kde_vals = [np.squeeze(self.res1.evaluate(xi)) for xi in xx]
-        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
+        kde_vals = [np.squeeze(self.res1.evaluate(np.asarray(xi))) for xi in xx]
+        kde_vals = np.array(kde_vals).ravel()  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(self.res1.density, kde_vals,
+        npt.assert_almost_equal(self.res1.density.ravel(), kde_vals,
                                 self.decimal_density)
 
         # regression test, not compared to another package

@@ -24,6 +24,7 @@ License: BSD (simplified)
 '''
 import numpy as np
 import numpy.lib.recfunctions as recf
+import pandas as pd
 from scipy import optimize
 
 
@@ -238,10 +239,9 @@ class RU2NMNL:
 #------------------------------
 
 #travel data from Greene
-dta = np.genfromtxt('TableF23-2.txt', skip_header=1,
-                    names='Mode   Ttme   Invc    Invt      GC     Hinc    PSize'.split())
+dta = pd.read_csv('TableF23-2.txt', delim_whitespace=True, skiprows=1)
 
-endog = dta['Mode'].reshape(-1,4).copy() #I do not want a view
+endog = dta['Mode'].values.reshape(-1,4).copy() #I do not want a view
 nobs, nchoices = endog.shape
 datafloat = dta.view(float).reshape(-1,7)
 exog = datafloat[:,1:].reshape(-1,6*nchoices).copy() #I do not want a view
