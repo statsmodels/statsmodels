@@ -436,7 +436,7 @@ cdef void {{prefix}}chandrasekhar_recursion({{prefix}}KalmanFilter kfilter, {{pr
 cdef void {{prefix}}loglikelihood({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, int i, {{cython_type}} forecast_error_cov, {{cython_type}} forecast_error_cov_inv):
     kfilter._loglikelihood[0] = (
         kfilter._loglikelihood[0] - 0.5*(
-            {{combined_prefix}}log(2 * NPY_PI * forecast_error_cov)
+            {{combined_prefix}}log(2 * M_PI * forecast_error_cov)
         )
     )
     if kfilter.filter_method & FILTER_CONCENTRATED:
