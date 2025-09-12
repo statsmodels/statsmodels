@@ -215,7 +215,7 @@ class CheckKDEWeights:
         # default kernel was scott when reference values computed
         res1.fit(kernel=cls.kernel_name, weights=weights, fft=False, bw="scott")
         cls.res1 = res1
-        cls.res_density = KDEWResults[cls.res_kernel_name]
+        cls.res_density = KDEWResults[cls.res_kernel_name].values.ravel()
 
     decimal_density = 7
 
@@ -229,14 +229,14 @@ class CheckKDEWeights:
         if self.kernel_name == 'cos':
             pytest.skip("Cosine kernel fails against Stata")
         kde_vals = [self.res1.evaluate(np.asarray(xi)) for xi in self.x]
-        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
+        kde_vals = np.array(kde_vals).ravel()  # kde_vals is a "column_list"
         npt.assert_almost_equal(kde_vals, self.res_density.ravel(),
                                 self.decimal_density)
 
     def test_compare(self):
         xx = self.res1.support
         kde_vals = [np.squeeze(self.res1.evaluate(np.asarray(xi))) for xi in xx]
-        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
+        kde_vals = np.array(kde_vals).ravel()  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
