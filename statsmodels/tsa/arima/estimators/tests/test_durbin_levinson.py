@@ -1,15 +1,15 @@
 import numpy as np
-
-import pytest
 from numpy.testing import assert_allclose, assert_raises
+import pytest
 
-from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import dowj, lake
 from statsmodels.tsa.arima.estimators.durbin_levinson import durbin_levinson
+from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 
 
-@pytest.mark.low_precision('Test against Example 5.1.1 in Brockwell and Davis'
-                           ' (2016)')
+@pytest.mark.low_precision(
+    "Test against Example 5.1.1 in Brockwell and Davis" " (2016)"
+)
 def test_brockwell_davis_example_511():
     # Note: this example is primarily tested in
     # test_yule_walker::test_brockwell_davis_example_511.
@@ -36,14 +36,20 @@ def check_itsmr(lake):
     assert_allclose(dl[3].ar_params, desired)
     desired = [1.08425065810, -0.39076602696, 0.09367609911, 0.03405704644]
     assert_allclose(dl[4].ar_params, desired)
-    desired = [1.08213598501, -0.39658257147, 0.11793957728, -0.03326633983,
-               0.06209208707]
+    desired = [
+        1.08213598501,
+        -0.39658257147,
+        0.11793957728,
+        -0.03326633983,
+        0.06209208707,
+    ]
     assert_allclose(dl[5].ar_params, desired)
 
     # itsmr::yw returns the innovations algorithm estimate of the variance
     # we'll just check for p=5
-    u, v = arma_innovations(np.array(lake) - np.mean(lake),
-                            ar_params=dl[5].ar_params, sigma2=1)
+    u, v = arma_innovations(
+        np.array(lake) - np.mean(lake), ar_params=dl[5].ar_params, sigma2=1
+    )
     desired_sigma2 = 0.4716322564
     assert_allclose(np.sum(u**2 / v) / len(u), desired_sigma2)
 
@@ -53,8 +59,8 @@ def test_itsmr():
     # control this)
     endog = lake.copy()
 
-    check_itsmr(endog)           # Pandas series
-    check_itsmr(endog.values)    # Numpy array
+    check_itsmr(endog)  # Pandas series
+    check_itsmr(endog.values)  # Numpy array
     check_itsmr(endog.tolist())  # Python list
 
 
@@ -67,7 +73,7 @@ def test_nonstationary_series():
     assert_allclose(res[2].ar_params, desired_ar_params)
 
 
-@pytest.mark.xfail(reason='Different computation of variances')
+@pytest.mark.xfail(reason="Different computation of variances")
 def test_nonstationary_series_variance():
     # See `test_nonstationary_series`. This part of the test has been broken
     # out as an xfail because we compute a different estimate of the variance
