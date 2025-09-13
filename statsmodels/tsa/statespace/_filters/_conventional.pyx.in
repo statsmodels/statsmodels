@@ -390,7 +390,7 @@ cdef {{cython_type}} {{prefix}}loglikelihood_conventional({{prefix}}KalmanFilter
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
 
-    loglikelihood = -0.5*(model._k_endog*{{combined_prefix}}log(2*NPY_PI) + determinant)
+    loglikelihood = -0.5*(model._k_endog*{{combined_prefix}}log(2*M_PI) + determinant)
 
     if not kfilter.filter_method & FILTER_CONCENTRATED:
         {{if combined_prefix == 'd'}}
