@@ -6,7 +6,7 @@ requires = [
     "cython>=3.0.10,<4",  # Sync with CYTHON_MIN_VER in setup
     "numpy>=2.0.0,<3",
     "scipy>=1.13,<2",
-    "setuptools_scm[toml]>=8,<9"
+    "setuptools_scm[toml]>=8,<10"
 ]
 build-backend = "setuptools.build_meta"
 
