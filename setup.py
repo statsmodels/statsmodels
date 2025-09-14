@@ -260,11 +260,6 @@ def process_tempita(source_name):
 NUMPY_INCLUDES = sorted(
     {np.get_include(), pjoin(dirname(inspect.getfile(np.core)), "include")}
 )
-NUMPY_MATH_LIBS = {
-    "include_dirs": [np.get_include()],
-    "library_dirs": [os.path.join(np.get_include(), "..", "lib")],
-    "libraries": [],
-}
 
 
 extensions = []
@@ -278,9 +273,9 @@ for config in exts.values():
     library_dirs = config.get("library_dirs", [])
     uses_numpy_libraries = config.get("numpy_libraries", False)
 
-    include_dirs = sorted(set(include_dirs + NUMPY_MATH_LIBS["include_dirs"]))
-    libraries = sorted(set(libraries + NUMPY_MATH_LIBS["libraries"]))
-    library_dirs = sorted(set(library_dirs + NUMPY_MATH_LIBS["library_dirs"]))
+    include_dirs = sorted(set(include_dirs + NUMPY_INCLUDES))
+    libraries = sorted(set(libraries + NUMPY_INCLUDES))
+    library_dirs = sorted(set(library_dirs + NUMPY_INCLUDES))
 
     ext = Extension(
         name,
@@ -301,10 +296,8 @@ for source in statespace_exts:
     ext = Extension(
         name,
         [source],
-        include_dirs=["statsmodels/src"] + NUMPY_MATH_LIBS["include_dirs"],
+        include_dirs=["statsmodels/src"] + NUMPY_INCLUDES,
         depends=[],
-        libraries=NUMPY_MATH_LIBS["libraries"],
-        library_dirs=NUMPY_MATH_LIBS["library_dirs"],
         define_macros=DEFINE_MACROS,
     )
     extensions.append(ext)
