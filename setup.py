@@ -264,7 +264,7 @@ NUMPY_INCLUDES = sorted(
 NUMPY_MATH_LIBS = {
     "include_dirs": [np.get_include()],
     "library_dirs": [os.path.join(np.get_include(), "..", "lib")],
-    "libraries": ["npymath"],
+    "libraries": [],
 }
 
 

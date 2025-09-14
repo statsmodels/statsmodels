@@ -9,23 +9,28 @@ estimation differ among implementations and the results will not agree
 exactly.
 """
 
-from statsmodels.compat import lrange
 import os
-import numpy as np
-import pytest
-from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_array_less, assert_raises, assert_warns,
-                           assert_)
-import statsmodels.genmod.generalized_estimating_equations as gee
-import statsmodels.tools as tools
-import statsmodels.regression.linear_model as lm
-from statsmodels.genmod import families
-from statsmodels.genmod import cov_struct
-import statsmodels.discrete.discrete_model as discrete
-
-import pandas as pd
-from scipy.stats.distributions import norm
 import warnings
+
+import numpy as np
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_less,
+    assert_equal,
+    assert_raises,
+)
+import pandas as pd
+import pytest
+from scipy.stats.distributions import norm
+
+from statsmodels.compat import lrange
+import statsmodels.discrete.discrete_model as discrete
+from statsmodels.genmod import cov_struct, families
+import statsmodels.genmod.generalized_estimating_equations as gee
+import statsmodels.regression.linear_model as lm
+import statsmodels.tools as tools
 
 try:
     import matplotlib.pyplot as plt
@@ -36,6 +41,7 @@ pdf_output = False
 
 if pdf_output:
     from matplotlib.backends.backend_pdf import PdfPages
+
     pdf = PdfPages("test_glm.pdf")
 else:
     pdf = None
@@ -60,16 +66,14 @@ def load_data(fname, icept=True):
     """
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    Z = np.genfromtxt(os.path.join(cur_dir, 'results', fname),
-                      delimiter=",")
+    Z = np.genfromtxt(os.path.join(cur_dir, "results", fname), delimiter=",")
 
     group = Z[:, 0]
     endog = Z[:, 1]
     exog = Z[:, 2:]
 
     if icept:
-        exog = np.concatenate((np.ones((exog.shape[0], 1)), exog),
-                              axis=1)
+        exog = np.concatenate((np.ones((exog.shape[0], 1)), exog), axis=1)
 
     return endog, exog, group
 
@@ -102,8 +106,7 @@ class TestGEE:
         endog = exog[:, 1] + np.random.normal(size=n)
 
         model = gee.GEE(endog, exog, groups)
-        result = model.fit(
-            start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
+        result = model.fit(start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
 
         marg = result.get_margeff()
 
@@ -131,8 +134,7 @@ class TestGEE:
         endog_list = list(endog_arr)
 
         model = gee.GEE(endog_list, exog_list, groups_list)
-        result = model.fit(
-            start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
+        result = model.fit(start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
 
         marg = result.get_margeff()
 
@@ -145,8 +147,7 @@ class TestGEE:
         endog_tuple = tuple(endog_arr)
 
         model = gee.GEE(endog_tuple, exog_tuple, groups_tuple)
-        result = model.fit(
-            start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
+        result = model.fit(start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
 
         marg = result.get_margeff()
 
@@ -165,8 +166,7 @@ class TestGEE:
         groups = np.arange(8)
 
         model = gee.GEE(endog, exog, groups, family=families.Binomial())
-        result = model.fit(
-            cov_type='naive', start_params=[-3.29583687,  2.19722458])
+        result = model.fit(cov_type="naive", start_params=[-3.29583687, 2.19722458])
 
         marg = result.get_margeff()
 
@@ -186,8 +186,7 @@ class TestGEE:
         groups = np.arange(8)
 
         model = gee.NominalGEE(endog, exog, groups)
-        result = model.fit(cov_type='naive', start_params=[
-                           3.295837, -2.197225])
+        result = model.fit(cov_type="naive", start_params=[3.295837, -2.197225])
 
         marg = result.get_margeff()
 
@@ -205,8 +204,7 @@ class TestGEE:
         groups = np.arange(8)
 
         model = gee.NominalGEE(endog, exog, groups)
-        result = model.fit(cov_type='naive',
-                           start_params=[3.295837, -2.197225])
+        result = model.fit(cov_type="naive", start_params=[3.295837, -2.197225])
 
         fig = result.plot_distribution()
         assert_equal(isinstance(fig, plt.Figure), True)
@@ -222,8 +220,7 @@ class TestGEE:
         groups = np.arange(8)
 
         model = gee.GEE(endog, exog, groups, family=families.Poisson())
-        result = model.fit(cov_type='naive', start_params=[
-                           2.52572864, 0.62057649])
+        result = model.fit(cov_type="naive", start_params=[2.52572864, 0.62057649])
 
         marg = result.get_margeff()
 
@@ -244,12 +241,10 @@ class TestGEE:
         groups = np.arange(8)
 
         model = gee.NominalGEE(endog, exog, groups)
-        results = model.fit(cov_type='naive', start_params=[
-                            3.295837, -2.197225])
+        results = model.fit(cov_type="naive", start_params=[3.295837, -2.197225])
 
-        logit_model = gee.GEE(endog, exog, groups,
-                              family=families.Binomial())
-        logit_results = logit_model.fit(cov_type='naive')
+        logit_model = gee.GEE(endog, exog, groups, family=families.Binomial())
+        logit_results = logit_model.fit(cov_type="naive")
 
         assert_allclose(results.params, -logit_results.params, rtol=1e-5)
         assert_allclose(results.bse, logit_results.bse, rtol=1e-5)
@@ -265,22 +260,20 @@ class TestGEE:
         groups = np.kron(np.arange(10), np.r_[1, 1])
         model = gee.GEE(endog, exog, groups, weights=weights)
         result = model.fit()
-        assert_allclose(result.params, np.r_[2 / 3.])
+        assert_allclose(result.params, np.r_[2 / 3.0])
 
         # Comparison against stata using groups with different sizes.
         weights = np.ones(20)
         weights[10:] = 2
-        endog = np.r_[1, 2, 3, 2, 3, 4, 3, 4, 5, 4, 5, 6, 5, 6, 7, 6,
-                      7, 8, 7, 8]
-        exog1 = np.r_[1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4,
-                      3, 3, 3, 3]
-        groups = np.r_[1, 1, 2, 2, 2, 2, 4, 4, 5, 5, 6, 6, 6, 6,
-                       8, 8, 9, 9, 10, 10]
+        endog = np.r_[1, 2, 3, 2, 3, 4, 3, 4, 5, 4, 5, 6, 5, 6, 7, 6, 7, 8, 7, 8]
+        exog1 = np.r_[1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 3]
+        groups = np.r_[1, 1, 2, 2, 2, 2, 4, 4, 5, 5, 6, 6, 6, 6, 8, 8, 9, 9, 10, 10]
         exog = np.column_stack((np.ones(20), exog1))
 
         # Comparison using independence model
-        model = gee.GEE(endog, exog, groups, weights=weights,
-                        cov_struct=cov_struct.Independence())
+        model = gee.GEE(
+            endog, exog, groups, weights=weights, cov_struct=cov_struct.Independence()
+        )
         g = np.mean([2, 4, 2, 2, 4, 2, 2, 2])
         fac = 20 / float(20 - g)
         result = model.fit(ddof_scale=0, scaling_factor=fac)
@@ -294,8 +287,9 @@ class TestGEE:
 
         # Comparison using exchangeable model
         # Smoke test for now
-        model = gee.GEE(endog, exog, groups, weights=weights,
-                        cov_struct=cov_struct.Exchangeable())
+        model = gee.GEE(
+            endog, exog, groups, weights=weights, cov_struct=cov_struct.Exchangeable()
+        )
         model.fit(ddof_scale=0)
 
     # This is in the release announcement for version 0.6.
@@ -307,15 +301,15 @@ class TestGEE:
 
         fam = families.Poisson()
         ind = cov_struct.Independence()
-        mod1 = gee.GEE.from_formula("y ~ age + trt + base", data["subject"],
-                                    data, cov_struct=ind, family=fam)
-        rslt1 = mod1.fit(cov_type='naive')
+        mod1 = gee.GEE.from_formula(
+            "y ~ age + trt + base", data["subject"], data, cov_struct=ind, family=fam
+        )
+        rslt1 = mod1.fit(cov_type="naive")
 
         # Coefficients should agree with GLM
         from statsmodels.genmod.generalized_linear_model import GLM
 
-        mod2 = GLM.from_formula("y ~ age + trt + base", data,
-                                family=families.Poisson())
+        mod2 = GLM.from_formula("y ~ age + trt + base", data, family=families.Poisson())
         rslt2 = mod2.fit()
 
         # do not use wrapper, asserts_xxx do not work
@@ -339,7 +333,7 @@ class TestGEE:
         endog[5:7] = np.nan
         exog[10:12, 1] = np.nan
 
-        mod1 = gee.GEE(endog, exog, groups, missing='drop')
+        mod1 = gee.GEE(endog, exog, groups, missing="drop")
         rslt1 = mod1.fit()
 
         assert_almost_equal(len(mod1.endog), 95)
@@ -347,7 +341,7 @@ class TestGEE:
 
         ii = np.isfinite(endog) & np.isfinite(exog).all(1)
 
-        mod2 = gee.GEE(endog[ii], exog[ii, :], groups[ii], missing='none')
+        mod2 = gee.GEE(endog[ii], exog[ii, :], groups[ii], missing="none")
         rslt2 = mod2.fit()
 
         assert_almost_equal(rslt1.params, rslt2.params)
@@ -367,8 +361,15 @@ class TestGEE:
         endog[5:7] = np.nan
         exog2[10:12] = np.nan
 
-        data0 = pd.DataFrame({"endog": endog, "exog1": exog1, "exog2": exog2,
-                              "exog3": exog3, "groups": groups})
+        data0 = pd.DataFrame(
+            {
+                "endog": endog,
+                "exog1": exog1,
+                "exog2": exog2,
+                "exog3": exog3,
+                "groups": groups,
+            }
+        )
 
         for k in 0, 1:
             data = data0.copy()
@@ -379,9 +380,13 @@ class TestGEE:
                 kwargs["offset"] = "offset"
                 kwargs["time"] = "time"
 
-            mod1 = gee.GEE.from_formula("endog ~ exog1 + exog2 + exog3",
-                                        groups="groups", data=data,
-                                        missing='drop', **kwargs)
+            mod1 = gee.GEE.from_formula(
+                "endog ~ exog1 + exog2 + exog3",
+                groups="groups",
+                data=data,
+                missing="drop",
+                **kwargs
+            )
             rslt1 = mod1.fit()
 
             assert_almost_equal(len(mod1.endog), 95)
@@ -394,9 +399,13 @@ class TestGEE:
                 kwargs["offset"] = data["offset"]
                 kwargs["time"] = data["time"]
 
-            mod2 = gee.GEE.from_formula("endog ~ exog1 + exog2 + exog3",
-                                        groups=data["groups"], data=data,
-                                        missing='none', **kwargs)
+            mod2 = gee.GEE.from_formula(
+                "endog ~ exog1 + exog2 + exog3",
+                groups=data["groups"],
+                data=data,
+                missing="none",
+                **kwargs
+            )
             rslt2 = mod2.fit()
 
             assert_almost_equal(rslt1.params.values, rslt2.params.values)
@@ -441,13 +450,11 @@ class TestGEE:
         md1 = gee.GEE(endog, exog, group, family=family, cov_struct=va)
         mdf1 = md1.fit()
 
-        md2 = gee.GEE(endog, exog, group, time=T, family=family,
-                      cov_struct=va)
+        md2 = gee.GEE(endog, exog, group, time=T, family=family, cov_struct=va)
         mdf2 = md2.fit()
 
         assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
-        assert_almost_equal(mdf1.standard_errors(),
-                            mdf2.standard_errors(), decimal=6)
+        assert_almost_equal(mdf1.standard_errors(), mdf2.standard_errors(), decimal=6)
 
     def test_logistic(self):
         # R code for comparing results:
@@ -499,40 +506,53 @@ class TestGEE:
         va = cov_struct.Autoregressive(grid=False)
 
         # From R gee
-        cf = [[0.0167272965285882, 1.13038654425893,
-               -1.86896345082962, 1.09397608331333],
-              [0.0178982283915449, 1.13118798191788,
-               -1.86133518416017, 1.08944256230299],
-              [0.0109621937947958, 1.13226505028438,
-               -1.88278757333046, 1.09954623769449]]
-        se = [[0.127291720283049, 0.166725808326067,
-               0.192430061340865, 0.173141068839597],
-              [0.127045031730155, 0.165470678232842,
-               0.192052750030501, 0.173174779369249],
-              [0.127240302296444, 0.170554083928117,
-               0.191045527104503, 0.169776150974586]]
+        cf = [
+            [0.0167272965285882, 1.13038654425893, -1.86896345082962, 1.09397608331333],
+            [0.0178982283915449, 1.13118798191788, -1.86133518416017, 1.08944256230299],
+            [0.0109621937947958, 1.13226505028438, -1.88278757333046, 1.09954623769449],
+        ]
+        se = [
+            [
+                0.127291720283049,
+                0.166725808326067,
+                0.192430061340865,
+                0.173141068839597,
+            ],
+            [
+                0.127045031730155,
+                0.165470678232842,
+                0.192052750030501,
+                0.173174779369249,
+            ],
+            [
+                0.127240302296444,
+                0.170554083928117,
+                0.191045527104503,
+                0.169776150974586,
+            ],
+        ]
 
         for j, v in enumerate((vi, ve, va)):
             md = gee.GEE(endog, exog, group, T, family, v)
             mdf = md.fit()
             if id(v) != id(va):
                 assert_almost_equal(mdf.params, cf[j], decimal=6)
-                assert_almost_equal(mdf.standard_errors(), se[j],
-                                    decimal=6)
+                assert_almost_equal(mdf.standard_errors(), se[j], decimal=6)
 
         # Test with formulas
-        D = np.concatenate((endog[:, None], group[:, None], exog[:, 1:]),
-                           axis=1)
+        D = np.concatenate((endog[:, None], group[:, None], exog[:, 1:]), axis=1)
         D = pd.DataFrame(D)
-        D.columns = ["Y", "Id", ] + ["X%d" % (k + 1)
-                                     for k in range(exog.shape[1] - 1)]
+        D.columns = [
+            "Y",
+            "Id",
+        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
         for j, v in enumerate((vi, ve)):
-            md = gee.GEE.from_formula("Y ~ X1 + X2 + X3", "Id", D,
-                                      family=family, cov_struct=v)
+            md = gee.GEE.from_formula(
+                "Y ~ X1 + X2 + X3", "Id", D, family=family, cov_struct=v
+            )
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=6)
-            assert_almost_equal(mdf.standard_errors(), se[j],
-                                decimal=6)
+            assert_almost_equal(mdf.standard_errors(), se[j], decimal=6)
 
         # FIXME: do not leave commented-out
         # Check for run-time exceptions in summary
@@ -542,9 +562,11 @@ class TestGEE:
 
         dep_params_true = [0, 0.589208623896, 0.559823804948]
 
-        params_true = [[1.08043787, 1.12709319, 0.90133927],
-                       [0.9613677, 1.05826987, 0.90832055],
-                       [1.05370439, 0.96084864, 0.93923374]]
+        params_true = [
+            [1.08043787, 1.12709319, 0.90133927],
+            [0.9613677, 1.05826987, 0.90832055],
+            [1.05370439, 0.96084864, 0.93923374],
+        ]
 
         np.random.seed(342837482)
 
@@ -558,7 +580,7 @@ class TestGEE:
 
             ix = np.arange(gsize)[:, None] - np.arange(gsize)[None, :]
             ix = np.abs(ix)
-            cmat = ar_param ** ix
+            cmat = ar_param**ix
             cmat_r = np.linalg.cholesky(cmat)
 
             endog = []
@@ -592,10 +614,8 @@ class TestGEE:
         md = gee.GEE(endog, exog, group, None, family, ve)
         mdf = md.fit()
 
-        assert_almost_equal(np.dot(exog, mdf.params),
-                            mdf.fittedvalues)
-        assert_almost_equal(endog - np.dot(exog, mdf.params),
-                            mdf.resid)
+        assert_almost_equal(np.dot(exog, mdf.params), mdf.fittedvalues)
+        assert_almost_equal(endog - np.dot(exog, mdf.params), mdf.resid)
 
     def test_scoretest(self):
         # Regression tests
@@ -608,48 +628,55 @@ class TestGEE:
         group = np.kron(np.arange(n / 4), np.ones(4))
 
         # Test under the null.
-        L = np.array([[1., -1, 0, 0]])
-        R = np.array([0., ])
+        L = np.array([[1.0, -1, 0, 0]])
+        R = np.array(
+            [
+                0.0,
+            ]
+        )
         family = families.Gaussian()
         va = cov_struct.Independence()
-        mod1 = gee.GEE(endog, exog, group, family=family,
-                       cov_struct=va, constraint=(L, R))
+        mod1 = gee.GEE(
+            endog, exog, group, family=family, cov_struct=va, constraint=(L, R)
+        )
         res1 = mod1.fit()
-        assert_almost_equal(res1.score_test()["statistic"],
-                            1.08126334)
-        assert_almost_equal(res1.score_test()["p-value"],
-                            0.2984151086)
+        assert_almost_equal(res1.score_test()["statistic"], 1.08126334)
+        assert_almost_equal(res1.score_test()["p-value"], 0.2984151086)
 
         # Test under the alternative.
-        L = np.array([[1., -1, 0, 0]])
-        R = np.array([1.0, ])
+        L = np.array([[1.0, -1, 0, 0]])
+        R = np.array(
+            [
+                1.0,
+            ]
+        )
         family = families.Gaussian()
         va = cov_struct.Independence()
-        mod2 = gee.GEE(endog, exog, group, family=family,
-                       cov_struct=va, constraint=(L, R))
+        mod2 = gee.GEE(
+            endog, exog, group, family=family, cov_struct=va, constraint=(L, R)
+        )
         res2 = mod2.fit()
-        assert_almost_equal(res2.score_test()["statistic"],
-                            3.491110965)
-        assert_almost_equal(res2.score_test()["p-value"],
-                            0.0616991659)
+        assert_almost_equal(res2.score_test()["statistic"], 3.491110965)
+        assert_almost_equal(res2.score_test()["p-value"], 0.0616991659)
 
         # Compare to Wald tests
         exog = np.random.normal(size=(n, 2))
         L = np.array([[1, -1]])
-        R = np.array([0.])
+        R = np.array([0.0])
         f = np.r_[1, -1]
         for i in range(10):
-            endog = exog[:, 0] + (0.5 + i / 10.) * exog[:, 1] +\
-                np.random.normal(size=n)
+            endog = (
+                exog[:, 0] + (0.5 + i / 10.0) * exog[:, 1] + np.random.normal(size=n)
+            )
             family = families.Gaussian()
             va = cov_struct.Independence()
-            mod0 = gee.GEE(endog, exog, group, family=family,
-                           cov_struct=va)
+            mod0 = gee.GEE(endog, exog, group, family=family, cov_struct=va)
             rslt0 = mod0.fit()
             family = families.Gaussian()
             va = cov_struct.Independence()
-            mod1 = gee.GEE(endog, exog, group, family=family,
-                           cov_struct=va, constraint=(L, R))
+            mod1 = gee.GEE(
+                endog, exog, group, family=family, cov_struct=va, constraint=(L, R)
+            )
             res1 = mod1.fit()
             se = np.sqrt(np.dot(f, np.dot(rslt0.cov_params(), f)))
             wald_z = np.dot(f, rslt0.params) / se
@@ -657,8 +684,9 @@ class TestGEE:
             score_p = res1.score_test()["p-value"]
             assert_array_less(np.abs(wald_p - score_p), 0.02)
 
-    @pytest.mark.parametrize("cov_struct", [cov_struct.Independence,
-                                            cov_struct.Exchangeable])
+    @pytest.mark.parametrize(
+        "cov_struct", [cov_struct.Independence, cov_struct.Exchangeable]
+    )
     def test_compare_score_test(self, cov_struct):
 
         np.random.seed(6432)
@@ -671,8 +699,7 @@ class TestGEE:
 
         L = np.asarray([[0, 1, 0, 0], [0, 0, 1, 0]])
         R = np.zeros(2)
-        mod_lr = gee.GEE(endog, exog, group, constraint=(L, R),
-                         cov_struct=cov_struct())
+        mod_lr = gee.GEE(endog, exog, group, constraint=(L, R), cov_struct=cov_struct())
         mod_lr.fit()
 
         mod_sub = gee.GEE(endog, exog_sub, group, cov_struct=cov_struct())
@@ -685,14 +712,12 @@ class TestGEE:
                 mod.fit()
             score_results = mod.compare_score_test(res_sub)
             assert_almost_equal(
-                score_results["statistic"],
-                mod_lr.score_test_results["statistic"])
+                score_results["statistic"], mod_lr.score_test_results["statistic"]
+            )
             assert_almost_equal(
-                score_results["p-value"],
-                mod_lr.score_test_results["p-value"])
-            assert_almost_equal(
-                score_results["df"],
-                mod_lr.score_test_results["df"])
+                score_results["p-value"], mod_lr.score_test_results["p-value"]
+            )
+            assert_almost_equal(score_results["df"], mod_lr.score_test_results["df"])
 
     def test_compare_score_test_warnings(self):
 
@@ -704,18 +729,17 @@ class TestGEE:
         endog = exog_sub.sum(1) + 3 * np.random.normal(size=n)
 
         # Mismatched cov_struct
-        with assert_warns(UserWarning):
-            mod_sub = gee.GEE(endog, exog_sub, group,
-                              cov_struct=cov_struct.Exchangeable())
+        with pytest.warns(UserWarning):
+            mod_sub = gee.GEE(
+                endog, exog_sub, group, cov_struct=cov_struct.Exchangeable()
+            )
             res_sub = mod_sub.fit()
-            mod = gee.GEE(endog, exog, group,
-                          cov_struct=cov_struct.Independence())
+            mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched family
-        with assert_warns(UserWarning):
-            mod_sub = gee.GEE(endog, exog_sub, group,
-                              family=families.Gaussian())
+        with pytest.warns(UserWarning):
+            mod_sub = gee.GEE(endog, exog_sub, group, family=families.Gaussian())
             res_sub = mod_sub.fit()
             mod = gee.GEE(endog, exog, group, family=families.Poisson())
             mod.compare_score_test(res_sub)  # smoketest
@@ -728,7 +752,7 @@ class TestGEE:
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched weights
-        with assert_warns(UserWarning):
+        with pytest.warns(UserWarning):
             w = np.random.uniform(size=n)
             mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
             res_sub = mod_sub.fit()
@@ -751,13 +775,18 @@ class TestGEE:
         endog = exog[:, 0] + exog[:, 1] + exog[:, 2]
         endog += 3 * np.random.normal(size=n)
         group = np.kron(np.arange(n / 4), np.ones(4))
-        L = np.array([[1., -1, 0, 0]])
-        R = np.array([0., ])
+        L = np.array([[1.0, -1, 0, 0]])
+        R = np.array(
+            [
+                0.0,
+            ]
+        )
         family = families.Gaussian()
         va = cov_struct.Independence()
         for cov_type in "robust", "naive", "bias_reduced":
-            model = gee.GEE(endog, exog, group, family=family,
-                            cov_struct=va, constraint=(L, R))
+            model = gee.GEE(
+                endog, exog, group, family=family, cov_struct=va, constraint=(L, R)
+            )
             result = model.fit(cov_type=cov_type)
             result.standard_errors(cov_type=cov_type)
             assert_allclose(result.cov_robust.shape, np.r_[4, 4])
@@ -801,35 +830,50 @@ class TestGEE:
         ve = cov_struct.Exchangeable()
 
         # From R gee
-        cf = [[-0.01850226507491, 0.81436304278962,
-               -1.56167635393184, 0.794239361055003],
-              [-0.0182920577154767, 0.814898414022467,
-               -1.56194040106201, 0.793499517527478]]
-        se = [[0.0440733554189401, 0.0479993639119261,
-               0.0496045952071308, 0.0479467597161284],
-              [0.0440369906460754, 0.0480069787567662,
-               0.049519758758187, 0.0479760443027526]]
+        cf = [
+            [-0.01850226507491, 0.81436304278962, -1.56167635393184, 0.794239361055003],
+            [
+                -0.0182920577154767,
+                0.814898414022467,
+                -1.56194040106201,
+                0.793499517527478,
+            ],
+        ]
+        se = [
+            [
+                0.0440733554189401,
+                0.0479993639119261,
+                0.0496045952071308,
+                0.0479467597161284,
+            ],
+            [
+                0.0440369906460754,
+                0.0480069787567662,
+                0.049519758758187,
+                0.0479760443027526,
+            ],
+        ]
 
         for j, v in enumerate((vi, ve)):
             md = gee.GEE(endog, exog, group, None, family, v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
-            assert_almost_equal(mdf.standard_errors(), se[j],
-                                decimal=10)
+            assert_almost_equal(mdf.standard_errors(), se[j], decimal=10)
 
         # Test with formulas
-        D = np.concatenate((endog[:, None], group[:, None], exog[:, 1:]),
-                           axis=1)
+        D = np.concatenate((endog[:, None], group[:, None], exog[:, 1:]), axis=1)
         D = pd.DataFrame(D)
-        D.columns = ["Y", "Id", ] + ["X%d" % (k + 1)
-                                     for k in range(exog.shape[1] - 1)]
+        D.columns = [
+            "Y",
+            "Id",
+        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
         for j, v in enumerate((vi, ve)):
-            md = gee.GEE.from_formula("Y ~ X1 + X2 + X3", "Id", D,
-                                      family=family, cov_struct=v)
+            md = gee.GEE.from_formula(
+                "Y ~ X1 + X2 + X3", "Id", D, family=family, cov_struct=v
+            )
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
-            assert_almost_equal(mdf.standard_errors(), se[j],
-                                decimal=10)
+            assert_almost_equal(mdf.standard_errors(), se[j], decimal=10)
 
     def test_linear_constrained(self):
 
@@ -838,19 +882,17 @@ class TestGEE:
         np.random.seed(34234)
         exog = np.random.normal(size=(300, 4))
         exog[:, 0] = 1
-        endog = np.dot(exog, np.r_[1, 1, 0, 0.2]) +\
-            np.random.normal(size=300)
+        endog = np.dot(exog, np.r_[1, 1, 0, 0.2]) + np.random.normal(size=300)
         group = np.kron(np.arange(100), np.r_[1, 1, 1])
 
         vi = cov_struct.Independence()
         ve = cov_struct.Exchangeable()
 
         L = np.r_[[[0, 0, 0, 1]]]
-        R = np.r_[0, ]
+        R = np.r_[0,]
 
         for j, v in enumerate((vi, ve)):
-            md = gee.GEE(endog, exog, group, None, family, v,
-                         constraint=(L, R))
+            md = gee.GEE(endog, exog, group, None, family, v, constraint=(L, R))
             mdf = md.fit()
             assert_almost_equal(mdf.params[3], 0, decimal=10)
 
@@ -862,8 +904,18 @@ class TestGEE:
 
         group_n = []
         for i in range(endog.shape[0] // 10):
-            group_n.extend([0, ] * 5)
-            group_n.extend([1, ] * 5)
+            group_n.extend(
+                [
+                    0,
+                ]
+                * 5
+            )
+            group_n.extend(
+                [
+                    1,
+                ]
+                * 5
+            )
         group_n = np.array(group_n)[:, None]
 
         dp = cov_struct.Independence()
@@ -871,29 +923,25 @@ class TestGEE:
         mdf1 = md.fit()
 
         # From statsmodels.GEE (not an independent test)
-        cf = np.r_[-0.1671073,  1.00467426, -2.01723004,  0.97297106]
-        se = np.r_[0.08629606,  0.04058653,  0.04067038,  0.03777989]
+        cf = np.r_[-0.1671073, 1.00467426, -2.01723004, 0.97297106]
+        se = np.r_[0.08629606, 0.04058653, 0.04067038, 0.03777989]
         assert_almost_equal(mdf1.params, cf, decimal=6)
-        assert_almost_equal(mdf1.standard_errors(), se,
-                            decimal=6)
+        assert_almost_equal(mdf1.standard_errors(), se, decimal=6)
 
         ne = cov_struct.Nested()
-        md = gee.GEE(endog, exog, group, None, family, ne,
-                     dep_data=group_n)
+        md = gee.GEE(endog, exog, group, None, family, ne, dep_data=group_n)
         mdf2 = md.fit(start_params=mdf1.params)
 
         # From statsmodels.GEE (not an independent test)
-        cf = np.r_[-0.16655319,  1.02183688, -2.00858719,  1.00101969]
-        se = np.r_[0.08632616,  0.02913582,  0.03114428,  0.02893991]
+        cf = np.r_[-0.16655319, 1.02183688, -2.00858719, 1.00101969]
+        se = np.r_[0.08632616, 0.02913582, 0.03114428, 0.02893991]
         assert_almost_equal(mdf2.params, cf, decimal=6)
-        assert_almost_equal(mdf2.standard_errors(), se,
-                            decimal=6)
+        assert_almost_equal(mdf2.standard_errors(), se, decimal=6)
 
         smry = mdf2.cov_struct.summary()
         assert_allclose(
-            smry.Variance,
-            np.r_[1.043878, 0.611656, 1.421205],
-            atol=1e-5, rtol=1e-5)
+            smry.Variance, np.r_[1.043878, 0.611656, 1.421205], atol=1e-5, rtol=1e-5
+        )
 
     def test_nested_pandas(self):
 
@@ -915,13 +963,17 @@ class TestGEE:
         y = groups_e[groups] + groups1_e[groups1] + groups2_e[groups2]
         y += 0.5 * np.random.normal(size=n)
 
-        df = pd.DataFrame({"y": y, "TheGroups": groups,
-                           "groups1": groups1, "groups2": groups2})
+        df = pd.DataFrame(
+            {"y": y, "TheGroups": groups, "groups1": groups1, "groups2": groups2}
+        )
 
-        model = gee.GEE.from_formula("y ~ 1", groups="TheGroups",
-                                     dep_data="0 + groups1 + groups2",
-                                     cov_struct=cov_struct.Nested(),
-                                     data=df)
+        model = gee.GEE.from_formula(
+            "y ~ 1",
+            groups="TheGroups",
+            dep_data="0 + groups1 + groups2",
+            cov_struct=cov_struct.Nested(),
+            data=df,
+        )
         result = model.fit()
 
         # The true variances are 1, 4, 9, 0.25
@@ -929,14 +981,15 @@ class TestGEE:
         assert_allclose(
             smry.Variance,
             np.r_[1.437299, 4.421543, 8.905295, 0.258480],
-            atol=1e-5, rtol=1e-5)
+            atol=1e-5,
+            rtol=1e-5,
+        )
 
     def test_ordinal(self):
 
         family = families.Binomial()
 
-        endog, exog, groups = load_data("gee_ordinal_1.csv",
-                                        icept=False)
+        endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
 
         va = cov_struct.GlobalOddsRatio("ordinal")
 
@@ -944,13 +997,29 @@ class TestGEE:
         rslt = mod.fit()
 
         # Regression test
-        cf = np.r_[1.09250002, 0.0217443, -0.39851092, -0.01812116,
-                   0.03023969, 1.18258516, 0.01803453, -1.10203381]
+        cf = np.r_[
+            1.09250002,
+            0.0217443,
+            -0.39851092,
+            -0.01812116,
+            0.03023969,
+            1.18258516,
+            0.01803453,
+            -1.10203381,
+        ]
         assert_almost_equal(rslt.params, cf, decimal=5)
 
         # Regression test
-        se = np.r_[0.10883461, 0.10330197, 0.11177088, 0.05486569,
-                   0.05997153, 0.09168148, 0.05953324, 0.0853862]
+        se = np.r_[
+            0.10883461,
+            0.10330197,
+            0.11177088,
+            0.05486569,
+            0.05997153,
+            0.09168148,
+            0.05953324,
+            0.0853862,
+        ]
         assert_almost_equal(rslt.bse, se, decimal=5)
 
         # Check that we get the correct results type
@@ -974,8 +1043,7 @@ class TestGEE:
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            model = gee.NominalGEE.from_formula("y ~ 0 + x1 + x2", groups,
-                                                data=df)
+            model = gee.NominalGEE.from_formula("y ~ 0 + x1 + x2", groups, data=df)
             model.fit()
 
     @pytest.mark.smoke
@@ -1011,8 +1079,7 @@ class TestGEE:
     def test_ordinal_plot(self, close_figures):
         family = families.Binomial()
 
-        endog, exog, groups = load_data("gee_ordinal_1.csv",
-                                        icept=False)
+        endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
 
         va = cov_struct.GlobalOddsRatio("ordinal")
 
@@ -1024,8 +1091,7 @@ class TestGEE:
 
     def test_nominal(self):
 
-        endog, exog, groups = load_data("gee_nominal_1.csv",
-                                        icept=False)
+        endog, exog, groups = load_data("gee_nominal_1.csv", icept=False)
 
         # Test with independence correlation
         va = cov_struct.Independence()
@@ -1090,39 +1156,63 @@ class TestGEE:
         ve = cov_struct.Exchangeable()
 
         # From R gee
-        cf = [[-0.0364450410793481, -0.0543209391301178,
-               0.0156642711741052, 0.57628591338724,
-               -0.00465659951186211, -0.477093153099256],
-              [-0.0315615554826533, -0.0562589480840004,
-               0.0178419412298561, 0.571512795340481,
-               -0.00363255566297332, -0.475971696727736]]
-        se = [[0.0611309237214186, 0.0390680524493108,
-               0.0334234174505518, 0.0366860768962715,
-               0.0304758505008105, 0.0316348058881079],
-              [0.0610840153582275, 0.0376887268649102,
-               0.0325168379415177, 0.0369786751362213,
-               0.0296141014225009, 0.0306115470200955]]
+        cf = [
+            [
+                -0.0364450410793481,
+                -0.0543209391301178,
+                0.0156642711741052,
+                0.57628591338724,
+                -0.00465659951186211,
+                -0.477093153099256,
+            ],
+            [
+                -0.0315615554826533,
+                -0.0562589480840004,
+                0.0178419412298561,
+                0.571512795340481,
+                -0.00363255566297332,
+                -0.475971696727736,
+            ],
+        ]
+        se = [
+            [
+                0.0611309237214186,
+                0.0390680524493108,
+                0.0334234174505518,
+                0.0366860768962715,
+                0.0304758505008105,
+                0.0316348058881079,
+            ],
+            [
+                0.0610840153582275,
+                0.0376887268649102,
+                0.0325168379415177,
+                0.0369786751362213,
+                0.0296141014225009,
+                0.0306115470200955,
+            ],
+        ]
 
         for j, v in enumerate((vi, ve)):
             md = gee.GEE(endog, exog, group_n, None, family, v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=5)
-            assert_almost_equal(mdf.standard_errors(), se[j],
-                                decimal=6)
+            assert_almost_equal(mdf.standard_errors(), se[j], decimal=6)
 
         # Test with formulas
-        D = np.concatenate((endog[:, None], group_n[:, None],
-                            exog[:, 1:]), axis=1)
+        D = np.concatenate((endog[:, None], group_n[:, None], exog[:, 1:]), axis=1)
         D = pd.DataFrame(D)
-        D.columns = ["Y", "Id", ] + ["X%d" % (k + 1)
-                                     for k in range(exog.shape[1] - 1)]
+        D.columns = [
+            "Y",
+            "Id",
+        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
         for j, v in enumerate((vi, ve)):
-            md = gee.GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", "Id",
-                                      D, family=family, cov_struct=v)
+            md = gee.GEE.from_formula(
+                "Y ~ X1 + X2 + X3 + X4 + X5", "Id", D, family=family, cov_struct=v
+            )
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=5)
-            assert_almost_equal(mdf.standard_errors(), se[j],
-                                decimal=6)
+            assert_almost_equal(mdf.standard_errors(), se[j], decimal=6)
             # print(mdf.params)
 
     def test_groups(self):
@@ -1157,8 +1247,9 @@ class TestGEE:
         # group labels are strings
         mp = {}
         import string
+
         for j, g in enumerate(set(groups)):
-            mp[g] = string.ascii_letters[j:j + 4]
+            mp[g] = string.ascii_letters[j : j + 4]
         groups2 = [mp[g] for g in groups]
 
         model3 = gee.GEE(y, x, groups=groups2)
@@ -1184,8 +1275,9 @@ class TestGEE:
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
-        md = gee.GEE.from_formula("Y ~ X1 + X2 + X3", groups, D,
-                                  family=family, cov_struct=vs)
+        md = gee.GEE.from_formula(
+            "Y ~ X1 + X2 + X3", groups, D, family=family, cov_struct=vs
+        )
         mdf = md.fit()
 
         ols = lm.OLS.from_formula("Y ~ X1 + X2 + X3", data=D).fit()
@@ -1218,24 +1310,27 @@ class TestGEE:
         va = cov_struct.Autoregressive(grid=False)
         family = families.Gaussian()
 
-        mod1 = gee.GEE(Y, mat, groups, time=Time, family=family,
-                       cov_struct=va)
+        mod1 = gee.GEE(Y, mat, groups, time=Time, family=family, cov_struct=va)
         rslt1 = mod1.fit()
 
-        mod2 = gee.GEE.from_formula("Y ~ X1", groups, data, time=Time,
-                                    family=family, cov_struct=va)
+        mod2 = gee.GEE.from_formula(
+            "Y ~ X1", groups, data, time=Time, family=family, cov_struct=va
+        )
         rslt2 = mod2.fit()
 
-        mod3 = gee.GEE.from_formula("Y ~ X1", groups, data, time="Time",
-                                    family=family, cov_struct=va)
+        mod3 = gee.GEE.from_formula(
+            "Y ~ X1", groups, data, time="Time", family=family, cov_struct=va
+        )
         rslt3 = mod3.fit()
 
-        mod4 = gee.GEE.from_formula("Y ~ X1", "groups", data, time=Time,
-                                    family=family, cov_struct=va)
+        mod4 = gee.GEE.from_formula(
+            "Y ~ X1", "groups", data, time=Time, family=family, cov_struct=va
+        )
         rslt4 = mod4.fit()
 
-        mod5 = gee.GEE.from_formula("Y ~ X1", "groups", data, time="Time",
-                                    family=family, cov_struct=va)
+        mod5 = gee.GEE.from_formula(
+            "Y ~ X1", "groups", data, time="Time", family=family, cov_struct=va
+        )
         rslt5 = mod5.fit()
 
         assert_almost_equal(rslt1.params, rslt2.params, decimal=8)
@@ -1259,15 +1354,15 @@ class TestGEE:
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
-        mod1 = gee.GEE.from_formula("Y ~ X1 + X2 + X3", groups, D,
-                                    family=family, cov_struct=vs)
+        mod1 = gee.GEE.from_formula(
+            "Y ~ X1 + X2 + X3", groups, D, family=family, cov_struct=vs
+        )
         rslt1 = mod1.fit()
 
         mod2 = discrete.Logit.from_formula("Y ~ X1 + X2 + X3", data=D)
         rslt2 = mod2.fit(disp=False)
 
-        assert_almost_equal(rslt1.params.values, rslt2.params.values,
-                            decimal=10)
+        assert_almost_equal(rslt1.params.values, rslt2.params.values, decimal=10)
 
     def test_compare_poisson(self):
 
@@ -1283,15 +1378,15 @@ class TestGEE:
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
-        mod1 = gee.GEE.from_formula("Y ~ X1 + X2 + X3", groups, D,
-                                    family=family, cov_struct=vs)
+        mod1 = gee.GEE.from_formula(
+            "Y ~ X1 + X2 + X3", groups, D, family=family, cov_struct=vs
+        )
         rslt1 = mod1.fit()
 
         mod2 = discrete.Poisson.from_formula("Y ~ X1 + X2 + X3", data=D)
         rslt2 = mod2.fit(disp=False)
 
-        assert_almost_equal(rslt1.params.values, rslt2.params.values,
-                            decimal=10)
+        assert_almost_equal(rslt1.params.values, rslt2.params.values, decimal=10)
 
     def test_predict(self):
 
@@ -1302,13 +1397,14 @@ class TestGEE:
         groups = np.kron(np.arange(n / 2), np.r_[1, 1])
         offset = np.random.uniform(1, 2, size=n)
         Y = np.random.normal(0.1 * (X1 + X2) + offset, size=n)
-        data = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "groups": groups,
-                             "offset": offset})
+        data = pd.DataFrame(
+            {"Y": Y, "X1": X1, "X2": X2, "groups": groups, "offset": offset}
+        )
 
         fml = "Y ~ X1 + X2"
-        model = gee.GEE.from_formula(fml, groups, data,
-                                     family=families.Gaussian(),
-                                     offset="offset")
+        model = gee.GEE.from_formula(
+            fml, groups, data, family=families.Gaussian(), offset="offset"
+        )
         result = model.fit(start_params=[0, 0.1, 0.1])
         assert_equal(result.converged, True)
 
@@ -1333,7 +1429,7 @@ class TestGEE:
 
     def test_stationary_grid(self):
 
-        endog = np.r_[4, 2, 3, 1, 4, 5, 6, 7, 8, 3, 2, 4.]
+        endog = np.r_[4, 2, 3, 1, 4, 5, 6, 7, 8, 3, 2, 4.0]
         exog = np.r_[2, 3, 1, 4, 3, 2, 5, 4, 5, 6, 3, 2]
         group = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
         exog = tools.add_constant(exog)
@@ -1341,45 +1437,52 @@ class TestGEE:
         cs = cov_struct.Stationary(max_lag=2, grid=True)
         model = gee.GEE(endog, exog, group, cov_struct=cs)
         result = model.fit()
-        se = result.bse * np.sqrt(12 / 9.)  # Stata adjustment
+        se = result.bse * np.sqrt(12 / 9.0)  # Stata adjustment
 
-        assert_allclose(cs.covariance_matrix(np.r_[1, 1, 1], 0)[0].sum(),
-                        6.4633538285149452)
+        assert_allclose(
+            cs.covariance_matrix(np.r_[1, 1, 1], 0)[0].sum(), 6.4633538285149452
+        )
 
         # Obtained from Stata using:
         # xtgee y x, i(g) vce(robust) corr(Stationary2)
-        assert_allclose(result.params, np.r_[
-                        4.463968, -0.0386674], rtol=1e-5, atol=1e-5)
+        assert_allclose(
+            result.params, np.r_[4.463968, -0.0386674], rtol=1e-5, atol=1e-5
+        )
         assert_allclose(se, np.r_[0.5217202, 0.2800333], rtol=1e-5, atol=1e-5)
 
     def test_stationary_nogrid(self):
 
         # First test special case where the data follow a grid but we
         # fit using nogrid
-        endog = np.r_[4, 2, 3, 1, 4, 5, 6, 7, 8, 3, 2, 4.]
+        endog = np.r_[4, 2, 3, 1, 4, 5, 6, 7, 8, 3, 2, 4.0]
         exog = np.r_[2, 3, 1, 4, 3, 2, 5, 4, 5, 6, 3, 2]
         time = np.r_[0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2]
         group = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
 
         exog = tools.add_constant(exog)
 
-        model = gee.GEE(endog, exog, group,
-                        cov_struct=cov_struct.Stationary(max_lag=2,
-                                                         grid=False))
+        model = gee.GEE(
+            endog, exog, group, cov_struct=cov_struct.Stationary(max_lag=2, grid=False)
+        )
         result = model.fit()
-        se = result.bse * np.sqrt(12 / 9.)  # Stata adjustment
+        se = result.bse * np.sqrt(12 / 9.0)  # Stata adjustment
 
         # Obtained from Stata using:
         # xtgee y x, i(g) vce(robust) corr(Stationary2)
-        assert_allclose(result.params, np.r_[
-                        4.463968, -0.0386674], rtol=1e-5, atol=1e-5)
+        assert_allclose(
+            result.params, np.r_[4.463968, -0.0386674], rtol=1e-5, atol=1e-5
+        )
         assert_allclose(se, np.r_[0.5217202, 0.2800333], rtol=1e-5, atol=1e-5)
 
         # Smoke test for no grid  # TODO: pytest.mark.smoke>
         time = np.r_[0, 1, 3, 0, 2, 3, 0, 2, 3, 0, 1, 2][:, None]
-        model = gee.GEE(endog, exog, group, time=time,
-                        cov_struct=cov_struct.Stationary(max_lag=4,
-                                                         grid=False))
+        model = gee.GEE(
+            endog,
+            exog,
+            group,
+            time=time,
+            cov_struct=cov_struct.Stationary(max_lag=4, grid=False),
+        )
         model.fit()
 
     def test_predict_exposure(self):
@@ -1391,31 +1494,46 @@ class TestGEE:
         groups = np.kron(np.arange(25), np.r_[1, 1])
         offset = np.random.uniform(1, 2, size=n)
         exposure = np.random.uniform(1, 2, size=n)
-        Y = np.random.poisson(0.1 * (X1 + X2) + offset +
-                              np.log(exposure), size=n)
-        data = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "groups": groups,
-                             "offset": offset, "exposure": exposure})
+        Y = np.random.poisson(0.1 * (X1 + X2) + offset + np.log(exposure), size=n)
+        data = pd.DataFrame(
+            {
+                "Y": Y,
+                "X1": X1,
+                "X2": X2,
+                "groups": groups,
+                "offset": offset,
+                "exposure": exposure,
+            }
+        )
 
         fml = "Y ~ X1 + X2"
-        model = gee.GEE.from_formula(fml, groups, data,
-                                     family=families.Poisson(),
-                                     offset="offset", exposure="exposure")
+        model = gee.GEE.from_formula(
+            fml,
+            groups,
+            data,
+            family=families.Poisson(),
+            offset="offset",
+            exposure="exposure",
+        )
         result = model.fit()
         assert_equal(result.converged, True)
 
         pred1 = result.predict()
         pred2 = result.predict(offset=data["offset"])
         pred3 = result.predict(exposure=data["exposure"])
-        pred4 = result.predict(
-            offset=data["offset"], exposure=data["exposure"])
-        pred5 = result.predict(exog=data[-10:],
-                               offset=data["offset"][-10:],
-                               exposure=data["exposure"][-10:])
+        pred4 = result.predict(offset=data["offset"], exposure=data["exposure"])
+        pred5 = result.predict(
+            exog=data[-10:],
+            offset=data["offset"][-10:],
+            exposure=data["exposure"][-10:],
+        )
         # without patsy
-        pred6 = result.predict(exog=result.model.exog[-10:],
-                               offset=data["offset"][-10:],
-                               exposure=data["exposure"][-10:],
-                               transform=False)
+        pred6 = result.predict(
+            exog=result.model.exog[-10:],
+            offset=data["offset"][-10:],
+            exposure=data["exposure"][-10:],
+            transform=False,
+        )
         assert_allclose(pred1, pred2)
         assert_allclose(pred1, pred3)
         assert_allclose(pred1, pred4)
@@ -1463,46 +1581,59 @@ class TestGEE:
         offset = np.random.uniform(1, 2, size=n)
         exposure = np.exp(offset)
         Y = np.random.poisson(0.1 * (X1 + X2) + 2 * offset, size=n)
-        data = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "groups": groups,
-                             "offset": offset, "exposure": exposure})
+        data = pd.DataFrame(
+            {
+                "Y": Y,
+                "X1": X1,
+                "X2": X2,
+                "groups": groups,
+                "offset": offset,
+                "exposure": exposure,
+            }
+        )
 
         fml = "Y ~ X1 + X2"
-        model1 = gee.GEE.from_formula(fml, groups, data,
-                                      family=families.Poisson(),
-                                      offset="offset")
+        model1 = gee.GEE.from_formula(
+            fml, groups, data, family=families.Poisson(), offset="offset"
+        )
         result1 = model1.fit()
         assert_equal(result1.converged, True)
 
-        model2 = gee.GEE.from_formula(fml, groups, data,
-                                      family=families.Poisson(),
-                                      offset=offset)
+        model2 = gee.GEE.from_formula(
+            fml, groups, data, family=families.Poisson(), offset=offset
+        )
         result2 = model2.fit(start_params=result1.params)
         assert_allclose(result1.params, result2.params)
         assert_equal(result2.converged, True)
 
-        model3 = gee.GEE.from_formula(fml, groups, data,
-                                      family=families.Poisson(),
-                                      exposure=exposure)
+        model3 = gee.GEE.from_formula(
+            fml, groups, data, family=families.Poisson(), exposure=exposure
+        )
         result3 = model3.fit(start_params=result1.params)
         assert_allclose(result1.params, result3.params)
         assert_equal(result3.converged, True)
 
-        model4 = gee.GEE.from_formula(fml, groups, data,
-                                      family=families.Poisson(),
-                                      exposure="exposure")
+        model4 = gee.GEE.from_formula(
+            fml, groups, data, family=families.Poisson(), exposure="exposure"
+        )
         result4 = model4.fit(start_params=result1.params)
         assert_allclose(result1.params, result4.params)
         assert_equal(result4.converged, True)
 
-        model5 = gee.GEE.from_formula(fml, groups, data,
-                                      family=families.Poisson(),
-                                      exposure="exposure", offset="offset")
+        model5 = gee.GEE.from_formula(
+            fml,
+            groups,
+            data,
+            family=families.Poisson(),
+            exposure="exposure",
+            offset="offset",
+        )
         result5 = model5.fit()
         assert_equal(result5.converged, True)
 
-        model6 = gee.GEE.from_formula(fml, groups, data,
-                                      family=families.Poisson(),
-                                      offset=2 * offset)
+        model6 = gee.GEE.from_formula(
+            fml, groups, data, family=families.Poisson(), offset=2 * offset
+        )
         result6 = model6.fit(start_params=result5.params)
         assert_allclose(result5.params, result6.params)
         assert_equal(result6.converged, True)
@@ -1521,17 +1652,19 @@ class TestGEE:
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2})
 
-        mod = gee.GEE.from_formula("Y ~ X1 + X2", groups, D,
-                                   family=family, cov_struct=va)
+        mod = gee.GEE.from_formula(
+            "Y ~ X1 + X2", groups, D, family=family, cov_struct=va
+        )
         rslt = mod.fit()
         ps = rslt.params_sensitivity(0, 0.5, 2)
         assert_almost_equal(len(ps), 2)
-        assert_almost_equal([x.cov_struct.dep_params for x in ps],
-                            [0.0, 0.5])
+        assert_almost_equal([x.cov_struct.dep_params for x in ps], [0.0, 0.5])
 
         # Regression test
-        assert_almost_equal([np.asarray(x.params)[0] for x in ps],
-                            [0.1696214707458818, 0.17836097387799127])
+        assert_almost_equal(
+            [np.asarray(x.params)[0] for x in ps],
+            [0.1696214707458818, 0.17836097387799127],
+        )
 
     def test_equivalence(self):
         """
@@ -1556,11 +1689,15 @@ class TestGEE:
 
             # Diagonal values (variance parameters)
             if k < 3:
-                pairs[k][0] = (start[k] + np.r_[0, 1, 2, 3],
-                               start[k] + np.r_[0, 1, 2, 3])
+                pairs[k][0] = (
+                    start[k] + np.r_[0, 1, 2, 3],
+                    start[k] + np.r_[0, 1, 2, 3],
+                )
             else:
-                pairs[k][0] = (start[k] + np.r_[0, 1, 2, 3, 4, 5, 6, 7],
-                               start[k] + np.r_[0, 1, 2, 3, 4, 5, 6, 7])
+                pairs[k][0] = (
+                    start[k] + np.r_[0, 1, 2, 3, 4, 5, 6, 7],
+                    start[k] + np.r_[0, 1, 2, 3, 4, 5, 6, 7],
+                )
 
             # Off-diagonal pairs (covariance parameters)
             if k < 3:
@@ -1587,8 +1724,7 @@ class TestGEE:
                 atol, rtol = 1e-6, 1e-6
             else:
                 atol, rtol = 1e-3, 1e-3
-            assert_allclose(result1.params, result2.params,
-                            atol=atol, rtol=rtol)
+            assert_allclose(result1.params, result2.params, atol=atol, rtol=rtol)
             assert_allclose(result1.bse, result2.bse, atol=atol, rtol=rtol)
             assert_allclose(result1.scale, result2.scale, atol=atol, rtol=rtol)
 
@@ -1632,7 +1768,7 @@ class TestGEE:
         eq = cov_struct.Equivalence(labels=labels, return_cov=True)
         model1 = gee.GEE(endog, exog, groups, cov_struct=eq)
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
+            warnings.simplefilter("ignore")
             model1.fit(maxiter=2)
 
 
@@ -1643,33 +1779,31 @@ class CheckConsistency:
     def test_cov_type(self):
         mod = self.mod
         res_robust = mod.fit(start_params=self.start_params)
-        res_naive = mod.fit(start_params=self.start_params,
-                            cov_type='naive')
-        res_robust_bc = mod.fit(start_params=self.start_params,
-                                cov_type='bias_reduced')
+        res_naive = mod.fit(start_params=self.start_params, cov_type="naive")
+        res_robust_bc = mod.fit(start_params=self.start_params, cov_type="bias_reduced")
 
         # call summary to make sure it does not change cov_type
         res_naive.summary()
         res_robust_bc.summary()
 
         # check cov_type
-        assert_equal(res_robust.cov_type, 'robust')
-        assert_equal(res_naive.cov_type, 'naive')
-        assert_equal(res_robust_bc.cov_type, 'bias_reduced')
+        assert_equal(res_robust.cov_type, "robust")
+        assert_equal(res_naive.cov_type, "naive")
+        assert_equal(res_robust_bc.cov_type, "bias_reduced")
 
         # check bse and cov_params
         # we are comparing different runs of the optimization
         # bse in ordinal and multinomial have an atol around 5e-10 for two
         # consecutive calls to fit.
         rtol = 1e-8
-        for (res, cov_type, cov) in [
-                (res_robust, 'robust', res_robust.cov_robust),
-                (res_naive, 'naive', res_robust.cov_naive),
-                (res_robust_bc, 'bias_reduced', res_robust_bc.cov_robust_bc)
+        for res, cov_type, cov in [
+            (res_robust, "robust", res_robust.cov_robust),
+            (res_naive, "naive", res_robust.cov_naive),
+            (res_robust_bc, "bias_reduced", res_robust_bc.cov_robust_bc),
         ]:
             bse = np.sqrt(np.diag(cov))
             assert_allclose(res.bse, bse, rtol=rtol)
-            if cov_type != 'bias_reduced':
+            if cov_type != "bias_reduced":
                 # cov_type=naive shortcuts calculation of bias reduced
                 # covariance for efficiency
                 bse = res_naive.standard_errors(cov_type=cov_type)
@@ -1680,11 +1814,10 @@ class CheckConsistency:
         # assert that we do not have a copy
         assert_(res_robust.cov_params_default is res_robust.cov_robust)
         assert_(res_naive.cov_params_default is res_naive.cov_naive)
-        assert_(res_robust_bc.cov_params_default is
-                res_robust_bc.cov_robust_bc)
+        assert_(res_robust_bc.cov_params_default is res_robust_bc.cov_robust_bc)
 
         # check exception for misspelled cov_type
-        assert_raises(ValueError, mod.fit, cov_type='robust_bc')
+        assert_raises(ValueError, mod.fit, cov_type="robust_bc")
 
 
 class TestGEEPoissonCovType(CheckConsistency):
@@ -1699,13 +1832,13 @@ class TestGEEPoissonCovType(CheckConsistency):
 
         cls.mod = gee.GEE(endog, exog, group_n, None, family, vi)
 
-        cls.start_params = np.array([-0.03644504, -0.05432094,  0.01566427,
-                                     0.57628591, -0.0046566,  -0.47709315])
+        cls.start_params = np.array(
+            [-0.03644504, -0.05432094, 0.01566427, 0.57628591, -0.0046566, -0.47709315]
+        )
 
     def test_wrapper(self):
 
-        endog, exog, group_n = load_data("gee_poisson_1.csv",
-                                         icept=False)
+        endog, exog, group_n = load_data("gee_poisson_1.csv", icept=False)
         endog = pd.Series(endog)
         exog = pd.DataFrame(exog)
         group_n = pd.Series(group_n)
@@ -1729,17 +1862,20 @@ class TestGEEPoissonFormulaCovType(CheckConsistency):
         family = families.Poisson()
         vi = cov_struct.Independence()
         # Test with formulas
-        D = np.concatenate((endog[:, None], group_n[:, None],
-                            exog[:, 1:]), axis=1)
+        D = np.concatenate((endog[:, None], group_n[:, None], exog[:, 1:]), axis=1)
         D = pd.DataFrame(D)
-        D.columns = ["Y", "Id", ] + ["X%d" % (k + 1)
-                                     for k in range(exog.shape[1] - 1)]
+        D.columns = [
+            "Y",
+            "Id",
+        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
 
-        cls.mod = gee.GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", "Id",
-                                       D, family=family, cov_struct=vi)
+        cls.mod = gee.GEE.from_formula(
+            "Y ~ X1 + X2 + X3 + X4 + X5", "Id", D, family=family, cov_struct=vi
+        )
 
-        cls.start_params = np.array([-0.03644504, -0.05432094,  0.01566427,
-                                     0.57628591, -0.0046566,  -0.47709315])
+        cls.start_params = np.array(
+            [-0.03644504, -0.05432094, 0.01566427, 0.57628591, -0.0046566, -0.47709315]
+        )
 
 
 class TestGEEOrdinalCovType(CheckConsistency):
@@ -1749,24 +1885,31 @@ class TestGEEOrdinalCovType(CheckConsistency):
 
         family = families.Binomial()
 
-        endog, exog, groups = load_data("gee_ordinal_1.csv",
-                                        icept=False)
+        endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
 
         va = cov_struct.GlobalOddsRatio("ordinal")
 
         cls.mod = gee.OrdinalGEE(endog, exog, groups, None, family, va)
-        cls.start_params = np.array([1.09250002, 0.0217443, -0.39851092,
-                                     -0.01812116, 0.03023969, 1.18258516,
-                                     0.01803453, -1.10203381])
+        cls.start_params = np.array(
+            [
+                1.09250002,
+                0.0217443,
+                -0.39851092,
+                -0.01812116,
+                0.03023969,
+                1.18258516,
+                0.01803453,
+                -1.10203381,
+            ]
+        )
 
     def test_wrapper(self):
 
-        endog, exog, groups = load_data("gee_ordinal_1.csv",
-                                        icept=False)
+        endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
 
-        endog = pd.Series(endog, name='yendog')
+        endog = pd.Series(endog, name="yendog")
         exog = pd.DataFrame(exog)
-        groups = pd.Series(groups, name='the_group')
+        groups = pd.Series(groups, name="the_group")
 
         family = families.Binomial()
         va = cov_struct.GlobalOddsRatio("ordinal")
@@ -1781,22 +1924,19 @@ class TestGEEMultinomialCovType(CheckConsistency):
     @classmethod
     def setup_class(cls):
 
-        endog, exog, groups = load_data("gee_nominal_1.csv",
-                                        icept=False)
+        endog, exog, groups = load_data("gee_nominal_1.csv", icept=False)
 
         # Test with independence correlation
         va = cov_struct.Independence()
         cls.mod = gee.NominalGEE(endog, exog, groups, cov_struct=va)
-        cls.start_params = np.array([0.44944752,  0.45569985, -0.92007064,
-                                     -0.46766728])
+        cls.start_params = np.array([0.44944752, 0.45569985, -0.92007064, -0.46766728])
 
     def test_wrapper(self):
 
-        endog, exog, groups = load_data("gee_nominal_1.csv",
-                                        icept=False)
-        endog = pd.Series(endog, name='yendog')
+        endog, exog, groups = load_data("gee_nominal_1.csv", icept=False)
+        endog = pd.Series(endog, name="yendog")
         exog = pd.DataFrame(exog)
-        groups = pd.Series(groups, name='the_group')
+        groups = pd.Series(groups, name="the_group")
 
         va = cov_struct.Independence()
         mod = gee.NominalGEE(endog, exog, groups, cov_struct=va)
@@ -1811,10 +1951,10 @@ def test_regularized_poisson():
 
     ng, gs, p = 1000, 5, 5
 
-    x = np.random.normal(size=(ng*gs, p))
+    x = np.random.normal(size=(ng * gs, p))
     r = 0.5
-    x[:, 2] = r*x[:, 1] + np.sqrt(1-r**2)*x[:, 2]
-    lpr = 0.7*(x[:, 1] - x[:, 3])
+    x[:, 2] = r * x[:, 1] + np.sqrt(1 - r**2) * x[:, 2]
+    lpr = 0.7 * (x[:, 1] - x[:, 3])
     mean = np.exp(lpr)
     y = np.random.poisson(mean)
 
@@ -1823,8 +1963,7 @@ def test_regularized_poisson():
     model = gee.GEE(y, x, groups=groups, family=families.Poisson())
     result = model.fit_regularized(0.0000001)
 
-    assert_allclose(result.params, 0.7 * np.r_[0, 1, 0, -1, 0],
-                    rtol=0.01, atol=0.12)
+    assert_allclose(result.params, 0.7 * np.r_[0, 1, 0, -1, 0], rtol=0.01, atol=0.12)
 
 
 def test_regularized_gaussian():
@@ -1837,17 +1976,17 @@ def test_regularized_gaussian():
 
     groups = np.kron(np.arange(ng), np.ones(gs))
 
-    x = np.zeros((ng*gs, p))
-    x[:, 0] = 1 * (np.random.uniform(size=ng*gs) < 0.5)
-    x[:, 1] = np.random.normal(size=ng*gs)
+    x = np.zeros((ng * gs, p))
+    x[:, 0] = 1 * (np.random.uniform(size=ng * gs) < 0.5)
+    x[:, 1] = np.random.normal(size=ng * gs)
     r = 0.5
     for j in range(2, p):
-        eps = np.random.normal(size=ng*gs)
-        x[:, j] = r * x[:, j-1] + np.sqrt(1 - r**2) * eps
+        eps = np.random.normal(size=ng * gs)
+        x[:, j] = r * x[:, j - 1] + np.sqrt(1 - r**2) * eps
     lpr = np.dot(x[:, 0:4], np.r_[2, 3, 1.5, 2])
     s = 0.4
     e = np.sqrt(s) * np.kron(np.random.normal(size=ng), np.ones(gs))
-    e += np.sqrt(1 - s) * np.random.normal(size=ng*gs)
+    e += np.sqrt(1 - s) * np.random.normal(size=ng * gs)
 
     y = lpr + e
 
@@ -1858,8 +1997,7 @@ def test_regularized_gaussian():
     ex[0:4] = np.r_[2, 3, 1.5, 2]
     assert_allclose(result.params, ex, rtol=0.01, atol=0.2)
 
-    assert_allclose(model.cov_struct.dep_params, np.r_[s],
-                    rtol=0.01, atol=0.05)
+    assert_allclose(model.cov_struct.dep_params, np.r_[s], rtol=0.01, atol=0.05)
 
 
 @pytest.mark.smoke
@@ -1885,52 +2023,62 @@ def test_plots(close_figures):
 
 def test_missing():
     # gh-1877
-    data = [['id', 'al', 'status', 'fake', 'grps'],
-            ['4A', 'A', 1, 1, 0],
-            ['5A', 'A', 1, 2.0, 1],
-            ['6A', 'A', 1, 3, 2],
-            ['7A', 'A', 1, 2.0, 3],
-            ['8A', 'A', 1, 1, 4],
-            ['9A', 'A', 1, 2.0, 5],
-            ['11A', 'A', 1, 1, 6],
-            ['12A', 'A', 1, 2.0, 7],
-            ['13A', 'A', 1, 1, 8],
-            ['14A', 'A', 1, 1, 9],
-            ['15A', 'A', 1, 1, 10],
-            ['16A', 'A', 1, 2.0, 11],
-            ['17A', 'A', 1, 3.0, 12],
-            ['18A', 'A', 1, 3.0, 13],
-            ['19A', 'A', 1, 2.0, 14],
-            ['20A', 'A', 1, 2.0, 15],
-            ['2C', 'C', 0, 3.0, 0],
-            ['3C', 'C', 0, 1, 1],
-            ['4C', 'C', 0, 1, 2],
-            ['5C', 'C', 0, 2.0, 3],
-            ['6C', 'C', 0, 1, 4],
-            ['9C', 'C', 0, 1, 5],
-            ['10C', 'C', 0, 3, 6],
-            ['12C', 'C', 0, 3, 7],
-            ['14C', 'C', 0, 2.5, 8],
-            ['15C', 'C', 0, 1, 9],
-            ['17C', 'C', 0, 1, 10],
-            ['22C', 'C', 0, 1, 11],
-            ['23C', 'C', 0, 1, 12],
-            ['24C', 'C', 0, 1, 13],
-            ['32C', 'C', 0, 2.0, 14],
-            ['35C', 'C', 0, 1, 15]]
+    data = [
+        ["id", "al", "status", "fake", "grps"],
+        ["4A", "A", 1, 1, 0],
+        ["5A", "A", 1, 2.0, 1],
+        ["6A", "A", 1, 3, 2],
+        ["7A", "A", 1, 2.0, 3],
+        ["8A", "A", 1, 1, 4],
+        ["9A", "A", 1, 2.0, 5],
+        ["11A", "A", 1, 1, 6],
+        ["12A", "A", 1, 2.0, 7],
+        ["13A", "A", 1, 1, 8],
+        ["14A", "A", 1, 1, 9],
+        ["15A", "A", 1, 1, 10],
+        ["16A", "A", 1, 2.0, 11],
+        ["17A", "A", 1, 3.0, 12],
+        ["18A", "A", 1, 3.0, 13],
+        ["19A", "A", 1, 2.0, 14],
+        ["20A", "A", 1, 2.0, 15],
+        ["2C", "C", 0, 3.0, 0],
+        ["3C", "C", 0, 1, 1],
+        ["4C", "C", 0, 1, 2],
+        ["5C", "C", 0, 2.0, 3],
+        ["6C", "C", 0, 1, 4],
+        ["9C", "C", 0, 1, 5],
+        ["10C", "C", 0, 3, 6],
+        ["12C", "C", 0, 3, 7],
+        ["14C", "C", 0, 2.5, 8],
+        ["15C", "C", 0, 1, 9],
+        ["17C", "C", 0, 1, 10],
+        ["22C", "C", 0, 1, 11],
+        ["23C", "C", 0, 1, 12],
+        ["24C", "C", 0, 1, 13],
+        ["32C", "C", 0, 2.0, 14],
+        ["35C", "C", 0, 1, 15],
+    ]
 
     df = pd.DataFrame(data[1:], columns=data[0])
-    df.loc[df.fake == 1, 'fake'] = np.nan
-    mod = gee.GEE.from_formula('status ~ fake', data=df, groups='grps',
-                               cov_struct=cov_struct.Independence(),
-                               family=families.Binomial())
+    df.loc[df.fake == 1, "fake"] = np.nan
+    mod = gee.GEE.from_formula(
+        "status ~ fake",
+        data=df,
+        groups="grps",
+        cov_struct=cov_struct.Independence(),
+        family=families.Binomial(),
+    )
 
     df = df.dropna().copy()
-    df['constant'] = 1
+    df["constant"] = 1
 
-    mod2 = gee.GEE(df.status, df[['constant', 'fake']], groups=df.grps,
-                   cov_struct=cov_struct.Independence(),
-                   family=families.Binomial())
+    mod2 = gee.GEE(
+        df.status,
+        df[["constant", "fake"]],
+        groups=df.grps,
+        cov_struct=cov_struct.Independence(),
+        family=families.Binomial(),
+    )
 
     assert_equal(mod.endog, mod2.endog)
     assert_equal(mod.exog, mod2.exog)
@@ -1972,8 +2120,8 @@ def test_ql_known(family):
     mean2 = result2.fittedvalues
 
     if family is families.Gaussian:
-        ql1 = -len(y) / 2.
-        ql2 = -len(y) / 2.
+        ql1 = -len(y) / 2.0
+        ql2 = -len(y) / 2.0
     elif family is families.Poisson:
         c = np.zeros_like(y)
         ii = y > 0
@@ -2000,9 +2148,9 @@ def test_ql_known(family):
 # Compare differences of QL values computed by numerical integration.
 #  Use difference here so that constants that are inconvenient to compute
 #  cancel out.
-@pytest.mark.parametrize("family", [families.Gaussian,
-                                    families.Binomial,
-                                    families.Poisson])
+@pytest.mark.parametrize(
+    "family", [families.Gaussian, families.Binomial, families.Poisson]
+)
 def test_ql_diff(family):
 
     fam = family()
@@ -2023,15 +2171,12 @@ def test_ql_diff(family):
         qldiff = np.sum(y * np.log(mean1 / (1 - mean1)) + np.log(1 - mean1))
         qldiff -= np.sum(y * np.log(mean2 / (1 - mean2)) + np.log(1 - mean2))
     elif family is families.Poisson:
-        qldiff = (np.sum(y * np.log(mean1) - mean1)
-                  - np.sum(y * np.log(mean2) - mean2))
+        qldiff = np.sum(y * np.log(mean1) - mean1) - np.sum(y * np.log(mean2) - mean2)
     else:
         raise ValueError("unknown family")
 
-    qle1, _, _ = model1.qic(result1.params, result1.scale,
-                            result1.cov_params())
-    qle2, _, _ = model2.qic(result2.params, result2.scale,
-                            result2.cov_params())
+    qle1, _, _ = model1.qic(result1.params, result1.scale, result1.cov_params())
+    qle2, _, _ = model2.qic(result2.params, result2.scale, result2.cov_params())
 
     assert_allclose(qle1 - qle2, qldiff, rtol=1e-5, atol=1e-5)
 
@@ -2056,10 +2201,18 @@ def test_quasipoisson(reg):
     y = np.random.poisson(g)
     grp = np.kron(np.arange(100), np.ones(n // 100))
 
-    model1 = gee.GEE(y, x, family=families.Poisson(), groups=grp,
-                     )
-    model2 = gee.GEE(y, x, family=families.Poisson(), groups=grp,
-                     )
+    model1 = gee.GEE(
+        y,
+        x,
+        family=families.Poisson(),
+        groups=grp,
+    )
+    model2 = gee.GEE(
+        y,
+        x,
+        family=families.Poisson(),
+        groups=grp,
+    )
 
     if reg:
         result1 = model1.fit_regularized(pen_wt=0.1)
@@ -2075,8 +2228,10 @@ def test_quasipoisson(reg):
     if not reg:
         # The robust covariance does not depend on the scale parameter,
         # but the naive covariance does.
-        assert_allclose(result2.cov_naive / result1.cov_naive,
-                        result2.scale * np.ones_like(result2.cov_naive))
+        assert_allclose(
+            result2.cov_naive / result1.cov_naive,
+            result2.scale * np.ones_like(result2.cov_naive),
+        )
 
 
 def test_grid_ar():
@@ -2087,35 +2242,37 @@ def test_grid_ar():
     m = 10
     ng = 100
     ii = np.arange(m)
-    cov = r**np.abs(np.subtract.outer(ii, ii))
+    cov = r ** np.abs(np.subtract.outer(ii, ii))
     covr = np.linalg.cholesky(cov)
 
     e = [np.dot(covr, np.random.normal(size=m)) for k in range(ng)]
     e = 2 * np.concatenate(e)
 
-    grps = [[k]*m for k in range(ng)]
+    grps = [[k] * m for k in range(ng)]
     grps = np.concatenate(grps)
 
-    x = np.random.normal(size=(ng*m, 3))
+    x = np.random.normal(size=(ng * m, 3))
     y = np.dot(x, np.r_[1, -1, 0]) + e
 
-    model1 = gee.GEE(y, x, groups=grps,
-                     cov_struct=cov_struct.Autoregressive(grid=False))
+    model1 = gee.GEE(
+        y, x, groups=grps, cov_struct=cov_struct.Autoregressive(grid=False)
+    )
     result1 = model1.fit()
 
-    model2 = gee.GEE(y, x, groups=grps,
-                     cov_struct=cov_struct.Autoregressive(grid=True))
+    model2 = gee.GEE(y, x, groups=grps, cov_struct=cov_struct.Autoregressive(grid=True))
     result2 = model2.fit()
 
-    model3 = gee.GEE(y, x, groups=grps,
-                     cov_struct=cov_struct.Stationary(max_lag=1, grid=False))
+    model3 = gee.GEE(
+        y, x, groups=grps, cov_struct=cov_struct.Stationary(max_lag=1, grid=False)
+    )
     result3 = model3.fit()
 
-    assert_allclose(result1.cov_struct.dep_params,
-                    result2.cov_struct.dep_params,
-                    rtol=0.05)
-    assert_allclose(result1.cov_struct.dep_params,
-                    result3.cov_struct.dep_params[1], rtol=0.05)
+    assert_allclose(
+        result1.cov_struct.dep_params, result2.cov_struct.dep_params, rtol=0.05
+    )
+    assert_allclose(
+        result1.cov_struct.dep_params, result3.cov_struct.dep_params[1], rtol=0.05
+    )
 
 
 def test_unstructured_complete():
@@ -2126,15 +2283,14 @@ def test_unstructured_complete():
     covr = np.linalg.cholesky(cov)
     e = np.random.normal(size=(ngrp, 3))
     e = np.dot(e, covr.T)
-    xmat = np.random.normal(size=(3*ngrp, 3))
+    xmat = np.random.normal(size=(3 * ngrp, 3))
     par = np.r_[1, -2, 0.1]
     ey = np.dot(xmat, par)
     y = ey + e.ravel()
     g = np.kron(np.arange(ngrp), np.ones(3))
     t = np.kron(np.ones(ngrp), np.r_[0, 1, 2]).astype(int)
 
-    m = gee.GEE(y, xmat, time=t, cov_struct=cov_struct.Unstructured(),
-                groups=g)
+    m = gee.GEE(y, xmat, time=t, cov_struct=cov_struct.Unstructured(), groups=g)
     r = m.fit()
 
     assert_allclose(r.params, par, 0.05, 0.5)
@@ -2149,7 +2305,7 @@ def test_unstructured_incomplete():
     covr = np.linalg.cholesky(cov)
     e = np.random.normal(size=(ngrp, 3))
     e = np.dot(e, covr.T)
-    xmat = np.random.normal(size=(3*ngrp, 3))
+    xmat = np.random.normal(size=(3 * ngrp, 3))
     par = np.r_[1, -2, 0.1]
     ey = np.dot(xmat, par)
 
@@ -2162,8 +2318,8 @@ def test_unstructured_incomplete():
         ix = np.asarray(ix)
         tl.append(ix)
 
-        yl.append(ey[3*i + ix] + e[i, ix])
-        x = xmat[3*i + ix, :]
+        yl.append(ey[3 * i + ix] + e[i, ix])
+        x = xmat[3 * i + ix, :]
         xl.append(x)
         gl.append(i * np.ones(2))
 
@@ -2173,8 +2329,7 @@ def test_unstructured_incomplete():
     t = np.asarray(t, dtype=int)
     g = np.concatenate(gl)
 
-    m = gee.GEE(y, x, time=t[:, None], cov_struct=cov_struct.Unstructured(),
-                groups=g)
+    m = gee.GEE(y, x, time=t[:, None], cov_struct=cov_struct.Unstructured(), groups=g)
     r = m.fit()
 
     assert_allclose(r.params, par, 0.05, 0.5)
@@ -2201,11 +2356,10 @@ def test_ar_covsolve():
                 z = np.random.normal(size=(d, q))
 
             sm = np.diag(sd)
-            z1 = np.linalg.solve(sm,
-                                 np.linalg.solve(mat, np.linalg.solve(sm, z)))
-            z2 = c.covariance_matrix_solve(np.zeros_like(sd),
-                                           np.zeros_like(sd),
-                                           sd, [z])
+            z1 = np.linalg.solve(sm, np.linalg.solve(mat, np.linalg.solve(sm, z)))
+            z2 = c.covariance_matrix_solve(
+                np.zeros_like(sd), np.zeros_like(sd), sd, [z]
+            )
 
             assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)
 
@@ -2229,11 +2383,10 @@ def test_ex_covsolve():
                 z = np.random.normal(size=(d, q))
 
             sm = np.diag(sd)
-            z1 = np.linalg.solve(sm,
-                                 np.linalg.solve(mat, np.linalg.solve(sm, z)))
-            z2 = c.covariance_matrix_solve(np.zeros_like(sd),
-                                           np.arange(d, dtype=int),
-                                           sd, [z])
+            z1 = np.linalg.solve(sm, np.linalg.solve(mat, np.linalg.solve(sm, z)))
+            z2 = c.covariance_matrix_solve(
+                np.zeros_like(sd), np.arange(d, dtype=int), sd, [z]
+            )
 
             assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)
 
@@ -2248,10 +2401,9 @@ def test_stationary_covsolve():
     for d in 1, 2, 4:
         for q in 1, 4:
 
-            c.dep_params = (2.0 ** (-np.arange(d)))
+            c.dep_params = 2.0 ** (-np.arange(d))
             c.max_lag = d - 1
-            mat, _ = c.covariance_matrix(np.zeros(d),
-                                         np.arange(d, dtype=int))
+            mat, _ = c.covariance_matrix(np.zeros(d), np.arange(d, dtype=int))
             sd = np.random.uniform(size=d)
 
             if q == 1:
@@ -2260,10 +2412,9 @@ def test_stationary_covsolve():
                 z = np.random.normal(size=(d, q))
 
             sm = np.diag(sd)
-            z1 = np.linalg.solve(sm,
-                                 np.linalg.solve(mat, np.linalg.solve(sm, z)))
-            z2 = c.covariance_matrix_solve(np.zeros_like(sd),
-                                           np.arange(d, dtype=int),
-                                           sd, [z])
+            z1 = np.linalg.solve(sm, np.linalg.solve(mat, np.linalg.solve(sm, z)))
+            z2 = c.covariance_matrix_solve(
+                np.zeros_like(sd), np.arange(d, dtype=int), sd, [z]
+            )
 
             assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)

@@ -4,6 +4,7 @@ Tests for recursive least squares models
 Author: Chad Fulton
 License: Simplified-BSD
 """
+
 import os
 
 import numpy as np
@@ -23,17 +24,17 @@ from statsmodels.tools.sm_exceptions import ValueWarning
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-results_R_path = 'results' + os.sep + 'results_rls_R.csv'
+results_R_path = "results" + os.sep + "results_rls_R.csv"
 results_R = pd.read_csv(current_path + os.sep + results_R_path)
 
-results_stata_path = 'results' + os.sep + 'results_rls_stata.csv'
+results_stata_path = "results" + os.sep + "results_rls_stata.csv"
 results_stata = pd.read_csv(current_path + os.sep + results_stata_path)
 
 dta = macrodata.load_pandas().data
-dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
+dta.index = pd.date_range(start="1959-01-01", end="2009-07-01", freq="QS")
 
-endog = dta['cpi']
-exog = add_constant(dta['m1'])
+endog = dta["cpi"]
+exog = add_constant(dta["m1"])
 
 
 def test_endog():
@@ -47,20 +48,21 @@ def test_endog():
     assert_allclose(res.params, res_ols.params)
 
     # Tests for 1-dim exog
-    mod = RecursiveLS(endog, dta['m1'].values)
+    mod = RecursiveLS(endog, dta["m1"].values)
     res = mod.fit()
 
     # Test the RLS estimates against OLS estimates
-    mod_ols = OLS(endog, dta['m1'])
+    mod_ols = OLS(endog, dta["m1"])
     res_ols = mod_ols.fit()
     assert_allclose(res.params, res_ols.params)
 
+
 def test_ols():
     # More comprehensive tests against OLS estimates
-    mod = RecursiveLS(endog, dta['m1'])
+    mod = RecursiveLS(endog, dta["m1"])
     res = mod.fit()
 
-    mod_ols = OLS(endog, dta['m1'])
+    mod_ols = OLS(endog, dta["m1"])
     res_ols = mod_ols.fit()
 
     # Regression coefficients, standard errors, and estimated scale
@@ -75,8 +77,9 @@ def test_ols():
     # (the latter are defined as e_t|T by Harvey, 1989, 5.4.5)
     # (this follows since the smoothed state simply contains the
     # full-information estimates of the regression coefficients)
-    actual = (mod.endog[:, 0] -
-              np.sum(mod['design', 0, :, :] * res.smoothed_state, axis=0))
+    actual = mod.endog[:, 0] - np.sum(
+        mod["design", 0, :, :] * res.smoothed_state, axis=0
+    )
     assert_allclose(actual, res_ols.resid)
 
     # Given the estimate of scale as `sum(v_t^2 / f_t) / (T - d)` (see
@@ -87,11 +90,19 @@ def test_ols():
     # Alternatively, we can constrcut the concentrated OLS loglikelihood
     # by computing the scale term with `nobs` in the denominator rather than
     # `nobs - d`.
-    scale_alternative = np.sum((
-        res.standardized_forecasts_error[0, 1:] *
-        res.filter_results.obs_cov[0, 0]**0.5)**2) / mod.nobs
-    llf_alternative = np.log(norm.pdf(res.resid_recursive, loc=0,
-                                      scale=scale_alternative**0.5)).sum()
+    scale_alternative = (
+        np.sum(
+            (
+                res.standardized_forecasts_error[0, 1:]
+                * res.filter_results.obs_cov[0, 0] ** 0.5
+            )
+            ** 2
+        )
+        / mod.nobs
+    )
+    llf_alternative = np.log(
+        norm.pdf(res.resid_recursive, loc=0, scale=scale_alternative**0.5)
+    ).sum()
     assert_allclose(llf_alternative, res_ols.llf)
 
     # Prediction
@@ -111,13 +122,13 @@ def test_ols():
     assert_allclose(res.mse_total, res_ols.mse_total)
 
     # Hypothesis tests
-    actual = res.t_test('m1 = 0')
-    desired = res_ols.t_test('m1 = 0')
+    actual = res.t_test("m1 = 0")
+    desired = res_ols.t_test("m1 = 0")
     assert_allclose(actual.statistic, desired.statistic)
     assert_allclose(actual.pvalue, desired.pvalue, atol=1e-15)
 
-    actual = res.f_test('m1 = 0')
-    desired = res_ols.f_test('m1 = 0')
+    actual = res.f_test("m1 = 0")
+    desired = res_ols.f_test("m1 = 0")
     assert_allclose(actual.statistic, desired.statistic)
     assert_allclose(actual.pvalue, desired.pvalue, atol=1e-15)
 
@@ -138,7 +149,7 @@ def test_glm(constraints=None):
     # given `test_ols`, but this is mostly to complement the tests in
     # `test_glm_constrained`)
     endog = dta.infl
-    exog = add_constant(dta[['unemp', 'm1']])
+    exog = add_constant(dta[["unemp", "m1"]])
 
     mod = RecursiveLS(endog, exog, constraints=constraints)
     res = mod.fit()
@@ -165,8 +176,9 @@ def test_glm(constraints=None):
     # (the latter are defined as e_t|T by Harvey, 1989, 5.4.5)
     # (this follows since the smoothed state simply contains the
     # full-information estimates of the regression coefficients)
-    actual = (mod.endog[:, 0] -
-              np.sum(mod['design', 0, :, :] * res.smoothed_state, axis=0))
+    actual = mod.endog[:, 0] - np.sum(
+        mod["design", 0, :, :] * res.smoothed_state, axis=0
+    )
     assert_allclose(actual, res_glm.resid_response, atol=1e-7)
 
     # Given the estimate of scale as `sum(v_t^2 / f_t) / (T - d)` (see
@@ -177,11 +189,19 @@ def test_glm(constraints=None):
     # Alternatively, we can construct the concentrated OLS loglikelihood
     # by computing the scale term with `nobs` in the denominator rather than
     # `nobs - d`.
-    scale_alternative = np.sum((
-        res.standardized_forecasts_error[0, 1:] *
-        res.filter_results.obs_cov[0, 0]**0.5)**2) / mod.nobs
-    llf_alternative = np.log(norm.pdf(res.resid_recursive, loc=0,
-                                      scale=scale_alternative**0.5)).sum()
+    scale_alternative = (
+        np.sum(
+            (
+                res.standardized_forecasts_error[0, 1:]
+                * res.filter_results.obs_cov[0, 0] ** 0.5
+            )
+            ** 2
+        )
+        / mod.nobs
+    )
+    llf_alternative = np.log(
+        norm.pdf(res.resid_recursive, loc=0, scale=scale_alternative**0.5)
+    ).sum()
     assert_allclose(llf_alternative, res_glm.llf)
 
     # Prediction
@@ -195,13 +215,13 @@ def test_glm(constraints=None):
         assert_raises(NotImplementedError, res.forecast, 10, design=design)
 
     # Hypothesis tests
-    actual = res.t_test('m1 = 0')
-    desired = res_glm.t_test('m1 = 0')
+    actual = res.t_test("m1 = 0")
+    desired = res_glm.t_test("m1 = 0")
     assert_allclose(actual.statistic, desired.statistic)
     assert_allclose(actual.pvalue, desired.pvalue, atol=1e-15)
 
-    actual = res.f_test('m1 = 0')
-    desired = res_glm.f_test('m1 = 0')
+    actual = res.f_test("m1 = 0")
+    desired = res_glm.f_test("m1 = 0")
     assert_allclose(actual.statistic, desired.statistic)
     assert_allclose(actual.pvalue, desired.pvalue)
 
@@ -217,8 +237,9 @@ def test_glm(constraints=None):
     # actual_bic = bic(llf_alternative, res.nobs_effective, res.df_model)
     # assert_allclose(actual_bic, res_glm.bic)
 
+
 def test_glm_constrained():
-    test_glm(constraints='m1 + unemp = 1')
+    test_glm(constraints="m1 + unemp = 1")
 
 
 def test_filter():
@@ -239,16 +260,22 @@ def test_estimates():
     # Test for start_params
     assert_equal(mod.start_params, 0)
 
-
     # Test the RLS coefficient estimates against those from R (quantreg)
     # Due to initialization issues, we get more agreement as we get
     # farther from the initial values.
-    assert_allclose(res.recursive_coefficients.filtered[:, 2:10].T,
-                    results_R.iloc[:8][['beta1', 'beta2']], rtol=1e-5)
-    assert_allclose(res.recursive_coefficients.filtered[:, 9:20].T,
-                    results_R.iloc[7:18][['beta1', 'beta2']])
-    assert_allclose(res.recursive_coefficients.filtered[:, 19:].T,
-                    results_R.iloc[17:][['beta1', 'beta2']])
+    assert_allclose(
+        res.recursive_coefficients.filtered[:, 2:10].T,
+        results_R.iloc[:8][["beta1", "beta2"]],
+        rtol=1e-5,
+    )
+    assert_allclose(
+        res.recursive_coefficients.filtered[:, 9:20].T,
+        results_R.iloc[7:18][["beta1", "beta2"]],
+    )
+    assert_allclose(
+        res.recursive_coefficients.filtered[:, 19:].T,
+        results_R.iloc[17:][["beta1", "beta2"]],
+    )
 
     # Test the RLS estimates against OLS estimates
     mod_ols = OLS(endog, exog)
@@ -258,23 +285,24 @@ def test_estimates():
 
 @pytest.mark.matplotlib
 def test_plots(close_figures):
-    exog = add_constant(dta[['m1', 'pop']])
+    exog = add_constant(dta[["m1", "pop"]])
     mod = RecursiveLS(endog, exog)
     res = mod.fit()
 
     # Basic plot
     try:
         from pandas.plotting import register_matplotlib_converters
+
         register_matplotlib_converters()
     except ImportError:
         pass
     fig = res.plot_recursive_coefficient()
 
     # Specific variable
-    fig = res.plot_recursive_coefficient(variables=['m1'])
+    fig = res.plot_recursive_coefficient(variables=["m1"])
 
     # All variables
-    fig = res.plot_recursive_coefficient(variables=[0, 'm1', 'pop'])
+    fig = res.plot_recursive_coefficient(variables=[0, "m1", "pop"])
 
     # Basic plot
     fig = res.plot_cusum()
@@ -304,13 +332,12 @@ def test_plots(close_figures):
 
 
 def test_from_formula():
-    with pytest.warns(ValueWarning, match="No frequency information"):
-        mod = RecursiveLS.from_formula('cpi ~ m1', data=dta)
+    mod = RecursiveLS.from_formula("cpi ~ m1", data=dta)
 
     res = mod.fit()
 
     # Test the RLS estimates against OLS estimates
-    mod_ols = OLS.from_formula('cpi ~ m1', data=dta)
+    mod_ols = OLS.from_formula("cpi ~ m1", data=dta)
     res_ols = mod_ols.fit()
     assert_allclose(res.params, res_ols.params)
 
@@ -320,16 +347,14 @@ def test_resid_recursive():
     res = mod.fit()
 
     # Test the recursive residuals against those from R (strucchange)
-    assert_allclose(res.resid_recursive[2:10].T,
-                    results_R.iloc[:8]['rec_resid'])
-    assert_allclose(res.resid_recursive[9:20].T,
-                    results_R.iloc[7:18]['rec_resid'])
-    assert_allclose(res.resid_recursive[19:].T,
-                    results_R.iloc[17:]['rec_resid'])
+    assert_allclose(res.resid_recursive[2:10].T, results_R.iloc[:8]["rec_resid"])
+    assert_allclose(res.resid_recursive[9:20].T, results_R.iloc[7:18]["rec_resid"])
+    assert_allclose(res.resid_recursive[19:].T, results_R.iloc[17:]["rec_resid"])
 
     # Test the RLS estimates against those from Stata (cusum6)
-    assert_allclose(res.resid_recursive[3:],
-                    results_stata.iloc[3:]['rr'], atol=1e-5, rtol=1e-5)
+    assert_allclose(
+        res.resid_recursive[3:], results_stata.iloc[3:]["rr"], atol=1e-5, rtol=1e-5
+    )
 
     # Test the RLS estimates against statsmodels estimates
     mod_ols = OLS(endog, exog)
@@ -340,11 +365,12 @@ def test_resid_recursive():
 
 def test_recursive_olsresiduals_bad_input(reset_randomstate):
     from statsmodels.tsa.arima.model import ARIMA
+
     e = np.random.standard_normal(250)
     y = e.copy()
     for i in range(1, y.shape[0]):
         y[i] += 0.1 + 0.8 * y[i - 1] + e[i]
-    res = ARIMA(y[20:], order=(1,0,0), trend="c").fit()
+    res = ARIMA(y[20:], order=(1, 0, 0), trend="c").fit()
     with pytest.raises(TypeError, match="res a regression results instance"):
         recursive_olsresiduals(res)
 
@@ -367,9 +393,9 @@ def test_cusum():
     d = res.nobs_diffuse
     cusum = res.cusum * np.std(res.resid_recursive[d:], ddof=1)
     cusum -= res.resid_recursive[d]
-    cusum /= np.std(res.resid_recursive[d+1:], ddof=1)
+    cusum /= np.std(res.resid_recursive[d + 1 :], ddof=1)
     cusum = cusum[1:]
-    assert_allclose(cusum, results_stata.iloc[3:]['cusum'], atol=1e-6, rtol=1e-5)
+    assert_allclose(cusum, results_stata.iloc[3:]["cusum"], atol=1e-6, rtol=1e-5)
 
     # Test the cusum statistics against statsmodels estimates
     mod_ols = OLS(endog, exog)
@@ -381,19 +407,20 @@ def test_cusum():
     # Again note that cusum6 excludes the first 3 elements, so we need to
     # change the ddof and points.
     actual_bounds = res._cusum_significance_bounds(
-        alpha=0.05, ddof=1, points=np.arange(d+1, res.nobs))
-    desired_bounds = results_stata.iloc[3:][['lw', 'uw']].T
+        alpha=0.05, ddof=1, points=np.arange(d + 1, res.nobs)
+    )
+    desired_bounds = results_stata.iloc[3:][["lw", "uw"]].T
     assert_allclose(actual_bounds, desired_bounds, rtol=1e-6)
 
     # Test the cusum bounds against statsmodels
     actual_bounds = res._cusum_significance_bounds(
-        alpha=0.05, ddof=0, points=np.arange(d, res.nobs))
+        alpha=0.05, ddof=0, points=np.arange(d, res.nobs)
+    )
     desired_bounds = recursive_olsresiduals(res_ols)[-1]
     assert_allclose(actual_bounds, desired_bounds)
 
     # Test for invalid calls
-    assert_raises(ValueError, res._cusum_squares_significance_bounds,
-                  alpha=0.123)
+    assert_raises(ValueError, res._cusum_squares_significance_bounds, alpha=0.123)
 
 
 def test_stata():
@@ -403,30 +430,32 @@ def test_stata():
         res = mod.fit()
     d = max(res.nobs_diffuse, res.loglikelihood_burn)
 
-    assert_allclose(res.resid_recursive[3:], results_stata.iloc[3:]['rr'],
-                    atol=1e-5, rtol=1e-5)
-    assert_allclose(res.cusum, results_stata.iloc[3:]['cusum'], atol=1e-5)
-    assert_allclose(res.cusum_squares, results_stata.iloc[3:]['cusum2'],
-                    atol=1e-5)
+    assert_allclose(
+        res.resid_recursive[3:], results_stata.iloc[3:]["rr"], atol=1e-5, rtol=1e-5
+    )
+    assert_allclose(res.cusum, results_stata.iloc[3:]["cusum"], atol=1e-5)
+    assert_allclose(res.cusum_squares, results_stata.iloc[3:]["cusum2"], atol=1e-5)
 
     actual_bounds = res._cusum_significance_bounds(
-        alpha=0.05, ddof=0, points=np.arange(d+1, res.nobs+1))
-    desired_bounds = results_stata.iloc[3:][['lw', 'uw']].T
+        alpha=0.05, ddof=0, points=np.arange(d + 1, res.nobs + 1)
+    )
+    desired_bounds = results_stata.iloc[3:][["lw", "uw"]].T
     assert_allclose(actual_bounds, desired_bounds, atol=1e-5)
 
     # Note: Stata uses a set of tabulated critical values whereas we use an
     # approximation formula, so this test is quite imprecise
     actual_bounds = res._cusum_squares_significance_bounds(
-        alpha=0.05, points=np.arange(d+1, res.nobs+1))
-    desired_bounds = results_stata.iloc[3:][['lww', 'uww']].T
+        alpha=0.05, points=np.arange(d + 1, res.nobs + 1)
+    )
+    desired_bounds = results_stata.iloc[3:][["lww", "uww"]].T
     assert_allclose(actual_bounds, desired_bounds, atol=1e-2)
 
 
 def test_constraints_stata():
-    endog = dta['infl']
-    exog = add_constant(dta[['m1', 'unemp']])
+    endog = dta["infl"]
+    exog = add_constant(dta[["m1", "unemp"]])
 
-    mod = RecursiveLS(endog, exog, constraints='m1 + unemp = 1')
+    mod = RecursiveLS(endog, exog, constraints="m1 + unemp = 1")
     res = mod.fit()
 
     # See tests/results/test_rls.do
@@ -434,7 +463,7 @@ def test_constraints_stata():
     assert_allclose(res.params, desired)
 
     # See tests/results/test_rls.do
-    desired = [.4699552366, .0005369357, .0005369357]
+    desired = [0.4699552366, 0.0005369357, 0.0005369357]
     bse = np.asarray(res.bse)
     assert_allclose(bse[0], desired[0], atol=1e-1)
     assert_allclose(bse[1:], desired[1:], atol=1e-4)
@@ -444,21 +473,29 @@ def test_constraints_stata():
     # Note that to compute what Stata reports as the llf, we need to use a
     # different denominator for estimating the scale, and then compute the
     # llf from the alternative recursive residuals
-    scale_alternative = np.sum((
-        res.standardized_forecasts_error[0, 1:] *
-        res.filter_results.obs_cov[0, 0]**0.5)**2) / mod.nobs
-    llf_alternative = np.log(norm.pdf(res.resid_recursive, loc=0,
-                                      scale=scale_alternative**0.5)).sum()
+    scale_alternative = (
+        np.sum(
+            (
+                res.standardized_forecasts_error[0, 1:]
+                * res.filter_results.obs_cov[0, 0] ** 0.5
+            )
+            ** 2
+        )
+        / mod.nobs
+    )
+    llf_alternative = np.log(
+        norm.pdf(res.resid_recursive, loc=0, scale=scale_alternative**0.5)
+    ).sum()
     assert_allclose(llf_alternative, desired)
 
 
 def test_multiple_constraints():
-    endog = dta['infl']
-    exog = add_constant(dta[['m1', 'unemp', 'cpi']])
+    endog = dta["infl"]
+    exog = add_constant(dta[["m1", "unemp", "cpi"]])
 
     constraints = [
-        'm1 + unemp = 1',
-        'cpi = 0',
+        "m1 + unemp = 1",
+        "cpi = 0",
     ]
 
     mod = RecursiveLS(endog, exog, constraints=constraints)
@@ -469,7 +506,7 @@ def test_multiple_constraints():
     assert_allclose(res.params, desired, atol=1e-10)
 
     # See tests/results/test_rls.do
-    desired = [.4699552366, .0005369357, .0005369357, 0]
+    desired = [0.4699552366, 0.0005369357, 0.0005369357, 0]
     bse = np.asarray(res.bse)
     assert_allclose(bse[0], desired[0], atol=1e-1)
     assert_allclose(bse[1:-1], desired[1:-1], atol=1e-4)
@@ -479,21 +516,31 @@ def test_multiple_constraints():
     # Note that to compute what Stata reports as the llf, we need to use a
     # different denominator for estimating the scale, and then compute the
     # llf from the alternative recursive residuals
-    scale_alternative = np.sum((
-        res.standardized_forecasts_error[0, 1:] *
-        res.filter_results.obs_cov[0, 0]**0.5)**2) / mod.nobs
-    llf_alternative = np.log(norm.pdf(res.resid_recursive, loc=0,
-                                      scale=scale_alternative**0.5)).sum()
+    scale_alternative = (
+        np.sum(
+            (
+                res.standardized_forecasts_error[0, 1:]
+                * res.filter_results.obs_cov[0, 0] ** 0.5
+            )
+            ** 2
+        )
+        / mod.nobs
+    )
+    llf_alternative = np.log(
+        norm.pdf(res.resid_recursive, loc=0, scale=scale_alternative**0.5)
+    ).sum()
     assert_allclose(llf_alternative, desired)
 
 
 def test_fix_params():
     mod = RecursiveLS([0, 1, 0, 1], [1, 1, 1, 1])
-    with pytest.raises(ValueError, match=('Linear constraints on coefficients'
-                                          ' should be given')):
-        with mod.fix_params({'const': 0.1}):
+    with pytest.raises(
+        ValueError, match=("Linear constraints on coefficients" " should be given")
+    ):
+        with mod.fix_params({"const": 0.1}):
             mod.fit()
 
-    with pytest.raises(ValueError, match=('Linear constraints on coefficients'
-                                          ' should be given')):
-        mod.fit_constrained({'const': 0.1})
+    with pytest.raises(
+        ValueError, match=("Linear constraints on coefficients" " should be given")
+    ):
+        mod.fit_constrained({"const": 0.1})
