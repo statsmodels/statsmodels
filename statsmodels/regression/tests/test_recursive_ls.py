@@ -20,7 +20,6 @@ from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from statsmodels.tools.eval_measures import aic, bic
-from statsmodels.tools.sm_exceptions import ValueWarning
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
