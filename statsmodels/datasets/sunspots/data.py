@@ -9,7 +9,7 @@ SOURCE      = """
 http://www.ngdc.noaa.gov/stp/solar/solarda3.html
 
 The original dataset contains monthly data on sunspot activity in the file
-./src/sunspots_yearly.dat.  There is also sunspots_monthly.dat.
+./include/sunspots_yearly.dat.  There is also sunspots_monthly.dat.
 """
 
 DESCRSHORT  = """Yearly (1700-2008) data on sunspots from the National

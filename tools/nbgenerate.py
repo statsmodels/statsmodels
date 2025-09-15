@@ -51,7 +51,7 @@ for dname in [EXECUTED_DIR, DST_DIR]:
 
 def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     """
-    Execute notebook in `src` and write the output to `dst`
+    Execute notebook in `include` and write the output to `dst`
 
     Parameters
     ----------
@@ -81,7 +81,7 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
 
 def convert(src, dst, to="rst"):
     """
-    Convert a notebook `src`.
+    Convert a notebook `include`.
 
     Parameters
     ----------

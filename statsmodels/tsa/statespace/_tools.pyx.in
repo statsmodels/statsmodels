@@ -15,7 +15,7 @@ import numpy as np
 
 np.import_array()
 
-from statsmodels.src.math cimport *
+from statsmodels.include.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 

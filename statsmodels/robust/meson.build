@@ -1,0 +1,6 @@
+py.extension_module(
+    '_qn',
+    '_qn.pyx',
+    install: true,
+    include_directories: [inc_np]
+)

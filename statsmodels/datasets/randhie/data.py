@@ -18,7 +18,7 @@ This data was used in::
 
 And was obtained from: <http://cameron.econ.ucdavis.edu/mmabook/mmadata.html>
 
-See randhie/src for the original data and description.  The data included
+See randhie/include for the original data and description.  The data included
 here contains only a subset of the original data.  The data varies slightly
 compared to that reported in Cameron and Trivedi.
 """

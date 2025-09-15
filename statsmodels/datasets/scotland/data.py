@@ -25,7 +25,7 @@ regional GDP, the percentage of children aged 5 to 15, and an interaction term
 between female unemployment and the council tax.
 
 The original source files and variable information are included in
-/scotland/src/
+/scotland/include/
 """
 
 NOTE        = """::

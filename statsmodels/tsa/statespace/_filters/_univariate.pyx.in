@@ -23,7 +23,7 @@ TYPES = {
 # Typical imports
 cimport numpy as np
 import numpy as np
-from statsmodels.src.math cimport *
+from statsmodels.include.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 

@@ -74,39 +74,6 @@ EXTRAS_REQUIRE = {
 ###############################################################################
 # Values that rarely change
 ###############################################################################
-DISTNAME = "statsmodels"
-DESCRIPTION = "Statistical computations and models for Python"
-README = SETUP_DIR.joinpath("README.rst").read_text()
-LONG_DESCRIPTION = README
-MAINTAINER = "statsmodels Developers"
-MAINTAINER_EMAIL = "pystatsmodels@googlegroups.com"
-URL = "https://www.statsmodels.org/"
-LICENSE = "BSD License"
-DOWNLOAD_URL = ""
-PROJECT_URLS = {
-    "Bug Tracker": "https://github.com/statsmodels/statsmodels/issues",
-    "Documentation": "https://www.statsmodels.org/stable/index.html",
-    "Source Code": "https://github.com/statsmodels/statsmodels",
-}
-
-CLASSIFIERS = [
-    "Development Status :: 4 - Beta",
-    "Environment :: Console",
-    "Programming Language :: Cython",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Operating System :: OS Independent",
-    "Intended Audience :: End Users/Desktop",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "Natural Language :: English",
-    "License :: OSI Approved :: BSD License",
-    "Topic :: Office/Business :: Financial",
-    "Topic :: Scientific/Engineering",
-]
-
 FILES_TO_INCLUDE_IN_PACKAGE = ["LICENSE.txt", "setup.cfg"]
 
 FILES_COPIED_TO_PACKAGE = []
@@ -296,7 +263,7 @@ for source in statespace_exts:
     ext = Extension(
         name,
         [source],
-        include_dirs=["statsmodels/src"] + NUMPY_INCLUDES,
+        include_dirs=["statsmodels/include"] + NUMPY_INCLUDES,
         depends=[],
         define_macros=DEFINE_MACROS,
     )

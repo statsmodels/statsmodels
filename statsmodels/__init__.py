@@ -1,8 +1,8 @@
 from statsmodels.compat.patsy import monkey_patch_cat_dtype
+# TODO
+#from statsmodels._version import __version__, __version_tuple__
 
-from statsmodels._version import __version__, __version_tuple__
-
-__version_info__ = __version_tuple__
+#__version_info__ = __version_tuple__
 
 monkey_patch_cat_dtype()
 
@@ -39,4 +39,4 @@ def test(extra_args=None, exit=False):
     return tst(extra_args=extra_args, exit=exit)
 
 
-__all__ = ["__version__", "__version_info__", "__version_tuple__", "test"]
+# __all__ = ["__version__", "__version_info__", "__version_tuple__", "test"]
