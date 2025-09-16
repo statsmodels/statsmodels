@@ -71,9 +71,6 @@ bugtracker = "https://github.com/statsmodels/statsmodels/issues"
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
 
-[tool.setuptools_scm]
-write_to = "statsmodels/_version.py"
-
 [tool.ruff]
 line-length = 88
 target-version = "py310"
@@ -95,7 +92,6 @@ filterwarnings = [
     "error:Support for multi-dimensional:DeprecationWarning",
     "error:Mutating unit root tests is deprecated:FutureWarning",
     "error:invalid value encountered in cos:RuntimeWarning",
-    "error:invalid value encountered in log:RuntimeWarning",
     "error:divide by zero encountered in double_scalars:RuntimeWarning",
     "error:Lag selection has changed:DeprecationWarning",
     "error:More than 20 figures have been opened:RuntimeWarning:",
@@ -111,6 +107,7 @@ filterwarnings = [
     "error:get_state is deprecated:FutureWarning",
     "error:Conversion of an array with ndim:DeprecationWarning:arch"
     # Strict checks disabled
+    # "error:invalid value encountered in log:RuntimeWarning",
     # "error:invalid value encountered in sqrt:RuntimeWarning:",
     # "error:overflow encountered in double_scalars:RuntimeWarning:",
     # "error:overflow encountered in multiply:RuntimeWarning:",

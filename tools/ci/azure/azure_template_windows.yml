@@ -41,20 +41,33 @@ jobs:
       python -m pip install --upgrade pip setuptools wheel
     displayName: 'Update essentials'
 
-  - script: |
+  - pwsh: |
       python -m pip install -r requirements.txt
       python -m pip install -r requirements-dev.txt
     displayName: 'Install dependencies'
 
-  - script: |
+  - pwsh: |
       python -m pip list
     displayName: 'List Configuration'
 
-  - script: |
+  - pwsh: |
+      $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+
+      $vcvarspath = &$vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+      Write-Output "vc tools located at: $vcvarspath"
+
+      cmd.exe /c "call `"$vcvarspath\VC\Auxiliary\Build\vcvars64.bat`" && set > %temp%\vcvars.txt"
+    
+      Get-Content "$env:temp\vcvars.txt" | Foreach-Object {
+        if ($_ -match "^(.*?)=(.*)$") {
+          Set-Content "env:\$($matches[1])" $matches[2]
+        }
+      }
+      
       python -m pip install -vv --no-build-isolation --config-settings=editable-verbose=true --editable .
     displayName: 'Build Cython Extensions'
 
-  - script: |
+  - pwsh: |
       pytest statsmodels --skip-examples --junitxml=junit/test-results.xml -n 2 --durations=50
     displayName: 'pytest'
 
