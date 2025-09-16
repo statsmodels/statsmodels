@@ -16,7 +16,7 @@ _statspece_tree = [
 statspece_cython_gen = generator(cython,
   arguments : cython_args,
   output : '@BASENAME@.c',
-  depends : [_math_pxd, _cython_tree, _special_tree, _statspece_tree, _statspece_filters_tree, _statspece_smoothers_tree]
+  depends : [_math_pxd, _cython_tree, _special_tree, _statspece_filters_tree, _statspece_smoothers_tree, _statspece_tree]
 )
 
 
@@ -59,14 +59,14 @@ _kalman_filter_pyx = custom_target(
   command: [tempita, '@INPUT@', '--outfile', '@OUTPUT@'],
 )
 
-# py.extension_module('_kalman_filter',
-#  statspece_cython_gen.process(_kalman_filter_pyx),
-#  c_args: cython_c_args,
-#  include_directories: [inc_np, inc_sm],
-#  link_args: version_link_args,
-#  install: true,
-#  subdir: 'statsmodels/tsa/statespace',
-#)
+py.extension_module('_kalman_filter',
+  statspece_cython_gen.process(_kalman_filter_pyx),
+  c_args: cython_c_args,
+  include_directories: [inc_np, inc_sm],
+  link_args: version_link_args,
+  install: true,
+  subdir: 'statsmodels/tsa/statespace',
+)
 
 _kalman_smoother_pyx = custom_target(
   '_kalman_smoother_pyx',
@@ -75,14 +75,14 @@ _kalman_smoother_pyx = custom_target(
   command: [tempita, '@INPUT@', '--outfile', '@OUTPUT@'],
 )
 
-# py.extension_module('_kalman_smoother',
-#  statspece_cython_gen.process(_kalman_smoother_pyx),
-#  c_args: cython_c_args,
-#  include_directories: [inc_np, inc_sm],
-#  link_args: version_link_args,
-#  install: true,
-#  subdir: 'statsmodels/tsa/statespace',
-# )
+py.extension_module('_kalman_smoother',
+  statspece_cython_gen.process(_kalman_smoother_pyx),
+  c_args: cython_c_args,
+  include_directories: [inc_np, inc_sm],
+  link_args: version_link_args,
+  install: true,
+  subdir: 'statsmodels/tsa/statespace',
+)
 
 _representation_pyx = custom_target(
   '_representation_pyx',
