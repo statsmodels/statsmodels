@@ -32,12 +32,6 @@ cython_args = ['-3', '--fast-fail', '--output-file', '@OUTPUT@', '--include-dir'
 cython_c_args = [] # '-Wno-format-extra-args', '-Wno-format']
 version_link_args = []
 
-add_global_link_arguments('/LTCG', language: 'c')
-add_global_link_arguments('/INCREMENTAL:NO', language: 'c')
-add_global_link_arguments('/MANIFEST:EMBED,ID=2', language: 'c')
-add_global_link_arguments('/MANIFESTUAC:NO', language: 'c')
-
-
 subdir('includes')
 subdir('robust')
 subdir('nonparametric')

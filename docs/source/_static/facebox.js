@@ -103,7 +103,7 @@
       showOverlay()
 
       $('#facebox .content').empty().
-        append('<div class="loading"><img include="'+$.facebox.settings.loadingImage+'"/></div>')
+        append('<div class="loading"><img src="'+$.facebox.settings.loadingImage+'"/></div>')
 
       $('#facebox').show().css({
         top:	getPageScroll()[1] + (getPageHeight() / 10),
@@ -185,7 +185,7 @@
 
     $('#facebox .close')
       .click($.facebox.close)
-      .append('<img include="'
+      .append('<img src="'
               + $.facebox.settings.closeImage
               + '" class="close_image" title="close">')
   }
@@ -254,7 +254,7 @@
   function fillFaceboxFromImage(href, klass) {
     var image = new Image()
     image.onload = function() {
-      $.facebox.reveal('<div class="image"><img include="' + image.src + '" /></div>', klass)
+      $.facebox.reveal('<div class="image"><img src="' + image.src + '" /></div>', klass)
     }
     image.src = href
   }
