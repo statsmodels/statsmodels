@@ -4,8 +4,7 @@ to a function's reference
 """
 import webbrowser
 from urllib.parse import urlencode
-# TODO: remove the comment below and uncomment the import
-# from statsmodels import __version__
+from statsmodels import __version__
 
 BASE_URL = 'https://www.statsmodels.org/'
 

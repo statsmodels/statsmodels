@@ -2,9 +2,12 @@
 import os
 import setuptools_scm
 from packaging.version import Version
+from pathlib import Path
+ROOT = Path(__file__).parent.parent.parent.absolute()
+
 
 def get_version() -> tuple[str, tuple[int | str, ...]]:
-    _version = setuptools_scm.get_version()
+    _version = setuptools_scm.get_version(root=ROOT)
     parsed_version = Version(_version)
     version_fields: tuple[int | str, ...] = parsed_version.release
     if parsed_version.epoch:

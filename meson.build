@@ -4,7 +4,7 @@ project(
   license: 'BSD-3',
   meson_version: '>= 1.9.0',
   default_options: [],
-  version:  run_command(['tools/git_version.py'], check: true).stdout().strip(),
+  version:  run_command(['statsmodels/_build/git_version.py'], check: true).stdout().strip(),
 )
 
 cc = meson.get_compiler('c')

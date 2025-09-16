@@ -75,10 +75,9 @@ __all__ = [
 
 from . import datasets, distributions, iolib, regression, robust, tools
 from .__init__ import test
-# TODO: Fix version
-#from statsmodels._version import (
-#    version as __version__, version_tuple as __version_info__
-#)
+from statsmodels._version import (
+    version as __version__, version_tuple as __version_info__
+)
 from .discrete.conditional_models import (
     ConditionalLogit,
     ConditionalMNLogit,

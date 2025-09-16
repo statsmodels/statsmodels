@@ -32,6 +32,32 @@ cython_args = ['-3', '--fast-fail', '--output-file', '@OUTPUT@', '--include-dir'
 cython_c_args = [] # '-Wno-format-extra-args', '-Wno-format']
 version_link_args = []
 
+sm_dir = py.get_install_dir() / 'statsmodels'
+# Generate version.py for sdist
+meson.add_dist_script(
+   ['_build/git_version.py', '--meson-dist', '--write',
+     'statsmodels/_version.py']
+)
+if not fs.exists('version.py')
+  generate_version = custom_target(
+    'generate-version',
+    install: true,
+    build_always_stale: true,
+    build_by_default: true,
+    output: '_version.py',
+    input: '_build/git_version.py',
+    command: [py, '@INPUT@', '--write', '@OUTPUT@'],
+    install_dir: sm_dir,
+    install_tag: 'python-runtime'
+  )
+else
+  # When building from sdist, version.py exists and should be included
+  py.install_sources(
+    ['_version.py'],
+    subdir : 'statsmodels'
+  )
+endif
+
 subdir('includes')
 subdir('robust')
 subdir('nonparametric')
