@@ -1,3 +1,10 @@
+rs_cython_gen = generator(cython,
+  arguments : cython_args,
+  output : '@BASENAME@.c',
+  depends : [_math_pxd, _cython_tree, _special_tree]
+)
+
+
 _hamilton_filter_pyx = custom_target(
   '_hamilton_filter_pyx',
   input: '_hamilton_filter.pyx.in',
@@ -5,12 +12,15 @@ _hamilton_filter_pyx = custom_target(
   command: [tempita, '@INPUT@', '--outfile', '@OUTPUT@'],
 )
 
-py.extension_module(
-  '_hamilton_filter',
-  [_hamilton_filter_pyx, math_pxd],
+py.extension_module('_hamilton_filter',
+  rs_cython_gen.process(_hamilton_filter_pyx),
+  c_args: cython_c_args,
   include_directories: [inc_np, inc_sm],
-  install: true
+  link_args: version_link_args,
+  install: true,
+  subdir: 'statsmodels/tsa/regime_switching',
 )
+
 
 _kim_smoother_pyx = custom_target(
   '_kim_smoother_pyx',
@@ -19,9 +29,11 @@ _kim_smoother_pyx = custom_target(
   command: [tempita, '@INPUT@', '--outfile', '@OUTPUT@'],
 )
 
-py.extension_module(
-  '_kim_smoother',
-  [_kim_smoother_pyx, math_pxd],
+py.extension_module('_kim_smoother',
+  rs_cython_gen.process(_kim_smoother_pyx),
+  c_args: cython_c_args,
   include_directories: [inc_np, inc_sm],
-  install: true
+  link_args: version_link_args,
+  install: true,
+  subdir: 'statsmodels/tsa/regime_switching',
 )

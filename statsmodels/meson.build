@@ -19,12 +19,19 @@ print(incdir)
 ).stdout().strip()
 
 inc_np = include_directories(incdir_numpy)
-math_pxd = files('include/math.pxd')
-inc_sm = include_directories('include')
+inc_sm = include_directories('includes')
+_math_pxd = [
+]
 
-subdir('robust')
-subdir('nonparametric')
-subdir('tsa')
+# Copy the main __init__.py to the build dir.
+# Some submodules (linalg, special, optimize) add pxd files to this.
+# Needed to trick Cython, it won't do a relative import outside a package
+#_cython_tree = declare_dependency(sources: [
+_cython_tree = [fs.copyfile('__init__.py')]
+cython_args = ['-3', '--fast-fail', '--output-file', '@OUTPUT@', '--include-dir', '@BUILD_ROOT@', '@INPUT@']
+cython_c_args = ['-Wno-format-extra-args', '-Wno-format']
+version_link_args = []
+
 
 subdirs_list = [
     'base',
@@ -68,3 +75,8 @@ top_level_py_list = [
     'conftest.py',
 ]
 py.install_sources(top_level_py_list, subdir: 'statsmodels')
+
+subdir('includes')
+subdir('robust')
+subdir('nonparametric')
+subdir('tsa')
