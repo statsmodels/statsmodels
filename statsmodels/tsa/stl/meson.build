@@ -3,4 +3,5 @@ py.extension_module(
     '_stl.pyx',
     install: true,
     include_directories: [inc_np],
+    subdir: 'statsmodels/tsa/stl',
 )

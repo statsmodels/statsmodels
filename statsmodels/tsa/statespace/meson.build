@@ -1,7 +1,7 @@
 subdir('_filters')
 subdir('_smoothers')
 
-_statspece_tree = [
+_statspece_tree = _tsa_tree + [
     fs.copyfile('__init__.py'),
     fs.copyfile('_cfa_simulation_smoother.pxd'),
     fs.copyfile('_initialization.pxd'),

@@ -1,4 +1,4 @@
-_statspece_smoothers_tree = [
+_statspece_smoothers_tree = _tsa_tree + [
     fs.copyfile('__init__.py'),
     fs.copyfile('_alternative.pxd'),
     fs.copyfile('_classical.pxd'),

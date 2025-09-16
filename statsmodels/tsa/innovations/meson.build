@@ -9,5 +9,6 @@ py.extension_module(
   '_arma_innovations',
   _arma_innovations_pyx,
   include_directories: [inc_np],
-  install: true
+  install: true,
+  subdir: 'statsmodels/tsa/innovations',
 )

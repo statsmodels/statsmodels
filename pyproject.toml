@@ -116,7 +116,12 @@ filterwarnings = [
 ]
 junit_family = "xunit2"
 markers = [
-  "slow: mark a test as slow",
+    "example: mark a test that runs example code",
+    "matplotlib: mark a test that requires matplotlib",
+    "slow: mark a test as slow",
+    "smoke: mark a test as a smoketest",
+    "low_precision: mark a test as low precision",
+    "todo: mark a test as incomplete"
 ]
 
 [tool.isort]

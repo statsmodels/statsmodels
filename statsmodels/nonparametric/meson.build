@@ -3,6 +3,7 @@ py.extension_module(
     '_smoothers_lowess.pyx',
     install: true,
     include_directories: [inc_np],
+    subdir: 'statsmodels/nonparametric',
 )
 
 py.extension_module(
@@ -10,4 +11,5 @@ py.extension_module(
     'linbin.pyx',
     install: true,
     include_directories: [inc_np],
+    subdir: 'statsmodels/nonparametric',
 )

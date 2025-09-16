@@ -1,8 +1,10 @@
+_tsa_tree = [fs.copyfile('__init__.py')]
 py.extension_module(
     '_innovations',
     '_innovations.pyx',
     install: true,
     include_directories: [inc_np],
+    subdir: 'statsmodels/tsa',
 )
 
 subdir('exponential_smoothing')

@@ -2,6 +2,9 @@
 cython>=3.0.10,<4
 setuptools_scm[toml]~=8.0
 meson-python>=0.18.0
+meson
+ninja
+
 # run
 matplotlib>=3
 colorama

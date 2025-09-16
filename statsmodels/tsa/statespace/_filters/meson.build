@@ -1,4 +1,4 @@
-_statspece_filters_tree = [
+_statspece_filters_tree = _tsa_tree + [
     fs.copyfile('__init__.py'),
     fs.copyfile('_conventional.pxd'),
     fs.copyfile('_inversions.pxd'),
