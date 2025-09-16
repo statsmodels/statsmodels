@@ -47,7 +47,7 @@ TYPES = {
 # Typical imports
 import numpy as np
 cimport numpy as np
-from statsmodels.include.math cimport *
+from statsmodels.includes.math cimport *
 cimport scipy.linalg.cython_blas as blas
 
 from statsmodels.tsa.statespace._kalman_smoother cimport (
