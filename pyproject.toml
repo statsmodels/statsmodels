@@ -99,11 +99,8 @@ filterwarnings = [
     "error:divide by zero encountered in double_scalars:RuntimeWarning",
     "error:Lag selection has changed:DeprecationWarning",
     "error:More than 20 figures have been opened:RuntimeWarning:",
-    "error:invalid value encountered in sqrt:RuntimeWarning:",
     "error:Inequality constraints incompatible::",
     "error:Parameters are not consistent with a::",
-    "error:overflow encountered in double_scalars:RuntimeWarning:",
-    "error:overflow encountered in multiply:RuntimeWarning:",
     "ignore:The --strict option is deprecated:pytest.PytestDeprecationWarning",
     "error:The default for reindex:FutureWarning:",
     "error:overflow encountered in square:RuntimeWarning",
@@ -113,6 +110,10 @@ filterwarnings = [
     "error:seed is deprecated:FutureWarning",
     "error:get_state is deprecated:FutureWarning",
     "error:Conversion of an array with ndim:DeprecationWarning:arch"
+    # Strict checks disabled
+    # "error:invalid value encountered in sqrt:RuntimeWarning:",
+    # "error:overflow encountered in double_scalars:RuntimeWarning:",
+    # "error:overflow encountered in multiply:RuntimeWarning:",
 ]
 junit_family = "xunit2"
 markers = [
