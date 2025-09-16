@@ -50,17 +50,15 @@ NOTEBOOK_DIR = os.path.join(head, '..', '..', '..', 'examples', 'notebooks')
 NOTEBOOK_DIR = os.path.abspath(NOTEBOOK_DIR)
 
 nbs = sorted(glob.glob(os.path.join(NOTEBOOK_DIR, '*.ipynb')))
-ids = list(map(lambda p: os.path.split(p)[-1], nbs))
-
-
-@pytest.fixture(params=nbs, ids=ids)
-def notebook(request):
-    return request.param
-
 
 if not nbs:
     pytestmark = pytest.mark.skip(reason='No notebooks found so no tests run')
 
+ids = list(map(lambda p: os.path.split(p)[-1], nbs))
+
+@pytest.fixture(params=nbs, ids=ids)
+def notebook(request):
+    return request.param
 
 @pytest.mark.slow
 @pytest.mark.example

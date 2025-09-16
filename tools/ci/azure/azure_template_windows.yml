@@ -51,7 +51,7 @@ jobs:
     displayName: 'List Configuration'
 
   - script: |
-      python -m pip install -e . -v --no-build-isolation
+      python -m pip install -vv --no-build-isolation --config-settings=editable-verbose=true --editable .
     displayName: 'Build Cython Extensions'
 
   - script: |
