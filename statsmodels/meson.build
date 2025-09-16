@@ -32,6 +32,10 @@ cython_args = ['-3', '--fast-fail', '--output-file', '@OUTPUT@', '--include-dir'
 cython_c_args = ['-Wno-format-extra-args', '-Wno-format']
 version_link_args = []
 
+subdir('includes')
+subdir('robust')
+subdir('nonparametric')
+subdir('tsa')
 
 subdirs_list = [
     'base',
@@ -75,8 +79,3 @@ top_level_py_list = [
     'conftest.py',
 ]
 py.install_sources(top_level_py_list, subdir: 'statsmodels')
-
-subdir('includes')
-subdir('robust')
-subdir('nonparametric')
-subdir('tsa')
