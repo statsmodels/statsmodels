@@ -140,6 +140,7 @@ if [ "$LINT" == true ]; then
         statsmodels/graphics/tsaplots.py \
         statsmodels/imputation/__init__.py \
         statsmodels/imputation/tests/__init__.py \
+        statsmodels/includes \
         statsmodels/interface \
         statsmodels/iolib/__init__.py \
         statsmodels/iolib/api.py \
@@ -214,7 +215,6 @@ if [ "$LINT" == true ]; then
         statsmodels/sandbox/stats/tests \
         statsmodels/sandbox/tests/__init__.py \
         statsmodels/sandbox/tools/__init__.py \
-        statsmodels/src \
         statsmodels/stats/__init__.py \
         statsmodels/stats/_delta_method.py \
         statsmodels/stats/_knockoff.py \
