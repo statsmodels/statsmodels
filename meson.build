@@ -12,8 +12,8 @@ cy = meson.get_compiler('cython')
 cython = find_program(cy.cmd_array()[0])
 tempita = find_program('statsmodels/_build/tempita.py')
 
-if not cy.version().version_compare('>=3.0.12')
-  error('statsmodels requires Cython >= 3.0.12')
+if not cy.version().version_compare('>=3.0.10')
+  error('statsmodels requires Cython >= 3.0.10')
 endif
 
 py = import('python').find_installation(pure: false)
