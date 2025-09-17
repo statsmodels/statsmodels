@@ -23,42 +23,43 @@ jobs:
         python_311_latest:
           python.version: '3.11'
           lint: true
-          CYTHON: 3.0.12
+          CYTHON_VERSION: 3.0.12
           coverage: true
-        python_310_latest_install:
-          python.version: '3.10'
+        python_311_wheel:
+          python.version: '3.11'
           lint: true
           test.install: true
-        python_310_latest_install_sdist:
-          python.version: '3.10'
+          TEST_SDIST: false
+        python_312_sdist:
+          python.version: '3.12'
           test.install: true
           TEST_SDIST: true
         python_39:
           python.version: '3.9'
-          USE_MATPLOTLIB: false
+          USE_MATPLOTLIB_VERSION: false
           USE_CVXOPT: false
-          SCIPY: 1.8.1
-          PANDAS: 1.5.3
-          NUMPY: 1.23.5
-          CYTHON: 3.0.12
+          SCIPY_VERSION: 1.8.1
+          PANDAS_VERSION: 1.5.3
+          NUMPY_VERSION: 1.23.5
+          CYTHON_VERSION: 3.0.10
           coverage: true
           lint: true
         python_310_legacy_blas:
           python.version: '3.10'
           use.conda: true
           coverage: true
-          NUMPY: 2.0.0
-          PANDAS: 2.2.2
-          SCIPY: 1.13.0
-          CYTHON: 3.0.12
+          NUMPY_VERSION: 2.0.0
+          PANDAS_VERSION: 2.2.2
+          SCIPY_VERSION: 1.13.0
+          CYTHON_VERSION: 3.0.12
           BLAS: "nomkl blas=*=openblas"
           PYTEST_OPTIONS: ''
         python310_numpy124:
           python.version: '3.10'
-          NUMPY: 1.24.4
-          SCIPY: 1.9.3
-          PANDAS: 1.5.3
-          MATPLOTLIB: 3.6.0
+          NUMPY_VERSION: 1.24.4
+          SCIPY_VERSION: 1.9.3
+          PANDAS_VERSION: 1.5.3
+          MATPLOTLIB_VERSION: 3.6.0
         python_313_copy_on_write:
           python.version: '3.13'
           SM_TEST_COPY_ON_WRITE: 1
@@ -126,7 +127,7 @@ jobs:
     condition: eq(variables['test.install'], 'true')
 
   - script: |
-       python -m pip install -vv --no-build-isolation --config-settings=editable-verbose=true --editable .
+       python -m pip install -vv --no-build-isolation --upgrade-strategy only-if-needed --config-settings=editable-verbose=true --editable .
     displayName: 'Install statsmodels (editable)'
     condition: ne(variables['test.install'], 'true')
 

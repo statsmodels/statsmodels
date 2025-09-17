@@ -138,7 +138,7 @@ The current minimum dependencies are:
 
 Cython is required to build from a git checkout but not to run or install from PyPI:
 
-* `Cython <https://cython.org/>`__ >= 3.0.12 is required to build the code from
+* `Cython <https://cython.org/>`__ >= 3.0.10 is required to build the code from
   github but not from a source distribution.
 
 Given the long release cycle, statsmodels follows a loose time-based policy for
