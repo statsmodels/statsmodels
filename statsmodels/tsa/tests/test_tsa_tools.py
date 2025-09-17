@@ -641,11 +641,17 @@ class TestAddTrend:
             has_constant="raise",
         )
         df = pd.DataFrame(self.c)
-        assert_raises(
-            ValueError, tools.add_trend, x=df, trend="c", has_constant="raise"
+       assert_equal(
+            "x contains one or more constant columns. Column(s) 0 "
+            "are constant. Adding a constant with trend='c' is not allowed.",
+            str(value_error_str.exception)
         )
-        assert_raises(
-            ValueError, tools.add_trend, x=df, trend="ct", has_constant="raise"
+        with assert_raises(ValueError) as value_error_str:
+            tools.add_trend(x=df, trend="ct", has_constant="raise")
+        assert_equal(
+            "x contains one or more constant columns. Column(s) 0 "
+            "are constant. Adding a constant with trend='ct' is not allowed.",
+            str(value_error_str.exception)
         )
 
         skipped = tools.add_trend(self.c, trend="c")
