@@ -112,6 +112,7 @@ jobs:
   - script: |
       echo "Installing to site packages"
       if [[ $TEST_SDIST ]]; then
+        python -m pip install --upgrade build
         python -m build . --sdist
         TAIL=".tar.gz"
       else

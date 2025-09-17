@@ -308,17 +308,7 @@ class BinaryDistribution(Distribution):
 
 
 setup(
-    name=DISTNAME,
-    maintainer=MAINTAINER,
     ext_modules=extensions,
-    maintainer_email=MAINTAINER_EMAIL,
-    description=DESCRIPTION,
-    license=LICENSE,
-    url=URL,
-    download_url=DOWNLOAD_URL,
-    project_urls=PROJECT_URLS,
-    long_description=LONG_DESCRIPTION,
-    classifiers=CLASSIFIERS,
     platforms="any",
     cmdclass=cmdclass,
     packages=find_packages(),
