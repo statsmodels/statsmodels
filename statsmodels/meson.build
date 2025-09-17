@@ -38,7 +38,7 @@ meson.add_dist_script(
    ['_build/git_version.py', '--meson-dist', '--write',
      'statsmodels/_version.py']
 )
-if not fs.exists('version.py')
+if not fs.exists('_version.py')
   generate_version = custom_target(
     'generate-version',
     install: true,
