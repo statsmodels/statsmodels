@@ -34,5 +34,5 @@ jobs:
         env:
           CIBW_PLATFORM: pyodide
           CIBW_BUILD: cp312-*
-          CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['-svra', '--skip-examples', '--skip-slow'], exit=True)"
+          CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['-sra', '--skip-examples', '--skip-slow'], exit=True)"
           CIBW_TEST_REQUIRES: pytest pytest-cov matplotlib
