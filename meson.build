@@ -13,8 +13,8 @@ cython = find_program(cy.cmd_array()[0])
 cythonize = find_program('cythonize')
 tempita = find_program('statsmodels/_build/tempita.py')
 
-if not cy.version().version_compare('>=3.0.10')
-  error('statsmodels requires Cython >= 3.0.10')
+if not cy.version().version_compare('>=3.0.12')
+  error('statsmodels requires Cython >= 3.0.12')
 endif
 
 py = import('python').find_installation(pure: false)

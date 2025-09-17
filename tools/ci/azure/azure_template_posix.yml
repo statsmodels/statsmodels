@@ -23,7 +23,7 @@ jobs:
         python_311_latest:
           python.version: '3.11'
           lint: true
-          CYTHON: 3.0.10
+          CYTHON: 3.0.12
           coverage: true
         python_310_latest_install:
           python.version: '3.10'
@@ -40,7 +40,7 @@ jobs:
           SCIPY: 1.8.1
           PANDAS: 1.5.3
           NUMPY: 1.23.5
-          CYTHON: 3.0.10
+          CYTHON: 3.0.12
           coverage: true
           lint: true
         python_310_legacy_blas:
@@ -50,7 +50,7 @@ jobs:
           NUMPY: 2.0.0
           PANDAS: 2.2.2
           SCIPY: 1.13.0
-          CYTHON: 3.0.10
+          CYTHON: 3.0.12
           BLAS: "nomkl blas=*=openblas"
           PYTEST_OPTIONS: ''
         python310_numpy124:

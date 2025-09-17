@@ -102,7 +102,7 @@ doc = [
 ]
 dev = [
     # build
-    "cython>=3.0.10,<4",
+    "cython>=3.0.12,<4",
     "setuptools_scm~=9.0",
     "meson-python>=0.18.0",
     "meson",
