@@ -1,0 +1,36 @@
+name: Test Emscripten/Pyodide build using CIBW
+
+on:
+  pull_request:
+    branches:
+      - main
+      - maintenance/**
+
+env:
+  FORCE_COLOR: 3
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+
+jobs:
+  build-wasm-emscripten:
+    permissions:
+      contents: read  # to fetch code (actions/checkout)
+    name: Pyodide test
+    runs-on: ubuntu-22.04
+    # To enable this workflow on a fork, comment out:
+    if: github.repository == 'statsmodels/statsmodels'
+    steps:
+      - name: Checkout statsmodels
+        uses: actions/checkout@5
+        with:
+          submodules: recursive
+          fetch-tags: true
+          persist-credentials: false
+
+      - uses: pypa/cibuildwheel@3.1.4
+        env:
+          CIBW_PLATFORM: pyodide
+          CIBW_BUILD: cp312-*
