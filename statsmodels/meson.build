@@ -28,8 +28,16 @@ _math_pxd = [
 # Needed to trick Cython, it won't do a relative import outside a package
 #_cython_tree = declare_dependency(sources: [
 _cython_tree = [fs.copyfile('__init__.py')]
-cython_args = ['-3', '--fast-fail', '--output-file', '@OUTPUT@', '--include-dir', '@BUILD_ROOT@', '@INPUT@']
-cython_c_args = [] # '-Wno-format-extra-args', '-Wno-format']
+cython_args = []
+cython_c_args =  ['-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION']
+if get_option('cython-coverage')
+  cython_args += ['--directive', 'linetrace=true']
+  cython_c_args += ['-DCYTHON_TRACE_NOGIL=1']
+endif
+cython_args += ['-3', '--output-file', '@OUTPUT@', '--include-dir', '@BUILD_ROOT@', '@INPUT@']
+# -X linetrace=true
+#
+
 version_link_args = []
 
 sm_dir = py.get_install_dir() / 'statsmodels'

@@ -4,6 +4,7 @@ py.extension_module(
     install: true,
     include_directories: [inc_np],
     subdir: 'statsmodels/nonparametric',
+    c_args: cython_c_args,
 )
 
 py.extension_module(
@@ -12,4 +13,5 @@ py.extension_module(
     install: true,
     include_directories: [inc_np],
     subdir: 'statsmodels/nonparametric',
+    c_args: cython_c_args,
 )

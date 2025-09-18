@@ -1,0 +1,2 @@
+option('cython-coverage', type: 'boolean', value: false,
+        description: 'Compile and build cython modules with coverage support')

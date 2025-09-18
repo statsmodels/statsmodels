@@ -4,4 +4,5 @@ py.extension_module(
     install: true,
     include_directories: [inc_np],
     subdir: 'statsmodels/tsa/holtwinters',
+    c_args: cython_c_args,
 )
