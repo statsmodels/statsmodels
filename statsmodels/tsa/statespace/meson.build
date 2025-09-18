@@ -31,8 +31,7 @@ py.extension_module('_cfa_simulation_smoother',
   statspece_cython_gen.process(_cfa_simulation_smoother_pyx),
   c_args: cython_c_args,
   include_directories: [inc_np, inc_sm],
-  link_args: version_link_args,
-  install: true,
+  install : true,
   subdir: 'statsmodels/tsa/statespace',
 )
 
@@ -47,8 +46,7 @@ py.extension_module('_initialization',
   statspece_cython_gen.process(_initialization_pyx),
   c_args: cython_c_args,
   include_directories: [inc_np, inc_sm],
-  link_args: version_link_args,
-  install: true,
+  install : true,
   subdir: 'statsmodels/tsa/statespace',
 )
 
@@ -63,8 +61,7 @@ py.extension_module('_kalman_filter',
   statspece_cython_gen.process(_kalman_filter_pyx),
   c_args: cython_c_args,
   include_directories: [inc_np, inc_sm],
-  link_args: version_link_args,
-  install: true,
+  install : true,
   subdir: 'statsmodels/tsa/statespace',
 )
 
@@ -79,8 +76,7 @@ py.extension_module('_kalman_smoother',
   statspece_cython_gen.process(_kalman_smoother_pyx),
   c_args: cython_c_args,
   include_directories: [inc_np, inc_sm],
-  link_args: version_link_args,
-  install: true,
+  install : true,
   subdir: 'statsmodels/tsa/statespace',
 )
 
@@ -95,8 +91,7 @@ py.extension_module('_representation',
   statspece_cython_gen.process(_representation_pyx),
   c_args: cython_c_args,
   include_directories: [inc_np, inc_sm],
-  link_args: version_link_args,
-  install: true,
+  install : true,
   subdir: 'statsmodels/tsa/statespace',
 )
 
@@ -111,8 +106,7 @@ py.extension_module('_simulation_smoother',
   statspece_cython_gen.process(_simulation_smoother_pyx),
   c_args: cython_c_args,
   include_directories: [inc_np, inc_sm],
-  link_args: version_link_args,
-  install: true,
+  install : true,
   subdir: 'statsmodels/tsa/statespace',
 )
 
@@ -127,7 +121,6 @@ py.extension_module('_tools',
   statspece_cython_gen.process(_tools_pyx),
   c_args: cython_c_args,
   include_directories: [inc_np, inc_sm],
-  link_args: version_link_args,
-  install: true,
+  install : true,
   subdir: 'statsmodels/tsa/statespace',
 )

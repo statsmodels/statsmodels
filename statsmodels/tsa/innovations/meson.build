@@ -15,7 +15,6 @@ py.extension_module('_arma_innovations',
   _arma_innovations_gen.process(_arma_innovations_pyx),
   c_args: cython_c_args,
   include_directories: [inc_np, inc_sm],
-  link_args: version_link_args,
   install: true,
   subdir: 'statsmodels/tsa/innovations',
 )

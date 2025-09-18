@@ -17,7 +17,6 @@ if not cy.version().version_compare('>=3.0.10')
 endif
 
 py = import('python').find_installation(pure: false)
-py_dep = py.dependency()
 fs = import('fs')
 
 py.install_sources('pyproject.toml', subdir: 'statsmodels')

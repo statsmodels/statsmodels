@@ -1,7 +1,5 @@
 [build-system]
 build-backend = 'mesonpy'
-# These are strictly build requirements. Runtime requirements are listed in
-# INSTALL_REQUIRES in setup.py
 requires = [
     'meson-python',
     "cython>=3.0.13,<4",  # Sync with CYTHON_MIN_VER in setup
@@ -75,6 +73,7 @@ test = [
     "pytest-randomly",
     "pytest-xdist",
     "pytest-cov",
+    "coverage[toml]",
     "meson",
     'ninja; sys_platform != "emscripten"',
 ]
@@ -128,14 +127,13 @@ repository = "https://github.com/statsmodels/statsmodels"
 changelog = "https://bashtage.github.io/arch/changes.html"
 bugtracker = "https://github.com/statsmodels/statsmodels/issues"
 
-[tool.setuptools.dynamic]
-dependencies = { file = ["requirements.txt"] }
+[tool.meson-python.args]
+setup = ['--vsenv']
 
 [tool.ruff]
 line-length = 88
 target-version = "py310"
 fix = true
-typing-modules = ["statsmodels.compat.python", "compat.python"]
 
 [tool.ruff.lint]
 typing-modules = ["statsmodels.compat.python", "compat.python"]
@@ -144,6 +142,7 @@ typing-modules = ["statsmodels.compat.python", "compat.python"]
 minversion = "8.4.1"
 addopts = "--strict --durations=30 --junitxml=test-data.xml"
 testpaths = "statsmodels"
+xfail_strict = true
 empty_parameter_set_mark = "fail_at_collect"
 filterwarnings = [
     "ignore:`formatargspec`:DeprecationWarning:statsmodels",
@@ -197,3 +196,62 @@ force_sort_within_sections=true
 include_trailing_comma=true
 use_parentheses=true
 
+[tool.coverage.run]
+source = "statsmodels"
+branch = true
+plugins = "Cython.Coverage"
+omit = [
+    # print_version is untestable
+    "*/print_version.py",
+    # skip compatibility code
+    "*/compat/*",
+    # Unused file
+    "*/results/gee_generate_tests.py",
+    # Results for tests
+    "*/tests/results/*",
+    # Simulation checks
+    "*/tests/*_simulation_check.py",
+    # Misc non-test files in test directories
+    "*/tests/_*",
+    "*/tests/e*",
+    "*/tests/c*",
+    "*/tests/d*",
+    "*/tests/g*",
+    "*/tests/m*",
+    "*/tests/p*",
+    "*/tests/r*",
+    "*/tests/s*",
+    "*/_version.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+ignore_errors = false
+# Regexes for lines to exclude from consideration
+exclude_also = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+
+    # Do not complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+    "if pdf_output:",
+
+    # Do not complain if tests do not hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "except NotImplementedError",
+    "except ImportError",
+    "except (HTTPError, URLError, SSLError, timeout)",
+    "except IGNORED_EXCEPTIONS",
+
+    # Ignore pass
+    "pass",
+
+    # Do not complain if non-runnable code is not run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+]
+
+[tool.coverage.html]
+directory = "coverage_html_report"

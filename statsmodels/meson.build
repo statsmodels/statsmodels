@@ -35,10 +35,6 @@ if get_option('cython-coverage')
   cython_c_args += ['-DCYTHON_TRACE_NOGIL=1']
 endif
 cython_args += ['-3', '--output-file', '@OUTPUT@', '--include-dir', '@BUILD_ROOT@', '@INPUT@']
-# -X linetrace=true
-#
-
-version_link_args = []
 
 sm_dir = py.get_install_dir() / 'statsmodels'
 # Generate version.py for sdist
@@ -85,6 +81,7 @@ subdirs_list = [
     'genmod',
     'graphics',
     'imputation',
+    'includes',
     'interface',
     'iolib',
     'miscmodels',
@@ -94,7 +91,6 @@ subdirs_list = [
     'regression',
     'robust',
     'sandbox',
-    'include',
     'stats',
     'tests',
     'tools',
@@ -109,7 +105,6 @@ endforeach
 top_level_py_list = [
     '__init__.py',
     'api.py',
-#    '_version.py',  # TODO: generate _version.py
     'conftest.py',
 ]
 py.install_sources(top_level_py_list, subdir: 'statsmodels')

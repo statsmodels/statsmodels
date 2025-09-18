@@ -29,7 +29,6 @@ jobs:
           python.version: '3.11'
           lint: true
           test.install: true
-          TEST_SDIST: false
         python_312_sdist:
           python.version: '3.12'
           test.install: true

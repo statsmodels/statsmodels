@@ -17,6 +17,7 @@ pytest>=8.4.1,<9
 pytest-randomly
 pytest-xdist
 pytest-cov
+coverage[toml]
 
 # Pin on Win32
 pywinpty; os_name == "nt"
