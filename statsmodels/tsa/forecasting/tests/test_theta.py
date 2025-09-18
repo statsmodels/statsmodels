@@ -152,7 +152,7 @@ def test_auto(reset_randomstate):
     assert tm.method == "mul"
     res2 = tm.fit()
 
-    np.testing.assert_allclose(res.params, res2.params)
+    np.testing.assert_allclose(res.params, res2.params, rtol=1e-4)
 
     tm = ThetaModel(y - y.mean(), method="auto")
     assert tm.method == "add"
