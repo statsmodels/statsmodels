@@ -180,3 +180,21 @@ def pytest_collection_modifyitems(config, items):
                     item.keywords["xfail"] = new_mark
     else:
         pass
+
+
+@pytest.fixture(scope="function", autouse=True)
+def check_figures_closed():
+    try:
+        import matplotlib.pyplot
+
+        def count():
+            return len(matplotlib.pyplot.get_fignums())
+
+    except ImportError:
+
+        def count():
+            return 0
+    initial = count()
+    yield
+    cnt = count()
+    assert cnt <= initial, f"test created {cnt - initial} figure(s)"
