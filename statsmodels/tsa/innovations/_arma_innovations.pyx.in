@@ -23,7 +23,7 @@ TYPES = {
 import numpy as np
 import warnings
 from statsmodels.tsa import arima_process
-from statsmodels.src.math cimport M_PI, dlog, zlog
+from statsmodels.includes.math cimport M_PI, dlog, zlog
 cimport numpy as cnp
 cimport cython
 

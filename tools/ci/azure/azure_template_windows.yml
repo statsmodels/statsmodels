@@ -22,9 +22,6 @@ jobs:
       python310_win_latest:
         python.version: '3.10'
         python.architecture: 'x64'
-      python311_win_latest:
-        python.version: '3.11'
-        python.architecture: 'x64'
       python312_win_latest:
         python.version: '3.12'
         python.architecture: 'x64'
@@ -54,12 +51,12 @@ jobs:
     displayName: 'List Configuration'
 
   - pwsh: |
-      python -m pip install -e . -v --no-build-isolation
+      python -m pip install -vv --no-build-isolation --config-settings=editable-verbose=true --editable .
     displayName: 'Build Cython Extensions'
 
   - pwsh: |
       pytest statsmodels --skip-examples --junitxml=junit/test-results.xml -n 2 --durations=50
-    displayName: 'Run pytest'
+    displayName: 'pytest'
 
   - task: PublishTestResults@2
     inputs:

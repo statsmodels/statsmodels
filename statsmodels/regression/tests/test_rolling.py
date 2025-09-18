@@ -226,7 +226,7 @@ def test_formula():
 
 
 @pytest.mark.matplotlib
-def test_plot():
+def test_plot(close_figures):
     import matplotlib.pyplot as plt
 
     y, x, w = gen_data(250, 3, True, pandas=True)
@@ -241,12 +241,14 @@ def test_plot():
     res.plot_recursive_coefficient(
         variables=[0, 2], alpha=None, figsize=(30, 7)
     )
+    plt.close("all")
     res.plot_recursive_coefficient(
         variables=["x0"], alpha=None, figsize=(30, 7)
     )
     res.plot_recursive_coefficient(
         variables=["x0", "x1", "x2"], alpha=None, figsize=(30, 7)
     )
+    plt.close("all")
     with pytest.raises(ValueError, match="variable x4 is not an integer"):
         res.plot_recursive_coefficient(variables="x4")
 

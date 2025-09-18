@@ -1,5 +1,5 @@
 #!python
-#cython: wraparound=False, boundscheck=False, cdivision=True
+#cython: wraparound=False, boundscheck=False, cdivision=True, cpow=True
 
 from cpython cimport bool
 import numpy as np

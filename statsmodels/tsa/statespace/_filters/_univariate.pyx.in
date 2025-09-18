@@ -2,6 +2,7 @@
 #cython: boundscheck=False
 #cython: wraparound=False
 #cython: cdivision=False
+#cython: cpow=True
 """
 State Space Models
 
@@ -23,7 +24,7 @@ TYPES = {
 # Typical imports
 cimport numpy as np
 import numpy as np
-from statsmodels.src.math cimport *
+from statsmodels.includes.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 

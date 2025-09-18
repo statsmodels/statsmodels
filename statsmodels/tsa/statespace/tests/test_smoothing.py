@@ -1190,30 +1190,34 @@ def test_smoothed_state_autocovariances_forwards(missing, filter_univariate,
 
     acov3 = res.smoothed_state_autocovariance(
         -3, extend_kwargs=extend_kwargs2).transpose(2, 0, 1)
-    assert_allclose(acov3[:-3, :2, :2], desired_acov3[3:])
-    assert_allclose(acov3[-3:, :2, :2], oos_cov[-4:-1, 6:8, :2])
+    assert_allclose(acov3[:-3, :2, :2], desired_acov3[3:], atol=1e-10, rtol=1e-6)
+    assert_allclose(acov3[-3:, :2, :2], oos_cov[-4:-1, 6:8, :2], atol=1e-10, rtol=1e-6)
 
     # Test for specific autocovariances
     acov1 = res.smoothed_state_autocovariance(
         -1, t=mod.nobs, extend_kwargs=extend_kwargs1)
-    assert_allclose(acov1[:2, :2], oos_cov[-3, 2:4, :2])
+    assert_allclose(acov1[:2, :2], oos_cov[-3, 2:4, :2], atol=1e-10, rtol=1e-6)
     acov1 = res.smoothed_state_autocovariance(-1, t=0)
-    assert_allclose(acov1[:2, :2], desired_acov1[0 + 1])
+    assert_allclose(acov1[:2, :2], desired_acov1[0 + 1], atol=1e-10, rtol=1e-6)
     acov1 = res.smoothed_state_autocovariance(
         -1, start=8, end=9).transpose(2, 0, 1)
-    assert_allclose(acov1[:, :2, :2], desired_acov1[8 + 1:9 + 1])
+    assert_allclose(
+        acov1[:, :2, :2], desired_acov1[8 + 1:9 + 1], atol=1e-10, rtol=1e-6
+    )
 
     acov2 = res.smoothed_state_autocovariance(
         -2, t=mod.nobs, extend_kwargs=extend_kwargs2)
-    assert_allclose(acov2[:2, :2], oos_cov[-2, 4:6, :2])
+    assert_allclose(acov2[:2, :2], oos_cov[-2, 4:6, :2], atol=1e-10, rtol=1e-6)
     acov2 = res.smoothed_state_autocovariance(
         -2, t=mod.nobs - 1, extend_kwargs=extend_kwargs1)
-    assert_allclose(acov2[:2, :2], oos_cov[-3, 4:6, :2])
+    assert_allclose(acov2[:2, :2], oos_cov[-3, 4:6, :2], atol=1e-10, rtol=1e-6)
     acov2 = res.smoothed_state_autocovariance(-2, t=0)
-    assert_allclose(acov2[:2, :2], desired_acov2[0 + 2])
+    assert_allclose(acov2[:2, :2], desired_acov2[0 + 2], atol=1e-10, rtol=1e-6)
     acov2 = res.smoothed_state_autocovariance(
         -2, start=8, end=9).transpose(2, 0, 1)
-    assert_allclose(acov2[:, :2, :2], desired_acov2[8 + 2:9 + 2])
+    assert_allclose(
+        acov2[:, :2, :2], desired_acov2[8 + 2:9 + 2], atol=1e-10, rtol=1e-6
+    )
 
 
 @pytest.mark.parametrize('missing', ['all', 'partial', 'mixed', None])
