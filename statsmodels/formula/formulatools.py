@@ -1,9 +1,12 @@
-import statsmodels.tools.data as data_util
-from patsy import dmatrices, NAAction
 import numpy as np
+from patsy import NAAction, dmatrices
+
+import statsmodels.tools.data as data_util
 
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
+
+__all__ = ["handle_formula_data", "formula_handler"]
 
 # this is a mutable object, so editing it should show up in the below
 formula_handler = {}
@@ -18,10 +21,10 @@ class NAAction(NAAction):
         good_mask = ~total_mask
         self.missing_mask = total_mask
         # "..." to handle 1- versus 2-dim indexing
-        return [v[good_mask, ...] for v in values]
+        return [v[good_mask] if v.ndim == 1 else v[good_mask, ...] for v in values]
 
 
-def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
+def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
     """
     Returns endog, exog, and the model specification from arrays and formula.
 
@@ -53,21 +56,25 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
 
     if X is not None:
         if data_util._is_using_pandas(Y, X):
-            result = dmatrices(formula, (Y, X), depth,
-                               return_type='dataframe', NA_action=na_action)
+            result = dmatrices(
+                formula, (Y, X), depth, return_type="dataframe", NA_action=na_action
+            )
         else:
-            result = dmatrices(formula, (Y, X), depth,
-                               return_type='dataframe', NA_action=na_action)
+            result = dmatrices(
+                formula, (Y, X), depth, return_type="dataframe", NA_action=na_action
+            )
     else:
         if data_util._is_using_pandas(Y, None):
-            result = dmatrices(formula, Y, depth, return_type='dataframe',
-                               NA_action=na_action)
+            result = dmatrices(
+                formula, Y, depth, return_type="dataframe", NA_action=na_action
+            )
         else:
-            result = dmatrices(formula, Y, depth, return_type='dataframe',
-                               NA_action=na_action)
+            result = dmatrices(
+                formula, Y, depth, return_type="dataframe", NA_action=na_action
+            )
 
     # if missing == 'raise' there's not missing_mask
-    missing_mask = getattr(na_action, 'missing_mask', None)
+    missing_mask = getattr(na_action, "missing_mask", None)
     if not np.any(missing_mask):
         missing_mask = None
     if len(result) > 1:  # have RHS design
@@ -83,6 +90,7 @@ def _remove_intercept_patsy(terms):
     Remove intercept from Patsy terms.
     """
     from patsy.desc import INTERCEPT
+
     if INTERCEPT in terms:
         terms.remove(INTERCEPT)
     return terms
@@ -90,6 +98,7 @@ def _remove_intercept_patsy(terms):
 
 def _has_intercept(design_info):
     from patsy.desc import INTERCEPT
+
     return INTERCEPT in design_info.terms
 
 
@@ -97,15 +106,16 @@ def _intercept_idx(design_info):
     """
     Returns boolean array index indicating which column holds the intercept.
     """
-    from patsy.desc import INTERCEPT
     from numpy import array
+    from patsy.desc import INTERCEPT
+
     return array([INTERCEPT == i for i in design_info.terms])
 
 
 def make_hypotheses_matrices(model_results, test_formula):
-    """
-    """
+    """ """
     from patsy.constraint import linear_constraint
+
     exog_names = model_results.model.exog_names
     LC = linear_constraint(test_formula, exog_names)
     return LC

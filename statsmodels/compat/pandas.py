@@ -1,4 +1,6 @@
-from typing import Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, TypeVar
 
 import numpy as np
 from packaging.version import Version, parse
@@ -7,9 +9,18 @@ from pandas.util._decorators import (
     Appender,
     Substitution,
     cache_readonly,
-    deprecate_kwarg,
+    deprecate_kwarg as pd_deprecate_kwarg,
 )
 
+if TYPE_CHECKING:
+    try:
+        from typing import TypeAlias
+    except ImportError:
+        from typing_extensions import TypeAlias
+
+
+FuncType: TypeAlias = Callable[..., Any]
+F = TypeVar("F", bound=FuncType)
 __all__ = [
     "assert_frame_equal",
     "assert_index_equal",
@@ -36,6 +47,7 @@ __all__ = [
     "QUARTER_END",
     "YEAR_END",
     "FUTURE_STACK",
+    "PD_LT_3",
 ]
 
 version = parse(pd.__version__)
@@ -44,7 +56,8 @@ PD_LT_2_2_0 = version < Version("2.1.99")
 PD_LT_2_1_0 = version < Version("2.0.99")
 PD_LT_1_0_0 = version < Version("0.99.0")
 PD_LT_1_4 = version < Version("1.3.99")
-PD_LT_2 = version < Version("1.9.99")
+PD_LT_2 = version < Version("1.99.99")
+PD_LT_3 = version < Version("2.99.99")
 
 try:
     from pandas.api.types import is_numeric_dtype
@@ -186,3 +199,26 @@ MONTH_END = "M" if PD_LT_2_2_0 else "ME"
 QUARTER_END = "Q" if PD_LT_2_2_0 else "QE"
 YEAR_END = "Y" if PD_LT_2_2_0 else "YE"
 FUTURE_STACK = {} if PD_LT_2_1_0 else {"future_stack": True}
+
+
+def deprecate_kwarg(
+    old_arg_name: str,
+    new_arg_name: str | None,
+    mapping: Mapping[Any, Any] | Callable[[Any], Any] | None = None,
+    stacklevel: int = 2,
+) -> Callable[[F], F]:
+    if PD_LT_3:
+        return pd_deprecate_kwarg(
+            old_arg_name=old_arg_name,
+            new_arg_name=new_arg_name,
+            mapping=mapping,
+            stacklevel=stacklevel,
+        )
+    else:
+        return pd_deprecate_kwarg(
+            klass=FutureWarning,
+            old_arg_name=old_arg_name,
+            new_arg_name=new_arg_name,
+            mapping=mapping,
+            stacklevel=stacklevel,
+        )
