@@ -50,36 +50,34 @@ NOTEBOOK_DIR = os.path.join(head, '..', '..', '..', 'examples', 'notebooks')
 NOTEBOOK_DIR = os.path.abspath(NOTEBOOK_DIR)
 
 nbs = sorted(glob.glob(os.path.join(NOTEBOOK_DIR, '*.ipynb')))
-ids = list(map(lambda p: os.path.split(p)[-1], nbs))
 
+if nbs:
+    ids = list(map(lambda p: os.path.split(p)[-1], nbs))
 
-@pytest.fixture(params=nbs, ids=ids)
-def notebook(request):
-    return request.param
+    @pytest.fixture(params=nbs, ids=ids)
+    def notebook(request):
+        return request.param
 
+    @pytest.mark.slow
+    @pytest.mark.example
+    def test_notebook(notebook):
+        fullfile = os.path.abspath(notebook)
+        _, filename = os.path.split(fullfile)
+        filename, _ = os.path.splitext(filename)
 
-if not nbs:
+        if filename in KNOWN_FAILURES:
+            pytest.skip(f'{filename} is known to fail')
+        if filename in RPY2_NOTEBOOKS and not HAS_RPY2:
+            pytest.skip(f'{filename} since rpy2 is not installed')
+        if filename in JOBLIB_NOTEBOOKS and not JOBLIB_NOTEBOOKS:
+            pytest.skip(f'{filename} since joblib is not installed')
+
+        with open(fullfile, encoding='utf-8') as fp:
+            nb = nbformat.read(fp, as_version=4)
+
+        ep = ExecutePreprocessor(allow_errors=False,
+                                 timeout=20,
+                                 kernel_name=kernel_name)
+        ep.preprocess(nb, {'metadata': {'path': NOTEBOOK_DIR}})
+else:
     pytestmark = pytest.mark.skip(reason='No notebooks found so no tests run')
-
-
-@pytest.mark.slow
-@pytest.mark.example
-def test_notebook(notebook):
-    fullfile = os.path.abspath(notebook)
-    _, filename = os.path.split(fullfile)
-    filename, _ = os.path.splitext(filename)
-
-    if filename in KNOWN_FAILURES:
-        pytest.skip(f'{filename} is known to fail')
-    if filename in RPY2_NOTEBOOKS and not HAS_RPY2:
-        pytest.skip(f'{filename} since rpy2 is not installed')
-    if filename in JOBLIB_NOTEBOOKS and not JOBLIB_NOTEBOOKS:
-        pytest.skip(f'{filename} since joblib is not installed')
-
-    with open(fullfile, encoding='utf-8') as fp:
-        nb = nbformat.read(fp, as_version=4)
-
-    ep = ExecutePreprocessor(allow_errors=False,
-                             timeout=20,
-                             kernel_name=kernel_name)
-    ep.preprocess(nb, {'metadata': {'path': NOTEBOOK_DIR}})

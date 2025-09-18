@@ -20,13 +20,14 @@ if [ "$LINT" == true ]; then
     # Run with --isolated to ignore config files, the files included here
     # pass _all_ flake8 checks
     echo "Linting known clean files with strict rules"
-    # Default flake8 rules plus the additional rules from setup.cfg
+    # Default flake8 rules plus the additional rules from .flake8
     flake8 --isolated  \
         --max-line-length 88 \
         --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 \
         examples \
-        setup.py \
         statsmodels/__init__.py \
+        statsmodels/_build/git_version.py \
+        statsmodels/_build/tempita.py \
         statsmodels/api.py \
         statsmodels/base/__init__.py \
         statsmodels/base/distributed_estimation.py \
@@ -140,6 +141,7 @@ if [ "$LINT" == true ]; then
         statsmodels/graphics/tsaplots.py \
         statsmodels/imputation/__init__.py \
         statsmodels/imputation/tests/__init__.py \
+        statsmodels/includes \
         statsmodels/interface \
         statsmodels/iolib/__init__.py \
         statsmodels/iolib/api.py \
@@ -214,7 +216,6 @@ if [ "$LINT" == true ]; then
         statsmodels/sandbox/stats/tests \
         statsmodels/sandbox/tests/__init__.py \
         statsmodels/sandbox/tools/__init__.py \
-        statsmodels/src \
         statsmodels/stats/__init__.py \
         statsmodels/stats/_delta_method.py \
         statsmodels/stats/_knockoff.py \

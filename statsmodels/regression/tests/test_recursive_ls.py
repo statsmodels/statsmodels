@@ -284,10 +284,7 @@ def test_estimates():
 
 @pytest.mark.matplotlib
 def test_plots(close_figures):
-    exog = add_constant(dta[["m1", "pop"]])
-    mod = RecursiveLS(endog, exog)
-    res = mod.fit()
-
+    import matplotlib.pyplot as plt
     # Basic plot
     try:
         from pandas.plotting import register_matplotlib_converters
@@ -295,6 +292,10 @@ def test_plots(close_figures):
         register_matplotlib_converters()
     except ImportError:
         pass
+
+    exog = add_constant(dta[["m1", "pop"]])
+    mod = RecursiveLS(endog, exog)
+    res = mod.fit()
     res.plot_recursive_coefficient()
 
     # Specific variable
@@ -302,7 +303,7 @@ def test_plots(close_figures):
 
     # All variables
     res.plot_recursive_coefficient(variables=[0, "m1", "pop"])
-
+    plt.close("all")
     # Basic plot
     res.plot_cusum()
 
@@ -315,6 +316,7 @@ def test_plots(close_figures):
 
     # Basic plot
     res.plot_cusum_squares()
+    plt.close("all")
 
     # Numpy input (no dates)
     mod = RecursiveLS(endog.values, exog.values)
