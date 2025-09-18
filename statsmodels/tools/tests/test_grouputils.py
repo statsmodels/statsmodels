@@ -1,13 +1,14 @@
 from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
-
+from scipy import stats
 import numpy as np
-from numpy.testing import assert_equal
+from numpy.testing import assert_equal, assert_array_almost_equal
 import pandas as pd
 import pytest
 from scipy import sparse
 
 from statsmodels.tools.grouputils import (dummy_sparse, Grouping, Group,
-                                          combine_indices, group_sums)
+                                          combine_indices, group_sums,
+                                          GroupsStats)
 from statsmodels.datasets import grunfeld, anes96
 
 
@@ -337,3 +338,47 @@ def test_dummy_sparse():
                          [0, 0, 1],
                          [1, 0, 0]], dtype=np.int8)
     assert_equal(result, expected)
+
+
+class TestGroupsStats:
+
+    @classmethod
+    def setup_class(cls):
+        # build a 2d array with data and groups
+        # data from multicomp.py module docstring
+        X = np.array([[7.68, 1], [7.69, 1], [7.70, 1], [7.70, 1],
+                      [7.72, 1], [7.73, 1], [7.73, 1], [7.76, 1],
+                      [7.71, 2], [7.73, 2], [7.74, 2], [7.74, 2],
+                      [7.78, 2], [7.78, 2], [7.80, 2], [7.81, 2],
+                      [7.74, 3], [7.75, 3], [7.77, 3], [7.78, 3],
+                      [7.80, 3], [7.81, 3], [7.84, 3],
+                      [7.71, 4], [7.71, 4], [7.74, 4], [7.79, 4],
+                      [7.81, 4], [7.85, 4], [7.87, 4], [7.91, 4]])
+        cls.x = X
+        # create an instance of GroupsStats
+        cls.gs = GroupsStats(X)
+
+    def test_basic(self):
+        # test the basic attributes of GroupsStats
+        assert_equal(self.gs.groupnobs, [8, 8, 7, 8])
+        assert_array_almost_equal(self.gs.groupsum,
+                                  [61.71, 62.09, 54.49, 62.39])
+        assert_array_almost_equal(self.gs.groupmean,
+                                  [7.71375, 7.76125, 7.78428571, 7.79875])
+        assert_equal(len(self.gs.groupmeanfilter), len(self.x))
+
+    def test_var(self):
+        # test the variance-related attributes
+        assert_array_almost_equal(self.gs.groupsswithin(),
+                                  [0.0047875, 0.0090875,
+                                   0.00737143, 0.0394875])
+        assert_array_almost_equal(self.gs.groupvarwithin(),
+                                  [0.00068393, 0.00129821,
+                                   0.00122857, 0.00564107])
+
+    def test_useranks(self):
+        # test the useranks option
+        gs_ranked = GroupsStats(self.x, useranks=True)
+        # gs_ranked.groupmeanfilter should be equivalent to scipy's rankdata
+        assert_array_almost_equal(gs_ranked.groupmeanfilter,
+                                  stats.rankdata(self.x[:, 0]))

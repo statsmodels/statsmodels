@@ -2,10 +2,12 @@ from statsmodels.compat.pandas import assert_frame_equal
 
 from numpy.testing import (
     assert_array_almost_equal,
+    assert_array_equal,
     assert_equal,
     assert_raises,
 )
 import pandas as pd
+import numpy as np
 
 from statsmodels.stats.anova import AnovaRM
 
@@ -205,3 +207,33 @@ def test_repeated_measures_aggregate_compare_with_ezANOVA():
           .anova_table)
 
     assert_frame_equal(ez, df, check_dtype=False)
+
+
+class TestAnovaPostHoc:
+    """
+    Test post hoc tests
+    """
+    def test_tukeyhsd(self):
+        # Test pairwise_tukeyhsd
+        # Results are checked against statsmodels.stats.multicomp.MultiComparison
+        from statsmodels.stats.multicomp import MultiComparison
+        df = AnovaRM(data, 'DV', 'id', within=['A', 'B', 'D']).fit()
+        res = df.pairwise_tukeyhsd()
+
+        mc = MultiComparison(data['DV'], data['A'])
+        res2 = mc.tukeyhsd()
+        assert_equal(np.sum(res.reject), np.sum(res2.reject))
+
+    def test_allpairtest(self):
+        # Test allpairtest
+        # Results are checked against statsmodels.stats.multicomp.MultiComparison
+        from statsmodels.stats.multicomp import MultiComparison
+        from scipy import stats
+        df = AnovaRM(data, 'DV', 'id', within=['A', 'B', 'D']).fit()
+        _, _, resarr1 = df.allpairtest(stats.ttest_ind, method="bonf")
+        mc = MultiComparison(data['DV'], data['A'])
+        _, _, resarr2 = mc.allpairtest(stats.ttest_ind, method="bonf")
+
+        # The data in the SimpleTable is stringified, so direct comparison
+        # can fail. Instead we compare the returned structured arrays.
+        assert_array_equal(resarr1, resarr2)

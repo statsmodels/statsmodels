@@ -8,6 +8,8 @@ from scipy import stats
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import OLS
+from statsmodels.stats.multicomp import MultiComparison
+from statsmodels.tools.grouputils import GroupsStats
 
 
 def _get_covariance(model, robust):
@@ -327,6 +329,7 @@ def anova_lm(*args, **kwargs):
     See Also
     --------
     model_results.compare_f_test, model_results.compare_lm_test
+    statsmodels.stats.multicomp.MultiComparison.tukeyhsd
 
     Examples
     --------
@@ -523,23 +526,36 @@ class AnovaRM:
         for wi in self.within:
             factor_levels *= len(self.data[wi].unique())
 
-        cell_count = {}
-        for index in range(self.data.shape[0]):
-            key = []
-            for col in self.within:
-                key.append(self.data[col].iloc[index])
-            key = tuple(key)
-            if key in cell_count:
-                cell_count[key] = cell_count[key] + 1
-            else:
-                cell_count[key] = 1
+        # -----------------------------------------------------------------
+        # Determine cell membership *robustly* for arbitrary dtypes.
+        # Using ``np.unique`` with ``axis`` fails on object dtype (e.g. string
+        # labels) starting with NumPy 2.0 and raises
+        # ``TypeError: The axis argument to unique is not supported for dtype
+        # object``.  Instead, we build a ``pandas.MultiIndex`` from the
+        # within-subject factor columns and *factorize* it.  ``factorize``
+        # assigns consecutive integer codes (0..k-1) to each distinct
+        # combination of factor levels, exactly what is needed here, and works
+        # independently of the underlying dtype of the factors.
+        # -----------------------------------------------------------------
+        groups_df = self.data[self.within]
+        # ``pd.MultiIndex.from_frame`` preserves the row order, so the codes
+        # returned by ``pd.factorize`` align with the original observations.
+        labels = pd.factorize(pd.MultiIndex.from_frame(groups_df))[0]
+
+        # Use GroupsStats to count observations in each cell.
+        d_dummy = np.arange(len(labels))           # 1st column = irrelevant
+        gs = GroupsStats(np.column_stack([d_dummy, labels]))
+
         error_message = "Data is unbalanced."
-        if len(cell_count) != factor_levels:
+        # `len(gs.groupnobs)` is number of cells that have observations
+        if len(gs.groupnobs) != factor_levels:
             raise ValueError(error_message)
-        count = cell_count[key]
-        for key in cell_count:
-            if count != cell_count[key]:
-                raise ValueError(error_message)
+
+        # check if all group counts are equal
+        if len(np.unique(gs.groupnobs)) > 1:
+            raise ValueError(error_message)
+
+        count = gs.groupnobs[0]
         if self.data.shape[0] > count * factor_levels:
             raise ValueError('There are more than 1 element in a cell! Missing'
                              ' factors?')
@@ -609,7 +625,8 @@ class AnovaRM:
                 anova_table.loc[term, 'Den DF'] = df2
                 anova_table.loc[term, 'Pr > F'] = p
 
-        return AnovaResults(anova_table)
+        return AnovaResults(anova_table, self.data, self.depvar, self.within,
+                            self.subject)
 
 
 class AnovaResults:
@@ -620,8 +637,13 @@ class AnovaResults:
     ----------
     anova_table : DataFrame
     """
-    def __init__(self, anova_table):
+    def __init__(self, anova_table, data=None, depvar=None, within=None,
+                 subject=None):
         self.anova_table = anova_table
+        self.data = data
+        self.depvar = depvar
+        self.within = within
+        self.subject = subject
 
     def __str__(self):
         return self.summary().__str__()
@@ -638,6 +660,78 @@ class AnovaResults:
         summ.add_df(self.anova_table)
 
         return summ
+
+    def pairwise_tukeyhsd(self, alpha=0.05, use_var='equal'):
+        """
+        Tukey's range test to compare means of all pairs of groups.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Value of FWER at which to calculate HSD.
+        use_var : {"unequal", "equal"}
+            If ``use_var`` is "equal", then the Tukey-hsd pvalues are returned.
+            Tukey-hsd assumes that (within) variances are the same across groups.
+            If ``use_var`` is "unequal", then the Games-Howell pvalues are
+            returned. This uses Welch's t-test for unequal variances with
+            Satterthwait's corrected degrees of freedom for each pairwise
+            comparison.
+
+        Returns
+        -------
+        results : TukeyHSDResults instance
+            A results class containing relevant data and some post-hoc
+            calculations
+
+        Notes
+        -----
+        See Also
+        --------
+        statsmodels.stats.multicomp.MultiComparison.tukeyhsd
+        """
+        # Create a MultiComparison object
+        mc = MultiComparison(self.data[self.depvar], self.data[self.within[0]])
+        # Perform Tukey's HSD test
+        result = mc.tukeyhsd(alpha=alpha, use_var=use_var)
+        return result
+
+    def allpairtest(self, testfunc, alpha=0.05, method="bonf", pvalidx=1):
+        """
+        Run a pairwise test on all pairs with multiple test correction.
+
+        The statistical test given in testfunc is calculated for all pairs
+        and the p-values are adjusted by methods in multipletests. The p-value
+        correction is generic and based only on the p-values, and does not
+        take any special structure of the hypotheses into account.
+
+        Parameters
+        ----------
+        testfunc : function
+            A test function for two (independent) samples. It is assumed that
+            the return value on position pvalidx is the p-value.
+        alpha : float
+            familywise error rate
+        method : str
+            This specifies the method for the p-value correction. Any method
+            of multipletests is possible.
+        pvalidx : int (default: 1)
+            position of the p-value in the return of testfunc
+
+        Returns
+        -------
+        sumtab : SimpleTable instance
+            summary table for printing
+
+        See Also
+        --------
+        statsmodels.stats.multicomp.MultiComparison.allpairtest
+        """
+        # Create a MultiComparison object
+        mc = MultiComparison(self.data[self.depvar], self.data[self.within[0]])
+        # Perform all-pairs test
+        result = mc.allpairtest(testfunc, alpha=alpha, method=method,
+                                pvalidx=pvalidx)
+        return result
 
 
 if __name__ == "__main__":
