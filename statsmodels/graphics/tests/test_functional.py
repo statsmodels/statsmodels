@@ -225,7 +225,7 @@ def test_banddepth_BD2():
     # plt.close(fig)
 
 
-def test_banddepth_MBD():
+def test_banddepth_MBD(close_figures):
     xx = np.arange(5001) / 5000.
     y1 = np.zeros(xx.shape)
     y2 = 2 * xx - 1

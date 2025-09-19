@@ -368,7 +368,7 @@ class TestCERESPlot:
 
 
 @pytest.mark.matplotlib
-def test_partregress_formula_env():
+def test_partregress_formula_env(close_figures):
     # test that user function in formulas work, see #7672
 
     @np.vectorize

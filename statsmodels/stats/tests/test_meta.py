@@ -355,7 +355,7 @@ class TestMetaBinOR:
         assert_allclose(res_glm.params, res2.TE_random, rtol=1e-13)
 
     @pytest.mark.matplotlib
-    def test_plot(self):
+    def test_plot(self, close_figures):
         # smoke tests
         res1 = self.res1
         # `use_t=False` avoids warning about missing nobs for use_t is true

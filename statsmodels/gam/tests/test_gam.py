@@ -733,7 +733,7 @@ def test_partial_values():
 
 
 @pytest.mark.matplotlib
-def test_partial_plot():
+def test_partial_plot(close_figures):
     # verify that plot and partial_values method agree
     # the model only has one component so partial values is the same as
     # fittedvalues

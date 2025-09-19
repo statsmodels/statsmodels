@@ -364,7 +364,7 @@ def test_seasonal_plot(close_figures):
 )
 @pytest.mark.parametrize("use_pandas", [True, False])
 @pytest.mark.parametrize("alpha", [None, 0.10])
-def test_predict_plot(use_pandas, model_and_args, alpha):
+def test_predict_plot(use_pandas, model_and_args, alpha, close_figures):
     model, kwargs = model_and_args
     rs = np.random.RandomState(0)
     y = rs.standard_normal(1000)
@@ -387,7 +387,7 @@ def test_predict_plot(use_pandas, model_and_args, alpha):
 
 
 @pytest.mark.matplotlib
-def test_plot_pacf_small_sample():
+def test_plot_pacf_small_sample(close_figures):
     idx = [pd.Timestamp.now() + pd.Timedelta(seconds=i) for i in range(10)]
     df = pd.DataFrame(
         index=idx,

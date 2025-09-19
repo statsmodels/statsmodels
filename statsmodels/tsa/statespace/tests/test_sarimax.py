@@ -2774,7 +2774,7 @@ def test_dynamic_str():
 
 
 @pytest.mark.matplotlib
-def test_plot_too_few_obs(reset_randomstate):
+def test_plot_too_few_obs(reset_randomstate, close_figures):
     # GH 6173
     # SO https://stackoverflow.com/questions/55930880/
     #    arima-models-plot-diagnostics-share-error/58051895#58051895
