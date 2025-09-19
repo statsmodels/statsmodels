@@ -159,9 +159,5 @@ def test_varmax_pickle(temp_filename):
 
 def test_existing_pickle():
     pkl_file = os.path.join(current_path, "results", "sm-0.9-sarimax.pkl")
-    if not NP_LT_24:
-        with pytest.warns(np.exceptions.VisibleDeprecationWarning):
-            loaded = sarimax.SARIMAXResults.load(pkl_file)
-    else:
-        loaded = sarimax.SARIMAXResults.load(pkl_file)
+    loaded = sarimax.SARIMAXResults.load(pkl_file)
     assert isinstance(loaded, sarimax.SARIMAXResultsWrapper)
