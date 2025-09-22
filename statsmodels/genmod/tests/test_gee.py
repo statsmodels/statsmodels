@@ -19,7 +19,6 @@ from numpy.testing import (
     assert_almost_equal,
     assert_array_less,
     assert_equal,
-    assert_raises,
 )
 import pandas as pd
 import pytest
@@ -385,7 +384,7 @@ class TestGEE:
                 groups="groups",
                 data=data,
                 missing="drop",
-                **kwargs
+                **kwargs,
             )
             rslt1 = mod1.fit()
 
@@ -404,7 +403,7 @@ class TestGEE:
                 groups=data["groups"],
                 data=data,
                 missing="none",
-                **kwargs
+                **kwargs,
             )
             rslt2 = mod2.fit()
 
@@ -429,7 +428,7 @@ class TestGEE:
                 kwargs["exposure"] = np.zeros(18)
             if k2:
                 kwargs["time"] = np.zeros(18)
-            with assert_raises(ValueError):
+            with pytest.raises(ValueError):
                 gee.GEE(endog, exog, **kwargs)
 
     def test_default_time(self):
@@ -745,7 +744,7 @@ class TestGEE:
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched size
-        with assert_raises(Exception):
+        with pytest.raises(Exception):
             mod_sub = gee.GEE(endog, exog_sub, group)
             res_sub = mod_sub.fit()
             mod = gee.GEE(endog[0:100], exog[:100, :], group[0:100])
@@ -1857,7 +1856,8 @@ class CheckConsistency:
         assert_(res_robust_bc.cov_params_default is res_robust_bc.cov_robust_bc)
 
         # check exception for misspelled cov_type
-        assert_raises(ValueError, mod.fit, cov_type="robust_bc")
+        with pytest.raises(ValueError):
+            mod.fit(cov_type="robust_bc")
 
 
 class TestGEEPoissonCovType(CheckConsistency):

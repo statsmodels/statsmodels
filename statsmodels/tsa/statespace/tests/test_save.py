@@ -2,13 +2,10 @@
 Tests of save / load / remove_data state space functionality.
 """
 
-from statsmodels.compat.numpy import NP_LT_24
-
 import os
 import pickle
 import tempfile
 
-import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 

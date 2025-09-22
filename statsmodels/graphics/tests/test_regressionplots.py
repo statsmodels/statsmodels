@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_array_less, assert_equal, assert_raises
+from numpy.testing import assert_array_less, assert_equal
 from pandas import DataFrame, Series
 import pytest
 
@@ -28,6 +28,7 @@ pdf_output = False
 
 if pdf_output:
     from matplotlib.backends.backend_pdf import PdfPages
+
     pdf = PdfPages("test_regressionplots.pdf")
 else:
     pdf = None
@@ -47,7 +48,7 @@ class TestPlot:
         x1 = np.linspace(0, 20, nsample)
         x2 = 5 + 3 * np.random.randn(nsample)
         x = np.c_[x1, x2, np.sin(0.5 * x1), (x2 - 5) ** 2, np.ones(nsample)]
-        beta = [0.5, 0.5, 1, -0.04, 5.]
+        beta = [0.5, 0.5, 1, -0.04, 5.0]
         y_true = np.dot(x, beta)
         y = y_true + sig * np.random.normal(size=nsample)
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
@@ -86,7 +87,7 @@ class TestPlot:
         plot_regress_exog(res, exog_idx=0)
         plot_ccpr(res, exog_idx=0)
         plot_ccpr_grid(res, exog_idx=[0])
-        fig = plot_ccpr_grid(res, exog_idx=[0,1])
+        fig = plot_ccpr_grid(res, exog_idx=[0, 1])
         for ax in fig.axes:
             add_lowess(ax)
 
@@ -105,9 +106,10 @@ class TestPlot:
             assert_array_less(ssr, 1e-12)
         except AttributeError:
             import warnings
-            warnings.warn('test not compatible with matplotlib version')
 
-        fig = influence_plot(self.res, criterion='DFFITS')
+            warnings.warn("test not compatible with matplotlib version")
+
+        fig = influence_plot(self.res, criterion="DFFITS")
         assert_equal(isinstance(fig, plt.Figure), True)
         try:
             sizes = fig.axes[0].get_children()[0]._sizes
@@ -117,7 +119,8 @@ class TestPlot:
         except AttributeError:
             pass
 
-        assert_raises(ValueError, influence_plot, self.res, criterion='unknown')
+        with pytest.raises(ValueError):
+            influence_plot(self.res, criterion="unknown")
 
     @pytest.mark.matplotlib
     def test_plot_leverage_resid2(self, close_figures):
@@ -130,9 +133,9 @@ class TestPlotPandas(TestPlot):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
-        x2 = 5 + 3* np.random.randn(nsample)
-        X = np.c_[x1, x2, np.sin(0.5*x1), (x2-5)**2, np.ones(nsample)]
-        beta = [0.5, 0.5, 1, -0.04, 5.]
+        x2 = 5 + 3 * np.random.randn(nsample)
+        X = np.c_[x1, x2, np.sin(0.5 * x1), (x2 - 5) ** 2, np.ones(nsample)]
+        beta = [0.5, 0.5, 1, -0.04, 5.0]
         y_true = np.dot(X, beta)
         y = y_true + sig * np.random.normal(size=nsample)
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
@@ -141,14 +144,16 @@ class TestPlotPandas(TestPlot):
         res = sm.OLS(y, exog0).fit()
         self.res = res
         data = DataFrame(exog0, columns=["const", "var1", "var2"])
-        data['y'] = y
+        data["y"] = y
         self.data = data
+
 
 class TestPlotFormula(TestPlotPandas):
 
     @pytest.mark.matplotlib
     def test_one_column_exog(self, close_figures):
         from statsmodels.formula.api import ols
+
         res = ols("y~var1-1", data=self.data).fit()
         plot_regress_exog(res, "var1")
         res = ols("y~var1", data=self.data).fit()
@@ -162,7 +167,7 @@ class TestABLine:
         np.random.seed(12345)
         X = sm.add_constant(np.random.normal(0, 20, size=30))
         y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
-        mod = sm.OLS(y,X).fit()
+        mod = sm.OLS(y, X).fit()
         cls.X = X
         cls.y = y
         cls.mod = mod
@@ -171,14 +176,14 @@ class TestABLine:
     def test_abline_model(self, close_figures):
         fig = abline_plot(model_results=self.mod)
         ax = fig.axes[0]
-        ax.scatter(self.X[:,1], self.y)
+        ax.scatter(self.X[:, 1], self.y)
         close_or_save(pdf, fig)
 
     @pytest.mark.matplotlib
     def test_abline_model_ax(self, close_figures):
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.scatter(self.X[:,1], self.y)
+        ax.scatter(self.X[:, 1], self.y)
         fig = abline_plot(model_results=self.mod, ax=ax)
         close_or_save(pdf, fig)
 
@@ -195,7 +200,7 @@ class TestABLine:
         intercept, slope = mod.params
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.scatter(self.X[:,1], self.y)
+        ax.scatter(self.X[:, 1], self.y)
         fig = abline_plot(intercept=intercept, slope=slope, ax=ax)
         close_or_save(pdf, fig)
 
@@ -205,9 +210,9 @@ class TestABLine:
         intercept, slope = mod.params
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.scatter(self.X[:,1], self.y)
+        ax.scatter(self.X[:, 1], self.y)
         abline_plot(intercept=intercept, slope=slope, ax=ax)
-        abline_plot(intercept=intercept, slope=2*slope, ax=ax)
+        abline_plot(intercept=intercept, slope=2 * slope, ax=ax)
         lines = ax.get_lines()
         lines.pop(0).remove()
         close_or_save(pdf, fig)
@@ -223,7 +228,7 @@ class TestABLinePandas(TestABLine):
         cls.y = y
         X = DataFrame(X, columns=["const", "someX"])
         y = Series(y, name="outcome")
-        mod = sm.OLS(y,X).fit()
+        mod = sm.OLS(y, X).fit()
         cls.mod = mod
 
 
@@ -235,7 +240,7 @@ class TestAddedVariablePlot:
         n = 100
         p = 3
         exog = np.random.normal(size=(n, p))
-        lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1]**2
+        lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1] ** 2
         endog = lin_pred + np.random.normal(size=n)
 
         model = sm.OLS(endog, exog)
@@ -254,7 +259,7 @@ class TestAddedVariablePlot:
         n = 100
         p = 3
         exog = np.random.normal(size=(n, p))
-        lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1]**2
+        lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1] ** 2
         expval = np.exp(lin_pred)
         endog = np.random.poisson(expval)
 
@@ -270,21 +275,29 @@ class TestAddedVariablePlot:
                     for j in 0, 1:
 
                         if j == 0:
-                            fig = plot_added_variable(results, focus_col,
-                                                      use_glm_weights=use_glm_weights,
-                                                      resid_type=resid_type)
+                            fig = plot_added_variable(
+                                results,
+                                focus_col,
+                                use_glm_weights=use_glm_weights,
+                                resid_type=resid_type,
+                            )
                             ti = "Added variable plot"
                         else:
-                            fig = results.plot_added_variable(focus_col,
-                                                              use_glm_weights=use_glm_weights,
-                                                              resid_type=resid_type)
+                            fig = results.plot_added_variable(
+                                focus_col,
+                                use_glm_weights=use_glm_weights,
+                                resid_type=resid_type,
+                            )
                             ti = "Added variable plot (called as method)"
                         ax = fig.get_axes()[0]
 
                         add_lowess(ax)
                         ax.set_position([0.1, 0.1, 0.8, 0.7])
-                        effect_str = ["Linear effect, slope=1",
-                                      "Quadratic effect", "No effect"][focus_col]
+                        effect_str = [
+                            "Linear effect, slope=1",
+                            "Quadratic effect",
+                            "No effect",
+                        ][focus_col]
                         ti += "\nPoisson regression\n"
                         ti += effect_str + "\n"
                         ti += weight_str + "\n"
@@ -305,7 +318,7 @@ class TestPartialResidualPlot:
         p = 3
         exog = np.random.normal(size=(n, p))
         exog[:, 0] = 1
-        lin_pred = 4 + exog[:, 1] + 0.2*exog[:, 2]**2
+        lin_pred = 4 + exog[:, 1] + 0.2 * exog[:, 2] ** 2
         expval = np.exp(lin_pred)
         endog = np.random.poisson(expval)
 
@@ -313,7 +326,7 @@ class TestPartialResidualPlot:
         results = model.fit()
 
         for focus_col in 1, 2:
-            for j in 0,1:
+            for j in 0, 1:
                 if j == 0:
                     fig = plot_partial_residuals(results, focus_col)
                 else:
@@ -321,14 +334,17 @@ class TestPartialResidualPlot:
                 ax = fig.get_axes()[0]
                 add_lowess(ax)
                 ax.set_position([0.1, 0.1, 0.8, 0.77])
-                effect_str = ["Intercept", "Linear effect, slope=1",
-                              "Quadratic effect"][focus_col]
+                effect_str = [
+                    "Intercept",
+                    "Linear effect, slope=1",
+                    "Quadratic effect",
+                ][focus_col]
                 ti = "Partial residual plot"
                 if j == 1:
                     ti += " (called as method)"
-                ax.set_title(ti + "\nPoisson regression\n" +
-                             effect_str)
+                ax.set_title(ti + "\nPoisson regression\n" + effect_str)
                 close_or_save(pdf, fig)
+
 
 class TestCERESPlot:
 
@@ -341,7 +357,7 @@ class TestCERESPlot:
         p = 3
         exog = np.random.normal(size=(n, p))
         exog[:, 0] = 1
-        lin_pred = 4 + exog[:, 1] + 0.2*exog[:, 2]**2
+        lin_pred = 4 + exog[:, 1] + 0.2 * exog[:, 2] ** 2
         expval = np.exp(lin_pred)
         endog = np.random.poisson(expval)
 
@@ -357,13 +373,15 @@ class TestCERESPlot:
                 ax = fig.get_axes()[0]
                 add_lowess(ax)
                 ax.set_position([0.1, 0.1, 0.8, 0.77])
-                effect_str = ["Intercept", "Linear effect, slope=1",
-                              "Quadratic effect"][focus_col]
+                effect_str = [
+                    "Intercept",
+                    "Linear effect, slope=1",
+                    "Quadratic effect",
+                ][focus_col]
                 ti = "CERES plot"
                 if j == 1:
                     ti += " (called as method)"
-                ax.set_title(ti + "\nPoisson regression\n" +
-                             effect_str)
+                ax.set_title(ti + "\nPoisson regression\n" + effect_str)
                 close_or_save(pdf, fig)
 
 
@@ -380,10 +398,10 @@ def test_partregress_formula_env(close_figures):
             a=np.random.random(size=10),
             b=np.random.random(size=10),
             c=np.random.random(size=10),
-            )
         )
+    )
     sm.graphics.plot_partregress(
-        "a", "lg(b)", ["c"], obs_labels=False, data=df, eval_env=1)
+        "a", "lg(b)", ["c"], obs_labels=False, data=df, eval_env=1
+    )
 
-    sm.graphics.plot_partregress(
-        "a", "lg(b)", ["c"], obs_labels=False, data=df)
+    sm.graphics.plot_partregress("a", "lg(b)", ["c"], obs_labels=False, data=df)

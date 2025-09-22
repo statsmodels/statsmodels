@@ -12,7 +12,6 @@ from numpy.testing import (
     assert_allclose,
     assert_almost_equal,
     assert_equal,
-    assert_raises,
 )
 import pandas as pd
 from pandas import DataFrame, Series, date_range
@@ -772,7 +771,8 @@ class TestKPSS:
             kpss(self.x, nlags="legacy")
 
         x = np.random.rand(20, 2)
-        assert_raises(ValueError, kpss, x)
+        with pytest.raises(ValueError):
+            kpss(x)
 
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
@@ -785,7 +785,8 @@ class TestKPSS:
         with pytest.warns(InterpolationWarning):
             kpss(self.x, "CT", nlags="legacy")
 
-        assert_raises(ValueError, kpss, self.x, "unclear hypothesis", nlags="legacy")
+        with pytest.raises(ValueError):
+            kpss(self.x, "unclear hypothesis", nlags="legacy")
 
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
@@ -983,7 +984,8 @@ class TestRUR:
             range_unit_root_test(self.x)
 
         x = np.random.rand(20, 2)
-        assert_raises(ValueError, range_unit_root_test, x)
+        with pytest.raises(ValueError):
+            range_unit_root_test(x)
 
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):

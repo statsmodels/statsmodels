@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_raises
+from numpy.testing import assert_, assert_allclose
 import pytest
 
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import (
@@ -92,12 +92,16 @@ def test_innovations_ma_itsmr():
 
 def test_innovations_ma_invalid():
     endog = np.arange(2)
-    assert_raises(ValueError, innovations, endog, ma_order=2)
-    assert_raises(ValueError, innovations, endog, ma_order=-1)
-    assert_raises(ValueError, innovations, endog, ma_order=1.5)
+    with pytest.raises(ValueError):
+        innovations(endog, ma_order=2)
+    with pytest.raises(ValueError):
+        innovations(endog, ma_order=-1)
+    with pytest.raises(ValueError):
+        innovations(endog, ma_order=1.5)
 
     endog = np.arange(10)
-    assert_raises(ValueError, innovations, endog, ma_order=[1, 3])
+    with pytest.raises(ValueError):
+        innovations(endog, ma_order=[1, 3])
 
 
 @pytest.mark.low_precision(
@@ -355,14 +359,15 @@ def test_innovations_mle_misc():
 
 def test_innovations_mle_invalid():
     endog = np.arange(2) * 1.0
-    assert_raises(ValueError, innovations_mle, endog, order=(0, 0, 2))
-    assert_raises(ValueError, innovations_mle, endog, order=(0, 0, -1))
-    assert_raises(ValueError, innovations_mle, endog, order=(0, 0, 1.5))
+    with pytest.raises(ValueError):
+        innovations_mle(endog, order=(0, 0, 2))
+    with pytest.raises(ValueError):
+        innovations_mle(endog, order=(0, 0, -1))
+    with pytest.raises(ValueError):
+        innovations_mle(endog, order=(0, 0, 1.5))
 
     endog = lake.copy()
-    assert_raises(
-        ValueError, innovations_mle, endog, order=(1, 0, 0), start_params=[1.0, 1.0]
-    )
-    assert_raises(
-        ValueError, innovations_mle, endog, order=(0, 0, 1), start_params=[1.0, 1.0]
-    )
+    with pytest.raises(ValueError):
+        innovations_mle(endog, order=(1, 0, 0), start_params=[1.0, 1.0])
+    with pytest.raises(ValueError):
+        innovations_mle(endog, order=(0, 0, 1), start_params=[1.0, 1.0])

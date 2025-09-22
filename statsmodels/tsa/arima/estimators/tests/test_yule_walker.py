@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal, assert_raises
+from numpy.testing import assert_allclose, assert_equal
 import pytest
 
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import dowj, lake
@@ -77,11 +77,14 @@ def test_itsmr():
 
 def test_invalid():
     endog = np.arange(2) * 1.0
-    assert_raises(ValueError, yule_walker, endog, ar_order=-1)
-    assert_raises(ValueError, yule_walker, endog, ar_order=1.5)
+    with pytest.raises(ValueError):
+        yule_walker(endog, ar_order=-1)
+    with pytest.raises(ValueError):
+        yule_walker(endog, ar_order=1.5)
 
     endog = np.arange(10) * 1.0
-    assert_raises(ValueError, yule_walker, endog, ar_order=[1, 3])
+    with pytest.raises(ValueError):
+        yule_walker(endog, ar_order=[1, 3])
 
 
 @pytest.mark.xfail(
@@ -93,4 +96,5 @@ def test_invalid_xfail():
 
     # TODO: this does not raise an error due to the way Statsmodels'
     # yule_walker function works
-    assert_raises(ValueError, yule_walker, endog, ar_order=2)
+    with pytest.raises(ValueError):
+        yule_walker(endog, ar_order=2)
