@@ -1,5 +1,6 @@
 import numpy as np
-from numpy.testing import assert_allclose, assert_raises
+from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake
@@ -65,9 +66,7 @@ def test_start_params():
     )
 
     # Test for invalid use of starting parameters
-    assert_raises(
-        ValueError, statespace, endog, order=(1, 0, 0), start_params=[0, 1.0, 1.0]
-    )
-    assert_raises(
-        ValueError, statespace, endog, order=(0, 0, 1), start_params=[0, 1.0, 1.0]
-    )
+    with pytest.raises(ValueError):
+        statespace(endog, order=(1, 0, 0), start_params=[0, 1.0, 1.0])
+    with pytest.raises(ValueError):
+        statespace(endog, order=(0, 0, 1), start_params=[0, 1.0, 1.0])

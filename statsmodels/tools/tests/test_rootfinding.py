@@ -55,8 +55,8 @@ def test_brentq_expanding():
     # wrong sign for start bounds
     # does not raise yet during development TODO: activate this
     # it kind of works in some cases, but not correctly or in a useful way
-    #assert_raises(ValueError, brentq_expanding, func, args=(-500,), start_upp=-1000)
-    #assert_raises(ValueError, brentq_expanding, func, args=(500,), start_low=1000)
+    # with pytest.raises(ValueError): brentq_expanding(func, args=(-500,), start_upp=-1000)
+    # with pytest.raises(ValueError): brentq_expanding(func, args=(500,), start_low=1000)
 
     # low upp given, but does not bound root, leave brentq exception
     # ValueError: f(a) and f(b) must have different signs
