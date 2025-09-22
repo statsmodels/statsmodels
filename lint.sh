@@ -26,20 +26,24 @@ if [ "$LINT" == true ]; then
         --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 \
         examples \
         statsmodels/__init__.py \
-        statsmodels/_build/git_version.py \
-        statsmodels/_build/tempita.py \
+        statsmodels/_build \
         statsmodels/api.py \
         statsmodels/base/__init__.py \
+        statsmodels/base/_constraints.py \
+        statsmodels/base/_prediction_inference.py \
+        statsmodels/base/data.py \
         statsmodels/base/distributed_estimation.py \
         statsmodels/base/elastic_net.py \
         statsmodels/base/tests/__init__.py \
         statsmodels/base/tests/test_data.py \
         statsmodels/base/tests/test_distributed_estimation.py \
         statsmodels/base/tests/test_optimize.py \
+        statsmodels/base/tests/test_predict.py \
         statsmodels/base/tests/test_shrink_pickle.py \
         statsmodels/base/tests/test_transform.py \
+        statsmodels/base/transform.py \
+        statsmodels/base/wrapper.py \
         statsmodels/compat \
-        statsmodels/compat/tests \
         statsmodels/conftest.py \
         statsmodels/datasets/__init__.py \
         statsmodels/datasets/anes96/__init__.py \
@@ -77,21 +81,16 @@ if [ "$LINT" == true ]; then
         statsmodels/discrete/tests/__init__.py \
         statsmodels/discrete/tests/results \
         statsmodels/discrete/tests/test_constrained.py \
+        statsmodels/discrete/tests/test_diagnostic.py \
+        statsmodels/discrete/tests/test_discrete.py \
+        statsmodels/discrete/tests/test_predict.py \
         statsmodels/discrete/tests/test_truncated_model.py \
         statsmodels/discrete/truncated_model.py \
         statsmodels/distributions/__init__.py \
         statsmodels/distributions/bernstein.py \
+        statsmodels/distributions/copula \
+        statsmodels/distributions/discrete.py \
         statsmodels/distributions/empirical_distribution.py \
-        statsmodels/distributions/copula/__init__.py \
-        statsmodels/distributions/copula/api.py \
-        statsmodels/distributions/copula/archimedean.py \
-        statsmodels/distributions/copula/copulas.py \
-        statsmodels/distributions/copula/depfunc_ev.py \
-        statsmodels/distributions/copula/elliptical.py \
-        statsmodels/distributions/copula/extreme_value.py \
-        statsmodels/distributions/copula/other_copulas.py \
-        statsmodels/distributions/copula/tests/test_model.py \
-        statsmodels/distributions/copula/transforms.py \
         statsmodels/distributions/tests/__init__.py \
         statsmodels/distributions/tests/test_bernstein.py \
         statsmodels/distributions/tests/test_discrete.py \
@@ -106,45 +105,51 @@ if [ "$LINT" == true ]; then
         statsmodels/emplike/__init__.py \
         statsmodels/emplike/api.py \
         statsmodels/emplike/tests \
-        statsmodels/emplike/tests/results \
         statsmodels/examples/ex_ordered_model.py \
         statsmodels/examples/tests \
         statsmodels/examples/tsa/ex_var_reorder.py \
         statsmodels/formula \
-        statsmodels/formula/tests \
         statsmodels/gam \
-        statsmodels/gam/gam_cross_validation \
-        statsmodels/gam/tests \
-        statsmodels/gam/tests/results \
         statsmodels/genmod/__init__.py \
         statsmodels/genmod/_tweedie_compound_poisson.py \
         statsmodels/genmod/api.py \
         statsmodels/genmod/bayes_mixed_glm.py \
         statsmodels/genmod/families \
-        statsmodels/genmod/families/tests \
         statsmodels/genmod/generalized_estimating_equations.py \
         statsmodels/genmod/qif.py \
         statsmodels/genmod/tests/__init__.py \
         statsmodels/genmod/tests/results \
         statsmodels/genmod/tests/test_gee.py \
+        statsmodels/genmod/tests/test_glm_weights.py \
         statsmodels/genmod/tests/test_qif.py \
         statsmodels/graphics/__init__.py \
+        statsmodels/graphics/_regressionplots_doc.py \
+        statsmodels/graphics/agreement.py \
         statsmodels/graphics/api.py \
+        statsmodels/graphics/factorplots.py \
         statsmodels/graphics/functional.py \
+        statsmodels/graphics/gofplots.py \
         statsmodels/graphics/tests/__init__.py \
         statsmodels/graphics/tests/test_agreement.py \
         statsmodels/graphics/tests/test_boxplots.py \
         statsmodels/graphics/tests/test_correlation.py \
+        statsmodels/graphics/tests/test_factorplots.py \
         statsmodels/graphics/tests/test_functional.py \
         statsmodels/graphics/tests/test_gofplots.py \
+        statsmodels/graphics/tests/test_mosaicplot.py \
+        statsmodels/graphics/tests/test_regressionplots.py \
         statsmodels/graphics/tests/test_tsaplots.py \
         statsmodels/graphics/tsaplots.py \
         statsmodels/imputation/__init__.py \
+        statsmodels/imputation/bayes_mi.py \
+        statsmodels/imputation/mice.py \
         statsmodels/imputation/tests/__init__.py \
+        statsmodels/imputation/tests/test_bayes_mi.py \
         statsmodels/includes \
         statsmodels/interface \
         statsmodels/iolib/__init__.py \
         statsmodels/iolib/api.py \
+        statsmodels/iolib/foreign.py \
         statsmodels/iolib/openfile.py \
         statsmodels/iolib/smpickle.py \
         statsmodels/iolib/summary2.py \
@@ -155,15 +160,24 @@ if [ "$LINT" == true ]; then
         statsmodels/iolib/tests/test_pickle.py \
         statsmodels/iolib/tests/test_summary2.py \
         statsmodels/miscmodels/__init__.py \
+        statsmodels/miscmodels/ordinal_model.py \
         statsmodels/miscmodels/tests/__init__.py \
         statsmodels/miscmodels/tests/results \
+        statsmodels/miscmodels/tests/test_ordinal_model.py \
         statsmodels/multivariate/__init__.py \
         statsmodels/multivariate/api.py \
         statsmodels/multivariate/factor_rotation/_analytic_rotation.py \
+        statsmodels/multivariate/factor_rotation/_gpa_rotation.py \
+        statsmodels/multivariate/factor_rotation/_wrappers.py \
         statsmodels/multivariate/factor_rotation/tests/__init__.py \
+        statsmodels/multivariate/manova.py \
         statsmodels/multivariate/pca.py \
         statsmodels/multivariate/tests/__init__.py \
         statsmodels/multivariate/tests/results \
+        statsmodels/multivariate/tests/test_manova.py \
+        statsmodels/multivariate/tests/test_ml_factor.py \
+        statsmodels/multivariate/tests/test_multivariate_ols.py \
+        statsmodels/multivariate/tests/test_pca.py \
         statsmodels/nonparametric/__init__.py \
         statsmodels/nonparametric/api.py \
         statsmodels/nonparametric/kde.py \
@@ -171,9 +185,9 @@ if [ "$LINT" == true ]; then
         statsmodels/nonparametric/tests/__init__.py \
         statsmodels/nonparametric/tests/results \
         statsmodels/nonparametric/tests/test_asymmetric.py \
+        statsmodels/nonparametric/tests/test_kde.py \
+        statsmodels/nonparametric/tests/test_lowess.py \
         statsmodels/othermod \
-        statsmodels/othermod/tests \
-        statsmodels/othermod/tests/results \
         statsmodels/regression/__init__.py \
         statsmodels/regression/_prediction.py \
         statsmodels/regression/_tools.py \
@@ -186,21 +200,23 @@ if [ "$LINT" == true ]; then
         statsmodels/regression/tests/results \
         statsmodels/regression/tests/test_dimred.py \
         statsmodels/regression/tests/test_lme.py \
+        statsmodels/regression/tests/test_predict.py \
         statsmodels/regression/tests/test_processreg.py \
         statsmodels/regression/tests/test_quantile_regression.py \
+        statsmodels/regression/tests/test_recursive_ls.py \
         statsmodels/regression/tests/test_rolling.py \
         statsmodels/regression/tests/test_tools.py \
         statsmodels/robust \
-        statsmodels/robust/tests \
-        statsmodels/robust/tests/results \
         statsmodels/sandbox/__init__.py \
         statsmodels/sandbox/archive/__init__.py \
         statsmodels/sandbox/distributions/__init__.py \
         statsmodels/sandbox/distributions/examples/__init__.py \
         statsmodels/sandbox/distributions/tests/__init__.py \
         statsmodels/sandbox/distributions/tests/test_gof_new.py \
+        statsmodels/sandbox/distributions/tests/test_multivariate.py \
         statsmodels/sandbox/distributions/try_pot.py \
         statsmodels/sandbox/mcevaluate/__init__.py \
+        statsmodels/sandbox/multilinear.py \
         statsmodels/sandbox/nonparametric/__init__.py \
         statsmodels/sandbox/nonparametric/tests/__init__.py \
         statsmodels/sandbox/panel/__init__.py \
@@ -217,14 +233,18 @@ if [ "$LINT" == true ]; then
         statsmodels/sandbox/tests/__init__.py \
         statsmodels/sandbox/tools/__init__.py \
         statsmodels/stats/__init__.py \
+        statsmodels/stats/_adnorm.py \
         statsmodels/stats/_delta_method.py \
+        statsmodels/stats/_inference_tools.py \
         statsmodels/stats/_knockoff.py \
         statsmodels/stats/_lilliefors.py \
         statsmodels/stats/_lilliefors_critical_values.py \
+        statsmodels/stats/_results_store.py \
         statsmodels/stats/api.py \
         statsmodels/stats/base.py \
         statsmodels/stats/contingency_tables.py \
         statsmodels/stats/correlation_tools.py \
+        statsmodels/stats/covariance.py \
         statsmodels/stats/diagnostic.py \
         statsmodels/stats/diagnostic_gen.py \
         statsmodels/stats/dist_dependence_measures.py \
@@ -249,13 +269,16 @@ if [ "$LINT" == true ]; then
         statsmodels/stats/tests/test_anova_rm.py \
         statsmodels/stats/tests/test_base.py \
         statsmodels/stats/tests/test_correlation.py \
+        statsmodels/stats/tests/test_covariance.py \
         statsmodels/stats/tests/test_deltacov.py \
         statsmodels/stats/tests/test_descriptivestats.py \
         statsmodels/stats/tests/test_diagnostic.py \
         statsmodels/stats/tests/test_dist_dependant_measures.py \
         statsmodels/stats/tests/test_effectsize.py \
+        statsmodels/stats/tests/test_groups_sw.py \
         statsmodels/stats/tests/test_knockoff.py \
         statsmodels/stats/tests/test_lilliefors.py \
+        statsmodels/stats/tests/test_mediation.py \
         statsmodels/stats/tests/test_meta.py \
         statsmodels/stats/tests/test_moment_helpers.py \
         statsmodels/stats/tests/test_multi.py \
@@ -267,15 +290,21 @@ if [ "$LINT" == true ]; then
         statsmodels/stats/tests/test_regularized_covariance.py \
         statsmodels/stats/tests/test_robust_compare.py \
         statsmodels/stats/tests/test_sandwich.py \
+        statsmodels/stats/tests/test_statstools.py \
         statsmodels/stats/tests/test_tabledist.py \
         statsmodels/tests \
         statsmodels/tools/__init__.py \
+        statsmodels/tools/_test_runner.py \
+        statsmodels/tools/_testing.py \
+        statsmodels/tools/catadd.py \
+        statsmodels/tools/data.py \
         statsmodels/tools/decorators.py \
         statsmodels/tools/docstring.py \
         statsmodels/tools/eval_measures.py \
         statsmodels/tools/grouputils.py \
         statsmodels/tools/linalg.py \
         statsmodels/tools/parallel.py \
+        statsmodels/tools/print_version.py \
         statsmodels/tools/rng_qrng.py \
         statsmodels/tools/rootfinding.py \
         statsmodels/tools/sequences.py \
@@ -287,36 +316,32 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/tests/test_docstring.py \
         statsmodels/tools/tests/test_eval_measures.py \
         statsmodels/tools/tests/test_linalg.py \
+        statsmodels/tools/tests/test_sequences.py \
         statsmodels/tools/tests/test_testing.py \
+        statsmodels/tools/tests/test_tools.py \
         statsmodels/tools/tests/test_transform_model.py \
         statsmodels/tools/tests/test_web.py \
+        statsmodels/tools/tools.py \
         statsmodels/tools/transform_model.py \
         statsmodels/tools/typing.py \
         statsmodels/tools/validation \
-        statsmodels/tools/validation/tests \
         statsmodels/tools/web.py \
+        statsmodels/treatment \
         statsmodels/tsa/__init__.py \
         statsmodels/tsa/_bds.py \
+        statsmodels/tsa/_leybourne.py \
         statsmodels/tsa/adfvalues.py \
         statsmodels/tsa/api.py \
         statsmodels/tsa/ar_model.py \
         statsmodels/tsa/ardl \
-        statsmodels/tsa/ardl/_pss_critical_values \
-        statsmodels/tsa/ardl/tests \
         statsmodels/tsa/arima \
-        statsmodels/tsa/arima/datasets \
-        statsmodels/tsa/arima/datasets/brockwell_davis_2002 \
-        statsmodels/tsa/arima/datasets/brockwell_davis_2002/data \
-        statsmodels/tsa/arima/estimators \
-        statsmodels/tsa/arima/estimators/tests \
-        statsmodels/tsa/arima/tests \
         statsmodels/tsa/arima_model.py \
+        statsmodels/tsa/arima_process.py \
         statsmodels/tsa/arma_mle.py \
         statsmodels/tsa/base/__init__.py \
         statsmodels/tsa/base/prediction.py \
-        statsmodels/tsa/base/tests/__init__.py \
-        statsmodels/tsa/base/tests/test_datetools.py \
-        statsmodels/tsa/base/tests/test_prediction.py \
+        statsmodels/tsa/base/tests \
+        statsmodels/tsa/base/tsa_model.py \
         statsmodels/tsa/deterministic.py \
         statsmodels/tsa/exponential_smoothing \
         statsmodels/tsa/filters/__init__.py \
@@ -324,40 +349,27 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/filters/bk_filter.py \
         statsmodels/tsa/filters/hp_filter.py \
         statsmodels/tsa/filters/tests \
-        statsmodels/tsa/filters/tests/results \
         statsmodels/tsa/forecasting \
-        statsmodels/tsa/forecasting/tests \
         statsmodels/tsa/holtwinters \
-        statsmodels/tsa/holtwinters/tests \
-        statsmodels/tsa/holtwinters/tests/results \
         statsmodels/tsa/innovations \
-        statsmodels/tsa/innovations/tests \
         statsmodels/tsa/interp/__init__.py \
         statsmodels/tsa/interp/tests/__init__.py \
         statsmodels/tsa/regime_switching \
-        statsmodels/tsa/regime_switching/tests \
-        statsmodels/tsa/regime_switching/tests/results \
         statsmodels/tsa/seasonal \
         statsmodels/tsa/statespace \
-        statsmodels/tsa/statespace/_filters \
-        statsmodels/tsa/statespace/_smoothers \
-        statsmodels/tsa/statespace/tests \
-        statsmodels/tsa/statespace/tests/results \
-        statsmodels/tsa/statespace/tests/results/frbny_nowcast \
-        statsmodels/tsa/statespace/tests/results/frbny_nowcast/Nowcasting \
-        statsmodels/tsa/statespace/tests/results/frbny_nowcast/Nowcasting/data \
-        statsmodels/tsa/statespace/tests/results/frbny_nowcast/Nowcasting/data/US \
-        statsmodels/tsa/statespace/tests/results/frbny_nowcast/Nowcasting/functions \
+        statsmodels/tsa/stattools \
         statsmodels/tsa/stl \
-        statsmodels/tsa/stl/tests \
         statsmodels/tsa/tests/__init__.py \
         statsmodels/tsa/tests/results \
         statsmodels/tsa/tests/test_ar.py \
+        statsmodels/tsa/tests/test_arima_process.py \
         statsmodels/tsa/tests/test_bds.py \
         statsmodels/tsa/tests/test_deterministic.py \
         statsmodels/tsa/tests/test_seasonal.py \
+        statsmodels/tsa/tests/test_stattools.py \
         statsmodels/tsa/tests/test_tsa_tools.py \
         statsmodels/tsa/tests/test_x13.py \
+        statsmodels/tsa/tsatools.py \
         statsmodels/tsa/vector_ar/__init__.py \
         statsmodels/tsa/vector_ar/api.py \
         statsmodels/tsa/vector_ar/hypothesis_test_results.py \
