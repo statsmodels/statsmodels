@@ -1688,27 +1688,27 @@ def test_exceptions():
         endog, exog, k_ar_diff=3, coint_rank=coint_rank, deterministic="co"
     ).fit()
     # ##### exog_fc not passed as argument:
-    assert_raises_regex(ValueError, "exog_fc is None.*", vecm_res.predict)
+    with pytest.raises(ValueError, match="exog_fc is None"):
+        vecm_res.predict()
     # ##### exog_fc is too short:
     exog_fc = np.ones(STEPS)
-    assert_raises_regex(
-        ValueError,
-        ".*exog_fc must have at least steps elements.*",
-        vecm_res.predict,
-        5,
-        None,
-        exog_fc[:2],
-    )  # [:2] shortens exog_fc
+    with pytest.raises(
+        ValueError, match=".*exog_fc must have at least steps elements.*"
+    ):
+        vecm_res.predict(
+            5,
+            None,
+            exog_fc[:2],
+        )
+        # [:2] shortens exog_fc
     # ##### exog_coint_fc (NOT exog_fc) is passed when there is no exog_coint
-    assert_raises_regex(
-        ValueError,
-        ".*exog_coint attribute is None.*",
-        vecm_res.predict,
-        5,
-        None,
-        exog_fc,
-        exog_fc,
-    )  # passed as exog_coint_fc-argument!
+    with pytest.raises(ValueError, match=".*exog_coint attribute is None.*"):
+        vecm_res.predict(
+            5,
+            None,
+            exog_fc,
+            exog_fc,
+        )  # passed as exog_coint_fc-argument!
     # ### with exog_coint
     exog_coint = []
     exog_coint.append(np.ones(len(endog)).reshape(-1, 1))
@@ -1716,27 +1716,26 @@ def test_exceptions():
     exog_coint = np.hstack(exog_coint)
     vecm_res = VECM(endog, k_ar_diff=1, deterministic="n", exog_coint=exog_coint).fit()
     # ##### exog_coint_fc not passed as argument:
-    assert_raises_regex(ValueError, "exog_coint_fc is None.*", vecm_res.predict)
+    with pytest.raises(ValueError, match="exog_coint_fc is None.*"):
+        vecm_res.predict()
     # ##### exog_coint_fc is too short:
     exog_coint_fc = np.ones(STEPS)
-    assert_raises_regex(
-        ValueError,
-        ".*exog_coint_fc must have at least steps elements.*",
-        vecm_res.predict,
-        5,
-        None,
-        None,
-        exog_coint_fc[:2],
-    )  # [:2] shortens
+    with pytest.raises(
+        ValueError, match=".*exog_coint_fc must have at least steps elements.*"
+    ):
+        vecm_res.predict(
+            5,
+            None,
+            None,
+            exog_coint_fc[:2],
+        )  # [:2] shortens
     # ##### exog_fc (NOT exog_coint_fc) is passed when there is no exog
-    assert_raises_regex(
-        ValueError,
-        ".*exog attribute is None.*",
-        vecm_res.predict,
-        5,
-        None,
-        exog_coint_fc,
-    )  # passed as exog_fc-argument!
+    with pytest.raises(ValueError, match=".*exog attribute is None.*"):
+        vecm_res.predict(
+            5,
+            None,
+            exog_coint_fc,
+        )  # passed as exog_fc-argument!
 
 
 def test_select_coint_rank():  # This is only a smoke test.

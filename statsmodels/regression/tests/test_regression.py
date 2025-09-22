@@ -3,6 +3,7 @@ Test functions for models.regression
 """
 
 from statsmodels.compat.python import lrange
+
 # TODO: Test for LM
 from statsmodels.compat.scipy import SP_LT_116
 
@@ -14,7 +15,6 @@ from numpy.testing import (
     assert_allclose,
     assert_almost_equal,
     assert_equal,
-    assert_raises,
 )
 import pandas as pd
 import pytest
@@ -608,17 +608,17 @@ class TestGLS_alt_sigma(CheckRegressionResults):
 
     def test_wrong_size_sigma_1d(self):
         n = len(self.endog)
-        assert_raises(ValueError, GLS, self.endog, self.exog, sigma=np.ones(n - 1))
+        with pytest.raises(ValueError):
+            GLS(self.endog, self.exog, sigma=np.ones(n - 1))
 
     def test_wrong_size_sigma_2d(self):
         n = len(self.endog)
-        assert_raises(
-            ValueError,
-            GLS,
-            self.endog,
-            self.exog,
-            sigma=np.ones((n - 1, n - 1)),
-        )
+        with pytest.raises(ValueError):
+            GLS(
+                self.endog,
+                self.exog,
+                sigma=np.ones((n - 1, n - 1)),
+            )
 
     @pytest.mark.skip("Test does not raise but should")
     def test_singular_sigma(self):
@@ -711,7 +711,8 @@ class TestLM:
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
     def test_LM_nonnested(self):
-        assert_raises(ValueError, self.res2_restricted.compare_lm_test, self.res2_full)
+        with pytest.raises(ValueError):
+            self.res2_restricted.compare_lm_test(self.res2_full)
 
 
 class TestOLS_GLS_WLS_equivalence:
@@ -804,7 +805,8 @@ class TestWLS_CornerCases:
 
     def test_wrong_size_weights(self):
         weights = np.ones((10, 10))
-        assert_raises(ValueError, WLS, self.endog, self.exog, weights=weights)
+        with pytest.raises(ValueError):
+            WLS(self.endog, self.exog, weights=weights)
 
 
 class TestWLSExogWeights(CheckRegressionResults):
@@ -1046,7 +1048,8 @@ class TestNxNxOne(TestDataDimensions):
 def test_bad_size():
     np.random.seed(54321)
     data = np.random.uniform(0, 20, 31)
-    assert_raises(ValueError, OLS, data, data[1:])
+    with pytest.raises(ValueError):
+        OLS(data, data[1:])
 
 
 def test_const_indicator():
