@@ -6,8 +6,6 @@ ignore=
     # W503: line break before binary operator
     W504,
     # W504: line break after binary operator
-    E741,
-    # E741: ambiguous variable name 'l'
     E203
     # E203: Whitespace before ':'
 select=
@@ -15,6 +13,76 @@ select=
     # E101: indentation contains mixed spaces and tabs
     E124,
     # E124: closing bracket does not match visual indentation
+    E111,
+    # E111: Indentation is not a multiple of four
+    E112,
+    # E112: expected an indented block
+    E113,
+    # E113: unexpected indentation
+    E114,
+    # E114: Indentation is not a multiple of four (comment)
+    E117,
+    # E117: over-indented
+    E124
+    # E124: closing bracket does not match visual indentation
+    E125,
+    # E125: continuation line with same indent as next logical line
+    E129,
+    # E129: visually indented line with same indent as next logical line
+    E131,
+    # E131: continuation line unaligned for hanging indent
+    E133
+    # E133: closing bracket is missing indentation
+    E211,
+    # E211: whitespace before '['
+    E223,
+    # E223: tab before operator
+    E224,
+    # E224: tab after operator
+    E227,
+    # E227: missing whitespace around bitwise or shift operator
+    E228,
+    # E228: missing whitespace around modulo operator
+    E242,
+    # E242: tab after ','
+    E252,
+    # E252: missing whitespace around parameter equals
+    E304,
+    # E304: blank lines found after function decorator
+    E306,
+    # E306: expected 1 blank line before a nested definition, found 0
+
+    E27,
+    # E271: multiple spaces after keyword
+    # E272: multiple spaces before keyword
+    # E273: tab after keyword
+    # E274: tab before keyword
+    # E275: missing whitespace after keyword
+
+    E4,
+    # E401: multiple imports on one line
+    # E402: module level import not at top of file
+
+    E7,
+    # E701: multiple statements on one line (colon)
+    # E702: multiple statements on one line (semicolon)
+    # E703: statement ends with a semicolon
+    # E704: multiple statements on one line (def)
+    # E711: comparison to None should be 'if cond is None:'
+    # E712: comparison to True should be 'if cond is True:' or 'if cond:'
+    # E713: test for membership should be 'not in'
+    # E721: do not compare types, use 'isinstance()'
+    # E722: 	do not use bare 'except'
+    # E731: do not assign a lambda expression, use a def
+    # E741 ambiguous variable name 'l', 'O', or 'I'
+    # E742: do not define classes named 'l', 'O', or 'I'
+    # E743: do not define functions named 'l', 'O', or 'I'
+
+    E9,
+    # E901: SyntaxError or IndentationError
+    # E902: IOError
+    # E999: Syntax Error
+
     F811,
     # F811: redefinition of unused 'pytest' from line 10
     F812,
@@ -23,40 +91,8 @@ select=
     # F822: undefined name name in __all__
     F823,
     # F823: local variable name ... referenced before assignment
-    E129,
-    # E129: visually indented line with same indent as next logical line
-    E131,
-    # E131: continuation line unaligned for hanging indent
-    E125,
-    # E125: continuation line with same indent as next logical line
-    E111,
-    # E111: Indentation is not a multiple of four
-    E114,
-    # E114: Indentation is not a multiple of four (comment)
-    E117,
-    # E117: over-indented
-    E227,
-    # E227: missing whitespace around bitwise or shift operator
-    E228,
-    # E228: missing whitespace around modulo operator
-    E211,
-    # E211: whitespace before '['
-    E112,
-    # E112: expected an indented block
-    E113,
-    # E113: unexpected indentation
-    E223,
-    # E223: tab before operator
-    E224,
-    # E224: tab after operator
-    E242,
-    # E242: tab after ','
-    E304,
-    # E304: blank lines found after function decorator
     F831,
     # F831: duplicate argument name in function definition
-    E306,
-    # E306: expected 1 blank line before a nested definition, found 0
 
     W,
     # W191: indentation contains tabs
@@ -70,25 +106,6 @@ select=
     # W604: backticks are deprecated, use 'repr()'
     # W605: invalid escape sequence 'x'
     # W606: 'async' and 'await' are reserved keywords starting with Python 3.7
-
-    E70,
-    # E701: multiple statements on one line (colon)
-    # E702: multiple statements on one line (semicolon)
-    # E703: statement ends with a semicolon
-    # E704: multiple statements on one line (def)
-
-    E71,
-    # E711: comparison to None should be 'if cond is None:'
-    # E712: comparison to True should be 'if cond is True:' or 'if cond:'
-    # E713: test for membership should be 'not in'
-
-    E721,
-    # E721: do not compare types, use 'isinstance()'
-
-    E74,
-    # E741 ambiguous variable name 'l', 'O', or 'I'
-    # E742: do not define classes named 'l', 'O', or 'I'
-    # E743: do not define functions named 'l', 'O', or 'I'
 
     F4,
     # F401: 'foo.bar' imported but unused
@@ -129,22 +146,6 @@ select=
 
     F9,
     # F901: raise NotImplemented should be raise NotImplementedError
-
-    E27,
-    # E271: multiple spaces after keyword
-    # E272: multiple spaces before keyword
-    # E273: tab after keyword
-    # E274: tab before keyword
-    # E275: missing whitespace after keyword
-
-    E4,
-    # E401: multiple imports on one line
-    # E402: module level import not at top of file
-
-    E9,
-    # E901: SyntaxError or IndentationError
-    # E902: IOError
-    # E999: Syntax Error
 
     B001,
     # Do not use bare except
