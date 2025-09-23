@@ -13,9 +13,9 @@ from numpy.testing import (
     assert_allclose,
     assert_almost_equal,
     assert_equal,
-    assert_raises,
 )
 from pandas import DataFrame, concat, date_range
+import pytest
 
 from statsmodels.datasets import macrodata
 from statsmodels.tsa.filters._utils import pandas_wrapper
@@ -1003,7 +1003,8 @@ class TestFilters:
         expected = self.expected.recurse_init_na
         np.testing.assert_almost_equal(res, expected)
 
-        assert_raises(ValueError, recursive_filter, x, [0.75, 0.25, 0.5], [150, 100])
+        with pytest.raises(ValueError):
+            recursive_filter(x, [0.75, 0.25, 0.5], [150, 100])
 
     def test_pandas(self):
         start = datetime(1951, 3, 31)

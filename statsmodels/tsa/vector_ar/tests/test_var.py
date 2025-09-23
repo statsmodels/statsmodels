@@ -218,7 +218,7 @@ class CheckIRF:
         self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
 
     @pytest.mark.matplotlib
-    def test_plot_figsizes(self):
+    def test_plot_figsizes(self, close_figures):
         assert_equal(self.irf.plot().get_size_inches(), (10, 10))
         assert_equal(self.irf.plot(figsize=(14, 10)).get_size_inches(), (14, 10))
 

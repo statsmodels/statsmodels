@@ -366,7 +366,6 @@ The following functions are not (yet) public
    ccols
    compare_ordered
    distance_st_range
-   ecdf
    get_tukeyQcrit
    homogeneous_subsets
    maxzero
@@ -379,6 +378,15 @@ The following functions are not (yet) public
    set_partition
    set_remove_subs
    tiecorrect
+
+
+.. currentmodule:: statsmodels.stats.multitest
+
+.. autosummary::
+   :toctree: generated/
+
+   _ecdf
+
 
 .. _tost:
 

@@ -426,7 +426,7 @@ def test_autoreg_predict_smoke(ar_data):
 
 
 @pytest.mark.matplotlib
-def test_parameterless_autoreg():
+def test_parameterless_autoreg(close_figures):
     data = gen_data(250, 0, False)
     mod = AutoReg(data.endog, 0, trend="n", seasonal=False, exog=None)
     res = mod.fit()
@@ -1069,7 +1069,7 @@ def test_autoreg_forecast_period_index():
 
 
 @pytest.mark.matplotlib
-def test_autoreg_plot_err():
+def test_autoreg_plot_err(close_figures):
     y = np.random.standard_normal(100)
     mod = AutoReg(y, lags=[1, 3])
     res = mod.fit()

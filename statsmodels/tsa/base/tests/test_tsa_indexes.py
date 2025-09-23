@@ -9,12 +9,13 @@ Test index support in time series models
 Author: Chad Fulton
 License: BSD-3
 """
+
 from statsmodels.compat.pandas import PD_LT_2_2_0, YEAR_END, is_int_index
 
 import warnings
 
 import numpy as np
-from numpy.testing import assert_equal, assert_raises
+from numpy.testing import assert_equal
 import pandas as pd
 import pytest
 
@@ -279,9 +280,8 @@ def test_instantiation_valid():
         # Since only supported indexes are valid `dates` arguments, everything
         # else is invalid here
         for ix, freq in supported_increment_indexes + unsupported_indexes:
-            assert_raises(
-                ValueError, tsa_model.TimeSeriesModel, endog, dates=ix
-            )
+            with pytest.raises(ValueError):
+                tsa_model.TimeSeriesModel(endog, dates=ix)
 
     # Test pandas (Series, DataFrame); with index (no dates/freq argument)
     for base_endog in dta[2:4]:
@@ -443,9 +443,7 @@ def test_instantiation_valid():
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
-                assert_equal(
-                    isinstance(mod._index, (pd.Index, pd.RangeIndex)), True
-                )
+                assert_equal(isinstance(mod._index, (pd.Index, pd.RangeIndex)), True)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
@@ -469,9 +467,7 @@ def test_instantiation_valid():
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
-                assert isinstance(mod._index, pd.RangeIndex) or is_int_index(
-                    mod._index
-                )
+                assert isinstance(mod._index, pd.RangeIndex) or is_int_index(mod._index)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
@@ -483,42 +479,38 @@ def test_instantiation_valid():
 
     # Test (invalid) freq with no index
     endog = dta[0]
-    assert_raises(
-        ValueError,
-        tsa_model.TimeSeriesModel,
-        endog,
-        freq=date_indexes[1][0].freq,
-    )
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(
+            endog,
+            freq=date_indexes[1][0].freq,
+        )
 
     # Test conflicting index, freq specifications
     endog = dta[2].copy()
     endog.index = date_indexes[0][0]
-    assert_raises(
-        ValueError,
-        tsa_model.TimeSeriesModel,
-        endog,
-        freq=date_indexes[1][0].freq,
-    )
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(
+            endog,
+            freq=date_indexes[1][0].freq,
+        )
 
     # Test unsupported index, but a freq specification
     endog = dta[2].copy()
     endog.index = unsupported_indexes[0][0]
-    assert_raises(
-        ValueError,
-        tsa_model.TimeSeriesModel,
-        endog,
-        freq=date_indexes[1][0].freq,
-    )
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(
+            endog,
+            freq=date_indexes[1][0].freq,
+        )
 
     # Test index that can coerce to date time but incorrect freq
     endog = dta[2].copy()
     endog.index = numpy_datestr_indexes[0][0]
-    assert_raises(
-        ValueError,
-        tsa_model.TimeSeriesModel,
-        endog,
-        freq=date_indexes[1][0].freq,
-    )
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(
+            endog,
+            freq=date_indexes[1][0].freq,
+        )
 
 
 def test_prediction_increment_unsupported():
@@ -950,9 +942,7 @@ def test_prediction_increment_pandas_dates_monthly():
 def test_prediction_increment_pandas_dates_nanosecond():
     # Date-based index
     endog = dta[2].copy()
-    endog.index = pd.date_range(
-        start="1970-01-01", periods=len(endog), freq="ns"
-    )
+    endog.index = pd.date_range(start="1970-01-01", periods=len(endog), freq="ns")
     mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
@@ -1129,9 +1119,7 @@ def test_prediction_rangeindex_withstep():
 def test_custom_index():
     tsa_model.__warningregistry__ = {}
 
-    endog = pd.Series(
-        np.random.normal(size=5), index=["a", "b", "c", "d", "e"]
-    )
+    endog = pd.Series(np.random.normal(size=5), index=["a", "b", "c", "d", "e"])
     message = (
         "An unsupported index was provided. As a result, forecasts cannot be "
         "generated. To use the model for forecasting, use on the the "
@@ -1207,13 +1195,12 @@ def test_custom_index():
     assert_equal(prediction_index.equals(pd.Index(["f", "g"])), True)
 
     # Test invalid custom index
-    assert_raises(
-        ValueError,
-        mod._get_prediction_index,
-        start_key,
-        end_key,
-        index=["f", "g", "h"],
-    )
+    with pytest.raises(ValueError):
+        mod._get_prediction_index(
+            start_key,
+            end_key,
+            index=["f", "g", "h"],
+        )
 
 
 def test_nonmonotonic_periodindex():

@@ -1,0 +1,16 @@
+_tsa_tree = [fs.copyfile('__init__.py')]
+py.extension_module(
+    '_innovations',
+    '_innovations.pyx',
+    install: true,
+    include_directories: [inc_np],
+    subdir: 'statsmodels/tsa',
+    c_args: cython_c_args,
+)
+
+subdir('exponential_smoothing')
+subdir('holtwinters')
+subdir('innovations')
+subdir('regime_switching')
+subdir('statespace')
+subdir('stl')

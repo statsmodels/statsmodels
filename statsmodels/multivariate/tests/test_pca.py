@@ -3,7 +3,7 @@ from statsmodels.compat.platform import PLATFORM_WIN32
 import warnings
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal, assert_raises
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
@@ -15,7 +15,7 @@ from statsmodels.multivariate.tests.results.datamlw import (
 )
 from statsmodels.tools.sm_exceptions import EstimationWarning
 
-DECIMAL_5 = .00001
+DECIMAL_5 = 0.00001
 
 
 class TestPCA:
@@ -71,32 +71,26 @@ class TestPCA:
     def test_eig_svd_equiv(self):
         # Test leading components since the tail end can differ
         pc_eig = PCA(self.x)
-        pc_svd = PCA(self.x, method='svd')
+        pc_svd = PCA(self.x, method="svd")
 
         assert_allclose(pc_eig.projection, pc_svd.projection)
-        assert_allclose(np.abs(pc_eig.factors[:, :2]),
-                        np.abs(pc_svd.factors[:, :2]))
-        assert_allclose(np.abs(pc_eig.coeff[:2, :]),
-                        np.abs(pc_svd.coeff[:2, :]))
-        assert_allclose(pc_eig.eigenvals,
-                        pc_svd.eigenvals)
-        assert_allclose(np.abs(pc_eig.eigenvecs[:, :2]),
-                        np.abs(pc_svd.eigenvecs[:, :2]))
+        assert_allclose(np.abs(pc_eig.factors[:, :2]), np.abs(pc_svd.factors[:, :2]))
+        assert_allclose(np.abs(pc_eig.coeff[:2, :]), np.abs(pc_svd.coeff[:2, :]))
+        assert_allclose(pc_eig.eigenvals, pc_svd.eigenvals)
+        assert_allclose(
+            np.abs(pc_eig.eigenvecs[:, :2]), np.abs(pc_svd.eigenvecs[:, :2])
+        )
 
-        pc_svd = PCA(self.x, method='svd', ncomp=2)
-        pc_nipals = PCA(self.x, method='nipals', ncomp=2)
-        assert_allclose(np.abs(pc_nipals.factors),
-                        np.abs(pc_svd.factors),
-                        atol=DECIMAL_5)
-        assert_allclose(np.abs(pc_nipals.coeff),
-                        np.abs(pc_svd.coeff),
-                        atol=DECIMAL_5)
-        assert_allclose(pc_nipals.eigenvals,
-                        pc_svd.eigenvals,
-                        atol=DECIMAL_5)
-        assert_allclose(np.abs(pc_nipals.eigenvecs),
-                        np.abs(pc_svd.eigenvecs),
-                        atol=DECIMAL_5)
+        pc_svd = PCA(self.x, method="svd", ncomp=2)
+        pc_nipals = PCA(self.x, method="nipals", ncomp=2)
+        assert_allclose(
+            np.abs(pc_nipals.factors), np.abs(pc_svd.factors), atol=DECIMAL_5
+        )
+        assert_allclose(np.abs(pc_nipals.coeff), np.abs(pc_svd.coeff), atol=DECIMAL_5)
+        assert_allclose(pc_nipals.eigenvals, pc_svd.eigenvals, atol=DECIMAL_5)
+        assert_allclose(
+            np.abs(pc_nipals.eigenvecs), np.abs(pc_svd.eigenvecs), atol=DECIMAL_5
+        )
         # Check data for no changes
         assert_equal(self.x, pc_svd.data)
         # Check data for no changes
@@ -107,8 +101,9 @@ class TestPCA:
     def test_options(self):
         pc = PCA(self.x)
         pc_no_norm = PCA(self.x, normalize=False)
-        assert_allclose(pc.factors.dot(pc.coeff),
-                        pc_no_norm.factors.dot(pc_no_norm.coeff))
+        assert_allclose(
+            pc.factors.dot(pc.coeff), pc_no_norm.factors.dot(pc_no_norm.coeff)
+        )
         princomp = pc.factors
         assert_allclose(princomp.T.dot(princomp), np.eye(100), atol=1e-5)
         weights = pc_no_norm.coeff
@@ -117,7 +112,7 @@ class TestPCA:
         pc_10 = PCA(self.x, ncomp=10)
         assert_allclose(pc.factors[:, :10], pc_10.factors)
         assert_allclose(pc.coeff[:10, :], pc_10.coeff)
-        assert_allclose(pc.rsquare[:(10 + 1)], pc_10.rsquare)
+        assert_allclose(pc.rsquare[: (10 + 1)], pc_10.rsquare)
         assert_allclose(pc.eigenvals[:10], pc_10.eigenvals)
         assert_allclose(pc.eigenvecs[:, :10], pc_10.eigenvecs)
 
@@ -158,8 +153,7 @@ class TestPCA:
         assert_allclose(np.abs(pc.factors), np.abs(ref.factors))
         assert_allclose(pc.factors.dot(pc.coeff) + x.mean(0), x)
         assert_allclose(np.abs(pc.coeff), np.abs(ref.coef.T))
-        assert_allclose(pc.factors.dot(pc.coeff),
-                        ref.factors.dot(ref.coef.T))
+        assert_allclose(pc.factors.dot(pc.coeff), ref.factors.dot(ref.coef.T))
 
         pc = PCA(x[:20], normalize=False, standardize=False)
         mu = x[:20].mean(0)
@@ -167,8 +161,7 @@ class TestPCA:
         assert_allclose(np.abs(pc.factors), np.abs(ref.factors))
         assert_allclose(pc.factors.dot(pc.coeff) + mu, x[:20])
         assert_allclose(np.abs(pc.coeff), np.abs(ref.coef.T))
-        assert_allclose(pc.factors.dot(pc.coeff),
-                        ref.factors.dot(ref.coef.T))
+        assert_allclose(pc.factors.dot(pc.coeff), ref.factors.dot(ref.coef.T))
 
     def test_warnings_and_errors(self):
         with warnings.catch_warnings(record=True) as w:
@@ -178,13 +171,17 @@ class TestPCA:
         with warnings.catch_warnings(record=True) as w:
             rs = self.rs
             x = rs.standard_normal((200, 1)) * np.ones(200)
-            PCA(x, method='eig')
+            PCA(x, method="eig")
             assert_equal(len(w), 1)
 
-        assert_raises(ValueError, PCA, self.x, method='unknown')
-        assert_raises(ValueError, PCA, self.x, missing='unknown')
-        assert_raises(ValueError, PCA, self.x, tol=2.0)
-        assert_raises(ValueError, PCA, np.nan * np.ones((200, 100)), tol=2.0)
+        with pytest.raises(ValueError):
+            PCA(self.x, method="unknown")
+        with pytest.raises(ValueError):
+            PCA(self.x, missing="unknown")
+        with pytest.raises(ValueError):
+            PCA(self.x, tol=2.0)
+        with pytest.raises(ValueError):
+            PCA(np.nan * np.ones((200, 100)), tol=2.0)
 
     @pytest.mark.matplotlib
     def test_pandas(self, close_figures):
@@ -201,18 +198,20 @@ class TestPCA:
         PCA(pd.DataFrame(self.x), ncomp=4, standardize=False)
 
     def test_gls_and_weights(self):
-        assert_raises(ValueError, PCA, self.x, gls=True)
-        assert_raises(ValueError, PCA, self.x, weights=np.array([1.0, 1.0]))
+        with pytest.raises(ValueError):
+            PCA(self.x, gls=True)
+        with pytest.raises(ValueError):
+            PCA(self.x, weights=np.array([1.0, 1.0]))
 
         # Pre-standardize to make comparison simple
-        x = (self.x - self.x.mean(0))
-        x = x / (x ** 2.0).mean(0)
+        x = self.x - self.x.mean(0)
+        x = x / (x**2.0).mean(0)
         pc_gls = PCA(x, ncomp=1, standardize=False, demean=False, gls=True)
         pc = PCA(x, ncomp=1, standardize=False, demean=False)
         errors = x - pc.projection
-        var = (errors ** 2.0).mean(0)
+        var = (errors**2.0).mean(0)
         weights = 1.0 / var
-        weights = weights / np.sqrt((weights ** 2.0).mean())
+        weights = weights / np.sqrt((weights**2.0).mean())
 
         assert_allclose(weights, pc_gls.weights)
         assert_equal(x, pc_gls.data)
@@ -270,26 +269,27 @@ class TestPCA:
 
         # Test error for too many factors
         project = pc.project
-        assert_raises(ValueError, project, 6)
+        with pytest.raises(ValueError):
+            project(6)
 
-    @pytest.mark.skipif(PLATFORM_WIN32, reason='Windows 32-bit')
+    @pytest.mark.skipif(PLATFORM_WIN32, reason="Windows 32-bit")
     def test_replace_missing(self):
         x = self.x.copy()
         x[::5, ::7] = np.nan
 
-        pc = PCA(x, missing='drop-row')
+        pc = PCA(x, missing="drop-row")
         x_dropped_row = x[np.logical_not(np.any(np.isnan(x), 1))]
         pc_dropped = PCA(x_dropped_row)
         assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
-        pc = PCA(x, missing='drop-col')
+        pc = PCA(x, missing="drop-col")
         x_dropped_col = x[:, np.logical_not(np.any(np.isnan(x), 0))]
         pc_dropped = PCA(x_dropped_col)
         assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
-        pc = PCA(x, missing='drop-min')
+        pc = PCA(x, missing="drop-min")
         if x_dropped_row.size > x_dropped_col.size:
             x_dropped_min = x_dropped_row
         else:
@@ -298,11 +298,11 @@ class TestPCA:
         assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
-        pc = PCA(x, ncomp=3, missing='fill-em')
+        pc = PCA(x, ncomp=3, missing="fill-em")
         missing = np.isnan(x)
         mu = np.nanmean(x, axis=0)
         errors = x - mu
-        sigma = np.sqrt(np.nanmean(errors ** 2, axis=0))
+        sigma = np.sqrt(np.nanmean(errors**2, axis=0))
         x_std = errors / sigma
         x_std[missing] = 0.0
         last = x_std[missing]
@@ -313,7 +313,7 @@ class TestPCA:
             x_std[missing] = pc_temp.projection[missing]
             current = x_std[missing]
             diff = current - last
-            delta = np.sqrt(np.sum(diff ** 2)) / np.sqrt(np.sum(current ** 2))
+            delta = np.sqrt(np.sum(diff**2)) / np.sqrt(np.sum(current**2))
             last = current
             count += 1
         x = self.x + 0.0
@@ -325,26 +325,30 @@ class TestPCA:
 
         x = self.x
         pc = PCA(x)
-        pc_dropped = PCA(x, missing='drop-row')
+        pc_dropped = PCA(x, missing="drop-row")
         assert_allclose(pc.projection, pc_dropped.projection, atol=DECIMAL_5)
 
-        pc_dropped = PCA(x, missing='drop-col')
+        pc_dropped = PCA(x, missing="drop-col")
         assert_allclose(pc.projection, pc_dropped.projection, atol=DECIMAL_5)
 
-        pc_dropped = PCA(x, missing='drop-min')
+        pc_dropped = PCA(x, missing="drop-min")
         assert_allclose(pc.projection, pc_dropped.projection, atol=DECIMAL_5)
 
         pc = PCA(x, ncomp=3)
-        pc_dropped = PCA(x, ncomp=3, missing='fill-em')
+        pc_dropped = PCA(x, ncomp=3, missing="fill-em")
         assert_allclose(pc.projection, pc_dropped.projection, atol=DECIMAL_5)
 
         # Test too many missing for missing='fill-em'
         x = self.x.copy()
         x[:, :] = np.nan
-        assert_raises(ValueError, PCA, x, missing='drop-row')
-        assert_raises(ValueError, PCA, x, missing='drop-col')
-        assert_raises(ValueError, PCA, x, missing='drop-min')
-        assert_raises(ValueError, PCA, x, missing='fill-em')
+        with pytest.raises(ValueError):
+            PCA(x, missing="drop-row")
+        with pytest.raises(ValueError):
+            PCA(x, missing="drop-col")
+        with pytest.raises(ValueError):
+            PCA(x, missing="drop-min")
+        with pytest.raises(ValueError):
+            PCA(x, missing="fill-em")
 
     def test_rsquare(self):
         x = self.x + 0.0
@@ -356,34 +360,34 @@ class TestPCA:
         pc = PCA(self.x)
         nvar = x.shape[1]
         rsquare = np.zeros(nvar + 1)
-        tss = np.sum(x_std ** 2)
+        tss = np.sum(x_std**2)
         for i in range(nvar + 1):
             errors = x_std - pc.project(i, transform=False, unweight=False)
-            rsquare[i] = 1.0 - np.sum(errors ** 2) / tss
+            rsquare[i] = 1.0 - np.sum(errors**2) / tss
         assert_allclose(rsquare, pc.rsquare)
 
         pc = PCA(self.x, standardize=False)
-        tss = np.sum(x_demean ** 2)
+        tss = np.sum(x_demean**2)
         for i in range(nvar + 1):
             errors = x_demean - pc.project(i, transform=False, unweight=False)
-            rsquare[i] = 1.0 - np.sum(errors ** 2) / tss
+            rsquare[i] = 1.0 - np.sum(errors**2) / tss
         assert_allclose(rsquare, pc.rsquare)
 
         pc = PCA(self.x, standardize=False, demean=False)
-        tss = np.sum(x ** 2)
+        tss = np.sum(x**2)
         for i in range(nvar + 1):
             errors = x - pc.project(i, transform=False, unweight=False)
-            rsquare[i] = 1.0 - np.sum(errors ** 2) / tss
+            rsquare[i] = 1.0 - np.sum(errors**2) / tss
         assert_allclose(rsquare, pc.rsquare)
 
     @pytest.mark.slow
     def test_missing_dataframe(self):
         x = self.x.copy()
         x[::5, ::7] = np.nan
-        pc = PCA(x, ncomp=3, missing='fill-em')
+        pc = PCA(x, ncomp=3, missing="fill-em")
 
         x = pd.DataFrame(x)
-        pc_df = PCA(x, ncomp=3, missing='fill-em')
+        pc_df = PCA(x, ncomp=3, missing="fill-em")
         assert_allclose(pc.coeff, pc_df.coeff)
         assert_allclose(pc.factors, pc_df.factors)
 
@@ -396,18 +400,18 @@ class TestPCA:
         x = self.x.copy()
         x[::5, ::7] = np.nan
         x_df = pd.DataFrame(x)
-        pc = PCA(x, missing='drop-row')
-        pc_df = PCA(x_df, missing='drop-row')
+        pc = PCA(x, missing="drop-row")
+        pc_df = PCA(x_df, missing="drop-row")
         assert_allclose(pc.coeff, pc_df.coeff)
         assert_allclose(pc.factors, pc_df.factors)
 
-        pc = PCA(x, missing='drop-col')
-        pc_df = PCA(x_df, missing='drop-col')
+        pc = PCA(x, missing="drop-col")
+        pc_df = PCA(x_df, missing="drop-col")
         assert_allclose(pc.coeff, pc_df.coeff)
         assert_allclose(pc.factors, pc_df.factors)
 
-        pc = PCA(x, missing='drop-min')
-        pc_df = PCA(x_df, missing='drop-min')
+        pc = PCA(x, missing="drop-min")
+        pc_df = PCA(x_df, missing="drop-min")
         assert_allclose(pc.coeff, pc_df.coeff)
         assert_allclose(pc.factors, pc_df.factors)
 
@@ -440,7 +444,7 @@ def test_too_many_missing(reset_randomstate):
 
 def test_gls_warning(reset_randomstate):
     data = np.random.standard_normal((400, 200))
-    data[:, 1:] = data[:, :1] + .01 * data[:, 1:]
+    data[:, 1:] = data[:, :1] + 0.01 * data[:, 1:]
     with pytest.warns(EstimationWarning, match="Many series are being down weighted"):
         factors = PCA(data, ncomp=2, gls=True).factors
     assert factors.shape == (data.shape[0], 2)

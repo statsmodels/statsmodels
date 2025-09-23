@@ -7,7 +7,8 @@ License: BSD-3
 """
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_raises
+from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.base._constraints import (
     TransformRestriction,
@@ -15,13 +16,9 @@ from statsmodels.base._constraints import (
     transform_params_constraint,
 )
 
-if __name__ == '__main__':
-
-
+if __name__ == "__main__":
 
     R = np.array([[1, 1, 0, 0, 0], [0, 0, 1, -1, 0]])
-
-
 
     k_constr, k_vars = R.shape
 
@@ -38,35 +35,35 @@ if __name__ == '__main__':
     q = [2, 0]
     tr0 = TransformRestriction(R, q)
 
-    p_reduced = [1,1,1]
-    #round trip test
+    p_reduced = [1, 1, 1]
+    # round trip test
     assert_allclose(tr0.reduce(tr0.expand(p_reduced)), p_reduced, rtol=1e-14)
-
 
     p = tr0.expand(p_reduced)
     assert_allclose(R.dot(p), q, rtol=1e-14)
 
     # inconsistent restrictions
-    #Ri = np.array([[1, 1, 0, 0, 0], [0, 0, 1, -1, 0], [0, 0, 1, -2, 0]])
+    # Ri = np.array([[1, 1, 0, 0, 0], [0, 0, 1, -1, 0], [0, 0, 1, -2, 0]])
     R = np.array([[1, 1, 0, 0, 0], [0, 0, 1, -1, 0], [0, 0, 1, 0, -1]])
     q = np.zeros(R.shape[0])
     tr1 = TransformRestriction(R, q)  # bug raises error with q
-    p = tr1.expand([1,1])
+    p = tr1.expand([1, 1])
 
     # inconsistent restrictions that has a solution with p3=0
     Ri = np.array([[1, 1, 0, 0, 0], [0, 0, 1, -1, 0], [0, 0, 1, -2, 0]])
     tri = TransformRestriction(Ri, [0, 1, 1])
     # Note: the only way this can hold is if variable 3 is zero
-    p = tri.expand([1,1])
-    print(p[[2,3]])
-    #array([  1.00000000e+00,  -1.34692639e-17])
+    p = tri.expand([1, 1])
+    print(p[[2, 3]])
+    # array([  1.00000000e+00,  -1.34692639e-17])
 
     # inconsistent without any possible solution
     Ri2 = np.array([[0, 0, 0, 1, 0], [0, 0, 1, -1, 0], [0, 0, 1, -2, 0]])
     q = [1, 1]
-    #tri2 = TransformRestriction(Ri2, q)
-    #p = tri.expand([1,1])
-    assert_raises(ValueError, TransformRestriction, Ri2, q)
+    # tri2 = TransformRestriction(Ri2, q)
+    # p = tri.expand([1,1])
+    with pytest.raises(ValueError):
+        TransformRestriction(Ri2, q)
     # L does not have full row rank, calculating constant fails with Singular Matrix
 
     # transform data xr = T x
@@ -76,15 +73,16 @@ if __name__ == '__main__':
     # roundtrip
     x2 = tr1.expand(xr)
     # this does not hold ? do not use constant? do not need it anyway ?
-    #assert_allclose(x2, x, rtol=1e-14)
-
+    # assert_allclose(x2, x, rtol=1e-14)
 
     from statsmodels.formula._manager import FormulaManager
 
     mgr = FormulaManager()
-    names = 'a b c d'.split()
-    lc = mgr.get_linear_constraints('a + b = 0', names)
-    lc = mgr.get_linear_constraints(['a + b = 0', 'a + 2*c = 1', 'b-a', 'c-a', 'd-a'], names)
+    names = "a b c d".split()
+    lc = mgr.get_linear_constraints("a + b = 0", names)
+    lc = mgr.get_linear_constraints(
+        ["a + b = 0", "a + 2*c = 1", "b-a", "c-a", "d-a"], names
+    )
     r_matrix, q_matrix = lc.constraint_matrix, lc.constraint_values
 
     np.random.seed(123)
@@ -94,9 +92,10 @@ if __name__ == '__main__':
     endog = exog.sum(1) + np.random.randn(nobs)
 
     from statsmodels.regression.linear_model import OLS
+
     res2 = OLS(endog, exog).fit()
-    #transf = TransformRestriction(np.eye(exog.shape[1])[:2], res2.params[:2] / 2)
-    transf = TransformRestriction([[0, 0, 0,1,1]], res2.params[-2:].sum())
+    # transf = TransformRestriction(np.eye(exog.shape[1])[:2], res2.params[:2] / 2)
+    transf = TransformRestriction([[0, 0, 0, 1, 1]], res2.params[-2:].sum())
     exog_st = transf.reduce(exog)
     res1 = OLS(endog, exog_st).fit()
     # need to correct for constant/offset in the optimization
@@ -108,8 +107,8 @@ if __name__ == '__main__':
     print(res1.params)
 
     res3_ols = OLS(endog - exog[:, -1], exog[:, :-2]).fit()
-    #transf = TransformRestriction(np.eye(exog.shape[1])[:2], res2.params[:2] / 2)
-    transf3 = TransformRestriction([[0, 0, 0, 1, 0],[0, 0, 0, 0, 1]], [0, 1])
+    # transf = TransformRestriction(np.eye(exog.shape[1])[:2], res2.params[:2] / 2)
+    transf3 = TransformRestriction([[0, 0, 0, 1, 0], [0, 0, 0, 0, 1]], [0, 1])
     exog3_st = transf3.reduce(exog)
     res3 = OLS(endog, exog3_st).fit()
     # need to correct for constant/offset in the optimization
@@ -121,21 +120,24 @@ if __name__ == '__main__':
     print(res3_ols.params)
     print(res3_ols.bse)
     # the following raises `ValueError: cannot test a constant constraint`
-    #tt = res3.t_test(transf3.transf_mat, transf3.constant.squeeze())
-    #print tt.sd
+    # tt = res3.t_test(transf3.transf_mat, transf3.constant.squeeze())
+    # print tt.sd
     cov_params3 = transf3.transf_mat.dot(res3.cov_params()).dot(transf3.transf_mat.T)
     bse3 = np.sqrt(np.diag(cov_params3))
     print(bse3)
 
-    tp = transform_params_constraint(res2.params, res2.normalized_cov_params,
-                                     transf3.R, transf3.q)
-    tp = transform_params_constraint(res2.params, res2.cov_params(), transf3.R, transf3.q)
+    tp = transform_params_constraint(
+        res2.params, res2.normalized_cov_params, transf3.R, transf3.q
+    )
+    tp = transform_params_constraint(
+        res2.params, res2.cov_params(), transf3.R, transf3.q
+    )
 
     import statsmodels.api as sm
+
     rand_data = sm.datasets.randhie.load()
     rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
     rand_exog = sm.add_constant(rand_exog, prepend=False)
-
 
     # Fit Poisson model:
     poisson_mod0 = sm.Poisson(rand_data.endog, rand_exog)
@@ -147,41 +149,52 @@ if __name__ == '__main__':
     transfp = TransformRestriction(R, [0, 1])
     poisson_mod = sm.Poisson(rand_data.endog, rand_exog[:, :-2])
     # note wrong offset, why did I put offset in fit ? it's ignored
-    poisson_res = poisson_mod.fit(method="newton", offset=rand_exog.dot(transfp.constant.squeeze()))
+    poisson_res = poisson_mod.fit(
+        method="newton", offset=rand_exog.dot(transfp.constant.squeeze())
+    )
 
     exogp_st = transfp.reduce(rand_exog)
     poisson_modr = sm.Poisson(rand_data.endog, exogp_st)
     poisson_resr = poisson_modr.fit(method="newton")
     paramsp = transfp.expand(poisson_resr.params).squeeze()
-    print('\nPoisson')
+    print("\nPoisson")
     print(paramsp)
     print(poisson_res.params)
     # error because I do not use the unconstrained basic model
-#    tp = transform_params_constraint(poisson_res.params, poisson_res.cov_params(), transfp.R, transfp.q)
-#    cov_params3 = transf3.transf_mat.dot(res3.cov_params()).dot(transf3.transf_mat.T)
-#    bse3 = np.sqrt(np.diag(cov_params3))
-
+    #    tp = transform_params_constraint(poisson_res.params, poisson_res.cov_params(), transfp.R, transfp.q)
+    #    cov_params3 = transf3.transf_mat.dot(res3.cov_params()).dot(transf3.transf_mat.T)
+    #    bse3 = np.sqrt(np.diag(cov_params3))
 
     poisson_mod0 = sm.Poisson(rand_data.endog, rand_exog)
     poisson_res0 = poisson_mod0.fit(method="newton")
-    tp = transform_params_constraint(poisson_res0.params, poisson_res0.cov_params(), transfp.R, transfp.q)
+    tp = transform_params_constraint(
+        poisson_res0.params, poisson_res0.cov_params(), transfp.R, transfp.q
+    )
     cov_params3 = transf3.transf_mat.dot(res3.cov_params()).dot(transf3.transf_mat.T)
     bse3 = np.sqrt(np.diag(cov_params3))
 
     # try again same example as it was intended
 
-    poisson_mod = sm.Poisson(rand_data.endog, rand_exog[:, :-2], offset=rand_exog[:, -1])
+    poisson_mod = sm.Poisson(
+        rand_data.endog, rand_exog[:, :-2], offset=rand_exog[:, -1]
+    )
     poisson_res = poisson_mod.fit(method="newton")
 
     exogp_st = transfp.reduce(rand_exog)
-    poisson_modr = sm.Poisson(rand_data.endog, exogp_st, offset=rand_exog.dot(transfp.constant.squeeze()))
+    poisson_modr = sm.Poisson(
+        rand_data.endog, exogp_st, offset=rand_exog.dot(transfp.constant.squeeze())
+    )
     poisson_resr = poisson_modr.fit(method="newton")
     paramsp = transfp.expand(poisson_resr.params).squeeze()
-    print('\nPoisson')
+    print("\nPoisson")
     print(paramsp)
     print(poisson_resr.params)
-    tp = transform_params_constraint(poisson_res0.params, poisson_res0.cov_params(), transfp.R, transfp.q)
-    cov_paramsp = transfp.transf_mat.dot(poisson_resr.cov_params()).dot(transfp.transf_mat.T)
+    tp = transform_params_constraint(
+        poisson_res0.params, poisson_res0.cov_params(), transfp.R, transfp.q
+    )
+    cov_paramsp = transfp.transf_mat.dot(poisson_resr.cov_params()).dot(
+        transfp.transf_mat.T
+    )
     bsep = np.sqrt(np.diag(cov_paramsp))
     print(bsep)
     p, cov, res_r = fit_constrained(poisson_mod0, transfp.R, transfp.q)

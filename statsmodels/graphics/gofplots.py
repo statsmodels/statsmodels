@@ -684,7 +684,9 @@ def qqplot(
     return fig
 
 
-def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None, **kwargs):
+def qqplot_2samples(
+    data1, data2, xlabel=None, ylabel=None, line=None, ax=None, **kwargs
+):
     """
     Q-Q Plot of two samples' quantiles.
 
@@ -767,7 +769,9 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None, 
     if not isinstance(data2, ProbPlot):
         data2 = ProbPlot(data2)
     if data2.data.shape[0] > data1.data.shape[0]:
-        fig = data1.qqplot(xlabel=xlabel, ylabel=ylabel, line=line, other=data2, ax=ax, **kwargs)
+        fig = data1.qqplot(
+            xlabel=xlabel, ylabel=ylabel, line=line, other=data2, ax=ax, **kwargs
+        )
     else:
         fig = data2.qqplot(
             xlabel=ylabel,
@@ -776,7 +780,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None, 
             other=data1,
             ax=ax,
             swap=True,
-            **kwargs
+            **kwargs,
         )
 
     return fig
@@ -1031,10 +1035,14 @@ def _do_plot(x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs)
     if "color" in plot_style and fmt:
         if fmt[0] in ("b", "g", "r", "c", "m", "y", "k", "w"):
             fmt = fmt[1:]
+    args = [x, y]
+    if fmt:
+        # Only pass fmt if it is not empty
+        args += [fmt]
     if step:
-        ax.step(x, y, fmt, where=where, **plot_style)
+        ax.step(*args, where=where, **plot_style)
     else:
-        ax.plot(x, y, fmt, **plot_style)
+        ax.plot(*args, **plot_style)
     if line:
         if line not in ["r", "q", "45", "s"]:
             msg = "%s option for line not understood" % line

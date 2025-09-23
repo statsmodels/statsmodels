@@ -177,7 +177,7 @@ class BaseProbplotMixin:
             alpha=0.5,
         )
 
-    def test_fit_params(self):
+    def test_fit_params(self, close_figures):
         assert self.prbplt.fit_params[-2] == self.prbplt.loc
         assert self.prbplt.fit_params[-1] == self.prbplt.scale
 
@@ -237,13 +237,13 @@ class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
         self.line = "45"
         super().setup_method()
 
-    def test_loc_set(self):
+    def test_loc_set(self, close_figures):
         assert self.prbplt.loc == 8.5
 
-    def test_scale_set(self):
+    def test_scale_set(self, close_figures):
         assert self.prbplt.scale == 3.0
 
-    def test_exceptions(self):
+    def test_exceptions(self, close_figures):
         with pytest.raises(ValueError):
             ProbPlot(self.data, dist=stats.norm(loc=8.5, scale=3.0), fit=True)
         with pytest.raises(ValueError):
@@ -284,16 +284,16 @@ class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
         self.line = "45"
         super().setup_method()
 
-    def test_loc_set(self):
+    def test_loc_set(self, close_figures):
         assert self.prbplt.loc == 8
 
-    def test_scale_set(self):
+    def test_scale_set(self, close_figures):
         assert self.prbplt.scale == 3
 
-    def test_loc_set_in_dist(self):
+    def test_loc_set_in_dist(self, close_figures):
         assert self.prbplt.dist.mean() == 8.0
 
-    def test_scale_set_in_dist(self):
+    def test_scale_set_in_dist(self, close_figures):
         assert self.prbplt.dist.var() == 9.0
 
 
@@ -348,7 +348,7 @@ def test_invalid_dist_config(close_figures):
 
 
 @pytest.mark.matplotlib
-def test_qqplot_unequal():
+def test_qqplot_unequal(close_figures):
     rs = np.random.RandomState(0)
     data1 = rs.standard_normal(100)
     data2 = rs.standard_normal(200)
@@ -491,7 +491,7 @@ class TestQQLine:
         self.fmt = "bo-"
 
     @pytest.mark.matplotlib
-    def test_badline(self):
+    def test_badline(self, close_figures):
         with pytest.raises(ValueError):
             qqline(self.ax, "junk")
 

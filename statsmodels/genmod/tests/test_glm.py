@@ -15,7 +15,6 @@ from numpy.testing import (
     assert_almost_equal,
     assert_array_less,
     assert_equal,
-    assert_raises,
 )
 import pandas as pd
 from pandas.testing import assert_series_equal
@@ -1248,22 +1247,15 @@ def test_formula_missing_exposure():
 
     exposure = pd.Series(np.random.uniform(size=5))
     df.loc[3, "Bar"] = 4  # nan not relevant for Valueerror for shape mismatch
-    assert_raises(
-        ValueError,
-        smf.glm,
-        "Foo ~ Bar",
-        data=df,
-        exposure=exposure,
-        family=family,
-    )
-    assert_raises(
-        ValueError,
-        GLM,
-        df.Foo,
-        df[["constant", "Bar"]],
-        exposure=exposure,
-        family=family,
-    )
+    with pytest.raises(ValueError):
+        smf.glm("Foo ~ Bar", data=df, exposure=exposure, family=family)
+    with pytest.raises(ValueError):
+        GLM(
+            df.Foo,
+            df[["constant", "Bar"]],
+            exposure=exposure,
+            family=family,
+        )
 
 
 @pytest.mark.matplotlib

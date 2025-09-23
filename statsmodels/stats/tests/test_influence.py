@@ -76,6 +76,8 @@ class InfluenceCompareExact:
     @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_plots(self, close_figures):
+        import matplotlib.pyplot as plt
+
         infl1 = self.infl1
         infl0 = self.infl0
 
@@ -84,12 +86,14 @@ class InfluenceCompareExact:
 
         infl0.plot_index('resid', threshold=0.2, title='')
         infl1.plot_index('resid', threshold=0.2, title='')
+        plt.close('all')
 
         infl0.plot_index('dfbeta', idx=1, threshold=0.2, title='')
         infl1.plot_index('dfbeta', idx=1, threshold=0.2, title='')
 
         infl0.plot_index('cook', idx=1, threshold=0.2, title='')
         infl1.plot_index('cook', idx=1, threshold=0.2, title='')
+        plt.close('all')
 
         infl0.plot_index('hat', idx=1, threshold=0.2, title='')
         infl1.plot_index('hat', idx=1, threshold=0.2, title='')

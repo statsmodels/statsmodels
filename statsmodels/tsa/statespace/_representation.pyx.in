@@ -27,7 +27,7 @@ cimport cython
 
 np.import_array()
 
-from statsmodels.src.math cimport *
+from statsmodels.includes.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 cimport statsmodels.tsa.statespace._tools as tools
@@ -1000,7 +1000,7 @@ cdef class {{prefix}}Statespace(object):
             # (p-m) log( 2*pi) + log( |H_t| )
             self.collapse_loglikelihood = (
                 self.collapse_loglikelihood +
-                (self._k_endog - k_states)*{{combined_prefix}}log(2*NPY_PI) + 
+                (self._k_endog - k_states)*{{combined_prefix}}log(2*M_PI) +
                 self.transform_determinant
             )
 

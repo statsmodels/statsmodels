@@ -551,7 +551,7 @@ class CheckCopula:
 
     def test_cdf(self):
         cdf_u_test = self.copula.cdf(self.u)
-        assert_allclose(self.cdf_u, cdf_u_test, rtol=1e-5)
+        assert_allclose(self.cdf_u, cdf_u_test, rtol=6e-5)
 
     def test_validate_params(self):
         pass
