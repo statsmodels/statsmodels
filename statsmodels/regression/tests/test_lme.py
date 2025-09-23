@@ -129,7 +129,7 @@ class TestMixedLM:
             vc["a"][i] = exog_vc[ix, 0:2]
             vc["b"][i] = exog_vc[ix, 2:3]
 
-        with pytest.warns(UserWarning, match="Using deprecated variance"):
+        with pytest.warns(FutureWarning, match="Using deprecated variance"):
             model = MixedLM(
                 endog, exog_fe, groups, exog_re, exog_vc=vc, use_sqrt=use_sqrt
             )
@@ -224,7 +224,7 @@ class TestMixedLM:
             ii = np.flatnonzero(groups == k)
             vc["a"][k] = vca[ii][:, None]
             vc["b"][k] = vcb[ii][:, None]
-        with pytest.warns(UserWarning, match="Using deprecated variance"):
+        with pytest.warns(FutureWarning, match="Using deprecated variance"):
             rslt = MixedLM(
                 endog, exog, groups=groups, exog_re=exog_re, exog_vc=vc
             ).fit()
@@ -626,7 +626,7 @@ class TestMixedLM:
             ix = np.flatnonzero(groups == group)
             exog_vc["a"][group] = ex_vc[ix, 0:2]
             exog_vc["b"][group] = ex_vc[ix, 2:]
-        with pytest.warns(UserWarning, match="Using deprecated variance"):
+        with pytest.warns(FutureWarning, match="Using deprecated variance"):
             model1 = MixedLM(endog, exog, groups, exog_re=exog_re, exog_vc=exog_vc)
         result1 = model1.fit()
 
