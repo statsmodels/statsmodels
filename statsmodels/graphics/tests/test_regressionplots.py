@@ -107,7 +107,11 @@ class TestPlot:
         except AttributeError:
             import warnings
 
-            warnings.warn("test not compatible with matplotlib version")
+            warnings.warn(
+                "test not compatible with matplotlib version",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
         fig = influence_plot(self.res, criterion="DFFITS")
         assert_equal(isinstance(fig, plt.Figure), True)

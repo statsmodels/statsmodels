@@ -10,7 +10,11 @@ from statsmodels.graphics.utils import _import_mpl
 from statsmodels.iolib import summary2
 from statsmodels.tools.decorators import cache_readonly
 
-from ..tools.sm_exceptions import SpecificationWarning
+from ..tools.sm_exceptions import (
+    ConvergenceWarning,
+    EstimationWarning,
+    SpecificationWarning,
+)
 from .factor_rotation import promax, rotate_factors
 
 _opt_defaults = {"gtol": 1e-7}
@@ -33,7 +37,7 @@ def _check_args_1(endog, n_factor, corr, nobs):
         raise ValueError("n_factor must be larger than 0! %d < 0" % (n_factor))
 
     if nobs is not None and endog is not None:
-        warnings.warn("nobs is ignored when endog is provided")
+        warnings.warn("nobs is ignored when endog is provided", stacklevel=2)
 
 
 def _check_args_2(endog, n_factor, corr, nobs, k_endog):
@@ -433,12 +437,14 @@ class Factor(Model):
             opt = _opt_defaults
         r = minimize(nloglike, start, jac=nscore, method=opt_method, options=opt)
         if not r.success:
-            warnings.warn("Fitting did not converge")
+            warnings.warn("Fitting did not converge", ConvergenceWarning, stacklevel=2)
         par = r.x
         uniq, load = self._unpack(par)
 
         if uniq.min() < 1e-10:
-            warnings.warn("Some uniquenesses are nearly zero")
+            warnings.warn(
+                "Some uniquenesses are nearly zero", EstimationWarning, stacklevel=2
+            )
 
         # Rotate solution to satisfy IC3 of Bai and Li
         load = self._rotate(load, uniq)

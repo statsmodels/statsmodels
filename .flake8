@@ -145,3 +145,88 @@ select=
     # E901: SyntaxError or IndentationError
     # E902: IOError
     # E999: Syntax Error
+
+    B001,
+    # Do not use bare except
+    B002,
+    # Python does not support the unary prefix increment.
+    B003,
+    # Assigning to os.environ doesn't clear the environment
+    B004,
+    # Using hasattr(x, '__call__') to test if x is callable is unreliable
+    B005,
+    # Using .strip() with multi-character strings is misleading the reader
+    B006,
+    # Do not use mutable data structures for argument defaults
+    # B007,
+    # Loop control variable not used within the loop body
+    B008,
+    # Do not perform function calls in argument defaults
+    B009,
+    # Do not call getattr(x, 'attr'), instead use normal property access x.attr
+    B010,
+    # Do not call setattr(x, 'attr', val), instead use normal property access, x.attr = val
+    B011,
+    # Do not call assert False since python -O removes these calls.
+    B012,
+    # Use of break, continue or return inside finally blocks will silence exceptions or override return values from the try or except blocks.
+    B013,
+    # A length-one tuple literal is redundant.
+    B014,
+    # Redundant exception types in except
+    B015,
+    # Pointless comparison
+    B016,
+    # Cannot raise a literal. Did you intend to return it or raise an Exception?
+    B017,
+    # assertRaises(Exception) and pytest.raises(Exception) should be considered evil.
+    B018,
+    # Found useless expression. Either assign it to a variable or remove it.
+    B019,
+    # Use of functools.lru_cache or functools.cache on methods can lead to memory leaks.
+    # B020,
+    # Loop control variable overrides iterable it iterates
+    B021,
+    # f-string used as docstring.
+    B022,
+    # No arguments passed to contextlib.suppress.
+    # B023,
+    # Functions defined inside a loop must not use variables redefined in the loop, because late-binding closures are a classic gotcha.
+    B024,
+    # Abstract base class has methods, but none of them are abstract.
+    B025,
+    # try-except block with duplicate exceptions found.
+    # B026,
+    # Star-arg unpacking after a keyword argument is strongly discouraged
+    B027,
+    # Empty method in abstract base class, but has no abstract decorator.
+    B028,
+    # No explicit stacklevel argument found.
+    B029,
+    # Using except (), with an empty tuple does not handle/catch anything. Add exceptions to handle.
+    B030,
+    # Except handlers should only be exception classes or tuples of exception classes.
+    B031,
+    # Using the generator returned from itertools.groupby() more than once will do nothing on the second usage. Save the result to a list if the result is needed multiple times.
+    B032,
+    # Possible unintentional type annotation (using :). Did you mean to assign (using =)?
+    B033,
+    # Sets should not contain duplicate items. Duplicate items will be replaced with a single item at runtime.
+    B034,
+    # Calls to re.sub, re.subn or re.split should pass flags or count/maxsplit as keyword arguments.
+    B035,
+    # Found dict comprehension with a static key - either a constant value or variable not from the comprehension expression.
+    B036,
+    # Found except BaseException, without re-raising (no raise in the top-level of the except block).
+    B037,
+    # Found return <value>, yield, yield <value>, or yield from <value> in class __init__() method.
+    B038,
+    # Moved to B909 - Found a mutation of a mutable loop iterable inside the loop body.
+    B039,
+    # ContextVar with mutable literal or function call as default.
+    B040,
+    # Caught exception with call to add_note not used.
+    B041,
+    # Repeated key-value pair in dictionary literal.
+    B042,
+    # Remember to call super().__init__() in custom exceptions initalizer.

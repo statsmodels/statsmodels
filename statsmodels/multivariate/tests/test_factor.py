@@ -89,7 +89,7 @@ def test_direct_corr_matrix():
 
     # Test set endog_names with the wrong number of elements
     with pytest.raises(ValueError):
-        setattr(mod, "endog_names", X.iloc[:, :1].columns)
+        mod.endog_names = X.iloc[:, :1].columns
 
 
 def test_unknown_fa_method_error():

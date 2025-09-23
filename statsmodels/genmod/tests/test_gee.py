@@ -744,7 +744,7 @@ class TestGEE:
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched size
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             mod_sub = gee.GEE(endog, exog_sub, group)
             res_sub = mod_sub.fit()
             mod = gee.GEE(endog[0:100], exog[:100, :], group[0:100])

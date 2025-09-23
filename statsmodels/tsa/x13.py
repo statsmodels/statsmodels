@@ -279,8 +279,8 @@ class SeriesSpec(Spec):
         modelspan=(),
         period=12,
         precision=0,
-        to_print=[],
-        to_save=[],
+        to_print=(),
+        to_save=(),
         span=(),
         start=(1, 1),
         title="",
@@ -519,7 +519,7 @@ def x13_arima_analysis(
         try:
             with open(rawspec) as f:
                 rawspec_text = f.read()
-        except (OSError, FileNotFoundError):
+        except OSError:
             if "{" in rawspec:
                 rawspec_text = rawspec
             else:

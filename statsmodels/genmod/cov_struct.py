@@ -817,7 +817,6 @@ class Autoregressive(CovStruct):
                 "grid=True will become default in a future version",
                 FutureWarning,
                 stacklevel=2,
-                stacklevel=2,
             )
         self.grid = bool(grid)
         if not self.grid:

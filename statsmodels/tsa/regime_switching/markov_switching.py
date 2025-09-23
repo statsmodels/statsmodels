@@ -238,7 +238,7 @@ def cy_hamilton_filter_log(
 
     # S_t | t
     filtered_marginal_probabilities = filtered_joint_probabilities[..., 1:]
-    for i in range(1, filtered_marginal_probabilities.ndim - 1):
+    for _ in range(1, filtered_marginal_probabilities.ndim - 1):
         filtered_marginal_probabilities = np.sum(
             filtered_marginal_probabilities, axis=-2
         )
@@ -327,7 +327,7 @@ def cy_kim_smoother_log(
     # Get smoothed marginal probabilities S_t | T by integrating out
     # S_{t-k+1}, S_{t-k+2}, ..., S_{t-1}
     smoothed_marginal_probabilities = smoothed_joint_probabilities
-    for i in range(1, smoothed_marginal_probabilities.ndim - 1):
+    for _ in range(1, smoothed_marginal_probabilities.ndim - 1):
         smoothed_marginal_probabilities = np.sum(
             smoothed_marginal_probabilities, axis=-2
         )
@@ -779,7 +779,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
             # Compute weighted average
             predict = predict * probabilities
-            for i in range(predict.ndim - 1 - int(conditional)):
+            for _ in range(predict.ndim - 1 - int(conditional)):
                 predict = np.sum(predict, axis=-2)
         else:
             predict = squeezed
@@ -1413,7 +1413,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Marginalize the smoothed joint probabilities to just S_t, S_{t-1} | T
         tmp = result.smoothed_joint_probabilities
-        for i in range(tmp.ndim - 3):
+        for _ in range(tmp.ndim - 3):
             tmp = np.sum(tmp, -2)
         smoothed_joint_probabilities = tmp
 
@@ -1750,7 +1750,7 @@ class HamiltonFilterResults:
     def predicted_marginal_probabilities(self):
         if self._predicted_marginal_probabilities is None:
             self._predicted_marginal_probabilities = self.predicted_joint_probabilities
-            for i in range(self._predicted_marginal_probabilities.ndim - 2):
+            for _ in range(self._predicted_marginal_probabilities.ndim - 2):
                 self._predicted_marginal_probabilities = np.sum(
                     self._predicted_marginal_probabilities, axis=-2
                 )
@@ -2290,7 +2290,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                 summary.tables.append(table)
 
         mask = []
-        for key, _mask in other_masks.items():
+        for _key, _mask in other_masks.items():
             mask.extend(_mask)
         if len(mask) > 0:
             table = make_table(self, mask, "Non-switching parameters")

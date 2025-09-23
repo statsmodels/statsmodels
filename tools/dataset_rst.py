@@ -14,9 +14,7 @@ from string import Template
 import statsmodels.api as sm
 
 file_path = dirname(__file__)
-dest_dir = realpath(
-    join(file_path, "..", "docs", "source", "datasets", "generated")
-)
+dest_dir = realpath(join(file_path, "..", "docs", "source", "datasets", "generated"))
 
 datasets = dict(inspect.getmembers(sm.datasets, inspect.ismodule))
 datasets.pop("utils")
@@ -74,11 +72,11 @@ if __name__ == "__main__":
                 )
                 continue
         data_mod = datasets[dataset]
-        title = getattr(data_mod, "TITLE")
-        descr = getattr(data_mod, "DESCRLONG")
-        copyr = getattr(data_mod, "COPYRIGHT")
-        notes = getattr(data_mod, "NOTE")
-        source = getattr(data_mod, "SOURCE")
+        title = data_mod.TITLE
+        descr = data_mod.DESCRLONG
+        copyr = data_mod.COPYRIGHT
+        notes = data_mod.NOTE
+        source = data_mod.SOURCE
         write_file = doc_template.substitute(
             TITLE=title,
             title_="=" * len(title),
@@ -88,7 +86,5 @@ if __name__ == "__main__":
             COPYRIGHT=copyr,
         )
         print(f"Writing {rst_file_name}.")
-        with open(
-                os.path.realpath(write_pth), "w", encoding="utf-8"
-        ) as rst_file:
+        with open(os.path.realpath(write_pth), "w", encoding="utf-8") as rst_file:
             rst_file.write(write_file)

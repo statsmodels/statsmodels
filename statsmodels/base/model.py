@@ -645,6 +645,7 @@ class LikelihoodModel(Model):
                     "Maximum Likelihood optimization failed to "
                     "converge. Check mle_retvals",
                     ConvergenceWarning,
+                    stacklevel=2,
                 )
 
         mlefit.mle_settings = optim_settings

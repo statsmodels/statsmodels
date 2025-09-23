@@ -260,7 +260,7 @@ class TestMixedLM:
             ix = model1.row_indices[group]
             exog_vc["a"][group] = exog_re[ix, 0:1]
             exog_vc["b"][group] = exog_re[ix, 1:2]
-        with pytest.warns(UserWarning, match="Using deprecated variance"):
+        with pytest.warns(FutureWarning, match="Using deprecated variance"):
             model2 = MixedLM(endog, exog, groups, exog_vc=exog_vc)
         result2 = model2.fit()
         result2.summary()

@@ -45,6 +45,7 @@ from statsmodels.tools.decorators import (
 )
 from statsmodels.tools.docstring import Docstring
 from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
     DomainWarning,
     HessianInversionWarning,
     PerfectSeparationWarning,
@@ -1625,7 +1626,9 @@ class GLM(base.LikelihoodModel):
         self.scale = self.estimate_scale(self.mu)
 
         if not result.converged:
-            warnings.warn("Elastic net fitting did not converge")
+            warnings.warn(
+                "Elastic net fitting did not converge", ConvergenceWarning, stacklevel=2
+            )
 
         return result
 
@@ -1653,7 +1656,7 @@ class GLM(base.LikelihoodModel):
         if not mr.success:
             ngrad = np.sqrt(np.sum(mr.jac**2))
             msg = "GLM ridge optimization may have failed, |grad|=%f" % ngrad
-            warnings.warn(msg)
+            warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         results = RegularizedResults(self, params)
         results = RegularizedResultsWrapper(results)
@@ -1852,7 +1855,9 @@ class GLMResults(base.LikelihoodModelResults):
             from statsmodels.tools.sm_exceptions import SpecificationWarning
 
             warnings.warn(
-                "cov_type not fully supported with freq_weights", SpecificationWarning
+                "cov_type not fully supported with freq_weights",
+                SpecificationWarning,
+                stacklevel=2,
             )
 
         if self.model._has_var_weights and not ct:
@@ -1860,7 +1865,9 @@ class GLMResults(base.LikelihoodModelResults):
             from statsmodels.tools.sm_exceptions import SpecificationWarning
 
             warnings.warn(
-                "cov_type not fully supported with var_weights", SpecificationWarning
+                "cov_type not fully supported with var_weights",
+                SpecificationWarning,
+                stacklevel=2,
             )
 
         if cov_type == "nonrobust":
@@ -2157,6 +2164,7 @@ class GLMResults(base.LikelihoodModelResults):
                 "with True to get the LLF-based version now or False to retain"
                 "the deviance version.",
                 FutureWarning,
+                stacklevel=2,
             )
         if bool(_use_bic_helper.use_bic_llf):
             return self.bic_llf
@@ -2237,7 +2245,7 @@ class GLMResults(base.LikelihoodModelResults):
             if not isinstance(f, fl):
                 msg = "QAIC is only valid for Binomial, Poisson and "
                 msg += "Negative Binomial families."
-                warnings.warn(msg)
+                warnings.warn(msg, stacklevel=2)
             llf = self.llf_scaled(scale=1)
             return -2 * llf / scale + 2 * k_params
 
@@ -2401,11 +2409,15 @@ class GLMResults(base.LikelihoodModelResults):
 
         if self.model._has_freq_weights is True:
             warnings.warn(
-                "score test has not been verified with freq_weights", UserWarning
+                "score test has not been verified with freq_weights",
+                UserWarning,
+                stacklevel=2,
             )
         if self.model._has_var_weights is True:
             warnings.warn(
-                "score test has not been verified with var_weights", UserWarning
+                "score test has not been verified with var_weights",
+                UserWarning,
+                stacklevel=2,
             )
 
         # We need to temporarily change model.df_resid for scale computation
@@ -2539,7 +2551,7 @@ class GLMResults(base.LikelihoodModelResults):
             scale = 1.0
             if self.scale != 1.0:
                 msg = "using scale=1, no exess dispersion in distribution"
-                warnings.warn(msg, UserWarning)
+                warnings.warn(msg, UserWarning, stacklevel=2)
         else:
             scale = self.scale
 
@@ -2638,7 +2650,7 @@ class GLMResults(base.LikelihoodModelResults):
         if getattr(self.model, "offset", None) is not None:
             raise NotImplementedError("Margins with offset are not available.")
         if np.any(self.model.var_weights != 1) or np.any(self.model.freq_weights != 1):
-            warnings.warn("weights are not taken into account by margeff")
+            warnings.warn("weights are not taken into account by margeff", stacklevel=2)
         from statsmodels.discrete.discrete_margins import DiscreteMargins
 
         return DiscreteMargins(self, (at, method, atexog, dummy, count))

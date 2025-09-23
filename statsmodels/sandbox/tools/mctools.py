@@ -1,4 +1,4 @@
-'''Helper class for Monte Carlo Studies for (currently) statistical tests
+"""Helper class for Monte Carlo Studies for (currently) statistical tests
 
 Most of it should also be usable for Bootstrap, and for MC for estimators.
 Takes the sample generator, dgb, and the statistical results, statistic,
@@ -22,7 +22,8 @@ variables. Joint distribution is not used (yet).
 I guess this is currently only for one sided test statistics, e.g. for
 two-sided tests basend on t or normal distribution use the absolute value.
 
-'''
+"""
+
 from statsmodels.compat.python import lrange
 
 import numpy as np
@@ -30,7 +31,7 @@ import numpy as np
 from statsmodels.iolib.table import SimpleTable
 
 
-#copied from stattools
+# copied from stattools
 class StatTestMC:
     """class to run Monte Carlo study on a statistical test'''
 
@@ -100,11 +101,11 @@ class StatTestMC:
     """
 
     def __init__(self, dgp, statistic):
-        self.dgp = dgp #staticmethod(dgp)  #no self
-        self.statistic = statistic # staticmethod(statistic)  #no self
+        self.dgp = dgp  # staticmethod(dgp)  #no self
+        self.statistic = statistic  # staticmethod(statistic)  #no self
 
-    def run(self, nrepl, statindices=None, dgpargs=[], statsargs=[]):
-        '''run the actual Monte Carlo and save results
+    def run(self, nrepl, statindices=None, dgpargs=(), statsargs=()):
+        """run the actual Monte Carlo and save results
 
         Parameters
         ----------
@@ -125,43 +126,42 @@ class StatTestMC:
         None, all results are attached
 
 
-        '''
+        """
         self.nrepl = nrepl
         self.statindices = statindices
         self.dgpargs = dgpargs
         self.statsargs = statsargs
 
         dgp = self.dgp
-        statfun = self.statistic # name ?
-        #introspect len of return of statfun,
-        #possible problems with ndim>1, check ValueError
+        statfun = self.statistic  # name ?
+        # introspect len of return of statfun,
+        # possible problems with ndim>1, check ValueError
         mcres0 = statfun(dgp(*dgpargs), *statsargs)
         self.nreturn = nreturns = len(np.ravel(mcres0))
 
-        #single return statistic
+        # single return statistic
         if statindices is None:
-            #self.nreturn = nreturns = 1
+            # self.nreturn = nreturns = 1
             mcres = np.zeros(nrepl)
             mcres[0] = mcres0
-            for ii in range(1, nrepl-1, nreturns):
-                x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
-                #should I ravel?
+            for ii in range(1, nrepl - 1, nreturns):
+                x = dgp(*dgpargs)  # (1e-4+np.random.randn(nobs)).cumsum()
+                # should I ravel?
                 mcres[ii] = statfun(x, *statsargs)
-        #more than one return statistic
+        # more than one return statistic
         else:
             self.nreturn = nreturns = len(statindices)
             self.mcres = mcres = np.zeros((nrepl, nreturns))
             mcres[0] = [mcres0[i] for i in statindices]
-            for ii in range(1, nrepl-1):
-                x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
+            for ii in range(1, nrepl - 1):
+                x = dgp(*dgpargs)  # (1e-4+np.random.randn(nobs)).cumsum()
                 ret = statfun(x, *statsargs)
                 mcres[ii] = [ret[i] for i in statindices]
 
         self.mcres = mcres
 
-
     def histogram(self, idx=None, critval=None):
-        '''calculate histogram values
+        """calculate histogram values
 
         does not do any plotting
 
@@ -169,12 +169,12 @@ class StatTestMC:
         method, but this also does a binned pdf (self.histo)
 
 
-        '''
+        """
         if self.mcres.ndim == 2:
             if idx is not None:
-                mcres = self.mcres[:,idx]
+                mcres = self.mcres[:, idx]
             else:
-                raise ValueError('currently only 1 statistic at a time')
+                raise ValueError("currently only 1 statistic at a time")
         else:
             mcres = self.mcres
 
@@ -182,26 +182,24 @@ class StatTestMC:
             histo = np.histogram(mcres, bins=10)
         else:
             if not critval[0] == -np.inf:
-                bins=np.r_[-np.inf, critval, np.inf]
+                bins = np.r_[-np.inf, critval, np.inf]
             if not critval[0] == -np.inf:
-                bins=np.r_[bins, np.inf]
-            histo = np.histogram(mcres,
-                                 bins=np.r_[-np.inf, critval, np.inf])
+                bins = np.r_[bins, np.inf]
+            histo = np.histogram(mcres, bins=np.r_[-np.inf, critval, np.inf])
 
         self.histo = histo
-        self.cumhisto = np.cumsum(histo[0])*1./self.nrepl
-        self.cumhistoreversed = np.cumsum(histo[0][::-1])[::-1]*1./self.nrepl
+        self.cumhisto = np.cumsum(histo[0]) * 1.0 / self.nrepl
+        self.cumhistoreversed = np.cumsum(histo[0][::-1])[::-1] * 1.0 / self.nrepl
         return histo, self.cumhisto, self.cumhistoreversed
 
-    #use cache decorator instead
+    # use cache decorator instead
     def get_mc_sorted(self):
-        if not hasattr(self, 'mcressort'):
+        if not hasattr(self, "mcressort"):
             self.mcressort = np.sort(self.mcres, axis=0)
         return self.mcressort
 
-
-    def quantiles(self, idx=None, frac=[0.01, 0.025, 0.05, 0.1, 0.975]):
-        '''calculate quantiles of Monte Carlo results
+    def quantiles(self, idx=None, frac=(0.01, 0.025, 0.05, 0.1, 0.975)):
+        """calculate quantiles of Monte Carlo results
 
         similar to ppf
 
@@ -228,23 +226,23 @@ class StatTestMC:
         change sequence idx, frac
 
 
-        '''
+        """
 
         if self.mcres.ndim == 2:
             if idx is not None:
-                self.mcres[:,idx]
+                self.mcres[:, idx]
             else:
-                raise ValueError('currently only 1 statistic at a time')
+                raise ValueError("currently only 1 statistic at a time")
         else:
             pass
 
         self.frac = frac = np.asarray(frac)
 
-        mc_sorted = self.get_mc_sorted()[:,idx]
-        return frac, mc_sorted[(self.nrepl*frac).astype(int)]
+        mc_sorted = self.get_mc_sorted()[:, idx]
+        return frac, mc_sorted[(self.nrepl * frac).astype(int)]
 
     def cdf(self, x, idx=None):
-        '''calculate cumulative probabilities of Monte Carlo results
+        """calculate cumulative probabilities of Monte Carlo results
 
         Parameters
         ----------
@@ -264,37 +262,37 @@ class StatTestMC:
 
 
 
-        '''
-        idx = np.atleast_1d(idx).tolist()  #assure iterable, use list ?
+        """
+        idx = np.atleast_1d(idx).tolist()  # assure iterable, use list ?
 
-#        if self.mcres.ndim == 2:
-#            if not idx is None:
-#                mcres = self.mcres[:,idx]
-#            else:
-#                raise ValueError('currently only 1 statistic at a time')
-#        else:
-#            mcres = self.mcres
+        #        if self.mcres.ndim == 2:
+        #            if not idx is None:
+        #                mcres = self.mcres[:,idx]
+        #            else:
+        #                raise ValueError('currently only 1 statistic at a time')
+        #        else:
+        #            mcres = self.mcres
 
         mc_sorted = self.get_mc_sorted()
 
         x = np.asarray(x)
-        #TODO:autodetect or explicit option ?
-        if x.ndim > 1 and x.shape[1]==len(idx):
+        # TODO:autodetect or explicit option ?
+        if x.ndim > 1 and x.shape[1] == len(idx):
             use_xi = True
         else:
             use_xi = False
 
-        x_ = x  #alias
+        x_ = x  # alias
         probs = []
-        for i,ix in enumerate(idx):
+        for i, ix in enumerate(idx):
             if use_xi:
-                x_ = x[:,i]
-            probs.append(np.searchsorted(mc_sorted[:,ix], x_)/float(self.nrepl))
+                x_ = x[:, i]
+            probs.append(np.searchsorted(mc_sorted[:, ix], x_) / float(self.nrepl))
         probs = np.asarray(probs).T
         return x, probs
 
     def plot_hist(self, idx, distpdf=None, bins=50, ax=None, kwds=None):
-        '''plot the histogram against a reference distribution
+        """plot the histogram against a reference distribution
 
         Parameters
         ----------
@@ -316,34 +314,38 @@ class StatTestMC:
         None
 
 
-        '''
+        """
         if kwds is None:
-            kwds = ({},{})
+            kwds = ({}, {})
         if self.mcres.ndim == 2:
             if idx is not None:
-                mcres = self.mcres[:,idx]
+                mcres = self.mcres[:, idx]
             else:
-                raise ValueError('currently only 1 statistic at a time')
+                raise ValueError("currently only 1 statistic at a time")
         else:
             mcres = self.mcres
 
         lsp = np.linspace(mcres.min(), mcres.max(), 100)
 
-
         import matplotlib.pyplot as plt
 
-        #I do not want to figure this out now
-#        if ax=None:
-#            fig = plt.figure()
-#            ax = fig.addaxis()
+        # I do not want to figure this out now
+        #        if ax=None:
+        #            fig = plt.figure()
+        #            ax = fig.addaxis()
         plt.figure()
         plt.hist(mcres, bins=bins, normed=True, **kwds[0])
-        plt.plot(lsp, distpdf(lsp), 'r', **kwds[1])
+        plt.plot(lsp, distpdf(lsp), "r", **kwds[1])
 
-
-    def summary_quantiles(self, idx, distppf, frac=[0.01, 0.025, 0.05, 0.1, 0.975],
-                          varnames=None, title=None):
-        '''summary table for quantiles (critical values)
+    def summary_quantiles(
+        self,
+        idx,
+        distppf,
+        frac=(0.01, 0.025, 0.05, 0.1, 0.975),
+        varnames=None,
+        title=None,
+    ):
+        """summary table for quantiles (critical values)
 
         Parameters
         ----------
@@ -363,34 +365,36 @@ class StatTestMC:
         table : instance of SimpleTable
             use `print(table` to see results
 
-        '''
-        idx = np.atleast_1d(idx)  #assure iterable, use list ?
+        """
+        idx = np.atleast_1d(idx)  # assure iterable, use list ?
 
         quant, mcq = self.quantiles(idx, frac=frac)
-        #not sure whether this will work with single quantile
-        #crit = stats.chi2([2,4]).ppf(np.atleast_2d(quant).T)
+        # not sure whether this will work with single quantile
+        # crit = stats.chi2([2,4]).ppf(np.atleast_2d(quant).T)
         crit = distppf(np.atleast_2d(quant).T)
-        mml=[]
-        for i, ix in enumerate(idx):  #TODO: hardcoded 2 ?
-            mml.extend([mcq[:,i], crit[:,i]])
-        #mmlar = np.column_stack(mml)
+        mml = []
+        for i, ix in enumerate(idx):  # TODO: hardcoded 2 ?
+            mml.extend([mcq[:, i], crit[:, i]])
+        # mmlar = np.column_stack(mml)
         mmlar = np.column_stack([quant] + mml)
-        #print(mmlar.shape
+        # print(mmlar.shape
         if title:
-            title = title +' Quantiles (critical values)'
+            title = title + " Quantiles (critical values)"
         else:
-            title='Quantiles (critical values)'
-        #TODO use stub instead
+            title = "Quantiles (critical values)"
+        # TODO use stub instead
         if varnames is None:
-            varnames = ['var%d' % i for i in range(mmlar.shape[1]//2)]
-        headers = ['\nprob'] + [f'{i}\n{t}' for i in varnames for t in ['mc', 'dist']]
-        return SimpleTable(mmlar,
-                          txt_fmt={'data_fmts': ["%#6.3f"]+["%#10.4f"]*(mmlar.shape[1]-1)},
-                          title=title,
-                          headers=headers)
+            varnames = ["var%d" % i for i in range(mmlar.shape[1] // 2)]
+        headers = ["\nprob"] + [f"{i}\n{t}" for i in varnames for t in ["mc", "dist"]]
+        return SimpleTable(
+            mmlar,
+            txt_fmt={"data_fmts": ["%#6.3f"] + ["%#10.4f"] * (mmlar.shape[1] - 1)},
+            title=title,
+            headers=headers,
+        )
 
     def summary_cdf(self, idx, frac, crit, varnames=None, title=None):
-        '''summary table for cumulative density function
+        """summary table for cumulative density function
 
 
         Parameters
@@ -411,76 +415,71 @@ class StatTestMC:
             use `print(table` to see results
 
 
-        '''
-        idx = np.atleast_1d(idx)  #assure iterable, use list ?
+        """
+        idx = np.atleast_1d(idx)  # assure iterable, use list ?
 
-
-        mml=[]
-        #TODO:need broadcasting in cdf
+        mml = []
+        # TODO:need broadcasting in cdf
         for i in range(len(idx)):
-            #print(i, mc1.cdf(crit[:,i], [idx[i]])[1].ravel()
-            mml.append(self.cdf(crit[:,i], [idx[i]])[1].ravel())
-        #mml = self.cdf(crit, idx)[1]
-        #mmlar = np.column_stack(mml)
-        #print(mml[0].shape, np.shape(frac)
+            # print(i, mc1.cdf(crit[:,i], [idx[i]])[1].ravel()
+            mml.append(self.cdf(crit[:, i], [idx[i]])[1].ravel())
+        # mml = self.cdf(crit, idx)[1]
+        # mmlar = np.column_stack(mml)
+        # print(mml[0].shape, np.shape(frac)
         mmlar = np.column_stack([frac] + mml)
-        #print(mmlar.shape
+        # print(mmlar.shape
         if title:
-            title = title +' Probabilites'
+            title = title + " Probabilites"
         else:
-            title='Probabilities'
-        #TODO use stub instead
-        #headers = ['\nprob'] + ['var%d\n%s' % (i, t) for i in range(mmlar.shape[1]-1) for t in ['mc']]
+            title = "Probabilities"
+        # TODO use stub instead
+        # headers = ['\nprob'] + ['var%d\n%s' % (i, t) for i in range(mmlar.shape[1]-1) for t in ['mc']]
 
         if varnames is None:
-            varnames = ['var%d' % i for i in range(mmlar.shape[1]-1)]
-        headers = ['prob'] + varnames
-        return SimpleTable(mmlar,
-                          txt_fmt={'data_fmts': ["%#6.3f"]+["%#10.4f"]*(np.array(mml).shape[1]-1)},
-                          title=title,
-                          headers=headers)
+            varnames = ["var%d" % i for i in range(mmlar.shape[1] - 1)]
+        headers = ["prob"] + varnames
+        return SimpleTable(
+            mmlar,
+            txt_fmt={
+                "data_fmts": ["%#6.3f"] + ["%#10.4f"] * (np.array(mml).shape[1] - 1)
+            },
+            title=title,
+            headers=headers,
+        )
 
 
-
-
-
-
-
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     from scipy import stats
 
     from statsmodels.stats.diagnostic import acorr_ljungbox
 
-
     def randwalksim(nobs=100, drift=0.0):
-        return (drift+np.random.randn(nobs)).cumsum()
+        return (drift + np.random.randn(nobs)).cumsum()
 
     def normalnoisesim(nobs=500, loc=0.0):
-        return (loc+np.random.randn(nobs))
+        return loc + np.random.randn(nobs)
 
-#    print('\nResults with MC class'
-#    mc1 = StatTestMC(randwalksim, adf20)
-#    mc1.run(1000)
-#    print(mc1.histogram(critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
-#    print(mc1.quantiles()
+    #    print('\nResults with MC class'
+    #    mc1 = StatTestMC(randwalksim, adf20)
+    #    mc1.run(1000)
+    #    print(mc1.histogram(critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
+    #    print(mc1.quantiles()
 
-    print('\nLjung Box')
+    print("\nLjung Box")
 
     def lb4(x):
-        s,p = acorr_ljungbox(x, lags=4, return_df=True)
+        s, p = acorr_ljungbox(x, lags=4, return_df=True)
         return s[-1], p[-1]
 
     def lb1(x):
-        s,p = acorr_ljungbox(x, lags=1, return_df=True)
+        s, p = acorr_ljungbox(x, lags=1, return_df=True)
         return s[0], p[0]
 
     def lb(x):
-        s,p = acorr_ljungbox(x, lags=4, return_df=True)
+        s, p = acorr_ljungbox(x, lags=4, return_df=True)
         return np.r_[s, p]
 
-    print('Results with MC class')
+    print("Results with MC class")
     mc1 = StatTestMC(normalnoisesim, lb)
     mc1.run(10000, statindices=lrange(8))
     print(mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975]))
@@ -488,36 +487,48 @@ if __name__ == '__main__':
     print(mc1.quantiles(0))
     print(mc1.histogram(0))
 
-    #print(mc1.summary_quantiles([1], stats.chi2([2]).ppf, title='acorr_ljungbox')
-    print(mc1.summary_quantiles([1,2,3], stats.chi2([2,3,4]).ppf,
-                                varnames=['lag 1', 'lag 2', 'lag 3'],
-                                title='acorr_ljungbox'))
+    # print(mc1.summary_quantiles([1], stats.chi2([2]).ppf, title='acorr_ljungbox')
+    print(
+        mc1.summary_quantiles(
+            [1, 2, 3],
+            stats.chi2([2, 3, 4]).ppf,
+            varnames=["lag 1", "lag 2", "lag 3"],
+            title="acorr_ljungbox",
+        )
+    )
     print(mc1.cdf(0.1026, 1))
     print(mc1.cdf(0.7278, 3))
 
-    print(mc1.cdf(0.7278, [1,2,3]))
+    print(mc1.cdf(0.7278, [1, 2, 3]))
     frac = [0.01, 0.025, 0.05, 0.1, 0.975]
-    crit = stats.chi2([2,4]).ppf(np.atleast_2d(frac).T)
-    print(mc1.summary_cdf([1,3], frac, crit, title='acorr_ljungbox'))
-    crit = stats.chi2([2,3,4]).ppf(np.atleast_2d(frac).T)
-    print(mc1.summary_cdf([1,2,3], frac, crit,
-                          varnames=['lag 1', 'lag 2', 'lag 3'],
-                          title='acorr_ljungbox'))
+    crit = stats.chi2([2, 4]).ppf(np.atleast_2d(frac).T)
+    print(mc1.summary_cdf([1, 3], frac, crit, title="acorr_ljungbox"))
+    crit = stats.chi2([2, 3, 4]).ppf(np.atleast_2d(frac).T)
+    print(
+        mc1.summary_cdf(
+            [1, 2, 3],
+            frac,
+            crit,
+            varnames=["lag 1", "lag 2", "lag 3"],
+            title="acorr_ljungbox",
+        )
+    )
 
-    print(mc1.cdf(crit, [1,2,3])[1].shape)
+    print(mc1.cdf(crit, [1, 2, 3])[1].shape)
 
-    #fixed broadcasting in cdf  Done 2d only
-    '''
+    # fixed broadcasting in cdf  Done 2d only
+    """
     >>> mc1.cdf(crit[:,0], [1])[1].shape
     (5, 1)
     >>> mc1.cdf(crit[:,0], [1,3])[1].shape
     (5, 2)
     >>> mc1.cdf(crit[:,:], [1,3])[1].shape
     (2, 5, 2)
-    '''
+    """
 
-    doplot=0
+    doplot = 0
     if doplot:
         import matplotlib.pyplot as plt
-        mc1.plot_hist(0,stats.chi2(2).pdf)  #which pdf
+
+        mc1.plot_hist(0, stats.chi2(2).pdf)  # which pdf
         plt.show()

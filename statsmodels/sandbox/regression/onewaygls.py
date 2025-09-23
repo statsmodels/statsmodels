@@ -50,6 +50,7 @@ after looking at Greene:
 Created on Sat Mar 27 01:48:01 2010
 Author: josef-pktd
 """
+
 import numpy as np
 from scipy import stats
 
@@ -57,7 +58,7 @@ from statsmodels.regression.linear_model import OLS, WLS
 
 
 class OneWayLS:
-    '''Class to test equality of regression coefficients across groups
+    """Class to test equality of regression coefficients across groups
 
     This class performs tests whether the linear regression coefficients are
     the same across pre-specified groups. This can be used to test for
@@ -103,22 +104,23 @@ class OneWayLS:
            make sure groupnames are always consistently sorted/ordered
            Fixed for getting the results, but groups are not printed yet, still
            inconsistent use for summaries of results.
-    '''
+    """
+
     def __init__(self, y, x, groups=None, het=False, data=None, meta=None):
         if groups is None:
-            raise ValueError('use OLS if there are no groups')
-            #maybe replace by dispatch to OLS
+            raise ValueError("use OLS if there are no groups")
+            # maybe replace by dispatch to OLS
         if data:
             y = data[y]
             x = [data[v] for v in x]
             try:
                 groups = data[groups]
-            except [KeyError, ValueError]:
+            except (KeyError, ValueError):
                 pass
         self.endog = np.asarray(y)
         self.exog = np.asarray(x)
         if self.exog.ndim == 1:
-            self.exog = self.exog[:,None]
+            self.exog = self.exog[:, None]
         self.groups = np.asarray(groups)
         self.het = het
 
@@ -128,12 +130,12 @@ class OneWayLS:
             if (self.unique == np.arange(len(self.unique))).all():
                 self.groupsint = self.groups
 
-        if self.groupsint is None: # groups are not consecutive integers
+        if self.groupsint is None:  # groups are not consecutive integers
             self.unique, self.groupsint = np.unique(self.groups, return_inverse=True)
-        self.uniqueint = np.arange(len(self.unique)) #as shortcut
+        self.uniqueint = np.arange(len(self.unique))  # as shortcut
 
     def fitbygroups(self):
-        '''Fit OLS regression for each group separately.
+        """Fit OLS regression for each group separately.
 
         Returns
         -------
@@ -149,20 +151,20 @@ class OneWayLS:
 
 
 
-        '''
+        """
         olsbygroup = {}
         sigmabygroup = []
-        for gi, group in enumerate(self.unique): #np.arange(len(self.unique))):
-            groupmask = self.groupsint == gi   #group index
+        for gi, group in enumerate(self.unique):  # np.arange(len(self.unique))):
+            groupmask = self.groupsint == gi  # group index
             res = OLS(self.endog[groupmask], self.exog[groupmask]).fit()
             olsbygroup[group] = res
             sigmabygroup.append(res.mse_resid)
         self.olsbygroup = olsbygroup
         self.sigmabygroup = np.array(sigmabygroup)
-        self.weights = np.sqrt(self.sigmabygroup[self.groupsint]) #TODO:chk sqrt
+        self.weights = np.sqrt(self.sigmabygroup[self.groupsint])  # TODO:chk sqrt
 
     def fitjoint(self):
-        '''fit a joint fixed effects model to all observations
+        """fit a joint fixed effects model to all observations
 
         The regression results are attached as `lsjoint`.
 
@@ -179,17 +181,19 @@ class OneWayLS:
 
 
 
-        '''
-        if not hasattr(self, 'weights'):
+        """
+        if not hasattr(self, "weights"):
             self.fitbygroups()
-        groupdummy = (self.groupsint[:,None] == self.uniqueint).astype(int)
-        #order of dummy variables by variable - not used
-        #dummyexog = self.exog[:,:,None]*groupdummy[:,None,1:]
-        #order of dummy variables by grous - used
-        dummyexog = self.exog[:,None,:]*groupdummy[:,1:,None]
-        exog = np.c_[self.exog, dummyexog.reshape(self.exog.shape[0],-1)] #self.nobs ??
-        #Notes: I changed to drop first group from dummy
-        #instead I want one full set dummies
+        groupdummy = (self.groupsint[:, None] == self.uniqueint).astype(int)
+        # order of dummy variables by variable - not used
+        # dummyexog = self.exog[:,:,None]*groupdummy[:,None,1:]
+        # order of dummy variables by grous - used
+        dummyexog = self.exog[:, None, :] * groupdummy[:, 1:, None]
+        exog = np.c_[
+            self.exog, dummyexog.reshape(self.exog.shape[0], -1)
+        ]  # self.nobs ??
+        # Notes: I changed to drop first group from dummy
+        # instead I want one full set dummies
         if self.het:
             weights = self.weights
             res = WLS(self.endog, exog, weights=weights).fit()
@@ -200,36 +204,36 @@ class OneWayLS:
         nvars = self.exog.shape[1]
         nparams = exog.shape[1]
         ndummies = nparams - nvars
-        contrasts['all'] = np.c_[np.zeros((ndummies, nvars)), np.eye(ndummies)]
-        for groupind, group in enumerate(self.unique[1:]):  #need enumerate if groups != groupsint
+        contrasts["all"] = np.c_[np.zeros((ndummies, nvars)), np.eye(ndummies)]
+        for groupind, group in enumerate(
+            self.unique[1:]
+        ):  # need enumerate if groups != groupsint
             groupind = groupind + 1
             contr = np.zeros((nvars, nparams))
-            contr[:,nvars*groupind:nvars*(groupind+1)] = np.eye(nvars)
+            contr[:, nvars * groupind : nvars * (groupind + 1)] = np.eye(nvars)
             contrasts[group] = contr
-            #save also for pairs, see next
+            # save also for pairs, see next
             contrasts[(self.unique[0], group)] = contr
 
-        #Note: I'm keeping some duplication for testing
-        pairs = np.triu_indices(len(self.unique),1)
-        for ind1,ind2 in zip(*pairs):  #replace with group1, group2 in sorted(keys)
+        # Note: I'm keeping some duplication for testing
+        pairs = np.triu_indices(len(self.unique), 1)
+        for ind1, ind2 in zip(*pairs):  # replace with group1, group2 in sorted(keys)
             if ind1 == 0:
-                continue # need comparison with benchmark/normalization group separate
+                continue  # need comparison with benchmark/normalization group separate
             g1 = self.unique[ind1]
             g2 = self.unique[ind2]
             group = (g1, g2)
             contr = np.zeros((nvars, nparams))
-            contr[:,nvars*ind1:nvars*(ind1+1)] = np.eye(nvars)
-            contr[:,nvars*ind2:nvars*(ind2+1)] = -np.eye(nvars)
+            contr[:, nvars * ind1 : nvars * (ind1 + 1)] = np.eye(nvars)
+            contr[:, nvars * ind2 : nvars * (ind2 + 1)] = -np.eye(nvars)
             contrasts[group] = contr
-
 
         self.contrasts = contrasts
 
     def fitpooled(self):
-        '''fit the pooled model, which assumes there are no differences across groups
-        '''
+        """fit the pooled model, which assumes there are no differences across groups"""
         if self.het:
-            if not hasattr(self, 'weights'):
+            if not hasattr(self, "weights"):
                 self.fitbygroups()
             weights = self.weights
             res = WLS(self.endog, self.exog, weights=weights).fit()
@@ -238,7 +242,7 @@ class OneWayLS:
         self.lspooled = res
 
     def ftest_summary(self):
-        '''run all ftests on the joint model
+        """run all ftests on the joint model
 
         Returns
         -------
@@ -251,51 +255,53 @@ class OneWayLS:
         ----
         This are the raw results and not formatted for nice printing.
 
-        '''
-        if not hasattr(self, 'lsjoint'):
+        """
+        if not hasattr(self, "lsjoint"):
             self.fitjoint()
         txt = []
         summarytable = []
 
-        txt.append('F-test for equality of coefficients across groups')
-        fres = self.lsjoint.f_test(self.contrasts['all'])
+        txt.append("F-test for equality of coefficients across groups")
+        fres = self.lsjoint.f_test(self.contrasts["all"])
         txt.append(fres.__str__())
-        summarytable.append(('all',(fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num)))
+        summarytable.append(
+            ("all", (fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num))
+        )
 
-#        for group in self.unique[1:]:  #replace with group1, group2 in sorted(keys)
-#            txt.append('F-test for equality of coefficients between group'
-#                       ' %s and group %s' % (group, '0'))
-#            fres = self.lsjoint.f_test(self.contrasts[group])
-#            txt.append(fres.__str__())
-#            summarytable.append((group,(fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num)))
-        pairs = np.triu_indices(len(self.unique),1)
-        for ind1,ind2 in zip(*pairs):  #replace with group1, group2 in sorted(keys)
+        #        for group in self.unique[1:]:  #replace with group1, group2 in sorted(keys)
+        #            txt.append('F-test for equality of coefficients between group'
+        #                       ' %s and group %s' % (group, '0'))
+        #            fres = self.lsjoint.f_test(self.contrasts[group])
+        #            txt.append(fres.__str__())
+        #            summarytable.append((group,(fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num)))
+        pairs = np.triu_indices(len(self.unique), 1)
+        for ind1, ind2 in zip(*pairs):  # replace with group1, group2 in sorted(keys)
             g1 = self.unique[ind1]
             g2 = self.unique[ind2]
-            txt.append('F-test for equality of coefficients between group'
-                       ' %s and group %s' % (g1, g2))
+            txt.append(
+                "F-test for equality of coefficients between group"
+                " %s and group %s" % (g1, g2)
+            )
             group = (g1, g2)
             fres = self.lsjoint.f_test(self.contrasts[group])
             txt.append(fres.__str__())
-            summarytable.append((group,(fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num)))
+            summarytable.append(
+                (group, (fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num))
+            )
 
         self.summarytable = summarytable
-        return '\n'.join(txt), summarytable
-
+        return "\n".join(txt), summarytable
 
     def print_summary(self, res):
-        '''printable string of summary
-
-        '''
+        """printable string of summary"""
         groupind = res.groups
-        #res.fitjoint()  #not really necessary, because called by ftest_summary
-        if hasattr(res, 'self.summarytable'):
+        # res.fitjoint()  #not really necessary, because called by ftest_summary
+        if hasattr(res, "self.summarytable"):
             summtable = self.summarytable
         else:
             _, summtable = res.ftest_summary()
-        #print ft[0]  #skip because table is nicer
-        templ = \
-'''Table of F-tests for overall or pairwise equality of coefficients'
+        # print ft[0]  #skip because table is nicer
+        templ = """Table of F-tests for overall or pairwise equality of coefficients'
 %(tab)s
 
 
@@ -329,33 +335,48 @@ variance and standard deviation for individual regressions'
 %(grh)s
 variance    ', res.sigmabygroup
 standard dev', np.sqrt(res.sigmabygroup)
-'''
+"""
 
         from statsmodels.iolib import SimpleTable
-        resvals = {}
-        resvals['tab'] = str(SimpleTable([([f'{row[0]!r}']
-                            + list(row[1])
-                            + ['*']*(row[1][1]>0.5).item() ) for row in summtable],
-                          headers=['pair', 'F-statistic','p-value','df_denom',
-                                   'df_num']))
-        resvals['statsfow'] = str(stats.f_oneway(*[res.endog[groupind==gr] for gr in
-                                                   res.unique]))
-        #resvals['lrtest'] = str(res.lr_test())
-        resvals['lrtest'] = str(SimpleTable([res.lr_test()],
-                                    headers=['likelihood ratio', 'p-value', 'df'] ))
 
-        resvals['olsbg'] = str(SimpleTable([[group]
-                                            + res.olsbygroup[group].params.tolist()
-                                            for group in sorted(res.olsbygroup)]))
-        resvals['grh'] = str(SimpleTable(np.vstack([res.sigmabygroup,
-                                               np.sqrt(res.sigmabygroup)]),
-                                     headers=res.unique.tolist()))
+        resvals = {}
+        resvals["tab"] = str(
+            SimpleTable(
+                [
+                    ([f"{row[0]!r}"] + list(row[1]) + ["*"] * (row[1][1] > 0.5).item())
+                    for row in summtable
+                ],
+                headers=["pair", "F-statistic", "p-value", "df_denom", "df_num"],
+            )
+        )
+        resvals["statsfow"] = str(
+            stats.f_oneway(*[res.endog[groupind == gr] for gr in res.unique])
+        )
+        # resvals['lrtest'] = str(res.lr_test())
+        resvals["lrtest"] = str(
+            SimpleTable([res.lr_test()], headers=["likelihood ratio", "p-value", "df"])
+        )
+
+        resvals["olsbg"] = str(
+            SimpleTable(
+                [
+                    [group] + res.olsbygroup[group].params.tolist()
+                    for group in sorted(res.olsbygroup)
+                ]
+            )
+        )
+        resvals["grh"] = str(
+            SimpleTable(
+                np.vstack([res.sigmabygroup, np.sqrt(res.sigmabygroup)]),
+                headers=res.unique.tolist(),
+            )
+        )
 
         return templ % resvals
 
     # a variation of this has been added to RegressionResults as compare_lr
     def lr_test(self):
-        r'''
+        r"""
         generic likelihood ratio test between nested models
 
             \begin{align}
@@ -367,14 +388,14 @@ standard dev', np.sqrt(res.sigmabygroup)
         difference in residual degrees of freedom  (sign?)
 
         TODO: put into separate function
-        '''
-        if not hasattr(self, 'lsjoint'):
+        """
+        if not hasattr(self, "lsjoint"):
             self.fitjoint()
-        if not hasattr(self, 'lspooled'):
+        if not hasattr(self, "lspooled"):
             self.fitpooled()
         loglikejoint = self.lsjoint.llf
         loglikepooled = self.lspooled.llf
-        lrstat = -2*(loglikepooled - loglikejoint)   #??? check sign
+        lrstat = -2 * (loglikepooled - loglikejoint)  # ??? check sign
         lrdf = self.lspooled.df_resid - self.lsjoint.df_resid
         lrpval = stats.chi2.sf(lrstat, lrdf)
 

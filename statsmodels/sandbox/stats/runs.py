@@ -1,4 +1,4 @@
-'''runstest
+"""runstest
 
 formulas for mean and var of runs taken from SAS manual NPAR tests, also idea
 for runstest_1samp and runstest_2samp
@@ -17,16 +17,19 @@ run is also started after a run of a fixed length of the same kind.
 TODO
 * add one-sided tests where possible or where it makes sense
 
-'''
+"""
+
+import warnings
 
 import numpy as np
 from scipy import stats
 from scipy.special import comb
-import warnings
+
 from statsmodels.tools.validation import array_like
 
+
 class Runs:
-    '''class for runs in a binary sequence
+    """class for runs in a binary sequence
 
 
     Parameters
@@ -51,7 +54,7 @@ class Runs:
     The exact distribution for the runs test is also available but not yet
     verified.
 
-    '''
+    """
 
     def __init__(self, x):
         self.x = np.asarray(x)
@@ -59,14 +62,14 @@ class Runs:
         self.runstart = runstart = np.nonzero(np.diff(np.r_[[-np.inf], x, [np.inf]]))[0]
         self.runs = runs = np.diff(runstart)
         self.runs_sign = runs_sign = x[runstart[:-1]]
-        self.runs_pos = runs[runs_sign==1]
-        self.runs_neg = runs[runs_sign==0]
+        self.runs_pos = runs[runs_sign == 1]
+        self.runs_neg = runs[runs_sign == 0]
         self.runs_freqs = np.bincount(runs)
         self.n_runs = len(self.runs)
-        self.n_pos = (x==1).sum()
+        self.n_pos = (x == 1).sum()
 
     def runs_test(self, correction=True):
-        '''basic version of runs test
+        """basic version of runs test
 
         Parameters
         ----------
@@ -79,19 +82,19 @@ class Runs:
         pvalue based on normal distribution, with integer correction
         if a single run is detected, pvalue is based on the Binomial distribition
 
-        '''
+        """
         self.npo = npo = (self.runs_pos).sum()
         self.nne = nne = (self.runs_neg).sum()
 
         n_r = self.n_runs
         n = npo + nne
         if n_r == 1:
-            pval = 1 / (2.0 ** (min(n,1024) - 1))
+            pval = 1 / (2.0 ** (min(n, 1024) - 1))
             z = -stats.norm.isf(pval)
-            return z, pval*2
+            return z, pval * 2
         npn = npo * nne
-        rmean = 2. * npn / n + 1
-        rvar = 2. * npn * (2.*npn - n) / n**2. / (n-1.)
+        rmean = 2.0 * npn / n + 1
+        rvar = 2.0 * npn * (2.0 * npn - n) / n**2.0 / (n - 1.0)
         rstd = np.sqrt(rvar)
         rdemean = n_r - rmean
         if n >= 50 or not correction:
@@ -102,14 +105,15 @@ class Runs:
             elif rdemean < 0.5:
                 z = rdemean + 0.5
             else:
-                z = 0.
+                z = 0.0
 
         z /= rstd
         pval = 2 * stats.norm.sf(np.abs(z))
         return z, pval
 
-def runstest_1samp(x, cutoff='mean', correction=True):
-    '''use runs test on binary discretized data above/below cutoff
+
+def runstest_1samp(x, cutoff="mean", correction=True):
+    """use runs test on binary discretized data above/below cutoff
 
     Parameters
     ----------
@@ -132,20 +136,21 @@ def runstest_1samp(x, cutoff='mean', correction=True):
         p-value, reject the null hypothesis if it is below an type 1 error
         level, alpha .
 
-    '''
+    """
 
     x = array_like(x, "x")
-    if cutoff == 'mean':
+    if cutoff == "mean":
         cutoff = np.mean(x)
-    elif cutoff == 'median':
+    elif cutoff == "median":
         cutoff = np.median(x)
     else:
         cutoff = float(cutoff)
     xindicator = (x >= cutoff).astype(int)
     return Runs(xindicator).runs_test(correction=correction)
 
+
 def runstest_2samp(x, y=None, groups=None, correction=True):
-    '''Wald-Wolfowitz runstest for two samples
+    """Wald-Wolfowitz runstest for two samples
 
     This tests whether two samples come from the same distribution.
 
@@ -210,7 +215,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     Runs
     RunsProb
 
-    '''
+    """
     x = np.asarray(x)
     if y is not None:
         y = np.asarray(y)
@@ -221,33 +226,33 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     elif groups is not None:
         gruni = np.unique(groups)
         if gruni.size != 2:  # pylint: disable=E1103
-            raise ValueError('not exactly two groups specified')
-        #require groups to be numeric ???
+            raise ValueError("not exactly two groups specified")
+        # require groups to be numeric ???
     else:
-        raise ValueError('either y or groups is necessary')
+        raise ValueError("either y or groups is necessary")
 
     xargsort = np.argsort(x)
-    #check for ties
+    # check for ties
     x_sorted = x[xargsort]
     x_diff = np.diff(x_sorted)  # used for detecting and handling ties
     if x_diff.min() == 0:
-        print('ties detected')   #replace with warning
+        print("ties detected")  # replace with warning
         x_mindiff = x_diff[x_diff > 0].min()
-        eps = x_mindiff/2.
-        xx = x.copy()  #do not change original, just in case
+        eps = x_mindiff / 2.0
+        xx = x.copy()  # do not change original, just in case
 
-        xx[groups==gruni[0]] += eps
+        xx[groups == gruni[0]] += eps
         xargsort = np.argsort(xx)
         xindicator = groups[xargsort]
         z0, p0 = Runs(xindicator).runs_test(correction=correction)
 
-        xx[groups==gruni[0]] -= eps   #restore xx = x
-        xx[groups==gruni[1]] += eps
+        xx[groups == gruni[0]] -= eps  # restore xx = x
+        xx[groups == gruni[1]] += eps
         xargsort = np.argsort(xx)
         xindicator = groups[xargsort]
         z1, p1 = Runs(xindicator).runs_test(correction=correction)
 
-        idx = np.argmax([p0,p1])
+        idx = np.argmax([p0, p1])
         return [z0, z1][idx], [p0, p1][idx]
 
     else:
@@ -256,7 +261,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
 
 
 class TotalRunsProb:
-    '''class for the probability distribution of total runs
+    """class for the probability distribution of total runs
 
     This is the exact probability distribution for the (Wald-Wolfowitz)
     runs test. The random variable is the total number of runs if the
@@ -278,7 +283,7 @@ class TotalRunsProb:
 
 
 
-    '''
+    """
 
     def __init__(self, n0, n1):
         self.n0 = n0
@@ -288,18 +293,18 @@ class TotalRunsProb:
 
     def runs_prob_even(self, r):
         n0, n1 = self.n0, self.n1
-        tmp0 = comb(n0-1, r//2-1)
-        tmp1 = comb(n1-1, r//2-1)
-        return tmp0 * tmp1 * 2. / self.comball
+        tmp0 = comb(n0 - 1, r // 2 - 1)
+        tmp1 = comb(n1 - 1, r // 2 - 1)
+        return tmp0 * tmp1 * 2.0 / self.comball
 
     def runs_prob_odd(self, r):
         n0, n1 = self.n0, self.n1
-        k = (r+1)//2
-        tmp0 = comb(n0-1, k-1)
-        tmp1 = comb(n1-1, k-2)
-        tmp3 = comb(n0-1, k-2)
-        tmp4 = comb(n1-1, k-1)
-        return (tmp0 * tmp1 + tmp3 * tmp4)  / self.comball
+        k = (r + 1) // 2
+        tmp0 = comb(n0 - 1, k - 1)
+        tmp1 = comb(n1 - 1, k - 2)
+        tmp3 = comb(n0 - 1, k - 2)
+        tmp4 = comb(n1 - 1, k - 1)
+        return (tmp0 * tmp1 + tmp3 * tmp4) / self.comball
 
     def pdf(self, r):
         r = np.asarray(r)
@@ -311,16 +316,15 @@ class TotalRunsProb:
         runs_pdf[~r_isodd] = self.runs_prob_even(r_even)
         return runs_pdf
 
-
     def cdf(self, r):
-        r_ = np.arange(2,r+1)
+        r_ = np.arange(2, r + 1)
         cdfval = self.runs_prob_even(r_[::2]).sum()
         cdfval += self.runs_prob_odd(r_[1::2]).sum()
         return cdfval
 
 
 class RunsProb:
-    '''distribution of success runs of length k or more (classical definition)
+    """distribution of success runs of length k or more (classical definition)
 
     The underlying process is assumed to be a sequence of Bernoulli trials
     of a given length n.
@@ -336,12 +340,10 @@ class RunsProb:
     need a MonteCarlo function to do some quick tests before doing more
 
 
-    '''
-
-
+    """
 
     def pdf(self, x, k, n, p):
-        '''distribution of success runs of length k or more
+        """distribution of success runs of length k or more
 
         Parameters
         ----------
@@ -366,19 +368,25 @@ class RunsProb:
         References
         ----------
         Muselli 1996, theorem 3
-        '''
+        """
 
-        q = 1-p
-        m = np.arange(x, (n+1)//(k+1)+1)[:,None]
-        terms = (-1)**(m-x) * comb(m, x) * p**(m*k) * q**(m-1) \
-                * (comb(n - m*k, m - 1) + q * comb(n - m*k, m))
+        q = 1 - p
+        m = np.arange(x, (n + 1) // (k + 1) + 1)[:, None]
+        terms = (
+            (-1) ** (m - x)
+            * comb(m, x)
+            * p ** (m * k)
+            * q ** (m - 1)
+            * (comb(n - m * k, m - 1) + q * comb(n - m * k, m))
+        )
         return terms.sum(0)
 
     def pdf_nb(self, x, k, n, p):
         pass
-        #y = np.arange(m-1, n-mk+1
+        # y = np.arange(m-1, n-mk+1
 
-'''
+
+"""
 >>> [np.sum([RunsProb().pdf(xi, k, 16, 10/16.) for xi in range(0,16)]) for k in range(16)]
 [0.99999332193894064, 0.99999999999999367, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 >>> [(np.arange(0,16) * [RunsProb().pdf(xi, k, 16, 10/16.) for xi in range(0,16)]).sum() for k in range(16)]
@@ -391,12 +399,11 @@ array([ 0.63635392,  0.37642045,  0.22194602,  0.13039329,  0.07629395,
 array([ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
         0.        ,  0.        ,  0.16298145,  0.12014061,  0.20563602,
         0.35047531,  0.59509277,  1.00708008,  1.69921875,  2.85926815])
-'''
-
+"""
 
 
 def median_test_ksample(x, groups):
-    '''chisquare test for equality of median/location
+    """chisquare test for equality of median/location
 
     This tests whether all groups have the same fraction of observations
     above the median.
@@ -417,10 +424,10 @@ def median_test_ksample(x, groups):
     others ????
        currently some test output, table and expected
 
-    '''
+    """
     x = np.asarray(x)
     gruni = np.unique(groups)
-    xli = [x[groups==group] for group in gruni]
+    xli = [x[groups == group] for group in gruni]
     xmedian = np.median(x)
     counts_larger = np.array([(xg > xmedian).sum() for xg in xli])
     counts = np.array([len(xg) for xg in xli])
@@ -430,23 +437,24 @@ def median_test_ksample(x, groups):
     n_smaller = nobs - n_larger
     table = np.vstack((counts_smaller, counts_larger))
 
-    #the following should be replaced by chisquare_contingency table
-    expected = np.vstack((counts * 1. / nobs * n_smaller,
-                          counts * 1. / nobs * n_larger))
+    # the following should be replaced by chisquare_contingency table
+    expected = np.vstack(
+        (counts * 1.0 / nobs * n_smaller, counts * 1.0 / nobs * n_larger)
+    )
 
     if (expected < 5).any():
-        print('Warning: There are cells with less than 5 expected' \
-        'observations. The chisquare distribution might not be a good' \
-        'approximation for the true distribution.')
+        print(
+            "Warning: There are cells with less than 5 expected"
+            "observations. The chisquare distribution might not be a good"
+            "approximation for the true distribution."
+        )
 
-    #check ddof
+    # check ddof
     return stats.chisquare(table.ravel(), expected.ravel(), ddof=1), table, expected
 
 
-
-
 def cochrans_q(x):
-    '''Cochran's Q test for identical effect of k treatments
+    """Cochran's Q test for identical effect of k treatments
 
     Cochran's Q is a k-sample extension of the McNemar test. If there are only
     two treatments, then Cochran's Q test and McNemar test are equivalent.
@@ -480,35 +488,40 @@ def cochrans_q(x):
     https://en.wikipedia.org/wiki/Cochran_test
     SAS Manual for NPAR TESTS
 
-    '''
+    """
 
-    warnings.warn("Deprecated, use stats.cochrans_q instead", FutureWarning)
+    warnings.warn(
+        "Deprecated, use stats.cochrans_q instead", FutureWarning, stacklevel=2
+    )
 
     x = np.asarray(x)
     gruni = np.unique(x)
     N, k = x.shape
-    count_row_success = (x==gruni[-1]).sum(1, float)
-    count_col_success = (x==gruni[-1]).sum(0, float)
+    count_row_success = (x == gruni[-1]).sum(1, float)
+    count_col_success = (x == gruni[-1]).sum(0, float)
     count_row_ss = count_row_success.sum()
     count_col_ss = count_col_success.sum()
-    assert count_row_ss == count_col_ss  #just a calculation check
+    assert count_row_ss == count_col_ss  # just a calculation check
 
+    # this is SAS manual
+    q_stat = (
+        (k - 1)
+        * (k * np.sum(count_col_success**2) - count_col_ss**2)
+        / (k * count_row_ss - np.sum(count_row_success**2))
+    )
 
-    #this is SAS manual
-    q_stat = (k-1) * (k *  np.sum(count_col_success**2) - count_col_ss**2) \
-             / (k * count_row_ss - np.sum(count_row_success**2))
+    # Note: the denominator looks just like k times the variance of the
+    # columns
 
-    #Note: the denominator looks just like k times the variance of the
-    #columns
+    # Wikipedia uses a different, but equivalent expression
+    ##    q_stat = (k-1) * (k *  np.sum(count_row_success**2) - count_row_ss**2) \
+    ##             / (k * count_col_ss - np.sum(count_col_success**2))
 
-    #Wikipedia uses a different, but equivalent expression
-##    q_stat = (k-1) * (k *  np.sum(count_row_success**2) - count_row_ss**2) \
-##             / (k * count_col_ss - np.sum(count_col_success**2))
+    return q_stat, stats.chi2.sf(q_stat, k - 1)
 
-    return q_stat, stats.chi2.sf(q_stat, k-1)
 
 def mcnemar(x, y=None, exact=True, correction=True):
-    '''McNemar test
+    """McNemar test
 
     Parameters
     ----------
@@ -542,14 +555,16 @@ def mcnemar(x, y=None, exact=True, correction=True):
     This is a special case of Cochran's Q test. The results when the chisquare
     distribution is used are identical, except for continuity correction.
 
-    '''
+    """
 
-    warnings.warn("Deprecated, use stats.TableSymmetry instead", FutureWarning)
+    warnings.warn(
+        "Deprecated, use stats.TableSymmetry instead", FutureWarning, stacklevel=2
+    )
 
     x = np.asarray(x)
     if y is None and x.shape[0] == x.shape[1]:
         if x.shape[0] != 2:
-            raise ValueError('table needs to be 2 by 2')
+            raise ValueError("table needs to be 2 by 2")
         n1, n2 = x[1, 0], x[0, 1]
     else:
         # I'm not checking here whether x and y are binary,
@@ -563,15 +578,15 @@ def mcnemar(x, y=None, exact=True, correction=True):
         pval = stats.binom.cdf(stat, n1 + n2, 0.5) * 2
         pval = np.minimum(pval, 1)  # limit to 1 if n1==n2
     else:
-        corr = int(correction) # convert bool to 0 or 1
-        stat = (np.abs(n1 - n2) - corr)**2 / (1. * (n1 + n2))
+        corr = int(correction)  # convert bool to 0 or 1
+        stat = (np.abs(n1 - n2) - corr) ** 2 / (1.0 * (n1 + n2))
         df = 1
         pval = stats.chi2.sf(stat, df)
     return stat, pval
 
 
 def symmetry_bowker(table):
-    '''Test for symmetry of a (k, k) square contingency table
+    """Test for symmetry of a (k, k) square contingency table
 
     This is an extension of the McNemar test to test the Null hypothesis
     that the contingency table is symmetric around the main diagonal, that is
@@ -608,35 +623,37 @@ def symmetry_bowker(table):
     mcnemar
 
 
-    '''
+    """
 
-    warnings.warn("Deprecated, use stats.TableSymmetry instead", FutureWarning)
+    warnings.warn(
+        "Deprecated, use stats.TableSymmetry instead", FutureWarning, stacklevel=2
+    )
 
     table = np.asarray(table)
     k, k2 = table.shape
     if k != k2:
-        raise ValueError('table needs to be square')
+        raise ValueError("table needs to be square")
 
-    #low_idx = np.tril_indices(k, -1)  # this does not have Fortran order
+    # low_idx = np.tril_indices(k, -1)  # this does not have Fortran order
     upp_idx = np.triu_indices(k, 1)
 
-    tril = table.T[upp_idx]   # lower triangle in column order
-    triu = table[upp_idx]     # upper triangle in row order
+    tril = table.T[upp_idx]  # lower triangle in column order
+    triu = table[upp_idx]  # upper triangle in row order
 
-    stat = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
-    df = k * (k-1) / 2.
+    stat = ((tril - triu) ** 2 / (tril + triu + 1e-20)).sum()
+    df = k * (k - 1) / 2.0
     pval = stats.chi2.sf(stat, df)
 
     return stat, pval, df
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     x1 = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
 
     print(Runs(x1).runs_test())
-    print(runstest_1samp(x1, cutoff='mean'))
-    print(runstest_2samp(np.arange(16,0,-1), groups=x1))
-    print(TotalRunsProb(7,9).cdf(11))
-    print(median_test_ksample(np.random.randn(100), np.random.randint(0,2,100)))
-    print(cochrans_q(np.random.randint(0,2,(100,8))))
+    print(runstest_1samp(x1, cutoff="mean"))
+    print(runstest_2samp(np.arange(16, 0, -1), groups=x1))
+    print(TotalRunsProb(7, 9).cdf(11))
+    print(median_test_ksample(np.random.randn(100), np.random.randint(0, 2, 100)))
+    print(cochrans_q(np.random.randint(0, 2, (100, 8))))

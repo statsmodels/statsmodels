@@ -1798,7 +1798,7 @@ class UnobservedComponentsResults(MLEResults):
                 #  possibly multiple bagged up in property freq_seasonal
                 if component.startswith("freq_seasonal_"):
                     ix = int(component.replace("freq_seasonal_", ""))
-                    big_bunch = getattr(self, "freq_seasonal")
+                    big_bunch = self.freq_seasonal
                     component_bunch = big_bunch[ix]
                     title = component_bunch.pretty_name
                 else:

@@ -1641,7 +1641,7 @@ class GEE(GLM):
             update, hm = self._update_regularized(mean_params, pen_wt, scad_param, eps)
             if update is None:
                 msg = "Singular matrix encountered in regularized GEE update"
-                warnings.warn(msg, ConvergenceWarning)
+                warnings.warn(msg, ConvergenceWarning, stacklevel=2)
                 break
             if itr > miniter and np.sqrt(np.sum(update**2)) < ctol:
                 converged = True
@@ -1655,7 +1655,7 @@ class GEE(GLM):
 
         if not converged:
             msg = "GEE.fit_regularized did not converge"
-            warnings.warn(msg)
+            warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         mean_params[np.abs(mean_params) < ztol] = 0
 
@@ -3298,7 +3298,8 @@ class GEEMargins:
         results.get_margeff. See there for more information.
     """
 
-    def __init__(self, results, args, kwargs={}):
+    def __init__(self, results, args, kwargs=None):
+        kwargs = {} if kwargs is None else kwargs
         self._cache = {}
         self.results = results
         self.get_margeff(*args, **kwargs)

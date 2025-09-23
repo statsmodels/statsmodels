@@ -1043,7 +1043,7 @@ def test_predict():
 
     # Check for invalid attribute
     with pytest.raises(AttributeError):
-        getattr(prediction_results, "test")
+        prediction_results.test
 
     # Check that an error is raised when a non-two-dimensional obs_cov
     # is given

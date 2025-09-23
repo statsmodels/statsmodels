@@ -15,7 +15,7 @@ import os
 import sys
 
 
-def iter_subclasses(cls, _seen=None, template_classes=[]):
+def iter_subclasses(cls, _seen=None, template_classes=()):
     """
     Generator to iterate over all the subclasses of Model. Based on
 
@@ -25,8 +25,7 @@ def iter_subclasses(cls, _seen=None, template_classes=[]):
     """
     if not isinstance(cls, type):
         raise TypeError(
-            "itersubclasses must be called with "
-            "new-style classes, not %.100r" % cls
+            "itersubclasses must be called with " "new-style classes, not %.100r" % cls
         )
     if _seen is None:
         _seen = set()
@@ -70,22 +69,15 @@ def write_formula_api(directory):
     fout = open(path, "w", encoding="utf-8")
     for model in iter_subclasses(Model, template_classes=template_classes):
         print("Generating API for %s" % model.__name__)
-        fout.write(
-            "from " + model.__module__ + " import " + model.__name__ + "\n"
-        )
-        fout.write(
-            model.__name__.lower() + " = " + model.__name__ + ".from_formula\n"
-        )
+        fout.write("from " + model.__module__ + " import " + model.__name__ + "\n")
+        fout.write(model.__name__.lower() + " = " + model.__name__ + ".from_formula\n")
     fout.close()
 
 
 if __name__ == "__main__":
     import statsmodels.api as sm
 
-    print(
-        "Generating formula API for statsmodels version %s"
-        % sm.version.full_version
-    )
+    print("Generating formula API for statsmodels version %s" % sm.version.full_version)
     directory = sys.argv[1]
     cur_dir = os.path.dirname(__file__)
     os.chdir(directory)

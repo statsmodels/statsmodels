@@ -22,13 +22,17 @@ from statsmodels.tools.validation import array_like, float_like
 from . import norms
 from ._qn import _qn
 
+GAUSSIAN_3_4 = Gaussian.ppf(3 / 4.0)
+GAUSSIAN_IQR = GAUSSIAN_3_4 - Gaussian.ppf(1 / 4)
+ONE_OVER_SQRT2_GAUSSIAN_5_8 = 1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))
 
-class Holder():
+
+class Holder:
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
 
 
-def mad(a, c=Gaussian.ppf(3 / 4.0), axis=0, center=np.median):
+def mad(a, c=GAUSSIAN_3_4, axis=0, center=np.median):
     # c \approx .6745
     """
     The Median Absolute Deviation along given axis of an array
@@ -74,7 +78,7 @@ def mad(a, c=Gaussian.ppf(3 / 4.0), axis=0, center=np.median):
     return np.median(err, axis=axis)
 
 
-def iqr(a, c=Gaussian.ppf(3 / 4) - Gaussian.ppf(1 / 4), axis=0):
+def iqr(a, c=GAUSSIAN_IQR, axis=0):
     """
     The normalized interquartile range along given axis of an array
 
@@ -106,7 +110,7 @@ def iqr(a, c=Gaussian.ppf(3 / 4) - Gaussian.ppf(1 / 4), axis=0):
         return np.squeeze(np.diff(quantiles, axis=0) / c)
 
 
-def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
+def qn_scale(a, c=ONE_OVER_SQRT2_GAUSSIAN_5_8, axis=0):
     """
     Computes the Qn robust estimator of scale
 
@@ -133,9 +137,7 @@ def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
     {float, ndarray}
         The Qn robust estimator of scale
     """
-    a = array_like(
-        a, "a", ndim=None, dtype=np.float64, contiguous=True, order="C"
-    )
+    a = array_like(a, "a", ndim=None, dtype=np.float64, contiguous=True, order="C")
     c = float_like(c, "c")
     if a.ndim == 0:
         raise ValueError("a should have at least one dimension")
@@ -148,7 +150,7 @@ def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
         return out
 
 
-def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
+def _qn_naive(a, c=ONE_OVER_SQRT2_GAUSSIAN_5_8):
     """
     A naive implementation of the Qn robust estimator of scale, used solely
     to test the faster, more involved one
@@ -217,7 +219,7 @@ class Huber:
         self.tol = tol
         self.norm = norm
         tmp = 2 * Gaussian.cdf(c) - 1
-        self.gamma = tmp + c ** 2 * (1 - tmp) - 2 * c * Gaussian.pdf(c)
+        self.gamma = tmp + c**2 * (1 - tmp) - 2 * c * Gaussian.pdf(c)
 
     def __call__(self, a, mu=None, initscale=None, axis=0):
         """
@@ -283,9 +285,7 @@ class Huber:
                     # if self.norm == norms.HuberT
                     # It should be faster than using norms.HuberT
                     nmu = (
-                        np.clip(
-                            a, mu - self.c * scale, mu + self.c * scale
-                        ).sum(axis)
+                        np.clip(a, mu - self.c * scale, mu + self.c * scale).sum(axis)
                         / a.shape[axis]
                     )
                 else:
@@ -299,18 +299,15 @@ class Huber:
 
             subset = np.less_equal(np.abs((a - mu) / scale), self.c)
 
-            scale_num = np.sum(subset * (a - nmu) ** 2 +
-                               (1 - subset) * (scale * self.c)**2, axis)
+            scale_num = np.sum(
+                subset * (a - nmu) ** 2 + (1 - subset) * (scale * self.c) ** 2, axis
+            )
             scale_denom = n * self.gamma
             nscale = np.sqrt(scale_num / scale_denom)
             nscale = tools.unsqueeze(nscale, axis, a.shape)
 
-            test1 = np.all(
-                np.less_equal(np.abs(scale - nscale), nscale * self.tol)
-            )
-            test2 = np.all(
-                np.less_equal(np.abs(mu - nmu), nscale * self.tol)
-            )
+            test1 = np.all(np.less_equal(np.abs(scale - nscale), nscale * self.tol))
+            test2 = np.all(np.less_equal(np.abs(mu - nmu), nscale * self.tol))
             if not (test1 and test2):
                 mu = nmu
                 scale = nscale
@@ -371,10 +368,10 @@ class HuberScale:
             df_resid
             / nobs
             * (
-                self.d ** 2
-                + (1 - self.d ** 2) * Gaussian.cdf(self.d)
+                self.d**2
+                + (1 - self.d**2) * Gaussian.cdf(self.d)
                 - 0.5
-                - self.d / (np.sqrt(2 * np.pi)) * np.exp(-0.5 * self.d ** 2)
+                - self.d / (np.sqrt(2 * np.pi)) * np.exp(-0.5 * self.d**2)
             )
         )
         s = mad(resid)
@@ -383,9 +380,7 @@ class HuberScale:
             return np.less(np.abs(resid / x), self.d)
 
         def chi(s):
-            return subset(s) * (resid / s) ** 2 / 2 + (1 - subset(s)) * (
-                self.d ** 2 / 2
-            )
+            return subset(s) * (resid / s) ** 2 / 2 + (1 - subset(s)) * (self.d**2 / 2)
 
         scalehist = [np.inf, s]
         niter = 1
@@ -394,10 +389,7 @@ class HuberScale:
             and niter < self.maxiter
         ):
             nscale = np.sqrt(
-                1
-                / (nobs * h)
-                * np.sum(chi(scalehist[-1]))
-                * scalehist[-1] ** 2
+                1 / (nobs * h) * np.sum(chi(scalehist[-1])) * scalehist[-1] ** 2
             )
             scalehist.append(nscale)
             niter += 1
@@ -432,7 +424,7 @@ class MScale:
     def __call__(self, data, **kwds):
         return self.fit(data, **kwds)
 
-    def fit(self, data, start_scale='mad', maxiter=100, rtol=1e-6, atol=1e-8):
+    def fit(self, data, start_scale="mad", maxiter=100, rtol=1e-6, atol=1e-8):
         """
         Estimate M-scale using iteration.
 
@@ -460,16 +452,17 @@ class MScale:
         scale = _scale_iter(
             data,
             scale0=start_scale,
-            maxiter=maxiter, rtol=rtol, atol=atol,
+            maxiter=maxiter,
+            rtol=rtol,
+            atol=atol,
             meef_scale=self.chi_func,
             scale_bias=self.scale_bias,
-            )
+        )
 
         return scale
 
 
-def scale_trimmed(data, alpha, center='median', axis=0, distr=None,
-                  distargs=None):
+def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=None):
     """scale estimate based on symmetrically trimmed sample
 
     The scale estimate is robust to a fraction alpha of outliers on each
@@ -543,11 +536,11 @@ def scale_trimmed(data, alpha, center='median', axis=0, distr=None,
     x.sort(axis)
     nobs = x.shape[axis]
 
-    if distr == 'raw':
+    if distr == "raw":
         c_inv = 1
     else:
         bound = distr.ppf(1 - alpha, *distargs)
-        c_inv = distr.expect(lambda x: x*x, lb=-bound, ub=bound, args=distargs)
+        c_inv = distr.expect(lambda x: x * x, lb=-bound, ub=bound, args=distargs)
 
     cut_idx = np.floor(nobs * alpha).astype(int)
     sl = [slice(None, None, None)] * x.ndim
@@ -557,30 +550,32 @@ def scale_trimmed(data, alpha, center='median', axis=0, distr=None,
     x_trimmed = x[tuple(sl)]
 
     center_type = center
-    if center in ['med', 'median']:
+    if center in ["med", "median"]:
         center = np.median(x, axis=axis)
-    elif center == 'mean':
+    elif center == "mean":
         center = np.mean(x, axis=axis)
-    elif center == 'tmean':
+    elif center == "tmean":
         center = np.mean(x_trimmed, axis=axis)
     else:
         # assume number
-        center_type = 'user'
+        center_type = "user"
 
     center_ndim = np.ndim(center)
     if (center_ndim > 0) and (center_ndim < x.ndim):
         center = np.expand_dims(center, axis)
 
-    s_raw = ((x_trimmed - center)**2).sum(axis)
+    s_raw = ((x_trimmed - center) ** 2).sum(axis)
     scale = np.sqrt(s_raw / nobs / c_inv)
 
-    res = Holder(scale=scale,
-                 center=center,
-                 center_type=center_type,
-                 trim_idx=cut_idx,
-                 nobs=nobs,
-                 distr=distr,
-                 scale_correction=1. / c_inv)
+    res = Holder(
+        scale=scale,
+        center=center,
+        center_type=center_type,
+        trim_idx=cut_idx,
+        nobs=nobs,
+        distr=distr,
+        scale_correction=1.0 / c_inv,
+    )
     return res
 
 
@@ -599,7 +594,7 @@ def _weight_mean(x, c):
     ndarray : weights
     """
     x = np.asarray(x)
-    w = (1 - (x / c)**2)**2 * (np.abs(x) <= c)
+    w = (1 - (x / c) ** 2) ** 2 * (np.abs(x) <= c)
     return w
 
 
@@ -620,8 +615,15 @@ def _winsor(x, c):
     return np.minimum(x**2, c**2)
 
 
-def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
-              weight_scale=_winsor, normalize=True, ddof=0):
+def scale_tau(
+    data,
+    cm=4.5,
+    cs=3,
+    weight_mean=_weight_mean,
+    weight_scale=_winsor,
+    normalize=True,
+    ddof=0,
+):
     """Tau estimator of univariate scale.
 
     Experimental, API will change
@@ -673,14 +675,12 @@ def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
     mad_x = np.median(np.abs(xdm), 0)
     wm = weight_mean(xdm / mad_x, cm)
     mean = (wm * x).sum(0) / wm.sum(0)
-    var = (mad_x**2 * weight_scale((x - mean) / mad_x, cs).sum(0) /
-           (nobs - ddof))
+    var = mad_x**2 * weight_scale((x - mean) / mad_x, cs).sum(0) / (nobs - ddof)
 
     cf = 1
     if normalize:
         c = cs * stats.norm.ppf(0.75)
-        cf = 2 * ((1 - c**2) * stats.norm.cdf(c) - c * stats.norm.pdf(c)
-                  + c**2) - 1
+        cf = 2 * ((1 - c**2) * stats.norm.cdf(c) - c * stats.norm.pdf(c) + c**2) - 1
     # return Holder(loc=mean, scale=np.sqrt(var / cf))
     return mean, np.sqrt(var / cf)
 
@@ -688,21 +688,29 @@ def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
 debug = 0
 
 
-def _scale_iter(data, scale0='mad', maxiter=100, rtol=1e-6, atol=1e-8,
-                meef_scale=None, scale_bias=None, iter_method="rho", ddof=0):
-    """iterative scale estimate base on "rho" function
-
-    """
+def _scale_iter(
+    data,
+    scale0="mad",
+    maxiter=100,
+    rtol=1e-6,
+    atol=1e-8,
+    meef_scale=None,
+    scale_bias=None,
+    iter_method="rho",
+    ddof=0,
+):
+    """iterative scale estimate base on "rho" function"""
     x = np.asarray(data)
     nobs = x.shape[0]
-    if scale0 == 'mad':
+    if scale0 == "mad":
         scale0 = mad(x, center=0)
 
     for i in range(maxiter):
         x_scaled = x / scale0
         if iter_method == "rho":
             scale = scale0 * np.sqrt(
-                np.sum(meef_scale(x / scale0)) / scale_bias / (nobs - ddof))
+                np.sum(meef_scale(x / scale0)) / scale_bias / (nobs - ddof)
+            )
         else:
             weights_scale = meef_scale(x_scaled) / (1e-50 + x_scaled**2)
             scale2 = (weights_scale * x**2).sum() / (nobs - ddof)

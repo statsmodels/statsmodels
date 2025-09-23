@@ -25,7 +25,7 @@ from statsmodels.tools.sm_exceptions import (
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
-    ValueWarning,
+    SingularMatrixWarning,
 )
 
 # Remove imports when range unit root test gets an R implementation
@@ -348,7 +348,7 @@ class TestPACF(CheckCorrGram):
 
     @pytest.mark.skipif(PYTHON_IMPL_WASM, reason="No fp exception support in WASM")
     def test_yw_singular(self):
-        with pytest.warns(ValueWarning):
+        with pytest.warns(SingularMatrixWarning):
             pacf(np.ones(30), nlags=6)
 
     def test_ld(self):

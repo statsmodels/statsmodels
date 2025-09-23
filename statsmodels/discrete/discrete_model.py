@@ -2279,7 +2279,7 @@ class GeneralizedPoisson(CountModel):
     def score(self, params):
         score = np.sum(self.score_obs(params), axis=0)
         if self._transparams:
-            score[-1] == score[-1] ** 2
+            score[-1] = score[-1] ** 2
             return score
         else:
             return score
@@ -4390,7 +4390,7 @@ class NegativeBinomialP(CountModel):
         """
         score = np.sum(self.score_obs(params), axis=0)
         if self._transparams:
-            score[-1] == score[-1] ** 2
+            score[-1] = score[-1] ** 2
             return score
         else:
             return score

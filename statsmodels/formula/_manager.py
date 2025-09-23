@@ -424,7 +424,7 @@ class FormulaManager:
         | pd.DataFrame
         | tuple[pd.DataFrame, pd.DataFrame]
     ):
-        f"""
+        """
         Get the model matrices or design matrices from a formula and data.
 
         Parameters
