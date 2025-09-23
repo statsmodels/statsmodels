@@ -143,7 +143,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
                 else:
                     columns = np.arange(x.shape[1])[col_const]
                     if isinstance(x, pd.DataFrame):
-                        columns = x.columns
+                        columns = x.columns[col_const]
                     const_cols = ", ".join([str(c) for c in columns])
                     base_err = (
                         "x contains one or more constant columns. Column(s) "
