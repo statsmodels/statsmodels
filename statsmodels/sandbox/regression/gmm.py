@@ -1,4 +1,4 @@
-'''Generalized Method of Moments, GMM, and Two-Stage Least Squares for
+"""Generalized Method of Moments, GMM, and Two-Stage Least Squares for
 instrumental variables IV2SLS
 
 
@@ -45,8 +45,7 @@ Unclear
 Author: josef-pktd
 License: BSD (3-clause)
 
-'''
-
+"""
 
 from statsmodels.compat.python import lrange
 
@@ -72,8 +71,7 @@ DEBUG = 0
 
 
 def maxabs(x):
-    '''just a shortcut to np.abs(x).max()
-    '''
+    """just a shortcut to np.abs(x).max()"""
     return np.abs(x).max()
 
 
@@ -110,7 +108,7 @@ class IV2SLS(LikelihoodModel):
         # Note: Greene p.77/78 dof correction is not necessary (because only
         #       asy results), but most packages do it anyway
         self.df_resid = self.exog.shape[0] - self.exog.shape[1]
-        #self.df_model = float(self.rank - self.k_constant)
+        # self.df_model = float(self.rank - self.k_constant)
         self.df_model = float(self.exog.shape[1] - self.k_constant)
 
     def initialize(self):
@@ -122,7 +120,7 @@ class IV2SLS(LikelihoodModel):
         pass
 
     def fit(self):
-        '''estimate model using 2SLS IV regression
+        """estimate model using 2SLS IV regression
 
         Returns
         -------
@@ -137,26 +135,27 @@ class IV2SLS(LikelihoodModel):
         Parameter estimates and covariance are correct, but other results
         have not been tested yet, to see whether they apply without changes.
 
-        '''
-        #Greene 5th edt., p.78 section 5.4
-        #move this maybe
-        y,x,z = self.endog, self.exog, self.instrument
+        """
+        # Greene 5th edt., p.78 section 5.4
+        # move this maybe
+        y, x, z = self.endog, self.exog, self.instrument
         # TODO: this uses "textbook" calculation, improve linalg
         ztz = np.dot(z.T, z)
         ztx = np.dot(z.T, x)
         self.xhatparams = xhatparams = np.linalg.solve(ztz, ztx)
-        #print 'x.T.shape, xhatparams.shape', x.shape, xhatparams.shape
+        # print 'x.T.shape, xhatparams.shape', x.shape, xhatparams.shape
         F = xhat = np.dot(z, xhatparams)
         FtF = np.dot(F.T, F)
-        self.xhatprod = FtF  #store for Housman specification test
+        self.xhatprod = FtF  # store for Housman specification test
         Ftx = np.dot(F.T, x)
         Fty = np.dot(F.T, y)
         params = np.linalg.solve(FtF, Fty)
         Ftxinv = np.linalg.inv(Ftx)
         self.normalized_cov_params = np.dot(Ftxinv.T, np.dot(FtF, Ftxinv))
 
-        lfit = IVRegressionResults(self, params,
-                       normalized_cov_params=self.normalized_cov_params)
+        lfit = IVRegressionResults(
+            self, params, normalized_cov_params=self.normalized_cov_params
+        )
 
         lfit.exog_hat_params = xhatparams
         lfit.exog_hat = xhat  # TODO: do we want to store this, might be large
@@ -218,44 +217,42 @@ class IVRegressionResults(RegressionResults):
             restriction = np.eye(k_vars)
             idx_noconstant = lrange(k_vars)
             del idx_noconstant[const_idx]
-            fval = self.f_test(restriction[idx_noconstant]).fvalue # without constant
+            fval = self.f_test(restriction[idx_noconstant]).fvalue  # without constant
             return fval
 
-
     def spec_hausman(self, dof=None):
-        '''Hausman's specification test
+        """Hausman's specification test
 
         See Also
         --------
         spec_hausman : generic function for Hausman's specification test
 
-        '''
-        #use normalized cov_params for OLS
+        """
+        # use normalized cov_params for OLS
 
         endog, exog = self.model.endog, self.model.exog
         resols = OLS(endog, exog).fit()
         normalized_cov_params_ols = resols.model.normalized_cov_params
         # Stata `ivendog` does not use df correction for se
-        #se2 = resols.mse_resid #* resols.df_resid * 1. / len(endog)
+        # se2 = resols.mse_resid #* resols.df_resid * 1. / len(endog)
         se2 = resols.ssr / len(endog)
 
         params_diff = self.params - resols.params
 
         cov_diff = np.linalg.pinv(self.model.xhatprod) - normalized_cov_params_ols
-        #TODO: the following is very inefficient, solves problem (svd) twice
-        #use linalg.lstsq or svd directly
-        #cov_diff will very often be in-definite (singular)
+        # TODO: the following is very inefficient, solves problem (svd) twice
+        # use linalg.lstsq or svd directly
+        # cov_diff will very often be in-definite (singular)
         if not dof:
             dof = np.linalg.matrix_rank(cov_diff)
         cov_diffpinv = np.linalg.pinv(cov_diff)
-        H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))/se2
+        H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff)) / se2
         pval = stats.chi2.sf(H, dof)
 
         return H, pval, dof
 
-
-# copied from regression results with small changes, no llf
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    # copied from regression results with small changes, no llf
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05):
         """Summarize the Regression Results
 
         Parameters
@@ -282,95 +279,113 @@ class IVRegressionResults(RegressionResults):
             results
         """
 
-        #TODO: import where we need it (for now), add as cached attributes
+        # TODO: import where we need it (for now), add as cached attributes
         from statsmodels.stats.stattools import (
             durbin_watson,
             jarque_bera,
             omni_normtest,
         )
+
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
 
-        #TODO: reuse condno from somewhere else ?
-        #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
+        # TODO: reuse condno from somewhere else ?
+        # condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
         wexog = self.model.wexog
         eigvals = np.linalg.eigvalsh(np.dot(wexog.T, wexog))
-        eigvals = np.sort(eigvals) #in increasing order
-        condno = np.sqrt(eigvals[-1]/eigvals[0])
+        eigvals = np.sort(eigvals)  # in increasing order
+        condno = np.sqrt(eigvals[-1] / eigvals[0])
 
         # TODO: check what is valid.
         # box-pierce, breusch-pagan, durbin's h are not with endogenous on rhs
         # use Cumby Huizinga 1992 instead
-        self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
-                          omni=omni, omnipv=omnipv, condno=condno,
-                          mineigval=eigvals[0])
+        self.diagn = dict(
+            jb=jb,
+            jbpv=jbpv,
+            skew=skew,
+            kurtosis=kurtosis,
+            omni=omni,
+            omnipv=omnipv,
+            condno=condno,
+            mineigval=eigvals[0],
+        )
 
-        #TODO not used yet
-        #diagn_left_header = ['Models stats']
-        #diagn_right_header = ['Residual stats']
+        # TODO not used yet
+        # diagn_left_header = ['Models stats']
+        # diagn_right_header = ['Residual stats']
 
-        #TODO: requiring list/iterable is a bit annoying
-        #need more control over formatting
-        #TODO: default do not work if it's not identically spelled
+        # TODO: requiring list/iterable is a bit annoying
+        # need more control over formatting
+        # TODO: default do not work if it's not identically spelled
 
-        top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
-                    ('Method:', ['Two Stage']),
-                    ('', ['Least Squares']),
-                    ('Date:', None),
-                    ('Time:', None),
-                    ('No. Observations:', None),
-                    ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
-                    ('Df Model:', None), #[self.df_model])
-                    ]
+        top_left = [
+            ("Dep. Variable:", None),
+            ("Model:", None),
+            ("Method:", ["Two Stage"]),
+            ("", ["Least Squares"]),
+            ("Date:", None),
+            ("Time:", None),
+            ("No. Observations:", None),
+            ("Df Residuals:", None),  # [self.df_resid]), #TODO: spelling
+            ("Df Model:", None),  # [self.df_model])
+        ]
 
-        top_right = [('R-squared:', ["%#8.3f" % self.rsquared]),
-                     ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
-                     ('F-statistic:', ["%#8.4g" % self.fvalue] ),
-                     ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     #('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
-                     #('AIC:', ["%#8.4g" % self.aic]),
-                     #('BIC:', ["%#8.4g" % self.bic])
-                     ]
+        top_right = [
+            ("R-squared:", ["%#8.3f" % self.rsquared]),
+            ("Adj. R-squared:", ["%#8.3f" % self.rsquared_adj]),
+            ("F-statistic:", ["%#8.4g" % self.fvalue]),
+            ("Prob (F-statistic):", ["%#6.3g" % self.f_pvalue]),
+            # ('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
+            # ('AIC:', ["%#8.4g" % self.aic]),
+            # ('BIC:', ["%#8.4g" % self.bic])
+        ]
 
-        diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
-                      ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
-                      ('Skew:', ["%#6.3f" % skew]),
-                      ('Kurtosis:', ["%#6.3f" % kurtosis])
-                      ]
+        diagn_left = [
+            ("Omnibus:", ["%#6.3f" % omni]),
+            ("Prob(Omnibus):", ["%#6.3f" % omnipv]),
+            ("Skew:", ["%#6.3f" % skew]),
+            ("Kurtosis:", ["%#6.3f" % kurtosis]),
+        ]
 
-        diagn_right = [('Durbin-Watson:', ["%#8.3f" % durbin_watson(self.wresid)]),
-                       ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
-                       ('Prob(JB):', ["%#8.3g" % jbpv]),
-                       ('Cond. No.', ["%#8.3g" % condno])
-                       ]
-
+        diagn_right = [
+            ("Durbin-Watson:", ["%#8.3f" % durbin_watson(self.wresid)]),
+            ("Jarque-Bera (JB):", ["%#8.3f" % jb]),
+            ("Prob(JB):", ["%#8.3g" % jbpv]),
+            ("Cond. No.", ["%#8.3g" % condno]),
+        ]
 
         if title is None:
-            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+            title = self.model.__class__.__name__ + " " + "Regression Results"
 
-        #create summary table instance
+        # create summary table instance
         from statsmodels.iolib.summary import Summary
+
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                          yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                             use_t=True)
+        smry.add_table_2cols(
+            self,
+            gleft=top_left,
+            gright=top_right,
+            yname=yname,
+            xname=xname,
+            title=title,
+        )
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha, use_t=True)
 
-        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-                          yname=yname, xname=xname,
-                          title="")
-
-
+        smry.add_table_2cols(
+            self,
+            gleft=diagn_left,
+            gright=diagn_right,
+            yname=yname,
+            xname=xname,
+            title="",
+        )
 
         return smry
 
 
-
-
 ############# classes for Generalized Method of Moments GMM
 
-_gmm_options = '''\
+_gmm_options = """\
 
 Options for GMM
 ---------------
@@ -424,10 +439,11 @@ The additional option is
    TODO: do we want to have a different default after `onestep`?
 
 
-'''
+"""
+
 
 class GMM(Model):
-    '''
+    """
     Class for estimation by Generalized Method of Moments
 
     needs to be subclassed, where the subclass defined the moment conditions
@@ -477,23 +493,30 @@ class GMM(Model):
     currently onestep (maxiter=0) still produces an updated estimate of bse
     and cov_params.
 
-    '''
+    """
 
-    results_class = 'GMMResults'
+    results_class = "GMMResults"
 
-    def __init__(self, endog, exog, instrument, k_moms=None, k_params=None,
-                 missing='none', **kwds):
-        '''
+    def __init__(
+        self,
+        endog,
+        exog,
+        instrument,
+        k_moms=None,
+        k_params=None,
+        missing="none",
+        **kwds,
+    ):
+        """
         maybe drop and use mixin instead
 
         TODO: GMM does not really care about the data, just the moment conditions
-        '''
-        instrument = self._check_inputs(instrument, endog) # attaches if needed
-        super().__init__(endog, exog, missing=missing,
-                instrument=instrument)
-#         self.endog = endog
-#         self.exog = exog
-#         self.instrument = instrument
+        """
+        instrument = self._check_inputs(instrument, endog)  # attaches if needed
+        super().__init__(endog, exog, missing=missing, instrument=instrument)
+        #         self.endog = endog
+        #         self.exog = exog
+        #         self.instrument = instrument
         self.nobs = endog.shape[0]
         if k_moms is not None:
             self.nmoms = k_moms
@@ -527,15 +550,15 @@ class GMM(Model):
             if len(params) == len(param_names):
                 self.data.xnames = param_names
             else:
-                raise ValueError('param_names has the wrong length')
+                raise ValueError("param_names has the wrong length")
 
         else:
             if len(params) < len(xnames):
                 # cut in front for poisson multiplicative
-                self.data.xnames = xnames[-len(params):]
+                self.data.xnames = xnames[-len(params) :]
             elif len(params) > len(xnames):
                 # use generic names
-                self.data.xnames = ['p%2d' % i for i in range(len(params))]
+                self.data.xnames = ["p%2d" % i for i in range(len(params))]
 
     def set_param_names(self, param_names, k_params=None):
         """set the parameter names in the model
@@ -558,14 +581,20 @@ class GMM(Model):
         if k_params == len(param_names):
             self.data.xnames = param_names
         else:
-            raise ValueError('param_names has the wrong length')
+            raise ValueError("param_names has the wrong length")
 
-
-    def fit(self, start_params=None, maxiter=10, inv_weights=None,
-                  weights_method='cov', wargs=(),
-                  has_optimal_weights=True,
-                  optim_method='bfgs', optim_args=None):
-        '''
+    def fit(
+        self,
+        start_params=None,
+        maxiter=10,
+        inv_weights=None,
+        weights_method="cov",
+        wargs=(),
+        has_optimal_weights=True,
+        optim_method="bfgs",
+        optim_args=None,
+    ):
+        """
         Estimate parameters using GMM and return GMMResults
 
         TODO: weight and covariance arguments still need to be made consistent
@@ -643,7 +672,7 @@ class GMM(Model):
         The same options as for weight matrix also apply to the calculation of
         the estimate of the covariance matrix of the parameter estimates.
 
-        '''
+        """
         # TODO: add check for correct wargs keys
         #       currently a misspelled key is not detected,
         #       because I'm still adding options
@@ -652,69 +681,75 @@ class GMM(Model):
         #       arguments are dictionaries, i.e. mutable
         #       unit test if anything  is stale or spilled over.
 
-        #bug: where does start come from ???
+        # bug: where does start come from ???
         start = start_params  # alias for renaming
         if start is None:
-            start = self.fitstart() #TODO: temporary hack
+            start = self.fitstart()  # TODO: temporary hack
 
         if inv_weights is None:
             inv_weights
 
         if optim_args is None:
             optim_args = {}
-        if 'disp' not in optim_args:
-            optim_args['disp'] = 1
+        if "disp" not in optim_args:
+            optim_args["disp"] = 1
 
-        if maxiter == 0 or maxiter == 'cue':
+        if maxiter == 0 or maxiter == "cue":
             if inv_weights is not None:
                 weights = np.linalg.pinv(inv_weights)
             else:
                 # let start_weights handle the inv=False for maxiter=0
                 weights = self.start_weights(inv=False)
 
-            params = self.fitgmm(start, weights=weights,
-                                 optim_method=optim_method, optim_args=optim_args)
+            params = self.fitgmm(
+                start, weights=weights, optim_method=optim_method, optim_args=optim_args
+            )
         else:
-            params, weights = self.fititer(start,
-                                           maxiter=maxiter,
-                                           start_invweights=inv_weights,
-                                           weights_method=weights_method,
-                                           wargs=wargs,
-                                           optim_method=optim_method,
-                                           optim_args=optim_args)
+            params, weights = self.fititer(
+                start,
+                maxiter=maxiter,
+                start_invweights=inv_weights,
+                weights_method=weights_method,
+                wargs=wargs,
+                optim_method=optim_method,
+                optim_args=optim_args,
+            )
             # TODO weights returned by fititer is inv_weights - not true anymore
             # weights_ currently not necessary and used anymore
             np.linalg.pinv(weights)
 
-        if maxiter == 'cue':
-            #we have params from maxiter= 0 as starting value
+        if maxiter == "cue":
+            # we have params from maxiter= 0 as starting value
             # TODO: need to give weights options to gmmobjective_cu
-            params = self.fitgmm_cu(params,
-                                     optim_method=optim_method,
-                                     optim_args=optim_args)
+            params = self.fitgmm_cu(
+                params, optim_method=optim_method, optim_args=optim_args
+            )
             # weights is stored as attribute
             weights = self._weights_cu
 
-        #TODO: use Bunch instead ?
-        options_other = {'weights_method':weights_method,
-                         'has_optimal_weights':has_optimal_weights,
-                         'optim_method':optim_method}
+        # TODO: use Bunch instead ?
+        options_other = {
+            "weights_method": weights_method,
+            "has_optimal_weights": has_optimal_weights,
+            "optim_method": optim_method,
+        }
 
         # check that we have the right number of xnames
         self._fix_param_names(params, param_names=None)
         results = results_class_dict[self.results_class](
-                                        model = self,
-                                        params = params,
-                                        weights = weights,
-                                        wargs = wargs,
-                                        options_other = options_other,
-                                        optim_args = optim_args)
+            model=self,
+            params=params,
+            weights=weights,
+            wargs=wargs,
+            options_other=options_other,
+            optim_args=optim_args,
+        )
 
-        self.results = results # FIXME: remove, still keeping it temporarily
+        self.results = results  # FIXME: remove, still keeping it temporarily
         return results
 
-    def fitgmm(self, start, weights=None, optim_method='bfgs', optim_args=None):
-        '''estimate parameters using GMM
+    def fitgmm(self, start, weights=None, optim_method="bfgs", optim_args=None):
+        """estimate parameters using GMM
 
         Parameters
         ----------
@@ -736,9 +771,9 @@ class GMM(Model):
 
         uses scipy.optimize.fmin
 
-        '''
-##        if not fixed is None:  #fixed not defined in this version
-##            raise NotImplementedError
+        """
+        ##        if not fixed is None:  #fixed not defined in this version
+        ##            raise NotImplementedError
 
         # TODO: should start_weights only be in `fit`
         if weights is None:
@@ -747,38 +782,38 @@ class GMM(Model):
         if optim_args is None:
             optim_args = {}
 
-        if optim_method == 'nm':
+        if optim_method == "nm":
             optimizer = optimize.fmin
-        elif optim_method == 'bfgs':
+        elif optim_method == "bfgs":
             optimizer = optimize.fmin_bfgs
             # TODO: add score
-            optim_args['fprime'] = self.score #lambda params: self.score(params, weights)
-        elif optim_method == 'ncg':
+            optim_args["fprime"] = (
+                self.score
+            )  # lambda params: self.score(params, weights)
+        elif optim_method == "ncg":
             optimizer = optimize.fmin_ncg
-            optim_args['fprime'] = self.score
-        elif optim_method == 'cg':
+            optim_args["fprime"] = self.score
+        elif optim_method == "cg":
             optimizer = optimize.fmin_cg
-            optim_args['fprime'] = self.score
-        elif optim_method == 'fmin_l_bfgs_b':
+            optim_args["fprime"] = self.score
+        elif optim_method == "fmin_l_bfgs_b":
             optimizer = optimize.fmin_l_bfgs_b
-            optim_args['fprime'] = self.score
-        elif optim_method == 'powell':
+            optim_args["fprime"] = self.score
+        elif optim_method == "powell":
             optimizer = optimize.fmin_powell
-        elif optim_method == 'slsqp':
+        elif optim_method == "slsqp":
             optimizer = optimize.fmin_slsqp
         else:
-            raise ValueError('optimizer method not available')
+            raise ValueError("optimizer method not available")
 
         if DEBUG:
             print(np.linalg.det(weights))
 
-        #TODO: add other optimization options and results
-        return optimizer(self.gmmobjective, start, args=(weights,),
-                         **optim_args)
+        # TODO: add other optimization options and results
+        return optimizer(self.gmmobjective, start, args=(weights,), **optim_args)
 
-
-    def fitgmm_cu(self, start, optim_method='bfgs', optim_args=None):
-        '''estimate parameters using continuously updating GMM
+    def fitgmm_cu(self, start, optim_method="bfgs", optim_args=None):
+        """estimate parameters using continuously updating GMM
 
         Parameters
         ----------
@@ -796,24 +831,24 @@ class GMM(Model):
 
         uses scipy.optimize.fmin
 
-        '''
-##        if not fixed is None:  #fixed not defined in this version
-##            raise NotImplementedError
+        """
+        ##        if not fixed is None:  #fixed not defined in this version
+        ##            raise NotImplementedError
 
         if optim_args is None:
             optim_args = {}
 
-        if optim_method == 'nm':
+        if optim_method == "nm":
             optimizer = optimize.fmin
-        elif optim_method == 'bfgs':
+        elif optim_method == "bfgs":
             optimizer = optimize.fmin_bfgs
-            optim_args['fprime'] = self.score_cu
-        elif optim_method == 'ncg':
+            optim_args["fprime"] = self.score_cu
+        elif optim_method == "ncg":
             optimizer = optimize.fmin_ncg
         else:
-            raise ValueError('optimizer method not available')
+            raise ValueError("optimizer method not available")
 
-        #TODO: add other optimization options and results
+        # TODO: add other optimization options and results
         return optimizer(self.gmmobjective_cu, start, args=(), **optim_args)
 
     def start_weights(self, inv=True):
@@ -821,7 +856,7 @@ class GMM(Model):
         return np.eye(self.nmoms)
 
     def gmmobjective(self, params, weights):
-        '''
+        """
         objective function for GMM minimization
 
         Parameters
@@ -836,16 +871,14 @@ class GMM(Model):
         jval : float
             value of objective function
 
-        '''
+        """
         moms = self.momcond_mean(params)
         return np.dot(np.dot(moms, weights), moms)
-        #moms = self.momcond(params)
-        #return np.dot(np.dot(moms.mean(0),weights), moms.mean(0))
+        # moms = self.momcond(params)
+        # return np.dot(np.dot(moms.mean(0),weights), moms.mean(0))
 
-
-    def gmmobjective_cu(self, params, weights_method='cov',
-                        wargs=()):
-        '''
+    def gmmobjective_cu(self, params, weights_method="cov", wargs=()):
+        """
         objective function for continuously updating  GMM minimization
 
         Parameters
@@ -858,19 +891,26 @@ class GMM(Model):
         jval : float
             value of objective function
 
-        '''
+        """
         moms = self.momcond(params)
-        inv_weights = self.calc_weightmatrix(moms, weights_method=weights_method,
-                                             wargs=wargs)
+        inv_weights = self.calc_weightmatrix(
+            moms, weights_method=weights_method, wargs=wargs
+        )
         weights = np.linalg.pinv(inv_weights)
         self._weights_cu = weights  # store if we need it later
         return np.dot(np.dot(moms.mean(0), weights), moms.mean(0))
 
-
-    def fititer(self, start, maxiter=2, start_invweights=None,
-                    weights_method='cov', wargs=(), optim_method='bfgs',
-                    optim_args=None):
-        '''iterative estimation with updating of optimal weighting matrix
+    def fititer(
+        self,
+        start,
+        maxiter=2,
+        start_invweights=None,
+        weights_method="cov",
+        wargs=(),
+        optim_method="bfgs",
+        optim_args=None,
+    ):
+        """iterative estimation with updating of optimal weighting matrix
 
         stopping criteria are maxiter or change in parameter estimate less
         than self.epsilon_iter, with default 1e-6.
@@ -902,7 +942,7 @@ class GMM(Model):
 
 
 
-        '''
+        """
         self.history = []
         momcond = self.momcond
 
@@ -911,37 +951,36 @@ class GMM(Model):
         else:
             w = start_invweights
 
-        #call fitgmm function
-        #args = (self.endog, self.exog, self.instrument)
-        #args is not used in the method version
+        # call fitgmm function
+        # args = (self.endog, self.exog, self.instrument)
+        # args is not used in the method version
         winv_new = w
         for it in range(maxiter):
             winv = winv_new
             w = np.linalg.pinv(winv)
-            #this is still calling function not method
-##            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
-##                            weightsoptimal=False)
-            resgmm = self.fitgmm(start, weights=w, optim_method=optim_method,
-                                 optim_args=optim_args)
+            # this is still calling function not method
+            ##            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
+            ##                            weightsoptimal=False)
+            resgmm = self.fitgmm(
+                start, weights=w, optim_method=optim_method, optim_args=optim_args
+            )
 
             moms = momcond(resgmm)
             # the following is S = cov_moments
-            winv_new = self.calc_weightmatrix(moms,
-                                              weights_method=weights_method,
-                                              wargs=wargs, params=resgmm)
+            winv_new = self.calc_weightmatrix(
+                moms, weights_method=weights_method, wargs=wargs, params=resgmm
+            )
 
             if it > 2 and maxabs(resgmm - start) < self.epsilon_iter:
-                #check rule for early stopping
+                # check rule for early stopping
                 # TODO: set has_optimal_weights = True
                 break
 
             start = resgmm
         return resgmm, w
 
-
-    def calc_weightmatrix(self, moms, weights_method='cov', wargs=(),
-                          params=None):
-        '''
+    def calc_weightmatrix(self, moms, weights_method="cov", wargs=(), params=None):
+        """
         calculate omega or the weighting matrix
 
         Parameters
@@ -980,13 +1019,13 @@ class GMM(Model):
         Greene
         Hansen, Bruce
 
-        '''
+        """
         nobs, k_moms = moms.shape
         # TODO: wargs are tuple or dict ?
         if DEBUG:
-            print(' momcov wargs', wargs)
+            print(" momcov wargs", wargs)
 
-        centered = not ('centered' in wargs and not wargs['centered'])
+        centered = not ("centered" in wargs and not wargs["centered"])
         if not centered:
             # caller does not want centered moment conditions
             moms_ = moms
@@ -999,45 +1038,44 @@ class GMM(Model):
         #       some options will not make sense in some cases
         #       possible add all here and allow subclasses to define a list
         # TODO: should other weights_methods also have `ddof`
-        if weights_method == 'cov':
+        if weights_method == "cov":
             w = np.dot(moms_.T, moms_)
-            if 'ddof' in wargs:
+            if "ddof" in wargs:
                 # caller requests degrees of freedom correction
-                if wargs['ddof'] == 'k_params':
-                    w /= (nobs - self.k_params)
+                if wargs["ddof"] == "k_params":
+                    w /= nobs - self.k_params
                 else:
                     if DEBUG:
-                        print(' momcov ddof', wargs['ddof'])
-                    w /= (nobs - wargs['ddof'])
+                        print(" momcov ddof", wargs["ddof"])
+                    w /= nobs - wargs["ddof"]
             else:
                 # default: divide by nobs
                 w /= nobs
 
-        elif weights_method == 'flatkernel':
-            #uniform cut-off window
+        elif weights_method == "flatkernel":
+            # uniform cut-off window
             # This was a trial version, can use HAC with flatkernel
-            if 'maxlag' not in wargs:
-                raise ValueError('flatkernel requires maxlag')
+            if "maxlag" not in wargs:
+                raise ValueError("flatkernel requires maxlag")
 
-            maxlag = wargs['maxlag']
+            maxlag = wargs["maxlag"]
             h = np.ones(maxlag + 1)
-            w = np.dot(moms_.T, moms_)/nobs
-            for i in range(1,maxlag+1):
-                w += (h[i] * np.dot(moms_[i:].T, moms_[:-i]) / (nobs-i))
+            w = np.dot(moms_.T, moms_) / nobs
+            for i in range(1, maxlag + 1):
+                w += h[i] * np.dot(moms_[i:].T, moms_[:-i]) / (nobs - i)
 
-        elif weights_method == 'hac':
-            maxlag = wargs['maxlag']
-            if 'kernel' in wargs:
-                weights_func = wargs['kernel']
+        elif weights_method == "hac":
+            maxlag = wargs["maxlag"]
+            if "kernel" in wargs:
+                weights_func = wargs["kernel"]
             else:
                 weights_func = smcov.weights_bartlett
-                wargs['kernel'] = weights_func
+                wargs["kernel"] = weights_func
 
-            w = smcov.S_hac_simple(moms_, nlags=maxlag,
-                                   weights_func=weights_func)
-            w /= nobs #(nobs - self.k_params)
+            w = smcov.S_hac_simple(moms_, nlags=maxlag, weights_func=weights_func)
+            w /= nobs  # (nobs - self.k_params)
 
-        elif weights_method == 'iid':
+        elif weights_method == "iid":
             # only when we have instruments and residual mom = Z * u
             # TODO: problem we do not have params in argument
             #       I cannot keep everything in here w/o params as argument
@@ -1046,42 +1084,40 @@ class GMM(Model):
             if centered:
                 # Note: I'm not centering instruments,
                 #    should not we always center u? Ok, with centered as default
-                u -= u.mean(0)  #demean inplace, we do not need original u
+                u -= u.mean(0)  # demean inplace, we do not need original u
 
             instrument = self.instrument
             w = np.dot(instrument.T, instrument).dot(np.dot(u.T, u)) / nobs
-            if 'ddof' in wargs:
+            if "ddof" in wargs:
                 # caller requests degrees of freedom correction
-                if wargs['ddof'] == 'k_params':
-                    w /= (nobs - self.k_params)
+                if wargs["ddof"] == "k_params":
+                    w /= nobs - self.k_params
                 else:
                     # assume ddof is a number
                     if DEBUG:
-                        print(' momcov ddof', wargs['ddof'])
-                    w /= (nobs - wargs['ddof'])
+                        print(" momcov ddof", wargs["ddof"])
+                    w /= nobs - wargs["ddof"]
             else:
                 # default: divide by nobs
                 w /= nobs
 
         else:
-            raise ValueError('weight method not available')
+            raise ValueError("weight method not available")
 
         return w
 
-
     def momcond_mean(self, params):
-        '''
+        """
         mean of moment conditions,
 
-        '''
+        """
 
         momcond = self.momcond(params)
         self.nobs_moms, self.k_moms = momcond.shape
         return momcond.mean(0)
 
-
     def gradient_momcond(self, params, epsilon=1e-4, centered=True):
-        '''gradient of moment conditions
+        """gradient of moment conditions
 
         Parameters
         ----------
@@ -1097,14 +1133,16 @@ class GMM(Model):
         TODO: looks like not used yet
               missing argument `weights`
 
-        '''
+        """
 
         momcond = self.momcond_mean
 
         # TODO: approx_fprime has centered keyword
         if centered:
-            gradmoms = (approx_fprime(params, momcond, epsilon=epsilon) +
-                    approx_fprime(params, momcond, epsilon=-epsilon))/2
+            gradmoms = (
+                approx_fprime(params, momcond, epsilon=epsilon)
+                + approx_fprime(params, momcond, epsilon=-epsilon)
+            ) / 2
         else:
             gradmoms = approx_fprime(params, momcond, epsilon=epsilon)
 
@@ -1112,22 +1150,28 @@ class GMM(Model):
 
     def score(self, params, weights, epsilon=None, centered=True):
         """Score"""
-        deriv = approx_fprime(params, self.gmmobjective, args=(weights,),
-                              centered=centered, epsilon=epsilon)
+        deriv = approx_fprime(
+            params,
+            self.gmmobjective,
+            args=(weights,),
+            centered=centered,
+            epsilon=epsilon,
+        )
 
         return deriv
 
     def score_cu(self, params, epsilon=None, centered=True):
         """Score cu"""
-        deriv = approx_fprime(params, self.gmmobjective_cu, args=(),
-                              centered=centered, epsilon=epsilon)
+        deriv = approx_fprime(
+            params, self.gmmobjective_cu, args=(), centered=centered, epsilon=epsilon
+        )
 
         return deriv
 
 
 # TODO: wrong superclass, I want tvalues, ... right now
 class GMMResults(LikelihoodModelResults):
-    '''just a storage class right now'''
+    """just a storage class right now"""
 
     use_t = False
 
@@ -1150,23 +1194,23 @@ class GMMResults(LikelihoodModelResults):
         return self.q * self.model.nobs_moms
 
     def _cov_params(self, **kwds):
-        #TODO add options ???)
+        # TODO add options ???)
         # this should use by default whatever options have been specified in
         # fit
 
         # TODO: do not do this when we want to change options
-#         if hasattr(self, '_cov_params'):
-#             #replace with decorator later
-#             return self._cov_params
+        #         if hasattr(self, '_cov_params'):
+        #             #replace with decorator later
+        #             return self._cov_params
 
         # set defaults based on fit arguments
-        if 'wargs' not in kwds:
+        if "wargs" not in kwds:
             # Note: we do not check the keys in wargs, use either all or nothing
-            kwds['wargs'] = self.wargs
-        if 'weights_method' not in kwds:
-            kwds['weights_method'] = self.options_other['weights_method']
-        if 'has_optimal_weights' not in kwds:
-            kwds['has_optimal_weights'] = self.options_other['has_optimal_weights']
+            kwds["wargs"] = self.wargs
+        if "weights_method" not in kwds:
+            kwds["weights_method"] = self.options_other["weights_method"]
+        if "has_optimal_weights" not in kwds:
+            kwds["has_optimal_weights"] = self.options_other["has_optimal_weights"]
 
         gradmoms = self.model.gradient_momcond(self.params)
         moms = self.model.momcond(self.params)
@@ -1174,11 +1218,17 @@ class GMMResults(LikelihoodModelResults):
 
         return covparams
 
-
-    def calc_cov_params(self, moms, gradmoms, weights=None, use_weights=False,
-                                              has_optimal_weights=True,
-                                              weights_method='cov', wargs=()):
-        '''calculate covariance of parameter estimates
+    def calc_cov_params(
+        self,
+        moms,
+        gradmoms,
+        weights=None,
+        use_weights=False,
+        has_optimal_weights=True,
+        weights_method="cov",
+        wargs=(),
+    ):
+        """calculate covariance of parameter estimates
 
         not all options tried out yet
 
@@ -1190,51 +1240,48 @@ class GMMResults(LikelihoodModelResults):
         (API Note: The latter assumption could be changed if we allow for
         has_optimal_weights=None.)
 
-        '''
+        """
 
         nobs = moms.shape[0]
 
         if weights is None:
-            #omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
-            #has_optimal_weights = True
-            #add other options, Barzen, ...  longrun var estimators
+            # omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
+            # has_optimal_weights = True
+            # add other options, Barzen, ...  longrun var estimators
             # TODO: this might still be inv_weights after fititer
             weights = self.weights
         else:
             pass
-            #omegahat = weights   #2 different names used,
-            #TODO: this is wrong, I need an estimate for omega
+            # omegahat = weights   #2 different names used,
+            # TODO: this is wrong, I need an estimate for omega
 
         if use_weights:
             omegahat = weights
         else:
             omegahat = self.model.calc_weightmatrix(
-                                                moms,
-                                                weights_method=weights_method,
-                                                wargs=wargs,
-                                                params=self.params)
+                moms, weights_method=weights_method, wargs=wargs, params=self.params
+            )
 
-
-        if has_optimal_weights: #has_optimal_weights:
+        if has_optimal_weights:  # has_optimal_weights:
             # TOD0 make has_optimal_weights depend on convergence or iter >2
-            cov = np.linalg.inv(np.dot(gradmoms.T,
-                                    np.dot(np.linalg.inv(omegahat), gradmoms)))
+            cov = np.linalg.inv(
+                np.dot(gradmoms.T, np.dot(np.linalg.inv(omegahat), gradmoms))
+            )
         else:
             gw = np.dot(gradmoms.T, weights)
             gwginv = np.linalg.inv(np.dot(gw, gradmoms))
             cov = np.dot(np.dot(gwginv, np.dot(np.dot(gw, omegahat), gw.T)), gwginv)
-            #cov /= nobs
+            # cov /= nobs
 
-        return cov/nobs
+        return cov / nobs
 
     @property
     def bse_(self):
-        '''standard error of the parameter estimates
-        '''
+        """standard error of the parameter estimates"""
         return self.get_bse()
 
     def get_bse(self, **kwds):
-        '''standard error of the parameter estimates with options
+        """standard error of the parameter estimates with options
 
         Parameters
         ----------
@@ -1246,24 +1293,23 @@ class GMMResults(LikelihoodModelResults):
         bse : ndarray
             estimated standard error of parameter estimates
 
-        '''
+        """
         return np.sqrt(np.diag(self.cov_params(**kwds)))
 
     def jtest(self):
-        '''overidentification test
+        """overidentification test
 
         I guess this is missing a division by nobs,
         what's the normalization in jval ?
-        '''
+        """
 
         jstat = self.jval
-        nparams = self.params.size #self.nparams
+        nparams = self.params.size  # self.nparams
         df = self.model.nmoms - nparams
         return jstat, stats.chi2.sf(jstat, df), df
 
-
     def compare_j(self, other):
-        '''overidentification test for comparing two nested gmm estimates
+        """overidentification test for comparing two nested gmm estimates
 
         This assumes that some moment restrictions have been dropped in one
         of the GMM estimates relative to the other.
@@ -1276,7 +1322,7 @@ class GMMResults(LikelihoodModelResults):
 
         TODO: Check in which cases Stata programs use the same weigths
 
-        '''
+        """
         jstat1 = self.jval
         k_moms1 = self.model.nmoms
         jstat2 = other.jval
@@ -1286,11 +1332,11 @@ class GMMResults(LikelihoodModelResults):
         if df < 0:
             # possible nested in other way, TODO allow this or not
             # flip sign instead of absolute
-            df = - df
-            jdiff = - jdiff
+            df = -df
+            jdiff = -jdiff
         return jdiff, stats.chi2.sf(jdiff, df), df
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05):
         """Summarize the Regression Results
 
         Parameters
@@ -1316,48 +1362,56 @@ class GMMResults(LikelihoodModelResults):
         statsmodels.iolib.summary.Summary : class to hold summary
             results
         """
-        #TODO: add a summary text for options that have been used
+        # TODO: add a summary text for options that have been used
 
         jvalue, jpvalue, jdf = self.jtest()
 
-        top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
-                    ('Method:', ['GMM']),
-                    ('Date:', None),
-                    ('Time:', None),
-                    ('No. Observations:', None),
-                    #('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
-                    #('Df Model:', None), #[self.df_model])
-                    ]
+        top_left = [
+            ("Dep. Variable:", None),
+            ("Model:", None),
+            ("Method:", ["GMM"]),
+            ("Date:", None),
+            ("Time:", None),
+            ("No. Observations:", None),
+            # ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
+            # ('Df Model:', None), #[self.df_model])
+        ]
 
-        top_right = [#('R-squared:', ["%#8.3f" % self.rsquared]),
-                     #('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
-                     ('Hansen J:', ["%#8.4g" % jvalue] ),
-                     ('Prob (Hansen J):', ["%#6.3g" % jpvalue]),
-                     #('F-statistic:', ["%#8.4g" % self.fvalue] ),
-                     #('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     #('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
-                     #('AIC:', ["%#8.4g" % self.aic]),
-                     #('BIC:', ["%#8.4g" % self.bic])
-                     ]
+        top_right = [  # ('R-squared:', ["%#8.3f" % self.rsquared]),
+            # ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
+            ("Hansen J:", ["%#8.4g" % jvalue]),
+            ("Prob (Hansen J):", ["%#6.3g" % jpvalue]),
+            # ('F-statistic:', ["%#8.4g" % self.fvalue] ),
+            # ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
+            # ('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
+            # ('AIC:', ["%#8.4g" % self.aic]),
+            # ('BIC:', ["%#8.4g" % self.bic])
+        ]
 
         if title is None:
-            title = self.model.__class__.__name__ + ' ' + "Results"
+            title = self.model.__class__.__name__ + " " + "Results"
 
         # create summary table instance
         from statsmodels.iolib.summary import Summary
+
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                              use_t=self.use_t)
+        smry.add_table_2cols(
+            self,
+            gleft=top_left,
+            gright=top_right,
+            yname=yname,
+            xname=xname,
+            title=title,
+        )
+        smry.add_table_params(
+            self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t
+        )
 
         return smry
 
 
-
 class IVGMM(GMM):
-    '''
+    """
     Basic class for instrumental variables estimation using GMM
 
     A linear function for the conditional mean is defined as default but the
@@ -1369,9 +1423,9 @@ class IVGMM(GMM):
     LinearIVGMM
     NonlinearIVGMM
 
-    '''
+    """
 
-    results_class = 'IVGMMResults'
+    results_class = "IVGMMResults"
 
     def fitstart(self):
         """Create array of zeros"""
@@ -1435,7 +1489,7 @@ class LinearIVGMM(IVGMM):
     """
 
     def fitgmm(self, start, weights=None, optim_method=None, **kwds):
-        '''estimate parameters using GMM for linear model
+        """estimate parameters using GMM for linear model
 
         Uses closed form expression instead of nonlinear optimizers
 
@@ -1459,9 +1513,9 @@ class LinearIVGMM(IVGMM):
         paramest : ndarray
             estimated parameters
 
-        '''
-##        if not fixed is None:  #fixed not defined in this version
-##            raise NotImplementedError
+        """
+        ##        if not fixed is None:  #fixed not defined in this version
+        ##            raise NotImplementedError
 
         # TODO: should start_weights only be in `fit`
         if weights is None:
@@ -1479,13 +1533,11 @@ class LinearIVGMM(IVGMM):
 
         return params
 
-
     def predict(self, params, exog=None):
         if exog is None:
             exog = self.exog
 
         return np.dot(exog, params)
-
 
     def gradient_momcond(self, params, **kwds):
         # **kwds for compatibility not used
@@ -1507,7 +1559,6 @@ class LinearIVGMM(IVGMM):
         score /= nobs * nobs
 
         return score
-
 
 
 class NonlinearIVGMM(IVGMM):
@@ -1551,19 +1602,17 @@ class NonlinearIVGMM(IVGMM):
 
     TODO: check required signature of jac_error and jac_func
     """
+
     # This should be reversed:
     # NonlinearIVGMM is IVGMM and need LinearIVGMM as special case (fit, predict)
 
-
     def fitstart(self):
-        #might not make sense for more general functions
+        # might not make sense for more general functions
         return np.zeros(self.exog.shape[1])
-
 
     def __init__(self, endog, exog, instrument, func, **kwds):
         self.func = func
         super().__init__(endog, exog, instrument, **kwds)
-
 
     def predict(self, params, exog=None):
         if exog is None:
@@ -1571,26 +1620,25 @@ class NonlinearIVGMM(IVGMM):
 
         return self.func(params, exog)
 
-    #----------  the following a semi-general versions,
+    # ----------  the following a semi-general versions,
     # TODO: move to higher class after testing
 
     def jac_func(self, params, weights, args=None, centered=True, epsilon=None):
 
         # TODO: Why are ther weights in the signature - copy-paste error?
-        deriv = approx_fprime(params, self.func, args=(self.exog,),
-                              centered=centered, epsilon=epsilon)
+        deriv = approx_fprime(
+            params, self.func, args=(self.exog,), centered=centered, epsilon=epsilon
+        )
 
         return deriv
 
+    def jac_error(self, params, weights, args=None, centered=True, epsilon=None):
 
-    def jac_error(self, params, weights, args=None, centered=True,
-                   epsilon=None):
-
-        jac_func = self.jac_func(params, weights, args=None, centered=True,
-                                 epsilon=None)
+        jac_func = self.jac_func(
+            params, weights, args=None, centered=True, epsilon=None
+        )
 
         return -jac_func
-
 
     def score(self, params, weights, **kwds):
         # **kwds for compatibility not used
@@ -1599,8 +1647,7 @@ class NonlinearIVGMM(IVGMM):
         z = self.instrument
         nobs = z.shape[0]
 
-        jac_u = self.jac_error(params, weights, args=None, epsilon=None,
-                               centered=True)
+        jac_u = self.jac_error(params, weights, args=None, epsilon=None, centered=True)
         x = -jac_u  # alias, plays the same role as X in linear model
 
         u = self.get_error(params)
@@ -1613,6 +1660,7 @@ class NonlinearIVGMM(IVGMM):
 
 class IVGMMResults(GMMResults):
     """Results class of IVGMM"""
+
     # this assumes that we have an additive error model `(y - f(x, params))`
 
     @cache_readonly
@@ -1620,12 +1668,10 @@ class IVGMMResults(GMMResults):
         """Fitted values"""
         return self.model.predict(self.params)
 
-
     @cache_readonly
     def resid(self):
         """Residuals"""
         return self.model.endog - self.fittedvalues
-
 
     @cache_readonly
     def ssr(self):
@@ -1633,10 +1679,8 @@ class IVGMMResults(GMMResults):
         return (self.resid * self.resid).sum(0)
 
 
-
-
 def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
-    '''Hausmans specification test
+    """Hausmans specification test
 
     Parameters
     ----------
@@ -1667,12 +1711,12 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     Greene section 5.5 p.82/83
 
 
-    '''
-    params_diff = (params_i - params_e)
+    """
+    params_diff = params_i - params_e
     cov_diff = cov_params_i - cov_params_e
-    #TODO: the following is very inefficient, solves problem (svd) twice
-    #use linalg.lstsq or svd directly
-    #cov_diff will very often be in-definite (singular)
+    # TODO: the following is very inefficient, solves problem (svd) twice
+    # use linalg.lstsq or svd directly
+    # cov_diff will very often be in-definite (singular)
     if not dof:
         dof = np.linalg.matrix_rank(cov_diff)
     cov_diffpinv = np.linalg.pinv(cov_diff)
@@ -1684,63 +1728,65 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     return H, pval, dof, evals
 
 
-
-
 ###########
 
+
 class DistQuantilesGMM(GMM):
-    '''
+    """
     Estimate distribution parameters by GMM based on matching quantiles
 
     Currently mainly to try out different requirements for GMM when we cannot
     calculate the optimal weighting matrix.
 
-    '''
+    """
 
     def __init__(self, endog, exog, instrument, **kwds):
-        #TODO: something wrong with super
+        # TODO: something wrong with super
         super().__init__(endog, exog, instrument)
-        #self.func = func
+        # self.func = func
         self.epsilon_iter = 1e-5
 
-        self.distfn = kwds['distfn']
-        #done by super does not work yet
-        #TypeError: super does not take keyword arguments
+        self.distfn = kwds["distfn"]
+        # done by super does not work yet
+        # TypeError: super does not take keyword arguments
         self.endog = endog
 
-        #make this optional for fit
-        if 'pquant' not in kwds:
-            self.pquant = pquant = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
+        # make this optional for fit
+        if "pquant" not in kwds:
+            self.pquant = pquant = np.array(
+                [0.01, 0.05, 0.1, 0.4, 0.6, 0.9, 0.95, 0.99]
+            )
         else:
-            self.pquant = pquant = kwds['pquant']
+            self.pquant = pquant = kwds["pquant"]
 
-        #TODO: vectorize this: use edf
-        self.xquant = np.array([stats.scoreatpercentile(endog, p) for p
-                                in pquant*100])
+        # TODO: vectorize this: use edf
+        self.xquant = np.array(
+            [stats.scoreatpercentile(endog, p) for p in pquant * 100]
+        )
         self.nmoms = len(self.pquant)
 
-        #TODOcopied from GMM, make super work
+        # TODOcopied from GMM, make super work
         self.endog = endog
         self.exog = exog
         self.instrument = instrument
         self.results = GMMResults(model=self)
-        #self.__dict__.update(kwds)
+        # self.__dict__.update(kwds)
         self.epsilon_iter = 1e-6
 
     def fitstart(self):
-        #todo: replace with or add call to distfn._fitstart
+        # todo: replace with or add call to distfn._fitstart
         #      added but not used during testing
         distfn = self.distfn
-        if hasattr(distfn, '_fitstart'):
+        if hasattr(distfn, "_fitstart"):
             start = distfn._fitstart(self.endog)
         else:
-            start = [1]*distfn.numargs + [0.,1.]
+            start = [1] * distfn.numargs + [0.0, 1.0]
 
         return np.asarray(start)
 
-    def momcond(self, params): #drop distfn as argument
-        #, mom2, quantile=None, shape=None
-        '''moment conditions for estimating distribution parameters by matching
+    def momcond(self, params):  # drop distfn as argument
+        # , mom2, quantile=None, shape=None
+        """moment conditions for estimating distribution parameters by matching
         quantiles, defines as many moment conditions as quantiles.
 
         Returns
@@ -1753,26 +1799,26 @@ class DistQuantilesGMM(GMM):
         This can be used for method of moments or for generalized method of
         moments.
 
-        '''
-        #this check looks redundant/unused know
+        """
+        # this check looks redundant/unused know
         if len(params) == 2:
             loc, scale = params
         elif len(params) == 3:
             shape, loc, scale = params
         else:
-            #raise NotImplementedError
-            pass #see whether this might work, seems to work for beta with 2 shape args
+            # raise NotImplementedError
+            pass  # see whether this might work, seems to work for beta with 2 shape args
 
-        #mom2diff = np.array(distfn.stats(*params)) - mom2
-        #if not quantile is None:
+        # mom2diff = np.array(distfn.stats(*params)) - mom2
+        # if not quantile is None:
         pq, xq = self.pquant, self.xquant
-        #ppfdiff = distfn.ppf(pq, alpha)
+        # ppfdiff = distfn.ppf(pq, alpha)
         cdfdiff = self.distfn.cdf(xq, *params) - pq
-        #return np.concatenate([mom2diff, cdfdiff[:1]])
+        # return np.concatenate([mom2diff, cdfdiff[:1]])
         return np.atleast_2d(cdfdiff)
 
     def fitonce(self, start=None, weights=None, has_optimal_weights=False):
-        '''fit without estimating an optimal weighting matrix and return results
+        """fit without estimating an optimal weighting matrix and return results
 
         This is a convenience function that calls fitgmm and covparams with
         a given weight matrix or the identity weight matrix.
@@ -1796,25 +1842,27 @@ class DistQuantilesGMM(GMM):
         fitgmm
         cov_params
 
-        '''
+        """
         if weights is None:
             weights = np.eye(self.nmoms)
         params = self.fitgmm(start=start)
         # TODO: rewrite this old hack, should use fitgmm or fit maxiter=0
-        self.results.params = params  #required before call to self.cov_params
-        self.results.wargs = {} #required before call to self.cov_params
-        self.results.options_other = {'weights_method':'cov'}
+        self.results.params = params  # required before call to self.cov_params
+        self.results.wargs = {}  # required before call to self.cov_params
+        self.results.options_other = {"weights_method": "cov"}
         # TODO: which weights_method?  There should not be any needed ?
-        _cov_params = self.results.cov_params(weights=weights,
-                                      has_optimal_weights=has_optimal_weights)
+        # _cov_params = self.results.cov_params(weights=weights,
+        #                              has_optimal_weights=has_optimal_weights)
 
         self.results.weights = weights
         self.results.jval = self.gmmobjective(params, weights)
-        self.results.options_other.update({'has_optimal_weights':has_optimal_weights})
+        self.results.options_other.update({"has_optimal_weights": has_optimal_weights})
 
         return self.results
 
 
-results_class_dict = {'GMMResults': GMMResults,
-                      'IVGMMResults': IVGMMResults,
-                      'DistQuantilesGMM': GMMResults}  #TODO: should be a default
+results_class_dict = {
+    "GMMResults": GMMResults,
+    "IVGMMResults": IVGMMResults,
+    "DistQuantilesGMM": GMMResults,
+}  # TODO: should be a default

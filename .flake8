@@ -1,7 +1,7 @@
 [flake8]
 exclude = .git,build,docs,archive
 max-line-length = 88
-ignore=
+extend-ignore=
     W503,
     # W503: line break before binary operator
     W504,
@@ -14,228 +14,29 @@ ignore=
     # Found for loop that reassigns the iterable it is iterating with each iterable value
     B023,
     # Function definition does not bind loop variable
-    B026
+    B026,
     # Star-arg unpacking after a keyword argument is strongly discouraged
-select=
-    E101,
-    # E101: indentation contains mixed spaces and tabs
-    E124,
-    # E124: closing bracket does not match visual indentation
-    E111,
-    # E111: Indentation is not a multiple of four
-    E112,
-    # E112: expected an indented block
-    E113,
-    # E113: unexpected indentation
-    E114,
-    # E114: Indentation is not a multiple of four (comment)
-    E117,
-    # E117: over-indented
-    E124
-    # E124: closing bracket does not match visual indentation
-    E125,
-    # E125: continuation line with same indent as next logical line
-    E129,
-    # E129: visually indented line with same indent as next logical line
-    E131,
-    # E131: continuation line unaligned for hanging indent
-    E133
-    # E133: closing bracket is missing indentation
-    E211,
-    # E211: whitespace before '['
-    E223,
-    # E223: tab before operator
-    E224,
-    # E224: tab after operator
-    E227,
-    # E227: missing whitespace around bitwise or shift operator
-    E228,
-    # E228: missing whitespace around modulo operator
-    E242,
-    # E242: tab after ','
-    E252,
-    # E252: missing whitespace around parameter equals
-    E304,
-    # E304: blank lines found after function decorator
-    E306,
-    # E306: expected 1 blank line before a nested definition, found 0
+    E231,
+    E225,
+    E302,
+    E265,
+    E251,
+    E261,
+    E501,
+    E128,
+    E222,
+    E266,
+    E201,
+    E202,
+    E303,
+    E502,
+    E262,
+    E127,
+    E221,
+    E305,
+    E301,
+    E115,
+    E122,
+    E116,
+    
 
-    E27,
-    # E271: multiple spaces after keyword
-    # E272: multiple spaces before keyword
-    # E273: tab after keyword
-    # E274: tab before keyword
-    # E275: missing whitespace after keyword
-
-    E4,
-    # E401: multiple imports on one line
-    # E402: module level import not at top of file
-
-    E7,
-    # E701: multiple statements on one line (colon)
-    # E702: multiple statements on one line (semicolon)
-    # E703: statement ends with a semicolon
-    # E704: multiple statements on one line (def)
-    # E711: comparison to None should be 'if cond is None:'
-    # E712: comparison to True should be 'if cond is True:' or 'if cond:'
-    # E713: test for membership should be 'not in'
-    # E721: do not compare types, use 'isinstance()'
-    # E722: 	do not use bare 'except'
-    # E731: do not assign a lambda expression, use a def
-    # E741 ambiguous variable name 'l', 'O', or 'I'
-    # E742: do not define classes named 'l', 'O', or 'I'
-    # E743: do not define functions named 'l', 'O', or 'I'
-
-    E9,
-    # E901: SyntaxError or IndentationError
-    # E902: IOError
-    # E999: Syntax Error
-
-    F811,
-    # F811: redefinition of unused 'pytest' from line 10
-    F812,
-    # F812: list comprehension redefines 'x' from line 199
-    F822,
-    # F822: undefined name name in __all__
-    F823,
-    # F823: local variable name ... referenced before assignment
-    F831,
-    # F831: duplicate argument name in function definition
-
-    W,
-    # W191: indentation contains tabs
-    # W291: trailing whitespace
-    # W292: no newline at end of file
-    # W293: blank line contains whitespace
-    # W391: blank line at end of file
-    # W601: .has_key() is deprecated, use 'in'
-    # W602: deprecated form of raising exception
-    # W603: '<>' is deprecated, use '!='
-    # W604: backticks are deprecated, use 'repr()'
-    # W605: invalid escape sequence 'x'
-    # W606: 'async' and 'await' are reserved keywords starting with Python 3.7
-
-    F4,
-    # F401: 'foo.bar' imported but unused
-    # F402: import 'assert_equal' from line 7 shadowed by loop variable
-    # F403: 'from .data import *' used; unable to detect undefined names
-    # F404: future import(s) name after other statements
-    # F405: name may be undefined, or defined from star imports: module
-    # F406: 'from module import *' only allowed at module level
-    # F407: an undefined __future__ feature name was imported
-
-    F6,
-    # F601: dictionary key name repeated with different values
-    # F602: dictionary key variable name repeated with different values
-    # F621: too many expressions in an assignment with star-unpacking
-    # F622: two or more starred expressions in an assignment (a, *b, *c = d)
-    # F631: assertion test is a tuple, which are always True
-    # F632: use ==/!= to compare str, bytes, and int literals
-
-    F7,
-    # F701: a break statement outside of a while or for loop
-    # F702: a continue statement outside of a while or for loop
-    # F703: a continue statement in a finally block in a loop
-    # F704: a yield or yield from statement outside of a function
-    # F705: a return statement with arguments inside a generator
-    # F706: a return statement outside of a function/method
-    # F707: an except: block as not the last exception handler
-    # F721: doctest syntax error
-    # F722: syntax error in forward type annotation
-
-    F81,
-    # F811: redefinition of unused 'pytest' from line 10
-    # F812: list comprehension redefines 'x' from line 199
-
-    F82,
-    # F821: undefined name 'foo'
-    # F822: undefined name name in __all__
-    # F823: local variable name ... referenced before assignment
-
-    F9,
-    # F901: raise NotImplemented should be raise NotImplementedError
-
-    B001,
-    # Do not use bare except
-    B002,
-    # Python does not support the unary prefix increment.
-    B003,
-    # Assigning to os.environ doesn't clear the environment
-    B004,
-    # Using hasattr(x, '__call__') to test if x is callable is unreliable
-    B005,
-    # Using .strip() with multi-character strings is misleading the reader
-    B006,
-    # Do not use mutable data structures for argument defaults
-    # B007,
-    # Loop control variable not used within the loop body
-    B008,
-    # Do not perform function calls in argument defaults
-    B009,
-    # Do not call getattr(x, 'attr'), instead use normal property access x.attr
-    B010,
-    # Do not call setattr(x, 'attr', val), instead use normal property access, x.attr = val
-    B011,
-    # Do not call assert False since python -O removes these calls.
-    B012,
-    # Use of break, continue or return inside finally blocks will silence exceptions or override return values from the try or except blocks.
-    B013,
-    # A length-one tuple literal is redundant.
-    B014,
-    # Redundant exception types in except
-    B015,
-    # Pointless comparison
-    B016,
-    # Cannot raise a literal. Did you intend to return it or raise an Exception?
-    B017,
-    # assertRaises(Exception) and pytest.raises(Exception) should be considered evil.
-    B018,
-    # Found useless expression. Either assign it to a variable or remove it.
-    B019,
-    # Use of functools.lru_cache or functools.cache on methods can lead to memory leaks.
-    # B020,
-    # Loop control variable overrides iterable it iterates
-    B021,
-    # f-string used as docstring.
-    B022,
-    # No arguments passed to contextlib.suppress.
-    # B023,
-    # Functions defined inside a loop must not use variables redefined in the loop, because late-binding closures are a classic gotcha.
-    B024,
-    # Abstract base class has methods, but none of them are abstract.
-    B025,
-    # try-except block with duplicate exceptions found.
-    # B026,
-    # Star-arg unpacking after a keyword argument is strongly discouraged
-    B027,
-    # Empty method in abstract base class, but has no abstract decorator.
-    B028,
-    # No explicit stacklevel argument found.
-    B029,
-    # Using except (), with an empty tuple does not handle/catch anything. Add exceptions to handle.
-    B030,
-    # Except handlers should only be exception classes or tuples of exception classes.
-    B031,
-    # Using the generator returned from itertools.groupby() more than once will do nothing on the second usage. Save the result to a list if the result is needed multiple times.
-    B032,
-    # Possible unintentional type annotation (using :). Did you mean to assign (using =)?
-    B033,
-    # Sets should not contain duplicate items. Duplicate items will be replaced with a single item at runtime.
-    B034,
-    # Calls to re.sub, re.subn or re.split should pass flags or count/maxsplit as keyword arguments.
-    B035,
-    # Found dict comprehension with a static key - either a constant value or variable not from the comprehension expression.
-    B036,
-    # Found except BaseException, without re-raising (no raise in the top-level of the except block).
-    B037,
-    # Found return <value>, yield, yield <value>, or yield from <value> in class __init__() method.
-    B038,
-    # Moved to B909 - Found a mutation of a mutable loop iterable inside the loop body.
-    B039,
-    # ContextVar with mutable literal or function call as default.
-    B040,
-    # Caught exception with call to add_note not used.
-    B041,
-    # Repeated key-value pair in dictionary literal.
-    B042,
-    # Remember to call super().__init__() in custom exceptions initalizer.
