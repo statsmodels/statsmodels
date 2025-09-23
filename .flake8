@@ -1,13 +1,7 @@
 [flake8]
 exclude = .git,build,docs,archive
 max-line-length = 88
-extend-ignore=
-    W503,
-    # W503: line break before binary operator
-    W504,
-    # W504: line break after binary operator
-    E203,
-    # E203: Whitespace before ':'
+extend-ignore =
     B007,
     # Loop control variable 'i' not used within the loop body
     B020,
@@ -16,6 +10,12 @@ extend-ignore=
     # Function definition does not bind loop variable
     B026,
     # Star-arg unpacking after a keyword argument is strongly discouraged
+    W503,
+    # W503: line break before binary operator
+    W504,
+    # W504: line break after binary operator
+    E203,
+    # E203: Whitespace before ':'
     E231,
     E225,
     E302,
