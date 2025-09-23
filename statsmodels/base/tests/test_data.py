@@ -15,6 +15,7 @@ from statsmodels.formula import handle_formula_data
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.sm_exceptions import MissingDataError
 
 # FIXME: do not leave commented-out, enable or move/remove
 # class TestDates:
@@ -495,7 +496,7 @@ class TestMissingArray:
         sm_data.handle_data(np.random.random(20), np.random.random((20, 2)), "raise")
 
     def test_raise(self):
-        with pytest.raises(Exception):
+        with pytest.raises(MissingDataError):
             # TODO: be more specific about exception
             sm_data.handle_data(self.y, self.X, "raise")
 
@@ -517,7 +518,7 @@ class TestMissingArray:
         assert data.k_constant == 0
 
     def test_endog_only_raise(self):
-        with pytest.raises(Exception):
+        with pytest.raises(MissingDataError):
             # TODO: be more specific about exception
             sm_data.handle_data(self.y, None, "raise")
 
@@ -570,7 +571,7 @@ class TestMissingPandas:
         )
 
     def test_raise(self):
-        with pytest.raises(Exception):
+        with pytest.raises(MissingDataError):
             # TODO: be more specific about exception
             sm_data.handle_data(self.y, self.X, "raise")
 
@@ -594,7 +595,7 @@ class TestMissingPandas:
         assert data.k_constant == 0
 
     def test_endog_only_raise(self):
-        with pytest.raises(Exception):
+        with pytest.raises(MissingDataError):
             # TODO: be more specific about exception
             sm_data.handle_data(self.y, None, "raise")
 

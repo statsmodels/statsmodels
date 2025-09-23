@@ -357,11 +357,11 @@ def test_na_action(engine, data):
 
     raiser = mgr.get_na_action("raise")
     if engine == "patsy":
-        exception = patsy.PatsyError
+        formula_exception = patsy.PatsyError
     else:
-        exception = ValueError
+        formula_exception = ValueError
 
-    with pytest.raises(exception):
+    with pytest.raises(formula_exception):
         mgr.get_matrices(fmla, missing, na_action=raiser)
 
     if engine == "patsy":

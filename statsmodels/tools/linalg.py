@@ -1,10 +1,12 @@
 """
 Linear Algebra solvers and other helpers
 """
+
 import numpy as np
 
-__all__ = ["logdet_symm", "stationary_solve", "transf_constraints",
-           "matrix_sqrt"]
+__all__ = ["logdet_symm", "stationary_solve", "transf_constraints", "matrix_sqrt"]
+
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 
 def logdet_symm(m, check_symm=False):
@@ -22,11 +24,12 @@ def logdet_symm(m, check_symm=False):
         The log-determinant of m.
     """
     from scipy import linalg
+
     if check_symm:
         if not np.all(m == m.T):  # would be nice to short-circuit check
             raise ValueError("m is not symmetric.")
     c, _ = linalg.cho_factor(m, lower=True)
-    return 2*np.sum(np.log(c.diagonal()))
+    return 2 * np.sum(np.log(c.diagonal()))
 
 
 def stationary_solve(r, b):
@@ -68,7 +71,7 @@ def stationary_solve(r, b):
 
         rn = r[j]
         a = (rn - np.dot(rf, db)) / (1 - np.dot(rf, db[::-1]))
-        z = db - a*db[::-1]
+        z = db - a * db[::-1]
         db = np.concatenate((z, np.r_[a]))
 
     if dim == 1:
@@ -113,8 +116,7 @@ def transf_constraints(constraints):
     return transf
 
 
-def matrix_sqrt(mat, inverse=False, full=False, nullspace=False,
-                threshold=1e-15):
+def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15):
     """matrix square root for symmetric matrices
 
     Usage is for decomposing a covariance function S into a square root R
@@ -154,7 +156,10 @@ def matrix_sqrt(mat, inverse=False, full=False, nullspace=False,
     u, s, v = np.linalg.svd(mat)
     if np.any(s < -threshold):
         import warnings
-        warnings.warn('some singular values are negative')
+
+        warnings.warn(
+            "some singular values are negative", SingularMatrixWarning, stacklevel=2
+        )
 
     if not nullspace:
         mask = s > threshold

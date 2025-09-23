@@ -16,6 +16,7 @@ MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with Multiple
 Seasonal Patterns
 https://arxiv.org/pdf/2107.13462.pdf
 """
+
 from collections.abc import Sequence
 from typing import Optional, Union
 import warnings
@@ -116,9 +117,7 @@ class MSTL:
         self._y = self._to_1d_array(endog)
         self.nobs = self._y.shape[0]
         self.lmbda = lmbda
-        self.periods, self.windows = self._process_periods_and_windows(
-            periods, windows
-        )
+        self.periods, self.windows = self._process_periods_and_windows(periods, windows)
         self.iterate = iterate
         self._stl_kwargs = self._remove_overloaded_stl_kwargs(
             stl_kwargs if stl_kwargs else {}
@@ -215,11 +214,11 @@ class MSTL:
         if any(period >= self.nobs / 2 for period in periods):
             warnings.warn(
                 "A period(s) is larger than half the length of time series."
-                " Removing these period(s).", UserWarning
+                " Removing these period(s).",
+                UserWarning,
+                stacklevel=2,
             )
-            periods = tuple(
-                period for period in periods if period < self.nobs / 2
-            )
+            periods = tuple(period for period in periods if period < self.nobs / 2)
             windows = windows[: len(periods)]
 
         return periods, windows

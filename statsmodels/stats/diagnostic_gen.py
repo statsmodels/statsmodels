@@ -11,11 +11,19 @@ from scipy import stats
 
 from statsmodels.stats.base import HolderTuple
 from statsmodels.stats.effect_size import _noncentrality_chisquare
+from statsmodels.tools.sm_exceptions import ModelWarning
 
 
-def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
-                           df=None, ordered=False, sort_method="quicksort",
-                           alpha_nc=0.05):
+def test_chisquare_binning(
+    counts,
+    expected,
+    sort_var=None,
+    bins=10,
+    df=None,
+    ordered=False,
+    sort_method="quicksort",
+    alpha_nc=0.05,
+):
     """chisquare gof test with binning of data, Hosmer-Lemeshow type
 
     ``observed`` and ``expected`` are observation specific and should have
@@ -71,8 +79,12 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
         if np.max(expected) < 1 + 1e-13:
             # expected seems to be probability, warn and rescale
             import warnings
-            warnings.warn("sum of expected and of observed differ, "
-                          "rescaling ``expected``")
+
+            warnings.warn(
+                "sum of expected and of observed differ, " "rescaling ``expected``",
+                ModelWarning,
+                stacklevel=2,
+            )
             expected = expected / n_expected * n_observed
         else:
             # expected doesn't look like fractions or probabilities
@@ -94,7 +106,7 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
 
     # chisquare test
     resid_pearson = (freqs - probs) / np.sqrt(probs)
-    chi2_stat_groups = ((freqs - probs)**2 / probs).sum(1)
+    chi2_stat_groups = ((freqs - probs) ** 2 / probs).sum(1)
     chi2_stat = chi2_stat_groups.sum()
     if df is None:
         g, c = freqs.shape
@@ -105,16 +117,17 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
     pvalue = stats.chi2.sf(chi2_stat, df)
     noncentrality = _noncentrality_chisquare(chi2_stat, df, alpha=alpha_nc)
 
-    res = HolderTuple(statistic=chi2_stat,
-                      pvalue=pvalue,
-                      df=df,
-                      freqs=freqs,
-                      probs=probs,
-                      noncentrality=noncentrality,
-                      resid_pearson=resid_pearson,
-                      chi2_stat_groups=chi2_stat_groups,
-                      indices=indices
-                      )
+    res = HolderTuple(
+        statistic=chi2_stat,
+        pvalue=pvalue,
+        df=df,
+        freqs=freqs,
+        probs=probs,
+        noncentrality=noncentrality,
+        resid_pearson=resid_pearson,
+        chi2_stat_groups=chi2_stat_groups,
+        indices=indices,
+    )
     return res
 
 
@@ -180,29 +193,27 @@ def prob_larger_2ordinal(probs1, probs2):
     prob2 : float
         prob2 = 1 - prob1 = Pr(x1 < x2) + 0.5 * Pr(x1 = x2)
     """
-#    count1 = np.asarray(count1)
-#    count2 = np.asarray(count2)
-#    nobs1, nobs2 = count1.sum(), count2.sum()
-#    freq1 = count1 / nobs1
-#    freq2 = count2 / nobs2
+    #    count1 = np.asarray(count1)
+    #    count2 = np.asarray(count2)
+    #    nobs1, nobs2 = count1.sum(), count2.sum()
+    #    freq1 = count1 / nobs1
+    #    freq2 = count2 / nobs2
 
-#     if freq1.ndim == 1:
-#         freq1_ = np.concatenate(([0], freq1))
-#     elif freq1.ndim == 2:
-#         freq1_ = np.concatenate((np.zeros((len(freq1), 1)), freq1), axis=1)
+    #     if freq1.ndim == 1:
+    #         freq1_ = np.concatenate(([0], freq1))
+    #     elif freq1.ndim == 2:
+    #         freq1_ = np.concatenate((np.zeros((len(freq1), 1)), freq1), axis=1)
 
-#     if freq2.ndim == 1:
-#         freq2_ = np.concatenate(([0], freq2))
-#     elif freq2.ndim == 2:
-#         freq2_ = np.concatenate((np.zeros((len(freq2), 1)), freq2), axis=1)
+    #     if freq2.ndim == 1:
+    #         freq2_ = np.concatenate(([0], freq2))
+    #     elif freq2.ndim == 2:
+    #         freq2_ = np.concatenate((np.zeros((len(freq2), 1)), freq2), axis=1)
 
     freq1 = np.asarray(probs1)
     freq2 = np.asarray(probs2)
     # add zero at beginning of choices for cdf computation
-    freq1_ = np.concatenate((np.zeros(freq1.shape[:-1] + (1,)), freq1),
-                            axis=-1)
-    freq2_ = np.concatenate((np.zeros(freq2.shape[:-1] + (1,)), freq2),
-                            axis=-1)
+    freq1_ = np.concatenate((np.zeros(freq1.shape[:-1] + (1,)), freq1), axis=-1)
+    freq2_ = np.concatenate((np.zeros(freq2.shape[:-1] + (1,)), freq2), axis=-1)
 
     cdf1 = freq1_.cumsum(axis=-1)
     cdf2 = freq2_.cumsum(axis=-1)
@@ -227,7 +238,7 @@ def cov_multinomial(probs):
     k = probs.shape[-1]
     di = np.diag_indices(k, 2)
     cov = probs[..., None] * probs[..., None, :]
-    cov *= - 1
+    cov *= -1
     cov[..., di[0], di[1]] += probs
     return cov
 

@@ -5,6 +5,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+
 from io import StringIO
 
 import numpy as np
@@ -18,6 +19,7 @@ from statsmodels.discrete.discrete_model import Logit, Poisson
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.tools.sm_exceptions import InvalidTestWarning
 from statsmodels.tools.tools import add_constant
 
 from .results import (
@@ -33,7 +35,7 @@ spector_data.exog = add_constant(spector_data.exog, prepend=False)
 
 DEBUG = False
 
-ss = '''\
+ss = """\
 agecat	smokes	deaths	pyears
 1	1	32	52407
 2	1	104	43248
@@ -44,11 +46,11 @@ agecat	smokes	deaths	pyears
 2	0	12	10673
 3	0	28	5710
 4	0	28	2585
-5	0	31	1462'''
+5	0	31	1462"""
 
-data = pd.read_csv(StringIO(ss), delimiter='\t')
+data = pd.read_csv(StringIO(ss), delimiter="\t")
 data = data.astype(int)
-data['logpyears'] = np.log(data['pyears'])
+data["logpyears"] = np.log(data["pyears"])
 
 
 class CheckPoissonConstrainedMixin:
@@ -63,16 +65,18 @@ class CheckPoissonConstrainedMixin:
         assert_allclose(bse1[~mask], res2.bse[self.idx][~mask], rtol=1e-6)
 
     def test_basic_method(self):
-        if hasattr(self, 'res1m'):
-            res1 = (self.res1m if not hasattr(self.res1m, '_results')
-                    else self.res1m._results)
+        if hasattr(self, "res1m"):
+            res1 = (
+                self.res1m
+                if not hasattr(self.res1m, "_results")
+                else self.res1m._results
+            )
             res2 = self.res2
             assert_allclose(res1.params, res2.params[self.idx], rtol=1e-6)
 
             # when a parameter is fixed, the Stata has bse=nan, we have bse=0
             mask = (res1.bse == 0) & np.isnan(res2.bse[self.idx])
-            assert_allclose(res1.bse[~mask], res2.bse[self.idx][~mask],
-                            rtol=1e-6)
+            assert_allclose(res1.bse[~mask], res2.bse[self.idx][~mask], rtol=1e-6)
 
             tvalues = res2.params_table[self.idx, 2]
             # when a parameter is fixed, the Stata has tvalue=nan,
@@ -92,8 +96,9 @@ class CheckPoissonConstrainedMixin:
             # note most pvalues are very small
             # examples so far agree at 8 or more decimal, but rtol is stricter
             # see above: nan versus value
-            assert_allclose(res1.conf_int()[~np.isnan(ci)], ci[~np.isnan(ci)],
-                            rtol=5e-5)
+            assert_allclose(
+                res1.conf_int()[~np.isnan(ci)], ci[~np.isnan(ci)], rtol=5e-5
+            )
 
             # other
             assert_allclose(res1.llf, res2.ll, rtol=1e-6)
@@ -106,18 +111,18 @@ class CheckPoissonConstrainedMixin:
 
     def test_other(self):
         # some results may not be valid or available for all models
-        if hasattr(self, 'res1m'):
+        if hasattr(self, "res1m"):
             res1 = self.res1m
             res2 = self.res2
 
-            if hasattr(res2, 'll_0'):
+            if hasattr(res2, "ll_0"):
                 assert_allclose(res1.llnull, res2.ll_0, rtol=1e-6)
             else:
                 if DEBUG:
                     import warnings
-                    message = ('test: ll_0 not available, llnull=%6.4F'
-                               % res1.llnull)
-                    warnings.warn(message)
+
+                    message = "test: ll_0 not available, llnull=%6.4F" % res1.llnull
+                    warnings.warn(message, InvalidTestWarning, stacklevel=2)
 
         else:
             pytest.skip("not available yet")
@@ -133,7 +138,7 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         cls.idx = [7, 3, 4, 5, 6, 0, 1]
 
         # example without offset
-        formula = 'deaths ~ logpyears + smokes + C(agecat)'
+        formula = "deaths ~ logpyears + smokes + C(agecat)"
         mod = Poisson.from_formula(formula, data=data)
         # get start_params, example fails to converge on one CI run
         k_vars = len(mod.exog_names)
@@ -143,32 +148,37 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         #  p = np.array([-3.93478643,  1.37276214,  2.33077032,  2.71338891,
         #                2.71338891, 0.57966535,  0.97254074])
 
-        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        constr = "C(agecat)[T.4] = C(agecat)[T.5]"
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
 
-        cls.res1 = fit_constrained(mod, lc.constraint_matrix, lc.constraint_values,
-                                   start_params=start_params,
-                                   fit_kwds={'method': 'bfgs', 'disp': 0})
+        cls.res1 = fit_constrained(
+            mod,
+            lc.constraint_matrix,
+            lc.constraint_values,
+            start_params=start_params,
+            fit_kwds={"method": "bfgs", "disp": 0},
+        )
         # TODO: Newton fails
 
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr, start_params=start_params,
-                                        method='bfgs', disp=0)
+        cls.res1m = mod.fit_constrained(
+            constr, start_params=start_params, method="bfgs", disp=0
+        )
 
     @pytest.mark.smoke
     def test_summary(self):
         # trailing text in summary, assumes it's the first extra string
         # NOTE: see comment about convergence in llnull for self.res1m
         summ = self.res1m.summary()
-        assert_('linear equality constraints' in summ.extra_txt)
+        assert_("linear equality constraints" in summ.extra_txt)
 
     @pytest.mark.smoke
     def test_summary2(self):
         # trailing text in summary, assumes it's the first extra string
         # NOTE: see comment about convergence in llnull for self.res1m
         summ = self.res1m.summary2()
-        assert_('linear equality constraints' in summ.extra_txt[0])
+        assert_("linear equality constraints" in summ.extra_txt[0])
 
 
 class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
@@ -180,22 +190,21 @@ class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
         cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical
 
         # example without offset
-        formula = 'deaths ~ smokes + C(agecat)'
-        mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
-        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        formula = "deaths ~ smokes + C(agecat)"
+        mod = Poisson.from_formula(formula, data=data, exposure=data["pyears"].values)
+        constr = "C(agecat)[T.4] = C(agecat)[T.5]"
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
-            mod, lc.constraint_matrix,
+            mod,
+            lc.constraint_matrix,
             lc.constraint_values,
-            fit_kwds={'method': 'newton', 'disp': 0},
+            fit_kwds={"method": "newton", "disp": 0},
         )
         cls.constraints = lc
         # TODO: bfgs fails
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr, method='newton',
-                                        disp=0)
+        cls.res1m = mod.fit_constrained(constr, method="newton", disp=0)
 
 
 class TestPoissonConstrained1c(CheckPoissonConstrainedMixin):
@@ -207,23 +216,24 @@ class TestPoissonConstrained1c(CheckPoissonConstrainedMixin):
         cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical
 
         # example without offset
-        formula = 'deaths ~ smokes + C(agecat)'
-        mod = Poisson.from_formula(formula, data=data,
-                                   offset=np.log(data['pyears'].values))
-        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        formula = "deaths ~ smokes + C(agecat)"
+        mod = Poisson.from_formula(
+            formula, data=data, offset=np.log(data["pyears"].values)
+        )
+        constr = "C(agecat)[T.4] = C(agecat)[T.5]"
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
             mod,
             lc.constraint_matrix,
             lc.constraint_values,
-            fit_kwds={'method': 'newton', 'disp': 0}
+            fit_kwds={"method": "newton", "disp": 0},
         )
         cls.constraints = lc
         # TODO: bfgs fails
 
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr, method='newton', disp=0)
+        cls.res1m = mod.fit_constrained(constr, method="newton", disp=0)
 
 
 class TestPoissonNoConstrained(CheckPoissonConstrainedMixin):
@@ -235,9 +245,10 @@ class TestPoissonNoConstrained(CheckPoissonConstrainedMixin):
         cls.idx = [6, 2, 3, 4, 5, 0]  # 1 is dropped baseline for categorical
 
         # example without offset
-        formula = 'deaths ~ smokes + C(agecat)'
-        mod = Poisson.from_formula(formula, data=data,
-                                   offset=np.log(data['pyears'].values))
+        formula = "deaths ~ smokes + C(agecat)"
+        mod = Poisson.from_formula(
+            formula, data=data, offset=np.log(data["pyears"].values)
+        )
         res1 = mod.fit(disp=0)._results
         # res1 is duplicate check, so we can follow the same pattern
         cls.res1 = (res1.params, res1.cov_params())
@@ -254,7 +265,7 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
         cls.idx = [7, 3, 4, 5, 6, 0, 1]
 
         # example without offset
-        formula = 'deaths ~ logpyears + smokes + C(agecat)'
+        formula = "deaths ~ logpyears + smokes + C(agecat)"
         mod = Poisson.from_formula(formula, data=data)
 
         # get start_params, example fails to converge on one CI run
@@ -265,7 +276,7 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
         #  p = np.array([-9.43762015,  1.52762442,  2.74155711,  3.58730007,
         #                4.08730007,  1.15987869,  0.12111539])
 
-        constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
+        constr = "C(agecat)[T.5] - C(agecat)[T.4] = 0.5"
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
@@ -273,13 +284,14 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
             lc.constraint_matrix,
             lc.constraint_values,
             start_params=start_params,
-            fit_kwds={'method': 'bfgs', 'disp': 0}
+            fit_kwds={"method": "bfgs", "disp": 0},
         )
         # TODO: Newton fails
 
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr, start_params=start_params,
-                                        method='bfgs', disp=0)
+        cls.res1m = mod.fit_constrained(
+            constr, start_params=start_params, method="bfgs", disp=0
+        )
 
 
 class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
@@ -291,24 +303,24 @@ class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
         cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical
 
         # example without offset
-        formula = 'deaths ~ smokes + C(agecat)'
-        mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
-        constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
+        formula = "deaths ~ smokes + C(agecat)"
+        mod = Poisson.from_formula(formula, data=data, exposure=data["pyears"].values)
+        constr = "C(agecat)[T.5] - C(agecat)[T.4] = 0.5"
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
             mod,
             lc.constraint_matrix,
             lc.constraint_values,
-            fit_kwds={'method': 'newton', 'disp': 0}
+            fit_kwds={"method": "newton", "disp": 0},
         )
         cls.constraints = lc
         # TODO: bfgs fails to converge. overflow somewhere?
 
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr, method='bfgs', disp=0,
-                                        start_params=cls.res1[0])
+        cls.res1m = mod.fit_constrained(
+            constr, method="bfgs", disp=0, start_params=cls.res1[0]
+        )
 
 
 class TestPoissonConstrained2c(CheckPoissonConstrainedMixin):
@@ -320,26 +332,27 @@ class TestPoissonConstrained2c(CheckPoissonConstrainedMixin):
         cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical
 
         # example without offset
-        formula = 'deaths ~ smokes + C(agecat)'
-        mod = Poisson.from_formula(formula, data=data,
-                                   offset=np.log(data['pyears'].values))
+        formula = "deaths ~ smokes + C(agecat)"
+        mod = Poisson.from_formula(
+            formula, data=data, offset=np.log(data["pyears"].values)
+        )
 
-        constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
+        constr = "C(agecat)[T.5] - C(agecat)[T.4] = 0.5"
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
             mod,
             lc.constraint_matrix,
             lc.constraint_values,
-            fit_kwds={'method': 'newton', 'disp': 0}
+            fit_kwds={"method": "newton", "disp": 0},
         )
         cls.constraints = lc
         # TODO: bfgs fails
 
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr,
-                                        method='bfgs', disp=0,
-                                        start_params=cls.res1[0])
+        cls.res1m = mod.fit_constrained(
+            constr, method="bfgs", disp=0, start_params=cls.res1[0]
+        )
 
 
 class TestGLMPoissonConstrained1a(CheckPoissonConstrainedMixin):
@@ -353,18 +366,14 @@ class TestGLMPoissonConstrained1a(CheckPoissonConstrainedMixin):
         cls.idx = [7, 3, 4, 5, 6, 0, 1]
 
         # example without offset
-        formula = 'deaths ~ logpyears + smokes + C(agecat)'
-        mod = GLM.from_formula(formula, data=data,
-                               family=families.Poisson())
+        formula = "deaths ~ logpyears + smokes + C(agecat)"
+        mod = GLM.from_formula(formula, data=data, family=families.Poisson())
 
-        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        constr = "C(agecat)[T.4] = C(agecat)[T.5]"
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
-            mod,
-            lc.constraint_matrix,
-            lc.constraint_values,
-            fit_kwds={'atol': 1e-10}
+            mod, lc.constraint_matrix, lc.constraint_values, fit_kwds={"atol": 1e-10}
         )
         cls.constraints = lc
         cls.res1m = mod.fit_constrained(constr, atol=1e-10)
@@ -382,20 +391,20 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
         cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical
 
         # example with offset
-        formula = 'deaths ~ smokes + C(agecat)'
-        mod = GLM.from_formula(formula, data=data,
-                               family=families.Poisson(),
-                               offset=np.log(data['pyears'].values))
+        formula = "deaths ~ smokes + C(agecat)"
+        mod = GLM.from_formula(
+            formula,
+            data=data,
+            family=families.Poisson(),
+            offset=np.log(data["pyears"].values),
+        )
 
-        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        constr = "C(agecat)[T.4] = C(agecat)[T.5]"
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
 
         cls.res1 = fit_constrained(
-            mod,
-            lc.constraint_matrix,
-            lc.constraint_values,
-            fit_kwds={'atol': 1e-10}
+            mod, lc.constraint_matrix, lc.constraint_values, fit_kwds={"atol": 1e-10}
         )
         cls.constraints = lc
         cls.res1m = mod.fit_constrained(constr, atol=1e-10)._results
@@ -404,14 +413,17 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
         res1 = self.res1m
         res2 = self.res2
 
-        formula = 'deaths ~ smokes + C(agecat)'
-        mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
+        formula = "deaths ~ smokes + C(agecat)"
+        mod = Poisson.from_formula(formula, data=data, exposure=data["pyears"].values)
 
-        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        res2 = mod.fit_constrained(constr, start_params=self.res1m.params,
-                                   method='newton', warn_convergence=False,
-                                   disp=0)
+        constr = "C(agecat)[T.4] = C(agecat)[T.5]"
+        res2 = mod.fit_constrained(
+            constr,
+            start_params=self.res1m.params,
+            method="newton",
+            warn_convergence=False,
+            disp=0,
+        )
 
         # we get high precision because we use the params as start_params
 
@@ -425,9 +437,9 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
         assert_allclose(predicted, res2.predict(), rtol=1e-10)
         assert_allclose(res1.mu, predicted, rtol=1e-10)
         assert_allclose(res1.fittedvalues, predicted, rtol=1e-10)
-        assert_allclose(res2.predict(which="linear"),
-                        res2.predict(which="linear"),
-                        rtol=1e-10)
+        assert_allclose(
+            res2.predict(which="linear"), res2.predict(which="linear"), rtol=1e-10
+        )
 
 
 class CheckGLMConstrainedMixin(CheckPoissonConstrainedMixin):
@@ -466,10 +478,9 @@ class TestGLMLogitConstrained1(CheckGLMConstrainedMixin):
 
         cls.res2 = reslogit.results_constraint1
 
-        mod1 = GLM(spector_data.endog, spector_data.exog,
-                   family=families.Binomial())
+        mod1 = GLM(spector_data.endog, spector_data.exog, family=families.Binomial())
 
-        constr = 'x1 = 2.8'
+        constr = "x1 = 2.8"
         cls.res1m = mod1.fit_constrained(constr)
 
         R, q = cls.res1m.constraints
@@ -489,14 +500,14 @@ class TestLogitConstrained1(CheckGLMConstrainedMixin):
 
         mod1 = Logit(spector_data.endog, spector_data.exog)
 
-        constr = 'x1 = 2.8'
+        constr = "x1 = 2.8"
         # newton doesn't work, raises hessian singular
-        cls.res1m = mod1.fit_constrained(constr, method='bfgs')
+        cls.res1m = mod1.fit_constrained(constr, method="bfgs")
 
         R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
-        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'method': 'bfgs'})
+        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={"method": "bfgs"})
 
-    @pytest.mark.skip(reason='not a GLM')
+    @pytest.mark.skip(reason="not a GLM")
     def test_glm(self):
         return
 
@@ -508,15 +519,14 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         cls.idx = slice(None)  # params sequence same as Stata
         cls.res2 = reslogit.results_constraint2
 
-        mod1 = GLM(spector_data.endog, spector_data.exog,
-                   family=families.Binomial())
+        mod1 = GLM(spector_data.endog, spector_data.exog, family=families.Binomial())
 
-        constr = 'x1 - x3 = 0'
+        constr = "x1 - x3 = 0"
         cls.res1m = mod1.fit_constrained(constr, atol=1e-10)
 
         # patsy compatible constraints
         R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
-        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'atol': 1e-10})
+        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={"atol": 1e-10})
         cls.constraints_rq = (R, q)
 
     def test_predict(self):
@@ -533,7 +543,7 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
     def test_summary(self):
         # trailing text in summary, assumes it's the first extra string
         summ = self.res1m.summary()
-        assert_('linear equality constraints' in summ.extra_txt)
+        assert_("linear equality constraints" in summ.extra_txt)
 
         lc_string = str(self.res1m.constraints)
         assert lc_string.startswith("x1 - x3 = 0")
@@ -548,13 +558,14 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
             # FutureWarning for BIC changes
             summ = self.res1m.summary2()
 
-        assert_('linear equality constraints' in summ.extra_txt[0])
+        assert_("linear equality constraints" in summ.extra_txt[0])
 
     def test_fit_constrained_wrap(self):
         # minimal test
         res2 = self.res2  # reference results
 
         from statsmodels.base._constraints import fit_constrained_wrap
+
         res_wrap = fit_constrained_wrap(self.res1m.model, self.constraints_rq)
         assert_allclose(res_wrap.params, res2.params, rtol=1e-6)
         assert_allclose(res_wrap.params, res2.params, rtol=1e-6)
@@ -567,23 +578,26 @@ class TestGLMLogitConstrained2HC(CheckGLMConstrainedMixin):
         cls.idx = slice(None)  # params sequence same as Stata
         cls.res2 = reslogit.results_constraint2_robust
 
-        mod1 = GLM(spector_data.endog, spector_data.exog,
-                   family=families.Binomial())
+        mod1 = GLM(spector_data.endog, spector_data.exog, family=families.Binomial())
 
         # not used to match Stata for HC
         # nobs, k_params = mod1.exog.shape
         # k_params -= 1   # one constraint
-        cov_type = 'HC0'
-        cov_kwds = {'scaling_factor': 32/31}
+        cov_type = "HC0"
+        cov_kwds = {"scaling_factor": 32 / 31}
         # looks like nobs / (nobs - 1) and not (nobs - 1.) / (nobs - k_params)}
-        constr = 'x1 - x3 = 0'
-        cls.res1m = mod1.fit_constrained(constr, cov_type=cov_type,
-                                         cov_kwds=cov_kwds, atol=1e-10)
+        constr = "x1 - x3 = 0"
+        cls.res1m = mod1.fit_constrained(
+            constr, cov_type=cov_type, cov_kwds=cov_kwds, atol=1e-10
+        )
 
         R, q = cls.res1m.constraints
-        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'atol': 1e-10,
-                                                         'cov_type': cov_type,
-                                                         'cov_kwds': cov_kwds})
+        cls.res1 = fit_constrained(
+            mod1,
+            R,
+            q,
+            fit_kwds={"atol": 1e-10, "cov_type": cov_type, "cov_kwds": cov_kwds},
+        )
         cls.constraints_rq = (R, q)
 
 
@@ -600,21 +614,27 @@ class TestLogitConstrained2HC(CheckGLMConstrainedMixin):
         # not used to match Stata for HC
         # nobs, k_params = mod1.exog.shape
         # k_params -= 1   # one constraint
-        cov_type = 'HC0'
-        cov_kwds = {'scaling_factor': 32/31}
+        cov_type = "HC0"
+        cov_kwds = {"scaling_factor": 32 / 31}
         # looks like nobs / (nobs - 1) and not (nobs - 1.) / (nobs - k_params)}
-        constr = 'x1 - x3 = 0'
-        cls.res1m = mod1.fit_constrained(constr, cov_type=cov_type,
-                                         cov_kwds=cov_kwds, tol=1e-10,
-                                         )
+        constr = "x1 - x3 = 0"
+        cls.res1m = mod1.fit_constrained(
+            constr,
+            cov_type=cov_type,
+            cov_kwds=cov_kwds,
+            tol=1e-10,
+        )
 
         R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
-        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'tol': 1e-10,
-                                                         'cov_type': cov_type,
-                                                         'cov_kwds': cov_kwds})
+        cls.res1 = fit_constrained(
+            mod1,
+            R,
+            q,
+            fit_kwds={"tol": 1e-10, "cov_type": cov_type, "cov_kwds": cov_kwds},
+        )
         cls.constraints_rq = (R, q)
 
-    @pytest.mark.skip(reason='not a GLM')
+    @pytest.mark.skip(reason="not a GLM")
     def test_glm(self):
         return
 
@@ -623,27 +643,25 @@ def junk():  # FIXME: make this into a test, or move/remove
     # Singular Matrix in mod1a.fit()
 
     # same as Stata default
-    formula2 = 'deaths ~ C(agecat) + C(smokes) : C(agecat)'
+    formula2 = "deaths ~ C(agecat) + C(smokes) : C(agecat)"
 
-    mod = Poisson.from_formula(formula2, data=data,
-                               exposure=data['pyears'].values)
+    mod = Poisson.from_formula(formula2, data=data, exposure=data["pyears"].values)
 
     mod.fit()
 
-    constraints = 'C(smokes)[T.1]:C(agecat)[3] = C(smokes)[T.1]:C(agec`at)[4]'
+    constraints = "C(smokes)[T.1]:C(agecat)[3] = C(smokes)[T.1]:C(agec`at)[4]"
 
     mgr = FormulaManager()
     lc = mgr.get_linear_constraints(mod.exog_names).linear_constraint(constraints)
     R, q = lc.coefs, lc.constants
 
-    mod.fit_constrained(R, q, fit_kwds={'method': 'bfgs'})
+    mod.fit_constrained(R, q, fit_kwds={"method": "bfgs"})
 
     # example without offset
-    formula1a = 'deaths ~ logpyears + smokes + C(agecat)'
+    formula1a = "deaths ~ logpyears + smokes + C(agecat)"
     mod1a = Poisson.from_formula(formula1a, data=data)
 
     mod1a.fit()
-    constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+    constr = "C(agecat)[T.4] = C(agecat)[T.5]"
     lc_1a = mgr.get_linear_constraints(constr, mod1a.exog_names)
-    mod1a.fit_constrained(lc_1a.coefs, lc_1a.constants,
-                          fit_kwds={'method': 'newton'})
+    mod1a.fit_constrained(lc_1a.coefs, lc_1a.constants, fit_kwds={"method": "newton"})

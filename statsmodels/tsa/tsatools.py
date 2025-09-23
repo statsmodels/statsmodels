@@ -112,9 +112,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
         x = np.asanyarray(x)
 
     nobs = len(x)
-    trendarr = np.vander(
-        np.arange(1, nobs + 1, dtype=np.float64), trendorder + 1
-    )
+    trendarr = np.vander(np.arange(1, nobs + 1, dtype=np.float64), trendorder + 1)
     # put in order ctt
     trendarr = np.fliplr(trendarr)
     if trend == "t":
@@ -232,9 +230,9 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             insert = x.shape[1]
 
             warnings.warn(
-                "insert > number of variables, inserting at the"
-                " last position",
+                "insert > number of variables, inserting at the" " last position",
                 ValueWarning,
+                stacklevel=2,
             )
         ins_idx = insert
 
@@ -277,9 +275,7 @@ def detrend(x, order=1, axis=0):
     if x.ndim == 2 and int(axis) == 1:
         x = x.T
     elif x.ndim > 2:
-        raise NotImplementedError(
-            "x.ndim > 2 is not implemented until it is needed"
-        )
+        raise NotImplementedError("x.ndim > 2 is not implemented until it is needed")
 
     nobs = x.shape[0]
     if order == 0:
@@ -388,8 +384,7 @@ def lagmat(
     trim = trim.lower()
     if is_pandas and trim in ("none", "backward"):
         raise ValueError(
-            "trim cannot be 'none' or 'backward' when used on "
-            "Series or DataFrames"
+            "trim cannot be 'none' or 'backward' when used on " "Series or DataFrames"
         )
 
     dropidx = 0
@@ -448,9 +443,7 @@ def lagmat(
         return lags
 
 
-def lagmat2ds(
-    x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=False
-):
+def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=False):
     """
     Generate lagmatrix for 2d array, columns arranged by variables.
 
@@ -510,9 +503,7 @@ def lagmat2ds(
     nobs, nvar = x.shape
 
     if is_pandas and use_pandas:
-        lags = lagmat(
-            x.iloc[:, 0], maxlag, trim=trim, original="in", use_pandas=True
-        )
+        lags = lagmat(x.iloc[:, 0], maxlag, trim=trim, original="in", use_pandas=True)
         lagsli = [lags.iloc[:, : maxlag0 + 1]]
         for k in range(1, nvar):
             lags = lagmat(
@@ -523,14 +514,10 @@ def lagmat2ds(
     elif is_pandas:
         x = np.asanyarray(x)
 
-    lagsli = [
-        lagmat(x[:, 0], maxlag, trim=trim, original="in")[:, : maxlag0 + 1]
-    ]
+    lagsli = [lagmat(x[:, 0], maxlag, trim=trim, original="in")[:, : maxlag0 + 1]]
     for k in range(1, nvar):
         lagsli.append(
-            lagmat(x[:, k], maxlag, trim=trim, original="in")[
-                :, dropex : maxlagex + 1
-            ]
+            lagmat(x[:, k], maxlag, trim=trim, original="in")[:, dropex : maxlagex + 1]
         )
     return np.column_stack(lagsli)
 
@@ -671,9 +658,7 @@ def _ar_invtransparams(params):
     for j in range(len(params) - 1, 0, -1):
         a = params[j]
         for kiter in range(j):
-            tmp[kiter] = (params[kiter] + a * params[j - kiter - 1]) / (
-                1 - a ** 2
-            )
+            tmp[kiter] = (params[kiter] + a * params[j - kiter - 1]) / (1 - a**2)
         params[:j] = tmp[:j]
     invarcoefs = 2 * np.arctanh(params)
     return invarcoefs
@@ -717,9 +702,7 @@ def _ma_invtransparams(macoefs):
     for j in range(len(macoefs) - 1, 0, -1):
         b = macoefs[j]
         for kiter in range(j):
-            tmp[kiter] = (macoefs[kiter] - b * macoefs[j - kiter - 1]) / (
-                1 - b ** 2
-            )
+            tmp[kiter] = (macoefs[kiter] - b * macoefs[j - kiter - 1]) / (1 - b**2)
         macoefs[:j] = tmp[:j]
     invmacoefs = -np.log((1 - macoefs) / (1 + macoefs))
     return invmacoefs

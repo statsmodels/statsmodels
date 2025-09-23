@@ -10,6 +10,7 @@ Genest, C., 2009. Rank-based inference for bivariate extreme-value
 copulas. The Annals of Statistics, 37(5), pp.2990-3022.
 
 """
+
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -36,6 +37,7 @@ class CopulaDistribution:
     Status: experimental, argument handling may still change
 
     """
+
     def __init__(self, copula, marginals, cop_args=()):
 
         self.copula = copula
@@ -95,12 +97,12 @@ class CopulaDistribution:
         if marg_args is None:
             marg_args = [()] * self.k_vars
 
-        sample = self.copula.rvs(nobs=nobs, args=cop_args,
-                                 random_state=random_state)
+        sample = self.copula.rvs(nobs=nobs, args=cop_args, random_state=random_state)
 
         for i, dist in enumerate(self.marginals):
-            sample[:, i] = dist.ppf(0.5 + (1 - 1e-10) * (sample[:, i] - 0.5),
-                                    *marg_args[i])
+            sample[:, i] = dist.ppf(
+                0.5 + (1 - 1e-10) * (sample[:, i] - 0.5), *marg_args[i]
+            )
         return sample
 
     def cdf(self, y, cop_args=None, marg_args=None):
@@ -405,8 +407,8 @@ class Copula(ABC):
 
         fig, ax = utils.create_mpl_ax(ax)
         ax.scatter(sample[:, 0], sample[:, 1])
-        ax.set_xlabel('u')
-        ax.set_ylabel('v')
+        ax.set_xlabel("u")
+        ax.set_ylabel("v")
 
         return fig, sample
 
@@ -429,15 +431,20 @@ class Copula(ABC):
 
         """
         from matplotlib import pyplot as plt
+
         if self.k_dim != 2:
             import warnings
-            warnings.warn("Plotting 2-dimensional Copula.")
+
+            warnings.warn(
+                "Plotting 2-dimensional Copula.", RuntimeWarning, stacklevel=2
+            )
 
         n_samples = 100
 
         eps = 1e-4
-        uu, vv = np.meshgrid(np.linspace(eps, 1 - eps, n_samples),
-                             np.linspace(eps, 1 - eps, n_samples))
+        uu, vv = np.meshgrid(
+            np.linspace(eps, 1 - eps, n_samples), np.linspace(eps, 1 - eps, n_samples)
+        )
         points = np.vstack([uu.ravel(), vv.ravel()]).T
 
         data = self.pdf(points).T.reshape(uu.shape)
@@ -448,17 +455,23 @@ class Copula(ABC):
 
         vticks = np.linspace(min_, max_, num=ticks_nbr)
         range_cbar = [min_, max_]
-        cs = ax.contourf(uu, vv, data, vticks,
-                         antialiased=True, vmin=range_cbar[0],
-                         vmax=range_cbar[1])
+        cs = ax.contourf(
+            uu,
+            vv,
+            data,
+            vticks,
+            antialiased=True,
+            vmin=range_cbar[0],
+            vmax=range_cbar[1],
+        )
 
         ax.set_xlabel("u")
         ax.set_ylabel("v")
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
         cbar = plt.colorbar(cs, ticks=vticks)
-        cbar.set_label('p')
+        cbar.set_label("p")
         fig.tight_layout()
 
         return fig
@@ -496,8 +509,11 @@ class Copula(ABC):
             tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
         else:
             k = self.k_dim
-            taus = [stats.kendalltau(x[..., i], x[..., j])[0]
-                    for i in range(k) for j in range(i+1, k)]
+            taus = [
+                stats.kendalltau(x[..., i], x[..., j])[0]
+                for i in range(k)
+                for j in range(i + 1, k)
+            ]
             tau = np.mean(taus)
         return self._arg_from_tau(tau)
 

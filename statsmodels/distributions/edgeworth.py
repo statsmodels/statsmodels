@@ -13,10 +13,11 @@ from scipy.stats import rv_continuous
 
 
 _faa_di_bruno_cache = {
-        1: [[(1, 1)]],
-        2: [[(1, 2)], [(2, 1)]],
-        3: [[(1, 3)], [(2, 1), (1, 1)], [(3, 1)]],
-        4: [[(1, 4)], [(1, 2), (2, 1)], [(2, 2)], [(3, 1), (1, 1)], [(4, 1)]]}
+    1: [[(1, 1)]],
+    2: [[(1, 2)], [(2, 1)]],
+    3: [[(1, 3)], [(2, 1), (1, 1)], [(3, 1)]],
+    4: [[(1, 4)], [(1, 2), (2, 1)], [(2, 2)], [(3, 1), (1, 1)], [(4, 1)]],
+}
 
 
 def _faa_di_bruno_partitions(n):
@@ -50,7 +51,7 @@ def _faa_di_bruno_partitions(n):
     except KeyError:
         # TODO: higher order terms
         # solve Eq. (31) from Blinninkov & Moessner here
-        raise NotImplementedError('Higher order terms not yet implemented.')
+        raise NotImplementedError("Higher order terms not yet implemented.")
 
 
 def cumulant_from_moments(momt, n):
@@ -73,26 +74,32 @@ def cumulant_from_moments(momt, n):
     if n < 1:
         raise ValueError("Expected a positive integer. Got %s instead." % n)
     if len(momt) < n:
-        raise ValueError("%s-th cumulant requires %s moments, "
-                         "only got %s." % (n, n, len(momt)))
-    kappa = 0.
+        raise ValueError(
+            "%s-th cumulant requires %s moments, " "only got %s." % (n, n, len(momt))
+        )
+    kappa = 0.0
     for p in _faa_di_bruno_partitions(n):
         r = sum(k for (m, k) in p)
-        term = (-1)**(r - 1) * factorial(r - 1)
-        for (m, k) in p:
+        term = (-1) ** (r - 1) * factorial(r - 1)
+        for m, k in p:
             term *= np.power(momt[m - 1] / factorial(m), k) / factorial(k)
         kappa += term
     kappa *= factorial(n)
     return kappa
 
+
 ## copied from scipy.stats.distributions to avoid the overhead of
 ## the public methods
-_norm_pdf_C = np.sqrt(2*np.pi)
+_norm_pdf_C = np.sqrt(2 * np.pi)
+
+
 def _norm_pdf(x):
-    return np.exp(-x**2/2.0) / _norm_pdf_C
+    return np.exp(-(x**2) / 2.0) / _norm_pdf_C
+
 
 def _norm_cdf(x):
     return special.ndtr(x)
+
 
 def _norm_sf(x):
     return special.ndtr(-x)
@@ -149,7 +156,8 @@ class ExpandedNormal(rv_continuous):
     .. [*] S. Blinnikov and R. Moessner, Expansions for nearly Gaussian
         distributions, Astron. Astrophys. Suppl. Ser. 130, 193 (1998)
     """
-    def __init__(self, cum, name='Edgeworth expanded normal', **kwds):
+
+    def __init__(self, cum, name="Edgeworth expanded normal", **kwds):
         if len(cum) < 2:
             raise ValueError("At least two cumulants are needed.")
         self._coef, self._mu, self._sigma = self._compute_coefs_pdf(cum)
@@ -157,17 +165,16 @@ class ExpandedNormal(rv_continuous):
         if self._coef.size > 2:
             self._herm_cdf = HermiteE(-self._coef[1:])
         else:
-            self._herm_cdf = lambda x: 0.
+            self._herm_cdf = lambda x: 0.0
 
         # warn if pdf(x) < 0 for some values of x within 4 sigma
         r = np.real_if_close(self._herm_pdf.roots())
         r = (r - self._mu) / self._sigma
         if r[(np.imag(r) == 0) & (np.abs(r) < 4)].any():
-            mesg = 'PDF has zeros at %s ' % r
-            warnings.warn(mesg, RuntimeWarning)
+            mesg = "PDF has zeros at %s " % r
+            warnings.warn(mesg, RuntimeWarning, stacklevel=2)
 
-        kwds.update({'name': name,
-                     'momtype': 0})   # use pdf, not ppf in self.moment()
+        kwds.update({"name": name, "momtype": 0})  # use pdf, not ppf in self.moment()
         super().__init__(**kwds)
 
     def _pdf(self, x):
@@ -176,28 +183,26 @@ class ExpandedNormal(rv_continuous):
 
     def _cdf(self, x):
         y = (x - self._mu) / self._sigma
-        return (_norm_cdf(y) +
-                self._herm_cdf(y) * _norm_pdf(y))
+        return _norm_cdf(y) + self._herm_cdf(y) * _norm_pdf(y)
 
     def _sf(self, x):
         y = (x - self._mu) / self._sigma
-        return (_norm_sf(y) -
-                self._herm_cdf(y) * _norm_pdf(y))
+        return _norm_sf(y) - self._herm_cdf(y) * _norm_pdf(y)
 
     def _compute_coefs_pdf(self, cum):
         # scale cumulants by \sigma
         mu, sigma = cum[0], np.sqrt(cum[1])
         lam = np.asarray(cum)
         for j in range(lam.shape[0]):
-            lam[j] /= cum[1]**j
+            lam[j] /= cum[1] ** j
 
         coef = np.zeros(lam.size * 3 - 5)
-        coef[0] = 1.
+        coef[0] = 1.0
         for s in range(lam.size - 2):
-            for p in _faa_di_bruno_partitions(s+1):
-                term = sigma**(s+1)
-                for (m, k) in p:
-                    term *= np.power(lam[m+1] / factorial(m+2), k) / factorial(k)
+            for p in _faa_di_bruno_partitions(s + 1):
+                term = sigma ** (s + 1)
+                for m, k in p:
+                    term *= np.power(lam[m + 1] / factorial(m + 2), k) / factorial(k)
                 r = sum(k for (m, k) in p)
-                coef[s + 1 + 2*r] += term
+                coef[s + 1 + 2 * r] += term
         return coef, mu, sigma

@@ -1,4 +1,4 @@
-""" Distance dependence measure and the dCov test.
+"""Distance dependence measure and the dCov test.
 
 Implementation of Székely et al. (2007) calculation of distance
 dependence statistics, including the Distance covariance (dCov) test
@@ -13,6 +13,7 @@ References
    Annals of Statistics, Vol. 35 No. 6, pp. 2769-2794.
 
 """
+
 from collections import namedtuple
 import warnings
 
@@ -24,8 +25,14 @@ from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 DistDependStat = namedtuple(
     "DistDependStat",
-    ["test_statistic", "distance_correlation",
-     "distance_covariance", "dvar_x", "dvar_y", "S"],
+    [
+        "test_statistic",
+        "distance_correlation",
+        "distance_covariance",
+        "dvar_x",
+        "dvar_y",
+        "S",
+    ],
 )
 
 
@@ -134,7 +141,7 @@ def distance_covariance_test(x, y, B=None, method="auto"):
             f"p-value was {pval} when using the empirical method. "
             "The asymptotic approximation will be used instead"
         )
-        warnings.warn(msg, HypothesisTestWarning)
+        warnings.warn(msg, HypothesisTestWarning, stacklevel=2)
         _, pval = _asymptotic_pvalue(stats)
 
     return test_statistic, pval, chosen_method
@@ -173,9 +180,7 @@ def _validate_and_tranform_x_and_y(x, y):
     y = np.asanyarray(y)
 
     if x.shape[0] != y.shape[0]:
-        raise ValueError(
-            "x and y must have the same number of observations (rows)."
-        )
+        raise ValueError("x and y must have the same number of observations (rows).")
 
     if len(x.shape) == 1:
         x = x.reshape((x.shape[0], 1))
@@ -218,9 +223,9 @@ def _empirical_pvalue(x, y, B, n, stats):
     """
     B = int(B) if B else int(np.floor(200 + 5000 / n))
     empirical_dist = _get_test_statistic_distribution(x, y, B)
-    pval = 1 - np.searchsorted(
-        sorted(empirical_dist), stats.test_statistic
-    ) / len(empirical_dist)
+    pval = 1 - np.searchsorted(sorted(empirical_dist), stats.test_statistic) / len(
+        empirical_dist
+    )
     test_statistic = stats.test_statistic
 
     return test_statistic, pval
@@ -370,7 +375,7 @@ def distance_statistics(x, y, x_dist=None, y_dist=None):
     dvar_y = np.sqrt(np.multiply(B, B).mean())
     dcor = dcov / np.sqrt(dvar_x * dvar_y)
 
-    test_statistic = n * dcov ** 2
+    test_statistic = n * dcov**2
 
     return DistDependStat(
         test_statistic=test_statistic,

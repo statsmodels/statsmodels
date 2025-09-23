@@ -19,6 +19,7 @@ from scipy.interpolate import interp1d
 from scipy.signal import correlate
 
 from statsmodels.regression.linear_model import OLS, yule_walker
+from statsmodels.stats._results_store import ResultsStore
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
     InfeasibleTestError,
@@ -26,7 +27,6 @@ from statsmodels.tools.sm_exceptions import (
     MissingDataError,
     ValueWarning,
 )
-from statsmodels.stats._results_store import ResultsStore
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.validation import (
     array_like,
@@ -1541,6 +1541,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
         warnings.warn(
             "verbose is deprecated since functions should not print results",
             FutureWarning,
+            stacklevel=2,
         )
     else:
         verbose = True  # old default

@@ -10,8 +10,10 @@ changes for statsmodels (Josef Perktold)
 
 """
 
-from statsmodels.tools.sm_exceptions import (ModuleUnavailableWarning,
-                                             module_unavailable_doc)
+from statsmodels.tools.sm_exceptions import (
+    ModuleUnavailableWarning,
+    module_unavailable_doc,
+)
 
 
 def parallel_func(func, n_jobs, verbose=5):
@@ -57,17 +59,26 @@ def parallel_func(func, n_jobs, verbose=5):
         if n_jobs == -1:
             try:
                 import multiprocessing
+
                 n_jobs = multiprocessing.cpu_count()
             except (ImportError, NotImplementedError):
                 import warnings
-                warnings.warn(module_unavailable_doc.format('multiprocessing'),
-                              ModuleUnavailableWarning)
+
+                warnings.warn(
+                    module_unavailable_doc.format("multiprocessing"),
+                    ModuleUnavailableWarning,
+                    stacklevel=2,
+                )
                 n_jobs = 1
 
     except ImportError:
         import warnings
-        warnings.warn(module_unavailable_doc.format('joblib'),
-                      ModuleUnavailableWarning)
+
+        warnings.warn(
+            module_unavailable_doc.format("joblib"),
+            ModuleUnavailableWarning,
+            stacklevel=2,
+        )
         n_jobs = 1
         my_func = func
         parallel = list

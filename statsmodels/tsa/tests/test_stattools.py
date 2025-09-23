@@ -957,7 +957,9 @@ class TestRUR:
             direction = "larger"
 
         if direction:
-            warnings.warn(warn_msg.format(direction=direction), InterpolationWarning)
+            warnings.warn(
+                warn_msg.format(direction=direction), InterpolationWarning, stacklevel=2
+            )
 
         crit_dict = {
             "10%": inter_crit[0, 3],

@@ -80,6 +80,7 @@ def _check_data(data):
             "deprecated and will be removed in a future version of statsmodels. "
             "DataFrames are the only supported data structure.",
             DeprecationWarning,
+            stacklevel=2,
         )
 
 
@@ -464,7 +465,7 @@ class FormulaManager:
             else:
                 _eval_env = eval_env
                 if isinstance(eval_env, patsy.eval.EvalEnvironment):
-                    warnings.warn(EVAL_ENV_WARNING, FutureWarning)
+                    warnings.warn(EVAL_ENV_WARNING, FutureWarning, stacklevel=2)
             if (
                 isinstance(
                     formula, (patsy.design_info.DesignInfo, patsy.desc.ModelDesc)
@@ -515,7 +516,7 @@ class FormulaManager:
                 from patsy.eval import EvalEnvironment
 
                 if isinstance(eval_env, EvalEnvironment):
-                    warnings.warn(EVAL_ENV_WARNING, FutureWarning)
+                    warnings.warn(EVAL_ENV_WARNING, FutureWarning, stacklevel=2)
 
                     ns = eval_env._namespaces
                     _eval_env = {}

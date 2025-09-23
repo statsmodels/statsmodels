@@ -40,8 +40,7 @@ def check_random_state(seed=None):
 
         Random number generator.
     """
-    if hasattr(stats, "qmc") and \
-            isinstance(seed, stats.qmc.QMCEngine):
+    if hasattr(stats, "qmc") and isinstance(seed, stats.qmc.QMCEngine):
         return seed
     elif isinstance(seed, np.random.RandomState):
         return seed
@@ -51,5 +50,6 @@ def check_random_state(seed=None):
         return np.random.default_rng(seed)
     else:
         import warnings
-        warnings.warn(_future_warn, FutureWarning)
+
+        warnings.warn(_future_warn, FutureWarning, stacklevel=2)
         return np.random.mtrand._rand

@@ -903,6 +903,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             warnings.warn(
                 "Optimization failed to converge. Check mle_retvals.",
                 ConvergenceWarning,
+                stacklevel=2,
             )
         params[sel] = res.x
 
