@@ -10,7 +10,7 @@ import warnings
 
 import numpy as np
 
-from statsmodels.discrete._diagnostics_count import (  # _test_poisson_dispersion_generic,
+from statsmodels.discrete._diagnostics_count import (
     plot_probs,
     test_chisquare_prob,
     test_poisson_dispersion,
