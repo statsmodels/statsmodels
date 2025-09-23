@@ -3,7 +3,6 @@ from numpy.testing import (
     assert_,
     assert_allclose,
     assert_array_equal,
-    assert_raises_regex,
 )
 import pytest
 
