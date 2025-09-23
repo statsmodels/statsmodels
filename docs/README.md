@@ -1,4 +1,4 @@
-# Documentation
+# Documentation Guidelines: Sphinx and Jupyter Notebooks Integration
 
 We use a combination of sphinx and Jupyter notebooks for the documentation.
 Jupyter notebooks should be used for longer, self-contained examples demonstrating
