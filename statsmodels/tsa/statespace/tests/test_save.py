@@ -2,13 +2,10 @@
 Tests of save / load / remove_data state space functionality.
 """
 
-from statsmodels.compat.numpy import NP_LT_24
-
 import os
 import pickle
 import tempfile
 
-import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
@@ -159,9 +156,5 @@ def test_varmax_pickle(temp_filename):
 
 def test_existing_pickle():
     pkl_file = os.path.join(current_path, "results", "sm-0.9-sarimax.pkl")
-    if not NP_LT_24:
-        with pytest.warns(np.exceptions.VisibleDeprecationWarning):
-            loaded = sarimax.SARIMAXResults.load(pkl_file)
-    else:
-        loaded = sarimax.SARIMAXResults.load(pkl_file)
+    loaded = sarimax.SARIMAXResults.load(pkl_file)
     assert isinstance(loaded, sarimax.SARIMAXResultsWrapper)

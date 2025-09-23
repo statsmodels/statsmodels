@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_equal, assert_raises
+from numpy.testing import assert_, assert_allclose, assert_equal
 import pytest
 
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake, oshorts
@@ -66,7 +66,8 @@ def test_integrated_invalid():
     # - include_constant=True is invalid if integration is present
     endog = lake.copy()
     exog = np.arange(1, len(endog) + 1) * 1.0
-    assert_raises(ValueError, gls, endog, exog, order=(1, 1, 0), include_constant=True)
+    with pytest.raises(ValueError):
+        gls(endog, exog, order=(1, 1, 0), include_constant=True)
 
 
 def test_results():
@@ -159,73 +160,64 @@ def test_alternate_arma_estimators_invalid():
     exog = np.c_[np.ones_like(endog), np.arange(1, len(endog) + 1) * 1.0]
 
     # Test for invalid estimator
-    assert_raises(
-        ValueError,
-        gls,
-        endog,
-        exog,
-        order=(0, 0, 1),
-        arma_estimator="invalid_estimator",
-    )
+    with pytest.raises(ValueError):
+        gls(
+            endog,
+            exog,
+            order=(0, 0, 1),
+            arma_estimator="invalid_estimator",
+        )
 
     # Yule-Walker, Burg can only handle consecutive AR
-    assert_raises(
-        ValueError, gls, endog, exog, order=(0, 0, 1), arma_estimator="yule_walker"
-    )
-    assert_raises(
-        ValueError,
-        gls,
-        endog,
-        exog,
-        order=(0, 0, 0),
-        seasonal_order=(1, 0, 0, 4),
-        arma_estimator="yule_walker",
-    )
-    assert_raises(
-        ValueError, gls, endog, exog, order=([0, 1], 0, 0), arma_estimator="yule_walker"
-    )
+    with pytest.raises(ValueError):
+        gls(endog, exog, order=(0, 0, 1), arma_estimator="yule_walker")
+    with pytest.raises(ValueError):
+        gls(
+            endog,
+            exog,
+            order=(0, 0, 0),
+            seasonal_order=(1, 0, 0, 4),
+            arma_estimator="yule_walker",
+        )
+    with pytest.raises(ValueError):
+        gls(endog, exog, order=([0, 1], 0, 0), arma_estimator="yule_walker")
 
-    assert_raises(ValueError, gls, endog, exog, order=(0, 0, 1), arma_estimator="burg")
-    assert_raises(
-        ValueError,
-        gls,
-        endog,
-        exog,
-        order=(0, 0, 0),
-        seasonal_order=(1, 0, 0, 4),
-        arma_estimator="burg",
-    )
-    assert_raises(
-        ValueError, gls, endog, exog, order=([0, 1], 0, 0), arma_estimator="burg"
-    )
+    with pytest.raises(ValueError):
+        gls(endog, exog, order=(0, 0, 1), arma_estimator="burg")
+    with pytest.raises(ValueError):
+        gls(
+            endog,
+            exog,
+            order=(0, 0, 0),
+            seasonal_order=(1, 0, 0, 4),
+            arma_estimator="burg",
+        )
+    with pytest.raises(ValueError):
+        gls(endog, exog, order=([0, 1], 0, 0), arma_estimator="burg")
 
     # Innovations (MA) can only handle consecutive MA
-    assert_raises(
-        ValueError, gls, endog, exog, order=(1, 0, 0), arma_estimator="innovations"
-    )
-    assert_raises(
-        ValueError,
-        gls,
-        endog,
-        exog,
-        order=(0, 0, 0),
-        seasonal_order=(0, 0, 1, 4),
-        arma_estimator="innovations",
-    )
-    assert_raises(
-        ValueError, gls, endog, exog, order=(0, 0, [0, 1]), arma_estimator="innovations"
-    )
+    with pytest.raises(ValueError):
+        gls(endog, exog, order=(1, 0, 0), arma_estimator="innovations")
+    with pytest.raises(ValueError):
+        gls(
+            endog,
+            exog,
+            order=(0, 0, 0),
+            seasonal_order=(0, 0, 1, 4),
+            arma_estimator="innovations",
+        )
+    with pytest.raises(ValueError):
+        gls(endog, exog, order=(0, 0, [0, 1]), arma_estimator="innovations")
 
     # Hannan-Rissanen can't handle seasonal components
-    assert_raises(
-        ValueError,
-        gls,
-        endog,
-        exog,
-        order=(0, 0, 0),
-        seasonal_order=(0, 0, 1, 4),
-        arma_estimator="hannan_rissanen",
-    )
+    with pytest.raises(ValueError):
+        gls(
+            endog,
+            exog,
+            order=(0, 0, 0),
+            seasonal_order=(0, 0, 1, 4),
+            arma_estimator="hannan_rissanen",
+        )
 
 
 def test_arma_kwargs():

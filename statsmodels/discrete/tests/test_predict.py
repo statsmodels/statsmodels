@@ -146,7 +146,8 @@ class CheckPredict():
         assert_allclose(pmw.predicted, pm6.predicted, rtol=1e-13)
         assert_allclose(dfmw, dfm6, rtol=1e-7)
 
-    def test_diagnostic(self):
+    @pytest.mark.matplotlib
+    def test_diagnostic(self, close_figures):
         # smoke test for now
         res1 = self.res1
 
@@ -154,11 +155,8 @@ class CheckPredict():
         res_chi2 = dia.test_chisquare_prob(bin_edges=np.arange(4))
         assert_equal(res_chi2.diff1.shape[1], 3)
         assert_equal(dia.probs_predicted.shape[1], 22)
-
-        try:
-            dia.plot_probs(upp_xlim=20)
-        except ImportError:
-            pass
+        # smoke test
+        dia.plot_probs(upp_xlim=20)
 
 
 class CheckExtras():
@@ -346,7 +344,7 @@ y_count, x_const = get_data_simulated()
 
 
 @pytest.mark.parametrize("case", models)
-def test_distr(case):
+def test_distr(case, close_figures):
     y, x = y_count, x_const
     nobs = len(y)
     np.random.seed(987456348)

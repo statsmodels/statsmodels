@@ -5,7 +5,7 @@ from statsmodels.compat.pandas import (
 )
 
 import numpy as np
-from numpy.testing import assert_, assert_equal, assert_raises
+from numpy.testing import assert_, assert_equal
 import pandas as pd
 import pytest
 
@@ -388,7 +388,8 @@ def test_alignment():
     exog = pd.DataFrame(data)
 
     # TODO: which index do we get??
-    np.testing.assert_raises(ValueError, OLS, *(endog, exog))
+    with pytest.raises(ValueError):
+        OLS(endog, exog)
 
 
 class TestMultipleEqsArrays(TestArrays):
@@ -927,7 +928,8 @@ def test_formula_missing_extra_arrays():
     (endog, exog), missing_idx, model_spec = tmp
 
     kwargs.update({"weights": weights_wrong_size, "missing_idx": missing_idx})
-    assert_raises(ValueError, sm_data.handle_data, endog, exog, **kwargs)
+    with pytest.raises(ValueError):
+        sm_data.handle_data(endog, exog, **kwargs)
 
 
 def test_raise_nonfinite_exog():
@@ -939,6 +941,8 @@ def test_raise_nonfinite_exog():
     y = np.array([-0.6, -0.1, 0.0, -0.7, -0.5, 0.5, 0.1, -0.8, -2.0, 1.1])
 
     x[1, 1] = np.inf
-    assert_raises(MissingDataError, OLS, y, x)
+    with pytest.raises(MissingDataError):
+        OLS(y, x)
     x[1, 1] = np.nan
-    assert_raises(MissingDataError, OLS, y, x)
+    with pytest.raises(MissingDataError):
+        OLS(y, x)

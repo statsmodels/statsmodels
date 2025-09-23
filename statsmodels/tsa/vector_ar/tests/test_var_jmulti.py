@@ -1,5 +1,6 @@
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_raises
+from numpy.testing import assert_, assert_allclose
+import pytest
 
 import statsmodels.datasets.macrodata.data as macro
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import (
@@ -23,9 +24,7 @@ debug_mode = False
 dont_test_se_t_p = False
 deterministic_terms_list = ["nc", "c", "ct"]
 seasonal_list = [0, 4]
-dt_s_list = [
-    (det, s) for det in deterministic_terms_list for s in seasonal_list
-]
+dt_s_list = [(det, s) for det in deterministic_terms_list for s in seasonal_list]
 all_tests = [
     "coefs",
     "det",
@@ -39,7 +38,9 @@ all_tests = [
     "whiteness",
     "exceptions",
 ]
-to_test = all_tests  # ["coefs", "det", "Sigma_u", "log_like", "fc", "causality"]  # all_tests
+to_test = (
+    all_tests  # ["coefs", "det", "Sigma_u", "log_like", "fc", "causality"]  # all_tests
+)
 
 
 def load_data(dataset, data_dict):
@@ -182,21 +183,15 @@ def test_ols_coefs():
             # standard errors
             obt = results_sm[ds][dt_s].stderr_endog_lagged
             des = results_ref[ds][dt_s]["se"]["Lagged endogenous term"].T
-            assert_allclose(
-                obt, des, rtol, atol, False, "STANDARD ERRORS\n" + err_msg
-            )
+            assert_allclose(obt, des, rtol, atol, False, "STANDARD ERRORS\n" + err_msg)
             # t-values
             obt = results_sm[ds][dt_s].tvalues_endog_lagged
             des = results_ref[ds][dt_s]["t"]["Lagged endogenous term"].T
-            assert_allclose(
-                obt, des, rtol, atol, False, "t-VALUES\n" + err_msg
-            )
+            assert_allclose(obt, des, rtol, atol, False, "t-VALUES\n" + err_msg)
             # p-values
             obt = results_sm[ds][dt_s].pvalues_endog_lagged
             des = results_ref[ds][dt_s]["p"]["Lagged endogenous term"].T
-            assert_allclose(
-                obt, des, rtol, atol, False, "p-VALUES\n" + err_msg
-            )
+            assert_allclose(obt, des, rtol, atol, False, "p-VALUES\n" + err_msg)
 
 
 def test_ols_det_terms():
@@ -234,30 +229,18 @@ def test_ols_det_terms():
             # standard errors
             obt = results_sm[ds][dt_s].stderr_dt
             des = results_ref[ds][dt_s]["se"][det_key_ref]
-            des = reorder_jmultis_det_terms(
-                des, dt_s[0].startswith("c"), dt_s[1]
-            ).T
-            assert_allclose(
-                obt, des, rtol, atol, False, "STANDARD ERRORS\n" + err_msg
-            )
+            des = reorder_jmultis_det_terms(des, dt_s[0].startswith("c"), dt_s[1]).T
+            assert_allclose(obt, des, rtol, atol, False, "STANDARD ERRORS\n" + err_msg)
             # t-values
             obt = results_sm[ds][dt_s].tvalues_dt
             des = results_ref[ds][dt_s]["t"][det_key_ref]
-            des = reorder_jmultis_det_terms(
-                des, dt_s[0].startswith("c"), dt_s[1]
-            ).T
-            assert_allclose(
-                obt, des, rtol, atol, False, "t-VALUES\n" + err_msg
-            )
+            des = reorder_jmultis_det_terms(des, dt_s[0].startswith("c"), dt_s[1]).T
+            assert_allclose(obt, des, rtol, atol, False, "t-VALUES\n" + err_msg)
             # p-values
             obt = results_sm[ds][dt_s].pvalues_dt
             des = results_ref[ds][dt_s]["p"][det_key_ref]
-            des = reorder_jmultis_det_terms(
-                des, dt_s[0].startswith("c"), dt_s[1]
-            ).T
-            assert_allclose(
-                obt, des, rtol, atol, False, "p-VALUES\n" + err_msg
-            )
+            des = reorder_jmultis_det_terms(des, dt_s[0].startswith("c"), dt_s[1]).T
+            assert_allclose(obt, des, rtol, atol, False, "p-VALUES\n" + err_msg)
 
 
 def test_ols_sigma():
@@ -304,9 +287,7 @@ def test_fc():
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
             steps = 5  # parsed JMulTi output comprises 5 steps
-            last_observations = results_sm[ds][dt].endog[
-                -results_sm[ds][dt].k_ar :
-            ]
+            last_observations = results_sm[ds][dt].endog[-results_sm[ds][dt].k_ar :]
             seasons = dt[1]
             if seasons == 0:
                 exog_future = None
@@ -380,9 +361,7 @@ def test_causality():  # test Granger- and instantaneous causality
                 g_t_des = results_ref[ds][dt]["granger_caus"]["test_stat"][
                     (causing_key, caused_key)
                 ]
-                assert_allclose(
-                    g_t_obt, g_t_des, rtol, atol, False, err_msg_g_t
-                )
+                assert_allclose(g_t_obt, g_t_des, rtol, atol, False, err_msg_g_t)
                 # check whether string sequences as args work in the same way:
                 g_t_obt_str = granger_sm_str.test_statistic
                 assert_allclose(
@@ -398,15 +377,9 @@ def test_causality():  # test Granger- and instantaneous causality
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1 or len(caused_ind) == 1:
-                    ci = (
-                        causing_ind[0]
-                        if len(causing_ind) == 1
-                        else causing_ind
-                    )
+                    ci = causing_ind[0] if len(causing_ind) == 1 else causing_ind
                     ce = caused_ind[0] if len(caused_ind) == 1 else caused_ind
-                    granger_sm_single_ind = results_sm[ds][dt].test_causality(
-                        ce, ci
-                    )
+                    granger_sm_single_ind = results_sm[ds][dt].test_causality(ce, ci)
                     g_t_obt_single = granger_sm_single_ind.test_statistic
                     assert_allclose(
                         g_t_obt_single,
@@ -424,9 +397,7 @@ def test_causality():  # test Granger- and instantaneous causality
                 g_p_des = results_ref[ds][dt]["granger_caus"]["p"][
                     (causing_key, caused_key)
                 ]
-                assert_allclose(
-                    g_p_obt, g_p_des, rtol, atol, False, err_msg_g_p
-                )
+                assert_allclose(g_p_obt, g_p_des, rtol, atol, False, err_msg_g_p)
                 # check whether string sequences as args work in the same way:
                 g_p_obt_str = granger_sm_str.pvalue
                 assert_allclose(
@@ -455,12 +426,8 @@ def test_causality():  # test Granger- and instantaneous causality
                     )
 
                 # test instantaneous causality ################################
-                inst_sm_ind = results_sm[ds][dt].test_inst_causality(
-                    causing_ind
-                )
-                inst_sm_str = results_sm[ds][dt].test_inst_causality(
-                    causing_names
-                )
+                inst_sm_ind = results_sm[ds][dt].test_inst_causality(causing_ind)
+                inst_sm_str = results_sm[ds][dt].test_inst_causality(causing_names)
                 # test test-statistic for instantaneous non-causality
                 t_obt = inst_sm_ind.test_statistic
                 t_des = results_ref[ds][dt]["inst_caus"]["test_stat"][
@@ -482,9 +449,9 @@ def test_causality():  # test Granger- and instantaneous causality
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
-                    inst_sm_single_ind = results_sm[ds][
-                        dt
-                    ].test_inst_causality(causing_ind[0])
+                    inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(
+                        causing_ind[0]
+                    )
                     t_obt_single = inst_sm_single_ind.test_statistic
                     assert_allclose(
                         t_obt_single,
@@ -498,12 +465,8 @@ def test_causality():  # test Granger- and instantaneous causality
                     )
 
                 # test p-value for instantaneous non-causality
-                p_obt = (
-                    results_sm[ds][dt].test_inst_causality(causing_ind).pvalue
-                )
-                p_des = results_ref[ds][dt]["inst_caus"]["p"][
-                    (causing_key, caused_key)
-                ]
+                p_obt = results_sm[ds][dt].test_inst_causality(causing_ind).pvalue
+                p_des = results_ref[ds][dt]["inst_caus"]["p"][(causing_key, caused_key)]
                 assert_allclose(p_obt, p_des, rtol, atol, False, err_msg_i_p)
                 # check whether string sequences as args work in the same way:
                 p_obt_str = inst_sm_str.pvalue
@@ -520,9 +483,9 @@ def test_causality():  # test Granger- and instantaneous causality
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
-                    inst_sm_single_ind = results_sm[ds][
-                        dt
-                    ].test_inst_causality(causing_ind[0])
+                    inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(
+                        causing_ind[0]
+                    )
                     p_obt_single = inst_sm_single_ind.pvalue
                     assert_allclose(
                         p_obt_single,
@@ -552,9 +515,7 @@ def test_impulse_response():
             # flatten inner arrays to make them comparable to parsed results:
             obtained_all = obtained_all.reshape(periods + 1, -1)
             desired_all = results_ref[ds][dt]["ir"]
-            assert_allclose(
-                obtained_all, desired_all, rtol, atol, False, err_msg
-            )
+            assert_allclose(obtained_all, desired_all, rtol, atol, False, err_msg)
 
 
 def test_lag_order_selection():
@@ -573,9 +534,7 @@ def test_lag_order_selection():
             trend = "n" if dt[0] == "nc" else dt[0]
             obtained_all = model.select_order(10, trend=trend)
             for ic in ["aic", "fpe", "hqic", "bic"]:
-                err_msg = build_err_msg(
-                    ds, dt, "LAG ORDER SELECTION - " + ic.upper()
-                )
+                err_msg = build_err_msg(ds, dt, "LAG ORDER SELECTION - " + ic.upper())
                 obtained = getattr(obtained_all, ic)
                 desired = results_ref[ds][dt]["lagorder"][ic]
                 assert_allclose(obtained, desired, rtol, atol, False, err_msg)
@@ -595,12 +554,8 @@ def test_normality():
             obtained = results_sm[ds][dt].test_normality(signif=0.05)
             err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - STATISTIC")
             obt_statistic = obtained.test_statistic
-            des_statistic = results_ref[ds][dt]["test_norm"][
-                "joint_test_statistic"
-            ]
-            assert_allclose(
-                obt_statistic, des_statistic, rtol, atol, False, err_msg
-            )
+            des_statistic = results_ref[ds][dt]["test_norm"]["joint_test_statistic"]
+            assert_allclose(obt_statistic, des_statistic, rtol, atol, False, err_msg)
             err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - P-VALUE")
             obt_pvalue = obtained.pvalue
             des_pvalue = results_ref[ds][dt]["test_norm"]["joint_pvalue"]
@@ -624,25 +579,17 @@ def test_whiteness():
 
             obtained = results_sm[ds][dt].test_whiteness(nlags=lags)
             # test statistic
-            err_msg = build_err_msg(
-                ds, dt, "WHITENESS OF RESIDUALS - TEST STATISTIC"
-            )
+            err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - TEST STATISTIC")
             desired = results_ref[ds][dt]["whiteness"]["test statistic"]
             assert_allclose(
                 obtained.test_statistic, desired, rtol, atol, False, err_msg
             )
             # p-value
-            err_msg = build_err_msg(
-                ds, dt, "WHITENESS OF RESIDUALS - P-VALUE"
-            )
+            err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - P-VALUE")
             desired = results_ref[ds][dt]["whiteness"]["p-value"]
-            assert_allclose(
-                obtained.pvalue, desired, rtol, atol, False, err_msg
-            )
+            assert_allclose(obtained.pvalue, desired, rtol, atol, False, err_msg)
 
-            obtained = results_sm[ds][dt].test_whiteness(
-                nlags=lags, adjusted=True
-            )
+            obtained = results_sm[ds][dt].test_whiteness(nlags=lags, adjusted=True)
             # test statistic (adjusted Portmanteau test)
             err_msg = build_err_msg(
                 ds,
@@ -658,9 +605,7 @@ def test_whiteness():
                 ds, dt, "WHITENESS OF RESIDUALS - P-VALUE (ADJUSTED TEST)"
             )
             desired = results_ref[ds][dt]["whiteness"]["p-value adjusted"]
-            assert_allclose(
-                obtained.pvalue, desired, rtol, atol, False, err_msg
-            )
+            assert_allclose(obtained.pvalue, desired, rtol, atol, False, err_msg)
 
 
 def test_exceptions():
@@ -676,10 +621,10 @@ def test_exceptions():
 
             # instant causality:
             ### 0<signif<1
-            assert_raises(
-                ValueError, results_sm[ds][dt].test_inst_causality, 0, 0
-            )  # this means signif=0
+            with pytest.raises(ValueError):
+                results_sm[ds][dt].test_inst_causality(0, 0)
+                # this means signif=0
             ### causing must be int, str or iterable of int or str
-            assert_raises(
-                TypeError, results_sm[ds][dt].test_inst_causality, [0.5]
-            )  # 0.5 not an int
+            with pytest.raises(TypeError):
+                results_sm[ds][dt].test_inst_causality([0.5])
+                # 0.5 not an int

@@ -79,7 +79,7 @@ def test_x13_arima_select_order(dataset, use_numpy):
 
 
 @pytest.mark.matplotlib
-def test_x13_arima_plot(dataset):
+def test_x13_arima_plot(dataset, close_figures):
     res = x13_arima_analysis(dataset)
     res.plot()
 

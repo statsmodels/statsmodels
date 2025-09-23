@@ -17,7 +17,6 @@ from numpy.testing import (
     assert_almost_equal,
     assert_array_equal,
     assert_equal,
-    assert_raises,
 )
 import pytest
 
@@ -102,7 +101,7 @@ class CheckPowerMixin:
             # alternative='larger',
             ax=ax,
             title="Power of t-Test",
-            **self.kwds_extra
+            **self.kwds_extra,
         )
         ax = fig.add_subplot(2, 1, 2)
         self.cls().plot_power(
@@ -112,7 +111,7 @@ class CheckPowerMixin:
             # alternative='larger',
             ax=ax,
             title="",
-            **self.kwds_extra
+            **self.kwds_extra,
         )
 
 
@@ -882,16 +881,15 @@ def test_power_solver():
     # I let this case fail, could be fixed for some statistical tests
     # (we should not get here in the first place)
     # effect size is negative, but last stage brentq uses [1e-8, 1-1e-8]
-    assert_raises(
-        ValueError,
-        nip.solve_power,
-        None,
-        nobs1=1600,
-        alpha=0.01,
-        power=0.005,
-        ratio=1,
-        alternative="larger",
-    )
+    with pytest.raises(ValueError):
+        nip.solve_power(
+            None,
+            nobs1=1600,
+            alpha=0.01,
+            power=0.005,
+            ratio=1,
+            alternative="larger",
+        )
 
     with pytest.warns(HypothesisTestWarning):
         with pytest.raises(ValueError):

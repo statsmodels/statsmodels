@@ -475,7 +475,7 @@ class CheckHurdlePredict:
         # smoke test
         res1.summary()
 
-    def test_predict(self):
+    def test_predict(self, close_figures):
         res1 = self.res1
         endog = res1.model.endog
         exog = res1.model.exog

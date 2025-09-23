@@ -8,7 +8,7 @@ License: Simplified-BSD
 import os
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal, assert_raises
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 from scipy.stats import norm
@@ -211,7 +211,8 @@ def test_glm(constraints=None):
         assert_allclose(actual, res_glm.predict(np.ones((10, 3))))
     else:
         design = np.ones((2, 3, 10))
-        assert_raises(NotImplementedError, res.forecast, 10, design=design)
+        with pytest.raises(NotImplementedError):
+            res.forecast(10, design=design)
 
     # Hypothesis tests
     actual = res.t_test("m1 = 0")
@@ -284,9 +285,7 @@ def test_estimates():
 
 @pytest.mark.matplotlib
 def test_plots(close_figures):
-    exog = add_constant(dta[["m1", "pop"]])
-    mod = RecursiveLS(endog, exog)
-    res = mod.fit()
+    import matplotlib.pyplot as plt
 
     # Basic plot
     try:
@@ -295,6 +294,10 @@ def test_plots(close_figures):
         register_matplotlib_converters()
     except ImportError:
         pass
+
+    exog = add_constant(dta[["m1", "pop"]])
+    mod = RecursiveLS(endog, exog)
+    res = mod.fit()
     res.plot_recursive_coefficient()
 
     # Specific variable
@@ -302,7 +305,7 @@ def test_plots(close_figures):
 
     # All variables
     res.plot_recursive_coefficient(variables=[0, "m1", "pop"])
-
+    plt.close("all")
     # Basic plot
     res.plot_cusum()
 
@@ -311,10 +314,12 @@ def test_plots(close_figures):
         res.plot_cusum(alpha=alpha)
 
     # Invalid alpha
-    assert_raises(ValueError, res.plot_cusum, alpha=0.123)
+    with pytest.raises(ValueError):
+        res.plot_cusum(alpha=0.123)
 
     # Basic plot
     res.plot_cusum_squares()
+    plt.close("all")
 
     # Numpy input (no dates)
     mod = RecursiveLS(endog.values, exog.values)
@@ -419,7 +424,8 @@ def test_cusum():
     assert_allclose(actual_bounds, desired_bounds)
 
     # Test for invalid calls
-    assert_raises(ValueError, res._cusum_squares_significance_bounds, alpha=0.123)
+    with pytest.raises(ValueError):
+        res._cusum_squares_significance_bounds(alpha=0.123)
 
 
 def test_stata():

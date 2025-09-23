@@ -43,7 +43,7 @@ def test_smoke(data):
 
 
 @pytest.mark.matplotlib
-def test_sharex(data):
+def test_sharex(data, close_figures):
     stlf = STLForecast(data, ARIMA, model_kwargs={"order": (2, 0, 0)})
     res = stlf.fit(fit_kwargs={})
     plt = res.result.plot()
@@ -64,7 +64,7 @@ IDS = [str(c[0]).split(".")[-1][:-2] for c in MODELS]
 
 @pytest.mark.parametrize("config", MODELS, ids=IDS)
 @pytest.mark.parametrize("horizon", [1, 7, 23])
-def test_equivalence_forecast(data, config, horizon):
+def test_equivalence_forecast(data, config, horizon, close_figures):
     model, kwargs = config
 
     stl = STL(data)
@@ -164,7 +164,7 @@ def test_get_prediction(sunspots):
 
 
 @pytest.mark.parametrize("not_implemented", [True, False])
-def test_no_var_pred(sunspots, not_implemented):
+def test_no_var_pred(sunspots, not_implemented, close_figures):
     class DummyPred:
         def __init__(self, predicted_mean, row_labels):
             self.predicted_mean = predicted_mean

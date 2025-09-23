@@ -1,6 +1,9 @@
 # build
 cython>=3.0.10,<4
-setuptools_scm[toml]~=8.0
+setuptools_scm~=9.0
+meson-python>=0.18.0
+meson
+ninja
 
 # run
 matplotlib>=3
@@ -14,6 +17,7 @@ pytest>=8.4.1,<9
 pytest-randomly
 pytest-xdist
 pytest-cov
+coverage[toml]
 
 # Pin on Win32
 pywinpty; os_name == "nt"
