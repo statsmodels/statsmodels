@@ -90,7 +90,7 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
 
 
 def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
-                    error_fmt='k--', alpha=0.05, stderr_type = 'asym'):
+                    error_fmt='k--', alpha=0.05, stderr_type='asym'):
     """
     Make plot with optional error bars
 

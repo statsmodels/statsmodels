@@ -205,7 +205,7 @@ class TArma(Arma):
 
         df = params[-2]
         scale = np.abs(params[-1])
-        llike  = - stats.t._logpdf(errorsest/scale, df) + np_log(scale)
+        llike = - stats.t._logpdf(errorsest/scale, df) + np_log(scale)
         return llike
 
     # TODO rename fit_mle -> fit, fit -> fit_ls

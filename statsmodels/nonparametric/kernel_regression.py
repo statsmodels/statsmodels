@@ -785,7 +785,7 @@ class TestRegCoefC:
         Y = _adjust_shape(Y, 1)
         X = _adjust_shape(X, self.k_vars)
         b = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                        defaults = EstimatorSettings(efficient=False)).fit()[1]
+                        defaults=EstimatorSettings(efficient=False)).fit()[1]
 
         b = b[:, self.test_vars]
         b = np.reshape(b, (n, len(self.test_vars)))
@@ -895,7 +895,7 @@ class TestRegCoefD(TestRegCoefC):
 
         n = np.shape(X)[0]
         model = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                          defaults = EstimatorSettings(efficient=False))
+                          defaults=EstimatorSettings(efficient=False))
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0
 
@@ -929,7 +929,7 @@ class TestRegCoefD(TestRegCoefC):
         for j in range(self.nboot):
             u_boot = copy.deepcopy(u2)
 
-            prob = np.random.uniform(0,1, size = (n,1))
+            prob = np.random.uniform(0,1, size=(n,1))
             ind = prob < r
             u_boot[ind] = u1[ind]
             Y_boot = m + u_boot
@@ -954,8 +954,8 @@ class TestRegCoefD(TestRegCoefC):
         X = copy.deepcopy(self.exog)
         m = 0
         for i in self.dom_x:
-            X[:, self.test_vars]  = i
-            m += self.model.fit(data_predict = X)[0]
+            X[:, self.test_vars] = i
+            m += self.model.fit(data_predict=X)[0]
 
         m = m / float(len(self.dom_x))
         m = np.reshape(m, (np.shape(self.exog)[0], 1))

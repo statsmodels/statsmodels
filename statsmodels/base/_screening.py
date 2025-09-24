@@ -357,14 +357,14 @@ class VariableScreening:
         res_final.model.exog_names[k_keep:] = xnames[k_keep:]
 
         res = ScreeningResults(self,
-                               results_pen = res_pen,
-                               results_final = res_final,
-                               idx_nonzero = idx_nonzero,
-                               idx_exog = idx_nonzero[k_keep:] - k_keep,
-                               idx_excl = idx_excl,
-                               history = history,
-                               converged = converged,
-                               iterations = it + 1  # it is 0-based
+                               results_pen=res_pen,
+                               results_final=res_final,
+                               idx_nonzero=idx_nonzero,
+                               idx_exog=idx_nonzero[k_keep:] - k_keep,
+                               idx_excl=idx_excl,
+                               history=history,
+                               converged=converged,
+                               iterations=it + 1  # it is 0-based
                                )
         return res
 

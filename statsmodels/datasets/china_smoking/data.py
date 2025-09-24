@@ -3,20 +3,20 @@ from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Intern. J. Epidemiol. (1992)"""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """Intern. J. Epidemiol. (1992)"""
+TITLE = __doc__
+SOURCE = """
 Transcribed from Z. Liu, Smoking and Lung Cancer Incidence in China,
 Intern. J. Epidemiol., 21:197-201, (1992).
 """
 
-DESCRSHORT  = """Co-occurrence of lung cancer and smoking in 8 Chinese cities."""
+DESCRSHORT = """Co-occurrence of lung cancer and smoking in 8 Chinese cities."""
 
-DESCRLONG   = """This is a series of 8 2x2 contingency tables showing the co-occurrence
+DESCRLONG = """This is a series of 8 2x2 contingency tables showing the co-occurrence
 of lung cancer and smoking in 8 Chinese cities.
 """
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 8
     Number of Variables - 3

@@ -198,7 +198,7 @@ class TestKernelReg(KernelRegressionTestBase):
         # Theoretical marginal effects
         mfx1 = b1 * C2
         mfx2 = b1 * C1
-        npt.assert_allclose(sm_mean, Y, rtol = 2e-1)
+        npt.assert_allclose(sm_mean, Y, rtol=2e-1)
 
         npt.assert_allclose(sm_mfx[:, 0], mfx1, rtol=2e-1)
         npt.assert_allclose(sm_mfx[0:10, 1], mfx2[0:10], rtol=2e-1)
@@ -236,7 +236,7 @@ class TestKernelReg(KernelRegressionTestBase):
                                          reg_type='ll', var_type='cc',
                                          bw='cv_ls', censor_val=0)
         sm_mean, sm_mfx = model.fit()
-        npt.assert_allclose(sm_mfx[0,:], [1.2, -0.9], rtol = 2e-1)
+        npt.assert_allclose(sm_mfx[0,:], [1.2, -0.9], rtol=2e-1)
 
     @pytest.mark.slow
     def test_continuous_lc_aic(self):

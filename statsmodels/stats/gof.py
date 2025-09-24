@@ -225,7 +225,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
             last = current
             if current > (1-wsupp):
                 break
-    if distsupp[-1]  < distfn.b:
+    if distsupp[-1] < distfn.b:
         distsupp.append(distfn.b)
         distmass.append(1-last)
     distsupp = np.array(distsupp)
@@ -313,7 +313,7 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
             last = current
             if current > (1-wsupp):
                 break
-    if distsupp[-1]  < distfn.b:
+    if distsupp[-1] < distfn.b:
         distsupp.append(distfn.b)
         distmass.append(1-last)
     distsupp = np.array(distsupp)

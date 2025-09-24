@@ -9,57 +9,57 @@ from statsmodels.iolib import SimpleTable
 mat = np.array
 
 _default_table_fmt = dict(
-    empty_cell = '',
+    empty_cell='',
     colsep='  ',
-    row_pre = '',
-    row_post = '',
+    row_pre='',
+    row_post='',
     table_dec_above='=',
     table_dec_below='=',
     header_dec_below='-',
-    header_fmt = '%s',
-    stub_fmt = '%s',
+    header_fmt='%s',
+    stub_fmt='%s',
     title_align='c',
-    header_align = 'r',
-    data_aligns = 'r',
-    stubs_align = 'l',
-    fmt = 'txt'
+    header_align='r',
+    data_aligns='r',
+    stubs_align='l',
+    fmt='txt'
 )
 
 
 class VARSummary:
     default_fmt = dict(
-        #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-        #data_fmts = ["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
-        data_fmts = ["%#15.6F","%#15.6F","%#15.3F","%#14.3F"],
-        empty_cell = '',
-        #colwidths = 10,
+        #data_fmts=["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+        #data_fmts=["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
+        data_fmts=["%#15.6F","%#15.6F","%#15.3F","%#14.3F"],
+        empty_cell='',
+        #colwidths=10,
         colsep='  ',
-        row_pre = '',
-        row_post = '',
+        row_pre='',
+        row_post='',
         table_dec_above='=',
         table_dec_below='=',
         header_dec_below='-',
-        header_fmt = '%s',
-        stub_fmt = '%s',
+        header_fmt='%s',
+        stub_fmt='%s',
         title_align='c',
-        header_align = 'r',
-        data_aligns = 'r',
-        stubs_align = 'l',
-        fmt = 'txt'
+        header_align='r',
+        data_aligns='r',
+        stubs_align='l',
+        fmt='txt'
     )
 
     part1_fmt = dict(
         default_fmt,
-        data_fmts = ["%s"],
-        colwidths = 15,
+        data_fmts=["%s"],
+        colwidths=15,
         colsep=' ',
         table_dec_below='',
         header_dec_below=None,
     )
     part2_fmt = dict(
         default_fmt,
-        data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-        colwidths = None,
+        data_fmts=["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+        colwidths=None,
         colsep='    ',
         table_dec_above='-',
         table_dec_below='-',
@@ -131,9 +131,9 @@ class VARSummary:
         part2Rdata = [[model.bic], [model.hqic], [model.fpe], [model.detomega]]
         part2Lheader = None
         part2L = SimpleTable(part2Ldata, part2Lheader, part2Lstubs,
-                             txt_fmt = self.part2_fmt)
+                             txt_fmt=self.part2_fmt)
         part2R = SimpleTable(part2Rdata, part2Lheader, part2Rstubs,
-                             txt_fmt = self.part2_fmt)
+                             txt_fmt=self.part2_fmt)
         part2L.extend_right(part2R)
 
         return str(part2L)
@@ -158,7 +158,7 @@ class VARSummary:
             buf.write(section + '\n')
 
             table = SimpleTable(data[dim * i : dim * (i + 1)], header,
-                                Xnames, title=None, txt_fmt = self.default_fmt)
+                                Xnames, title=None, txt_fmt=self.default_fmt)
             buf.write(str(table) + '\n')
 
             if i < k - 1:
