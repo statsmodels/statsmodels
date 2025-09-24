@@ -99,16 +99,16 @@ class CheckTLinearModelMixin:
         fittedvalues = res1.predict()
         resid = res1.model.endog - fittedvalues
         assert_allclose(fittedvalues, res2.loc_fit.fitted_values, rtol=0.00025)
-        assert_allclose(resid, res2.loc_fit.residuals, atol=2e-6) #rtol=0.00036)
-        #TODO: no resid available as attribute
-        #assert_allclose(res1.resid, res2.loc_fit.residuals)
-        #assert_allclose(res1.fittedvalues, res2.loc_fit.fitted_values)
+        assert_allclose(resid, res2.loc_fit.residuals, atol=2e-6)  # rtol=0.00036)
+        # TODO: no resid available as attribute
+        # assert_allclose(res1.resid, res2.loc_fit.residuals)
+        # assert_allclose(res1.fittedvalues, res2.loc_fit.fitted_values)
 
     def test_formula(self):
         res1 = self.res1
         resf = self.resf
         # converges slightly differently why?
-        assert_allclose(res1.params, resf.params,  atol=1e-4) #rtol=2e-5,
+        assert_allclose(res1.params, resf.params,  atol=1e-4)  # rtol=2e-5,
         assert_allclose(res1.bse, resf.bse, rtol=5e-5)
 
         assert_allclose(res1.model.endog, resf.model.endog, rtol=1e-10)
@@ -171,7 +171,7 @@ class TestTModelFixed:
                                     data={"price":mm.m_marietta, "CRSP":mm.CRSP},
                                     fix_df=3)
         resf = modf.fit(method='bfgs', disp=False)
-        #TODO: no reference results yet
+        # TODO: no reference results yet
         #from results_tmodel import res_t_dfest as res2
         #cls.res2 = res2
         cls.res1 = res  # take from module scope temporarily

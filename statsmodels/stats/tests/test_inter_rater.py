@@ -32,39 +32,40 @@ table10 = [[0, 4, 1],
            [0, 1, 5]]
 
 #Fleiss 1971, Fleiss has only the transformed table
-diagnoses = np.array( [[4, 4, 4, 4, 4, 4],
-                       [2, 2, 2, 5, 5, 5],
-                       [2, 3, 3, 3, 3, 5],
-                       [5, 5, 5, 5, 5, 5],
-                       [2, 2, 2, 4, 4, 4],
-                       [1, 1, 3, 3, 3, 3],
-                       [3, 3, 3, 3, 5, 5],
-                       [1, 1, 3, 3, 3, 4],
-                       [1, 1, 4, 4, 4, 4],
-                       [5, 5, 5, 5, 5, 5],
-                       [1, 4, 4, 4, 4, 4],
-                       [1, 2, 4, 4, 4, 4],
-                       [2, 2, 2, 3, 3, 3],
-                       [1, 4, 4, 4, 4, 4],
-                       [2, 2, 4, 4, 4, 5],
-                       [3, 3, 3, 3, 3, 5],
-                       [1, 1, 1, 4, 5, 5],
-                       [1, 1, 1, 1, 1, 2],
-                       [2, 2, 4, 4, 4, 4],
-                       [1, 3, 3, 5, 5, 5],
-                       [5, 5, 5, 5, 5, 5],
-                       [2, 4, 4, 4, 4, 4],
-                       [2, 2, 4, 5, 5, 5],
-                       [1, 1, 4, 4, 4, 4],
-                       [1, 4, 4, 4, 4, 5],
-                       [2, 2, 2, 2, 2, 4],
-                       [1, 1, 1, 1, 5, 5],
-                       [2, 2, 4, 4, 4, 4],
-                       [1, 3, 3, 3, 3, 3],
-                       [5, 5, 5, 5, 5, 5]])
+diagnoses = np.array([
+    [4, 4, 4, 4, 4, 4],
+    [2, 2, 2, 5, 5, 5],
+    [2, 3, 3, 3, 3, 5],
+    [5, 5, 5, 5, 5, 5],
+    [2, 2, 2, 4, 4, 4],
+    [1, 1, 3, 3, 3, 3],
+    [3, 3, 3, 3, 5, 5],
+    [1, 1, 3, 3, 3, 4],
+    [1, 1, 4, 4, 4, 4],
+    [5, 5, 5, 5, 5, 5],
+    [1, 4, 4, 4, 4, 4],
+    [1, 2, 4, 4, 4, 4],
+    [2, 2, 2, 3, 3, 3],
+    [1, 4, 4, 4, 4, 4],
+    [2, 2, 4, 4, 4, 5],
+    [3, 3, 3, 3, 3, 5],
+    [1, 1, 1, 4, 5, 5],
+    [1, 1, 1, 1, 1, 2],
+    [2, 2, 4, 4, 4, 4],
+    [1, 3, 3, 5, 5, 5],
+    [5, 5, 5, 5, 5, 5],
+    [2, 4, 4, 4, 4, 4],
+    [2, 2, 4, 5, 5, 5],
+    [1, 1, 4, 4, 4, 4],
+    [1, 4, 4, 4, 4, 5],
+    [2, 2, 2, 2, 2, 4],
+    [1, 1, 1, 1, 5, 5],
+    [2, 2, 4, 4, 4, 4],
+    [1, 3, 3, 3, 3, 3],
+    [5, 5, 5, 5, 5, 5]
+])
 diagnoses_rownames = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', ]
 diagnoses_colnames = ['rater1', 'rater2', 'rater3', 'rater4', 'rater5', 'rater6', ]
-
 
 
 def test_fleiss_kappa():
@@ -125,11 +126,11 @@ class TestUnweightedCohens(CheckCohens):
     # comparison to printout of a SAS example
     @classmethod
     def setup_class(cls):
-        #temporary: res instance is at last position
+        # temporary: res instance is at last position
         cls.res = cohens_kappa(table10)
         res10_sas = [0.4842, 0.1380, 0.2137, 0.7547]
-        res10_sash0 = [0.1484, 3.2626, 0.0006, 0.0011]  #for test H0:kappa=0
-        cls.res2 = res10_sas + res10_sash0 #concatenate
+        res10_sash0 = [0.1484, 3.2626, 0.0006, 0.0011]  # for test H0:kappa=0
+        cls.res2 = res10_sas + res10_sash0  # concatenate
 
         cls.res_string = '''\
                   Simple Kappa Coefficient
@@ -152,14 +153,14 @@ class TestUnweightedCohens(CheckCohens):
 
 
 class TestWeightedCohens(CheckCohens):
-    #comparison to printout of a SAS example
+    # comparison to printout of a SAS example
     @classmethod
     def setup_class(cls):
-        #temporary: res instance is at last position
+        # temporary: res instance is at last position
         cls.res = cohens_kappa(table10, weights=[0, 1, 2])
         res10w_sas = [0.4701, 0.1457, 0.1845, 0.7558]
-        res10w_sash0 = [0.1426, 3.2971, 0.0005, 0.0010]  #for test H0:kappa=0
-        cls.res2 = res10w_sas + res10w_sash0 #concatenate
+        res10w_sash0 = [0.1426, 3.2971, 0.0005, 0.0010]  # for test H0:kappa=0
+        cls.res2 = res10w_sas + res10w_sash0  # concatenate
 
         cls.res_string = '''\
                   Weighted Kappa Coefficient
@@ -215,6 +216,7 @@ def test_cohenskappa_weights():
     res2 = cohens_kappa(table, weights=5*np.arange(5), wt='quadratic')
     assert_almost_equal(res1.kappa, res2.kappa, decimal=14)
     assert_almost_equal(res1.var_kappa, res2.var_kappa, decimal=14)
+
 
 anxiety = np.array([
      3, 3, 3, 4, 5, 5, 2, 3, 5, 2, 2, 6, 1, 5, 2, 2, 1, 2, 4, 3, 3, 6, 4,
@@ -322,12 +324,13 @@ def test_fleiss_kappa_irr():
     res1_kappa = fleiss_kappa(data_)
     assert_almost_equal(res1_kappa, fleiss.value, decimal=7)
 
+
 def test_to_table():
     data = diagnoses
     res1 = to_table(data[:,:2]-1, 5)
     res0 = np.asarray([[(data[:,:2]-1 == [i,j]).all(1).sum()
                             for j in range(5)]
-                                for i in range(5)] )
+                                for i in range(5)])
     assert_equal(res1[0], res0)
 
     res2 = to_table(data[:,:2])

@@ -111,8 +111,6 @@ __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
            'se_cov', 'weights_bartlett', 'weights_uniform']
 
 
-
-
 #----------- from linear_model.RegressionResults
 '''
     HC0_se
@@ -157,6 +155,8 @@ __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
 '''
 
 # Note: HCCM stands for Heteroskedasticity Consistent Covariance Matrix
+
+
 def _HCCM(results, scale):
     '''
     sandwich with pinv(x) * diag(scale) * pinv(x).T
@@ -168,15 +168,17 @@ def _HCCM(results, scale):
         scale[:,None]*results.model.pinv_wexog.T)
     return H
 
+
 def cov_hc0(results):
     """
     See statsmodels.RegressionResults
     """
 
-    het_scale = results.resid**2 # or whitened residuals? only OLS?
+    het_scale = results.resid**2  # or whitened residuals? only OLS?
     cov_hc0 = _HCCM(results, het_scale)
 
     return cov_hc0
+
 
 def cov_hc1(results):
     """
@@ -186,6 +188,7 @@ def cov_hc1(results):
     het_scale = results.nobs/(results.df_resid)*(results.resid**2)
     cov_hc1 = _HCCM(results, het_scale)
     return cov_hc1
+
 
 def cov_hc2(results):
     """
@@ -200,6 +203,7 @@ def cov_hc2(results):
     cov_hc2_ = _HCCM(results, het_scale)
     return cov_hc2_
 
+
 def cov_hc3(results):
     """
     See statsmodels.RegressionResults
@@ -209,11 +213,12 @@ def cov_hc3(results):
     h = np.diag(np.dot(results.model.exog,
                           np.dot(results.normalized_cov_params,
                           results.model.exog.T)))
-    het_scale=(results.resid/(1-h))**2
+    het_scale = (results.resid / (1-h))**2
     cov_hc3_ = _HCCM(results, het_scale)
     return cov_hc3_
 
 #---------------------------------------
+
 
 def _get_sandwich_arrays(results, cov_type=''):
     """Helper function to get scores from results
@@ -285,6 +290,7 @@ def _HCCM1(results, scale):
                    np.dot(scale, results.model.pinv_wexog.T))
     return H
 
+
 def _HCCM2(hessian_inv, scale):
     '''
     sandwich with (X'X)^(-1) * scale * (X'X)^(-1)
@@ -312,7 +318,9 @@ def _HCCM2(hessian_inv, scale):
     H = np.dot(np.dot(xxi, scale), xxi.T)
     return H
 
-#TODO: other kernels, move ?
+# TODO: other kernels, move ?
+
+
 def weights_bartlett(nlags):
     '''Bartlett weights for HAC
 
@@ -332,6 +340,7 @@ def weights_bartlett(nlags):
 
     #with lag zero
     return 1 - np.arange(nlags+1)/(nlags+1.)
+
 
 def weights_uniform(nlags):
     '''uniform weights for HAC
@@ -397,13 +406,14 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
 
     weights = weights_func(nlags)
 
-    S = weights[0] * np.dot(x.T, x)  #weights[0] just for completeness, is 1
+    S = weights[0] * np.dot(x.T, x)  # weights[0] just for completeness, is 1
 
     for lag in range(1, nlags+1):
         s = np.dot(x[lag:].T, x[:-lag])
         S += weights[lag] * (s + s.T)
 
     return S
+
 
 def S_white_simple(x):
     '''inner covariance matrix for White heteroscedastistity sandwich
@@ -467,7 +477,7 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
     '''
     #needs groupsums
 
-    x_group_sums = group_sums(x, time).T #TODO: transpose return in grou_sum
+    x_group_sums = group_sums(x, time).T  # TODO: transpose return in grou_sum
 
     return S_hac_simple(x_group_sums, nlags=nlags, weights_func=weights_func)
 
@@ -481,7 +491,7 @@ def S_crosssection(x, group):
     This is used by cov_cluster and indirectly verified
 
     '''
-    x_group_sums = group_sums(x, group).T  #TODO: why transposed
+    x_group_sums = group_sums(x, group).T  # TODO: why transposed
 
     return S_white_simple(x_group_sums)
 
@@ -489,11 +499,12 @@ def S_crosssection(x, group):
 def cov_crosssection_0(results, group):
     '''this one is still wrong, use cov_cluster instead'''
 
-    #TODO: currently used version of groupsums requires 2d resid
+    # TODO: currently used version of groupsums requires 2d resid
     scale = S_crosssection(results.resid[:,None], group)
     scale = np.squeeze(scale)
     cov = _HCCM1(results, scale)
     return cov
+
 
 def cov_cluster(results, group, use_correction=True):
     '''cluster robust covariance matrix
@@ -519,7 +530,7 @@ def cov_cluster(results, group, use_correction=True):
     same result as Stata in UCLA example and same as Peterson
 
     '''
-    #TODO: currently used version of groupsums requires 2d resid
+    # TODO: currently used version of groupsums requires 2d resid
     xu, hessian_inv = _get_sandwich_arrays(results, cov_type='clu')
 
     if not hasattr(group, 'dtype') or group.dtype != np.dtype('int'):
@@ -530,7 +541,7 @@ def cov_cluster(results, group, use_correction=True):
     scale = S_crosssection(xu, group)
 
     nobs, k_params = xu.shape
-    n_groups = len(clusters) #replace with stored group attributes if available
+    n_groups = len(clusters)  # replace with stored group attributes if available
 
     cov_c = _HCCM2(hessian_inv, scale)
 
@@ -539,6 +550,7 @@ def cov_cluster(results, group, use_correction=True):
                   ((nobs-1.) / float(nobs - k_params)))
 
     return cov_c
+
 
 def cov_cluster_2groups(results, group, group2=None, use_correction=True):
     '''cluster robust covariance matrix for two groups/clusters
@@ -570,7 +582,7 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
     '''
 
     if group2 is None:
-        if group.ndim !=2 or group.shape[1] != 2:
+        if group.ndim != 2 or group.shape[1] != 2:
             raise ValueError('if group2 is not given, then groups needs to be ' +
                              'an array with two columns')
         group0 = group[:, 0]
@@ -579,7 +591,6 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
         group0 = group
         group1 = group2
         group = (group0, group1)
-
 
     cov0 = cov_cluster(results, group0, use_correction=use_correction)
     #[0] because we get still also returns bse
@@ -628,7 +639,7 @@ def cov_white_simple(results, use_correction=True):
     xu, hessian_inv = _get_sandwich_arrays(results)
     sigma = S_white_simple(xu)
 
-    cov_w = _HCCM2(hessian_inv, sigma)  #add bread to sandwich
+    cov_w = _HCCM2(hessian_inv, sigma)  # add bread to sandwich
 
     if use_correction:
         nobs, k_params = xu.shape
@@ -682,7 +693,8 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
 
     return cov_hac
 
-cov_hac = cov_hac_simple   #alias for users
+
+cov_hac = cov_hac_simple   # alias for users
 
 #---------------------- use time lags corrected for groups
 #the following were copied from a different experimental script,
@@ -690,6 +702,7 @@ cov_hac = cov_hac_simple   #alias for users
 #sorted by time, equal number of periods is not required, but equal spacing is.
 #I think this is pure within group HAC: apply HAC to each group member
 #separately
+
 
 def lagged_groups(x, lag, groupidx):
     '''
@@ -699,14 +712,13 @@ def lagged_groups(x, lag, groupidx):
     out0 = []
     out_lagged = []
     for lo, up in groupidx:
-        if lo+lag < up: #group is longer than lag
+        if lo+lag < up:  # group is longer than lag
             out0.append(x[lo+lag:up])
             out_lagged.append(x[lo:up-lag])
 
     if out0 == []:
         raise ValueError('all groups are empty taking lags')
     return np.vstack(out0), np.vstack(out_lagged)
-
 
 
 def S_nw_panel(xw, weights, groupidx):
@@ -718,7 +730,7 @@ def S_nw_panel(xw, weights, groupidx):
     '''
     nlags = len(weights)-1
 
-    S = weights[0] * np.dot(xw.T, xw)  #weights just for completeness
+    S = weights[0] * np.dot(xw.T, xw)  # weights just for completeness
     for lag in range(1, nlags+1):
         xw0, xwlag = lagged_groups(xw, lag, groupidx)
         s = np.dot(xw0.T, xwlag)
@@ -775,8 +787,8 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     available.
 
     '''
-    if nlags == 0: #so we can reproduce HC0 White
-        weights = [1, 0]  #to avoid the scalar check in hac_nw
+    if nlags == 0:  # so we can reproduce HC0 White
+        weights = [1, 0]  # to avoid the scalar check in hac_nw
     else:
         weights = weights_func(nlags)
 

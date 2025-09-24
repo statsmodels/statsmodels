@@ -79,7 +79,7 @@ from numpy.linalg import solve
 #    B = block_diag(*(np.ones((k,1)),)*m)
 #
 #    r = benchmark - B.T.dot(indicator)
-#TODO: take code in the string at the end and implement Denton's original
+# TODO: take code in the string at the end and implement Denton's original
 # method with a few of the penalty functions.
 
 
@@ -171,8 +171,8 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         benchmark = benchmark[:,None]
 
     # get dimensions
-    N = len(indicator) # total number of high-freq
-    m = len(benchmark) # total number of low-freq
+    N = len(indicator)  # total number of high-freq
+    m = len(benchmark)  # total number of low-freq
 
     # number of low-freq observations for aggregate measure
     # 4 for annual to quarter and 3 for quarter to monthly
@@ -187,7 +187,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     else:
         raise ValueError("freq %s not understood" % freq)
 
-    n = k*m # number of indicator series with a benchmark for back-series
+    n = k*m  # number of indicator series with a benchmark for back-series
     # if k*m != n, then we are going to extrapolate q observations
     if N > n:
         q = N - n
@@ -223,10 +223,10 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     I[:n,n:] = B
     I[n:,:n] = B.T
 
-    A = zeros((m+n,1)) # zero first-order constraints
-    A[-m:] = benchmark # adding up constraints
+    A = zeros((m+n,1))  # zero first-order constraints
+    A[-m:] = benchmark  # adding up constraints
     X = solve(I,A)
-    X = X[:-m]  # drop the lagrange multipliers
+    X = X[:-m]   # drop the lagrange multipliers
 
     # handle extrapolation
     if q > 0:

@@ -44,7 +44,7 @@ class CheckPenalizedPoisson:
         nobs, k_vars = 500, 10
         k_nonzero = 4
         x = ((np.random.rand(nobs, k_vars) +
-              0.5* (np.random.rand(nobs, 1) - 0.5)) * 2 - 1)
+              0.5 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1)
         x *= 1.2
         x[:, 0] = 1
         beta = np.zeros(k_vars)

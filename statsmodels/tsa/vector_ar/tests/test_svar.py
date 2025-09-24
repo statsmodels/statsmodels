@@ -87,7 +87,7 @@ def test_oneparam():
     # A_guess = np.asarray([[1, 0.2], [0, 1.]])
     B = np.eye(2, dtype=object)
 
-    k=2
+    k = 2
     model = SVAR(y[:, :k], svar_type="AB", A=A, B=B)
     model.k_exog_user = 0
     results = model.fit(maxlags=lags, solver="bfgs")  # "newton")

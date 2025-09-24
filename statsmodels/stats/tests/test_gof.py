@@ -20,6 +20,7 @@ def test_chisquare_power():
         assert_almost_equal(power, case.power, decimal=6,
                             err_msg=repr(vars(case)))
 
+
 def test_chisquare():
     # TODO: no tests for ``value`` yet
     res1 = Holder()
@@ -44,7 +45,6 @@ def test_chisquare():
          0.876714007519206, -1.142080481440321, -2.517068894406109e-15,
          -2.773674830645328e-15, 0.105409255338946
         ])
-
 
     #> c = chisq.test(freq, p=pr2, rescale.p = TRUE)
     #> cat_items(c, "res2.")
@@ -89,7 +89,7 @@ def test_chisquare_effectsize():
     # regression tests for correction
     res1 = chisquare_effectsize(pr1, pr2, cohen=False,
                                 correction=(3000, len(pr1)-1))
-    res0 = 0 #-0.00059994422693327625
+    res0 = 0  # -0.00059994422693327625
     assert_equal(res1, res0)
     pr3 = pr2 + [0,0,0,50,50]
     res1 = chisquare_effectsize(pr1, pr3, cohen=False,

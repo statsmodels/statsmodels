@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def _make_index(prob,size):
     """
     Returns a boolean index for given probabilities.
@@ -13,6 +14,7 @@ def _make_index(prob,size):
     rv = np.random.uniform(size=(size,1))
     cumprob = np.cumsum(prob)
     return np.logical_and(np.r_[0,cumprob[:-1]] <= rv, rv < cumprob)
+
 
 def mixture_rvs(prob, size, dist, kwargs=None):
     """
@@ -78,7 +80,6 @@ class MixtureDistribution:
     def rvs(self, prob, size, dist, kwargs=None):
         return mixture_rvs(prob, size, dist, kwargs=kwargs)
 
-
     def pdf(self, x, prob, dist, kwargs=None):
         """
         pdf a mixture of distributions.
@@ -123,7 +124,7 @@ class MixtureDistribution:
             loc = kwargs[i].get('loc',0)
             scale = kwargs[i].get('scale',1)
             args = kwargs[i].get('args',())
-            if i == 0:  #assume all broadcast the same as the first dist
+            if i == 0:  # assume all broadcast the same as the first dist
                 pdf_ = prob[i] * dist[i].pdf(x, *args, loc=loc, scale=scale)
             else:
                 pdf_ += prob[i] * dist[i].pdf(x, *args, loc=loc, scale=scale)
@@ -175,7 +176,7 @@ class MixtureDistribution:
             loc = kwargs[i].get('loc',0)
             scale = kwargs[i].get('scale',1)
             args = kwargs[i].get('args',())
-            if i == 0:  #assume all broadcast the same as the first dist
+            if i == 0:  # assume all broadcast the same as the first dist
                 cdf_ = prob[i] * dist[i].cdf(x, *args, loc=loc, scale=scale)
             else:
                 cdf_ += prob[i] * dist[i].cdf(x, *args, loc=loc, scale=scale)
@@ -238,15 +239,12 @@ def mv_mixture_rvs(prob, size, dist, nvars, **kwargs):
     return sample
 
 
-
 if __name__ == '__main__':
 
     from scipy import stats
 
     obs_dist = mixture_rvs([.25,.75], size=10000, dist=[stats.norm, stats.beta],
                 kwargs=(dict(loc=-1,scale=.5),dict(loc=1,scale=1,args=(1,.5))))
-
-
 
     nobs = 10000
     mix = MixtureDistribution()

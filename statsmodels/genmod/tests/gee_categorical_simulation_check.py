@@ -23,10 +23,8 @@ class ordinal_simulator(GEE_simulator):
     # obtain the categorical values.
     thresholds = None
 
-
     def true_params(self):
         return np.concatenate((self.thresholds, self.params))
-
 
     def starting_values(self, nconstraints):
         beta = gee_ordinal_starting_values(self.endog,
@@ -37,13 +35,11 @@ class ordinal_simulator(GEE_simulator):
 
         return beta
 
-
     def print_dparams(self, dparams_est):
         OUT.write("Odds ratio estimate:   %8.4f\n" % dparams_est[0])
         OUT.write("Odds ratio truth:      %8.4f\n" %
                   self.dparams[0])
         OUT.write("\n")
-
 
     def simulate(self):
 
@@ -125,7 +121,6 @@ class nominal_simulator(GEE_simulator):
         self.time = np.concatenate(time, axis=0)
         self.group = np.concatenate(group)
         self.offset = np.zeros(len(self.endog), dtype=np.float64)
-
 
 
 def gendat_ordinal():

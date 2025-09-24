@@ -43,6 +43,7 @@ def load():
     """
     return load_pandas()
 
+
 def load_pandas():
     """
     Load the stack loss data and returns a Dataset class instance.

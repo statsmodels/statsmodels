@@ -73,7 +73,7 @@ def cffilter(x, low=6, high=32, drift=True):
 
     .. plot:: plots/cff_plot.py
     """
-    #TODO: cythonize/vectorize loop?, add ability for symmetric filter,
+    # TODO: cythonize/vectorize loop?, add ability for symmetric filter,
     #      and estimates of theta other than random walk.
     if low < 2:
         raise ValueError("low must be >= 2")

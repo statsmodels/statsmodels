@@ -24,22 +24,22 @@ x = results['service'].to_numpy(copy=True)
 positive = x >= 0
 x = np.log(x[positive])
 y = y[positive]
-xg = np.linspace(x.min(), x.max(), 40) # grid points default in Stata
+xg = np.linspace(x.min(), x.max(), 40)  # grid points default in Stata
 
 
 # FIXME: do not leave this commented-out; use or move/remove
-#kern_name = 'gau'
-#kern = kernels.Gaussian()
-#kern_name = 'epan2'
-#kern = kernels.Epanechnikov()
-#kern_name = 'rec'
-#kern = kernels.Uniform()  # ours looks awful
-#kern_name = 'tri'
-#kern = kernels.Triangular()
-#kern_name = 'cos'
-#kern = kernels.Cosine()  #does not match up, nan in Stata results ?
-#kern_name = 'bi'
-#kern = kernels.Biweight()
+# kern_name = 'gau'
+# kern = kernels.Gaussian()
+# kern_name = 'epan2'
+# kern = kernels.Epanechnikov()
+# kern_name = 'rec'
+# kern = kernels.Uniform()  # ours looks awful
+# kern_name = 'tri'
+# kern = kernels.Triangular()
+# kern_name = 'cos'
+# kern = kernels.Cosine()  #does not match up, nan in Stata results ?
+# kern_name = 'bi'
+# kern = kernels.Biweight()
 
 
 class CheckKernelMixin:

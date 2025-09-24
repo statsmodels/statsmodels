@@ -3533,7 +3533,7 @@ class MNLogit(MultinomialModel):
 #    ------
 #    This is unfinished and untested.
 #    """
-##TODO: add analytic hessian for Weibull
+## TODO: add analytic hessian for Weibull
 #    def initialize(self):
 #        pass
 #

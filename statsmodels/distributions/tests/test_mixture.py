@@ -8,6 +8,7 @@ from statsmodels.distributions.mixture_rvs import (mv_mixture_rvs,
 import statsmodels.sandbox.distributions.mv_normal as mvd
 from scipy import stats
 
+
 class TestMixtureDistributions:
 
     def test_mixture_rvs_random(self):
@@ -22,9 +23,11 @@ class TestMixtureDistributions:
                 decimal=1)
 
     def test_mv_mixture_rvs_random(self):
-        cov3 = np.array([[ 1.  ,  0.5 ,  0.75],
-                       [ 0.5 ,  1.5 ,  0.6 ],
-                       [ 0.75,  0.6 ,  2.  ]])
+        cov3 = np.array([
+            [1.00,  0.5,  0.75],
+            [0.50,  1.5,  0.60],
+            [0.75,  0.6,  2.00]]
+        )
         mu = np.array([-1, 0.0, 2.0])
         mu2 = np.array([4, 2.0, 2.0])
         mvn3 = mvd.MVNormal(mu, cov3)
@@ -43,10 +46,12 @@ class TestMixtureDistributions:
                 (dict(loc=-1,scale=.25),dict(loc=1,scale=.75)))
         npt.assert_almost_equal(
                 res,
-                np.array([  7.92080017e-11,   1.05977272e-07,   3.82368500e-05,
-                            2.21485447e-01,   1.00534607e-01,   2.69531536e-01,
-                            3.21265627e-01,   9.39899015e-02,   6.74932493e-03,
-                            1.18960201e-04]))
+                np.array([
+                    7.92080017e-11, 1.05977272e-07, 3.82368500e-05,
+                    2.21485447e-01, 1.00534607e-01, 2.69531536e-01,
+                    3.21265627e-01, 9.39899015e-02, 6.74932493e-03,
+                    1.18960201e-04]
+                ))
 
     def test_mixture_cdf(self):
         mix = MixtureDistribution()
@@ -55,10 +60,12 @@ class TestMixtureDistributions:
                    (dict(loc=-1,scale=.25),dict(loc=1,scale=.75)))
         npt.assert_almost_equal(
                 res,
-                np.array([  8.72261646e-12,   1.40592960e-08,   5.95819161e-06,
-                         3.10250226e-02,   3.46993159e-01,   4.86283549e-01,
-                         7.81092904e-01,   9.65606734e-01,   9.98373155e-01,
-                         9.99978886e-01]))
+                np.array([
+                    8.72261646e-12,   1.40592960e-08,   5.95819161e-06,
+                    3.10250226e-02,   3.46993159e-01,   4.86283549e-01,
+                    7.81092904e-01,   9.65606734e-01,   9.98373155e-01,
+                    9.99978886e-01]
+                ))
 
     def test_mixture_rvs_fixed(self):
         mix = MixtureDistribution()
@@ -83,9 +90,11 @@ class TestMixtureDistributions:
 
     def test_mv_mixture_rvs_fixed(self):
         np.random.seed(1234)
-        cov3 = np.array([[ 1.  ,  0.5 ,  0.75],
-                       [ 0.5 ,  1.5 ,  0.6 ],
-                       [ 0.75,  0.6 ,  2.  ]])
+        cov3 = np.array([
+            [1.00,  0.5,  0.75],
+            [0.50,  1.5,  0.60],
+            [0.75,  0.6,  2.00]
+        ])
         mu = np.array([-1, 0.0, 2.0])
         mu2 = np.array([4, 2.0, 2.0])
         mvn3 = mvd.MVNormal(mu, cov3)
@@ -93,13 +102,15 @@ class TestMixtureDistributions:
         res = mv_mixture_rvs([0.2, 0.8], 10, [mvn3, mvn32], 3)
         npt.assert_almost_equal(
                 res,
-                np.array([[-0.23955497,  1.73426482,  0.36100243],
-                       [ 2.52063189,  1.0832677 ,  1.89947131],
-                       [ 4.36755379,  2.14480498,  2.22003966],
-                       [ 3.1141545 ,  1.21250505,  2.58511199],
-                       [ 4.1980202 ,  2.50017561,  1.87324933],
-                       [ 3.48717503,  0.91847424,  2.14004598],
-                       [ 3.55904133,  2.74367622,  0.68619582],
-                       [ 3.60521933,  1.57316531,  0.82784584],
-                       [ 3.86102275,  0.6211812 ,  1.33016426],
-                       [ 3.91074761,  2.037155  ,  2.22247051]]))
+                np.array([
+                    [-0.23955497,  1.73426482,  0.36100243],
+                    [+2.52063189,  1.08326770,  1.89947131],
+                    [+4.36755379,  2.14480498,  2.22003966],
+                    [+3.11415450,  1.21250505,  2.58511199],
+                    [+4.19802020,  2.50017561,  1.87324933],
+                    [+3.48717503,  0.91847424,  2.14004598],
+                    [+3.55904133,  2.74367622,  0.68619582],
+                    [+3.60521933,  1.57316531,  0.82784584],
+                    [+3.86102275,  0.62118120,  1.33016426],
+                    [+3.91074761,  2.03715500,  2.22247051]
+                ]))

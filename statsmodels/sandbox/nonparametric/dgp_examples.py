@@ -9,44 +9,43 @@ import numpy as np
 
 ## Functions
 
-def fg1(x):
-    '''Fan and Gijbels example function 1
 
-    '''
+def fg1(x):
+    """Fan and Gijbels example function 1"""
     return x + 2 * np.exp(-16 * x**2)
 
-def fg1eu(x):
-    '''Eubank similar to Fan and Gijbels example function 1
 
-    '''
-    return x + 0.5 * np.exp(-50 * (x - 0.5)**2)
+def fg1eu(x):
+    """Eubank similar to Fan and Gijbels example function 1"""
+    return x + 0.5 * np.exp(-50 * (x - 0.5) ** 2)
+
 
 def fg2(x):
-    '''Fan and Gijbels example function 2
-
-    '''
+    """Fan and Gijbels example function 2"""
     return np.sin(2 * x) + 2 * np.exp(-16 * x**2)
 
-def func1(x):
-    '''made up example with sin, square
 
-    '''
-    return np.sin(x * 5) / x + 2. * x - 1. * x**2
+def func1(x):
+    """made up example with sin, square"""
+    return np.sin(x * 5) / x + 2.0 * x - 1.0 * x**2
+
 
 ## Classes with Data Generating Processes
 
-doc = {'description':
-'''Base Class for Univariate non-linear example
+doc = {
+    "description": """Base Class for Univariate non-linear example
 
     Does not work on it's own.
     needs additional at least self.func
-''',
-'ref': ''}
+""",
+    "ref": "",
+}
+
 
 class _UnivariateFunction:
-    #Base Class for Univariate non-linear example.
-    #Does not work on it's own. needs additionally at least self.func
-    __doc__ = '''%(description)s
+    # Base Class for Univariate non-linear example.
+    # Does not work on it's own. needs additionally at least self.func
+    __doc__ = """%(description)s
 
     Parameters
     ----------
@@ -74,7 +73,7 @@ class _UnivariateFunction:
         underlying function (defined by subclass)
 
     %(ref)s
-    ''' #% doc
+    """  # % doc
 
     def __init__(self, nobs=200, x=None, distr_x=None, distr_noise=None):
 
@@ -92,16 +91,15 @@ class _UnivariateFunction:
         else:
             noise = distr_noise.rvs(size=nobs)
 
-        if hasattr(self, 'het_scale'):
+        if hasattr(self, "het_scale"):
             noise *= self.het_scale(self.x)
 
-        #self.func = fg1
+        # self.func = fg1
         self.y_true = y_true = self.func(x)
         self.y = y_true + noise
 
-
     def plot(self, scatter=True, ax=None):
-        '''plot the mean function and optionally the scatter of the sample
+        """plot the mean function and optionally the scatter of the sample
 
         Parameters
         ----------
@@ -117,96 +115,104 @@ class _UnivariateFunction:
             This is either the created figure instance or the one associated
             with ax if ax is given.
 
-        '''
+        """
         if ax is None:
             import matplotlib.pyplot as plt
+
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
 
         if scatter:
-            ax.plot(self.x, self.y, 'o', alpha=0.5)
+            ax.plot(self.x, self.y, "o", alpha=0.5)
 
         xx = np.linspace(self.x.min(), self.x.max(), 100)
-        ax.plot(xx, self.func(xx), lw=2, color='b', label='dgp mean')
+        ax.plot(xx, self.func(xx), lw=2, color="b", label="dgp mean")
         return ax.figure
 
-doc = {'description':
-'''Fan and Gijbels example function 1
+
+doc = {
+    "description": """Fan and Gijbels example function 1
 
 linear trend plus a hump
-''',
-'ref':
-'''
+""",
+    "ref": """
 References
 ----------
 Fan, Jianqing, and Irene Gijbels. 1992. "Variable Bandwidth and Local
 Linear Regression Smoothers."
 The Annals of Statistics 20 (4) (December): 2008-2036. doi:10.2307/2242378.
 
-'''}
+""",
+}
+
 
 class UnivariateFanGijbels1(_UnivariateFunction):
     __doc__ = _UnivariateFunction.__doc__ % doc
 
-
     def __init__(self, nobs=200, x=None, distr_x=None, distr_noise=None):
-        self.s_x = 1.
+        self.s_x = 1.0
         self.s_noise = 0.7
         self.func = fg1
-        super(self.__class__, self).__init__(nobs=nobs, x=x,
-                                             distr_x=distr_x,
-                                             distr_noise=distr_noise)
+        super(self.__class__, self).__init__(
+            nobs=nobs, x=x, distr_x=distr_x, distr_noise=distr_noise
+        )
 
-doc['description'] =\
-'''Fan and Gijbels example function 2
+
+doc[
+    "description"
+] = """\
+Fan and Gijbels example function 2
 
 sin plus a hump
-'''
+"""
+
 
 class UnivariateFanGijbels2(_UnivariateFunction):
     __doc__ = _UnivariateFunction.__doc__ % doc
 
     def __init__(self, nobs=200, x=None, distr_x=None, distr_noise=None):
-        self.s_x = 1.
+        self.s_x = 1.0
         self.s_noise = 0.5
         self.func = fg2
-        super(self.__class__, self).__init__(nobs=nobs, x=x,
-                                             distr_x=distr_x,
-                                             distr_noise=distr_noise)
+        super(self.__class__, self).__init__(
+            nobs=nobs, x=x, distr_x=distr_x, distr_noise=distr_noise
+        )
+
 
 class UnivariateFanGijbels1EU(_UnivariateFunction):
-    '''
+    """
 
     Eubank p.179f
-    '''
+    """
 
     def __init__(self, nobs=50, x=None, distr_x=None, distr_noise=None):
         if distr_x is None:
             from scipy import stats
+
             distr_x = stats.uniform
         self.s_noise = 0.15
         self.func = fg1eu
-        super(self.__class__, self).__init__(nobs=nobs, x=x,
-                                             distr_x=distr_x,
-                                             distr_noise=distr_noise)
+        super(self.__class__, self).__init__(
+            nobs=nobs, x=x, distr_x=distr_x, distr_noise=distr_noise
+        )
+
 
 class UnivariateFunc1(_UnivariateFunction):
-    '''
+    """
 
     made up, with sin and quadratic trend
-    '''
+    """
 
     def __init__(self, nobs=200, x=None, distr_x=None, distr_noise=None):
         if x is None and distr_x is None:
             from scipy import stats
+
             distr_x = stats.uniform(-2, 4)
         else:
             nobs = x.shape[0]
-        self.s_noise = 2.
+        self.s_noise = 2.0
         self.func = func1
-        super().__init__(nobs=nobs, x=x,
-                                             distr_x=distr_x,
-                                             distr_noise=distr_noise)
+        super().__init__(nobs=nobs, x=x, distr_x=distr_x, distr_noise=distr_noise)
 
     def het_scale(self, x):
-        return np.sqrt(np.abs(3+x))
+        return np.sqrt(np.abs(3 + x))

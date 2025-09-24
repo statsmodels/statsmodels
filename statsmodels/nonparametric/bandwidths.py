@@ -57,6 +57,7 @@ def bw_scott(x, kernel=None):
     n = len(x)
     return 1.059 * A * n ** (-0.2)
 
+
 def bw_silverman(x, kernel=None):
     """
     Silverman's Rule of Thumb
@@ -141,6 +142,7 @@ def bw_normal_reference(x, kernel=None):
 ## Least Squares Cross-Validation ##
 
 ## Helper Functions ##
+
 
 bandwidth_funcs = {
     "scott": bw_scott,

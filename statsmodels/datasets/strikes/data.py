@@ -37,7 +37,6 @@ NOTE        = """::
 """
 
 
-
 def load_pandas():
     """
     Load the strikes data and return a Dataset class instance.

@@ -30,9 +30,10 @@ def mvn_loglike_sum(x, sigma):
     llf = -np.log(SSR) * nobs2      # concentrated likelihood
     llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
     if np.any(sigma) and sigma.ndim == 2:
-    #FIXME: robust-enough check?  unneeded if _det_sigma gets defined
+        #FIXME: robust-enough check?  unneeded if _det_sigma gets defined
         llf -= .5*np.log(np.linalg.det(sigma))
     return llf
+
 
 def mvn_loglike(x, sigma):
     '''loglike multivariate normal
@@ -54,6 +55,7 @@ def mvn_loglike(x, sigma):
     llf -= logdetsigma
     llf *= 0.5
     return llf
+
 
 def mvn_loglike_chol(x, sigma):
     '''loglike multivariate normal
@@ -83,6 +85,7 @@ def mvn_loglike_chol(x, sigma):
     return llf, logdetsigma, 2 * np.sum(np.log(np.diagonal(cholsigmainv)))
 #0.5 * np.dot(x_whitened.T, x_whitened) + nobs * np.log(2 * np.pi) + logdetsigma)
 
+
 def mvn_nloglike_obs(x, sigma):
     '''loglike multivariate normal
 
@@ -107,11 +110,11 @@ def mvn_nloglike_obs(x, sigma):
     # sigmainv = linalg.cholesky(sigma)
     # logdetsigma = np.log(np.linalg.det(sigma))
 
-    sigma2 = 1. # error variance is included in sigma
+    sigma2 = 1.  # error variance is included in sigma
 
-    llike  =  0.5 * (np.log(sigma2) - 2.* np.log(np.diagonal(cholsigmainv))
-                          + (x_whitened**2)/sigma2
-                          +  np.log(2*np.pi))
+    llike  = 0.5 * (np.log(sigma2) - 2.0 * np.log(np.diagonal(cholsigmainv))
+                          + (x_whitened**2) / sigma2
+                          + np.log(2*np.pi))
 
     return llike
 
@@ -126,6 +129,7 @@ def getpoly(self, params):
     ma = np.r_[[1], params[-self.nma:]]
     import numpy.polynomial as poly
     return poly.Polynomial(ar), poly.Polynomial(ma)
+
 
 class MLEGLS(GenericLikelihoodModel):
     '''ARMA model with exact loglikelhood for short time series
@@ -142,7 +146,6 @@ class MLEGLS(GenericLikelihoodModel):
        distributed N(0,1)
     Maybe extend to mean handling, or assume it is already removed.
     '''
-
 
     def _params2cov(self, params, nobs):
         '''get autocovariance matrix from ARMA regression parameter
@@ -181,25 +184,23 @@ class MLEGLS(GenericLikelihoodModel):
         return res
 
 
-
 if __name__ == '__main__':
     nobs = 50
     ar = [1.0, -0.8, 0.1]
     ma = [1.0,  0.1,  0.2]
-    #ma = [1]
+    # ma = [1]
     np.random.seed(9875789)
     y = arma_generate_sample(ar,ma,nobs,2)
-    y -= y.mean() #I have not checked treatment of mean yet, so remove
+    y -= y.mean()  # I have not checked treatment of mean yet, so remove
     mod = MLEGLS(y)
-    mod.nar, mod.nma = 2, 2   #needs to be added, no init method
+    mod.nar, mod.nma = 2, 2   # needs to be added, no init method
     mod.nobs = len(y)
     res = mod.fit(start_params=[0.1, -0.8, 0.2, 0.1, 1.])
     print('DGP', ar, ma)
     print(res.params)
     from statsmodels.regression import yule_walker
     print(yule_walker(y, 2))
-    #resi = mod.fit_invertible(start_params=[0.1,0,0.2,0, 0.5])
-    #print(resi.params
+    # resi = mod.fit_invertible(start_params=[0.1,0,0.2,0, 0.5])
 
     arpoly, mapoly = getpoly(mod, res.params[:-1])
 

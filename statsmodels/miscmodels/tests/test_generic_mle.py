@@ -13,13 +13,14 @@ from statsmodels.base.model import GenericLikelihoodModel
 from numpy.testing import (assert_array_less, assert_almost_equal,
                            assert_allclose)
 
+
 class MyPareto(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation pareto distribution
 
     first version: iid case, with constant parameters
     '''
 
-    def initialize(self):   #TODO needed or not
+    def initialize(self):   # TODO needed or not
         super().initialize()
         extra_params_names = ['shape', 'loc', 'scale']
         self._set_extra_params_names(extra_params_names)
@@ -27,9 +28,8 @@ class MyPareto(GenericLikelihoodModel):
         #start_params needs to be attribute
         self.start_params = np.array([1.5, self.endog.min() - 1.5, 1.])
 
-
-    #copied from stats.distribution
     def pdf(self, x, b):
+        #copied from stats.distribution
         return b * x**(-b-1)
 
     def loglike(self, params):
@@ -52,12 +52,12 @@ class MyPareto(GenericLikelihoodModel):
         #loc = np.dot(self.exog, beta)
         endog = self.endog
         x = (endog - loc)/scale
-        logpdf = np.log(b) - (b+1.)*np.log(x)  #use np_log(1 + x) for Pareto II
+        logpdf = np.log(b) - (b+1.)*np.log(x)  # use np_log(1 + x) for Pareto II
         logpdf -= np.log(scale)
-        #lb = loc + scale
-        #logpdf[endog<lb] = -inf
-        #import pdb; pdb.set_trace()
-        logpdf[x<1] = -10000 #-np.inf
+        # lb = loc + scale
+        # logpdf[endog<lb] = -inf
+        # import pdb; pdb.set_trace()
+        logpdf[x < 1] = -10000  # -np.inf
         return -logpdf
 
 
@@ -125,7 +125,7 @@ class TestMyPareto1(CheckGenericMixin):
         mod_par.fixed_paramsmask = None
         mod_par.df_model = 0
         mod_par.k_extra = k_extra = 3
-        mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model -  k_extra
+        mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model - k_extra
         mod_par.data.xnames = ['shape', 'loc', 'scale']
 
         cls.mod = mod_par
@@ -144,8 +144,8 @@ class TestMyPareto1(CheckGenericMixin):
         assert_array_less(p_min, x_min)
         assert_almost_equal(p_min, x_min, decimal=2)
 
-class TestMyParetoRestriction(CheckGenericMixin):
 
+class TestMyParetoRestriction(CheckGenericMixin):
 
     @classmethod
     def setup_class(cls):

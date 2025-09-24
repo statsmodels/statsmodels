@@ -89,7 +89,6 @@ class TLinearModel(GenericLikelihoodModel):
         self._set_extra_params_names(extra_params_names)
         self._set_start_params()
 
-
     def _set_start_params(self, start_params=None, use_kurtosis=False):
         if start_params is not None:
             self.start_params = start_params
@@ -108,13 +107,10 @@ class TLinearModel(GenericLikelihoodModel):
                     df = 5
 
                 start_params[-2] = df
-                #TODO adjust scale for df
+                # TODO adjust scale for df
                 start_params[-1] = np.sqrt(res_ols.scale)
 
             self.start_params = start_params
-
-
-
 
     def loglike(self, params):
         return -self.nloglikeobs(params).sum(0)
@@ -154,7 +150,7 @@ class TLinearModel(GenericLikelihoodModel):
 
         beta = params[:-2]
         df = params[-2]
-        scale = np.abs(params[-1])  #TODO check behavior around zero
+        scale = np.abs(params[-1])  # TODO check behavior around zero
         loc = np.dot(self.exog, beta)
         endog = self.endog
         x = (endog - loc)/scale
@@ -190,8 +186,8 @@ class TArma(Arma):
     def loglike(self, params):
         return -self.nloglikeobs(params).sum(0)
 
+    # add for Jacobian calculation  bsejac in GenericMLE, copied from loglike
 
-    #add for Jacobian calculation  bsejac in GenericMLE, copied from loglike
     def nloglikeobs(self, params):
         """
         Loglikelihood for arma model for each observation, t-distribute
@@ -212,7 +208,7 @@ class TArma(Arma):
         llike  = - stats.t._logpdf(errorsest/scale, df) + np_log(scale)
         return llike
 
-    #TODO rename fit_mle -> fit, fit -> fit_ls
+    # TODO rename fit_mle -> fit, fit -> fit_ls
     def fit_mle(self, order, start_params=None, method='nm', maxiter=5000,
             tol=1e-08, **kwds):
         nar, nma = order
@@ -221,7 +217,6 @@ class TArma(Arma):
                 raise ValueError('start_param need sum(order) + 2 elements')
         else:
             start_params = np.concatenate((0.05*np.ones(nar + nma), [5, 1]))
-
 
         res = super().fit_mle(order=order,
                                          start_params=start_params,

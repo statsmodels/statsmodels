@@ -9,6 +9,7 @@ Author : Josef Perktold
 import numpy as np
 from ._smoothers_lowess import lowess as _lowess
 
+
 def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=False,
            missing='drop', return_sorted=True):
     '''LOWESS (Locally Weighted Scatterplot Smoothing)

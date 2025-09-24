@@ -990,7 +990,7 @@ def power_equivalence_oneway(f2_alt, equiv_margin, nobs_t, n_groups=None,
 def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
                                       k_mc=1000, trim_frac=0,
                                       options_var=None, margin_type="f2"
-                                      ):  # , anova_options=None):  #TODO
+                                      ):  # , anova_options=None):  # TODO
     """Simulate Power for oneway equivalence test (Wellek's Anova)
 
     This function is experimental and written to evaluate asymptotic power

@@ -36,9 +36,9 @@ from statsmodels.base.model import GenericLikelihoodModel
 def maxabs(arr1, arr2):
     return np.max(np.abs(arr1 - arr2))
 
+
 def maxabsrel(arr1, arr2):
     return np.max(np.abs(arr2 / arr1 - 1))
-
 
 
 class PoissonGMLE(GenericLikelihoodModel):
@@ -74,7 +74,7 @@ class PoissonGMLE(GenericLikelihoodModel):
         """
         XB = np.dot(self.exog, params)
         endog = self.endog
-        return np.exp(XB) -  endog*XB + np.log(factorial(endog))
+        return np.exp(XB) - endog*XB + np.log(factorial(endog))
 
     def predict_distribution(self, exog):
         '''return frozen scipy.stats distribution with mu at estimated prediction
@@ -89,7 +89,6 @@ class PoissonGMLE(GenericLikelihoodModel):
             params = result.params
             mu = np.exp(np.dot(exog, params))
             return stats.poisson(mu, loc=0)
-
 
 
 class PoissonOffsetGMLE(GenericLikelihoodModel):
@@ -109,7 +108,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
         # let them be none in case user wants to use inheritance
         if offset is not None:
             if offset.ndim == 1:
-                offset = offset[:,None] #need column
+                offset = offset[:,None]  # need column
             self.offset = offset.ravel()
         else:
             self.offset = 0.
@@ -141,8 +140,9 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
         XB = self.offset + np.dot(self.exog, params)
         endog = self.endog
-        nloglik = np.exp(XB) -  endog*XB + np.log(factorial(endog))
+        nloglik = np.exp(XB) - endog*XB + np.log(factorial(endog))
         return nloglik
+
 
 class PoissonZiGMLE(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation of Poisson Model
@@ -166,12 +166,12 @@ class PoissonZiGMLE(GenericLikelihoodModel):
                 extra_params_names=["zi"], **kwds)
         if offset is not None:
             if offset.ndim == 1:
-                offset = offset[:,None] #need column
-            self.offset = offset.ravel()  #which way?
+                offset = offset[:,None]  # need column
+            self.offset = offset.ravel()  # which way?
         else:
             self.offset = 0.
 
-        #TODO: it's not standard pattern to use default exog
+        # TODO: it's not standard pattern to use default exog
         if exog is None:
             self.exog = np.ones((self.nobs,1))
         self.nparams = self.exog.shape[1]
@@ -183,7 +183,6 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         # needed for t_test and summary
         # Note: no added to super __init__ which also adjusts df_resid
         # self.exog_names.append('zi')
-
 
     # original copied from discretemod.Poisson
     def nloglikeobs(self, params):
@@ -204,12 +203,12 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
         beta = params[:-1]
-        gamm = 1 / (1 + np.exp(params[-1]))  #check this
+        gamm = 1 / (1 + np.exp(params[-1]))  # check this
         # replace with np.dot(self.exogZ, gamma)
         #print(np.shape(self.offset), self.exog.shape, beta.shape
         XB = self.offset + np.dot(self.exog, beta)
         endog = self.endog
-        nloglik = -np.log(1-gamm) + np.exp(XB) -  endog*XB + np.log(factorial(endog))
-        nloglik[endog==0] = - np.log(gamm + np.exp(-nloglik[endog==0]))
+        nloglik = -np.log(1-gamm) + np.exp(XB) - endog*XB + np.log(factorial(endog))
+        nloglik[endog == 0] = - np.log(gamm + np.exp(-nloglik[endog == 0]))
 
         return nloglik

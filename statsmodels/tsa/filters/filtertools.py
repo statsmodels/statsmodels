@@ -24,6 +24,7 @@ except ImportError:
 
 from statsmodels.tools.validation import array_like, PandasWrapper
 
+
 def _pad_nans(x, head=None, tail=None):
     if np.ndim(x) == 1:
         if head is None and tail is None:
@@ -129,7 +130,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
         s2 = 0
     if in3 is not None:
         s3 = np.array(in3.shape)
-        s2 = max(s2, s3) # try this looks reasonable for ARMA
+        s2 = max(s2, s3)  # try this looks reasonable for ARMA
         #s2 = s3
 
     complex_result = (np.issubdtype(in1.dtype, np.complex) or
@@ -217,7 +218,6 @@ def recursive_filter(x, ar_coeff, init=None):
         result = y
 
     return pw.wrap(result)
-
 
 
 def convolution_filter(x, filt, nsides=2):

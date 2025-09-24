@@ -421,10 +421,12 @@ _phi = scipy.stats.norm.isf
 # Now we can build the A 'matrix'
 
 # these are for the least squares fitting
+
+
 def qhat(a, p, r, v):
 
     # eq. 2.3
-    p_ = (1. + p) /2.
+    p_ = (1. + p) / 2.0
 
     f = a[0]*np.log(r-1.) + \
         a[1]*np.log(r-1.)**2 + \
@@ -443,10 +445,12 @@ def qhat(a, p, r, v):
 
     return math.sqrt(2) * (f - 1.) * _tinv(p_, v)
 
+
 def errfunc(a, p, r, v, q):
     return qhat(a, p, r, v) - q
 
-A = {} # this is the error matrix
+
+A = {}  # this is the error matrix
 for p in T:
     for v in T[p]:
         #eq. 2.4

@@ -122,11 +122,11 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
         arr[i, slice_] = 1
 
     sum_sq = np.dot(arr, effects**2)
-    #NOTE: assumes intercept is first column
+    # NOTE: assumes intercept is first column
     mgr = FormulaManager()
     idx = mgr.intercept_idx(model_spec)
     sum_sq = sum_sq[~idx]
-    term_names = np.array(mgr.get_term_names(model_spec)) # want boolean indexing
+    term_names = np.array(mgr.get_term_names(model_spec))  # want boolean indexing
     term_names = term_names[~idx]
 
     index = term_names.tolist()
@@ -144,6 +144,8 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
     return table
 
 #NOTE: the below is not agnostic about formula...
+
+
 def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     """
     Anova type II table for one fitted linear model.
@@ -170,7 +172,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     not particularly useful for models with significant interaction terms.
     """
     mgr = FormulaManager()
-    terms_info = model_spec.terms[:] # copy
+    terms_info = model_spec.terms[:]  # copy
     terms_info = mgr.remove_intercept(terms_info)
 
     names = ['sum_sq', 'df', test, pr_test]
@@ -187,7 +189,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         L1 = lrange(cols.start, cols.stop)
         L2 = []
         term_set = set(term.factors)
-        for t in terms_info: # for the term you have
+        for t in terms_info:  # for the term you have
             other_set = set(t.factors)
             if term_set.issubset(other_set) and not term_set == other_set:
                 col = mgr.get_slice(model_spec, t)
@@ -232,6 +234,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
 
     return table
 
+
 def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     mgr = FormulaManager()
     n_rows += mgr.has_intercept(model_spec)
@@ -270,6 +273,7 @@ def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
                                                             model.df_resid,
                                                             np.nan, np.nan)
     return table
+
 
 def anova_lm(*args, **kwargs):
     """
@@ -360,7 +364,7 @@ def anova_lm(*args, **kwargs):
     names = ['df_resid', 'ssr', 'df_diff', 'ss_diff', test, pr_test]
     table = DataFrame(np.zeros((n_models, 6)), columns=names)
 
-    if not scale: # assume biggest model is last
+    if not scale:  # assume biggest model is last
         scale = args[-1].scale
 
     table["ssr"] = [mdl.ssr for mdl in args]

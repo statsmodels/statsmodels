@@ -245,11 +245,11 @@ class KernelReg(GenericKDE):
                       tosum=False)
 
         ker_xc = ker_xc[:, np.newaxis]
-        d_mx = -(endog * ker_xc).sum(axis=0) / float(nobs) #* np.prod(bw[:, ix_cont]))
-        d_fx = -ker_xc.sum(axis=0) / float(nobs) #* np.prod(bw[:, ix_cont]))
+        d_mx = -(endog * ker_xc).sum(axis=0) / float(nobs)  # * np.prod(bw[:, ix_cont]))
+        d_fx = -ker_xc.sum(axis=0) / float(nobs)  # * np.prod(bw[:, ix_cont]))
         B_x = d_mx / f_x - G * d_fx / f_x
         B_x = (G_numer * d_fx - G_denom * d_mx) / (G_denom**2)
-        #B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
+        # B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
         return G, B_x
 
     def aic_hurvich(self, bw, func=None):
@@ -552,10 +552,10 @@ class KernelCensoredReg(KernelReg):
         self.d = np.squeeze(self.d[ix])
         self.W_in = np.empty((self.nobs, 1))
         for i in range(1, self.nobs + 1):
-            P=1
+            P = 1
             for j in range(1, i):
                 P *= ((self.nobs - j)/(float(self.nobs)-j+1))**self.d[j-1]
-            self.W_in[i-1,0] = P * self.d[i-1] / (float(self.nobs) - i + 1 )
+            self.W_in[i-1,0] = P * self.d[i-1] / (float(self.nobs) - i + 1)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -623,7 +623,6 @@ class KernelCensoredReg(KernelReg):
         mean = mean_mfx[0]
         mfx = mean_mfx[1:, :]
         return mean, mfx
-
 
     def cv_loo(self, bw, func):
         r"""
@@ -953,7 +952,7 @@ class TestRegCoefD(TestRegCoefC):
         """
         self.dom_x = np.sort(np.unique(self.exog[:, self.test_vars]))
         X = copy.deepcopy(self.exog)
-        m=0
+        m = 0
         for i in self.dom_x:
             X[:, self.test_vars]  = i
             m += self.model.fit(data_predict = X)[0]

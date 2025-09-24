@@ -35,7 +35,7 @@ convenience functions to create required data format from raw data
 """
 
 import numpy as np
-from scipy import stats  #get rid of this? need only norm.sf
+from scipy import stats  # get rid of this? need only norm.sf
 
 
 class ResultsBunch(dict):
@@ -52,6 +52,7 @@ class ResultsBunch(dict):
 
     def __str__(self):
         return self.template % self
+
 
 def _int_ifclose(x, dec=1, width=4):
     '''helper function for creating result string for int or float
@@ -115,12 +116,12 @@ def aggregate_raters(data, n_cat=None):
     data = np.asarray(data)
     n_rows = data.shape[0]
     if n_cat is None:
-        #I could add int conversion (reverse_index) to np.unique
+        # I could add int conversion (reverse_index) to np.unique
         cat_uni, cat_int = np.unique(data.ravel(), return_inverse=True)
         n_cat = len(cat_uni)
         data_ = cat_int.reshape(data.shape)
     else:
-        cat_uni = np.arange(n_cat)  #for return only, assumed cat levels
+        cat_uni = np.arange(n_cat)  # for return only, assumed cat levels
         data_ = data
 
     tt = np.zeros((n_rows, n_cat), int)
@@ -129,6 +130,7 @@ def aggregate_raters(data, n_cat=None):
         tt[idx, :len(ro)] = ro
 
     return tt, cat_uni
+
 
 def to_table(data, bins=None):
     '''convert raw data with shape (subject, rater) to (rater1, rater2)
@@ -186,10 +188,10 @@ def to_table(data, bins=None):
         bins_ = bins
         data_ = data
 
-
     tt = np.histogramdd(data_, (bins_,)*n_cols)
 
     return tt[0], bins_
+
 
 def fleiss_kappa(table, method='fleiss'):
     """Fleiss' and Randolph's kappa multi-rater agreement measure
@@ -243,8 +245,8 @@ def fleiss_kappa(table, method='fleiss'):
     https://doi.org/10.1007/s11634-010-0073-4.
     """
 
-    table = 1.0 * np.asarray(table)   #avoid integer division
-    n_sub, n_cat =  table.shape
+    table = 1.0 * np.asarray(table)   # avoid integer division
+    n_sub, n_cat = table.shape
     n_total = table.sum()
     n_rater = table.sum(1)
     n_rat = n_rater.max()
@@ -263,7 +265,7 @@ def fleiss_kappa(table, method='fleiss'):
     elif method.startswith('rand') or method.startswith('unif'):
         p_mean_exp = 1 / n_cat
 
-    kappa = (p_mean - p_mean_exp) / (1- p_mean_exp)
+    kappa = (p_mean - p_mean_exp) / (1 - p_mean_exp)
     return kappa
 
 
@@ -340,18 +342,18 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     SAS Manual
 
     '''
-    table = np.asarray(table, float) #avoid integer division
+    table = np.asarray(table, float)  # avoid integer division
     agree = np.diag(table).sum()
     nobs = table.sum()
     probs = table / nobs
-    freqs = probs  #TODO: rename to use freqs instead of probs for observed
+    freqs = probs  # TODO: rename to use freqs instead of probs for observed
     probs_diag = np.diag(probs)
     freq_row = table.sum(1) / nobs
     freq_col = table.sum(0) / nobs
     prob_exp = freq_col * freq_row[:, None]
     assert np.allclose(prob_exp.sum(), 1)
-    #print prob_exp.sum()
-    agree_exp = np.diag(prob_exp).sum() #need for kappa_max
+    # print prob_exp.sum()
+    agree_exp = np.diag(prob_exp).sum()  # need for kappa_max
     if weights is None and wt is None:
         kind = 'Simple'
         kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
@@ -362,7 +364,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             term_a = term_a.sum()
             term_b = probs * (freq_col[:, None] + freq_row)**2
             d_idx = np.arange(table.shape[0])
-            term_b[d_idx, d_idx] = 0   #set diagonal to zero
+            term_b[d_idx, d_idx] = 0   # set diagonal to zero
             term_b = (1 - kappa)**2 * term_b.sum()
             term_c = (kappa - agree_exp * (1-kappa))**2
             var_kappa = (term_a + term_b - term_c) / (1 - agree_exp)**2 / nobs
@@ -397,7 +399,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
                 raise ValueError('weights are not square')
         #this is formula from Wikipedia
         kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
-        #TODO: add var_kappa for weighted version
+        # TODO: add var_kappa for weighted version
         if return_results:
             var_kappa = np.nan
             var_kappa0 = np.nan
@@ -408,26 +410,28 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             w_row = (freq_col * w).sum(1)
             w_col = (freq_row[:, None] * w).sum(0)
             agree_wexp = (w * freq_col * freq_row[:, None]).sum()
-            term_a = freqs * (w -  (w_col + w_row[:, None]) * (1 - kappa))**2
+            term_a = freqs * (w - (w_col + w_row[:, None]) * (1 - kappa))**2
             fac = 1. / ((1 - agree_wexp)**2 * nobs)
             var_kappa = term_a.sum() - (kappa - agree_wexp * (1 - kappa))**2
-            var_kappa *=  fac
+            var_kappa *= fac
 
             freqse = freq_col * freq_row[:, None]
-            var_kappa0 = (freqse * (w -  (w_col + w_row[:, None]))**2).sum()
+            var_kappa0 = (freqse * (w - (w_col + w_row[:, None]))**2).sum()
             var_kappa0 -= agree_wexp**2
-            var_kappa0 *=  fac
+            var_kappa0 *= fac
 
     kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / \
                 (1 - agree_exp)
 
     if return_results:
-        res = KappaResults( kind=kind,
-                    kappa=kappa,
-                    kappa_max=kappa_max,
-                    weights=weights,
-                    var_kappa=var_kappa,
-                    var_kappa0=var_kappa0)
+        res = KappaResults(
+            kind=kind,
+            kappa=kappa,
+            kappa_max=kappa_max,
+            weights=weights,
+            var_kappa=var_kappa,
+            var_kappa0=var_kappa0
+        )
         return res
     else:
         return kappa

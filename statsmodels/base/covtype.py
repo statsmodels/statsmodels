@@ -226,7 +226,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     if cov_type in ['cluster', 'hac-panel', 'hac-groupsum']:
         df_correction = kwds.get('df_correction', None)
         # TODO: check also use_correction, do I need all combinations?
-        if df_correction is not False: # i.e. in [None, True]:
+        if df_correction is not False:  # i.e. in [None, True]:
             # user did not explicitely set it to False
             adjust_df = True
 
@@ -254,7 +254,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.cov_kwds['weights_func'] = weights_func
         use_correction = kwds.get('use_correction', False)
         res.cov_kwds['use_correction'] = use_correction
-        res.cov_kwds['description'] =  descriptions['HAC'].format(
+        res.cov_kwds['description'] = descriptions['HAC'].format(
             maxlags=maxlags, correction=['without', 'with'][use_correction])
 
         res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
@@ -290,7 +290,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
                 n_groups0 = len(np.unique(groups[:,0]))
                 n_groups1 = len(np.unique(groups[:, 1]))
                 self.n_groups = (n_groups0, n_groups1)
-                n_groups = min(n_groups0, n_groups1) # use for adjust_df
+                n_groups = min(n_groups0, n_groups1)  # use for adjust_df
 
             # Note: sw.cov_cluster_2groups has 3 returns
             res.cov_params_default = sw.cov_cluster_2groups(self, groups,
@@ -303,10 +303,10 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         #cluster robust standard errors
         res.cov_kwds['time'] = time = kwds.get('time', None)
         res.cov_kwds['groups'] = groups = kwds.get('groups', None)
-        #TODO: nlags is currently required
+        # TODO: nlags is currently required
         #nlags = kwds.get('nlags', True)
         #res.cov_kwds['nlags'] = nlags
-        #TODO: `nlags` or `maxlags`
+        # TODO: `nlags` or `maxlags`
         res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
         use_correction = kwds.get('use_correction', 'hac')
         res.cov_kwds['use_correction'] = use_correction
@@ -334,10 +334,10 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     elif cov_type.lower() == 'hac-groupsum':
         # Driscoll-Kraay standard errors
         res.cov_kwds['time'] = time = kwds['time']
-        #TODO: nlags is currently required
+        # TODO: nlags is currently required
         #nlags = kwds.get('nlags', True)
         #res.cov_kwds['nlags'] = nlags
-        #TODO: `nlags` or `maxlags`
+        # TODO: `nlags` or `maxlags`
         res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
         use_correction = kwds.get('use_correction', 'cluster')
         res.cov_kwds['use_correction'] = use_correction

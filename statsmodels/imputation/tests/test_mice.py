@@ -149,7 +149,6 @@ class TestMICEData:
         # The returned dataframes are all the same object
         assert all_x[0] is all_x[1]
 
-
     def test_pertmeth(self):
         # Test with specified perturbation method.
 
@@ -258,8 +257,6 @@ class TestMICEData:
             ('x5', 'x4', 'x3', 'y', 'x2', 'x1')
         )
 
-
-
     @pytest.mark.matplotlib
     def test_plot_missing_pattern(self, close_figures):
 
@@ -276,7 +273,6 @@ class TestMICEData:
                     close_or_save(pdf, fig)
                     close_figures()
 
-
     @pytest.mark.matplotlib
     def test_plot_bivariate(self, close_figures):
 
@@ -291,7 +287,6 @@ class TestMICEData:
             close_or_save(pdf, fig)
             close_figures()
 
-
     @pytest.mark.matplotlib
     def test_fit_obs(self, close_figures):
 
@@ -305,7 +300,6 @@ class TestMICEData:
             fig.get_axes()[0].set_title('plot_fit_scatterplot')
             close_or_save(pdf, fig)
             close_figures()
-
 
     @pytest.mark.matplotlib
     def test_plot_imputed_hist(self, close_figures):
@@ -336,7 +330,6 @@ class TestMICE:
         # Smoke test for results
         result.summary()
 
-
     def test_MICE1(self):
 
         df = gendat()
@@ -351,14 +344,12 @@ class TestMICE:
             x = mi.next_sample()
             assert issubclass(x.__class__, RegressionResultsWrapper)
 
-
     def test_MICE1_regularized(self):
 
         df = gendat()
         imp = mice.MICEData(df, perturbation_method='boot')
         imp.set_imputer('x1', 'x2 + y', fit_kwds={'alpha': 1, 'L1_wt': 0})
         imp.update_all()
-
 
     def test_MICE2(self):
 

@@ -18,7 +18,6 @@ class CheckGEEGLM:
         assert_allclose(res1.params.values, res2.params.values,
                         rtol=1e-6, atol=1e-10)
 
-
     def test_resid(self):
         res1 = self.result1
         res2 = self.result2

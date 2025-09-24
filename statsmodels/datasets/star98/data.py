@@ -66,7 +66,6 @@ NOTE        = """::
 """
 
 
-
 def load():
     """
     Load the star98 data and returns a Dataset class instance.

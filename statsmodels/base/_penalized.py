@@ -33,7 +33,7 @@ class PenalizedMixin:
 
         # pop extra kwds before calling super
         self.penal = kwds.pop('penal', None)
-        self.pen_weight =  kwds.pop('pen_weight', None)
+        self.pen_weight = kwds.pop('pen_weight', None)
 
         super().__init__(*args, **kwds)
 

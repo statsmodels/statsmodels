@@ -41,7 +41,6 @@ NOTE        = """::
 """
 
 
-
 def load():
     """
     Load the Longley data and return a Dataset class.

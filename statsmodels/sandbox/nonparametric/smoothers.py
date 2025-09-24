@@ -9,6 +9,7 @@ who generate a smooth fit of a set of (x,y) pairs.
 # pylint: disable-msg=E1101
 
 import numpy as np
+
 from . import kernels
 
 
@@ -21,7 +22,8 @@ class KernelSmoother:
     y - array_like of y values
     Kernel - Kernel object, Default is Gaussian.
     """
-    def __init__(self, x, y, Kernel = None):
+
+    def __init__(self, x, y, Kernel=None):
         if Kernel is None:
             Kernel = kernels.Gaussian()
         self.Kernel = Kernel
@@ -43,11 +45,12 @@ class KernelSmoother:
         Otherwise an attempt is made to cast x to numpy.ndarray and an array of
         corresponding y-points is returned.
         """
-        if np.size(x) == 1: # if isinstance(x, numbers.Real):
+        if np.size(x) == 1:  # if isinstance(x, numbers.Real):
             return self.Kernel.smooth(self.x, self.y, x)
         else:
-            return np.array([self.Kernel.smooth(self.x, self.y, xx) for xx
-                                                in np.array(x)])
+            return np.array(
+                [self.Kernel.smooth(self.x, self.y, xx) for xx in np.array(x)]
+            )
 
     def conf(self, x):
         """
@@ -70,15 +73,14 @@ class KernelSmoother:
             conffit = self.conf(confx)
             return (confx, conffit)
         else:
-            return np.array([self.Kernel.smoothconf(self.x, self.y, xx)
-                                                                for xx in x])
-
+            return np.array([self.Kernel.smoothconf(self.x, self.y, xx) for xx in x])
 
     def var(self, x):
         return np.array([self.Kernel.smoothvar(self.x, self.y, xx) for xx in x])
 
     def std(self, x):
         return np.sqrt(self.var(x))
+
 
 class PolySmoother:
     """
@@ -90,7 +92,8 @@ class PolySmoother:
     This is a 3 liner with OLS or WLS, see test.
     It's here as a test smoother for GAM
     """
-    #JP: heavily adjusted to work as plugin replacement for bspline
+
+    # JP: heavily adjusted to work as plugin replacement for bspline
     #   smoother in gam.py  initialized by function default_smoother
     #   Only fixed exceptions, I did not check whether it is statistically
     #   correctand I think it is not, there are still be some dimension
@@ -99,22 +102,20 @@ class PolySmoother:
     # comment: this is just like polyfit with initialization options
     #          and additional results (OLS on polynomial of x (x is 1d?))
 
-
     def __init__(self, order, x=None):
-        #order = 4 # set this because we get knots instead of order
+        # order = 4 # set this because we get knots instead of order
         self.order = order
 
-        #print order, x.shape
-        self.coef = np.zeros((order+1,), np.float64)
+        # print order, x.shape
+        self.coef = np.zeros((order + 1,), np.float64)
         if x is not None:
             if x.ndim > 1:
-                print('Warning: 2d x detected in PolySmoother init, shape:', x.shape)
-                x=x[0,:] #check orientation
-            self.X = np.array([x**i for i in range(order+1)]).T
+                print("Warning: 2d x detected in PolySmoother init, shape:", x.shape)
+                x = x[0, :]  # check orientation
+            self.X = np.array([x**i for i in range(order + 1)]).T
 
     def df_fit(self):
-        '''alias of df_model for backwards compatibility
-        '''
+        """alias of df_model for backwards compatibility"""
         return self.df_model()
 
     def df_model(self):
@@ -124,15 +125,15 @@ class PolySmoother:
         return self.order + 1
 
     def gram(self, d=None):
-        #fake for spline imitation
+        # fake for spline imitation
         pass
 
-    def smooth(self,*args, **kwds):
-        '''alias for fit,  for backwards compatibility,
+    def smooth(self, *args, **kwds):
+        """alias for fit,  for backwards compatibility,
 
         do we need it with different behavior than fit?
 
-        '''
+        """
         return self.fit(*args, **kwds)
 
     def df_resid(self):
@@ -144,68 +145,49 @@ class PolySmoother:
     def __call__(self, x=None):
         return self.predict(x=x)
 
-
     def predict(self, x=None):
 
         if x is not None:
-            #if x.ndim > 1: x=x[0,:]  #why this this should select column not row
+            # if x.ndim > 1: x=x[0,:]  #why this this should select column not row
             if x.ndim > 1:
-                print('Warning: 2d x detected in PolySmoother predict, shape:', x.shape)
-                x=x[:,0]  #TODO: check and clean this up
-            X = np.array([(x**i) for i in range(self.order+1)])
+                print("Warning: 2d x detected in PolySmoother predict, shape:", x.shape)
+                x = x[:, 0]  # TODO: check and clean this up
+            X = np.array([(x**i) for i in range(self.order + 1)])
         else:
             X = self.X
-        #return np.squeeze(np.dot(X.T, self.coef))
-        #need to check what dimension this is supposed to be
+        # return np.squeeze(np.dot(X.T, self.coef))
+        # need to check what dimension this is supposed to be
         if X.shape[1] == self.coef.shape[0]:
-            return np.squeeze(np.dot(X, self.coef))#[0]
+            return np.squeeze(np.dot(X, self.coef))  # [0]
         else:
-            return np.squeeze(np.dot(X.T, self.coef))#[0]
+            return np.squeeze(np.dot(X.T, self.coef))  # [0]
 
     def fit(self, y, x=None, weights=None):
         self.N = y.shape[0]
         if y.ndim == 1:
-            y = y[:,None]
+            y = y[:, None]
         if weights is None or np.isnan(weights).all():
             weights = 1
             _w = 1
         else:
-            _w = np.sqrt(weights)[:,None]
+            _w = np.sqrt(weights)[:, None]
         if x is None:
             if not hasattr(self, "X"):
                 raise ValueError("x needed to fit PolySmoother")
         else:
             if x.ndim > 1:
-                print('Warning: 2d x detected in PolySmoother predict, shape:', x.shape)
-                #x=x[0,:] #TODO: check orientation, row or col
-            self.X = np.array([(x**i) for i in range(self.order+1)]).T
-        #print _w.shape
+                print("Warning: 2d x detected in PolySmoother predict, shape:", x.shape)
+                # x=x[0,:] # TODO: check orientation, row or col
+            self.X = np.array([(x**i) for i in range(self.order + 1)]).T
+        # print _w.shape
 
         X = self.X * _w
 
-        _y = y * _w#[:,None]
-        #self.coef = np.dot(L.pinv(X).T, _y[:,None])
-        #self.coef = np.dot(L.pinv(X), _y)
+        _y = y * _w  # [:,None]
+        # self.coef = np.dot(L.pinv(X).T, _y[:,None])
+        # self.coef = np.dot(L.pinv(X), _y)
         self.coef = np.linalg.lstsq(X, _y, rcond=-1)[0]
         self.params = np.squeeze(self.coef)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # comment out for now to remove dependency on _hbspline

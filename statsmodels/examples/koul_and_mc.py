@@ -2,7 +2,7 @@ import statsmodels.api as sm
 import numpy as np
 
 ##################
-#Monte Carlo test#
+# Monte Carlo test#
 ##################
 modrand1 = np.random.RandomState(5676576)
 modrand2 = np.random.RandomState(1543543)
@@ -24,10 +24,10 @@ for i in range(10000):
 mc_est = np.mean(params, axis=0)  # Gives MC parameter estimate
 
 ##################
-#Koul replication#
+# Koul replication#
 ##################
 
-koul_data = np.genfromtxt('/home/justin/rverify.csv', delimiter=';')
+koul_data = np.genfromtxt("/home/justin/rverify.csv", delimiter=";")
 # ^ Change path to where file is located.
 koul_y = np.log10(koul_data[:, 0])
 koul_x = sm.add_constant(koul_data[:, 2])

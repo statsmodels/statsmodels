@@ -8,7 +8,7 @@ Author: Josef Perktold
 import numpy as np
 import statsmodels.stats.diagnostic as dia
 
-canada_raw = '''\
+canada_raw = """\
      405.36646642737	    929.610513893698	    7.52999999999884	    386.136109062605
     404.639833965913	    929.803984550587	    7.69999999999709	    388.135759111711
     403.814883043744	    930.318387567177	    7.47000000000116	    390.540112911955
@@ -92,66 +92,68 @@ canada_raw = '''\
     416.867407108435	    960.362493080892	    6.80000000000291	    469.134788222928
     417.610399060359	    960.783379042937	    6.69999999999709	    469.336419672322
     418.002980476361	    961.029029939624	    6.93000000000029	    470.011666329664
-    417.266680178544	    961.765709811429	    6.87000000000262	    469.647234439539'''
+    417.266680178544	    961.765709811429	    6.87000000000262	    469.647234439539"""
 
-canada = np.array(canada_raw.split(), float).reshape(-1,4)
-k=2
-resarch2 = dia.acorr_lm((canada[:,k]-canada[:,k].mean())**2, maxlag=2, autolag=None, store=1)
+canada = np.array(canada_raw.split(), float).reshape(-1, 4)
+k = 2
+resarch2 = dia.acorr_lm(
+    (canada[:, k] - canada[:, k].mean()) ** 2, maxlag=2, autolag=None, store=1
+)
 print(resarch2)
-resarch5 = dia.acorr_lm(canada[:,k]**2, maxlag=12, autolag=None, store=1)
+resarch5 = dia.acorr_lm(canada[:, k] ** 2, maxlag=12, autolag=None, store=1)
 
-ss = '''\
+ss = """\
         ARCH LM-test; Null hypothesis: no ARCH effects
 
 Chi-squared = %(chi)-8.4f df = %(df)-4d p-value = %(pval)8.4g
-'''
+"""
 resarch = resarch5
 print()
 print(ss % dict(chi=resarch[2], df=resarch[-1].resols.df_model, pval=resarch[3]))
 
 
-#R:FinTS: ArchTest(as.vector(Canada[,3]), lag=5)
-'''
+# R:FinTS: ArchTest(as.vector(Canada[,3]), lag=5)
+"""
         ARCH LM-test; Null hypothesis: no ARCH effects
 
 data:  as.vector(Canada[, 3])
 Chi-squared = 78.878, df = 5, p-value = 1.443e-15
-'''
+"""
 
-#from ss above
-'''
+# from ss above
+"""
         ARCH LM-test; Null hypothesis: no ARCH effects
 
 Chi-squared = 78.849   df = 5    p-value = 1.461e-15
-'''
+"""
 
-#k=2
-#R
-'''
+# k=2
+# R
+"""
         ARCH LM-test; Null hypothesis: no ARCH effects
 
 data:  as.vector(Canada[, 4])
 Chi-squared = 74.6028, df = 5, p-value = 1.121e-14
-'''
-#mine
-'''
+"""
+# mine
+"""
         ARCH LM-test; Null hypothesis: no ARCH effects
 
 Chi-squared = 74.6028  df = 5    p-value = 1.126e-14
-'''
+"""
 
-'''
+"""
 > ArchTest(as.vector(Canada[,4]), lag=12)
 
         ARCH LM-test; Null hypothesis: no ARCH effects
 
 data:  as.vector(Canada[, 4])
 Chi-squared = 69.6359, df = 12, p-value = 3.747e-10
-'''
+"""
 
-#mine:
-'''
+# mine:
+"""
         ARCH LM-test; Null hypothesis: no ARCH effects
 
 Chi-squared = 69.6359  df = 12   p-value = 3.747e-10
-'''
+"""

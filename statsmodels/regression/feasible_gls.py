@@ -29,11 +29,9 @@ class GLSHet2(GLS):
 
     '''
 
-
     def __init__(self, endog, exog, exog_var, sigma=None):
         self.exog_var = atleast_2dcols(exog_var)
         super(self.__class__, self).__init__(endog, exog, sigma=sigma)
-
 
     def fit(self, lambd=1.):
         #maybe iterate
@@ -137,9 +135,9 @@ class GLSHet(WLS):
             weights = np.ones(endog.shape)
         if link is not None:
             self.link = link
-            self.linkinv = link.inverse   #as defined in families.links
+            self.linkinv = link.inverse   # as defined in families.links
         else:
-            self.link = lambda x: x  #no transformation
+            self.link = lambda x: x  # no transformation
             self.linkinv = lambda x: x
 
         super(self.__class__, self).__init__(endog, exog, weights=weights)
@@ -175,27 +173,27 @@ class GLSHet(WLS):
         """
 
         import collections
-        self.history = collections.defaultdict(list) #not really necessary
-        res_resid = None  #if maxiter < 2 no updating
+        self.history = collections.defaultdict(list)  # not really necessary
+        res_resid = None  # if maxiter < 2 no updating
         for i in range(maxiter):
-            #pinv_wexog is cached
+            # pinv_wexog is cached
             if hasattr(self, 'pinv_wexog'):
                 del self.pinv_wexog
-            #self.initialize()
-            #print 'wls self',
+            # self.initialize()
+            # print 'wls self',
             results = self.fit()
             self.history['self_params'].append(results.params)
-            if not i == maxiter-1:  #skip for last iteration, could break instead
-                #print 'ols',
-                self.results_old = results #for debugging
-                #estimate heteroscedasticity
+            if not i == maxiter-1:  # s kip for last iteration, could break instead
+                # print 'ols',
+                self.results_old = results  # for debugging
+                # estimate heteroscedasticity
                 res_resid = OLS(self.link(results.resid**2), self.exog_var).fit()
                 self.history['ols_params'].append(res_resid.params)
                 #update weights
                 self.weights = 1./self.linkinv(res_resid.fittedvalues)
-                self.weights /= self.weights.max()  #not required
-                self.weights[self.weights < 1e-14] = 1e-14  #clip
-                #print 'in iter', i, self.weights.var() #debug, do weights change
+                self.weights /= self.weights.max()  # not required
+                self.weights[self.weights < 1e-14] = 1e-14  # clip
+                # print 'in iter', i, self.weights.var() #debug, do weights change
                 self.initialize()
 
         #note results is the wrapper, results._results is the results instance

@@ -75,7 +75,6 @@ if __name__ == '__main__':
     print(r_summary)
     print('\n\n')
 
-
     from statsmodels.discrete.tests.test_discrete import TestProbitNewton
 
     aregression = TestProbitNewton()

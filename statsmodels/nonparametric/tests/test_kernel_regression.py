@@ -146,7 +146,7 @@ class TestKernelReg(KernelRegressionTestBase):
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         b3 = 2.3
-        Y = b0+ b1 * C1 + b2*C2+ b3 * C3 + noise
+        Y = b0 + b1 * C1 + b2 * C2 + b3 * C3 + noise
         bw_cv_ls = np.array([0.96075, 0.5682, 0.29835])
         model = nparam.KernelReg(endog=[Y], exog=[C1, C2, C3],
                                  reg_type='ll', var_type='ccc', bw=bw_cv_ls)
@@ -165,7 +165,7 @@ class TestKernelReg(KernelRegressionTestBase):
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         b3 = 2.3
-        Y = b0+ b1 * C1 + b2*C2+ b3 * ovals + noise
+        Y = b0 + b1 * C1 + b2 * C2 + b3 * ovals + noise
         bw_cv_ls = np.array([1.04726, 1.67485, 0.39852])
         model = nparam.KernelReg(endog=[Y], exog=[C1, C2, ovals],
                                  reg_type='ll', var_type='cco', bw=bw_cv_ls)
@@ -187,7 +187,7 @@ class TestKernelReg(KernelRegressionTestBase):
         b0 = 3
         b1 = 1.2
         b3 = 2.3
-        Y = b0+ b1 * C1 * C2 + b3 * C3 + noise
+        Y = b0 + b1 * C1 * C2 + b3 * C3 + noise
         model = nparam.KernelReg(endog=[Y], exog=[C1, C2, C3],
                                  reg_type='ll', var_type='ccc', bw='cv_ls')
         # Smoke test
@@ -212,7 +212,7 @@ class TestKernelReg(KernelRegressionTestBase):
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
-        Y = b0+ b1 * C1 + b2*C2
+        Y = b0 + b1 * C1 + b2*C2
 
         model_efficient = nparam.KernelReg(endog=[Y], exog=[C1], reg_type='lc',
                               var_type='c', bw='cv_ls',
@@ -230,8 +230,8 @@ class TestKernelReg(KernelRegressionTestBase):
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         noise = np.random.normal(size=(nobs, ))
-        Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
-        Y[Y>0] = 0  # censor the data
+        Y = 0.3 + 1.2 * C1 - 0.9 * C2 + noise
+        Y[Y > 0] = 0  # censor the data
         model = nparam.KernelCensoredReg(endog=[Y], exog=[C1, C2],
                                          reg_type='ll', var_type='cc',
                                          bw='cv_ls', censor_val=0)
@@ -245,7 +245,7 @@ class TestKernelReg(KernelRegressionTestBase):
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         noise = np.random.normal(size=(nobs, ))
-        Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
+        Y = 0.3 + 1.2 * C1 - 0.9 * C2 + noise
         #self.write2file('RegData.csv', (Y, C1, C2))
 
         #CODE TO PRODUCE BANDWIDTH ESTIMATION IN R
@@ -272,7 +272,7 @@ class TestKernelReg(KernelRegressionTestBase):
         Y = b1 * C1 + b2 * C2 + noise
 
         # This is the cv_ls bandwidth estimated earlier
-        bw=[11108137.1087194, 1333821.85150218]
+        bw = [11108137.1087194, 1333821.85150218]
         model = nparam.KernelReg(endog=[Y], exog=[C1, C3],
                                  reg_type='ll', var_type='cc', bw=bw)
         nboot = 45  # Number of bootstrap samples
@@ -295,7 +295,7 @@ class TestKernelReg(KernelRegressionTestBase):
         b2 = 3.7  # regression coefficients
         Y = b1 * ovals + b2 * C2 + noise
 
-        bw= [3.63473198e+00, 1.21404803e+06]
+        bw = [3.63473198e+00, 1.21404803e+06]
         # This is the cv_ls bandwidth estimated earlier
         # The cv_ls bandwidth was estimated earlier to save time
         model = nparam.KernelReg(endog=[Y], exog=[ovals, C3],
@@ -349,7 +349,7 @@ class TestKernelReg(KernelRegressionTestBase):
 
     def test_efficient_user_specificed_bw(self):
 
-        bw_user=[0.23, 434697.22]
+        bw_user = [0.23, 434697.22]
         model = nparam.KernelReg(endog=[self.y], exog=[self.c1, self.c2],
                                  reg_type='lc', var_type='cc', bw=bw_user,
                                  defaults=nparam.EstimatorSettings(efficient=True))
@@ -362,10 +362,10 @@ class TestKernelReg(KernelRegressionTestBase):
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         noise = np.random.normal(size=(nobs, ))
-        Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
-        Y[Y>0] = 0  # censor the data
+        Y = 0.3 + 1.2 * C1 - 0.9 * C2 + noise
+        Y[Y > 0] = 0  # censor the data
 
-        bw_user=[0.23, 434697.22]
+        bw_user = [0.23, 434697.22]
         model = nparam.KernelCensoredReg(endog=[Y], exog=[C1, C2],
                                          reg_type='ll', var_type='cc',
                                          bw=bw_user, censor_val=0,

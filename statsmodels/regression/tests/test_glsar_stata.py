@@ -29,7 +29,7 @@ class CheckStataResultsPMixin(CheckStataResultsMixin):
     def test_predicted(self):
         res, results = self.res, self.results
         assert_allclose(res.fittedvalues, results.fittedvalues, rtol=0.002)
-        predicted = res.predict(res.model.exog) #should be equal
+        predicted = res.predict(res.model.exog)  # should be equal
         assert_allclose(predicted, results.fittedvalues, rtol=0.0016)
         # not yet
         # assert_almost_equal(res.fittedvalues_se, results.fittedvalues_se, 4)
@@ -80,7 +80,7 @@ class TestGLSARCorc(CheckStataResultsPMixin):
         endog = self.res.model.endog
         exog = self.res.model.exog
 
-        rho = np.array([ 0.207,  0.275,  1.033])
+        rho = np.array([0.207,  0.275,  1.033])
         mod1 = GLSAR(endog, exog, rho)
         res1 = mod1.fit()
         res0 = mod1.iterative_fit(0)

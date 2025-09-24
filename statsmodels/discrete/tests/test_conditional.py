@@ -49,7 +49,7 @@ def test_logit_formula():
     groups = np.repeat([0, 1], 50)
     exog = np.linspace(-2, 2, len(groups))
 
-    error = np.linspace(-1, 1, len(groups)) # Needed for within-group variance
+    error = np.linspace(-1, 1, len(groups))  # Needed for within-group variance
     logit_link = 1 / (1 + np.exp(exog + groups)) + error
     endog = (logit_link > 0.5).astype(int)
 

@@ -208,6 +208,7 @@ def test_crossed_poisson_map():
     assert_equal(cp.shape, np.r_[p, p])
     np.linalg.cholesky(cp)
 
+
 def test_logit_map_crossed_formula():
 
     data = gen_crossed_logit_pandas(10, 10, 1, 0.5)
@@ -232,6 +233,7 @@ def test_logit_map_crossed_formula():
     p = rslt.params.shape[0]
     assert_equal(list(cm.shape), [p, p])
     np.linalg.cholesky(cm)
+
 
 def test_elbo_grad():
 
@@ -329,6 +331,7 @@ def test_simple_logit_vb():
         else:
             assert_equal(cp.shape, np.r_[p,])
             assert_equal(cp > 0, True*np.ones(p))
+
 
 def test_simple_poisson_vb():
 
@@ -544,6 +547,7 @@ def test_poisson_formula():
                 assert_equal(cp.shape, np.r_[p, p])
                 np.linalg.cholesky(cp)
 
+
 def test_scale_vb():
 
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
@@ -560,6 +564,7 @@ def test_scale_vb():
 
     assert_allclose(rslts[0].params, rslts[1].params, rtol=1e-4)
 
+
 def test_scale_map():
 
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
@@ -575,6 +580,7 @@ def test_scale_map():
         rslts.append(rslt)
 
     assert_allclose(rslts[0].params, rslts[1].params, rtol=1e-4)
+
 
 def test_doc_examples():
 
