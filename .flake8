@@ -15,21 +15,18 @@ extend-ignore =
     W504,
     # W504: line break after binary operator
     E203,
-    # E203: Whitespace before ':'
+    # E203: Whitespace before ':' (Needed for black)
     E127,
     # E127: Continuation line over-indented for visual indent
     E128,
     # E128: Continuation line under-indented for visual indent
-    E221,
-    # E221: Multiple spaces before operator
     E231,
     # E231: Missing whitespace after ',', ';', or ':'
-    E251,
-    # E251: Unexpected spaces around keyword / parameter equals
     E265,
     # E265: Block comment should start with '# '
     E266,
     # E266: Too many leading '#' for block comment
     E501,
-    # E501: Line too long (### > 88 characters)
-
+    # E501: Line too long (### > 88 characters) (Needed for black)
+    E701,
+    # E701: Multiple statements on one line (colon) (Needed for black)

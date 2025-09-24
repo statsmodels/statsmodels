@@ -3,9 +3,9 @@ from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is public domain."""
+TITLE = __doc__
+SOURCE = """
 The classic 1967 Longley Data
 
 http://www.itl.nist.gov/div898/strd/lls/data/Longley.shtml
@@ -17,13 +17,13 @@ http://www.itl.nist.gov/div898/strd/lls/data/Longley.shtml
         the American Statistical Association.  62.319, 819-41.
 """
 
-DESCRSHORT  = """"""
+DESCRSHORT = """"""
 
-DESCRLONG   = """The Longley dataset contains various US macroeconomic
+DESCRLONG = """The Longley dataset contains various US macroeconomic
 variables that are known to be highly collinear.  It has been used to appraise
 the accuracy of least squares routines."""
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 16
 

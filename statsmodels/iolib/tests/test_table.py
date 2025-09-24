@@ -78,22 +78,22 @@ stub R2 C2  40.95038  40.65765
 
     def test_simple_table_4(self):
         # Basic test, test_simple_table_4 test uses custom txt_fmt
-        txt_fmt1 = dict(data_fmts = ['%3.2f', '%d'],
-                        empty_cell = ' ',
-                        colwidths = 1,
+        txt_fmt1 = dict(data_fmts=['%3.2f', '%d'],
+                        empty_cell=' ',
+                        colwidths=1,
                         colsep=' * ',
-                        row_pre = '* ',
-                        row_post = ' *',
+                        row_pre='* ',
+                        row_post=' *',
                         table_dec_above='*',
                         table_dec_below='*',
                         header_dec_below='*',
-                        header_fmt = '%s',
-                        stub_fmt = '%s',
+                        header_fmt='%s',
+                        stub_fmt='%s',
                         title_align='r',
-                        header_align = 'r',
-                        data_aligns = "r",
-                        stubs_align = "l",
-                        fmt = 'txt'
+                        header_align='r',
+                        data_aligns="r",
+                        stubs_align="l",
+                        fmt='txt'
                         )
         ltx_fmt1 = default_latex_fmt.copy()
         html_fmt1 = default_html_fmt.copy()

@@ -135,7 +135,7 @@ class PenalizedMixin:
         nobs_sc = float(sc.shape[0])
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
-            sc -= 1/scale * pen_weight / nobs_sc  * self.penal.deriv(params)
+            sc -= 1/scale * pen_weight / nobs_sc * self.penal.deriv(params)
 
         return sc
 

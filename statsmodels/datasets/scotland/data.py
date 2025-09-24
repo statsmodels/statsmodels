@@ -3,17 +3,17 @@ from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Used with express permission from the original author,
+COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
-TITLE       = "Taxation Powers Vote for the Scottish Parliament 1997"
-SOURCE      = """
+TITLE = "Taxation Powers Vote for the Scottish Parliament 1997"
+SOURCE = """
 Jeff Gill's `Generalized Linear Models: A Unified Approach`
 
 http://jgill.wustl.edu/research/books.html
 """
-DESCRSHORT  = """Taxation Powers' Yes Vote for Scottish Parliamanet-1997"""
+DESCRSHORT = """Taxation Powers' Yes Vote for Scottish Parliamanet-1997"""
 
-DESCRLONG   = """
+DESCRLONG = """
 This data is based on the example in Gill and describes the proportion of
 voters who voted Yes to grant the Scottish Parliament taxation powers.
 The data are divided into 32 council districts.  This example's explanatory
@@ -28,7 +28,7 @@ The original source files and variable information are included in
 /scotland/src/
 """
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 32 (1 for each Scottish district)
 

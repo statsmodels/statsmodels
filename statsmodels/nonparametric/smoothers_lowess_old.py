@@ -147,7 +147,7 @@ def _lowess_initial_fit(x_copy, y_copy, k, n):
         x-values
 
    """
-    weights = np.zeros((n,k), dtype = x_copy.dtype)
+    weights = np.zeros((n,k), dtype=x_copy.dtype)
     nn_indices = [0,k]
 
     X = np.ones((k,2))

@@ -3,21 +3,21 @@ from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """This data is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This data is public domain."""
+TITLE = __doc__
+SOURCE = """
 http://www.ngdc.noaa.gov/stp/solar/solarda3.html
 
 The original dataset contains monthly data on sunspot activity in the file
 ./src/sunspots_yearly.dat.  There is also sunspots_monthly.dat.
 """
 
-DESCRSHORT  = """Yearly (1700-2008) data on sunspots from the National
+DESCRSHORT = """Yearly (1700-2008) data on sunspots from the National
 Geophysical Data Center."""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 309 (Annual 1700 - 2008)
     Number of Variables - 1

@@ -3,18 +3,18 @@ from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Public domain."""
-TITLE       = """Statewide Crime Data 2009"""
-SOURCE      = """
+COPYRIGHT = "Public domain."
+TITLE = "Statewide Crime Data 2009"
+SOURCE = """
 All data is for 2009 and was obtained from the American Statistical Abstracts except as indicated below.
 """
 
-DESCRSHORT  = """State crime data 2009"""
+DESCRSHORT = """State crime data 2009"""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
 #suggested notes
-NOTE        = """::
+NOTE = """::
 
     Number of observations: 51
     Number of variables: 8

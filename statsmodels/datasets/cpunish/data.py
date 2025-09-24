@@ -3,18 +3,18 @@ from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Used with express permission from the original author,
+COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
-TITLE       = __doc__
-SOURCE      = """
+TITLE = __doc__
+SOURCE = """
 Jeff Gill's `Generalized Linear Models: A Unified Approach`
 
 http://jgill.wustl.edu/research/books.html
 """
 
-DESCRSHORT  = """Number of state executions in 1997"""
+DESCRSHORT = """Number of state executions in 1997"""
 
-DESCRLONG   = """This data describes the number of times capital punishment is implemented
+DESCRLONG = """This data describes the number of times capital punishment is implemented
 at the state level for the year 1997.  The outcome variable is the number of
 executions.  There were executions in 17 states.
 Included in the data are explanatory variables for median per capita income
@@ -25,7 +25,7 @@ whether the state is in the South, and (an estimate of) the proportion
 of the population with a college degree of some kind.
 """
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 17
     Number of Variables - 7

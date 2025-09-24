@@ -3,9 +3,9 @@ from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """This is in the public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is in the public domain."""
+TITLE = __doc__
+SOURCE = """
 The data was collected by the RAND corporation as part of the Health
 Insurance Experiment (HIE).
 
@@ -23,11 +23,11 @@ here contains only a subset of the original data.  The data varies slightly
 compared to that reported in Cameron and Trivedi.
 """
 
-DESCRSHORT  = """The RAND Co. Health Insurance Experiment Data"""
+DESCRSHORT = """The RAND Co. Health Insurance Experiment Data"""
 
-DESCRLONG   = """"""
+DESCRLONG = """"""
 
-NOTE        = """::
+NOTE = """::
 
     Number of observations - 20,190
     Number of variables - 10

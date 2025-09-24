@@ -112,7 +112,7 @@ def mvn_nloglike_obs(x, sigma):
 
     sigma2 = 1.  # error variance is included in sigma
 
-    llike  = 0.5 * (np.log(sigma2) - 2.0 * np.log(np.diagonal(cholsigmainv))
+    llike = 0.5 * (np.log(sigma2) - 2.0 * np.log(np.diagonal(cholsigmainv))
                           + (x_whitened**2) / sigma2
                           + np.log(2*np.pi))
 

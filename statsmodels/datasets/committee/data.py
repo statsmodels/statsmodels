@@ -3,18 +3,18 @@ from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Used with express permission from the original author,
+COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
-TITLE       = __doc__
-SOURCE      = """
+TITLE = __doc__
+SOURCE = """
 Jeff Gill's `Generalized Linear Models: A Unifited Approach`
 
 http://jgill.wustl.edu/research/books.html
 """
 
-DESCRSHORT  = """Number of bill assignments in the 104th House in 1995"""
+DESCRSHORT = """Number of bill assignments in the 104th House in 1995"""
 
-DESCRLONG   = """The example in Gill, seeks to explain the number of bill
+DESCRLONG = """The example in Gill, seeks to explain the number of bill
 assignments in the first 100 days of the US' 104th House of Representatives.
 The response variable is the number of bill assignments in the first 100 days
 over 20 Committees.  The explanatory variables in the example are the number of
