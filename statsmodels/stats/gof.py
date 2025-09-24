@@ -136,7 +136,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
     n = np.sum(o, axis=axis)
     nt = n
-    if n.size>1:
+    if n.size > 1:
         n = np.atleast_2d(n)
         if axis == 1:
             nt = n.T     # need both for 2d, n and nt for broadcasting
@@ -170,10 +170,9 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
     return D_obs, stats.chi2.sf(D_obs,k-1-ddof)
 
-
-
-#todo: need also binning for continuous distribution
+# TODO: need also binning for continuous distribution
 #      and separated binning function to be used for powerdiscrepancy
+
 
 def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
     '''perform chisquare test for random sample of a discrete distribution
@@ -237,7 +236,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
     histsupp[0] = distfn.a
 
     # find sample frequencies and perform chisquare test
-    #TODO: move to compatibility.py
+    # TODO: move to compatibility.py
     freq, hsupp = np.histogram(rvs,histsupp)
     # cdfs = distfn.cdf(distsupp,*arg)
     (chis,pval) = stats.chisquare(np.array(freq),n*distmass)
@@ -246,6 +245,8 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
            'at arg = %s with pval = %s' % (msg,str(arg),str(pval))
 
 # copy/paste, remove code duplication when it works
+
+
 def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     '''get bins for chisquare type gof tests for a discrete distribution
 
@@ -339,7 +340,6 @@ License: BSD-3
 """
 
 
-
 def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     '''chisquare goodness-of-fit test
 
@@ -391,7 +391,7 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     if return_basic:
         return chisq, pvalue
     else:
-        return chisq, pvalue    #TODO: replace with TestResults
+        return chisq, pvalue    # TODO: replace with TestResults
 
 
 def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):

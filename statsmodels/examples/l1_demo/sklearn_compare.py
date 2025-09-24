@@ -16,6 +16,7 @@ The results "prove" that the regularization paths are the same.  Note that
     finding the reparameterization is non-trivial since the coefficient paths
     are NOT monotonic.  As a result, the paths do not match up perfectly.
 """
+
 from statsmodels.compat.python import lrange
 
 import matplotlib.pyplot as plt
@@ -36,8 +37,9 @@ if use_spector:
     Y = spector_data.endog
 else:
     raise Exception(
-        "The anes96 dataset is now loaded in as a short version that cannot "\
-        "be used here")
+        "The anes96 dataset is now loaded in as a short version that cannot "
+        "be used here"
+    )
     anes96_data = sm.datasets.anes96.load_pandas()
     Y = anes96_data.exog.vote
 
@@ -54,8 +56,9 @@ else:
     alphas = 1 / np.logspace(-3, 2, N)  # for anes96_data
 for n, alpha in enumerate(alphas):
     logit_res = logit_mod.fit_regularized(
-            method='l1', alpha=alpha, disp=False, trim_mode='off')
-    sm_coeff[n,:] = logit_res.params
+        method="l1", alpha=alpha, disp=False, trim_mode="off"
+    )
+    sm_coeff[n, :] = logit_res.params
 ## Sklearn
 sk_coeff = np.zeros((N, K))
 if use_spector:
@@ -63,8 +66,7 @@ if use_spector:
 else:
     Cs = np.logspace(-2.6, 0, N)
 for n, C in enumerate(Cs):
-    clf = linear_model.LogisticRegression(
-            C=C, penalty='l1', fit_intercept=False)
+    clf = linear_model.LogisticRegression(C=C, penalty="l1", fit_intercept=False)
     clf.fit(X, Y)
     sk_coeff[n, :] = clf.coef_
 
@@ -76,8 +78,8 @@ for n, C in enumerate(Cs):
 #
 # special_X is chosen since this coefficient becomes non-zero before the
 # other two...and is relatively monotonic...with both datasets.
-sk_special_X = np.fabs(sk_coeff[:,2])
-sm_special_X = np.fabs(sm_coeff[:,2])
+sk_special_X = np.fabs(sk_coeff[:, 2])
+sm_special_X = np.fabs(sm_coeff[:, 2])
 s = np.zeros(N)
 # Note that sk_special_X will not always be perfectly sorted...
 s = np.searchsorted(sk_special_X, sm_special_X)
@@ -86,18 +88,18 @@ s = np.searchsorted(sk_special_X, sm_special_X)
 plt.figure(2)
 plt.clf()
 plt.grid()
-plt.xlabel('Index in sklearn simulation')
-plt.ylabel('Coefficient value')
-plt.title('Regularization Paths')
-colors = ['b', 'r', 'k', 'g', 'm', 'c', 'y']
-for coeff, name in [(sm_coeff, 'sm'), (sk_coeff, 'sk')]:
-    if name == 'sk':
-        ltype = 'x'  # linetype
+plt.xlabel("Index in sklearn simulation")
+plt.ylabel("Coefficient value")
+plt.title("Regularization Paths")
+colors = ["b", "r", "k", "g", "m", "c", "y"]
+for coeff, name in [(sm_coeff, "sm"), (sk_coeff, "sk")]:
+    if name == "sk":
+        ltype = "x"  # linetype
         t = lrange(N)  # The 'time' parameter
     else:
-        ltype = 'o'
+        ltype = "o"
         t = s
     for i in range(K):
-        plt.plot(t, coeff[:,i], ltype+colors[i], label=name+'-X'+str(i))
-plt.legend(loc='best')
+        plt.plot(t, coeff[:, i], ltype + colors[i], label=name + "-X" + str(i))
+plt.legend(loc="best")
 plt.show()

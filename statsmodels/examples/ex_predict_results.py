@@ -22,23 +22,22 @@ from statsmodels.genmod.families import links
 
 nsample = 50
 x = np.linspace(0, 20, nsample)
-X = np.column_stack((x, (x - 5)**2))
+X = np.column_stack((x, (x - 5) ** 2))
 X = add_constant(X)
-beta = [5., 0.5, -0.01]
+beta = [5.0, 0.5, -0.01]
 sig = 0.5
 w = np.ones(nsample)
-w[nsample * 6/10:] = 3
+w[nsample * 6 / 10 :] = 3
 y_true = np.dot(X, beta)
 e = np.random.normal(size=nsample)
 y = y_true + sig * w * e
-X = X[:,[0,1]]
+X = X[:, [0, 1]]
 
 
 # ### WLS knowing the true variance ratio of heteroscedasticity
 
-mod_wls = WLS(y, X, weights=1./w)
+mod_wls = WLS(y, X, weights=1.0 / w)
 res_wls = mod_wls.fit()
-
 
 
 prstd, iv_l, iv_u = wls_prediction_std(res_wls)
@@ -64,7 +63,7 @@ print(pred_wls_n.summary_frame().head())
 
 
 w_sqrt = np.sqrt(w)
-mod_glm = GLM(y/w_sqrt, X/w_sqrt[:,None])
+mod_glm = GLM(y / w_sqrt, X / w_sqrt[:, None])
 res_glm = mod_glm.fit()
 pred_glm = res_glm.get_prediction()
 print(pred_glm.summary_frame().head())
@@ -74,17 +73,23 @@ pred_glm_t = res_glm_t.get_prediction()
 print(pred_glm_t.summary_frame().head())
 
 rates = params_transform_univariate(res_glm.params, res_glm.cov_params())
-print('\nRates exp(params)')
+print("\nRates exp(params)")
 print(rates.summary_frame())
 
-rates2 = np.column_stack((np.exp(res_glm.params),
-                          res_glm.bse * np.exp(res_glm.params),
-                          np.exp(res_glm.conf_int())))
+rates2 = np.column_stack(
+    (
+        np.exp(res_glm.params),
+        res_glm.bse * np.exp(res_glm.params),
+        np.exp(res_glm.conf_int()),
+    )
+)
 assert_allclose(rates.summary_frame().values, rates2, rtol=1e-13)
 
 
 # with identity transform
-pt = params_transform_univariate(res_glm.params, res_glm.cov_params(), link=links.Identity())
+pt = params_transform_univariate(
+    res_glm.params, res_glm.cov_params(), link=links.Identity()
+)
 print(pt.tvalues)
 
 assert_allclose(pt.tvalues, res_glm.tvalues, rtol=1e-13)

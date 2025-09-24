@@ -49,9 +49,7 @@ class Results:
 ##    return weights * (function(xdata, *params) - ydata)
 ##
 
-
-
-class NonlinearLS(Model):  #or subclass a model
+class NonlinearLS(Model):  # or subclass a model
     r'''Base class for estimation of a non-linear model with least squares
 
     This class is supposed to be subclassed, and the subclass has to provide a method
@@ -128,7 +126,6 @@ class NonlinearLS(Model):  #or subclass a model
         #copied from GLS, Model has different signature
         return self._predict(params)
 
-
     def _predict(self, params):
         pass
 
@@ -145,7 +142,6 @@ class NonlinearLS(Model):  #or subclass a model
 
     def errorsumsquares(self, params):
         return (self.geterrors(params)**2).sum()
-
 
     def fit(self, start_value=None, nparams=None, **kw):
         #if hasattr(self, 'start_value'):
@@ -190,13 +186,13 @@ class NonlinearLS(Model):  #or subclass a model
         fitres.params = popt
         fitres.pcov = pcov
         fitres.rawres = res
-        self.wendog = self.endog  #add weights
+        self.wendog = self.endog  # add weights
         self.wexog = self.jac_predict(popt)
         pinv_wexog = np.linalg.pinv(self.wexog)
         self.normalized_cov_params = np.dot(pinv_wexog,
                                          np.transpose(pinv_wexog))
 
-        #TODO: check effect of `weights` on result statistics
+        # TODO: check effect of `weights` on result statistics
         #I think they are correctly included in cov_params
         #maybe not anymore, I'm not using pcov of leastsq
         #direct calculation with jac_predict misses the weights
@@ -209,7 +205,7 @@ class NonlinearLS(Model):  #or subclass a model
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
 
-        lfit.fitres = fitres   #mainly for testing
+        lfit.fitres = fitres   # mainly for testing
         self._results = lfit
         return lfit
 
@@ -254,21 +250,18 @@ class NonlinearLS(Model):  #or subclass a model
 class Myfunc(NonlinearLS):
 
     #predict model.Model has a different signature
-##    def predict(self, params, exog=None):
-##        if not exog is None:
-##            x = exog
-##        else:
-##            x = self.exog
-##        a, b, c = params
-##        return a*np.exp(-b*x) + c
+    ##    def predict(self, params, exog=None):
+    ##        if not exog is None:
+    ##            x = exog
+    ##        else:
+    ##            x = self.exog
+    ##        a, b, c = params
+    ##        return a*np.exp(-b*x) + c
 
     def _predict(self, params):
         x = self.exog
         a, b, c = params
         return a*np.exp(-b*x) + c
-
-
-
 
 
 if __name__ == '__main__':
@@ -284,9 +277,6 @@ if __name__ == '__main__':
 
     def error2(params, x, y):
         return (y - func(params, x))**2
-
-
-
 
     x = np.linspace(0,4,50)
     params = np.array([2.5, 1.3, 0.5])

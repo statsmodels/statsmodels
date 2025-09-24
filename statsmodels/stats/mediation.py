@@ -158,7 +158,6 @@ class Mediation:
         # Position of the mediator variable in the outcome model.
         self._med_pos_outcome = self._variable_pos('mediator', 'outcome')
 
-
     def _variable_pos(self, var, model):
         if model == 'mediator':
             mod = self.mediator_model
@@ -179,13 +178,11 @@ class Mediation:
         else:
             return maybe_name_or_idx(exp, mod)[1]
 
-
     def _guess_endog_name(self, model, typ):
         if hasattr(model, 'formula'):
             return model.formula.split("~")[0].strip()
         else:
             raise ValueError('cannot infer %s name without formula' % typ)
-
 
     def _simulate_params(self, result):
         """
@@ -194,7 +191,6 @@ class Mediation:
         mn = result.params
         cov = result.cov_params()
         return np.random.multivariate_normal(mn, cov)
-
 
     def _get_mediator_exog(self, exposure):
         """
@@ -220,7 +216,6 @@ class Mediation:
             mediator_exog = model.exog
 
         return mediator_exog
-
 
     def _get_outcome_exog(self, exposure, mediator):
         """
@@ -250,7 +245,6 @@ class Mediation:
 
         return outcome_exog
 
-
     def _fit_model(self, model, fit_kwargs, boot=False):
         klass = model.__class__
         init_kwargs = model._get_init_kwds()
@@ -262,7 +256,6 @@ class Mediation:
             exog = exog[ii, :]
         outcome_model = klass(endog, exog, **init_kwargs)
         return outcome_model.fit(**fit_kwargs)
-
 
     def fit(self, method="parametric", n_rep=1000):
         """

@@ -28,7 +28,7 @@ res_t_dfest.dof = 2.837183
 res_t_dfest.dofse = 1.175296
 res_t_dfest.iter = 7
 res_t_dfest.logLik = 71.81292
-res_t_dfest.endTime =  0.01
+res_t_dfest.endTime = 0.01
 
 loc_fit = Holder()
 #> cat_items(tfit3$loc.fit, "loc_fit.")

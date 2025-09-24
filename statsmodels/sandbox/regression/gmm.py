@@ -326,7 +326,7 @@ class IVRegressionResults(RegressionResults):
             ("Date:", None),
             ("Time:", None),
             ("No. Observations:", None),
-            ("Df Residuals:", None),  # [self.df_resid]), #TODO: spelling
+            ("Df Residuals:", None),  # [self.df_resid]), # TODO: spelling
             ("Df Model:", None),  # [self.df_model])
         ]
 
@@ -1373,7 +1373,7 @@ class GMMResults(LikelihoodModelResults):
             ("Date:", None),
             ("Time:", None),
             ("No. Observations:", None),
-            # ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
+            # ('Df Residuals:', None), #[self.df_resid]), # TODO: spelling
             # ('Df Model:', None), #[self.df_model])
         ]
 

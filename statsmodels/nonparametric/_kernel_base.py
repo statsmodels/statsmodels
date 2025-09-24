@@ -79,8 +79,10 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
                               var_type=var_type, bw=bw,
                               defaults=EstimatorSettings(efficient=False))
     else:
-        raise ValueError("class_type not recognized, should be one of " \
-                 "{KDEMultivariate, KDEMultivariateConditional, KernelReg}")
+        raise ValueError(
+            "class_type not recognized, should be one of "
+            "{KDEMultivariate, KDEMultivariateConditional, KernelReg}"
+        )
 
     # Compute dispersion in next 4 lines
     if class_type == 'KernelReg':
@@ -91,7 +93,7 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
     fct = dispersion * n_sub**(-1. / (n_cvars + co))
     fct[ix_unord] = n_sub**(-2. / (n_cvars + do))
     fct[ix_ord] = n_sub**(-2. / (n_cvars + do))
-    sample_scale_sub = sub_model.bw / fct  #TODO: check if correct
+    sample_scale_sub = sub_model.bw / fct  # TODO: check if correct
     bw_sub = sub_model.bw
     return sample_scale_sub, bw_sub
 
@@ -209,8 +211,8 @@ class GenericKDE :
             # `res` is a list of tuples (sample_scale_sub, bw_sub)
             res = joblib.Parallel(n_jobs=self.n_jobs)(
                 joblib.delayed(_compute_subset)(
-                    class_type, data, bw, co, do, n_cvars, ix_ord, ix_unord, \
-                    n_sub, class_vars, self.randomize, bounds[i]) \
+                    class_type, data, bw, co, do, n_cvars, ix_ord, ix_unord,
+                    n_sub, class_vars, self.randomize, bounds[i])
                 for i in range(n_blocks))
         else:
             res = []
@@ -229,8 +231,8 @@ class GenericKDE :
         m_scale = order_func(sample_scale, axis=0)
         # TODO: Check if 1/5 is correct in line below!
         bw = m_scale * s * nobs**(-1. / (n_cvars + co))
-        bw[ix_ord] = m_scale[ix_ord] * nobs**(-2./ (n_cvars + do))
-        bw[ix_unord] = m_scale[ix_unord] * nobs**(-2./ (n_cvars + do))
+        bw[ix_ord] = m_scale[ix_ord] * nobs**(-2.0 / (n_cvars + do))
+        bw[ix_unord] = m_scale[ix_unord] * nobs**(-2.0 / (n_cvars + do))
 
         if self.return_only_bw:
             bw = np.median(only_bw, axis=0)

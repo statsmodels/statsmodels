@@ -106,7 +106,7 @@ def lowess(endog, exog, frac=2./3, it=3):
     k = int(frac * n)
 
     index_array = np.argsort(exog)
-    x_copy = np.array(exog[index_array]) #, dtype ='float32')
+    x_copy = np.array(exog[index_array])  # , dtype ='float32')
     y_copy = endog[index_array]
 
     fitted, weights = _lowess_initial_fit(x_copy, y_copy, k, n)
@@ -172,7 +172,6 @@ def _lowess_initial_fit(x_copy, y_copy, k, n):
 
         _lowess_update_nn(x_copy, nn_indices, i+1)
 
-
     return fitted, weights
 
 
@@ -235,13 +234,12 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
     residual_weights = np.copy(y_copy)
     residual_weights.shape = (n,)
     residual_weights -= fitted
-    residual_weights = np.absolute(residual_weights)#, out=residual_weights)
+    residual_weights = np.absolute(residual_weights)  # , out=residual_weights)
     s = np.median(residual_weights)
     residual_weights /= (6*s)
-    too_big = residual_weights>=1
+    too_big = residual_weights >= 1
     _lowess_bisquare(residual_weights)
     residual_weights[too_big] = 0
-
 
     for i in range(n):
         total_weights = weights[i,:] * np.sqrt(residual_weights[nn_indices[0]:
@@ -280,7 +278,7 @@ def _lowess_update_nn(x, cur_nn,i):
     Nothing. It modifies cur_nn in place.
     """
     while True:
-        if cur_nn[1]<x.size:
+        if cur_nn[1] < x.size:
             left_dist = x[i] - x[cur_nn[0]]
             new_right_dist = x[cur_nn[1]] - x[i]
             if new_right_dist < left_dist:
@@ -307,10 +305,10 @@ def _lowess_tricube(t):
     -------
     Nothing
     """
-    #t = (1-np.abs(t)**3)**3
-    t[:] = np.absolute(t) #, out=t) #numpy version?
+    # t = (1-np.abs(t)**3)**3
+    t[:] = np.absolute(t)  # , out=t) #numpy version?
     _lowess_mycube(t)
-    t[:] = np.negative(t) #, out = t)
+    t[:] = np.negative(t)  # , out = t)
     t += 1
     _lowess_mycube(t)
 
@@ -347,8 +345,8 @@ def _lowess_bisquare(t):
     -------
     Nothing
     """
-    #t = (1-t**2)**2
+    # t = (1-t**2)**2
     t *= t
-    t[:] = np.negative(t) #, out=t)
+    t[:] = np.negative(t)  # , out=t)
     t += 1
     t *= t

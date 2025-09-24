@@ -24,13 +24,13 @@ def test_adf_autolag():
                               regression=tr, store=True, regresults=True)
         st2 = adf3[-1]
 
-        assert_equal(len(st2.autolag_results), 15 + 1)  #+1 for lagged level
+        assert_equal(len(st2.autolag_results), 15 + 1)  # +1 for lagged level
         for i, res in sorted(st2.autolag_results.items())[:5]:
             lag = i - k_trend
-            #assert correct design matrices in _autolag
+            # assert correct design matrices in _autolag
             assert_equal(res.model.exog[-10:,k_trend], x[-11:-1])
             assert_equal(res.model.exog[-1,k_trend+1:], xd[-lag:-1][::-1])
-            #min-ic lag of dfgls in Stata is also 2, or 9 for maic with notrend
+            # min-ic lag of dfgls in Stata is also 2, or 9 for maic with notrend
             assert_equal(st2.usedlag, 2)
 
         #same result with lag fixed at usedlag of autolag

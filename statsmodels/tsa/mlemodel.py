@@ -21,7 +21,7 @@ from statsmodels.base.model import LikelihoodModel
 
 
 #copied from sandbox/regression/mle.py
-#TODO: I take it this is only a stub and should be included in another
+# TODO: I take it this is only a stub and should be included in another
 # model class?
 class TSMLEModel(LikelihoodModel):
     """

@@ -20,7 +20,7 @@ from statsmodels.stats.moment_helpers import cov2corr
 
 
 def corr_equi(k_vars, rho):
-    '''create equicorrelated correlation matrix with rho on off diagonal
+    """create equicorrelated correlation matrix with rho on off diagonal
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ def corr_equi(k_vars, rho):
     corr : ndarray (k_vars, k_vars)
         correlation matrix
 
-    '''
+    """
     corr = np.empty((k_vars, k_vars))
     corr.fill(rho)
     corr[np.diag_indices_from(corr)] = 1
@@ -42,7 +42,7 @@ def corr_equi(k_vars, rho):
 
 
 def corr_ar(k_vars, ar):
-    '''create autoregressive correlation matrix
+    """create autoregressive correlation matrix
 
     This might be MA, not AR, process if used for residual process - check
 
@@ -52,18 +52,19 @@ def corr_ar(k_vars, ar):
         AR lag-polynomial including 1 for lag 0
 
 
-    '''
+    """
     from scipy.linalg import toeplitz
+
     if len(ar) < k_vars:
         ar_ = np.zeros(k_vars)
-        ar_[:len(ar)] = ar
+        ar_[: len(ar)] = ar
         ar = ar_
 
     return toeplitz(ar)
 
 
 def corr_arma(k_vars, ar, ma):
-    '''create arma correlation matrix
+    """create arma correlation matrix
 
     converts arma to autoregressive lag-polynomial with k_var lags
 
@@ -76,8 +77,9 @@ def corr_arma(k_vars, ar, ma):
     ma : array_like, 1d
         MA lag-polynomial
 
-    '''
+    """
     from scipy.linalg import toeplitz
+
     from statsmodels.tsa.arima_process import arma2ar
 
     # TODO: flesh out the comment below about a bug in arma2ar
@@ -87,7 +89,7 @@ def corr_arma(k_vars, ar, ma):
 
 
 def corr2cov(corr, std):
-    '''convert correlation matrix to covariance matrix
+    """convert correlation matrix to covariance matrix
 
     Parameters
     ----------
@@ -97,9 +99,9 @@ def corr2cov(corr, std):
         standard deviation for the vector of random variables. If scalar, then
         it is assumed that all variables have the same scale given by std.
 
-    '''
+    """
     if np.size(std) == 1:
-        std = std*np.ones(corr.shape[0])
+        std = std * np.ones(corr.shape[0])
     cov = corr * std[:, None] * std[None, :]  # same as outer product
     return cov
 
@@ -136,7 +138,7 @@ def whiten_ar(x, ar_coefs, order):
     if x.ndim == 2:
         rho = rho[:, None]
     for i in range(order):
-        _x[(i+1):] = _x[(i+1):] - rho[i] * x[0:-(i+1)]
+        _x[(i + 1) :] = _x[(i + 1) :] - rho[i] * x[0 : -(i + 1)]
 
     return _x[order:]
 
@@ -164,17 +166,16 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
     Rinv : ndarray
         inverse of the Toepliz matrix
     """
-    return yule_walker(acov, order=order, method=method, df=df, inv=inv,
-                       demean=False)
+    return yule_walker(acov, order=order, method=method, df=df, inv=inv, demean=False)
 
 
 class ARCovariance:
-    '''
+    """
     experimental class for Covariance of AR process
     classmethod? staticmethods?
-    '''
+    """
 
-    def __init__(self, ar=None, ar_coefs=None, sigma=1.):
+    def __init__(self, ar=None, ar_coefs=None, sigma=1.0):
         if ar is not None:
             self.ar = ar
             self.ar_coefs = -ar[1:]
@@ -194,7 +195,7 @@ class ARCovariance:
 
     def corr(self, k_vars=None):
         if k_vars is None:
-            k_vars = len(self.ar)   # TODO: this could move into corr_arr
+            k_vars = len(self.ar)  # TODO: this could move into corr_arr
         return corr_ar(k_vars, self.ar)
 
     def cov(self, k_vars=None):

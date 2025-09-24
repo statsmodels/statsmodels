@@ -145,7 +145,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                 ('Dependent Variable:', yname),  # TODO: What happens with multiple names?
                 ('df model', [df_model])
                 ]
-    gen_stubs_left, gen_data_left = zip_longest(*gen_left) #transpose row col
+    gen_stubs_left, gen_data_left = zip_longest(*gen_left)  # transpose row col
 
     gen_title = title
     gen_header = None
@@ -160,7 +160,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                        'Time:',
                        'Number of Obs:',
                        'df resid')
-    gen_data_right = ([modeltype], #was dist family need to look at more
+    gen_data_right = ([modeltype],  # was dist family need to look at more
                       time_of_day,
                       [nobs],
                       [df_resid]
@@ -199,8 +199,8 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
          'GLS'   : ['coef', 'std err', 't', 'P>|t|', alp + ' Conf. Interval'],
          'GLSAR' : ['coef', 'std err', 't', 'P>|t|', alp + ' Conf. Interval'],
          'WLS'   : ['coef', 'std err', 't', 'P>|t|', alp + ' Conf. Interval'],
-         'GLM'   : ['coef', 'std err', 't', 'P>|t|', alp + ' Conf. Interval'], #glm uses t-distribution
-         'RLM'   : ['coef', 'std err', 'z', 'P>|z|', alp + ' Conf. Interval']  #checke z
+         'GLM'   : ['coef', 'std err', 't', 'P>|t|', alp + ' Conf. Interval'],  # glm uses t-distribution
+         'RLM'   : ['coef', 'std err', 'z', 'P>|z|', alp + ' Conf. Interval']   # checke z
                    }
     params_stubs = xname
     params = self.params
@@ -225,12 +225,12 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
 
     #special table
     #-------------
-    #TODO: exists in linear_model, what about other models
+    # TODO: exists in linear_model, what about other models
     #residual diagnostics
 
     #output options
     #--------------
-    #TODO: JP the rest needs to be fixed, similar to summary in linear_model
+    # TODO: JP the rest needs to be fixed, similar to summary in linear_model
 
     def ols_printer():
         """
@@ -357,9 +357,9 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
             gen_left += [(' ', ' ')] * (len(gen_right) - len(gen_left))
 
         # padding in SimpleTable does not work like I want
-        #force extra spacing and exact string length in right table
+        # force extra spacing and exact string length in right table
         gen_right = [('%-21s' % ('  '+k), v) for k,v in gen_right]
-        gen_stubs_right, gen_data_right = zip_longest(*gen_right) #transpose row col
+        gen_stubs_right, gen_data_right = zip_longest(*gen_right)  # transpose row col
         gen_table_right = SimpleTable(gen_data_right,
                                       gen_header,
                                       gen_stubs_right,
@@ -367,11 +367,11 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
                                       txt_fmt=fmt_2cols
                                       )
     else:
-        gen_table_right = []  #because .extend_right seems works with []
+        gen_table_right = []  # because .extend_right seems works with []
 
-    #moved below so that we can pad if needed to match length of gen_right
-    #transpose rows and columns, `unzip`
-    gen_stubs_left, gen_data_left = zip_longest(*gen_left) #transpose row col
+    # moved below so that we can pad if needed to match length of gen_right
+    # transpose rows and columns, `unzip`
+    gen_stubs_left, gen_data_left = zip_longest(*gen_left)  # transpose row col
 
     gen_table_left = SimpleTable(gen_data_left,
                                  gen_header,
@@ -513,7 +513,7 @@ def summary_params_frame(results, yname=None, xname=None, alpha=.05,
     else:
         params = results.params
         std_err = results.bse
-        tvalues = results.tvalues  #is this sometimes called zvalues
+        tvalues = results.tvalues  # is this sometimes called zvalues
         pvalues = results.pvalues
         conf_int = results.conf_int(alpha)
 
@@ -578,9 +578,9 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
                        for what in extras
                        ]
         data = lzip(res_params, *extras_list)
-        data = [i for j in data for i in j]  #flatten
+        data = [i for j in data for i in j]  # flatten
         stubs = lzip(endog_names, *[['']*len(endog_names)]*len(extras))
-        stubs = [i for j in stubs for i in j] #flatten
+        stubs = [i for j in stubs for i in j]  # flatten
     else:
         data = res_params
         stubs = endog_names
@@ -690,10 +690,10 @@ def table_extend(tables, keep_headers=True):
 
     """
     from copy import deepcopy
-    for ii, t in enumerate(tables[:]): #[1:]:
+    for ii, t in enumerate(tables[:]):  # [1:]:
         t = deepcopy(t)
 
-        #move title to first cell of header
+        # move title to first cell of header
         # TODO: check if we have multiline headers
         if t[0].datatype == 'header':
             t[0][0].data = t.title

@@ -39,7 +39,7 @@ cell0data = 0.0000
 cell1data = 1
 row0data = [cell0data, cell1data]
 row1data = [2, 3.333]
-table1data = [ row0data, row1data ]
+table1data = [row0data, row1data]
 test1stubs = ('stub1', 'stub2')
 test1header = ('header1', 'header2')
 #test1header = ('header1\nheader1a', 'header2\nheader2a')
@@ -78,6 +78,7 @@ class TestSimpleTable:
         #print('desired')
         #print(desired)
         assert_equal(actual, desired)
+
     def test_ltx_fmt1(self):
         # Limited test of custom ltx_fmt
         desired = r"""

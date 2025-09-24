@@ -47,7 +47,6 @@ class Exchangeable_simulator(GEE_simulator):
                   self.scale_inv)
         OUT.write("\n")
 
-
     def simulate(self):
 
         endog, exog, group, time = [], [], [], []
@@ -109,14 +108,12 @@ class Overdispersed_simulator(GEE_simulator):
     dparams[0] is the common correlation coefficient
     """
 
-
     def print_dparams(self, dparams_est):
         OUT.write("Estimated inverse scale parameter:       %8.4f\n" %
                   dparams_est[0])
         OUT.write("True inverse scale parameter:            %8.4f\n" %
                   self.scale_inv)
         OUT.write("\n")
-
 
     def simulate(self):
 
@@ -157,7 +154,6 @@ class Overdispersed_simulator(GEE_simulator):
         self.group = np.concatenate(group)
 
 
-
 def gendat_exchangeable():
     exs = Exchangeable_simulator()
     exs.params = np.r_[2., 0.2, 0.2, -0.1, -0.2]
@@ -165,6 +161,7 @@ def gendat_exchangeable():
     exs.dparams = [0.3,]
     exs.simulate()
     return exs, Exchangeable()
+
 
 def gendat_overdispersed():
     exs = Overdispersed_simulator()

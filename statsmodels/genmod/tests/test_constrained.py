@@ -236,7 +236,7 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
             warnings.simplefilter('ignore', ValueWarning)
             wt2 = res2.wald_test(np.eye(k2)[1:], use_f=use_f, scalar=True)
             wt1 = res1.wald_test(np.eye(k1)[1:], use_f=use_f, scalar=True)
-        assert_allclose(wt2.pvalue, wt1.pvalue, atol=1e-20) # pvalue = 0
+        assert_allclose(wt2.pvalue, wt1.pvalue, atol=1e-20)  # pvalue = 0
         assert_allclose(wt2.statistic, wt1.statistic, rtol=1e-8)
         assert_equal(wt2.df_denom, wt1.df_denom)
 
@@ -245,7 +245,7 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
             warnings.simplefilter('ignore', ValueWarning)
             wt2 = res2.wald_test(np.eye(k2)[1:], use_f=use_f, scalar=True)
             wt1 = res1.wald_test(np.eye(k1)[1:], use_f=use_f, scalar=True)
-        assert_allclose(wt2.pvalue, wt1.pvalue, rtol=1) # pvalue = 8e-273
+        assert_allclose(wt2.pvalue, wt1.pvalue, rtol=1)  # pvalue = 8e-273
         assert_allclose(wt2.statistic, wt1.statistic, rtol=1e-8)
         assert_equal(wt2.df_denom, wt1.df_denom)
         assert_equal(wt2.df_num, wt1.df_num)

@@ -17,6 +17,7 @@ The standard l1 solver is fmin_slsqp and is included with scipy.  It
 The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be
     installed separately.  It works well even for larger data sizes.
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -39,11 +40,10 @@ logit_res = logit_mod.fit()
 alpha = 0.05 * N * np.ones(K)
 
 # Use l1, which solves via a built-in (scipy.optimize) solver
-logit_l1_res = logit_mod.fit_regularized(method='l1', alpha=alpha, acc=1e-6)
+logit_l1_res = logit_mod.fit_regularized(method="l1", alpha=alpha, acc=1e-6)
 
 # Use l1_cvxopt_cp, which solves with a CVXOPT solver
-logit_l1_cvxopt_res = logit_mod.fit_regularized(
-        method='l1_cvxopt_cp', alpha=alpha)
+logit_l1_cvxopt_res = logit_mod.fit_regularized(method="l1_cvxopt_cp", alpha=alpha)
 
 ## Print results
 print("============ Results for Logit =================")
@@ -64,13 +64,13 @@ mlogit_res = mlogit_mod.fit()
 alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
 
 # Do not regularize the constant
-alpha[-1,:] = 0
-mlogit_l1_res = mlogit_mod.fit_regularized(method='l1', alpha=alpha)
+alpha[-1, :] = 0
+mlogit_l1_res = mlogit_mod.fit_regularized(method="l1", alpha=alpha)
 print(mlogit_l1_res.params)
 
-#mlogit_l1_res = mlogit_mod.fit_regularized(
+# mlogit_l1_res = mlogit_mod.fit_regularized(
 #        method='l1_cvxopt_cp', alpha=alpha, abstol=1e-10, trim_tol=1e-6)
-#print mlogit_l1_res.params
+# print mlogit_l1_res.params
 
 ## Print results
 print("============ Results for MNLogit =================")
@@ -99,18 +99,24 @@ alphas = 1 / np.logspace(-0.5, 2, N)
 # acc and increased QC_tol to make it pass
 for n, alpha in enumerate(alphas):
     logit_res = logit_mod.fit_regularized(
-        method='l1', alpha=alpha, trim_mode='off', QC_tol=0.1, disp=False,
-        QC_verbose=True, acc=1e-15)
-    coeff[n,:] = logit_res.params
+        method="l1",
+        alpha=alpha,
+        trim_mode="off",
+        QC_tol=0.1,
+        disp=False,
+        QC_verbose=True,
+        acc=1e-15,
+    )
+    coeff[n, :] = logit_res.params
 
 ## Plot
 plt.figure(1)
 plt.clf()
 plt.grid()
-plt.title('Regularization Path')
-plt.xlabel('alpha')
-plt.ylabel('Parameter value')
+plt.title("Regularization Path")
+plt.xlabel("alpha")
+plt.ylabel("Parameter value")
 for i in range(K):
-    plt.plot(alphas, coeff[:,i], label='X'+str(i), lw=3)
-plt.legend(loc='best')
+    plt.plot(alphas, coeff[:, i], label="X" + str(i), lw=3)
+plt.legend(loc="best")
 plt.show()

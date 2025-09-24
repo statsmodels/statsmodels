@@ -281,7 +281,7 @@ class GenericZeroInflated(CountModel):
         dldp[nonzero_idx,:] = score_main[nonzero_idx]
 
         if self.inflation == 'logit':
-            dldw[zero_idx,:] =  (self.exog_infl[zero_idx].T * w[zero_idx] *
+            dldw[zero_idx,:] = (self.exog_infl[zero_idx].T * w[zero_idx] *
                                  (1 - w[zero_idx]) *
                                  (1 - np.exp(llf_main[zero_idx])) /
                                   np.exp(llf[zero_idx])).T
@@ -318,15 +318,29 @@ class GenericZeroInflated(CountModel):
         #d2l/dw2
         for i in range(self.k_inflate):
             for j in range(i, -1, -1):
-                hess_arr[i, j] = ((
-                    self.exog_infl[zero_idx, i] * self.exog_infl[zero_idx, j] *
-                    (w[zero_idx] * (1 - w[zero_idx]) * ((1 -
-                    np.exp(llf_main[zero_idx])) * (1 - 2 * w[zero_idx]) *
-                    np.exp(llf[zero_idx]) - (w[zero_idx] - w[zero_idx]**2) *
-                    (1 - np.exp(llf_main[zero_idx]))**2) /
-                    pmf[zero_idx]**2)).sum() -
-                    (self.exog_infl[nonzero_idx, i] * self.exog_infl[nonzero_idx, j] *
-                    w[nonzero_idx] * (1 - w[nonzero_idx])).sum())
+                a = (
+                    self.exog_infl[zero_idx, i]
+                    * self.exog_infl[zero_idx, j]
+                    * (
+                        w[zero_idx]
+                        * (1 - w[zero_idx])
+                        * (
+                            (1 - np.exp(llf_main[zero_idx]))
+                            * (1 - 2 * w[zero_idx])
+                            * np.exp(llf[zero_idx])
+                            - (w[zero_idx] - w[zero_idx] ** 2)
+                            * (1 - np.exp(llf_main[zero_idx])) ** 2
+                        )
+                        / pmf[zero_idx] ** 2
+                    )
+                ).sum()
+                b = (
+                    self.exog_infl[nonzero_idx, i]
+                    * self.exog_infl[nonzero_idx, j]
+                    * w[nonzero_idx]
+                    * (1 - w[nonzero_idx])
+                ).sum()
+                hess_arr[i, j] = a - b
 
         #d2l/dpdw
         for i in range(self.k_inflate):
@@ -642,12 +656,20 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         #d2l/dp2
         for i in range(self.k_exog):
             for j in range(i, -1, -1):
-                hess_arr[i, j] = ((
-                    self.exog[zero_idx, i] * self.exog[zero_idx, j] *
-                    mu[zero_idx] * (w[zero_idx] - 1) * (1 / coeff -
-                    w[zero_idx] * mu[zero_idx] * np.exp(mu[zero_idx]) /
-                    coeff**2)).sum() - (mu[nonzero_idx] * self.exog[nonzero_idx, i] *
-                    self.exog[nonzero_idx, j]).sum())
+                hess_arr[i, j] = (
+                    self.exog[zero_idx, i]
+                    * self.exog[zero_idx, j]
+                    * mu[zero_idx]
+                    * (w[zero_idx] - 1)
+                    * (
+                        1 / coeff
+                        - w[zero_idx] * mu[zero_idx] * np.exp(mu[zero_idx]) / coeff**2
+                    )
+                ).sum() - (
+                    mu[nonzero_idx]
+                    * self.exog[nonzero_idx, i]
+                    * self.exog[nonzero_idx, j]
+                ).sum()
 
         return hess_arr
 
@@ -1035,8 +1057,9 @@ class ZeroInflatedResults(CountResults):
 
 class ZeroInflatedPoissonResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
-    "one_line_description": "A results class for Zero Inflated Poisson",
-    "extra_attr": ""}
+        "one_line_description": "A results class for Zero Inflated Poisson",
+        "extra_attr": ""
+    }
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -1059,12 +1082,16 @@ class L1ZeroInflatedPoissonResults(L1CountResults, ZeroInflatedPoissonResults):
 
 class ZeroInflatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(ZeroInflatedPoissonResultsWrapper,
                       ZeroInflatedPoissonResults)
 
 
 class L1ZeroInflatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
                       L1ZeroInflatedPoissonResults)
 
@@ -1099,6 +1126,8 @@ class L1ZeroInflatedGeneralizedPoissonResults(L1CountResults,
 class ZeroInflatedGeneralizedPoissonResultsWrapper(
         lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(ZeroInflatedGeneralizedPoissonResultsWrapper,
                       ZeroInflatedGeneralizedPoissonResults)
 
@@ -1106,6 +1135,8 @@ wrap.populate_wrapper(ZeroInflatedGeneralizedPoissonResultsWrapper,
 class L1ZeroInflatedGeneralizedPoissonResultsWrapper(
         lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
                       L1ZeroInflatedGeneralizedPoissonResults)
 
@@ -1140,6 +1171,8 @@ class L1ZeroInflatedNegativeBinomialResults(L1CountResults,
 class ZeroInflatedNegativeBinomialResultsWrapper(
         lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(ZeroInflatedNegativeBinomialResultsWrapper,
                       ZeroInflatedNegativeBinomialResults)
 
@@ -1147,5 +1180,7 @@ wrap.populate_wrapper(ZeroInflatedNegativeBinomialResultsWrapper,
 class L1ZeroInflatedNegativeBinomialResultsWrapper(
         lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(L1ZeroInflatedNegativeBinomialResultsWrapper,
                       L1ZeroInflatedNegativeBinomialResults)

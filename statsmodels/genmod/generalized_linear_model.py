@@ -1796,7 +1796,7 @@ class GLMResults(base.LikelihoodModelResults):
         The estimate of the scale / dispersion for the model fit.
         See GLM.fit and GLM.estimate_scale for more information.
     stand_errors : ndarray
-        The standard errors of the fitted GLM.   #TODO still named bse
+        The standard errors of the fitted GLM.   # TODO still named bse
 
     See Also
     --------

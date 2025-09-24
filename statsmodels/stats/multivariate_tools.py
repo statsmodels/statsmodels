@@ -11,9 +11,6 @@ TODO:
 - names of functions, currently just "working titles"
 
 '''
-
-
-
 import numpy as np
 
 from statsmodels.tools.tools import Bunch
@@ -55,7 +52,6 @@ def partial_project(endog, exog):
                 resid=residual)
 
     return res
-
 
 
 def cancorr(x1, x2, demean=True, standardize=False):
@@ -222,7 +218,6 @@ def cc_stats(x1, x2, demean=True):
     df_model = k1 * k2  # df_hypothesis (we do not include mean in x1, x2)
     df_resid = k1 * (nobs1 - k2 - demean)
     m = 0.5 * (df_model - k1)
-
 
     pt_value = cc2.sum()    # Pillai's trace
     wl_value = np.product(1 / (1 + lam))   # Wilk's Lambda

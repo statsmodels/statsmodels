@@ -224,11 +224,12 @@ def test_cochransq3():
                       [1, 1, 0],
                       [0, 1, 1],
                       [1, 1, 1]])
-    count = np.array([ 6,  2, 16,  4,  2,  6,  4,  6])
+    count = np.array([6,  2, 16,  4,  2,  6,  4,  6])
     data = np.repeat(cases, count, 0)
 
     res = cochrans_q(data)
     assert_allclose([res.statistic, res.pvalue], [8.4706, 0.0145], atol=5e-5)
+
 
 def test_runstest(reset_randomstate):
     #comparison numbers from R, tseries, runs.test
@@ -241,7 +242,6 @@ def test_runstest(reset_randomstate):
     #print Runs(x).runs_test(correction=False)
     assert_almost_equal(np.array(Runs(x).runs_test(correction=False)),
                         [z_twosided, pvalue_twosided], decimal=6)
-
 
     # compare with runstest_1samp which should have same indicator
     assert_almost_equal(runstest_1samp(x, correction=False),
@@ -267,7 +267,7 @@ def test_runstest_2sample():
 
     x = [31.8, 32.8, 39.2, 36, 30, 34.5, 37.4]
     y = [35.5, 27.6, 21.3, 24.8, 36.7, 30]
-    y[-1] += 1e-6  #avoid tie that creates warning
+    y[-1] += 1e-6  # avoid tie that creates warning
 
     res = runstest_2samp(x, y)
     res1 = (0.022428065200812752, 0.98210649318649212)
@@ -611,6 +611,7 @@ def reference_implementation_results():
     )
     return results
 
+
 def test_samplesize_rank_compare_onetail(reference_implementation_results):
     """
     Test the `samplesize_rank_compare_onetail` function against the reference
@@ -784,8 +785,8 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
         ),
         # Relative effect > 0.5 but alternative is smaller
         (
-            np.array([4, 5, 6]), # Synthetic sample
-            np.array([1, 2, 3]), # Reference sample
+            np.array([4, 5, 6]),  # Synthetic sample
+            np.array([1, 2, 3]),  # Reference sample
             0.05,
             0.8,
             1.0,
@@ -795,8 +796,8 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
         ),
         # Relative effect < 0.5 but alternative is larger
         (
-            np.array([1, 2, 3]), # Synthetic sample
-            np.array([4, 6, 8]), # Reference sample
+            np.array([1, 2, 3]),  # Synthetic sample
+            np.array([4, 6, 8]),  # Reference sample
             0.05,
             0.8,
             1.0,

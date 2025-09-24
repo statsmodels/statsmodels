@@ -11,6 +11,7 @@ def forrt(X, m=None):
     y = np.fft.rfft(X, m) / m
     return np.r_[y.real, y[1:-1].imag]
 
+
 def revrt(X, m=None):
     """
     Inverse of forrt. Equivalent to Munro (1976) REVRT routine.
@@ -20,6 +21,7 @@ def revrt(X, m=None):
     i = int(m // 2 + 1)
     y = X[:i] + np.r_[0, X[i:], 0] * 1j
     return np.fft.irfft(y)*m
+
 
 def silverman_transform(bw, M, RANGE):
     """
@@ -36,6 +38,7 @@ def silverman_transform(bw, M, RANGE):
     FAC = np.exp(-JFAC)/BC
     kern_est = np.r_[FAC, FAC[1:-1]]
     return kern_est
+
 
 def counts(x, v):
     """

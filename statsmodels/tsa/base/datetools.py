@@ -117,7 +117,7 @@ def date_range_str(start, end=None, length=None):
         split = 'q'
     elif re.search(_y_pattern, start, flags):
         annual_freq = 1
-        start += 'a1' # hack
+        start += 'a1'  # hack
         if end:
             end += 'a1'
         split = 'a'

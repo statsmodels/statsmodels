@@ -7,7 +7,7 @@ from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.tools import clean0, fullrank
 
 
-#TODO: should this be public if it's just a container?
+# TODO: should this be public if it's just a container?
 class ContrastResults:
     """
     Class for results of tests of linear restrictions on coefficients in a model.
@@ -136,7 +136,7 @@ class ContrastResults:
                 title = None
             # we have everything for a params table
             use_t = (self.distribution == 't')
-            yname='constraints' # Not used in params_frame
+            yname = 'constraints'  # Not used in params_frame
             if xname is None:
                 xname = self.c_names
             from statsmodels.iolib.summary import summary_params
@@ -160,7 +160,6 @@ class ContrastResults:
             return ('<Wald test: statistic=%s, p-value=%s>' %
                    (self.statistic, self.pvalue))
 
-
     def summary_frame(self, xname=None, alpha=0.05):
         """Return the parameter table as a pandas DataFrame
 
@@ -169,7 +168,7 @@ class ContrastResults:
         if self.effect is not None:
             # we have everything for a params table
             use_t = (self.distribution == 't')
-            yname='constraints'  # Not used in params_frame
+            yname = 'constraints'  # Not used in params_frame
             if xname is None:
                 xname = self.c_names
             from statsmodels.iolib.summary import summary_params_frame
@@ -182,7 +181,6 @@ class ContrastResults:
         else:
             # TODO: create something nicer
             raise NotImplementedError('only available for t and z')
-
 
 
 class Contrast:
@@ -285,7 +283,9 @@ class Contrast:
         except (AttributeError, IndexError):
             self.rank = 1
 
-#TODO: fix docstring after usage is settled
+# TODO: fix docstring after usage is settled
+
+
 def contrastfromcols(L, D, pseudo=None):
     """
     From an n x p design matrix D and a matrix L, tries
@@ -403,10 +403,8 @@ class WaldTestResults:
         self.dframe = self.table.rename(columns=renaming)
         return self.dframe
 
-
     def __str__(self):
         return self.summary_frame().to_string()
-
 
     def __repr__(self):
         return str(self.__class__) + '\n' + self.__str__()
@@ -422,6 +420,7 @@ def _get_pairs_labels(k_level, level_names):
     labels = [f'{level_names[name[1]]}-{level_names[name[0]]}'
               for name in zip(*idx_pairs_all)]
     return labels
+
 
 def _contrast_pairs(k_params, k_level, idx_start):
     """create pairwise contrast for reference coding
@@ -660,7 +659,6 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
             cat = factor_labels
         else:
             raise ValueError("factor_labels has the wrong length, should be %d" % len(cat))
-
 
     k_level = len(cat)
     cm = mgr.get_contrast_matrix(term, factor, model_spec)

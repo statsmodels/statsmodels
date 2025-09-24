@@ -1,7 +1,9 @@
 """
 Tests corresponding to sandbox.stats.runs
 """
+
 from numpy.testing import assert_almost_equal
+
 from statsmodels.sandbox.stats.runs import runstest_1samp
 
 
@@ -31,6 +33,6 @@ def test_numeric_cutoff():
 
 def test_single_run():
     x = [1] * 10
-    expected = (-2.8856349,  0.0039062)
+    expected = (-2.8856349, 0.0039062)
     results = runstest_1samp(x)
     assert_almost_equal(expected, results)

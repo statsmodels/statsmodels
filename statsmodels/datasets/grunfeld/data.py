@@ -42,6 +42,7 @@ NOTE        = """::
     string categorical variable.
 """
 
+
 def load():
     """
     Loads the Grunfeld data and returns a Dataset class.
@@ -57,6 +58,7 @@ def load():
     firm (ie., there is no reference dummy)
     """
     return load_pandas()
+
 
 def load_pandas():
     """

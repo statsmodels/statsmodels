@@ -58,9 +58,7 @@ aymp.normal p-value (upper) 0.306629578855
 
 """
 
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     import time
 
@@ -68,15 +66,16 @@ if __name__ == '__main__':
     from scipy import stats
 
     from statsmodels.regression.linear_model import OLS
-    #from statsmodels.nonparametric.api import KernelReg
+
+    # from statsmodels.nonparametric.api import KernelReg
     import statsmodels.sandbox.nonparametric.kernel_extras as smke
 
     seed = np.random.randint(999999)
-    #seed = 661176
+    # seed = 661176
     print(seed)
     np.random.seed(seed)
 
-    sig_e = 0.1 #0.5 #0.1
+    sig_e = 0.1  # 0.5 #0.1
     nobs, k_vars = 100, 1
 
     t0 = time.time()
@@ -87,53 +86,66 @@ if __name__ == '__main__':
         x.sort(0)
 
         order = 2
-        exog = x**np.arange(1, order + 1)
-        beta = np.array([2, -0.2])[:order+1-1] # 1. / np.arange(1, order + 2)
+        exog = x ** np.arange(1, order + 1)
+        beta = np.array([2, -0.2])[: order + 1 - 1]  # 1. / np.arange(1, order + 2)
         y_true = np.dot(exog, beta)
         y = y_true + sig_e * np.random.normal(size=nobs)
         endog = y
 
-        mod_ols = OLS(endog, exog[:,:1])
-        #res_ols = mod_ols.fit()
+        mod_ols = OLS(endog, exog[:, :1])
+        # res_ols = mod_ols.fit()
         #'cv_ls'[1000, 0.5]
-        bw_lw = [1./np.sqrt(12.) * nobs**(-0.2)]*2  #(-1. / 5.)
-        tst = smke.TestFForm(endog, exog[:,:1], bw=bw_lw, var_type='c',
-                             fform=lambda x,p: mod_ols.predict(p,x),
-                             estimator=lambda y,x: OLS(y,x).fit().params,
-                             nboot=399)
-        b_res.append([tst.test_stat,
-                      stats.norm.sf(tst.test_stat),
-                      (tst.boots_results > tst.test_stat).mean()])
+        bw_lw = [1.0 / np.sqrt(12.0) * nobs ** (-0.2)] * 2  # (-1. / 5.)
+        tst = smke.TestFForm(
+            endog,
+            exog[:, :1],
+            bw=bw_lw,
+            var_type="c",
+            fform=lambda x, p: mod_ols.predict(p, x),
+            estimator=lambda y, x: OLS(y, x).fit().params,
+            nboot=399,
+        )
+        b_res.append(
+            [
+                tst.test_stat,
+                stats.norm.sf(tst.test_stat),
+                (tst.boots_results > tst.test_stat).mean(),
+            ]
+        )
     t1 = time.time()
     b_res = np.asarray(b_res)
 
-    print('time', (t1 - t0) / 60.)
+    print("time", (t1 - t0) / 60.0)
     print(b_res.mean(0))
     print(b_res.std(0))
-    print('reject at [0.2, 0.1, 0.05] (row 1: normal, row 2: bootstrap)')
-    print((b_res[:,1:,None] >= [0.2, 0.1, 0.05]).mean(0))
+    print("reject at [0.2, 0.1, 0.05] (row 1: normal, row 2: bootstrap)")
+    print((b_res[:, 1:, None] >= [0.2, 0.1, 0.05]).mean(0))
 
-    print('bw', tst.bw)
-    print('tst.test_stat', tst.test_stat)
+    print("bw", tst.bw)
+    print("tst.test_stat", tst.test_stat)
     print(tst.sig)
-    print('tst.boots_results min, max', tst.boots_results.min(), tst.boots_results.max())
-    print('lower tail bootstrap p-value', (tst.boots_results < tst.test_stat).mean())
-    print('upper tail bootstrap p-value', (tst.boots_results >= tst.test_stat).mean())
+    print(
+        "tst.boots_results min, max", tst.boots_results.min(), tst.boots_results.max()
+    )
+    print("lower tail bootstrap p-value", (tst.boots_results < tst.test_stat).mean())
+    print("upper tail bootstrap p-value", (tst.boots_results >= tst.test_stat).mean())
     from scipy import stats
-    print('aymp.normal p-value (2-sided)', stats.norm.sf(np.abs(tst.test_stat))*2)
-    print('aymp.normal p-value (upper)', stats.norm.sf(tst.test_stat))
+
+    print("aymp.normal p-value (2-sided)", stats.norm.sf(np.abs(tst.test_stat)) * 2)
+    print("aymp.normal p-value (upper)", stats.norm.sf(tst.test_stat))
 
     res_ols = mod_ols.fit()
 
-    do_plot=True
+    do_plot = True
     if do_plot:
         import matplotlib.pyplot as plt
+
         plt.figure()
-        plt.plot(x, y, '.')
+        plt.plot(x, y, ".")
         plt.plot(x, res_ols.fittedvalues)
-        plt.title('OLS fit')
+        plt.title("OLS fit")
 
         plt.figure()
         plt.hist(tst.boots_results.ravel(), bins=20)
-        plt.title('bootstrap histogram or test statistic')
+        plt.title("bootstrap histogram or test statistic")
         plt.show()

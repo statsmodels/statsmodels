@@ -72,6 +72,7 @@ kidney_table = StringIO("""Days      Duration Weight ID
 kidney_table.seek(0)
 kidney_table = read_csv(kidney_table, sep=r"\s+", engine='python').astype(int)
 
+
 class TestAnovaLM:
     @classmethod
     def setup_class(cls):
@@ -130,7 +131,6 @@ class TestAnovaLMNoconstant:
         # Residuals       54  28.989   0.537
         # ---
         # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-
 
 
 class TestAnovaLMCompare(TestAnovaLM):
@@ -296,6 +296,7 @@ class TestAnova2HC0(TestAnovaLM):
         np.testing.assert_almost_equal(results['F'].values, F, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
 
+
 class TestAnova2HC1(TestAnovaLM):
     # drop some observations to make an unbalanced, disproportionate panel
     # to make sure things are okay
@@ -323,6 +324,7 @@ class TestAnova2HC1(TestAnovaLM):
         np.testing.assert_almost_equal(results['F'].values, F, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
 
+
 class TestAnova2HC2(TestAnovaLM):
     # drop some observations to make an unbalanced, disproportionate panel
     # to make sure things are okay
@@ -344,12 +346,12 @@ class TestAnova2HC2(TestAnovaLM):
              0.01554009, 4.511826e-05, 0.8609815, np.nan
             ])
 
-
         results = anova_lm(anova_ii, typ="II", robust="hc2")
         np.testing.assert_equal(results['df'].values, Df)
         #np.testing.assert_almost_equal(results['sum_sq'].values, Sum_Sq, 4)
         np.testing.assert_almost_equal(results['F'].values, F, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
+
 
 class TestAnova2HC3(TestAnovaLM):
     # drop some observations to make an unbalanced, disproportionate panel
@@ -378,6 +380,7 @@ class TestAnova2HC3(TestAnovaLM):
         np.testing.assert_almost_equal(results['F'].values, F, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
 
+
 class TestAnova3(TestAnovaLM):
     # drop some observations to make an unbalanced, disproportionate panel
     # to make sure things are okay
@@ -404,6 +407,7 @@ class TestAnova3(TestAnovaLM):
         np.testing.assert_almost_equal(results['sum_sq'].values, Sum_Sq, 4)
         np.testing.assert_almost_equal(results['F'].values, F_value, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
+
 
 class TestAnova3HC0(TestAnovaLM):
     #NOTE: R does not return SSq with robust covariance. Why?
@@ -433,6 +437,7 @@ class TestAnova3HC0(TestAnovaLM):
         np.testing.assert_almost_equal(results['F'].values, F, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
 
+
 class TestAnova3HC1(TestAnovaLM):
     # drop some observations to make an unbalanced, disproportionate panel
     # to make sure things are okay
@@ -460,6 +465,7 @@ class TestAnova3HC1(TestAnovaLM):
         np.testing.assert_almost_equal(results['F'].values, F, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
 
+
 class TestAnova3HC2(TestAnovaLM):
     # drop some observations to make an unbalanced, disproportionate panel
     # to make sure things are okay
@@ -486,6 +492,7 @@ class TestAnova3HC2(TestAnovaLM):
         #np.testing.assert_almost_equal(results['sum_sq'].values, Sum_Sq, 4)
         np.testing.assert_almost_equal(results['F'].values, F, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
+
 
 class TestAnova3HC3(TestAnovaLM):
     # drop some observations to make an unbalanced, disproportionate panel

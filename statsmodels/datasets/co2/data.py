@@ -59,5 +59,6 @@ def load():
     """
     return load_pandas()
 
+
 def _get_data():
     return du.load_csv(__file__, 'co2.csv')

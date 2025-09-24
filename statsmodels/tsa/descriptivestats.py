@@ -9,7 +9,7 @@ License: BSD(3clause)
 from . import stattools as stt
 
 
-#todo: check subclassing for descriptive stats classes
+# TODO: check subclassing for descriptive stats classes
 class TsaDescriptive:
     '''collection of descriptive statistical methods for time series
 
@@ -52,7 +52,7 @@ class TsaDescriptive:
         data = self.data
         acf = self.acf(nacf)
         pacf = self.pacf(nacf)
-        spdr = self.periodogram()[:nfreq] #(w)
+        spdr = self.periodogram()[:nfreq]  # (w)
 
         if fig is None:
             import matplotlib.pyplot as plt
@@ -67,7 +67,7 @@ class TsaDescriptive:
         ax.set_title('Autocorrelation' + namestr)
 
         ax = fig.add_subplot(2,2,3)
-        ax.plot(spdr) # (wr, spdr)
+        ax.plot(spdr)  # (wr, spdr)
         ax.set_title('Power Spectrum' + namestr)
 
         ax = fig.add_subplot(2,2,4)

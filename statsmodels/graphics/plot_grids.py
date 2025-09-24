@@ -26,11 +26,11 @@ def _make_ellipse(mean, cov, ax, level=0.95, color=None):
     v, w = np.linalg.eigh(cov)
     u = w[0] / np.linalg.norm(w[0])
     angle = np.arctan(u[1]/u[0])
-    angle = 180 * angle / np.pi # convert to degrees
-    v = 2 * np.sqrt(v * stats.chi2.ppf(level, 2)) #get size corresponding to level
+    angle = 180 * angle / np.pi  # convert to degrees
+    v = 2 * np.sqrt(v * stats.chi2.ppf(level, 2))  # get size corresponding to level
     ell = Ellipse(mean[:2], v[0], v[1], angle=180 + angle, facecolor='none',
                   edgecolor=color,
-                  #ls='dashed',  #for debugging
+                  # ls='dashed',  #for debugging
                   lw=1.5)
     ell.set_clip_box(ax.bbox)
     ell.set_alpha(0.5)
@@ -90,17 +90,17 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
     fig = utils.create_mpl_fig(fig)
     import matplotlib.ticker as mticker
 
-    data = np.asanyarray(data)  #needs mean and cov
+    data = np.asanyarray(data)  # needs mean and cov
     nvars = data.shape[1]
     if varnames is None:
-        #assuming single digit, nvars<=10  else use 'var%2d'
+        # assuming single digit, nvars<=10  else use 'var%2d'
         varnames = ['var%d' % i for i in range(nvars)]
 
     plot_kwds_ = dict(ls='none', marker='.', color='k', alpha=0.5)
     if plot_kwds:
         plot_kwds_.update(plot_kwds)
 
-    ell_kwds_= dict(color='k')
+    ell_kwds_ = dict(color='k')
     if ell_kwds:
         ell_kwds_.update(ell_kwds)
 
@@ -114,7 +114,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
 ##            if j == 0:
 ##                ax_last = ax
 ##                ax.set_ylabel(varnames[i])
-            #TODO: make sure we have same xlim and ylim
+            # TODO: make sure we have same xlim and ylim
 
             formatter = mticker.FormatStrFormatter('% 3.1f')
             ax.yaxis.set_major_formatter(formatter)
@@ -162,10 +162,10 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             else:
                 yt = ylim[1] - 0.2 * (ylim[1] - ylim[0])
             xt = xlim[0] + 0.1 * (xlim[1] - xlim[0])
-            ax.text(xt, yt, '$\\rho=%0.2f$'% dc[1,0])
+            ax.text(xt, yt, '$\\rho=%0.2f$' % dc[1,0])
 
     for ax in fig.axes:
-        if ax.get_subplotspec().is_last_row(): # or ax.is_first_col():
+        if ax.get_subplotspec().is_last_row():  # or ax.is_first_col():
             ax.xaxis.set_major_locator(mticker.MaxNLocator(3))
         if ax.get_subplotspec().is_first_col():
             ax.yaxis.set_major_locator(mticker.MaxNLocator(3))

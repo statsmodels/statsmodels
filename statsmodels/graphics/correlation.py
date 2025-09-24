@@ -103,7 +103,6 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         ax.set_xticklabels(xnames, fontsize='small', rotation=45,
                            horizontalalignment='right')
 
-
     if not title == '':
         ax.set_title(title)
 

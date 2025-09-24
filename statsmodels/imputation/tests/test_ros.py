@@ -230,7 +230,6 @@ class Test_cohn_numbers:
              'nuncen_above': numpy.nan, 'prob_exceedance': 0.0, 'upper_dl': numpy.nan}
         ])[self.final_cols]
 
-
     def test_baseline(self):
         result = ros.cohn_numbers(self.df, observations='conc', censorship='censored')
         assert_frame_equal(result, self.expected_baseline)
@@ -299,7 +298,7 @@ class Test__ros_plot_pos:
 
 def test__norm_plot_pos():
     result = ros._norm_plot_pos([1, 2, 3, 4])
-    expected = numpy.array([ 0.159104,  0.385452,  0.614548,  0.840896])
+    expected = numpy.array([0.159104,  0.385452,  0.614548,  0.840896])
     npt.assert_array_almost_equal(result, expected)
 
 
@@ -616,7 +615,7 @@ class Test_HalfDLs_80pctNDs(CheckROSMixin):
 class Test_HaflDLs_OneUncensored(CheckROSMixin):
     decimal = 3
     res = numpy.array([1.0, 1.0, 12., 15., ])
-    cen = numpy.array([True, True, True, False ])
+    cen = numpy.array([True, True, True, False])
     rescol = 'value'
     cencol = 'qual'
     df = pandas.DataFrame({rescol: res, cencol: cen})
@@ -646,7 +645,7 @@ class Test_ROS_MaxCen_GT_MaxUncen(Test_ROS_HelselAppendixB):
 class Test_ROS_OnlyDL_GT_MaxUncen(Test_NoOp_ZeroND):
     numpy.random.seed(0)
     N = 20
-    res =  [
+    res = [
         0.38, 0.43, 0.81, 0.86, 0.90, 1.13, 1.15, 1.37, 1.40,
         1.49, 1.51, 1.56, 2.14, 2.59, 2.66, 4.28, 4.46, 5.84,
         6.47, 9.40, 10.0, 10.0

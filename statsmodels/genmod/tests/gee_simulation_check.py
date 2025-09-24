@@ -19,6 +19,7 @@ np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
 
 OUT = open("gee_simulation_check.txt", "w", encoding="utf-8")
 
+
 class GEE_simulator:
 
     #
@@ -36,7 +37,6 @@ class GEE_simulator:
 
     # The parameters defining the dependence structure
     dparams = None
-
 
     #
     # Output parameters
@@ -67,7 +67,6 @@ class AR_simulator(GEE_simulator):
 
     # The distance function for determining AR correlations.
     distfun = [lambda x, y: np.sqrt(np.sum((x-y)**2)),]
-
 
     def print_dparams(self, dparams_est):
         OUT.write("AR coefficient estimate:   %8.4f\n" %
@@ -117,7 +116,6 @@ class AR_simulator(GEE_simulator):
         self.group = np.concatenate(group)
 
 
-
 class Nested_simulator(GEE_simulator):
 
     # Vector containing list of nest sizes (used instead of
@@ -127,20 +125,18 @@ class Nested_simulator(GEE_simulator):
     # Matrix of nest id's (an output parameter)
     id_matrix = None
 
-
     def print_dparams(self, dparams_est):
         for j in range(len(self.nest_sizes)):
-            OUT.write("Nest %d variance estimate:  %8.4f\n" % \
+            OUT.write("Nest %d variance estimate:  %8.4f\n" %
                           (j+1, dparams_est[j]))
-            OUT.write("Nest %d variance truth:     %8.4f\n" % \
+            OUT.write("Nest %d variance truth:     %8.4f\n" %
                           (j+1, self.dparams[j]))
 
-        OUT.write("Error variance estimate:   %8.4f\n" % \
+        OUT.write("Error variance estimate:   %8.4f\n" %
             (dparams_est[-1] - sum(dparams_est[0:-1])))
         OUT.write("Error variance truth:      %8.4f\n" %
                   self.error_sd**2)
         OUT.write("\n")
-
 
     def simulate(self):
 
@@ -195,21 +191,14 @@ class Nested_simulator(GEE_simulator):
         self.time = np.zeros_like(self.endog)
 
 
-
-
-
-
-
 def check_constraint(da, va, ga):
     """
     Check the score testing of the parameter constraints.
     """
 
 
-
-
-
 def gen_gendat_ar0(ar):
+
     def gendat_ar0(msg = False):
         ars = AR_simulator()
         ars.ngroups = 200
@@ -219,6 +208,7 @@ def gen_gendat_ar0(ar):
         ars.simulate()
         return ars, Autoregressive()
     return gendat_ar0
+
 
 def gen_gendat_ar1(ar):
     def gendat_ar1():
@@ -231,6 +221,7 @@ def gen_gendat_ar1(ar):
         return ars, Autoregressive()
     return gendat_ar1
 
+
 def gendat_nested0():
     ns = Nested_simulator()
     ns.error_sd = 1.
@@ -240,6 +231,7 @@ def gendat_nested0():
     ns.dparams = [2., 1.]
     ns.simulate()
     return ns, Nested(ns.id_matrix)
+
 
 def gendat_nested1():
     ns = Nested_simulator()

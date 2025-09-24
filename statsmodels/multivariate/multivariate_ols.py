@@ -18,8 +18,8 @@ from statsmodels.tools.decorators import cache_readonly
 
 __docformat__ = 'restructuredtext en'
 
-_hypotheses_doc = \
-"""hypotheses : list[tuple]
+_hypotheses_doc = """\
+hypotheses : list[tuple]
     Hypothesis `L*B*M = C` to be tested where B is the parameters in
     regression Y = X*B. Each element is a tuple of length 2, 3, or 4:
 
@@ -89,8 +89,8 @@ def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
     """
     y = endog
     x = exog
-    nobs, k_endog = y.shape  #noqa: F841
-    nobs1, k_exog= x.shape
+    nobs, k_endog = y.shape  # noqa: F841
+    nobs1, k_exog = x.shape
     if nobs != nobs1:
         raise ValueError('x(n=%d) and y(n=%d) should have the same number of '
                          'rows!' % (nobs1, nobs))
@@ -307,7 +307,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
     k_yvar = len(endog_names)
     results = {}
     for hypo in hypotheses:
-        if len(hypo) ==2:
+        if len(hypo) == 2:
             name, L = hypo
             M = None
             C = None
@@ -489,7 +489,6 @@ class _MultivariateOLSResults(LikelihoodModelResults):
                                        self.endog_names,
                                        self.exog_names)
 
-
     def _summary(self):
         raise NotImplementedError
 
@@ -511,7 +510,6 @@ class MultivariateLS(_MultivariateOLS):
         default)
     """
 
-
     def fit(self, method='svd', use_t=True):
         _fittedmod = _multivariate_ols_fit(
             self.endog, self.exog, method=method)
@@ -529,7 +527,7 @@ class MultivariateLS(_MultivariateOLS):
             )
 
         res.df_resid = self.df_resid = df_resid
-        res._fittedmod =_fittedmod
+        res._fittedmod = _fittedmod
         res.cov_resid = sscpr / df_resid
         return MultivariateLSResultsWrapper(res)
         return res

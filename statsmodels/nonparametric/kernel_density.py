@@ -105,7 +105,7 @@ class KDEMultivariate(GenericKDE):
         self.data_type = var_type
         self.nobs, self.k_vars = np.shape(self.data)
         if self.nobs <= self.k_vars:
-            raise ValueError("The number of observations must be larger " \
+            raise ValueError("The number of observations must be larger "
                              "than the number of variables.")
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)

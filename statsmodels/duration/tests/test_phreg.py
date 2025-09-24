@@ -49,6 +49,7 @@ def get_results(n, p, ext, ties):
     hazard = getattr(survival_r_results, hazard_name)
     return coef, se, time, hazard
 
+
 class TestPHReg:
 
     # Load a data file from the results directory
@@ -179,7 +180,6 @@ class TestPHReg:
         assert_allclose(result_direct.params, result_formula.params)
         assert_allclose(result_direct.bse, result_formula.bse)
 
-
     def test_formula_cat_interactions(self):
 
         time = np.r_[1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -292,7 +292,7 @@ class TestPHReg:
         assert_allclose(v, w)
 
         score_resid = rslt.score_residuals
-        v = np.r_[ 0.50924792, 0.4533952, 0.4876718, 0.5441128]
+        v = np.r_[0.50924792, 0.4533952, 0.4876718, 0.5441128]
         w = np.abs(score_resid).mean(0)
         assert_allclose(v, w)
 

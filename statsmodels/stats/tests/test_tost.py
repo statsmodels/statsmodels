@@ -213,8 +213,6 @@ tost_clinic_all_no_multi.method = 'step.up'
 tost_clinic_all_no_multi.var_equal = '''FALSE'''
 tost_clinic_all_no_multi.FWER = 0.05
 
-
-
 #> comp <- multeq.diff(data=clinic,grp="fact", resp=c("var1"),method="step.up",margin.up=rep(0.6), margin.lo=rep(-1.5))
 #> cat_items(comp, prefix="tost_clinic_1_asym.")
 tost_clinic_1_asym = Holder
@@ -232,7 +230,7 @@ tost_clinic_1_asym.method = 'step.up'
 tost_clinic_1_asym.var_equal = '''FALSE'''
 tost_clinic_1_asym.FWER = 0.05
 
-#TODO: not used yet, some p-values are multi-testing adjusted
+# TODO: not used yet, some p-values are multi-testing adjusted
 #      not implemented
 #> compvall <- multeq.diff(data=clinic,grp="fact",method="step.up",margin.up=rep(0.6,5), margin.lo=c(-0.5, -0.5, -1.5, -1.5, -1.5))
 #> cat_items(compvall, prefix="tost_clinic_all_multi.")
@@ -280,8 +278,6 @@ ttest_clinic_paired_1.null_value = 0
 ttest_clinic_paired_1.alternative = 'two.sided'
 ttest_clinic_paired_1.method = 'Paired t-test'
 ttest_clinic_paired_1.data_name = 'clinic$var1[1:15] and clinic$var1[16:30]'
-
-
 
 #> ttless = t.test(clinic$var1[1:15], clinic$var1[16:30],, data=clinic, mu=-0., alternative="less", paired=FALSE)
 #> cat_items(ttless, prefix="ttest_clinic_paired_1_l.")
@@ -361,8 +357,6 @@ ttest_clinic_indep_1_two_mu_pooled.method = ' Two Sample t-test'
 ttest_clinic_indep_1_two_mu_pooled.data_name = 'clinic$var1[1:15] and clinic$var1[16:30]'
 
 
-
-
 res1 = smws.ttost_paired(clinic[:15, 2], clinic[15:, 2], -0.6, 0.6, transform=None)
 res2 = smws.ttost_paired(clinic[:15, 3], clinic[15:, 3], -0.6, 0.6, transform=None)
 res = smws.ttost_ind(clinic[:15, 3], clinic[15:, 3], -0.6, 0.6, usevar='unequal')
@@ -373,6 +367,7 @@ class CheckTostMixin:
     def test_pval(self):
         assert_almost_equal(self.res1.pvalue, self.res2.p_value, decimal=13)
         #assert_almost_equal(self.res1.df, self.res2.df, decimal=13)
+
 
 class TestTostp1(CheckTostMixin):
     #paired var1
@@ -394,7 +389,7 @@ class TestTostp1(CheckTostMixin):
         cls.res2b = ttest_clinic_paired_1
 
     def test_special(self):
-        #TODO: add attributes to other cases and move to superclass
+        # TODO: add attributes to other cases and move to superclass
         assert_almost_equal(self.res1.tconfint_diff, self.res2.ci_diff,
                             decimal=13)
         assert_almost_equal(self.res1.mean_diff, self.res2.mean_diff,
@@ -416,6 +411,7 @@ class TestTostp2(CheckTostMixin):
         res = smws.ttost_paired(x, y, -0.6, 0.6, transform=None)
         cls.res1.pvalue = res[0]
 
+
 class TestTosti1(CheckTostMixin):
     @classmethod
     def setup_class(cls):
@@ -424,6 +420,7 @@ class TestTosti1(CheckTostMixin):
         cls.res1 = Holder()
         res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='unequal')
         cls.res1.pvalue = res[0]
+
 
 class TestTosti2(CheckTostMixin):
     @classmethod
@@ -434,6 +431,7 @@ class TestTosti2(CheckTostMixin):
         res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='unequal')
         cls.res1.pvalue = res[0]
 
+
 class TestTostip1(CheckTostMixin):
     @classmethod
     def setup_class(cls):
@@ -442,6 +440,7 @@ class TestTostip1(CheckTostMixin):
         cls.res1 = Holder()
         res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='pooled')
         cls.res1.pvalue = res[0]
+
 
 class TestTostip2(CheckTostMixin):
     @classmethod
@@ -454,6 +453,8 @@ class TestTostip2(CheckTostMixin):
 
 #transform=np.log
 #class TestTostp1_log(CheckTost):
+
+
 def test_tost_log():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]
 
@@ -462,6 +463,7 @@ def test_tost_log():
 
     resi = smws.ttost_ind(x1, x2, 0.8, 1.25, transform=np.log, usevar='unequal')
     assert_almost_equal(resi[0], tost_clinic_1_indep.p_value, 13)
+
 
 def test_tost_asym():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]
@@ -506,6 +508,7 @@ def test_tost_asym():
                            [-1.0, -0.5, -0.7, -1.5, -1.5],
                            np.repeat(0.6,5), usevar='unequal')
 
+
 def test_ttest():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]
     all_tests = []
@@ -531,7 +534,6 @@ def test_ttest():
     assert_almost_equal_inf(ci, ttest_clinic_indep_1_l.conf_int, decimal=13)
     ci = cm.tconfint_diff(alternative='larger', usevar='unequal')
     assert_almost_equal_inf(ci, ttest_clinic_indep_1_g.conf_int, decimal=13)
-
 
     #test get_compare
     cm = smws.CompareMeans(smws.DescrStatsW(x1), smws.DescrStatsW(x2))

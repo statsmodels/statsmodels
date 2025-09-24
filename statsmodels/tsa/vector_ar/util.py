@@ -14,6 +14,7 @@ import statsmodels.tsa.tsatools as tsa
 #-------------------------------------------------------------------------------
 # Auxiliary functions for estimation
 
+
 def get_var_endog(y, lags, trend='c', has_constant='skip'):
     """
     Make predictor matrix for VAR(p) process
@@ -69,7 +70,7 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
     for i in range(1, lag_order + 1):
         for name in names:
             if not isinstance(name, str):
-                name = str(name) # will need consistent unicode handling
+                name = str(name)  # will need consistent unicode handling
             lag_names.append('L'+str(i)+'.'+name)
 
     # handle the constant name
@@ -124,7 +125,7 @@ def comp_matrix(coefs):
 # Miscellaneous stuff
 
 
-def parse_lutkepohl_data(path): # pragma: no cover
+def parse_lutkepohl_data(path):  # pragma: no cover
     """
     Parse data files from Lütkepohl (2005) book
 
@@ -236,7 +237,7 @@ def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None, n
     rs = np.random.RandomState(seed=seed)
     rmvnorm = rs.multivariate_normal
     p, k, k = coefs.shape
-    nsimulations= int_like(nsimulations, "nsimulations", optional=True)
+    nsimulations = int_like(nsimulations, "nsimulations", optional=True)
     if isinstance(nsimulations, int) and nsimulations <= 0:
         raise ValueError("nsimulations must be a positive integer if provided")
     if nsimulations is None:
@@ -307,14 +308,14 @@ def vech(A):
     vechvec: vector of all elements on and below diagonal
     """
 
-    length=A.shape[1]
-    vechvec=[]
+    length = A.shape[1]
+    vechvec = []
     for i in range(length):
-        b=i
+        b = i
         while b < length:
             vechvec.append(A[b,i])
-            b=b+1
-    vechvec=np.asarray(vechvec)
+            b = b+1
+    vechvec = np.asarray(vechvec)
     return vechvec
 
 

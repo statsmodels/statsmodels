@@ -90,7 +90,7 @@ class SVAR(tsbase.TimeSeriesModel):
             self.B_mask = B_mask
 
         # convert A and B to numeric
-        #TODO: change this when masked support is better or with formula
+        # TODO: change this when masked support is better or with formula
         #integration
         Anum = np.zeros(A.shape, dtype=float)
         Anum[~A_mask] = A[~A_mask]
@@ -169,7 +169,7 @@ class SVAR(tsbase.TimeSeriesModel):
                                  % (ic, sorted(selections)))
             lags = selections[ic]
             if verbose:
-                print('Using %d based on %s criterion' %  (lags, ic))
+                print('Using %d based on %s criterion' % (lags, ic))
         else:
             if lags is None:
                 lags = 1
@@ -243,7 +243,7 @@ class SVAR(tsbase.TimeSeriesModel):
         df_resid = avobs - (self.neqs * lags + k_trend)
 
         sse = np.dot(resid.T, resid)
-        #TODO: should give users the option to use a dof correction or not
+        # TODO: should give users the option to use a dof correction or not
         omega = sse / df_resid
         self.sigma_u = omega
 
@@ -269,7 +269,7 @@ class SVAR(tsbase.TimeSeriesModel):
         is estimated
         """
 
-        #TODO: this does not look robust if A or B is None
+        # TODO: this does not look robust if A or B is None
         A = self.A
         B = self.B
         A_mask = self.A_mask
@@ -288,7 +288,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         W = np.dot(npl.inv(B),A)
         trc_in = np.dot(np.dot(W.T,W),sigma_u)
-        sign, b_logdet = slogdet(B**2) #numpy 1.4 compat
+        sign, b_logdet = slogdet(B**2)  # numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
         likl = -nobs/2. * (neqs * np.log(2 * np.pi) -
@@ -349,7 +349,7 @@ class SVAR(tsbase.TimeSeriesModel):
         -------
         A_solve, B_solve: ML solutions for A, B matrices
         """
-        #TODO: this could stand a refactor
+        # TODO: this could stand a refactor
         A_mask = self.A_mask
         B_mask = self.B_mask
         A = self.A
@@ -363,7 +363,7 @@ class SVAR(tsbase.TimeSeriesModel):
             J = self._compute_J(A, B)
             self.check_order(J)
             self.check_rank(J)
-        else: #TODO: change to a warning?
+        else:  # TODO: change to a warning?
             print("Order/rank conditions have not been checked")
 
         if solver == "bfgs":
@@ -399,18 +399,18 @@ class SVAR(tsbase.TimeSeriesModel):
         D_nT = np.zeros([int((1.0 / 2) * (neqs) * (neqs + 1)), neqs**2])
 
         for j in range(neqs):
-            i=j
+            i = j
             while j <= i < neqs:
-                u=np.zeros([int((1.0/2)*neqs*(neqs+1)), 1])
+                u = np.zeros([int((1.0/2)*neqs*(neqs+1)), 1])
                 u[int(j * neqs + (i + 1) - (1.0 / 2) * (j + 1) * j - 1)] = 1
-                Tij=np.zeros([neqs,neqs])
-                Tij[i,j]=1
-                Tij[j,i]=1
-                D_nT=D_nT+np.dot(u,(Tij.ravel('F')[:,None]).T)
-                i=i+1
+                Tij = np.zeros([neqs,neqs])
+                Tij[i,j] = 1
+                Tij[j,i] = 1
+                D_nT = D_nT+np.dot(u,(Tij.ravel('F')[:,None]).T)
+                i = i+1
 
-        D_n=D_nT.T
-        D_pl=npl.pinv(D_n)
+        D_n = D_nT.T
+        D_pl = npl.pinv(D_n)
 
         #generate S_B
         S_B = np.zeros((neqs**2, len(A_solve[A_mask])))
@@ -429,7 +429,7 @@ class SVAR(tsbase.TimeSeriesModel):
             for k in range(neqs**2):
                 if B_vec[k]:
                     S_D[k,j_d] = 1
-                    j_d +=1
+                    j_d += 1
 
         #now compute J
         invA = npl.inv(A_solve)
@@ -576,7 +576,7 @@ class SVARResults(SVARProcess, VARResults):
         self.n_totobs, self.neqs = self.endog.shape
         self.nobs = self.n_totobs - lag_order
         k_trend = util.get_trendorder(trend)
-        if k_trend > 0: # make this the polynomial trend order
+        if k_trend > 0:  # make this the polynomial trend order
             trendorder = k_trend - 1
         else:
             trendorder = None
@@ -597,7 +597,7 @@ class SVARResults(SVARProcess, VARResults):
         coefs = reshaped.swapaxes(1, 2).copy()
 
         #SVAR components
-        #TODO: if you define these here, you do not also have to define
+        # TODO: if you define these here, you do not also have to define
         #them in SVAR process, but I left them for now -ss
         self.A = A
         self.B = B
@@ -620,7 +620,7 @@ class SVARResults(SVARProcess, VARResults):
         irf : IRAnalysis
         """
         A = self.A
-        B= self.B
+        B = self.B
         P = np.dot(npl.inv(A), B)
 
         return IRAnalysis(self, P=P, periods=periods, svar=True)

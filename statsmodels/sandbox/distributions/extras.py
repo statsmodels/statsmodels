@@ -773,7 +773,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         derivplus,
         derivminus,
         *args,
-        **kwargs
+        **kwargs,
     ):
         # print args
         # print kwargs

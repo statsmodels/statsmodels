@@ -447,7 +447,6 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
                                 transform=trans,
                                 **line_props[styles[jp]])
 
-
                 # Plot the point
                 sl = styles[jp]
                 sll = sl if sl not in labeled else None

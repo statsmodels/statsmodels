@@ -30,6 +30,7 @@ NOTE        = """::
         foodexp - annual household food expenditure (Belgian francs)
 """
 
+
 def load():
     """
     Load the data and return a Dataset class instance.

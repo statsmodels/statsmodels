@@ -32,22 +32,22 @@ class TestContrast:
         term = np.column_stack((noise, self.X[:,2]))
         c = Contrast(term, self.X)
         assert_equal(c.contrast_matrix.shape, (10,))
-#TODO: this should actually test the value of the contrast, not only its dimension
+# TODO: this should actually test the value of the contrast, not only its dimension
 
     def test_estimable(self):
         X2 = np.column_stack((self.X, self.X[:,5]))
         Contrast(self.X[:,5],X2)
-        #TODO: I do not think this should be estimable?  isestimable correct?
+        # TODO: I do not think this should be estimable?  isestimable correct?
 
 
 def test_constraints():
     cm_ = np.eye(4, 3, k=-1)
-    cpairs = np.array([[ 1.,  0.,  0.],
-                       [ 0.,  1.,  0.],
-                       [ 0.,  0.,  1.],
-                       [-1.,  1.,  0.],
-                       [-1.,  0.,  1.],
-                       [ 0., -1.,  1.]])
+    cpairs = np.array([[+1., +0., 0.],
+                       [+0., +1., 0.],
+                       [+0., +0., 1.],
+                       [-1., +1., 0.],
+                       [-1., +0., 1.],
+                       [+0., -1., 1.]])
     c0 = smc._constraints_factor(cm_)
     assert_equal(c0, cpairs)
 
@@ -55,12 +55,14 @@ def test_constraints():
     assert_equal(c1, cpairs)
 
     # embedded
-    cpairs2 = np.array([[ 0.,  1.,  0.,  0.,  0.,  0.],
-                        [ 0.,  0.,  1.,  0.,  0.,  0.],
-                        [ 0.,  0.,  0.,  1.,  0.,  0.],
-                        [ 0., -1.,  1.,  0.,  0.,  0.],
-                        [ 0., -1.,  0.,  1.,  0.,  0.],
-                        [ 0.,  0., -1.,  1.,  0.,  0.]])
+    cpairs2 = np.array([
+        [0.,  1.,  0.,  0.,  0.,  0.],
+        [0.,  0.,  1.,  0.,  0.,  0.],
+        [0.,  0.,  0.,  1.,  0.,  0.],
+        [0., -1.,  1.,  0.,  0.,  0.],
+        [0., -1.,  0.,  1.,  0.,  0.],
+        [0.,  0., -1.,  1.,  0.,  0.]
+    ])
 
     c0 = smc._constraints_factor(cm_, k_params=6, idx_start=1)
     assert_equal(c0, cpairs2)

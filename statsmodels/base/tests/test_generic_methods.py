@@ -60,7 +60,7 @@ class CheckGenericMixin:
         tt = res.t_test(mat[0])
 
         def string_confint(alpha):
-            return f"[{(alpha / 2):4.3F}      {(1- alpha / 2):4.3F}]"
+            return f"[{(alpha / 2):4.3F}      {(1 - alpha / 2):4.3F}]"
 
         summ = tt.summary()   # smoke test for #1323
         assert_allclose(tt.pvalue, res.pvalues[0], rtol=5e-10)
@@ -164,7 +164,6 @@ class CheckGenericMixin:
         else:
             res = mod.fit(maxiter=500)
         return res
-
 
     def test_zero_collinear(self):
         # not completely generic yet
@@ -381,7 +380,7 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
         mod = sm.NegativeBinomial(data.endog, exog)
         start_params = np.array([-0.05783623, -0.26655806,  0.04109148, -0.03815837,
                                  0.2685168 ,   0.03811594, -0.04426238,  0.01614795,
-                                 0.17490962,  0.66461151,   1.2925957 ])
+                                 0.17490962,  0.66461151,   1.29259570])
         self.results = mod.fit(start_params=start_params, disp=0, maxiter=500)
         self.transform_index = -1
 
@@ -394,7 +393,8 @@ class TestGenericLogit(CheckGenericMixin):
         nobs = x.shape[0]
         np.random.seed(987689)
         y_bin = (np.random.rand(nobs) < 1.0 / (1 + np.exp(x.sum(1) - x.mean()))).astype(int)
-        model = sm.Logit(y_bin, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
+        model = sm.Logit(y_bin, x)  # ,exposure=np.ones(nobs), offset=np.zeros(nobs))
+        # #bug with default
         # use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
         with pytest.warns(FutureWarning,

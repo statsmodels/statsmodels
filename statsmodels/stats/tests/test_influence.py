@@ -98,7 +98,6 @@ class InfluenceCompareExact:
         infl0.plot_index('hat', idx=1, threshold=0.2, title='')
         infl1.plot_index('hat', idx=1, threshold=0.2, title='')
 
-
     def test_summary(self):
         infl1 = self.infl1
         infl0 = self.infl0
@@ -227,7 +226,7 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
                         infl1.resid_studentized, rtol=1e-12, atol=1e-7)
         assert_allclose(infl0.cooks_distance, infl1.cooks_distance,
                         rtol=1e-7, atol=1e-14)  # very small values possible
-        assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=0.1) # changed
+        assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=0.1)  # changed
         # OLSInfluence only has looo dfbeta/d_params
         assert_allclose(infl0.d_params, infl1.dfbeta, rtol=1e-9, atol=1e-14)
         # d_fittedvalues is not available in OLSInfluence, i.e. only scaled dffits

@@ -14,7 +14,8 @@ def test_regression_summary():
     from string import Template
     t = time.localtime()
     desired = Template(
-'''     Summary of Regression Results
+        """\
+     Summary of Regression Results
 =======================================
 | Dependent Variable:                y|
 | Model:                           OLS|
@@ -44,20 +45,22 @@ def test_regression_summary():
 | Log likelihood:                -109.6   Prob(JB):                  0.7103  |
 | AIC criterion:                  233.2   Skew:                      0.4200  |
 | BIC criterion:                  238.6   Kurtosis:                   2.434  |
-------------------------------------------------------------------------------'''
-).substitute(XXcurrentXdateXX = str(time.strftime("%a, %d %b %Y",t)),
-             XXtimeXXX = str(time.strftime("%H:%M:%S",t)))
+------------------------------------------------------------------------------"""
+    ).substitute(
+        XXcurrentXdateXX=str(time.strftime("%a, %d %b %Y", t)),
+        XXtimeXXX=str(time.strftime("%H:%M:%S", t)),
+    )
     desired = str(desired)
     aregression = TestOLS()
     TestOLS.setup_class()
     results = aregression.res1
     # be quiet!
-    original_filters = warnings.filters[:] # copy original
+    original_filters = warnings.filters[:]  # copy original
     warnings.simplefilter("ignore")
     try:
         r_summary = str(results.summary_old())
     finally:
-        warnings.filters = original_filters # restore filters
+        warnings.filters = original_filters  # restore filters
 
 ##    print('###')
 ##    print(r_summary)

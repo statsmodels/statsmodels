@@ -25,40 +25,43 @@ class KDETestBase:
         self.y2 = b0 + b1 * self.c1 + b2 * self.c2 + self.o + self.noise
         # Italy data from R's np package (the first 50 obs) R>> data (Italy)
 
-        self.Italy_gdp = \
-        [8.556, 12.262, 9.587, 8.119, 5.537, 6.796, 8.638,
-         6.483, 6.212, 5.111, 6.001, 7.027, 4.616, 3.922,
-         4.688, 3.957, 3.159, 3.763, 3.829, 5.242, 6.275,
-         8.518, 11.542, 9.348, 8.02, 5.527, 6.865, 8.666,
-         6.672, 6.289, 5.286, 6.271, 7.94, 4.72, 4.357,
-         4.672, 3.883, 3.065, 3.489, 3.635, 5.443, 6.302,
-         9.054, 12.485, 9.896, 8.33, 6.161, 7.055, 8.717,
-         6.95]
+        self.Italy_gdp = [
+            8.556, 12.262, 9.587, 8.119, 5.537, 6.796, 8.638,
+            6.483, 6.212, 5.111, 6.001, 7.027, 4.616, 3.922,
+            4.688, 3.957, 3.159, 3.763, 3.829, 5.242, 6.275,
+            8.518, 11.542, 9.348, 8.02, 5.527, 6.865, 8.666,
+            6.672, 6.289, 5.286, 6.271, 7.94, 4.72, 4.357,
+            4.672, 3.883, 3.065, 3.489, 3.635, 5.443, 6.302,
+            9.054, 12.485, 9.896, 8.33, 6.161, 7.055, 8.717,
+            6.95
+        ]
 
-        self.Italy_year = \
-        [1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951,
-       1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1952,
-       1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952,
-       1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1953, 1953,
-       1953, 1953, 1953, 1953, 1953, 1953]
+        self.Italy_year = [
+            1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951,
+            1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1951, 1952,
+            1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952,
+            1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1953, 1953,
+            1953, 1953, 1953, 1953, 1953, 1953
+        ]
 
         # OECD panel data from NP  R>> data(oecdpanel)
-        self.growth = \
-        [-0.0017584, 0.00740688, 0.03424461, 0.03848719, 0.02932506,
-        0.03769199, 0.0466038,  0.00199456, 0.03679607, 0.01917304,
-       -0.00221, 0.00787269, 0.03441118, -0.0109228, 0.02043064,
-       -0.0307962, 0.02008947, 0.00580313, 0.00344502, 0.04706358,
-        0.03585851, 0.01464953, 0.04525762, 0.04109222, -0.0087903,
-        0.04087915, 0.04551403, 0.036916, 0.00369293, 0.0718669,
-        0.02577732, -0.0130759, -0.01656641, 0.00676429, 0.08833017,
-        0.05092105, 0.02005877,  0.00183858, 0.03903173, 0.05832116,
-        0.0494571, 0.02078484,  0.09213897, 0.0070534, 0.08677202,
-        0.06830603, -0.00041, 0.0002856, 0.03421225, -0.0036825]
+        self.growth = [
+            -0.0017584, 0.00740688, 0.03424461, 0.03848719, 0.02932506,
+            0.03769199, 0.0466038,  0.00199456, 0.03679607, 0.01917304,
+            -0.00221, 0.00787269, 0.03441118, -0.0109228, 0.02043064,
+            -0.0307962, 0.02008947, 0.00580313, 0.00344502, 0.04706358,
+            0.03585851, 0.01464953, 0.04525762, 0.04109222, -0.0087903,
+            0.04087915, 0.04551403, 0.036916, 0.00369293, 0.0718669,
+            0.02577732, -0.0130759, -0.01656641, 0.00676429, 0.08833017,
+            0.05092105, 0.02005877,  0.00183858, 0.03903173, 0.05832116,
+            0.0494571, 0.02078484,  0.09213897, 0.0070534, 0.08677202,
+            0.06830603, -0.00041, 0.0002856, 0.03421225, -0.0036825]
 
-        self.oecd = \
-        [0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-       0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
-       0, 0, 0, 0]
+        self.oecd = [
+            0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+            0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
+            0, 0, 0, 0
+        ]
 
         self.weights = np.random.random(nobs)
 
@@ -69,7 +72,6 @@ class TestKDEUnivariate(KDETestBase):
 
         kde = nparam.KDEUnivariate(self.noise)
         kde.fit(fft=False, bw='scott')
-
 
         grid = kde.support
         testx = [grid[10*i] for i in range(6)]
@@ -89,7 +91,6 @@ class TestKDEUnivariate(KDETestBase):
                             atol=1e-6)
         npt.assert_allclose(kde_vals0, kde_expected,
                             atol=1e-6)
-
 
     def test_weighted_pdf_non_fft(self):
 
@@ -223,7 +224,7 @@ class TestKDEMultivariate(KDETestBase):
         np.random.seed(12345)
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
-        Y = 0.3 +1.2 * C1 - 0.9 * C2
+        Y = 0.3 + 1.2 * C1 - 0.9 * C2
         dens_efficient = nparam.KDEMultivariate(data=[Y, C1], var_type='cc',
             bw='cv_ls',
             defaults=nparam.EstimatorSettings(efficient=True, n_sub=100))
@@ -239,7 +240,7 @@ class TestKDEMultivariate(KDETestBase):
         np.random.seed(12345)
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
-        Y = 0.3 +1.2 * C1 - 0.9 * C2
+        Y = 0.3 + 1.2 * C1 - 0.9 * C2
 
         dens_efficient = nparam.KDEMultivariate(data=[Y, C1], var_type='cc',
             bw='cv_ml', defaults=nparam.EstimatorSettings(efficient=True,
@@ -256,7 +257,7 @@ class TestKDEMultivariate(KDETestBase):
         np.random.seed(12345)
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
-        Y = 0.3 +1.2 * C1 - 0.9 * C2
+        Y = 0.3 + 1.2 * C1 - 0.9 * C2
 
         dens_efficient = nparam.KDEMultivariate(data=[Y, C1], var_type='cc',
             bw='cv_ml', defaults=nparam.EstimatorSettings(efficient=True,
@@ -270,7 +271,7 @@ class TestKDEMultivariate(KDETestBase):
         np.random.seed(12345)
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
-        bw_user=[0.23, 434697.22]
+        bw_user = [0.23, 434697.22]
 
         dens = nparam.KDEMultivariate(data=[C1, C2], var_type='cc',
             bw=bw_user, defaults=nparam.EstimatorSettings(efficient=True,
@@ -308,7 +309,7 @@ class TestKDEMultivariateConditional(KDETestBase):
     def test_pdf_continuous(self):
         # Hardcode here the bw that will be calculated is we had used
         # ``bw='cv_ml'``.  That calculation is slow, and tested in other tests.
-        bw_cv_ml = np.array([0.010043, 12095254.7]) # TODO: odd numbers (?!)
+        bw_cv_ml = np.array([0.010043, 12095254.7])  # TODO: odd numbers (?!)
         dens = nparam.KDEMultivariateConditional(endog=[self.growth],
                                                  exog=[self.Italy_gdp],
                                                  dep_type='c', indep_type='c',
@@ -391,7 +392,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
-        Y = b0+ b1 * C1 + b2*ovals  + noise
+        Y = b0 + b1 * C1 + b2*ovals  + noise
 
         dens_efficient = nparam.KDEMultivariateConditional(endog=[Y],
             exog=[C1], dep_type='c', indep_type='c', bw='cv_ml',
@@ -408,7 +409,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         np.random.seed(12345)
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
-        bw_user=[0.23, 434697.22]
+        bw_user = [0.23, 434697.22]
 
         dens = nparam.KDEMultivariate(data=[C1, C2], var_type='cc',
             bw=bw_user, defaults=nparam.EstimatorSettings(efficient=True,

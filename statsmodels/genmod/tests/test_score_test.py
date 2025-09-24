@@ -42,7 +42,7 @@ class CheckScoreTest():
         # regression number
         assert_allclose(lm_constr[1], self.res_pvalue[0], rtol=1e-12, atol=1e-14)
 
-        cov_type='HC0'
+        cov_type = 'HC0'
         res_full_hc = mod_full.fit(cov_type=cov_type, start_params=res_full.params)
         wald = res_full_hc.wald_test(restriction, scalar=True)
         lm_constr = np.hstack(score_test(res_constr, cov_type=cov_type))

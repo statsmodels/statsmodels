@@ -33,12 +33,15 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
+from statsmodels.nonparametric._kernel_base import (
+    LeaveOneOut,
+    _adjust_shape,
+    _get_type_pos,
+    gpke,
+)
 from statsmodels.nonparametric.api import KDEMultivariate, KernelReg
-from statsmodels.nonparametric._kernel_base import \
-    gpke, LeaveOneOut, _get_type_pos, _adjust_shape
 
-
-__all__ = ['SingleIndexModel', 'SemiLinear', 'TestFForm']
+__all__ = ["SingleIndexModel", "SemiLinear", "TestFForm"]
 
 
 class TestFForm:
@@ -77,6 +80,7 @@ class TestFForm:
 
     See chapter 12 in [1]  pp. 355-357.
     """
+
     def __init__(self, endog, exog, bw, var_type, fform, estimator, nboot=100):
         self.endog = endog
         self.exog = exog
@@ -96,17 +100,17 @@ class TestFForm:
         resid = Y - m
         resid = resid - np.mean(resid)  # center residuals
         self.test_stat = self._compute_test_stat(resid)
-        sqrt5 = np.sqrt(5.)
-        fct1 = (1 - sqrt5) / 2.
-        fct2 = (1 + sqrt5) / 2.
+        sqrt5 = np.sqrt(5.0)
+        fct1 = (1 - sqrt5) / 2.0
+        fct2 = (1 + sqrt5) / 2.0
         u1 = fct1 * resid
         u2 = fct2 * resid
         r = fct2 / sqrt5
-        I_dist = np.empty((self.nboot,1))
+        I_dist = np.empty((self.nboot, 1))
         for j in range(self.nboot):
             u_boot = u2.copy()
 
-            prob = np.random.uniform(0,1, size = (n,))
+            prob = np.random.uniform(0, 1, size=(n,))
             ind = prob < r
             u_boot[ind] = u1[ind]
             Y_boot = m + u_boot
@@ -128,23 +132,28 @@ class TestFForm:
     def _compute_test_stat(self, u):
         n = np.shape(u)[0]
         XLOO = LeaveOneOut(self.exog)
-        uLOO = LeaveOneOut(u[:,None]).__iter__()
+        uLOO = LeaveOneOut(u[:, None]).__iter__()
         ival = 0
         S2 = 0
         for i, X_not_i in enumerate(XLOO):
             u_j = next(uLOO)
             u_j = np.squeeze(u_j)
             # See Bootstrapping procedure on p. 357 in [1]
-            K = gpke(self.bw, data=-X_not_i, data_predict=-self.exog[i, :],
-                     var_type=self.var_type, tosum=False)
-            f_i = (u[i] * u_j * K)
+            K = gpke(
+                self.bw,
+                data=-X_not_i,
+                data_predict=-self.exog[i, :],
+                var_type=self.var_type,
+                tosum=False,
+            )
+            f_i = u[i] * u_j * K
             assert u_j.shape == K.shape
             ival += f_i.sum()  # See eq. 12.7 on p. 355 in [1]
             S2 += (f_i**2).sum()  # See Theorem 12.1 on p.356 in [1]
             assert np.size(ival) == 1
             assert np.size(S2) == 1
 
-        ival *= 1. / (n * (n - 1))
+        ival *= 1.0 / (n * (n - 1))
         ix_cont = _get_type_pos(self.var_type)[0]
         hp = self.bw[ix_cont].prod()
         S2 *= 2 * hp / (n * (n - 1))
@@ -192,6 +201,7 @@ class SingleIndexModel(KernelReg):
     In the parametric binary choice models the user usually assumes
     some distribution of g() such as normal or logistic.
     """
+
     def __init__(self, endog, exog, var_type):
         self.var_type = var_type
         self.K = len(var_type)
@@ -200,18 +210,18 @@ class SingleIndexModel(KernelReg):
         self.exog = _adjust_shape(exog, self.K)
         self.nobs = np.shape(self.exog)[0]
         self.data_type = self.var_type
-        self.ckertype = 'gaussian'
-        self.okertype = 'wangryzin'
-        self.ukertype = 'aitchisonaitken'
+        self.ckertype = "gaussian"
+        self.okertype = "wangryzin"
+        self.ukertype = "aitchisonaitken"
         self.func = self._est_loc_linear
 
         self.b, self.bw = self._est_b_bw()
 
     def _est_b_bw(self):
-        params0 = np.random.uniform(size=(self.K + 1, ))
+        params0 = np.random.uniform(size=(self.K + 1,))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
-        b = b_bw[0:self.K]
-        bw = b_bw[self.K:]
+        b = b_bw[0 : self.K]
+        bw = b_bw[self.K :]
         bw = self._set_bw_bounds(bw)
         return b, bw
 
@@ -219,17 +229,21 @@ class SingleIndexModel(KernelReg):
         # See p. 254 in Textbook
         params = np.asarray(params)
         b = params[0 : self.K]
-        bw = params[self.K:]
+        bw = params[self.K :]
         LOO_X = LeaveOneOut(self.exog)
         LOO_Y = LeaveOneOut(self.endog).__iter__()
         L = 0
         for i, X_not_i in enumerate(LOO_X):
             Y = next(LOO_Y)
-            #print b.shape, np.dot(self.exog[i:i+1, :], b).shape, bw,
-            G = self.func(bw, endog=Y, exog=-np.dot(X_not_i, b)[:,None],
-                          #data_predict=-b*self.exog[i, :])[0]
-                          data_predict=-np.dot(self.exog[i:i+1, :], b))[0]
-            #print G.shape
+            # print b.shape, np.dot(self.exog[i:i+1, :], b).shape, bw,
+            G = self.func(
+                bw,
+                endog=Y,
+                exog=-np.dot(X_not_i, b)[:, None],
+                # data_predict=-b*self.exog[i, :])[0]
+                data_predict=-np.dot(self.exog[i : i + 1, :], b),
+            )[0]
+            # print G.shape
             L += (self.endog[i] - G) ** 2
 
         # Note: There might be a way to vectorize this. See p.72 in [1]
@@ -245,9 +259,12 @@ class SingleIndexModel(KernelReg):
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.K))
         for i in range(N_data_predict):
-            mean_mfx = self.func(self.bw, self.endog,
-                                 np.dot(self.exog, self.b)[:,None],
-                                 data_predict=np.dot(data_predict[i:i+1, :],self.b))
+            mean_mfx = self.func(
+                self.bw,
+                self.endog,
+                np.dot(self.exog, self.b)[:, None],
+                data_predict=np.dot(data_predict[i : i + 1, :], self.b),
+            )
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
@@ -321,9 +338,9 @@ class SemiLinear(KernelReg):
         self.nobs = np.shape(self.exog)[0]
         self.var_type = var_type
         self.data_type = self.var_type
-        self.ckertype = 'gaussian'
-        self.okertype = 'wangryzin'
-        self.ukertype = 'aitchisonaitken'
+        self.ckertype = "gaussian"
+        self.okertype = "wangryzin"
+        self.ukertype = "aitchisonaitken"
         self.func = self._est_loc_linear
 
         self.b, self.bw = self._est_b_bw()
@@ -334,11 +351,11 @@ class SemiLinear(KernelReg):
 
         Minimizes ``cv_loo`` with respect to ``b`` and ``bw``.
         """
-        params0 = np.random.uniform(size=(self.k_linear + self.K, ))
+        params0 = np.random.uniform(size=(self.k_linear + self.K,))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0 : self.k_linear]
-        bw = b_bw[self.k_linear:]
-        #bw = self._set_bw_bounds(np.asarray(bw))
+        bw = b_bw[self.k_linear :]
+        # bw = self._set_bw_bounds(np.asarray(bw))
         return b, bw
 
     def cv_loo(self, params):
@@ -364,20 +381,21 @@ class SemiLinear(KernelReg):
         """
         params = np.asarray(params)
         b = params[0 : self.k_linear]
-        bw = params[self.k_linear:]
+        bw = params[self.k_linear :]
         LOO_X = LeaveOneOut(self.exog)
         LOO_Y = LeaveOneOut(self.endog).__iter__()
         LOO_Z = LeaveOneOut(self.exog_nonparametric).__iter__()
-        Xb = np.dot(self.exog, b)[:,None]
+        Xb = np.dot(self.exog, b)[:, None]
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
             Y = next(LOO_Y)
             Z = next(LOO_Z)
-            Xb_j = np.dot(X_not_i, b)[:,None]
+            Xb_j = np.dot(X_not_i, b)[:, None]
             Yx = Y - Xb_j
-            G = self.func(bw, endog=Yx, exog=-Z,
-                          data_predict=-self.exog_nonparametric[ii, :])[0]
-            lt = Xb[ii, :] #.sum()  # linear term
+            G = self.func(
+                bw, endog=Yx, exog=-Z, data_predict=-self.exog_nonparametric[ii, :]
+            )[0]
+            lt = Xb[ii, :]  # .sum()  # linear term
             L += (self.endog[ii] - lt - G) ** 2
 
         return L
@@ -393,15 +411,21 @@ class SemiLinear(KernelReg):
         if exog_nonparametric_predict is None:
             exog_nonparametric_predict = self.exog_nonparametric
         else:
-            exog_nonparametric_predict = _adjust_shape(exog_nonparametric_predict, self.K)
+            exog_nonparametric_predict = _adjust_shape(
+                exog_nonparametric_predict, self.K
+            )
 
         N_data_predict = np.shape(exog_nonparametric_predict)[0]
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.K))
-        Y = self.endog - np.dot(exog_predict, self.b)[:,None]
+        Y = self.endog - np.dot(exog_predict, self.b)[:, None]
         for i in range(N_data_predict):
-            mean_mfx = self.func(self.bw, Y, self.exog_nonparametric,
-                                 data_predict=exog_nonparametric_predict[i, :])
+            mean_mfx = self.func(
+                self.bw,
+                Y,
+                self.exog_nonparametric,
+                data_predict=exog_nonparametric_predict[i, :],
+            )
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c

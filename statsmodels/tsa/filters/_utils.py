@@ -6,7 +6,7 @@ from statsmodels.tsa.tsatools import freq_to_period
 
 def _get_pandas_wrapper(X, trim_head=None, trim_tail=None, names=None):
     index = X.index
-    #TODO: allow use index labels
+    # TODO: allow use index labels
     if trim_head is None and trim_tail is None:
         index = index
     elif trim_tail is None:

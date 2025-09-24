@@ -99,7 +99,7 @@ class VARSummary:
         # Header information
         part1title = "Summary of Regression Results"
         part1data = [[model._model_type],
-                     ["OLS"], #TODO: change when fit methods change
+                     ["OLS"],  # TODO: change when fit methods change
                      [time.strftime("%a, %d, %b, %Y", t)],
                      [time.strftime("%H:%M:%S", t)]]
         part1header = None

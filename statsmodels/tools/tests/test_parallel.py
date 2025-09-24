@@ -3,6 +3,7 @@ from statsmodels.tools.parallel import parallel_func
 from numpy import arange, testing
 from math import sqrt
 
+
 def test_parallel():
     x = arange(10.)
     with warnings.catch_warnings():
