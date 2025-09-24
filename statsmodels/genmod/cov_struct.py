@@ -6,6 +6,7 @@ docs:
 
 http://www.stata.com/manuals13/xtxtgee.pdf
 """
+
 from statsmodels.compat.pandas import Appender
 
 from collections import defaultdict
@@ -20,6 +21,7 @@ from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     NotImplementedWarning,
     OutputWarning,
+    SingularMatrixWarning,
 )
 from statsmodels.tools.validation import bool_like
 
@@ -163,13 +165,14 @@ class CovStruct:
                 success = True
                 break
             except np.linalg.LinAlgError:
-                vmat = cov_nearest(vmat, method=self.cov_nearest_method,
-                                   threshold=threshold)
+                vmat = cov_nearest(
+                    vmat, method=self.cov_nearest_method, threshold=threshold
+                )
                 threshold *= 2
                 cov_adjust += 1
                 msg = "At least one covariance matrix was not PSD "
                 msg += "and required projection."
-                warnings.warn(msg)
+                warnings.warn(msg, SingularMatrixWarning, stacklevel=2)
 
         self.cov_adjust.append(cov_adjust)
 
@@ -177,7 +180,10 @@ class CovStruct:
         if not success:
             warnings.warn(
                 "Unable to condition covariance matrix to an SPD "
-                "matrix using cov_nearest", ConvergenceWarning)
+                "matrix using cov_nearest",
+                ConvergenceWarning,
+                stacklevel=2,
+            )
             vmat = np.diag(np.diag(vmat))
             vco = spl.cho_factor(vmat)
 
@@ -209,7 +215,7 @@ class Independence(CovStruct):
 
     @Appender(CovStruct.covariance_matrix_solve.__doc__)
     def covariance_matrix_solve(self, expval, index, stdev, rhs):
-        v = stdev ** 2
+        v = stdev**2
         rslt = []
         for x in rhs:
             if x.ndim == 1:
@@ -219,8 +225,8 @@ class Independence(CovStruct):
         return rslt
 
     def summary(self):
-        return ("Observations within a cluster are modeled "
-                "as being independent.")
+        return "Observations within a cluster are modeled " "as being independent."
+
 
 class Unstructured(CovStruct):
     """
@@ -242,6 +248,7 @@ class Unstructured(CovStruct):
         self.model = model
 
         import numbers
+
         if not issubclass(self.model.time.dtype.type, numbers.Integral):
             msg = "time must be provided and must have integer dtype"
             raise ValueError(msg)
@@ -256,7 +263,7 @@ class Unstructured(CovStruct):
         if hasattr(self.model, "time"):
             time_li = self.model.time_li
             ix = time_li[index][:, 0]
-            return self.dep_params[np.ix_(ix, ix)],True
+            return self.dep_params[np.ix_(ix, ix)], True
 
         return self.dep_params, True
 
@@ -273,10 +280,10 @@ class Unstructured(CovStruct):
         time_li = self.model.time_li
         q = self.model.time.max() + 1
         csum = np.zeros((q, q))
-        wsum = 0.
+        wsum = 0.0
         cov = np.zeros((q, q))
 
-        scale = 0.
+        scale = 0.0
         for i in range(self.model.num_group):
 
             # Get the Pearson residuals
@@ -288,14 +295,14 @@ class Unstructured(CovStruct):
             m = np.outer(resid, resid)
             ssr = np.sum(np.diag(m))
 
-            w = weights_li[i] if has_weights else 1.
+            w = weights_li[i] if has_weights else 1.0
             csum[np.ix_(ix, ix)] += w
             wsum += w * len(ix)
             cov[np.ix_(ix, ix)] += w * m
             scale += w * ssr
         ddof = self.model.ddof_scale
         scale /= wsum * (nobs - ddof) / float(nobs)
-        cov /= (csum - ddof)
+        cov /= csum - ddof
 
         sd = np.sqrt(np.diag(cov))
         cov /= np.outer(sd, sd)
@@ -317,7 +324,7 @@ class Exchangeable(CovStruct):
         super().__init__()
 
         # The correlation between any two values in the same cluster
-        self.dep_params = 0.
+        self.dep_params = 0.0
 
     @Appender(CovStruct.update.__doc__)
     def update(self, params):
@@ -334,12 +341,12 @@ class Exchangeable(CovStruct):
         weights_li = self.model.weights
 
         residsq_sum, scale = 0, 0
-        fsum1, fsum2, n_pairs = 0., 0., 0.
+        fsum1, fsum2, n_pairs = 0.0, 0.0, 0.0
         for i in range(self.model.num_group):
             expval, _ = cached_means[i]
             stdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - expval) / stdev
-            f = weights_li[i] if has_weights else 1.
+            f = weights_li[i] if has_weights else 1.0
 
             ssr = np.sum(resid * resid)
             scale += f * ssr
@@ -352,10 +359,9 @@ class Exchangeable(CovStruct):
             n_pairs += npr
 
         ddof = self.model.ddof_scale
-        scale /= (fsum1 * (nobs - ddof) / float(nobs))
+        scale /= fsum1 * (nobs - ddof) / float(nobs)
         residsq_sum /= scale
-        self.dep_params = residsq_sum / \
-            (fsum2 * (n_pairs - ddof) / float(n_pairs))
+        self.dep_params = residsq_sum / (fsum2 * (n_pairs - ddof) / float(n_pairs))
 
     @Appender(CovStruct.covariance_matrix.__doc__)
     def covariance_matrix(self, expval, index):
@@ -368,19 +374,19 @@ class Exchangeable(CovStruct):
     def covariance_matrix_solve(self, expval, index, stdev, rhs):
 
         k = len(expval)
-        c = self.dep_params / (1. - self.dep_params)
-        c /= 1. + self.dep_params * (k - 1)
+        c = self.dep_params / (1.0 - self.dep_params)
+        c /= 1.0 + self.dep_params * (k - 1)
 
         rslt = []
         for x in rhs:
             if x.ndim == 1:
                 x1 = x / stdev
-                y = x1 / (1. - self.dep_params)
+                y = x1 / (1.0 - self.dep_params)
                 y -= c * sum(x1)
                 y /= stdev
             else:
                 x1 = x / stdev[:, None]
-                y = x1 / (1. - self.dep_params)
+                y = x1 / (1.0 - self.dep_params)
                 y -= c * x1.sum(0)
                 y /= stdev[:, None]
             rslt.append(y)
@@ -388,8 +394,10 @@ class Exchangeable(CovStruct):
         return rslt
 
     def summary(self):
-        return ("The correlation between two observations in the " +
-                "same cluster is %.3f" % self.dep_params)
+        return (
+            "The correlation between two observations in the "
+            + "same cluster is %.3f" % self.dep_params
+        )
 
 
 class Nested(CovStruct):
@@ -449,9 +457,12 @@ class Nested(CovStruct):
         super().initialize(model)
 
         if self.model.weights is not None:
-            warnings.warn("weights not implemented for nested cov_struct, "
-                          "using unweighted covariance estimate",
-                          NotImplementedWarning)
+            warnings.warn(
+                "weights not implemented for nested cov_struct, "
+                "using unweighted covariance estimate",
+                NotImplementedWarning,
+                stacklevel=2,
+            )
 
         # A bit of processing of the nest data
         id_matrix = np.asarray(self.model.dep_data)
@@ -473,8 +484,7 @@ class Nested(CovStruct):
             # Determine the number of common variance components
             # shared by each pair of observations.
             ix1, ix2 = np.tril_indices(ngrp, -1)
-            ncm = (self.id_matrix[rix[ix1], :] ==
-                   self.id_matrix[rix[ix2], :]).sum(1)
+            ncm = (self.id_matrix[rix[ix1], :] == self.id_matrix[rix[ix2], :]).sum(1)
 
             # This is used to construct the working correlation
             # matrix.
@@ -488,7 +498,7 @@ class Nested(CovStruct):
             dsx[:, 0] = 1
             for k in np.unique(ncm):
                 ii = np.flatnonzero(ncm == k)
-                dsx[ii, 1:k + 1] = 1
+                dsx[ii, 1 : k + 1] = 1
             designx.append(dsx)
 
         self.designx = np.concatenate(designx, axis=0)
@@ -515,7 +525,7 @@ class Nested(CovStruct):
         varfunc = self.model.family.variance
 
         dvmat = []
-        scale = 0.
+        scale = 0.0
         for i in range(self.model.num_group):
 
             expval, _ = cached_means[i]
@@ -526,15 +536,16 @@ class Nested(CovStruct):
             ix1, ix2 = np.tril_indices(len(resid), -1)
             dvmat.append(resid[ix1] * resid[ix2])
 
-            scale += np.sum(resid ** 2)
+            scale += np.sum(resid**2)
 
         dvmat = np.concatenate(dvmat)
-        scale /= (nobs - dim)
+        scale /= nobs - dim
 
         # Use least squares regression to estimate the variance
         # components
-        vcomp_coeff = np.dot(self.designx_v, np.dot(self.designx_u.T,
-                                                    dvmat) / self.designx_s)
+        vcomp_coeff = np.dot(
+            self.designx_v, np.dot(self.designx_u.T, dvmat) / self.designx_s
+        )
 
         self.vcomp_coeff = np.clip(vcomp_coeff, 0, np.inf)
         self.scale = scale
@@ -567,7 +578,9 @@ class Nested(CovStruct):
         if hasattr(self.model, "_dep_data_names"):
             dep_names.extend(self.model._dep_data_names)
         else:
-            dep_names.extend(["Component %d:" % (k + 1) for k in range(len(self.vcomp_coeff) - 1)])
+            dep_names.extend(
+                ["Component %d:" % (k + 1) for k in range(len(self.vcomp_coeff) - 1)]
+            )
         if hasattr(self.model, "_groups_name"):
             dep_names[0] = self.model._groups_name
         dep_names.append("Residual")
@@ -605,7 +618,8 @@ class Stationary(CovStruct):
         if grid is None:
             warnings.warn(
                 "grid=True will become default in a future version",
-                FutureWarning
+                FutureWarning,
+                stacklevel=2,
             )
 
         self.max_lag = max_lag
@@ -673,8 +687,9 @@ class Stationary(CovStruct):
             j2 = j2[ii]
             dx = dx[ii]
 
-            vs = np.bincount(dx, weights=resid[j1] * resid[j2],
-                             minlength=self.max_lag + 1)
+            vs = np.bincount(
+                dx, weights=resid[j1] * resid[j2], minlength=self.max_lag + 1
+            )
             vd = np.bincount(dx, minlength=self.max_lag + 1)
 
             resid_ssq += np.sum(resid**2)
@@ -713,21 +728,22 @@ class Stationary(CovStruct):
     def covariance_matrix_grid(self, endog_expval, index):
 
         from scipy.linalg import toeplitz
+
         r = np.zeros(len(endog_expval))
         r[0] = 1
-        r[1:self.max_lag + 1] = self.dep_params[1:]
+        r[1 : self.max_lag + 1] = self.dep_params[1:]
         return toeplitz(r), True
 
     @Appender(CovStruct.covariance_matrix_solve.__doc__)
     def covariance_matrix_solve(self, expval, index, stdev, rhs):
 
         if not self.grid:
-            return super().covariance_matrix_solve(
-                expval, index, stdev, rhs)
+            return super().covariance_matrix_solve(expval, index, stdev, rhs)
 
         from statsmodels.tools.linalg import stationary_solve
+
         r = np.zeros(len(expval))
-        r[0:self.max_lag] = self.dep_params[1:]
+        r[0 : self.max_lag] = self.dep_params[1:]
 
         rslt = []
         for x in rhs:
@@ -799,22 +815,26 @@ class Autoregressive(CovStruct):
         if grid is None:
             warnings.warn(
                 "grid=True will become default in a future version",
-                FutureWarning
+                FutureWarning,
+                stacklevel=2,
             )
         self.grid = bool(grid)
         if not self.grid:
             self.designx = None
 
         # The autocorrelation parameter
-        self.dep_params = 0.
+        self.dep_params = 0.0
 
     @Appender(CovStruct.update.__doc__)
     def update(self, params):
 
         if self.model.weights is not None:
-            warnings.warn("weights not implemented for autoregressive "
-                          "cov_struct, using unweighted covariance estimate",
-                          NotImplementedWarning)
+            warnings.warn(
+                "weights not implemented for autoregressive "
+                "cov_struct, using unweighted covariance estimate",
+                NotImplementedWarning,
+                stacklevel=2,
+            )
 
         if self.grid:
             self._update_grid(params)
@@ -861,8 +881,7 @@ class Autoregressive(CovStruct):
                 # Loop over pairs of observations within a cluster
                 for j1 in range(ngrp):
                     for j2 in range(j1):
-                        designx.append(self.dist_func(time[i][j1, :],
-                                                      time[i][j2, :]))
+                        designx.append(self.dist_func(time[i][j1, :], time[i][j2, :]))
 
             designx = np.array(designx)
             self.designx = designx
@@ -872,9 +891,9 @@ class Autoregressive(CovStruct):
         cached_means = self.model.cached_means
 
         # Weights
-        var = 1. - self.dep_params ** (2 * designx)
-        var /= 1. - self.dep_params ** 2
-        wts = 1. / var
+        var = 1.0 - self.dep_params ** (2 * designx)
+        var /= 1.0 - self.dep_params**2
+        wts = 1.0 / var
         wts /= wts.sum()
 
         residmat = []
@@ -893,11 +912,11 @@ class Autoregressive(CovStruct):
 
         # Need to minimize this
         def fitfunc(a):
-            dif = residmat[:, 0] - (a ** designx) * residmat[:, 1]
-            return np.dot(dif ** 2, wts)
+            dif = residmat[:, 0] - (a**designx) * residmat[:, 1]
+            return np.dot(dif**2, wts)
 
         # Left bracket point
-        b_lft, f_lft = 0., fitfunc(0.)
+        b_lft, f_lft = 0.0, fitfunc(0.0)
 
         # Center bracket point
         b_ctr, f_ctr = 0.5, fitfunc(0.5)
@@ -911,13 +930,13 @@ class Autoregressive(CovStruct):
         # Right bracket point
         b_rgt, f_rgt = 0.75, fitfunc(0.75)
         while f_rgt < f_ctr:
-            b_rgt = b_rgt + (1. - b_rgt) / 2
+            b_rgt = b_rgt + (1.0 - b_rgt) / 2
             f_rgt = fitfunc(b_rgt)
-            if b_rgt > 1. - 1e-6:
-                raise ValueError(
-                    "Autoregressive: unable to find right bracket")
+            if b_rgt > 1.0 - 1e-6:
+                raise ValueError("Autoregressive: unable to find right bracket")
 
         from scipy.optimize import brent
+
         self.dep_params = brent(fitfunc, brack=[b_lft, b_ctr, b_rgt])
 
     @Appender(CovStruct.covariance_matrix.__doc__)
@@ -939,12 +958,12 @@ class Autoregressive(CovStruct):
 
         # RHS has 1 row
         if k == 1:
-            return [x / stdev ** 2 for x in rhs]
+            return [x / stdev**2 for x in rhs]
 
         # RHS has 2 rows
         if k == 2:
             mat = np.array([[1, -r], [-r, 1]])
-            mat /= (1. - r ** 2)
+            mat /= 1.0 - r**2
             for x in rhs:
                 if x.ndim == 1:
                     x1 = x / stdev
@@ -962,9 +981,9 @@ class Autoregressive(CovStruct):
         # the inverse.  c0 is on the diagonal, except for the first
         # and last position.  c1 is on the first and last position of
         # the diagonal.  c2 is on the sub/super diagonal.
-        c0 = (1. + r ** 2) / (1. - r ** 2)
-        c1 = 1. / (1. - r ** 2)
-        c2 = -r / (1. - r ** 2)
+        c0 = (1.0 + r**2) / (1.0 - r**2)
+        c1 = 1.0 / (1.0 - r**2)
+        c2 = -r / (1.0 - r**2)
         soln = []
         for x in rhs:
             flatten = False
@@ -992,8 +1011,7 @@ class Autoregressive(CovStruct):
 
     def summary(self):
 
-        return ("Autoregressive(1) dependence parameter: %.3f\n" %
-                self.dep_params)
+        return "Autoregressive(1) dependence parameter: %.3f\n" % self.dep_params
 
 
 class CategoricalCovStruct(CovStruct):
@@ -1019,6 +1037,7 @@ class CategoricalCovStruct(CovStruct):
         self._ncut = self.nlevel - 1
 
         from numpy.lib.stride_tricks import as_strided
+
         b = np.dtype(np.int64).itemsize
 
         ibd = []
@@ -1062,16 +1081,19 @@ class GlobalOddsRatio(CategoricalCovStruct):
     def __init__(self, endog_type):
         super().__init__()
         self.endog_type = endog_type
-        self.dep_params = 0.
+        self.dep_params = 0.0
 
     def initialize(self, model):
 
         super().initialize(model)
 
         if self.model.weights is not None:
-            warnings.warn("weights not implemented for GlobalOddsRatio "
-                          "cov_struct, using unweighted covariance estimate",
-                          NotImplementedWarning)
+            warnings.warn(
+                "weights not implemented for GlobalOddsRatio "
+                "cov_struct, using unweighted covariance estimate",
+                NotImplementedWarning,
+                stacklevel=2,
+            )
 
         # Need to restrict to between-subject pairs
         cpp = []
@@ -1107,13 +1129,17 @@ class GlobalOddsRatio(CategoricalCovStruct):
         """
 
         if len(tables) == 0:
-            return 1.
+            return 1.0
 
         # Get the sampled odds ratios and variances
         log_oddsratio, var = [], []
         for table in tables:
-            lor = np.log(table[1, 1]) + np.log(table[0, 0]) -\
-                np.log(table[0, 1]) - np.log(table[1, 0])
+            lor = (
+                np.log(table[1, 1])
+                + np.log(table[0, 0])
+                - np.log(table[0, 1])
+                - np.log(table[1, 0])
+            )
             log_oddsratio.append(lor)
             var.append((1 / table.astype(np.float64)).sum())
 
@@ -1156,9 +1182,9 @@ class GlobalOddsRatio(CategoricalCovStruct):
             # The observed joint values for the current cluster
             yvec = endog[i]
             endog_11 = np.outer(yvec, yvec)
-            endog_10 = np.outer(yvec, 1. - yvec)
-            endog_01 = np.outer(1. - yvec, yvec)
-            endog_00 = np.outer(1. - yvec, 1. - yvec)
+            endog_10 = np.outer(yvec, 1.0 - yvec)
+            endog_01 = np.outer(1.0 - yvec, yvec)
+            endog_00 = np.outer(1.0 - yvec, 1.0 - yvec)
 
             cpp1 = cpp[i]
             for ky in cpp1.keys():
@@ -1186,19 +1212,20 @@ class GlobalOddsRatio(CategoricalCovStruct):
         else:
             psum = endog_expval[:, None] + endog_expval[None, :]
             pprod = endog_expval[:, None] * endog_expval[None, :]
-            pfac = np.sqrt((1. + psum * (current_or - 1.)) ** 2 +
-                           4 * current_or * (1. - current_or) * pprod)
-            vmat = 1. + psum * (current_or - 1.) - pfac
-            vmat /= 2. * (current_or - 1)
+            pfac = np.sqrt(
+                (1.0 + psum * (current_or - 1.0)) ** 2
+                + 4 * current_or * (1.0 - current_or) * pprod
+            )
+            vmat = 1.0 + psum * (current_or - 1.0) - pfac
+            vmat /= 2.0 * (current_or - 1)
 
         # Fix E[YY'] for elements that belong to same observation
         for bdl in ibd:
-            evy = endog_expval[bdl[0]:bdl[1]]
+            evy = endog_expval[bdl[0] : bdl[1]]
             if self.endog_type == "ordinal":
-                vmat[bdl[0]:bdl[1], bdl[0]:bdl[1]] =\
-                    np.minimum.outer(evy, evy)
+                vmat[bdl[0] : bdl[1], bdl[0] : bdl[1]] = np.minimum.outer(evy, evy)
             else:
-                vmat[bdl[0]:bdl[1], bdl[0]:bdl[1]] = np.diag(evy)
+                vmat[bdl[0] : bdl[1], bdl[0] : bdl[1]] = np.diag(evy)
 
         return vmat
 
@@ -1228,7 +1255,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
             emat_11 = self.get_eyy(endog_expval, i)
             emat_10 = endog_expval[:, None] - emat_11
             emat_01 = -emat_11 + endog_expval
-            emat_00 = 1. - (emat_11 + emat_10 + emat_01)
+            emat_00 = 1.0 - (emat_11 + emat_10 + emat_01)
 
             cpp1 = cpp[i]
             for ky in cpp1.keys():
@@ -1242,9 +1269,12 @@ class GlobalOddsRatio(CategoricalCovStruct):
 
         self.dep_params *= self.crude_or / cor_expval
         if not np.isfinite(self.dep_params):
-            self.dep_params = 1.
-            warnings.warn("dep_params became inf, resetting to 1",
-                          ConvergenceWarning)
+            self.dep_params = 1.0
+            warnings.warn(
+                "dep_params became inf, resetting to 1",
+                ConvergenceWarning,
+                stacklevel=2,
+            )
 
     def summary(self):
         return "Global odds ratio: %.3f\n" % self.dep_params
@@ -1269,9 +1299,10 @@ class OrdinalIndependence(CategoricalCovStruct):
         vmat = np.zeros((n, n))
 
         for bdl in ibd:
-            ev = expected_value[bdl[0]:bdl[1]]
-            vmat[bdl[0]:bdl[1], bdl[0]:bdl[1]] =\
-                np.minimum.outer(ev, ev) - np.outer(ev, ev)
+            ev = expected_value[bdl[0] : bdl[1]]
+            vmat[bdl[0] : bdl[1], bdl[0] : bdl[1]] = np.minimum.outer(
+                ev, ev
+            ) - np.outer(ev, ev)
 
         return vmat, False
 
@@ -1299,9 +1330,8 @@ class NominalIndependence(CategoricalCovStruct):
         vmat = np.zeros((n, n))
 
         for bdl in ibd:
-            ev = expected_value[bdl[0]:bdl[1]]
-            vmat[bdl[0]:bdl[1], bdl[0]:bdl[1]] =\
-                np.diag(ev) - np.outer(ev, ev)
+            ev = expected_value[bdl[0] : bdl[1]]
+            vmat[bdl[0] : bdl[1], bdl[0] : bdl[1]] = np.diag(ev) - np.outer(ev, ev)
 
         return vmat, False
 
@@ -1379,15 +1409,17 @@ class Equivalence(CovStruct):
 
         if (pairs is None) and (labels is None):
             raise ValueError(
-                "Equivalence cov_struct requires either `pairs` or `labels`")
+                "Equivalence cov_struct requires either `pairs` or `labels`"
+            )
 
         if (pairs is not None) and (labels is not None):
             raise ValueError(
-                "Equivalence cov_struct accepts only one of `pairs` "
-                "and `labels`")
+                "Equivalence cov_struct accepts only one of `pairs` " "and `labels`"
+            )
 
         if pairs is not None:
             import copy
+
             self.pairs = copy.deepcopy(pairs)
 
         if labels is not None:
@@ -1430,6 +1462,7 @@ class Equivalence(CovStruct):
     def _pairs_from_labels(self):
 
         from collections import defaultdict
+
         pairs = defaultdict(lambda: defaultdict(lambda: None))
 
         model = self.model
@@ -1478,11 +1511,14 @@ class Equivalence(CovStruct):
         super().initialize(model)
 
         if self.model.weights is not None:
-            warnings.warn("weights not implemented for equalence cov_struct, "
-                          "using unweighted covariance estimate",
-                          NotImplementedWarning)
+            warnings.warn(
+                "weights not implemented for equalence cov_struct, "
+                "using unweighted covariance estimate",
+                NotImplementedWarning,
+                stacklevel=2,
+            )
 
-        if not hasattr(self, 'pairs'):
+        if not hasattr(self, "pairs"):
             self._pairs_from_labels()
 
         # Initialize so that any equivalence class containing a
@@ -1496,7 +1532,10 @@ class Equivalence(CovStruct):
                     if not np.all(j1 == j2):
                         warnings.warn(
                             "equivalence class contains both variance "
-                            "and covariance parameters", OutputWarning)
+                            "and covariance parameters",
+                            OutputWarning,
+                            stacklevel=2,
+                        )
                     self._var_classes.add(lb)
                     self.dep_params[lb] = 1
 
@@ -1519,7 +1558,7 @@ class Equivalence(CovStruct):
         endog = self.model.endog_li
         varfunc = self.model.family.variance
         cached_means = self.model.cached_means
-        dep_params = defaultdict(lambda: [0., 0., 0.])
+        dep_params = defaultdict(lambda: [0.0, 0.0, 0.0])
         n_pairs = defaultdict(int)
         dim = len(params)
 
@@ -1545,7 +1584,7 @@ class Equivalence(CovStruct):
                 den = np.sqrt(dep_params[lb][1] * dep_params[lb][2])
                 dep_params[lb] = dep_params[lb][0] / den
             for lb in self._var_classes:
-                dep_params[lb] = 1.
+                dep_params[lb] = 1.0
 
         self.dep_params = dep_params
         self.n_pairs = n_pairs

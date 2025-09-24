@@ -15,6 +15,7 @@ General References:
 Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 
 """
+
 import itertools
 
 import numpy as np
@@ -96,12 +97,11 @@ class _OptFuncts:
         The function value is not used in optimization and the optimal value
         is disregarded when computing the log likelihood ratio.
         """
-        data_star = np.log(weights) + (np.sum(weights) +\
-                                       np.dot(est_vect, eta))
-        idx = data_star < 1. / nobs
+        data_star = np.log(weights) + (np.sum(weights) + np.dot(est_vect, eta))
+        idx = data_star < 1.0 / nobs
         not_idx = ~idx
         nx = nobs * data_star[idx]
-        data_star[idx] = np.log(1. / nobs) - 1.5 + nx * (2. - nx / 2)
+        data_star[idx] = np.log(1.0 / nobs) - 1.5 + nx * (2.0 - nx / 2)
         data_star[not_idx] = np.log(data_star[not_idx])
         return data_star
 
@@ -126,12 +126,12 @@ class _OptFuncts:
         hess : m x m array
             Weighted hessian used in _wtd_modif_newton
         """
-        #eta = np.squeeze(eta)
+        # eta = np.squeeze(eta)
         data_star_doub_prime = np.sum(weights) + np.dot(est_vect, eta)
-        idx = data_star_doub_prime < 1. / nobs
+        idx = data_star_doub_prime < 1.0 / nobs
         not_idx = ~idx
-        data_star_doub_prime[idx] = - nobs ** 2
-        data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
+        data_star_doub_prime[idx] = -(nobs**2)
+        data_star_doub_prime[not_idx] = -((data_star_doub_prime[not_idx]) ** -2)
         wtd_dsdp = weights * data_star_doub_prime
         return np.dot(est_vect.T, wtd_dsdp[:, None] * est_vect)
 
@@ -156,15 +156,15 @@ class _OptFuncts:
         gradient : ndarray (m,1)
             The gradient used in _wtd_modif_newton
         """
-        #eta = np.squeeze(eta)
+        # eta = np.squeeze(eta)
         data_star_prime = np.sum(weights) + np.dot(est_vect, eta)
-        idx = data_star_prime < 1. / nobs
+        idx = data_star_prime < 1.0 / nobs
         not_idx = ~idx
         data_star_prime[idx] = nobs * (2 - nobs * data_star_prime[idx])
-        data_star_prime[not_idx] = 1. / data_star_prime[not_idx]
+        data_star_prime[not_idx] = 1.0 / data_star_prime[not_idx]
         return np.dot(weights * data_star_prime, est_vect)
 
-    def _modif_newton(self,  eta, est_vect, weights):
+    def _modif_newton(self, eta, est_vect, weights):
         """
         Modified Newton's method for maximizing the log 'star' equation.  This
         function calls _fit_newton to find the optimal values of eta.
@@ -195,10 +195,10 @@ class _OptFuncts:
 
         def hess(x0):
             return -self._hess(x0, est_vect, weights, nobs)
-        kwds = {'tol': 1e-8}
+
+        kwds = {"tol": 1e-8}
         eta = eta.squeeze()
-        res = _fit_newton(f, grad, eta, (), kwds, hess=hess, maxiter=50, \
-                              disp=0)
+        res = _fit_newton(f, grad, eta, (), kwds, hess=hess, maxiter=50, disp=0)
         return res[0]
 
     def _find_eta(self, eta):
@@ -216,8 +216,7 @@ class _OptFuncts:
         llr : float
             n times the log likelihood value for a given value of eta
         """
-        return np.sum((self.endog - self.mu0) / \
-              (1. + eta * (self.endog - self.mu0)))
+        return np.sum((self.endog - self.mu0) / (1.0 + eta * (self.endog - self.mu0)))
 
     def _ci_limits_mu(self, mu):
         """
@@ -257,8 +256,7 @@ class _OptFuncts:
         """
         denom = np.sum((self.endog - gamma) ** -1)
         new_weights = (self.endog - gamma) ** -1 / denom
-        return -2 * np.sum(np.log(self.nobs * new_weights)) - \
-            self.r0
+        return -2 * np.sum(np.log(self.nobs * new_weights)) - self.r0
 
     def _opt_var(self, nuisance_mu, pval=False):
         """
@@ -278,16 +276,15 @@ class _OptFuncts:
         """
         endog = self.endog
         nobs = self.nobs
-        sig_data = ((endog - nuisance_mu) ** 2 \
-                    - self.sig2_0)
-        mu_data = (endog - nuisance_mu)
+        sig_data = (endog - nuisance_mu) ** 2 - self.sig2_0
+        mu_data = endog - nuisance_mu
         est_vect = np.column_stack((mu_data, sig_data))
-        eta_star = self._modif_newton(np.array([1. / nobs,
-                                               1. / nobs]), est_vect,
-                                                np.ones(nobs) * (1. / nobs))
+        eta_star = self._modif_newton(
+            np.array([1.0 / nobs, 1.0 / nobs]), est_vect, np.ones(nobs) * (1.0 / nobs)
+        )
 
         denom = 1 + np.dot(eta_star, est_vect.T)
-        self.new_weights = 1. / nobs * 1. / denom
+        self.new_weights = 1.0 / nobs * 1.0 / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         if pval:  # Used for contour plotting
             return chi2.sf(-2 * llr, 1)
@@ -332,15 +329,17 @@ class _OptFuncts:
         nobs = self.nobs
         mu_data = endog - nuis_params[0]
         sig_data = ((endog - nuis_params[0]) ** 2) - nuis_params[1]
-        skew_data = (((endog - nuis_params[0]) ** 3) /
-                    (nuis_params[1] ** 1.5)) - self.skew0
+        skew_data = (
+            ((endog - nuis_params[0]) ** 3) / (nuis_params[1] ** 1.5)
+        ) - self.skew0
         est_vect = np.column_stack((mu_data, sig_data, skew_data))
-        eta_star = self._modif_newton(np.array([1. / nobs,
-                                               1. / nobs,
-                                               1. / nobs]), est_vect,
-                                               np.ones(nobs) * (1. / nobs))
-        denom = 1. + np.dot(eta_star, est_vect.T)
-        self.new_weights = 1. / nobs * 1. / denom
+        eta_star = self._modif_newton(
+            np.array([1.0 / nobs, 1.0 / nobs, 1.0 / nobs]),
+            est_vect,
+            np.ones(nobs) * (1.0 / nobs),
+        )
+        denom = 1.0 + np.dot(eta_star, est_vect.T)
+        self.new_weights = 1.0 / nobs * 1.0 / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
 
@@ -364,15 +363,17 @@ class _OptFuncts:
         nobs = self.nobs
         mu_data = endog - nuis_params[0]
         sig_data = ((endog - nuis_params[0]) ** 2) - nuis_params[1]
-        kurt_data = ((((endog - nuis_params[0]) ** 4) / \
-                    (nuis_params[1] ** 2)) - 3) - self.kurt0
+        kurt_data = (
+            (((endog - nuis_params[0]) ** 4) / (nuis_params[1] ** 2)) - 3
+        ) - self.kurt0
         est_vect = np.column_stack((mu_data, sig_data, kurt_data))
-        eta_star = self._modif_newton(np.array([1. / nobs,
-                                               1. / nobs,
-                                               1. / nobs]), est_vect,
-                                               np.ones(nobs) * (1. / nobs))
+        eta_star = self._modif_newton(
+            np.array([1.0 / nobs, 1.0 / nobs, 1.0 / nobs]),
+            est_vect,
+            np.ones(nobs) * (1.0 / nobs),
+        )
         denom = 1 + np.dot(eta_star, est_vect.T)
-        self.new_weights = 1. / nobs * 1. / denom
+        self.new_weights = 1.0 / nobs * 1.0 / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
 
@@ -396,18 +397,20 @@ class _OptFuncts:
         nobs = self.nobs
         mu_data = endog - nuis_params[0]
         sig_data = ((endog - nuis_params[0]) ** 2) - nuis_params[1]
-        skew_data = (((endog - nuis_params[0]) ** 3) / \
-                    (nuis_params[1] ** 1.5)) - self.skew0
-        kurt_data = ((((endog - nuis_params[0]) ** 4) / \
-                    (nuis_params[1] ** 2)) - 3) - self.kurt0
+        skew_data = (
+            ((endog - nuis_params[0]) ** 3) / (nuis_params[1] ** 1.5)
+        ) - self.skew0
+        kurt_data = (
+            (((endog - nuis_params[0]) ** 4) / (nuis_params[1] ** 2)) - 3
+        ) - self.kurt0
         est_vect = np.column_stack((mu_data, sig_data, skew_data, kurt_data))
-        eta_star = self._modif_newton(np.array([1. / nobs,
-                                               1. / nobs,
-                                               1. / nobs,
-                                               1. / nobs]), est_vect,
-                                               np.ones(nobs) * (1. / nobs))
-        denom = 1. + np.dot(eta_star, est_vect.T)
-        self.new_weights = 1. / nobs * 1. / denom
+        eta_star = self._modif_newton(
+            np.array([1.0 / nobs, 1.0 / nobs, 1.0 / nobs, 1.0 / nobs]),
+            est_vect,
+            np.ones(nobs) * (1.0 / nobs),
+        )
+        denom = 1.0 + np.dot(eta_star, est_vect.T)
+        self.new_weights = 1.0 / nobs * 1.0 / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
 
@@ -455,15 +458,17 @@ class _OptFuncts:
             parameters constant
         """
         mu1_data, mu2_data = (endog - nuis_params[::2]).T
-        sig1_data = mu1_data ** 2 - nuis_params[1]
-        sig2_data = mu2_data ** 2 - nuis_params[3]
-        correl_data = ((mu1_data * mu2_data) - corr0 *
-                    (nuis_params[1] * nuis_params[3]) ** .5)
-        est_vect = np.column_stack((mu1_data, sig1_data,
-                                    mu2_data, sig2_data, correl_data))
+        sig1_data = mu1_data**2 - nuis_params[1]
+        sig2_data = mu2_data**2 - nuis_params[3]
+        correl_data = (mu1_data * mu2_data) - corr0 * (
+            nuis_params[1] * nuis_params[3]
+        ) ** 0.5
+        est_vect = np.column_stack(
+            (mu1_data, sig1_data, mu2_data, sig2_data, correl_data)
+        )
         eta_star = self._modif_newton(x0, est_vect, weights0)
-        denom = 1. + np.dot(est_vect, eta_star)
-        self.new_weights = 1. / nobs * 1. / denom
+        denom = 1.0 + np.dot(est_vect, eta_star)
+        self.new_weights = 1.0 / nobs * 1.0 / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
 
@@ -517,18 +522,24 @@ class DescStatUV(_OptFuncts):
         self.mu0 = mu0
         endog = self.endog
         nobs = self.nobs
-        eta_min = (1. - (1. / nobs)) / (self.mu0 - max(endog))
-        eta_max = (1. - (1. / nobs)) / (self.mu0 - min(endog))
+        eta_min = (1.0 - (1.0 / nobs)) / (self.mu0 - max(endog))
+        eta_max = (1.0 - (1.0 / nobs)) / (self.mu0 - min(endog))
         eta_star = optimize.brentq(self._find_eta, eta_min, eta_max)
-        new_weights = (1. / nobs) * 1. / (1. + eta_star * (endog - self.mu0))
+        new_weights = (1.0 / nobs) * 1.0 / (1.0 + eta_star * (endog - self.mu0))
         llr = -2 * np.sum(np.log(nobs * new_weights))
         if return_weights:
             return llr, chi2.sf(llr, 1), new_weights
         else:
             return llr, chi2.sf(llr, 1)
 
-    def ci_mean(self, sig=.05, method='gamma', epsilon=10 ** -8,
-                 gamma_low=-10 ** 10, gamma_high=10 ** 10):
+    def ci_mean(
+        self,
+        sig=0.05,
+        method="gamma",
+        epsilon=10**-8,
+        gamma_low=-(10**10),
+        gamma_high=10**10,
+    ):
         """
         Returns the confidence interval for the mean.
 
@@ -582,30 +593,32 @@ class DescStatUV(_OptFuncts):
         """
         endog = self.endog
         sig = 1 - sig
-        if method == 'nested-brent':
+        if method == "nested-brent":
             self.r0 = chi2.ppf(sig, 1)
             middle = np.mean(endog)
             epsilon_u = (max(endog) - np.mean(endog)) * epsilon
             epsilon_l = (np.mean(endog) - min(endog)) * epsilon
-            ulim = optimize.brentq(self._ci_limits_mu, middle,
-                max(endog) - epsilon_u)
-            llim = optimize.brentq(self._ci_limits_mu, middle,
-                min(endog) + epsilon_l)
+            ulim = optimize.brentq(self._ci_limits_mu, middle, max(endog) - epsilon_u)
+            llim = optimize.brentq(self._ci_limits_mu, middle, min(endog) + epsilon_l)
             return llim, ulim
 
-        if method == 'gamma':
+        if method == "gamma":
             self.r0 = chi2.ppf(sig, 1)
-            gamma_star_l = optimize.brentq(self._find_gamma, gamma_low,
-                min(endog) - epsilon)
-            gamma_star_u = optimize.brentq(self._find_gamma, \
-                         max(endog) + epsilon, gamma_high)
-            weights_low = ((endog - gamma_star_l) ** -1) / \
-                np.sum((endog - gamma_star_l) ** -1)
-            weights_high = ((endog - gamma_star_u) ** -1) / \
-                np.sum((endog - gamma_star_u) ** -1)
+            gamma_star_l = optimize.brentq(
+                self._find_gamma, gamma_low, min(endog) - epsilon
+            )
+            gamma_star_u = optimize.brentq(
+                self._find_gamma, max(endog) + epsilon, gamma_high
+            )
+            weights_low = ((endog - gamma_star_l) ** -1) / np.sum(
+                (endog - gamma_star_l) ** -1
+            )
+            weights_high = ((endog - gamma_star_u) ** -1) / np.sum(
+                (endog - gamma_star_u) ** -1
+            )
             mu_low = np.sum(weights_low * endog)
             mu_high = np.sum(weights_high * endog)
-            return mu_low,  mu_high
+            return mu_low, mu_high
 
     def test_var(self, sig2_0, return_weights=False):
         """
@@ -637,15 +650,14 @@ class DescStatUV(_OptFuncts):
         self.sig2_0 = sig2_0
         mu_max = max(self.endog)
         mu_min = min(self.endog)
-        llr = optimize.fminbound(self._opt_var, mu_min, mu_max, \
-                                 full_output=1)[1]
+        llr = optimize.fminbound(self._opt_var, mu_min, mu_max, full_output=1)[1]
         p_val = chi2.sf(llr, 1)
         if return_weights:
             return llr, p_val, self.new_weights.T
         else:
             return llr, p_val
 
-    def ci_var(self, lower_bound=None, upper_bound=None, sig=.05):
+    def ci_var(self, lower_bound=None, upper_bound=None, sig=0.05):
         """
         Returns the confidence interval for the variance.
 
@@ -690,19 +702,28 @@ class DescStatUV(_OptFuncts):
         """
         endog = self.endog
         if upper_bound is None:
-            upper_bound = ((self.nobs - 1) * endog.var()) / \
-              (chi2.ppf(.0001, self.nobs - 1))
+            upper_bound = ((self.nobs - 1) * endog.var()) / (
+                chi2.ppf(0.0001, self.nobs - 1)
+            )
         if lower_bound is None:
-            lower_bound = ((self.nobs - 1) * endog.var()) / \
-              (chi2.ppf(.9999, self.nobs - 1))
+            lower_bound = ((self.nobs - 1) * endog.var()) / (
+                chi2.ppf(0.9999, self.nobs - 1)
+            )
         self.r0 = chi2.ppf(1 - sig, 1)
         llim = optimize.brentq(self._ci_limits_var, lower_bound, endog.var())
         ulim = optimize.brentq(self._ci_limits_var, endog.var(), upper_bound)
         return llim, ulim
 
-    def plot_contour(self, mu_low, mu_high, var_low, var_high, mu_step,
-                        var_step,
-                        levs=[.2, .1, .05, .01, .001]):
+    def plot_contour(
+        self,
+        mu_low,
+        mu_high,
+        var_low,
+        var_high,
+        mu_step,
+        var_step,
+        levs=(0.2, 0.1, 0.05, 0.01, 0.001),
+    ):
         """
         Returns a plot of the confidence region for a univariate
         mean and variance.
@@ -737,8 +758,8 @@ class DescStatUV(_OptFuncts):
             The contour plot
         """
         fig, ax = utils.create_mpl_ax()
-        ax.set_ylabel('Variance')
-        ax.set_xlabel('Mean')
+        ax.set_ylabel("Variance")
+        ax.set_xlabel("Mean")
         mu_vect = list(np.arange(mu_low, mu_high, mu_step))
         var_vect = list(np.arange(var_low, var_high, var_step))
         z = []
@@ -770,14 +791,14 @@ class DescStatUV(_OptFuncts):
             The log-likelihood ratio and p_value of skew0
         """
         self.skew0 = skew0
-        start_nuisance = np.array([self.endog.mean(),
-                                       self.endog.var()])
+        start_nuisance = np.array([self.endog.mean(), self.endog.var()])
 
-        llr = optimize.fmin_powell(self._opt_skew, start_nuisance,
-                                     full_output=1, disp=0)[1]
+        llr = optimize.fmin_powell(
+            self._opt_skew, start_nuisance, full_output=1, disp=0
+        )[1]
         p_val = chi2.sf(llr, 1)
         if return_weights:
-            return llr, p_val,  self.new_weights.T
+            return llr, p_val, self.new_weights.T
         return llr, p_val
 
     def test_kurt(self, kurt0, return_weights=False):
@@ -800,11 +821,11 @@ class DescStatUV(_OptFuncts):
             The log-likelihood ratio and p-value of kurt0
         """
         self.kurt0 = kurt0
-        start_nuisance = np.array([self.endog.mean(),
-                                       self.endog.var()])
+        start_nuisance = np.array([self.endog.mean(), self.endog.var()])
 
-        llr = optimize.fmin_powell(self._opt_kurt, start_nuisance,
-                                     full_output=1, disp=0)[1]
+        llr = optimize.fmin_powell(
+            self._opt_kurt, start_nuisance, full_output=1, disp=0
+        )[1]
         p_val = chi2.sf(llr, 1)
         if return_weights:
             return llr, p_val, self.new_weights.T
@@ -833,17 +854,17 @@ class DescStatUV(_OptFuncts):
         """
         self.skew0 = skew0
         self.kurt0 = kurt0
-        start_nuisance = np.array([self.endog.mean(),
-                                       self.endog.var()])
+        start_nuisance = np.array([self.endog.mean(), self.endog.var()])
 
-        llr = optimize.fmin_powell(self._opt_skew_kurt, start_nuisance,
-                                     full_output=1, disp=0)[1]
+        llr = optimize.fmin_powell(
+            self._opt_skew_kurt, start_nuisance, full_output=1, disp=0
+        )[1]
         p_val = chi2.sf(llr, 2)
         if return_weights:
             return llr, p_val, self.new_weights.T
         return llr, p_val
 
-    def ci_skew(self, sig=.05, upper_bound=None, lower_bound=None):
+    def ci_skew(self, sig=0.05, upper_bound=None, lower_bound=None):
         """
         Returns the confidence interval for skewness.
 
@@ -873,21 +894,31 @@ class DescStatUV(_OptFuncts):
         nobs = self.nobs
         endog = self.endog
         if upper_bound is None:
-            upper_bound = skew(endog) + \
-            2.5 * ((6. * nobs * (nobs - 1.)) / \
-              ((nobs - 2.) * (nobs + 1.) * \
-               (nobs + 3.))) ** .5
+            upper_bound = (
+                skew(endog)
+                + 2.5
+                * (
+                    (6.0 * nobs * (nobs - 1.0))
+                    / ((nobs - 2.0) * (nobs + 1.0) * (nobs + 3.0))
+                )
+                ** 0.5
+            )
         if lower_bound is None:
-            lower_bound = skew(endog) - \
-            2.5 * ((6. * nobs * (nobs - 1.)) / \
-              ((nobs - 2.) * (nobs + 1.) * \
-               (nobs + 3.))) ** .5
+            lower_bound = (
+                skew(endog)
+                - 2.5
+                * (
+                    (6.0 * nobs * (nobs - 1.0))
+                    / ((nobs - 2.0) * (nobs + 1.0) * (nobs + 3.0))
+                )
+                ** 0.5
+            )
         self.r0 = chi2.ppf(1 - sig, 1)
         llim = optimize.brentq(self._ci_limits_skew, lower_bound, skew(endog))
         ulim = optimize.brentq(self._ci_limits_skew, skew(endog), upper_bound)
         return llim, ulim
 
-    def ci_kurt(self, sig=.05, upper_bound=None, lower_bound=None):
+    def ci_kurt(self, sig=0.05, upper_bound=None, lower_bound=None):
         """
         Returns the confidence interval for kurtosis.
 
@@ -922,24 +953,34 @@ class DescStatUV(_OptFuncts):
         endog = self.endog
         nobs = self.nobs
         if upper_bound is None:
-            upper_bound = kurtosis(endog) + \
-            (2.5 * (2. * ((6. * nobs * (nobs - 1.)) / \
-              ((nobs - 2.) * (nobs + 1.) * \
-               (nobs + 3.))) ** .5) * \
-               (((nobs ** 2.) - 1.) / ((nobs - 3.) *\
-                 (nobs + 5.))) ** .5)
+            upper_bound = kurtosis(endog) + (
+                2.5
+                * (
+                    2.0
+                    * (
+                        (6.0 * nobs * (nobs - 1.0))
+                        / ((nobs - 2.0) * (nobs + 1.0) * (nobs + 3.0))
+                    )
+                    ** 0.5
+                )
+                * (((nobs**2.0) - 1.0) / ((nobs - 3.0) * (nobs + 5.0))) ** 0.5
+            )
         if lower_bound is None:
-            lower_bound = kurtosis(endog) - \
-            (2.5 * (2. * ((6. * nobs * (nobs - 1.)) / \
-              ((nobs - 2.) * (nobs + 1.) * \
-               (nobs + 3.))) ** .5) * \
-               (((nobs ** 2.) - 1.) / ((nobs - 3.) *\
-                 (nobs + 5.))) ** .5)
+            lower_bound = kurtosis(endog) - (
+                2.5
+                * (
+                    2.0
+                    * (
+                        (6.0 * nobs * (nobs - 1.0))
+                        / ((nobs - 2.0) * (nobs + 1.0) * (nobs + 3.0))
+                    )
+                    ** 0.5
+                )
+                * (((nobs**2.0) - 1.0) / ((nobs - 3.0) * (nobs + 5.0))) ** 0.5
+            )
         self.r0 = chi2.ppf(1 - sig, 1)
-        llim = optimize.brentq(self._ci_limits_kurt, lower_bound, \
-                             kurtosis(endog))
-        ulim = optimize.brentq(self._ci_limits_kurt, kurtosis(endog), \
-                             upper_bound)
+        llim = optimize.brentq(self._ci_limits_kurt, lower_bound, kurtosis(endog))
+        ulim = optimize.brentq(self._ci_limits_kurt, kurtosis(endog), upper_bound)
         return llim, ulim
 
 
@@ -988,27 +1029,40 @@ class DescStatMV(_OptFuncts):
         endog = self.endog
         nobs = self.nobs
         if len(mu_array) != endog.shape[1]:
-            raise ValueError('mu_array must have the same number of '
-                             'elements as the columns of the data.')
+            raise ValueError(
+                "mu_array must have the same number of "
+                "elements as the columns of the data."
+            )
         mu_array = mu_array.reshape(1, endog.shape[1])
         means = np.ones((endog.shape[0], endog.shape[1]))
         means = mu_array * means
         est_vect = endog - means
-        start_vals = 1. / nobs * np.ones(endog.shape[1])
-        eta_star = self._modif_newton(start_vals, est_vect,
-                                      np.ones(nobs) * (1. / nobs))
+        start_vals = 1.0 / nobs * np.ones(endog.shape[1])
+        eta_star = self._modif_newton(
+            start_vals, est_vect, np.ones(nobs) * (1.0 / nobs)
+        )
         denom = 1 + np.dot(eta_star, est_vect.T)
         self.new_weights = 1 / nobs * 1 / denom
         llr = -2 * np.sum(np.log(nobs * self.new_weights))
         p_val = chi2.sf(llr, mu_array.shape[1])
         if return_weights:
-            return llr, p_val,  self.new_weights.T
+            return llr, p_val, self.new_weights.T
         else:
             return llr, p_val
 
-    def mv_mean_contour(self, mu1_low, mu1_upp, mu2_low, mu2_upp, step1, step2,
-                        levs=(.001, .01, .05, .1, .2), var1_name=None,
-                        var2_name=None, plot_dta=False):
+    def mv_mean_contour(
+        self,
+        mu1_low,
+        mu1_upp,
+        mu2_low,
+        mu2_upp,
+        step1,
+        step2,
+        levs=(0.001, 0.01, 0.05, 0.1, 0.2),
+        var1_name=None,
+        var2_name=None,
+        plot_dta=False,
+    ):
         """
         Creates a confidence region plot for the mean of bivariate data
 
@@ -1054,14 +1108,14 @@ class DescStatMV(_OptFuncts):
         >>> contourp.show()
         """
         if self.endog.shape[1] != 2:
-            raise ValueError('Data must contain exactly two variables')
+            raise ValueError("Data must contain exactly two variables")
         fig, ax = utils.create_mpl_ax()
         if var2_name is None:
-            ax.set_ylabel('Variable 2')
+            ax.set_ylabel("Variable 2")
         else:
             ax.set_ylabel(var2_name)
         if var1_name is None:
-            ax.set_xlabel('Variable 1')
+            ax.set_xlabel("Variable 1")
         else:
             ax.set_xlabel(var1_name)
         x = np.arange(mu1_low, mu1_upp, step1)
@@ -1075,7 +1129,7 @@ class DescStatMV(_OptFuncts):
         z = z.reshape(X.shape[1], Y.shape[0])
         ax.contour(x, y, z.T, levels=levs)
         if plot_dta:
-            ax.plot(self.endog[:, 0], self.endog[:, 1], 'bo')
+            ax.plot(self.endog[:, 0], self.endog[:, 1], "bo")
         return fig
 
     def test_corr(self, corr0, return_weights=0):
@@ -1095,23 +1149,28 @@ class DescStatMV(_OptFuncts):
         nobs = self.nobs
         endog = self.endog
         if endog.shape[1] != 2:
-            raise NotImplementedError('Correlation matrix not yet implemented')
-        nuis0 = np.array([endog[:, 0].mean(),
-                              endog[:, 0].var(),
-                              endog[:, 1].mean(),
-                              endog[:, 1].var()])
+            raise NotImplementedError("Correlation matrix not yet implemented")
+        nuis0 = np.array(
+            [
+                endog[:, 0].mean(),
+                endog[:, 0].var(),
+                endog[:, 1].mean(),
+                endog[:, 1].var(),
+            ]
+        )
 
         x0 = np.zeros(5)
-        weights0 = np.array([1. / nobs] * int(nobs))
+        weights0 = np.array([1.0 / nobs] * int(nobs))
         args = (corr0, endog, nobs, x0, weights0)
-        llr = optimize.fmin(self._opt_correl, nuis0, args=args,
-                                     full_output=1, disp=0)[1]
+        llr = optimize.fmin(self._opt_correl, nuis0, args=args, full_output=1, disp=0)[
+            1
+        ]
         p_val = chi2.sf(llr, 1)
         if return_weights:
             return llr, p_val, self.new_weights.T
         return llr, p_val
 
-    def ci_corr(self, sig=.05, upper_bound=None, lower_bound=None):
+    def ci_corr(self, sig=0.05, upper_bound=None, lower_bound=None):
         """
         Returns the confidence intervals for the correlation coefficient
 
@@ -1138,14 +1197,15 @@ class DescStatMV(_OptFuncts):
         self.r0 = chi2.ppf(1 - sig, 1)
         point_est = np.corrcoef(endog[:, 0], endog[:, 1])[0, 1]
         if upper_bound is None:
-            upper_bound = min(.999, point_est + \
-                          2.5 * ((1. - point_est ** 2.) / \
-                          (nobs - 2.)) ** .5)
+            upper_bound = min(
+                0.999, point_est + 2.5 * ((1.0 - point_est**2.0) / (nobs - 2.0)) ** 0.5
+            )
 
         if lower_bound is None:
-            lower_bound = max(- .999, point_est - \
-                          2.5 * (np.sqrt((1. - point_est ** 2.) / \
-                          (nobs - 2.))))
+            lower_bound = max(
+                -0.999,
+                point_est - 2.5 * (np.sqrt((1.0 - point_est**2.0) / (nobs - 2.0))),
+            )
 
         llim = optimize.brenth(self._ci_limits_corr, lower_bound, point_est)
         ulim = optimize.brenth(self._ci_limits_corr, point_est, upper_bound)

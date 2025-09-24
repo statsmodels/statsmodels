@@ -1234,9 +1234,7 @@ def test_power_2indep():
 
 @pytest.mark.parametrize("count", np.arange(10, 90, 5))
 @pytest.mark.parametrize("method", list(probci_methods.keys()) + ["binom_test"])
-@pytest.mark.parametrize("array_like", [False, True])
-def test_ci_symmetry(count, method, array_like):
-    _count = [count] * 3 if array_like else count
+def test_ci_symmetry(count, method):
     n = 100
     a = proportion_confint(count, n, method=method)
     b = proportion_confint(n - count, n, method=method)

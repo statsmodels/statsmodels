@@ -158,6 +158,7 @@ Wooldridge, Jeffrey M. Econometric analysis of cross section and panel data. MIT
 press, 2010.
 
 """
+
 import warnings
 
 import numpy as np
@@ -201,18 +202,26 @@ def dispersion_poisson(results):
        alternative hypothesis.
     """
     msg = (
-        'dispersion_poisson here is deprecated, use the version in '
-        'discrete._diagnostic_count'
+        "dispersion_poisson here is deprecated, use the version in "
+        "discrete._diagnostic_count"
     )
-    warnings.warn(msg, FutureWarning)
+    warnings.warn(msg, FutureWarning, stacklevel=2)
 
     from statsmodels.discrete._diagnostics_count import test_poisson_dispersion
+
     return test_poisson_dispersion(results, _old=True)
 
 
-def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
-                               include_score=False, use_endog=True,
-                               cov_type='HC3', cov_kwds=None, use_t=False):
+def dispersion_poisson_generic(
+    results,
+    exog_new_test,
+    exog_new_control=None,
+    include_score=False,
+    use_endog=True,
+    cov_type="HC3",
+    cov_kwds=None,
+    use_t=False,
+):
     """A variable addition test for the variance function
 
     .. deprecated:: 0.14
@@ -227,25 +236,29 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
     Warning: insufficiently tested, especially for options
     """
     msg = (
-        'dispersion_poisson_generic here is deprecated, use the version in '
-        'discrete._diagnostic_count'
+        "dispersion_poisson_generic here is deprecated, use the version in "
+        "discrete._diagnostic_count"
     )
-    warnings.warn(msg, FutureWarning)
+    warnings.warn(msg, FutureWarning, stacklevel=2)
 
     from statsmodels.discrete._diagnostics_count import (
         _test_poisson_dispersion_generic,
     )
 
     res_test = _test_poisson_dispersion_generic(
-        results, exog_new_test, exog_new_control= exog_new_control,
-        include_score=include_score, use_endog=use_endog,
-        cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
-        )
+        results,
+        exog_new_test,
+        exog_new_control=exog_new_control,
+        include_score=include_score,
+        use_endog=use_endog,
+        cov_type=cov_type,
+        cov_kwds=cov_kwds,
+        use_t=use_t,
+    )
     return res_test
 
 
 class ResultsGeneric:
-
 
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
@@ -254,25 +267,25 @@ class ResultsGeneric:
 class TestResults(ResultsGeneric):
 
     def summary(self):
-        txt = 'Specification Test (LM, score)\n'
+        txt = "Specification Test (LM, score)\n"
         stat = [self.c1, self.c2, self.c3]
         pval = [self.pval1, self.pval2, self.pval3]
-        description = ['nonrobust', 'dispersed', 'HC']
+        description = ["nonrobust", "dispersed", "HC"]
 
         for row in zip(description, stat, pval):
-            txt += '%-12s  statistic = %6.4f  pvalue = %6.5f\n' % row
+            txt += "%-12s  statistic = %6.4f  pvalue = %6.5f\n" % row
 
-        txt += '\nAssumptions:\n'
-        txt += 'nonrobust: variance is correctly specified\n'
-        txt += 'dispersed: variance correctly specified up to scale factor\n'
-        txt += 'HC       : robust to any heteroscedasticity\n'
-        txt += 'test is not robust to correlation across observations'
+        txt += "\nAssumptions:\n"
+        txt += "nonrobust: variance is correctly specified\n"
+        txt += "dispersed: variance correctly specified up to scale factor\n"
+        txt += "HC       : robust to any heteroscedasticity\n"
+        txt += "test is not robust to correlation across observations"
 
         return txt
 
 
 def lm_test_glm(result, exog_extra, mean_deriv=None):
-    '''score/lagrange multiplier test for GLM
+    """score/lagrange multiplier test for GLM
 
     Wooldridge procedure for test of mean function in GLM
 
@@ -314,9 +327,9 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
 
     and other articles and text book by Wooldridge
 
-    '''
+    """
 
-    if hasattr(result, '_result'):
+    if hasattr(result, "_result"):
         res = result._result
     else:
         res = result
@@ -324,12 +337,12 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
     mod = result.model
     nobs = mod.endog.shape[0]
 
-    #mean_func = mod.family.link.inverse
+    # mean_func = mod.family.link.inverse
     dlinkinv = mod.family.link.inverse_deriv
 
     # derivative of mean function w.r.t. beta (linear params)
     def dm(x, linpred):
-        return dlinkinv(linpred)[:,None] * x
+        return dlinkinv(linpred)[:, None] * x
 
     var_func = mod.family.variance
 
@@ -351,43 +364,44 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
     elif mean_deriv is not None:
         dm_excl = mean_deriv
     else:
-        raise ValueError('either exog_extra or mean_deriv have to be provided')
+        raise ValueError("either exog_extra or mean_deriv have to be provided")
 
     # TODO check for rank or redundant, note OLS calculates the rank
     k_constraint = dm_excl.shape[1]
     fittedvalues = res.predict()  # discrete has linpred instead of mean
     v = var_func(fittedvalues)
     std = np.sqrt(v)
-    res_ols1 = OLS(res.resid_response / std, np.column_stack((dm_incl, dm_excl)) / std[:, None]).fit()
+    res_ols1 = OLS(
+        res.resid_response / std, np.column_stack((dm_incl, dm_excl)) / std[:, None]
+    ).fit()
 
     # case: nonrobust assumes variance implied by distribution is correct
     c1 = res_ols1.ess
     pval1 = stats.chi2.sf(c1, k_constraint)
-    #print c1, stats.chi2.sf(c1, 2)
+    # print c1, stats.chi2.sf(c1, 2)
 
     # case: robust to dispersion
     c2 = nobs * res_ols1.rsquared
     pval2 = stats.chi2.sf(c2, k_constraint)
-    #print c2, stats.chi2.sf(c2, 2)
+    # print c2, stats.chi2.sf(c2, 2)
 
     # case: robust to heteroscedasticity
     from statsmodels.stats.multivariate_tools import partial_project
-    pp = partial_project(dm_excl / std[:,None], dm_incl / std[:,None])
+
+    pp = partial_project(dm_excl / std[:, None], dm_incl / std[:, None])
     resid_p = res.resid_response / std
-    res_ols3 = OLS(np.ones(nobs), pp.resid * resid_p[:,None]).fit()
-    #c3 = nobs * res_ols3.rsquared   # this is Wooldridge
+    res_ols3 = OLS(np.ones(nobs), pp.resid * resid_p[:, None]).fit()
+    # c3 = nobs * res_ols3.rsquared   # this is Wooldridge
     c3b = res_ols3.ess  # simpler if endog is ones
     pval3 = stats.chi2.sf(c3b, k_constraint)
 
-    tres = TestResults(c1=c1, pval1=pval1,
-                       c2=c2, pval2=pval2,
-                       c3=c3b, pval3=pval3)
+    tres = TestResults(c1=c1, pval1=pval1, c2=c2, pval2=pval2, c3=c3b, pval3=pval3)
 
     return tres
 
 
 def cm_test_robust(resid, resid_deriv, instruments, weights=1):
-    '''score/lagrange multiplier of Wooldridge
+    """score/lagrange multiplier of Wooldridge
 
     generic version of Wooldridge procedure for test of conditional moments
 
@@ -430,13 +444,12 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
     Wooldridge
     and more Wooldridge
 
-    '''
+    """
     # notation: Wooldridge uses too mamny Greek letters
     # instruments is capital lambda
     # resid is small phi
     # resid_deriv is capital phi
     # weights is C
-
 
     nobs = resid.shape[0]
 
@@ -444,7 +457,7 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
 
     w_sqrt = np.sqrt(weights)
     if np.size(weights) > 1:
-        w_sqrt = w_sqrt[:,None]
+        w_sqrt = w_sqrt[:, None]
     pp = partial_project(instruments * w_sqrt, resid_deriv * w_sqrt)
     mom_resid = pp.resid
 
@@ -467,9 +480,8 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
     return stat, pval, stat2
 
 
-def lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
-              cov_params=None):
-    '''general formula for score/LM test
+def lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=None):
+    """general formula for score/LM test
 
     generalized score or lagrange multiplier test for implicit constraints
 
@@ -505,7 +517,7 @@ def lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
     Notes
     -----
 
-    '''
+    """
     # shorthand alias
     R, Ainv, B, V = constraint_matrix, score_deriv_inv, cov_score, cov_params
 
@@ -523,15 +535,15 @@ def lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
         else:
             inner = R.dot(V).dot(R.T)
 
-        #lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
+        # lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
         # Let's assume inner is invertible, TODO: check if usecase for pinv exists
         lm_stat = wscore.dot(np.linalg.solve(inner, wscore))
 
-    return lm_stat#, lm_stat2
+    return lm_stat  # , lm_stat2
 
 
 def lm_robust_subset(score, k_constraints, score_deriv_inv, cov_score):
-    '''general formula for score/LM test
+    """general formula for score/LM test
 
     generalized score or lagrange multiplier test for constraints on a subset
     of parameters
@@ -571,7 +583,7 @@ def lm_robust_subset(score, k_constraints, score_deriv_inv, cov_score):
     The implementation is based on Boos 1992 section 4.1. The same derivation
     is also in other articles and in text books.
 
-    '''
+    """
 
     # Notation in Boos
     # score `S = sum (s_i)
@@ -579,44 +591,50 @@ def lm_robust_subset(score, k_constraints, score_deriv_inv, cov_score):
     # score_deriv `I` is derivative of score (hessian)
     # `D` is covariance matrix of score, OPG product given independent observations
 
-    #k_params = len(score)
+    # k_params = len(score)
 
     # Note: I reverse order between constraint and unconstrained compared to Boos
 
     # submatrices of score_deriv/hessian
     # these are I22 and I12 in Boos
-    #h_uu = score_deriv[-k_constraints:, -k_constraints:]
+    # h_uu = score_deriv[-k_constraints:, -k_constraints:]
     h_uu = score_deriv_inv[:-k_constraints, :-k_constraints]
     h_cu = score_deriv_inv[-k_constraints:, :-k_constraints]
 
     # TODO: pinv or solve ?
     tmp_proj = h_cu.dot(np.linalg.inv(h_uu))
-    tmp = np.column_stack((-tmp_proj, np.eye(k_constraints))) #, tmp_proj))
+    tmp = np.column_stack((-tmp_proj, np.eye(k_constraints)))  # , tmp_proj))
 
     cov_score_constraints = tmp.dot(cov_score.dot(tmp.T))
 
-    #lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
+    # lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
     # Let's assume inner is invertible, TODO: check if usecase for pinv exists
     lm_stat = score.dot(np.linalg.solve(cov_score_constraints, score))
     pval = stats.chi2.sf(lm_stat, k_constraints)
 
-#     # check second calculation Boos referencing Kent 1982 and Engle 1984
-#     # we can use this when robust_cov_params of full model is available
-#     #h_inv = np.linalg.inv(score_deriv)
-#     hinv = score_deriv_inv
-#     v = h_inv.dot(cov_score.dot(h_inv)) # this is robust cov_params
-#     v_cc = v[:k_constraints, :k_constraints]
-#     h_cc = score_deriv[:k_constraints, :k_constraints]
-#     # brute force calculation:
-#     h_resid_cu = h_cc - h_cu.dot(np.linalg.solve(h_uu, h_cu))
-#     cov_s_c = h_resid_cu.dot(v_cc.dot(h_resid_cu))
-#     diff = np.max(np.abs(cov_s_c - cov_score_constraints))
-    return lm_stat, pval  #, lm_stat2
+    #     # check second calculation Boos referencing Kent 1982 and Engle 1984
+    #     # we can use this when robust_cov_params of full model is available
+    #     #h_inv = np.linalg.inv(score_deriv)
+    #     hinv = score_deriv_inv
+    #     v = h_inv.dot(cov_score.dot(h_inv)) # this is robust cov_params
+    #     v_cc = v[:k_constraints, :k_constraints]
+    #     h_cc = score_deriv[:k_constraints, :k_constraints]
+    #     # brute force calculation:
+    #     h_resid_cu = h_cc - h_cu.dot(np.linalg.solve(h_uu, h_cu))
+    #     cov_s_c = h_resid_cu.dot(v_cc.dot(h_resid_cu))
+    #     diff = np.max(np.abs(cov_s_c - cov_score_constraints))
+    return lm_stat, pval  # , lm_stat2
 
 
-def lm_robust_subset_parts(score, k_constraints,
-                           score_deriv_uu, score_deriv_cu,
-                           cov_score_cc, cov_score_cu, cov_score_uu):
+def lm_robust_subset_parts(
+    score,
+    k_constraints,
+    score_deriv_uu,
+    score_deriv_cu,
+    cov_score_cc,
+    cov_score_cu,
+    cov_score_uu,
+):
     """robust generalized score tests on subset of parameters
 
     This is the same as lm_robust_subset with arguments in parts of
@@ -737,10 +755,15 @@ def lm_robust_reparameterized(score, params_deriv, score_deriv, cov_score):
     return lm_stat, pval
 
 
-def conditional_moment_test_generic(mom_test, mom_test_deriv,
-                                    mom_incl, mom_incl_deriv,
-                                    var_mom_all=None,
-                                    cov_type='OPG', cov_kwds=None):
+def conditional_moment_test_generic(
+    mom_test,
+    mom_test_deriv,
+    mom_incl,
+    mom_incl_deriv,
+    var_mom_all=None,
+    cov_type="OPG",
+    cov_kwds=None,
+):
     """generic conditional moment test
 
     This is mainly intended as internal function in support of diagnostic
@@ -786,7 +809,7 @@ def conditional_moment_test_generic(mom_test, mom_test_deriv,
     Wooldridge ???
     Pagan and Vella 1989
     """
-    if cov_type != 'OPG':
+    if cov_type != "OPG":
         raise NotImplementedError
 
     k_constraints = mom_test.shape[1]
@@ -821,19 +844,27 @@ def conditional_moment_test_generic(mom_test, mom_test_deriv,
     tvalues = mom_test_sum / se
     pvalues = stats.norm.sf(np.abs(tvalues))
 
-    res = ResultsGeneric(var_cm=var_cm,
-                         stat_cmt=statistic,
-                         pval_cmt=pval,
-                         tvalues=tvalues,
-                         pvalues=pvalues)
+    res = ResultsGeneric(
+        var_cm=var_cm,
+        stat_cmt=statistic,
+        pval_cmt=pval,
+        tvalues=tvalues,
+        pvalues=pvalues,
+    )
 
     return res
 
 
-def conditional_moment_test_regression(mom_test, mom_test_deriv=None,
-                                    mom_incl=None, mom_incl_deriv=None,
-                                    var_mom_all=None, demean=False,
-                                    cov_type='OPG', cov_kwds=None):
+def conditional_moment_test_regression(
+    mom_test,
+    mom_test_deriv=None,
+    mom_incl=None,
+    mom_incl_deriv=None,
+    var_mom_all=None,
+    demean=False,
+    cov_type="OPG",
+    cov_kwds=None,
+):
     """generic conditional moment test based artificial regression
 
     this is very experimental, no options implemented yet
@@ -857,7 +888,7 @@ def conditional_moment_test_regression(mom_test, mom_test_deriv=None,
         ex = mom_test
     if demean:
         ex -= ex.mean(0)
-    if cov_type == 'OPG':
+    if cov_type == "OPG":
         res = OLS(endog, ex).fit()
 
         statistic = nobs * res.rsquared
@@ -935,8 +966,7 @@ class CMTNewey:
       Moment Tests, Econometrica
     """
 
-    def __init__(self, moments, cov_moments, moments_deriv,
-                 weights, transf_mt):
+    def __init__(self, moments, cov_moments, moments_deriv, weights, transf_mt):
 
         self.moments = moments
         self.cov_moments = cov_moments
@@ -946,7 +976,7 @@ class CMTNewey:
 
         # derived quantities
         self.moments_constraint = transf_mt.dot(moments)
-        self.htw = moments_deriv.T.dot(weights)   # H'W
+        self.htw = moments_deriv.T.dot(weights)  # H'W
 
         # TODO check these
         self.k_moments = self.moments.shape[-1]  # in this case only 1-D
@@ -957,11 +987,11 @@ class CMTNewey:
     def asy_transf_params(self):
 
         moments_deriv = self.moments_deriv  # H
-        #weights = self.weights  # W
+        # weights = self.weights  # W
 
         htw = self.htw  # moments_deriv.T.dot(weights)   # H'W
         res = np.linalg.solve(htw.dot(moments_deriv), htw)
-        #res = np.linalg.pinv(htw.dot(moments_deriv)).dot(htw)
+        # res = np.linalg.pinv(htw.dot(moments_deriv)).dot(htw)
         return -res
 
     @cache_readonly
@@ -1016,13 +1046,12 @@ class CMTNewey:
 
         # Newey uses a generalized inverse
         stat = diff / bse
-        pval = stats.norm.sf(np.abs(stat))*2
+        pval = stats.norm.sf(np.abs(stat)) * 2
         return stat, pval
 
     @cache_readonly
     def chisquare(self):
-        """statistic, p-value and degrees of freedom of joint moment test
-        """
+        """statistic, p-value and degrees of freedom of joint moment test"""
         diff = self.moments_constraint
         cov = self.cov_mom_constraints
 
@@ -1076,17 +1105,17 @@ class CMTTauchen:
     @cache_readonly
     def cov_params_all(self):
         m_deriv = np.zeros((self.k_moments_all, self.k_moments_all))
-        m_deriv[:self.k_params, :self.k_params] = self.score_deriv
-        m_deriv[self.k_params:, :self.k_params] = self.moments_deriv
-        m_deriv[self.k_params:, self.k_params:] = np.eye(self.k_moments_test)
+        m_deriv[: self.k_params, : self.k_params] = self.score_deriv
+        m_deriv[self.k_params :, : self.k_params] = self.moments_deriv
+        m_deriv[self.k_params :, self.k_params :] = np.eye(self.k_moments_test)
 
         m_deriv_inv = np.linalg.inv(m_deriv)
-        cov = m_deriv_inv.dot(self.cov_moments_all.dot(m_deriv_inv.T)) # K_inv J K_inv
+        cov = m_deriv_inv.dot(self.cov_moments_all.dot(m_deriv_inv.T))  # K_inv J K_inv
         return cov
 
     @cache_readonly
     def cov_mom_constraints(self):
-        return self.cov_params_all[self.k_params:, self.k_params:]
+        return self.cov_params_all[self.k_params :, self.k_params :]
 
     @cache_readonly
     def rank_cov_mom_constraints(self):
@@ -1106,19 +1135,18 @@ class CMTTauchen:
 
         # Newey uses a generalized inverse
         stat = diff / bse
-        pval = stats.norm.sf(np.abs(stat))*2
+        pval = stats.norm.sf(np.abs(stat)) * 2
         return stat, pval
 
     @cache_readonly
     def chisquare(self):
-        """statistic, p-value and degrees of freedom of joint moment test
-        """
-        diff = self.moments #_constraints
+        """statistic, p-value and degrees of freedom of joint moment test"""
+        diff = self.moments  # _constraints
         cov = self.cov_mom_constraints
 
         # Newey uses a generalized inverse, we use it also here
         stat = diff.T.dot(np.linalg.pinv(cov).dot(diff))
-        #df = self.k_moments_test
+        # df = self.k_moments_test
         # We allow for redundant mom_constraints:
         df = self.rank_cov_mom_constraints
         pval = stats.chi2.sf(stat, df)

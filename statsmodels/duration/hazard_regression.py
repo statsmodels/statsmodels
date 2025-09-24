@@ -14,6 +14,7 @@ B Gillespie (2006).  Checking the assumptions in the Cox proportional
 hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
+
 from statsmodels.compat.pandas import Appender
 
 import numpy as np
@@ -22,6 +23,7 @@ from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 _predict_docstring = """
     Returns predicted values from the proportional hazards
@@ -82,11 +84,9 @@ _predict_cov_params_docstring = """
         otherwise optional."""
 
 
-
 class PHSurvivalTime:
 
-    def __init__(self, time, status, exog, strata=None, entry=None,
-                 offset=None):
+    def __init__(self, time, status, exog, strata=None, entry=None, offset=None):
         """
         Represent a collection of survival times with possible
         stratification and left truncation.
@@ -130,13 +130,13 @@ class PHSurvivalTime:
         # Get the row indices for the cases in each stratum
         stu = np.unique(strata)
         sth = {x: [] for x in stu}
-        for i,k in enumerate(strata):
+        for i, k in enumerate(strata):
             sth[k].append(i)
         stratum_rows = [np.asarray(sth[k], dtype=np.int32) for k in stu]
         stratum_names = stu
 
         # Remove strata with no events
-        ix = [i for i,ix in enumerate(stratum_rows) if status[ix].sum() > 0]
+        ix = [i for i, ix in enumerate(stratum_rows) if status[ix].sum() > 0]
         self.nstrat_orig = len(stratum_rows)
         stratum_rows = [stratum_rows[i] for i in ix]
         stratum_names = [stratum_names[i] for i in ix]
@@ -147,25 +147,23 @@ class PHSurvivalTime:
 
         # Remove subjects whose entry time occurs after the last event
         # in their stratum.
-        for stx,ix in enumerate(stratum_rows):
+        for stx, ix in enumerate(stratum_rows):
             last_failure = max(time[ix][status[ix] == 1])
 
             # Stata uses < here, R uses <=
-            ii = [i for i,t in enumerate(entry[ix]) if
-                  t <= last_failure]
+            ii = [i for i, t in enumerate(entry[ix]) if t <= last_failure]
             stratum_rows[stx] = stratum_rows[stx][ii]
 
         # Remove subjects who are censored before the first event in
         # their stratum.
-        for stx,ix in enumerate(stratum_rows):
+        for stx, ix in enumerate(stratum_rows):
             first_failure = min(time[ix][status[ix] == 1])
 
-            ii = [i for i,t in enumerate(time[ix]) if
-                  t >= first_failure]
+            ii = [i for i, t in enumerate(time[ix]) if t >= first_failure]
             stratum_rows[stx] = stratum_rows[stx][ii]
 
         # Order by time within each stratum
-        for stx,ix in enumerate(stratum_rows):
+        for stx, ix in enumerate(stratum_rows):
             ii = np.argsort(time[ix])
             stratum_rows[stx] = stratum_rows[stx][ii]
 
@@ -202,8 +200,7 @@ class PHSurvivalTime:
         # risk_exit[stx][k] is a list of indices for subjects who exit
         # the risk set at the k^th sorted unique failure time in
         # stratum stx
-        self.ufailt_ix, self.risk_enter, self.risk_exit, self.ufailt =\
-            [], [], [], []
+        self.ufailt_ix, self.risk_enter, self.risk_exit, self.ufailt = [], [], [], []
 
         for stx in range(self.nstrat):
 
@@ -216,16 +213,16 @@ class PHSurvivalTime:
             nuft = len(uft)
 
             # Indices of cases that fail at each unique failure time
-            #uft_map = {x:i for i,x in enumerate(uft)} # requires >=2.7
-            uft_map = {x: i for i,x in enumerate(uft)} # 2.6
+            # uft_map = {x:i for i,x in enumerate(uft)} # requires >=2.7
+            uft_map = {x: i for i, x in enumerate(uft)}  # 2.6
             uft_ix = [[] for k in range(nuft)]
-            for ix,ti in zip(ift,ft):
+            for ix, ti in zip(ift, ft):
                 uft_ix[uft_map[ti]].append(ix)
 
             # Indices of cases (failed or censored) that enter the
             # risk set at each unique failure time.
             risk_enter1 = [[] for k in range(nuft)]
-            for i,t in enumerate(self.time_s[stx]):
+            for i, t in enumerate(self.time_s[stx]):
                 ix = np.searchsorted(uft, t, "right") - 1
                 if ix >= 0:
                     risk_enter1[ix].append(i)
@@ -233,17 +230,14 @@ class PHSurvivalTime:
             # Indices of cases (failed or censored) that exit the
             # risk set at each unique failure time.
             risk_exit1 = [[] for k in range(nuft)]
-            for i,t in enumerate(self.entry_s[stx]):
+            for i, t in enumerate(self.entry_s[stx]):
                 ix = np.searchsorted(uft, t)
                 risk_exit1[ix].append(i)
 
             self.ufailt.append(uft)
-            self.ufailt_ix.append([np.asarray(x, dtype=np.int32)
-                                   for x in uft_ix])
-            self.risk_enter.append([np.asarray(x, dtype=np.int32)
-                                    for x in risk_enter1])
-            self.risk_exit.append([np.asarray(x, dtype=np.int32)
-                                   for x in risk_exit1])
+            self.ufailt_ix.append([np.asarray(x, dtype=np.int32) for x in uft_ix])
+            self.risk_enter.append([np.asarray(x, dtype=np.int32) for x in risk_enter1])
+            self.risk_exit.append([np.asarray(x, dtype=np.int32) for x in risk_exit1])
 
     def _split(self, x):
         v = []
@@ -256,12 +250,12 @@ class PHSurvivalTime:
         return v
 
     def _check(self, time, status, strata, entry):
-        n1, n2, n3, n4 = len(time), len(status), len(strata),\
-            len(entry)
+        n1, n2, n3, n4 = len(time), len(status), len(strata), len(entry)
         nv = [n1, n2, n3, n4]
         if max(nv) != min(nv):
-            raise ValueError("endog, status, strata, and " +
-                             "entry must all have the same length")
+            raise ValueError(
+                "endog, status, strata, and " + "entry must all have the same length"
+            )
         if min(time) < 0:
             raise ValueError("endog must be non-negative")
         if min(entry) < 0:
@@ -269,8 +263,9 @@ class PHSurvivalTime:
 
         # In Stata, this is entry >= time, in R it is >.
         if np.any(entry > time):
-            raise ValueError("entry times may not occur " +
-                             "after event or censoring times")
+            raise ValueError(
+                "entry times may not occur " + "after event or censoring times"
+            )
 
 
 class PHReg(model.LikelihoodModel):
@@ -313,18 +308,33 @@ class PHReg(model.LikelihoodModel):
     of `exog` all must have the same length
     """
 
-    def __init__(self, endog, exog, status=None, entry=None,
-                 strata=None, offset=None, ties='breslow',
-                 missing='drop', **kwargs):
+    def __init__(
+        self,
+        endog,
+        exog,
+        status=None,
+        entry=None,
+        strata=None,
+        offset=None,
+        ties="breslow",
+        missing="drop",
+        **kwargs,
+    ):
 
         # Default is no censoring
         if status is None:
             status = np.ones(len(endog))
 
-        super().__init__(endog, exog, status=status,
-                                    entry=entry, strata=strata,
-                                    offset=offset, missing=missing,
-                                    **kwargs)
+        super().__init__(
+            endog,
+            exog,
+            status=status,
+            entry=entry,
+            strata=strata,
+            offset=offset,
+            missing=missing,
+            **kwargs,
+        )
 
         # endog and exog are automatically converted, but these are
         # not
@@ -337,30 +347,39 @@ class PHReg(model.LikelihoodModel):
         if self.offset is not None:
             self.offset = np.asarray(self.offset)
 
-        self.surv = PHSurvivalTime(self.endog, self.status,
-                                    self.exog, self.strata,
-                                    self.entry, self.offset)
+        self.surv = PHSurvivalTime(
+            self.endog, self.status, self.exog, self.strata, self.entry, self.offset
+        )
         self.nobs = len(self.endog)
         self.groups = None
 
         # TODO: not used?
         self.missing = missing
 
-        self.df_resid = float(self.exog.shape[0] -
-                              np.linalg.matrix_rank(self.exog))
+        self.df_resid = float(self.exog.shape[0] - np.linalg.matrix_rank(self.exog))
         self.df_model = float(np.linalg.matrix_rank(self.exog))
 
         ties = ties.lower()
         if ties not in ("efron", "breslow"):
-            raise ValueError("`ties` must be either `efron` or " +
-                             "`breslow`")
+            raise ValueError("`ties` must be either `efron` or " + "`breslow`")
 
         self.ties = ties
 
     @classmethod
-    def from_formula(cls, formula, data, status=None, entry=None,
-                     strata=None, offset=None, subset=None,
-                     ties='breslow', missing='drop', *args, **kwargs):
+    def from_formula(
+        cls,
+        formula,
+        data,
+        status=None,
+        entry=None,
+        strata=None,
+        offset=None,
+        subset=None,
+        ties="breslow",
+        missing="drop",
+        *args,
+        **kwargs,
+    ):
         """
         Create a proportional hazards regression model from a formula
         and dataframe.
@@ -418,18 +437,33 @@ class PHReg(model.LikelihoodModel):
             offset = data[offset]
 
         import re
+
         terms = re.split(r"[+\-~]", formula)
         for term in terms:
             term = term.strip()
             if term in ("0", "1"):
                 import warnings
-                warnings.warn("PHReg formulas should not include any '0' or '1' terms")
+
+                warnings.warn(
+                    "PHReg formulas should not include any '0' or '1' terms",
+                    SpecificationWarning,
+                    stacklevel=2,
+                )
         advance_eval_env(kwargs)
-        mod = super().from_formula(formula, data,
-                    status=status, entry=entry, strata=strata,
-                    offset=offset, subset=subset, ties=ties,
-                    missing=missing, drop_cols=["Intercept"], *args,
-                    **kwargs)
+        mod = super().from_formula(
+            formula,
+            data,
+            status=status,
+            entry=entry,
+            strata=strata,
+            offset=offset,
+            subset=subset,
+            ties=ties,
+            missing=missing,
+            drop_cols=["Intercept"],
+            *args,
+            **kwargs,
+        )
 
         return mod
 
@@ -453,15 +487,17 @@ class PHReg(model.LikelihoodModel):
         # TODO process for missing values
         if groups is not None:
             if len(groups) != len(self.endog):
-                msg = ("len(groups) = %d and len(endog) = %d differ" %
-                       (len(groups), len(self.endog)))
+                msg = "len(groups) = %d and len(endog) = %d differ" % (
+                    len(groups),
+                    len(self.endog),
+                )
                 raise ValueError(msg)
             self.groups = np.asarray(groups)
         else:
             self.groups = None
 
-        if 'disp' not in args:
-            args['disp'] = False
+        if "disp" not in args:
+            args["disp"] = False
 
         fit_rslts = super().fit(**args)
 
@@ -474,8 +510,9 @@ class PHReg(model.LikelihoodModel):
 
         return results
 
-    def fit_regularized(self, method="elastic_net", alpha=0.,
-                        start_params=None, refit=False, **kwargs):
+    def fit_regularized(
+        self, method="elastic_net", alpha=0.0, start_params=None, refit=False, **kwargs
+    ):
         r"""
         Return a regularized fit to a linear regression model.
 
@@ -536,16 +573,17 @@ class PHReg(model.LikelihoodModel):
         if method != "elastic_net":
             raise ValueError("method for fit_regularized must be elastic_net")
 
-        defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
-                    "zero_tol" : 1e-10}
+        defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10, "zero_tol": 1e-10}
         defaults.update(kwargs)
 
-        return fit_elasticnet(self, method=method,
-                              alpha=alpha,
-                              start_params=start_params,
-                              refit=refit,
-                              **defaults)
-
+        return fit_elasticnet(
+            self,
+            method=method,
+            alpha=alpha,
+            start_params=start_params,
+            refit=refit,
+            **defaults,
+        )
 
     def loglike(self, params):
         """
@@ -588,7 +626,7 @@ class PHReg(model.LikelihoodModel):
 
         surv = self.surv
 
-        like = 0.
+        like = 0.0
 
         # Loop over strata
         for stx in range(surv.nstrat):
@@ -603,7 +641,7 @@ class PHReg(model.LikelihoodModel):
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
-            xp0 = 0.
+            xp0 = 0.0
 
             # Iterate backward through the unique failure times.
             for i in range(nuft)[::-1]:
@@ -631,7 +669,7 @@ class PHReg(model.LikelihoodModel):
 
         surv = self.surv
 
-        like = 0.
+        like = 0.0
 
         # Loop over strata
         for stx in range(surv.nstrat):
@@ -644,7 +682,7 @@ class PHReg(model.LikelihoodModel):
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
-            xp0 = 0.
+            xp0 = 0.0
 
             # Iterate backward through the unique failure times.
             uft_ix = surv.ufailt_ix[stx]
@@ -662,7 +700,7 @@ class PHReg(model.LikelihoodModel):
 
                 m = len(ix)
                 J = np.arange(m, dtype=np.float64) / m
-                like -= np.log(xp0 - J*xp0f).sum()
+                like -= np.log(xp0 - J * xp0f).sum()
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -678,7 +716,7 @@ class PHReg(model.LikelihoodModel):
 
         surv = self.surv
 
-        grad = 0.
+        grad = 0.0
 
         # Loop over strata
         for stx in range(surv.nstrat):
@@ -698,7 +736,7 @@ class PHReg(model.LikelihoodModel):
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
-            xp0, xp1 = 0., 0.
+            xp0, xp1 = 0.0, 0.0
 
             # Iterate backward through the unique failure times.
             for i in range(nuft)[::-1]:
@@ -706,20 +744,20 @@ class PHReg(model.LikelihoodModel):
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
                 if len(ix) > 0:
-                    v = exog_s[ix,:]
+                    v = exog_s[ix, :]
                     xp0 += e_linpred[ix].sum()
-                    xp1 += (e_linpred[ix][:,None] * v).sum(0)
+                    xp1 += (e_linpred[ix][:, None] * v).sum(0)
 
                 # Account for all cases that fail at this point.
                 ix = uft_ix[i]
-                grad += (exog_s[ix,:] - xp1 / xp0).sum(0)
+                grad += (exog_s[ix, :] - xp1 / xp0).sum(0)
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
                 if len(ix) > 0:
-                    v = exog_s[ix,:]
+                    v = exog_s[ix, :]
                     xp0 -= e_linpred[ix].sum()
-                    xp1 -= (e_linpred[ix][:,None] * v).sum(0)
+                    xp1 -= (e_linpred[ix][:, None] * v).sum(0)
 
         return grad
 
@@ -731,7 +769,7 @@ class PHReg(model.LikelihoodModel):
 
         surv = self.surv
 
-        grad = 0.
+        grad = 0.0
 
         # Loop over strata
         for stx in range(surv.nstrat):
@@ -747,7 +785,7 @@ class PHReg(model.LikelihoodModel):
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
-            xp0, xp1 = 0., 0.
+            xp0, xp1 = 0.0, 0.0
 
             # Iterate backward through the unique failure times.
             uft_ix = surv.ufailt_ix[stx]
@@ -757,14 +795,14 @@ class PHReg(model.LikelihoodModel):
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
                 if len(ix) > 0:
-                    v = exog_s[ix,:]
+                    v = exog_s[ix, :]
                     xp0 += e_linpred[ix].sum()
-                    xp1 += (e_linpred[ix][:,None] * v).sum(0)
+                    xp1 += (e_linpred[ix][:, None] * v).sum(0)
                 ixf = uft_ix[i]
                 if len(ixf) > 0:
-                    v = exog_s[ixf,:]
+                    v = exog_s[ixf, :]
                     xp0f = e_linpred[ixf].sum()
-                    xp1f = (e_linpred[ixf][:,None] * v).sum(0)
+                    xp1f = (e_linpred[ixf][:, None] * v).sum(0)
 
                     # Consider all cases that fail at this point.
                     grad += v.sum(0)
@@ -780,9 +818,9 @@ class PHReg(model.LikelihoodModel):
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
                 if len(ix) > 0:
-                    v = exog_s[ix,:]
+                    v = exog_s[ix, :]
                     xp0 -= e_linpred[ix].sum()
-                    xp1 -= (e_linpred[ix][:,None] * v).sum(0)
+                    xp1 -= (e_linpred[ix][:, None] * v).sum(0)
 
         return grad
 
@@ -794,7 +832,7 @@ class PHReg(model.LikelihoodModel):
 
         surv = self.surv
 
-        hess = 0.
+        hess = 0.0
 
         # Loop over strata
         for stx in range(surv.nstrat):
@@ -810,7 +848,7 @@ class PHReg(model.LikelihoodModel):
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
-            xp0, xp1, xp2 = 0., 0., 0.
+            xp0, xp1, xp2 = 0.0, 0.0, 0.0
 
             # Iterate backward through the unique failure times.
             for i in range(nuft)[::-1]:
@@ -819,21 +857,21 @@ class PHReg(model.LikelihoodModel):
                 ix = surv.risk_enter[stx][i]
                 if len(ix) > 0:
                     xp0 += e_linpred[ix].sum()
-                    v = exog_s[ix,:]
-                    xp1 += (e_linpred[ix][:,None] * v).sum(0)
+                    v = exog_s[ix, :]
+                    xp1 += (e_linpred[ix][:, None] * v).sum(0)
                     elx = e_linpred[ix]
                     xp2 += np.einsum("ij,ik,i->jk", v, v, elx)
 
                 # Account for all cases that fail at this point.
                 m = len(uft_ix[i])
-                hess += m*(xp2 / xp0  - np.outer(xp1, xp1) / xp0**2)
+                hess += m * (xp2 / xp0 - np.outer(xp1, xp1) / xp0**2)
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_exit[stx][i]
                 if len(ix) > 0:
                     xp0 -= e_linpred[ix].sum()
-                    v = exog_s[ix,:]
-                    xp1 -= (e_linpred[ix][:,None] * v).sum(0)
+                    v = exog_s[ix, :]
+                    xp1 -= (e_linpred[ix][:, None] * v).sum(0)
                     elx = e_linpred[ix]
                     xp2 -= np.einsum("ij,ik,i->jk", v, v, elx)
         return -hess
@@ -847,7 +885,7 @@ class PHReg(model.LikelihoodModel):
 
         surv = self.surv
 
-        hess = 0.
+        hess = 0.0
 
         # Loop over strata
         for stx in range(surv.nstrat):
@@ -860,7 +898,7 @@ class PHReg(model.LikelihoodModel):
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
-            xp0, xp1, xp2 = 0., 0., 0.
+            xp0, xp1, xp2 = 0.0, 0.0, 0.0
 
             # Iterate backward through the unique failure times.
             uft_ix = surv.ufailt_ix[stx]
@@ -871,23 +909,23 @@ class PHReg(model.LikelihoodModel):
                 ix = surv.risk_enter[stx][i]
                 if len(ix) > 0:
                     xp0 += e_linpred[ix].sum()
-                    v = exog_s[ix,:]
-                    xp1 += (e_linpred[ix][:,None] * v).sum(0)
+                    v = exog_s[ix, :]
+                    xp1 += (e_linpred[ix][:, None] * v).sum(0)
                     elx = e_linpred[ix]
                     xp2 += np.einsum("ij,ik,i->jk", v, v, elx)
 
                 ixf = uft_ix[i]
                 if len(ixf) > 0:
-                    v = exog_s[ixf,:]
+                    v = exog_s[ixf, :]
                     xp0f = e_linpred[ixf].sum()
-                    xp1f = (e_linpred[ixf][:,None] * v).sum(0)
+                    xp1f = (e_linpred[ixf][:, None] * v).sum(0)
                     elx = e_linpred[ixf]
                     xp2f = np.einsum("ij,ik,i->jk", v, v, elx)
 
                 # Account for all cases that fail at this point.
                 m = len(uft_ix[i])
                 J = np.arange(m, dtype=np.float64) / m
-                c0 = xp0 - J*xp0f
+                c0 = xp0 - J * xp0f
                 hess += xp2 * np.sum(1 / c0)
                 hess -= xp2f * np.sum(J / c0)
                 mat = (xp1[None, :] - np.outer(J, xp1f)) / c0[:, None]
@@ -897,8 +935,8 @@ class PHReg(model.LikelihoodModel):
                 ix = surv.risk_exit[stx][i]
                 if len(ix) > 0:
                     xp0 -= e_linpred[ix].sum()
-                    v = exog_s[ix,:]
-                    xp1 -= (e_linpred[ix][:,None] * v).sum(0)
+                    v = exog_s[ix, :]
+                    xp1 -= (e_linpred[ix][:, None] * v).sum(0)
                     elx = e_linpred[ix]
                     xp2 -= np.einsum("ij,ik,i->jk", v, v, elx)
 
@@ -928,7 +966,9 @@ class PHReg(model.LikelihoodModel):
         """
 
         if self.groups is None:
-            raise ValueError("`groups` must be specified to calculate the robust covariance matrix")
+            raise ValueError(
+                "`groups` must be specified to calculate the robust covariance matrix"
+            )
 
         hess = self.hessian(params)
 
@@ -936,9 +976,9 @@ class PHReg(model.LikelihoodModel):
 
         # Collapse
         grads = {}
-        for i,g in enumerate(self.groups):
+        for i, g in enumerate(self.groups):
             if g not in grads:
-                grads[g] = 0.
+                grads[g] = 0.0
             grads[g] += score_obs[i, :]
         grads = np.asarray(list(grads.values()))
 
@@ -990,7 +1030,7 @@ class PHReg(model.LikelihoodModel):
             nuft = len(uft_ix)
             strat_ix = surv.stratum_rows[stx]
 
-            xp0 = 0.
+            xp0 = 0.0
 
             linpred = np.dot(exog_s, params)
             if surv.offset_s is not None:
@@ -1023,7 +1063,7 @@ class PHReg(model.LikelihoodModel):
 
                 # Update the score residuals
                 ii = strat_ix[atr_ix]
-                score_resid[ii,:] += leverage * mrp[:, None]
+                score_resid[ii, :] += leverage * mrp[:, None]
                 mask[ii] = 1
 
                 # Update for cases leaving the risk set.
@@ -1063,7 +1103,7 @@ class PHReg(model.LikelihoodModel):
         surv = self.surv
 
         averages = []
-        xp0, xp1 = 0., 0.
+        xp0, xp1 = 0.0, 0.0
 
         # Loop over strata
         for stx in range(surv.nstrat):
@@ -1072,8 +1112,7 @@ class PHReg(model.LikelihoodModel):
             exog_s = surv.exog_s[stx]
             nuft = len(uft_ix)
 
-            average_s = np.zeros((len(uft_ix), exog_s.shape[1]),
-                                  dtype=np.float64)
+            average_s = np.zeros((len(uft_ix), exog_s.shape[1]), dtype=np.float64)
 
             linpred = np.dot(exog_s, params)
             if surv.offset_s is not None:
@@ -1140,7 +1179,7 @@ class PHReg(model.LikelihoodModel):
                 linpred += surv.offset_s[stx]
             e_linpred = np.exp(linpred)
 
-            xp0 = 0.
+            xp0 = 0.0
             h0 = np.zeros(nuft, dtype=np.float64)
 
             # Iterate backward through the unique failure times.
@@ -1181,6 +1220,7 @@ class PHReg(model.LikelihoodModel):
         """
 
         from scipy.interpolate import interp1d
+
         surv = self.surv
         base = self.baseline_cumulative_hazard(params)
 
@@ -1190,16 +1230,29 @@ class PHReg(model.LikelihoodModel):
             cumhaz = base[stx][1]
             time_h = np.r_[-np.inf, time_h, np.inf]
             cumhaz = np.r_[cumhaz[0], cumhaz, cumhaz[-1]]
-            func = interp1d(time_h, cumhaz, kind='zero')
+            func = interp1d(time_h, cumhaz, kind="zero")
             cumhaz_f[self.surv.stratum_names[stx]] = func
 
         return cumhaz_f
 
-    @Appender(_predict_docstring % {
-        'params_doc': _predict_params_doc,
-        'cov_params_doc': _predict_cov_params_docstring})
-    def predict(self, params, exog=None, cov_params=None, endog=None,
-                strata=None, offset=None, pred_type="lhr", pred_only=False):
+    @Appender(
+        _predict_docstring
+        % {
+            "params_doc": _predict_params_doc,
+            "cov_params_doc": _predict_cov_params_docstring,
+        }
+    )
+    def predict(
+        self,
+        params,
+        exog=None,
+        cov_params=None,
+        endog=None,
+        strata=None,
+        offset=None,
+        pred_type="lhr",
+        pred_only=False,
+    ):
 
         # This function breaks mediation, because it does not simply
         # return the predicted values as an array.
@@ -1212,6 +1265,7 @@ class PHReg(model.LikelihoodModel):
         class bunch:
             predicted_values = None
             standard_errors = None
+
         ret_val = bunch()
 
         # Do not do anything with offset here because we want to allow
@@ -1263,7 +1317,9 @@ class PHReg(model.LikelihoodModel):
             if exog_provided and self.surv.nstrat > 1:
                 raise ValueError("`strata` must be provided")
             if self.strata is None:
-                strata = [self.surv.stratum_names[0],] * len(endog)
+                strata = [
+                    self.surv.stratum_names[0],
+                ] * len(endog)
             else:
                 strata = self.strata
 
@@ -1358,8 +1414,8 @@ class PHReg(model.LikelihoodModel):
             if xk[k].shape[1] < mxc:
                 xk1 = np.zeros((xk[k].shape[0], mxc))
                 pk1 = np.zeros((pk[k].shape[0], mxc))
-                xk1[:, 0:xk[k].shape[1]] = xk[k]
-                pk1[:, 0:pk[k].shape[1]] = pk[k]
+                xk1[:, 0 : xk[k].shape[1]] = xk[k]
+                pk1[:, 0 : pk[k].shape[1]] = pk[k]
                 xk[k], pk[k] = xk1, pk1
 
         # Put the support points and probabilities into single matrices
@@ -1376,7 +1432,7 @@ class PHReg(model.LikelihoodModel):
 
 
 class PHRegResults(base.LikelihoodModelResults):
-    '''
+    """
     Class to contain results of fitting a Cox proportional hazards
     survival model.
 
@@ -1402,9 +1458,9 @@ class PHRegResults(base.LikelihoodModelResults):
     See Also
     --------
     statsmodels.LikelihoodModelResults
-    '''
+    """
 
-    def __init__(self, model, params, cov_params, scale=1., covariance_type="naive"):
+    def __init__(self, model, params, cov_params, scale=1.0, covariance_type="naive"):
 
         # There is no scale parameter, but we need it for
         # meta-procedures that work with results.
@@ -1413,8 +1469,7 @@ class PHRegResults(base.LikelihoodModelResults):
         self.df_resid = model.df_resid
         self.df_model = model.df_model
 
-        super().__init__(model, params, scale=1.,
-           normalized_cov_params=cov_params)
+        super().__init__(model, params, scale=1.0, normalized_cov_params=cov_params)
 
     @cache_readonly
     def standard_errors(self):
@@ -1449,16 +1504,25 @@ class PHRegResults(base.LikelihoodModelResults):
 
         return self.model.get_distribution(self.params)
 
-    @Appender(_predict_docstring % {'params_doc': '', 'cov_params_doc': ''})
-    def predict(self, endog=None, exog=None, strata=None,
-                offset=None, transform=True, pred_type="lhr"):
-        return super().predict(exog=exog,
-                                                 transform=transform,
-                                                 cov_params=self.cov_params(),
-                                                 endog=endog,
-                                                 strata=strata,
-                                                 offset=offset,
-                                                 pred_type=pred_type)
+    @Appender(_predict_docstring % {"params_doc": "", "cov_params_doc": ""})
+    def predict(
+        self,
+        endog=None,
+        exog=None,
+        strata=None,
+        offset=None,
+        transform=True,
+        pred_type="lhr",
+    ):
+        return super().predict(
+            exog=exog,
+            transform=transform,
+            cov_params=self.cov_params(),
+            endog=endog,
+            strata=strata,
+            offset=offset,
+            pred_type=pred_type,
+        )
 
     def _group_stats(self, groups):
         """
@@ -1514,7 +1578,7 @@ class PHRegResults(base.LikelihoodModelResults):
 
         # Initialize at NaN since rows that belong to strata with no
         # events have undefined residuals.
-        sch_resid = np.nan*np.ones(self.model.exog.shape, dtype=np.float64)
+        sch_resid = np.nan * np.ones(self.model.exog.shape, dtype=np.float64)
 
         # Loop over strata
         for stx in range(surv.nstrat):
@@ -1548,7 +1612,7 @@ class PHRegResults(base.LikelihoodModelResults):
 
         # Initialize at NaN since rows that belong to strata with no
         # events have undefined residuals.
-        mart_resid = np.nan*np.ones(len(self.model.endog), dtype=np.float64)
+        mart_resid = np.nan * np.ones(len(self.model.endog), dtype=np.float64)
 
         cumhaz_f_list = self.baseline_cumulative_hazard_function
 
@@ -1571,7 +1635,7 @@ class PHRegResults(base.LikelihoodModelResults):
 
         return mart_resid
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05):
         """
         Summarize the proportional hazards regression results.
 
@@ -1601,6 +1665,7 @@ class PHRegResults(base.LikelihoodModelResults):
         """
 
         from statsmodels.iolib import summary2
+
         smry = summary2.Summary()
         float_format = "%8.3f"
 
@@ -1627,11 +1692,10 @@ class PHRegResults(base.LikelihoodModelResults):
             info["Max stratum size:"] = "%.0f" % mx
             info["Avg stratum size:"] = "%.1f" % avg
 
-        smry.add_dict(info, align='l', float_format=float_format)
+        smry.add_dict(info, align="l", float_format=float_format)
 
         param = summary2.summary_params(self, alpha=alpha)
-        param = param.rename(columns={"Coef.": "log HR",
-                                      "Std.Err.": "log HR SE"})
+        param = param.rename(columns={"Coef.": "log HR", "Std.Err.": "log HR SE"})
         param.insert(2, "HR", np.exp(param["log HR"]))
         a = "[%.3f" % (alpha / 2)
         param.loc[:, a] = np.exp(param.loc[:, a])
@@ -1718,7 +1782,7 @@ class rv_discrete_float:
 
         ix = (self.cpk < u[:, None]).sum(1)
         ii = np.arange(n, dtype=np.int32)
-        return self.xk[(ii,ix)]
+        return self.xk[(ii, ix)]
 
     def mean(self):
         """
@@ -1745,7 +1809,7 @@ class rv_discrete_float:
         mn = self.mean()
         xkc = self.xk - mn[:, None]
 
-        return (self.pk * (self.xk - xkc)**2).sum(1)
+        return (self.pk * (self.xk - xkc) ** 2).sum(1)
 
     def std(self):
         """

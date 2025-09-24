@@ -293,7 +293,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
             assert_equal(idx, i)
             assert_equal(idx, idx2)
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             self.res.get_eq_index("foo")
 
     @pytest.mark.smoke
@@ -349,7 +349,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
             # Smoke test
             self.model.fit(maxlags=10, ic=ic, verbose=True)
 
-        with pytest.raises(Exception):
+        with pytest.raises(TypeError):
             self.model.fit(ic="foo")
 
     def test_nobs(self):
@@ -388,7 +388,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         _ = self.res.test_causality(self.names[0], self.names[1])
         _ = self.res.test_causality(0, 1)
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             self.res.test_causality(0, 1, kind="foo")
 
     def test_causality_no_lags(self):

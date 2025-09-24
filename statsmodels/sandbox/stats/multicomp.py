@@ -70,8 +70,8 @@ import math
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
-from scipy import interpolate, stats
 import pandas as pd
+from scipy import interpolate, stats
 
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
@@ -679,7 +679,6 @@ class TukeyHSDResults:
         nobs_group = self._multicomp.groupstats.groupnobs
         self.df_total_hsd = np.sum(nobs_group - 1)
 
-
     def __str__(self):
         return str(self._results_table)
 
@@ -704,15 +703,17 @@ class TukeyHSDResults:
         statsmodels. Do not use numeric indices for the DataFrame in order
         to be robust to the addition of columns.
         """
-        frame = pd.DataFrame({
-            "group_t": self.group_t,
-            "group_c": self.group_c,
-            "meandiff": self.meandiffs,
-            "p-adj": self.pvalues,
-            "lower": self.confint[:, 0],
-            "upper": self.confint[:, 1],
-            "reject": self.reject,
-            })
+        frame = pd.DataFrame(
+            {
+                "group_t": self.group_t,
+                "group_c": self.group_c,
+                "meandiff": self.meandiffs,
+                "p-adj": self.pvalues,
+                "lower": self.confint[:, 0],
+                "upper": self.confint[:, 1],
+                "reject": self.reject,
+            }
+        )
         return frame
 
     def _get_q_crit(self, hsd=True, alpha=None):
@@ -965,6 +966,7 @@ class MultiComparison:
                     "group_order does not contain all groups:"
                     + " dropping observations",
                     ValueWarning,
+                    stacklevel=2,
                 )
 
                 mask_keep = self.groupintlab != -999
@@ -1119,7 +1121,7 @@ class MultiComparison:
             resarr,
         )
 
-    def tukeyhsd(self, alpha=0.05, use_var='equal'):
+    def tukeyhsd(self, alpha=0.05, use_var="equal"):
         """
         Tukey's range test to compare means of all pairs of groups
 
@@ -1153,9 +1155,9 @@ class MultiComparison:
 
         gmeans = self.groupstats.groupmean
         gnobs = self.groupstats.groupnobs
-        if use_var == 'unequal':
+        if use_var == "unequal":
             var_ = self.groupstats.groupvarwithin()
-        elif use_var == 'equal':
+        elif use_var == "equal":
             var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
         else:
             raise ValueError('use_var should be "unequal" or "equal"')
@@ -1204,7 +1206,7 @@ class MultiComparison:
             alpha=alpha,
             group_t=self.groupsunique[res[0][1]],
             group_c=self.groupsunique[res[0][0]],
-            )
+        )
 
 
 def rankdata(x):
@@ -1473,7 +1475,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all, srange=True)
     elif np.size(var_all) > 1:
         var_pairs, df_pairs_ = varcorrection_pairs_unequal(var_all, nobs_all, df)
-        var_pairs /= 2.
+        var_pairs /= 2.0
         # check division by two for studentized range
 
     else:
@@ -1613,7 +1615,7 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all, srange=True)
     elif np.size(var_all) > 1:
         var_pairs, df_sum = varcorrection_pairs_unequal(var_all, nobs_all, df)
-        var_pairs /= 2.
+        var_pairs /= 2.0
         # check division by two for studentized range
     else:
         raise ValueError("not supposed to be here")
@@ -1690,8 +1692,7 @@ def contrast_diff_mean(nm):
 
 
 def tukey_pvalues(std_range, nm, df):
-    """compute tukey p-values by numerical integration of multivariate-t distribution
-    """
+    """compute tukey p-values by numerical integration of multivariate-t distribution"""
     # corrected but very slow with warnings about integration
     # need to increase maxiter or similar
     # nm = len(std_range)

@@ -116,6 +116,7 @@ dev = [
     "pywinpty; os_name == 'nt'",
     # code quality
     "flake8",
+    "flake8-bugbear",
     "isort",
     "ruff",
 ]

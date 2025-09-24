@@ -1,19 +1,19 @@
-'''
+"""
 Test for ratio of Poisson intensities in two independent samples
 
 Author: Josef Perktold
 License: BSD-3
 
-'''
+"""
 
-import numpy as np
 import warnings
 
-from scipy import stats, optimize
+import numpy as np
+from scipy import optimize, stats
 
+from statsmodels.stats._inference_tools import _mover_confint
 from statsmodels.stats.base import HolderTuple
 from statsmodels.stats.weightstats import _zstat_generic2
-from statsmodels.stats._inference_tools import _mover_confint
 
 # shorthand
 norm = stats.norm
@@ -29,7 +29,7 @@ method_names_poisson_1samp = {
         "sqrt-a",
         "sqrt-v",
         "sqrt",
-        ],
+    ],
     "confint": [
         "wald",
         "score",
@@ -42,12 +42,13 @@ method_names_poisson_1samp = {
         "sqrt",
         "sqrt-cent",
         "sqrt-centcc",
-        ]
-    }
+    ],
+}
 
 
-def test_poisson(count, nobs, value, method=None, alternative="two-sided",
-                 dispersion=1):
+def test_poisson(
+    count, nobs, value, method=None, alternative="two-sided", dispersion=1
+):
     """Test for one sample poisson mean or rate
 
     Parameters
@@ -164,14 +165,17 @@ def test_poisson(count, nobs, value, method=None, alternative="two-sided",
         # vandenbroucke, based on Swift 2009 (with transformation to rate)
         std = 0.5
         crit = stats.norm.isf(0.025)
-        statistic = (np.sqrt(count + (crit**2 + 2) / 12) -
-                     # np.sqrt(n * value + (crit**2 + 2) / 12)) / std
-                     np.sqrt(n * value)) / std
+        statistic = (
+            np.sqrt(count + (crit**2 + 2) / 12)
+            -
+            # np.sqrt(n * value + (crit**2 + 2) / 12)) / std
+            np.sqrt(n * value)
+        ) / std
 
     else:
         raise ValueError("unknown method %s" % method)
 
-    if dist == 'normal':
+    if dist == "normal":
         statistic, pvalue = _zstat_generic2(statistic, 1, alternative)
 
     res = HolderTuple(
@@ -181,13 +185,12 @@ def test_poisson(count, nobs, value, method=None, alternative="two-sided",
         method=method,
         alternative=alternative,
         rate=rate,
-        nobs=n
-        )
+        nobs=n,
+    )
     return res
 
 
-def confint_poisson(count, exposure, method=None, alpha=0.05,
-                    alternative="two-sided"):
+def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-sided"):
     """Confidence interval for a Poisson mean or rate
 
     The function is vectorized for all methods except "midp-c", which uses
@@ -277,11 +280,10 @@ def confint_poisson(count, exposure, method=None, alpha=0.05,
     n = exposure  # short hand
     rate = count / exposure
 
-    if alternative == 'two-sided':
+    if alternative == "two-sided":
         alpha = alpha / 2
-    elif alternative not in ['larger', 'smaller']:
-        raise NotImplementedError(
-            f"alternative {alternative} is not available")
+    elif alternative not in ["larger", "smaller"]:
+        raise NotImplementedError(f"alternative {alternative} is not available")
 
     if method is None:
         msg = "method needs to be specified, currently no default method"
@@ -305,8 +307,9 @@ def confint_poisson(count, exposure, method=None, alpha=0.05,
 
     elif method == "midp-c":
         # note local alpha above is for one tail
-        ci = _invert_test_confint(count, n, alpha=2 * alpha, method="midp-c",
-                                  method_start="exact-c")
+        ci = _invert_test_confint(
+            count, n, alpha=2 * alpha, method="midp-c", method_start="exact-c"
+        )
 
     elif method == "sqrt":
         # drop, wrong n
@@ -329,8 +332,10 @@ def confint_poisson(count, exposure, method=None, alpha=0.05,
         center_upp = np.sqrt(count + 3 / 8 + 0.5)
         whalf = crit / 2
         # above is for ci of count
-        ci = (((np.maximum(center_low - whalf, 0))**2 - 3 / 8) / n,
-              ((center_upp + whalf)**2 - 3 / 8) / n)
+        ci = (
+            ((np.maximum(center_low - whalf, 0)) ** 2 - 3 / 8) / n,
+            ((center_upp + whalf) ** 2 - 3 / 8) / n,
+        )
 
         # crit = stats.norm.isf(alpha)
         # center = count
@@ -343,8 +348,10 @@ def confint_poisson(count, exposure, method=None, alpha=0.05,
         center = np.sqrt(count + 3 / 8)
         whalf = crit / 2
         # above is for ci of count
-        ci = (((np.maximum(center - whalf, 0))**2 - 3 / 8) / n,
-              ((center + whalf)**2 - 3 / 8) / n)
+        ci = (
+            ((np.maximum(center - whalf, 0)) ** 2 - 3 / 8) / n,
+            ((center + whalf) ** 2 - 3 / 8) / n,
+        )
 
     elif method == "sqrt-v":
         # vandenbroucke, based on Swift 2009 (with transformation to rate)
@@ -352,12 +359,12 @@ def confint_poisson(count, exposure, method=None, alpha=0.05,
         center = np.sqrt(count + (crit**2 + 2) / 12)
         whalf = crit / 2
         # above is for ci of count
-        ci = (np.maximum(center - whalf, 0))**2 / n, (center + whalf)**2 / n
+        ci = (np.maximum(center - whalf, 0)) ** 2 / n, (center + whalf) ** 2 / n
 
     elif method in ["gamma", "exact-c"]:
         # garwood exact, gamma
         low = stats.gamma.ppf(alpha, count) / exposure
-        upp = stats.gamma.isf(alpha, count+1) / exposure
+        upp = stats.gamma.isf(alpha, count + 1) / exposure
         if np.isnan(low).any():
             # case with count = 0
             if np.size(low) == 1:
@@ -370,8 +377,10 @@ def confint_poisson(count, exposure, method=None, alpha=0.05,
     elif method.startswith("jeff"):
         # jeffreys, gamma
         countc = count + 0.5
-        ci = (stats.gamma.ppf(alpha, countc) / exposure,
-              stats.gamma.isf(alpha, countc) / exposure)
+        ci = (
+            stats.gamma.ppf(alpha, countc) / exposure,
+            stats.gamma.isf(alpha, countc) / exposure,
+        )
 
     else:
         raise ValueError("unknown method %s" % method)
@@ -385,9 +394,15 @@ def confint_poisson(count, exposure, method=None, alpha=0.05,
     return ci
 
 
-def tolerance_int_poisson(count, exposure, prob=0.95, exposure_new=1.,
-                          method=None, alpha=0.05,
-                          alternative="two-sided"):
+def tolerance_int_poisson(
+    count,
+    exposure,
+    prob=0.95,
+    exposure_new=1.0,
+    method=None,
+    alpha=0.05,
+    alternative="two-sided",
+):
     """tolerance interval for a poisson observation
 
     Parameters
@@ -466,9 +481,15 @@ def tolerance_int_poisson(count, exposure, prob=0.95, exposure_new=1.,
     return low_pred, upp_pred
 
 
-def confint_quantile_poisson(count, exposure, prob, exposure_new=1.,
-                             method=None, alpha=0.05,
-                             alternative="two-sided"):
+def confint_quantile_poisson(
+    count,
+    exposure,
+    prob,
+    exposure_new=1.0,
+    method=None,
+    alpha=0.05,
+    alternative="two-sided",
+):
     """confidence interval for quantile of poisson random variable
 
     Parameters
@@ -535,14 +556,13 @@ def confint_quantile_poisson(count, exposure, prob, exposure_new=1.,
     return low_pred, upp_pred
 
 
-def _invert_test_confint(count, nobs, alpha=0.05, method="midp-c",
-                         method_start="exact-c"):
-    """invert hypothesis test to get confidence interval
-    """
+def _invert_test_confint(
+    count, nobs, alpha=0.05, method="midp-c", method_start="exact-c"
+):
+    """invert hypothesis test to get confidence interval"""
 
     def func(r):
-        v = (test_poisson(count, nobs, value=r, method=method)[1] -
-             alpha)**2
+        v = (test_poisson(count, nobs, value=r, method=method)[1] - alpha) ** 2
         return v
 
     ci = confint_poisson(count, nobs, method=method_start)
@@ -553,24 +573,35 @@ def _invert_test_confint(count, nobs, alpha=0.05, method="midp-c",
 
 
 def _invert_test_confint_2indep(
-        count1, exposure1, count2, exposure2,
-        alpha=0.05,
-        method="score",
-        compare="diff",
-        method_start="wald"
-        ):
-    """invert hypothesis test to get confidence interval for 2indep
-    """
+    count1,
+    exposure1,
+    count2,
+    exposure2,
+    alpha=0.05,
+    method="score",
+    compare="diff",
+    method_start="wald",
+):
+    """invert hypothesis test to get confidence interval for 2indep"""
 
     def func(r):
-        v = (test_poisson_2indep(
-             count1, exposure1, count2, exposure2,
-             value=r, method=method, compare=compare
-             )[1] - alpha)**2
+        v = (
+            test_poisson_2indep(
+                count1,
+                exposure1,
+                count2,
+                exposure2,
+                value=r,
+                method=method,
+                compare=compare,
+            )[1]
+            - alpha
+        ) ** 2
         return v
 
-    ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
-                                method=method_start, compare=compare)
+    ci = confint_poisson_2indep(
+        count1, exposure1, count2, exposure2, method=method_start, compare=compare
+    )
     low = optimize.fmin(func, ci[0], xtol=1e-8, disp=False)
     upp = optimize.fmin(func, ci[1], xtol=1e-8, disp=False)
     assert np.size(low) == 1
@@ -588,16 +619,10 @@ method_names_poisson_2indep = {
             "cond-midp",
             "sqrt",
             "etest-score",
-            "etest-wald"
-            ],
-        "diff": [
-            "wald",
-            "score",
-            "waldccv",
-            "etest-score",
-            "etest-wald"
-            ]
-        },
+            "etest-wald",
+        ],
+        "diff": ["wald", "score", "waldccv", "etest-score", "etest-wald"],
+    },
     "confint": {
         "ratio": [
             "waldcc",
@@ -606,22 +631,25 @@ method_names_poisson_2indep = {
             "wald-log",
             "sqrtcc",
             "mover",
-            ],
-        "diff": [
-            "wald",
-            "score",
-            "waldccv",
-            "mover"
-            ]
-        }
-    }
+        ],
+        "diff": ["wald", "score", "waldccv", "mover"],
+    },
+}
 
 
-def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
-                        ratio_null=None,
-                        method=None, compare='ratio',
-                        alternative='two-sided', etest_kwds=None):
-    '''Test for comparing two sample Poisson intensity rates.
+def test_poisson_2indep(
+    count1,
+    exposure1,
+    count2,
+    exposure2,
+    value=None,
+    ratio_null=None,
+    method=None,
+    compare="ratio",
+    alternative="two-sided",
+    etest_kwds=None,
+):
+    """Test for comparing two sample Poisson intensity rates.
 
     Rates are defined as expected count divided by exposure.
 
@@ -761,7 +789,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
        Computational Statistics & Data Analysis 51 (6): 3085–99.
        https://doi.org/10.1016/j.csda.2006.02.004.
 
-    '''
+    """
 
     # shortcut names
     y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
@@ -769,14 +797,17 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
 
-    if compare == 'ratio':
+    if compare == "ratio":
         if method is None:
             # default method
-            method = 'score'
+            method = "score"
 
         if ratio_null is not None:
-            warnings.warn("'ratio_null' is deprecated, use 'value' keyword",
-                          FutureWarning)
+            warnings.warn(
+                "'ratio_null' is deprecated, use 'value' keyword",
+                FutureWarning,
+                stacklevel=2,
+            )
             value = ratio_null
         if ratio_null is None and value is None:
             # default value
@@ -786,66 +817,75 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
             ratio_null = value
 
         r = value
-        r_d = r / d   # r1 * n1 / (r2 * n2)
+        r_d = r / d  # r1 * n1 / (r2 * n2)
 
-        if method in ['score']:
+        if method in ["score"]:
             stat = (y1 - y2 * r_d) / np.sqrt((y1 + y2) * r_d)
-            dist = 'normal'
-        elif method in ['wald']:
+            dist = "normal"
+        elif method in ["wald"]:
             stat = (y1 - y2 * r_d) / np.sqrt(y1 + y2 * r_d**2)
-            dist = 'normal'
-        elif method in ['score-log']:
-            stat = (np.log(y1 / y2) - np.log(r_d))
+            dist = "normal"
+        elif method in ["score-log"]:
+            stat = np.log(y1 / y2) - np.log(r_d)
             stat /= np.sqrt((2 + 1 / r_d + r_d) / (y1 + y2))
-            dist = 'normal'
-        elif method in ['wald-log']:
+            dist = "normal"
+        elif method in ["wald-log"]:
             stat = (np.log(y1 / y2) - np.log(r_d)) / np.sqrt(1 / y1 + 1 / y2)
-            dist = 'normal'
-        elif method in ['sqrt']:
-            stat = 2 * (np.sqrt(y1 + 3 / 8.) - np.sqrt((y2 + 3 / 8.) * r_d))
+            dist = "normal"
+        elif method in ["sqrt"]:
+            stat = 2 * (np.sqrt(y1 + 3 / 8.0) - np.sqrt((y2 + 3 / 8.0) * r_d))
             stat /= np.sqrt(1 + r_d)
-            dist = 'normal'
-        elif method in ['exact-cond', 'cond-midp']:
+            dist = "normal"
+        elif method in ["exact-cond", "cond-midp"]:
             from statsmodels.stats import proportion
+
             bp = r_d / (1 + r_d)
             y_total = y1 + y2
             stat = np.nan
             # TODO: why y2 in here and not y1, check definition of H1 "larger"
-            pvalue = proportion.binom_test(y1, y_total, prop=bp,
-                                           alternative=alternative)
-            if method in ['cond-midp']:
+            pvalue = proportion.binom_test(
+                y1, y_total, prop=bp, alternative=alternative
+            )
+            if method in ["cond-midp"]:
                 # not inplace in case we still want binom pvalue
                 pvalue = pvalue - 0.5 * stats.binom.pmf(y1, y_total, bp)
 
-            dist = 'binomial'
-        elif method.startswith('etest'):
-            if method.endswith('wald'):
-                method_etest = 'wald'
+            dist = "binomial"
+        elif method.startswith("etest"):
+            if method.endswith("wald"):
+                method_etest = "wald"
             else:
-                method_etest = 'score'
+                method_etest = "score"
             if etest_kwds is None:
                 etest_kwds = {}
 
             stat, pvalue = etest_poisson_2indep(
-                count1, exposure1, count2, exposure2, value=value,
-                method=method_etest, alternative=alternative, **etest_kwds)
+                count1,
+                exposure1,
+                count2,
+                exposure2,
+                value=value,
+                method=method_etest,
+                alternative=alternative,
+                **etest_kwds,
+            )
 
-            dist = 'poisson'
+            dist = "poisson"
         else:
             raise ValueError(f'method "{method}" not recognized')
 
     elif compare == "diff":
         if value is None:
             value = 0
-        if method in ['wald']:
+        if method in ["wald"]:
             stat = (rate1 - rate2 - value) / np.sqrt(rate1 / n1 + rate2 / n2)
-            dist = 'normal'
+            dist = "normal"
             "waldccv"
-        elif method in ['waldccv']:
-            stat = (rate1 - rate2 - value)
+        elif method in ["waldccv"]:
+            stat = rate1 - rate2 - value
             stat /= np.sqrt((count1 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
-            dist = 'normal'
-        elif method in ['score']:
+            dist = "normal"
+        elif method in ["score"]:
             # estimate rates with constraint MLE
             count_pooled = y1 + y2
             rate_pooled = count_pooled / (n1 + n2)
@@ -853,15 +893,14 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
             r2_cmle = 0.5 * (dt + np.sqrt(dt**2 + 4 * value * y2 / (n1 + n2)))
             r1_cmle = r2_cmle + value
 
-            stat = ((rate1 - rate2 - value) /
-                    np.sqrt(r1_cmle / n1 + r2_cmle / n2))
+            stat = (rate1 - rate2 - value) / np.sqrt(r1_cmle / n1 + r2_cmle / n2)
             rates_cmle = (r1_cmle, r2_cmle)
-            dist = 'normal'
-        elif method.startswith('etest'):
-            if method.endswith('wald'):
-                method_etest = 'wald'
+            dist = "normal"
+        elif method.startswith("etest"):
+            if method.endswith("wald"):
+                method_etest = "wald"
             else:
-                method_etest = 'score'
+                method_etest = "score"
                 if method == "etest":
                     method = method + "-score"
 
@@ -869,42 +908,48 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
                 etest_kwds = {}
 
             stat, pvalue = etest_poisson_2indep(
-                count1, exposure1, count2, exposure2, value=value,
-                method=method_etest, compare="diff",
-                alternative=alternative, **etest_kwds)
+                count1,
+                exposure1,
+                count2,
+                exposure2,
+                value=value,
+                method=method_etest,
+                compare="diff",
+                alternative=alternative,
+                **etest_kwds,
+            )
 
-            dist = 'poisson'
+            dist = "poisson"
         else:
             raise ValueError(f'method "{method}" not recognized')
     else:
         raise NotImplementedError('"compare" needs to be ratio or diff')
 
-    if dist == 'normal':
+    if dist == "normal":
         stat, pvalue = _zstat_generic2(stat, 1, alternative)
 
     rates = (rate1, rate2)
     ratio = rate1 / rate2
     diff = rate1 - rate2
-    res = HolderTuple(statistic=stat,
-                      pvalue=pvalue,
-                      distribution=dist,
-                      compare=compare,
-                      method=method,
-                      alternative=alternative,
-                      rates=rates,
-                      ratio=ratio,
-                      diff=diff,
-                      value=value,
-                      rates_cmle=rates_cmle,
-                      ratio_null=ratio_null,
-                      )
+    res = HolderTuple(
+        statistic=stat,
+        pvalue=pvalue,
+        distribution=dist,
+        compare=compare,
+        method=method,
+        alternative=alternative,
+        rates=rates,
+        ratio=ratio,
+        diff=diff,
+        value=value,
+        rates_cmle=rates_cmle,
+        ratio_null=ratio_null,
+    )
     return res
 
 
 def _score_diff(y1, n1, y2, n2, value=0, return_cmle=False):
-    """score test and cmle for difference of 2 independent poisson rates
-
-    """
+    """score test and cmle for difference of 2 independent poisson rates"""
     count_pooled = y1 + y2
     rate1, rate2 = y1 / n1, y2 / n2
     rate_pooled = count_pooled / (n1 + n2)
@@ -921,10 +966,19 @@ def _score_diff(y1, n1, y2, n2, value=0, return_cmle=False):
         return stat
 
 
-def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
-                         value=None, method='score', compare="ratio",
-                         alternative='two-sided', ygrid=None,
-                         y_grid=None):
+def etest_poisson_2indep(
+    count1,
+    exposure1,
+    count2,
+    exposure2,
+    ratio_null=None,
+    value=None,
+    method="score",
+    compare="ratio",
+    alternative="two-sided",
+    ygrid=None,
+    y_grid=None,
+):
     """
     E-test for ratio of two sample Poisson rates.
 
@@ -1019,8 +1073,11 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
             # default value
             value = 1
         elif ratio_null is not None:
-            warnings.warn("'ratio_null' is deprecated, use 'value' keyword",
-                          FutureWarning)
+            warnings.warn(
+                "'ratio_null' is deprecated, use 'value' keyword",
+                FutureWarning,
+                stacklevel=2,
+            )
             value = ratio_null
 
         r = value  # rate1 / rate2
@@ -1028,23 +1085,27 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
         rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
         rate1_cmle = rate2_cmle * r
 
-        if method in ['score']:
+        if method in ["score"]:
+
             def stat_func(x1, x2):
                 return (x1 - x2 * r_d) / np.sqrt((x1 + x2) * r_d + eps)
+
             # TODO: do I need these? return_results ?
             # rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
             # rate1_cmle = rate2_cmle * r
             # rate1 = rate1_cmle
             # rate2 = rate2_cmle
-        elif method in ['wald']:
+        elif method in ["wald"]:
+
             def stat_func(x1, x2):
                 return (x1 - x2 * r_d) / np.sqrt(x1 + x2 * r_d**2 + eps)
+
             # rate2_mle = y2 / n2
             # rate1_mle = y1 / n1
             # rate1 = rate1_mle
             # rate2 = rate2_mle
         else:
-            raise ValueError('method not recognized')
+            raise ValueError("method not recognized")
 
     elif compare == "diff":
         if value is None:
@@ -1052,21 +1113,21 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
         tmp = _score_diff(y1, n1, y2, n2, value=value, return_cmle=True)
         _, rate1_cmle, rate2_cmle = tmp
 
-        if method in ['score']:
+        if method in ["score"]:
 
             def stat_func(x1, x2):
                 return _score_diff(x1, n1, x2, n2, value=value)
 
-        elif method in ['wald']:
+        elif method in ["wald"]:
 
             def stat_func(x1, x2):
                 rate1, rate2 = x1 / n1, x2 / n2
-                stat = (rate1 - rate2 - value)
+                stat = rate1 - rate2 - value
                 stat /= np.sqrt(rate1 / n1 + rate2 / n2 + eps)
                 return stat
 
         else:
-            raise ValueError('method not recognized')
+            raise ValueError("method not recognized")
 
     # The sampling distribution needs to be based on the null hypotheis
     # use constrained MLE from 'score' calculation
@@ -1078,7 +1139,7 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
     stat_sample = stat_func(y1, y2)
 
     if ygrid is not None:
-        warnings.warn("ygrid is deprecated, use y_grid", FutureWarning)
+        warnings.warn("ygrid is deprecated, use y_grid", FutureWarning, stacklevel=2)
     y_grid = y_grid if y_grid is not None else ygrid
 
     # The following uses a fixed truncation for evaluating the probabilities
@@ -1088,7 +1149,7 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
     # Some numerical optimization or checks for large means need to be added.
     if y_grid is None:
         threshold = stats.poisson.isf(1e-13, max(mean1, mean2))
-        threshold = max(threshold, 100)   # keep at least 100
+        threshold = max(threshold, 100)  # keep at least 100
         y_grid = np.arange(threshold + 1)
     else:
         y_grid = np.asarray(y_grid)
@@ -1098,24 +1159,25 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
     pdf2 = stats.poisson.pmf(y_grid, mean2)
 
     stat_space = stat_func(y_grid[:, None], y_grid[None, :])  # broadcasting
-    eps = 1e-15   # correction for strict inequality check
+    eps = 1e-15  # correction for strict inequality check
 
-    if alternative in ['two-sided', '2-sided', '2s']:
+    if alternative in ["two-sided", "2-sided", "2s"]:
         mask = np.abs(stat_space) >= (np.abs(stat_sample) - eps)
-    elif alternative in ['larger', 'l']:
+    elif alternative in ["larger", "l"]:
         mask = stat_space >= (stat_sample - eps)
-    elif alternative in ['smaller', 's']:
+    elif alternative in ["smaller", "s"]:
         mask = stat_space <= (stat_sample + eps)
     else:
-        raise ValueError('invalid alternative')
+        raise ValueError("invalid alternative")
 
     pvalue = ((pdf1[:, None] * pdf2[None, :])[mask]).sum()
     return stat_sample, pvalue
 
 
-def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
-                        method='score', compare='ratio'):
-    '''Equivalence test based on two one-sided `test_proportions_2indep`
+def tost_poisson_2indep(
+    count1, exposure1, count2, exposure2, low, upp, method="score", compare="ratio"
+):
+    """Equivalence test based on two one-sided `test_proportions_2indep`
 
     This assumes that we have two independent poisson samples.
 
@@ -1184,37 +1246,51 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
     --------
     test_poisson_2indep
     confint_poisson_2indep
-    '''
+    """
 
-    tt1 = test_poisson_2indep(count1, exposure1, count2, exposure2,
-                              value=low, method=method,
-                              compare=compare,
-                              alternative='larger')
-    tt2 = test_poisson_2indep(count1, exposure1, count2, exposure2,
-                              value=upp, method=method,
-                              compare=compare,
-                              alternative='smaller')
+    tt1 = test_poisson_2indep(
+        count1,
+        exposure1,
+        count2,
+        exposure2,
+        value=low,
+        method=method,
+        compare=compare,
+        alternative="larger",
+    )
+    tt2 = test_poisson_2indep(
+        count1,
+        exposure1,
+        count2,
+        exposure2,
+        value=upp,
+        method=method,
+        compare=compare,
+        alternative="smaller",
+    )
 
     # idx_max = 1 if t1.pvalue < t2.pvalue else 0
     idx_max = np.asarray(tt1.pvalue < tt2.pvalue, int)
     statistic = np.choose(idx_max, [tt1.statistic, tt2.statistic])
     pvalue = np.choose(idx_max, [tt1.pvalue, tt2.pvalue])
 
-    res = HolderTuple(statistic=statistic,
-                      pvalue=pvalue,
-                      method=method,
-                      compare=compare,
-                      equiv_limits=(low, upp),
-                      results_larger=tt1,
-                      results_smaller=tt2,
-                      title="Equivalence test for 2 independent Poisson rates"
-                      )
+    res = HolderTuple(
+        statistic=statistic,
+        pvalue=pvalue,
+        method=method,
+        compare=compare,
+        equiv_limits=(low, upp),
+        results_larger=tt1,
+        results_smaller=tt2,
+        title="Equivalence test for 2 independent Poisson rates",
+    )
 
     return res
 
 
-def nonequivalence_poisson_2indep(count1, exposure1, count2, exposure2,
-                                  low, upp, method='score', compare="ratio"):
+def nonequivalence_poisson_2indep(
+    count1, exposure1, count2, exposure2, low, upp, method="score", compare="ratio"
+):
     """Test for non-equivalence, minimum effect for poisson.
 
     This reverses null and alternative hypothesis compared to equivalence
@@ -1260,32 +1336,53 @@ def nonequivalence_poisson_2indep(count1, exposure1, count2, exposure2,
        Econometrics 7 (2): 21. https://doi.org/10.3390/econometrics7020021.
 
     """
-    tt1 = test_poisson_2indep(count1, exposure1, count2, exposure2,
-                              value=low, method=method, compare=compare,
-                              alternative='smaller')
-    tt2 = test_poisson_2indep(count1, exposure1, count2, exposure2,
-                              value=upp, method=method, compare=compare,
-                              alternative='larger')
+    tt1 = test_poisson_2indep(
+        count1,
+        exposure1,
+        count2,
+        exposure2,
+        value=low,
+        method=method,
+        compare=compare,
+        alternative="smaller",
+    )
+    tt2 = test_poisson_2indep(
+        count1,
+        exposure1,
+        count2,
+        exposure2,
+        value=upp,
+        method=method,
+        compare=compare,
+        alternative="larger",
+    )
 
     # idx_min = 0 if tt1.pvalue < tt2.pvalue else 1
     idx_min = np.asarray(tt1.pvalue < tt2.pvalue, int)
     pvalue = 2 * np.minimum(tt1.pvalue, tt2.pvalue)
     statistic = np.choose(idx_min, [tt1.statistic, tt2.statistic])
-    res = HolderTuple(statistic=statistic,
-                      pvalue=pvalue,
-                      method=method,
-                      results_larger=tt1,
-                      results_smaller=tt2,
-                      title="Equivalence test for 2 independent Poisson rates"
-                      )
+    res = HolderTuple(
+        statistic=statistic,
+        pvalue=pvalue,
+        method=method,
+        results_larger=tt1,
+        results_smaller=tt2,
+        title="Equivalence test for 2 independent Poisson rates",
+    )
 
     return res
 
 
-def confint_poisson_2indep(count1, exposure1, count2, exposure2,
-                           method='score', compare='ratio', alpha=0.05,
-                           method_mover="score",
-                           ):
+def confint_poisson_2indep(
+    count1,
+    exposure1,
+    count2,
+    exposure2,
+    method="score",
+    compare="ratio",
+    alpha=0.05,
+    method_mover="score",
+):
     """Confidence interval for ratio or difference of 2 indep poisson rates.
 
     Parameters
@@ -1359,12 +1456,15 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
         if method == "score":
             low, upp = _invert_test_confint_2indep(
-                count1, exposure1, count2, exposure2,
-                alpha=alpha * 2,   # check how alpha is defined
+                count1,
+                exposure1,
+                count2,
+                exposure2,
+                alpha=alpha * 2,  # check how alpha is defined
                 method="score",
                 compare="ratio",
-                method_start="waldcc"
-                )
+                method_start="waldcc",
+            )
             ci = (low, upp)
 
         elif method == "wald-log":
@@ -1373,16 +1473,19 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
             center = (count1 + c) / (count2 + c) * n2 / n1
             std = np.sqrt(1 / (count1 + c) + 1 / (count2 + c))
 
-            ci = (center * np.exp(- crit * std), center * np.exp(crit * std))
+            ci = (center * np.exp(-crit * std), center * np.exp(crit * std))
 
         elif method == "score-log":
             low, upp = _invert_test_confint_2indep(
-                count1, exposure1, count2, exposure2,
-                alpha=alpha * 2,   # check how alpha is defined
+                count1,
+                exposure1,
+                count2,
+                exposure2,
+                alpha=alpha * 2,  # check how alpha is defined
                 method="score-log",
                 compare="ratio",
-                method_start="waldcc"
-                )
+                method_start="waldcc",
+            )
             ci = (low, upp)
 
         elif method == "waldcc":
@@ -1390,14 +1493,14 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
             center = (count1 + 0.5) / (count2 + 0.5) * n2 / n1
             std = np.sqrt(1 / (count1 + 0.5) + 1 / (count2 + 0.5))
 
-            ci = (center * np.exp(- crit * std), center * np.exp(crit * std))
+            ci = (center * np.exp(-crit * std), center * np.exp(crit * std))
 
         elif method == "sqrtcc":
             # coded based on Price, Bonett 2000 equ (2.4)
             crit = stats.norm.isf(alpha)
             center = np.sqrt((count1 + 0.5) * (count2 + 0.5))
             std = 0.5 * np.sqrt(count1 + 0.5 + count2 + 0.5 - 0.25 * crit)
-            denom = (count2 + 0.5 - 0.25 * crit**2)
+            denom = count2 + 0.5 - 0.25 * crit**2
 
             low_sqrt = (center - crit * std) / denom
             upp_sqrt = (center + crit * std) / denom
@@ -1406,8 +1509,8 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
         elif method == "mover":
             method_p = method_mover
-            ci1 = confint_poisson(y1, n1, method=method_p, alpha=2*alpha)
-            ci2 = confint_poisson(y2, n2, method=method_p, alpha=2*alpha)
+            ci1 = confint_poisson(y1, n1, method=method_p, alpha=2 * alpha)
+            ci2 = confint_poisson(y2, n2, method=method_p, alpha=2 * alpha)
 
             ci = _mover_confint(rate1, rate2, ci1, ci2, contrast="ratio")
 
@@ -1418,13 +1521,13 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
     elif compare == "diff":
 
-        if method in ['wald']:
+        if method in ["wald"]:
             crit = stats.norm.isf(alpha)
             center = rate1 - rate2
             half = crit * np.sqrt(rate1 / n1 + rate2 / n2)
             ci = center - half, center + half
 
-        elif method in ['waldccv']:
+        elif method in ["waldccv"]:
             crit = stats.norm.isf(alpha)
             center = rate1 - rate2
             std = np.sqrt((count1 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
@@ -1433,18 +1536,21 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
         elif method == "score":
             low, upp = _invert_test_confint_2indep(
-                count1, exposure1, count2, exposure2,
-                alpha=alpha * 2,   # check how alpha is defined
+                count1,
+                exposure1,
+                count2,
+                exposure2,
+                alpha=alpha * 2,  # check how alpha is defined
                 method="score",
                 compare="diff",
-                method_start="waldccv"
-                )
+                method_start="waldccv",
+            )
             ci = (low, upp)
 
         elif method == "mover":
             method_p = method_mover
-            ci1 = confint_poisson(y1, n1, method=method_p, alpha=2*alpha)
-            ci2 = confint_poisson(y2, n2, method=method_p, alpha=2*alpha)
+            ci1 = confint_poisson(y1, n1, method=method_p, alpha=2 * alpha)
+            ci2 = confint_poisson(y2, n2, method=method_p, alpha=2 * alpha)
 
             ci = _mover_confint(rate1, rate2, ci1, ci2, contrast="diff")
         else:
@@ -1456,16 +1562,18 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
 
 def power_poisson_ratio_2indep(
-        rate1, rate2, nobs1,
-        nobs_ratio=1,
-        exposure=1,
-        value=0,
-        alpha=0.05,
-        dispersion=1,
-        alternative="smaller",
-        method_var="alt",
-        return_results=True,
-        ):
+    rate1,
+    rate2,
+    nobs1,
+    nobs_ratio=1,
+    exposure=1,
+    value=0,
+    alpha=0.05,
+    dispersion=1,
+    alternative="smaller",
+    method_var="alt",
+    return_results=True,
+):
     """Power of test of ratio of 2 independent poisson rates.
 
     This is based on Zhu and Zhu and Lakkis. It does not directly correspond
@@ -1551,7 +1659,7 @@ def power_poisson_ratio_2indep(
         v0 = v1
     elif method_var == "score":
         # nobs_ratio = 1 / nobs_ratio
-        v0 = dispersion / exposure * (1 + value / nobs_ratio)**2
+        v0 = dispersion / exposure * (1 + value / nobs_ratio) ** 2
         v0 /= value / nobs_ratio * (rate1 + (nobs_ratio * rate2))
     else:
         raise NotImplementedError(f"method_var {method_var} not recognized")
@@ -1560,9 +1668,14 @@ def power_poisson_ratio_2indep(
     std_alt = np.sqrt(v1)
     es = np.log(rate1 / rate2) - np.log(value)
 
-    pow_ = normal_power_het(es, nobs1, alpha, std_null=std_null,
-                            std_alternative=std_alt,
-                            alternative=alternative)
+    pow_ = normal_power_het(
+        es,
+        nobs1,
+        alpha,
+        std_null=std_null,
+        std_alternative=std_alt,
+        alternative=alternative,
+    )
 
     p_pooled = None  # TODO: replace or remove
 
@@ -1577,17 +1690,25 @@ def power_poisson_ratio_2indep(
             nobs_ratio=nobs_ratio,
             alpha=alpha,
             tuple_=("power",),  # override default
-            )
+        )
         return res
 
     return pow_
 
 
-def power_equivalence_poisson_2indep(rate1, rate2, nobs1,
-                                     low, upp, nobs_ratio=1,
-                                     exposure=1, alpha=0.05, dispersion=1,
-                                     method_var="alt",
-                                     return_results=False):
+def power_equivalence_poisson_2indep(
+    rate1,
+    rate2,
+    nobs1,
+    low,
+    upp,
+    nobs_ratio=1,
+    exposure=1,
+    alpha=0.05,
+    dispersion=1,
+    method_var="alt",
+    return_results=False,
+):
     """Power of equivalence test of ratio of 2 independent poisson rates.
 
     Parameters
@@ -1667,9 +1788,9 @@ def power_equivalence_poisson_2indep(rate1, rate2, nobs1,
     if method_var == "alt":
         v0_low = v0_upp = v1
     elif method_var == "score":
-        v0_low = dispersion / exposure * (1 + low * nobs_ratio)**2
+        v0_low = dispersion / exposure * (1 + low * nobs_ratio) ** 2
         v0_low /= low * nobs_ratio * (rate1 + (nobs_ratio * rate2))
-        v0_upp = dispersion / exposure * (1 + upp * nobs_ratio)**2
+        v0_upp = dispersion / exposure * (1 + upp * nobs_ratio) ** 2
         v0_upp /= upp * nobs_ratio * (rate1 + (nobs_ratio * rate2))
     else:
         raise NotImplementedError(f"method_var {method_var} not recognized")
@@ -1680,10 +1801,15 @@ def power_equivalence_poisson_2indep(rate1, rate2, nobs1,
     std_null_upp = np.sqrt(v0_upp)
     std_alternative = np.sqrt(v1)
 
-    pow_ = _power_equivalence_het(es_low, es_upp, nobs2, alpha=alpha,
-                                  std_null_low=std_null_low,
-                                  std_null_upp=std_null_upp,
-                                  std_alternative=std_alternative)
+    pow_ = _power_equivalence_het(
+        es_low,
+        es_upp,
+        nobs2,
+        alpha=alpha,
+        std_null_low=std_null_low,
+        std_null_upp=std_null_upp,
+        std_alternative=std_alternative,
+    )
 
     if return_results:
         res = HolderTuple(
@@ -1697,19 +1823,22 @@ def power_equivalence_poisson_2indep(rate1, rate2, nobs1,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
             tuple_=("power",),  # override default
-            )
+        )
         return res
     else:
         return pow_[0]
 
 
-def _power_equivalence_het_v0(es_low, es_upp, nobs, alpha=0.05,
-                              std_null_low=None,
-                              std_null_upp=None,
-                              std_alternative=None):
-    """power for equivalence test
-
-    """
+def _power_equivalence_het_v0(
+    es_low,
+    es_upp,
+    nobs,
+    alpha=0.05,
+    std_null_low=None,
+    std_null_upp=None,
+    std_alternative=None,
+):
+    """power for equivalence test"""
 
     s0_low = std_null_low
     s0_upp = std_null_upp
@@ -1717,19 +1846,23 @@ def _power_equivalence_het_v0(es_low, es_upp, nobs, alpha=0.05,
 
     crit = norm.isf(alpha)
     pow_ = (
-        norm.cdf((np.sqrt(nobs) * es_low - crit * s0_low) / s1) +
-        norm.cdf((np.sqrt(nobs) * es_upp - crit * s0_upp) / s1) - 1
-        )
+        norm.cdf((np.sqrt(nobs) * es_low - crit * s0_low) / s1)
+        + norm.cdf((np.sqrt(nobs) * es_upp - crit * s0_upp) / s1)
+        - 1
+    )
     return pow_
 
 
-def _power_equivalence_het(es_low, es_upp, nobs, alpha=0.05,
-                           std_null_low=None,
-                           std_null_upp=None,
-                           std_alternative=None):
-    """power for equivalence test
-
-    """
+def _power_equivalence_het(
+    es_low,
+    es_upp,
+    nobs,
+    alpha=0.05,
+    std_null_low=None,
+    std_null_upp=None,
+    std_alternative=None,
+):
+    """power for equivalence test"""
 
     s0_low = std_null_low
     s0_upp = std_null_upp
@@ -1746,12 +1879,15 @@ def _power_equivalence_het(es_low, es_upp, nobs, alpha=0.05,
 
 
 def _std_2poisson_power(
-        rate1, rate2, nobs_ratio=1, alpha=0.05,
-        exposure=1,
-        dispersion=1,
-        value=0,
-        method_var="score",
-        ):
+    rate1,
+    rate2,
+    nobs_ratio=1,
+    alpha=0.05,
+    exposure=1,
+    dispersion=1,
+    value=0,
+    method_var="score",
+):
     rates_pooled = (rate1 + rate2 * nobs_ratio) / (1 + nobs_ratio)
     # v1 = dispersion / exposure * (1 / rate2 + 1 / (nobs_ratio * rate1))
     if method_var == "alt":
@@ -1759,18 +1895,24 @@ def _std_2poisson_power(
     else:
         # uaw n1 = 1 as normalization
         _, r1_cmle, r2_cmle = _score_diff(
-            rate1, 1, rate2 * nobs_ratio, nobs_ratio, value=value,
-            return_cmle=True)
+            rate1, 1, rate2 * nobs_ratio, nobs_ratio, value=value, return_cmle=True
+        )
         v1 = rate1 + rate2 / nobs_ratio
         v0 = r1_cmle + r2_cmle / nobs_ratio
     return rates_pooled, np.sqrt(v0), np.sqrt(v1)
 
 
-def power_poisson_diff_2indep(rate1, rate2, nobs1, nobs_ratio=1, alpha=0.05,
-                              value=0,
-                              method_var="score",
-                              alternative='two-sided',
-                              return_results=True):
+def power_poisson_diff_2indep(
+    rate1,
+    rate2,
+    nobs1,
+    nobs_ratio=1,
+    alpha=0.05,
+    value=0,
+    method_var="score",
+    alternative="two-sided",
+    return_results=True,
+):
     """Power of ztest for the difference between two independent poisson rates.
 
     Parameters
@@ -1846,11 +1988,16 @@ def power_poisson_diff_2indep(rate1, rate2, nobs1, nobs_ratio=1, alpha=0.05,
         alpha=alpha,
         value=value,
         method_var=method_var,
-        )
+    )
 
-    pow_ = normal_power_het(diff - value, nobs1, alpha, std_null=std_null,
-                            std_alternative=std_alt,
-                            alternative=alternative)
+    pow_ = normal_power_het(
+        diff - value,
+        nobs1,
+        alpha,
+        std_null=std_null,
+        std_alternative=std_alt,
+        alternative=alternative,
+    )
 
     if return_results:
         res = HolderTuple(
@@ -1863,14 +2010,13 @@ def power_poisson_diff_2indep(rate1, rate2, nobs1, nobs_ratio=1, alpha=0.05,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
             tuple_=("power",),  # override default
-            )
+        )
         return res
     else:
         return pow_
 
 
-def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1,
-                     dispersion=0):
+def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1, dispersion=0):
     """
     variance based on constrained cmle, for score test version
 
@@ -1884,32 +2030,38 @@ def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1,
     rate0 = rate2  # control
     nobs_ratio = 1 / nobs_ratio
 
-    a = - dispersion * exposure * value * (1 + nobs_ratio)
-    b = (dispersion * exposure * (rate0 * value + nobs_ratio * rate1) -
-         (1 + nobs_ratio * value))
+    a = -dispersion * exposure * value * (1 + nobs_ratio)
+    b = dispersion * exposure * (rate0 * value + nobs_ratio * rate1) - (
+        1 + nobs_ratio * value
+    )
     c = rate0 + nobs_ratio * rate1
     if dispersion == 0:
         r0 = -c / b
     else:
         r0 = (-b - np.sqrt(b**2 - 4 * a * c)) / (2 * a)
     r1 = r0 * value
-    v = (1 / exposure / r0 * (1 + 1 / value / nobs_ratio) +
-         (1 + nobs_ratio) / nobs_ratio * dispersion)
+    v = (
+        1 / exposure / r0 * (1 + 1 / value / nobs_ratio)
+        + (1 + nobs_ratio) / nobs_ratio * dispersion
+    )
 
     r2 = r0
     return v * nobs_ratio, r1, r2
 
 
 def power_negbin_ratio_2indep(
-        rate1, rate2, nobs1,
-        nobs_ratio=1,
-        exposure=1,
-        value=1,
-        alpha=0.05,
-        dispersion=0.01,
-        alternative="two-sided",
-        method_var="alt",
-        return_results=True):
+    rate1,
+    rate2,
+    nobs1,
+    nobs_ratio=1,
+    exposure=1,
+    value=1,
+    alpha=0.05,
+    dispersion=0.01,
+    alternative="two-sided",
+    method_var="alt",
+    return_results=True,
+):
     """
     Power of test of ratio of 2 independent negative binomial rates.
 
@@ -1992,18 +2144,25 @@ def power_negbin_ratio_2indep(
     rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
 
     nobs2 = nobs_ratio * nobs1
-    v1 = ((1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure +
-          (1 + nobs_ratio) / nobs_ratio * dispersion)
+    v1 = (1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure + (
+        1 + nobs_ratio
+    ) / nobs_ratio * dispersion
     if method_var == "alt":
         v0 = v1
     elif method_var == "ftotal":
-        v0 = (1 + value * nobs_ratio)**2 / (
-             exposure * nobs_ratio * value * (rate1 + nobs_ratio * rate2))
+        v0 = (1 + value * nobs_ratio) ** 2 / (
+            exposure * nobs_ratio * value * (rate1 + nobs_ratio * rate2)
+        )
         v0 += (1 + nobs_ratio) / nobs_ratio * dispersion
     elif method_var == "score":
-        v0 = _var_cmle_negbin(rate1, rate2, nobs_ratio,
-                              exposure=exposure, value=value,
-                              dispersion=dispersion)[0]
+        v0 = _var_cmle_negbin(
+            rate1,
+            rate2,
+            nobs_ratio,
+            exposure=exposure,
+            value=value,
+            dispersion=dispersion,
+        )[0]
     else:
         raise NotImplementedError(f"method_var {method_var} not recognized")
 
@@ -2011,9 +2170,14 @@ def power_negbin_ratio_2indep(
     std_alt = np.sqrt(v1)
     es = np.log(rate1 / rate2) - np.log(value)
 
-    pow_ = normal_power_het(es, nobs1, alpha, std_null=std_null,
-                            std_alternative=std_alt,
-                            alternative=alternative)
+    pow_ = normal_power_het(
+        es,
+        nobs1,
+        alpha,
+        std_null=std_null,
+        std_alternative=std_alt,
+        alternative=alternative,
+    )
 
     if return_results:
         res = HolderTuple(
@@ -2025,17 +2189,25 @@ def power_negbin_ratio_2indep(
             nobs_ratio=nobs_ratio,
             alpha=alpha,
             tuple_=("power",),  # override default
-            )
+        )
         return res
 
     return pow_
 
 
-def power_equivalence_neginb_2indep(rate1, rate2, nobs1,
-                                    low, upp, nobs_ratio=1,
-                                    exposure=1, alpha=0.05, dispersion=0,
-                                    method_var="alt",
-                                    return_results=False):
+def power_equivalence_neginb_2indep(
+    rate1,
+    rate2,
+    nobs1,
+    low,
+    upp,
+    nobs_ratio=1,
+    exposure=1,
+    alpha=0.05,
+    dispersion=0,
+    method_var="alt",
+    return_results=False,
+):
     """
     Power of equivalence test of ratio of 2 indep. negative binomial rates.
 
@@ -2112,24 +2284,37 @@ def power_equivalence_neginb_2indep(rate1, rate2, nobs1,
 
     nobs2 = nobs_ratio * nobs1
 
-    v1 = ((1 / rate2 + 1 / (nobs_ratio * rate1)) / exposure +
-          (1 + nobs_ratio) / nobs_ratio * dispersion)
+    v1 = (1 / rate2 + 1 / (nobs_ratio * rate1)) / exposure + (
+        1 + nobs_ratio
+    ) / nobs_ratio * dispersion
     if method_var == "alt":
         v0_low = v0_upp = v1
     elif method_var == "ftotal":
-        v0_low = (1 + low * nobs_ratio)**2 / (
-             exposure * nobs_ratio * low * (rate1 + nobs_ratio * rate2))
+        v0_low = (1 + low * nobs_ratio) ** 2 / (
+            exposure * nobs_ratio * low * (rate1 + nobs_ratio * rate2)
+        )
         v0_low += (1 + nobs_ratio) / nobs_ratio * dispersion
-        v0_upp = (1 + upp * nobs_ratio)**2 / (
-             exposure * nobs_ratio * upp * (rate1 + nobs_ratio * rate2))
+        v0_upp = (1 + upp * nobs_ratio) ** 2 / (
+            exposure * nobs_ratio * upp * (rate1 + nobs_ratio * rate2)
+        )
         v0_upp += (1 + nobs_ratio) / nobs_ratio * dispersion
     elif method_var == "score":
-        v0_low = _var_cmle_negbin(rate1, rate2, nobs_ratio,
-                                  exposure=exposure, value=low,
-                                  dispersion=dispersion)[0]
-        v0_upp = _var_cmle_negbin(rate1, rate2, nobs_ratio,
-                                  exposure=exposure, value=upp,
-                                  dispersion=dispersion)[0]
+        v0_low = _var_cmle_negbin(
+            rate1,
+            rate2,
+            nobs_ratio,
+            exposure=exposure,
+            value=low,
+            dispersion=dispersion,
+        )[0]
+        v0_upp = _var_cmle_negbin(
+            rate1,
+            rate2,
+            nobs_ratio,
+            exposure=exposure,
+            value=upp,
+            dispersion=dispersion,
+        )[0]
     else:
         raise NotImplementedError(f"method_var {method_var} not recognized")
 
@@ -2139,10 +2324,15 @@ def power_equivalence_neginb_2indep(rate1, rate2, nobs1,
     std_null_upp = np.sqrt(v0_upp)
     std_alternative = np.sqrt(v1)
 
-    pow_ = _power_equivalence_het(es_low, es_upp, nobs1, alpha=alpha,
-                                  std_null_low=std_null_low,
-                                  std_null_upp=std_null_upp,
-                                  std_alternative=std_alternative)
+    pow_ = _power_equivalence_het(
+        es_low,
+        es_upp,
+        nobs1,
+        alpha=alpha,
+        std_null_low=std_null_low,
+        std_null_upp=std_null_upp,
+        std_alternative=std_alternative,
+    )
 
     if return_results:
         res = HolderTuple(
@@ -2156,7 +2346,7 @@ def power_equivalence_neginb_2indep(rate1, rate2, nobs1,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
             tuple_=("power",),  # override default
-            )
+        )
         return res
     else:
         return pow_[0]

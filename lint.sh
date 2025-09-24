@@ -23,7 +23,7 @@ if [ "$LINT" == true ]; then
     # Default flake8 rules plus the additional rules from .flake8
     flake8 --isolated  \
         --max-line-length 88 \
-        --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 \
+        --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203,B007,B020,B023,B026 \
         examples \
         statsmodels/__init__.py \
         statsmodels/_build \

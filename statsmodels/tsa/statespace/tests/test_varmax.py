@@ -153,7 +153,7 @@ class CheckLutkepohl(CheckVARMAX):
         trend,
         error_cov_type,
         cov_type="approx",
-        included_vars=["dln_inv", "dln_inc", "dln_consump"],
+        included_vars=("dln_inv", "dln_inc", "dln_consump"),
         **kwargs,
     ):
         cls.true = true
@@ -168,7 +168,7 @@ class CheckLutkepohl(CheckVARMAX):
         dta["dln_inc"] = np.log(dta["inc"]).diff()
         dta["dln_consump"] = np.log(dta["consump"]).diff()
 
-        endog = dta.loc["1960-04-01":"1978-10-01", included_vars]
+        endog = dta.loc["1960-04-01":"1978-10-01", list(included_vars)]
 
         cls.model = varmax.VARMAX(
             endog, order=order, trend=trend, error_cov_type=error_cov_type, **kwargs

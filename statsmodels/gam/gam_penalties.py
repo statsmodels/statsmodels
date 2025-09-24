@@ -8,7 +8,9 @@ Author: Josef Perktold
 
 import numpy as np
 from scipy.linalg import block_diag
+
 from statsmodels.base._penalties import Penalty
+from statsmodels.tools.sm_exceptions import ModelWarning
 
 
 class UnivariateGamPenalty(Penalty):
@@ -157,13 +159,13 @@ class MultivariateGamPenalty(Penalty):
     k_params : total number of parameters in the regression model
     """
 
-    def __init__(self, multivariate_smoother, alpha, weights=None,
-                 start_idx=0):
+    def __init__(self, multivariate_smoother, alpha, weights=None, start_idx=0):
 
         if len(multivariate_smoother.smoothers) != len(alpha):
-            msg = ('all the input values should be of the same length.'
-                   ' len(smoothers)=%d, len(alphas)=%d') % (
-                   len(multivariate_smoother.smoothers), len(alpha))
+            msg = (
+                "all the input values should be of the same length."
+                " len(smoothers)=%d, len(alphas)=%d"
+            ) % (len(multivariate_smoother.smoothers), len(alpha))
             raise ValueError(msg)
 
         self.multivariate_smoother = multivariate_smoother
@@ -178,26 +180,30 @@ class MultivariateGamPenalty(Penalty):
         if weights is None:
             # weights should have total length as params
             # but it can also be scalar in individual component
-            self.weights = [1. for _ in range(self.k_variables)]
+            self.weights = [1.0 for _ in range(self.k_variables)]
         else:
             import warnings
-            warnings.warn('weights is currently ignored')
+
+            warnings.warn("weights is currently ignored", ModelWarning, stacklevel=2)
             self.weights = weights
 
-        self.mask = [np.zeros(self.k_params, dtype=bool)
-                     for _ in range(self.k_variables)]
+        self.mask = [
+            np.zeros(self.k_params, dtype=bool) for _ in range(self.k_variables)
+        ]
         param_count = start_idx
         for i, smoother in enumerate(self.multivariate_smoother.smoothers):
             # the mask[i] contains a vector of length k_columns. The index
             # corresponding to the i-th input variable are set to True.
-            self.mask[i][param_count: param_count + smoother.dim_basis] = True
+            self.mask[i][param_count : param_count + smoother.dim_basis] = True
             param_count += smoother.dim_basis
 
         self.gp = []
         for i in range(self.k_variables):
-            gp = UnivariateGamPenalty(self.multivariate_smoother.smoothers[i],
-                                      weights=self.weights[i],
-                                      alpha=self.alpha[i])
+            gp = UnivariateGamPenalty(
+                self.multivariate_smoother.smoothers[i],
+                weights=self.weights[i],
+                alpha=self.alpha[i],
+            )
             self.gp.append(gp)
 
     def func(self, params, alpha=None):

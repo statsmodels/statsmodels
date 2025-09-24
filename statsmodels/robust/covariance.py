@@ -25,15 +25,16 @@ doi:10.1109/TSP.2011.2138698.
 """
 
 import numpy as np
-from scipy import stats, linalg
+from scipy import linalg, stats
 from scipy.linalg.lapack import dtrtri
-from .scale import mad
+
 import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.tools as rtools
+from statsmodels.stats.covariance import corr_normal_scores, corr_rank
 from statsmodels.tools.testing import Holder
 
-from statsmodels.stats.covariance import corr_rank, corr_normal_scores
+from .scale import mad
 
 mad0 = lambda x: mad(x, center=0)  # noqa: E731
 median = lambda x: np.median(x, axis=0)  # noqa: E731
@@ -54,11 +55,14 @@ def _naive_ledoit_wolf_shrinkage(x, center):
     emp_cov = xdm.T.dot(xdm) / n_samples
     mu = np.trace(emp_cov) / n_features
     delta_ = emp_cov.copy()
-    delta_.flat[::n_features + 1] -= mu
-    delta = (delta_ ** 2).sum() / n_features
-    x2 = x ** 2
-    beta_ = 1. / (n_features * n_samples) \
-        * np.sum(np.dot(x2.T, x2) / n_samples - emp_cov ** 2)
+    delta_.flat[:: n_features + 1] -= mu
+    delta = (delta_**2).sum() / n_features
+    x2 = x**2
+    beta_ = (
+        1.0
+        / (n_features * n_samples)
+        * np.sum(np.dot(x2.T, x2) / n_samples - emp_cov**2)
+    )
 
     beta = min(beta_, delta)
     shrinkage = beta / delta
@@ -111,11 +115,9 @@ def _coef_normalize_cov_truncated_(frac, k_vars):
     # normalize cov_truncated (example ogk)
     # currently not used except for verification
     # I think it generalized to other weight/transform function than trimming
-    ct = k_vars / stats.chi2.expect(lambda x: x,
-                                    lb=0,
-                                    ub=stats.chi2.ppf(frac, k_vars),
-                                    args=(k_vars,)
-                                    )
+    ct = k_vars / stats.chi2.expect(
+        lambda x: x, lb=0, ub=stats.chi2.ppf(frac, k_vars), args=(k_vars,)
+    )
     # correction for using cov of truncated sample which uses nobs of subsample
     # not full nobs
     ct *= frac
@@ -123,16 +125,15 @@ def _coef_normalize_cov_truncated_(frac, k_vars):
 
 
 class _NormalizeTruncCov:
-    """Normalization factor for truncation with caching
-    """
+    """Normalization factor for truncation with caching"""
+
     _cache = {}
 
     def __call__(self, frac, k_vars):
 
         return self._cache.setdefault(
-            (frac, k_vars),
-            _coef_normalize_cov_truncated(frac, k_vars)
-            )
+            (frac, k_vars), _coef_normalize_cov_truncated(frac, k_vars)
+        )
 
 
 _coef_normalize_cov_truncated = _NormalizeTruncCov()
@@ -188,8 +189,7 @@ def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
     d = mahalanobis(x - loc, cov)
     # only hard thresholding right now
     dmed = np.median(d)
-    cutoff = (dmed * stats.chi2.isf(1-beta, k_vars) /
-              stats.chi2.ppf(0.5, k_vars))
+    cutoff = dmed * stats.chi2.isf(1 - beta, k_vars) / stats.chi2.ppf(0.5, k_vars)
     mask = d <= cutoff
     sample = x[mask]
     loc = sample.mean(0)
@@ -306,12 +306,17 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
         cutoff = dtail[-1] + 1e-15  # not sure, check inequality
     if (dtail > cutoff).sum() < ntail:
         import warnings
-        warnings.warn('ties at cutoff, cutoff rule produces fewer'
-                      'outliers than `ntail`')
+
+        warnings.warn(
+            "ties at cutoff, cutoff rule produces fewer" "outliers than `ntail`",
+            RuntimeWarning,
+            stacklevel=2,
+        )
     return frac, cutoff, ntail, ntail0, threshold
 
 
 # ## GK and OGK ###
+
 
 def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
     """Mahalanobis distance squared
@@ -345,7 +350,7 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
     elif cov is not None:
         d = (x * np.linalg.solve(cov, x.T).T).sum(1)
     else:
-        raise ValueError('either cov or cov_inv needs to be given')
+        raise ValueError("either cov or cov_inv needs to be given")
 
     if sqrt:
         d = np.sqrt(d)
@@ -399,9 +404,9 @@ def cov_gk(data, scale_func=mad):
     """
     x = np.asarray(data)
     if x.ndim != 2:
-        raise ValueError('data needs to be two dimensional')
+        raise ValueError("data needs to be two dimensional")
     nobs, k_vars = x.shape  # noqa: F841
-    cov = np.diag(scale_func(x)**2)
+    cov = np.diag(scale_func(x) ** 2)
     for i in range(k_vars):
         for j in range(i):
             cij = cov_gk1(x[:, i], x[:, j], scale_func=scale_func)
@@ -409,9 +414,17 @@ def cov_gk(data, scale_func=mad):
     return cov
 
 
-def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
-            loc_func=lambda x: np.median(x, axis=0), reweight=0.9,
-            rescale=True, rescale_raw=True, ddof=1):
+def cov_ogk(
+    data,
+    maxiter=2,
+    scale_func=mad,
+    cov_func=cov_gk,
+    loc_func=lambda x: np.median(x, axis=0),
+    reweight=0.9,
+    rescale=True,
+    rescale_raw=True,
+    ddof=1,
+):
     """Orthogonalized Gnanadesikan and Kettenring covariance estimator.
 
     Based on Maronna and Zamar 2002
@@ -479,7 +492,7 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
         beta = 0.9
     x = np.asarray(data)
     if x.ndim != 2:
-        raise ValueError('data needs to be two dimensional')
+        raise ValueError("data needs to be two dimensional")
     nobs, k_vars = x.shape  # noqa: F841
     z = x
     transf0 = np.eye(k_vars)
@@ -508,17 +521,17 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     # extra results are None if reweight is None
     mask = None
     d = None
-    scale_factor_raw = 1.
-    scale_factor = 1.
+    scale_factor_raw = 1.0
+    scale_factor = 1.0
     n_trunc = 0
     if (reweight is not None) or rescale_raw:
         # compute scale_factor_raw and cutoff if needed
-        d = (((z - loc_z) / scale_z)**2).sum(1)
+        d = (((z - loc_z) / scale_z) ** 2).sum(1)
         # d = mahalanobis(x - loc, cov)
         # only hard thresholding right now
         dmed = np.median(d)
         scale_factor_raw = dmed / stats.chi2.ppf(0.5, k_vars)
-        cutoff = scale_factor_raw * stats.chi2.isf(1-beta, k_vars)
+        cutoff = scale_factor_raw * stats.chi2.isf(1 - beta, k_vars)
 
     if reweight is not None:
         mask = d <= cutoff
@@ -536,18 +549,26 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
         cov_raw *= scale_factor_raw
 
     # duplicate name loc mean center, choose consistent naming
-    res = Holder(cov=cov, loc=loc, mean=loc, mask=mask, mahalanobis_raw=d,
-                 cov_raw=cov_raw, loc_raw=loc_raw,
-                 transf0=transf0, scale_factor=scale_factor,
-                 scale_factor_raw=scale_factor_raw,
-                 n_trunc=n_trunc,
-                 method="ogk"
-                 )
+    res = Holder(
+        cov=cov,
+        loc=loc,
+        mean=loc,
+        mask=mask,
+        mahalanobis_raw=d,
+        cov_raw=cov_raw,
+        loc_raw=loc_raw,
+        transf0=transf0,
+        scale_factor=scale_factor,
+        scale_factor_raw=scale_factor_raw,
+        n_trunc=n_trunc,
+        method="ogk",
+    )
 
     return res
 
 
 # ## Tyler ###
+
 
 def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     """Tyler's M-estimator for normalized covariance (scatter)
@@ -616,7 +637,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     if start_cov is not None:
         c = start_cov
     else:
-        c = np.diag(mad(x, center=0)**2)
+        c = np.diag(mad(x, center=0) ** 2)
 
     # Tyler's M-estimator of shape (scatter) matrix
     for i in range(maxiter):
@@ -628,7 +649,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         c_old = c
         ichol, _ = dtrtri(linalg.cholesky(c, lower=False), lower=0)
         v = x @ ichol
-        dist_mahal_2 = np.einsum('ij,ji->i', v, v.T)
+        dist_mahal_2 = np.einsum("ij,ji->i", v, v.T)
         weights = k_vars / dist_mahal_2[:, None]
         xw = np.sqrt(weights) * x
         c = xw.T @ xw / nobs
@@ -642,7 +663,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     elif normalize == "trace":
         c /= np.trace(c) / k_vars
     elif normalize == "det":
-        c /= np.linalg.det(c)**(1. / k_vars)
+        c /= np.linalg.det(c) ** (1.0 / k_vars)
     elif normalize == "normal":
         _rescale(x, np.zeros(k_vars), c, prob=0.5)
     elif normalize == "weights":
@@ -654,9 +675,9 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     return Holder(cov=c, n_iter=i, method="tyler")
 
 
-def cov_tyler_regularized(data, start_cov=None, normalize=False,
-                          shrinkage_factor=None,
-                          maxiter=100, eps=1e-13):
+def cov_tyler_regularized(
+    data, start_cov=None, normalize=False, shrinkage_factor=None, maxiter=100, eps=1e-13
+):
     """Regularized Tyler's M-estimator for normalized covariance (shape).
 
     The underlying (population) mean of the data is assumed to be zero.
@@ -709,7 +730,7 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
     """
     x = np.asarray(data)
     nobs, k_vars = x.shape
-    kn = k_vars * 1. / nobs
+    kn = k_vars * 1.0 / nobs
 
     # calculate MAD only once if needed
     if start_cov is None or shrinkage_factor is None:
@@ -726,8 +747,8 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
 
         n, k = nobs, k_vars
         # Chen and Wiesel 2011 equation (13)
-        sf = k*k + (1 - 2./k) * tr
-        sf /= (k*k - n*k - 2*n) + (n + 1 + 2. * (n - 1.) / k) * tr
+        sf = k * k + (1 - 2.0 / k) * tr
+        sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
 
     if start_cov is not None:
@@ -742,8 +763,7 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
         c_old = c
         # this could be vectorized but could use a lot of memory
         # TODO:  try to work in vectorized batches
-        c0 = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi))
-                      for xi in x)
+        c0 = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi)) for xi in x)
         if shrinkage_factor != 0:
             c = (1 - shrinkage_factor) * c0 + shrinkage_factor * identity
         else:
@@ -755,14 +775,20 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
         if diff < eps:
             break
 
-    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor,
-                 corr=corr)
+    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor, corr=corr)
     return res
 
 
-def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
-                                shrinkage_factor=None, nobs=None, k_vars=None,
-                                maxiter=100, eps=1e-13):
+def cov_tyler_pairs_regularized(
+    data_iterator,
+    start_cov=None,
+    normalize=False,
+    shrinkage_factor=None,
+    nobs=None,
+    k_vars=None,
+    maxiter=100,
+    eps=1e-13,
+):
     """Tyler's M-estimator for normalized covariance (scatter)
 
     The underlying (population) mean of the data is assumed to be zero.
@@ -834,8 +860,8 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
 
         n, k = nobs, k_vars
         # Chen and Wiesel 2011 equation (13)
-        sf = k*k + (1 - 2./k) * tr
-        sf /= (k*k - n*k - 2*n) + (n + 1 + 2. * (n - 1.) / k) * tr
+        sf = k * k + (1 - 2.0 / k) * tr
+        sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
 
     if start_cov is not None:
@@ -844,7 +870,7 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
         c = np.diag(scale_mad**2)
 
     identity = np.eye(k_vars)
-    kn = k_vars * 1. / nobs
+    kn = k_vars * 1.0 / nobs
     for i in range(maxiter):
         c_inv = np.linalg.pinv(c)
         c_old = c
@@ -853,8 +879,9 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
         # weights is a problem if iterator should be ndarray
         # c0 = kn * sum(np.outer(xi, xj) / np.inner(xi, c_inv.dot(xj))
         #               for xi, xj in x)
-        c0 = kn * sum(np.outer(xij[0], xij[1]) /
-                      np.inner(xij[0], c_inv.dot(xij[1])) for xij in x)
+        c0 = kn * sum(
+            np.outer(xij[0], xij[1]) / np.inner(xij[0], c_inv.dot(xij[1])) for xij in x
+        )
         if shrinkage_factor != 0:
             c = (1 - shrinkage_factor) * c0 + shrinkage_factor * identity
         else:
@@ -866,15 +893,16 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
         if diff < eps:
             break
 
-    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor,
-                 corr=corr)
+    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor, corr=corr)
     return res
 
 
 # ## iterative, M-estimators and related
 
-def cov_weighted(data, weights, center=None, weights_cov=None,
-                 weights_cov_denom=None, ddof=1):
+
+def cov_weighted(
+    data, weights, center=None, weights_cov=None, weights_cov_denom=None, ddof=1
+):
     """weighted mean and covariance (for M-estimators)
 
     wmean = sum (weights * data) / sum(weights)
@@ -953,13 +981,13 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
     if weights_cov_denom is None:
         if wsum_cov is None:
             wsum_cov = weights_cov.sum()
-        wcov /= (wsum_cov - ddof)   # * np.sum(weights_cov**2) / wsum_cov)
+        wcov /= wsum_cov - ddof  # * np.sum(weights_cov**2) / wsum_cov)
     elif weights_cov_denom == "det":
-        wcov /= np.linalg.det(wcov)**(1 / wcov.shape[0])
+        wcov /= np.linalg.det(wcov) ** (1 / wcov.shape[0])
     elif weights_cov_denom == 1:
         pass
     else:
-        wcov /= (weights_cov_denom - ddof)
+        wcov /= weights_cov_denom - ddof
 
     return wcov, wmean
 
@@ -1008,8 +1036,16 @@ def weights_quantile(distance, frac=0.5, rescale=True):
     return w
 
 
-def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
-              rescale='med', maxiter=3, atol=1e-14, rtol=1e-6):
+def _cov_iter(
+    data,
+    weights_func,
+    weights_args=None,
+    cov_init=None,
+    rescale="med",
+    maxiter=3,
+    atol=1e-14,
+    rtol=1e-6,
+):
     """Iterative robust covariance estimation using weights.
 
     This is in the style of M-estimators for given weight function.
@@ -1074,19 +1110,25 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
     # recompute maha distance at final estimate
     dist = mahalanobis(data, cov=cov)
 
-    if rescale == 'none':
+    if rescale == "none":
         s = 1
-    elif rescale == 'med':
+    elif rescale == "med":
         s = np.median(dist) / stats.chi2.ppf(0.5, k_vars)
         cov *= s
     else:
         raise NotImplementedError('only rescale="med" is currently available')
 
-    res = Holder(cov=cov, mean=mean, weights=w, mahalanobis=dist,
-                 scale_factor=s, n_iter=it, converged=converged,
-                 method="m-estimator",
-                 weights_func=weights_func,
-                 )
+    res = Holder(
+        cov=cov,
+        mean=mean,
+        weights=w,
+        mahalanobis=dist,
+        scale_factor=s,
+        n_iter=it,
+        converged=converged,
+        method="m-estimator",
+        weights_func=weights_func,
+    )
     return res
 
 
@@ -1124,7 +1166,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     if standardize:
         # there should be a helper function/class
         center = np.median(data, axis=0)
-        xs = (x - center)
+        xs = x - center
         std = mad0(data)
         xs /= std
     else:
@@ -1134,7 +1176,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
-    percentiles = [(k_vars+2) / nobs * 100 * 2, 25, 50, 85]
+    percentiles = [(k_vars + 2) / nobs * 100 * 2, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
     for p, cutoff in zip(percentiles, cutoffs):
         xsp = xs[d < cutoff]
@@ -1144,17 +1186,29 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
             cov=c * corr_factor,
             mean=xsp.mean(0) * std + center,
             method="pearson truncated",
-            )
-        c01 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
-                        rescale="med", cov_init=c0.cov, maxiter=100)
+        )
+        c01 = _cov_iter(
+            xs,
+            weights_quantile,
+            weights_args=(quantile,),
+            rescale="med",
+            cov_init=c0.cov,
+            maxiter=100,
+        )
 
         c02 = Holder(
             cov=_naive_ledoit_wolf_shrinkage(xsp, 0).cov * corr_factor,
             mean=xsp.mean(0) * std + center,
             method="ledoit_wolf",
-            )
-        c03 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
-                        rescale="med", cov_init=c02.cov, maxiter=100)
+        )
+        c03 = _cov_iter(
+            xs,
+            weights_quantile,
+            weights_args=(quantile,),
+            rescale="med",
+            cov_init=c02.cov,
+            maxiter=100,
+        )
 
         if not standardize or not retransform:
             cov_all.extend([c0, c01, c02, c03])
@@ -1168,42 +1222,42 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     cov_all.append(c2)
 
     c2raw = Holder(
-            cov=c2.cov_raw,
-            mean=c2.loc_raw * std + center,
-            method="ogk_raw",
-            )
+        cov=c2.cov_raw,
+        mean=c2.loc_raw * std + center,
+        method="ogk_raw",
+    )
     cov_all.append(c2raw)
 
     z_tanh = np.tanh(xs)
     c_th = Holder(
-            cov=np.corrcoef(z_tanh.T),  # not consistently scaled for cov
-            mean=center,  # TODO: do we add inverted mean z_tanh ?
-            method="tanh",
-            )
+        cov=np.corrcoef(z_tanh.T),  # not consistently scaled for cov
+        mean=center,  # TODO: do we add inverted mean z_tanh ?
+        method="tanh",
+    )
     cov_all.append(c_th)
 
     x_spatial = xs / np.sqrt(np.sum(xs**2, axis=1))[:, None]
     c_th = Holder(
-            cov=np.cov(x_spatial.T),
-            mean=center,
-            method="spatial",
-            )
+        cov=np.cov(x_spatial.T),
+        mean=center,
+        method="spatial",
+    )
     cov_all.append(c_th)
 
     c_th = Holder(
-            # not consistently scaled for cov
-            # cov=stats.spearmanr(xs)[0], # not correct shape if k=1 or 2
-            cov=corr_rank(xs),  # always returns matrix, np.corrcoef result
-            mean=center,
-            method="spearman",
-            )
+        # not consistently scaled for cov
+        # cov=stats.spearmanr(xs)[0], # not correct shape if k=1 or 2
+        cov=corr_rank(xs),  # always returns matrix, np.corrcoef result
+        mean=center,
+        method="spearman",
+    )
     cov_all.append(c_th)
 
     c_ns = Holder(
-            cov=corr_normal_scores(xs),  # not consistently scaled for cov
-            mean=center,  # TODO: do we add inverted mean z_tanh ?
-            method="normal-scores",
-            )
+        cov=corr_normal_scores(xs),  # not consistently scaled for cov
+        mean=center,  # TODO: do we add inverted mean z_tanh ?
+        method="normal-scores",
+    )
     cov_all.append(c_ns)
 
     # TODO: rescale back to original space using center and std
@@ -1213,10 +1267,8 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 # ####### Det, CovDet and helper functions, might be moved to separate module
 
 
-class _Standardize():
-    """Robust standardization of random variable
-
-    """
+class _Standardize:
+    """Robust standardization of random variable"""
 
     def __init__(self, x, func_center=None, func_scale=None):
         # naming mean or center
@@ -1343,8 +1395,9 @@ class CovM:
         Currently only S-estimator has automatic selection of scale function.
     """
 
-    def __init__(self, data, norm_mean=None, norm_scatter=None,
-                 scale_bias=None, method="S"):
+    def __init__(
+        self, data, norm_mean=None, norm_scatter=None, scale_bias=None, method="S"
+    ):
         # todo: method defines how norm_mean and norm_scatter are linked
         #       currently I try for S-estimator
 
@@ -1404,11 +1457,10 @@ class CovM:
             weights_cov=weights_cov,
             weights_cov_denom="det",
             ddof=1,
-            )
+        )
         return res
 
-    def _fit_scale(self, maha, start_scale=None, maxiter=100, rtol=1e-5,
-                   atol=1e-5):
+    def _fit_scale(self, maha, start_scale=None, maxiter=100, rtol=1e-5, atol=1e-5):
         """Estimate iterated M-scale.
 
         Parameters
@@ -1439,11 +1491,17 @@ class CovM:
             atol=atol,
             meef_scale=self.rho,
             scale_bias=self.scale_bias,
-            )
+        )
         return scale
 
-    def fit(self, start_mean=None, start_shape=None, start_scale=None,
-            maxiter=100, update_scale=True):
+    def fit(
+        self,
+        start_mean=None,
+        start_shape=None,
+        start_scale=None,
+        maxiter=100,
+        update_scale=True,
+    ):
         """Estimate mean, shape and scale parameters with MM-estimator.
 
         Parameters
@@ -1503,10 +1561,11 @@ class CovM:
             if update_scale:
                 scale = self._fit_scale(d, start_scale=scale_old, maxiter=10)
 
-            if (np.allclose(scale, scale_old, rtol=1e-5) and
-                    np.allclose(mean, mean_old, rtol=1e-5) and
-                    np.allclose(shape, shape_old, rtol=1e-5)
-                    ):  # noqa E124
+            if (
+                np.allclose(scale, scale_old, rtol=1e-5)
+                and np.allclose(mean, mean_old, rtol=1e-5)
+                and np.allclose(shape, shape_old, rtol=1e-5)
+            ):  # noqa E124
                 converged = True
                 break
             scale_old = scale
@@ -1523,7 +1582,7 @@ class CovM:
             converged=converged,
             n_iter=i,
             mahalanobis=maha,
-            )
+        )
         return res
 
 
@@ -1586,7 +1645,7 @@ class CovDetMCD:
             mean = x_sel.mean(0)
             cov_new = np.cov(x_sel.T, ddof=1)
 
-            if ((cov - cov_new)**2).mean() < tol:
+            if ((cov - cov_new) ** 2).mean() < tol:
                 cov = cov_new
                 converged = True
                 break
@@ -1638,9 +1697,19 @@ class CovDetMCD:
 
         return mean, cov, det, conv
 
-    def fit(self, h, *, h_start=None, mean_func=None, scale_func=None,
-            maxiter=100, options_start=None, reweight=True,
-            trim_frac=0.975, maxiter_step=100):
+    def fit(
+        self,
+        h,
+        *,
+        h_start=None,
+        mean_func=None,
+        scale_func=None,
+        maxiter=100,
+        options_start=None,
+        reweight=True,
+        trim_frac=0.975,
+        maxiter_step=100,
+    ):
         """
         Compute minimum covariance determinant estimate of mean and covariance.
 
@@ -1703,14 +1772,13 @@ class CovDetMCD:
         res = {}
         for ii, ini in enumerate(starts):
             idx_sel, method = ini
-            mean, cov, det, _ = self._fit_one(x, idx_sel, h,
-                                              maxiter=maxiter_step)
+            mean, cov, det, _ = self._fit_one(x, idx_sel, h, maxiter=maxiter_step)
             res[ii] = Holder(
                 mean=mean,
                 cov=cov * fac_trunc,
                 det_subset=det,
                 method=method,
-                )
+            )
 
         det_all = np.array([i.det_subset for i in res.values()])
         idx_best = np.argmin(det_all)
@@ -1721,15 +1789,16 @@ class CovDetMCD:
         # need to c-step to convergence for best,
         # is with best 2 in original DetMCD
         if maxiter_step < maxiter:
-            mean, cov, det, conv = self._fit_one(x, None, h, maxiter=maxiter,
-                                                 mean=best.mean, cov=best.cov)
+            mean, cov, det, conv = self._fit_one(
+                x, None, h, maxiter=maxiter, mean=best.mean, cov=best.cov
+            )
             best = Holder(
                 mean=mean,
                 cov=cov * fac_trunc,
                 det_subset=det,
                 method=method,
                 converged=conv,
-                )
+            )
 
         # include extra info in returned Holder instance
         best.det_all = det_all
@@ -1739,8 +1808,7 @@ class CovDetMCD:
         best.tscale = s
 
         if reweight:
-            cov, mean = _reweight(x, best.mean, best.cov, trim_frac=trim_frac,
-                                  ddof=1)
+            cov, mean = _reweight(x, best.mean, best.cov, trim_frac=trim_frac, ddof=1)
             fac_trunc = coef_normalize_cov_truncated(trim_frac, k_vars)
             best_w = Holder(
                 mean=mean,
@@ -1748,7 +1816,7 @@ class CovDetMCD:
                 # det_subset=det,
                 method=method,
                 results_raw=best,
-                )
+            )
 
             return best_w
         else:
@@ -1810,8 +1878,13 @@ class CovDetS:
 
         self.norm = norm
 
-        self.mod = CovM(data, norm_mean=norm, norm_scatter=norm,
-                        scale_bias=self.scale_bias, method="S")
+        self.mod = CovM(
+            data,
+            norm_mean=norm,
+            norm_scatter=norm,
+            scale_bias=self.scale_bias,
+            method="S",
+        )
 
     def _get_start_params(self, idx):
         """Starting parameters from a subsample given by index
@@ -1877,13 +1950,21 @@ class CovDetS:
             start_shape=shape,
             start_scale=scale,
             maxiter=maxiter,
-            update_scale=True
-            )
+            update_scale=True,
+        )
 
         return res
 
-    def fit(self, *, h_start=None, mean_func=None, scale_func=None,
-            maxiter=100, options_start=None, maxiter_step=5):
+    def fit(
+        self,
+        *,
+        h_start=None,
+        mean_func=None,
+        scale_func=None,
+        maxiter=100,
+        options_start=None,
+        maxiter_step=5,
+    ):
         """Compute S-estimator of mean and covariance.
 
         Parameters
@@ -1932,7 +2013,7 @@ class CovDetS:
                 shape=shape0,
                 scale=scale0,
                 maxiter=maxiter_step,
-                )
+            )
 
             res_i.method = method
             res[ii] = res_i
@@ -1951,7 +2032,7 @@ class CovDetS:
                 shape=best.shape,
                 scale=best.scale,
                 maxiter=maxiter,
-                )
+            )
 
         # include extra info in returned Holder instance
         best.scale_all = scale_all
@@ -1963,7 +2044,7 @@ class CovDetS:
         return best  # is Holder instance already
 
 
-class CovDetMM():
+class CovDetMM:
     """MM estimator using DetS as first stage estimator.
 
     Note: The tuning parameter for second stage M estimator is currently only
@@ -2040,8 +2121,9 @@ class CovDetMM():
 
         self.norm = norm
         # model for second stage M-estimator
-        self.mod = CovM(data, norm_mean=norm, norm_scatter=norm,
-                        scale_bias=None, method="S")
+        self.mod = CovM(
+            data, norm_mean=norm, norm_scatter=norm, scale_bias=None, method="S"
+        )
 
     def fit(self, maxiter=100):
         """Estimate model parameters.
@@ -2066,11 +2148,7 @@ class CovDetMM():
 
         """
         # first stage estimate
-        mod_s = CovDetS(
-            self.data,
-            norm=None,
-            breakdown_point=self.breakdown_point
-            )
+        mod_s = CovDetS(self.data, norm=None, breakdown_point=self.breakdown_point)
         res_s = mod_s.fit()
 
         res = self.mod.fit(
@@ -2079,6 +2157,6 @@ class CovDetMM():
             start_scale=res_s.scale,
             maxiter=maxiter,
             update_scale=False,
-            )
+        )
 
         return res

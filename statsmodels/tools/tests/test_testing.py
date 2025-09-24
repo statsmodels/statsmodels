@@ -1,13 +1,13 @@
-import pytest
 import numpy as np
+import pytest
 
-from statsmodels.tools.testing import ParamsTableTestBunch, \
-    MarginTableTestBunch, Holder
+from statsmodels.tools.testing import Holder, MarginTableTestBunch, ParamsTableTestBunch
 
 
-@pytest.mark.parametrize('attribute, bunch_type',
-                         (('params_table', ParamsTableTestBunch),
-                          ('margins_table', MarginTableTestBunch)))
+@pytest.mark.parametrize(
+    "attribute, bunch_type",
+    (("params_table", ParamsTableTestBunch), ("margins_table", MarginTableTestBunch)),
+)
 def check_params_table_classes(attribute, bunch_type):
     table = np.empty((10, 4))
     bunch = bunch_type(**{attribute: table})
@@ -23,5 +23,5 @@ def test_bad_table():
 def test_holder():
     holder = Holder()
     holder.new_attr = 1
-    assert hasattr(holder, 'new_attr')
-    assert getattr(holder, 'new_attr') == 1
+    assert hasattr(holder, "new_attr")
+    assert holder.new_attr == 1
