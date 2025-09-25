@@ -162,7 +162,8 @@ filterwarnings = [
     "error:random_state is deprecated:FutureWarning",
     "error:seed is deprecated:FutureWarning",
     "error:get_state is deprecated:FutureWarning",
-    "error:Conversion of an array with ndim:DeprecationWarning:arch"
+    "error:Conversion of an array with ndim:DeprecationWarning:",
+    "error:the matrix subclass is not the recommended::",
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",

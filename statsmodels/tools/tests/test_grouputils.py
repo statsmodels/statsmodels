@@ -316,8 +316,8 @@ def test_dummy_sparse():
     g = np.array([0, 0, 2, 1, 1, 2, 0])
     indi = dummy_sparse(g)
     assert isinstance(indi, sparse.csr_matrix)
-    result = indi.todense()
-    expected = np.matrix([[1, 0, 0],
+    result = indi.toarray()
+    expected = np.array([[1, 0, 0],
                          [1, 0, 0],
                          [0, 0, 1],
                          [0, 1, 0],
@@ -329,8 +329,8 @@ def test_dummy_sparse():
     # current behavior with missing groups
     g = np.array([0, 0, 2, 0, 2, 0])
     indi = dummy_sparse(g)
-    result = indi.todense()
-    expected = np.matrix([[1, 0, 0],
+    result = indi.toarray()
+    expected = np.array([[1, 0, 0],
                          [1, 0, 0],
                          [0, 0, 1],
                          [1, 0, 0],

@@ -1513,7 +1513,7 @@ class VECMResults:
         omega12 = b_y.dot(self._delta_x.T)
         omega21 = omega12.T
         omega22 = self._delta_x.dot(self._delta_x.T)
-        omega = np.bmat([[omega11, omega12], [omega21, omega22]]).A
+        omega = np.block([[omega11, omega12], [omega21, omega22]])
 
         mat1 = b_id.dot(inv(omega)).dot(b_id.T)
         return np.kron(mat1, self.sigma_u)
