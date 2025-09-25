@@ -274,7 +274,7 @@ class KernelReg(GenericKDE):
         """
         H = np.empty((self.nobs, self.nobs))
         for j in range(self.nobs):
-            H[:, j] = gpke(bw, data=self.exog, data_predict=self.exog[j,:],
+            H[:, j] = gpke(bw, data=self.exog, data_predict=self.exog[j, :],
                            ckertype=self.ckertype, ukertype=self.ukertype,
                            okertype=self.okertype, var_type=self.var_type,
                            tosum=False)
@@ -555,7 +555,7 @@ class KernelCensoredReg(KernelReg):
             P = 1
             for j in range(1, i):
                 P *= ((self.nobs - j)/(float(self.nobs)-j+1))**self.d[j-1]
-            self.W_in[i-1,0] = P * self.d[i-1] / (float(self.nobs) - i + 1)
+            self.W_in[i-1, 0] = P * self.d[i-1] / (float(self.nobs) - i + 1)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -931,11 +931,11 @@ class TestRegCoefD(TestRegCoefC):
         u1 = fct1 * u
         u2 = fct2 * u
         r = fct2 / (5 ** 0.5)
-        I_dist = np.empty((self.nboot,1))
+        I_dist = np.empty((self.nboot, 1))
         for j in range(self.nboot):
             u_boot = copy.deepcopy(u2)
 
-            prob = np.random.uniform(0,1, size=(n,1))
+            prob = np.random.uniform(0, 1, size=(n, 1))
             ind = prob < r
             u_boot[ind] = u1[ind]
             Y_boot = m + u_boot

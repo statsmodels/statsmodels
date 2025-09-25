@@ -517,11 +517,11 @@ def test_poisson_formula():
         # Build categorical variables that match exog_vc
         df = pd.DataFrame({"y": y, "x1": exog_fe[:, 0]})
         z1 = np.zeros(len(y))
-        for j,k in enumerate(np.flatnonzero(ident == 0)):
+        for j, k in enumerate(np.flatnonzero(ident == 0)):
             z1[exog_vc[:, k] == 1] = j
         df["z1"] = z1
         z2 = np.zeros(len(y))
-        for j,k in enumerate(np.flatnonzero(ident == 1)):
+        for j, k in enumerate(np.flatnonzero(ident == 1)):
             z2[exog_vc[:, k] == 1] = j
         df["z2"] = z2
 

@@ -82,7 +82,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         vmin, vmax = None, None
 
     axim = ax.imshow(dcorr, cmap=cmap, interpolation='nearest',
-                     extent=(0,nvars,0,nvars), vmin=vmin, vmax=vmax)
+                     extent=(0, nvars, 0, nvars), vmin=vmin, vmax=vmax)
 
     # create list of label positions
     labelPos = np.arange(0, nvars) + 0.5

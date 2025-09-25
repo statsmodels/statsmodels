@@ -111,7 +111,7 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
     mgr = FormulaManager()
     effects = getattr(model, 'effects', None)
     if effects is None:
-        q,r = np.linalg.qr(exog)
+        q, r = np.linalg.qr(exog)
         effects = np.dot(q.T, endog)
 
     arr = np.zeros((len(model_spec.terms), len(model_spec.column_names)))
@@ -133,7 +133,7 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
     table.index = Index(index + ['Residual'])
     table.loc[index, ['df', 'sum_sq']] = np.c_[arr[~idx].sum(1), sum_sq]
     # fill in residual
-    table.loc['Residual', ['sum_sq','df']] = model.ssr, model.df_resid
+    table.loc['Residual', ['sum_sq', 'df']] = model.ssr, model.df_resid
     if test == 'F':
         table[test] = ((table['sum_sq'] / table['df']) /
                        (model.ssr / model.df_resid))

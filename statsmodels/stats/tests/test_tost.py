@@ -55,7 +55,7 @@ raw_clinic = '''\
 28    2 3.86 3.61 3.28 3.19 3.09
 29    2 3.31 2.97 3.76 3.18 2.60
 30    2 3.02 2.73 3.87 3.50 2.93'''.split()
-clinic = np.array(raw_clinic, float).reshape(-1,7)
+clinic = np.array(raw_clinic, float).reshape(-1, 7)
 
 
 # t = tost(-clinic$var2[16:30] + clinic$var2[1:15], eps=0.6)
@@ -585,7 +585,7 @@ def test_ttest():
     cm = smws.CompareMeans(smws.DescrStatsW(x1), smws.DescrStatsW(x2))
     cm1 = cm.d1.get_compare(cm.d2)
     cm2 = cm.d1.get_compare(x2)
-    cm3 = cm.d1.get_compare(np.hstack((x2,x2)))
+    cm3 = cm.d1.get_compare(np.hstack((x2, x2)))
     # all use the same d1, no copying
     assert_(cm.d1 is cm1.d1)
     assert_(cm.d1 is cm2.d1)
@@ -600,7 +600,7 @@ def test_tost_transform_paired():
        69.48 58.21  72.17 101.3  74.37 79.84  84.44 96.06
        96.74 89.30  94.26 97.22  48.52 61.62  95.68 85.80'''.split(), float)
 
-    x, y = raw.reshape(-1,2).T
+    x, y = raw.reshape(-1, 2).T
 
     res1 = smws.ttost_paired(x, y, 0.8, 1.25, transform=np.log)
     res_sas = (0.0031, (3.38, 0.0031), (-5.90, 0.00005))

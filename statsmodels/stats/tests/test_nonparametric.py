@@ -108,7 +108,7 @@ def test_mcnemar_chisquare():
 
 
 def test_mcnemar_vectorized(reset_randomstate):
-    ttk = np.random.randint(5,15, size=(2,2,3))
+    ttk = np.random.randint(5, 15, size=(2, 2, 3))
     with pytest.warns(FutureWarning):
         res = sbmcnemar(ttk, exact=False)
     with pytest.warns(FutureWarning):
@@ -190,7 +190,7 @@ def test_cochransq():
     assert_almost_equal([res.statistic, res.pvalue], [res_qstat, res_pvalue])
 
     # equivalence of mcnemar and cochranq for 2 samples
-    a,b = x[:,:2].T
+    a, b = x[:, :2].T
     res = cochrans_q(x[:, :2])
     with pytest.warns(FutureWarning):
         assert_almost_equal(sbmcnemar(a, b, exact=False, correction=False),

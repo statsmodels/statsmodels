@@ -302,7 +302,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
                 y0 = pos + dpos/2 if k0 == lines0[0] else pos
 
-                ax.fill_between((0, 1), (y0,y0),
+                ax.fill_between((0, 1), (y0, y0),
                                 (pos-0.7*title_space_axes,
                                  pos-0.7*title_space_axes),
                                 color='darkgrey',
@@ -322,7 +322,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
                 ax.fill_between((pos-dpos/2+0.01,
                                  pos+(m-1)*dpos+dpos/2-0.01),
-                                (1.01,1.01), (1.06,1.06),
+                                (1.01, 1.01), (1.06, 1.06),
                                 color='darkgrey',
                                 transform=ax.transAxes,
                                 zorder=1, clip_on=False)
@@ -415,7 +415,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
             ticks.append(pos)
 
             # Loop over the points in one line
-            for ji,jp in enumerate(lines_map[(k0,k1)]):
+            for ji, jp in enumerate(lines_map[(k0, k1)]):
 
                 # Calculate the vertical offset
                 yo = 0
@@ -429,13 +429,11 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
                     # Symmetric interval
                     if np.isscalar(intervals[jp]):
-                        lcb, ucb = pt - intervals[jp],\
-                            pt + intervals[jp]
+                        lcb, ucb = pt - intervals[jp], pt + intervals[jp]
 
                     # Nonsymmetric interval
                     else:
-                        lcb, ucb = pt - intervals[jp][0],\
-                            pt + intervals[jp][1]
+                        lcb, ucb = pt - intervals[jp][0], pt + intervals[jp][1]
 
                     # Draw the interval
                     if horizontal:

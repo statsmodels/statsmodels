@@ -20,7 +20,7 @@ from statsmodels.tools.tools import add_constant
 cpunish_data = load()
 cpunish_data.exog = np.asarray(cpunish_data.exog)
 cpunish_data.endog = np.asarray(cpunish_data.endog)
-cpunish_data.exog[:,3] = np.log(cpunish_data.exog[:,3])
+cpunish_data.exog[:, 3] = np.log(cpunish_data.exog[:, 3])
 exog = add_constant(cpunish_data.exog, prepend=False)
 endog = cpunish_data.endog - 1  # avoid zero-truncation
 exog /= np.round(exog.max(0), 3)

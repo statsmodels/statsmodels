@@ -30,7 +30,7 @@ class VARSummary:
     default_fmt = dict(
         # data_fmts=["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
         # data_fmts=["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
-        data_fmts=["%#15.6F","%#15.6F","%#15.3F","%#14.3F"],
+        data_fmts=["%#15.6F", "%#15.6F", "%#15.3F", "%#14.3F"],
         empty_cell='',
         # colwidths=10,
         colsep='  ',
@@ -58,7 +58,7 @@ class VARSummary:
     )
     part2_fmt = dict(
         default_fmt,
-        data_fmts=["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+        data_fmts=["%#12.6g", "%#12.6g", "%#10.4g", "%#5.4g"],
         colwidths=None,
         colsep='    ',
         table_dec_above='-',
@@ -149,7 +149,7 @@ class VARSummary:
                     model.tvalues.T.ravel(),
                     model.pvalues.T.ravel())
 
-        header = ('coefficient','std. error','t-stat','prob')
+        header = ('coefficient', 'std. error', 't-stat', 'prob')
 
         buf = StringIO()
         dim = k * model.k_ar + model.k_trend + model.k_exog_user
@@ -184,7 +184,7 @@ def normality_summary(results):
 
 def hypothesis_test_table(results, title, null_hyp):
     fmt = dict(_default_table_fmt,
-               data_fmts=["%#15.6F","%#15.6F","%#15.3F", "%s"])
+               data_fmts=["%#15.6F", "%#15.6F", "%#15.3F", "%s"])
 
     buf = StringIO()
     table = SimpleTable([[results['statistic'],
@@ -229,7 +229,7 @@ def pprint_matrix(values, rlabels, clabels, col_space=None):
         line = ('%s' % rlab).ljust(row_space)
 
         for j in range(K):
-            line += _pfixed(values[i,j], col_space[j])
+            line += _pfixed(values[i, j], col_space[j])
 
         buf.write(line + '\n')
 

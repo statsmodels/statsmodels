@@ -344,7 +344,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
         gen_right = gen_right_
 
     # check nothing was missed
-    missing_values = [k for k,v in gen_left + gen_right if v is None]
+    missing_values = [k for k, v in gen_left + gen_right if v is None]
     assert missing_values == [], missing_values
 
     # pad both tables to equal number of rows
@@ -358,7 +358,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
         # padding in SimpleTable does not work like I want
         # force extra spacing and exact string length in right table
-        gen_right = [('%-21s' % ('  '+k), v) for k,v in gen_right]
+        gen_right = [('%-21s' % ('  '+k), v) for k, v in gen_right]
         gen_stubs_right, gen_data_right = zip_longest(*gen_right)  # transpose row col
         gen_table_right = SimpleTable(gen_data_right,
                                       gen_header,
@@ -460,8 +460,8 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
                        [forg(std_err[i]) for i in exog_idx],
                        [forg(tvalues[i]) for i in exog_idx],
                        ["%#6.3f" % (pvalues[i]) for i in exog_idx],
-                       [forg(conf_int[i,0]) for i in exog_idx],
-                       [forg(conf_int[i,1]) for i in exog_idx])
+                       [forg(conf_int[i, 0]) for i in exog_idx],
+                       [forg(conf_int[i, 1]) for i in exog_idx])
     parameter_table = SimpleTable(params_data,
                                   param_header,
                                   params_stubs,
@@ -650,8 +650,8 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
 
     tables = []
     for eq in range(n_equ):
-        restup = (res, res.params[:,eq], res.bse[:,eq], res.tvalues[:,eq],
-                  res.pvalues[:,eq], res.conf_int(alpha)[eq])
+        restup = (res, res.params[:, eq], res.bse[:, eq], res.tvalues[:, eq],
+                  res.pvalues[:, eq], res.conf_int(alpha)[eq])
 
         skiph = False
         tble = summary_params(restup, yname=endog_names[eq],

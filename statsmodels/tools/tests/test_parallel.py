@@ -10,4 +10,4 @@ def test_parallel():
         warnings.simplefilter("ignore")
         parallel, p_func, n_jobs = parallel_func(sqrt, n_jobs=-1, verbose=0)
         y = parallel(p_func(i**2) for i in range(10))
-    testing.assert_equal(x,y)
+    testing.assert_equal(x, y)

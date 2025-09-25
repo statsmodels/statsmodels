@@ -2,9 +2,6 @@
 exclude = .git,build,docs,archive
 max-line-length = 88
 extend-ignore =
-    E231,
-    # E231: Missing whitespace after ',', ';', or ':'
-
     # Bugbear codes
     B007,
     # B007: Loop control variable 'i' not used within the loop body

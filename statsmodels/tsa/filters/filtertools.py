@@ -79,9 +79,9 @@ def fftconvolveinv(in1, in2, mode="full"):
 
     # Always use 2**n-sized FFT
     fsize = 2**np.ceil(np.log2(size))
-    IN1 = fft.fftn(in1,fsize)
+    IN1 = fft.fftn(in1, fsize)
     # IN1 *= fftn(in2,fsize) # JP: this looks like the only change I made
-    IN1 /= fft.fftn(in2,fsize)  # use inverse filter
+    IN1 /= fft.fftn(in2, fsize)  # use inverse filter
     # note the inverse is elementwise not matrix inverse
     # is this correct, NO  does not seem to work for VARMA
     fslice = tuple([slice(0, int(sz)) for sz in size])
@@ -92,13 +92,13 @@ def fftconvolveinv(in1, in2, mode="full"):
     if mode == "full":
         return ret
     elif mode == "same":
-        if np.product(s1,axis=0) > np.product(s2,axis=0):
+        if np.product(s1, axis=0) > np.product(s2, axis=0):
             osize = s1
         else:
             osize = s2
-        return trim_centered(ret,osize)
+        return trim_centered(ret, osize)
     elif mode == "valid":
-        return trim_centered(ret,abs(s2-s1)+1)
+        return trim_centered(ret, abs(s2-s1)+1)
 
 
 # code duplication with fftconvolveinv
@@ -156,13 +156,13 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     if mode == "full":
         return ret
     elif mode == "same":
-        if np.product(s1,axis=0) > np.product(s2,axis=0):
+        if np.product(s1, axis=0) > np.product(s2, axis=0):
             osize = s1
         else:
             osize = s2
-        return trim_centered(ret,osize)
+        return trim_centered(ret, osize)
     elif mode == "valid":
-        return trim_centered(ret,abs(s2-s1)+1)
+        return trim_centered(ret, abs(s2-s1)+1)
 
 
 # original changes and examples in sandbox.tsa.try_var_convolve

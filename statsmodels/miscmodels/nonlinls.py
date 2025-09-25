@@ -163,7 +163,7 @@ class NonlinearLS(Model):  # or subclass a model
         res = optimize.leastsq(func, p0, full_output=1, **kw)
         (popt, pcov, infodict, errmsg, ier) = res
 
-        if ier not in [1,2,3,4]:
+        if ier not in [1, 2, 3, 4]:
             msg = "Optimal parameters not found: " + errmsg
             raise RuntimeError(msg)
 
@@ -276,7 +276,7 @@ if __name__ == '__main__':
     def error2(params, x, y):
         return (y - func(params, x))**2
 
-    x = np.linspace(0,4,50)
+    x = np.linspace(0, 4, 50)
     params = np.array([2.5, 1.3, 0.5])
     y0 = func(params, x)
     y = y0 + 0.2*np.random.normal(size=len(x))

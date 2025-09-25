@@ -440,8 +440,8 @@ class GenericZeroInflated(CountModel):
 
         hess_arr = np.zeros((dim, dim))
 
-        hess_arr[:self.k_inflate,:] = hess_arr_infl
-        hess_arr[self.k_inflate:,self.k_inflate:] = hess_arr_main
+        hess_arr[:self.k_inflate, :] = hess_arr_infl
+        hess_arr[self.k_inflate:, self.k_inflate:] = hess_arr_main
 
         tri_idx = np.triu_indices(self.k_exog + self.k_inflate, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]

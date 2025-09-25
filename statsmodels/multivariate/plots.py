@@ -102,7 +102,7 @@ def plot_loadings(loadings, col_names=None, row_names=None,
     if loading_pairs is None:
         loading_pairs = []
         for i in range(n_factor):
-            for j in range(i + 1,n_factor):
+            for j in range(i + 1, n_factor):
                 loading_pairs.append([i, j])
     if col_names is None:
         col_names = ["factor %d" % i for i in range(n_factor)]

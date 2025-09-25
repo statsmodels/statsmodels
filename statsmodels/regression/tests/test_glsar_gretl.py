@@ -25,7 +25,7 @@ import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.tools import add_constant
 
 
-def compare_ftest(contrast_res, other, decimal=(5,4)):
+def compare_ftest(contrast_res, other, decimal=(5, 4)):
     assert_almost_equal(contrast_res.fvalue, other[0], decimal=decimal[0])
     assert_almost_equal(contrast_res.pvalue, other[1], decimal=decimal[1])
     assert_equal(contrast_res.df_num, other[2])
@@ -96,9 +96,9 @@ class TestGLSARGretl:
 
         # basic
 
-        assert_almost_equal(res.params, partable[:,0], 4)
-        assert_almost_equal(res.bse, partable[:,1], 6)
-        assert_almost_equal(res.tvalues, partable[:,2], 2)
+        assert_almost_equal(res.params, partable[:, 0], 4)
+        assert_almost_equal(res.bse, partable[:, 1], 6)
+        assert_almost_equal(res.tvalues, partable[:, 2], 2)
 
         assert_almost_equal(res.ssr, result_gretl_g1['ssr'][1], decimal=2)
         # assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) # not in gretl
@@ -124,9 +124,9 @@ class TestGLSARGretl:
         assert_almost_equal(res.model.rho, rho, decimal=3)
 
         # basic
-        assert_almost_equal(res.params, partable[:,0], 4)
-        assert_almost_equal(res.bse, partable[:,1], 3)
-        assert_almost_equal(res.tvalues, partable[:,2], 2)
+        assert_almost_equal(res.params, partable[:, 0], 4)
+        assert_almost_equal(res.bse, partable[:, 1], 3)
+        assert_almost_equal(res.tvalues, partable[:, 2], 2)
 
         assert_almost_equal(res.ssr, result_gretl_g1['ssr'][1], decimal=2)
         # assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) # not in gretl
@@ -138,9 +138,9 @@ class TestGLSARGretl:
         # assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
 
         c = oi.reset_ramsey(res, degree=2)
-        compare_ftest(c, reset_2, decimal=(2,4))
+        compare_ftest(c, reset_2, decimal=(2, 4))
         c = oi.reset_ramsey(res, degree=3)
-        compare_ftest(c, reset_2_3, decimal=(2,4))
+        compare_ftest(c, reset_2_3, decimal=(2, 4))
 
         # arch
         # sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
@@ -314,11 +314,11 @@ class TestGLSARGretl:
         cur_dir = os.path.abspath(os.path.dirname(__file__))
         fpath = os.path.join(cur_dir, 'results/leverage_influence_ols_nostars.txt')
         lev = np.genfromtxt(fpath, skip_header=3, skip_footer=1,
-                            converters={0:lambda s: s})
+                            converters={0: lambda s: s})
         # either numpy 1.6 or python 3.2 changed behavior
         if np.isnan(lev[-1]['f1']):
             lev = np.genfromtxt(fpath, skip_header=3, skip_footer=2,
-                                converters={0:lambda s: s})
+                                converters={0: lambda s: s})
 
         lev.dtype.names = names
 
@@ -327,8 +327,8 @@ class TestGLSARGretl:
         cov_hac = sw.cov_hac_simple(res, nlags=4, use_correction=False)
         bse_hac = sw.se_cov(cov_hac)
 
-        assert_almost_equal(res.params, partable[:,0], 5)
-        assert_almost_equal(bse_hac, partable[:,1], 5)
+        assert_almost_equal(res.params, partable[:, 0], 5)
+        assert_almost_equal(bse_hac, partable[:, 1], 5)
         # TODO
 
         assert_almost_equal(res.ssr, result_gretl_g1['ssr'][1], decimal=2)
@@ -344,9 +344,9 @@ class TestGLSARGretl:
         # assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
 
         c = oi.reset_ramsey(res, degree=2)
-        compare_ftest(c, reset_2, decimal=(6,5))
+        compare_ftest(c, reset_2, decimal=(6, 5))
         c = oi.reset_ramsey(res, degree=3)
-        compare_ftest(c, reset_2_3, decimal=(6,5))
+        compare_ftest(c, reset_2_3, decimal=(6, 5))
 
         linear_sq = smsdia.linear_lm(res.resid, res.model.exog)
         assert_almost_equal(linear_sq[0], linear_squares[0], decimal=6)
@@ -365,7 +365,7 @@ class TestGLSARGretl:
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=5)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 
-        [oi.variance_inflation_factor(res.model.exog, k) for k in [1,2]]
+        [oi.variance_inflation_factor(res.model.exog, k) for k in [1, 2]]
 
         infl = oi.OLSInfluence(res_ols)
         # print np.max(np.abs(lev['DFFITS'] - infl.dffits[0]))

@@ -46,7 +46,7 @@ params_table = np.array([
                    0,  .20113613870656,  .21875129330105, np.nan,
      1.9599639845401,                0,  1.5417559978312,  .01547272444235,
      99.643472846381,                0,  1.5114300151815,   1.572081980481,
-    np.nan,  1.9599639845401,                0]).reshape(3,9)
+    np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -55,7 +55,7 @@ params_table_rownames = 'aget totchr _cons'.split()
 cov = np.array([
      .00002543469022, -1.201653007e-06, -.00004595604713, -1.201653007e-06,
      .00002019373927, -.00004598669366, -.00004595604713, -.00004598669366,
-     .00023940520167]).reshape(3,3)
+     .00023940520167]).reshape(3, 3)
 
 cov_colnames = 'aget totchr _cons'.split()
 
@@ -75,8 +75,8 @@ class Bunch(dict):
         self.__dict__ = self
 
         if hasattr(self, 'params_table'):
-            for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-                self[att] = self.params_table[:,i]
+            for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
+                self[att] = self.params_table[:, i]
 
 
 results_trunc_poisson = Bunch(
@@ -150,7 +150,7 @@ table = np.array([
     np.nan,  1.9599639845401,                0,   .8962702739583,
      .00300215903947,  298.54190340135,                0,  .89038615036507,
      .90215439755153, np.nan,  1.9599639845401,                0
-    ]).reshape(4,9)
+    ]).reshape(4, 9)
 
 table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -175,7 +175,7 @@ table = np.array([
      .06349506148811, np.nan,  1.9599639845401,                0,
      .89467323355669,   .0030739863865,  291.04658286247,                0,
      .88864833095018,   .9006981361632, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
 table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -243,7 +243,7 @@ params_table = np.array([
     np.nan,  1.9599639845401,                0, -.53039277265033,
      .04237842368148, -12.515632403809,  6.131755594e-36, -.61345295678762,
     -.44733258851304, np.nan,  1.9599639845401,                0
-    ]).reshape(4,9)
+    ]).reshape(4, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -254,7 +254,7 @@ cov = np.array([
     -8.133778629e-06,  .00013616052341, -.00027073391794,  .00003663514391,
      -.0002727009794, -.00027073391794,  .00134173143862, -.00027563132595,
      4.768991952e-06,  .00003663514391, -.00027563132595,  .00179593079373
-    ]).reshape(4,4)
+    ]).reshape(4, 4)
 
 cov_colnames = 'aget totchr _cons _cons'.split()
 
@@ -340,7 +340,7 @@ table = np.array([
     np.nan,  1.9599639845401,                0,  .69072240772241,
      .00681119370137,  101.40989054297,                0,  .67737271337601,
      .70407210206881, np.nan,  1.9599639845401,                0
-    ]).reshape(4,9)
+    ]).reshape(4, 9)
 
 table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -365,7 +365,7 @@ table = np.array([
      .09595402645998, np.nan,  1.9599639845401,                0,
      .64444261784167,  .00909052984414,  70.891645359594,                0,
      .62662550674676,  .66225972893657, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
 table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -421,7 +421,7 @@ params_table = np.array([
                    0,   .1716228164283,  .18977081579048, np.nan,
      1.9599639845401,                0,  1.6905464469665,  .01602194453256,
      105.51443637387,                0,  1.6591440127204,  1.7219488812126,
-    np.nan,  1.9599639845401,                0]).reshape(3,9)
+    np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -430,7 +430,7 @@ params_table_rownames = 'aget totchr _cons'.split()
 cov = np.array([
      .00002619263819, -9.943128998e-07, -.00004800030105, -9.943128998e-07,
      .00002143390677, -.00005015292878, -.00004800030105, -.00005015292878,
-      .0002567027066]).reshape(3,3)
+      .0002567027066]).reshape(3, 3)
 
 cov_colnames = 'aget totchr _cons'.split()
 
@@ -516,7 +516,7 @@ table = np.array([
     np.nan,  1.9599639845401,                0,  .86987044494885,
      .00367826110927,  236.48958546081,                0,  .86266118564894,
      .87707970424876, np.nan,  1.9599639845401,                0
-    ]).reshape(4,9)
+    ]).reshape(4, 9)
 
 table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -541,7 +541,7 @@ table = np.array([
      .04340477854541, np.nan,  1.9599639845401,                0,
      .93352045017566,  .00238739224619,  391.02097766504,                0,
      .92884124735615,  .93819965299516, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
 table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -609,7 +609,7 @@ params_table = np.array([
     np.nan,  1.9599639845401,                0, -.43643003824212,
      .05825731989132, -7.4914197744811,  6.813252519e-14, -.55061228706494,
      -.3222477894193, np.nan,  1.9599639845401,                0
-    ]).reshape(4,9)
+    ]).reshape(4, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -620,7 +620,7 @@ cov = np.array([
     -8.418931354e-06,  .00016690759006,  -.0003648589293,  .00010167740775,
     -.00034269534637,  -.0003648589293,  .00193460518158, -.00096544368473,
      8.523991115e-06,  .00010167740775, -.00096544368473,  .00339391532092
-    ]).reshape(4,4)
+    ]).reshape(4, 4)
 
 cov_colnames = 'aget totchr _cons _cons'.split()
 
@@ -706,7 +706,7 @@ table = np.array([
     np.nan,  1.9599639845401,                0,  .65791347836172,
      .00742267145141,  88.635672839381,                0,  .64336530964788,
      .67246164707557, np.nan,  1.9599639845401,                0
-    ]).reshape(4,9)
+    ]).reshape(4, 9)
 
 table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -731,7 +731,7 @@ table = np.array([
      .09510782152757, np.nan,  1.9599639845401,                0,
      .63109782867243,  .01370605085442,  46.045198239483,                0,
      .60423446262748,  .65796119471738, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
 table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 

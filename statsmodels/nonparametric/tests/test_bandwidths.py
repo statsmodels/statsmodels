@@ -21,10 +21,10 @@ import pytest
 
 np.random.seed(12345)
 Xi = mixture_rvs(
-    [.25,.75],
+    [.25, .75],
     size=200,
     dist=[stats.norm, stats.norm],
-    kwargs=(dict(loc=-1,scale=.5),dict(loc=1,scale=.5))
+    kwargs=(dict(loc=-1, scale=.5), dict(loc=1, scale=.5))
 )
 
 
@@ -39,7 +39,7 @@ class TestBandwidthCalculation:
         kern = kernels.Gaussian()
 
         bw_calc = [0, 0, 0]
-        for ii, bw in enumerate(['scott','silverman','normal_reference']):
+        for ii, bw in enumerate(['scott', 'silverman', 'normal_reference']):
             bw_calc[ii] = select_bandwidth(Xi, bw, kern)
 
         assert_allclose(bw_expected, bw_calc)

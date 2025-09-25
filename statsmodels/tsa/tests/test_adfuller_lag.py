@@ -28,8 +28,8 @@ def test_adf_autolag():
         for i, res in sorted(st2.autolag_results.items())[:5]:
             lag = i - k_trend
             # assert correct design matrices in _autolag
-            assert_equal(res.model.exog[-10:,k_trend], x[-11:-1])
-            assert_equal(res.model.exog[-1,k_trend+1:], xd[-lag:-1][::-1])
+            assert_equal(res.model.exog[-10:, k_trend], x[-11:-1])
+            assert_equal(res.model.exog[-1, k_trend+1:], xd[-lag:-1][::-1])
             # min-ic lag of dfgls in Stata is also 2, or 9 for maic with notrend
             assert_equal(st2.usedlag, 2)
 

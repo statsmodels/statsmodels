@@ -82,7 +82,7 @@ class CheckGenericMixin:
     def test_params(self):
         params = self.res1.params
 
-        params_true = np.array([2,0,2])
+        params_true = np.array([2, 0, 2])
         if self.res1.model.fixed_paramsmask is not None:
             params_true = params_true[self.res1.model.fixed_paramsmask]
         assert_allclose(params, params_true, atol=1.5)

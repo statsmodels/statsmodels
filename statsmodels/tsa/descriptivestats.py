@@ -30,7 +30,7 @@ class TsaDescriptive:
         xdetrended = tsatools.detrend(self.data, order=order)
         return self.__class__(xdetrended, self.label, self.name + '_detrended')
 
-    def fit(self, order=(1,0,1), **kwds):
+    def fit(self, order=(1, 0, 1), **kwds):
         from .arima_model import ARMA
         self.mod = ARMA(self.data)
         self.res = self.mod.fit(order=order, **kwds)
@@ -57,20 +57,20 @@ class TsaDescriptive:
         if fig is None:
             import matplotlib.pyplot as plt
             fig = plt.figure()
-        ax = fig.add_subplot(2,2,1)
+        ax = fig.add_subplot(2, 2, 1)
         namestr = ' for %s' % self.name if self.name else ''
         ax.plot(data)
         ax.set_title('Time series' + namestr)
 
-        ax = fig.add_subplot(2,2,2)
+        ax = fig.add_subplot(2, 2, 2)
         ax.plot(acf)
         ax.set_title('Autocorrelation' + namestr)
 
-        ax = fig.add_subplot(2,2,3)
+        ax = fig.add_subplot(2, 2, 3)
         ax.plot(spdr)  # (wr, spdr)
         ax.set_title('Power Spectrum' + namestr)
 
-        ax = fig.add_subplot(2,2,4)
+        ax = fig.add_subplot(2, 2, 4)
         ax.plot(pacf)
         ax.set_title('Partial Autocorrelation' + namestr)
 

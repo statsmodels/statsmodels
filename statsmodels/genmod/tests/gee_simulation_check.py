@@ -90,11 +90,11 @@ class AR_simulator(GEE_simulator):
 
             group.append([i,] * gsize)
 
-            time1 = np.random.normal(size=(gsize,2))
+            time1 = np.random.normal(size=(gsize, 2))
             time.append(time1)
 
             exog1 = np.random.normal(size=(gsize, 5))
-            exog1[:,0] = 1
+            exog1[:, 0] = 1
             exog.append(exog1)
 
             # Pairwise distances within the cluster
@@ -153,7 +153,7 @@ class Nested_simulator(GEE_simulator):
 
             # The random effects
             variances = [np.sqrt(v)*np.random.normal(size=n)
-                         for v,n in zip(vcomp, self.nest_sizes)]
+                         for v, n in zip(vcomp, self.nest_sizes)]
 
             gpe = np.random.normal() * np.sqrt(group_effect_var)
 
@@ -167,7 +167,7 @@ class Nested_simulator(GEE_simulator):
 
                 # The sum of all random effects that apply to this
                 # unit
-                ref = gpe + sum([v[j] for v,j in zip(variances, nest)])
+                ref = gpe + sum([v[j] for v, j in zip(variances, nest)])
 
                 exog1 = np.random.normal(size=5)
                 exog1[0] = 1
@@ -263,7 +263,7 @@ for gendat in gendats:
 
     for j in range(nrep):
 
-        da,va = gendat()
+        da, va = gendat()
         ga = Gaussian()
 
         md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
@@ -274,7 +274,7 @@ for gendat in gendats:
         params.append(np.asarray(mdf.params))
         std_errors.append(np.asarray(mdf.standard_errors))
 
-        da,va = gendat()
+        da, va = gendat()
         ga = Gaussian()
 
         md = GEE(da.endog, da.exog, da.group, da.time, ga, va,

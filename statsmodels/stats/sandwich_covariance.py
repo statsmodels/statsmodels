@@ -289,7 +289,7 @@ def _HCCM1(results, scale):
     '''
     if scale.ndim == 1:
         H = np.dot(results.model.pinv_wexog,
-                   scale[:,None]*results.model.pinv_wexog.T)
+                   scale[:, None]*results.model.pinv_wexog.T)
     else:
         H = np.dot(results.model.pinv_wexog,
                    np.dot(scale, results.model.pinv_wexog.T))
@@ -317,7 +317,7 @@ def _HCCM2(hessian_inv, scale):
 
     '''
     if scale.ndim == 1:
-        scale = scale[:,None]
+        scale = scale[:, None]
 
     xxi = hessian_inv
     H = np.dot(np.dot(xxi, scale), xxi.T)
@@ -404,7 +404,7 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
     '''
 
     if x.ndim == 1:
-        x = x[:,None]
+        x = x[:, None]
     n_periods = x.shape[0]
     if nlags is None:
         nlags = int(np.floor(4 * (n_periods / 100.)**(2./9.)))
@@ -440,7 +440,7 @@ def S_white_simple(x):
 
     '''
     if x.ndim == 1:
-        x = x[:,None]
+        x = x[:, None]
 
     return np.dot(x.T, x)
 
@@ -505,7 +505,7 @@ def cov_crosssection_0(results, group):
     '''this one is still wrong, use cov_cluster instead'''
 
     # TODO: currently used version of groupsums requires 2d resid
-    scale = S_crosssection(results.resid[:,None], group)
+    scale = S_crosssection(results.resid[:, None], group)
     scale = np.squeeze(scale)
     cov = _HCCM1(results, scale)
     return cov

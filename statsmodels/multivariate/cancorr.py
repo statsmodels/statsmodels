@@ -107,7 +107,7 @@ class CanCorr(Model):
         nobs, k_xvar = self.exog.shape
         eigenvals = np.power(self.cancorr, 2)
         stats = pd.DataFrame(columns=['Canonical Correlation', "Wilks' lambda",
-                                      'Num DF','Den DF', 'F Value','Pr > F'],
+                                      'Num DF', 'Den DF', 'F Value', 'Pr > F'],
                              index=list(range(len(eigenvals) - 1, -1, -1)))
         prod = 1
         for i in range(len(eigenvals) - 1, -1, -1):
