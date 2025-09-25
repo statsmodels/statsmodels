@@ -25,7 +25,7 @@ nxx = [-0.95, -1.0, -1.1]
 
 
 def test_loggamma():
-    #'Results for expgamma'
+    # 'Results for expgamma'
     loggammaexpg = LogTransf_gen(stats.gamma)
     cdftr = loggammaexpg._cdf(1, 10)
     cdfst = stats.loggamma.cdf(1, 10)
@@ -54,7 +54,7 @@ class CheckDistEquivalence:
     # no args, kwds yet
 
     def test_cdf(self):
-        #'\nsquare of standard normal random variable is chisquare with dof=1 distributed'
+        # '\nsquare of standard normal random variable is chisquare with dof=1 distributed'
         cdftr = self.dist.cdf(xx, *self.trargs, **self.trkwds)
         sfctr = 1 - self.dist.sf(xx, *self.trargs, **self.trkwds)  # sf complement
         cdfst = self.statsdist.cdf(xx, *self.stargs, **self.stkwds)
@@ -62,13 +62,13 @@ class CheckDistEquivalence:
         assert_almost_equal(cdfst, sfctr, 14)
 
     def test_pdf(self):
-        #'\nsquare of standard normal random variable is chisquare with dof=1 distributed'
+        # '\nsquare of standard normal random variable is chisquare with dof=1 distributed'
         pdftr = self.dist.pdf(xx, *self.trargs, **self.trkwds)
         pdfst = self.statsdist.pdf(xx, *self.stargs, **self.stkwds)
         assert_almost_equal(pdfst, pdftr, 13)
 
     def test_ppf(self):
-        #'\nsquare of standard normal random variable is chisquare with dof=1 distributed'
+        # '\nsquare of standard normal random variable is chisquare with dof=1 distributed'
         ppftr = self.dist.ppf(ppfq, *self.trargs, **self.trkwds)
         ppfst = self.statsdist.ppf(ppfq, *self.stargs, **self.stkwds)
         assert_almost_equal(ppfst, ppftr, 13)
@@ -154,7 +154,7 @@ class TestSquaredTF(CheckDistEquivalence):
 
 
 def test_squared_normal_chi2():
-    #'\nsquare of standard normal random variable is chisquare with dof=1 distributed'
+    # '\nsquare of standard normal random variable is chisquare with dof=1 distributed'
     cdftr = squarenormalg.cdf(xx, loc=loc, scale=s)
     sfctr = 1 - squarenormalg.sf(xx, loc=loc, scale=s)  # sf complement
     cdfst = stats.chi2.cdf(xx, 1)

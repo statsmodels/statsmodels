@@ -194,10 +194,10 @@ class ClippedContinuous:
         cdf_raw = self.base_dist.cdf(x, *args, **kwds)
 
         # not needed if equality test is used
-        ##        clip_mask = (x == self.clip_lower)
-        ##        if np.any(clip_mask):
-        ##            clip_prob = self.base_dist.cdf(clip_lower, *args, **kwds)
-        ##            pdf_raw[clip_mask] = clip_prob
+        #        clip_mask = (x == self.clip_lower)
+        #        if np.any(clip_mask):
+        #            clip_prob = self.base_dist.cdf(clip_lower, *args, **kwds)
+        #            pdf_raw[clip_mask] = clip_prob
 
         # the following will be handled by sub-classing rv_continuous
         # if self.a is defined

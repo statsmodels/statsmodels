@@ -267,9 +267,11 @@ class TestMICEData:
             for hide_complete_rows in False, True:
                 for color_row_patterns in False, True:
                     plt.clf()
-                    fig = imp_data.plot_missing_pattern(row_order=row_order,
-                                      hide_complete_rows=hide_complete_rows,
-                                      color_row_patterns=color_row_patterns)
+                    fig = imp_data.plot_missing_pattern(
+                        row_order=row_order,
+                        hide_complete_rows=hide_complete_rows,
+                        color_row_patterns=color_row_patterns
+                    )
                     close_or_save(pdf, fig)
                     close_figures()
 
@@ -405,10 +407,12 @@ def test_micedata_miss1():
 
     assert_equal(data_imp.data.isnull().values.sum(), 0)
 
-    ix_miss = {'var1': np.array([], dtype=np.int64),
-                 'var2': np.array([1], dtype=np.int64),
-                 'var3': np.array([1, 3], dtype=np.int64),
-                 'var4': np.array([], dtype=np.int64)}
+    ix_miss = {
+        'var1': np.array([], dtype=np.int64),
+        'var2': np.array([1], dtype=np.int64),
+        'var3': np.array([1, 3], dtype=np.int64),
+        'var4': np.array([], dtype=np.int64)
+    }
 
     for k in ix_miss:
         assert_equal(data_imp.ix_miss[k], ix_miss[k])

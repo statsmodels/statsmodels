@@ -398,7 +398,7 @@ class FormulaManager:
             ]
             conts[tuple(sorted(cont))].append((term, term.degree))
         final_conts = []
-        for key, value in conts.items():
+        for _, value in conts.items():
             tmp = sorted(value, key=lambda term_degree: term_degree[1])
             final_conts.extend([value[0] for value in tmp])
         if lhs_formula is not None:

@@ -138,7 +138,7 @@ def gammamomentcond2(distfn, params, mom2, quantile=None):
     return np.array(mom2) - mom2s
 
 
-######### fsolve does not move in small samples, fmin not very accurate
+# fsolve does not move in small samples, fmin not very accurate
 def momentcondunbound(distfn, params, mom2, quantile=None):
     """moment conditions for estimating distribution parameters using method
     of moments, uses mean, variance and one quantile for distributions
@@ -160,7 +160,7 @@ def momentcondunbound(distfn, params, mom2, quantile=None):
     return mom2diff
 
 
-###### loc scale only
+# loc scale only
 def momentcondunboundls(distfn, params, mom2, quantile=None, shape=None):
     """moment conditions for estimating loc and scale of a distribution
     with method of moments using either 2 quantiles or 2 moments (not both).
@@ -182,7 +182,7 @@ def momentcondunboundls(distfn, params, mom2, quantile=None, shape=None):
     return mom2diff
 
 
-######### try quantile GMM with identity weight matrix
+# try quantile GMM with identity weight matrix
 # (just a guess that's what it is
 
 
@@ -496,8 +496,8 @@ if __name__ == "__main__":
     print("--------------------------")
 
     # monkey patching :
-    ##    if hasattr(stats.beta, '_fitstart'):
-    ##        del stats.beta._fitstart  #bug in _fitstart  #raises AttributeError: _fitstart
+    #    if hasattr(stats.beta, '_fitstart'):
+    #        del stats.beta._fitstart  # bug in _fitstart  # raises AttributeError: _fitstart
     # stats.distributions.beta_gen._fitstart = lambda self, data : np.array([1,1,0,1])
     # _fitstart seems to require a tuple
     stats.distributions.beta_gen._fitstart = lambda self, data: (5, 5, 0, 1)
@@ -545,15 +545,13 @@ if __name__ == "__main__":
     print("tparest_gmm3quantile", tparest_gmm3quantile)
     print(distfn.fit(trvs))
 
-    ##
-
-    ##distfn = stats.t
-    ##pq = np.array([0.1,0.9])
-    ##paramsdgp = (5, 0, 1)
-    ##trvs = distfn.rvs(5, 0, 1, size=nobs)
-    ##xqs = [stats.scoreatpercentile(trvs, p) for p in pq*100]
-    ##mom2th = distfn.stats(*paramsdgp)
-    ##mom2s = np.array([trvs.mean(), trvs.var()])
+    # distfn = stats.t
+    # pq = np.array([0.1,0.9])
+    # paramsdgp = (5, 0, 1)
+    # trvs = distfn.rvs(5, 0, 1, size=nobs)
+    # xqs = [stats.scoreatpercentile(trvs, p) for p in pq*100]
+    # mom2th = distfn.stats(*paramsdgp)
+    # mom2s = np.array([trvs.mean(), trvs.var()])
     print(
         optimize.fsolve(
             lambda params: momentcondunboundls(distfn, params, mom2s, shape=5),

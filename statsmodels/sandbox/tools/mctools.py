@@ -101,8 +101,8 @@ class StatTestMC:
     """
 
     def __init__(self, dgp, statistic):
-        self.dgp = dgp  # staticmethod(dgp)  #no self
-        self.statistic = statistic  # staticmethod(statistic)  #no self
+        self.dgp = dgp  # staticmethod(dgp)  # no self
+        self.statistic = statistic  # staticmethod(statistic)  # no self
 
     def run(self, nrepl, statindices=None, dgpargs=(), statsargs=()):
         """run the actual Monte Carlo and save results

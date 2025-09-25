@@ -11,8 +11,9 @@ from scipy import stats, linalg
 
 import statsmodels.tsa.tsatools as tsa
 
-#-------------------------------------------------------------------------------
+#
 # Auxiliary functions for estimation
+#
 
 
 def get_var_endog(y, lags, trend='c', has_constant='skip'):
@@ -120,9 +121,9 @@ def comp_matrix(coefs):
         result[np.arange(k1, kp), np.arange(kp-k1)] = 1
 
     return result
-
-#-------------------------------------------------------------------------------
+#
 # Miscellaneous stuff
+#
 
 
 def parse_lutkepohl_data(path):  # pragma: no cover
@@ -142,7 +143,7 @@ def parse_lutkepohl_data(path):  # pragma: no cover
 
     to_skip = 0
     while asbytes('*/') not in lines.popleft():
-        #while '*/' not in lines.popleft():
+        # while '*/' not in lines.popleft():
         to_skip += 1
 
     while True:
@@ -285,7 +286,7 @@ def get_index(lst, name):
     return result
 
 
-#method used repeatedly in Sims-Zha error bands
+# method used repeatedly in Sims-Zha error bands
 def eigval_decomp(sym_array):
     """
     Returns
@@ -294,7 +295,7 @@ def eigval_decomp(sym_array):
     eigva: list of eigenvalues
     k: largest eigenvector
     """
-    #check if symmetric, do not include shock period
+    # check if symmetric, do not include shock period
     eigva, W = linalg.eig(sym_array, left=True, right=False)
     k = np.argmax(eigva)
     return W, eigva, k

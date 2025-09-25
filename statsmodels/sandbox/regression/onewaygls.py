@@ -268,7 +268,7 @@ class OneWayLS:
             ("all", (fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num))
         )
 
-        #        for group in self.unique[1:]:  #replace with group1, group2 in sorted(keys)
+        #        for group in self.unique[1:]:  # replace with group1, group2 in sorted(keys)
         #            txt.append('F-test for equality of coefficients between group'
         #                       ' %s and group %s' % (group, '0'))
         #            fres = self.lsjoint.f_test(self.contrasts[group])
@@ -295,12 +295,12 @@ class OneWayLS:
     def print_summary(self, res):
         """printable string of summary"""
         groupind = res.groups
-        # res.fitjoint()  #not really necessary, because called by ftest_summary
+        # res.fitjoint()  # not really necessary, because called by ftest_summary
         if hasattr(res, "self.summarytable"):
             summtable = self.summarytable
         else:
             _, summtable = res.ftest_summary()
-        # print ft[0]  #skip because table is nicer
+        # print ft[0]  # skip because table is nicer
         templ = """Table of F-tests for overall or pairwise equality of coefficients'
 %(tab)s
 

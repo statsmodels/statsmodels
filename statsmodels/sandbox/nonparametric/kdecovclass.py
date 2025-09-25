@@ -114,8 +114,8 @@ def test_kde_1d():
     )
 
 
-##    assert_almost_equal(gkde.integrate_gaussian(0.0, 1.0),
-##                        (kdepdf*normpdf).sum()*intervall, decimal=2)
+#    assert_almost_equal(gkde.integrate_gaussian(0.0, 1.0),
+#                        (kdepdf*normpdf).sum()*intervall, decimal=2)
 
 
 if __name__ == "__main__":

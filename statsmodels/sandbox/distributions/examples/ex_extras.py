@@ -96,12 +96,12 @@ def examples_normexpand():
 
 
 def examples_transf():
-    ##lognormal = ExpTransf(a=0.0, xa=-10.0, name = 'Log transformed normal')
-    ##print(lognormal.cdf(1))
-    ##print(stats.lognorm.cdf(1,1))
-    ##print(lognormal.stats())
-    ##print(stats.lognorm.stats(1))
-    ##print(lognormal.rvs(size=10))
+    #  lognormal = ExpTransf(a=0.0, xa=-10.0, name = 'Log transformed normal')
+    #  print(lognormal.cdf(1))
+    #  print(stats.lognorm.cdf(1,1))
+    #  print(lognormal.stats())
+    #  print(stats.lognorm.stats(1))
+    #  print(lognormal.rvs(size=10))
 
     print("Results for lognormal")
     lognormalg = ExpTransf_gen(stats.norm, a=0, name="Log transformed normal general")
@@ -111,10 +111,10 @@ def examples_transf():
     print(stats.lognorm.stats(1))
     print(lognormalg.rvs(size=5))
 
-    ##print('Results for loggamma')
-    ##loggammag = ExpTransf_gen(stats.gamma)
-    ##print(loggammag._cdf(1,10))
-    ##print(stats.loggamma.cdf(1,10))
+    # print('Results for loggamma')
+    # loggammag = ExpTransf_gen(stats.gamma)
+    # print(loggammag._cdf(1,10))
+    # print(stats.loggamma.cdf(1,10))
 
     print("Results for expgamma")
     loggammaexpg = LogTransf_gen(stats.gamma)

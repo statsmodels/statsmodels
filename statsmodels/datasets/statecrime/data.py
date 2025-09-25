@@ -13,7 +13,7 @@ DESCRSHORT = """State crime data 2009"""
 
 DESCRLONG = DESCRSHORT
 
-#suggested notes
+# suggested notes
 NOTE = """::
 
     Number of observations: 51

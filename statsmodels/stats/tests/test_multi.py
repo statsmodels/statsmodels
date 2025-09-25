@@ -250,7 +250,7 @@ class TestMultiTests3(CheckMultiTestsMixin):
 class TestMultiTests4(CheckMultiTestsMixin):
     # in simulations, all two stage fdr, fdr_tsbky, fdr_tsbh, fdr_gbs, have in
     # some cases (cases with large Alternative) an FDR that looks too large
-    # this is the first case #rejected = 12, DGP : has 10 false
+    # this is the first case # rejected = 12, DGP : has 10 false
     @classmethod
     def setup_class(cls):
         cls.methods = ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',

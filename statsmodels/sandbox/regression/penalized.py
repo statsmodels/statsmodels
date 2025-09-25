@@ -350,10 +350,10 @@ class TheilRegressionResults(RegressionResults):
         """trace of hat matrix"""
         return self.hatmatrix_diag.sum()
 
-    ##    #this does not update df_resid
-    ##    @property   #needs to be property or attribute (no call)
-    ##    def df_model(self):
-    ##        return self.hatmatrix_trace()
+    #    # this does not update df_resid
+    #    @property   # needs to be property or attribute (no call)
+    #    def df_model(self):
+    #        return self.hatmatrix_trace()
 
     # Note: mse_resid uses df_resid not nobs-k_vars, which might differ if df_model, tr(H), is used
     # in paper for gcv ess/nobs is used instead of mse_resid
@@ -475,8 +475,8 @@ def coef_restriction_diffseq(n_coeffs, degree=1, n_vars=None, position=0, base_i
         return full
 
 
-##
-##    R = np.c_[np.zeros((n_groups, k_vars-1)), np.eye(n_groups)]
-##    r = np.zeros(n_groups)
-##    R = np.c_[np.zeros((n_groups-1, k_vars)),
-##              np.eye(n_groups-1)-1./n_groups * np.ones((n_groups-1, n_groups-1))]
+#
+#    R = np.c_[np.zeros((n_groups, k_vars-1)), np.eye(n_groups)]
+#    r = np.zeros(n_groups)
+#    R = np.c_[np.zeros((n_groups-1, k_vars)),
+#              np.eye(n_groups-1)-1./n_groups * np.ones((n_groups-1, n_groups-1))]

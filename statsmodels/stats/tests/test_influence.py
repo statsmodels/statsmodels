@@ -126,8 +126,11 @@ class TestInfluenceLogitGLMMLE(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         df = data_bin
-        res = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
-              family=families.Binomial()).fit(attach_wls=True, atol=1e-10)
+        res = GLM(
+            df["constrict"],
+            df[["const", "log_rate", "log_volumne"]],
+            family=families.Binomial(),
+        ).fit(attach_wls=True, atol=1e-10)
 
         cls.infl1 = res.get_influence()
         cls.infl0 = MLEInfluence(res)
@@ -184,13 +187,16 @@ class TestInfluenceGaussianGLMMLE(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         from .test_diagnostic import get_duncan_data
-        endog, exog, labels = get_duncan_data()
-        data = pd.DataFrame(np.column_stack((endog, exog)),
-                        columns='y const var1 var2'.split(),
-                        index=labels)
 
-        res = GLM.from_formula('y ~ const + var1 + var2 - 1', data).fit()
-        #res = GLM(endog, exog).fit()
+        endog, exog, labels = get_duncan_data()
+        data = pd.DataFrame(
+            np.column_stack((endog, exog)),
+            columns="y const var1 var2".split(),
+            index=labels,
+        )
+
+        res = GLM.from_formula("y ~ const + var1 + var2 - 1", data).fit()
+        # res = GLM(endog, exog).fit()
 
         cls.infl1 = res.get_influence()
         cls.infl0 = MLEInfluence(res)
@@ -204,13 +210,16 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         from .test_diagnostic import get_duncan_data
-        endog, exog, labels = get_duncan_data()
-        data = pd.DataFrame(np.column_stack((endog, exog)),
-                        columns='y const var1 var2'.split(),
-                        index=labels)
 
-        res0 = GLM.from_formula('y ~ const + var1 + var2 - 1', data).fit()
-        res1 = OLS.from_formula('y ~ const + var1 + var2 - 1', data).fit()
+        endog, exog, labels = get_duncan_data()
+        data = pd.DataFrame(
+            np.column_stack((endog, exog)),
+            columns="y const var1 var2".split(),
+            index=labels,
+        )
+
+        res0 = GLM.from_formula("y ~ const + var1 + var2 - 1", data).fit()
+        res1 = OLS.from_formula("y ~ const + var1 + var2 - 1", data).fit()
         cls.infl1 = res1.get_influence()
         cls.infl0 = res0.get_influence()
 

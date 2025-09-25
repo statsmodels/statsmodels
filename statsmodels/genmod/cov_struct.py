@@ -159,7 +159,7 @@ class CovStruct:
         threshold = 1e-2
         success = False
         cov_adjust = 0
-        for itr in range(20):
+        for _ in range(20):
             try:
                 vco = spl.cho_factor(vmat)
                 success = True
@@ -1472,7 +1472,7 @@ class Equivalence(CovStruct):
 
         ulabels = np.unique(self.labels)
 
-        for g_ix, g_lb in enumerate(model.group_labels):
+        for _, g_lb in enumerate(model.group_labels):
 
             # Loop over label pairs
             for lx1 in range(len(ulabels)):
@@ -1542,7 +1542,7 @@ class Equivalence(CovStruct):
         # Need to start indexing at 0 within each group.
         # rx maps olds indices to new indices
         rx = -1 * np.ones(len(self.model.endog), dtype=np.int32)
-        for g_ix, g_lb in enumerate(self.model.group_labels):
+        for _, g_lb in enumerate(self.model.group_labels):
             ii = self.model.group_indices[g_lb]
             rx[ii] = np.arange(len(ii), dtype=np.int32)
 

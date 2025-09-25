@@ -287,7 +287,7 @@ def expect_mc_bounds(
         return func(x)  # * dist.pdf(x)
 
     rvsli = []
-    used = 0  # remain = size  #inplace changes size
+    used = 0  # remain = size  # inplace changes size
     total = 0
     while True:
         remain = size - used  # just a temp variable
@@ -295,7 +295,7 @@ def expect_mc_bounds(
         total += int(size * overfact)
 
         rvsok = rvs[((rvs >= lower) & (rvs <= upper)).all(-1)]
-        # if rvsok.ndim == 1: #possible shape problems if only 1 random vector
+        # if rvsok.ndim == 1: # possible shape problems if only 1 random vector
         rvsok = np.atleast_2d(rvsok)
         used += rvsok.shape[0]
 
@@ -1000,7 +1000,7 @@ class MVNormal(MVElliptical):
             sigmakg, np.linalg.solve(sigmagg, values - self.mean[given])
         )
 
-        #        #or
+        #        # or
         #        sig = np.linalg.solve(sigmagg, sigmagk).T
         #        mean_new = self.mean[keep] + np.dot(sigmakg, values-self.mean[given])
         #        sigma_new = sigmakk - np.dot(sigmakg, sig)
@@ -1233,11 +1233,11 @@ if __name__ == "__main__":
         # comparisons with R mvtnorm::dmvnorm
         # decimal=14
         #        mvn3.logpdf(cov3) - [-7.667977543898155, -6.917977543898155, -5.167977543898155]
-        #        #decimal 18
+        #        # decimal 18
         #        mvn3.pdf(cov3) - [0.000467562492721686, 0.000989829804859273, 0.005696077243833402]
-        #        #cheating new mean, same cov
+        #        # cheating new mean, same cov
         #        mvn3.mean = np.array([0,0,0])
-        #        #decimal= 16
+        #        # decimal= 16
         #        mvn3.pdf(cov3) - [0.02914269740502042, 0.02269635555984291, 0.01767593948287269]
 
         # as asserts

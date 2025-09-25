@@ -384,34 +384,129 @@ q0999 = """\
 
 #                 [alpha keys]        [v keys]
 #                   [table values as lists of floats]
-T = dict([(0.100, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0100.split('\n')}),
-          (0.500, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0500.split('\n')}),
-          (0.675, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0675.split('\n')}),
-          (0.750, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0750.split('\n')}),
-          (0.800, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0800.split('\n')}),
-          (0.850, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0850.split('\n')}),
-          (0.900, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0900.split('\n')}),
-          (0.950, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0950.split('\n')}),
-          (0.975, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0975.split('\n')}),
-          (0.990, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0990.split('\n')}),
-          (0.995, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0995.split('\n')}),
-          (0.999, {float(L.split()[0]):
-                         lmap(float, L.split()[1:]) for L in q0999.split('\n')})])
+T = dict(
+    [
+        (
+            0.100,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0100.split("\n")
+            },
+        ),
+        (
+            0.500,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0500.split("\n")
+            },
+        ),
+        (
+            0.675,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0675.split("\n")
+            },
+        ),
+        (
+            0.750,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0750.split("\n")
+            },
+        ),
+        (
+            0.800,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0800.split("\n")
+            },
+        ),
+        (
+            0.850,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0850.split("\n")
+            },
+        ),
+        (
+            0.900,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0900.split("\n")
+            },
+        ),
+        (
+            0.950,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0950.split("\n")
+            },
+        ),
+        (
+            0.975,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0975.split("\n")
+            },
+        ),
+        (
+            0.990,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0990.split("\n")
+            },
+        ),
+        (
+            0.995,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0995.split("\n")
+            },
+        ),
+        (
+            0.999,
+            {
+                float(L.split()[0]): lmap(float, L.split()[1:])
+                for L in q0999.split("\n")
+            },
+        ),
+    ]
+)
+
 
 # This dict maps r values to the correct list index
-R = dict(zip([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
-                     17,18,19,20,30,40,60,80,100], lrange(24)))
+R = dict(
+    zip(
+        [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            30,
+            40,
+            60,
+            80,
+            100,
+        ],
+        lrange(24),
+    )
+)
+
 
 inf = np.inf
 # we will need a tinv function
@@ -453,7 +548,7 @@ def errfunc(a, p, r, v, q):
 A = {}  # this is the error matrix
 for p in T:
     for v in T[p]:
-        #eq. 2.4
+        # eq. 2.4
         a0 = random(4)
         a1, success = leastsq(errfunc, a0,
                               args=(p, np.array(list(R.keys())),
@@ -466,5 +561,5 @@ for p in T:
 
 raise ImportError("we do not want to import this")
 # uncomment the lines below to repr-ize A
-##import pprint
-##pprint.pprint(A, width=160)
+# import pprint
+# pprint.pprint(A, width=160)

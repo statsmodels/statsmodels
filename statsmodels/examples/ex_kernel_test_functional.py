@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     mod_ols = OLS(endog, exog[:, :2])
     res_ols = mod_ols.fit()
-    #'cv_ls'[1000, 0.5][0.01, 0.45]
+    # 'cv_ls'[1000, 0.5][0.01, 0.45]
     tst = smke.TestFForm(
         endog,
         exog[:, :2],

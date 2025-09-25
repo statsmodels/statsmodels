@@ -790,10 +790,10 @@ default_txt_fmt = dict(
     colsep=' ',
     data_aligns="r",  # GH 1477
     # data formats
-    # data_fmt="%s",  #deprecated; use data_fmts
+    # data_fmt="%s",  # deprecated; use data_fmts
     data_fmts=["%s"],
     # labeled alignments
-    # stubs_align='l',   #deprecated; use data_fmts
+    # stubs_align='l',   # deprecated; use data_fmts
     stub_align='l',
     header_align='c',
     # labeled formats
@@ -853,7 +853,7 @@ default_html_fmt = dict(
     data_fmts=['<td>%s</td>'],
     data_fmt="<td>%s</td>",  # deprecated; use data_fmts
     # labeled alignments
-    # stubs_align='l',   #deprecated; use data_fmts
+    # stubs_align='l',   # deprecated; use data_fmts
     stub_align='l',
     header_align='c',
     # labeled formats

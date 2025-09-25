@@ -1,4 +1,4 @@
-## copied from nonlinear_transform_gen.py
+# copied from nonlinear_transform_gen.py
 
 """A class for the distribution of a non-linear monotonic transformation of a continuous random variable
 
@@ -145,7 +145,7 @@ lognormalg = Transf_gen(
 
 loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
 
-## copied form nonlinear_transform_short.py
+# copied form nonlinear_transform_short.py
 
 """univariate distribution of a non-linear monotonic transformation of a
 random variable
@@ -223,12 +223,12 @@ class LogTransf_gen(distributions.rv_continuous):
 
 
 def examples_transf():
-    ##lognormal = ExpTransf(a=0.0, xa=-10.0, name = 'Log transformed normal')
-    ##print(lognormal.cdf(1)
-    ##print(stats.lognorm.cdf(1,1)
-    ##print(lognormal.stats()
-    ##print(stats.lognorm.stats(1)
-    ##print(lognormal.rvs(size=10)
+    # lognormal = ExpTransf(a=0.0, xa=-10.0, name = 'Log transformed normal')
+    # print(lognormal.cdf(1)
+    # print(stats.lognorm.cdf(1,1)
+    # print(lognormal.stats()
+    # print(stats.lognorm.stats(1)
+    # print(lognormal.rvs(size=10)
 
     print("Results for lognormal")
     lognormalg = ExpTransf_gen(stats.norm, a=0, name="Log transformed normal general")
@@ -238,10 +238,10 @@ def examples_transf():
     print(stats.lognorm.stats(1))
     print(lognormalg.rvs(size=5))
 
-    ##print('Results for loggamma'
-    ##loggammag = ExpTransf_gen(stats.gamma)
-    ##print(loggammag._cdf(1,10)
-    ##print(stats.loggamma.cdf(1,10)
+    # print('Results for loggamma'
+    # loggammag = ExpTransf_gen(stats.gamma)
+    # print(loggammag._cdf(1,10)
+    # print(stats.loggamma.cdf(1,10)
 
     print("Results for expgamma")
     loggammaexpg = LogTransf_gen(stats.gamma)
@@ -261,7 +261,7 @@ def examples_transf():
     print(loglaplaceexpg._cdf(2, 10))
 
 
-## copied from transformtwo.py
+# copied from transformtwo.py
 
 """
 Created on Apr 28, 2009

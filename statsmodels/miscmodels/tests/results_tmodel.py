@@ -31,7 +31,7 @@ res_t_dfest.logLik = 71.81292
 res_t_dfest.endTime = 0.01
 
 loc_fit = Holder()
-#> cat_items(tfit3$loc.fit, "loc_fit.")
+# > cat_items(tfit3$loc.fit, "loc_fit.")
 loc_fit.coefficients = np.array([-0.007248461, 1.263751])
 loc_fit.residuals = np.array([
      -0.09133902, 0.004151492, -0.02737765, 0.02117769, 0.01251936,
@@ -91,8 +91,8 @@ loc_fit.terms = '''m.marietta ~ CRSP'''
 loc_fit.iter = 7
 loc_fit.call = '''tlm(lform = m.marietta ~ CRSP, data = mm, start = list(dof = 3),      estDof = TRUE)'''
 
-#> s = summary(tfit3)
-#> cat_items(s$loc.summary, prefix="loc_fit.")
+# > s = summary(tfit3)
+# > cat_items(s$loc.summary, prefix="loc_fit.")
 # renamed coefficient -> table
 loc_fit.table = np.array([
      -0.007248461, 1.263751, 0.008167043, 0.1901585, -0.8875258, 6.645774,
@@ -114,7 +114,7 @@ loc_fit.cov_scaled_colnames = ['(Intercept)', 'CRSP', ]
 
 
 scale_fit = Holder()
-#> cat_items(tfit3$scale.fit, "scale_fit.")
+# > cat_items(tfit3$scale.fit, "scale_fit.")
 scale_fit.coefficients = -5.983115
 scale_fit.residuals = np.array([
      2.193327, -2.038408, -1.308573, -1.591579, -1.888103, -0.5330418,

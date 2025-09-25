@@ -135,11 +135,11 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     df_model = self.df_model
     df_resid = self.df_resid
 
-    #General part of the summary table, Applicable to all? models
-    #------------------------------------------------------------
+    # General part of the summary table, Applicable to all? models
+    #
     # TODO: define this generically, overwrite in model classes
-    #replace definition of stubs data by single list
-    #e.g.
+    # replace definition of stubs data by single list
+    # e.g.
     gen_left = [('Model type:', [modeltype]),
                 ('Date:', [date]),
                 ('Dependent Variable:', yname),  # TODO: What happens with multiple names?
@@ -223,13 +223,13 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                                   txt_fmt=fmt_2
                                   )
 
-    #special table
-    #-------------
+    # special table
+    # -------------
     # TODO: exists in linear_model, what about other models
-    #residual diagnostics
+    # residual diagnostics
 
-    #output options
-    #--------------
+    # output options
+    #  --------------
     # TODO: JP the rest needs to be fixed, similar to summary in linear_model
 
     def ols_printer():
@@ -278,7 +278,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     ? allow gleft, gright to be 1 element tuples instead of filling with None?
 
     '''
-    #change of names ?
+    # change of names ?
     gen_left, gen_right = gleft, gright
 
     # time and names are always included
@@ -421,7 +421,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     if isinstance(results, tuple):
         # for multivariate endog
         # TODO: check whether I do not want to refactor this
-        #we need to give parameter alpha to conf_int
+        # we need to give parameter alpha to conf_int
         results, params, std_err, tvalues, pvalues, conf_int = results
     else:
         params = np.asarray(results.params)
@@ -508,7 +508,7 @@ def summary_params_frame(results, yname=None, xname=None, alpha=.05,
     if isinstance(results, tuple):
         # for multivariate endog
         # TODO: check whether I do not want to refactor this
-        #we need to give parameter alpha to conf_int
+        # we need to give parameter alpha to conf_int
         results, params, std_err, tvalues, pvalues, conf_int = results
     else:
         params = results.params
@@ -588,10 +588,9 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
     txt_fmt = copy.deepcopy(fmt_params)
     txt_fmt["data_fmts"] = ["%s"]*result.params.shape[1]
 
-    return SimpleTable(data, headers=exog_names,
-                             stubs=stubs,
-                             title=title,
-                             txt_fmt=txt_fmt)
+    return SimpleTable(
+        data, headers=exog_names, stubs=stubs, title=title, txt_fmt=txt_fmt
+    )
 
 
 def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
@@ -640,8 +639,8 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
             raise ValueError('endog_names has wrong length')
         n_equ = 1
 
-    #VAR does not have conf_int
-    #params = res.params.T # this is a convention for multi-eq models
+    # VAR does not have conf_int
+    # params = res.params.T # this is a convention for multi-eq models
 
     # check that we have the right length of names
     if not isinstance(endog_names, list):

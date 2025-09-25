@@ -51,7 +51,7 @@ def fit_l1_slsqp(
     """
     start_params = np.array(start_params).ravel('F')
 
-    ### Extract values
+    # Extract values
     # k_params is total number of covariates,
     # possibly including a leading constant.
     k_params = len(start_params)
@@ -67,7 +67,7 @@ def fit_l1_slsqp(
     # Set/retrieve the desired accuracy
     acc = kwargs.setdefault('acc', 1e-10)
 
-    ### Wrap up for use in fmin_slsqp
+    # Wrap up for use in fmin_slsqp
 
     def func(x_full):
         return _objective_func(f, x_full, k_params, alpha, *args)
@@ -81,14 +81,14 @@ def fit_l1_slsqp(
     def fprime_ieqcons_wrap(x_full):
         return _fprime_ieqcons(x_full, k_params)
 
-    ### Call the solver
+    # Call the solver
     results = fmin_slsqp(
         func, x0, f_ieqcons=f_ieqcons_wrap, fprime=fprime_wrap, acc=acc,
         iter=maxiter, disp=disp_slsqp, full_output=full_output,
         fprime_ieqcons=fprime_ieqcons_wrap)
     params = np.asarray(results[0][:k_params])
 
-    ### Post-process
+    # Post-process
     # QC
     qc_tol = kwargs['qc_tol']
     qc_verbose = kwargs['qc_verbose']
@@ -102,7 +102,7 @@ def fit_l1_slsqp(
         params, k_params, alpha, score, passed, trim_mode, size_trim_tol,
         auto_trim_tol)
 
-    ### Pack up return values for statsmodels optimizers
+    # Pack up return values for statsmodels optimizers
     # TODO These retvals are returned as mle_retvals...but the fit was not ML.
     # This could be confusing someday.
     if full_output:
@@ -118,7 +118,7 @@ def fit_l1_slsqp(
             'gopt': gopt, 'hopt': hopt, 'trimmed': trimmed,
             'warnflag': warnflag}
 
-    ### Return
+    # Return
     if full_output:
         return params, retvals
     else:
@@ -142,7 +142,7 @@ def _objective_func(f, x_full, k_params, alpha, *args):
     """
     x_params = x_full[:k_params]
     x_added = x_full[k_params:]
-    ## Return
+    # Return
     return f(x_params, *args) + (alpha * x_added).sum()
 
 
@@ -173,5 +173,5 @@ def _fprime_ieqcons(x_full, k_params):
     A = np.concatenate((I, I), axis=1)
     B = np.concatenate((-I, I), axis=1)
     C = np.concatenate((A, B), axis=0)
-    ## Return
+    # Return
     return C

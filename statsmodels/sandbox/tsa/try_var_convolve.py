@@ -133,7 +133,7 @@ def arfilter(x, a):
 
     elif a.ndim == 3:
         # case: vector autoregressive with lag matrices
-        #        #not necessary:
+        #        # not necessary:
         #        if np.any(a.shape[1:] != nvar):
         #            raise ValueError('if 3d shape of a has to be (nobs,nvar,nvar)')
         yf = signal.convolve(x[:, :, None], a)

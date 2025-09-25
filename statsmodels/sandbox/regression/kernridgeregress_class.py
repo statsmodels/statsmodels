@@ -106,10 +106,10 @@ class GaussProcess:
         yhat = np.dot(self.distxsample, self.parest)
         return yhat
 
-    ##        print ds33.shape
-    ##        ds33_2 = kernel(x,x[::k,:],scale=scale)
-    ##        dsinv = np.linalg.inv(ds33+np.eye(*distxsample.shape)*ridgecoeff)
-    ##        B = np.dot(dsinv,y[::k,:])
+    #        print ds33.shape
+    #        ds33_2 = kernel(x,x[::k,:],scale=scale)
+    #        dsinv = np.linalg.inv(ds33+np.eye(*distxsample.shape)*ridgecoeff)
+    #        B = np.dot(dsinv,y[::k,:])
     def predict(self, x):
         """predict new y values for a given array of explanatory variables"""
         self.xpredict = x
@@ -179,7 +179,7 @@ def example2(m=100, scale=0.01, stride=2):
     y1true = np.sum(np.sin(xs1**2), 1)[:, np.newaxis] / xs1
     y1 = y1true + 0.05 * np.random.randn(m, 1)
 
-    # stride = 2 #use only some points as trainig points e.g 2 means every 2nd
+    # stride = 2 # use only some points as trainig points e.g 2 means every 2nd
     gp1 = GaussProcess(
         xs1[::stride, :], y1[::stride, :], kernel=kernel_euclid, ridgecoeff=1e-10
     )

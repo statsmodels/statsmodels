@@ -34,7 +34,7 @@ class TsaDescriptive:
         from .arima_model import ARMA
         self.mod = ARMA(self.data)
         self.res = self.mod.fit(order=order, **kwds)
-        #self.estimated_process =
+        # self.estimated_process =
         return self.res
 
     def acf(self, nlags=40):
@@ -44,7 +44,7 @@ class TsaDescriptive:
         return stt.pacf(self.data, nlags=nlags)
 
     def periodogram(self):
-        #does not return frequesncies
+        # does not return frequesncies
         return stt.periodogram(self.data)
 
     # copied from fftarma.py

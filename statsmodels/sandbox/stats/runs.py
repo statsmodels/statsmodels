@@ -514,8 +514,8 @@ def cochrans_q(x):
     # columns
 
     # Wikipedia uses a different, but equivalent expression
-    ##    q_stat = (k-1) * (k *  np.sum(count_row_success**2) - count_row_ss**2) \
-    ##             / (k * count_col_ss - np.sum(count_col_success**2))
+    #    q_stat = (k-1) * (k *  np.sum(count_row_success**2) - count_row_ss**2) \
+    #             / (k * count_col_ss - np.sum(count_col_success**2))
 
     return q_stat, stats.chi2.sf(q_stat, k - 1)
 

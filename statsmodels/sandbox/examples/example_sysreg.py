@@ -146,7 +146,7 @@ resiv2 = miv2.fit()
 print("equation 2")
 print(resiv2.params)
 
-### Below is the same example using Greene's data ###
+# Below is the same example using Greene's data ###
 
 run_greene = 0
 if run_greene:

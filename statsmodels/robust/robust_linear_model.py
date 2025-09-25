@@ -347,7 +347,7 @@ class RLM(base.LikelihoodModel):
         # norm is not changed in fit, no old state
 
         # doing the next causes exception
-        # self.cov = self.scale_est = None #reset for additional fits
+        # self.cov = self.scale_est = None # reset for additional fits
         # iteration and history could contain wrong state with repeated fit
         return RLMResultsWrapper(results)
 

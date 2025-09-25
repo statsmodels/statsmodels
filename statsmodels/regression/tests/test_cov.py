@@ -23,13 +23,13 @@ def test_HC_use():
     cov12 = results.cov_params(column=[1, 2], cov_p=results.cov_HC0)
     assert_almost_equal(cov12, results.cov_HC0[idx[:, None], idx], decimal=15)
 
-    #test t_test
+    # test t_test
     tvals = results.params/results.HC0_se
     ttest = results.t_test(np.eye(3), cov_p=results.cov_HC0)
     assert_almost_equal(ttest.tvalue, tvals, decimal=14)
     assert_almost_equal(ttest.sd, results.HC0_se, decimal=14)
 
-    #test f_test
+    # test f_test
     ftest = results.f_test(np.eye(3)[:-1], cov_p=results.cov_HC0)
     slopes = results.params[:-1]
     idx = np.array([0,1])

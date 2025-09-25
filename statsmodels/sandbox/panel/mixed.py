@@ -639,9 +639,9 @@ class OneWayMixedResults(LikelihoodModelResults):
         )
 
 
-#        #note I have written this already as helper function, get it
+#        # note I have written this already as helper function, get it
 #        import matplotlib.pyplot as plt
-#        #from scipy.stats import norm as normal
+#        # from scipy.stats import norm as normal
 #        fig = plt.figure()
 #        k = self.model.k_exog_re
 #        n_plots = k * (k - 1) // 2

@@ -456,7 +456,7 @@ class IRAnalysis(BaseIRAnalysis):
                                     seed=seed, burn=100)
         stack = np.zeros((neqs, repl, periods*neqs))
 
-        #stack left to right, up and down
+        # stack left to right, up and down
 
         for p in range(repl):
             for i in range(neqs):
@@ -475,7 +475,7 @@ class IRAnalysis(BaseIRAnalysis):
             else:
                 k = component
 
-        #compute for eigen decomp for each stack
+        # compute for eigen decomp for each stack
         for i in range(neqs):
             stack_cov[i] = np.cov(stack[i],rowvar=0)
             W[i], eigva[i], k[i] = util.eigval_decomp(stack_cov[i])

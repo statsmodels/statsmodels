@@ -14,7 +14,7 @@ def tukeyplot(results, dim=None, yticklabels=None):
     fsp.set_yticks(np.arange(1,11))
     fsp.set_yticklabels(['V-T','V-S','T-S','V-P','T-P','S-P','V-M',
                          'T-M','S-M','P-M'])
-    #fsp.yaxis.set_major_locator(mticker.MaxNLocator(npairs))
+    # fsp.yaxis.set_major_locator(mticker.MaxNLocator(npairs))
     fsp.yaxis.grid(True, linestyle='-', color='gray')
     fsp.set_xlabel('Differences in mean levels of Var', labelpad=8)
     fsp.xaxis.tick_bottom()
@@ -39,15 +39,29 @@ def tukeyplot(results, dim=None, yticklabels=None):
         ylabel.set_x(-.04)
 
     for pair in range(npairs):
-        data = .5+results[pair]/100.
-        #fsp.axhline(y=npairs-pair, xmin=data[0], xmax=data[1], linewidth=1.25,
-        fsp.axhline(y=npairs-pair, xmin=data.mean(), xmax=data[1], linewidth=1.25,
-            color='blue', marker="|",  markevery=1)
+        data = 0.5 + results[pair] / 100.0
+        # fsp.axhline(y=npairs-pair, xmin=data[0], xmax=data[1], linewidth=1.25,
+        fsp.axhline(
+            y=npairs - pair,
+            xmin=data.mean(),
+            xmax=data[1],
+            linewidth=1.25,
+            color="blue",
+            marker="|",
+            markevery=1,
+        )
 
-        fsp.axhline(y=npairs-pair, xmin=data[0], xmax=data.mean(), linewidth=1.25,
-            color='blue', marker="|", markevery=1)
+        fsp.axhline(
+            y=npairs - pair,
+            xmin=data[0],
+            xmax=data.mean(),
+            linewidth=1.25,
+            color="blue",
+            marker="|",
+            markevery=1,
+        )
 
-    #for pair in range(npairs):
+    # for pair in range(npairs):
     #    data = .5+results[pair]/100.
     #    data = results[pair]
     #    data = np.r_[data[0],data.mean(),data[1]]
@@ -73,4 +87,4 @@ results = np.array([
 ])
 
 
-#plt.show()
+# plt.show()

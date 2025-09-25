@@ -739,7 +739,7 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
 
     # use the first group as a reference
     for g in range(1, dfs+1):
-        # Difference between observed and  expected number of events in the group #g
+        # Difference between observed and  expected number of events in the group # g
         oe = obsv[g] - r[g]*obs
 
         # build one row of the dfs x dfs variance matrix

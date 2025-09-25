@@ -1648,29 +1648,29 @@ def test_exceptions():
         select_coint_rank(endog, 0, 3, "trace", 0.025)
 
     # Granger_causality:
-    # ### 0<signif<1
+    # # 0<signif<1
     # this means signif=0
     with pytest.raises(ValueError):
         results_sm[ds][dt].test_granger_causality(0, None, 0)
-    # ### caused must be int, str or iterable of int or str
+    # # caused must be int, str or iterable of int or str
     # 0.5 not int
     with pytest.raises(TypeError):
         results_sm[ds][dt].test_granger_causality([0.5])
-    # ### causing must be None, int, str or iterable of int or str
+    # # causing must be None, int, str or iterable of int or str
     # .5 not int
     with pytest.raises(TypeError):
         results_sm[ds][dt].test_granger_causality(0, 0.5)
 
     # exceptions in VECM class
-    # ### choose only one of the two: "co" and "ci"
+    # # choose only one of the two: "co" and "ci"
     model = VECM(endog, k_ar_diff=1, deterministic="cico")
     with pytest.raises(ValueError):
         model.fit()
-    # ### we analyze multiple time series
+    # # we analyze multiple time series
     univariate_data = endog[0]
     with pytest.raises(ValueError):
         VECM(univariate_data)
-    # ### fit only allowed with known method
+    # # fit only allowed with known method
     model = VECM(endog, k_ar_diff=1, deterministic="n")
     with pytest.raises(ValueError):
         model.fit("abc")  # no "abc" estim.-method
@@ -1680,7 +1680,7 @@ def test_exceptions():
         VECM(endog, None, np.ones(len(endog) - 1))
     # forecasting: argument checks
     STEPS = 5
-    # ### with exog
+    # # with exog
     exog = seasonal_dummies(4, len(endog), 2, centered=True)  # seasonal...
     exog = np.hstack((exog, 1 + np.arange(len(endog)).reshape(-1, 1)))  # & lin
     vecm_res = VECM(
@@ -1708,7 +1708,7 @@ def test_exceptions():
             exog_fc,
             exog_fc,
         )  # passed as exog_coint_fc-argument!
-    # ### with exog_coint
+    # # with exog_coint
     exog_coint = []
     exog_coint.append(np.ones(len(endog)).reshape(-1, 1))
     exog_coint.append(1 + np.arange(len(endog)).reshape(-1, 1))

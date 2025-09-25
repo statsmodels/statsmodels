@@ -9,12 +9,12 @@ mdata = mdatagen[['realgdp','realcons','realinv']]
 names = mdata.dtype.names
 start = pd.datetime(1959, 3, 31)
 end = pd.datetime(2009, 9, 30)
-#qtr = pd.DatetimeIndex(start=start, end=end, freq=pd.datetools.BQuarterEnd())
+# qtr = pd.DatetimeIndex(start=start, end=end, freq=pd.datetools.BQuarterEnd())
 qtr = pd.date_range(start=start, end=end, freq='BQ-MAR')
 data = pd.DataFrame(mdata, index=qtr)
 data = (np.log(data)).diff().dropna()
 
-#define structural inputs
+# define structural inputs
 A = np.asarray([[1, 0, 0],['E', 1, 0],['E', 'E', 1]])
 B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']])
 A_guess = np.asarray([0.5, 0.25, -0.38])

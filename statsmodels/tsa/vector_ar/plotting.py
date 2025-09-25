@@ -25,9 +25,9 @@ class MPLConfigurator:
         self._inverse_actions.append(revert)
 
 
-#-------------------------------------------------------------------------------
+#
 # Plotting functions
-
+#
 def plot_mts(Y, names=None, index=None):
     """
     Plot multiple time series
@@ -72,12 +72,10 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
         ax = plt.subplot(rows, cols, j+1)
 
         ax.plot(prange, prior[:, j], 'k', label='Observed')
-        ax.plot(rng_f, np.r_[prior[-1:, j], forc[:, j]], 'k--',
-                     label='Forecast')
+        ax.plot(rng_f, np.r_[prior[-1:, j], forc[:, j]], 'k--', label='Forecast')
 
         if plot_stderr:
-            ax.plot(rng_err, err_upper[:, j], 'k-.',
-                         label='Forc 2 STD err')
+            ax.plot(rng_err, err_upper[:, j], 'k-.', label='Forc 2 STD err')
             ax.plot(rng_err, err_lower[:, j], 'k-.')
 
         if names is not None:
@@ -111,7 +109,7 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
 
     plot_action(y, value_fmt)
 
-    #changed this
+    # changed this
     if error is not None:
         if stderr_type == 'asym':
             q = util.norm_signif_level(alpha)
@@ -185,8 +183,9 @@ def adjust_subplots(**kwds):
     plt.subplots_adjust(**passed_kwds)
 
 
-#-------------------------------------------------------------------------------
+#
 # Multiple impulse response (cum_effects, etc.) cplots
+#
 
 def irf_grid_plot(values, stderr, impcol, rescol, names, title,
                   signif=0.05, hlines=None, subplot_params=None,
@@ -273,5 +272,5 @@ def _get_irf_plot_config(names, impcol, rescol):
 
     return nrows, ncols, to_plot
 
-#-------------------------------------------------------------------------------
+#
 # Forecast error variance decomposition

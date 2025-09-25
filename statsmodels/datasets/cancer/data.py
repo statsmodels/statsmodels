@@ -15,7 +15,7 @@ DESCRSHORT = """Breast Cancer and county population"""
 
 DESCRLONG = """The number of breast cancer observances in various counties"""
 
-#suggested notes
+# suggested notes
 NOTE = """::
 
     Number of observations: 301

@@ -20,21 +20,21 @@ def test_panel_robust_cov():
     from .results.results_panelrobust import results as res_stata
 
     dtapa = gr.data.load_pandas()
-    #Stata example/data seems to miss last firm
+    # Stata example/data seems to miss last firm
     dtapa_endog = dtapa.endog[:200]
     dtapa_exog = dtapa.exog[:200]
     res = OLS(dtapa_endog, add_constant(dtapa_exog[['value', 'capital']],
               prepend=False)).fit()
 
-    #time indicator in range(max Ti)
+    # time indicator in range(max Ti)
     time = np.require(dtapa_exog[['year']], requirements="W")
     time -= time.min()
     time = np.squeeze(time).astype(int)
 
-    #sw.cov_nw_panel requires bounds instead of index
+    # sw.cov_nw_panel requires bounds instead of index
     tidx = [(i*20, 20*(i+1)) for i in range(10)]
 
-    #firm index in range(n_firms)
+    # firm index in range(n_firms)
     firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
                                     return_inverse=True)
 
@@ -52,7 +52,7 @@ def test_panel_robust_cov():
     # np.testing.assert_allclose(cov, res_stata.cov_pnw4_stata, rtol=1e-6)
     assert_almost_equal(cov, res_stata.cov_pnw4_stata, decimal=4)
 
-    #cluster robust standard errors
+    # cluster robust standard errors
     cov_clu = sw.cov_cluster(res, firm_id)
     assert_almost_equal(cov_clu, res_stata.cov_clu_stata, decimal=4)
 

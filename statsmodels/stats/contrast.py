@@ -101,7 +101,7 @@ class ContrastResults:
         return self.summary().__str__()
 
     def __repr__(self):
-        return str(self.__class__) + '\n' + self.__str__()
+        return str(self.__class__) + "\n" + self.__str__()
 
     def summary(self, xname=None, alpha=0.05, title=None):
         """Summarize the Results of the hypothesis test
@@ -129,36 +129,56 @@ class ContrastResults:
             # TODO: should also add some extra information, e.g. robust cov ?
             # TODO: can we infer names for constraints, xname in __init__ ?
             if title is None:
-                title = 'Test for Constraints'
-            elif title == '':
+                title = "Test for Constraints"
+            elif title == "":
                 # do not add any title,
                 # I think SimpleTable skips on None - check
                 title = None
             # we have everything for a params table
-            use_t = (self.distribution == 't')
-            yname = 'constraints'  # Not used in params_frame
+            use_t = self.distribution == "t"
+            yname = "constraints"  # Not used in params_frame
             if xname is None:
                 xname = self.c_names
             from statsmodels.iolib.summary import summary_params
+
             pvalues = np.atleast_1d(self.pvalue)
-            summ = summary_params((self, self.effect, self.sd, self.statistic,
-                                   pvalues, self.conf_int(alpha)),
-                                  yname=yname, xname=xname, use_t=use_t,
-                                  title=title, alpha=alpha)
+            summ = summary_params(
+                (
+                    self,
+                    self.effect,
+                    self.sd,
+                    self.statistic,
+                    pvalues,
+                    self.conf_int(alpha),
+                ),
+                yname=yname,
+                xname=xname,
+                use_t=use_t,
+                title=title,
+                alpha=alpha,
+            )
             return summ
-        elif hasattr(self, 'fvalue'):
+        elif hasattr(self, "fvalue"):
             # TODO: create something nicer for these casee
-            return ('<F test: F=%s, p=%s, df_denom=%.3g, df_num=%.3g>' %
-                   (repr(self.fvalue), self.pvalue, self.df_denom,
-                    self.df_num))
-        elif self.distribution == 'chi2':
-            return ('<Wald test (%s): statistic=%s, p-value=%s, df_denom=%.3g>' %
-                   (self.distribution, self.statistic, self.pvalue,
-                    self.df_denom))
+            return "<F test: F=%s, p=%s, df_denom=%.3g, df_num=%.3g>" % (
+                repr(self.fvalue),
+                self.pvalue,
+                self.df_denom,
+                self.df_num,
+            )
+        elif self.distribution == "chi2":
+            return "<Wald test (%s): statistic=%s, p-value=%s, df_denom=%.3g>" % (
+                self.distribution,
+                self.statistic,
+                self.pvalue,
+                self.df_denom,
+            )
         else:
             # generic
-            return ('<Wald test: statistic=%s, p-value=%s>' %
-                   (self.statistic, self.pvalue))
+            return "<Wald test: statistic=%s, p-value=%s>" % (
+                self.statistic,
+                self.pvalue,
+            )
 
     def summary_frame(self, xname=None, alpha=0.05):
         """Return the parameter table as a pandas DataFrame
@@ -167,20 +187,30 @@ class ContrastResults:
         """
         if self.effect is not None:
             # we have everything for a params table
-            use_t = (self.distribution == 't')
-            yname = 'constraints'  # Not used in params_frame
+            use_t = self.distribution == "t"
+            yname = "constraints"  # Not used in params_frame
             if xname is None:
                 xname = self.c_names
             from statsmodels.iolib.summary import summary_params_frame
-            summ = summary_params_frame((self, self.effect, self.sd,
-                                         self.statistic,self.pvalue,
-                                         self.conf_int(alpha)), yname=yname,
-                                         xname=xname, use_t=use_t,
-                                         alpha=alpha)
+
+            summ = summary_params_frame(
+                (
+                    self,
+                    self.effect,
+                    self.sd,
+                    self.statistic,
+                    self.pvalue,
+                    self.conf_int(alpha),
+                ),
+                yname=yname,
+                xname=xname,
+                use_t=use_t,
+                alpha=alpha,
+            )
             return summ
         else:
             # TODO: create something nicer
-            raise NotImplementedError('only available for t and z')
+            raise NotImplementedError("only available for t and z")
 
 
 class Contrast:
@@ -355,7 +385,7 @@ class WaldTestResults:
 
         self.distribution = distribution
         self.statistic = statistic
-        #self.sd = sd
+        # self.sd = sd
         self.dist_args = dist_args
 
         # The following is because I do not know which we want

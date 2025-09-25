@@ -578,7 +578,7 @@ def kdensityfft(
     # This is the Silverman binning function, but I believe it's buggy (SS)
     # weighting according to Silverman
     #    count = counts(x,grid)
-    #    binned = np.zeros_like(grid)    #xi_{k} in Silverman
+    #    binned = np.zeros_like(grid)    # xi_{k} in Silverman
     #    j = 0
     #    for k in range(int(gridsize-1)):
     #        if count[k]>0: # there are points of x in the grid here

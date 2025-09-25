@@ -42,9 +42,15 @@ row1data = [2, 3.333]
 table1data = [row0data, row1data]
 test1stubs = ('stub1', 'stub2')
 test1header = ('header1', 'header2')
-#test1header = ('header1\nheader1a', 'header2\nheader2a')
-tbl = SimpleTable(table1data, test1header, test1stubs,
-    txt_fmt=txt_fmt1, ltx_fmt=ltx_fmt1, html_fmt=html_fmt1)
+# test1header = ('header1\nheader1a', 'header2\nheader2a')
+tbl = SimpleTable(
+    table1data,
+    test1header,
+    test1stubs,
+    txt_fmt=txt_fmt1,
+    ltx_fmt=ltx_fmt1,
+    html_fmt=html_fmt1
+)
 
 
 def custom_labeller(cell):
@@ -73,10 +79,10 @@ class TestSimpleTable:
 *****************************
 """
         actual = '\n%s\n' % tbl.as_text()
-        #print('actual')
-        #print(actual)
-        #print('desired')
-        #print(desired)
+        # print('actual')
+        # print(actual)
+        # print('desired')
+        # print(desired)
         assert_equal(actual, desired)
 
     def test_ltx_fmt1(self):
@@ -94,8 +100,8 @@ class TestSimpleTable:
 \end{center}
 """
         actual = '\n%s\n' % tbl.as_latex_tabular()
-        #print(actual)
-        #print(desired)
+        # print(actual)
+        # print(desired)
         assert_equal(actual, desired)
 
     def test_html_fmt1(self):
@@ -113,13 +119,13 @@ class TestSimpleTable:
 </tr>
 </table>
 """
-        #the previous has significant trailing whitespace that got removed
-        #desired = '''\n<table class="simpletable">\n<tr>\n    <td></td>    <th>header1</th> <th>header2</th>\n</tr>\n<tr>\n  <th>stub1</th>   <td>0.0</td>      <td>1</td>   \n</tr>\n<tr>\n  <th>stub2</th>    <td>2</td>     <td>3.333</td> \n</tr>\n</table>\n'''
+        # the previous has significant trailing whitespace that got removed
+        # desired = '''\n<table class="simpletable">\n<tr>\n    <td></td>    <th>header1</th> <th>header2</th>\n</tr>\n<tr>\n  <th>stub1</th>   <td>0.0</td>      <td>1</td>   \n</tr>\n<tr>\n  <th>stub2</th>    <td>2</td>     <td>3.333</td> \n</tr>\n</table>\n'''
         actual = '\n%s\n' % tbl.as_html()
         actual = '\n'.join(line.rstrip() for line in actual.split('\n'))
-        #print(actual)
-        #print(desired)
-        #print len(actual), len(desired)
+        # print(actual)
+        # print(desired)
+        # print len(actual), len(desired)
         assert_equal(actual, desired)
 
     def test_customlabel(self):
@@ -127,7 +133,7 @@ class TestSimpleTable:
         tbl = SimpleTable(table1data, test1header, test1stubs, txt_fmt=txt_fmt1)
         tbl[1][1].data = np.nan
         tbl.label_cells(custom_labeller)
-        #print([[c.datatype for c in row] for row in tbl])
+        # print([[c.datatype for c in row] for row in tbl])
         desired = """
 *****************************
 *       * header1 * header2 *

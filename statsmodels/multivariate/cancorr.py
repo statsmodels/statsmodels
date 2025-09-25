@@ -43,9 +43,11 @@ class CanCorr(Model):
     .. [*] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
     .. [*] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
     """  # noqa:E501
-    def __init__(self, endog, exog, tolerance=1e-8, missing='none', hasconst=None, **kwargs):
-        super().__init__(endog, exog, missing=missing,
-                                      hasconst=hasconst, **kwargs)
+
+    def __init__(
+        self, endog, exog, tolerance=1e-8, missing="none", hasconst=None, **kwargs
+    ):
+        super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
         self._fit(tolerance)
 
     def _fit(self, tolerance=1e-8):

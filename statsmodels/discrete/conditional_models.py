@@ -67,7 +67,7 @@ class _ConditionalModel(base.LikelihoodModel):
         self._sumy = []
         self.nobs = 0
         drops = [0, 0]
-        for g, ix in row_ix.items():
+        for _, ix in row_ix.items():
             y = endog[ix].flat
             if np.std(y) == 0:
                 drops[0] += 1

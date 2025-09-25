@@ -259,7 +259,7 @@ def test_glmlogit_screening():
     res_oracle = GLMPenalized(y, xframe_true, family=family.Binomial()).fit()
     parameters['oracle'] = res_oracle.params
 
-    #mod_initial = LogitPenalized(y, np.ones(nobs), pen_weight=nobs * 0.5)
+    # mod_initial = LogitPenalized(y, np.ones(nobs), pen_weight=nobs * 0.5)
     mod_initial = GLMPenalized(y, np.ones(nobs), family=family.Binomial())
 
     screener = VariableScreening(mod_initial, **screener_kwds)

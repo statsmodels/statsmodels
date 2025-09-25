@@ -155,7 +155,7 @@ if "ex1" in examples:
     print("test mean of both random effects variables is zero")
     print(res.f_test([[1]]))
     plots = res.plot_random_univariate(bins=50)
-    # fig = res.plot_scatter_pairs(0, 1) #no pairs
+    # fig = res.plot_scatter_pairs(0, 1) # no pairs
     import matplotlib.pyplot as plt
 
     plt.show()

@@ -614,7 +614,7 @@ def lm_robust_subset(score, k_constraints, score_deriv_inv, cov_score):
 
     #     # check second calculation Boos referencing Kent 1982 and Engle 1984
     #     # we can use this when robust_cov_params of full model is available
-    #     #h_inv = np.linalg.inv(score_deriv)
+    #     # h_inv = np.linalg.inv(score_deriv)
     #     hinv = score_deriv_inv
     #     v = h_inv.dot(cov_score.dot(h_inv)) # this is robust cov_params
     #     v_cc = v[:k_constraints, :k_constraints]

@@ -18,7 +18,7 @@ example = ["null", "diff"][1]  # null: identical coefficients across groups
 example_size = [10, 100][0]
 example_size = [(10, 2), (100, 2)][0]
 example_groups = ["2", "2-2"][1]
-#'2-2': 4 groups,
+# '2-2': 4 groups,
 #       groups 0 and 1 and groups 2 and 3 have identical parameters in DGP
 
 # generate example
@@ -60,9 +60,9 @@ else:
 
 def print_results(res):
     groupind = res.groups
-    # res.fitjoint()  #not really necessary, because called by ftest_summary
+    # res.fitjoint()  # not really necessary, because called by ftest_summary
     ft = res.ftest_summary()
-    # print ft[0]  #skip because table is nicer
+    # print ft[0]  # skip because table is nicer
     print("\nTable of F-tests for overall or pairwise equality of coefficients")
     # print 'hypothesis F-statistic         p-value  df_denom df_num  reject'
     for row in ft[1]:
@@ -113,9 +113,9 @@ def print_results(res):
 # now added to class
 def print_results2(res):
     groupind = res.groups
-    # res.fitjoint()  #not really necessary, because called by ftest_summary
+    # res.fitjoint()  # not really necessary, because called by ftest_summary
     ft = res.ftest_summary()
-    # print ft[0]  #skip because table is nicer
+    # print ft[0]  # skip because table is nicer
     templ = """\
 Table of F-tests for overall or pairwise equality of coefficients'
 %(tab)s

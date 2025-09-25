@@ -246,20 +246,23 @@ def multivariate_stats(eigenvals,
     return results
 
 
-def _multivariate_ols_test(hypotheses, fit_results, exog_names,
-                            endog_names):
+def _multivariate_ols_test(hypotheses, fit_results, exog_names, endog_names):
     def fn(L, M, C):
         # .. [1] https://support.sas.com/documentation/cdl/en/statug/63033
         #        /HTML/default/viewer.htm#statug_introreg_sect012.htm
+
         params, df_resid, inv_cov, sscpr = fit_results
         # t1 = (L * params)M
+
         t1 = L.dot(params).dot(M) - C
         # H = t1'L(X'X)^L't1
+
         t2 = L.dot(inv_cov).dot(L.T)
         q = matrix_rank(t2)
         H = t1.T.dot(inv(t2)).dot(t1)
 
         # E = M'(Y'Y - B'(X'X)B)M
+
         E = M.T.dot(sscpr).dot(M)
         return E, H, q, df_resid
 
@@ -396,12 +399,13 @@ class _MultivariateOLS(Model):
     """
     _formula_max_endog = None
 
-    def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
+    def __init__(self, endog, exog, missing="none", hasconst=None, **kwargs):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
-            raise ValueError('There must be more than one dependent variable'
-                             ' to fit multivariate OLS!')
-        super().__init__(endog, exog, missing=missing,
-                                               hasconst=hasconst, **kwargs)
+            raise ValueError(
+                "There must be more than one dependent variable"
+                " to fit multivariate OLS!"
+            )
+        super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
 
         self.nobs, self.k_endog = self.endog.shape
         self.k_exog = self.exog.shape[1]
@@ -467,27 +471,28 @@ class _MultivariateOLSResults(LikelihoodModelResults):
                 terms = mgr.get_term_name_slices(self.model_spec)
                 hypotheses = []
                 for key in terms:
-                    if skip_intercept_test and (key == 'Intercept' or key == mgr.intercept_term):
+                    if skip_intercept_test and (
+                        key == "Intercept" or key == mgr.intercept_term
+                    ):
                         continue
                     L_contrast = np.eye(k_xvar)[terms[key], :]
                     test_name = str(key)
                     if key == mgr.intercept_term:
-                        test_name = 'Intercept'
+                        test_name = "Intercept"
                     hypotheses.append([test_name, L_contrast, None])
             else:
                 hypotheses = []
                 for i in range(k_xvar):
-                    name = 'x%d' % (i)
+                    name = "x%d" % (i)
                     L = np.zeros([1, k_xvar])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])
 
-        results = _multivariate_ols_test(hypotheses, self._fittedmod,
-                                          self.exog_names, self.endog_names)
+        results = _multivariate_ols_test(
+            hypotheses, self._fittedmod, self.exog_names, self.endog_names
+        )
 
-        return MultivariateTestResults(results,
-                                       self.endog_names,
-                                       self.exog_names)
+        return MultivariateTestResults(results, self.endog_names, self.exog_names)
 
     def _summary(self):
         raise NotImplementedError
@@ -622,31 +627,34 @@ class MultivariateLSResults(LikelihoodModelResults):
                 terms = mgr.get_term_name_slices(self.model.data.model_spec)
                 hypotheses = []
                 for key in terms:
-                    if skip_intercept_test and (key == 'Intercept' or key == mgr.intercept_term):
+                    if skip_intercept_test and (
+                        key == "Intercept" or key == mgr.intercept_term
+                    ):
                         continue
                     L_contrast = np.eye(k_xvar)[terms[key], :]
                     test_name = str(key)
                     if key == mgr.intercept_term:
-                        test_name = 'Intercept'
+                        test_name = "Intercept"
                     hypotheses.append([test_name, L_contrast, None])
             else:
                 hypotheses = []
                 for i in range(k_xvar):
-                    name = f'x{i:d}'
+                    name = f"x{i:d}"
                     L = np.zeros([1, k_xvar])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])
 
-        results = _multivariate_ols_test(hypotheses, self._fittedmod,
-                                          self.model.exog_names, self.model.endog_names)
+        results = _multivariate_ols_test(
+            hypotheses, self._fittedmod, self.model.exog_names, self.model.endog_names
+        )
 
-        return MultivariateTestResults(results,
-                                       self.model.endog_names,
-                                       self.model.exog_names)
+        return MultivariateTestResults(
+            results, self.model.endog_names, self.model.exog_names
+        )
 
-    def conf_int(self, alpha=.05, cols=None):
+    def conf_int(self, alpha=0.05, cols=None):
         confint = super().conf_int(alpha=alpha, cols=cols)
-        return confint.transpose(2,0,1)
+        return confint.transpose(2, 0, 1)
 
     # copied from discrete
     def _get_endog_name(self, yname, yname_list):
@@ -656,8 +664,7 @@ class MultivariateLSResults(LikelihoodModelResults):
             yname_list = self.model.endog_names
         return yname, yname_list
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05,
-            yname_list=None):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05, yname_list=None):
         """
         Summarize the Regression Results.
 
@@ -688,45 +695,56 @@ class MultivariateLSResults(LikelihoodModelResults):
         self.nobs = self.model.nobs
         self.df_model = self.model.k_endog * (self.model.k_exog - 1)
 
-        top_left = [('Dep. Variable:', None),
-                     ('Model:', [self.model.__class__.__name__]),
-                     ('Method:', [self.method]),
-                     ('Date:', None),
-                     ('Time:', None),
-                     # ('converged:', ["%s" % self.mle_retvals['converged']]),
-                    ]
+        top_left = [
+            ("Dep. Variable:", None),
+            ("Model:", [self.model.__class__.__name__]),
+            ("Method:", [self.method]),
+            ("Date:", None),
+            ("Time:", None),
+            # ('converged:', ["%s" % self.mle_retvals['converged']]),
+        ]
 
-        top_right = [('No. Observations:', None),
-                     ('Df Residuals:', None),
-                     ('Df Model:', None),
-                     # ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
-                     # ('Log-Likelihood:', None),
-                     # ('LL-Null:', ["%#8.5g" % self.llnull]),
-                     # ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
-                     ]
+        top_right = [
+            ("No. Observations:", None),
+            ("Df Residuals:", None),
+            ("Df Model:", None),
+            # ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
+            # ('Log-Likelihood:', None),
+            # ('LL-Null:', ["%#8.5g" % self.llnull]),
+            # ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
+        ]
 
-        if hasattr(self, 'cov_type'):
-            top_left.append(('Covariance Type:', [self.cov_type]))
+        if hasattr(self, "cov_type"):
+            top_left.append(("Covariance Type:", [self.cov_type]))
 
         if title is None:
-            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+            title = self.model.__class__.__name__ + " " + "Regression Results"
 
         # boiler plate
         from statsmodels.iolib.summary import Summary
+
         smry = Summary()
         yname, yname_list = self._get_endog_name(yname, yname_list)
 
         # for top of table
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=yname, xname=xname, title=title)
+        smry.add_table_2cols(
+            self,
+            gleft=top_left,
+            gright=top_right,
+            yname=yname,
+            xname=xname,
+            title=title,
+        )
 
         # for parameters, etc
-        smry.add_table_params(self, yname=yname_list, xname=xname, alpha=alpha,
-                              use_t=self.use_t)
+        smry.add_table_params(
+            self, yname=yname_list, xname=xname, alpha=alpha, use_t=self.use_t
+        )
 
-        if hasattr(self, 'constraints'):
-            smry.add_extra_txt(['Model has been estimated subject to linear '
-                                'equality constraints.'])
+        if hasattr(self, "constraints"):
+            smry.add_extra_txt(
+                ["Model has been estimated subject to linear " "equality constraints."]
+            )
 
         return smry
 

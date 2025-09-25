@@ -519,7 +519,7 @@ class Power:
                 val, infodict, ier, msg = optimize.fsolve(
                     func, start_value, full_output=True
                 )  # scalar
-                # val = optimize.newton(func, start_value) #scalar
+                # val = optimize.newton(func, start_value) # scalar
                 fval = infodict["fvec"]
                 fit_res.append(infodict)
             else:

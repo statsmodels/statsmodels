@@ -1920,9 +1920,9 @@ def _isfloat(x):
     return True
 
 
-##def _phi(p):
-##    """returns the pth quantile inverse norm"""
-##    return scipy.stats.norm.isf(p)
+# def _phi(p):
+#    """returns the pth quantile inverse norm"""
+#    return scipy.stats.norm.isf(p)
 
 
 def _phi(p):
@@ -2243,7 +2243,7 @@ def _interpolate_v(p, r, v):
 
 def _qsturng(p, r, v):
     """scalar version of qsturng"""
-    ##    print 'q',p
+    #    print 'q',p
     # r is interpolated through the q to y here we only need to
     # account for when p and/or v are not found in the table.
     # global A, p_keys, v_keys
@@ -2372,30 +2372,30 @@ def qsturng(p, r, v):
     return _vqsturng(p, r, v)
 
 
-##def _qsturng0(p, r, v):
-####    print 'q0',p
-##    """
-##    returns a first order approximation of q studentized range
-##    value. Based on Lund and Lund's 1983 based on the FORTRAN77
-##    algorithm AS 190.2 Appl. Statist. (1983).
-##    """
-##    vmax = 120.
-##    c = [0.8843, 0.2368, 1.214, 1.208, 1.4142]
-##
-##    t = -_phi(.5+.5*p)
-##    if (v < vmax):
-##        t += (t**3. + t) / float(v) / 4.
-##
-##    q = c[0] - c[1] * t
-##    if (v < vmax):
-##        q = q - c[2] / float(v) + c[3] * t / float(v)
-##    q = t * (q * math.log(r - 1.) + c[4])
-##
-##    # apply "bar napkin" correction for when p < .85
-##    # this is good enough for our intended purpose
-##    if p < .85:
-##        q += math.log10(r) * 2.25 * (.85-p)
-##    return q
+# def _qsturng0(p, r, v):
+#    print 'q0',p
+#    """
+#    returns a first order approximation of q studentized range
+#    value. Based on Lund and Lund's 1983 based on the FORTRAN77
+#    algorithm AS 190.2 Appl. Statist. (1983).
+#    """
+#    vmax = 120.
+#    c = [0.8843, 0.2368, 1.214, 1.208, 1.4142]
+#
+#    t = -_phi(.5+.5*p)
+#    if (v < vmax):
+#        t += (t**3. + t) / float(v) / 4.
+#
+#    q = c[0] - c[1] * t
+#    if (v < vmax):
+#        q = q - c[2] / float(v) + c[3] * t / float(v)
+#    q = t * (q * math.log(r - 1.) + c[4])
+#
+#    # apply "bar napkin" correction for when p < .85
+#    # this is good enough for our intended purpose
+#    if p < .85:
+#        q += math.log10(r) * 2.25 * (.85-p)
+#    return q
 
 
 def _psturng(q, r, v):
@@ -2461,30 +2461,3 @@ def psturng(q, r, v):
     if all(map(_isfloat, [q, r, v])):
         return _psturng(q, r, v)
     return _vpsturng(q, r, v)
-
-
-##p, r, v = .9, 10, 20
-##print
-##print 'p and v interpolation'
-##print '\t20\t22\t24'
-##print '.75',qsturng(.75, r, 20),qsturng(.75, r, 22),qsturng(.75, r, 24)
-##print '.85',qsturng(.85, r, 20),qsturng(.85, r, 22),qsturng(.85, r, 24)
-##print '.90',qsturng(.90, r, 20),qsturng(.90, r, 22),qsturng(.90, r, 24)
-##print
-##print 'p and v interpolation'
-##print '\t120\t500\tinf'
-##print '.950',qsturng(.95, r, 120),qsturng(.95, r, 500),qsturng(.95, r, inf)
-##print '.960',qsturng(.96, r, 120),qsturng(.96, r, 500),qsturng(.96, r, inf)
-##print '.975',qsturng(.975, r, 120),qsturng(.975, r, 500),qsturng(.975, r, inf)
-##print
-##print 'p and v interpolation'
-##print '\t40\t50\t60'
-##print '.950',qsturng(.95, r, 40),qsturng(.95, r, 50),qsturng(.95, r, 60)
-##print '.960',qsturng(.96, r, 40),qsturng(.96, r, 50),qsturng(.96, r, 60)
-##print '.975',qsturng(.975, r, 40),qsturng(.975, r, 50),qsturng(.975, r, 60)
-##print
-##print 'p and v interpolation'
-##print '\t20\t22\t24'
-##print '.50',qsturng(.5, r, 20),qsturng(.5, r, 22),qsturng(.5, r, 24)
-##print '.60',qsturng(.6, r, 20),qsturng(.6, r, 22),qsturng(.6, r, 24)
-##print '.75',qsturng(.75, r, 20),qsturng(.75, r, 22),qsturng(.75, r, 24)

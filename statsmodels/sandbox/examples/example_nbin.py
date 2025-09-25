@@ -35,7 +35,7 @@ from statsmodels.base.model import (
 from statsmodels.formula._manager import FormulaManager
 
 
-#### Negative Binomial Log-likelihoods ####
+# Negative Binomial Log-likelihoods ####
 def _ll_nbp(y, X, beta, alph, Q):
     r"""
     Negative Binomial Log-likelihood -- type P
@@ -101,7 +101,7 @@ def _ll_nbt(y, X, beta, alph, C=0):
     return ll
 
 
-#### Model Classes ####
+# Model Classes
 class NBin(GenericLikelihoodModel):
     """
     Negative Binomial regression
@@ -226,8 +226,7 @@ class CountResults(GenericLikelihoodModelResults):
         return smry
 
 
-#### Score function for NB-P ####
-
+# Score function for NB-P
 
 def _score_nbp(y, X, beta, thet, Q):
     r"""
@@ -265,7 +264,7 @@ def _score_nbp(y, X, beta, thet, Q):
     return sc
 
 
-#### Tests ####
+# Tests
 medpar = pandas.read_csv(
     urlopen(
         "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/medpar.csv"

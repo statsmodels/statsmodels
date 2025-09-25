@@ -133,31 +133,31 @@ def check_movorder():
 
 
 # identity filter
-##>>> signal.order_filter(x,np.ones(1),0)
-##array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.])
+# >>> signal.order_filter(x,np.ones(1),0)
+# array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.])
 # median filter
-##signal.medfilt(np.sin(x), kernel_size=3)
-##>>> plt.figure()
-##<matplotlib.figure.Figure object at 0x069BBB50>
-##>>> x=np.linspace(0,3,100);plt.plot(x,np.sin(x),x,signal.medfilt(np.sin(x), kernel_size=3))
+# signal.medfilt(np.sin(x), kernel_size=3)
+# >>> plt.figure()
+# <matplotlib.figure.Figure object at 0x069BBB50>
+# >>> x=np.linspace(0,3,100);plt.plot(x,np.sin(x),x,signal.medfilt(np.sin(x), kernel_size=3))
 
 # remove old version
-##def movmeanvar(x, windowsize=3, valid='same'):
-##    '''
-##    this should also work along axis or at least for columns
-##    '''
-##    n = x.shape[0]
-##    x = expandarr(x, windowsize - 1)
-##    takeslice = slice(windowsize-1, n + windowsize-1)
-##    avgkern = (np.ones(windowsize)/float(windowsize))
-##    m = np.correlate(x, avgkern, 'same')#[takeslice]
-##    print(m.shape)
-##    print(x.shape)
-##    xm = x - m
-##    v = np.correlate(x*x, avgkern, 'same') - m**2
-##    v1 = np.correlate(xm*xm, avgkern, valid) #not correct for var of window
-###>>> np.correlate(xm*xm,np.array([1,1,1])/3.0,'valid')-np.correlate(xm*xm,np.array([1,1,1])/3.0,'valid')**2
-##    return m[takeslice], v[takeslice], v1
+# def movmeanvar(x, windowsize=3, valid='same'):
+#    '''
+#    this should also work along axis or at least for columns
+#    '''
+#    n = x.shape[0]
+#    x = expandarr(x, windowsize - 1)
+#    takeslice = slice(windowsize-1, n + windowsize-1)
+#    avgkern = (np.ones(windowsize)/float(windowsize))
+#    m = np.correlate(x, avgkern, 'same')# [takeslice]
+#    print(m.shape)
+#    print(x.shape)
+#    xm = x - m
+#    v = np.correlate(x*x, avgkern, 'same') - m**2
+#    v1 = np.correlate(xm*xm, avgkern, valid) # not correct for var of window
+# #>>> np.correlate(xm*xm,np.array([1,1,1])/3.0,'valid')-np.correlate(xm*xm,np.array([1,1,1])/3.0,'valid')**2
+#    return m[takeslice], v[takeslice], v1
 
 
 def movmean(x, windowsize=3, lag="lagged"):
@@ -242,7 +242,7 @@ def movmoment(x, k, windowsize=3, lag="lagged"):
     windsize = windowsize
     # if windsize is even should it raise ValueError
     if lag == "lagged":
-        # lead = -0 + windsize #windsize//2
+        # lead = -0 + windsize # windsize//2
         lead = -0  # + (windsize-1) + windsize//2
         sl = slice((windsize - 1) or None, -2 * (windsize - 1) or None)
     elif lag == "centered":
@@ -281,21 +281,21 @@ def movmoment(x, k, windowsize=3, lag="lagged"):
 
 # x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,[1],'full')
 # x=0.5**np.arange(3);np.correlate(x,x,'same')
-##>>> x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,xo,'full')
-##
-##>>> xo=np.ones(10);d=np.correlate(xo,xo,'full')
-##>>> xo
-##xo=np.ones(10);d=np.correlate(xo,xo,'full')
-##>>> x=np.ones(10);xo=x-x.mean();a=np.correlate(xo,xo,'full')
-##>>> xo=np.ones(10);d=np.correlate(xo,xo,'full')
-##>>> d
-##array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.,   9.,
-##         8.,   7.,   6.,   5.,   4.,   3.,   2.,   1.])
+# >>> x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,xo,'full')
+#
+# >>> xo=np.ones(10);d=np.correlate(xo,xo,'full')
+# >>> xo
+# xo=np.ones(10);d=np.correlate(xo,xo,'full')
+# >>> x=np.ones(10);xo=x-x.mean();a=np.correlate(xo,xo,'full')
+# >>> xo=np.ones(10);d=np.correlate(xo,xo,'full')
+# >>> d
+# array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.,   9.,
+#         8.,   7.,   6.,   5.,   4.,   3.,   2.,   1.])
 
 
-##def ccovf():
-##    pass
-##    #x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,xo,'full')
+# def ccovf():
+#    pass
+#    # x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,xo,'full')
 
 __all__ = ["movorder", "movmean", "movvar", "movmoment"]
 

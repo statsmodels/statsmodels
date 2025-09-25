@@ -9,7 +9,7 @@ from scipy import stats
 
 from statsmodels.stats.descriptivestats import sign_test
 
-#############################################
+#
 #
 # ============================================
 #       Univariate Descriptive Statistics
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     # this works
     # p.view(dtype = np.int, type = np.ndarray)
 
-    ### This is *really* slow ###
+    # This is *really* slow ###
     if os.path.isfile("./Econ724_PS_I_Data.csv"):
         data2 = np.genfromtxt("./Econ724_PS_I_Data.csv", delimiter=",")
         sum2 = descstats(data2.ahe)

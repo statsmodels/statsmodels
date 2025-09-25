@@ -17,8 +17,8 @@ mmean = np.arange(1.0, nvars + 1) / nvars * 1.5
 rho = 0.5
 # dcorr = rho*np.ones((nvars, nvars)) + (1-rho)*np.eye(nvars)
 r = np.random.uniform(-0.99, 0.99, size=(nvars, nvars))
-##from scipy import stats
-##r = stats.rdist.rvs(1, size=(nvars, nvars))
+# from scipy import stats
+# r = stats.rdist.rvs(1, size=(nvars, nvars))
 r = (r + r.T) / 2.0
 assert np.allclose(r, r.T)
 mcorr = r

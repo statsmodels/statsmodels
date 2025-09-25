@@ -191,7 +191,7 @@ class ArmaFft(ArmaProcess):
         n = npos
         w = fft.fftfreq(2 * n) * 2 * np.pi
         hw = self.fftarma(2 * n)  # not sure, need to check normalization
-        # return (hw*hw.conj()).real[n//2-1:]  * 0.5 / np.pi #does not show in plot
+        # return (hw*hw.conj()).real[n//2-1:]  * 0.5 / np.pi # does not show in plot
         return (hw * hw.conj()).real * 0.5 / np.pi, w
 
     def spdshift(self, n):

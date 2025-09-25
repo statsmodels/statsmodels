@@ -118,8 +118,8 @@ stub R2 C2  40.95038  40.65765
 *****************************
 """
             actual = '\n%s\n' % tbl.as_text()
-            #print(actual)
-            #print(desired)
+            # print(actual)
+            # print(desired)
             assert_equal(actual, desired)
 
         def test_ltx_fmt1(self):
@@ -135,8 +135,8 @@ stub R2 C2  40.95038  40.65765
 \end{tabular}
 """
             actual = '\n%s\n' % tbl.as_latex_tabular(center=False)
-            #print(actual)
-            #print(desired)
+            # print(actual)
+            # print(desired)
             assert_equal(actual, desired)
             # Test "center=True" (the default):
             desired_centered = r"""

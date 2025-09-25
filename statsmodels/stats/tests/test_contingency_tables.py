@@ -599,10 +599,8 @@ class Test2x2_1(Check2x2Mixin):
         cls.log_riskratio = 0.
         cls.log_riskratio_se = 1 / np.sqrt(2)
         cls.riskratio_pvalue = 1.
-        cls.riskratio_confint = [0.25009765325990629,
-                                  3.9984381579173824]
-        cls.log_riskratio_confint = [-1.3859038243496782,
-                                      1.3859038243496782]
+        cls.riskratio_confint = [0.25009765325990629, 3.9984381579173824]
+        cls.log_riskratio_confint = [-1.3859038243496782, 1.3859038243496782]
         ss = [
             '               Estimate   SE   LCB    UCB   p-value',
             '---------------------------------------------------',

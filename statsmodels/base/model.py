@@ -2565,7 +2565,7 @@ class ResultMixin:
         """
         #  if not hasattr(self, '_results'):
         #      raise ValueError('need to call fit first')
-        #      #self.fit()
+        #      # self.fit()
         #  self.jacv = jacv = self.jac(self._results.params)
         jacv = self.score_obsv
         return np.linalg.inv(np.dot(jacv.T, jacv))
@@ -2631,7 +2631,7 @@ class ResultMixin:
         """
         results = []
         hascloneattr = True if hasattr(self.model, "cloneattr") else False
-        for i in range(nrep):
+        for _ in range(nrep):
             rvsind = np.random.randint(self.nobs, size=self.nobs)
             # this needs to set startparam and get other defining attributes
             # need a clone method on model

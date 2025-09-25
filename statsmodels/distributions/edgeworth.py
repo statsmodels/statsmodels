@@ -88,8 +88,8 @@ def cumulant_from_moments(momt, n):
     return kappa
 
 
-## copied from scipy.stats.distributions to avoid the overhead of
-## the public methods
+# copied from scipy.stats.distributions to avoid the overhead of
+# the public methods
 _norm_pdf_C = np.sqrt(2 * np.pi)
 
 

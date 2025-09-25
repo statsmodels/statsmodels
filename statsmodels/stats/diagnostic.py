@@ -1475,7 +1475,7 @@ skip large enough to ensure that the first OLS estimator is well-defined.
     y0 = y[:skip]
     # add Ridge to start (not in jplv)
     xtxi = np.linalg.inv(np.dot(x0.T, x0) + lamda * np.eye(nvars))
-    xty = np.dot(x0.T, y0)  # xi * y   #np.dot(xi, y)
+    xty = np.dot(x0.T, y0)  # xi * y   # np.dot(xi, y)
     beta = np.dot(xtxi, xty)
     rparams[skip - 1] = beta
     yipred = np.dot(x[skip - 1], beta)
@@ -1504,7 +1504,7 @@ skip large enough to ensure that the first OLS estimator is well-defined.
 
     rresid_scaled = rresid / np.sqrt(rvarraw)  # N(0,sigma2) distributed
     nrr = nobs - skip
-    # sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
+    # sigma2 = rresid_scaled[skip-1:].var(ddof=1)  # var or sum of squares ?
     # Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
     # Gretl uses: by reverse engineering matching their numbers
     sigma2 = rresid_scaled[skip:].var(ddof=1)
@@ -1654,16 +1654,16 @@ def breaks_cusumolsresid(resid, ddof=0):
 #    """
 #    resid = recolsresid.ravel()
 #    nobssigma2 = (resid**2).sum()
-#    #B is asymptotically a Brownian Bridge
+#    # B is asymptotically a Brownian Bridge
 #    B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
 #    nobs = len(resid)
-#    denom = 1. + 2. * np.arange(nobs)/(nobs-1.) #not sure about limits
+#    denom = 1. + 2. * np.arange(nobs)/(nobs-1.) # not sure about limits
 #    sup_b = np.abs(B/denom).max()
-#    #asymptotically distributed as standard Brownian Bridge
+#    # asymptotically distributed as standard Brownian Bridge
 #    crit = [(1,1.63), (5, 1.36), (10, 1.22)]
-#    #Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian
+#    # Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian
 #    Bridge
 #    #>>> stats.kstwobign.isf([0.01,0.05,0.1])
-#    #array([ 1.62762361,  1.35809864,  1.22384787])
+#    # array([ 1.62762361,  1.35809864,  1.22384787])
 #    pval = stats.kstwobign.sf(sup_b)
 #    return sup_b, pval, crit

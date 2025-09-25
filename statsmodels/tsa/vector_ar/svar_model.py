@@ -56,7 +56,7 @@ class SVAR(tsbase.TimeSeriesModel):
     def __init__(self, endog, svar_type, dates=None,
                  freq=None, A=None, B=None, missing='none'):
         super().__init__(endog, None, dates, freq, missing=missing)
-        #(self.endog, self.names,
+        # (self.endog, self.names,
         # self.dates) = data_util.interpret_data(endog, names, dates)
 
         self.neqs = self.endog.shape[1]
@@ -91,7 +91,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         # convert A and B to numeric
         # TODO: change this when masked support is better or with formula
-        #integration
+        # integration
         Anum = np.zeros(A.shape, dtype=float)
         Anum[~A_mask] = A[~A_mask]
         Anum[A_mask] = np.nan
@@ -102,9 +102,9 @@ class SVAR(tsbase.TimeSeriesModel):
         Bnum[B_mask] = np.nan
         self.B = Bnum
 
-        #LikelihoodModel.__init__(self, endog)
+        # LikelihoodModel.__init__(self, endog)
 
-        #super().__init__(endog)
+        # super().__init__(endog)
 
     def fit(self, A_guess=None, B_guess=None, maxlags=None, method='ols',
             ic=None, trend='c', verbose=False, s_method='mle',
@@ -383,18 +383,18 @@ class SVAR(tsbase.TimeSeriesModel):
 
     def _compute_J(self, A_solve, B_solve):
 
-        #first compute appropriate duplication matrix
+        # first compute appropriate duplication matrix
         # taken from Magnus and Neudecker (1980),
-        #"The Elimination Matrix: Some Lemmas and Applications
+        # "The Elimination Matrix: Some Lemmas and Applications
         # the creation of the D_n matrix follows MN (1980) directly,
-        #while the rest follows Hamilton (1994)
+        # while the rest follows Hamilton (1994)
 
         neqs = self.neqs
         sigma_u = self.sigma_u
         A_mask = self.A_mask
         B_mask = self.B_mask
 
-        #first generate duplication matrix, see MN (1980) for notation
+        # first generate duplication matrix, see MN (1980) for notation
 
         D_nT = np.zeros([int((1.0 / 2) * (neqs) * (neqs + 1)), neqs**2])
 
@@ -412,7 +412,7 @@ class SVAR(tsbase.TimeSeriesModel):
         D_n = D_nT.T
         D_pl = npl.pinv(D_n)
 
-        #generate S_B
+        # generate S_B
         S_B = np.zeros((neqs**2, len(A_solve[A_mask])))
         S_D = np.zeros((neqs**2, len(B_solve[B_mask])))
 
@@ -431,7 +431,7 @@ class SVAR(tsbase.TimeSeriesModel):
                     S_D[k,j_d] = 1
                     j_d += 1
 
-        #now compute J
+        # now compute J
         invA = npl.inv(A_solve)
         J_p1i = np.dot(np.dot(D_pl, np.kron(sigma_u, invA)), S_B)
         J_p1 = -2.0 * J_p1i
@@ -596,16 +596,15 @@ class SVARResults(SVARProcess, VARResults):
         intercept = self.params[0]
         coefs = reshaped.swapaxes(1, 2).copy()
 
-        #SVAR components
+        # SVAR components
         # TODO: if you define these here, you do not also have to define
-        #them in SVAR process, but I left them for now -ss
+        # them in SVAR process, but I left them for now -ss
         self.A = A
         self.B = B
         self.A_mask = A_mask
         self.B_mask = B_mask
 
-        super().__init__(coefs, intercept, sigma_u, A, B,
-                                          names=names)
+        super().__init__(coefs, intercept, sigma_u, A, B, names=names)
 
     def irf(self, periods=10, var_order=None):
         """

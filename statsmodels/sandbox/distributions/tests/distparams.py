@@ -20,7 +20,7 @@ distcont = [
     ["exponpow", (2.697119160358469,)],
     ["exponweib", (2.8923945291034436, 1.9505288745913174)],
     ["f", (29, 18)],
-    # ['fatiguelife', (29,)],   #correction numargs = 1, variance very large
+    # ['fatiguelife', (29,)],   # correction numargs = 1, variance very large
     ["fatiguelife", (2,)],
     ["fisk", (3.0857548622253179,)],
     ["foldcauchy", (4.7164673455831894,)],
@@ -51,7 +51,7 @@ distcont = [
     ["halflogistic", ()],
     ["halfnorm", ()],
     ["hypsecant", ()],
-    # ['invgamma', (2.0668996136993067,)], #convergence problem with expect
+    # ['invgamma', (2.0668996136993067,)], # convergence problem with expect
     # ['invgamma', (3.0,)],
     ["invgamma", (5.0,)],  # kurtosis requires alpha > 4
     ["invnorm", (0.14546264555347513,)],
@@ -63,7 +63,7 @@ distcont = [
     ["laplace", ()],
     ["levy", ()],
     ["levy_l", ()],
-    # #NotImplementedError
+    # # NotImplementedError
     # ['levy_stable', (0.35667405469844993,-0.67450531578494011)],
     # rvs not tested
     ["loggamma", (0.41411931826052117,)],
@@ -89,8 +89,8 @@ distcont = [
     ["powernorm", (4.4453652254590779,)],
     ["rayleigh", ()],
     ["rdist", (0.9,)],  # feels also slow
-    # ['rdist', (3.8266985793976525,)],  #veryslow, especially rvs
-    # ['rdist', (541.0,)],   # from ticket #758    #veryslow
+    # ['rdist', (3.8266985793976525,)],  # veryslow, especially rvs
+    # ['rdist', (541.0,)],   # from ticket #758    # veryslow
     ["recipinvgauss", (0.63004267809369119,)],
     ["reciprocal", (0.0062309367010521255, 1.0062309367010522)],
     ["rice", (0.7749725210111873,)],

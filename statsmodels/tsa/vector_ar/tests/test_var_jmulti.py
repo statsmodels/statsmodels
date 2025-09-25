@@ -620,11 +620,11 @@ def test_exceptions():
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             # instant causality:
-            ### 0<signif<1
+            # 0<signif<1
             with pytest.raises(ValueError):
                 results_sm[ds][dt].test_inst_causality(0, 0)
                 # this means signif=0
-            ### causing must be int, str or iterable of int or str
+            # causing must be int, str or iterable of int or str
             with pytest.raises(TypeError):
                 results_sm[ds][dt].test_inst_causality([0.5])
                 # 0.5 not an int

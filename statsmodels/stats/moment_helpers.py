@@ -91,7 +91,7 @@ def cum2mc(kappa):
     X = _convert_to_multidim(kappa)
 
     def _local_counts(kappa):
-        mc = [1, 0.0]  # _kappa[0]]  #insert 0-moment and mean
+        mc = [1, 0.0]  # _kappa[0]]  # insert 0-moment and mean
         kappa0 = kappa[0]
         kappa = [1] + list(kappa)
         for nn, m in enumerate(kappa[2:]):

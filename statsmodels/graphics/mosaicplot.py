@@ -31,20 +31,23 @@ def _normalize_split(proportion):
         elif proportion >= 1:
             proportion = array([1.0, 0.0])
         elif proportion < 0:
-            raise ValueError("proportions should be positive,"
-                              "given value: {}".format(proportion))
+            raise ValueError(
+                "proportions should be positive," "given value: {}".format(proportion)
+            )
         else:
             proportion = array([proportion, 1.0 - proportion])
     proportion = np.asarray(proportion, dtype=float)
     if np.any(proportion < 0):
-        raise ValueError("proportions should be positive,"
-                          "given value: {}".format(proportion))
+        raise ValueError(
+            "proportions should be positive," "given value: {}".format(proportion)
+        )
     if np.allclose(proportion, 0):
         raise ValueError(
             "at least one proportion should be greater than zero"
             "given value: {}".format(proportion)
         )
     # ok, data are meaningful, so go on
+
     if len(proportion) < 2:
         return array([0.0, 1.0])
     left = r_[0, cumsum(proportion)]
@@ -62,32 +65,41 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
     """
     x, y, w, h = float(x), float(y), float(width), float(height)
     if (w < 0) or (h < 0):
-        raise ValueError("dimension of the square less than"
-                          "zero w={} h={}".format(w, h))
+        raise ValueError(
+            "dimension of the square less than" "zero w={} h={}".format(w, h)
+        )
     proportions = _normalize_split(proportion)
 
     # extract the starting point and the dimension of each subdivision
     # in respect to the unit square
+
     starting = proportions[:-1]
     amplitude = proportions[1:] - starting
 
     # how much each extrema is going to be displaced due to gaps
+
     starting += gap * np.arange(len(proportions) - 1)
 
     # how much the squares plus the gaps are extended
+
     extension = starting[-1] + amplitude[-1] - starting[0]
 
     # normalize everything for fit again in the original dimension
+
     starting /= extension
     amplitude /= extension
 
     # bring everything to the original square
+
     starting = (x if horizontal else y) + starting * (w if horizontal else h)
     amplitude = amplitude * (w if horizontal else h)
 
     # create each 4-tuple for each new block
-    results = [(s, y, a, h) if horizontal else (x, s, w, a)
-                for s, a in zip(starting, amplitude)]
+
+    results = [
+        (s, y, a, h) if horizontal else (x, s, w, a)
+        for s, a in zip(starting, amplitude)
+    ]
     return results
 
 
@@ -185,37 +197,48 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
             3 - height of the rectangle
     """
     # this is the unit square that we are going to divide
+
     base_rect = dict([(tuple(), (0, 0, 1, 1))])
     # get the list of each possible value for each level
+
     categories_levels = _categories_level(list(count_dict.keys()))
     L = len(categories_levels)
 
     # recreate the gaps vector starting from an int
+
     if not np.iterable(gap):
-        gap = [gap / 1.5 ** idx for idx in range(L)]
+        gap = [gap / 1.5**idx for idx in range(L)]
     # extend if it's too short
+
     if len(gap) < L:
         last = gap[-1]
-        gap = list(*gap) + [last / 1.5 ** idx for idx in range(L)]
+        gap = list(*gap) + [last / 1.5**idx for idx in range(L)]
     # trim if it's too long
+
     gap = gap[:L]
     # put the count dictionay in order for the keys
     # this will allow some code simplification
-    count_ordered = {k: count_dict[k]
-                        for k in list(product(*categories_levels))}
+
+    count_ordered = {k: count_dict[k] for k in list(product(*categories_levels))}
     for cat_idx, cat_enum in enumerate(categories_levels):
         # get the partial key up to the actual level
+
         base_keys = list(product(*categories_levels[:cat_idx]))
         for key in base_keys:
             # for each partial and each value calculate how many
             # observation we have in the counting dictionary
-            part_count = [_reduce_dict(count_ordered, key + (partial,))
-                            for partial in cat_enum]
+
+            part_count = [
+                _reduce_dict(count_ordered, key + (partial,)) for partial in cat_enum
+            ]
             # reduce the gap for subsequents levels
+
             new_gap = gap[cat_idx]
             # split the given subkeys in the rectangle dictionary
-            base_rect = _key_splitting(base_rect, cat_enum, part_count, key,
-                                       horizontal, new_gap)
+
+            base_rect = _key_splitting(
+                base_rect, cat_enum, part_count, key, horizontal, new_gap
+            )
         horizontal = not horizontal
     return base_rect
 
@@ -227,7 +250,7 @@ def _single_hsv_to_rgb(hsv):
 
 
 def _create_default_properties(data):
-    """"Create the default properties of the mosaic given the data
+    """ "Create the default properties of the mosaic given the data
     first it will varies the color hue (first category) then the color
     saturation (second category) and then the color value
     (third category).  If a fourth category is found, it will put
@@ -237,26 +260,30 @@ def _create_default_properties(data):
     categories_levels = _categories_level(list(data.keys()))
     Nlevels = len(categories_levels)
     # first level, the hue
+
     L = len(categories_levels[0])
     # hue = np.linspace(1.0, 0.0, L+1)[:-1]
+
     hue = np.linspace(0.0, 1.0, L + 2)[:-2]
     # second level, the saturation
+
     L = len(categories_levels[1]) if Nlevels > 1 else 1
     saturation = np.linspace(0.5, 1.0, L + 1)[:-1]
     # third level, the value
+
     L = len(categories_levels[2]) if Nlevels > 2 else 1
     value = np.linspace(0.5, 1.0, L + 1)[:-1]
     # fourth level, the hatch
+
     L = len(categories_levels[3]) if Nlevels > 3 else 1
-    hatch = ['', '/', '-', '|', '+'][:L + 1]
+    hatch = ["", "/", "-", "|", "+"][: L + 1]
     # convert in list and merge with the levels
+
     hue = lzip(list(hue), categories_levels[0])
-    saturation = lzip(list(saturation),
-                     categories_levels[1] if Nlevels > 1 else [''])
-    value = lzip(list(value),
-                     categories_levels[2] if Nlevels > 2 else [''])
-    hatch = lzip(list(hatch),
-                     categories_levels[3] if Nlevels > 3 else [''])
+    saturation = lzip(list(saturation), categories_levels[1] if Nlevels > 1 else [""])
+    value = lzip(list(value), categories_levels[2] if Nlevels > 2 else [""])
+    hatch = lzip(list(hatch), categories_levels[3] if Nlevels > 3 else [""])
+
     # create the properties dictionary
     properties = {}
     for h, s, v, t in product(hue, saturation, value, hatch):
@@ -325,7 +352,7 @@ def _normalize_dataframe(dataframe, index):
     """Take a pandas DataFrame and count the element present in the
     given columns, return a hierarchical index on those columns
     """
-    #groupby the given keys, extract the same columns and count the element
+    # groupby the given keys, extract the same columns and count the element
     # then collapse them with a mean
     data = dataframe[index].dropna()
     grouped = data.groupby(index, sort=False, observed=False)
@@ -399,35 +426,35 @@ def _create_labels(rects, horizontal, ax, rotation):
                "is already a lot of levels, are you sure you need them all?")
         raise ValueError(msg)
     labels = {}
-    #keep it fixed as will be used a lot of times
+    # keep it fixed as will be used a lot of times
     items = list(rects.items())
     vertical = not horizontal
 
-    #get the axis ticks and labels locator to put the correct values!
+    # get the axis ticks and labels locator to put the correct values!
     ax2 = ax.twinx()
     ax3 = ax.twiny()
-    #this is the order of execution for horizontal disposition
+    # this is the order of execution for horizontal disposition
     ticks_pos = [ax.set_xticks, ax.set_yticks, ax3.set_xticks, ax2.set_yticks]
     ticks_lab = [ax.set_xticklabels, ax.set_yticklabels,
                  ax3.set_xticklabels, ax2.set_yticklabels]
-    #for the vertical one, rotate it by one
+    # for the vertical one, rotate it by one
     if vertical:
         ticks_pos = ticks_pos[1:] + ticks_pos[:1]
         ticks_lab = ticks_lab[1:] + ticks_lab[:1]
-    #clean them
+    # clean them
     for pos, lab in zip(ticks_pos, ticks_lab):
         pos([])
         lab([])
-    #for each level, for each value in the level, take the mean of all
-    #the sublevel that correspond to that partial key
+    # for each level, for each value in the level, take the mean of all
+    # the sublevel that correspond to that partial key
     for level_idx, level in enumerate(categories):
-        #this dictionary keep the labels only for this level
+        # this dictionary keep the labels only for this level
         level_ticks = dict()
         for value in level:
-            #to which level it should refer to get the preceding
-            #values of labels? it's rather a tricky question...
-            #this is dependent on the side. It's a very crude management
-            #but I couldn't think a more general way...
+            # to which level it should refer to get the preceding
+            # values of labels? it's rather a tricky question...
+            # this is dependent on the side. It's a very crude management
+            # but I couldn't think a more general way...
             if horizontal:
                 if level_idx == 3:
                     index_select = [-1, -1, -1]
@@ -438,29 +465,27 @@ def _create_labels(rects, horizontal, ax, rotation):
                     index_select = [+0, -1, +0]
                 else:
                     index_select = [-1, -1, -1]
-            #now I create the base key name and append the current value
-            #It will search on all the rects to find the corresponding one
-            #and use them to evaluate the mean position
-            basekey = tuple(categories[i][index_select[i]]
-                            for i in range(level_idx))
+            # now I create the base key name and append the current value
+            # It will search on all the rects to find the corresponding one
+            # and use them to evaluate the mean position
+            basekey = tuple(categories[i][index_select[i]] for i in range(level_idx))
             basekey = basekey + (value,)
-            subset = {k: v for k, v in items
-                          if basekey == k[:level_idx + 1]}
-            #now I extract the center of all the tiles and make a weighted
-            #mean of all these center on the area of the tile
-            #this should give me the (more or less) correct position
-            #of the center of the category
+            subset = {k: v for k, v in items if basekey == k[:level_idx + 1]}
+            # now I extract the center of all the tiles and make a weighted
+            # mean of all these center on the area of the tile
+            # this should give me the (more or less) correct position
+            # of the center of the category
 
             vals = list(subset.values())
             W = sum(w * h for (x, y, w, h) in vals)
             x_lab = sum(_get_position(x, w, h, W) for (x, y, w, h) in vals)
             y_lab = sum(_get_position(y, h, w, W) for (x, y, w, h) in vals)
-            #now base on the ordering, select which position to keep
-            #needs to be written in a more general form of 4 level are enough?
-            #should give also the horizontal and vertical alignment
+            # now base on the ordering, select which position to keep
+            # needs to be written in a more general form of 4 level are enough?
+            # should give also the horizontal and vertical alignment
             side = (level_idx + vertical) % 4
             level_ticks[value] = y_lab if side % 2 else x_lab
-        #now we add the labels of this level to the correct axis
+        # now we add the labels of this level to the correct axis
 
         ticks_pos[level_idx](list(level_ticks.values()))
         ticks_lab[level_idx](list(level_ticks.keys()),
@@ -625,7 +650,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     from matplotlib.patches import Rectangle
 
-    #from pylab import Rectangle
+    # from pylab import Rectangle
     fig, ax = utils.create_mpl_ax(ax)
     # normalize the data to a dict with tuple of strings as keys
     data = _normalize_data(data, index)
@@ -654,10 +679,9 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         text = labelizer(k)
         Rect = Rectangle((x, y), w, h, label=text, **props)
         ax.add_patch(Rect)
-        ax.text(x + w / 2, y + h / 2, text, ha='center',
-                 va='center', size='smaller')
-    #creating the labels on the axis
-    #o clearing it
+        ax.text(x + w / 2, y + h / 2, text, ha='center', va='center', size='smaller')
+    # creating the labels on the axis
+    # o clearing it
     if axes_label:
         if np.iterable(label_rotation):
             rotation = label_rotation

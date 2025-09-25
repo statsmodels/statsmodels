@@ -5,7 +5,7 @@ from statsmodels.tools.validation import PandasWrapper, array_like
 # the data is sampled quarterly, so cut-off frequency of 18
 
 # Wn is normalized cut-off freq
-#Cutoff frequency is that frequency where the magnitude response of the filter
+# Cutoff frequency is that frequency where the magnitude response of the filter
 # is sqrt(1/2.). For butter, the normalized cutoff frequency Wn must be a
 # number between  0 and 1, where 1 corresponds to the Nyquist frequency, p
 # radians per sample.

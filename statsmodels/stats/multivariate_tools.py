@@ -91,13 +91,13 @@ def cancorr(x1, x2, demean=True, standardize=False):
     CCA not yet
 
     '''
-    #x, y = x1, x2
+    # x, y = x1, x2
     if demean or standardize:
         x1 = (x1 - x1.mean(0))
         x2 = (x2 - x2.mean(0))
 
     if standardize:
-        #std does not make a difference to canonical correlation coefficients
+        # std does not make a difference to canonical correlation coefficients
         x1 /= x1.std(0)
         x2 /= x2.std(0)
 
@@ -223,7 +223,7 @@ def cc_stats(x1, x2, demean=True):
     wl_value = np.product(1 / (1 + lam))   # Wilk's Lambda
     ht_value = lam.sum()    # Hotelling's Trace
     rm_value = lam.max()    # Roy's largest root
-    #from scipy import stats
+    # from scipy import stats
     # what's the distribution, the test statistic ?
     res = {}
     res['canonical correlation coefficient'] = cc

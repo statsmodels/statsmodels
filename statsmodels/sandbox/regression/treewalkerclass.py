@@ -329,7 +329,7 @@ class RU2NMNL:
     def calc_prob(self, tree, parent=None):
         """walking a tree bottom-up based on dictionary"""
 
-        # 0.5#2 #placeholder for now
+        # 0.5#2 # placeholder for now
         # should be tau=self.taus[name] but as part of params for optimization
         datadict = self.datadict
         branchsum = self.branchsum
@@ -391,8 +391,8 @@ class RU2NMNL:
                     if np.size(self.datadict[name]) > 0:
                         # not used yet, might have to move one indentation level
                         # self.probs[k] = self.probs[k] / tmpsum
-                        ## np.exp(-self.datadict[name] *
-                        ## np.sum(self.recursionparams[self.parinddict[name]]))
+                        # np.exp(-self.datadict[name] *
+                        # np.sum(self.recursionparams[self.parinddict[name]]))
                         if DEBUG:
                             print("self.datadict[name], self.probs[k]")
                             print(self.datadict[name], self.probs[k])
@@ -447,7 +447,7 @@ class RU2NMNL:
                 else:
                     tau = 1
                 # Unused result commented out
-                # branchxb + tau * branchsum #which tau: name or parent???
+                # branchxb + tau * branchsum # which tau: name or parent???
                 return branchxb + tau * np.log(branchsum)  # iv
                 # branchsum is now IV, TODO: add effect of branch variables
 
@@ -467,7 +467,7 @@ class RU2NMNL:
                 / tau
             )  # fake tau for now, wrong spot ???
             # it seems I get the same answer with and without tau here
-            self.probs[tree] = leafprob  # = 1 #try initialization only
+            self.probs[tree] = leafprob  # = 1 # try initialization only
             # TODO: where  should I add tau in the leaves
 
             if testxb == 2:
@@ -490,7 +490,7 @@ if __name__ == "__main__":
 
     endog = 5  # dummy place holder
 
-    ##############  Example similar to Greene
+    # #############  Example similar to Greene
 
     # get pickled data
     # endog3, xifloat3 = pickle.load(open('xifloat2.pickle','rb'))
@@ -538,7 +538,7 @@ if __name__ == "__main__":
     print("\nmodru.probs")
     pprint(modru.probs)
 
-    ##############  example with many layers
+    # #############  example with many layers
 
     tree2 = (
         "top",

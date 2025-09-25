@@ -121,7 +121,7 @@ class JumpDiffusionMerton:
         jumps = np.zeros((nrepl, nobs))
         for j in range(nrepl):
             # simulate jump arrival time
-            t = T * np.random.rand(n_jumps[j])  # ,1) #uniform
+            t = T * np.random.rand(n_jumps[j])  # ,1) # uniform
             t = np.sort(t, 0)
 
             # simulate jump size
@@ -137,7 +137,7 @@ class JumpDiffusionMerton:
                 if Events > 0:
                     jumps_ts[n] = CumS[Events]  # TODO: out of bounds see top
 
-            # jumps = np.column_stack((jumps, jumps_ts))  #maybe wrong transl
+            # jumps = np.column_stack((jumps, jumps_ts))  # maybe wrong transl
             jumps[j, :] = jumps_ts
 
         D_Diff = np.zeros((nrepl, nobs))

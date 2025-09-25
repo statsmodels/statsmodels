@@ -45,10 +45,10 @@ class MaxDist(stats.rv_continuous):
         return self.dist.ppf(q ** (1.0 / self.n), *args, **kw)
 
 
-##    def rvs( self, *args, **kw ):
-##       size = kw.pop( "size", 1 )
-##       u = np.random.uniform( size=size, **kw ) ** (1 / self.n)
-##       return self.dist.ppf( u, **kw )
+#    def rvs( self, *args, **kw ):
+#       size = kw.pop( "size", 1 )
+#       u = np.random.uniform( size=size, **kw ) ** (1 / self.n)
+#       return self.dist.ppf( u, **kw )
 
 
 maxdistr = MaxDist(stats.norm, 10)

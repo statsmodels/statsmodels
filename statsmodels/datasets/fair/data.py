@@ -19,7 +19,7 @@ of an individual's time among work, time spent with a spouse, and time
 spent with a paramour. The data is used as an example of regression
 with censored data."""
 
-#suggested notes
+# suggested notes
 NOTE = """::
 
     Number of observations: 6366

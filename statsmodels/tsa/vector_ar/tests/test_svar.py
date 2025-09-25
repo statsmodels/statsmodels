@@ -26,7 +26,7 @@ class TestSVAR:
         B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']], dtype="U")
         results = SVAR(data, svar_type='AB', A=A, B=B).fit(maxlags=3)
         cls.res1 = results
-        #cls.res2 = results_svar.SVARdataResults()
+        # cls.res2 = results_svar.SVARdataResults()
         from .results import results_svar_st
         cls.res2 = results_svar_st.results_svar1_small
 

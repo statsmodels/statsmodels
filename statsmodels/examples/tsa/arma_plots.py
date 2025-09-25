@@ -34,8 +34,8 @@ for arcoef in arcoefs[:-1]:
         pacf = armaprocess.pacf(20)[:20]
         ax = fig.add_subplot(nrows, 2, subplotcount)
         plotacf(acf, ax=ax)
-        ##        ax.set_title('Autocorrelation \nar=%s, ma=%rs' % (ar, ma),
-        ##                     size='xx-small')
+        #        ax.set_title('Autocorrelation \nar=%s, ma=%rs' % (ar, ma),
+        #                     size='xx-small')
         ax.text(
             0.7,
             0.6,
@@ -48,8 +48,8 @@ for arcoef in arcoefs[:-1]:
         subplotcount += 1
         ax = fig.add_subplot(nrows, 2, subplotcount)
         plotacf(pacf, ax=ax)
-        ##        ax.set_title('Partial Autocorrelation \nar=%s, ma=%rs' % (ar, ma),
-        ##                     size='xx-small')
+        #        ax.set_title('Partial Autocorrelation \nar=%s, ma=%rs' % (ar, ma),
+        #                     size='xx-small')
         ax.text(
             0.7,
             0.6,
@@ -62,9 +62,9 @@ for arcoef in arcoefs[:-1]:
         subplotcount += 1
 
 axs = fig.axes
-### turn of the 2nd column y tick labels
-##for ax in axs[1::2]:#[:,1].flat:
-##   for label in ax.get_yticklabels(): label.set_visible(False)
+# turn of the 2nd column y tick labels
+# for ax in axs[1::2]:#[:,1].flat:
+#   for label in ax.get_yticklabels(): label.set_visible(False)
 
 # turn off all but the bottom xtick labels
 for ax in axs[:-2]:

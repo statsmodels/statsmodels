@@ -81,7 +81,7 @@ class NdKernel:
                 )
             else:
                 w = np.mean(self((xs - x) * self._Hrootinv))  # transposed
-            # w = np.mean([self(xd) for xd in ((xs-x) * self._Hrootinv)] ) #transposed
+            # w = np.mean([self(xd) for xd in ((xs-x) * self._Hrootinv)] ) # transposed
             return w
         else:
             return np.nan
@@ -89,7 +89,7 @@ class NdKernel:
     def _kernweight(self, x):
         """returns the kernel weight for the independent multivariate kernel"""
         if isinstance(self._kernels, CustomKernel):
-            ## Radial case
+            # Radial case
             # d = x.T * x
             # x is matrix, 2d, element wise sqrt looks wrong
             # d = np.sqrt( x.T * x )

@@ -59,7 +59,7 @@ plt.imshow(
 )
 plt.colorbar()
 
-normcolor = (0, 1)  # False #True
+normcolor = (0, 1)  # False # True
 fig = plt.figure()
 ax = fig.add_subplot(2, 2, 1)
 plot_corr(rrcorr, xnames=ticksym, normcolor=normcolor, ax=ax)

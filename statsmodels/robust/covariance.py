@@ -315,7 +315,7 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
     return frac, cutoff, ntail, ntail0, threshold
 
 
-# ## GK and OGK ###
+# # GK and OGK ###
 
 
 def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
@@ -567,7 +567,7 @@ def cov_ogk(
     return res
 
 
-# ## Tyler ###
+# # Tyler ###
 
 
 def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
@@ -897,7 +897,7 @@ def cov_tyler_pairs_regularized(
     return res
 
 
-# ## iterative, M-estimators and related
+# # iterative, M-estimators and related
 
 
 def cov_weighted(

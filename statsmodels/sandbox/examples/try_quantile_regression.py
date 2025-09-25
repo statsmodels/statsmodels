@@ -24,10 +24,10 @@ res_qr3 = QuantReg(y, exog).fit(0.75)
 res_ols = sm.OLS(y, exog).fit()
 
 
-##print 'ols ', res_ols.params
-##print '0.25', res_qr2
-##print '0.5 ', res_qr
-##print '0.75', res_qr3
+# print 'ols ', res_ols.params
+# print '0.25', res_qr2
+# print '0.5 ', res_qr
+# print '0.75', res_qr3
 
 params = [res_ols.params, res_qr2.params, res_qr.params, res_qr3.params]
 labels = ["ols", "qr 0.25", "qr 0.5", "qr 0.75"]

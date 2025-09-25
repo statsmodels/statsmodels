@@ -188,7 +188,7 @@ def get_tukey_pvalue(k, df, q):
 def Tukeythreegene(first, second, third):
     # Performing the Tukey HSD post-hoc test for three genes
     # qwb = xlrd.open_workbook('F:/Lab/bioinformatics/qcrittable.xls')
-    # #opening the workbook containing the q crit table
+    # # opening the workbook containing the q crit table
     # qwb.sheet_names()
     # qcrittable = qwb.sheet_by_name(u'Sheet1')
 
@@ -269,11 +269,11 @@ def Tukeythreegene2(genes):  # Performing the Tukey HSD post-hoc test for three 
         means.append(np.mean(gene))
         std.append(np.std(gene))  # noqa:F821  See GH#5756
 
-    # firstmean = np.mean(first) #means of the three arrays
+    # firstmean = np.mean(first) # means of the three arrays
     # secondmean = np.mean(second)
     # thirdmean = np.mean(third)
 
-    # firststd = np.std(first) #standard deviations of the three arrays
+    # firststd = np.std(first) # standard deviations of the three arrays
     # secondstd = np.std(second)
     # thirdstd = np.std(third)
 
@@ -281,15 +281,15 @@ def Tukeythreegene2(genes):  # Performing the Tukey HSD post-hoc test for three 
     for std in stds:
         stds2.append(math.pow(std, 2))
 
-    # firsts2 = math.pow(firststd,2) #standard deviation squared of the three arrays
+    # firsts2 = math.pow(firststd,2) # standard deviation squared of the three arrays
     # seconds2 = math.pow(secondstd,2)
     # thirds2 = math.pow(thirdstd,2)
 
     # Unused result, comented out
-    # mserrornum = firsts2*2+seconds2*2+thirds2*2 #numerator for mean square error
+    # mserrornum = firsts2*2+seconds2*2+thirds2*2 # numerator for mean square error
     # mserrornum = sum(stds2)*2
-    # mserrorden = (len(genes[0])+len(genes[1])+len(genes[2]))-3 #denominator for mean square error
-    # mserrornum/mserrorden #mean square error
+    # mserrorden = (len(genes[0])+len(genes[1])+len(genes[2]))-3 # denominator for mean square error
+    # mserrornum/mserrorden # mean square error
 
 
 def catstack(args):
@@ -1020,7 +1020,7 @@ class MultiComparison:
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(
                 f * np.sum(1.0 / groupnobs[[i, j]])
-            )  # np.array([8,8]))) #Fixme groupnobs[[i,j]] ))
+            )  # np.array([8,8]))) # Fixme groupnobs[[i,j]] ))
             Q = pdiff / se
 
             # TODO : print(statments, fix
@@ -1767,8 +1767,8 @@ class StepDown:
         self.df = df
         # the following has been moved to run
         # self.cache_result = {}
-        # self.crit = self.getcrit(0.5)   #decide where to set alpha, moved to run
-        # self.accepted = []  #store accepted sets, not unique
+        # self.crit = self.getcrit(0.5)   # decide where to set alpha, moved to run
+        # self.accepted = []  # store accepted sets, not unique
 
     def get_crit(self, alpha):
         """
@@ -1983,8 +1983,8 @@ def set_remove_subs(ssli):
             part.append(s)
         # else: print(part
 
-    ##    missing = list(set(i for ll in ssli for i in ll)
-    ##                   - set(i for ll in part for i in ll))
+    #    missing = list(set(i for ll in ssli for i in ll)
+    #                   - set(i for ll in part for i in ll))
     return part
 
 
@@ -2140,7 +2140,7 @@ if __name__ == "__main__":
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(
                 f * np.sum(1.0 / xnobs[[i, j]])
-            )  # np.array([8,8]))) #Fixme groupnobs[[i,j]] ))
+            )  # np.array([8,8]))) # Fixme groupnobs[[i,j]] ))
             print(i, j, pdiff, se, pdiff / se, pdiff / se > 2.6310)
 
         multicomp = MultiComparison(*X.T)
@@ -2180,7 +2180,7 @@ if __name__ == "__main__":
         gs4 = GroupsStats(np.column_stack([x, labels]))
         print(gs4.groupvarwithin())
 
-    # test_tukeyhsd() #moved to test_multi.py
+    # test_tukeyhsd() # moved to test_multi.py
 
     gmeans = np.array([7.71375, 7.76125, 7.78428571, 7.79875])
     gnobs = np.array([8, 8, 7, 8])

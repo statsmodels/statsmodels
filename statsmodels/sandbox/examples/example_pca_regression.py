@@ -64,13 +64,13 @@ for k in range(0, x0.shape[1] + 1):
     # this is faster and same result
     fact_wconst = sm.add_constant(fact[:, :k], prepend=False)
     res = sm.OLS(y0, fact_wconst).fit()
-    ##    print 'k =', k
-    ##    print res.params
-    ##    print 'aic:  ', res.aic
-    ##    print 'bic:  ', res.bic
-    ##    print 'llf:  ', res.llf
-    ##    print 'R2    ', res.rsquared
-    ##    print 'R2 adj', res.rsquared_adj
+    #    print 'k =', k
+    #    print res.params
+    #    print 'aic:  ', res.aic
+    #    print 'bic:  ', res.bic
+    #    print 'llf:  ', res.llf
+    #    print 'R2    ', res.rsquared
+    #    print 'R2 adj', res.rsquared_adj
     prederr2 = 0.0
     for inidx, outidx in LeaveOneOut(len(y0)):
         resl1o = sm.OLS(y0[inidx], fact_wconst[inidx, :]).fit()

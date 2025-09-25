@@ -111,7 +111,7 @@ __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
            'se_cov', 'weights_bartlett', 'weights_uniform']
 
 
-#----------- from linear_model.RegressionResults
+# from linear_model.RegressionResults
 '''
     HC0_se
         White's (1980) heteroskedasticity robust standard errors.
@@ -158,14 +158,13 @@ __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
 
 
 def _HCCM(results, scale):
-    '''
+    """
     sandwich with pinv(x) * diag(scale) * pinv(x).T
 
     where pinv(x) = (X'X)^(-1) X
     and scale is (nobs,)
-    '''
-    H = np.dot(results.model.pinv_wexog,
-        scale[:,None]*results.model.pinv_wexog.T)
+    """
+    H = np.dot(results.model.pinv_wexog, scale[:, None] * results.model.pinv_wexog.T)
     return H
 
 
@@ -196,9 +195,13 @@ def cov_hc2(results):
     """
 
     # probably could be optimized
-    h = np.diag(np.dot(results.model.exog,
-                          np.dot(results.normalized_cov_params,
-                          results.model.exog.T)))
+    h = np.diag(
+        np.dot(
+            results.model.exog,
+            np.dot(results.normalized_cov_params, results.model.exog.T),
+        )
+    )
+
     het_scale = results.resid**2/(1-h)
     cov_hc2_ = _HCCM(results, het_scale)
     return cov_hc2_
@@ -210,14 +213,16 @@ def cov_hc3(results):
     """
 
     # above probably could be optimized to only calc the diag
-    h = np.diag(np.dot(results.model.exog,
-                          np.dot(results.normalized_cov_params,
-                          results.model.exog.T)))
-    het_scale = (results.resid / (1-h))**2
+
+    h = np.diag(
+        np.dot(
+            results.model.exog,
+            np.dot(results.normalized_cov_params, results.model.exog.T),
+        )
+    )
+    het_scale = (results.resid / (1 - h)) ** 2
     cov_hc3_ = _HCCM(results, het_scale)
     return cov_hc3_
-
-#---------------------------------------
 
 
 def _get_sandwich_arrays(results, cov_type=''):
@@ -338,7 +343,7 @@ def weights_bartlett(nlags):
 
     '''
 
-    #with lag zero
+    # with lag zero
     return 1 - np.arange(nlags+1)/(nlags+1.)
 
 
@@ -359,7 +364,7 @@ def weights_uniform(nlags):
 
     '''
 
-    #with lag zero
+    # with lag zero
     return np.ones(nlags+1)
 
 
@@ -475,7 +480,7 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
     Driscoll and Kraay
 
     '''
-    #needs groupsums
+    # needs groupsums
 
     x_group_sums = group_sums(x, time).T  # TODO: transpose return in grou_sum
 
@@ -593,7 +598,7 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
         group = (group0, group1)
 
     cov0 = cov_cluster(results, group0, use_correction=use_correction)
-    #[0] because we get still also returns bse
+    # [0] because we get still also returns bse
     cov1 = cov_cluster(results, group1, use_correction=use_correction)
 
     # cov of cluster formed by intersection of two groups
@@ -601,10 +606,10 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
                         combine_indices(group)[0],
                         use_correction=use_correction)
 
-    #robust cov matrix for union of groups
+    # robust cov matrix for union of groups
     cov_both = cov0 + cov1 - cov01
 
-    #return all three (for now?)
+    # return all three (for now?)
     return cov_both, cov0, cov1
 
 
@@ -696,12 +701,12 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
 
 cov_hac = cov_hac_simple   # alias for users
 
-#---------------------- use time lags corrected for groups
-#the following were copied from a different experimental script,
-#groupidx is tuple, observations assumed to be stacked by group member and
-#sorted by time, equal number of periods is not required, but equal spacing is.
-#I think this is pure within group HAC: apply HAC to each group member
-#separately
+# use time lags corrected for groups
+# the following were copied from a different experimental script,
+# groupidx is tuple, observations assumed to be stacked by group member and
+# sorted by time, equal number of periods is not required, but equal spacing is.
+# I think this is pure within group HAC: apply HAC to each group member
+# separately
 
 
 def lagged_groups(x, lag, groupidx):
@@ -808,8 +813,13 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     return cov_hac
 
 
-def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
-                 use_correction=0):
+def cov_nw_groupsum(
+        results,
+        nlags,
+        time,
+        weights_func=weights_bartlett,
+        use_correction=0
+):
     '''Driscoll and Kraay Panel robust covariance matrix
 
     Robust covariance matrix for panel data of Driscoll and Kraay.
@@ -870,7 +880,7 @@ def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
 
     xu, hessian_inv = _get_sandwich_arrays(results)
 
-    #S_hac = S_nw_panel(xw, weights, groupidx)
+    # S_hac = S_nw_panel(xw, weights, groupidx)
     S_hac = S_hac_groupsum(xu, time, nlags=nlags, weights_func=weights_func)
     cov_hac = _HCCM2(hessian_inv, S_hac)
     if use_correction:

@@ -14,7 +14,7 @@ from statsmodels.miscmodels.ordinal_model import OrderedModel
 nobs, k_vars = 1000, 3
 x = np.random.randn(nobs, k_vars)
 # x = np.column_stack((np.ones(nobs), x))
-# #constant will be in integration limits
+# # constant will be in integration limits
 xb = x.dot(np.ones(k_vars))
 y_latent = xb + np.random.randn(nobs)
 y = np.round(np.clip(y_latent, -2.4, 2.4)).astype(int) + 2

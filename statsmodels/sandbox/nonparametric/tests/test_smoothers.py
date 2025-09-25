@@ -75,7 +75,7 @@ class TestPolySmoother2(BasePolySmoother, CheckSmoother):
 
         # use order = 3 in regression
         pmod = smoothers.PolySmoother(3, x)
-        # pmod.fit(y)  #no return
+        # pmod.fit(y)  # no return
         pmod.smooth(y)  # no return, use alias for fit
 
         cls.res_ps = pmod

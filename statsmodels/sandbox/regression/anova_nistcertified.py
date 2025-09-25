@@ -28,12 +28,7 @@ filenameli = [
     "SmLs08.dat",
     "SmLs09.dat",
 ]
-##filename = 'SmLs03.dat' #'SiRstv.dat' #'SmLs09.dat'#, 'AtmWtAg.dat' #'SmLs07.dat'
-
-
-##path = __file__
-##print(locals().keys()
-###print(path
+# filename = 'SmLs03.dat' # 'SiRstv.dat' # 'SmLs09.dat'#, 'AtmWtAg.dat' # 'SmLs07.dat'
 
 
 def getnist(filename):

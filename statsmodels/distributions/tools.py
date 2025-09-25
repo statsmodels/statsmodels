@@ -466,7 +466,7 @@ def _eval_bernstein_dd(x, fvals):
     poly_base = np.exp(poly_base)
     bp_values = fvals.T[..., None] * poly_base
 
-    for i in range(k_dim):
+    for _ in range(k_dim):
         bp_values = bp_values.sum(0)
 
     return bp_values

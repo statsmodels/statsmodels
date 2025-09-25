@@ -100,13 +100,13 @@ class FactorModelUnivariate:
             # this is faster and same result
             fact = self.factors[:, :k]
             res = sm.OLS(y0, fact).fit()
-            ##    print 'k =', k
-            ##    print res.params
-            ##    print 'aic:  ', res.aic
-            ##    print 'bic:  ', res.bic
-            ##    print 'llf:  ', res.llf
-            ##    print 'R2    ', res.rsquared
-            ##    print 'R2 adj', res.rsquared_adj
+            #    print 'k =', k
+            #    print res.params
+            #    print 'aic:  ', res.aic
+            #    print 'bic:  ', res.bic
+            #    print 'llf:  ', res.llf
+            #    print 'R2    ', res.rsquared
+            #    print 'R2 adj', res.rsquared_adj
 
             if not skip_crossval:
                 if cv_iter is None:

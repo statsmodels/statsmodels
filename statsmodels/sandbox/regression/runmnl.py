@@ -159,7 +159,7 @@ class TryNCLogit:
         probs = expxb / sumexpxb[:, None]
         return probs, logsumexpxp  # noqa:F821  See GH#5756
         # if self.endog where index then xb[self.endog]
-        # return -loglike.sum()   #return sum for now not for each observation
+        # return -loglike.sum()   # return sum for now not for each observation
 
     def loglike_branch(self, params, tau):
         # not yet sure how to keep track of branches during walking of tree
@@ -168,7 +168,7 @@ class TryNCLogit:
             probs, iv = self.loglike_leafbranch(params, tau)
             ivs.append(iv)
 
-        # ivs = np.array(ivs)   #note ivs is (nobs,nbranchchoices)
+        # ivs = np.array(ivs)   # note ivs is (nobs,nbranchchoices)
         # Unused code commented out
         # ivs = np.column_stack(ivs) # this way ?
         # exptiv = np.exp(tau*ivs)
@@ -177,9 +177,9 @@ class TryNCLogit:
         # probs = exptiv/sumexptiv[:,None]
 
 
-####### obsolete version to try out attaching data,
-####### new in treewalkerclass.py, copy new version to replace this
-####### problem with bzr I will disconnect history when copying
+# obsolete version to try out attaching data,
+# new in treewalkerclass.py, copy new version to replace this
+# problem with bzr I will disconnect history when copying
 testxb = 0  # global to class
 
 
@@ -336,7 +336,7 @@ array([-0.0961246 , -0.0155019 ,  0.01328757,  5.20741244,  3.86905293,
 res3corr = res3[[1, 0, 2, 3, 4, 5]]
 res3corr[0] *= 10
 print(res3corr - tab2324)  # diff 1e-5 to 1e-6
-# 199.128369 - 199.1284  #llf same up to print(precision of Greene
+# 199.128369 - 199.1284  # llf same up to print(precision of Greene
 
 print(clogit.fit())
 

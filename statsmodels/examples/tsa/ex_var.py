@@ -9,7 +9,7 @@ mdata = mdata[["realgdp", "realcons", "realinv"]]
 names = mdata.dtype.names
 data = mdata.view((float, 3))
 
-use_growthrate = False  # True #False
+use_growthrate = False  # True # False
 if use_growthrate:
     data = 100 * 4 * np.diff(np.log(data), axis=0)
 

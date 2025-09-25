@@ -52,7 +52,7 @@ if "all" in examples:
 
     k_vars = 5
     diag_idx = np.arange(k_vars)
-    for ii in range(10):
+    for _ in range(10):
         print()
         x = np.random.uniform(-1, 1, size=(k_vars, k_vars))
         x = (x + x.T) * 0.5

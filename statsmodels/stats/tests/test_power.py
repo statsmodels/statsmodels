@@ -115,7 +115,7 @@ class CheckPowerMixin:
         )
 
 
-#''' test cases
+# ''' test cases
 # one sample
 #               two-sided one-sided
 # large power     OneS1      OneS3
@@ -126,7 +126,7 @@ class CheckPowerMixin:
 # large power     TwoS1       TwoS3
 # small power     TwoS2       TwoS4
 # small p, ratio  TwoS4       TwoS5
-#'''
+# '''
 
 
 class TestTTPowerOneS1(CheckPowerMixin):

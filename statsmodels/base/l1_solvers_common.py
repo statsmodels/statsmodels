@@ -40,11 +40,11 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
     ------
     Warning message if QC check fails.
     """
-    ## Check for fatal errors
+    # Check for fatal errors
     assert not np.isnan(params).max()
     assert (params == params.ravel("F")).min(), "params should have already been 1-d"
 
-    ## Start the theory compliance check
+    # Start the theory compliance check
     fprime = score(params)
     k_params = len(params)
 
@@ -139,7 +139,7 @@ def do_trim_params(
     trimmed : ndarray of booleans
         trimmed[i] == True if the ith parameter was trimmed.
     """
-    ## Trim the small params
+    # Trim the small params
     trimmed = [False] * k_params
 
     if trim_mode == "off":

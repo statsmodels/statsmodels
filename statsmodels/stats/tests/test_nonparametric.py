@@ -56,7 +56,7 @@ def test_mcnemar_exact():
     f_obs5 = np.array([[101,  10], [30, 33]])
     f_obs6 = np.array([[101,  10], [10, 33]])
 
-    #vassar college online computation
+    # vassar college online computation
     res1 = 0.000004
     res2 = 0.378688
     res3 = 0.089452
@@ -82,7 +82,7 @@ def test_mcnemar_chisquare():
     f_obs2 = np.array([[101,  70], [59, 33]])
     f_obs3 = np.array([[101,  80], [59, 33]])
 
-    #> mcn = mcnemar.test(matrix(c(101, 121,  59,  33),nrow=2))
+    # > mcn = mcnemar.test(matrix(c(101, 121,  59,  33),nrow=2))
     res1 = [2.067222e01, 5.450095e-06]
     res2 = [0.7751938,    0.3786151]
     res3 = [2.87769784,   0.08981434]
@@ -166,26 +166,30 @@ def test_symmetry_bowker():
 
 
 def test_cochransq():
-    #example from dataplot docs, Conovover p. 253
-    #http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/cochran.htm
-    x = np.array([[1, 1, 1],
-                   [1, 1, 1],
-                   [0, 1, 0],
-                   [1, 1, 0],
-                   [0, 0, 0],
-                   [1, 1, 1],
-                   [1, 1, 1],
-                   [1, 1, 0],
-                   [0, 0, 1],
-                   [0, 1, 0],
-                   [1, 1, 1],
-                   [1, 1, 1]])
+    # example from dataplot docs, Conovover p. 253
+    # http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/cochran.htm
+    x = np.array(
+        [
+            [1, 1, 1],
+            [1, 1, 1],
+            [0, 1, 0],
+            [1, 1, 0],
+            [0, 0, 0],
+            [1, 1, 1],
+            [1, 1, 1],
+            [1, 1, 0],
+            [0, 0, 1],
+            [0, 1, 0],
+            [1, 1, 1],
+            [1, 1, 1],
+        ]
+    )
     res_qstat = 2.8
     res_pvalue = 0.246597
     res = cochrans_q(x)
     assert_almost_equal([res.statistic, res.pvalue], [res_qstat, res_pvalue])
 
-    #equivalence of mcnemar and cochranq for 2 samples
+    # equivalence of mcnemar and cochranq for 2 samples
     a,b = x[:,:2].T
     res = cochrans_q(x[:, :2])
     with pytest.warns(FutureWarning):
@@ -232,14 +236,14 @@ def test_cochransq3():
 
 
 def test_runstest(reset_randomstate):
-    #comparison numbers from R, tseries, runs.test
-    #currently only 2-sided used
+    # comparison numbers from R, tseries, runs.test
+    # currently only 2-sided used
     x = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
 
     z_twosided = 1.386750
     pvalue_twosided = 0.1655179
 
-    #print Runs(x).runs_test(correction=False)
+    # print Runs(x).runs_test(correction=False)
     assert_almost_equal(np.array(Runs(x).runs_test(correction=False)),
                         [z_twosided, pvalue_twosided], decimal=6)
 
@@ -364,7 +368,7 @@ def test_rank_compare_2indep1():
     x2 = np.repeat(levels, active)
 
     # using lawstat
-    # > brunner.munzel.test(xn, xa) #brunnermunzel.test(x, y)
+    # > brunner.munzel.test(xn, xa) # brunnermunzel.test(x, y)
     res2_t = Holder(statistic=1.1757561456582,
                     df=204.2984239868,
                     pvalue=0.2410606649547,

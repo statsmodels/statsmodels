@@ -12,7 +12,7 @@ data = sm.datasets.macrodata.load()
 data = data.data
 
 
-### Create Timeseries Representations of a few vars
+# Create Timeseries Representations of a few vars
 
 dates = ts.date_array(
     start_date=ts.Date("Q", year=1959, quarter=1),

@@ -878,7 +878,7 @@ class CompareMeans:
         # assume nobs is available
 
     #        if not hasattr(self.d1, 'nobs'):
-    #            d1.nobs1 = d1.sum_weights.astype(float)  #float just to make sure
+    #            d1.nobs1 = d1.sum_weights.astype(float)  # float just to make sure
     #        self.nobs2 = d2.sum_weights.astype(float)
 
     @classmethod
@@ -1272,14 +1272,14 @@ class CompareMeans:
 
 
 # does not work for 2d, does not take weights into account
-##    def test_equal_var(self):
-##        """Levene test for independence
-##
-##        """
-##        d1 = self.d1
-##        d2 = self.d2
-##        #rewrite this, for now just use scipy.stats
-##        return stats.levene(d1.data, d2.data)
+#    def test_equal_var(self):
+#        """Levene test for independence
+#
+#        """
+#        d1 = self.d1
+#        d2 = self.d2
+#        # rewrite this, for now just use scipy.stats
+#        return stats.levene(d1.data, d2.data)
 
 
 def ttest_ind(

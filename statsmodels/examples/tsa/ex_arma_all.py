@@ -46,18 +46,18 @@ print(rescmt.params)
 
 
 mkf = ARMA(x)
-##rkf = mkf.fit((1,1))
-##rkf.params
+# rkf = mkf.fit((1,1))
+# rkf.params
 rkf = mkf.fit((1, 1), trend="nc")
 print(rkf.params)
 
 np.random.seed(12345)
 y_arma22 = arma_generate_sample([1.0, -0.85, 0.35, -0.1], [1, 0.25, -0.7], nsample=1000)
-##arma22 = ARMA(y_arma22)
-##res22 = arma22.fit(trend = 'n', order=(2,2))
-##print 'kf ',res22.params
-##res22css = arma22.fit(method='css',trend = 'n', order=(2,2))
-##print 'css', res22css.params
+# arma22 = ARMA(y_arma22)
+# res22 = arma22.fit(trend = 'n', order=(2,2))
+# print 'kf ',res22.params
+# res22css = arma22.fit(method='css',trend = 'n', order=(2,2))
+# print 'css', res22css.params
 mod22 = Arma(y_arma22)
 resls22 = mod22.fit(order=(2, 2))
 print("ls ", resls22[0])
