@@ -155,14 +155,15 @@ stub R2 C2  40.95038  40.65765
     <td></td>    <th>header1</th> <th>header2</th>
 </tr>
 <tr>
-  <th>stub1</th>   <td>0.0</td>      <td>1</td>   
+  <th>stub1</th>   <td>0.0</td>      <td>1</td>
 </tr>
 <tr>
-  <th>stub2</th>    <td>2</td>     <td>3.333</td> 
+  <th>stub2</th>    <td>2</td>     <td>3.333</td>
 </tr>
 </table>
 """  # noqa:W291
-            actual = '\n%s\n' % tbl.as_html()
+            stripped = "\n".join([line.rstrip() for line in tbl.as_html().split("\n")])
+            actual = f"\n{stripped}\n"
             assert_equal(actual, desired)
         test_txt_fmt1(self)
         test_ltx_fmt1(self)

@@ -279,12 +279,12 @@ def test_elbo_grad():
 
                 mean_grad, sd_grad = glmm1.vb_elbo_grad(vb_mean, vb_sd)
 
-                def elbo(vec):
+                def elbo(vec, glmm1):
                     n = len(vec) // 2
                     return glmm1.vb_elbo(vec[:n], vec[n:])
 
                 x = np.concatenate((vb_mean, vb_sd))
-                g1 = approx_fprime(x, elbo, 1e-5)
+                g1 = approx_fprime(x, elbo, 1e-5, glmm1)
                 n = len(x) // 2
 
                 mean_grad_n = g1[:n]

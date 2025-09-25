@@ -177,11 +177,11 @@ class NumpyDocString(Mapping):
     def _strip(self, doc):
         i = 0
         j = 0
-        for i, line in enumerate(doc):
+        for line in doc:
             if line.strip():
                 break
 
-        for j, line in enumerate(doc[::-1]):
+        for line in doc[::-1]:
             if line.strip():
                 break
 

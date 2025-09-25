@@ -16,7 +16,7 @@ est = dict(
     predict="regres_p",
     depvar="lconsump",
     marginsok="XB default",
-    cmdline="tgmixed lconsump lincome lprice, prior(lprice -0.7 0.15 lincome 1 0.15) cov(lprice lincome -0.01)",  # noqa:E501
+    cmdline="tgmixed lconsump lincome lprice, prior(lprice -0.7 0.15 lincome 1 0.15) cov(lprice lincome -0.01)",
     prior="lprice -0.7 0.15 lincome 1 0.15",
     properties="b V",
 )

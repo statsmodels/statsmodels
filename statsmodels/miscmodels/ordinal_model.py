@@ -261,7 +261,7 @@ class OrderedModel(GenericLikelihoodModel):
         original_endog = data[endog_name]
         advance_eval_env(kwargs)
         model = super().from_formula(
-            formula, data=data, drop_cols=["Intercept"], *args, **kwargs
+            formula, data, *args, drop_cols=["Intercept"], **kwargs
         )
 
         if model.endog.ndim == 2:

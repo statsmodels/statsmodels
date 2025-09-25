@@ -409,15 +409,15 @@ class TestPHReg:
                 assert_allclose(sm_result.params, params, rtol=0.3)
 
                 # The penalized log-likelihood that we are maximizing.
-                def plf(params):
+                def plf(params, model, time, s):
                     llf = model.loglike(params) / len(time)
                     L1_wt = 1
                     llf = llf - s * ((1 - L1_wt)*np.sum(params**2) / 2 + L1_wt*np.sum(np.abs(params)))
                     return llf
 
                 # Confirm that we are doing better than glmnet.
-                llf_r = plf(params)
-                llf_sm = plf(sm_result.params)
+                llf_r = plf(params, model, time, s)
+                llf_sm = plf(sm_result.params, model, time, s)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 

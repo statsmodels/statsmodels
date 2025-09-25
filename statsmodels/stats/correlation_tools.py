@@ -80,7 +80,7 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
     x_new = corr.copy()
     diag_idx = np.arange(k_vars)
 
-    for ii in range(int(len(corr) * n_fact)):
+    for _ in range(int(len(corr) * n_fact)):
         x_adj = x_new - diff
         x_psd, clipped = clip_evals(x_adj, value=threshold)
         if not clipped:
@@ -289,7 +289,7 @@ def _nmono_linesearch(
     last_obval = obj(x)
     obj_max = max(obj_hist[-M:])
 
-    for iter in range(maxiter):
+    for _ in range(maxiter):
 
         obval = obj(x + alpha * d)
         g = grad(x)
@@ -375,7 +375,7 @@ def _spg_optim(
         func(params),
     ]
 
-    for itr in range(int(maxiter)):
+    for _ in range(int(maxiter)):
 
         # Check convergence
         df = params - gval
@@ -1058,7 +1058,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
 
         cm, cw = 0.0, 0.0
 
-        for g, ii in ix.items():
+        for ii in ix.values():
 
             m = len(ii)
             j1, j2 = np.indices((m, m))

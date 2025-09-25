@@ -33,7 +33,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 
 class TestStatesAR3:
     @classmethod
-    def setup_class(cls, alternate_timing=False, *args, **kwargs):
+    def setup_class(cls, *args, alternate_timing=False, **kwargs):
         # Dataset / Stata comparison
         path = os.path.join(current_path, 'results',
                             'results_wpi1_ar3_stata.csv')
@@ -50,8 +50,12 @@ class TestStatesAR3:
         cls.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
 
         cls.model = sarimax.SARIMAX(
-            cls.stata['wpi'], order=(3, 1, 0), simple_differencing=True,
-            hamilton_representation=True, *args, **kwargs
+            cls.stata['wpi'],
+            *args,
+            order=(3, 1, 0),
+            simple_differencing=True,
+            hamilton_representation=True,
+            **kwargs
         )
 
         if alternate_timing:
@@ -161,15 +165,13 @@ class TestStatesAR3:
 class TestStatesAR3AlternateTiming(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
 
 class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
+        super().setup_class(*args, smooth_method=SMOOTH_ALTERNATIVE, **kwargs)
 
     def test_smoothed_states(self):
         # Initialization issues can change the first few smoothed states
@@ -200,8 +202,7 @@ class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
 class TestStatesAR3UnivariateSmoothing(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+        super().setup_class(*args, filter_method=FILTER_UNIVARIATE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, 0)
@@ -237,8 +238,11 @@ class TestStatesMissingAR3:
         cls.stata.loc[cls.stata.index[10:21], 'dwpi'] = np.nan
 
         cls.model = sarimax.SARIMAX(
-            cls.stata.loc[cls.stata.index[1:], 'dwpi'], order=(3, 0, 0),
-            hamilton_representation=True, *args, **kwargs
+            cls.stata.loc[cls.stata.index[1:], 'dwpi'],
+            *args,
+            order=(3, 0, 0),
+            hamilton_representation=True,
+            **kwargs
         )
         if alternate_timing:
             cls.model.ssm.timing_init_filtered = True
@@ -334,14 +338,13 @@ class TestStatesMissingAR3:
 class TestStatesMissingAR3AlternateTiming(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
 
 class TestStatesMissingAR3AlternativeSmoothing(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
+        super().setup_class(*args, smooth_method=SMOOTH_ALTERNATIVE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, SMOOTH_ALTERNATIVE)
@@ -354,8 +357,7 @@ class TestStatesMissingAR3AlternativeSmoothing(TestStatesMissingAR3):
 class TestStatesMissingAR3UnivariateSmoothing(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+        super().setup_class(*args, filter_method=FILTER_UNIVARIATE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, 0)
@@ -516,8 +518,7 @@ class TestMultivariateMissing:
 class TestMultivariateMissingClassicalSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
+        super().setup_class(*args, smooth_method=SMOOTH_CLASSICAL, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, SMOOTH_CLASSICAL)
@@ -530,8 +531,7 @@ class TestMultivariateMissingClassicalSmoothing(TestMultivariateMissing):
 class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
+        super().setup_class(*args, smooth_method=SMOOTH_ALTERNATIVE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, SMOOTH_ALTERNATIVE)
@@ -543,9 +543,8 @@ class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
 
 class TestMultivariateMissingUnivariateSmoothing(TestMultivariateMissing):
     @classmethod
-    def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+    def setup_class(cls, **kwargs):
+        super().setup_class(filter_method=FILTER_UNIVARIATE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, 0)
@@ -712,8 +711,7 @@ class TestMultivariateVAR:
 class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
+        super().setup_class(*args, smooth_method=SMOOTH_ALTERNATIVE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, SMOOTH_ALTERNATIVE)
@@ -726,8 +724,7 @@ class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
 class TestMultivariateVARClassicalSmoothing(TestMultivariateVAR):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
+        super().setup_class(*args, smooth_method=SMOOTH_CLASSICAL, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, SMOOTH_CLASSICAL)
@@ -896,8 +893,7 @@ class TestMultivariateVARUnivariate:
 class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+        super().setup_class(*args, filter_method=FILTER_UNIVARIATE, **kwargs)
 
     def test_filter_method(self):
         assert_equal(self.model.ssm.filter_method, FILTER_UNIVARIATE)
@@ -991,8 +987,7 @@ class TestVARAutocovariances:
 class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
+        super().setup_class(*args, smooth_method=SMOOTH_ALTERNATIVE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, SMOOTH_ALTERNATIVE)
@@ -1005,8 +1000,7 @@ class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
 class TestVARAutocovariancesClassicalSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
+        super().setup_class(*args, smooth_method=SMOOTH_CLASSICAL, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, SMOOTH_CLASSICAL)
@@ -1019,8 +1013,7 @@ class TestVARAutocovariancesClassicalSmoothing(TestVARAutocovariances):
 class TestVARAutocovariancesUnivariateSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+        super().setup_class(*args, filter_method=FILTER_UNIVARIATE, **kwargs)
 
     def test_filter_method(self):
         assert_equal(self.model.ssm.filter_method, FILTER_UNIVARIATE)

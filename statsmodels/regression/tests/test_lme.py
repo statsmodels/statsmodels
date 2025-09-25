@@ -139,7 +139,7 @@ class TestMixedLM:
 
         try:
             # Test the score at several points.
-            for kr in range(5):
+            for _ in range(5):
                 fe_params = np.random.normal(size=k_fe)
                 cov_re = np.random.normal(size=(k_re, k_re))
                 cov_re = np.dot(cov_re.T, cov_re)
@@ -256,7 +256,7 @@ class TestMixedLM:
         result1 = model1.fit(free=free)
 
         exog_vc = {"a": {}, "b": {}}
-        for k, group in enumerate(model1.group_labels):
+        for _, group in enumerate(model1.group_labels):
             ix = model1.row_indices[group]
             exog_vc["a"][group] = exog_re[ix, 0:1]
             exog_vc["b"][group] = exog_re[ix, 1:2]
@@ -622,7 +622,7 @@ class TestMixedLM:
         endog = exog.sum(1) + errors
 
         exog_vc = {"a": {}, "b": {}}
-        for k, group in enumerate(range(int(n / 4))):
+        for _, group in enumerate(range(int(n / 4))):
             ix = np.flatnonzero(groups == group)
             exog_vc["a"][group] = ex_vc[ix, 0:2]
             exog_vc["b"][group] = ex_vc[ix, 2:]

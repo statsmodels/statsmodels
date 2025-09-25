@@ -425,7 +425,7 @@ class MICEData:
         The imputed values are stored in the class attribute `self.data`.
         """
 
-        for k in range(n_iter):
+        for _ in range(n_iter):
             for vname in self._cycle_order:
                 self.update(vname)
 
@@ -1258,7 +1258,7 @@ class MICE:
         # Run without fitting the analysis model
         self.data.update_all(n_burnin)
 
-        for j in range(n_imputations):
+        for _ in range(n_imputations):
             result = self.next_sample()
             self.results_list.append(result)
 

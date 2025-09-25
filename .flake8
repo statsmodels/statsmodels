@@ -2,16 +2,6 @@
 exclude = .git,build,docs,archive
 max-line-length = 88
 extend-ignore =
-    # Bugbear codes
-    B007,
-    # B007: Loop control variable 'i' not used within the loop body
-    B020,
-    # B020Found for loop that reassigns the iterable it is iterating with each iterable value
-    B023,
-    # B023: Function definition does not bind loop variable
-    B026,
-    # B026: Star-arg unpacking after a keyword argument is strongly discouraged
-
     # Required to allow black formatting
     E203,
     # E203: Whitespace before ':' (Needed for black)

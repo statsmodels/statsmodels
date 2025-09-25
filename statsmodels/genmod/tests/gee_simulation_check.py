@@ -158,7 +158,7 @@ class Nested_simulator(GEE_simulator):
             gpe = np.random.normal() * np.sqrt(group_effect_var)
 
             nest_all = []
-            for j in self.nest_sizes:
+            for _ in self.nest_sizes:
                 nest_all.append(set())
 
             for nest in product(*iterators):
@@ -261,7 +261,7 @@ for gendat in gendats:
     std_errors = []
     dparams = []
 
-    for j in range(nrep):
+    for _ in range(nrep):
 
         da, va = gendat()
         ga = Gaussian()

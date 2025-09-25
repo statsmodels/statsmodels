@@ -2033,4 +2033,6 @@ class SARIMAXResultsWrapper(MLEResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(SARIMAXResultsWrapper, SARIMAXResults)  # noqa:E305
+
+
+wrap.populate_wrapper(SARIMAXResultsWrapper, SARIMAXResults)

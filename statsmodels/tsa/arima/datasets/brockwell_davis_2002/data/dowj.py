@@ -14,7 +14,7 @@ References
 .. [1] Brockwell, Peter J., and Richard A. Davis. 2016.
    Introduction to Time Series and Forecasting. Springer.
 .. [2] Brockwell, Peter J., and Richard A. Davis. n.d. ITSM2000.
-"""  # noqa:E501
+"""
 
 import pandas as pd
 

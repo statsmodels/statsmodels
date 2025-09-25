@@ -54,7 +54,7 @@ def _handle_args(names, defaults, *args, **kwargs):
         for i in range(len(names)):
             output_args.append(flags.get(names[i], defaults[i]))
 
-        for name, value in flags.items():
+        for name in flags.keys():
             if name in kwargs:
                 raise TypeError(
                     "loglike() got multiple values for keyword" " argument '%s'" % name
@@ -5512,7 +5512,7 @@ class MLEResultsWrapper(wrap.ResultsWrapper):
     )
 
 
-wrap.populate_wrapper(MLEResultsWrapper, MLEResults)  # noqa:E305
+wrap.populate_wrapper(MLEResultsWrapper, MLEResults)
 
 
 class PredictionResults(pred.PredictionResults):
@@ -5701,4 +5701,4 @@ class PredictionResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(_methods)
 
 
-wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)  # noqa:E305
+wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)

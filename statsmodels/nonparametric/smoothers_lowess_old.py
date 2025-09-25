@@ -111,7 +111,7 @@ def lowess(endog, exog, frac=2./3, it=3):
 
     fitted, weights = _lowess_initial_fit(x_copy, y_copy, k, n)
 
-    for i in range(it):
+    for _ in range(it):
         _lowess_robustify_fit(x_copy, y_copy, fitted,
                               weights, k, n)
 

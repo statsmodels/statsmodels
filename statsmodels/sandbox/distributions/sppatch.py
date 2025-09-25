@@ -333,20 +333,20 @@ def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional
     if fn is None:
 
         def fun(x, *args):
-            return x * self.pdf(x, loc=loc, scale=scale, *args)
+            return x * self.pdf(x, loc, scale, *args)
 
     else:
 
         def fun(x, *args):
-            return fn(x) * self.pdf(x, loc=loc, scale=scale, *args)
+            return fn(x) * self.pdf(x, loc, scale, *args)
 
     if lb is None:
         lb = loc + self.a * scale  # (self.a - loc)/(1.0*scale)
     if ub is None:
         ub = loc + self.b * scale  # (self.b - loc)/(1.0*scale)
     if conditional:
-        invfac = self.sf(lb, loc=loc, scale=scale, *args) - self.sf(
-            ub, loc=loc, scale=scale, *args
+        invfac = self.sf(lb, loc, scale, *args) - self.sf(
+            ub, loc, scale, *args
         )
     else:
         invfac = 1.0

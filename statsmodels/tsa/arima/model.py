@@ -535,4 +535,6 @@ class ARIMAResultsWrapper(sarimax.SARIMAXResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(
         sarimax.SARIMAXResultsWrapper._wrap_methods, _methods)
-wrap.populate_wrapper(ARIMAResultsWrapper, ARIMAResults)  # noqa:E305
+
+
+wrap.populate_wrapper(ARIMAResultsWrapper, ARIMAResults)

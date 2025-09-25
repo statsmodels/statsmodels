@@ -388,7 +388,7 @@ def _statistical_coloring(data):
     # and it's standard deviation from a binomial distribution
     # under the hipothesys of independence
     expected = {}
-    for key, value in data.items():
+    for key in data.keys():
         base = 1.0
         for i, k in enumerate(key):
             base *= levels_count[i][k]

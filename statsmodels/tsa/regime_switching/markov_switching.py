@@ -2338,5 +2338,5 @@ class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
 
 
 wrap.populate_wrapper(
-    MarkovSwitchingResultsWrapper, MarkovSwitchingResults  # noqa:E305
+    MarkovSwitchingResultsWrapper, MarkovSwitchingResults
 )

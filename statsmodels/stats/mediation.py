@@ -296,7 +296,7 @@ class Mediation:
         indirect_effects = [[], []]
         direct_effects = [[], []]
 
-        for iter in range(n_rep):
+        for _ in range(n_rep):
 
             if method == "parametric":
                 # Realization of outcome model parameters from sampling distribution

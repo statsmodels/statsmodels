@@ -668,7 +668,7 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
     fig, ax = utils.create_mpl_ax(ax)
     start = 0
     ticks = []
-    for season, df in grouped_x:
+    for _, df in grouped_x:
         df = df.copy()  # or sort balks for series. may be better way
         df.sort_index()
         nobs = len(df)

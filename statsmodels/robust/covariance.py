@@ -640,12 +640,14 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         c = np.diag(mad(x, center=0) ** 2)
 
     # Tyler's M-estimator of shape (scatter) matrix
-    for i in range(maxiter):
+    n_iter = 0
+    for _ in range(maxiter):
         # this is old code, slower than new version, but more literal
         # c_inv = np.linalg.pinv(c)
         # c_old = c
         # c = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi))
         #              for xi in x)
+        n_iter += 1
         c_old = c
         ichol, _ = dtrtri(linalg.cholesky(c, lower=False), lower=0)
         v = x @ ichol
@@ -672,7 +674,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         msg = 'normalize needs to be False, "trace", "det" or "normal"'
         raise ValueError(msg)
 
-    return Holder(cov=c, n_iter=i, method="tyler")
+    return Holder(cov=c, n_iter=n_iter, method="tyler")
 
 
 def cov_tyler_regularized(
@@ -758,7 +760,9 @@ def cov_tyler_regularized(
 
     identity = np.eye(k_vars)
 
+    n_iter = 0
     for i in range(maxiter):
+        n_iter += i
         c_inv = np.linalg.pinv(c)
         c_old = c
         # this could be vectorized but could use a lot of memory
@@ -775,7 +779,7 @@ def cov_tyler_regularized(
         if diff < eps:
             break
 
-    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor, corr=corr)
+    res = Holder(cov=c, n_iter=n_iter, shrinkage_factor=shrinkage_factor, corr=corr)
     return res
 
 
@@ -871,7 +875,9 @@ def cov_tyler_pairs_regularized(
 
     identity = np.eye(k_vars)
     kn = k_vars * 1.0 / nobs
-    for i in range(maxiter):
+    n_iter = 0
+    for _ in range(maxiter):
+        n_iter += 1
         c_inv = np.linalg.pinv(c)
         c_old = c
         # this could be vectorized but could use a lot of memory
@@ -893,7 +899,7 @@ def cov_tyler_pairs_regularized(
         if diff < eps:
             break
 
-    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor, corr=corr)
+    res = Holder(cov=c, n_iter=n_iter, shrinkage_factor=shrinkage_factor, corr=corr)
     return res
 
 
@@ -1099,7 +1105,9 @@ def _cov_iter(
 
     converged = False
     cov = cov_old = cov_init
-    for it in range(maxiter):
+    n_iter = 0
+    for _ in range(maxiter):
+        n_iter += 1
         dist = mahalanobis(data, cov=cov)
         w = weights_func(dist, *weights_args)
         cov, mean = cov_weighted(data, w)
@@ -1124,7 +1132,7 @@ def _cov_iter(
         weights=w,
         mahalanobis=dist,
         scale_factor=s,
-        n_iter=it,
+        n_iter=n_iter,
         converged=converged,
         method="m-estimator",
         weights_func=weights_func,
@@ -1555,7 +1563,9 @@ class CovM:
         if update_scale is False:
             scale = start_scale
 
-        for i in range(maxiter):
+        n_iter = 0
+        for _ in range(maxiter):
+            n_iter += 1
             shape, mean = self._fit_mean_shape(mean_old, shape_old, scale_old)
             d = mahalanobis(self.data - mean, shape, sqrt=True)
             if update_scale:
@@ -1580,7 +1590,7 @@ class CovM:
             scale=scale,
             cov=shape * scale**2,
             converged=converged,
-            n_iter=i,
+            n_iter=n_iter,
             mahalanobis=maha,
         )
         return res

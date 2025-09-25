@@ -4,7 +4,7 @@
 """
 Kalman Filter declarations
 
-Author: Chad Fulton  
+Author: Chad Fulton 
 License: Simplified-BSD
 """
 

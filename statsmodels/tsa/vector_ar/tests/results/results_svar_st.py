@@ -71,8 +71,8 @@ est = dict(
     tsfmt="%tq",
     small="small",
     title="Structural vector autoregression",
-    cns_b="[b_1_2]_cons = 0:[b_1_3]_cons = 0:[b_2_1]_cons = 0:[b_2_3]_cons = 0:[b_3_1]_cons = 0:[b_3_2]_cons = 0",  # noqa:E501
-    cns_a="[a_1_1]_cons = 1:[a_1_2]_cons = 0:[a_1_3]_cons = 0:[a_2_2]_cons = 1:[a_2_3]_cons = 0:[a_3_3]_cons = 1",  # noqa:E501
+    cns_b="[b_1_2]_cons = 0:[b_1_3]_cons = 0:[b_2_1]_cons = 0:[b_2_3]_cons = 0:[b_3_1]_cons = 0:[b_3_2]_cons = 0",
+    cns_a="[a_1_1]_cons = 1:[a_1_2]_cons = 0:[a_1_3]_cons = 0:[a_2_2]_cons = 1:[a_2_3]_cons = 0:[a_3_3]_cons = 1",
     properties="b V",
 )
 
@@ -802,4 +802,4 @@ results_svar1_small.__doc__ = """
       e(B)                estimated B matrix
       e(C)                estimated C matrix, if a long-run model
       e(A1)               estimated A bar matrix, if a long-run model
-"""  # noqa:E501
+"""

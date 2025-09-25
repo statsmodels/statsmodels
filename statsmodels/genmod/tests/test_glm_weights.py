@@ -25,7 +25,7 @@ TestBinomial0RepeatedvsDuplicated statsmodels.GLM        X      X               
 TestBinomialVsVarWeights          statsmodels.GLM        X      X                     X                                                                                                  bfgs
 TestGlmGaussianWLS                statsmodels.WLS        X      X                     X                                                                                                  bfgs
 ================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
-"""  # noqa: E501
+"""
 
 import warnings
 

@@ -229,8 +229,7 @@ class TestTrivariateConventional(Trivariate):
 class TestTrivariateConventionalAlternate(TestTrivariateConventional):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -272,7 +271,7 @@ class TestTrivariateConventionalPartialMissingAlternate(
         TestTrivariateConventionalPartialMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -314,8 +313,7 @@ class TestTrivariateConventionalAllMissingAlternate(
         TestTrivariateConventionalAllMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -352,8 +350,7 @@ class TestTrivariateUnivariate(Trivariate):
 class TestTrivariateUnivariateAlternate(TestTrivariateUnivariate):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True,  **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -395,7 +392,7 @@ class TestTrivariateUnivariatePartialMissingAlternate(
         TestTrivariateUnivariatePartialMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -437,8 +434,7 @@ class TestTrivariateUnivariateAllMissingAlternate(
         TestTrivariateUnivariateAllMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -691,8 +687,7 @@ class TestDFM:
 class TestDFMClassicalSmoothing(TestDFM):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
+        super().setup_class(*args, smooth_method=SMOOTH_CLASSICAL, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.smooth_method, SMOOTH_CLASSICAL)
@@ -705,8 +700,7 @@ class TestDFMClassicalSmoothing(TestDFM):
 class TestDFMUnivariateSmoothing(TestDFM):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+        super().setup_class(*args, filter_method=FILTER_UNIVARIATE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.smooth_method, 0)
@@ -718,8 +712,7 @@ class TestDFMUnivariateSmoothing(TestDFM):
 class TestDFMAlternativeSmoothing(TestDFM):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_ALTERNATIVE, **kwargs)
+        super().setup_class(smooth_method=SMOOTH_ALTERNATIVE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.smooth_method, SMOOTH_ALTERNATIVE)

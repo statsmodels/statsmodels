@@ -415,7 +415,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
             ticks.append(pos)
 
             # Loop over the points in one line
-            for ji, jp in enumerate(lines_map[(k0, k1)]):
+            for _, jp in enumerate(lines_map[(k0, k1)]):
 
                 # Calculate the vertical offset
                 yo = 0

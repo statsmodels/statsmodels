@@ -279,7 +279,7 @@ def test_instantiation_valid():
 
         # Since only supported indexes are valid `dates` arguments, everything
         # else is invalid here
-        for ix, freq in supported_increment_indexes + unsupported_indexes:
+        for ix, _ in supported_increment_indexes + unsupported_indexes:
             with pytest.raises(ValueError):
                 tsa_model.TimeSeriesModel(endog, dates=ix)
 
@@ -439,7 +439,7 @@ def test_instantiation_valid():
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            for ix, freq in unsupported_indexes:
+            for ix, _ in unsupported_indexes:
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
@@ -463,7 +463,7 @@ def test_instantiation_valid():
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            for ix, freq in unsupported_date_indexes:
+            for ix, _ in unsupported_date_indexes:
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)

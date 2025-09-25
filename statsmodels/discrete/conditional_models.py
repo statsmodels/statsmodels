@@ -219,7 +219,7 @@ class _ConditionalModel(base.LikelihoodModel):
                 stacklevel=2,
             )
         advance_eval_env(kwargs)
-        model = super().from_formula(formula, data=data, groups=groups, *args, **kwargs)
+        model = super().from_formula(formula, data, *args, groups=groups, **kwargs)
 
         return model
 

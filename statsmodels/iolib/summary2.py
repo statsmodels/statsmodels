@@ -312,7 +312,7 @@ def summary_model(results):
 
     rsquared_type = '' if results.k_constant else ' (uncentered)'
     info['R-squared' + rsquared_type + ':'] = lambda x: "%#8.3f" % x.rsquared
-    info['Adj. R-squared' + rsquared_type + ':'] = lambda x: "%#8.3f" % x.rsquared_adj  # noqa:E501
+    info['Adj. R-squared' + rsquared_type + ':'] = lambda x: "%#8.3f" % x.rsquared_adj
     info['Pseudo R-squared:'] = lambda x: "%#8.3f" % x.prsquared
     info['AIC:'] = lambda x: "%8.4f" % x.aic
     info['BIC:'] = lambda x: "%8.4f" % x.bic

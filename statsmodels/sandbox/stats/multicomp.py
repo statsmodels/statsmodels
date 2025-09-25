@@ -433,7 +433,7 @@ def mcfdr(nrepl=100, nobs=50, ntests=10, ntrue=6, mu=0.5, alpha=0.05, rho=0.0):
     # ntests - ntrue
     locs = np.array([0.0] * ntrue + [mu] * (ntests - ntrue))
     results = []
-    for i in range(nrepl):
+    for _ in range(nrepl):
         # rvs = locs + stats.norm.rvs(size=(nobs, ntests))
         rvs = locs + randmvn(rho, size=(nobs, ntests))
         tt, tpval = stats.ttest_1samp(rvs, 0)
@@ -2148,7 +2148,7 @@ if __name__ == "__main__":
         gsr = GroupsStats(X, useranks=True)
 
         print("\nexamples for kruskal multicomparison")
-        for i in range(10):
+        for _ in range(10):
             x1, x2 = (np.random.randn(30, 2) + np.array([0, 0.5])).T
             skw = stats.kruskal(x1, x2)
             mc2 = MultiComparison(

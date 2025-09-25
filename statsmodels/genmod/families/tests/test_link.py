@@ -54,7 +54,7 @@ def test_inverse():
     np.random.seed(3285)
 
     for link in Links:
-        for k in range(10):
+        for _ in range(10):
             p = np.random.uniform(0, 1)  # In domain for all families
             d = link.inverse(link(p))
             assert_allclose(d, p, atol=1e-8, err_msg=str(link))
@@ -70,7 +70,7 @@ def test_deriv():
     np.random.seed(24235)
 
     for link in Links:
-        for k in range(10):
+        for _ in range(10):
             p = np.random.uniform(0, 1)
             if isinstance(link, links.Cauchy):
                 p = np.clip(p, 0.03, 0.97)
@@ -91,7 +91,7 @@ def test_deriv2():
     np.random.seed(24235)
 
     for link in Links:
-        for k in range(10):
+        for _ in range(10):
             p = np.random.uniform(0, 1)
             p = np.clip(p, 0.01, 0.99)
             if isinstance(link, links.cauchy):
@@ -108,7 +108,7 @@ def test_inverse_deriv():
     np.random.seed(24235)
 
     for link in Links:
-        for k in range(10):
+        for _ in range(10):
             z = get_domainvalue(link)
             d = link.inverse_deriv(z)
             f = 1 / link.deriv(link.inverse(z))
@@ -122,7 +122,7 @@ def test_inverse_deriv2():
     np.random.seed(24235)
 
     for link in LinksISD:
-        for k in range(10):
+        for _ in range(10):
             z = get_domainvalue(link)
             d2 = link.inverse_deriv2(z)
             d2a = nd.approx_fprime(np.r_[z], link.inverse_deriv)

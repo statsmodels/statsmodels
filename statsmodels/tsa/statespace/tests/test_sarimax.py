@@ -189,7 +189,7 @@ class ARIMA(SARIMAXStataTests):
         kwargs.setdefault("simple_differencing", True)
         kwargs.setdefault("hamilton_representation", True)
 
-        cls.model = sarimax.SARIMAX(endog, order=(1, 1, 1), trend="c", *args, **kwargs)
+        cls.model = sarimax.SARIMAX(endog, *args, order=(1, 1, 1), trend="c", **kwargs)
 
         # Stata estimates the mean of the process, whereas SARIMAX estimates
         # the intercept of the process. Get the intercept.
@@ -336,7 +336,7 @@ class AdditiveSeasonal(SARIMAXStataTests):
         kwargs.setdefault("hamilton_representation", True)
 
         cls.model = sarimax.SARIMAX(
-            endog, order=(1, 1, (1, 0, 0, 1)), trend="c", *args, **kwargs
+            endog, *args, order=(1, 1, (1, 0, 0, 1)), trend="c", **kwargs
         )
 
         # Stata estimates the mean of the process, whereas SARIMAX estimates
@@ -423,10 +423,10 @@ class Airline(SARIMAXStataTests):
 
         cls.model = sarimax.SARIMAX(
             endog,
+            *args,
             order=(0, 1, 1),
             seasonal_order=(0, 1, 1, 12),
             trend="n",
-            *args,
             **kwargs,
         )
 
@@ -641,7 +641,7 @@ class Friedman(SARIMAXStataTests):
         kwargs.setdefault("simple_differencing", True)
         kwargs.setdefault("hamilton_representation", True)
 
-        cls.model = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 1), *args, **kwargs)
+        cls.model = sarimax.SARIMAX(endog,  *args, exog=exog, order=(1, 0, 1), **kwargs)
 
         params = np.r_[
             true["params_exog"],
@@ -1922,7 +1922,7 @@ class Test_arma_exog_trend_polynomial_missing(SARIMAXCoverageTest):
         kwargs["order"] = (3, 0, 2)
         kwargs["trend"] = [0, 0, 0, 1]
         kwargs["decimal"] = 1
-        super().setup_class(52, endog=endog, *args, **kwargs)
+        super().setup_class(52, *args, endog=endog, **kwargs)
 
         # Modify true params to convert from mean to intercept form
         tps = cls.true_params

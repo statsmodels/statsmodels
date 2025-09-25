@@ -107,7 +107,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
             break
         # update T
         al = 2*al
-        for i in range(11):
+        for _ in range(11):
             # determine Tt
             X = T - al*Gp
             if rotation_method == 'orthogonal':

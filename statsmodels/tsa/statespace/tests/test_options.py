@@ -63,8 +63,7 @@ class Options:
         endog = np.arange(10)
         k_states = 1
 
-        cls.model = SimulationSmoother(k_endog=1, k_states=k_states, *args,
-                                       **kwargs)
+        cls.model = SimulationSmoother(*args, k_endog=1, k_states=k_states, **kwargs)
         cls.model.bind(endog)
 
 

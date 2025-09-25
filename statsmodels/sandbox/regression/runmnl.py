@@ -164,7 +164,7 @@ class TryNCLogit:
     def loglike_branch(self, params, tau):
         # not yet sure how to keep track of branches during walking of tree
         ivs = []
-        for b in branches:  # noqa:F821  See GH#5756
+        for _ in branches:  # noqa:F821  See GH#5756
             probs, iv = self.loglike_leafbranch(params, tau)
             ivs.append(iv)
 

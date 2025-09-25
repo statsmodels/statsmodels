@@ -1028,7 +1028,7 @@ class LogitGam(PenalizedMixin, Logit):
         self.pen_weight = 1  # TODO: pen weight should not be defined here!!
         penal = MultivariateGamPenalty(smoother, alpha=alpha)
 
-        super().__init__(endog, smoother.basis, penal=penal, *args, **kwargs)
+        super().__init__(endog, smoother.basis, *args, penal=penal, **kwargs)
 
 
 def penalized_wls(endog, exog, penalty_matrix, weights):

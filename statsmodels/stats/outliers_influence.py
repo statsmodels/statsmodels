@@ -1127,7 +1127,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         cv_iter = LeaveOneOut(self.k_vars)
         res_loo = defaultdict(list)
-        for inidx, outidx in cv_iter:
+        for inidx, _ in cv_iter:
             for att in attributes:
                 res_i = self.model_class(endog, exog[:, inidx]).fit()
                 res_loo[att].append(getattr(res_i, att))

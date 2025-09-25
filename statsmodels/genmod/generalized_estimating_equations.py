@@ -816,14 +816,14 @@ class GEE(GLM):
         advance_eval_env(kwargs)
         model = super().from_formula(
             formula,
-            data=data,
+            data,
+            *args,
             subset=subset,
             groups=groups,
             time=time,
             offset=offset,
             exposure=exposure,
             family=family,
-            *args,
             **kwargs,
         )
 
@@ -2493,7 +2493,7 @@ class GEEResultsWrapper(lm.RegressionResultsWrapper):
     _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs, _attrs)
 
 
-wrap.populate_wrapper(GEEResultsWrapper, GEEResults)  # noqa:E305
+wrap.populate_wrapper(GEEResultsWrapper, GEEResults)
 
 
 class OrdinalGEE(GEE):
@@ -2824,7 +2824,7 @@ class OrdinalGEEResultsWrapper(GEEResultsWrapper):
     pass
 
 
-wrap.populate_wrapper(OrdinalGEEResultsWrapper, OrdinalGEEResults)  # noqa:E305
+wrap.populate_wrapper(OrdinalGEEResultsWrapper, OrdinalGEEResults)
 
 
 class NominalGEE(GEE):
@@ -3201,7 +3201,7 @@ class NominalGEEResultsWrapper(GEEResultsWrapper):
     pass
 
 
-wrap.populate_wrapper(NominalGEEResultsWrapper, NominalGEEResults)  # noqa:E305
+wrap.populate_wrapper(NominalGEEResultsWrapper, NominalGEEResults)
 
 
 class _MultinomialLogit(Link):

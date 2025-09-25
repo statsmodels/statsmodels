@@ -234,13 +234,13 @@ class TestStationaryUnivariate:
 
     def test_cases(self):
         for constrained in self.constrained_cases:
-            unconstrained = tools.unconstrain_stationary_univariate(constrained)  # noqa:E501
-            reconstrained = tools.constrain_stationary_univariate(unconstrained)  # noqa:E501
+            unconstrained = tools.unconstrain_stationary_univariate(constrained)
+            reconstrained = tools.constrain_stationary_univariate(unconstrained)
             assert_allclose(reconstrained, constrained)
 
         for unconstrained in self.unconstrained_cases:
             constrained = tools.constrain_stationary_univariate(unconstrained)
-            reunconstrained = tools.unconstrain_stationary_univariate(constrained)  # noqa:E501
+            reunconstrained = tools.unconstrain_stationary_univariate(constrained)
             assert_allclose(reunconstrained, unconstrained)
 
 
@@ -397,7 +397,7 @@ class TestConstrainStationaryMultivariate:
                 cov = np.eye(unconstrained[0].shape[0])
             else:
                 cov = np.eye(unconstrained.shape[0])
-            constrained, _ = tools.constrain_stationary_multivariate(unconstrained, cov)  # noqa:E501
+            constrained, _ = tools.constrain_stationary_multivariate(unconstrained, cov)
             companion = tools.companion_matrix(
                 [1] + [-np.squeeze(constrained[i])
                        for i in range(len(constrained))]
@@ -450,8 +450,8 @@ class TestStationaryMultivariate:
                 cov = np.eye(constrained[0].shape[0])
             else:
                 cov = np.eye(constrained.shape[0])
-            unconstrained, _ = tools.unconstrain_stationary_multivariate(constrained, cov)  # noqa:E501
-            reconstrained, _ = tools.constrain_stationary_multivariate(unconstrained, cov)  # noqa:E501
+            unconstrained, _ = tools.unconstrain_stationary_multivariate(constrained, cov)
+            reconstrained, _ = tools.constrain_stationary_multivariate(unconstrained, cov)
             assert_allclose(reconstrained, constrained)
 
         for unconstrained in self.unconstrained_cases:
@@ -459,8 +459,8 @@ class TestStationaryMultivariate:
                 cov = np.eye(unconstrained[0].shape[0])
             else:
                 cov = np.eye(unconstrained.shape[0])
-            constrained, _ = tools.constrain_stationary_multivariate(unconstrained, cov)  # noqa:E501
-            reunconstrained, _ = tools.unconstrain_stationary_multivariate(constrained, cov)  # noqa:E501
+            constrained, _ = tools.constrain_stationary_multivariate(unconstrained, cov)
+            reunconstrained, _ = tools.unconstrain_stationary_multivariate(constrained, cov)
             # Note: low tolerance comes from last example in
             # unconstrained_cases, but is not a real problem
             assert_allclose(reunconstrained, unconstrained, atol=1e-4)
