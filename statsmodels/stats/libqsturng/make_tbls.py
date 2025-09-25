@@ -555,9 +555,9 @@ for p in T:
                                     v, np.array(T[p][v])))
 
         if v == 1e38:
-            A[(p,inf)] = list(a1)
+            A[(p, inf)] = list(a1)
         else:
-            A[(p,v)] = list(a1)
+            A[(p, v)] = list(a1)
 
 raise ImportError("we do not want to import this")
 # uncomment the lines below to repr-ize A

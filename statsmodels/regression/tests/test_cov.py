@@ -11,7 +11,7 @@ import statsmodels.api as sm
 def test_HC_use():
     np.random.seed(0)
     nsample = 100
-    x = np.linspace(0,10, 100)
+    x = np.linspace(0, 10, 100)
     X = sm.add_constant(np.column_stack((x, x**2)), prepend=False)
     beta = np.array([1, 0.1, 10])
     y = np.dot(X, beta) + np.random.normal(size=nsample)
@@ -32,7 +32,7 @@ def test_HC_use():
     # test f_test
     ftest = results.f_test(np.eye(3)[:-1], cov_p=results.cov_HC0)
     slopes = results.params[:-1]
-    idx = np.array([0,1])
-    cov_slopes = results.cov_HC0[idx[:,None], idx]
+    idx = np.array([0, 1])
+    cov_slopes = results.cov_HC0[idx[:, None], idx]
     fval = np.dot(slopes, np.dot(np.linalg.inv(cov_slopes), slopes))/len(idx)
     assert_allclose(ftest.fvalue, fval, rtol=12)

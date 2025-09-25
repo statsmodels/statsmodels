@@ -8,12 +8,12 @@ def tukeyplot(results, dim=None, yticklabels=None):
 
     fig = plt.figure()
     fsp = fig.add_subplot(111)
-    fsp.axis([-50,50,0.5,10.5])
+    fsp.axis([-50, 50, 0.5, 10.5])
     fsp.set_title('95 % family-wise confidence level')
     fsp.title.set_y(1.025)
-    fsp.set_yticks(np.arange(1,11))
-    fsp.set_yticklabels(['V-T','V-S','T-S','V-P','T-P','S-P','V-M',
-                         'T-M','S-M','P-M'])
+    fsp.set_yticks(np.arange(1, 11))
+    fsp.set_yticklabels(['V-T', 'V-S', 'T-S', 'V-P', 'T-P', 'S-P', 'V-M',
+                         'T-M', 'S-M', 'P-M'])
     # fsp.yaxis.set_major_locator(mticker.MaxNLocator(npairs))
     fsp.yaxis.grid(True, linestyle='-', color='gray')
     fsp.set_xlabel('Differences in mean levels of Var', labelpad=8)

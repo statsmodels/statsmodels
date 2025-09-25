@@ -303,7 +303,7 @@ class Contrast:
 
         T = self.term
         if T.ndim == 1:
-            T = T[:,None]
+            T = T[:, None]
 
         self.T = clean0(T)
         self.D = self.design

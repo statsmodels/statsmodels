@@ -81,9 +81,9 @@ ss_ejcp2 = '''\
         70.4630  73.9355  81.0678
         76.4081  79.9878  87.2395'''
 
-ejcp0 = np.array(ss_ejcp0.split(),float).reshape(-1,3)
-ejcp1 = np.array(ss_ejcp1.split(),float).reshape(-1,3)
-ejcp2 = np.array(ss_ejcp2.split(),float).reshape(-1,3)
+ejcp0 = np.array(ss_ejcp0.split(), float).reshape(-1, 3)
+ejcp1 = np.array(ss_ejcp1.split(), float).reshape(-1, 3)
+ejcp2 = np.array(ss_ejcp2.split(), float).reshape(-1, 3)
 
 
 def c_sja(n, p):
@@ -92,11 +92,11 @@ def c_sja(n, p):
     elif ((n > 12) or (n < 1)):
         jc = np.full(3, np.nan)
     elif p == -1:
-        jc = ejcp0[n-1,:]
+        jc = ejcp0[n-1, :]
     elif p == 0:
-        jc = ejcp1[n-1,:]
+        jc = ejcp1[n-1, :]
     elif p == 1:
-        jc = ejcp2[n-1,:]
+        jc = ejcp2[n-1, :]
 
     return jc
 
@@ -195,9 +195,9 @@ ss_tjcp2 = '''\
          298.8836 306.8988 322.4264
          350.1125 358.7190 375.3203'''
 
-tjcp0 = np.array(ss_tjcp0.split(),float).reshape(-1,3)
-tjcp1 = np.array(ss_tjcp1.split(),float).reshape(-1,3)
-tjcp2 = np.array(ss_tjcp2.split(),float).reshape(-1,3)
+tjcp0 = np.array(ss_tjcp0.split(), float).reshape(-1, 3)
+tjcp1 = np.array(ss_tjcp1.split(), float).reshape(-1, 3)
+tjcp2 = np.array(ss_tjcp2.split(), float).reshape(-1, 3)
 
 
 def c_sjt(n, p):
@@ -206,11 +206,11 @@ def c_sjt(n, p):
     elif ((n > 12) or (n < 1)):
         jc = np.full(3, np.nan)
     elif p == -1:
-        jc = tjcp0[n-1,:]
+        jc = tjcp0[n-1, :]
     elif p == 0:
-        jc = tjcp1[n-1,:]
+        jc = tjcp1[n-1, :]
     elif p == 1:
-        jc = tjcp2[n-1,:]
+        jc = tjcp2[n-1, :]
     else:
         raise ValueError('invalid p')
 

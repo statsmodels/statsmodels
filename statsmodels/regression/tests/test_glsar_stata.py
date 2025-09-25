@@ -62,11 +62,11 @@ class TestGLSARCorc(CheckStataResultsPMixin):
         exog = self.res.model.exog
         mod1 = GLSAR(endog, exog, 3)
         res = mod1.iterative_fit(10)
-        mod_arma = ARIMA(endog, order=(3,0,0), exog=exog[:, :-1])
+        mod_arma = ARIMA(endog, order=(3, 0, 0), exog=exog[:, :-1])
         res_arma = mod_arma.fit()
-        assert_allclose(res.params, res_arma.params[[1,2,0]], atol=0.01, rtol=1e-2)
+        assert_allclose(res.params, res_arma.params[[1, 2, 0]], atol=0.01, rtol=1e-2)
         assert_allclose(res.model.rho, res_arma.params[3:6], atol=0.05, rtol=1e-3)
-        assert_allclose(res.bse, res_arma.bse[[1,2,0]], atol=0.1, rtol=1e-3)
+        assert_allclose(res.bse, res_arma.bse[[1, 2, 0]], atol=0.1, rtol=1e-3)
 
         assert_equal(len(res.history['params']), 5)
         # this should be identical, history has last fit

@@ -120,14 +120,14 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             ax.yaxis.set_major_formatter(formatter)
             ax.xaxis.set_major_formatter(formatter)
 
-            idx = np.array([j,i])
-            ax.plot(*data[:,idx].T, **plot_kwds_)
+            idx = np.array([j, i])
+            ax.plot(*data[:, idx].T, **plot_kwds_)
 
             if np.isscalar(level):
                 level = [level]
             for alpha in level:
                 _make_ellipse(
-                    dmean[idx], dcov[idx[:,None], idx], ax, level=alpha, **ell_kwds_
+                    dmean[idx], dcov[idx[:, None], idx], ax, level=alpha, **ell_kwds_
                 )
 
             if add_titles:
@@ -148,7 +148,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
                     ax.xaxis.set_major_locator(mticker.MaxNLocator(3))
 
             dcorr = np.corrcoef(data, rowvar=0)
-            dc = dcorr[idx[:,None], idx]
+            dc = dcorr[idx[:, None], idx]
             xlim = ax.get_xlim()
             ylim = ax.get_ylim()
 #            xt = xlim[0] + 0.1 * (xlim[1] - xlim[0])
@@ -158,12 +158,12 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
 #            else:
 #                yt = ylim[1] - 0.2 * (ylim[1] - ylim[0])
             yrangeq = ylim[0] + 0.4 * (ylim[1] - ylim[0])
-            if dc[1,0] < -0.25 or (dc[1,0] < 0.25 and dmean[idx][1] > yrangeq):
+            if dc[1, 0] < -0.25 or (dc[1, 0] < 0.25 and dmean[idx][1] > yrangeq):
                 yt = ylim[0] + 0.1 * (ylim[1] - ylim[0])
             else:
                 yt = ylim[1] - 0.2 * (ylim[1] - ylim[0])
             xt = xlim[0] + 0.1 * (xlim[1] - xlim[0])
-            ax.text(xt, yt, '$\\rho=%0.2f$' % dc[1,0])
+            ax.text(xt, yt, '$\\rho=%0.2f$' % dc[1, 0])
 
     for ax in fig.axes:
         if ax.get_subplotspec().is_last_row():  # or ax.is_first_col():

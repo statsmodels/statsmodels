@@ -148,7 +148,7 @@ class TestTModel(CheckTLinearModelMixin):
         res = mod.fit(method='bfgs', disp=False)
         with pytest.warns(DeprecationWarning, match="Using"):
             modf = TLinearModel.from_formula(
-                "price ~ CRSP", data={"price":mm.m_marietta, "CRSP":mm.CRSP}
+                "price ~ CRSP", data={"price": mm.m_marietta, "CRSP": mm.CRSP}
             )
         resf = modf.fit(method='bfgs', disp=False)
         from .results_tmodel import res_t_dfest as res2
@@ -168,7 +168,7 @@ class TestTModelFixed:
         res = mod.fit(method='bfgs', disp=False)
         with pytest.warns(DeprecationWarning, match="Using"):
             modf = TLinearModel.from_formula(
-                "price ~ CRSP", data={"price":mm.m_marietta, "CRSP":mm.CRSP}, fix_df=3
+                "price ~ CRSP", data={"price": mm.m_marietta, "CRSP": mm.CRSP}, fix_df=3
             )
         resf = modf.fit(method='bfgs', disp=False)
         # TODO: no reference results yet

@@ -705,7 +705,7 @@ class TestGLMGaussHACUniform(CheckDiscreteGLM):
         cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds)
 
         # for debugging
-        cls.res3 = mod2.fit(cov_type='HAC', cov_kwds={'maxlags':2})
+        cls.res3 = mod2.fit(cov_type='HAC', cov_kwds={'maxlags': 2})
 
     def test_cov_options(self):
 

@@ -33,7 +33,7 @@ tables[2] = np.asarray([[20, 10, 5],
 
 def test_homogeneity():
 
-    for k,table in enumerate(tables):
+    for k, table in enumerate(tables):
         st = sm.stats.SquareTable(table, shift_zeros=False)
         hm = st.homogeneity()
         assert_allclose(hm.statistic, r_results.loc[k, "homog_stat"])
@@ -169,7 +169,7 @@ def test_resids():
 
 def test_ordinal_association():
 
-    for k,table in enumerate(tables):
+    for k, table in enumerate(tables):
 
         row_scores = 1 + np.arange(table.shape[0])
         col_scores = 1 + np.arange(table.shape[1])
@@ -208,7 +208,7 @@ def test_chi2_association():
 
 def test_symmetry():
 
-    for k,table in enumerate(tables):
+    for k, table in enumerate(tables):
         st = sm.stats.SquareTable(table, shift_zeros=False)
         b = st.symmetry()
         assert_allclose(b.statistic, r_results.loc[k, "bowker_stat"])

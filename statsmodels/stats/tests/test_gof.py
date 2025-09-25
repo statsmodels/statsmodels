@@ -91,7 +91,7 @@ def test_chisquare_effectsize():
                                 correction=(3000, len(pr1)-1))
     res0 = 0  # -0.00059994422693327625
     assert_equal(res1, res0)
-    pr3 = pr2 + [0,0,0,50,50]
+    pr3 = pr2 + [0, 0, 0, 50, 50]
     res1 = chisquare_effectsize(pr1, pr3, cohen=False,
                                 correction=(3000, len(pr1)-1))
     res0 = 0.0023106468846296755

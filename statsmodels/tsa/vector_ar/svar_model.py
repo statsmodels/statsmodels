@@ -286,8 +286,8 @@ class SVAR(tsbase.TimeSeriesModel):
         neqs = self.neqs
         sigma_u = self.sigma_u
 
-        W = np.dot(npl.inv(B),A)
-        trc_in = np.dot(np.dot(W.T,W),sigma_u)
+        W = np.dot(npl.inv(B), A)
+        trc_in = np.dot(np.dot(W.T, W), sigma_u)
         sign, b_logdet = slogdet(B**2)  # numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
@@ -403,10 +403,10 @@ class SVAR(tsbase.TimeSeriesModel):
             while j <= i < neqs:
                 u = np.zeros([int((1.0/2)*neqs*(neqs+1)), 1])
                 u[int(j * neqs + (i + 1) - (1.0 / 2) * (j + 1) * j - 1)] = 1
-                Tij = np.zeros([neqs,neqs])
-                Tij[i,j] = 1
-                Tij[j,i] = 1
-                D_nT = D_nT+np.dot(u,(Tij.ravel('F')[:,None]).T)
+                Tij = np.zeros([neqs, neqs])
+                Tij[i, j] = 1
+                Tij[j, i] = 1
+                D_nT = D_nT+np.dot(u, (Tij.ravel('F')[:, None]).T)
                 i = i+1
 
         D_n = D_nT.T
@@ -422,13 +422,13 @@ class SVAR(tsbase.TimeSeriesModel):
             A_vec = np.ravel(A_mask, order='F')
             for k in range(neqs**2):
                 if A_vec[k]:
-                    S_B[k,j] = -1
+                    S_B[k, j] = -1
                     j += 1
         if len(B_solve[B_mask]) != 0:
             B_vec = np.ravel(B_mask, order='F')
             for k in range(neqs**2):
                 if B_vec[k]:
-                    S_D[k,j_d] = 1
+                    S_D[k, j_d] = 1
                     j_d += 1
 
         # now compute J

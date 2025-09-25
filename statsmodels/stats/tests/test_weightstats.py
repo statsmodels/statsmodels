@@ -179,8 +179,8 @@ class TestWeightstats:
         x2 = m2 + np.random.randn(n2)
         x1_2d = m1 + np.random.randn(n1, 3)
         x2_2d = m2 + np.random.randn(n2, 3)
-        w1 = np.random.randint(1,4, n1)
-        w2 = np.random.randint(1,4, n2)
+        w1 = np.random.randint(1, 4, n1)
+        w2 = np.random.randint(1, 4, n2)
         cls.x1, cls.x2 = x1, x2
         cls.w1, cls.w2 = w1, w2
         cls.x1_2d, cls.x2_2d = x1_2d, x2_2d

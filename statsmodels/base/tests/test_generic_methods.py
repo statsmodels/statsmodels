@@ -514,7 +514,7 @@ class CheckAnovaMixin:
         test = ttmod.TestAnova3()
         test.setup_class()
 
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
         cls.initialize()
 
     def test_combined(self):
@@ -522,9 +522,9 @@ class CheckAnovaMixin:
         wa = res.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Weight'], scalar=True)
         eye = np.eye(len(res.params))
         c_const = eye[0]
-        c_w = eye[[2,3]]
+        c_w = eye[[2, 3]]
         c_d = eye[1]
-        c_dw = eye[[4,5]]
+        c_dw = eye[[4, 5]]
         c_weight = eye[2:6]
         c_duration = eye[[1, 4, 5]]
 
@@ -535,8 +535,8 @@ class CheckAnovaMixin:
         res = self.res
         wa = res.wald_test_terms(skip_single=True, scalar=True)
         eye = np.eye(len(res.params))
-        c_w = eye[[2,3]]
-        c_dw = eye[[4,5]]
+        c_w = eye[[2, 3]]
+        c_dw = eye[[4, 5]]
 
         compare_waldres(res, wa, [c_w, c_dw])
 
@@ -682,7 +682,7 @@ class TestTTestPairwiseOLS(CheckPairwise):
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
 
         mod = ols("np.log(Days+1) ~ C(Duration) + C(Weight)", cls.data)
         cls.res = mod.fit()
@@ -716,7 +716,7 @@ class TestTTestPairwiseOLS2(CheckPairwise):
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
 
         mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration)", cls.data)
         cls.res = mod.fit()
@@ -735,7 +735,7 @@ class TestTTestPairwiseOLS3(CheckPairwise):
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
 
         mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration) - 1", cls.data)
         cls.res = mod.fit()
@@ -754,7 +754,7 @@ class TestTTestPairwiseOLS4(CheckPairwise):
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
 
         mod = ols("np.log(Days+1) ~ C(Weight, Treatment(2)) + C(Duration)", cls.data)
         cls.res = mod.fit()
@@ -773,7 +773,7 @@ class TestTTestPairwisePoisson(CheckPairwise):
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
 
         mod = Poisson.from_formula("Days ~ C(Duration) + C(Weight)", cls.data)
         cls.res = mod.fit(cov_type='HC0')

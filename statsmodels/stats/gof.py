@@ -168,7 +168,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     else:
         D_obs = 2*n/a/(a+1) * np.sum(o/(1.0*nt) * ((o/e)**a - 1), axis=axis)
 
-    return D_obs, stats.chi2.sf(D_obs,k-1-ddof)
+    return D_obs, stats.chi2.sf(D_obs, k-1-ddof)
 
 # TODO: need also binning for continuous distribution
 #      and separated binning function to be used for powerdiscrepancy
@@ -317,7 +317,7 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     distsupp = [max(distfn.a, -1000)]
     distmass = []
     for ii in distsupport:
-        current = distfn.cdf(ii,*arg)
+        current = distfn.cdf(ii, *arg)
         if current - last >= wsupp-1e-14:
             distsupp.append(ii)
             distmass.append(current - last)
@@ -335,9 +335,9 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     histsupp[0] = distfn.a
 
     # find sample frequencies and perform chisquare test
-    freq,hsupp = np.histogram(rvs,histsupp)
+    freq, hsupp = np.histogram(rvs, histsupp)
     # freq,hsupp = np.histogram(rvs,histsupp,new=True)
-    distfn.cdf(distsupp,*arg)
+    distfn.cdf(distsupp, *arg)
     return np.array(freq), n*distmass, histsupp
 
 

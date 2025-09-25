@@ -63,4 +63,4 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__,'strikes.csv').astype(float)
+    return du.load_csv(__file__, 'strikes.csv').astype(float)

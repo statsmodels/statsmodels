@@ -23,7 +23,7 @@ table0 = np.asarray('''\
 7 	3 	2 	6 	3 	0 	0.242
 8 	2 	5 	3 	2 	2 	0.176
 9 	6 	5 	2 	1 	0 	0.286
-10 	0 	2 	2 	3 	7 	0.286'''.split(), float).reshape(10,-1)
+10 	0 	2 	2 	3 	7 	0.286'''.split(), float).reshape(10, -1)
 
 table1 = table0[:, 1:-1]
 
@@ -185,10 +185,10 @@ class TestWeightedCohens(CheckCohens):
 def test_cohenskappa_weights():
     # some tests for equivalent results with different options
     np.random.seed(9743678)
-    table = np.random.randint(0, 10, size=(5,5)) + 5*np.eye(5)
+    table = np.random.randint(0, 10, size=(5, 5)) + 5*np.eye(5)
 
     # example aggregation, 2 groups of levels
-    mat = np.array([[1,1,1, 0,0],[0,0,0,1,1]])
+    mat = np.array([[1, 1, 1, 0, 0], [0, 0, 0, 1, 1]])
     table_agg = np.dot(np.dot(mat, table), mat.T)
     res1 = cohens_kappa(table, weights=np.arange(5) > 2, wt='linear')
     res2 = cohens_kappa(table_agg, weights=np.arange(2), wt='linear')
@@ -222,7 +222,7 @@ anxiety = np.array([
      3, 3, 3, 4, 5, 5, 2, 3, 5, 2, 2, 6, 1, 5, 2, 2, 1, 2, 4, 3, 3, 6, 4,
      6, 2, 4, 2, 4, 3, 3, 2, 3, 3, 3, 2, 2, 1, 3, 3, 4, 2, 1, 4, 4, 3, 2,
      1, 6, 1, 1, 1, 2, 3, 3, 1, 1, 3, 3, 2, 2
-    ]).reshape(20,3, order='F')
+    ]).reshape(20, 3, order='F')
 anxiety_rownames = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', ]
 anxiety_colnames = ['rater1', 'rater2', 'rater3', ]
 
@@ -297,10 +297,10 @@ def test_cohens_kappa_irr():
                  (ck_w3, None, 'quadratic'),
                  (ck_w3, np.arange(5)**2, 'toeplitz'),
                  (ck_w3, 4*np.arange(5)**2, 'toeplitz'),
-                 (ck_w4, [0,0,1,1,2], 'toeplitz')]
+                 (ck_w4, [0, 0, 1, 1, 2], 'toeplitz')]
 
     # Note R:irr drops the missing category level 4 and uses the reduced matrix
-    r = np.histogramdd(anxiety[:,1:], ([1, 2, 3, 4, 6, 7], [1, 2, 3, 4, 6, 7]))
+    r = np.histogramdd(anxiety[:, 1:], ([1, 2, 3, 4, 6, 7], [1, 2, 3, 4, 6, 7]))
 
     for res2, w, wt in all_cases:
         msg = repr(w) + repr(wt)
@@ -333,16 +333,16 @@ def test_to_table():
     )
     assert_equal(res1[0], res0)
 
-    res2 = to_table(data[:,:2])
+    res2 = to_table(data[:, :2])
     assert_equal(res2[0], res0)
 
     bins = [0.5,  1.5,  2.5,  3.5,  4.5, 5.5]
-    res3 = to_table(data[:,:2], bins)
+    res3 = to_table(data[:, :2], bins)
     assert_equal(res3[0], res0)
 
     # more than 2 columns
-    res4 = to_table(data[:,:3]-1, bins=[-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
-    res5 = to_table(data[:,:3]-1, bins=5)
+    res4 = to_table(data[:, :3]-1, bins=[-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
+    res5 = to_table(data[:, :3]-1, bins=5)
     assert_equal(res4[0].sum(-1), res0)
     assert_equal(res5[0].sum(-1), res0)
 

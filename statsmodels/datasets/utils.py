@@ -324,7 +324,7 @@ def strip_column_names(df):
 def load_csv(base_file, csv_name, sep=',', convert_float=False):
     """Standard simple csv loader"""
     filepath = dirname(abspath(base_file))
-    filename = join(filepath,csv_name)
+    filename = join(filepath, csv_name)
     engine = 'python' if sep != ',' else 'c'
     float_precision = {}
     if engine == 'c':

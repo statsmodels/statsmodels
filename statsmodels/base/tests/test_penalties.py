@@ -72,7 +72,7 @@ class TestL2Constraints1(CheckPenalty):
     def setup_class(cls):
         x0 = np.linspace(-0.2, 0.2, 11)
         cls.params = np.column_stack((x0, x0))
-        cls.pen = smpen.L2ConstraintsPenalty(restriction=[[1,0], [1, 1]])
+        cls.pen = smpen.L2ConstraintsPenalty(restriction=[[1, 0], [1, 1]])
 
     def test_values(self):
         pen = self.pen

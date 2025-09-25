@@ -22,8 +22,8 @@ _quarter_to_day = {
 
 
 _mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-_months_with_days = lzip(lrange(1,13), _mdays)
-_month_to_day = dict(zip(map(str,lrange(1,13)), _months_with_days))
+_months_with_days = lzip(lrange(1, 13), _mdays)
+_month_to_day = dict(zip(map(str, lrange(1, 13)), _months_with_days))
 _month_to_day.update(
     dict(
         zip(
@@ -76,11 +76,11 @@ def date_parser(timestr, parserinfo=None, **kwargs):
     """
     flags = re.IGNORECASE | re.VERBOSE
     if re.search(_q_pattern, timestr, flags):
-        y,q = timestr.replace(":","").lower().split('q')
+        y, q = timestr.replace(":", "").lower().split('q')
         month, day = _quarter_to_day[q.upper()]
         year = int(y)
     elif re.search(_m_pattern, timestr, flags):
-        y,m = timestr.replace(":","").lower().split('m')
+        y, m = timestr.replace(":", "").lower().split('m')
         month, day = _month_to_day[m.upper()]
         year = int(y)
         if _is_leap(y) and month == 2:
@@ -129,10 +129,10 @@ def date_range_str(start, end=None, length=None):
         split = 'a'
     else:
         raise ValueError("Date %s not understood" % start)
-    yr1, offset1 = lmap(int, start.replace(":","").split(split))
+    yr1, offset1 = lmap(int, start.replace(":", "").split(split))
     if end is not None:
         end = end.lower()
-        yr2, offset2 = lmap(int, end.replace(":","").split(split))
+        yr2, offset2 = lmap(int, end.replace(":", "").split(split))
     else:  # length > 0
         if not length:
             raise ValueError("length must be provided if end is None")

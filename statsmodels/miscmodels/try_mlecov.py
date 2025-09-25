@@ -193,7 +193,7 @@ if __name__ == '__main__':
     ma = [1.0,  0.1,  0.2]
     # ma = [1]
     np.random.seed(9875789)
-    y = arma_generate_sample(ar,ma,nobs,2)
+    y = arma_generate_sample(ar, ma, nobs, 2)
     y -= y.mean()  # I have not checked treatment of mean yet, so remove
     mod = MLEGLS(y)
     mod.nar, mod.nma = 2, 2   # needs to be added, no init method

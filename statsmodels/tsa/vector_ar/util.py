@@ -257,21 +257,21 @@ def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None, n
                 raise ValueError('2-D intercept needs to have length `steps`')
         # add intercept/offset also to intial values
         result += intercept
-        result[:,p:] += ugen[:,p:]
+        result[:, p:] += ugen[:, p:]
     else:
-        result[:,p:] = ugen[:,p:]
+        result[:, p:] = ugen[:, p:]
 
     initial_values = array_like(initial_values, "initial_values", optional=True, maxdim=2)
     if initial_values is not None:
         if not (initial_values.shape == (p, k) or initial_values.shape == (k,)):
             raise ValueError("initial_values should have shape (p, k) or (k,) where p is the number of lags and k is the number of equations.")
-        result[:,:p] = initial_values
+        result[:, :p] = initial_values
 
     # add in AR terms
     for t in range(p, steps):
-        ygen = result[:,t]
+        ygen = result[:, t]
         for j in range(p):
-            ygen += np.dot(coefs[j], result[:,t-j-1].T).T
+            ygen += np.dot(coefs[j], result[:, t-j-1].T).T
 
     return result.reshape(result_shape)
 
@@ -314,7 +314,7 @@ def vech(A):
     for i in range(length):
         b = i
         while b < length:
-            vechvec.append(A[b,i])
+            vechvec.append(A[b, i])
             b = b+1
     vechvec = np.asarray(vechvec)
     return vechvec

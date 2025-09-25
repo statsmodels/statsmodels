@@ -116,7 +116,7 @@ def lowess(endog, exog, frac=2./3, it=3):
                               weights, k, n)
 
     out = np.array([x_copy, fitted]).T
-    out.shape = (n,2)
+    out.shape = (n, 2)
 
     return out
 
@@ -228,8 +228,8 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
     -------
     Nothing. The fitted values are modified in place.
     """
-    nn_indices = [0,k]
-    X = np.ones((k,2))
+    nn_indices = [0, k]
+    X = np.ones((k, 2))
 
     residual_weights = np.copy(y_copy)
     residual_weights.shape = (n,)
@@ -246,9 +246,9 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
             residual_weights[nn_indices[0] : nn_indices[1]]
         )
 
-        X[:,1] = x_copy[nn_indices[0]:nn_indices[1]]
+        X[:, 1] = x_copy[nn_indices[0]:nn_indices[1]]
         y_i = total_weights * y_copy[nn_indices[0]:nn_indices[1]]
-        total_weights.shape = (k,1)
+        total_weights.shape = (k, 1)
 
         beta = lstsq(total_weights * X, y_i, rcond=-1)[0]
 
@@ -257,7 +257,7 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
         _lowess_update_nn(x_copy, nn_indices, i+1)
 
 
-def _lowess_update_nn(x, cur_nn,i):
+def _lowess_update_nn(x, cur_nn, i):
     """
     Update the endpoints of the nearest neighbors to
     the ith point.

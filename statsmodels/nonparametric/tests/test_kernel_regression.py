@@ -68,7 +68,7 @@ class KernelRegressionTestBase:
         data = np.column_stack(data)
         nobs = max(np.shape(data))
         K = min(np.shape(data))
-        data = np.reshape(data, (nobs,K))
+        data = np.reshape(data, (nobs, K))
         for i in range(nobs):
             data_file.writerow(list(data[i, :]))
 
@@ -140,7 +140,7 @@ class TestKernelReg(KernelRegressionTestBase):
         np.random.seed(1234)
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
-        C3 = np.random.beta(0.5,0.2, size=(nobs,))
+        C3 = np.random.beta(0.5, 0.2, size=(nobs,))
         noise = np.random.normal(size=(nobs, ))
         b0 = 3
         b1 = 1.2
@@ -152,7 +152,7 @@ class TestKernelReg(KernelRegressionTestBase):
                                  reg_type='ll', var_type='ccc', bw=bw_cv_ls)
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
-        npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
+        npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=2e-1)
 
     def test_mixed_mfx_ll_cvls(self, file_name='RegData.csv'):
         nobs = 200
@@ -182,7 +182,7 @@ class TestKernelReg(KernelRegressionTestBase):
         np.random.seed(1234)
         C1 = np.random.normal(size=(nobs,))
         C2 = np.random.normal(2, 1, size=(nobs,))
-        C3 = np.random.beta(0.5,0.2, size=(nobs,))
+        C3 = np.random.beta(0.5, 0.2, size=(nobs,))
         noise = np.random.normal(size=(nobs,))
         b0 = 3
         b1 = 1.2
@@ -241,7 +241,7 @@ class TestKernelReg(KernelRegressionTestBase):
                                          reg_type='ll', var_type='cc',
                                          bw='cv_ls', censor_val=0)
         sm_mean, sm_mfx = model.fit()
-        npt.assert_allclose(sm_mfx[0,:], [1.2, -0.9], rtol=2e-1)
+        npt.assert_allclose(sm_mfx[0, :], [1.2, -0.9], rtol=2e-1)
 
     @pytest.mark.slow
     def test_continuous_lc_aic(self):
@@ -270,7 +270,7 @@ class TestKernelReg(KernelRegressionTestBase):
         np.random.seed(12345)
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
-        C3 = np.random.beta(0.5,0.2, size=(nobs,))
+        C3 = np.random.beta(0.5, 0.2, size=(nobs,))
         noise = np.random.normal(size=(nobs, ))
         b1 = 1.2
         b2 = 3.7  # regression coefficients
@@ -281,7 +281,7 @@ class TestKernelReg(KernelRegressionTestBase):
         model = nparam.KernelReg(endog=[Y], exog=[C1, C3],
                                  reg_type='ll', var_type='cc', bw=bw)
         nboot = 45  # Number of bootstrap samples
-        sig_var12 = model.sig_test([0,1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        sig_var12 = model.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
         npt.assert_equal(sig_var12 == 'Not Significant', False)
         sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
         npt.assert_equal(sig_var1 == 'Not Significant', False)
@@ -294,7 +294,7 @@ class TestKernelReg(KernelRegressionTestBase):
         np.random.seed(12345)
         ovals = np.random.binomial(2, 0.5, size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
-        C3 = np.random.beta(0.5,0.2, size=(nobs,))
+        C3 = np.random.beta(0.5, 0.2, size=(nobs,))
         noise = np.random.normal(size=(nobs, ))
         b1 = 1.2
         b2 = 3.7  # regression coefficients

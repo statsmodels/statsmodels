@@ -104,7 +104,7 @@ def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
 
         # inverse of x'x
         inv_cov = pinv_x.dot(pinv_x.T)
-        if matrix_rank(inv_cov,tol=tolerance) < k_exog:
+        if matrix_rank(inv_cov, tol=tolerance) < k_exog:
             raise ValueError('Covariance of x singular!')
 
         # Sums of squares and cross-products of residuals

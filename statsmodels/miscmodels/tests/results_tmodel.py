@@ -97,18 +97,18 @@ loc_fit.call = '''tlm(lform = m.marietta ~ CRSP, data = mm, start = list(dof = 3
 loc_fit.table = np.array([
      -0.007248461, 1.263751, 0.008167043, 0.1901585, -0.8875258, 6.645774,
      0.3784616, 1.150536e-08
-    ]).reshape(2,4, order='F')
+    ]).reshape(2, 4, order='F')
 loc_fit.table_rownames = ['(Intercept)', 'CRSP', ]
 loc_fit.table_colnames = ['Estimate', 'Std. Error', 't value', 'Pr(>|t|)', ]
 loc_fit.dispersion = 1
 loc_fit.cov_unscaled = np.array([
      6.670059e-05, -0.0003174268, -0.0003174268, 0.03616026
-    ]).reshape(2,2, order='F')
+    ]).reshape(2, 2, order='F')
 loc_fit.cov_unscaled_rownames = ['(Intercept)', 'CRSP', ]
 loc_fit.cov_unscaled_colnames = ['(Intercept)', 'CRSP', ]
 loc_fit.cov_scaled = np.array([
      6.670059e-05, -0.0003174268, -0.0003174268, 0.03616026
-    ]).reshape(2,2, order='F')
+    ]).reshape(2, 2, order='F')
 loc_fit.cov_scaled_rownames = ['(Intercept)', 'CRSP', ]
 loc_fit.cov_scaled_colnames = ['(Intercept)', 'CRSP', ]
 

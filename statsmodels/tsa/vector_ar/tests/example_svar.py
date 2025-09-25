@@ -5,7 +5,7 @@ import statsmodels.datasets.macrodata
 from statsmodels.tsa.vector_ar.svar_model import SVAR
 
 mdatagen = statsmodels.datasets.macrodata.load().data
-mdata = mdatagen[['realgdp','realcons','realinv']]
+mdata = mdatagen[['realgdp', 'realcons', 'realinv']]
 names = mdata.dtype.names
 start = pd.datetime(1959, 3, 31)
 end = pd.datetime(2009, 9, 30)
@@ -15,7 +15,7 @@ data = pd.DataFrame(mdata, index=qtr)
 data = (np.log(data)).diff().dropna()
 
 # define structural inputs
-A = np.asarray([[1, 0, 0],['E', 1, 0],['E', 'E', 1]])
+A = np.asarray([[1, 0, 0], ['E', 1, 0], ['E', 'E', 1]])
 B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']])
 A_guess = np.asarray([0.5, 0.25, -0.38])
 B_guess = np.asarray([0.5, 0.1, 0.05])

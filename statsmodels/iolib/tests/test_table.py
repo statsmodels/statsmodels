@@ -20,7 +20,7 @@ stub1 1.30312 2.73999
 stub2 1.95038 2.65765
 ---------------------
 '''
-        test1data = [[1.30312, 2.73999],[1.95038, 2.65765]]
+        test1data = [[1.30312, 2.73999], [1.95038, 2.65765]]
         test1stubs = ('stub1', 'stub2')
         test1header = ('header1', 'header2')
         actual = SimpleTable(test1data, test1header, test1stubs,
@@ -104,7 +104,7 @@ stub R2 C2  40.95038  40.65765
         table1data = [row0data, row1data]
         test1stubs = ('stub1', 'stub2')
         test1header = ('header1', 'header2')
-        tbl = SimpleTable(table1data, test1header, test1stubs,txt_fmt=txt_fmt1,
+        tbl = SimpleTable(table1data, test1header, test1stubs, txt_fmt=txt_fmt1,
                           ltx_fmt=ltx_fmt1, html_fmt=html_fmt1)
 
         def test_txt_fmt1(self):

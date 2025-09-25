@@ -368,7 +368,7 @@ class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
         mod = PoissonPenalized(y, x, penal=cls.penalty)
         mod.pen_weight *= 10  # need to penalize more to get oracle selection
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(start_params=params_notrim * 0.5,cov_type=cov_type,
+        cls.res1 = mod.fit(start_params=params_notrim * 0.5, cov_type=cov_type,
                            method='bfgs', maxiter=100, trim=True, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)

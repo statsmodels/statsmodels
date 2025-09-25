@@ -108,7 +108,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
         # let them be none in case user wants to use inheritance
         if offset is not None:
             if offset.ndim == 1:
-                offset = offset[:,None]  # need column
+                offset = offset[:, None]  # need column
             self.offset = offset.ravel()
         else:
             self.offset = 0.
@@ -166,14 +166,14 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         )
         if offset is not None:
             if offset.ndim == 1:
-                offset = offset[:,None]  # need column
+                offset = offset[:, None]  # need column
             self.offset = offset.ravel()  # which way?
         else:
             self.offset = 0.
 
         # TODO: it's not standard pattern to use default exog
         if exog is None:
-            self.exog = np.ones((self.nobs,1))
+            self.exog = np.ones((self.nobs, 1))
         self.nparams = self.exog.shape[1]
         # what's the shape in regression for exog if only constant
         self.start_params = np.hstack((np.ones(self.nparams), 0))
