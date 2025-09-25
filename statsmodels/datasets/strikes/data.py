@@ -23,7 +23,7 @@ unanticipated industrial production. The data is a subset of the data originally
 used by Kennan. The data here is data for the months of June only to avoid
 seasonal issues."""
 
-#suggested notes
+# suggested notes
 NOTE = """::
 
     Number of observations - 62

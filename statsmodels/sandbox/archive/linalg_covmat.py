@@ -210,7 +210,7 @@ def mvn_nloglike_obs(x, sigma):
     # Still wasteful to calculate pinv first
     sigmainv = linalg.inv(sigma)
     cholsigmainv = linalg.cholesky(sigmainv)
-    # 2 * np.sum(np.log(np.diagonal(np.linalg.cholesky(A)))) #Dag mailinglist
+    # 2 * np.sum(np.log(np.diagonal(np.linalg.cholesky(A)))) # Dag mailinglist
     # logdet not needed ???
     # logdetsigma = 2 * np.sum(np.log(np.diagonal(cholsigmainv)))
     x_whitened = np.dot(cholsigmainv, x)
@@ -240,7 +240,7 @@ cholsigma = linalg.cholesky(sigma).T  # , lower=True)
 
 sigmainv = linalg.inv(sigma)
 cholsigmainv = linalg.cholesky(sigmainv)
-# 2 * np.sum(np.log(np.diagonal(np.linalg.cholesky(A)))) #Dag mailinglist
+# 2 * np.sum(np.log(np.diagonal(np.linalg.cholesky(A)))) # Dag mailinglist
 # logdet not needed ???
 # logdetsigma = 2 * np.sum(np.log(np.diagonal(cholsigmainv)))
 x_whitened = np.dot(cholsigmainv, x)

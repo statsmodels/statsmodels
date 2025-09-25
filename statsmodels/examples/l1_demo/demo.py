@@ -231,7 +231,7 @@ def run_demo(
     alpha = base_alpha * N * sp.ones((num_nonconst_covariates + 1, num_targets - 1))
     alpha[0, :] = 0  # Do not regularize the intercept
 
-    #### Make the data and model
+    # Make the data and model
     exog = get_exog(N, num_nonconst_covariates, cor_length)
     exog = sm.add_constant(exog)
     true_params = sp.rand(num_nonconst_covariates + 1, num_targets - 1)
@@ -244,7 +244,7 @@ def run_demo(
     )
     model = models[mode](endog, exog)
 
-    #### Get the results and print
+    # Get the results and print
     results = run_solvers(
         model,
         true_params,
@@ -278,7 +278,7 @@ def run_solvers(
     Works the same for any l1 penalized likelihood model.
     """
     results = {}
-    #### Train the models
+    # Train the models
     # Get ML results
     results["results_ML"] = model.fit(method="newton")
     # Get l1 results
@@ -310,7 +310,7 @@ def get_summary_str(
     """
     Gets a string summarizing the results.
     """
-    #### Extract specific results
+    # Extract specific results
     results_ML = results["results_ML"]
     RMSE_ML = get_RMSE(results_ML, true_params)
     if get_l1_slsqp_results:
@@ -318,7 +318,7 @@ def get_summary_str(
     if get_l1_cvxopt_results:
         results_l1_cvxopt_cp = results["results_l1_cvxopt_cp"]
 
-    #### Format summaries
+    # Format summaries
     # Short summary
     print_str = "\n\n=========== Short Error Summary ============"
     print_str += "\n\n The maximum likelihood fit RMS error = %.4f" % RMSE_ML
@@ -378,13 +378,13 @@ def get_logit_endog(true_params, exog, noise_level):
         perturbed by noise at noise_level.
     """
     N = exog.shape[0]
-    ### Create the probability of entering the different classes,
-    ### given exog and true_params
+    # Create the probability of entering the different classes,
+    # given exog and true_params
     Xdotparams = sp.dot(exog, true_params)
     eXB = sp.column_stack((sp.ones(len(Xdotparams)), sp.exp(Xdotparams)))
     class_probabilities = eXB / eXB.sum(1)[:, None]
 
-    ### Create the endog
+    # Create the endog
     cdf = class_probabilities.cumsum(axis=1)
     endog = sp.zeros(N)
     for i in range(N):
@@ -399,11 +399,11 @@ def get_probit_endog(true_params, exog, noise_level):
         perturbed by noise at noise_level.
     """
     N = exog.shape[0]
-    ### Create the probability of entering the different classes,
-    ### given exog and true_params
+    # Create the probability of entering the different classes,
+    # given exog and true_params
     Xdotparams = sp.dot(exog, true_params)
 
-    ### Create the endog
+    # Create the endog
     cdf = stats.norm._cdf(-Xdotparams)
     endog = sp.zeros(N)
     for i in range(N):
@@ -424,7 +424,7 @@ def get_exog(N, num_nonconst_covariates, cor_length):
     BEWARE:  With very long correlation lengths, you often get a singular KKT
         matrix (during the l1_cvxopt_cp fit)
     """
-    ## Create the noiseless exog
+    # Create the noiseless exog
     uncorrelated_exog = sp.randn(N, num_nonconst_covariates)
     if cor_length == 0:
         exog = uncorrelated_exog
@@ -435,7 +435,7 @@ def get_exog(N, num_nonconst_covariates, cor_length):
             cov_matrix[i, :] = sp.exp(-sp.fabs(i - j) / cor_length)
         chol = linalg.cholesky(cov_matrix)  # cov_matrix = sp.dot(chol.T, chol)
         exog = sp.dot(uncorrelated_exog, chol)
-    ## Return
+    # Return
     return exog
 
 

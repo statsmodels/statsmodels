@@ -89,7 +89,7 @@ data2.update({"top": 1000, "B1": 100, "B2": 200, "B21": 21, "B22": 22, "B3": 300
 
 # data2
 # {'a': 0, 'c': 2, 'b': 1, 'e': 4, 'd': 3, 'g': 6, 'f': 5, 'h': 7,
-#'top': 1000, 'B22': 22, 'B21': 21, 'B1': 100, 'B2': 200, 'B3': 300}
+# 'top': 1000, 'B22': 22, 'B21': 21, 'B1': 100, 'B2': 200, 'B3': 300}
 
 print("\n tree with dictionary data")
 print(branch2(tree2))  # results look correct for testxb=0 and 1

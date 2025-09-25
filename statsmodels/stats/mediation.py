@@ -124,9 +124,17 @@ class Mediation:
     Software 59:5.  http://www.jstatsoft.org/v59/i05/paper
     """
 
-    def __init__(self, outcome_model, mediator_model, exposure, mediator=None,
-                 moderators=None, outcome_fit_kwargs=None, mediator_fit_kwargs=None,
-                 outcome_predict_kwargs=None):
+    def __init__(
+        self,
+        outcome_model,
+        mediator_model,
+        exposure,
+        mediator=None,
+        moderators=None,
+        outcome_fit_kwargs=None,
+        mediator_fit_kwargs=None,
+        outcome_predict_kwargs=None,
+    ):
 
         self.outcome_model = outcome_model
         self.mediator_model = mediator_model
@@ -134,29 +142,32 @@ class Mediation:
         self.moderators = moderators if moderators is not None else {}
 
         if mediator is None:
-            self.mediator = self._guess_endog_name(mediator_model, 'mediator')
+            self.mediator = self._guess_endog_name(mediator_model, "mediator")
         else:
             self.mediator = mediator
 
-        self._outcome_fit_kwargs = (outcome_fit_kwargs if outcome_fit_kwargs
-                is not None else {})
-        self._mediator_fit_kwargs = (mediator_fit_kwargs if mediator_fit_kwargs
-                is not None else {})
-        self._outcome_predict_kwargs = (outcome_predict_kwargs if
-                outcome_predict_kwargs is not None else {})
+        self._outcome_fit_kwargs = (
+            outcome_fit_kwargs if outcome_fit_kwargs is not None else {}
+        )
+        self._mediator_fit_kwargs = (
+            mediator_fit_kwargs if mediator_fit_kwargs is not None else {}
+        )
+        self._outcome_predict_kwargs = (
+            outcome_predict_kwargs if outcome_predict_kwargs is not None else {}
+        )
 
         # We will be changing these so need to copy.
         self._outcome_exog = outcome_model.exog.copy()
         self._mediator_exog = mediator_model.exog.copy()
 
         # Position of the exposure variable in the mediator model.
-        self._exp_pos_mediator = self._variable_pos('exposure', 'mediator')
+        self._exp_pos_mediator = self._variable_pos("exposure", "mediator")
 
         # Position of the exposure variable in the outcome model.
-        self._exp_pos_outcome = self._variable_pos('exposure', 'outcome')
+        self._exp_pos_outcome = self._variable_pos("exposure", "outcome")
 
         # Position of the mediator variable in the outcome model.
-        self._med_pos_outcome = self._variable_pos('mediator', 'outcome')
+        self._med_pos_outcome = self._variable_pos("mediator", "outcome")
 
     def _variable_pos(self, var, model):
         if model == 'mediator':
@@ -273,12 +284,14 @@ class Mediation:
 
         if method.startswith("para"):
             # Initial fit to unperturbed data.
-            outcome_result = self._fit_model(self.outcome_model, self._outcome_fit_kwargs)
-            mediator_result = self._fit_model(self.mediator_model, self._mediator_fit_kwargs)
-        elif not method.startswith("boot"):
-            raise ValueError(
-                "method must be either 'parametric' or 'bootstrap'"
+            outcome_result = self._fit_model(
+                self.outcome_model, self._outcome_fit_kwargs
             )
+            mediator_result = self._fit_model(
+                self.mediator_model, self._mediator_fit_kwargs
+            )
+        elif not method.startswith("boot"):
+            raise ValueError("method must be either 'parametric' or 'bootstrap'")
 
         indirect_effects = [[], []]
         direct_effects = [[], []]
@@ -292,11 +305,13 @@ class Mediation:
                 # Realization of mediation model parameters from sampling distribution
                 mediation_params = self._simulate_params(mediator_result)
             else:
-                outcome_result = self._fit_model(self.outcome_model,
-                                                 self._outcome_fit_kwargs, boot=True)
+                outcome_result = self._fit_model(
+                    self.outcome_model, self._outcome_fit_kwargs, boot=True
+                )
                 outcome_params = outcome_result.params
-                mediator_result = self._fit_model(self.mediator_model,
-                                                  self._mediator_fit_kwargs, boot=True)
+                mediator_result = self._fit_model(
+                    self.mediator_model, self._mediator_fit_kwargs, boot=True
+                )
                 mediation_params = mediator_result.params
 
             # predicted outcomes[tm][te] is the outcome when the
@@ -308,14 +323,14 @@ class Mediation:
                 kwargs = {"exog": mex}
                 if hasattr(mediator_result, "scale"):
                     kwargs["scale"] = mediator_result.scale
-                gen = self.mediator_model.get_distribution(mediation_params,
-                                                           **kwargs)
+                gen = self.mediator_model.get_distribution(mediation_params, **kwargs)
                 potential_mediator = gen.rvs(mex.shape[0])
 
                 for te in 0, 1:
                     oex = self._get_outcome_exog(te, potential_mediator)
-                    po = self.outcome_model.predict(outcome_params, oex,
-                            **self._outcome_predict_kwargs)
+                    po = self.outcome_model.predict(
+                        outcome_params, oex, **self._outcome_predict_kwargs
+                    )
                     predicted_outcomes[tm][te] = po
 
             for t in 0, 1:

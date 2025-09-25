@@ -107,7 +107,7 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
     -----
     Use of this function is discouraged. Use anova_lm instead.
     """
-    #maybe we should rethink using pinv > qr in OLS/linear models?
+    # maybe we should rethink using pinv > qr in OLS/linear models?
     mgr = FormulaManager()
     effects = getattr(model, 'effects', None)
     if effects is None:
@@ -143,7 +143,7 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
     table['mean_sq'] = table['sum_sq'] / table['df']
     return table
 
-#NOTE: the below is not agnostic about formula...
+# NOTE: the below is not agnostic about formula...
 
 
 def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
@@ -175,7 +175,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     terms_info = model_spec.terms[:]  # copy
     terms_info = mgr.remove_intercept(terms_info)
 
-    names = ['sum_sq', 'df', test, pr_test]
+    names = ["sum_sq", "df", test, pr_test]
 
     table = DataFrame(np.zeros((n_rows, 4)), columns=names)
     robust_cov = _get_covariance(model, robust)
@@ -185,6 +185,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         # grab all variables except interaction effects that contain term
         # need two hypotheses matrices L1 is most restrictive, ie., term==0
         # L2 is everything except term==0
+
         cols = mgr.get_slice(model_spec, term)
         L1 = lrange(cols.start, cols.stop)
         L2 = []
@@ -194,43 +195,50 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
             if term_set.issubset(other_set) and not term_set == other_set:
                 col = mgr.get_slice(model_spec, t)
                 # on a higher order term containing current `term`
+
                 L1.extend(lrange(col.start, col.stop))
                 L2.extend(lrange(col.start, col.stop))
-
         L1 = np.eye(model.model.exog.shape[1])[L1]
         L2 = np.eye(model.model.exog.shape[1])[L2]
 
         if L2.size:
-            LVL = np.dot(np.dot(L1,robust_cov),L2.T)
+            LVL = np.dot(np.dot(L1, robust_cov), L2.T)
             from scipy import linalg
-            orth_compl,_ = linalg.qr(LVL)
+
+            orth_compl, _ = linalg.qr(LVL)
             r = L1.shape[0] - L2.shape[0]
             # L1|2
             # use the non-unique orthogonal completion since L12 is rank r
-            L12 = np.dot(orth_compl[:,-r:].T, L1)
+
+            L12 = np.dot(orth_compl[:, -r:].T, L1)
         else:
             L12 = L1
             r = L1.shape[0]
-        #from IPython.core.debugger import Pdb; Pdb().set_trace()
-        if test == 'F':
+        # from IPython.core.debugger import Pdb; Pdb().set_trace()
+
+        if test == "F":
             f = model.f_test(L12, cov_p=robust_cov)
             table.loc[table.index[i], test] = f.fvalue
             table.loc[table.index[i], pr_test] = f.pvalue
-
         # need to back out SSR from f_test
-        table.loc[table.index[i], 'df'] = r
+
+        table.loc[table.index[i], "df"] = r
         col_order.append(cols.start)
         index.append(mgr.get_term_name(term))
-
-    table.index = Index(index + ['Residual'])
-    table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
+    table.index = Index(index + ["Residual"])
+    table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1] + 1])]
     # back out sum of squares from f_test
-    ssr = table[test] * table['df'] * model.ssr/model.df_resid
-    table['sum_sq'] = ssr
+
+    ssr = table[test] * table["df"] * model.ssr / model.df_resid
+    table["sum_sq"] = ssr
     # fill in residual
-    table.loc['Residual', ['sum_sq','df', test, pr_test]] = (model.ssr,
-                                                            model.df_resid,
-                                                            np.nan, np.nan)
+
+    table.loc["Residual", ["sum_sq", "df", test, pr_test]] = (
+        model.ssr,
+        model.df_resid,
+        np.nan,
+        np.nan,
+    )
 
     return table
 
@@ -240,38 +248,44 @@ def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     n_rows += mgr.has_intercept(model_spec)
     terms_info = model_spec.terms
 
-    names = ['sum_sq', 'df', test, pr_test]
+    names = ["sum_sq", "df", test, pr_test]
 
     table = DataFrame(np.zeros((n_rows, 4)), columns=names)
     cov = _get_covariance(model, robust)
     index = []
     for i, term in enumerate(terms_info):
         # grab term, hypothesis is that term == 0
+
         cols = mgr.get_slice(model_spec, term)
         L1 = np.eye(model.model.exog.shape[1])[cols]
         L12 = L1
         r = L1.shape[0]
 
-        if test == 'F':
+        if test == "F":
             f = model.f_test(L12, cov_p=cov)
             table.loc[table.index[i], test] = f.fvalue
             table.loc[table.index[i], pr_test] = f.pvalue
-
         # need to back out SSR from f_test
-        table.loc[table.index[i], 'df'] = r
-        #col_order.append(cols.start)
-        index.append(mgr.get_term_name(term))
 
-    table.index = Index(index + ['Residual'])
-    #NOTE: Do not need to sort because terms are an ordered dict now
-    #table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
+        table.loc[table.index[i], "df"] = r
+        # col_order.append(cols.start)
+
+        index.append(mgr.get_term_name(term))
+    table.index = Index(index + ["Residual"])
+    # NOTE: Do not need to sort because terms are an ordered dict now
+    # table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
     # back out sum of squares from f_test
-    ssr = table[test] * table['df'] * model.ssr/model.df_resid
-    table['sum_sq'] = ssr
+
+    ssr = table[test] * table["df"] * model.ssr / model.df_resid
+    table["sum_sq"] = ssr
     # fill in residual
-    table.loc['Residual', ['sum_sq','df', test, pr_test]] = (model.ssr,
-                                                            model.df_resid,
-                                                            np.nan, np.nan)
+
+    table.loc["Residual", ["sum_sq", "df", test, pr_test]] = (
+        model.ssr,
+        model.df_resid,
+        np.nan,
+        np.nan,
+    )
     return table
 
 
@@ -347,7 +361,7 @@ def anova_lm(*args, **kwargs):
     """
     typ = kwargs.get('typ', 1)
 
-    ### Farm Out Single model Anova Type I, II, III, and IV ###
+    # Farm Out Single model Anova Type I, II, III, and IV ###
 
     if len(args) == 1:
         model = args[0]
@@ -650,15 +664,19 @@ if __name__ == "__main__":
     from statsmodels.formula.api import ols
 
     # in R
-    #library(car)
-    #write.csv(Moore, "moore.csv", row.names=FALSE)
-    moore = pandas.read_csv('moore.csv', skiprows=1,
-                            names=['partner_status','conformity',
-                                   'fcategory','fscore'])
-    moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
-                    data=moore).fit()
+    # library(car)
+    # write.csv(Moore, "moore.csv", row.names=FALSE)
 
-    mooreB = ols('conformity ~ C(partner_status, Sum)', data=moore).fit()
+    moore = pandas.read_csv(
+        "moore.csv",
+        skiprows=1,
+        names=["partner_status", "conformity", "fcategory", "fscore"],
+    )
+    moore_lm = ols(
+        "conformity ~ C(fcategory, Sum)*C(partner_status, Sum)", data=moore
+    ).fit()
+
+    mooreB = ols("conformity ~ C(partner_status, Sum)", data=moore).fit()
 
     # for each term you just want to test vs the model without its
     # higher-order terms

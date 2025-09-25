@@ -317,7 +317,7 @@ class Optimizer:
         raise NotImplementedError
 
 
-########################################
+#
 # Helper functions to fit
 
 

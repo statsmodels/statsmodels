@@ -35,7 +35,7 @@ if __name__ == "__main__":
         exog=[x, x2],
         reg_type="ll",
         var_type="cc",
-        bw="aic",  # 'cv_ls', #[0.23, 434697.22], #'cv_ls',
+        bw="aic",  # 'cv_ls', #[0.23, 434697.22], # 'cv_ls',
         censor_val=c_val[:, None],
         # defaults=nparam.EstimatorSettings(efficient=True)
     )

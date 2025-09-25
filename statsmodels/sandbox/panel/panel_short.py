@@ -74,7 +74,7 @@ def whiten_individuals_loop(x, transform, group_iter):
         x_g = x[g]
         x_new.append(np.dot(transform, x_g))
 
-    return np.concatenate(x_new)  # np.vstack(x_new)  #or np.array(x_new) #check shape
+    return np.concatenate(x_new)  # np.vstack(x_new)  # or np.array(x_new) # check shape
 
 
 class ShortPanelGLS2:
@@ -91,7 +91,7 @@ class ShortPanelGLS2:
         self.exog = exog
         self.group = GroupSorted(group)
         self.n_groups = self.group.n_groups
-        # self.nobs_group =   #list for unbalanced?
+        # self.nobs_group =   # list for unbalanced?
 
     def fit_ols(self):
         self.res_pooled = OLS(self.endog, self.exog).fit()
@@ -103,7 +103,7 @@ class ShortPanelGLS2:
         return mom / self.n_groups  # df correction ?
 
     def whiten_groups(self, x, cholsigmainv_i):
-        # from scipy import sparse #use sparse
+        # from scipy import sparse # use sparse
         wx = whiten_individuals_loop(x, cholsigmainv_i, self.group.group_iter)
         return wx
 
@@ -130,7 +130,7 @@ class ShortPanelGLS(GLS):
     def __init__(self, endog, exog, group, sigma_i=None):
         self.group = GroupSorted(group)
         self.n_groups = self.group.n_groups
-        # self.nobs_group =   #list for unbalanced?
+        # self.nobs_group =   # list for unbalanced?
         nobs_i = len(endog) / self.n_groups  # endog might later not be an ndarray
         # balanced only for now,
         # which is a requirement anyway in this case (full cov)
@@ -150,7 +150,7 @@ class ShortPanelGLS(GLS):
         return mom / self.n_groups  # df correction ?
 
     def whiten_groups(self, x, cholsigmainv_i):
-        # from scipy import sparse #use sparse
+        # from scipy import sparse # use sparse
         wx = whiten_individuals_loop(x, cholsigmainv_i, self.group.group_iter)
         return wx
 

@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
     from statsmodels.regression.tests.test_regression import TestOLS
 
-    #def mytest():
+    # def mytest():
     aregression = TestOLS()
     TestOLS.setup_class()
     results = aregression.res1
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     from statsmodels.robust.tests.test_rlm import TestHampel
 
     aregression = TestHampel()
-    #TestHampel.setup_class()
+    # TestHampel.setup_class()
     results = aregression.res1
     r_summary = str(results.summary())
     print(r_summary)
@@ -100,13 +100,13 @@ if __name__ == '__main__':
     from statsmodels.genmod.tests.test_glm import TestGlmBinomial
 
     aregression = TestGlmBinomial()
-    #TestGlmBinomial.setup_class()
+    # TestGlmBinomial.setup_class()
     results = aregression.res1
     r_summary = str(results.summary())
     print(r_summary)
 
-    #print(results.summary2(return_fmt='latex'))
-    #print(results.summary2(return_fmt='csv'))
+    # print(results.summary2(return_fmt='latex'))
+    # print(results.summary2(return_fmt='csv'))
 
     smry = olsres.summary()
     print(smry.as_csv())

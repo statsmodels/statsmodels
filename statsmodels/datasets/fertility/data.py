@@ -30,7 +30,7 @@ DESCRSHORT = """Total fertility rate represents the number of children that woul
 
 DESCRLONG = DESCRSHORT
 
-#suggested notes
+# suggested notes
 NOTE = """
 ::
 

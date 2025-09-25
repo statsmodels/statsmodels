@@ -616,7 +616,7 @@ class TestGMMStOneiter(CheckGMM):
         # TODO: does not look different
         # assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
         np.sqrt(np.diag(res1._cov_params(has_optimal_weights=False)))
-        # use_weights=True #weights=w
+        # use_weights=True # weights=w
         # assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
 
         # This does not replicate Stata oneway either

@@ -37,7 +37,7 @@ xg = np.linspace(x.min(), x.max(), 40)  # grid points default in Stata
 # kern_name = 'tri'
 # kern = kernels.Triangular()
 # kern_name = 'cos'
-# kern = kernels.Cosine()  #does not match up, nan in Stata results ?
+# kern = kernels.Cosine()  # does not match up, nan in Stata results ?
 # kern_name = 'bi'
 # kern = kernels.Biweight()
 
@@ -52,7 +52,7 @@ class CheckKernelMixin:
     def test_smoothconf(self):
         kern_name = self.kern_name
         kern = self.kern
-        #fittedg = np.array([kernels.Epanechnikov().smoothconf(x, y, xi) for xi in xg])
+        # fittedg = np.array([kernels.Epanechnikov().smoothconf(x, y, xi) for xi in xg])
         fittedg = np.array([kern.smoothconf(x, y, xi) for xi in xg])
         # attach for inspection from outside of test run
         self.fittedg = fittedg
@@ -94,7 +94,7 @@ class CheckKernelMixin:
         assert_allclose(fittedg[se_valid, 0], res_low[se_valid],
                         rtol=self.low_rtol, atol=self.low_atol)
 
-        #assert_allclose(fitted, res_fitted, rtol=0, atol=1e-6)
+        # assert_allclose(fitted, res_fitted, rtol=0, atol=1e-6)
 
     @pytest.mark.slow
     @pytest.mark.smoke  # TOOD: make this an actual test?

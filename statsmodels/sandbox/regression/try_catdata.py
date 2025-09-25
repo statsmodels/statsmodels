@@ -93,8 +93,8 @@ def convertlabels(ys, indices=None):
         if idx.size > 1 and ys.ndim == 2:
             ylabel = np.array(["@%s@" % ii[:2].tostring() for ii in ys])[:, np.newaxis]
             # alternative
-        ##        if ys[:,idx].dtype.kind == 'S':
-        ##            ylabel = nd.array([' '.join(ii[:2]) for ii in ys])[:,np.newaxis]
+        #        if ys[:,idx].dtype.kind == 'S':
+        #            ylabel = nd.array([' '.join(ii[:2]) for ii in ys])[:,np.newaxis]
         else:
             # there might be a problem here
             ylabel = ys

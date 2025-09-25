@@ -686,7 +686,7 @@ def _power_ztost(
             k_upp = k_upp * 1.0 / nobs
     #    else:
     #        if dist == 'binom':
-    #            #need counts
+    #            # need counts
     #            k_low *= nobs
     #            k_upp *= nobs
     # print mean_low, np.sqrt(var_low), crit, var_low

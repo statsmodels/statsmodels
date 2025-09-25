@@ -260,7 +260,7 @@ def test_multivariate_penalty():
         mgp = MultivariateGamPenalty(multivariate_smoother=pol, alpha=alphas,
                                      weights=weights)
 
-    for i in range(10):
+    for _ in range(10):
         params1 = np.random.randint(-3, 3, pol.smoothers[0].dim_basis)
         params2 = np.random.randint(-3, 3, pol.smoothers[1].dim_basis)
         params = np.concatenate([params1, params2])

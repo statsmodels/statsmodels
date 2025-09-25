@@ -34,7 +34,7 @@ y = y_true + sig * w * e
 X = X[:, [0, 1]]
 
 
-# ### WLS knowing the true variance ratio of heteroscedasticity
+# # WLS knowing the true variance ratio of heteroscedasticity
 
 mod_wls = WLS(y, X, weights=1.0 / w)
 res_wls = mod_wls.fit()

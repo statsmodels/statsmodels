@@ -68,7 +68,7 @@ if __name__ == "__main__":
     # short version
     #    true, est, bse = mcarma22(niter=50)
     #    print(true
-    #    #print(est
+    #    # print(est
     #    print(est.mean(0)
 
     """niter 50, sample size=1000, 2 runs

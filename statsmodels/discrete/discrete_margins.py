@@ -7,7 +7,7 @@ from scipy.stats import norm
 
 from statsmodels.tools.decorators import cache_readonly
 
-#### margeff helper functions ####
+# margeff helper functions ####
 # NOTE: todo marginal effects for group 2
 # group 2 oprobit, ologit, gologit, mlogit, biprobit
 

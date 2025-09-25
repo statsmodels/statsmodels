@@ -28,11 +28,11 @@ _default_table_fmt = dict(
 
 class VARSummary:
     default_fmt = dict(
-        #data_fmts=["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-        #data_fmts=["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
+        # data_fmts=["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+        # data_fmts=["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
         data_fmts=["%#15.6F","%#15.6F","%#15.3F","%#14.3F"],
         empty_cell='',
-        #colwidths=10,
+        # colwidths=10,
         colsep='  ',
         row_pre='',
         row_post='',

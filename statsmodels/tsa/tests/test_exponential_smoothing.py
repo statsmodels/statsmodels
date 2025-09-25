@@ -34,9 +34,9 @@ import statsmodels.tsa.statespace.exponential_smoothing as statespace
 #         # perform some tests
 #         ...
 
-###############################################################################
+#
 # UTILS
-###############################################################################
+#
 
 # Below I define parameter lists for all possible model and data combinations
 # (for data, see below). These are used for parametrizing the pytest fixture
@@ -142,9 +142,9 @@ def oildata_model(oildata):
     return ETSModel(oildata, error="add", trend="add", damped_trend=True,)
 
 
-#############################################################################
+#
 # DATA
-#############################################################################
+#
 
 
 @pytest.fixture
@@ -283,9 +283,9 @@ def oildata():
     return pd.Series(data, index=pd.date_range("1965", "2013", freq="YS"))
 
 
-#############################################################################
+#
 # REFERENCE RESULTS
-#############################################################################
+#
 
 
 def obtain_R_results(path):
@@ -380,9 +380,9 @@ def get_states_from_R(results_R, k_states):
     return xhat_R
 
 
-#############################################################################
+#
 # BASIC TEST CASES
-#############################################################################
+#
 
 
 def test_fit_model_austouritsts(setup_model):
@@ -390,9 +390,9 @@ def test_fit_model_austouritsts(setup_model):
     model.fit(disp=False)
 
 
-#############################################################################
+#
 # TEST OF MODEL EQUATIONS VS R
-#############################################################################
+#
 
 
 def test_smooth_vs_R(setup_model):
@@ -495,9 +495,9 @@ def test_predict_vs_R(setup_model):
     assert_allclose(prediction[n:], forecast_R, rtol=1e-3, atol=1e-4)
 
 
-#############################################################################
+#
 # OTHER TESTS
-#############################################################################
+#
 
 
 def test_initialization_known(austourists):
@@ -1030,8 +1030,7 @@ def test_one_step_ahead(setup_model):
 
     pred1 = res.get_prediction(start=model2.nobs, end=model2.nobs,
                                simulate_repetitions=2)
-    res.get_prediction(start=model2.nobs, end=model2.nobs + 1,
-                               simulate_repetitions=2)
+    res.get_prediction(start=model2.nobs, end=model2.nobs + 1, simulate_repetitions=2)
     df1 = pred1.summary_frame(alpha=0.05)
     df2 = pred1.summary_frame(alpha=0.05)
     assert_allclose(df1.iloc[0, 0], df2.iloc[0, 0])

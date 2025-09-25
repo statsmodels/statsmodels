@@ -21,7 +21,7 @@ from statsmodels.stats.diagnostic import (
 example = ["null", "smalldiff", "mediumdiff", "largediff"][1]
 example_size = [20, 100][1]
 example_groups = ["2", "2-2"][1]
-#'2-2': 4 groups,
+# '2-2': 4 groups,
 #       groups 0 and 1 and groups 2 and 3 have identical parameters in DGP
 
 # generate example
@@ -91,7 +91,7 @@ assert_almost_equal(rparams[skip:], rparams2[skip:], 13)
 # np.c_[rparams[skip+1:], rparams2[skip:-1]]
 # plt.show()
 
-####################  Example break test
+#  Example break test
 H, crit95 = breaks_hansen(res1)
 print(H)
 print(crit95)
@@ -99,8 +99,8 @@ print(crit95)
 supb, pval, crit = breaks_cusumolsresid(res1.resid)
 print(supb, pval, crit)
 
-##check whether this works directly: Ploberger/Kramer framing of standard cusum
-##no, it's different, there is another denominator
+# check whether this works directly: Ploberger/Kramer framing of standard cusum
+# no, it's different, there is another denominator
 # print breaks_cusumolsresid(rresid[skip:])
 # this function is still completely wrong, cut and paste does not apply
 # print breaks_cusum(rresid[skip:])

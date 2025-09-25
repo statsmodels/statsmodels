@@ -381,8 +381,8 @@ def pltxcorr(
 
 
 arrvs = ar_generator()
-##arma = ARIMA()
-##res = arma.fit(arrvs[0], 4, 0)
+# arma = ARIMA()
+# res = arma.fit(arrvs[0], 4, 0)
 arma = ARIMA(arrvs[0])
 res = arma.fit((4, 0, 0))
 

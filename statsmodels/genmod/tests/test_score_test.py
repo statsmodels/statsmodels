@@ -102,7 +102,7 @@ class TestScoreTest(CheckScoreTest):
         if cls.dispersed:
             het = np.random.randn(nobs)
             y = np.random.poisson(np.exp(x.sum(1) * 0.5 + het))
-            #y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
+            # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
             y = np.random.poisson(np.exp(x.sum(1) * 0.5))
 
@@ -179,7 +179,7 @@ class TestScoreTestPoisson(TestScoreTest):
         if cls.dispersed:
             het = np.random.randn(nobs)
             y = np.random.poisson(np.exp(x.sum(1) * 0.5 + het))
-            #y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
+            # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
             y = np.random.poisson(np.exp(x.sum(1) * 0.5))
 
@@ -234,7 +234,7 @@ class TestScoreTestGaussian(CheckScoreTest):
         if cls.dispersed:
             het = np.random.randn(nobs)
             y = np.random.randn(nobs) + x.sum(1) * 0.5 + het
-            #y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
+            # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
             y = np.random.randn(nobs) + x.sum(1) * 0.5
 

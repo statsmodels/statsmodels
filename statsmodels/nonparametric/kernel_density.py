@@ -278,8 +278,8 @@ class KDEMultivariate(GenericKDE):
         .. [2] Racine, J., Li, Q. "Nonparametric Estimation of Distributions
                 with Categorical and Continuous Data." Working Paper. (2000)
         """
-        #F = 0
-        #for i in range(self.nobs):
+        # F = 0
+        # for i in range(self.nobs):
         #    k_bar_sum = gpke(bw, data=-self.data,
         #                     data_predict=-self.data[i, :],
         #                     var_type=self.var_type,
@@ -287,8 +287,8 @@ class KDEMultivariate(GenericKDE):
         #                     okertype='wangryzin_convolution',
         #                     ukertype='aitchisonaitken_convolution')
         #    F += k_bar_sum
-        ## there is a + because loo_likelihood returns the negative
-        #return (F / self.nobs**2 + self.loo_likelihood(bw) * \
+        # there is a + because loo_likelihood returns the negative
+        # return (F / self.nobs**2 + self.loo_likelihood(bw) * \
         #        2 / ((self.nobs) * (self.nobs - 1)))
 
         # The code below is equivalent to the commented-out code above.  It's

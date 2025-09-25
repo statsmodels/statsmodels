@@ -123,9 +123,9 @@ def pcasvd(data, keepdim=0, demean=True):
         m = x.mean(0)
     else:
         m = 0
-    ##    if keepdim == 0:
-    ##        keepdim = nvars
-    ##        "print reassigning keepdim to max", keepdim
+    #    if keepdim == 0:
+    #        keepdim = nvars
+    #        "print reassigning keepdim to max", keepdim
     x -= m
     U, s, v = np.linalg.svd(x.T, full_matrices=1)
     factors = np.dot(U.T, x.T).T  # princomps

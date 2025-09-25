@@ -293,7 +293,7 @@ if __name__ == "__main__":
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     allexog = " ".join(dta.dtype.names[:-1])
-    #'breed sex litter pen pig age bage'
+    # 'breed sex litter pen pig age bage'
 
     xx_b1a, names_b1a = form2design(
         "I F:breed F:sex F:litter F:pen age bage", dta_use_b1

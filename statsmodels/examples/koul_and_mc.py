@@ -1,9 +1,9 @@
 import statsmodels.api as sm
 import numpy as np
 
-##################
-# Monte Carlo test#
-##################
+#
+# Monte Carlo test
+#
 modrand1 = np.random.RandomState(5676576)
 modrand2 = np.random.RandomState(1543543)
 modrand3 = np.random.RandomState(5738276)
@@ -12,7 +12,7 @@ X = sm.add_constant(X)
 beta = np.array([[10], [2], [3], [4], [5]])
 y = np.dot(X, beta)
 params = []
-for i in range(10000):
+for _ in range(10000):
     yhat = y + modrand2.standard_normal((1000, 1))
     cens_times = 50 + (modrand3.standard_normal((1000, 1)) * 5)
     yhat_observed = np.minimum(yhat, cens_times)
@@ -23,9 +23,9 @@ for i in range(10000):
 
 mc_est = np.mean(params, axis=0)  # Gives MC parameter estimate
 
-##################
+#
 # Koul replication#
-##################
+#
 
 koul_data = np.genfromtxt("/home/justin/rverify.csv", delimiter=";")
 # ^ Change path to where file is located.

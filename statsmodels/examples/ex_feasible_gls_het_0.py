@@ -38,7 +38,7 @@ if "ex1" in examples:
     gamma = np.array([1, 3.0])
     # with slope 3 instead of two, I get negative weights, Not correct
     #   - was misspecified, but the negative weights are still possible with identity link
-    # gamma /= gamma.sum()   #normalize assuming x1.max is 1
+    # gamma /= gamma.sum()   # normalize assuming x1.max is 1
     z_true = add_constant(x1)
 
     winv = np.dot(z_true, gamma)
@@ -106,8 +106,8 @@ if "ex1" in examples:
         plt.legend()
 
     # the next only works if w has finite support, discrete/categorical
-    # z = (w[:,None] == [1,4]).astype(float) #dummy variable
-    # z = (w0[:,None] == np.unique(w0)).astype(float) #dummy variable
+    # z = (w[:,None] == [1,4]).astype(float) # dummy variable
+    # z = (w0[:,None] == np.unique(w0)).astype(float) # dummy variable
     # changed z0 contains dummy and constant
     mod2 = GLSHet(y2, X2, exog_var=z0)
     res2 = mod2.iterative_fit(3)

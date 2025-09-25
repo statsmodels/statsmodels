@@ -258,7 +258,7 @@ class AdditiveModel:
         # in component ??? what's the effect of offset
         offset = self.results.offset
         # print self.iter
-        # self.iter += 1 #missing incrementing of iter counter NOT
+        # self.iter += 1 # missing incrementing of iter counter NOT
         return Results(Y, alpha, self.exog, self.smoothers, self.family, offset)
 
     def cont(self):
@@ -414,7 +414,7 @@ class Model(GLM, AdditiveModel):
         return (
             np.power(resid, 2) / self.family.variance(self.results.mu)
         ).sum() / self.df_resid  # TODO check this
-        # / AdditiveModel.df_resid(self)  #what is the class doing here?
+        # / AdditiveModel.df_resid(self)  # what is the class doing here?
 
     def fit(self, Y, rtol=1.0e-06, maxiter=30):
 

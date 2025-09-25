@@ -167,13 +167,13 @@ class TestTModelFixed:
         mod = TLinearModel(endog, exog, fix_df=3)
         res = mod.fit(method='bfgs', disp=False)
         with pytest.warns(DeprecationWarning, match="Using"):
-            modf = TLinearModel.from_formula("price ~ CRSP",
-                                    data={"price":mm.m_marietta, "CRSP":mm.CRSP},
-                                    fix_df=3)
+            modf = TLinearModel.from_formula(
+                "price ~ CRSP", data={"price":mm.m_marietta, "CRSP":mm.CRSP}, fix_df=3
+            )
         resf = modf.fit(method='bfgs', disp=False)
         # TODO: no reference results yet
-        #from results_tmodel import res_t_dfest as res2
-        #cls.res2 = res2
+        # from results_tmodel import res_t_dfest as res2
+        # cls.res2 = res2
         cls.res1 = res  # take from module scope temporarily
         cls.resf = resf
         cls.k_extra = 1

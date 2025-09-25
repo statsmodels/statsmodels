@@ -82,7 +82,7 @@ class CheckOLSRobust:
 
         ft = res1.f_test(mat[:-1], cov_p=self.cov_robust)
         if self.small:
-            #'df_denom', 'df_num', 'fvalue', 'pvalue'
+            # 'df_denom', 'df_num', 'fvalue', 'pvalue'
             assert_allclose(ft.fvalue, res2.F, rtol=rtol)
             # f-pvalue is not directly available in Stata results, but is in ivreg2
             if hasattr(res2, "Fp"):
@@ -346,9 +346,9 @@ class TestOLSRobust2LargeNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         super().test_confint()
 
 
-#######################################################
+#
 #    cluster robust standard errors
-#######################################################
+#
 
 
 class CheckOLSRobustCluster(CheckOLSRobust):
@@ -725,9 +725,9 @@ class TestOLSRobustCluster2GLarge(CheckOLSRobustCluster, CheckOLSRobustNewMixin)
         self.rtolh = 1e-10
 
 
-######################################
+#
 #                 WLS
-######################################
+#
 
 
 class CheckWLSRobustCluster(CheckOLSRobust):

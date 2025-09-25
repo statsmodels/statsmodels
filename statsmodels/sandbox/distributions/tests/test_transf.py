@@ -129,7 +129,7 @@ class Test_Transf2:
     def test_equivalent(self):
         xx, ppfq = self.xx, self.ppfq
         for j, (d1, d2) in enumerate(self.dist_equivalents):
-            ##            print d1.name
+            #            print d1.name
             assert_almost_equal(d1.cdf(xx), d2.cdf(xx), err_msg="cdf" + d1.name)
             assert_almost_equal(
                 d1.pdf(xx), d2.pdf(xx), err_msg="pdf " + d1.name + d2.name
@@ -143,9 +143,9 @@ class Test_Transf2:
             )
             self.d1 = d1
             self.d2 = d2
-            ##            print d1, d2
-            ##            print d1.moment(3)
-            ##            print d2.moment(3)
+            #            print d1, d2
+            #            print d1.moment(3)
+            #            print d2.moment(3)
             # work around bug#1293
             if hasattr(d2, "dist"):
                 d2mom = d2.dist.moment(3, *d2.args)

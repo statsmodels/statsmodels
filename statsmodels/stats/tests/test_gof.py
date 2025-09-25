@@ -25,11 +25,11 @@ def test_chisquare():
     # TODO: no tests for ``value`` yet
     res1 = Holder()
     res2 = Holder()
-    #> freq = c(1048,  660,  510,  420,  362)
-    #> pr1 = c(1020,  690,  510,  420,  360)
-    #> pr2 = c(1050,  660,  510,  420,  360)
-    #> c = chisq.test(freq, p=pr1, rescale.p = TRUE)
-    #> cat_items(c, "res1.")
+    # > freq = c(1048,  660,  510,  420,  362)
+    # > pr1 = c(1020,  690,  510,  420,  360)
+    # > pr2 = c(1050,  660,  510,  420,  360)
+    # > c = chisq.test(freq, p=pr1, rescale.p = TRUE)
+    # > cat_items(c, "res1.")
     res1.statistic = 2.084086388178453
     res1.parameter = 4
     res1.p_value = 0.72029651761105
@@ -46,8 +46,8 @@ def test_chisquare():
          -2.773674830645328e-15, 0.105409255338946
         ])
 
-    #> c = chisq.test(freq, p=pr2, rescale.p = TRUE)
-    #> cat_items(c, "res2.")
+    # > c = chisq.test(freq, p=pr2, rescale.p = TRUE)
+    # > cat_items(c, "res2.")
     res2.statistic = 0.01492063492063492
     res2.parameter = 4
     res2.p_value = 0.999972309849908
@@ -78,8 +78,8 @@ def test_chisquare_effectsize():
 
     pr1 = np.array([1020,  690,  510,  420,  360])
     pr2 = np.array([1050,  660,  510,  420,  360])
-    #> library(pwr)
-    #> ES.w1(pr1/3000, pr2/3000)
+    # > library(pwr)
+    # > ES.w1(pr1/3000, pr2/3000)
     es_r = 0.02699815282115563
     es1 = chisquare_effectsize(pr1, pr2)
     es2 = chisquare_effectsize(pr1, pr2, cohen=False)

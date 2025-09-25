@@ -90,7 +90,7 @@ if example > 1:
     # plt.plot(p, '.', lw=2)
     plt.plot(y_true, lw=2)
 
-    y_pred = m.results.mu  # + m.results.alpha #m.results.predict(d)
+    y_pred = m.results.mu  # + m.results.alpha # m.results.predict(d)
     plt.figure()
     plt.subplot(2, 2, 1)
     plt.plot(p, ".")

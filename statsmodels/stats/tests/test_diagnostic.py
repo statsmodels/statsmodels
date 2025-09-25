@@ -968,7 +968,7 @@ class TestDiagnosticG:
     def test_normality(self):
         res = self.res
 
-        # > library(nortest) #Lilliefors (Kolmogorov-Smirnov) normality test
+        # > library(nortest) # Lilliefors (Kolmogorov-Smirnov) normality test
         # > lt = lillie.test(residuals(fm))
         # > mkhtest(lt, "lilliefors", "-")
         lilliefors1 = dict(
@@ -1071,7 +1071,7 @@ class TestDiagnosticG:
         )
 
         # slow:
-        # infl._get_all_obs()  #slow, nobs estimation loop, called implicitly
+        # infl._get_all_obs()  # slow, nobs estimation loop, called implicitly
         dffits, dffth = infl.dffits
         assert_almost_equal(dffits, lsdiag["dfits"], decimal=12)
         assert_almost_equal(

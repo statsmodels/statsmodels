@@ -16,7 +16,7 @@ from statsmodels.compat.python import lmap
 import numpy as np
 from scipy import integrate, optimize, stats
 
-########## patching scipy
+# patching scipy
 
 # vonmises does not define finite bounds, because it is intended for circular
 # support which does not define a proper pdf on the real line
@@ -435,7 +435,7 @@ def expect_v2(
     return integrate.quad(fun, lb, ub, args=args, limit=500)[0] / invfac
 
 
-### for discrete distributions
+# for discrete distributions
 
 # TODO: check that for a distribution with finite support the calculations are
 #      done with one array summation (np.dot)
@@ -563,7 +563,7 @@ stats.distributions.rv_discrete.expect = expect_discrete
 stats.distributions.beta_gen._fitstart = _fitstart_beta  # not tried out yet
 stats.distributions.poisson_gen._fitstart = _fitstart_poisson  # not tried out yet
 
-########## end patching scipy
+# end patching scipy
 
 
 def distfitbootstrap(sample, distr, nrepl=100):

@@ -25,11 +25,11 @@ class MyPareto(GenericLikelihoodModel):
         extra_params_names = ['shape', 'loc', 'scale']
         self._set_extra_params_names(extra_params_names)
 
-        #start_params needs to be attribute
+        # start_params needs to be attribute
         self.start_params = np.array([1.5, self.endog.min() - 1.5, 1.])
 
     def pdf(self, x, b):
-        #copied from stats.distribution
+        # copied from stats.distribution
         return b * x**(-b-1)
 
     def loglike(self, params):
@@ -42,14 +42,14 @@ class MyPareto(GenericLikelihoodModel):
 #        return np.array([1.5, self.endog.min() - 1.5, 1.])
 
     def nloglikeobs(self, params):
-        #print params.shape
+        # print params.shape
         if self.fixed_params is not None:
-            #print 'using fixed'
+            # print 'using fixed'
             params = self.expandparams(params)
         b = params[0]
         loc = params[1]
         scale = params[2]
-        #loc = np.dot(self.exog, beta)
+        # loc = np.dot(self.exog, beta)
         endog = self.endog
         x = (endog - loc)/scale
         logpdf = np.log(b) - (b+1.)*np.log(x)  # use np_log(1 + x) for Pareto II

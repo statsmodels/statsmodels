@@ -7,7 +7,7 @@ Author: Josef Perktold
 
 import numpy as np
 
-## Functions
+# Functions
 
 
 def fg1(x):
@@ -30,7 +30,7 @@ def func1(x):
     return np.sin(x * 5) / x + 2.0 * x - 1.0 * x**2
 
 
-## Classes with Data Generating Processes
+# Classes with Data Generating Processes
 
 doc = {
     "description": """Base Class for Univariate non-linear example

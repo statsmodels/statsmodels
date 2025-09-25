@@ -112,10 +112,9 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
             self.offset = offset.ravel()
         else:
             self.offset = 0.
-        super().__init__(endog, exog, missing=missing,
-                **kwds)
+        super().__init__(endog, exog, missing=missing, **kwds)
 
-#this was added temporarily for bug-hunting, but should not be needed
+# this was added temporarily for bug-hunting, but should not be needed
 #    def loglike(self, params):
 #        return -self.nloglikeobs(params).sum(0)
 
@@ -162,8 +161,9 @@ class PoissonZiGMLE(GenericLikelihoodModel):
     def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
         # let them be none in case user wants to use inheritance
         self.k_extra = 1
-        super().__init__(endog, exog, missing=missing,
-                extra_params_names=["zi"], **kwds)
+        super().__init__(
+            endog, exog, missing=missing, extra_params_names=["zi"], **kwds
+        )
         if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:,None]  # need column
@@ -175,7 +175,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         if exog is None:
             self.exog = np.ones((self.nobs,1))
         self.nparams = self.exog.shape[1]
-        #what's the shape in regression for exog if only constant
+        # what's the shape in regression for exog if only constant
         self.start_params = np.hstack((np.ones(self.nparams), 0))
         # need to add zi params to nparams
         self.nparams += 1
@@ -205,7 +205,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         beta = params[:-1]
         gamm = 1 / (1 + np.exp(params[-1]))  # check this
         # replace with np.dot(self.exogZ, gamma)
-        #print(np.shape(self.offset), self.exog.shape, beta.shape
+        # print(np.shape(self.offset), self.exog.shape, beta.shape
         XB = self.offset + np.dot(self.exog, beta)
         endog = self.endog
         nloglik = -np.log(1-gamm) + np.exp(XB) - endog*XB + np.log(factorial(endog))

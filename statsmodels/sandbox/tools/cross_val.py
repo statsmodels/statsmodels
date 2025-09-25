@@ -20,7 +20,7 @@ from itertools import combinations
 import numpy as np
 
 
-################################################################################
+#
 class LeaveOneOut:
     """
     Leave-One-Out cross validation iterator:
@@ -70,7 +70,7 @@ class LeaveOneOut:
         )
 
 
-################################################################################
+#
 class LeavePOut:
     """
     Leave-P-Out cross validation iterator:
@@ -127,7 +127,7 @@ class LeavePOut:
         )
 
 
-################################################################################
+#
 class KFold:
     """
     K-Folds cross validation iterator:
@@ -190,7 +190,7 @@ class KFold:
         )
 
 
-################################################################################
+#
 class LeaveOneLabelOut:
     """
     Leave-One-Label_Out cross-validation iterator:
@@ -271,7 +271,7 @@ possible to add other arrays of the same shape[0] too
 """
 
 
-################################################################################
+#
 # below: Author: josef-pktd
 
 

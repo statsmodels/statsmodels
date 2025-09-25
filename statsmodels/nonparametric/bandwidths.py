@@ -23,7 +23,7 @@ def _select_sigma(x, percentile=25):
         return std_dev
 
 
-## Univariate Rule of Thumb Bandwidths ##
+# Univariate Rule of Thumb Bandwidths
 def bw_scott(x, kernel=None):
     """
     Scott's Rule of Thumb
@@ -137,11 +137,9 @@ def bw_normal_reference(x, kernel=None):
     n = len(x)
     return C * A * n ** (-0.2)
 
-## Plug-In Methods ##
-
-## Least Squares Cross-Validation ##
-
-## Helper Functions ##
+# Plug-In Methods
+# Least Squares Cross-Validation
+# Helper Functions
 
 
 bandwidth_funcs = {

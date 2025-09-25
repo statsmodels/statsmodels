@@ -141,7 +141,7 @@ if __name__ == "__main__":
     exog = np.ones(nobs)
     exog = group_dummy
     mod = PanelAR1(y, exog, groups=groups)
-    # mod = PanelAR1(data, exog, groups=groups) #data does not contain different means
+    # mod = PanelAR1(data, exog, groups=groups) # data does not contain different means
     # print(mod.ar1filter(mod.endog, 1))
     resa, reso = mod.fit()
     print(resa[0], reso.params)

@@ -151,7 +151,7 @@ class CheckEquivalenceMixin:
             "llf",
             "aic",
             "bic",
-            #'fittedvalues', 'resid'
+            # 'fittedvalues', 'resid'
         ]
         attributes_inference = ["bse", "tvalues", "pvalues"]
         import copy

@@ -48,13 +48,13 @@ def _pad_nans(x, head=None, tail=None):
     else:
         raise ValueError("Nan-padding for ndim > 2 not implemented")
 
-#original changes and examples in sandbox.tsa.try_var_convolve
+# original changes and examples in sandbox.tsa.try_var_convolve
 
 # do not do these imports, here just for copied fftconvolve
-#get rid of these imports
-#from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
+# get rid of these imports
+# from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
 #     ifftn, fftfreq
-#from numpy import product,array
+# from numpy import product,array
 
 
 # previous location in sandbox.tsa.try_var_convolve
@@ -80,7 +80,7 @@ def fftconvolveinv(in1, in2, mode="full"):
     # Always use 2**n-sized FFT
     fsize = 2**np.ceil(np.log2(size))
     IN1 = fft.fftn(in1,fsize)
-    #IN1 *= fftn(in2,fsize) #JP: this looks like the only change I made
+    # IN1 *= fftn(in2,fsize) # JP: this looks like the only change I made
     IN1 /= fft.fftn(in2,fsize)  # use inverse filter
     # note the inverse is elementwise not matrix inverse
     # is this correct, NO  does not seem to work for VARMA
@@ -101,7 +101,7 @@ def fftconvolveinv(in1, in2, mode="full"):
         return trim_centered(ret,abs(s2-s1)+1)
 
 
-#code duplication with fftconvolveinv
+# code duplication with fftconvolveinv
 def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     """
     Convolve two N-dimensional arrays using FFT. See convolve.
@@ -131,7 +131,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     if in3 is not None:
         s3 = np.array(in3.shape)
         s2 = max(s2, s3)  # try this looks reasonable for ARMA
-        #s2 = s3
+        # s2 = s3
 
     complex_result = (np.issubdtype(in1.dtype, np.complex) or
                       np.issubdtype(in2.dtype, np.complex))
@@ -139,7 +139,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
 
     # Always use 2**n-sized FFT
     fsize = 2**np.ceil(np.log2(size))
-    #convolve shorter ones first, not sure if it matters
+    # convolve shorter ones first, not sure if it matters
     IN1 = in1.copy()  # TODO: Is this correct?
     if in2 is not None:
         IN1 = fft.fftn(in2, fsize)
@@ -165,8 +165,8 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
         return trim_centered(ret,abs(s2-s1)+1)
 
 
-#original changes and examples in sandbox.tsa.try_var_convolve
-#examples and tests are there
+# original changes and examples in sandbox.tsa.try_var_convolve
+# examples and tests are there
 def recursive_filter(x, ar_coeff, init=None):
     """
     Autoregressive, or recursive, filtering.

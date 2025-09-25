@@ -496,7 +496,7 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     cross_derivative = (exog_infl.T * (-mu)).dot(exog).T
     cov_infl = (exog_infl.T * ((1 - prob_zero) / prob_zero)).dot(exog_infl)
     score_obs_infl = exog_infl * (((endog == 0) - prob_zero) / prob_zero)[:, None]
-    # score_obs_infl = exog_infl * ((endog == 0) * (1 - prob_zero) / prob_zero - (endog>0))[:,None] #same
+    # score_obs_infl = exog_infl * ((endog == 0) * (1 - prob_zero) / prob_zero - (endog>0))[:,None] # same
     score_infl = score_obs_infl.sum(0)
     cov_score_infl = cov_infl - cross_derivative.T.dot(cov_poi).dot(cross_derivative)
     cov_score_infl_inv = np.linalg.pinv(cov_score_infl)

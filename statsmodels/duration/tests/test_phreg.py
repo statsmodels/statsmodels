@@ -90,27 +90,26 @@ class TestPHReg:
         time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
 
         # Entry times but no stratification
-        phrb = PHReg(time, exog, status, entry=entry,
-                     ties=ties).fit(**args)
+        phrb = PHReg(time, exog, status, entry=entry, ties=ties).fit(**args)
         coef, se, time_r, hazard_r = get_results(n, p, "et", ties1)
         assert_allclose(phrb.params, coef, rtol=1e-3)
         assert_allclose(phrb.bse, se, rtol=1e-3)
 
         # Stratification but no entry times
-        phrb = PHReg(time, exog, status, strata=strata,
-                      ties=ties).fit(**args)
+        phrb = PHReg(time, exog, status, strata=strata, ties=ties).fit(**args)
         coef, se, time_r, hazard_r = get_results(n, p, "st", ties1)
         assert_allclose(phrb.params, coef, rtol=1e-4)
         assert_allclose(phrb.bse, se, rtol=1e-4)
 
         # Stratification and entry times
-        phrb = PHReg(time, exog, status, entry=entry,
-                     strata=strata, ties=ties).fit(**args)
+        phrb = PHReg(time, exog, status, entry=entry, strata=strata, ties=ties).fit(
+            **args
+        )
         coef, se, time_r, hazard_r = get_results(n, p, "et_st", ties1)
         assert_allclose(phrb.params, coef, rtol=1e-3)
         assert_allclose(phrb.bse, se, rtol=1e-4)
 
-        #smoke test
+        # smoke test
         time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
 
     def test_missing(self):
@@ -282,8 +281,10 @@ class TestPHReg:
         assert_allclose(np.abs(mart_resid).sum(), 120.72475743348433)
 
         w_avg = rslt.weighted_covariate_averages
-        assert_allclose(np.abs(w_avg[0]).sum(0),
-               np.r_[7.31008415, 9.77608674,10.89515885, 13.1106801])
+        assert_allclose(
+            np.abs(w_avg[0]).sum(0),
+            np.r_[7.31008415, 9.77608674,10.89515885, 13.1106801]
+        )
 
         bc_haz = rslt.baseline_cumulative_hazard
         v = [np.mean(np.abs(x)) for x in bc_haz[0]]

@@ -1,4 +1,4 @@
-#  ##### tables
+# tables
 tukeybiweight_bp = {
     # breakdown point : (tuning parameter, efficiency, scale bias)
     0.50: (1.547645, 0.286826, 0.199600),

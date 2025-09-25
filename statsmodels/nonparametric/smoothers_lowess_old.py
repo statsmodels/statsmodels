@@ -123,55 +123,55 @@ def lowess(endog, exog, frac=2./3, it=3):
 
 def _lowess_initial_fit(x_copy, y_copy, k, n):
     """
-    The initial weighted local linear regression for lowess.
+     The initial weighted local linear regression for lowess.
 
-    Parameters
-    ----------
-    x_copy : 1-d ndarray
-        The x-values/exogenous part of the data being smoothed
-    y_copy : 1-d ndarray
-        The y-values/ endogenous part of the data being smoothed
-   k : int
-        The number of data points which affect the linear fit for
-        each estimated point
-    n : int
-        The total number of points
+     Parameters
+     ----------
+     x_copy : 1-d ndarray
+         The x-values/exogenous part of the data being smoothed
+     y_copy : 1-d ndarray
+         The y-values/ endogenous part of the data being smoothed
+    k : int
+         The number of data points which affect the linear fit for
+         each estimated point
+     n : int
+         The total number of points
 
-    Returns
-    -------
-    fitted : 1-d ndarray
-        The fitted y-values
-    weights : 2-d ndarray
-        An n by k array. The contribution to the weights in the
-        local linear fit coming from the distances between the
-        x-values
+     Returns
+     -------
+     fitted : 1-d ndarray
+         The fitted y-values
+     weights : 2-d ndarray
+         An n by k array. The contribution to the weights in the
+         local linear fit coming from the distances between the
+         x-values
 
-   """
-    weights = np.zeros((n,k), dtype=x_copy.dtype)
-    nn_indices = [0,k]
+    """
+    weights = np.zeros((n, k), dtype=x_copy.dtype)
+    nn_indices = [0, k]
 
-    X = np.ones((k,2))
+    X = np.ones((k, 2))
     fitted = np.zeros(n)
 
     for i in range(n):
-        #note: all _lowess functions are inplace, no return
+        # note: all _lowess functions are inplace, no return
+
         left_width = x_copy[i] - x_copy[nn_indices[0]]
-        right_width = x_copy[nn_indices[1]-1] - x_copy[i]
+        right_width = x_copy[nn_indices[1] - 1] - x_copy[i]
         width = max(left_width, right_width)
-        _lowess_wt_standardize(weights[i,:],
-                                x_copy[nn_indices[0]:nn_indices[1]],
-                            x_copy[i], width)
-        _lowess_tricube(weights[i,:])
-        weights[i,:] = np.sqrt(weights[i,:])
+        _lowess_wt_standardize(
+            weights[i, :], x_copy[nn_indices[0] : nn_indices[1]], x_copy[i], width
+        )
+        _lowess_tricube(weights[i, :])
+        weights[i, :] = np.sqrt(weights[i, :])
 
-        X[:,1] = x_copy[nn_indices[0]:nn_indices[1]]
-        y_i = weights[i,:] * y_copy[nn_indices[0]:nn_indices[1]]
+        X[:, 1] = x_copy[nn_indices[0] : nn_indices[1]]
+        y_i = weights[i, :] * y_copy[nn_indices[0] : nn_indices[1]]
 
-        beta = lstsq(weights[i,:].reshape(k,1) * X, y_i, rcond=-1)[0]
-        fitted[i] = beta[0] + beta[1]*x_copy[i]
+        beta = lstsq(weights[i, :].reshape(k, 1) * X, y_i, rcond=-1)[0]
+        fitted[i] = beta[0] + beta[1] * x_copy[i]
 
-        _lowess_update_nn(x_copy, nn_indices, i+1)
-
+        _lowess_update_nn(x_copy, nn_indices, i + 1)
     return fitted, weights
 
 
@@ -242,8 +242,9 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
     residual_weights[too_big] = 0
 
     for i in range(n):
-        total_weights = weights[i,:] * np.sqrt(residual_weights[nn_indices[0]:
-                                                        nn_indices[1]])
+        total_weights = weights[i, :] * np.sqrt(
+            residual_weights[nn_indices[0] : nn_indices[1]]
+        )
 
         X[:,1] = x_copy[nn_indices[0]:nn_indices[1]]
         y_i = total_weights * y_copy[nn_indices[0]:nn_indices[1]]
@@ -306,7 +307,7 @@ def _lowess_tricube(t):
     Nothing
     """
     # t = (1-np.abs(t)**3)**3
-    t[:] = np.absolute(t)  # , out=t) #numpy version?
+    t[:] = np.absolute(t)  # , out=t) # numpy version?
     _lowess_mycube(t)
     t[:] = np.negative(t)  # , out = t)
     t += 1
@@ -326,7 +327,7 @@ def _lowess_mycube(t):
     -------
     Nothing
     """
-    #t **= 3
+    # t **= 3
     t2 = t*t
     t *= t2
 

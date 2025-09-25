@@ -1334,7 +1334,7 @@ def summary_table(res, alpha=0.05):
         ]
     )
 
-    # colnames, data = lzip(*table_raw) #unzip
+    # colnames, data = lzip(*table_raw) # unzip
     data = table_sm
     ss2 = [
         "Obs",

@@ -33,7 +33,7 @@ def demean(x):
 
 nobs = 500
 lb, ub = -1.0, 1.0  # for Poisson
-# lb, ub = -0.75, 2 #0.75 #for Binomial
+# lb, ub = -0.75, 2 #0.75 # for Binomial
 x1 = R.uniform(lb, ub, nobs)  # R.standard_normal(nobs)
 x1 = np.linspace(lb, ub, nobs)
 x1.sort()
@@ -65,7 +65,7 @@ print("z.std()", z.std())
 # with standardize I get better values, but I do not know what the true params are
 print(z.mean(), z.min(), z.max())
 
-# y += z  #noise
+# y += z  # noise
 y = z
 
 d = np.array([x1, x2]).T
@@ -134,7 +134,7 @@ if example > 1:
 
     #    counter = 2
     #    for ii, xx in zip(['z', 'x1', 'x2'], [z, x1, x2]):
-    #        #plt.figure()
+    #        # plt.figure()
     #        plt.subplot(2, 2, counter)
     #        plt.plot(xx, p, '.')
     #        plt.plot(xx, yp, 'b-', label='true')
@@ -156,22 +156,22 @@ plt.figure()
 plt.plot(x2, standardize(m.smoothers[1](x2)), "r")
 plt.plot(x2, standardize(f2(x2)), linewidth=2)
 
-##y_pred = m.results.predict(d)
-##plt.figure()
-##plt.plot(z, p, '.')
-##plt.plot(z, yp, 'b-', label='true')
-##plt.plot(z, y_pred, 'r-', label='AdditiveModel')
-##plt.legend()
-##plt.title('gam.AdditiveModel')
+# y_pred = m.results.predict(d)
+# plt.figure()
+# plt.plot(z, p, '.')
+# plt.plot(z, yp, 'b-', label='true')
+# plt.plot(z, y_pred, 'r-', label='AdditiveModel')
+# plt.legend()
+# plt.title('gam.AdditiveModel')
 
 
 # plt.show()
 
 
-##     pylab.figure(num=1)
-##     pylab.plot(x1, standardize(m.smoothers[0](x1)), 'b')
-##     pylab.plot(x1, standardize(f1(x1)), linewidth=2)
-##     pylab.figure(num=2)
-##     pylab.plot(x2, standardize(m.smoothers[1](x2)), 'b')
-##     pylab.plot(x2, standardize(f2(x2)), linewidth=2)
-##     pylab.show()
+#     pylab.figure(num=1)
+#     pylab.plot(x1, standardize(m.smoothers[0](x1)), 'b')
+#     pylab.plot(x1, standardize(f1(x1)), linewidth=2)
+#     pylab.figure(num=2)
+#     pylab.plot(x2, standardize(m.smoothers[1](x2)), 'b')
+#     pylab.plot(x2, standardize(f2(x2)), linewidth=2)
+#     pylab.show()

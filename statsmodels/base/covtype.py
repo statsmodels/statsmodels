@@ -63,7 +63,7 @@ def normalize_cov_type(cov_type):
     return cov_type
 
 
-def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
+def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
     """create new results instance with robust covariance as default
 
     Parameters
@@ -197,172 +197,198 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
     cov_type = normalize_cov_type(cov_type)
 
-    if 'kernel' in kwds:
-        kwds['weights_func'] = kwds.pop('kernel')
-    if 'weights_func' in kwds and not callable(kwds['weights_func']):
-        kwds['weights_func'] = sw.kernel_dict[kwds['weights_func']]
-
+    if "kernel" in kwds:
+        kwds["weights_func"] = kwds.pop("kernel")
+    if "weights_func" in kwds and not callable(kwds["weights_func"]):
+        kwds["weights_func"] = sw.kernel_dict[kwds["weights_func"]]
     # pop because HCx raises if any kwds
-    sc_factor = kwds.pop('scaling_factor', None)
+
+    sc_factor = kwds.pop("scaling_factor", None)
 
     # TODO: make separate function that returns a robust cov plus info
-    use_self = kwds.pop('use_self', False)
+
+    use_self = kwds.pop("use_self", False)
     if use_self:
         res = self
     else:
         # this does not work for most models, use raw instance instead from fit
-        res = self.__class__(self.model, self.params,
-                   normalized_cov_params=self.normalized_cov_params,
-                   scale=self.scale)
 
+        res = self.__class__(
+            self.model,
+            self.params,
+            normalized_cov_params=self.normalized_cov_params,
+            scale=self.scale,
+        )
     res.cov_type = cov_type
     # use_t might already be defined by the class, and already set
+
     if use_t is None:
         use_t = self.use_t
-    res.cov_kwds = {'use_t':use_t}  # store for information
+    res.cov_kwds = {"use_t": use_t}  # store for information
     res.use_t = use_t
 
     adjust_df = False
-    if cov_type in ['cluster', 'hac-panel', 'hac-groupsum']:
-        df_correction = kwds.get('df_correction', None)
+    if cov_type in ["cluster", "hac-panel", "hac-groupsum"]:
+        df_correction = kwds.get("df_correction", None)
         # TODO: check also use_correction, do I need all combinations?
+
         if df_correction is not False:  # i.e. in [None, True]:
             # user did not explicitely set it to False
-            adjust_df = True
 
-    res.cov_kwds['adjust_df'] = adjust_df
+            adjust_df = True
+    res.cov_kwds["adjust_df"] = adjust_df
 
     # verify and set kwds, and calculate cov
     # TODO: this should be outsourced in a function so we can reuse it in
     #       other models
     # TODO: make it DRYer   repeated code for checking kwds
-    if cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
-        if kwds:
-            raise ValueError('heteroscedasticity robust covariance '
-                             'does not use keywords')
-        res.cov_kwds['description'] = descriptions[cov_type.upper()]
 
-        res.cov_params_default = getattr(self, 'cov_' + cov_type.upper(), None)
+    if cov_type.upper() in ("HC0", "HC1", "HC2", "HC3"):
+        if kwds:
+            raise ValueError(
+                "heteroscedasticity robust covariance " "does not use keywords"
+            )
+        res.cov_kwds["description"] = descriptions[cov_type.upper()]
+
+        res.cov_params_default = getattr(self, "cov_" + cov_type.upper(), None)
         if res.cov_params_default is None:
             # results classes that do not have cov_HCx attribute
-            res.cov_params_default = sw.cov_white_simple(self,
-                                                         use_correction=False)
-    elif cov_type.lower() == 'hac':
-        maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
-        res.cov_kwds['maxlags'] = maxlags
-        weights_func = kwds.get('weights_func', sw.weights_bartlett)
-        res.cov_kwds['weights_func'] = weights_func
-        use_correction = kwds.get('use_correction', False)
-        res.cov_kwds['use_correction'] = use_correction
-        res.cov_kwds['description'] = descriptions['HAC'].format(
-            maxlags=maxlags, correction=['without', 'with'][use_correction])
 
-        res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
-                                             weights_func=weights_func,
-                                             use_correction=use_correction)
-    elif cov_type.lower() == 'cluster':
-        #cluster robust standard errors, one- or two-way
-        groups = kwds['groups']
-        if not hasattr(groups, 'shape'):
+            res.cov_params_default = sw.cov_white_simple(self, use_correction=False)
+    elif cov_type.lower() == "hac":
+        maxlags = kwds["maxlags"]  # required?, default in cov_hac_simple
+        res.cov_kwds["maxlags"] = maxlags
+        weights_func = kwds.get("weights_func", sw.weights_bartlett)
+        res.cov_kwds["weights_func"] = weights_func
+        use_correction = kwds.get("use_correction", False)
+        res.cov_kwds["use_correction"] = use_correction
+        res.cov_kwds["description"] = descriptions["HAC"].format(
+            maxlags=maxlags, correction=["without", "with"][use_correction]
+        )
+
+        res.cov_params_default = sw.cov_hac_simple(
+            self,
+            nlags=maxlags,
+            weights_func=weights_func,
+            use_correction=use_correction,
+        )
+    elif cov_type.lower() == "cluster":
+        # cluster robust standard errors, one- or two-way
+
+        groups = kwds["groups"]
+        if not hasattr(groups, "shape"):
             groups = np.asarray(groups).T
-
         if groups.ndim >= 2:
             groups = groups.squeeze()
-
-        res.cov_kwds['groups'] = groups
-        use_correction = kwds.get('use_correction', True)
-        res.cov_kwds['use_correction'] = use_correction
+        res.cov_kwds["groups"] = groups
+        use_correction = kwds.get("use_correction", True)
+        res.cov_kwds["use_correction"] = use_correction
         if groups.ndim == 1:
             if adjust_df:
                 # need to find number of groups
                 # duplicate work
+
                 self.n_groups = n_groups = len(np.unique(groups))
-            res.cov_params_default = sw.cov_cluster(self, groups,
-                                             use_correction=use_correction)
-
+            res.cov_params_default = sw.cov_cluster(
+                self, groups, use_correction=use_correction
+            )
         elif groups.ndim == 2:
-            if hasattr(groups, 'values'):
+            if hasattr(groups, "values"):
                 groups = groups.values
-
             if adjust_df:
                 # need to find number of groups
                 # duplicate work
-                n_groups0 = len(np.unique(groups[:,0]))
+
+                n_groups0 = len(np.unique(groups[:, 0]))
                 n_groups1 = len(np.unique(groups[:, 1]))
                 self.n_groups = (n_groups0, n_groups1)
                 n_groups = min(n_groups0, n_groups1)  # use for adjust_df
-
             # Note: sw.cov_cluster_2groups has 3 returns
-            res.cov_params_default = sw.cov_cluster_2groups(self, groups,
-                                         use_correction=use_correction)[0]
-        else:
-            raise ValueError('only two groups are supported')
-        res.cov_kwds['description'] = descriptions['cluster']
 
-    elif cov_type.lower() == 'hac-panel':
-        #cluster robust standard errors
-        res.cov_kwds['time'] = time = kwds.get('time', None)
-        res.cov_kwds['groups'] = groups = kwds.get('groups', None)
+            res.cov_params_default = sw.cov_cluster_2groups(
+                self, groups, use_correction=use_correction
+            )[0]
+        else:
+            raise ValueError("only two groups are supported")
+        res.cov_kwds["description"] = descriptions["cluster"]
+    elif cov_type.lower() == "hac-panel":
+        # cluster robust standard errors
+
+        res.cov_kwds["time"] = time = kwds.get("time", None)
+        res.cov_kwds["groups"] = groups = kwds.get("groups", None)
         # TODO: nlags is currently required
-        #nlags = kwds.get('nlags', True)
-        #res.cov_kwds['nlags'] = nlags
+        # nlags = kwds.get('nlags', True)
+        # res.cov_kwds['nlags'] = nlags
         # TODO: `nlags` or `maxlags`
-        res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
-        use_correction = kwds.get('use_correction', 'hac')
-        res.cov_kwds['use_correction'] = use_correction
-        weights_func = kwds.get('weights_func', sw.weights_bartlett)
-        res.cov_kwds['weights_func'] = weights_func
+
+        res.cov_kwds["maxlags"] = maxlags = kwds["maxlags"]
+        use_correction = kwds.get("use_correction", "hac")
+        res.cov_kwds["use_correction"] = use_correction
+        weights_func = kwds.get("weights_func", sw.weights_bartlett)
+        res.cov_kwds["weights_func"] = weights_func
         # TODO: clumsy time index in cov_nw_panel
+
         if groups is not None:
             groups = np.asarray(groups)
             tt = (np.nonzero(groups[:-1] != groups[1:])[0] + 1).tolist()
             nobs_ = len(groups)
         elif time is not None:
             # TODO: clumsy time index in cov_nw_panel
+
             time = np.asarray(time)
             tt = (np.nonzero(time[1:] < time[:-1])[0] + 1).tolist()
             nobs_ = len(time)
         else:
-            raise ValueError('either time or groups needs to be given')
+            raise ValueError("either time or groups needs to be given")
         groupidx = lzip([0] + tt, tt + [nobs_])
         self.n_groups = n_groups = len(groupidx)
-        res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
-                                            weights_func=weights_func,
-                                            use_correction=use_correction)
-        res.cov_kwds['description'] = descriptions['HAC-Panel']
-
-    elif cov_type.lower() == 'hac-groupsum':
+        res.cov_params_default = sw.cov_nw_panel(
+            self,
+            maxlags,
+            groupidx,
+            weights_func=weights_func,
+            use_correction=use_correction,
+        )
+        res.cov_kwds["description"] = descriptions["HAC-Panel"]
+    elif cov_type.lower() == "hac-groupsum":
         # Driscoll-Kraay standard errors
-        res.cov_kwds['time'] = time = kwds['time']
+
+        res.cov_kwds["time"] = time = kwds["time"]
         # TODO: nlags is currently required
-        #nlags = kwds.get('nlags', True)
-        #res.cov_kwds['nlags'] = nlags
+        # nlags = kwds.get('nlags', True)
+        # res.cov_kwds['nlags'] = nlags
         # TODO: `nlags` or `maxlags`
-        res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
-        use_correction = kwds.get('use_correction', 'cluster')
-        res.cov_kwds['use_correction'] = use_correction
-        weights_func = kwds.get('weights_func', sw.weights_bartlett)
-        res.cov_kwds['weights_func'] = weights_func
+
+        res.cov_kwds["maxlags"] = maxlags = kwds["maxlags"]
+        use_correction = kwds.get("use_correction", "cluster")
+        res.cov_kwds["use_correction"] = use_correction
+        weights_func = kwds.get("weights_func", sw.weights_bartlett)
+        res.cov_kwds["weights_func"] = weights_func
         if adjust_df:
             # need to find number of groups
-            tt = (np.nonzero(time[1:] < time[:-1])[0] + 1)
-            self.n_groups = n_groups = len(tt) + 1
-        res.cov_params_default = sw.cov_nw_groupsum(self, maxlags, time,
-                                        weights_func=weights_func,
-                                        use_correction=use_correction)
-        res.cov_kwds['description'] = descriptions['HAC-Groupsum']
-    else:
-        raise ValueError('cov_type not recognized. See docstring for ' +
-                         'available options and spelling')
 
+            tt = np.nonzero(time[1:] < time[:-1])[0] + 1
+            self.n_groups = n_groups = len(tt) + 1
+        res.cov_params_default = sw.cov_nw_groupsum(
+            self,
+            maxlags,
+            time,
+            weights_func=weights_func,
+            use_correction=use_correction,
+        )
+        res.cov_kwds["description"] = descriptions["HAC-Groupsum"]
+    else:
+        raise ValueError(
+            "cov_type not recognized. See docstring for "
+            + "available options and spelling"
+        )
     # generic optional factor to scale covariance
 
-    res.cov_kwds['scaling_factor'] = sc_factor
+    res.cov_kwds["scaling_factor"] = sc_factor
     if sc_factor is not None:
         res.cov_params_default *= sc_factor
-
     if adjust_df:
         # Note: df_resid is used for scale and others, add new attribute
-        res.df_resid_inference = n_groups - 1
 
+        res.df_resid_inference = n_groups - 1
     return res

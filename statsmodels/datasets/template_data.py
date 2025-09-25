@@ -15,7 +15,7 @@ DESCRSHORT = """A short description."""
 
 DESCRLONG = """A longer description of the dataset."""
 
-#suggested notes
+# suggested notes
 NOTE = """
 ::
 

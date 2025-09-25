@@ -5,11 +5,11 @@ import pytest
 
 @pytest.mark.xfail(strict=True)
 def test_regression_summary():
-    #little luck getting this test to pass (It should?), can be used for
-    #visual testing of the regression.summary table
-    #fixed, might fail at minute changes
+    # little luck getting this test to pass (It should?), can be used for
+    # visual testing of the regression.summary table
+    # fixed, might fail at minute changes
     from statsmodels.regression.tests.test_regression import TestOLS
-    #from test_regression import TestOLS
+    # from test_regression import TestOLS
     import time
     from string import Template
     t = time.localtime()
@@ -62,20 +62,11 @@ def test_regression_summary():
     finally:
         warnings.filters = original_filters  # restore filters
 
-##    print('###')
-##    print(r_summary)
-##    print('###')
-##    print(desired)
-##    print('###')
     actual = r_summary
     import numpy as np
     actual = '\n'.join(line.rstrip() for line in actual.split('\n'))
-#    print len(actual), len(desired)
-#    print repr(actual)
-#    print repr(desired)
 #    counter = 0
 #    for c1,c2 in zip(actual, desired):
 #        if not c1==c2 and counter<20:
-#            print c1,c2
 #            counter += 1
     np.testing.assert_(actual == desired)

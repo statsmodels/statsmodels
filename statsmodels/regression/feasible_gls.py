@@ -34,15 +34,15 @@ class GLSHet2(GLS):
         super(self.__class__, self).__init__(endog, exog, sigma=sigma)
 
     def fit(self, lambd=1.):
-        #maybe iterate
-        #preliminary estimate
+        # maybe iterate
+        # preliminary estimate
         res_gls = GLS(self.endog, self.exog, sigma=self.sigma).fit()
         res_resid = OLS(res_gls.resid**2, self.exog_var).fit()
-        #or  log-link
-        #res_resid = OLS(np.log(res_gls.resid**2), self.exog_var).fit()
-        #here I could use whiten and current instance instead of delegating
-        #but this is easier
-        #see pattern of GLSAR, calls self.initialize and self.fit
+        # or  log-link
+        # res_resid = OLS(np.log(res_gls.resid**2), self.exog_var).fit()
+        # here I could use whiten and current instance instead of delegating
+        # but this is easier
+        # see pattern of GLSAR, calls self.initialize and self.fit
         res_wls = WLS(self.endog, self.exog, weights=1./res_resid.fittedvalues).fit()
 
         res_wls._results.results_residual_regression = res_resid
@@ -189,13 +189,13 @@ class GLSHet(WLS):
                 # estimate heteroscedasticity
                 res_resid = OLS(self.link(results.resid**2), self.exog_var).fit()
                 self.history['ols_params'].append(res_resid.params)
-                #update weights
+                # update weights
                 self.weights = 1./self.linkinv(res_resid.fittedvalues)
                 self.weights /= self.weights.max()  # not required
                 self.weights[self.weights < 1e-14] = 1e-14  # clip
-                # print 'in iter', i, self.weights.var() #debug, do weights change
+                # print 'in iter', i, self.weights.var() # debug, do weights change
                 self.initialize()
 
-        #note results is the wrapper, results._results is the results instance
+        # note results is the wrapper, results._results is the results instance
         results._results.results_residual_regression = res_resid
         return results

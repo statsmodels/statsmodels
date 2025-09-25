@@ -38,10 +38,10 @@ class TestGLSARGretl:
     def test_all(self):
 
         d = macrodata.load_pandas().data
-        #import datasetswsm.greene as g
-        #d = g.load('5-1')
+        # import datasetswsm.greene as g
+        # d = g.load('5-1')
 
-        #growth rates
+        # growth rates
         gs_l_realinv = 400 * np.diff(np.log(d['realinv'].values))
         gs_l_realgdp = 400 * np.diff(np.log(d['realgdp'].values))
 
@@ -49,7 +49,7 @@ class TestGLSARGretl:
         exogg = add_constant(np.c_[gs_l_realgdp, d['realint'][:-1].values])
 
         res_ols = OLS(endogg, exogg).fit()
-        #print res_ols.params
+        # print res_ols.params
 
         mod_g1 = GLSAR(endogg, exogg, rho=-0.108136)
         res_g1 = mod_g1.fit()
@@ -66,7 +66,7 @@ class TestGLSARGretl:
             [-0.579253, 0.268009, -2.161, 0.0319, -1.10777, -0.0507346]
         ])
 
-        #Statistics based on the rho-differenced data:
+        # Statistics based on the rho-differenced data:
 
         result_gretl_g1 = dict(
             endog_mean=("Mean dependent var", 3.113973),
@@ -81,10 +81,10 @@ class TestGLSARGretl:
             dw=("Durbin-Watson", 1.993858)
         )
 
-        #fstatistic, p-value, df1, df2
+        # fstatistic, p-value, df1, df2
         reset_2_3 = [5.219019, 0.00619, 2, 197, "f"]
         reset_2 = [7.268492, 0.00762, 1, 198, "f"]
-        #LM-statistic, p-value, df
+        # LM-statistic, p-value, df
         arch_4 = [7.30776, 0.120491, 4, "chi2"]
 
         # multicollinearity
@@ -94,25 +94,25 @@ class TestGLSARGretl:
         # tests
         res = res_g1  # with rho from Gretl
 
-        #basic
+        # basic
 
         assert_almost_equal(res.params, partable[:,0], 4)
         assert_almost_equal(res.bse, partable[:,1], 6)
         assert_almost_equal(res.tvalues, partable[:,2], 2)
 
         assert_almost_equal(res.ssr, result_gretl_g1['ssr'][1], decimal=2)
-        #assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) # not in gretl
-        #assert_almost_equal(res.rsquared, result_gretl_g1['rsquared'][1], decimal=7) # FAIL
-        #assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=7) # FAIL
+        # assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) # not in gretl
+        # assert_almost_equal(res.rsquared, result_gretl_g1['rsquared'][1], decimal=7) # FAIL
+        # assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=7) # FAIL
         assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1['mse_resid_sqrt'][1], decimal=5)
         assert_almost_equal(res.fvalue, result_gretl_g1['fvalue'][1], decimal=4)
         assert_allclose(res.f_pvalue,
                         result_gretl_g1['f_pvalue'][1],
                         rtol=1e-2)
-        #assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
+        # assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
 
-        #arch
-        #sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
+        # arch
+        # sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
         sm_arch = smsdia.het_arch(res.wresid, nlags=4)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=4)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
@@ -120,30 +120,30 @@ class TestGLSARGretl:
         # tests
         res = res_g2  # with estimated rho
 
-        #estimated lag coefficient
+        # estimated lag coefficient
         assert_almost_equal(res.model.rho, rho, decimal=3)
 
-        #basic
+        # basic
         assert_almost_equal(res.params, partable[:,0], 4)
         assert_almost_equal(res.bse, partable[:,1], 3)
         assert_almost_equal(res.tvalues, partable[:,2], 2)
 
         assert_almost_equal(res.ssr, result_gretl_g1['ssr'][1], decimal=2)
-        #assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) #not in gretl
-        #assert_almost_equal(res.rsquared, result_gretl_g1['rsquared'][1], decimal=7) #FAIL
-        #assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=7) #FAIL
+        # assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) # not in gretl
+        # assert_almost_equal(res.rsquared, result_gretl_g1['rsquared'][1], decimal=7) # FAIL
+        # assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=7) # FAIL
         assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1['mse_resid_sqrt'][1], decimal=5)
         assert_almost_equal(res.fvalue, result_gretl_g1['fvalue'][1], decimal=0)
         assert_almost_equal(res.f_pvalue, result_gretl_g1['f_pvalue'][1], decimal=6)
-        #assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
+        # assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
 
         c = oi.reset_ramsey(res, degree=2)
         compare_ftest(c, reset_2, decimal=(2,4))
         c = oi.reset_ramsey(res, degree=3)
         compare_ftest(c, reset_2_3, decimal=(2,4))
 
-        #arch
-        #sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
+        # arch
+        # sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
         sm_arch = smsdia.het_arch(res.wresid, nlags=4)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=1)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=2)
@@ -239,7 +239,7 @@ class TestGLSARGretl:
           with p-value = 3.94837e-005:
         '''
 
-        #no idea what this is
+        # no idea what this is
         '''
         Augmented regression for common factor test
         OLS, using observations 1959:3-2009:3 (T = 201)
@@ -261,14 +261,14 @@ class TestGLSARGretl:
           Test statistic: F(2, 195) = 0.426391, with p-value = 0.653468
         '''
 
-        ################ with OLS, HAC errors
+        # with OLS, HAC errors
 
-        #Model 5: OLS, using observations 1959:2-2009:3 (T = 202)
-        #Dependent variable: ds_l_realinv
-        #HAC standard errors, bandwidth 4 (Bartlett kernel)
+        # Model 5: OLS, using observations 1959:2-2009:3 (T = 202)
+        # Dependent variable: ds_l_realinv
+        # HAC standard errors, bandwidth 4 (Bartlett kernel)
 
-        #coefficient   std. error   t-ratio    p-value 95% CONFIDENCE INTERVAL
-        #for confidence interval t(199, 0.025) = 1.972
+        # coefficient   std. error   t-ratio    p-value 95% CONFIDENCE INTERVAL
+        # for confidence interval t(199, 0.025) = 1.972
 
         partable = np.array([
             [-9.48167,      1.17709,     -8.055,    7.17e-014, -11.8029, -7.16049],
@@ -293,14 +293,14 @@ class TestGLSARGretl:
                     dw=("Durbin-Watson", 2.213805)
         )
 
-        #for logs: dropping 70 nan or incomplete observations, T=133
-        #(res_ols.model.exog <=0).any(1).sum() = 69  ?not 70
+        # for logs: dropping 70 nan or incomplete observations, T=133
+        # (res_ols.model.exog <=0).any(1).sum() = 69  ?not 70
         linear_squares = [7.52477, 0.0232283, 2, "chi2"]
 
-        #Autocorrelation, Breusch-Godfrey test for autocorrelation up to order 4
+        # Autocorrelation, Breusch-Godfrey test for autocorrelation up to order 4
 
-        #break
-        #see cusum results in files
+        # break
+        # see cusum results in files
 
         arch_4 = [3.43473, 0.487871, 4, "chi2"]
 
@@ -315,7 +315,7 @@ class TestGLSARGretl:
         fpath = os.path.join(cur_dir, 'results/leverage_influence_ols_nostars.txt')
         lev = np.genfromtxt(fpath, skip_header=3, skip_footer=1,
                             converters={0:lambda s: s})
-        #either numpy 1.6 or python 3.2 changed behavior
+        # either numpy 1.6 or python 3.2 changed behavior
         if np.isnan(lev[-1]['f1']):
             lev = np.genfromtxt(fpath, skip_header=3, skip_footer=2,
                                 converters={0:lambda s: s})
@@ -339,8 +339,8 @@ class TestGLSARGretl:
         # f-value is based on cov_hac I guess
         # res2 = res.get_robustcov_results(cov_type='HC1')
         # TODO: fvalue differs from Gretl, trying any of the HCx
-        # assert_almost_equal(res2.fvalue, result_gretl_g1['fvalue'][1], decimal=0) #FAIL
-        # assert_approx_equal(res.f_pvalue, result_gretl_g1['f_pvalue'][1], significant=1) #FAIL
+        # assert_almost_equal(res2.fvalue, result_gretl_g1['fvalue'][1], decimal=0) # FAIL
+        # assert_approx_equal(res.f_pvalue, result_gretl_g1['f_pvalue'][1], significant=1) # FAIL
         # assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
 
         c = oi.reset_ramsey(res, degree=2)
@@ -359,8 +359,8 @@ class TestGLSARGretl:
         hw = smsdia.het_white(res.resid, res.model.exog)
         assert_almost_equal(hw[:2], het_white[:2], 6)
 
-        #arch
-        #sm_arch = smsdia.acorr_lm(res.resid**2, maxlag=4, autolag=None)
+        # arch
+        # sm_arch = smsdia.acorr_lm(res.resid**2, maxlag=4, autolag=None)
         sm_arch = smsdia.het_arch(res.resid, nlags=4)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=5)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
@@ -368,11 +368,11 @@ class TestGLSARGretl:
         [oi.variance_inflation_factor(res.model.exog, k) for k in [1,2]]
 
         infl = oi.OLSInfluence(res_ols)
-        #print np.max(np.abs(lev['DFFITS'] - infl.dffits[0]))
-        #print np.max(np.abs(lev['leverage'] - infl.hat_matrix_diag))
-        #print np.max(np.abs(lev['influence'] - infl.influence))  #just added this based on Gretl
+        # print np.max(np.abs(lev['DFFITS'] - infl.dffits[0]))
+        # print np.max(np.abs(lev['leverage'] - infl.hat_matrix_diag))
+        # print np.max(np.abs(lev['influence'] - infl.influence))  # just added this based on Gretl
 
-        #just rough test, low decimal in Gretl output,
+        # just rough test, low decimal in Gretl output,
         assert_almost_equal(lev['residual'], res.resid, decimal=3)
         assert_almost_equal(lev['DFFITS'], infl.dffits[0], decimal=3)
         assert_almost_equal(lev['leverage'], infl.hat_matrix_diag, decimal=3)
@@ -380,7 +380,7 @@ class TestGLSARGretl:
 
 
 def test_GLSARlag():
-    #test that results for lag>1 is close to lag=1, and smaller ssr
+    # test that results for lag>1 is close to lag=1, and smaller ssr
 
     from statsmodels.datasets import macrodata
     d2 = macrodata.load_pandas().data

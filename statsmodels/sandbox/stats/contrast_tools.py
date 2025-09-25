@@ -454,9 +454,9 @@ def groupmean_d(x, d):
 
     """
     x = np.asarray(x)
-    ##    if x.ndim == 1:
-    ##        nvars = 1
-    ##    else:
+    #    if x.ndim == 1:
+    #        nvars = 1
+    #    else:
     nvars = x.ndim + 1
     sli = [slice(None)] + [None] * (nvars - 2) + [slice(None)]
     return (x[..., None] * d[sli]).sum(0) * 1.0 / d.sum(0)

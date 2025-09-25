@@ -30,7 +30,7 @@ def mvn_loglike_sum(x, sigma):
     llf = -np.log(SSR) * nobs2      # concentrated likelihood
     llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
     if np.any(sigma) and sigma.ndim == 2:
-        #FIXME: robust-enough check?  unneeded if _det_sigma gets defined
+        # FIXME: robust-enough check?  unneeded if _det_sigma gets defined
         llf -= .5*np.log(np.linalg.det(sigma))
     return llf
 
@@ -44,8 +44,8 @@ def mvn_loglike(x, sigma):
     no checking of correct inputs
     use of inv and log-det should be replace with something more efficient
     '''
-    #see numpy thread
-    #Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
+    # see numpy thread
+    # Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
     sigmainv = linalg.inv(sigma)
     logdetsigma = np.log(np.linalg.det(sigma))
     nobs = len(x)
@@ -66,8 +66,8 @@ def mvn_loglike_chol(x, sigma):
     no checking of correct inputs
     use of inv and log-det should be replace with something more efficient
     '''
-    #see numpy thread
-    #Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
+    # see numpy thread
+    # Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
     sigmainv = np.linalg.inv(sigma)
     cholsigmainv = np.linalg.cholesky(sigmainv).T
     x_whitened = np.dot(cholsigmainv, x)
@@ -83,38 +83,41 @@ def mvn_loglike_chol(x, sigma):
     llf -= logdetsigma
     llf *= 0.5
     return llf, logdetsigma, 2 * np.sum(np.log(np.diagonal(cholsigmainv)))
-#0.5 * np.dot(x_whitened.T, x_whitened) + nobs * np.log(2 * np.pi) + logdetsigma)
+    # 0.5 * np.dot(x_whitened.T, x_whitened) + nobs * np.log(2 * np.pi) + logdetsigma)
 
 
 def mvn_nloglike_obs(x, sigma):
-    '''loglike multivariate normal
+    """loglike multivariate normal
 
     assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs)
 
     brute force from formula
     no checking of correct inputs
     use of inv and log-det should be replace with something more efficient
-    '''
-    #see numpy thread
-    #Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
+    """
+    # see numpy thread
+    # Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
 
-    #Still wasteful to calculate pinv first
+    # Still wasteful to calculate pinv first
     sigmainv = np.linalg.inv(sigma)
     cholsigmainv = np.linalg.cholesky(sigmainv).T
-    #2 * np.sum(np.log(np.diagonal(np.linalg.cholesky(A)))) #Dag mailinglist
+    # 2 * np.sum(np.log(np.diagonal(np.linalg.cholesky(A)))) # Dag mailinglist
     # logdet not needed ???
-    #logdetsigma = 2 * np.sum(np.log(np.diagonal(cholsigmainv)))
+    # logdetsigma = 2 * np.sum(np.log(np.diagonal(cholsigmainv)))
     x_whitened = np.dot(cholsigmainv, x)
 
     # Unused, commented out
     # sigmainv = linalg.cholesky(sigma)
     # logdetsigma = np.log(np.linalg.det(sigma))
 
-    sigma2 = 1.  # error variance is included in sigma
+    sigma2 = 1.0  # error variance is included in sigma
 
-    llike = 0.5 * (np.log(sigma2) - 2.0 * np.log(np.diagonal(cholsigmainv))
-                          + (x_whitened**2) / sigma2
-                          + np.log(2*np.pi))
+    llike = 0.5 * (
+            np.log(sigma2)
+            - 2.0 * np.log(np.diagonal(cholsigmainv))
+            + (x_whitened**2) / sigma2
+            + np.log(2 * np.pi)
+    )
 
     return llike
 
@@ -155,13 +158,13 @@ class MLEGLS(GenericLikelihoodModel):
         '''
         ar = np.r_[[1], -params[:self.nar]]
         ma = np.r_[[1], params[-self.nma:]]
-        #print('ar', ar
-        #print('ma', ma
-        #print('nobs', nobs
+        # print('ar', ar
+        # print('ma', ma
+        # print('nobs', nobs
         autocov = arma_acovf(ar, ma, nobs=nobs)
-        #print('arma_acovf(%r, %r, nobs=%d)' % (ar, ma, nobs)
-        #print(autocov.shape
-        #something is strange  fixed in aram_acovf
+        # print('arma_acovf(%r, %r, nobs=%d)' % (ar, ma, nobs)
+        # print(autocov.shape
+        # something is strange  fixed in aram_acovf
         autocov = autocov[:nobs]
         sigma = toeplitz(autocov)
         return sigma
@@ -179,7 +182,7 @@ class MLEGLS(GenericLikelihoodModel):
         if not wasinvertible:
             start_params = res.params.copy()
             start_params[self.nar: self.nar+self.nma] = mainv[1:]
-            #need to add args kwds
+            # need to add args kwds
             res = self.fit(start_params=start_params)
         return res
 
@@ -205,17 +208,17 @@ if __name__ == '__main__':
     arpoly, mapoly = getpoly(mod, res.params[:-1])
 
     data = sunspots.load()
-    #ys = data.endog[-100:]
-##    ys = data.endog[12:]-data.endog[:-12]
-##    ys -= ys.mean()
-##    mods = MLEGLS(ys)
-##    mods.nar, mods.nma = 13, 1   #needs to be added, no init method
-##    mods.nobs = len(ys)
-##    ress = mods.fit(start_params=np.r_[0.4, np.zeros(12), [0.2, 5.]],maxiter=200)
-##    print(ress.params
-##    import matplotlib.pyplot as plt
-##    plt.plot(data.endog[1])
-##    #plt.show()
+    # ys = data.endog[-100:]
+    # ys = data.endog[12:]-data.endog[:-12]
+    # ys -= ys.mean()
+    # mods = MLEGLS(ys)
+    # mods.nar, mods.nma = 13, 1   # needs to be added, no init method
+    # mods.nobs = len(ys)
+    # ress = mods.fit(start_params=np.r_[0.4, np.zeros(12), [0.2, 5.]],maxiter=200)
+    # print(ress.params
+    # import matplotlib.pyplot as plt
+    # plt.plot(data.endog[1])
+    # # plt.show()
 
     sigma = mod._params2cov(res.params[:-1], nobs) * res.params[-1]**2
     print(mvn_loglike(y, sigma))

@@ -126,7 +126,7 @@ if __name__ == "__main__":
         moddist = gmm.DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto)
         # produces non-sense because optimal weighting matrix calculations do not
         # apply to this case
-        # resgp = moddist.fit() #now with 'cov': LinAlgError: Singular matrix
+        # resgp = moddist.fit() # now with 'cov': LinAlgError: Singular matrix
         pit1, wit1 = moddist.fititer([1.5, 0, 1.5], maxiter=1)
         print(pit1)
         p1 = moddist.fitgmm([1.5, 0, 1.5])

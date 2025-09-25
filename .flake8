@@ -2,30 +2,22 @@
 exclude = .git,build,docs,archive
 max-line-length = 88
 extend-ignore =
-    B007,
-    # Loop control variable 'i' not used within the loop body
-    B020,
-    # Found for loop that reassigns the iterable it is iterating with each iterable value
-    B023,
-    # Function definition does not bind loop variable
-    B026,
-    # Star-arg unpacking after a keyword argument is strongly discouraged
-    W503,
-    # W503: line break before binary operator
-    W504,
-    # W504: line break after binary operator
-    E203,
-    # E203: Whitespace before ':' (Needed for black)
-    E127,
-    # E127: Continuation line over-indented for visual indent
-    E128,
-    # E128: Continuation line under-indented for visual indent
     E231,
     # E231: Missing whitespace after ',', ';', or ':'
-    E265,
-    # E265: Block comment should start with '# '
-    E266,
-    # E266: Too many leading '#' for block comment
+
+    # Bugbear codes
+    B007,
+    # B007: Loop control variable 'i' not used within the loop body
+    B020,
+    # B020Found for loop that reassigns the iterable it is iterating with each iterable value
+    B023,
+    # B023: Function definition does not bind loop variable
+    B026,
+    # B026: Star-arg unpacking after a keyword argument is strongly discouraged
+
+    # Required to allow black formatting
+    E203,
+    # E203: Whitespace before ':' (Needed for black)
     E501,
     # E501: Line too long (### > 88 characters) (Needed for black)
     E701,

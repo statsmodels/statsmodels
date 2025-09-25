@@ -23,9 +23,9 @@ def get_data():
     dt = pandas.read_csv(os.path.join(curdir, "racd10data_with_transformed.csv"))
 
     # Transformations compared to original data
-    ##dt3['income'] /= 10.
-    ##dt3['aget'] = (dt3['age'] - dt3['age'].min()) / 5.
-    ##dt3['aget2'] = dt3['aget']**2
+    # dt3['income'] /= 10.
+    # dt3['aget'] = (dt3['age'] - dt3['age'].min()) / 5.
+    # dt3['aget2'] = dt3['aget']**2
 
     # How do we do this with pandas
     mask = ~((np.asarray(dt["private"]) == 1) & (dt["medicaid"] == 1))

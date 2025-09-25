@@ -24,7 +24,7 @@ np.random.seed(8765993)
 # DGP: simple polynomial
 order = 3
 sigma_noise = 0.5
-nobs = 1000  # 1000 #with 1000, OLS and Additivemodel agree in params at 2 decimals
+nobs = 1000  # 1000 # with 1000, OLS and Additivemodel agree in params at 2 decimals
 lb, ub = -3.5, 4  # 2.5
 x1 = np.linspace(lb, ub, nobs)
 x2 = np.sin(2 * x1)
@@ -62,7 +62,7 @@ if example > 0:
     plt.figure()
     plt.plot(exog)
 
-    y_pred = m.results.mu  # + m.results.alpha #m.results.predict(d)
+    y_pred = m.results.mu  # + m.results.alpha # m.results.predict(d)
     plt.figure()
     plt.subplot(2, 2, 1)
     plt.plot(y, ".", alpha=0.25)

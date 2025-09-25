@@ -34,8 +34,8 @@ def plothist(x, distfn, args, loc, scale, right=1):
     # print(axlim)
     axlim[-1] = maxheight * 1.05
     # plt.axis(tuple(axlim))
-    ##    print(bins)
-    ##    print('args in plothist', args)
+    #    print(bins)
+    #    print('args in plothist', args)
     # add a 'best fit' line
     # yt = stats.norm.pdf( bins, loc=loc, scale=scale)
     yt = distfn.pdf(bins, loc=loc, scale=scale, *args)
@@ -308,7 +308,7 @@ targetdist = [f for f in categ[("open", "open")] if f not in not_good]
 not_good = ["wrapcauchy"]
 not_good = ["vonmises"]
 not_good = ["genexpon", "vonmises"]
-#'wrapcauchy' requires additional parameter (scale) in argcheck
+# 'wrapcauchy' requires additional parameter (scale) in argcheck
 targetdist = [f for f in contdist if f not in not_good]
 # targetdist = contdist
 # targetdist = not_good
@@ -434,11 +434,9 @@ if __name__ == "__main__":
             "%s ks-stat = %f, ks-pval = %f tail_prob = %f)"
             % (distname, ks_stat, ks_pval, tail_prob)
         )
-        ##    print('arg_est = %s, loc_est = %f scale_est = %f)' % \
-        ##          (repr(arg_est),loc_est,scale_est))
+        #    print('arg_est = %s, loc_est = %f scale_est = %f)' % \
+        #          (repr(arg_est),loc_est,scale_est))
         plothist(rvs, distfn, arg_est, loc_est, scale_est, right=rind)
         plt.savefig(
             os.path.join(imagedir, "%s%s%02d_%s.png" % (prefix, ri, ii, distname))
         )
-    ##plt.show()
-    ##plt.close()

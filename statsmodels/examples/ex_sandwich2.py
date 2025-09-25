@@ -27,7 +27,7 @@ except OSError:
     srs = dta.genfromdta("srs.dta")
 #    from statsmodels.datasets import webuse
 #    srs = webuse('srs', 'http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/')
-#    #does currently not cache file
+#    # does currently not cache file
 
 y = srs["api00"]
 # older numpy do not reorder

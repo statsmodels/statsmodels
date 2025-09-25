@@ -209,7 +209,7 @@ class BSpline:
 
     # FIXME: update parameter names, replace single character names
     # FIXME: `order` should be actual spline order (implemented as order+1)
-    ## FIXME: update the use of spline order in extension code (evaluate is recursively called)
+    # FIXME: update the use of spline order in extension code (evaluate is recursively called)
     # FIXME: eliminate duplicate M and m attributes (m is order, M is related to tau size)
 
     def __init__(self, knots, order=4, M=None, coef=None, x=None):

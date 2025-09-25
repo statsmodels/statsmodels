@@ -1,6 +1,5 @@
 import numpy as np
-from numpy import (dot, eye, diag_indices, zeros, ones, diag,
-        asarray, r_)
+from numpy import dot, eye, diag_indices, zeros, ones, diag, asarray, r_
 from numpy.linalg import solve
 
 
@@ -160,7 +159,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 #        D3 - sum((X[t]/X[t-1] / I[t]/I[t-1])**2)
 #        D4 - sum((X[t]/I[t] - X[t-1]/I[t-1])**2)
 #        D5 - sum((X[t]/I[t] / X[t-1]/I[t-1] - 1)**2)
-#NOTE: only D4 is the only one implemented, see IMF chapter 6.
+# NOTE: only D4 is the only one implemented, see IMF chapter 6.
 
     # check arrays and make 2d
     indicator = asarray(indicator)
@@ -195,7 +194,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         q = 0
 
     # make the aggregator matrix
-    #B = block_diag(*(ones((k,1)),)*m)
+    # B = block_diag(*(ones((k,1)),)*m)
     B = np.kron(np.eye(m), ones((k,1)))
 
     # following the IMF paper, we can do
@@ -239,7 +238,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
 
 if __name__ == "__main__":
-    #these will be the tests
+    # these will be the tests
     # from IMF paper
 
     # quarterly data
@@ -249,18 +248,22 @@ if __name__ == "__main__":
     benchmark = np.array([4000.,4161.4])
     x_imf = dentonm(indicator, benchmark, freq="aq")
 
-    imf_stata = np.array([969.8, 998.4, 1018.3, 1013.4, 1007.2, 1042.9,
-                                1060.3, 1051.0, 1040.6, 1066.5, 1071.7, 1051.0])
+    imf_stata = np.array([
+        969.8, 998.4, 1018.3, 1013.4, 1007.2, 1042.9,
+        1060.3, 1051.0, 1040.6, 1066.5, 1071.7, 1051.0
+    ])
     np.testing.assert_almost_equal(imf_stata, x_imf, 1)
 
     # Denton example
     zQ = np.array([50,100,150,100] * 5)
     Y = np.array([500,400,300,400,500])
     x_denton = dentonm(zQ, Y, freq="aq")
-    x_stata = np.array([64.334796,127.80616,187.82379,120.03526,56.563894,
-                    105.97568,147.50144,89.958987,40.547201,74.445963,
-                    108.34473,76.66211,42.763347,94.14664,153.41596,
-                    109.67405,58.290761,122.62556,190.41409,128.66959])
+    x_stata = np.array([
+        64.334796,127.80616,187.82379,120.03526,56.563894,
+        105.97568,147.50144,89.958987,40.547201,74.445963,
+        108.34473,76.66211,42.763347,94.14664,153.41596,
+        109.67405,58.290761,122.62556,190.41409,128.66959
+    ])
 
 
 """

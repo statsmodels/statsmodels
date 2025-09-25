@@ -192,7 +192,7 @@ class TestWeightstats:
 
         #        print ttest_ind(x1, x2)
         #        print ttest_ind(x1, x2, usevar='unequal')
-        #        #print ttest_ind(x1, x2, usevar='unequal')
+        #        # print ttest_ind(x1, x2, usevar='unequal')
         #        print stats.ttest_ind(x1, x2)
         #        print ttest_ind(x1, x2, usevar='unequal', alternative='larger')
         #        print ttest_ind(x1, x2, usevar='unequal', alternative='smaller')
@@ -252,7 +252,7 @@ class TestWeightstats:
         assert_almost_equal(np.corrcoef(x2r_2d.T), d2w_2d.corrcoef, 14)
 
         #        print d1w_2d.ttest_mean(3)
-        #        #scipy.stats.ttest is also vectorized
+        #        # scipy.stats.ttest is also vectorized
         #        print stats.ttest_1samp(x1r_2d, 3)
         t, p, d = d1w_2d.ttest_mean(3)
         assert_almost_equal([t, p], stats.ttest_1samp(x1r_2d, 3), 11)
@@ -746,13 +746,15 @@ class TestZTest:
         for tc in [ztest_, ztest_smaller, ztest_larger,
                    ztest_mu, ztest_smaller_mu, ztest_larger_mu]:
 
-            zstat, pval = ztest(x1, x2, value=tc.null_value,
-                                alternative=alternatives[tc.alternative])
+            zstat, pval = ztest(
+                x1, x2, value=tc.null_value, alternative=alternatives[tc.alternative]
+            )
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
-            zstat, pval = cm.ztest_ind(value=tc.null_value,
-                                alternative=alternatives[tc.alternative])
+            zstat, pval = cm.ztest_ind(
+                value=tc.null_value, alternative=alternatives[tc.alternative]
+            )
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
@@ -791,8 +793,9 @@ class TestZTest:
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
-            zstat, pval = d1.ztest_mean(value=tc.null_value,
-                                 alternative=alternatives[tc.alternative])
+            zstat, pval = d1.ztest_mean(
+                value=tc.null_value, alternative=alternatives[tc.alternative]
+            )
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 

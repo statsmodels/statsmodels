@@ -656,7 +656,7 @@ def test_var_constant():
 
     data.index = DatetimeIndex(index)
 
-    # with pytest.warns(ValueWarning):  #does not silence warning in test output
+    # with pytest.warns(ValueWarning):  # does not silence warning in test output
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=ValueWarning)
         model = VAR(data)

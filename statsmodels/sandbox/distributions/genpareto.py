@@ -14,7 +14,7 @@ from scipy.special import comb
 from scipy.stats.distributions import rv_continuous
 
 
-## Generalized Pareto  with reversed sign of c as in literature
+# Generalized Pareto  with reversed sign of c as in literature
 class genpareto2_gen(rv_continuous):
     def _argcheck(self, c):
         c = np.asarray(c)

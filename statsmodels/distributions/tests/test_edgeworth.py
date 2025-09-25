@@ -168,7 +168,7 @@ class TestExpandedNormal:
                 ExpandedNormal([0, 1, 101])
 
 
-## stolen verbatim from scipy/stats/tests/test_continuous_extra.py
+# stolen verbatim from scipy/stats/tests/test_continuous_extra.py
 DECIMAL = 8
 
 
@@ -213,7 +213,7 @@ def check_cdf_sf(distfn, arg, msg):
 
 
 def check_distribution_rvs(distfn, args, alpha, rvs):
-    ## signature changed to avoid calling a distribution by name
+    # signature changed to avoid calling a distribution by name
     # test from scipy.stats.tests
     # this version reuses existing random variables
     D, pval = stats.kstest(rvs, distfn.cdf, args=args, N=1000)

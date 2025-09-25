@@ -77,6 +77,6 @@ print("eigenvalues of numerical Hessian")
 print(np.linalg.eigh(np.linalg.inv(hb))[0])
 
 # store_params is only available in original test script
-##pp=np.array(store_params)
-##print pp.min(0)
-##print pp.max(0)
+# pp=np.array(store_params)
+# print pp.min(0)
+# print pp.max(0)

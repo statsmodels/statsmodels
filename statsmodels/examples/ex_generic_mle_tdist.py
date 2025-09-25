@@ -153,7 +153,7 @@ print(pp.min(0))
 print(pp.max(0))
 
 
-##################### Example: Pareto
+# Example: Pareto
 # estimating scale does not work yet, a bug somewhere ?
 # fit_ks works well, but no bse or other result statistics yet
 
@@ -326,10 +326,10 @@ mod_par.data.xnames = [
 
 res_par3 = mod_par.start_params = par_start_params[mod_par.fixed_paramsmask]
 res5 = mod_par.fit(start_params=mod_par.start_params)
-##res_parks2 = mod_par.fit_ks()
-##
-##res_parkst = mod_par.fit_ks1_trim()
-##print res_parkst
+# res_parks2 = mod_par.fit_ks()
+#
+# res_parkst = mod_par.fit_ks1_trim()
+# print res_parkst
 
 print(res5.summary())
 print(res5.t_test([[1, 0]]))
@@ -416,7 +416,7 @@ array([ 1.,  2.])
 """
 
 
-#'''
+# '''
 # 0.0686702747648
 # 0.0164150896481
 # 0.128121386381
@@ -508,7 +508,7 @@ array([ 1.,  2.])
 # >>> (lb-loc)/scale
 # 1.0000000000000004
 # >>>
-#'''
+# '''
 
 """
 repr(start_params) array([  1.,  10.,   2.])

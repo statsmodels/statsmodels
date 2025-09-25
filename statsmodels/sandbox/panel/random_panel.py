@@ -99,7 +99,7 @@ class PanelSample:
             exog = t[:, None] ** np.arange(k_vars)
 
         self.exog = exog
-        # self.y_true = exog.sum(1)  #all coefficients equal 1,
+        # self.y_true = exog.sum(1)  # all coefficients equal 1,
         # moved to make random coefficients
         # initialize
         self.y_true = None

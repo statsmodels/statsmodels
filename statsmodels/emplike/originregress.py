@@ -157,8 +157,9 @@ class OriginResults(RegressionResults):
         self.llr = est_llr
         self.llf_el = llf_el
 
-    def el_test(self, b0_vals, param_nums, method='nm',
-                            stochastic_exog=1, return_weights=0):
+    def el_test(
+        self, b0_vals, param_nums, method="nm", stochastic_exog=1, return_weights=0
+    ):
         """
         Returns the llr and p-value for a hypothesized parameter value
         for a regression that goes through the origin.
@@ -196,9 +197,13 @@ class OriginResults(RegressionResults):
         """
         b0_vals = np.hstack((0, b0_vals))
         param_nums = np.hstack((0, param_nums))
-        test_res = self.model.fit().el_test(b0_vals, param_nums, method=method,
-                                  stochastic_exog=stochastic_exog,
-                                  return_weights=return_weights)
+        test_res = self.model.fit().el_test(
+            b0_vals,
+            param_nums,
+            method=method,
+            stochastic_exog=stochastic_exog,
+            return_weights=return_weights,
+        )
         llr_test = test_res[0]
         llr_res = llr_test - self.llr
         pval = chi2.sf(llr_res, self.model.exog.shape[1] - 1)
@@ -207,9 +212,15 @@ class OriginResults(RegressionResults):
         else:
             return llr_res, pval
 
-    def conf_int_el(self, param_num, upper_bound=None,
-                       lower_bound=None, sig=.05, method='nm',
-                       stochastic_exog=True):
+    def conf_int_el(
+        self,
+        param_num,
+        upper_bound=None,
+        lower_bound=None,
+        sig=0.05,
+        method="nm",
+        stochastic_exog=True,
+    ):
         """
         Returns the confidence interval for a regression parameter when the
         regression is forced through the origin.

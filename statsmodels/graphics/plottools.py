@@ -23,5 +23,5 @@ def rainbow(n):
     from matplotlib import colors
     R = np.ones((1,n,3))
     R[0,:,0] = np.linspace(0, 1, n, endpoint=False)
-    #Note: could iterate and use colorsys.hsv_to_rgb
+    # Note: could iterate and use colorsys.hsv_to_rgb
     return colors.hsv_to_rgb(R).squeeze()

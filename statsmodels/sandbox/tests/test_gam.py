@@ -153,7 +153,7 @@ class BaseAM:
         del idx[order + 1]
         exog_reduced = exog[:, idx]  # remove duplicate constant
         y_true = exog.sum(1)  # / 4.
-        # z = y_true #alias check
+        # z = y_true # alias check
         # d = x
 
         cls.nobs = nobs
@@ -181,7 +181,7 @@ class TestAdditiveModel(BaseAM, CheckAM):
 
         # Note: there still are some naming inconsistencies
         cls.res1 = res1 = Dummy()  # for gam model
-        # res2 = Dummy() #for benchmark
+        # res2 = Dummy() # for benchmark
         cls.res2 = res2 = res_ols  # reuse existing ols results, will add additional
 
         res1.y_pred = res_gam.predict(x)
@@ -232,7 +232,7 @@ class BaseGAM(BaseAM, CheckGAM):
 
         # Note: there still are some naming inconsistencies
         cls.res1 = res1 = Dummy()  # for gam model
-        # res2 = Dummy() #for benchmark
+        # res2 = Dummy() # for benchmark
         cls.res2 = res2 = res_glm  # reuse existing glm results, will add additional
 
         # eta in GLM terminology

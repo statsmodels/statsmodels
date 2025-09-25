@@ -383,7 +383,7 @@ class IVRegressionResults(RegressionResults):
         return smry
 
 
-############# classes for Generalized Method of Moments GMM
+# classes for Generalized Method of Moments GMM
 
 _gmm_options = """\
 
@@ -772,8 +772,8 @@ class GMM(Model):
         uses scipy.optimize.fmin
 
         """
-        ##        if not fixed is None:  #fixed not defined in this version
-        ##            raise NotImplementedError
+        #        if not fixed is None:  # fixed not defined in this version
+        #            raise NotImplementedError
 
         # TODO: should start_weights only be in `fit`
         if weights is None:
@@ -832,8 +832,8 @@ class GMM(Model):
         uses scipy.optimize.fmin
 
         """
-        ##        if not fixed is None:  #fixed not defined in this version
-        ##            raise NotImplementedError
+        #        if not fixed is None:  # fixed not defined in this version
+        #            raise NotImplementedError
 
         if optim_args is None:
             optim_args = {}
@@ -959,8 +959,8 @@ class GMM(Model):
             winv = winv_new
             w = np.linalg.pinv(winv)
             # this is still calling function not method
-            ##            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
-            ##                            weightsoptimal=False)
+            #            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
+            #                            weightsoptimal=False)
             resgmm = self.fitgmm(
                 start, weights=w, optim_method=optim_method, optim_args=optim_args
             )
@@ -1200,7 +1200,7 @@ class GMMResults(LikelihoodModelResults):
 
         # TODO: do not do this when we want to change options
         #         if hasattr(self, '_cov_params'):
-        #             #replace with decorator later
+        #             # replace with decorator later
         #             return self._cov_params
 
         # set defaults based on fit arguments
@@ -1514,8 +1514,8 @@ class LinearIVGMM(IVGMM):
             estimated parameters
 
         """
-        ##        if not fixed is None:  #fixed not defined in this version
-        ##            raise NotImplementedError
+        #        if not fixed is None:  # fixed not defined in this version
+        #            raise NotImplementedError
 
         # TODO: should start_weights only be in `fit`
         if weights is None:
@@ -1728,7 +1728,7 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     return H, pval, dof, evals
 
 
-###########
+#
 
 
 class DistQuantilesGMM(GMM):

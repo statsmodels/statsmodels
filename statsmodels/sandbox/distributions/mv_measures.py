@@ -88,9 +88,9 @@ def mutualinfo_binned(y, x, bins, normed=True):
     y = np.asarray(y, float)
     # yx = np.vstack((y,x))
 
-    ##    fyx, binsy, binsx = np.histogram2d(y, x, bins=bins)
-    ##    fx, binsx_ = np.histogram(x, bins=binsx)
-    ##    fy, binsy_ = np.histogram(y, bins=binsy)
+    #    fyx, binsy, binsx = np.histogram2d(y, x, bins=bins)
+    #    fx, binsx_ = np.histogram(x, bins=binsx)
+    #    fy, binsy_ = np.histogram(y, bins=binsy)
 
     if bins == "auto":
         ys = np.sort(y)
@@ -110,10 +110,10 @@ def mutualinfo_binned(y, x, bins, normed=True):
         binsx = bins
     elif len(bins) == 2:
         binsy, binsx = bins
-    ##        if np.size(bins[0]) == 1:
-    ##            binsx = bins[0]
-    ##        if np.size(bins[1]) == 1:
-    ##            binsx = bins[1]
+    #        if np.size(bins[0]) == 1:
+    #            binsx = bins[0]
+    #        if np.size(bins[1]) == 1:
+    #            binsx = bins[1]
 
     fx, binsx = np.histogram(x, bins=binsx)
     fy, binsy = np.histogram(y, bins=binsy)

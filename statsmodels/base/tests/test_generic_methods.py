@@ -89,12 +89,11 @@ class CheckGenericMixin:
 
     def test_zero_constrained(self):
         # not completely generic yet
-        if (isinstance(self.results.model, (sm.GEE))):
+        if isinstance(self.results.model, (sm.GEE)):
             # GEE does not subclass LikelihoodModel
-            pytest.skip('GEE does not subclass LikelihoodModel')
+            pytest.skip("GEE does not subclass LikelihoodModel")
 
-        use_start_params = not isinstance(self.results.model,
-                                          (sm.RLM, sm.OLS, sm.WLS))
+        use_start_params = not isinstance(self.results.model, (sm.RLM, sm.OLS, sm.WLS))
         self.use_start_params = use_start_params  # attach for _get_constrained
 
         keep_index = list(range(self.results.model.exog.shape[1]))
@@ -106,18 +105,17 @@ class CheckGenericMixin:
             del keep_index_p[i]
 
         if use_start_params:
-            res1 = self.results.model._fit_zeros(keep_index, maxiter=500,
-                                        start_params=self.results.params)
+            res1 = self.results.model._fit_zeros(
+                keep_index, maxiter=500, start_params=self.results.params
+            )
         else:
             res1 = self.results.model._fit_zeros(keep_index, maxiter=500)
 
         res2 = self._get_constrained(keep_index, keep_index_p)
 
-        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10,
-                        atol=1e-10)
+        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10, atol=1e-10)
         assert_equal(res1.params[drop_index], 0)
-        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10,
-                        atol=1e-10)
+        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10, atol=1e-10)
         assert_equal(res1.bse[drop_index], 0)
         # OSX has many slight failures on this test
         tol = 1e-8 if PLATFORM_OSX else 1e-10
@@ -131,7 +129,7 @@ class CheckGenericMixin:
             pvals1 = res1.pvalues[keep_index_p]
         assert_allclose(pvals1, res2.pvalues, rtol=tol, atol=tol)
 
-        if hasattr(res1, 'resid'):
+        if hasattr(res1, "resid"):
             # discrete models, Logit do not have `resid` yet
             # atol discussion at gh-5158
             rtol = 1e-10
@@ -296,13 +294,13 @@ class CheckGenericMixin:
             assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
 
 
-#########  subclasses for individual models, unchanged from test_shrink_pickle
+# subclasses for individual models, unchanged from test_shrink_pickle
 # TODO: check if setup_class is faster than setup
 
 class TestGenericOLS(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y = x.sum(axis=1) + np.random.randn(x.shape[0])
@@ -313,7 +311,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
     # check with single regressor (no constant)
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog[:, 1]
         np.random.seed(987689)
         y = x + np.random.randn(x.shape[0])
@@ -328,7 +326,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 class TestGenericWLS(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y = x.sum(axis=1) + np.random.randn(x.shape[0])
@@ -338,7 +336,7 @@ class TestGenericWLS(CheckGenericMixin):
 class TestGenericPoisson(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
@@ -352,7 +350,7 @@ class TestGenericPoisson(CheckGenericMixin):
 class TestGenericPoissonOffset(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
         np.random.seed(987689)
@@ -371,7 +369,7 @@ class TestGenericPoissonOffset(CheckGenericMixin):
 class TestGenericNegativeBinomial(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         np.random.seed(987689)
         data = sm.datasets.randhie.load()
         data.exog = np.asarray(data.exog)
@@ -388,13 +386,13 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
 class TestGenericLogit(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
         np.random.seed(987689)
         y_bin = (np.random.rand(nobs) < 1.0 / (1 + np.exp(x.sum(1) - x.mean()))).astype(int)
         model = sm.Logit(y_bin, x)  # ,exposure=np.ones(nobs), offset=np.zeros(nobs))
-        # #bug with default
+        # # bug with default
         # use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
         with pytest.warns(FutureWarning,
@@ -406,7 +404,7 @@ class TestGenericLogit(CheckGenericMixin):
 class TestGenericRLM(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y = x.sum(axis=1) + np.random.randn(x.shape[0])
@@ -416,7 +414,7 @@ class TestGenericRLM(CheckGenericMixin):
 class TestGenericGLM(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y = x.sum(axis=1) + np.random.randn(x.shape[0])
@@ -426,7 +424,7 @@ class TestGenericGLM(CheckGenericMixin):
 class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
         np.random.seed(987689)
@@ -446,46 +444,52 @@ class TestGenericGLMPoissonOffset(CheckGenericMixin):
 class TestGenericGEEPoisson(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
+
         x = self.exog
         np.random.seed(987689)
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         groups = np.random.randint(0, 4, size=x.shape[0])
         # use start_params to speed up test, difficult convergence not tested
-        start_params = np.array([0., 1., 1., 1.])
+
+        start_params = np.array([0.0, 1.0, 1.0, 1.0])
 
         vi = sm.cov_struct.Independence()
         family = sm.families.Poisson()
-        self.results = sm.GEE(y_count, self.exog, groups, family=family,
-                                cov_struct=vi).fit(start_params=start_params)
+        self.results = sm.GEE(
+            y_count, self.exog, groups, family=family, cov_struct=vi
+        ).fit(start_params=start_params)
 
 
 class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
+
         x = self.exog
         np.random.seed(987689)
-        #y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        # y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+
         y_count = np.random.poisson(np.exp(x.sum(1) - x.sum(1).mean(0)))
         groups = np.random.randint(0, 4, size=x.shape[0])
         # use start_params to speed up test, difficult convergence not tested
-        start_params = np.array([0., 1., 1., 1.])
+
+        start_params = np.array([0.0, 1.0, 1.0, 1.0])
 
         vi = sm.cov_struct.Independence()
         family = sm.families.Poisson()
-        self.results = sm.GEE(y_count, self.exog, groups, family=family,
-                                cov_struct=vi).fit(start_params=start_params,
-                                                   cov_type='naive')
+        self.results = sm.GEE(
+            y_count, self.exog, groups, family=family, cov_struct=vi
+        ).fit(start_params=start_params, cov_type="naive")
 
 
 class TestGenericGEEPoissonBC(CheckGenericMixin):
 
     def setup_method(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        #y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        # y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         y_count = np.random.poisson(np.exp(x.sum(1) - x.sum(1).mean(0)))
         groups = np.random.randint(0, 4, size=x.shape[0])
         # use start_params to speed up test, difficult convergence not tested

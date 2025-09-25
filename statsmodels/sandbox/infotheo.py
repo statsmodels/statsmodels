@@ -372,7 +372,7 @@ def covent(px, py, pxpy, logbase=2):
     )  # noqa:F821  See GH#5756
 
 
-#### Generalized Entropies ####
+# Generalized Entropies
 
 
 def renyientropy(px, alpha=1, logbase=2, measure="R"):
@@ -596,7 +596,7 @@ and Synthesis'
     )
     print("such that more information lowers the error")
 
-    ### Stochastic processes
+    # Stochastic processes
     markovchain = np.array(
         [[0.553, 0.284, 0.163], [0.465, 0.312, 0.223], [0.420, 0.322, 0.258]]
     )

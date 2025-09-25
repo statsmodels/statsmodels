@@ -293,7 +293,7 @@ class DensityOrthoPoly:
             self.polys = [polybase(i) for i in range(order)]
         # try:
         # self.offsetfac = 0.05
-        # self.offsetfac = polys[0].offsetfactor #polys maybe not defined yet
+        # self.offsetfac = polys[0].offsetfactor # polys maybe not defined yet
         self._corfactor = 1
         self._corshift = 0
 
@@ -394,7 +394,7 @@ class DensityOrthoPoly:
 
 # old version as a simple function
 def density_orthopoly(x, polybase, order=5, xeval=None):
-    # polybase = legendre  #chebyt #hermitenorm#
+    # polybase = legendre  # chebyt # hermitenorm#
     # polybase = chebyt
     # polybase = FPoly
     # polybase = ChtPoly
@@ -429,15 +429,15 @@ if __name__ == "__main__":
     )
 
     # np.random.seed(12345)
-    ##    obs_dist = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
-    ##                   kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.75)))
+    #    obs_dist = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
+    #                   kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.75)))
     mix_kwds = (dict(loc=-0.5, scale=0.5), dict(loc=1, scale=0.2))
     obs_dist = mixture_rvs(
         [1 / 3.0, 2 / 3.0], size=nobs, dist=[stats.norm, stats.norm], kwargs=mix_kwds
     )
     mix = MixtureDistribution()
 
-    # obs_dist = np.random.randn(nobs)/4. #np.sqrt(2)
+    # obs_dist = np.random.randn(nobs)/4. # np.sqrt(2)
 
     if "chebyt_" in examples:  # needed for Cheby example below
         # obs_dist = np.clip(obs_dist, -2, 2)/2.01

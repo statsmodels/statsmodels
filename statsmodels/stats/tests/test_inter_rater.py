@@ -31,7 +31,7 @@ table10 = [[0, 4, 1],
            [0, 8, 0],
            [0, 1, 5]]
 
-#Fleiss 1971, Fleiss has only the transformed table
+# Fleiss 1971, Fleiss has only the transformed table
 diagnoses = np.array([
     [4, 4, 4, 4, 4, 4],
     [2, 2, 2, 5, 5, 5],
@@ -69,7 +69,7 @@ diagnoses_colnames = ['rater1', 'rater2', 'rater3', 'rater4', 'rater5', 'rater6'
 
 
 def test_fleiss_kappa():
-    #currently only example from Wikipedia page
+    # currently only example from Wikipedia page
     kappa_wp = 0.210
     assert_almost_equal(fleiss_kappa(table1), kappa_wp, decimal=3)
 
@@ -183,11 +183,11 @@ class TestWeightedCohens(CheckCohens):
 
 
 def test_cohenskappa_weights():
-    #some tests for equivalent results with different options
+    # some tests for equivalent results with different options
     np.random.seed(9743678)
     table = np.random.randint(0, 10, size=(5,5)) + 5*np.eye(5)
 
-    #example aggregation, 2 groups of levels
+    # example aggregation, 2 groups of levels
     mat = np.array([[1,1,1, 0,0],[0,0,0,1,1]])
     table_agg = np.dot(np.dot(mat, table), mat.T)
     res1 = cohens_kappa(table, weights=np.arange(5) > 2, wt='linear')
@@ -195,11 +195,11 @@ def test_cohenskappa_weights():
     assert_almost_equal(res1.kappa, res2.kappa, decimal=14)
     assert_almost_equal(res1.var_kappa, res2.var_kappa, decimal=14)
 
-    #equivalence toeplitz with linear for special cases
+    # equivalence toeplitz with linear for special cases
     res1 = cohens_kappa(table, weights=2*np.arange(5), wt='linear')
     res2 = cohens_kappa(table, weights=2*np.arange(5), wt='toeplitz')
     res3 = cohens_kappa(table, weights=res1.weights[0], wt='toeplitz')
-    #2-Dim weights
+    # 2-Dim weights
     res4 = cohens_kappa(table, weights=res1.weights)
 
     assert_almost_equal(res1.kappa, res2.kappa, decimal=14)
@@ -211,7 +211,7 @@ def test_cohenskappa_weights():
     assert_almost_equal(res1.kappa, res4.kappa, decimal=14)
     assert_almost_equal(res1.var_kappa, res4.var_kappa, decimal=14)
 
-    #equivalence toeplitz with quadratic for special cases
+    # equivalence toeplitz with quadratic for special cases
     res1 = cohens_kappa(table, weights=5*np.arange(5)**2, wt='toeplitz')
     res2 = cohens_kappa(table, weights=5*np.arange(5), wt='quadratic')
     assert_almost_equal(res1.kappa, res2.kappa, decimal=14)
@@ -232,8 +232,8 @@ def test_cohens_kappa_irr():
     ck_w3 = Holder()
     ck_w4 = Holder()
 
-    #>r = kappa2(anxiety[,1:2], c(0,0,0,1,1,1))
-    #> cat_items(r, pref="ck_w3.")
+    # >r = kappa2(anxiety[,1:2], c(0,0,0,1,1,1))
+    # > cat_items(r, pref="ck_w3.")
     ck_w3.method = "Cohen's Kappa for 2 Raters (Weights: 0,0,0,1,1,1)"
     ck_w3.irr_name = 'Kappa'
     ck_w3.value = 0.1891892
@@ -241,8 +241,8 @@ def test_cohens_kappa_irr():
     ck_w3.statistic = 0.5079002
     ck_w3.p_value = 0.6115233
 
-    #> r = kappa2(anxiety[,1:2], c(0,0,1,1,2,2))
-    #> cat_items(r, pref="ck_w4.")
+    # > r = kappa2(anxiety[,1:2], c(0,0,1,1,2,2))
+    # > cat_items(r, pref="ck_w4.")
     ck_w4.method = "Cohen's Kappa for 2 Raters (Weights: 0,0,1,1,2,2)"
     ck_w4.irr_name = 'Kappa'
     ck_w4.value = 0.2820513
@@ -254,8 +254,8 @@ def test_cohens_kappa_irr():
     ck_w2 = Holder()
     ck_w3 = Holder()
     ck_w4 = Holder()
-    #> r = kappa2(anxiety[,2:3])
-    #> cat_items(r, pref="ck_w1.")
+    # > r = kappa2(anxiety[,2:3])
+    # > cat_items(r, pref="ck_w1.")
     ck_w1.method = "Cohen's Kappa for 2 Raters (Weights: unweighted)"
     ck_w1.irr_name = 'Kappa'
     ck_w1.value = -0.006289308
@@ -263,8 +263,8 @@ def test_cohens_kappa_irr():
     ck_w1.statistic = -0.0604067
     ck_w1.p_value = 0.9518317
 
-    #> r = kappa2(anxiety[,2:3], "equal")
-    #> cat_items(r, pref="ck_w2.")
+    # > r = kappa2(anxiety[,2:3], "equal")
+    # > cat_items(r, pref="ck_w2.")
     ck_w2.method = "Cohen's Kappa for 2 Raters (Weights: equal)"
     ck_w2.irr_name = 'Kappa'
     ck_w2.value = 0.1459075
@@ -272,8 +272,8 @@ def test_cohens_kappa_irr():
     ck_w2.statistic = 1.282472
     ck_w2.p_value = 0.1996772
 
-    #> r = kappa2(anxiety[,2:3], "squared")
-    #> cat_items(r, pref="ck_w3.")
+    # > r = kappa2(anxiety[,2:3], "squared")
+    # > cat_items(r, pref="ck_w3.")
     ck_w3.method = "Cohen's Kappa for 2 Raters (Weights: squared)"
     ck_w3.irr_name = 'Kappa'
     ck_w3.value = 0.2520325
@@ -281,8 +281,8 @@ def test_cohens_kappa_irr():
     ck_w3.statistic = 1.437451
     ck_w3.p_value = 0.1505898
 
-    #> r = kappa2(anxiety[,2:3], c(0,0,1,1,2))
-    #> cat_items(r, pref="ck_w4.")
+    # > r = kappa2(anxiety[,2:3], c(0,0,1,1,2))
+    # > cat_items(r, pref="ck_w4.")
     ck_w4.method = "Cohen's Kappa for 2 Raters (Weights: 0,0,1,1,2)"
     ck_w4.irr_name = 'Kappa'
     ck_w4.value = 0.2391304
@@ -299,7 +299,7 @@ def test_cohens_kappa_irr():
                  (ck_w3, 4*np.arange(5)**2, 'toeplitz'),
                  (ck_w4, [0,0,1,1,2], 'toeplitz')]
 
-    #Note R:irr drops the missing category level 4 and uses the reduced matrix
+    # Note R:irr drops the missing category level 4 and uses the reduced matrix
     r = np.histogramdd(anxiety[:,1:], ([1, 2, 3, 4, 6, 7], [1, 2, 3, 4, 6, 7]))
 
     for res2, w, wt in all_cases:
@@ -312,8 +312,8 @@ def test_cohens_kappa_irr():
 
 def test_fleiss_kappa_irr():
     fleiss = Holder()
-    #> r = kappam.fleiss(diagnoses)
-    #> cat_items(r, pref="fleiss.")
+    # > r = kappam.fleiss(diagnoses)
+    # > cat_items(r, pref="fleiss.")
     fleiss.method = "Fleiss' Kappa for m Raters"
     fleiss.irr_name = 'Kappa'
     fleiss.value = 0.4302445
@@ -327,10 +327,10 @@ def test_fleiss_kappa_irr():
 
 def test_to_table():
     data = diagnoses
-    res1 = to_table(data[:,:2]-1, 5)
-    res0 = np.asarray([[(data[:,:2]-1 == [i,j]).all(1).sum()
-                            for j in range(5)]
-                                for i in range(5)])
+    res1 = to_table(data[:, :2] - 1, 5)
+    res0 = np.asarray(
+        [[(data[:, :2] - 1 == [i, j]).all(1).sum() for j in range(5)] for i in range(5)]
+    )
     assert_equal(res1[0], res0)
 
     res2 = to_table(data[:,:2])
@@ -340,7 +340,7 @@ def test_to_table():
     res3 = to_table(data[:,:2], bins)
     assert_equal(res3[0], res0)
 
-    #more than 2 columns
+    # more than 2 columns
     res4 = to_table(data[:,:3]-1, bins=[-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
     res5 = to_table(data[:,:3]-1, bins=5)
     assert_equal(res4[0].sum(-1), res0)

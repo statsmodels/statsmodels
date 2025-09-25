@@ -47,7 +47,7 @@ hurdle_poisson.zero = np.array([
 hurdle_poisson.params_table = np.concatenate((hurdle_poisson.zero,
                                               hurdle_poisson.count), axis=0)
 
-# > dfm = data.frame(t(as.matrix(dtm)))  #at means
+# > dfm = data.frame(t(as.matrix(dtm)))  # at means
 # > predict(mod, dfm)
 hurdle_poisson.predict_mean = 6.530525236464
 # > predict(mod, dfm, type="prob", at=c(0, 1, 2, 3))

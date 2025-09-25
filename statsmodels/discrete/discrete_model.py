@@ -179,7 +179,7 @@ def _validate_l1_method(method):
         )
 
 
-#### Private Model Classes ####
+# Private Model Classes
 
 
 class DiscreteModel(base.LikelihoodModel):
@@ -394,9 +394,9 @@ class DiscreteModel(base.LikelihoodModel):
         # Set attributes based on method
         cov_params_func = self.cov_params_func_l1
 
-        ### Bundle up extra kwargs for the dictionary kwargs.  These are
-        ### passed through super(...).fit() as kwargs and unpacked at
-        ### appropriate times
+        # Bundle up extra kwargs for the dictionary kwargs.  These are
+        # passed through super(...).fit() as kwargs and unpacked at
+        # appropriate times
         alpha = np.array(alpha)
         assert alpha.min() >= 0
         try:
@@ -410,14 +410,14 @@ class DiscreteModel(base.LikelihoodModel):
         kwargs["qc_tol"] = qc_tol
         kwargs["qc_verbose"] = qc_verbose
 
-        ### Define default keyword arguments to be passed to super(...).fit()
+        # Define default keyword arguments to be passed to super(...).fit()
         if maxiter == "defined_by_method":
             if method == "l1":
                 maxiter = 1000
             elif method == "l1_cvxopt_cp":
                 maxiter = 70
 
-        ## Parameters to pass to super(...).fit()
+        # Parameters to pass to super(...).fit()
         # For the 'extra' parameters, pass all that are available,
         # even if we know (at this point) we will only use one.
         extra_fit_funcs = {"l1": fit_l1_slsqp}
@@ -3533,7 +3533,7 @@ class MNLogit(MultinomialModel):
 #    ------
 #    This is unfinished and untested.
 #    """
-## TODO: add analytic hessian for Weibull
+#  TODO: add analytic hessian for Weibull
 #    def initialize(self):
 #        pass
 #
@@ -3541,7 +3541,7 @@ class MNLogit(MultinomialModel):
 #        """
 #        Gumbell (Log Weibull) cumulative distribution function
 #        """
-##        return np.exp(-np.exp(-X))
+#        return np.exp(-np.exp(-X))
 #        return stats.gumbel_r.cdf(X)
 #        # these two are equivalent.
 #        # Greene table and discussion is incorrect.
@@ -3574,7 +3574,7 @@ class MNLogit(MultinomialModel):
 #        return hess(params)
 #
 #    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
-## The example had problems with all zero start values, Hessian = 0
+# The example had problems with all zero start values, Hessian = 0
 #        if start_params is None:
 #            start_params = OLS(self.endog, self.exog).fit().params
 #        mlefit = super(Weibull, self).fit(start_params=start_params,
@@ -4889,7 +4889,7 @@ class NegativeBinomialP(CountModel):
         return distr
 
 
-### Results Class ###
+# Results Class
 
 
 class DiscreteResults(base.LikelihoodModelResults):
@@ -6138,7 +6138,7 @@ class L1MultinomialResults(MultinomialResults):
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
 
-#### Results Wrappers ####
+# Results Wrappers
 
 
 class OrderedResultsWrapper(lm.RegressionResultsWrapper):

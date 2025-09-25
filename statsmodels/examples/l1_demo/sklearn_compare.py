@@ -25,12 +25,12 @@ from sklearn import linear_model
 
 import statsmodels.api as sm
 
-## Decide which dataset to use
+# Decide which dataset to use
 # Use either spector or anes96
 use_spector = False
 
-#### Load data
-## The Spector and Mazzeo (1980) data from statsmodels
+# Load data
+# The Spector and Mazzeo (1980) data from statsmodels
 if use_spector:
     spector_data = sm.datasets.spector.load()
     X = spector_data.exog
@@ -43,11 +43,11 @@ else:
     anes96_data = sm.datasets.anes96.load_pandas()
     Y = anes96_data.exog.vote
 
-#### Fit and plot results
+# Fit and plot results
 N = 200  # number of points to solve at
 K = X.shape[1]
 
-## statsmodels
+# statsmodels
 logit_mod = sm.Logit(Y, X)
 sm_coeff = np.zeros((N, K))  # Holds the coefficients
 if use_spector:
@@ -59,7 +59,7 @@ for n, alpha in enumerate(alphas):
         method="l1", alpha=alpha, disp=False, trim_mode="off"
     )
     sm_coeff[n, :] = logit_res.params
-## Sklearn
+# Sklearn
 sk_coeff = np.zeros((N, K))
 if use_spector:
     Cs = np.logspace(-0.45, 2, N)
@@ -70,7 +70,7 @@ for n, C in enumerate(Cs):
     clf.fit(X, Y)
     sk_coeff[n, :] = clf.coef_
 
-## Get the reparametrization of sm_coeff that makes the paths equal
+# Get the reparametrization of sm_coeff that makes the paths equal
 # Do this by finding one single re-parameterization of the second coefficient
 # that makes the path for the second coefficient (almost) identical.  This
 # same parameterization will work for the other two coefficients since the
@@ -84,7 +84,7 @@ s = np.zeros(N)
 # Note that sk_special_X will not always be perfectly sorted...
 s = np.searchsorted(sk_special_X, sm_special_X)
 
-## Plot
+# Plot
 plt.figure(2)
 plt.clf()
 plt.grid()

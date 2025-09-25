@@ -584,7 +584,7 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
             count += (stat >= value).sum()
         return count / float(n_batch * batch_size)
     else:
-        # rvs = distr.rvs(args, **kwds)  #extension to distribution kwds ?
+        # rvs = distr.rvs(args, **kwds)  # extension to distribution kwds ?
         rvs = distr.rvs(args, **{"size": (nrep, nobs)})
         params = distr.fit_vec(rvs, axis=1)
         params = lmap(lambda x: np.expand_dims(x, 1), params)
@@ -616,7 +616,7 @@ def bootstrap2(value, distr, args=(), nobs=200, nrep=100):
 
     count = 0
     for irep in range(nrep):
-        # rvs = distr.rvs(args, **kwds)  #extension to distribution kwds ?
+        # rvs = distr.rvs(args, **kwds)  # extension to distribution kwds ?
         rvs = distr.rvs(args, **{"size": nobs})
         params = distr.fit_vec(rvs)
         cdfvals = np.sort(distr.cdf(rvs, params))

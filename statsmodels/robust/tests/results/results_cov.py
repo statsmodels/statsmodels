@@ -22,8 +22,8 @@ cov = np.array([
 center = np.array([
     1.51333333333333, 1.80833333333333, 1.70166666666667, -0.06
     ])
-# > #cat(convert(ccogk$wcov, name="wcov"))
-# > #cat(convert(ccogk$wcenter, name="wcenter"))
+# > # cat(convert(ccogk$wcov, name="wcov"))
+# > # cat(convert(ccogk$wcenter, name="wcenter"))
 # > cat(convert(ccogk$raw.cov, name="cov_raw"))
 cov_raw = np.array([
     1.9407276011319, -0.345451662256964, 0.366369160423434, 0.190853625223746,

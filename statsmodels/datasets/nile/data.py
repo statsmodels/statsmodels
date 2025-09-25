@@ -19,7 +19,7 @@ the Nile as measured at Ashwan for 100 years from 1871-1970."""
 
 DESCRLONG = DESCRSHORT + " There is an apparent changepoint near 1898."
 
-#suggested notes
+# suggested notes
 NOTE = """::
 
     Number of observations: 100

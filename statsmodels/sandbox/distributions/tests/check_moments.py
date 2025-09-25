@@ -69,13 +69,13 @@ def check_cont_basic():
     for distname, distargs in distcont[:]:
         # if distname not in distex_0: continue
         distfn = getattr(stats, distname)
-        ##        np.random.seed(765456)
-        ##        sn = 1000
-        ##        rvs = distfn.rvs(size=sn,*arg)
-        ##        sm = rvs.mean()
-        ##        sv = rvs.var()
-        ##        skurt = stats.kurtosis(rvs)
-        ##        sskew = stats.skew(rvs)
+        #        np.random.seed(765456)
+        #        sn = 1000
+        #        rvs = distfn.rvs(size=sn,*arg)
+        #        sm = rvs.mean()
+        #        sv = rvs.var()
+        #        skurt = stats.kurtosis(rvs)
+        #        sskew = stats.skew(rvs)
         m, v, s, k = distfn.stats(*distargs, **dict(moments="mvsk"))
         st = np.array([m, v, s, k])
         mask = np.isfinite(st)

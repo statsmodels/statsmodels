@@ -81,7 +81,7 @@ if __name__ == "__main__":
     t0 = time.time()
 
     b_res = []
-    for i in range(100):
+    for _ in range(100):
         x = np.random.uniform(0, 1, size=(nobs, k_vars))
         x.sort(0)
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
         mod_ols = OLS(endog, exog[:, :1])
         # res_ols = mod_ols.fit()
-        #'cv_ls'[1000, 0.5]
+        # 'cv_ls'[1000, 0.5]
         bw_lw = [1.0 / np.sqrt(12.0) * nobs ** (-0.2)] * 2  # (-1. / 5.)
         tst = smke.TestFForm(
             endog,

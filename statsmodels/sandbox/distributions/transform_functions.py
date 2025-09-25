@@ -16,7 +16,7 @@ class TransformFunction:
         self.func(x)
 
 
-## Hump and U-shaped functions
+# Hump and U-shaped functions
 
 
 class SquareFunc(TransformFunction):
@@ -80,7 +80,7 @@ class AbsFunc(TransformFunction):
         return 0.0 - 1.0
 
 
-## monotonic functions
+# monotonic functions
 # more monotone functions in families.links, some for restricted domains
 
 

@@ -259,10 +259,10 @@ def multipletests(
 
     elif method.lower() in ["fdr_gbs"]:
         # adaptive stepdown in Gavrilov, Benjamini, Sarkar, Annals of Statistics 2009
-        ##        notreject = pvals > alphaf / np.arange(ntests, 0, -1) #alphacSidak
-        ##        notrejectmin = np.min(np.nonzero(notreject))
-        ##        notreject[notrejectmin:] = True
-        ##        reject = ~notreject
+        #        notreject = pvals > alphaf / np.arange(ntests, 0, -1) # alphacSidak
+        #        notrejectmin = np.min(np.nonzero(notreject))
+        #        notreject[notrejectmin:] = True
+        #        reject = ~notreject
 
         ii = np.arange(1, ntests + 1)
         q = (ntests + 1.0 - ii) / ii * pvals / (1.0 - pvals)
@@ -353,9 +353,9 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     elif method in ["n", "negcorr"]:
         cm = np.sum(1.0 / np.arange(1, len(pvals_sorted) + 1))  # corrected this
         ecdffactor = _ecdf(pvals_sorted) / cm
-    ##    elif method in ['n', 'negcorr']:
-    ##        cm = np.sum(np.arange(len(pvals)))
-    ##        ecdffactor = ecdf(pvals_sorted)/cm
+    #    elif method in ['n', 'negcorr']:
+    #        cm = np.sum(np.arange(len(pvals)))
+    #        ecdffactor = ecdf(pvals_sorted)/cm
     else:
         raise ValueError("only indep and negcorr implemented")
     reject = pvals_sorted <= ecdffactor * alpha

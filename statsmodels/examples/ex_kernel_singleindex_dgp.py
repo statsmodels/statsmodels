@@ -42,7 +42,7 @@ if __name__ == "__main__":
     for i, func in enumerate(funcs):
         # f = func()
         f = func
-        #        mod0 = smke.SingleIndexModel(endog=[f.y], exog=[xb], #reg_type='ll',
+        #        mod0 = smke.SingleIndexModel(endog=[f.y], exog=[xb], # reg_type='ll',
         #                          var_type='c')#, bw='cv_ls')
         #        mean0, mfx0 = mod0.fit()
         model = smke.SingleIndexModel(

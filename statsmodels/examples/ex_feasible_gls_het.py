@@ -88,7 +88,7 @@ if "ex1" in examples:
         plt.plot(x1, res_ols.fittedvalues, "--", label="ols")
         plt.legend()
 
-    # z = (w[:,None] == [1,4]).astype(float) #dummy variable
+    # z = (w[:,None] == [1,4]).astype(float) # dummy variable
     z = (w[:, None] == np.unique(w)).astype(float)  # dummy variable
     mod2 = GLSHet(y2, X2, exog_var=z)
     res2 = mod2.iterative_fit(2)

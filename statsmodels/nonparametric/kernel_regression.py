@@ -130,17 +130,17 @@ class KernelReg(GenericKDE):
             # The user specified a bandwidth selection method e.g. 'cv_ls'
             self._bw_method = bw
             # Workaround to avoid instance methods in __dict__
-            if bw == 'cv_ls':
+            if bw == "cv_ls":
                 res = self.cv_loo
             else:  # bw == 'aic'
                 res = self.aic_hurvich
             X = np.std(self.exog, axis=0)
-            h0 = 1.06 * X * \
-                 self.nobs ** (- 1. / (4 + np.size(self.exog, axis=1)))
+            h0 = 1.06 * X * self.nobs ** (-1.0 / (4 + np.size(self.exog, axis=1)))
 
             func = self.est[self.reg_type]
-            bw_estimated = optimize.fmin(res, x0=h0, args=(func, ),
-                                         maxiter=1e3, maxfun=1e3, disp=0)
+            bw_estimated = optimize.fmin(
+                res, x0=h0, args=(func,), maxiter=1e3, maxfun=1e3, disp=0
+            )
             return bw_estimated
 
     def _est_loc_linear(self, bw, endog, exog, data_predict):
@@ -177,7 +177,7 @@ class KernelReg(GenericKDE):
                    tosum=False) / float(nobs)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
-        #ix_cont = np.arange(self.k_vars)  # Use all vars instead of continuous only
+        # ix_cont = np.arange(self.k_vars)  # Use all vars instead of continuous only
         # Note: because ix_cont was defined here such that it selected all
         # columns, I removed the indexing with it from exog/data_predict.
 
@@ -241,7 +241,7 @@ class KernelReg(GenericKDE):
         ker_xc = gpke(bw, data=exog, data_predict=data_predict,
                       var_type=self.var_type,
                       ckertype='d_gaussian',
-                      #okertype='wangryzin_reg',
+                      # okertype='wangryzin_reg',
                       tosum=False)
 
         ker_xc = ker_xc[:, np.newaxis]
@@ -289,9 +289,9 @@ class KernelReg(GenericKDE):
 
         frac = (1 + np.trace(H) / float(self.nobs)) / \
                (1 - (np.trace(H) + 2) / float(self.nobs))
-        #siga = np.dot(self.endog.T, (I - H).T)
-        #sigb = np.dot((I - H), self.endog)
-        #sigma = np.dot(siga, sigb) / float(self.nobs)
+        # siga = np.dot(self.endog.T, (I - H).T)
+        # sigb = np.dot((I - H), self.endog)
+        # sigma = np.dot(siga, sigb) / float(self.nobs)
         aic = np.log(sigma) + frac
         return aic
 
@@ -784,13 +784,19 @@ class TestRegCoefC:
         n = np.shape(X)[0]
         Y = _adjust_shape(Y, 1)
         X = _adjust_shape(X, self.k_vars)
-        b = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                        defaults=EstimatorSettings(efficient=False)).fit()[1]
+        b = KernelReg(
+            Y,
+            X,
+            self.var_type,
+            self.model.reg_type,
+            self.bw,
+            defaults=EstimatorSettings(efficient=False),
+        ).fit()[1]
 
         b = b[:, self.test_vars]
         b = np.reshape(b, (n, len(self.test_vars)))
-        #fct = np.std(b)  # Pivot the statistic by dividing by SE
-        fct = 1.  # Do not Pivot -- Bootstrapping works better if Pivot
+        # fct = np.std(b)  # Pivot the statistic by dividing by SE
+        fct = 1.0  # Do not Pivot -- Bootstrapping works better if Pivot
         lam = ((b / fct) ** 2).sum() / float(n)
         return lam
 

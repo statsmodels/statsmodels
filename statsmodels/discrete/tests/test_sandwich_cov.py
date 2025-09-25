@@ -31,7 +31,7 @@ filepath = os.path.join(cur_dir, "results", "ships.csv")
 data_raw = pd.read_csv(filepath, index_col=False)
 data = data_raw.dropna()
 
-#mod = smd.Poisson.from_formula('accident ~ yr_con + op_75_79', data=dat)
+# mod = smd.Poisson.from_formula('accident ~ yr_con + op_75_79', data=dat)
 # Do not use formula for tests against Stata because intercept needs to be last
 endog = data['accident']
 exog_data = data['yr_con op_75_79'.split()]
@@ -128,13 +128,14 @@ class TestPoissonCluGeneric(CheckCountRobustMixin):
 
         from statsmodels.base.covtype import get_robustcov_results
 
-        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
-        get_robustcov_results(cls.res1._results, 'cluster',
-                                                  groups=group,
-                                                  use_correction=True,
-                                                  df_correction=True,  # TODO has no effect
-                                                  use_t=False,  # True,
-                                                  use_self=True)
+        # res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        get_robustcov_results(cls.res1._results,
+                              'cluster',
+                              groups=group,
+                              use_correction=True,
+                              df_correction=True,  # TODO has no effect
+                              use_t=False,  # True,
+                              use_self=True)
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1)
@@ -150,7 +151,7 @@ class TestPoissonHC1Generic(CheckCountRobustMixin):
 
         from statsmodels.base.covtype import get_robustcov_results
 
-        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        # res_hc0_ = cls.res1.get_robustcov_results('HC1')
         get_robustcov_results(cls.res1._results, 'HC1', use_self=True)
         cls.bse_rob = cls.res1.bse
 
@@ -250,12 +251,16 @@ class TestPoissonCluExposureGeneric(CheckCountRobustMixin):
         from statsmodels.base.covtype import get_robustcov_results
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
-        get_robustcov_results(cls.res1._results, 'cluster',
-                                                  groups=group,
-                                                  use_correction=True,
-                                                  df_correction=True,  # TODO has no effect
-                                                  use_t=False,  # True,
-                                                  use_self=True)
+
+        get_robustcov_results(
+            cls.res1._results,
+            "cluster",
+            groups=group,
+            use_correction=True,
+            df_correction=True,  # TODO has no effect
+            use_t=False,  # True,
+            use_self=True,
+        )
         cls.bse_rob = cls.res1.bse  # sw.se_cov(cov_clu)
 
         cls.corr_fact = cls.get_correction_factor(cls.res1)
@@ -280,12 +285,15 @@ class TestGLMPoissonCluGeneric(CheckCountRobustMixin):
         mod = GLM(endog, exog, family=families.Poisson())
         cls.res1 = mod.fit()
 
-        get_robustcov_results(cls.res1._results, 'cluster',
-                                                  groups=group,
-                                                  use_correction=True,
-                                                  df_correction=True,  # TODO has no effect
-                                                  use_t=False,  # True,
-                                                  use_self=True)
+        get_robustcov_results(
+            cls.res1._results,
+            "cluster",
+            groups=group,
+            use_correction=True,
+            df_correction=True,  # TODO has no effect
+            use_t=False,  # True,
+            use_self=True,
+        )
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1)
@@ -299,7 +307,7 @@ class TestGLMPoissonHC1Generic(CheckCountRobustMixin):
         mod = GLM(endog, exog, family=families.Poisson())
         cls.res1 = mod.fit()
 
-        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        # res_hc0_ = cls.res1.get_robustcov_results('HC1')
         get_robustcov_results(cls.res1._results, 'HC1', use_self=True)
         cls.bse_rob = cls.res1.bse
 
@@ -387,12 +395,15 @@ class TestNegbinCluGeneric(CheckCountRobustMixin):
         mod = smd.NegativeBinomial(endog, exog)
         cls.res1 = mod.fit(disp=False, gtol=1e-7)
 
-        get_robustcov_results(cls.res1._results, 'cluster',
-                                                  groups=group,
-                                                  use_correction=True,
-                                                  df_correction=True,  # TODO has no effect
-                                                  use_t=False,  # True,
-                                                  use_self=True)
+        get_robustcov_results(
+            cls.res1._results,
+            "cluster",
+            groups=group,
+            use_correction=True,
+            df_correction=True,  # TODO has no effect
+            use_t=False,  # True,
+            use_self=True,
+        )
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1)
@@ -404,12 +415,15 @@ class TestNegbinCluFit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_negbin_clu
         mod = smd.NegativeBinomial(endog, exog)
-        cls.res1 = mod.fit(disp=False, cov_type='cluster',
-                                  cov_kwds=dict(groups=group,
-                                                use_correction=True,
-                                                df_correction=True),  # TODO has no effect
-                                  use_t=False,  # True,
-                                  gtol=1e-7)
+        cls.res1 = mod.fit(
+            disp=False,
+            cov_type="cluster",
+            cov_kwds=dict(
+                groups=group, use_correction=True, df_correction=True
+            ),  # TODO has no effect
+            use_t=False,  # True,
+            gtol=1e-7,
+        )
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1)
@@ -690,7 +704,7 @@ class TestGLMGaussHACUniform(CheckDiscreteGLM):
         mod2 = OLS(endog, exog)
         cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds)
 
-        #for debugging
+        # for debugging
         cls.res3 = mod2.fit(cov_type='HAC', cov_kwds={'maxlags':2})
 
     def test_cov_options(self):
