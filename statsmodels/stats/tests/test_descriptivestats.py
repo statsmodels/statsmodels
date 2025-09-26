@@ -16,7 +16,7 @@ pytestmark = pytest.mark.filterwarnings(
 )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def df():
     a = np.random.RandomState(0).standard_normal(100)
     b = pd.Series(np.arange(100) % 10, dtype="category")

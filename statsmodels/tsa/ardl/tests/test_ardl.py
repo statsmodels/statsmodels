@@ -238,8 +238,8 @@ def test_ardl_order_keys_exceptions(data):
 def test_ardl_deterministic_exceptions(data):
     with pytest.raises(TypeError):
         ARDL(data.y, 2, data.x, 2, deterministic="seasonal")
+    deterministic = DeterministicProcess(data.y.index, constant=True, order=1)
     with pytest.warns(SpecificationWarning, match="When using deterministic, trend"):
-        deterministic = DeterministicProcess(data.y.index, constant=True, order=1)
         ARDL(data.y, 2, data.x, 2, deterministic=deterministic, trend="ct")
 
 

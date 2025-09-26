@@ -4,7 +4,6 @@ import datetime as dt
 
 import numpy as np
 from numpy.testing import (
-    assert_,
     assert_allclose,
     assert_almost_equal,
     assert_array_almost_equal,
@@ -355,12 +354,12 @@ class TestArmaProcess:
         process1 = ArmaProcess.from_coeffs([0.9], [0.2])
         out = process1.__str__()
         print(out)
-        assert_(out.find("AR: [1.0, -0.9]") != -1)
-        assert_(out.find("MA: [1.0, 0.2]") != -1)
+        assert (out.find("AR: [1.0, -0.9]") != -1)
+        assert (out.find("MA: [1.0, 0.2]") != -1)
 
         out = process1.__repr__()
-        assert_(out.find("nobs=100") != -1)
-        assert_(out.find("at " + str(hex(id(process1)))) != -1)
+        assert (out.find("nobs=100") != -1)
+        assert (out.find("at " + str(hex(id(process1)))) != -1)
 
     def test_acf(self):
         process1 = ArmaProcess.from_coeffs([0.9])
@@ -369,7 +368,7 @@ class TestArmaProcess:
         assert_array_almost_equal(acf, expected)
 
         acf = process1.acf()
-        assert_(acf.shape[0] == process1.nobs)
+        assert (acf.shape[0] == process1.nobs)
 
     def test_pacf(self):
         process1 = ArmaProcess.from_coeffs([0.9])
@@ -378,7 +377,7 @@ class TestArmaProcess:
         assert_array_almost_equal(pacf, expected)
 
         pacf = process1.pacf()
-        assert_(pacf.shape[0] == process1.nobs)
+        assert (pacf.shape[0] == process1.nobs)
 
     def test_isstationary(self):
         process1 = ArmaProcess.from_coeffs([1.1])

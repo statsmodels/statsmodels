@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
@@ -47,8 +47,8 @@ def test_init():
     assert_equal(p.reduced_ma_poly.coef, np.r_[1, [np.nan] * 5])
 
     # Test other properties, methods
-    assert_(not p.is_complete)
-    assert_(not p.is_valid)
+    assert (not p.is_complete)
+    assert (not p.is_valid)
     with pytest.raises(ValueError):
         p.__getattribute__("is_stationary")
     with pytest.raises(ValueError):
@@ -93,8 +93,8 @@ def test_set_params_single():
     p = params.SARIMAXParams(spec=spec)
 
     def check(is_stationary="raise", is_invertible="raise"):
-        assert_(not p.is_complete)
-        assert_(not p.is_valid)
+        assert (not p.is_complete)
+        assert (not p.is_valid)
         if is_stationary == "raise":
             with pytest.raises(ValueError):
                 p.__getattribute__("is_stationary")
@@ -119,9 +119,9 @@ def test_set_params_single():
     check(is_stationary=False, is_invertible=False)
     p.sigma2 = -1.0
     # Finally, we have a complete set.
-    assert_(p.is_complete)
+    assert (p.is_complete)
     # But still not valid
-    assert_(not p.is_valid)
+    assert (not p.is_valid)
 
     assert_equal(p.params, [-6, -5, -4, -3, -2, -1])
     assert_equal(p.exog_params, [-6])
@@ -207,8 +207,8 @@ def test_set_params_single_nonconsecutive():
     p = params.SARIMAXParams(spec=spec)
 
     def check(is_stationary="raise", is_invertible="raise"):
-        assert_(not p.is_complete)
-        assert_(not p.is_valid)
+        assert (not p.is_complete)
+        assert (not p.is_valid)
         if is_stationary == "raise":
             with pytest.raises(ValueError):
                 p.__getattribute__("is_stationary")
@@ -233,9 +233,9 @@ def test_set_params_single_nonconsecutive():
     check(is_stationary=False, is_invertible=False)
     p.sigma2 = -1.0
     # Finally, we have a complete set.
-    assert_(p.is_complete)
+    assert (p.is_complete)
     # But still not valid
-    assert_(not p.is_valid)
+    assert (not p.is_valid)
 
     assert_equal(p.params, [-6, -5, -4, -3, -2, -1])
     assert_equal(p.exog_params, [-6])
@@ -476,25 +476,25 @@ def test_is_stationary():
         p.__getattribute__("is_stationary")
     p.ar_params = [0.5]
     p.seasonal_ar_params = [0]
-    assert_(p.is_stationary)
+    assert (p.is_stationary)
     p.ar_params = [1.0]
-    assert_(not p.is_stationary)
+    assert (not p.is_stationary)
 
     p.ar_params = [0]
     p.seasonal_ar_params = [0.5]
-    assert_(p.is_stationary)
+    assert (p.is_stationary)
     p.seasonal_ar_params = [1.0]
-    assert_(not p.is_stationary)
+    assert (not p.is_stationary)
 
     p.ar_params = [0.2]
     p.seasonal_ar_params = [0.2]
-    assert_(p.is_stationary)
+    assert (p.is_stationary)
     p.ar_params = [0.99]
     p.seasonal_ar_params = [0.99]
-    assert_(p.is_stationary)
+    assert (p.is_stationary)
     p.ar_params = [1.0]
     p.seasonal_ar_params = [1.0]
-    assert_(not p.is_stationary)
+    assert (not p.is_stationary)
 
 
 def test_is_invertible():
@@ -509,25 +509,25 @@ def test_is_invertible():
         p.__getattribute__("is_invertible")
     p.ma_params = [0.5]
     p.seasonal_ma_params = [0]
-    assert_(p.is_invertible)
+    assert (p.is_invertible)
     p.ma_params = [1.0]
-    assert_(not p.is_invertible)
+    assert (not p.is_invertible)
 
     p.ma_params = [0]
     p.seasonal_ma_params = [0.5]
-    assert_(p.is_invertible)
+    assert (p.is_invertible)
     p.seasonal_ma_params = [1.0]
-    assert_(not p.is_invertible)
+    assert (not p.is_invertible)
 
     p.ma_params = [0.2]
     p.seasonal_ma_params = [0.2]
-    assert_(p.is_invertible)
+    assert (p.is_invertible)
     p.ma_params = [0.99]
     p.seasonal_ma_params = [0.99]
-    assert_(p.is_invertible)
+    assert (p.is_invertible)
     p.ma_params = [1.0]
     p.seasonal_ma_params = [1.0]
-    assert_(not p.is_invertible)
+    assert (not p.is_invertible)
 
 
 def test_is_valid():
@@ -542,19 +542,19 @@ def test_is_valid():
     p = params.SARIMAXParams(spec=spec)
 
     # Doesn't start out as valid
-    assert_(not p.is_valid)
+    assert (not p.is_valid)
     # Given stationary / invertible values, it is valid
     p.params = [0.5, 0.5, 0.5, 0.5, 1.0]
-    assert_(p.is_valid)
+    assert (p.is_valid)
     # With either non-stationary or non-invertible values, not valid
     p.params = [1.0, 0.5, 0.5, 0.5, 1.0]
-    assert_(not p.is_valid)
+    assert (not p.is_valid)
     p.params = [0.5, 1.0, 0.5, 0.5, 1.0]
-    assert_(not p.is_valid)
+    assert (not p.is_valid)
     p.params = [0.5, 0.5, 1.0, 0.5, 1.0]
-    assert_(not p.is_valid)
+    assert (not p.is_valid)
     p.params = [0.5, 0.5, 0.5, 1.0, 1.0]
-    assert_(not p.is_valid)
+    assert (not p.is_valid)
 
 
 def test_repr_str():

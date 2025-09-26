@@ -89,7 +89,7 @@ def test_short_panel():
     # compare with OLS
 
     res2_ols = mod2._fit_ols()
-    npt.assert_(mod2.res_pooled is res2_ols)
+    assert mod2.res_pooled is res2_ols
 
     res2_ols = mod2.res_pooled  # TODO: BUG: requires call to _fit_ols
 

@@ -27,18 +27,18 @@ class CheckGrouping:
         expected_sorted_data = self.data.sort_index()
 
         assert_frame_equal(sorted_data, expected_sorted_data)
-        np.testing.assert_(isinstance(sorted_data, pd.DataFrame))
-        np.testing.assert_(not index.equals(self.grouping.index))
+        assert isinstance(sorted_data, pd.DataFrame)
+        assert not index.equals(self.grouping.index)
 
         # make sure it copied
         if hasattr(sorted_data, "equals"):  # newer pandas
-            np.testing.assert_(not sorted_data.equals(self.data))
+            assert not sorted_data.equals(self.data)
 
         # 2d arrays
         sorted_data, index = self.grouping.sort(self.data.values)
         np.testing.assert_array_equal(sorted_data,
                                       expected_sorted_data.values)
-        np.testing.assert_(isinstance(sorted_data, np.ndarray))
+        assert isinstance(sorted_data, np.ndarray)
 
         # 1d series
         series = self.data[self.data.columns[0]]
@@ -46,9 +46,9 @@ class CheckGrouping:
 
         expected_sorted_data = series.sort_index()
         assert_series_equal(sorted_data, expected_sorted_data)
-        np.testing.assert_(isinstance(sorted_data, pd.Series))
+        assert isinstance(sorted_data, pd.Series)
         if hasattr(sorted_data, "equals"):
-            np.testing.assert_(not sorted_data.equals(series))
+            assert not sorted_data.equals(series)
 
         # 1d array
         array = series.values
@@ -56,7 +56,7 @@ class CheckGrouping:
 
         expected_sorted_data = series.sort_index().values
         np.testing.assert_array_equal(sorted_data, expected_sorted_data)
-        np.testing.assert_(isinstance(sorted_data, np.ndarray))
+        assert isinstance(sorted_data, np.ndarray)
 
     def test_transform_dataframe(self):
         names = self.data.index.names

@@ -9,7 +9,6 @@ from datetime import datetime
 import numpy as np
 from numpy import array, column_stack
 from numpy.testing import (
-    assert_,
     assert_allclose,
     assert_almost_equal,
     assert_equal,
@@ -1011,30 +1010,30 @@ class TestFilters:
         end = datetime(1958, 12, 31)
         x = self.data[0]
         res = convolution_filter(x, [0.75, 0.25])
-        assert_(res.index[0] == start)
-        assert_(res.index[-1] == end)
+        assert (res.index[0] == start)
+        assert (res.index[-1] == end)
 
         res = convolution_filter(x, [0.75, 0.25], nsides=1)
-        assert_(res.index[0] == start)
+        assert (res.index[0] == start)
         # with no nan-padding q1 if not
-        assert_(res.index[-1] == end)
+        assert (res.index[-1] == end)
 
         res = recursive_filter(x, [0.75, 0.25])
-        assert_(res.index[0] == start)
-        assert_(res.index[-1] == end)
+        assert (res.index[0] == start)
+        assert (res.index[-1] == end)
 
         x = self.datana
         res = recursive_filter(x, [0.75, 0.25])
-        assert_(res.index[0] == start)
-        assert_(res.index[-1] == end)
+        assert (res.index[0] == start)
+        assert (res.index[-1] == end)
 
     def test_pandas2d(self):
         start = datetime(1951, 3, 31)
         end = datetime(1958, 12, 31)
         x = concat((self.data[0], self.data[0]), axis=1)
         res = convolution_filter(x, [[0.75, 0.75], [0.25, 0.25]])
-        assert_(res.index[0] == start)
-        assert_(res.index[-1] == end)
+        assert (res.index[0] == start)
+        assert (res.index[-1] == end)
 
     def test_odd_length_filter(self):
         start = datetime(1951, 3, 31)
@@ -1043,14 +1042,14 @@ class TestFilters:
         res = convolution_filter(x, [0.75, 0.5, 0.3, 0.2, 0.1])
         expected = self.expected.conv2_odd
         np.testing.assert_almost_equal(res.values.squeeze(), expected)
-        np.testing.assert_(res.index[0] == start)
-        np.testing.assert_(res.index[-1] == end)
+        assert res.index[0] == start
+        assert res.index[-1] == end
 
         res = convolution_filter(x, [0.75, 0.5, 0.3, 0.2, 0.1], nsides=1)
         expected = self.expected.conv1_odd
         np.testing.assert_almost_equal(res.values.squeeze(), expected)
-        np.testing.assert_(res.index[0] == start)
-        np.testing.assert_(res.index[-1] == end)
+        assert res.index[0] == start
+        assert res.index[-1] == end
         # with no NAs
 
         # not a stable filter
@@ -1060,8 +1059,8 @@ class TestFilters:
         expected = self.expected.recurse_odd
         # only have 12 characters in R and this blows up and gets big
         np.testing.assert_almost_equal(res.values.squeeze(), expected, 4)
-        np.testing.assert_(res.index[0] == start)
-        np.testing.assert_(res.index[-1] == end)
+        assert res.index[0] == start
+        assert res.index[-1] == end
 
 
 def dummy_func(x):

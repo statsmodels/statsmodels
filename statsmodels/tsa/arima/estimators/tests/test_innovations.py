@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_, assert_allclose
+from numpy.testing import assert_allclose
 import pytest
 
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import (
@@ -345,14 +345,14 @@ def test_innovations_mle_misc():
     # Check that when Hannan-Rissanen estimates non-stationary starting
     # parameters, innovations_mle sets it to zero
     hr, _ = hannan_rissanen(endog, ar_order=1, demean=False)
-    assert_(hr.ar_params[0] > 1)
+    assert (hr.ar_params[0] > 1)
     _, res = innovations_mle(endog, order=(1, 0, 0))
     assert_allclose(res.start_params[0], 0)
 
     # Check that when Hannan-Rissanen estimates non-invertible starting
     # parameters, innovations_mle sets it to zero
     hr, _ = hannan_rissanen(endog, ma_order=1, demean=False)
-    assert_(hr.ma_params[0] > 1)
+    assert (hr.ma_params[0] > 1)
     _, res = innovations_mle(endog, order=(0, 0, 1))
     assert_allclose(res.start_params[0], 0)
 

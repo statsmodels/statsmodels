@@ -3,7 +3,6 @@ from statsmodels.compat.pandas import PD_LT_2_2_0
 from datetime import datetime
 
 import numpy as np
-import numpy.testing as npt
 import pandas as pd
 import pytest
 
@@ -86,7 +85,7 @@ def test_period_index():
     model = TimeSeriesModel(pd.Series(x, index=dates))
     assert_equal(model._index.freqstr, "M")
     model = TimeSeriesModel(pd.Series(x, index=dates))
-    npt.assert_(model.data.freq == "M")
+    assert model.data.freq == "M"
 
 
 def test_pandas_dates():

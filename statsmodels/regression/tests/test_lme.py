@@ -1283,12 +1283,10 @@ def test_singular():
     df = pd.DataFrame(data, columns=["Y", "X"])
     df["class"] = pd.Series([i % 3 for i in df.index], index=df.index)
 
-    with pytest.warns(Warning) as wrn:
-        md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
-        mdf = md.fit()
+    md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
+    mdf = md.fit()
+    with pytest.warns(Warning):
         mdf.summary()
-        if not wrn:
-            pytest.fail("warning expected")
 
 
 def test_get_distribution():

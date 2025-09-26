@@ -604,7 +604,7 @@ def test_compute_rank_placements(test_cases):
     assert_allclose(res.placements_2, expected_holder.placements_2)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def reference_implementation_results():
     """
     Results from R's rankFD::WMWSSP function.

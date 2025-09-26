@@ -219,14 +219,4 @@ def check_distribution_rvs(distfn, args, alpha, rvs):
     D, pval = stats.kstest(rvs, distfn.cdf, args=args, N=1000)
     if pval < alpha:
         D, pval = stats.kstest(distfn.rvs, distfn.cdf, args=args, N=1000)
-        npt.assert_(
-            pval > alpha,
-            "D = "
-            + str(D)
-            + "; pval = "
-            + str(pval)
-            + "; alpha = "
-            + str(alpha)
-            + "\nargs = "
-            + str(args),
-        )
+        assert pval > alpha, f"D = {D}; pval = {pval}; alpha = {alpha}; args = {args}"

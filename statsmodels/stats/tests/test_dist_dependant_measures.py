@@ -91,8 +91,8 @@ class TestDistDependenceMeasures:
             statistic, pval, _ = ddm.distance_covariance_test(
                 self.x, self.y, method="emp", B=200
             )
-            assert_almost_equal(statistic, self.test_stat_emp_exp, 0)
-            assert_almost_equal(pval, self.pval_asym_exp, 3)
+        assert_almost_equal(statistic, self.test_stat_emp_exp, 0)
+        assert_almost_equal(pval, self.pval_asym_exp, 3)
 
     def test_statistics_for_2d_input(self):
         stats = ddm.distance_statistics(

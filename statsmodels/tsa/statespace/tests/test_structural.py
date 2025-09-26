@@ -155,7 +155,7 @@ def test_fixed_intercept(close_figures):
     match = "Specified model does not contain"
     with pytest.warns(warning, match=match):
         run_ucm("fixed_intercept")
-        run_ucm("fixed_intercept", use_exact_diffuse=True)
+    run_ucm("fixed_intercept", use_exact_diffuse=True)
 
 
 def test_deterministic_constant(close_figures):
@@ -178,7 +178,7 @@ def test_fixed_slope(close_figures):
     match = "irregular component added"
     with pytest.warns(warning, match=match):
         run_ucm("fixed_slope")
-        run_ucm("fixed_slope", use_exact_diffuse=True)
+    run_ucm("fixed_slope", use_exact_diffuse=True)
 
 
 def test_fixed_slope_warn(close_figures):
@@ -189,7 +189,7 @@ def test_fixed_slope_warn(close_figures):
     match = "irregular component added"
     with pytest.warns(warning, match=match):
         run_ucm("fixed_slope")
-        run_ucm("fixed_slope", use_exact_diffuse=True)
+    run_ucm("fixed_slope", use_exact_diffuse=True)
 
 
 def test_deterministic_trend(close_figures):
@@ -306,7 +306,7 @@ def test_specifications():
     match = "irregular component added"
     with pytest.warns(warning, match=match):
         mod = UnobservedComponents(endog)
-        assert_equal(mod.trend_specification, "irregular")
+    assert_equal(mod.trend_specification, "irregular")
 
     # Test an invalid string trend specification
     with pytest.raises(ValueError):
@@ -318,7 +318,7 @@ def test_specifications():
     match = "Trend component specified without"
     with pytest.warns(warning, match=match):
         mod = UnobservedComponents(endog, trend=True, irregular=True)
-        assert_equal(mod.trend_specification, "deterministic trend")
+    assert_equal(mod.trend_specification, "deterministic trend")
 
     # Test that if a string specification is provided, a warning is issued if
     # the boolean attributes are also specified

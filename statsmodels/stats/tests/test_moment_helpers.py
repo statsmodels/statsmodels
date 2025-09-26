@@ -104,9 +104,9 @@ def test_multidimensional(test_vals):
     assert_almost_equal(mvsk2mc(mc2mvsk(test_vals).T).T, test_vals)
 
 
-@pytest.mark.parametrize("func_name", ["cum2mc", "cum2mc", "mc2cum", "mc2mnc",
+@pytest.mark.parametrize("func_name", ["cum2mc", "mc2cum", "mc2mnc",
                                        "mc2mvsk", "mnc2cum", "mnc2mc",
-                                       "mnc2mc", "mvsk2mc", "mvsk2mnc"])
+                                       "mvsk2mc", "mvsk2mnc"])
 def test_moment_conversion_types(func_name):
     # written in 2009
     # TODO: why did I use list as return type?

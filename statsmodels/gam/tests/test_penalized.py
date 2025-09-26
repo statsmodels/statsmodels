@@ -8,7 +8,7 @@ Author: Josef Perktold
 import os
 
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
@@ -831,7 +831,7 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
 
         assert_equal(res1a.fittedvalues.iloc[2:4].index.values, [2, 3])
         assert_equal(np.asarray(res1a.params.index), xnames)
-        assert_(isinstance(res1a.params, pd.Series))
+        assert (isinstance(res1a.params, pd.Series))
 
-        assert_(isinstance(res1a, GLMGamResultsWrapper))
-        assert_(isinstance(res1a._results, GLMGamResults))
+        assert (isinstance(res1a, GLMGamResultsWrapper))
+        assert (isinstance(res1a._results, GLMGamResults))

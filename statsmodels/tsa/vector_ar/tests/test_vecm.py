@@ -1,6 +1,5 @@
 import numpy as np
 from numpy.testing import (
-    assert_,
     assert_allclose,
     assert_array_equal,
 )
@@ -459,7 +458,7 @@ def test_ml_c():  # test deterministic terms outside coint relation
                     and t_C_obt.size == 0
                     and p_C_obt.size == 0
                 ):
-                    assert_(True)
+                    assert (True)
                     continue
 
             desired = results_ref[ds][dt]["est"]["C"]
@@ -753,18 +752,19 @@ def test_ml_det_terms_in_coint_relation():
             obtained_exog_coint = results_sm_exog_coint[ds][dt].det_coef_coint
             if "ci" not in dt_string and "li" not in dt_string:
                 if obtained.size > 0:
-                    assert_(
-                        False,
+                    pytest.fail(
                         build_err_msg(
                             ds,
                             dt,
-                            "There should not be any det terms in "
-                            "cointegration for deterministic terms "
-                            + dt_string,
-                        ),
+                            (
+                                "There should not be any det terms in cointegration "
+                                "for deterministic terms" + dt_string
+                            ),
+                        )
                     )
+
                 else:
-                    assert_(True)
+                    assert (True)
                 continue
             desired = results_ref[ds][dt]["est"]["det_coint"]
             assert_allclose(obtained, desired, rtol, atol, False, err_msg)
@@ -1152,7 +1152,7 @@ def test_granger_causality():
                 # call methods to assure they do not raise exceptions
                 granger_sm_ind.summary()
                 str(granger_sm_ind)  # __str__()
-                assert_(granger_sm_ind == granger_sm_str)  # __eq__()
+                assert (granger_sm_ind == granger_sm_str)  # __eq__()
 
                 # test test-statistic for Granger non-causality:
                 g_t_obt = granger_sm_ind.test_statistic
@@ -1281,7 +1281,7 @@ def test_inst_causality():  # test instantaneous causality
                 # call methods to assure they do not raise exceptions
                 inst_sm_ind.summary()
                 str(inst_sm_ind)  # __str__()
-                assert_(inst_sm_ind == inst_sm_str)  # __eq__()
+                assert (inst_sm_ind == inst_sm_str)  # __eq__()
                 # test test-statistic for instantaneous non-causality
                 t_obt = inst_sm_ind.test_statistic
                 t_obt_exog = inst_sm_ind_exog.test_statistic
@@ -1513,7 +1513,7 @@ def test_normality():
             # call methods to assure they do not raise exceptions
             obtained.summary()
             str(obtained)  # __str__()
-            assert_(obtained == obtained_exog)  # __eq__()
+            assert (obtained == obtained_exog)  # __eq__()
 
 
 def test_whiteness():
@@ -1598,7 +1598,7 @@ def test_whiteness():
             # call methods to assure they do not raise exceptions
             obtained.summary()
             str(obtained)  # __str__()
-            assert_(obtained == obtained_exog)  # __eq__()
+            assert (obtained == obtained_exog)  # __eq__()
 
 
 def test_summary():
@@ -1754,9 +1754,9 @@ def test_select_coint_rank():  # This is only a smoke test.
     if rank > 0:
         assert_equal(r_1[0], r_1[1])
         for i in range(rank):
-            assert_(test_stats[i] > crit_vals[i])
+            assert (test_stats[i] > crit_vals[i])
     if rank < neqs:
-        assert_(test_stats[rank] < crit_vals[rank])
+        assert (test_stats[rank] < crit_vals[rank])
 
     maxeig_result = select_coint_rank(endog, 0, 3, method="maxeig", signif=0.1)
     rank = maxeig_result.rank
@@ -1766,9 +1766,9 @@ def test_select_coint_rank():  # This is only a smoke test.
     if maxeig_result.rank > 0:
         assert_equal(r_1[0], r_1[1] - 1)
         for i in range(rank):
-            assert_(test_stats[i] > crit_vals[i])
+            assert (test_stats[i] > crit_vals[i])
     if rank < neqs:
-        assert_(test_stats[rank] < crit_vals[rank])
+        assert (test_stats[rank] < crit_vals[rank])
 
 
 def test_VECM_seasonal_forecast():

@@ -84,7 +84,7 @@ def test_sir_regularized_numdiff():
         fmat[i, i:i+3] = [1, -2, 1]
 
     with pytest.warns(UserWarning, match="SIR.fit_regularized did not"):
-        _ = model.fit_regularized(2, 3*fmat)
+        model.fit_regularized(2, 3*fmat)
 
     # Compare the gradients to the numerical derivatives
     for _ in range(5):

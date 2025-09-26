@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pytest
 
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake, oshorts
@@ -77,15 +77,15 @@ def test_results():
     # Test for results output
     p, res = gls(endog, exog, order=(1, 0, 0))
 
-    assert_("params" in res)
-    assert_("converged" in res)
-    assert_("differences" in res)
-    assert_("iterations" in res)
-    assert_("arma_estimator" in res)
-    assert_("arma_results" in res)
+    assert ("params" in res)
+    assert ("converged" in res)
+    assert ("differences" in res)
+    assert ("iterations" in res)
+    assert ("arma_estimator" in res)
+    assert ("arma_results" in res)
 
-    assert_(res.converged)
-    assert_(res.iterations > 0)
+    assert (res.converged)
+    assert (res.iterations > 0)
     assert_equal(res.arma_estimator, "innovations_mle")
     assert_equal(len(res.params), res.iterations + 1)
     assert_equal(len(res.differences), res.iterations + 1)

@@ -9,7 +9,7 @@ License: BSD-3
 from io import StringIO
 
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
@@ -170,14 +170,14 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         # trailing text in summary, assumes it's the first extra string
         # NOTE: see comment about convergence in llnull for self.res1m
         summ = self.res1m.summary()
-        assert_("linear equality constraints" in summ.extra_txt)
+        assert ("linear equality constraints" in summ.extra_txt)
 
     @pytest.mark.smoke
     def test_summary2(self):
         # trailing text in summary, assumes it's the first extra string
         # NOTE: see comment about convergence in llnull for self.res1m
         summ = self.res1m.summary2()
-        assert_("linear equality constraints" in summ.extra_txt[0])
+        assert ("linear equality constraints" in summ.extra_txt[0])
 
 
 class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
@@ -542,7 +542,7 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
     def test_summary(self):
         # trailing text in summary, assumes it's the first extra string
         summ = self.res1m.summary()
-        assert_("linear equality constraints" in summ.extra_txt)
+        assert ("linear equality constraints" in summ.extra_txt)
 
         lc_string = str(self.res1m.constraints)
         assert lc_string.startswith("x1 - x3 = 0")
@@ -557,7 +557,7 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
             # FutureWarning for BIC changes
             summ = self.res1m.summary2()
 
-        assert_("linear equality constraints" in summ.extra_txt[0])
+        assert ("linear equality constraints" in summ.extra_txt[0])
 
     def test_fit_constrained_wrap(self):
         # minimal test

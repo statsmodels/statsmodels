@@ -21,7 +21,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 macrodata = datasets.macrodata.load_pandas().data
 
 
-@pytest.fixture()
+@pytest.fixture
 def temp_filename():
     fd, filename = tempfile.mkstemp()
     yield filename

@@ -2789,14 +2789,14 @@ def test_start_params_small_nobs():
     )
     with pytest.warns(UserWarning, match=match):
         start_params = mod.start_params
-        assert_allclose(start_params, [0, 0, 0, 0, np.var(endog[:4])])
+    assert_allclose(start_params, [0, 0, 0, 0, np.var(endog[:4])])
 
     # Seasonal ARMA
     mod = sarimax.SARIMAX(endog[:4], order=(0, 0, 0), seasonal_order=(1, 0, 0, 4))
     match = "Too few observations to estimate starting parameters for" " seasonal ARMA."
     with pytest.warns(UserWarning, match=match):
         start_params = mod.start_params
-        assert_allclose(start_params, [0, np.var(endog[:4])])
+    assert_allclose(start_params, [0, np.var(endog[:4])])
 
 
 def test_simple_differencing_int64index():

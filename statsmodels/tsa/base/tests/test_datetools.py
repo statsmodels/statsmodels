@@ -45,12 +45,12 @@ def test_dates_from_range():
                datetime(1962, 3, 31, 0, 0),
                datetime(1962, 6, 30, 0, 0)]
     dt_range = dates_from_range("1959q1", "1962q2")
-    npt.assert_(results == dt_range)
+    assert results == dt_range
 
     # test with starting period not the first with length
     results = results[2:]
     dt_range = dates_from_range("1959q3", length=len(results))
-    npt.assert_(results == dt_range)
+    assert results == dt_range
 
     # check month
     results = [datetime(1959, 3, 31, 0, 0),

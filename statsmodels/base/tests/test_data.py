@@ -5,7 +5,7 @@ from statsmodels.compat.pandas import (
 )
 
 import numpy as np
-from numpy.testing import assert_, assert_equal
+from numpy.testing import assert_equal
 import pandas as pd
 import pytest
 
@@ -75,7 +75,7 @@ class TestArrays:
         # HACK: because numpy main after NA stuff assert_equal fails on
         # pandas indices
         # FIXME: see if this can be de-hacked
-        np.testing.assert_(np.all(self.data.row_labels == self.row_labels))
+        assert np.all(self.data.row_labels == self.row_labels)
 
 
 class TestArrays2dEndog(TestArrays):
@@ -639,7 +639,7 @@ class TestMissingPandas:
             ]
         )
         data = sm_data.handle_data(self.y, self.X, "drop")
-        np.testing.assert_(data.row_labels.equals(labels))
+        assert data.row_labels.equals(labels)
 
 
 class TestConstant:
@@ -744,7 +744,7 @@ class CheckHasConstant:
             assert_equal(mod.k_constant, result[0])
             assert_equal(mod.data.k_constant, result[0])
             if result[1] is None:
-                assert_(mod.data.const_idx is None)
+                assert mod.data.const_idx is None
             else:
                 assert_equal(mod.data.const_idx, result[1])
 

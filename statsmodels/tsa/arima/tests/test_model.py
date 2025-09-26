@@ -15,7 +15,7 @@ from statsmodels.compat.platform import PLATFORM_WIN32
 import io
 
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
@@ -199,17 +199,17 @@ def test_low_memory():
     assert_equal(mod.ssm.memory_conserve, 0)
 
     # Check that low memory was actually used (just check a couple)
-    assert_(res2.llf_obs is None)
-    assert_(res2.predicted_state is None)
-    assert_(res2.filtered_state is None)
-    assert_(res2.smoothed_state is None)
+    assert (res2.llf_obs is None)
+    assert (res2.predicted_state is None)
+    assert (res2.filtered_state is None)
+    assert (res2.smoothed_state is None)
 
 
 def check_cloned(mod, endog, exog=None):
     mod_c = mod.clone(endog, exog=exog)
 
     assert_allclose(mod.nobs, mod_c.nobs)
-    assert_(mod._index.equals(mod_c._index))
+    assert (mod._index.equals(mod_c._index))
     assert_equal(mod.k_params, mod_c.k_params)
     assert_allclose(mod.start_params, mod_c.start_params)
     p = mod.start_params

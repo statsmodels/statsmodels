@@ -63,10 +63,9 @@ def test_regression_summary():
         warnings.filters = original_filters  # restore filters
 
     actual = r_summary
-    import numpy as np
     actual = "\n".join(line.rstrip() for line in actual.split("\n"))
 #    counter = 0
 #    for c1,c2 in zip(actual, desired):
 #        if not c1==c2 and counter<20:
 #            counter += 1
-    np.testing.assert_(actual == desired)
+    assert actual == desired

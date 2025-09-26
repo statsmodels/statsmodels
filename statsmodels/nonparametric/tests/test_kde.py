@@ -333,8 +333,7 @@ class TestKdeRefit:
     pdf2.fit()
 
     for attr in ["icdf", "cdf", "sf"]:
-        npt.assert_(not np.allclose(getattr(pdf, attr)[:10],
-                                    getattr(pdf2, attr)[:10]))
+        assert not np.allclose(getattr(pdf, attr)[:10], getattr(pdf2, attr)[:10])
 
 
 class TestNormConstant:

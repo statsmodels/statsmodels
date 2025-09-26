@@ -732,15 +732,15 @@ class TestGEE:
             mod_sub = gee.GEE(
                 endog, exog_sub, group, cov_struct=cov_struct.Exchangeable()
             )
-            res_sub = mod_sub.fit()
-            mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
-            mod.compare_score_test(res_sub)  # smoketest
+        res_sub = mod_sub.fit()
+        mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
+        mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched family
+        mod_sub = gee.GEE(endog, exog_sub, group, family=families.Gaussian())
+        res_sub = mod_sub.fit()
+        mod = gee.GEE(endog, exog, group, family=families.Poisson())
         with pytest.warns(UserWarning):
-            mod_sub = gee.GEE(endog, exog_sub, group, family=families.Gaussian())
-            res_sub = mod_sub.fit()
-            mod = gee.GEE(endog, exog, group, family=families.Poisson())
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched size
@@ -751,19 +751,19 @@ class TestGEE:
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched weights
+        w = np.random.uniform(size=n)
         with pytest.warns(UserWarning):
-            w = np.random.uniform(size=n)
             mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
-            res_sub = mod_sub.fit()
-            mod = gee.GEE(endog, exog, group)
-            mod.compare_score_test(res_sub)  # smoketest
+        res_sub = mod_sub.fit()
+        mod = gee.GEE(endog, exog, group)
+        mod.compare_score_test(res_sub)  # smoketest
 
         # Parent and submodel are the same dimension
+        w = np.random.uniform(size=n)
+        mod_sub = gee.GEE(endog, exog, group)
+        res_sub = mod_sub.fit()
+        mod = gee.GEE(endog, exog, group)
         with pytest.warns(UserWarning):
-            w = np.random.uniform(size=n)
-            mod_sub = gee.GEE(endog, exog, group)
-            res_sub = mod_sub.fit()
-            mod = gee.GEE(endog, exog, group)
             mod.compare_score_test(res_sub)  # smoketest
 
     def test_constraint_covtype(self):
@@ -2222,11 +2222,11 @@ def test_ql_diff(family):
 
 
 def test_qic_warnings():
+    fam = families.Gaussian()
+    y, x1, _, g = simple_qic_data(fam)
+    model = gee.GEE(y, x1, family=fam, groups=g)
+    result = model.fit()
     with pytest.warns(UserWarning):
-        fam = families.Gaussian()
-        y, x1, _, g = simple_qic_data(fam)
-        model = gee.GEE(y, x1, family=fam, groups=g)
-        result = model.fit()
         result.qic()
 
 

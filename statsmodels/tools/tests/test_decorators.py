@@ -51,14 +51,14 @@ def test_deprecated_alias(msg, remove_version, warning):
     dummy_set = dummy_factory(msg, remove_version, warning)
     with pytest.warns(warning) as w:
         dummy_set.y = 2
-        assert dummy_set.x == 2
+    assert dummy_set.x == 2
 
     assert warning.__class__ is w[0].category.__class__
 
     dummy_get = dummy_factory(msg, remove_version, warning)
     with pytest.warns(warning) as w:
         x = dummy_get.y
-        assert x == 1
+    assert x == 1
 
     assert warning.__class__ is w[0].category.__class__
     message = str(w[0].message)

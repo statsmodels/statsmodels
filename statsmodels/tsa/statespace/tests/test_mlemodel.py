@@ -13,7 +13,6 @@ import warnings
 
 import numpy as np
 from numpy.testing import (
-    assert_,
     assert_allclose,
     assert_almost_equal,
     assert_equal,
@@ -1240,25 +1239,25 @@ def check_states_index(states, ix, predicted_ix, cols):
     smoothed_cov_ix = pd.MultiIndex.from_product([ix, cols]).swaplevel()
 
     # Predicted
-    assert_(states.predicted.index.equals(predicted_ix))
-    assert_(states.predicted.columns.equals(cols))
+    assert (states.predicted.index.equals(predicted_ix))
+    assert (states.predicted.columns.equals(cols))
 
-    assert_(states.predicted_cov.index.equals(predicted_cov_ix))
-    assert_(states.predicted.columns.equals(cols))
+    assert (states.predicted_cov.index.equals(predicted_cov_ix))
+    assert (states.predicted.columns.equals(cols))
 
     # Filtered
-    assert_(states.filtered.index.equals(ix))
-    assert_(states.filtered.columns.equals(cols))
+    assert (states.filtered.index.equals(ix))
+    assert (states.filtered.columns.equals(cols))
 
-    assert_(states.filtered_cov.index.equals(filtered_cov_ix))
-    assert_(states.filtered.columns.equals(cols))
+    assert (states.filtered_cov.index.equals(filtered_cov_ix))
+    assert (states.filtered.columns.equals(cols))
 
     # Smoothed
-    assert_(states.smoothed.index.equals(ix))
-    assert_(states.smoothed.columns.equals(cols))
+    assert (states.smoothed.index.equals(ix))
+    assert (states.smoothed.columns.equals(cols))
 
-    assert_(states.smoothed_cov.index.equals(smoothed_cov_ix))
-    assert_(states.smoothed.columns.equals(cols))
+    assert (states.smoothed_cov.index.equals(smoothed_cov_ix))
+    assert (states.smoothed.columns.equals(cols))
 
 
 def test_states_index_periodindex():

@@ -157,7 +157,7 @@ select = [
   # pylint
   "PL",
 ##  # flake8-pytest-style
-##  "PT",
+  "PT",
   # misc lints
   "PIE",
   # flake8-pyi
@@ -193,6 +193,7 @@ select = [
 ]
 
 ignore = [
+    "PT011","PT028","PT030",
   # Required to allow black formatting
   "E203",
   # E203: Whitespace before ':' (Needed for black)

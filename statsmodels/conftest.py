@@ -96,7 +96,7 @@ def pytest_configure(config):
         pass
 
 
-@pytest.fixture()
+@pytest.fixture
 def close_figures():
     """
     Fixture that closes all figures after a test function has completed
@@ -138,7 +138,7 @@ def close_figures():
     close()
 
 
-@pytest.fixture()
+@pytest.fixture
 def reset_randomstate():
     """
     Fixture that set the global RandomState to the fixed seed 1
@@ -182,7 +182,7 @@ def pytest_collection_modifyitems(config, items):
         pass
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def check_figures_closed():
     try:
         import matplotlib.pyplot as plt

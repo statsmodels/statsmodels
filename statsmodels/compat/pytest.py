@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
-from pytest import warns
+import pytest
 
 if TYPE_CHECKING:
     from _pytest.recwarn import WarningsChecker
@@ -34,10 +34,11 @@ def pytest_warns(
     warning: type[Warning] | tuple[type[Warning], ...] | None
 ) -> WarningsChecker | NoWarningsChecker:
     """
+    Shim for pytest warn compatability
 
     Parameters
     ----------
-    warning : {None, Warning, Tuple[Warning]}
+    warning: {None, Warning, Tuple[Warning]}
         None if no warning is produced, or a single or multiple Warnings
 
     Returns
@@ -50,4 +51,4 @@ def pytest_warns(
     else:
         assert warning is not None
 
-        return warns(warning)
+        return pytest.warns(warning)

@@ -30,7 +30,7 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 
 
-@pytest.fixture()
+@pytest.fixture
 def bivariate_var_data(reset_randomstate):
     """A bivariate dataset for VAR estimation"""
     e = np.random.standard_normal((252, 2))
@@ -41,7 +41,7 @@ def bivariate_var_data(reset_randomstate):
     return y
 
 
-@pytest.fixture()
+@pytest.fixture
 def bivariate_var_result(bivariate_var_data):
     """A bivariate VARResults for reuse"""
     mod = VAR(bivariate_var_data)
