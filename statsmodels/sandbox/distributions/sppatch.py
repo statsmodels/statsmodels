@@ -154,12 +154,11 @@ def _fitstart_poisson(self, x, fixed=None):
     if fixed is None:
         # this part not checked with books
         loc = a - eps
+    elif np.isnan(fixed[-1]):
+        # estimate loc
+        loc = a - eps
     else:
-        if np.isnan(fixed[-1]):
-            # estimate loc
-            loc = a - eps
-        else:
-            loc = fixed[-1]
+        loc = fixed[-1]
 
     # MLE for standard (unshifted, if loc=0) Poisson distribution
 

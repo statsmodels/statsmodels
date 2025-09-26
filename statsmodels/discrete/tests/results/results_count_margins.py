@@ -54,10 +54,10 @@ margins_table = np.array([
     .00049396734722, -41.545976343431, -11.630819235457, np.nan,
     1.9599639845401,                0]).reshape(6, 9)
 
-margins_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+margins_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-margins_table_rownames = ['sincome', 'sperpoverty', 'sperblack',
-                          'LN_VC100k96', 'south', 'sdegree']
+margins_table_rownames = ["sincome", "sperpoverty", "sperblack",
+                          "LN_VC100k96", "south", "sdegree"]
 
 margins_cov = np.array([
     10.87507957467,  3.4816608831283,  .87483487811437,  3.1229403520191,
@@ -74,11 +74,11 @@ margins_cov = np.array([
     .41772084541889, -21.269786576194,   1.461997775289,   -4.46154120848,
     37.559994394326]).reshape(7, 7)
 
-margins_cov_colnames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
-                        'south', 'sdegree', '_cons']
+margins_cov_colnames = ["sincome", "sperpoverty", "sperblack", "LN_VC100k96",
+                        "south", "sdegree", "_cons"]
 
-margins_cov_rownames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
-                        'south', 'sdegree', '_cons']
+margins_cov_rownames = ["sincome", "sperpoverty", "sperblack", "LN_VC100k96",
+                        "south", "sdegree", "_cons"]
 
 
 results_poisson_margins_cont = MarginTableTestBunch(
@@ -150,10 +150,10 @@ margins_table = np.array([
     .279746674501, -70.693193888391,  20.436586695964, np.nan,
     1.9599639845401,                0]).reshape(6, 9)
 
-margins_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+margins_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-margins_table_rownames = ['sincome', 'sperpoverty', 'sperblack',
-                          'LN_VC100k96', 'south', 'sdegree']
+margins_table_rownames = ["sincome", "sperpoverty", "sperblack",
+                          "LN_VC100k96", "south", "sdegree"]
 
 margins_cov = np.array([
     44.468037032422,  13.291812805254,  .84306554343753, -.38095027773819,
@@ -174,11 +174,11 @@ margins_cov = np.array([
     -.34297224102579, -.61952491151176,  .88600743091011,  .71851239110057
     ]).reshape(8, 8)
 
-margins_cov_colnames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
-                        'south', 'sdegree', '_cons', '_cons']
+margins_cov_colnames = ["sincome", "sperpoverty", "sperblack", "LN_VC100k96",
+                        "south", "sdegree", "_cons", "_cons"]
 
-margins_cov_rownames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
-                        'south', 'sdegree', '_cons', '_cons']
+margins_cov_rownames = ["sincome", "sperpoverty", "sperblack", "LN_VC100k96",
+                        "south", "sdegree", "_cons", "_cons"]
 
 
 results_negbin_margins_cont = MarginTableTestBunch(
@@ -245,10 +245,10 @@ margins_table = np.array([
     -3.4840065782311,  .00049396734691, -41.545976342695, -11.630819236193,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-margins_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+margins_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-margins_table_rownames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
-                          '0b.south', '1.south', 'sdegree']
+margins_table_rownames = ["sincome", "sperpoverty", "sperblack", "LN_VC100k96",
+                          "0b.south", "1.south", "sdegree"]
 
 margins_cov = np.array([
     10.875079574674,  3.4816608831298,  .87483487811447,  3.1229403520208,
@@ -269,11 +269,11 @@ margins_cov = np.array([
     0,  1.4619977752889, -4.4615412084808,  37.559994394343
     ]).reshape(8, 8)
 
-margins_cov_colnames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
-                        '0b.south', '1.south', 'sdegree', '_cons']
+margins_cov_colnames = ["sincome", "sperpoverty", "sperblack", "LN_VC100k96",
+                        "0b.south", "1.south", "sdegree", "_cons"]
 
-margins_cov_rownames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
-                        '0b.south', '1.south', 'sdegree', '_cons']
+margins_cov_rownames = ["sincome", "sperpoverty", "sperblack", "LN_VC100k96",
+                        "0b.south", "1.south", "sdegree", "_cons"]
 
 
 results_poisson_margins_dummy = MarginTableTestBunch(
@@ -347,10 +347,10 @@ margins_table = np.array([
     -1.0808885896294,  .27974667485873, -70.693193922279,  20.436586729858,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-margins_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+margins_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-margins_table_rownames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
-                          '0b.south', '1.south', 'sdegree']
+margins_table_rownames = ["sincome", "sperpoverty", "sperblack", "LN_VC100k96",
+                          "0b.south", "1.south", "sdegree"]
 
 
 margins_cov = np.array([
@@ -376,11 +376,11 @@ margins_cov = np.array([
     0, -.34297224102581, -.61952491151187,  .88600743090998,
     .71851239110059]).reshape(9, 9)
 
-margins_cov_colnames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
-                        '0b.south', '1.south', 'sdegree', '_cons', '_cons']
+margins_cov_colnames = ["sincome", "sperpoverty", "sperblack", "LN_VC100k96",
+                        "0b.south", "1.south", "sdegree", "_cons", "_cons"]
 
-margins_cov_rownames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
-                        '0b.south', '1.south', 'sdegree', '_cons', '_cons']
+margins_cov_rownames = ["sincome", "sperpoverty", "sperblack", "LN_VC100k96",
+                        "0b.south", "1.south", "sdegree", "_cons", "_cons"]
 
 
 results_negbin_margins_dummy = MarginTableTestBunch(

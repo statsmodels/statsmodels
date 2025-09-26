@@ -1,7 +1,7 @@
 """Yearly sunspots data 1700-2008"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This data is public domain."""
 TITLE = __doc__
@@ -34,7 +34,7 @@ def load_pandas():
     # TODO: time series
     endog = data.set_index(data.YEAR).SUNACTIVITY
     dataset = du.Dataset(data=data, names=list(data.columns),
-                         endog=endog, endog_name='volume')
+                         endog=endog, endog_name="volume")
     return dataset
 
 
@@ -57,4 +57,4 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'sunspots.csv').astype(float)
+    return du.load_csv(__file__, "sunspots.csv").astype(float)

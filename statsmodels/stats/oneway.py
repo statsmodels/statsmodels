@@ -494,7 +494,7 @@ def anova_generic(means, variances, nobs, use_var="unequal",
                "welch_correction": welch_correction
                }
     if means.ndim != 1:
-        raise ValueError('data (means, ...) has to be one-dimensional')
+        raise ValueError("data (means, ...) has to be one-dimensional")
     nobs_t = nobs.sum()
     n_groups = len(means)
     # mean_t = (nobs * means).sum() / nobs_t
@@ -667,7 +667,7 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
         pass
     args = list(map(np.asarray, data))
     if any([x.ndim != 1 for x in args]):
-        raise ValueError('data arrays have to be one-dimensional')
+        raise ValueError("data arrays have to be one-dimensional")
 
     nobs = np.array([len(x) for x in args], float)
     # n_groups = len(args)  # not used
@@ -1015,7 +1015,7 @@ def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
     other_mc = []
     for _ in range(k_mc):
         y0, y1, y2, y3 = (m + std * np.random.randn(n)
-                          for (n, m, std) in zip(nobs, means, stds))
+                          for (n, m, std) in zip(nobs, means, stds, strict=False))
 
         res_i = []
         f_i = []
@@ -1141,8 +1141,8 @@ def test_scale_oneway(data, method="bf", center="median", transform="abs",
     return res
 
 
-def equivalence_scale_oneway(data, equiv_margin, method='bf', center='median',
-                             transform='abs', trim_frac_mean=0.,
+def equivalence_scale_oneway(data, equiv_margin, method="bf", center="median",
+                             transform="abs", trim_frac_mean=0.,
                              trim_frac_anova=0.):
     """Oneway Anova test for equivalence of scale, variance or dispersion
 

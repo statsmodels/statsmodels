@@ -13,7 +13,7 @@ import statsmodels.api as sm
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 fname = "contingency_table_r_results.csv"
-fpath = os.path.join(cur_dir, 'results', fname)
+fpath = os.path.join(cur_dir, "results", fname)
 r_results = pd.read_csv(fpath)
 
 
@@ -63,7 +63,7 @@ def test_SquareTable_from_data():
                  rslt3.summary().as_text())
 
     s = str(rslt1)
-    assert_equal(s.startswith('A 5x5 contingency table with counts:'), True)
+    assert_equal(s.startswith("A 5x5 contingency table with counts:"), True)
     assert_equal(rslt1.table[0, 0], 8.)
 
 
@@ -602,13 +602,13 @@ class Test2x2_1(Check2x2Mixin):
         cls.riskratio_confint = [0.25009765325990629, 3.9984381579173824]
         cls.log_riskratio_confint = [-1.3859038243496782, 1.3859038243496782]
         ss = [
-            '               Estimate   SE   LCB    UCB   p-value',
-            '---------------------------------------------------',
-            'Odds ratio        1.000        0.063 15.988   1.000',
-            'Log odds ratio    0.000 1.414 -2.772  2.772   1.000',
-            'Risk ratio        1.000        0.250  3.998   1.000',
-            'Log risk ratio    0.000 0.707 -1.386  1.386   1.000',
-            '---------------------------------------------------'
+            "               Estimate   SE   LCB    UCB   p-value",
+            "---------------------------------------------------",
+            "Odds ratio        1.000        0.063 15.988   1.000",
+            "Log odds ratio    0.000 1.414 -2.772  2.772   1.000",
+            "Risk ratio        1.000        0.250  3.998   1.000",
+            "Log risk ratio    0.000 0.707 -1.386  1.386   1.000",
+            "---------------------------------------------------"
         ]
-        cls.summary_string = '\n'.join(ss)
+        cls.summary_string = "\n".join(ss)
         cls.initialize()

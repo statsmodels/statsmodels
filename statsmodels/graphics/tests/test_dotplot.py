@@ -291,7 +291,7 @@ def test_all(close_figures, reset_randomstate):
         styles_order=styles_order,
     )
     handles, labels = ax.get_legend_handles_labels()
-    lh = dict(zip(labels, handles))
+    lh = dict(zip(labels, handles, strict=False))
     handles = [lh[idx] for idx in styles_order]
     leg = plt.figlegend(
         handles, styles_order, loc="center right", numpoints=1, handletextpad=0.0001

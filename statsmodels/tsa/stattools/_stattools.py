@@ -291,7 +291,7 @@ def adfuller(
         maxlag = min(nobs // 2 - ntrend - 1, maxlag)
         if maxlag < 0:
             raise ValueError(
-                "sample size is too short to use selected " "regression component"
+                "sample size is too short to use selected regression component"
             )
     elif maxlag > nobs // 2 - ntrend - 1:
         raise ValueError(
@@ -376,11 +376,10 @@ def adfuller(
         resstore.icbest = icbest
         resstore._str = "Augmented Dickey-Fuller Test Results"
         return adfstat, pvalue, critvalues, resstore
+    elif not autolag:
+        return adfstat, pvalue, usedlag, nobs, critvalues
     else:
-        if not autolag:
-            return adfstat, pvalue, usedlag, nobs, critvalues
-        else:
-            return adfstat, pvalue, usedlag, nobs, critvalues, icbest
+        return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 
 @deprecate_kwarg("unbiased", "adjusted")
@@ -481,16 +480,15 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
                 acov /= n - np.arange(lag_len + 1)
             else:
                 acov /= n
-        else:
-            if adjusted:
-                divisor = np.empty(lag_len + 1, dtype=np.int64)
-                divisor[0] = notmask_int.sum()
-                for i in range(lag_len):
-                    divisor[i + 1] = notmask_int[i + 1 :].dot(notmask_int[: -(i + 1)])
-                divisor[divisor == 0] = 1
-                acov /= divisor
-            else:  # biased, missing data but npt "drop"
-                acov /= notmask_int.sum()
+        elif adjusted:
+            divisor = np.empty(lag_len + 1, dtype=np.int64)
+            divisor[0] = notmask_int.sum()
+            for i in range(lag_len):
+                divisor[i + 1] = notmask_int[i + 1 :].dot(notmask_int[: -(i + 1)])
+            divisor[divisor == 0] = 1
+            acov /= divisor
+        else:  # biased, missing data but npt "drop"
+            acov /= notmask_int.sum()
         return acov
 
     if adjusted and deal_with_masked and missing == "conservative":
@@ -754,8 +752,9 @@ def pacf_yw(
     pacf = [1.0]
     with warnings.catch_warnings():
         warnings.simplefilter("once", ValueWarning)
-        for k in range(1, nlags + 1):
-            pacf.append(yule_walker(x, k, method=method)[0][-1])
+        pacf.extend(
+            [yule_walker(x, k, method=method)[0][-1] for k in range(1, nlags + 1)]
+        )
     return np.array(pacf)
 
 
@@ -1279,7 +1278,7 @@ def levinson_durbin_pacf(pacf, nlags=None):
 
     if pacf[0] != 1:
         raise ValueError(
-            "The first entry of the pacf corresponds to lags 0 " "and so must be 1."
+            "The first entry of the pacf corresponds to lags 0 and so must be 1."
         )
     pacf = pacf[1:]
     n = pacf.shape[0]
@@ -1551,13 +1550,13 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
         if maxlag <= 0:
             raise ValueError("maxlag must be a positive integer")
         lags = np.arange(1, maxlag + 1)
-    except TypeError:
+    except TypeError as exc:
         lags = np.array([int(lag) for lag in maxlag])
         maxlag = lags.max()
         if lags.min() <= 0 or lags.size == 0:
             raise ValueError(
-                "maxlag must be a non-empty list containing only " "positive integers"
-            )
+                "maxlag must be a non-empty list containing only positive integers"
+            ) from exc
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError(

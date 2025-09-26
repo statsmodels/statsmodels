@@ -7,7 +7,7 @@ from statsmodels.compat.python import lrange
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
-import statsmodels.graphics.utils as utils
+from statsmodels.graphics import utils
 
 
 def interaction_plot(
@@ -121,7 +121,7 @@ def interaction_plot(
     if isinstance(x[0], str):
         x_levels = [val for val in np.unique(x)]
         x_values = lrange(len(x_levels))
-        x = _recode(x, dict(zip(x_levels, x_values)))
+        x = _recode(x, dict(zip(x_levels, x_values, strict=False)))
 
     data = DataFrame(dict(x=x, trace=trace, response=response))
     plot_data = data.groupby(["trace", "x"]).aggregate(func).reset_index()

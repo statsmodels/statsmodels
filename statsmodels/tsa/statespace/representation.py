@@ -292,7 +292,7 @@ class Representation:
         # Get dimensions from transition equation
         if k_states < 1:
             raise ValueError(
-                "Number of states in statespace model must be a" " positive number."
+                "Number of states in statespace model must be a positive number."
             )
         self.k_states = k_states
         self.k_posdef = k_posdef if k_posdef is not None else k_states
@@ -384,7 +384,7 @@ class Representation:
             raise ValueError("Invalid state space initialization method.")
 
         # Check for unused kwargs
-        if len(kwargs):
+        if kwargs:
             # raise TypeError(f'{__class__} constructor got unexpected keyword'
             #                 f' argument(s): {kwargs}.')
             msg = (
@@ -723,8 +723,8 @@ class Representation:
         is_new = existing_nan & ~new_nan
         is_revision[is_new] = False
 
-        revision_ix = list(zip(*np.where(is_revision)))
-        new_ix = list(zip(*np.where(is_new)))
+        revision_ix = list(zip(*np.where(is_revision), strict=False))
+        new_ix = list(zip(*np.where(is_new), strict=False))
 
         return revision_ix, new_ix
 

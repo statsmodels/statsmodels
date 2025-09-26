@@ -255,7 +255,6 @@ class Huber:
             est_mu = True
         else:
             n = a.shape[axis]
-            mu = mu
             est_mu = False
 
         if initscale is None:

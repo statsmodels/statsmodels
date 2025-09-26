@@ -625,10 +625,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             A = np.c_[(np.eye(m) - regime_transition).T, np.ones(m)].T
             try:
                 probabilities = np.linalg.pinv(A)[:, -1]
-            except np.linalg.LinAlgError:
+            except np.linalg.LinAlgError as exc:
                 raise RuntimeError(
-                    "Steady-state probabilities could not be" " constructed."
-                )
+                    "Steady-state probabilities could not be constructed."
+                ) from exc
         elif self._initialization == "known":
             probabilities = self._initial_probabilities
         else:
@@ -897,7 +897,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             "filtered_joint_probabilities_log",
         ]
         result = HamiltonFilterResults(
-            self, Bunch(**dict(zip(names, self._filter(params))))
+            self, Bunch(**dict(zip(names, self._filter(params), strict=False)))
         )
 
         # Wrap in a results object
@@ -1023,7 +1023,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             "predicted_joint_probabilities_log",
             "filtered_joint_probabilities_log",
         ]
-        result = Bunch(**dict(zip(names, self._filter(params))))
+        result = Bunch(**dict(zip(names, self._filter(params), strict=False)))
 
         # Kim smoother
         out = self._smooth(
@@ -1365,9 +1365,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             # Save the output
             if full_output:
                 em_retvals = Bunch(
-                    **{"params": np.array(params), "llf": np.array(llf), "iter": i}
+                    params=np.array(params), llf=np.array(llf), iter=i
                 )
-                em_settings = Bunch(**{"tolerance": tolerance, "maxiter": maxiter})
+                em_settings = Bunch(tolerance=tolerance, maxiter=maxiter)
             else:
                 em_retvals = None
                 em_settings = None

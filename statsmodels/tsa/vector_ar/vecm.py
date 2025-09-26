@@ -18,7 +18,7 @@ from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     CausalityTestResults,
     WhitenessTestResults,
 )
-import statsmodels.tsa.vector_ar.irf as irf
+from statsmodels.tsa.vector_ar import irf
 import statsmodels.tsa.vector_ar.plotting as plot
 from statsmodels.tsa.vector_ar.util import get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import (
@@ -333,7 +333,7 @@ def _endog_matrices(
     if "co" in deterministic and "ci" in deterministic:
         raise ValueError(
             "Both 'co' and 'ci' as deterministic terms given. "
-            + "Please choose one of the two."
+            "Please choose one of the two."
         )
     y_lag1_stack = [y_lag1]
     if "ci" in deterministic:  # pp. 257, 299, 306, 307
@@ -726,7 +726,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     cvt = np.zeros((neqs, 3))
     iota = np.ones(neqs)
     t, junk = rkt.shape
-    for i in range(0, neqs):
+    for i in range(neqs):
         tmp = np.log(iota - a)[i:]
         lr1[i] = -t * np.sum(tmp, 0)
         lr2[i] = -t * np.log(1 - a[i])

@@ -236,7 +236,6 @@ class ClippedContinuous:
         plt.plot(xr, self.pdf(xr, *args, **kwds))
         # plt.vline(clip_lower, self.pdf(clip_lower, *args, **kwds))
         plt.stem([clip_lower], [mass], linefmt="b-", markerfmt="bo", basefmt="r-")
-        return
 
 
 if __name__ == "__main__":

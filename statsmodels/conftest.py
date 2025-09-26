@@ -8,9 +8,9 @@ import pandas as pd
 import pytest
 
 try:
-    import matplotlib
+    import matplotlib as mpl
 
-    matplotlib.use("agg")
+    mpl.use("agg")
     HAVE_MATPLOTLIB = True
 except ImportError:
     HAVE_MATPLOTLIB = False
@@ -83,9 +83,9 @@ def pytest_runtest_setup(item):
 
 def pytest_configure(config):
     try:
-        import matplotlib
+        import matplotlib as mpl
 
-        matplotlib.use("agg")
+        mpl.use("agg")
         try:
             from pandas.plotting import register_matplotlib_converters
 
@@ -124,10 +124,10 @@ def close_figures():
             close_figures()
     """
     try:
-        import matplotlib.pyplot
+        import matplotlib.pyplot as plt
 
         def close():
-            matplotlib.pyplot.close("all")
+            plt.close("all")
 
     except ImportError:
 
@@ -185,10 +185,10 @@ def pytest_collection_modifyitems(config, items):
 @pytest.fixture(scope="function", autouse=True)
 def check_figures_closed():
     try:
-        import matplotlib.pyplot
+        import matplotlib.pyplot as plt
 
         def count():
-            return len(matplotlib.pyplot.get_fignums())
+            return len(plt.get_fignums())
 
     except ImportError:
 

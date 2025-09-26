@@ -65,7 +65,7 @@ def _split_train_test_smoothers(x, smoother, train_index, test_index):
         train_smoothers.append(
             UnivariateGenericSmoother(
                 train_x, train_basis, train_der_basis, train_der2_basis,
-                train_cov_der2, smoother.variable_name + ' train'))
+                train_cov_der2, smoother.variable_name + " train"))
 
         test_basis = smoother.basis[test_index]
         test_der_basis = smoother.der_basis[test_index]
@@ -76,7 +76,7 @@ def _split_train_test_smoothers(x, smoother, train_index, test_index):
         test_smoothers.append(
             UnivariateGenericSmoother(
                 test_x, test_basis, test_der_basis, train_der2_basis,
-                test_cov_der2, smoother.variable_name + ' test'))
+                test_cov_der2, smoother.variable_name + " test"))
 
     train_multivariate_smoothers = GenericSmoothers(x[train_index],
                                                     train_smoothers)
@@ -143,19 +143,18 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
     def plot_path(self):
         from statsmodels.graphics.utils import _import_mpl
         plt = _import_mpl()
-        plt.plot(self.alphas, self.cv_error, c='black')
+        plt.plot(self.alphas, self.cv_error, c="black")
         plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std,
-                 c='blue')
+                 c="blue")
         plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std,
-                 c='blue')
+                 c="blue")
 
-        plt.plot(self.alphas, self.cv_error, 'o', c='black')
-        plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std, 'o',
-                 c='blue')
-        plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std, 'o',
-                 c='blue')
+        plt.plot(self.alphas, self.cv_error, "o", c="black")
+        plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std, "o",
+                 c="blue")
+        plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std, "o",
+                 c="blue")
 
-        return
         # TODO add return
 
 

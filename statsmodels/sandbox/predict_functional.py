@@ -180,7 +180,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     # Initialize at zero so each column can be converted to any dtype.
     ix = range(num_points)
     fexog = pd.DataFrame(index=ix, columns=colnames)
-    for d, x in zip(dtypes, colnames):
+    for d, x in zip(dtypes, colnames, strict=False):
         fexog[x] = pd.Series(index=ix, dtype=d)
 
     # The values of the 'focus variable' are a sequence of percentiles
@@ -329,7 +329,7 @@ def predict_functional(
 
         if any(x is not None for x in [summaries, summaries2, values, values2]):
             raise ValueError(
-                "if `exog` is provided then do not " "provide `summaries` or `values`"
+                "if `exog` is provided then do not provide `summaries` or `values`"
             )
 
         fexog = exog

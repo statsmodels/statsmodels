@@ -219,7 +219,7 @@ class OrderedModel(GenericLikelihoodModel):
                 endog = endog.cat.codes
                 if endog.min() == -1:  # means there is a missing value
                     raise ValueError(
-                        "missing values in categorical endog are " "not supported"
+                        "missing values in categorical endog are not supported"
                     )
                 endog.name = endog_name
                 is_pandas = True
@@ -239,7 +239,7 @@ class OrderedModel(GenericLikelihoodModel):
             self.nobs, self.k_vars = self.endog.shape[0], 0
 
         threshold_names = [
-            str(x) + "/" + str(y) for x, y in zip(labels[:-1], labels[1:])
+            str(x) + "/" + str(y) for x, y in zip(labels[:-1], labels[1:], strict=False)
         ]
 
         # from GenericLikelihoodModel.fit
@@ -463,9 +463,8 @@ class OrderedModel(GenericLikelihoodModel):
             exog = self.exog
             if offset is None:
                 offset = self.offset
-        else:
-            if offset is None:
-                offset = 0
+        elif offset is None:
+            offset = 0
 
         if offset is not None:
             offset = np.asarray(offset)

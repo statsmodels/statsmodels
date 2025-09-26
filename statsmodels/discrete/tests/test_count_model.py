@@ -12,7 +12,7 @@ import pytest
 
 import statsmodels.api as sm
 
-from ...compat.scipy import SP_LT_116
+from statsmodels.compat.scipy import SP_LT_116
 from .results.results_discrete import RandHIE
 from .test_discrete import CheckModelMixin
 

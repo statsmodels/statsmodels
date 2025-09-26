@@ -3,7 +3,7 @@ Holds files for l1 regularization of LikelihoodModel, using cvxopt.
 """
 import numpy as np
 
-import statsmodels.base.l1_solvers_common as l1_solvers_common
+from statsmodels.base import l1_solvers_common
 
 
 def fit_l1_cvxopt_cp(
@@ -56,7 +56,7 @@ def fit_l1_cvxopt_cp(
     """
     from cvxopt import matrix, solvers
 
-    start_params = np.array(start_params).ravel('F')
+    start_params = np.array(start_params).ravel("F")
 
     # Extract arguments
     # k_params is total number of covariates, possibly including a leading constant.
@@ -65,7 +65,7 @@ def fit_l1_cvxopt_cp(
     x0 = np.append(start_params, np.fabs(start_params))
     x0 = matrix(x0, (2 * k_params, 1))
     # The regularization parameter
-    alpha = np.array(kwargs['alpha_rescaled']).ravel('F')
+    alpha = np.array(kwargs["alpha_rescaled"]).ravel("F")
     # Make sure it's a vector
     alpha = alpha * np.ones(k_params)
     assert alpha.min() >= 0
@@ -93,32 +93,32 @@ def fit_l1_cvxopt_cp(
             return f_0(x), Df(x), H(x, z)
 
     # Convert optimization settings to cvxopt form
-    solvers.options['show_progress'] = disp
-    solvers.options['maxiters'] = maxiter
-    if 'abstol' in kwargs:
-        solvers.options['abstol'] = kwargs['abstol']
-    if 'reltol' in kwargs:
-        solvers.options['reltol'] = kwargs['reltol']
-    if 'feastol' in kwargs:
-        solvers.options['feastol'] = kwargs['feastol']
-    if 'refinement' in kwargs:
-        solvers.options['refinement'] = kwargs['refinement']
+    solvers.options["show_progress"] = disp
+    solvers.options["maxiters"] = maxiter
+    if "abstol" in kwargs:
+        solvers.options["abstol"] = kwargs["abstol"]
+    if "reltol" in kwargs:
+        solvers.options["reltol"] = kwargs["reltol"]
+    if "feastol" in kwargs:
+        solvers.options["feastol"] = kwargs["feastol"]
+    if "refinement" in kwargs:
+        solvers.options["refinement"] = kwargs["refinement"]
 
     # Call the optimizer
     results = solvers.cp(F, G, h)
-    x = np.asarray(results['x']).ravel()
+    x = np.asarray(results["x"]).ravel()
     params = x[:k_params]
 
     # Post-process
     # QC
-    qc_tol = kwargs['qc_tol']
-    qc_verbose = kwargs['qc_verbose']
+    qc_tol = kwargs["qc_tol"]
+    qc_verbose = kwargs["qc_verbose"]
     passed = l1_solvers_common.qc_results(
         params, alpha, score, qc_tol, qc_verbose)
     # Possibly trim
-    trim_mode = kwargs['trim_mode']
-    size_trim_tol = kwargs['size_trim_tol']
-    auto_trim_tol = kwargs['auto_trim_tol']
+    trim_mode = kwargs["trim_mode"]
+    size_trim_tol = kwargs["size_trim_tol"]
+    auto_trim_tol = kwargs["auto_trim_tol"]
     params, trimmed = l1_solvers_common.do_trim_params(
         params, k_params, alpha, score, passed, trim_mode, size_trim_tol,
         auto_trim_tol)
@@ -127,17 +127,17 @@ def fit_l1_cvxopt_cp(
     # TODO These retvals are returned as mle_retvals...but the fit was not ML
     if full_output:
         fopt = f_0(x)
-        gopt = float('nan')  # Objective is non-differentiable
-        hopt = float('nan')
-        iterations = float('nan')
-        converged = (results['status'] == 'optimal')
-        warnflag = results['status']
+        gopt = float("nan")  # Objective is non-differentiable
+        hopt = float("nan")
+        iterations = float("nan")
+        converged = (results["status"] == "optimal")
+        warnflag = results["status"]
         retvals = {
-            'fopt': fopt, 'converged': converged, 'iterations': iterations,
-            'gopt': gopt, 'hopt': hopt, 'trimmed': trimmed,
-            'warnflag': warnflag}
+            "fopt": fopt, "converged": converged, "iterations": iterations,
+            "gopt": gopt, "hopt": hopt, "trimmed": trimmed,
+            "warnflag": warnflag}
     else:
-        x = np.array(results['x']).ravel()
+        x = np.array(results["x"]).ravel()
         params = x[:k_params]
 
     # Return results

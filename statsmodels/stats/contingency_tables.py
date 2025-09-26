@@ -225,15 +225,13 @@ class Table:
 
         if len(row_scores) != self.table.shape[0]:
             msg = (
-                "The length of `row_scores` must match the first "
-                + "dimension of `table`."
+                "The length of `row_scores` must match the first dimension of `table`."
             )
             raise ValueError(msg)
 
         if len(col_scores) != self.table.shape[1]:
             msg = (
-                "The length of `col_scores` must match the second "
-                + "dimension of `table`."
+                "The length of `col_scores` must match the second dimension of `table`."
             )
             raise ValueError(msg)
 

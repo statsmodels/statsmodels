@@ -308,7 +308,7 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
         import warnings
 
         warnings.warn(
-            "ties at cutoff, cutoff rule produces fewer" "outliers than `ntail`",
+            "ties at cutoff, cutoff rule produces feweroutliers than `ntail`",
             RuntimeWarning,
             stacklevel=2,
         )
@@ -1186,7 +1186,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
     percentiles = [(k_vars + 2) / nobs * 100 * 2, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
-    for p, cutoff in zip(percentiles, cutoffs):
+    for p, cutoff in zip(percentiles, cutoffs, strict=False):
         xsp = xs[d < cutoff]
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
@@ -1575,7 +1575,7 @@ class CovM:
                 np.allclose(scale, scale_old, rtol=1e-5)
                 and np.allclose(mean, mean_old, rtol=1e-5)
                 and np.allclose(shape, shape_old, rtol=1e-5)
-            ):  # noqa E124
+            ):
                 converged = True
                 break
             scale_old = scale
@@ -1761,7 +1761,8 @@ class CovDetMCD:
         if h is None:
             h = (nobs + k_vars + 1) // 2  # check with literature
         if mean_func is None:
-            mean_func = lambda x: np.median(x, axis=0)  # noqa
+            def mean_func(x):
+                return np.median(x, axis=0)
         if scale_func is None:
             scale_func = mad
         if options_start is None:
@@ -1998,7 +1999,9 @@ class CovDetS:
         nobs, k_vars = x.shape
 
         if mean_func is None:
-            mean_func = lambda x: np.median(x, axis=0)  # noqa
+
+            def mean_func(x):
+                return np.median(x, axis=0)
         if scale_func is None:
             scale_func = mad
         if options_start is None:

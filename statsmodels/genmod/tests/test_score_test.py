@@ -21,9 +21,9 @@ class CheckScoreTest():
     def test_wald_score(self):
         mod_full = self.model_full
         mod_drop = self.model_drop
-        restriction = 'x5=0, x6=0'
+        restriction = "x5=0, x6=0"
         res_full = mod_full.fit()
-        res_constr = mod_full.fit_constrained('x5=0, x6=0')
+        res_constr = mod_full.fit_constrained("x5=0, x6=0")
         res_drop = mod_drop.fit()
 
         wald = res_full.wald_test(restriction, scalar=True)
@@ -42,7 +42,7 @@ class CheckScoreTest():
         # regression number
         assert_allclose(lm_constr[1], self.res_pvalue[0], rtol=1e-12, atol=1e-14)
 
-        cov_type = 'HC0'
+        cov_type = "HC0"
         res_full_hc = mod_full.fit(cov_type=cov_type, start_params=res_full.params)
         wald = res_full_hc.wald_test(restriction, scalar=True)
         lm_constr = np.hstack(score_test(res_constr, cov_type=cov_type))

@@ -6,14 +6,14 @@ from statsmodels.tools.tools import Bunch
 mpg_bs_poisson = Bunch()
 
 mpg_bs_poisson.smooth0 = Bunch()
-mpg_bs_poisson.smooth0.term = 'weight'
+mpg_bs_poisson.smooth0.term = "weight"
 mpg_bs_poisson.smooth0.bs_dim = 12
 mpg_bs_poisson.smooth0.dim = 1
 mpg_bs_poisson.smooth0.p_order = np.array([
     3, 2
     ])
-mpg_bs_poisson.smooth0.by = 'NA'
-mpg_bs_poisson.smooth0.label = 's(weight)'
+mpg_bs_poisson.smooth0.by = "NA"
+mpg_bs_poisson.smooth0.label = "s(weight)"
 mpg_bs_poisson.smooth0.sp = -1
 mpg_bs_poisson.smooth0.m = np.array([
     3, 2
@@ -27,7 +27,7 @@ mpg_bs_poisson.smooth0.rank = 10
 mpg_bs_poisson.smooth0.null_space_dim = 1
 mpg_bs_poisson.smooth0.df = 11
 mpg_bs_poisson.smooth0.S_scale = 2.44395544177397e-06
-mpg_bs_poisson.smooth0.vn = 'weight'
+mpg_bs_poisson.smooth0.vn = "weight"
 mpg_bs_poisson.smooth0.first_para = 5
 mpg_bs_poisson.smooth0.last_para = 15
 mpg_bs_poisson.smooth0.S = np.array([
@@ -72,7 +72,7 @@ mpg_bs_poisson.smooth0.S = np.array([
     -0.00142523589453221, 0.00234383478372281, 0.00147745030481206,
     0.00285258581655637, 0.00255839876648785, -0.0111654555301857,
     0.00794139033444708
-    ]).reshape(11, 11, order='F')
+    ]).reshape(11, 11, order="F")
 
 mpg_bs_poisson.coefficients = np.array([
     3.38155196812657, -0.2398057983025, 0.0385574655971876,
@@ -566,7 +566,7 @@ mpg_bs_poisson.rV = np.array([
     0.000604997293885961, 0.000392867571322303, 0.000561225223337066,
     0.00056952076942879, 0.000186965781647446, 2.43190236830834e-05,
     -1.49153748573756e-05
-    ]).reshape(24, 24, order='F')
+    ]).reshape(24, 24, order="F")
 
 mpg_bs_poisson.db_drho = np.array([
     -0.00955607829508903, 0.00430986949109399, 0.00462834751450597,
@@ -585,7 +585,7 @@ mpg_bs_poisson.db_drho = np.array([
     -0.020380893865003, -0.00665329046642183, 0.00475504810058412,
     0.00904455059277683, 0.0203739259385563, 0.026657106982953,
     0.0214205189927133, -0.0170394753092789, -0.0478344361350309
-    ]).reshape(24, 2, order='F')
+    ]).reshape(24, 2, order="F")
 
 mpg_bs_poisson.dw_drho = np.array([
     0.198451577496262, 0.198451577496262, 0.0211323116265804,
@@ -724,7 +724,7 @@ mpg_bs_poisson.dw_drho = np.array([
     0.00660287534316686, -0.00167186752805072, -0.00240546718672251,
     0.0118803438893343, 0.0424368089424911, 0.219430516658537,
     -0.0151485147157889
-    ]).reshape(203, 2, order='F')
+    ]).reshape(203, 2, order="F")
 
 mpg_bs_poisson.aic = 1077.25052939687
 mpg_bs_poisson.rank = 24
@@ -733,7 +733,7 @@ mpg_bs_poisson.sp = np.array([
     ])
 mpg_bs_poisson.gcv_ubre = -0.733688545240377
 mpg_bs_poisson.scale = 1
-mpg_bs_poisson.method = 'UBRE'
+mpg_bs_poisson.method = "UBRE"
 mpg_bs_poisson.Vp = np.array([
     0.00909877938596195, -0.0036458463607326, -0.00588941030822462,
     -0.00591326964084843, 0.00270235043019556, 0.00119384910564329,
@@ -927,7 +927,7 @@ mpg_bs_poisson.Vp = np.array([
     -0.00325655842738453, -0.00159801030917644, -0.000420681148041455,
     -9.02272784316804e-05, 0.00143202572023981, 0.00283652481021948,
     0.00566170373323159, 0.0166147008644102, 0.0269823093695889
-    ]).reshape(24, 24, order='F')
+    ]).reshape(24, 24, order="F")
 
 mpg_bs_poisson.hat = np.array([
     0.0278593212349963, 0.027859321234996, 0.0271835195981152,
@@ -1192,7 +1192,7 @@ mpg_bs_poisson.Ve = np.array([
     -0.00381508286624081, -0.00188156469729417, -0.00049570481303046,
     -8.72594247231747e-05, 0.00178733690750939, 0.00362843568148569,
     0.00794460693942518, 0.0152750741086272, 0.0213508475270903
-    ]).reshape(24, 24, order='F')
+    ]).reshape(24, 24, order="F")
 
 mpg_bs_poisson.edf_all = np.array([
     1, 1, 1, 0.999999999999997, 0.138685243481343, 0.168020596767126,
@@ -1321,7 +1321,7 @@ mpg_bs_poisson.R = np.array([
     0.157297649723395, 0.195127506637709, -0.126981325801707,
     -0.201542068281104, 0.633451731139413, 1.23686433543792,
     0.0741286829376448, 3.93651436085439, 0, 0, 0
-    ]).reshape(24, 24, order='F')
+    ]).reshape(24, 24, order="F")
 
 mpg_bs_poisson.nsdf = 4
 mpg_bs_poisson.sig2 = 1
@@ -1346,7 +1346,7 @@ mpg_bs_poisson.offset = np.array([
 mpg_bs_poisson.df_residual = 194.753831641044
 mpg_bs_poisson.min_edf = 6
 mpg_bs_poisson.optimizer = np.array([
- 'outer', 'newton'
+ "outer", "newton"
     ])
 mpg_bs_poisson.p_coeff = np.array([
     3.38155196812657, -0.2398057983025, 0.0385574655971876,
@@ -1588,7 +1588,7 @@ mpg_bs_poisson.cov_unscaled = np.array([
     -0.00325655842738453, -0.00159801030917644, -0.000420681148041455,
     -9.02272784316804e-05, 0.00143202572023981, 0.00283652481021948,
     0.00566170373323159, 0.0166147008644102, 0.0269823093695889
-    ]).reshape(24, 24, order='F')
+    ]).reshape(24, 24, order="F")
 
 mpg_bs_poisson.cov_scaled = mpg_bs_poisson.cov_unscaled
 
@@ -1599,20 +1599,20 @@ mpg_bs_poisson.p_table = np.array([
     -4.22233954403625, 0.512512235301397, 0.394707362829427,
     2.83211381163377e-275, 2.41779512472801e-05, 0.608292559428079,
     0.693058868325634
-    ]).reshape(4, 4, order='F')
+    ]).reshape(4, 4, order="F")
 
 mpg_bs_poisson.pTerms_table = np.array([
     1, 2, 17.8281512251323, 0.267231825859481, 2.41779512472801e-05,
     0.874926047858207
-    ]).reshape(2, 3, order='F')
+    ]).reshape(2, 3, order="F")
 
 mpg_bs_poisson.s_table = np.array([
     2.53986871460058, 1.70629964435497, 3.20982914795608, 2.15301685267905,
     24.0890023854214, 12.9900133623474, 4.50054787026542e-05,
     0.0019804834204652
-    ]).reshape(2, 4, order='F')
+    ]).reshape(2, 4, order="F")
 
-mpg_bs_poisson.method = 'UBRE'
+mpg_bs_poisson.method = "UBRE"
 mpg_bs_poisson.sp_criterion = -0.733688545240377
 mpg_bs_poisson.rank = 24
 mpg_bs_poisson.np = 24

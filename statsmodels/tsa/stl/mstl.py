@@ -262,7 +262,7 @@ class MSTL:
     ) -> tuple[Sequence[int], Sequence[int]]:
         if len(periods) != len(windows):
             raise ValueError("Periods and windows must have same length")
-        periods, windows = zip(*sorted(zip(periods, windows)))
+        periods, windows = zip(*sorted(zip(periods, windows, strict=False)), strict=False)
         return periods, windows
 
     @staticmethod

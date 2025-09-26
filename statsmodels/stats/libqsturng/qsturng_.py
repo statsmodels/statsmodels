@@ -2187,9 +2187,8 @@ def _select_vs(v, p):
     if p >= 0.9:
         if v < 2.5:
             return 1, 2, 3
-    else:
-        if v < 3.5:
-            return 2, 3, 4
+    elif v < 3.5:
+        return 2, 3, 4
 
     vi = int(round(v))
     return vi - 1, vi, vi + 1
@@ -2254,9 +2253,8 @@ def _qsturng(p, r, v):
     if p < 0.9:
         if v < 2:
             raise ValueError("v must be > 2 when p < .9")
-    else:
-        if v < 1:
-            raise ValueError("v must be > 1 when p >= .9")
+    elif v < 1:
+        raise ValueError("v must be > 1 when p >= .9")
 
     # The easy case. A tabled value is requested.
 

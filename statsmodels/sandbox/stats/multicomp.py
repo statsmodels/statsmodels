@@ -472,7 +472,7 @@ def randmvn(rho, size=(1, 2), standardize=False):
 
     """
     nobs, nvars = size
-    if 0 < rho and rho < 1:
+    if 0 < rho < 1:
         rvs = np.random.randn(nobs, nvars + 1)
         rvs2 = rvs[:, :-1] * np.sqrt(1 - rho) + rvs[:, -1:] * np.sqrt(rho)
     elif rho == 0:
@@ -963,8 +963,7 @@ class MultiComparison:
                 import warnings
 
                 warnings.warn(
-                    "group_order does not contain all groups:"
-                    + " dropping observations",
+                    "group_order does not contain all groups: dropping observations",
                     ValueWarning,
                     stacklevel=2,
                 )
@@ -1015,7 +1014,7 @@ class MultiComparison:
         # simultaneous/separate treatment of multiple tests
         f = (tot * (tot + 1.0) / 12.0) / stats.tiecorrect(self.rankdata)  # (xranks)
         print("MultiComparison.kruskal")
-        for i, j in zip(*self.pairindices):
+        for i, j in zip(*self.pairindices, strict=False):
             # pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(
@@ -1062,7 +1061,7 @@ class MultiComparison:
         from statsmodels.stats.multitest import multipletests
 
         res = []
-        for i, j in zip(*self.pairindices):
+        for i, j in zip(*self.pairindices, strict=False):
             res.append(testfunc(self.datali[i], self.datali[j]))
         res = np.array(res)
         reject, pvals_corrected, alphacSidak, alphacBonf = multipletests(
@@ -2095,7 +2094,7 @@ if __name__ == "__main__":
         mrs[v2[diffidx]] - mrs[v1[diffidx]]
 
         print("\nkruskal for all pairs")
-        for i, j in zip(v2[diffidx], v1[diffidx]):
+        for i, j in zip(v2[diffidx], v1[diffidx], strict=False):
             print(i, j, stats.kruskal(xli[i], xli[j]))
             mwu, mwupval = stats.mannwhitneyu(xli[i], xli[j], use_continuity=False)
             print(mwu, mwupval * 2, mwupval * 2 < 0.05 / 6.0, mwupval * 2 < 0.1 / 6.0)
@@ -2135,7 +2134,7 @@ if __name__ == "__main__":
         f = (tot * (tot + 1.0) / 12.0) - (t / (6.0 * (tot - 1.0)))
         f = (tot * (tot + 1.0) / 12.0) / stats.tiecorrect(xranks)
         print("\npairs of mean rank differences")
-        for i, j in zip(v2[diffidx], v1[diffidx]):
+        for i, j in zip(v2[diffidx], v1[diffidx], strict=False):
             # pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(

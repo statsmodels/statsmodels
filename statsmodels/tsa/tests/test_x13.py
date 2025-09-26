@@ -69,7 +69,7 @@ def test_x13_arima_select_order(dataset, use_numpy):
             start = start.to_timestamp()
             freq = index.freq
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
         assert freq is not None
     else:
         freq = start = None

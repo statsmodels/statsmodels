@@ -74,7 +74,6 @@ def test_skewt():
         ]
     )
     pdf_st = skewt.pdf(x, 1000000, 10)
-    pass
     np.allclose(pdf_st, pdf_r, rtol=0, atol=1e-6)
     np.allclose(pdf_st, pdf_r, rtol=1e-1, atol=0)
 

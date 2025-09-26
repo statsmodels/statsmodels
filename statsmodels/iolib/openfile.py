@@ -74,6 +74,6 @@ def get_file_obj(fname, mode="r", encoding=None):
                 fname.read
             if "w" in mode or "a" in mode:
                 fname.write
-        except AttributeError:
-            raise ValueError("fname must be a string or a file-like object")
+        except AttributeError as exc:
+            raise ValueError("fname must be a string or a file-like object") from exc
         return EmptyContextManager(fname)

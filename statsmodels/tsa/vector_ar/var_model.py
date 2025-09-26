@@ -15,7 +15,7 @@ from io import StringIO
 
 import numpy as np
 import pandas as pd
-import scipy.stats as stats
+from scipy import stats
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.table import SimpleTable
@@ -68,7 +68,7 @@ def ma_rep(coefs, maxn=10):
     -------
     phis : ndarray (maxn + 1 x k x k)
     """
-    p, k, k = coefs.shape
+    p, k, _ = coefs.shape
     phis = np.zeros((maxn + 1, k, k))
     phis[0] = np.eye(k)
 
@@ -660,9 +660,8 @@ class VAR(TimeSeriesModel):
             if verbose:
                 print(selections)
                 print("Using %d based on %s criterion" % (lags, ic))
-        else:
-            if lags is None:
-                lags = 1
+        elif lags is None:
+            lags = 1
 
         k_trend = util.get_trendorder(trend)
         orig_exog_names = self.exog_names
@@ -794,13 +793,12 @@ class VAR(TimeSeriesModel):
 
             # Ensure enough obs to estimate model with maxlags
             maxlags = min(maxlags, max_estimable)
-        else:
-            if maxlags > max_estimable:
-                raise ValueError(
-                    "maxlags is too large for the number of observations and "
-                    "the number of equations. The largest model cannot be "
-                    "estimated."
-                )
+        elif maxlags > max_estimable:
+            raise ValueError(
+                "maxlags is too large for the number of observations and "
+                "the number of equations. The largest model cannot be "
+                "estimated."
+            )
 
         ics = defaultdict(list)
         p_min = 0 if self.exog is not None or trend != "n" else 1
@@ -961,12 +959,11 @@ class VARProcess:
                 steps = 1000
             else:
                 steps = steps_
-        else:
-            if steps_ is not None and steps != steps_:
-                raise ValueError(
-                    "if exog or offset are used, then steps must"
-                    "be equal to their length or None"
-                )
+        elif steps_ is not None and steps != steps_:
+            raise ValueError(
+                "if exog or offset are used, then steps must"
+                "be equal to their length or None"
+            )
 
         y = util.varsim(
             self.coefs,
@@ -1116,11 +1113,11 @@ class VARProcess:
         """
         if self.exog is None and exog_future is not None:
             raise ValueError(
-                "No exog in model, so no exog_future supported " "in forecast method."
+                "No exog in model, so no exog_future supported in forecast method."
             )
         if self.exog is not None and exog_future is None:
             raise ValueError(
-                "Please provide an exog_future argument to " "the forecast method."
+                "Please provide an exog_future argument to the forecast method."
             )
 
         exog_future = array_like(exog_future, "exog_future", optional=True, ndim=2)
@@ -1633,7 +1630,7 @@ class VARResults(VARProcess):
                 import warnings
 
                 warnings.warn(
-                    "forecast cov takes parameter uncertainty into" "account",
+                    "forecast cov takes parameter uncertainty intoaccount",
                     OutputWarning,
                     stacklevel=2,
                 )
@@ -2073,7 +2070,7 @@ class VARResults(VARProcess):
         if not all(isinstance(c, allowed_types) for c in causing):
             raise TypeError(
                 "causing has to be of type string or int (or a "
-                + "a sequence of these types)."
+                "a sequence of these types)."
             )
         causing = [self.names[c] if type(c) is int else c for c in causing]
         causing_ind = [util.get_index(self.names, c) for c in causing]

@@ -80,7 +80,7 @@ block_id = list(range(32))
 params = list(product(k, case, i1, block_id))
 seeds = ss.generate_state(8 * len(params)).reshape((-1, 8)).tolist()
 configs = []
-for _s, (_k, _case, _i1, _block_id) in zip(seeds, params):
+for _s, (_k, _case, _i1, _block_id) in zip(seeds, params, strict=False):
     configs.append(
         {
             "seed": _s,

@@ -99,13 +99,12 @@ class Runs:
         rdemean = n_r - rmean
         if n >= 50 or not correction:
             z = rdemean
+        elif rdemean > 0.5:
+            z = rdemean - 0.5
+        elif rdemean < 0.5:
+            z = rdemean + 0.5
         else:
-            if rdemean > 0.5:
-                z = rdemean - 0.5
-            elif rdemean < 0.5:
-                z = rdemean + 0.5
-            else:
-                z = 0.0
+            z = 0.0
 
         z /= rstd
         pval = 2 * stats.norm.sf(np.abs(z))

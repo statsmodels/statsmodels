@@ -58,8 +58,8 @@ def burg(endog, ar_order=0, demean=True):
         endog = endog * 1.0
 
     if not spec.is_ar_consecutive:
-        raise ValueError('Burg estimation unavailable for models with'
-                         ' seasonal or otherwise non-consecutive AR orders.')
+        raise ValueError("Burg estimation unavailable for models with"
+                         " seasonal or otherwise non-consecutive AR orders.")
 
     p = SARIMAXParams(spec=spec)
 
@@ -71,7 +71,7 @@ def burg(endog, ar_order=0, demean=True):
 
         # Construct other results
     other_results = Bunch({
-        'spec': spec,
+        "spec": spec,
     })
 
     return p, other_results

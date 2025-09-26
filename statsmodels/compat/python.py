@@ -44,7 +44,7 @@ def lrange(*args, **kwargs):
 
 
 def lzip(*args, **kwargs):
-    return list(zip(*args, **kwargs))
+    return list(zip(*args, **kwargs, strict=False))
 
 
 def lmap(*args, **kwargs):

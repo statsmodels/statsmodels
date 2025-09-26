@@ -40,7 +40,7 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
     utime, rtime = np.unique(time, return_inverse=True)
 
     # Last index where each unique time occurs.
-    ie = np.searchsorted(time, utime, side='right') - 1
+    ie = np.searchsorted(time, utime, side="right") - 1
 
     ngrp = int(status.max())
 
@@ -172,7 +172,7 @@ def _kernel_survfunc(time, status, exog, kfunc, freq_weights):
     exog2d = exog2d[ii, :]
 
     # Last index where each evaluation time occurs.
-    ie = np.searchsorted(time, utime, side='right') - 1
+    ie = np.searchsorted(time, utime, side="right") - 1
 
     if freq_weights is not None:
         freq_weights = freq_weights / freq_weights.sum()

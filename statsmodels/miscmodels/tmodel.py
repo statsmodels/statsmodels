@@ -48,7 +48,7 @@ sps_gamln = special.gammaln
 
 
 class TLinearModel(GenericLikelihoodModel):
-    '''Maximum Likelihood Estimation of Linear Model with t-distributed errors
+    """Maximum Likelihood Estimation of Linear Model with t-distributed errors
 
     This is an example for generic MLE.
 
@@ -57,13 +57,13 @@ class TLinearModel(GenericLikelihoodModel):
     and all resulting statistics are based on numerical
     differentiation.
 
-    '''
+    """
 
     def initialize(self):
         print("running Tmodel initialize")
         # TODO: here or in __init__
         self.k_vars = self.exog.shape[1]
-        if not hasattr(self, 'fix_df'):
+        if not hasattr(self, "fix_df"):
             self.fix_df = False
 
         if self.fix_df is False:
@@ -71,7 +71,7 @@ class TLinearModel(GenericLikelihoodModel):
             self.fixed_params = None
             self.fixed_paramsmask = None
             self.k_params = self.exog.shape[1] + 2
-            extra_params_names = ['df', 'scale']
+            extra_params_names = ["df", "scale"]
         else:
             # df fixed
             self.k_params = self.exog.shape[1] + 1
@@ -79,7 +79,7 @@ class TLinearModel(GenericLikelihoodModel):
             fixdf[-2] = self.fix_df
             self.fixed_params = fixdf
             self.fixed_paramsmask = np.isnan(fixdf)
-            extra_params_names = ['scale']
+            extra_params_names = ["scale"]
 
         super().initialize()
 
@@ -167,7 +167,7 @@ class TLinearModel(GenericLikelihoodModel):
 
 
 class TArma(Arma):
-    '''Univariate Arma Model with t-distributed errors
+    """Univariate Arma Model with t-distributed errors
 
     This inherit all methods except loglike from tsa.arma_mle.Arma
 
@@ -181,7 +181,7 @@ class TArma(Arma):
     This might be replaced by a standardized t-distribution with scale**2
     equal to variance
 
-    '''
+    """
 
     def loglike(self, params):
         return -self.nloglikeobs(params).sum(0)

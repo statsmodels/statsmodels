@@ -41,11 +41,11 @@ def _R_compat_quantile(x, probs):
 # FIXME: is this copy/pasted?  If so, why do we need it?  If not, get
 #  rid of the try/except for scipy import
 # from patsy splines.py
-def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
+def _eval_bspline_basis(x, knots, degree, deriv="all", include_intercept=True):
     try:
         from scipy.interpolate import splev
-    except ImportError:
-        raise ImportError("spline functionality requires scipy")
+    except ImportError as err:
+        raise ImportError("spline functionality requires scipy") from err
     # 'knots' are assumed to be already pre-processed. E.g. usually you
     # want to include duplicate copies of boundary knots; you should do
     # that *before* calling this constructor.
@@ -79,13 +79,13 @@ def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
 
     k_const = 1 - int(include_intercept)
     n_bases = len(knots) - (degree + 1) - k_const
-    if deriv in ['all', 0]:
+    if deriv in ["all", 0]:
         basis = np.empty((x.shape[0], n_bases), dtype=float)
         ret = basis
-    if deriv in ['all', 1]:
+    if deriv in ["all", 1]:
         der1_basis = np.empty((x.shape[0], n_bases), dtype=float)
         ret = der1_basis
-    if deriv in ['all', 2]:
+    if deriv in ["all", 2]:
         der2_basis = np.empty((x.shape[0], n_bases), dtype=float)
         ret = der2_basis
 
@@ -94,14 +94,14 @@ def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
         # we are skipping the first column of the basis to drop constant
         coefs[i + k_const] = 1
         ii = i
-        if deriv in ['all', 0]:
+        if deriv in ["all", 0]:
             basis[:, ii] = splev(x, (knots, coefs, degree))
-        if deriv in ['all', 1]:
+        if deriv in ["all", 1]:
             der1_basis[:, ii] = splev(x, (knots, coefs, degree), der=1)
-        if deriv in ['all', 2]:
+        if deriv in ["all", 2]:
             der2_basis[:, ii] = splev(x, (knots, coefs, degree), der=2)
 
-    if deriv == 'all':
+    if deriv == "all":
         return basis, der1_basis, der2_basis
     else:
         return ret
@@ -120,7 +120,7 @@ def compute_all_knots(x, df, degree):
 
 
 def make_bsplines_basis(x, df, degree):
-    ''' make a spline basis for x '''
+    """ make a spline basis for x """
 
     all_knots, _, _, _ = compute_all_knots(x, df, degree)
     basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
@@ -128,7 +128,7 @@ def make_bsplines_basis(x, df, degree):
 
 
 def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
-                       spacing='quantile', lower_bound=None,
+                       spacing="quantile", lower_bound=None,
                        upper_bound=None, all_knots=None):
     """knots for use in B-splines
 
@@ -174,11 +174,11 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
                                  "but %s knots were provided"
                                  % (df, degree,
                                     n_inner_knots, len(knots)))
-        elif spacing == 'quantile':
+        elif spacing == "quantile":
             # Need to compute inner knots
             knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
             inner_knots = _R_compat_quantile(x, knot_quantiles)
-        elif spacing == 'equal':
+        elif spacing == "equal":
             # Need to compute inner knots
             grid = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
             inner_knots = x_min + grid * (x_max - x_min)
@@ -262,10 +262,10 @@ def get_covder2(smoother, k_points=3, integration_points=None,
 
 # TODO: this function should be deleted
 def make_poly_basis(x, degree, intercept=True):
-    '''
+    """
     given a vector x returns poly=(1, x, x^2, ..., x^degree)
     and its first and second derivative
-    '''
+    """
 
     if intercept:
         start = 0
@@ -304,24 +304,23 @@ def make_poly_basis(x, degree, intercept=True):
 class UnivariateGamSmoother(with_metaclass(ABCMeta)):
     """Base Class for single smooth component
     """
-    def __init__(self, x, constraints=None, variable_name='x'):
+    def __init__(self, x, constraints=None, variable_name="x"):
         self.x = x
         self.constraints = constraints
         self.variable_name = variable_name
         self.nobs, self.k_variables = len(x), 1
 
         base4 = self._smooth_basis_for_single_variable()
-        if constraints == 'center':
+        if constraints == "center":
             constraints = base4[0].mean(0)[None, :]
 
         if constraints is not None and not isinstance(constraints, str):
             ctransf = transf_constraints(constraints)
             self.ctransf = ctransf
-        else:
-            # subclasses might set ctransf directly
-            # only used if constraints is None
-            if not hasattr(self, 'ctransf'):
-                self.ctransf = None
+        # subclasses might set ctransf directly
+        # only used if constraints is None
+        elif not hasattr(self, "ctransf"):
+            self.ctransf = None
 
         self.basis, self.der_basis, self.der2_basis, self.cov_der2 = base4
         if self.ctransf is not None:
@@ -349,7 +348,7 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
     """Generic single smooth component
     """
     def __init__(self, x, basis, der_basis, der2_basis, cov_der2,
-                 variable_name='x'):
+                 variable_name="x"):
         self.basis = basis
         self.der_basis = der_basis
         self.der2_basis = der2_basis
@@ -365,7 +364,7 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
 class UnivariatePolynomialSmoother(UnivariateGamSmoother):
     """polynomial single smooth component
     """
-    def __init__(self, x, degree, variable_name='x'):
+    def __init__(self, x, degree, variable_name="x"):
         self.degree = degree
         super().__init__(
             x, variable_name=variable_name)
@@ -446,7 +445,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
           all other options will be ignored.
     """
     def __init__(self, x, df, degree=3, include_intercept=False,
-                 constraints=None, variable_name='x',
+                 constraints=None, variable_name="x",
                  covder2_kwds=None, **knot_kwds):
         self.degree = degree
         self.df = df
@@ -498,7 +497,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
                                    include_intercept=self.include_intercept)
 
         # ctransf does not exist yet when cov_der2 is computed
-        ctransf = getattr(self, 'ctransf', None)
+        ctransf = getattr(self, "ctransf", None)
         if ctransf is not None and not skip_ctransf:
             exog = exog.dot(self.ctransf)
         return exog
@@ -510,8 +509,8 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
     Cubic splines as described in the wood's book in chapter 3
     """
 
-    def __init__(self, x, df, constraints=None, transform='domain',
-                 variable_name='x'):
+    def __init__(self, x, df, constraints=None, transform="domain",
+                 variable_name="x"):
 
         self.degree = 3
         self.df = df
@@ -528,19 +527,19 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
             return x
 
         if initialize is True:
-            if tm == 'domain':
+            if tm == "domain":
                 self.domain_low = x.min(0)
                 self.domain_upp = x.max(0)
             elif isinstance(tm, tuple):
                 self.domain_low = tm[0]
                 self.domain_upp = tm[1]
-                self.transform_data_method = 'domain'
+                self.transform_data_method = "domain"
             else:
                 raise ValueError("transform should be None, 'domain' "
                                  "or a tuple")
             self.domain_diff = self.domain_upp - self.domain_low
 
-        if self.transform_data_method == 'domain':
+        if self.transform_data_method == "domain":
             x = (x - self.domain_low) / self.domain_diff
             return x
         else:
@@ -550,20 +549,20 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
 
         basis = self._splines_x()[:, :-1]
         # demean except for constant, does not affect derivatives
-        if not self.constraints == 'none':
+        if not self.constraints == "none":
             self.transf_mean = basis[:, 1:].mean(0)
             basis[:, 1:] -= self.transf_mean
         else:
             self.transf_mean = np.zeros(basis.shape[1])
         s = self._splines_s()[:-1, :-1]
-        if not self.constraints == 'none':
+        if not self.constraints == "none":
             ctransf = np.diag(1/np.max(np.abs(basis), axis=0))
         else:
             ctransf = np.eye(basis.shape[1])
         # use np.eye to avoid rescaling
         # ctransf = np.eye(basis.shape[1])
 
-        if self.constraints == 'no-const':
+        if self.constraints == "no-const":
             ctransf = ctransf[1:]
 
         self.ctransf = ctransf
@@ -635,7 +634,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         The name for the underlying explanatory variable, x, used in for
         creating the column and parameter names for the basis functions.
     """
-    def __init__(self, x, df, constraints=None, variable_name='x'):
+    def __init__(self, x, df, constraints=None, variable_name="x"):
         self.degree = 3
         self.df = df
         self.x = x
@@ -764,7 +763,7 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
             if data_names is not None:
                 self.variable_names = data_names
             else:
-                self.variable_names = ['x' + str(i)
+                self.variable_names = ["x" + str(i)
                                        for i in range(self.k_variables)]
         else:
             self.variable_names = variable_names
@@ -937,7 +936,7 @@ class BSplines(AdditiveGamSmoother):
         self.knot_kwds = knot_kwds
         # TODO: move attaching constraints to super call
         self.constraints = constraints
-        if constraints == 'center':
+        if constraints == "center":
             include_intercept = True
 
         super().__init__(x, include_intercept=include_intercept,
@@ -964,7 +963,7 @@ class CubicSplines(AdditiveGamSmoother):
     Note, these splines do NOT use the same spline basis as
     ``Cubic Regression Splines``.
     """
-    def __init__(self, x, df, constraints='center', transform='domain',
+    def __init__(self, x, df, constraints="center", transform="domain",
                  variable_names=None):
         self.dfs = df
         self.constraints = constraints

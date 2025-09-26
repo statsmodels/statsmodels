@@ -929,12 +929,12 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
     nobs, nvars = x.shape
     if split is None:
         split = nobs // 2
-    elif (0 < split) and (split < 1):
+    elif (0 < split < 1):
         split = int(nobs * split)
 
     if drop is None:
         start2 = split
-    elif (0 < drop) and (drop < 1):
+    elif (0 < drop < 1):
         start2 = split + int(nobs * drop)
     else:
         start2 = split + drop
@@ -1208,7 +1208,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
                                 "and exog must be a pandas DataFrame.")
             name = "__index__"
             while name in cols:
-                name += '_'
+                name += "_"
             cols[name] = np.arange(cols.shape[0])
             cols = cols.sort_values(order_by)
             order_by = np.asarray(cols[name])
@@ -1232,7 +1232,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
         except np.linalg.LinAlgError:
             err = exog - exog.mean(0)
             vi = np.linalg.inv(err.T @ err / nobs)
-        dist = cdist(exog, center_obs, metric='mahalanobis', VI=vi)
+        dist = cdist(exog, center_obs, metric="mahalanobis", VI=vi)
         idx = np.argsort(dist.ravel())
         endog = endog[idx]
         exog = exog[idx]

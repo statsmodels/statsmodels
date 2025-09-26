@@ -30,21 +30,21 @@ from .results import results_kalman_filter
 def data():
     true = results_kalman_filter.uc_uni
     data_ = pd.DataFrame(
-        true['data'],
-        index=pd.date_range('1947-01-01', '1995-07-01', freq='QS'),
-        columns=['GDP']
+        true["data"],
+        index=pd.date_range("1947-01-01", "1995-07-01", freq="QS"),
+        columns=["GDP"]
     )
-    data_['lgdp'] = np.log(data_['GDP'])
+    data_["lgdp"] = np.log(data_["GDP"])
     return data_
 
 
 def test_pickle_fit_sarimax(data):
     # Fit an ARIMA(1,1,0) to log GDP
-    mod = sarimax.SARIMAX(data['lgdp'], order=(1, 1, 0))
+    mod = sarimax.SARIMAX(data["lgdp"], order=(1, 1, 0))
     pkl_mod = pickle.loads(pickle.dumps(mod))
 
-    res = mod.fit(disp=-1, full_output=True, method='newton')
-    pkl_res = pkl_mod.fit(disp=-1, full_output=True, method='newton')
+    res = mod.fit(disp=-1, full_output=True, method="newton")
+    pkl_res = pkl_mod.fit(disp=-1, full_output=True, method="newton")
 
     assert_allclose(res.llf_obs, pkl_res.llf_obs)
     assert_allclose(res.tvalues, pkl_res.tvalues)
@@ -62,13 +62,13 @@ def test_unobserved_components_pickle():
     endog[:4, 0] = np.nan
     exog2 = np.random.normal(size=(nobs, 2))
 
-    index = pd.date_range('1970-01-01', freq='QS', periods=nobs)
+    index = pd.date_range("1970-01-01", freq="QS", periods=nobs)
     endog_pd = pd.DataFrame(endog, index=index)
     exog2_pd = pd.DataFrame(exog2, index=index)
 
     models = [
-        UnobservedComponents(endog, 'llevel', exog=exog2),
-        UnobservedComponents(endog_pd, 'llevel', exog=exog2_pd),
+        UnobservedComponents(endog, "llevel", exog=exog2),
+        UnobservedComponents(endog_pd, "llevel", exog=exog2_pd),
     ]
 
     for mod in models:
@@ -90,7 +90,7 @@ def test_kalman_filter_pickle(data):
     true = results_kalman_filter.uc_uni
     k_states = 4
     model = KalmanFilter(k_endog=1, k_states=k_states)
-    model.bind(data['lgdp'].values)
+    model.bind(data["lgdp"].values)
 
     model.design[:, :, 0] = [1, 1, 0, 0]
     model.transition[([0, 0, 1, 1, 2, 3],
@@ -100,7 +100,7 @@ def test_kalman_filter_pickle(data):
 
     # Update matrices with given parameters
     (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(
-        true['parameters']
+        true["parameters"]
     )
     model.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
     model.state_cov[
@@ -123,14 +123,14 @@ def test_kalman_filter_pickle(data):
     results = model.filter()
     pkl_results = pkl_mod.filter()
 
-    assert_allclose(results.llf_obs[true['start']:].sum(),
-                    pkl_results.llf_obs[true['start']:].sum())
-    assert_allclose(results.filtered_state[0][true['start']:],
-                    pkl_results.filtered_state[0][true['start']:])
-    assert_allclose(results.filtered_state[1][true['start']:],
-                    pkl_results.filtered_state[1][true['start']:])
-    assert_allclose(results.filtered_state[3][true['start']:],
-                    pkl_results.filtered_state[3][true['start']:])
+    assert_allclose(results.llf_obs[true["start"]:].sum(),
+                    pkl_results.llf_obs[true["start"]:].sum())
+    assert_allclose(results.filtered_state[0][true["start"]:],
+                    pkl_results.filtered_state[0][true["start"]:])
+    assert_allclose(results.filtered_state[1][true["start"]:],
+                    pkl_results.filtered_state[1][true["start"]:])
+    assert_allclose(results.filtered_state[3][true["start"]:],
+                    pkl_results.filtered_state[3][true["start"]:])
 
 
 def test_representation_pickle():

@@ -64,7 +64,7 @@ def test_regression_summary():
 
     actual = r_summary
     import numpy as np
-    actual = '\n'.join(line.rstrip() for line in actual.split('\n'))
+    actual = "\n".join(line.rstrip() for line in actual.split("\n"))
 #    counter = 0
 #    for c1,c2 in zip(actual, desired):
 #        if not c1==c2 and counter<20:

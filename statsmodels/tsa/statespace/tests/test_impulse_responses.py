@@ -48,7 +48,7 @@ def test_sarimax():
     # irf table irf
     params = [.01928228, -.03656216, .7588994,
               .27070341, -.72928328, .01122177**0.5]
-    mod = sarimax.SARIMAX([0], order=(2, 0, 2), trend='c')
+    mod = sarimax.SARIMAX([0], order=(2, 0, 2), trend="c")
     actual = mod.impulse_responses(params, steps=10)
     desired = [1, .234141, .021055, .17692, .00951, .133917, .002321, .101544,
                -.001951, .077133, -.004301]
@@ -65,7 +65,7 @@ def test_sarimax():
               .81878967, -.9533955, 14.043884**0.5]
     exog = np.arange(1, 92)**2
     mod = sarimax.SARIMAX(np.zeros(91), order=(1, 1, 1),
-                          seasonal_order=(1, 0, 1, 4), trend='c', exog=exog,
+                          seasonal_order=(1, 0, 1, 4), trend="c", exog=exog,
                           simple_differencing=True)
     actual = mod.impulse_responses(params, steps=10)
     desired = [1, .149215, .128899, .111349, -.038417, .063007, .054429,
@@ -88,7 +88,7 @@ def test_structural():
     # case `impulse_responses` just calls `simulate`
 
     # Irregular
-    mod = structural.UnobservedComponents([0], 'irregular')
+    mod = structural.UnobservedComponents([0], "irregular")
     actual = mod.impulse_responses([1.], steps)
     assert_allclose(actual, 0)
 
@@ -97,22 +97,22 @@ def test_structural():
     #  component must be added)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        mod = structural.UnobservedComponents([0], 'fixed intercept')
+        mod = structural.UnobservedComponents([0], "fixed intercept")
     actual = mod.impulse_responses([1.], steps)
     assert_allclose(actual, 0)
 
     # Deterministic constant
-    mod = structural.UnobservedComponents([0], 'deterministic constant')
+    mod = structural.UnobservedComponents([0], "deterministic constant")
     actual = mod.impulse_responses([1.], steps)
     assert_allclose(actual, 0)
 
     # Local level
-    mod = structural.UnobservedComponents([0], 'local level')
+    mod = structural.UnobservedComponents([0], "local level")
     actual = mod.impulse_responses([1., 1.], steps)
     assert_allclose(actual, 1)
 
     # Random walk
-    mod = structural.UnobservedComponents([0], 'random walk')
+    mod = structural.UnobservedComponents([0], "random walk")
     actual = mod.impulse_responses([1.], steps)
     assert_allclose(actual, 1)
 
@@ -121,28 +121,28 @@ def test_structural():
     #  component must be added)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        mod = structural.UnobservedComponents([0], 'fixed slope')
+        mod = structural.UnobservedComponents([0], "fixed slope")
     actual = mod.impulse_responses([1.], steps)
     assert_allclose(actual, 0)
 
     # Deterministic trend
-    mod = structural.UnobservedComponents([0], 'deterministic trend')
+    mod = structural.UnobservedComponents([0], "deterministic trend")
     actual = mod.impulse_responses([1.], steps)
     assert_allclose(actual, 0)
 
     # Local linear deterministic trend
     mod = structural.UnobservedComponents(
-        [0], 'local linear deterministic trend')
+        [0], "local linear deterministic trend")
     actual = mod.impulse_responses([1., 1.], steps)
     assert_allclose(actual, 1)
 
     # Random walk with drift
-    mod = structural.UnobservedComponents([0], 'random walk with drift')
+    mod = structural.UnobservedComponents([0], "random walk with drift")
     actual = mod.impulse_responses([1.], steps)
     assert_allclose(actual, 1)
 
     # Local linear trend
-    mod = structural.UnobservedComponents([0], 'local linear trend')
+    mod = structural.UnobservedComponents([0], "local linear trend")
     # - shock the level
     actual = mod.impulse_responses([1., 1., 1.], steps)
     assert_allclose(actual, 1)
@@ -151,34 +151,34 @@ def test_structural():
     assert_allclose(actual, np.arange(steps + 1))
 
     # Smooth trend
-    mod = structural.UnobservedComponents([0], 'smooth trend')
+    mod = structural.UnobservedComponents([0], "smooth trend")
     actual = mod.impulse_responses([1., 1.], steps)
     assert_allclose(actual, np.arange(steps + 1))
 
     # Random trend
-    mod = structural.UnobservedComponents([0], 'random trend')
+    mod = structural.UnobservedComponents([0], "random trend")
     actual = mod.impulse_responses([1., 1.], steps)
     assert_allclose(actual, np.arange(steps + 1))
 
     # Seasonal (deterministic)
-    mod = structural.UnobservedComponents([0], 'irregular', seasonal=2,
+    mod = structural.UnobservedComponents([0], "irregular", seasonal=2,
                                           stochastic_seasonal=False)
     actual = mod.impulse_responses([1.], steps)
     assert_allclose(actual, 0)
 
     # Seasonal (stochastic)
-    mod = structural.UnobservedComponents([0], 'irregular', seasonal=2)
+    mod = structural.UnobservedComponents([0], "irregular", seasonal=2)
     actual = mod.impulse_responses([1., 1.], steps)
     desired = np.r_[1, np.tile([-1, 1], steps // 2)]
     assert_allclose(actual, desired)
 
     # Cycle (deterministic)
-    mod = structural.UnobservedComponents([0], 'irregular', cycle=True)
+    mod = structural.UnobservedComponents([0], "irregular", cycle=True)
     actual = mod.impulse_responses([1., 1.2], steps)
     assert_allclose(actual, 0)
 
     # Cycle (stochastic)
-    mod = structural.UnobservedComponents([0], 'irregular', cycle=True,
+    mod = structural.UnobservedComponents([0], "irregular", cycle=True,
                                           stochastic_cycle=True)
     actual = mod.impulse_responses([1., 1., 1.2], steps=10)
     x1 = [np.cos(1.2), np.sin(1.2)]
@@ -199,14 +199,14 @@ def test_varmax():
     varmax.__warningregistry__ = {}
 
     # VAR(2) - single series
-    mod1 = varmax.VARMAX([[0]], order=(2, 0), trend='n')
+    mod1 = varmax.VARMAX([[0]], order=(2, 0), trend="n")
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 0))
     actual = mod1.impulse_responses([0.5, 0.2, 1], steps)
     desired = mod2.impulse_responses([0.5, 0.2, 1], steps)
     assert_allclose(actual, desired)
 
     # VMA(2) - single series
-    mod1 = varmax.VARMAX([[0]], order=(0, 2), trend='n')
+    mod1 = varmax.VARMAX([[0]], order=(0, 2), trend="n")
     mod2 = sarimax.SARIMAX([0], order=(0, 0, 2))
     actual = mod1.impulse_responses([0.5, 0.2, 1], steps)
     desired = mod2.impulse_responses([0.5, 0.2, 1], steps)
@@ -215,7 +215,7 @@ def test_varmax():
     # VARMA(2, 2) - single series
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='n')
+        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend="n")
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2))
     actual = mod1.impulse_responses([0.5, 0.2, 0.1, -0.2, 1], steps)
     desired = mod2.impulse_responses([0.5, 0.2, 0.1, -0.2, 1], steps)
@@ -223,10 +223,10 @@ def test_varmax():
 
     # VARMA(2, 2) + trend - single series
     warning = EstimationWarning
-    match = r'VARMA\(p,q\) models is not'
+    match = r"VARMA\(p,q\) models is not"
     with pytest.warns(warning, match=match):
-        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='c')
-    mod2 = sarimax.SARIMAX([0], order=(2, 0, 2), trend='c')
+        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend="c")
+    mod2 = sarimax.SARIMAX([0], order=(2, 0, 2), trend="c")
     actual = mod1.impulse_responses([10, 0.5, 0.2, 0.1, -0.2, 1], steps)
     desired = mod2.impulse_responses([10, 0.5, 0.2, 0.1, -0.2, 1], steps)
     assert_allclose(actual, desired)
@@ -259,7 +259,7 @@ def test_varmax():
     oirf_11 = [0.010963, 0.00023, 0.001384, 0.000728, 0.000315, 0.000082,
                0.000108, 0.000036, 0.000014, 0.000011, 5.50E-06]
 
-    mod = varmax.VARMAX([[0, 0]], order=(2, 0), trend='c')
+    mod = varmax.VARMAX([[0, 0]], order=(2, 0), trend="c")
 
     # IRFs
     actual = mod.impulse_responses(params, steps, impulse=0)
@@ -285,12 +285,12 @@ def test_varmax():
         "b": data[:, 1],
         "c": data[:, 2]})
 
-    mod1 = varmax.VARMAX(df, order=(1, 0), trend='c')
+    mod1 = varmax.VARMAX(df, order=(1, 0), trend="c")
     mod1_result = mod1.fit()
-    mod2 = varmax.VARMAX(data, order=(1, 0), trend='c')
+    mod2 = varmax.VARMAX(data, order=(1, 0), trend="c")
     mod2_result = mod2.fit()
 
-    with pytest.raises(ValueError, match='Endog must be pd.DataFrame.'):
+    with pytest.raises(ValueError, match="Endog must be pd.DataFrame."):
         mod2_result.impulse_responses(6, impulse="b")
 
     response1 = mod1_result.impulse_responses(6, impulse="b")
@@ -302,7 +302,7 @@ def test_varmax():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         mod = varmax.VARMAX(
-            np.random.normal(size=(steps, 2)), order=(2, 2), trend='c',
+            np.random.normal(size=(steps, 2)), order=(2, 2), trend="c",
             exog=np.ones(steps), enforce_stationarity=False,
             enforce_invertibility=False)
     mod.impulse_responses(mod.start_params, steps)
@@ -346,7 +346,7 @@ def test_time_varying_ssm():
     T = np.zeros((1, 1, 11))
     T[..., :5] = 0.5
     T[..., 5:] = 0.2
-    mod['transition'] = T
+    mod["transition"] = T
 
     irfs = mod.ssm.impulse_responses()
     desired = np.cumprod(np.r_[1, [0.5] * 4, [0.2] * 5]).reshape(10, 1)
@@ -371,17 +371,17 @@ class TVSS(mlemodel.MLEModel):
             endog,
             k_states=_k_states,
             k_posdef=k_posdef,
-            initialization='diffuse'
+            initialization="diffuse"
         )
 
-        self['obs_intercept'] = np.random.normal(
+        self["obs_intercept"] = np.random.normal(
             size=(self.k_endog, self.nobs))
-        self['design'] = np.zeros((self.k_endog, self.k_states, self.nobs))
-        self['transition'] = np.zeros(
+        self["design"] = np.zeros((self.k_endog, self.k_states, self.nobs))
+        self["transition"] = np.zeros(
             (self.k_states, self.k_states, self.nobs))
-        self['selection'] = np.zeros(
+        self["selection"] = np.zeros(
             (self.k_states, self.ssm.k_posdef, self.nobs))
-        self['design', :, :k_states, :] = np.random.normal(
+        self["design", :, :k_states, :] = np.random.normal(
             size=(self.k_endog, k_states, self.nobs))
         # For the transition matrices, enforce eigenvalues not too far outside
         # unit circle. Otherwise, the random draws will often lead to large
@@ -391,9 +391,9 @@ class TVSS(mlemodel.MLEModel):
         D = [np.diag(d)
              for d in np.random.uniform(-1.1, 1.1, size=(self.nobs, k_states))]
         Q = ortho_group.rvs(k_states, size=self.nobs)
-        self['transition', :k_states, :k_states, :] = (
+        self["transition", :k_states, :k_states, :] = (
             Q @ D @ Q.transpose(0, 2, 1)).transpose(1, 2, 0)
-        self['selection', :k_states, :, :] = np.random.normal(
+        self["selection", :k_states, :, :] = np.random.normal(
             size=(k_states, self.ssm.k_posdef, self.nobs))
 
         # Need to make sure the covariances are positive definite
@@ -405,14 +405,14 @@ class TVSS(mlemodel.MLEModel):
         for t in range(self.nobs):
             H[..., t] = np.dot(H05[..., t], H05[..., t].T)
             Q[..., t] = np.dot(Q05[..., t], Q05[..., t].T)
-        self['obs_cov'] = H
-        self['state_cov'] = Q
+        self["obs_cov"] = H
+        self["state_cov"] = Q
 
     def clone(self, endog, exog=None, **kwargs):
         mod = self.__class__(endog, **kwargs)
 
         for key in self.ssm.shapes.keys():
-            if key in ['obs', 'state_intercept']:
+            if key in ["obs", "state_intercept"]:
                 continue
             n = min(self.nobs, mod.nobs)
             mod[key, ..., :n] = self.ssm[key, ..., :n]
@@ -437,10 +437,10 @@ def test_time_varying_in_sample(reset_randomstate):
                                    orthogonalized=True)
 
     # Compute IRFs manually
-    Z = mod['design']
-    T = mod['transition']
-    R = mod['selection']
-    Q = mod['state_cov', ..., 0]
+    Z = mod["design"]
+    T = mod["transition"]
+    R = mod["selection"]
+    Q = mod["state_cov", ..., 0]
     L = np.linalg.cholesky(Q)
 
     desired_irfs = np.zeros((mod.nobs - 1, 2)) * np.nan
@@ -463,8 +463,8 @@ def test_time_varying_out_of_sample(reset_randomstate):
     mod = TVSS(np.zeros((10, 2)))
 
     # Compute all in-sample IRFs and also one out-of-sample IRF
-    new_Z = np.random.normal(size=mod['design', :, :, -1].shape)
-    new_T = np.random.normal(size=mod['transition', :, :, -1].shape)
+    new_Z = np.random.normal(size=mod["design", :, :, -1].shape)
+    new_T = np.random.normal(size=mod["transition", :, :, -1].shape)
     irfs = mod.impulse_responses(
         [], steps=mod.nobs, design=new_Z[:, :, None],
         transition=new_T[:, :, None])
@@ -487,10 +487,10 @@ def test_time_varying_out_of_sample(reset_randomstate):
         transition=new_T[:, :, None], cumulative=True, orthogonalized=True)
 
     # Compute IRFs manually
-    Z = mod['design']
-    T = mod['transition']
-    R = mod['selection']
-    Q = mod['state_cov', ..., 0]
+    Z = mod["design"]
+    T = mod["transition"]
+    R = mod["selection"]
+    Q = mod["state_cov", ..., 0]
     L = np.linalg.cholesky(Q)
 
     desired_irfs = np.zeros((mod.nobs, 2)) * np.nan
@@ -533,10 +533,10 @@ def test_time_varying_in_sample_anchored(reset_randomstate):
         cumulative=True, orthogonalized=True)
 
     # Compute IRFs manually
-    Z = mod['design']
-    T = mod['transition']
-    R = mod['selection']
-    Q = mod['state_cov', ..., anchor]
+    Z = mod["design"]
+    T = mod["transition"]
+    R = mod["selection"]
+    Q = mod["state_cov", ..., anchor]
     L = np.linalg.cholesky(Q)
 
     desired_irfs = np.zeros((mod.nobs - anchor - 1, 2)) * np.nan
@@ -560,8 +560,8 @@ def test_time_varying_out_of_sample_anchored(reset_randomstate):
     # Compute all in-sample IRFs and also one out-of-sample IRF
     anchor = 2
 
-    new_Z = mod['design', :, :, -1]
-    new_T = mod['transition', :, :, -1]
+    new_Z = mod["design", :, :, -1]
+    new_T = mod["transition", :, :, -1]
     irfs = mod.impulse_responses(
         [], steps=mod.nobs - anchor, anchor=anchor, design=new_Z[:, :, None],
         transition=new_T[:, :, None])
@@ -583,10 +583,10 @@ def test_time_varying_out_of_sample_anchored(reset_randomstate):
         cumulative=True, orthogonalized=True)
 
     # Compute IRFs manually
-    Z = mod['design']
-    T = mod['transition']
-    R = mod['selection']
-    Q = mod['state_cov', ..., anchor]
+    Z = mod["design"]
+    T = mod["transition"]
+    R = mod["selection"]
+    Q = mod["state_cov", ..., anchor]
     L = np.linalg.cholesky(Q)
 
     desired_irfs = np.zeros((mod.nobs - anchor, 2)) * np.nan
@@ -610,31 +610,31 @@ def test_time_varying_out_of_sample_anchored_end(reset_randomstate):
     mod = TVSS(np.zeros((10, 2)))
 
     # Cannot compute the any in-sample IRFs when anchoring at the end
-    with pytest.raises(ValueError, match='Model has time-varying'):
-        mod.impulse_responses([], steps=2, anchor='end')
+    with pytest.raises(ValueError, match="Model has time-varying"):
+        mod.impulse_responses([], steps=2, anchor="end")
 
     # Compute two out-of-sample IRFs
-    new_Z = np.random.normal(size=mod['design', :, :, -2:].shape)
-    new_T = np.random.normal(size=mod['transition', :, :, -2:].shape)
-    irfs = mod.impulse_responses([], steps=2, anchor='end',
+    new_Z = np.random.normal(size=mod["design", :, :, -2:].shape)
+    new_T = np.random.normal(size=mod["transition", :, :, -2:].shape)
+    irfs = mod.impulse_responses([], steps=2, anchor="end",
                                  design=new_Z, transition=new_T)
 
     # Cumulative IRFs
     cirfs = mod.impulse_responses(
-        [], steps=2, anchor='end', design=new_Z, transition=new_T,
+        [], steps=2, anchor="end", design=new_Z, transition=new_T,
         cumulative=True)
     # Orthogonalized IRFs
     oirfs = mod.impulse_responses(
-        [], steps=2, anchor='end', design=new_Z, transition=new_T,
+        [], steps=2, anchor="end", design=new_Z, transition=new_T,
         orthogonalized=True)
     # Cumulative, orthogonalized IRFs
     coirfs = mod.impulse_responses(
-        [], steps=2, anchor='end', design=new_Z, transition=new_T,
+        [], steps=2, anchor="end", design=new_Z, transition=new_T,
         cumulative=True, orthogonalized=True)
 
     # Compute IRFs manually
-    R = mod['selection']
-    Q = mod['state_cov', ..., -1]
+    R = mod["selection"]
+    Q = mod["state_cov", ..., -1]
     L = np.linalg.cholesky(Q)
 
     desired_irfs = np.zeros((2, 2)) * np.nan
@@ -671,7 +671,7 @@ def test_pandas_univariate_rangeindex():
 
 def test_pandas_univariate_dateindex():
     # Impulse responses still have RangeIndex (i.e. aren't wrapped with dates)
-    ix = pd.date_range(start='2000', periods=1, freq=MONTH_END)
+    ix = pd.date_range(start="2000", periods=1, freq=MONTH_END)
     endog = pd.Series(np.zeros(1), index=ix)
     mod = sarimax.SARIMAX(endog)
     res = mod.filter([0.5, 1.])
@@ -685,7 +685,7 @@ def test_pandas_univariate_dateindex():
 def test_pandas_multivariate_rangeindex():
     # Impulse responses have RangeIndex
     endog = pd.DataFrame(np.zeros((1, 2)))
-    mod = varmax.VARMAX(endog, trend='n')
+    mod = varmax.VARMAX(endog, trend="n")
     res = mod.filter([0.5, 0., 0., 0.2, 1., 0., 1.])
 
     actual = res.impulse_responses(2)
@@ -696,9 +696,9 @@ def test_pandas_multivariate_rangeindex():
 
 def test_pandas_multivariate_dateindex():
     # Impulse responses still have RangeIndex (i.e. aren't wrapped with dates)
-    ix = pd.date_range(start='2000', periods=1, freq=MONTH_END)
+    ix = pd.date_range(start="2000", periods=1, freq=MONTH_END)
     endog = pd.DataFrame(np.zeros((1, 2)), index=ix)
-    mod = varmax.VARMAX(endog, trend='n')
+    mod = varmax.VARMAX(endog, trend="n")
     res = mod.filter([0.5, 0., 0., 0.2, 1., 0., 1.])
 
     actual = res.impulse_responses(2)
@@ -709,7 +709,7 @@ def test_pandas_multivariate_dateindex():
 
 def test_pandas_anchor():
     # Test that anchor with dates works
-    ix = pd.date_range(start='2000', periods=10, freq=MONTH_END)
+    ix = pd.date_range(start="2000", periods=10, freq=MONTH_END)
     endog = pd.DataFrame(np.zeros((10, 2)), index=ix)
     mod = TVSS(endog)
     res = mod.filter([])

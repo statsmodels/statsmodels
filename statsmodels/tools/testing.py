@@ -4,12 +4,12 @@
 from statsmodels.compat.pandas import testing as pdt
 
 import numpy.testing as npt
-import pandas
+import pandas as pd
 
 from statsmodels.tools.tools import Bunch
 
 # Standard list for parsing tables
-PARAM_LIST = ['params', 'bse', 'tvalues', 'pvalues']
+PARAM_LIST = ["params", "bse", "tvalues", "pvalues"]
 
 
 def bunch_factory(attribute, columns):
@@ -33,17 +33,17 @@ def bunch_factory(attribute, columns):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             if not hasattr(self, attribute):
-                raise AttributeError('{} is required and must be passed to '
-                                     'the constructor'.format(attribute))
+                raise AttributeError("{} is required and must be passed to "
+                                     "the constructor".format(attribute))
             for i, att in enumerate(columns):
                 self[att] = getattr(self, attribute)[:, i]
 
     return FactoryBunch
 
 
-ParamsTableTestBunch = bunch_factory('params_table', PARAM_LIST)
+ParamsTableTestBunch = bunch_factory("params_table", PARAM_LIST)
 
-MarginTableTestBunch = bunch_factory('margins_table', PARAM_LIST)
+MarginTableTestBunch = bunch_factory("margins_table", PARAM_LIST)
 
 
 class Holder:
@@ -54,13 +54,13 @@ class Holder:
         self.__dict__.update(kwds)
 
     def __str__(self):
-        ss = "\n".join(str(k) + " = " + str(v).replace('\n', '\n    ')
+        ss = "\n".join(str(k) + " = " + str(v).replace("\n", "\n    ")
                        for k, v in vars(self).items())
         return ss
 
     def __repr__(self):
         # use repr for values including nested cases as in tost
-        ss = "\n".join(str(k) + " = " + repr(v).replace('\n', '\n    ')
+        ss = "\n".join(str(k) + " = " + repr(v).replace("\n", "\n    ")
                        for k, v in vars(self).items())
         ss = str(self.__class__) + "\n" + ss
         return ss
@@ -68,12 +68,12 @@ class Holder:
 
 # adjusted functions
 
-def assert_equal(actual, desired, err_msg='', verbose=True, **kwds):
-    if isinstance(desired, pandas.Index):
+def assert_equal(actual, desired, err_msg="", verbose=True, **kwds):
+    if isinstance(desired, pd.Index):
         pdt.assert_index_equal(actual, desired)
-    elif isinstance(desired, pandas.Series):
+    elif isinstance(desired, pd.Series):
         pdt.assert_series_equal(actual, desired, **kwds)
-    elif isinstance(desired, pandas.DataFrame):
+    elif isinstance(desired, pd.DataFrame):
         pdt.assert_frame_equal(actual, desired, **kwds)
     else:
-        npt.assert_equal(actual, desired, err_msg='', verbose=True)
+        npt.assert_equal(actual, desired, err_msg="", verbose=True)

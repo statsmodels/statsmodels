@@ -1,7 +1,7 @@
 """Star98 Educational Testing dataset."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
@@ -80,7 +80,7 @@ def load():
 
 def load_pandas():
     data = _get_data()
-    return du.process_pandas(data, endog_idx=['NABOVE', 'NBELOW'])
+    return du.process_pandas(data, endog_idx=["NABOVE", "NBELOW"])
 
 
 def _get_data():

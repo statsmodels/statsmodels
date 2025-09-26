@@ -1,11 +1,11 @@
-'''Testing numerical differentiation
+"""Testing numerical differentiation
 
 Still some problems, with API (args tuple versus *args)
 finite difference Hessian has some problems that I did not look at yet
 
 Should Hessian also work per observation, if fun returns 2d
 
-'''
+"""
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 
@@ -366,7 +366,7 @@ def test_vectorized():
     assert_allclose(approx_fprime_cs(p.T, f).squeeze(), desired, rtol=1e-8)
 
 
-if __name__ == '__main__':  # FIXME: turn into tests or move/remove
+if __name__ == "__main__":  # FIXME: turn into tests or move/remove
 
     epsilon = 1e-6
     nobs = 200
@@ -409,15 +409,15 @@ if __name__ == '__main__':  # FIXME: turn into tests or move/remove
     # cs does not work for Probit because special.ndtr does not support complex
     # maybe calculating ndtr for real and imag parts separately, if we need it
     # and if it still works in this case
-    print('sm', score(test_params))
-    print('fd', numdiff.approx_fprime(test_params, loglike, epsilon))
-    print('cs', numdiff.approx_fprime_cs(test_params, loglike))
-    print('sm', hess(test_params))
-    print('fd', numdiff.approx_fprime(test_params, score, epsilon))
-    print('cs', numdiff.approx_fprime_cs(test_params, score))
+    print("sm", score(test_params))
+    print("fd", numdiff.approx_fprime(test_params, loglike, epsilon))
+    print("cs", numdiff.approx_fprime_cs(test_params, loglike))
+    print("sm", hess(test_params))
+    print("fd", numdiff.approx_fprime(test_params, score, epsilon))
+    print("cs", numdiff.approx_fprime_cs(test_params, score))
 
     hesscs = numdiff.approx_hess_cs(test_params, loglike)
-    print('cs', hesscs)
+    print("cs", hesscs)
     print(maxabs(hess(test_params), hesscs))
 
     data = sm.datasets.anes96.load()
@@ -430,4 +430,4 @@ if __name__ == '__main__':  # FIXME: turn into tests or move/remove
     exogp = sm.add_constant(datap.exog.view(float).reshape(nobs, -1),
                             prepend=False)
     modp = sm.Poisson(datap.endog, exogp)
-    resp = modp.fit(method='newton', disp=0)
+    resp = modp.fit(method="newton", disp=0)

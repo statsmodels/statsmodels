@@ -71,9 +71,9 @@ except ImportError:
 data_klasses = (pd.Series, pd.DataFrame)
 
 try:
-    import pandas.testing as testing
+    from pandas import testing
 except ImportError:
-    import pandas.util.testing as testing
+    from pandas.util import testing
 
 assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal

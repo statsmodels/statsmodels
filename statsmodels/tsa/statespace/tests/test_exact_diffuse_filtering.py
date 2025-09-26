@@ -60,7 +60,7 @@ from . import kfas_helpers
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 macrodata = datasets.macrodata.load_pandas().data
-macrodata.index = pd.period_range(start='1959Q1', end='2009Q3', freq='Q')
+macrodata.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
 
 
 # - Model definitions --------------------------------------------------------
@@ -78,21 +78,21 @@ def model_local_level(endog=None, params=None, direct=False):
         # Construct the basic representation
         ssm = KalmanSmoother(k_endog=1, k_states=1, k_posdef=1)
         ssm.bind(endog)
-        init = Initialization(ssm.k_states, initialization_type='diffuse')
+        init = Initialization(ssm.k_states, initialization_type="diffuse")
         ssm.initialize(init)
         # ssm.filter_univariate = True  # should not be required
 
         # Fill in the system matrices for a local level model
-        ssm['design', :] = 1
-        ssm['obs_cov', :] = sigma2_y
-        ssm['transition', :] = 1
-        ssm['selection', :] = 1
-        ssm['state_cov', :] = sigma2_mu
+        ssm["design", :] = 1
+        ssm["obs_cov", :] = sigma2_y
+        ssm["transition", :] = 1
+        ssm["selection", :] = 1
+        ssm["state_cov", :] = sigma2_mu
     else:
-        mod = UnobservedComponents(endog, 'llevel')
+        mod = UnobservedComponents(endog, "llevel")
         mod.update(params)
         ssm = mod.ssm
-        ssm.initialize(Initialization(ssm.k_states, 'diffuse'))
+        ssm.initialize(Initialization(ssm.k_states, "diffuse"))
 
     return mod, ssm
 
@@ -112,22 +112,22 @@ def model_local_linear_trend(endog=None, params=None, direct=False):
         # Construct the basic representation
         ssm = KalmanSmoother(k_endog=1, k_states=2, k_posdef=2)
         ssm.bind(endog)
-        init = Initialization(ssm.k_states, initialization_type='diffuse')
+        init = Initialization(ssm.k_states, initialization_type="diffuse")
         ssm.initialize(init)
         # ssm.filter_univariate = True  # should not be required
 
         # Fill in the system matrices for a local level model
-        ssm['design', 0, 0] = 1
-        ssm['obs_cov', 0, 0] = sigma2_y
-        ssm['transition'] = np.array([[1, 1],
+        ssm["design", 0, 0] = 1
+        ssm["obs_cov", 0, 0] = sigma2_y
+        ssm["transition"] = np.array([[1, 1],
                                       [0, 1]])
-        ssm['selection'] = np.eye(2)
-        ssm['state_cov'] = np.diag([sigma2_mu, sigma2_beta])
+        ssm["selection"] = np.eye(2)
+        ssm["state_cov"] = np.diag([sigma2_mu, sigma2_beta])
     else:
-        mod = UnobservedComponents(endog, 'lltrend')
+        mod = UnobservedComponents(endog, "lltrend")
         mod.update(params)
         ssm = mod.ssm
-        ssm.initialize(Initialization(ssm.k_states, 'diffuse'))
+        ssm.initialize(Initialization(ssm.k_states, "diffuse"))
 
     return mod, ssm
 
@@ -148,38 +148,38 @@ def model_common_level(endog=None, params=None, restricted=False):
         # Construct the basic representation
         ssm = KalmanSmoother(k_endog=2, k_states=2, k_posdef=1)
         ssm.bind(endog.T)
-        init = Initialization(ssm.k_states, initialization_type='diffuse')
+        init = Initialization(ssm.k_states, initialization_type="diffuse")
         ssm.initialize(init)
         # ssm.filter_univariate = True  # should not be required
 
         # Fill in the system matrices for a common trend model
-        ssm['design'] = np.array([[1, 0],
+        ssm["design"] = np.array([[1, 0],
                                   [theta, 1]])
-        ssm['obs_cov'] = np.eye(2)
-        ssm['transition'] = np.eye(2)
-        ssm['selection', 0, 0] = 1
-        ssm['state_cov', 0, 0] = sigma2_mu
+        ssm["obs_cov"] = np.eye(2)
+        ssm["transition"] = np.eye(2)
+        ssm["selection", 0, 0] = 1
+        ssm["state_cov", 0, 0] = sigma2_mu
     else:
         # Construct the basic representation
         ssm = KalmanSmoother(k_endog=2, k_states=1, k_posdef=1)
         ssm.bind(endog.T)
-        init = Initialization(ssm.k_states, initialization_type='diffuse')
+        init = Initialization(ssm.k_states, initialization_type="diffuse")
         ssm.initialize(init)
         # ssm.filter_univariate = True  # should not be required
 
         # Fill in the system matrices for a local level model
-        ssm['design'] = np.array([[1, theta]]).T
-        ssm['obs_cov'] = np.eye(2)
-        ssm['transition', :] = 1
-        ssm['selection', :] = 1
-        ssm['state_cov', :] = sigma2_mu
+        ssm["design"] = np.array([[1, theta]]).T
+        ssm["obs_cov"] = np.eye(2)
+        ssm["transition", :] = 1
+        ssm["selection", :] = 1
+        ssm["state_cov", :] = sigma2_mu
 
     return ssm
 
 
 def model_var1(endog=None, params=None, measurement_error=False, init=None):
     if endog is None:
-        levels = macrodata[['realgdp', 'realcons']]
+        levels = macrodata[["realgdp", "realcons"]]
         endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
     if params is None:
         params = np.r_[0.5, 0.3, 0.2, 0.4, 2**0.5, 0, 3**0.5]
@@ -187,12 +187,12 @@ def model_var1(endog=None, params=None, measurement_error=False, init=None):
             params = np.r_[params, 4, 5]
 
     # Model
-    mod = VARMAX(endog, order=(1, 0), trend='n',
+    mod = VARMAX(endog, order=(1, 0), trend="n",
                  measurement_error=measurement_error)
     mod.update(params)
     ssm = mod.ssm
     if init is None:
-        init = Initialization(ssm.k_states, 'diffuse')
+        init = Initialization(ssm.k_states, "diffuse")
     ssm.initialize(init)
 
     return mod, ssm
@@ -200,7 +200,7 @@ def model_var1(endog=None, params=None, measurement_error=False, init=None):
 
 def model_dfm(endog=None, params=None, factor_order=2):
     if endog is None:
-        levels = macrodata[['realgdp', 'realcons']]
+        levels = macrodata[["realgdp", "realcons"]]
         endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
     if params is None:
         params = np.r_[0.5, 1., 1.5, 2., 0.9, 0.1]
@@ -210,7 +210,7 @@ def model_dfm(endog=None, params=None, factor_order=2):
     mod.update(params)
     ssm = mod.ssm
     ssm.filter_univariate = True
-    init = Initialization(ssm.k_states, 'diffuse')
+    init = Initialization(ssm.k_states, "diffuse")
     ssm.initialize(init)
 
     return mod, ssm
@@ -230,8 +230,8 @@ class TestLocalLevelAnalytic:
         res = self.res
 
         y1 = ssm.endog[0, 0]
-        sigma2_y = ssm['obs_cov', 0, 0]
-        sigma2_mu = ssm['state_cov', 0, 0]
+        sigma2_y = ssm["obs_cov", 0, 0]
+        sigma2_mu = ssm["state_cov", 0, 0]
 
         # Basic initialization variables
         assert_allclose(res.predicted_state_cov[0, 0, 0], 0)
@@ -267,8 +267,8 @@ class TestLocalLinearTrendAnalytic:
         res = self.res
 
         y1, y2, y3 = ssm.endog[0, :3]
-        sigma2_y = ssm['obs_cov', 0, 0]
-        sigma2_mu, sigma2_beta = np.diagonal(ssm['state_cov'])
+        sigma2_y = ssm["obs_cov", 0, 0]
+        sigma2_mu, sigma2_beta = np.diagonal(ssm["state_cov"])
 
         # Basic initialization variables
         assert_allclose(res.predicted_state_cov[..., 0], np.zeros((2, 2)))
@@ -319,8 +319,8 @@ class TestLocalLinearTrendAnalyticMissing(TestLocalLinearTrendAnalytic):
         res = self.res
 
         y1, y2, y3 = ssm.endog[0, :3]
-        sigma2_y = ssm['obs_cov', 0, 0]
-        sigma2_mu, sigma2_beta = np.diagonal(ssm['state_cov'])
+        sigma2_y = ssm["obs_cov", 0, 0]
+        sigma2_mu, sigma2_beta = np.diagonal(ssm["state_cov"])
 
         # Test output
         q_mu = sigma2_mu / sigma2_y
@@ -342,8 +342,8 @@ def test_common_level_analytic():
     # Analytic test using results from Koopman (1997), section 5.3
     mod = model_common_level()
     y11, y21 = mod.endog[:, 0]
-    theta = mod['design', 1, 0]
-    sigma2_mu = mod['state_cov', 0, 0]
+    theta = mod["design", 1, 0]
+    sigma2_mu = mod["state_cov", 0, 0]
 
     # Perform filtering
     res = mod.smooth()
@@ -379,8 +379,8 @@ def test_common_level_restricted_analytic():
     # with the restriction mu_bar = 0
     mod = model_common_level(restricted=True)
     y11, y21 = mod.endog[:, 0]
-    theta = mod['design', 1, 0]
-    sigma2_mu = mod['state_cov', 0, 0]
+    theta = mod["design", 1, 0]
+    sigma2_mu = mod["state_cov", 0, 0]
 
     # Perform filtering
     res = mod.smooth()
@@ -625,7 +625,7 @@ class CheckApproximateDiffuseMixin:
 
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        init_approx = kwargs.pop('init_approx', None)
+        init_approx = kwargs.pop("init_approx", None)
 
         super().setup_class(*args, **kwargs)
 
@@ -634,7 +634,7 @@ class CheckApproximateDiffuseMixin:
         if init_approx is None:
             init_approx = Initialization(
                 cls.ssm.k_states,
-                'approximate_diffuse',
+                "approximate_diffuse",
                 approximate_diffuse_variance=kappa)
         cls.ssm.initialize(init_approx)
         cls.results_b = cls.ssm.smooth()
@@ -655,7 +655,7 @@ class CheckKFASMixin:
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs.setdefault('filter_univariate', True)
+        kwargs.setdefault("filter_univariate", True)
         super().setup_class(*args, **kwargs)
 
         # Get the KFAS results objects
@@ -689,7 +689,7 @@ class CheckKFASMixin:
 class CheckVAR1(CheckSSMResults):
     @classmethod
     def setup_class(cls, **kwargs):
-        filter_univariate = kwargs.pop('filter_univariate', False)
+        filter_univariate = kwargs.pop("filter_univariate", False)
         cls.mod, cls.ssm = model_var1(**kwargs)
         if filter_univariate:
             cls.ssm.filter_univariate = True
@@ -710,7 +710,7 @@ class TestVAR1_Approx(CheckApproximateDiffuseMixin, CheckVAR1):
 
 class TestVAR1_KFAS(CheckKFASMixin, CheckVAR1):
     results_path = os.path.join(
-        current_path, 'results', 'results_exact_initial_var1_R.csv')
+        current_path, "results", "results_exact_initial_var1_R.csv")
 
 
 # - VAR(1) + Measurement error -----------------------------------------------
@@ -719,7 +719,7 @@ class TestVAR1_KFAS(CheckKFASMixin, CheckVAR1):
 class CheckVAR1MeasurementError(CheckVAR1):
     @classmethod
     def setup_class(cls, **kwargs):
-        kwargs['measurement_error'] = True
+        kwargs["measurement_error"] = True
         super().setup_class(**kwargs)
 
 
@@ -746,8 +746,8 @@ class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
 
 class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
     results_path = os.path.join(
-        current_path, 'results',
-        'results_exact_initial_var1_measurement_error_R.csv')
+        current_path, "results",
+        "results_exact_initial_var1_measurement_error_R.csv")
 
 
 # - VAR(1) + Missing data ----------------------------------------------------
@@ -756,11 +756,11 @@ class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
 class CheckVAR1Missing(CheckVAR1):
     @classmethod
     def setup_class(cls, **kwargs):
-        levels = macrodata[['realgdp', 'realcons']]
+        levels = macrodata[["realgdp", "realcons"]]
         endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
         endog.iloc[0:5, 0] = np.nan
         endog.iloc[8:12, :] = np.nan
-        kwargs['endog'] = endog
+        kwargs["endog"] = endog
 
         super().setup_class(**kwargs)
 
@@ -791,7 +791,7 @@ class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
 
 class TestVAR1Missing_KFAS(CheckKFASMixin, CheckVAR1Missing):
     results_path = os.path.join(
-        current_path, 'results', 'results_exact_initial_var1_missing_R.csv')
+        current_path, "results", "results_exact_initial_var1_missing_R.csv")
 
     def test_forecasts_error_cov(self):
         # TODO: fails for the general version of forecasts_error_cov because
@@ -819,14 +819,14 @@ class CheckVAR1Mixed(CheckVAR1):
         k_states = 2
 
         init = Initialization(k_states)
-        init.set(0, 'diffuse')
-        init.set(1, 'stationary')
+        init.set(0, "diffuse")
+        init.set(1, "stationary")
 
-        if kwargs.pop('approx', False):
+        if kwargs.pop("approx", False):
             init_approx = Initialization(k_states)
-            init_approx.set(0, 'approximate_diffuse')
-            init_approx.set(1, 'stationary')
-            kwargs['init_approx'] = init_approx
+            init_approx.set(0, "approximate_diffuse")
+            init_approx.set(1, "stationary")
+            kwargs["init_approx"] = init_approx
 
         super().setup_class(init=init, **kwargs)
 
@@ -845,7 +845,7 @@ class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin,
                            CheckVAR1):
     @classmethod
     def setup_class(cls, **kwargs):
-        kwargs['approx'] = True
+        kwargs["approx"] = True
         super().setup_class(**kwargs)
 
     def test_initialization_approx(self):
@@ -859,7 +859,7 @@ class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin,
 class TestVAR1Mixed_KFAS(CheckVAR1Mixed, CheckKFASMixin, CheckVAR1):
     # TODO: fails
     results_path = os.path.join(
-        current_path, 'results', 'results_exact_initial_var1_mixed_R.csv')
+        current_path, "results", "results_exact_initial_var1_mixed_R.csv")
 
     # TODO: KFAS disagrees for the diffuse observations for all of these
     # states, but it appears that they have a bug (e.g. since the approximate
@@ -883,7 +883,7 @@ class TestVAR1Mixed_KFAS(CheckVAR1Mixed, CheckKFASMixin, CheckVAR1):
 class CheckDFM(CheckSSMResults):
     @classmethod
     def setup_class(cls, **kwargs):
-        filter_univariate = kwargs.pop('filter_univariate', False)
+        filter_univariate = kwargs.pop("filter_univariate", False)
         cls.mod, cls.ssm = model_dfm(**kwargs)
         if filter_univariate:
             cls.ssm.filter_univariate = True
@@ -908,7 +908,7 @@ class TestDFM_Approx(CheckApproximateDiffuseMixin, CheckDFM):
 
 class TestDFM_KFAS(CheckKFASMixin, CheckDFM):
     results_path = os.path.join(
-        current_path, 'results', 'results_exact_initial_dfm_R.csv')
+        current_path, "results", "results_exact_initial_dfm_R.csv")
 
     # TODO: KFAS disagrees for the diffuse observations for all of these
     # states, but it appears that they have a bug (e.g. since the approximate
@@ -929,7 +929,7 @@ class TestDFM_KFAS(CheckKFASMixin, CheckDFM):
 class CheckDFMCollapsed(CheckSSMResults):
     @classmethod
     def setup_class(cls, **kwargs):
-        filter_univariate = kwargs.pop('filter_univariate', True)
+        filter_univariate = kwargs.pop("filter_univariate", True)
         cls.mod, cls.ssm = model_dfm(factor_order=1, **kwargs)
         if filter_univariate:
             cls.ssm.filter_univariate = True
@@ -977,20 +977,20 @@ def test_irrelevant_state():
     endog = macrodata.infl
 
     spec = {
-        'freq_seasonal': [{'period': 8, 'harmonics': 6},
-                          {'period': 36, 'harmonics': 6}]
+        "freq_seasonal": [{"period": 8, "harmonics": 6},
+                          {"period": 36, "harmonics": 6}]
     }
 
     # Approximate diffuse version
-    mod = UnobservedComponents(endog, 'llevel', **spec)
+    mod = UnobservedComponents(endog, "llevel", **spec)
     mod.ssm.initialization = Initialization(mod.k_states,
-                                            'approximate_diffuse')
+                                            "approximate_diffuse")
     res = mod.smooth([3.4, 7.2, 0.01, 0.01])
 
     # Exact diffuse version
-    mod2 = UnobservedComponents(endog, 'llevel', **spec)
+    mod2 = UnobservedComponents(endog, "llevel", **spec)
     mod2.ssm.filter_univariate = True
-    mod2.ssm.initialization = Initialization(mod2.k_states, 'diffuse')
+    mod2.ssm.initialization = Initialization(mod2.k_states, "diffuse")
     res2 = mod2.smooth([3.4, 7.2, 0.01, 0.01])
 
     # Check that e.g. the filtered state for the level is equal

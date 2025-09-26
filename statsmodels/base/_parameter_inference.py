@@ -11,7 +11,7 @@ from scipy import stats
 # this is a copy from stats._diagnostic_other to avoid circular imports
 def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
                cov_params=None):
-    '''general formula for score/LM test
+    """general formula for score/LM test
 
     generalized score or lagrange multiplier test for implicit constraints
 
@@ -50,7 +50,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
     Notes
     -----
 
-    '''
+    """
     # shorthand alias
     R, Ainv, B, V = constraint_matrix, score_deriv_inv, cov_score, cov_params
 
@@ -77,7 +77,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
 
 
 def score_test(self, exog_extra=None, params_constrained=None,
-               hypothesis='joint', cov_type=None, cov_kwds=None,
+               hypothesis="joint", cov_type=None, cov_kwds=None,
                k_constraints=None, r_matrix=None, scale=None, observed=True):
     """score test for restrictions or for omitted variables
 
@@ -176,29 +176,28 @@ def score_test(self, exog_extra=None, params_constrained=None,
     cov_type = cov_type if cov_type is not None else self.cov_type
 
     if observed is False:
-        hess_kwd = {'observed': False}
+        hess_kwd = {"observed": False}
     else:
         hess_kwd = {}
 
     if exog_extra is None:
 
-        if hasattr(self, 'constraints'):
+        if hasattr(self, "constraints"):
             if isinstance(self.constraints, tuple):
                 r_matrix = self.constraints[0]
             else:
                 r_matrix = self.constraints.coefs
             k_constraints = r_matrix.shape[0]
 
-        else:
-            if k_constraints is None:
-                raise ValueError('if exog_extra is None, then k_constraints'
-                                 'needs to be given')
+        elif k_constraints is None:
+            raise ValueError("if exog_extra is None, then k_constraints"
+                             "needs to be given")
 
         # we need to use results scale as additional parameter
         if scale is not None:
             # we need to use results scale as additional parameter, gh #7840
-            score_kwd = {'scale': scale}
-            hess_kwd['scale'] = scale
+            score_kwd = {"scale": scale}
+            hess_kwd["scale"] = scale
         else:
             score_kwd = {}
 
@@ -208,12 +207,12 @@ def score_test(self, exog_extra=None, params_constrained=None,
         hessian = model.hessian(params_constrained, **hess_kwd)
 
     else:
-        if cov_type == 'V':
-            raise ValueError('if exog_extra is not None, then cov_type cannot '
-                             'be V')
-        if hasattr(self, 'constraints'):
-            raise NotImplementedError('if exog_extra is not None, then self'
-                                      'should not be a constrained fit result')
+        if cov_type == "V":
+            raise ValueError("if exog_extra is not None, then cov_type cannot "
+                             "be V")
+        if hasattr(self, "constraints"):
+            raise NotImplementedError("if exog_extra is not None, then self"
+                                      "should not be a constrained fit result")
 
         if isinstance(exog_extra, tuple):
             sh = _scorehess_extra(self, params_constrained, *exog_extra,
@@ -246,9 +245,9 @@ def score_test(self, exog_extra=None, params_constrained=None,
                 hessian_factor *= -1
             hessian = np.dot(ex.T * hessian_factor, ex)
 
-    if cov_type == 'nonrobust':
+    if cov_type == "nonrobust":
         cov_score_test = -hessian
-    elif cov_type.upper() == 'HC0':
+    elif cov_type.upper() == "HC0":
         hinv = -np.linalg.inv(hessian)
         cov_score = nobs * np.cov(score_obs.T)
         # temporary to try out
@@ -258,7 +257,7 @@ def score_test(self, exog_extra=None, params_constrained=None,
         # https://github.com/statsmodels/statsmodels/pull/2096#issuecomment-393646205
         # cov_score_test_inv = cov_lm_robust(score, r_matrix, hinv,
         #                                   cov_score, cov_params=None)
-    elif cov_type.upper() == 'V':
+    elif cov_type.upper() == "V":
         # TODO: this does not work, V in fit_constrained results is singular
         # we need cov_params without the zeros in it
         hinv = -np.linalg.inv(hessian)
@@ -272,12 +271,12 @@ def score_test(self, exog_extra=None, params_constrained=None,
         msg = 'Only cov_type "nonrobust" and "HC0" are available.'
         raise NotImplementedError(msg)
 
-    if hypothesis == 'joint':
+    if hypothesis == "joint":
         chi2stat = score.dot(np.linalg.solve(cov_score_test, score[:, None]))
         pval = stats.chi2.sf(chi2stat, k_constraints)
         # return a stats results instance instead?  Contrast?
         return chi2stat, pval, k_constraints
-    elif hypothesis == 'separate':
+    elif hypothesis == "separate":
         diff = score
         bse = np.sqrt(np.diag(cov_score_test))
         stat = diff / bse

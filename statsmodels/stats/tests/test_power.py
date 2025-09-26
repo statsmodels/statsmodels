@@ -536,8 +536,8 @@ class TestNormalIndPower2(CheckPowerMixin):
         res2.power = 0.0438089705093578
         res2.alternative = "less"
         res2.method = (
-            "Difference of proportion power calculation for"
-            + " binomial distribution (arcsine transformation)"
+            "Difference of proportion power calculation for binomial distribution "
+            "(arcsine transformation)"
         )
         res2.note = "same sample sizes"
 

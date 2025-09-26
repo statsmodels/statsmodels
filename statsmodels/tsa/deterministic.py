@@ -170,7 +170,7 @@ class DeterministicTerm(ABC):
             oth_attr = other._eq_attr
             if len(own_attr) != len(oth_attr):
                 return False
-            return all([a == b for a, b in zip(own_attr, oth_attr)])
+            return all([a == b for a, b in zip(own_attr, oth_attr, strict=False)])
         else:
             return False
 
@@ -568,8 +568,8 @@ class CalendarDeterministicTerm(DeterministicTerm, ABC):
         try:
             index = pd.date_range("2020-01-01", freq=freq, periods=1)
             self._freq = index.freq
-        except ValueError:
-            raise ValueError("freq is not understood by pandas")
+        except ValueError as exc:
+            raise ValueError("freq is not understood by pandas") from exc
 
     @property
     def freq(self) -> str:

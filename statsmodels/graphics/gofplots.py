@@ -228,7 +228,7 @@ class ProbPlot:
         elif distargs or loc != 0 or scale != 1:
             try:
                 self.dist = dist(*distargs, **dict(loc=loc, scale=scale))
-            except Exception:
+            except Exception as exc:
                 distargs = ", ".join([str(da) for da in distargs])
                 cmd = "dist({distargs}, loc={loc}, scale={scale})"
                 cmd = cmd.format(distargs=distargs, loc=loc, scale=scale)
@@ -237,7 +237,7 @@ class ProbPlot:
                     "can occur if distargs contains loc or scale. "
                     "The distribution initialization command "
                     "is:\n{cmd}".format(cmd=cmd)
-                )
+                ) from exc
             self.loc = loc
             self.scale = scale
             self.fit_params = np.r_[distargs, loc, scale]
@@ -257,12 +257,12 @@ class ProbPlot:
         """Theoretical quantiles"""
         try:
             return self.dist.ppf(self.theoretical_percentiles)
-        except TypeError:
+        except TypeError as exc:
             msg = f"{self.dist.name} requires more parameters to compute ppf"
-            raise TypeError(msg)
+            raise TypeError(msg) from exc
         except Exception as exc:
             msg = f"failed to compute the ppf of {self.dist.name}"
-            raise type(exc)(msg)
+            raise type(exc)(msg) from exc
 
     @cache_readonly
     def sorted_data(self):
@@ -446,8 +446,8 @@ class ProbPlot:
 
             if len(s_self) > len(s_other):
                 raise ValueError(
-                    "Sample size of `other` must be equal or "
-                    + "larger than this `ProbPlot` instance"
+                    "Sample size of `other` must be equal or larger than "
+                    "this `ProbPlot` instance"
                 )
             elif len(s_self) < len(s_other):
                 # Use quantiles of the smaller set and interpolate quantiles of

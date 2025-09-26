@@ -117,7 +117,6 @@ class IV2SLS(LikelihoodModel):
 
     def whiten(self, X):
         """Not implemented"""
-        pass
 
     def fit(self):
         """estimate model using 2SLS IV regression
@@ -552,13 +551,12 @@ class GMM(Model):
             else:
                 raise ValueError("param_names has the wrong length")
 
-        else:
-            if len(params) < len(xnames):
-                # cut in front for poisson multiplicative
-                self.data.xnames = xnames[-len(params) :]
-            elif len(params) > len(xnames):
-                # use generic names
-                self.data.xnames = ["p%2d" % i for i in range(len(params))]
+        elif len(params) < len(xnames):
+            # cut in front for poisson multiplicative
+            self.data.xnames = xnames[-len(params) :]
+        elif len(params) > len(xnames):
+            # use generic names
+            self.data.xnames = ["p%2d" % i for i in range(len(params))]
 
     def set_param_names(self, param_names, k_params=None):
         """set the parameter names in the model
@@ -1726,9 +1724,6 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     evals = np.linalg.eigvalsh(cov_diff)
 
     return H, pval, dof, evals
-
-
-#
 
 
 class DistQuantilesGMM(GMM):

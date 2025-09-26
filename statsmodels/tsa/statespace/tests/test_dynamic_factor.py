@@ -900,7 +900,7 @@ def test_recreate_model():
     for element in itertools.product(
         k_factors, factor_orders, error_orders, error_vars, error_cov_types
     ):
-        kwargs = dict(zip(names, element))
+        kwargs = dict(zip(names, element, strict=False))
 
         mod = dynamic_factor.DynamicFactor(endog, exog=exog, **kwargs)
         mod2 = dynamic_factor.DynamicFactor(endog, exog=exog, **mod._get_init_kwds())

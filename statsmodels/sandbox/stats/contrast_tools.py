@@ -99,7 +99,7 @@ def contrast_labels(contrasts, names, reverse=False):
         sl = slice(None)
     labels = [
         "".join(
-            [f"{signstr(c, noplus=True)}{v}" for c, v in zip(row, names)[sl] if c != 0]
+            [f"{signstr(c, noplus=True)}{v}" for c, v in zip(row, names, strict=False)[sl] if c != 0]
         )
         for row in contrasts
     ]
@@ -145,7 +145,7 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
         "".join(
             [
                 f"{signstr(c, noplus=True)}{v}"
-                for c, v in zip(row, names_prod)[::-1]
+                for c, v in zip(row, names_prod, strict=False)[::-1]
                 if c != 0
             ]
         )
@@ -165,7 +165,7 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
         "".join(
             [
                 f"{signstr(c, noplus=True)}{v}"
-                for c, v in zip(row, names_prod)[::-1]
+                for c, v in zip(row, names_prod, strict=False)[::-1]
                 if c != 0
             ]
         )
@@ -489,7 +489,7 @@ class TwoWay:
             vname1 = "a"
             vname2 = "b"
         else:
-            vname1, vname1 = varnames
+            vname1, vname2 = varnames
 
         self.d1, self.d1_labels = d1, d1_labels = dummy_1d(factor1, vname1)
         self.d2, self.d2_labels = d2, d2_labels = dummy_1d(factor2, vname2)

@@ -1,4 +1,4 @@
-'''correlation plots
+"""correlation plots
 
 Author: Josef Perktold
 License: BSD-3
@@ -6,14 +6,14 @@ License: BSD-3
 example for usage with different options in
 statsmodels/sandbox/examples/thirdparty/ex_ratereturn.py
 
-'''
+"""
 import numpy as np
 
 from . import utils
 
 
 def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
-              ax=None, cmap='RdYlBu_r'):
+              ax=None, cmap="RdYlBu_r"):
     """Plot correlation of many variables in a tight color grid.
 
     Parameters
@@ -73,7 +73,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     if ynames is None:
         ynames = xnames
     if title is None:
-        title = 'Correlation Matrix'
+        title = "Correlation Matrix"
     if isinstance(normcolor, tuple):
         vmin, vmax = normcolor
     elif normcolor:
@@ -81,7 +81,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     else:
         vmin, vmax = None, None
 
-    axim = ax.imshow(dcorr, cmap=cmap, interpolation='nearest',
+    axim = ax.imshow(dcorr, cmap=cmap, interpolation="nearest",
                      extent=(0, nvars, 0, nvars), vmin=vmin, vmax=vmax)
 
     # create list of label positions
@@ -92,28 +92,28 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     elif ynames is not None:
         ax.set_yticks(labelPos)
         ax.set_yticks(labelPos[:-1]+0.5, minor=True)
-        ax.set_yticklabels(ynames[::-1], fontsize='small',
-                           horizontalalignment='right')
+        ax.set_yticklabels(ynames[::-1], fontsize="small",
+                           horizontalalignment="right")
 
     if isinstance(xnames, list) and len(xnames) == 0:
         ax.set_xticks([])
     elif xnames is not None:
         ax.set_xticks(labelPos)
         ax.set_xticks(labelPos[:-1]+0.5, minor=True)
-        ax.set_xticklabels(xnames, fontsize='small', rotation=45,
-                           horizontalalignment='right')
+        ax.set_xticklabels(xnames, fontsize="small", rotation=45,
+                           horizontalalignment="right")
 
-    if not title == '':
+    if not title == "":
         ax.set_title(title)
 
     if create_colorbar:
         fig.colorbar(axim, use_gridspec=True)
     fig.tight_layout()
 
-    ax.tick_params(which='minor', length=0)
-    ax.tick_params(direction='out', top=False, right=False)
+    ax.tick_params(which="minor", length=0)
+    ax.tick_params(direction="out", top=False, right=False)
     try:
-        ax.grid(True, which='minor', linestyle='-', color='w', lw=1)
+        ax.grid(True, which="minor", linestyle="-", color="w", lw=1)
     except AttributeError:
         # Seems to fail for axes created with AxesGrid.  MPL bug?
         pass
@@ -122,7 +122,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
 
 
 def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None,
-                   ynames=None, fig=None, cmap='RdYlBu_r'):
+                   ynames=None, fig=None, cmap="RdYlBu_r"):
     """
     Create a grid of correlation plots.
 
@@ -185,19 +185,18 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
         ynames = xnames
 
     if not titles:
-        titles = ['']*len(dcorrs)
+        titles = [""]*len(dcorrs)
 
     n_plots = len(dcorrs)
     if ncols is not None:
         nrows = int(np.ceil(n_plots / float(ncols)))
+    # Determine number of rows and columns, square if possible, otherwise
+    # prefer a wide (more columns) over a high layout.
+    elif n_plots < 4:
+        nrows, ncols = 1, n_plots
     else:
-        # Determine number of rows and columns, square if possible, otherwise
-        # prefer a wide (more columns) over a high layout.
-        if n_plots < 4:
-            nrows, ncols = 1, n_plots
-        else:
-            nrows = int(np.sqrt(n_plots))
-            ncols = int(np.ceil(n_plots / float(nrows)))
+        nrows = int(np.sqrt(n_plots))
+        ncols = int(np.ceil(n_plots / float(nrows)))
 
     # Create a figure with the correct size
     aspect = min(ncols / float(nrows), 1.8)

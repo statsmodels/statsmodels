@@ -29,7 +29,7 @@ get function drop imag if close to zero from numpy/scipy source, where?
 """
 
 import numpy as np
-import numpy.fft as fft
+from numpy import fft
 
 # import scipy.fftpack as fft
 from scipy import signal

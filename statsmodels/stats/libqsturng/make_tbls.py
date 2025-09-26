@@ -503,7 +503,7 @@ R = dict(
             80,
             100,
         ],
-        lrange(24),
+        lrange(24), strict=False,
     )
 )
 
@@ -546,8 +546,8 @@ def errfunc(a, p, r, v, q):
 
 
 A = {}  # this is the error matrix
-for p in T:
-    for v in T[p]:
+for p, p_vals in T:
+    for v in p_vals:
         # eq. 2.4
         a0 = random(4)
         a1, success = leastsq(errfunc, a0,

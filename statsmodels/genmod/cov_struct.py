@@ -225,7 +225,7 @@ class Independence(CovStruct):
         return rslt
 
     def summary(self):
-        return "Observations within a cluster are modeled " "as being independent."
+        return "Observations within a cluster are modeled as being independent."
 
 
 class Unstructured(CovStruct):
@@ -1147,7 +1147,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
         wts = [1 / v for v in var]
         wtsum = sum(wts)
         wts = [w / wtsum for w in wts]
-        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio)])
+        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio, strict=False)])
 
         return np.exp(log_pooled_or)
 
@@ -1414,7 +1414,7 @@ class Equivalence(CovStruct):
 
         if (pairs is not None) and (labels is not None):
             raise ValueError(
-                "Equivalence cov_struct accepts only one of `pairs` " "and `labels`"
+                "Equivalence cov_struct accepts only one of `pairs` and `labels`"
             )
 
         if pairs is not None:

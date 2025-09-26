@@ -15,13 +15,18 @@ def _term_integrate(rho):
     # needs other terms for spearman rho var calculation
     # TODO: streamline calculation and save to linear interpolation, maybe
     sin, cos = np.sin, np.cos
-    f1 = lambda t, x: np.arcsin(sin(x) / (1 + 2 * cos(2 * x)))  # noqa
-    f2 = lambda t, x: np.arcsin(sin(2 * x) /  # noqa
-                                np.sqrt(1 + 2 * cos(2 * x)))
-    f3 = lambda t, x: np.arcsin(sin(2 * x) /  # noqa
-                                (2 * np.sqrt(cos(2 * x))))
-    f4 = lambda t, x: np.arcsin((3 * sin(x) - sin(3 * x)) /  # noqa
-                                (4 * cos(2 * x)))
+
+    def f1(t, x):
+        return np.arcsin(sin(x) / (1 + 2 * cos(2 * x)))
+
+    def f2(t, x):
+        return np.arcsin(sin(2 * x) / np.sqrt(1 + 2 * cos(2 * x)))
+
+    def f3(t, x):
+        return np.arcsin(sin(2 * x) / (2 * np.sqrt(cos(2 * x))))
+
+    def f4(t, x):
+        return np.arcsin((3 * sin(x) - sin(3 * x)) / (4 * cos(2 * x)))
 
     fact = pi2i * (f1(None, rho) +
                    2 * pi2i * f2(None, rho) +
@@ -87,23 +92,23 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
 
     var = None  # initialize
 
-    if method in ['pearson', 'gauss_rank']:
+    if method in ["pearson", "gauss_rank"]:
         corr_n = corr
         if return_var:
             var = (1 - rho**2)**2
 
-    elif method.startswith('kendal'):
+    elif method.startswith("kendal"):
         corr_n = np.sin(np.pi / 2 * corr)
         if return_var:
             var = (1 - rho**2) * np.pi**2 * (
                   1./9 - 4 / np.pi**2 * np.arcsin(rho / 2)**2)
 
-    elif method == 'quadrant':
+    elif method == "quadrant":
         corr_n = np.sin(np.pi / 2 * corr)
         if return_var:
             var = (1 - rho**2) * (np.pi**2 / 4 - np.arcsin(rho)**2)
 
-    elif method.startswith('spearman'):
+    elif method.startswith("spearman"):
         corr_n = 2 * np.sin(np.pi / 6 * corr)
         # not clear which rho is in formula, should be normalized rho,
         # but original corr coefficient seems to match results in articles
@@ -119,13 +124,19 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
             # drop np namespace here
             sin, cos = np.sin, np.cos
             var = (1 - rho**2 / 4) * pi2 / 9  # leading factor
-            f1 = lambda t, x: np.arcsin(sin(x) / (1 + 2 * cos(2 * x)))  # noqa
-            f2 = lambda t, x: np.arcsin(sin(2 * x) /  # noqa
-                                        np.sqrt(1 + 2 * cos(2 * x)))
-            f3 = lambda t, x: np.arcsin(sin(2 * x) /  # noqa
-                                        (2 * np.sqrt(cos(2 * x))))
-            f4 = lambda t, x: np.arcsin(( 3 * sin(x) - sin(3 * x)) /  # noqa
-                                        (4 * cos(2 * x)))
+
+            def f1(t, x):
+                return np.arcsin(sin(x) / (1 + 2 * cos(2 * x)))
+
+            def f2(t, x):
+                return np.arcsin(sin(2 * x) / np.sqrt(1 + 2 * cos(2 * x)))
+
+            def f3(t, x):
+                return np.arcsin(sin(2 * x) / (2 * np.sqrt(cos(2 * x))))
+
+            def f4(t, x):
+                return np.arcsin((3 * sin(x) - sin(3 * x)) / (4 * cos(2 * x)))
+
             # todo check dimension, odeint return column (n, 1) array
             hmax = 1e-1
             rf1 = integrate.odeint(f1 , 0, t=t, hmax=hmax).squeeze()
@@ -141,7 +152,7 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
             fact2[idx] = fact[1:]
             var *= fact2
     else:
-        raise ValueError('method not recognized')
+        raise ValueError("method not recognized")
 
     if return_var:
         return corr_n, var

@@ -35,7 +35,7 @@ class _MinimalWLS:
     compatibility
     """
 
-    msg = 'NaN, inf or invalid value detected in {0}, estimation infeasible.'
+    msg = "NaN, inf or invalid value detected in {0}, estimation infeasible."
 
     def __init__(self, endog, exog, weights=1.0, check_endog=False,
                  check_weights=False):
@@ -45,11 +45,11 @@ class _MinimalWLS:
         w_half = np.sqrt(weights)
         if check_weights:
             if not np.all(np.isfinite(w_half)):
-                raise ValueError(self.msg.format('weights'))
+                raise ValueError(self.msg.format("weights"))
 
         if check_endog:
             if not np.all(np.isfinite(endog)):
-                raise ValueError(self.msg.format('endog'))
+                raise ValueError(self.msg.format("endog"))
 
         self.wendog = w_half * endog
         if np.isscalar(weights):
@@ -57,7 +57,7 @@ class _MinimalWLS:
         else:
             self.wexog = np.asarray(w_half)[:, None] * exog
 
-    def fit(self, method='pinv'):
+    def fit(self, method="pinv"):
         """
         Minimal implementation of WLS optimized for performance.
 
@@ -91,10 +91,10 @@ class _MinimalWLS:
         --------
         statsmodels.regression.linear_model.WLS
         """
-        if method == 'pinv':
+        if method == "pinv":
             pinv_wexog = np.linalg.pinv(self.wexog)
             params = pinv_wexog.dot(self.wendog)
-        elif method == 'qr':
+        elif method == "qr":
             Q, R = np.linalg.qr(self.wexog)
             params = np.linalg.solve(R, np.dot(Q.T, self.wendog))
         else:

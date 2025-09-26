@@ -684,7 +684,7 @@ class TestLogitL1(CheckLikelihoodModelL1):
 
 
 @pytest.mark.skipif(
-    not has_cvxopt, reason="Skipped test_cvxopt since cvxopt " "is not available"
+    not has_cvxopt, reason="Skipped test_cvxopt since cvxopt is not available"
 )
 class TestCVXOPT:
 
@@ -2717,7 +2717,7 @@ def test_non_binary():
 
 def test_mnlogit_factor():
     dta = sm.datasets.anes96.load_pandas()
-    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG")))
+    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG", strict=False)))
     exog = sm.add_constant(dta.exog, prepend=True)
     mod = sm.MNLogit(dta.endog, exog)
     res = mod.fit(disp=0)
@@ -2742,7 +2742,7 @@ def test_mnlogit_factor():
 
 def test_mnlogit_factor_categorical():
     dta = sm.datasets.anes96.load_pandas()
-    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG")))
+    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG", strict=False)))
     exog = sm.add_constant(dta.exog, prepend=True)
     mod = sm.MNLogit(dta.endog, exog)
     res = mod.fit(disp=0)
@@ -3544,7 +3544,7 @@ def test_optim_kwds_prelim():
 
     # we use "nm", "bfgs" does not work for Poisson/exp with older scipy
     optim_kwds_prelim = dict(method="nm", maxiter=5000)
-    model = Poisson(y, exog, offset=offset)  #
+    model = Poisson(y, exog, offset=offset)
     res_poi = model.fit(disp=0, **optim_kwds_prelim)
 
     model = NegativeBinomial(y, exog, offset=offset)

@@ -38,7 +38,7 @@ ntrim = nlags // 2
 y0 = signal.convolve(x, a3f[:, :, 0], mode="valid")
 y1 = signal.convolve(x, a3f[:, :, 1], mode="valid")
 yf = signal.convolve(x[:, :, None], a3f)
-y = yf[:, 1, :]  #
+y = yf[:, 1, :]
 yvalid = yf[ntrim:-ntrim, yf.shape[1] // 2, :]
 # same result with fftconvolve
 # signal.fftconvolve(x[:,:,None],a3f).shape

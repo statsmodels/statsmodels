@@ -49,7 +49,7 @@ def index(request):
             fib.append(fib[-2] + fib[-1])
         idx = pd.Index(fib)
     else:
-        raise NotImplementedError()
+        raise NotImplementedError
     return idx
 
 
@@ -412,9 +412,7 @@ def test_calendar_time_trend(reset_randomstate):
     assert list(terms.columns) == cols
 
     inc = 1 + offset / (24 * 3600)
-    expected = []
-    for i in range(4):
-        expected.append(inc**i)
+    expected = [inc**i for i in range(4)]
     expected = np.column_stack(expected)
     np.testing.assert_allclose(expected, terms.values)
 

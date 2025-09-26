@@ -72,10 +72,10 @@ class CheckGenericMixin:
         assert_(ss in str(summ))
 
         summf = tt.summary_frame(alpha=0.1)
-        pvstring_use_t = 'P>|z|' if res.use_t is False else 'P>|t|'
-        tstring_use_t = 'z' if res.use_t is False else 't'
-        cols = ['coef', 'std err', tstring_use_t, pvstring_use_t,
-                'Conf. Int. Low', 'Conf. Int. Upp.']
+        pvstring_use_t = "P>|z|" if res.use_t is False else "P>|t|"
+        tstring_use_t = "z" if res.use_t is False else "t"
+        cols = ["coef", "std err", tstring_use_t, pvstring_use_t,
+                "Conf. Int. Low", "Conf. Int. Upp."]
         assert_array_equal(summf.columns.values, cols)
 
     def test_ftest_pvalues(self):
@@ -166,7 +166,7 @@ class CheckGenericMixin:
     def test_zero_collinear(self):
         # not completely generic yet
         if isinstance(self.results.model, (sm.GEE)):
-            pytest.skip('Not completely generic yet')
+            pytest.skip("Not completely generic yet")
 
         use_start_params = not isinstance(self.results.model,
                                           (sm.RLM, sm.OLS, sm.WLS, sm.GLM))
@@ -192,7 +192,7 @@ class CheckGenericMixin:
         keep_index_p = list(range(self.results.model.exog.shape[1]))
         k_vars = ex.shape[1]
         k_extra = 0
-        if hasattr(mod, 'k_extra') and mod.k_extra > 0:
+        if hasattr(mod, "k_extra") and mod.k_extra > 0:
             keep_index_p += list(range(k_vars, k_vars + mod.k_extra))
             k_extra = mod.k_extra
 
@@ -204,20 +204,20 @@ class CheckGenericMixin:
         # support under WASM
         warn_cls = HessianInversionWarning if (isinstance(mod, sm.GLM) and not PYTHON_IMPL_WASM) else None
 
-        cov_types = ['nonrobust', 'HC0']
+        cov_types = ["nonrobust", "HC0"]
 
         for cov_type in cov_types:
             # Note: for RLM we only check default when cov_type is 'nonrobust'
             # cov_type is otherwise ignored
-            if cov_type != 'nonrobust' and (isinstance(self.results.model,
+            if cov_type != "nonrobust" and (isinstance(self.results.model,
                                                        sm.RLM)):
                 return
 
             if use_start_params:
                 start_params = np.zeros(k_vars + k_extra)
-                method = self.results.mle_settings['optimizer']
+                method = self.results.mle_settings["optimizer"]
                 # string in `method` is not mutable, so no need for copy
-                sp = self.results.mle_settings['start_params'].copy()
+                sp = self.results.mle_settings["start_params"].copy()
                 if self.transform_index is not None:
                     # work around internal transform_params, currently in NB
                     sp[self.transform_index] = np.exp(sp[self.transform_index])
@@ -227,7 +227,7 @@ class CheckGenericMixin:
                     res1 = mod._fit_collinear(cov_type=cov_type,
                                               start_params=start_params,
                                               method=method, disp=0)
-                if cov_type != 'nonrobust':
+                if cov_type != "nonrobust":
                     # reestimate original model to get robust cov
                     with pytest_warns(warn_cls):
                         res2 = self.results.model.fit(cov_type=cov_type,
@@ -240,26 +240,26 @@ class CheckGenericMixin:
                         res1 = mod._fit_collinear()
                     else:
                         res1 = mod._fit_collinear(cov_type=cov_type)
-                if cov_type != 'nonrobust':
+                if cov_type != "nonrobust":
                     # reestimate original model to get robust cov
                     res2 = self.results.model.fit(cov_type=cov_type)
 
-            if cov_type == 'nonrobust':
+            if cov_type == "nonrobust":
                 res2 = self.results
 
             # check fit optimizer arguments, if mle_settings is available
-            if hasattr(res2, 'mle_settings'):
-                assert_equal(res1.results_constrained.mle_settings['optimizer'],
-                             res2.mle_settings['optimizer'])
-                if 'start_params' in res2.mle_settings:
-                    spc = res1.results_constrained.mle_settings['start_params']
+            if hasattr(res2, "mle_settings"):
+                assert_equal(res1.results_constrained.mle_settings["optimizer"],
+                             res2.mle_settings["optimizer"])
+                if "start_params" in res2.mle_settings:
+                    spc = res1.results_constrained.mle_settings["start_params"]
                     assert_allclose(spc,
-                                    res2.mle_settings['start_params'],
+                                    res2.mle_settings["start_params"],
                                     rtol=1e-10, atol=1e-20)
-                    assert_equal(res1.mle_settings['optimizer'],
-                                 res2.mle_settings['optimizer'])
-                    assert_allclose(res1.mle_settings['start_params'],
-                                    res2.mle_settings['start_params'],
+                    assert_equal(res1.mle_settings["optimizer"],
+                                 res2.mle_settings["optimizer"])
+                    assert_allclose(res1.mle_settings["start_params"],
+                                    res2.mle_settings["start_params"],
                                     rtol=1e-10, atol=1e-20)
 
             # Poisson has reduced precision in params, difficult optimization?
@@ -277,7 +277,7 @@ class CheckGenericMixin:
                 pvals1 = res1.pvalues[keep_index_p]
             assert_allclose(pvals1, res2.pvalues, rtol=1e-6, atol=1e-30)
 
-            if hasattr(res1, 'resid'):
+            if hasattr(res1, "resid"):
                 # discrete models, Logit do not have `resid` yet
                 assert_allclose(res1.resid, res2.resid, rtol=1e-5, atol=1e-10)
 
@@ -287,7 +287,7 @@ class CheckGenericMixin:
             assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
 
             ex = res1.model.exog[:5]
-            kwds = getattr(self, 'predict_kwds_5', {})
+            kwds = getattr(self, "predict_kwds_5", {})
 
             predicted1 = res1.predict(ex, **kwds)
             predicted2 = res2.predict(ex[:, keep_index], **kwds)
@@ -319,8 +319,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 
     def test_zero_constrained(self):
         # override, we cannot remove the only regressor
-        pytest.skip('Override since cannot remove the only regressor')
-        pass
+        pytest.skip("Override since cannot remove the only regressor")
 
 
 class TestGenericWLS(CheckGenericMixin):
@@ -343,7 +342,7 @@ class TestGenericPoisson(CheckGenericMixin):
         model = sm.Poisson(y_count, x)
         # use start_params to converge faster
         start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
-        self.results = model.fit(start_params=start_params, method='bfgs',
+        self.results = model.fit(start_params=start_params, method="bfgs",
                                  disp=0)
 
 
@@ -359,7 +358,7 @@ class TestGenericPoissonOffset(CheckGenericMixin):
                            exposure=np.ones(nobs))  # bug with default
         # use start_params to converge faster
         start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
-        self.results = model.fit(start_params=start_params, method='bfgs',
+        self.results = model.fit(start_params=start_params, method="bfgs",
                                  disp=0)
 
         self.predict_kwds_5 = dict(exposure=0.01 * np.ones(5), offset=np.ones(5))
@@ -398,7 +397,7 @@ class TestGenericLogit(CheckGenericMixin):
         with pytest.warns(FutureWarning,
                           match="Keyword arguments have been passed"):
             self.results = model.fit(start_params=start_params,
-                                     method='bfgs', disp=0, tol=1e-5)
+                                     method="bfgs", disp=0, tol=1e-5)
 
 
 class TestGenericRLM(CheckGenericMixin):
@@ -434,7 +433,7 @@ class TestGenericGLMPoissonOffset(CheckGenericMixin):
                        exposure=np.ones(nobs))
         # use start_params to converge faster
         start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
-        self.results = model.fit(start_params=start_params, method='bfgs',
+        self.results = model.fit(start_params=start_params, method="bfgs",
                                  disp=0)
 
         self.predict_kwds_5 = dict(exposure=0.01 * np.ones(5), offset=np.ones(5))
@@ -500,7 +499,7 @@ class TestGenericGEEPoissonBC(CheckGenericMixin):
         family = sm.families.Poisson()
         mod = sm.GEE(y_count, self.exog, groups, family=family, cov_struct=vi)
         self.results = mod.fit(start_params=start_params,
-                               cov_type='bias_reduced')
+                               cov_type="bias_reduced")
 
 
 # Other test classes
@@ -519,7 +518,7 @@ class CheckAnovaMixin:
 
     def test_combined(self):
         res = self.res
-        wa = res.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Weight'], scalar=True)
+        wa = res.wald_test_terms(skip_single=False, combine_terms=["Duration", "Weight"], scalar=True)
         eye = np.eye(len(res.params))
         c_const = eye[0]
         c_w = eye[[2, 3]]
@@ -557,13 +556,13 @@ def compare_waldres(res, wa, constrasts):
 
     col_names = wa.col_names
     if res.use_t:
-        assert_equal(wa.distribution, 'F')
-        assert_equal(col_names[0], 'F')
-        assert_equal(col_names[1], 'P>F')
+        assert_equal(wa.distribution, "F")
+        assert_equal(col_names[0], "F")
+        assert_equal(col_names[1], "P>F")
     else:
-        assert_equal(wa.distribution, 'chi2')
-        assert_equal(col_names[0], 'chi2')
-        assert_equal(col_names[1], 'P>chi2')
+        assert_equal(wa.distribution, "chi2")
+        assert_equal(col_names[0], "chi2")
+        assert_equal(col_names[1], "P>chi2")
 
     # SMOKETEST
     wa.summary_frame()
@@ -585,7 +584,7 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
 
         res = sm.OLS(endog, exog).fit()
         wa = res.wald_test_terms(skip_single=False,
-                                 combine_terms=['Duration', 'Weight'],
+                                 combine_terms=["Duration", "Weight"],
                                  scalar=True)
         eye = np.eye(len(res.params))
 
@@ -633,7 +632,7 @@ class TestWaldAnovaPoisson(CheckAnovaMixin):
         from statsmodels.discrete.discrete_model import Poisson
 
         mod = Poisson.from_formula("Days ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
-        cls.res = mod.fit(cov_type='HC0')
+        cls.res = mod.fit(cov_type="HC0")
 
 
 class TestWaldAnovaNegBin(CheckAnovaMixin):
@@ -644,7 +643,7 @@ class TestWaldAnovaNegBin(CheckAnovaMixin):
 
         formula = "Days ~ C(Duration, Sum)*C(Weight, Sum)"
         mod = NegativeBinomial.from_formula(formula, cls.data,
-                                            loglike_method='nb2')
+                                            loglike_method="nb2")
         cls.res = mod.fit()
 
 
@@ -656,8 +655,8 @@ class TestWaldAnovaNegBin1(CheckAnovaMixin):
 
         formula = "Days ~ C(Duration, Sum)*C(Weight, Sum)"
         mod = NegativeBinomial.from_formula(formula, cls.data,
-                                            loglike_method='nb1')
-        cls.res = mod.fit(cov_type='HC0')
+                                            loglike_method="nb1")
+        cls.res = mod.fit(cov_type="HC0")
 
 
 class CheckPairwise:
@@ -687,14 +686,14 @@ class TestTTestPairwiseOLS(CheckPairwise):
         mod = ols("np.log(Days+1) ~ C(Duration) + C(Weight)", cls.data)
         cls.res = mod.fit()
         cls.term_name = "C(Weight)"
-        cls.constraints = ['C(Weight)[T.2]',
-                           'C(Weight)[T.3]',
-                           'C(Weight)[T.3] - C(Weight)[T.2]']
+        cls.constraints = ["C(Weight)[T.2]",
+                           "C(Weight)[T.3]",
+                           "C(Weight)[T.3] - C(Weight)[T.2]"]
 
     def test_alpha(self):
-        pw1 = self.res.t_test_pairwise(self.term_name, method='hommel',
-                                       factor_labels='A B C'.split())
-        pw2 = self.res.t_test_pairwise(self.term_name, method='hommel',
+        pw1 = self.res.t_test_pairwise(self.term_name, method="hommel",
+                                       factor_labels="A B C".split())
+        pw2 = self.res.t_test_pairwise(self.term_name, method="hommel",
                                        alpha=0.01)
         assert_allclose(pw1.result_frame.iloc[:, :7].values,
                         pw2.result_frame.iloc[:, :7].values, rtol=1e-10)
@@ -704,7 +703,7 @@ class TestTTestPairwiseOLS(CheckPairwise):
                      [False, True, False])
 
         assert_equal(pw1.result_frame.index.values,
-                     np.array(['B-A', 'C-A', 'C-B'], dtype=object))
+                     np.array(["B-A", "C-A", "C-B"], dtype=object))
 
 
 class TestTTestPairwiseOLS2(CheckPairwise):
@@ -721,9 +720,9 @@ class TestTTestPairwiseOLS2(CheckPairwise):
         mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration)", cls.data)
         cls.res = mod.fit()
         cls.term_name = "C(Weight)"
-        cls.constraints = ['C(Weight)[T.2]',
-                           'C(Weight)[T.3]',
-                           'C(Weight)[T.3] - C(Weight)[T.2]']
+        cls.constraints = ["C(Weight)[T.2]",
+                           "C(Weight)[T.3]",
+                           "C(Weight)[T.3] - C(Weight)[T.2]"]
 
 
 class TestTTestPairwiseOLS3(CheckPairwise):
@@ -740,9 +739,9 @@ class TestTTestPairwiseOLS3(CheckPairwise):
         mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration) - 1", cls.data)
         cls.res = mod.fit()
         cls.term_name = "C(Weight)"
-        cls.constraints = ['C(Weight)[2] - C(Weight)[1]',
-                           'C(Weight)[3] - C(Weight)[1]',
-                           'C(Weight)[3] - C(Weight)[2]']
+        cls.constraints = ["C(Weight)[2] - C(Weight)[1]",
+                           "C(Weight)[3] - C(Weight)[1]",
+                           "C(Weight)[3] - C(Weight)[2]"]
 
 
 class TestTTestPairwiseOLS4(CheckPairwise):
@@ -759,9 +758,9 @@ class TestTTestPairwiseOLS4(CheckPairwise):
         mod = ols("np.log(Days+1) ~ C(Weight, Treatment(2)) + C(Duration)", cls.data)
         cls.res = mod.fit()
         cls.term_name = "C(Weight, Treatment(2))"
-        cls.constraints = ['-C(Weight, Treatment(2))[T.1]',
-                           'C(Weight, Treatment(2))[T.3] - C(Weight, Treatment(2))[T.1]',
-                           'C(Weight, Treatment(2))[T.3]',]
+        cls.constraints = ["-C(Weight, Treatment(2))[T.1]",
+                           "C(Weight, Treatment(2))[T.3] - C(Weight, Treatment(2))[T.1]",
+                           "C(Weight, Treatment(2))[T.3]",]
 
 
 class TestTTestPairwisePoisson(CheckPairwise):
@@ -776,8 +775,8 @@ class TestTTestPairwisePoisson(CheckPairwise):
         cls.data = test.data.drop([0, 1, 2])
 
         mod = Poisson.from_formula("Days ~ C(Duration) + C(Weight)", cls.data)
-        cls.res = mod.fit(cov_type='HC0')
+        cls.res = mod.fit(cov_type="HC0")
         cls.term_name = "C(Weight)"
-        cls.constraints = ['C(Weight)[T.2]',
-                           'C(Weight)[T.3]',
-                           'C(Weight)[T.3] - C(Weight)[T.2]']
+        cls.constraints = ["C(Weight)[T.2]",
+                           "C(Weight)[T.3]",
+                           "C(Weight)[T.3] - C(Weight)[T.2]"]

@@ -331,14 +331,10 @@ class Description:
             "freq": [f"freq_{i}" for i in range(1, self._ntop + 1)],
         }
 
-        for key in replacements:
+        for key, value in replacements.items():
             if key in self._stats:
                 idx = self._stats.index(key)
-                self._stats = (
-                    self._stats[:idx]
-                    + replacements[key]
-                    + self._stats[idx + 1 :]
-                )
+                self._stats = self._stats[:idx] + value + self._stats[idx + 1 :]
 
         self._percentiles = array_like(
             percentiles, "percentiles", maxdim=1, dtype="d"
@@ -542,8 +538,7 @@ class Description:
         )
         top = {}
         freq = {}
-        for col in vc:
-            single = vc[col]
+        for col, single in vc.items():
             if single.shape[0] >= self._ntop:
                 top[col] = single.index[: self._ntop]
                 freq[col] = np.asarray(single.iloc[:5])

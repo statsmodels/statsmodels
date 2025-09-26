@@ -70,7 +70,7 @@ kidney_table = StringIO("""Days      Duration Weight ID
 """)
 
 kidney_table.seek(0)
-kidney_table = read_csv(kidney_table, sep=r"\s+", engine='python').astype(int)
+kidney_table = read_csv(kidney_table, sep=r"\s+", engine="python").astype(int)
 
 
 class TestAnovaLM:
@@ -92,10 +92,10 @@ class TestAnovaLM:
         pr_f = np.array([0.0415617, 3.944502e-06, 0.5567479, np.nan])
 
         results = anova_lm(self.kidney_lm)
-        np.testing.assert_equal(results['df'].values, Df)
-        np.testing.assert_almost_equal(results['sum_sq'].values, sum_sq, 4)
-        np.testing.assert_almost_equal(results['F'].values, f_value, 4)
-        np.testing.assert_almost_equal(results['PR(>F)'].values, pr_f)
+        np.testing.assert_equal(results["df"].values, Df)
+        np.testing.assert_almost_equal(results["sum_sq"].values, sum_sq, 4)
+        np.testing.assert_almost_equal(results["F"].values, f_value, 4)
+        np.testing.assert_almost_equal(results["PR(>F)"].values, pr_f)
 
 
 class TestAnovaLMNoconstant:
@@ -117,10 +117,10 @@ class TestAnovaLMNoconstant:
         pr_f = np.array([1.262324e-22, 3.944502e-06, 0.5567479, np.nan])
 
         results = anova_lm(self.kidney_lm)
-        np.testing.assert_equal(results['df'].values, Df)
-        np.testing.assert_almost_equal(results['sum_sq'].values, sum_sq, 4)
-        np.testing.assert_almost_equal(results['F'].values, f_value, 4)
-        np.testing.assert_almost_equal(results['PR(>F)'].values, pr_f)
+        np.testing.assert_equal(results["df"].values, Df)
+        np.testing.assert_almost_equal(results["sum_sq"].values, sum_sq, 4)
+        np.testing.assert_almost_equal(results["F"].values, f_value, 4)
+        np.testing.assert_almost_equal(results["PR(>F)"].values, pr_f)
 
         # > sum2.lm = lm(logDays ~ Duration * Weight - 1, contrasts=list(Duration=contr.sum, Weight=contr.sum))
         # > anova.lm.sum2 <- anova(sum2.lm)

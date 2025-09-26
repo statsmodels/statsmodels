@@ -73,12 +73,12 @@ class TSMLEModel(LikelihoodModel):
         Hfun = ndt.Jacobian(self.score, stepMax=1e-4)
         return Hfun(params)[-1]
 
-    def fit(self, start_params=None, maxiter=5000, method='fmin', tol=1e-08):
-        '''estimate model by minimizing negative loglikelihood
+    def fit(self, start_params=None, maxiter=5000, method="fmin", tol=1e-08):
+        """estimate model by minimizing negative loglikelihood
 
         does this need to be overwritten ?
-        '''
-        if start_params is None and hasattr(self, '_start_params'):
+        """
+        if start_params is None and hasattr(self, "_start_params"):
             start_params = self._start_params
         # start_params = np.concatenate((0.05*np.ones(self.nar + self.nma), [1]))
         mlefit = super().fit(

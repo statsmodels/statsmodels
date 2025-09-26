@@ -4,7 +4,6 @@ from statsmodels.compat.pandas import Appender, Substitution, call_cached_func
 
 from collections import defaultdict
 from collections.abc import Hashable, Mapping, Sequence
-import datetime as dt
 from itertools import combinations, product
 import textwrap
 from types import SimpleNamespace
@@ -22,12 +21,6 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
 from statsmodels.tools.sm_exceptions import SpecificationWarning
-from statsmodels.tools.typing import (
-    ArrayLike1D,
-    ArrayLike2D,
-    Float64Array,
-    NDArray,
-)
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -44,11 +37,20 @@ from statsmodels.tsa.ardl import pss_critical_values
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tsa.base import tsa_model
 from statsmodels.tsa.base.prediction import PredictionResults
-from statsmodels.tsa.deterministic import DeterministicProcess
 from statsmodels.tsa.tsatools import lagmat
 
 if TYPE_CHECKING:
+    import datetime as dt
+
     import matplotlib.figure
+
+    from statsmodels.tsa.deterministic import DeterministicProcess
+    from statsmodels.tools.typing import (
+        ArrayLike1D,
+        ArrayLike2D,
+        Float64Array,
+        NDArray,
+    )
 
 __all__ = [
     "ARDL",
@@ -420,12 +422,12 @@ class ARDL(AutoReg):
         max_order = 0
         for val in order.values():
             if val is not None:
-                max_order = max(max(val), max_order)
+                max_order = max(max(val), max_order)  # noqa: PLW3301
         if not isinstance(exog, pd.DataFrame):
             exog = array_like(exog, "exog", ndim=2, maxdim=2)
         exog_lags = {}
-        for key in order:
-            if order[key] is None:
+        for key, order_val in order.items():
+            if order_val is None:
                 continue
             if isinstance(exog, np.ndarray):
                 assert isinstance(key, int)
@@ -433,7 +435,7 @@ class ARDL(AutoReg):
             else:
                 col = exog[key]
             lagged_col = lagmat(col, max_order, original="in")
-            lags = order[key]
+            lags = order_val
             exog_lags[key] = lagged_col[:, lags]
         return exog_lags
 
@@ -602,8 +604,8 @@ class ARDL(AutoReg):
         }
         x_names = list(self._deterministic_reg.columns)
         x_names += endog_lag_names
-        for key in exog_names:
-            x_names += exog_names[key]
+        for exog_name_value in exog_names.values():
+            x_names += exog_name_value
         x_names += self._fixed_names
         return y_name, x_names
 

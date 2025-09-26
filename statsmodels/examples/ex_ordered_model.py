@@ -7,7 +7,7 @@ License: BSD-3
 
 import numpy as np
 from scipy import stats
-import pandas
+import pandas as pd
 
 from statsmodels.miscmodels.ordinal_model import OrderedModel
 
@@ -55,7 +55,7 @@ print(res_log.summary())
 # http://www.ats.ucla.edu/stat/stata/dae/ologit.htm
 # requires downloaded dataset ologit.dta
 
-dataf = pandas.read_stata(r"M:\josef_new\scripts\ologit_ucla.dta")
+dataf = pd.read_stata(r"M:\josef_new\scripts\ologit_ucla.dta")
 
 # this works but sorts category levels alphabetically
 res_log2 = OrderedModel(

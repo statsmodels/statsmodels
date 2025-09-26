@@ -102,7 +102,6 @@ if __name__ == "__main__":
     print(val)
     print(vars(info))
 
-    #
     print(brentq_expanding(func_nan, args=(20, 0), increasing=True))
     print(brentq_expanding(func_nan, args=(20, 0)))
     # In the next point 0 is minumum, below is nan

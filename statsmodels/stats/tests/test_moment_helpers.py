@@ -56,7 +56,7 @@ ms = [([0.0, 1, 0, 3], [0.0, 1.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]),
       ([1.0, 1, 0, 3, 1], [1.0, 1.0, 0.0, 0.0, 1.0], [1., 0., -1., 6., -20.])]
 
 
-@pytest.mark.parametrize('mom', ms)
+@pytest.mark.parametrize("mom", ms)
 def test_moment_conversion(mom):
     # this was initially written for an old version of moment_helpers
     # I'm not sure whether there are not redundant cases after moving functions
@@ -97,16 +97,16 @@ multidimension_test_vals = [np.array([[5., 10., 1.],
                             random_vals]
 
 
-@pytest.mark.parametrize('test_vals', multidimension_test_vals)
+@pytest.mark.parametrize("test_vals", multidimension_test_vals)
 def test_multidimensional(test_vals):
     assert_almost_equal(cum2mc(mnc2cum(mc2mnc(test_vals).T).T).T, test_vals)
     assert_almost_equal(cum2mc(mc2cum(test_vals).T).T, test_vals)
     assert_almost_equal(mvsk2mc(mc2mvsk(test_vals).T).T, test_vals)
 
 
-@pytest.mark.parametrize('func_name', ['cum2mc', 'cum2mc', 'mc2cum', 'mc2mnc',
-                                       'mc2mvsk', 'mnc2cum', 'mnc2mc',
-                                       'mnc2mc', 'mvsk2mc', 'mvsk2mnc'])
+@pytest.mark.parametrize("func_name", ["cum2mc", "cum2mc", "mc2cum", "mc2mnc",
+                                       "mc2mvsk", "mnc2cum", "mnc2mc",
+                                       "mnc2mc", "mvsk2mc", "mvsk2mnc"])
 def test_moment_conversion_types(func_name):
     # written in 2009
     # TODO: why did I use list as return type?

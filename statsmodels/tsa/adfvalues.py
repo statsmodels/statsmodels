@@ -1,7 +1,7 @@
 from scipy.stats import norm
 from numpy import array, polyval, inf, asarray
 
-__all__ = ['mackinnonp', 'mackinnoncrit']
+__all__ = ["mackinnonp", "mackinnoncrit"]
 
 # These are the cut-off values for the left-tail vs. the rest of the
 # tau distribution, for getting the p-values
@@ -440,7 +440,7 @@ def mackinnoncrit(N=1, regression="c", nobs=inf):
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
     reg = regression
-    if reg not in ['c', 'ct', 'n', 'ctt']:
+    if reg not in ["c", "ct", "n", "ctt"]:
         raise ValueError("regression keyword %s not understood" % reg)
     tau = tau_2010s[reg]
     if nobs is inf:

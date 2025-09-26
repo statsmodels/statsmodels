@@ -36,7 +36,7 @@ class Anes:
             1.3469616, -.01790407, .21693885, .08095841, -7.0604782,
             -.14088069, 2.0700801, -.00943265, .3219257, .10889408,
             -12.105751]
-        obj.params = np.reshape(params, (6, -1), order='F')
+        obj.params = np.reshape(params, (6, -1), order="F")
         bse = [
             .0342823657, .093626795, .0065248584, .0735865799,
             .0176336937, .6298376313, .0391615553, .1082386919,
@@ -47,9 +47,9 @@ class Anes:
             .0393516553, .1171860107, .0076110152, .0850070091,
             .0229760791, .8443638283, .042138047, .1434089089,
             .0081338625, .0910979921, .025300888, 1.059954821]
-        obj.bse = np.reshape(bse, (6, -1), order='F')
-        obj.yhat = np.loadtxt(os.path.join(cur_dir, 'yhat_mnlogit.csv'))
-        obj.phat = np.loadtxt(os.path.join(cur_dir, 'phat_mnlogit.csv'))
+        obj.bse = np.reshape(bse, (6, -1), order="F")
+        obj.yhat = np.loadtxt(os.path.join(cur_dir, "yhat_mnlogit.csv"))
+        obj.phat = np.loadtxt(os.path.join(cur_dir, "phat_mnlogit.csv"))
         obj.cov_params = None
         obj.llf = -1461.922747312
         obj.llnull = -1750.34670999
@@ -72,7 +72,7 @@ class Anes:
             -2.370538224, 11.49421878, -2.352389066, 2.552011323,
             3.523595639, -8.361890935, -3.34331327, 14.43480847,
             -1.159676452, 3.533839715, 4.303962885, -11.42100649]
-        obj.z = np.reshape(z, (6, -1), order='F')
+        obj.z = np.reshape(z, (6, -1), order="F")
         pvalues = [
             0.7364947525, 0.0014737744, 0.0001317999, 0.2622827367,
             0.7682272401, 0.5532789548, 0.0234348654, 0.0002962422,
@@ -83,7 +83,7 @@ class Anes:
             0.0177622072, 1.41051e-30, 0.0186532528, 0.0107103038,
             0.0004257334, 6.17209e-17, 0.0008278439, 3.12513e-47,
             0.2461805610, 0.0004095694, 0.0000167770, 3.28408e-30]
-        obj.pvalues = np.reshape(pvalues, (6, -1), order='F')
+        obj.pvalues = np.reshape(pvalues, (6, -1), order="F")
         conf_int = [
             [[-0.0787282, 0.0556562],
              [0.1142092, 0.4812195],
@@ -239,7 +239,7 @@ class Anes:
              .3727166284]]).T
 
         # taken from gretl
-        obj.resid = np.loadtxt(os.path.join(cur_dir, 'mnlogit_resid.csv'),
+        obj.resid = np.loadtxt(os.path.join(cur_dir, "mnlogit_resid.csv"),
                                delimiter=",")
         return obj
 
@@ -252,7 +252,6 @@ class DiscreteL1:
         Special results for L1 models
         Uses the Spector data and a script to generate the baseline results
         """
-        pass
 
     def logit():
         """
@@ -830,7 +829,7 @@ class RandHIE:
             .00161284852954, .01223913844387, .00056476496963,
             .00925061122826, .01530987068312, .02627928267502,
             .01116266712362]
-        predict = np.loadtxt(os.path.join(cur_dir, 'yhat_poisson.csv'),
+        predict = np.loadtxt(os.path.join(cur_dir, "yhat_poisson.csv"),
                              delimiter=",")
         obj.phat = predict[:, 0]
         obj.yhat = predict[:, 1]
@@ -888,7 +887,7 @@ class RandHIE:
             .0264611158, .0437974779,
             .0752099666]
         # taken from gretl
-        obj.resid = np.loadtxt(os.path.join(cur_dir, 'poisson_resid.csv'),
+        obj.resid = np.loadtxt(os.path.join(cur_dir, "poisson_resid.csv"),
                                delimiter=",")
         return obj
 

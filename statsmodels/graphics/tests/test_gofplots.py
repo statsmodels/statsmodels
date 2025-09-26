@@ -657,13 +657,12 @@ def test_correct_labels(close_figures, reset_randomstate, line, x_size, y_size, 
         else:
             assert "X" in x_label
             assert "Y" in y_label
+    elif not labels:
+        assert "1st" in x_label
+        assert "2nd" in y_label
     else:
-        if not labels:
-            assert "1st" in x_label
-            assert "2nd" in y_label
-        else:
-            assert "X" in x_label
-            assert "Y" in y_label
+        assert "X" in x_label
+        assert "Y" in y_label
 
 
 @pytest.mark.matplotlib
@@ -710,11 +709,11 @@ def test_qqplot_2samples_labels():
 def test_qqplot_2samples_kwargs(close_figures):
     data1 = np.random.normal(0, 1, 100)
     data2 = np.random.normal(0, 1, 100)
-    fig_with_kwarg = qqplot_2samples(data1, data2, color='cyan')
+    fig_with_kwarg = qqplot_2samples(data1, data2, color="cyan")
     ax = fig_with_kwarg.get_axes()[0]
     scatter = ax.get_children()[0]
-    assert scatter.get_color() == 'cyan'
+    assert scatter.get_color() == "cyan"
     fig_without_kwarg = qqplot_2samples(data1, data2)
     ax_default = fig_without_kwarg.get_axes()[0]
     scatter_default = ax_default.get_children()[0]
-    assert scatter_default.get_color() != 'cyan'
+    assert scatter_default.get_color() != "cyan"

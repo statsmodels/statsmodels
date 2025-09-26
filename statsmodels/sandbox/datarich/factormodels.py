@@ -86,7 +86,7 @@ class FactorModelUnivariate:
         if (maxfact + hasconst) < 1:
             raise ValueError(
                 "nothing to do, number of factors (incl. constant) should "
-                + "be at least 1"
+                "be at least 1"
             )
 
         # temporary safety

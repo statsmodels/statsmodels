@@ -105,14 +105,14 @@ import numpy as np
 from statsmodels.stats.moment_helpers import se_cov
 from statsmodels.tools.grouputils import combine_indices, group_sums
 
-__all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
-           'cov_white_simple',
-           'cov_hc0', 'cov_hc1', 'cov_hc2', 'cov_hc3',
-           'se_cov', 'weights_bartlett', 'weights_uniform']
+__all__ = ["cov_cluster", "cov_cluster_2groups", "cov_hac", "cov_nw_panel",
+           "cov_white_simple",
+           "cov_hc0", "cov_hc1", "cov_hc2", "cov_hc3",
+           "se_cov", "weights_bartlett", "weights_uniform"]
 
 
 # from linear_model.RegressionResults
-'''
+"""
     HC0_se
         White's (1980) heteroskedasticity robust standard errors.
         Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
@@ -152,7 +152,7 @@ __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
         which is in this case is resid^(2)/(1-h_ii)^(2).  HCCM matrices are
         only appropriate for OLS.
 
-'''
+"""
 
 # Note: HCCM stands for Heteroskedasticity Consistent Covariance Matrix
 
@@ -225,7 +225,7 @@ def cov_hc3(results):
     return cov_hc3_
 
 
-def _get_sandwich_arrays(results, cov_type=''):
+def _get_sandwich_arrays(results, cov_type=""):
     """Helper function to get scores from results
 
     Parameters
@@ -236,15 +236,15 @@ def _get_sandwich_arrays(results, cov_type=''):
         jac, hessian_inv = results
         xu = jac = np.asarray(jac)
         hessian_inv = np.asarray(hessian_inv)
-    elif hasattr(results, 'model'):
-        if hasattr(results, '_results'):
+    elif hasattr(results, "model"):
+        if hasattr(results, "_results"):
             # remove wrapper
             results = results._results
         # assume we have a results instance
-        if hasattr(results.model, 'jac'):
+        if hasattr(results.model, "jac"):
             xu = results.model.jac(results.params)
             hessian_inv = np.linalg.inv(results.model.hessian(results.params))
-        elif hasattr(results.model, 'score_obs'):
+        elif hasattr(results.model, "score_obs"):
             xu = results.model.score_obs(results.params)
             hessian_inv = np.linalg.inv(results.model.hessian(results.params))
         else:
@@ -253,7 +253,7 @@ def _get_sandwich_arrays(results, cov_type=''):
             hessian_inv = np.asarray(results.normalized_cov_params)
 
         # experimental support for freq_weights
-        if hasattr(results.model, 'freq_weights') and not cov_type == 'clu':
+        if hasattr(results.model, "freq_weights") and not cov_type == "clu":
             # we do not want to square the weights in the covariance calculations
             # assumes that freq_weights are incorporated in score_obs or equivalent
             # assumes xu/score_obs is 2D
@@ -261,14 +261,14 @@ def _get_sandwich_arrays(results, cov_type=''):
             xu /= np.sqrt(np.asarray(results.model.freq_weights)[:, None])
 
     else:
-        raise ValueError('need either tuple of (jac, hessian_inv) or results' +
-                         'instance')
+        raise ValueError("need either tuple of (jac, hessian_inv) or results"
+                         "instance")
 
     return xu, hessian_inv
 
 
 def _HCCM1(results, scale):
-    '''
+    """
     sandwich with pinv(x) * scale * pinv(x).T
 
     where pinv(x) = (X'X)^(-1) X
@@ -286,7 +286,7 @@ def _HCCM1(results, scale):
     H : ndarray (k_vars, k_vars)
         robust covariance matrix for the parameter estimates
 
-    '''
+    """
     if scale.ndim == 1:
         H = np.dot(results.model.pinv_wexog,
                    scale[:, None]*results.model.pinv_wexog.T)
@@ -297,7 +297,7 @@ def _HCCM1(results, scale):
 
 
 def _HCCM2(hessian_inv, scale):
-    '''
+    """
     sandwich with (X'X)^(-1) * scale * (X'X)^(-1)
 
     scale is (kvars, kvars)
@@ -315,7 +315,7 @@ def _HCCM2(hessian_inv, scale):
     H : ndarray (k_vars, k_vars)
         robust covariance matrix for the parameter estimates
 
-    '''
+    """
     if scale.ndim == 1:
         scale = scale[:, None]
 
@@ -327,7 +327,7 @@ def _HCCM2(hessian_inv, scale):
 
 
 def weights_bartlett(nlags):
-    '''Bartlett weights for HAC
+    """Bartlett weights for HAC
 
     this will be moved to another module
 
@@ -341,14 +341,14 @@ def weights_bartlett(nlags):
     kernel : ndarray, (nlags+1,)
         weights for Bartlett kernel
 
-    '''
+    """
 
     # with lag zero
     return 1 - np.arange(nlags+1)/(nlags+1.)
 
 
 def weights_uniform(nlags):
-    '''uniform weights for HAC
+    """uniform weights for HAC
 
     this will be moved to another module
 
@@ -362,18 +362,18 @@ def weights_uniform(nlags):
     kernel : ndarray, (nlags+1,)
         weights for uniform kernel
 
-    '''
+    """
 
     # with lag zero
     return np.ones(nlags+1)
 
 
-kernel_dict = {'bartlett': weights_bartlett,
-               'uniform': weights_uniform}
+kernel_dict = {"bartlett": weights_bartlett,
+               "uniform": weights_uniform}
 
 
 def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
-    '''inner covariance matrix for HAC (Newey, West) sandwich
+    """inner covariance matrix for HAC (Newey, West) sandwich
 
     assumes we have a single time series with zero axis consecutive, equal
     spaced time periods
@@ -401,7 +401,7 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
 
     options might change when other kernels besides Bartlett are available.
 
-    '''
+    """
 
     if x.ndim == 1:
         x = x[:, None]
@@ -421,7 +421,7 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
 
 
 def S_white_simple(x):
-    '''inner covariance matrix for White heteroscedastistity sandwich
+    """inner covariance matrix for White heteroscedastistity sandwich
 
 
     Parameters
@@ -438,7 +438,7 @@ def S_white_simple(x):
     -----
     this is just dot(X.T, X)
 
-    '''
+    """
     if x.ndim == 1:
         x = x[:, None]
 
@@ -446,7 +446,7 @@ def S_white_simple(x):
 
 
 def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
-    '''inner covariance matrix for HAC over group sums sandwich
+    """inner covariance matrix for HAC over group sums sandwich
 
     This assumes we have complete equal spaced time periods.
     The number of time periods per group need not be the same, but we need
@@ -479,7 +479,7 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
     Daniel Hoechle, xtscc paper
     Driscoll and Kraay
 
-    '''
+    """
     # needs groupsums
 
     x_group_sums = group_sums(x, time).T  # TODO: transpose return in grou_sum
@@ -488,21 +488,21 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
 
 
 def S_crosssection(x, group):
-    '''inner covariance matrix for White on group sums sandwich
+    """inner covariance matrix for White on group sums sandwich
 
     I guess for a single categorical group only,
     categorical group, can also be the product/intersection of groups
 
     This is used by cov_cluster and indirectly verified
 
-    '''
+    """
     x_group_sums = group_sums(x, group).T  # TODO: why transposed
 
     return S_white_simple(x_group_sums)
 
 
 def cov_crosssection_0(results, group):
-    '''this one is still wrong, use cov_cluster instead'''
+    """this one is still wrong, use cov_cluster instead"""
 
     # TODO: currently used version of groupsums requires 2d resid
     scale = S_crosssection(results.resid[:, None], group)
@@ -512,7 +512,7 @@ def cov_crosssection_0(results, group):
 
 
 def cov_cluster(results, group, use_correction=True):
-    '''cluster robust covariance matrix
+    """cluster robust covariance matrix
 
     Calculates sandwich covariance matrix for a single cluster, i.e. grouped
     variables.
@@ -534,11 +534,11 @@ def cov_cluster(results, group, use_correction=True):
     -----
     same result as Stata in UCLA example and same as Peterson
 
-    '''
+    """
     # TODO: currently used version of groupsums requires 2d resid
-    xu, hessian_inv = _get_sandwich_arrays(results, cov_type='clu')
+    xu, hessian_inv = _get_sandwich_arrays(results, cov_type="clu")
 
-    if not hasattr(group, 'dtype') or group.dtype != np.dtype('int'):
+    if not hasattr(group, "dtype") or group.dtype != np.dtype("int"):
         clusters, group = np.unique(group, return_inverse=True)
     else:
         clusters = np.unique(group)
@@ -558,7 +558,7 @@ def cov_cluster(results, group, use_correction=True):
 
 
 def cov_cluster_2groups(results, group, group2=None, use_correction=True):
-    '''cluster robust covariance matrix for two groups/clusters
+    """cluster robust covariance matrix for two groups/clusters
 
     Parameters
     ----------
@@ -584,12 +584,12 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
     -----
 
     verified against Peterson's table, (4 decimal print precision)
-    '''
+    """
 
     if group2 is None:
         if group.ndim != 2 or group.shape[1] != 2:
-            raise ValueError('if group2 is not given, then groups needs to be ' +
-                             'an array with two columns')
+            raise ValueError("if group2 is not given, then groups needs to be "
+                             "an array with two columns")
         group0 = group[:, 0]
         group1 = group[:, 1]
     else:
@@ -614,7 +614,7 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
 
 
 def cov_white_simple(results, use_correction=True):
-    '''
+    """
     heteroscedasticity robust covariance matrix (White)
 
     Parameters
@@ -640,7 +640,7 @@ def cov_white_simple(results, use_correction=True):
     cov_hc1, cov_hc2, cov_hc3 : heteroscedasticity robust covariance matrices
         with small sample corrections
 
-    '''
+    """
     xu, hessian_inv = _get_sandwich_arrays(results)
     sigma = S_white_simple(xu)
 
@@ -655,7 +655,7 @@ def cov_white_simple(results, use_correction=True):
 
 def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
                    use_correction=True):
-    '''
+    """
     heteroscedasticity and autocorrelation robust covariance matrix (Newey-West)
 
     Assumes we have a single time series with zero axis consecutive, equal
@@ -686,7 +686,7 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
 
     options might change when other kernels besides Bartlett are available.
 
-    '''
+    """
     xu, hessian_inv = _get_sandwich_arrays(results)
     sigma = S_hac_simple(xu, nlags=nlags, weights_func=weights_func)
 
@@ -710,10 +710,10 @@ cov_hac = cov_hac_simple   # alias for users
 
 
 def lagged_groups(x, lag, groupidx):
-    '''
+    """
     assumes sorted by time, groupidx is tuple of start and end values
     not optimized, just to get a working version, loop over groups
-    '''
+    """
     out0 = []
     out_lagged = []
     for lo, up in groupidx:
@@ -722,17 +722,17 @@ def lagged_groups(x, lag, groupidx):
             out_lagged.append(x[lo:up-lag])
 
     if out0 == []:
-        raise ValueError('all groups are empty taking lags')
+        raise ValueError("all groups are empty taking lags")
     return np.vstack(out0), np.vstack(out_lagged)
 
 
 def S_nw_panel(xw, weights, groupidx):
-    '''inner covariance matrix for HAC for panel data
+    """inner covariance matrix for HAC for panel data
 
     no denominator nobs used
 
     no reference for this, just accounting for time indices
-    '''
+    """
     nlags = len(weights)-1
 
     S = weights[0] * np.dot(xw.T, xw)  # weights just for completeness
@@ -744,8 +744,8 @@ def S_nw_panel(xw, weights, groupidx):
 
 
 def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
-                 use_correction='hac'):
-    '''Panel HAC robust covariance matrix
+                 use_correction="hac"):
+    """Panel HAC robust covariance matrix
 
     Assumes we have a panel of time series with consecutive, equal spaced time
     periods. Data is assumed to be in long format with time series of each
@@ -791,7 +791,7 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     Options might change when other kernels besides Bartlett and uniform are
     available.
 
-    '''
+    """
     if nlags == 0:  # so we can reproduce HC0 White
         weights = [1, 0]  # to avoid the scalar check in hac_nw
     else:
@@ -803,9 +803,9 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     cov_hac = _HCCM2(hessian_inv, S_hac)
     if use_correction:
         nobs, k_params = xu.shape
-        if use_correction == 'hac':
+        if use_correction == "hac":
             cov_hac *= nobs / float(nobs - k_params)
-        elif use_correction in ['c', 'clu', 'cluster']:
+        elif use_correction in ["c", "clu", "cluster"]:
             n_groups = len(groupidx)
             cov_hac *= n_groups / (n_groups - 1.)
             cov_hac *= ((nobs-1.) / float(nobs - k_params))
@@ -820,7 +820,7 @@ def cov_nw_groupsum(
         weights_func=weights_bartlett,
         use_correction=0
 ):
-    '''Driscoll and Kraay Panel robust covariance matrix
+    """Driscoll and Kraay Panel robust covariance matrix
 
     Robust covariance matrix for panel data of Driscoll and Kraay.
 
@@ -876,7 +876,7 @@ def cov_nw_groupsum(
     Daniel Hoechle, xtscc paper
     Driscoll and Kraay
 
-    '''
+    """
 
     xu, hessian_inv = _get_sandwich_arrays(results)
 
@@ -885,9 +885,9 @@ def cov_nw_groupsum(
     cov_hac = _HCCM2(hessian_inv, S_hac)
     if use_correction:
         nobs, k_params = xu.shape
-        if use_correction == 'hac':
+        if use_correction == "hac":
             cov_hac *= nobs / float(nobs - k_params)
-        elif use_correction in ['c', 'cluster']:
+        elif use_correction in ["c", "cluster"]:
             n_groups = len(np.unique(time))
             cov_hac *= n_groups / (n_groups - 1.)
             cov_hac *= ((nobs-1.) / float(nobs - k_params))

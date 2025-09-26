@@ -1104,10 +1104,13 @@ class TukeyQuartic(RobustNorm):
         #     1/2 x^2 (-(4 (x/c)^k)/(k + 2) + (x/c)^(2 k)/(k + 1) + 1) +
         #     constant
         rh = (
-            subset * 1 / 2 * z**2 *
-                (1 - 4 / (k + 2) * x**k + 1 / (k + 1) * x**(2 * k)) +  # noqa
-            (1 - subset) * rhoc
-            )
+            subset
+            * 1
+            / 2
+            * z**2
+            * (1 - 4 / (k + 2) * x**k + 1 / (k + 1) * x ** (2 * k))
+            + (1 - subset) * rhoc
+        )
         return rh
 
     def psi(self, z):
@@ -1411,7 +1414,7 @@ class MQuantileNorm(RobustNorm):
         return qq * self.base_norm.weights(z)
 
     def psi_deriv(self, z):
-        '''
+        """
         The derivative of MQuantileNorm function
 
         Parameters
@@ -1426,7 +1429,7 @@ class MQuantileNorm(RobustNorm):
         Notes
         -----
         Used to estimate the robust covariance matrix.
-        '''
+        """
         qq = self._get_q(z)
         return qq * self.base_norm.psi_deriv(z)
 

@@ -498,11 +498,10 @@ class ETSModel(base.StateSpaceMLEModel):
                 self._smoothing_func = smooth._ets_smooth_add_add
             else:
                 self._smoothing_func = smooth._ets_smooth_add_mul
+        elif self.seasonal == "add" or self.seasonal is None:
+            self._smoothing_func = smooth._ets_smooth_mul_add
         else:
-            if self.seasonal == "add" or self.seasonal is None:
-                self._smoothing_func = smooth._ets_smooth_mul_add
-            else:
-                self._smoothing_func = smooth._ets_smooth_mul_mul
+            self._smoothing_func = smooth._ets_smooth_mul_mul
 
     def set_initialization_method(
         self,
@@ -607,10 +606,10 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # we also have to reset the params index dictionaries
         self._internal_params_index = OrderedDict(
-            zip(self._internal_param_names, np.arange(self._k_params_internal))
+            zip(self._internal_param_names, np.arange(self._k_params_internal), strict=False)
         )
         self._params_index = OrderedDict(
-            zip(self.param_names, np.arange(self.k_params))
+            zip(self.param_names, np.arange(self.k_params), strict=False)
         )
 
     def set_bounds(self, bounds):

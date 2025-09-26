@@ -9,16 +9,16 @@ from .discrete import (
     )
 
 __all__ = [
-    'ECDF',
-    'ECDFDiscrete',
-    'ExpandedNormal',
-    'StepFunction',
-    'genpoisson_p',
-    'monotone_fn_inverter',
-    'test',
-    'zigenpoisson',
-    'zinegbin',
-    'zipoisson'
+    "ECDF",
+    "ECDFDiscrete",
+    "ExpandedNormal",
+    "StepFunction",
+    "genpoisson_p",
+    "monotone_fn_inverter",
+    "test",
+    "zigenpoisson",
+    "zinegbin",
+    "zipoisson"
     ]
 
 test = PytestTester()

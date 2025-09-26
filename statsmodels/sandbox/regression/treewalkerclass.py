@@ -506,12 +506,12 @@ if __name__ == "__main__":
     datadict = dict(
         zip(
             ["Air", "Train", "Bus", "Car"],
-            ["Airdata", "Traindata", "Busdata", "Cardata"],
+            ["Airdata", "Traindata", "Busdata", "Cardata"], strict=False,
         )
     )
 
     if testxb:
-        datadict = dict(zip(["Air", "Train", "Bus", "Car"], np.arange(4)))
+        datadict = dict(zip(["Air", "Train", "Bus", "Car"], np.arange(4), strict=False))
 
     datadict.update({"top": [], "Fly": [], "Ground": []})
 
@@ -567,7 +567,7 @@ if __name__ == "__main__":
         "top": [],
     }
 
-    datadict2 = dict([i for i in zip("abcdefgh", lrange(8))])
+    datadict2 = dict([i for i in zip("abcdefgh", lrange(8), strict=False)])
     datadict2.update(
         {"top": 1000, "B1": 100, "B2": 200, "B21": 21, "B22": 22, "B3": 300}
     )

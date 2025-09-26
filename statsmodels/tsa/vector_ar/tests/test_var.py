@@ -19,7 +19,7 @@ from statsmodels.datasets import macrodata
 import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
-import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.var_model import VAR, forecast, var_acf
 
 DECIMAL_12 = 12

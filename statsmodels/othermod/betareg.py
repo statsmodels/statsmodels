@@ -427,7 +427,6 @@ class BetaModel(GenericLikelihoodModel):
 
         t = 1.0 / self.link.deriv(mu)
         h = 1.0 / self.link_precision.deriv(phi)
-        #
         sf1 = phi * t * (ystar - mustar)
         sf2 = h * (mu * (ystar - mustar) + yt - mut)
 

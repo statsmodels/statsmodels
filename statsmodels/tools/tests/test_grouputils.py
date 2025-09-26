@@ -31,7 +31,7 @@ class CheckGrouping:
         np.testing.assert_(not index.equals(self.grouping.index))
 
         # make sure it copied
-        if hasattr(sorted_data, 'equals'):  # newer pandas
+        if hasattr(sorted_data, "equals"):  # newer pandas
             np.testing.assert_(not sorted_data.equals(self.data))
 
         # 2d arrays
@@ -47,7 +47,7 @@ class CheckGrouping:
         expected_sorted_data = series.sort_index()
         assert_series_equal(sorted_data, expected_sorted_data)
         np.testing.assert_(isinstance(sorted_data, pd.Series))
-        if hasattr(sorted_data, 'equals'):
+        if hasattr(sorted_data, "equals"):
             np.testing.assert_(not sorted_data.equals(series))
 
         # 1d array
@@ -110,7 +110,7 @@ class CheckGrouping:
         names = self.data.index.names
         transformed_slices = self.grouping.transform_slices(
                                             self.data.values,
-                                            lambda x, idx : x.mean(0),  # noqa
+                                            lambda x, idx : x.mean(0),
                                             level=0)
         expected = self.data.reset_index().groupby(
             names[0])[self.data.columns].mean()
@@ -120,7 +120,7 @@ class CheckGrouping:
         if len(names) > 1:
             transformed_slices = self.grouping.transform_slices(
                                             self.data.values,
-                                            lambda x, idx : x.mean(0),  # noqa
+                                            lambda x, idx : x.mean(0),
                                             level=1)
             expected = self.data.reset_index().groupby(
                 names[1])[self.data.columns].mean()
@@ -156,7 +156,7 @@ class TestMultiIndexGrouping(CheckGrouping):
     @classmethod
     def setup_class(cls):
         grun_data = grunfeld.load_pandas().data
-        multi_index_data = grun_data.set_index(['firm', 'year'])
+        multi_index_data = grun_data.set_index(["firm", "year"])
         multi_index_panel = multi_index_data.index
         cls.grouping = Grouping(multi_index_panel)
         cls.data = multi_index_data
@@ -168,7 +168,7 @@ class TestIndexGrouping(CheckGrouping):
     @classmethod
     def setup_class(cls):
         grun_data = grunfeld.load_pandas().data
-        index_data = grun_data.set_index(['firm'])
+        index_data = grun_data.set_index(["firm"])
         index_group = index_data.index
         cls.grouping = Grouping(index_group)
         cls.data = index_data
@@ -179,10 +179,10 @@ class TestIndexGrouping(CheckGrouping):
 def test_init_api():
     # make a multi-index panel
     grun_data = grunfeld.load_pandas().data
-    multi_index_panel = grun_data.set_index(['firm', 'year']).index
+    multi_index_panel = grun_data.set_index(["firm", "year"]).index
     grouping = Grouping(multi_index_panel)
     # check group_names
-    np.testing.assert_array_equal(grouping.group_names, ['firm', 'year'])
+    np.testing.assert_array_equal(grouping.group_names, ["firm", "year"])
     # check shape
     np.testing.assert_array_equal(grouping.index_shape, (11, 20))
     # check index_int
@@ -220,36 +220,36 @@ def test_init_api():
                 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
             ]
         ])
-    grouping = Grouping(multi_index_panel, names=['firms', 'year'])
-    np.testing.assert_array_equal(grouping.group_names, ['firms', 'year'])
+    grouping = Grouping(multi_index_panel, names=["firms", "year"])
+    np.testing.assert_array_equal(grouping.group_names, ["firms", "year"])
 
     # make a multi-index grouping
     anes_data = anes96.load_pandas().data
-    multi_index_groups = anes_data.set_index(['educ', 'income',
-                                              'TVnews']).index
+    multi_index_groups = anes_data.set_index(["educ", "income",
+                                              "TVnews"]).index
     grouping = Grouping(multi_index_groups)
     np.testing.assert_array_equal(grouping.group_names,
-                                  ['educ', 'income', 'TVnews'])
+                                  ["educ", "income", "TVnews"])
     np.testing.assert_array_equal(grouping.index_shape, (7, 24, 8))
 
     # make a list multi-index panel
     list_panel = multi_index_panel.tolist()
-    grouping = Grouping(list_panel, names=['firms', 'year'])
-    np.testing.assert_array_equal(grouping.group_names, ['firms', 'year'])
+    grouping = Grouping(list_panel, names=["firms", "year"])
+    np.testing.assert_array_equal(grouping.group_names, ["firms", "year"])
     np.testing.assert_array_equal(grouping.index_shape, (11, 20))
 
     # make a list multi-index grouping
     list_groups = multi_index_groups.tolist()
-    grouping = Grouping(list_groups, names=['educ', 'income', 'TVnews'])
+    grouping = Grouping(list_groups, names=["educ", "income", "TVnews"])
     np.testing.assert_array_equal(grouping.group_names,
-                                  ['educ', 'income', 'TVnews'])
+                                  ["educ", "income", "TVnews"])
     np.testing.assert_array_equal(grouping.index_shape, (7, 24, 8))
 
     # single-variable index grouping
     index_group = multi_index_panel.get_level_values(0)
     grouping = Grouping(index_group)
     # the original multi_index_panel had it's name changed inplace above
-    np.testing.assert_array_equal(grouping.group_names, ['firms'])
+    np.testing.assert_array_equal(grouping.group_names, ["firms"])
     np.testing.assert_array_equal(grouping.index_shape, (220,))
 
     # single variable list grouping
@@ -261,7 +261,7 @@ def test_init_api():
     # test generic group names
     grouping = Grouping(list_groups)
     np.testing.assert_array_equal(grouping.group_names,
-                                  ['group0', 'group1', 'group2'])
+                                  ["group0", "group1", "group2"])
 
 
 def test_combine_indices():
@@ -269,24 +269,24 @@ def test_combine_indices():
     np.random.seed(985367)
     groups = np.random.randint(0, 2, size=(10, 2))
     uv, ux, u, label = combine_indices(groups, return_labels=True)
-    uv, ux, u, label = combine_indices(groups, prefix='g1,g2=', sep=',',
+    uv, ux, u, label = combine_indices(groups, prefix="g1,g2=", sep=",",
                                        return_labels=True)
 
-    group0 = np.array(['sector0', 'sector1'])[groups[:, 0]]
-    group1 = np.array(['region0', 'region1'])[groups[:, 1]]
+    group0 = np.array(["sector0", "sector1"])[groups[:, 0]]
+    group1 = np.array(["region0", "region1"])[groups[:, 1]]
     uv, ux, u, label = combine_indices((group0, group1),
-                                       prefix='sector,region=',
-                                       sep=',',
+                                       prefix="sector,region=",
+                                       sep=",",
                                        return_labels=True)
-    uv, ux, u, label = combine_indices((group0, group1), prefix='', sep='.',
+    uv, ux, u, label = combine_indices((group0, group1), prefix="", sep=".",
                                        return_labels=True)
     group_joint = np.array(label)[uv.squeeze()]
-    group_joint_expected = np.array(['sector1.region0', 'sector0.region1',
-                                     'sector0.region0', 'sector0.region1',
-                                     'sector1.region1', 'sector0.region0',
-                                     'sector1.region0', 'sector1.region0',
-                                     'sector0.region1', 'sector0.region0'],
-                                    dtype='|U15')
+    group_joint_expected = np.array(["sector1.region0", "sector0.region1",
+                                     "sector0.region0", "sector0.region1",
+                                     "sector1.region1", "sector0.region0",
+                                     "sector1.region0", "sector1.region0",
+                                     "sector0.region1", "sector0.region0"],
+                                    dtype="|U15")
     assert_equal(group_joint, group_joint_expected)
 
 
@@ -306,7 +306,7 @@ def test_group_class():
     # Moved from grouputils __main__ section
     g = np.array([0, 0, 1, 2, 1, 1, 2, 0])
 
-    x = np.arange(len(g)*3).reshape(len(g), 3, order='F')
+    x = np.arange(len(g)*3).reshape(len(g), 3, order="F")
     mygroup = Group(g)
 
     mygroup.group_int

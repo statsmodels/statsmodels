@@ -24,7 +24,7 @@ from urllib.request import urlopen
 
 import numpy as np
 from numpy.testing import assert_almost_equal
-import pandas
+import pandas as pd
 from scipy.special import digamma
 from scipy.stats import nbinom
 
@@ -265,12 +265,12 @@ def _score_nbp(y, X, beta, thet, Q):
 
 
 # Tests
-medpar = pandas.read_csv(
+medpar = pd.read_csv(
     urlopen(
         "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/medpar.csv"
     )
 )
-mdvis = pandas.read_csv(
+mdvis = pd.read_csv(
     urlopen(
         "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/mdvis.csv"
     )

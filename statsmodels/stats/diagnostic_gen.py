@@ -81,7 +81,7 @@ def test_chisquare_binning(
             import warnings
 
             warnings.warn(
-                "sum of expected and of observed differ, " "rescaling ``expected``",
+                "sum of expected and of observed differ, rescaling ``expected``",
                 ModelWarning,
                 stacklevel=2,
             )

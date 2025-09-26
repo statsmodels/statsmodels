@@ -722,7 +722,7 @@ class RollingRegressionResults:
             cols = np.asarray(cols)
             lower = lower[:, cols]
             upper = upper[:, cols]
-        return np.asarray(list(zip(lower, upper)))
+        return np.asarray(list(zip(lower, upper, strict=False)))
 
     @Appender(LikelihoodModelResults.conf_int.__doc__)
     def conf_int(self, alpha=0.05, cols=None):

@@ -14,13 +14,13 @@ def test_adf_autolag():
     # see issue #246
     # this is mostly a unit test
     d2 = macrodata.load_pandas().data
-    x = np.log(d2['realgdp'].values)
-    for k_trend, tr in enumerate(['n', 'c', 'ct', 'ctt']):
-        x = np.log(d2['realgdp'].values)
+    x = np.log(d2["realgdp"].values)
+    for k_trend, tr in enumerate(["n", "c", "ct", "ctt"]):
+        x = np.log(d2["realgdp"].values)
         xd = np.diff(x)
 
         # check exog
-        adf3 = tsast.adfuller(x, maxlag=None, autolag='aic',
+        adf3 = tsast.adfuller(x, maxlag=None, autolag="aic",
                               regression=tr, store=True, regresults=True)
         st2 = adf3[-1]
 
@@ -37,11 +37,11 @@ def test_adf_autolag():
         adf2 = tsast.adfuller(x, maxlag=2, autolag=None, regression=tr)
         assert_almost_equal(adf3[:2], adf2[:2], decimal=12)
 
-    tr = 'c'
+    tr = "c"
     # check maxlag with autolag
-    adf3 = tsast.adfuller(x, maxlag=5, autolag='aic',
+    adf3 = tsast.adfuller(x, maxlag=5, autolag="aic",
                           regression=tr, store=True, regresults=True)
     assert_equal(len(adf3[-1].autolag_results), 5 + 1)
-    adf3 = tsast.adfuller(x, maxlag=0, autolag='aic',
+    adf3 = tsast.adfuller(x, maxlag=0, autolag="aic",
                           regression=tr, store=True, regresults=True)
     assert_equal(len(adf3[-1].autolag_results), 0 + 1)

@@ -64,7 +64,7 @@ __all__ = [
 ]
 
 from . import interp, stattools, tsatools, vector_ar as var
-from ..graphics import tsaplots as graphics
+from statsmodels.graphics import tsaplots as graphics
 from .ar_model import AR, AutoReg
 from .ardl import ARDL, UECM, ardl_select_order
 from .arima import api as arima

@@ -15,14 +15,14 @@ from scipy.stats import norm as Gaussian
 from scipy import stats
 
 import statsmodels.api as sm
-import statsmodels.robust.scale as scale
+from statsmodels.robust import scale
 from statsmodels.robust.scale import mad, scale_tau
 import statsmodels.robust.norms as rnorms
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
-file_name = 'hbk.csv'
-file_path = os.path.join(cur_dir, 'results', file_name)
+file_name = "hbk.csv"
+file_path = os.path.join(cur_dir, "results", file_name)
 dta_hbk = pd.read_csv(file_path)
 
 
@@ -341,8 +341,8 @@ def test_tau_scale1():
 def test_tau_scale2():
     import pandas as pd
     cur_dir = os.path.abspath(os.path.dirname(__file__))
-    file_name = 'hbk.csv'
-    file_path = os.path.join(cur_dir, 'results', file_name)
+    file_name = "hbk.csv"
+    file_path = os.path.join(cur_dir, "results", file_name)
     dta_hbk = pd.read_csv(file_path)
 
     # from R robustbase

@@ -33,8 +33,8 @@ def test_chisquare():
     res1.statistic = 2.084086388178453
     res1.parameter = 4
     res1.p_value = 0.72029651761105
-    res1.method = 'Chi-squared test for given probabilities'
-    res1.data_name = 'freq'
+    res1.method = "Chi-squared test for given probabilities"
+    res1.data_name = "freq"
     res1.observed = np.array([
          1048, 660, 510, 420, 362
         ])
@@ -51,8 +51,8 @@ def test_chisquare():
     res2.statistic = 0.01492063492063492
     res2.parameter = 4
     res2.p_value = 0.999972309849908
-    res2.method = 'Chi-squared test for given probabilities'
-    res2.data_name = 'freq'
+    res2.method = "Chi-squared test for given probabilities"
+    res2.data_name = "freq"
     res2.observed = np.array([
          1048, 660, 510, 420, 362
         ])
@@ -68,7 +68,7 @@ def test_chisquare():
     pr1 = np.array([1020,  690,  510,  420,  360])
     pr2 = np.array([1050,  660,  510,  420,  360])
 
-    for pr, res in zip([pr1, pr2], [res1, res2]):
+    for pr, res in zip([pr1, pr2], [res1, res2], strict=False):
         stat, pval = chisquare(freq, pr)
         assert_almost_equal(stat, res.statistic, decimal=12)
         assert_almost_equal(pval, res.p_value, decimal=13)

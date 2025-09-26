@@ -32,14 +32,14 @@ def _normalize_split(proportion):
             proportion = array([1.0, 0.0])
         elif proportion < 0:
             raise ValueError(
-                "proportions should be positive," "given value: {}".format(proportion)
+                "proportions should be positive,given value: {}".format(proportion)
             )
         else:
             proportion = array([proportion, 1.0 - proportion])
     proportion = np.asarray(proportion, dtype=float)
     if np.any(proportion < 0):
         raise ValueError(
-            "proportions should be positive," "given value: {}".format(proportion)
+            "proportions should be positive,given value: {}".format(proportion)
         )
     if np.allclose(proportion, 0):
         raise ValueError(
@@ -66,7 +66,7 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
     x, y, w, h = float(x), float(y), float(width), float(height)
     if (w < 0) or (h < 0):
         raise ValueError(
-            "dimension of the square less than" "zero w={} h={}".format(w, h)
+            "dimension of the square less thanzero w={} h={}".format(w, h)
         )
     proportions = _normalize_split(proportion)
 
@@ -98,7 +98,7 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
 
     results = [
         (s, y, a, h) if horizontal else (x, s, w, a)
-        for s, a in zip(starting, amplitude)
+        for s, a in zip(starting, amplitude, strict=False)
     ]
     return results
 
@@ -126,7 +126,7 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
         if key_subset == name[:L]:
             # split base on the values given
             divisions = _split_rect(x, y, w, h, values, horizontal, gap)
-            for key, rect in zip(keys, divisions):
+            for key, rect in zip(keys, divisions, strict=False):
                 result[name + (key,)] = rect
         else:
             result[name] = (x, y, w, h)
@@ -150,7 +150,7 @@ def _categories_level(keys):
     [[key_1_level_1,key_2_level_1],[key_1_level_2,key_2_level_2]]
     """
     res = []
-    for i in zip(*(keys)):
+    for i in zip(*(keys), strict=False):
         tuplefied = _tuplify(i)
         res.append(list({j: None for j in tuplefied}))
     return res
@@ -295,7 +295,7 @@ def _create_default_properties(data):
         level = level + ((vn,) if vn else tuple())
         level = level + ((tn,) if tn else tuple())
         hsv = array([hv, sv, vv])
-        prop = {'color': _single_hsv_to_rgb(hsv), 'hatch': tv, 'lw': 0}
+        prop = {"color": _single_hsv_to_rgb(hsv), "hatch": tv, "lw": 0}
         properties[level] = prop
     return properties
 
@@ -313,7 +313,7 @@ def _normalize_data(data, index):
     # if data is a dataframe we need to take a completely new road
     # before coming back here. Use the hasattr to avoid importing
     # pandas explicitly
-    if hasattr(data, 'pivot') and hasattr(data, 'groupby'):
+    if hasattr(data, "pivot") and hasattr(data, "groupby"):
         data = _normalize_dataframe(data, index)
         index = None
     # can it be used as a dictionary?
@@ -401,8 +401,8 @@ def _statistical_coloring(data):
         red = 0.0 if dev < 0 else (dev / (1 + dev))
         blue = 0.0 if dev > 0 else (dev / (-1 + dev))
         green = (1.0 - red - blue) / 2.0
-        hatch = 'x' if dev > 2 else 'o' if dev < -2 else ''
-        props[key] = {'color': [red, green, blue], 'hatch': hatch}
+        hatch = "x" if dev > 2 else "o" if dev < -2 else ""
+        props[key] = {"color": [red, green, blue], "hatch": hatch}
     return props
 
 
@@ -442,14 +442,14 @@ def _create_labels(rects, horizontal, ax, rotation):
         ticks_pos = ticks_pos[1:] + ticks_pos[:1]
         ticks_lab = ticks_lab[1:] + ticks_lab[:1]
     # clean them
-    for pos, lab in zip(ticks_pos, ticks_lab):
+    for pos, lab in zip(ticks_pos, ticks_lab, strict=False):
         pos([])
         lab([])
     # for each level, for each value in the level, take the mean of all
     # the sublevel that correspond to that partial key
     for level_idx, level in enumerate(categories):
         # this dictionary keep the labels only for this level
-        level_ticks = dict()
+        level_ticks = {}
         for value in level:
             # to which level it should refer to get the preceding
             # values of labels? it's rather a tricky question...
@@ -460,11 +460,10 @@ def _create_labels(rects, horizontal, ax, rotation):
                     index_select = [-1, -1, -1]
                 else:
                     index_select = [+0, -1, -1]
+            elif level_idx == 3:
+                index_select = [+0, -1, +0]
             else:
-                if level_idx == 3:
-                    index_select = [+0, -1, +0]
-                else:
-                    index_select = [-1, -1, -1]
+                index_select = [-1, -1, -1]
             # now I create the base key name and append the current value
             # It will search on all the rects to find the corresponding one
             # and use them to evaluate the mean position
@@ -495,7 +494,7 @@ def _create_labels(rects, horizontal, ax, rotation):
 
 def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
            properties=lambda key: None, labelizer=None,
-           title='', statistic=False, axes_label=True,
+           title="", statistic=False, axes_label=True,
            label_rotation=0.0):
     """Create a mosaic plot from a contingency table.
 
@@ -679,7 +678,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         text = labelizer(k)
         Rect = Rectangle((x, y), w, h, label=text, **props)
         ax.add_patch(Rect)
-        ax.text(x + w / 2, y + h / 2, text, ha='center', va='center', size='smaller')
+        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", size="smaller")
     # creating the labels on the axis
     # o clearing it
     if axes_label:

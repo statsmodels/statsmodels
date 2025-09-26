@@ -213,7 +213,7 @@ def test_plot_ccf(close_figures):
     plot_ccf(x1, x2, ax=ax, negative_lags=True)
     plot_ccf(x1, x2, ax=ax, adjusted=True)
     plot_ccf(x1, x2, ax=ax, fft=True)
-    plot_ccf(x1, x2, ax=ax, title='CCF')
+    plot_ccf(x1, x2, ax=ax, title="CCF")
     plot_ccf(x1, x2, ax=ax, auto_ylims=True)
     plot_ccf(x1, x2, ax=ax, use_vlines=False)
 
@@ -232,7 +232,7 @@ def test_plot_accf_grid(close_figures):
         armaprocess.generate_sample(100, distrvs=rs.standard_normal),
     ]).T
     plot_accf_grid(x)
-    plot_accf_grid(pd.DataFrame({'x': x[:, 0], 'y': x[:, 1]}))
+    plot_accf_grid(pd.DataFrame({"x": x[:, 0], "y": x[:, 1]}))
     plot_accf_grid(x, fig=fig, lags=10)
     plot_accf_grid(x, fig=fig)
     plot_accf_grid(x, fig=fig, negative_lags=False)
@@ -290,7 +290,7 @@ def test_plot_month(close_figures):
                 "Nov",
                 "Dez",
             ]
-            for lbl, exp in zip(labels, expected):
+            for lbl, exp in zip(labels, expected, strict=False):
                 if isinstance(exp, tuple):
                     assert lbl in exp
                 else:
@@ -305,7 +305,7 @@ def test_plot_quarter(close_figures):
     dates = lmap(
         "-Q".join,
         zip(
-            dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str)
+            dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str), strict=False
         ),
     )
     # test dates argument

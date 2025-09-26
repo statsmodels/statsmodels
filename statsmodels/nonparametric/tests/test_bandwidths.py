@@ -39,7 +39,7 @@ class TestBandwidthCalculation:
         kern = kernels.Gaussian()
 
         bw_calc = [0, 0, 0]
-        for ii, bw in enumerate(['scott', 'silverman', 'normal_reference']):
+        for ii, bw in enumerate(["scott", "silverman", "normal_reference"]):
             bw_calc[ii] = select_bandwidth(Xi, bw, kern)
 
         assert_allclose(bw_expected, bw_calc)
@@ -88,7 +88,7 @@ class BandwidthZero:
     def test_bandwidth_zero(self):
 
         kern = kernels.Gaussian()
-        for bw in ['scott', 'silverman', 'normal_reference']:
+        for bw in ["scott", "silverman", "normal_reference"]:
             with pytest.raises(RuntimeError,
                                match="Selected KDE bandwidth is 0"):
                 select_bandwidth(self.xx, bw, kern)

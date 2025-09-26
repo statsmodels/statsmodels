@@ -409,11 +409,10 @@ def getstartparams(dist, data):
     if hasattr(dist, "fitstart"):
         # x0 = getattr(dist, 'fitstart')(data)
         x0 = dist.fitstart(data)
+    elif np.isfinite(dist.a):
+        x0 = np.r_[[1.0] * dist.numargs, (data.min() - 1), 1.0]
     else:
-        if np.isfinite(dist.a):
-            x0 = np.r_[[1.0] * dist.numargs, (data.min() - 1), 1.0]
-        else:
-            x0 = np.r_[[1.0] * dist.numargs, (data.mean() - 1), 1.0]
+        x0 = np.r_[[1.0] * dist.numargs, (data.mean() - 1), 1.0]
     return x0
 
 

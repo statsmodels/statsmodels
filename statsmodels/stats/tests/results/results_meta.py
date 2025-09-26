@@ -53,7 +53,7 @@ exk1_metafor.vi = np.array([
     ])
 exk1_metafor.X = np.array([
     1, 1, 1, 1, 1, 1, 1, 1, 1
-    ]).reshape(9, 1, order='F')
+    ]).reshape(9, 1, order="F")
 
 exk1_metafor.yi_f = np.array([
     61, 61.4, 62.21, 62.3, 62.34, 62.6, 62.7, 62.84, 65.9
@@ -63,7 +63,7 @@ exk1_metafor.vi_f = np.array([
     ])
 exk1_metafor.X_f = np.array([
     1, 1, 1, 1, 1, 1, 1, 1, 1
-    ]).reshape(9, 1, order='F')
+    ]).reshape(9, 1, order="F")
 
 exk1_metafor.M = np.array([
     0.907895309224248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.91539530922425, 0, 0, 0, 0,
@@ -72,7 +72,7 @@ exk1_metafor.M = np.array([
     0, 0, 0, 0, 0, 0, 1.26789530922425, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0.772995309224248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.727895309224248, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 2.52789530922425
-    ]).reshape(9, 9, order='F')
+    ]).reshape(9, 9, order="F")
 
 exk1_metafor.ids = np.array([
     1, 2, 3, 4, 5, 6, 7, 8, 9
@@ -80,9 +80,9 @@ exk1_metafor.ids = np.array([
 exk1_metafor.slab = np.array([
     1, 2, 3, 4, 5, 6, 7, 8, 9
     ])
-exk1_metafor.measure = 'GEN'
-exk1_metafor.method = 'PM'
-exk1_metafor.test = 'z'
+exk1_metafor.measure = "GEN"
+exk1_metafor.method = "PM"
+exk1_metafor.test = "z"
 exk1_metafor.s2w = 1
 exk1_metafor.btt = 1
 exk1_metafor.digits = np.array([
@@ -90,14 +90,14 @@ exk1_metafor.digits = np.array([
     ])
 exk1_metafor.level = 0.05
 exk1_metafor.add = 0.5
-exk1_metafor.to = 'only0'
+exk1_metafor.to = "only0"
 exk1_metafor.fit_stats = np.array([
     -12.722152033808, 21.73438033144, 29.4443040676159, 29.8387532222884,
     31.4443040676159, -11.7892200590463, 23.5784401180925, 27.5784401180925,
     27.7373232014522, 29.9784401180925
-    ]).reshape(5, 2, order='F')
+    ]).reshape(5, 2, order="F")
 
-exk1_metafor.model = 'rma.uni'
+exk1_metafor.model = "rma.uni"
 
 
 # > res = rma(y, v, data=dat, method="DL", control=list(tol=1e-9))
@@ -335,7 +335,7 @@ results_or_dl_hk.event_c = np.array([
 results_or_dl_hk.n_c = np.array([
     22, 35, 68, 20, 32, 94, 50, 55, 25, 35, 208, 141, 32, 15, 18, 19, 75
     ])
-results_or_dl_hk.method = 'Inverse'
+results_or_dl_hk.method = "Inverse"
 results_or_dl_hk.incr = 0.5
 results_or_dl_hk.Q_CMH = 24.9044036917599
 results_or_dl_hk.df_Q_CMH = 1
@@ -434,9 +434,9 @@ results_or_dl_hk.upper_tau2 = 0.45893520964914
 results_or_dl_hk.tau = 0.0409682583383086
 results_or_dl_hk.lower_tau = 0
 results_or_dl_hk.upper_tau = 0.677447569668045
-results_or_dl_hk.method_tau_ci = 'J'
-results_or_dl_hk.sign_lower_tau = ''
-results_or_dl_hk.sign_upper_tau = ''
+results_or_dl_hk.method_tau_ci = "J"
+results_or_dl_hk.sign_lower_tau = ""
+results_or_dl_hk.sign_upper_tau = ""
 results_or_dl_hk.H = 1.00565197331206
 results_or_dl_hk.lower_H = 1
 results_or_dl_hk.upper_H = 1.43793739981697
@@ -447,24 +447,24 @@ results_or_dl_hk.Rb = 0.0117679262339789
 results_or_dl_hk.lower_Rb = 0
 results_or_dl_hk.upper_Rb = 0.725656377301252
 results_or_dl_hk.approx_TE = np.array([
- '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+ "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
     ])
 results_or_dl_hk.approx_seTE = np.array([
- '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+ "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
     ])
-results_or_dl_hk.sm = 'OR'
+results_or_dl_hk.sm = "OR"
 results_or_dl_hk.level = 0.95
 results_or_dl_hk.level_comb = 0.95
 results_or_dl_hk.df_hakn = 16
-results_or_dl_hk.method_tau = 'DL'
-results_or_dl_hk.method_bias = 'score'
-results_or_dl_hk.title = ''
-results_or_dl_hk.complab = ''
-results_or_dl_hk.outclab = ''
-results_or_dl_hk.label_e = 'Experimental'
-results_or_dl_hk.label_c = 'Control'
-results_or_dl_hk.label_left = ''
-results_or_dl_hk.label_right = ''
+results_or_dl_hk.method_tau = "DL"
+results_or_dl_hk.method_bias = "score"
+results_or_dl_hk.title = ""
+results_or_dl_hk.complab = ""
+results_or_dl_hk.outclab = ""
+results_or_dl_hk.label_e = "Experimental"
+results_or_dl_hk.label_c = "Control"
+results_or_dl_hk.label_left = ""
+results_or_dl_hk.label_right = ""
 results_or_dl_hk.data = np.array([
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 34, 72, 22,
     70, 183, 26, 61, 36, 45, 246, 386, 59, 45, 14, 26, 74, 22, 35, 68, 20, 32,
@@ -482,10 +482,10 @@ results_or_dl_hk.data = np.array([
     208, 141, 32, 15, 18, 19, 75, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
     14, 15, 16, 17, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
     0.5, 0.5, 0.5, 0.5, 0.5, 0.5
-    ]).reshape(17, 17, order='F')
+    ]).reshape(17, 17, order="F")
 
-results_or_dl_hk.byseparator = ' = '
+results_or_dl_hk.byseparator = " = "
 results_or_dl_hk.pscale = 1
 results_or_dl_hk.irscale = 1
-results_or_dl_hk.irunit = 'person-years'
-results_or_dl_hk.version = '4.11-0'
+results_or_dl_hk.irunit = "person-years"
+results_or_dl_hk.version = "4.11-0"

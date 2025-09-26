@@ -178,13 +178,13 @@ def gendat_nominal():
     return ns, va, Multinomial(3), (lhs, rhs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     nrep = 100
 
     OUT = open("gee_categorical_simulation_check.txt", "w", encoding="utf-8")
 
-    np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
                         suppress=True)
 
     # Loop over data generating models

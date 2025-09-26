@@ -74,7 +74,7 @@ df = DataFrame.from_records(mdata)
 quarter_end = frequencies.BQuarterEnd()
 df.index = [
     quarter_end.rollforward(datetime(int(y), int(q) * 3, 1))
-    for y, q in zip(df.pop("year"), df.pop("quarter"))
+    for y, q in zip(df.pop("year"), df.pop("quarter"), strict=False)
 ]
 logged = np.log(df.loc[:, ["m1", "realgdp", "cpi"]])
 logged.plot(subplots=True)

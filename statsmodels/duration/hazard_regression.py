@@ -216,7 +216,7 @@ class PHSurvivalTime:
             # uft_map = {x:i for i,x in enumerate(uft)} # requires >=2.7
             uft_map = {x: i for i, x in enumerate(uft)}  # 2.6
             uft_ix = [[] for k in range(nuft)]
-            for ix, ti in zip(ift, ft):
+            for ix, ti in zip(ift, ft, strict=False):
                 uft_ix[uft_map[ti]].append(ix)
 
             # Indices of cases (failed or censored) that enter the

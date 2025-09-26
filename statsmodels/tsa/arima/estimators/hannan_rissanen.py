@@ -120,7 +120,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     )
 
     # Compute lagged endog
-    lagged_endog = lagmat(endog, max_ar_order, trim='both')
+    lagged_endog = lagmat(endog, max_ar_order, trim="both")
 
     # If no AR or MA components, this is just a variance computation
     mod = None
@@ -160,13 +160,13 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     else:
         # Step 1: Compute long AR model via Yule-Walker, get residuals
         initial_ar_params, _ = yule_walker(
-            endog, order=initial_ar_order, method='mle')
-        X = lagmat(endog, initial_ar_order, trim='both')
+            endog, order=initial_ar_order, method="mle")
+        X = lagmat(endog, initial_ar_order, trim="both")
         y = endog[initial_ar_order:]
         resid = y - X.dot(initial_ar_params)
 
         # Get lagged residuals for `exog` in least-squares regression
-        lagged_resid = lagmat(resid, max_ma_order, trim='both')
+        lagged_resid = lagmat(resid, max_ma_order, trim="both")
 
         # Step 2: estimate ARMA model via least squares
         ix = initial_ar_order + max_ma_order - max_ar_order
@@ -261,8 +261,8 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
             V = lfilter([1], ar_coef, Z)
             W = lfilter(np.r_[1, -ma_coef[1:]], [1], Z)
 
-            lagged_V = lagmat(V, max_ar_order, trim='both')
-            lagged_W = lagmat(W, max_ma_order, trim='both')
+            lagged_V = lagmat(V, max_ar_order, trim="both")
+            lagged_W = lagmat(W, max_ma_order, trim="both")
 
             exog = np.c_[
                 lagged_V[
@@ -293,9 +293,9 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
 
     # Construct results
     other_results = Bunch({
-        'spec': spec,
-        'initial_ar_order': initial_ar_order,
-        'resid': resid
+        "spec": spec,
+        "initial_ar_order": initial_ar_order,
+        "resid": resid
     })
     return p, other_results
 
@@ -421,7 +421,7 @@ def _stitch_fixed_and_free_params(fixed_ar_or_ma_lags, fixed_ar_or_ma_params,
     all_params = np.r_[fixed_ar_or_ma_params, free_ar_or_ma_params]
     assert set(all_lags) == set(spec_ar_or_ma_lags)
 
-    lag_to_param_map = dict(zip(all_lags, all_params))
+    lag_to_param_map = dict(zip(all_lags, all_params, strict=False))
 
     # Sort params by the order of their corresponding lags in
     # spec_ar_or_ma_lags (e.g. SARIMAXSpecification.ar_lags or

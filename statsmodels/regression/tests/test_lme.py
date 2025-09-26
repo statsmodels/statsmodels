@@ -171,7 +171,7 @@ class TestMixedLM:
             # See GH#5628; because this test fails unpredictably but only on
             #  OSX, we only xfail it there.
             if PLATFORM_OSX:
-                pytest.xfail("fails on OSX due to unresolved " "numerical differences")
+                pytest.xfail("fails on OSX due to unresolved numerical differences")
             else:
                 raise
 

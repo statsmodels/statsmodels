@@ -701,7 +701,7 @@ class TestDiagnosticG:
         )  # Brownian Bridge
 
         k_vars = 3
-        cs_ols = smsdia.breaks_cusumolsresid(self.res.resid, ddof=k_vars)  #
+        cs_ols = smsdia.breaks_cusumolsresid(self.res.resid, ddof=k_vars)
         compare_to_reference(cs_ols, cusum_ols, decimal=(12, 12))
 
     def test_breaks_hansen(self):

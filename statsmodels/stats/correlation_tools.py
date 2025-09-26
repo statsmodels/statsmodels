@@ -10,7 +10,7 @@ import warnings
 
 import numpy as np
 from scipy.optimize import fminbound
-import scipy.sparse as sparse
+from scipy import sparse
 from scipy.sparse.linalg import svds
 
 from statsmodels.tools.sm_exceptions import (
@@ -300,7 +300,7 @@ def _nmono_linesearch(
 
         a1 = -0.5 * alpha**2 * gtd / (obval - last_obval - alpha * gtd)
 
-        if (sig1 <= a1) and (a1 <= sig2 * alpha):
+        if (sig1 <= a1 <= sig2 * alpha):
             alpha = a1
         else:
             alpha /= 2.0
@@ -383,12 +383,7 @@ def _spg_optim(
         df -= params
         if np.max(np.abs(df)) < ctol:
             return Bunch(
-                **{
-                    "Converged": True,
-                    "params": params,
-                    "objective_values": obj_hist,
-                    "Message": "Converged successfully",
-                }
+                Converged=True, params=params, objective_values=obj_hist, Message="Converged successfully"
             )
 
         # The line search direction
@@ -412,12 +407,7 @@ def _spg_optim(
 
         if alpha is None:
             return Bunch(
-                **{
-                    "Converged": False,
-                    "params": params,
-                    "objective_values": obj_hist,
-                    "Message": "Failed in nmono_linesearch",
-                }
+                Converged=False, params=params, objective_values=obj_hist, Message="Failed in nmono_linesearch"
             )
 
         obj_hist.append(fval)
@@ -435,12 +425,7 @@ def _spg_optim(
         gval = gval1
 
     return Bunch(
-        **{
-            "Converged": False,
-            "params": params,
-            "objective_values": obj_hist,
-            "Message": "spg_optim did not converge",
-        }
+        Converged=False, params=params, objective_values=obj_hist, Message="spg_optim did not converge"
     )
 
 
@@ -1038,8 +1023,8 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
         if g not in ix:
             ix[g] = []
         ix[g].append(i)
-    for g in ix.keys():
-        ix[g] = np.sort(ix[g])
+    for g, group_lbls in ix.items():
+        ix[g] = np.sort(group_lbls)
 
     if kernel is None:
         kernel = GaussianMultivariateKernel()
@@ -1074,7 +1059,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
         if cw < 1e-10:
             msg = (
                 "Effective sample size is 0.  The bandwidth may be too "
-                + "small, or you are outside the range of your data."
+                "small, or you are outside the range of your data."
             )
             warnings.warn(msg, SpecificationWarning, stacklevel=2)
             return np.nan * np.ones_like(cm)

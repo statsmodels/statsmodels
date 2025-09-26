@@ -30,7 +30,7 @@ methods = ["wald", "score", "exact-c", "waldccv", "sqrt-a", "sqrt-v", "midp-c",
            ]
 
 
-@pytest.mark.parametrize('method', methods)
+@pytest.mark.parametrize("method", methods)
 def test_rate_poisson_consistency(method):
     # check consistency between test and confint for one poisson rate
     count, nobs = 15, 400
@@ -114,7 +114,7 @@ cases_tolint = [
     ]
 
 
-@pytest.mark.parametrize('case', cases_tolint)
+@pytest.mark.parametrize("case", cases_tolint)
 def test_tol_int(case):
     # results values are from R package `tolerance, e.g.
     # poistol.int(15, 1, m = 1, alpha = 0.05, P = 0.975, side = 1, method="LS")
@@ -179,15 +179,15 @@ def test_tol_int(case):
 class TestMethodsCompar1samp():
     # check that all methods for test and confint produce similar results
 
-    @pytest.mark.parametrize('meth', method_names_poisson_1samp["test"])
+    @pytest.mark.parametrize("meth", method_names_poisson_1samp["test"])
     def test_test(self, meth):
         count1, n1 = 60, 514.775
         tst = smr.test_poisson(count1, n1, method=meth, value=0.1,
-                               alternative='two-sided')
+                               alternative="two-sided")
 
         assert_allclose(tst.pvalue, 0.25, rtol=0.1)
 
-    @pytest.mark.parametrize('meth', method_names_poisson_1samp["confint"])
+    @pytest.mark.parametrize("meth", method_names_poisson_1samp["confint"])
     def test_confint(self, meth):
         count1, n1 = 60, 514.775
         ci = confint_poisson(count1, n1, method=meth, alpha=0.05)
@@ -201,7 +201,7 @@ methods_diff = ["wald", "score", "waldccv",
                 ]
 
 
-@pytest.mark.parametrize('method', methods_diff)
+@pytest.mark.parametrize("method", methods_diff)
 def test_rate_poisson_diff_consistency(method):
     # check consistency between test and confint for diff of poisson rates
     count1, n1, count2, n2 = 30, 400 / 10, 7, 300 / 10   # avoid low=0
@@ -237,7 +237,7 @@ methods_ratio = ["wald-log", "score-log",  # "waldccv",
                  ]
 
 
-@pytest.mark.parametrize('method', methods_ratio)
+@pytest.mark.parametrize("method", methods_ratio)
 def test_rate_poisson_ratio_consistency(method):
     compare = "ratio"
     # check consistency between test and confint for ratio of poisson rates
@@ -274,7 +274,7 @@ methods_diff_ratio = ["wald", "score", "etest", "etest-wald",
                       ]
 
 
-@pytest.mark.parametrize('method', methods_diff_ratio)
+@pytest.mark.parametrize("method", methods_diff_ratio)
 def test_rate_poisson_diff_ratio_consistency(method):
     # check consistency between test for rate and diff for equality null
     count1, n1, count2, n2 = 30, 400 / 10, 7, 300 / 10   # avoid low=0
@@ -310,29 +310,29 @@ def test_twosample_poisson():
     # example 1
     count1, n1, count2, n2 = 60, 51477.5, 30, 54308.7
 
-    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method='wald')
+    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald")
     pv1r = 0.000356
     assert_allclose(pv1, pv1r*2, rtol=0, atol=5e-6)
     assert_allclose(s1, 3.384913, atol=0, rtol=5e-6)  # regression test
 
-    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method='score')
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score")
     pv2r = 0.000316
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.417402, atol=0, rtol=5e-6)  # regression test
 
     s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
-                                      method='wald-log')
+                                      method="wald-log")
     pv2r = 0.000420
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.3393, atol=0, rtol=5e-6)
 
     s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
-                                      method='score-log')
+                                      method="score-log")
     pv2r = 0.000200
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.5406, atol=0, rtol=5e-5)
 
-    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method='sqrt')
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt")
     pv2r = 0.000285
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.445485, atol=0, rtol=5e-6)  # regression test
@@ -341,32 +341,32 @@ def test_twosample_poisson():
     # example2
     # I don't know why it's only 2.5 decimal agreement, rounding?
     count1, n1, count2, n2 = 41, 28010, 15, 19017
-    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method='wald',
+    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald",
                                       value=1.5)
     pv1r = 0.2309
     assert_allclose(pv1, pv1r*2, rtol=0, atol=5e-4)
     assert_allclose(s1, 0.735447, atol=0, rtol=5e-6)  # regression test
 
-    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method='score',
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score",
                                       value=1.5)
     pv2r = 0.2398
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.706631, atol=0, rtol=5e-6)  # regression test
 
     s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
-                                      method='wald-log', value=1.5)
+                                      method="wald-log", value=1.5)
     pv2r = 0.2402
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.7056, atol=0, rtol=5e-4)
 
     with pytest.warns(FutureWarning):
         s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
-                                          method='score-log', ratio_null=1.5)
+                                          method="score-log", ratio_null=1.5)
     pv2r = 0.2303
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.7380, atol=0, rtol=5e-4)
 
-    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method='sqrt',
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt",
                                       value=1.5)
     pv2r = 0.2499
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-3)
@@ -376,88 +376,88 @@ def test_twosample_poisson():
     # example 1 onesided
     count1, n1, count2, n2 = 60, 51477.5, 30, 54308.7
 
-    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method='wald',
-                                      alternative='larger')
+    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald",
+                                      alternative="larger")
     pv1r = 0.000356
     assert_allclose(pv1, pv1r, rtol=0, atol=5e-6)
 
-    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method='score',
-                                      alternative='larger')
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score",
+                                      alternative="larger")
     pv2r = 0.000316
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-6)
 
-    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method='sqrt',
-                                      alternative='larger')
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt",
+                                      alternative="larger")
     pv2r = 0.000285
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-6)
 
     # 'exact-cond', 'cond-midp'
 
     s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
-                                      method='exact-cond',
-                                      value=1, alternative='larger')
+                                      method="exact-cond",
+                                      value=1, alternative="larger")
     pv2r = 0.000428  # typo in Gu et al, switched pvalues between C and M
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
     s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
-                                      method='cond-midp',
-                                      value=1, alternative='larger')
+                                      method="cond-midp",
+                                      value=1, alternative="larger")
     pv2r = 0.000310
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
     _, pve1 = etest_poisson_2indep(count1, n1, count2, n2,
-                                   method='score',
-                                   alternative='larger')
+                                   method="score",
+                                   alternative="larger")
     pve1r = 0.000298
     assert_allclose(pve1, pve1r, rtol=0, atol=5e-4)
 
     _, pve1 = etest_poisson_2indep(count1, n1, count2, n2,
-                                   method='wald',
-                                   alternative='larger')
+                                   method="wald",
+                                   alternative="larger")
     pve1r = 0.000298
     assert_allclose(pve1, pve1r, rtol=0, atol=5e-4)
 
     # example2 onesided
     # I don't know why it's only 2.5 decimal agreement, rounding?
     count1, n1, count2, n2 = 41, 28010, 15, 19017
-    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method='wald',
-                                      value=1.5, alternative='larger')
+    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald",
+                                      value=1.5, alternative="larger")
     pv1r = 0.2309
     assert_allclose(pv1, pv1r, rtol=0, atol=5e-4)
 
-    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method='score',
-                                      value=1.5, alternative='larger')
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score",
+                                      value=1.5, alternative="larger")
     pv2r = 0.2398
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
-    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method='sqrt',
-                                      value=1.5, alternative='larger')
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt",
+                                      value=1.5, alternative="larger")
     pv2r = 0.2499
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
     # 'exact-cond', 'cond-midp'
 
     s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
-                                      method='exact-cond',
-                                      value=1.5, alternative='larger')
+                                      method="exact-cond",
+                                      value=1.5, alternative="larger")
     pv2r = 0.2913
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
     s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
-                                      method='cond-midp',
-                                      value=1.5, alternative='larger')
+                                      method="cond-midp",
+                                      value=1.5, alternative="larger")
     pv2r = 0.2450
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
     _, pve2 = etest_poisson_2indep(count1, n1, count2, n2,
-                                   method='score',
-                                   value=1.5, alternative='larger')
+                                   method="score",
+                                   value=1.5, alternative="larger")
     pve2r = 0.2453
     assert_allclose(pve2, pve2r, rtol=0, atol=5e-4)
 
     _, pve2 = etest_poisson_2indep(count1, n1, count2, n2,
-                                   method='wald',
-                                   value=1.5, alternative='larger')
+                                   method="wald",
+                                   value=1.5, alternative="larger")
     pve2r = 0.2453
     assert_allclose(pve2, pve2r, rtol=0, atol=5e-4)
 
@@ -471,7 +471,7 @@ cases_diff_ng = [
     ]
 
 
-@pytest.mark.parametrize('case', cases_diff_ng)
+@pytest.mark.parametrize("case", cases_diff_ng)
 def test_twosample_poisson_diff(case):
     # testing against two examples Ng et al 2007
     # methods_diff = ["wald", "score", "etest-wald", "etest"]
@@ -482,15 +482,15 @@ def test_twosample_poisson_diff(case):
     value = 0
     t = smr.test_poisson_2indep(count1, exposure1, count2, exposure2,
                                 value=value,
-                                method=meth, compare='diff',
-                                alternative='larger', etest_kwds=None)
+                                method=meth, compare="diff",
+                                alternative="larger", etest_kwds=None)
     assert_allclose((t.statistic, t.pvalue), res1, atol=0.0006)
 
     value = 0.0002
     t = smr.test_poisson_2indep(count1, exposure1, count2, exposure2,
                                 value=value,
-                                method=meth, compare='diff',
-                                alternative='larger', etest_kwds=None)
+                                method=meth, compare="diff",
+                                alternative="larger", etest_kwds=None)
     assert_allclose((t.statistic, t.pvalue), res2, atol=0.0007)
 
 
@@ -502,13 +502,13 @@ def test_twosample_poisson_r():
     count1, n1, count2, n2 = 60, 51477.5, 30, 54308.7
 
     res2 = res_pexact_cond
-    res1 = smr.test_poisson_2indep(count1, n1, count2, n2, method='exact-cond')
+    res1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="exact-cond")
     assert_allclose(res1.pvalue, res2.p_value, rtol=1e-13)
     assert_allclose(res1.ratio, res2.estimate, rtol=1e-13)
     assert_equal(res1.ratio_null, res2.null_value)
 
     res2 = res_pexact_cond_midp
-    res1 = smr.test_poisson_2indep(count1, n1, count2, n2, method='cond-midp')
+    res1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="cond-midp")
     assert_allclose(res1.pvalue, res2.p_value, rtol=0, atol=5e-6)
     assert_allclose(res1.ratio, res2.estimate, rtol=1e-13)
     assert_equal(res1.ratio_null, res2.null_value)
@@ -518,29 +518,29 @@ def test_twosample_poisson_r():
     #                      alternative="less", tsmethod="minlike", midp=TRUE)
     # > pe$p.value
     pv2 = 0.9949053964701466
-    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method='cond-midp',
-                                   value=1.2, alternative='smaller')
+    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method="cond-midp",
+                                   value=1.2, alternative="smaller")
     assert_allclose(rest.pvalue, pv2, rtol=1e-12)
     # > pe = poisson.exact(c(60, 30), c(51477.5, 54308.7), r=1.2,
     #           alternative="greater", tsmethod="minlike", midp=TRUE)
     # > pe$p.value
     pv2 = 0.005094603529853279
-    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method='cond-midp',
-                                   value=1.2, alternative='larger')
+    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method="cond-midp",
+                                   value=1.2, alternative="larger")
     assert_allclose(rest.pvalue, pv2, rtol=1e-12)
     # > pe = poisson.exact(c(60, 30), c(51477.5, 54308.7), r=1.2,
     #           alternative="greater", tsmethod="minlike", midp=FALSE)
     # > pe$p.value
     pv2 = 0.006651774552714537
-    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method='exact-cond',
-                                   value=1.2, alternative='larger')
+    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method="exact-cond",
+                                   value=1.2, alternative="larger")
     assert_allclose(rest.pvalue, pv2, rtol=1e-12)
     # > pe = poisson.exact(c(60, 30), c(51477.5, 54308.7), r=1.2,
     #                      alternative="less", tsmethod="minlike", midp=FALSE)
     # > pe$p.value
     pv2 = 0.9964625674930079
-    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method='exact-cond',
-                                   value=1.2, alternative='smaller')
+    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method="exact-cond",
+                                   value=1.2, alternative="smaller")
     assert_allclose(rest.pvalue, pv2, rtol=1e-12)
 
 
@@ -550,7 +550,7 @@ def test_confint_poisson_2indep():
     count1, exposure1, count2, exposure2 = 60, 51477.5, 30, 54308.7
 
     ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
-                                method='mover', compare='ratio', alpha=0.1,
+                                method="mover", compare="ratio", alpha=0.1,
                                 method_mover="jeff",
                                 )
     ci1 = (1.4667, 3.0608)  # LTW 2014
@@ -564,20 +564,20 @@ def test_confint_poisson_2indep():
     assert_allclose(ci, ci1, rtol=0.001)
 
     ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
-                                method='mover', compare='ratio', alpha=0.1,
+                                method="mover", compare="ratio", alpha=0.1,
                                 method_mover="score",
                                 )
     ci1 = (1.4611, 3.0424)  # LTW 2014
     assert_allclose(ci, ci1, atol=0.05)
 
     ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
-                                method='waldcc', compare='ratio', alpha=0.1,
+                                method="waldcc", compare="ratio", alpha=0.1,
                                 )
     ci1 = (1.4523, 3.0154)  # LTW 2014
     assert_allclose(ci, ci1, atol=0.0005)
 
     ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
-                                method='score', compare='ratio', alpha=0.05,
+                                method="score", compare="ratio", alpha=0.05,
                                 )
     ci1 = (1.365962, 3.259306)
     assert_allclose(ci, ci1, atol=5e-6)
@@ -587,7 +587,7 @@ def test_confint_poisson_2indep():
     exposure1 /= 1000
     exposure2 /= 1000
     ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
-                                method='mover', compare='diff', alpha=0.05,
+                                method="mover", compare="diff", alpha=0.05,
                                 method_mover="jeff",
                                 )
     # moverci(60, 51477.5/1000, 30, 54308.7/1000, type = "jeff", distrib="poi",
@@ -595,7 +595,7 @@ def test_confint_poisson_2indep():
     ci1 = (0.2629322, 0.9786493)
     assert_allclose(ci, ci1, atol=0.005)
     ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
-                                method='score', compare='diff', alpha=0.05,
+                                method="score", compare="diff", alpha=0.05,
                                 )
     # scoreci(60, 51477.5/1000, 30, 54308.7/1000, distrib="poi", contrast="RD",
     # skew=FALSE, cc=0, level=0.95)
@@ -604,7 +604,7 @@ def test_confint_poisson_2indep():
 
     # example in Li et al 2011, scaled
     ci = confint_poisson_2indep(count2, exposure2, count1, exposure1,
-                                method='mover', compare='diff', alpha=0.1,
+                                method="mover", compare="diff", alpha=0.1,
                                 method_mover="jeff",
                                 )
     # moverci(30, 54308.7/1000, 60, 51477.5/1000, type = "jeff", distrib="poi",
@@ -615,7 +615,7 @@ def test_confint_poisson_2indep():
     assert_allclose(ci, ci1, atol=0.005)
 
     ci = confint_poisson_2indep(count2, exposure2, count1, exposure1,
-                                method='mover', compare='diff', alpha=0.1,
+                                method="mover", compare="diff", alpha=0.1,
                                 method_mover="jeff",
                                 )
     # scoreci(30, 54308.7/1000, 60, 51477.5/1000, distrib="poi", contrast="RD",
@@ -634,7 +634,7 @@ def test_tost_poisson():
                                   method="exact-cond")
 
     assert_allclose(res.pvalue, 0.025, rtol=1e-12)
-    methods = ['wald', 'score', 'sqrt', 'exact-cond', 'cond-midp']
+    methods = ["wald", "score", "sqrt", "exact-cond", "cond-midp"]
 
     # test that we are in the correct range for other methods
     for meth in methods:
@@ -670,7 +670,7 @@ cases_alt = {
     }
 
 
-@pytest.mark.parametrize('case', list(cases_alt.keys()))
+@pytest.mark.parametrize("case", list(cases_alt.keys()))
 def test_alternative(case):
     # regression test numbers, but those are close to each other
     alt, meth = case
@@ -694,7 +694,7 @@ class TestMethodsCompare2indep():
         count1, n1, count2, n2 = 60, 514.775, 40, 543.0870000
         tst = smr.test_poisson_2indep(count1, n1, count2, n2, method=meth,
                                       compare=compare,
-                                      value=None, alternative='two-sided')
+                                      value=None, alternative="two-sided")
 
         assert_allclose(tst.pvalue, 0.0245, rtol=0.2)
 
@@ -722,7 +722,7 @@ class TestMethodsCompare2indep():
                 smr.test_poisson_2indep(
                     count1, n1, 0, n2, method=meth,
                     compare=compare,
-                    value=None, alternative='two-sided'
+                    value=None, alternative="two-sided"
                 )
 
     @pytest.mark.parametrize(
@@ -781,7 +781,7 @@ class TestMethodsCompare2indep():
             # not all methods are vectorized for smr.test_poisson_2indep
             tst = smr.test_poisson_2indep(count1, n1, count2, n2, method=meth,
                                           compare=compare,
-                                          value=None, alternative='two-sided')
+                                          value=None, alternative="two-sided")
 
             assert_allclose(tst2.pvalue, tst.pvalue, rtol=1e-12)
 
@@ -976,7 +976,7 @@ def test_power_poisson_equal():
 
     pow_ = power_poisson_diff_2indep(
         rate1, rate2, nobs1, nobs_ratio=nobs_ratio, alpha=0.05, value=0,
-        method_var="alt", alternative='larger', return_results=True)
+        method_var="alt", alternative="larger", return_results=True)
     assert_allclose(pow_.power, 0.82566, atol=5e-5)
 
     # This supports now nonzero value
@@ -1152,22 +1152,22 @@ def test_power_negbin():
     assert_allclose(pow_p, pow_, rtol=1e-13)
 
 
-@pytest.mark.parametrize('count',    [0, 1, 10, 100])
-@pytest.mark.parametrize('exposure', [1, 10, 100, 1000])
-@pytest.mark.parametrize('alpha',    [0.01, 0.05, 0.1])
-@pytest.mark.parametrize('method',
-                         method_names_poisson_1samp['confint'])
-@pytest.mark.parametrize('alternative', ['larger', 'smaller'])
+@pytest.mark.parametrize("count",    [0, 1, 10, 100])
+@pytest.mark.parametrize("exposure", [1, 10, 100, 1000])
+@pytest.mark.parametrize("alpha",    [0.01, 0.05, 0.1])
+@pytest.mark.parametrize("method",
+                         method_names_poisson_1samp["confint"])
+@pytest.mark.parametrize("alternative", ["larger", "smaller"])
 def test_confint_poisson_alternative(count, exposure, method, alpha,
                                      alternative):
     # regression test
     two_sided_ci = confint_poisson(count, exposure, method=method,
-                                   alpha=alpha * 2, alternative='two-sided')
+                                   alpha=alpha * 2, alternative="two-sided")
     one_sided_ci = confint_poisson(count, exposure, method=method,
                                    alpha=alpha, alternative=alternative)
-    if alternative == 'larger':
+    if alternative == "larger":
         two_sided_ci = (0, two_sided_ci[1])
         assert_allclose(one_sided_ci, two_sided_ci, rtol=1e-12)
-    elif alternative == 'smaller':
+    elif alternative == "smaller":
         two_sided_ci = (two_sided_ci[0], np.inf)
         assert_allclose(one_sided_ci, two_sided_ci, rtol=1e-12)

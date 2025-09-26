@@ -10,7 +10,7 @@ import warnings
 import numpy as np
 
 from . import tools
-from ...tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 
 class Initialization:
@@ -288,8 +288,6 @@ class Initialization:
            Time Series Analysis by State Space Methods: Second Edition.
            Oxford University Press.
         """
-        k_states = k_states
-
         # Standardize the input
         a = tools._atleast_1d(a)
         Pstar, Pinf, A, R0, Q0 = tools._atleast_2d(Pstar, Pinf, A, R0, Q0)

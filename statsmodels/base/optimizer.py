@@ -7,11 +7,13 @@ from __future__ import annotations
 
 from statsmodels.compat.scipy import SP_LT_15, SP_LT_17, SP_LT_115
 
-from collections.abc import Sequence
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
 from scipy import optimize
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
@@ -230,7 +232,7 @@ class Optimizer:
         """
         # TODO: generalize the regularization stuff
         # Extract kwargs specific to fit_regularized calling fit
-        extra_fit_funcs = kwargs.get("extra_fit_funcs", dict())
+        extra_fit_funcs = kwargs.get("extra_fit_funcs", {})
 
         methods = [
             "newton",
@@ -536,7 +538,7 @@ def _fit_newton(
     if iterations == maxiter:
         warnflag = 1
         if disp:
-            print("Warning: Maximum number of iterations has been " "exceeded.")
+            print("Warning: Maximum number of iterations has been exceeded.")
             print("         Current function value: %f" % fval)
             print("         Iterations: %d" % iterations)
     else:

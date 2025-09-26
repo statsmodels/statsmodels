@@ -739,7 +739,7 @@ class TestHandleMissing:
 class CheckHasConstant:
 
     def test_hasconst(self):
-        for x, result in zip(self.exogs, self.results):
+        for x, result in zip(self.exogs, self.results, strict=False):
             mod = self.mod(self.y, x)
             assert_equal(mod.k_constant, result[0])
             assert_equal(mod.data.k_constant, result[0])

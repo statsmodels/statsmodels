@@ -758,7 +758,7 @@ class MultinomialModel(BinaryModel):
             yname = "y"
 
         if not isinstance(ynames, dict):
-            ynames = dict(zip(range(endog_dummies.shape[1]), ynames))
+            ynames = dict(zip(range(endog_dummies.shape[1]), ynames, strict=False))
 
         self._ynames_map = ynames
         data = handle_data(endog_dummies, exog, missing, hasconst, **kwargs)
@@ -4072,11 +4072,10 @@ class NegativeBinomial(CountModel):
                     res_poi.predict(), res_poi.resid, df_resid=res_poi.df_resid
                 )
                 start_params = np.append(start_params, max(0.05, a))
-        else:
-            if self._transparams is True:
-                # transform user provided start_params dispersion, see #3918
-                start_params = np.array(start_params, copy=True)
-                start_params[-1] = np.log(start_params[-1])
+        elif self._transparams is True:
+            # transform user provided start_params dispersion, see #3918
+            start_params = np.array(start_params, copy=True)
+            start_params[-1] = np.log(start_params[-1])
 
         if callback is None:
             # work around perfect separation callback #3895
@@ -4918,9 +4917,8 @@ class DiscreteResults(base.LikelihoodModelResults):
             if cov_type == "nonrobust":
                 self.cov_type = "nonrobust"
                 self.cov_kwds = {
-                    "description": "Standard Errors assume that the "
-                    + "covariance matrix of the errors is correctly "
-                    + "specified."
+                    "description": "Standard Errors assume that the covariance matrix "
+                                   "of the errors is correctly specified."
                 }
             else:
                 if cov_kwds is None:
@@ -5454,7 +5452,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         if hasattr(self, "constraints"):
             smry.add_extra_txt(
-                ["Model has been estimated subject to linear " "equality constraints."]
+                ["Model has been estimated subject to linear equality constraints."]
             )
 
         return smry
@@ -5504,7 +5502,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         if hasattr(self, "constraints"):
             smry.add_text(
-                "Model has been estimated subject to linear " "equality constraints."
+                "Model has been estimated subject to linear equality constraints."
             )
 
         return smry
@@ -5739,7 +5737,6 @@ class OrderedResults(DiscreteResults):
         "one_line_description": "A results class for ordered discrete data.",
         "extra_attr": "",
     }
-    pass
 
 
 class BinaryResults(DiscreteResults):
@@ -6004,7 +6001,7 @@ class MultinomialResults(DiscreteResults):
             ynames = self._maybe_convert_ynames_int(ynames)
             # use range below to ensure sortedness
             ynames = [ynames[key] for key in range(int(model.J))]
-            ynames = ["=".join([yname, name]) for name in ynames]
+            ynames = [f"{yname}={name}" for name in ynames]
             if not all:
                 yname_list = ynames[1:]  # assumes first variable is dropped
             else:

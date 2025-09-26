@@ -248,10 +248,9 @@ class _IPWGMM(_TEGMMGeneric1):
             probt = prob
         elif effect_group in [0, "untreated", "control"]:
             probt = 1 - prob
-        elif isinstance(effect_group, np.ndarray):
-            probt = probt
-        else:
+        elif not isinstance(effect_group, np.ndarray):
             raise ValueError("incorrect option for effect_group")
+        # default else probt = probt
 
         w = tind / prob + (1 - tind) / (1 - prob)
         # Are we supposed to use scaled weights? doesn't cloesely match Stata
@@ -671,7 +670,7 @@ class TreatmentEffect:
         self.endog_grouped = np.concatenate((mod0.endog, mod1.endog), axis=0)
 
     @classmethod
-    def from_data(cls, endog, exog, treatment, model='ols', **kwds):
+    def from_data(cls, endog, exog, treatment, model="ols", **kwds):
         """create models from data
 
         not yet implemented
@@ -738,7 +737,7 @@ class TreatmentEffect:
                                        self.results_select.params))
         res_gmm = gmm.fit(start_params=start_params,
                           inv_weights=np.eye(len(start_params)),
-                          optim_method='nm',
+                          optim_method="nm",
                           optim_args={"maxiter": 5000, "disp": disp},
                           maxiter=1,
                           )
@@ -799,7 +798,7 @@ class TreatmentEffect:
             self.results1.params))
         res_gmm = mod_gmm.fit(start_params=start_params,
                               inv_weights=np.eye(len(start_params)),
-                              optim_method='nm',
+                              optim_method="nm",
                               optim_args={"maxiter": 5000, "disp": disp},
                               maxiter=1,
                               )
@@ -843,7 +842,7 @@ class TreatmentEffect:
         res_gmm = mag_aipw1.fit(
             start_params=start_params,
             inv_weights=np.eye(len(start_params)),
-            optim_method='nm',
+            optim_method="nm",
             optim_args={"maxiter": 5000, "disp": disp},
             maxiter=1)
 
@@ -878,13 +877,13 @@ class TreatmentEffect:
         ww1 = tind / prob * (tind / prob - 1)
         mod1 = WLS(endog[treat_mask], exog[treat_mask],
                    weights=ww1[treat_mask])
-        result1 = mod1.fit(cov_type='HC1')
+        result1 = mod1.fit(cov_type="HC1")
         mean1_ipw2 = result1.predict(exog).mean()
 
         ww0 = (1 - tind) / (1 - prob) * ((1 - tind) / (1 - prob) - 1)
         mod0 = WLS(endog[~treat_mask], exog[~treat_mask],
                    weights=ww0[~treat_mask])
-        result0 = mod0.fit(cov_type='HC1')
+        result0 = mod0.fit(cov_type="HC1")
         mean0_ipw2 = result0.predict(exog).mean()
 
         self.results_ipwwls0 = result0
@@ -912,7 +911,7 @@ class TreatmentEffect:
         res_gmm = mod_gmm.fit(
             start_params=start_params,
             inv_weights=np.eye(len(start_params)),
-            optim_method='nm',
+            optim_method="nm",
             optim_args={"maxiter": 5000, "disp": disp},
             maxiter=1)
         res = TreatmentEffectResults(self, res_gmm, "IPW",
@@ -958,13 +957,13 @@ class TreatmentEffect:
 
         mod0 = WLS(endog[~treat_mask], exog[~treat_mask],
                    weights=w0)
-        result0 = mod0.fit(cov_type='HC1')
+        result0 = mod0.fit(cov_type="HC1")
         # mean0_ipwra = (result0.predict(exog) * (prob / prob.mean())).mean()
         mean0_ipwra = result0.predict(exogt).mean()
 
         mod1 = WLS(endog[treat_mask], exog[treat_mask],
                    weights=w1)
-        result1 = mod1.fit(cov_type='HC1')
+        result1 = mod1.fit(cov_type="HC1")
         # mean1_ipwra = (result1.predict(exog) * (prob / prob.mean())).mean()
         mean1_ipwra = result1.predict(exogt).mean()
 
@@ -983,7 +982,7 @@ class TreatmentEffect:
         res_gmm = mod_gmm.fit(
             start_params=start_params,
             inv_weights=np.eye(len(start_params)),
-            optim_method='nm',
+            optim_method="nm",
             optim_args={"maxiter": 2000, "disp": disp},
             maxiter=1
             )

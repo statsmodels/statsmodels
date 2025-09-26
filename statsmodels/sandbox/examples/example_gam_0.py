@@ -37,7 +37,7 @@ lb, ub = -1.0, 1.0  # for Poisson
 x1 = R.uniform(lb, ub, nobs)  # R.standard_normal(nobs)
 x1 = np.linspace(lb, ub, nobs)
 x1.sort()
-x2 = R.uniform(lb, ub, nobs)  #
+x2 = R.uniform(lb, ub, nobs)
 # x2 = R.standard_normal(nobs)
 x2.sort()
 # x2 = np.cos(x2)
@@ -121,7 +121,7 @@ if example > 1:
     plt.title("gam.GAM " + mod_name)
 
     counter = 2
-    for ii, xx in zip(["z", "x1", "x2"], [z, x1, x2]):
+    for ii, xx in zip(["z", "x1", "x2"], [z, x1, x2], strict=False):
         sortidx = np.argsort(xx)
         # plt.figure()
         plt.subplot(2, 2, counter)

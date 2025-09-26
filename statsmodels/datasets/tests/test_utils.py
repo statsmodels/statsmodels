@@ -25,11 +25,11 @@ def test_get_rdataset():
                "Rdatasets/master/csv/datasets/cars.csv"
     internet_available = check_internet(test_url)
     if not internet_available:  # pragma: no cover
-        pytest.skip('Unable to retrieve file - skipping test')
+        pytest.skip("Unable to retrieve file - skipping test")
     try:
         duncan = get_rdataset("Duncan", "carData", cache=CUR_DIR)
     except IGNORED_EXCEPTIONS:
-        pytest.skip('Failed with HTTPError or URLError, these are random')
+        pytest.skip("Failed with HTTPError or URLError, these are random")
     assert_(isinstance(duncan, utils.Dataset))
     duncan = get_rdataset("Duncan", "carData", cache=CUR_DIR)
     assert_(duncan.from_cache)
@@ -41,7 +41,7 @@ def test_get_rdataset_write_read_cache():
     try:
         guerry = get_rdataset("Guerry", "HistData", cache=CUR_DIR)
     except IGNORED_EXCEPTIONS:
-        pytest.skip('Failed with HTTPError or URLError, these are random')
+        pytest.skip("Failed with HTTPError or URLError, these are random")
 
     assert_(guerry.from_cache is False)
     guerry2 = get_rdataset("Guerry", "HistData", cache=CUR_DIR)
@@ -62,11 +62,11 @@ def test_webuse():
               "statsmodels/datasets/macrodata/"
     internet_available = check_internet(base_gh)
     if not internet_available:  # pragma: no cover
-        pytest.skip('Unable to retrieve file - skipping test')
+        pytest.skip("Unable to retrieve file - skipping test")
     try:
-        res1 = webuse('macrodata', baseurl=base_gh, as_df=False)
+        res1 = webuse("macrodata", baseurl=base_gh, as_df=False)
     except IGNORED_EXCEPTIONS:
-        pytest.skip('Failed with HTTPError or URLError, these are random')
+        pytest.skip("Failed with HTTPError or URLError, these are random")
     assert_array_equal(res1, res2)
 
 
@@ -79,10 +79,10 @@ def test_webuse_pandas():
               "statsmodels/datasets/macrodata/"
     internet_available = check_internet(base_gh)
     if not internet_available:  # pragma: no cover
-        pytest.skip('Unable to retrieve file - skipping test')
+        pytest.skip("Unable to retrieve file - skipping test")
     try:
-        res1 = webuse('macrodata', baseurl=base_gh)
+        res1 = webuse("macrodata", baseurl=base_gh)
     except IGNORED_EXCEPTIONS:
-        pytest.skip('Failed with HTTP Error, these are random')
+        pytest.skip("Failed with HTTP Error, these are random")
     res1 = res1.astype(float)
     assert_frame_equal(res1, dta.astype(float))

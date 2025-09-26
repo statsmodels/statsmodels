@@ -269,7 +269,7 @@ def pdf_moments_st(cnt):
     N = len(cnt)
     if N < 2:
         raise ValueError(
-            "At least two moments must be given to " "approximate the pdf."
+            "At least two moments must be given to approximate the pdf."
         )
 
     totp = poly1d(1)
@@ -342,7 +342,7 @@ def pdf_mvsk(mvsk):
     """
     N = len(mvsk)
     if N < 4:
-        raise ValueError("Four moments must be given to " "approximate the pdf.")
+        raise ValueError("Four moments must be given to approximate the pdf.")
 
     mu, mc2, skew, kurt = mvsk
 
@@ -392,7 +392,7 @@ def pdf_moments(cnt):
     N = len(cnt)
     if N < 2:
         raise ValueError(
-            "At least two moments must be given to " "approximate the pdf."
+            "At least two moments must be given to approximate the pdf."
         )
 
     mc, mc2, mc3, mc4 = cnt
@@ -666,7 +666,6 @@ class ExpTransf_gen(distributions.rv_continuous):
         self.kls = kls
 
     def _cdf(self, x, *args):
-        pass
         # print args
         return self.kls.cdf(np.log(x), *args)
 

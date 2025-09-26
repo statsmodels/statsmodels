@@ -293,7 +293,6 @@ class LikelihoodModel(Model):
         initialized can be used to recompute values using the modified design
         matrix.
         """
-        pass
 
     # TODO: if the intent is to re-initialize the model with new data then this
     # method needs to take inputs...
@@ -546,7 +545,7 @@ class LikelihoodModel(Model):
                 start_params = [0.0] * self.exog.shape[1]
             else:
                 raise ValueError(
-                    "If exog is None, then start_params should " "be specified"
+                    "If exog is None, then start_params should be specified"
                 )
 
         # TODO: separate args from nonarg taking score and hessian, ie.,
@@ -626,7 +625,7 @@ class LikelihoodModel(Model):
                 Hinv = np.asfortranarray((Hinv + Hinv.T) / 2.0)
             else:
                 warnings.warn(
-                    "Inverting hessian failed, no bse or cov_params " "available",
+                    "Inverting hessian failed, no bse or cov_params available",
                     HessianInversionWarning,
                     stacklevel=2,
                 )
@@ -936,9 +935,8 @@ class GenericLikelihoodModel(LikelihoodModel):
             self.score = lambda x: approx_fprime(x, self.loglike)
             if not self.hessian:
                 pass
-        else:  # can use approx_hess_p if we have a gradient
-            if not self.hessian:
-                pass
+        elif not self.hessian:
+            pass
         # Initialize is called by
         # statsmodels.model.LikelihoodModel.__init__
         # and should contain any preprocessing that needs to be done for a model
@@ -1188,7 +1186,7 @@ class Results:
                     "formula api. \n\nThe original error message returned "
                     f"by {mgr.engine} is:\n {str(str(exc))}"
                 )
-                raise exc.__class__(msg)
+                raise exc.__class__(msg) from exc
             if orig_exog_len > len(exog) and not is_dict:
                 if exog_index is None:
                     warnings.warn(
@@ -1451,9 +1449,8 @@ class LikelihoodModelResults(Results):
             if cov_type == "nonrobust":
                 self.cov_type = "nonrobust"
                 self.cov_kwds = {
-                    "description": "Standard Errors assume that the "
-                    + "covariance matrix of the errors is correctly "
-                    + "specified."
+                    "description": "Standard Errors assume that the covariance matrix "
+                                   "of the errors is correctly specified."
                 }
             else:
                 from statsmodels.base.covtype import get_robustcov_results
@@ -1475,7 +1472,7 @@ class LikelihoodModelResults(Results):
     ):
         if use_self is False:
             raise ValueError(
-                "use_self should have been removed long ago.  " "See GH#4401"
+                "use_self should have been removed long ago.  See GH#4401"
             )
         from statsmodels.base.covtype import get_robustcov_results
 
@@ -1485,9 +1482,8 @@ class LikelihoodModelResults(Results):
         if cov_type == "nonrobust":
             self.cov_type = "nonrobust"
             self.cov_kwds = {
-                "description": "Standard Errors assume that the "
-                + "covariance matrix of the errors is correctly "
-                + "specified."
+                "description": "Standard Errors assume that the covariance matrix "
+                               "of the errors is correctly specified."
             }
         else:
             # TODO: we should not need use_t in get_robustcov_results
@@ -1614,7 +1610,7 @@ class LikelihoodModelResults(Results):
                 "(unnormalized) covariances"
             )
         if column is not None and (r_matrix is not None or other is not None):
-            raise ValueError("Column should be specified without other " "arguments.")
+            raise ValueError("Column should be specified without other arguments.")
         if other is not None and r_matrix is None:
             raise ValueError("other can only be specified with r_matrix")
 
@@ -1752,7 +1748,7 @@ class LikelihoodModelResults(Results):
             and not hasattr(self, "cov_params_default")
         ):
             raise ValueError(
-                "Need covariance of parameters for computing " "T statistics"
+                "Need covariance of parameters for computing T statistics"
             )
         params = self.params.ravel(order="F")
         if num_params != params.shape[0]:
@@ -1765,7 +1761,7 @@ class LikelihoodModelResults(Results):
         if q_matrix.size > 1:
             if q_matrix.shape[0] != num_ttests:
                 raise ValueError(
-                    "r_matrix and q_matrix must have the same " "number of rows"
+                    "r_matrix and q_matrix must have the same number of rows"
                 )
 
         if use_t is None:
@@ -1986,7 +1982,7 @@ class LikelihoodModelResults(Results):
             and not hasattr(self, "cov_params_default")
         ):
             raise ValueError(
-                "need covariance of parameters for computing " "F statistics"
+                "need covariance of parameters for computing F statistics"
             )
 
         cparams = np.dot(r_matrix, params[:, None])
@@ -2000,7 +1996,7 @@ class LikelihoodModelResults(Results):
             q_matrix = q_matrix[:, None]
             if q_matrix.shape[0] != J:
                 raise ValueError(
-                    "r_matrix and q_matrix must have the same " "number of rows"
+                    "r_matrix and q_matrix must have the same number of rows"
                 )
         Rbq = cparams - q_matrix
         if invcov is None:
@@ -2882,7 +2878,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         if self.df_model + self.model.k_constant + k_extra != k_params:
             warnings.warn(
-                "df_model + k_constant + k_extra " "differs from k_params",
+                "df_model + k_constant + k_extra differs from k_params",
                 UserWarning,
                 stacklevel=2,
             )

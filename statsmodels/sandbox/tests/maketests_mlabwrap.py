@@ -200,7 +200,7 @@ def generate_armarep(filen="testsave.py"):
         header=False,
         comment=(
             "''mlab.garchma(-res_armarep.ar[1:], res_armarep.ma[1:], 20)\n"
-            + "mlab.garchar(-res_armarep.ar[1:], res_armarep.ma[1:], 20)''"
+            "mlab.garchar(-res_armarep.ar[1:], res_armarep.ma[1:], 20)''"
         ),
     )
 

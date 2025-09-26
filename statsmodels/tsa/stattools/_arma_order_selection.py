@@ -132,7 +132,7 @@ def arma_order_select_ic(
 
     dfs = [pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results]
 
-    res = dict(zip(ic, dfs))
+    res = dict(zip(ic, dfs, strict=False))
 
     # add the minimums to the results dict
     min_res = {}

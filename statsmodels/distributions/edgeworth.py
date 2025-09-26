@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 from numpy.polynomial.hermite_e import HermiteE
-import scipy.special as special
+from scipy import special
 from scipy.special import factorial
 from scipy.stats import rv_continuous
 
@@ -48,10 +48,10 @@ def _faa_di_bruno_partitions(n):
         raise ValueError("Expected a positive integer; got %s instead" % n)
     try:
         return _faa_di_bruno_cache[n]
-    except KeyError:
+    except KeyError as err:
         # TODO: higher order terms
         # solve Eq. (31) from Blinninkov & Moessner here
-        raise NotImplementedError("Higher order terms not yet implemented.")
+        raise NotImplementedError("Higher order terms not yet implemented.") from err
 
 
 def cumulant_from_moments(momt, n):
@@ -75,7 +75,7 @@ def cumulant_from_moments(momt, n):
         raise ValueError("Expected a positive integer. Got %s instead." % n)
     if len(momt) < n:
         raise ValueError(
-            "%s-th cumulant requires %s moments, " "only got %s." % (n, n, len(momt))
+            "%s-th cumulant requires %s moments, only got %s." % (n, n, len(momt))
         )
     kappa = 0.0
     for p in _faa_di_bruno_partitions(n):

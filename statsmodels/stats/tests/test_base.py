@@ -42,7 +42,7 @@ def test_holdertuple2():
 
     x = np.asarray(ht, dtype=object)
     assert_equal(x, np.asarray([5, [1, 2, 4]], dtype=object))
-    assert_equal(x.dtype, np.dtype('O'))
+    assert_equal(x.dtype, np.dtype("O"))
     # assert_equal(pd.Series(ht).values, [5, [1, 2, 4]])
     # assert_equal(pd.Series(ht).dtype, np.dtype('O'))
 

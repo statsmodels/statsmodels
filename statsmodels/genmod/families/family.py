@@ -1613,7 +1613,7 @@ class Tweedie(Family):
         self.eql = eql
         if eql and (var_power < 1 or var_power > 2):
             raise ValueError(
-                "Tweedie: if EQL=True then var_power must fall " "between 1 and 2"
+                "Tweedie: if EQL=True then var_power must fall between 1 and 2"
             )
         if link is None:
             link = L.Log()

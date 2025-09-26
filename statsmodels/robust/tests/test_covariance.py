@@ -15,8 +15,8 @@ from .results import results_cov as res_cov
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
-file_name = 'hbk.csv'
-file_path = os.path.join(cur_dir, 'results', file_name)
+file_name = "hbk.csv"
+file_path = os.path.join(cur_dir, "results", file_name)
 
 dta_hbk = pd.read_csv(file_path)
 
@@ -344,14 +344,14 @@ def test_robcov_SMOKE():
     # We use 0.75 quantile for truncation to get better efficiency
     # at q=0.5, cov is pretty noisy at nobs=100 and passes at rtol=1
     res_li = robcov._cov_starting(x, standardize=True, quantile=0.75)
-    for ii, res in enumerate(res_li):  # noqa  # keep ii for debugging
+    for _, res in enumerate(res_li):
         # note: basic cov are not properly scaled
         # check only those with _cov_iter rescaling, `n_iter`
         # include also ogk
         # need more generic detection of appropriate cov
-        if hasattr(res, 'n_iter') or hasattr(res, 'cov_ogk_raw'):
+        if hasattr(res, "n_iter") or hasattr(res, "cov_ogk_raw"):
             # inconsistent returns, redundant for now b/c no arrays
-            c = getattr(res, 'cov', res)
+            c = getattr(res, "cov", res)
             # rough comparison with DGP cov
             assert_allclose(c, cov, rtol=0.5)
             # check average scaling

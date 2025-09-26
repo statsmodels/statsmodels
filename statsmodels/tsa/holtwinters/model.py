@@ -257,12 +257,12 @@ class ExponentialSmoothing(TimeSeriesModel):
             if seasonal_periods is None:
                 try:
                     self.seasonal_periods = freq_to_period(self._index_freq)
-                except Exception:
+                except Exception as exc:
                     raise ValueError(
                         "seasonal_periods has not been provided and index "
                         "does not have a known freq. You must provide "
                         "seasonal_periods"
-                    )
+                    ) from exc
             if self.seasonal_periods <= 1:
                 raise ValueError("seasonal_periods must be larger than 1.")
             assert self.seasonal_periods is not None
@@ -636,7 +636,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             not_fixed = np.array([name not in fixed for name in names])
             if (~sel[~not_fixed]).any():
                 invalid = []
-                for name, s, nf in zip(names, sel, not_fixed):
+                for name, s, nf in zip(names, sel, not_fixed, strict=False):
                     if not s and not nf:
                         invalid.append(name)
                 invalid_names = ", ".join(invalid)
@@ -835,7 +835,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         # We always use [0, 1] for a, b and g and handle transform inside
         mod_bounds = [(0, 1)] * 3 + orig_bounds[3:]
-        relevant_bounds = [bnd for bnd, flag in zip(mod_bounds, sel) if flag]
+        relevant_bounds = [bnd for bnd, flag in zip(mod_bounds, sel, strict=False) if flag]
         bounds = np.array(relevant_bounds, dtype=float)
         lb, ub = bounds.T
         lb[np.isnan(lb)] = -np.inf
@@ -1079,7 +1079,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             )
         if use_boxcox is not None:
             raise ValueError(
-                "use_boxcox was set at model initialization and cannot " "be changed"
+                "use_boxcox was set at model initialization and cannot be changed"
             )
         elif self._use_boxcox is None:
             use_boxcox = False
@@ -1426,7 +1426,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         included = [True, has_trend, has_seasonal, True, has_trend, damped]
         included += [True] * m
         formatted = pd.DataFrame(
-            [[c, f, o] for c, f, o in zip(codes, formatted, optimized)],
+            [[c, f, o] for c, f, o in zip(codes, formatted, optimized, strict=False)],
             columns=["name", "param", "optimized"],
             index=idx,
         )

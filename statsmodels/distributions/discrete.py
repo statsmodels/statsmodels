@@ -317,13 +317,12 @@ class DiscretizedCount(rv_discrete):
             if add_scale:
                 kwds.update({"shapes": distr.shapes + ", s"})
                 self.k_shapes += 1
+        # no shape parameters in underlying distribution
+        elif add_scale:
+            kwds.update({"shapes": "s"})
+            self.k_shapes = 1
         else:
-            # no shape parameters in underlying distribution
-            if add_scale:
-                kwds.update({"shapes": "s"})
-                self.k_shapes = 1
-            else:
-                self.k_shapes = 0
+            self.k_shapes = 0
 
         super().__init__(**kwds)
 

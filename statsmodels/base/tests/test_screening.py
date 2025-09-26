@@ -56,14 +56,14 @@ def test_poisson_screening():
     y, x, idx_nonzero_true, beta = _get_poisson_data()
     nobs = len(y)
 
-    xnames_true = ['var%4d' % ii for ii in idx_nonzero_true]
-    xnames_true[0] = 'const'
+    xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
+    xnames_true[0] = "const"
     parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true,
-                              columns=['true'])
+                              columns=["true"])
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = Poisson(y, xframe_true).fit()
-    parameters['oracle'] = res_oracle.params
+    parameters["oracle"] = res_oracle.params
 
     mod_initial = PoissonPenalized(y, np.ones(nobs), pen_weight=nobs * 5)
 
@@ -73,18 +73,18 @@ def test_poisson_screening():
 
     assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
 
-    xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
-    xnames[0] = 'const'
+    xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
+    xnames[0] = "const"
 
     # smoke test
     res_screen.results_final.summary(xname=xnames)
     res_screen.results_pen.summary()
-    assert_equal(res_screen.results_final.mle_retvals['converged'], True)
+    assert_equal(res_screen.results_final.mle_retvals["converged"], True)
 
-    ps = pd.Series(res_screen.results_final.params, index=xnames, name='final')
-    parameters = parameters.join(ps, how='outer')
+    ps = pd.Series(res_screen.results_final.params, index=xnames, name="final")
+    parameters = parameters.join(ps, how="outer")
 
-    assert_allclose(parameters['oracle'], parameters['final'], atol=5e-6)
+    assert_allclose(parameters["oracle"], parameters["final"], atol=5e-6)
 
 
 def test_screen_iterated():
@@ -131,7 +131,7 @@ def test_screen_iterated():
         screener.k_max_add = 30
 
         final = screener.screen_exog_iterator(exog_iterator())
-        names = ['var0_10', 'var1_10', 'var2_10', 'var3_10']
+        names = ["var0_10", "var1_10", "var2_10", "var3_10"]
         assert_equal(final.exog_final_names, names)
         idx_full = np.array([[0, 10],
                              [1, 10],
@@ -145,13 +145,13 @@ def test_glmpoisson_screening():
     y, x, idx_nonzero_true, beta = _get_poisson_data()
     nobs = len(y)
 
-    xnames_true = ['var%4d' % ii for ii in idx_nonzero_true]
-    xnames_true[0] = 'const'
-    parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true, columns=['true'])
+    xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
+    xnames_true[0] = "const"
+    parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true, columns=["true"])
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = GLMPenalized(y, xframe_true, family=family.Poisson()).fit()
-    parameters['oracle'] = res_oracle.params
+    parameters["oracle"] = res_oracle.params
 
     mod_initial = GLMPenalized(y, np.ones(nobs), family=family.Poisson())
 
@@ -161,18 +161,18 @@ def test_glmpoisson_screening():
 
     assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
 
-    xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
-    xnames[0] = 'const'
+    xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
+    xnames[0] = "const"
 
     # smoke test
     res_screen.results_final.summary(xname=xnames)
     res_screen.results_pen.summary()
-    assert_equal(res_screen.results_final.mle_retvals['converged'], True)
+    assert_equal(res_screen.results_final.mle_retvals["converged"], True)
 
-    ps = pd.Series(res_screen.results_final.params, index=xnames, name='final')
-    parameters = parameters.join(ps, how='outer')
+    ps = pd.Series(res_screen.results_final.params, index=xnames, name="final")
+    parameters = parameters.join(ps, how="outer")
 
-    assert_allclose(parameters['oracle'], parameters['final'], atol=5e-6)
+    assert_allclose(parameters["oracle"], parameters["final"], atol=5e-6)
 
 
 def _get_logit_data():
@@ -203,14 +203,14 @@ def test_logit_screening():
     # test uses
     screener_kwds = dict(pen_weight=nobs * 0.7, threshold_trim=1e-3)
 
-    xnames_true = ['var%4d' % ii for ii in idx_nonzero_true]
-    xnames_true[0] = 'const'
+    xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
+    xnames_true[0] = "const"
     parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true,
-                              columns=['true'])
+                              columns=["true"])
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = Logit(y, xframe_true).fit()
-    parameters['oracle'] = res_oracle.params
+    parameters["oracle"] = res_oracle.params
 
     mod_initial = LogitPenalized(y, np.ones(nobs), pen_weight=nobs * 0.5)
     screener = VariableScreening(mod_initial, **screener_kwds)
@@ -225,20 +225,20 @@ def test_logit_screening():
     idx_r = np.array([0, 74, 100, 163, 300, 400, 411])
     assert_equal(np.sort(res_screen.idx_nonzero), idx_r)
 
-    xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
-    xnames[0] = 'const'
+    xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
+    xnames[0] = "const"
 
     # smoke test
     res_screen.results_final.summary(xname=xnames)
     res_screen.results_pen.summary()
-    assert_equal(res_screen.results_final.mle_retvals['converged'], True)
+    assert_equal(res_screen.results_final.mle_retvals["converged"], True)
 
-    ps = pd.Series(res_screen.results_final.params, index=xnames, name='final')
+    ps = pd.Series(res_screen.results_final.params, index=xnames, name="final")
     # changed the following to allow for some extra params
     # parameters = parameters.join(ps, how='outer')
-    parameters['final'] = ps
+    parameters["final"] = ps
 
-    assert_allclose(parameters['oracle'], parameters['final'], atol=0.005)
+    assert_allclose(parameters["oracle"], parameters["final"], atol=0.005)
 
 
 def test_glmlogit_screening():
@@ -248,16 +248,16 @@ def test_glmlogit_screening():
 
     # test uses
     screener_kwds = dict(pen_weight=nobs * 0.75, threshold_trim=1e-3,
-                         ranking_attr='model.score_factor')
+                         ranking_attr="model.score_factor")
 
-    xnames_true = ['var%4d' % ii for ii in idx_nonzero_true]
-    xnames_true[0] = 'const'
+    xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
+    xnames_true[0] = "const"
     parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true,
-                              columns=['true'])
+                              columns=["true"])
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = GLMPenalized(y, xframe_true, family=family.Binomial()).fit()
-    parameters['oracle'] = res_oracle.params
+    parameters["oracle"] = res_oracle.params
 
     # mod_initial = LogitPenalized(y, np.ones(nobs), pen_weight=nobs * 0.5)
     mod_initial = GLMPenalized(y, np.ones(nobs), family=family.Binomial())
@@ -271,20 +271,20 @@ def test_glmlogit_screening():
 
     res_screen.results_final
 
-    xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
-    xnames[0] = 'const'
+    xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
+    xnames[0] = "const"
 
     # smoke test
     res_screen.results_final.summary(xname=xnames)
     res_screen.results_pen.summary()
-    assert_equal(res_screen.results_final.mle_retvals['converged'], True)
+    assert_equal(res_screen.results_final.mle_retvals["converged"], True)
 
-    ps = pd.Series(res_screen.results_final.params, index=xnames, name='final')
+    ps = pd.Series(res_screen.results_final.params, index=xnames, name="final")
     # changed the following to allow for some extra params
     # parameters = parameters.join(ps, how='outer')
-    parameters['final'] = ps
+    parameters["final"] = ps
 
-    assert_allclose(parameters['oracle'], parameters['final'], atol=0.005)
+    assert_allclose(parameters["oracle"], parameters["final"], atol=0.005)
 
 
 def _get_gaussian_data():
@@ -317,16 +317,16 @@ def test_glmgaussian_screening():
 
     # test uses
     screener_kwds = dict(pen_weight=nobs * 0.75, threshold_trim=1e-3,
-                         ranking_attr='model.score_factor')
+                         ranking_attr="model.score_factor")
 
-    xnames_true = ['var%4d' % ii for ii in idx_nonzero_true]
-    xnames_true[0] = 'const'
+    xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
+    xnames_true[0] = "const"
     parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true,
-                              columns=['true'])
+                              columns=["true"])
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = GLMPenalized(y, xframe_true, family=family.Gaussian()).fit()
-    parameters['oracle'] = res_oracle.params
+    parameters["oracle"] = res_oracle.params
 
     for k_keep in [1, 2]:
         mod_initial = GLMPenalized(y, x[:, :k_keep], family=family.Gaussian())
@@ -336,17 +336,17 @@ def test_glmgaussian_screening():
 
         assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
 
-        xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
-        xnames[0] = 'const'
+        xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
+        xnames[0] = "const"
 
         # smoke test
         res_screen.results_final.summary(xname=xnames)
         res_screen.results_pen.summary()
-        assert_equal(res_screen.results_final.mle_retvals['converged'], True)
+        assert_equal(res_screen.results_final.mle_retvals["converged"], True)
 
-        ps = pd.Series(res_screen.results_final.params, index=xnames, name='final')
-        parameters = parameters.join(ps, how='outer')
+        ps = pd.Series(res_screen.results_final.params, index=xnames, name="final")
+        parameters = parameters.join(ps, how="outer")
 
-        assert_allclose(parameters['oracle'], parameters['final'], atol=1e-5)
+        assert_allclose(parameters["oracle"], parameters["final"], atol=1e-5)
         # we need to remove 'final' again for next iteration
-        del parameters['final']
+        del parameters["final"]

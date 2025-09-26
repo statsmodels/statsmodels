@@ -175,7 +175,7 @@ class RankCompareResult(HolderTuple):
         return res
 
     def tost_prob_superior(self, low, upp):
-        '''test of stochastic (non-)equivalence of p = P(x1 > x2)
+        """test of stochastic (non-)equivalence of p = P(x1 > x2)
 
         Null hypothesis:  p < low or p > upp
         Alternative hypothesis:  low < p < upp
@@ -214,10 +214,10 @@ class RankCompareResult(HolderTuple):
                 Results instanc with test statistic, pvalue and degrees of
                 freedom for upper threshold test.
 
-        '''
+        """
 
-        t1 = self.test_prob_superior(low, alternative='larger')
-        t2 = self.test_prob_superior(upp, alternative='smaller')
+        t1 = self.test_prob_superior(low, alternative="larger")
+        t2 = self.test_prob_superior(upp, alternative="smaller")
 
         # idx_max = 1 if t1.pvalue < t2.pvalue else 0
         idx_max = np.asarray(t1.pvalue < t2.pvalue, int)
@@ -337,9 +337,9 @@ class RankCompareResult(HolderTuple):
         sd = np.atleast_1d(np.sqrt(self.var_prob))
         statistic = np.atleast_1d(statistic)
         if xname is None:
-            xname = ['c%d' % ii for ii in range(len(effect))]
+            xname = ["c%d" % ii for ii in range(len(effect))]
 
-        xname2 = ['prob(x1>x2) %s' % ii for ii in xname]
+        xname2 = ["prob(x1>x2) %s" % ii for ii in xname]
 
         title = "Probability sample 1 is stochastically larger"
         from statsmodels.iolib.summary import summary_params

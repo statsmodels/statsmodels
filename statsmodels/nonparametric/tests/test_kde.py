@@ -8,24 +8,24 @@ from scipy import stats
 
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
-import statsmodels.sandbox.nonparametric.kernels as kernels
-import statsmodels.nonparametric.bandwidths as bandwidths
+from statsmodels.sandbox.nonparametric import kernels
+from statsmodels.nonparametric import bandwidths
 
 # get results from Stata
 
 curdir = os.path.dirname(os.path.abspath(__file__))
-rfname = os.path.join(curdir, 'results', 'results_kde.csv')
+rfname = os.path.join(curdir, "results", "results_kde.csv")
 # print rfname
-KDEResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
+KDEResults = np.genfromtxt(open(rfname, "rb"), delimiter=",", names=True)
 
-rfname = os.path.join(curdir, 'results', 'results_kde_univ_weights.csv')
-KDEWResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
+rfname = os.path.join(curdir, "results", "results_kde_univ_weights.csv")
+KDEWResults = np.genfromtxt(open(rfname, "rb"), delimiter=",", names=True)
 
 # get results from R
 curdir = os.path.dirname(os.path.abspath(__file__))
-rfname = os.path.join(curdir, 'results', 'results_kcde.csv')
+rfname = os.path.join(curdir, "results", "results_kcde.csv")
 # print rfname
-KCDEResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
+KCDEResults = np.genfromtxt(open(rfname, "rb"), delimiter=",", names=True)
 
 # setup test data
 
@@ -105,22 +105,22 @@ class TestKDEGauss(CheckKDE):
     # Values have been checked to be very close to R 'ks' package (Dec 2013)
     def test_support_gridded(self):
         kde = self.res1
-        support = KCDEResults['gau_support']
+        support = KCDEResults["gau_support"]
         npt.assert_allclose(support, kde.support)
 
     def test_cdf_gridded(self):
         kde = self.res1
-        cdf = KCDEResults['gau_cdf']
+        cdf = KCDEResults["gau_cdf"]
         npt.assert_allclose(cdf, kde.cdf)
 
     def test_sf_gridded(self):
         kde = self.res1
-        sf = KCDEResults['gau_sf']
+        sf = KCDEResults["gau_sf"]
         npt.assert_allclose(sf, kde.sf)
 
     def test_icdf_gridded(self):
         kde = self.res1
-        icdf = KCDEResults['gau_icdf']
+        icdf = KCDEResults["gau_icdf"]
         npt.assert_allclose(icdf, kde.icdf)
 
 
@@ -181,8 +181,8 @@ class TestKdeWeights(CheckKDE):
         res1.fit(kernel="gau", gridsize=50, weights=weights, fft=False,
                  bw="silverman")
         cls.res1 = res1
-        fname = os.path.join(curdir, 'results', 'results_kde_weights.csv')
-        cls.res_density = np.genfromtxt(open(fname, 'rb'), skip_header=1)
+        fname = os.path.join(curdir, "results", "results_kde_weights.csv")
+        cls.res_density = np.genfromtxt(open(fname, "rb"), skip_header=1)
 
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
@@ -202,16 +202,16 @@ class TestKDEGaussFFT(CheckKDE):
         res1 = KDE(Xi)
         res1.fit(kernel="gau", fft=True, bw="silverman")
         cls.res1 = res1
-        rfname2 = os.path.join(curdir, 'results', 'results_kde_fft.csv')
-        cls.res_density = np.genfromtxt(open(rfname2, 'rb'))
+        rfname2 = os.path.join(curdir, "results", "results_kde_fft.csv")
+        cls.res_density = np.genfromtxt(open(rfname2, "rb"))
 
 
 class CheckKDEWeights:
 
     @classmethod
     def setup_class(cls):
-        cls.x = x = KDEWResults['x']
-        weights = KDEWResults['weights']
+        cls.x = x = KDEWResults["x"]
+        weights = KDEWResults["weights"]
         res1 = KDE(x)
         # default kernel was scott when reference values computed
         res1.fit(kernel=cls.kernel_name, weights=weights, fft=False, bw="scott")
@@ -227,7 +227,7 @@ class CheckKDEWeights:
                                 self.decimal_density)
 
     def test_evaluate(self):
-        if self.kernel_name == 'cos':
+        if self.kernel_name == "cos":
             pytest.skip("Cosine kernel fails against Stata")
         kde_vals = [self.res1.evaluate(xi) for xi in self.x]
         kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
@@ -332,7 +332,7 @@ class TestKdeRefit:
     pdf2 = KDE(data2)
     pdf2.fit()
 
-    for attr in ['icdf', 'cdf', 'sf']:
+    for attr in ["icdf", "cdf", "sf"]:
         npt.assert_(not np.allclose(getattr(pdf, attr)[:10],
                                     getattr(pdf2, attr)[:10]))
 
@@ -382,7 +382,7 @@ class TestKDECustomBandwidth:
         s1 = kde.support.copy()
         d1 = kde.density.copy()
 
-        kde = self.kde.fit(bw='silverman')
+        kde = self.kde.fit(bw="silverman")
 
         npt.assert_almost_equal(s1, kde.support, self.decimal_density)
         npt.assert_almost_equal(d1, kde.density, self.decimal_density)

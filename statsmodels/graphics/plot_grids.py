@@ -1,4 +1,4 @@
-'''create scatterplot with confidence ellipsis
+"""create scatterplot with confidence ellipsis
 
 Author: Josef Perktold
 License: BSD-3
@@ -8,7 +8,7 @@ TODO: update script to use sharex, sharey, and visible=False
     for sharex I need to have the ax of the last_row when editing the earlier
     rows. Or you axes_grid1, imagegrid
     http://matplotlib.sourceforge.net/mpl_toolkits/axes_grid/users/overview.html
-'''
+"""
 
 
 import numpy as np
@@ -16,7 +16,7 @@ from scipy import stats
 
 from . import utils
 
-__all__ = ['scatter_ellipse']
+__all__ = ["scatter_ellipse"]
 
 
 def _make_ellipse(mean, cov, ax, level=0.95, color=None):
@@ -28,7 +28,7 @@ def _make_ellipse(mean, cov, ax, level=0.95, color=None):
     angle = np.arctan(u[1]/u[0])
     angle = 180 * angle / np.pi  # convert to degrees
     v = 2 * np.sqrt(v * stats.chi2.ppf(level, 2))  # get size corresponding to level
-    ell = Ellipse(mean[:2], v[0], v[1], angle=180 + angle, facecolor='none',
+    ell = Ellipse(mean[:2], v[0], v[1], angle=180 + angle, facecolor="none",
                   edgecolor=color,
                   # ls='dashed',  # for debugging
                   lw=1.5)
@@ -94,13 +94,13 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
     nvars = data.shape[1]
     if varnames is None:
         # assuming single digit, nvars<=10  else use 'var%2d'
-        varnames = ['var%d' % i for i in range(nvars)]
+        varnames = ["var%d" % i for i in range(nvars)]
 
-    plot_kwds_ = dict(ls='none', marker='.', color='k', alpha=0.5)
+    plot_kwds_ = dict(ls="none", marker=".", color="k", alpha=0.5)
     if plot_kwds:
         plot_kwds_.update(plot_kwds)
 
-    ell_kwds_ = dict(color='k')
+    ell_kwds_ = dict(color="k")
     if ell_kwds:
         ell_kwds_.update(ell_kwds)
 
@@ -116,7 +116,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
 #                ax.set_ylabel(varnames[i])
             # TODO: make sure we have same xlim and ylim
 
-            formatter = mticker.FormatStrFormatter('% 3.1f')
+            formatter = mticker.FormatStrFormatter("% 3.1f")
             ax.yaxis.set_major_formatter(formatter)
             ax.xaxis.set_major_formatter(formatter)
 
@@ -131,7 +131,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
                 )
 
             if add_titles:
-                ax.set_title(f'{varnames[i]}-{varnames[j]}')
+                ax.set_title(f"{varnames[i]}-{varnames[j]}")
             if not ax.get_subplotspec().is_first_col():
                 if not keep_ticks:
                     ax.set_yticks([])
@@ -141,11 +141,10 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
                 ax.set_ylabel(varnames[i])
             if ax.get_subplotspec().is_last_row():
                 ax.set_xlabel(varnames[j])
+            elif not keep_ticks:
+                ax.set_xticks([])
             else:
-                if not keep_ticks:
-                    ax.set_xticks([])
-                else:
-                    ax.xaxis.set_major_locator(mticker.MaxNLocator(3))
+                ax.xaxis.set_major_locator(mticker.MaxNLocator(3))
 
             dcorr = np.corrcoef(data, rowvar=0)
             dc = dcorr[idx[:, None], idx]
@@ -163,7 +162,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             else:
                 yt = ylim[1] - 0.2 * (ylim[1] - ylim[0])
             xt = xlim[0] + 0.1 * (xlim[1] - xlim[0])
-            ax.text(xt, yt, '$\\rho=%0.2f$' % dc[1, 0])
+            ax.text(xt, yt, "$\\rho=%0.2f$" % dc[1, 0])
 
     for ax in fig.axes:
         if ax.get_subplotspec().is_last_row():  # or ax.is_first_col():

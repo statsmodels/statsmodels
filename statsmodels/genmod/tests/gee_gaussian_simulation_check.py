@@ -153,7 +153,7 @@ class Nested_simulator(GEE_simulator):
 
             # The random effects
             variances = [np.sqrt(v)*np.random.normal(size=n)
-                         for v, n in zip(vcomp, self.nest_sizes)]
+                         for v, n in zip(vcomp, self.nest_sizes, strict=False)]
 
             gpe = np.random.normal() * np.sqrt(group_effect_var)
 
@@ -167,7 +167,7 @@ class Nested_simulator(GEE_simulator):
 
                 # The sum of all random effects that apply to this
                 # unit
-                ref = gpe + sum([v[j] for v, j in zip(variances, nest)])
+                ref = gpe + sum([v[j] for v, j in zip(variances, nest, strict=False)])
 
                 exog1 = np.random.normal(size=5)
                 exog1[0] = 1
@@ -241,7 +241,7 @@ def gendat_nested1():
 if __name__ == "__main__":
 
     try:
-        np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+        np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
                             suppress=True)
     except TypeError:
         # older numpy versions do not have formatter option

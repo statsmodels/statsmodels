@@ -16,16 +16,16 @@ def _initialization_simple(endog, trend=False, seasonal=False,
     # Non-seasonal
     if seasonal is None or not seasonal:
         initial_level = endog[0]
-        if trend == 'add':
+        if trend == "add":
             initial_trend = endog[1] - endog[0]
-        elif trend == 'mul':
+        elif trend == "mul":
             initial_trend = endog[1] / endog[0]
     # Seasonal
     else:
         if nobs < 2 * seasonal_periods:
-            raise ValueError('Cannot compute initial seasonals using'
-                             ' heuristic method with less than two full'
-                             ' seasonal cycles in the data.')
+            raise ValueError("Cannot compute initial seasonals using"
+                             " heuristic method with less than two full"
+                             " seasonal cycles in the data.")
 
         initial_level = np.mean(endog[:seasonal_periods])
         m = seasonal_periods
@@ -33,9 +33,9 @@ def _initialization_simple(endog, trend=False, seasonal=False,
         if trend is not None:
             initial_trend = (pd.Series(endog).diff(m)[m:2 * m] / m).mean()
 
-        if seasonal == 'add':
+        if seasonal == "add":
             initial_seasonal = endog[:m] - initial_level
-        elif seasonal == 'mul':
+        elif seasonal == "mul":
             initial_seasonal = endog[:m] / initial_level
 
     return initial_level, initial_trend, initial_seasonal
@@ -48,27 +48,27 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
     nobs = len(endog)
 
     if nobs < 10:
-        raise ValueError('Cannot use heuristic method with less than 10'
-                         ' observations.')
+        raise ValueError("Cannot use heuristic method with less than 10"
+                         " observations.")
 
     # Seasonal component
     initial_seasonal = None
     if seasonal:
         # Calculate the number of full cycles to use
         if nobs < 2 * seasonal_periods:
-            raise ValueError('Cannot compute initial seasonals using'
-                             ' heuristic method with less than two full'
-                             ' seasonal cycles in the data.')
+            raise ValueError("Cannot compute initial seasonals using"
+                             " heuristic method with less than two full"
+                             " seasonal cycles in the data.")
         # We need at least 10 periods for the level initialization
         # and we will lose self.seasonal_periods // 2 values at the
         # beginning and end of the sample, so we need at least
         # 10 + 2 * (self.seasonal_periods // 2) values
         min_obs = 10 + 2 * (seasonal_periods // 2)
         if nobs < min_obs:
-            raise ValueError('Cannot use heuristic method to compute'
-                             ' initial seasonal and levels with less'
-                             ' than 10 + 2 * (seasonal_periods // 2)'
-                             ' datapoints.')
+            raise ValueError("Cannot use heuristic method to compute"
+                             " initial seasonal and levels with less"
+                             " than 10 + 2 * (seasonal_periods // 2)"
+                             " datapoints.")
         # In some datasets we may only have 2 full cycles (but this may
         # still satisfy the above restriction that we will end up with
         # 10 seasonally adjusted observations)
@@ -84,9 +84,9 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
             initial_trend = initial_trend.shift(-1).rolling(2).mean()
 
         # Detrend
-        if seasonal == 'add':
+        if seasonal == "add":
             detrended = series - initial_trend
-        elif seasonal == 'mul':
+        elif seasonal == "mul":
             detrended = series / initial_trend
 
         # Average seasonal effect
@@ -96,9 +96,9 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
             tmp.reshape(k_cycles, seasonal_periods).T, axis=1)
 
         # Normalize the seasonals
-        if seasonal == 'add':
+        if seasonal == "add":
             initial_seasonal -= np.mean(initial_seasonal)
-        elif seasonal == 'mul':
+        elif seasonal == "mul":
             initial_seasonal /= np.mean(initial_seasonal)
 
         # Replace the data with the trend
@@ -112,9 +112,9 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
     initial_level = beta[0]
 
     initial_trend = None
-    if trend == 'add':
+    if trend == "add":
         initial_trend = beta[1]
-    elif trend == 'mul':
+    elif trend == "mul":
         initial_trend = 1 + beta[1] / beta[0]
 
     return initial_level, initial_trend, initial_seasonal

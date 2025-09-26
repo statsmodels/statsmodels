@@ -16,7 +16,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.regression.linear_model import OLS
-import statsmodels.sandbox.regression.gmm as gmm
+from statsmodels.sandbox.regression import gmm
 from statsmodels.tools.tools import add_constant
 
 

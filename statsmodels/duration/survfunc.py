@@ -34,7 +34,7 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
         n = np.bincount(rtime, weights=weights, minlength=ml)
     if entry is not None:
         n = np.cumsum(n) - n
-        rentry = np.searchsorted(utime, entry, side='left')
+        rentry = np.searchsorted(utime, entry, side="left")
         if weights is None:
             n0 = np.bincount(rentry, minlength=ml)
         else:
@@ -419,7 +419,7 @@ class SurvfuncRight:
 
         return self.surv_times[ii[0]]
 
-    def quantile_ci(self, p, alpha=0.05, method='cloglog'):
+    def quantile_ci(self, p, alpha=0.05, method="cloglog"):
         """
         Returns a confidence interval for a survival quantile.
 
@@ -690,7 +690,7 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
 
         if entry is not None:
             n = np.cumsum(n) - n
-            rentry = np.searchsorted(utimes, entry0, side='left')
+            rentry = np.searchsorted(utimes, entry0, side="left")
             n0 = np.bincount(rentry, minlength=ml)
             n0 = np.cumsum(n0) - n0
             nr = n0 - n
@@ -826,15 +826,15 @@ def plot_survfunc(survfuncs, ax=None):
 
         label = getattr(sf, "title", "Group %d" % (gx + 1))
 
-        li, = ax.step(surv_times, surv_prob, '-', label=label, lw=2,
-                      where='post')
+        li, = ax.step(surv_times, surv_prob, "-", label=label, lw=2,
+                      where="post")
 
         # Plot the censored points.
         ii = np.flatnonzero(np.logical_not(sf.status))
         ti = np.unique(sf.time[ii])
         jj = np.searchsorted(surv_times, ti) - 1
         sp = surv_prob[jj]
-        ax.plot(ti, sp, '+', ms=12, color=li.get_color(),
+        ax.plot(ti, sp, "+", ms=12, color=li.get_color(),
                 label=label + " points")
 
     ax.set_ylim(0, 1.01)

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import warnings
+from typing import TYPE_CHECKING
 
-from _pytest.recwarn import WarningsChecker
 from pytest import warns
+
+if TYPE_CHECKING:
+    from _pytest.recwarn import WarningsChecker
 
 __all__ = ["pytest_warns"]
 

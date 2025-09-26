@@ -477,40 +477,40 @@ class VarmaPoly:
     def vstack(self, a=None, name="ar"):
         """stack lagpolynomial vertically in 2d array"""
         if a is not None:
-            a = a
+            _a = a
         elif name == "ar":
-            a = self.ar
+            _a = self.ar
         elif name == "ma":
-            a = self.ma
+            _a = self.ma
         else:
             raise ValueError("no array or name given")
-        return a.reshape(-1, self.nvarall)
+        return _a.reshape(-1, self.nvarall)
 
     # @property
     def hstack(self, a=None, name="ar"):
         """stack lagpolynomial horizontally in 2d array"""
         if a is not None:
-            a = a
+            _a = a
         elif name == "ar":
-            a = self.ar
+            _a = self.ar
         elif name == "ma":
-            a = self.ma
+            _a = self.ma
         else:
             raise ValueError("no array or name given")
-        return a.swapaxes(1, 2).reshape(-1, self.nvarall).T
+        return _a.swapaxes(1, 2).reshape(-1, self.nvarall).T
 
     # @property
     def stacksquare(self, a=None, name="ar", orientation="vertical"):
         """stack lagpolynomial vertically in 2d square array with eye"""
         if a is not None:
-            a = a
+            _a = a
         elif name == "ar":
-            a = self.ar
+            _a = self.ar
         elif name == "ma":
-            a = self.ma
+            _a = self.ma
         else:
             raise ValueError("no array or name given")
-        astacked = a.reshape(-1, self.nvarall)
+        astacked = _a.reshape(-1, self.nvarall)
         lenpk, nvars = astacked.shape  # [0]
         amat = np.eye(lenpk, k=nvars)
         amat[:, :nvars] = astacked
@@ -549,13 +549,12 @@ class VarmaPoly:
 
         """
         if a is not None:
-            a = a
+            _a = a
+        elif self.isstructured:
+            _a = -self.reduceform(self.ar)[1:]
         else:
-            if self.isstructured:
-                a = -self.reduceform(self.ar)[1:]
-            else:
-                a = -self.ar[1:]
-        amat = self.stacksquare(a)
+            _a = -self.ar[1:]
+        amat = self.stacksquare(_a)
         ev = np.sort(np.linalg.eigvals(amat))[::-1]
         self.areigenvalues = ev
         return (np.abs(ev) < 1).all()
@@ -578,18 +577,17 @@ class VarmaPoly:
 
         """
         if a is not None:
-            a = a
+            _a = a
+        elif self.isindependent:
+            _a = self.reduceform(self.ma)[1:]
         else:
-            if self.isindependent:
-                a = self.reduceform(self.ma)[1:]
-            else:
-                a = self.ma[1:]
-        if a.shape[0] == 0:
+            _a = self.ma[1:]
+        if _a.shape[0] == 0:
             # no ma lags
             self.maeigenvalues = np.array([], np.complex)
             return True
 
-        amat = self.stacksquare(a)
+        amat = self.stacksquare(_a)
         ev = np.sort(np.linalg.eigvals(amat))[::-1]
         self.maeigenvalues = ev
         return (np.abs(ev) < 1).all()
@@ -607,8 +605,10 @@ class VarmaPoly:
         a = np.empty_like(apoly)
         try:
             a0inv = np.linalg.inv(a[0, :nvars, :])
-        except np.linalg.LinAlgError:
-            raise ValueError("matrix not invertible", "ask for implementation of pinv")
+        except np.linalg.LinAlgError as la_err:
+            raise ValueError(
+                "matrix not invertible, ask for implementation of pinv"
+            ) from la_err
 
         for lag in range(nlags):
             a[lag] = np.dot(a0inv, apoly[lag])

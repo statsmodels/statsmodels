@@ -6,7 +6,7 @@ from numpy.testing import assert_allclose, assert_equal, assert_array_less
 from scipy import stats
 import pytest
 
-import statsmodels.genmod.families as families
+from statsmodels.genmod import families
 from statsmodels.tools import numdiff as nd
 
 # Family instances
@@ -177,8 +177,8 @@ class CasesCDFLink():
         (MyCLogLog(), links.CLogLog()),  # not a cdflink, but compares
         ]
 
-    methods = ['__call__', 'deriv', 'inverse', 'inverse_deriv', 'deriv2',
-               'inverse_deriv2']
+    methods = ["__call__", "deriv", "inverse", "inverse_deriv", "deriv2",
+               "inverse_deriv2"]
 
     p = np.linspace(0, 1, 6)
     eps = 1e-3

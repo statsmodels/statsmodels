@@ -182,7 +182,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     elif freq == "other":
         k = kwargs.get("k")
         if not k:
-            raise ValueError("k must be supplied with freq=\"other\"")
+            raise ValueError('k must be supplied with freq="other"')
     else:
         raise ValueError("freq %s not understood" % freq)
 

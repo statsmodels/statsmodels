@@ -14,7 +14,7 @@ Produces six different plots for each distribution
 """
 
 import numpy as np
-import scipy.stats as stats
+from scipy import stats
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 
@@ -44,7 +44,7 @@ plt.plot(support[ix], dens_normal.pdf()[ix], label="Scott")
 plt.plot(support[ix], dens_cvls.pdf()[ix], label="CV_LS")
 plt.plot(support[ix], dens_cvml.pdf()[ix], label="CV_ML")
 plt.title(
-    "Nonparametric Estimation of the Density of Beta Distributed " "Random Variable"
+    "Nonparametric Estimation of the Density of Beta Distributed Random Variable"
 )
 plt.legend(("Actual", "Scott", "CV_LS", "CV_ML"))
 
@@ -66,7 +66,7 @@ plt.plot(support[ix], rv.pdf(support[ix]), label="Actual")
 plt.plot(support[ix], dens_normal.pdf()[ix], label="Scott")
 plt.plot(support[ix], dens_cvls.pdf()[ix], label="CV_LS")
 plt.plot(support[ix], dens_cvml.pdf()[ix], label="CV_ML")
-plt.title("Nonparametric Estimation of the Density of f Distributed " "Random Variable")
+plt.title("Nonparametric Estimation of the Density of f Distributed Random Variable")
 plt.legend(("Actual", "Scott", "CV_LS", "CV_ML"))
 
 # Pareto distribution
@@ -85,7 +85,7 @@ plt.plot(support[ix], dens_normal.pdf()[ix], label="Scott")
 plt.plot(support[ix], dens_cvls.pdf()[ix], label="CV_LS")
 plt.plot(support[ix], dens_cvml.pdf()[ix], label="CV_ML")
 plt.title(
-    "Nonparametric Estimation of the Density of Pareto " "Distributed Random Variable"
+    "Nonparametric Estimation of the Density of Pareto Distributed Random Variable"
 )
 plt.legend(("Actual", "Scott", "CV_LS", "CV_ML"))
 
@@ -108,7 +108,7 @@ plt.plot(support[ix], dens_normal.pdf()[ix], label="Scott")
 plt.plot(support[ix], dens_cvls.pdf()[ix], label="CV_LS")
 plt.plot(support[ix], dens_cvml.pdf()[ix], label="CV_ML")
 plt.title(
-    "Nonparametric Estimation of the Density of Laplace " "Distributed Random Variable"
+    "Nonparametric Estimation of the Density of Laplace Distributed Random Variable"
 )
 plt.legend(("Actual", "Scott", "CV_LS", "CV_ML"))
 
@@ -130,7 +130,7 @@ plt.plot(support[ix], dens_normal.pdf()[ix], label="Scott")
 plt.plot(support[ix], dens_cvls.pdf()[ix], label="CV_LS")
 plt.plot(support[ix], dens_cvml.pdf()[ix], label="CV_ML")
 plt.title(
-    "Nonparametric Estimation of the Density of Weibull " "Distributed Random Variable"
+    "Nonparametric Estimation of the Density of Weibull Distributed Random Variable"
 )
 plt.legend(("Actual", "Scott", "CV_LS", "CV_ML"))
 
@@ -151,7 +151,7 @@ plt.plot(support[ix], dens_normal.pdf()[ix], label="Scott")
 plt.plot(support[ix], dens_cvls.pdf()[ix], label="CV_LS")
 plt.plot(support[ix], dens_cvml.pdf()[ix], label="CV_ML")
 plt.title(
-    "Nonparametric Estimation of the Density of Poisson " "Distributed Random Variable"
+    "Nonparametric Estimation of the Density of Poisson Distributed Random Variable"
 )
 plt.legend(("Actual", "Scott", "CV_LS", "CV_ML"))
 

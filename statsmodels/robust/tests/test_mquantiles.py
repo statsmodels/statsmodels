@@ -1,9 +1,9 @@
-'''
+"""
 Created on Nov. 29, 2022
 
 Author: Josef Perktold
 License: BSD-3
-'''
+"""
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -41,12 +41,12 @@ class TestMQuantiles():
         x = np.random.uniform(-4, 4, nobs)
         y = mean_func(x) + std_func(x) * np.random.randn(nobs)
 
-        cls.df = pd.DataFrame({'temp': x, 'dens': y})
+        cls.df = pd.DataFrame({"temp": x, "dens": y})
 
     def test_ols(self):
         # test expectile at q=0.5 versus OLS
 
-        res_ols = ols('dens ~ temp + I(temp ** 2.0)', self.df).fit(use_t=False)
+        res_ols = ols("dens ~ temp + I(temp ** 2.0)", self.df).fit(use_t=False)
 
         y = res_ols.model.endog
         xx = res_ols.model.exog
@@ -64,7 +64,7 @@ class TestMQuantiles():
         # cov_params inference will not agree
         t_eps = 1e-6
 
-        mod1 = quantreg('dens ~ temp + I(temp ** 2.0)', self.df)
+        mod1 = quantreg("dens ~ temp + I(temp ** 2.0)", self.df)
         y = mod1.endog
         xx = mod1.exog
 

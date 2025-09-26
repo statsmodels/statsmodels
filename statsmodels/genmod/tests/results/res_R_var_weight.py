@@ -11,37 +11,37 @@ path = os.path.abspath(__file__)
 dir_path = os.path.dirname(path)
 
 
-res = dict()
-res['params'] = np.array([
+res = {}
+res["params"] = np.array([
     0.74699331283637337986, -0.031592165334818379796, -0.021959412079720488226
 ])
-res['bse'] = np.array([
+res["bse"] = np.array([
     0.25438368514036091561, 0.011629899831763365614, 0.011034604276375996681
 ])
-res['deviance'] = 45399.238887
+res["deviance"] = 45399.238887
 if SP_LT_17:
-    res['ll'] = np.nan
+    res["ll"] = np.nan
 else:
-    res['ll'] = -8669.17968  # regression number, not from R
-res['resids_colnames'] = [
-    'resid_response', 'resid_pearson', 'resid_deviance', 'resid_working']
-csv_path = os.path.join(dir_path, 'results_tweedie_aweights_nonrobust.csv')
+    res["ll"] = -8669.17968  # regression number, not from R
+res["resids_colnames"] = [
+    "resid_response", "resid_pearson", "resid_deviance", "resid_working"]
+csv_path = os.path.join(dir_path, "results_tweedie_aweights_nonrobust.csv")
 resids = np.array(pd.read_csv(csv_path))
-res['resids'] = resids
+res["resids"] = resids
 results_tweedie_aweights_nonrobust = Bunch(**res)
 
-res = dict()
-res['params'] = np.array([
+res = {}
+res["params"] = np.array([
     4.3171222692811204169, -0.038835175525200764379, 0.54097404989168318412,
     1.0560051456310013407])
-res['bse'] = np.array([
+res["bse"] = np.array([
     0.80693035378427380166, 0.013827354415809251648, 0.18432033392178892584,
     0.186384917449112536])
-res['deviance'] = 28.440959
-res['ll'] = -301.601118
-res['resids_colnames'] = [
-    'resid_response', 'resid_pearson', 'resid_deviance', 'resid_working']
-res['resids'] = np.array([
+res["deviance"] = 28.440959
+res["ll"] = -301.601118
+res["resids_colnames"] = [
+    "resid_response", "resid_pearson", "resid_deviance", "resid_working"]
+res["resids"] = np.array([
     -6.0158828841102272023, -5.0064618225897614678, -5.5825299715106844189,
     -6.9511999508118442748, -4.5194555811187591132, -1.557595268795654242,
     -1.4915816790031248829, -2.8827914717229985442, -0.51945558111875911322,
@@ -109,18 +109,18 @@ res['resids'] = np.array([
 ]).reshape((48, 4), order="F")
 results_gamma_aweights_nonrobust = Bunch(**res)
 
-res = dict()
-res['params'] = np.array([
+res = {}
+res["params"] = np.array([
     0.019083886775238277644, 0.93993818789790006818
 ])
-res['bse'] = np.array([
+res["bse"] = np.array([
     0.021677622811348211396, 0.82525357389082676374
 ])
-res['deviance'] = 1248.273065
-res['ll'] = -52.674985
-res['resids_colnames'] = [
-    'resid_response', 'resid_pearson', 'resid_deviance', 'resid_working']
-res['resids'] = np.array([
+res["deviance"] = 1248.273065
+res["ll"] = -52.674985
+res["resids_colnames"] = [
+    "resid_response", "resid_pearson", "resid_deviance", "resid_working"]
+res["resids"] = np.array([
     32.059654149533187706, 3.3448403477511448045, 4.0197139294873869275,
     -0.28159357985674304814, -1.6667828494180003673, 0.13880513444962283565,
     -0.18150652396610489347, -2.9789626432480238449, -1.2529678442364695634,

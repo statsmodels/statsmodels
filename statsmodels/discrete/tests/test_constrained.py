@@ -117,12 +117,11 @@ class CheckPoissonConstrainedMixin:
 
             if hasattr(res2, "ll_0"):
                 assert_allclose(res1.llnull, res2.ll_0, rtol=1e-6)
-            else:
-                if DEBUG:
-                    import warnings
+            elif DEBUG:
+                import warnings
 
-                    message = "test: ll_0 not available, llnull=%6.4F" % res1.llnull
-                    warnings.warn(message, InvalidTestWarning, stacklevel=2)
+                message = "test: ll_0 not available, llnull=%6.4F" % res1.llnull
+                warnings.warn(message, InvalidTestWarning, stacklevel=2)
 
         else:
             pytest.skip("not available yet")

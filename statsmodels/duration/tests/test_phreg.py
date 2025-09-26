@@ -56,7 +56,7 @@ class TestPHReg:
     @staticmethod
     def load_file(fname):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
-        data = np.genfromtxt(os.path.join(cur_dir, 'results', fname),
+        data = np.genfromtxt(os.path.join(cur_dir, "results", fname),
                              delimiter=" ")
         time = data[:, 0]
         status = data[:, 1]
@@ -123,7 +123,7 @@ class TestPHReg:
         status[5:10] = np.nan
         exog[10:15, :] = np.nan
 
-        md = PHReg(time, exog, status, missing='drop')
+        md = PHReg(time, exog, status, missing="drop")
         assert_allclose(len(md.endog), 185)
         assert_allclose(len(md.status), 185)
         assert_allclose(md.exog.shape, np.r_[185, 4])
@@ -355,7 +355,7 @@ class TestPHReg:
         mod = PHReg(endog, exog, status)
         rslt = mod.fit()
         rslt.predict()
-        for pred_type in 'lhr', 'hr', 'cumhaz', 'surv':
+        for pred_type in "lhr", "hr", "cumhaz", "surv":
             rslt.predict(pred_type=pred_type)
             rslt.predict(endog=endog[0:10], pred_type=pred_type)
             rslt.predict(endog=endog[0:10], exog=exog[0:10, :],
@@ -401,7 +401,7 @@ class TestPHReg:
                 exog -= exog.mean(0)
                 exog /= exog.std(0, ddof=1)
 
-                model = PHReg(time, exog, status=status, ties='breslow')
+                model = PHReg(time, exog, status=status, ties="breslow")
                 sm_result = model.fit_regularized(alpha=s)
 
                 # The agreement is not very high, the issue may be on
@@ -422,7 +422,7 @@ class TestPHReg:
 
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-rdir = os.path.join(cur_dir, 'results')
+rdir = os.path.join(cur_dir, "results")
 fnames = os.listdir(rdir)
 fnames = [x for x in fnames if x.startswith("survival")
           and x.endswith(".csv")]
@@ -432,7 +432,7 @@ entry_f = (False, True)
 strata_f = (False, True)
 
 
-@pytest.mark.parametrize('fname,ties,entry_f,strata_f',
+@pytest.mark.parametrize("fname,ties,entry_f,strata_f",
                          list(itertools.product(fnames, ties, entry_f, strata_f)))
 def test_r(fname, ties, entry_f, strata_f):
     TestPHReg.do1(fname, ties, entry_f, strata_f)

@@ -29,7 +29,7 @@ import statsmodels.discrete.discrete_model as discrete
 from statsmodels.genmod import cov_struct, families
 import statsmodels.genmod.generalized_estimating_equations as gee
 import statsmodels.regression.linear_model as lm
-import statsmodels.tools as tools
+from statsmodels import tools
 
 try:
     import matplotlib.pyplot as plt
@@ -1591,7 +1591,7 @@ class TestGEE:
             np.random.poisson(
                 0.1 * (exog_i[1] + exog_i[2]) + offset_i + np.log(exposure_i)
             )
-            for exog_i, offset_i, exposure_i in zip(exog, offset, exposure)
+            for exog_i, offset_i, exposure_i in zip(exog, offset, exposure, strict=False)
         ]
 
         model = gee.GEE(
@@ -1798,7 +1798,7 @@ class TestGEE:
         ixs = set()
         for g in model1.group_labels:
             for v in eq.pairs[g].values():
-                for a, b in zip(v[0], v[1]):
+                for a, b in zip(v[0], v[1], strict=False):
                     ky = (a, b)
                     assert ky not in ixs
                     ixs.add(ky)

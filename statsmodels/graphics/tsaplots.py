@@ -1,4 +1,6 @@
 """Correlation plot functions."""
+from typing import TYPE_CHECKING
+
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import calendar
@@ -9,6 +11,9 @@ import pandas as pd
 from statsmodels.graphics import utils
 from statsmodels.tools.validation import array_like
 from statsmodels.tsa.stattools import acf, pacf, ccf
+
+if TYPE_CHECKING:
+    from statsmodels.tsa.base.prediction import PredictionResults
 
 
 def _prepare_data_corr_plot(x, lags, zero):
@@ -600,7 +605,7 @@ def plot_accf_grid(
         def get_var(i):
             return x.iloc[:, i]
     else:
-        varnames = varnames or [f'x[{i}]' for i in range(m)]
+        varnames = varnames or [f"x[{i}]" for i in range(m)]
 
         x = np.asarray(x)
 
@@ -614,7 +619,7 @@ def plot_accf_grid(
                 plot_acf(
                     get_var(i),
                     ax=ax,
-                    title=f'ACF({varnames[i]})',
+                    title=f"ACF({varnames[i]})",
                     lags=lags,
                     alpha=alpha,
                     use_vlines=use_vlines,
@@ -632,7 +637,7 @@ def plot_accf_grid(
                     get_var(i),
                     get_var(j),
                     ax=ax,
-                    title=f'CCF({varnames[i]}, {varnames[j]})',
+                    title=f"CCF({varnames[i]}, {varnames[j]})",
                     lags=lags,
                     negative_lags=negative_lags and i > j,
                     alpha=alpha,
@@ -845,7 +850,6 @@ def plot_predict(
 
     _ = _import_mpl()
     fig, ax = create_mpl_ax(ax)
-    from statsmodels.tsa.base.prediction import PredictionResults
 
     # use predict so you set dates
     pred: PredictionResults = result.get_prediction(

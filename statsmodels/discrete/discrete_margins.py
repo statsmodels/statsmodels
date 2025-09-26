@@ -136,10 +136,10 @@ def _get_margeff_exog(exog, at, atexog, ind):
                 k_vars = atexog.shape[1]
             try:
                 assert k_vars == exog.shape[1]
-            except AssertionError:
+            except AssertionError as err:
                 raise ValueError(
                     "atexog does not have the same number of variables as exog"
-                )
+                ) from err
             exog = atexog
 
     # NOTE: we should fill in atexog after we process at
@@ -196,12 +196,11 @@ def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
 
 def _effects_at(effects, at):
     if at == "all":
-        effects = effects
+        return effects
     elif at == "overall":
-        effects = effects.mean(0)
+        return effects.mean(0)
     else:
-        effects = effects[0, :]
-    return effects
+        return effects[0, :]
 
 
 def _margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind, method, J):
@@ -521,7 +520,7 @@ class DiscreteMargins:
             ynames = np.repeat(yname_list, len(var_names))
             xnames = np.tile(var_names, len(yname_list))
             index = MultiIndex.from_tuples(
-                list(zip(ynames, xnames)), names=["endog", "exog"]
+                list(zip(ynames, xnames, strict=False)), names=["endog", "exog"]
             )
         else:
             table = np.column_stack(

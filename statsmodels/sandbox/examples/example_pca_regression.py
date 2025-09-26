@@ -59,7 +59,7 @@ print(res.rsquared)
 print("OLS on Factors")
 results = []
 xred, fact, eva, eve = pca(x0, keepdim=0, normalize=1)
-for k in range(0, x0.shape[1] + 1):
+for k in range(x0.shape[1] + 1):
     # xred, fact, eva, eve  = pca(x0, keepdim=k, normalize=1)
     # this is faster and same result
     fact_wconst = sm.add_constant(fact[:, :k], prepend=False)

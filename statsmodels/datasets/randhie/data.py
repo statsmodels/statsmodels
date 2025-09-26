@@ -1,7 +1,7 @@
 """RAND Health Insurance Experiment Data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This is in the public domain."""
 TITLE = __doc__
@@ -82,4 +82,4 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'randhie.csv')
+    return du.load_csv(__file__, "randhie.csv")

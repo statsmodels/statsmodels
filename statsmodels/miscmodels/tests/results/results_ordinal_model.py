@@ -52,15 +52,15 @@ df = pd.read_csv(os.path.join(cur_dir, "ologit_ucla.csv"))
 
 # df_unordered['apply'] is pd.Categorical with ordered = False
 df_unordered = df.copy()
-df_unordered['apply'] = pd.Categorical(df['apply'], ordered=False)
+df_unordered["apply"] = pd.Categorical(df["apply"], ordered=False)
 # but categories are set in order
-df_unordered['apply'] = df_unordered['apply'].cat.set_categories(
-    ['unlikely', 'somewhat likely', 'very likely'])
+df_unordered["apply"] = df_unordered["apply"].cat.set_categories(
+    ["unlikely", "somewhat likely", "very likely"])
 
 # df['apply'] is pd.Categorical with ordered = True
-df['apply'] = pd.Categorical(df['apply'], ordered=True)
-df['apply'] = df['apply'].cat.set_categories(
-    ['unlikely', 'somewhat likely', 'very likely'])
+df["apply"] = pd.Categorical(df["apply"], ordered=True)
+df["apply"] = df["apply"].cat.set_categories(
+    ["unlikely", "somewhat likely", "very likely"])
 
 data_store.df_unordered = df_unordered
 data_store.df = df

@@ -204,7 +204,7 @@ class MICEData:
             msg = "MICEData data column names should be string type"
             raise ValueError(msg)
 
-        self.regularized = dict()
+        self.regularized = {}
 
         # Drop observations where all variables are missing.  This
         # also has the effect of copying the data frame.

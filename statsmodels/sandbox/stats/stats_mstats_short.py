@@ -316,7 +316,7 @@ def plotting_positions_w1d(data, weights=None, alpha=0.4, beta=0.4, method="notn
         weights = np.array(weights, float, copy=False, ndmin=1)  # atleast_1d(weights)
         if weights.shape != x.shape:
             raise ValueError(
-                "if weights is given, it needs to be the same" "shape as data"
+                "if weights is given, it needs to be the sameshape as data"
             )
     n = len(x)
     xargsort = x.argsort()

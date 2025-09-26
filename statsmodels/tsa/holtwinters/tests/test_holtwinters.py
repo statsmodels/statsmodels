@@ -528,8 +528,8 @@ class TestHoltWinters:
             fit = mod.fit(optimized=False)
 
         # Check that we captured the parameters correctly
-        for key in params.keys():
-            assert_allclose(fit.params[key], params[key])
+        for key, param_value in params.items():
+            assert_allclose(fit.params[key], param_value)
 
         with mod.fix_params(params):
             opt_fit = mod.fit(optimized=True)

@@ -98,7 +98,7 @@ if __name__ == "__main__":
     #    ysp = np.linspace(xlow[1], xupp[1], n_grid)
     xr, yr = np.meshgrid(xsp, ysp)
     kde_vals = np.array(
-        [kde.density(np.matrix([xi, yi])) for xi, yi in zip(xr.ravel(), yr.ravel())]
+        [kde.density(np.matrix([xi, yi])) for xi, yi in zip(xr.ravel(), yr.ravel(), strict=False)]
     )
     plt.contour(xsp, ysp, kde_vals.reshape(n_grid, n_grid))
 

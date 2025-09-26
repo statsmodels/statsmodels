@@ -19,13 +19,13 @@ from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
 
 dta = datasets.macrodata.load_pandas().data
-dta.index = pd.period_range(start='1959Q1', end='2009Q3', freq='Q')
+dta.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
 
 
-@pytest.mark.parametrize('use_exog', [False, True])
-@pytest.mark.parametrize('trend', ['n', 'c', 't'])
-@pytest.mark.parametrize('concentrate_scale', [False, True])
-@pytest.mark.parametrize('measurement_error', [False, True])
+@pytest.mark.parametrize("use_exog", [False, True])
+@pytest.mark.parametrize("trend", ["n", "c", "t"])
+@pytest.mark.parametrize("concentrate_scale", [False, True])
+@pytest.mark.parametrize("measurement_error", [False, True])
 def test_smoothed_state_obs_weights_sarimax(use_exog, trend,
                                             concentrate_scale,
                                             measurement_error):
@@ -39,7 +39,7 @@ def test_smoothed_state_obs_weights_sarimax(use_exog, trend,
     cov_params = [0.8]
 
     params = []
-    if trend in ['c', 't']:
+    if trend in ["c", "t"]:
         params += trend_params
     if use_exog:
         params += exog_params
@@ -95,11 +95,11 @@ def test_smoothed_state_obs_weights_sarimax(use_exog, trend,
                                       measurement_error=measurement_error)
             tmp_mod.ssm.initialize_known(prior_mean, prior_cov)
             tmp_mod.update(params)
-            if tmp_mod['state_intercept'].ndim == 1:
-                si = tmp_mod['state_intercept']
-                tmp_mod['state_intercept'] = np.zeros((mod.k_states, mod.nobs))
-                tmp_mod['state_intercept', :, :] = si
-            tmp_mod['state_intercept', ell, j] += 1.0
+            if tmp_mod["state_intercept"].ndim == 1:
+                si = tmp_mod["state_intercept"]
+                tmp_mod["state_intercept"] = np.zeros((mod.k_states, mod.nobs))
+                tmp_mod["state_intercept", :, :] = si
+            tmp_mod["state_intercept", ell, j] += 1.0
             tmp_res = tmp_mod.ssm.smooth()
 
             desired_state_intercept_weights[:, j, :, ell] = (
@@ -131,8 +131,8 @@ def test_smoothed_state_obs_weights_sarimax(use_exog, trend,
     assert_allclose(actual_prior_weights, desired_prior_weights, atol=1e-12)
 
 
-@pytest.mark.parametrize('use_exog', [False, True])
-@pytest.mark.parametrize('trend', ['n', 'c', 't'])
+@pytest.mark.parametrize("use_exog", [False, True])
+@pytest.mark.parametrize("trend", ["n", "c", "t"])
 def test_smoothed_state_obs_weights_varmax(use_exog, trend):
     endog = np.zeros((5, 2))
     endog[0, 0] = np.nan
@@ -146,7 +146,7 @@ def test_smoothed_state_obs_weights_varmax(use_exog, trend):
     cov_params = [1., 0., 1.]
 
     params = []
-    if trend in ['c', 't']:
+    if trend in ["c", "t"]:
         params += trend_params
     params += var_params
     if use_exog:
@@ -194,11 +194,11 @@ def test_smoothed_state_obs_weights_varmax(use_exog, trend):
                                     exog=exog if use_exog else None)
             tmp_mod.ssm.initialize_known(prior_mean, prior_cov)
             tmp_mod.update(params)
-            if tmp_mod['state_intercept'].ndim == 1:
-                si = tmp_mod['state_intercept']
-                tmp_mod['state_intercept'] = np.zeros((mod.k_states, mod.nobs))
-                tmp_mod['state_intercept', :, :] = si[:, None]
-            tmp_mod['state_intercept', ell, j] += 1.0
+            if tmp_mod["state_intercept"].ndim == 1:
+                si = tmp_mod["state_intercept"]
+                tmp_mod["state_intercept"] = np.zeros((mod.k_states, mod.nobs))
+                tmp_mod["state_intercept", :, :] = si[:, None]
+            tmp_mod["state_intercept", ell, j] += 1.0
             tmp_res = tmp_mod.ssm.smooth()
 
             desired_state_intercept_weights[:, j, :, ell] = (
@@ -226,8 +226,8 @@ def test_smoothed_state_obs_weights_varmax(use_exog, trend):
     assert_allclose(actual_prior_weights, desired_prior_weights, atol=1e-12)
 
 
-@pytest.mark.parametrize('diffuse', [0, 1, 4])
-@pytest.mark.parametrize('univariate', [False, True])
+@pytest.mark.parametrize("diffuse", [0, 1, 4])
+@pytest.mark.parametrize("univariate", [False, True])
 def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
                                          reset_randomstate):
     endog = np.zeros((10, 3))
@@ -283,11 +283,11 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
                 tmp_mod.ssm.initialize_known(prior_mean, prior_cov)
             if univariate:
                 tmp_mod.ssm.filter_univariate = True
-            if tmp_mod['state_intercept'].ndim == 1:
-                si = tmp_mod['state_intercept']
-                tmp_mod['state_intercept'] = np.zeros((mod.k_states, mod.nobs))
-                tmp_mod['state_intercept', :, :] = si[:, None]
-            tmp_mod['state_intercept', ell, j] += 1.0
+            if tmp_mod["state_intercept"].ndim == 1:
+                si = tmp_mod["state_intercept"]
+                tmp_mod["state_intercept"] = np.zeros((mod.k_states, mod.nobs))
+                tmp_mod["state_intercept", :, :] = si[:, None]
+            tmp_mod["state_intercept", ell, j] += 1.0
             tmp_res = tmp_mod.ssm.smooth()
 
             desired_state_intercept_weights[:, j, :, ell] = (
@@ -333,7 +333,7 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
         contribution_prior = np.nansum(
             actual_prior_weights * prior_mean[None, None, :], axis=2)
         contribution_endog = np.nansum(
-            actual * (endog - mod['obs_intercept'].T)[None, :, None, :],
+            actual * (endog - mod["obs_intercept"].T)[None, :, None, :],
             axis=(1, 3))
         computed_smoothed_state = contribution_prior + contribution_endog
         assert_allclose(computed_smoothed_state, res.smoothed_state.T)
@@ -342,8 +342,8 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
                     desired_state_intercept_weights[d:, d:], atol=1e-12)
 
 
-@pytest.mark.parametrize('singular', ['both', 0, 1])
-@pytest.mark.parametrize('periods', [1, 2])
+@pytest.mark.parametrize("singular", ["both", 0, 1])
+@pytest.mark.parametrize("periods", [1, 2])
 def test_smoothed_state_obs_weights_univariate_singular(singular, periods,
                                                         reset_randomstate):
     # Tests for the univariate case when the forecast error covariance matrix
@@ -355,13 +355,13 @@ def test_smoothed_state_obs_weights_univariate_singular(singular, periods,
     endog[8, 1] = np.nan
     mod = TVSS(endog)
     mod.ssm.initialize_known([1.2, 0.8], np.eye(2) * 0)
-    if singular == 'both':
-        mod['obs_cov', ..., :periods] = 0
+    if singular == "both":
+        mod["obs_cov", ..., :periods] = 0
     else:
-        mod['obs_cov', 0, 1, :periods] = 0
-        mod['obs_cov', 1, 0, :periods] = 0
-        mod['obs_cov', singular, singular, :periods] = 0
-    mod['state_cov', :, :, :periods] = 0
+        mod["obs_cov", 0, 1, :periods] = 0
+        mod["obs_cov", 1, 0, :periods] = 0
+        mod["obs_cov", singular, singular, :periods] = 0
+    mod["state_cov", :, :, :periods] = 0
     mod.ssm.filter_univariate = True
     res = mod.smooth([])
 
@@ -407,7 +407,7 @@ def test_smoothed_state_obs_weights_collapsed(reset_randomstate):
     endog[7, :] = np.nan
     endog[8, 1] = np.nan
     mod = TVSS(endog)
-    mod['obs_intercept'] = np.zeros((6, 1))
+    mod["obs_intercept"] = np.zeros((6, 1))
     mod.ssm.initialize_known([1.2, 0.8], np.eye(2))
     mod.ssm.filter_collapsed = True
     res = mod.smooth([])
@@ -428,7 +428,7 @@ def test_smoothed_state_obs_weights_collapsed(reset_randomstate):
                 y = endog.copy()
                 y[j, i] = 1.0
                 tmp_mod = mod.clone(y)
-                tmp_mod['obs_intercept'] = np.zeros((6, 1))
+                tmp_mod["obs_intercept"] = np.zeros((6, 1))
                 tmp_mod.ssm.initialize_known([1.2, 0.8], np.eye(2))
                 mod.ssm.filter_collapsed = True
                 tmp_res = tmp_mod.smooth([])
@@ -442,15 +442,15 @@ def test_smoothed_state_obs_weights_collapsed(reset_randomstate):
     for j in range(n):
         for ell in range(m):
             tmp_mod = mod.clone(endog)
-            tmp_mod['obs_intercept'] = np.zeros((6, 1))
+            tmp_mod["obs_intercept"] = np.zeros((6, 1))
             tmp_mod.ssm.initialize_known([1.2, 0.8], np.eye(2))
             mod.ssm.filter_collapsed = True
 
-            if tmp_mod['state_intercept'].ndim == 1:
-                si = tmp_mod['state_intercept']
-                tmp_mod['state_intercept'] = np.zeros((mod.k_states, mod.nobs))
-                tmp_mod['state_intercept', :, :] = si[:, None]
-            tmp_mod['state_intercept', ell, j] += 1.0
+            if tmp_mod["state_intercept"].ndim == 1:
+                si = tmp_mod["state_intercept"]
+                tmp_mod["state_intercept"] = np.zeros((mod.k_states, mod.nobs))
+                tmp_mod["state_intercept", :, :] = si[:, None]
+            tmp_mod["state_intercept", ell, j] += 1.0
             tmp_res = tmp_mod.ssm.smooth()
 
             desired_state_intercept_weights[:, j, :, ell] = (
@@ -467,8 +467,8 @@ def test_smoothed_state_obs_weights_collapsed(reset_randomstate):
     )
 
 
-@pytest.mark.parametrize('compute_j', [np.arange(10), [0, 1, 2], [5, 0, 9], 8])
-@pytest.mark.parametrize('compute_t', [np.arange(10), [3, 2, 2], [0, 2, 5], 5])
+@pytest.mark.parametrize("compute_j", [np.arange(10), [0, 1, 2], [5, 0, 9], 8])
+@pytest.mark.parametrize("compute_t", [np.arange(10), [3, 2, 2], [0, 2, 5], 5])
 def test_compute_t_compute_j(compute_j, compute_t, reset_randomstate):
     # Tests for the collapsed case
     endog = np.zeros((10, 6))
@@ -477,7 +477,7 @@ def test_compute_t_compute_j(compute_j, compute_t, reset_randomstate):
     endog[7, :] = np.nan
     endog[8, 1] = np.nan
     mod = TVSS(endog)
-    mod['obs_intercept'] = np.zeros((6, 1))
+    mod["obs_intercept"] = np.zeros((6, 1))
     mod.ssm.initialize_known([1.2, 0.8], np.eye(2))
     mod.ssm.filter_collapsed = True
     res = mod.smooth([])
@@ -498,7 +498,7 @@ def test_compute_t_compute_j(compute_j, compute_t, reset_randomstate):
                 y = endog.copy()
                 y[j, i] = 1.0
                 tmp_mod = mod.clone(y)
-                tmp_mod['obs_intercept'] = np.zeros((6, 1))
+                tmp_mod["obs_intercept"] = np.zeros((6, 1))
                 tmp_mod.ssm.initialize_known([1.2, 0.8], np.eye(2))
                 mod.ssm.filter_collapsed = True
                 tmp_res = tmp_mod.smooth([])

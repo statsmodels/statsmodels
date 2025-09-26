@@ -320,7 +320,7 @@ mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model
 # mod_par.data.xnames = np.array(['shape', 'loc', 'scale'])[mod_par.fixed_paramsmask].tolist() # works also
 mod_par.data.xnames = [
     name
-    for (name, incl) in zip(["shape", "loc", "scale"], mod_par.fixed_paramsmask)
+    for (name, incl) in zip(["shape", "loc", "scale"], mod_par.fixed_paramsmask, strict=False)
     if incl
 ]
 

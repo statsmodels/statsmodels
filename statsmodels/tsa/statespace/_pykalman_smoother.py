@@ -150,7 +150,7 @@ class _KalmanSmoother:
         if missing_partial_obs:
             design = np.array(
                 _kfilter.selected_design[:k_endog*model.k_states], copy=True
-            ).reshape(k_endog, model.k_states, order='F')
+            ).reshape(k_endog, model.k_states, order="F")
             obs_cov = np.array(
                 _kfilter.selected_obs_cov[:k_endog**2], copy=True
             ).reshape(k_endog, k_endog)
@@ -158,7 +158,7 @@ class _KalmanSmoother:
 
             forecasts_error_cov = np.array(
                 _kfilter.forecast_error_cov[:, :, t], copy=True
-                ).ravel(order='F')[:k_endog**2].reshape(k_endog, k_endog)
+                ).ravel(order="F")[:k_endog**2].reshape(k_endog, k_endog)
             forecasts_error = np.array(
                 _kfilter.forecast_error[:k_endog, t], copy=True)
             F_inv = np.linalg.inv(forecasts_error_cov)

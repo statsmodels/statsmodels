@@ -3,7 +3,7 @@ import pandas as pd
 
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This is public domain."""
 TITLE = """Mauna Loa Weekly Atmospheric CO2 Data"""
@@ -42,8 +42,8 @@ NOTE = """::
 
 def load_pandas():
     data = _get_data()
-    index = pd.date_range(start=str(data['date'][0]), periods=len(data), freq='W-SAT')
-    dataset = data[['co2']]
+    index = pd.date_range(start=str(data["date"][0]), periods=len(data), freq="W-SAT")
+    dataset = data[["co2"]]
     dataset.index = index
     return du.Dataset(data=dataset, names=list(data.columns))
 
@@ -61,4 +61,4 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'co2.csv')
+    return du.load_csv(__file__, "co2.csv")

@@ -35,7 +35,7 @@ labels = ["ols", "qr 0.1", "qr 0.5", "qr 0.75"]
 
 plt.figure()
 plt.plot(x, y, ".", alpha=0.5)
-for lab, beta in zip(["ols", "qr 0.1", "qr 0.5", "qr 0.75"], params):
+for lab, beta in zip(["ols", "qr 0.1", "qr 0.5", "qr 0.75"], params, strict=False):
     print("%-8s" % lab, np.round(beta, 4))
     fitted = np.dot(exog, beta)
     lw = 2

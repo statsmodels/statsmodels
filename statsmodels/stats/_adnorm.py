@@ -12,7 +12,7 @@ from scipy import stats
 from statsmodels.tools.validation import array_like, bool_like, int_like
 
 
-def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
+def anderson_statistic(x, dist="norm", fit=True, params=(), axis=0):
     """
     Calculate the Anderson-Darling a2 statistic.
 
@@ -36,13 +36,13 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
     {float, ndarray}
         The Anderson-Darling statistic.
     """
-    x = array_like(x, 'x', ndim=None)
-    fit = bool_like(fit, 'fit')
-    axis = int_like(axis, 'axis')
+    x = array_like(x, "x", ndim=None)
+    fit = bool_like(fit, "fit")
+    axis = int_like(axis, "axis")
     y = np.sort(x, axis=axis)
     nobs = y.shape[axis]
     if fit:
-        if dist == 'norm':
+        if dist == "norm":
             xbar = np.expand_dims(np.mean(x, axis=axis), axis)
             s = np.expand_dims(np.std(x, ddof=1, axis=axis), axis)
             w = (y - xbar) / s
@@ -52,11 +52,10 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
             z = dist.cdf(y, *params)
         else:
             raise ValueError("dist must be 'norm' or a Callable")
+    elif callable(dist):
+        z = dist.cdf(y, *params)
     else:
-        if callable(dist):
-            z = dist.cdf(y, *params)
-        else:
-            raise ValueError('if fit is false, then dist must be callable')
+        raise ValueError("if fit is false, then dist must be callable")
 
     i = np.arange(1, nobs + 1)
     sl1 = [None] * x.ndim
@@ -102,7 +101,7 @@ def normal_ad(x, axis=0):
         Kolmogorov-Smirnov test with estimated parameters for Normal or
         Exponential distributions.
     """
-    ad2 = anderson_statistic(x, dist='norm', fit=True, axis=axis)
+    ad2 = anderson_statistic(x, dist="norm", fit=True, axis=axis)
     n = x.shape[axis]
 
     ad2a = ad2 * (1 + 0.75 / n + 2.25 / n ** 2)
@@ -139,7 +138,7 @@ def normal_ad(x, axis=0):
 
         pvalli = [pval0, pval1, pval2, pval3, pval4]
 
-        idx = np.searchsorted(bounds, ad2a, side='right')
+        idx = np.searchsorted(bounds, ad2a, side="right")
         pval = np.nan * np.ones_like(ad2a)
         for i in range(5):
             mask = (idx == i)

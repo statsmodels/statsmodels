@@ -420,7 +420,7 @@ class MIResults(LikelihoodModelResults):
         info["Sample size:"] = "%d" % self.mi.imp.data.shape[0]
         info["Num. imputations"] = "%d" % self.mi.nrep
 
-        smry.add_dict(info, align='l', float_format=float_format)
+        smry.add_dict(info, align="l", float_format=float_format)
 
         param = summary2.summary_params(self, alpha=alpha)
         param["FMI"] = self.fmi

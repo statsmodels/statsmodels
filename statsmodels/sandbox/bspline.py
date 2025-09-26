@@ -638,7 +638,8 @@ class SmoothingSpline(BSpline):
             if curdf > df:
                 apen, bpen = curpen, 2 * curpen
             else:
-                apen, bpen = apen, curpen
+                # apen unchanged
+                bpen = curpen
             if apen >= self.penmax:
                 raise ValueError(
                     "penalty too large, try setting penmax \

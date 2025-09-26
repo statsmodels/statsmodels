@@ -19,12 +19,12 @@ class TestSVAR:
     @classmethod
     def setup_class(cls):
         mdata = statsmodels.datasets.macrodata.load_pandas().data
-        mdata = mdata[['realgdp', 'realcons', 'realinv']]
+        mdata = mdata[["realgdp", "realcons", "realinv"]]
         data = mdata.values
         data = np.diff(np.log(data), axis=0)
-        A = np.asarray([[1, 0, 0], ['E', 1, 0], ['E', 'E', 1]], dtype="U")
-        B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']], dtype="U")
-        results = SVAR(data, svar_type='AB', A=A, B=B).fit(maxlags=3)
+        A = np.asarray([[1, 0, 0], ["E", 1, 0], ["E", "E", 1]], dtype="U")
+        B = np.asarray([["E", 0, 0], [0, "E", 0], [0, 0, "E"]], dtype="U")
+        results = SVAR(data, svar_type="AB", A=A, B=B).fit(maxlags=3)
         cls.res1 = results
         # cls.res2 = results_svar.SVARdataResults()
         from .results import results_svar_st

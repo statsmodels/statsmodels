@@ -124,8 +124,7 @@ def _est_unregularized_naive(mod, pnum, partitions, fit_kwds=None):
 
     if fit_kwds is None:
         raise ValueError(
-            "_est_unregularized_naive currently "
-            + "requires that fit_kwds not be None."
+            "_est_unregularized_naive currently requires that fit_kwds not be None."
         )
 
     return mod.fit(**fit_kwds).params
@@ -257,8 +256,7 @@ def _est_regularized_debiased(
 
     if fit_kwds is None:
         raise ValueError(
-            "_est_regularized_debiased currently "
-            + "requires that fit_kwds not be None."
+            "_est_regularized_debiased currently requires that fit_kwds not be None."
         )
     else:
         alpha = fit_kwds["alpha"]
@@ -588,7 +586,7 @@ class DistributedModel:
 
         else:
 
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=False))
 
             for pnum, ((endog, exog), init_kwds_e) in tup_gen:
 
@@ -644,14 +642,14 @@ class DistributedModel:
                 )
 
         elif parallel_backend is None and init_kwds_generator is not None:
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=False))
             results_l = par(
                 f(self, pnum, endog, exog, fit_kwds, init_kwds)
                 for pnum, ((endog, exog), init_kwds) in tup_gen
             )
 
         elif parallel_backend is not None and init_kwds_generator is not None:
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=False))
             with parallel_backend:
                 results_l = par(
                     f(self, pnum, endog, exog, fit_kwds, init_kwds)

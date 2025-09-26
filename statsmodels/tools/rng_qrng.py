@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.stats as stats
+from scipy import stats
 
 _future_warn = """\
 Passing `None` as the seed currently return the NumPy singleton RandomState

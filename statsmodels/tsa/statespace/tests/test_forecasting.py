@@ -11,19 +11,19 @@ from numpy.testing import assert_allclose
 from statsmodels.tsa.statespace import sarimax
 
 
-@pytest.mark.parametrize('data', ['list', 'numpy', 'range', 'date', 'period'])
+@pytest.mark.parametrize("data", ["list", "numpy", "range", "date", "period"])
 def test_append_multistep(data):
     # Test that `MLEResults.append` works when called repeatedly
     endog = [1., 0.5, 1.5, 0.9, 0.2, 0.34]
-    if data == 'numpy':
+    if data == "numpy":
         endog = np.array(endog)
-    elif data == 'range':
+    elif data == "range":
         endog = pd.Series(endog)
-    elif data == 'date':
-        index = pd.date_range(start='2000-01-01', periods=6, freq='MS')
+    elif data == "date":
+        index = pd.date_range(start="2000-01-01", periods=6, freq="MS")
         endog = pd.Series(endog, index=index)
-    elif data == 'period':
-        index = pd.period_range(start='2000-01', periods=6, freq='M')
+    elif data == "period":
+        index = pd.period_range(start="2000-01", periods=6, freq="M")
         endog = pd.Series(endog, index=index)
 
     # Base model fitting

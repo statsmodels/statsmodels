@@ -89,7 +89,7 @@ def hpfilter(x, lamb=1600):
     .. plot:: plots/hpf_plot.py
     """
     pw = PandasWrapper(x)
-    x = array_like(x, 'x', ndim=1)
+    x = array_like(x, "x", ndim=1)
     nobs = len(x)
     I = sparse.eye(nobs, nobs)  # noqa:E741
     offsets = np.array([0, 1, 2])
@@ -100,4 +100,4 @@ def hpfilter(x, lamb=1600):
     trend = spsolve((I+lamb*K.T.dot(K)).tocsc(), x, use_umfpack=use_umfpack)
 
     cycle = x - trend
-    return pw.wrap(cycle, append='cycle'), pw.wrap(trend, append='trend')
+    return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")

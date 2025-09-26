@@ -112,7 +112,7 @@ class CheckWeight:
         res2 = self.res2
         if not hasattr(res2, "resids"):
             return None  # use SkipError instead
-        resid_all = dict(zip(res2.resids_colnames, res2.resids.T))
+        resid_all = dict(zip(res2.resids_colnames, res2.resids.T, strict=False))
 
         assert_allclose(
             res1.resid_response, resid_all["resid_response"], atol=1e-6, rtol=2e-6

@@ -1434,7 +1434,7 @@ class MixedLM(base.LikelihoodModel):
 
         # Quadratic terms for random effects covariance.
         ii = np.tril_indices(k_re)
-        ix = [(a, b) for a, b in zip(ii[0], ii[1])]
+        ix = [(a, b) for a, b in zip(ii[0], ii[1], strict=False)]
         for i1 in range(k_re2):
             for i2 in range(k_re2):
                 ix1 = ix[i1]
@@ -2237,21 +2237,19 @@ class MixedLM(base.LikelihoodModel):
             params.fe_params = np.zeros(self.k_fe)
             params.cov_re = np.eye(self.k_re)
             params.vcomp = np.ones(self.k_vc)
+        elif isinstance(start_params, MixedLMParams):
+            params = start_params
+        # It's a packed array
+        elif len(start_params) == self.k_fe + self.k_re2 + self.k_vc:
+            params = MixedLMParams.from_packed(
+                start_params, self.k_fe, self.k_re, self.use_sqrt, has_fe=True
+            )
+        elif len(start_params) == self.k_re2 + self.k_vc:
+            params = MixedLMParams.from_packed(
+                start_params, self.k_fe, self.k_re, self.use_sqrt, has_fe=False
+            )
         else:
-            if isinstance(start_params, MixedLMParams):
-                params = start_params
-            else:
-                # It's a packed array
-                if len(start_params) == self.k_fe + self.k_re2 + self.k_vc:
-                    params = MixedLMParams.from_packed(
-                        start_params, self.k_fe, self.k_re, self.use_sqrt, has_fe=True
-                    )
-                elif len(start_params) == self.k_re2 + self.k_vc:
-                    params = MixedLMParams.from_packed(
-                        start_params, self.k_fe, self.k_re, self.use_sqrt, has_fe=False
-                    )
-                else:
-                    raise ValueError("invalid start_params")
+            raise ValueError("invalid start_params")
 
         if do_cg:
             fit_kwargs["retall"] = hist is not None
@@ -2284,8 +2282,8 @@ class MixedLM(base.LikelihoodModel):
                     )
                 else:
                     msg = (
-                        "MixedLM optimization failed, "
-                        + "trying a different optimizer may help."
+                        "MixedLM optimization failed, trying a different optimizer "
+                        "may help."
                     )
                     warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
@@ -2342,8 +2340,8 @@ class MixedLM(base.LikelihoodModel):
             pcov = np.linalg.inv(-hess)
         if np.any(hess_diag >= 0):
             msg = (
-                "The Hessian matrix at the estimated parameter values "
-                + "is not positive definite."
+                "The Hessian matrix at the estimated parameter values is not "
+                "positive definite."
             )
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
@@ -2587,7 +2585,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             cov_re_inv = np.linalg.inv(self.cov_re)
         except np.linalg.LinAlgError:
             raise ValueError(
-                "Cannot predict random effects from " + "singular covariance structure."
+                "Cannot predict random effects from singular covariance structure."
             )
 
         vcomp = self.vcomp

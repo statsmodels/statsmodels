@@ -201,8 +201,8 @@ class TrimmedMean:
         #               (tm.nobs - 1.) / tm.nobs)
         return std_
 
-    def ttest_mean(self, value=0, transform='trimmed',
-                   alternative='two-sided'):
+    def ttest_mean(self, value=0, transform="trimmed",
+                   alternative="two-sided"):
         """
         One sample t-test for trimmed or Winsorized mean
 
@@ -224,10 +224,10 @@ class TrimmedMean:
         """
         import statsmodels.stats.weightstats as smws
         df = self.nobs_reduced - 1
-        if transform == 'trimmed':
+        if transform == "trimmed":
             mean_ = self.mean_trimmed
             std_ = self.std_mean_trimmed
-        elif transform == 'winsorized':
+        elif transform == "winsorized":
             mean_ = self.mean_winsorized
             std_ = self.std_mean_winsorized
         else:
@@ -251,7 +251,7 @@ class TrimmedMean:
         return tm
 
 
-def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
+def scale_transform(data, center="median", transform="abs", trim_frac=0.2,
                     axis=0):
     """Transform data for variance comparison for Levene type tests
 
@@ -278,27 +278,29 @@ def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
     """
     x = np.asarray(data)  # x is shorthand from earlier code
 
-    if transform == 'abs':
+    if transform == "abs":
         tfunc = np.abs
-    elif transform == 'square':
-        tfunc = lambda x: x * x  # noqa
-    elif transform == 'identity':
-        tfunc = lambda x: x  # noqa
+    elif transform == "square":
+        def tfunc(x):
+            return x * x
+    elif transform == "identity":
+        def tfunc(x):
+            return x
     elif callable(transform):
         tfunc = transform
     else:
-        raise ValueError('transform should be abs, square or exp')
+        raise ValueError("transform should be abs, square or exp")
 
-    if center == 'median':
+    if center == "median":
         res = tfunc(x - np.expand_dims(np.median(x, axis=axis), axis))
-    elif center == 'mean':
+    elif center == "mean":
         res = tfunc(x - np.expand_dims(np.mean(x, axis=axis), axis))
-    elif center == 'trimmed':
+    elif center == "trimmed":
         center = trim_mean(x, trim_frac, axis=axis)
         res = tfunc(x - np.expand_dims(center, axis))
     elif isinstance(center, numbers.Number):
         res = tfunc(x - center)
     else:
-        raise ValueError('center should be median, mean or trimmed')
+        raise ValueError("center should be median, mean or trimmed")
 
     return res

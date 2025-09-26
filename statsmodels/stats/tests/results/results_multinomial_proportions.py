@@ -21,7 +21,7 @@ res_multinomial = collections.defaultdict(Holder)
 
 # We test with any method name that starts with 'sison', as that is the
 # criterion.
-key1 = ('sison', 'Sison-Glaz example 1')
+key1 = ("sison", "Sison-Glaz example 1")
 res_multinomial[key1].proportions = [56, 72, 73, 59, 62, 87, 58]
 res_multinomial[key1].cis = np.array([
     [.07922912, .1643361], [.11349036, .1985973],
@@ -30,12 +30,12 @@ res_multinomial[key1].cis = np.array([
     [.08351178, .1686187]])
 res_multinomial[key1].precision = 4
 
-key2 = ('sisonandglaz', 'Sison-Glaz example 2')
+key2 = ("sisonandglaz", "Sison-Glaz example 2")
 res_multinomial[key2].proportions = [5] * 50
 res_multinomial[key2].cis = [0, .05304026] * np.ones((50, 2))
 res_multinomial[key2].precision = 4
 
-key3 = ('sison-whatever', 'Sison-Glaz example 3')
+key3 = ("sison-whatever", "Sison-Glaz example 3")
 res_multinomial[key3].proportions = (
     [1] * 10 + [12] * 10 + [5] * 10 + [3] * 10 + [4] * 10)
 res_multinomial[key3].cis = np.concatenate([
@@ -48,7 +48,7 @@ res_multinomial[key3].cis = np.concatenate([
 res_multinomial[key3].precision = 4
 
 # The examples from the Sison & Glaz paper only include 3 decimals.
-gkey1 = ('goodman', 'Sison-Glaz example 1')
+gkey1 = ("goodman", "Sison-Glaz example 1")
 res_multinomial[gkey1].proportions = [56, 72, 73, 59, 62, 87, 58]
 res_multinomial[gkey1].cis = np.array([
     [.085, .166],
@@ -60,12 +60,12 @@ res_multinomial[gkey1].cis = np.array([
     [.089, .171]])
 res_multinomial[gkey1].precision = 3
 
-gkey2 = ('goodman', 'Sison-Glaz example 2')
+gkey2 = ("goodman", "Sison-Glaz example 2")
 res_multinomial[gkey2].proportions = [5] * 50
 res_multinomial[gkey2].cis = [.005, .075] * np.ones((50, 2))
 res_multinomial[gkey2].precision = 3
 
-gkey3 = ('goodman', 'Sison-Glaz example 3')
+gkey3 = ("goodman", "Sison-Glaz example 3")
 res_multinomial[gkey3].proportions = (
     [1] * 10 + [12] * 10 + [5] * 10 + [3] * 10 + [4] * 10)
 res_multinomial[gkey3].cis = np.concatenate([

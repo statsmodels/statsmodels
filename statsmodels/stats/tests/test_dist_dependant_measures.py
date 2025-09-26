@@ -142,7 +142,7 @@ class TestDistDependenceMeasures:
         try:
             iris = get_rdataset("iris").data.values[:, :4]
         except IGNORED_EXCEPTIONS:
-            pytest.skip('Failed with HTTPError or URLError, these are random')
+            pytest.skip("Failed with HTTPError or URLError, these are random")
 
         x = np.asarray(iris[:50], dtype=float)
         y = np.asarray(iris[50:100], dtype=float)
@@ -182,7 +182,7 @@ class TestDistDependenceMeasures:
         try:
             quakes = get_rdataset("quakes").data.values[:, :3]
         except IGNORED_EXCEPTIONS:
-            pytest.skip('Failed with HTTPError or URLError, these are random')
+            pytest.skip("Failed with HTTPError or URLError, these are random")
 
         x = np.asarray(quakes[:50], dtype=float)
         y = np.asarray(quakes[50:100], dtype=float)

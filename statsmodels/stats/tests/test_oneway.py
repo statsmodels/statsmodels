@@ -59,25 +59,25 @@ def test_effectsize_power():
     alpha = 0.05
     power = 0.8
     nobs_t = nobs * n_groups
-    kwds = {'effect_size': es, 'nobs': nobs_t, 'alpha': alpha, 'power': power,
-            'k_groups': n_groups}
+    kwds = {"effect_size": es, "nobs": nobs_t, "alpha": alpha, "power": power,
+            "k_groups": n_groups}
 
     from statsmodels.stats.power import FTestAnovaPower
 
     res_pow = 0.8251
     res_es = 0.559
     kwds_ = kwds.copy()
-    del kwds_['power']
+    del kwds_["power"]
     p = FTestAnovaPower().power(**kwds_)
     assert_allclose(p, res_pow, atol=0.0001)
     assert_allclose(es, res_es, atol=0.0006)
 
     # example unequal sample sizes
     nobs = np.array([15, 9, 9])
-    kwds['nobs'] = nobs
+    kwds["nobs"] = nobs
     es = effectsize_oneway(means, vars_, nobs, use_var="equal", ddof_between=0)
     es = np.sqrt(es)
-    kwds['effect_size'] = es
+    kwds["effect_size"] = es
     p = FTestAnovaPower().power(**kwds_)
 
     res_pow = 0.8297
@@ -140,15 +140,15 @@ def test_effectsize_fstat_stata():
     assert_allclose(ci_es.ci_omega2, (lb_omega2, ub_omega2), rtol=0.025)
 
 
-@pytest.mark.parametrize("center", ['median', 'mean', 'trimmed'])
+@pytest.mark.parametrize("center", ["median", "mean", "trimmed"])
 def test_scale_transform(center):
     x = np.random.randn(5, 3)
-    xt = scale_transform(x, center=center, transform='abs', trim_frac=0.2,
+    xt = scale_transform(x, center=center, transform="abs", trim_frac=0.2,
                          axis=0)
-    xtt = scale_transform(x.T, center=center, transform='abs', trim_frac=0.2,
+    xtt = scale_transform(x.T, center=center, transform="abs", trim_frac=0.2,
                           axis=1)
     assert_allclose(xt.T, xtt, rtol=1e-13)
-    xt0 = scale_transform(x[:, 0], center=center, transform='abs',
+    xt0 = scale_transform(x[:, 0], center=center, transform="abs",
                           trim_frac=0.2)
     assert_allclose(xt0, xt[:, 0], rtol=1e-13)
     assert_allclose(xt0, xtt[0, :], rtol=1e-13)
@@ -316,8 +316,8 @@ class TestOnewayScale:
         # lawstat: Test Statistic = 1.0866123063642, p-value = 0.3471072204516
         statistic = 1.0866123063642
         p_value = 0.3471072204516
-        res0 = smo.test_scale_oneway(data, method='equal', center='median',
-                                     transform='abs', trim_frac_mean=0.2)
+        res0 = smo.test_scale_oneway(data, method="equal", center="median",
+                                     transform="abs", trim_frac_mean=0.2)
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
 
@@ -326,8 +326,8 @@ class TestOnewayScale:
         statistic = 1.10732113109744
         p_value = 0.340359251994645
         df = [2, 40]
-        res0 = smo.test_scale_oneway(data, method='equal', center='trimmed',
-                                     transform='abs', trim_frac_mean=0.2)
+        res0 = smo.test_scale_oneway(data, method="equal", center="trimmed",
+                                     transform="abs", trim_frac_mean=0.2)
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
         assert_allclose(res0.df, df)
@@ -339,8 +339,8 @@ class TestOnewayScale:
         parameter = [2, 40]  # df
         p_value = 0.349641166869223
         # method = "Levene's Homogeneity Test"
-        res0 = smo.test_scale_oneway(data, method='equal', center='mean',
-                                     transform='abs', trim_frac_mean=0.2)
+        res0 = smo.test_scale_oneway(data, method="equal", center="mean",
+                                     transform="abs", trim_frac_mean=0.2)
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
         assert_allclose(res0.df, parameter)
@@ -364,8 +364,8 @@ class TestOnewayScale:
         # regression numbers from initial run
         statistic, p_value = 1.0173464626246675, 0.3763806150460239
         df = (2.0, 24.40374758005409)
-        res = smo.test_scale_oneway(data, method='unequal', center='median',
-                                    transform='abs', trim_frac_mean=0.2)
+        res = smo.test_scale_oneway(data, method="unequal", center="median",
+                                    transform="abs", trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
         assert_allclose(res.df, df)
@@ -374,8 +374,8 @@ class TestOnewayScale:
         df = (1.83153791573948, 30.6733640949525)
         p_value2 = 0.3679999679787619
         df2 = (2, 30.6733640949525)
-        res = smo.test_scale_oneway(data, method='bf', center='median',
-                                    transform='abs', trim_frac_mean=0.2)
+        res = smo.test_scale_oneway(data, method="bf", center="median",
+                                    transform="abs", trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
         assert_allclose(res.df, df)
@@ -384,24 +384,24 @@ class TestOnewayScale:
 
         statistic, p_value = 1.7252431333701745, 0.19112038168209514
         df = (2.0, 40.0)
-        res = smo.test_scale_oneway(data, method='equal', center='mean',
-                                    transform='square', trim_frac_mean=0.2)
+        res = smo.test_scale_oneway(data, method="equal", center="mean",
+                                    transform="square", trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
         assert_equal(res.df, df)
 
         statistic, p_value = 0.4129696057329463, 0.6644711582864451
         df = (2.0, 40.0)
-        res = smo.test_scale_oneway(data, method='equal', center='mean',
-                                    transform=lambda x: np.log(x * x),  # noqa
+        res = smo.test_scale_oneway(data, method="equal", center="mean",
+                                    transform=lambda x: np.log(x * x),
                                     trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
         assert_allclose(res.df, df)
 
         # compare no transform with standard anova
-        res = smo.test_scale_oneway(data, method='unequal', center=0,
-                                    transform='identity', trim_frac_mean=0.2)
+        res = smo.test_scale_oneway(data, method="unequal", center=0,
+                                    transform="identity", trim_frac_mean=0.2)
         res2 = anova_oneway(self.data, use_var="unequal")
 
         assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
@@ -412,18 +412,18 @@ class TestOnewayScale:
         data = self.data
 
         # compare no transform with standard anova
-        res = smo.equivalence_scale_oneway(data, 0.5, method='unequal',
+        res = smo.equivalence_scale_oneway(data, 0.5, method="unequal",
                                            center=0,
-                                           transform='identity')
+                                           transform="identity")
         res2 = equivalence_oneway(self.data, 0.5, use_var="unequal")
 
         assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
         assert_allclose(res.statistic, res2.statistic, rtol=1e-13)
         assert_allclose(res.df, res2.df)
 
-        res = smo.equivalence_scale_oneway(data, 0.5, method='bf',
+        res = smo.equivalence_scale_oneway(data, 0.5, method="bf",
                                            center=0,
-                                           transform='identity')
+                                           transform="identity")
         res2 = equivalence_oneway(self.data, 0.5, use_var="bf")
 
         assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
@@ -504,8 +504,8 @@ class TestOnewayOLS:
         nc_wt_vec = wald_test_noncent_generic(params_alt, c_equal, v,
                                               cov_p, diff=None, joint=False)
         for i in range(c_equal.shape[0]):
-            nc_wt_i = wald_test_noncent_generic(params_alt, c_equal[i : i + 1],  # noqa
-                                                v[i : i + 1], cov_p, diff=None,  # noqa
+            nc_wt_i = wald_test_noncent_generic(params_alt, c_equal[i : i + 1],
+                                                v[i : i + 1], cov_p, diff=None,
                                                 joint=False)
             assert_allclose(nc_wt_vec[i], nc_wt_i, rtol=1e-13)
 

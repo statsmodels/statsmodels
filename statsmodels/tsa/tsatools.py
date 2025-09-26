@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from statsmodels.compat.python import lrange
 
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 import warnings
 
 import numpy as np
@@ -13,13 +13,15 @@ from pandas.tseries.frequencies import to_offset
 
 from statsmodels.tools.data import _is_recarray, _is_using_pandas
 from statsmodels.tools.sm_exceptions import ValueWarning
-from statsmodels.tools.typing import NDArray
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
     string_like,
 )
+
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import NDArray
 
 __all__ = [
     "lagmat",
@@ -384,7 +386,7 @@ def lagmat(
     trim = trim.lower()
     if is_pandas and trim in ("none", "backward"):
         raise ValueError(
-            "trim cannot be 'none' or 'backward' when used on " "Series or DataFrames"
+            "trim cannot be 'none' or 'backward' when used on Series or DataFrames"
         )
 
     dropidx = 0
@@ -394,7 +396,7 @@ def lagmat(
     if maxlag >= nobs:
         raise ValueError("maxlag should be < nobs")
     lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
-    for k in range(0, int(maxlag + 1)):
+    for k in range(int(maxlag + 1)):
         lm[
             maxlag - k : nobs + maxlag - k,
             nvar * (maxlag - k) : nvar * (maxlag - k + 1),

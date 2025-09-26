@@ -31,15 +31,15 @@ class MultivariateVARKnown:
         cls.test_against_KFAS = test_against_KFAS
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
-                                  freq='QS')
-        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
+        dta.index = pd.date_range(start="1959-01-01", end="2009-7-01",
+                                  freq="QS")
+        obs = np.log(dta[["realgdp", "realcons", "realinv"]]).diff().iloc[1:]
 
-        if missing == 'all':
+        if missing == "all":
             obs.iloc[0:50, :] = np.nan
-        elif missing == 'partial':
+        elif missing == "partial":
             obs.iloc[0:50, 0] = np.nan
-        elif missing == 'mixed':
+        elif missing == "mixed":
             obs.iloc[0:50, 0] = np.nan
             obs.iloc[19:70, 1] = np.nan
             obs.iloc[39:90, 2] = np.nan
@@ -52,17 +52,17 @@ class MultivariateVARKnown:
 
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
-        mod['design'] = np.eye(3)
-        mod['obs_cov'] = np.array([
+        mod["design"] = np.eye(3)
+        mod["obs_cov"] = np.array([
             [0.0000640649,  0.,            0.],
             [0.,            0.0000572802,  0.],
             [0.,            0.,            0.0017088585]])
-        mod['transition'] = np.array([
+        mod["transition"] = np.array([
             [-0.1119908792,  0.8441841604,  0.0238725303],
             [0.2629347724,   0.4996718412, -0.0173023305],
             [-3.2192369082,  4.1536028244,  0.4514379215]])
-        mod['selection'] = np.eye(3)
-        mod['state_cov'] = np.array([
+        mod["selection"] = np.eye(3)
+        mod["state_cov"] = np.array([
             [0.0000640649,  0.0000388496,  0.0002148769],
             [0.0000388496,  0.0000572802,  0.000001555],
             [0.0002148769,  0.000001555,   0.0017088585]])
@@ -110,8 +110,8 @@ class MultivariateVARKnown:
 
     def test_simulate_2(self):
         n = 10
-        Z = self.model['design']
-        T = self.model['transition']
+        Z = self.model["design"]
+        T = self.model["transition"]
 
         # Test with non-zero state shocks and initial state
         measurement_shocks = np.zeros((n, self.model.k_endog))
@@ -158,7 +158,7 @@ class MultivariateVARKnown:
         # - The simulated state disturbance is equal to the smoothed
         #   state disturbance for exactly the same reason as above.
         sim = self.sim
-        Z = self.model['design']
+        Z = self.model["design"]
 
         nobs = self.model.nobs
         k_endog = self.model.k_endog
@@ -182,23 +182,23 @@ class MultivariateVARKnown:
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = os.path.join(current_path, 'results',
-                                'results_simulation_smoothing0.csv')
+            path = os.path.join(current_path, "results",
+                                "results_simulation_smoothing0.csv")
             true = pd.read_csv(path)
 
             assert_allclose(sim.simulated_state,
-                            true[['state1', 'state2', 'state3']].T,
+                            true[["state1", "state2", "state3"]].T,
                             atol=1e-7)
             assert_allclose(sim.simulated_measurement_disturbance,
-                            true[['eps1', 'eps2', 'eps3']].T,
+                            true[["eps1", "eps2", "eps3"]].T,
                             atol=1e-7)
             assert_allclose(sim.simulated_state_disturbance,
-                            true[['eta1', 'eta2', 'eta3']].T,
+                            true[["eta1", "eta2", "eta3"]].T,
                             atol=1e-7)
             signals = np.zeros((3, self.model.nobs))
             for t in range(self.model.nobs):
                 signals[:, t] = np.dot(Z, sim.simulated_state[:, t])
-            assert_allclose(signals, true[['signal1', 'signal2', 'signal3']].T,
+            assert_allclose(signals, true[["signal1", "signal2", "signal3"]].T,
                             atol=1e-7)
 
     def test_simulation_smoothing_1(self):
@@ -206,7 +206,7 @@ class MultivariateVARKnown:
         # disturbances are zeros
         sim = self.sim
 
-        Z = self.model['design']
+        Z = self.model["design"]
 
         nobs = self.model.nobs
         k_endog = self.model.k_endog
@@ -221,7 +221,7 @@ class MultivariateVARKnown:
         # Compute some additional known quantities
         generated_measurement_disturbance = np.zeros(
             measurement_disturbance_variates.shape)
-        chol = np.linalg.cholesky(self.model['obs_cov'])
+        chol = np.linalg.cholesky(self.model["obs_cov"])
         for t in range(self.model.nobs):
             generated_measurement_disturbance[t] = np.dot(
                 chol, measurement_disturbance_variates[t])
@@ -230,8 +230,8 @@ class MultivariateVARKnown:
 
         generated_model = mlemodel.MLEModel(
             y, k_states=k_states, k_posdef=k_posdef)
-        for name in ['design', 'obs_cov', 'transition',
-                     'selection', 'state_cov']:
+        for name in ["design", "obs_cov", "transition",
+                     "selection", "state_cov"]:
             generated_model[name] = self.model[name]
 
         generated_model.initialize_approximate_diffuse(1e6)
@@ -268,22 +268,22 @@ class MultivariateVARKnown:
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = os.path.join(current_path, 'results',
-                                'results_simulation_smoothing1.csv')
+            path = os.path.join(current_path, "results",
+                                "results_simulation_smoothing1.csv")
             true = pd.read_csv(path)
             assert_allclose(sim.simulated_state,
-                            true[['state1', 'state2', 'state3']].T,
+                            true[["state1", "state2", "state3"]].T,
                             atol=1e-7)
             assert_allclose(sim.simulated_measurement_disturbance,
-                            true[['eps1', 'eps2', 'eps3']].T,
+                            true[["eps1", "eps2", "eps3"]].T,
                             atol=1e-7)
             assert_allclose(sim.simulated_state_disturbance,
-                            true[['eta1', 'eta2', 'eta3']].T,
+                            true[["eta1", "eta2", "eta3"]].T,
                             atol=1e-7)
             signals = np.zeros((3, self.model.nobs))
             for t in range(self.model.nobs):
                 signals[:, t] = np.dot(Z, sim.simulated_state[:, t])
-            assert_allclose(signals, true[['signal1', 'signal2', 'signal3']].T,
+            assert_allclose(signals, true[["signal1", "signal2", "signal3"]].T,
                             atol=1e-7)
 
     def test_simulation_smoothing_2(self):
@@ -291,8 +291,8 @@ class MultivariateVARKnown:
         # initial state variates are zeros.
         sim = self.sim
 
-        Z = self.model['design']
-        T = self.model['transition']
+        Z = self.model["design"]
+        T = self.model["transition"]
 
         nobs = self.model.nobs
         k_endog = self.model.k_endog
@@ -309,14 +309,14 @@ class MultivariateVARKnown:
         # Compute some additional known quantities
         generated_measurement_disturbance = np.zeros(
             measurement_disturbance_variates.shape)
-        chol = np.linalg.cholesky(self.model['obs_cov'])
+        chol = np.linalg.cholesky(self.model["obs_cov"])
         for t in range(self.model.nobs):
             generated_measurement_disturbance[t] = np.dot(
                 chol, measurement_disturbance_variates[t])
 
         generated_state_disturbance = np.zeros(
             state_disturbance_variates.shape)
-        chol = np.linalg.cholesky(self.model['state_cov'])
+        chol = np.linalg.cholesky(self.model["state_cov"])
         for t in range(self.model.nobs):
             generated_state_disturbance[t] = np.dot(
                 chol, state_disturbance_variates[t])
@@ -336,8 +336,8 @@ class MultivariateVARKnown:
 
         generated_model = mlemodel.MLEModel(y, k_states=k_states,
                                             k_posdef=k_posdef)
-        for name in ['design', 'obs_cov', 'transition',
-                     'selection', 'state_cov']:
+        for name in ["design", "obs_cov", "transition",
+                     "selection", "state_cov"]:
             generated_model[name] = self.model[name]
 
         generated_model.initialize_approximate_diffuse(1e6)
@@ -377,22 +377,22 @@ class MultivariateVARKnown:
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = os.path.join(current_path, 'results',
-                                'results_simulation_smoothing2.csv')
+            path = os.path.join(current_path, "results",
+                                "results_simulation_smoothing2.csv")
             true = pd.read_csv(path)
             assert_allclose(sim.simulated_state.T,
-                            true[['state1', 'state2', 'state3']],
+                            true[["state1", "state2", "state3"]],
                             atol=1e-7)
             assert_allclose(sim.simulated_measurement_disturbance,
-                            true[['eps1', 'eps2', 'eps3']].T,
+                            true[["eps1", "eps2", "eps3"]].T,
                             atol=1e-7)
             assert_allclose(sim.simulated_state_disturbance,
-                            true[['eta1', 'eta2', 'eta3']].T,
+                            true[["eta1", "eta2", "eta3"]].T,
                             atol=1e-7)
             signals = np.zeros((3, self.model.nobs))
             for t in range(self.model.nobs):
                 signals[:, t] = np.dot(Z, sim.simulated_state[:, t])
-            assert_allclose(signals, true[['signal1', 'signal2', 'signal3']].T,
+            assert_allclose(signals, true[["signal1", "signal2", "signal3"]].T,
                             atol=1e-7)
 
 
@@ -417,7 +417,7 @@ class TestMultivariateVARKnownMissingAll(MultivariateVARKnown):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         super().setup_class(
-            missing='all', test_against_KFAS=False)
+            missing="all", test_against_KFAS=False)
         cls.true_llf = 1305.739288
 
 
@@ -425,7 +425,7 @@ class TestMultivariateVARKnownMissingPartial(MultivariateVARKnown):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         super().setup_class(
-            missing='partial', test_against_KFAS=False)
+            missing="partial", test_against_KFAS=False)
         cls.true_llf = 1518.449598
 
 
@@ -433,7 +433,7 @@ class TestMultivariateVARKnownMissingMixed(MultivariateVARKnown):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         super().setup_class(
-            missing='mixed', test_against_KFAS=False)
+            missing="mixed", test_against_KFAS=False)
         cls.true_llf = 1117.265303
 
 
@@ -441,21 +441,21 @@ class TestDFM(TestMultivariateVARKnown):
     test_against_KFAS = False
 
     @classmethod
-    def setup_class(cls, which='none', *args, **kwargs):
+    def setup_class(cls, which="none", *args, **kwargs):
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
-                                  freq='QS')
-        levels = dta[['realgdp', 'realcons', 'realinv']]
+        dta.index = pd.date_range(start="1959-01-01", end="2009-7-01",
+                                  freq="QS")
+        levels = dta[["realgdp", "realcons", "realinv"]]
         obs = np.log(levels).diff().iloc[1:] * 400
 
-        if which == 'all':
+        if which == "all":
             obs.iloc[:50, :] = np.nan
             obs.iloc[119:130, :] = np.nan
-        elif which == 'partial':
+        elif which == "partial":
             obs.iloc[0:50, 0] = np.nan
             obs.iloc[119:130, 0] = np.nan
-        elif which == 'mixed':
+        elif which == "mixed":
             obs.iloc[0:50, 0] = np.nan
             obs.iloc[19:70, 1] = np.nan
             obs.iloc[39:90, 2] = np.nan
@@ -464,15 +464,15 @@ class TestDFM(TestMultivariateVARKnown):
 
         # Create the model with typical state space
         mod = mlemodel.MLEModel(obs, k_states=2, k_posdef=2, **kwargs)
-        mod['design'] = np.array([[-32.47143586, 17.33779024],
+        mod["design"] = np.array([[-32.47143586, 17.33779024],
                                   [-7.40264169, 1.69279859],
                                   [-209.04702853, 125.2879374]])
-        mod['obs_cov'] = np.diag(
+        mod["obs_cov"] = np.diag(
             np.array([0.0622668, 1.95666886, 58.37473642]))
-        mod['transition'] = np.array([[0.29935707, 0.33289005],
+        mod["transition"] = np.array([[0.29935707, 0.33289005],
                                       [-0.7639868, 1.2844237]])
-        mod['selection'] = np.eye(2)
-        mod['state_cov'] = np.array([[1.2, -0.25],
+        mod["selection"] = np.eye(2)
+        mod["state_cov"] = np.array([[1.2, -0.25],
                                      [-0.25, 1.1]])
         mod.initialize_approximate_diffuse(1e6)
         mod.ssm.filter_univariate = True
@@ -491,18 +491,18 @@ class MultivariateVAR:
     More generic tests for simulation smoothing; use actual N(0,1) variates
     """
     @classmethod
-    def setup_class(cls, missing='none', *args, **kwargs):
+    def setup_class(cls, missing="none", *args, **kwargs):
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
-                                  freq='QS')
-        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
+        dta.index = pd.date_range(start="1959-01-01", end="2009-7-01",
+                                  freq="QS")
+        obs = np.log(dta[["realgdp", "realcons", "realinv"]]).diff().iloc[1:]
 
-        if missing == 'all':
+        if missing == "all":
             obs.iloc[0:50, :] = np.nan
-        elif missing == 'partial':
+        elif missing == "partial":
             obs.iloc[0:50, 0] = np.nan
-        elif missing == 'mixed':
+        elif missing == "mixed":
             obs.iloc[0:50, 0] = np.nan
             obs.iloc[19:70, 1] = np.nan
             obs.iloc[39:90, 2] = np.nan
@@ -512,17 +512,17 @@ class MultivariateVAR:
 
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
-        mod['design'] = np.eye(3)
-        mod['obs_cov'] = np.array([
+        mod["design"] = np.eye(3)
+        mod["obs_cov"] = np.array([
             [0.0000640649,  0.,            0.],
             [0.,            0.0000572802,  0.],
             [0.,            0.,            0.0017088585]])
-        mod['transition'] = np.array([
+        mod["transition"] = np.array([
             [-0.1119908792,  0.8441841604,  0.0238725303],
             [0.2629347724,   0.4996718412, -0.0173023305],
             [-3.2192369082,  4.1536028244,  0.4514379215]])
-        mod['selection'] = np.eye(3)
-        mod['state_cov'] = np.array([
+        mod["selection"] = np.eye(3)
+        mod["state_cov"] = np.array([
             [0.0000640649,  0.0000388496,  0.0002148769],
             [0.0000388496,  0.0000572802,  0.000001555],
             [0.0002148769,  0.000001555,   0.0017088585]])
@@ -539,7 +539,7 @@ class MultivariateVAR:
     def test_simulation_smoothing(self):
         sim = self.sim
 
-        Z = self.model['design']
+        Z = self.model["design"]
 
         nobs = self.model.nobs
         k_endog = self.model.k_endog
@@ -554,19 +554,19 @@ class MultivariateVAR:
 
         # Test against R package KFAS values
         assert_allclose(sim.simulated_state.T,
-                        self.true[['state1', 'state2', 'state3']],
+                        self.true[["state1", "state2", "state3"]],
                         atol=1e-7)
         assert_allclose(sim.simulated_measurement_disturbance,
-                        self.true[['eps1', 'eps2', 'eps3']].T,
+                        self.true[["eps1", "eps2", "eps3"]].T,
                         atol=1e-7)
         assert_allclose(sim.simulated_state_disturbance,
-                        self.true[['eta1', 'eta2', 'eta3']].T,
+                        self.true[["eta1", "eta2", "eta3"]].T,
                         atol=1e-7)
         signals = np.zeros((3, self.model.nobs))
         for t in range(self.model.nobs):
             signals[:, t] = np.dot(Z, sim.simulated_state[:, t])
         assert_allclose(signals,
-                        self.true[['signal1', 'signal2', 'signal3']].T,
+                        self.true[["signal1", "signal2", "signal3"]].T,
                         atol=1e-7)
 
 
@@ -574,11 +574,11 @@ class TestMultivariateVAR(MultivariateVAR):
     @classmethod
     def setup_class(cls):
         super().setup_class()
-        path = os.path.join(current_path, 'results',
-                            'results_simulation_smoothing3_variates.csv')
+        path = os.path.join(current_path, "results",
+                            "results_simulation_smoothing3_variates.csv")
         cls.variates = pd.read_csv(path).values.squeeze()
-        path = os.path.join(current_path, 'results',
-                            'results_simulation_smoothing3.csv')
+        path = os.path.join(current_path, "results",
+                            "results_simulation_smoothing3.csv")
         cls.true = pd.read_csv(path)
         cls.true_llf = 1695.34872
 
@@ -587,13 +587,13 @@ def test_misc():
 
     # Create the model and simulation smoother
     dta = datasets.macrodata.load_pandas().data
-    dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
-                              freq='QS')
-    obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
+    dta.index = pd.date_range(start="1959-01-01", end="2009-7-01",
+                              freq="QS")
+    obs = np.log(dta[["realgdp", "realcons", "realinv"]]).diff().iloc[1:]
 
-    mod = sarimax.SARIMAX(obs['realgdp'], order=(1, 0, 0))
-    mod['design', 0, 0] = 0.
-    mod['obs_cov', 0, 0] = 1.
+    mod = sarimax.SARIMAX(obs["realgdp"], order=(1, 0, 0))
+    mod["design", 0, 0] = 0.
+    mod["obs_cov", 0, 0] = 1.
     mod.update(np.r_[1., 1.])
     sim = mod.simulation_smoother()
 
@@ -633,7 +633,7 @@ def test_simulation_smoothing_obs_intercept():
     nobs = 10
     intercept = 100
     endog = np.ones(nobs) * intercept
-    mod = structural.UnobservedComponents(endog, 'rwalk', exog=np.ones(nobs))
+    mod = structural.UnobservedComponents(endog, "rwalk", exog=np.ones(nobs))
     mod.update([1, intercept])
     sim = mod.simulation_smoother()
     sim.simulate(measurement_disturbance_variates=np.zeros(mod.nobs),
@@ -647,7 +647,7 @@ def test_simulation_smoothing_state_intercept():
     intercept = 100
     endog = np.ones(nobs) * intercept
 
-    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend="c",
                           measurement_error=True)
     mod.initialize_known([100], [[0]])
     mod.update([intercept, 1., 1.])
@@ -665,9 +665,9 @@ def test_simulation_smoothing_state_intercept_diffuse():
     endog = np.ones(nobs) * intercept
 
     # Test without missing values
-    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend="c",
                           measurement_error=True,
-                          initialization='diffuse')
+                          initialization="diffuse")
     mod.update([intercept, 1., 1.])
 
     sim = mod.simulation_smoother()
@@ -678,9 +678,9 @@ def test_simulation_smoothing_state_intercept_diffuse():
 
     # Test with missing values
     endog[5] = np.nan
-    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend="c",
                           measurement_error=True,
-                          initialization='diffuse')
+                          initialization="diffuse")
     mod.update([intercept, 1., 1.])
 
     sim = mod.simulation_smoother()
@@ -695,9 +695,9 @@ def test_deprecated_arguments_univariate():
     intercept = 100
     endog = np.ones(nobs) * intercept
 
-    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend="c",
                           measurement_error=True,
-                          initialization='diffuse')
+                          initialization="diffuse")
     mod.update([intercept, 0.5, 2.])
 
     mds = np.arange(10) / 10.
@@ -808,7 +808,7 @@ def test_nan():
     [0. 0. 0. 0.]
     """
     return
-    mod = sarimax.SARIMAX([1, np.nan, np.nan, 1], order=(1, 0, 0), trend='c')
+    mod = sarimax.SARIMAX([1, np.nan, np.nan, 1], order=(1, 0, 0), trend="c")
     res = mod.smooth([0, 0.5, 1.0])
 
     rs = np.random.RandomState(1234)
@@ -820,10 +820,10 @@ def test_nan():
         sim.simulate()
         out[i] = sim.simulated_state
 
-    print('True values:')
+    print("True values:")
     print(res.smoothed_state[0])
     print(res.smoothed_state_cov[0, 0])
     print()
-    print('Simulated values:')
+    print("Simulated values:")
     print(np.mean(out, axis=0))
     print(np.var(out, axis=0).round(6))

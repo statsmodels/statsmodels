@@ -272,7 +272,7 @@ class TestResults(ResultsGeneric):
         pval = [self.pval1, self.pval2, self.pval3]
         description = ["nonrobust", "dispersed", "HC"]
 
-        for row in zip(description, stat, pval):
+        for row in zip(description, stat, pval, strict=False):
             txt += "%-12s  statistic = %6.4f  pvalue = %6.5f\n" % row
 
         txt += "\nAssumptions:\n"

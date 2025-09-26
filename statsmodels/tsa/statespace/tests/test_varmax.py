@@ -1056,7 +1056,7 @@ def test_recreate_model():
         enforce_stationarities,
         enforce_invertibilities,
     ):
-        kwargs = dict(zip(names, element))
+        kwargs = dict(zip(names, element, strict=False))
 
         with warnings.catch_warnings(record=False):
             warnings.simplefilter("ignore")

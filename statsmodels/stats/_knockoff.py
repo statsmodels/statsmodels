@@ -108,7 +108,7 @@ class RegressionFDR:
         denom[denom < 1] = 1
 
         # The numerator of the FDR
-        ii = np.searchsorted(unq, -unq, side='right') - 1
+        ii = np.searchsorted(unq, -unq, side="right") - 1
         numer = cc[ii]
         numer[ii < 0] = 0
 
@@ -184,9 +184,9 @@ def _design_knockoff_sdp(exog):
     G1[i*nvar + j, i] = 1
     G1 = matrix(G1)
 
-    solvers.options['show_progress'] = False
+    solvers.options["show_progress"] = False
     sol = solvers.sdp(c, G0, h0, [G1], [h1])
-    sl = np.asarray(sol['x']).ravel()
+    sl = np.asarray(sol["x"]).ravel()
 
     xcov = np.dot(exog.T, exog)
     exogn = _get_knmat(exog, xcov, sl)

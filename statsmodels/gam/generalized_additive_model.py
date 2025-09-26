@@ -176,11 +176,10 @@ class GLMGamResults(GLMResults):
             if exog_smooth is None:
                 # exog could be None or array
                 ex = exog
+            elif exog is None:
+                ex = exog_smooth
             else:
-                if exog is None:
-                    ex = exog_smooth
-                else:
-                    ex = np.column_stack((exog, exog_smooth))
+                ex = np.column_stack((exog, exog_smooth))
         else:
             # transform exog_linear if needed
             if exog is not None and hasattr(self.model, "model_spec_linear"):
@@ -202,7 +201,7 @@ class GLMGamResults(GLMResults):
         return ex, exog_index
 
     def predict(self, exog=None, exog_smooth=None, transform=True, **kwargs):
-        """ "
+        """
         compute prediction
 
         Parameters

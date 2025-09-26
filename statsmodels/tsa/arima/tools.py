@@ -46,25 +46,25 @@ def standardize_lag_order(order, title=None):
     [1, 3]
     """
     order = np.array(order)
-    title = 'order' if title is None else '%s order' % title
+    title = "order" if title is None else "%s order" % title
 
     # Only integer orders are valid
     if not np.all(order == order.astype(int)):
-        raise ValueError('Invalid %s. Non-integer order (%s) given.'
+        raise ValueError("Invalid %s. Non-integer order (%s) given."
                          % (title, order))
     order = order.astype(int)
 
     # Only positive integers are valid
     if np.any(order < 0):
-        raise ValueError('Terms in the %s cannot be negative.' % title)
+        raise ValueError("Terms in the %s cannot be negative." % title)
 
     # Try to squeeze out an irrelevant trailing dimension
     if order.ndim == 2 and order.shape[1] == 1:
         order = order[:, 0]
     elif order.ndim > 1:
-        raise ValueError('Invalid %s. Must be an integer or'
-                         ' 1-dimensional array-like object (e.g. list,'
-                         ' ndarray, etc.). Got %s.' % (title, order))
+        raise ValueError("Invalid %s. Must be an integer or"
+                         " 1-dimensional array-like object (e.g. list,"
+                         " ndarray, etc.). Got %s." % (title, order))
 
     # Option 1: the typical integer response (implies including all
     # lags up through and including the value)
@@ -79,11 +79,11 @@ def standardize_lag_order(order, title=None):
         has_gt_one = np.any(order > 1)
         if has_zeros or has_multiple_ones:
             if has_gt_one:
-                raise ValueError('Invalid %s. Appears to be a boolean list'
-                                 ' (since it contains a 0 element and/or'
-                                 ' multiple elements) but also contains'
-                                 ' elements greater than 1 like a list of'
-                                 ' lag orders.' % title)
+                raise ValueError("Invalid %s. Appears to be a boolean list"
+                                 " (since it contains a 0 element and/or"
+                                 " multiple elements) but also contains"
+                                 " elements greater than 1 like a list of"
+                                 " lag orders." % title)
             order = (np.where(order == 1)[0] + 1)
 
         # (Default) Option 3: list of lag orders to include
@@ -103,7 +103,7 @@ def standardize_lag_order(order, title=None):
     # Check for duplicates
     has_duplicate = isinstance(order, list) and np.any(np.diff(order) == 0)
     if has_duplicate:
-        raise ValueError('Invalid %s. Cannot have duplicate elements.' % title)
+        raise ValueError("Invalid %s. Cannot have duplicate elements." % title)
 
     return order
 
@@ -135,7 +135,7 @@ def validate_basic(params, length, allow_infnan=False, title=None):
     Basic check that the parameters are numeric and that they are the right
     shape. Optionally checks for NaN / infinite values.
     """
-    title = '' if title is None else ' for %s' % title
+    title = "" if title is None else " for %s" % title
 
     # Check for invalid type and coerce to non-integer
     try:
@@ -144,22 +144,22 @@ def validate_basic(params, length, allow_infnan=False, title=None):
         dtype = complex if any(is_complex) else float
         params = np.array(params, dtype=dtype)
     except TypeError:
-        raise ValueError('Parameters vector%s includes invalid values.'
+        raise ValueError("Parameters vector%s includes invalid values."
                          % title)
 
     # Check for NaN, inf
     if not allow_infnan and (np.any(np.isnan(params)) or
                              np.any(np.isinf(params))):
-        raise ValueError('Parameters vector%s includes NaN or Inf values.'
+        raise ValueError("Parameters vector%s includes NaN or Inf values."
                          % title)
 
     params = np.atleast_1d(np.squeeze(params))
 
     # Check for right number of parameters
     if params.shape != (length,):
-        plural = '' if length == 1 else 's'
-        raise ValueError('Specification%s implies %d parameter%s, but'
-                         ' values with shape %s were provided.'
+        plural = "" if length == 1 else "s"
+        raise ValueError("Specification%s implies %d parameter%s, but"
+                         " values with shape %s were provided."
                          % (title, length, plural, params.shape))
 
     return params

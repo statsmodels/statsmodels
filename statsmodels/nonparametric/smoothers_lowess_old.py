@@ -94,11 +94,11 @@ def lowess(endog, exog, frac=2./3, it=3):
     x = exog
 
     if exog.ndim != 1:
-        raise ValueError('exog must be a vector')
+        raise ValueError("exog must be a vector")
     if endog.ndim != 1:
-        raise ValueError('endog must be a vector')
+        raise ValueError("endog must be a vector")
     if endog.shape[0] != x.shape[0] :
-        raise ValueError('exog and endog must have same length')
+        raise ValueError("exog and endog must have same length")
 
     n = exog.shape[0]
     fitted = np.zeros(n)

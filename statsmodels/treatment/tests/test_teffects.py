@@ -22,12 +22,12 @@ from .results import results_teffects as res_st
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
-file_name = 'cataneo2.csv'
-file_path = os.path.join(cur_dir, 'results', file_name)
+file_name = "cataneo2.csv"
+file_path = os.path.join(cur_dir, "results", file_name)
 
 dta_cat = pd.read_csv(file_path)
 
-formula = 'mbsmoke_ ~ mmarried_ + mage + mage2 + fbaby_ + medu'
+formula = "mbsmoke_ ~ mmarried_ + mage + mage2 + fbaby_ + medu"
 res_probit = Probit.from_formula(formula, dta_cat).fit()
 
 methods = [
@@ -43,16 +43,16 @@ class TestTEffects():
 
     @classmethod
     def setup_class(cls):
-        formula_outcome = 'bweight ~ prenatal1_ + mmarried_ + mage + fbaby_'
+        formula_outcome = "bweight ~ prenatal1_ + mmarried_ + mage + fbaby_"
         mod = OLS.from_formula(formula_outcome, dta_cat)
-        tind = np.asarray(dta_cat['mbsmoke_'])
+        tind = np.asarray(dta_cat["mbsmoke_"])
         cls.teff = TreatmentEffect(mod, tind, results_select=res_probit)
 
     def test_aux(self):
         prob = res_probit.predict()
         assert prob.shape == (4642,)
 
-    @pytest.mark.parametrize('case', methods)
+    @pytest.mark.parametrize("case", methods)
     def test_effects(self, case):
         meth, res2 = case
         teff = self.teff

@@ -293,8 +293,7 @@ class TestProportion(CheckProportionMixin):
         res_prop_test.conf_int = """NULL"""
         res_prop_test.alternative = "two.sided"
         res_prop_test.method = (
-            "4-sample test for equality of proportions "
-            + "without continuity correction"
+            "4-sample test for equality of proportions without continuity correction"
         )
         res_prop_test.data_name = "smokers2 out of patients"
         self.res_prop_test = res_prop_test
@@ -1135,7 +1134,6 @@ def test_equivalence_2indep():
         if method == "logit-smoothed":
             # not correctly vectorized
             return
-        res1 = res  # for debugging  # noqa
         res = smprop.tost_proportions_2indep(
             count1v,
             nobs1v,

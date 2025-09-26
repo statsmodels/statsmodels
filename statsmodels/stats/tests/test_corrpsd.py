@@ -12,7 +12,7 @@ import warnings
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
-import scipy.sparse as sparse
+from scipy import sparse
 
 from statsmodels.stats.correlation_tools import (
     FactoredPSDMatrix,

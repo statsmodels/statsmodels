@@ -94,7 +94,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         if self._fixed_params is None:
             self._fixed_params = {}
             self._params_index = OrderedDict(
-                zip(self.param_names, np.arange(self.k_params))
+                zip(self.param_names, np.arange(self.k_params), strict=False)
             )
 
         # Cache the current fixed parameters
@@ -251,14 +251,14 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         # the default epsilon can be too small
         # inversion_method = INVERT_UNIVARIATE | SOLVE_LU
         epsilon = _get_epsilon(params, 2., None, len(params))
-        kwargs['transformed'] = True
-        kwargs['complex_step'] = True
+        kwargs["transformed"] = True
+        kwargs["complex_step"] = True
         return approx_fprime_cs(params, self.loglike, epsilon=epsilon,
                                 kwargs=kwargs)
 
     def _score_finite_difference(self, params, approx_centered=False,
                                  **kwargs):
-        kwargs['transformed'] = True
+        kwargs["transformed"] = True
         return approx_fprime(params, self.loglike, kwargs=kwargs,
                              centered=approx_centered)
 
@@ -266,9 +266,9 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
                                    **kwargs):
         params = np.array(params, ndmin=1)
 
-        warnings.warn('Calculation of the Hessian using finite differences'
-                      ' is usually subject to substantial approximation'
-                      ' errors.',
+        warnings.warn("Calculation of the Hessian using finite differences"
+                      " is usually subject to substantial approximation"
+                      " errors.",
                       PrecisionWarning,
                       stacklevel=3,
                       )
@@ -292,8 +292,8 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         """
         # the default epsilon can be too small
         epsilon = _get_epsilon(params, 3., None, len(params))
-        kwargs['transformed'] = True
-        kwargs['complex_step'] = True
+        kwargs["transformed"] = True
+        kwargs["complex_step"] = True
         hessian = approx_hess_cs(
             params, self.loglike, epsilon=epsilon, kwargs=kwargs)
 
@@ -552,13 +552,13 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         Output is nan for any endogenous variable which has missing values.
         """
         if method is None:
-            method = 'ljungbox'
+            method = "ljungbox"
 
         if self.standardized_forecasts_error is None:
-            raise ValueError('Cannot compute test statistic when standardized'
-                             ' forecast errors have not been computed.')
+            raise ValueError("Cannot compute test statistic when standardized"
+                             " forecast errors have not been computed.")
 
-        if method == 'ljungbox' or method == 'boxpierce':
+        if method == "ljungbox" or method == "boxpierce":
             from statsmodels.stats.diagnostic import acorr_ljungbox
             if hasattr(self, "loglikelihood_burn"):
                 d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
@@ -580,24 +580,24 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 else:
                     lags = min(10, nobs_effective // 5)
 
-            cols = [2, 3] if method == 'boxpierce' else [0, 1]
+            cols = [2, 3] if method == "boxpierce" else [0, 1]
             for i in range(self.model.k_endog):
                 if hasattr(self, "filter_results"):
                     x = self.filter_results.standardized_forecasts_error[i][d:]
                 else:
                     x = self.standardized_forecasts_error
                 results = acorr_ljungbox(
-                    x, lags=lags, boxpierce=(method == 'boxpierce')
+                    x, lags=lags, boxpierce=(method == "boxpierce")
                 )
                 output.append(np.asarray(results)[:, cols].T)
 
             output = np.c_[output]
         else:
-            raise NotImplementedError('Invalid serial correlation test'
-                                      ' method.')
+            raise NotImplementedError("Invalid serial correlation test"
+                                      " method.")
         return output
 
-    def test_heteroskedasticity(self, method, alternative='two-sided',
+    def test_heteroskedasticity(self, method, alternative="two-sided",
                                 use_f=True):
         r"""
         Test for heteroskedasticity of standardized residuals
@@ -680,13 +680,13 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                *Models and the Kalman Filter.* Cambridge University Press.
         """
         if method is None:
-            method = 'breakvar'
+            method = "breakvar"
 
         if self.standardized_forecasts_error is None:
-            raise ValueError('Cannot compute test statistic when standardized'
-                             ' forecast errors have not been computed.')
+            raise ValueError("Cannot compute test statistic when standardized"
+                             " forecast errors have not been computed.")
 
-        if method == 'breakvar':
+        if method == "breakvar":
             # Store some values
             if hasattr(self, "filter_results"):
                 squared_resid = (
@@ -720,16 +720,16 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 denom_dof = len(denom_resid)
 
                 if numer_dof < 2:
-                    warnings.warn('Early subset of data for variable %d'
-                                  '  has too few non-missing observations to'
-                                  ' calculate test statistic.' % i,
+                    warnings.warn("Early subset of data for variable %d"
+                                  "  has too few non-missing observations to"
+                                  " calculate test statistic." % i,
                                   stacklevel=2,
                                   )
                     numer_resid = np.nan
                 if denom_dof < 2:
-                    warnings.warn('Later subset of data for variable %d'
-                                  '  has too few non-missing observations to'
-                                  ' calculate test statistic.' % i,
+                    warnings.warn("Later subset of data for variable %d"
+                                  "  has too few non-missing observations to"
+                                  " calculate test statistic." % i,
                                   stacklevel=2,
                                   )
                     denom_resid = np.nan
@@ -752,26 +752,26 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
                 # Calculate the one- or two-sided p-values
                 alternative = alternative.lower()
-                if alternative in ['i', 'inc', 'increasing']:
+                if alternative in ["i", "inc", "increasing"]:
                     p_value = pval_upper(test_statistic)
-                elif alternative in ['d', 'dec', 'decreasing']:
+                elif alternative in ["d", "dec", "decreasing"]:
                     test_statistic = 1. / test_statistic
                     p_value = pval_upper(test_statistic)
-                elif alternative in ['2', '2-sided', 'two-sided']:
+                elif alternative in ["2", "2-sided", "two-sided"]:
                     p_value = 2 * np.minimum(
                         pval_lower(test_statistic, numer_dof, denom_dof),
                         pval_upper(test_statistic, numer_dof, denom_dof)
                     )
                 else:
-                    raise ValueError('Invalid alternative.')
+                    raise ValueError("Invalid alternative.")
 
                 test_statistics.append(test_statistic)
                 p_values.append(p_value)
 
             output = np.c_[test_statistics, p_values]
         else:
-            raise NotImplementedError('Invalid heteroskedasticity test'
-                                      ' method.')
+            raise NotImplementedError("Invalid heteroskedasticity test"
+                                      " method.")
 
         return output
 
@@ -804,13 +804,13 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         observations.
         """
         if method is None:
-            method = 'jarquebera'
+            method = "jarquebera"
 
         if self.standardized_forecasts_error is None:
-            raise ValueError('Cannot compute test statistic when standardized'
-                             ' forecast errors have not been computed.')
+            raise ValueError("Cannot compute test statistic when standardized"
+                             " forecast errors have not been computed.")
 
-        if method == 'jarquebera':
+        if method == "jarquebera":
             from statsmodels.stats.stattools import jarque_bera
             if hasattr(self, "loglikelihood_burn"):
                 d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
@@ -827,7 +827,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 mask = ~np.isnan(resid)
                 output.append(jarque_bera(resid[mask]))
         else:
-            raise NotImplementedError('Invalid normality test method.')
+            raise NotImplementedError("Invalid normality test method.")
 
         return np.array(output)
 

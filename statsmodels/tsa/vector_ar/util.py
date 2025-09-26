@@ -16,7 +16,7 @@ import statsmodels.tsa.tsatools as tsa
 #
 
 
-def get_var_endog(y, lags, trend='c', has_constant='skip'):
+def get_var_endog(y, lags, trend="c", has_constant="skip"):
     """
     Make predictor matrix for VAR(p) process
 
@@ -32,22 +32,22 @@ def get_var_endog(y, lags, trend='c', has_constant='skip'):
     Z = np.array([y[t-lags : t][::-1].ravel() for t in range(lags, nobs)])
 
     # Add constant, trend, etc.
-    if trend != 'n':
+    if trend != "n":
         Z = tsa.add_trend(Z, prepend=True, trend=trend,
                           has_constant=has_constant)
 
     return Z
 
 
-def get_trendorder(trend='c'):
+def get_trendorder(trend="c"):
     # Handle constant, etc.
-    if trend == 'c':
+    if trend == "c":
         trendorder = 1
-    elif trend in ('n', 'nc'):
+    elif trend in ("n", "nc"):
         trendorder = 0
-    elif trend == 'ct':
+    elif trend == "ct":
         trendorder = 2
-    elif trend == 'ctt':
+    elif trend == "ctt":
         trendorder = 3
     else:
         raise ValueError(f"Unkown trend: {trend}")
@@ -72,19 +72,19 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
         for name in names:
             if not isinstance(name, str):
                 name = str(name)  # will need consistent unicode handling
-            lag_names.append('L'+str(i)+'.'+name)
+            lag_names.append("L"+str(i)+"."+name)
 
     # handle the constant name
     if trendorder != 0:
-        lag_names.insert(0, 'const')
+        lag_names.insert(0, "const")
     if trendorder > 1:
-        lag_names.insert(1, 'trend')
+        lag_names.insert(1, "trend")
     if trendorder > 2:
-        lag_names.insert(2, 'trend**2')
+        lag_names.insert(2, "trend**2")
     if exog is not None:
         if isinstance(exog, pd.Series):
             exog = pd.DataFrame(exog)
-        elif not hasattr(exog, 'ndim'):
+        elif not hasattr(exog, "ndim"):
             exog = np.asarray(exog)
         if exog.ndim == 1:
             exog = exog[:, None]
@@ -109,7 +109,7 @@ def comp_matrix(coefs):
     """
     p, k1, k2 = coefs.shape
     if k1 != k2:
-        raise ValueError('coefs must be 3-d with shape (p, k, k).')
+        raise ValueError("coefs must be 3-d with shape (p, k, k).")
 
     kp = k1 * p
 
@@ -137,12 +137,12 @@ def parse_lutkepohl_data(path):  # pragma: no cover
     from datetime import datetime
     import re
 
-    regex = re.compile(asbytes(r'<(.*) (\w)([\d]+)>.*'))
-    with open(path, 'rb') as f:
+    regex = re.compile(asbytes(r"<(.*) (\w)([\d]+)>.*"))
+    with open(path, "rb") as f:
         lines = deque(f)
 
     to_skip = 0
-    while asbytes('*/') not in lines.popleft():
+    while asbytes("*/") not in lines.popleft():
         # while '*/' not in lines.popleft():
         to_skip += 1
 
@@ -164,9 +164,9 @@ def parse_lutkepohl_data(path):  # pragma: no cover
     year = int(year)
 
     offsets = {
-        asbytes('Q'): frequencies.BQuarterEnd(),
-        asbytes('M'): frequencies.BMonthEnd(),
-        asbytes('A'): frequencies.BYearEnd()
+        asbytes("Q"): frequencies.BQuarterEnd(),
+        asbytes("M"): frequencies.BMonthEnd(),
+        asbytes("A"): frequencies.BYearEnd()
     }
 
     # create an instance
@@ -237,7 +237,7 @@ def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None, n
     """
     rs = np.random.RandomState(seed=seed)
     rmvnorm = rs.multivariate_normal
-    p, k, k = coefs.shape
+    p, k, _ = coefs.shape
     nsimulations = int_like(nsimulations, "nsimulations", optional=True)
     if isinstance(nsimulations, int) and nsimulations <= 0:
         raise ValueError("nsimulations must be a positive integer if provided")
@@ -254,7 +254,7 @@ def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None, n
         # intercept can be 2-D like an offset variable
         if np.ndim(intercept) > 1:
             if not len(intercept) == ugen.shape[1]:
-                raise ValueError('2-D intercept needs to have length `steps`')
+                raise ValueError("2-D intercept needs to have length `steps`")
         # add intercept/offset also to intial values
         result += intercept
         result[:, p:] += ugen[:, p:]

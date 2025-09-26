@@ -247,17 +247,17 @@ class TestStationaryUnivariate:
 class TestValidateMatrixShape:
     # name, shape, nrows, ncols, nobs
     valid = [
-        ('TEST', (5, 2), 5, 2, None),
-        ('TEST', (5, 2), 5, 2, 10),
-        ('TEST', (5, 2, 10), 5, 2, 10),
+        ("TEST", (5, 2), 5, 2, None),
+        ("TEST", (5, 2), 5, 2, 10),
+        ("TEST", (5, 2, 10), 5, 2, 10),
     ]
     invalid = [
-        ('TEST', (5,), 5, None, None),
-        ('TEST', (5, 1, 1, 1), 5, 1, None),
-        ('TEST', (5, 2), 10, 2, None),
-        ('TEST', (5, 2), 5, 1, None),
-        ('TEST', (5, 2, 10), 5, 2, None),
-        ('TEST', (5, 2, 10), 5, 2, 5),
+        ("TEST", (5,), 5, None, None),
+        ("TEST", (5, 1, 1, 1), 5, 1, None),
+        ("TEST", (5, 2), 10, 2, None),
+        ("TEST", (5, 2), 5, 1, None),
+        ("TEST", (5, 2, 10), 5, 2, None),
+        ("TEST", (5, 2, 10), 5, 2, 5),
     ]
 
     def test_valid_cases(self):
@@ -274,15 +274,15 @@ class TestValidateMatrixShape:
 class TestValidateVectorShape:
     # name, shape, nrows, ncols, nobs
     valid = [
-        ('TEST', (5,), 5, None),
-        ('TEST', (5,), 5, 10),
-        ('TEST', (5, 10), 5, 10),
+        ("TEST", (5,), 5, None),
+        ("TEST", (5,), 5, 10),
+        ("TEST", (5, 10), 5, 10),
     ]
     invalid = [
-        ('TEST', (5, 2, 10), 5, 10),
-        ('TEST', (5,), 10, None),
-        ('TEST', (5, 10), 5, None),
-        ('TEST', (5, 10), 5, 5),
+        ("TEST", (5, 2, 10), 5, 10),
+        ("TEST", (5,), 10, None),
+        ("TEST", (5, 10), 5, None),
+        ("TEST", (5, 10), 5, 5),
     ]
 
     def test_valid_cases(self):
@@ -740,7 +740,7 @@ def test_copy_missing_matrix_rows():
     for t in range(nobs):
         n = int(k_endog - np.sum(missing[:, t]))
         A[:n, :, t] = 1.
-    B = np.zeros((k_endog, k_states, nobs), order='F')
+    B = np.zeros((k_endog, k_states, nobs), order="F")
 
     missing = np.asfortranarray(missing.astype(np.int32))
     tools.copy_missing_matrix(A, B, missing, True, False, False, inplace=True)
@@ -764,7 +764,7 @@ def test_copy_missing_matrix_cols():
     for t in range(nobs):
         n = int(k_endog - np.sum(missing[:, t]))
         A[:, :n, t] = 1.
-    B = np.zeros((k_states, k_endog, nobs), order='F')
+    B = np.zeros((k_states, k_endog, nobs), order="F")
 
     missing = np.asfortranarray(missing.astype(np.int32))
     tools.copy_missing_matrix(A, B, missing, False, True, False, inplace=True)
@@ -787,7 +787,7 @@ def test_copy_missing_submatrix():
     for t in range(nobs):
         n = int(k_endog - np.sum(missing[:, t]))
         A[:n, :n, t] = 1.
-    B = np.zeros((k_endog, k_endog, nobs), order='F')
+    B = np.zeros((k_endog, k_endog, nobs), order="F")
 
     missing = np.asfortranarray(missing.astype(np.int32))
     tools.copy_missing_matrix(A, B, missing, True, True, False, inplace=True)
@@ -810,13 +810,13 @@ def test_copy_missing_diagonal_submatrix():
     for t in range(nobs):
         n = int(k_endog - np.sum(missing[:, t]))
         A[:n, :n, t] = np.eye(n)
-    B = np.zeros((k_endog, k_endog, nobs), order='F')
+    B = np.zeros((k_endog, k_endog, nobs), order="F")
 
     missing = np.asfortranarray(missing.astype(np.int32))
     tools.copy_missing_matrix(A, B, missing, True, True, False, inplace=True)
     assert_equal(B, A)
 
-    B = np.zeros((k_endog, k_endog, nobs), order='F')
+    B = np.zeros((k_endog, k_endog, nobs), order="F")
     tools.copy_missing_matrix(A, B, missing, True, True, True, inplace=True)
     assert_equal(B, A)
 
@@ -837,7 +837,7 @@ def test_copy_missing_vector():
     for t in range(nobs):
         n = int(k_endog - np.sum(missing[:, t]))
         A[:n, t] = 1.
-    B = np.zeros((k_endog, nobs), order='F')
+    B = np.zeros((k_endog, nobs), order="F")
 
     missing = np.asfortranarray(missing.astype(np.int32))
     tools.copy_missing_vector(A, B, missing, inplace=True)
@@ -862,7 +862,7 @@ def test_copy_index_matrix_rows():
         for i in range(k_endog):
             if index[i, t]:
                 A[i, :, t] = 1.
-    B = np.zeros((k_endog, k_states, nobs), order='F')
+    B = np.zeros((k_endog, k_states, nobs), order="F")
 
     index = np.asfortranarray(index.astype(np.int32))
     tools.copy_index_matrix(A, B, index, True, False, False, inplace=True)
@@ -887,7 +887,7 @@ def test_copy_index_matrix_cols():
         for i in range(k_endog):
             if index[i, t]:
                 A[:, i, t] = 1.
-    B = np.zeros((k_states, k_endog, nobs), order='F')
+    B = np.zeros((k_states, k_endog, nobs), order="F")
 
     index = np.asfortranarray(index.astype(np.int32))
     tools.copy_index_matrix(A, B, index, False, True, False, inplace=True)
@@ -912,7 +912,7 @@ def test_copy_index_submatrix():
             if index[i, t]:
                 A[i, :, t] = 1.
                 A[:, i, t] = 1.
-    B = np.zeros((k_endog, k_endog, nobs), order='F')
+    B = np.zeros((k_endog, k_endog, nobs), order="F")
 
     index = np.asfortranarray(index.astype(np.int32))
     tools.copy_index_matrix(A, B, index, True, True, False, inplace=True)
@@ -936,13 +936,13 @@ def test_copy_index_diagonal_submatrix():
         for i in range(k_endog):
             if index[i, t]:
                 A[i, i, t] = 1.
-    B = np.zeros((k_endog, k_endog, nobs), order='F')
+    B = np.zeros((k_endog, k_endog, nobs), order="F")
 
     index = np.asfortranarray(index.astype(np.int32))
     tools.copy_index_matrix(A, B, index, True, True, False, inplace=True)
     assert_equal(B, A)
 
-    B = np.zeros((k_endog, k_endog, nobs), order='F')
+    B = np.zeros((k_endog, k_endog, nobs), order="F")
     tools.copy_index_matrix(A, B, index, True, True, True, inplace=True)
     assert_equal(B, A)
 
@@ -964,7 +964,7 @@ def test_copy_index_vector():
         for i in range(k_endog):
             if index[i, t]:
                 A[i, t] = 1.
-    B = np.zeros((k_endog, nobs), order='F')
+    B = np.zeros((k_endog, nobs), order="F")
 
     index = np.asfortranarray(index.astype(np.int32))
     tools.copy_index_vector(A, B, index, inplace=True)

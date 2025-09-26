@@ -42,7 +42,7 @@ def check_random_state(seed=None):
         return seed
     else:
         raise ValueError(
-            f"{seed!r} cannot be used to seed a" " numpy.random.Generator instance"
+            f"{seed!r} cannot be used to seed a numpy.random.Generator instance"
         )
 
 

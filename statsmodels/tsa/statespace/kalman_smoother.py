@@ -58,40 +58,40 @@ class KalmanSmoother(KalmanFilter):
     """
 
     smoother_outputs = [
-        'smoother_state', 'smoother_state_cov', 'smoother_state_autocov',
-        'smoother_disturbance', 'smoother_disturbance_cov', 'smoother_all',
+        "smoother_state", "smoother_state_cov", "smoother_state_autocov",
+        "smoother_disturbance", "smoother_disturbance_cov", "smoother_all",
     ]
 
-    smoother_state = OptionWrapper('smoother_output', SMOOTHER_STATE)
-    smoother_state_cov = OptionWrapper('smoother_output', SMOOTHER_STATE_COV)
+    smoother_state = OptionWrapper("smoother_output", SMOOTHER_STATE)
+    smoother_state_cov = OptionWrapper("smoother_output", SMOOTHER_STATE_COV)
     smoother_disturbance = (
-        OptionWrapper('smoother_output', SMOOTHER_DISTURBANCE)
+        OptionWrapper("smoother_output", SMOOTHER_DISTURBANCE)
     )
     smoother_disturbance_cov = (
-        OptionWrapper('smoother_output', SMOOTHER_DISTURBANCE_COV)
+        OptionWrapper("smoother_output", SMOOTHER_DISTURBANCE_COV)
     )
     smoother_state_autocov = (
-        OptionWrapper('smoother_output', SMOOTHER_STATE_AUTOCOV)
+        OptionWrapper("smoother_output", SMOOTHER_STATE_AUTOCOV)
     )
-    smoother_all = OptionWrapper('smoother_output', SMOOTHER_ALL)
+    smoother_all = OptionWrapper("smoother_output", SMOOTHER_ALL)
 
     smooth_methods = [
-        'smooth_conventional', 'smooth_alternative', 'smooth_classical'
+        "smooth_conventional", "smooth_alternative", "smooth_classical"
     ]
 
-    smooth_conventional = OptionWrapper('smooth_method', SMOOTH_CONVENTIONAL)
+    smooth_conventional = OptionWrapper("smooth_method", SMOOTH_CONVENTIONAL)
     """
     (bool) Flag for conventional (Durbin and Koopman, 2012) Kalman smoothing.
     """
-    smooth_alternative = OptionWrapper('smooth_method', SMOOTH_ALTERNATIVE)
+    smooth_alternative = OptionWrapper("smooth_method", SMOOTH_ALTERNATIVE)
     """
     (bool) Flag for alternative (modified Bryson-Frazier) smoothing.
     """
-    smooth_classical = OptionWrapper('smooth_method', SMOOTH_CLASSICAL)
+    smooth_classical = OptionWrapper("smooth_method", SMOOTH_CLASSICAL)
     """
     (bool) Flag for classical (see e.g. Anderson and Moore, 1979) smoothing.
     """
-    smooth_univariate = OptionWrapper('smooth_method', SMOOTH_UNIVARIATE)
+    smooth_univariate = OptionWrapper("smooth_method", SMOOTH_UNIVARIATE)
     """
     (bool) Flag for univariate smoothing (uses modified Bryson-Frazier timing).
     """
@@ -107,10 +107,10 @@ class KalmanSmoother(KalmanFilter):
             results_class = SmootherResults
 
         # Extract keyword arguments to-be-used later
-        keys = ['smoother_output'] + KalmanSmoother.smoother_outputs
+        keys = ["smoother_output"] + KalmanSmoother.smoother_outputs
         smoother_output_kwargs = {key: kwargs.pop(key) for key in keys
                                   if key in kwargs}
-        keys = ['smooth_method'] + KalmanSmoother.smooth_methods
+        keys = ["smooth_method"] + KalmanSmoother.smooth_methods
         smooth_method_kwargs = {key: kwargs.pop(key) for key in keys
                                 if key in kwargs}
 
@@ -137,8 +137,8 @@ class KalmanSmoother(KalmanFilter):
         kwargs = super()._clone_kwargs(endog, **kwargs)
 
         # Get defaults for options
-        kwargs.setdefault('smoother_output', self.smoother_output)
-        kwargs.setdefault('smooth_method', self.smooth_method)
+        kwargs.setdefault("smoother_output", self.smoother_output)
+        kwargs.setdefault("smooth_method", self.smooth_method)
 
         return kwargs
 
@@ -358,9 +358,9 @@ class KalmanSmoother(KalmanFilter):
 
         # Check that the filter and statespace weren't just recreated
         if create_filter or create_statespace:
-            raise ValueError('Passed settings forced re-creation of the'
-                             ' Kalman filter. Please run `_filter` before'
-                             ' running `_smooth`.')
+            raise ValueError("Passed settings forced re-creation of the"
+                             " Kalman filter. Please run `_filter` before"
+                             " running `_smooth`.")
 
         # Get the appropriate smoother
         smoother = self._kalman_smoothers[prefix]
@@ -561,12 +561,12 @@ class SmootherResults(FilterResults):
     """
 
     _smoother_attributes = [
-        'smoother_output', 'scaled_smoothed_estimator',
-        'scaled_smoothed_estimator_cov', 'smoothing_error',
-        'smoothed_state', 'smoothed_state_cov', 'smoothed_state_autocov',
-        'smoothed_measurement_disturbance', 'smoothed_state_disturbance',
-        'smoothed_measurement_disturbance_cov',
-        'smoothed_state_disturbance_cov', 'innovations_transition'
+        "smoother_output", "scaled_smoothed_estimator",
+        "scaled_smoothed_estimator_cov", "smoothing_error",
+        "smoothed_state", "smoothed_state_cov", "smoothed_state_autocov",
+        "smoothed_measurement_disturbance", "smoothed_state_disturbance",
+        "smoothed_measurement_disturbance_cov",
+        "smoothed_state_disturbance_cov", "innovations_transition"
     ]
 
     _smoother_options = KalmanSmoother.smoother_outputs
@@ -621,34 +621,34 @@ class SmootherResults(FilterResults):
         # use the boolean options smoother_* and know they match the smoother
         # itself
         if self.smoother_state or self.smoother_disturbance:
-            attributes.append('scaled_smoothed_estimator')
+            attributes.append("scaled_smoothed_estimator")
         if self.smoother_state_cov or self.smoother_disturbance_cov:
-            attributes.append('scaled_smoothed_estimator_cov')
+            attributes.append("scaled_smoothed_estimator_cov")
         if self.smoother_state:
-            attributes.append('smoothed_state')
+            attributes.append("smoothed_state")
         if self.smoother_state_cov:
-            attributes.append('smoothed_state_cov')
+            attributes.append("smoothed_state_cov")
         if self.smoother_state_autocov:
-            attributes.append('smoothed_state_autocov')
+            attributes.append("smoothed_state_autocov")
         if self.smoother_disturbance:
             attributes += [
-                'smoothing_error',
-                'smoothed_measurement_disturbance',
-                'smoothed_state_disturbance'
+                "smoothing_error",
+                "smoothed_measurement_disturbance",
+                "smoothed_state_disturbance"
             ]
         if self.smoother_disturbance_cov:
             attributes += [
-                'smoothed_measurement_disturbance_cov',
-                'smoothed_state_disturbance_cov'
+                "smoothed_measurement_disturbance_cov",
+                "smoothed_state_disturbance_cov"
             ]
 
         has_missing = np.sum(self.nmissing) > 0
         for name in self._smoother_attributes:
-            if name == 'smoother_output':
+            if name == "smoother_output":
                 pass
             elif name in attributes:
-                if name in ['smoothing_error',
-                            'smoothed_measurement_disturbance']:
+                if name in ["smoothing_error",
+                            "smoothed_measurement_disturbance"]:
                     vector = getattr(smoother, name, None)
                     if vector is not None and has_missing:
                         vector = np.array(reorder_missing_vector(
@@ -656,7 +656,7 @@ class SmootherResults(FilterResults):
                     else:
                         vector = np.array(vector, copy=True)
                     setattr(self, name, vector)
-                elif name == 'smoothed_measurement_disturbance_cov':
+                elif name == "smoothed_measurement_disturbance_cov":
                     matrix = getattr(smoother, name, None)
                     if matrix is not None and has_missing:
                         matrix = reorder_missing_matrix(
@@ -701,13 +701,13 @@ class SmootherResults(FilterResults):
         # r_t stored such that scaled_smoothed_estimator[0] == r_{-1}
         start = 1
         end = None
-        if 'scaled_smoothed_estimator' in attributes:
+        if "scaled_smoothed_estimator" in attributes:
             self.scaled_smoothed_estimator_presample = (
                 self.scaled_smoothed_estimator[:, 0])
             self.scaled_smoothed_estimator = (
                 self.scaled_smoothed_estimator[:, start:end]
             )
-        if 'scaled_smoothed_estimator_cov' in attributes:
+        if "scaled_smoothed_estimator_cov" in attributes:
             self.scaled_smoothed_estimator_cov_presample = (
                 self.scaled_smoothed_estimator_cov[:, :, 0])
             self.scaled_smoothed_estimator_cov = (
@@ -970,7 +970,7 @@ class SmootherResults(FilterResults):
 
         # Handle `t`
         if t is not None and (start is not None or end is not None):
-            raise ValueError('Cannot specify both `t` and `start` or `end`.')
+            raise ValueError("Cannot specify both `t` and `start` or `end`.")
         if t is not None:
             start = t
             end = t + 1
@@ -988,13 +988,13 @@ class SmootherResults(FilterResults):
 
         # Sanity checks
         if start < 0 or end < 0:
-            raise ValueError('Negative `t`, `start`, or `end` is not allowed.')
+            raise ValueError("Negative `t`, `start`, or `end` is not allowed.")
         if end < start:
-            raise ValueError('`end` must be after `start`')
+            raise ValueError("`end` must be after `start`")
         if lag == 0 and self.smoothed_state_cov is None:
-            raise RuntimeError('Cannot return smoothed state covariances'
-                               ' if those values have not been computed by'
-                               ' Kalman smoothing.')
+            raise RuntimeError("Cannot return smoothed state covariances"
+                               " if those values have not been computed by"
+                               " Kalman smoothing.")
 
         # We already have in-sample (+1 out-of-sample) smoothed covariances
         if lag == 0 and end <= self.nobs + 1:
@@ -1031,17 +1031,16 @@ class SmootherResults(FilterResults):
             acov = self.smoothed_state_autocov.T[start:end]
         # Otherwise, we need to compute additional values at the end of the
         # sample
+        elif forward_autocovariances:
+            # Cov(t, t + lag), t = start, ..., end
+            acov = self._smoothed_state_autocovariance(
+                lag, start, end, extend_kwargs=extend_kwargs)
         else:
-            if forward_autocovariances:
-                # Cov(t, t + lag), t = start, ..., end
-                acov = self._smoothed_state_autocovariance(
-                    lag, start, end, extend_kwargs=extend_kwargs)
-            else:
-                # Cov(t, t + lag)' = Cov(t + lag, t),
-                # with t = start - lag, ..., end - lag
-                out = self._smoothed_state_autocovariance(
-                    lag, start - lag, end - lag, extend_kwargs=extend_kwargs)
-                acov = out.transpose(0, 2, 1)
+            # Cov(t, t + lag)' = Cov(t + lag, t),
+            # with t = start - lag, ..., end - lag
+            out = self._smoothed_state_autocovariance(
+                lag, start - lag, end - lag, extend_kwargs=extend_kwargs)
+            acov = out.transpose(0, 2, 1)
 
         # Squeeze the last axis or else reshape to have the same axis
         # definitions as e.g. smoothed_state_cov
@@ -1183,7 +1182,7 @@ class SmootherResults(FilterResults):
         """
         # Handle `t`
         if t is not None and (start is not None or end is not None):
-            raise ValueError('Cannot specify both `t` and `start` or `end`.')
+            raise ValueError("Cannot specify both `t` and `start` or `end`.")
         if t is not None:
             start = t
             end = t + 1
@@ -1196,39 +1195,39 @@ class SmootherResults(FilterResults):
 
         # Sanity checks
         if start < 0 or end < 0:
-            raise ValueError('Negative `t`, `start`, or `end` is not allowed.')
+            raise ValueError("Negative `t`, `start`, or `end` is not allowed.")
         if end <= start:
-            raise ValueError('`end` must be after `start`')
+            raise ValueError("`end` must be after `start`")
 
         if self.smoothed_state_cov is None:
-            raise ValueError('Cannot compute news without having applied the'
-                             ' Kalman smoother first.')
+            raise ValueError("Cannot compute news without having applied the"
+                             " Kalman smoother first.")
 
-        error_ss = ('This results object has %s and so it does not appear to'
-                    ' by an extension of `previous`. Can only compute the'
-                    ' news by comparing this results set to previous results'
-                    ' objects.')
+        error_ss = ("This results object has %s and so it does not appear to"
+                    " by an extension of `previous`. Can only compute the"
+                    " news by comparing this results set to previous results"
+                    " objects.")
         if self.nobs < previous.nobs:
-            raise ValueError(error_ss % 'fewer observations than'
-                             ' `previous`')
+            raise ValueError(error_ss % "fewer observations than"
+                             " `previous`")
 
         if not (self.k_endog == previous.k_endog and
                 self.k_states == previous.k_states and
                 self.k_posdef == previous.k_posdef):
-            raise ValueError(error_ss % 'different state space dimensions than'
-                             ' `previous`')
+            raise ValueError(error_ss % "different state space dimensions than"
+                             " `previous`")
 
         for key in self.model.shapes.keys():
-            if key == 'obs':
+            if key == "obs":
                 continue
             tv = getattr(self, key).shape[-1] > 1
             tv_prev = getattr(previous, key).shape[-1] > 1
             if tv and not tv_prev:
-                raise ValueError(error_ss % f'time-varying {key} while'
-                                 ' `previous` does not')
+                raise ValueError(error_ss % f"time-varying {key} while"
+                                 " `previous` does not")
             if not tv and tv_prev:
-                raise ValueError(error_ss % f'time-invariant {key} while'
-                                 ' `previous` does not')
+                raise ValueError(error_ss % f"time-invariant {key} while"
+                                 " `previous` does not")
 
         # Standardize
         if state_index is not None:
@@ -1237,14 +1236,14 @@ class SmootherResults(FilterResults):
 
         # We cannot forecast out-of-sample periods in a time-varying model
         if end > self.nobs and not self.model.time_invariant:
-            raise RuntimeError('Cannot compute the impacts of news on periods'
-                               ' outside of the sample in time-varying'
-                               ' models.')
+            raise RuntimeError("Cannot compute the impacts of news on periods"
+                               " outside of the sample in time-varying"
+                               " models.")
 
         # For time-varying case, figure out extension kwargs
         extend_kwargs = {}
         for key in self.model.shapes.keys():
-            if key == 'obs':
+            if key == "obs":
                 continue
             mat = getattr(self, key)
             prev_mat = getattr(previous, key)
@@ -1304,7 +1303,7 @@ class SmootherResults(FilterResults):
         # or not we are computing detailed impacts)
         if len(revisions_ix) > 0:
             # Indexes
-            revised_j, revised_p = zip(*revisions_ix)
+            revised_j, revised_p = zip(*revisions_ix, strict=False)
             compute_j = np.arange(revised_j[0], revised_j[-1] + 1)
 
             # Data from updated model
@@ -1336,7 +1335,7 @@ class SmootherResults(FilterResults):
             # Copy time-varying matrices (required by clone)
             clone_kwargs = {}
             for key in self.model.shapes.keys():
-                if key == 'obs':
+                if key == "obs":
                     continue
                 mat = getattr(self, key)
                 if mat.shape[-1] > 1:
@@ -1403,7 +1402,7 @@ class SmootherResults(FilterResults):
                 # elements
                 revised_j, revised_p = zip(*[
                     s for s in revisions_ix
-                    if s[0] >= revisions_details_start])
+                    if s[0] >= revisions_details_start], strict=False)
                 ix_j = revised_j - revised_j[0]
                 # Shape is: t, k, j * p
                 # Note: have to transpose first so that the two advanced
@@ -1446,7 +1445,7 @@ class SmootherResults(FilterResults):
 
         # Need to also flatten the revisions items that contain all revisions
         if len(revisions_ix) > 0:
-            revised_j, revised_p = zip(*revisions_ix)
+            revised_j, revised_p = zip(*revisions_ix, strict=False)
             ix_j = revised_j - revised_j[0]
 
             revisions_all = revisions_all[ix_j, revised_p]
@@ -1456,7 +1455,7 @@ class SmootherResults(FilterResults):
         # Now handle updates
         if len(updates_ix) > 0:
             # Figure out which time points we need forecast errors for
-            update_t, update_k = zip(*updates_ix)
+            update_t, update_k = zip(*updates_ix, strict=False)
             update_start_t = np.min(update_t)
             update_end_t = np.max(update_t)
 
@@ -1483,17 +1482,16 @@ class SmootherResults(FilterResults):
                 design = self.design[..., 0][None, ...]
             elif end <= self.nobs:
                 design = self.design[..., start:end].transpose(2, 0, 1)
+            # Note: this case is no longer possible, since above we raise
+            # ValueError for time-varying case with end > self.nobs
+            elif design is None:
+                raise ValueError("Model has time-varying design matrix, so"
+                                 " an updated time-varying matrix for"
+                                 " period `t` is required.")
+            elif design.ndim == 2:
+                design = design[None, ...]
             else:
-                # Note: this case is no longer possible, since above we raise
-                # ValueError for time-varying case with end > self.nobs
-                if design is None:
-                    raise ValueError('Model has time-varying design matrix, so'
-                                     ' an updated time-varying matrix for'
-                                     ' period `t` is required.')
-                elif design.ndim == 2:
-                    design = design[None, ...]
-                else:
-                    design = design.transpose(2, 0, 1)
+                design = design.transpose(2, 0, 1)
 
             state_gain = previous.smoothed_state_gain(
                 updates_ix, start=start, end=end, extend_kwargs=extend_kwargs)
@@ -1600,7 +1598,7 @@ class SmootherResults(FilterResults):
         """
         # Handle `t`
         if t is not None and (start is not None or end is not None):
-            raise ValueError('Cannot specify both `t` and `start` or `end`.')
+            raise ValueError("Cannot specify both `t` and `start` or `end`.")
         if t is not None:
             start = t
             end = t + 1
@@ -1615,9 +1613,9 @@ class SmootherResults(FilterResults):
 
         # Sanity checks
         if start < 0 or end < 0:
-            raise ValueError('Negative `t`, `start`, or `end` is not allowed.')
+            raise ValueError("Negative `t`, `start`, or `end` is not allowed.")
         if end <= start:
-            raise ValueError('`end` must be after `start`')
+            raise ValueError("`end` must be after `start`")
 
         # Dimensions
         n_periods = end - start
@@ -1632,10 +1630,10 @@ class SmootherResults(FilterResults):
                 else:
                     if (which not in extend_kwargs or
                             extend_kwargs[which].shape[-1] <= t - self.nobs):
-                        raise ValueError(f'Model has time-varying {which}'
-                                         ' matrix, so an updated time-varying'
-                                         ' matrix for the extension period is'
-                                         ' required.')
+                        raise ValueError(f"Model has time-varying {which}"
+                                         " matrix, so an updated time-varying"
+                                         " matrix for the extension period is"
+                                         " required.")
                     out = extend_kwargs[which][..., t - self.nobs]
             else:
                 out = mat[..., 0]
@@ -1648,7 +1646,7 @@ class SmootherResults(FilterResults):
                 t_i, k_i = updates_ix[i]
                 acov = self.smoothed_state_autocovariance(
                     lag=t - t_i, t=t, extend_kwargs=extend_kwargs)
-                Z_i = get_mat('design', t_i)
+                Z_i = get_mat("design", t_i)
                 tmp1[:, i:i + 1] = acov @ Z_i[k_i:k_i + 1].T
             return tmp1
 
@@ -1664,8 +1662,8 @@ class SmootherResults(FilterResults):
             for j in range(i + 1):
                 t_j, k_j = updates_ix[j]
 
-                Z_i = get_mat('design', t_i)
-                Z_j = get_mat('design', t_j)
+                Z_i = get_mat("design", t_i)
+                Z_j = get_mat("design", t_j)
 
                 acov = self.smoothed_state_autocovariance(
                     lag=t_i - t_j, t=t_i, extend_kwargs=extend_kwargs)
@@ -1674,7 +1672,7 @@ class SmootherResults(FilterResults):
                 )
 
                 if t_i == t_j:
-                    H = get_mat('obs_cov', t_i)
+                    H = get_mat("obs_cov", t_i)
 
                     if i == j:
                         tmp2[i, j] += H[k_i, k_j]
@@ -1741,7 +1739,7 @@ class SmootherResults(FilterResults):
     def smoothed_forecasts_error_cov(self):
         return self._get_smoothed_forecasts()[2]
 
-    def get_smoothed_decomposition(self, decomposition_of='smoothed_state',
+    def get_smoothed_decomposition(self, decomposition_of="smoothed_state",
                                    state_index=None):
         r"""
         Decompose smoothed output into contributions from observations
@@ -1817,7 +1815,7 @@ class SmootherResults(FilterResults):
         the smoothed signal is :math:`Z_t \alpha_t`, where :math:`Z_t` is the
         design matrix operative at time :math:`t`.
         """
-        if decomposition_of not in ['smoothed_state', 'smoothed_signal']:
+        if decomposition_of not in ["smoothed_state", "smoothed_signal"]:
             raise ValueError('Invalid value for `decomposition_of`. Must be'
                              ' one of "smoothed_state" or "smoothed_signal".')
 
@@ -1831,14 +1829,14 @@ class SmootherResults(FilterResults):
         cT = self.model.state_intercept.T  # t, m
 
         # Subset the states used for the impacts if applicable
-        if decomposition_of == 'smoothed_signal' and state_index is not None:
+        if decomposition_of == "smoothed_signal" and state_index is not None:
             ZT = ZT[:, state_index, :]
             weights = weights[:, :, state_index]
             prior_weights = prior_weights[:, state_index, :]
 
         # Convert the weights in terms of smoothed signal
         # t, j, m, p, i
-        if decomposition_of == 'smoothed_signal':
+        if decomposition_of == "smoothed_signal":
             # Multiplication gives: t, j, m, p * t, j, m, p, k
             # Sum along axis=2 gives: t, j, p, k
             # Transpose to: t, j, k, p (i.e. like t, j, m, p but with k instead

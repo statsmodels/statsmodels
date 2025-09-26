@@ -52,7 +52,7 @@ n_risk2 = np.r_[9, 3, 2, 1]
 n_events2 = np.r_[1., 1., 1., 1.]
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-fp = os.path.join(cur_dir, 'results', 'bmt.csv')
+fp = os.path.join(cur_dir, "results", "bmt.csv")
 bmt = pd.read_csv(fp)
 
 
@@ -129,7 +129,7 @@ def test_bmt():
     dfa = bmt[bmt.Group == "ALL"]
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    fp = os.path.join(cur_dir, 'results', 'bmt_results.csv')
+    fp = os.path.join(cur_dir, "results", "bmt_results.csv")
     rslt = pd.read_csv(fp)
 
     sf = SurvfuncRight(dfa["T"].values, dfa.Status.values)
@@ -234,7 +234,7 @@ def test_plot_km(close_figures):
     ha, lb = ax.get_legend_handles_labels()
     fig.legend([ha[k] for k in (0, 2, 4)],
                [lb[k] for k in (0, 2, 4)],
-               loc='center right')
+               loc="center right")
     close_or_save(pdf, fig)
 
     # Simultaneous CB for BMT data

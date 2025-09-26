@@ -8,7 +8,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
-import scipy.stats as stats
+from scipy import stats
 
 from statsmodels.discrete.discrete_model import Logit
 from statsmodels.miscmodels.ordinal_model import OrderedModel
@@ -278,7 +278,7 @@ class TestProbitModel(CheckOrdinalModelMixin):
             [
                 [202, 18, 0, 220],
                 [112, 28, 0, 140],
-                [27, 13, 0, 40],  # noqa
+                [27, 13, 0, 40],
                 [341, 59, 0, 400],
             ],
             dtype=np.int64,

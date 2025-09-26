@@ -170,12 +170,11 @@ def lowess(
         if all_valid:
             y = endog
             x = exog
+        elif missing == "drop":
+            x = exog[mask_valid]
+            y = endog[mask_valid]
         else:
-            if missing == "drop":
-                x = exog[mask_valid]
-                y = endog[mask_valid]
-            else:
-                raise ValueError("nan or inf found in data")
+            raise ValueError("nan or inf found in data")
     elif missing == "none":
         y = endog
         x = exog
@@ -218,11 +217,10 @@ def lowess(
             xvals_all_valid = np.all(xvals_mask_valid)
             if xvals_all_valid:
                 xvalues = xvals
+            elif missing == "drop":
+                xvalues = xvals[xvals_mask_valid]
             else:
-                if missing == "drop":
-                    xvalues = xvals[xvals_mask_valid]
-                else:
-                    raise ValueError("nan or inf found in xvals")
+                raise ValueError("nan or inf found in xvals")
         if not is_sorted:
             sort_index = np.argsort(xvalues)
             xvalues = np.array(xvalues[sort_index])
@@ -274,8 +272,7 @@ def lowess(
             yfitted_.fill(np.nan)
             yfitted_[sort_index] = yfitted
             yfitted = yfitted_
-        else:
-            yfitted = yfitted
+        # else (not needed) yfitted = yfitted
         if not xvals_all_valid:
             yfitted_ = np.empty_like(xvals)
             yfitted_.fill(np.nan)

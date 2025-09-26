@@ -170,30 +170,30 @@ class Mediation:
         self._med_pos_outcome = self._variable_pos("mediator", "outcome")
 
     def _variable_pos(self, var, model):
-        if model == 'mediator':
+        if model == "mediator":
             mod = self.mediator_model
         else:
             mod = self.outcome_model
 
-        if var == 'mediator':
+        if var == "mediator":
             return maybe_name_or_idx(self.mediator, mod)[1]
 
         exp = self.exposure
         exp_is_2 = ((len(exp) == 2) and not isinstance(exp, str))
 
         if exp_is_2:
-            if model == 'outcome':
+            if model == "outcome":
                 return exp[0]
-            elif model == 'mediator':
+            elif model == "mediator":
                 return exp[1]
         else:
             return maybe_name_or_idx(exp, mod)[1]
 
     def _guess_endog_name(self, model, typ):
-        if hasattr(model, 'formula'):
+        if hasattr(model, "formula"):
             return model.formula.split("~")[0].strip()
         else:
-            raise ValueError('cannot infer %s name without formula' % typ)
+            raise ValueError("cannot infer %s name without formula" % typ)
 
     def _simulate_params(self, result):
         """
@@ -209,7 +209,7 @@ class Mediation:
         value.  Set values of moderated variables as needed.
         """
         mediator_exog = self._mediator_exog
-        if not hasattr(self.mediator_model, 'formula'):
+        if not hasattr(self.mediator_model, "formula"):
             mediator_exog[:, self._exp_pos_mediator] = exposure
             for ix in self.moderators:
                 v = self.moderators[ix]
@@ -235,7 +235,7 @@ class Mediation:
         needed.
         """
         outcome_exog = self._outcome_exog
-        if not hasattr(self.outcome_model, 'formula'):
+        if not hasattr(self.outcome_model, "formula"):
             outcome_exog[:, self._med_pos_outcome] = mediator
             outcome_exog[:, self._exp_pos_outcome] = exposure
             for ix in self.moderators:
@@ -417,6 +417,6 @@ class MediationResults:
             smry.iloc[i, 2] = np.percentile(vec, 100 * (1 - alpha / 2))
             smry.iloc[i, 3] = _pvalue(vec)
 
-        smry = smry.apply(pd.to_numeric, errors='coerce')
+        smry = smry.apply(pd.to_numeric, errors="coerce")
 
         return smry

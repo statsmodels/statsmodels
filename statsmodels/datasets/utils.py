@@ -12,7 +12,7 @@ import numpy as np
 from pandas import Index, read_csv, read_stata
 
 
-def webuse(data, baseurl='https://www.stata-press.com/data/r11/', as_df=True):
+def webuse(data, baseurl="https://www.stata-press.com/data/r11/", as_df=True):
     """
     Download and return an example dataset from Stata.
 
@@ -39,7 +39,7 @@ def webuse(data, baseurl='https://www.stata-press.com/data/r11/', as_df=True):
     Make sure baseurl has trailing forward slash. Does not do any
     error checking in response URLs.
     """
-    url = urljoin(baseurl, data+'.dta')
+    url = urljoin(baseurl, data+".dta")
     return read_stata(url)
 
 
@@ -128,7 +128,7 @@ def _open_cache(cache_path):
     import zlib
 
     # return as bytes object encoded in utf-8 for cross-compat of cached
-    with open(cache_path, 'rb') as zf:
+    with open(cache_path, "rb") as zf:
         return zlib.decompress(zf.read())
 
 
@@ -140,13 +140,13 @@ def _urlopen_cached(url, cache):
     """
     from_cache = False
     if cache is not None:
-        file_name = url.split("://")[-1].replace('/', ',')
-        file_name = file_name.split('.')
+        file_name = url.split("://")[-1].replace("/", ",")
+        file_name = file_name.split(".")
         if len(file_name) > 1:
-            file_name[-2] += '-v2'
+            file_name[-2] += "-v2"
         else:
-            file_name[0] += '-v2'
-        file_name = '.'.join(file_name) + ".zip"
+            file_name[0] += "-v2"
+        file_name = ".".join(file_name) + ".zip"
         cache_path = join(cache, file_name)
         try:
             data = _open_cache(cache_path)
@@ -168,12 +168,12 @@ def _get_data(base_url, dataname, cache, extension="csv"):
     try:
         data, from_cache = _urlopen_cached(url, cache)
     except HTTPError as err:
-        if '404' in str(err):
-            raise ValueError("Dataset %s was not found." % dataname)
+        if "404" in str(err):
+            raise ValueError("Dataset %s was not found." % dataname) from err
         else:
             raise err
 
-    data = data.decode('utf-8', 'strict')
+    data = data.decode("utf-8", "strict")
     return StringIO(data), from_cache
 
 
@@ -183,7 +183,7 @@ def _get_dataset_meta(dataname, package, cache):
     index_url = ("https://raw.githubusercontent.com/vincentarelbundock/"
                  "Rdatasets/master/datasets.csv")
     data, _ = _urlopen_cached(index_url, cache)
-    data = data.decode('utf-8', 'strict')
+    data = data.decode("utf-8", "strict")
     index = read_csv(StringIO(data))
     idx = np.logical_and(index.Item == dataname, index.Package == package)
     if not idx.any():
@@ -266,8 +266,8 @@ def get_data_home(data_home=None):
     If the folder does not already exist, it is automatically created.
     """
     if data_home is None:
-        data_home = environ.get('STATSMODELS_DATA',
-                                join('~', 'statsmodels_data'))
+        data_home = environ.get("STATSMODELS_DATA",
+                                join("~", "statsmodels_data"))
     data_home = expanduser(data_home)
     if not exists(data_home):
         makedirs(data_home)
@@ -310,25 +310,25 @@ def strip_column_names(df):
     """
     columns = []
     for c in df:
-        if c.startswith('\'') and c.endswith('\''):
+        if c.startswith("'") and c.endswith("'"):
             c = c[1:-1]
-        elif c.startswith('\''):
+        elif c.startswith("'"):
             c = c[1:]
-        elif c.endswith('\''):
+        elif c.endswith("'"):
             c = c[:-1]
         columns.append(c)
     df.columns = columns
     return df
 
 
-def load_csv(base_file, csv_name, sep=',', convert_float=False):
+def load_csv(base_file, csv_name, sep=",", convert_float=False):
     """Standard simple csv loader"""
     filepath = dirname(abspath(base_file))
     filename = join(filepath, csv_name)
-    engine = 'python' if sep != ',' else 'c'
+    engine = "python" if sep != "," else "c"
     float_precision = {}
-    if engine == 'c':
-        float_precision = {'float_precision': 'high'}
+    if engine == "c":
+        float_precision = {"float_precision": "high"}
     data = read_csv(filename, sep=sep, engine=engine, **float_precision)
     if convert_float:
         data = data.astype(float)

@@ -1,7 +1,7 @@
 """Heart Transplant Data, Miller 1976"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """???"""
 
@@ -50,4 +50,4 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'heart.csv')
+    return du.load_csv(__file__, "heart.csv")

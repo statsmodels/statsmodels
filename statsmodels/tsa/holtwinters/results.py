@@ -626,7 +626,7 @@ class HoltWintersResults(Results):
         else:
             lvl[-1, :] = level[start_idx - 1]
             b[-1, :] = _trend[start_idx - 1]
-        if 0 <= start_idx and start_idx <= m:
+        if 0 <= start_idx <= m:
             initial_seasons = self.params["initial_seasons"]
             _s = np.concatenate((initial_seasons[start_idx:], season[:start_idx]))
             s[-m:, :] = np.tile(_s, (repetitions, 1)).T

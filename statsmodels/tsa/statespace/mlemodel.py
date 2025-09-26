@@ -50,7 +50,7 @@ def _handle_args(names, defaults, *args, **kwargs):
             flags = args[0]
         # otherwise, a user may have just used positional arguments...
         else:
-            flags = dict(zip(names, args))
+            flags = dict(zip(names, args, strict=False))
         for i in range(len(names)):
             output_args.append(flags.get(names[i], defaults[i]))
 
@@ -498,7 +498,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # because param_names may not be available at that point)
         if self._fixed_params is None:
             self._fixed_params = {}
-            self._params_index = dict(zip(self.param_names, np.arange(k_params)))
+            self._params_index = dict(zip(self.param_names, np.arange(k_params), strict=False))
 
         # Cache the current fixed parameters
         cache_fixed_params = self._fixed_params.copy()
@@ -2021,12 +2021,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             required_exog_shape = (out_of_sample, self.k_exog)
             try:
                 exog = exog.reshape(required_exog_shape)
-            except ValueError:
+            except ValueError as exc:
                 raise ValueError(
                     "Provided exogenous values are not of the"
                     " appropriate shape. Required %s, got %s."
                     % (str(required_exog_shape), str(exog.shape))
-                )
+                ) from exc
         elif k_exog > 0 and exog is not None:
             exog = None
             warnings.warn(

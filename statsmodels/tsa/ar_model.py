@@ -11,7 +11,7 @@ from collections.abc import Iterable
 import datetime
 import datetime as dt
 from types import SimpleNamespace
-from typing import Any, Literal, cast
+from typing import Any, Literal, cast, TYPE_CHECKING
 from collections.abc import Sequence
 import warnings
 
@@ -26,13 +26,6 @@ from statsmodels.tools import eval_measures
 from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.sm_exceptions import SpecificationWarning
-from statsmodels.tools.typing import (
-    ArrayLike,
-    ArrayLike1D,
-    ArrayLike2D,
-    Float64Array,
-    NDArray,
-)
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -49,6 +42,16 @@ from statsmodels.tsa.deterministic import (
     TimeTrend,
 )
 from statsmodels.tsa.tsatools import freq_to_period, lagmat
+
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import (
+        ArrayLike,
+        ArrayLike1D,
+        ArrayLike2D,
+        Float64Array,
+        NDArray,
+    )
+
 
 __all__ = ["AR", "AutoReg"]
 
@@ -306,7 +309,6 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
     def initialize(self) -> None:
         """Initialize the model (no-op)."""
-        pass
 
     def _check_lags(
         self, lags: int | Sequence[int] | None, hold_back: int | None

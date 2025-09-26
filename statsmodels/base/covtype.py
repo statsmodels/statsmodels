@@ -11,36 +11,36 @@ from statsmodels.compat.python import lzip
 import numpy as np
 
 descriptions = {
-    'HC0': 'Standard Errors are heteroscedasticity robust (HC0)',
-    'HC1': 'Standard Errors are heteroscedasticity robust (HC1)',
-    'HC2': 'Standard Errors are heteroscedasticity robust (HC2)',
-    'HC3': 'Standard Errors are heteroscedasticity robust (HC3)',
-    'HAC': 'Standard Errors are heteroscedasticity and autocorrelation '
-           'robust (HAC) using {maxlags} lags and '
-           '{correction} small sample correction',
-    'fixed_scale': 'Standard Errors are based on fixed scale',
-    'cluster': 'Standard Errors are robust to cluster correlation (cluster)',
-    'HAC-Panel': 'Standard Errors are robust to '
-                 'cluster correlation (HAC-Panel)',
-    'HAC-Groupsum': 'Driscoll and Kraay Standard Errors are robust to '
-                    'cluster correlation (HAC-Groupsum)',
-    'none': 'Covariance matrix not calculated.',
-    'approx': 'Covariance matrix calculated using numerical ({approx_type}) '
-              'differentiation.',
-    'OPG': 'Covariance matrix calculated using the outer product of '
-           'gradients ({approx_type}).',
-    'OIM': 'Covariance matrix calculated using the observed information '
-           'matrix ({approx_type}) described in Harvey (1989).',
-    'robust': 'Quasi-maximum likelihood covariance matrix used for '
-              'robustness to some misspecifications; calculated using '
-              'numerical ({approx_type}) differentiation.',
-    'robust-OIM': 'Quasi-maximum likelihood covariance matrix used for '
-                  'robustness to some misspecifications; calculated using the '
-                  'observed information matrix ({approx_type}) described in '
-                  'Harvey (1989).',
-    'robust-approx': 'Quasi-maximum likelihood covariance matrix used for '
-                     'robustness to some misspecifications; calculated using '
-                     'numerical ({approx_type}) differentiation.',
+    "HC0": "Standard Errors are heteroscedasticity robust (HC0)",
+    "HC1": "Standard Errors are heteroscedasticity robust (HC1)",
+    "HC2": "Standard Errors are heteroscedasticity robust (HC2)",
+    "HC3": "Standard Errors are heteroscedasticity robust (HC3)",
+    "HAC": "Standard Errors are heteroscedasticity and autocorrelation "
+           "robust (HAC) using {maxlags} lags and "
+           "{correction} small sample correction",
+    "fixed_scale": "Standard Errors are based on fixed scale",
+    "cluster": "Standard Errors are robust to cluster correlation (cluster)",
+    "HAC-Panel": "Standard Errors are robust to "
+                 "cluster correlation (HAC-Panel)",
+    "HAC-Groupsum": "Driscoll and Kraay Standard Errors are robust to "
+                    "cluster correlation (HAC-Groupsum)",
+    "none": "Covariance matrix not calculated.",
+    "approx": "Covariance matrix calculated using numerical ({approx_type}) "
+              "differentiation.",
+    "OPG": "Covariance matrix calculated using the outer product of "
+           "gradients ({approx_type}).",
+    "OIM": "Covariance matrix calculated using the observed information "
+           "matrix ({approx_type}) described in Harvey (1989).",
+    "robust": "Quasi-maximum likelihood covariance matrix used for "
+              "robustness to some misspecifications; calculated using "
+              "numerical ({approx_type}) differentiation.",
+    "robust-OIM": "Quasi-maximum likelihood covariance matrix used for "
+                  "robustness to some misspecifications; calculated using the "
+                  "observed information matrix ({approx_type}) described in "
+                  "Harvey (1989).",
+    "robust-approx": "Quasi-maximum likelihood covariance matrix used for "
+                     "robustness to some misspecifications; calculated using "
+                     "numerical ({approx_type}) differentiation.",
 }
 
 
@@ -56,10 +56,10 @@ def normalize_cov_type(cov_type):
     -------
     normalized_cov_type : str
     """
-    if cov_type == 'nw-panel':
-        cov_type = 'hac-panel'
-    if cov_type == 'nw-groupsum':
-        cov_type = 'hac-groupsum'
+    if cov_type == "nw-panel":
+        cov_type = "hac-panel"
+    if cov_type == "nw-groupsum":
+        cov_type = "hac-groupsum"
     return cov_type
 
 
@@ -246,7 +246,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
     if cov_type.upper() in ("HC0", "HC1", "HC2", "HC3"):
         if kwds:
             raise ValueError(
-                "heteroscedasticity robust covariance " "does not use keywords"
+                "heteroscedasticity robust covariance does not use keywords"
             )
         res.cov_kwds["description"] = descriptions[cov_type.upper()]
 
@@ -379,8 +379,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
         res.cov_kwds["description"] = descriptions["HAC-Groupsum"]
     else:
         raise ValueError(
-            "cov_type not recognized. See docstring for "
-            + "available options and spelling"
+            "cov_type not recognized. See docstring for available options and spelling"
         )
     # generic optional factor to scale covariance
 

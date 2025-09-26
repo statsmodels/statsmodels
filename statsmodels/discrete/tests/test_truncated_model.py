@@ -19,7 +19,7 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tools.testing import Holder
 from statsmodels.tools.tools import add_constant
 
-from ...compat.scipy import SP_LT_116
+from statsmodels.compat.scipy import SP_LT_116
 from .results import (
     results_truncated as results_t,
     results_truncated_st as results_ts,

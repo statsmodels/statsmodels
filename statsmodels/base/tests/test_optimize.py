@@ -69,8 +69,7 @@ def test_full_output_false(reset_randomstate):
     # cg ""
     # ncg ""
     # powell ""
-    for method in fit_funcs:
-        func = fit_funcs[method]
+    for method, func in fit_funcs.items():
         if method == "newton":
             xopt, retvals = func(
                 dummy_func,
@@ -102,8 +101,7 @@ def test_full_output_false(reset_randomstate):
 
 
 def test_full_output(reset_randomstate):
-    for method in fit_funcs:
-        func = fit_funcs[method]
+    for method, func in fit_funcs.items():
         if method == "newton":
             xopt, retvals = func(
                 dummy_func,

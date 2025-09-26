@@ -35,9 +35,9 @@ from .results import results_predict as resp
 
 
 # copied from `test_gmm_poisson.TestGMMAddOnestep`
-XLISTEXOG2 = 'aget aget2 educyr actlim totchr'.split()
-endog_name = 'docvis'
-exog_names = 'private medicaid'.split() + XLISTEXOG2 + ['const']
+XLISTEXOG2 = "aget aget2 educyr actlim totchr".split()
+endog_name = "docvis"
+exog_names = "private medicaid".split() + XLISTEXOG2 + ["const"]
 endog = DATA[endog_name]
 exog = DATA[exog_names]
 
@@ -236,8 +236,8 @@ class CheckExtras():
         from statsmodels.stats.outliers_influence import MLEInfluence
 
         influ = MLEInfluence(res1)
-        attrs = ['cooks_distance', 'd_fittedvalues', 'd_fittedvalues_scaled',
-                 'd_params', 'dfbetas', 'hat_matrix_diag', 'resid_studentized'
+        attrs = ["cooks_distance", "d_fittedvalues", "d_fittedvalues_scaled",
+                 "d_params", "dfbetas", "hat_matrix_diag", "resid_studentized"
                  ]
         for attr in attrs:
             getattr(influ, attr)
@@ -314,8 +314,8 @@ models = [
     (GeneralizedPoisson, {}, np.array([mu, alpha])),
     (GeneralizedPoisson, {"p": 2}, np.array([mu, alpha])),
     (NegativeBinomial, {}, np.array([mu, alpha])),
-    (NegativeBinomial, {"loglike_method": 'nb1'}, np.array([mu, alpha])),
-    (NegativeBinomial, {"loglike_method": 'geometric'}, np.array([mu])),
+    (NegativeBinomial, {"loglike_method": "nb1"}, np.array([mu, alpha])),
+    (NegativeBinomial, {"loglike_method": "geometric"}, np.array([mu])),
     ]
 
 models_influ = [

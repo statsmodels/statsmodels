@@ -35,12 +35,11 @@ def test_data_conversion(close_figures):
     # so the dictionary will look odd
     # as it key order has the c and b
     # keys swapped
-    import pandas
 
     _, ax = plt.subplots(4, 4)
     data = {"ax": 1, "bx": 2, "cx": 3}
     mosaic(data, ax=ax[0, 0], title="basic dict", axes_label=False)
-    data = pandas.Series(data)
+    data = pd.Series(data)
     mosaic(data, ax=ax[0, 1], title="basic series", axes_label=False)
     data = [1, 2, 3]
     mosaic(data, ax=ax[0, 2], title="basic list", axes_label=False)
@@ -53,7 +52,7 @@ def test_data_conversion(close_figures):
     mosaic(
         data, ax=ax[2, 0], title="inverted keys dict", index=[1, 0], axes_label=False
     )
-    data = pandas.Series(data)
+    data = pd.Series(data)
     mosaic(data, ax=ax[1, 1], title="compound series", axes_label=False)
     mosaic(data, ax=ax[2, 1], title="inverted keys series", index=[1, 0])
     data = [[1, 2], [3, 4]]
@@ -68,7 +67,7 @@ def test_data_conversion(close_figures):
 
     gender = ["male", "male", "male", "female", "female", "female"]
     pet = ["cat", "dog", "dog", "cat", "dog", "cat"]
-    data = pandas.DataFrame({"gender": gender, "pet": pet})
+    data = pd.DataFrame({"gender": gender, "pet": pet})
     mosaic(data, ["gender"], ax=ax[3, 0], title="dataframe by key 1", axes_label=False)
     mosaic(data, ["pet"], ax=ax[3, 1], title="dataframe by key 2", axes_label=False)
     mosaic(data, ["gender", "pet"], ax=ax[3, 2], title="both keys", axes_label=False)
@@ -93,7 +92,7 @@ def test_mosaic_simple(close_figures):
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = dict(zip(keys, range(1, 1 + len(keys))))
+    data = dict(zip(keys, range(1, 1 + len(keys)), strict=False))
     # which colours should I use for the various categories?
     # put it into a dict
     props = {}
@@ -175,7 +174,7 @@ def test_mosaic_very_complex(close_figures):
         ["work", "unemployed"],
     )
     keys = list(product(*key_base))
-    data = dict(zip(keys, range(1, 1 + len(keys))))
+    data = dict(zip(keys, range(1, 1 + len(keys)), strict=False))
     props = {}
     props[("male", "old")] = {"color": "r"}
     props[("female",)] = {"color": "pink"}
@@ -226,7 +225,7 @@ def test_axes_labeling(close_figures):
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = dict(zip(keys, rand(len(keys))))
+    data = dict(zip(keys, rand(len(keys)), strict=False))
 
     def labelizer(k):
         return "".join(s[0] for s in k)
@@ -291,13 +290,13 @@ def eq(x, y):
 
 def test_recursive_split():
     keys = list(product("mf"))
-    data = dict(zip(keys, [1] * len(keys)))
+    data = dict(zip(keys, [1] * len(keys), strict=False))
     res = _hierarchical_split(data, gap=0)
     assert_(list(res.keys()) == keys)
     res[("m",)] = (0.0, 0.0, 0.5, 1.0)
     res[("f",)] = (0.5, 0.0, 0.5, 1.0)
     keys = list(product("mf", "yao"))
-    data = dict(zip(keys, [1] * len(keys)))
+    data = dict(zip(keys, [1] * len(keys), strict=False))
     res = _hierarchical_split(data, gap=0)
     assert_(list(res.keys()) == keys)
     res[("m", "y")] = (0.0, 0.0, 0.5, 1 / 3)
@@ -309,11 +308,11 @@ def test_recursive_split():
 
 
 def test__reduce_dict():
-    data = dict(zip(list(product("mf", "oy", "wn")), [1] * 8))
+    data = dict(zip(list(product("mf", "oy", "wn")), [1] * 8, strict=False))
     eq(_reduce_dict(data, ("m",)), 4)
     eq(_reduce_dict(data, ("m", "o")), 2)
     eq(_reduce_dict(data, ("m", "o", "w")), 1)
-    data = dict(zip(list(product("mf", "oy", "wn")), lrange(8)))
+    data = dict(zip(list(product("mf", "oy", "wn")), lrange(8), strict=False))
     eq(_reduce_dict(data, ("m",)), 6)
     eq(_reduce_dict(data, ("m", "o")), 1)
     eq(_reduce_dict(data, ("m", "o", "w")), 0)

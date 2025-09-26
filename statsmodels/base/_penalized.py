@@ -32,8 +32,8 @@ class PenalizedMixin:
     def __init__(self, *args, **kwds):
 
         # pop extra kwds before calling super
-        self.penal = kwds.pop('penal', None)
-        self.pen_weight = kwds.pop('pen_weight', None)
+        self.penal = kwds.pop("penal", None)
+        self.pen_weight = kwds.pop("pen_weight", None)
 
         super().__init__(*args, **kwds)
 
@@ -48,15 +48,15 @@ class PenalizedMixin:
             self.penal = NonePenalty()
             self.pen_weight = 0
 
-        self._init_keys.extend(['penal', 'pen_weight'])
-        self._null_drop_keys = getattr(self, '_null_drop_keys', [])
-        self._null_drop_keys.extend(['penal', 'pen_weight'])
+        self._init_keys.extend(["penal", "pen_weight"])
+        self._null_drop_keys = getattr(self, "_null_drop_keys", [])
+        self._null_drop_keys.extend(["penal", "pen_weight"])
 
     def _handle_scale(self, params, scale=None, **kwds):
 
         if scale is None:
             # special handling for GLM
-            if hasattr(self, 'scaletype'):
+            if hasattr(self, "scaletype"):
                 mu = self.predict(params)
                 scale = self.estimate_scale(mu)
             else:
@@ -94,7 +94,7 @@ class PenalizedMixin:
 
         return llf
 
-    def score_numdiff(self, params, pen_weight=None, method='fd', **kwds):
+    def score_numdiff(self, params, pen_weight=None, method="fd", **kwds):
         """score based on finite difference derivative
         """
         if pen_weight is None:
@@ -103,9 +103,9 @@ class PenalizedMixin:
         def loglike(p):
             return self.loglike(p, pen_weight=pen_weight, **kwds)
 
-        if method == 'cs':
+        if method == "cs":
             return approx_fprime_cs(params, loglike)
-        elif method == 'fd':
+        elif method == "fd":
             return approx_fprime(params, loglike, centered=True)
         else:
             raise ValueError('method not recognized, should be "fd" or "cs"')
@@ -198,11 +198,11 @@ class PenalizedMixin:
         from statsmodels.genmod.generalized_linear_model import GLM
         # Only for fit methods supporting max_start_irls
         if isinstance(self, (GLM, GLMGam)):
-            kwds.update({'max_start_irls': 0})
+            kwds.update({"max_start_irls": 0})
 
         # currently we use `bfgs` by default
         if method is None:
-            method = 'bfgs'
+            method = "bfgs"
 
         if trim is None:
             trim = False

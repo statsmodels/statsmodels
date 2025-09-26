@@ -59,7 +59,7 @@ def test_exact():
             c.flat[::c.shape[0]+1] += uniq
             s = np.sqrt(np.diag(c))
             c /= np.outer(s, s)
-            fa = Factor(corr=c, n_factor=n_factor, method='ml')
+            fa = Factor(corr=c, n_factor=n_factor, method="ml")
             rslt = fa.fit()
             assert_allclose(rslt.fitted_cov, c, rtol=1e-4, atol=1e-4)
             rslt.summary()  # smoke test
@@ -80,7 +80,7 @@ def test_exact_em():
             c.flat[::c.shape[0]+1] += uniq
             s = np.sqrt(np.diag(c))
             c /= np.outer(s, s)
-            fa = Factor(corr=c, n_factor=n_factor, method='ml')
+            fa = Factor(corr=c, n_factor=n_factor, method="ml")
             load_e, uniq_e = fa._fit_ml_em(2000)
             c_e = np.dot(load_e, load_e.T)
             c_e.flat[::c_e.shape[0]+1] += uniq_e
@@ -95,8 +95,8 @@ def test_fit_ml_em_random_state():
     epsilon = np.random.multivariate_normal(np.zeros(3), np.eye(3), size=T).T
     initial = np.random.get_state()
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message='Fitting did not converge')
-        Factor(endog=epsilon, n_factor=2, method='ml').fit()
+        warnings.filterwarnings("ignore", message="Fitting did not converge")
+        Factor(endog=epsilon, n_factor=2, method="ml").fit()
     final = np.random.get_state()
 
     assert initial[0] == final[0]
@@ -109,8 +109,8 @@ def test_em():
     n_factor = 1
     cor = np.asarray([[1, 0.5, 0.3], [0.5, 1, 0], [0.3, 0, 1]])
 
-    fa = Factor(corr=cor, n_factor=n_factor, method='ml')
-    rslt = fa.fit(opt={'gtol': 1e-3})
+    fa = Factor(corr=cor, n_factor=n_factor, method="ml")
+    rslt = fa.fit(opt={"gtol": 1e-3})
     # Should add tests for these
     # load_opt = rslt.loadings
     # uniq_opt = rslt.uniqueness
@@ -140,7 +140,7 @@ def test_1factor():
     ii = np.arange(p)
     cm = r ** np.abs(np.subtract.outer(ii, ii))
 
-    fa = Factor(corr=cm, n_factor=1, method='ml')
+    fa = Factor(corr=cm, n_factor=1, method="ml")
     rslt = fa.fit()
 
     if rslt.loadings[0, 0] < 0:
@@ -181,7 +181,7 @@ def test_2factor():
     ii = np.arange(p)
     cm = r ** np.abs(np.subtract.outer(ii, ii))
 
-    fa = Factor(corr=cm, n_factor=2, nobs=100, method='ml')
+    fa = Factor(corr=cm, n_factor=2, nobs=100, method="ml")
     rslt = fa.fit()
 
     for j in 0, 1:

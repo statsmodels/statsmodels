@@ -138,109 +138,109 @@ class KalmanFilter(Representation):
     """
 
     filter_methods = [
-        'filter_conventional', 'filter_exact_initial', 'filter_augmented',
-        'filter_square_root', 'filter_univariate', 'filter_collapsed',
-        'filter_extended', 'filter_unscented', 'filter_concentrated',
-        'filter_chandrasekhar'
+        "filter_conventional", "filter_exact_initial", "filter_augmented",
+        "filter_square_root", "filter_univariate", "filter_collapsed",
+        "filter_extended", "filter_unscented", "filter_concentrated",
+        "filter_chandrasekhar"
     ]
 
-    filter_conventional = OptionWrapper('filter_method', FILTER_CONVENTIONAL)
+    filter_conventional = OptionWrapper("filter_method", FILTER_CONVENTIONAL)
     """
     (bool) Flag for conventional Kalman filtering.
     """
-    filter_exact_initial = OptionWrapper('filter_method', FILTER_EXACT_INITIAL)
+    filter_exact_initial = OptionWrapper("filter_method", FILTER_EXACT_INITIAL)
     """
     (bool) Flag for exact initial Kalman filtering. Not implemented.
     """
-    filter_augmented = OptionWrapper('filter_method', FILTER_AUGMENTED)
+    filter_augmented = OptionWrapper("filter_method", FILTER_AUGMENTED)
     """
     (bool) Flag for augmented Kalman filtering. Not implemented.
     """
-    filter_square_root = OptionWrapper('filter_method', FILTER_SQUARE_ROOT)
+    filter_square_root = OptionWrapper("filter_method", FILTER_SQUARE_ROOT)
     """
     (bool) Flag for square-root Kalman filtering. Not implemented.
     """
-    filter_univariate = OptionWrapper('filter_method', FILTER_UNIVARIATE)
+    filter_univariate = OptionWrapper("filter_method", FILTER_UNIVARIATE)
     """
     (bool) Flag for univariate filtering of multivariate observation vector.
     """
-    filter_collapsed = OptionWrapper('filter_method', FILTER_COLLAPSED)
+    filter_collapsed = OptionWrapper("filter_method", FILTER_COLLAPSED)
     """
     (bool) Flag for Kalman filtering with collapsed observation vector.
     """
-    filter_extended = OptionWrapper('filter_method', FILTER_EXTENDED)
+    filter_extended = OptionWrapper("filter_method", FILTER_EXTENDED)
     """
     (bool) Flag for extended Kalman filtering. Not implemented.
     """
-    filter_unscented = OptionWrapper('filter_method', FILTER_UNSCENTED)
+    filter_unscented = OptionWrapper("filter_method", FILTER_UNSCENTED)
     """
     (bool) Flag for unscented Kalman filtering. Not implemented.
     """
-    filter_concentrated = OptionWrapper('filter_method', FILTER_CONCENTRATED)
+    filter_concentrated = OptionWrapper("filter_method", FILTER_CONCENTRATED)
     """
     (bool) Flag for Kalman filtering with concentrated log-likelihood.
     """
-    filter_chandrasekhar = OptionWrapper('filter_method', FILTER_CHANDRASEKHAR)
+    filter_chandrasekhar = OptionWrapper("filter_method", FILTER_CHANDRASEKHAR)
     """
     (bool) Flag for filtering with Chandrasekhar recursions.
     """
 
     inversion_methods = [
-        'invert_univariate', 'solve_lu', 'invert_lu', 'solve_cholesky',
-        'invert_cholesky'
+        "invert_univariate", "solve_lu", "invert_lu", "solve_cholesky",
+        "invert_cholesky"
     ]
 
-    invert_univariate = OptionWrapper('inversion_method', INVERT_UNIVARIATE)
+    invert_univariate = OptionWrapper("inversion_method", INVERT_UNIVARIATE)
     """
     (bool) Flag for univariate inversion method (recommended).
     """
-    solve_lu = OptionWrapper('inversion_method', SOLVE_LU)
+    solve_lu = OptionWrapper("inversion_method", SOLVE_LU)
     """
     (bool) Flag for LU and linear solver inversion method.
     """
-    invert_lu = OptionWrapper('inversion_method', INVERT_LU)
+    invert_lu = OptionWrapper("inversion_method", INVERT_LU)
     """
     (bool) Flag for LU inversion method.
     """
-    solve_cholesky = OptionWrapper('inversion_method', SOLVE_CHOLESKY)
+    solve_cholesky = OptionWrapper("inversion_method", SOLVE_CHOLESKY)
     """
     (bool) Flag for Cholesky and linear solver inversion method (recommended).
     """
-    invert_cholesky = OptionWrapper('inversion_method', INVERT_CHOLESKY)
+    invert_cholesky = OptionWrapper("inversion_method", INVERT_CHOLESKY)
     """
     (bool) Flag for Cholesky inversion method.
     """
 
-    stability_methods = ['stability_force_symmetry']
+    stability_methods = ["stability_force_symmetry"]
 
     stability_force_symmetry = (
-        OptionWrapper('stability_method', STABILITY_FORCE_SYMMETRY)
+        OptionWrapper("stability_method", STABILITY_FORCE_SYMMETRY)
     )
     """
     (bool) Flag for enforcing covariance matrix symmetry
     """
 
     memory_options = [
-        'memory_store_all', 'memory_no_forecast_mean',
-        'memory_no_forecast_cov', 'memory_no_forecast',
-        'memory_no_predicted_mean', 'memory_no_predicted_cov',
-        'memory_no_predicted', 'memory_no_filtered_mean',
-        'memory_no_filtered_cov', 'memory_no_filtered',
-        'memory_no_likelihood', 'memory_no_gain',
-        'memory_no_smoothing', 'memory_no_std_forecast', 'memory_conserve'
+        "memory_store_all", "memory_no_forecast_mean",
+        "memory_no_forecast_cov", "memory_no_forecast",
+        "memory_no_predicted_mean", "memory_no_predicted_cov",
+        "memory_no_predicted", "memory_no_filtered_mean",
+        "memory_no_filtered_cov", "memory_no_filtered",
+        "memory_no_likelihood", "memory_no_gain",
+        "memory_no_smoothing", "memory_no_std_forecast", "memory_conserve"
     ]
 
-    memory_store_all = OptionWrapper('conserve_memory', MEMORY_STORE_ALL)
+    memory_store_all = OptionWrapper("conserve_memory", MEMORY_STORE_ALL)
     """
     (bool) Flag for storing all intermediate results in memory (default).
     """
     memory_no_forecast_mean = OptionWrapper(
-        'conserve_memory', MEMORY_NO_FORECAST_MEAN)
+        "conserve_memory", MEMORY_NO_FORECAST_MEAN)
     """
     (bool) Flag to prevent storing forecasts and forecast errors.
     """
     memory_no_forecast_cov = OptionWrapper(
-        'conserve_memory', MEMORY_NO_FORECAST_COV)
+        "conserve_memory", MEMORY_NO_FORECAST_COV)
     """
     (bool) Flag to prevent storing forecast error covariance matrices.
     """
@@ -261,12 +261,12 @@ class KalmanFilter(Representation):
             self.memory_no_forecast_cov = False
 
     memory_no_predicted_mean = OptionWrapper(
-        'conserve_memory', MEMORY_NO_PREDICTED_MEAN)
+        "conserve_memory", MEMORY_NO_PREDICTED_MEAN)
     """
     (bool) Flag to prevent storing predicted states.
     """
     memory_no_predicted_cov = OptionWrapper(
-        'conserve_memory', MEMORY_NO_PREDICTED_COV)
+        "conserve_memory", MEMORY_NO_PREDICTED_COV)
     """
     (bool) Flag to prevent storing predicted state covariance matrices.
     """
@@ -287,12 +287,12 @@ class KalmanFilter(Representation):
             self.memory_no_predicted_cov = False
 
     memory_no_filtered_mean = OptionWrapper(
-        'conserve_memory', MEMORY_NO_FILTERED_MEAN)
+        "conserve_memory", MEMORY_NO_FILTERED_MEAN)
     """
     (bool) Flag to prevent storing filtered states.
     """
     memory_no_filtered_cov = OptionWrapper(
-        'conserve_memory', MEMORY_NO_FILTERED_COV)
+        "conserve_memory", MEMORY_NO_FILTERED_COV)
     """
     (bool) Flag to prevent storing filtered state covariance matrices.
     """
@@ -313,38 +313,38 @@ class KalmanFilter(Representation):
             self.memory_no_filtered_cov = False
 
     memory_no_likelihood = (
-        OptionWrapper('conserve_memory', MEMORY_NO_LIKELIHOOD)
+        OptionWrapper("conserve_memory", MEMORY_NO_LIKELIHOOD)
     )
     """
     (bool) Flag to prevent storing likelihood values for each observation.
     """
-    memory_no_gain = OptionWrapper('conserve_memory', MEMORY_NO_GAIN)
+    memory_no_gain = OptionWrapper("conserve_memory", MEMORY_NO_GAIN)
     """
     (bool) Flag to prevent storing the Kalman gain matrices.
     """
-    memory_no_smoothing = OptionWrapper('conserve_memory', MEMORY_NO_SMOOTHING)
+    memory_no_smoothing = OptionWrapper("conserve_memory", MEMORY_NO_SMOOTHING)
     """
     (bool) Flag to prevent storing likelihood values for each observation.
     """
     memory_no_std_forecast = (
-        OptionWrapper('conserve_memory', MEMORY_NO_STD_FORECAST))
+        OptionWrapper("conserve_memory", MEMORY_NO_STD_FORECAST))
     """
     (bool) Flag to prevent storing standardized forecast errors.
     """
-    memory_conserve = OptionWrapper('conserve_memory', MEMORY_CONSERVE)
+    memory_conserve = OptionWrapper("conserve_memory", MEMORY_CONSERVE)
     """
     (bool) Flag to conserve the maximum amount of memory.
     """
 
     timing_options = [
-        'timing_init_predicted', 'timing_init_filtered'
+        "timing_init_predicted", "timing_init_filtered"
     ]
-    timing_init_predicted = OptionWrapper('filter_timing',
+    timing_init_predicted = OptionWrapper("filter_timing",
                                           TIMING_INIT_PREDICTED)
     """
     (bool) Flag for the default timing convention (Durbin and Koopman, 2012).
     """
-    timing_init_filtered = OptionWrapper('filter_timing', TIMING_INIT_FILTERED)
+    timing_init_filtered = OptionWrapper("filter_timing", TIMING_INIT_FILTERED)
     """
     (bool) Flag for the alternate timing convention (Kim and Nelson, 2012).
     """
@@ -375,19 +375,19 @@ class KalmanFilter(Representation):
                  loglikelihood_burn=0, tolerance=1e-19, results_class=None,
                  kalman_filter_classes=None, **kwargs):
         # Extract keyword arguments to-be-used later
-        keys = ['filter_method'] + KalmanFilter.filter_methods
+        keys = ["filter_method"] + KalmanFilter.filter_methods
         filter_method_kwargs = {key: kwargs.pop(key) for key in keys
                                 if key in kwargs}
-        keys = ['inversion_method'] + KalmanFilter.inversion_methods
+        keys = ["inversion_method"] + KalmanFilter.inversion_methods
         inversion_method_kwargs = {key: kwargs.pop(key) for key in keys
                                    if key in kwargs}
-        keys = ['stability_method'] + KalmanFilter.stability_methods
+        keys = ["stability_method"] + KalmanFilter.stability_methods
         stability_method_kwargs = {key: kwargs.pop(key) for key in keys
                                    if key in kwargs}
-        keys = ['conserve_memory'] + KalmanFilter.memory_options
+        keys = ["conserve_memory"] + KalmanFilter.memory_options
         conserve_memory_kwargs = {key: kwargs.pop(key) for key in keys
                                   if key in kwargs}
-        keys = ['alternate_timing'] + KalmanFilter.timing_options
+        keys = ["alternate_timing"] + KalmanFilter.timing_options
         filter_timing_kwargs = {key: kwargs.pop(key) for key in keys
                                 if key in kwargs}
 
@@ -435,13 +435,13 @@ class KalmanFilter(Representation):
         kwargs = super()._clone_kwargs(endog, **kwargs)
 
         # Get defaults for options
-        kwargs.setdefault('filter_method', self.filter_method)
-        kwargs.setdefault('inversion_method', self.inversion_method)
-        kwargs.setdefault('stability_method', self.stability_method)
-        kwargs.setdefault('conserve_memory', self.conserve_memory)
-        kwargs.setdefault('alternate_timing', bool(self.filter_timing))
-        kwargs.setdefault('tolerance', self.tolerance)
-        kwargs.setdefault('loglikelihood_burn', self.loglikelihood_burn)
+        kwargs.setdefault("filter_method", self.filter_method)
+        kwargs.setdefault("inversion_method", self.inversion_method)
+        kwargs.setdefault("stability_method", self.stability_method)
+        kwargs.setdefault("conserve_memory", self.conserve_memory)
+        kwargs.setdefault("alternate_timing", bool(self.filter_timing))
+        kwargs.setdefault("tolerance", self.tolerance)
+        kwargs.setdefault("loglikelihood_burn", self.loglikelihood_burn)
 
         return kwargs
 
@@ -473,8 +473,8 @@ class KalmanFilter(Representation):
 
         # Make sure we have endog
         if self.endog is None:
-            raise RuntimeError('Must bind a dataset to the model before'
-                               ' filtering or smoothing.')
+            raise RuntimeError("Must bind a dataset to the model before"
+                               " filtering or smoothing.")
 
         # Initialize the representation matrices
         prefix, dtype, create_statespace = self._initialize_representation()
@@ -857,10 +857,10 @@ class KalmanFilter(Representation):
         """
         if alternate_timing is not None:
             self.filter_timing = int(alternate_timing)
-        if 'timing_init_predicted' in kwargs:
-            self.filter_timing = int(not kwargs['timing_init_predicted'])
-        if 'timing_init_filtered' in kwargs:
-            self.filter_timing = int(kwargs['timing_init_filtered'])
+        if "timing_init_predicted" in kwargs:
+            self.filter_timing = int(not kwargs["timing_init_predicted"])
+        if "timing_init_filtered" in kwargs:
+            self.filter_timing = int(kwargs["timing_init_filtered"])
 
     @contextlib.contextmanager
     def fixed_scale(self, scale):
@@ -886,21 +886,21 @@ class KalmanFilter(Representation):
         # loglikelihood
         if scale is not None and scale != 1:
             if not self.filter_concentrated:
-                raise ValueError('Cannot provide scale if filter method does'
-                                 ' not include FILTER_CONCENTRATED.')
+                raise ValueError("Cannot provide scale if filter method does"
+                                 " not include FILTER_CONCENTRATED.")
             self.filter_concentrated = False
             self._scale = scale
-            obs_cov = self['obs_cov']
-            state_cov = self['state_cov']
-            self['obs_cov'] = scale * obs_cov
-            self['state_cov'] = scale * state_cov
+            obs_cov = self["obs_cov"]
+            state_cov = self["state_cov"]
+            self["obs_cov"] = scale * obs_cov
+            self["state_cov"] = scale * state_cov
         try:
             yield
         finally:
             # If a scale was provided, reset the model
             if scale is not None and scale != 1:
-                self['state_cov'] = state_cov
-                self['obs_cov'] = obs_cov
+                self["state_cov"] = state_cov
+                self["obs_cov"] = obs_cov
                 self.filter_concentrated = True
                 self._scale = None
 
@@ -996,12 +996,12 @@ class KalmanFilter(Representation):
         loglike : float
             The joint loglikelihood.
         """
-        kwargs.setdefault('conserve_memory',
+        kwargs.setdefault("conserve_memory",
                           MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD)
         kfilter = self._filter(**kwargs)
-        loglikelihood_burn = kwargs.get('loglikelihood_burn',
+        loglikelihood_burn = kwargs.get("loglikelihood_burn",
                                         self.loglikelihood_burn)
-        if not (kwargs['conserve_memory'] & MEMORY_NO_LIKELIHOOD):
+        if not (kwargs["conserve_memory"] & MEMORY_NO_LIKELIHOOD):
             loglike = np.sum(kfilter.loglikelihood[loglikelihood_burn:])
         else:
             loglike = np.sum(kfilter.loglikelihood)
@@ -1018,7 +1018,7 @@ class KalmanFilter(Representation):
             # associated with a singular forecast error covariance matrix
             nobs_k_endog -= kfilter.nobs_kendog_univariate_singular
 
-            if not (kwargs['conserve_memory'] & MEMORY_NO_LIKELIHOOD):
+            if not (kwargs["conserve_memory"] & MEMORY_NO_LIKELIHOOD):
                 scale = np.sum(kfilter.scale[d:]) / nobs_k_endog
             else:
                 scale = kfilter.scale[0] / nobs_k_endog
@@ -1056,18 +1056,18 @@ class KalmanFilter(Representation):
             Array of loglikelihood values for each observation.
         """
         if self.memory_no_likelihood:
-            raise RuntimeError('Cannot compute loglikelihood if'
-                               ' MEMORY_NO_LIKELIHOOD option is selected.')
+            raise RuntimeError("Cannot compute loglikelihood if"
+                               " MEMORY_NO_LIKELIHOOD option is selected.")
         if not self.filter_method & FILTER_CONCENTRATED:
-            kwargs.setdefault('conserve_memory',
+            kwargs.setdefault("conserve_memory",
                               MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD)
         else:
             kwargs.setdefault(
-                'conserve_memory',
+                "conserve_memory",
                 MEMORY_CONSERVE ^ (MEMORY_NO_FORECAST | MEMORY_NO_LIKELIHOOD))
         kfilter = self._filter(**kwargs)
         llf_obs = np.array(kfilter.loglikelihood, copy=True)
-        loglikelihood_burn = kwargs.get('loglikelihood_burn',
+        loglikelihood_burn = kwargs.get("loglikelihood_burn",
                                         self.loglikelihood_burn)
 
         # If the scale was concentrated out of the log-likelihood function,
@@ -1190,8 +1190,8 @@ class KalmanFilter(Representation):
         time_invariant = self.time_invariant
         # Check for valid number of simulations
         if not time_invariant and nsimulations > self.nobs:
-            raise ValueError('In a time-varying model, cannot create more'
-                             ' simulations than there are observations.')
+            raise ValueError("In a time-varying model, cannot create more"
+                             " simulations than there are observations.")
 
         return self._simulate(
             nsimulations,
@@ -1209,8 +1209,8 @@ class KalmanFilter(Representation):
 
     def _simulate(self, nsimulations, simulator=None, random_state=None,
                   **kwargs):
-        raise NotImplementedError('Simulation only available through'
-                                  ' the simulation smoother.')
+        raise NotImplementedError("Simulation only available through"
+                                  " the simulation smoother.")
 
     def impulse_responses(self, steps=10, impulse=0, orthogonalized=False,
                           cumulative=False, direct=False):
@@ -1269,8 +1269,8 @@ class KalmanFilter(Representation):
         # Check for what kind of impulse we want
         if type(impulse) is int:
             if impulse >= self.k_posdef or impulse < 0:
-                raise ValueError('Invalid value for `impulse`. Must be the'
-                                 ' index of one of the state innovations.')
+                raise ValueError("Invalid value for `impulse`. Must be the"
+                                 " index of one of the state innovations.")
 
             # Create the (non-orthogonalized) impulse vector
             idx = impulse
@@ -1281,8 +1281,8 @@ class KalmanFilter(Representation):
             if impulse.ndim > 1:
                 impulse = np.squeeze(impulse)
             if not impulse.shape == (self.k_posdef,):
-                raise ValueError('Invalid impulse vector. Must be shaped'
-                                 ' (%d,)' % self.k_posdef)
+                raise ValueError("Invalid impulse vector. Must be shaped"
+                                 " (%d,)" % self.k_posdef)
 
         # Orthogonalize the impulses, if requested, using Cholesky on the
         # first state covariance matrix
@@ -1301,9 +1301,9 @@ class KalmanFilter(Representation):
         # new time-varying model, and then compute the IRFs using the cloned
         # model
         if not time_invariant_irf and steps > self.nobs:
-            raise ValueError('In a time-varying model, cannot create more'
-                             ' impulse responses than there are'
-                             ' observations')
+            raise ValueError("In a time-varying model, cannot create more"
+                             " impulse responses than there are"
+                             " observations")
 
         # Impulse responses only depend on the design, transition, and
         # selection matrices. We set the others to zeros because they must be
@@ -1313,11 +1313,11 @@ class KalmanFilter(Representation):
         sim_model = self.clone(
             endog=np.zeros((steps, self.k_endog), dtype=self.dtype),
             obs_intercept=np.zeros(self.k_endog),
-            design=self['design', :, :, :steps],
+            design=self["design", :, :, :steps],
             obs_cov=np.zeros((self.k_endog, self.k_endog)),
             state_intercept=np.zeros(self.k_states),
-            transition=self['transition', :, :, :steps],
-            selection=self['selection', :, :, :steps],
+            transition=self["transition", :, :, :steps],
+            selection=self["selection", :, :, :steps],
             state_cov=np.zeros((self.k_posdef, self.k_posdef)))
 
         # Get the impulse response function via simulation of the state
@@ -1451,15 +1451,15 @@ class FilterResults(FrozenRepresentation):
         The loglikelihood values at each time period.
     """
     _filter_attributes = [
-        'filter_method', 'inversion_method', 'stability_method',
-        'conserve_memory', 'filter_timing', 'tolerance', 'loglikelihood_burn',
-        'converged', 'period_converged', 'filtered_state',
-        'filtered_state_cov', 'predicted_state', 'predicted_state_cov',
-        'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
-        'tmp1', 'tmp2', 'tmp3', 'tmp4', 'forecasts',
-        'forecasts_error', 'forecasts_error_cov', 'llf', 'llf_obs',
-        'collapsed_forecasts', 'collapsed_forecasts_error',
-        'collapsed_forecasts_error_cov', 'scale'
+        "filter_method", "inversion_method", "stability_method",
+        "conserve_memory", "filter_timing", "tolerance", "loglikelihood_burn",
+        "converged", "period_converged", "filtered_state",
+        "filtered_state_cov", "predicted_state", "predicted_state_cov",
+        "forecasts_error_diffuse_cov", "predicted_diffuse_state_cov",
+        "tmp1", "tmp2", "tmp3", "tmp4", "forecasts",
+        "forecasts_error", "forecasts_error_cov", "llf", "llf_obs",
+        "collapsed_forecasts", "collapsed_forecasts_error",
+        "collapsed_forecasts_error_cov", "scale"
     ]
 
     _filter_options = (
@@ -1972,7 +1972,7 @@ class FilterResults(FrozenRepresentation):
         if start is None:
             start = 0
         elif start < 0:
-            raise ValueError('Cannot predict values previous to the sample.')
+            raise ValueError("Cannot predict values previous to the sample.")
         if end is None:
             end = self.nobs
 
@@ -1988,7 +1988,7 @@ class FilterResults(FrozenRepresentation):
 
         # Short-circuit if end is before start
         if end <= start:
-            raise ValueError('End of prediction must be after start.')
+            raise ValueError("End of prediction must be after start.")
 
         # Get the number of forecasts to make after the end of the sample
         nforecast = max(0, end - self.nobs)
@@ -2016,16 +2016,16 @@ class FilterResults(FrozenRepresentation):
         # Cannot do in-sample prediction if we do not have appropriate
         # arrays (we can do out-of-sample forecasting, however)
         if nstatic > 0 and self.memory_no_forecast_mean:
-            raise ValueError('In-sample prediction is not available if memory'
-                             ' conservation has been used to avoid storing'
-                             ' forecast means.')
+            raise ValueError("In-sample prediction is not available if memory"
+                             " conservation has been used to avoid storing"
+                             " forecast means.")
         # Cannot do dynamic in-sample prediction if we do not have appropriate
         # arrays (we can do out-of-sample forecasting, however)
         if ndynamic > 0 and self.memory_no_predicted:
-            raise ValueError('In-sample dynamic prediction is not available if'
-                             ' memory conservation has been used to avoid'
-                             ' storing forecasted or predicted state means'
-                             ' or covariances.')
+            raise ValueError("In-sample dynamic prediction is not available if"
+                             " memory conservation has been used to avoid"
+                             " storing forecasted or predicted state means"
+                             " or covariances.")
 
         # Construct the predicted state and covariance matrix for each time
         # period depending on whether that time period corresponds to
@@ -2052,12 +2052,12 @@ class FilterResults(FrozenRepresentation):
             # end = kf_end - kf_start
 
             # We must at least store forecasts and predictions
-            kwargs['conserve_memory'] = (
+            kwargs["conserve_memory"] = (
                 self.conserve_memory & ~MEMORY_NO_FORECAST &
                 ~MEMORY_NO_PREDICTED)
 
             # Can't use Chandrasekhar recursions for prediction
-            kwargs['filter_method'] = (
+            kwargs["filter_method"] = (
                 self.model.filter_method & ~FILTER_CHANDRASEKHAR)
 
             # TODO: there is a corner case here when the filter has not
@@ -2080,9 +2080,9 @@ class FilterResults(FrozenRepresentation):
                 constant = self.predicted_state[..., kf_start]
                 stationary_cov = self.predicted_state_cov[..., kf_start]
 
-            kwargs.update({'initialization': 'known',
-                           'constant': constant,
-                           'stationary_cov': stationary_cov})
+            kwargs.update({"initialization": "known",
+                           "constant": constant,
+                           "stationary_cov": stationary_cov})
 
             # Construct the new endogenous array.
             endog = np.zeros((nforecast, self.k_endog)) * np.nan
@@ -2186,17 +2186,17 @@ class PredictionResults(FilterResults):
     returning the appropriate ranges for everything.
     """
     representation_attributes = [
-        'endog', 'design', 'obs_intercept',
-        'obs_cov', 'transition', 'state_intercept', 'selection',
-        'state_cov'
+        "endog", "design", "obs_intercept",
+        "obs_cov", "transition", "state_intercept", "selection",
+        "state_cov"
     ]
     filter_attributes = [
-        'filtered_state', 'filtered_state_cov',
-        'predicted_state', 'predicted_state_cov',
-        'forecasts', 'forecasts_error', 'forecasts_error_cov'
+        "filtered_state", "filtered_state_cov",
+        "predicted_state", "predicted_state_cov",
+        "forecasts", "forecasts_error", "forecasts_error_cov"
     ]
     smoother_attributes = [
-        'smoothed_state', 'smoothed_state_cov',
+        "smoothed_state", "smoothed_state_cov",
     ]
 
     def __init__(self, results, start, end, nstatic, ndynamic, nforecast,
@@ -2225,10 +2225,10 @@ class PredictionResults(FilterResults):
         self._smoothed_forecasts_error_cov = None
 
     def clear(self):
-        attributes = (['endog'] + self.representation_attributes
+        attributes = (["endog"] + self.representation_attributes
                       + self.filter_attributes)
         for attr in attributes:
-            _attr = '_' + attr
+            _attr = "_" + attr
             if hasattr(self, _attr):
                 delattr(self, _attr)
 
@@ -2238,15 +2238,15 @@ class PredictionResults(FilterResults):
         appropriate range (`start` - `end`).
         """
         # Prevent infinite recursive lookups
-        if attr[0] == '_':
+        if attr[0] == "_":
             raise AttributeError("'%s' object has no attribute '%s'" %
                                  (self.__class__.__name__, attr))
 
-        _attr = '_' + attr
+        _attr = "_" + attr
 
         # Cache the attribute
         if not hasattr(self, _attr):
-            if attr == 'endog' or attr in self.filter_attributes:
+            if attr == "endog" or attr in self.filter_attributes:
                 # Get a copy
                 value = getattr(self.results, attr).copy()
                 if self.ndynamic > 0:
@@ -2262,7 +2262,7 @@ class PredictionResults(FilterResults):
                     # But if we have dynamic prediction, then we have already
                     # eliminated the last element of the predicted state, so
                     # we do not need to do it here.
-                    if self.ndynamic == 0 and attr[:9] == 'predicted':
+                    if self.ndynamic == 0 and attr[:9] == "predicted":
                         value = value[..., :-1]
 
                     value = np.concatenate([value, oos_value], axis=-1)
@@ -2272,17 +2272,17 @@ class PredictionResults(FilterResults):
             elif attr in self.smoother_attributes:
                 if self.ndynamic > 0:
                     raise NotImplementedError(
-                        'Cannot retrieve smoothed attributes when using'
-                        ' dynamic prediction, since the information set used'
-                        ' to compute the smoothed results differs from the'
-                        ' information set implied by the dynamic prediction.')
+                        "Cannot retrieve smoothed attributes when using"
+                        " dynamic prediction, since the information set used"
+                        " to compute the smoothed results differs from the"
+                        " information set implied by the dynamic prediction.")
                 # Get a copy
                 value = getattr(self.results, attr).copy()
 
                 # The oos_results object is only dynamic or out-of-sample,
                 # so filtered == smoothed
                 if self.oos_results is not None:
-                    filtered_attr = 'filtered' + attr[8:]
+                    filtered_attr = "filtered" + attr[8:]
                     oos_value = getattr(self.oos_results, filtered_attr).copy()
                     value = np.concatenate([value, oos_value], axis=-1)
 
@@ -2328,19 +2328,18 @@ class PredictionResults(FilterResults):
                 forecasts = Z @ states
                 forecasts_error_cov = (
                     Z[None, ...] @ states_cov.T @ Z.T[None, ...]).T
+        elif not signal_only:
+            forecasts = d + (Z * states[None, :, :]).sum(axis=1)
+            tmp = Z[:, None, ...] * states_cov[None, ...]
+            tmp = (tmp[:, :, :, None, :]
+                   * Z.transpose(1, 0, 2)[None, :, None, ...])
+            forecasts_error_cov = (tmp.sum(axis=1).sum(axis=1).T + H.T).T
         else:
-            if not signal_only:
-                forecasts = d + (Z * states[None, :, :]).sum(axis=1)
-                tmp = Z[:, None, ...] * states_cov[None, ...]
-                tmp = (tmp[:, :, :, None, :]
-                       * Z.transpose(1, 0, 2)[None, :, None, ...])
-                forecasts_error_cov = (tmp.sum(axis=1).sum(axis=1).T + H.T).T
-            else:
-                forecasts = (Z * states[None, :, :]).sum(axis=1)
-                tmp = Z[:, None, ...] * states_cov[None, ...]
-                tmp = (tmp[:, :, :, None, :]
-                       * Z.transpose(1, 0, 2)[None, :, None, ...])
-                forecasts_error_cov = tmp.sum(axis=1).sum(axis=1)
+            forecasts = (Z * states[None, :, :]).sum(axis=1)
+            tmp = Z[:, None, ...] * states_cov[None, ...]
+            tmp = (tmp[:, :, :, None, :]
+                   * Z.transpose(1, 0, 2)[None, :, None, ...])
+            forecasts_error_cov = tmp.sum(axis=1).sum(axis=1)
 
         return forecasts, forecasts_error_cov
 
@@ -2463,16 +2462,16 @@ def _check_dynamic(dynamic, start, end, nobs):
 
     # Validate the `dynamic` parameter
     if dynamic < 0:
-        raise ValueError('Dynamic prediction cannot begin prior to the'
-                         ' first observation in the sample.')
+        raise ValueError("Dynamic prediction cannot begin prior to the"
+                         " first observation in the sample.")
     elif dynamic > end:
-        warn('Dynamic prediction specified to begin after the end of'
-             ' prediction, and so has no effect.', ValueWarning)
+        warn("Dynamic prediction specified to begin after the end of"
+             " prediction, and so has no effect.", ValueWarning, stacklevel=2)
         return None, 0
     elif dynamic > nobs:
-        warn('Dynamic prediction specified to begin during'
-             ' out-of-sample forecasting period, and so has no'
-             ' effect.', ValueWarning)
+        warn("Dynamic prediction specified to begin during"
+             " out-of-sample forecasting period, and so has no"
+             " effect.", ValueWarning, stacklevel=2)
         return None, 0
 
     # Get the total size of the desired dynamic forecasting component

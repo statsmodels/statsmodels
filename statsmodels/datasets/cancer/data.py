@@ -1,7 +1,7 @@
 """Breast Cancer Data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """???"""
 TITLE = """Breast Cancer Data"""
@@ -46,4 +46,4 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'cancer.csv', convert_float=True)
+    return du.load_csv(__file__, "cancer.csv", convert_float=True)

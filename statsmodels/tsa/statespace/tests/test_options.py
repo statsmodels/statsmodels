@@ -201,7 +201,7 @@ class TestOptions(Options):
         # Try setting and unsetting all
         model.conserve_memory = 0
         for name in model.memory_options:
-            if name == 'memory_conserve':
+            if name == "memory_conserve":
                 continue
             setattr(model, name, True)
         assert_equal(
@@ -212,7 +212,7 @@ class TestOptions(Options):
         )
         assert_equal(model.conserve_memory & MEMORY_CONSERVE, MEMORY_CONSERVE)
         for name in model.memory_options:
-            if name == 'memory_conserve':
+            if name == "memory_conserve":
                 continue
             setattr(model, name, False)
         assert_equal(model.conserve_memory, 0)
@@ -246,7 +246,7 @@ class TestOptions(Options):
         # Try setting and unsetting all
         model.smoother_output = 0
         for name in model.smoother_outputs:
-            if name == 'smoother_all':
+            if name == "smoother_all":
                 continue
             setattr(model, name, True)
         assert_equal(
@@ -256,7 +256,7 @@ class TestOptions(Options):
         )
         assert_equal(model.smoother_output, SMOOTHER_ALL)
         for name in model.smoother_outputs:
-            if name == 'smoother_all':
+            if name == "smoother_all":
                 continue
             setattr(model, name, False)
         assert_equal(model.smoother_output, 0)

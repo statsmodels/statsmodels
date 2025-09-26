@@ -458,7 +458,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
                 np.array(
                     [
                         truncated_poisson_factorial_moment(interval, r, p)
-                        for (interval, p) in zip(intervals, counts)
+                        for (interval, p) in zip(intervals, counts, strict=False)
                     ]
                 )
                 for r in range(1, 5)
@@ -499,7 +499,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
                     np.log(
                         [
                             poisson_interval(interval, p)
-                            for (interval, p) in zip(intervals, counts)
+                            for (interval, p) in zip(intervals, counts, strict=False)
                         ]
                     )
                 )
@@ -844,7 +844,7 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
         pval = stats.binom.cdf(count, nobs, prop)
     else:
         raise ValueError(
-            "alternative not recognized\n" "should be two-sided, larger or smaller"
+            "alternative not recognized\nshould be two-sided, larger or smaller"
         )
     return pval
 

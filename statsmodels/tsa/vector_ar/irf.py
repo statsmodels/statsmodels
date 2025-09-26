@@ -8,8 +8,8 @@ import scipy.linalg as L
 
 from statsmodels.tools.decorators import cache_readonly
 import statsmodels.tsa.tsatools as tsa
-import statsmodels.tsa.vector_ar.plotting as plotting
-import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tsa.vector_ar import plotting
+from statsmodels.tsa.vector_ar import util
 
 mat = np.array
 
@@ -87,7 +87,7 @@ class BaseIRAnalysis:
 
     def plot(self, orth=False, *, impulse=None, response=None,
              signif=0.05, plot_params=None, figsize=(10, 10),
-             subplot_params=None, plot_stderr=True, stderr_type='asym',
+             subplot_params=None, plot_stderr=True, stderr_type="asym",
              repl=1000, seed=None, component=None):
         """
         Plot impulse responses
@@ -127,35 +127,35 @@ class BaseIRAnalysis:
 
         irfs = self._choose_irfs(orth, svar)
         if orth:
-            title = 'Impulse responses (orthogonalized)'
+            title = "Impulse responses (orthogonalized)"
         elif svar:
-            title = 'Impulse responses (structural)'
+            title = "Impulse responses (structural)"
         else:
-            title = 'Impulse responses'
+            title = "Impulse responses"
 
         if plot_stderr is False:
             stderr = None
 
-        elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2', 'sz3']:
+        elif stderr_type not in ["asym", "mc", "sz1", "sz2", "sz3"]:
             raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'")
         else:
-            if stderr_type == 'asym':
+            if stderr_type == "asym":
                 stderr = self.cov(orth=orth)
-            if stderr_type == 'mc':
+            if stderr_type == "mc":
                 stderr = self.errband_mc(orth=orth, svar=svar,
                                          repl=repl, signif=signif,
                                          seed=seed)
-            if stderr_type == 'sz1':
+            if stderr_type == "sz1":
                 stderr = self.err_band_sz1(orth=orth, svar=svar,
                                            repl=repl, signif=signif,
                                            seed=seed,
                                            component=component)
-            if stderr_type == 'sz2':
+            if stderr_type == "sz2":
                 stderr = self.err_band_sz2(orth=orth, svar=svar,
                                            repl=repl, signif=signif,
                                            seed=seed,
                                            component=component)
-            if stderr_type == 'sz3':
+            if stderr_type == "sz3":
                 stderr = self.err_band_sz3(orth=orth, svar=svar,
                                            repl=repl, signif=signif,
                                            seed=seed,
@@ -172,7 +172,7 @@ class BaseIRAnalysis:
     def plot_cum_effects(self, orth=False, *, impulse=None, response=None,
                          signif=0.05, plot_params=None, figsize=(10, 10),
                          subplot_params=None, plot_stderr=True,
-                         stderr_type='asym', repl=1000, seed=None):
+                         stderr_type="asym", repl=1000, seed=None):
         """
         Plot cumulative impulse response functions
 
@@ -205,20 +205,20 @@ class BaseIRAnalysis:
         """
 
         if orth:
-            title = 'Cumulative responses responses (orthogonalized)'
+            title = "Cumulative responses responses (orthogonalized)"
             cum_effects = self.orth_cum_effects
             lr_effects = self.orth_lr_effects
         else:
-            title = 'Cumulative responses'
+            title = "Cumulative responses"
             cum_effects = self.cum_effects
             lr_effects = self.lr_effects
 
-        if stderr_type not in ['asym', 'mc']:
+        if stderr_type not in ["asym", "mc"]:
             raise ValueError("`stderr_type` must be one of 'asym', 'mc'")
         else:
-            if stderr_type == 'asym':
+            if stderr_type == "asym":
                 stderr = self.cum_effect_cov(orth=orth)
-            if stderr_type == 'mc':
+            if stderr_type == "mc":
                 stderr = self.cum_errband_mc(orth=orth, repl=repl,
                                              signif=signif, seed=seed)
         if not plot_stderr:

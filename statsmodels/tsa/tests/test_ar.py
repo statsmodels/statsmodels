@@ -73,8 +73,7 @@ def gen_ols_regressors(ar, seasonal, trend, exog):
             seasons = seasons.iloc[:, 1:]
         reg.append(seasons)
     if maxlag:
-        for lag in lags:
-            reg.append(y.shift(lag))
+        reg.extend([y.shift(lag) for lag in lags])
     if exog:
         x = rs.standard_normal((nobs, exog))
         cols = [f"x.{i}" for i in range(exog)]
@@ -102,7 +101,7 @@ for param in params:
 params = final
 names = ("AR", "Seasonal", "Trend", "Exog", "Cov Type")
 ids = [
-    ", ".join([n + ": " + str(p) for n, p in zip(names, param)])
+    ", ".join([n + ": " + str(p) for n, p in zip(names, param, strict=False)])
     for param in params
 ]
 

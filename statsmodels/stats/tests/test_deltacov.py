@@ -107,7 +107,7 @@ def test_deltacov_margeff():
 
     nlp = NonlinearDeltaCov(f, res_poi.params, res_poi.cov_params())
 
-    marg = res_poi.get_margeff(at='mean')
+    marg = res_poi.get_margeff(at="mean")
     # margeff excludes constant, last parameter in this case
     assert_allclose(nlp.se_vectorized()[:-1], marg.margeff_se, rtol=1e-13)
     assert_allclose(nlp.predicted()[:-1], marg.margeff, rtol=1e-13)

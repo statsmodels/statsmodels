@@ -5,7 +5,7 @@ import numpy.testing as npt
 from numpy.testing import assert_allclose, assert_equal
 import pytest
 from scipy.special import factorial, factorial2, gamma
-import scipy.stats as stats
+from scipy import stats
 
 from statsmodels.distributions.edgeworth import (
     ExpandedNormal,

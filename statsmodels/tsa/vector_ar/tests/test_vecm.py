@@ -759,7 +759,7 @@ def test_ml_det_terms_in_coint_relation():
                             ds,
                             dt,
                             "There should not be any det terms in "
-                            + "cointegration for deterministic terms "
+                            "cointegration for deterministic terms "
                             + dt_string,
                         ),
                     )

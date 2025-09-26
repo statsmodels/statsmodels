@@ -1,7 +1,7 @@
 """World Copper Prices 1951-1975 dataset."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
@@ -42,7 +42,7 @@ Years are included in the data file though not returned by load.
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'copper.csv')
+    data = du.load_csv(__file__, "copper.csv")
     data = data.iloc[:, 1:7]
     return data.astype(float)
 

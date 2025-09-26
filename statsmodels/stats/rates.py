@@ -133,7 +133,7 @@ def test_poisson(
         statistic = (rate - value) / std
         pvalue = stats.norm.sf(statistic)
 
-    elif method.startswith("exact-c") or method.startswith("midp-c"):
+    elif method.startswith(("exact-c", "midp-c")):
         pv1 = stats.poisson.cdf(count, n * value)
         pv2 = stats.poisson.sf(count - 1, n * value)
         if method.startswith("midp-c"):

@@ -555,10 +555,10 @@ def test_cov_oneway(cov_list, nobs_list):
     nobs = sum(nobs_list)  # total number of observations
     k = cov_list[0].shape[0]
 
-    cov_pooled = sum((n - 1) * c for (n, c) in zip(nobs_list, cov_list))
+    cov_pooled = sum((n - 1) * c for (n, c) in zip(nobs_list, cov_list, strict=False))
     cov_pooled /= (nobs - m)
     stat0 = (nobs - m) * _logdet(cov_pooled)
-    stat0 -= sum((n - 1) * _logdet(c) for (n, c) in zip(nobs_list, cov_list))
+    stat0 -= sum((n - 1) * _logdet(c) for (n, c) in zip(nobs_list, cov_list, strict=False))
 
     # Box's chi2
     c1 = sum(1 / (n - 1) for n in nobs_list) - 1 / (nobs - m)
@@ -586,8 +586,8 @@ def test_cov_oneway(cov_list, nobs_list):
                        statistic_chi2=statistic_chi2,
                        pvalue_chi2=pvalue_chi2,
                        df_chi2=df_chi2,
-                       distr_chi2='chi2',
+                       distr_chi2="chi2",
                        statistic_f=statistic_f,
                        pvalue_f=pvalue_f,
                        df_f=df_f,
-                       distr_f='F')
+                       distr_f="F")
