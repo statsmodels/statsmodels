@@ -66,7 +66,7 @@ if "ex1" in examples:
     gamma = 0.5 * np.ones(nz)  # mean of random effect
     # gamma[0] = 0
     gamma_re_true = []
-    for i in range(nsubj):
+    for _ in range(nsubj):
         # create data for one unit
 
         # random effect/coefficient

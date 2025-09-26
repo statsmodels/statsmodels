@@ -187,8 +187,8 @@ class TwoPeakLLHNoExog(GenericLikelihoodModel):
         self.signal = signal
         self.background = background
         super().__init__(
-            endog=endog,
-            exog=exog,
+            endog,
+            exog,
             *args,
             extra_params_names=self.exog_names,
             **kwargs

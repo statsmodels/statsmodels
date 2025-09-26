@@ -268,7 +268,9 @@ class VariableScreening:
         start_params = res_pen.params
         converged = False
         idx_old = []
-        for it in range(maxiter):
+        iterations = 0
+        for _ in range(maxiter):
+            iterations += 1
             # candidates for inclusion in next iteration
             x1 = x[:, idx_excl]
             mom_cond = self.ranking_measure(res_pen, x1, keep=keep)
@@ -364,7 +366,7 @@ class VariableScreening:
                                idx_excl=idx_excl,
                                history=history,
                                converged=converged,
-                               iterations=it + 1  # it is 0-based
+                               iterations=iterations
                                )
         return res
 

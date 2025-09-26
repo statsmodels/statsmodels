@@ -267,7 +267,7 @@ class Factor(Model):
 
         # Iterative communality estimation
         eigenvals = None
-        for i in range(maxiter):
+        for _ in range(maxiter):
             # Get eigenvalues/eigenvectors of R with diag replaced by
             # communality
             for j in range(len(R)):
@@ -464,7 +464,7 @@ class Factor(Model):
         load = 0.1 * random_state.standard_normal(size=(self.k_endog, self.n_factor))
         uniq = 0.5 * np.ones(self.k_endog)
 
-        for k in range(iter):
+        for _ in range(iter):
 
             loadu = load / uniq[:, None]
 

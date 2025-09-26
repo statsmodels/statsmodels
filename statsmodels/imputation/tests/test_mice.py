@@ -88,7 +88,7 @@ class TestMICEData:
         assert_equal([set(imp_data.data[col]) for col in imp_data.data],
                      [set(df[col].dropna()) for col in df])
 
-        for k in range(3):
+        for _ in range(3):
             imp_data.update_all()
             assert_equal(imp_data.data.shape[0], nrow)
             assert_equal(imp_data.data.shape[1], ncol)
@@ -140,7 +140,7 @@ class TestMICEData:
         imp_data = mice.MICEData(df)
 
         all_x = []
-        for j in range(2):
+        for _ in range(2):
             x = imp_data.next_sample()
             assert isinstance(x, pd.DataFrame)
             assert_equal(df.shape, x.shape)
@@ -161,7 +161,7 @@ class TestMICEData:
 
             imp_data = mice.MICEData(df, perturbation_method=pert_meth)
 
-            for k in range(2):
+            for _ in range(2):
                 imp_data.update_all()
                 assert_equal(imp_data.data.shape[0], nrow)
                 assert_equal(imp_data.data.shape[1], ncol)
@@ -311,7 +311,7 @@ class TestMICEData:
         imp_data.update_all()
 
         plt.clf()
-        for plot_points in False, True:
+        for _ in False, True:
             fig = imp_data.plot_imputed_hist('x4')
             fig.get_axes()[0].set_title('plot_imputed_hist')
             close_or_save(pdf, fig)
@@ -342,7 +342,7 @@ class TestMICE:
             RegressionResultsWrapper,
         )
 
-        for j in range(3):
+        for _ in range(3):
             x = mi.next_sample()
             assert issubclass(x.__class__, RegressionResultsWrapper)
 
@@ -364,7 +364,7 @@ class TestMICE:
         mi = mice.MICE("x3 ~ x1 + x2", sm.GLM, imp_data,
                        init_kwds={"family": sm.families.Binomial()})
 
-        for j in range(3):
+        for _ in range(3):
             x = mi.next_sample()
             assert isinstance(x, GLMResultsWrapper)
             assert isinstance(x.family, sm.families.Binomial)

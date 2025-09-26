@@ -874,5 +874,5 @@ class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
 
 
 wrap.populate_wrapper(
-    TimeSeriesResultsWrapper, TimeSeriesModelResults  # noqa:E305
+    TimeSeriesResultsWrapper, TimeSeriesModelResults
 )

@@ -650,7 +650,7 @@ def test_var_constant():
     d = datetime.datetime.now()
     delta = datetime.timedelta(days=1)
     index = []
-    for i in range(data.shape[0]):
+    for _ in range(data.shape[0]):
         index.append(d)
         d += delta
 

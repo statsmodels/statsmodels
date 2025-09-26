@@ -58,10 +58,10 @@ est = dict(
     vcetype="OIM",
     hac_lag="15",
     marginsok="default",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     predict="glim_p",
     cmd="glm",
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson)",
 )
 
 params_table = np.array([
@@ -246,10 +246,10 @@ est = dict(
     vcetype="OIM",
     hac_lag="15",
     marginsok="default",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     predict="glim_p",
     cmd="glm",
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson)",
 )
 
 params_table = np.array([
@@ -434,10 +434,10 @@ est = dict(
     vcetype="OIM",
     hac_lag="15",
     marginsok="default",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     predict="glim_p",
     cmd="glm",
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson)",
 )
 
 params_table = np.array([
@@ -621,10 +621,10 @@ est = dict(
     vcetype="Robust",
     hac_lag="15",
     marginsok="default",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     predict="glim_p",
     cmd="glm",
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson)",
 )
 
 params_table = np.array([
@@ -778,10 +778,10 @@ est = dict(
     deviance_s=18.59164098607571,
     dispers=1.859164098607571,
     deviance=18.59164098607571,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson) vce(robust)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson) vce(robust)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -924,10 +924,10 @@ est = dict(
     deviance_s=23.34969514421719,
     dispers=.8980651978545075,
     deviance=23.34969514421719,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson) vce(robust)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson) vce(robust)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1072,10 +1072,10 @@ est = dict(
     deviance_s=12.02863083186947,
     dispers=1.202863083186947,
     deviance=12.02863083186947,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson) vce(robust)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson) vce(robust)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1220,10 +1220,10 @@ est = dict(
     deviance_s=23.34969514421719,
     dispers=2.33496951442172,
     deviance=23.34969514421719,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson) vce(robust)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson) vce(robust)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1369,10 +1369,10 @@ est = dict(
     dispers=1.859164098607571,
     deviance=18.59164098607571,
     phi=1,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson) vce(cluster id)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson) vce(cluster id)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1517,10 +1517,10 @@ est = dict(
     dispers=.8980651978545075,
     deviance=23.34969514421719,
     phi=1,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson) vce(cluster id)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson) vce(cluster id)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1667,10 +1667,10 @@ est = dict(
     dispers=1.202863083186947,
     deviance=12.02863083186947,
     phi=1,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson) vce(cluster id)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson) vce(cluster id)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1817,10 +1817,10 @@ est = dict(
     dispers=2.33496951442172,
     deviance=23.34969514421719,
     phi=1,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson) vce(cluster id)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson) vce(cluster id)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1948,7 +1948,7 @@ est = dict(
     df_r=10,
     df_m=6,
     N=17,
-    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], vce(robust)",  # noqa:E501
+    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], vce(robust)",
     title="Linear regression",
     marginsok="XB default",
     vce="robust",
@@ -2061,7 +2061,7 @@ est = dict(
     df_m=6,
     N=17,
     N_clust=9,
-    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], vce(cluster id)",  # noqa:E501
+    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], vce(cluster id)",
     title="Linear regression",
     marginsok="XB default",
     vce="cluster",
@@ -2175,7 +2175,7 @@ est = dict(
     df_m=6,
     N=33,
     N_clust=9,
-    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], vce(cluster id)",  # noqa:E501
+    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], vce(cluster id)",
     title="Linear regression",
     marginsok="XB default",
     vce="cluster",
@@ -2289,7 +2289,7 @@ est = dict(
     df_m=6,
     N=17,
     N_clust=9,
-    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], vce(cluster id)",  # noqa:E501
+    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], vce(cluster id)",
     title="Linear regression",
     marginsok="XB default",
     vce="cluster",

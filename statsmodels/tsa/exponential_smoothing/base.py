@@ -739,15 +739,15 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 # Setup functions to calculate the p-values
                 if use_f:
                     from scipy.stats import f
-                    pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
+                    pval_lower = lambda test_statistics, numer_dof, denom_dof: f.cdf(  # noqa:E731
                         test_statistics, numer_dof, denom_dof)
-                    pval_upper = lambda test_statistics: f.sf(  # noqa:E731
+                    pval_upper = lambda test_statistics, numer_dof, denom_dof: f.sf(  # noqa:E731
                         test_statistics, numer_dof, denom_dof)
                 else:
                     from scipy.stats import chi2
-                    pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
+                    pval_lower = lambda test_statistics, numer_dof, denom_dof: chi2.cdf(  # noqa:E731
                         numer_dof * test_statistics, denom_dof)
-                    pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
+                    pval_upper = lambda test_statistics, numer_dof, denom_dof: chi2.sf(  # noqa:E731
                         numer_dof * test_statistics, denom_dof)
 
                 # Calculate the one- or two-sided p-values
@@ -759,8 +759,8 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                     p_value = pval_upper(test_statistic)
                 elif alternative in ['2', '2-sided', 'two-sided']:
                     p_value = 2 * np.minimum(
-                        pval_lower(test_statistic),
-                        pval_upper(test_statistic)
+                        pval_lower(test_statistic, numer_dof, denom_dof),
+                        pval_upper(test_statistic, numer_dof, denom_dof)
                     )
                 else:
                     raise ValueError('Invalid alternative.')

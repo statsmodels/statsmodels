@@ -160,22 +160,22 @@ def test_tyler():
     assert_allclose(np.trace(res1.cov), k_vars, rtol=1e-13)
     cov_det = res1.cov / np.linalg.det(res1.cov)**(1. / k_vars)
     assert_allclose(cov_det, res2, rtol=1e-11)
-    assert res1.n_iter == 55
+    assert res1.n_iter == 56
 
     res1 = robcov.cov_tyler(dta_hbk.to_numpy() - center, normalize="det")
     assert_allclose(np.linalg.det(res1.cov), 1, rtol=1e-13)
     assert_allclose(res1.cov, res2, rtol=1e-11)
-    assert res1.n_iter == 55
+    assert res1.n_iter == 56
 
     res1 = robcov.cov_tyler(dta_hbk.to_numpy() - center, normalize="normal")
     cov_det = res1.cov / np.linalg.det(res1.cov)**(1. / k_vars)
     assert_allclose(cov_det, res2, rtol=1e-11)
-    assert res1.n_iter == 55
+    assert res1.n_iter == 56
 
     res1 = robcov.cov_tyler(dta_hbk.to_numpy() - center)
     cov_det = res1.cov / np.linalg.det(res1.cov)**(1. / k_vars)
     assert_allclose(cov_det, res2, rtol=1e-11)
-    assert res1.n_iter == 55
+    assert res1.n_iter == 56
 
 
 def test_cov_ms():

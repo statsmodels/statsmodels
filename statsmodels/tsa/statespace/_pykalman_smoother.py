@@ -85,7 +85,7 @@ class _KalmanSmoother:
     def __call__(self):
         self.seek(self.model.nobs-1)
         # Perform backwards smoothing iterations
-        for i in range(self.model.nobs-1, -1, -1):
+        for _ in range(self.model.nobs-1, -1, -1):
             next(self)
 
     def next(self):

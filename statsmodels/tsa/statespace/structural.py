@@ -362,7 +362,7 @@ class UnobservedComponents(MLEModel):
     .. [1] Durbin, James, and Siem Jan Koopman. 2012.
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
-    """  # noqa:E501
+    """
 
     def __init__(
         self,
@@ -818,7 +818,6 @@ class UnobservedComponents(MLEModel):
         self._idx_state_cov = ("state_cov", idx[0], idx[1])
 
         # Some of the variances may be tied together (repeated parameter usage)
-        # Use list() for compatibility with python 3.5
         param_keys = list(self.parameters_state_cov.keys())
         self._var_repetitions = np.ones(self.k_state_cov, dtype=int)
         if self.freq_seasonal:
@@ -940,7 +939,7 @@ class UnobservedComponents(MLEModel):
             _start_params["seasonal_var"] = var_resid
 
         # Frequency domain seasonal
-        for ix, is_stochastic in enumerate(self.stochastic_freq_seasonal):
+        for ix, _ in enumerate(self.stochastic_freq_seasonal):
             cov_key = f"freq_seasonal_var_{ix!r}"
             _start_params[cov_key] = var_resid
 
@@ -1895,5 +1894,5 @@ class UnobservedComponentsResultsWrapper(MLEResultsWrapper):
 
 
 wrap.populate_wrapper(
-    UnobservedComponentsResultsWrapper, UnobservedComponentsResults  # noqa:E305
+    UnobservedComponentsResultsWrapper, UnobservedComponentsResults
 )

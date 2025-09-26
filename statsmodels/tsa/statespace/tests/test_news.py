@@ -1161,7 +1161,7 @@ def test_grouped_revisions(revisions_details_start):
     data_revisions = news.data_revisions
     revision_details = news.revision_details_by_update.reset_index([2, 3])
 
-    for key, diff in revisions.items():
+    for key in revisions.keys():
         assert_allclose(data_revisions.loc[key, 'revised'], y_revised.loc[key])
         assert_allclose(data_revisions.loc[key, 'observed (prev)'], y.loc[key])
         assert_equal(
@@ -1247,7 +1247,7 @@ def test_mixed_revisions(revisions_details_start):
     data_revisions = news.data_revisions
     revision_details = news.revision_details_by_update.reset_index([2, 3])
 
-    for key, diff in revisions.items():
+    for key in revisions.keys():
         assert_allclose(data_revisions.loc[key, 'revised'], y_revised.loc[key])
         assert_allclose(data_revisions.loc[key, 'observed (prev)'], y.loc[key])
         # Revisions to 2009Q2 are grouped (i.e. no details are computed),

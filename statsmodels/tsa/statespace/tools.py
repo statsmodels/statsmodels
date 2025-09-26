@@ -1115,7 +1115,7 @@ def _compute_multivariate_acovf_from_coefficients(
         for i in range(min(order, maxlag+1))
     ]
 
-    for i in range(maxlag - (order-1)):
+    for _ in range(maxlag - (order-1)):
         stacked_cov = np.dot(companion, stacked_cov)
         autocovariances += [
             stacked_cov[:k_endog, -k_endog:]

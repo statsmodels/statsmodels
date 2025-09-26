@@ -93,8 +93,9 @@ class TestDFM(CheckPosteriorMoments):
     def setup_class(cls, missing=None, *args, **kwargs):
         kwargs['k_factors'] = 1
         kwargs['factor_order'] = 1
-        super().setup_class(dynamic_factor.DynamicFactor, missing=missing,
-                            *args, **kwargs)
+        super().setup_class(
+            dynamic_factor.DynamicFactor, missing, *args, **kwargs
+        )
 
 
 class TestDFMComplex(CheckPosteriorMoments):
@@ -102,23 +103,24 @@ class TestDFMComplex(CheckPosteriorMoments):
     def setup_class(cls, missing=None, *args, **kwargs):
         kwargs['k_factors'] = 1
         kwargs['factor_order'] = 1
-        super().setup_class(dynamic_factor.DynamicFactor, missing=missing,
-                            use_complex=True, *args, **kwargs)
+        super().setup_class(
+            dynamic_factor.DynamicFactor, missing, *args, use_complex=True, **kwargs
+        )
 
 
 class TestDFMAllMissing(TestDFM):
     def setup_class(cls, missing='all', *args, **kwargs):
-        super().setup_class(missing=missing, *args, **kwargs)
+        super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestDFMPartialMissing(TestDFM):
     def setup_class(cls, missing='partial', *args, **kwargs):
-        super().setup_class(missing=missing, *args, **kwargs)
+        super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestDFMMixedMissing(TestDFM):
     def setup_class(cls, missing='mixed', *args, **kwargs):
-        super().setup_class(missing=missing, *args, **kwargs)
+        super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestVARME(CheckPosteriorMoments):
@@ -130,22 +132,22 @@ class TestVARME(CheckPosteriorMoments):
     def setup_class(cls, missing=None, *args, **kwargs):
         kwargs['order'] = (1, 0)
         kwargs['measurement_error'] = True
-        super().setup_class(varmax.VARMAX, missing=missing, *args, **kwargs)
+        super().setup_class(varmax.VARMAX, *args, missing=missing, **kwargs)
 
 
 class TestVARMEAllMissing(TestVARME):
     def setup_class(cls, missing='all', *args, **kwargs):
-        super().setup_class(missing=missing, *args, **kwargs)
+        super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestVARMEPartialMissing(TestVARME):
     def setup_class(cls, missing='partial', *args, **kwargs):
-        super().setup_class(missing=missing, *args, **kwargs)
+        super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestVARMEMixedMissing(TestVARME):
     def setup_class(cls, missing='mixed', *args, **kwargs):
-        super().setup_class(missing=missing, *args, **kwargs)
+        super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestSARIMAXME(CheckPosteriorMoments):
@@ -156,12 +158,12 @@ class TestSARIMAXME(CheckPosteriorMoments):
     def setup_class(cls, missing=None, *args, **kwargs):
         kwargs['order'] = (1, 0, 0)
         kwargs['measurement_error'] = True
-        super().setup_class(sarimax.SARIMAX, missing=missing, *args, **kwargs)
+        super().setup_class(sarimax.SARIMAX, *args, missing=missing, **kwargs)
 
 
 class TestSARIMAXMEMissing(TestSARIMAXME):
     def setup_class(cls, missing='mixed', *args, **kwargs):
-        super().setup_class(missing=missing, *args, **kwargs)
+        super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestUnobservedComponents(CheckPosteriorMoments):
@@ -171,13 +173,14 @@ class TestUnobservedComponents(CheckPosteriorMoments):
         kwargs['level'] = 'llevel'
         kwargs['exog'] = np.arange(dta.shape[0])
         kwargs['autoregressive'] = 1
-        super().setup_class(structural.UnobservedComponents, missing=missing,
-                            *args, **kwargs)
+        super().setup_class(
+            structural.UnobservedComponents, *args, missing=missing, **kwargs
+        )
 
 
 class TestUnobservedComponentsMissing(TestUnobservedComponents):
     def setup_class(cls, missing='mixed', *args, **kwargs):
-        super().setup_class(missing=missing, *args, **kwargs)
+        super().setup_class(*args, missing=missing, **kwargs)
 
 
 def test_dfm(missing=None):

@@ -1862,7 +1862,7 @@ class VARResults(VARProcess):
         # This converts order to list of integers if given as strings
         if isinstance(order[0], str):
             order_new = []
-            for i, nam in enumerate(order):
+            for i, _ in enumerate(order):
                 order_new.append(self.names.index(order[i]))
             order = order_new
         return _reordered(self, order)
@@ -2331,7 +2331,7 @@ class VARResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(TimeSeriesResultsWrapper._wrap_methods, _methods)
 
 
-wrap.populate_wrapper(VARResultsWrapper, VARResults)  # noqa:E305
+wrap.populate_wrapper(VARResultsWrapper, VARResults)
 
 
 class FEVD:

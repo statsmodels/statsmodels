@@ -489,7 +489,7 @@ def test_all(close_figures, reset_randomstate):
     lines = []
     ii = 0
     while len(lines) < 40:
-        for k in range(np.random.randint(1, 4)):
+        for _ in range(np.random.randint(1, 4)):
             lines.append(ii)
         ii += 1
     styles = np.kron(np.ones(20), (0, 1)).astype(np.int32)

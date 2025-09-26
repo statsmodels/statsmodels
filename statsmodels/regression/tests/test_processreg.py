@@ -63,7 +63,7 @@ def setup1(n, get_model, noise):
     for i, g in enumerate(groups):
         ix[g].append(i)
 
-    for g, ii in ix.items():
+    for ii in ix.values():
         c = gc.get_cov(time[ii], sc[ii], sm[ii])
         r = np.linalg.cholesky(c)
         y[ii] += np.dot(r, np.random.normal(size=len(ii)))

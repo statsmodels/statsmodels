@@ -70,8 +70,8 @@ est = dict(
     depvar="lw",
     partialsmall="small",
     exexog="med kww age mrt",
-    inexog="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",  # noqa:E501
-    insts="med kww age mrt expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",  # noqa:E501
+    inexog="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",
+    insts="med kww age mrt expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",
     instd="s iq",
     properties="b V",
 )
@@ -435,15 +435,15 @@ est = dict(
     title="IV (2SLS) estimation",
     predict="ivreg2_p",
     version="02.2.08",
-    cmdline="ivreg2 lw expr tenure rns smsa dyear* (s iq=med kww age mrt), robust",  # noqa:E501
+    cmdline="ivreg2 lw expr tenure rns smsa dyear* (s iq=med kww age mrt), robust",
     cmd="ivreg2",
     model="iv",
     depvar="lw",
     vcetype="Robust",
     partialsmall="small",
     exexog="med kww age mrt",
-    inexog="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",  # noqa:E501
-    insts="med kww age mrt expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",  # noqa:E501
+    inexog="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",
+    insts="med kww age mrt expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",
     instd="s iq",
     properties="b V",
 )
@@ -810,15 +810,15 @@ est = dict(
     title="IV (2SLS) estimation",
     predict="ivreg2_p",
     version="02.2.08",
-    cmdline="ivreg2 lw expr tenure rns smsa dyear* (s iq=med kww age mrt), small",  # noqa:E501
+    cmdline="ivreg2 lw expr tenure rns smsa dyear* (s iq=med kww age mrt), small",
     cmd="ivreg2",
     model="iv",
     depvar="lw",
     partialsmall="small",
     small="small",
     exexog="med kww age mrt",
-    inexog="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",  # noqa:E501
-    insts="med kww age mrt expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",  # noqa:E501
+    inexog="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",
+    insts="med kww age mrt expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",
     instd="s iq",
     properties="b V",
 )
@@ -1195,7 +1195,7 @@ est = dict(
     title="IV (2SLS) estimation",
     predict="ivreg2_p",
     version="02.2.08",
-    cmdline="ivreg2 lw expr tenure rns smsa dyear* (s iq=med kww age mrt), small robust",  # noqa:E501
+    cmdline="ivreg2 lw expr tenure rns smsa dyear* (s iq=med kww age mrt), small robust",
     cmd="ivreg2",
     model="iv",
     depvar="lw",
@@ -1203,8 +1203,8 @@ est = dict(
     partialsmall="small",
     small="small",
     exexog="med kww age mrt",
-    inexog="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",  # noqa:E501
-    insts="med kww age mrt expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",  # noqa:E501
+    inexog="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",
+    insts="med kww age mrt expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",
     instd="s iq",
     properties="b V",
 )
@@ -1568,15 +1568,15 @@ est = dict(
     title="2-Step GMM estimation",
     predict="ivreg2_p",
     version="02.2.08",
-    cmdline="ivreg2 lw expr tenure rns smsa dyear* (s iq=med kww age mrt), gmm2s robust",  # noqa:E501
+    cmdline="ivreg2 lw expr tenure rns smsa dyear* (s iq=med kww age mrt), gmm2s robust",
     cmd="ivreg2",
     model="gmm2s",
     depvar="lw",
     vcetype="Robust",
     partialsmall="small",
     exexog="med kww age mrt",
-    inexog="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",  # noqa:E501
-    insts="med kww age mrt expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",  # noqa:E501
+    inexog="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",
+    insts="med kww age mrt expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73",
     instd="s iq",
     properties="b V",
 )

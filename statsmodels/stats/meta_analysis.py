@@ -680,7 +680,7 @@ def _fit_tau_iterative(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
     tau2 = tau2_start
     k = eff.shape[0]
     converged = False
-    for i in range(maxiter):
+    for _ in range(maxiter):
         w = 1 / (var_eff + tau2)
         m = w.dot(eff) / w.sum(0)
         resid_sq = (eff - m) ** 2

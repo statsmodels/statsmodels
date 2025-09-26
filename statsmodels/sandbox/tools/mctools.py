@@ -373,7 +373,7 @@ class StatTestMC:
         # crit = stats.chi2([2,4]).ppf(np.atleast_2d(quant).T)
         crit = distppf(np.atleast_2d(quant).T)
         mml = []
-        for i, ix in enumerate(idx):  # TODO: hardcoded 2 ?
+        for i, _ in enumerate(idx):  # TODO: hardcoded 2 ?
             mml.extend([mcq[:, i], crit[:, i]])
         # mmlar = np.column_stack(mml)
         mmlar = np.column_stack([quant] + mml)

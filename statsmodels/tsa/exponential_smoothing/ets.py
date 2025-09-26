@@ -2400,4 +2400,4 @@ class PredictionResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(_methods)
 
 
-wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)  # noqa:E305
+wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)

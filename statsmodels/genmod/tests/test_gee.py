@@ -890,7 +890,7 @@ class TestGEE:
         L = np.r_[[[0, 0, 0, 1]]]
         R = np.r_[0,]
 
-        for j, v in enumerate((vi, ve)):
+        for _, v in enumerate((vi, ve)):
             md = gee.GEE(endog, exog, group, None, family, v, constraint=(L, R))
             mdf = md.fit()
             assert_almost_equal(mdf.params[3], 0, decimal=10)
@@ -902,7 +902,7 @@ class TestGEE:
         endog, exog, group = load_data("gee_nested_linear_1.csv")
 
         group_n = []
-        for i in range(endog.shape[0] // 10):
+        for _ in range(endog.shape[0] // 10):
             group_n.extend(
                 [
                     0,

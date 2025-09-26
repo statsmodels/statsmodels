@@ -276,7 +276,7 @@ class Huber:
 
         where estimate_location is an M-estimator and estimate_scale implements
         the check used in Section 5.5 of Venables & Ripley
-        """  # noqa:E501
+        """
         for _ in range(self.maxiter):
             # Estimate the mean along a given axis
             if est_mu:
@@ -705,7 +705,7 @@ def _scale_iter(
     if scale0 == "mad":
         scale0 = mad(x, center=0)
 
-    for i in range(maxiter):
+    for _ in range(maxiter):
         x_scaled = x / scale0
         if iter_method == "rho":
             scale = scale0 * np.sqrt(

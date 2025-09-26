@@ -196,7 +196,7 @@ if __name__ == "__main__":
         std_errors = []
         dparams = []
 
-        for j in range(nrep):
+        for _ in range(nrep):
 
             da, va = gendat()
             ga = Poisson()

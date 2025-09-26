@@ -333,8 +333,8 @@ class QIF(base.Model):
             groups = data[groups]
         advance_eval_env(kwargs)
         model = super().from_formula(
-                   formula, data=data, subset=subset,
-                   groups=groups, *args, **kwargs)
+            formula, data, *args,  subset=subset, groups=groups, **kwargs
+        )
 
         return model
 

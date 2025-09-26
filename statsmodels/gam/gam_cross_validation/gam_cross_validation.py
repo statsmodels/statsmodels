@@ -54,7 +54,7 @@ def _split_train_test_smoothers(x, smoother, train_index, test_index):
     """
     train_smoothers = []
     test_smoothers = []
-    for smoother in smoother.smoothers:
+    for smoother in smoother.smoothers:  # noqa: B020
         train_basis = smoother.basis[train_index]
         train_der_basis = smoother.der_basis[train_index]
         train_der2_basis = smoother.der2_basis[train_index]

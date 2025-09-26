@@ -25,7 +25,7 @@ est = dict(
     k_aux=13,
     k_eq_model=0,
     k_eq=13,
-    cmdline="gmm (lw - {xb:s iq expr tenure rns smsa dyear*} - {b0}), instruments(expr tenure rns smsa dyear* med kww age mrt)",  # noqa:E501
+    cmdline="gmm (lw - {xb:s iq expr tenure rns smsa dyear*} - {b0}), instruments(expr tenure rns smsa dyear* med kww age mrt)",
     cmd="gmm",
     estat_cmd="gmm_estat",
     predict="gmm_p",
@@ -37,10 +37,10 @@ est = dict(
     wmatrix="robust",
     vce="robust",
     vcetype="Robust",
-    params="xb_s xb_iq xb_expr xb_tenure xb_rns xb_smsa xb_dyear_67 xb_dyear_68 xb_dyear_69 xb_dyear_70 xb_dyear_71 xb_dyear_73 b0",  # noqa:E501
-    inst_1="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73 med kww age mrt _cons",  # noqa:E501
-    params_1="xb_s xb_iq xb_expr xb_tenure xb_rns xb_smsa xb_dyear_67 xb_dyear_68 xb_dyear_69 xb_dyear_70 xb_dyear_71 xb_dyear_73 b0",  # noqa:E501
-    sexp_1="lw - ({xb_s} *s + {xb_iq} *iq + {xb_expr} *expr + {xb_tenure} *tenure + {xb_rns} *rns + {xb_smsa} *smsa + {xb_dyear_67} *dyear_67 + {xb_dyear_68} *dyear_68 + {xb_dyear_69} *dyear_69 + {xb_dyear_70} *dyear_70 + {xb_dyear_71} *dyear_71 + {xb_dyear_73} *dyear_73) - {b0}",  # noqa:E501
+    params="xb_s xb_iq xb_expr xb_tenure xb_rns xb_smsa xb_dyear_67 xb_dyear_68 xb_dyear_69 xb_dyear_70 xb_dyear_71 xb_dyear_73 b0",
+    inst_1="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73 med kww age mrt _cons",
+    params_1="xb_s xb_iq xb_expr xb_tenure xb_rns xb_smsa xb_dyear_67 xb_dyear_68 xb_dyear_69 xb_dyear_70 xb_dyear_71 xb_dyear_73 b0",
+    sexp_1="lw - ({xb_s} *s + {xb_iq} *iq + {xb_expr} *expr + {xb_tenure} *tenure + {xb_rns} *rns + {xb_smsa} *smsa + {xb_dyear_67} *dyear_67 + {xb_dyear_68} *dyear_68 + {xb_dyear_69} *dyear_69 + {xb_dyear_70} *dyear_70 + {xb_dyear_71} *dyear_71 + {xb_dyear_73} *dyear_73) - {b0}",
     properties="b V",
 )
 
@@ -377,7 +377,7 @@ est = dict(
     k_aux=13,
     k_eq_model=0,
     k_eq=13,
-    cmdline="gmm (lw - {xb:s iq expr tenure rns smsa dyear*} - {b0}), instruments(expr tenure rns smsa dyear* med kww age mrt) onestep",  # noqa:E501
+    cmdline="gmm (lw - {xb:s iq expr tenure rns smsa dyear*} - {b0}), instruments(expr tenure rns smsa dyear* med kww age mrt) onestep",
     cmd="gmm",
     estat_cmd="gmm_estat",
     predict="gmm_p",
@@ -389,10 +389,10 @@ est = dict(
     wmatrix="robust",
     vce="robust",
     vcetype="Robust",
-    params="xb_s xb_iq xb_expr xb_tenure xb_rns xb_smsa xb_dyear_67 xb_dyear_68 xb_dyear_69 xb_dyear_70 xb_dyear_71 xb_dyear_73 b0",  # noqa:E501
-    inst_1="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73 med kww age mrt _cons",  # noqa:E501
-    params_1="xb_s xb_iq xb_expr xb_tenure xb_rns xb_smsa xb_dyear_67 xb_dyear_68 xb_dyear_69 xb_dyear_70 xb_dyear_71 xb_dyear_73 b0",  # noqa:E501
-    sexp_1="lw - ({xb_s} *s + {xb_iq} *iq + {xb_expr} *expr + {xb_tenure} *tenure + {xb_rns} *rns + {xb_smsa} *smsa + {xb_dyear_67} *dyear_67 + {xb_dyear_68} *dyear_68 + {xb_dyear_69} *dyear_69 + {xb_dyear_70} *dyear_70 + {xb_dyear_71} *dyear_71 + {xb_dyear_73} *dyear_73) - {b0}",  # noqa:E501
+    params="xb_s xb_iq xb_expr xb_tenure xb_rns xb_smsa xb_dyear_67 xb_dyear_68 xb_dyear_69 xb_dyear_70 xb_dyear_71 xb_dyear_73 b0",
+    inst_1="expr tenure rns smsa dyear_67 dyear_68 dyear_69 dyear_70 dyear_71 dyear_73 med kww age mrt _cons",
+    params_1="xb_s xb_iq xb_expr xb_tenure xb_rns xb_smsa xb_dyear_67 xb_dyear_68 xb_dyear_69 xb_dyear_70 xb_dyear_71 xb_dyear_73 b0",
+    sexp_1="lw - ({xb_s} *s + {xb_iq} *iq + {xb_expr} *expr + {xb_tenure} *tenure + {xb_rns} *rns + {xb_smsa} *smsa + {xb_dyear_67} *dyear_67 + {xb_dyear_68} *dyear_68 + {xb_dyear_69} *dyear_69 + {xb_dyear_70} *dyear_70 + {xb_dyear_71} *dyear_71 + {xb_dyear_73} *dyear_73) - {b0}",
     properties="b V",
 )
 

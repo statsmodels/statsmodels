@@ -220,7 +220,7 @@ def tuning_s_estimator_mean(norm, breakdown=None):
 
     res = []
     for bp in bps:
-        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)
+        c_bp = optimize.brentq(lambda c0, bp: func(c0) - bp, 0.1, 10, args=(bp,))
         norm._set_tuning_param(c_bp, inplace=True)  # inplace modification
         eff = 1 / _var_normal(norm)
         b = stats.norm.expect(lambda x : norm.rho(x))

@@ -2514,7 +2514,7 @@ class LikelihoodResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = {"cov_params": "cov", "conf_int": "columns"}
 
 
-wrap.populate_wrapper(LikelihoodResultsWrapper, LikelihoodModelResults)  # noqa:E305
+wrap.populate_wrapper(LikelihoodResultsWrapper, LikelihoodModelResults)
 
 
 class ResultMixin:

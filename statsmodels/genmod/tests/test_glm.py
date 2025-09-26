@@ -2741,7 +2741,7 @@ class TestRegularized:
                 assert_allclose(params, sm_result.params, atol=1e-2, rtol=0.3)
 
                 # The penalized log-likelihood that we are maximizing.
-                def plf(params):
+                def plf(params, model, endog, alpha, L1_wt):
                     llf = model.loglike(params) / len(endog)
                     llf = llf - alpha * (
                         (1 - L1_wt) * np.sum(params**2) / 2
@@ -2750,8 +2750,8 @@ class TestRegularized:
                     return llf
 
                 # Confirm that we are doing better than glmnet.
-                llf_r = plf(params)
-                llf_sm = plf(sm_result.params)
+                llf_r = plf(params, model, endog, alpha, L1_wt)
+                llf_sm = plf(sm_result.params, model, endog, alpha, L1_wt)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 
@@ -2768,7 +2768,7 @@ class TestConvergence:
         cls.model = GLM(data.endog, data.exog, family=sm.families.Binomial())
 
     def _when_converged(self, atol=1e-8, rtol=0, tol_criterion="deviance"):
-        for i, dev in enumerate(self.res.fit_history[tol_criterion]):
+        for i, _ in enumerate(self.res.fit_history[tol_criterion]):
             orig = self.res.fit_history[tol_criterion][i]
             new = self.res.fit_history[tol_criterion][i + 1]
             if np.allclose(orig, new, atol=atol, rtol=rtol):
@@ -3031,11 +3031,11 @@ def test_tweedie_score():
 
             pa = result.params + 0.2 * np.random.normal(size=result.params.size)
 
-            ngrad = approx_fprime_cs(pa, lambda x: model.loglike(x, scale=1))
+            from functools import partial
+            ngrad = approx_fprime_cs(pa, partial(model.loglike, scale=1))
             agrad = model.score(pa, scale=1)
             assert_allclose(ngrad, agrad, atol=1e-8, rtol=1e-8)
-
-            nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
+            nhess = approx_hess_cs(pa, partial(model.loglike, scale=1))
             ahess = model.hessian(pa, scale=1)
             assert_allclose(nhess, ahess, atol=5e-8, rtol=5e-8)
 

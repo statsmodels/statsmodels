@@ -42,7 +42,7 @@ class CanCorr(Model):
     .. [*] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
     .. [*] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
     .. [*] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
-    """  # noqa:E501
+    """
 
     def __init__(
         self, endog, exog, tolerance=1e-8, missing="none", hasconst=None, **kwargs

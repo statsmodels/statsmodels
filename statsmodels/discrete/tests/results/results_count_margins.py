@@ -35,7 +35,7 @@ est = dict(
            estat_cmd="poisson_estat",
            predict="poisso_p",
            cmd="poisson",
-           cmdline="poisson sexecutions sincome sperpoverty sperblack LN_VC100k96 south sdegree",  # noqa:E501
+           cmdline="poisson sexecutions sincome sperpoverty sperblack LN_VC100k96 south sdegree",
           )
 
 margins_table = np.array([
@@ -131,7 +131,7 @@ est = dict(
            dispers="mean",
            predict="nbreg_p",
            cmd="nbreg",
-           cmdline="nbreg sexecutions sincome sperpoverty sperblack LN_VC100k96 south sdegree",  # noqa:E501
+           cmdline="nbreg sexecutions sincome sperpoverty sperblack LN_VC100k96 south sdegree",
           )
 
 margins_table = np.array([
@@ -224,7 +224,7 @@ est = dict(
            estat_cmd="poisson_estat",
            predict="poisso_p",
            cmd="poisson",
-           cmdline="poisson sexecutions sincome sperpoverty sperblack LN_VC100k96 i.south sdegree",  # noqa:E501
+           cmdline="poisson sexecutions sincome sperpoverty sperblack LN_VC100k96 i.south sdegree",
           )
 
 margins_table = np.array([
@@ -326,7 +326,7 @@ est = dict(
            dispers="mean",
            predict="nbreg_p",
            cmd="nbreg",
-           cmdline="nbreg sexecutions sincome sperpoverty sperblack LN_VC100k96 i.south sdegree",  # noqa:E501
+           cmdline="nbreg sexecutions sincome sperpoverty sperblack LN_VC100k96 i.south sdegree",
           )
 
 margins_table = np.array([

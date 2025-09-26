@@ -142,7 +142,7 @@ def interaction_plot(
         raise ValueError("Must be a color for each trace level")
 
     if plottype == "both" or plottype == "b":
-        for i, (values, group) in enumerate(plot_data.groupby("trace")):
+        for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
             label = str(group["trace"].values[0])
             ax.plot(
@@ -155,7 +155,7 @@ def interaction_plot(
                 **kwargs,
             )
     elif plottype == "line" or plottype == "l":
-        for i, (values, group) in enumerate(plot_data.groupby("trace")):
+        for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
             label = str(group["trace"].values[0])
             ax.plot(
@@ -167,7 +167,7 @@ def interaction_plot(
                 **kwargs,
             )
     elif plottype == "scatter" or plottype == "s":
-        for i, (values, group) in enumerate(plot_data.groupby("trace")):
+        for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
             label = str(group["trace"].values[0])
             ax.scatter(

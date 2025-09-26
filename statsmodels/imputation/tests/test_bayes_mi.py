@@ -35,7 +35,7 @@ def test_2x2():
     bm = BayesGaussMI(x)
 
     # Burn-in
-    for k in range(500):
+    for _ in range(500):
         bm.update()
 
     # Estimate the posterior mean
@@ -43,7 +43,7 @@ def test_2x2():
     cov = 0
     dmean = 0
     dcov = 0
-    for k in range(500):
+    for _ in range(500):
         bm.update()
         mean += bm.mean
         cov += bm.cov
@@ -77,7 +77,7 @@ def test_MI():
         else:
             return (x.iloc[:, 0].values, x.iloc[:, 1:].values)
 
-    for j in (0, 1):
+    for _ in (0, 1):
         np.random.seed(2342)
         imp = BayesGaussMI(x.copy())
         mi = MI(imp, sm.OLS, model_args_fn, burn=0)

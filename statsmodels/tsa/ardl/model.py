@@ -1751,7 +1751,7 @@ class UECM(ARDL):
     def _check_order(self, order: _ARDLOrder):
         """Check order conforms to requirement"""
         if isinstance(order, Mapping):
-            for k, v in order.items():
+            for v in order.values():
                 if not isinstance(v, _INT_TYPES) and v is not None:
                     raise TypeError("order values must be positive integers or None")
         elif not (isinstance(order, _INT_TYPES) or order is None):
@@ -1763,7 +1763,7 @@ class UECM(ARDL):
         order = super()._check_order(order)
         if not order:
             raise ValueError("Model must contain at least one exogenous variable")
-        for key, val in order.items():
+        for val in order.values():
             if val == [0]:
                 raise ValueError(
                     "All included exog variables must have a lag length >= 1"

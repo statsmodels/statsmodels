@@ -451,7 +451,7 @@ class DimReductionResultsWrapper(wrap.ResultsWrapper):
     _wrap_attrs = _attrs
 
 
-wrap.populate_wrapper(DimReductionResultsWrapper, DimReductionResults)  # noqa:E305
+wrap.populate_wrapper(DimReductionResultsWrapper, DimReductionResults)
 
 
 def _grass_opt(params, fun, grad, maxiter, gtol):
@@ -514,7 +514,7 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
         paramsm = params.reshape((p, d))
         pa0 = np.dot(paramsm, vt.T)
 
-        def geo(t):
+        def geo(t, pa0, s, u, vt):
             # Parameterize the geodesic path in the direction
             # of the gradient as a function of a real value t.
             pa = pa0 * np.cos(s * t) + u * np.sin(s * t)
@@ -523,7 +523,7 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
         # Try to find a downhill step along the geodesic path.
         step = 2.0
         while step > 1e-10:
-            pa = geo(-step)
+            pa = geo(-step, pa0, s, u, vt)
             f1 = fun(pa)
             if f1 < f0:
                 params = pa

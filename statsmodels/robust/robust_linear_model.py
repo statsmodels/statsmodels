@@ -632,4 +632,4 @@ class RLMResultsWrapper(lm.RegressionResultsWrapper):
     pass
 
 
-wrap.populate_wrapper(RLMResultsWrapper, RLMResults)  # noqa:E305
+wrap.populate_wrapper(RLMResultsWrapper, RLMResults)

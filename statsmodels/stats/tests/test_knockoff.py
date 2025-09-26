@@ -115,7 +115,7 @@ def test_sim(method, tester, n, p, es):
         return
 
     fdr, power = 0, 0
-    for k in range(nrep):
+    for _ in range(nrep):
 
         # Generate the predictors
         x = np.random.normal(size=(n, p))

@@ -868,5 +868,6 @@ class RecursiveLSResultsWrapper(MLEResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(RecursiveLSResultsWrapper,  # noqa:E305
-                      RecursiveLSResults)
+
+
+wrap.populate_wrapper(RecursiveLSResultsWrapper, RecursiveLSResults)

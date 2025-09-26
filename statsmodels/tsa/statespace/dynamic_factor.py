@@ -1326,5 +1326,6 @@ class DynamicFactorResultsWrapper(MLEResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(DynamicFactorResultsWrapper,  # noqa:E305
-                      DynamicFactorResults)
+
+
+wrap.populate_wrapper(DynamicFactorResultsWrapper, DynamicFactorResults)

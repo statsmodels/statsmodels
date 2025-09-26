@@ -642,9 +642,10 @@ class ExponentialSmoothing(MLEModel):
                 *self._compute_concentrated_states(params, *args, **kwargs))
 
         results = super().filter(
-            params, cov_type=cov_type, cov_kwds=cov_kwds,
+            params, *args, cov_type=cov_type, cov_kwds=cov_kwds,
             return_ssm=return_ssm, results_class=results_class,
-            results_wrapper_class=results_wrapper_class, *args, **kwargs)
+            results_wrapper_class=results_wrapper_class, **kwargs
+        )
 
         if self.initialization_method == 'concentrated':
             self.ssm.initialization.constant = np.zeros(self.k_states)
@@ -659,9 +660,9 @@ class ExponentialSmoothing(MLEModel):
                 *self._compute_concentrated_states(params, *args, **kwargs))
 
         results = super().smooth(
-            params, cov_type=cov_type, cov_kwds=cov_kwds,
+            params, *args, cov_type=cov_type, cov_kwds=cov_kwds,
             return_ssm=return_ssm, results_class=results_class,
-            results_wrapper_class=results_wrapper_class, *args, **kwargs)
+            results_wrapper_class=results_wrapper_class, **kwargs)
 
         if self.initialization_method == 'concentrated':
             self.ssm.initialization.constant = np.zeros(self.k_states)
@@ -732,5 +733,6 @@ class ExponentialSmoothingResultsWrapper(MLEResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(ExponentialSmoothingResultsWrapper,  # noqa:E305
-                      ExponentialSmoothingResults)
+
+
+wrap.populate_wrapper(ExponentialSmoothingResultsWrapper, ExponentialSmoothingResults)

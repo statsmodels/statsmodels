@@ -592,7 +592,7 @@ class DynamicFactorMQStates(dict):
         # (0 is just a dummy value for the dict - we just do it this way to
         # collect the keys, in order, without duplicates.)
         factor_names = {}
-        for key, value in factors.items():
+        for value in factors.values():
             if isinstance(value, str):
                 factor_names[value] = 0
             else:
@@ -1749,7 +1749,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         except AttributeError:
             # Remove after pandas 1.5 is minimum
             items = data.iteritems()
-        for name, col in items:
+        for name, _ in items:
             data[name] = data[name] + (' ' * (len(name) // 2))
         data.index.name = 'Dep. variable'
         data = data.reset_index()
