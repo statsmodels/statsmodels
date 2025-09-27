@@ -5,7 +5,7 @@ import sys
 import pytest
 
 try:
-    import jupyter_client  # noqa: F401
+    import jupyter_client
     import nbformat
     from nbconvert.preprocessors import ExecutePreprocessor
 
@@ -25,14 +25,14 @@ except ImportError:
     pytestmark = pytest.mark.skip(reason="Required packages not available")
 
 try:
-    import rpy2  # noqa: F401
+    import rpy2
 
     HAS_RPY2 = True
 except ImportError:
     HAS_RPY2 = False
 
 try:
-    import joblib  # noqa: F401
+    import joblib
 
     HAS_JOBLIB = True
 except ImportError:

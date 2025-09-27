@@ -13,3 +13,6 @@ extend-ignore =
     # E501: Line too long (### > 88 characters) (Needed for black)
     E701,
     # E701: Multiple statements on one line (colon) (Needed for black)
+
+per-file-ignores =
+    statsmodels/examples/tests/test_notebooks.py: F401

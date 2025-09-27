@@ -183,9 +183,9 @@ def _get_G(k_params):
     """
     from cvxopt import matrix
 
-    I = np.eye(k_params)  # noqa:E741
-    A = np.concatenate((-I, -I), axis=1)
-    B = np.concatenate((I, -I), axis=1)
+    eye = np.eye(k_params)
+    A = np.concatenate((-eye, -eye), axis=1)
+    B = np.concatenate((eye, -eye), axis=1)
     C = np.concatenate((A, B), axis=0)
     # Return
     return matrix(C)

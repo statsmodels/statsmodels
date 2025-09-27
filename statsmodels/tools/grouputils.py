@@ -388,7 +388,8 @@ class Grouping:
         # This needs to reset cache
         if names is None:
             names = self.group_names
-        self = Grouping(index, names)
+        # Does nothing ??
+        Grouping(index, names)
 
     def get_slices(self, level=0):
         """

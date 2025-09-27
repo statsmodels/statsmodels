@@ -191,6 +191,9 @@ select = [
 ]
 
 ignore = [
+    "RUF002",
+    "RUF010",
+    "RUF021",
     "PERF401",
   # Too many uses of dict(...) instread of {...}
   # Would be goot enforce eventually
@@ -244,52 +247,21 @@ ignore = [
   "PLW0177",
 
   ### TODO: Enable gradually
-  # Useless statement
-  "B018",
   # Magic number
   "PLR2004",
-  # comparison-with-itself
-  "PLR0124",
   # collection-literal-concatenation
   "RUF005",
   # pairwise-over-zipped
   "RUF007",
   # mutable-class-default
   "RUF012",
-  # type-comparison
-  "E721",
   # repeated-equality-comparison
+  # TODO: Enable
   "PLR1714",
-  # self-or-cls-assignment
-  "PLW0642",
-  # literal-membership
-  "PLR6201", # 847 errors
-  # Method could be a function, class method, or static method
-  "PLR6301", # 11411 errors
-  # Private name import
-  "PLC2701", # 27 errors
-  # Too many positional arguments (6/5)
-  "PLR0917", # 470 errors
-  # compare-to-empty-string
-  "PLC1901",
-  # `tempfile.NamedTemporaryFile` in text mode without explicit `encoding` argument
-  "PLW1514", # 1 error
   # Object does not implement `__hash__` method
-  "PLW1641", # 16 errors
-  # Bad or misspelled dunder method name
-  "PLW3201", # 69 errors, seems to be all false positive
-  # Unnecessary lookup of dictionary value by key
-  "PLR1733", # 5 errors, it seems like we wannt to ignore these
-  # Unnecessary lookup of list item by index
-  "PLR1736", # 4 errors, we're currently having inline pylint ignore
-  # Unpacking a dictionary in iteration without calling `.items()`
-  "PLE1141", # autofixable
+  "PLW1641", # 2 errors
   # import-outside-toplevel
   "PLC0415",
-  # unnecessary-dunder-call
-  "PLC2801",
-  # comparison-with-itself
-  "PLR0124",
   # too-many-public-methods
   "PLR0904",
   # too-many-return-statements
@@ -310,10 +282,7 @@ ignore = [
   "PLR1704",
   # unnecessary-lambda
   "PLW0108",
-  # global-statement
-  "PLW0603",
-  # runtime-cast-value
-  "TC006",
+
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -326,7 +295,7 @@ ignore = [
 "statsmodels/stats/multivariate.py" = ["PT028"]
 "statsmodels/stats/diagnostic_gen.py" = ["PT028"]
 "statsmodels/discrete/_diagnostics_count.py" = ["PT028"]
-
+"statsmodels/examples/tests/test_notebooks.py" = ["F401"]
 [tool.pytest.ini_options]
 minversion = "8.4.1"
 addopts = "--strict --durations=30 --junitxml=test-data.xml"

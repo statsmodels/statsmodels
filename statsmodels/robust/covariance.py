@@ -36,8 +36,13 @@ from statsmodels.tools.testing import Holder
 
 from .scale import mad
 
-mad0 = lambda x: mad(x, center=0)  # noqa: E731
-median = lambda x: np.median(x, axis=0)  # noqa: E731
+
+def mad0(x):
+    return mad(x, center=0)
+
+
+def median(x):
+    return np.median(x, axis=0)
 
 
 # from scikit-learn

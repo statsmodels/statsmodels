@@ -5,9 +5,8 @@ Test VAR Model
 from statsmodels.compat.pandas import QUARTER_END, assert_index_equal
 from statsmodels.compat.python import lrange
 
-from io import BytesIO, StringIO
+from io import BytesIO
 import os
-import sys
 import warnings
 
 import numpy as np
@@ -168,15 +167,6 @@ class RResults:
         self.causality = data["causality"]
 
 
-_orig_stdout = None
-
-
-def setup_module():
-    global _orig_stdout
-    _orig_stdout = sys.stdout
-    sys.stdout = StringIO()
-
-
 class CheckIRF:
     ref = None
     res = None
@@ -284,7 +274,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_equal(model2.endog_names, self.ref.names)
 
     def test_get_eq_index(self):
-        assert type(self.res.names) is list  # noqa: E721
+        assert type(self.res.names) is list
 
         for i, name in enumerate(self.names):
             idx = self.res.get_eq_index(i)
@@ -500,7 +490,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         self.res.save(fh)
         fh.seek(0, 0)
         res_unpickled = self.res.__class__.load(fh)
-        assert type(res_unpickled) is type(self.res)  # noqa: E721
+        assert type(res_unpickled) is type(self.res)
 
 
 class E1_Results:

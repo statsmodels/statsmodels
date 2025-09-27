@@ -11,7 +11,7 @@ class genpoisson_p_gen(rv_discrete):
     """Generalized Poisson distribution"""
 
     def _argcheck(self, mu, alpha, p):
-        return (mu >= 0) & (alpha == alpha) & (p > 0)
+        return (mu >= 0) & np.isnan(alpha) & (p > 0)
 
     def _logpmf(self, x, mu, alpha, p):
         mu_p = mu ** (p - 1.0)

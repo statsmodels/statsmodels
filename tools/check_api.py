@@ -17,7 +17,7 @@ BLACKLIST = ["tests", "sandbox", "libqsturng"]
 
 def import_submodules(module: ModuleType):
     """Import all submodules of a module, recursively."""
-    for loader, module_name, is_pkg in pkgutil.walk_packages(
+    for _, module_name, _ in pkgutil.walk_packages(
         module.__path__, module.__name__ + "."
     ):
         blacklisted = any(f".{bl}." in module_name for bl in BLACKLIST)

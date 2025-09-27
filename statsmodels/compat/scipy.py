@@ -70,9 +70,9 @@ def _valarray(shape, value=np.nan, typecode=None):
 
 if SP_LT_16:
     # copied from scipy, added to scipy in 1.6.0
-    from ._scipy_multivariate_t import multivariate_t  # noqa: F401
+    from ._scipy_multivariate_t import multivariate_t
 else:
-    from scipy.stats import multivariate_t  # noqa: F401
+    from scipy.stats import multivariate_t
 
 
 def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
@@ -133,3 +133,17 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
         from scipy._lib._util import _lazywhere
 
         return _lazywhere(cond, args, f1, fill_value, f2)
+
+
+__all__ = [
+    "SP_VERSION",
+    "SP_LT_15",
+    "SCIPY_GT_14",
+    "SP_LT_16",
+    "SP_LT_17",
+    "SP_LT_19",
+    "SP_LT_115",
+    "SP_LT_116",
+    "multivariate_t",
+    "apply_where",
+]

@@ -44,7 +44,7 @@ except ImportError:
 
 
 try:
-    import formulaic  # noqa: F401
+    import formulaic
     import formulaic.parser
     import formulaic.utils.constraints
 

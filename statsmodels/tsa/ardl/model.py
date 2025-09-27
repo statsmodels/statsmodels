@@ -1930,9 +1930,9 @@ class UECM(ARDL):
         )
         uecm_lags = {}
         dl_lags = ardl.dl_lags
-        for key, val in dl_lags.items():
-            max_val = max(val)
-            if len(dl_lags[key]) < (max_val + int(not ardl.causal)):
+        for key, dl_lags_val in dl_lags.items():
+            max_val = max(dl_lags_val)
+            if len(dl_lags_val) < (max_val + int(not ardl.causal)):
                 raise ValueError(err.format(var_typ="exogenous"))
             uecm_lags[key] = max_val
         if ardl.ar_lags is None:

@@ -202,14 +202,14 @@ def test_save_load(data):
     res.save(fh)
     fh.seek(0, 0)
     res_unpickled = res.__class__.load(fh)
-    assert type(res_unpickled) is type(res)  # noqa: E721
+    assert type(res_unpickled) is type(res)
 
     fh = BytesIO()
     # test wrapped results load save pickle
     res.save(fh, remove_data=True)
     fh.seek(0, 0)
     res_unpickled = res.__class__.load(fh)
-    assert type(res_unpickled) is type(res)  # noqa: E721
+    assert type(res_unpickled) is type(res)
 
 
 def test_formula():

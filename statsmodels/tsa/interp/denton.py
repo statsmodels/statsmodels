@@ -1,5 +1,5 @@
 import numpy as np
-from numpy import dot, eye, diag_indices, zeros, ones, diag, asarray, r_
+from numpy import dot, diag_indices, zeros, ones, diag, asarray, r_
 from numpy.linalg import solve
 
 
@@ -207,7 +207,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 #    H = D[1:,:]
 #    HTH = dot(H.T,H)
     # just make HTH
-    HTH = eye(n)
+    HTH = np.eye(n)
     diag_idx0, diag_idx1 = diag_indices(n)
     HTH[diag_idx0[1:-1], diag_idx1[1:-1]] += 1
     HTH[diag_idx0[:-1]+1, diag_idx1[:-1]] = -1
@@ -217,14 +217,14 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
     # make partitioned matrices
     # TODO: break this out so that we can simplify the linalg?
-    I = zeros((n+m, n+m))  # noqa:E741
-    I[:n, :n] = W
-    I[:n, n:] = B
-    I[n:, :n] = B.T
+    eye = zeros((n+m, n+m))
+    eye[:n, :n] = W
+    eye[:n, n:] = B
+    eye[n:, :n] = B.T
 
     A = zeros((m+n, 1))  # zero first-order constraints
     A[-m:] = benchmark  # adding up constraints
-    X = solve(I, A)
+    X = solve(eye, A)
     X = X[:-m]   # drop the lagrange multipliers
 
     # handle extrapolation

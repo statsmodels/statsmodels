@@ -1420,21 +1420,19 @@ def breakvar_heteroskedasticity_test(
     if use_f:
         from scipy.stats import f
 
-        pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
-            test_statistics, numer_dof, denom_dof
-        )
-        pval_upper = lambda test_statistics: f.sf(  # noqa:E731
-            test_statistics, numer_dof, denom_dof
-        )
+        def pval_lower(test_statistics):
+            return f.cdf(test_statistics, numer_dof, denom_dof)
+
+        def pval_upper(test_statistics):
+            return f.sf(test_statistics, numer_dof, denom_dof)
     else:
         from scipy.stats import chi2
 
-        pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
-            numer_dof * test_statistics, denom_dof
-        )
-        pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
-            numer_dof * test_statistics, denom_dof
-        )
+        def pval_lower(test_statistics):
+            return chi2.cdf(numer_dof * test_statistics, denom_dof)
+
+        def pval_upper(test_statistics):
+            return chi2.sf(numer_dof * test_statistics, denom_dof)
 
     # Calculate the one- or two-sided p-values
     alternative = alternative.lower()

@@ -28,7 +28,7 @@ from statsmodels.tools.tools import Bunch
 
 __all__ = ["x13_arima_select_order", "x13_arima_analysis"]
 
-_binary_names = ("x13as.exe", "x13as", "x12a.exe", "x12a", "x13as_ascii", "x13as_html")
+BINARY_NAMES = ("x13as.exe", "x13as", "x12a.exe", "x12a", "x13as_ascii", "x13as_html")
 
 
 class _freq_to_period:
@@ -45,7 +45,10 @@ _freq_to_period = _freq_to_period()
 
 _period_to_freq = {12: "M", 4: "Q"}
 _log_to_x12 = {True: "log", False: "none", None: "auto"}
-_bool_to_yes_no = lambda x: "yes" if x else "no"  # noqa:E731
+
+
+def _bool_to_yes_no(x):
+    return "yes" if x else "no"
 
 
 def _find_x12(x12path=None, prefer_x13=True):
@@ -55,7 +58,7 @@ def _find_x12(x12path=None, prefer_x13=True):
     X13PATH must be defined. If prefer_x13 is True, only X13PATH is searched
     for. If it is false, only X12PATH is searched for.
     """
-    global _binary_names
+    _binary_names = BINARY_NAMES
     if x12path is not None and x12path.endswith(_binary_names):
         # remove binary from path if path is not a directory
         if not os.path.isdir(x12path):

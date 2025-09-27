@@ -10,7 +10,8 @@ PYTHON_IMPL_WASM = (
 )
 
 
-asunicode = lambda x, _: str(x)  # noqa:E731
+def asunicode(x, _):
+    return str(x)
 
 
 __all__ = [

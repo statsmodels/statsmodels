@@ -907,12 +907,12 @@ class TestRegCoefD(TestRegCoefC):
 
         m0 = model.fit(data_predict=X1)[0]
         m0 = np.reshape(m0, (n, 1))
-        zvec = np.zeros((n, 1))  # noqa:E741
+        zvec = np.zeros((n, 1))
         for i in dom_x[1:] :
             X1[:, self.test_vars] = i
             m1 = model.fit(data_predict=X1)[0]
             m1 = np.reshape(m1, (n, 1))
-            zvec += (m1 - m0) ** 2  # noqa:E741
+            zvec += (m1 - m0) ** 2
 
         avg = zvec.sum(axis=0) / float(n)
         return avg
