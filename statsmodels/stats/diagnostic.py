@@ -964,8 +964,7 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
 
     if store:
         res = ResultsStore()
-        res.__doc__ = "Test Results for Goldfeld-Quandt test of" \
-                      "heterogeneity"
+        res.__doc__ = "Test Results for Goldfeld-Quandt test of heterogeneity"
         res.fval = fval
         res.fpval = fpval
         res.df_fval = (resols2.df_resid, resols1.df_resid)

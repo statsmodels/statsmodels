@@ -21,8 +21,10 @@ if not PYTHON_IMPL_WASM:
 
 @pytest.mark.smoke
 def test_get_rdataset():
-    test_url = "https://raw.githubusercontent.com/vincentarelbundock/" \
-               "Rdatasets/master/csv/datasets/cars.csv"
+    test_url = (
+            "https://raw.githubusercontent.com/vincentarelbundock/"
+            "Rdatasets/master/csv/datasets/cars.csv"
+    )
     internet_available = check_internet(test_url)
     if not internet_available:  # pragma: no cover
         pytest.skip("Unable to retrieve file - skipping test")
@@ -46,11 +48,15 @@ def test_get_rdataset_write_read_cache():
     assert_(guerry.from_cache is False)
     guerry2 = get_rdataset("Guerry", "HistData", cache=CUR_DIR)
     assert_(guerry2.from_cache is True)
-    fn = "raw.githubusercontent.com,vincentarelbundock,Rdatasets,master,csv," \
-         "HistData,Guerry-v2.csv.zip"
+    fn = (
+        "raw.githubusercontent.com,vincentarelbundock,Rdatasets,master,csv,"
+        "HistData,Guerry-v2.csv.zip"
+    )
     os.remove(os.path.join(CUR_DIR, fn))
-    fn = "raw.githubusercontent.com,vincentarelbundock,Rdatasets,master,doc," \
-         "HistData,rst,Guerry-v2.rst.zip"
+    fn = (
+        "raw.githubusercontent.com,vincentarelbundock,Rdatasets,master,doc,"
+        "HistData,rst,Guerry-v2.rst.zip"
+    )
     os.remove(os.path.join(CUR_DIR, fn))
 
 
@@ -58,8 +64,10 @@ def test_webuse():
     # test copied and adjusted from iolib/tests/test_foreign
     from statsmodels.iolib.tests.results.macrodata import macrodata_result
     res2 = np.array([list(row) for row in macrodata_result])
-    base_gh = "https://github.com/statsmodels/statsmodels/raw/main/" \
-              "statsmodels/datasets/macrodata/"
+    base_gh = (
+        "https://github.com/statsmodels/statsmodels/raw/main/"
+        "statsmodels/datasets/macrodata/"
+    )
     internet_available = check_internet(base_gh)
     if not internet_available:  # pragma: no cover
         pytest.skip("Unable to retrieve file - skipping test")
@@ -75,8 +83,10 @@ def test_webuse_pandas():
     from statsmodels.compat.pandas import assert_frame_equal
     from statsmodels.datasets import macrodata
     dta = macrodata.load_pandas().data
-    base_gh = "https://github.com/statsmodels/statsmodels/raw/main/" \
-              "statsmodels/datasets/macrodata/"
+    base_gh = (
+        "https://github.com/statsmodels/statsmodels/raw/main/"
+        "statsmodels/datasets/macrodata/"
+    )
     internet_available = check_internet(base_gh)
     if not internet_available:  # pragma: no cover
         pytest.skip("Unable to retrieve file - skipping test")

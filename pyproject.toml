@@ -156,7 +156,7 @@ select = [
   "INT",
   # pylint
   "PL",
-##  # flake8-pytest-style
+  # flake8-pytest-style
   "PT",
   # misc lints
   "PIE",
@@ -165,7 +165,7 @@ select = [
   # tidy imports
   "TID",
   # implicit string concatenation
-#  "ISC",
+  "ISC",
   # flake8-type-checking
   "TC",
 #  # comprehensions
