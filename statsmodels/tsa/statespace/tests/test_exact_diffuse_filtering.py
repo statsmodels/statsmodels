@@ -731,7 +731,7 @@ class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
     # numerical errors (e.g. 1e10 is fine but 1e11 does not pass)
     approximate_diffuse_variance = 1e9
 
-    def test_smoothed_measurement_disturbance_cov(self, rtol_diffuse=None):
+    def test_smoothed_measurement_disturbance_cov(self):
         # Note: this test would fail here with most rtol, because
         # this is an example where the numerical errors associated with the
         # approximate method result in noticeable errors
@@ -740,6 +740,7 @@ class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
         #            [0.      , 4.221227]]])
         # y: array([[[ 3.355072, -0.600856],
         #            [-0.600856,  4.221227]]])
+        rtol_diffuse = None
         super().test_smoothed_measurement_disturbance_cov(
                 rtol_diffuse=rtol_diffuse)
 
@@ -775,7 +776,7 @@ class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
     # numerical errors (e.g. 1e11 does not pass)
     approximate_diffuse_variance = 1e10
 
-    def test_smoothed_state_cov(self, rtol_diffuse=None):
+    def test_smoothed_state_cov(self):
         # Note: this test would fail here with essentially any rtol, because
         # this is an example where the numerical errors associated with the
         # approximate method result in extreme errors: here a negative variance
@@ -785,6 +786,7 @@ class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
         # ...
         # y: array([[[-12.083676,   0.      ],
         #            [  0.      ,   0.      ]],
+        rtol_diffuse = None
         super().test_smoothed_state_cov(
             rtol_diffuse=rtol_diffuse)
 

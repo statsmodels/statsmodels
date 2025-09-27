@@ -143,12 +143,13 @@ def test_ols():
     assert_allclose(actual_bic, res_ols.bic)
 
 
-def test_glm(constraints=None):
+def test_glm():
     # More comprehensive tests against GLM estimates (this is sort of redundant
     # given `test_ols`, but this is mostly to complement the tests in
     # `test_glm_constrained`)
     endog = dta.infl
     exog = add_constant(dta[["unemp", "m1"]])
+    constraints = None
 
     mod = RecursiveLS(endog, exog, constraints=constraints)
     res = mod.fit()

@@ -172,16 +172,14 @@ select = [
   "C4",
   # pygrep-hooks
   "PGH",
-#  # Ruff-specific rules
-#  "RUF",
+  # Ruff-specific rules
+  # "RUF",
   # flake8-bandit: exec-builtin
   "S102",
   # Perflint
-  # "PERF",
+  "PERF",
   # flynt
   "FLY",
-  # flake8-logging-format (Not enabled)
-  # "G",
   # flake8-future-annotations
   "FA",
   # unconventional-import-alias
@@ -193,7 +191,13 @@ select = [
 ]
 
 ignore = [
-    "C408", "PT011","PT028","PT030",
+    "PERF401",
+  # Too many uses of dict(...) instread of {...}
+  # Would be goot enforce eventually
+  "C408",
+  # Too many places without match= in pytest raises and warns
+  # Would be goot enforce eventually
+  "PT011", "PT030",
   # Required to allow black formatting
   "E203",
   # E203: Whitespace before ':' (Needed for black)
@@ -214,10 +218,6 @@ ignore = [
   "PLW2901",
   # Use `typing.NamedTuple` instead of `collections.namedtuple`
   "PYI024",
-  # Use of possibly insecure function; consider using ast.literal_eval
-  "S307",
-  # while int | float can be shortened to float, the former is more explicit
-  "PYI041",
   # incorrect-dict-iterator, flags valid Series.items usage
   "PERF102",
   # try-except-in-loop, becomes useless in Python 3.11
@@ -315,6 +315,17 @@ ignore = [
   # runtime-cast-value
   "TC006",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# relative imports allowed for asv_bench
+"statsmodels/__init__.py" = ["PT028"]
+"statsmodels/tsa/vector_ar/var_model.py" = ["PT028"]
+"statsmodels/stats/rates.py" = ["PT028"]
+"statsmodels/stats/proportion.py" = ["PT028"]
+"statsmodels/stats/oneway.py" = ["PT028"]
+"statsmodels/stats/multivariate.py" = ["PT028"]
+"statsmodels/stats/diagnostic_gen.py" = ["PT028"]
+"statsmodels/discrete/_diagnostics_count.py" = ["PT028"]
 
 [tool.pytest.ini_options]
 minversion = "8.4.1"

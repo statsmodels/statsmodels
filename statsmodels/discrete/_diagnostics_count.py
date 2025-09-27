@@ -137,7 +137,7 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
     return fig
 
 
-def test_chisquare_prob(results, probs, bin_edges=None, method=None):
+def test_chisquare_prob(results, probs, bin_edges=None):
     """
     chisquare test for predicted probabilities using cmt-opg
 

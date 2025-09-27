@@ -203,7 +203,7 @@ class TestKDEMultivariate(KDETestBase):
         R_result = [0.0052051, 0.05835941]
         npt.assert_allclose(dens.bw, R_result, atol=1e-2)
 
-    def test_continuous_cdf(self, data_predict=None):
+    def test_continuous_cdf(self):
         dens = nparam.KDEMultivariate(data=[self.Italy_gdp, self.growth],
                                       var_type="cc", bw="cv_ml")
         sm_result = dens.cdf()[0:5]
@@ -211,7 +211,7 @@ class TestKDEMultivariate(KDETestBase):
                     0.513387712, 0.210985350]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
-    def test_mixeddata_cdf(self, data_predict=None):
+    def test_mixeddata_cdf(self):
         dens = nparam.KDEMultivariate(data=[self.Italy_gdp, self.oecd],
                                       var_type="cu", bw="cv_ml")
         sm_result = dens.cdf()[0:5]

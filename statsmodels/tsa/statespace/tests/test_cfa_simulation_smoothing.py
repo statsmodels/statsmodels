@@ -183,7 +183,7 @@ class TestUnobservedComponentsMissing(TestUnobservedComponents):
         super().setup_class(*args, missing=missing, **kwargs)
 
 
-def test_dfm(missing=None):
+def test_dfm():
     mod = dynamic_factor.DynamicFactor(dta, k_factors=2, factor_order=1)
     mod.update(mod.start_params)
     sim_cfa = mod.simulation_smoother(method="cfa")

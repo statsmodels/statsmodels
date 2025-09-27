@@ -135,7 +135,7 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
-    def test_continuous_mfx_ll_cvls(self, file_name="RegData.csv"):
+    def test_continuous_mfx_ll_cvls(self):
         nobs = 200
         np.random.seed(1234)
         C1 = np.random.normal(size=(nobs, ))
@@ -154,7 +154,7 @@ class TestKernelReg(KernelRegressionTestBase):
         sm_mean = sm_mean[0:5]
         npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=2e-1)
 
-    def test_mixed_mfx_ll_cvls(self, file_name="RegData.csv"):
+    def test_mixed_mfx_ll_cvls(self):
         nobs = 200
         np.random.seed(1234)
         ovals = np.random.binomial(2, 0.5, size=(nobs, ))
@@ -177,7 +177,7 @@ class TestKernelReg(KernelRegressionTestBase):
     @pytest.mark.slow
     @pytest.mark.xfail(reason="Test does not make much sense - always passes "
                               "with very small bw.")
-    def test_mfx_nonlinear_ll_cvls(self, file_name="RegData.csv"):
+    def test_mfx_nonlinear_ll_cvls(self):
         nobs = 200
         np.random.seed(1234)
         C1 = np.random.normal(size=(nobs,))

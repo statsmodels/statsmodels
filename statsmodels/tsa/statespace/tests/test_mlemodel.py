@@ -575,7 +575,7 @@ def check_results(pandas):
     assert_equal(res.loglikelihood_burn, 0)
 
 
-def test_results(pandas=False):
+def test_results():
     check_results(pandas=False)
     check_results(pandas=True)
 
