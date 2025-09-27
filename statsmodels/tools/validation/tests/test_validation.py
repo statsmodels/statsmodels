@@ -247,7 +247,7 @@ def test_wrap_pandas_append_non_string():
     assert wrapped.name == expected
 
     a = gen_data(2, True)
-    a.columns = [i for i in range(a.shape[1])]
+    a.columns = list(range(a.shape[1]))
     b = gen_data(2, False)
     wrapped = PandasWrapper(a).wrap(b, append="appended")
     expected = [f"{c}_appended" for c in a.columns]

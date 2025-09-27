@@ -20,7 +20,7 @@ def import_submodules(module: ModuleType):
     for loader, module_name, is_pkg in pkgutil.walk_packages(
         module.__path__, module.__name__ + "."
     ):
-        blacklisted = any([f".{bl}." in module_name for bl in BLACKLIST])
+        blacklisted = any(f".{bl}." in module_name for bl in BLACKLIST)
         if blacklisted:
             continue
         mod = importlib.import_module(module_name)

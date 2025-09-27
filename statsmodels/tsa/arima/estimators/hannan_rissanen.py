@@ -323,8 +323,8 @@ def _validate_fixed_params(fixed_params, spec_param_names):
 
     if len(invalid_param_names) > 0:
         raise ValueError(
-            f"Invalid fixed parameter(s): {sorted(list(invalid_param_names))}."
-            f" Please select among {sorted(list(valid_param_names))}."
+            f"Invalid fixed parameter(s): {sorted(invalid_param_names)}."
+            f" Please select among {sorted(valid_param_names)}."
         )
 
     return fixed_params

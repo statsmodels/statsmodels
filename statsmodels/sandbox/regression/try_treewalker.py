@@ -83,7 +83,7 @@ tree2 = (
     ],
 )
 
-data2 = dict([i for i in zip("abcdefgh", lrange(8), strict=False)])
+data2 = dict(list(zip("abcdefgh", lrange(8), strict=False)))
 # data2.update({'top':1000, 'B1':100, 'B2':200, 'B21':300,'B22':400, 'B3':400})
 data2.update({"top": 1000, "B1": 100, "B2": 200, "B21": 21, "B22": 22, "B3": 300})
 

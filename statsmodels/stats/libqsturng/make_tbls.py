@@ -384,94 +384,69 @@ q0999 = """\
 
 #                 [alpha keys]        [v keys]
 #                   [table values as lists of floats]
-T = dict(
-    [
-        (
-            0.100,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0100.split("\n")
-            },
-        ),
-        (
-            0.500,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0500.split("\n")
-            },
-        ),
-        (
-            0.675,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0675.split("\n")
-            },
-        ),
-        (
-            0.750,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0750.split("\n")
-            },
-        ),
-        (
-            0.800,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0800.split("\n")
-            },
-        ),
-        (
-            0.850,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0850.split("\n")
-            },
-        ),
-        (
-            0.900,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0900.split("\n")
-            },
-        ),
-        (
-            0.950,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0950.split("\n")
-            },
-        ),
-        (
-            0.975,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0975.split("\n")
-            },
-        ),
-        (
-            0.990,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0990.split("\n")
-            },
-        ),
-        (
-            0.995,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0995.split("\n")
-            },
-        ),
-        (
-            0.999,
-            {
-                float(L.split()[0]): lmap(float, L.split()[1:])
-                for L in q0999.split("\n")
-            },
-        ),
-    ]
-)
+T = {
+    0.100:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0100.split("\n")
+        },
+    0.500:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0500.split("\n")
+        },
+    0.675:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0675.split("\n")
+        },
+
+    0.750:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0750.split("\n")
+        },
+    0.800:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0800.split("\n")
+        },
+    0.850:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0850.split("\n")
+        },
+    0.900:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0900.split("\n")
+        },
+    0.950:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0950.split("\n")
+        },
+    0.975:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0975.split("\n")
+        },
+    0.990:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0990.split("\n")
+        },
+    0.995:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0995.split("\n")
+        },
+    0.999:
+        {
+            float(L.split()[0]): lmap(float, L.split()[1:])
+            for L in q0999.split("\n")
+        },
+}
 
 
 # This dict maps r values to the correct list index

@@ -118,5 +118,5 @@ def test_moment_conversion_types(func_name):
     assert (isinstance(func(np.array([1.0, 1, 0, 3])), list) or
             isinstance(func(np.array([1.0, 1, 0, 3])), (tuple, np.ndarray)))
 
-    assert (isinstance(func(tuple([1.0, 1, 0, 3])), list) or
+    assert (isinstance(func((1.0, 1, 0, 3)), list) or
             isinstance(func(np.array([1.0, 1, 0, 3])), (tuple, np.ndarray)))

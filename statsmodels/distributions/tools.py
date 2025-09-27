@@ -187,7 +187,7 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
     for _ in range(maxiter):
         pc0 = pc.copy()
         for ax in range(pc.ndim):
-            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            axs = tuple(i for i in range(pc.ndim) if not i == ax)
             pc0 /= pc.sum(axis=axs, keepdims=True)
         pc = pc0
         pc /= pc.sum()
@@ -195,7 +195,7 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
         # check convergence
         mptps = []
         for ax in range(pc.ndim):
-            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            axs = tuple(i for i in range(pc.ndim) if not i == ax)
             marg = pc.sum(axis=axs, keepdims=False)
             mptps.append(np.ptp(marg))
         if max(mptps) < tol:

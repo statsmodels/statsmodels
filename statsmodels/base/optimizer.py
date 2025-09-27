@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
-    extra = set(list(kwargs.keys())).difference(list(allowed))
+    extra = set(kwargs.keys()).difference(list(allowed))
     if extra:
         import warnings
 
@@ -1290,7 +1290,7 @@ def _fit_basinhopping(
         ("niter", "niter_success", "T", "stepsize", "interval", "minimizer", "seed"),
         "basinhopping",
     )
-    kwargs = {k: v for k, v in kwargs.items()}
+    kwargs = dict(kwargs.items())
     niter = kwargs.setdefault("niter", 100)
     niter_success = kwargs.setdefault("niter_success", None)
     T = kwargs.setdefault("T", 1.0)

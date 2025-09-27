@@ -529,7 +529,7 @@ class Description:
             The statistics of the categorical columns
         """
 
-        df = self._data.loc[:, [col for col in self._is_cat_like]]
+        df = self._data.loc[:, list(self._is_cat_like)]
         k = df.shape[1]
         cols = df.columns
         vc = {col: df[col].value_counts(normalize=True) for col in df}
@@ -591,7 +591,7 @@ class Description:
         stubs = [str(idx) for idx in df.index]
         data = []
         for _, row in df.iterrows():
-            data.append([v for v in row])
+            data.append(list(row))
 
         def _formatter(v):
             if isinstance(v, str):

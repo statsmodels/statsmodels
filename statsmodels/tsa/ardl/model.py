@@ -128,9 +128,9 @@ def _format_order(
         exog = array_like(exog, "exog", ndim=2, maxdim=2)
         keys = list(range(exog.shape[1]))
     else:
-        keys = [col for col in exog.columns]
+        keys = list(exog.columns)
     if order is None:
-        exog_order = {k: None for k in keys}
+        exog_order = dict.fromkeys(keys)
     elif isinstance(order, Mapping):
         exog_order = order
         missing = set(keys).difference(order.keys())
@@ -141,7 +141,7 @@ def _format_order(
                 "variable(s) that are not contained in exog"
             )
             msg += " Extra keys: "
-            msg += ", ".join(list(sorted([str(v) for v in extra]))) + "."
+            msg += ", ".join(sorted([str(v) for v in extra])) + "."
             raise ValueError(msg)
         if missing:
             msg = (
@@ -562,7 +562,7 @@ class ARDL(AutoReg):
             "fixed": self._fixed,
         }
         x = [self._deterministic_reg, self._endog_reg]
-        x += [ex for ex in self._exog.values()] + [self._fixed]
+        x += list(self._exog.values()) + [self._fixed]
         reg = np.column_stack(x)
         if hold_back is None:
             self._hold_back = int(self._maxlag)
@@ -1503,7 +1503,7 @@ def ardl_select_order(
         keys = [(None, i) for i in ar_lags]
         for k, v in base._order.items():
             keys += [(k, i) for i in v]
-        x = np.column_stack([a for a in select])
+        x = np.column_stack(list(select))
         all_columns = list(range(x.shape[1]))
         for i in range(x.shape[1]):
             for perm in combinations(all_columns, i):
@@ -1528,7 +1528,7 @@ def ardl_select_order(
         if val < lowest:
             lowest = val
             selected_order = key
-    exog_order = {k: v for k, v in selected_order[1:]}
+    exog_order = dict(selected_order[1:])
     model = ARDL(
         endog,
         selected_order[0],

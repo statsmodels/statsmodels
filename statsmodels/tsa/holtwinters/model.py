@@ -1417,7 +1417,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         formatted = [alpha, beta, gamma, lvls[0], b[0], phi]
         formatted += s[:m].tolist()
-        formatted = list(map(lambda v: np.nan if v is None else v, formatted))
+        formatted = [np.nan if v is None else v for v in formatted]
         formatted = np.array(formatted)
         if is_optimized is None:
             optimized = np.zeros(len(codes), dtype=bool)

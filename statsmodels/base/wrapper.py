@@ -16,7 +16,7 @@ class ResultsWrapper:
         self.__doc__ = results.__doc__
 
     def __dir__(self):
-        return [x for x in dir(self._results)]
+        return list(dir(self._results))
 
     def __getattribute__(self, attr):
         def get(name):

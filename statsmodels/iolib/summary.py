@@ -290,18 +290,18 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
     # create dictionary with default
     # use lambdas because some values raise exception if they are not available
-    default_items = dict([
-          ("Dependent Variable:", lambda: [yname]),
-          ("Dep. Variable:", lambda: [yname]),
-          ("Model:", lambda: [results.model.__class__.__name__]),
-          ("Date:", lambda: [date]),
-          ("Time:", lambda: time_of_day),
-          ("Number of Obs:", lambda: [results.nobs]),
-          ("No. Observations:", lambda: [d_or_f(results.nobs)]),
-          ("Df Model:", lambda: [d_or_f(results.df_model)]),
-          ("Df Residuals:", lambda: [d_or_f(results.df_resid)]),
-          ("Log-Likelihood:", lambda: ["%#8.5g" % results.llf])  # does not exist for RLM - exception
-    ])
+    default_items = {
+          "Dependent Variable:": lambda: [yname],
+          "Dep. Variable:": lambda: [yname],
+          "Model:": lambda: [results.model.__class__.__name__],
+          "Date:": lambda: [date],
+          "Time:": lambda: time_of_day,
+          "Number of Obs:": lambda: [results.nobs],
+          "No. Observations:": lambda: [d_or_f(results.nobs)],
+          "Df Model:": lambda: [d_or_f(results.df_model)],
+          "Df Residuals:": lambda: [d_or_f(results.df_resid)],
+          "Log-Likelihood:": lambda: ["%#8.5g" % results.llf]  # does not exist for RLM - exception
+    }
 
     if title is None:
         title = results.model.__class__.__name__ + "Regression Results"

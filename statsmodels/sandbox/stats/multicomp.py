@@ -1938,7 +1938,7 @@ def set_partition(ssli):
 
     """
     part = []
-    for s in sorted(list(set(ssli)), key=len)[::-1]:
+    for s in sorted(set(ssli), key=len)[::-1]:
         # print(s,
         s_ = set(s).copy()
         if not any(set(s_).intersection(set(t)) for t in part):
@@ -1974,7 +1974,7 @@ def set_remove_subs(ssli):
     """
     # TODO: maybe convert all tuples to sets immediately, but I do not need the extra efficiency
     part = []
-    for s in sorted(list(set(ssli)), key=lambda x: len(set(x)))[::-1]:
+    for s in sorted(set(ssli), key=lambda x: len(set(x)))[::-1]:
         # print(s,
         # s_ = set(s).copy()
         if not any(set(s).issubset(set(t)) for t in part):

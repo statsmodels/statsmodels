@@ -52,7 +52,7 @@ def pss_block(
     percentiles = [0.05]
     percentiles += [i / 10 for i in range(1, 10)]
     percentiles += [1 + i / 2 for i in range(18)]
-    percentiles += [i for i in range(10, 51)]
+    percentiles += list(range(10, 51))
     percentiles += [100 - v for v in percentiles]
     percentiles = sorted(set(percentiles))
     percentiles = np.asarray(percentiles)

@@ -3063,18 +3063,16 @@ class RegressionResults(base.LikelihoodModelResults):
         dw = durbin_watson(self.wresid)
         eigvals = self.eigenvals
         condno = self.condition_number
-        diagnostic = dict(
-            [
-                ("Omnibus:", "%.3f" % omni),
-                ("Prob(Omnibus):", "%.3f" % omnipv),
-                ("Skew:", "%.3f" % skew),
-                ("Kurtosis:", "%.3f" % kurtosis),
-                ("Durbin-Watson:", "%.3f" % dw),
-                ("Jarque-Bera (JB):", "%.3f" % jb),
-                ("Prob(JB):", "%.3f" % jbpv),
-                ("Condition No.:", "%.0f" % condno),
-            ]
-        )
+        diagnostic = {
+            "Omnibus:": "%.3f" % omni,
+            "Prob(Omnibus):": "%.3f" % omnipv,
+            "Skew:": "%.3f" % skew,
+            "Kurtosis:": "%.3f" % kurtosis,
+            "Durbin-Watson:": "%.3f" % dw,
+            "Jarque-Bera (JB):": "%.3f" % jb,
+            "Prob(JB):": "%.3f" % jbpv,
+            "Condition No.:": "%.0f" % condno,
+        }
 
         # Summary
         from statsmodels.iolib import summary2

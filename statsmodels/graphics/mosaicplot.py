@@ -152,7 +152,7 @@ def _categories_level(keys):
     res = []
     for i in zip(*(keys), strict=False):
         tuplefied = _tuplify(i)
-        res.append(list({j: None for j in tuplefied}))
+        res.append(list(dict.fromkeys(tuplefied)))
     return res
 
 
@@ -198,7 +198,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     """
     # this is the unit square that we are going to divide
 
-    base_rect = dict([(tuple(), (0, 0, 1, 1))])
+    base_rect = {(): (0, 0, 1, 1)}
     # get the list of each possible value for each level
 
     categories_levels = _categories_level(list(count_dict.keys()))

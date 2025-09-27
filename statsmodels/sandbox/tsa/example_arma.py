@@ -143,14 +143,13 @@ ma1 = [1.0, 0.4]
 ma2 = [1.0, 0.4, 0.6]
 ma0 = [1.0, 0.0]
 
-comparefn = dict(
-    [
-        ("ma1", acovf_ma1),
-        ("ma2", acovf_ma2),
-        ("arma11", acovf_arma11),
-        ("ar1", acovf_arma11),
-    ]
-)
+comparefn = {
+    "ma1": acovf_ma1,
+    "ma2": acovf_ma2,
+    "arma11": acovf_arma11,
+    "ar1": acovf_arma11,
+}
+
 
 cases = [
     ("ma1", (ar0, ma1)),

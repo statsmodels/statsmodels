@@ -76,7 +76,7 @@ class BernsteinDistribution:
         c, e = np.histogramdd(data, bins=bins, density=False)
         # TODO: check when we have zero observations, which bin?
         # check bins start at 0 exept leading bin
-        assert all([ei[1] == 0 for ei in e])
+        assert all(ei[1] == 0 for ei in e)
         c /= len(data)
 
         cdf_grid = prob2cdf_grid(c)

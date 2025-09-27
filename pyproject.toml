@@ -168,8 +168,8 @@ select = [
   "ISC",
   # flake8-type-checking
   "TC",
-#  # comprehensions
-#  "C4",
+  # comprehensions
+  "C4",
   # pygrep-hooks
   "PGH",
 #  # Ruff-specific rules
@@ -193,7 +193,7 @@ select = [
 ]
 
 ignore = [
-    "PT011","PT028","PT030",
+    "C408", "PT011","PT028","PT030",
   # Required to allow black formatting
   "E203",
   # E203: Whitespace before ':' (Needed for black)

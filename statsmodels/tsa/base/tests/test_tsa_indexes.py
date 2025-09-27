@@ -112,7 +112,7 @@ unsupported_indexes = [
     # Float indexes, even if they increment from zero
     (np.arange(nobs) * 1.0, None),
     # Non-date-string indexes
-    ([x for x in "abcde"], None),
+    (list("abcde"), None),
     # Non-date-object indexes
     ([str, 1, "a", -30.1, {}], None),
 ]

@@ -588,7 +588,7 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
                                  scalar=True)
         eye = np.eye(len(res.params))
 
-        c_single = [row for row in eye]
+        c_single = list(eye)
         c_weight = eye[2:6]
         c_duration = eye[[1, 4, 5]]
 

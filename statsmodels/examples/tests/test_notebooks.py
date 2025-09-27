@@ -52,7 +52,7 @@ NOTEBOOK_DIR = os.path.abspath(NOTEBOOK_DIR)
 nbs = sorted(glob.glob(os.path.join(NOTEBOOK_DIR, "*.ipynb")))
 
 if nbs:
-    ids = list(map(lambda p: os.path.split(p)[-1], nbs))
+    ids = [os.path.split(p)[-1] for p in nbs]
 
     @pytest.fixture(params=nbs, ids=ids)
     def notebook(request):

@@ -170,7 +170,7 @@ class DeterministicTerm(ABC):
             oth_attr = other._eq_attr
             if len(own_attr) != len(oth_attr):
                 return False
-            return all([a == b for a, b in zip(own_attr, oth_attr, strict=False)])
+            return all(a == b for a, b in zip(own_attr, oth_attr, strict=False))
         else:
             return False
 

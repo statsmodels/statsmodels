@@ -518,7 +518,7 @@ class TestDetrend:
 
     def test_detrend_dataframe(self):
         columns = ["one", "two"]
-        index = [c for c in "abcde"]
+        index = list("abcde")
         data = pd.DataFrame(self.data_2d, columns=columns, index=index)
 
         detrended = tools.detrend(data, order=1, axis=0)

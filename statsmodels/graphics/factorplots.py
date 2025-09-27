@@ -119,7 +119,7 @@ def interaction_plot(
 
     x_values = x_levels = None
     if isinstance(x[0], str):
-        x_levels = [val for val in np.unique(x)]
+        x_levels = np.unique(x).tolist()
         x_values = lrange(len(x_levels))
         x = _recode(x, dict(zip(x_levels, x_values, strict=False)))
 

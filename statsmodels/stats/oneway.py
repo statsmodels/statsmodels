@@ -666,7 +666,7 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
         # uniques = None  # not used yet, add to info?
         pass
     args = list(map(np.asarray, data))
-    if any([x.ndim != 1 for x in args]):
+    if any(x.ndim != 1 for x in args):
         raise ValueError("data arrays have to be one-dimensional")
 
     nobs = np.array([len(x) for x in args], float)
