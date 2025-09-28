@@ -147,7 +147,7 @@ select = [
   # flake8-2020
   "YTT",
   # flake8-bugbear
-#  "B",
+  "B",
   # flake8-quotes
   "Q",
   # flake8-debugger

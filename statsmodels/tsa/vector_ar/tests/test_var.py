@@ -228,10 +228,13 @@ class CheckFEVD:
 
     @pytest.mark.matplotlib
     def test_fevd_plot(self, close_figures):
-        self.fevd.plot()
+        import matplotlib.pyplot as plt
+
+        assert isinstance(self.fevd.plot(), plt.Figure)
 
     def test_fevd_repr(self):
-        self.fevd
+        assert hasattr(self.fevd, "plot")
+        assert hasattr(self.fevd, "cov")
 
     def test_fevd_summary(self):
         self.fevd.summary()
@@ -298,7 +301,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
     @pytest.mark.smoke
     def test_cov_params(self):
         # do nothing for now
-        self.res.cov_params
+        assert isinstance(self.res.cov_params(), np.ndarray)
 
     @pytest.mark.smoke
     def test_cov_ybar(self):
@@ -306,11 +309,11 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     @pytest.mark.smoke
     def test_tstat(self):
-        self.res.tvalues
+        assert isinstance(self.res.tvalues, np.ndarray)
 
     @pytest.mark.smoke
     def test_pvalues(self):
-        self.res.pvalues
+        assert isinstance(self.res.pvalues, np.ndarray)
 
     @pytest.mark.smoke
     def test_summary(self):

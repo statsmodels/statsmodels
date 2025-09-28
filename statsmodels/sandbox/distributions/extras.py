@@ -178,7 +178,7 @@ class ACSkewT_gen(distributions.rv_continuous):
     # """                               )
 
     def _argcheck(self, df, alpha):
-        return np.isnan(alpha) * (df > 0)
+        return ~np.isnan(alpha) * (df > 0)
 
     #    def _arg_check(self, alpha):
     #        return np.where(alpha>=0, 0, 1)

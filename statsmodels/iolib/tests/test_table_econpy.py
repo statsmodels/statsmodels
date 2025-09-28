@@ -54,8 +54,11 @@ tbl = SimpleTable(
 
 
 def custom_labeller(cell):
-    if np.isnan(cell.data):
-        return "missing"
+    try:
+        if np.isnan(cell.data):
+            return "missing"
+    except TypeError:
+        pass
 
 
 class TestCell:

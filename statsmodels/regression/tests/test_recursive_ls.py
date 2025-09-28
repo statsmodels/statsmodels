@@ -143,7 +143,8 @@ def test_ols():
     assert_allclose(actual_bic, res_ols.bic)
 
 
-def test_glm():
+@pytest.mark.parametrize("constraints", [None, "m1 + unemp = 1"], ids=["No constraint", "Constrained"])
+def test_glm(constraints):
     # More comprehensive tests against GLM estimates (this is sort of redundant
     # given `test_ols`, but this is mostly to complement the tests in
     # `test_glm_constrained`)
@@ -237,10 +238,6 @@ def test_glm():
     # See gh#1733 for details on why the BIC does not match while AIC does
     # actual_bic = bic(llf_alternative, res.nobs_effective, res.df_model)
     # assert_allclose(actual_bic, res_glm.bic)
-
-
-def test_glm_constrained():
-    test_glm(constraints="m1 + unemp = 1")
 
 
 def test_filter():

@@ -39,7 +39,7 @@ results_menenez = [
     (TukeyQuartic(k=2), [3.8827, 4.6851, 5.9207, 7.0414]),  # biweight
     (StudentT(df=1), [1.7249, 2.3849, 3.3962, 4.2904]),  # Cauchy
     (AndrewWave(), [1.1117, 1.338, 1.6930, 2.0170]),
-    # (Hampel(), [4.4209, 5.4, 7.00609, 8.0456]),
+    # (Hampel(), [4.4209, 5.4, 7.00609, 8.0456]),ru
     # rounding problem in Hampel, menenez use a as tuning parameter
     (Hampel(), [4.4208, 5.5275, 7.006, 8.0456]),
     (TrimmedMean(), [2.5003, 2.7955, 3.1365, 3.3682]),
