@@ -231,8 +231,6 @@ ignore = [
   "PT012",
   # pytest-fixture-param-without-value
   "PT019",
-  # The following rules may cause conflicts when used with the formatter:
-  # "ISC001",
   # if-stmt-min-max
   "PLR1730",
 
@@ -240,7 +238,7 @@ ignore = [
   # Magic number
   "PLR2004",
   # collection-literal-concatenation
-  "RUF005",
+  # "RUF005",
   # pairwise-over-zipped
   "RUF007",
   # mutable-class-default
