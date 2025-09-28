@@ -227,16 +227,10 @@ ignore = [
   "PERF203",
   # pytest-parametrize-names-wrong-type
   "PT006",
-  # pytest-parametrize-values-wrong-type
-  # "PT007",
-  # pytest-patch-with-lambda
-  "PT008",
   # pytest-raises-with-multiple-statements
   "PT012",
-  # pytest-assert-in-except
-  "PT017",
   # pytest-composite-assertion
-  "PT018",
+  # "PT018",
   # pytest-fixture-param-without-value
   "PT019",
   # The following rules may cause conflicts when used with the formatter:

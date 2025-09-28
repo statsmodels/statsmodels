@@ -246,7 +246,8 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
         toggles return of gradient
     """
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method=rotation_method)
     p, k = L.shape
     L2 = L**2
@@ -310,7 +311,8 @@ def orthomax_objective(L=None, A=None, T=None, gamma=0, return_gradient=True):
     """
     assert 0 <= gamma <= 1, "Gamma should be between 0 and 1"
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method="orthogonal")
     p, k = L.shape
     L2 = L**2
@@ -393,7 +395,8 @@ def CF_objective(L=None, A=None, T=None, kappa=0,
     """
     assert 0 <= kappa <= 1, "Kappa should be between 0 and 1"
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method=rotation_method)
     p, k = L.shape
     L2 = L**2
@@ -458,7 +461,8 @@ def vgQ_target(H, L=None, A=None, T=None, rotation_method="orthogonal"):
         should be one of {orthogonal, oblique}
     """
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method=rotation_method)
     q = np.linalg.norm(L-H, "fro")**2
     Gq = 2*(L-H)
@@ -501,7 +505,8 @@ def ff_target(H, L=None, A=None, T=None, rotation_method="orthogonal"):
         should be one of {orthogonal, oblique}
     """
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method=rotation_method)
     return np.linalg.norm(L-H, "fro")**2
 
@@ -547,7 +552,8 @@ def vgQ_partial_target(H, W=None, L=None, A=None, T=None):
     if W is None:
         return vgQ_target(H, L=L, A=A, T=T)
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method="orthogonal")
     q = np.linalg.norm(W*(L-H), "fro")**2
     Gq = 2*W*(L-H)
@@ -589,7 +595,8 @@ def ff_partial_target(H, W=None, L=None, A=None, T=None):
     if W is None:
         return ff_target(H, L=L, A=A, T=T)
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method="orthogonal")
     q = np.linalg.norm(W*(L-H), "fro")**2
     return q

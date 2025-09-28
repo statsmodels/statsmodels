@@ -208,12 +208,10 @@ def test_ols_det_terms():
             det_key_ref = "Deterministic term"
             # If there are no det. terms, just make sure we do not compute any:
             if det_key_ref not in results_ref[ds][dt_s]["est"].keys():
-                assert (
-                    results_sm[ds][dt_s].coefs_exog.size == 0
-                    and results_sm[ds][dt_s].stderr_dt.size == 0
-                    and results_sm[ds][dt_s].tvalues_dt.size == 0
-                    and results_sm[ds][dt_s].pvalues_dt.size == 0
-                ), err_msg
+                assert results_sm[ds][dt_s].coefs_exog.size == 0, err_msg
+                assert results_sm[ds][dt_s].stderr_dt.size == 0, err_msg
+                assert results_sm[ds][dt_s].tvalues_dt.size == 0, err_msg
+                assert results_sm[ds][dt_s].pvalues_dt.size == 0, err_msg
 
                 continue
             obtained = results_sm[ds][dt_s].coefs_exog
