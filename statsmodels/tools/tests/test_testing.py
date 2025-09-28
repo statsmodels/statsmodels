@@ -6,7 +6,7 @@ from statsmodels.tools.testing import Holder, MarginTableTestBunch, ParamsTableT
 
 @pytest.mark.parametrize(
     "attribute, bunch_type",
-    (("params_table", ParamsTableTestBunch), ("margins_table", MarginTableTestBunch)),
+    [("params_table", ParamsTableTestBunch), ("margins_table", MarginTableTestBunch)],
 )
 def check_params_table_classes(attribute, bunch_type):
     table = np.empty((10, 4))

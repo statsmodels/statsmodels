@@ -228,7 +228,7 @@ ignore = [
   # pytest-parametrize-names-wrong-type
   "PT006",
   # pytest-parametrize-values-wrong-type
-  "PT007",
+  # "PT007",
   # pytest-patch-with-lambda
   "PT008",
   # pytest-raises-with-multiple-statements

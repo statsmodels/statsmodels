@@ -88,10 +88,10 @@ def test_testers(p, tester, method):
 @pytest.mark.slow
 @pytest.mark.parametrize("method", ["equi", "sdp"])
 @pytest.mark.parametrize("tester,n,p,es", [
-    [kr.CorrelationEffects(), 300, 100, 6],
-    [kr.ForwardEffects(pursuit=False), 300, 100, 3.5],
-    [kr.ForwardEffects(pursuit=True), 300, 100, 3.5],
-    [kr.OLSEffects(), 3000, 200, 3.5],
+    (kr.CorrelationEffects(), 300, 100, 6),
+    (kr.ForwardEffects(pursuit=False), 300, 100, 3.5),
+    (kr.ForwardEffects(pursuit=True), 300, 100, 3.5),
+    (kr.OLSEffects(), 3000, 200, 3.5),
 ])
 def test_sim(method, tester, n, p, es):
     # This function assesses the performance of the knockoff approach

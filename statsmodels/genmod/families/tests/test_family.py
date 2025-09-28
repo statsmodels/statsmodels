@@ -120,7 +120,7 @@ def test_family_link_check(family, links):
 
 
 @pytest.mark.skipif(SP_LT_17, reason="Scipy too old, function not available")
-@pytest.mark.parametrize("power", (1.1, 1.5, 1.9))
+@pytest.mark.parametrize("power", [1.1, 1.5, 1.9])
 def test_tweedie_loglike_obs(power):
     """Test that Tweedie loglike is normalized to 1."""
     tweedie = Tweedie(var_power=power, eql=False)

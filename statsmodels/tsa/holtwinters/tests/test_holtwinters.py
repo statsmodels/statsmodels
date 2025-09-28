@@ -776,7 +776,7 @@ class TestHoltWinters:
 
 
 @pytest.mark.parametrize(
-    "trend_seasonal", (("mul", None), (None, "mul"), ("mul", "mul"))
+    "trend_seasonal", [("mul", None), (None, "mul"), ("mul", "mul")]
 )
 def test_negative_multipliative(trend_seasonal):
     trend, seasonal = trend_seasonal
@@ -797,7 +797,7 @@ def test_dampen_no_trend(seasonal):
         )
 
 
-@pytest.mark.parametrize("seasonal", ("add", "mul"))
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
 def test_invalid_seasonal(seasonal):
     y = pd.Series(
         -np.ones(100), index=pd.date_range("2000-1-1", periods=100, freq="MS")
@@ -1481,8 +1481,8 @@ def simulate_fit_state_r():
 
 @pytest.mark.parametrize("trend", TRENDS)
 @pytest.mark.parametrize("seasonal", SEASONALS)
-@pytest.mark.parametrize("damped", (True, False))
-@pytest.mark.parametrize("error", ("add", "mul"))
+@pytest.mark.parametrize("damped", [True, False])
+@pytest.mark.parametrize("error", ["add", "mul"])
 def test_simulate_expected_r(
     trend,
     seasonal,

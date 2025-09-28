@@ -370,7 +370,7 @@ def test_perfect_const(perfect_fit_data, norm):
     assert_allclose(res.params, np.array([3.2, 0, 0]), atol=1e-8)
 
 
-@pytest.mark.parametrize("conv", ("weights", "coefs", "sresid"))
+@pytest.mark.parametrize("conv", ["weights", "coefs", "sresid"])
 def test_alt_criterion(conv):
     data = load_stackloss()
     data.exog = sm.add_constant(data.exog, prepend=False)
