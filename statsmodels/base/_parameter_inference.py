@@ -389,7 +389,7 @@ def gbic(results, gbicp=False):
     ----------
     Lv, Jinchi, and Jun S. Liu. 2014. "Model Selection Principles in
     Misspecified Models." Journal of the Royal Statistical Society.
-    Series B (Statistical Methodology) 76 (1): 141–67.
+    Series B (Statistical Methodology) 76 (1): 141-67.
 
     """
     self = getattr(results, "_results", results)

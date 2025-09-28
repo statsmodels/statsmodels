@@ -1,5 +1,8 @@
-__all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson",
-           "ZeroInflatedNegativeBinomialP"]
+__all__ = [
+    "ZeroInflatedGeneralizedPoisson",
+    "ZeroInflatedNegativeBinomialP",
+    "ZeroInflatedPoisson",
+]
 
 from statsmodels.compat.pandas import Appender
 

@@ -378,7 +378,7 @@ def confint_noncentrality(f_stat, df, alpha=0.05,
     ----------
     .. [1] Steiger, James H. 2004. “Beyond the F Test: Effect Size Confidence
        Intervals and Tests of Close Fit in the Analysis of Variance and
-       Contrast Analysis.” Psychological Methods 9 (2): 164–82.
+       Contrast Analysis.” Psychological Methods 9 (2): 164-82.
        https://doi.org/10.1037/1082-989X.9.2.164.
 
     See Also
@@ -652,11 +652,11 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
     ----------
     Brown, Morton B., and Alan B. Forsythe. 1974. “The Small Sample Behavior
     of Some Statistics Which Test the Equality of Several Means.”
-    Technometrics 16 (1) (February 1): 129–132. doi:10.2307/1267501.
+    Technometrics 16 (1) (February 1): 129-132. doi:10.2307/1267501.
 
     Mehrotra, Devan V. 1997. “Improving the Brown-Forsythe Solution to the
     Generalized Behrens-Fisher Problem.” Communications in Statistics -
-    Simulation and Computation 26 (3): 1139–1145.
+    Simulation and Computation 26 (3): 1139-1145.
     doi:10.1080/03610919708813431.
     """
     if groups is not None:
@@ -754,12 +754,12 @@ def equivalence_oneway_generic(f_stat, n_groups, nobs, equiv_margin, df,
 
     Cribbie, Robert A., Chantal A. Arpin-Cribbie, and Jamie A. Gruman. 2009.
     “Tests of Equivalence for One-Way Independent Groups Designs.” The Journal
-    of Experimental Education 78 (1): 1–13.
+    of Experimental Education 78 (1): 1-13.
     https://doi.org/10.1080/00220970903224552.
 
     Jan, Show-Li, and Gwowen Shieh. 2019. “On the Extended Welch Test for
     Assessing Equivalence of Standardized Means.” Statistics in
-    Biopharmaceutical Research 0 (0): 1–8.
+    Biopharmaceutical Research 0 (0): 1-8.
     https://doi.org/10.1080/19466315.2019.1654915.
 
     """

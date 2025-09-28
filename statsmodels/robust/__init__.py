@@ -1,7 +1,7 @@
 """
 Robust statistical models
 """
-__all__ = ["norms", "mad", "Huber", "HuberScale", "hubers_scale", "test"]
+__all__ = ["Huber", "HuberScale", "hubers_scale", "mad", "norms", "test"]
 from . import norms
 from .scale import mad, Huber, HuberScale, hubers_scale
 

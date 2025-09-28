@@ -35,7 +35,7 @@ Ref:
 Lilliefors, H.W.
 On the Kolmogorov-Smirnov test for the exponential distribution with mean
 unknown. Journal of the American Statistical Association, Vol 64, No. 325.
-(1969), pp. 387–389.
+(1969), pp. 387-389.
 """
 
 from functools import partial

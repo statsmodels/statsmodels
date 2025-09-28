@@ -19,7 +19,7 @@ from multiprocessing import Pool
 
 from . import utils
 
-__all__ = ["hdrboxplot", "fboxplot", "rainbowplot", "banddepth"]
+__all__ = ["banddepth", "fboxplot", "hdrboxplot", "rainbowplot"]
 
 
 class HdrResults:

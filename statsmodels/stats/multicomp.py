@@ -4,10 +4,10 @@ Created on Fri Mar 30 18:27:25 2012
 Author: Josef Perktold
 """
 
-from statsmodels.sandbox.stats.multicomp import (  # noqa:F401
+from statsmodels.sandbox.stats.multicomp import (
     tukeyhsd, MultiComparison)
 
-__all__ = ["tukeyhsd", "MultiComparison"]
+__all__ = ["MultiComparison", "tukeyhsd"]
 
 
 def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var="equal"):

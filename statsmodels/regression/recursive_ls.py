@@ -113,8 +113,7 @@ class RecursiveLS(MLEModel):
         # Remove some formula-specific kwargs
         formula_kwargs = ["missing", "missing_idx", "formula", "model_spec"]
         for name in formula_kwargs:
-            if name in kwargs:
-                del kwargs[name]
+            kwargs.pop(name, None)
 
         # Initialize the state space representation
         super().__init__(

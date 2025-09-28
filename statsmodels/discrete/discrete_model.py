@@ -17,14 +17,14 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
 
 __all__ = [
-    "Poisson",
+    "CountModel",
+    "GeneralizedPoisson",
     "Logit",
-    "Probit",
     "MNLogit",
     "NegativeBinomial",
-    "GeneralizedPoisson",
     "NegativeBinomialP",
-    "CountModel",
+    "Poisson",
+    "Probit",
 ]
 
 from statsmodels.compat.pandas import Appender

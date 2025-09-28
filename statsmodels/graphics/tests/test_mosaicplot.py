@@ -13,7 +13,7 @@ from statsmodels.api import datasets
 # utilities for the tests
 
 try:
-    import matplotlib.pyplot as plt  # noqa:F401
+    import matplotlib.pyplot as plt
 except ImportError:
     pass
 

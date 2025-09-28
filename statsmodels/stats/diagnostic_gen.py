@@ -155,7 +155,7 @@ def prob_larger_ordinal_choice(prob):
     References
     ----------
     .. [2] Li, Chun, and Bryan E. Shepherd. 2012. “A New Residual for Ordinal
-       Outcomes.” Biometrika 99 (2): 473–80.
+       Outcomes.” Biometrika 99 (2): 473-80.
 
     See Also
     --------

@@ -173,7 +173,7 @@ select = [
   # pygrep-hooks
   "PGH",
   # Ruff-specific rules
-  # "RUF",
+  "RUF",
   # flake8-bandit: exec-builtin
   "S102",
   # Perflint
@@ -191,16 +191,23 @@ select = [
 ]
 
 ignore = [
-    "RUF002",
-    "RUF010",
-    "RUF021",
+    "RUF001", # 28
+    "RUF013", # Enable when Py 3.10 is min
+    "RUF059", # 319
+    "RUF015", # 4
+    "RUF046", # 3
+    "RUF043", # 17
+    "RUF002", # Do Not Enable
+    "RUF010", # 9
+    "RUF021", # 5
     "PERF401",
   # Too many uses of dict(...) instread of {...}
-  # Would be goot enforce eventually
+  # Would be good enforce eventually
   "C408",
   # Too many places without match= in pytest raises and warns
   # Would be goot enforce eventually
-  "PT011", "PT030",
+   "PT011", # 511
+    "PT030", # 21
   # Required to allow black formatting
   "E203",
   # E203: Whitespace before ':' (Needed for black)
@@ -210,17 +217,17 @@ ignore = [
   # E701: Multiple statements on one line (colon) (Needed for black)
   ### Intentionally disabled
   # Too many arguments to function call
-  "PLR0913",
+  "PLR0913", # 635
   # Too many returns
-  "PLR0911",
+  "PLR0911", # 11
   # Too many branches
-  "PLR0912",
+  "PLR0912", # 217
   # Too many statements
-  "PLR0915",
+  "PLR0915", # 220
   # Redefined loop name
-  "PLW2901",
+  "PLW2901", # 55
   # Use `typing.NamedTuple` instead of `collections.namedtuple`
-  "PYI024",
+  # "PYI024",
   # incorrect-dict-iterator, flags valid Series.items usage
   "PERF102",
   # try-except-in-loop, becomes useless in Python 3.11
@@ -237,38 +244,18 @@ ignore = [
   ### TODO: Enable gradually
   # Magic number
   "PLR2004",
+  # collection-literal-concatenation
+  "RUF005",
   # pairwise-over-zipped
-  # "RUF007",
+  "RUF007",
   # mutable-class-default
   "RUF012",
   # repeated-equality-comparison
-  # TODO: Enable
-  "PLR1714",
+  "PLR1714", # 28
   # Object does not implement `__hash__` method
-  "PLW1641", # 2 errors
+  "PLW1641", # 2
   # import-outside-toplevel
-  "PLC0415",
-  # too-many-public-methods
-  "PLR0904",
-  # too-many-return-statements
-  "PLR0911",
-  # too-many-branches
-  "PLR0912",
-  # too-many-arguments
-  "PLR0913",
-  # too-many-locals
-  "PLR0914",
-  # too-many-statements
-  "PLR0915",
-  # too-many-boolean-expressions
-  "PLR0916",
-  # too-many-nested-blocks
-  "PLR1702",
-  # redefined-argument-from-local
-  "PLR1704",
-  # unnecessary-lambda
-  "PLW0108",
-
+  "PLC0415", # 835 (Do not enable)
 ]
 
 [tool.ruff.lint.per-file-ignores]

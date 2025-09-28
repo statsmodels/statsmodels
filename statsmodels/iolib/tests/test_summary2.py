@@ -67,7 +67,7 @@ R-squared Adj. 0.7   0.5
 ==========================
 Standard errors in
 parentheses.
-"""  # noqa:W291
+"""
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
         y1 = [6, 4, 2, 7, 4]
@@ -195,7 +195,7 @@ religious FE           Yes     Yes
 R-squared      0.01    0.02    0.03
 R-squared Adj. 0.01    0.02    0.02
 ======================================
-Standard errors in parentheses."""  # noqa:W291
+Standard errors in parentheses."""
 
         desired2 = r"""
 ========================================
@@ -217,7 +217,7 @@ occupation FE              Yes    Yes
 R-squared           0.01   0.02   0.03
 R-squared Adj.      0.01   0.02   0.02
 ========================================
-Standard errors in parentheses."""  # noqa:W291
+Standard errors in parentheses."""
 
         from statsmodels.datasets.fair import load_pandas
 

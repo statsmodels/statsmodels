@@ -39,10 +39,10 @@ else:
 
 __all__ = [
     "ArrayLike",
-    "DTypeLike",
-    "Float64Array",
     "ArrayLike1D",
     "ArrayLike2D",
+    "DTypeLike",
+    "Float64Array",
     "NDArray",
     "NumericArray",
 ]

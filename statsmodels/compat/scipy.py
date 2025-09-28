@@ -136,14 +136,14 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
 
 
 __all__ = [
-    "SP_VERSION",
-    "SP_LT_15",
     "SCIPY_GT_14",
+    "SP_LT_15",
     "SP_LT_16",
     "SP_LT_17",
     "SP_LT_19",
     "SP_LT_115",
     "SP_LT_116",
-    "multivariate_t",
+    "SP_VERSION",
     "apply_where",
+    "multivariate_t",
 ]

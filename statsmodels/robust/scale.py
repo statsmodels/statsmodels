@@ -663,7 +663,7 @@ def scale_tau(
     ----------
     .. [1] Maronna, Ricardo A, and Ruben H Zamar. “Robust Estimates of Location
        and Dispersion for High-Dimensional Datasets.” Technometrics 44, no. 4
-       (November 1, 2002): 307–17. https://doi.org/10.1198/004017002188618509.
+       (November 1, 2002): 307-17. https://doi.org/10.1198/004017002188618509.
     """
 
     x = np.asarray(data)

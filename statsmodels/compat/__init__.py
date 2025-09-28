@@ -11,13 +11,13 @@ from .python import (
 )
 
 __all__ = [
-    "asunicode",
     "asbytes",
     "asstr",
+    "asunicode",
+    "lfilter",
+    "lmap",
     "lrange",
     "lzip",
-    "lmap",
-    "lfilter",
     "test",
 ]
 

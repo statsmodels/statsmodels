@@ -79,11 +79,11 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
     ----------
     .. [1] Boudt, Kris, Jonathan Cornelissen, and Christophe Croux. “The
        Gaussian Rank Correlation Estimator: Robustness Properties.”
-       Statistics and Computing 22, no. 2 (April 5, 2011): 471–83.
+       Statistics and Computing 22, no. 2 (April 5, 2011): 471-83.
        https://doi.org/10.1007/s11222-011-9237-0.
     .. [2] Croux, Christophe, and Catherine Dehon. “Influence Functions of the
        Spearman and Kendall Correlation Measures.”
-       Statistical Methods & Applications 19, no. 4 (May 12, 2010): 497–515.
+       Statistical Methods & Applications 19, no. 4 (May 12, 2010): 497-515.
        https://doi.org/10.1007/s10260-010-0142-z.
 
     """
@@ -191,7 +191,7 @@ def corr_normal_scores(data):
     ----------
     .. [1] Boudt, Kris, Jonathan Cornelissen, and Christophe Croux. “The
        Gaussian Rank Correlation Estimator: Robustness Properties.”
-       Statistics and Computing 22, no. 2 (April 5, 2011): 471–83.
+       Statistics and Computing 22, no. 2 (April 5, 2011): 471-83.
        https://doi.org/10.1007/s11222-011-9237-0.
     """
     # TODO: a full version should be same as scipy spearmanr
@@ -226,7 +226,7 @@ def corr_quadrant(data, transform=np.sign, normalize=False):
     ----------
     .. [1] Croux, Christophe, and Catherine Dehon. “Influence Functions of the
        Spearman and Kendall Correlation Measures.”
-       Statistical Methods & Applications 19, no. 4 (May 12, 2010): 497–515.
+       Statistical Methods & Applications 19, no. 4 (May 12, 2010): 497-515.
        https://doi.org/10.1007/s10260-010-0142-z.
     """
 

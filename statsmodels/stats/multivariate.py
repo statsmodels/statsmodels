@@ -282,7 +282,7 @@ def test_cov(cov, nobs, cov_null):
     ----------
     Bartlett, M. S. 1954. “A Note on the Multiplying Factors for Various Χ2
     Approximations.” Journal of the Royal Statistical Society. Series B
-    (Methodological) 16 (2): 296–98.
+    (Methodological) 16 (2): 296-98.
 
     Rencher, Alvin C., and William F. Christensen. 2012. Methods of
     Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and
@@ -346,7 +346,7 @@ def test_cov_spherical(cov, nobs):
     ----------
     Bartlett, M. S. 1954. “A Note on the Multiplying Factors for Various Χ2
     Approximations.” Journal of the Royal Statistical Society. Series B
-    (Methodological) 16 (2): 296–98.
+    (Methodological) 16 (2): 296-98.
 
     Rencher, Alvin C., and William F. Christensen. 2012. Methods of
     Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and

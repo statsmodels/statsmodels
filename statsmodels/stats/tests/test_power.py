@@ -25,7 +25,7 @@ from statsmodels.stats.tests.test_weightstats import Holder
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 try:
-    import matplotlib.pyplot as plt  # noqa:F401
+    import matplotlib.pyplot as plt
 except ImportError:
     pass
 

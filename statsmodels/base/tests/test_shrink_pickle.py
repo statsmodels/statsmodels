@@ -15,7 +15,7 @@ import pandas as pd
 import statsmodels.api as sm
 
 # log used in TestPickleFormula5
-log = np.log  # noqa: F841
+log = np.log
 
 
 def check_pickle(obj):

@@ -24,17 +24,17 @@ if TYPE_CHECKING:
     from statsmodels.tools.typing import NDArray
 
 __all__ = [
-    "lagmat",
-    "lagmat2ds",
     "add_trend",
+    "commutation_matrix",
     "duplication_matrix",
     "elimination_matrix",
-    "commutation_matrix",
-    "vec",
-    "vech",
+    "freq_to_period",
+    "lagmat",
+    "lagmat2ds",
     "unvec",
     "unvech",
-    "freq_to_period",
+    "vec",
+    "vech",
 ]
 
 

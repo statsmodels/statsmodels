@@ -10,7 +10,7 @@ from statsmodels.tools.tools import add_constant
 
 from . import utils
 
-__all__ = ["qqplot", "qqplot_2samples", "qqline", "ProbPlot"]
+__all__ = ["ProbPlot", "qqline", "qqplot", "qqplot_2samples"]
 
 
 class ProbPlot:

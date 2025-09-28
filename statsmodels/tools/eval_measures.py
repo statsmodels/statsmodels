@@ -608,15 +608,6 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 
 __all__ = [
-    "maxabs",
-    "meanabs",
-    "medianabs",
-    "medianbias",
-    "mse",
-    "rmse",
-    "rmspe",
-    "stde",
-    "vare",
     "aic",
     "aic_sigma",
     "aicc",
@@ -627,4 +618,13 @@ __all__ = [
     "hqic",
     "hqic_sigma",
     "iqr",
+    "maxabs",
+    "meanabs",
+    "medianabs",
+    "medianbias",
+    "mse",
+    "rmse",
+    "rmspe",
+    "stde",
+    "vare",
 ]

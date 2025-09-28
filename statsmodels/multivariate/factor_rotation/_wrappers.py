@@ -246,14 +246,14 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         gamma = method_args[0]
         if algorithm == "gpa":
 
-            def vgQ(L=None, A=None, T=None):  # noqa: F811
+            def vgQ(L=None, A=None, T=None):
                 return orthomax_objective(
                     L=L, A=A, T=T, gamma=gamma, return_gradient=True
                 )
 
         elif algorithm == "gpa_der_free":
 
-            def ff(L=None, A=None, T=None):  # noqa: F811
+            def ff(L=None, A=None, T=None):
                 return orthomax_objective(
                     L=L, A=A, T=T, gamma=gamma, return_gradient=False
                 )

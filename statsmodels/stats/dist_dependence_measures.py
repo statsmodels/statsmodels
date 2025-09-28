@@ -14,8 +14,8 @@ References
 
 """
 
-from collections import namedtuple
 import warnings
+from typing import NamedTuple
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -23,17 +23,14 @@ from scipy.stats import norm
 
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
-DistDependStat = namedtuple(
-    "DistDependStat",
-    [
-        "test_statistic",
-        "distance_correlation",
-        "distance_covariance",
-        "dvar_x",
-        "dvar_y",
-        "S",
-    ],
-)
+
+class DistDependStat(NamedTuple):
+    test_statistic: float
+    distance_correlation: float
+    distance_covariance: float
+    dvar_x: float
+    dvar_y: float
+    S: float
 
 
 def distance_covariance_test(x, y, B=None, method="auto"):

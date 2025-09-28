@@ -333,7 +333,7 @@ def eff_mvmean(norm, k_vars):
 
     .. [1] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators
        and M-Estimators of Multivariate Location and Covariance.”
-       The Annals of Statistics 17 (4): 1662–83.
+       The Annals of Statistics 17 (4): 1662-83.
 
     """
     k = k_vars  # shortcut
@@ -380,7 +380,7 @@ def eff_mvshape(norm, k_vars):
 
     .. [1] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators
        and M-Estimators of Multivariate Location and Covariance.”
-       The Annals of Statistics 17 (4): 1662–83.
+       The Annals of Statistics 17 (4): 1662-83.
 
     """
 

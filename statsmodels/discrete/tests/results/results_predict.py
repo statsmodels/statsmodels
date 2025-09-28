@@ -7,7 +7,6 @@ edits
 note seond `_cons` in params_table rownames is lnalpha
 
 """
-# flake8: noqa: E251, E131
 
 import numpy as np
 import pandas as pd

@@ -54,12 +54,12 @@ if TYPE_CHECKING:
 
 __all__ = [
     "ARDL",
-    "ARDLResults",
-    "ardl_select_order",
-    "ARDLOrderSelectionResults",
     "UECM",
-    "UECMResults",
+    "ARDLOrderSelectionResults",
+    "ARDLResults",
     "BoundsTestResult",
+    "UECMResults",
+    "ardl_select_order",
 ]
 
 

@@ -3,8 +3,12 @@ API for empirical likelihood
 
 """
 __all__ = [
-    "DescStat", "DescStatUV", "DescStatMV",
-    "ELOriginRegress", "ANOVA", "emplikeAFT"
+    "ANOVA",
+    "DescStat",
+    "DescStatMV",
+    "DescStatUV",
+    "ELOriginRegress",
+    "emplikeAFT"
 ]
 
 from .descriptive import DescStat, DescStatUV, DescStatMV

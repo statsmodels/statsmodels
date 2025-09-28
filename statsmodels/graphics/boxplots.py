@@ -8,7 +8,7 @@ from scipy.stats import gaussian_kde
 
 from . import utils
 
-__all__ = ["violinplot", "beanplot"]
+__all__ = ["beanplot", "violinplot"]
 
 
 def violinplot(

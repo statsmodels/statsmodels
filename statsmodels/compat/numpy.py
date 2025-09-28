@@ -45,8 +45,8 @@ from packaging.version import Version, parse
 __all__ = [
     "NP_LT_2",
     "NP_LT_24",
-    "NP_LT_123",
     "NP_LT_114",
+    "NP_LT_123",
     "lstsq",
     "np_matrix_rank",
     "np_new_unique",

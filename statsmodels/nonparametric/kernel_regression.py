@@ -39,7 +39,7 @@ from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
     LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR, kernel_func
 
 
-__all__ = ["KernelReg", "KernelCensoredReg"]
+__all__ = ["KernelCensoredReg", "KernelReg"]
 
 
 class KernelReg(GenericKDE):

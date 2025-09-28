@@ -49,11 +49,27 @@ from statsmodels.tools.validation import (
 )
 from statsmodels.tsa.tsatools import lagmat
 
-__all__ = ["kstest_fit", "lilliefors", "kstest_normal", "kstest_exponential",
-           "normal_ad", "compare_cox", "compare_j", "acorr_breusch_godfrey",
-           "acorr_ljungbox", "acorr_lm", "het_arch", "het_breuschpagan",
-           "het_goldfeldquandt", "het_white", "spec_white", "linear_lm",
-           "linear_rainbow", "linear_harvey_collier", "anderson_statistic"]
+__all__ = [
+    "acorr_breusch_godfrey",
+    "acorr_ljungbox",
+    "acorr_lm",
+    "anderson_statistic",
+    "compare_cox",
+    "compare_j",
+    "het_arch",
+    "het_breuschpagan",
+    "het_goldfeldquandt",
+    "het_white",
+    "kstest_exponential",
+    "kstest_fit",
+    "kstest_normal",
+    "lilliefors",
+    "linear_harvey_collier",
+    "linear_lm",
+    "linear_rainbow",
+    "normal_ad",
+    "spec_white",
+]
 
 
 NESTED_ERROR = """\
@@ -791,9 +807,9 @@ def het_breuschpagan(resid, exog_het, robust=True):
        5th edition. (2002).
     .. [2]  Breusch, T. S.; Pagan, A. R. (1979). "A Simple Test for
        Heteroskedasticity and Random Coefficient Variation". Econometrica.
-       47 (5): 1287–1294.
+       47 (5): 1287-1294.
     .. [3] Koenker, R. (1981). "A note on studentizing a test for
-       heteroskedasticity". Journal of Econometrics 17 (1): 107–112.
+       heteroskedasticity". Journal of Econometrics 17 (1): 107-112.
     """
     x = array_like(exog_het, "exog_het", ndim=2)
     _check_het_test(x, "The Breusch-Pagan")

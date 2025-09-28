@@ -205,17 +205,17 @@ class LeybourneMcCabeStationarity:
         ----------
         Kwiatkowski, D., Phillips, P.C.B., Schmidt, P. & Shin, Y. (1992).
         Testing the null hypothesis of stationarity against the alternative of
-        a unit root. Journal of Econometrics, 54: 159–178.
+        a unit root. Journal of Econometrics, 54: 159-178.
 
         Leybourne, S.J., & McCabe, B.P.M. (1994). A consistent test for a
-        unit root. Journal of Business and Economic Statistics, 12: 157–166.
+        unit root. Journal of Business and Economic Statistics, 12: 157-166.
 
         Leybourne, S.J., & McCabe, B.P.M. (1999). Modified stationarity tests
         with data-dependent model-selection rules. Journal of Business and
         Economic Statistics, 17: 264-270.
 
         Schwert, G W. (1987). Effects of model specification on tests for unit
-        roots in macroeconomic data. Journal of Monetary Economics, 20: 73–103.
+        roots in macroeconomic data. Journal of Monetary Economics, 20: 73-103.
         """
         if regression not in ["c", "ct"]:
             raise ValueError("LM: regression option '%s' not understood" % regression)

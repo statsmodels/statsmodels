@@ -1,5 +1,8 @@
-__all__ = ["TruncatedLFPoisson", "TruncatedLFNegativeBinomialP",
-           "HurdleCountModel"]
+__all__ = [
+    "HurdleCountModel",
+    "TruncatedLFNegativeBinomialP",
+    "TruncatedLFPoisson",
+]
 
 import warnings
 import numpy as np

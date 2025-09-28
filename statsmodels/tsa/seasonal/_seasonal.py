@@ -11,9 +11,9 @@ from statsmodels.tsa.filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
 
 __all__ = [
+    "DecomposeResult",
     "seasonal_decompose",
     "seasonal_mean",
-    "DecomposeResult",
 ]
 
 
@@ -336,7 +336,7 @@ class DecomposeResult:
             xlim = (0, self._observed.shape[0] - 1)
 
         fig, axs = plt.subplots(len(series), 1, sharex=True)
-        for i, (ax, (series, def_name)) in enumerate(zip(axs, series, strict=False)):  # noqa: B020
+        for i, (ax, (series, def_name)) in enumerate(zip(axs, series, strict=False)):
             if def_name != "residual":
                 ax.plot(series)
             else:

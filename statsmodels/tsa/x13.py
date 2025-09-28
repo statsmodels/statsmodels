@@ -26,7 +26,7 @@ from statsmodels.tools.sm_exceptions import (
 )
 from statsmodels.tools.tools import Bunch
 
-__all__ = ["x13_arima_select_order", "x13_arima_analysis"]
+__all__ = ["x13_arima_analysis", "x13_arima_select_order"]
 
 BINARY_NAMES = ("x13as.exe", "x13as", "x12a.exe", "x12a", "x13as_ascii", "x13as_html")
 

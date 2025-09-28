@@ -1,6 +1,9 @@
 __all__ = [
-    "SimpleTable", "savetxt", "csv2st",
-    "save_pickle", "load_pickle"
+    "SimpleTable",
+    "csv2st",
+    "load_pickle",
+    "save_pickle",
+    "savetxt"
 ]
 from .foreign import savetxt
 from .table import SimpleTable, csv2st

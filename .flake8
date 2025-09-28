@@ -16,3 +16,7 @@ extend-ignore =
 
 per-file-ignores =
     statsmodels/examples/tests/test_notebooks.py: F401
+    statsmodels/discrete/tests/results/results_predict.py: E131, E251
+    statsmodels/discrete/tests/results/results_truncated_st.py: E131, E251
+    statsmodels/treatment/tests/results/results_teffects.py: E124, E128, E131
+

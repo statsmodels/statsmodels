@@ -161,7 +161,7 @@ stub R2 C2  40.95038  40.65765
   <th>stub2</th>    <td>2</td>     <td>3.333</td>
 </tr>
 </table>
-"""  # noqa:W291
+"""
             stripped = "\n".join([line.rstrip() for line in tbl.as_html().split("\n")])
             actual = f"\n{stripped}\n"
             assert_equal(actual, desired)

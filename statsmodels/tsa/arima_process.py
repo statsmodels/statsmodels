@@ -33,15 +33,15 @@ else:
     ComplexWarning = np.exceptions.ComplexWarning
 
 __all__ = [
+    "arma2ar",
+    "arma2ma",
     "arma_acf",
     "arma_acovf",
     "arma_generate_sample",
     "arma_impulse_response",
-    "arma2ar",
-    "arma2ma",
     "deconvolve",
-    "lpol2index",
     "index2lpol",
+    "lpol2index",
 ]
 
 

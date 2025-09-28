@@ -38,12 +38,12 @@ def _noncentrality_chisquare(chi2_stat, df, alpha=0.05):
     ----------
     .. [1] Kubokawa, T., C.P. Robert, and A.K.Md.E. Saleh. 1993. “Estimation of
         Noncentrality Parameters.”
-        Canadian Journal of Statistics 21 (1): 45–57.
+        Canadian Journal of Statistics 21 (1): 45-57.
         https://doi.org/10.2307/3315657.
 
     .. [2] Li, Qizhai, Junjian Zhang, and Shuai Dai. 2009. “On Estimating the
         Non-Centrality Parameter of a Chi-Squared Distribution.”
-        Statistics & Probability Letters 79 (1): 98–104.
+        Statistics & Probability Letters 79 (1): 98-104.
         https://doi.org/10.1016/j.spl.2008.07.025.
 
     """
@@ -94,7 +94,7 @@ def _noncentrality_f(f_stat, df1, df2, alpha=0.05):
     References
     ----------
     .. [1] Kubokawa, T., C.P. Robert, and A.K.Md.E. Saleh. 1993. “Estimation of
-       Noncentrality Parameters.” Canadian Journal of Statistics 21 (1): 45–57.
+       Noncentrality Parameters.” Canadian Journal of Statistics 21 (1): 45-57.
        https://doi.org/10.2307/3315657.
     """
     alpha_half = alpha / 2
@@ -140,7 +140,7 @@ def _noncentrality_t(t_stat, df, alpha=0.05):
 
     References
     ----------
-    .. [1] Hedges, Larry V. 2016. “Distribution Theory for Glass’s Estimator of
+    .. [1] Hedges, Larry V. 2016. “Distribution Theory for Glass`s Estimator of
        Effect Size and Related Estimators:”
        Journal of Educational Statistics, November.
        https://doi.org/10.3102/10769986006002107.

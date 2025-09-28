@@ -35,7 +35,7 @@ from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
     LeaveOneOut, _adjust_shape
 
 
-__all__ = ["KDEMultivariate", "KDEMultivariateConditional", "EstimatorSettings"]
+__all__ = ["EstimatorSettings", "KDEMultivariate", "KDEMultivariateConditional"]
 
 
 class KDEMultivariate(GenericKDE):

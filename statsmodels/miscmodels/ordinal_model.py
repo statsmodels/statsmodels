@@ -691,10 +691,10 @@ class OrderedResults(GenericLikelihoodModelResults):
         ----------
         Shepherd BE, Li C, Liu Q (2016) Probability-scale residuals for
         continuous, discrete, and censored data.
-        The Canadian Journal of Statistics. 44:463–476.
+        The Canadian Journal of Statistics. 44:463-476.
 
         Li C and Shepherd BE (2012) A new residual for ordinal outcomes.
-        Biometrika. 99: 473–480
+        Biometrika. 99: 473-480
 
         """
         from statsmodels.stats.diagnostic_gen import prob_larger_ordinal_choice

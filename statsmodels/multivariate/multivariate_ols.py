@@ -89,7 +89,7 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
     """
     y = endog
     x = exog
-    nobs, k_endog = y.shape  # noqa: F841
+    nobs, k_endog = y.shape
     nobs1, k_exog = x.shape
     if nobs != nobs1:
         raise ValueError("x(n=%d) and y(n=%d) should have the same number of "

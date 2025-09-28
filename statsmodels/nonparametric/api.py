@@ -1,9 +1,14 @@
 __all__ = [
+    "EstimatorSettings",
+    "KDEMultivariate",
+    "KDEMultivariateConditional",
     "KDEUnivariate",
-    "KDEMultivariate", "KDEMultivariateConditional", "EstimatorSettings",
-    "KernelReg", "KernelCensoredReg",
-    "lowess", "bandwidths",
-    "pdf_kernel_asym", "cdf_kernel_asym"
+    "KernelCensoredReg",
+    "KernelReg",
+    "bandwidths",
+    "cdf_kernel_asym",
+    "lowess",
+    "pdf_kernel_asym"
 ]
 from .kde import KDEUnivariate
 from .smoothers_lowess import lowess

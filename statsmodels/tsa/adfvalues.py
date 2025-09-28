@@ -1,7 +1,7 @@
 from scipy.stats import norm
 from numpy import array, polyval, inf, asarray
 
-__all__ = ["mackinnonp", "mackinnoncrit"]
+__all__ = ["mackinnoncrit", "mackinnonp"]
 
 # These are the cut-off values for the left-tail vs. the rest of the
 # tau distribution, for getting the p-values

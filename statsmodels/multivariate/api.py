@@ -1,5 +1,9 @@
 __all__ = [
-    "PCA", "MANOVA", "Factor", "FactorResults", "CanCorr",
+    "MANOVA",
+    "PCA",
+    "CanCorr",
+    "Factor",
+    "FactorResults",
     "factor_rotation"
 ]
 

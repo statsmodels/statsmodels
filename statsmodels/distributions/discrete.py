@@ -296,7 +296,7 @@ class DiscretizedCount(rv_discrete):
 
     .. [2] Alzaatreh, Ayman, Carl Lee, and Felix Famoye. 2012. “On the Discrete
        Analogues of Continuous Distributions.” Statistical Methodology 9 (6):
-       589–603.
+       589-603.
 
 
     """

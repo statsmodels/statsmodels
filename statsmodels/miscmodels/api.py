@@ -1,4 +1,4 @@
-__all__ = ["TLinearModel", "PoissonGMLE", "PoissonOffsetGMLE", "PoissonZiGMLE"]
+__all__ = ["PoissonGMLE", "PoissonOffsetGMLE", "PoissonZiGMLE", "TLinearModel"]
 from .tmodel import TLinearModel
 from .count import (PoissonGMLE, PoissonOffsetGMLE, PoissonZiGMLE,
                     # NonlinearDeltaCov

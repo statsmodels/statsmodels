@@ -174,7 +174,7 @@ def proportion_confint(
 
     .. [*] Brown, Lawrence D.; Cai, T. Tony; DasGupta, Anirban (2001).
        "Interval Estimation for a Binomial Proportion", Statistical
-       Science 16 (2): 101–133. doi:10.1214/ss/1009213286.
+       Science 16 (2): 101-133. doi:10.1214/ss/1009213286.
     """
     is_scalar = np.isscalar(count) and np.isscalar(nobs)
     is_pandas = isinstance(count, (pd.Series, pd.DataFrame))
@@ -1381,21 +1381,21 @@ def confint_proportions_2indep(
     ----------
     .. [1] Fagerland, Morten W., Stian Lydersen, and Petter Laake. 2015.
        “Recommended Confidence Intervals for Two Independent Binomial
-       Proportions.” Statistical Methods in Medical Research 24 (2): 224–54.
+       Proportions.” Statistical Methods in Medical Research 24 (2): 224-54.
        https://doi.org/10.1177/0962280211415469.
     .. [2] Koopman, P. A. R. 1984. “Confidence Intervals for the Ratio of Two
-       Binomial Proportions.” Biometrics 40 (2): 513–17.
+       Binomial Proportions.” Biometrics 40 (2): 513-17.
        https://doi.org/10.2307/2531405.
     .. [3] Miettinen, Olli, and Markku Nurminen. "Comparative analysis of two
        rates." Statistics in medicine 4, no. 2 (1985): 213-226.
     .. [4] Newcombe, Robert G. 1998. “Interval Estimation for the Difference
        between Independent Proportions: Comparison of Eleven Methods.”
-       Statistics in Medicine 17 (8): 873–90.
+       Statistics in Medicine 17 (8): 873-90.
        https://doi.org/10.1002/(SICI)1097-0258(19980430)17:8<873::AID-
        SIM779>3.0.CO;2-I.
     .. [5] Newcombe, Robert G., and Markku M. Nurminen. 2011. “In Defence of
        Score Intervals for Proportions and Their Differences.” Communications
-       in Statistics - Theory and Methods 40 (7): 1271–82.
+       in Statistics - Theory and Methods 40 (7): 1271-82.
        https://doi.org/10.1080/03610920903576580.
     """
     method_default = {

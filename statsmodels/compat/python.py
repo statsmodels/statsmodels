@@ -15,15 +15,15 @@ def asunicode(x, _):
 
 
 __all__ = [
-    "asunicode",
-    "asstr",
-    "asbytes",
-    "lmap",
-    "lzip",
-    "lrange",
-    "lfilter",
-    "with_metaclass",
     "PYTHON_IMPL_WASM",
+    "asbytes",
+    "asstr",
+    "asunicode",
+    "lfilter",
+    "lmap",
+    "lrange",
+    "lzip",
+    "with_metaclass",
 ]
 
 

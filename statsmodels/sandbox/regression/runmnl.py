@@ -173,7 +173,7 @@ class TryNCLogit:
         # ivs = np.column_stack(ivs) # this way ?
         # exptiv = np.exp(tau*ivs)
         # sumexptiv = exptiv.sum(1)
-        # logsumexpxb = np.log(sumexpxb)  # noqa:F821  See GH#5756
+        # logsumexpxb = np.log(sumexpxb)
         # probs = exptiv/sumexptiv[:,None]
 
 

@@ -97,7 +97,7 @@ With Multiway Clustering,” Journal of Business and Economic Statistics 29
 not used yet:
 A.C. Cameron, J.B. Gelbach, and D.L. Miller, “Bootstrap-based improvements
 for inference with clustered errors,” The Review of Economics and
-Statistics 90, no. 3 (2008): 414–427.
+Statistics 90, no. 3 (2008): 414-427.
 
 """
 import numpy as np
@@ -105,10 +105,20 @@ import numpy as np
 from statsmodels.stats.moment_helpers import se_cov
 from statsmodels.tools.grouputils import combine_indices, group_sums
 
-__all__ = ["cov_cluster", "cov_cluster_2groups", "cov_hac", "cov_nw_panel",
-           "cov_white_simple",
-           "cov_hc0", "cov_hc1", "cov_hc2", "cov_hc3",
-           "se_cov", "weights_bartlett", "weights_uniform"]
+__all__ = [
+    "cov_cluster",
+    "cov_cluster_2groups",
+    "cov_hac",
+    "cov_hc0",
+    "cov_hc1",
+    "cov_hc2",
+    "cov_hc3",
+    "cov_nw_panel",
+    "cov_white_simple",
+    "se_cov",
+    "weights_bartlett",
+    "weights_uniform",
+]
 
 
 # from linear_model.RegressionResults

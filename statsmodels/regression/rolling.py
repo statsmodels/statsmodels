@@ -7,6 +7,8 @@ multiplication.
 Copyright (c) 2019 Kevin Sheppard
 License: 3-clause BSD
 """
+from typing import NamedTuple
+
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import (
     Appender,
@@ -16,7 +18,6 @@ from statsmodels.compat.pandas import (
     get_cached_doc,
 )
 
-from collections import namedtuple
 
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series
@@ -38,20 +39,17 @@ def strip4(line):
     return line
 
 
-RollingStore = namedtuple(
-    "RollingStore",
-    [
-        "params",
-        "ssr",
-        "llf",
-        "nobs",
-        "s2",
-        "xpxi",
-        "xeex",
-        "centered_tss",
-        "uncentered_tss",
-    ],
-)
+class RollingStore(NamedTuple):
+    params: np.ndarray
+    ssr: np.ndarray
+    llf: np.ndarray
+    nobs: np.ndarray
+    s2: np.ndarray
+    xpxi: np.ndarray
+    xeex: np.ndarray
+    centered_tss: np.ndarray
+    uncentered_tss: np.ndarray
+
 
 common_params = "\n".join(map(strip4, model._model_params_doc.split("\n")))
 window_parameters = """\

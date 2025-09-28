@@ -91,7 +91,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
        Introduction to Time Series and Forecasting. Springer.
     .. [2] Gomez, Victor, and Agustin Maravall. 2001.
        "Automatic Modeling Methods for Univariate Series."
-       A Course in Time Series Analysis, 171–201.
+       A Course in Time Series Analysis, 171-201.
     """
     spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order)
 

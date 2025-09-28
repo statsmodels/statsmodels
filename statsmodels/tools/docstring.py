@@ -1,12 +1,12 @@
 """
 Substantially copied from NumpyDoc 1.0pre.
 """
-from collections import namedtuple
 from collections.abc import Mapping
 import copy
 import inspect
 import re
 import textwrap
+from typing import NamedTuple
 
 from statsmodels.tools.sm_exceptions import ParseError
 
@@ -102,7 +102,10 @@ class Reader:
         return not "".join(self._str).strip()
 
 
-Parameter = namedtuple("Parameter", ["name", "type", "desc"])
+class Parameter(NamedTuple):
+    name: str
+    type: type
+    desc: str
 
 
 class NumpyDocString(Mapping):

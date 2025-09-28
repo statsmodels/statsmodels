@@ -27,6 +27,6 @@ __all__ = [
     "IndependenceCopula",
     "StudentTCopula",
     "depfunc_ev",
-    "transforms",
-    "rvs_kernel"
+    "rvs_kernel",
+    "transforms"
 ]

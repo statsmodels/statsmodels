@@ -69,9 +69,9 @@ __docformat__ = "restructuredtext en"
 
 __all__ = [
     "GLS",
-    "WLS",
-    "OLS",
     "GLSAR",
+    "OLS",
+    "WLS",
     "PredictionResults",
     "RegressionResultsWrapper",
 ]

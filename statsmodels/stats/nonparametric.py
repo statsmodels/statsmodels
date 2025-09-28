@@ -441,14 +441,14 @@ def rank_compare_2indep(x1, x2, use_t=True):
     .. [3] Vargha, András, and Harold D. Delaney. 2000. “A Critique and
            Improvement of the CL Common Language Effect Size Statistics of
            McGraw and Wong.” Journal of Educational and Behavioral Statistics
-           25 (2): 101–32. https://doi.org/10.3102/10769986025002101.
-    .. [4] Conroy, Ronán M. 2012. “What Hypotheses Do ‘Nonparametric’ Two-Group
+           25 (2): 101-32. https://doi.org/10.3102/10769986025002101.
+    .. [4] Conroy, Ronán M. 2012. “What Hypotheses Do`Nonparametric` Two-Group
            Tests Actually Test?” The Stata Journal: Promoting Communications on
-           Statistics and Stata 12 (2): 182–90.
+           Statistics and Stata 12 (2): 182-90.
            https://doi.org/10.1177/1536867X1201200202.
     .. [5] Divine, George W., H. James Norton, Anna E. Barón, and Elizabeth
-           Juarez-Colunga. 2018. “The Wilcoxon–Mann–Whitney Procedure Fails as
-           a Test of Medians.” The American Statistician 72 (3): 278–86.
+           Juarez-Colunga. 2018. “The Wilcoxon-Mann-Whitney Procedure Fails as
+           a Test of Medians.” The American Statistician 72 (3): 278-86.
            https://doi.org/10.1080/00031305.2017.1305291.
 
     """
@@ -775,7 +775,7 @@ def samplesize_rank_compare_onetail(
         `nobs_treat`. This is the ratio of the reference
         group sample size to the treatment group sample
         size, by default 1 (balanced design). See Notes.
-    alternative : str, ‘two-sided’ (default), ‘larger’, or ‘smaller’
+    alternative : str,`two-sided` (default),`larger`, or`smaller`
         Extra argument to choose whether the sample size is
         calculated for a two-sided (default) or one-sided test.
         See Notes.

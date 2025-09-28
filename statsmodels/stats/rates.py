@@ -266,14 +266,14 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
     ----------
     .. [1] Barker, Lawrence. 2002. “A Comparison of Nine Confidence Intervals
        for a Poisson Parameter When the Expected Number of Events Is ≤ 5.”
-       The American Statistician 56 (2): 85–89.
+       The American Statistician 56 (2): 85-89.
        https://doi.org/10.1198/000313002317572736.
     .. [2] Patil, VV, and HV Kulkarni. 2012. “Comparison of Confidence
        Intervals for the Poisson Mean: Some New Aspects.”
-       REVSTAT–Statistical Journal 10(2): 211–27.
+       REVSTAT-Statistical Journal 10(2): 211-27.
     .. [3] Swift, Michael Bruce. 2009. “Comparison of Confidence Intervals for
-       a Poisson Mean – Further Considerations.” Communications in Statistics -
-       Theory and Methods 38 (5): 748–59.
+       a Poisson Mean - Further Considerations.” Communications in Statistics -
+       Theory and Methods 38 (5): 748-59.
        https://doi.org/10.1080/03610920802255856.
 
     """
@@ -452,7 +452,7 @@ def tolerance_int_poisson(
        Statistics. Wiley. https://doi.org/10.1002/9780470316771.
     .. [2] Hahn, Gerald J., and Ramesh Chandra. 1981. “Tolerance Intervals for
        Poisson and Binomial Variables.” Journal of Quality Technology 13 (2):
-       100–110. https://doi.org/10.1080/00224065.1981.11980998.
+       100-110. https://doi.org/10.1080/00224065.1981.11980998.
 
     """
     prob_tail = 1 - prob
@@ -786,7 +786,7 @@ def test_poisson_2indep(
 
     .. [2] Ng, H. K. T., K. Gu, and M. L. Tang. 2007. “A Comparative Study of
        Tests for the Difference of Two Poisson Means.”
-       Computational Statistics & Data Analysis 51 (6): 3085–99.
+       Computational Statistics & Data Analysis 51 (6): 3085-99.
        https://doi.org/10.1016/j.csda.2006.02.004.
 
     """
@@ -1060,7 +1060,7 @@ def etest_poisson_2indep(
     Biometrical Journal 50 (2008) 2, 2008
     Ng, H. K. T., K. Gu, and M. L. Tang. 2007. “A Comparative Study of Tests
     for the Difference of Two Poisson Means.” Computational Statistics & Data
-    Analysis 51 (6): 3085–99. https://doi.org/10.1016/j.csda.2006.02.004.
+    Analysis 51 (6): 3085-99. https://doi.org/10.1016/j.csda.2006.02.004.
 
     """
     y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
@@ -1329,7 +1329,7 @@ def nonequivalence_poisson_2indep(
     ----------
     .. [1] Hodges, J. L., Jr., and E. L. Lehmann. 1954. Testing the Approximate
        Validity of Statistical Hypotheses. Journal of the Royal Statistical
-       Society, Series B (Methodological) 16: 261–68.
+       Society, Series B (Methodological) 16: 261-68.
 
     .. [2] Kim, Jae H., and Andrew P. Robinson. 2019. “Interval-Based
        Hypothesis Testing and Its Applications to Economics and Finance.”
@@ -1645,7 +1645,7 @@ def power_poisson_ratio_2indep(
        https://doi.org/10.1080/19466315.2016.1225594
     .. [2] Zhu, Haiyuan, and Hassan Lakkis. 2014. “Sample Size Calculation for
        Comparing Two Negative Binomial Rates.” Statistics in Medicine 33 (3):
-       376–87. https://doi.org/10.1002/sim.5947.
+       376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
     # TODO: avoid possible circular import, check if needed
@@ -1777,7 +1777,7 @@ def power_equivalence_poisson_2indep(
        https://doi.org/10.1080/19466315.2016.1225594
     .. [2] Zhu, Haiyuan, and Hassan Lakkis. 2014. “Sample Size Calculation for
        Comparing Two Negative Binomial Rates.” Statistics in Medicine 33 (3):
-       376–87. https://doi.org/10.1002/sim.5947.
+       376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
     rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
@@ -1970,7 +1970,7 @@ def power_poisson_diff_2indep(
     ----------
     .. [1] Stucke, Kathrin, and Meinhard Kieser. 2013. “Sample Size
        Calculations for Noninferiority Trials with Poisson Distributed Count
-       Data.” Biometrical Journal 55 (2): 203–16.
+       Data.” Biometrical Journal 55 (2): 203-16.
        https://doi.org/10.1002/bimj.201200142.
     .. [2] PASS manual chapter 436
 
@@ -2135,7 +2135,7 @@ def power_negbin_ratio_2indep(
        https://doi.org/10.1080/19466315.2016.1225594
     .. [2] Zhu, Haiyuan, and Hassan Lakkis. 2014. “Sample Size Calculation for
        Comparing Two Negative Binomial Rates.” Statistics in Medicine 33 (3):
-       376–87. https://doi.org/10.1002/sim.5947.
+       376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
     # TODO: avoid possible circular import, check if needed
@@ -2277,7 +2277,7 @@ def power_equivalence_neginb_2indep(
        https://doi.org/10.1080/19466315.2016.1225594
     .. [2] Zhu, Haiyuan, and Hassan Lakkis. 2014. “Sample Size Calculation for
        Comparing Two Negative Binomial Rates.” Statistics in Medicine 33 (3):
-       376–87. https://doi.org/10.1002/sim.5947.
+       376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
     rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])

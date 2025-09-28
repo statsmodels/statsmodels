@@ -106,7 +106,7 @@ class GaussianCovariance(ProcessCovariance):
     ----------
     .. [1] Paciorek, C. J. and Schervish, M. J. (2006). Spatial modeling using
         a new class of nonstationary covariance functions. Environmetrics,
-        17:483–506.
+        17:483-506.
         https://papers.nips.cc/paper/2350-nonstationary-covariance-functions-for-gaussian-process-regression.pdf
     """
 

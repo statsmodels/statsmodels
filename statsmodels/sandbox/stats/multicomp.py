@@ -61,10 +61,10 @@ TODO
 
 
 """
+from typing import NamedTuple
 
 from statsmodels.compat.python import lrange, lzip
 
-from collections import namedtuple
 import copy
 import math
 
@@ -83,8 +83,11 @@ try:
 except ImportError:
     from statsmodels.stats.libqsturng import psturng, qsturng
 
-    studentized_range_tuple = namedtuple("studentized_range", ["ppf", "sf"])
-    studentized_range = studentized_range_tuple(ppf=qsturng, sf=psturng)
+    class StudentizedRangeTuple(NamedTuple):
+        ppf: float
+        sf: float
+
+    studentized_range = StudentizedRangeTuple(ppf=qsturng, sf=psturng)
 
 
 qcrit = """

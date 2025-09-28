@@ -134,7 +134,7 @@ class TestAnovaLMNoconstant:
         # Duration:Weight  2   0.636   0.318   0.592    0.5567
         # Residuals       54  28.989   0.537
         # ---
-        # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+        # Signif. codes:  0`***` 0.001`**` 0.01`*` 0.05`.` 0.1` ` 1
 
 
 class TestAnovaLMCompare(TestAnovaLM):
