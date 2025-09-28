@@ -429,7 +429,7 @@ def test_cusum():
 def test_stata():
     # Test the cusum and cusumsq statistics against Stata (cusum6)
     mod = RecursiveLS(endog, exog, loglikelihood_burn=3)
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Care should be used when applying"):
         res = mod.fit()
     d = max(res.nobs_diffuse, res.loglikelihood_burn)
 

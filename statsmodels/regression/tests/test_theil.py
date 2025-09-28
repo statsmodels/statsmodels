@@ -121,7 +121,7 @@ class TestTheilTextile:
     @pytest.mark.smoke
     def test_summary(self):
         if SP_LT_116:
-            with pytest.warns(UserWarning):
+            with pytest.warns(UserWarning, match="blah"):
                 self.res1.summary()
         else:
             self.res1.summary()

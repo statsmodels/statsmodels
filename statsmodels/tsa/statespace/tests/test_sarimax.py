@@ -2829,7 +2829,7 @@ def test_simple_differencing_strindex():
     values = np.log(realgdp_results["value"]).values
     index = pd.Index(range(len(values))).map(str)
     endog = pd.Series(values, index=index)
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Could not infer forma"):
         mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
 
     assert_(mod._index.equals(pd.RangeIndex(start=0, stop=len(values) - 1)))

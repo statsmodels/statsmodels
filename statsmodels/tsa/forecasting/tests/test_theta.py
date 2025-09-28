@@ -77,9 +77,9 @@ def test_alt_index(indexed_data):
     period = 12 if date_like else None
     res = ThetaModel(indexed_data, period=period).fit()
     if hasattr(idx, "freq") and idx.freq is None:
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="Only PeriodIndexes, DatetimeIndexes"):
             res.forecast_components(37)
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="Only PeriodIndexes, DatetimeIndexes"):
             res.forecast(23)
     else:
         res.forecast_components(37)

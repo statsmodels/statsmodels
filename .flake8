@@ -2,7 +2,7 @@
 exclude = .git,build,docs,archive
 max-line-length = 88
 extend-select =
-    # B904, # TODO: Enable
+    B904,
     B905,
 
 extend-ignore =

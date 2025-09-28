@@ -143,9 +143,9 @@ def validate_basic(params, length, allow_infnan=False, title=None):
         is_complex = [isinstance(p, complex) for p in params.ravel()]
         dtype = complex if any(is_complex) else float
         params = np.array(params, dtype=dtype)
-    except TypeError:
+    except TypeError as exc:
         raise ValueError("Parameters vector%s includes invalid values."
-                         % title)
+                         % title) from exc
 
     # Check for NaN, inf
     if not allow_infnan and (np.any(np.isnan(params)) or

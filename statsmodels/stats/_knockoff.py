@@ -158,8 +158,10 @@ def _design_knockoff_sdp(exog):
 
     try:
         from cvxopt import solvers, matrix
-    except ImportError:
-        raise ValueError("SDP knockoff designs require installation of cvxopt")
+    except ImportError as exc:
+        raise ValueError(
+            "SDP knockoff designs require installation of cvxopt"
+        ) from exc
 
     nobs, nvar = exog.shape
 

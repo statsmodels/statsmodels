@@ -777,8 +777,8 @@ class RecursiveLSResults(MLEResults):
         n = 0.5 * (self.nobs - d) - 1
         try:
             ix = [0.1, 0.05, 0.025, 0.01, 0.005].index(alpha / 2)
-        except ValueError:
-            raise ValueError("Invalid significance level.")
+        except ValueError as exc:
+            raise ValueError("Invalid significance level.") from exc
         scalars = _cusum_squares_scalars[:, ix]
         crit = scalars[0] / n**0.5 + scalars[1] / n + scalars[2] / n**1.5
 

@@ -190,8 +190,8 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
     acovf = np.zeros(max(nobs, m), dtype=dtype)
     try:
         acovf[:m] = np.linalg.solve(A, b)[:, 0]
-    except np.linalg.LinAlgError:
-        raise ValueError(NONSTATIONARY_ERROR)
+    except np.linalg.LinAlgError as exc:
+        raise ValueError(NONSTATIONARY_ERROR) from exc
 
     # Iteratively apply (BD, eq. 3.3.9) to solve for remaining autocovariances
     if nobs > m:
@@ -878,8 +878,8 @@ class ArmaProcess:
                 mapolyoth = np.polynomial.Polynomial(maoth)
                 ar = (self.arpoly * arpolyoth).coef
                 ma = (self.mapoly * mapolyoth).coef
-            except Exception:
-                raise TypeError("Other type is not a valid type")
+            except Exception as exc:
+                raise TypeError("Other type is not a valid type") from exc
         return self.__class__(ar, ma, nobs=self.nobs)
 
     def __repr__(self):

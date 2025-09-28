@@ -1221,9 +1221,9 @@ class OLS(WLS):
 
         try:
             import cvxopt
-        except ImportError:
+        except ImportError as exc:
             msg = "sqrt_lasso fitting requires the cvxopt module"
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
 
         n = len(self.endog)
         p = self.exog.shape[1]

@@ -184,8 +184,8 @@ def nnlf_fr(self, thetash, x, frmask):
         loc = theta[-2]
         scale = theta[-1]
         args = tuple(theta[:-2])
-    except IndexError:
-        raise ValueError("Not enough input arguments.")
+    except IndexError as exc:
+        raise ValueError("Not enough input arguments.") from exc
     if not self._argcheck(*args) or scale <= 0:
         return np.inf
     x = np.array((x - loc) / scale)

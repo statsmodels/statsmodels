@@ -35,8 +35,8 @@ def _generate_url(func, stable):
                 raise ValueError("Function must be from statsmodels")
             url += "generated/"
             url += func_module + "." + func_name + ".html"
-        except AttributeError:
-            raise ValueError("Input not understood")
+        except AttributeError as exc:
+            raise ValueError("Input not understood") from exc
     return url
 
 

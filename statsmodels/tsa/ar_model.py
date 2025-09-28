@@ -1859,7 +1859,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 "appears below."
             )
             exc.args = (error,) + exc.args
-            raise exc.with_traceback(exc.__traceback__)
+            raise exc.with_traceback(exc.__traceback__) from exc
 
         if (mod.exog is None) != (existing.exog is None):
             if existing.exog is not None:

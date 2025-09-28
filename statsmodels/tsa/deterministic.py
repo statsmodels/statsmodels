@@ -107,8 +107,8 @@ class DeterministicTerm(ABC):
             return index
         try:
             return pd.Index(index)
-        except Exception:
-            raise TypeError("index must be a pandas Index or index-like")
+        except Exception as exc:
+            raise TypeError("index must be a pandas Index or index-like") from exc
 
     @staticmethod
     def _extend_index(

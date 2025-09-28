@@ -306,7 +306,7 @@ def test_innovations_mle_integrated():
     endog = np.r_[0, np.cumsum(lake.copy())]
 
     start_params = [0, np.var(lake.copy())]
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Provided `endog` series"):
         p, mleres = innovations_mle(
             endog, order=(1, 1, 0), demean=False, start_params=start_params
         )

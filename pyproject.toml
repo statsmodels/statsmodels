@@ -191,29 +191,14 @@ select = [
 ]
 
 ignore = [
-  "B018", # 45 # TODO: Enable
-  "B904", # 23 # TODO: Enable
-  # "RUF043", # 17 # TODO: Enable
-
-  "RUF001", # 28
-  "RUF013", # Enable when Py 3.10 is min
-  "RUF059", # 319
-  "RUF002", # Do Not Enable
-  "PERF401", # 53
-  # Too many uses of dict(...) instread of {...}
-  # Would be good enforce eventually
-  "C408", # 322
-  # Too many places without match= in pytest raises and warns
-  # Would be goot enforce eventually
-  "PT011", # 511
-  "PT030", # 21
   # Required to allow black formatting
+  # Whitespace before ':' (Needed for black)
   "E203",
-  # E203: Whitespace before ':' (Needed for black)
+  # Line too long (### > 88 characters) (Needed for black)
   "E501",
-  # E501: Line too long (### > 88 characters) (Needed for black)
+  # Multiple statements on one line (colon) (E701)
   "E701",
-  # E701: Multiple statements on one line (colon) (Needed for black)
+
   ### Intentionally disabled
   # Too many arguments to function call
   "PLR0913", # 635
@@ -233,23 +218,34 @@ ignore = [
   "PT006", # 37
   # pytest-raises-with-multiple-statements
   "PT012", # 11
+  # Docstring contains ambiguous letter
+  "RUF002", # Do Not Enable
+  # Magic number
+  "PLR2004", # 697
+  # import-outside-toplevel
+  "PLC0415", # 835
 
-
-### TODO: Enable gradually
-# Magic number
-"PLR2004",
-# collection-literal-concatenation
-"RUF005",
-# pairwise-over-zipped
-"RUF007",
-# mutable-class-default
-"RUF012",
-# repeated-equality-comparison
-"PLR1714", # 28
-# Object does not implement `__hash__` method
-"PLW1641", # 2
-# import-outside-toplevel
-"PLC0415", # 835 (Do not enable)
+  ### TODO: Enable gradually
+  # Too many uses of dict(...) instread of {...}
+  # Would be good enforce eventually
+  "C408", # 322
+  # Too many places without match= in pytest raises
+  # Would be goot enforce eventually
+  "PT011", # 511
+  "B018", # 45 # TODO: Enable
+  "RUF013", # Enable when Py 3.10 is min
+  "RUF059", # 319
+  "PERF401", # 53
+  # collection-literal-concatenation
+  "RUF005", # 186
+  # pairwise-over-zipped
+  "RUF007", # 1
+  # mutable-class-default
+  "RUF012", #  178
+  # repeated-equality-comparison
+  "PLR1714", # 28
+  # Object does not implement `__hash__` method
+  "PLW1641", # 2
 ]
 
 [tool.ruff.lint.per-file-ignores]

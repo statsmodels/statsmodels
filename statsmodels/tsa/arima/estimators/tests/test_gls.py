@@ -55,7 +55,7 @@ def test_integrated():
     p1, _ = gls(endog1, exog1, order=(1, 0, 0))
 
     # Estimate with integration
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Provided `endog` and `exog"):
         p2, _ = gls(endog2, exog2, order=(1, 1, 0))
 
     assert_allclose(p1.params, p2.params)
@@ -108,7 +108,7 @@ def test_misc():
     exog = np.c_[np.ones_like(endog), np.arange(1, len(endog) + 1) * 1.0]
 
     # Test for warning if iterations fail to converge
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Feasible GLS failed to converg"):
         gls(endog, exog, order=(2, 0, 0), max_iter=0)
 
 

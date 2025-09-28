@@ -1097,7 +1097,7 @@ def test_summary_as_latex():
     y = dta.endog
     res = OLS(y, x).fit()
     if SP_LT_116:
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="blah"):
             table = res.summary().as_latex()
     else:
         table = res.summary().as_latex()

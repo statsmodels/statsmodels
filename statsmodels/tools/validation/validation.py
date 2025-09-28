@@ -273,11 +273,11 @@ def bool_like(value, name, optional=False, strict=False):
         value = value.squeeze()
     try:
         return bool(value)
-    except Exception:
+    except Exception as exc:
         raise TypeError(
             "{} must be a bool (or bool-compatible)"
             "{}".format(name, extra_text)
-        )
+        ) from exc
 
 
 def int_like(

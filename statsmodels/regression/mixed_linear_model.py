@@ -2583,10 +2583,10 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         """
         try:
             cov_re_inv = np.linalg.inv(self.cov_re)
-        except np.linalg.LinAlgError:
+        except np.linalg.LinAlgError as exc:
             raise ValueError(
                 "Cannot predict random effects from singular covariance structure."
-            )
+            ) from exc
 
         vcomp = self.vcomp
         k_re = self.k_re

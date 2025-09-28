@@ -24,12 +24,13 @@ import pandas as pd
 import pytest
 from scipy.stats.distributions import norm
 
+from statsmodels import tools
 from statsmodels.compat import lrange
 import statsmodels.discrete.discrete_model as discrete
 from statsmodels.genmod import cov_struct, families
 import statsmodels.genmod.generalized_estimating_equations as gee
 import statsmodels.regression.linear_model as lm
-from statsmodels import tools
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 try:
     import matplotlib.pyplot as plt
@@ -733,14 +734,14 @@ class TestGEE:
         )
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="Model and submodel have"):
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched family
         mod_sub = gee.GEE(endog, exog_sub, group, family=families.Gaussian())
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group, family=families.Poisson())
-        with pytest.warns(UserWarning):
+        with pytest.warns(SpecificationWarning, match="Model and submodel have"):
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched size
@@ -755,7 +756,7 @@ class TestGEE:
         mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group)
-        with pytest.warns(UserWarning):
+        with pytest.warns(SpecificationWarning, match="Model and submodel have"):
             mod.compare_score_test(res_sub)  # smoketest
 
         # Parent and submodel are the same dimension
@@ -763,7 +764,7 @@ class TestGEE:
         mod_sub = gee.GEE(endog, exog, group)
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group)
-        with pytest.warns(UserWarning):
+        with pytest.warns(SpecificationWarning, match="Model and submodel have"):
             mod.compare_score_test(res_sub)  # smoketest
 
     def test_constraint_covtype(self):
@@ -2226,7 +2227,7 @@ def test_qic_warnings():
     y, x1, _, g = simple_qic_data(fam)
     model = gee.GEE(y, x1, family=fam, groups=g)
     result = model.fit()
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="QIC values obtained using"):
         result.qic()
 
 

@@ -978,7 +978,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=DomainWarning)
-            with pytest.warns(UserWarning):
+            with pytest.warns(ValueWarning, match="Negative binomial dispersio"):
                 fam = sm.families.NegativeBinomial()
 
         cls.res1 = GLM(cls.data.endog, cls.data.exog, family=fam).fit(scale="x2")

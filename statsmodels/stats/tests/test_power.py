@@ -795,7 +795,7 @@ class TestFtestPower(CheckPowerMixin):
 
     def test_kwargs(self):
 
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="nobs is not use"):
             smp.FTestPower().solve_power(
                 effect_size=0.3, alpha=0.1, power=0.9, df_denom=2, nobs=None
             )

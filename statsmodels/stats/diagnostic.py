@@ -1078,8 +1078,8 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     else:
         try:
             power = np.array(power, dtype=int)
-        except Exception:
-            raise ValueError("power must be an integer or list of integers")
+        except Exception as exc:
+            raise ValueError("power must be an integer or list of integers") from exc
         if power.ndim != 1 or len(set(power)) != power.shape[0] or \
                 (power < 2).any():
             raise ValueError("power must contains distinct integers all >= 2")
@@ -1217,10 +1217,10 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
                 order_by = [order_by]
             try:
                 cols = res.model.data.orig_exog[order_by].copy()
-            except (IndexError, KeyError):
+            except (IndexError, KeyError) as exc:
                 raise TypeError("order_by must contain valid column names "
                                 "from the exog data used to construct res,"
-                                "and exog must be a pandas DataFrame.")
+                                "and exog must be a pandas DataFrame.") from exc
             name = "__index__"
             while name in cols:
                 name += "_"
