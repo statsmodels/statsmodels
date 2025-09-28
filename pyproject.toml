@@ -237,10 +237,8 @@ ignore = [
   ### TODO: Enable gradually
   # Magic number
   "PLR2004",
-  # collection-literal-concatenation
-  # "RUF005",
   # pairwise-over-zipped
-  "RUF007",
+  # "RUF007",
   # mutable-class-default
   "RUF012",
   # repeated-equality-comparison
