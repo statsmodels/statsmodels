@@ -30,9 +30,7 @@ def time_index(request):
     return pd.date_range("2000-01-01", periods=833, freq="B")
 
 
-@pytest.fixture(
-    scope="module", params=["range", "period", "datetime", "fib", "int64"]
-)
+@pytest.fixture(scope="module", params=["range", "period", "datetime", "fib", "int64"])
 def index(request):
     param = request.param
     if param in ("period", "datetime"):
@@ -69,14 +67,8 @@ def test_time_trend_smoke(index, forecast_index):
     tt.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if (
-        is_int_index(index)
-        and np.any(np.diff(index) != 1)
-        or (
-            type(index) is pd.Index
-            and max(index) > 2**63
-            and forecast_index is None
-        )
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
+        type(index) is pd.Index and max(index) > 2**63 and forecast_index is None
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -101,14 +93,8 @@ def test_seasonality_smoke(index, forecast_index):
     s.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if (
-        is_int_index(index)
-        and np.any(np.diff(index) != 1)
-        or (
-            type(index) is pd.Index
-            and max(index) > 2**63
-            and forecast_index is None
-        )
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
+        type(index) is pd.Index and max(index) > 2**63 and forecast_index is None
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -129,14 +115,8 @@ def test_fourier_smoke(index, forecast_index):
     f.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if (
-        is_int_index(index)
-        and np.any(np.diff(index) != 1)
-        or (
-            type(index) is pd.Index
-            and max(index) > 2**63
-            and forecast_index is None
-        )
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
+        type(index) is pd.Index and max(index) > 2**63 and forecast_index is None
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -289,9 +269,7 @@ def test_time_trend(index):
     short = tt.in_sample(index[:-50])
     with pytest_warns(warn):
         remainder = tt.out_of_sample(50, index[:-50])
-    direct = tt.out_of_sample(
-        steps=50, index=index[:-50], forecast_index=index[-50:]
-    )
+    direct = tt.out_of_sample(steps=50, index=index[:-50], forecast_index=index[-50:])
     combined = pd.concat([short, remainder], axis=0)
     if isinstance(index, (pd.DatetimeIndex, pd.RangeIndex)):
         pd.testing.assert_frame_equal(combined, final)
@@ -526,9 +504,7 @@ def test_deterministic_process_errors(time_index):
 
 def test_range_error():
     idx = pd.Index([0, 1, 1, 2, 3, 5, 8, 13])
-    dp = DeterministicProcess(
-        idx, constant=True, order=2, seasonal=True, period=2
-    )
+    dp = DeterministicProcess(idx, constant=True, order=2, seasonal=True, period=2)
     with pytest.raises(TypeError, match="The index in the deterministic"):
         dp.range(0, 12)
 
@@ -558,9 +534,7 @@ def test_range_index_basic():
     dp.range(130, 150)
 
     idx = pd.RangeIndex(0, 120)
-    dp = DeterministicProcess(
-        idx, constant=True, order=1, seasonal=True, period=12
-    )
+    dp = DeterministicProcess(idx, constant=True, order=1, seasonal=True, period=12)
     dp.range(0, 100)
     dp.range(100, 150)
     dp.range(120, 150)
@@ -571,13 +545,9 @@ def test_range_index_basic():
 
 def test_range_casting():
     idx = np.arange(120).astype(np.int64)
-    dp = DeterministicProcess(
-        idx, constant=True, order=1, seasonal=True, period=12
-    )
+    dp = DeterministicProcess(idx, constant=True, order=1, seasonal=True, period=12)
     idx = pd.RangeIndex(0, 120)
-    dp2 = DeterministicProcess(
-        idx, constant=True, order=1, seasonal=True, period=12
-    )
+    dp2 = DeterministicProcess(idx, constant=True, order=1, seasonal=True, period=12)
     pd.testing.assert_frame_equal(dp.in_sample(), dp2.in_sample())
     pd.testing.assert_frame_equal(dp.range(100, 150), dp2.range(100, 150))
 
@@ -594,15 +564,9 @@ def test_additional_terms(time_index):
     dp = DeterministicProcess(time_index, additional_terms=add_terms)
     dp2 = DeterministicProcess(time_index, constant=True, order=1)
     pd.testing.assert_frame_equal(dp.in_sample(), dp2.in_sample())
-    with pytest.raises(
-        ValueError, match="One or more terms in additional_terms"
-    ):
-        DeterministicProcess(
-            time_index, additional_terms=add_terms + add_terms
-        )
-    with pytest.raises(
-        ValueError, match="One or more terms in additional_terms"
-    ):
+    with pytest.raises(ValueError, match="One or more terms in additional_terms"):
+        DeterministicProcess(time_index, additional_terms=add_terms + add_terms)
+    with pytest.raises(ValueError, match="One or more terms in additional_terms"):
         DeterministicProcess(
             time_index, constant=True, order=1, additional_terms=add_terms
         )

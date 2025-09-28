@@ -511,8 +511,8 @@ class LagOrderResults:
     def __str__(self):
         return (
             f"<{self.__module__}.{self.__class__.__name__} object. Selected "
-            f"orders are: AIC -> {str(self.aic)}, BIC -> {str(self.bic)}, "
-            f"FPE -> {str(self.fpe)}, HQIC ->  {str(self.hqic)}>"
+            f"orders are: AIC -> {self.aic}, BIC -> {self.bic}, "
+            f"FPE -> {self.fpe}, HQIC ->  {self.hqic}>"
         )
 
 
@@ -785,7 +785,7 @@ class VAR(TimeSeriesModel):
         ntrend = len(trend) if trend.startswith("c") else 0
         max_estimable = (self.n_totobs - self.neqs - ntrend) // (1 + self.neqs)
         if maxlags is None:
-            maxlags = int(round(12 * (len(self.endog) / 100.0) ** (1 / 4.0)))
+            maxlags = round(12 * (len(self.endog) / 100.0) ** (1 / 4.0))
             # TODO: This expression shows up in a bunch of places, but
             #  in some it is `int` and in others `np.ceil`.  Also in some
             #  it multiplies by 4 instead of 12.  Let's put these all in

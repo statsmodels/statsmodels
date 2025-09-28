@@ -561,7 +561,6 @@ and Synthesis'
     discX = discretize(X)
     # CF: R's infotheo
     # TODO: compare to pyentropy quantize?
-    print
     print("Example in section 3.6 of Golan, using table 3.3")
     print("Bounding errors using Fano's inequality")
     print("H(P_{e}) + P_{e}log(K-1) >= H(X|Y)")

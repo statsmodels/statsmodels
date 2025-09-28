@@ -728,13 +728,13 @@ class TestGEE:
         endog = exog_sub.sum(1) + 3 * np.random.normal(size=n)
 
         # Mismatched cov_struct
-        with pytest.warns(UserWarning):
-            mod_sub = gee.GEE(
-                endog, exog_sub, group, cov_struct=cov_struct.Exchangeable()
-            )
+        mod_sub = gee.GEE(
+            endog, exog_sub, group, cov_struct=cov_struct.Exchangeable()
+        )
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
-        mod.compare_score_test(res_sub)  # smoketest
+        with pytest.warns(UserWarning):
+            mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched family
         mod_sub = gee.GEE(endog, exog_sub, group, family=families.Gaussian())
@@ -752,11 +752,11 @@ class TestGEE:
 
         # Mismatched weights
         w = np.random.uniform(size=n)
-        with pytest.warns(UserWarning):
-            mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
+        mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group)
-        mod.compare_score_test(res_sub)  # smoketest
+        with pytest.warns(UserWarning):
+            mod.compare_score_test(res_sub)  # smoketest
 
         # Parent and submodel are the same dimension
         w = np.random.uniform(size=n)

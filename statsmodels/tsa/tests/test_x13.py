@@ -93,16 +93,16 @@ def test_x13_arima_plot_no_pandas(dataset):
 def test_log_diagnostics(dataset):
     res = x13_arima_analysis(dataset, log_diagnostics=True)
     assert isinstance(res.x13_diagnostic, dict)
-    assert list(res.x13_diagnostic.keys())[0] == "F-D8"
-    assert isinstance(list(res.x13_diagnostic.values())[0], float)
+    assert next(iter(res.x13_diagnostic.keys())) == "F-D8"
+    assert isinstance(next(iter(res.x13_diagnostic.values())), float)
 
 
 @pytest.mark.smoke
 def test_log_diagnostics_false(dataset):
     res = x13_arima_analysis(dataset, log_diagnostics=False)
     assert isinstance(res.x13_diagnostic, dict)
-    assert list(res.x13_diagnostic.keys())[0] == "F-D8"
-    assert list(res.x13_diagnostic.values())[0] == "Log diagnostics not retrieved."
+    assert next(iter(res.x13_diagnostic.keys())) == "F-D8"
+    assert next(iter(res.x13_diagnostic.values())) == "Log diagnostics not retrieved."
 
 
 def test_x13_arima_rawspec_arg():

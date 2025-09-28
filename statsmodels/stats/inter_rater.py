@@ -76,7 +76,7 @@ def _int_ifclose(x, dec=1, width=4):
         x formatted as string, either '%4d' or '%4.1f'
 
     """
-    xint = int(round(x))
+    xint = round(x)
     if np.max(np.abs(xint - x)) < 1e-14:
         return xint, "%4d" % xint
     else:

@@ -317,7 +317,7 @@ class STLForecastResults:
             is_left = any(key.startswith(val) for val in left_keys)
             new += ":"
             stub = f"{new:<23s}"
-            val = f"{str(config[key]):>13s}"
+            val = f"{config[key]!s:>13s}"
             if is_left:
                 left_stubs.append(stub)
                 left_data.append([val])

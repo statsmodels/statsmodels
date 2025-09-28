@@ -178,7 +178,7 @@ if __name__ == "__main__":
     ppfq = [0.1, 0.5, 0.9]
     xx = [0.95, 1.0, 1.1]
     nxx = [-0.95, -1.0, -1.1]
-    print
+    print()
     # print(invnormalg.__doc__
     print(
         "\nsquare of standard normal random variable is chisquare with dof=1 distributed"

@@ -247,7 +247,7 @@ class DispersionResults(HolderTuple):
         return frame
 
 
-def test_poisson_dispersion(results, method="all", _old=False):
+def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
     """Score/LM type tests for Poisson variance assumptions
 
     Null Hypothesis is

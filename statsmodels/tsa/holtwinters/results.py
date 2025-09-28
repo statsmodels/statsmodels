@@ -348,7 +348,7 @@ class HoltWintersResults(Results):
             abs_x = np.abs(x)
             scale = 1
             if np.isnan(x):
-                return f"{str(x):>20}"
+                return f"{x!s:>20}"
             if abs_x != 0:
                 scale = int(np.log10(abs_x))
             if scale > 4 or scale < -3:
@@ -363,7 +363,7 @@ class HoltWintersResults(Results):
                 [
                     _fmt(vals.iloc[1]),
                     f"{vals.iloc[0]:>20}",
-                    f"{str(bool(vals.iloc[2])):>20}",
+                    f"{bool(vals.iloc[2])!s:>20}",
                 ]
             )
         params_table = SimpleTable(

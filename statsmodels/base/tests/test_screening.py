@@ -267,9 +267,9 @@ def test_glmlogit_screening():
     exog_candidates = x[:, 1:]
     res_screen = screener.screen_exog(exog_candidates, maxiter=30)
 
-    res_screen.idx_nonzero
+    assert isinstance(res_screen.idx_nonzero, np.ndarray)
 
-    res_screen.results_final
+    assert isinstance(res_screen.results_final.params, np.ndarray)
 
     xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
     xnames[0] = "const"

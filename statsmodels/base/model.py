@@ -1184,7 +1184,7 @@ class Results:
                     "predict requires that you use a DataFrame when "
                     "predicting from a model\nthat was created using the "
                     "formula api. \n\nThe original error message returned "
-                    f"by {mgr.engine} is:\n {str(str(exc))}"
+                    f"by {mgr.engine} is:\n {str(exc)!s}"
                 )
                 raise exc.__class__(msg) from exc
             if orig_exog_len > len(exog) and not is_dict:

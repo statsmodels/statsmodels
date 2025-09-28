@@ -684,9 +684,6 @@ class GMM(Model):
         if start is None:
             start = self.fitstart()  # TODO: temporary hack
 
-        if inv_weights is None:
-            inv_weights
-
         if optim_args is None:
             optim_args = {}
         if "disp" not in optim_args:

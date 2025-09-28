@@ -2190,7 +2190,7 @@ def _select_vs(v, p):
     elif v < 3.5:
         return 2, 3, 4
 
-    vi = int(round(v))
+    vi = round(v)
     return vi - 1, vi, vi + 1
 
 
@@ -2216,8 +2216,8 @@ def _interpolate_v(p, r, v):
 
     # if v2 is inf set to a big number so interpolation
     # calculations will work
-    if v2 > 1e38:
-        v2 = 1e38
+    # if v2 > 1e38: v2 = 1e38
+    v2 = min(v2, 1e38)
 
     # transform v
     v_, v0_, v1_, v2_ = 1.0 / v, 1.0 / v0, 1.0 / v1, 1.0 / v2

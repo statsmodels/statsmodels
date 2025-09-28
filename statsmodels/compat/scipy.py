@@ -47,13 +47,13 @@ def _next_regular(target):
             p35 *= 3
             if p35 == target:
                 return p35
-        if p35 < match:
-            match = p35
+        # if p35 < match: match = p35
+        match = min(p35, match)
         p5 *= 5
         if p5 == target:
             return p5
-    if p5 < match:
-        match = p5
+    #  if p5 < match: match = p5
+    match = min(match, p5)
     return match
 
 

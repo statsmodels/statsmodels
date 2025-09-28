@@ -191,23 +191,22 @@ select = [
 ]
 
 ignore = [
-    "RUF001", # 28
-    "RUF013", # Enable when Py 3.10 is min
-    "RUF059", # 319
-    "RUF015", # 4
-    "RUF046", # 3
-    "RUF043", # 17
-    "RUF002", # Do Not Enable
-    "RUF010", # 9
-    "RUF021", # 5
-    "PERF401",
+  "B018", # 45 # TODO: Enable
+  "B904", # 23 # TODO: Enable
+  # "RUF043", # 17 # TODO: Enable
+
+  "RUF001", # 28
+  "RUF013", # Enable when Py 3.10 is min
+  "RUF059", # 319
+  "RUF002", # Do Not Enable
+  "PERF401", # 53
   # Too many uses of dict(...) instread of {...}
   # Would be good enforce eventually
-  "C408",
+  "C408", # 322
   # Too many places without match= in pytest raises and warns
   # Would be goot enforce eventually
-   "PT011", # 511
-    "PT030", # 21
+  "PT011", # 511
+  "PT030", # 21
   # Required to allow black formatting
   "E203",
   # E203: Whitespace before ':' (Needed for black)
@@ -226,36 +225,31 @@ ignore = [
   "PLR0915", # 220
   # Redefined loop name
   "PLW2901", # 55
-  # Use `typing.NamedTuple` instead of `collections.namedtuple`
-  # "PYI024",
   # incorrect-dict-iterator, flags valid Series.items usage
-  "PERF102",
+  "PERF102", # 6
   # try-except-in-loop, becomes useless in Python 3.11
-  "PERF203",
+  "PERF203", # 9
   # pytest-parametrize-names-wrong-type
-  "PT006",
+  "PT006", # 37
   # pytest-raises-with-multiple-statements
-  "PT012",
-  # pytest-fixture-param-without-value
-  "PT019",
-  # if-stmt-min-max
-  "PLR1730",
+  "PT012", # 11
 
-  ### TODO: Enable gradually
-  # Magic number
-  "PLR2004",
-  # collection-literal-concatenation
-  "RUF005",
-  # pairwise-over-zipped
-  "RUF007",
-  # mutable-class-default
-  "RUF012",
-  # repeated-equality-comparison
-  "PLR1714", # 28
-  # Object does not implement `__hash__` method
-  "PLW1641", # 2
-  # import-outside-toplevel
-  "PLC0415", # 835 (Do not enable)
+
+### TODO: Enable gradually
+# Magic number
+"PLR2004",
+# collection-literal-concatenation
+"RUF005",
+# pairwise-over-zipped
+"RUF007",
+# mutable-class-default
+"RUF012",
+# repeated-equality-comparison
+"PLR1714", # 28
+# Object does not implement `__hash__` method
+"PLW1641", # 2
+# import-outside-toplevel
+"PLC0415", # 835 (Do not enable)
 ]
 
 [tool.ruff.lint.per-file-ignores]

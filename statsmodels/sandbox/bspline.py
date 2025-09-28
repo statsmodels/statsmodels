@@ -484,9 +484,8 @@ class SmoothingSpline(BSpline):
                 "x and y shape do not agree, by default x are \
                the Bspline's internal knots"
             )
-
-        if pen >= self.penmax:
-            pen = self.penmax
+        # if pen >= self.penmax: pen = self.penmax
+        pen = min(pen, self.penmax)
 
         if weights is not None:
             self.weights = weights

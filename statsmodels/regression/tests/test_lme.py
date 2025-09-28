@@ -23,6 +23,7 @@ from statsmodels.regression.mixed_linear_model import (
     _smw_solver,
 )
 import statsmodels.tools.numdiff as nd
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 from .results import lme_r_results
 
@@ -1284,9 +1285,9 @@ def test_singular():
     df["class"] = pd.Series([i % 3 for i in df.index], index=df.index)
 
     md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
-    mdf = md.fit()
-    with pytest.warns(Warning):
-        mdf.summary()
+    with pytest.warns(SingularMatrixWarning, match="The random effects covariance"):
+        mdf = md.fit()
+    mdf.summary()
 
 
 def test_get_distribution():

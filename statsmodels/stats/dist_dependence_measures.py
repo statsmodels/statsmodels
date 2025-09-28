@@ -119,11 +119,11 @@ def distance_covariance_test(x, y, B=None, method="auto"):
     n = x.shape[0]
     stats = distance_statistics(x, y)
 
-    if method == "auto" and n <= 500 or method == "emp":
+    if (method == "auto" and n <= 500) or method == "emp":
         chosen_method = "emp"
         test_statistic, pval = _empirical_pvalue(x, y, B, n, stats)
 
-    elif method == "auto" and n > 500 or method == "asym":
+    elif (method == "auto" and n > 500) or method == "asym":
         chosen_method = "asym"
         test_statistic, pval = _asymptotic_pvalue(stats)
 

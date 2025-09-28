@@ -199,8 +199,10 @@ def test_invalid():
     endog[1] = np.nan
     mod = sarimax.SARIMAX(endog)
     mod.ssm.filter_chandrasekhar = True
-    with pytest.raises(RuntimeError, match=("Cannot use Chandrasekhar"
-                                            " recursions with missing data.")):
+    with pytest.raises(RuntimeError, match=(
+            r"Cannot use Chandrasekhar recursions with missing data."
+    )
+                       ):
         mod.filter([0.5, 1.0])
 
     # Alternative timing
@@ -208,9 +210,10 @@ def test_invalid():
     mod = sarimax.SARIMAX(endog)
     mod.ssm.filter_chandrasekhar = True
     mod.ssm.timing_init_filtered = True
-    with pytest.raises(RuntimeError, match=("Cannot use Chandrasekhar"
-                                            " recursions with filtered"
-                                            " timing.")):
+    with pytest.raises(RuntimeError, match=(
+            r"Cannot use Chandrasekhar recursions with filtered timing."
+    )
+                       ):
         mod.filter([0.5, 1.0])
 
     # Time-varying matrices
@@ -218,8 +221,9 @@ def test_invalid():
     mod = sarimax.SARIMAX(endog)
     mod.ssm.filter_chandrasekhar = True
     mod["obs_cov"] = np.ones((1, 1, 10))
-    with pytest.raises(RuntimeError, match=("Cannot use Chandrasekhar"
-                                            " recursions with time-varying"
-                                            r" system matrices \(except for"
-                                            r" intercept terms\).")):
+    with pytest.raises(RuntimeError, match=(
+            r"Cannot use Chandrasekhar recursions with time-varying system matrices "
+            r"\(except for intercept terms\)."
+    )
+                       ):
         mod.filter([0.5, 1.0])

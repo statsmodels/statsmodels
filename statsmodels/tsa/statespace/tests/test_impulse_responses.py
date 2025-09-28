@@ -290,7 +290,7 @@ def test_varmax():
     mod2 = varmax.VARMAX(data, order=(1, 0), trend="c")
     mod2_result = mod2.fit()
 
-    with pytest.raises(ValueError, match="Endog must be pd.DataFrame."):
+    with pytest.raises(ValueError, match=r"Endog must be pd.DataFrame."):
         mod2_result.impulse_responses(6, impulse="b")
 
     response1 = mod1_result.impulse_responses(6, impulse="b")
