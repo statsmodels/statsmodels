@@ -29,7 +29,7 @@ def temp_filename():
         os.close(fd)
         os.unlink(filename)
     except Exception:
-        print("Couldn't close or delete file " "{filename}.".format(filename=filename))
+        print("Couldn't close or delete file {filename}.".format(filename=filename))
 
 
 def test_sarimax(temp_filename):

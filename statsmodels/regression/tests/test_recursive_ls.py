@@ -541,12 +541,12 @@ def test_multiple_constraints():
 def test_fix_params():
     mod = RecursiveLS([0, 1, 0, 1], [1, 1, 1, 1])
     with pytest.raises(
-        ValueError, match=("Linear constraints on coefficients" " should be given")
+        ValueError, match=("Linear constraints on coefficients should be given")
     ):
         with mod.fix_params({"const": 0.1}):
             mod.fit()
 
     with pytest.raises(
-        ValueError, match=("Linear constraints on coefficients" " should be given")
+        ValueError, match=("Linear constraints on coefficients should be given")
     ):
         mod.fit_constrained({"const": 0.1})

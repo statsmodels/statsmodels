@@ -18,7 +18,7 @@ from statsmodels.tsa.statespace import sarimax
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.1.5 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.1.5 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_515():
     # Difference and demean the series
@@ -105,7 +105,7 @@ def test_innovations_ma_invalid():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.2.4 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.2.4 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_524():
     # Difference and demean the series
@@ -123,10 +123,10 @@ def test_brockwell_davis_example_524():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.2.4 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.2.4 in Brockwell and Davis (2016)"
 )
 @pytest.mark.xfail(
-    reason="Suspicious result reported in Brockwell and Davis" " (2016)."
+    reason="Suspicious result reported in Brockwell and Davis (2016)."
 )
 def test_brockwell_davis_example_524_variance():
     # See `test_brockwell_davis_example_524` for the main test
@@ -150,7 +150,7 @@ def test_brockwell_davis_example_524_variance():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.2.5 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.2.5 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_525():
     # Difference and demean the series
@@ -173,7 +173,7 @@ def test_brockwell_davis_example_525():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.4.1 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.4.1 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_541():
     # Difference and demean the series

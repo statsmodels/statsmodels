@@ -542,7 +542,7 @@ class UnobservedComponents(MLEModel):
 
         if self.seasonal and self.seasonal_periods < 2:
             raise ValueError(
-                "Seasonal component must have a seasonal period" " of at least 2."
+                "Seasonal component must have a seasonal period of at least 2."
             )
 
         if self.freq_seasonal:

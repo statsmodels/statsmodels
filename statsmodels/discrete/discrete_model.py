@@ -590,7 +590,7 @@ class BinaryModel(DiscreteModel):
             return var_
         else:
             raise ValueError(
-                'Only `which` is "mean", "linear" or "var" are' " available."
+                '`which` must be one of "mean", "linear", or "var"'
             )
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
@@ -3670,7 +3670,7 @@ class NegativeBinomial(CountModel):
             self.score = self._score_geom
             self.loglikeobs = self._ll_geometric
         else:
-            raise ValueError('Likelihood type must "nb1", "nb2" ' 'or "geometric"')
+            raise ValueError('Likelihood type must "nb1", "nb2" or "geometric"')
 
     # Workaround to pickle instance methods
     def __getstate__(self):

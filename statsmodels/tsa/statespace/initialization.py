@@ -348,7 +348,7 @@ class Initialization:
         # If there are non-diffuse states, require Pstar
         if Pstar is None and k_nondiffuse_states > 0:
             raise ValueError(
-                "Must provide initial covariance matrix for" " non-diffuse states."
+                "Must provide initial covariance matrix for non-diffuse states."
             )
 
         # Construct the initialization

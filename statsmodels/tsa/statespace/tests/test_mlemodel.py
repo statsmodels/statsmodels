@@ -1182,14 +1182,14 @@ def test_append_extend_apply_invalid():
     # end of model
     not_cts = niledata.iloc[21:41]
     message = (
-        "Given `endog` does not have an index that extends the index of" " the model.$"
+        "Given `endog` does not have an index that extends the index of the model.$"
     )
     with pytest.raises(ValueError, match=message):
         res1.append(not_cts)
     with pytest.raises(ValueError, match=message):
         res1.extend(not_cts)
     message = (
-        "Given `exog` does not have an index that extends the index of" " the model.$"
+        "Given `exog` does not have an index that extends the index of the model.$"
     )
     with pytest.raises(ValueError, match=message):
         res1.append(endog2, exog=not_cts)
@@ -1207,14 +1207,14 @@ def test_append_extend_apply_invalid():
     # end of model
     not_cts = pd.Series(niledata[:41].values)[21:]
     message = (
-        "Given `endog` does not have an index that extends the index of" " the model.$"
+        "Given `endog` does not have an index that extends the index of the model.$"
     )
     with pytest.raises(ValueError, match=message):
         res2.append(not_cts)
     with pytest.raises(ValueError, match=message):
         res2.extend(not_cts)
     message = (
-        "Given `exog` does not have an index that extends the index of" " the model.$"
+        "Given `exog` does not have an index that extends the index of the model.$"
     )
     with pytest.raises(ValueError, match=message):
         res2.append(endog4, exog=not_cts)

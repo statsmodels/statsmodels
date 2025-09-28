@@ -574,7 +574,7 @@ def select_coint_rank(
     possible_signif_values = [0.1, 0.05, 0.01]
     if signif not in possible_signif_values:
         raise ValueError(
-            "Please choose a significance level from {0.1, 0.05," "0.01}"
+            "Please choose a significance level from 0.1, 0.05, or 0.01"
         )
 
     coint_result = coint_johansen(endog, det_order, k_ar_diff)

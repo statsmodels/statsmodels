@@ -58,7 +58,7 @@ def main():
     parser.add_option(
         "-N",
         "--num_samples",
-        help="Number of data points to generate for fit " "[default: %default]",
+        help="Number of data points to generate for fit [default: %default]",
         dest="N",
         action="store",
         type="int",
@@ -151,7 +151,7 @@ def main():
     # load_old_arrays
     parser.add_option(
         "--load_old_arrays",
-        help="Load exog/endog/true_params arrays from disk.  " "[default: %default]",
+        help="Load exog/endog/true_params arrays from disk.  [default: %default]",
         action="store_true",
         dest="load_old_arrays",
         default=False,

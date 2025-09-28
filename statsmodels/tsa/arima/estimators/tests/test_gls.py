@@ -7,7 +7,7 @@ from statsmodels.tsa.arima.estimators.gls import gls
 
 
 @pytest.mark.low_precision(
-    "Test against Example 6.6.1 in Brockwell and Davis" " (2016)"
+    "Test against Example 6.6.1 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_661():
     endog = oshorts.copy()
@@ -28,7 +28,7 @@ def test_brockwell_davis_example_661():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 6.6.2 in Brockwell and Davis" " (2016)"
+    "Test against Example 6.6.2 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_662():
     endog = lake.copy()

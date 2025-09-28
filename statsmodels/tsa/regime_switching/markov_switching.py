@@ -553,7 +553,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             raise ValueError("Must have univariate endogenous data.")
         if self.k_regimes < 2:
             raise ValueError(
-                "Markov switching models must have at least two" " regimes."
+                "Markov switching models must have at least two regimes."
             )
         if not (self.exog_tvtp is None or self.exog_tvtp.shape[0] == self.nobs):
             raise ValueError(
@@ -605,7 +605,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         probabilities = np.array(probabilities, ndmin=1)
         if not probabilities.shape == (self.k_regimes,):
             raise ValueError(
-                "Initial probabilities must be a vector of shape" " (k_regimes,)."
+                "Initial probabilities must be a vector of shape (k_regimes,)."
             )
         if not np.abs(np.sum(probabilities) - 1) < tol:
             raise ValueError("Initial probabilities vector must sum to one.")

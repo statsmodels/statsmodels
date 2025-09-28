@@ -233,7 +233,7 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     p, k = coefs.shape[:2]
     if y.shape[0] < p:
         raise ValueError(
-            f"y must by have at least order ({p}) observations. " f"Got {y.shape[0]}."
+            f"y must by have at least order ({p}) observations. Got {y.shape[0]}."
         )
     # initial value
     forcs = np.zeros((steps, k))
@@ -1834,7 +1834,7 @@ class VARResults(VARProcess):
         """
         if var_order is not None:
             raise NotImplementedError(
-                "alternate variable order not implemented" " (yet)"
+                "alternate variable order not implemented (yet)"
             )
 
         return IRAnalysis(self, P=var_decomp, periods=periods)

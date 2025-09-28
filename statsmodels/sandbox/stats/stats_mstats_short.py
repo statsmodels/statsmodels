@@ -186,7 +186,7 @@ def scoreatpercentile(data, per, limit=(), alphap=0.4, betap=0.4, axis=0, maskna
     per = np.asarray(per, float)
     if (per < 0).any() or (per > 100.0).any():
         raise ValueError(
-            "The percentile should be between 0. and 100. !" " (got %s)" % per
+            "The percentile should be between 0. and 100. ! (got %s)" % per
         )
     return quantiles(
         data,

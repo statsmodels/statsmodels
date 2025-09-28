@@ -229,16 +229,12 @@ ignore = [
   "PT006",
   # pytest-raises-with-multiple-statements
   "PT012",
-  # pytest-composite-assertion
-  # "PT018",
   # pytest-fixture-param-without-value
   "PT019",
   # The following rules may cause conflicts when used with the formatter:
-  "ISC001",
+  # "ISC001",
   # if-stmt-min-max
   "PLR1730",
-  # nan-comparison
-  "PLW0177",
 
   ### TODO: Enable gradually
   # Magic number

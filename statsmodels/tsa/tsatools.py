@@ -232,7 +232,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             insert = x.shape[1]
 
             warnings.warn(
-                "insert > number of variables, inserting at the" " last position",
+                "insert > number of variables, inserting at the last position",
                 ValueWarning,
                 stacklevel=2,
             )

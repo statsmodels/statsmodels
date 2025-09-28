@@ -292,7 +292,7 @@ def test_string():
         string_like(b"4", "value")
     with pytest.raises(
         ValueError,
-        match="value must be one of: 'apple'," " 'banana', 'cherry'",
+        match="value must be one of: 'apple', 'banana', 'cherry'",
     ):
         string_like("date", "value", options=("apple", "banana", "cherry"))
 

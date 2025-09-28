@@ -8,7 +8,7 @@ from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.1.3 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.1.3 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_513():
     # Test against Example 5.1.3 in Brockwell and Davis (2016)
@@ -25,7 +25,7 @@ def test_brockwell_davis_example_513():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.1.4 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.1.4 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_514():
     # Test against Example 5.1.4 in Brockwell and Davis (2016)
