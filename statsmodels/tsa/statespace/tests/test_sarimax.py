@@ -4,7 +4,7 @@ Tests for SARIMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
+from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_WIN
 
 import os
@@ -2831,7 +2831,8 @@ def test_simple_differencing_strindex():
     values = np.log(realgdp_results["value"]).values
     index = pd.Index(range(len(values))).map(str)
     endog = pd.Series(values, index=index)
-    with pytest.warns(UserWarning, match="Could not infer forma"):
+    match = "Could not infer forma" if PD_LT_2 else "An unsupported index was provided"
+    with pytest.warns(UserWarning, match=match):
         mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
 
     assert_(mod._index.equals(pd.RangeIndex(start=0, stop=len(values) - 1)))
