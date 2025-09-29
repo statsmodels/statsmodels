@@ -25,7 +25,6 @@ from statsmodels.robust.tools import (
     tuning_s_estimator_mean,
 )
 
-
 effs = [0.9, 0.95, 0.98, 0.99]
 
 results_menenez = [
