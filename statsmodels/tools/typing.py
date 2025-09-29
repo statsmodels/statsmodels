@@ -13,12 +13,12 @@ if TYPE_CHECKING:
             "NumPy 1.22.0 or later required for type checking"
         )
     from numpy.typing import (
+        ArrayLike,
         DTypeLike,
         NDArray,
         _FloatLike_co,
         _UIntLike_co,
     )
-    from numpy.typing import ArrayLike as ArrayLike  # noqa: PLC0414
     from pandas import DataFrame, Series
 
     _ExtendedFloatLike_co = Union[_FloatLike_co, _UIntLike_co]
