@@ -293,12 +293,23 @@ def test_combine_indices():
 @pytest.mark.smoke
 def test_group_sums():
     # Moved from grouputils __main__ section
+
     g = np.array([0, 0, 1, 2, 1, 1, 2, 0])
 
-    group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2), g,
-               use_bincount=False).T
-    group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2)[:, :, 0], g)
-    group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2)[:, :, 1], g)
+    assert isinstance(
+        group_sums(
+            np.arange(len(g) * 3 * 2).reshape(len(g), 3, 2), g, use_bincount=False
+        ).T,
+        np.ndarray,
+    )
+    assert isinstance(
+        group_sums(np.arange(len(g) * 3 * 2).reshape(len(g), 3, 2)[:, :, 0], g),
+        np.ndarray,
+    )
+    assert isinstance(
+        group_sums(np.arange(len(g) * 3 * 2).reshape(len(g), 3, 2)[:, :, 1], g),
+        np.ndarray,
+    )
 
 
 @pytest.mark.smoke
@@ -309,9 +320,11 @@ def test_group_class():
     x = np.arange(len(g)*3).reshape(len(g), 3, order="F")
     mygroup = Group(g)
 
-    mygroup.group_int
-    mygroup.group_sums(x)
-    mygroup.labels()
+    assert isinstance(mygroup.group_int, np.ndarray)
+    assert isinstance(mygroup.group_sums(x), np.ndarray)
+    lbls = mygroup.labels()
+    assert isinstance(lbls, list)
+    assert all(isinstance(lbl, str) for lbl in lbls)
 
 
 def test_dummy_sparse():

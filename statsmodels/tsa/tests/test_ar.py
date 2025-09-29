@@ -713,7 +713,7 @@ def test_autoreg_series():
     dates = period_range(start="1959Q1", periods=len(dta), freq="Q")
     dta.index = dates
     ar = AutoReg(dta, lags=15).fit()
-    ar.bse
+    assert isinstance(ar.bse, pd.Series)
 
 
 def test_ar_order_select():

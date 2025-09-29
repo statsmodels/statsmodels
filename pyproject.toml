@@ -232,7 +232,6 @@ ignore = [
   # Too many places without match= in pytest raises
   # Would be goot enforce eventually
   "PT011", # 511
-  "B018", # 45 # TODO: Enable
   "RUF013", # Enable when Py 3.10 is min
   "RUF059", # 319
   "PERF401", # 53

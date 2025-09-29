@@ -41,7 +41,6 @@ xx = sm.add_constant(x, prepend=False)  # const at end for Stata compatibility
 
 # remove nan observation
 mask = (xx != -999.0).all(1)  # nan code in dta file
-mask.shape
 y = y[mask]
 xx = xx[mask]
 group = group[mask]

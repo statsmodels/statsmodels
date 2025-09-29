@@ -15,6 +15,7 @@ from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_
 import pandas as pd
 import pytest
 
+import statsmodels.iolib.summary
 from statsmodels.tools import add_constant
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.statespace import sarimax, tools
@@ -970,7 +971,7 @@ class SARIMAXCoverageTest:
         inv = self.model.enforce_invertibility
         self.model.enforce_stationarity = False
         self.model.enforce_invertibility = False
-        self.model.start_params
+        assert isinstance(self.model.start_params, np.ndarray)
         self.model.enforce_stationarity = stat
         self.model.enforce_invertibility = inv
 
@@ -1019,12 +1020,12 @@ class SARIMAXCoverageTest:
 
         # Make sure no expections are thrown calculating any of the
         # covariance matrix types
-        self.result.cov_params_default
-        self.result.cov_params_approx
-        self.result.cov_params_oim
-        self.result.cov_params_opg
-        self.result.cov_params_robust_oim
-        self.result.cov_params_robust_approx
+        assert isinstance(self.result.cov_params_default, np.ndarray)
+        assert isinstance(self.result.cov_params_approx, np.ndarray)
+        assert isinstance(self.result.cov_params_oim, np.ndarray)
+        assert isinstance(self.result.cov_params_opg, np.ndarray)
+        assert isinstance(self.result.cov_params_robust_oim, np.ndarray)
+        assert isinstance(self.result.cov_params_robust_approx, np.ndarray)
 
     @pytest.mark.matplotlib
     def test_plot_diagnostics(self, close_figures):
@@ -1770,12 +1771,12 @@ class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
 
         # Make sure no expections are thrown calculating any of the
         # covariance matrix types
-        self.result.cov_params_default
+        assert isinstance(self.result.cov_params_default, np.ndarray)
         # Known failure due to the complex step inducing non-stationary
         # parameters, causing a failure in the solve_discrete_lyapunov call
         # self.result.cov_params_approx
-        self.result.cov_params_oim
-        self.result.cov_params_opg
+        assert isinstance(self.result.cov_params_oim, np.ndarray)
+        assert isinstance(self.result.cov_params_opg, np.ndarray)
 
 
 class Test_seasonal_arma_diff(SARIMAXCoverageTest):
@@ -1818,15 +1819,15 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
 
         # Make sure no expections are thrown calculating any of the
         # covariance matrix types
-        self.result.cov_params_default
+        assert isinstance(self.result.cov_params_default, np.ndarray)
         # Known failure due to the complex step inducing non-stationary
         # parameters, causing a failure in the solve_discrete_lyapunov call
         # self.result.cov_params_approx
-        self.result.cov_params_oim
-        self.result.cov_params_opg
+        assert isinstance(self.result.cov_params_oim, np.ndarray)
+        assert isinstance(self.result.cov_params_opg, np.ndarray)
 
 
-class Test_seasonal_arma_diffuse(SARIMAXCoverageTest):
+class TestSeasonalARMADiffuse(SARIMAXCoverageTest):
     # // SARMA and diffuse initialization
     # arima wpi, sarima(3, 0, 2, 4) noconstant vce(oim) diffuse
     # save_results 49
@@ -2105,16 +2106,17 @@ def test_misc_exog():
 
     for mod in models:
         # Smoke tests
-        mod.start_params
+        assert isinstance(mod.start_params, np.ndarray)
         res = mod.fit(disp=False)
-        res.summary()
-        res.predict()
-        res.predict(dynamic=True)
-        res.get_prediction()
+        assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
+        typ = pd.Series if isinstance(res.model.orig_endog, pd.DataFrame) else np.ndarray
+        assert isinstance(res.predict(), typ)
+        assert isinstance(res.predict(dynamic=True), typ)
+        assert isinstance(res.get_prediction().predicted_mean, typ)
 
         oos_exog = np.random.normal(size=(1, mod.k_exog))
-        res.forecast(steps=1, exog=oos_exog)
-        res.get_forecast(steps=1, exog=oos_exog)
+        assert isinstance(res.forecast(steps=1, exog=oos_exog), typ)
+        assert isinstance(res.get_forecast(steps=1, exog=oos_exog).predicted_mean, typ)
 
         # Smoke tests for invalid exog
         oos_exog = np.random.normal(size=(2, mod.k_exog))

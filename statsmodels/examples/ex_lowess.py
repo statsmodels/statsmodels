@@ -16,8 +16,6 @@ import statsmodels.nonparametric.tests.results
 # this is just to check direct import
 import statsmodels.nonparametric.smoothers_lowess
 
-statsmodels.nonparametric.smoothers_lowess.lowess
-
 lowess = sm.nonparametric.lowess
 
 x = np.arange(20.0)

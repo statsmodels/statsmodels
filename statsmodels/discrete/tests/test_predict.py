@@ -384,7 +384,7 @@ def test_distr(case, close_figures):
             which="prob", y_values=np.arange(5), average=True)
         assert_allclose(probs2.predicted, probs.mean(0), rtol=1e-10)
         dia = res.get_diagnostic()
-        dia.probs_predicted
+        assert isinstance(dia.probs_predicted, np.ndarray)
         # fig = dia.plot_probs();
         # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)
 

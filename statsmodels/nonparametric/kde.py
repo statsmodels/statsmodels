@@ -39,7 +39,7 @@ kernel_switch = dict(
 
 def _checkisfit(self):
     try:
-        self.density
+        _ = self.density
     except Exception as exc:
         raise ValueError("Call fit to fit the density first") from exc
 

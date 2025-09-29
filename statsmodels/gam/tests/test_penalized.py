@@ -98,7 +98,7 @@ class CheckGAMMixin:
 
     @pytest.mark.smoke
     def test_null_smoke(self):
-        self.res1.llnull
+        assert isinstance(self.res1.llnull, float)
 
 
 class TestTheilPLS5(CheckGAMMixin):

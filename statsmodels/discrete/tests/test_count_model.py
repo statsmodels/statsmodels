@@ -62,7 +62,7 @@ class CheckGeneric(CheckModelMixin):
 
     def test_null(self):
         # call llnull, so null model is attached, side effect of cached attribute
-        self.res1.llnull
+        assert isinstance(self.res1.llnull, float)
         # check model instead of value
         exog_null = self.res1.res_null.model.exog
         exog_infl_null = self.res1.res_null.model.exog_infl

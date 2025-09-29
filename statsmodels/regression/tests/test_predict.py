@@ -271,7 +271,7 @@ def test_predict_remove_data():
     exog = list(range(100))
     model = WLS(endog, exog, weights=[1 for _ in range(100)]).fit()
     # we need to compute scale before we remove wendog, wexog
-    model.scale
+    assert isinstance(model.scale, float)
     model.remove_data()
     scalar = model.get_prediction(1).predicted_mean
     pred = model.get_prediction([1])

@@ -264,7 +264,7 @@ class CheckBinaryResults(CheckModelResults):
 
     @pytest.mark.smoke
     def test_resid_response(self):
-        self.res1.resid_response
+        assert isinstance(self.res1.resid_response, np.ndarray)
 
 
 class CheckMargEff:
@@ -1274,7 +1274,7 @@ class TestNegativeBinomialNB2Newton(CheckNegBinMixin, CheckModelResults):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
     def test_alpha(self):
-        self.res1.bse  # attaches alpha_std_err
+        assert isinstance(self.res1.bse, np.ndarray)  # attaches alpha_std_err
         assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, DECIMAL_4)
         assert_almost_equal(
             self.res1.lnalpha_std_err, self.res2.lnalpha_std_err, DECIMAL_4
@@ -1319,7 +1319,7 @@ class TestNegativeBinomialNB1Newton(CheckNegBinMixin, CheckModelResults):
         assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
 
     def test_lnalpha(self):
-        self.res1.bse  # attaches alpha_std_err
+        assert isinstance(self.res1.bse, np.ndarray)  # attaches alpha_std_err
         assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, 3)
         assert_almost_equal(
             self.res1.lnalpha_std_err, self.res2.lnalpha_std_err, DECIMAL_4
@@ -1370,7 +1370,7 @@ class TestNegativeBinomialNB2BFGS(CheckNegBinMixin, CheckModelResults):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
     def test_alpha(self):
-        self.res1.bse  # attaches alpha_std_err
+        assert isinstance(self.res1.bse, np.ndarray)  # attaches alpha_std_err
         assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, DECIMAL_4)
         assert_almost_equal(
             self.res1.lnalpha_std_err, self.res2.lnalpha_std_err, DECIMAL_4
@@ -1416,7 +1416,7 @@ class TestNegativeBinomialNB1BFGS(CheckNegBinMixin, CheckModelResults):
         assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
 
     def test_lnalpha(self):
-        self.res1.bse  # attaches alpha_std_err
+        assert isinstance(self.res1.bse, np.ndarray)  # attaches alpha_std_err
         assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, 3)
         assert_almost_equal(
             self.res1.lnalpha_std_err, self.res2.lnalpha_std_err, DECIMAL_4
@@ -3099,7 +3099,7 @@ class TestNegativeBinomialPNB2Newton(CheckNegBinMixin, CheckModelResults):
         assert_allclose(self.res1.params, self.res2.params, atol=1e-7)
 
     def test_alpha(self):
-        self.res1.bse  # attaches alpha_std_err
+        assert isinstance(self.res1.bse, np.ndarray)  # attaches alpha_std_err
         assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
         assert_allclose(self.res1.lnalpha_std_err, self.res2.lnalpha_std_err, atol=1e-7)
 
@@ -3136,7 +3136,7 @@ class TestNegativeBinomialPNB1Newton(CheckNegBinMixin, CheckModelResults):
         assert_allclose(self.res1.tvalues, self.res2.z, atol=5e-3, rtol=5e-3)
 
     def test_lnalpha(self):
-        self.res1.bse  # attaches alpha_std_err
+        assert isinstance(self.res1.bse, np.ndarray)  # attaches alpha_std_err
         assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
         assert_allclose(self.res1.lnalpha_std_err, self.res2.lnalpha_std_err)
 
@@ -3185,7 +3185,7 @@ class TestNegativeBinomialPNB2BFGS(CheckNegBinMixin, CheckModelResults):
         assert_allclose(self.res1.params, self.res2.params, atol=1e-3, rtol=1e-3)
 
     def test_alpha(self):
-        self.res1.bse  # attaches alpha_std_err
+        assert isinstance(self.res1.bse, np.ndarray)  # attaches alpha_std_err
         assert_allclose(self.res1.lnalpha, self.res2.lnalpha, atol=1e-5, rtol=1e-5)
         assert_allclose(
             self.res1.lnalpha_std_err, self.res2.lnalpha_std_err, atol=1e-5, rtol=1e-5

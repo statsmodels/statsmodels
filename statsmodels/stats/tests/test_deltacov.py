@@ -95,7 +95,7 @@ def test_deltacov_margeff():
     tc = dt.TestPoissonNewton()
     tc.setup_class()
     res_poi = tc.res1
-    res_poi.model._derivative_exog
+    assert isinstance(res_poi.model._derivative_exog(res_poi.params), np.ndarray)
 
     # 2d f doesn't work correctly,
     # se_vectorized and predicted are 2d column vector

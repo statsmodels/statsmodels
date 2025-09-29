@@ -756,7 +756,7 @@ class TestGEE:
         mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group)
-        with pytest.warns(SpecificationWarning, match="Model and submodel have"):
+        with pytest.warns(SpecificationWarning, match="Model and submodel should"):
             mod.compare_score_test(res_sub)  # smoketest
 
         # Parent and submodel are the same dimension

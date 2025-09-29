@@ -65,10 +65,10 @@ if "ex1" in examples:
     err = y_pred - dgp.y_true
     print(err.std())
     # OLS standard errors are too small
-    mod.res_pooled.params
-    mod.res_pooled.bse
+    assert isinstance(mod.res_pooled.params, np.ndarray)
+    assert isinstance(mod.res_pooled.bse, np.ndarray)
     # heteroscedasticity robust does not help
-    mod.res_pooled.HC1_se
+    assert isinstance(mod.res_pooled.HC1_se, np.ndarray)
     # compare with cluster robust se
 
     print(sw.se_cov(sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int))))

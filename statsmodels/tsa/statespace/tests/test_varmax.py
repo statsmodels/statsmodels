@@ -18,6 +18,7 @@ from statsmodels.iolib.summary import forg
 from statsmodels.tsa.statespace import sarimax, varmax
 
 from .results import results_varmax
+import statsmodels.iolib.summary
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -923,16 +924,17 @@ def test_misc_exog():
 
     for mod in models:
         # Smoke tests
-        mod.start_params
+        assert isinstance(mod.start_params, np.ndarray)
         res = mod.fit(disp=False)
-        res.summary()
-        res.predict()
-        res.predict(dynamic=True)
-        res.get_prediction()
+        assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
+        typ = pd.DataFrame if isinstance(mod.data.orig_endog, pd.DataFrame) else np.ndarray
+        assert isinstance(res.predict(), typ)
+        assert isinstance(res.predict(dynamic=True), typ)
+        assert isinstance(res.get_prediction().predicted_mean, typ)
 
         oos_exog = np.random.normal(size=(1, mod.k_exog))
-        res.forecast(steps=1, exog=oos_exog)
-        res.get_forecast(steps=1, exog=oos_exog)
+        assert isinstance(res.forecast(steps=1, exog=oos_exog), typ)
+        assert isinstance(res.get_forecast(steps=1, exog=oos_exog).predicted_mean, typ)
 
         # Smoke tests for invalid exog
         oos_exog = np.random.normal(size=(2, mod.k_exog))

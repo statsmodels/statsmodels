@@ -550,7 +550,7 @@ def test_params():
 
     # By default start_params raises NotImplementedError
     with pytest.raises(NotImplementedError):
-        mod.start_params
+        _ = mod.start_params
     # But param names are by default an empty array
     assert_equal(mod.param_names, [])
 

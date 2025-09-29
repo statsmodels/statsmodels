@@ -2073,7 +2073,7 @@ def test_initial_level():
     series = [0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0]
     es = ExponentialSmoothing(series, initialization_method="known", initial_level=20.0)
     es_fit = es.fit()
-    es_fit.params
+    assert isinstance(es_fit.params, dict)
     assert_allclose(es_fit.params["initial_level"], 20.0)
 
 

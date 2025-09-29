@@ -12,6 +12,7 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+import statsmodels.iolib.summary
 from statsmodels.datasets import macrodata
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.statespace import structural
@@ -55,7 +56,7 @@ def run_ucm(name, use_exact_diffuse=False):
 
         # Smoke test for starting parameters, untransform, transform
         # Also test that transform and untransform are inverses
-        mod.start_params
+        assert isinstance(mod.start_params, list)
         roundtrip = mod.transform_params(mod.untransform_params(mod.start_params))
         assert_allclose(mod.start_params, roundtrip)
 
@@ -400,16 +401,17 @@ def test_misc_exog():
 
     for mod in models:
         # Smoke tests
-        mod.start_params
+        assert isinstance(mod.start_params, list)
         res = mod.fit(disp=False)
-        res.summary()
-        res.predict()
-        res.predict(dynamic=True)
-        res.get_prediction()
+        assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
+        typ = np.ndarray if isinstance(mod.data.orig_endog, np.ndarray) else pd.Series
+        assert isinstance(res.predict(), typ)
+        assert isinstance(res.predict(dynamic=True), typ)
+        assert isinstance(res.get_prediction().predicted_mean, typ)
 
         oos_exog = np.random.normal(size=(1, mod.k_exog))
-        res.forecast(steps=1, exog=oos_exog)
-        res.get_forecast(steps=1, exog=oos_exog)
+        assert isinstance(res.forecast(steps=1, exog=oos_exog), typ)
+        assert isinstance(res.get_forecast(steps=1, exog=oos_exog).predicted_mean, typ)
 
         # Smoke tests for invalid exog
         oos_exog = np.random.normal(size=(2, mod.k_exog))
