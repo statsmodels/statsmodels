@@ -4,10 +4,10 @@ echo "inside $0"
 
 RET=0
 
-if [ "$LINT" == true ]; then
-    echo "Running ruff check"
-    ruff check statsmodels
+echo "Running ruff check"
+ruff check statsmodels
 
+if [ "$LINT" == true ]; then
     echo "Running flake8 linting"
     echo "Linting all files with limited rules"
     flake8 statsmodels
@@ -38,5 +38,8 @@ if [ "$LINT" == true ]; then
         echo "No new files to lint"
     fi
 fi
+
+echo "Running isort"
+isort --check-only statsmodels
 
 exit "$RET"
