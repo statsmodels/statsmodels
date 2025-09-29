@@ -256,9 +256,9 @@ def test_ols_summary_rsquared_label():
     reg_with_constant = OLS(y, add_constant(x)).fit()
     r2_str = "R-squared:"
     if SP_LT_116:
-        with pytest.warns(UserWarning, match="blah"):
+        with pytest.warns(UserWarning, match="`kurtosistest` p-value"):
             assert r2_str in str(reg_with_constant.summary2())
-        with pytest.warns(UserWarning, match="blah"):
+        with pytest.warns(UserWarning, match="`kurtosistest` p-value"):
             assert r2_str in str(reg_with_constant.summary())
     else:
         assert r2_str in str(reg_with_constant.summary2())
@@ -267,9 +267,9 @@ def test_ols_summary_rsquared_label():
     reg_without_constant = OLS(y, x, hasconst=False).fit()
     r2_str = "R-squared (uncentered):"
     if SP_LT_116:
-        with pytest.warns(UserWarning, match="blah"):
+        with pytest.warns(UserWarning, match="`kurtosistest` p-value"):
             assert r2_str in str(reg_without_constant.summary2())
-        with pytest.warns(UserWarning, match="blah"):
+        with pytest.warns(UserWarning, match="`kurtosistest` p-value"):
             assert r2_str in str(reg_without_constant.summary())
     else:
         assert r2_str in str(reg_without_constant.summary2())
