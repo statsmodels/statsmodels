@@ -458,7 +458,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
                 np.array(
                     [
                         truncated_poisson_factorial_moment(interval, r, p)
-                        for (interval, p) in zip(intervals, counts, strict=False)
+                        for (interval, p) in zip(intervals, counts)
                     ]
                 )
                 for r in range(1, 5)
@@ -499,7 +499,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
                     np.log(
                         [
                             poisson_interval(interval, p)
-                            for (interval, p) in zip(intervals, counts, strict=False)
+                            for (interval, p) in zip(intervals, counts)
                         ]
                     )
                 )

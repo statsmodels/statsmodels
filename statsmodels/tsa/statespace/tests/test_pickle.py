@@ -15,14 +15,15 @@ MIT Press Books. The MIT Press.
 import pickle
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
-from numpy.testing import assert_equal, assert_allclose
 import pytest
 
 from statsmodels.tsa.statespace import sarimax
 from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.structural import UnobservedComponents
+
 from .results import results_kalman_filter
 
 

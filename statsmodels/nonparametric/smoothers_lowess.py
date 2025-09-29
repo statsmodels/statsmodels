@@ -7,6 +7,7 @@ Author : Josef Perktold
 """
 
 import numpy as np
+
 from ._smoothers_lowess import lowess as _lowess
 
 

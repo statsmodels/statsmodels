@@ -35,7 +35,7 @@ from __future__ import annotations
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
-from typing import Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 import warnings
 
 import numpy as np

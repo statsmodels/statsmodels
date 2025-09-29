@@ -8,7 +8,8 @@ License: BSD-3
 """
 
 import numpy as np
-from statsmodels.regression.linear_model import OLS, GLS, WLS
+
+from statsmodels.regression.linear_model import GLS, OLS, WLS
 
 
 def atleast_2dcols(x):

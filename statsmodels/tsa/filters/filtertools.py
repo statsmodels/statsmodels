@@ -12,8 +12,8 @@ Author: Josef-pktd
 # version control history is there
 
 import numpy as np
-import scipy.fftpack as fft
 from scipy import signal
+import scipy.fftpack as fft
 
 try:
     from scipy.signal._signaltools import _centered as trim_centered
@@ -22,7 +22,7 @@ except ImportError:
     # public SciPy function, but we need it here)
     from scipy.signal.signaltools import _centered as trim_centered
 
-from statsmodels.tools.validation import array_like, PandasWrapper
+from statsmodels.tools.validation import PandasWrapper, array_like
 
 
 def _pad_nans(x, head=None, tail=None):

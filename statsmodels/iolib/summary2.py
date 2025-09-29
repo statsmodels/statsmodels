@@ -590,7 +590,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in
                 results]
     # use unique column names, otherwise the merge will not succeed
-    for df, name in zip(cols, _make_unique([df.columns[0] for df in cols]), strict=False):
+    for df, name in zip(cols, _make_unique([df.columns[0] for df in cols])):
         df.columns = [name]
 
     info = reduce(merg, cols)

@@ -1,7 +1,6 @@
 import numpy as np
-from numpy import dot, diag_indices, zeros, ones, diag, asarray, r_
+from numpy import asarray, diag, diag_indices, dot, ones, r_, zeros
 from numpy.linalg import solve
-
 
 # def denton(indicator, benchmark, freq="aq", **kwarg):
 #    """

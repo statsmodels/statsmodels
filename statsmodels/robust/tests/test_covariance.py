@@ -1,17 +1,16 @@
 import os
 
 import numpy as np
-from scipy import linalg
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
+from scipy import linalg
 
 from statsmodels import robust
-import statsmodels.robust.norms as robnorms
 import statsmodels.robust.covariance as robcov
+import statsmodels.robust.norms as robnorms
 import statsmodels.robust.scale as robscale
 
 from .results import results_cov as res_cov
-
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 

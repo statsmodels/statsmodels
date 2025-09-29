@@ -10,11 +10,11 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 import statsmodels.api as sm
+import statsmodels.iolib.foreign as dta
 import statsmodels.stats.sandwich_covariance as sw
 
 # http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/srs.dta
 
-import statsmodels.iolib.foreign as dta
 
 try:
     srs = dta.genfromdta("srs.dta")

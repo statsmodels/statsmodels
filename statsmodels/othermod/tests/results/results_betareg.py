@@ -1,6 +1,8 @@
-import numpy as np
 import os
+
+import numpy as np
 import pandas as pd
+
 from statsmodels.tools.testing import Holder
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))

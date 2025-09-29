@@ -1,12 +1,16 @@
 import os
 
 import numpy as np
-from statsmodels.duration.survfunc import (
-    SurvfuncRight, survdiff, plot_survfunc,
-    CumIncidenceRight)
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
+
+from statsmodels.duration.survfunc import (
+    CumIncidenceRight,
+    SurvfuncRight,
+    plot_survfunc,
+    survdiff,
+)
 
 # If true, the output is written to a multi-page pdf file.
 pdf_output = False

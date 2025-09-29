@@ -5,15 +5,14 @@ import pandas as pd
 import pytest
 
 from statsmodels.tools.validation import (
-    array_like,
     PandasWrapper,
+    array_like,
     bool_like,
     dict_like,
     float_like,
     int_like,
     string_like,
 )
-
 from statsmodels.tools.validation.validation import _right_squeeze
 
 

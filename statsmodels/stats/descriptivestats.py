@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 from statsmodels.compat.pandas import PD_LT_2, Appender, is_numeric_dtype
 from statsmodels.compat.scipy import SP_LT_19
 
-from typing import Union
-from collections.abc import Sequence
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,9 @@ from statsmodels.tools.validation import (
     float_like,
     int_like,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 PERCENTILES = (1, 5, 10, 25, 50, 75, 90, 95, 99)
 QUANTILES = np.array(PERCENTILES) / 100.0

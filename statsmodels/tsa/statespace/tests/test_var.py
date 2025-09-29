@@ -17,6 +17,7 @@ from numpy.testing import assert_allclose
 import pandas as pd
 
 from statsmodels.tsa.statespace import varmax
+
 from .results import results_var_R
 
 current_path = os.path.dirname(os.path.abspath(__file__))

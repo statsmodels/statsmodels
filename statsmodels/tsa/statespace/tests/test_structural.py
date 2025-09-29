@@ -12,8 +12,8 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-import statsmodels.iolib.summary
 from statsmodels.datasets import macrodata
+import statsmodels.iolib.summary
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.statespace import structural
 from statsmodels.tsa.statespace.structural import UnobservedComponents

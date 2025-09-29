@@ -77,15 +77,14 @@ License: BSD-3
 """
 
 
-import numpy as np
-import pandas as pd
 import os
 
+import numpy as np
+from numpy.testing import assert_, assert_allclose, assert_equal
+import pandas as pd
 import pytest
-from numpy.testing import assert_, assert_equal, assert_allclose
 
-from statsmodels.tsa.statespace.exponential_smoothing import (
-    ExponentialSmoothing)
+from statsmodels.tsa.statespace.exponential_smoothing import ExponentialSmoothing
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 results_path = os.path.join(current_path, "results")

@@ -6,9 +6,14 @@ import pandas as pd
 import pytest
 from scipy import sparse
 
-from statsmodels.tools.grouputils import (dummy_sparse, Grouping, Group,
-                                          combine_indices, group_sums)
-from statsmodels.datasets import grunfeld, anes96
+from statsmodels.datasets import anes96, grunfeld
+from statsmodels.tools.grouputils import (
+    Group,
+    Grouping,
+    combine_indices,
+    dummy_sparse,
+    group_sums,
+)
 
 
 class CheckGrouping:

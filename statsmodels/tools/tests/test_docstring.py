@@ -1,6 +1,6 @@
 import pytest
 
-from statsmodels.tools.docstring import Docstring, remove_parameters, Parameter
+from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
 
 good = """
 This is the summary.

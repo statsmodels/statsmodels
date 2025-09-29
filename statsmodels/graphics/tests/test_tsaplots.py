@@ -1,5 +1,5 @@
 from statsmodels.compat.pandas import MONTH_END
-from statsmodels.compat.python import lmap
+from statsmodels.compat.python import PYTHON_IMPL_WASM, lmap
 
 import calendar
 from io import BytesIO
@@ -10,7 +10,6 @@ from numpy.testing import assert_, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.datasets import elnino, macrodata
 from statsmodels.graphics.tsaplots import (
     month_plot,

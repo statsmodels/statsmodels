@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from statsmodels.compat.pandas import (
     PD_LT_2_2_0,
     Appender,
@@ -7,8 +9,7 @@ from statsmodels.compat.pandas import (
 
 from abc import ABC, abstractmethod
 import datetime as dt
-from typing import Optional, Union
-from collections.abc import Hashable, Sequence
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,9 @@ from statsmodels.tools.validation import (
     string_like,
 )
 from statsmodels.tsa.tsatools import freq_to_period
+
+if TYPE_CHECKING:
+    from collections.abc import Hashable, Sequence
 
 DateLike = Union[dt.datetime, pd.Timestamp, np.datetime64]
 IntLike = Union[int, np.integer]
@@ -170,7 +174,7 @@ class DeterministicTerm(ABC):
             oth_attr = other._eq_attr
             if len(own_attr) != len(oth_attr):
                 return False
-            return all(a == b for a, b in zip(own_attr, oth_attr, strict=False))
+            return all(a == b for a, b in zip(own_attr, oth_attr))
         else:
             return False
 

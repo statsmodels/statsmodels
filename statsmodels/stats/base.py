@@ -5,7 +5,9 @@ Created on Mon Apr 22 14:03:21 2013
 Author: Josef Perktold
 """
 from statsmodels.compat.python import lzip
+
 import numpy as np
+
 from statsmodels.tools.testing import Holder
 
 
@@ -120,5 +122,5 @@ class AllPairsResults:
                 % smt.multitest_methods_names[self.multitest_method])
         text += "Pairs" + (" " * (maxlevel - 5 + 1)) + "p-values\n"
         text += "\n".join(f"{pairs}  {pv:6.4g}" for (pairs, pv) in
-                          zip(self.all_pairs_names, self.pval_corrected(), strict=False))
+                          zip(self.all_pairs_names, self.pval_corrected()))
         return text

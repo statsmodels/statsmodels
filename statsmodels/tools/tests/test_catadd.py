@@ -1,8 +1,8 @@
 import numpy as np
 from numpy.testing import assert_equal
-from statsmodels.tools.catadd import add_indep
-
 from scipy import linalg
+
+from statsmodels.tools.catadd import add_indep
 
 
 def test_add_indep():

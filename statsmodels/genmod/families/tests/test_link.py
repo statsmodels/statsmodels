@@ -2,9 +2,9 @@
 Test functions for genmod.families.links
 """
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal, assert_array_less
-from scipy import stats
+from numpy.testing import assert_allclose, assert_array_less, assert_equal
 import pytest
+from scipy import stats
 
 from statsmodels.genmod import families
 from statsmodels.tools import numdiff as nd

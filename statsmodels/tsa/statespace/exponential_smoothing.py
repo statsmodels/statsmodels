@@ -4,25 +4,27 @@ Linear exponential smoothing models
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 import pandas as pd
+
 from statsmodels.base.data import PandasData
-
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.tools.validation import (array_like, bool_like, float_like,
-                                          string_like, int_like)
-
-from statsmodels.tsa.exponential_smoothing import initialization as es_init
-from statsmodels.tsa.statespace import initialization as ss_init
-from statsmodels.tsa.statespace.kalman_filter import (
-    MEMORY_CONSERVE, MEMORY_NO_FORECAST)
-
-from statsmodels.compat.pandas import Appender
 import statsmodels.base.wrapper as wrap
-
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    float_like,
+    int_like,
+    string_like,
+)
+from statsmodels.tsa.exponential_smoothing import initialization as es_init
+from statsmodels.tsa.statespace import initialization as ss_init
+from statsmodels.tsa.statespace.kalman_filter import MEMORY_CONSERVE, MEMORY_NO_FORECAST
 
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 

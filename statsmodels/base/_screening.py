@@ -6,6 +6,7 @@ License: BSD-3
 """
 
 from collections import defaultdict
+
 import numpy as np
 
 from statsmodels.base._penalties import SCADSmoothed

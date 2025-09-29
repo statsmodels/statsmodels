@@ -1,10 +1,12 @@
 import numpy as np
-from scipy import linalg
 from numpy.testing import assert_allclose, assert_equal
+from scipy import linalg
 
 from statsmodels.stats.covariance import (
-    transform_corr_normal, corr_normal_scores, corr_quadrant,
-    )
+    corr_normal_scores,
+    corr_quadrant,
+    transform_corr_normal,
+)
 
 
 def test_transform_corr_normal():

@@ -478,7 +478,7 @@ R = dict(
             80,
             100,
         ],
-        lrange(24), strict=False,
+        lrange(24),
     )
 )
 

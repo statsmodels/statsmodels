@@ -1,15 +1,14 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 import os
 from socket import timeout
-
 from urllib.error import HTTPError, URLError
 
 import numpy as np
 from numpy.testing import assert_, assert_array_equal
 import pytest
 
-from statsmodels.compat.python import PYTHON_IMPL_WASM
-from statsmodels.datasets import get_rdataset, webuse, check_internet, utils
-
+from statsmodels.datasets import check_internet, get_rdataset, utils, webuse
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -81,6 +80,7 @@ def test_webuse():
 def test_webuse_pandas():
     # test copied and adjusted from iolib/tests/test_foreign
     from statsmodels.compat.pandas import assert_frame_equal
+
     from statsmodels.datasets import macrodata
     dta = macrodata.load_pandas().data
     base_gh = (

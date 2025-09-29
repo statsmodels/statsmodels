@@ -12,20 +12,22 @@ are tested against R:multtest
     consistency only
 
 """
-import pytest
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal,
-                           assert_allclose)
-
-from statsmodels.stats.multitest import (multipletests, fdrcorrection,
-                                         fdrcorrection_twostage,
-                                         NullDistribution,
-                                         local_fdr, multitest_methods_names)
-from statsmodels.stats.multicomp import tukeyhsd
-from scipy.stats.distributions import norm
-import scipy
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 from packaging import version
+import pytest
+import scipy
+from scipy.stats.distributions import norm
 
+from statsmodels.stats.multicomp import tukeyhsd
+from statsmodels.stats.multitest import (
+    NullDistribution,
+    fdrcorrection,
+    fdrcorrection_twostage,
+    local_fdr,
+    multipletests,
+    multitest_methods_names,
+)
 
 pval0 = np.array([
     0.838541367553,  0.642193923795,  0.680845947633,

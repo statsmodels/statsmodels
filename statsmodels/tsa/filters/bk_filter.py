@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import fftconvolve
 
-from statsmodels.tools.validation import array_like, PandasWrapper
+from statsmodels.tools.validation import PandasWrapper, array_like
 
 
 def bkfilter(x, low=6, high=32, K=12):

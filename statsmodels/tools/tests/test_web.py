@@ -1,5 +1,5 @@
-import pytest
 from numpy import array
+import pytest
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.web import _generate_url, webdoc

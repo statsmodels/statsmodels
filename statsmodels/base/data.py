@@ -279,9 +279,9 @@ class ModelData:
                 nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
 
         if not np.any(nan_mask):  # no missing do not do anything
-            combined = dict(zip(combined_names, combined, strict=False))
+            combined = dict(zip(combined_names, combined))
             if combined_2d:
-                combined.update(dict(zip(combined_2d_names, combined_2d, strict=False)))
+                combined.update(dict(zip(combined_2d_names, combined_2d)))
             if none_array_names:
                 combined.update({k: kwargs.get(k, None) for k in none_array_names})
 
@@ -304,7 +304,7 @@ class ModelData:
             def drop_nans_2d(x):
                 return cls._drop_nans_2d(x, nan_mask)
 
-            combined = dict(zip(combined_names, lmap(drop_nans, combined), strict=False))
+            combined = dict(zip(combined_names, lmap(drop_nans, combined)))
 
             if missing_idx is not None:
                 if updated_row_mask is not None:
@@ -320,7 +320,7 @@ class ModelData:
 
             if combined_2d:
                 combined.update(
-                    dict(zip(combined_2d_names, lmap(drop_nans_2d, combined_2d), strict=False))
+                    dict(zip(combined_2d_names, lmap(drop_nans_2d, combined_2d)))
                 )
             if none_array_names:
                 combined.update({k: kwargs.get(k, None) for k in none_array_names})

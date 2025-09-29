@@ -5,26 +5,31 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.pandas import Appender
+
 import contextlib
 from warnings import warn
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from statsmodels.compat.pandas import Appender
-from statsmodels.tools.tools import Bunch
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tsa.vector_ar import var_model
 import statsmodels.base.wrapper as wrap
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.sm_exceptions import EstimationWarning
+from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.vector_ar import var_model
 
+from .initialization import Initialization
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
-from .initialization import Initialization
 from .tools import (
-    is_invertible, concat, prepare_exog,
-    constrain_stationary_multivariate, unconstrain_stationary_multivariate,
-    prepare_trend_spec, prepare_trend_data
+    concat,
+    constrain_stationary_multivariate,
+    is_invertible,
+    prepare_exog,
+    prepare_trend_data,
+    prepare_trend_spec,
+    unconstrain_stationary_multivariate,
 )
 
 

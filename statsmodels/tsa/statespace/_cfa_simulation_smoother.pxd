@@ -6,10 +6,16 @@ License: BSD-3
 """
 
 # Typical imports
+
 cimport numpy as np
 
 from statsmodels.tsa.statespace._representation cimport (
-    sStatespace, dStatespace, cStatespace, zStatespace)
+    cStatespace,
+    dStatespace,
+    sStatespace,
+    zStatespace,
+)
+
 
 cdef class sCFASimulationSmoother(object):
     # Statespace object

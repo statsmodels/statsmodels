@@ -1,8 +1,8 @@
-from .foreign import savetxt
-from .table import SimpleTable, csv2st
-from .smpickle import save_pickle, load_pickle
-
 from statsmodels.tools._test_runner import PytestTester
+
+from .foreign import savetxt
+from .smpickle import load_pickle, save_pickle
+from .table import SimpleTable, csv2st
 
 __all__ = [
            "SimpleTable",

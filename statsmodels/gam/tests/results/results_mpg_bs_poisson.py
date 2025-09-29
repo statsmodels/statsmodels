@@ -2,7 +2,6 @@ import numpy as np
 
 from statsmodels.tools.tools import Bunch
 
-
 mpg_bs_poisson = Bunch()
 
 mpg_bs_poisson.smooth0 = Bunch()

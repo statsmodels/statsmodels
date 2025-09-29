@@ -25,6 +25,7 @@ https://candes.su.domains/publications/downloads/FDR_regression.pdf
 
 import numpy as np
 import pandas as pd
+
 from statsmodels.iolib import summary2
 
 
@@ -157,7 +158,7 @@ def _design_knockoff_sdp(exog):
     """
 
     try:
-        from cvxopt import solvers, matrix
+        from cvxopt import matrix, solvers
     except ImportError as exc:
         raise ValueError(
             "SDP knockoff designs require installation of cvxopt"

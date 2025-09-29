@@ -7,8 +7,6 @@ multiplication.
 Copyright (c) 2019 Kevin Sheppard
 License: 3-clause BSD
 """
-from typing import NamedTuple
-
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import (
     Appender,
@@ -18,6 +16,7 @@ from statsmodels.compat.pandas import (
     get_cached_doc,
 )
 
+from typing import NamedTuple
 
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series

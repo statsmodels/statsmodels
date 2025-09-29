@@ -1592,7 +1592,7 @@ class TestGEE:
             np.random.poisson(
                 0.1 * (exog_i[1] + exog_i[2]) + offset_i + np.log(exposure_i)
             )
-            for exog_i, offset_i, exposure_i in zip(exog, offset, exposure, strict=False)
+            for exog_i, offset_i, exposure_i in zip(exog, offset, exposure)
         ]
 
         model = gee.GEE(
@@ -1799,7 +1799,7 @@ class TestGEE:
         ixs = set()
         for g in model1.group_labels:
             for v in eq.pairs[g].values():
-                for a, b in zip(v[0], v[1], strict=False):
+                for a, b in zip(v[0], v[1]):
                     ky = (a, b)
                     assert ky not in ixs
                     ixs.add(ky)

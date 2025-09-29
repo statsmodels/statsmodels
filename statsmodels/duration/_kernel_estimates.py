@@ -1,4 +1,5 @@
 import numpy as np
+
 from statsmodels.duration.hazard_regression import PHReg
 
 

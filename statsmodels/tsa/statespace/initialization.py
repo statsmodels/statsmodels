@@ -9,8 +9,9 @@ import warnings
 
 import numpy as np
 
-from . import tools
 from statsmodels.tools.sm_exceptions import SpecificationWarning
+
+from . import tools
 
 
 class Initialization:

@@ -8,8 +8,8 @@ License: BSD-3
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.tools.validation import array_like
 
 
@@ -555,10 +555,10 @@ def test_cov_oneway(cov_list, nobs_list):
     nobs = sum(nobs_list)  # total number of observations
     k = cov_list[0].shape[0]
 
-    cov_pooled = sum((n - 1) * c for (n, c) in zip(nobs_list, cov_list, strict=False))
+    cov_pooled = sum((n - 1) * c for (n, c) in zip(nobs_list, cov_list))
     cov_pooled /= (nobs - m)
     stat0 = (nobs - m) * _logdet(cov_pooled)
-    stat0 -= sum((n - 1) * _logdet(c) for (n, c) in zip(nobs_list, cov_list, strict=False))
+    stat0 -= sum((n - 1) * _logdet(c) for (n, c) in zip(nobs_list, cov_list))
 
     # Box's chi2
     c1 = sum(1 / (n - 1) for n in nobs_list) - 1 / (nobs - m)

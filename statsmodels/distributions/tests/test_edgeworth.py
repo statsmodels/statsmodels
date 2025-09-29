@@ -4,8 +4,8 @@ import numpy as np
 import numpy.testing as npt
 from numpy.testing import assert_allclose, assert_equal
 import pytest
-from scipy.special import factorial, factorial2, gamma
 from scipy import stats
+from scipy.special import factorial, factorial2, gamma
 
 from statsmodels.distributions.edgeworth import (
     ExpandedNormal,

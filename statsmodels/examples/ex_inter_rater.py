@@ -7,8 +7,7 @@ Author: Josef Perktold
 
 import numpy as np
 
-from statsmodels.stats.inter_rater import fleiss_kappa, cohens_kappa
-
+from statsmodels.stats.inter_rater import cohens_kappa, fleiss_kappa
 
 table0 = np.asarray(
     """\

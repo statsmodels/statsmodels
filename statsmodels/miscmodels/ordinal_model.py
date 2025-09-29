@@ -239,7 +239,7 @@ class OrderedModel(GenericLikelihoodModel):
             self.nobs, self.k_vars = self.endog.shape[0], 0
 
         threshold_names = [
-            str(x) + "/" + str(y) for x, y in zip(labels[:-1], labels[1:], strict=False)
+            str(x) + "/" + str(y) for x, y in zip(labels[:-1], labels[1:])
         ]
 
         # from GenericLikelihoodModel.fit

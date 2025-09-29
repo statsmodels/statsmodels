@@ -2,7 +2,6 @@ from numpy import array
 
 from statsmodels.tools.testing import Holder
 
-
 data = Holder()
 data.comment = "generated data, divide by 1000"
 data.name = "data"

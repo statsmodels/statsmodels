@@ -389,6 +389,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             elif wt == "toeplitz":
                 # assume toeplitz structure
                 from scipy.linalg import toeplitz
+
                 # weights = toeplitz(np.arange(table.shape[0]))
                 weights = toeplitz(weights)
             else:

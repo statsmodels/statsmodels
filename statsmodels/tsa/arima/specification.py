@@ -777,7 +777,7 @@ class SARIMAXSpecification:
             names.append("sigma2")
         ix = np.cumsum(ix)
 
-        out = dict(zip(names, np.split(params, ix), strict=False))
+        out = dict(zip(names, np.split(params, ix)))
         if "sigma2" in out:
             out["sigma2"] = out["sigma2"].item()
 

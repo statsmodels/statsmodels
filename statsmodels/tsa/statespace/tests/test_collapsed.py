@@ -8,21 +8,23 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import os
+
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
-import os
 
 from statsmodels import datasets
 from statsmodels.tsa.statespace import dynamic_factor
-from statsmodels.tsa.statespace.mlemodel import MLEModel
-from statsmodels.tsa.statespace.kalman_filter import (
-    FILTER_UNIVARIATE)
+from statsmodels.tsa.statespace.kalman_filter import FILTER_UNIVARIATE
 from statsmodels.tsa.statespace.kalman_smoother import (
-    SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
-    SMOOTH_UNIVARIATE)
+    SMOOTH_ALTERNATIVE,
+    SMOOTH_CLASSICAL,
+    SMOOTH_UNIVARIATE,
+)
+from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
-from numpy.testing import assert_equal, assert_allclose
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

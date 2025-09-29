@@ -18,12 +18,17 @@ Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
 import numpy as np
+from numpy.testing import assert_allclose
 import pytest
 
 from statsmodels.tsa.statespace import (
-    mlemodel, sarimax, structural, varmax, dynamic_factor)
+    dynamic_factor,
+    mlemodel,
+    sarimax,
+    structural,
+    varmax,
+)
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
-from numpy.testing import assert_allclose
 
 
 def get_model(univariate, missing=None, init=None):

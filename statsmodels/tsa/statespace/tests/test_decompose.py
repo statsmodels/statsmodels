@@ -5,17 +5,14 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import numpy as np
+from numpy.testing import assert_allclose
+import pandas as pd
 import pytest
 
-import numpy as np
-import pandas as pd
-
-from numpy.testing import assert_allclose
-
 from statsmodels import datasets
-from statsmodels.tsa.statespace import sarimax, varmax, dynamic_factor_mq
+from statsmodels.tsa.statespace import dynamic_factor_mq, sarimax, varmax
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
-
 
 dta = datasets.macrodata.load_pandas().data
 dta.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")

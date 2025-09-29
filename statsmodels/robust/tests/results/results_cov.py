@@ -6,8 +6,8 @@ License: BSD-3
 """
 
 import numpy as np
-from statsmodels.tools.testing import Holder
 
+from statsmodels.tools.testing import Holder
 
 # > ccogk = CovOgk(hbk, control = CovControlOgk(beta=0.9, smrob="s_mad"))
 # > cat(convert(ccogk$cov, name="cov"))

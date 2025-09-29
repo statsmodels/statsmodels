@@ -6,14 +6,17 @@ License: Simplified-BSD
 """
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
-from .results import results_varmax
+import pytest
+
 from statsmodels.tsa.statespace import sarimax, varmax
 from statsmodels.tsa.statespace.kalman_filter import (
-    MEMORY_CONSERVE, MEMORY_NO_LIKELIHOOD)
-from numpy.testing import assert_allclose
+    MEMORY_CONSERVE,
+    MEMORY_NO_LIKELIHOOD,
+)
 
-import pytest
+from .results import results_varmax
 
 
 def check_output(res_chand, res_orig, memory_conserve=False):

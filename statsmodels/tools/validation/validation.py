@@ -1,5 +1,7 @@
-from typing import Any, Optional
+from __future__ import annotations
+
 from collections.abc import Mapping
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -154,7 +156,7 @@ def array_like(
             msg = "{0} is required to have ndim {1} but has ndim {2}"
             raise ValueError(msg.format(name, ndim, arr.ndim))
     if shape is not None:
-        for actual, req in zip(arr.shape, shape, strict=False):
+        for actual, req in zip(arr.shape, shape):
             if req is not None and actual != req:
                 req_shape = str(shape).replace("None, ", "*, ")
                 msg = "{0} is required to have shape {1} but has shape {2}"

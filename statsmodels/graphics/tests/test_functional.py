@@ -1,8 +1,9 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pytest
 
-from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.datasets import elnino
 from statsmodels.graphics.functional import (
     banddepth,

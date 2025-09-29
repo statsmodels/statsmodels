@@ -1,11 +1,10 @@
-from statsmodels.compat.pandas import assert_series_equal, assert_frame_equal
+from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 
 from io import StringIO
 from textwrap import dedent
 
 import numpy as np
 import numpy.testing as npt
-
 from numpy.testing import assert_equal
 import pandas as pd
 import pytest

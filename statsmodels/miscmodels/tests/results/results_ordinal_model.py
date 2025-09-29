@@ -2,9 +2,11 @@
 Test Results for ordinal models from R MASS lib
 """
 
-import numpy as np
 import os
+
+import numpy as np
 import pandas as pd
+
 from statsmodels.tools.testing import Holder
 
 # R (v3.4.4) code inspired from

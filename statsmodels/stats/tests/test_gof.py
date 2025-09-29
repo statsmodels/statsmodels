@@ -7,8 +7,7 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
-from statsmodels.stats.gof import (chisquare, chisquare_power,
-                                   chisquare_effectsize)
+from statsmodels.stats.gof import chisquare, chisquare_effectsize, chisquare_power
 from statsmodels.tools.testing import Holder
 
 
@@ -68,7 +67,7 @@ def test_chisquare():
     pr1 = np.array([1020,  690,  510,  420,  360])
     pr2 = np.array([1050,  660,  510,  420,  360])
 
-    for pr, res in zip([pr1, pr2], [res1, res2], strict=False):
+    for pr, res in zip([pr1, pr2], [res1, res2]):
         stat, pval = chisquare(freq, pr)
         assert_almost_equal(stat, res.statistic, decimal=12)
         assert_almost_equal(pval, res.p_value, decimal=13)

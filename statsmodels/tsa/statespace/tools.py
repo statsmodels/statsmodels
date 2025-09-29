@@ -4,17 +4,24 @@ Statespace Tools
 Author: Chad Fulton
 License: Simplified-BSD
 """
-import numpy as np
-from scipy.linalg import solve_sylvester
-import pandas as pd
-
 from statsmodels.compat.pandas import Appender
-from statsmodels.tools.data import _is_using_pandas
-from scipy.linalg.blas import find_best_blas_type
-from . import (_initialization, _representation, _kalman_filter,
-               _kalman_smoother, _simulation_smoother,
-               _cfa_simulation_smoother, _tools)
 
+import numpy as np
+import pandas as pd
+from scipy.linalg import solve_sylvester
+from scipy.linalg.blas import find_best_blas_type
+
+from statsmodels.tools.data import _is_using_pandas
+
+from . import (
+    _cfa_simulation_smoother,
+    _initialization,
+    _kalman_filter,
+    _kalman_smoother,
+    _representation,
+    _simulation_smoother,
+    _tools,
+)
 
 compatibility_mode = False
 has_trmm = True

@@ -9,11 +9,11 @@ Created on Sat Dec 17 08:39:16 2011
 Author: Josef Perktold
 """
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.tools import add_constant
 import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.tools.tools import add_constant
 
 
 def test_cov_cluster_2groups():

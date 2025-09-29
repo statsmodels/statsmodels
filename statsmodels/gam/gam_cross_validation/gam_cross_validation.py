@@ -5,12 +5,14 @@ Author: Luca Puggini
 
 """
 
-from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass
+
+from abc import ABCMeta, abstractmethod
 import itertools
+
 import numpy as np
-from statsmodels.gam.smooth_basis import (GenericSmoothers,
-                                          UnivariateGenericSmoother)
+
+from statsmodels.gam.smooth_basis import GenericSmoothers, UnivariateGenericSmoother
 
 
 class BaseCV(with_metaclass(ABCMeta)):

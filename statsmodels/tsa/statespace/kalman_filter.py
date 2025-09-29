@@ -9,10 +9,12 @@ import contextlib
 from warnings import warn
 
 import numpy as np
-from .representation import OptionWrapper, Representation, FrozenRepresentation
-from .tools import reorder_missing_matrix, reorder_missing_vector
-from . import tools
+
 from statsmodels.tools.sm_exceptions import ValueWarning
+
+from . import tools
+from .representation import FrozenRepresentation, OptionWrapper, Representation
+from .tools import reorder_missing_matrix, reorder_missing_vector
 
 # Define constants
 FILTER_CONVENTIONAL = 0x01     # Durbin and Koopman (2012), Chapter 4

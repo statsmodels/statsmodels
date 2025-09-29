@@ -429,7 +429,7 @@ class WaldTestResults:
         if hasattr(self, "_dframe"):
             return self._dframe
         # rename the column nambes, but do not copy data
-        renaming = dict(zip(self.table.columns, self.col_names, strict=False))
+        renaming = dict(zip(self.table.columns, self.col_names))
         self.dframe = self.table.rename(columns=renaming)
         return self.dframe
 
@@ -448,7 +448,7 @@ def _get_pairs_labels(k_level, level_names):
     """
     idx_pairs_all = np.triu_indices(k_level, 1)
     labels = [f"{level_names[name[1]]}-{level_names[name[0]]}"
-              for name in zip(*idx_pairs_all, strict=False)]
+              for name in zip(*idx_pairs_all)]
     return labels
 
 

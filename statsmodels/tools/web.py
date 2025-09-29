@@ -2,8 +2,8 @@
 Provides a function to open the system browser to either search or go directly
 to a function's reference
 """
-import webbrowser
 from urllib.parse import urlencode
+import webbrowser
 
 from statsmodels import __version__
 

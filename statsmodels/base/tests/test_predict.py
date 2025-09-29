@@ -25,7 +25,7 @@ class CheckPredictReturns:
         assert_allclose(pred.values, fitted.values, rtol=1e-13)
 
         # plain dict
-        xd = dict(zip(data.columns, data.iloc[1:10:2].values.T, strict=False))
+        xd = dict(zip(data.columns, data.iloc[1:10:2].values.T))
         with pytest.warns(DeprecationWarning, match="Using"):
             pred = res.predict(xd)
         assert_equal(pred.index, np.arange(len(pred)))
@@ -132,7 +132,7 @@ class TestPredictGLM(CheckPredictReturns):
         assert_allclose(pred.values, fitted.values, rtol=1e-13)
 
         # plain dict
-        xd = dict(zip(data.columns, data.iloc[1:10:2].values.T, strict=False))
+        xd = dict(zip(data.columns, data.iloc[1:10:2].values.T))
         with pytest.warns(DeprecationWarning, match="Using"):
             pred = res.predict(xd, offset=offset)
         assert_equal(pred.index, np.arange(len(pred)))

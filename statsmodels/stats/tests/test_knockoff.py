@@ -1,11 +1,14 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal, assert_equal
 import pytest
+
 import statsmodels.api as sm
 from statsmodels.stats import knockoff_regeffects as kr
-from statsmodels.stats._knockoff import (RegressionFDR,
-                                         _design_knockoff_equi,
-                                         _design_knockoff_sdp)
+from statsmodels.stats._knockoff import (
+    RegressionFDR,
+    _design_knockoff_equi,
+    _design_knockoff_sdp,
+)
 
 try:
     import cvxopt  # noqa:F401

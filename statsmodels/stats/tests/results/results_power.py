@@ -9,7 +9,6 @@ import collections
 
 from statsmodels.tools.testing import Holder
 
-
 # numbers from R package `pwr` pwr.chisq.test
 pwr_chisquare = collections.defaultdict(Holder)
 pwr_chisquare[0].w = 1e-04

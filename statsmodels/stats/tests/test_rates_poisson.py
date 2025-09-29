@@ -1,29 +1,30 @@
-import pytest
+# we cannot import test_poisson_2indep directly, pytest treats that as test
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 import warnings
+
 import numpy as np
 from numpy import arange
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 from scipy import stats
 
-# we cannot import test_poisson_2indep directly, pytest treats that as test
-from statsmodels.compat.python import PYTHON_IMPL_WASM
 import statsmodels.stats.rates as smr
-from statsmodels.stats.rates import (
-    # test_poisson, # cannot import functions that start with test
+from statsmodels.stats.rates import (  # test_poisson, # cannot import functions that start with test
     confint_poisson,
-    tolerance_int_poisson,
+    confint_poisson_2indep,
     confint_quantile_poisson,
     etest_poisson_2indep,
-    confint_poisson_2indep,
-    nonequivalence_poisson_2indep,
-    power_poisson_ratio_2indep,
-    power_equivalence_poisson_2indep,
-    power_poisson_diff_2indep,
-    power_equivalence_neginb_2indep,
-    power_negbin_ratio_2indep,
     method_names_poisson_1samp,
     method_names_poisson_2indep,
-    )
+    nonequivalence_poisson_2indep,
+    power_equivalence_neginb_2indep,
+    power_equivalence_poisson_2indep,
+    power_negbin_ratio_2indep,
+    power_poisson_diff_2indep,
+    power_poisson_ratio_2indep,
+    tolerance_int_poisson,
+)
 
 methods = ["wald", "score", "exact-c", "waldccv", "sqrt-a", "sqrt-v", "midp-c",
            "sqrt",

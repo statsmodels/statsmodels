@@ -10,9 +10,12 @@ from numpy.testing import assert_equal
 
 __docformat__ = "restructuredtext en"
 
-from statsmodels.iolib.table import Cell, SimpleTable
-from statsmodels.iolib.table import default_latex_fmt
-from statsmodels.iolib.table import default_html_fmt
+from statsmodels.iolib.table import (
+    Cell,
+    SimpleTable,
+    default_html_fmt,
+    default_latex_fmt,
+)
 
 ltx_fmt1 = default_latex_fmt.copy()
 html_fmt1 = default_html_fmt.copy()
@@ -66,7 +69,7 @@ class TestCell:
         celldata = cell0data, cell1data, row1data[0], row1data[1]
         cells = [Cell(datum, datatype=i % 2)
                  for i, datum in enumerate(celldata)]
-        for cell, datum in zip(cells, celldata, strict=False):
+        for cell, datum in zip(cells, celldata):
             assert_equal(cell.data, datum)
 
 

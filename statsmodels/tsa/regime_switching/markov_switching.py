@@ -897,7 +897,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             "filtered_joint_probabilities_log",
         ]
         result = HamiltonFilterResults(
-            self, Bunch(**dict(zip(names, self._filter(params), strict=False)))
+            self, Bunch(**dict(zip(names, self._filter(params))))
         )
 
         # Wrap in a results object
@@ -1023,7 +1023,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             "predicted_joint_probabilities_log",
             "filtered_joint_probabilities_log",
         ]
-        result = Bunch(**dict(zip(names, self._filter(params), strict=False)))
+        result = Bunch(**dict(zip(names, self._filter(params))))
 
         # Kim smoother
         out = self._smooth(

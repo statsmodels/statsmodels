@@ -49,8 +49,8 @@ from statsmodels.discrete.discrete_margins import (
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.genmod import cov_struct as cov_structs, families
-from statsmodels.genmod.families.links import Link
 from statsmodels.genmod.families import varfuncs
+from statsmodels.genmod.families.links import Link
 from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
@@ -2388,7 +2388,7 @@ class GEEResults(GLMResults):
         # All within-group pairwise time distances (xdt) and the
         # corresponding products of scaled residuals (xre).
         xre, xdt = [], []
-        for re, ti in zip(resid, time, strict=False):
+        for re, ti in zip(resid, time):
             ix = np.tril_indices(re.shape[0], 0)
             re = re[ix[0]] * re[ix[1]] / self.scale**2
             xre.append(re)
@@ -2586,7 +2586,7 @@ class OrdinalGEE(GEE):
         offset_out = np.zeros(nrows, dtype=np.float64)
 
         jrow = 0
-        zipper = zip(exog, endog, groups, time, offset, strict=False)
+        zipper = zip(exog, endog, groups, time, offset)
         for exog_row, endog_value, group_value, time_value, offset_value in zipper:
 
             # Loop over thresholds for the indicators
@@ -2929,7 +2929,7 @@ class NominalGEE(GEE):
         offset_out = np.zeros(nrows, dtype=np.float64)
 
         jrow = 0
-        zipper = zip(exog, endog, groups, time, offset, strict=False)
+        zipper = zip(exog, endog, groups, time, offset)
         for exog_row, endog_value, group_value, time_value, offset_value in zipper:
 
             # Loop over thresholds for the indicators

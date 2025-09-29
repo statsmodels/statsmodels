@@ -8,11 +8,11 @@ closer to true slope and not tilted like OLS.
 Note: uncomment plt.show() to display graphs
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 # from scipy import stats
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 # fix a seed for these examples

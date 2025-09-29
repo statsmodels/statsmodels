@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from statsmodels.compat.scipy import SP_LT_15, SP_LT_17, SP_LT_115
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from scipy import optimize

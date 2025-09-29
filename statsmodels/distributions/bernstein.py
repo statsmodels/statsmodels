@@ -9,10 +9,15 @@ License: BSD-3
 import numpy as np
 from scipy import stats
 
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.distributions.tools import (
-        _Grid, cdf2prob_grid, prob2cdf_grid,
-        _eval_bernstein_dd, _eval_bernstein_2d, _eval_bernstein_1d)
+    _eval_bernstein_1d,
+    _eval_bernstein_2d,
+    _eval_bernstein_dd,
+    _Grid,
+    cdf2prob_grid,
+    prob2cdf_grid,
+)
+from statsmodels.tools.decorators import cache_readonly
 
 
 class BernsteinDistribution:

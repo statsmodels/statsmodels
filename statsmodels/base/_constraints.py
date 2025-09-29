@@ -61,9 +61,9 @@ class LinearConstraints:
             return ss
 
         constraints_strings = []
-        for r, q in zip(*self, strict=False):
+        for r, q in zip(*self):
             ss = []
-            for v, name in zip(r, self.variable_names, strict=False):
+            for v, name in zip(r, self.variable_names):
                 if v != 0 and ss == []:
                     ss += prod_string(v, name)
                 elif v > 0:

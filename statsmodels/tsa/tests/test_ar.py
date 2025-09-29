@@ -1,6 +1,8 @@
 """
 Test AR Model
 """
+from __future__ import annotations
+
 from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.pytest import pytest_warns
 
@@ -101,7 +103,7 @@ for param in params:
 params = final
 names = ("AR", "Seasonal", "Trend", "Exog", "Cov Type")
 ids = [
-    ", ".join([n + ": " + str(p) for n, p in zip(names, param, strict=False)])
+    ", ".join([n + ": " + str(p) for n, p in zip(names, param)])
     for param in params
 ]
 

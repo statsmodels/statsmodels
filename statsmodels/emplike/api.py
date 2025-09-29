@@ -11,7 +11,7 @@ __all__ = [
     "emplikeAFT"
 ]
 
-from .descriptive import DescStat, DescStatUV, DescStatMV
-from .originregress import ELOriginRegress
-from .elanova import ANOVA
 from .aft_el import emplikeAFT
+from .descriptive import DescStat, DescStatMV, DescStatUV
+from .elanova import ANOVA
+from .originregress import ELOriginRegress

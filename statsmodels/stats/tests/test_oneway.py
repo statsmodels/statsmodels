@@ -8,21 +8,31 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
-
 import pytest
 
 from statsmodels.regression.linear_model import OLS
-import statsmodels.stats.power as smpwr
+from statsmodels.stats.contrast import (
+    _offset_constraint,
+    wald_test_noncent,
+    wald_test_noncent_generic,
+)
 import statsmodels.stats.oneway as smo  # needed for function with `test`
 from statsmodels.stats.oneway import (
-    confint_effectsize_oneway, confint_noncentrality, effectsize_oneway,
+    _power_equivalence_oneway_emp,
+    anova_generic,
     anova_oneway,
-    anova_generic, equivalence_oneway, equivalence_oneway_generic,
-    power_equivalence_oneway, _power_equivalence_oneway_emp,
-    f2_to_wellek, fstat_to_wellek, wellek_to_f2)
+    confint_effectsize_oneway,
+    confint_noncentrality,
+    effectsize_oneway,
+    equivalence_oneway,
+    equivalence_oneway_generic,
+    f2_to_wellek,
+    fstat_to_wellek,
+    power_equivalence_oneway,
+    wellek_to_f2,
+)
+import statsmodels.stats.power as smpwr
 from statsmodels.stats.robust_compare import scale_transform
-from statsmodels.stats.contrast import (
-    wald_test_noncent_generic, wald_test_noncent, _offset_constraint)
 
 
 def test_oneway_effectsize():

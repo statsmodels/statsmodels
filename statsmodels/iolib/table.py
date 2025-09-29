@@ -84,8 +84,8 @@ Potential problems for Python 3
 
 from statsmodels.compat.python import lmap, lrange
 
-from itertools import cycle, zip_longest
 import csv
+from itertools import cycle, zip_longest
 
 
 def csv2st(csvfile, headers=False, stubs=False, title=None):
@@ -322,7 +322,7 @@ class SimpleTable(list):
         elif len(request) < ncols:
             request = [request[i % len(request)] for i in range(ncols)]
         min_widths = []
-        for col in zip(*self, strict=False):
+        for col in zip(*self):
             maxwidth = max(len(c.format(0, output_format, **fmt)) for c in col)
             min_widths.append(maxwidth)
         result = lmap(max, min_widths, request)
@@ -465,7 +465,7 @@ class SimpleTable(list):
         only if the two tables have the same number of columns,
         but that is not enforced.
         """
-        for row1, row2 in zip(self, table, strict=False):
+        for row1, row2 in zip(self, table):
             row1.extend(row2)
 
     def label_cells(self, func):
@@ -596,7 +596,7 @@ class Row(list):
         row_pre = fmt.get("row_pre", "")
         row_post = fmt.get("row_post", "")
         formatted_cells = []
-        for cell, width in zip(self, colwidths, strict=False):
+        for cell, width in zip(self, colwidths):
             content = cell.format(width, output_format=output_format, **fmt)
             formatted_cells.append(content)
         formatted_row = row_pre + colsep.join(formatted_cells) + row_post

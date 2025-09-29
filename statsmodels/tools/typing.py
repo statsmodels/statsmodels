@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, Any, Union
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from packaging.version import parse
 
     import numpy as np
+    from packaging.version import parse
 
     if parse(np.__version__) < parse("1.22.0"):
         raise NotImplementedError(

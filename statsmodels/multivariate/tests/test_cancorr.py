@@ -1,6 +1,7 @@
-import pandas as pd
-from statsmodels.multivariate.cancorr import CanCorr
 from numpy.testing import assert_almost_equal
+import pandas as pd
+
+from statsmodels.multivariate.cancorr import CanCorr
 
 data_fit = pd.DataFrame([[191, 36, 50,  5, 162,  60],
                          [189, 37, 52,  2, 110,  60],

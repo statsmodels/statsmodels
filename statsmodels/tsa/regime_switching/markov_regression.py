@@ -5,8 +5,8 @@ Author: Chad Fulton
 License: BSD-3
 """
 import numpy as np
-import statsmodels.base.wrapper as wrap
 
+import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.regime_switching import markov_switching
 
 

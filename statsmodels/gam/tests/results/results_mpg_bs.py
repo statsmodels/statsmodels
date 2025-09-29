@@ -1,6 +1,6 @@
 import numpy as np
-from statsmodels.tools.tools import Bunch
 
+from statsmodels.tools.tools import Bunch
 
 mpg_bs = Bunch()
 

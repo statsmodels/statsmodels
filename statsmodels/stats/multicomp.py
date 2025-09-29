@@ -4,8 +4,7 @@ Created on Fri Mar 30 18:27:25 2012
 Author: Josef Perktold
 """
 
-from statsmodels.sandbox.stats.multicomp import (
-    tukeyhsd, MultiComparison)
+from statsmodels.sandbox.stats.multicomp import MultiComparison, tukeyhsd
 
 __all__ = ["MultiComparison", "tukeyhsd"]
 

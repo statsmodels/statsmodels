@@ -17,6 +17,7 @@ Barron-Kenny approach.
 """
 import numpy as np
 import pandas as pd
+
 from statsmodels.graphics.utils import maybe_name_or_idx
 
 

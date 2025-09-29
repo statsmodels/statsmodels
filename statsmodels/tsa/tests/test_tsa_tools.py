@@ -135,7 +135,7 @@ class TestLagmat:
 
         index = [
             str(int(yr)) + "-Q" + str(int(qu))
-            for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter, strict=False)
+            for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)
         ]
         cls.macro_df.index = index
         cls.series = cls.macro_df.cpi
@@ -472,7 +472,7 @@ freqs = [
     "h",
 ]
 expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 24]
-freq_expected = [(f, e) for f, e in zip(freqs, expected, strict=False)]
+freq_expected = [(f, e) for f, e in zip(freqs, expected)]
 
 
 @pytest.mark.parametrize("freq_expected", freq_expected)
@@ -704,7 +704,7 @@ class TestLagmat2DS:
         cls.random_data = np.random.randn(100)
         index = [
             str(int(yr)) + "-Q" + str(int(qu))
-            for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter, strict=False)
+            for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)
         ]
         cls.macro_df.index = index
         cls.series = cls.macro_df.cpi

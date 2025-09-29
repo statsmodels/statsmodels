@@ -6,8 +6,8 @@ License: BSD-3
 """
 
 import numpy as np
-from scipy import stats
 import pandas as pd
+from scipy import stats
 
 from statsmodels.miscmodels.ordinal_model import OrderedModel
 

@@ -2,7 +2,6 @@ import numpy as np
 
 from statsmodels.tools.testing import ParamsTableTestBunch
 
-
 est = dict(
     N_clust=10,
     N=200,

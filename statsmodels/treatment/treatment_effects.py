@@ -27,9 +27,11 @@ could be loaded with webuse
 
 """
 
-import numpy as np
 from statsmodels.compat.pandas import Substitution
+
+import numpy as np
 from scipy.linalg import block_diag
+
 from statsmodels.regression.linear_model import WLS
 from statsmodels.sandbox.regression.gmm import GMM
 from statsmodels.stats.contrast import ContrastResults

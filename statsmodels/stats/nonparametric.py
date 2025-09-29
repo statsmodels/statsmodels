@@ -13,7 +13,6 @@ import numpy as np
 from scipy import stats
 from scipy.stats import rankdata
 
-from statsmodels.tools.testing import Holder
 from statsmodels.stats.base import HolderTuple
 from statsmodels.stats.weightstats import (
     _tconfint_generic,
@@ -21,6 +20,7 @@ from statsmodels.stats.weightstats import (
     _zconfint_generic,
     _zstat_generic,
 )
+from statsmodels.tools.testing import Holder
 
 
 def rankdata_2samp(x1, x2):

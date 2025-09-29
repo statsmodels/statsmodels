@@ -27,11 +27,12 @@ Not all methods and options have been tried out yet after refactoring
 need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 """
 from statsmodels.compat.python import lrange, lzip
+
 import numpy as np
 import pandas as pd
+from pandas import Index, MultiIndex
 
 import statsmodels.tools.data as data_util
-from pandas import Index, MultiIndex
 
 
 def combine_indices(groups, prefix="", sep=".", return_labels=False):

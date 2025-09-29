@@ -6,10 +6,11 @@ import os
 import warnings
 
 import numpy as np
-import statsmodels.stats.contingency_tables as ctab
-import pandas as pd
 from numpy.testing import assert_allclose, assert_equal
+import pandas as pd
+
 import statsmodels.api as sm
+import statsmodels.stats.contingency_tables as ctab
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 fname = "contingency_table_r_results.csv"

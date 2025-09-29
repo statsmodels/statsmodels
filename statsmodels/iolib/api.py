@@ -6,5 +6,5 @@ __all__ = [
     "savetxt"
 ]
 from .foreign import savetxt
+from .smpickle import load_pickle, save_pickle
 from .table import SimpleTable, csv2st
-from .smpickle import save_pickle, load_pickle

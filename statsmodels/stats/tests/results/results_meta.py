@@ -7,6 +7,7 @@ License: BSD-3
 """
 
 import numpy as np
+
 from statsmodels.tools.testing import Holder
 
 """

@@ -4,29 +4,31 @@ __all__ = [
     "TruncatedLFPoisson",
 ]
 
+from copy import deepcopy
 import warnings
+
 import numpy as np
+
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-import statsmodels.regression.linear_model as lm
-from statsmodels.distributions.discrete import (
-    truncatedpoisson,
-    truncatednegbin,
-    )
 from statsmodels.discrete.discrete_model import (
-    DiscreteModel,
     CountModel,
     CountResults,
-    L1CountResults,
-    Poisson,
-    NegativeBinomialP,
+    DiscreteModel,
     GeneralizedPoisson,
+    L1CountResults,
+    NegativeBinomialP,
+    Poisson,
     _discrete_results_docs,
-    )
-from statsmodels.tools.numdiff import approx_hess
+)
+from statsmodels.distributions.discrete import (
+    truncatednegbin,
+    truncatedpoisson,
+)
+import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
-from copy import deepcopy
 
 
 class TruncatedLFGeneric(CountModel):

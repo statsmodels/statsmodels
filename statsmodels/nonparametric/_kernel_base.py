@@ -16,7 +16,6 @@ except ImportError:
 
 from . import kernels
 
-
 kernel_func = dict(wangryzin=kernels.wang_ryzin,
                    aitchisonaitken=kernels.aitchison_aitken,
                    gaussian=kernels.gaussian,

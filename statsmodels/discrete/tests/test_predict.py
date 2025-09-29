@@ -6,33 +6,30 @@ License: BSD-3
 """
 
 import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
-
 import pytest
 
-from statsmodels.tools.tools import add_constant
-
 from statsmodels.base._prediction_inference import PredictionResultsMonotonic
-
+from statsmodels.discrete.count_model import (
+    ZeroInflatedGeneralizedPoisson,
+    ZeroInflatedNegativeBinomialP,
+    ZeroInflatedPoisson,
+)
 from statsmodels.discrete.discrete_model import (
     BinaryModel,
+    GeneralizedPoisson,
     Logit,
-    Probit,
-    Poisson,
     NegativeBinomial,
     NegativeBinomialP,
-    GeneralizedPoisson,
-    )
-from statsmodels.discrete.count_model import (
-    ZeroInflatedPoisson,
-    ZeroInflatedNegativeBinomialP,
-    ZeroInflatedGeneralizedPoisson,
-    )
-
+    Poisson,
+    Probit,
+)
 from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
-from .results import results_predict as resp
+from statsmodels.tools.tools import add_constant
 
+from .results import results_predict as resp
 
 # copied from `test_gmm_poisson.TestGMMAddOnestep`
 XLISTEXOG2 = "aget aget2 educyr actlim totchr".split()
@@ -210,8 +207,7 @@ class CheckExtras():
         np.random.seed(987125643)
         exog_extra = 0.01 * np.random.randn(endog.shape[0])
 
-        from statsmodels.base._parameter_inference import (
-            score_test, _scorehess_extra)
+        from statsmodels.base._parameter_inference import _scorehess_extra, score_test
 
         # note: we need params for the restricted model here
         # if params is not given, then it will be taked from results instance

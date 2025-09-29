@@ -7,14 +7,17 @@ License: Simplified-BSD
 import os
 
 import numpy as np
-import pandas as pd
 from numpy.testing import assert_allclose, assert_equal
+import pandas as pd
 import pytest
 
 from statsmodels import datasets
 from statsmodels.tsa.statespace import mlemodel, sarimax, structural, varmax
 from statsmodels.tsa.statespace.simulation_smoother import (
-    SIMULATION_STATE, SIMULATION_DISTURBANCE, SIMULATION_ALL)
+    SIMULATION_ALL,
+    SIMULATION_DISTURBANCE,
+    SIMULATION_STATE,
+)
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

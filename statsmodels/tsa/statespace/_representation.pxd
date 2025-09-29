@@ -10,6 +10,7 @@ License: Simplified-BSD
 
 cimport numpy as np
 
+
 cdef class sStatespace(object):
     # Statespace dimensions
     cdef readonly int nobs, k_endog, k_states, k_posdef

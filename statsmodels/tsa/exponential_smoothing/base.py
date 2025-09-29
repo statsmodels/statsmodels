@@ -9,13 +9,13 @@ from scipy.stats import norm
 from statsmodels.base.data import PandasData
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
-from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.numdiff import (
     _get_epsilon,
     approx_fprime,
     approx_fprime_cs,
     approx_hess_cs,
 )
+from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.tools import pinv_extended
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.statespace.tools import _safe_cond
@@ -94,7 +94,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         if self._fixed_params is None:
             self._fixed_params = {}
             self._params_index = OrderedDict(
-                zip(self.param_names, np.arange(self.k_params), strict=False)
+                zip(self.param_names, np.arange(self.k_params))
             )
 
         # Cache the current fixed parameters

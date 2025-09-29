@@ -723,8 +723,8 @@ class Representation:
         is_new = existing_nan & ~new_nan
         is_revision[is_new] = False
 
-        revision_ix = list(zip(*np.where(is_revision), strict=False))
-        new_ix = list(zip(*np.where(is_new), strict=False))
+        revision_ix = list(zip(*np.where(is_revision)))
+        new_ix = list(zip(*np.where(is_new)))
 
         return revision_ix, new_ix
 

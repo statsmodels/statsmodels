@@ -14,8 +14,8 @@ References
 
 """
 
-import warnings
 from typing import NamedTuple
+import warnings
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform

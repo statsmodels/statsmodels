@@ -7,13 +7,14 @@ License: BSD-3
 
 
 import numpy as np
-import statsmodels.base.wrapper as wrap
 
-from statsmodels.tsa.tsatools import lagmat
-from statsmodels.tsa.regime_switching import (
-    markov_switching, markov_regression)
+import statsmodels.base.wrapper as wrap
+from statsmodels.tsa.regime_switching import markov_regression, markov_switching
 from statsmodels.tsa.statespace.tools import (
-    constrain_stationary_univariate, unconstrain_stationary_univariate)
+    constrain_stationary_univariate,
+    unconstrain_stationary_univariate,
+)
+from statsmodels.tsa.tsatools import lagmat
 
 
 class MarkovAutoregression(markov_regression.MarkovRegression):

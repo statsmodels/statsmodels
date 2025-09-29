@@ -8,8 +8,8 @@ License: BSD-3
 import numpy as np
 from scipy import stats
 
-from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.distributions.copula.copulas import Copula
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class IndependenceCopula(Copula):

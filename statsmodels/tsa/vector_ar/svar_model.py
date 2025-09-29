@@ -12,8 +12,8 @@ from numpy.linalg import slogdet
 from statsmodels.tools.decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar import util
+from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
 

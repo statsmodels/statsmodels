@@ -133,8 +133,8 @@ setup = ['--vsenv']
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
 fix = false
+target-version = "py39"
 
 [tool.ruff.lint]
 typing-modules = ["statsmodels.compat.python", "compat.python"]

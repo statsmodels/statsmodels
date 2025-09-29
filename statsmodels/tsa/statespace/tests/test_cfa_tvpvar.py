@@ -20,14 +20,13 @@ License: BSD-3
 import os
 
 import numpy as np
-import pandas as pd
-
 from numpy.testing import assert_allclose
+import pandas as pd
 
 from statsmodels import datasets
 from statsmodels.tools import add_constant
-from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tsa.statespace import mlemodel
+from statsmodels.tsa.tsatools import lagmat
 
 dta = datasets.macrodata.load_pandas().data
 dta.index = pd.period_range("1959Q1", "2009Q3", freq="Q")

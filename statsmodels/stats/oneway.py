@@ -10,12 +10,12 @@ import numpy as np
 from scipy import stats
 from scipy.special import ncfdtrinc
 
+from statsmodels.stats.base import HolderTuple
+
 # functions that use scipy.special instead of boost based function in stats
 from statsmodels.stats.power import ncf_cdf, ncf_ppf
-
 from statsmodels.stats.robust_compare import TrimmedMean, scale_transform
 from statsmodels.tools.testing import Holder
-from statsmodels.stats.base import HolderTuple
 
 
 def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
@@ -1015,7 +1015,7 @@ def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
     other_mc = []
     for _ in range(k_mc):
         y0, y1, y2, y3 = (m + std * np.random.randn(n)
-                          for (n, m, std) in zip(nobs, means, stds, strict=False))
+                          for (n, m, std) in zip(nobs, means, stds))
 
         res_i = []
         f_i = []

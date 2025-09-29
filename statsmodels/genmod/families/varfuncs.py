@@ -2,6 +2,7 @@
 Variance functions for use with the link functions in statsmodels.family.links
 """
 import numpy as np
+
 FLOAT_EPS = np.finfo(float).eps
 
 

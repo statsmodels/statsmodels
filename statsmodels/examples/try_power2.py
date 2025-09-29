@@ -5,7 +5,7 @@ Created on Wed Mar 13 13:06:14 2013
 Author: Josef Perktold
 """
 
-from statsmodels.stats.power import TTestPower, TTestIndPower, tt_solve_power
+from statsmodels.stats.power import TTestIndPower, TTestPower, tt_solve_power
 
 if __name__ == "__main__":
     effect_size, alpha, power = 0.5, 0.05, 0.8

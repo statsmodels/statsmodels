@@ -3,7 +3,7 @@ exclude = .git,build,docs,archive
 max-line-length = 88
 extend-select =
     B904,
-    B905,
+    # B905, # Enable when Python 3.10 is the minimum
 
 extend-ignore =
     # Required to allow black formatting

@@ -92,7 +92,7 @@ def test_mosaic_simple(close_figures):
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = dict(zip(keys, range(1, 1 + len(keys)), strict=False))
+    data = dict(zip(keys, range(1, 1 + len(keys))))
     # which colours should I use for the various categories?
     # put it into a dict
     props = {}
@@ -174,7 +174,7 @@ def test_mosaic_very_complex(close_figures):
         ["work", "unemployed"],
     )
     keys = list(product(*key_base))
-    data = dict(zip(keys, range(1, 1 + len(keys)), strict=False))
+    data = dict(zip(keys, range(1, 1 + len(keys))))
     props = {}
     props[("male", "old")] = {"color": "r"}
     props[("female",)] = {"color": "pink"}
@@ -225,7 +225,7 @@ def test_axes_labeling(close_figures):
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = dict(zip(keys, rand(len(keys)), strict=False))
+    data = dict(zip(keys, rand(len(keys))))
 
     def labelizer(k):
         return "".join(s[0] for s in k)
@@ -290,13 +290,13 @@ def eq(x, y):
 
 def test_recursive_split():
     keys = list(product("mf"))
-    data = dict(zip(keys, [1] * len(keys), strict=False))
+    data = dict(zip(keys, [1] * len(keys)))
     res = _hierarchical_split(data, gap=0)
     assert_(list(res.keys()) == keys)
     res[("m",)] = (0.0, 0.0, 0.5, 1.0)
     res[("f",)] = (0.5, 0.0, 0.5, 1.0)
     keys = list(product("mf", "yao"))
-    data = dict(zip(keys, [1] * len(keys), strict=False))
+    data = dict(zip(keys, [1] * len(keys)))
     res = _hierarchical_split(data, gap=0)
     assert_(list(res.keys()) == keys)
     res[("m", "y")] = (0.0, 0.0, 0.5, 1 / 3)
@@ -308,11 +308,11 @@ def test_recursive_split():
 
 
 def test__reduce_dict():
-    data = dict(zip(list(product("mf", "oy", "wn")), [1] * 8, strict=False))
+    data = dict(zip(list(product("mf", "oy", "wn")), [1] * 8))
     eq(_reduce_dict(data, ("m",)), 4)
     eq(_reduce_dict(data, ("m", "o")), 2)
     eq(_reduce_dict(data, ("m", "o", "w")), 1)
-    data = dict(zip(list(product("mf", "oy", "wn")), lrange(8), strict=False))
+    data = dict(zip(list(product("mf", "oy", "wn")), lrange(8)))
     eq(_reduce_dict(data, ("m",)), 6)
     eq(_reduce_dict(data, ("m", "o")), 1)
     eq(_reduce_dict(data, ("m", "o", "w")), 0)

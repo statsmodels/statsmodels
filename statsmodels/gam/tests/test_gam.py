@@ -8,26 +8,37 @@ Created on 08/07/2015
 """
 
 import os
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
-from scipy.linalg import block_diag
 import pytest
+from scipy.linalg import block_diag
 
-from statsmodels.tools.linalg import matrix_sqrt
-from statsmodels.gam.smooth_basis import (
-    UnivariatePolynomialSmoother, PolynomialSmoother, BSplines,
-    GenericSmoothers, UnivariateCubicSplines, CyclicCubicSplines)
-from statsmodels.gam.generalized_additive_model import (
-    GLMGam, LogitGam, make_augmented_matrix, penalized_wls)
-from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
-    MultivariateGAMCV, MultivariateGAMCVPath, _split_train_test_smoothers)
-from statsmodels.gam.gam_penalties import (UnivariateGamPenalty,
-                                           MultivariateGamPenalty)
 from statsmodels.gam.gam_cross_validation.cross_validators import KFold
-from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
+    MultivariateGAMCV,
+    MultivariateGAMCVPath,
+    _split_train_test_smoothers,
+)
+from statsmodels.gam.gam_penalties import MultivariateGamPenalty, UnivariateGamPenalty
+from statsmodels.gam.generalized_additive_model import (
+    GLMGam,
+    LogitGam,
+    make_augmented_matrix,
+    penalized_wls,
+)
+from statsmodels.gam.smooth_basis import (
+    BSplines,
+    CyclicCubicSplines,
+    GenericSmoothers,
+    PolynomialSmoother,
+    UnivariateCubicSplines,
+    UnivariatePolynomialSmoother,
+)
 from statsmodels.genmod.families.family import Gaussian
-from statsmodels.genmod.generalized_linear_model import lm
+from statsmodels.genmod.generalized_linear_model import GLM, lm
+from statsmodels.tools.linalg import matrix_sqrt
 
 sigmoid = np.vectorize(lambda x: 1.0 / (1.0 + np.exp(-x)))
 

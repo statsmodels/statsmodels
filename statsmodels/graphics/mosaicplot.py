@@ -98,7 +98,7 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
 
     results = [
         (s, y, a, h) if horizontal else (x, s, w, a)
-        for s, a in zip(starting, amplitude, strict=False)
+        for s, a in zip(starting, amplitude)
     ]
     return results
 
@@ -126,7 +126,7 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
         if key_subset == name[:L]:
             # split base on the values given
             divisions = _split_rect(x, y, w, h, values, horizontal, gap)
-            for key, rect in zip(keys, divisions, strict=False):
+            for key, rect in zip(keys, divisions):
                 result[name + (key,)] = rect
         else:
             result[name] = (x, y, w, h)
@@ -150,7 +150,7 @@ def _categories_level(keys):
     [[key_1_level_1,key_2_level_1],[key_1_level_2,key_2_level_2]]
     """
     res = []
-    for i in zip(*(keys), strict=False):
+    for i in zip(*(keys)):
         tuplefied = _tuplify(i)
         res.append(list(dict.fromkeys(tuplefied)))
     return res
@@ -442,7 +442,7 @@ def _create_labels(rects, horizontal, ax, rotation):
         ticks_pos = ticks_pos[1:] + ticks_pos[:1]
         ticks_lab = ticks_lab[1:] + ticks_lab[:1]
     # clean them
-    for pos, lab in zip(ticks_pos, ticks_lab, strict=False):
+    for pos, lab in zip(ticks_pos, ticks_lab):
         pos([])
         lab([])
     # for each level, for each value in the level, take the mean of all

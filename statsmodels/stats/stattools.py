@@ -6,8 +6,9 @@ Notes
 These functions have not been formally tested.
 """
 
-from scipy import stats
 import numpy as np
+from scipy import stats
+
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 

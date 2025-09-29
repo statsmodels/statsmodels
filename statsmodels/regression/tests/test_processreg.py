@@ -1,14 +1,14 @@
 from statsmodels.compat.platform import PLATFORM_OSX
 
-from statsmodels.regression.process_regression import (
-       ProcessMLE, GaussianCovariance)
+import collections
+
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-import collections
+from statsmodels.regression.process_regression import GaussianCovariance, ProcessMLE
 import statsmodels.tools.numdiff as nd
-from numpy.testing import assert_allclose, assert_equal
 
 
 # Parameters for a test model, with or without additive

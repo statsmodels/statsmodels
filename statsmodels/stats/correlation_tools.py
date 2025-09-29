@@ -9,8 +9,8 @@ License: BSD-3
 import warnings
 
 import numpy as np
-from scipy.optimize import fminbound
 from scipy import sparse
+from scipy.optimize import fminbound
 from scipy.sparse.linalg import svds
 
 from statsmodels.tools.sm_exceptions import (

@@ -14,7 +14,6 @@ NOTE: As it is, this module does not interact with the existing API
 import numpy as np
 from scipy.special import erf
 
-
 # TODO:
 # - make sure we only receive int input for wang-ryzin and aitchison-aitken
 # - Check for the scalar Xi case everywhere

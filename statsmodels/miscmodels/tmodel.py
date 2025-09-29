@@ -40,7 +40,6 @@ from scipy import special, stats
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.tsa.arma_mle import Arma
 
-
 # redefine some shortcuts
 np_log = np.log
 np_pi = np.pi

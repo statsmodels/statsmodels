@@ -4,11 +4,12 @@ author: Yichuan Liu
 """
 import numpy as np
 from numpy.linalg import svd
-import scipy
 import pandas as pd
+import scipy
 
 from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
+
 from .multivariate_ols import multivariate_stats
 
 

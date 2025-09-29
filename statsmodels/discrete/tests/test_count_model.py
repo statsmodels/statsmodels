@@ -1,4 +1,5 @@
 from statsmodels.compat.platform import PLATFORM_LINUX32
+from statsmodels.compat.scipy import SP_LT_116
 
 import numpy as np
 from numpy.testing import (
@@ -12,7 +13,6 @@ import pytest
 
 import statsmodels.api as sm
 
-from statsmodels.compat.scipy import SP_LT_116
 from .results.results_discrete import RandHIE
 from .test_discrete import CheckModelMixin
 

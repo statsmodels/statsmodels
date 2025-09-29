@@ -12,11 +12,11 @@ from numpy.testing import assert_allclose, assert_almost_equal
 import statsmodels.api as sm
 from statsmodels.tools import numdiff
 from statsmodels.tools.numdiff import (
+    _approx_fprime_cs_scalar,
+    _approx_fprime_scalar,
     approx_fprime,
     approx_fprime_cs,
     approx_hess_cs,
-    _approx_fprime_scalar,
-    _approx_fprime_cs_scalar
 )
 
 DEC3 = 3

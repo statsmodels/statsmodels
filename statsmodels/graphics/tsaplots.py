@@ -1,16 +1,15 @@
 """Correlation plot functions."""
-from typing import TYPE_CHECKING
-
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import calendar
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
 from statsmodels.graphics import utils
 from statsmodels.tools.validation import array_like
-from statsmodels.tsa.stattools import acf, pacf, ccf
+from statsmodels.tsa.stattools import acf, ccf, pacf
 
 if TYPE_CHECKING:
     from statsmodels.tsa.base.prediction import PredictionResults

@@ -13,7 +13,7 @@ check: instead of bound checking I could use the fill-value of the
 interpolators
 """
 import numpy as np
-from scipy.interpolate import interp1d, interp2d, Rbf
+from scipy.interpolate import Rbf, interp1d, interp2d
 
 from statsmodels.tools.decorators import cache_readonly
 

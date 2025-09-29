@@ -5,11 +5,11 @@ Author: Chad Fulton
 License: BSD-3
 """
 import numpy as np
-import pandas as pd
 from numpy.polynomial import Polynomial
+import pandas as pd
 
-from statsmodels.tsa.statespace.tools import is_invertible
 from statsmodels.tsa.arima.tools import validate_basic
+from statsmodels.tsa.statespace.tools import is_invertible
 
 
 class SARIMAXParams:

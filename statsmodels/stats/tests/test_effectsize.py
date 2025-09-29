@@ -6,11 +6,14 @@ License: BSD-3
 
 """
 
-from scipy import stats
 from numpy.testing import assert_allclose
+from scipy import stats
 
 from statsmodels.stats.effect_size import (
-        _noncentrality_chisquare, _noncentrality_f, _noncentrality_t)
+    _noncentrality_chisquare,
+    _noncentrality_f,
+    _noncentrality_t,
+)
 
 
 def test_noncent_chi2():

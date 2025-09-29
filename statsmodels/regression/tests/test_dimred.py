@@ -1,10 +1,9 @@
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.regression.dimred import (
-     SlicedInverseReg, SAVE, PHD, CORE)
-from numpy.testing import (assert_equal, assert_allclose)
+from statsmodels.regression.dimred import CORE, PHD, SAVE, SlicedInverseReg
 from statsmodels.tools.numdiff import approx_fprime
 
 

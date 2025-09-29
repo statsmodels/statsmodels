@@ -1,8 +1,7 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 import statsmodels.api as sm
-
 
 # Necessary to make horizontal axis labels fit
 plt.rcParams["figure.subplot.bottom"] = 0.23

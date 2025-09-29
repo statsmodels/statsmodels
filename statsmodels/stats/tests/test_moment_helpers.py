@@ -4,13 +4,20 @@ Created on Sun Oct 16 17:33:56 2011
 Author: Josef Perktold
 """
 import numpy as np
+from numpy.testing import assert_, assert_almost_equal, assert_equal
 import pytest
-from numpy.testing import assert_almost_equal, assert_, assert_equal
 
 from statsmodels.stats import moment_helpers
-from statsmodels.stats.moment_helpers import (cov2corr, mvsk2mc, mc2mvsk,
-                                              mnc2mc, mc2mnc, cum2mc, mc2cum,
-                                              mnc2cum)
+from statsmodels.stats.moment_helpers import (
+    cov2corr,
+    cum2mc,
+    mc2cum,
+    mc2mnc,
+    mc2mvsk,
+    mnc2cum,
+    mnc2mc,
+    mvsk2mc,
+)
 
 
 def test_cov2corr():

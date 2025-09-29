@@ -5,15 +5,18 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-import numpy as np
 from types import SimpleNamespace
 
+import numpy as np
+
+from statsmodels.tsa.statespace import initialization, tools
+from statsmodels.tsa.statespace.kalman_filter import FilterResults, KalmanFilter
 from statsmodels.tsa.statespace.representation import OptionWrapper
-from statsmodels.tsa.statespace.kalman_filter import (KalmanFilter,
-                                                      FilterResults)
 from statsmodels.tsa.statespace.tools import (
-    reorder_missing_matrix, reorder_missing_vector, copy_index_matrix)
-from statsmodels.tsa.statespace import tools, initialization
+    copy_index_matrix,
+    reorder_missing_matrix,
+    reorder_missing_vector,
+)
 
 SMOOTHER_STATE = 0x01              # Durbin and Koopman (2012), Chapter 4.4.2
 SMOOTHER_STATE_COV = 0x02          # ibid., Chapter 4.4.3
@@ -1303,7 +1306,7 @@ class SmootherResults(FilterResults):
         # or not we are computing detailed impacts)
         if len(revisions_ix) > 0:
             # Indexes
-            revised_j, revised_p = zip(*revisions_ix, strict=False)
+            revised_j, revised_p = zip(*revisions_ix)
             compute_j = np.arange(revised_j[0], revised_j[-1] + 1)
 
             # Data from updated model
@@ -1402,7 +1405,7 @@ class SmootherResults(FilterResults):
                 # elements
                 revised_j, revised_p = zip(*[
                     s for s in revisions_ix
-                    if s[0] >= revisions_details_start], strict=False)
+                    if s[0] >= revisions_details_start])
                 ix_j = revised_j - revised_j[0]
                 # Shape is: t, k, j * p
                 # Note: have to transpose first so that the two advanced
@@ -1445,7 +1448,7 @@ class SmootherResults(FilterResults):
 
         # Need to also flatten the revisions items that contain all revisions
         if len(revisions_ix) > 0:
-            revised_j, revised_p = zip(*revisions_ix, strict=False)
+            revised_j, revised_p = zip(*revisions_ix)
             ix_j = revised_j - revised_j[0]
 
             revisions_all = revisions_all[ix_j, revised_p]
@@ -1455,7 +1458,7 @@ class SmootherResults(FilterResults):
         # Now handle updates
         if len(updates_ix) > 0:
             # Figure out which time points we need forecast errors for
-            update_t, update_k = zip(*updates_ix, strict=False)
+            update_t, update_k = zip(*updates_ix)
             update_start_t = np.min(update_t)
             update_end_t = np.max(update_t)
 

@@ -35,9 +35,16 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
-from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
-    LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR, kernel_func
-
+from ._kernel_base import (
+    EstimatorSettings,
+    GenericKDE,
+    LeaveOneOut,
+    _adjust_shape,
+    _compute_min_std_IQR,
+    _get_type_pos,
+    gpke,
+    kernel_func,
+)
 
 __all__ = ["KernelCensoredReg", "KernelReg"]
 

@@ -21,10 +21,10 @@ References
 
 [5] http://www.stat.ucla.edu/research/gpa/GPderfree.txt
 """
-from ._wrappers import rotate_factors
-
-from ._analytic_rotation import target_rotation, procrustes, promax
 from statsmodels.tools._test_runner import PytestTester
+
+from ._analytic_rotation import procrustes, promax, target_rotation
+from ._wrappers import rotate_factors
 
 __all__ = [
            "procrustes",

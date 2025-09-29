@@ -1,10 +1,13 @@
 import numpy as np
-from statsmodels.genmod.bayes_mixed_glm import (BinomialBayesMixedGLM,
-                                                PoissonBayesMixedGLM)
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 from scipy import sparse
-from numpy.testing import assert_allclose, assert_equal
 from scipy.optimize import approx_fprime
+
+from statsmodels.genmod.bayes_mixed_glm import (
+    BinomialBayesMixedGLM,
+    PoissonBayesMixedGLM,
+)
 
 
 def gen_simple_logit(nc, cs, s):

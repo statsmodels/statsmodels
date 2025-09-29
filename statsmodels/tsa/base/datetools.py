@@ -23,12 +23,12 @@ _quarter_to_day = {
 
 _mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 _months_with_days = lzip(lrange(1, 13), _mdays)
-_month_to_day = dict(zip(map(str, lrange(1, 13)), _months_with_days, strict=False))
+_month_to_day = dict(zip(map(str, lrange(1, 13)), _months_with_days))
 _month_to_day.update(
     dict(
         zip(
             ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"],
-            _months_with_days, strict=False,
+            _months_with_days,
         )
     )
 )
@@ -148,7 +148,7 @@ def date_range_str(start, end=None, length=None):
         offset = np.r_[np.arange(offset1, annual_freq + 1).astype("S2"), offset]
         offset = np.r_[offset, np.arange(1, offset2 + 1).astype("S2")]
         date_arr_range = ["".join([i, split, asstr(j)])
-                          for i, j in zip(years, offset, strict=False)]
+                          for i, j in zip(years, offset)]
     else:
         date_arr_range = years
     return date_arr_range

@@ -5,11 +5,16 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-import pytest
 import numpy as np
-from numpy.testing import (assert_allclose, assert_equal, assert_array_less,
-                           assert_array_equal, assert_almost_equal)
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_equal,
+    assert_array_less,
+    assert_equal,
+)
 import pandas as pd
+import pytest
 from scipy.linalg import solve_discrete_lyapunov
 
 from statsmodels.tsa.statespace import tools

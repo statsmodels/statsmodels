@@ -11,34 +11,38 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
-from scipy.linalg import cho_factor, cho_solve, LinAlgError
+from scipy.linalg import LinAlgError, cho_factor, cho_solve
 
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tools.validation import int_like
-from statsmodels.tools.decorators import cache_readonly
-from statsmodels.regression.linear_model import OLS
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.multivariate.pca import PCA
-
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-from statsmodels.tsa.statespace._quarterly_ar1 import QuarterlyAR1
-from statsmodels.tsa.vector_ar.var_model import VAR
-from statsmodels.tools.tools import Bunch
-from statsmodels.tools.validation import string_like
-from statsmodels.tsa.tsatools import lagmat
-from statsmodels.tsa.statespace import mlemodel, initialization
-from statsmodels.tsa.statespace.tools import (
-    companion_matrix, is_invertible, constrain_stationary_univariate,
-    constrain_stationary_multivariate, unconstrain_stationary_univariate,
-    unconstrain_stationary_multivariate)
-from statsmodels.tsa.statespace.kalman_smoother import (
-    SMOOTHER_STATE, SMOOTHER_STATE_COV, SMOOTHER_STATE_AUTOCOV)
 from statsmodels.base.data import PandasData
-
-from statsmodels.iolib.table import SimpleTable
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.iolib.summary import Summary
+from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
-from statsmodels.tools.sm_exceptions import EstimationWarning, ConvergenceWarning
+from statsmodels.multivariate.pca import PCA
+from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, EstimationWarning
+from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import int_like, string_like
+from statsmodels.tsa.statespace import initialization, mlemodel
+from statsmodels.tsa.statespace._quarterly_ar1 import QuarterlyAR1
+from statsmodels.tsa.statespace.kalman_smoother import (
+    SMOOTHER_STATE,
+    SMOOTHER_STATE_AUTOCOV,
+    SMOOTHER_STATE_COV,
+)
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.tsa.statespace.tools import (
+    companion_matrix,
+    constrain_stationary_multivariate,
+    constrain_stationary_univariate,
+    is_invertible,
+    unconstrain_stationary_multivariate,
+    unconstrain_stationary_univariate,
+)
+from statsmodels.tsa.tsatools import lagmat
+from statsmodels.tsa.vector_ar.var_model import VAR
 
 
 class FactorBlock(dict):
@@ -1479,7 +1483,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # Parameter slices
         ix = np.split(np.arange(self.k_params),
                       np.cumsum(list(self.params.values()))[:-1])
-        self._p = dict(zip(self.params.keys(), ix, strict=False))
+        self._p = dict(zip(self.params.keys(), ix))
 
         # Cache
         self._loading_constraints = {}

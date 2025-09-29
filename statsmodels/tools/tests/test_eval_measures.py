@@ -86,7 +86,7 @@ ics = [aic, aicc, bic, hqic]
 ics_sig = [aic_sigma, aicc_sigma, bic_sigma, hqic_sigma]
 
 
-@pytest.mark.parametrize("ic,ic_sig", zip(ics, ics_sig, strict=False))
+@pytest.mark.parametrize("ic,ic_sig", zip(ics, ics_sig))
 def test_ic_equivalence(ic, ic_sig):
     # consistency check
 

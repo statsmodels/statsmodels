@@ -5,29 +5,25 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-import pytest
-
 import numpy as np
 from numpy.testing import assert_allclose
-
-# from scipy import stats
+import pytest
 
 from statsmodels.robust.norms import (
     AndrewWave,
-    TrimmedMean,
-    TukeyBiweight,
-    TukeyQuartic,
     Hampel,
     HuberT,
     StudentT,
-    )
-
+    TrimmedMean,
+    TukeyBiweight,
+    TukeyQuartic,
+)
 from statsmodels.robust.tools import (
+    _get_tuning_param,
     _var_normal,
     _var_normal_jump,
-    _get_tuning_param,
     tuning_s_estimator_mean,
-    )
+)
 
 
 effs = [0.9, 0.95, 0.98, 0.99]

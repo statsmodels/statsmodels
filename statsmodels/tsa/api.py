@@ -63,8 +63,9 @@ __all__ = [
     "zivot_andrews"
 ]
 
-from . import interp, stattools, tsatools, vector_ar as var
 from statsmodels.graphics import tsaplots as graphics
+
+from . import interp, stattools, tsatools, vector_ar as var
 from .ar_model import AR, AutoReg
 from .ardl import ARDL, UECM, ardl_select_order
 from .arima import api as arima
@@ -102,7 +103,7 @@ from .stattools import (
     pacf_yw,
     q_stat,
     range_unit_root_test,
-    zivot_andrews
+    zivot_andrews,
 )
 from .tsatools import add_lag, add_trend, detrend, lagmat, lagmat2ds
 from .vector_ar.svar_model import SVAR

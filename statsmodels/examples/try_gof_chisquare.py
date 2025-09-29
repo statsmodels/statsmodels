@@ -6,11 +6,10 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from scipy import stats
-from statsmodels.stats.gof import chisquare, chisquare_power, chisquare_effectsize
-
 from numpy.testing import assert_almost_equal
+from scipy import stats
 
+from statsmodels.stats.gof import chisquare, chisquare_effectsize, chisquare_power
 
 nobs = 30000
 n_bins = 5

@@ -73,11 +73,13 @@ __all__ = [
 ]
 
 
+from statsmodels._version import (
+    version as __version__,
+    version_tuple as __version_info__,
+)
+
 from . import datasets, distributions, iolib, regression, robust, tools
 from .__init__ import test
-from statsmodels._version import (
-    version as __version__, version_tuple as __version_info__
-)
 from .discrete.conditional_models import (
     ConditionalLogit,
     ConditionalMNLogit,
@@ -98,10 +100,10 @@ from .discrete.discrete_model import (
     Probit,
 )
 from .discrete.truncated_model import (
-    TruncatedLFPoisson,
-    TruncatedLFNegativeBinomialP,
     HurdleCountModel,
-    )
+    TruncatedLFNegativeBinomialP,
+    TruncatedLFPoisson,
+)
 from .duration import api as duration
 from .duration.hazard_regression import PHReg
 from .duration.survfunc import SurvfuncRight

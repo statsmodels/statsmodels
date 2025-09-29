@@ -6,12 +6,15 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 
-from statsmodels.stats.inter_rater import (fleiss_kappa, cohens_kappa,
-                                           to_table, aggregate_raters)
+from statsmodels.stats.inter_rater import (
+    aggregate_raters,
+    cohens_kappa,
+    fleiss_kappa,
+    to_table,
+)
 from statsmodels.tools.testing import Holder
-
 
 table0 = np.asarray("""\
 1 	0 	0 	0 	0 	14 	1.000

@@ -1,15 +1,15 @@
 import os
 
-import numpy.testing as npt
 import numpy as np
+import numpy.testing as npt
 import pandas as pd
 import pytest
 from scipy import stats
 
 from statsmodels.distributions.mixture_rvs import mixture_rvs
+from statsmodels.nonparametric import bandwidths
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
 from statsmodels.sandbox.nonparametric import kernels
-from statsmodels.nonparametric import bandwidths
 
 # get results from Stata
 

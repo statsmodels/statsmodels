@@ -206,7 +206,7 @@ class NewsResults:
         self.revisions_details_start = news_results.revisions_details_start
 
         self.revisions_iloc = pd.DataFrame(
-            list(zip(*news_results.revisions_ix, strict=False)),
+            list(zip(*news_results.revisions_ix)),
             index=["revision date", "revised variable"]).T
         iloc = self.revisions_iloc
         if len(iloc) > 0:
@@ -221,7 +221,7 @@ class NewsResults:
         self.revisions_ix_detailed = self.revisions_ix[mask]
 
         self.updates_iloc = pd.DataFrame(
-            list(zip(*news_results.updates_ix, strict=False)),
+            list(zip(*news_results.updates_ix)),
             index=["update date", "updated variable"]).T
         iloc = self.updates_iloc
         if len(iloc) > 0:

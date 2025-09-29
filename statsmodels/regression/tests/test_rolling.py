@@ -3,13 +3,13 @@ from itertools import product
 import warnings
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_array_equal
 import pandas as pd
 import pytest
-from numpy.testing import assert_allclose, assert_array_equal
 
 from statsmodels import tools
 from statsmodels.regression.linear_model import WLS
-from statsmodels.regression.rolling import RollingWLS, RollingOLS
+from statsmodels.regression.rolling import RollingOLS, RollingWLS
 
 
 def gen_data(nobs, nvar, const, pandas=False, missing=0.0, weights=False):

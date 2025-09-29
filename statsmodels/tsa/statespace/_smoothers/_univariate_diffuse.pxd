@@ -9,15 +9,26 @@ License: Simplified-BSD
 """
 
 cimport numpy as np
-from statsmodels.tsa.statespace._representation cimport (
-    sStatespace, dStatespace, cStatespace, zStatespace
-)
+
 from statsmodels.tsa.statespace._kalman_filter cimport (
-    sKalmanFilter, dKalmanFilter, cKalmanFilter, zKalmanFilter
+    cKalmanFilter,
+    dKalmanFilter,
+    sKalmanFilter,
+    zKalmanFilter,
 )
 from statsmodels.tsa.statespace._kalman_smoother cimport (
-    sKalmanSmoother, dKalmanSmoother, cKalmanSmoother, zKalmanSmoother
+    cKalmanSmoother,
+    dKalmanSmoother,
+    sKalmanSmoother,
+    zKalmanSmoother,
 )
+from statsmodels.tsa.statespace._representation cimport (
+    cStatespace,
+    dStatespace,
+    sStatespace,
+    zStatespace,
+)
+
 
 # Single precision
 cdef int ssmoothed_estimators_measurement_univariate_diffuse(sKalmanSmoother smoother, sKalmanFilter kfilter, sStatespace model) except *

@@ -6,8 +6,8 @@ from statsmodels.compat.python import lrange
 
 import numpy as np
 
-from statsmodels.graphics.plottools import rainbow
 from statsmodels.graphics import utils
+from statsmodels.graphics.plottools import rainbow
 
 
 def interaction_plot(

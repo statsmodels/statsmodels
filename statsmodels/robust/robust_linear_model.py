@@ -21,8 +21,7 @@ import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression._tools as reg_tools
 import statsmodels.regression.linear_model as lm
-from statsmodels.robust import norms
-from statsmodels.robust import scale
+from statsmodels.robust import norms, scale
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 

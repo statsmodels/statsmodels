@@ -1147,7 +1147,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
         wts = [1 / v for v in var]
         wtsum = sum(wts)
         wts = [w / wtsum for w in wts]
-        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio, strict=False)])
+        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio)])
 
         return np.exp(log_pooled_or)
 

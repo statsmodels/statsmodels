@@ -7,11 +7,10 @@ Author: Josef Perktold
 
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_almost_equal, assert_array_less
 from scipy import stats
-from statsmodels.base.model import GenericLikelihoodModel
 
-from numpy.testing import (assert_array_less, assert_almost_equal,
-                           assert_allclose)
+from statsmodels.base.model import GenericLikelihoodModel
 
 
 class MyPareto(GenericLikelihoodModel):

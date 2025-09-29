@@ -13,9 +13,10 @@ Produces six different plots for each distribution
 
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
-import matplotlib.pyplot as plt
+
 import statsmodels.api as sm
 
 KDEMultivariate = sm.nonparametric.KDEMultivariate

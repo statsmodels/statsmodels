@@ -1434,7 +1434,7 @@ class MixedLM(base.LikelihoodModel):
 
         # Quadratic terms for random effects covariance.
         ii = np.tril_indices(k_re)
-        ix = [(a, b) for a, b in zip(ii[0], ii[1], strict=False)]
+        ix = [(a, b) for a, b in zip(ii[0], ii[1])]
         for i1 in range(k_re2):
             for i2 in range(k_re2):
                 ix1 = ix[i1]

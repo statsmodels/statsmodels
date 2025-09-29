@@ -6,6 +6,7 @@ Author: Josef Perktold
 """
 
 import numbers
+
 import numpy as np
 
 # the trimboth and trim_mean are taken from scipy.stats.stats

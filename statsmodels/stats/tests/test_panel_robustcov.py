@@ -7,16 +7,18 @@ Author: Josef Perktold
 """
 
 from statsmodels.compat.python import lmap
+
 import numpy as np
 from numpy.testing import assert_almost_equal
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.tools import add_constant
 import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.tools.tools import add_constant
 
 
 def test_panel_robust_cov():
     import statsmodels.datasets.grunfeld as gr
+
     from .results.results_panelrobust import results as res_stata
 
     dtapa = gr.data.load_pandas()

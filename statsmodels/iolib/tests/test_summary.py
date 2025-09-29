@@ -4,12 +4,12 @@
 """
 
 import numpy as np
-import pytest
 from numpy.testing import assert_equal
+import pytest
 
 from statsmodels.datasets import macrodata
-from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.tools import add_constant
 
 
 def test_escaped_variable_name():

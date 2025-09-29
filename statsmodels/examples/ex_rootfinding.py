@@ -6,8 +6,8 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from statsmodels.tools.rootfinding import brentq_expanding
 
+from statsmodels.tools.rootfinding import brentq_expanding
 
 # Warning: module.global, changing this will affect everyone
 # import statsmodels.tools.rootfinding as smroots

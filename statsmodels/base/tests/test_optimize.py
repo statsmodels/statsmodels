@@ -1,18 +1,18 @@
 from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
+
+from numpy.testing import assert_, assert_almost_equal
 import pytest
-from numpy.testing import assert_
-from numpy.testing import assert_almost_equal
 
 from statsmodels.base.optimizer import (
-    _fit_newton,
-    _fit_nm,
+    _fit_basinhopping,
     _fit_bfgs,
     _fit_cg,
-    _fit_ncg,
-    _fit_powell,
     _fit_lbfgs,
-    _fit_basinhopping,
     _fit_minimize,
+    _fit_ncg,
+    _fit_newton,
+    _fit_nm,
+    _fit_powell,
 )
 
 fit_funcs = {

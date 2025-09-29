@@ -3,12 +3,12 @@ Miscellaneous utility code for VAR estimation
 """
 from statsmodels.compat.pandas import frequencies
 from statsmodels.compat.python import asbytes
-from statsmodels.tools.validation import array_like, int_like
 
 import numpy as np
 import pandas as pd
-from scipy import stats, linalg
+from scipy import linalg, stats
 
+from statsmodels.tools.validation import array_like, int_like
 import statsmodels.tsa.tsatools as tsa
 
 #

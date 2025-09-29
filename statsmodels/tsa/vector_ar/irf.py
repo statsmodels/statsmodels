@@ -8,8 +8,7 @@ import scipy.linalg as L
 
 from statsmodels.tools.decorators import cache_readonly
 import statsmodels.tsa.tsatools as tsa
-from statsmodels.tsa.vector_ar import plotting
-from statsmodels.tsa.vector_ar import util
+from statsmodels.tsa.vector_ar import plotting, util
 
 mat = np.array
 

@@ -12,8 +12,7 @@ import pandas as pd
 from scipy.linalg import cho_solve_banded
 
 from statsmodels import datasets
-from statsmodels.tsa.statespace import (sarimax, structural, dynamic_factor,
-                                        varmax)
+from statsmodels.tsa.statespace import dynamic_factor, sarimax, structural, varmax
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 dta = datasets.macrodata.load_pandas().data

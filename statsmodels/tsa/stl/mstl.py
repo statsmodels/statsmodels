@@ -16,19 +16,23 @@ MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with Multiple
 Seasonal Patterns
 https://arxiv.org/pdf/2107.13462.pdf
 """
+from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 import warnings
 
 import numpy as np
 import pandas as pd
 from scipy.stats import boxcox
 
-from statsmodels.tools.typing import ArrayLike1D
 from statsmodels.tsa.seasonal._seasonal import DecomposeResult
 from statsmodels.tsa.stl._stl import STL
 from statsmodels.tsa.tsatools import freq_to_period
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from statsmodels.tools.typing import ArrayLike1D
 
 
 class MSTL:
@@ -262,7 +266,7 @@ class MSTL:
     ) -> tuple[Sequence[int], Sequence[int]]:
         if len(periods) != len(windows):
             raise ValueError("Periods and windows must have same length")
-        periods, windows = zip(*sorted(zip(periods, windows, strict=False)), strict=False)
+        periods, windows = zip(*sorted(zip(periods, windows)))
         return periods, windows
 
     @staticmethod

@@ -6,19 +6,17 @@ License: BSD-3
 """
 
 import os
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
-from statsmodels.regression.linear_model import OLS
 from statsmodels.discrete.discrete_model import Probit
-from statsmodels.treatment.treatment_effects import (
-    TreatmentEffect
-    )
+from statsmodels.regression.linear_model import OLS
+from statsmodels.treatment.treatment_effects import TreatmentEffect
 
 from .results import results_teffects as res_st
-
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 

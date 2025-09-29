@@ -10,6 +10,7 @@ License: BSD-3
 
 import numpy as np
 from scipy import stats
+
 from statsmodels.tools.numdiff import _approx_fprime_cs_scalar, approx_hess
 
 
@@ -233,6 +234,7 @@ class HR(PickandDependence):
         term = np.log((1. - t) / t) * 0.5 / lamda
 
         from scipy.stats import norm
+
         # use special if I want to avoid stats import
         transf = ((1 - t) * norm._cdf(lamda + term) +
                   t * norm._cdf(lamda - term))
@@ -314,6 +316,7 @@ class TEV(PickandDependence):
         #    raise ValueError('invalid args')
 
         from scipy.stats import t as stats_t
+
         # use special if I want to avoid stats import
 
         term1 = (np.power(t/(1.-t), 1./x) - rho)  # for t

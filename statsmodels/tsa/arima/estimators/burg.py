@@ -6,11 +6,10 @@ License: BSD-3
 """
 import numpy as np
 
-from statsmodels.tools.tools import Bunch
 from statsmodels.regression import linear_model
-
-from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.params import SARIMAXParams
+from statsmodels.tsa.arima.specification import SARIMAXSpecification
 
 
 def burg(endog, ar_order=0, demean=True):

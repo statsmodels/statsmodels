@@ -1,6 +1,7 @@
 import numpy as np
 
 from statsmodels.tools.testing import ParamsTableTestBunch
+
 est = dict(
     N=201,
     df_m=2,

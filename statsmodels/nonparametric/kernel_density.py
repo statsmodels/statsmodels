@@ -31,9 +31,13 @@ References
 import numpy as np
 
 from . import kernels
-from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
-    LeaveOneOut, _adjust_shape
-
+from ._kernel_base import (
+    EstimatorSettings,
+    GenericKDE,
+    LeaveOneOut,
+    _adjust_shape,
+    gpke,
+)
 
 __all__ = ["EstimatorSettings", "KDEMultivariate", "KDEMultivariateConditional"]
 

@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats._delta_method import NonlinearDeltaCov
 

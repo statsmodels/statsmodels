@@ -1,11 +1,15 @@
 import numpy as np
+from numpy.testing import assert_almost_equal
 import pandas as pd
 import pytest
-from numpy.testing import assert_almost_equal
 from scipy import stats
 
-from statsmodels.stats._lilliefors import lilliefors, get_lilliefors_table, \
-    kstest_fit, ksstat
+from statsmodels.stats._lilliefors import (
+    get_lilliefors_table,
+    ksstat,
+    kstest_fit,
+    lilliefors,
+)
 
 
 class TestLilliefors:

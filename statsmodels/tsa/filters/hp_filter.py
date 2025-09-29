@@ -1,7 +1,8 @@
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
-from statsmodels.tools.validation import array_like, PandasWrapper
+
+from statsmodels.tools.validation import PandasWrapper, array_like
 
 
 def hpfilter(x, lamb=1600):

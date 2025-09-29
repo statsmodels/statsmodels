@@ -2,7 +2,6 @@ import numpy as np
 
 from statsmodels.tools.tools import Bunch
 
-
 pls5 = Bunch()
 
 pls5.smooth = Bunch()

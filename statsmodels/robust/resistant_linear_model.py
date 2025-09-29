@@ -6,14 +6,14 @@ License: BSD-3
 """
 
 import numpy as np
+
 from statsmodels.base.model import Model
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.testing import Holder
-
-from statsmodels.robust.robust_linear_model import RLM
-import statsmodels.robust.norms as rnorms
-import statsmodels.robust.scale as rscale
 from statsmodels.robust.covariance import _get_detcov_startidx
+import statsmodels.robust.norms as rnorms
+from statsmodels.robust.robust_linear_model import RLM
+import statsmodels.robust.scale as rscale
+from statsmodels.tools.testing import Holder
 
 
 class RLMDetS(Model):

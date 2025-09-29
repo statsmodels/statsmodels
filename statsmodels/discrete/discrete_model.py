@@ -758,7 +758,7 @@ class MultinomialModel(BinaryModel):
             yname = "y"
 
         if not isinstance(ynames, dict):
-            ynames = dict(zip(range(endog_dummies.shape[1]), ynames, strict=False))
+            ynames = dict(zip(range(endog_dummies.shape[1]), ynames))
 
         self._ynames_map = ynames
         data = handle_data(endog_dummies, exog, missing, hasconst, **kwargs)

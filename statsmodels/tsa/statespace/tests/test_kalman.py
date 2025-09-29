@@ -17,21 +17,25 @@ Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
 import copy
+import os
 import pickle
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_almost_equal
 import pandas as pd
-import os
 import pytest
-
-from scipy.linalg.blas import find_best_blas_type
 from scipy.linalg import solve_discrete_lyapunov
+from scipy.linalg.blas import find_best_blas_type
+
+from statsmodels.tsa.statespace import _kalman_filter, _representation
 from statsmodels.tsa.statespace.kalman_filter import (
-    MEMORY_NO_FORECAST, MEMORY_NO_PREDICTED, MEMORY_CONSERVE)
+    MEMORY_CONSERVE,
+    MEMORY_NO_FORECAST,
+    MEMORY_NO_PREDICTED,
+)
 from statsmodels.tsa.statespace.mlemodel import MLEModel
-from statsmodels.tsa.statespace import _representation, _kalman_filter
+
 from .results import results_kalman_filter
-from numpy.testing import assert_almost_equal, assert_allclose
 
 prefix_statespace_map = {
     "s": _representation.sStatespace, "d": _representation.dStatespace,

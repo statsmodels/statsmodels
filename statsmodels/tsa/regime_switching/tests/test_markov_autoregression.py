@@ -5,11 +5,11 @@ Author: Chad Fulton
 License: BSD-3
 """
 
-import warnings
 import os
+import warnings
 
 import numpy as np
-from numpy.testing import assert_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 

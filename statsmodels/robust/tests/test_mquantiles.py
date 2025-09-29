@@ -11,7 +11,6 @@ import pandas as pd
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.quantile_regression import QuantReg
-
 from statsmodels.robust import norms
 from statsmodels.robust.robust_linear_model import RLM
 

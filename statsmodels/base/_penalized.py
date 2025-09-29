@@ -6,8 +6,10 @@ License: BSD-3
 """
 
 import numpy as np
+
+from statsmodels.tools.numdiff import approx_fprime, approx_fprime_cs
+
 from ._penalties import NonePenalty
-from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
 
 
 class PenalizedMixin:
@@ -196,6 +198,7 @@ class PenalizedMixin:
         # penalization
         from statsmodels.gam.generalized_additive_model import GLMGam
         from statsmodels.genmod.generalized_linear_model import GLM
+
         # Only for fit methods supporting max_start_irls
         if isinstance(self, (GLM, GLMGam)):
             kwds.update({"max_start_irls": 0})

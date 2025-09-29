@@ -61,12 +61,11 @@ TODO
 
 
 """
-from typing import NamedTuple
-
 from statsmodels.compat.python import lrange, lzip
 
 import copy
 import math
+from typing import NamedTuple
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
@@ -1017,7 +1016,7 @@ class MultiComparison:
         # simultaneous/separate treatment of multiple tests
         f = (tot * (tot + 1.0) / 12.0) / stats.tiecorrect(self.rankdata)  # (xranks)
         print("MultiComparison.kruskal")
-        for i, j in zip(*self.pairindices, strict=False):
+        for i, j in zip(*self.pairindices):
             # pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(
@@ -1064,7 +1063,7 @@ class MultiComparison:
         from statsmodels.stats.multitest import multipletests
 
         res = []
-        for i, j in zip(*self.pairindices, strict=False):
+        for i, j in zip(*self.pairindices):
             res.append(testfunc(self.datali[i], self.datali[j]))
         res = np.array(res)
         reject, pvals_corrected, alphacSidak, alphacBonf = multipletests(
@@ -2097,7 +2096,7 @@ if __name__ == "__main__":
         mrs[v2[diffidx]] - mrs[v1[diffidx]]
 
         print("\nkruskal for all pairs")
-        for i, j in zip(v2[diffidx], v1[diffidx], strict=False):
+        for i, j in zip(v2[diffidx], v1[diffidx]):
             print(i, j, stats.kruskal(xli[i], xli[j]))
             mwu, mwupval = stats.mannwhitneyu(xli[i], xli[j], use_continuity=False)
             print(mwu, mwupval * 2, mwupval * 2 < 0.05 / 6.0, mwupval * 2 < 0.1 / 6.0)
@@ -2137,7 +2136,7 @@ if __name__ == "__main__":
         f = (tot * (tot + 1.0) / 12.0) - (t / (6.0 * (tot - 1.0)))
         f = (tot * (tot + 1.0) / 12.0) / stats.tiecorrect(xranks)
         print("\npairs of mean rank differences")
-        for i, j in zip(v2[diffidx], v1[diffidx], strict=False):
+        for i, j in zip(v2[diffidx], v1[diffidx]):
             # pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(

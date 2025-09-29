@@ -1,7 +1,8 @@
+from statsmodels.compat.pandas import Substitution
+
 import numpy as np
 from scipy.stats import scoreatpercentile
 
-from statsmodels.compat.pandas import Substitution
 from statsmodels.sandbox.nonparametric import kernels
 
 

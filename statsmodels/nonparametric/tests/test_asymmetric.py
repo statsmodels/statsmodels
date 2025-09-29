@@ -9,11 +9,10 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
-from scipy import stats
 import pytest
+from scipy import stats
 
 import statsmodels.nonparametric.kernels_asymmetric as kern
-
 
 kernels_rplus = [("gamma", 0.1),
                  ("gamma2", 0.1),

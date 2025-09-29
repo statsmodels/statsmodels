@@ -1,9 +1,8 @@
 import numpy as np
 
 import statsmodels.api as sm
-from statsmodels.miscmodels.count import PoissonGMLE, PoissonOffsetGMLE, PoissonZiGMLE
 from statsmodels.discrete.discrete_model import Poisson
-
+from statsmodels.miscmodels.count import PoissonGMLE, PoissonOffsetGMLE, PoissonZiGMLE
 
 DEC = 3
 

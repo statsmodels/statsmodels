@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Mapping, Optional, TypeVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, TypeVar
+
 import numpy as np
 from packaging.version import Version, parse
 import pandas as pd

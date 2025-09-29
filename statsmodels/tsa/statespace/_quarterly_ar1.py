@@ -5,14 +5,20 @@ Author: Chad Fulton
 License: BSD-3
 """
 import warnings
+
 import numpy as np
 
 from statsmodels.tools.tools import Bunch
-from statsmodels.tsa.statespace import mlemodel, initialization
+from statsmodels.tsa.statespace import initialization, mlemodel
 from statsmodels.tsa.statespace.kalman_smoother import (
-    SMOOTHER_STATE, SMOOTHER_STATE_COV, SMOOTHER_STATE_AUTOCOV)
+    SMOOTHER_STATE,
+    SMOOTHER_STATE_AUTOCOV,
+    SMOOTHER_STATE_COV,
+)
 from statsmodels.tsa.statespace.tools import (
-    constrain_stationary_univariate, unconstrain_stationary_univariate)
+    constrain_stationary_univariate,
+    unconstrain_stationary_univariate,
+)
 
 
 class QuarterlyAR1(mlemodel.MLEModel):

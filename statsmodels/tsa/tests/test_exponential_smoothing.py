@@ -14,8 +14,8 @@ import pandas as pd
 import pytest
 import scipy.stats
 
-from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa import holtwinters
+from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 import statsmodels.tsa.statespace.exponential_smoothing as statespace
 
 # This contains tests for the exponential smoothing implementation in
@@ -349,7 +349,7 @@ def fit_austourists_with_R_params(model, results_R, set_state=False):
     Fit the model with params as found by R's forecast package
     """
     params = get_params_from_R(results_R)
-    with model.fix_params(dict(zip(model.param_names, params, strict=False))):
+    with model.fix_params(dict(zip(model.param_names, params))):
         fit = model.fit(disp=False)
 
     if set_state:

@@ -14,11 +14,11 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+import statsmodels.iolib.summary
 from statsmodels.iolib.summary import forg
 from statsmodels.tsa.statespace import sarimax, varmax
 
 from .results import results_varmax
-import statsmodels.iolib.summary
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -1058,7 +1058,7 @@ def test_recreate_model():
         enforce_stationarities,
         enforce_invertibilities,
     ):
-        kwargs = dict(zip(names, element, strict=False))
+        kwargs = dict(zip(names, element))
 
         with warnings.catch_warnings(record=False):
             warnings.simplefilter("ignore")

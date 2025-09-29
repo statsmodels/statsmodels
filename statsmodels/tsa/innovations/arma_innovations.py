@@ -1,9 +1,10 @@
 import numpy as np
+from scipy.linalg.blas import find_best_blas_type
 
+from statsmodels.tools.numdiff import _get_epsilon, approx_fprime_cs
 from statsmodels.tsa import arima_process
 from statsmodels.tsa.statespace.tools import prefix_dtype_map
-from statsmodels.tools.numdiff import _get_epsilon, approx_fprime_cs
-from scipy.linalg.blas import find_best_blas_type
+
 from . import _arma_innovations
 
 NON_STATIONARY_ERROR = """\

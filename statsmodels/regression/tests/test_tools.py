@@ -2,8 +2,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
-from statsmodels.regression.linear_model import WLS
 from statsmodels.regression._tools import _MinimalWLS
+from statsmodels.regression.linear_model import WLS
 
 
 class TestMinimalWLS:

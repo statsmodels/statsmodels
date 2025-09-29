@@ -7,18 +7,22 @@ License: BSD-3
 
 
 import numpy as np
+from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
-
 import pytest
-from numpy.testing import assert_equal, assert_allclose, assert_
 
 from statsmodels.datasets import macrodata
-from statsmodels.tsa.statespace import (
-    sarimax, varmax, dynamic_factor)
+from statsmodels.tsa.statespace import dynamic_factor, sarimax, varmax
 from statsmodels.tsa.statespace.kalman_filter import (
-    MEMORY_NO_FORECAST_MEAN, MEMORY_NO_FORECAST_COV,
-    MEMORY_NO_PREDICTED_MEAN, MEMORY_NO_PREDICTED_COV, MEMORY_NO_PREDICTED,
-    MEMORY_NO_SMOOTHING, MEMORY_NO_GAIN, MEMORY_CONSERVE)
+    MEMORY_CONSERVE,
+    MEMORY_NO_FORECAST_COV,
+    MEMORY_NO_FORECAST_MEAN,
+    MEMORY_NO_GAIN,
+    MEMORY_NO_PREDICTED,
+    MEMORY_NO_PREDICTED_COV,
+    MEMORY_NO_PREDICTED_MEAN,
+    MEMORY_NO_SMOOTHING,
+)
 
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start="1959-01-01", end="2009-07-01", freq="QS")

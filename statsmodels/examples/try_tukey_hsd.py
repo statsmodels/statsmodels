@@ -12,9 +12,8 @@ from numpy.testing import assert_almost_equal, assert_equal
 from scipy import stats
 
 from statsmodels.stats.libqsturng import qsturng
-from statsmodels.stats.multicomp import tukeyhsd
 import statsmodels.stats.multicomp as multi
-
+from statsmodels.stats.multicomp import tukeyhsd
 
 ss = """\
   43.9  1   1

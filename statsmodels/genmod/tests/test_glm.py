@@ -2966,7 +2966,7 @@ def test_output_exposure_null(reset_randomstate):
     rs = np.random.RandomState(0)
     # Variable exposures for each observation
     exposure = rs.randint(100, 200, size=1000)
-    y = [np.sum(rs.poisson(x, size=e)) for x, e in zip(x0, exposure, strict=False)]
+    y = [np.sum(rs.poisson(x, size=e)) for x, e in zip(x0, exposure)]
     x = add_constant(x0)
 
     model = GLM(endog=y, exog=x, exposure=exposure, family=sm.families.Poisson()).fit()

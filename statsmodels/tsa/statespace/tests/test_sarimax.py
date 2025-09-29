@@ -2234,7 +2234,7 @@ def check_concentrated_scale(filter_univariate=False):
         time_varying_regressions,
         simple_differencings,
     ):
-        kwargs = dict(zip(names, element, strict=False))
+        kwargs = dict(zip(names, element))
         if kwargs.get("time_varying_regression", False):
             kwargs["mle_regression"] = False
 
@@ -2563,7 +2563,7 @@ def test_recreate_model():
         time_varying_regressions,
         simple_differencings,
     ):
-        kwargs = dict(zip(names, element, strict=False))
+        kwargs = dict(zip(names, element))
         if kwargs.get("time_varying_regression", False):
             kwargs["mle_regression"] = False
         exog = kwargs.pop("exog", None)

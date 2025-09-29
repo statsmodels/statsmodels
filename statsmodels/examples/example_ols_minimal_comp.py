@@ -5,6 +5,7 @@ add example for new compare methods
 """
 
 import numpy as np
+
 import statsmodels.api as sm
 
 np.random.seed(765367)

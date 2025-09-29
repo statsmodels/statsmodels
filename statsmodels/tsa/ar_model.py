@@ -7,12 +7,11 @@ from statsmodels.compat.pandas import (
     to_numpy,
 )
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 import datetime
 import datetime as dt
 from types import SimpleNamespace
-from typing import Any, Literal, cast, TYPE_CHECKING
-from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Literal, cast
 import warnings
 
 import numpy as np

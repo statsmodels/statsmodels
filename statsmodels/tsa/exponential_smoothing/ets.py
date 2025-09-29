@@ -166,8 +166,8 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.exponential_smoothing import base
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
 from statsmodels.tsa.exponential_smoothing.initialization import (
-    _initialization_simple,
     _initialization_heuristic,
+    _initialization_simple,
 )
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -606,10 +606,10 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # we also have to reset the params index dictionaries
         self._internal_params_index = OrderedDict(
-            zip(self._internal_param_names, np.arange(self._k_params_internal), strict=False)
+            zip(self._internal_param_names, np.arange(self._k_params_internal))
         )
         self._params_index = OrderedDict(
-            zip(self.param_names, np.arange(self.k_params), strict=False)
+            zip(self.param_names, np.arange(self.k_params))
         )
 
     def set_bounds(self, bounds):

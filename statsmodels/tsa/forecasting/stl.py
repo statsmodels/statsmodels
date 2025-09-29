@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from statsmodels.compat.pandas import Substitution, is_int_index
 
 import datetime as dt

@@ -3,8 +3,8 @@ Tests for ARMA innovations algorithm wrapper
 """
 
 import numpy as np
-import pytest
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.tsa.innovations import arma_innovations
 from statsmodels.tsa.statespace.sarimax import SARIMAX

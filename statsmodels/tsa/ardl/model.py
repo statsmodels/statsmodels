@@ -44,13 +44,13 @@ if TYPE_CHECKING:
 
     import matplotlib.figure
 
-    from statsmodels.tsa.deterministic import DeterministicProcess
     from statsmodels.tools.typing import (
         ArrayLike1D,
         ArrayLike2D,
         Float64Array,
         NDArray,
     )
+    from statsmodels.tsa.deterministic import DeterministicProcess
 
 __all__ = [
     "ARDL",

@@ -14,11 +14,11 @@ from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
 from statsmodels.tsa.tsatools import duplication_matrix, lagmat, vec
+from statsmodels.tsa.vector_ar import irf
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     CausalityTestResults,
     WhitenessTestResults,
 )
-from statsmodels.tsa.vector_ar import irf
 import statsmodels.tsa.vector_ar.plotting as plot
 from statsmodels.tsa.vector_ar.util import get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import (
