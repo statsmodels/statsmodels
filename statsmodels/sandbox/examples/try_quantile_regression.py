@@ -39,7 +39,7 @@ x_sorted = res_ols.model.exog[sortidx]
 fitted_ols = np.dot(x_sorted, params[0])
 plt.figure()
 plt.plot(y[sortidx], "o", alpha=0.75)
-for lab, beta in zip(["ols", "qr 0.25", "qr 0.5", "qr 0.75"], params, strict=False):
+for lab, beta in zip(["ols", "qr 0.25", "qr 0.5", "qr 0.75"], params):
     print("%-8s" % lab, np.round(beta, 4))
     fitted = np.dot(x_sorted, beta)
     lw = 2 if lab == "ols" else 1

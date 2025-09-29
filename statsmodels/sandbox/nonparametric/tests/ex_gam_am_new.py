@@ -74,7 +74,7 @@ if example > 0:
     plt.title("gam.AdditiveModel")
 
     counter = 2
-    for ii, xx in zip(["z", "x1", "x2"], [z, x[:, 0], x[:, 1]], strict=False):
+    for ii, xx in zip(["z", "x1", "x2"], [z, x[:, 0], x[:, 1]]):
         sortidx = np.argsort(xx)
         # plt.figure()
         plt.subplot(2, 2, counter)

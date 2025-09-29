@@ -334,7 +334,7 @@ class DensityOrthoPoly:
         xeval = self._transform(xeval)
         if order is None:
             order = len(self.polys)
-        res = sum(c * p(xeval) for c, p in list(zip(self.coeffs, self.polys, strict=False))[:order])
+        res = sum(c * p(xeval) for c, p in list(zip(self.coeffs, self.polys))[:order])
         res = self._correction(res)
         return res
 
@@ -409,7 +409,7 @@ def density_orthopoly(x, polybase, order=5, xeval=None):
     # coeffs = [(p(x)*(1-x**2)**(-1/2.)).mean() for p in polys]
     # coeffs = [(p(x)*np.exp(-x*x)).mean() for p in polys]
     coeffs = [(p(x)).mean() for p in polys]
-    res = sum(c * p(xeval) for c, p in zip(coeffs, polys, strict=False))
+    res = sum(c * p(xeval) for c, p in zip(coeffs, polys))
     # res *= (1-xeval**2)**(-1/2.)
     # res *= np.exp(-xeval**2./2)
     return res, xeval, coeffs, polys

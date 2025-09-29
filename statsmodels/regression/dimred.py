@@ -385,7 +385,7 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
         if not self.bc:
             # Cook's original approach
             vm = 0
-            for w, cvx in zip(ns, cv, strict=False):
+            for w, cvx in zip(ns, cv):
                 icv = np.eye(p) - cvx
                 vm += w * np.dot(icv, icv)
             vm /= len(cv)

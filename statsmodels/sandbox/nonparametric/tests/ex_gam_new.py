@@ -100,7 +100,7 @@ if example > 1:
     plt.title("gam.GAM Poisson")
 
     counter = 2
-    for ii, xx in zip(["z", "x1", "x2"], [z, x[:, 0], x[:, 1]], strict=False):
+    for ii, xx in zip(["z", "x1", "x2"], [z, x[:, 0], x[:, 1]]):
         sortidx = np.argsort(xx)
         # plt.figure()
         plt.subplot(2, 2, counter)

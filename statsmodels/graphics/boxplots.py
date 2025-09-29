@@ -148,7 +148,7 @@ def violinplot(
     )
 
     # Plot violins.
-    for pos_data, pos in zip(data, positions, strict=False):
+    for pos_data, pos in zip(data, positions):
         _single_violin(ax, pos, pos_data, width, side, plot_opts)
 
     if show_boxplot:
@@ -370,7 +370,7 @@ def beanplot(
     )
 
     legend_txt = plot_opts.get("bean_legend_text", None)
-    for pos_data, pos in zip(data, positions, strict=False):
+    for pos_data, pos in zip(data, positions):
         # Draw violins.
         xvals, violin = _single_violin(ax, pos, pos_data, violin_width, side, plot_opts)
 

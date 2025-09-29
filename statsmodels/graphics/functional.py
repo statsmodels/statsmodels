@@ -456,13 +456,13 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     # Proxy artist for fill_between legend entry
     # See https://matplotlib.org/1.3.1/users/legend_guide.html
     plt = _import_mpl()
-    for label, fill_between in zip(["50% HDR", "90% HDR"], fill_betweens, strict=False):
+    for label, fill_between in zip(["50% HDR", "90% HDR"], fill_betweens):
         p = plt.Rectangle((0, 0), 1, 1,
                           fc=fill_between.get_facecolor()[0])
         handles.append(p)
         labels.append(label)
 
-    by_label = dict(zip(labels, handles, strict=False))
+    by_label = dict(zip(labels, handles))
     if len(outliers) != 0:
         by_label.pop("Median")
         by_label.pop("50% HDR")

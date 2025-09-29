@@ -121,7 +121,7 @@ def interaction_plot(
     if isinstance(x[0], str):
         x_levels = np.unique(x).tolist()
         x_values = lrange(len(x_levels))
-        x = _recode(x, dict(zip(x_levels, x_values, strict=False)))
+        x = _recode(x, dict(zip(x_levels, x_values)))
 
     data = DataFrame(dict(x=x, trace=trace, response=response))
     plot_data = data.groupby(["trace", "x"]).aggregate(func).reset_index()

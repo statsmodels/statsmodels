@@ -180,7 +180,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     # Initialize at zero so each column can be converted to any dtype.
     ix = range(num_points)
     fexog = pd.DataFrame(index=ix, columns=colnames)
-    for d, x in zip(dtypes, colnames, strict=False):
+    for d, x in zip(dtypes, colnames):
         fexog[x] = pd.Series(index=ix, dtype=d)
 
     # The values of the 'focus variable' are a sequence of percentiles

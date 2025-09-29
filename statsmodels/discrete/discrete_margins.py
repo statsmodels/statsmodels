@@ -520,7 +520,7 @@ class DiscreteMargins:
             ynames = np.repeat(yname_list, len(var_names))
             xnames = np.tile(var_names, len(yname_list))
             index = MultiIndex.from_tuples(
-                list(zip(ynames, xnames, strict=False)), names=["endog", "exog"]
+                list(zip(ynames, xnames)), names=["endog", "exog"]
             )
         else:
             table = np.column_stack(

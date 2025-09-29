@@ -49,7 +49,7 @@ print(repr(s2u))
 
 print("\nUsing pandas")
 pdta = pd.DataFrame(s.data, np.arange(len(s.data)), [1])
-pa = pdta.groupby(dict(zip(np.arange(len(s.data)), s.dates.tolist(), strict=False))).aggregate(
+pa = pdta.groupby(dict(zip(np.arange(len(s.data)), s.dates.tolist()))).aggregate(
     np.mean
 )
 s3 = ts.time_series(pa.values.ravel(), dates=ts.date_array(pa.index.tolist(), freq="M"))

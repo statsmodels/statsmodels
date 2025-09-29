@@ -1191,7 +1191,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
     percentiles = [(k_vars + 2) / nobs * 100 * 2, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
-    for p, cutoff in zip(percentiles, cutoffs, strict=False):
+    for p, cutoff in zip(percentiles, cutoffs):
         xsp = xs[d < cutoff]
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
