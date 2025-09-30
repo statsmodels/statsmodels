@@ -17,6 +17,9 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
+        python_314_latest:
+          python.version: '3.14'
+          coverage: true
         python_312_latest:
           python.version: '3.12'
           coverage: true
@@ -84,6 +87,8 @@ jobs:
         python313_macos_latest_install:
           python.version: '3.13'
           test.install: true
+        python314_macos_latest:
+          python.version: '3.14'
     maxParallel: 10
 
   steps:

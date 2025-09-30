@@ -139,6 +139,129 @@ fix = true
 [tool.ruff.lint]
 typing-modules = ["statsmodels.compat.python", "compat.python"]
 
+<<<<<<< Updated upstream
+=======
+select = [
+  # pyflakes
+  "F",
+  # pycodestyle
+  "E", "W",
+  # flake8-2020
+  "YTT",
+  # flake8-bugbear
+  "B",
+  # flake8-quotes
+  "Q",
+  # flake8-debugger
+  "T10",
+  # flake8-gettext
+  "INT",
+  # pylint
+  "PL",
+  # flake8-pytest-style
+  "PT",
+  # misc lints
+  "PIE",
+  # flake8-pyi
+  "PYI",
+  # tidy imports
+  "TID",
+  # implicit string concatenation
+  "ISC",
+  # flake8-type-checking
+  "TC",
+  # comprehensions
+  "C4",
+  # pygrep-hooks
+  "PGH",
+  # Ruff-specific rules
+  "RUF",
+  # flake8-bandit: exec-builtin
+  "S102",
+  # Perflint
+  "PERF",
+  # flynt
+  "FLY",
+  # flake8-future-annotations
+  "FA",
+  # unconventional-import-alias
+  "ICN001",
+  # flake8-slots
+  "SLOT",
+  # flake8-raise
+  "RSE"
+]
+
+ignore = [
+  # Required to allow black formatting
+  # Whitespace before ':' (Needed for black)
+  "E203",
+  # Line too long (### > 88 characters) (Needed for black)
+  "E501",
+  # Multiple statements on one line (colon) (E701)
+  "E701",
+
+  ### Intentionally disabled
+  # Too many arguments to function call
+  "PLR0913", # 635
+  # Too many returns
+  "PLR0911", # 11
+  # Too many branches
+  "PLR0912", # 217
+  # Too many statements
+  "PLR0915", # 220
+  # Redefined loop name
+  "PLW2901", # 55
+  # incorrect-dict-iterator, flags valid Series.items usage
+  "PERF102", # 6
+  # try-except-in-loop, becomes useless in Python 3.11
+  "PERF203", # 9
+  # pytest-parametrize-names-wrong-type
+  "PT006", # 37
+  # pytest-raises-with-multiple-statements
+  "PT012", # 11
+  # Docstring contains ambiguous letter
+  "RUF002", # Do Not Enable
+  # Magic number
+  "PLR2004", # 697
+  # import-outside-toplevel
+  "PLC0415", # 835
+
+  ### TODO: Enable gradually
+  # Too many uses of dict(...) instread of {...}
+  # Would be good enforce eventually
+  "C408", # 322
+  # Too many places without match= in pytest raises
+  # Would be goot enforce eventually
+  "PT011", # 511
+  "RUF013", # Enable when Py 3.10 is min
+  "RUF059", # 319
+  "PERF401", # 53
+  # collection-literal-concatenation
+  "RUF005", # 186
+  # pairwise-over-zipped
+  "RUF007", # 1
+  # mutable-class-default
+  "RUF012", #  178
+  # repeated-equality-comparison
+  "PLR1714", # 28
+  # Object does not implement `__hash__` method
+  "PLW1641", # 2
+]
+
+[tool.ruff.lint.per-file-ignores]
+# relative imports allowed for asv_bench
+"statsmodels/__init__.py" = ["PT028"]
+"statsmodels/tsa/vector_ar/var_model.py" = ["PT028"]
+"statsmodels/stats/rates.py" = ["PT028"]
+"statsmodels/stats/proportion.py" = ["PT028"]
+"statsmodels/stats/oneway.py" = ["PT028"]
+"statsmodels/stats/multivariate.py" = ["PT028"]
+"statsmodels/stats/diagnostic_gen.py" = ["PT028"]
+"statsmodels/discrete/_diagnostics_count.py" = ["PT028"]
+"statsmodels/examples/tests/test_notebooks.py" = ["F401"]
+
+>>>>>>> Stashed changes
 [tool.pytest.ini_options]
 minversion = "8.4.1"
 addopts = "--strict --durations=30 --junitxml=test-data.xml"
