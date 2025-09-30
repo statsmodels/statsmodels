@@ -17,6 +17,7 @@ import pytest
 
 import statsmodels.iolib.summary
 from statsmodels.tools import add_constant
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.statespace import sarimax, tools
 
@@ -2831,8 +2832,9 @@ def test_simple_differencing_strindex():
     values = np.log(realgdp_results["value"]).values
     index = pd.Index(range(len(values))).map(str)
     endog = pd.Series(values, index=index)
-    match = "Could not infer forma" if PD_LT_2 else "An unsupported index was provided"
-    with pytest.warns(UserWarning, match=match):
+    match = "An unsupported index was provided" if PD_LT_2 else "Could not infer forma"
+    err = ValueWarning if PD_LT_2 else UserWarning
+    with pytest.warns(err, match=match):
         mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
 
     assert_(mod._index.equals(pd.RangeIndex(start=0, stop=len(values) - 1)))
