@@ -10,6 +10,7 @@ License: Simplified-BSD
 
 cimport numpy as np
 
+
 cdef void shamilton_filter_log_iteration(int t, int k_regimes, int order,
                                 np.float32_t [:,:] transition,
                                 np.float32_t [:] weighted_likelihoods,

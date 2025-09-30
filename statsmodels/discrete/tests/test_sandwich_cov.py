@@ -33,11 +33,11 @@ data = data_raw.dropna()
 
 # mod = smd.Poisson.from_formula('accident ~ yr_con + op_75_79', data=dat)
 # Do not use formula for tests against Stata because intercept needs to be last
-endog = data['accident']
-exog_data = data['yr_con op_75_79'.split()]
+endog = data["accident"]
+exog_data = data["yr_con op_75_79".split()]
 exog = add_constant(exog_data, prepend=False)
-group = np.asarray(data['ship'], int)
-exposure = np.asarray(data['service'])
+group = np.asarray(data["ship"], int)
+exposure = np.asarray(data["service"])
 
 
 # TODO get the test methods from regression/tests
@@ -130,7 +130,7 @@ class TestPoissonCluGeneric(CheckCountRobustMixin):
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
         get_robustcov_results(cls.res1._results,
-                              'cluster',
+                              "cluster",
                               groups=group,
                               use_correction=True,
                               df_correction=True,  # TODO has no effect
@@ -152,7 +152,7 @@ class TestPoissonHC1Generic(CheckCountRobustMixin):
         from statsmodels.base.covtype import get_robustcov_results
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
-        get_robustcov_results(cls.res1._results, 'HC1', use_self=True)
+        get_robustcov_results(cls.res1._results, "HC1", use_self=True)
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1, sub_kparams=False)
@@ -174,7 +174,7 @@ class TestPoissonCluFit(CheckCountRobustMixin):
         #   get_correction_factor; can we de-duplicate?
         sc_fact = (nobs-1.) / float(nobs - k_params)
 
-        cls.res1 = mod.fit(disp=False, cov_type='cluster',
+        cls.res1 = mod.fit(disp=False, cov_type="cluster",
                            cov_kwds=dict(groups=group,
                                          use_correction=True,
                                          scaling_factor=1. / sc_fact,
@@ -210,7 +210,7 @@ class TestPoissonHC1Fit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_hc1
         mod = smd.Poisson(endog, exog)
-        cls.res1 = mod.fit(disp=False, cov_type='HC1')
+        cls.res1 = mod.fit(disp=False, cov_type="HC1")
 
         cls.bse_rob = cls.res1.bse
 
@@ -223,7 +223,7 @@ class TestPoissonHC1FitExposure(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_exposure_hc1
         mod = smd.Poisson(endog, exog, exposure=exposure)
-        cls.res1 = mod.fit(disp=False, cov_type='HC1')
+        cls.res1 = mod.fit(disp=False, cov_type="HC1")
 
         cls.bse_rob = cls.res1.bse
 
@@ -308,7 +308,7 @@ class TestGLMPoissonHC1Generic(CheckCountRobustMixin):
         cls.res1 = mod.fit()
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
-        get_robustcov_results(cls.res1._results, 'HC1', use_self=True)
+        get_robustcov_results(cls.res1._results, "HC1", use_self=True)
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1, sub_kparams=False)
@@ -346,7 +346,7 @@ class TestGLMPoissonHC1Fit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_hc1
         mod = GLM(endog, exog, family=families.Poisson())
-        cls.res1 = mod.fit(cov_type='HC1')
+        cls.res1 = mod.fit(cov_type="HC1")
 
         cls.bse_rob = cls.res1.bse
 
@@ -458,7 +458,7 @@ class CheckDiscreteGLM:
         assert_equal(res1.cov_type, self.cov_type)
         assert_equal(res2.cov_type, self.cov_type)
 
-        rtol = getattr(res1, 'rtol', 1e-13)
+        rtol = getattr(res1, "rtol", 1e-13)
         assert_allclose(res1.params, res2.params, rtol=rtol)
         assert_allclose(res1.bse, res2.bse, rtol=1e-10)
 
@@ -469,7 +469,7 @@ class CheckDiscreteGLM:
         # We need to fix scale in GLM and OLS,
         # discrete MLE have it always fixed
         if isinstance(res2.model, OLS):
-            kwds = {'scale': res2.scale}
+            kwds = {"scale": res2.scale}
         else:
             kwds = {}
         if isinstance(res2.model, OLS):
@@ -506,8 +506,8 @@ class CheckDiscreteGLM:
 
         fitted = self.res1.fittedvalues
         exog_extra = np.column_stack((fitted**2, fitted**3))
-        res_lm1 = res1.score_test(exog_extra, cov_type='nonrobust')
-        res_lm2 = res2.score_test(exog_extra, cov_type='nonrobust')
+        res_lm1 = res1.score_test(exog_extra, cov_type="nonrobust")
+        res_lm2 = res2.score_test(exog_extra, cov_type="nonrobust")
         assert_allclose(np.hstack(res_lm1), np.hstack(res_lm2), rtol=5e-7)
 
     def test_margeff(self):
@@ -532,13 +532,13 @@ class TestGLMPoisson(CheckDiscreteGLM):
     def setup_class(cls):
         np.random.seed(987125643)  # not intentional seed
         endog_count = np.random.poisson(endog)
-        cls.cov_type = 'HC0'
+        cls.cov_type = "HC0"
 
         mod1 = GLM(endog_count, exog, family=families.Poisson())
-        cls.res1 = mod1.fit(cov_type='HC0')
+        cls.res1 = mod1.fit(cov_type="HC0")
 
         mod1 = smd.Poisson(endog_count, exog)
-        cls.res2 = mod1.fit(cov_type='HC0')
+        cls.res2 = mod1.fit(cov_type="HC0")
 
         cls.res1.rtol = 1e-11
 
@@ -548,13 +548,13 @@ class TestGLMLogit(CheckDiscreteGLM):
     @classmethod
     def setup_class(cls):
         endog_bin = (endog > endog.mean()).astype(int)
-        cls.cov_type = 'cluster'
+        cls.cov_type = "cluster"
 
         mod1 = GLM(endog_bin, exog, family=families.Binomial())
-        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.res1 = mod1.fit(cov_type="cluster", cov_kwds=dict(groups=group))
 
         mod1 = smd.Logit(endog_bin, exog)
-        cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.res2 = mod1.fit(cov_type="cluster", cov_kwds=dict(groups=group))
 
 
 class TestGLMLogitOffset(CheckDiscreteGLM):
@@ -562,14 +562,14 @@ class TestGLMLogitOffset(CheckDiscreteGLM):
     @classmethod
     def setup_class(cls):
         endog_bin = (endog > endog.mean()).astype(int)
-        cls.cov_type = 'cluster'
+        cls.cov_type = "cluster"
         offset = np.ones(endog_bin.shape[0])
 
         mod1 = GLM(endog_bin, exog, family=families.Binomial(), offset=offset)
-        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.res1 = mod1.fit(cov_type="cluster", cov_kwds=dict(groups=group))
 
         mod1 = smd.Logit(endog_bin, exog, offset=offset)
-        cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.res2 = mod1.fit(cov_type="cluster", cov_kwds=dict(groups=group))
 
 
 class TestGLMProbit(CheckDiscreteGLM):
@@ -577,14 +577,14 @@ class TestGLMProbit(CheckDiscreteGLM):
     @classmethod
     def setup_class(cls):
         endog_bin = (endog > endog.mean()).astype(int)
-        cls.cov_type = 'cluster'
+        cls.cov_type = "cluster"
 
         mod1 = GLM(endog_bin, exog, family=families.Binomial(link=links.Probit()))
-        cls.res1 = mod1.fit(method='newton',
-                            cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.res1 = mod1.fit(method="newton",
+                            cov_type="cluster", cov_kwds=dict(groups=group))
 
         mod1 = smd.Probit(endog_bin, exog)
-        cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.res2 = mod1.fit(cov_type="cluster", cov_kwds=dict(groups=group))
         cls.rtol = 1e-6
 
     def test_score_hessian(self):
@@ -605,17 +605,17 @@ class TestGLMProbitOffset(CheckDiscreteGLM):
     @classmethod
     def setup_class(cls):
         endog_bin = (endog > endog.mean()).astype(int)
-        cls.cov_type = 'cluster'
+        cls.cov_type = "cluster"
         offset = np.ones(endog_bin.shape[0])
 
         mod1 = GLM(endog_bin, exog,
                    family=families.Binomial(link=links.Probit()),
                    offset=offset)
-        cls.res1 = mod1.fit(method='newton',
-                            cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.res1 = mod1.fit(method="newton",
+                            cov_type="cluster", cov_kwds=dict(groups=group))
 
         mod1 = smd.Probit(endog_bin, exog, offset=offset)
-        cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.res2 = mod1.fit(cov_type="cluster", cov_kwds=dict(groups=group))
         cls.rtol = 1e-6
 
 
@@ -623,7 +623,7 @@ class TestGLMGaussNonRobust(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
-        cls.cov_type = 'nonrobust'
+        cls.cov_type = "nonrobust"
 
         mod1 = GLM(endog, exog, family=families.Gaussian())
         cls.res1 = mod1.fit()
@@ -636,26 +636,26 @@ class TestGLMGaussClu(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
-        cls.cov_type = 'cluster'
+        cls.cov_type = "cluster"
 
         mod1 = GLM(endog, exog, family=families.Gaussian())
-        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.res1 = mod1.fit(cov_type="cluster", cov_kwds=dict(groups=group))
 
         mod2 = OLS(endog, exog)
-        cls.res2 = mod2.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.res2 = mod2.fit(cov_type="cluster", cov_kwds=dict(groups=group))
 
 
 class TestGLMGaussHC(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
-        cls.cov_type = 'HC0'
+        cls.cov_type = "HC0"
 
         mod1 = GLM(endog, exog, family=families.Gaussian())
-        cls.res1 = mod1.fit(cov_type='HC0')
+        cls.res1 = mod1.fit(cov_type="HC0")
 
         mod2 = OLS(endog, exog)
-        cls.res2 = mod2.fit(cov_type='HC0')
+        cls.res2 = mod2.fit(cov_type="HC0")
 
 
 class TestGLMGaussHAC(CheckDiscreteGLM):
@@ -663,14 +663,14 @@ class TestGLMGaussHAC(CheckDiscreteGLM):
     @classmethod
     def setup_class(cls):
 
-        cls.cov_type = 'HAC'
+        cls.cov_type = "HAC"
 
-        kwds = {'maxlags': 2}
+        kwds = {"maxlags": 2}
         mod1 = GLM(endog, exog, family=families.Gaussian())
-        cls.res1 = mod1.fit(cov_type='HAC', cov_kwds=kwds)
+        cls.res1 = mod1.fit(cov_type="HAC", cov_kwds=kwds)
 
         mod2 = OLS(endog, exog)
-        cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds)
+        cls.res2 = mod2.fit(cov_type="HAC", cov_kwds=kwds)
 
 
 class TestGLMGaussHAC2(CheckDiscreteGLM):
@@ -678,16 +678,16 @@ class TestGLMGaussHAC2(CheckDiscreteGLM):
     @classmethod
     def setup_class(cls):
 
-        cls.cov_type = 'HAC'
+        cls.cov_type = "HAC"
 
         # check kernel specified as string
-        kwds = {'kernel': 'bartlett', 'maxlags': 2}
+        kwds = {"kernel": "bartlett", "maxlags": 2}
         mod1 = GLM(endog, exog, family=families.Gaussian())
-        cls.res1 = mod1.fit(cov_type='HAC', cov_kwds=kwds)
+        cls.res1 = mod1.fit(cov_type="HAC", cov_kwds=kwds)
 
         mod2 = OLS(endog, exog)
-        kwds2 = {'maxlags': 2}
-        cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds2)
+        kwds2 = {"maxlags": 2}
+        cls.res2 = mod2.fit(cov_type="HAC", cov_kwds=kwds2)
 
 
 class TestGLMGaussHACUniform(CheckDiscreteGLM):
@@ -695,24 +695,24 @@ class TestGLMGaussHACUniform(CheckDiscreteGLM):
     @classmethod
     def setup_class(cls):
 
-        cls.cov_type = 'HAC'
+        cls.cov_type = "HAC"
 
-        kwds = {'kernel': sw.weights_uniform, 'maxlags': 2}
+        kwds = {"kernel": sw.weights_uniform, "maxlags": 2}
         mod1 = GLM(endog, exog, family=families.Gaussian())
-        cls.res1 = mod1.fit(cov_type='HAC', cov_kwds=kwds)
+        cls.res1 = mod1.fit(cov_type="HAC", cov_kwds=kwds)
 
         mod2 = OLS(endog, exog)
-        cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds)
+        cls.res2 = mod2.fit(cov_type="HAC", cov_kwds=kwds)
 
         # for debugging
-        cls.res3 = mod2.fit(cov_type='HAC', cov_kwds={'maxlags':2})
+        cls.res3 = mod2.fit(cov_type="HAC", cov_kwds={"maxlags": 2})
 
     def test_cov_options(self):
 
         # check keyword `weights_func
-        kwdsa = {'weights_func': sw.weights_uniform, 'maxlags': 2}
-        res1a = self.res1.model.fit(cov_type='HAC', cov_kwds=kwdsa)
-        res2a = self.res2.model.fit(cov_type='HAC', cov_kwds=kwdsa)
+        kwdsa = {"weights_func": sw.weights_uniform, "maxlags": 2}
+        res1a = self.res1.model.fit(cov_type="HAC", cov_kwds=kwdsa)
+        res2a = self.res2.model.fit(cov_type="HAC", cov_kwds=kwdsa)
         assert_allclose(res1a.bse, self.res1.bse, rtol=1e-12)
         assert_allclose(res2a.bse, self.res2.bse, rtol=1e-12)
 
@@ -720,11 +720,11 @@ class TestGLMGaussHACUniform(CheckDiscreteGLM):
         bse = np.array([2.82203924,   4.60199596,  11.01275064])
         assert_allclose(res1a.bse, bse, rtol=1e-6)
 
-        assert_(res1a.cov_kwds['weights_func'] is sw.weights_uniform)
+        assert_(res1a.cov_kwds["weights_func"] is sw.weights_uniform)
 
-        kwdsb = {'kernel': sw.weights_bartlett, 'maxlags': 2}
-        res1a = self.res1.model.fit(cov_type='HAC', cov_kwds=kwdsb)
-        res2a = self.res2.model.fit(cov_type='HAC', cov_kwds=kwdsb)
+        kwdsb = {"kernel": sw.weights_bartlett, "maxlags": 2}
+        res1a = self.res1.model.fit(cov_type="HAC", cov_kwds=kwdsb)
+        res2a = self.res2.model.fit(cov_type="HAC", cov_kwds=kwdsb)
         assert_allclose(res1a.bse, res2a.bse, rtol=1e-12)
 
         # regression test for bse values
@@ -737,36 +737,36 @@ class TestGLMGaussHACUniform2(TestGLMGaussHACUniform):
     @classmethod
     def setup_class(cls):
 
-        cls.cov_type = 'HAC'
+        cls.cov_type = "HAC"
 
-        kwds = {'kernel': sw.weights_uniform, 'maxlags': 2}
+        kwds = {"kernel": sw.weights_uniform, "maxlags": 2}
         mod1 = GLM(endog, exog, family=families.Gaussian())
-        cls.res1 = mod1.fit(cov_type='HAC', cov_kwds=kwds)
+        cls.res1 = mod1.fit(cov_type="HAC", cov_kwds=kwds)
 
         # check kernel as string
         mod2 = OLS(endog, exog)
-        kwds2 = {'kernel': 'uniform', 'maxlags': 2}
-        cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds2)
+        kwds2 = {"kernel": "uniform", "maxlags": 2}
+        cls.res2 = mod2.fit(cov_type="HAC", cov_kwds=kwds2)
 
 
 class TestGLMGaussHACPanel(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
-        cls.cov_type = 'hac-panel'
+        cls.cov_type = "hac-panel"
         # time index is just made up to have a test case
         time = np.tile(np.arange(7), 5)[:-1]
         mod1 = GLM(endog.copy(), exog.copy(), family=families.Gaussian())
         kwds = dict(time=time,
                     maxlags=2,
                     kernel=sw.weights_uniform,
-                    use_correction='hac',
+                    use_correction="hac",
                     df_correction=False)
-        cls.res1 = mod1.fit(cov_type='hac-panel', cov_kwds=kwds)
-        cls.res1b = mod1.fit(cov_type='nw-panel', cov_kwds=kwds)
+        cls.res1 = mod1.fit(cov_type="hac-panel", cov_kwds=kwds)
+        cls.res1b = mod1.fit(cov_type="nw-panel", cov_kwds=kwds)
 
         mod2 = OLS(endog, exog)
-        cls.res2 = mod2.fit(cov_type='hac-panel', cov_kwds=kwds)
+        cls.res2 = mod2.fit(cov_type="hac-panel", cov_kwds=kwds)
 
     def test_kwd(self):
         # test corrected keyword name
@@ -777,38 +777,38 @@ class TestGLMGaussHACPanelGroups(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
-        cls.cov_type = 'hac-panel'
+        cls.cov_type = "hac-panel"
         # time index is just made up to have a test case
         groups = np.repeat(np.arange(5), 7)[:-1]
         mod1 = GLM(endog.copy(), exog.copy(), family=families.Gaussian())
         kwds = dict(groups=pd.Series(groups),  # check for #3606
                     maxlags=2,
                     kernel=sw.weights_uniform,
-                    use_correction='hac',
+                    use_correction="hac",
                     df_correction=False)
-        cls.res1 = mod1.fit(cov_type='hac-panel', cov_kwds=kwds)
+        cls.res1 = mod1.fit(cov_type="hac-panel", cov_kwds=kwds)
 
         mod2 = OLS(endog, exog)
-        cls.res2 = mod2.fit(cov_type='hac-panel', cov_kwds=kwds)
+        cls.res2 = mod2.fit(cov_type="hac-panel", cov_kwds=kwds)
 
 
 class TestGLMGaussHACGroupsum(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
-        cls.cov_type = 'hac-groupsum'
+        cls.cov_type = "hac-groupsum"
         # time index is just made up to have a test case
         time = np.tile(np.arange(7), 5)[:-1]
         mod1 = GLM(endog, exog, family=families.Gaussian())
         kwds = dict(time=pd.Series(time),  # check for #3606
                     maxlags=2,
-                    use_correction='hac',
+                    use_correction="hac",
                     df_correction=False)
-        cls.res1 = mod1.fit(cov_type='hac-groupsum', cov_kwds=kwds)
-        cls.res1b = mod1.fit(cov_type='nw-groupsum', cov_kwds=kwds)
+        cls.res1 = mod1.fit(cov_type="hac-groupsum", cov_kwds=kwds)
+        cls.res1b = mod1.fit(cov_type="nw-groupsum", cov_kwds=kwds)
 
         mod2 = OLS(endog, exog)
-        cls.res2 = mod2.fit(cov_type='hac-groupsum', cov_kwds=kwds)
+        cls.res2 = mod2.fit(cov_type="hac-groupsum", cov_kwds=kwds)
 
     def test_kwd(self):
         # test corrected keyword name

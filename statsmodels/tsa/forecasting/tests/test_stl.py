@@ -145,7 +145,7 @@ def test_exceptions(data):
         STLForecast(data, FakeModelSummary).fit().summary()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def sunspots():
     df = statsmodels.datasets.sunspots.load_pandas().data
     df.index = np.arange(df.shape[0])

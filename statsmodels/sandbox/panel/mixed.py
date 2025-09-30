@@ -459,8 +459,9 @@ class OneWayMixed:
         # initialize for convergence criteria
         self._a_old = np.inf * self.a
         self.history = {"llf": [], "params": [], "D": []}
-
-        for i in range(maxiter):
+        iterations = 0
+        for _ in range(maxiter):
+            iterations += 1
             self._compute_a()  # a, Sinv :  params, cov_params of fixed exog
             self._compute_sigma(ML=ML)  # sigma   MLE or REML of sigma ?
             self._compute_D(ML=ML)  # D :  covariance of random effects, MLE or REML
@@ -472,7 +473,7 @@ class OneWayMixed:
             self.termination = "maxiter"
             print("Warning: maximum number of iterations reached")
 
-        self.iterations = i
+        self.iterations = iterations
 
         results = OneWayMixedResults(self)
         # compatibility functions for fixed effects/exog

@@ -6,6 +6,7 @@ it also generates plots.
 """
 
 import numpy as np
+
 import statsmodels.api as sm
 
 print("Welcome to El")

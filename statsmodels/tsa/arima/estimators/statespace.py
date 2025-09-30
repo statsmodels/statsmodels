@@ -6,11 +6,10 @@ License: BSD-3
 """
 import numpy as np
 
-from statsmodels.tools.tools import add_constant, Bunch
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-
-from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tsa.arima.params import SARIMAXParams
+from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
 def statespace(endog, exog=None, order=(0, 0, 0),
@@ -94,12 +93,12 @@ def statespace(endog, exog=None, order=(0, 0, 0),
         sp.params = start_params
 
         if spec.enforce_stationarity and not sp.is_stationary:
-            raise ValueError('Given starting parameters imply a non-stationary'
-                             ' AR process with `enforce_stationarity=True`.')
+            raise ValueError("Given starting parameters imply a non-stationary"
+                             " AR process with `enforce_stationarity=True`.")
 
         if spec.enforce_invertibility and not sp.is_invertible:
-            raise ValueError('Given starting parameters imply a non-invertible'
-                             ' MA process with `enforce_invertibility=True`.')
+            raise ValueError("Given starting parameters imply a non-invertible"
+                             " MA process with `enforce_invertibility=True`.")
 
     # Create and fit the state space model
     mod = SARIMAX(endog, exog=exog, order=spec.order,
@@ -109,14 +108,14 @@ def statespace(endog, exog=None, order=(0, 0, 0),
                   concentrate_scale=spec.concentrate_scale)
     if fit_kwargs is None:
         fit_kwargs = {}
-    fit_kwargs.setdefault('disp', 0)
+    fit_kwargs.setdefault("disp", 0)
     res_ss = mod.fit(start_params=start_params, **fit_kwargs)
 
     # Construct results
     p.params = res_ss.params
     res = Bunch({
-        'spec': spec,
-        'statespace_results': res_ss,
+        "spec": spec,
+        "statespace_results": res_ss,
     })
 
     return p, res

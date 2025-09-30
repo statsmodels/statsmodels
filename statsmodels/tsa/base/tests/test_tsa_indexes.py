@@ -112,7 +112,7 @@ unsupported_indexes = [
     # Float indexes, even if they increment from zero
     (np.arange(nobs) * 1.0, None),
     # Non-date-string indexes
-    ([x for x in "abcde"], None),
+    (list("abcde"), None),
     # Non-date-object indexes
     ([str, 1, "a", -30.1, {}], None),
 ]
@@ -279,7 +279,7 @@ def test_instantiation_valid():
 
         # Since only supported indexes are valid `dates` arguments, everything
         # else is invalid here
-        for ix, freq in supported_increment_indexes + unsupported_indexes:
+        for ix, _ in supported_increment_indexes + unsupported_indexes:
             with pytest.raises(ValueError):
                 tsa_model.TimeSeriesModel(endog, dates=ix)
 
@@ -439,7 +439,7 @@ def test_instantiation_valid():
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            for ix, freq in unsupported_indexes:
+            for ix, _ in unsupported_indexes:
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
@@ -463,7 +463,7 @@ def test_instantiation_valid():
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            for ix, freq in unsupported_date_indexes:
+            for ix, _ in unsupported_date_indexes:
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
@@ -732,7 +732,7 @@ def test_prediction_increment_pandas_dates_daily():
     assert_equal(start, 0)
     assert_equal(end, nobs - 1)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index), True)
 
     # In-sample prediction: [0, 3]; the index is a subset of the date index
@@ -745,7 +745,7 @@ def test_prediction_increment_pandas_dates_daily():
     assert_equal(start, 0)
     assert_equal(end, 3)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[:4]), True)
 
     # Negative index: [-2, end]
@@ -758,7 +758,7 @@ def test_prediction_increment_pandas_dates_daily():
     assert_equal(start, 3)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[3:]), True)
 
     # Forecasting: [1, 5]; the index is an extended version of the date index
@@ -786,7 +786,7 @@ def test_prediction_increment_pandas_dates_daily():
     assert_equal(start, 1)
     assert_equal(end, 3)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[1:4]), True)
 
     # Out-of-sample forecasting (equivalent to [0, 5])
@@ -845,7 +845,7 @@ def test_prediction_increment_pandas_dates_monthly():
     assert_equal(start, 0)
     assert_equal(end, nobs - 1)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index), True)
 
     # In-sample prediction: [0, 3]; the index is a subset of the date index
@@ -858,7 +858,7 @@ def test_prediction_increment_pandas_dates_monthly():
     assert_equal(start, 0)
     assert_equal(end, 3)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[:4]), True)
 
     # Negative index: [-2, end]
@@ -871,7 +871,7 @@ def test_prediction_increment_pandas_dates_monthly():
     assert_equal(start, 3)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[3:]), True)
 
     # Forecasting: [1, 5]; the index is an extended version of the date index
@@ -899,7 +899,7 @@ def test_prediction_increment_pandas_dates_monthly():
     assert_equal(start, 1)
     assert_equal(end, 3)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[1:4]), True)
 
     # Out-of-sample forecasting (equivalent to [0, 5])
@@ -958,7 +958,7 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(start, 0)
     assert_equal(end, nobs - 1)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index), True)
 
     # Negative index: [-2, end]
@@ -971,7 +971,7 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(start, 3)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[3:]), True)
 
     # Forecasting: [1, 5]; the index is an extended version of the date index

@@ -6,8 +6,8 @@ from statsmodels.compat.python import lrange
 
 import numpy as np
 
+from statsmodels.graphics import utils
 from statsmodels.graphics.plottools import rainbow
-import statsmodels.graphics.utils as utils
 
 
 def interaction_plot(
@@ -119,7 +119,7 @@ def interaction_plot(
 
     x_values = x_levels = None
     if isinstance(x[0], str):
-        x_levels = [val for val in np.unique(x)]
+        x_levels = np.unique(x).tolist()
         x_values = lrange(len(x_levels))
         x = _recode(x, dict(zip(x_levels, x_values)))
 
@@ -142,7 +142,7 @@ def interaction_plot(
         raise ValueError("Must be a color for each trace level")
 
     if plottype == "both" or plottype == "b":
-        for i, (values, group) in enumerate(plot_data.groupby("trace")):
+        for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
             label = str(group["trace"].values[0])
             ax.plot(
@@ -155,7 +155,7 @@ def interaction_plot(
                 **kwargs,
             )
     elif plottype == "line" or plottype == "l":
-        for i, (values, group) in enumerate(plot_data.groupby("trace")):
+        for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
             label = str(group["trace"].values[0])
             ax.plot(
@@ -167,7 +167,7 @@ def interaction_plot(
                 **kwargs,
             )
     elif plottype == "scatter" or plottype == "s":
-        for i, (values, group) in enumerate(plot_data.groupby("trace")):
+        for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
             label = str(group["trace"].values[0])
             ax.scatter(
@@ -217,11 +217,11 @@ def _recode(x, levels):
 
     if x.dtype.type not in [np.str_, np.object_, str]:
         raise ValueError(
-            "This is not a categorial factor." " Array of str type required."
+            "This is not a categorial factor. Array of str type required."
         )
 
     elif not isinstance(levels, dict):
-        raise ValueError("This is not a valid value for levels." " Dict required.")
+        raise ValueError("This is not a valid value for levels. Dict required.")
 
     elif not (np.unique(x) == np.unique(list(levels.keys()))).all():
         raise ValueError("The levels do not match the array values.")

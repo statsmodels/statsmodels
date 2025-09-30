@@ -434,7 +434,7 @@ class GLM(base.LikelihoodModel):
         if exposure is not None:
             if not isinstance(self.family.link, families.links.Log):
                 raise ValueError(
-                    "exposure can only be used with the log " "link function"
+                    "exposure can only be used with the log link function"
                 )
             elif exposure.shape[0] != endog.shape[0]:
                 raise ValueError("exposure is not the same length as endog")
@@ -873,7 +873,7 @@ class GLM(base.LikelihoodModel):
         if exog_extra is None:
             if k_constraints is None:
                 raise ValueError(
-                    "if exog_extra is None, then k_constraints" "needs to be given"
+                    "if exog_extra is None, then k_constraintsneeds to be given"
                 )
 
             score = self.score(params_constrained)
@@ -1077,7 +1077,7 @@ class GLM(base.LikelihoodModel):
         if exposure is not None and not isinstance(
             self.family.link, families.links.Log
         ):
-            raise ValueError("exposure can only be used with the log link " "function")
+            raise ValueError("exposure can only be used with the log link function")
 
         # Use fit exposure if appropriate
         if exposure is None and exog is None and hasattr(self, "exposure"):
@@ -1281,7 +1281,7 @@ class GLM(base.LikelihoodModel):
             try:
                 scale = float(scale)
             except Exception as exc:
-                raise type(exc)("scale must be a float if given and no a string.")
+                raise type(exc)("scale must be a float if given and no a string.") from exc
         self.scaletype = scale
 
         if method.lower() == "irls":
@@ -1387,7 +1387,7 @@ class GLM(base.LikelihoodModel):
             cov_p = np.linalg.inv(-self.hessian(rslt.params, observed=oim)) / scale
         except LinAlgError:
             warnings.warn(
-                "Inverting hessian failed, no bse or cov_params " "available",
+                "Inverting hessian failed, no bse or cov_params available",
                 HessianInversionWarning,
                 stacklevel=2,
             )
@@ -1873,9 +1873,8 @@ class GLMResults(base.LikelihoodModelResults):
         if cov_type == "nonrobust":
             self.cov_type = "nonrobust"
             self.cov_kwds = {
-                "description": "Standard Errors assume that the"
-                + " covariance matrix of the errors is correctly "
-                + "specified."
+                "description": "Standard Errors assume that the covariance matrix of "
+                               "the errors is correctly specified."
             }
 
         else:
@@ -2787,7 +2786,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         if hasattr(self, "constraints"):
             smry.add_extra_txt(
-                ["Model has been estimated subject to linear " "equality constraints."]
+                ["Model has been estimated subject to linear equality constraints."]
             )
         return smry
 
@@ -2837,7 +2836,7 @@ class GLMResults(base.LikelihoodModelResults):
             )
         if hasattr(self, "constraints"):
             smry.add_text(
-                "Model has been estimated subject to linear " "equality constraints."
+                "Model has been estimated subject to linear equality constraints."
             )
 
         return smry

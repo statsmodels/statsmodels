@@ -20,7 +20,7 @@ from statsmodels.tools.tools import add_constant
 cpunish_data = load()
 cpunish_data.exog = np.asarray(cpunish_data.exog)
 cpunish_data.endog = np.asarray(cpunish_data.endog)
-cpunish_data.exog[:,3] = np.log(cpunish_data.exog[:,3])
+cpunish_data.exog[:, 3] = np.log(cpunish_data.exog[:, 3])
 exog = add_constant(cpunish_data.exog, prepend=False)
 endog = cpunish_data.endog - 1  # avoid zero-truncation
 exog /= np.round(exog.max(0), 3)
@@ -84,7 +84,7 @@ class TestNegBinMargin(CheckMarginMixin):
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomial(endog, exog)
-        res = mod.fit(start_params=start_params, method='nm', maxiter=2000)
+        res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff()
         cls.res = res
         cls.margeff = marge
@@ -103,7 +103,7 @@ class TestNegBinMarginDummy(CheckMarginMixin):
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomial(endog, exog)
-        res = mod.fit(start_params=start_params, method='nm', maxiter=2000)
+        res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff(dummy=True)
         cls.res = res
         cls.margeff = marge
@@ -122,7 +122,7 @@ class TestNegBinPMargin(CheckMarginMixin):
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomialP(endog, exog)   # checks also that default p=2
-        res = mod.fit(start_params=start_params, method='nm', maxiter=2000)
+        res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff()
         cls.res = res
         cls.margeff = marge

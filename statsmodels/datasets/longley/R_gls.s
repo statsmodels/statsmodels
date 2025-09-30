@@ -1,4 +1,4 @@
-### GLS Example with Longley Data 
+### GLS Example with Longley Data
 ### Done the long way...
 
 d <- read.table('./longley.csv', sep=',', header=T)

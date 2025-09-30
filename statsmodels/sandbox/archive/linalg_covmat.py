@@ -62,7 +62,7 @@ class AffineTransform:
         self.tmatinv = linalg.inv(tmat)
         self.absdet = np.abs(np.linalg.det(self.tmat))
         self.logabsdet = np.log(np.abs(np.linalg.det(self.tmat)))
-        self.dist
+        assert isinstance(self.dist, np.ndarray)
 
     def rvs(self, size):
         # size can only be integer not yet tuple

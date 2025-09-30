@@ -15,7 +15,7 @@ import pandas as pd
 import statsmodels.api as sm
 
 # log used in TestPickleFormula5
-log = np.log  # noqa: F841
+log = np.log
 
 
 def check_pickle(obj):
@@ -76,7 +76,7 @@ class RemoveDataPickle:
 
         # for testing attach res
         self.res = res
-        msg = 'pickle length not %d < %d' % (nbytes, orig_nbytes)
+        msg = "pickle length not %d < %d" % (nbytes, orig_nbytes)
         assert nbytes < orig_nbytes * self.reduction_factor, msg
         pred3 = results.predict(xf, **pred_kwds)
 
@@ -99,7 +99,7 @@ class RemoveDataPickle:
         self.results._results.save(fh)
         fh.seek(0, 0)
         res_unpickled = self.results._results.__class__.load(fh)
-        assert type(res_unpickled) is type(self.results._results)  # noqa: E721
+        assert type(res_unpickled) is type(self.results._results)
 
         # test wrapped results load save
         fh.seek(0, 0)
@@ -107,23 +107,23 @@ class RemoveDataPickle:
         fh.seek(0, 0)
         res_unpickled = self.results.__class__.load(fh)
         fh.close()
-        assert type(res_unpickled) is type(self.results)  # noqa: E721
+        assert type(res_unpickled) is type(self.results)
 
         before = sorted(self.results.__dict__.keys())
         after = sorted(res_unpickled.__dict__.keys())
-        assert before == after, f'not equal {before!r} and {after!r}'
+        assert before == after, f"not equal {before!r} and {after!r}"
 
         before = sorted(self.results._results.__dict__.keys())
         after = sorted(res_unpickled._results.__dict__.keys())
-        assert before == after, f'not equal {before!r} and {after!r}'
+        assert before == after, f"not equal {before!r} and {after!r}"
 
         before = sorted(self.results.model.__dict__.keys())
         after = sorted(res_unpickled.model.__dict__.keys())
-        assert before == after, f'not equal {before!r} and {after!r}'
+        assert before == after, f"not equal {before!r} and {after!r}"
 
         before = sorted(self.results._cache.keys())
         after = sorted(res_unpickled._cache.keys())
-        assert before == after, f'not equal {before!r} and {after!r}'
+        assert before == after, f"not equal {before!r} and {after!r}"
 
 
 class TestRemoveDataPickleOLS(RemoveDataPickle):
@@ -160,7 +160,7 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
         # use start_params to converge faster
         start_params = np.array(
             [0.75334818, 0.99425553, 1.00494724, 1.00247112])
-        self.results = model.fit(start_params=start_params, method='bfgs',
+        self.results = model.fit(start_params=start_params, method="bfgs",
                                  disp=0)
 
         # TODO: temporary, fixed in main
@@ -193,7 +193,7 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
         # use start_params to converge faster
         start_params = np.array(
             [-0.73403806, -1.00901514, -0.97754543, -0.95648212])
-        self.results = model.fit(start_params=start_params, method='bfgs',
+        self.results = model.fit(start_params=start_params, method="bfgs",
                                  disp=0)
 
 
@@ -219,8 +219,8 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
     def test_cached_data_removed(self):
         res = self.results
         # fill data-like members of the cache
-        names = ['resid_response', 'resid_deviance',
-                 'resid_pearson', 'resid_anscombe']
+        names = ["resid_response", "resid_deviance",
+                 "resid_pearson", "resid_anscombe"]
         for name in names:
             getattr(res, name)
         # check that the attributes are present before calling remove_data
@@ -243,7 +243,7 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         res = self.results
         assert res._cache == {}
         res.remove_data()
-        assert 'aic' in res._cache
+        assert "aic" in res._cache
 
 
 class TestRemoveDataPickleGLMConstrained(RemoveDataPickle):
@@ -328,4 +328,4 @@ class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):
         np.random.seed(987689)
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         model = sm.Poisson(y_count, x)
-        self.results = model.fit_regularized(method='l1', disp=0, alpha=10)
+        self.results = model.fit_regularized(method="l1", disp=0, alpha=10)

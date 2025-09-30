@@ -14,7 +14,7 @@ References
 
 """
 
-from collections import namedtuple
+from typing import NamedTuple
 import warnings
 
 import numpy as np
@@ -23,17 +23,14 @@ from scipy.stats import norm
 
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
-DistDependStat = namedtuple(
-    "DistDependStat",
-    [
-        "test_statistic",
-        "distance_correlation",
-        "distance_covariance",
-        "dvar_x",
-        "dvar_y",
-        "S",
-    ],
-)
+
+class DistDependStat(NamedTuple):
+    test_statistic: float
+    distance_correlation: float
+    distance_covariance: float
+    dvar_x: float
+    dvar_y: float
+    S: float
 
 
 def distance_covariance_test(x, y, B=None, method="auto"):
@@ -122,11 +119,11 @@ def distance_covariance_test(x, y, B=None, method="auto"):
     n = x.shape[0]
     stats = distance_statistics(x, y)
 
-    if method == "auto" and n <= 500 or method == "emp":
+    if (method == "auto" and n <= 500) or method == "emp":
         chosen_method = "emp"
         test_statistic, pval = _empirical_pvalue(x, y, B, n, stats)
 
-    elif method == "auto" and n > 500 or method == "asym":
+    elif (method == "auto" and n > 500) or method == "asym":
         chosen_method = "asym"
         test_statistic, pval = _asymptotic_pvalue(stats)
 

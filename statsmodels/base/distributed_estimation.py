@@ -124,8 +124,7 @@ def _est_unregularized_naive(mod, pnum, partitions, fit_kwds=None):
 
     if fit_kwds is None:
         raise ValueError(
-            "_est_unregularized_naive currently "
-            + "requires that fit_kwds not be None."
+            "_est_unregularized_naive currently requires that fit_kwds not be None."
         )
 
     return mod.fit(**fit_kwds).params
@@ -257,8 +256,7 @@ def _est_regularized_debiased(
 
     if fit_kwds is None:
         raise ValueError(
-            "_est_regularized_debiased currently "
-            + "requires that fit_kwds not be None."
+            "_est_regularized_debiased currently requires that fit_kwds not be None."
         )
     else:
         alpha = fit_kwds["alpha"]

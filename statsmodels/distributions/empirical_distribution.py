@@ -78,9 +78,9 @@ class StepFunction:
     3.0
     """
 
-    def __init__(self, x, y, ival=0., sorted=False, side='left'):  # noqa
+    def __init__(self, x, y, ival=0., sorted=False, side="left"):
 
-        if side.lower() not in ['right', 'left']:
+        if side.lower() not in ["right", "left"]:
             msg = "side can take the values 'right' or 'left'"
             raise ValueError(msg)
         self.side = side
@@ -92,7 +92,7 @@ class StepFunction:
             msg = "x and y do not have the same shape"
             raise ValueError(msg)
         if len(_x.shape) != 1:
-            msg = 'x and y must be 1-dimensional'
+            msg = "x and y must be 1-dimensional"
             raise ValueError(msg)
 
         self.x = np.r_[-np.inf, _x]
@@ -136,7 +136,7 @@ class ECDF(StepFunction):
     >>> ecdf([3, 55, 0.5, 1.5])
     array([ 0.75,  1.  ,  0.  ,  0.25])
     """
-    def __init__(self, x, side='right'):
+    def __init__(self, x, side="right"):
         x = np.sort(np.asarray(x))
         nobs = len(x)
         y = np.linspace(1./nobs, 1, nobs)
@@ -198,7 +198,7 @@ class ECDFDiscrete(StepFunction):
     >>> print(e1.y, e2.y)
     [0.  0.2 0.4 0.8 1. ] [0.  0.2 0.4 0.8 1. ]
     """
-    def __init__(self, x, freq_weights=None, side='right'):
+    def __init__(self, x, freq_weights=None, side="right"):
         if freq_weights is None:
             x, freq_weights = np.unique(x, return_counts=True)
         else:

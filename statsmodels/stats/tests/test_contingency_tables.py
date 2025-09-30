@@ -6,14 +6,15 @@ import os
 import warnings
 
 import numpy as np
-import statsmodels.stats.contingency_tables as ctab
-import pandas as pd
 from numpy.testing import assert_allclose, assert_equal
+import pandas as pd
+
 import statsmodels.api as sm
+import statsmodels.stats.contingency_tables as ctab
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 fname = "contingency_table_r_results.csv"
-fpath = os.path.join(cur_dir, 'results', fname)
+fpath = os.path.join(cur_dir, "results", fname)
 r_results = pd.read_csv(fpath)
 
 
@@ -33,7 +34,7 @@ tables[2] = np.asarray([[20, 10, 5],
 
 def test_homogeneity():
 
-    for k,table in enumerate(tables):
+    for k, table in enumerate(tables):
         st = sm.stats.SquareTable(table, shift_zeros=False)
         hm = st.homogeneity()
         assert_allclose(hm.statistic, r_results.loc[k, "homog_stat"])
@@ -63,7 +64,7 @@ def test_SquareTable_from_data():
                  rslt3.summary().as_text())
 
     s = str(rslt1)
-    assert_equal(s.startswith('A 5x5 contingency table with counts:'), True)
+    assert_equal(s.startswith("A 5x5 contingency table with counts:"), True)
     assert_equal(rslt1.table[0, 0], 8.)
 
 
@@ -169,7 +170,7 @@ def test_resids():
 
 def test_ordinal_association():
 
-    for k,table in enumerate(tables):
+    for k, table in enumerate(tables):
 
         row_scores = 1 + np.arange(table.shape[0])
         col_scores = 1 + np.arange(table.shape[1])
@@ -208,7 +209,7 @@ def test_chi2_association():
 
 def test_symmetry():
 
-    for k,table in enumerate(tables):
+    for k, table in enumerate(tables):
         st = sm.stats.SquareTable(table, shift_zeros=False)
         b = st.symmetry()
         assert_allclose(b.statistic, r_results.loc[k, "bowker_stat"])
@@ -602,13 +603,13 @@ class Test2x2_1(Check2x2Mixin):
         cls.riskratio_confint = [0.25009765325990629, 3.9984381579173824]
         cls.log_riskratio_confint = [-1.3859038243496782, 1.3859038243496782]
         ss = [
-            '               Estimate   SE   LCB    UCB   p-value',
-            '---------------------------------------------------',
-            'Odds ratio        1.000        0.063 15.988   1.000',
-            'Log odds ratio    0.000 1.414 -2.772  2.772   1.000',
-            'Risk ratio        1.000        0.250  3.998   1.000',
-            'Log risk ratio    0.000 0.707 -1.386  1.386   1.000',
-            '---------------------------------------------------'
+            "               Estimate   SE   LCB    UCB   p-value",
+            "---------------------------------------------------",
+            "Odds ratio        1.000        0.063 15.988   1.000",
+            "Log odds ratio    0.000 1.414 -2.772  2.772   1.000",
+            "Risk ratio        1.000        0.250  3.998   1.000",
+            "Log risk ratio    0.000 0.707 -1.386  1.386   1.000",
+            "---------------------------------------------------"
         ]
-        cls.summary_string = '\n'.join(ss)
+        cls.summary_string = "\n".join(ss)
         cls.initialize()

@@ -44,7 +44,7 @@ def mc2mnc(mc):
         mc = [1] + list(mc)  # add zero moment = 1
         mc[1] = 0  # define central mean as zero for formula
         mnc = [1, mean]  # zero and first raw moments
-        for nn, m in enumerate(mc[2:]):
+        for nn, _ in enumerate(mc[2:]):
             n = nn + 2
             mnc.append(0)
             for k in range(n + 1):
@@ -66,7 +66,7 @@ def mnc2mc(mnc, wmean=True):
         mean = mnc[0]
         mnc = [1] + list(mnc)  # add zero moment = 1
         mu = []
-        for n, m in enumerate(mnc):
+        for n, _ in enumerate(mnc):
             mu.append(0)
             for k in range(n + 1):
                 sgn_comb = (-1) ** (n - k) * comb(n, k, exact=True)
@@ -94,7 +94,7 @@ def cum2mc(kappa):
         mc = [1, 0.0]  # _kappa[0]]  # insert 0-moment and mean
         kappa0 = kappa[0]
         kappa = [1] + list(kappa)
-        for nn, m in enumerate(kappa[2:]):
+        for nn, _ in enumerate(kappa[2:]):
             n = nn + 2
             mc.append(0)
             for k in range(n - 1):

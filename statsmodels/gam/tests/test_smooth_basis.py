@@ -5,12 +5,15 @@ Author: Luca Puggini
 
 """
 
-import pytest
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
-from statsmodels.gam.smooth_basis import (UnivariatePolynomialSmoother,
-                                          PolynomialSmoother,
-                                          BSplines)
+import pytest
+
+from statsmodels.gam.smooth_basis import (
+    BSplines,
+    PolynomialSmoother,
+    UnivariatePolynomialSmoother,
+)
 
 
 def test_univariate_polynomial_smoother():

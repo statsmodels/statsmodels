@@ -3,7 +3,7 @@ from numpy import log
 
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This is public domain."""
 TITLE = __doc__
@@ -113,7 +113,7 @@ def load():
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'anes96.csv', sep=r'\s')
+    data = du.load_csv(__file__, "anes96.csv", sep=r"\s")
     data = du.strip_column_names(data)
-    data['logpopul'] = log(data['popul'] + .1)
+    data["logpopul"] = log(data["popul"] + .1)
     return data.astype(float)

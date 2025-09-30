@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from statsmodels.compat.python import lrange
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 import warnings
 
 import numpy as np
@@ -13,7 +13,6 @@ from pandas.tseries.frequencies import to_offset
 
 from statsmodels.tools.data import _is_recarray, _is_using_pandas
 from statsmodels.tools.sm_exceptions import ValueWarning
-from statsmodels.tools.typing import NDArray
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -21,18 +20,21 @@ from statsmodels.tools.validation import (
     string_like,
 )
 
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import NDArray
+
 __all__ = [
-    "lagmat",
-    "lagmat2ds",
     "add_trend",
+    "commutation_matrix",
     "duplication_matrix",
     "elimination_matrix",
-    "commutation_matrix",
-    "vec",
-    "vech",
+    "freq_to_period",
+    "lagmat",
+    "lagmat2ds",
     "unvec",
     "unvech",
-    "freq_to_period",
+    "vec",
+    "vech",
 ]
 
 
@@ -230,7 +232,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             insert = x.shape[1]
 
             warnings.warn(
-                "insert > number of variables, inserting at the" " last position",
+                "insert > number of variables, inserting at the last position",
                 ValueWarning,
                 stacklevel=2,
             )
@@ -384,7 +386,7 @@ def lagmat(
     trim = trim.lower()
     if is_pandas and trim in ("none", "backward"):
         raise ValueError(
-            "trim cannot be 'none' or 'backward' when used on " "Series or DataFrames"
+            "trim cannot be 'none' or 'backward' when used on Series or DataFrames"
         )
 
     dropidx = 0
@@ -394,7 +396,7 @@ def lagmat(
     if maxlag >= nobs:
         raise ValueError("maxlag should be < nobs")
     lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
-    for k in range(0, int(maxlag + 1)):
+    for k in range(int(maxlag + 1)):
         lm[
             maxlag - k : nobs + maxlag - k,
             nvar * (maxlag - k) : nvar * (maxlag - k + 1),

@@ -92,22 +92,21 @@ class CombineResults:
             if use_t is False:
                 crit = stats.norm.isf(alpha / 2)
                 self.ci_sample_distr = "normal"
+            elif nobs is not None:
+                df_resid = nobs - 1
+                crit = stats.t.isf(alpha / 2, df_resid)
+                self.ci_sample_distr = "t"
             else:
-                if nobs is not None:
-                    df_resid = nobs - 1
-                    crit = stats.t.isf(alpha / 2, df_resid)
-                    self.ci_sample_distr = "t"
-                else:
-                    msg = (
-                        "`use_t=True` requires `nobs` for each sample "
-                        "or `ci_func`. Using normal distribution for "
-                        "confidence interval of individual samples."
-                    )
-                    import warnings
+                msg = (
+                    "`use_t=True` requires `nobs` for each sample "
+                    "or `ci_func`. Using normal distribution for "
+                    "confidence interval of individual samples."
+                )
+                import warnings
 
-                    warnings.warn(msg, InvalidTestWarning, stacklevel=2)
-                    crit = stats.norm.isf(alpha / 2)
-                    self.ci_sample_distr = "normal"
+                warnings.warn(msg, InvalidTestWarning, stacklevel=2)
+                crit = stats.norm.isf(alpha / 2)
+                self.ci_sample_distr = "normal"
 
             # sgn = np.asarray([-1, 1])
             # ci_eff = self.eff + sgn * crit * self.sd_eff
@@ -680,7 +679,7 @@ def _fit_tau_iterative(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
     tau2 = tau2_start
     k = eff.shape[0]
     converged = False
-    for i in range(maxiter):
+    for _ in range(maxiter):
         w = 1 / (var_eff + tau2)
         m = w.dot(eff) / w.sum(0)
         resid_sq = (eff - m) ** 2

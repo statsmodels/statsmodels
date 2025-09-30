@@ -298,7 +298,7 @@ class PanelModel:
             exog = self._group_mean(self.exog, index=effects)
         else:
             raise ValueError(
-                "%s effects is not valid for the between " "estimator" % effects
+                "%s effects is not valid for the between estimator" % effects
             )
         befit = GLS(endog, exog).fit()
         return befit
@@ -341,7 +341,7 @@ class DynamicPanel(PanelModel):
 
 if __name__ == "__main__":
     import numpy.lib.recfunctions as nprf
-    import pandas
+    import pandas as pd
     from pandas import Panel
 
     import statsmodels.api as sm
@@ -353,7 +353,7 @@ if __name__ == "__main__":
     #    fullexog.sort(order=['firm','year'])
     panel_arr = nprf.append_fields(fullexog, "investment", endog, float, usemask=False)
 
-    panel_df = pandas.DataFrame(panel_arr)
+    panel_df = pd.DataFrame(panel_arr)
     panel_panda = panel_df.set_index(["year", "firm"]).to_panel()
 
     # the most cumbersome way of doing it as far as preprocessing by hand

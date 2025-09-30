@@ -30,7 +30,7 @@ class Pca:
         if p > n:
             from warnings import warn
 
-            warn("p > n - intentional?", RuntimeWarning)
+            warn("p > n - intentional?", RuntimeWarning, stacklevel=2)
         self.A = A
         self._origA = A.copy()
 
@@ -169,15 +169,14 @@ class Pca:
             m = slice(None)
         elif nonnones > 1:
             raise ValueError("cannot specify more than one threshold")
+        elif enthresh is not None:
+            m = self.energies() > enthresh
+        elif nPCs is not None:
+            m = slice(None, nPCs)
+        elif cumen is not None:
+            m = np.cumsum(self.energies()) < cumen
         else:
-            if enthresh is not None:
-                m = self.energies() > enthresh
-            elif nPCs is not None:
-                m = slice(None, nPCs)
-            elif cumen is not None:
-                m = np.cumsum(self.energies()) < cumen
-            else:
-                raise RuntimeError("Should be unreachable")
+            raise RuntimeError("Should be unreachable")
 
         if vals is None:
             vals = self.N.T

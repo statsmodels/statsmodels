@@ -109,8 +109,8 @@ def arma_order_select_ic(
     model_kw = dict_like(model_kw, "model_kw", optional=True)
     fit_kw = dict_like(fit_kw, "fit_kw", optional=True)
 
-    ar_range = [i for i in range(max_ar + 1)]
-    ma_range = [i for i in range(max_ma + 1)]
+    ar_range = list(range(max_ar + 1))
+    ma_range = list(range(max_ma + 1))
     if isinstance(ic, str):
         ic = [ic]
     elif not isinstance(ic, (list, tuple)):

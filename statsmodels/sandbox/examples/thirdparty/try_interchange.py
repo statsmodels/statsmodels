@@ -26,7 +26,7 @@ from statsmodels.compat.python import lrange
 from finance import ibm, msft  # hack to make it run as standalone
 import la
 import numpy as np
-import pandas
+import pandas as pd
 import scikits.timeseries as ts
 import tabular as tb
 
@@ -48,7 +48,7 @@ print(repr(s2))
 print(repr(s2u))
 
 print("\nUsing pandas")
-pdta = pandas.DataFrame(s.data, np.arange(len(s.data)), [1])
+pdta = pd.DataFrame(s.data, np.arange(len(s.data)), [1])
 pa = pdta.groupby(dict(zip(np.arange(len(s.data)), s.dates.tolist()))).aggregate(
     np.mean
 )

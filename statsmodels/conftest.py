@@ -8,9 +8,9 @@ import pandas as pd
 import pytest
 
 try:
-    import matplotlib
+    import matplotlib as mpl
 
-    matplotlib.use("agg")
+    mpl.use("agg")
     HAVE_MATPLOTLIB = True
 except ImportError:
     HAVE_MATPLOTLIB = False
@@ -83,9 +83,9 @@ def pytest_runtest_setup(item):
 
 def pytest_configure(config):
     try:
-        import matplotlib
+        import matplotlib as mpl
 
-        matplotlib.use("agg")
+        mpl.use("agg")
         try:
             from pandas.plotting import register_matplotlib_converters
 
@@ -96,7 +96,7 @@ def pytest_configure(config):
         pass
 
 
-@pytest.fixture()
+@pytest.fixture
 def close_figures():
     """
     Fixture that closes all figures after a test function has completed
@@ -124,10 +124,10 @@ def close_figures():
             close_figures()
     """
     try:
-        import matplotlib.pyplot
+        import matplotlib.pyplot as plt
 
         def close():
-            matplotlib.pyplot.close("all")
+            plt.close("all")
 
     except ImportError:
 
@@ -138,7 +138,7 @@ def close_figures():
     close()
 
 
-@pytest.fixture()
+@pytest.fixture
 def reset_randomstate():
     """
     Fixture that set the global RandomState to the fixed seed 1
@@ -182,13 +182,13 @@ def pytest_collection_modifyitems(config, items):
         pass
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def check_figures_closed():
     try:
-        import matplotlib.pyplot
+        import matplotlib.pyplot as plt
 
         def count():
-            return len(matplotlib.pyplot.get_fignums())
+            return len(plt.get_fignums())
 
     except ImportError:
 

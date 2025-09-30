@@ -149,8 +149,7 @@ def example1():
     plt.figure()
     plt.plot(y1, "bo-", y1true, "go-", yhatr1, "r.-")
     plt.title(
-        "euclid kernel: true (green), noisy (blue) and estimated (red) "
-        + "observations"
+        "euclid kernel: true (green), noisy (blue) and estimated (red) observations"
     )
 
     gp2 = GaussProcess(
@@ -192,8 +191,7 @@ def example2(m=100, scale=0.01, stride=2):
     plt.figure()
     plt.plot(y1, "bo-", y1true, "go-", yhatr1, "r.-")
     plt.title(
-        "euclid kernel: true (green), noisy (blue) and estimated (red) "
-        + "observations"
+        "euclid kernel: true (green), noisy (blue) and estimated (red) observations"
     )
 
     gp2 = GaussProcess(

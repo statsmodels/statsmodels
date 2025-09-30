@@ -453,6 +453,7 @@ class PHReg(model.LikelihoodModel):
         mod = super().from_formula(
             formula,
             data,
+            *args,
             status=status,
             entry=entry,
             strata=strata,
@@ -461,7 +462,6 @@ class PHReg(model.LikelihoodModel):
             ties=ties,
             missing=missing,
             drop_cols=["Intercept"],
-            *args,
             **kwargs,
         )
 

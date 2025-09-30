@@ -24,7 +24,7 @@ import numpy as np
 from scipy import stats
 from scipy.stats import gaussian_kde
 
-import statsmodels.sandbox.infotheo as infotheo
+from statsmodels.sandbox import infotheo
 
 
 def mutualinfo_kde(y, x, normed=True):

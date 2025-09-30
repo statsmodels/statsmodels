@@ -110,7 +110,7 @@ def n_primes(n):
 
     if len(primes) < n:
         big_number = 10
-        while 'Not enought primes':
+        while "Not enought primes":
             primes = primes_from_2_to(big_number)[:n]
             if len(primes) == n:
                 break

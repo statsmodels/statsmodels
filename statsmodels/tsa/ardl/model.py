@@ -4,7 +4,6 @@ from statsmodels.compat.pandas import Appender, Substitution, call_cached_func
 
 from collections import defaultdict
 from collections.abc import Hashable, Mapping, Sequence
-import datetime as dt
 from itertools import combinations, product
 import textwrap
 from types import SimpleNamespace
@@ -22,12 +21,6 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
 from statsmodels.tools.sm_exceptions import SpecificationWarning
-from statsmodels.tools.typing import (
-    ArrayLike1D,
-    ArrayLike2D,
-    Float64Array,
-    NDArray,
-)
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -44,20 +37,29 @@ from statsmodels.tsa.ardl import pss_critical_values
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tsa.base import tsa_model
 from statsmodels.tsa.base.prediction import PredictionResults
-from statsmodels.tsa.deterministic import DeterministicProcess
 from statsmodels.tsa.tsatools import lagmat
 
 if TYPE_CHECKING:
+    import datetime as dt
+
     import matplotlib.figure
+
+    from statsmodels.tools.typing import (
+        ArrayLike1D,
+        ArrayLike2D,
+        Float64Array,
+        NDArray,
+    )
+    from statsmodels.tsa.deterministic import DeterministicProcess
 
 __all__ = [
     "ARDL",
-    "ARDLResults",
-    "ardl_select_order",
-    "ARDLOrderSelectionResults",
     "UECM",
-    "UECMResults",
+    "ARDLOrderSelectionResults",
+    "ARDLResults",
     "BoundsTestResult",
+    "UECMResults",
+    "ardl_select_order",
 ]
 
 
@@ -126,9 +128,9 @@ def _format_order(
         exog = array_like(exog, "exog", ndim=2, maxdim=2)
         keys = list(range(exog.shape[1]))
     else:
-        keys = [col for col in exog.columns]
+        keys = list(exog.columns)
     if order is None:
-        exog_order = {k: None for k in keys}
+        exog_order = dict.fromkeys(keys)
     elif isinstance(order, Mapping):
         exog_order = order
         missing = set(keys).difference(order.keys())
@@ -139,7 +141,7 @@ def _format_order(
                 "variable(s) that are not contained in exog"
             )
             msg += " Extra keys: "
-            msg += ", ".join(list(sorted([str(v) for v in extra]))) + "."
+            msg += ", ".join(sorted([str(v) for v in extra])) + "."
             raise ValueError(msg)
         if missing:
             msg = (
@@ -420,12 +422,12 @@ class ARDL(AutoReg):
         max_order = 0
         for val in order.values():
             if val is not None:
-                max_order = max(max(val), max_order)
+                max_order = max(max(val), max_order)  # noqa: PLW3301
         if not isinstance(exog, pd.DataFrame):
             exog = array_like(exog, "exog", ndim=2, maxdim=2)
         exog_lags = {}
-        for key in order:
-            if order[key] is None:
+        for key, order_val in order.items():
+            if order_val is None:
                 continue
             if isinstance(exog, np.ndarray):
                 assert isinstance(key, int)
@@ -433,7 +435,7 @@ class ARDL(AutoReg):
             else:
                 col = exog[key]
             lagged_col = lagmat(col, max_order, original="in")
-            lags = order[key]
+            lags = order_val
             exog_lags[key] = lagged_col[:, lags]
         return exog_lags
 
@@ -560,7 +562,7 @@ class ARDL(AutoReg):
             "fixed": self._fixed,
         }
         x = [self._deterministic_reg, self._endog_reg]
-        x += [ex for ex in self._exog.values()] + [self._fixed]
+        x += list(self._exog.values()) + [self._fixed]
         reg = np.column_stack(x)
         if hold_back is None:
             self._hold_back = int(self._maxlag)
@@ -602,8 +604,8 @@ class ARDL(AutoReg):
         }
         x_names = list(self._deterministic_reg.columns)
         x_names += endog_lag_names
-        for key in exog_names:
-            x_names += exog_names[key]
+        for exog_name_value in exog_names.values():
+            x_names += exog_name_value
         x_names += self._fixed_names
         return y_name, x_names
 
@@ -1501,7 +1503,7 @@ def ardl_select_order(
         keys = [(None, i) for i in ar_lags]
         for k, v in base._order.items():
             keys += [(k, i) for i in v]
-        x = np.column_stack([a for a in select])
+        x = np.column_stack(list(select))
         all_columns = list(range(x.shape[1]))
         for i in range(x.shape[1]):
             for perm in combinations(all_columns, i):
@@ -1526,7 +1528,7 @@ def ardl_select_order(
         if val < lowest:
             lowest = val
             selected_order = key
-    exog_order = {k: v for k, v in selected_order[1:]}
+    exog_order = dict(selected_order[1:])
     model = ARDL(
         endog,
         selected_order[0],
@@ -1751,7 +1753,7 @@ class UECM(ARDL):
     def _check_order(self, order: _ARDLOrder):
         """Check order conforms to requirement"""
         if isinstance(order, Mapping):
-            for k, v in order.items():
+            for v in order.values():
                 if not isinstance(v, _INT_TYPES) and v is not None:
                     raise TypeError("order values must be positive integers or None")
         elif not (isinstance(order, _INT_TYPES) or order is None):
@@ -1763,7 +1765,7 @@ class UECM(ARDL):
         order = super()._check_order(order)
         if not order:
             raise ValueError("Model must contain at least one exogenous variable")
-        for key, val in order.items():
+        for val in order.values():
             if val == [0]:
                 raise ValueError(
                     "All included exog variables must have a lag length >= 1"
@@ -1928,9 +1930,9 @@ class UECM(ARDL):
         )
         uecm_lags = {}
         dl_lags = ardl.dl_lags
-        for key, val in dl_lags.items():
-            max_val = max(val)
-            if len(dl_lags[key]) < (max_val + int(not ardl.causal)):
+        for key, dl_lags_val in dl_lags.items():
+            max_val = max(dl_lags_val)
+            if len(dl_lags_val) < (max_val + int(not ardl.causal)):
                 raise ValueError(err.format(var_typ="exogenous"))
             uecm_lags[key] = max_val
         if ardl.ar_lags is None:

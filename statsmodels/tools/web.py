@@ -2,12 +2,12 @@
 Provides a function to open the system browser to either search or go directly
 to a function's reference
 """
-import webbrowser
 from urllib.parse import urlencode
+import webbrowser
 
 from statsmodels import __version__
 
-BASE_URL = 'https://www.statsmodels.org/'
+BASE_URL = "https://www.statsmodels.org/"
 
 
 def _generate_url(func, stable):
@@ -17,27 +17,26 @@ def _generate_url(func, stable):
     """
     url = BASE_URL
     if stable:
-        url += 'stable/'
+        url += "stable/"
     else:
-        url += 'devel/'
+        url += "devel/"
 
     if func is None:
         return url
     elif isinstance(func, str):
-        url += 'search.html?'
-        url += urlencode({'q': func})
-        url += '&check_keywords=yes&area=default'
+        url += "search.html?"
+        url += urlencode({"q": func})
+        url += "&check_keywords=yes&area=default"
     else:
         try:
-            func = func
             func_name = func.__name__
             func_module = func.__module__
-            if not func_module.startswith('statsmodels.'):
-                raise ValueError('Function must be from statsmodels')
-            url += 'generated/'
-            url += func_module + '.' + func_name + '.html'
-        except AttributeError:
-            raise ValueError('Input not understood')
+            if not func_module.startswith("statsmodels."):
+                raise ValueError("Function must be from statsmodels")
+            url += "generated/"
+            url += func_module + "." + func_name + ".html"
+        except AttributeError as exc:
+            raise ValueError("Input not understood") from exc
     return url
 
 
@@ -78,7 +77,6 @@ def webdoc(func=None, stable=None):
 
     Uses the default system browser.
     """
-    stable = __version__ if 'dev' not in __version__ else stable
+    stable = __version__ if "dev" not in __version__ else stable
     url_or_error = _generate_url(func, stable)
     webbrowser.open(url_or_error)
-    return None

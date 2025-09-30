@@ -53,9 +53,10 @@ class Exchangeable_simulator(GEE_simulator):
 
         # Get a basis for the orthogonal complement to params.
         f = np.sum(self.params**2)
-        u,s,vt = np.linalg.svd(np.eye(len(self.params)) -
-                               np.outer(self.params, self.params) / f)
-        params0 = u[:,np.flatnonzero(s > 1e-6)]
+        u, s, vt = np.linalg.svd(
+            np.eye(len(self.params)) - np.outer(self.params, self.params) / f
+        )
+        params0 = u[:, np.flatnonzero(s > 1e-6)]
 
         for i in range(self.ngroups):
 
@@ -175,7 +176,7 @@ def gendat_overdispersed():
 
 if __name__ == "__main__":
 
-    np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
                         suppress=True)
 
     OUT = open("gee_poisson_simulation_check.txt", "w", encoding="utf-8")
@@ -195,7 +196,7 @@ if __name__ == "__main__":
         std_errors = []
         dparams = []
 
-        for j in range(nrep):
+        for _ in range(nrep):
 
             da, va = gendat()
             ga = Poisson()
@@ -217,7 +218,7 @@ if __name__ == "__main__":
             params.append(np.asarray(mdf.params))
             std_errors.append(np.asarray(mdf.standard_errors))
 
-            da,va = gendat()
+            da, va = gendat()
             ga = Poisson()
 
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va,

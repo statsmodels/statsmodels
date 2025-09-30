@@ -23,6 +23,7 @@ from statsmodels.regression.mixed_linear_model import (
     _smw_solver,
 )
 import statsmodels.tools.numdiff as nd
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 from .results import lme_r_results
 
@@ -139,7 +140,7 @@ class TestMixedLM:
 
         try:
             # Test the score at several points.
-            for kr in range(5):
+            for _ in range(5):
                 fe_params = np.random.normal(size=k_fe)
                 cov_re = np.random.normal(size=(k_re, k_re))
                 cov_re = np.dot(cov_re.T, cov_re)
@@ -171,7 +172,7 @@ class TestMixedLM:
             # See GH#5628; because this test fails unpredictably but only on
             #  OSX, we only xfail it there.
             if PLATFORM_OSX:
-                pytest.xfail("fails on OSX due to unresolved " "numerical differences")
+                pytest.xfail("fails on OSX due to unresolved numerical differences")
             else:
                 raise
 
@@ -256,7 +257,7 @@ class TestMixedLM:
         result1 = model1.fit(free=free)
 
         exog_vc = {"a": {}, "b": {}}
-        for k, group in enumerate(model1.group_labels):
+        for _, group in enumerate(model1.group_labels):
             ix = model1.row_indices[group]
             exog_vc["a"][group] = exog_re[ix, 0:1]
             exog_vc["b"][group] = exog_re[ix, 1:2]
@@ -622,7 +623,7 @@ class TestMixedLM:
         endog = exog.sum(1) + errors
 
         exog_vc = {"a": {}, "b": {}}
-        for k, group in enumerate(range(int(n / 4))):
+        for _, group in enumerate(range(int(n / 4))):
             ix = np.flatnonzero(groups == group)
             exog_vc["a"][group] = ex_vc[ix, 0:2]
             exog_vc["b"][group] = ex_vc[ix, 2:]
@@ -1283,12 +1284,10 @@ def test_singular():
     df = pd.DataFrame(data, columns=["Y", "X"])
     df["class"] = pd.Series([i % 3 for i in df.index], index=df.index)
 
-    with pytest.warns(Warning) as wrn:
-        md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
+    md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
+    with pytest.warns(SingularMatrixWarning, match="The random effects covariance"):
         mdf = md.fit()
-        mdf.summary()
-        if not wrn:
-            pytest.fail("warning expected")
+    mdf.summary()
 
 
 def test_get_distribution():

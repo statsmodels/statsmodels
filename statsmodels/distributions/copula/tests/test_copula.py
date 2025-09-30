@@ -319,7 +319,7 @@ def test_ev_copula(case):
 
 @pytest.mark.parametrize("case", ev_dep_list)
 def test_ev_dep(case):
-    ev_tr, v1, v2, args, res1, res2 = case  # noqa
+    ev_tr, v1, v2, args, res1, res2 = case
     t = np.array([0.25, 0.5, 0.75])
     df = ev_tr(t, *args)
     assert_allclose(df, res2, rtol=1e-13)

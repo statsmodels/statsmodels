@@ -39,8 +39,7 @@ class _ConditionalModel(base.LikelihoodModel):
 
         if self.data.const_idx is not None:
             msg = (
-                "Conditional models should not have an intercept in the "
-                + "design matrix"
+                "Conditional models should not have an intercept in the design matrix"
             )
             raise ValueError(msg)
 
@@ -206,8 +205,8 @@ class _ConditionalModel(base.LikelihoodModel):
         try:
             groups = kwargs["groups"]
             del kwargs["groups"]
-        except KeyError:
-            raise ValueError("'groups' is a required argument")
+        except KeyError as err:
+            raise ValueError("'groups' is a required argument") from err
 
         if isinstance(groups, str):
             groups = data[groups]
@@ -219,7 +218,7 @@ class _ConditionalModel(base.LikelihoodModel):
                 stacklevel=2,
             )
         advance_eval_env(kwargs)
-        model = super().from_formula(formula, data=data, groups=groups, *args, **kwargs)
+        model = super().from_formula(formula, data, *args, groups=groups, **kwargs)
 
         return model
 

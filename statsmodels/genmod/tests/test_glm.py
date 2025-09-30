@@ -978,7 +978,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=DomainWarning)
-            with pytest.warns(UserWarning):
+            with pytest.warns(ValueWarning, match="Negative binomial dispersio"):
                 fam = sm.families.NegativeBinomial()
 
         cls.res1 = GLM(cls.data.endog, cls.data.exog, family=fam).fit(scale="x2")
@@ -1365,14 +1365,20 @@ def check_score_hessian(results):
     # avoid checking score at MLE, score close to zero
     sc = results.model.score(params * 0.98, scale=1)
     # cs currently (0.9) does not work for all families
-    llfunc = lambda x: results.model.loglike(x, scale=1)  # noqa
+
+    def llfunc(x):
+        return results.model.loglike(x, scale=1)
+
     sc2 = approx_fprime(params * 0.98, llfunc)
     assert_allclose(sc, sc2, rtol=1e-4, atol=1e-4)
 
     hess = results.model.hessian(params, scale=1)
     hess2 = approx_hess(params, llfunc)
     assert_allclose(hess, hess2, rtol=1e-4)
-    scfunc = lambda x: results.model.score(x, scale=1)  # noqa
+
+    def scfunc(x):
+        return results.model.score(x, scale=1)
+
     hess3 = approx_fprime(params, scfunc)
     assert_allclose(hess, hess3, rtol=1e-4)
 
@@ -2741,7 +2747,7 @@ class TestRegularized:
                 assert_allclose(params, sm_result.params, atol=1e-2, rtol=0.3)
 
                 # The penalized log-likelihood that we are maximizing.
-                def plf(params):
+                def plf(params, model, endog, alpha, L1_wt):
                     llf = model.loglike(params) / len(endog)
                     llf = llf - alpha * (
                         (1 - L1_wt) * np.sum(params**2) / 2
@@ -2750,8 +2756,8 @@ class TestRegularized:
                     return llf
 
                 # Confirm that we are doing better than glmnet.
-                llf_r = plf(params)
-                llf_sm = plf(sm_result.params)
+                llf_r = plf(params, model, endog, alpha, L1_wt)
+                llf_sm = plf(sm_result.params, model, endog, alpha, L1_wt)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 
@@ -2768,7 +2774,7 @@ class TestConvergence:
         cls.model = GLM(data.endog, data.exog, family=sm.families.Binomial())
 
     def _when_converged(self, atol=1e-8, rtol=0, tol_criterion="deviance"):
-        for i, dev in enumerate(self.res.fit_history[tol_criterion]):
+        for i, _ in enumerate(self.res.fit_history[tol_criterion]):
             orig = self.res.fit_history[tol_criterion][i]
             new = self.res.fit_history[tol_criterion][i + 1]
             if np.allclose(orig, new, atol=atol, rtol=rtol):
@@ -3031,11 +3037,11 @@ def test_tweedie_score():
 
             pa = result.params + 0.2 * np.random.normal(size=result.params.size)
 
-            ngrad = approx_fprime_cs(pa, lambda x: model.loglike(x, scale=1))
+            from functools import partial
+            ngrad = approx_fprime_cs(pa, partial(model.loglike, scale=1))
             agrad = model.score(pa, scale=1)
             assert_allclose(ngrad, agrad, atol=1e-8, rtol=1e-8)
-
-            nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
+            nhess = approx_hess_cs(pa, partial(model.loglike, scale=1))
             ahess = model.hessian(pa, scale=1)
             assert_allclose(nhess, ahess, atol=5e-8, rtol=5e-8)
 

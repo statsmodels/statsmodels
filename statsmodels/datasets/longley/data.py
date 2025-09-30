@@ -1,7 +1,7 @@
 """Longley dataset"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This is public domain."""
 TITLE = __doc__
@@ -67,6 +67,6 @@ def load_pandas():
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'longley.csv')
+    data = du.load_csv(__file__, "longley.csv")
     data = data.iloc[:, [1, 2, 3, 4, 5, 6, 7]].astype(float)
     return data

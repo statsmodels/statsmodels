@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     print("\n OLS leave 2 out")
     resparams = []
-    for inidx, outidx in cross_val.LeavePOut(len(data.endog), 2):
+    for inidx, _ in cross_val.LeavePOut(len(data.endog), 2):
         res = sm.OLS(data.endog[inidx], data.exog[inidx, :]).fit()
         # print data.endog[outidx], res.model.predict(data.exog[outidx,:]),
         # print ((data.endog[outidx] - res.model.predict(data.exog[outidx,:]))**2).sum()

@@ -176,11 +176,10 @@ class GLMGamResults(GLMResults):
             if exog_smooth is None:
                 # exog could be None or array
                 ex = exog
+            elif exog is None:
+                ex = exog_smooth
             else:
-                if exog is None:
-                    ex = exog_smooth
-                else:
-                    ex = np.column_stack((exog, exog_smooth))
+                ex = np.column_stack((exog, exog_smooth))
         else:
             # transform exog_linear if needed
             if exog is not None and hasattr(self.model, "model_spec_linear"):
@@ -202,7 +201,7 @@ class GLMGamResults(GLMResults):
         return ex, exog_index
 
     def predict(self, exog=None, exog_smooth=None, transform=True, **kwargs):
-        """ "
+        """
         compute prediction
 
         Parameters
@@ -1028,7 +1027,7 @@ class LogitGam(PenalizedMixin, Logit):
         self.pen_weight = 1  # TODO: pen weight should not be defined here!!
         penal = MultivariateGamPenalty(smoother, alpha=alpha)
 
-        super().__init__(endog, smoother.basis, penal=penal, *args, **kwargs)
+        super().__init__(endog, smoother.basis, *args, penal=penal, **kwargs)
 
 
 def penalized_wls(endog, exog, penalty_matrix, weights):

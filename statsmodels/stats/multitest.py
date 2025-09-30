@@ -11,12 +11,12 @@ import numpy as np
 from statsmodels.stats._knockoff import RegressionFDR
 
 __all__ = [
+    "NullDistribution",
+    "RegressionFDR",
     "fdrcorrection",
     "fdrcorrection_twostage",
     "local_fdr",
     "multipletests",
-    "NullDistribution",
-    "RegressionFDR",
 ]
 
 # ==============================================

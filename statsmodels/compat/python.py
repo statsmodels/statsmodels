@@ -10,19 +10,20 @@ PYTHON_IMPL_WASM = (
 )
 
 
-asunicode = lambda x, _: str(x)  # noqa:E731
+def asunicode(x, _):
+    return str(x)
 
 
 __all__ = [
-    "asunicode",
-    "asstr",
-    "asbytes",
-    "lmap",
-    "lzip",
-    "lrange",
-    "lfilter",
-    "with_metaclass",
     "PYTHON_IMPL_WASM",
+    "asbytes",
+    "asstr",
+    "asunicode",
+    "lfilter",
+    "lmap",
+    "lrange",
+    "lzip",
+    "with_metaclass",
 ]
 
 

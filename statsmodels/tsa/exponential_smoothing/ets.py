@@ -166,8 +166,8 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.exponential_smoothing import base
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
 from statsmodels.tsa.exponential_smoothing.initialization import (
-    _initialization_simple,
     _initialization_heuristic,
+    _initialization_simple,
 )
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -498,11 +498,10 @@ class ETSModel(base.StateSpaceMLEModel):
                 self._smoothing_func = smooth._ets_smooth_add_add
             else:
                 self._smoothing_func = smooth._ets_smooth_add_mul
+        elif self.seasonal == "add" or self.seasonal is None:
+            self._smoothing_func = smooth._ets_smooth_mul_add
         else:
-            if self.seasonal == "add" or self.seasonal is None:
-                self._smoothing_func = smooth._ets_smooth_mul_add
-            else:
-                self._smoothing_func = smooth._ets_smooth_mul_mul
+            self._smoothing_func = smooth._ets_smooth_mul_mul
 
     def set_initialization_method(
         self,
@@ -2400,4 +2399,4 @@ class PredictionResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(_methods)
 
 
-wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)  # noqa:E305
+wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)

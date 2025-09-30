@@ -43,27 +43,27 @@ and Vella.
 
 
 Boos, Dennis D. 1992. “On Generalized Score Tests.” The American Statistician 46
-(4): 327–33. https://doi.org/10.2307/2685328.
+(4): 327-33. https://doi.org/10.2307/2685328.
 
-Breslow, Norman. 1989. “Score Tests in Overdispersed GLM’s.” In Statistical
+Breslow, Norman. 1989. “Score Tests in Overdispersed GLM`s.” In Statistical
 Modelling, edited by Adriano Decarli, Brian J. Francis, Robert Gilchrist, and
-Gilg U. H. Seeber, 64–74. Lecture Notes in Statistics 57. Springer New York.
+Gilg U. H. Seeber, 64-74. Lecture Notes in Statistics 57. Springer New York.
 http://link.springer.com/chapter/10.1007/978-1-4612-3680-1_8.
 
 Breslow, Norman. 1990. “Tests of Hypotheses in Overdispersed Poisson Regression
 and Other Quasi- Likelihood Models.” Journal of the American Statistical
-Association 85 (410): 565–71. https://doi.org/10.2307/2289799.
+Association 85 (410): 565-71. https://doi.org/10.2307/2289799.
 
 Cameron, A. Colin, and Pravin K. Trivedi. 1986. “Econometric Models Based on
 Count Data. Comparisons and Applications of Some Estimators and Tests.” Journal
-of Applied Econometrics 1 (1): 29–53. https://doi.org/10.1002/jae.3950010104.
+of Applied Econometrics 1 (1): 29-53. https://doi.org/10.1002/jae.3950010104.
 
 Cameron, A. Colin, and Pravin K. Trivedi. 1990a. “Conditional Moment Tests and
 Orthogonal Polynomials.” Indiana University, Department of Economics, Working
-Paper, 90–051.
+Paper, 90-051.
 
 Cameron, A. Colin, and Pravin K. Trivedi. 1990b. “Regression-Based Tests for
-Overdispersion in the Poisson Model.” Journal of Econometrics 46 (3): 347–64.
+Overdispersion in the Poisson Model.” Journal of Econometrics 46 (3): 347-64.
 https://doi.org/10.1016/0304-4076(90)90014-K.
 
 Cameron, A. Colin, and Pravin K. Trivedi. Microeconometrics: methods and
@@ -74,53 +74,53 @@ Vol. 53. Cambridge university press, 2013.
 
 Davidson, Russell, and James G. MacKinnon. 1981. “Several Tests for Model
 Specification in the Presence of Alternative Hypotheses.” Econometrica 49 (3):
-781–93. https://doi.org/10.2307/1911522.
+781-93. https://doi.org/10.2307/1911522.
 
 Davidson, Russell, and James G. MacKinnon. 1990. “Specification Tests Based on
 Artificial Regressions.” Journal of the American Statistical Association 85
-(409): 220–27. https://doi.org/10.2307/2289548.
+(409): 220-27. https://doi.org/10.2307/2289548.
 
 Davidson, Russell, and James G. MacKinnon. 1991. “Artificial Regressions and C
-(α) Tests.” Economics Letters 35 (2): 149–53.
+(α) Tests.” Economics Letters 35 (2): 149-53.
 https://doi.org/10.1016/0165-1765(91)90162-E.
 
 Davidson, Russell, and James G. MacKinnon. Econometric theory and methods. Vol.
 5. New York: Oxford University Press, 2004.
 
 Dean, C. B. 1992. “Testing for Overdispersion in Poisson and Binomial Regression
-Models.” Journal of the American Statistical Association 87 (418): 451–57.
+Models.” Journal of the American Statistical Association 87 (418): 451-57.
 https://doi.org/10.2307/2290276.
 
 Dean, C., and J. F. Lawless. 1989. “Tests for Detecting Overdispersion in
 Poisson Regression Models.” Journal of the American Statistical Association 84
-(406): 467–72. https://doi.org/10.2307/2289931.
+(406): 467-72. https://doi.org/10.2307/2289931.
 
 Newey, Whitney K. 1985a. “Generalized Method of Moments Specification Testing.”
-Journal of Econometrics 29 (3): 229–56.
+Journal of Econometrics 29 (3): 229-56.
 https://doi.org/10.1016/0304-4076(85)90154-X.
 
 Newey, Whitney K. 1985b. “Maximum Likelihood Specification Testing and
-Conditional Moment Tests.” Econometrica 53 (5): 1047–70.
+Conditional Moment Tests.” Econometrica 53 (5): 1047-70.
 https://doi.org/10.2307/1911011.
 
 Newey, Whitney K. and Kenneth D. West. 1987. “Hypothesis Testing with Efficient
-Method of Moments Estimation.” International Economic Review 28 (3): 777–87.
+Method of Moments Estimation.” International Economic Review 28 (3): 777-87.
 https://doi.org/10.2307/2526578.
 
 Newey, Whitney K. and Daniel McFadden. 1994 "Large sample estimation and
 hypothesis testing." Handbook of econometrics 4: 2111-2245.
 
 Pagan, Adrian, and Frank Vella. 1989. “Diagnostic Tests for Models Based on
-Individual Data: A Survey.” Journal of Applied Econometrics 4 (S1): S29–59.
+Individual Data: A Survey.” Journal of Applied Econometrics 4 (S1): S29-59.
 https://doi.org/10.1002/jae.3950040504.
 
 Tauchen, George. 1985. “Diagnostic Testing and Evaluation of Maximum Likelihood
-Models.” Journal of Econometrics 30 (1–2): 415–43.
+Models.” Journal of Econometrics 30 (1-2): 415-43.
 https://doi.org/10.1016/0304-4076(85)90149-6.
 
 White, Halbert. 1981. “Consequences and Detection of Misspecified Nonlinear
 Regression Models.” Journal of the American Statistical Association 76 (374):
-419–33. https://doi.org/10.2307/2287845.
+419-33. https://doi.org/10.2307/2287845.
 
 White, Halbert. 1983. “Maximum Likelihood Estimation of Misspecified Models.”
 Econometrica 51 (2): 513. https://doi.org/10.2307/1912004.
@@ -129,30 +129,30 @@ White, Halbert. 1994. Estimation, Inference and Specification Analysis.
 Cambridge: Cambridge University Press. https://doi.org/10.1017/CCOL0521252806.
 
 Wooldridge, Jeffrey M. 1991. “Specification Testing and Quasi-Maximum-
-Likelihood Estimation.” Journal of Econometrics 48 (1–2): 29–55.
+Likelihood Estimation.” Journal of Econometrics 48 (1-2): 29-55.
 https://doi.org/10.1016/0304-4076(91)90031-8.
 
 Wooldridge, Jeffrey M. 1990. “A Unified Approach to Robust, Regression-Based
-Specification Tests.” Econometric Theory 6 (1): 17–43.
+Specification Tests.” Econometric Theory 6 (1): 17-43.
 
 Wooldridge, Jeffrey M. 1991a. “On the Application of Robust, Regression- Based
 Diagnostics to Models of Conditional Means and Conditional Variances.” Journal
-of Econometrics 47 (1): 5–46. https://doi.org/10.1016/0304-4076(91)90076-P.
+of Econometrics 47 (1): 5-46. https://doi.org/10.1016/0304-4076(91)90076-P.
 
 Wooldridge, Jeffrey M. 1991b. “On the Application of Robust, Regression- Based
 Diagnostics to Models of Conditional Means and Conditional Variances.” Journal
-of Econometrics 47 (1): 5–46. https://doi.org/10.1016/0304-4076(91)90076-P.
+of Econometrics 47 (1): 5-46. https://doi.org/10.1016/0304-4076(91)90076-P.
 
 Wooldridge, Jeffrey M. 1991c. “Specification Testing and Quasi-Maximum-
-Likelihood Estimation.” Journal of Econometrics 48 (1–2): 29–55.
+Likelihood Estimation.” Journal of Econometrics 48 (1-2): 29-55.
 https://doi.org/10.1016/0304-4076(91)90031-8.
 
 Wooldridge, Jeffrey M. 1994. “On the Limits of GLM for Specification Testing: A
-Comment on Gurmu and Trivedi.” Econometric Theory 10 (2): 409–18.
+Comment on Gurmu and Trivedi.” Econometric Theory 10 (2): 409-18.
 https://doi.org/10.2307/3532875.
 
 Wooldridge, Jeffrey M. 1997. “Quasi-Likelihood Methods for Count Data.” Handbook
-of Applied Econometrics 2: 352–406.
+of Applied Econometrics 2: 352-406.
 
 Wooldridge, Jeffrey M. Econometric analysis of cross section and panel data. MIT
 press, 2010.
@@ -323,7 +323,7 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
     References
     ----------
     Wooldridge, Jeffrey M. 1997. “Quasi-Likelihood Methods for Count Data.”
-    Handbook of Applied Econometrics 2: 352–406.
+    Handbook of Applied Econometrics 2: 352-406.
 
     and other articles and text book by Wooldridge
 

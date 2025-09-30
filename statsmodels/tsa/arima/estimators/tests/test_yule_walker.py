@@ -9,7 +9,7 @@ from statsmodels.tsa.stattools import acovf
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.1.1 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.1.1 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_511():
     # Make the series stationary
@@ -29,7 +29,7 @@ def test_brockwell_davis_example_511():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.1.4 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.1.4 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_514():
     # Note: this example is primarily tested in

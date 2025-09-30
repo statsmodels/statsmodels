@@ -12,17 +12,17 @@ from numpy.linalg import slogdet
 from statsmodels.tools.decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
+from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
-import statsmodels.tsa.vector_ar.util as util
 from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
 
 def svar_ckerr(svar_type, A, B):
-    if A is None and (svar_type == 'A' or svar_type == 'AB'):
-        raise ValueError('SVAR of type A or AB but A array not given.')
-    if B is None and (svar_type == 'B' or svar_type == 'AB'):
+    if A is None and (svar_type == "A" or svar_type == "AB"):
+        raise ValueError("SVAR of type A or AB but A array not given.")
+    if B is None and (svar_type == "B" or svar_type == "AB"):
 
-        raise ValueError('SVAR of type B or AB but B array not given.')
+        raise ValueError("SVAR of type B or AB but B array not given.")
 
 
 class SVAR(tsbase.TimeSeriesModel):
@@ -54,16 +54,16 @@ class SVAR(tsbase.TimeSeriesModel):
     y = deprecated_alias("y", "endog", remove_version="0.11.0")
 
     def __init__(self, endog, svar_type, dates=None,
-                 freq=None, A=None, B=None, missing='none'):
+                 freq=None, A=None, B=None, missing="none"):
         super().__init__(endog, None, dates, freq, missing=missing)
         # (self.endog, self.names,
         # self.dates) = data_util.interpret_data(endog, names, dates)
 
         self.neqs = self.endog.shape[1]
 
-        types = ['A', 'B', 'AB']
+        types = ["A", "B", "AB"]
         if svar_type not in types:
-            raise ValueError('SVAR type not recognized, must be in '
+            raise ValueError("SVAR type not recognized, must be in "
                              + str(types))
         self.svar_type = svar_type
 
@@ -79,14 +79,14 @@ class SVAR(tsbase.TimeSeriesModel):
             self.A_mask = A_mask = np.zeros(A.shape, dtype=bool)
         else:
             A = A.astype("U")
-            A_mask = np.logical_or(A == 'E', A == 'e')
+            A_mask = np.logical_or(A == "E", A == "e")
             self.A_mask = A_mask
         if B is None:
             B = np.identity(self.neqs)
             self.B_mask = B_mask = np.zeros(B.shape, dtype=bool)
         else:
             B = B.astype("U")
-            B_mask = np.logical_or(B == 'E', B == 'e')
+            B_mask = np.logical_or(B == "E", B == "e")
             self.B_mask = B_mask
 
         # convert A and B to numeric
@@ -106,8 +106,8 @@ class SVAR(tsbase.TimeSeriesModel):
 
         # super().__init__(endog)
 
-    def fit(self, A_guess=None, B_guess=None, maxlags=None, method='ols',
-            ic=None, trend='c', verbose=False, s_method='mle',
+    def fit(self, A_guess=None, B_guess=None, maxlags=None, method="ols",
+            ic=None, trend="c", verbose=False, s_method="mle",
             solver="bfgs", override=False, maxiter=500, maxfun=500):
         """
         Fit the SVAR model and solve for structural parameters
@@ -169,10 +169,9 @@ class SVAR(tsbase.TimeSeriesModel):
                                  % (ic, sorted(selections)))
             lags = selections[ic]
             if verbose:
-                print('Using %d based on %s criterion' % (lags, ic))
-        else:
-            if lags is None:
-                lags = 1
+                print("Using %d based on %s criterion" % (lags, ic))
+        elif lags is None:
+            lags = 1
 
         self.nobs = len(self.endog) - lags
 
@@ -191,31 +190,29 @@ class SVAR(tsbase.TimeSeriesModel):
         var_type = self.svar_type.lower()
 
         n_masked_a = self.A_mask.sum()
-        if var_type in ['ab', 'a']:
+        if var_type in ["ab", "a"]:
             if A_guess is None:
                 A_guess = np.array([.1]*n_masked_a)
-            else:
-                if len(A_guess) != n_masked_a:
-                    msg = 'len(A_guess) = %s, there are %s parameters in A'
-                    raise ValueError(msg % (len(A_guess), n_masked_a))
+            elif len(A_guess) != n_masked_a:
+                msg = "len(A_guess) = %s, there are %s parameters in A"
+                raise ValueError(msg % (len(A_guess), n_masked_a))
         else:
             A_guess = []
 
         n_masked_b = self.B_mask.sum()
-        if var_type in ['ab', 'b']:
+        if var_type in ["ab", "b"]:
             if B_guess is None:
                 B_guess = np.array([.1]*n_masked_b)
-            else:
-                if len(B_guess) != n_masked_b:
-                    msg = 'len(B_guess) = %s, there are %s parameters in B'
-                    raise ValueError(msg % (len(B_guess), n_masked_b))
+            elif len(B_guess) != n_masked_b:
+                msg = "len(B_guess) = %s, there are %s parameters in B"
+                raise ValueError(msg % (len(B_guess), n_masked_b))
         else:
             B_guess = []
 
         return np.r_[A_guess, B_guess]
 
     def _estimate_svar(self, start_params, lags, maxiter, maxfun,
-                       trend='c', solver="nm", override=False):
+                       trend="c", solver="nm", override=False):
         """
         lags : int
         trend : {str, None}
@@ -223,7 +220,7 @@ class SVAR(tsbase.TimeSeriesModel):
         """
         k_trend = util.get_trendorder(trend)
         y = self.endog
-        z = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
+        z = util.get_var_endog(y, lags, trend=trend, has_constant="raise")
         y_sample = y[lags:]
 
         # Lutkepohl p75, about 5x faster than stated formula
@@ -286,8 +283,8 @@ class SVAR(tsbase.TimeSeriesModel):
         neqs = self.neqs
         sigma_u = self.sigma_u
 
-        W = np.dot(npl.inv(B),A)
-        trc_in = np.dot(np.dot(W.T,W),sigma_u)
+        W = np.dot(npl.inv(B), A)
+        trc_in = np.dot(np.dot(W.T, W), sigma_u)
         sign, b_logdet = slogdet(B**2)  # numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
@@ -328,7 +325,7 @@ class SVAR(tsbase.TimeSeriesModel):
             AB_mask = AB_mask.ravel()
         return approx_hess(AB_mask, loglike)
 
-    def _solve_AB(self, start_params, maxiter, override=False, solver='bfgs'):
+    def _solve_AB(self, start_params, maxiter, override=False, solver="bfgs"):
         """
         Solves for MLE estimate of structural parameters
 
@@ -403,10 +400,10 @@ class SVAR(tsbase.TimeSeriesModel):
             while j <= i < neqs:
                 u = np.zeros([int((1.0/2)*neqs*(neqs+1)), 1])
                 u[int(j * neqs + (i + 1) - (1.0 / 2) * (j + 1) * j - 1)] = 1
-                Tij = np.zeros([neqs,neqs])
-                Tij[i,j] = 1
-                Tij[j,i] = 1
-                D_nT = D_nT+np.dot(u,(Tij.ravel('F')[:,None]).T)
+                Tij = np.zeros([neqs, neqs])
+                Tij[i, j] = 1
+                Tij[j, i] = 1
+                D_nT = D_nT+np.dot(u, (Tij.ravel("F")[:, None]).T)
                 i = i+1
 
         D_n = D_nT.T
@@ -419,16 +416,16 @@ class SVAR(tsbase.TimeSeriesModel):
         j = 0
         j_d = 0
         if len(A_solve[A_mask]) != 0:
-            A_vec = np.ravel(A_mask, order='F')
+            A_vec = np.ravel(A_mask, order="F")
             for k in range(neqs**2):
                 if A_vec[k]:
-                    S_B[k,j] = -1
+                    S_B[k, j] = -1
                     j += 1
         if len(B_solve[B_mask]) != 0:
-            B_vec = np.ravel(B_mask, order='F')
+            B_vec = np.ravel(B_mask, order="F")
             for k in range(neqs**2):
                 if B_vec[k]:
-                    S_D[k,j_d] = 1
+                    S_D[k, j_d] = 1
                     j_d += 1
 
         # now compute J
@@ -562,11 +559,11 @@ class SVARResults(SVARProcess, VARResults):
     tvalues
     """
 
-    _model_type = 'SVAR'
+    _model_type = "SVAR"
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  A=None, B=None, A_mask=None, B_mask=None, model=None,
-                 trend='c', names=None, dates=None):
+                 trend="c", names=None, dates=None):
 
         self.model = model
         self.endog = endog

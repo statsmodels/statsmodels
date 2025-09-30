@@ -71,7 +71,7 @@ class TestKDEUnivariate(KDETestBase):
     def test_pdf_non_fft(self):
 
         kde = nparam.KDEUnivariate(self.noise)
-        kde.fit(fft=False, bw='scott')
+        kde.fit(fft=False, bw="scott")
 
         grid = kde.support
         testx = [grid[10*i] for i in range(6)]
@@ -95,7 +95,7 @@ class TestKDEUnivariate(KDETestBase):
     def test_weighted_pdf_non_fft(self):
 
         kde = nparam.KDEUnivariate(self.noise)
-        kde.fit(weights=self.weights, fft=False, bw='scott')
+        kde.fit(weights=self.weights, fft=False, bw="scott")
 
         grid = kde.support
         testx = [grid[10*i] for i in range(6)]
@@ -137,7 +137,7 @@ class TestKDEMultivariate(KDETestBase):
     @pytest.mark.slow
     def test_pdf_mixeddata_CV_LS(self):
         dens_u = nparam.KDEMultivariate(data=[self.c1, self.o, self.o2],
-                                        var_type='coo', bw='cv_ls')
+                                        var_type="coo", bw="cv_ls")
         npt.assert_allclose(dens_u.bw, [0.70949447, 0.08736727, 0.09220476],
                             atol=1e-6)
 
@@ -157,15 +157,15 @@ class TestKDEMultivariate(KDETestBase):
     @pytest.mark.slow
     def test_pdf_mixeddata_LS_vs_ML(self):
         dens_ls = nparam.KDEMultivariate(data=[self.c1, self.o, self.o2],
-                                         var_type='coo', bw='cv_ls')
+                                         var_type="coo", bw="cv_ls")
         dens_ml = nparam.KDEMultivariate(data=[self.c1, self.o, self.o2],
-                                         var_type='coo', bw='cv_ml')
+                                         var_type="coo", bw="cv_ml")
         npt.assert_allclose(dens_ls.bw, dens_ml.bw, atol=0, rtol=0.5)
 
     def test_pdf_mixeddata_CV_ML(self):
         # Test ML cross-validation
         dens_ml = nparam.KDEMultivariate(data=[self.c1, self.o, self.c2],
-                                         var_type='coc', bw='cv_ml')
+                                         var_type="coc", bw="cv_ml")
         R_bw = [1.021563, 2.806409e-14, 0.5142077]
         npt.assert_allclose(dens_ml.bw, R_bw, atol=0.1, rtol=0.1)
 
@@ -173,7 +173,7 @@ class TestKDEMultivariate(KDETestBase):
     def test_pdf_continuous(self):
         # Test for only continuous data
         dens = nparam.KDEMultivariate(data=[self.growth, self.Italy_gdp],
-                                      var_type='cc', bw='cv_ls')
+                                      var_type="cc", bw="cv_ls")
         # take the first data points from the training set
         sm_result = np.squeeze(dens.pdf()[0:5])
         R_result = [1.6202284, 0.7914245, 1.6084174, 2.4987204, 1.3705258]
@@ -190,7 +190,7 @@ class TestKDEMultivariate(KDETestBase):
 
     def test_pdf_ordered(self):
         # Test for only ordered data
-        dens = nparam.KDEMultivariate(data=[self.oecd], var_type='o', bw='cv_ls')
+        dens = nparam.KDEMultivariate(data=[self.oecd], var_type="o", bw="cv_ls")
         sm_result = np.squeeze(dens.pdf()[0:5])
         R_result = [0.7236395, 0.7236395, 0.2763605, 0.2763605, 0.7236395]
         # lower tol here. only 2nd decimal
@@ -199,21 +199,21 @@ class TestKDEMultivariate(KDETestBase):
     @pytest.mark.slow
     def test_unordered_CV_LS(self):
         dens = nparam.KDEMultivariate(data=[self.growth, self.oecd],
-                                      var_type='cu', bw='cv_ls')
+                                      var_type="cu", bw="cv_ls")
         R_result = [0.0052051, 0.05835941]
         npt.assert_allclose(dens.bw, R_result, atol=1e-2)
 
-    def test_continuous_cdf(self, data_predict=None):
+    def test_continuous_cdf(self):
         dens = nparam.KDEMultivariate(data=[self.Italy_gdp, self.growth],
-                                      var_type='cc', bw='cv_ml')
+                                      var_type="cc", bw="cv_ml")
         sm_result = dens.cdf()[0:5]
         R_result = [0.192180770, 0.299505196, 0.557303666,
                     0.513387712, 0.210985350]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
-    def test_mixeddata_cdf(self, data_predict=None):
+    def test_mixeddata_cdf(self):
         dens = nparam.KDEMultivariate(data=[self.Italy_gdp, self.oecd],
-                                      var_type='cu', bw='cv_ml')
+                                      var_type="cu", bw="cv_ml")
         sm_result = dens.cdf()[0:5]
         R_result = [0.54700010, 0.65907039, 0.89676865, 0.74132941, 0.25291361]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
@@ -299,16 +299,16 @@ class TestKDEMultivariateConditional(KDETestBase):
     def test_mixeddata_CV_LS(self):
         dens_ls = nparam.KDEMultivariateConditional(endog=[self.Italy_gdp],
                                                     exog=[self.Italy_year],
-                                                    dep_type='c',
-                                                    indep_type='o', bw='cv_ls')
+                                                    dep_type="c",
+                                                    indep_type="o", bw="cv_ls")
         # R result: [1.6448, 0.2317373]
         npt.assert_allclose(dens_ls.bw, [1.01203728, 0.31905144], atol=1e-5)
 
     def test_continuous_CV_ML(self):
         dens_ml = nparam.KDEMultivariateConditional(endog=[self.Italy_gdp],
                                                     exog=[self.growth],
-                                                    dep_type='c',
-                                                    indep_type='c', bw='cv_ml')
+                                                    dep_type="c",
+                                                    indep_type="c", bw="cv_ml")
         # Results from R
         npt.assert_allclose(dens_ml.bw, [0.5341164, 0.04510836], atol=1e-3)
 

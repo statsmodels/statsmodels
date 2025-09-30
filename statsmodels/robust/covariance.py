@@ -36,8 +36,13 @@ from statsmodels.tools.testing import Holder
 
 from .scale import mad
 
-mad0 = lambda x: mad(x, center=0)  # noqa: E731
-median = lambda x: np.median(x, axis=0)  # noqa: E731
+
+def mad0(x):
+    return mad(x, center=0)
+
+
+def median(x):
+    return np.median(x, axis=0)
 
 
 # from scikit-learn
@@ -98,11 +103,11 @@ def coef_normalize_cov_truncated(frac, k_vars):
 
     .. [1] Riani, Marco, Andrea Cerioli, and Francesca Torti. “On Consistency
        Factors and Efficiency of Robust S-Estimators.” TEST 23, no. 2 (February
-       4, 2014): 356–87. https://doi.org/10.1007/s11749-014-0357-7.
+       4, 2014): 356-87. https://doi.org/10.1007/s11749-014-0357-7.
 
     .. [2] Rocke, David M., and David L. Woodruff. “Identification of Outliers
        in Multivariate Data.” Journal of the American Statistical
-       Association 91, no. 435 (1996): 1047–61.
+       Association 91, no. 435 (1996): 1047-61.
        https://doi.org/10.2307/2291724.
 
     """
@@ -184,7 +189,7 @@ def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
 
     """
     beta = trim_frac
-    nobs, k_vars = x.shape  # noqa: F841
+    nobs, k_vars = x.shape
     # d = (((z - loc_z) / scale_z)**2).sum(1) # for orthogonal
     d = mahalanobis(x - loc, cov)
     # only hard thresholding right now
@@ -308,7 +313,7 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
         import warnings
 
         warnings.warn(
-            "ties at cutoff, cutoff rule produces fewer" "outliers than `ntail`",
+            "ties at cutoff, cutoff rule produces feweroutliers than `ntail`",
             RuntimeWarning,
             stacklevel=2,
         )
@@ -405,7 +410,7 @@ def cov_gk(data, scale_func=mad):
     x = np.asarray(data)
     if x.ndim != 2:
         raise ValueError("data needs to be two dimensional")
-    nobs, k_vars = x.shape  # noqa: F841
+    nobs, k_vars = x.shape
     cov = np.diag(scale_func(x) ** 2)
     for i in range(k_vars):
         for j in range(i):
@@ -480,7 +485,7 @@ def cov_ogk(
     ----------
     .. [1] Maronna, Ricardo A, and Ruben H Zamar. “Robust Estimates of Location
        and Dispersion for High-Dimensional Datasets.” Technometrics 44, no. 4
-       (November 1, 2002): 307–17. https://doi.org/10.1198/004017002188618509.
+       (November 1, 2002): 307-17. https://doi.org/10.1198/004017002188618509.
 
     """
     if reweight is False:
@@ -493,7 +498,7 @@ def cov_ogk(
     x = np.asarray(data)
     if x.ndim != 2:
         raise ValueError("data needs to be two dimensional")
-    nobs, k_vars = x.shape  # noqa: F841
+    nobs, k_vars = x.shape
     z = x
     transf0 = np.eye(k_vars)
     for _ in range(maxiter):
@@ -502,7 +507,7 @@ def cov_ogk(
         corr = cov_func(zs, scale_func=scale_func)
         # Maronna, Zamar set diagonal to 1, otherwise small difference to 1
         corr[np.arange(k_vars), np.arange(k_vars)] = 1
-        evals, evecs = np.linalg.eigh(corr)  # noqa: F841
+        evals, evecs = np.linalg.eigh(corr)
         transf = evecs * scale[:, None]  # A matrix in Maronna, Zamar
         # z = np.linalg.solve(transf, z.T).T
         z = zs.dot(evecs)
@@ -619,13 +624,13 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     References
     ----------
     .. [1] Tyler, David E. “A Distribution-Free M-Estimator of Multivariate
-       Scatter.” The Annals of Statistics 15, no. 1 (March 1, 1987): 234–51.
+       Scatter.” The Annals of Statistics 15, no. 1 (March 1, 1987): 234-51.
     .. [2] Soloveychik, I., and A. Wiesel. 2014. Tyler's Covariance Matrix
        Estimator in Elliptical Models With Convex Structure.
        IEEE Transactions on Signal Processing 62 (20): 5251-59.
        doi:10.1109/TSP.2014.2348951.
     .. [3] Ollila, Esa, Daniel P. Palomar, and Frederic Pascal.
-       “Affine Equivariant Tyler’s M-Estimator Applied to Tail Parameter
+       “Affine Equivariant Tyler`s M-Estimator Applied to Tail Parameter
        Learning of Elliptical Distributions.” arXiv, May 7, 2023.
        https://doi.org/10.48550/arXiv.2305.04330.
 
@@ -640,12 +645,14 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         c = np.diag(mad(x, center=0) ** 2)
 
     # Tyler's M-estimator of shape (scatter) matrix
-    for i in range(maxiter):
+    n_iter = 0
+    for _ in range(maxiter):
         # this is old code, slower than new version, but more literal
         # c_inv = np.linalg.pinv(c)
         # c_old = c
         # c = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi))
         #              for xi in x)
+        n_iter += 1
         c_old = c
         ichol, _ = dtrtri(linalg.cholesky(c, lower=False), lower=0)
         v = x @ ichol
@@ -672,7 +679,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         msg = 'normalize needs to be False, "trace", "det" or "normal"'
         raise ValueError(msg)
 
-    return Holder(cov=c, n_iter=i, method="tyler")
+    return Holder(cov=c, n_iter=n_iter, method="tyler")
 
 
 def cov_tyler_regularized(
@@ -723,7 +730,7 @@ def cov_tyler_regularized(
     ----------
     .. [1] Chen, Yilun, A. Wiesel, and A.O. Hero. “Robust Shrinkage
        Estimation of High-Dimensional Covariance Matrices.” IEEE Transactions
-       on Signal Processing 59, no. 9 (September 2011): 4097–4107.
+       on Signal Processing 59, no. 9 (September 2011): 4097-4107.
        https://doi.org/10.1109/TSP.2011.2138698.
 
 
@@ -758,7 +765,9 @@ def cov_tyler_regularized(
 
     identity = np.eye(k_vars)
 
+    n_iter = 0
     for i in range(maxiter):
+        n_iter += i
         c_inv = np.linalg.pinv(c)
         c_old = c
         # this could be vectorized but could use a lot of memory
@@ -775,7 +784,7 @@ def cov_tyler_regularized(
         if diff < eps:
             break
 
-    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor, corr=corr)
+    res = Holder(cov=c, n_iter=n_iter, shrinkage_factor=shrinkage_factor, corr=corr)
     return res
 
 
@@ -837,7 +846,7 @@ def cov_tyler_pairs_regularized(
     ----------
     .. [1] Chen, Yilun, A. Wiesel, and A.O. Hero. “Robust Shrinkage Estimation
        of High-Dimensional Covariance Matrices.” IEEE Transactions on Signal
-       Processing 59, no. 9 (September 2011): 4097–4107.
+       Processing 59, no. 9 (September 2011): 4097-4107.
        https://doi.org/10.1109/TSP.2011.2138698.
 
     """
@@ -871,7 +880,9 @@ def cov_tyler_pairs_regularized(
 
     identity = np.eye(k_vars)
     kn = k_vars * 1.0 / nobs
-    for i in range(maxiter):
+    n_iter = 0
+    for _ in range(maxiter):
+        n_iter += 1
         c_inv = np.linalg.pinv(c)
         c_old = c
         # this could be vectorized but could use a lot of memory
@@ -893,7 +904,7 @@ def cov_tyler_pairs_regularized(
         if diff < eps:
             break
 
-    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor, corr=corr)
+    res = Holder(cov=c, n_iter=n_iter, shrinkage_factor=shrinkage_factor, corr=corr)
     return res
 
 
@@ -1092,14 +1103,16 @@ def _cov_iter(
 
     """
     data = np.asarray(data)
-    nobs, k_vars = data.shape  # noqa: F841
+    nobs, k_vars = data.shape
 
     if cov_init is None:
         cov_init = np.cov(data.T)
 
     converged = False
     cov = cov_old = cov_init
-    for it in range(maxiter):
+    n_iter = 0
+    for _ in range(maxiter):
+        n_iter += 1
         dist = mahalanobis(data, cov=cov)
         w = weights_func(dist, *weights_args)
         cov, mean = cov_weighted(data, w)
@@ -1124,7 +1137,7 @@ def _cov_iter(
         weights=w,
         mahalanobis=dist,
         scale_factor=s,
-        n_iter=it,
+        n_iter=n_iter,
         converged=converged,
         method="m-estimator",
         weights_func=weights_func,
@@ -1310,7 +1323,7 @@ def _orthogonalize_det(x, corr, loc_func, scale_func):
     z is the data here, zscored with robust estimators,
     e.g. median and Qn in DetMCD
     """
-    evals, evecs = np.linalg.eigh(corr)  # noqa: F841
+    evals, evecs = np.linalg.eigh(corr)
     z = x.dot(evecs)
     transf0 = evecs
 
@@ -1555,7 +1568,9 @@ class CovM:
         if update_scale is False:
             scale = start_scale
 
-        for i in range(maxiter):
+        n_iter = 0
+        for _ in range(maxiter):
+            n_iter += 1
             shape, mean = self._fit_mean_shape(mean_old, shape_old, scale_old)
             d = mahalanobis(self.data - mean, shape, sqrt=True)
             if update_scale:
@@ -1565,7 +1580,7 @@ class CovM:
                 np.allclose(scale, scale_old, rtol=1e-5)
                 and np.allclose(mean, mean_old, rtol=1e-5)
                 and np.allclose(shape, shape_old, rtol=1e-5)
-            ):  # noqa E124
+            ):
                 converged = True
                 break
             scale_old = scale
@@ -1580,7 +1595,7 @@ class CovM:
             scale=scale,
             cov=shape * scale**2,
             converged=converged,
-            n_iter=i,
+            n_iter=n_iter,
             mahalanobis=maha,
         )
         return res
@@ -1616,11 +1631,11 @@ class CovDetMCD:
     ----------
     ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
        “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
-       Computational Statistics & Data Analysis 81 (January): 64–75.
+       Computational Statistics & Data Analysis 81 (January): 64-75.
        https://doi.org/10.1016/j.csda.2014.07.013.
     ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
-       Computational and Graphical Statistics 21 (3): 618–37.
+       Computational and Graphical Statistics 21 (3): 618-37.
        https://doi.org/10.1080/10618600.2012.672100.
     """
 
@@ -1751,7 +1766,8 @@ class CovDetMCD:
         if h is None:
             h = (nobs + k_vars + 1) // 2  # check with literature
         if mean_func is None:
-            mean_func = lambda x: np.median(x, axis=0)  # noqa
+            def mean_func(x):
+                return np.median(x, axis=0)
         if scale_func is None:
             scale_func = mad
         if options_start is None:
@@ -1853,11 +1869,11 @@ class CovDetS:
     ----------
     ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
        “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
-       Computational Statistics & Data Analysis 81 (January): 64–75.
+       Computational Statistics & Data Analysis 81 (January): 64-75.
        https://doi.org/10.1016/j.csda.2014.07.013.
     ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
-       Computational and Graphical Statistics 21 (3): 618–37.
+       Computational and Graphical Statistics 21 (3): 618-37.
        https://doi.org/10.1080/10618600.2012.672100.
     """
 
@@ -1988,7 +2004,9 @@ class CovDetS:
         nobs, k_vars = x.shape
 
         if mean_func is None:
-            mean_func = lambda x: np.median(x, axis=0)  # noqa
+
+            def mean_func(x):
+                return np.median(x, axis=0)
         if scale_func is None:
             scale_func = mad
         if options_start is None:
@@ -2084,22 +2102,22 @@ class CovDetMM:
     ----------
     ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
        “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
-       Computational Statistics & Data Analysis 81 (January): 64–75.
+       Computational Statistics & Data Analysis 81 (January): 64-75.
        https://doi.org/10.1016/j.csda.2014.07.013.
     ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
-       Computational and Graphical Statistics 21 (3): 618–37.
+       Computational and Graphical Statistics 21 (3): 618-37.
        https://doi.org/10.1080/10618600.2012.672100.
     ..[3] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators and
        M-Estimators of Multivariate Location and Covariance.” The Annals of
-       Statistics 17 (4): 1662–83.
+       Statistics 17 (4): 1662-83.
     ..[4] Salibián-Barrera, Matías, Stefan Van Aelst, and Gert Willems. 2006.
        “Principal Components Analysis Based on Multivariate MM Estimators with
        Fast and Robust Bootstrap.” Journal of the American Statistical
-       Association 101 (475): 1198–1211.
+       Association 101 (475): 1198-1211.
     ..[5] Tatsuoka, Kay S., and David E. Tyler. 2000. “On the Uniqueness of
        S-Functionals and M-Functionals under Nonelliptical Distributions.” The
-       Annals of Statistics 28 (4): 1219–43.
+       Annals of Statistics 28 (4): 1219-43.
     """
 
     def __init__(self, data, norm=None, breakdown_point=0.5, efficiency=0.95):

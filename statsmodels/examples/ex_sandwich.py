@@ -5,13 +5,12 @@ Author: Josef Perktold
 """
 
 from statsmodels.compat.python import lzip
+
 import numpy as np
 from numpy.testing import assert_almost_equal
 
 import statsmodels.api as sm
-
 import statsmodels.stats.sandwich_covariance as sw
-
 
 nobs = 100
 kvars = 4  # including constant

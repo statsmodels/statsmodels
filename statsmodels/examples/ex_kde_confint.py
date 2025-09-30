@@ -5,12 +5,13 @@ Created on Mon Dec 16 11:02:59 2013
 Author: Josef Perktold
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
-import matplotlib.pyplot as plt
+
+from statsmodels.distributions.mixture_rvs import mixture_rvs
 import statsmodels.nonparametric.api as npar
 from statsmodels.sandbox.nonparametric import kernels
-from statsmodels.distributions.mixture_rvs import mixture_rvs
 
 # example from test_kde.py mixture of two normal distributions
 np.random.seed(12345)

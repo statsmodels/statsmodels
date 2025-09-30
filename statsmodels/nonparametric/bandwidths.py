@@ -1,7 +1,8 @@
+from statsmodels.compat.pandas import Substitution
+
 import numpy as np
 from scipy.stats import scoreatpercentile
 
-from statsmodels.compat.pandas import Substitution
 from statsmodels.sandbox.nonparametric import kernels
 
 
@@ -176,9 +177,11 @@ def select_bandwidth(x, bw, kernel):
     bandwidth = bandwidth_funcs[bw](x, kernel)
     if np.any(bandwidth == 0):
         # eventually this can fall back on another selection criterion.
-        err = "Selected KDE bandwidth is 0. Cannot estimate density. " \
-              "Either provide the bandwidth during initialization or use " \
-              "an alternative method."
+        err = (
+            "Selected KDE bandwidth is 0. Cannot estimate density. "
+            "Either provide the bandwidth during initialization or use "
+            "an alternative method."
+        )
         raise RuntimeError(err)
     else:
         return bandwidth

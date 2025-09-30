@@ -137,7 +137,7 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
     return fig
 
 
-def test_chisquare_prob(results, probs, bin_edges=None, method=None):
+def test_chisquare_prob(results, probs, bin_edges=None):
     """
     chisquare test for predicted probabilities using cmt-opg
 
@@ -180,15 +180,15 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
     References
     ----------
     .. [1] Andrews, Donald W. K. 1988a. “Chi-Square Diagnostic Tests for
-           Econometric Models: Theory.” Econometrica 56 (6): 1419–53.
+           Econometric Models: Theory.” Econometrica 56 (6): 1419-53.
            https://doi.org/10.2307/1913105.
 
     .. [2] Andrews, Donald W. K. 1988b. “Chi-Square Diagnostic Tests for
-           Econometric Models.” Journal of Econometrics 37 (1): 135–56.
+           Econometric Models.” Journal of Econometrics 37 (1): 135-56.
            https://doi.org/10.1016/0304-4076(88)90079-6.
 
     .. [3] Manjón, M., and O. Martínez. 2014. “The Chi-Squared Goodness-of-Fit
-           Test for Count-Data Models.” Stata Journal 14 (4): 798–816.
+           Test for Count-Data Models.” Stata Journal 14 (4): 798-816.
     """
     res = results
     score_obs = results.model.score_obs(results.params)
@@ -247,7 +247,7 @@ class DispersionResults(HolderTuple):
         return frame
 
 
-def test_poisson_dispersion(results, method="all", _old=False):
+def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
     """Score/LM type tests for Poisson variance assumptions
 
     Null Hypothesis is
@@ -471,7 +471,7 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     ----------
     .. [1] Jansakul, N., and J. P. Hinde. 2002. “Score Tests for Zero-Inflated
            Poisson Models.” Computational Statistics & Data Analysis 40 (1):
-           75–96. https://doi.org/10.1016/S0167-9473(01)00104-9.
+           75-96. https://doi.org/10.1016/S0167-9473(01)00104-9.
     """
     if not isinstance(results_poisson.model, Poisson):
         # GLM Poisson would be also valid, not tried
@@ -531,7 +531,7 @@ def test_poisson_zeroinflation_broek(results_poisson):
     References
     ----------
     .. [1] Broek, Jan van den. 1995. “A Score Test for Zero Inflation in a
-           Poisson Distribution.” Biometrics 51 (2): 738–43.
+           Poisson Distribution.” Biometrics 51 (2): 738-43.
            https://doi.org/10.2307/2532959.
 
     """
@@ -577,7 +577,7 @@ def test_poisson_zeros(results):
 
     .. [2] He, Hua, Hui Zhang, Peng Ye, and Wan Tang. 2019. “A Test of Inflated
            Zeros for Poisson Regression Models.” Statistical Methods in
-           Medical Research 28 (4): 1157–69.
+           Medical Research 28 (4): 1157-69.
            https://doi.org/10.1177/0962280217749991.
 
     """

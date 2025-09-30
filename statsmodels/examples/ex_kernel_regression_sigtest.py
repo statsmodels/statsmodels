@@ -35,6 +35,7 @@ times: 8.34599995613 20.6909999847 666.373999834
 import time
 
 import numpy as np
+
 import statsmodels.nonparametric.api as nparam
 import statsmodels.nonparametric.kernel_regression as smkr
 

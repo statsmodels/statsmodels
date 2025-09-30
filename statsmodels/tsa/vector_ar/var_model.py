@@ -15,7 +15,7 @@ from io import StringIO
 
 import numpy as np
 import pandas as pd
-import scipy.stats as stats
+from scipy import stats
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.table import SimpleTable
@@ -68,7 +68,7 @@ def ma_rep(coefs, maxn=10):
     -------
     phis : ndarray (maxn + 1 x k x k)
     """
-    p, k, k = coefs.shape
+    p, k, _ = coefs.shape
     phis = np.zeros((maxn + 1, k, k))
     phis[0] = np.eye(k)
 
@@ -233,7 +233,7 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     p, k = coefs.shape[:2]
     if y.shape[0] < p:
         raise ValueError(
-            f"y must by have at least order ({p}) observations. " f"Got {y.shape[0]}."
+            f"y must by have at least order ({p}) observations. Got {y.shape[0]}."
         )
     # initial value
     forcs = np.zeros((steps, k))
@@ -511,8 +511,8 @@ class LagOrderResults:
     def __str__(self):
         return (
             f"<{self.__module__}.{self.__class__.__name__} object. Selected "
-            f"orders are: AIC -> {str(self.aic)}, BIC -> {str(self.bic)}, "
-            f"FPE -> {str(self.fpe)}, HQIC ->  {str(self.hqic)}>"
+            f"orders are: AIC -> {self.aic}, BIC -> {self.bic}, "
+            f"FPE -> {self.fpe}, HQIC ->  {self.hqic}>"
         )
 
 
@@ -660,9 +660,8 @@ class VAR(TimeSeriesModel):
             if verbose:
                 print(selections)
                 print("Using %d based on %s criterion" % (lags, ic))
-        else:
-            if lags is None:
-                lags = 1
+        elif lags is None:
+            lags = 1
 
         k_trend = util.get_trendorder(trend)
         orig_exog_names = self.exog_names
@@ -786,7 +785,7 @@ class VAR(TimeSeriesModel):
         ntrend = len(trend) if trend.startswith("c") else 0
         max_estimable = (self.n_totobs - self.neqs - ntrend) // (1 + self.neqs)
         if maxlags is None:
-            maxlags = int(round(12 * (len(self.endog) / 100.0) ** (1 / 4.0)))
+            maxlags = round(12 * (len(self.endog) / 100.0) ** (1 / 4.0))
             # TODO: This expression shows up in a bunch of places, but
             #  in some it is `int` and in others `np.ceil`.  Also in some
             #  it multiplies by 4 instead of 12.  Let's put these all in
@@ -794,13 +793,12 @@ class VAR(TimeSeriesModel):
 
             # Ensure enough obs to estimate model with maxlags
             maxlags = min(maxlags, max_estimable)
-        else:
-            if maxlags > max_estimable:
-                raise ValueError(
-                    "maxlags is too large for the number of observations and "
-                    "the number of equations. The largest model cannot be "
-                    "estimated."
-                )
+        elif maxlags > max_estimable:
+            raise ValueError(
+                "maxlags is too large for the number of observations and "
+                "the number of equations. The largest model cannot be "
+                "estimated."
+            )
 
         ics = defaultdict(list)
         p_min = 0 if self.exog is not None or trend != "n" else 1
@@ -961,12 +959,11 @@ class VARProcess:
                 steps = 1000
             else:
                 steps = steps_
-        else:
-            if steps_ is not None and steps != steps_:
-                raise ValueError(
-                    "if exog or offset are used, then steps must"
-                    "be equal to their length or None"
-                )
+        elif steps_ is not None and steps != steps_:
+            raise ValueError(
+                "if exog or offset are used, then steps must"
+                "be equal to their length or None"
+            )
 
         y = util.varsim(
             self.coefs,
@@ -1116,11 +1113,11 @@ class VARProcess:
         """
         if self.exog is None and exog_future is not None:
             raise ValueError(
-                "No exog in model, so no exog_future supported " "in forecast method."
+                "No exog in model, so no exog_future supported in forecast method."
             )
         if self.exog is not None and exog_future is None:
             raise ValueError(
-                "Please provide an exog_future argument to " "the forecast method."
+                "Please provide an exog_future argument to the forecast method."
             )
 
         exog_future = array_like(exog_future, "exog_future", optional=True, ndim=2)
@@ -1633,7 +1630,7 @@ class VARResults(VARProcess):
                 import warnings
 
                 warnings.warn(
-                    "forecast cov takes parameter uncertainty into" "account",
+                    "forecast cov takes parameter uncertainty intoaccount",
                     OutputWarning,
                     stacklevel=2,
                 )
@@ -1837,7 +1834,7 @@ class VARResults(VARProcess):
         """
         if var_order is not None:
             raise NotImplementedError(
-                "alternate variable order not implemented" " (yet)"
+                "alternate variable order not implemented (yet)"
             )
 
         return IRAnalysis(self, P=var_decomp, periods=periods)
@@ -1862,7 +1859,7 @@ class VARResults(VARProcess):
         # This converts order to list of integers if given as strings
         if isinstance(order[0], str):
             order_new = []
-            for i, nam in enumerate(order):
+            for i, _ in enumerate(order):
                 order_new.append(self.names.index(order[i]))
             order = order_new
         return _reordered(self, order)
@@ -2073,7 +2070,7 @@ class VARResults(VARProcess):
         if not all(isinstance(c, allowed_types) for c in causing):
             raise TypeError(
                 "causing has to be of type string or int (or a "
-                + "a sequence of these types)."
+                "a sequence of these types)."
             )
         causing = [self.names[c] if type(c) is int else c for c in causing]
         causing_ind = [util.get_index(self.names, c) for c in causing]
@@ -2331,7 +2328,7 @@ class VARResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(TimeSeriesResultsWrapper._wrap_methods, _methods)
 
 
-wrap.populate_wrapper(VARResultsWrapper, VARResults)  # noqa:E305
+wrap.populate_wrapper(VARResultsWrapper, VARResults)
 
 
 class FEVD:

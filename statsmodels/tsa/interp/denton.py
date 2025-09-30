@@ -1,7 +1,6 @@
 import numpy as np
-from numpy import dot, eye, diag_indices, zeros, ones, diag, asarray, r_
+from numpy import asarray, diag, diag_indices, dot, ones, r_, zeros
 from numpy.linalg import solve
-
 
 # def denton(indicator, benchmark, freq="aq", **kwarg):
 #    """
@@ -164,10 +163,10 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     # check arrays and make 2d
     indicator = asarray(indicator)
     if indicator.ndim == 1:
-        indicator = indicator[:,None]
+        indicator = indicator[:, None]
     benchmark = asarray(benchmark)
     if benchmark.ndim == 1:
-        benchmark = benchmark[:,None]
+        benchmark = benchmark[:, None]
 
     # get dimensions
     N = len(indicator)  # total number of high-freq
@@ -182,7 +181,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     elif freq == "other":
         k = kwargs.get("k")
         if not k:
-            raise ValueError("k must be supplied with freq=\"other\"")
+            raise ValueError('k must be supplied with freq="other"')
     else:
         raise ValueError("freq %s not understood" % freq)
 
@@ -195,7 +194,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
     # make the aggregator matrix
     # B = block_diag(*(ones((k,1)),)*m)
-    B = np.kron(np.eye(m), ones((k,1)))
+    B = np.kron(np.eye(m), ones((k, 1)))
 
     # following the IMF paper, we can do
     Zinv = diag(1./indicator.squeeze()[:n])
@@ -207,24 +206,24 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 #    H = D[1:,:]
 #    HTH = dot(H.T,H)
     # just make HTH
-    HTH = eye(n)
+    HTH = np.eye(n)
     diag_idx0, diag_idx1 = diag_indices(n)
     HTH[diag_idx0[1:-1], diag_idx1[1:-1]] += 1
     HTH[diag_idx0[:-1]+1, diag_idx1[:-1]] = -1
     HTH[diag_idx0[:-1], diag_idx1[:-1]+1] = -1
 
-    W = dot(dot(Zinv,HTH),Zinv)
+    W = dot(dot(Zinv, HTH), Zinv)
 
     # make partitioned matrices
     # TODO: break this out so that we can simplify the linalg?
-    I = zeros((n+m, n+m))  # noqa:E741
-    I[:n,:n] = W
-    I[:n,n:] = B
-    I[n:,:n] = B.T
+    eye = zeros((n+m, n+m))
+    eye[:n, :n] = W
+    eye[:n, n:] = B
+    eye[n:, :n] = B.T
 
-    A = zeros((m+n,1))  # zero first-order constraints
+    A = zeros((m+n, 1))  # zero first-order constraints
     A[-m:] = benchmark  # adding up constraints
-    X = solve(I,A)
+    X = solve(eye, A)
     X = X[:-m]   # drop the lagrange multipliers
 
     # handle extrapolation
@@ -232,7 +231,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         # get last Benchmark-Indicator ratio
         bi = X[n-1]/indicator[n-1]
         extrapolated = bi * indicator[n:]
-        X = r_[X,extrapolated]
+        X = r_[X, extrapolated]
 
     return X.squeeze()
 
@@ -245,7 +244,7 @@ if __name__ == "__main__":
     indicator = np.array([98.2, 100.8, 102.2, 100.8, 99.0, 101.6,
                           102.7, 101.5, 100.5, 103.0, 103.5, 101.5])
     # two annual observations
-    benchmark = np.array([4000.,4161.4])
+    benchmark = np.array([4000., 4161.4])
     x_imf = dentonm(indicator, benchmark, freq="aq")
 
     imf_stata = np.array([
@@ -255,14 +254,14 @@ if __name__ == "__main__":
     np.testing.assert_almost_equal(imf_stata, x_imf, 1)
 
     # Denton example
-    zQ = np.array([50,100,150,100] * 5)
-    Y = np.array([500,400,300,400,500])
+    zQ = np.array([50, 100, 150, 100] * 5)
+    Y = np.array([500, 400, 300, 400, 500])
     x_denton = dentonm(zQ, Y, freq="aq")
     x_stata = np.array([
-        64.334796,127.80616,187.82379,120.03526,56.563894,
-        105.97568,147.50144,89.958987,40.547201,74.445963,
-        108.34473,76.66211,42.763347,94.14664,153.41596,
-        109.67405,58.290761,122.62556,190.41409,128.66959
+        64.334796, 127.80616, 187.82379, 120.03526, 56.563894,
+        105.97568, 147.50144, 89.958987, 40.547201, 74.445963,
+        108.34473, 76.66211, 42.763347, 94.14664, 153.41596,
+        109.67405, 58.290761, 122.62556, 190.41409, 128.66959
     ])
 
 

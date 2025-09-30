@@ -1104,10 +1104,13 @@ class TukeyQuartic(RobustNorm):
         #     1/2 x^2 (-(4 (x/c)^k)/(k + 2) + (x/c)^(2 k)/(k + 1) + 1) +
         #     constant
         rh = (
-            subset * 1 / 2 * z**2 *
-                (1 - 4 / (k + 2) * x**k + 1 / (k + 1) * x**(2 * k)) +  # noqa
-            (1 - subset) * rhoc
-            )
+            subset
+            * 1
+            / 2
+            * z**2
+            * (1 - 4 / (k + 2) * x**k + 1 / (k + 1) * x ** (2 * k))
+            + (1 - subset) * rhoc
+        )
         return rh
 
     def psi(self, z):
@@ -1329,17 +1332,17 @@ class MQuantileNorm(RobustNorm):
     .. [*] Bianchi, Annamaria, and Nicola Salvati. 2015. “Asymptotic Properties
        and Variance Estimators of the M-Quantile Regression Coefficients
        Estimators.” Communications in Statistics - Theory and Methods 44 (11):
-       2416–29. doi:10.1080/03610926.2013.791375.
+       2416-29. doi:10.1080/03610926.2013.791375.
 
     .. [*] Breckling, Jens, and Ray Chambers. 1988. “M-Quantiles.”
-       Biometrika 75 (4): 761–71. doi:10.2307/2336317.
+       Biometrika 75 (4): 761-71. doi:10.2307/2336317.
 
     .. [*] Jones, M. C. 1994. “Expectiles and M-Quantiles Are Quantiles.”
-       Statistics & Probability Letters 20 (2): 149–53.
+       Statistics & Probability Letters 20 (2): 149-53.
        doi:10.1016/0167-7152(94)90031-0.
 
     .. [*] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric Least
-       Squares Estimation and Testing.” Econometrica 55 (4): 819–47.
+       Squares Estimation and Testing.” Econometrica 55 (4): 819-47.
        doi:10.2307/1911031.
     """
 
@@ -1411,7 +1414,7 @@ class MQuantileNorm(RobustNorm):
         return qq * self.base_norm.weights(z)
 
     def psi_deriv(self, z):
-        '''
+        """
         The derivative of MQuantileNorm function
 
         Parameters
@@ -1426,7 +1429,7 @@ class MQuantileNorm(RobustNorm):
         Notes
         -----
         Used to estimate the robust covariance matrix.
-        '''
+        """
         qq = self._get_q(z)
         return qq * self.base_norm.psi_deriv(z)
 

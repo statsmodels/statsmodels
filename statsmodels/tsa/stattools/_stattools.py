@@ -43,28 +43,28 @@ from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 ArrayLike1D = Union[np.ndarray, pd.Series, list[float]]
 
 __all__ = [
-    "breakvar_heteroskedasticity_test",
-    "grangercausalitytests",
-    "acovf",
     "acf",
-    "pacf",
-    "pacf_yw",
-    "pacf_ols",
-    "ccovf",
-    "ccf",
-    "q_stat",
-    "coint",
+    "acovf",
     "adfuller",
-    "kpss",
     "bds",
-    "pacf_burg",
+    "breakvar_heteroskedasticity_test",
+    "ccf",
+    "ccovf",
+    "coint",
+    "grangercausalitytests",
     "innovations_algo",
     "innovations_filter",
+    "kpss",
     "lagmat",
-    "levinson_durbin_pacf",
     "levinson_durbin",
-    "zivot_andrews",
+    "levinson_durbin_pacf",
+    "pacf",
+    "pacf_burg",
+    "pacf_ols",
+    "pacf_yw",
+    "q_stat",
     "range_unit_root_test",
+    "zivot_andrews",
 ]
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
@@ -291,7 +291,7 @@ def adfuller(
         maxlag = min(nobs // 2 - ntrend - 1, maxlag)
         if maxlag < 0:
             raise ValueError(
-                "sample size is too short to use selected " "regression component"
+                "sample size is too short to use selected regression component"
             )
     elif maxlag > nobs // 2 - ntrend - 1:
         raise ValueError(
@@ -376,11 +376,10 @@ def adfuller(
         resstore.icbest = icbest
         resstore._str = "Augmented Dickey-Fuller Test Results"
         return adfstat, pvalue, critvalues, resstore
+    elif not autolag:
+        return adfstat, pvalue, usedlag, nobs, critvalues
     else:
-        if not autolag:
-            return adfstat, pvalue, usedlag, nobs, critvalues
-        else:
-            return adfstat, pvalue, usedlag, nobs, critvalues, icbest
+        return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 
 @deprecate_kwarg("unbiased", "adjusted")
@@ -481,16 +480,15 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
                 acov /= n - np.arange(lag_len + 1)
             else:
                 acov /= n
-        else:
-            if adjusted:
-                divisor = np.empty(lag_len + 1, dtype=np.int64)
-                divisor[0] = notmask_int.sum()
-                for i in range(lag_len):
-                    divisor[i + 1] = notmask_int[i + 1 :].dot(notmask_int[: -(i + 1)])
-                divisor[divisor == 0] = 1
-                acov /= divisor
-            else:  # biased, missing data but npt "drop"
-                acov /= notmask_int.sum()
+        elif adjusted:
+            divisor = np.empty(lag_len + 1, dtype=np.int64)
+            divisor[0] = notmask_int.sum()
+            for i in range(lag_len):
+                divisor[i + 1] = notmask_int[i + 1 :].dot(notmask_int[: -(i + 1)])
+            divisor[divisor == 0] = 1
+            acov /= divisor
+        else:  # biased, missing data but npt "drop"
+            acov /= notmask_int.sum()
         return acov
 
     if adjusted and deal_with_masked and missing == "conservative":
@@ -754,8 +752,9 @@ def pacf_yw(
     pacf = [1.0]
     with warnings.catch_warnings():
         warnings.simplefilter("once", ValueWarning)
-        for k in range(1, nlags + 1):
-            pacf.append(yule_walker(x, k, method=method)[0][-1])
+        pacf.extend(
+            [yule_walker(x, k, method=method)[0][-1] for k in range(1, nlags + 1)]
+        )
     return np.array(pacf)
 
 
@@ -1279,7 +1278,7 @@ def levinson_durbin_pacf(pacf, nlags=None):
 
     if pacf[0] != 1:
         raise ValueError(
-            "The first entry of the pacf corresponds to lags 0 " "and so must be 1."
+            "The first entry of the pacf corresponds to lags 0 and so must be 1."
         )
     pacf = pacf[1:]
     n = pacf.shape[0]
@@ -1421,21 +1420,19 @@ def breakvar_heteroskedasticity_test(
     if use_f:
         from scipy.stats import f
 
-        pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
-            test_statistics, numer_dof, denom_dof
-        )
-        pval_upper = lambda test_statistics: f.sf(  # noqa:E731
-            test_statistics, numer_dof, denom_dof
-        )
+        def pval_lower(test_statistics):
+            return f.cdf(test_statistics, numer_dof, denom_dof)
+
+        def pval_upper(test_statistics):
+            return f.sf(test_statistics, numer_dof, denom_dof)
     else:
         from scipy.stats import chi2
 
-        pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
-            numer_dof * test_statistics, denom_dof
-        )
-        pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
-            numer_dof * test_statistics, denom_dof
-        )
+        def pval_lower(test_statistics):
+            return chi2.cdf(numer_dof * test_statistics, denom_dof)
+
+        def pval_upper(test_statistics):
+            return chi2.sf(numer_dof * test_statistics, denom_dof)
 
     # Calculate the one- or two-sided p-values
     alternative = alternative.lower()
@@ -1551,13 +1548,13 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
         if maxlag <= 0:
             raise ValueError("maxlag must be a positive integer")
         lags = np.arange(1, maxlag + 1)
-    except TypeError:
+    except TypeError as exc:
         lags = np.array([int(lag) for lag in maxlag])
         maxlag = lags.max()
         if lags.min() <= 0 or lags.size == 0:
             raise ValueError(
-                "maxlag must be a non-empty list containing only " "positive integers"
-            )
+                "maxlag must be a non-empty list containing only positive integers"
+            ) from exc
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError(

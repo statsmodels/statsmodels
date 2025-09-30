@@ -1,13 +1,15 @@
-import numpy as np
 import os
+
+import numpy as np
 import pandas as pd
+
 from statsmodels.tools.testing import Holder
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 results_meth = Holder()
-results_meth.type = 'ML'
-results_meth.method = 'BFGS'
+results_meth.type = "ML"
+results_meth.method = "BFGS"
 results_meth.scoring = 3
 results_meth.start = np.array([
     1.44771372395646, 0.0615237727637243, 0.604926837329731, 0.98389051740736,
@@ -31,7 +33,7 @@ results_meth.vcov = np.array([
     0.000331499252772628, 3.20761137509433, -0.0581708456538647,
     -1.44829373972985e-05, 4.18754929463506e-05, 1.14762434349836e-07,
     1.93773358431975e-07, -0.0581708456538647, 0.00107353277853341
-    ]).reshape(6, 6, order='F')
+    ]).reshape(6, 6, order="F")
 results_meth.pseudo_r_squared = 0.905194911478503
 results_meth.y = np.array([
     0.815, 0.803, 0.803, 0.808, 0.855, 0.813, 0.816, 0.827, 0.829, 0.776,
@@ -43,7 +45,7 @@ results_meth.y = np.array([
 # > cat_items(summ_meth, prefix="results_meth.")
 # duplicate deleted
 
-results_meth.residuals_type = 'sweighted2'
+results_meth.residuals_type = "sweighted2"
 results_meth.iterations = np.array([
     12, 3
     ])
@@ -54,13 +56,13 @@ results_meth.table_mean = np.array([
     0.0531104241011462, 42.4038504677562, 1.60255085761448, 12.5633843785881,
     18.3306314080896, 0, 0.109033850726723, 3.35661710796797e-36,
     4.71401008973566e-75
-    ]).reshape(4, 4, order='F')
+    ]).reshape(4, 4, order="F")
 
 results_meth.table_precision = np.array([
     8.22828526376512, -0.0347054296138766, 1.79098056245575,
     0.0327648100640521, 4.59429065633335, -1.05922877459173,
     4.34223794561173e-06, 0.289495603466561
-    ]).reshape(2, 4, order='F')
+    ]).reshape(2, 4, order="F")
 
 results_meth.aic = -196.296056810686
 results_meth.bic = -186.79494317995
@@ -71,13 +73,13 @@ results_meth.table_mean_oim = np.array([
     0.053386889034385, 42.362435567127, 1.60271563734762, 12.3925442590004,
     18.2357056075048, 0, 0.108997449531221, 2.86797597854623e-35,
     2.68762966306205e-74
-    ]).reshape(4, 4, order='F')
+    ]).reshape(4, 4, order="F")
 
 results_meth.table_precision_oim = np.array([
     8.22828540005571, -0.0347054322904486, 1.83887205150239,
     0.0336205378385678, 4.4746372611042, -1.0322688012039,
     7.65411434417314e-06, 0.301946212204644
-    ]).reshape(2, 4, order='F')
+    ]).reshape(2, 4, order="F")
 
 results_meth.resid = pd.read_csv(os.path.join(cur_dir,
-                                              'resid_methylation.csv'))
+                                              "resid_methylation.csv"))

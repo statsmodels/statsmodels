@@ -154,12 +154,11 @@ def _fitstart_poisson(self, x, fixed=None):
     if fixed is None:
         # this part not checked with books
         loc = a - eps
+    elif np.isnan(fixed[-1]):
+        # estimate loc
+        loc = a - eps
     else:
-        if np.isnan(fixed[-1]):
-            # estimate loc
-            loc = a - eps
-        else:
-            loc = fixed[-1]
+        loc = fixed[-1]
 
     # MLE for standard (unshifted, if loc=0) Poisson distribution
 
@@ -185,8 +184,8 @@ def nnlf_fr(self, thetash, x, frmask):
         loc = theta[-2]
         scale = theta[-1]
         args = tuple(theta[:-2])
-    except IndexError:
-        raise ValueError("Not enough input arguments.")
+    except IndexError as exc:
+        raise ValueError("Not enough input arguments.") from exc
     if not self._argcheck(*args) or scale <= 0:
         return np.inf
     x = np.array((x - loc) / scale)
@@ -333,20 +332,20 @@ def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional
     if fn is None:
 
         def fun(x, *args):
-            return x * self.pdf(x, loc=loc, scale=scale, *args)
+            return x * self.pdf(x, loc, scale, *args)
 
     else:
 
         def fun(x, *args):
-            return fn(x) * self.pdf(x, loc=loc, scale=scale, *args)
+            return fn(x) * self.pdf(x, loc, scale, *args)
 
     if lb is None:
         lb = loc + self.a * scale  # (self.a - loc)/(1.0*scale)
     if ub is None:
         ub = loc + self.b * scale  # (self.b - loc)/(1.0*scale)
     if conditional:
-        invfac = self.sf(lb, loc=loc, scale=scale, *args) - self.sf(
-            ub, loc=loc, scale=scale, *args
+        invfac = self.sf(lb, loc, scale, *args) - self.sf(
+            ub, loc, scale, *args
         )
     else:
         invfac = 1.0

@@ -186,7 +186,7 @@ def scoreatpercentile(data, per, limit=(), alphap=0.4, betap=0.4, axis=0, maskna
     per = np.asarray(per, float)
     if (per < 0).any() or (per > 100.0).any():
         raise ValueError(
-            "The percentile should be between 0. and 100. !" " (got %s)" % per
+            "The percentile should be between 0. and 100. ! (got %s)" % per
         )
     return quantiles(
         data,
@@ -316,7 +316,7 @@ def plotting_positions_w1d(data, weights=None, alpha=0.4, beta=0.4, method="notn
         weights = np.array(weights, float, copy=False, ndmin=1)  # atleast_1d(weights)
         if weights.shape != x.shape:
             raise ValueError(
-                "if weights is given, it needs to be the same" "shape as data"
+                "if weights is given, it needs to be the sameshape as data"
             )
     n = len(x)
     xargsort = x.argsort()

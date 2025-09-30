@@ -43,8 +43,8 @@ from statsmodels.tools.testing import Holder
 
 
 def _expand_table(table):
-    '''expand a 2 by 2 contingency table to observations
-    '''
+    """expand a 2 by 2 contingency table to observations
+    """
     return np.repeat([[1, 1], [1, 0], [0, 1], [0, 0]], table.ravel(), axis=0)
 
 
@@ -108,7 +108,7 @@ def test_mcnemar_chisquare():
 
 
 def test_mcnemar_vectorized(reset_randomstate):
-    ttk = np.random.randint(5,15, size=(2,2,3))
+    ttk = np.random.randint(5, 15, size=(2, 2, 3))
     with pytest.warns(FutureWarning):
         res = sbmcnemar(ttk, exact=False)
     with pytest.warns(FutureWarning):
@@ -135,16 +135,16 @@ def test_symmetry_bowker():
 
     res = SquareTable(table, shift_zeros=False).symmetry()
     mcnemar5_1 = dict(statistic=7.001587, pvalue=0.7252951, parameters=(10,),
-                      distr='chi2')
+                      distr="chi2")
     assert_allclose([res.statistic, res.pvalue],
-                    [mcnemar5_1['statistic'], mcnemar5_1['pvalue']],
+                    [mcnemar5_1["statistic"], mcnemar5_1["pvalue"]],
                     rtol=1e-7)
 
     res = SquareTable(1 + table, shift_zeros=False).symmetry()
     mcnemar5_1b = dict(statistic=5.355988, pvalue=0.8661652, parameters=(10,),
-                       distr='chi2')
+                       distr="chi2")
     assert_allclose([res.statistic, res.pvalue],
-                    [mcnemar5_1b['statistic'], mcnemar5_1b['pvalue']],
+                    [mcnemar5_1b["statistic"], mcnemar5_1b["pvalue"]],
                     rtol=1e-7)
 
     table = np.array([2, 2, 3, 6, 2, 3, 4, 3, 6, 6, 6, 7, 1, 9, 6, 7, 1, 1, 9,
@@ -152,16 +152,16 @@ def test_symmetry_bowker():
 
     res = SquareTable(table, shift_zeros=False).symmetry()
     mcnemar5_2 = dict(statistic=18.76432, pvalue=0.04336035, parameters=(10,),
-                      distr='chi2')
+                      distr="chi2")
     assert_allclose([res.statistic, res.pvalue],
-                    [mcnemar5_2['statistic'], mcnemar5_2['pvalue']],
+                    [mcnemar5_2["statistic"], mcnemar5_2["pvalue"]],
                     rtol=1.5e-7)
 
     res = SquareTable(1 + table, shift_zeros=False).symmetry()
     mcnemar5_2b = dict(statistic=14.55256, pvalue=0.1492461, parameters=(10,),
-                       distr='chi2')
+                       distr="chi2")
     assert_allclose([res.statistic, res.pvalue],
-                    [mcnemar5_2b['statistic'], mcnemar5_2b['pvalue']],
+                    [mcnemar5_2b["statistic"], mcnemar5_2b["pvalue"]],
                     rtol=1e-7)
 
 
@@ -190,7 +190,7 @@ def test_cochransq():
     assert_almost_equal([res.statistic, res.pvalue], [res_qstat, res_pvalue])
 
     # equivalence of mcnemar and cochranq for 2 samples
-    a,b = x[:,:2].T
+    a, b = x[:, :2].T
     res = cochrans_q(x[:, :2])
     with pytest.warns(FutureWarning):
         assert_almost_equal(sbmcnemar(a, b, exact=False, correction=False),
@@ -199,7 +199,7 @@ def test_cochransq():
 
 def test_cochransq2():
     # from an example found on web, verifies 13.286
-    data = np.array('''
+    data = np.array("""
         0 0 0 1
         0 0 0 1
         0 0 0 1
@@ -211,7 +211,7 @@ def test_cochransq2():
         0 1 0 0
         0 0 0 0
         1 0 0 1
-        0 0 1 1'''.split(), int).reshape(-1, 4)
+        0 0 1 1""".split(), int).reshape(-1, 4)
 
     res = cochrans_q(data)
     assert_allclose([res.statistic, res.pvalue], [13.2857143, 0.00405776], rtol=1e-6)
@@ -255,13 +255,13 @@ def test_runstest(reset_randomstate):
     assert_almost_equal(runstest_1samp(x2, cutoff=0, correction=False),
                         [z_twosided, pvalue_twosided], decimal=6)
 
-    assert_almost_equal(runstest_1samp(x2, cutoff='mean', correction=False),
+    assert_almost_equal(runstest_1samp(x2, cutoff="mean", correction=False),
                         [z_twosided, pvalue_twosided], decimal=6)
     assert_almost_equal(runstest_1samp(x2, cutoff=x2.mean(), correction=False),
                         [z_twosided, pvalue_twosided], decimal=6)
 
     # check median
-    assert_almost_equal(runstest_1samp(x2, cutoff='median', correction=False),
+    assert_almost_equal(runstest_1samp(x2, cutoff="median", correction=False),
                         runstest_1samp(x2, cutoff=np.median(x2), correction=False),
                         decimal=6)
 
@@ -300,13 +300,13 @@ def test_brunnermunzel_one_sided():
 
     # Results are compared with R's lawstat package.
     u1, p1 = rank_compare_2indep(x, y
-                                 ).test_prob_superior(alternative='smaller')
+                                 ).test_prob_superior(alternative="smaller")
     u2, p2 = rank_compare_2indep(y, x
-                                 ).test_prob_superior(alternative='larger')
+                                 ).test_prob_superior(alternative="larger")
     u3, p3 = rank_compare_2indep(x, y
-                                 ).test_prob_superior(alternative='larger')
+                                 ).test_prob_superior(alternative="larger")
     u4, p4 = rank_compare_2indep(y, x
-                                 ).test_prob_superior(alternative='smaller')
+                                 ).test_prob_superior(alternative="smaller")
 
     assert_approx_equal(p1, p2, significant=significant)
     assert_approx_equal(p3, p4, significant=significant)
@@ -339,10 +339,10 @@ def test_brunnermunzel_two_sided():
     # Results are compared with R's lawstat package.
     res1 = rank_compare_2indep(x, y)
     u1, p1 = res1
-    t1 = res1.test_prob_superior(alternative='two-sided')
+    t1 = res1.test_prob_superior(alternative="two-sided")
     res2 = rank_compare_2indep(y, x)
     u2, p2 = res2
-    t2 = res2.test_prob_superior(alternative='two-sided')
+    t2 = res2.test_prob_superior(alternative="two-sided")
 
     assert_approx_equal(p1, p2, significant=significant)
     assert_approx_equal(u1, 3.1374674823029505,
@@ -604,7 +604,7 @@ def test_compute_rank_placements(test_cases):
     assert_allclose(res.placements_2, expected_holder.placements_2)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def reference_implementation_results():
     """
     Results from R's rankFD::WMWSSP function.

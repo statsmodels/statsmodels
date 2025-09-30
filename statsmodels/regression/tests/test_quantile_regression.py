@@ -26,7 +26,7 @@ from .results.results_quantile_regression import (
     parzen_hsheather,
 )
 
-idx = ['income', 'Intercept']
+idx = ["income", "Intercept"]
 
 
 class CheckModelResultsMixin:
@@ -78,39 +78,39 @@ class CheckModelResultsMixin:
                         self.res2.kbwidth, rtol=1e-3)
 
 
-d = {('biw', 'bofinger'): biweight_bofinger,
-     ('biw', 'chamberlain'): biweight_chamberlain,
-     ('biw', 'hsheather'): biweight_hsheather,
-     ('cos', 'bofinger'): cosine_bofinger,
-     ('cos', 'chamberlain'): cosine_chamberlain,
-     ('cos', 'hsheather'): cosine_hsheather,
-     ('gau', 'bofinger'): gaussian_bofinger,
-     ('gau', 'chamberlain'): gaussian_chamberlain,
-     ('gau', 'hsheather'): gaussian_hsheather,
-     ('par', 'bofinger'): parzen_bofinger,
-     ('par', 'chamberlain'): parzen_chamberlain,
-     ('par', 'hsheather'): parzen_hsheather,
+d = {("biw", "bofinger"): biweight_bofinger,
+     ("biw", "chamberlain"): biweight_chamberlain,
+     ("biw", "hsheather"): biweight_hsheather,
+     ("cos", "bofinger"): cosine_bofinger,
+     ("cos", "chamberlain"): cosine_chamberlain,
+     ("cos", "hsheather"): cosine_hsheather,
+     ("gau", "bofinger"): gaussian_bofinger,
+     ("gau", "chamberlain"): gaussian_chamberlain,
+     ("gau", "hsheather"): gaussian_hsheather,
+     ("par", "bofinger"): parzen_bofinger,
+     ("par", "chamberlain"): parzen_chamberlain,
+     ("par", "hsheather"): parzen_hsheather,
      # ('rec','bofinger'): rectangle_bofinger,
      # ('rec','chamberlain'): rectangle_chamberlain,
      # ('rec','hsheather'): rectangle_hsheather,
      # ('tri','bofinger'): triangle_bofinger,
      # ('tri','chamberlain'): triangle_chamberlain,
      # ('tri','hsheather'): triangle_hsheather,
-     ('epa', 'bofinger'): epan2_bofinger,
-     ('epa', 'chamberlain'): epan2_chamberlain,
-     ('epa', 'hsheather'): epan2_hsheather
+     ("epa", "bofinger"): epan2_bofinger,
+     ("epa", "chamberlain"): epan2_chamberlain,
+     ("epa", "hsheather"): epan2_hsheather
      # ('epa2', 'bofinger'): epan2_bofinger,
      # ('epa2', 'chamberlain'): epan2_chamberlain,
      # ('epa2', 'hsheather'): epan2_hsheather
      }
 
 
-def setup_fun(kernel='gau', bandwidth='bofinger'):
+def setup_fun(kernel="gau", bandwidth="bofinger"):
     data = sm.datasets.engel.load_pandas().data
 
     mgr = FormulaManager()
-    y, X = mgr.get_matrices('foodexp ~ income', data)
-    statsm = QuantReg(y, X).fit(vcov='iid', kernel=kernel, bandwidth=bandwidth)
+    y, X = mgr.get_matrices("foodexp ~ income", data)
+    statsm = QuantReg(y, X).fit(vcov="iid", kernel=kernel, bandwidth=bandwidth)
     stata = d[(kernel, bandwidth)]
     return statsm, stata
 
@@ -119,7 +119,7 @@ def test_fitted_residuals():
     data = sm.datasets.engel.load_pandas().data
 
     mgr = FormulaManager()
-    y, X = mgr.get_matrices('foodexp ~ income', data)
+    y, X = mgr.get_matrices("foodexp ~ income", data)
 
     res = QuantReg(y, X).fit(q=.1)
     # Note: maxabs relative error with fitted is 1.789e-09
@@ -134,100 +134,100 @@ class TestEpanechnikovHsheatherQ75(CheckModelResultsMixin):
     def setup_class(cls):
         data = sm.datasets.engel.load_pandas().data
         mgr = FormulaManager()
-        y, X = mgr.get_matrices('foodexp ~ income', data)
-        cls.res1 = QuantReg(y, X).fit(q=.75, vcov='iid', kernel='epa',
-                                      bandwidth='hsheather')
+        y, X = mgr.get_matrices("foodexp ~ income", data)
+        cls.res1 = QuantReg(y, X).fit(q=.75, vcov="iid", kernel="epa",
+                                      bandwidth="hsheather")
         cls.res2 = epanechnikov_hsheather_q75
 
 
 class TestEpanechnikovBofinger(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('epa', 'bofinger')
+        cls.res1, cls.res2 = setup_fun("epa", "bofinger")
 
 
 class TestEpanechnikovChamberlain(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('epa', 'chamberlain')
+        cls.res1, cls.res2 = setup_fun("epa", "chamberlain")
 
 
 class TestEpanechnikovHsheather(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('epa', 'hsheather')
+        cls.res1, cls.res2 = setup_fun("epa", "hsheather")
 
 
 class TestGaussianBofinger(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('gau', 'bofinger')
+        cls.res1, cls.res2 = setup_fun("gau", "bofinger")
 
 
 class TestGaussianChamberlain(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('gau', 'chamberlain')
+        cls.res1, cls.res2 = setup_fun("gau", "chamberlain")
 
 
 class TestGaussianHsheather(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('gau', 'hsheather')
+        cls.res1, cls.res2 = setup_fun("gau", "hsheather")
 
 
 class TestBiweightBofinger(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('biw', 'bofinger')
+        cls.res1, cls.res2 = setup_fun("biw", "bofinger")
 
 
 class TestBiweightChamberlain(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('biw', 'chamberlain')
+        cls.res1, cls.res2 = setup_fun("biw", "chamberlain")
 
 
 class TestBiweightHsheather(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('biw', 'hsheather')
+        cls.res1, cls.res2 = setup_fun("biw", "hsheather")
 
 
 class TestCosineBofinger(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('cos', 'bofinger')
+        cls.res1, cls.res2 = setup_fun("cos", "bofinger")
 
 
 class TestCosineChamberlain(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('cos', 'chamberlain')
+        cls.res1, cls.res2 = setup_fun("cos", "chamberlain")
 
 
 class TestCosineHsheather(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('cos', 'hsheather')
+        cls.res1, cls.res2 = setup_fun("cos", "hsheather")
 
 
 class TestParzeneBofinger(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('par', 'bofinger')
+        cls.res1, cls.res2 = setup_fun("par", "bofinger")
 
 
 class TestParzeneChamberlain(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('par', 'chamberlain')
+        cls.res1, cls.res2 = setup_fun("par", "chamberlain")
 
 
 class TestParzeneHsheather(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
-        cls.res1, cls.res2 = setup_fun('par', 'hsheather')
+        cls.res1, cls.res2 = setup_fun("par", "hsheather")
 
 # class TestTriangleBofinger(CheckModelResultsMixin):
 #    @classmethod
@@ -251,7 +251,7 @@ def test_zero_resid():
     X = np.array([[1, 0], [0, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
     y = np.array([0, 1, 2, 3], dtype=np.float64)
 
-    res = QuantReg(y, X).fit(0.5, bandwidth='chamberlain')  # 'bofinger')
+    res = QuantReg(y, X).fit(0.5, bandwidth="chamberlain")  # 'bofinger')
     res.summary()
 
     assert_allclose(res.params,
@@ -268,7 +268,7 @@ def test_zero_resid():
     X = np.array([[1, 0], [0.1, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
     y = np.array([0, 1, 2, 3], dtype=np.float64)
 
-    res = QuantReg(y, X).fit(0.5, bandwidth='chamberlain')
+    res = QuantReg(y, X).fit(0.5, bandwidth="chamberlain")
     res.summary()
 
     assert_allclose(res.params, np.array([9.99982796e-08, 9.67741630e-01]),
@@ -284,20 +284,20 @@ def test_use_t_summary():
     X = np.array([[1, 0], [0, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
     y = np.array([0, 1, 2, 3], dtype=np.float64)
 
-    res = QuantReg(y, X).fit(0.5, bandwidth='chamberlain', use_t=True)
+    res = QuantReg(y, X).fit(0.5, bandwidth="chamberlain", use_t=True)
     summ = res.summary()
-    assert 'P>|t|' in str(summ)
-    assert 'P>|z|' not in str(summ)
+    assert "P>|t|" in str(summ)
+    assert "P>|z|" not in str(summ)
 
 
 def test_alpha_summary():
     X = np.array([[1, 0], [0, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
     y = np.array([0, 1, 2, 3], dtype=np.float64)
 
-    res = QuantReg(y, X).fit(0.5, bandwidth='chamberlain', use_t=True)
+    res = QuantReg(y, X).fit(0.5, bandwidth="chamberlain", use_t=True)
     summ_20 = res.summary(alpha=.2)
-    assert '[0.025      0.975]' not in str(summ_20)
-    assert '[0.1        0.9]' in str(summ_20)
+    assert "[0.025      0.975]" not in str(summ_20)
+    assert "[0.1        0.9]" in str(summ_20)
 
 
 def test_remove_data():

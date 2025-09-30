@@ -368,7 +368,7 @@ use one of the methods for adjusting data for missing-values."""
 
         # Check adjusted data size
         if self._adjusted_data.size == 0:
-            raise ValueError("Removal of missing values has eliminated " "all data.")
+            raise ValueError("Removal of missing values has eliminated all data.")
 
     def _compute_gls_weights(self):
         """
@@ -678,7 +678,7 @@ estimates are based on only {eff_series} (effective) series."""
         ncomp = self._ncomp if ncomp is None else ncomp
         if ncomp > self._ncomp:
             raise ValueError(
-                "ncomp must be smaller than the number of " "components computed."
+                "ncomp must be smaller than the number of components computed."
             )
         factors = np.asarray(self.factors)
         coeff = np.asarray(self.coeff)

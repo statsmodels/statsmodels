@@ -1,7 +1,9 @@
 from time import time
-from statsmodels.tsa.arma_mle import Arma
-from statsmodels.tsa.api import ARMA
+
 import numpy as np
+
+from statsmodels.tsa.api import ARMA
+from statsmodels.tsa.arma_mle import Arma
 
 print("Battle of the dueling ARMAs")
 

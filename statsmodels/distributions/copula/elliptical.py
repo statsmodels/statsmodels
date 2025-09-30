@@ -6,10 +6,11 @@ Author: Pamphile Roy
 License: BSD-3
 
 """
-import numpy as np
-from scipy import stats
 # scipy compat:
 from statsmodels.compat.scipy import multivariate_t
+
+import numpy as np
+from scipy import stats
 
 from statsmodels.distributions.copula.copulas import Copula
 

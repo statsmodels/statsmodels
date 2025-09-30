@@ -156,11 +156,11 @@ if run_greene:
 TableF5-1.txt",
             names=True,
         )
-    except Exception:
+    except Exception as exc:
         raise ValueError(
             "Based on Greene TableF5-1.  You should download it "
             "from his web site and edit this script accordingly."
-        )
+        ) from exc
 
     # Example 15.1 in Greene 5th Edition
     # c_t = constant + y_t + c_t-1

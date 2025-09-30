@@ -1,7 +1,7 @@
 """Travel Mode Choice"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This is public domain."""
 TITLE = __doc__
@@ -73,8 +73,8 @@ def load_pandas():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_pandas(data, endog_idx=2, exog_idx=[3,4,5,6,7,8])
+    return du.process_pandas(data, endog_idx=2, exog_idx=[3, 4, 5, 6, 7, 8])
 
 
 def _get_data():
-    return du.load_csv(__file__, 'modechoice.csv', sep=';', convert_float=True)
+    return du.load_csv(__file__, "modechoice.csv", sep=";", convert_float=True)

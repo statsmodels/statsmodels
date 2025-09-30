@@ -529,16 +529,15 @@ class Power:
 
             if ier == 1 and np.abs(fval) < 1e-4:
                 success = 1
+            # print infodict
+            elif key in ["alpha", "power", "effect_size"]:
+                val, r = optimize.brentq(
+                    func, 1e-8, 1 - 1e-8, full_output=True
+                )  # scalar
+                success = 1 if r.converged else 0
+                fit_res.append(r)
             else:
-                # print infodict
-                if key in ["alpha", "power", "effect_size"]:
-                    val, r = optimize.brentq(
-                        func, 1e-8, 1 - 1e-8, full_output=True
-                    )  # scalar
-                    success = 1 if r.converged else 0
-                    fit_res.append(r)
-                else:
-                    success = 0
+                success = 0
 
         if not success == 1:
             import warnings

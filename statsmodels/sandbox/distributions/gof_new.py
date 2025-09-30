@@ -507,7 +507,7 @@ def gof_mc(randfn, distr, nobs=100):
     from collections import defaultdict
 
     results = defaultdict(list)
-    for i in range(1000):
+    for _ in range(1000):
         rvs = randfn(nobs)
         goft = GOF(rvs, distr)
         for ti in all_gofs:
@@ -575,8 +575,8 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
             raise ValueError("using batching requires a value")
         n_batch = int(np.ceil(nrep / float(batch_size)))
         count = 0
-        for irep in range(n_batch):
-            rvs = distr.rvs(args, **{"size": (batch_size, nobs)})
+        for _ in range(n_batch):
+            rvs = distr.rvs(args, size=(batch_size, nobs))
             params = distr.fit_vec(rvs, axis=1)
             params = lmap(lambda x: np.expand_dims(x, 1), params)
             cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
@@ -585,7 +585,7 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
         return count / float(n_batch * batch_size)
     else:
         # rvs = distr.rvs(args, **kwds)  # extension to distribution kwds ?
-        rvs = distr.rvs(args, **{"size": (nrep, nobs)})
+        rvs = distr.rvs(args, size=(nrep, nobs))
         params = distr.fit_vec(rvs, axis=1)
         params = lmap(lambda x: np.expand_dims(x, 1), params)
         cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
@@ -615,9 +615,9 @@ def bootstrap2(value, distr, args=(), nobs=200, nrep=100):
     # rvs_kwds.update(kwds)
 
     count = 0
-    for irep in range(nrep):
+    for _ in range(nrep):
         # rvs = distr.rvs(args, **kwds)  # extension to distribution kwds ?
-        rvs = distr.rvs(args, **{"size": nobs})
+        rvs = distr.rvs(args, size=nobs)
         params = distr.fit_vec(rvs)
         cdfvals = np.sort(distr.cdf(rvs, params))
         stat = asquare(cdfvals, axis=0)
@@ -659,7 +659,7 @@ if __name__ == "__main__":
 
     results = defaultdict(list)
     nobs = 200
-    for i in range(100):
+    for _ in range(100):
         rvs = np.random.randn(nobs)
         goft = GOF(rvs, "norm")
         for ti in all_gofs:

@@ -23,6 +23,7 @@ jobs:
         python_312_latest:
           python.version: '3.12'
           coverage: true
+          lint: true
         python_311_latest:
           python.version: '3.11'
           lint: true
@@ -30,7 +31,6 @@ jobs:
           coverage: true
         python_311_wheel:
           python.version: '3.11'
-          lint: true
           test.install: true
         python_312_sdist:
           python.version: '3.12'
@@ -56,6 +56,7 @@ jobs:
           CYTHON_VERSION: 3.0.12
           BLAS: "nomkl blas=*=openblas"
           PYTEST_OPTIONS: ''
+          lint: true
         python310_numpy124:
           python.version: '3.10'
           NUMPY_VERSION: 1.24.4
@@ -65,6 +66,7 @@ jobs:
         python_313_copy_on_write:
           python.version: '3.13'
           SM_TEST_COPY_ON_WRITE: 1
+          lint: true
         python_312_pre:
           python.version: '3.12'
           pip.pre: true

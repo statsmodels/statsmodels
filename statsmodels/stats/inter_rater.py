@@ -40,7 +40,7 @@ from scipy import stats  # get rid of this? need only norm.sf
 
 class ResultsBunch(dict):
 
-    template = '%r'
+    template = "%r"
 
     def __init__(self, **kwds):
         dict.__init__(self, kwds)
@@ -55,7 +55,7 @@ class ResultsBunch(dict):
 
 
 def _int_ifclose(x, dec=1, width=4):
-    '''helper function for creating result string for int or float
+    """helper function for creating result string for int or float
 
     only dec=1 and width=4 is implemented
 
@@ -75,16 +75,16 @@ def _int_ifclose(x, dec=1, width=4):
     x_string : str
         x formatted as string, either '%4d' or '%4.1f'
 
-    '''
-    xint = int(round(x))
+    """
+    xint = round(x)
     if np.max(np.abs(xint - x)) < 1e-14:
-        return xint, '%4d' % xint
+        return xint, "%4d" % xint
     else:
-        return x, '%4.1f' % x
+        return x, "%4.1f" % x
 
 
 def aggregate_raters(data, n_cat=None):
-    '''convert raw data with shape (subject, rater) to (subject, cat_counts)
+    """convert raw data with shape (subject, rater) to (subject, cat_counts)
 
     brings data into correct format for fleiss_kappa
 
@@ -112,7 +112,7 @@ def aggregate_raters(data, n_cat=None):
     categories : nd_array, (n_category_levels,)
         Contains the category levels.
 
-    '''
+    """
     data = np.asarray(data)
     n_rows = data.shape[0]
     if n_cat is None:
@@ -133,7 +133,7 @@ def aggregate_raters(data, n_cat=None):
 
 
 def to_table(data, bins=None):
-    '''convert raw data with shape (subject, rater) to (rater1, rater2)
+    """convert raw data with shape (subject, rater) to (rater1, rater2)
 
     brings data into correct format for cohens_kappa
 
@@ -167,7 +167,7 @@ def to_table(data, bins=None):
     the resulting contingency table is the same as the number of raters
     instead of 2-dimensional.
 
-    '''
+    """
 
     data = np.asarray(data)
     n_rows, n_cols = data.shape
@@ -193,7 +193,7 @@ def to_table(data, bins=None):
     return tt[0], bins_
 
 
-def fleiss_kappa(table, method='fleiss'):
+def fleiss_kappa(table, method="fleiss"):
     """Fleiss' and Randolph's kappa multi-rater agreement measure
 
     Parameters
@@ -260,9 +260,9 @@ def fleiss_kappa(table, method='fleiss'):
     p_rat = (table2.sum(1) - n_rat) / (n_rat * (n_rat - 1.))
     p_mean = p_rat.mean()
 
-    if method == 'fleiss':
+    if method == "fleiss":
         p_mean_exp = (p_cat*p_cat).sum()
-    elif method.startswith('rand') or method.startswith('unif'):
+    elif method.startswith(("rand", "unif")):
         p_mean_exp = 1 / n_cat
 
     kappa = (p_mean - p_mean_exp) / (1 - p_mean_exp)
@@ -355,7 +355,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     # print prob_exp.sum()
     agree_exp = np.diag(prob_exp).sum()  # need for kappa_max
     if weights is None and wt is None:
-        kind = 'Simple'
+        kind = "Simple"
         kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
 
         if return_results:
@@ -377,26 +377,27 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         if weights is None:
             weights = np.arange(table.shape[0])
         # weights follows the Wikipedia definition, not the SAS, which is 1 -
-        kind = 'Weighted'
+        kind = "Weighted"
         weights = np.asarray(weights, float)
         if weights.ndim == 1:
-            if wt in ['ca', 'linear', None]:
+            if wt in ["ca", "linear", None]:
                 weights = np.abs(weights[:, None] - weights) /  \
                            (weights[-1] - weights[0])
-            elif wt in ['fc', 'quadratic']:
+            elif wt in ["fc", "quadratic"]:
                 weights = (weights[:, None] - weights)**2 /  \
                            (weights[-1] - weights[0])**2
-            elif wt == 'toeplitz':
+            elif wt == "toeplitz":
                 # assume toeplitz structure
                 from scipy.linalg import toeplitz
+
                 # weights = toeplitz(np.arange(table.shape[0]))
                 weights = toeplitz(weights)
             else:
-                raise ValueError('wt option is not known')
+                raise ValueError("wt option is not known")
         else:
             rows, cols = table.shape
             if (table.shape != weights.shape):
-                raise ValueError('weights are not square')
+                raise ValueError("weights are not square")
         # this is formula from Wikipedia
         kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
         # TODO: add var_kappa for weighted version
@@ -437,7 +438,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         return kappa
 
 
-_kappa_template = '''\
+_kappa_template = """\
                   %(kind)s Kappa Coefficient
               --------------------------------
               Kappa                     %(kappa)6.4f
@@ -451,9 +452,9 @@ _kappa_template = '''\
               Z                         %(z_value)6.4f
               One-sided Pr >  Z         %(pvalue_one_sided)6.4f
               Two-sided Pr > |Z|        %(pvalue_two_sided)6.4f
-'''
+"""
 
-'''
+"""
                    Weighted Kappa Coefficient
               --------------------------------
               Weighted Kappa            0.4701
@@ -467,7 +468,7 @@ _kappa_template = '''\
               Z                         3.2971
               One-sided Pr >  Z         0.0005
               Two-sided Pr > |Z|        0.0010
-'''
+"""
 
 
 class KappaResults(ResultsBunch):

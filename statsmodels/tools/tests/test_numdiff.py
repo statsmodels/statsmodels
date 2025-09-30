@@ -1,22 +1,22 @@
-'''Testing numerical differentiation
+"""Testing numerical differentiation
 
 Still some problems, with API (args tuple versus *args)
 finite difference Hessian has some problems that I did not look at yet
 
 Should Hessian also work per observation, if fun returns 2d
 
-'''
+"""
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 
 import statsmodels.api as sm
 from statsmodels.tools import numdiff
 from statsmodels.tools.numdiff import (
+    _approx_fprime_cs_scalar,
+    _approx_fprime_scalar,
     approx_fprime,
     approx_fprime_cs,
     approx_hess_cs,
-    _approx_fprime_scalar,
-    _approx_fprime_cs_scalar
 )
 
 DEC3 = 3
@@ -28,7 +28,7 @@ DEC13 = 13
 DEC14 = 14
 
 
-def maxabs(x,y):
+def maxabs(x, y):
     return np.abs(x-y).max()
 
 
@@ -278,7 +278,7 @@ class TestDerivativeFun(CheckDerivativeMixin):
     def setup_class(cls):
         super().setup_class()
         xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
-        cls.params = [np.array([1.,1.,1.]), xkols]
+        cls.params = [np.array([1., 1., 1.]), xkols]
         cls.args = (cls.x,)
 
     def fun(self):
@@ -288,7 +288,7 @@ class TestDerivativeFun(CheckDerivativeMixin):
         return self.x.sum(0)
 
     def hesstrue(self, params):
-        return np.zeros((3,3))   # make it (3,3), because test fails with scalar 0
+        return np.zeros((3, 3))   # make it (3,3), because test fails with scalar 0
         # why is precision only DEC3
 
 
@@ -297,7 +297,7 @@ class TestDerivativeFun2(CheckDerivativeMixin):
     def setup_class(cls):
         super().setup_class()
         xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
-        cls.params = [np.array([1.,1.,1.]), xkols]
+        cls.params = [np.array([1., 1., 1.]), xkols]
         cls.args = (cls.y, cls.x)
 
     def fun(self):
@@ -305,7 +305,7 @@ class TestDerivativeFun2(CheckDerivativeMixin):
 
     def gradtrue(self, params):
         y, x = self.y, self.x
-        return (-x*2*(y-np.dot(x, params))[:,None]).sum(0)
+        return (-x*2*(y-np.dot(x, params))[:, None]).sum(0)
 
     def hesstrue(self, params):
         x = self.x
@@ -317,7 +317,7 @@ class TestDerivativeFun1(CheckDerivativeMixin):
     def setup_class(cls):
         super().setup_class()
         xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
-        cls.params = [np.array([1.,1.,1.]), xkols]
+        cls.params = [np.array([1., 1., 1.]), xkols]
         cls.args = (cls.y, cls.x)
 
     def fun(self):
@@ -325,12 +325,12 @@ class TestDerivativeFun1(CheckDerivativeMixin):
 
     def gradtrue(self, params):
         y, x = self.y, self.x
-        return (-x*2*(y-np.dot(x, params))[:,None])
+        return (-x*2*(y-np.dot(x, params))[:, None])
 
     def hesstrue(self, params):
         return None
         y, x = self.y, self.x
-        return (-x*2*(y-np.dot(x, params))[:,None])  # TODO: check shape
+        return (-x*2*(y-np.dot(x, params))[:, None])  # TODO: check shape
 
 
 def test_dtypes():
@@ -366,33 +366,33 @@ def test_vectorized():
     assert_allclose(approx_fprime_cs(p.T, f).squeeze(), desired, rtol=1e-8)
 
 
-if __name__ == '__main__':  # FIXME: turn into tests or move/remove
+if __name__ == "__main__":  # FIXME: turn into tests or move/remove
 
     epsilon = 1e-6
     nobs = 200
-    x = np.arange(nobs*3).reshape(nobs,-1)
-    x = np.random.randn(nobs,3)
+    x = np.arange(nobs*3).reshape(nobs, -1)
+    x = np.random.randn(nobs, 3)
 
-    xk = np.array([1,2,3])
-    xk = np.array([1.,1.,1.])
+    xk = np.array([1, 2, 3])
+    xk = np.array([1., 1., 1.])
     # xk = np.zeros(3)
     beta = xk
     y = np.dot(x, beta) + 0.1*np.random.randn(nobs)
-    xkols = np.dot(np.linalg.pinv(x),y)
+    xkols = np.dot(np.linalg.pinv(x), y)
 
-    print(approx_fprime((1,2,3),fun,epsilon,x))
+    print(approx_fprime((1, 2, 3), fun, epsilon, x))
     gradtrue = x.sum(0)
     print(x.sum(0))
-    gradcs = approx_fprime_cs((1,2,3), fun, (x,), h=1.0e-20)
+    gradcs = approx_fprime_cs((1, 2, 3), fun, (x,), h=1.0e-20)
     print(gradcs, maxabs(gradcs, gradtrue))
-    print(approx_hess_cs((1,2,3), fun, (x,), h=1.0e-20))  # this is correctly zero
+    print(approx_hess_cs((1, 2, 3), fun, (x,), h=1.0e-20))  # this is correctly zero
 
-    print(approx_hess_cs((1,2,3), fun2, (y,x), h=1.0e-20)-2*np.dot(x.T, x))
-    print(numdiff.approx_hess(xk,fun2,1e-3, (y,x))[0] - 2*np.dot(x.T, x))
+    print(approx_hess_cs((1, 2, 3), fun2, (y, x), h=1.0e-20)-2*np.dot(x.T, x))
+    print(numdiff.approx_hess(xk, fun2, 1e-3, (y, x))[0] - 2*np.dot(x.T, x))
 
-    gt = (-x*2*(y-np.dot(x, [1,2,3]))[:,None])
-    g = approx_fprime_cs((1,2,3), fun1, (y,x), h=1.0e-20)  # .T - this should not be transposed
-    gd = numdiff.approx_fprime((1,2,3),fun1,epsilon,(y,x))
+    gt = (-x*2*(y-np.dot(x, [1, 2, 3]))[:, None])
+    g = approx_fprime_cs((1, 2, 3), fun1, (y, x), h=1.0e-20)  # .T - this should not be transposed
+    gd = numdiff.approx_fprime((1, 2, 3), fun1, epsilon, (y, x))
     print(maxabs(g, gt))
     print(maxabs(gd, gt))
 
@@ -401,7 +401,7 @@ if __name__ == '__main__':  # FIXME: turn into tests or move/remove
     # mod = sm.Probit(data.endog, data.exog)
     mod = sm.Logit(data.endog, data.exog)
     # res = mod.fit(method="newton")
-    test_params = [1,0.25,1.4,-7]
+    test_params = [1, 0.25, 1.4, -7]
     loglike = mod.loglike
     score = mod.score
     hess = mod.hessian
@@ -409,15 +409,15 @@ if __name__ == '__main__':  # FIXME: turn into tests or move/remove
     # cs does not work for Probit because special.ndtr does not support complex
     # maybe calculating ndtr for real and imag parts separately, if we need it
     # and if it still works in this case
-    print('sm', score(test_params))
-    print('fd', numdiff.approx_fprime(test_params,loglike,epsilon))
-    print('cs', numdiff.approx_fprime_cs(test_params,loglike))
-    print('sm', hess(test_params))
-    print('fd', numdiff.approx_fprime(test_params,score,epsilon))
-    print('cs', numdiff.approx_fprime_cs(test_params, score))
+    print("sm", score(test_params))
+    print("fd", numdiff.approx_fprime(test_params, loglike, epsilon))
+    print("cs", numdiff.approx_fprime_cs(test_params, loglike))
+    print("sm", hess(test_params))
+    print("fd", numdiff.approx_fprime(test_params, score, epsilon))
+    print("cs", numdiff.approx_fprime_cs(test_params, score))
 
     hesscs = numdiff.approx_hess_cs(test_params, loglike)
-    print('cs', hesscs)
+    print("cs", hesscs)
     print(maxabs(hess(test_params), hesscs))
 
     data = sm.datasets.anes96.load()
@@ -427,7 +427,7 @@ if __name__ == '__main__':  # FIXME: turn into tests or move/remove
 
     datap = sm.datasets.randhie.load()
     nobs = len(datap.endog)
-    exogp = sm.add_constant(datap.exog.view(float).reshape(nobs,-1),
+    exogp = sm.add_constant(datap.exog.view(float).reshape(nobs, -1),
                             prepend=False)
     modp = sm.Poisson(datap.endog, exogp)
-    resp = modp.fit(method='newton', disp=0)
+    resp = modp.fit(method="newton", disp=0)

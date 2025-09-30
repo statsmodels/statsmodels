@@ -47,7 +47,7 @@ def distance_indicators(x, epsilon=None, distance=1.5):
     -----
     Since this can be a very large matrix, use np.int8 to save some space.
     """
-    x = array_like(x, 'x')
+    x = array_like(x, "x")
 
     if epsilon is not None and epsilon <= 0:
         raise ValueError("Threshold distance must be positive if specified."
@@ -86,9 +86,9 @@ def correlation_sum(indicators, embedding_dim):
         matrix of joint-distance-threshold indicators
     """
     if not indicators.ndim == 2:
-        raise ValueError('Indicators must be a matrix')
+        raise ValueError("Indicators must be a matrix")
     if not indicators.shape[0] == indicators.shape[1]:
-        raise ValueError('Indicator matrix must be symmetric (square)')
+        raise ValueError("Indicator matrix must be symmetric (square)")
 
     if embedding_dim == 1:
         indicators_joint = indicators
@@ -201,7 +201,7 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
     required to calculate the m-histories:
     x_t^m = (x_t, x_{t-1}, ... x_{t-(m-1)})
     """
-    x = array_like(x, 'x', ndim=1)
+    x = array_like(x, "x", ndim=1)
     nobs_full = len(x)
 
     if max_dim < 2 or max_dim >= nobs_full:

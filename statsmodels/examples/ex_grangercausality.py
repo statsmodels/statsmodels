@@ -7,8 +7,8 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_almost_equal
-from statsmodels.datasets import macrodata
 
+from statsmodels.datasets import macrodata
 import statsmodels.tsa.stattools as tsa_stats
 
 # some example data

@@ -17,29 +17,33 @@ Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
 import copy
+import os
 import pickle
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_almost_equal
 import pandas as pd
-import os
 import pytest
-
-from scipy.linalg.blas import find_best_blas_type
 from scipy.linalg import solve_discrete_lyapunov
+from scipy.linalg.blas import find_best_blas_type
+
+from statsmodels.tsa.statespace import _kalman_filter, _representation
 from statsmodels.tsa.statespace.kalman_filter import (
-    MEMORY_NO_FORECAST, MEMORY_NO_PREDICTED, MEMORY_CONSERVE)
+    MEMORY_CONSERVE,
+    MEMORY_NO_FORECAST,
+    MEMORY_NO_PREDICTED,
+)
 from statsmodels.tsa.statespace.mlemodel import MLEModel
-from statsmodels.tsa.statespace import _representation, _kalman_filter
+
 from .results import results_kalman_filter
-from numpy.testing import assert_almost_equal, assert_allclose
 
 prefix_statespace_map = {
-    's': _representation.sStatespace, 'd': _representation.dStatespace,
-    'c': _representation.cStatespace, 'z': _representation.zStatespace
+    "s": _representation.sStatespace, "d": _representation.dStatespace,
+    "c": _representation.cStatespace, "z": _representation.zStatespace
 }
 prefix_kalman_filter_map = {
-    's': _kalman_filter.sKalmanFilter, 'd': _kalman_filter.dKalmanFilter,
-    'c': _kalman_filter.cKalmanFilter, 'z': _kalman_filter.zKalmanFilter
+    "s": _kalman_filter.sKalmanFilter, "d": _kalman_filter.dKalmanFilter,
+    "c": _kalman_filter.cKalmanFilter, "z": _kalman_filter.zKalmanFilter
 }
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -58,15 +62,15 @@ class Clark1987:
     @classmethod
     def setup_class(cls, dtype=float, conserve_memory=0, loglikelihood_burn=0):
         cls.true = results_kalman_filter.uc_uni
-        cls.true_states = pd.DataFrame(cls.true['states'])
+        cls.true_states = pd.DataFrame(cls.true["states"])
 
         # GDP, Quarterly, 1947.1 - 1995.3
         data = pd.DataFrame(
-            cls.true['data'],
-            index=pd.date_range('1947-01-01', '1995-07-01', freq='QS'),
-            columns=['GDP']
+            cls.true["data"],
+            index=pd.date_range("1947-01-01", "1995-07-01", freq="QS"),
+            columns=["GDP"]
         )
-        data['lgdp'] = np.log(data['GDP'])
+        data["lgdp"] = np.log(data["GDP"])
 
         # Parameters
         cls.conserve_memory = conserve_memory
@@ -74,7 +78,7 @@ class Clark1987:
 
         # Observed data
         cls.obs = np.require(
-            np.array(data['lgdp'], ndmin=2, dtype=dtype, order="F"),
+            np.array(data["lgdp"], ndmin=2, dtype=dtype, order="F"),
             requirements="W"
         )
 
@@ -112,7 +116,7 @@ class Clark1987:
 
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(
-            cls.true['parameters'], dtype=dtype
+            cls.true["parameters"], dtype=dtype
         )
         cls.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
         cls.state_cov[
@@ -161,26 +165,26 @@ class Clark1987:
 
         # Get results
         return {
-            'loglike': lambda burn: np.sum(cls.filter.loglikelihood[burn:]),
-            'state': np.array(cls.filter.filtered_state),
+            "loglike": lambda burn: np.sum(cls.filter.loglikelihood[burn:]),
+            "state": np.array(cls.filter.filtered_state),
         }
 
     def test_loglike(self):
         assert_almost_equal(
-            self.result['loglike'](self.true['start']), self.true['loglike'], 5
+            self.result["loglike"](self.true["start"]), self.true["loglike"], 5
         )
 
     def test_filtered_state(self):
         assert_almost_equal(
-            self.result['state'][0][self.true['start']:],
+            self.result["state"][0][self.true["start"]:],
             self.true_states.iloc[:, 0], 4
         )
         assert_almost_equal(
-            self.result['state'][1][self.true['start']:],
+            self.result["state"][1][self.true["start"]:],
             self.true_states.iloc[:, 1], 4
         )
         assert_almost_equal(
-            self.result['state'][3][self.true['start']:],
+            self.result["state"][3][self.true["start"]:],
             self.true_states.iloc[:, 2], 4
         )
 
@@ -217,7 +221,7 @@ class TestClark1987Single(Clark1987):
     @classmethod
     def setup_class(cls):
         # TODO: Can we be more specific?  How can a contributor help?
-        pytest.skip('Not implemented')
+        pytest.skip("Not implemented")
         super().setup_class(
             dtype=np.float32, conserve_memory=0
         )
@@ -226,23 +230,23 @@ class TestClark1987Single(Clark1987):
 
     def test_loglike(self):
         assert_allclose(
-            self.result['loglike'](self.true['start']), self.true['loglike'],
+            self.result["loglike"](self.true["start"]), self.true["loglike"],
             rtol=1e-3
         )
 
     def test_filtered_state(self):
         assert_allclose(
-            self.result['state'][0][self.true['start']:],
+            self.result["state"][0][self.true["start"]:],
             self.true_states.iloc[:, 0],
             atol=1e-2
         )
         assert_allclose(
-            self.result['state'][1][self.true['start']:],
+            self.result["state"][1][self.true["start"]:],
             self.true_states.iloc[:, 1],
             atol=1e-2
         )
         assert_allclose(
-            self.result['state'][3][self.true['start']:],
+            self.result["state"][3][self.true["start"]:],
             self.true_states.iloc[:, 2],
             atol=1e-2
         )
@@ -269,7 +273,7 @@ class TestClark1987SingleComplex(Clark1987):
     @classmethod
     def setup_class(cls):
         # TODO: Can we be more specific?  How can a contributor help?
-        pytest.skip('Not implemented')
+        pytest.skip("Not implemented")
         super().setup_class(
             dtype=np.complex64, conserve_memory=0
         )
@@ -278,23 +282,23 @@ class TestClark1987SingleComplex(Clark1987):
 
     def test_loglike(self):
         assert_allclose(
-            self.result['loglike'](self.true['start']), self.true['loglike'],
+            self.result["loglike"](self.true["start"]), self.true["loglike"],
             rtol=1e-3
         )
 
     def test_filtered_state(self):
         assert_allclose(
-            self.result['state'][0][self.true['start']:],
+            self.result["state"][0][self.true["start"]:],
             self.true_states.iloc[:, 0],
             atol=1e-2
         )
         assert_allclose(
-            self.result['state'][1][self.true['start']:],
+            self.result["state"][1][self.true["start"]:],
             self.true_states.iloc[:, 1],
             atol=1e-2
         )
         assert_allclose(
-            self.result['state'][3][self.true['start']:],
+            self.result["state"][3][self.true["start"]:],
             self.true_states.iloc[:, 2],
             atol=1e-2
         )
@@ -346,15 +350,15 @@ class Clark1987Forecast(Clark1987):
 
     def test_filtered_state(self):
         assert_almost_equal(
-            self.result['state'][0][self.true['start']:-self.nforecast],
+            self.result["state"][0][self.true["start"]:-self.nforecast],
             self.true_states.iloc[:, 0], 4
         )
         assert_almost_equal(
-            self.result['state'][1][self.true['start']:-self.nforecast],
+            self.result["state"][1][self.true["start"]:-self.nforecast],
             self.true_states.iloc[:, 1], 4
         )
         assert_almost_equal(
-            self.result['state'][3][self.true['start']:-self.nforecast],
+            self.result["state"][3][self.true["start"]:-self.nforecast],
             self.true_states.iloc[:, 2], 4
         )
 
@@ -409,23 +413,23 @@ class TestClark1987ConserveAll(Clark1987):
         super().setup_class(
             dtype=float, conserve_memory=MEMORY_CONSERVE
         )
-        cls.loglikelihood_burn = cls.true['start']
+        cls.loglikelihood_burn = cls.true["start"]
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
 
     def test_loglike(self):
         assert_almost_equal(
-            self.result['loglike'](0), self.true['loglike'], 5
+            self.result["loglike"](0), self.true["loglike"], 5
         )
 
     def test_filtered_state(self):
         end = self.true_states.shape[0]
         assert_almost_equal(
-            self.result['state'][0][-1],
+            self.result["state"][0][-1],
             self.true_states.iloc[end-1, 0], 4
         )
         assert_almost_equal(
-            self.result['state'][1][-1],
+            self.result["state"][1][-1],
             self.true_states.iloc[end-1, 1], 4
         )
 
@@ -445,16 +449,16 @@ class Clark1989:
     @classmethod
     def setup_class(cls, dtype=float, conserve_memory=0, loglikelihood_burn=0):
         cls.true = results_kalman_filter.uc_bi
-        cls.true_states = pd.DataFrame(cls.true['states'])
+        cls.true_states = pd.DataFrame(cls.true["states"])
 
         # GDP and Unemployment, Quarterly, 1948.1 - 1995.3
         data = pd.DataFrame(
-            cls.true['data'],
-            index=pd.date_range('1947-01-01', '1995-07-01', freq='QS'),
-            columns=['GDP', 'UNEMP']
+            cls.true["data"],
+            index=pd.date_range("1947-01-01", "1995-07-01", freq="QS"),
+            columns=["GDP", "UNEMP"]
         )[4:]
-        data['GDP'] = np.log(data['GDP'])
-        data['UNEMP'] = (data['UNEMP']/100)
+        data["GDP"] = np.log(data["GDP"])
+        data["UNEMP"] = (data["UNEMP"]/100)
 
         # Observed data
         cls.obs = np.array(data, ndmin=2, dtype=dtype, order="C").T
@@ -500,7 +504,7 @@ class Clark1989:
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, sigma_vl, sigma_ec,
          phi_1, phi_2, alpha_1, alpha_2, alpha_3) = np.array(
-            cls.true['parameters'], dtype=dtype
+            cls.true["parameters"], dtype=dtype
         )
         cls.design[([1, 1, 1], [1, 2, 3], [0, 0, 0])] = [
             alpha_1, alpha_2, alpha_3
@@ -553,32 +557,32 @@ class Clark1989:
 
         # Get results
         return {
-            'loglike': lambda burn: np.sum(cls.filter.loglikelihood[burn:]),
-            'state': np.array(cls.filter.filtered_state),
+            "loglike": lambda burn: np.sum(cls.filter.loglikelihood[burn:]),
+            "state": np.array(cls.filter.filtered_state),
         }
 
     def test_loglike(self):
         assert_almost_equal(
             # self.result['loglike'](self.true['start']),
-            self.result['loglike'](0),
-            self.true['loglike'], 2
+            self.result["loglike"](0),
+            self.true["loglike"], 2
         )
 
     def test_filtered_state(self):
         assert_almost_equal(
-            self.result['state'][0][self.true['start']:],
+            self.result["state"][0][self.true["start"]:],
             self.true_states.iloc[:, 0], 4
         )
         assert_almost_equal(
-            self.result['state'][1][self.true['start']:],
+            self.result["state"][1][self.true["start"]:],
             self.true_states.iloc[:, 1], 4
         )
         assert_almost_equal(
-            self.result['state'][4][self.true['start']:],
+            self.result["state"][4][self.true["start"]:],
             self.true_states.iloc[:, 2], 4
         )
         assert_almost_equal(
-            self.result['state'][5][self.true['start']:],
+            self.result["state"][5][self.true["start"]:],
             self.true_states.iloc[:, 3], 4
         )
 
@@ -635,19 +639,19 @@ class Clark1989Forecast(Clark1989):
 
     def test_filtered_state(self):
         assert_almost_equal(
-            self.result['state'][0][self.true['start']:-self.nforecast],
+            self.result["state"][0][self.true["start"]:-self.nforecast],
             self.true_states.iloc[:, 0], 4
         )
         assert_almost_equal(
-            self.result['state'][1][self.true['start']:-self.nforecast],
+            self.result["state"][1][self.true["start"]:-self.nforecast],
             self.true_states.iloc[:, 1], 4
         )
         assert_almost_equal(
-            self.result['state'][4][self.true['start']:-self.nforecast],
+            self.result["state"][4][self.true["start"]:-self.nforecast],
             self.true_states.iloc[:, 2], 4
         )
         assert_almost_equal(
-            self.result['state'][5][self.true['start']:-self.nforecast],
+            self.result["state"][5][self.true["start"]:-self.nforecast],
             self.true_states.iloc[:, 3], 4
         )
 
@@ -709,25 +713,25 @@ class TestClark1989ConserveAll(Clark1989):
 
     def test_loglike(self):
         assert_almost_equal(
-            self.result['loglike'](0), self.true['loglike'], 2
+            self.result["loglike"](0), self.true["loglike"], 2
         )
 
     def test_filtered_state(self):
         end = self.true_states.shape[0]
         assert_almost_equal(
-            self.result['state'][0][-1],
+            self.result["state"][0][-1],
             self.true_states.iloc[end-1, 0], 4
         )
         assert_almost_equal(
-            self.result['state'][1][-1],
+            self.result["state"][1][-1],
             self.true_states.iloc[end-1, 1], 4
         )
         assert_almost_equal(
-            self.result['state'][4][-1],
+            self.result["state"][4][-1],
             self.true_states.iloc[end-1, 2], 4
         )
         assert_almost_equal(
-            self.result['state'][5][-1],
+            self.result["state"][5][-1],
             self.true_states.iloc[end-1, 3], 4
         )
 
@@ -742,10 +746,10 @@ def check_stationary_initialization_1dim(dtype=float):
     phi = np.diag([0.9]).astype(dtype)
     sigma2 = np.diag([1.3]).astype(dtype)
 
-    mod['state_intercept'] = intercept
-    mod['transition'] = phi
-    mod['selection'] = np.eye(1).astype(dtype)
-    mod['state_cov'] = sigma2
+    mod["state_intercept"] = intercept
+    mod["transition"] = phi
+    mod["selection"] = np.eye(1).astype(dtype)
+    mod["state_cov"] = sigma2
 
     mod.ssm._initialize_filter()
     mod.ssm._initialize_state()
@@ -778,10 +782,10 @@ def check_stationary_initialization_2dim(dtype=float):
     sigma2 = np.array([[1.4, -0.2],
                        [-0.2, 4.5]], dtype=dtype)
 
-    mod['state_intercept'] = intercept
-    mod['transition'] = phi
-    mod['selection'] = np.eye(2).astype(dtype)
-    mod['state_cov'] = sigma2
+    mod["state_intercept"] = intercept
+    mod["transition"] = phi
+    mod["selection"] = np.eye(2).astype(dtype)
+    mod["state_cov"] = sigma2
 
     mod.ssm._initialize_filter()
     mod.ssm._initialize_state()

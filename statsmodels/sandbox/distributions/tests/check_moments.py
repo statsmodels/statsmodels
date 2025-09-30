@@ -85,17 +85,17 @@ def check_cont_basic():
         # print 'stats ', m,v,s,k
         # expect = distfn.expect
 
-        def expect(*args, **kwds):
+        def expect(distfn, *args, **kwds):
             return expect_v2(distfn, *args, **kwds)
 
         special_kwds = specialcases.get(distname, {})
-        mnc0 = expect(mom_nc0, args=distargs, **special_kwds)
-        mnc1 = expect(args=distargs, **special_kwds)
-        mnc2 = expect(mom_nc2, args=distargs, **special_kwds)
-        mnc3 = expect(mom_nc3, args=distargs, **special_kwds)
-        mnc4 = expect(mom_nc4, args=distargs, **special_kwds)
+        mnc0 = expect(distfn, mom_nc0, args=distargs, **special_kwds)
+        mnc1 = expect(distfn, args=distargs, **special_kwds)
+        mnc2 = expect(distfn, mom_nc2, args=distargs, **special_kwds)
+        mnc3 = expect(distfn, mom_nc3, args=distargs, **special_kwds)
+        mnc4 = expect(distfn, mom_nc4, args=distargs, **special_kwds)
 
-        mnc1_lc = expect(args=distargs, loc=1, scale=2, **special_kwds)
+        mnc1_lc = expect(distfn, args=distargs, loc=1, scale=2, **special_kwds)
         # print mnc1, mnc2, mnc3, mnc4
         try:
             me, ve, se, ke = mnc2mvsk((mnc1, mnc2, mnc3, mnc4))

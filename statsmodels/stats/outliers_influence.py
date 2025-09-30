@@ -210,7 +210,7 @@ def variance_inflation_factor(exog, exog_idx):
 class _BaseInfluenceMixin:
     """common methods between OLSInfluence and MLE/GLMInfluence"""
 
-    @Appender(_plot_influence_doc.format(**{"extra_params_doc": ""}))
+    @Appender(_plot_influence_doc.format(extra_params_doc=""))
     def plot_influence(
         self,
         external=None,
@@ -330,7 +330,7 @@ class _BaseInfluenceMixin:
         elif criterion.startswith("cook"):
             y = self.cooks_distance[0]
             ylabel = "Cook's distance"
-        elif criterion.startswith("hat") or criterion.startswith("lever"):
+        elif criterion.startswith(("hat", "lever")):
             y = self.hat_matrix_diag
             ylabel = "Leverage (diagonal of hat matrix)"
         elif criterion.startswith("cook"):
@@ -1127,7 +1127,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         cv_iter = LeaveOneOut(self.k_vars)
         res_loo = defaultdict(list)
-        for inidx, outidx in cv_iter:
+        for inidx, _ in cv_iter:
             for att in attributes:
                 res_i = self.model_class(endog, exog[:, inidx]).fit()
                 res_loo[att].append(getattr(res_i, att))

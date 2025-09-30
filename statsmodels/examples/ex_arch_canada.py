@@ -6,6 +6,7 @@ Author: Josef Perktold
 """
 
 import numpy as np
+
 import statsmodels.stats.diagnostic as dia
 
 canada_raw = """\

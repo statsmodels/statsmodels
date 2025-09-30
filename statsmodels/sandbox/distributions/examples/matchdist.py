@@ -38,7 +38,7 @@ def plothist(x, distfn, args, loc, scale, right=1):
     #    print('args in plothist', args)
     # add a 'best fit' line
     # yt = stats.norm.pdf( bins, loc=loc, scale=scale)
-    yt = distfn.pdf(bins, loc=loc, scale=scale, *args)
+    yt = distfn.pdf(bins,  loc, scale, *args)
     yt[yt > maxheight] = maxheight
     plt.plot(bins, yt, "r--", linewidth=1)
     ys = (
@@ -324,7 +324,7 @@ if __name__ == "__main__":
     dgp_arg = 10
     dgp_scale = 10
     results = []
-    for i in range(1):
+    for _ in range(1):
         rvs_orig = stats.t.rvs(dgp_arg, scale=dgp_scale, size=n * convol)
         rvs_orig = np.hstack(
             (
@@ -353,9 +353,8 @@ if __name__ == "__main__":
             sstd = np.sqrt(rvs.var())
             ssupp = (rvs.min(), rvs.max())
             if distname in ["truncnorm", "betaprime", "reciprocal"]:
-
                 par0 = (sm - 2 * sstd, sm + 2 * sstd)
-                par_est = tuple(distfn.fit(rvs, loc=sm, scale=sstd, *par0))
+                par_est = tuple(distfn.fit(rvs, sm, sstd, *par0))
             elif distname == "norm":
                 par_est = tuple(distfn.fit(rvs, loc=sm, scale=sstd))
             elif distname == "genextreme":
@@ -383,7 +382,7 @@ if __name__ == "__main__":
             print("kstest", ks_stat, ks_pval)
             quant = 0.1
             crit = distfn.ppf(
-                1 - quant * float(rind), loc=loc_est, scale=scale_est, *par_est
+                1 - quant * float(rind), loc_est, scale_est, *par_est
             )
             tail_prob = stats.t.sf(crit, dgp_arg, scale=dgp_scale)
             print("crit, prob", quant, crit, tail_prob)

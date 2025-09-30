@@ -8,15 +8,14 @@ extracted from test suite by josef-pktd
 
 import os
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 import statsmodels.api as sm
-import statsmodels.nonparametric.tests.results
 
 # this is just to check direct import
 import statsmodels.nonparametric.smoothers_lowess
-
-statsmodels.nonparametric.smoothers_lowess.lowess
+import statsmodels.nonparametric.tests.results
 
 lowess = sm.nonparametric.lowess
 

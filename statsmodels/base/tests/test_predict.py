@@ -94,13 +94,13 @@ class TestPredictOLS(CheckPredictReturns):
         np.random.seed(987128)
         x = np.random.randn(nobs, 3)
         y = x.sum(1) + np.random.randn(nobs)
-        index = ['obs%02d' % i for i in range(nobs)]
+        index = ["obs%02d" % i for i in range(nobs)]
         # add one extra column to check that it does not matter
         cls.data = pd.DataFrame(np.round(np.column_stack((y, x)), 4),
-                                columns='y var1 var2 var3'.split(),
+                                columns="y var1 var2 var3".split(),
                                 index=index)
 
-        cls.res = OLS.from_formula('y ~ var1 + var2', data=cls.data).fit()
+        cls.res = OLS.from_formula("y ~ var1 + var2", data=cls.data).fit()
 
 
 class TestPredictGLM(CheckPredictReturns):
@@ -111,13 +111,13 @@ class TestPredictGLM(CheckPredictReturns):
         np.random.seed(987128)
         x = np.random.randn(nobs, 3)
         y = x.sum(1) + np.random.randn(nobs)
-        index = ['obs%02d' % i for i in range(nobs)]
+        index = ["obs%02d" % i for i in range(nobs)]
         # add one extra column to check that it does not matter
         cls.data = pd.DataFrame(np.round(np.column_stack((y, x)), 4),
-                                columns='y var1 var2 var3'.split(),
+                                columns="y var1 var2 var3".split(),
                                 index=index)
 
-        cls.res = GLM.from_formula('y ~ var1 + var2', data=cls.data).fit()
+        cls.res = GLM.from_formula("y ~ var1 + var2", data=cls.data).fit()
 
     def test_predict_offset(self):
         res = self.res
@@ -140,16 +140,16 @@ class TestPredictGLM(CheckPredictReturns):
 
         # offset as pandas.Series
         data2 = data.iloc[1:10:2].copy()
-        data2['offset'] = offset
-        pred = res.predict(data2, offset=data2['offset'])
+        data2["offset"] = offset
+        pred = res.predict(data2, offset=data2["offset"])
         pdt.assert_index_equal(pred.index, fitted.index)
         assert_allclose(pred.values, fitted.values, rtol=1e-13)
 
         # check nan in exog is ok, preserves index matching offset length
         data2 = data.iloc[1:10:2].copy()
-        data2['offset'] = offset
+        data2["offset"] = offset
         data2.iloc[0, 1] = np.nan
-        pred = res.predict(data2, offset=data2['offset'])
+        pred = res.predict(data2, offset=data2["offset"])
         pdt.assert_index_equal(pred.index, fitted.index)
         fitted_nan = fitted.copy()
         fitted_nan.iloc[0] = np.nan

@@ -74,9 +74,9 @@ class CheckDistEquivalence:
         assert_almost_equal(ppfst, ppftr, 13)
 
     def test_rvs(self):
-        rvs = self.dist.rvs(*self.trargs, **{"size": 100})
+        rvs = self.dist.rvs(*self.trargs, size=100)
         mean_s = rvs.mean(0)
-        mean_d, var_d = self.dist.stats(*self.trargs, **{"moments": "mv"})
+        mean_d, var_d = self.dist.stats(*self.trargs, moments="mv")
         if np.any(np.abs(mean_d) < 1):
             assert_almost_equal(mean_d, mean_s, 1)
         else:
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     ppfq = [0.1, 0.5, 0.9]
     xx = [0.95, 1.0, 1.1]
     nxx = [-0.95, -1.0, -1.1]
-    print
+    print()
     # print(invnormalg.__doc__
     print(
         "\nsquare of standard normal random variable is chisquare with dof=1 distributed"

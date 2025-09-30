@@ -9,7 +9,7 @@ License: BSD-3
 from io import StringIO
 
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
@@ -117,12 +117,11 @@ class CheckPoissonConstrainedMixin:
 
             if hasattr(res2, "ll_0"):
                 assert_allclose(res1.llnull, res2.ll_0, rtol=1e-6)
-            else:
-                if DEBUG:
-                    import warnings
+            elif DEBUG:
+                import warnings
 
-                    message = "test: ll_0 not available, llnull=%6.4F" % res1.llnull
-                    warnings.warn(message, InvalidTestWarning, stacklevel=2)
+                message = "test: ll_0 not available, llnull=%6.4F" % res1.llnull
+                warnings.warn(message, InvalidTestWarning, stacklevel=2)
 
         else:
             pytest.skip("not available yet")
@@ -171,14 +170,14 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         # trailing text in summary, assumes it's the first extra string
         # NOTE: see comment about convergence in llnull for self.res1m
         summ = self.res1m.summary()
-        assert_("linear equality constraints" in summ.extra_txt)
+        assert ("linear equality constraints" in summ.extra_txt)
 
     @pytest.mark.smoke
     def test_summary2(self):
         # trailing text in summary, assumes it's the first extra string
         # NOTE: see comment about convergence in llnull for self.res1m
         summ = self.res1m.summary2()
-        assert_("linear equality constraints" in summ.extra_txt[0])
+        assert ("linear equality constraints" in summ.extra_txt[0])
 
 
 class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
@@ -543,7 +542,7 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
     def test_summary(self):
         # trailing text in summary, assumes it's the first extra string
         summ = self.res1m.summary()
-        assert_("linear equality constraints" in summ.extra_txt)
+        assert ("linear equality constraints" in summ.extra_txt)
 
         lc_string = str(self.res1m.constraints)
         assert lc_string.startswith("x1 - x3 = 0")
@@ -558,7 +557,7 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
             # FutureWarning for BIC changes
             summ = self.res1m.summary2()
 
-        assert_("linear equality constraints" in summ.extra_txt[0])
+        assert ("linear equality constraints" in summ.extra_txt[0])
 
     def test_fit_constrained_wrap(self):
         # minimal test

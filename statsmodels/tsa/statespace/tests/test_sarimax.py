@@ -4,7 +4,7 @@ Tests for SARIMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
+from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_WIN
 
 import os
@@ -15,7 +15,9 @@ from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_
 import pandas as pd
 import pytest
 
+import statsmodels.iolib.summary
 from statsmodels.tools import add_constant
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.statespace import sarimax, tools
 
@@ -189,7 +191,7 @@ class ARIMA(SARIMAXStataTests):
         kwargs.setdefault("simple_differencing", True)
         kwargs.setdefault("hamilton_representation", True)
 
-        cls.model = sarimax.SARIMAX(endog, order=(1, 1, 1), trend="c", *args, **kwargs)
+        cls.model = sarimax.SARIMAX(endog, *args, order=(1, 1, 1), trend="c", **kwargs)
 
         # Stata estimates the mean of the process, whereas SARIMAX estimates
         # the intercept of the process. Get the intercept.
@@ -336,7 +338,7 @@ class AdditiveSeasonal(SARIMAXStataTests):
         kwargs.setdefault("hamilton_representation", True)
 
         cls.model = sarimax.SARIMAX(
-            endog, order=(1, 1, (1, 0, 0, 1)), trend="c", *args, **kwargs
+            endog, *args, order=(1, 1, (1, 0, 0, 1)), trend="c", **kwargs
         )
 
         # Stata estimates the mean of the process, whereas SARIMAX estimates
@@ -423,10 +425,10 @@ class Airline(SARIMAXStataTests):
 
         cls.model = sarimax.SARIMAX(
             endog,
+            *args,
             order=(0, 1, 1),
             seasonal_order=(0, 1, 1, 12),
             trend="n",
-            *args,
             **kwargs,
         )
 
@@ -641,7 +643,7 @@ class Friedman(SARIMAXStataTests):
         kwargs.setdefault("simple_differencing", True)
         kwargs.setdefault("hamilton_representation", True)
 
-        cls.model = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 1), *args, **kwargs)
+        cls.model = sarimax.SARIMAX(endog,  *args, exog=exog, order=(1, 0, 1), **kwargs)
 
         params = np.r_[
             true["params_exog"],
@@ -970,7 +972,7 @@ class SARIMAXCoverageTest:
         inv = self.model.enforce_invertibility
         self.model.enforce_stationarity = False
         self.model.enforce_invertibility = False
-        self.model.start_params
+        assert isinstance(self.model.start_params, np.ndarray)
         self.model.enforce_stationarity = stat
         self.model.enforce_invertibility = inv
 
@@ -1019,12 +1021,12 @@ class SARIMAXCoverageTest:
 
         # Make sure no expections are thrown calculating any of the
         # covariance matrix types
-        self.result.cov_params_default
-        self.result.cov_params_approx
-        self.result.cov_params_oim
-        self.result.cov_params_opg
-        self.result.cov_params_robust_oim
-        self.result.cov_params_robust_approx
+        assert isinstance(self.result.cov_params_default, np.ndarray)
+        assert isinstance(self.result.cov_params_approx, np.ndarray)
+        assert isinstance(self.result.cov_params_oim, np.ndarray)
+        assert isinstance(self.result.cov_params_opg, np.ndarray)
+        assert isinstance(self.result.cov_params_robust_oim, np.ndarray)
+        assert isinstance(self.result.cov_params_robust_approx, np.ndarray)
 
     @pytest.mark.matplotlib
     def test_plot_diagnostics(self, close_figures):
@@ -1770,12 +1772,12 @@ class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
 
         # Make sure no expections are thrown calculating any of the
         # covariance matrix types
-        self.result.cov_params_default
+        assert isinstance(self.result.cov_params_default, np.ndarray)
         # Known failure due to the complex step inducing non-stationary
         # parameters, causing a failure in the solve_discrete_lyapunov call
         # self.result.cov_params_approx
-        self.result.cov_params_oim
-        self.result.cov_params_opg
+        assert isinstance(self.result.cov_params_oim, np.ndarray)
+        assert isinstance(self.result.cov_params_opg, np.ndarray)
 
 
 class Test_seasonal_arma_diff(SARIMAXCoverageTest):
@@ -1818,15 +1820,15 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
 
         # Make sure no expections are thrown calculating any of the
         # covariance matrix types
-        self.result.cov_params_default
+        assert isinstance(self.result.cov_params_default, np.ndarray)
         # Known failure due to the complex step inducing non-stationary
         # parameters, causing a failure in the solve_discrete_lyapunov call
         # self.result.cov_params_approx
-        self.result.cov_params_oim
-        self.result.cov_params_opg
+        assert isinstance(self.result.cov_params_oim, np.ndarray)
+        assert isinstance(self.result.cov_params_opg, np.ndarray)
 
 
-class Test_seasonal_arma_diffuse(SARIMAXCoverageTest):
+class TestSeasonalARMADiffuse(SARIMAXCoverageTest):
     # // SARMA and diffuse initialization
     # arima wpi, sarima(3, 0, 2, 4) noconstant vce(oim) diffuse
     # save_results 49
@@ -1922,7 +1924,7 @@ class Test_arma_exog_trend_polynomial_missing(SARIMAXCoverageTest):
         kwargs["order"] = (3, 0, 2)
         kwargs["trend"] = [0, 0, 0, 1]
         kwargs["decimal"] = 1
-        super().setup_class(52, endog=endog, *args, **kwargs)
+        super().setup_class(52, *args, endog=endog, **kwargs)
 
         # Modify true params to convert from mean to intercept form
         tps = cls.true_params
@@ -2105,16 +2107,17 @@ def test_misc_exog():
 
     for mod in models:
         # Smoke tests
-        mod.start_params
+        assert isinstance(mod.start_params, np.ndarray)
         res = mod.fit(disp=False)
-        res.summary()
-        res.predict()
-        res.predict(dynamic=True)
-        res.get_prediction()
+        assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
+        typ = pd.Series if isinstance(res.model.orig_endog, pd.DataFrame) else np.ndarray
+        assert isinstance(res.predict(), typ)
+        assert isinstance(res.predict(dynamic=True), typ)
+        assert isinstance(res.get_prediction().predicted_mean, typ)
 
         oos_exog = np.random.normal(size=(1, mod.k_exog))
-        res.forecast(steps=1, exog=oos_exog)
-        res.get_forecast(steps=1, exog=oos_exog)
+        assert isinstance(res.forecast(steps=1, exog=oos_exog), typ)
+        assert isinstance(res.get_forecast(steps=1, exog=oos_exog).predicted_mean, typ)
 
         # Smoke tests for invalid exog
         oos_exog = np.random.normal(size=(2, mod.k_exog))
@@ -2785,18 +2788,18 @@ def test_start_params_small_nobs():
     # Regular ARMA
     mod = sarimax.SARIMAX(endog[:4], order=(4, 0, 0))
     match = (
-        "Too few observations to estimate starting parameters for ARMA" " and trend."
+        "Too few observations to estimate starting parameters for ARMA and trend."
     )
     with pytest.warns(UserWarning, match=match):
         start_params = mod.start_params
-        assert_allclose(start_params, [0, 0, 0, 0, np.var(endog[:4])])
+    assert_allclose(start_params, [0, 0, 0, 0, np.var(endog[:4])])
 
     # Seasonal ARMA
     mod = sarimax.SARIMAX(endog[:4], order=(0, 0, 0), seasonal_order=(1, 0, 0, 4))
-    match = "Too few observations to estimate starting parameters for" " seasonal ARMA."
+    match = "Too few observations to estimate starting parameters for seasonal ARMA."
     with pytest.warns(UserWarning, match=match):
         start_params = mod.start_params
-        assert_allclose(start_params, [0, np.var(endog[:4])])
+    assert_allclose(start_params, [0, np.var(endog[:4])])
 
 
 def test_simple_differencing_int64index():
@@ -2829,7 +2832,9 @@ def test_simple_differencing_strindex():
     values = np.log(realgdp_results["value"]).values
     index = pd.Index(range(len(values))).map(str)
     endog = pd.Series(values, index=index)
-    with pytest.warns(UserWarning):
+    match = "An unsupported index was provided" if PD_LT_2 else "Could not infer forma"
+    err = ValueWarning if PD_LT_2 else UserWarning
+    with pytest.warns(err, match=match):
         mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
 
     assert_(mod._index.equals(pd.RangeIndex(start=0, stop=len(values) - 1)))

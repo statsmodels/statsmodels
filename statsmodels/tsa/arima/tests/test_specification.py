@@ -325,17 +325,20 @@ def check_methods(
 )
 def test_specification_ar_or_ma(n, d, D, s, params, which):
     if which == "p":
-        p, d, q = n, d, 0
+        # d unchanged
+        p, q = n, 0
         ar_names = ["ar.L%d" % i for i in range(1, p + 1)]
         ma_names = []
     else:
-        p, d, q = 0, d, n
+        # d unchanged
+        p, q = 0, n
         ar_names = []
         ma_names = ["ma.L%d" % i for i in range(1, q + 1)]
     ar_params = params[:p]
     ma_params = params[p:-1]
     sigma2 = params[-1]
-    P, D, Q, s = 0, D, 0, s
+    # D, s unchanged
+    P, Q = 0, 0
 
     args = ((p, d, q), (P, D, Q, s))
     kwargs = {

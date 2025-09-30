@@ -25,7 +25,7 @@ from statsmodels.stats.tests.test_weightstats import Holder
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 try:
-    import matplotlib.pyplot as plt  # noqa:F401
+    import matplotlib.pyplot as plt
 except ImportError:
     pass
 
@@ -536,8 +536,8 @@ class TestNormalIndPower2(CheckPowerMixin):
         res2.power = 0.0438089705093578
         res2.alternative = "less"
         res2.method = (
-            "Difference of proportion power calculation for"
-            + " binomial distribution (arcsine transformation)"
+            "Difference of proportion power calculation for binomial distribution "
+            "(arcsine transformation)"
         )
         res2.note = "same sample sizes"
 
@@ -795,7 +795,7 @@ class TestFtestPower(CheckPowerMixin):
 
     def test_kwargs(self):
 
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="nobs is not use"):
             smp.FTestPower().solve_power(
                 effect_size=0.3, alpha=0.1, power=0.9, df_denom=2, nobs=None
             )

@@ -82,8 +82,8 @@ class Penalty:
         """
         if np.size(self.weights) > 1:
             if len(params) == 1:
-                raise  # raise to identify models where this would be needed
-                return 0.0
+                # raise to identify models where this would be needed
+                raise NotImplementedError
 
         return self.weights
 

@@ -8,8 +8,7 @@ import scipy.linalg as L
 
 from statsmodels.tools.decorators import cache_readonly
 import statsmodels.tsa.tsatools as tsa
-import statsmodels.tsa.vector_ar.plotting as plotting
-import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tsa.vector_ar import plotting, util
 
 mat = np.array
 
@@ -87,7 +86,7 @@ class BaseIRAnalysis:
 
     def plot(self, orth=False, *, impulse=None, response=None,
              signif=0.05, plot_params=None, figsize=(10, 10),
-             subplot_params=None, plot_stderr=True, stderr_type='asym',
+             subplot_params=None, plot_stderr=True, stderr_type="asym",
              repl=1000, seed=None, component=None):
         """
         Plot impulse responses
@@ -127,35 +126,35 @@ class BaseIRAnalysis:
 
         irfs = self._choose_irfs(orth, svar)
         if orth:
-            title = 'Impulse responses (orthogonalized)'
+            title = "Impulse responses (orthogonalized)"
         elif svar:
-            title = 'Impulse responses (structural)'
+            title = "Impulse responses (structural)"
         else:
-            title = 'Impulse responses'
+            title = "Impulse responses"
 
         if plot_stderr is False:
             stderr = None
 
-        elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
+        elif stderr_type not in ["asym", "mc", "sz1", "sz2", "sz3"]:
             raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'")
         else:
-            if stderr_type == 'asym':
+            if stderr_type == "asym":
                 stderr = self.cov(orth=orth)
-            if stderr_type == 'mc':
+            if stderr_type == "mc":
                 stderr = self.errband_mc(orth=orth, svar=svar,
                                          repl=repl, signif=signif,
                                          seed=seed)
-            if stderr_type == 'sz1':
+            if stderr_type == "sz1":
                 stderr = self.err_band_sz1(orth=orth, svar=svar,
                                            repl=repl, signif=signif,
                                            seed=seed,
                                            component=component)
-            if stderr_type == 'sz2':
+            if stderr_type == "sz2":
                 stderr = self.err_band_sz2(orth=orth, svar=svar,
                                            repl=repl, signif=signif,
                                            seed=seed,
                                            component=component)
-            if stderr_type == 'sz3':
+            if stderr_type == "sz3":
                 stderr = self.err_band_sz3(orth=orth, svar=svar,
                                            repl=repl, signif=signif,
                                            seed=seed,
@@ -172,7 +171,7 @@ class BaseIRAnalysis:
     def plot_cum_effects(self, orth=False, *, impulse=None, response=None,
                          signif=0.05, plot_params=None, figsize=(10, 10),
                          subplot_params=None, plot_stderr=True,
-                         stderr_type='asym', repl=1000, seed=None):
+                         stderr_type="asym", repl=1000, seed=None):
         """
         Plot cumulative impulse response functions
 
@@ -205,20 +204,20 @@ class BaseIRAnalysis:
         """
 
         if orth:
-            title = 'Cumulative responses responses (orthogonalized)'
+            title = "Cumulative responses responses (orthogonalized)"
             cum_effects = self.orth_cum_effects
             lr_effects = self.orth_lr_effects
         else:
-            title = 'Cumulative responses'
+            title = "Cumulative responses"
             cum_effects = self.cum_effects
             lr_effects = self.lr_effects
 
-        if stderr_type not in ['asym', 'mc']:
+        if stderr_type not in ["asym", "mc"]:
             raise ValueError("`stderr_type` must be one of 'asym', 'mc'")
         else:
-            if stderr_type == 'asym':
+            if stderr_type == "asym":
                 stderr = self.cum_effect_cov(orth=orth)
-            if stderr_type == 'mc':
+            if stderr_type == "mc":
                 stderr = self.cum_errband_mc(orth=orth, repl=repl,
                                              signif=signif, seed=seed)
         if not plot_stderr:
@@ -339,7 +338,7 @@ class IRAnalysis(BaseIRAnalysis):
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
 
         if component is not None:
-            if np.shape(component) != (neqs,neqs):
+            if np.shape(component) != (neqs, neqs):
                 raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
             if np.argmax(component) >= neqs*periods:
                 raise ValueError("Atleast one of the components does not exist")
@@ -351,8 +350,8 @@ class IRAnalysis(BaseIRAnalysis):
         upper = np.copy(irfs)
         for i in range(neqs):
             for j in range(neqs):
-                lower[1:,i,j] = irfs[1:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
-                upper[1:,i,j] = irfs[1:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
+                lower[1:, i, j] = irfs[1:, i, j] + W[i, j, :, k[i, j]]*q*np.sqrt(eigva[i, j, k[i, j]])
+                upper[1:, i, j] = irfs[1:, i, j] - W[i, j, :, k[i, j]]*q*np.sqrt(eigva[i, j, k[i, j]])
 
         return lower, upper
 
@@ -395,7 +394,7 @@ class IRAnalysis(BaseIRAnalysis):
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
 
         if component is not None:
-            if np.shape(component) != (neqs,neqs):
+            if np.shape(component) != (neqs, neqs):
                 raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
             if np.argmax(component) >= neqs*periods:
                 raise ValueError("Atleast one of the components does not exist")
@@ -406,17 +405,17 @@ class IRAnalysis(BaseIRAnalysis):
         for p in range(repl):
             for i in range(neqs):
                 for j in range(neqs):
-                    gamma[p,1:,i,j] = W[i,j,k[i,j],:] * irf_resim[p,1:,i,j]
+                    gamma[p, 1:, i, j] = W[i, j, k[i, j], :] * irf_resim[p, 1:, i, j]
 
         gamma_sort = np.sort(gamma, axis=0)  # sort to get quantiles
-        indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
+        indx = round(signif/2*repl)-1, round((1-signif/2)*repl)-1
 
         lower = np.copy(irfs)
         upper = np.copy(irfs)
         for i in range(neqs):
             for j in range(neqs):
-                lower[:,i,j] = irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
-                upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
+                lower[:, i, j] = irfs[:, i, j] + gamma_sort[indx[0], :, i, j]
+                upper[:, i, j] = irfs[:, i, j] + gamma_sort[indx[1], :, i, j]
 
         return lower, upper
 
@@ -460,7 +459,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         for p in range(repl):
             for i in range(neqs):
-                stack[i, p,:] = np.ravel(irf_resim[p,1:,:,i].T)
+                stack[i, p, :] = np.ravel(irf_resim[p, 1:, :, i].T)
 
         stack_cov = np.zeros((neqs, periods*neqs, periods*neqs))
         W = np.zeros((neqs, periods*neqs, periods*neqs))
@@ -477,26 +476,26 @@ class IRAnalysis(BaseIRAnalysis):
 
         # compute for eigen decomp for each stack
         for i in range(neqs):
-            stack_cov[i] = np.cov(stack[i],rowvar=0)
+            stack_cov[i] = np.cov(stack[i], rowvar=0)
             W[i], eigva[i], k[i] = util.eigval_decomp(stack_cov[i])
 
         gamma = np.zeros((repl, periods+1, neqs, neqs))
         for p in range(repl):
             for j in range(neqs):
                 for i in range(neqs):
-                    gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
+                    gamma[p, 1:, i, j] = W[j, k[j], i*periods:(i+1)*periods] * irf_resim[p, 1:, i, j]
                     if i == neqs-1:
-                        gamma[p,1:,i,j] = W[j,k[j],i*periods:] * irf_resim[p,1:,i,j]
+                        gamma[p, 1:, i, j] = W[j, k[j], i*periods:] * irf_resim[p, 1:, i, j]
 
         gamma_sort = np.sort(gamma, axis=0)  # sort to get quantiles
-        indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
+        indx = round(signif/2*repl)-1, round((1-signif/2)*repl)-1
 
         lower = np.copy(irfs)
         upper = np.copy(irfs)
         for i in range(neqs):
             for j in range(neqs):
-                lower[:,i,j] = irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
-                upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
+                lower[:, i, j] = irfs[:, i, j] + gamma_sort[indx[0], :, i, j]
+                upper[:, i, j] = irfs[:, i, j] + gamma_sort[indx[1], :, i, j]
 
         return lower, upper
 
@@ -514,7 +513,7 @@ class IRAnalysis(BaseIRAnalysis):
         cov_hold = np.zeros((neqs, neqs, periods, periods))
         for i in range(neqs):
             for j in range(neqs):
-                cov_hold[i,j,:,:] = np.cov(irf_resim[:,1:,i,j],rowvar=0)
+                cov_hold[i, j, :, :] = np.cov(irf_resim[:, 1:, i, j], rowvar=0)
 
         W = np.zeros((neqs, neqs, periods, periods))
         eigva = np.zeros((neqs, neqs, periods, 1))
@@ -522,7 +521,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         for i in range(neqs):
             for j in range(neqs):
-                W[i,j,:,:], eigva[i,j,:,0], k[i,j] = util.eigval_decomp(cov_hold[i,j,:,:])
+                W[i, j, :, :], eigva[i, j, :, 0], k[i, j] = util.eigval_decomp(cov_hold[i, j, :, :])
         return W, eigva, k
 
     @cache_readonly

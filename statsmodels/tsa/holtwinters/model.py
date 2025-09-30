@@ -257,12 +257,12 @@ class ExponentialSmoothing(TimeSeriesModel):
             if seasonal_periods is None:
                 try:
                     self.seasonal_periods = freq_to_period(self._index_freq)
-                except Exception:
+                except Exception as exc:
                     raise ValueError(
                         "seasonal_periods has not been provided and index "
                         "does not have a known freq. You must provide "
                         "seasonal_periods"
-                    )
+                    ) from exc
             if self.seasonal_periods <= 1:
                 raise ValueError("seasonal_periods must be larger than 1.")
             assert self.seasonal_periods is not None
@@ -1079,7 +1079,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             )
         if use_boxcox is not None:
             raise ValueError(
-                "use_boxcox was set at model initialization and cannot " "be changed"
+                "use_boxcox was set at model initialization and cannot be changed"
             )
         elif self._use_boxcox is None:
             use_boxcox = False
@@ -1417,7 +1417,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         formatted = [alpha, beta, gamma, lvls[0], b[0], phi]
         formatted += s[:m].tolist()
-        formatted = list(map(lambda v: np.nan if v is None else v, formatted))
+        formatted = [np.nan if v is None else v for v in formatted]
         formatted = np.array(formatted)
         if is_optimized is None:
             optimized = np.zeros(len(codes), dtype=bool)

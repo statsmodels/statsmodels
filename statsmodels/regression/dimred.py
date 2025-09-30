@@ -242,7 +242,6 @@ class SlicedInverseReg(_DimReductionRegression):
         if start_params is None:
             params = np.zeros((self.k_vars, ndim))
             params[0:ndim, 0:ndim] = np.eye(ndim)
-            params = params
         else:
             if start_params.shape[1] != ndim:
                 msg = "Shape of start_params is not compatible with ndim"
@@ -451,7 +450,7 @@ class DimReductionResultsWrapper(wrap.ResultsWrapper):
     _wrap_attrs = _attrs
 
 
-wrap.populate_wrapper(DimReductionResultsWrapper, DimReductionResults)  # noqa:E305
+wrap.populate_wrapper(DimReductionResultsWrapper, DimReductionResults)
 
 
 def _grass_opt(params, fun, grad, maxiter, gtol):
@@ -514,7 +513,7 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
         paramsm = params.reshape((p, d))
         pa0 = np.dot(paramsm, vt.T)
 
-        def geo(t):
+        def geo(t, pa0, s, u, vt):
             # Parameterize the geodesic path in the direction
             # of the gradient as a function of a real value t.
             pa = pa0 * np.cos(s * t) + u * np.sin(s * t)
@@ -523,7 +522,7 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
         # Try to find a downhill step along the geodesic path.
         step = 2.0
         while step > 1e-10:
-            pa = geo(-step)
+            pa = geo(-step, pa0, s, u, vt)
             f1 = fun(pa)
             if f1 < f0:
                 params = pa
@@ -679,7 +678,6 @@ class CovarianceReduction(_DimReductionRegression):
         if start_params is None:
             params = np.zeros((p, d))
             params[0:d, 0:d] = np.eye(d)
-            params = params
         else:
             params = start_params
 

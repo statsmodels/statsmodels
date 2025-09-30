@@ -5,8 +5,10 @@ Author: Luca Puggini
 
 """
 
-from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass
+
+from abc import ABCMeta, abstractmethod
+
 import numpy as np
 
 

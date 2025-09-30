@@ -1,7 +1,7 @@
 """United States Macroeconomic data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This is public domain."""
 TITLE = __doc__
@@ -77,7 +77,7 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'macrodata.csv').astype(float)
+    return du.load_csv(__file__, "macrodata.csv").astype(float)
 
 
 variable_names = ["realcons", "realgdp", "realinv"]

@@ -143,6 +143,8 @@ Therefore, optimization methods requiring the Hessian matrix such as
 the Newton-Raphson algorithm cannot be used for model fitting.
 """
 
+from io import StringIO
+import tokenize
 import warnings
 
 import numpy as np
@@ -590,7 +592,7 @@ def _convert_vc(exog_vc):
 
     # Get the groups in sorted order
     groups = set()
-    for k, v in exog_vc.items():
+    for _k, v in exog_vc.items():
         groups |= set(v.keys())
     groups = list(groups)
     groups.sort()
@@ -1062,7 +1064,7 @@ class MixedLM(base.LikelihoodModel):
                 model_spec = mgr.get_spec(vc_formula[vc_name])
                 vc_names.append(vc_name)
                 evc_mats, evc_colnames = [], []
-                for group_ix, group in enumerate(kylist):
+                for _group_ix, group in enumerate(kylist):
                     ii = gb.groups[group]
                     mat = mgr.get_matrices(
                         model_spec, data.loc[ii, :], eval_env=eval_env, pandas=True
@@ -1231,7 +1233,7 @@ class MixedLM(base.LikelihoodModel):
         except np.linalg.LinAlgError:
             cov_re_inv = None
 
-        for itr in range(maxit):
+        for _itr in range(maxit):
 
             fe_params_s = fe_params.copy()
             for j in range(self.k_fe):
@@ -1365,7 +1367,7 @@ class MixedLM(base.LikelihoodModel):
                 self._endex_li.append(mat)
 
         xtxy = 0.0
-        for group_ix, group in enumerate(self.group_labels):
+        for group_ix, _group in enumerate(self.group_labels):
             vc_var = self._expand_vcomp(vcomp, group_ix)
             if vc_var.size > 0:
                 if vc_var.min() < tol:
@@ -1420,14 +1422,14 @@ class MixedLM(base.LikelihoodModel):
             e = np.zeros(k_tot)
             e[k] = 1
             lin.append(e)
-        for k in range(k_re2):
+        for _ in range(k_re2):
             lin.append(np.zeros(k_tot))
-        for k in range(k_vc):
+        for _ in range(k_vc):
             lin.append(np.zeros(k_tot))
 
         quad = []
         # Quadratic terms for fixed effects.
-        for k in range(k_tot):
+        for _ in range(k_tot):
             quad.append(np.zeros((k_tot, k_tot)))
 
         # Quadratic terms for random effects covariance.
@@ -1780,7 +1782,7 @@ class MixedLM(base.LikelihoodModel):
         # resid' V^{-1} dV/dQ_jj V^{-1} resid (a scalar)
         rvavr = np.zeros(self.k_re2 + self.k_vc)
 
-        for group_ix, group in enumerate(self.group_labels):
+        for group_ix, _group in enumerate(self.group_labels):
 
             vc_var = self._expand_vcomp(vcomp, group_ix)
 
@@ -1962,7 +1964,7 @@ class MixedLM(base.LikelihoodModel):
         B = np.zeros(m)
         D = np.zeros((m, m))
         F = [[0.0] * m for k in range(m)]
-        for group_ix, group in enumerate(self.group_labels):
+        for group_ix, _group in enumerate(self.group_labels):
 
             vc_var = self._expand_vcomp(vcomp, group_ix)
             vc_vari = np.zeros_like(vc_var)
@@ -2107,7 +2109,7 @@ class MixedLM(base.LikelihoodModel):
             warnings.warn(_warn_cov_sing, SingularMatrixWarning, stacklevel=2)
 
         qf = 0.0
-        for group_ix, group in enumerate(self.group_labels):
+        for group_ix, _group in enumerate(self.group_labels):
 
             vc_var = self._expand_vcomp(vcomp, group_ix)
 
@@ -2235,21 +2237,19 @@ class MixedLM(base.LikelihoodModel):
             params.fe_params = np.zeros(self.k_fe)
             params.cov_re = np.eye(self.k_re)
             params.vcomp = np.ones(self.k_vc)
+        elif isinstance(start_params, MixedLMParams):
+            params = start_params
+        # It's a packed array
+        elif len(start_params) == self.k_fe + self.k_re2 + self.k_vc:
+            params = MixedLMParams.from_packed(
+                start_params, self.k_fe, self.k_re, self.use_sqrt, has_fe=True
+            )
+        elif len(start_params) == self.k_re2 + self.k_vc:
+            params = MixedLMParams.from_packed(
+                start_params, self.k_fe, self.k_re, self.use_sqrt, has_fe=False
+            )
         else:
-            if isinstance(start_params, MixedLMParams):
-                params = start_params
-            else:
-                # It's a packed array
-                if len(start_params) == self.k_fe + self.k_re2 + self.k_vc:
-                    params = MixedLMParams.from_packed(
-                        start_params, self.k_fe, self.k_re, self.use_sqrt, has_fe=True
-                    )
-                elif len(start_params) == self.k_re2 + self.k_vc:
-                    params = MixedLMParams.from_packed(
-                        start_params, self.k_fe, self.k_re, self.use_sqrt, has_fe=False
-                    )
-                else:
-                    raise ValueError("invalid start_params")
+            raise ValueError("invalid start_params")
 
         if do_cg:
             fit_kwargs["retall"] = hist is not None
@@ -2282,8 +2282,8 @@ class MixedLM(base.LikelihoodModel):
                     )
                 else:
                     msg = (
-                        "MixedLM optimization failed, "
-                        + "trying a different optimizer may help."
+                        "MixedLM optimization failed, trying a different optimizer "
+                        "may help."
                     )
                     warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
@@ -2340,8 +2340,8 @@ class MixedLM(base.LikelihoodModel):
             pcov = np.linalg.inv(-hess)
         if np.any(hess_diag >= 0):
             msg = (
-                "The Hessian matrix at the estimated parameter values "
-                + "is not positive definite."
+                "The Hessian matrix at the estimated parameter values is not "
+                "positive definite."
             )
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
@@ -2583,10 +2583,10 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         """
         try:
             cov_re_inv = np.linalg.inv(self.cov_re)
-        except np.linalg.LinAlgError:
+        except np.linalg.LinAlgError as exc:
             raise ValueError(
-                "Cannot predict random effects from " + "singular covariance structure."
-            )
+                "Cannot predict random effects from singular covariance structure."
+            ) from exc
 
         vcomp = self.vcomp
         k_re = self.k_re
@@ -3026,22 +3026,19 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
     if vc_formula is not None:
         forms.extend(vc_formula.values())
 
-    from statsmodels.compat.python import asunicode
-
-    from io import StringIO
-    import tokenize
-
     skiptoks = {"(", ")", "*", ":", "+", "-", "**", "/"}
 
     for fml in forms:
         # Unicode conversion is for Py2 compatability
-        rl = StringIO(fml)
+        def _line_reader(_fml):
+            rl = StringIO(_fml)
 
-        def rlu():
-            line = rl.readline()
-            return asunicode(line, "ascii")
+            def rlu():
+                return rl.readline()
 
-        g = tokenize.generate_tokens(rlu)
+            return rlu
+        lr = _line_reader(fml)
+        g = tokenize.generate_tokens(lr)
         for tok in g:
             if tok not in skiptoks:
                 tokens.add(tok.string)

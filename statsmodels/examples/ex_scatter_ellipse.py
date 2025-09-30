@@ -6,11 +6,11 @@ License: BSD-3
 """
 
 from statsmodels.compat.python import lrange
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 from statsmodels.graphics.plot_grids import scatter_ellipse
-
 
 nvars = 6
 mmean = np.arange(1.0, nvars + 1) / nvars * 1.5

@@ -7,13 +7,20 @@ See the generated file "gee_categorical_simulation_check.txt" for
 results.
 """
 from statsmodels.compat.python import lrange
+
 import numpy as np
 from scipy import stats
-from statsmodels.genmod.generalized_estimating_equations import GEE,\
-    gee_setup_ordinal, gee_setup_nominal,\
-    gee_ordinal_starting_values, Multinomial
-from statsmodels.genmod.families import Binomial
+
 from statsmodels.genmod.cov_struct import GlobalOddsRatio
+from statsmodels.genmod.families import Binomial
+from statsmodels.genmod.generalized_estimating_equations import (
+    GEE,
+    Multinomial,
+    gee_ordinal_starting_values,
+    gee_setup_nominal,
+    gee_setup_ordinal,
+)
+
 from .gee_gaussian_simulation_check import GEE_simulator
 
 
@@ -52,7 +59,7 @@ class ordinal_simulator(GEE_simulator):
 
             group.append([i,] * gsize)
 
-            time1 = np.random.normal(size=(gsize,2))
+            time1 = np.random.normal(size=(gsize, 2))
             time.append(time1)
 
             exog1 = np.random.normal(size=(gsize, len(self.params)))
@@ -96,7 +103,7 @@ class nominal_simulator(GEE_simulator):
 
             group.append([i,] * gsize)
 
-            time1 = np.random.normal(size=(gsize,2))
+            time1 = np.random.normal(size=(gsize, 2))
             time.append(time1)
 
             exog1 = np.random.normal(size=(gsize, len(self.params[0])))
@@ -111,7 +118,7 @@ class nominal_simulator(GEE_simulator):
             endog1 = []
             for k in range(gsize):
                 pdist = stats.rv_discrete(values=(lrange(m),
-                                                  prob[k,:]))
+                                                  prob[k, :]))
                 endog1.append(pdist.rvs())
 
             endog.append(np.asarray(endog1))
@@ -132,14 +139,14 @@ def gendat_ordinal():
     os.dparams = [1.,]
     os.simulate()
 
-    data = np.concatenate((os.endog[:,None], os.exog,
-                           os.group[:,None]), axis=1)
+    data = np.concatenate((os.endog[:, None], os.exog,
+                           os.group[:, None]), axis=1)
 
     os.endog_ex, os.exog_ex, os.intercepts, os.nthresh = \
         gee_setup_ordinal(data, 0)
 
-    os.group_ex = os.exog_ex[:,-1]
-    os.exog_ex = os.exog_ex[:,0:-1]
+    os.group_ex = os.exog_ex[:, -1]
+    os.exog_ex = os.exog_ex[:, 0:-1]
 
     os.exog_ex = np.concatenate((os.intercepts, os.exog_ex),
                                 axis=1)
@@ -162,13 +169,13 @@ def gendat_nominal():
     ns.dparams = [1., ]
     ns.simulate()
 
-    data = np.concatenate((ns.endog[:,None], ns.exog,
-                           ns.group[:,None]), axis=1)
+    data = np.concatenate((ns.endog[:, None], ns.exog,
+                           ns.group[:, None]), axis=1)
 
     ns.endog_ex, ns.exog_ex, ns.exog_ne, ns.nlevel = \
         gee_setup_nominal(data, 0, [3,])
 
-    ns.group_ex = ns.exog_ne[:,0]
+    ns.group_ex = ns.exog_ne[:, 0]
 
     va = GlobalOddsRatio(3, "nominal")
 
@@ -178,26 +185,26 @@ def gendat_nominal():
     return ns, va, Multinomial(3), (lhs, rhs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     nrep = 100
 
     OUT = open("gee_categorical_simulation_check.txt", "w", encoding="utf-8")
 
-    np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
                         suppress=True)
 
     # Loop over data generating models
     gendats = [gendat_nominal, gendat_ordinal]
 
-    for jg,gendat in enumerate(gendats):
+    for jg, gendat in enumerate(gendats):
 
         dparams = []
         params = []
         std_errors = []
         pvalues = []
 
-        for j in range(nrep):
+        for _ in range(nrep):
 
             da, va, mt, constraint = gendat()
 

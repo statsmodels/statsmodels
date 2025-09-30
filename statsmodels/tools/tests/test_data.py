@@ -1,5 +1,5 @@
 import numpy as np
-import pandas
+import pandas as pd
 
 from statsmodels.tools import data
 
@@ -10,14 +10,14 @@ def test_missing_data_pandas():
     """
     X = np.random.random((10, 5))
     X[1, 2] = np.nan
-    df = pandas.DataFrame(X)
+    df = pd.DataFrame(X)
     vals, cnames, rnames = data.interpret_data(df)
     np.testing.assert_equal(rnames.tolist(), [0, 2, 3, 4, 5, 6, 7, 8, 9])
 
 
 def test_dataframe():
     X = np.random.random((10, 5))
-    df = pandas.DataFrame(X)
+    df = pd.DataFrame(X)
     vals, cnames, rnames = data.interpret_data(df)
     np.testing.assert_equal(vals, df.values)
     np.testing.assert_equal(rnames.tolist(), df.index.tolist())
@@ -26,7 +26,7 @@ def test_dataframe():
 
 def test_formula_engine_use_detection_577():
     x = np.random.random((10, 2))
-    df = pandas.DataFrame(x, columns=["var1", "var2"])
+    df = pd.DataFrame(x, columns=["var1", "var2"])
     from statsmodels.formula._manager import FormulaManager
     mgr = FormulaManager()
     if mgr.engine == "patsy":
@@ -41,7 +41,7 @@ def test_formula_engine_use_detection_577():
 
 
 def test_as_array_with_name_series():
-    s = pandas.Series([1], name="hello")
+    s = pd.Series([1], name="hello")
     arr, name = data._as_array_with_name(s, "not_used")
     np.testing.assert_array_equal(np.array([1]), arr)
     assert name == "hello"

@@ -23,8 +23,8 @@ regressors as in the main equation.
 import numpy as np
 from numpy.testing import assert_almost_equal
 
-from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.feasible_gls import GLSHet, GLSHet2
+from statsmodels.regression.linear_model import OLS
 
 examples = ["ex1"]
 

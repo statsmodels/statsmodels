@@ -233,7 +233,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     assert (
         "rotation_method" not in algorithm_kwargs
     ), "rotation_method cannot be provided as keyword argument"
-    vgQ = ff = T = L = None
+    T = L = None
     p, k = A.shape
     # set ff or vgQ to appropriate objective function, compute solution using
     # recursion or analytically compute solution
@@ -246,17 +246,19 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         gamma = method_args[0]
         if algorithm == "gpa":
 
-            def vgQ(L=None, A=None, T=None):  # noqa: F811
+            def vgQ(L=None, A=None, T=None):
                 return orthomax_objective(
                     L=L, A=A, T=T, gamma=gamma, return_gradient=True
                 )
+            ff = None
 
         elif algorithm == "gpa_der_free":
 
-            def ff(L=None, A=None, T=None):  # noqa: F811
+            def ff(L=None, A=None, T=None):
                 return orthomax_objective(
                     L=L, A=A, T=T, gamma=gamma, return_gradient=False
                 )
+            vgQ = None
 
         else:
             raise ValueError(
@@ -280,6 +282,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
                 return oblimin_objective(
                     L=L, A=A, T=T, gamma=gamma, return_gradient=True
                 )
+            ff = None
 
         elif algorithm == "gpa_der_free":
 
@@ -292,6 +295,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
                     rotation_method=rotation_method,
                     return_gradient=False,
                 )
+            vgQ = None
 
         else:
             raise ValueError(
@@ -319,6 +323,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
                     rotation_method=rotation_method,
                     return_gradient=True,
                 )
+            ff = None
 
         elif algorithm == "gpa_der_free":
 
@@ -331,6 +336,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
                     rotation_method=rotation_method,
                     return_gradient=False,
                 )
+            vgQ = None
 
         else:
             raise ValueError(
@@ -369,11 +375,13 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
             def vgQ(L=None, A=None, T=None):
                 return vgQ_target(H, L=L, A=A, T=T, rotation_method=rotation_method)
+            ff = None
 
         elif algorithm == "gpa_der_free":
 
             def ff(L=None, A=None, T=None):
                 return ff_target(H, L=L, A=A, T=T, rotation_method=rotation_method)
+            vgQ = None
 
         elif algorithm == "analytic":
             assert rotation_method == "orthogonal", (
@@ -395,12 +403,12 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
             def vgQ(L=None, A=None, T=None):
                 return vgQ_partial_target(H, W=W, L=L, A=A, T=T)
-
+            ff = None
         elif algorithm == "gpa_der_free":
 
             def ff(L=None, A=None, T=None):
                 return ff_partial_target(H, W=W, L=L, A=A, T=T)
-
+            vgQ = None
         else:
             raise ValueError(
                 "Algorithm %s is not possible for %s rotation" % (algorithm, method)

@@ -7,12 +7,15 @@ See the generated file "gee_gaussian_simulation_check.txt" for
 results.
 """
 from statsmodels.compat.python import lrange
-import scipy
-import numpy as np
+
 from itertools import product
+
+import numpy as np
+import scipy
+
+from statsmodels.genmod.cov_struct import Autoregressive, Nested
 from statsmodels.genmod.families import Gaussian
 from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.genmod.cov_struct import Autoregressive, Nested
 
 
 class GEE_simulator:
@@ -88,11 +91,11 @@ class AR_simulator(GEE_simulator):
 
             group.append([i,] * gsize)
 
-            time1 = np.random.normal(size=(gsize,2))
+            time1 = np.random.normal(size=(gsize, 2))
             time.append(time1)
 
             exog1 = np.random.normal(size=(gsize, 5))
-            exog1[:,0] = 1
+            exog1[:, 0] = 1
             exog.append(exog1)
 
             # Pairwise distances within the cluster
@@ -153,12 +156,12 @@ class Nested_simulator(GEE_simulator):
 
             # The random effects
             variances = [np.sqrt(v)*np.random.normal(size=n)
-                         for v,n in zip(vcomp, self.nest_sizes)]
+                         for v, n in zip(vcomp, self.nest_sizes)]
 
             gpe = np.random.normal() * np.sqrt(group_effect_var)
 
             nest_all = []
-            for j in self.nest_sizes:
+            for _ in self.nest_sizes:
                 nest_all.append(set())
 
             for nest in product(*iterators):
@@ -167,7 +170,7 @@ class Nested_simulator(GEE_simulator):
 
                 # The sum of all random effects that apply to this
                 # unit
-                ref = gpe + sum([v[j] for v,j in zip(variances, nest)])
+                ref = gpe + sum([v[j] for v, j in zip(variances, nest)])
 
                 exog1 = np.random.normal(size=5)
                 exog1[0] = 1
@@ -241,7 +244,7 @@ def gendat_nested1():
 if __name__ == "__main__":
 
     try:
-        np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+        np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
                             suppress=True)
     except TypeError:
         # older numpy versions do not have formatter option
@@ -266,9 +269,9 @@ if __name__ == "__main__":
         std_errors = []
         dep_params = []
 
-        for j in range(nrep):
+        for _ in range(nrep):
 
-            da,va = gendat()
+            da, va = gendat()
             ga = Gaussian()
 
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
@@ -279,7 +282,7 @@ if __name__ == "__main__":
             params.append(np.asarray(mdf.params))
             std_errors.append(np.asarray(mdf.standard_errors()))
 
-            da,va = gendat()
+            da, va = gendat()
             ga = Gaussian()
 
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va,

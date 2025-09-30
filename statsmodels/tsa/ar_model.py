@@ -7,12 +7,11 @@ from statsmodels.compat.pandas import (
     to_numpy,
 )
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 import datetime
 import datetime as dt
 from types import SimpleNamespace
-from typing import Any, Literal, cast
-from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Literal, cast
 import warnings
 
 import numpy as np
@@ -26,13 +25,6 @@ from statsmodels.tools import eval_measures
 from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.sm_exceptions import SpecificationWarning
-from statsmodels.tools.typing import (
-    ArrayLike,
-    ArrayLike1D,
-    ArrayLike2D,
-    Float64Array,
-    NDArray,
-)
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -49,6 +41,16 @@ from statsmodels.tsa.deterministic import (
     TimeTrend,
 )
 from statsmodels.tsa.tsatools import freq_to_period, lagmat
+
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import (
+        ArrayLike,
+        ArrayLike1D,
+        ArrayLike2D,
+        Float64Array,
+        NDArray,
+    )
+
 
 __all__ = ["AR", "AutoReg"]
 
@@ -210,7 +212,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
     ):
         super().__init__(endog, exog, None, None, missing=missing)
         self._trend = cast(
-            Literal["n", "c", "t", "ct", "ctt"],
+            "Literal['n', 'c', 't', 'ct', 'ctt']",
             string_like(
                 trend, "trend", options=("n", "c", "t", "ct", "ctt"), optional=False
             ),
@@ -306,7 +308,6 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
     def initialize(self) -> None:
         """Initialize the model (no-op)."""
-        pass
 
     def _check_lags(
         self, lags: int | Sequence[int] | None, hold_back: int | None
@@ -1857,7 +1858,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 "appears below."
             )
             exc.args = (error,) + exc.args
-            raise exc.with_traceback(exc.__traceback__)
+            raise exc.with_traceback(exc.__traceback__) from exc
 
         if (mod.exog is None) != (existing.exog is None):
             if existing.exog is not None:

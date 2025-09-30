@@ -1,4 +1,4 @@
-from .arma_innovations import (  # noqa: F401
+from .arma_innovations import (
     arma_innovations,
     arma_loglike,
     arma_loglikeobs,

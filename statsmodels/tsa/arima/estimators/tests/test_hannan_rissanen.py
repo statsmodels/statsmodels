@@ -15,7 +15,7 @@ from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.1.7 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.1.7 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_517():
     # Get the lake data
@@ -164,7 +164,7 @@ def test_validate_fixed_params(ar_order, ma_order, fixed_params, invalid_fixed_p
             unbiased=False,
         )
     else:
-        valid_params = sorted(list(set(spec.param_names) - {"sigma2"}))
+        valid_params = sorted(set(spec.param_names) - {"sigma2"})
         msg = (
             f"Invalid fixed parameter(s): {invalid_fixed_params}. "
             f"Please select among {valid_params}."

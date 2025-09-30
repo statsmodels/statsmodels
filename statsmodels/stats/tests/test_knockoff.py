@@ -1,11 +1,14 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal, assert_equal
 import pytest
+
 import statsmodels.api as sm
 from statsmodels.stats import knockoff_regeffects as kr
-from statsmodels.stats._knockoff import (RegressionFDR,
-                                         _design_knockoff_equi,
-                                         _design_knockoff_sdp)
+from statsmodels.stats._knockoff import (
+    RegressionFDR,
+    _design_knockoff_equi,
+    _design_knockoff_sdp,
+)
 
 try:
     import cvxopt  # noqa:F401
@@ -88,10 +91,10 @@ def test_testers(p, tester, method):
 @pytest.mark.slow
 @pytest.mark.parametrize("method", ["equi", "sdp"])
 @pytest.mark.parametrize("tester,n,p,es", [
-    [kr.CorrelationEffects(), 300, 100, 6],
-    [kr.ForwardEffects(pursuit=False), 300, 100, 3.5],
-    [kr.ForwardEffects(pursuit=True), 300, 100, 3.5],
-    [kr.OLSEffects(), 3000, 200, 3.5],
+    (kr.CorrelationEffects(), 300, 100, 6),
+    (kr.ForwardEffects(pursuit=False), 300, 100, 3.5),
+    (kr.ForwardEffects(pursuit=True), 300, 100, 3.5),
+    (kr.OLSEffects(), 3000, 200, 3.5),
 ])
 def test_sim(method, tester, n, p, es):
     # This function assesses the performance of the knockoff approach
@@ -115,7 +118,7 @@ def test_sim(method, tester, n, p, es):
         return
 
     fdr, power = 0, 0
-    for k in range(nrep):
+    for _ in range(nrep):
 
         # Generate the predictors
         x = np.random.normal(size=(n, p))

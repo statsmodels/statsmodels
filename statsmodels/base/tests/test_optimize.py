@@ -1,18 +1,18 @@
 from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
+
+from numpy.testing import assert_, assert_almost_equal
 import pytest
-from numpy.testing import assert_
-from numpy.testing import assert_almost_equal
 
 from statsmodels.base.optimizer import (
-    _fit_newton,
-    _fit_nm,
+    _fit_basinhopping,
     _fit_bfgs,
     _fit_cg,
-    _fit_ncg,
-    _fit_powell,
     _fit_lbfgs,
-    _fit_basinhopping,
     _fit_minimize,
+    _fit_ncg,
+    _fit_newton,
+    _fit_nm,
+    _fit_powell,
 )
 
 fit_funcs = {
@@ -69,8 +69,7 @@ def test_full_output_false(reset_randomstate):
     # cg ""
     # ncg ""
     # powell ""
-    for method in fit_funcs:
-        func = fit_funcs[method]
+    for method, func in fit_funcs.items():
         if method == "newton":
             xopt, retvals = func(
                 dummy_func,
@@ -102,8 +101,7 @@ def test_full_output_false(reset_randomstate):
 
 
 def test_full_output(reset_randomstate):
-    for method in fit_funcs:
-        func = fit_funcs[method]
+    for method, func in fit_funcs.items():
         if method == "newton":
             xopt, retvals = func(
                 dummy_func,

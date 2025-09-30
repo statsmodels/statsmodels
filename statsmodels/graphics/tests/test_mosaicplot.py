@@ -13,7 +13,7 @@ from statsmodels.api import datasets
 # utilities for the tests
 
 try:
-    import matplotlib.pyplot as plt  # noqa:F401
+    import matplotlib.pyplot as plt
 except ImportError:
     pass
 
@@ -35,12 +35,11 @@ def test_data_conversion(close_figures):
     # so the dictionary will look odd
     # as it key order has the c and b
     # keys swapped
-    import pandas
 
     _, ax = plt.subplots(4, 4)
     data = {"ax": 1, "bx": 2, "cx": 3}
     mosaic(data, ax=ax[0, 0], title="basic dict", axes_label=False)
-    data = pandas.Series(data)
+    data = pd.Series(data)
     mosaic(data, ax=ax[0, 1], title="basic series", axes_label=False)
     data = [1, 2, 3]
     mosaic(data, ax=ax[0, 2], title="basic list", axes_label=False)
@@ -53,7 +52,7 @@ def test_data_conversion(close_figures):
     mosaic(
         data, ax=ax[2, 0], title="inverted keys dict", index=[1, 0], axes_label=False
     )
-    data = pandas.Series(data)
+    data = pd.Series(data)
     mosaic(data, ax=ax[1, 1], title="compound series", axes_label=False)
     mosaic(data, ax=ax[2, 1], title="inverted keys series", index=[1, 0])
     data = [[1, 2], [3, 4]]
@@ -68,7 +67,7 @@ def test_data_conversion(close_figures):
 
     gender = ["male", "male", "male", "female", "female", "female"]
     pet = ["cat", "dog", "dog", "cat", "dog", "cat"]
-    data = pandas.DataFrame({"gender": gender, "pet": pet})
+    data = pd.DataFrame({"gender": gender, "pet": pet})
     mosaic(data, ["gender"], ax=ax[3, 0], title="dataframe by key 1", axes_label=False)
     mosaic(data, ["pet"], ax=ax[3, 1], title="dataframe by key 2", axes_label=False)
     mosaic(data, ["gender", "pet"], ax=ax[3, 2], title="both keys", axes_label=False)

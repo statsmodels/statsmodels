@@ -133,14 +133,12 @@ setup = ['--vsenv']
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
-fix = true
+fix = false
+target-version = "py39"
 
 [tool.ruff.lint]
 typing-modules = ["statsmodels.compat.python", "compat.python"]
 
-<<<<<<< Updated upstream
-=======
 select = [
   # pyflakes
   "F",
@@ -261,7 +259,6 @@ ignore = [
 "statsmodels/discrete/_diagnostics_count.py" = ["PT028"]
 "statsmodels/examples/tests/test_notebooks.py" = ["F401"]
 
->>>>>>> Stashed changes
 [tool.pytest.ini_options]
 minversion = "8.4.1"
 addopts = "--strict --durations=30 --junitxml=test-data.xml"

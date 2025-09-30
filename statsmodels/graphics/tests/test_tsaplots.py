@@ -1,5 +1,5 @@
 from statsmodels.compat.pandas import MONTH_END
-from statsmodels.compat.python import lmap
+from statsmodels.compat.python import PYTHON_IMPL_WASM, lmap
 
 import calendar
 from io import BytesIO
@@ -10,7 +10,6 @@ from numpy.testing import assert_, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.datasets import elnino, macrodata
 from statsmodels.graphics.tsaplots import (
     month_plot,
@@ -213,7 +212,7 @@ def test_plot_ccf(close_figures):
     plot_ccf(x1, x2, ax=ax, negative_lags=True)
     plot_ccf(x1, x2, ax=ax, adjusted=True)
     plot_ccf(x1, x2, ax=ax, fft=True)
-    plot_ccf(x1, x2, ax=ax, title='CCF')
+    plot_ccf(x1, x2, ax=ax, title="CCF")
     plot_ccf(x1, x2, ax=ax, auto_ylims=True)
     plot_ccf(x1, x2, ax=ax, use_vlines=False)
 
@@ -232,7 +231,7 @@ def test_plot_accf_grid(close_figures):
         armaprocess.generate_sample(100, distrvs=rs.standard_normal),
     ]).T
     plot_accf_grid(x)
-    plot_accf_grid(pd.DataFrame({'x': x[:, 0], 'y': x[:, 1]}))
+    plot_accf_grid(pd.DataFrame({"x": x[:, 0], "y": x[:, 1]}))
     plot_accf_grid(x, fig=fig, lags=10)
     plot_accf_grid(x, fig=fig)
     plot_accf_grid(x, fig=fig, negative_lags=False)

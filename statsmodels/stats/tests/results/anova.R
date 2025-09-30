@@ -7,7 +7,7 @@ attach(dta)
 library(car)
 source('/home/skipper/statsmodels/statsmodels/tools/topy.R')
 
-sum.lm = lm(logDays ~ Duration * Weight, contrasts=list(Duration=contr.sum, 
+sum.lm = lm(logDays ~ Duration * Weight, contrasts=list(Duration=contr.sum,
                                                         Weight=contr.sum))
 
 anova.lm.sum <- anova(sum.lm)

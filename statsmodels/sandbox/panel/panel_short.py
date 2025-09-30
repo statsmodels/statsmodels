@@ -136,7 +136,6 @@ class ShortPanelGLS(GLS):
         # which is a requirement anyway in this case (full cov)
         # needs to change for parametrized sigma_i
 
-        #
         if sigma_i is None:
             sigma_i = np.eye(int(nobs_i))
         self.cholsigmainv_i = np.linalg.cholesky(np.linalg.pinv(sigma_i)).T

@@ -6,14 +6,13 @@ Author: Josef Perktold
 """
 
 from statsmodels.compat.python import lmap
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
+from numpy.testing import assert_almost_equal
 
 import statsmodels.stats.proportion as sms
 import statsmodels.stats.weightstats as smw
-
-from numpy.testing import assert_almost_equal
-
 
 # Region, Eyes, Hair, Count
 ss = """\

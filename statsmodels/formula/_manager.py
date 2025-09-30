@@ -44,7 +44,7 @@ except ImportError:
 
 
 try:
-    import formulaic  # noqa: F401
+    import formulaic
     import formulaic.parser
     import formulaic.utils.constraints
 
@@ -88,7 +88,7 @@ def _maybe_convert_data(data):
     if (
         not isinstance(data, pd.DataFrame)
         or PD_LT_3
-        or not any([isinstance(dt, pd.StringDtype) for dt in data.dtypes])
+        or not any(isinstance(dt, pd.StringDtype) for dt in data.dtypes)
     ):
         return data
     data = data.copy()
@@ -370,7 +370,7 @@ class FormulaManager:
             rhs_formula = _formula
             lhs_formula = None
         include_intercept = any(
-            [(term.degree == 0 and str(term) == "1") for term in rhs_formula]
+            (term.degree == 0 and str(term) == "1") for term in rhs_formula
         )
         parser = formulaic.parser.DefaultFormulaParser(
             feature_flags=feature_flags, include_intercept=include_intercept
@@ -379,7 +379,7 @@ class FormulaManager:
         categorical_variables = list(rhs.model_spec.factor_contrasts.keys())
 
         def all_cat(term):
-            return all([f in categorical_variables for f in term.factors])
+            return all(f in categorical_variables for f in term.factors)
 
         def drop_terms(term_list, terms):
             for term in terms:

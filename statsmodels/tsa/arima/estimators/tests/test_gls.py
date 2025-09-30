@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pytest
 
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake, oshorts
@@ -7,7 +7,7 @@ from statsmodels.tsa.arima.estimators.gls import gls
 
 
 @pytest.mark.low_precision(
-    "Test against Example 6.6.1 in Brockwell and Davis" " (2016)"
+    "Test against Example 6.6.1 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_661():
     endog = oshorts.copy()
@@ -28,7 +28,7 @@ def test_brockwell_davis_example_661():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 6.6.2 in Brockwell and Davis" " (2016)"
+    "Test against Example 6.6.2 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_662():
     endog = lake.copy()
@@ -55,7 +55,7 @@ def test_integrated():
     p1, _ = gls(endog1, exog1, order=(1, 0, 0))
 
     # Estimate with integration
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Provided `endog` and `exog"):
         p2, _ = gls(endog2, exog2, order=(1, 1, 0))
 
     assert_allclose(p1.params, p2.params)
@@ -77,15 +77,15 @@ def test_results():
     # Test for results output
     p, res = gls(endog, exog, order=(1, 0, 0))
 
-    assert_("params" in res)
-    assert_("converged" in res)
-    assert_("differences" in res)
-    assert_("iterations" in res)
-    assert_("arma_estimator" in res)
-    assert_("arma_results" in res)
+    assert ("params" in res)
+    assert ("converged" in res)
+    assert ("differences" in res)
+    assert ("iterations" in res)
+    assert ("arma_estimator" in res)
+    assert ("arma_results" in res)
 
-    assert_(res.converged)
-    assert_(res.iterations > 0)
+    assert (res.converged)
+    assert (res.iterations > 0)
     assert_equal(res.arma_estimator, "innovations_mle")
     assert_equal(len(res.params), res.iterations + 1)
     assert_equal(len(res.differences), res.iterations + 1)
@@ -108,7 +108,7 @@ def test_misc():
     exog = np.c_[np.ones_like(endog), np.arange(1, len(endog) + 1) * 1.0]
 
     # Test for warning if iterations fail to converge
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Feasible GLS failed to converg"):
         gls(endog, exog, order=(2, 0, 0), max_iter=0)
 
 

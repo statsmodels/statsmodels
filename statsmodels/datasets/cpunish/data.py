@@ -1,7 +1,7 @@
 """US Capital Punishment dataset."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
@@ -70,6 +70,6 @@ def load():
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'cpunish.csv')
+    data = du.load_csv(__file__, "cpunish.csv")
     data = data.iloc[:, 1:8].astype(float)
     return data

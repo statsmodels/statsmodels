@@ -204,7 +204,7 @@ class MICEData:
             msg = "MICEData data column names should be string type"
             raise ValueError(msg)
 
-        self.regularized = dict()
+        self.regularized = {}
 
         # Drop observations where all variables are missing.  This
         # also has the effect of copying the data frame.
@@ -425,7 +425,7 @@ class MICEData:
         The imputed values are stored in the class attribute `self.data`.
         """
 
-        for k in range(n_iter):
+        for _ in range(n_iter):
             for vname in self._cycle_order:
                 self.update(vname)
 
@@ -995,7 +995,7 @@ class MICEData:
         klass = self.model_class[vname]
         self.models[vname] = klass(endog, exog, **init_kwds)
 
-        if vname in self.regularized and self.regularized[vname]:
+        if self.regularized.get(vname):
             self.results[vname] = self.models[vname].fit_regularized(**fit_kwds)
         else:
             self.results[vname] = self.models[vname].fit(**fit_kwds)
@@ -1258,7 +1258,7 @@ class MICE:
         # Run without fitting the analysis model
         self.data.update_all(n_burnin)
 
-        for j in range(n_imputations):
+        for _ in range(n_imputations):
             result = self.next_sample()
             self.results_list.append(result)
 

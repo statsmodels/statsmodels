@@ -33,7 +33,7 @@ def _est_cont_fit():
 
 def check_cont_fit(distname, arg):
     distfn = getattr(stats, distname)
-    rvs = distfn.rvs(size=n_repl1, *arg)
+    rvs = distfn.rvs(*arg, size=n_repl1)
     est = distfn.fit(rvs)  # ,*arg) # start with default values
 
     truearg = np.hstack([arg, [0.0, 1.0]])
@@ -49,19 +49,18 @@ def check_cont_fit(distname, arg):
 
     if np.any(np.isnan(est)):
         raise AssertionError("nan returned in fit")
-    else:
+    elif np.any((np.abs(diff) - diffthreshold) > 0.0):
+        # txt = 'WARNING - diff too large with small sample'
+        # print 'parameter diff =', diff - diffthreshold, txt
+        rvs = np.concatenate([rvs, distfn.rvs(*arg, size=n_repl2 - n_repl1)])
+        est = distfn.fit(rvs)  # ,*arg)
+        truearg = np.hstack([arg, [0.0, 1.0]])
+        diff = est - truearg
         if np.any((np.abs(diff) - diffthreshold) > 0.0):
-            # txt = 'WARNING - diff too large with small sample'
-            # print 'parameter diff =', diff - diffthreshold, txt
-            rvs = np.concatenate([rvs, distfn.rvs(size=n_repl2 - n_repl1, *arg)])
-            est = distfn.fit(rvs)  # ,*arg)
-            truearg = np.hstack([arg, [0.0, 1.0]])
-            diff = est - truearg
-            if np.any((np.abs(diff) - diffthreshold) > 0.0):
-                txt = "parameter: %s\n" % str(truearg)
-                txt += "estimated: %s\n" % str(est)
-                txt += "diff     : %s\n" % str(diff)
-                raise AssertionError("fit not very good in %s\n" % distfn.name + txt)
+            txt = "parameter: %s\n" % str(truearg)
+            txt += "estimated: %s\n" % str(est)
+            txt += "diff     : %s\n" % str(diff)
+            raise AssertionError("fit not very good in %s\n" % distfn.name + txt)
 
 
 if __name__ == "__main__":

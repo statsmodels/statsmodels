@@ -1,10 +1,10 @@
-'''Non-linear least squares
+"""Non-linear least squares
 
 
 
 Author: Josef Perktold based on scipy.optimize.curve_fit
 
-'''
+"""
 import numpy as np
 from scipy import optimize
 
@@ -12,10 +12,9 @@ from statsmodels.base.model import Model
 
 
 class Results:
-    '''just a dummy placeholder for now
+    """just a dummy placeholder for now
     most results from RegressionResults can be used here
-    '''
-    pass
+    """
 
 
 # def getjaccov(retval, n):
@@ -50,7 +49,7 @@ class Results:
 #
 
 class NonlinearLS(Model):  # or subclass a model
-    r'''Base class for estimation of a non-linear model with least squares
+    r"""Base class for estimation of a non-linear model with least squares
 
     This class is supposed to be subclassed, and the subclass has to provide a method
     `_predict` that defines the non-linear function `f(params) that is predicting the endogenous
@@ -106,7 +105,7 @@ class NonlinearLS(Model):  # or subclass a model
     myres.tvalues
 
 
-    '''
+    """
     # NOTE: This needs to call super for data checking
     def __init__(self, endog=None, exog=None, weights=None, sigma=None, missing="none"):
         self.endog = endog
@@ -157,17 +156,17 @@ class NonlinearLS(Model):  # or subclass a model
             elif nparams is not None:
                 p0 = 0.1 * np.ones(nparams)
             else:
-                raise ValueError('need information about start values for optimization')
+                raise ValueError("need information about start values for optimization")
 
         func = self.geterrors
         res = optimize.leastsq(func, p0, full_output=1, **kw)
         (popt, pcov, infodict, errmsg, ier) = res
 
-        if ier not in [1,2,3,4]:
+        if ier not in [1, 2, 3, 4]:
             msg = "Optimal parameters not found: " + errmsg
             raise RuntimeError(msg)
 
-        err = infodict['fvec']
+        err = infodict["fvec"]
 
         ydata = self.endog
         if (len(ydata) > len(p0)) and pcov is not None:
@@ -208,17 +207,17 @@ class NonlinearLS(Model):  # or subclass a model
         return lfit
 
     def fit_minimal(self, start_value, **kwargs):
-        '''minimal fitting with no extra calculations'''
+        """minimal fitting with no extra calculations"""
         func = self.geterrors
         res = optimize.leastsq(func, start_value, full_output=0, **kwargs)
         return res
 
     def fit_random(self, ntries=10, rvs_generator=None, nparams=None):
-        '''fit with random starting values
+        """fit with random starting values
 
         this could be replaced with a global fitter
 
-        '''
+        """
 
         if nparams is None:
             nparams = self.nparams
@@ -233,12 +232,12 @@ class NonlinearLS(Model):  # or subclass a model
         return results
 
     def jac_predict(self, params):
-        '''jacobian of prediction function using complex step derivative
+        """jacobian of prediction function using complex step derivative
 
         This assumes that the predict function does not use complex variable
         but is designed to do so.
 
-        '''
+        """
         from statsmodels.tools.numdiff import approx_fprime_cs
 
         jaccs_err = approx_fprime_cs(params, self._predict)
@@ -262,7 +261,7 @@ class Myfunc(NonlinearLS):
         return a*np.exp(-b*x) + c
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     def func0(x, a, b, c):
         return a*np.exp(-b*x) + c
 
@@ -276,7 +275,7 @@ if __name__ == '__main__':
     def error2(params, x, y):
         return (y - func(params, x))**2
 
-    x = np.linspace(0,4,50)
+    x = np.linspace(0, 4, 50)
     params = np.array([2.5, 1.3, 0.5])
     y0 = func(params, x)
     y = y0 + 0.2*np.random.normal(size=len(x))

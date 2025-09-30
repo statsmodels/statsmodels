@@ -1,7 +1,7 @@
 """Smoking and lung cancer in eight cities in China."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """Intern. J. Epidemiol. (1992)"""
 TITLE = __doc__
@@ -37,8 +37,8 @@ def load_pandas():
     Dataset
         See DATASET_PROPOSAL.txt for more information.
     """
-    raw_data = du.load_csv(__file__, 'china_smoking.csv')
-    data = raw_data.set_index('Location')
+    raw_data = du.load_csv(__file__, "china_smoking.csv")
+    data = raw_data.set_index("Location")
     dset = du.Dataset(data=data, title="Smoking and lung cancer in Chinese regions")
     dset.raw_data = raw_data
     return dset

@@ -149,7 +149,7 @@ def _convert_to_numpy(data, fixed, order, seasonal, use_numpy):
         y = np.asarray(y)
         x = np.asarray(x)
         if isinstance(order, dict):
-            order = {i: v for i, v in enumerate(order.values())}
+            order = dict(enumerate(order.values()))
         if fixed is not None:
             z = np.asarray(fixed)
         period = 4 if seasonal else None
@@ -238,8 +238,8 @@ def test_ardl_order_keys_exceptions(data):
 def test_ardl_deterministic_exceptions(data):
     with pytest.raises(TypeError):
         ARDL(data.y, 2, data.x, 2, deterministic="seasonal")
+    deterministic = DeterministicProcess(data.y.index, constant=True, order=1)
     with pytest.warns(SpecificationWarning, match="When using deterministic, trend"):
-        deterministic = DeterministicProcess(data.y.index, constant=True, order=1)
         ARDL(data.y, 2, data.x, 2, deterministic=deterministic, trend="ct")
 
 

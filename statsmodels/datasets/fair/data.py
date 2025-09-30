@@ -1,7 +1,7 @@
 """Fair's Extramarital Affairs Data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """Included with permission of the author."""
 TITLE = """Affairs dataset"""
@@ -68,4 +68,4 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'fair.csv', convert_float=True)
+    return du.load_csv(__file__, "fair.csv", convert_float=True)

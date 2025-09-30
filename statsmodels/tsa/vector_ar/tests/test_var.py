@@ -5,9 +5,8 @@ Test VAR Model
 from statsmodels.compat.pandas import QUARTER_END, assert_index_equal
 from statsmodels.compat.python import lrange
 
-from io import BytesIO, StringIO
+from io import BytesIO
 import os
-import sys
 import warnings
 
 import numpy as np
@@ -19,7 +18,7 @@ from statsmodels.datasets import macrodata
 import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
-import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.var_model import VAR, forecast, var_acf
 
 DECIMAL_12 = 12
@@ -30,7 +29,7 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 
 
-@pytest.fixture()
+@pytest.fixture
 def bivariate_var_data(reset_randomstate):
     """A bivariate dataset for VAR estimation"""
     e = np.random.standard_normal((252, 2))
@@ -41,7 +40,7 @@ def bivariate_var_data(reset_randomstate):
     return y
 
 
-@pytest.fixture()
+@pytest.fixture
 def bivariate_var_result(bivariate_var_data):
     """A bivariate VARResults for reuse"""
     mod = VAR(bivariate_var_data)
@@ -168,15 +167,6 @@ class RResults:
         self.causality = data["causality"]
 
 
-_orig_stdout = None
-
-
-def setup_module():
-    global _orig_stdout
-    _orig_stdout = sys.stdout
-    sys.stdout = StringIO()
-
-
 class CheckIRF:
     ref = None
     res = None
@@ -238,10 +228,13 @@ class CheckFEVD:
 
     @pytest.mark.matplotlib
     def test_fevd_plot(self, close_figures):
-        self.fevd.plot()
+        import matplotlib.pyplot as plt
+
+        assert isinstance(self.fevd.plot(), plt.Figure)
 
     def test_fevd_repr(self):
-        self.fevd
+        assert hasattr(self.fevd, "plot")
+        assert hasattr(self.fevd, "cov")
 
     def test_fevd_summary(self):
         self.fevd.summary()
@@ -284,7 +277,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_equal(model2.endog_names, self.ref.names)
 
     def test_get_eq_index(self):
-        assert type(self.res.names) is list  # noqa: E721
+        assert type(self.res.names) is list
 
         for i, name in enumerate(self.names):
             idx = self.res.get_eq_index(i)
@@ -308,7 +301,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
     @pytest.mark.smoke
     def test_cov_params(self):
         # do nothing for now
-        self.res.cov_params
+        assert isinstance(self.res.cov_params(), np.ndarray)
 
     @pytest.mark.smoke
     def test_cov_ybar(self):
@@ -316,11 +309,11 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     @pytest.mark.smoke
     def test_tstat(self):
-        self.res.tvalues
+        assert isinstance(self.res.tvalues, np.ndarray)
 
     @pytest.mark.smoke
     def test_pvalues(self):
-        self.res.pvalues
+        assert isinstance(self.res.pvalues, np.ndarray)
 
     @pytest.mark.smoke
     def test_summary(self):
@@ -500,7 +493,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         self.res.save(fh)
         fh.seek(0, 0)
         res_unpickled = self.res.__class__.load(fh)
-        assert type(res_unpickled) is type(self.res)  # noqa: E721
+        assert type(res_unpickled) is type(self.res)
 
 
 class E1_Results:
@@ -650,7 +643,7 @@ def test_var_constant():
     d = datetime.datetime.now()
     delta = datetime.timedelta(days=1)
     index = []
-    for i in range(data.shape[0]):
+    for _ in range(data.shape[0]):
         index.append(d)
         d += delta
 

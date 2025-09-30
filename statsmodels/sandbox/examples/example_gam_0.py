@@ -37,7 +37,7 @@ lb, ub = -1.0, 1.0  # for Poisson
 x1 = R.uniform(lb, ub, nobs)  # R.standard_normal(nobs)
 x1 = np.linspace(lb, ub, nobs)
 x1.sort()
-x2 = R.uniform(lb, ub, nobs)  #
+x2 = R.uniform(lb, ub, nobs)
 # x2 = R.standard_normal(nobs)
 x2.sort()
 # x2 = np.cos(x2)

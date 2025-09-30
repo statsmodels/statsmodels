@@ -8,18 +8,19 @@ License: BSD-3
 """
 
 import numpy as np
-from statsmodels.regression.linear_model import OLS, GLS, WLS
+
+from statsmodels.regression.linear_model import GLS, OLS, WLS
 
 
 def atleast_2dcols(x):
     x = np.asarray(x)
     if x.ndim == 1:
-        x = x[:,None]
+        x = x[:, None]
     return x
 
 
 class GLSHet2(GLS):
-    '''WLS with heteroscedasticity that depends on explanatory variables
+    """WLS with heteroscedasticity that depends on explanatory variables
 
     note: mixing GLS sigma and weights for heteroscedasticity might not make
     sense
@@ -27,7 +28,7 @@ class GLSHet2(GLS):
     I think rewriting following the pattern of GLSAR is better
     stopping criteria: improve in GLSAR also, e.g. change in rho
 
-    '''
+    """
 
     def __init__(self, endog, exog, exog_var, sigma=None):
         self.exog_var = atleast_2dcols(exog_var)
@@ -177,18 +178,18 @@ class GLSHet(WLS):
         res_resid = None  # if maxiter < 2 no updating
         for i in range(maxiter):
             # pinv_wexog is cached
-            if hasattr(self, 'pinv_wexog'):
+            if hasattr(self, "pinv_wexog"):
                 del self.pinv_wexog
             # self.initialize()
             # print 'wls self',
             results = self.fit()
-            self.history['self_params'].append(results.params)
+            self.history["self_params"].append(results.params)
             if not i == maxiter-1:  # s kip for last iteration, could break instead
                 # print 'ols',
                 self.results_old = results  # for debugging
                 # estimate heteroscedasticity
                 res_resid = OLS(self.link(results.resid**2), self.exog_var).fit()
-                self.history['ols_params'].append(res_resid.params)
+                self.history["ols_params"].append(res_resid.params)
                 # update weights
                 self.weights = 1./self.linkinv(res_resid.fittedvalues)
                 self.weights /= self.weights.max()  # not required

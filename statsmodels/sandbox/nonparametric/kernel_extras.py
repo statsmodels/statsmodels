@@ -41,7 +41,7 @@ from statsmodels.nonparametric._kernel_base import (
 )
 from statsmodels.nonparametric.api import KDEMultivariate, KernelReg
 
-__all__ = ["SingleIndexModel", "SemiLinear", "TestFForm"]
+__all__ = ["SemiLinear", "SingleIndexModel", "TestFForm"]
 
 
 class TestFForm:

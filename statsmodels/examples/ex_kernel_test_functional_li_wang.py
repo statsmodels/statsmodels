@@ -101,7 +101,7 @@ if __name__ == "__main__":
             exog[:, :1],
             bw=bw_lw,
             var_type="c",
-            fform=lambda x, p: mod_ols.predict(p, x),
+            fform=lambda x, p, mod_ols: mod_ols.predict(p, x),
             estimator=lambda y, x: OLS(y, x).fit().params,
             nboot=399,
         )

@@ -1,10 +1,10 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
-from statsmodels.distributions.mixture_rvs import mixture_rvs
-from statsmodels.nonparametric.kde import kdensityfft
-from statsmodels.nonparametric import bandwidths
-import matplotlib.pyplot as plt
 
+from statsmodels.distributions.mixture_rvs import mixture_rvs
+from statsmodels.nonparametric import bandwidths
+from statsmodels.nonparametric.kde import kdensityfft
 
 np.random.seed(12345)
 obs_dist = mixture_rvs(

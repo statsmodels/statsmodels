@@ -3,7 +3,7 @@ import pandas as pd
 
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This is public domain."""
 TITLE = __doc__
@@ -83,5 +83,5 @@ def load_pandas():
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'grunfeld.csv')
+    data = du.load_csv(__file__, "grunfeld.csv")
     return data

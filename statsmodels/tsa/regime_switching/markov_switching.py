@@ -553,7 +553,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             raise ValueError("Must have univariate endogenous data.")
         if self.k_regimes < 2:
             raise ValueError(
-                "Markov switching models must have at least two" " regimes."
+                "Markov switching models must have at least two regimes."
             )
         if not (self.exog_tvtp is None or self.exog_tvtp.shape[0] == self.nobs):
             raise ValueError(
@@ -605,7 +605,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         probabilities = np.array(probabilities, ndmin=1)
         if not probabilities.shape == (self.k_regimes,):
             raise ValueError(
-                "Initial probabilities must be a vector of shape" " (k_regimes,)."
+                "Initial probabilities must be a vector of shape (k_regimes,)."
             )
         if not np.abs(np.sum(probabilities) - 1) < tol:
             raise ValueError("Initial probabilities vector must sum to one.")
@@ -625,10 +625,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             A = np.c_[(np.eye(m) - regime_transition).T, np.ones(m)].T
             try:
                 probabilities = np.linalg.pinv(A)[:, -1]
-            except np.linalg.LinAlgError:
+            except np.linalg.LinAlgError as exc:
                 raise RuntimeError(
-                    "Steady-state probabilities could not be" " constructed."
-                )
+                    "Steady-state probabilities could not be constructed."
+                ) from exc
         elif self._initialization == "known":
             probabilities = self._initial_probabilities
         else:
@@ -1365,9 +1365,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             # Save the output
             if full_output:
                 em_retvals = Bunch(
-                    **{"params": np.array(params), "llf": np.array(llf), "iter": i}
+                    params=np.array(params), llf=np.array(llf), iter=i
                 )
-                em_settings = Bunch(**{"tolerance": tolerance, "maxiter": maxiter})
+                em_settings = Bunch(tolerance=tolerance, maxiter=maxiter)
             else:
                 em_retvals = None
                 em_settings = None
@@ -2338,5 +2338,5 @@ class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
 
 
 wrap.populate_wrapper(
-    MarkovSwitchingResultsWrapper, MarkovSwitchingResults  # noqa:E305
+    MarkovSwitchingResultsWrapper, MarkovSwitchingResults
 )

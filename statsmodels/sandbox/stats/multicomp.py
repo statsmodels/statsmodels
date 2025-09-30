@@ -61,12 +61,11 @@ TODO
 
 
 """
-
 from statsmodels.compat.python import lrange, lzip
 
-from collections import namedtuple
 import copy
 import math
+from typing import NamedTuple
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
@@ -83,8 +82,11 @@ try:
 except ImportError:
     from statsmodels.stats.libqsturng import psturng, qsturng
 
-    studentized_range_tuple = namedtuple("studentized_range", ["ppf", "sf"])
-    studentized_range = studentized_range_tuple(ppf=qsturng, sf=psturng)
+    class StudentizedRangeTuple(NamedTuple):
+        ppf: float
+        sf: float
+
+    studentized_range = StudentizedRangeTuple(ppf=qsturng, sf=psturng)
 
 
 qcrit = """
@@ -433,7 +435,7 @@ def mcfdr(nrepl=100, nobs=50, ntests=10, ntrue=6, mu=0.5, alpha=0.05, rho=0.0):
     # ntests - ntrue
     locs = np.array([0.0] * ntrue + [mu] * (ntests - ntrue))
     results = []
-    for i in range(nrepl):
+    for _ in range(nrepl):
         # rvs = locs + stats.norm.rvs(size=(nobs, ntests))
         rvs = locs + randmvn(rho, size=(nobs, ntests))
         tt, tpval = stats.ttest_1samp(rvs, 0)
@@ -472,7 +474,7 @@ def randmvn(rho, size=(1, 2), standardize=False):
 
     """
     nobs, nvars = size
-    if 0 < rho and rho < 1:
+    if 0 < rho < 1:
         rvs = np.random.randn(nobs, nvars + 1)
         rvs2 = rvs[:, :-1] * np.sqrt(1 - rho) + rvs[:, -1:] * np.sqrt(rho)
     elif rho == 0:
@@ -963,8 +965,7 @@ class MultiComparison:
                 import warnings
 
                 warnings.warn(
-                    "group_order does not contain all groups:"
-                    + " dropping observations",
+                    "group_order does not contain all groups: dropping observations",
                     ValueWarning,
                     stacklevel=2,
                 )
@@ -1939,7 +1940,7 @@ def set_partition(ssli):
 
     """
     part = []
-    for s in sorted(list(set(ssli)), key=len)[::-1]:
+    for s in sorted(set(ssli), key=len)[::-1]:
         # print(s,
         s_ = set(s).copy()
         if not any(set(s_).intersection(set(t)) for t in part):
@@ -1975,7 +1976,7 @@ def set_remove_subs(ssli):
     """
     # TODO: maybe convert all tuples to sets immediately, but I do not need the extra efficiency
     part = []
-    for s in sorted(list(set(ssli)), key=lambda x: len(set(x)))[::-1]:
+    for s in sorted(set(ssli), key=lambda x: len(set(x)))[::-1]:
         # print(s,
         # s_ = set(s).copy()
         if not any(set(s).issubset(set(t)) for t in part):
@@ -2148,7 +2149,7 @@ if __name__ == "__main__":
         gsr = GroupsStats(X, useranks=True)
 
         print("\nexamples for kruskal multicomparison")
-        for i in range(10):
+        for _ in range(10):
             x1, x2 = (np.random.randn(30, 2) + np.array([0, 0.5])).T
             skw = stats.kruskal(x1, x2)
             mc2 = MultiComparison(

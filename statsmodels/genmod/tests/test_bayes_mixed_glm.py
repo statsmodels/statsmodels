@@ -1,10 +1,13 @@
 import numpy as np
-from statsmodels.genmod.bayes_mixed_glm import (BinomialBayesMixedGLM,
-                                                PoissonBayesMixedGLM)
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 from scipy import sparse
-from numpy.testing import assert_allclose, assert_equal
 from scipy.optimize import approx_fprime
+
+from statsmodels.genmod.bayes_mixed_glm import (
+    BinomialBayesMixedGLM,
+    PoissonBayesMixedGLM,
+)
 
 
 def gen_simple_logit(nc, cs, s):
@@ -279,12 +282,12 @@ def test_elbo_grad():
 
                 mean_grad, sd_grad = glmm1.vb_elbo_grad(vb_mean, vb_sd)
 
-                def elbo(vec):
+                def elbo(vec, glmm1):
                     n = len(vec) // 2
                     return glmm1.vb_elbo(vec[:n], vec[n:])
 
                 x = np.concatenate((vb_mean, vb_sd))
-                g1 = approx_fprime(x, elbo, 1e-5)
+                g1 = approx_fprime(x, elbo, 1e-5, glmm1)
                 n = len(x) // 2
 
                 mean_grad_n = g1[:n]
@@ -517,11 +520,11 @@ def test_poisson_formula():
         # Build categorical variables that match exog_vc
         df = pd.DataFrame({"y": y, "x1": exog_fe[:, 0]})
         z1 = np.zeros(len(y))
-        for j,k in enumerate(np.flatnonzero(ident == 0)):
+        for j, k in enumerate(np.flatnonzero(ident == 0)):
             z1[exog_vc[:, k] == 1] = j
         df["z1"] = z1
         z2 = np.zeros(len(y))
-        for j,k in enumerate(np.flatnonzero(ident == 1)):
+        for j, k in enumerate(np.flatnonzero(ident == 1)):
             z2[exog_vc[:, k] == 1] = j
         df["z2"] = z2
 
@@ -589,7 +592,7 @@ def test_doc_examples():
     m = 20
     data = pd.DataFrame({"Year": np.random.uniform(0, 1, n),
                          "Village": np.random.randint(0, m, n)})
-    data['year_cen'] = data['Year'] - data.Year.mean()
+    data["year_cen"] = data["Year"] - data.Year.mean()
 
     # Binomial outcome
     lpr = np.random.normal(size=m)[data.Village]
@@ -598,9 +601,9 @@ def test_doc_examples():
     data["y"] = y.astype(int)
 
     # These lines should agree with the example in the class docstring.
-    random = {"a": '0 + C(Village)', "b": '0 + C(Village)*year_cen'}
+    random = {"a": "0 + C(Village)", "b": "0 + C(Village)*year_cen"}
     model = BinomialBayesMixedGLM.from_formula(
-                 'y ~ year_cen', random, data)
+                 "y ~ year_cen", random, data)
     result = model.fit_vb()
     _ = result
 
@@ -610,8 +613,8 @@ def test_doc_examples():
     data["y"] = np.random.poisson(np.exp(lpr))
 
     # These lines should agree with the example in the class docstring.
-    random = {"a": '0 + C(Village)', "b": '0 + C(Village)*year_cen'}
+    random = {"a": "0 + C(Village)", "b": "0 + C(Village)*year_cen"}
     model = PoissonBayesMixedGLM.from_formula(
-                 'y ~ year_cen', random, data)
+                 "y ~ year_cen", random, data)
     result = model.fit_vb()
     _ = result

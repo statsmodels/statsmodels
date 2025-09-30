@@ -24,7 +24,7 @@ from urllib.request import urlopen
 
 import numpy as np
 from numpy.testing import assert_almost_equal
-import pandas
+import pandas as pd
 from scipy.special import digamma
 from scipy.stats import nbinom
 
@@ -265,12 +265,12 @@ def _score_nbp(y, X, beta, thet, Q):
 
 
 # Tests
-medpar = pandas.read_csv(
+medpar = pd.read_csv(
     urlopen(
         "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/medpar.csv"
     )
 )
-mdvis = pandas.read_csv(
+mdvis = pd.read_csv(
     urlopen(
         "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/mdvis.csv"
     )
@@ -301,7 +301,7 @@ factor(type)3  0.70616    0.07600   9.292  < 2e-16 ***
 hmo           -0.06796    0.05321  -1.277    0.202
 white         -0.12907    0.06836  -1.888    0.059 .
 ---
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+Signif. codes:  0`***` 0.001`**` 0.01`*` 0.05`.` 0.1` ` 1
 
 (Dispersion parameter for Negative Binomial(2.2434) family taken to be 1)
 
@@ -380,7 +380,7 @@ factor(type)3  0.70599    0.08092   8.724  < 2e-16 ***
 hmo           -0.06779    0.05521  -1.228   0.2197
 white         -0.12709    0.07169  -1.773   0.0765 .
 ---
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+Signif. codes:  0`***` 0.001`**` 0.01`*` 0.05`.` 0.1` ` 1
 
 (Dispersion parameter for Negative Binomial(1) family taken to be 0.5409721)
 

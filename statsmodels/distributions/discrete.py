@@ -11,7 +11,7 @@ class genpoisson_p_gen(rv_discrete):
     """Generalized Poisson distribution"""
 
     def _argcheck(self, mu, alpha, p):
-        return (mu >= 0) & (alpha == alpha) & (p > 0)
+        return (mu >= 0) & ~np.isnan(alpha) & (p > 0)
 
     def _logpmf(self, x, mu, alpha, p):
         mu_p = mu ** (p - 1.0)
@@ -296,7 +296,7 @@ class DiscretizedCount(rv_discrete):
 
     .. [2] Alzaatreh, Ayman, Carl Lee, and Felix Famoye. 2012. “On the Discrete
        Analogues of Continuous Distributions.” Statistical Methodology 9 (6):
-       589–603.
+       589-603.
 
 
     """
@@ -317,13 +317,12 @@ class DiscretizedCount(rv_discrete):
             if add_scale:
                 kwds.update({"shapes": distr.shapes + ", s"})
                 self.k_shapes += 1
+        # no shape parameters in underlying distribution
+        elif add_scale:
+            kwds.update({"shapes": "s"})
+            self.k_shapes = 1
         else:
-            # no shape parameters in underlying distribution
-            if add_scale:
-                kwds.update({"shapes": "s"})
-                self.k_shapes = 1
-            else:
-                self.k_shapes = 0
+            self.k_shapes = 0
 
         super().__init__(**kwds)
 

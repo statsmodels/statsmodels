@@ -292,7 +292,7 @@ class Representation:
         # Get dimensions from transition equation
         if k_states < 1:
             raise ValueError(
-                "Number of states in statespace model must be a" " positive number."
+                "Number of states in statespace model must be a positive number."
             )
         self.k_states = k_states
         self.k_posdef = k_posdef if k_posdef is not None else k_states
@@ -384,7 +384,7 @@ class Representation:
             raise ValueError("Invalid state space initialization method.")
 
         # Check for unused kwargs
-        if len(kwargs):
+        if kwargs:
             # raise TypeError(f'{__class__} constructor got unexpected keyword'
             #                 f' argument(s): {kwargs}.')
             msg = (
@@ -437,7 +437,7 @@ class Representation:
         # Otherwise, we have only a single slice index, but it is not a string
         else:
             raise IndexError(
-                "First index must the name of a valid state space" " matrix."
+                "First index must the name of a valid state space matrix."
             )
 
     def __setitem__(self, key, value):
@@ -477,7 +477,7 @@ class Representation:
         # invalid
         else:
             raise IndexError(
-                "First index must the name of a valid state space" " matrix."
+                "First index must the name of a valid state space matrix."
             )
 
     def _clone_kwargs(self, endog, **kwargs):
@@ -505,7 +505,7 @@ class Representation:
                 kwargs[key] = val
             if kwargs[key] != val:
                 raise ValueError(
-                    "Cannot change the dimension of %s when" " cloning." % key
+                    "Cannot change the dimension of %s when cloning." % key
                 )
 
         # Get defaults for time-invariant system matrices, if not otherwise
@@ -828,7 +828,7 @@ class Representation:
                 endog.shape = (1, endog.shape[0])
         if not endog.ndim == 2:
             raise ValueError(
-                "Invalid endogenous array provided; must be" " 2-dimensional."
+                "Invalid endogenous array provided; must be 2-dimensional."
             )
 
         # Check for valid column-ordered arrays
@@ -855,7 +855,7 @@ class Representation:
         # Non-contiguous arrays
         else:
             raise ValueError(
-                "Invalid endogenous array; must be ordered in" " contiguous memory."
+                "Invalid endogenous array; must be ordered in contiguous memory."
             )
 
         # We may still have a non-fortran contiguous array, so double-check

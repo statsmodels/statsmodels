@@ -100,13 +100,3 @@ class TestPolySmoother3(BasePolySmoother, CheckSmoother):
 
         cls.res_ps = pmod
         cls.res2 = WLS(y, exog[:, : 2 + 1], weights=weights).fit()
-
-
-if __name__ == "__main__":
-    t1 = TestPolySmoother1()
-    t1.test_predict()
-    t1.test_coef()
-    t1.test_df
-
-    t3 = TestPolySmoother3()
-    t3.test_predict()

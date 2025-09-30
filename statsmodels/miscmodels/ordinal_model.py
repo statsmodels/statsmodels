@@ -219,7 +219,7 @@ class OrderedModel(GenericLikelihoodModel):
                 endog = endog.cat.codes
                 if endog.min() == -1:  # means there is a missing value
                     raise ValueError(
-                        "missing values in categorical endog are " "not supported"
+                        "missing values in categorical endog are not supported"
                     )
                 endog.name = endog_name
                 is_pandas = True
@@ -261,7 +261,7 @@ class OrderedModel(GenericLikelihoodModel):
         original_endog = data[endog_name]
         advance_eval_env(kwargs)
         model = super().from_formula(
-            formula, data=data, drop_cols=["Intercept"], *args, **kwargs
+            formula, data, *args, drop_cols=["Intercept"], **kwargs
         )
 
         if model.endog.ndim == 2:
@@ -463,9 +463,8 @@ class OrderedModel(GenericLikelihoodModel):
             exog = self.exog
             if offset is None:
                 offset = self.offset
-        else:
-            if offset is None:
-                offset = 0
+        elif offset is None:
+            offset = 0
 
         if offset is not None:
             offset = np.asarray(offset)
@@ -692,10 +691,10 @@ class OrderedResults(GenericLikelihoodModelResults):
         ----------
         Shepherd BE, Li C, Liu Q (2016) Probability-scale residuals for
         continuous, discrete, and censored data.
-        The Canadian Journal of Statistics. 44:463–476.
+        The Canadian Journal of Statistics. 44:463-476.
 
         Li C and Shepherd BE (2012) A new residual for ordinal outcomes.
-        Biometrika. 99: 473–480
+        Biometrika. 99: 473-480
 
         """
         from statsmodels.stats.diagnostic_gen import prob_larger_ordinal_choice

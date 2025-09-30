@@ -120,7 +120,6 @@ class ModelData:
                     break
                 except (NameError, mgr.factor_evaluation_error) as e:
                     exc.append(e)  # why do I need a reference from outside except block
-                    pass
             else:
                 raise exc[-1]
 
@@ -226,7 +225,7 @@ class ModelData:
         # deal with other arrays
         combined_2d = ()
         combined_2d_names = []
-        if len(kwargs):
+        if kwargs:
             for key, value_array in kwargs.items():
                 if value_array is None or np.ndim(value_array) == 0:
                     none_array_names += [key]
@@ -245,7 +244,7 @@ class ModelData:
                     combined_2d_names += [key]
                 else:
                     raise ValueError(
-                        "Arrays with more than 2 dimensions " "are not yet handled"
+                        "Arrays with more than 2 dimensions are not yet handled"
                     )
 
         if missing_idx is not None:
