@@ -84,8 +84,8 @@ Potential problems for Python 3
 
 from statsmodels.compat.python import lmap, lrange
 
-from itertools import cycle, zip_longest
 import csv
+from itertools import cycle, zip_longest
 
 
 def csv2st(csvfile, headers=False, stubs=False, title=None):
@@ -117,7 +117,7 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
             stubs = ()
     ncols = len(rows[0])
     if any(len(row) != ncols for row in rows):
-        raise OSError('All rows of CSV file must have same length.')
+        raise OSError("All rows of CSV file must have same length.")
     return SimpleTable(data=rows, headers=headers, stubs=stubs)
 
 
@@ -147,7 +147,7 @@ class SimpleTable(list):
         with open('c:/temp/temp.tex','w') as fh:
             fh.write( tbl.as_latex_tabular() )
     """
-    def __init__(self, data, headers=None, stubs=None, title='',
+    def __init__(self, data, headers=None, stubs=None, title="",
                  datatypes=None, csv_fmt=None, txt_fmt=None, ltx_fmt=None,
                  html_fmt=None, celltype=None, rowtype=None, **fmt_dict):
         """
@@ -194,10 +194,10 @@ class SimpleTable(list):
         self._latex_fmt.update(fmt_dict)
         self._html_fmt.update(fmt_dict)
         # substitute any output-type specific formatting
-        self._csv_fmt.update(csv_fmt or dict())
-        self._txt_fmt.update(txt_fmt or dict())
-        self._latex_fmt.update(ltx_fmt or dict())
-        self._html_fmt.update(html_fmt or dict())
+        self._csv_fmt.update(csv_fmt or {})
+        self._txt_fmt.update(txt_fmt or {})
+        self._latex_fmt.update(ltx_fmt or {})
+        self._html_fmt.update(html_fmt or {})
         self.output_formats = dict(
             txt=self._txt_fmt,
             csv=self._csv_fmt,
@@ -209,7 +209,7 @@ class SimpleTable(list):
         rows = self._data2rows(data)  # a list of Row instances
         list.__init__(self, rows)
         self._add_headers_stubs(headers, stubs)
-        self._colwidths = dict()
+        self._colwidths = {}
 
     def __str__(self):
         return self.as_text()
@@ -236,7 +236,7 @@ class SimpleTable(list):
         :note: a header row does not receive a stub!
         """
         if headers:
-            self.insert_header_row(0, headers, dec_below='header_dec_below')
+            self.insert_header_row(0, headers, dec_below="header_dec_below")
         if stubs:
             self.insert_stubs(0, stubs)
 
@@ -251,17 +251,17 @@ class SimpleTable(list):
         row = self._Row(row, datatype=datatype, table=self)
         list.insert(self, idx, row)
 
-    def insert_header_row(self, rownum, headers, dec_below='header_dec_below'):
+    def insert_header_row(self, rownum, headers, dec_below="header_dec_below"):
         """Return None.  Insert a row of headers,
         where ``headers`` is a sequence of strings.
         (The strings may contain newlines, to indicated multiline headers.)
         """
-        header_rows = [header.split('\n') for header in headers]
+        header_rows = [header.split("\n") for header in headers]
         # rows in reverse order
-        rows = list(zip_longest(*header_rows, **dict(fillvalue='')))
+        rows = list(zip_longest(*header_rows, **dict(fillvalue="")))
         rows.reverse()
         for i, row in enumerate(rows):
-            self.insert(rownum, row, datatype='header')
+            self.insert(rownum, row, datatype="header")
             if i == 0:
                 self[rownum].dec_below = dec_below
             else:
@@ -275,14 +275,14 @@ class SimpleTable(list):
         _Cell = self._Cell
         stubs = iter(stubs)
         for row in self:
-            if row.datatype == 'header':
-                empty_cell = _Cell('', datatype='empty')
+            if row.datatype == "header":
+                empty_cell = _Cell("", datatype="empty")
                 row.insert(loc, empty_cell)
             else:
                 try:
                     row.insert_stub(loc, next(stubs))
-                except StopIteration:
-                    raise ValueError('length of stubs must match table length')
+                except StopIteration as exc:
+                    raise ValueError("length of stubs must match table length") from exc
 
     def _data2rows(self, raw_data):
         """Return list of Row,
@@ -294,7 +294,7 @@ class SimpleTable(list):
         rows = []
         for datarow in raw_data:
             dtypes = cycle(self._datatypes)
-            newrow = _Row(datarow, datatype='data', table=self, celltype=_Cell)
+            newrow = _Row(datarow, datatype="data", table=self, celltype=_Cell)
             for cell in newrow:
                 cell.datatype = next(dtypes)
                 cell.row = newrow  # a cell knows its row
@@ -312,7 +312,7 @@ class SimpleTable(list):
         fmt = self.output_formats[output_format].copy()
         fmt.update(fmt_dict)
         ncols = max(len(row) for row in self)
-        request = fmt.get('colwidths')
+        request = fmt.get("colwidths")
         if request == 0:  # assume no extra space desired (e.g, CSV)
             return [0] * ncols
         elif request is None:  # assume no extra space desired (e.g, CSV)
@@ -353,8 +353,8 @@ class SimpleTable(list):
         # first get the default formatting
         try:
             fmt = self.output_formats[output_format].copy()
-        except KeyError:
-            raise ValueError('Unknown format: %s' % output_format)
+        except KeyError as exc:
+            raise ValueError("Unknown format: %s" % output_format) from exc
         # then, add formatting specific to this call
         fmt.update(fmt_dict)
         return fmt
@@ -363,32 +363,32 @@ class SimpleTable(list):
         """Return string, the table in CSV format.
         Currently only supports comma separator."""
         # fetch the format, which may just be default_csv_format
-        fmt = self._get_fmt('csv', **fmt_dict)
+        fmt = self._get_fmt("csv", **fmt_dict)
         return self.as_text(**fmt)
 
     def as_text(self, **fmt_dict):
         """Return string, the table as text."""
         # fetch the text format, override with fmt_dict
-        fmt = self._get_fmt('txt', **fmt_dict)
+        fmt = self._get_fmt("txt", **fmt_dict)
         # get rows formatted as strings
-        formatted_rows = [row.as_string('text', **fmt) for row in self]
+        formatted_rows = [row.as_string("text", **fmt) for row in self]
         rowlen = len(formatted_rows[-1])  # do not use header row
 
         # place decoration above the table body, if desired
-        table_dec_above = fmt.get('table_dec_above', '=')
+        table_dec_above = fmt.get("table_dec_above", "=")
         if table_dec_above:
             formatted_rows.insert(0, table_dec_above * rowlen)
         # next place a title at the very top, if desired
         # :note: user can include a newlines at end of title if desired
         title = self.title
         if title:
-            title = pad(self.title, rowlen, fmt.get('title_align', 'c'))
+            title = pad(self.title, rowlen, fmt.get("title_align", "c"))
             formatted_rows.insert(0, title)
         # add decoration below the table, if desired
-        table_dec_below = fmt.get('table_dec_below', '-')
+        table_dec_below = fmt.get("table_dec_below", "-")
         if table_dec_below:
             formatted_rows.append(table_dec_below * rowlen)
-        return '\n'.join(formatted_rows)
+        return "\n".join(formatted_rows)
 
     def as_html(self, **fmt_dict):
         """Return string.
@@ -397,27 +397,27 @@ class SimpleTable(list):
         a table and a format dictionary.
         """
         # fetch the text format, override with fmt_dict
-        fmt = self._get_fmt('html', **fmt_dict)
+        fmt = self._get_fmt("html", **fmt_dict)
         formatted_rows = ['<table class="simpletable">']
         if self.title:
-            title = '<caption>%s</caption>' % self.title
+            title = "<caption>%s</caption>" % self.title
             formatted_rows.append(title)
-        formatted_rows.extend(row.as_string('html', **fmt) for row in self)
-        formatted_rows.append('</table>')
-        return '\n'.join(formatted_rows)
+        formatted_rows.extend(row.as_string("html", **fmt) for row in self)
+        formatted_rows.append("</table>")
+        return "\n".join(formatted_rows)
 
     def as_latex_tabular(self, center=True, **fmt_dict):
-        '''Return string, the table as a LaTeX tabular environment.
-        Note: will require the booktabs package.'''
+        """Return string, the table as a LaTeX tabular environment.
+        Note: will require the booktabs package."""
         # fetch the text format, override with fmt_dict
-        fmt = self._get_fmt('latex', **fmt_dict)
+        fmt = self._get_fmt("latex", **fmt_dict)
 
         formatted_rows = []
         if center:
-            formatted_rows.append(r'\begin{center}')
+            formatted_rows.append(r"\begin{center}")
 
-        table_dec_above = fmt['table_dec_above'] or ''
-        table_dec_below = fmt['table_dec_below'] or ''
+        table_dec_above = fmt["table_dec_above"] or ""
+        table_dec_below = fmt["table_dec_below"] or ""
 
         prev_aligns = None
         last = None
@@ -425,34 +425,34 @@ class SimpleTable(list):
             if row == last:
                 aligns = None
             else:
-                aligns = row.get_aligns('latex', **fmt)
+                aligns = row.get_aligns("latex", **fmt)
 
             if aligns != prev_aligns:
                 # When the number/type of columns changes...
                 if prev_aligns:
                     # ... if there is a tabular to close, close it...
                     formatted_rows.append(table_dec_below)
-                    formatted_rows.append(r'\end{tabular}')
+                    formatted_rows.append(r"\end{tabular}")
                 if aligns:
                     # ... and if there are more lines, open a new one:
-                    formatted_rows.append(r'\begin{tabular}{%s}' % aligns)
+                    formatted_rows.append(r"\begin{tabular}{%s}" % aligns)
                     if not prev_aligns:
                         # (with a nice line if it's the top of the whole table)
                         formatted_rows.append(table_dec_above)
             if row != last:
                 formatted_rows.append(
-                    row.as_string(output_format='latex', **fmt))
+                    row.as_string(output_format="latex", **fmt))
             prev_aligns = aligns
         # tabular does not support caption, but make it available for
         # figure environment
         if self.title:
-            title = r'%%\caption{%s}' % self.title
+            title = r"%%\caption{%s}" % self.title
             formatted_rows.append(title)
         if center:
-            formatted_rows.append(r'\end{center}')
+            formatted_rows.append(r"\end{center}")
 
         # Replace $$ due to bug in GH 5444
-        return '\n'.join(formatted_rows).replace('$$', ' ')
+        return "\n".join(formatted_rows).replace("$$", " ")
 
     def extend_right(self, table):
         """Return None.
@@ -487,9 +487,9 @@ class SimpleTable(list):
 def pad(s, width, align):
     """Return string padded with spaces,
     based on alignment parameter."""
-    if align == 'l':
+    if align == "l":
         s = s.ljust(width)
-    elif align == 'r':
+    elif align == "r":
         s = s.rjust(width)
     else:
         s = s.center(width)
@@ -500,8 +500,8 @@ class Row(list):
     """Provides a table row as a list of cells.
     A row can belong to a SimpleTable, but does not have to.
     """
-    def __init__(self, seq, datatype='data', table=None, celltype=None,
-                 dec_below='row_dec_below', **fmt_dict):
+    def __init__(self, seq, datatype="data", table=None, celltype=None,
+                 dec_below="row_dec_below", **fmt_dict):
         """
         Parameters
         ----------
@@ -522,7 +522,7 @@ class Row(list):
                 celltype = table._Cell
         self._Cell = celltype
         self._fmt = fmt_dict
-        self.special_fmts = dict()  # special formatting for any output format
+        self.special_fmts = {}  # special formatting for any output format
         self.dec_below = dec_below
         list.__init__(self, (celltype(cell, row=self) for cell in seq))
 
@@ -534,7 +534,7 @@ class Row(list):
         """
         output_format = get_output_format(output_format)
         if output_format not in self.special_fmts:
-            self.special_fmts[output_format] = dict()
+            self.special_fmts[output_format] = {}
         self.special_fmts[output_format].update(fmt_dict)
 
     def insert_stub(self, loc, stub):
@@ -543,8 +543,7 @@ class Row(list):
         """
         _Cell = self._Cell
         if not isinstance(stub, _Cell):
-            stub = stub
-            stub = _Cell(stub, datatype='stub', row=self)
+            stub = _Cell(stub, datatype="stub", row=self)
         self.insert(loc, stub)
 
     def _get_fmt(self, output_format, **fmt_dict):
@@ -554,8 +553,8 @@ class Row(list):
         # first get the default formatting
         try:
             fmt = default_fmts[output_format].copy()
-        except KeyError:
-            raise ValueError('Unknown format: %s' % output_format)
+        except KeyError as exc:
+            raise ValueError("Unknown format: %s" % output_format) from exc
         # second get table specific formatting (if possible)
         try:
             fmt.update(self.table.output_formats[output_format])
@@ -573,9 +572,9 @@ class Row(list):
         """Return string, sequence of column alignments.
         Ensure comformable data_aligns in `fmt_dict`."""
         fmt = self._get_fmt(output_format, **fmt_dict)
-        return ''.join(cell.alignment(output_format, **fmt) for cell in self)
+        return "".join(cell.alignment(output_format, **fmt) for cell in self)
 
-    def as_string(self, output_format='txt', **fmt_dict):
+    def as_string(self, output_format="txt", **fmt_dict):
         """Return string: the formatted row.
         This is the default formatter for rows.
         Override this to get different formatting.
@@ -589,13 +588,13 @@ class Row(list):
         try:
             colwidths = self.table.get_colwidths(output_format, **fmt)
         except AttributeError:
-            colwidths = fmt.get('colwidths')
+            colwidths = fmt.get("colwidths")
         if colwidths is None:
             colwidths = (0,) * len(self)
 
-        colsep = fmt['colsep']
-        row_pre = fmt.get('row_pre', '')
-        row_post = fmt.get('row_post', '')
+        colsep = fmt["colsep"]
+        row_pre = fmt.get("row_pre", "")
+        row_post = fmt.get("row_post", "")
         formatted_cells = []
         for cell, width in zip(self, colwidths):
             content = cell.format(width, output_format=output_format, **fmt)
@@ -613,13 +612,13 @@ class Row(list):
             result = row_as_string
         else:
             output_format = get_output_format(output_format)
-            if output_format == 'txt':
+            if output_format == "txt":
                 row0len = len(row_as_string)
                 dec_len = len(dec_below)
                 repeat, addon = divmod(row0len, dec_len)
                 result = row_as_string + "\n" + (dec_below * repeat +
                                                  dec_below[:addon])
-            elif output_format == 'latex':
+            elif output_format == "latex":
                 result = row_as_string + "\n" + dec_below
             else:
                 raise ValueError("I cannot decorate a %s header." %
@@ -635,7 +634,7 @@ class Cell:
     """Provides a table cell.
     A cell can belong to a Row, but does not have to.
     """
-    def __init__(self, data='', datatype=None, row=None, **fmt_dict):
+    def __init__(self, data="", datatype=None, row=None, **fmt_dict):
         if isinstance(data, Cell):
             # might have passed a Cell instance
             self.data = data.data
@@ -644,12 +643,12 @@ class Cell:
         else:
             self.data = data
             self._datatype = datatype
-            self._fmt = dict()
+            self._fmt = {}
         self._fmt.update(fmt_dict)
         self.row = row
 
     def __str__(self):
-        return '%s' % self.data
+        return "%s" % self.data
 
     def _get_fmt(self, output_format, **fmt_dict):
         """Return dict, the formatting options.
@@ -658,8 +657,8 @@ class Cell:
         # first get the default formatting
         try:
             fmt = default_fmts[output_format].copy()
-        except KeyError:
-            raise ValueError('Unknown format: %s' % output_format)
+        except KeyError as exc:
+            raise ValueError("Unknown format: %s" % output_format) from exc
         # then get any table specific formtting
         try:
             fmt.update(self.row.table.output_formats[output_format])
@@ -678,22 +677,22 @@ class Cell:
     def alignment(self, output_format, **fmt_dict):
         fmt = self._get_fmt(output_format, **fmt_dict)
         datatype = self.datatype
-        data_aligns = fmt.get('data_aligns', 'c')
+        data_aligns = fmt.get("data_aligns", "c")
         if isinstance(datatype, int):
             align = data_aligns[datatype % len(data_aligns)]
-        elif datatype == 'stub':
+        elif datatype == "stub":
             # still support deprecated `stubs_align`
-            align = fmt.get('stubs_align') or fmt.get('stub_align', 'l')
+            align = fmt.get("stubs_align") or fmt.get("stub_align", "l")
         elif datatype in fmt:
-            label_align = '%s_align' % datatype
-            align = fmt.get(label_align, 'c')
+            label_align = "%s_align" % datatype
+            align = fmt.get(label_align, "c")
         else:
-            raise ValueError('Unknown cell datatype: %s' % datatype)
+            raise ValueError("Unknown cell datatype: %s" % datatype)
         return align
 
     @staticmethod
     def _latex_escape(data, fmt, output_format):
-        if output_format != 'latex':
+        if output_format != "latex":
             return data
         if "replacements" in fmt:
             if isinstance(data, str):
@@ -701,7 +700,7 @@ class Cell:
                     data = data.replace(repl, fmt["replacements"][repl])
         return data
 
-    def format(self, width, output_format='txt', **fmt_dict):
+    def format(self, width, output_format="txt", **fmt_dict):
         """Return string.
         This is the default formatter for cells.
         Override this to get different formating.
@@ -715,12 +714,12 @@ class Cell:
 
         data = self.data
         datatype = self.datatype
-        data_fmts = fmt.get('data_fmts')
+        data_fmts = fmt.get("data_fmts")
         if data_fmts is None:
             # chk allow for deprecated use of data_fmt
-            data_fmt = fmt.get('data_fmt')
+            data_fmt = fmt.get("data_fmt")
             if data_fmt is None:
-                data_fmt = '%s'
+                data_fmt = "%s"
             data_fmts = [data_fmt]
         if isinstance(datatype, int):
             datatype = datatype % len(data_fmts)  # constrain to indexes
@@ -742,7 +741,7 @@ class Cell:
             except TypeError:  # dfmt is not a substitution string
                 content = dfmt
         else:
-            raise ValueError('Unknown cell datatype: %s' % datatype)
+            raise ValueError("Unknown cell datatype: %s" % datatype)
         align = self.alignment(output_format, **fmt)
         return pad(content, width, align)
 
@@ -776,64 +775,64 @@ class Cell:
         data_aligns = "r",
 """
 default_txt_fmt = dict(
-    fmt='txt',
+    fmt="txt",
     # basic table formatting
-    table_dec_above='=',
-    table_dec_below='-',
-    title_align='c',
+    table_dec_above="=",
+    table_dec_below="-",
+    title_align="c",
     # basic row formatting
-    row_pre='',
-    row_post='',
-    header_dec_below='-',
+    row_pre="",
+    row_post="",
+    header_dec_below="-",
     row_dec_below=None,
     colwidths=None,
-    colsep=' ',
+    colsep=" ",
     data_aligns="r",  # GH 1477
     # data formats
     # data_fmt="%s",  # deprecated; use data_fmts
     data_fmts=["%s"],
     # labeled alignments
     # stubs_align='l',   # deprecated; use data_fmts
-    stub_align='l',
-    header_align='c',
+    stub_align="l",
+    header_align="c",
     # labeled formats
-    header_fmt='%s',  # deprecated; just use 'header'
-    stub_fmt='%s',  # deprecated; just use 'stub'
-    header='%s',
-    stub='%s',
-    empty_cell='',  # deprecated; just use 'empty'
-    empty='',
-    missing='--',
+    header_fmt="%s",  # deprecated; just use 'header'
+    stub_fmt="%s",  # deprecated; just use 'stub'
+    header="%s",
+    stub="%s",
+    empty_cell="",  # deprecated; just use 'empty'
+    empty="",
+    missing="--",
 )
 
 default_csv_fmt = dict(
-    fmt='csv',
+    fmt="csv",
     table_dec_above=None,  # '',
     table_dec_below=None,  # '',
     # basic row formatting
-    row_pre='',
-    row_post='',
+    row_pre="",
+    row_post="",
     header_dec_below=None,  # '',
     row_dec_below=None,
-    title_align='',
+    title_align="",
     data_aligns="l",
     colwidths=None,
-    colsep=',',
+    colsep=",",
     # data formats
-    data_fmt='%s',  # deprecated; use data_fmts
-    data_fmts=['%s'],
+    data_fmt="%s",  # deprecated; use data_fmts
+    data_fmts=["%s"],
     # labeled alignments
     # stubs_align='l',   # deprecated; use data_fmts
     stub_align="l",
-    header_align='c',
+    header_align="c",
     # labeled formats
     header_fmt='"%s"',  # deprecated; just use 'header'
     stub_fmt='"%s"',  # deprecated; just use 'stub'
-    empty_cell='',  # deprecated; just use 'empty'
-    header='%s',
-    stub='%s',
-    empty='',
-    missing='--',
+    empty_cell="",  # deprecated; just use 'empty'
+    header="%s",
+    stub="%s",
+    empty="",
+    missing="--",
 )
 
 default_html_fmt = dict(
@@ -842,59 +841,59 @@ default_html_fmt = dict(
     table_dec_below=None,
     header_dec_below=None,
     row_dec_below=None,
-    title_align='c',
+    title_align="c",
     # basic row formatting
     colwidths=None,
-    colsep=' ',
-    row_pre='<tr>\n  ',
-    row_post='\n</tr>',
+    colsep=" ",
+    row_pre="<tr>\n  ",
+    row_post="\n</tr>",
     data_aligns="c",
     # data formats
-    data_fmts=['<td>%s</td>'],
+    data_fmts=["<td>%s</td>"],
     data_fmt="<td>%s</td>",  # deprecated; use data_fmts
     # labeled alignments
     # stubs_align='l',   # deprecated; use data_fmts
-    stub_align='l',
-    header_align='c',
+    stub_align="l",
+    header_align="c",
     # labeled formats
-    header_fmt='<th>%s</th>',  # deprecated; just use `header`
-    stub_fmt='<th>%s</th>',  # deprecated; just use `stub`
-    empty_cell='<td></td>',  # deprecated; just use `empty`
-    header='<th>%s</th>',
-    stub='<th>%s</th>',
-    empty='<td></td>',
-    missing='<td>--</td>',
+    header_fmt="<th>%s</th>",  # deprecated; just use `header`
+    stub_fmt="<th>%s</th>",  # deprecated; just use `stub`
+    empty_cell="<td></td>",  # deprecated; just use `empty`
+    header="<th>%s</th>",
+    stub="<th>%s</th>",
+    empty="<td></td>",
+    missing="<td>--</td>",
 )
 
 default_latex_fmt = dict(
-    fmt='ltx',
+    fmt="ltx",
     # basic table formatting
-    table_dec_above=r'\toprule',
-    table_dec_below=r'\bottomrule',
-    header_dec_below=r'\midrule',
+    table_dec_above=r"\toprule",
+    table_dec_below=r"\bottomrule",
+    header_dec_below=r"\midrule",
     row_dec_below=None,
     strip_backslash=True,  # NotImplemented
     # row formatting
-    row_post=r'  \\',
-    data_aligns='c',
+    row_post=r"  \\",
+    data_aligns="c",
     colwidths=None,
-    colsep=' & ',
+    colsep=" & ",
     # data formats
-    data_fmts=['%s'],
-    data_fmt='%s',  # deprecated; use data_fmts
+    data_fmts=["%s"],
+    data_fmt="%s",  # deprecated; use data_fmts
     # labeled alignments
     # stubs_align='l',   # deprecated; use data_fmts
-    stub_align='l',
-    header_align='c',
-    empty_align='l',
+    stub_align="l",
+    header_align="c",
+    empty_align="l",
     # labeled formats
-    header_fmt=r'\textbf{%s}',  # deprecated; just use 'header'
-    stub_fmt=r'\textbf{%s}',  # deprecated; just use 'stub'
-    empty_cell='',  # deprecated; just use 'empty'
-    header=r'\textbf{%s}',
-    stub=r'\textbf{%s}',
-    empty='',
-    missing='--',
+    header_fmt=r"\textbf{%s}",  # deprecated; just use 'header'
+    stub_fmt=r"\textbf{%s}",  # deprecated; just use 'stub'
+    empty_cell="",  # deprecated; just use 'empty'
+    header=r"\textbf{%s}",
+    stub=r"\textbf{%s}",
+    empty="",
+    missing="--",
     # replacements will be processed in lexicographical order
     replacements={"#": r"\#",
                   "$": r"\$",
@@ -912,16 +911,16 @@ default_fmts = dict(
     csv=default_csv_fmt
 )
 output_format_translations = dict(
-    htm='html',
-    text='txt',
-    ltx='latex'
+    htm="html",
+    text="txt",
+    ltx="latex"
 )
 
 
 def get_output_format(output_format):
-    if output_format not in ('html', 'txt', 'latex', 'csv'):
+    if output_format not in ("html", "txt", "latex", "csv"):
         try:
             output_format = output_format_translations[output_format]
-        except KeyError:
-            raise ValueError('unknown output format %s' % output_format)
+        except KeyError as exc:
+            raise ValueError("unknown output format %s" % output_format) from exc
     return output_format

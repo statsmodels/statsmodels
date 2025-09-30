@@ -528,8 +528,8 @@ class TestHoltWinters:
             fit = mod.fit(optimized=False)
 
         # Check that we captured the parameters correctly
-        for key in params.keys():
-            assert_allclose(fit.params[key], params[key])
+        for key, param_value in params.items():
+            assert_allclose(fit.params[key], param_value)
 
         with mod.fix_params(params):
             opt_fit = mod.fit(optimized=True)
@@ -776,7 +776,7 @@ class TestHoltWinters:
 
 
 @pytest.mark.parametrize(
-    "trend_seasonal", (("mul", None), (None, "mul"), ("mul", "mul"))
+    "trend_seasonal", [("mul", None), (None, "mul"), ("mul", "mul")]
 )
 def test_negative_multipliative(trend_seasonal):
     trend, seasonal = trend_seasonal
@@ -797,7 +797,7 @@ def test_dampen_no_trend(seasonal):
         )
 
 
-@pytest.mark.parametrize("seasonal", ("add", "mul"))
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
 def test_invalid_seasonal(seasonal):
     y = pd.Series(
         -np.ones(100), index=pd.date_range("2000-1-1", periods=100, freq="MS")
@@ -1481,8 +1481,8 @@ def simulate_fit_state_r():
 
 @pytest.mark.parametrize("trend", TRENDS)
 @pytest.mark.parametrize("seasonal", SEASONALS)
-@pytest.mark.parametrize("damped", (True, False))
-@pytest.mark.parametrize("error", ("add", "mul"))
+@pytest.mark.parametrize("damped", [True, False])
+@pytest.mark.parametrize("error", ["add", "mul"])
 def test_simulate_expected_r(
     trend,
     seasonal,
@@ -2073,7 +2073,7 @@ def test_initial_level():
     series = [0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0]
     es = ExponentialSmoothing(series, initialization_method="known", initial_level=20.0)
     es_fit = es.fit()
-    es_fit.params
+    assert isinstance(es_fit.params, dict)
     assert_allclose(es_fit.params["initial_level"], 20.0)
 
 

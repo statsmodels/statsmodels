@@ -9,11 +9,10 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
-from scipy import stats
 import pytest
+from scipy import stats
 
 import statsmodels.nonparametric.kernels_asymmetric as kern
-
 
 kernels_rplus = [("gamma", 0.1),
                  ("gamma2", 0.1),
@@ -119,15 +118,15 @@ class TestKernelsRplus(CheckKernels):
         cls.amse_pdf = 1e-4  # tol for average mean squared error
         cls.amse_cdf = 5e-4
 
-    @pytest.mark.parametrize('case', kernels_rplus)
+    @pytest.mark.parametrize("case", kernels_rplus)
     def test_kernels(self, case):
         super().test_kernels(case)
 
-    @pytest.mark.parametrize('case', kernels_rplus)
+    @pytest.mark.parametrize("case", kernels_rplus)
     def test_kernels_vectorized(self, case):
         super().test_kernels_vectorized(case)
 
-    @pytest.mark.parametrize('case', kernels_rplus)
+    @pytest.mark.parametrize("case", kernels_rplus)
     def test_kernels_weights(self, case):
         super().test_kernels_weights(case)
 
@@ -150,14 +149,14 @@ class TestKernelsUnit(CheckKernels):
         cls.amse_pdf = 0.01
         cls.amse_cdf = 5e-3
 
-    @pytest.mark.parametrize('case', kernels_unit)
+    @pytest.mark.parametrize("case", kernels_unit)
     def test_kernels(self, case):
         super().test_kernels(case)
 
-    @pytest.mark.parametrize('case', kernels_unit)
+    @pytest.mark.parametrize("case", kernels_unit)
     def test_kernels_vectorized(self, case):
         super().test_kernels_vectorized(case)
 
-    @pytest.mark.parametrize('case', kernels_unit)
+    @pytest.mark.parametrize("case", kernels_unit)
     def test_kernels_weights(self, case):
         super().test_kernels_weights(case)

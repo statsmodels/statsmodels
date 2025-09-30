@@ -12,13 +12,12 @@ import pandas as pd
 from scipy.linalg import cho_solve_banded
 
 from statsmodels import datasets
-from statsmodels.tsa.statespace import (sarimax, structural, dynamic_factor,
-                                        varmax)
+from statsmodels.tsa.statespace import dynamic_factor, sarimax, structural, varmax
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 dta = datasets.macrodata.load_pandas().data
-dta.index = pd.period_range('1959Q1', '2009Q3', freq='Q')
-dta = np.log(dta[['realcons', 'realgdp', 'cpi']]).diff().iloc[1:] * 400
+dta.index = pd.period_range("1959Q1", "2009Q3", freq="Q")
+dta = np.log(dta[["realcons", "realgdp", "cpi"]]).diff().iloc[1:] * 400
 
 
 class CheckPosteriorMoments:
@@ -30,11 +29,11 @@ class CheckPosteriorMoments:
 
         endog = dta.copy()
 
-        if missing == 'all':
+        if missing == "all":
             endog.iloc[0:50, :] = np.nan
-        elif missing == 'partial':
+        elif missing == "partial":
             endog.iloc[0:50, 0] = np.nan
-        elif missing == 'mixed':
+        elif missing == "mixed":
             endog.iloc[0:50, 0] = np.nan
             endog.iloc[19:70, 1] = np.nan
             endog.iloc[39:90, 2] = np.nan
@@ -51,9 +50,9 @@ class CheckPosteriorMoments:
             params = params + 0j
         cls.res = cls.mod.smooth(params)
 
-        cls.sim_cfa = cls.mod.simulation_smoother(method='cfa')
+        cls.sim_cfa = cls.mod.simulation_smoother(method="cfa")
         cls.sim_cfa.simulate()
-        prefix = 'z' if use_complex else 'd'
+        prefix = "z" if use_complex else "d"
         cls._sim_cfa = cls.sim_cfa._simulation_smoothers[prefix]
 
     def test_posterior_mean(self):
@@ -91,8 +90,8 @@ class CheckPosteriorMoments:
 class TestDFM(CheckPosteriorMoments):
     @classmethod
     def setup_class(cls, missing=None, *args, **kwargs):
-        kwargs['k_factors'] = 1
-        kwargs['factor_order'] = 1
+        kwargs["k_factors"] = 1
+        kwargs["factor_order"] = 1
         super().setup_class(
             dynamic_factor.DynamicFactor, missing, *args, **kwargs
         )
@@ -101,25 +100,25 @@ class TestDFM(CheckPosteriorMoments):
 class TestDFMComplex(CheckPosteriorMoments):
     @classmethod
     def setup_class(cls, missing=None, *args, **kwargs):
-        kwargs['k_factors'] = 1
-        kwargs['factor_order'] = 1
+        kwargs["k_factors"] = 1
+        kwargs["factor_order"] = 1
         super().setup_class(
             dynamic_factor.DynamicFactor, missing, *args, use_complex=True, **kwargs
         )
 
 
 class TestDFMAllMissing(TestDFM):
-    def setup_class(cls, missing='all', *args, **kwargs):
+    def setup_class(cls, missing="all", *args, **kwargs):
         super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestDFMPartialMissing(TestDFM):
-    def setup_class(cls, missing='partial', *args, **kwargs):
+    def setup_class(cls, missing="partial", *args, **kwargs):
         super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestDFMMixedMissing(TestDFM):
-    def setup_class(cls, missing='mixed', *args, **kwargs):
+    def setup_class(cls, missing="mixed", *args, **kwargs):
         super().setup_class(*args, missing=missing, **kwargs)
 
 
@@ -130,23 +129,23 @@ class TestVARME(CheckPosteriorMoments):
     # shocks must be non-degenerate for the CFA algorithm
     @classmethod
     def setup_class(cls, missing=None, *args, **kwargs):
-        kwargs['order'] = (1, 0)
-        kwargs['measurement_error'] = True
+        kwargs["order"] = (1, 0)
+        kwargs["measurement_error"] = True
         super().setup_class(varmax.VARMAX, *args, missing=missing, **kwargs)
 
 
 class TestVARMEAllMissing(TestVARME):
-    def setup_class(cls, missing='all', *args, **kwargs):
+    def setup_class(cls, missing="all", *args, **kwargs):
         super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestVARMEPartialMissing(TestVARME):
-    def setup_class(cls, missing='partial', *args, **kwargs):
+    def setup_class(cls, missing="partial", *args, **kwargs):
         super().setup_class(*args, missing=missing, **kwargs)
 
 
 class TestVARMEMixedMissing(TestVARME):
-    def setup_class(cls, missing='mixed', *args, **kwargs):
+    def setup_class(cls, missing="mixed", *args, **kwargs):
         super().setup_class(*args, missing=missing, **kwargs)
 
 
@@ -156,13 +155,13 @@ class TestSARIMAXME(CheckPosteriorMoments):
     # shocks must be non-degenerate for the CFA algorithm
     @classmethod
     def setup_class(cls, missing=None, *args, **kwargs):
-        kwargs['order'] = (1, 0, 0)
-        kwargs['measurement_error'] = True
+        kwargs["order"] = (1, 0, 0)
+        kwargs["measurement_error"] = True
         super().setup_class(sarimax.SARIMAX, *args, missing=missing, **kwargs)
 
 
 class TestSARIMAXMEMissing(TestSARIMAXME):
-    def setup_class(cls, missing='mixed', *args, **kwargs):
+    def setup_class(cls, missing="mixed", *args, **kwargs):
         super().setup_class(*args, missing=missing, **kwargs)
 
 
@@ -170,23 +169,23 @@ class TestUnobservedComponents(CheckPosteriorMoments):
     # Test UC model, with exog
     @classmethod
     def setup_class(cls, missing=None, *args, **kwargs):
-        kwargs['level'] = 'llevel'
-        kwargs['exog'] = np.arange(dta.shape[0])
-        kwargs['autoregressive'] = 1
+        kwargs["level"] = "llevel"
+        kwargs["exog"] = np.arange(dta.shape[0])
+        kwargs["autoregressive"] = 1
         super().setup_class(
             structural.UnobservedComponents, *args, missing=missing, **kwargs
         )
 
 
 class TestUnobservedComponentsMissing(TestUnobservedComponents):
-    def setup_class(cls, missing='mixed', *args, **kwargs):
+    def setup_class(cls, missing="mixed", *args, **kwargs):
         super().setup_class(*args, missing=missing, **kwargs)
 
 
-def test_dfm(missing=None):
+def test_dfm():
     mod = dynamic_factor.DynamicFactor(dta, k_factors=2, factor_order=1)
     mod.update(mod.start_params)
-    sim_cfa = mod.simulation_smoother(method='cfa')
+    sim_cfa = mod.simulation_smoother(method="cfa")
     res = mod.ssm.smooth()
 
     # Test zero variates

@@ -3,7 +3,7 @@ import pandas as pd
 
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This is public domain."""
 TITLE = """Nile River flows at Ashwan 1871-1970"""
@@ -46,10 +46,10 @@ def load():
 def load_pandas():
     data = _get_data()
     # TODO: time series
-    endog = pd.Series(data['volume'], index=data['year'].astype(int))
-    dataset = du.Dataset(data=data, names=list(data.columns), endog=endog, endog_name='volume')
+    endog = pd.Series(data["volume"], index=data["year"].astype(int))
+    dataset = du.Dataset(data=data, names=list(data.columns), endog=endog, endog_name="volume")
     return dataset
 
 
 def _get_data():
-    return du.load_csv(__file__, 'nile.csv').astype(float)
+    return du.load_csv(__file__, "nile.csv").astype(float)

@@ -1,5 +1,8 @@
-__all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson",
-           "ZeroInflatedNegativeBinomialP"]
+__all__ = [
+    "ZeroInflatedGeneralizedPoisson",
+    "ZeroInflatedNegativeBinomialP",
+    "ZeroInflatedPoisson",
+]
 
 from statsmodels.compat.pandas import Appender
 
@@ -103,15 +106,15 @@ class GenericZeroInflated(CountModel):
         self.k_extra = self.k_inflate
 
         if len(self.exog) != len(self.exog_infl):
-            raise ValueError('exog and exog_infl have different number of'
-                             'observation. `missing` handling is not supported')
+            raise ValueError("exog and exog_infl have different number of"
+                             "observation. `missing` handling is not supported")
 
-        infl_names = ['inflate_%s' % i for i in self.model_infl.data.param_names]
+        infl_names = ["inflate_%s" % i for i in self.model_infl.data.param_names]
         self.exog_names[:] = infl_names + list(self.exog_names)
         self.exog_infl = np.asarray(self.exog_infl, dtype=np.float64)
 
-        self._init_keys.extend(['exog_infl', 'inflation'])
-        self._null_drop_keys = ['exog_infl']
+        self._init_keys.extend(["exog_infl", "inflation"])
+        self._null_drop_keys = ["exog_infl"]
 
     def _get_exogs(self):
         """list of exogs, for internal use in post-estimation
@@ -449,7 +452,7 @@ class GenericZeroInflated(CountModel):
         return hess_arr
 
     def predict(self, params, exog=None, exog_infl=None, exposure=None,
-                offset=None, which='mean', y_values=None):
+                offset=None, which="mean", y_values=None):
         """
         Predict expected response or other statistic given exogenous variables.
 
@@ -505,9 +508,8 @@ class GenericZeroInflated(CountModel):
         if exog_infl is None:
             if no_exog:
                 exog_infl = self.exog_infl
-            else:
-                if self._no_exog_infl:
-                    exog_infl = np.ones((len(exog), 1))
+            elif self._no_exog_infl:
+                exog_infl = np.ones((len(exog), 1))
         else:
             exog_infl = np.asarray(exog_infl)
             if exog_infl.ndim == 1 and self.k_inflate == 1:
@@ -515,7 +517,7 @@ class GenericZeroInflated(CountModel):
 
         if exposure is None:
             if no_exog:
-                exposure = getattr(self, 'exposure', 0)
+                exposure = getattr(self, "exposure", 0)
             else:
                 exposure = 0
         else:
@@ -523,7 +525,7 @@ class GenericZeroInflated(CountModel):
 
         if offset is None:
             if no_exog:
-                offset = getattr(self, 'offset', 0)
+                offset = getattr(self, "offset", 0)
             else:
                 offset = 0
 
@@ -539,8 +541,8 @@ class GenericZeroInflated(CountModel):
         # this is just prob(y=0 | model_main)
         tmp_exog = self.model_main.exog
         tmp_endog = self.model_main.endog
-        tmp_offset = getattr(self.model_main, 'offset', False)
-        tmp_exposure = getattr(self.model_main, 'exposure', False)
+        tmp_offset = getattr(self.model_main, "offset", False)
+        tmp_exposure = getattr(self.model_main, "exposure", False)
         self.model_main.exog = exog
         self.model_main.endog = np.zeros(exog.shape[0])
         self.model_main.offset = offset
@@ -563,28 +565,28 @@ class GenericZeroInflated(CountModel):
 
         prob_zero = (1 - prob_main) + prob_main * np.exp(llf)
 
-        if which == 'mean':
+        if which == "mean":
             return prob_main * np.exp(lin_pred)
-        elif which == 'mean-main':
+        elif which == "mean-main":
             return np.exp(lin_pred)
-        elif which == 'linear':
+        elif which == "linear":
             return lin_pred
-        elif which == 'mean-nonzero':
+        elif which == "mean-nonzero":
             return prob_main * np.exp(lin_pred) / (1 - prob_zero)
-        elif which == 'prob-zero':
+        elif which == "prob-zero":
             return prob_zero
-        elif which == 'prob-main':
+        elif which == "prob-main":
             return prob_main
-        elif which == 'var':
+        elif which == "var":
             mu = np.exp(lin_pred)
             return self._predict_var(params, mu, 1 - prob_main)
-        elif which == 'prob':
+        elif which == "prob":
             return self._predict_prob(params, exog, exog_infl, exposure,
                                       offset, y_values=y_values)
         else:
-            raise ValueError('which = %s is not available' % which)
+            raise ValueError("which = %s is not available" % which)
 
-    def _derivative_predict(self, params, exog=None, transform='dydx'):
+    def _derivative_predict(self, params, exog=None, transform="dydx"):
         """NotImplemented
         """
         raise NotImplementedError
@@ -641,7 +643,7 @@ class GenericZeroInflated(CountModel):
         raise NotImplementedError
 
         # The below currently does not work, discontinuity at zero
-        # see https://github.com/statsmodels/statsmodels/pull/7951#issuecomment-996355875  # noqa
+        # see https://github.com/statsmodels/statsmodels/pull/7951#issuecomment-996355875
         from statsmodels.tools.numdiff import _approx_fprime_scalar
         endog_original = self.endog
 
@@ -1056,7 +1058,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
     def _get_init_kwds(self):
         kwds = super()._get_init_kwds()
-        kwds['p'] = self.model_main.parameterization
+        kwds["p"] = self.model_main.parameterization
         return kwds
 
     def _predict_prob(self, params, exog, exog_infl, exposure, offset, y_values=None):
@@ -1107,7 +1109,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     def _get_start_params(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
-            start_params = self.model_main.fit(disp=0, method='nm').params
+            start_params = self.model_main.fit(disp=0, method="nm").params
         start_params = np.append(np.zeros(self.k_inflate), start_params)
         return start_params
 
@@ -1129,17 +1131,17 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 class ZeroInflatedResults(CountResults):
 
     def get_prediction(self, exog=None, exog_infl=None, exposure=None,
-                       offset=None, which='mean', average=False,
+                       offset=None, which="mean", average=False,
                        agg_weights=None, y_values=None,
                        transform=True, row_labels=None):
 
         import statsmodels.base._prediction_inference as pred
 
         pred_kwds = {
-            'exog_infl': exog_infl,
-            'exposure': exposure,
-            'offset': offset,
-            'y_values': y_values,
+            "exog_infl": exog_infl,
+            "exposure": exposure,
+            "offset": offset,
+            "y_values": y_values,
             }
 
         res = pred.get_prediction_delta(self, exog=exog, which=which,
@@ -1191,11 +1193,11 @@ class ZeroInflatedPoissonResults(ZeroInflatedResults):
 
     @cache_readonly
     def _dispersion_factor(self):
-        mu = self.predict(which='linear')
-        w = 1 - self.predict() / np.exp(self.predict(which='linear'))
+        mu = self.predict(which="linear")
+        w = 1 - self.predict() / np.exp(self.predict(which="linear"))
         return (1 + w * np.exp(mu))
 
-    def get_margeff(self, at='overall', method='dydx', atexog=None,
+    def get_margeff(self, at="overall", method="dydx", atexog=None,
                     dummy=False, count=False):
         """Get marginal effects of the fitted model.
 

@@ -7,12 +7,13 @@ Author: Josef Perktold
 
 if __name__ == "__main__":
 
-    import numpy as np
     import matplotlib.pyplot as plt
+    import numpy as np
+
+    import statsmodels.sandbox.nonparametric.dgp_examples as dgp
 
     # from statsmodels.nonparametric.api import KernelReg
     import statsmodels.sandbox.nonparametric.kernel_extras as smke
-    import statsmodels.sandbox.nonparametric.dgp_examples as dgp
 
     class UnivariateFunc1a(dgp.UnivariateFunc1):
 

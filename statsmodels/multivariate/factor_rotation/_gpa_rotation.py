@@ -25,7 +25,7 @@ import numpy as np
 
 
 def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
-        rotation_method='orthogonal', tol=1e-5):
+        rotation_method="orthogonal", tol=1e-5):
     r"""
     The gradient projection algorithm (GPA) minimizes a target function
     :math:`\phi(L)`, where :math:`L` is a matrix with rotated factors.
@@ -60,12 +60,12 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         smaller then tol
     """
     # pre processing
-    if rotation_method not in ['orthogonal', 'oblique']:
-        raise ValueError('rotation_method should be one of '
-                         '{orthogonal, oblique}')
+    if rotation_method not in ["orthogonal", "oblique"]:
+        raise ValueError("rotation_method should be one of "
+                         "{orthogonal, oblique}")
     if vgQ is None:
         if ff is None:
-            raise ValueError('ff should be provided if vgQ is not')
+            raise ValueError("ff should be provided if vgQ is not")
         derivative_free = True
 
         def Gff(x):
@@ -82,7 +82,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
     if derivative_free:
         f = ff(T=T, A=A, L=None)
         G = Gff(T)
-    elif rotation_method == 'orthogonal':  # and not derivative_free
+    elif rotation_method == "orthogonal":  # and not derivative_free
         L = A.dot(T)
         f, Gq = vgQ(L=L)
         G = (A.T).dot(Gq)
@@ -92,15 +92,15 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         f, Gq = vgQ(L=L)
         G = -((L.T).dot(Gq).dot(Ti)).T
     # iteration
-    for i_try in range(0, max_tries):
+    for i_try in range(max_tries):
         # determine Gp
-        if rotation_method == 'orthogonal':
+        if rotation_method == "orthogonal":
             M = (T.T).dot(G)
             S = (M + M.T)/2
             Gp = G - T.dot(S)
         else:  # i.e. if rotation_method == 'oblique':
             Gp = G-T.dot(np.diag(np.sum(T*G, axis=0)))
-        s = np.linalg.norm(Gp, 'fro')
+        s = np.linalg.norm(Gp, "fro")
         table.append([i_try, f, np.log10(s), al])
         # if we are close stop
         if s < tol:
@@ -110,7 +110,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         for _ in range(11):
             # determine Tt
             X = T - al*Gp
-            if rotation_method == 'orthogonal':
+            if rotation_method == "orthogonal":
                 U, D, V = np.linalg.svd(X, full_matrices=False)
                 Tt = U.dot(V)
             else:  # i.e. if rotation_method == 'oblique':
@@ -119,7 +119,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
             # calculate objective using Tt
             if derivative_free:
                 ft = ff(T=Tt, A=A, L=None)
-            elif rotation_method == 'orthogonal':  # and not derivative_free
+            elif rotation_method == "orthogonal":  # and not derivative_free
                 L = A.dot(Tt)
                 ft, Gq = vgQ(L=L)
             else:  # i.e. rotation_method == 'oblique' and not derivative_free
@@ -135,7 +135,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         f = ft
         if derivative_free:
             G = Gff(T)
-        elif rotation_method == 'orthogonal':  # and not derivative_free
+        elif rotation_method == "orthogonal":  # and not derivative_free
             G = (A.T).dot(Gq)
         else:  # i.e. rotation_method == 'oblique' and not derivative_free
             G = -((L.T).dot(Gq).dot(Ti)).T
@@ -161,7 +161,7 @@ def Gf(T, ff):
     return G
 
 
-def rotateA(A, T, rotation_method='orthogonal'):
+def rotateA(A, T, rotation_method="orthogonal"):
     r"""
     For orthogonal rotation methods :math:`L=AT`, where :math:`T` is an
     orthogonal matrix. For oblique rotation matrices :math:`L=A(T^*)^{-1}`,
@@ -169,18 +169,18 @@ def rotateA(A, T, rotation_method='orthogonal'):
     rotations relax the orthogonality constraint in order to gain simplicity
     in the interpretation.
     """
-    if rotation_method == 'orthogonal':
+    if rotation_method == "orthogonal":
         L = A.dot(T)
-    elif rotation_method == 'oblique':
+    elif rotation_method == "oblique":
         L = A.dot(np.linalg.inv(T.T))
     else:  # i.e. if rotation_method == 'oblique':
-        raise ValueError('rotation_method should be one of '
-                         '{orthogonal, oblique}')
+        raise ValueError("rotation_method should be one of "
+                         "{orthogonal, oblique}")
     return L
 
 
 def oblimin_objective(L=None, A=None, T=None, gamma=0,
-                      rotation_method='orthogonal',
+                      rotation_method="orthogonal",
                       return_gradient=True):
     r"""
     Objective function for the oblimin family for orthogonal or
@@ -246,7 +246,8 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
         toggles return of gradient
     """
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method=rotation_method)
     p, k = L.shape
     L2 = L**2
@@ -310,8 +311,9 @@ def orthomax_objective(L=None, A=None, T=None, gamma=0, return_gradient=True):
     """
     assert 0 <= gamma <= 1, "Gamma should be between 0 and 1"
     if L is None:
-        assert A is not None and T is not None
-        L = rotateA(A, T, rotation_method='orthogonal')
+        assert A is not None
+        assert T is not None
+        L = rotateA(A, T, rotation_method="orthogonal")
     p, k = L.shape
     L2 = L**2
     if np.isclose(gamma, 0):
@@ -328,7 +330,7 @@ def orthomax_objective(L=None, A=None, T=None, gamma=0, return_gradient=True):
 
 
 def CF_objective(L=None, A=None, T=None, kappa=0,
-                 rotation_method='orthogonal',
+                 rotation_method="orthogonal",
                  return_gradient=True):
     r"""
     Objective function for the Crawford-Ferguson family for orthogonal
@@ -393,7 +395,8 @@ def CF_objective(L=None, A=None, T=None, kappa=0,
     """
     assert 0 <= kappa <= 1, "Kappa should be between 0 and 1"
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method=rotation_method)
     p, k = L.shape
     L2 = L**2
@@ -415,7 +418,7 @@ def CF_objective(L=None, A=None, T=None, kappa=0,
         return phi
 
 
-def vgQ_target(H, L=None, A=None, T=None, rotation_method='orthogonal'):
+def vgQ_target(H, L=None, A=None, T=None, rotation_method="orthogonal"):
     r"""
     Subroutine for the value of vgQ using orthogonal or oblique rotation
     towards a target matrix, i.e., we minimize:
@@ -458,14 +461,15 @@ def vgQ_target(H, L=None, A=None, T=None, rotation_method='orthogonal'):
         should be one of {orthogonal, oblique}
     """
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method=rotation_method)
-    q = np.linalg.norm(L-H, 'fro')**2
+    q = np.linalg.norm(L-H, "fro")**2
     Gq = 2*(L-H)
     return q, Gq
 
 
-def ff_target(H, L=None, A=None, T=None, rotation_method='orthogonal'):
+def ff_target(H, L=None, A=None, T=None, rotation_method="orthogonal"):
     r"""
     Subroutine for the value of f using (orthogonal or oblique) rotation
     towards a target matrix, i.e., we minimize:
@@ -501,9 +505,10 @@ def ff_target(H, L=None, A=None, T=None, rotation_method='orthogonal'):
         should be one of {orthogonal, oblique}
     """
     if L is None:
-        assert A is not None and T is not None
+        assert A is not None
+        assert T is not None
         L = rotateA(A, T, rotation_method=rotation_method)
-    return np.linalg.norm(L-H, 'fro')**2
+    return np.linalg.norm(L-H, "fro")**2
 
 
 def vgQ_partial_target(H, W=None, L=None, A=None, T=None):
@@ -547,9 +552,10 @@ def vgQ_partial_target(H, W=None, L=None, A=None, T=None):
     if W is None:
         return vgQ_target(H, L=L, A=A, T=T)
     if L is None:
-        assert A is not None and T is not None
-        L = rotateA(A, T, rotation_method='orthogonal')
-    q = np.linalg.norm(W*(L-H), 'fro')**2
+        assert A is not None
+        assert T is not None
+        L = rotateA(A, T, rotation_method="orthogonal")
+    q = np.linalg.norm(W*(L-H), "fro")**2
     Gq = 2*W*(L-H)
     return q, Gq
 
@@ -589,7 +595,8 @@ def ff_partial_target(H, W=None, L=None, A=None, T=None):
     if W is None:
         return ff_target(H, L=L, A=A, T=T)
     if L is None:
-        assert A is not None and T is not None
-        L = rotateA(A, T, rotation_method='orthogonal')
-    q = np.linalg.norm(W*(L-H), 'fro')**2
+        assert A is not None
+        assert T is not None
+        L = rotateA(A, T, rotation_method="orthogonal")
+    q = np.linalg.norm(W*(L-H), "fro")**2
     return q

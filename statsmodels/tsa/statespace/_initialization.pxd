@@ -11,8 +11,12 @@ License: Simplified-BSD
 cimport numpy as np
 
 from statsmodels.tsa.statespace._representation cimport (
-    sStatespace, dStatespace, cStatespace, zStatespace
+    cStatespace,
+    dStatespace,
+    sStatespace,
+    zStatespace,
 )
+
 
 cdef class sInitialization(object):
     cdef readonly int k_states

@@ -317,13 +317,13 @@ class TestGlmPoissonFwClu(CheckWeight):
         cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))
         # np.sqrt((wsum - 1.) / wsum)
         cov_kwds = {"groups": gid, "use_correction": False}
+        mod = GLM(
+            cpunish_data.endog,
+            cpunish_data.exog,
+            family=sm.families.Poisson(),
+            freq_weights=fweights,
+        )
         with pytest.warns(SpecificationWarning):
-            mod = GLM(
-                cpunish_data.endog,
-                cpunish_data.exog,
-                family=sm.families.Poisson(),
-                freq_weights=fweights,
-            )
             cls.res1 = mod.fit(cov_type="cluster", cov_kwds=cov_kwds)
 
         cls.res2 = res_stata.results_poisson_fweight_clu1
@@ -839,7 +839,7 @@ def test_warnings_raised():
             family=sm.families.Poisson(),
             freq_weights=weights,
         ).fit(cov_type="cluster", cov_kwds=cov_kwds)
-        res1.summary()
+    res1.summary()
 
     with pytest.warns(SpecificationWarning):
         res1 = GLM(
@@ -848,7 +848,7 @@ def test_warnings_raised():
             family=sm.families.Poisson(),
             var_weights=weights,
         ).fit(cov_type="cluster", cov_kwds=cov_kwds)
-        res1.summary()
+    res1.summary()
 
 
 weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]

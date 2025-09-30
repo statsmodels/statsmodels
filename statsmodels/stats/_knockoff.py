@@ -25,6 +25,7 @@ https://candes.su.domains/publications/downloads/FDR_regression.pdf
 
 import numpy as np
 import pandas as pd
+
 from statsmodels.iolib import summary2
 
 
@@ -108,7 +109,7 @@ class RegressionFDR:
         denom[denom < 1] = 1
 
         # The numerator of the FDR
-        ii = np.searchsorted(unq, -unq, side='right') - 1
+        ii = np.searchsorted(unq, -unq, side="right") - 1
         numer = cc[ii]
         numer[ii < 0] = 0
 
@@ -157,9 +158,11 @@ def _design_knockoff_sdp(exog):
     """
 
     try:
-        from cvxopt import solvers, matrix
-    except ImportError:
-        raise ValueError("SDP knockoff designs require installation of cvxopt")
+        from cvxopt import matrix, solvers
+    except ImportError as exc:
+        raise ValueError(
+            "SDP knockoff designs require installation of cvxopt"
+        ) from exc
 
     nobs, nvar = exog.shape
 
@@ -184,9 +187,9 @@ def _design_knockoff_sdp(exog):
     G1[i*nvar + j, i] = 1
     G1 = matrix(G1)
 
-    solvers.options['show_progress'] = False
+    solvers.options["show_progress"] = False
     sol = solvers.sdp(c, G0, h0, [G1], [h1])
-    sl = np.asarray(sol['x']).ravel()
+    sl = np.asarray(sol["x"]).ravel()
 
     xcov = np.dot(exog.T, exog)
     exogn = _get_knmat(exog, xcov, sl)

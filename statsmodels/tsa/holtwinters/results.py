@@ -348,7 +348,7 @@ class HoltWintersResults(Results):
             abs_x = np.abs(x)
             scale = 1
             if np.isnan(x):
-                return f"{str(x):>20}"
+                return f"{x!s:>20}"
             if abs_x != 0:
                 scale = int(np.log10(abs_x))
             if scale > 4 or scale < -3:
@@ -363,7 +363,7 @@ class HoltWintersResults(Results):
                 [
                     _fmt(vals.iloc[1]),
                     f"{vals.iloc[0]:>20}",
-                    f"{str(bool(vals.iloc[2])):>20}",
+                    f"{bool(vals.iloc[2])!s:>20}",
                 ]
             )
         params_table = SimpleTable(
@@ -626,7 +626,7 @@ class HoltWintersResults(Results):
         else:
             lvl[-1, :] = level[start_idx - 1]
             b[-1, :] = _trend[start_idx - 1]
-        if 0 <= start_idx and start_idx <= m:
+        if 0 <= start_idx <= m:
             initial_seasons = self.params["initial_seasons"]
             _s = np.concatenate((initial_seasons[start_idx:], season[:start_idx]))
             s[-m:, :] = np.tile(_s, (repetitions, 1)).T

@@ -1,15 +1,15 @@
 """Helper functions for graphics with Matplotlib."""
 from statsmodels.compat.python import lrange
 
-__all__ = ['create_mpl_ax', 'create_mpl_fig']
+__all__ = ["create_mpl_ax", "create_mpl_fig"]
 
 
 def _import_mpl():
     """This function is not needed outside this utils module."""
     try:
         import matplotlib.pyplot as plt
-    except ImportError:
-        raise ImportError("Matplotlib is not found.")
+    except ImportError as exc:
+        raise ImportError("Matplotlib is not found.") from exc
 
     return plt
 
@@ -119,11 +119,11 @@ def get_data_names(series_or_dataframe):
     Input can be an array or pandas-like. Will handle 1d array-like but not
     2d. Returns a str for 1d data or a list of strings for 2d data.
     """
-    names = getattr(series_or_dataframe, 'name', None)
+    names = getattr(series_or_dataframe, "name", None)
     if not names:
-        names = getattr(series_or_dataframe, 'columns', None)
+        names = getattr(series_or_dataframe, "columns", None)
     if not names:
-        shape = getattr(series_or_dataframe, 'shape', [1])
+        shape = getattr(series_or_dataframe, "shape", [1])
         nvars = 1 if len(shape) == 1 else series_or_dataframe.shape[1]
         names = ["X%d" for _ in range(nvars)]
         if nvars == 1:

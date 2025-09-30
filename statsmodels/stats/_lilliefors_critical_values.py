@@ -375,8 +375,8 @@ exp_asymp_crit_vals = {
 
 
 # Critical Value
-critical_values = {'normal': normal_crit_vals, 'exp': exp_crit_vals}
+critical_values = {"normal": normal_crit_vals, "exp": exp_crit_vals}
 asymp_critical_values = {
-    'normal': normal_asymp_crit_vals,
-    'exp': exp_asymp_crit_vals
+    "normal": normal_asymp_crit_vals,
+    "exp": exp_asymp_crit_vals
 }

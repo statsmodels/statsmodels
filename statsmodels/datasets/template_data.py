@@ -1,7 +1,7 @@
 """Name of dataset."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """E.g., This is public domain."""
 TITLE = """Title of the dataset"""
@@ -53,4 +53,4 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'DatasetName.csv')
+    return du.load_csv(__file__, "DatasetName.csv")

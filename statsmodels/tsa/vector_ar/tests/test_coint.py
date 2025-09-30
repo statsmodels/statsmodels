@@ -30,12 +30,12 @@ class CheckCointJoh:
     def test_table_trace(self):
         table1 = np.column_stack((self.res.lr1, self.res.cvt))
         assert_almost_equal(table1,
-                            self.res1_m.reshape(table1.shape, order='F'))
+                            self.res1_m.reshape(table1.shape, order="F"))
 
     def test_table_maxeval(self):
         table2 = np.column_stack((self.res.lr2, self.res.cvm))
         assert_almost_equal(table2,
-                            self.res2_m.reshape(table2.shape, order='F'))
+                            self.res2_m.reshape(table2.shape, order="F"))
 
     def test_normalization(self):
         # GH 5517
@@ -78,7 +78,7 @@ class TestCointJoh12(CheckCointJoh):
 
             -0.001868995544352928, 0.05993345996347871, 0.01213394328069316, 0.02096614212178651,
             -0.08624395993789938, 0.02108183181049973, -0.08470307289295617, -5.135072530480897e-005])
-        cls.evec_m = evec.reshape(cls.res.evec.shape, order='F')
+        cls.evec_m = evec.reshape(cls.res.evec.shape, order="F")
 
         cls.eig_m = np.array([0.3586376068088151, 0.2812806889719111, 0.2074818815675726,  0.141259991767926, 0.09880133062878599, 0.08704563854307619,  0.048471840356709, 0.01919823444066367])
 

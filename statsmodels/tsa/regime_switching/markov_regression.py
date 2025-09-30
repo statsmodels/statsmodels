@@ -5,8 +5,8 @@ Author: Chad Fulton
 License: BSD-3
 """
 import numpy as np
-import statsmodels.base.wrapper as wrap
 
+import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.regime_switching import markov_switching
 
 
@@ -83,10 +83,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     MIT Press Books. The MIT Press.
     """
 
-    def __init__(self, endog, k_regimes, trend='c', exog=None, order=0,
+    def __init__(self, endog, k_regimes, trend="c", exog=None, order=0,
                  exog_tvtp=None, switching_trend=True, switching_exog=True,
                  switching_variance=False, dates=None, freq=None,
-                 missing='none'):
+                 missing="none"):
 
         # Properties
         from statsmodels.tools.validation import string_like
@@ -103,13 +103,13 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         self.k_trend = 0
         self._k_exog = self.k_exog
         trend_exog = None
-        if trend == 'c':
+        if trend == "c":
             trend_exog = np.ones((nobs, 1))
             self.k_trend = 1
-        elif trend == 't':
+        elif trend == "t":
             trend_exog = (np.arange(nobs) + 1)[:, np.newaxis]
             self.k_trend = 1
-        elif trend == 'ct':
+        elif trend == "ct":
             trend_exog = np.c_[np.ones((nobs, 1)),
                                (np.arange(nobs) + 1)[:, np.newaxis]]
             self.k_trend = 2
@@ -126,19 +126,19 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         if self.switching_trend is True or self.switching_trend is False:
             self.switching_trend = [self.switching_trend] * self.k_trend
         elif not len(self.switching_trend) == self.k_trend:
-            raise ValueError('Invalid iterable passed to `switching_trend`.')
+            raise ValueError("Invalid iterable passed to `switching_trend`.")
         if self.switching_exog is True or self.switching_exog is False:
             self.switching_exog = [self.switching_exog] * self.k_exog
         elif not len(self.switching_exog) == self.k_exog:
-            raise ValueError('Invalid iterable passed to `switching_exog`.')
+            raise ValueError("Invalid iterable passed to `switching_exog`.")
 
         self.switching_coeffs = (
             np.r_[self.switching_trend,
                   self.switching_exog].astype(bool).tolist())
 
         # Parameters
-        self.parameters['exog'] = self.switching_coeffs
-        self.parameters['variance'] = [1] if self.switching_variance else [0]
+        self.parameters["exog"] = self.switching_coeffs
+        self.parameters["variance"] = [1] if self.switching_variance else [0]
 
     def predict_conditional(self, params):
         """
@@ -164,7 +164,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         for i in range(self.k_regimes):
             # Predict
             if self._k_exog > 0:
-                coeffs = params[self.parameters[i, 'exog']]
+                coeffs = params[self.parameters[i, "exog"]]
                 predict[i] = np.dot(self.exog, coeffs)
 
         return predict[:, None, :]
@@ -183,7 +183,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         resid = self._resid(params)
 
         # Compute the conditional likelihoods
-        variance = params[self.parameters['variance']].squeeze()
+        variance = params[self.parameters["variance"]].squeeze()
         if self.switching_variance:
             variance = np.reshape(variance, (self.k_regimes, 1, 1))
 
@@ -194,7 +194,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
     @property
     def _res_classes(self):
-        return {'fit': (MarkovRegressionResults,
+        return {"fit": (MarkovRegressionResults,
                         MarkovRegressionResultsWrapper)}
 
     def _em_iteration(self, params0):
@@ -216,12 +216,12 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         coeffs = None
         if self._k_exog > 0:
             coeffs = self._em_exog(result, self.endog, self.exog,
-                                   self.parameters.switching['exog'], tmp)
+                                   self.parameters.switching["exog"], tmp)
             for i in range(self.k_regimes):
-                params1[self.parameters[i, 'exog']] = coeffs[i]
+                params1[self.parameters[i, "exog"]] = coeffs[i]
 
         # Variances
-        params1[self.parameters['variance']] = self._em_variance(
+        params1[self.parameters["variance"]] = self._em_variance(
             result, self.endog, self.exog, coeffs, tmp)
         # params1[self.parameters['variance']] = 0.33282116
 
@@ -311,19 +311,19 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
             if np.any(self.switching_coeffs):
                 for i in range(self.k_regimes):
-                    params[self.parameters[i, 'exog']] = (
+                    params[self.parameters[i, "exog"]] = (
                         beta * (i / self.k_regimes))
             else:
-                params[self.parameters['exog']] = beta
+                params[self.parameters["exog"]] = beta
         else:
             variance = np.var(self.endog)
 
         # Variances
         if self.switching_variance:
-            params[self.parameters['variance']] = (
+            params[self.parameters["variance"]] = (
                 np.linspace(variance / 10., variance, num=self.k_regimes))
         else:
-            params[self.parameters['variance']] = variance
+            params[self.parameters["variance"]] = variance
 
         return params
 
@@ -341,17 +341,17 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         # Regression coefficients
         if np.any(self.switching_coeffs):
             for i in range(self.k_regimes):
-                param_names[self.parameters[i, 'exog']] = [
-                    '%s[%d]' % (exog_name, i) for exog_name in self.exog_names]
+                param_names[self.parameters[i, "exog"]] = [
+                    "%s[%d]" % (exog_name, i) for exog_name in self.exog_names]
         else:
-            param_names[self.parameters['exog']] = self.exog_names
+            param_names[self.parameters["exog"]] = self.exog_names
 
         # Variances
         if self.switching_variance:
             for i in range(self.k_regimes):
-                param_names[self.parameters[i, 'variance']] = 'sigma2[%d]' % i
+                param_names[self.parameters[i, "variance"]] = "sigma2[%d]" % i
         else:
-            param_names[self.parameters['variance']] = 'sigma2'
+            param_names[self.parameters["variance"]] = "sigma2"
 
         return param_names.tolist()
 
@@ -377,12 +377,12 @@ class MarkovRegression(markov_switching.MarkovSwitching):
             unconstrained)
 
         # Nothing to do for regression coefficients
-        constrained[self.parameters['exog']] = (
-            unconstrained[self.parameters['exog']])
+        constrained[self.parameters["exog"]] = (
+            unconstrained[self.parameters["exog"]])
 
         # Force variances to be positive
-        constrained[self.parameters['variance']] = (
-            unconstrained[self.parameters['variance']]**2)
+        constrained[self.parameters["variance"]] = (
+            unconstrained[self.parameters["variance"]]**2)
 
         return constrained
 
@@ -407,12 +407,12 @@ class MarkovRegression(markov_switching.MarkovSwitching):
             constrained)
 
         # Nothing to do for regression coefficients
-        unconstrained[self.parameters['exog']] = (
-            constrained[self.parameters['exog']])
+        unconstrained[self.parameters["exog"]] = (
+            constrained[self.parameters["exog"]])
 
         # Force variances to be positive
-        unconstrained[self.parameters['variance']] = (
-            constrained[self.parameters['variance']]**0.5)
+        unconstrained[self.parameters["variance"]] = (
+            constrained[self.parameters["variance"]]**0.5)
 
         return unconstrained
 
@@ -446,7 +446,6 @@ class MarkovRegressionResults(markov_switching.MarkovSwitchingResults):
     scale : float
         This is currently set to 1.0 and not used by the model or its results.
     """
-    pass
 
 
 class MarkovRegressionResultsWrapper(

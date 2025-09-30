@@ -94,16 +94,15 @@ _hessian_docs = """
 def _get_epsilon(x, s, epsilon, n):
     if epsilon is None:
         h = EPS ** (1.0 / s) * np.maximum(np.abs(np.asarray(x)), 0.1)
-    else:
-        if np.isscalar(epsilon):
-            h = np.empty(n)
-            h.fill(epsilon)
-        else:  # pragma : no cover
-            h = np.asarray(epsilon)
-            if h.shape != x.shape:
-                raise ValueError(
-                    "If h is not a scalar it must have the same" " shape as x."
-                )
+    elif np.isscalar(epsilon):
+        h = np.empty(n)
+        h.fill(epsilon)
+    else:  # pragma : no cover
+        h = np.asarray(epsilon)
+        if h.shape != x.shape:
+            raise ValueError(
+                "If h is not a scalar it must have the same shape as x."
+            )
     return np.asarray(h)
 
 
@@ -413,7 +412,6 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs=None, return_grad=False):
 )
 @Appender(_hessian_docs)
 def approx_hess2(x, f, epsilon=None, args=(), kwargs=None, return_grad=False):
-    #
     kwargs = {} if kwargs is None else kwargs
     n = len(x)
     # NOTE: ridout suggesting using eps**(1/4)*theta

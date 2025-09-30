@@ -82,7 +82,7 @@ License: BSD
 """
 
 import numpy as np
-import scipy.interpolate as interpolate
+from scipy import interpolate
 
 
 def scoreatpercentile(data, percentile):

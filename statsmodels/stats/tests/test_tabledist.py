@@ -6,7 +6,7 @@ Author(s): Gerard E. Dallal and Leland WilkinsonSource: The American
 Statistician, Vol. 40, No. 4 (Nov., 1986), pp. 294-296
 """
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
 
 from statsmodels.stats.tabledist import TableDist
 

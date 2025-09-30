@@ -35,9 +35,9 @@ _month_to_day.update(
 
 
 # regex patterns
-_y_pattern = r'^\d?\d?\d?\d$'
+_y_pattern = r"^\d?\d?\d?\d$"
 
-_q_pattern = r'''
+_q_pattern = r"""
 ^               # beginning of string
 \d?\d?\d?\d     # match any number 1-9999, includes leading zeros
 
@@ -46,9 +46,9 @@ _q_pattern = r'''
 ([1-4]|(I{1,3}V?)) # match 1-4 or I-IV roman numerals
 
 $               # end of string
-'''
+"""
 
-_m_pattern = r'''
+_m_pattern = r"""
 ^               # beginning of string
 \d?\d?\d?\d     # match any number 1-9999, includes leading zeros
 
@@ -58,7 +58,7 @@ _m_pattern = r'''
                                               # I-XII roman numerals
 
 $               # end of string
-'''
+"""
 
 
 # NOTE: see also ts.extras.isleapyear, which accepts a sequence
@@ -76,11 +76,11 @@ def date_parser(timestr, parserinfo=None, **kwargs):
     """
     flags = re.IGNORECASE | re.VERBOSE
     if re.search(_q_pattern, timestr, flags):
-        y, q = timestr.replace(":", "").lower().split('q')
+        y, q = timestr.replace(":", "").lower().split("q")
         month, day = _quarter_to_day[q.upper()]
         year = int(y)
     elif re.search(_m_pattern, timestr, flags):
-        y, m = timestr.replace(":", "").lower().split('m')
+        y, m = timestr.replace(":", "").lower().split("m")
         month, day = _month_to_day[m.upper()]
         year = int(y)
         if _is_leap(y) and month == 2:
@@ -117,16 +117,16 @@ def date_range_str(start, end=None, length=None):
     start = start.lower()
     if re.search(_m_pattern, start, flags):
         annual_freq = 12
-        split = 'm'
+        split = "m"
     elif re.search(_q_pattern, start, flags):
         annual_freq = 4
-        split = 'q'
+        split = "q"
     elif re.search(_y_pattern, start, flags):
         annual_freq = 1
-        start += 'a1'  # hack
+        start += "a1"  # hack
         if end:
-            end += 'a1'
-        split = 'a'
+            end += "a1"
+        split = "a"
     else:
         raise ValueError("Date %s not understood" % start)
     yr1, offset1 = lmap(int, start.replace(":", "").split(split))
@@ -143,11 +143,11 @@ def date_range_str(start, end=None, length=None):
     years = [(str(yr1))] * (annual_freq + 1 - offset1) + years
     # tack on last year
     years = years + [(str(yr2))] * offset2
-    if split != 'a':
+    if split != "a":
         offset = np.tile(np.arange(1, annual_freq + 1), yr2 - yr1 - 1).astype("S2")
-        offset = np.r_[np.arange(offset1, annual_freq + 1).astype('S2'), offset]
-        offset = np.r_[offset, np.arange(1, offset2 + 1).astype('S2')]
-        date_arr_range = [''.join([i, split, asstr(j)])
+        offset = np.r_[np.arange(offset1, annual_freq + 1).astype("S2"), offset]
+        offset = np.r_[offset, np.arange(1, offset2 + 1).astype("S2")]
+        date_arr_range = ["".join([i, split, asstr(j)])
                           for i, j in zip(years, offset)]
     else:
         date_arr_range = years

@@ -576,7 +576,7 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
         n_batch = int(np.ceil(nrep / float(batch_size)))
         count = 0
         for _ in range(n_batch):
-            rvs = distr.rvs(args, **{"size": (batch_size, nobs)})
+            rvs = distr.rvs(args, size=(batch_size, nobs))
             params = distr.fit_vec(rvs, axis=1)
             params = lmap(lambda x: np.expand_dims(x, 1), params)
             cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
@@ -585,7 +585,7 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
         return count / float(n_batch * batch_size)
     else:
         # rvs = distr.rvs(args, **kwds)  # extension to distribution kwds ?
-        rvs = distr.rvs(args, **{"size": (nrep, nobs)})
+        rvs = distr.rvs(args, size=(nrep, nobs))
         params = distr.fit_vec(rvs, axis=1)
         params = lmap(lambda x: np.expand_dims(x, 1), params)
         cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
@@ -617,7 +617,7 @@ def bootstrap2(value, distr, args=(), nobs=200, nrep=100):
     count = 0
     for _ in range(nrep):
         # rvs = distr.rvs(args, **kwds)  # extension to distribution kwds ?
-        rvs = distr.rvs(args, **{"size": nobs})
+        rvs = distr.rvs(args, size=nobs)
         params = distr.fit_vec(rvs)
         cdfvals = np.sort(distr.cdf(rvs, params))
         stat = asquare(cdfvals, axis=0)

@@ -1,12 +1,12 @@
-import pytest
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.robust import norms
-from statsmodels.tools.numdiff import (
+from statsmodels.tools.numdiff import (  # _approx_fprime_cs_scalar,  # not yet
     _approx_fprime_scalar,
-    # _approx_fprime_cs_scalar,  # not yet
-    )
+)
+
 from .results import results_norms as res_r
 
 cases = [

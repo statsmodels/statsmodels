@@ -30,7 +30,7 @@ def simulate_k_factor1(nobs=1000):
               [10] * mod_sim.k_endog,
               0.5,
               [0.] * mod_sim.k_endog]
-    ix = pd.period_range(start='1935-01', periods=nobs, freq='M')
+    ix = pd.period_range(start="1935-01", periods=nobs, freq="M")
     endog = pd.DataFrame(mod_sim.simulate(p, nobs), index=ix)
 
     true = pd.Series(p, index=mod_sim.param_names)
@@ -73,14 +73,14 @@ def simulate_k_factor1(nobs=1000):
 
 def simulate_k_factors3_blocks2(nobs=1000, idiosyncratic_ar1=False):
     # Simulate the first two factors
-    ix = pd.period_range(start='2000-01', periods=1, freq='M')
-    endog = pd.DataFrame(np.zeros((1, 2)), columns=['f1', 'f2'], index=ix)
-    mod_f_12 = varmax.VARMAX(endog, order=(1, 0), trend='n')
+    ix = pd.period_range(start="2000-01", periods=1, freq="M")
+    endog = pd.DataFrame(np.zeros((1, 2)), columns=["f1", "f2"], index=ix)
+    mod_f_12 = varmax.VARMAX(endog, order=(1, 0), trend="n")
     params = [0.5, 0.1, -0.2, 0.9, 1.0, 0, 1.0]
     f_12 = mod_f_12.simulate(params, nobs)
 
     # Simulate the third factor
-    endog = pd.Series([0], name='f3', index=ix)
+    endog = pd.Series([0], name="f3", index=ix)
     mod_f_3 = sarimax.SARIMAX(endog, order=(2, 0, 0))
     params = [0.7, 0.1, 1.]
     f_3 = mod_f_3.simulate(params, nobs)
@@ -106,24 +106,24 @@ def simulate_k_factors3_blocks2(nobs=1000, idiosyncratic_ar1=False):
     eps = [lfilter([1], [1, -rho[i]], np.random.normal(size=nobs))
            for i in range(k_endog)]
     endog = (design @ f.T).T + eps
-    endog.columns = [f'y{i + 1}' for i in range(k_endog)]
+    endog.columns = [f"y{i + 1}" for i in range(k_endog)]
 
     # True parameters
     tmp1 = design.ravel()
-    tmp2 = np.linalg.cholesky(mod_f_12['state_cov'])
+    tmp2 = np.linalg.cholesky(mod_f_12["state_cov"])
     tmp3 = rho if idiosyncratic_ar1 else []
     true = np.r_[
         tmp1[tmp1 != 0],
-        mod_f_12['transition', :2, :].ravel(),
-        mod_f_3['transition', :, 0],
+        mod_f_12["transition", :2, :].ravel(),
+        mod_f_3["transition", :, 0],
         tmp2[np.tril_indices_from(tmp2)],
-        mod_f_3['state_cov', 0, 0],
+        mod_f_3["state_cov", 0, 0],
         tmp3,
         [1] * k_endog
     ]
 
     # Compute levels series (M and Q)
-    ix = pd.period_range(endog.index[0] - 1, endog.index[-1], freq='M')
+    ix = pd.period_range(endog.index[0] - 1, endog.index[-1], freq="M")
     levels_M = 1 + endog.reindex(ix) / 100
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
@@ -139,13 +139,13 @@ def simulate_k_factors3_blocks2(nobs=1000, idiosyncratic_ar1=False):
     endog_Q = log_levels_Q.iloc[:, 7:].diff().iloc[2:]
 
     # Specification
-    factor_names = np.array(['global', 'second', 'third'])
+    factor_names = np.array(["global", "second", "third"])
     factors = {endog.columns[i]: factor_names[design[i] != 0]
                for i in range(k_endog)}
 
     factor_orders = {
-        ('global', 'second'): 1,
-        'third': 2,
+        ("global", "second"): 1,
+        "third": 2,
     }
 
     return (endog_M, endog_Q, log_levels_M, log_levels_Q, factors,
@@ -176,16 +176,16 @@ def test_k_factor1(reset_randomstate):
     # Fit the model with L-BFGS. Because the model doesn't impose identifying
     # assumptions on the factors, here we force identification by fixing the
     # factor error variance to be unity
-    with mod.fix_params({'fb(0).cov.chol[1,1]': 1.}):
-        mod.fit(method='lbfgs', disp=False)
+    with mod.fix_params({"fb(0).cov.chol[1,1]": 1.}):
+        mod.fit(method="lbfgs", disp=False)
 
 
 def gen_k_factor1_nonstationary(nobs=1000, k=1, idiosyncratic_ar1=False,
                                 idiosyncratic_var=0.4, k_ar=1):
     # Simulate univariate random walk
-    ix = pd.period_range(start='1950-01', periods=1, freq='M')
+    ix = pd.period_range(start="1950-01", periods=1, freq="M")
     faux = pd.Series([0], index=ix)
-    mod = sarimax.SARIMAX(faux, order=(k_ar, 0, 0), initialization='diffuse')
+    mod = sarimax.SARIMAX(faux, order=(k_ar, 0, 0), initialization="diffuse")
 
     params = np.r_[[0] * (k_ar - 1), [1.0001], 1.0]
     factor = mod.simulate(params, nobs)
@@ -214,14 +214,14 @@ def gen_k_factor1_nonstationary(nobs=1000, k=1, idiosyncratic_ar1=False,
     # Compute the growth rate series that we'll actually run the model on
     endog_M = log_levels_M.diff().iloc[1:, :k]
     if k > 1:
-        endog_M.columns = ['yM%d_f1' % (i + 1) for i in range(k)]
+        endog_M.columns = ["yM%d_f1" % (i + 1) for i in range(k)]
     else:
-        endog_M.columns = ['yM_f1']
+        endog_M.columns = ["yM_f1"]
     endog_Q = log_levels_Q.diff().iloc[1:, k:]
     if k > 1:
-        endog_Q.columns = ['yQ%d_f1' % (i + 1) for i in range(k)]
+        endog_Q.columns = ["yQ%d_f1" % (i + 1) for i in range(k)]
     else:
-        endog_Q.columns = ['yQ_f1']
+        endog_Q.columns = ["yQ_f1"]
 
     return endog_M, endog_Q, factor
 
@@ -229,15 +229,15 @@ def gen_k_factor1_nonstationary(nobs=1000, k=1, idiosyncratic_ar1=False,
 def test_em_nonstationary(reset_randomstate):
     # Test that when the EM algorithm estimates non-stationary parameters, that
     # it warns the user and switches to a diffuse initialization.
-    ix = pd.period_range(start='2000', periods=20, freq='M')
+    ix = pd.period_range(start="2000", periods=20, freq="M")
     endog_M = pd.Series(np.arange(20), index=ix, dtype=float)
     endog_M.iloc[10:12] += [0.4, -0.2]  # add in a little noise
-    ix = pd.period_range(start='2000', periods=5, freq='Q')
+    ix = pd.period_range(start="2000", periods=5, freq="Q")
     endog_Q = pd.Series(np.arange(5), index=ix)
 
     mod = dynamic_factor_mq.DynamicFactorMQ(
         endog_M, endog_quarterly=endog_Q, idiosyncratic_ar1=False,
-        standardize=False, factors=['global'])
+        standardize=False, factors=["global"])
     msg = ('Non-stationary parameters found at EM iteration 1, which is not'
            ' compatible with stationary initialization. Initialization was'
            r' switched to diffuse for the following:  \["factor block:'
@@ -249,7 +249,7 @@ def test_em_nonstationary(reset_randomstate):
 def gen_k_factor1(nobs=10000, k=1, idiosyncratic_ar1=False,
                   idiosyncratic_var=0.4, k_ar=6):
     # Simulate univariate AR(6)
-    ix = pd.period_range(start='1950-01', periods=1, freq='M')
+    ix = pd.period_range(start="1950-01", periods=1, freq="M")
     faux = pd.Series([0], index=ix)
     mod = sarimax.SARIMAX(faux, order=(k_ar, 0, 0))
 
@@ -280,14 +280,14 @@ def gen_k_factor1(nobs=10000, k=1, idiosyncratic_ar1=False,
     # Compute the growth rate series that we'll actually run the model on
     endog_M = log_levels_M.diff().iloc[1:, :k]
     if k > 1:
-        endog_M.columns = ['yM%d_f1' % (i + 1) for i in range(k)]
+        endog_M.columns = ["yM%d_f1" % (i + 1) for i in range(k)]
     else:
-        endog_M.columns = ['yM_f1']
+        endog_M.columns = ["yM_f1"]
     endog_Q = log_levels_Q.diff().iloc[1:, k:]
     if k > 1:
-        endog_Q.columns = ['yQ%d_f1' % (i + 1) for i in range(k)]
+        endog_Q.columns = ["yQ%d_f1" % (i + 1) for i in range(k)]
     else:
-        endog_Q.columns = ['yQ_f1']
+        endog_Q.columns = ["yQ_f1"]
 
     return endog_M, endog_Q, factor
 
@@ -342,10 +342,10 @@ def test_k_factor1_factor_order_6(reset_randomstate):
 def gen_k_factor2(nobs=10000, k=2, idiosyncratic_ar1=False,
                   idiosyncratic_var=0.4, k_ar=6):
     # Simulate bivariate VAR(6) for the factor
-    ix = pd.period_range(start='1950-01', periods=1, freq='M')
+    ix = pd.period_range(start="1950-01", periods=1, freq="M")
     faux = pd.DataFrame([[0, 0]], index=ix,
-                        columns=['f1', 'f2'])
-    mod = varmax.VARMAX(faux, order=(k_ar, 0), trend='n')
+                        columns=["f1", "f2"])
+    mod = varmax.VARMAX(faux, order=(k_ar, 0), trend="n")
     A = np.zeros((2, 2 * k_ar))
     A[:, -2:] = np.array([[0.5, -0.2],
                           [0.1, 0.3]])
@@ -370,7 +370,7 @@ def gen_k_factor2(nobs=10000, k=2, idiosyncratic_ar1=False,
         endog_M.iloc[:, i] = (
             endog_M.iloc[:, i] +
             mod_idio.simulate([phi[0], idiosyncratic_var], nobs))
-        columns += [f'yM{i + 1}_f2']
+        columns += [f"yM{i + 1}_f2"]
     endog_M.columns = columns
 
     # Monthly versions of quarterly variables
@@ -380,7 +380,7 @@ def gen_k_factor2(nobs=10000, k=2, idiosyncratic_ar1=False,
         endog_Q_M.iloc[:, i] = (
             endog_Q_M.iloc[:, i] +
             mod_idio.simulate([phi[0], idiosyncratic_var], nobs))
-        columns += [f'yQ{i + 1}_f2']
+        columns += [f"yQ{i + 1}_f2"]
     endog_Q_M.columns = columns
 
     # Create quarterly versions of quarterly variables
@@ -427,14 +427,14 @@ def test_k_factor2_factor_order_6(reset_randomstate):
 
     # This is the invertible matrix that we'll use to transform the factors
     # and parameter matrices into the original form
-    M = np.kron(np.eye(6), mod['design', :2, :2])
+    M = np.kron(np.eye(6), mod["design", :2, :2])
     Mi = np.linalg.inv(M)
 
     # Get the estimated parameter matrices
-    Z = mod['design', :, :12]
-    A = mod['transition', :12, :12]
-    R = mod['selection', :12, :2]
-    Q = mod['state_cov', :2, :2]
+    Z = mod["design", :, :12]
+    A = mod["transition", :12, :12]
+    R = mod["selection", :12, :2]
+    Q = mod["state_cov", :2, :2]
     RQR = R @ Q @ R.T
 
     # Create the transformed matrices
@@ -515,12 +515,12 @@ def test_two_blocks_factor_orders_6(reset_randomstate):
     endog_M = pd.concat([endog1_M, f2, endog2_M], axis=1)
     endog_Q = pd.concat([endog1_Q, endog2_Q], axis=1)
 
-    factors = {f'yM{i + 1}_f1': ['a'] for i in range(k1)}
-    factors.update({f'yQ{i + 1}_f1': ['a'] for i in range(k1)})
-    factors.update({f'f{i + 1}': ['b'] for i in range(2)})
-    factors.update({f'yM{i + 1}_f2': ['b'] for i in range(k2)})
-    factors.update({f'yQ{i + 1}_f2': ['b'] for i in range(k2)})
-    factor_multiplicities = {'b': 2}
+    factors = {f"yM{i + 1}_f1": ["a"] for i in range(k1)}
+    factors.update({f"yQ{i + 1}_f1": ["a"] for i in range(k1)})
+    factors.update({f"f{i + 1}": ["b"] for i in range(2)})
+    factors.update({f"yM{i + 1}_f2": ["b"] for i in range(k2)})
+    factors.update({f"yQ{i + 1}_f2": ["b"] for i in range(k2)})
+    factor_multiplicities = {"b": 2}
 
     mod = dynamic_factor_mq.DynamicFactorMQ(
         endog_M, endog_quarterly=endog_Q,
@@ -575,16 +575,16 @@ def test_two_blocks_factor_orders_6(reset_randomstate):
     # This is the invertible matrix that we'll use to transform the factors
     # and parameter matrices into the original form
     from scipy.linalg import block_diag
-    M1 = np.kron(np.eye(6), mod['design', 3:5, :2])
-    M2 = np.kron(np.eye(6), mod['design', 0:1, 12:13])
+    M1 = np.kron(np.eye(6), mod["design", 3:5, :2])
+    M2 = np.kron(np.eye(6), mod["design", 0:1, 12:13])
     M = block_diag(M1, M2)
     Mi = np.linalg.inv(M)
 
     # Get the estimated parameter matrices
-    Z = mod['design', :, :18]
-    A = mod['transition', :18, :18]
-    R = mod['selection', :18, :3]
-    Q = block_diag(mod['state_cov', :2, :2], mod['state_cov', 12:13, 12:13])
+    Z = mod["design", :, :18]
+    A = mod["transition", :18, :18]
+    R = mod["selection", :18, :3]
+    Q = block_diag(mod["state_cov", :2, :2], mod["state_cov", 12:13, 12:13])
     RQR = R @ Q @ R.T
 
     # Create the transformed matrices

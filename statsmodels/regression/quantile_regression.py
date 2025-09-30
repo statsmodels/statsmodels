@@ -21,7 +21,7 @@ import warnings
 
 import numpy as np
 from numpy.linalg import pinv
-import scipy.stats as stats
+from scipy import stats
 from scipy.stats import norm
 
 from statsmodels.regression.linear_model import (

@@ -57,7 +57,7 @@ def _handle_args(names, defaults, *args, **kwargs):
         for name in flags.keys():
             if name in kwargs:
                 raise TypeError(
-                    "loglike() got multiple values for keyword" " argument '%s'" % name
+                    "loglike() got multiple values for keyword argument '%s'" % name
                 )
     else:
         for i in range(len(names)):
@@ -1454,8 +1454,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         )
         if approx_complex_step:
             kwargs["inversion_method"] = INVERT_UNIVARIATE | SOLVE_LU
-        if "transformed" in kwargs:
-            del kwargs["transformed"]
+        kwargs.pop("transformed", None)
         res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
 
         # Get forecasts error partials
@@ -2021,12 +2020,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             required_exog_shape = (out_of_sample, self.k_exog)
             try:
                 exog = exog.reshape(required_exog_shape)
-            except ValueError:
+            except ValueError as exc:
                 raise ValueError(
                     "Provided exogenous values are not of the"
                     " appropriate shape. Required %s, got %s."
                     % (str(required_exog_shape), str(exog.shape))
-                )
+                ) from exc
         elif k_exog > 0 and exog is not None:
             exog = None
             warnings.warn(
@@ -2471,7 +2470,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             iloc = self.nobs + iloc
         if iloc >= self.nobs:
             raise ValueError(
-                "Cannot anchor impulse responses outside of the" " sample."
+                "Cannot anchor impulse responses outside of the sample."
             )
 
         time_invariant = (
@@ -3533,7 +3532,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
             output = np.c_[test_statistics, p_values]
         else:
-            raise NotImplementedError("Invalid heteroskedasticity test" " method.")
+            raise NotImplementedError("Invalid heteroskedasticity test method.")
 
         return output
 
@@ -3632,7 +3631,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
             output = np.c_[output]
         else:
-            raise NotImplementedError("Invalid serial correlation test" " method.")
+            raise NotImplementedError("Invalid serial correlation test method.")
         return output
 
     def get_prediction(
@@ -4492,12 +4491,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         # Validate input
         if self.smoother_results is None:
-            raise ValueError("Cannot compute news without Kalman smoother" " results.")
+            raise ValueError("Cannot compute news without Kalman smoother results.")
 
         if state_index is not None:
             state_index = np.sort(np.array(state_index, dtype=int))
             if state_index[0] < 0:
-                raise ValueError("Cannot include negative indexes in" " `state_index`.")
+                raise ValueError("Cannot include negative indexes in `state_index`.")
             if state_index[-1] >= self.model.k_states:
                 raise ValueError(
                     f"Given state index {state_index[-1]} is too"

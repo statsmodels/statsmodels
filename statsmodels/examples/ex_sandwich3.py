@@ -11,7 +11,6 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 import statsmodels.api as sm
-
 import statsmodels.stats.sandwich_covariance as sw
 
 # requires Petersen's test_data

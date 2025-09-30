@@ -13,7 +13,7 @@ def asstr2(s):
     if isinstance(s, str):
         return s
     elif isinstance(s, bytes):
-        return s.decode('latin1')
+        return s.decode("latin1")
     else:
         return str(s)
 
@@ -141,7 +141,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
 
 
 # TODO: add an axis argument to this for sysreg
-def add_constant(data, prepend=True, has_constant='skip'):
+def add_constant(data, prepend=True, has_constant="skip"):
     """
     Add a column of ones to an array.
 
@@ -171,7 +171,7 @@ def add_constant(data, prepend=True, has_constant='skip'):
     """
     if _is_using_pandas(data, None):
         from statsmodels.tsa.tsatools import add_trend
-        return add_trend(data, trend='c', prepend=prepend, has_constant=has_constant)
+        return add_trend(data, trend="c", prepend=prepend, has_constant=has_constant)
 
     # Special case for NumPy
     x = np.asarray(data)
@@ -179,14 +179,14 @@ def add_constant(data, prepend=True, has_constant='skip'):
     if ndim == 1:
         x = x[:, None]
     elif x.ndim > 2:
-        raise ValueError('Only implemented for 2-dimensional arrays')
+        raise ValueError("Only implemented for 2-dimensional arrays")
 
     is_nonzero_const = np.ptp(x, axis=0) == 0
     is_nonzero_const &= np.all(x != 0.0, axis=0)
     if is_nonzero_const.any():
-        if has_constant == 'skip':
+        if has_constant == "skip":
             return x
-        elif has_constant == 'raise':
+        elif has_constant == "raise":
             if ndim == 1:
                 raise ValueError("data is constant.")
             else:
@@ -230,11 +230,11 @@ def isestimable(c, d):
     >>> isestimable([1, -1, 0], d)
     True
     """
-    c = array_like(c, 'c', maxdim=2)
-    d = array_like(d, 'd', ndim=2)
+    c = array_like(c, "c", maxdim=2)
+    d = array_like(d, "d", ndim=2)
     c = c[None, :] if c.ndim == 1 else c
     if c.shape[1] != d.shape[1]:
-        raise ValueError('Contrast should have %d columns' % d.shape[1])
+        raise ValueError("Contrast should have %d columns" % d.shape[1])
     new = np.vstack([c, d])
     if np.linalg.matrix_rank(new) != np.linalg.matrix_rank(d):
         return False
@@ -431,7 +431,7 @@ def maybe_unwrap_results(results):
     Can be used in plotting functions or other post-estimation type
     routines.
     """
-    return getattr(results, '_results', results)
+    return getattr(results, "_results", results)
 
 
 class Bunch(dict):
@@ -484,7 +484,7 @@ def _ensure_2d(x, ndarray=False):
         else:
             return x, None
     elif x.ndim > 2:
-        raise ValueError('x mst be 1 or 2-dimensional.')
+        raise ValueError("x mst be 1 or 2-dimensional.")
 
     name = x.name if is_pandas else None
     if ndarray:

@@ -4,25 +4,27 @@ Linear exponential smoothing models
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 import pandas as pd
+
 from statsmodels.base.data import PandasData
-
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.tools.validation import (array_like, bool_like, float_like,
-                                          string_like, int_like)
-
-from statsmodels.tsa.exponential_smoothing import initialization as es_init
-from statsmodels.tsa.statespace import initialization as ss_init
-from statsmodels.tsa.statespace.kalman_filter import (
-    MEMORY_CONSERVE, MEMORY_NO_FORECAST)
-
-from statsmodels.compat.pandas import Appender
 import statsmodels.base.wrapper as wrap
-
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    float_like,
+    int_like,
+    string_like,
+)
+from statsmodels.tsa.exponential_smoothing import initialization as es_init
+from statsmodels.tsa.statespace import initialization as ss_init
+from statsmodels.tsa.statespace.kalman_filter import MEMORY_CONSERVE, MEMORY_NO_FORECAST
 
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 
@@ -146,18 +148,18 @@ class ExponentialSmoothing(MLEModel):
         Springer Science & Business Media, 2008.
     """
     def __init__(self, endog, trend=False, damped_trend=False, seasonal=None,
-                 initialization_method='estimated', initial_level=None,
+                 initialization_method="estimated", initial_level=None,
                  initial_trend=None, initial_seasonal=None, bounds=None,
                  concentrate_scale=True, dates=None, freq=None):
         # Model definition
-        self.trend = bool_like(trend, 'trend')
-        self.damped_trend = bool_like(damped_trend, 'damped_trend')
-        self.seasonal_periods = int_like(seasonal, 'seasonal', optional=True)
+        self.trend = bool_like(trend, "trend")
+        self.damped_trend = bool_like(damped_trend, "damped_trend")
+        self.seasonal_periods = int_like(seasonal, "seasonal", optional=True)
         self.seasonal = self.seasonal_periods is not None
         self.initialization_method = string_like(
-            initialization_method, 'initialization_method').lower()
+            initialization_method, "initialization_method").lower()
         self.concentrate_scale = bool_like(concentrate_scale,
-                                           'concentrate_scale')
+                                           "concentrate_scale")
 
         # TODO: add validation for bounds (e.g. have all bounds, upper > lower)
         # TODO: add `bounds_method` argument to choose between "usual" and
@@ -168,18 +170,18 @@ class ExponentialSmoothing(MLEModel):
 
         # Validation
         if self.seasonal_periods == 1:
-            raise ValueError('Cannot have a seasonal period of 1.')
+            raise ValueError("Cannot have a seasonal period of 1.")
 
         if self.seasonal and self.seasonal_periods is None:
-            raise NotImplementedError('Unable to detect season automatically;'
-                                      ' please specify `seasonal_periods`.')
+            raise NotImplementedError("Unable to detect season automatically;"
+                                      " please specify `seasonal_periods`.")
 
-        if self.initialization_method not in ['concentrated', 'estimated',
-                                              'simple', 'heuristic', 'known']:
+        if self.initialization_method not in ["concentrated", "estimated",
+                                              "simple", "heuristic", "known"]:
             raise ValueError('Invalid initialization method "%s".'
                              % initialization_method)
 
-        if self.initialization_method == 'known':
+        if self.initialization_method == "known":
             if initial_level is None:
                 raise ValueError('`initial_level` argument must be provided'
                                  ' when initialization method is set to'
@@ -202,7 +204,7 @@ class ExponentialSmoothing(MLEModel):
         k_states = 2 + int(self.trend) + self._seasonal_periods
         k_posdef = 1
 
-        init = ss_init.Initialization(k_states, 'known',
+        init = ss_init.Initialization(k_states, "known",
                                       constant=[0] * k_states)
         super().__init__(
             endog, k_states=k_states, k_posdef=k_posdef,
@@ -214,56 +216,56 @@ class ExponentialSmoothing(MLEModel):
 
         # Setup fixed elements of the system matrices
         # Observation error
-        self.ssm['design', 0, 0] = 1.
-        self.ssm['selection', 0, 0] = 1.
-        self.ssm['state_cov', 0, 0] = 1.
+        self.ssm["design", 0, 0] = 1.
+        self.ssm["selection", 0, 0] = 1.
+        self.ssm["state_cov", 0, 0] = 1.
 
         # Level
-        self.ssm['design', 0, 1] = 1.
-        self.ssm['transition', 1, 1] = 1.
+        self.ssm["design", 0, 1] = 1.
+        self.ssm["transition", 1, 1] = 1.
 
         # Trend
         if self.trend:
-            self.ssm['transition', 1:3, 2] = 1.
+            self.ssm["transition", 1:3, 2] = 1.
 
         # Seasonal
         if self.seasonal:
             k = 2 + int(self.trend)
-            self.ssm['design', 0, k] = 1.
-            self.ssm['transition', k, -1] = 1.
-            self.ssm['transition', k + 1:k_states, k:k_states - 1] = (
+            self.ssm["design", 0, k] = 1.
+            self.ssm["transition", k, -1] = 1.
+            self.ssm["transition", k + 1:k_states, k:k_states - 1] = (
                 np.eye(self.seasonal_periods - 1))
 
         # Initialization of the states
-        if self.initialization_method != 'known':
+        if self.initialization_method != "known":
             msg = ('Cannot give `%%s` argument when initialization is "%s"'
                    % initialization_method)
             if initial_level is not None:
-                raise ValueError(msg % 'initial_level')
+                raise ValueError(msg % "initial_level")
             if initial_trend is not None:
-                raise ValueError(msg % 'initial_trend')
+                raise ValueError(msg % "initial_trend")
             if initial_seasonal is not None:
-                raise ValueError(msg % 'initial_seasonal')
+                raise ValueError(msg % "initial_seasonal")
 
-        if self.initialization_method == 'simple':
+        if self.initialization_method == "simple":
             initial_level, initial_trend, initial_seasonal = (
                 es_init._initialization_simple(
-                    self.endog[:, 0], trend='add' if self.trend else None,
-                    seasonal='add' if self.seasonal else None,
+                    self.endog[:, 0], trend="add" if self.trend else None,
+                    seasonal="add" if self.seasonal else None,
                     seasonal_periods=self.seasonal_periods))
-        elif self.initialization_method == 'heuristic':
+        elif self.initialization_method == "heuristic":
             initial_level, initial_trend, initial_seasonal = (
                 es_init._initialization_heuristic(
-                    self.endog[:, 0], trend='add' if self.trend else None,
-                    seasonal='add' if self.seasonal else None,
+                    self.endog[:, 0], trend="add" if self.trend else None,
+                    seasonal="add" if self.seasonal else None,
                     seasonal_periods=self.seasonal_periods))
-        elif self.initialization_method == 'known':
-            initial_level = float_like(initial_level, 'initial_level')
+        elif self.initialization_method == "known":
+            initial_level = float_like(initial_level, "initial_level")
             if self.trend:
-                initial_trend = float_like(initial_trend, 'initial_trend')
+                initial_trend = float_like(initial_trend, "initial_trend")
             if self.seasonal:
                 initial_seasonal = array_like(initial_seasonal,
-                                              'initial_seasonal')
+                                              "initial_seasonal")
 
                 if len(initial_seasonal) == self.seasonal_periods - 1:
                     initial_seasonal = np.r_[initial_seasonal,
@@ -271,9 +273,9 @@ class ExponentialSmoothing(MLEModel):
 
                 if len(initial_seasonal) != self.seasonal_periods:
                     raise ValueError(
-                        'Invalid length of initial seasonal values. Must be'
-                        ' one of s or s-1, where s is the number of seasonal'
-                        ' periods.')
+                        "Invalid length of initial seasonal values. Must be"
+                        " one of s or s-1, where s is the number of seasonal"
+                        " periods.")
 
         # Note that the simple and heuristic methods of computing initial
         # seasonal factors return estimated seasonal factors associated with
@@ -284,7 +286,7 @@ class ExponentialSmoothing(MLEModel):
         # seasonal factors ordered L0, L1, L2, L3, and as a result we need to
         # reverse the order of the computed initial seasonal factors from
         # these methods.
-        methods = ['simple', 'heuristic']
+        methods = ["simple", "heuristic"]
         if (self.initialization_method in methods
                 and initial_seasonal is not None):
             initial_seasonal = initial_seasonal[::-1]
@@ -297,66 +299,66 @@ class ExponentialSmoothing(MLEModel):
         # Initialize now if possible (if we have a damped trend, then
         # initialization will depend on the phi parameter, and so has to be
         # done at each `update`)
-        methods = ['simple', 'heuristic', 'known']
+        methods = ["simple", "heuristic", "known"]
         if not self.damped_trend and self.initialization_method in methods:
             self._initialize_constant_statespace(initial_level, initial_trend,
                                                  initial_seasonal)
 
         # Save keys for kwarg initialization
-        self._init_keys += ['trend', 'damped_trend', 'seasonal',
-                            'initialization_method', 'initial_level',
-                            'initial_trend', 'initial_seasonal', 'bounds',
-                            'concentrate_scale', 'dates', 'freq']
+        self._init_keys += ["trend", "damped_trend", "seasonal",
+                            "initialization_method", "initial_level",
+                            "initial_trend", "initial_seasonal", "bounds",
+                            "concentrate_scale", "dates", "freq"]
 
     def _get_init_kwds(self):
         kwds = super()._get_init_kwds()
-        kwds['seasonal'] = self.seasonal_periods
+        kwds["seasonal"] = self.seasonal_periods
         return kwds
 
     @property
     def _res_classes(self):
-        return {'fit': (ExponentialSmoothingResults,
+        return {"fit": (ExponentialSmoothingResults,
                         ExponentialSmoothingResultsWrapper)}
 
     def clone(self, endog, exog=None, **kwargs):
         if exog is not None:
             raise NotImplementedError(
-                'ExponentialSmoothing does not support `exog`.')
+                "ExponentialSmoothing does not support `exog`.")
         return self._clone_from_init_kwds(endog, **kwargs)
 
     @property
     def state_names(self):
-        state_names = ['error', 'level']
+        state_names = ["error", "level"]
         if self.trend:
-            state_names += ['trend']
+            state_names += ["trend"]
         if self.seasonal:
             state_names += (
-                ['seasonal'] + ['seasonal.L%d' % i
+                ["seasonal"] + ["seasonal.L%d" % i
                                 for i in range(1, self.seasonal_periods)])
 
         return state_names
 
     @property
     def param_names(self):
-        param_names = ['smoothing_level']
+        param_names = ["smoothing_level"]
         if self.trend:
-            param_names += ['smoothing_trend']
+            param_names += ["smoothing_trend"]
         if self.seasonal:
-            param_names += ['smoothing_seasonal']
+            param_names += ["smoothing_seasonal"]
         if self.damped_trend:
-            param_names += ['damping_trend']
+            param_names += ["damping_trend"]
         if not self.concentrate_scale:
-            param_names += ['sigma2']
+            param_names += ["sigma2"]
 
         # Initialization
-        if self.initialization_method == 'estimated':
-            param_names += ['initial_level']
+        if self.initialization_method == "estimated":
+            param_names += ["initial_level"]
             if self.trend:
-                param_names += ['initial_trend']
+                param_names += ["initial_trend"]
             if self.seasonal:
                 param_names += (
-                    ['initial_seasonal']
-                    + ['initial_seasonal.L%d' % i
+                    ["initial_seasonal"]
+                    + ["initial_seasonal.L%d" % i
                        for i in range(1, self.seasonal_periods - 1)])
 
         return param_names
@@ -378,12 +380,12 @@ class ExponentialSmoothing(MLEModel):
             start_params += [np.var(self.endog)]
 
         # Initialization
-        if self.initialization_method == 'estimated':
+        if self.initialization_method == "estimated":
             initial_level, initial_trend, initial_seasonal = (
                 es_init._initialization_simple(
                     self.endog[:, 0],
-                    trend='add' if self.trend else None,
-                    seasonal='add' if self.seasonal else None,
+                    trend="add" if self.trend else None,
+                    seasonal="add" if self.seasonal else None,
                     seasonal_periods=self.seasonal_periods))
             start_params += [initial_level]
             if self.trend:
@@ -398,7 +400,7 @@ class ExponentialSmoothing(MLEModel):
         k_params = (
             1 + int(self.trend) + int(self.seasonal) +
             int(not self.concentrate_scale) + int(self.damped_trend))
-        if self.initialization_method == 'estimated':
+        if self.initialization_method == "estimated":
             k_params += (
                 1 + int(self.trend) +
                 int(self.seasonal) * (self._seasonal_periods - 1))
@@ -443,7 +445,7 @@ class ExponentialSmoothing(MLEModel):
             i += 1
 
         # Initial parameters are as-is
-        if self.initialization_method == 'estimated':
+        if self.initialization_method == "estimated":
             constrained[i:] = unconstrained[i:]
 
         return constrained
@@ -487,7 +489,7 @@ class ExponentialSmoothing(MLEModel):
             i += 1
 
         # Initial parameters are as-is
-        if self.initialization_method == 'estimated':
+        if self.initialization_method == "estimated":
             unconstrained[i:] = constrained[i:]
 
         return unconstrained
@@ -514,13 +516,13 @@ class ExponentialSmoothing(MLEModel):
 
         # Apply the prediction step to get to what we need for our Kalman
         # filter implementation
-        constant = np.dot(self.ssm['transition'], constant)
+        constant = np.dot(self.ssm["transition"], constant)
 
         self.initialization.constant = constant
 
     def _initialize_stationary_cov_statespace(self):
-        R = self.ssm['selection']
-        Q = self.ssm['state_cov']
+        R = self.ssm["selection"]
+        Q = self.ssm["state_cov"]
         self.initialization.stationary_cov = R.dot(Q).dot(R.T)
 
     def update(self, params, transformed=True, includes_fixed=False,
@@ -529,25 +531,25 @@ class ExponentialSmoothing(MLEModel):
                                     includes_fixed=includes_fixed)
 
         # State space system matrices
-        self.ssm['selection', 0, 0] = 1 - params[0]
-        self.ssm['selection', 1, 0] = params[0]
+        self.ssm["selection", 0, 0] = 1 - params[0]
+        self.ssm["selection", 1, 0] = params[0]
         i = 1
         if self.trend:
-            self.ssm['selection', 2, 0] = params[i]
+            self.ssm["selection", 2, 0] = params[i]
             i += 1
         if self.seasonal:
-            self.ssm['selection', 0, 0] -= params[i]
-            self.ssm['selection', i + 1, 0] = params[i]
+            self.ssm["selection", 0, 0] -= params[i]
+            self.ssm["selection", i + 1, 0] = params[i]
             i += 1
         if self.damped_trend:
-            self.ssm['transition', 1:3, 2] = params[i]
+            self.ssm["transition", 1:3, 2] = params[i]
             i += 1
         if not self.concentrate_scale:
-            self.ssm['state_cov', 0, 0] = params[i]
+            self.ssm["state_cov", 0, 0] = params[i]
             i += 1
 
         # State initialization
-        if self.initialization_method == 'estimated':
+        if self.initialization_method == "estimated":
             initial_level = params[i]
             i += 1
             initial_trend = None
@@ -563,7 +565,7 @@ class ExponentialSmoothing(MLEModel):
             self._initialize_constant_statespace(initial_level, initial_trend,
                                                  initial_seasonal)
 
-        methods = ['simple', 'heuristic', 'known']
+        methods = ["simple", "heuristic", "known"]
         if self.damped_trend and self.initialization_method in methods:
             self._initialize_constant_statespace(
                 self._initial_level, self._initial_trend,
@@ -573,7 +575,7 @@ class ExponentialSmoothing(MLEModel):
 
     def _compute_concentrated_states(self, params, *args, **kwargs):
         # Apply the usual filter, but keep forecasts
-        kwargs['conserve_memory'] = MEMORY_CONSERVE & ~MEMORY_NO_FORECAST
+        kwargs["conserve_memory"] = MEMORY_CONSERVE & ~MEMORY_NO_FORECAST
         super().loglike(params, *args, **kwargs)
 
         # Compute the initial state vector
@@ -583,9 +585,9 @@ class ExponentialSmoothing(MLEModel):
         # Need to modify our state space system matrices slightly to get them
         # back into the form of the innovations framework of
         # De Livera et al. (2011)
-        T = self['transition', 1:, 1:]
-        R = self['selection', 1:]
-        Z = self['design', :, 1:].copy()
+        T = self["transition", 1:, 1:]
+        R = self["selection", 1:]
+        Z = self["design", :, 1:].copy()
         i = 1
         if self.trend:
             Z[0, i] = 1.
@@ -624,7 +626,7 @@ class ExponentialSmoothing(MLEModel):
 
     @Appender(MLEModel.loglike.__doc__)
     def loglike(self, params, *args, **kwargs):
-        if self.initialization_method == 'concentrated':
+        if self.initialization_method == "concentrated":
             self._initialize_constant_statespace(
                 *self._compute_concentrated_states(params, *args, **kwargs))
             llf = self.ssm.loglike()
@@ -637,7 +639,7 @@ class ExponentialSmoothing(MLEModel):
     def filter(self, params, cov_type=None, cov_kwds=None,
                return_ssm=False, results_class=None,
                results_wrapper_class=None, *args, **kwargs):
-        if self.initialization_method == 'concentrated':
+        if self.initialization_method == "concentrated":
             self._initialize_constant_statespace(
                 *self._compute_concentrated_states(params, *args, **kwargs))
 
@@ -647,7 +649,7 @@ class ExponentialSmoothing(MLEModel):
             results_wrapper_class=results_wrapper_class, **kwargs
         )
 
-        if self.initialization_method == 'concentrated':
+        if self.initialization_method == "concentrated":
             self.ssm.initialization.constant = np.zeros(self.k_states)
         return results
 
@@ -655,7 +657,7 @@ class ExponentialSmoothing(MLEModel):
     def smooth(self, params, cov_type=None, cov_kwds=None,
                return_ssm=False, results_class=None,
                results_wrapper_class=None, *args, **kwargs):
-        if self.initialization_method == 'concentrated':
+        if self.initialization_method == "concentrated":
             self._initialize_constant_statespace(
                 *self._compute_concentrated_states(params, *args, **kwargs))
 
@@ -664,7 +666,7 @@ class ExponentialSmoothing(MLEModel):
             return_ssm=return_ssm, results_class=results_class,
             results_wrapper_class=results_wrapper_class, **kwargs)
 
-        if self.initialization_method == 'concentrated':
+        if self.initialization_method == "concentrated":
             self.ssm.initialization.constant = np.zeros(self.k_states)
         return results
 
@@ -688,30 +690,30 @@ class ExponentialSmoothingResults(MLEResults):
 
     @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None):
-        specification = ['A']
+        specification = ["A"]
         if self.model.trend and self.model.damped_trend:
-            specification.append('Ad')
+            specification.append("Ad")
         elif self.model.trend:
-            specification.append('A')
+            specification.append("A")
         else:
-            specification.append('N')
+            specification.append("N")
         if self.model.seasonal:
-            specification.append('A')
+            specification.append("A")
         else:
-            specification.append('N')
+            specification.append("N")
 
-        model_name = 'ETS(' + ', '.join(specification) + ')'
+        model_name = "ETS(" + ", ".join(specification) + ")"
 
         summary = super().summary(
-            alpha=alpha, start=start, title='Exponential Smoothing Results',
+            alpha=alpha, start=start, title="Exponential Smoothing Results",
             model_name=model_name)
 
-        if self.model.initialization_method != 'estimated':
+        if self.model.initialization_method != "estimated":
             params = np.array(self.initial_state)
             if params.ndim > 1:
                 params = params[0]
             names = self.model.state_names[1:]
-            param_header = ['initialization method: %s'
+            param_header = ["initialization method: %s"
                             % self.model.initialization_method]
             params_stubs = names
             params_data = [[forg(params[i], prec=4)]

@@ -13,7 +13,6 @@ import warnings
 
 import numpy as np
 from numpy.testing import (
-    assert_,
     assert_allclose,
     assert_almost_equal,
     assert_equal,
@@ -551,7 +550,7 @@ def test_params():
 
     # By default start_params raises NotImplementedError
     with pytest.raises(NotImplementedError):
-        mod.start_params
+        _ = mod.start_params
     # But param names are by default an empty array
     assert_equal(mod.param_names, [])
 
@@ -576,7 +575,7 @@ def check_results(pandas):
     assert_equal(res.loglikelihood_burn, 0)
 
 
-def test_results(pandas=False):
+def test_results():
     check_results(pandas=False)
     check_results(pandas=True)
 
@@ -1183,14 +1182,14 @@ def test_append_extend_apply_invalid():
     # end of model
     not_cts = niledata.iloc[21:41]
     message = (
-        "Given `endog` does not have an index that extends the index of" " the model.$"
+        "Given `endog` does not have an index that extends the index of the model.$"
     )
     with pytest.raises(ValueError, match=message):
         res1.append(not_cts)
     with pytest.raises(ValueError, match=message):
         res1.extend(not_cts)
     message = (
-        "Given `exog` does not have an index that extends the index of" " the model.$"
+        "Given `exog` does not have an index that extends the index of the model.$"
     )
     with pytest.raises(ValueError, match=message):
         res1.append(endog2, exog=not_cts)
@@ -1208,14 +1207,14 @@ def test_append_extend_apply_invalid():
     # end of model
     not_cts = pd.Series(niledata[:41].values)[21:]
     message = (
-        "Given `endog` does not have an index that extends the index of" " the model.$"
+        "Given `endog` does not have an index that extends the index of the model.$"
     )
     with pytest.raises(ValueError, match=message):
         res2.append(not_cts)
     with pytest.raises(ValueError, match=message):
         res2.extend(not_cts)
     message = (
-        "Given `exog` does not have an index that extends the index of" " the model.$"
+        "Given `exog` does not have an index that extends the index of the model.$"
     )
     with pytest.raises(ValueError, match=message):
         res2.append(endog4, exog=not_cts)
@@ -1240,25 +1239,25 @@ def check_states_index(states, ix, predicted_ix, cols):
     smoothed_cov_ix = pd.MultiIndex.from_product([ix, cols]).swaplevel()
 
     # Predicted
-    assert_(states.predicted.index.equals(predicted_ix))
-    assert_(states.predicted.columns.equals(cols))
+    assert (states.predicted.index.equals(predicted_ix))
+    assert (states.predicted.columns.equals(cols))
 
-    assert_(states.predicted_cov.index.equals(predicted_cov_ix))
-    assert_(states.predicted.columns.equals(cols))
+    assert (states.predicted_cov.index.equals(predicted_cov_ix))
+    assert (states.predicted.columns.equals(cols))
 
     # Filtered
-    assert_(states.filtered.index.equals(ix))
-    assert_(states.filtered.columns.equals(cols))
+    assert (states.filtered.index.equals(ix))
+    assert (states.filtered.columns.equals(cols))
 
-    assert_(states.filtered_cov.index.equals(filtered_cov_ix))
-    assert_(states.filtered.columns.equals(cols))
+    assert (states.filtered_cov.index.equals(filtered_cov_ix))
+    assert (states.filtered.columns.equals(cols))
 
     # Smoothed
-    assert_(states.smoothed.index.equals(ix))
-    assert_(states.smoothed.columns.equals(cols))
+    assert (states.smoothed.index.equals(ix))
+    assert (states.smoothed.columns.equals(cols))
 
-    assert_(states.smoothed_cov.index.equals(smoothed_cov_ix))
-    assert_(states.smoothed.columns.equals(cols))
+    assert (states.smoothed_cov.index.equals(smoothed_cov_ix))
+    assert (states.smoothed.columns.equals(cols))
 
 
 def test_states_index_periodindex():

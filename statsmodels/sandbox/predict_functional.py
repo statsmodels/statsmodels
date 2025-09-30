@@ -329,7 +329,7 @@ def predict_functional(
 
         if any(x is not None for x in [summaries, summaries2, values, values2]):
             raise ValueError(
-                "if `exog` is provided then do not " "provide `summaries` or `values`"
+                "if `exog` is provided then do not provide `summaries` or `values`"
             )
 
         fexog = exog

@@ -55,8 +55,13 @@ jobs:
     displayName: 'Build Cython Extensions'
 
   - pwsh: |
+      ruff check statsmodels
+      isort --check-only statsmodels
+    displayName: "Lint"
+
+  - pwsh: |
       pytest statsmodels --skip-examples --junitxml=junit/test-results.xml -n 2 --durations=50
-    displayName: 'pytest'
+    displayName: 'Run pytest'
 
   - task: PublishTestResults@2
     inputs:

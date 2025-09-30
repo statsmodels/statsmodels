@@ -1,7 +1,7 @@
 """World Bank Fertility Data."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This data is distributed according to the World Bank terms of use. See SOURCE."""
 TITLE = """World Bank Fertility Data"""
@@ -65,4 +65,4 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'fertility.csv')
+    return du.load_csv(__file__, "fertility.csv")

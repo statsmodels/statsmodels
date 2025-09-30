@@ -13,6 +13,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.datasets import macrodata
+import statsmodels.iolib.summary
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.statespace import structural
 from statsmodels.tsa.statespace.structural import UnobservedComponents
@@ -55,7 +56,7 @@ def run_ucm(name, use_exact_diffuse=False):
 
         # Smoke test for starting parameters, untransform, transform
         # Also test that transform and untransform are inverses
-        mod.start_params
+        assert isinstance(mod.start_params, list)
         roundtrip = mod.transform_params(mod.untransform_params(mod.start_params))
         assert_allclose(mod.start_params, roundtrip)
 
@@ -155,7 +156,7 @@ def test_fixed_intercept(close_figures):
     match = "Specified model does not contain"
     with pytest.warns(warning, match=match):
         run_ucm("fixed_intercept")
-        run_ucm("fixed_intercept", use_exact_diffuse=True)
+    run_ucm("fixed_intercept", use_exact_diffuse=True)
 
 
 def test_deterministic_constant(close_figures):
@@ -178,7 +179,7 @@ def test_fixed_slope(close_figures):
     match = "irregular component added"
     with pytest.warns(warning, match=match):
         run_ucm("fixed_slope")
-        run_ucm("fixed_slope", use_exact_diffuse=True)
+    run_ucm("fixed_slope", use_exact_diffuse=True)
 
 
 def test_fixed_slope_warn(close_figures):
@@ -189,7 +190,7 @@ def test_fixed_slope_warn(close_figures):
     match = "irregular component added"
     with pytest.warns(warning, match=match):
         run_ucm("fixed_slope")
-        run_ucm("fixed_slope", use_exact_diffuse=True)
+    run_ucm("fixed_slope", use_exact_diffuse=True)
 
 
 def test_deterministic_trend(close_figures):
@@ -306,7 +307,7 @@ def test_specifications():
     match = "irregular component added"
     with pytest.warns(warning, match=match):
         mod = UnobservedComponents(endog)
-        assert_equal(mod.trend_specification, "irregular")
+    assert_equal(mod.trend_specification, "irregular")
 
     # Test an invalid string trend specification
     with pytest.raises(ValueError):
@@ -318,7 +319,7 @@ def test_specifications():
     match = "Trend component specified without"
     with pytest.warns(warning, match=match):
         mod = UnobservedComponents(endog, trend=True, irregular=True)
-        assert_equal(mod.trend_specification, "deterministic trend")
+    assert_equal(mod.trend_specification, "deterministic trend")
 
     # Test that if a string specification is provided, a warning is issued if
     # the boolean attributes are also specified
@@ -400,16 +401,17 @@ def test_misc_exog():
 
     for mod in models:
         # Smoke tests
-        mod.start_params
+        assert isinstance(mod.start_params, list)
         res = mod.fit(disp=False)
-        res.summary()
-        res.predict()
-        res.predict(dynamic=True)
-        res.get_prediction()
+        assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
+        typ = np.ndarray if isinstance(mod.data.orig_endog, np.ndarray) else pd.Series
+        assert isinstance(res.predict(), typ)
+        assert isinstance(res.predict(dynamic=True), typ)
+        assert isinstance(res.get_prediction().predicted_mean, typ)
 
         oos_exog = np.random.normal(size=(1, mod.k_exog))
-        res.forecast(steps=1, exog=oos_exog)
-        res.get_forecast(steps=1, exog=oos_exog)
+        assert isinstance(res.forecast(steps=1, exog=oos_exog), typ)
+        assert isinstance(res.get_forecast(steps=1, exog=oos_exog).predicted_mean, typ)
 
         # Smoke tests for invalid exog
         oos_exog = np.random.normal(size=(2, mod.k_exog))

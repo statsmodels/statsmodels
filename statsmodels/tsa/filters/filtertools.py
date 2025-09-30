@@ -12,8 +12,8 @@ Author: Josef-pktd
 # version control history is there
 
 import numpy as np
-import scipy.fftpack as fft
 from scipy import signal
+import scipy.fftpack as fft
 
 try:
     from scipy.signal._signaltools import _centered as trim_centered
@@ -22,7 +22,7 @@ except ImportError:
     # public SciPy function, but we need it here)
     from scipy.signal.signaltools import _centered as trim_centered
 
-from statsmodels.tools.validation import array_like, PandasWrapper
+from statsmodels.tools.validation import PandasWrapper, array_like
 
 
 def _pad_nans(x, head=None, tail=None):
@@ -122,7 +122,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     original signal.fftconvolve also uses fftn
     """
     if (in2 is None) and (in3 is None):
-        raise ValueError('at least one of in2 and in3 needs to be given')
+        raise ValueError("at least one of in2 and in3 needs to be given")
     s1 = np.array(in1.shape)
     if in2 is not None:
         s2 = np.array(in2.shape)
@@ -197,11 +197,11 @@ def recursive_filter(x, ar_coeff, init=None):
     where n_coeff = len(n_coeff).
     """
     pw = PandasWrapper(x)
-    x = array_like(x, 'x')
-    ar_coeff = array_like(ar_coeff, 'ar_coeff')
+    x = array_like(x, "x")
+    ar_coeff = array_like(ar_coeff, "ar_coeff")
 
     if init is not None:  # integer init are treated differently in lfiltic
-        init = array_like(init, 'init')
+        init = array_like(init, "init")
         if len(init) != len(ar_coeff):
             raise ValueError("ar_coeff must be the same length as init")
 
@@ -282,11 +282,11 @@ def convolution_filter(x, filt, nsides=2):
         raise ValueError("nsides must be 1 or 2")
 
     pw = PandasWrapper(x)
-    x = array_like(x, 'x', maxdim=2)
-    filt = array_like(filt, 'filt', ndim=x.ndim)
+    x = array_like(x, "x", maxdim=2)
+    filt = array_like(filt, "filt", ndim=x.ndim)
 
     if filt.ndim == 1 or min(filt.shape) == 1:
-        result = signal.convolve(x, filt, mode='valid')
+        result = signal.convolve(x, filt, mode="valid")
     else:  # filt.ndim == 2
         nlags = filt.shape[0]
         nvar = x.shape[1]
@@ -295,11 +295,11 @@ def convolution_filter(x, filt, nsides=2):
             for i in range(nvar):
                 # could also use np.convolve, but easier for swiching to fft
                 result[:, i] = signal.convolve(x[:, i], filt[:, i],
-                                               mode='valid')
+                                               mode="valid")
         elif nsides == 1:
             for i in range(nvar):
                 result[:, i] = signal.convolve(x[:, i], np.r_[0, filt[:, i]],
-                                               mode='valid')
+                                               mode="valid")
     result = _pad_nans(result, trim_head, trim_tail)
     return pw.wrap(result)
 
@@ -345,8 +345,8 @@ def miso_lfilter(ar, ma, x, useic=False):
     with shapes y (nobs,), x (nobs, nvars), ar (narlags,), and
     ma (narlags, nvars).
     """
-    ma = array_like(ma, 'ma')
-    ar = array_like(ar, 'ar')
+    ma = array_like(ma, "ma")
+    ar = array_like(ar, "ar")
     inp = signal.correlate(x, ma[::-1, :])[:, (x.shape[1] + 1) // 2]
     # for testing 2d equivalence between convolve and correlate
     #  inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]

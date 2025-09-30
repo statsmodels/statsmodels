@@ -65,10 +65,10 @@ if "ex1" in examples:
     err = y_pred - dgp.y_true
     print(err.std())
     # OLS standard errors are too small
-    mod.res_pooled.params
-    mod.res_pooled.bse
+    assert isinstance(mod.res_pooled.params, np.ndarray)
+    assert isinstance(mod.res_pooled.bse, np.ndarray)
     # heteroscedasticity robust does not help
-    mod.res_pooled.HC1_se
+    assert isinstance(mod.res_pooled.HC1_se, np.ndarray)
     # compare with cluster robust se
 
     print(sw.se_cov(sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int))))
@@ -158,15 +158,15 @@ if "ex1" in examples:
     assert_almost_equal(cov_clu2, cg, decimal=13)
     assert_almost_equal(cov_uni2, cg, decimal=8)  # pnw all lags
 
-    import pandas as pa
+    import pandas as pd
 
     # pandas.DataFrame does not do inplace append
-    se = pa.DataFrame(res_ols.bse[None, :], index=["OLS"])
-    se = se.append(pa.DataFrame(res5.bse[None, :], index=["PGLSit5"]))
+    se = pd.DataFrame(res_ols.bse[None, :], index=["OLS"])
+    se = se.append(pd.DataFrame(res5.bse[None, :], index=["PGLSit5"]))
     clbse = sw.se_cov(sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int)))
-    se = se.append(pa.DataFrame(clbse[None, :], index=["OLSclu"]))
+    se = se.append(pd.DataFrame(clbse[None, :], index=["OLSclu"]))
     pnwse = sw.se_cov(sw.cov_nw_panel(mod.res_pooled, 4, mod.group.groupidx))
-    se = se.append(pa.DataFrame(pnwse[None, :], index=["OLSpnw"]))
+    se = se.append(pd.DataFrame(pnwse[None, :], index=["OLSpnw"]))
     print(se)
     # list(se.index)
     from statsmodels.iolib.table import SimpleTable

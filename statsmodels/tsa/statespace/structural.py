@@ -448,6 +448,7 @@ class UnobservedComponents(MLEModel):
                         "Value of `%s` may be overridden when the trend"
                         " component is specified using a model string." % attribute,
                         SpecificationWarning,
+                        stacklevel=2
                     )
                     setattr(self, attribute, False)
 
@@ -517,6 +518,7 @@ class UnobservedComponents(MLEModel):
                 "Trend component specified without level component;"
                 " deterministic level component added.",
                 SpecificationWarning,
+                stacklevel=2
             )
             self.level = True
             self.stochastic_level = False
@@ -534,12 +536,13 @@ class UnobservedComponents(MLEModel):
                 "Specified model does not contain a stochastic element;"
                 " irregular component added.",
                 SpecificationWarning,
+                stacklevel=2
             )
             self.irregular = True
 
         if self.seasonal and self.seasonal_periods < 2:
             raise ValueError(
-                "Seasonal component must have a seasonal period" " of at least 2."
+                "Seasonal component must have a seasonal period of at least 2."
             )
 
         if self.freq_seasonal:
@@ -961,13 +964,12 @@ class UnobservedComponents(MLEModel):
                 _start_params["cycle_freq"] = 2 * np.pi / 12
             elif freq == "M":
                 _start_params["cycle_freq"] = 2 * np.pi / 36
+            elif not np.any(np.isinf(self.cycle_frequency_bound)):
+                _start_params["cycle_freq"] = np.mean(self.cycle_frequency_bound)
+            elif np.isinf(self.cycle_frequency_bound[1]):
+                _start_params["cycle_freq"] = self.cycle_frequency_bound[0]
             else:
-                if not np.any(np.isinf(self.cycle_frequency_bound)):
-                    _start_params["cycle_freq"] = np.mean(self.cycle_frequency_bound)
-                elif np.isinf(self.cycle_frequency_bound[1]):
-                    _start_params["cycle_freq"] = self.cycle_frequency_bound[0]
-                else:
-                    _start_params["cycle_freq"] = self.cycle_frequency_bound[1]
+                _start_params["cycle_freq"] = self.cycle_frequency_bound[1]
 
         # Irregular
         if self.irregular:
@@ -1231,31 +1233,29 @@ class UnobservedComponentsResults(MLEResults):
 
         # Save the model specification
         self.specification = Bunch(
-            **{
-                # Model options
-                "level": self.model.level,
-                "trend": self.model.trend,
-                "seasonal_periods": self.model.seasonal_periods,
-                "seasonal": self.model.seasonal,
-                "freq_seasonal": self.model.freq_seasonal,
-                "freq_seasonal_periods": self.model.freq_seasonal_periods,
-                "freq_seasonal_harmonics": self.model.freq_seasonal_harmonics,
-                "cycle": self.model.cycle,
-                "ar_order": self.model.ar_order,
-                "autoregressive": self.model.autoregressive,
-                "irregular": self.model.irregular,
-                "stochastic_level": self.model.stochastic_level,
-                "stochastic_trend": self.model.stochastic_trend,
-                "stochastic_seasonal": self.model.stochastic_seasonal,
-                "stochastic_freq_seasonal": self.model.stochastic_freq_seasonal,
-                "stochastic_cycle": self.model.stochastic_cycle,
-                "damped_cycle": self.model.damped_cycle,
-                "regression": self.model.regression,
-                "mle_regression": self.model.mle_regression,
-                "k_exog": self.model.k_exog,
-                # Check for string trend/level specification
-                "trend_specification": self.model.trend_specification,
-            }
+            # Model options
+            level=self.model.level,
+            trend=self.model.trend,
+            seasonal_periods=self.model.seasonal_periods,
+            seasonal=self.model.seasonal,
+            freq_seasonal=self.model.freq_seasonal,
+            freq_seasonal_periods=self.model.freq_seasonal_periods,
+            freq_seasonal_harmonics=self.model.freq_seasonal_harmonics,
+            cycle=self.model.cycle,
+            ar_order=self.model.ar_order,
+            autoregressive=self.model.autoregressive,
+            irregular=self.model.irregular,
+            stochastic_level=self.model.stochastic_level,
+            stochastic_trend=self.model.stochastic_trend,
+            stochastic_seasonal=self.model.stochastic_seasonal,
+            stochastic_freq_seasonal=self.model.stochastic_freq_seasonal,
+            stochastic_cycle=self.model.stochastic_cycle,
+            damped_cycle=self.model.damped_cycle,
+            regression=self.model.regression,
+            mle_regression=self.model.mle_regression,
+            k_exog=self.model.k_exog,
+            # Check for string trend/level specification
+            trend_specification=self.model.trend_specification,
         )
 
     @property

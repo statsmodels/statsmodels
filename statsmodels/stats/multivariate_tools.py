@@ -17,7 +17,7 @@ from statsmodels.tools.tools import Bunch
 
 
 def partial_project(endog, exog):
-    '''helper function to get linear projection or partialling out of variables
+    """helper function to get linear projection or partialling out of variables
 
     endog variables are projected on exog variables
 
@@ -42,7 +42,7 @@ def partial_project(endog, exog):
     This is no-frills mainly for internal calculations, no error checking or
     array conversion is performed, at least for now.
 
-    '''
+    """
     x1, x2 = endog, exog
     params = np.linalg.pinv(x2).dot(x1)
     predicted = x2.dot(params)
@@ -55,7 +55,7 @@ def partial_project(endog, exog):
 
 
 def cancorr(x1, x2, demean=True, standardize=False):
-    '''canonical correlation coefficient beween 2 arrays
+    """canonical correlation coefficient beween 2 arrays
 
     Parameters
     ----------
@@ -90,7 +90,7 @@ def cancorr(x1, x2, demean=True, standardize=False):
     cc_stats
     CCA not yet
 
-    '''
+    """
     # x, y = x1, x2
     if demean or standardize:
         x1 = (x1 - x1.mean(0))
@@ -110,7 +110,7 @@ def cancorr(x1, x2, demean=True, standardize=False):
 
 
 def cc_ranktest(x1, x2, demean=True, fullrank=False):
-    '''rank tests based on smallest canonical correlation coefficients
+    """rank tests based on smallest canonical correlation coefficients
 
     Anderson canonical correlations test (LM test) and
     Cragg-Donald test (Wald test)
@@ -156,7 +156,7 @@ def cc_ranktest(x1, x2, demean=True, fullrank=False):
     cancorr
     cc_stats
 
-    '''
+    """
 
     from scipy import stats
 
@@ -179,7 +179,7 @@ def cc_ranktest(x1, x2, demean=True, fullrank=False):
 
 
 def cc_stats(x1, x2, demean=True):
-    '''MANOVA statistics based on canonical correlation coefficient
+    """MANOVA statistics based on canonical correlation coefficient
 
     Calculates Pillai's Trace, Wilk's Lambda, Hotelling's Trace and
     Roy's Largest Root.
@@ -206,7 +206,7 @@ def cc_stats(x1, x2, demean=True):
     TODO: should return a results class instead
     produces nans sometimes, singular, perfect correlation of x1, x2 ?
 
-    '''
+    """
 
     nobs1, k1 = x1.shape  # endogenous ?
     nobs2, k2 = x2.shape
@@ -226,12 +226,12 @@ def cc_stats(x1, x2, demean=True):
     # from scipy import stats
     # what's the distribution, the test statistic ?
     res = {}
-    res['canonical correlation coefficient'] = cc
-    res['eigenvalues'] = lam
+    res["canonical correlation coefficient"] = cc
+    res["eigenvalues"] = lam
     res["Pillai's Trace"] = pt_value
     res["Wilk's Lambda"] = wl_value
     res["Hotelling's Trace"] = ht_value
     res["Roy's Largest Root"] = rm_value
-    res['df_resid'] = df_resid
-    res['df_m'] = m
+    res["df_resid"] = df_resid
+    res["df_m"] = m
     return res

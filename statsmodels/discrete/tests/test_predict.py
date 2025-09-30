@@ -6,38 +6,35 @@ License: BSD-3
 """
 
 import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
-
 import pytest
 
-from statsmodels.tools.tools import add_constant
-
 from statsmodels.base._prediction_inference import PredictionResultsMonotonic
-
+from statsmodels.discrete.count_model import (
+    ZeroInflatedGeneralizedPoisson,
+    ZeroInflatedNegativeBinomialP,
+    ZeroInflatedPoisson,
+)
 from statsmodels.discrete.discrete_model import (
     BinaryModel,
+    GeneralizedPoisson,
     Logit,
-    Probit,
-    Poisson,
     NegativeBinomial,
     NegativeBinomialP,
-    GeneralizedPoisson,
-    )
-from statsmodels.discrete.count_model import (
-    ZeroInflatedPoisson,
-    ZeroInflatedNegativeBinomialP,
-    ZeroInflatedGeneralizedPoisson,
-    )
-
+    Poisson,
+    Probit,
+)
 from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
+from statsmodels.tools.tools import add_constant
+
 from .results import results_predict as resp
 
-
 # copied from `test_gmm_poisson.TestGMMAddOnestep`
-XLISTEXOG2 = 'aget aget2 educyr actlim totchr'.split()
-endog_name = 'docvis'
-exog_names = 'private medicaid'.split() + XLISTEXOG2 + ['const']
+XLISTEXOG2 = "aget aget2 educyr actlim totchr".split()
+endog_name = "docvis"
+exog_names = "private medicaid".split() + XLISTEXOG2 + ["const"]
 endog = DATA[endog_name]
 exog = DATA[exog_names]
 
@@ -210,8 +207,7 @@ class CheckExtras():
         np.random.seed(987125643)
         exog_extra = 0.01 * np.random.randn(endog.shape[0])
 
-        from statsmodels.base._parameter_inference import (
-            score_test, _scorehess_extra)
+        from statsmodels.base._parameter_inference import _scorehess_extra, score_test
 
         # note: we need params for the restricted model here
         # if params is not given, then it will be taked from results instance
@@ -236,8 +232,8 @@ class CheckExtras():
         from statsmodels.stats.outliers_influence import MLEInfluence
 
         influ = MLEInfluence(res1)
-        attrs = ['cooks_distance', 'd_fittedvalues', 'd_fittedvalues_scaled',
-                 'd_params', 'dfbetas', 'hat_matrix_diag', 'resid_studentized'
+        attrs = ["cooks_distance", "d_fittedvalues", "d_fittedvalues_scaled",
+                 "d_params", "dfbetas", "hat_matrix_diag", "resid_studentized"
                  ]
         for attr in attrs:
             getattr(influ, attr)
@@ -314,8 +310,8 @@ models = [
     (GeneralizedPoisson, {}, np.array([mu, alpha])),
     (GeneralizedPoisson, {"p": 2}, np.array([mu, alpha])),
     (NegativeBinomial, {}, np.array([mu, alpha])),
-    (NegativeBinomial, {"loglike_method": 'nb1'}, np.array([mu, alpha])),
-    (NegativeBinomial, {"loglike_method": 'geometric'}, np.array([mu])),
+    (NegativeBinomial, {"loglike_method": "nb1"}, np.array([mu, alpha])),
+    (NegativeBinomial, {"loglike_method": "geometric"}, np.array([mu])),
     ]
 
 models_influ = [
@@ -384,7 +380,7 @@ def test_distr(case, close_figures):
             which="prob", y_values=np.arange(5), average=True)
         assert_allclose(probs2.predicted, probs.mean(0), rtol=1e-10)
         dia = res.get_diagnostic()
-        dia.probs_predicted
+        assert isinstance(dia.probs_predicted, np.ndarray)
         # fig = dia.plot_probs();
         # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)
 

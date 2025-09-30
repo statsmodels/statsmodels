@@ -16,7 +16,6 @@ except ImportError:
 
 from . import kernels
 
-
 kernel_func = dict(wangryzin=kernels.wang_ryzin,
                    aitchisonaitken=kernels.aitchison_aitken,
                    gaussian=kernels.gaussian,
@@ -101,7 +100,7 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
         )
 
     # Compute dispersion in next 4 lines
-    if class_type == 'KernelReg':
+    if class_type == "KernelReg":
         sub_data = sub_data[:, 1:]
 
     dispersion = _compute_min_std_IQR(sub_data)
@@ -137,7 +136,7 @@ class GenericKDE :
         The default values for bw is 'normal_reference'.
         """
         if bw is None:
-            bw = 'normal_reference'
+            bw = "normal_reference"
 
         if not isinstance(bw, str):
             self._bw_method = "user-specified"
@@ -146,9 +145,9 @@ class GenericKDE :
             # The user specified a bandwidth selection method
             self._bw_method = bw
             # Workaround to avoid instance methods in __dict__
-            if bw == 'normal_reference':
+            if bw == "normal_reference":
                 bwfunc = self._normal_reference
-            elif bw == 'cv_ml':
+            elif bw == "cv_ml":
                 bwfunc = self._cv_ml
             else:  # bw == 'cv_ls'
                 bwfunc = self._cv_ls
@@ -179,7 +178,6 @@ class GenericKDE :
         """Helper method to be able to pass needed vars to _compute_subset.
 
         Needs to be implemented by subclasses."""
-        pass
 
     def _compute_efficient(self, bw):
         """
@@ -194,7 +192,7 @@ class GenericKDE :
         """
 
         if bw is None:
-            self._bw_method = 'normal_reference'
+            self._bw_method = "normal_reference"
         if isinstance(bw, str):
             self._bw_method = bw
         else:
@@ -204,7 +202,7 @@ class GenericKDE :
         nobs = self.nobs
         n_sub = self.n_sub
         data = copy.deepcopy(self.data)
-        n_cvars = self.data_type.count('c')
+        n_cvars = self.data_type.count("c")
         co = 4  # 2*order of continuous kernel
         do = 4  # 2*order of discrete kernel
         _, ix_ord, ix_unord = _get_type_pos(self.data_type)
@@ -446,9 +444,9 @@ class LeaveOneOut:
 
 
 def _get_type_pos(var_type):
-    ix_cont = np.array([c == 'c' for c in var_type])
-    ix_ord = np.array([c == 'o' for c in var_type])
-    ix_unord = np.array([c == 'u' for c in var_type])
+    ix_cont = np.array([c == "c" for c in var_type])
+    ix_ord = np.array([c == "o" for c in var_type])
+    ix_unord = np.array([c == "u" for c in var_type])
     return ix_cont, ix_ord, ix_unord
 
 
@@ -471,8 +469,8 @@ def _adjust_shape(dat, k_vars):
     return dat
 
 
-def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
-         okertype='wangryzin', ukertype='aitchisonaitken', tosum=True):
+def gpke(bw, data, data_predict, var_type, ckertype="gaussian",
+         okertype="wangryzin", ukertype="aitchisonaitken", tosum=True):
     r"""
     Returns the non-normalized Generalized Product Kernel Estimator
 
@@ -528,7 +526,7 @@ def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
         func = kernel_func[kertypes[vtype]]
         Kval[:, ii] = func(bw[ii], data[:, ii], data_predict[ii])
 
-    iscontinuous = np.array([c == 'c' for c in var_type])
+    iscontinuous = np.array([c == "c" for c in var_type])
     dens = Kval.prod(axis=1) / np.prod(bw[iscontinuous])
     if tosum:
         return dens.sum(axis=0)

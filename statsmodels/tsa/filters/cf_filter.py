@@ -78,7 +78,7 @@ def cffilter(x, low=6, high=32, drift=True):
     if low < 2:
         raise ValueError("low must be >= 2")
     pw = PandasWrapper(x)
-    x = array_like(x, 'x', ndim=2)
+    x = array_like(x, "x", ndim=2)
     nobs, nseries = x.shape
     a = 2*np.pi/high
     b = 2*np.pi/low
@@ -101,12 +101,12 @@ def cffilter(x, low=6, high=32, drift=True):
 
     cycle, trend = y.squeeze(), x.squeeze() - y
 
-    return pw.wrap(cycle, append='cycle'), pw.wrap(trend, append='trend')
+    return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
 
 
 if __name__ == "__main__":
     import statsmodels as sm
-    dta = sm.datasets.macrodata.load().data[['infl', 'tbilrate']].view((float, 2))[1:]
+    dta = sm.datasets.macrodata.load().data[["infl", "tbilrate"]].view((float, 2))[1:]
     cycle, trend = cffilter(dta, 6, 32, drift=True)
-    dta = sm.datasets.macrodata.load().data['tbilrate'][1:]
+    dta = sm.datasets.macrodata.load().data["tbilrate"][1:]
     cycle2, trend2 = cffilter(dta, 6, 32, drift=True)

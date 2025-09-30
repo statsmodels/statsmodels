@@ -36,7 +36,7 @@ class TestCountDiagnostic:
         #                                2, 0.01, size=mu_true.shape)
 
         model_poi = Poisson(endog_poi, exog)
-        res_poi = model_poi.fit(method='bfgs', maxiter=5000, disp=False)
+        res_poi = model_poi.fit(method="bfgs", maxiter=5000, disp=False)
         cls.exog = exog
         cls.endog = endog_poi
         cls.res = res_poi

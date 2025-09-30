@@ -1,7 +1,7 @@
 """(West) German interest and inflation rate 1972-1998"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """..."""  # TODO
 TITLE = __doc__
@@ -58,7 +58,7 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'E6.csv', convert_float=True)
+    return du.load_csv(__file__, "E6.csv", convert_float=True)
 
 
 def __str__():

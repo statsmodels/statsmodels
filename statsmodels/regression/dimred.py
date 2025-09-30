@@ -242,7 +242,6 @@ class SlicedInverseReg(_DimReductionRegression):
         if start_params is None:
             params = np.zeros((self.k_vars, ndim))
             params[0:ndim, 0:ndim] = np.eye(ndim)
-            params = params
         else:
             if start_params.shape[1] != ndim:
                 msg = "Shape of start_params is not compatible with ndim"
@@ -679,7 +678,6 @@ class CovarianceReduction(_DimReductionRegression):
         if start_params is None:
             params = np.zeros((p, d))
             params[0:d, 0:d] = np.eye(d)
-            params = params
         else:
             params = start_params
 

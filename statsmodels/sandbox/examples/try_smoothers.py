@@ -37,9 +37,9 @@ if __name__ == "__main__":
     KSy = KS.conf(KSx)
     KVar = KS.std(KSx)
     print(time.time() - start)  # This should be significantly quicker...
-    start = time.time()  #
-    KS2y = KS2.conf(KSx)  #
-    K2Var = KS2.std(KSx)  #
+    start = time.time()
+    KS2y = KS2.conf(KSx)
+    K2Var = KS2.std(KSx)
     print(time.time() - start)  # ...than this.
 
     KSConfIntx, KSConfInty = KS.conf(15)

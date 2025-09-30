@@ -293,8 +293,7 @@ class TestProportion(CheckProportionMixin):
         res_prop_test.conf_int = """NULL"""
         res_prop_test.alternative = "two.sided"
         res_prop_test.method = (
-            "4-sample test for equality of proportions "
-            + "without continuity correction"
+            "4-sample test for equality of proportions without continuity correction"
         )
         res_prop_test.data_name = "smokers2 out of patients"
         self.res_prop_test = res_prop_test
@@ -790,20 +789,20 @@ def test_confint_2indep():
     """
     diff:
     Wald 0.029 0.32 0.29
-    Agresti–Caffo 0.012 0.32 0.31
+    Agresti-Caffo 0.012 0.32 0.31
     Newcombe hybrid score 0.019 0.34 0.32
-    Miettinen–Nurminen asymptotic score 0.028 0.34 0.31
-    Santner–Snell exact unconditional -0.069 0.41 0.48
-    Chan–Zhang exact unconditional 0.019 0.36 0.34
-    Agresti–Min exact unconditional 0.024 0.35 0.33
+    Miettinen-Nurminen asymptotic score 0.028 0.34 0.31
+    Santner-Snell exact unconditional -0.069 0.41 0.48
+    Chan-Zhang exact unconditional 0.019 0.36 0.34
+    Agresti-Min exact unconditional 0.024 0.35 0.33
 
     ratio:
     Katz log 0.91 54 4.08
     Adjusted log 0.92 27 3.38
     Inverse sinh 1.17 42 3.58
     Koopman asymptotic score 1.21 43 3.57
-    Chan–Zhang 1.22 181 5.00
-    Agresti–Min 1.15 89 4.35
+    Chan-Zhang 1.22 181 5.00
+    Agresti-Min 1.15 89 4.35
 
     odds-ratio
     Woolf logit 0.99 74 4.31
@@ -811,9 +810,9 @@ def test_confint_2indep():
     Independence-smoothed logit 0.99 60 4.11
     Cornfield exact conditional 0.97 397 6.01
     Cornfield mid-p 1.19 200 5.12
-    Baptista–Pike exact conditional 1.00 195 5.28
-    Baptista–Pike mid-p 1.33 99 4.31
-    Agresti–Min exact unconditional 1.19 72 4.10
+    Baptista-Pike exact conditional 1.00 195 5.28
+    Baptista-Pike mid-p 1.33 99 4.31
+    Agresti-Min exact unconditional 1.19 72 4.10
     """  # pylint: disable=W0105
     ci = confint_proportions_2indep(
         count1, nobs1, count2, nobs2, method="newcomb", compare="diff", alpha=0.05
@@ -1135,7 +1134,6 @@ def test_equivalence_2indep():
         if method == "logit-smoothed":
             # not correctly vectorized
             return
-        res1 = res  # for debugging  # noqa
         res = smprop.tost_proportions_2indep(
             count1v,
             nobs1v,

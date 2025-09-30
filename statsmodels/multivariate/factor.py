@@ -9,12 +9,12 @@ from statsmodels.base.model import Model
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.iolib import summary2
 from statsmodels.tools.decorators import cache_readonly
-
-from ..tools.sm_exceptions import (
+from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     EstimationWarning,
     SpecificationWarning,
 )
+
 from .factor_rotation import promax, rotate_factors
 
 _opt_defaults = {"gtol": 1e-7}
@@ -27,8 +27,7 @@ def _check_args_1(endog, n_factor, corr, nobs):
         raise ValueError(msg)
     if endog is None and corr is None:
         warnings.warn(
-            "Both endog and corr are provided, "
-            + "corr will be used for factor analysis.",
+            "Both endog and corr are provided, corr will be used for factor analysis.",
             SpecificationWarning,
             stacklevel=2,
         )
@@ -165,16 +164,15 @@ class Factor(Model):
         """Names of endogenous variables"""
         if self._endog_names is not None:
             return self._endog_names
+        elif self.endog is not None:
+            return self.data.ynames
         else:
-            if self.endog is not None:
-                return self.data.ynames
-            else:
-                d = 0
-                n = self.corr.shape[0] - 1
-                while n > 0:
-                    d += 1
-                    n //= 10
-                return [("var%0" + str(d) + "d") % i for i in range(self.corr.shape[0])]
+            d = 0
+            n = self.corr.shape[0] - 1
+            while n > 0:
+                d += 1
+                n //= 10
+            return [("var%0" + str(d) + "d") % i for i in range(self.corr.shape[0])]
 
     @endog_names.setter
     def endog_names(self, value):
@@ -182,7 +180,7 @@ class Factor(Model):
         if value is not None:
             if len(value) != self.corr.shape[0]:
                 raise ValueError(
-                    "The length of `endog_names` must " "equal the number of variables."
+                    "The length of `endog_names` must equal the number of variables."
                 )
             self._endog_names = np.asarray(value)
         else:
@@ -767,8 +765,8 @@ class FactorResults:
                     endog = np.asarray(endog)
             else:
                 raise ValueError(
-                    "If transform is True, then `endog` needs "
-                    + "to be available in the Factor instance."
+                    "If transform is True, then `endog` needs to be available "
+                    "in the Factor instance."
                 )
 
             endog = (endog - m) / s

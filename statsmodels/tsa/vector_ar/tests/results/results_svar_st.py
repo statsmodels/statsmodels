@@ -119,12 +119,12 @@ params_table = np.array([
     8.739086225e-49,  .01866157756892,  .02275631868632,              193,
     1.9723316757957,                0]).reshape(18, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
 params_table_rownames = [
-    '_cons', '_cons', '_cons', '_cons', '_cons', '_cons', '_cons',
-    '_cons', '_cons', '_cons', '_cons', '_cons', '_cons', '_cons',
-    '_cons', '_cons', '_cons', '_cons']
+    "_cons", "_cons", "_cons", "_cons", "_cons", "_cons", "_cons",
+    "_cons", "_cons", "_cons", "_cons", "_cons", "_cons", "_cons",
+    "_cons", "_cons", "_cons", "_cons"]
 
 b = np.array([
     1, -.50680224519119, -5.5360565201616,                0,
@@ -134,11 +134,11 @@ b = np.array([
     0,  .02070894812762])
 
 b_colnames = [
-    '_cons', '_cons', '_cons', '_cons', '_cons', '_cons', '_cons',
-    '_cons', '_cons', '_cons', '_cons', '_cons', '_cons', '_cons',
-    '_cons', '_cons', '_cons', '_cons']
+    "_cons", "_cons", "_cons", "_cons", "_cons", "_cons", "_cons",
+    "_cons", "_cons", "_cons", "_cons", "_cons", "_cons", "_cons",
+    "_cons", "_cons", "_cons", "_cons"]
 
-b_rownames = 'y1'.split()
+b_rownames = "y1".split()
 
 cov = np.array([
     0,                0,                0,                0,
@@ -225,14 +225,14 @@ cov = np.array([
     ]).reshape(18, 18)
 
 cov_colnames = [
-    '_cons', '_cons', '_cons', '_cons', '_cons', '_cons', '_cons',
-    '_cons', '_cons', '_cons', '_cons', '_cons', '_cons', '_cons',
-    '_cons', '_cons', '_cons', '_cons']
+    "_cons", "_cons", "_cons", "_cons", "_cons", "_cons", "_cons",
+    "_cons", "_cons", "_cons", "_cons", "_cons", "_cons", "_cons",
+    "_cons", "_cons", "_cons", "_cons"]
 
 cov_rownames = [
-    '_cons', '_cons', '_cons', '_cons', '_cons', '_cons', '_cons',
-    '_cons', '_cons', '_cons', '_cons', '_cons', '_cons', '_cons',
-    '_cons', '_cons', '_cons', '_cons']
+    "_cons", "_cons", "_cons", "_cons", "_cons", "_cons", "_cons",
+    "_cons", "_cons", "_cons", "_cons", "_cons", "_cons", "_cons",
+    "_cons", "_cons", "_cons", "_cons"]
 
 constraints = np.array([
     1,                0,                0,                0,
@@ -295,20 +295,20 @@ constraints = np.array([
     ]).reshape(12, 19)
 
 constraints_colnames = [
-    '_cons', '_cons', '_cons', '_cons', '_cons', '_cons', '_cons',
-    '_cons', '_cons', '_cons', '_cons', '_cons', '_cons', '_cons',
-    '_cons', '_cons', '_cons', '_cons', '_r']
+    "_cons", "_cons", "_cons", "_cons", "_cons", "_cons", "_cons",
+    "_cons", "_cons", "_cons", "_cons", "_cons", "_cons", "_cons",
+    "_cons", "_cons", "_cons", "_cons", "_r"]
 
-constraints_rownames = 'r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12'.split()
+constraints_rownames = "r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12".split()
 
 Sigma = np.array([
     .00005739073954,  .00002908575565,  .00022926345064,  .00002908575565,
     .00004096043971,   .0000364524456,  .00022926345064,   .0000364524456,
     .00158721761072]).reshape(3, 3)
 
-Sigma_colnames = 'gdp cons inv'.split()
+Sigma_colnames = "gdp cons inv".split()
 
-Sigma_rownames = 'gdp cons inv'.split()
+Sigma_rownames = "gdp cons inv".split()
 
 G_var = np.array([
     1,  .00772119249309,  .00832845872247,  .00812414768988,
@@ -339,16 +339,16 @@ G_var = np.array([
     ]).reshape(10, 10)
 
 G_var_colnames = [
-    '_cons',
-    'L.gdp', 'L.cons', 'L.inv',
-    'L2.gdp', 'L2.cons', 'L2.inv',
-    'L3.gdp', 'L3.cons', 'L3.inv']
+    "_cons",
+    "L.gdp", "L.cons", "L.inv",
+    "L2.gdp", "L2.cons", "L2.inv",
+    "L3.gdp", "L3.cons", "L3.inv"]
 
 G_var_rownames = [
-    '_cons',
-    'L.gdp', 'L.cons', 'L.inv',
-    'L2.gdp', 'L2.cons', 'L2.inv',
-    'L3.gdp', 'L3.cons', 'L3.inv']
+    "_cons",
+    "L.gdp", "L.cons", "L.inv",
+    "L2.gdp", "L2.cons", "L2.inv",
+    "L3.gdp", "L3.cons", "L3.inv"]
 
 
 bf_var = np.array([
@@ -362,56 +362,56 @@ bf_var = np.array([
     .03345298758638, -.02059735685585])
 
 bf_var_colnames = [
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons',
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons',
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons']
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons",
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons",
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons"]
 
-bf_var_rownames = 'r1'.split()
+bf_var_rownames = "r1".split()
 
 B = np.array([
     .00757566759698,                0,                0,                0,
     .00512051886486,                0,                0,                0,
     .02070894812762]).reshape(3, 3)
 
-B_colnames = 'gdp cons inv'.split()
+B_colnames = "gdp cons inv".split()
 
-B_rownames = 'gdp cons inv'.split()
+B_rownames = "gdp cons inv".split()
 
 A = np.array([
     1,                0,                0, -.50680224519119,
     1,                0, -5.5360565201616,  3.0411768648574,
     1]).reshape(3, 3)
 
-A_colnames = 'gdp cons inv'.split()
+A_colnames = "gdp cons inv".split()
 
-A_rownames = 'gdp cons inv'.split()
+A_rownames = "gdp cons inv".split()
 
 beq = np.array([
     np.nan,                0,                0,                0,
     np.nan,                0,                0,                0,
     np.nan]).reshape(3, 3)
 
-beq_colnames = 'c1 c2 c3'.split()
+beq_colnames = "c1 c2 c3".split()
 
-beq_rownames = 'r1 r2 r3'.split()
+beq_rownames = "r1 r2 r3".split()
 
 aeq = np.array([
     1,                0,                0, np.nan,
     1,                0, np.nan, np.nan,
     1]).reshape(3, 3)
 
-aeq_colnames = 'c1 c2 c3'.split()
+aeq_colnames = "c1 c2 c3".split()
 
-aeq_rownames = 'r1 r2 r3'.split()
+aeq_rownames = "r1 r2 r3".split()
 
 V_var = np.array([
     .02944043907167, -.00139167936464,  -.0010606099932, -.01749947940302,
@@ -642,32 +642,32 @@ V_var = np.array([
     ]).reshape(30, 30)
 
 V_var_colnames = [
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons',
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons',
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons']
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons",
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons",
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons"]
 
 V_var_rownames = [
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons',
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons',
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons']
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons",
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons",
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons"]
 
 b_var = np.array([
     -.28614799058891,  .02569110476595, -.18003096181942,   .6738689560015,
@@ -680,20 +680,20 @@ b_var = np.array([
     .03345298758638, -.02059735685585])
 
 b_var_colnames = [
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons',
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons',
-    'L.gdp', 'L2.gdp', 'L3.gdp',
-    'L.cons', 'L2.cons', 'L3.cons',
-    'L.inv', 'L2.inv', 'L3.inv',
-    '_cons']
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons",
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons",
+    "L.gdp", "L2.gdp", "L3.gdp",
+    "L.cons", "L2.cons", "L3.cons",
+    "L.inv", "L2.inv", "L3.inv",
+    "_cons"]
 
-b_var_rownames = 'y1'.split()
+b_var_rownames = "y1".split()
 
 
 results_svar1_small = ParamsTableTestBunch(

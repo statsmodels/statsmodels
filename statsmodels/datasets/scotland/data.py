@@ -1,7 +1,7 @@
 """Taxation Powers Vote for the Scottish Parliament 1997 dataset."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
@@ -79,6 +79,6 @@ def load_pandas():
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'scotvote.csv')
+    data = du.load_csv(__file__, "scotvote.csv")
     data = data.iloc[:, 1:9]
     return data.astype(float)

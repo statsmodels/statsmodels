@@ -2,10 +2,9 @@ from numpy import array
 
 from statsmodels.tools.testing import Holder
 
-
 data = Holder()
-data.comment = 'generated data, divide by 1000'
-data.name = 'data'
+data.comment = "generated data, divide by 1000"
+data.name = "data"
 data.xo = array([
     [-419, -731, -1306, -1294],
     [6, 529, -200, -437],
@@ -109,7 +108,7 @@ data.xo = array([
     [1923, 329, -152, 1128]])
 
 princomp1 = Holder()
-princomp1.comment = 'mlab.princomp(x, nout=3)'
+princomp1.comment = "mlab.princomp(x, nout=3)"
 princomp1.factors = array([
     [-.83487832815382, -1.75681522344645, -.50882660928949, -.59661466511045],
     [-.18695786699253, -.10732909330422, .23971799542554, -.75468286946853],
@@ -216,7 +215,7 @@ princomp1.values = array([
     [1.12722515391348],
     [.94682423958163],
     [.65890241090379]])
-princomp1.name = 'princomp1'
+princomp1.name = "princomp1"
 princomp1.coef = array([
     [.65989917631713, .22621848650964, -.5882833472413, -.40899997165748],
     [.15824945056105, .3189419948895, .71689623797385, -.5994104597619],
@@ -224,7 +223,7 @@ princomp1.coef = array([
     [.64635538301471, .17832458477678, .33251578268108, .66321815082225]])
 
 princomp2 = Holder()
-princomp2.comment = 'mlab.princomp(x[:20,], nout=3)'
+princomp2.comment = "mlab.princomp(x[:20,], nout=3)"
 princomp2.factors = array([
     [.74592631465403, -.92093638563647, 1.10020213969681, -.20234362115983],
     [.40379773814409, -.23694214086306, -.53526599590626, .48048423978257],
@@ -251,7 +250,7 @@ princomp2.values = array([
     [.77687367815155],
     [.72297937656591],
     [.32548581375971]])
-princomp2.name = 'princomp2'
+princomp2.name = "princomp2"
 princomp2.coef = array([
     [-.13957162231397, .6561182967648, .32256106777669, .66781951188167],
     [.49534264552989, -.08241251099014, -.6919444767593, .51870674049413],
@@ -259,7 +258,7 @@ princomp2.coef = array([
     [.04661912785591, .74138950947638, -.43584764555793, -.50813884128056]])
 
 princomp3 = Holder()
-princomp3.comment = 'mlab.princomp(x[:20,]-x[:20,].mean(0), nout=3)'
+princomp3.comment = "mlab.princomp(x[:20,]-x[:20,].mean(0), nout=3)"
 princomp3.factors = array([
     [.74592631465403, -.92093638563647, 1.10020213969681, -.20234362115983],
     [.40379773814409, -.23694214086306, -.53526599590626, .48048423978257],
@@ -286,7 +285,7 @@ princomp3.values = array([
     [.77687367815155],
     [.72297937656591],
     [.32548581375971]])
-princomp3.name = 'princomp3'
+princomp3.name = "princomp3"
 princomp3.coef = array([
     [-.13957162231397, .6561182967648, .32256106777669, .66781951188167],
     [.49534264552989, -.08241251099014, -.6919444767593, .51870674049413],

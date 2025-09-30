@@ -1,9 +1,10 @@
 import numpy as np
+from scipy.linalg.blas import find_best_blas_type
 
+from statsmodels.tools.numdiff import _get_epsilon, approx_fprime_cs
 from statsmodels.tsa import arima_process
 from statsmodels.tsa.statespace.tools import prefix_dtype_map
-from statsmodels.tools.numdiff import _get_epsilon, approx_fprime_cs
-from scipy.linalg.blas import find_best_blas_type
+
 from . import _arma_innovations
 
 NON_STATIONARY_ERROR = """\
@@ -71,11 +72,11 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
 
     # Get the appropriate functions
     arma_transformed_acovf_fast = getattr(
-        _arma_innovations, prefix + 'arma_transformed_acovf_fast')
+        _arma_innovations, prefix + "arma_transformed_acovf_fast")
     arma_innovations_algo_fast = getattr(
-        _arma_innovations, prefix + 'arma_innovations_algo_fast')
+        _arma_innovations, prefix + "arma_innovations_algo_fast")
     arma_innovations_filter = getattr(
-        _arma_innovations, prefix + 'arma_innovations_filter')
+        _arma_innovations, prefix + "arma_innovations_filter")
 
     # Run the innovations algorithm for ARMA coefficients
     arma_acovf = arima_process.arma_acovf(ar, ma,
@@ -175,7 +176,7 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     ma_params = np.asfortranarray(ma_params, dtype=dtype)
     sigma2 = dtype(sigma2).item()
 
-    func = getattr(_arma_innovations, prefix + 'arma_loglikeobs_fast')
+    func = getattr(_arma_innovations, prefix + "arma_loglikeobs_fast")
     return func(endog, ar_params, ma_params, sigma2)
 
 

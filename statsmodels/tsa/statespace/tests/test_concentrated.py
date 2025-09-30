@@ -39,15 +39,7 @@ def get_sarimax_models(endog, filter_univariate=False, **kwargs):
     res_orig = mod_orig.smooth(params_orig)
 
     return Bunch(
-        **{
-            "mod_conc": mod_conc,
-            "params_conc": params_conc,
-            "mod_orig": mod_orig,
-            "params_orig": params_orig,
-            "res_conc": res_conc,
-            "res_orig": res_orig,
-            "scale": scale,
-        }
+        mod_conc=mod_conc, params_conc=params_conc, mod_orig=mod_orig, params_orig=params_orig, res_conc=res_conc, res_orig=res_orig, scale=scale
     )
 
 

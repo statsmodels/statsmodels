@@ -249,10 +249,9 @@ class _BayesMixedGLM(base.Model):
         # Get the variance parameter names
         if vcp_names is None:
             vcp_names = ["VC_%d" % (k + 1) for k in range(int(max(ident)) + 1)]
-        else:
-            if len(vcp_names) != len(set(ident)):
-                msg = "The lengths of vcp_names and ident should be the same"
-                raise ValueError(msg)
+        elif len(vcp_names) != len(set(ident)):
+            msg = "The lengths of vcp_names and ident should be the same"
+            raise ValueError(msg)
 
         if not sparse.issparse(exog_vc):
             exog_vc = sparse.csr_matrix(exog_vc)
@@ -950,9 +949,9 @@ class BayesMixedGLMResults:
         summ.add_df(df)
 
         summ.add_text(
-            "Parameter types are mean structure (M) and " "variance structure (V)"
+            "Parameter types are mean structure (M) and variance structure (V)"
         )
-        summ.add_text("Variance parameters are modeled as log " "standard deviations")
+        summ.add_text("Variance parameters are modeled as log standard deviations")
 
         return summ
 

@@ -19,7 +19,7 @@ from multiprocessing import Pool
 
 from . import utils
 
-__all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
+__all__ = ["banddepth", "fboxplot", "hdrboxplot", "rainbowplot"]
 
 
 class HdrResults:
@@ -299,7 +299,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     if labels is None:
         # For use with pandas, get the labels
-        if hasattr(data, 'index'):
+        if hasattr(data, "index"):
             labels = data.index
         else:
             labels = np.arange(len(data))
@@ -315,7 +315,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     # Create gaussian kernel
     ks_gaussian = KDEMultivariate(data_r, bw=bw,
-                                  var_type='c' * data_r.shape[1])
+                                  var_type="c" * data_r.shape[1])
 
     # Boundaries of the n-variate space
     bounds = np.array([data_r.min(axis=0), data_r.max(axis=0)]).T
@@ -332,11 +332,11 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     pdf_r = ks_gaussian.pdf(data_r).flatten()
     if NP_LT_123:
         pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
-                                 interpolation='linear')
+                                 interpolation="linear")
                    for i in range(n_quantiles)]
     else:
         pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
-                                 method='midpoint')
+                                 method="midpoint")
                    for i in range(n_quantiles)]
 
     # Find mean, outliers curves
@@ -408,8 +408,9 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     if len(extra_alpha) > 0:
         extra_quantiles = []
         for x in extra_alpha:
-            for y in _band_quantiles([x], use_brute=use_brute, seed=seed):
-                extra_quantiles.append(y)
+            extra_quantiles.extend(
+                list(_band_quantiles([x], use_brute=use_brute, seed=seed))
+            )
     else:
         extra_quantiles = []
 
@@ -429,33 +430,33 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     # Plots
     ax.plot(np.array([xdata] * n_samples).T, data.T,
-            c='c', alpha=.1, label=None)
-    ax.plot(xdata, median, c='k', label='Median')
+            c="c", alpha=.1, label=None)
+    ax.plot(xdata, median, c="k", label="Median")
     fill_betweens = []
-    fill_betweens.append(ax.fill_between(xdata, *hdr_50, color='gray',
-                                         alpha=.4,  label='50% HDR'))
-    fill_betweens.append(ax.fill_between(xdata, *hdr_90, color='gray',
-                                         alpha=.3, label='90% HDR'))
+    fill_betweens.append(ax.fill_between(xdata, *hdr_50, color="gray",
+                                         alpha=.4,  label="50% HDR"))
+    fill_betweens.append(ax.fill_between(xdata, *hdr_90, color="gray",
+                                         alpha=.3, label="90% HDR"))
 
     if len(extra_quantiles) != 0:
         ax.plot(np.array([xdata] * len(extra_quantiles)).T,
                 np.array(extra_quantiles).T,
-                c='y', ls='-.', alpha=.4, label='Extra quantiles')
+                c="y", ls="-.", alpha=.4, label="Extra quantiles")
 
     if len(outliers) != 0:
         for ii, outlier in enumerate(outliers):
             if labels_outlier is None:
-                label = 'Outliers'
+                label = "Outliers"
             else:
                 label = str(labels_outlier[ii])
-            ax.plot(xdata, outlier, ls='--', alpha=0.7, label=label)
+            ax.plot(xdata, outlier, ls="--", alpha=0.7, label=label)
 
     handles, labels = ax.get_legend_handles_labels()
 
     # Proxy artist for fill_between legend entry
     # See https://matplotlib.org/1.3.1/users/legend_guide.html
     plt = _import_mpl()
-    for label, fill_between in zip(['50% HDR', '90% HDR'], fill_betweens):
+    for label, fill_between in zip(["50% HDR", "90% HDR"], fill_betweens):
         p = plt.Rectangle((0, 0), 1, 1,
                           fc=fill_between.get_facecolor()[0])
         handles.append(p)
@@ -463,16 +464,16 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     by_label = dict(zip(labels, handles))
     if len(outliers) != 0:
-        by_label.pop('Median')
-        by_label.pop('50% HDR')
-        by_label.pop('90% HDR')
+        by_label.pop("Median")
+        by_label.pop("50% HDR")
+        by_label.pop("90% HDR")
 
-    ax.legend(by_label.values(), by_label.keys(), loc='best')
+    ax.legend(by_label.values(), by_label.keys(), loc="best")
 
     return fig, hdr_res
 
 
-def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
+def fboxplot(data, xdata=None, labels=None, depth=None, method="MBD",
              wfactor=1.5, ax=None, plot_opts=None):
     """
     Plot functional boxplot.
@@ -593,9 +594,9 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     fig, ax = utils.create_mpl_ax(ax)
 
     plot_opts = {} if plot_opts is None else plot_opts
-    if plot_opts.get('cmap_outliers') is None:
+    if plot_opts.get("cmap_outliers") is None:
         from matplotlib.cm import rainbow_r
-        plot_opts['cmap_outliers'] = rainbow_r
+        plot_opts["cmap_outliers"] = rainbow_r
 
     data = np.asarray(data)
     if xdata is None:
@@ -603,13 +604,12 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     # Calculate band depth if required.
     if depth is None:
-        if method not in ['MBD', 'BD2']:
+        if method not in ["MBD", "BD2"]:
             raise ValueError("Unknown value for parameter `method`.")
 
         depth = banddepth(data, method=method)
-    else:
-        if depth.size != data.shape[0]:
-            raise ValueError("Provided `depth` array is not of correct size.")
+    elif depth.size != data.shape[0]:
+        raise ValueError("Provided `depth` array is not of correct size.")
 
     # Inner area is 25%-75% region of band-depth ordered curves.
     ix_depth = np.argsort(depth)[::-1]
@@ -639,27 +639,27 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     lower_nonout = data[ix_nonout, :].min(axis=0)
     upper_nonout = data[ix_nonout, :].max(axis=0)
     ax.fill_between(xdata, lower_nonout, upper_nonout,
-                    color=plot_opts.get('c_outer', (0.75, 0.75, 0.75)))
+                    color=plot_opts.get("c_outer", (0.75, 0.75, 0.75)))
 
     # Plot central 50% region
     ax.fill_between(xdata, lower, upper,
-                    color=plot_opts.get('c_inner', (0.5, 0.5, 0.5)))
+                    color=plot_opts.get("c_inner", (0.5, 0.5, 0.5)))
 
     # Plot median curve
-    ax.plot(xdata, median_curve, color=plot_opts.get('c_median', 'k'),
-            lw=plot_opts.get('lw_median', 2))
+    ax.plot(xdata, median_curve, color=plot_opts.get("c_median", "k"),
+            lw=plot_opts.get("lw_median", 2))
 
     # Plot outliers
-    cmap = plot_opts.get('cmap_outliers')
+    cmap = plot_opts.get("cmap_outliers")
     for ii, ix in enumerate(ix_outliers):
         label = str(labels[ix]) if labels is not None else None
         ax.plot(xdata, data[ix, :],
                 color=cmap(float(ii) / (len(ix_outliers)-1)), label=label,
-                lw=plot_opts.get('lw_outliers', 1))
+                lw=plot_opts.get("lw_outliers", 1))
 
-    if plot_opts.get('draw_nonout', False):
+    if plot_opts.get("draw_nonout", False):
         for ix in ix_nonout:
-            ax.plot(xdata, data[ix, :], 'k-', lw=0.5)
+            ax.plot(xdata, data[ix, :], "k-", lw=0.5)
 
     if labels is not None:
         ax.legend()
@@ -667,7 +667,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     return fig, depth, ix_depth, ix_outliers
 
 
-def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
+def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None,
                 cmap=None):
     """
     Create a rainbow plot for a set of curves.
@@ -751,13 +751,12 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
 
     # Calculate band depth if required.
     if depth is None:
-        if method not in ['MBD', 'BD2']:
+        if method not in ["MBD", "BD2"]:
             raise ValueError("Unknown value for parameter `method`.")
 
         depth = banddepth(data, method=method)
-    else:
-        if depth.size != data.shape[0]:
-            raise ValueError("Provided `depth` array is not of correct size.")
+    elif depth.size != data.shape[0]:
+        raise ValueError("Provided `depth` array is not of correct size.")
 
     ix_depth = np.argsort(depth)[::-1]
 
@@ -768,12 +767,12 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
 
     # Plot the median curve
     median_curve = data[ix_depth[0], :]
-    ax.plot(xdata, median_curve, 'k-', lw=2)
+    ax.plot(xdata, median_curve, "k-", lw=2)
 
     return fig
 
 
-def banddepth(data, method='MBD'):
+def banddepth(data, method="MBD"):
     """
     Calculate the band depth for a set of functional curves.
 
@@ -843,9 +842,9 @@ def banddepth(data, method='MBD'):
         up = n - rmat
         return ((np.sum(up * down, axis=1) / p) + n - 1) / comb(n, 2)
 
-    if method == 'BD2':
+    if method == "BD2":
         depth = _fbd2()
-    elif method == 'MBD':
+    elif method == "MBD":
         depth = _fmbd()
     else:
         raise ValueError("Unknown input value for parameter `method`.")

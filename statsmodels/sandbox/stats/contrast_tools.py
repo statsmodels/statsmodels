@@ -489,7 +489,7 @@ class TwoWay:
             vname1 = "a"
             vname2 = "b"
         else:
-            vname1, vname1 = varnames
+            vname1, vname2 = varnames
 
         self.d1, self.d1_labels = d1, d1_labels = dummy_1d(factor1, vname1)
         self.d2, self.d2_labels = d2, d2_labels = dummy_1d(factor2, vname2)

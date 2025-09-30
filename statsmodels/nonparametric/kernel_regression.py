@@ -35,11 +35,18 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
-from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
-    LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR, kernel_func
+from ._kernel_base import (
+    EstimatorSettings,
+    GenericKDE,
+    LeaveOneOut,
+    _adjust_shape,
+    _compute_min_std_IQR,
+    _get_type_pos,
+    gpke,
+    kernel_func,
+)
 
-
-__all__ = ['KernelReg', 'KernelCensoredReg']
+__all__ = ["KernelCensoredReg", "KernelReg"]
 
 
 class KernelReg(GenericKDE):
@@ -90,9 +97,9 @@ class KernelReg(GenericKDE):
     bw : array_like
         The bandwidth parameters.
     """
-    def __init__(self, endog, exog, var_type, reg_type='ll', bw='cv_ls',
-                 ckertype='gaussian', okertype='wangryzin',
-                 ukertype='aitchisonaitken', defaults=None):
+    def __init__(self, endog, exog, var_type, reg_type="ll", bw="cv_ls",
+                 ckertype="gaussian", okertype="wangryzin",
+                 ukertype="aitchisonaitken", defaults=None):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
@@ -101,8 +108,8 @@ class KernelReg(GenericKDE):
         self.ukertype = ukertype
         if not (self.ckertype in kernel_func and self.ukertype in kernel_func
                 and self.okertype in kernel_func):
-            raise ValueError('user specified kernel must be a supported '
-                             'kernel from statsmodels.nonparametric.kernels.')
+            raise ValueError("user specified kernel must be a supported "
+                             "kernel from statsmodels.nonparametric.kernels.")
 
         self.k_vars = len(self.var_type)
         self.endog = _adjust_shape(endog, 1)
@@ -115,8 +122,8 @@ class KernelReg(GenericKDE):
         if not isinstance(bw, str):
             bw = np.asarray(bw)
             if len(bw) != self.k_vars:
-                raise ValueError('bw must have the same dimension as the '
-                                 'number of variables.')
+                raise ValueError("bw must have the same dimension as the "
+                                 "number of variables.")
         if not self.efficient:
             self.bw = self._compute_reg_bw(bw)
         else:
@@ -240,7 +247,7 @@ class KernelReg(GenericKDE):
         f_x = G_denom / float(nobs)
         ker_xc = gpke(bw, data=exog, data_predict=data_predict,
                       var_type=self.var_type,
-                      ckertype='d_gaussian',
+                      ckertype="d_gaussian",
                       # okertype='wangryzin_reg',
                       tosum=False)
 
@@ -438,7 +445,7 @@ class KernelReg(GenericKDE):
 
     def _get_class_vars_type(self):
         """Helper method to be able to pass needed vars to _compute_subset."""
-        class_type = 'KernelReg'
+        class_type = "KernelReg"
         class_vars = (self.var_type, self.k_vars, self.reg_type)
         return class_type, class_vars
 
@@ -504,10 +511,10 @@ class KernelCensoredReg(KernelReg):
     bw : array_like
         The bandwidth parameters
     """
-    def __init__(self, endog, exog, var_type, reg_type, bw='cv_ls',
-                 ckertype='gaussian',
-                 ukertype='aitchison_aitken_reg',
-                 okertype='wangryzin_reg',
+    def __init__(self, endog, exog, var_type, reg_type, bw="cv_ls",
+                 ckertype="gaussian",
+                 ukertype="aitchison_aitken_reg",
+                 okertype="wangryzin_reg",
                  censor_val=0, defaults=None):
         self.var_type = var_type
         self.data_type = var_type
@@ -517,8 +524,8 @@ class KernelCensoredReg(KernelReg):
         self.ukertype = ukertype
         if not (self.ckertype in kernel_func and self.ukertype in kernel_func
                 and self.okertype in kernel_func):
-            raise ValueError('user specified kernel must be a supported '
-                             'kernel from statsmodels.nonparametric.kernels.')
+            raise ValueError("user specified kernel must be a supported "
+                             "kernel from statsmodels.nonparametric.kernels.")
 
         self.k_vars = len(self.var_type)
         self.endog = _adjust_shape(endog, 1)
@@ -907,12 +914,12 @@ class TestRegCoefD(TestRegCoefC):
 
         m0 = model.fit(data_predict=X1)[0]
         m0 = np.reshape(m0, (n, 1))
-        zvec = np.zeros((n, 1))  # noqa:E741
+        zvec = np.zeros((n, 1))
         for i in dom_x[1:] :
             X1[:, self.test_vars] = i
             m1 = model.fit(data_predict=X1)[0]
             m1 = np.reshape(m1, (n, 1))
-            zvec += (m1 - m0) ** 2  # noqa:E741
+            zvec += (m1 - m0) ** 2
 
         avg = zvec.sum(axis=0) / float(n)
         return avg

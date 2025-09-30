@@ -27,14 +27,15 @@ Not all methods and options have been tried out yet after refactoring
 need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 """
 from statsmodels.compat.python import lrange, lzip
+
 import numpy as np
 import pandas as pd
-
-import statsmodels.tools.data as data_util
 from pandas import Index, MultiIndex
 
+import statsmodels.tools.data as data_util
 
-def combine_indices(groups, prefix='', sep='.', return_labels=False):
+
+def combine_indices(groups, prefix="", sep=".", return_labels=False):
     """use np.unique to get integer group indices for product, intersection
     """
     if isinstance(groups, tuple):
@@ -49,9 +50,9 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
     if is2d:
         ncols = groups.shape[1]
         if not groups.flags.c_contiguous:
-            groups = np.array(groups, order='C')
+            groups = np.array(groups, order="C")
 
-        groups_ = groups.view([('', groups.dtype)] * groups.shape[1])
+        groups_ = groups.view([("", groups.dtype)] * groups.shape[1])
     else:
         groups_ = groups
 
@@ -69,7 +70,7 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
         # uni.shape = (uni.size//ncols, ncols)
 
     if return_labels:
-        label = [(prefix+sep.join(['%s']*len(uni[0]))) % tuple(ii)
+        label = [(prefix+sep.join(["%s"]*len(uni[0]))) % tuple(ii)
                  for ii in uni]
         return uni_inv, uni_idx, uni, label
     else:
@@ -94,7 +95,7 @@ def group_sums(x, group, use_bincount=True):
     if x.ndim == 1:
         x = x[:, None]
     elif x.ndim > 2 and use_bincount:
-        raise ValueError('not implemented yet')
+        raise ValueError("not implemented yet")
 
     if use_bincount:
 
@@ -186,7 +187,7 @@ def dummy_sparse(groups):
 
 class Group:
 
-    def __init__(self, group, name=''):
+    def __init__(self, group, name=""):
 
         # self.group = np.asarray(group)  # TODO: use checks in combine_indices
         self.name = name
@@ -198,10 +199,10 @@ class Group:
         self.n_groups = len(self.uni)
 
         # put this here so they can be overwritten before calling labels
-        self.separator = '.'
+        self.separator = "."
         self.prefix = self.name
         if self.prefix:
-            self.prefix = self.prefix + '='
+            self.prefix = self.prefix + "="
 
     # cache decorator
     def counts(self):
@@ -215,10 +216,10 @@ class Group:
         sep = self.separator
 
         if uni.ndim > 1:
-            label = [(prefix+sep.join(['%s']*len(uni[0]))) % tuple(ii)
+            label = [(prefix+sep.join(["%s"]*len(uni[0]))) % tuple(ii)
                      for ii in uni]
         else:
-            label = [prefix + '%s' % ii for ii in uni]
+            label = [prefix + "%s" % ii for ii in uni]
         return label
 
     def dummy(self, drop_idx=None, sparse=False, dtype=int):
@@ -257,7 +258,7 @@ class Group:
 
 
 class GroupSorted(Group):
-    def __init__(self, group, name=''):
+    def __init__(self, group, name=""):
         super(self.__class__, self).__init__(group, name=name)
 
         idx = (np.nonzero(np.diff(group))[0]+1).tolist()
@@ -330,7 +331,7 @@ class Grouping:
         """
         if isinstance(index, (Index, MultiIndex)):
             if names is not None:
-                if hasattr(index, 'set_names'):  # newer pandas
+                if hasattr(index, "set_names"):  # newer pandas
                     index.set_names(names, inplace=True)
                 else:
                     index.names = names
@@ -342,7 +343,7 @@ class Grouping:
                 self.index = Index(index, name=names)
             if names is None:
                 names = _make_generic_names(self.index)
-                if hasattr(self.index, 'set_names'):
+                if hasattr(self.index, "set_names"):
                     self.index.set_names(names, inplace=True)
                 else:
                     self.index.names = names
@@ -353,14 +354,14 @@ class Grouping:
 
     @property
     def index_shape(self):
-        if hasattr(self.index, 'levshape'):
+        if hasattr(self.index, "levshape"):
             return self.index.levshape
         else:
             return self.index.shape
 
     @property
     def levels(self):
-        if hasattr(self.index, 'levels'):
+        if hasattr(self.index, "levels"):
             return self.index.levels
         else:
             return pd.Categorical(self.index).levels
@@ -368,9 +369,9 @@ class Grouping:
     @property
     def labels(self):
         # this was index_int, but that's not a very good name...
-        codes = getattr(self.index, 'codes', None)
+        codes = getattr(self.index, "codes", None)
         if codes is None:
-            if hasattr(self.index, 'labels'):
+            if hasattr(self.index, "labels"):
                 codes = self.index.labels
             else:
                 codes = pd.Categorical(self.index).codes[None]
@@ -388,7 +389,8 @@ class Grouping:
         # This needs to reset cache
         if names is None:
             names = self.group_names
-        self = Grouping(index, names)
+        # Does nothing ??
+        Grouping(index, names)
 
     def get_slices(self, level=0):
         """
@@ -421,10 +423,10 @@ class Grouping:
             test = pd.DataFrame(lrange(len(index)), index=index)
             test_sorted = test.sort()
             if not test.index.equals(test_sorted.index):
-                raise Exception('Data is not be sorted')
+                raise Exception("Data is not be sorted")
         if unique:
             if len(index) != len(index.unique()):
-                raise Exception('Duplicate index entries')
+                raise Exception("Duplicate index entries")
 
     def sort(self, data, index=None):
         """Applies a (potentially hierarchical) sort operation on a numpy array
@@ -449,14 +451,14 @@ class Grouping:
             out = out.sort_index()
             return out, out.index
         else:
-            msg = 'data must be a Numpy array or a Pandas Series/DataFrame'
+            msg = "data must be a Numpy array or a Pandas Series/DataFrame"
             raise ValueError(msg)
 
     def transform_dataframe(self, dataframe, function, level=0, **kwargs):
         """Apply function to each column, by group
         Assumes that the dataframe already has a proper index"""
         if dataframe.shape[0] != self.nobs:
-            raise Exception('dataframe does not have the same shape as index')
+            raise Exception("dataframe does not have the same shape as index")
         out = dataframe.groupby(level=level).apply(function, **kwargs)
         if 1 in out.shape:
             return np.ravel(out)
@@ -467,7 +469,7 @@ class Grouping:
         """Apply function to each column, by group
         """
         if array.shape[0] != self.nobs:
-            raise Exception('array does not have the same shape as index')
+            raise Exception("array does not have the same shape as index")
         dataframe = pd.DataFrame(array, index=self.index)
         return self.transform_dataframe(dataframe, function, level=level,
                                         **kwargs)
@@ -479,7 +481,7 @@ class Grouping:
         """
         array = np.asarray(array)
         if array.shape[0] != self.nobs:
-            raise Exception('array does not have the same shape as index')
+            raise Exception("array does not have the same shape as index")
         # always reset because level is given. need to refactor this.
         self.get_slices(level=level)
         processed = []

@@ -5,26 +5,31 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.pandas import Appender
+
 import contextlib
 from warnings import warn
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from statsmodels.compat.pandas import Appender
-from statsmodels.tools.tools import Bunch
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tsa.vector_ar import var_model
 import statsmodels.base.wrapper as wrap
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.sm_exceptions import EstimationWarning
+from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.vector_ar import var_model
 
+from .initialization import Initialization
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
-from .initialization import Initialization
 from .tools import (
-    is_invertible, concat, prepare_exog,
-    constrain_stationary_multivariate, unconstrain_stationary_multivariate,
-    prepare_trend_spec, prepare_trend_data
+    concat,
+    constrain_stationary_multivariate,
+    is_invertible,
+    prepare_exog,
+    prepare_trend_data,
+    prepare_trend_spec,
+    unconstrain_stationary_multivariate,
 )
 
 
@@ -129,8 +134,8 @@ class VARMAX(MLEModel):
        Berlin: Springer.
     """
 
-    def __init__(self, endog, exog=None, order=(1, 0), trend='c',
-                 error_cov_type='unstructured', measurement_error=False,
+    def __init__(self, endog, exog=None, order=(1, 0), trend="c",
+                 error_cov_type="unstructured", measurement_error=False,
                  enforce_stationarity=True, enforce_invertibility=True,
                  trend_offset=1, **kwargs):
 
@@ -148,18 +153,18 @@ class VARMAX(MLEModel):
         self.k_ma = int(order[1])
 
         # Check for valid model
-        if error_cov_type not in ['diagonal', 'unstructured']:
-            raise ValueError('Invalid error covariance matrix type'
-                             ' specification.')
+        if error_cov_type not in ["diagonal", "unstructured"]:
+            raise ValueError("Invalid error covariance matrix type"
+                             " specification.")
         if self.k_ar == 0 and self.k_ma == 0:
-            raise ValueError('Invalid VARMAX(p,q) specification; at least one'
-                             ' p,q must be greater than zero.')
+            raise ValueError("Invalid VARMAX(p,q) specification; at least one"
+                             " p,q must be greater than zero.")
 
         # Warn for VARMA model
         if self.k_ar > 0 and self.k_ma > 0:
-            warn('Estimation of VARMA(p,q) models is not generically robust,'
-                 ' due especially to identification issues.',
-                 EstimationWarning)
+            warn("Estimation of VARMA(p,q) models is not generically robust,"
+                 " due especially to identification issues.",
+                 EstimationWarning, stacklevel=2)
 
         # Trend
         self.trend = trend
@@ -190,10 +195,10 @@ class VARMAX(MLEModel):
         k_states = k_endog * self._k_order
 
         # By default, initialize as stationary
-        kwargs.setdefault('initialization', 'stationary')
+        kwargs.setdefault("initialization", "stationary")
 
         # By default, use LU decomposition
-        kwargs.setdefault('inversion_method', INVERT_UNIVARIATE | SOLVE_LU)
+        kwargs.setdefault("inversion_method", INVERT_UNIVARIATE | SOLVE_LU)
 
         # Initialize the state space model
         super().__init__(
@@ -206,19 +211,19 @@ class VARMAX(MLEModel):
 
         # Initialize the parameters
         self.parameters = {}
-        self.parameters['trend'] = self.k_endog * self.k_trend
-        self.parameters['ar'] = self.k_endog**2 * self.k_ar
-        self.parameters['ma'] = self.k_endog**2 * self.k_ma
-        self.parameters['regression'] = self.k_endog * self.k_exog
-        if self.error_cov_type == 'diagonal':
-            self.parameters['state_cov'] = self.k_endog
+        self.parameters["trend"] = self.k_endog * self.k_trend
+        self.parameters["ar"] = self.k_endog**2 * self.k_ar
+        self.parameters["ma"] = self.k_endog**2 * self.k_ma
+        self.parameters["regression"] = self.k_endog * self.k_exog
+        if self.error_cov_type == "diagonal":
+            self.parameters["state_cov"] = self.k_endog
         # These parameters fill in a lower-triangular matrix which is then
         # dotted with itself to get a positive definite matrix.
-        elif self.error_cov_type == 'unstructured':
-            self.parameters['state_cov'] = (
+        elif self.error_cov_type == "unstructured":
+            self.parameters["state_cov"] = (
                 int(self.k_endog * (self.k_endog + 1) / 2)
             )
-        self.parameters['obs_cov'] = self.k_endog * self.measurement_error
+        self.parameters["obs_cov"] = self.k_endog * self.measurement_error
         self.k_params = sum(self.parameters.values())
 
         # Initialize trend data: we create trend data with one more observation
@@ -235,12 +240,12 @@ class VARMAX(MLEModel):
         # If we have exog effects, then the state intercept needs to be
         # time-varying
         if (self.k_trend > 0 and not self._trend_is_const) or self.k_exog > 0:
-            self.ssm['state_intercept'] = np.zeros((self.k_states, self.nobs))
+            self.ssm["state_intercept"] = np.zeros((self.k_states, self.nobs))
             # self.ssm['obs_intercept'] = np.zeros((self.k_endog, self.nobs))
 
         # The design matrix is just an identity for the first k_endog states
         idx = np.diag_indices(self.k_endog)
-        self.ssm[('design',) + idx] = 1
+        self.ssm[("design",) + idx] = 1
 
         # The transition matrix is described in four blocks, where the upper
         # left block is in companion form with the autoregressive coefficient
@@ -248,13 +253,13 @@ class VARMAX(MLEModel):
         if self.k_ar > 0:
             idx = np.diag_indices((self.k_ar - 1) * self.k_endog)
             idx = idx[0] + self.k_endog, idx[1]
-            self.ssm[('transition',) + idx] = 1
+            self.ssm[("transition",) + idx] = 1
         # ... and the  lower right block is in companion form with zeros as the
         # coefficient matrices (it is shaped k_endog * k_ma x k_endog * k_ma).
         idx = np.diag_indices((self.k_ma - 1) * self.k_endog)
         idx = (idx[0] + (_min_k_ar + 1) * self.k_endog,
                idx[1] + _min_k_ar * self.k_endog)
-        self.ssm[('transition',) + idx] = 1
+        self.ssm[("transition",) + idx] = 1
 
         # The selection matrix is described in two blocks, where the upper
         # block selects the all k_posdef errors in the first k_endog rows
@@ -262,27 +267,27 @@ class VARMAX(MLEModel):
         # also selects all k_posdef errors in the first k_endog rows (the lower
         # block is shaped k_endog * k_ma x k).
         idx = np.diag_indices(self.k_endog)
-        self.ssm[('selection',) + idx] = 1
+        self.ssm[("selection",) + idx] = 1
         idx = idx[0] + _min_k_ar * self.k_endog, idx[1]
         if self.k_ma > 0:
-            self.ssm[('selection',) + idx] = 1
+            self.ssm[("selection",) + idx] = 1
 
         # Cache some indices
         if self._trend_is_const and self.k_exog == 0:
-            self._idx_state_intercept = np.s_['state_intercept', :k_endog, :]
+            self._idx_state_intercept = np.s_["state_intercept", :k_endog, :]
         elif self.k_trend > 0 or self.k_exog > 0:
-            self._idx_state_intercept = np.s_['state_intercept', :k_endog, :-1]
+            self._idx_state_intercept = np.s_["state_intercept", :k_endog, :-1]
         if self.k_ar > 0:
-            self._idx_transition = np.s_['transition', :k_endog, :]
+            self._idx_transition = np.s_["transition", :k_endog, :]
         else:
-            self._idx_transition = np.s_['transition', :k_endog, k_endog:]
-        if self.error_cov_type == 'diagonal':
+            self._idx_transition = np.s_["transition", :k_endog, k_endog:]
+        if self.error_cov_type == "diagonal":
             self._idx_state_cov = (
-                ('state_cov',) + np.diag_indices(self.k_endog))
-        elif self.error_cov_type == 'unstructured':
+                ("state_cov",) + np.diag_indices(self.k_endog))
+        elif self.error_cov_type == "unstructured":
             self._idx_lower_state_cov = np.tril_indices(self.k_endog)
         if self.measurement_error:
-            self._idx_obs_cov = ('obs_cov',) + np.diag_indices(self.k_endog)
+            self._idx_obs_cov = ("obs_cov",) + np.diag_indices(self.k_endog)
 
         # Cache some slices
         def _slice(key, offset):
@@ -292,28 +297,28 @@ class VARMAX(MLEModel):
             return param_slice, offset
 
         offset = 0
-        self._params_trend, offset = _slice('trend', offset)
-        self._params_ar, offset = _slice('ar', offset)
-        self._params_ma, offset = _slice('ma', offset)
-        self._params_regression, offset = _slice('regression', offset)
-        self._params_state_cov, offset = _slice('state_cov', offset)
-        self._params_obs_cov, offset = _slice('obs_cov', offset)
+        self._params_trend, offset = _slice("trend", offset)
+        self._params_ar, offset = _slice("ar", offset)
+        self._params_ma, offset = _slice("ma", offset)
+        self._params_regression, offset = _slice("regression", offset)
+        self._params_state_cov, offset = _slice("state_cov", offset)
+        self._params_obs_cov, offset = _slice("obs_cov", offset)
 
         # Variable holding optional final `exog`
         # (note: self._final_trend was set earlier)
         self._final_exog = None
 
         # Update _init_keys attached by super
-        self._init_keys += ['order', 'trend', 'error_cov_type',
-                            'measurement_error', 'enforce_stationarity',
-                            'enforce_invertibility'] + list(kwargs.keys())
+        self._init_keys += ["order", "trend", "error_cov_type",
+                            "measurement_error", "enforce_stationarity",
+                            "enforce_invertibility"] + list(kwargs.keys())
 
     def clone(self, endog, exog=None, **kwargs):
         return self._clone_from_init_kwds(endog, exog=exog, **kwargs)
 
     @property
     def _res_classes(self):
-        return {'fit': (VARMAXResults, VARMAXResultsWrapper)}
+        return {"fit": (VARMAXResults, VARMAXResultsWrapper)}
 
     @property
     def start_params(self):
@@ -354,7 +359,7 @@ class VARMAX(MLEModel):
         ar_params = []
         k_ar = self.k_ar if self.k_ar > 0 else 1
         mod_ar = var_model.VAR(endog)
-        res_ar = mod_ar.fit(maxlags=k_ar, ic=None, trend='n')
+        res_ar = mod_ar.fit(maxlags=k_ar, ic=None, trend="n")
         if self.k_ar > 0:
             ar_params = np.array(res_ar.params).T.ravel()
         endog = res_ar.resid
@@ -370,15 +375,16 @@ class VARMAX(MLEModel):
             stationary = is_invertible([1] + list(-coefficient_matrices))
 
             if not stationary:
-                warn('Non-stationary starting autoregressive parameters'
-                     ' found. Using zeros as starting parameters.')
+                warn("Non-stationary starting autoregressive parameters"
+                     " found. Using zeros as starting parameters.",
+                     EstimationWarning, stacklevel=2)
                 ar_params *= 0
 
         # C. Run a VAR model on the residuals to get MA parameters
         ma_params = []
         if self.k_ma > 0:
             mod_ma = var_model.VAR(endog)
-            res_ma = mod_ma.fit(maxlags=self.k_ma, ic=None, trend='n')
+            res_ma = mod_ma.fit(maxlags=self.k_ma, ic=None, trend="n")
             ma_params = np.array(res_ma.params.T).ravel()
 
             # Test for invertibility
@@ -392,8 +398,9 @@ class VARMAX(MLEModel):
                 invertible = is_invertible([1] + list(-coefficient_matrices))
 
                 if not invertible:
-                    warn('Non-stationary starting moving-average parameters'
-                         ' found. Using zeros as starting parameters.')
+                    warn("Non-stationary starting moving-average parameters"
+                         " found. Using zeros as starting parameters.",
+                         EstimationWarning, stacklevel=2)
                     ma_params *= 0
 
         # Transform trend / exog params from mean form to intercept form
@@ -428,9 +435,9 @@ class VARMAX(MLEModel):
             params[self._params_regression] = exog_params.ravel()
 
         # 5. State covariance terms
-        if self.error_cov_type == 'diagonal':
+        if self.error_cov_type == "diagonal":
             params[self._params_state_cov] = res_ar.sigma_u.diagonal()
-        elif self.error_cov_type == 'unstructured':
+        elif self.error_cov_type == "unstructured":
             cov_factor = np.linalg.cholesky(res_ar.sigma_u)
             params[self._params_state_cov] = (
                 cov_factor[self._idx_lower_state_cov].ravel())
@@ -456,15 +463,15 @@ class VARMAX(MLEModel):
             for j in range(self.k_endog):
                 for i in self.polynomial_trend.nonzero()[0]:
                     if i == 0:
-                        param_names += ['intercept.%s' % endog_names[j]]
+                        param_names += ["intercept.%s" % endog_names[j]]
                     elif i == 1:
-                        param_names += ['drift.%s' % endog_names[j]]
+                        param_names += ["drift.%s" % endog_names[j]]
                     else:
-                        param_names += ['trend.%d.%s' % (i, endog_names[j])]
+                        param_names += ["trend.%d.%s" % (i, endog_names[j])]
 
         # 2. AR terms
         param_names += [
-            'L%d.%s.%s' % (i+1, endog_names[k], endog_names[j])
+            "L%d.%s.%s" % (i+1, endog_names[k], endog_names[j])
             for j in range(self.k_endog)
             for i in range(self.k_ar)
             for k in range(self.k_endog)
@@ -472,7 +479,7 @@ class VARMAX(MLEModel):
 
         # 3. MA terms
         param_names += [
-            'L%d.e(%s).%s' % (i+1, endog_names[k], endog_names[j])
+            "L%d.e(%s).%s" % (i+1, endog_names[k], endog_names[j])
             for j in range(self.k_endog)
             for i in range(self.k_ma)
             for k in range(self.k_endog)
@@ -480,21 +487,21 @@ class VARMAX(MLEModel):
 
         # 4. Regression terms
         param_names += [
-            f'beta.{self.exog_names[j]}.{endog_names[i]}'
+            f"beta.{self.exog_names[j]}.{endog_names[i]}"
             for i in range(self.k_endog)
             for j in range(self.k_exog)
         ]
 
         # 5. State covariance terms
-        if self.error_cov_type == 'diagonal':
+        if self.error_cov_type == "diagonal":
             param_names += [
-                'sigma2.%s' % endog_names[i]
+                "sigma2.%s" % endog_names[i]
                 for i in range(self.k_endog)
             ]
-        elif self.error_cov_type == 'unstructured':
+        elif self.error_cov_type == "unstructured":
             param_names += [
-                ('sqrt.var.%s' % endog_names[i] if i == j else
-                 f'sqrt.cov.{endog_names[j]}.{endog_names[i]}')
+                ("sqrt.var.%s" % endog_names[i] if i == j else
+                 f"sqrt.cov.{endog_names[j]}.{endog_names[i]}")
                 for i in range(self.k_endog)
                 for j in range(i+1)
             ]
@@ -502,7 +509,7 @@ class VARMAX(MLEModel):
         # 5. Measurement error variance terms
         if self.measurement_error:
             param_names += [
-                'measurement_variance.%s' % endog_names[i]
+                "measurement_variance.%s" % endog_names[i]
                 for i in range(self.k_endog)
             ]
 
@@ -539,10 +546,10 @@ class VARMAX(MLEModel):
         # 2. AR terms: optionally force to be stationary
         if self.k_ar > 0 and self.enforce_stationarity:
             # Create the state covariance matrix
-            if self.error_cov_type == 'diagonal':
+            if self.error_cov_type == "diagonal":
                 state_cov = np.diag(unconstrained[self._params_state_cov]**2)
-            elif self.error_cov_type == 'unstructured':
-                state_cov_lower = np.zeros(self.ssm['state_cov'].shape,
+            elif self.error_cov_type == "unstructured":
+                state_cov_lower = np.zeros(self.ssm["state_cov"].shape,
                                            dtype=unconstrained.dtype)
                 state_cov_lower[self._idx_lower_state_cov] = (
                     unconstrained[self._params_state_cov])
@@ -575,11 +582,11 @@ class VARMAX(MLEModel):
 
         # 5. State covariance terms
         # If we have variances, force them to be positive
-        if self.error_cov_type == 'diagonal':
+        if self.error_cov_type == "diagonal":
             constrained[self._params_state_cov] = (
                 unconstrained[self._params_state_cov]**2)
         # Otherwise, nothing needs to be done
-        elif self.error_cov_type == 'unstructured':
+        elif self.error_cov_type == "unstructured":
             constrained[self._params_state_cov] = (
                 unconstrained[self._params_state_cov])
 
@@ -616,10 +623,10 @@ class VARMAX(MLEModel):
         # 2. AR terms: optionally were forced to be stationary
         if self.k_ar > 0 and self.enforce_stationarity:
             # Create the state covariance matrix
-            if self.error_cov_type == 'diagonal':
+            if self.error_cov_type == "diagonal":
                 state_cov = np.diag(constrained[self._params_state_cov])
-            elif self.error_cov_type == 'unstructured':
-                state_cov_lower = np.zeros(self.ssm['state_cov'].shape,
+            elif self.error_cov_type == "unstructured":
+                state_cov_lower = np.zeros(self.ssm["state_cov"].shape,
                                            dtype=constrained.dtype)
                 state_cov_lower[self._idx_lower_state_cov] = (
                     constrained[self._params_state_cov])
@@ -652,11 +659,11 @@ class VARMAX(MLEModel):
 
         # 5. State covariance terms
         # If we have variances, then these were forced to be positive
-        if self.error_cov_type == 'diagonal':
+        if self.error_cov_type == "diagonal":
             unconstrained[self._params_state_cov] = (
                 constrained[self._params_state_cov]**0.5)
         # Otherwise, nothing needs to be done
-        elif self.error_cov_type == 'unstructured':
+        elif self.error_cov_type == "unstructured":
             unconstrained[self._params_state_cov] = (
                 constrained[self._params_state_cov])
 
@@ -682,10 +689,10 @@ class VARMAX(MLEModel):
                     len(param_names.intersection(ar_names)) > 0)
                 if fix_any and not fix_all:
                     raise ValueError(
-                        'Cannot fix individual autoregressive parameters'
-                        ' when `enforce_stationarity=True`. In this case,'
-                        ' must either fix all autoregressive parameters or'
-                        ' none.')
+                        "Cannot fix individual autoregressive parameters"
+                        " when `enforce_stationarity=True`. In this case,"
+                        " must either fix all autoregressive parameters or"
+                        " none.")
         if self.enforce_invertibility and self.k_ma > 0:
             if self.k_endog or self.k_ma > 1:
                 fix_all = param_names.issuperset(ma_names)
@@ -693,10 +700,10 @@ class VARMAX(MLEModel):
                     len(param_names.intersection(ma_names)) > 0)
                 if fix_any and not fix_all:
                     raise ValueError(
-                        'Cannot fix individual moving average parameters'
-                        ' when `enforce_invertibility=True`. In this case,'
-                        ' must either fix all moving average parameters or'
-                        ' none.')
+                        "Cannot fix individual moving average parameters"
+                        " when `enforce_invertibility=True`. In this case,"
+                        " must either fix all moving average parameters or"
+                        " none.")
 
     def update(self, params, transformed=True, includes_fixed=False,
                complex_step=False):
@@ -712,7 +719,7 @@ class VARMAX(MLEModel):
             self.ssm[self._idx_state_intercept] = intercept.T
 
             if self._final_exog is not None:
-                self.ssm['state_intercept', :self.k_endog, -1] = np.dot(
+                self.ssm["state_intercept", :self.k_endog, -1] = np.dot(
                     self._final_exog, exog_params)
 
         # - Trend
@@ -721,7 +728,7 @@ class VARMAX(MLEModel):
             # just += later
             if not self.mle_regression:
                 zero = np.array(0, dtype=params.dtype)
-                self.ssm['state_intercept', :] = zero
+                self.ssm["state_intercept", :] = zero
 
             trend_params = params[self._params_trend].reshape(
                 self.k_endog, self.k_trend).T
@@ -733,14 +740,14 @@ class VARMAX(MLEModel):
 
             if (self._final_trend is not None
                     and self._idx_state_intercept[-1].stop == -1):
-                self.ssm['state_intercept', :self.k_endog, -1:] += np.dot(
+                self.ssm["state_intercept", :self.k_endog, -1:] += np.dot(
                     self._final_trend, trend_params).T
 
         # Need to set the last state intercept to np.nan (with appropriate
         # dtype) if we don't have the final exog
         if self.mle_regression and self._final_exog is None:
             nan = np.array(np.nan, dtype=params.dtype)
-            self.ssm['state_intercept', :self.k_endog, -1] = nan
+            self.ssm["state_intercept", :self.k_endog, -1] = nan
 
         # 2. Transition
         ar = params[self._params_ar].reshape(
@@ -750,16 +757,16 @@ class VARMAX(MLEModel):
         self.ssm[self._idx_transition] = np.c_[ar, ma]
 
         # 3. State covariance
-        if self.error_cov_type == 'diagonal':
+        if self.error_cov_type == "diagonal":
             self.ssm[self._idx_state_cov] = (
                 params[self._params_state_cov]
             )
-        elif self.error_cov_type == 'unstructured':
-            state_cov_lower = np.zeros(self.ssm['state_cov'].shape,
+        elif self.error_cov_type == "unstructured":
+            state_cov_lower = np.zeros(self.ssm["state_cov"].shape,
                                        dtype=params.dtype)
             state_cov_lower[self._idx_lower_state_cov] = (
                 params[self._params_state_cov])
-            self.ssm['state_cov'] = np.dot(state_cov_lower, state_cov_lower.T)
+            self.ssm["state_cov"] = np.dot(state_cov_lower, state_cov_lower.T)
 
         # 4. Observation covariance
         if self.measurement_error:
@@ -795,11 +802,11 @@ class VARMAX(MLEModel):
                     exog = exog[:1]
                 try:
                     exog = np.reshape(exog[:1], (self.k_exog,))
-                except ValueError:
-                    raise ValueError('Provided exogenous values are not of the'
-                                     ' appropriate shape. Required %s, got %s.'
-                                     % (str((self.k_exog,)),
-                                        str(exog.shape)))
+                except ValueError as exc:
+                    raise ValueError(
+                        "Provided exogenous values are not of the appropriate shape. "
+                        f"Required {self.k_exog}, got {exog.shape}."
+                    ) from exc
             self._final_exog = exog
         try:
             yield
@@ -852,26 +859,22 @@ class VARMAXResults(MLEResults):
                  cov_kwds=None, **kwargs):
         super().__init__(model, params, filter_results,
                          cov_type, cov_kwds, **kwargs)
-
-        self.specification = Bunch(**{
+        self.specification = Bunch(
             # Set additional model parameters
-            'error_cov_type': self.model.error_cov_type,
-            'measurement_error': self.model.measurement_error,
-            'enforce_stationarity': self.model.enforce_stationarity,
-            'enforce_invertibility': self.model.enforce_invertibility,
-            'trend_offset': self.model.trend_offset,
-
-            'order': self.model.order,
-
+            error_cov_type=self.model.error_cov_type,
+            measurement_error=self.model.measurement_error,
+            enforce_stationarity=self.model.enforce_stationarity,
+            enforce_invertibility=self.model.enforce_invertibility,
+            trend_offset=self.model.trend_offset,
+            order=self.model.order,
             # Model order
-            'k_ar': self.model.k_ar,
-            'k_ma': self.model.k_ma,
-
+            k_ar=self.model.k_ar,
+            k_ma=self.model.k_ma,
             # Trend / Regression
-            'trend': self.model.trend,
-            'k_trend': self.model.k_trend,
-            'k_exog': self.model.k_exog,
-        })
+            trend=self.model.trend,
+            k_trend=self.model.k_trend,
+            k_exog=self.model.k_exog,
+        )
 
         # Polynomials / coefficient matrices
         self.coefficient_matrices_var = None
@@ -904,11 +907,11 @@ class VARMAXResults(MLEResults):
             initial_state = self.predicted_state[..., -1]
             initial_state_cov = self.predicted_state_cov[..., -1]
 
-        kwargs.setdefault('trend_offset', self.nobs + self.model.trend_offset)
+        kwargs.setdefault("trend_offset", self.nobs + self.model.trend_offset)
         mod = self.model.clone(endog, exog=exog, **kwargs)
 
         mod.ssm.initialization = Initialization(
-            mod.k_states, 'known', constant=initial_state,
+            mod.k_states, "known", constant=initial_state,
             stationary_cov=initial_state_cov)
 
         if self.smoother_results is not None:
@@ -943,7 +946,7 @@ class VARMAXResults(MLEResults):
             cache_value = self.filter_results.state_intercept[:, -1]
             mod.update(self.params)
             self.filter_results.state_intercept[:mod.k_endog, -1] = (
-                mod['state_intercept', :mod.k_endog, -1])
+                mod["state_intercept", :mod.k_endog, -1])
             try:
                 yield
             finally:
@@ -1000,7 +1003,7 @@ class VARMAXResults(MLEResults):
 
     @Appender(MLEResults.get_prediction.__doc__)
     def get_prediction(self, start=None, end=None, dynamic=False,
-                       information_set='predicted', index=None, exog=None,
+                       information_set="predicted", index=None, exog=None,
                        **kwargs):
         if start is None:
             start = 0
@@ -1015,7 +1018,7 @@ class VARMAXResults(MLEResults):
         # Handle trend offset for extended model
         extend_kwargs = {}
         if self.model.k_trend > 0:
-            extend_kwargs['trend_offset'] = (
+            extend_kwargs["trend_offset"] = (
                 self.model.trend_offset + self.nobs)
 
         # Get the prediction
@@ -1032,9 +1035,9 @@ class VARMAXResults(MLEResults):
                  state_shocks=None, initial_state=None, anchor=None,
                  repetitions=None, exog=None, extend_model=None,
                  extend_kwargs=None, **kwargs):
-        if anchor is None or anchor == 'start':
+        if anchor is None or anchor == "start":
             iloc = 0
-        elif anchor == 'end':
+        elif anchor == "end":
             iloc = self.nobs
         else:
             iloc, _, _ = self.model._get_index_loc(anchor)
@@ -1042,8 +1045,8 @@ class VARMAXResults(MLEResults):
         if iloc < 0:
             iloc = self.nobs + iloc
         if iloc > self.nobs:
-            raise ValueError('Cannot anchor simulation after the estimated'
-                             ' sample.')
+            raise ValueError("Cannot anchor simulation after the estimated"
+                             " sample.")
 
         out_of_sample = max(iloc + nsimulations - self.nobs, 0)
 
@@ -1096,23 +1099,23 @@ class VARMAXResults(MLEResults):
         # Create the model name
         spec = self.specification
         if spec.k_ar > 0 and spec.k_ma > 0:
-            model_name = 'VARMA'
-            order = f'({spec.k_ar},{spec.k_ma})'
+            model_name = "VARMA"
+            order = f"({spec.k_ar},{spec.k_ma})"
         elif spec.k_ar > 0:
-            model_name = 'VAR'
-            order = '(%s)' % (spec.k_ar)
+            model_name = "VAR"
+            order = "(%s)" % (spec.k_ar)
         else:
-            model_name = 'VMA'
-            order = '(%s)' % (spec.k_ma)
+            model_name = "VMA"
+            order = "(%s)" % (spec.k_ma)
         if spec.k_exog > 0:
-            model_name += 'X'
+            model_name += "X"
         model_name = [model_name + order]
 
         if spec.k_trend > 0:
-            model_name.append('intercept')
+            model_name.append("intercept")
 
         if spec.measurement_error:
-            model_name.append('measurement error')
+            model_name.append("measurement error")
 
         summary = super().summary(
             alpha=alpha, start=start, model_name=model_name,
@@ -1130,11 +1133,11 @@ class VARMAXResults(MLEResults):
                 param_names = []
                 for name in np.array(self.data.param_names)[mask].tolist():
                     if strip_end:
-                        param_name = '.'.join(name.split('.')[:-1])
+                        param_name = ".".join(name.split(".")[:-1])
                     else:
                         param_name = name
                     if name in self.fixed_params:
-                        param_name = '%s (fixed)' % param_name
+                        param_name = "%s (fixed)" % param_name
                     param_names.append(param_name)
 
                 return summary_params(res, yname=None, xname=param_names,

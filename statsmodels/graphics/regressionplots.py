@@ -35,23 +35,23 @@ from ._regressionplots_doc import (
 )
 
 __all__ = [
-    "plot_fit",
-    "plot_regress_exog",
-    "plot_partregress",
-    "plot_ccpr",
-    "plot_regress_exog",
-    "plot_partregress_grid",
-    "plot_ccpr_grid",
-    "add_lowess",
     "abline_plot",
-    "influence_plot",
-    "plot_leverage_resid2",
+    "add_lowess",
     "added_variable_resids",
-    "partial_resids",
     "ceres_resids",
+    "influence_plot",
+    "partial_resids",
     "plot_added_variable",
-    "plot_partial_residuals",
+    "plot_ccpr",
+    "plot_ccpr_grid",
     "plot_ceres_residuals",
+    "plot_fit",
+    "plot_leverage_resid2",
+    "plot_partial_residuals",
+    "plot_partregress",
+    "plot_partregress_grid",
+    "plot_regress_exog",
+    "plot_regress_exog",
 ]
 
 
@@ -571,14 +571,13 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     .. plot:: plots/graphics_regression_partregress_grid.py
     """
-    import pandas
 
     fig = utils.create_mpl_fig(fig)
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
     # TODO: maybe add option for using wendog, wexog instead
-    y = pandas.Series(results.model.endog, name=results.model.endog_names)
+    y = pd.Series(results.model.endog, name=results.model.endog_names)
     exog = results.model.exog
 
     k_vars = exog.shape[1]
@@ -596,11 +595,11 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     for i, idx in enumerate(exog_idx):
         others = lrange(k_vars)
         others.pop(idx)
-        exog_others = pandas.DataFrame(exog[:, others], columns=other_names[others])
+        exog_others = pd.DataFrame(exog[:, others], columns=other_names[others])
         ax = fig.add_subplot(nrows, ncols, i + 1)
         plot_partregress(
             y,
-            pandas.Series(exog[:, idx], name=other_names[idx]),
+            pd.Series(exog[:, idx], name=other_names[idx]),
             exog_others,
             ax=ax,
             title_kwargs=title_kwargs,
@@ -768,13 +767,12 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 
     if grid is not None:
         nrows, ncols = grid
+    elif len(exog_idx) > 2:
+        nrows = int(np.ceil(len(exog_idx) / 2.0))
+        ncols = 2
     else:
-        if len(exog_idx) > 2:
-            nrows = int(np.ceil(len(exog_idx) / 2.0))
-            ncols = 2
-        else:
-            nrows = len(exog_idx)
-            ncols = 1
+        nrows = len(exog_idx)
+        ncols = 1
 
     seen_constant = 0
     for i, idx in enumerate(exog_idx):
@@ -912,12 +910,10 @@ def abline_plot(
 
 @Appender(
     _plot_influence_doc.format(
-        **{
-            "extra_params_doc": "results: object\n"
-            "        Results for a fitted regression model.\n"
-            "    influence: instance\n"
-            "        The instance of Influence for model."
-        }
+        extra_params_doc="results: object\n"
+                         "        Results for a fitted regression model.\n"
+                         "    influence: instance\n"
+                         "        The instance of Influence for model."
     )
 )
 def _influence_plot(
@@ -997,10 +993,8 @@ def _influence_plot(
 
 @Appender(
     _plot_influence_doc.format(
-        **{
-            "extra_params_doc": "results : Results\n"
-            "        Results for a fitted regression model."
-        }
+        extra_params_doc="results : Results\n"
+                         "        Results for a fitted regression model."
     )
 )
 def influence_plot(
@@ -1410,8 +1404,8 @@ def added_variable_resids(
 
     try:
         endog_resid = getattr(new_result, resid_type)
-    except AttributeError:
-        raise ValueError("'%s' residual type not available" % resid_type)
+    except AttributeError as exc:
+        raise ValueError("'%s' residual type not available" % resid_type) from exc
 
     import statsmodels.regression.linear_model as lm
 

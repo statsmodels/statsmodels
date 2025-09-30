@@ -7,12 +7,15 @@ See the generated file "gee_gaussian_simulation_check.txt" for
 results.
 """
 from statsmodels.compat.python import lrange
-import scipy
-import numpy as np
+
 from itertools import product
+
+import numpy as np
+import scipy
+
+from statsmodels.genmod.cov_struct import Autoregressive, Nested
 from statsmodels.genmod.families import Gaussian
 from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.genmod.cov_struct import Autoregressive, Nested
 
 
 class GEE_simulator:
@@ -241,7 +244,7 @@ def gendat_nested1():
 if __name__ == "__main__":
 
     try:
-        np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+        np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
                             suppress=True)
     except TypeError:
         # older numpy versions do not have formatter option

@@ -35,8 +35,7 @@ from __future__ import annotations
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
-from collections.abc import Sequence
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 import warnings
 
 import numpy as np
@@ -57,18 +56,22 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import pinv_extended
-from statsmodels.tools.typing import Float64Array
 from statsmodels.tools.validation import bool_like, float_like, string_like
 
 from . import _prediction as pred
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from statsmodels.tools.typing import Float64Array
 
 __docformat__ = "restructuredtext en"
 
 __all__ = [
     "GLS",
-    "WLS",
-    "OLS",
     "GLSAR",
+    "OLS",
+    "WLS",
     "PredictionResults",
     "RegressionResultsWrapper",
 ]
@@ -199,7 +202,7 @@ def _get_sigma(sigma, nobs):
         )
         if info > 0:
             raise np.linalg.LinAlgError(
-                "Cholesky decomposition of sigma " "yields a singular matrix"
+                "Cholesky decomposition of sigma yields a singular matrix"
             )
         elif info < 0:
             raise ValueError("Invalid input to dtrtri (info = %d)" % info)
@@ -1218,9 +1221,9 @@ class OLS(WLS):
 
         try:
             import cvxopt
-        except ImportError:
+        except ImportError as exc:
             msg = "sqrt_lasso fitting requires the cvxopt module"
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
 
         n = len(self.endog)
         p = self.exog.shape[1]
@@ -1730,9 +1733,8 @@ class RegressionResults(base.LikelihoodModelResults):
         if cov_type == "nonrobust":
             self.cov_type = "nonrobust"
             self.cov_kwds = {
-                "description": "Standard Errors assume that the "
-                + "covariance matrix of the errors is correctly "
-                + "specified."
+                "description": "Standard Errors assume that the covariance matrix of "
+                               "the errors is correctly specified."
             }
             if use_t is None:
                 use_t = True  # TODO: class default
@@ -1749,8 +1751,8 @@ class RegressionResults(base.LikelihoodModelResults):
             self.get_robustcov_results(
                 cov_type=cov_type, use_self=True, use_t=use_t, **cov_kwds
             )
-        for key in kwargs:
-            setattr(self, key, kwargs[key])
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def conf_int(self, alpha=0.05, cols=None):
         """
@@ -2370,8 +2372,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         if has_robust1 or has_robust2:
             warnings.warn(
-                "F test for comparison is likely invalid with "
-                + "robust covariance, proceeding anyway",
+                "F test for comparison is likely invalid with robust covariance, "
+                "proceeding anyway",
                 InvalidTestWarning,
                 stacklevel=2,
             )
@@ -2474,8 +2476,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         if has_robust1 or has_robust2:
             warnings.warn(
-                "Likelihood Ratio test is likely invalid with "
-                + "robust covariance, proceeding anyway",
+                "Likelihood Ratio test is likely invalid with robust covariance, "
+                "proceeding anyway",
                 InvalidTestWarning,
                 stacklevel=2,
             )
@@ -2667,7 +2669,7 @@ class RegressionResults(base.LikelihoodModelResults):
         elif cov_type.upper() in ("HC0", "HC1", "HC2", "HC3"):
             if kwargs:
                 raise ValueError(
-                    "heteroscedasticity robust covariance " "does not use keywords"
+                    "heteroscedasticity robust covariance does not use keywords"
                 )
             res.cov_kwds["description"] = descriptions[cov_type.upper()]
             res.cov_params_default = getattr(self, "cov_" + cov_type.upper())
@@ -2792,8 +2794,8 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds["description"] = descriptions["HAC-Groupsum"]
         else:
             raise ValueError(
-                "cov_type not recognized. See docstring for "
-                + "available options and spelling"
+                "cov_type not recognized. See docstring for available options "
+                "and spelling"
             )
 
         if adjust_df:
@@ -3061,18 +3063,16 @@ class RegressionResults(base.LikelihoodModelResults):
         dw = durbin_watson(self.wresid)
         eigvals = self.eigenvals
         condno = self.condition_number
-        diagnostic = dict(
-            [
-                ("Omnibus:", "%.3f" % omni),
-                ("Prob(Omnibus):", "%.3f" % omnipv),
-                ("Skew:", "%.3f" % skew),
-                ("Kurtosis:", "%.3f" % kurtosis),
-                ("Durbin-Watson:", "%.3f" % dw),
-                ("Jarque-Bera (JB):", "%.3f" % jb),
-                ("Prob(JB):", "%.3f" % jbpv),
-                ("Condition No.:", "%.0f" % condno),
-            ]
-        )
+        diagnostic = {
+            "Omnibus:": "%.3f" % omni,
+            "Prob(Omnibus):": "%.3f" % omnipv,
+            "Skew:": "%.3f" % skew,
+            "Kurtosis:": "%.3f" % kurtosis,
+            "Durbin-Watson:": "%.3f" % dw,
+            "Jarque-Bera (JB):": "%.3f" % jb,
+            "Prob(JB):": "%.3f" % jbpv,
+            "Condition No.:": "%.0f" % condno,
+        }
 
         # Summary
         from statsmodels.iolib import summary2

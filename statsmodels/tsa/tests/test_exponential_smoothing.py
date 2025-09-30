@@ -14,8 +14,8 @@ import pandas as pd
 import pytest
 import scipy.stats
 
+from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
-import statsmodels.tsa.holtwinters as holtwinters
 import statsmodels.tsa.statespace.exponential_smoothing as statespace
 
 # This contains tests for the exponential smoothing implementation in
@@ -302,12 +302,10 @@ def obtain_R_results(path):
                 results[new_key][model] = R_results[damped][model]
 
     # get correct types
-    for damped in results:
-        for model in results[damped]:
+    for damped, result_value in results.items():
+        for model in result_value:
             for key in ["alpha", "beta", "gamma", "phi", "sigma2"]:
-                results[damped][model][key] = float(
-                    results[damped][model][key][0]
-                )
+                results[damped][model][key] = float(result_value[model][key][0])
             for key in [
                 "states",
                 "initstate",
@@ -316,9 +314,7 @@ def obtain_R_results(path):
                 "forecast",
                 "simulation",
             ]:
-                results[damped][model][key] = np.asarray(
-                    results[damped][model][key]
-                )
+                results[damped][model][key] = np.asarray(result_value[model][key])
     return results
 
 
@@ -1046,7 +1042,7 @@ def test_estimated_initialization_short_data(oildata, trend, seasonal, nobs):
         trend=trend,
         seasonal=seasonal,
         seasonal_periods=4,
-        initialization_method='estimated'
+        initialization_method="estimated"
     ).fit()
     assert ~np.any(np.isnan(res.params))
 
@@ -1076,11 +1072,11 @@ def test_aicc_0_dof():
 
     model = ETSModel(
         endog=endog,
-        initialization_method='known',
+        initialization_method="known",
         initial_level=100.0,
         initial_trend=0.0,
-        error='add',
-        trend='add',
+        error="add",
+        trend="add",
         damped_trend=True
     )
     aicc = model.fit().aicc

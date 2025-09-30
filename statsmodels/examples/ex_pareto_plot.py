@@ -4,9 +4,9 @@ Created on Sun Aug 01 19:20:16 2010
 Author: josef-pktd
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
-import matplotlib.pyplot as plt
 
 nobs = 1000
 r = stats.pareto.rvs(1, size=nobs)

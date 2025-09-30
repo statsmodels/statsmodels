@@ -1,7 +1,9 @@
-import warnings
-from statsmodels.tools.parallel import parallel_func
-from numpy import arange, testing
 from math import sqrt
+import warnings
+
+from numpy import arange, testing
+
+from statsmodels.tools.parallel import parallel_func
 
 
 def test_parallel():

@@ -1,11 +1,11 @@
 """Plot acf and pacf for some ARMA(1,1)"""
 
-import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+import numpy as np
 
-import statsmodels.tsa.arima_process as tsp
 from statsmodels.graphics.tsaplots import plotacf
+import statsmodels.tsa.arima_process as tsp
 
 np.set_printoptions(precision=2)
 

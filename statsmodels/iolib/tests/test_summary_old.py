@@ -8,10 +8,12 @@ def test_regression_summary():
     # little luck getting this test to pass (It should?), can be used for
     # visual testing of the regression.summary table
     # fixed, might fail at minute changes
-    from statsmodels.regression.tests.test_regression import TestOLS
+    from string import Template
+
     # from test_regression import TestOLS
     import time
-    from string import Template
+
+    from statsmodels.regression.tests.test_regression import TestOLS
     t = time.localtime()
     desired = Template(
         """\
@@ -63,10 +65,9 @@ def test_regression_summary():
         warnings.filters = original_filters  # restore filters
 
     actual = r_summary
-    import numpy as np
-    actual = '\n'.join(line.rstrip() for line in actual.split('\n'))
+    actual = "\n".join(line.rstrip() for line in actual.split("\n"))
 #    counter = 0
 #    for c1,c2 in zip(actual, desired):
 #        if not c1==c2 and counter<20:
 #            counter += 1
-    np.testing.assert_(actual == desired)
+    assert actual == desired

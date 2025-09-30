@@ -11,9 +11,9 @@ from statsmodels.tsa.filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
 
 __all__ = [
+    "DecomposeResult",
     "seasonal_decompose",
     "seasonal_mean",
-    "DecomposeResult",
 ]
 
 
@@ -208,7 +208,7 @@ def seasonal_decompose(
 
     results = []
     for s, name in zip(
-        (seasonal, trend, resid, x), ("seasonal", "trend", "resid", None)
+        (seasonal, trend, resid, x), ("seasonal", "trend", "resid", None),
     ):
         results.append(pw.wrap(s.squeeze(), columns=name))
     return DecomposeResult(

@@ -5,7 +5,7 @@ from statsmodels.formula._manager import FormulaManager
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
 
-__all__ = ["handle_formula_data", "formula_handler", "advance_eval_env"]
+__all__ = ["advance_eval_env", "formula_handler", "handle_formula_data"]
 
 # this is a mutable object, so editing it should show up in the below
 formula_handler = {}

@@ -4,8 +4,8 @@ import numpy as np
 import numpy.testing as npt
 from numpy.testing import assert_allclose, assert_equal
 import pytest
+from scipy import stats
 from scipy.special import factorial, factorial2, gamma
-import scipy.stats as stats
 
 from statsmodels.distributions.edgeworth import (
     ExpandedNormal,
@@ -219,14 +219,4 @@ def check_distribution_rvs(distfn, args, alpha, rvs):
     D, pval = stats.kstest(rvs, distfn.cdf, args=args, N=1000)
     if pval < alpha:
         D, pval = stats.kstest(distfn.rvs, distfn.cdf, args=args, N=1000)
-        npt.assert_(
-            pval > alpha,
-            "D = "
-            + str(D)
-            + "; pval = "
-            + str(pval)
-            + "; alpha = "
-            + str(alpha)
-            + "\nargs = "
-            + str(args),
-        )
+        assert pval > alpha, f"D = {D}; pval = {pval}; alpha = {alpha}; args = {args}"

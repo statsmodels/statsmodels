@@ -21,7 +21,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 macrodata = datasets.macrodata.load_pandas().data
 
 
-@pytest.fixture()
+@pytest.fixture
 def temp_filename():
     fd, filename = tempfile.mkstemp()
     yield filename
@@ -29,7 +29,7 @@ def temp_filename():
         os.close(fd)
         os.unlink(filename)
     except Exception:
-        print("Couldn't close or delete file " "{filename}.".format(filename=filename))
+        print("Couldn't close or delete file {filename}.".format(filename=filename))
 
 
 def test_sarimax(temp_filename):
@@ -44,7 +44,7 @@ def test_sarimax(temp_filename):
 
 
 # GH7527
-@pytest.mark.parametrize("order", ((4, 1, 0), (0, 1, 4), (0, 2, 0)))
+@pytest.mark.parametrize("order", [(4, 1, 0), (0, 1, 4), (0, 2, 0)])
 def test_sarimax_save_remove_data(temp_filename, order):
     mod = sarimax.SARIMAX(macrodata["realgdp"].values, order=order)
     res = mod.smooth(mod.start_params)

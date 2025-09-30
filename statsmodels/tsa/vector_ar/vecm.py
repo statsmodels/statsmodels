@@ -14,11 +14,11 @@ from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
 from statsmodels.tsa.tsatools import duplication_matrix, lagmat, vec
+from statsmodels.tsa.vector_ar import irf
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     CausalityTestResults,
     WhitenessTestResults,
 )
-import statsmodels.tsa.vector_ar.irf as irf
 import statsmodels.tsa.vector_ar.plotting as plot
 from statsmodels.tsa.vector_ar.util import get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import (
@@ -333,7 +333,7 @@ def _endog_matrices(
     if "co" in deterministic and "ci" in deterministic:
         raise ValueError(
             "Both 'co' and 'ci' as deterministic terms given. "
-            + "Please choose one of the two."
+            "Please choose one of the two."
         )
     y_lag1_stack = [y_lag1]
     if "ci" in deterministic:  # pp. 257, 299, 306, 307
@@ -574,7 +574,7 @@ def select_coint_rank(
     possible_signif_values = [0.1, 0.05, 0.01]
     if signif not in possible_signif_values:
         raise ValueError(
-            "Please choose a significance level from {0.1, 0.05," "0.01}"
+            "Please choose a significance level from 0.1, 0.05, or 0.01"
         )
 
     coint_result = coint_johansen(endog, det_order, k_ar_diff)
@@ -726,7 +726,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     cvt = np.zeros((neqs, 3))
     iota = np.ones(neqs)
     t, junk = rkt.shape
-    for i in range(0, neqs):
+    for i in range(neqs):
         tmp = np.log(iota - a)[i:]
         lr1[i] = -t * np.sum(tmp, 0)
         lr2[i] = -t * np.log(1 - a[i])

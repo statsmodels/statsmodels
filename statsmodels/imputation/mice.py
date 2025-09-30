@@ -204,7 +204,7 @@ class MICEData:
             msg = "MICEData data column names should be string type"
             raise ValueError(msg)
 
-        self.regularized = dict()
+        self.regularized = {}
 
         # Drop observations where all variables are missing.  This
         # also has the effect of copying the data frame.
@@ -995,7 +995,7 @@ class MICEData:
         klass = self.model_class[vname]
         self.models[vname] = klass(endog, exog, **init_kwds)
 
-        if vname in self.regularized and self.regularized[vname]:
+        if self.regularized.get(vname):
             self.results[vname] = self.models[vname].fit_regularized(**fit_kwds)
         else:
             self.results[vname] = self.models[vname].fit(**fit_kwds)

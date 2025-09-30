@@ -5,9 +5,9 @@ import sys
 import pytest
 
 try:
-    import jupyter_client  # noqa: F401
-    import nbformat
+    import jupyter_client
     from nbconvert.preprocessors import ExecutePreprocessor
+    import nbformat
 
     plat_win = sys.platform.startswith("win")
     if plat_win and sys.version_info >= (3, 8):  # pragma: no cover
@@ -25,14 +25,14 @@ except ImportError:
     pytestmark = pytest.mark.skip(reason="Required packages not available")
 
 try:
-    import rpy2  # noqa: F401
+    import rpy2
 
     HAS_RPY2 = True
 except ImportError:
     HAS_RPY2 = False
 
 try:
-    import joblib  # noqa: F401
+    import joblib
 
     HAS_JOBLIB = True
 except ImportError:
@@ -52,7 +52,7 @@ NOTEBOOK_DIR = os.path.abspath(NOTEBOOK_DIR)
 nbs = sorted(glob.glob(os.path.join(NOTEBOOK_DIR, "*.ipynb")))
 
 if nbs:
-    ids = list(map(lambda p: os.path.split(p)[-1], nbs))
+    ids = [os.path.split(p)[-1] for p in nbs]
 
     @pytest.fixture(params=nbs, ids=ids)
     def notebook(request):

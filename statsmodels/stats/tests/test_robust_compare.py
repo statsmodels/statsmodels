@@ -339,7 +339,7 @@ class TestTrimmedRAnova:
             statistic=8.02355212103924,
             parameter=np.array([2, 24.272320628139]),
             p_value=0.00211423625518082,
-            method=("One-way analysis of means " "(not assuming equal variances)"),
+            method=("One-way analysis of means (not assuming equal variances)"),
         )
 
         # > ow = oneway.test(y ~ g, df3, var.equal = TRUE)

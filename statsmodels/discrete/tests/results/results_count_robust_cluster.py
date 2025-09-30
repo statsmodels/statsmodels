@@ -50,18 +50,18 @@ params_table = np.array([
     2.054299999499,  .03994666479943,  .10422780555076,  4.4351876230922,
     np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'yr_con op_75_79 _cons'.split()
+params_table_rownames = "yr_con op_75_79 _cons".split()
 
 cov = np.array([
     .03973527687332,  .00976206273414, -.21171095768584,  .00976206273414,
     .01230685870994, -.06297293767114, -.21171095768584, -.06297293767114,
     1.2207089686939]).reshape(3, 3)
 
-cov_colnames = 'yr_con op_75_79 _cons'.split()
+cov_colnames = "yr_con op_75_79 _cons".split()
 
-cov_rownames = 'yr_con op_75_79 _cons'.split()
+cov_rownames = "yr_con op_75_79 _cons".split()
 
 
 results_poisson_clu = ParamsTableTestBunch(
@@ -120,18 +120,18 @@ params_table = np.array([
     3.4114258702533,  .00064624070669,  .96569421829539,  3.5737212103476,
     np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'yr_con op_75_79 _cons'.split()
+params_table_rownames = "yr_con op_75_79 _cons".split()
 
 cov = np.array([
     .03699357253114, -.01521223175214, -.09585501859714, -.01521223175214,
     .30582453697607,  -.1649339692102, -.09585501859714,  -.1649339692102,
     .44265766657651]).reshape(3, 3)
 
-cov_colnames = 'yr_con op_75_79 _cons'.split()
+cov_colnames = "yr_con op_75_79 _cons".split()
 
-cov_rownames = 'yr_con op_75_79 _cons'.split()
+cov_rownames = "yr_con op_75_79 _cons".split()
 
 
 results_poisson_hc1 = ParamsTableTestBunch(
@@ -190,18 +190,18 @@ params_table = np.array([
     -52.629709605328,                0,  -7.234455560208,  -6.714970045336,
     np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'yr_con op_75_79 _cons'.split()
+params_table_rownames = "yr_con op_75_79 _cons".split()
 
 cov = np.array([
     .00335337279036, -.00315267340017, -.00589654294427, -.00315267340017,
     .0147665254054, -.00165060980569, -.00589654294427, -.00165060980569,
     .01756267688645]).reshape(3, 3)
 
-cov_colnames = 'yr_con op_75_79 _cons'.split()
+cov_colnames = "yr_con op_75_79 _cons".split()
 
-cov_rownames = 'yr_con op_75_79 _cons'.split()
+cov_rownames = "yr_con op_75_79 _cons".split()
 
 
 results_poisson_exposure_nonrobust = ParamsTableTestBunch(
@@ -261,18 +261,18 @@ params_table = np.array([
     -27.259076168227,  1.29723387e-163, -7.4762039689282, -6.4732216366159,
     np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'yr_con op_75_79 _cons'.split()
+params_table_rownames = "yr_con op_75_79 _cons".split()
 
 cov = np.array([
     .00836211050535,  .00098797681063, -.01860743122756,  .00098797681063,
     .02593237192942, -.02395236210603, -.01860743122756, -.02395236210603,
     .06546819879413]).reshape(3, 3)
 
-cov_colnames = 'yr_con op_75_79 _cons'.split()
+cov_colnames = "yr_con op_75_79 _cons".split()
 
-cov_rownames = 'yr_con op_75_79 _cons'.split()
+cov_rownames = "yr_con op_75_79 _cons".split()
 
 
 results_poisson_exposure_hc1 = ParamsTableTestBunch(
@@ -334,18 +334,18 @@ params_table = np.array([
     -72.003975518463,                0, -7.1645660129248, -6.7848595926192,
     np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'yr_con op_75_79 _cons'.split()
+params_table_rownames = "yr_con op_75_79 _cons".split()
 
 cov = np.array([
     .0014574789737, -.00277745275086,  .00108765624666, -.00277745275086,
     .00848823823534, -.00469929607507,  .00108765624666, -.00469929607507,
     .00938295660262]).reshape(3, 3)
 
-cov_colnames = 'yr_con op_75_79 _cons'.split()
+cov_colnames = "yr_con op_75_79 _cons".split()
 
-cov_rownames = 'yr_con op_75_79 _cons'.split()
+cov_rownames = "yr_con op_75_79 _cons".split()
 
 
 results_poisson_exposure_clu = ParamsTableTestBunch(
@@ -414,9 +414,9 @@ params_table = np.array([
     1.4998057895818,  3.6206622525444, np.nan,  1.9599639845401,
     0]).reshape(5, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'yr_con op_75_79 _cons _cons alpha'.split()
+params_table_rownames = "yr_con op_75_79 _cons _cons alpha".split()
 
 cov = np.array([
     .07407155576607, -.00421355148283, -.32663130963457,  .02015715724983,
@@ -425,9 +425,9 @@ cov = np.array([
     .02015715724983, -.00714955450361, -.09288283512096,  .05054897861465
     ]).reshape(4, 4)
 
-cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
+cov_colnames = "yr_con op_75_79 _cons _cons".split()
 
-cov_rownames = 'yr_con op_75_79 _cons _cons'.split()
+cov_rownames = "yr_con op_75_79 _cons _cons".split()
 
 
 results_negbin_clu = ParamsTableTestBunch(
@@ -495,9 +495,9 @@ params_table = np.array([
     1.4557092049439,  3.7303399539165, np.nan,  1.9599639845401,
     0]).reshape(5, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'yr_con op_75_79 _cons _cons alpha'.split()
+params_table_rownames = "yr_con op_75_79 _cons _cons alpha".split()
 
 cov = np.array([
     .06815688354362, -.03840590969835, -.16217402790798,  .02098165591138,
@@ -506,9 +506,9 @@ cov = np.array([
     .02098165591138, -.02643483668568, -.03915049342584,  .05762736490753
     ]).reshape(4, 4)
 
-cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
+cov_colnames = "yr_con op_75_79 _cons _cons".split()
 
-cov_rownames = 'yr_con op_75_79 _cons _cons'.split()
+cov_rownames = "yr_con op_75_79 _cons _cons".split()
 
 
 results_negbin_hc1 = ParamsTableTestBunch(
@@ -579,9 +579,9 @@ params_table = np.array([
     .089900758997,  .67173218155228, np.nan,  1.9599639845401,
     0]).reshape(5, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'yr_con op_75_79 _cons _cons alpha'.split()
+params_table_rownames = "yr_con op_75_79 _cons _cons alpha".split()
 
 cov = np.array([
     .02245095735788, -.01097939549632, -.05127649084781,  .00045725833006,
@@ -590,9 +590,9 @@ cov = np.array([
     .00045725833006, -.00926008351523,  .02198323898312,  .26322927930229
     ]).reshape(4, 4)
 
-cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
+cov_colnames = "yr_con op_75_79 _cons _cons".split()
 
-cov_rownames = 'yr_con op_75_79 _cons _cons'.split()
+cov_rownames = "yr_con op_75_79 _cons _cons".split()
 
 
 results_negbin_exposure_nonrobust = ParamsTableTestBunch(
@@ -662,9 +662,9 @@ params_table = np.array([
     .0450313052935,  1.3410500222158, np.nan,  1.9599639845401,
     0]).reshape(5, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'yr_con op_75_79 _cons _cons alpha'.split()
+params_table_rownames = "yr_con op_75_79 _cons _cons alpha".split()
 
 cov = np.array([
     .02036611468766, -.00330004038514, -.08114367170947, -.07133030733881,
@@ -673,9 +673,9 @@ cov = np.array([
     -.07133030733881, -.09492663454187,  .43276143586693,  .74959931564018
     ]).reshape(4, 4)
 
-cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
+cov_colnames = "yr_con op_75_79 _cons _cons".split()
 
-cov_rownames = 'yr_con op_75_79 _cons _cons'.split()
+cov_rownames = "yr_con op_75_79 _cons _cons".split()
 
 
 results_negbin_exposure_clu = ParamsTableTestBunch(

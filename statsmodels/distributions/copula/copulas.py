@@ -257,7 +257,7 @@ class Copula(ABC):
     References
     ----------
     .. [1] Marshall AW, Olkin I. “Families of Multivariate Distributions”,
-      Journal of the American Statistical Association, 83, 834–841, 1988.
+      Journal of the American Statistical Association, 83, 834-841, 1988.
     .. [2] Marius Hofert. "Sampling Archimedean copulas",
       Universität Ulm, 2008.
     .. rvs[3] Harry Joe. "Dependence Modeling with Copulas", Monographs on

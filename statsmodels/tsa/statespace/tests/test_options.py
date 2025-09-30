@@ -9,50 +9,48 @@ License: Simplified-BSD
 """
 
 import numpy as np
+from numpy.testing import assert_equal
+
 from statsmodels.tsa.statespace.kalman_filter import (
+    FILTER_AUGMENTED,
+    FILTER_CHANDRASEKHAR,
+    FILTER_COLLAPSED,
+    FILTER_CONCENTRATED,
     FILTER_CONVENTIONAL,
     FILTER_EXACT_INITIAL,
-    FILTER_AUGMENTED,
+    FILTER_EXTENDED,
     FILTER_SQUARE_ROOT,
     FILTER_UNIVARIATE,
-    FILTER_COLLAPSED,
-    FILTER_EXTENDED,
     FILTER_UNSCENTED,
-    FILTER_CONCENTRATED,
-    FILTER_CHANDRASEKHAR,
-
-    INVERT_UNIVARIATE,
-    SOLVE_LU,
-    INVERT_LU,
-    SOLVE_CHOLESKY,
     INVERT_CHOLESKY,
-
-    STABILITY_FORCE_SYMMETRY,
-
-    MEMORY_STORE_ALL,
-    MEMORY_NO_FORECAST,
-    MEMORY_NO_PREDICTED,
+    INVERT_LU,
+    INVERT_UNIVARIATE,
+    MEMORY_CONSERVE,
     MEMORY_NO_FILTERED,
-    MEMORY_NO_LIKELIHOOD,
+    MEMORY_NO_FORECAST,
     MEMORY_NO_GAIN,
+    MEMORY_NO_LIKELIHOOD,
+    MEMORY_NO_PREDICTED,
     MEMORY_NO_SMOOTHING,
     MEMORY_NO_STD_FORECAST,
-    MEMORY_CONSERVE
+    MEMORY_STORE_ALL,
+    SOLVE_CHOLESKY,
+    SOLVE_LU,
+    STABILITY_FORCE_SYMMETRY,
 )
 from statsmodels.tsa.statespace.kalman_smoother import (
-    SMOOTHER_STATE,
-    SMOOTHER_STATE_COV,
-    SMOOTHER_STATE_AUTOCOV,
+    SMOOTHER_ALL,
     SMOOTHER_DISTURBANCE,
     SMOOTHER_DISTURBANCE_COV,
-    SMOOTHER_ALL
+    SMOOTHER_STATE,
+    SMOOTHER_STATE_AUTOCOV,
+    SMOOTHER_STATE_COV,
 )
 from statsmodels.tsa.statespace.simulation_smoother import (
-    SimulationSmoother,
+    SIMULATION_ALL,
     SIMULATION_STATE,
-    SIMULATION_ALL
+    SimulationSmoother,
 )
-from numpy.testing import assert_equal
 
 
 class Options:
@@ -201,7 +199,7 @@ class TestOptions(Options):
         # Try setting and unsetting all
         model.conserve_memory = 0
         for name in model.memory_options:
-            if name == 'memory_conserve':
+            if name == "memory_conserve":
                 continue
             setattr(model, name, True)
         assert_equal(
@@ -212,7 +210,7 @@ class TestOptions(Options):
         )
         assert_equal(model.conserve_memory & MEMORY_CONSERVE, MEMORY_CONSERVE)
         for name in model.memory_options:
-            if name == 'memory_conserve':
+            if name == "memory_conserve":
                 continue
             setattr(model, name, False)
         assert_equal(model.conserve_memory, 0)
@@ -246,7 +244,7 @@ class TestOptions(Options):
         # Try setting and unsetting all
         model.smoother_output = 0
         for name in model.smoother_outputs:
-            if name == 'smoother_all':
+            if name == "smoother_all":
                 continue
             setattr(model, name, True)
         assert_equal(
@@ -256,7 +254,7 @@ class TestOptions(Options):
         )
         assert_equal(model.smoother_output, SMOOTHER_ALL)
         for name in model.smoother_outputs:
-            if name == 'smoother_all':
+            if name == "smoother_all":
                 continue
             setattr(model, name, False)
         assert_equal(model.smoother_output, 0)

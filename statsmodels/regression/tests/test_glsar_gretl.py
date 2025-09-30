@@ -42,11 +42,11 @@ class TestGLSARGretl:
         # d = g.load('5-1')
 
         # growth rates
-        gs_l_realinv = 400 * np.diff(np.log(d['realinv'].values))
-        gs_l_realgdp = 400 * np.diff(np.log(d['realgdp'].values))
+        gs_l_realinv = 400 * np.diff(np.log(d["realinv"].values))
+        gs_l_realgdp = 400 * np.diff(np.log(d["realgdp"].values))
 
         endogg = gs_l_realinv
-        exogg = add_constant(np.c_[gs_l_realgdp, d['realint'][:-1].values])
+        exogg = add_constant(np.c_[gs_l_realgdp, d["realint"][:-1].values])
 
         res_ols = OLS(endogg, exogg).fit()
         # print res_ols.params
@@ -100,14 +100,14 @@ class TestGLSARGretl:
         assert_almost_equal(res.bse, partable[:, 1], 6)
         assert_almost_equal(res.tvalues, partable[:, 2], 2)
 
-        assert_almost_equal(res.ssr, result_gretl_g1['ssr'][1], decimal=2)
+        assert_almost_equal(res.ssr, result_gretl_g1["ssr"][1], decimal=2)
         # assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) # not in gretl
         # assert_almost_equal(res.rsquared, result_gretl_g1['rsquared'][1], decimal=7) # FAIL
         # assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=7) # FAIL
-        assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1['mse_resid_sqrt'][1], decimal=5)
-        assert_almost_equal(res.fvalue, result_gretl_g1['fvalue'][1], decimal=4)
+        assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1["mse_resid_sqrt"][1], decimal=5)
+        assert_almost_equal(res.fvalue, result_gretl_g1["fvalue"][1], decimal=4)
         assert_allclose(res.f_pvalue,
-                        result_gretl_g1['f_pvalue'][1],
+                        result_gretl_g1["f_pvalue"][1],
                         rtol=1e-2)
         # assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
 
@@ -128,13 +128,13 @@ class TestGLSARGretl:
         assert_almost_equal(res.bse, partable[:, 1], 3)
         assert_almost_equal(res.tvalues, partable[:, 2], 2)
 
-        assert_almost_equal(res.ssr, result_gretl_g1['ssr'][1], decimal=2)
+        assert_almost_equal(res.ssr, result_gretl_g1["ssr"][1], decimal=2)
         # assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) # not in gretl
         # assert_almost_equal(res.rsquared, result_gretl_g1['rsquared'][1], decimal=7) # FAIL
         # assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=7) # FAIL
-        assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1['mse_resid_sqrt'][1], decimal=5)
-        assert_almost_equal(res.fvalue, result_gretl_g1['fvalue'][1], decimal=0)
-        assert_almost_equal(res.f_pvalue, result_gretl_g1['f_pvalue'][1], decimal=6)
+        assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1["mse_resid_sqrt"][1], decimal=5)
+        assert_almost_equal(res.fvalue, result_gretl_g1["fvalue"][1], decimal=0)
+        assert_almost_equal(res.f_pvalue, result_gretl_g1["f_pvalue"][1], decimal=6)
         # assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
 
         c = oi.reset_ramsey(res, degree=2)
@@ -148,7 +148,7 @@ class TestGLSARGretl:
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=1)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=2)
 
-        '''
+        """
         Performing iterative calculation of rho...
 
                          ITER       RHO        ESS
@@ -172,9 +172,9 @@ class TestGLSARGretl:
         R-squared            0.676973   Adjusted R-squared   0.673710
         F(2, 198)            221.0475   P-value(F)           3.56e-51
         rho                 -0.003481   Durbin-Watson        1.993858
-        '''
+        """
 
-        '''
+        """
         RESET test for specification (squares and cubes)
         Test statistic: F = 5.219019,
         with p-value = P(F(2,197) > 5.21902) = 0.00619
@@ -186,9 +186,9 @@ class TestGLSARGretl:
         RESET test for specification (cubes only)
         Test statistic: F = 5.248951,
         with p-value = P(F(1,198) > 5.24895) = 0.023:
-        '''
+        """
 
-        '''
+        """
         Test for ARCH of order 4
 
                      coefficient   std. error   t-ratio   p-value
@@ -202,9 +202,9 @@ class TestGLSARGretl:
           Null hypothesis: no ARCH effect is present
           Test statistic: LM = 7.30776
           with p-value = P(Chi-square(4) > 7.30776) = 0.120491:
-        '''
+        """
 
-        '''
+        """
         Variance Inflation Factors
 
         Minimum possible value = 1.0
@@ -221,8 +221,8 @@ class TestGLSARGretl:
          1-norm = 6862.0664
          Determinant = 1.0296049e+009
          Reciprocal condition number = 0.013819244
-        '''
-        '''
+        """
+        """
         Test for ARCH of order 4 -
           Null hypothesis: no ARCH effect is present
           Test statistic: LM = 7.30776
@@ -237,10 +237,10 @@ class TestGLSARGretl:
           Null hypothesis: error is normally distributed
           Test statistic: Chi-square(2) = 20.2792
           with p-value = 3.94837e-005:
-        '''
+        """
 
         # no idea what this is
-        '''
+        """
         Augmented regression for common factor test
         OLS, using observations 1959:3-2009:3 (T = 201)
         Dependent variable: ds_l_realinv
@@ -259,7 +259,7 @@ class TestGLSARGretl:
         Test of common factor restriction
 
           Test statistic: F(2, 195) = 0.426391, with p-value = 0.653468
-        '''
+        """
 
         # with OLS, HAC errors
 
@@ -310,13 +310,13 @@ class TestGLSARGretl:
         reset_2_3 = [5.219019, 0.00619, 2, 197, "f"]
         reset_2 = [7.268492, 0.00762, 1, 198, "f"]
 
-        names = 'date   residual        leverage       influence        DFFITS'.split()
+        names = "date   residual        leverage       influence        DFFITS".split()
         cur_dir = os.path.abspath(os.path.dirname(__file__))
-        fpath = os.path.join(cur_dir, 'results/leverage_influence_ols_nostars.txt')
+        fpath = os.path.join(cur_dir, "results/leverage_influence_ols_nostars.txt")
         lev = np.genfromtxt(fpath, skip_header=3, skip_footer=1,
                             converters={0: lambda s: s})
         # either numpy 1.6 or python 3.2 changed behavior
-        if np.isnan(lev[-1]['f1']):
+        if np.isnan(lev[-1]["f1"]):
             lev = np.genfromtxt(fpath, skip_header=3, skip_footer=2,
                                 converters={0: lambda s: s})
 
@@ -331,11 +331,11 @@ class TestGLSARGretl:
         assert_almost_equal(bse_hac, partable[:, 1], 5)
         # TODO
 
-        assert_almost_equal(res.ssr, result_gretl_g1['ssr'][1], decimal=2)
-        assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=4)  # not in gretl
-        assert_almost_equal(res.rsquared, result_gretl_g1['rsquared'][1], decimal=6)  # FAIL
-        assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=6)  # FAIL
-        assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1['mse_resid_sqrt'][1], decimal=5)
+        assert_almost_equal(res.ssr, result_gretl_g1["ssr"][1], decimal=2)
+        assert_almost_equal(res.llf, result_gretl_g1["llf"][1], decimal=4)  # not in gretl
+        assert_almost_equal(res.rsquared, result_gretl_g1["rsquared"][1], decimal=6)  # FAIL
+        assert_almost_equal(res.rsquared_adj, result_gretl_g1["rsquared_adj"][1], decimal=6)  # FAIL
+        assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1["mse_resid_sqrt"][1], decimal=5)
         # f-value is based on cov_hac I guess
         # res2 = res.get_robustcov_results(cov_type='HC1')
         # TODO: fvalue differs from Gretl, trying any of the HCx
@@ -373,10 +373,10 @@ class TestGLSARGretl:
         # print np.max(np.abs(lev['influence'] - infl.influence))  # just added this based on Gretl
 
         # just rough test, low decimal in Gretl output,
-        assert_almost_equal(lev['residual'], res.resid, decimal=3)
-        assert_almost_equal(lev['DFFITS'], infl.dffits[0], decimal=3)
-        assert_almost_equal(lev['leverage'], infl.hat_matrix_diag, decimal=3)
-        assert_almost_equal(lev['influence'], infl.influence, decimal=4)
+        assert_almost_equal(lev["residual"], res.resid, decimal=3)
+        assert_almost_equal(lev["DFFITS"], infl.dffits[0], decimal=3)
+        assert_almost_equal(lev["leverage"], infl.hat_matrix_diag, decimal=3)
+        assert_almost_equal(lev["influence"], infl.influence, decimal=4)
 
 
 def test_GLSARlag():
@@ -384,9 +384,9 @@ def test_GLSARlag():
 
     from statsmodels.datasets import macrodata
     d2 = macrodata.load_pandas().data
-    g_gdp = 400*np.diff(np.log(d2['realgdp'].values))
-    g_inv = 400*np.diff(np.log(d2['realinv'].values))
-    exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1].values], prepend=False)
+    g_gdp = 400*np.diff(np.log(d2["realgdp"].values))
+    g_inv = 400*np.diff(np.log(d2["realinv"].values))
+    exogg = add_constant(np.c_[g_gdp, d2["realint"][:-1].values], prepend=False)
 
     mod1 = GLSAR(g_inv, exogg, 1)
     res1 = mod1.iterative_fit(5)
@@ -402,12 +402,12 @@ def test_GLSARlag():
     assert_equal(len(mod4.rho), 4)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     t = TestGLSARGretl()
     t.test_all()
 
 
-'''
+"""
 Model 5: OLS, using observations 1959:2-2009:3 (T = 202)
 Dependent variable: ds_l_realinv
 HAC standard errors, bandwidth 4 (Bartlett kernel)
@@ -611,4 +611,4 @@ with p-value = P(Chi-square(2) > 0.709924) = 0.701200
   Regression proportion, UR         0.13557
   Disturbance proportion, UD        0.80049
 
-'''
+"""

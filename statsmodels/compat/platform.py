@@ -2,12 +2,12 @@ import os
 import sys
 
 __all__ = [
-    "PLATFORM_OSX",
-    "PLATFORM_WIN",
-    "PLATFORM_WIN32",
     "PLATFORM_32",
     "PLATFORM_LINUX",
     "PLATFORM_LINUX32",
+    "PLATFORM_OSX",
+    "PLATFORM_WIN",
+    "PLATFORM_WIN32",
 ]
 
 PLATFORM_OSX = sys.platform == "darwin"

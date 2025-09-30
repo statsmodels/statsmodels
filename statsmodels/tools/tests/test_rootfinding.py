@@ -91,9 +91,9 @@ def test_brentq_expanding():
 
     assert_array_less(info.iterations, 70)
     assert_array_less(info.function_calls, 70)
-    for k in info1:
+    for k, val in info1.items():
         if k in ["iterations", "function_calls"]:
             continue
-        assert_equal(info1[k], getattr(info, k))
+        assert_equal(val, getattr(info, k))
 
     assert_allclose(info.root, a, rtol=1e-5)

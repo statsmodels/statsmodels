@@ -4,7 +4,7 @@ import warnings
 
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
 
-__all__ = ["cache_readonly", "cache_writable", "deprecated_alias", "ResettableCache"]
+__all__ = ["ResettableCache", "cache_readonly", "cache_writable", "deprecated_alias"]
 
 
 class ResettableCache(dict):

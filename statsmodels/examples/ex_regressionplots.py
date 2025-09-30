@@ -4,13 +4,13 @@ Author: Josef Perktold
 
 """
 
-import numpy as np
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+import numpy as np
 
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
+import statsmodels.api as sm
 import statsmodels.graphics.regressionplots as smrp
 from statsmodels.graphics.tests.test_regressionplots import TestPlot
+from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 # example from tut.ols with changes
 # fix a seed for these examples

@@ -978,7 +978,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=DomainWarning)
-            with pytest.warns(UserWarning):
+            with pytest.warns(ValueWarning, match="Negative binomial dispersio"):
                 fam = sm.families.NegativeBinomial()
 
         cls.res1 = GLM(cls.data.endog, cls.data.exog, family=fam).fit(scale="x2")
@@ -1365,14 +1365,20 @@ def check_score_hessian(results):
     # avoid checking score at MLE, score close to zero
     sc = results.model.score(params * 0.98, scale=1)
     # cs currently (0.9) does not work for all families
-    llfunc = lambda x: results.model.loglike(x, scale=1)  # noqa
+
+    def llfunc(x):
+        return results.model.loglike(x, scale=1)
+
     sc2 = approx_fprime(params * 0.98, llfunc)
     assert_allclose(sc, sc2, rtol=1e-4, atol=1e-4)
 
     hess = results.model.hessian(params, scale=1)
     hess2 = approx_hess(params, llfunc)
     assert_allclose(hess, hess2, rtol=1e-4)
-    scfunc = lambda x: results.model.score(x, scale=1)  # noqa
+
+    def scfunc(x):
+        return results.model.score(x, scale=1)
+
     hess3 = approx_fprime(params, scfunc)
     assert_allclose(hess, hess3, rtol=1e-4)
 

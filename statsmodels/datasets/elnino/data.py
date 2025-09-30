@@ -1,7 +1,7 @@
 """El Nino dataset, 1950 - 2010"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This data is in the public domain."""
 
@@ -58,4 +58,4 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'elnino.csv', convert_float=True)
+    return du.load_csv(__file__, "elnino.csv", convert_float=True)

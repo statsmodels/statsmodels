@@ -30,6 +30,7 @@ Issues
 import numpy as np
 from scipy import stats
 from scipy.special import factorial
+
 from statsmodels.base.model import GenericLikelihoodModel
 
 
@@ -42,7 +43,7 @@ def maxabsrel(arr1, arr2):
 
 
 class PoissonGMLE(GenericLikelihoodModel):
-    '''Maximum Likelihood Estimation of Poisson Model
+    """Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same
     statistical model as discretemod.Poisson.
@@ -52,7 +53,7 @@ class PoissonGMLE(GenericLikelihoodModel):
     and all resulting statistics are based on numerical
     differentiation.
 
-    '''
+    """
 
     # copied from discretemod.Poisson
     def nloglikeobs(self, params):
@@ -77,8 +78,8 @@ class PoissonGMLE(GenericLikelihoodModel):
         return np.exp(XB) - endog*XB + np.log(factorial(endog))
 
     def predict_distribution(self, exog):
-        '''return frozen scipy.stats distribution with mu at estimated prediction
-        '''
+        """return frozen scipy.stats distribution with mu at estimated prediction
+        """
         if not hasattr(self, "result"):
             # TODO: why would this be ValueError instead of AttributeError?
             # TODO: Why even make this a Model attribute in the first place?
@@ -92,7 +93,7 @@ class PoissonGMLE(GenericLikelihoodModel):
 
 
 class PoissonOffsetGMLE(GenericLikelihoodModel):
-    '''Maximum Likelihood Estimation of Poisson Model
+    """Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same
     statistical model as discretemod.Poisson but adds offset
@@ -102,9 +103,9 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
     and all resulting statistics are based on numerical
     differentiation.
 
-    '''
+    """
 
-    def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
+    def __init__(self, endog, exog=None, offset=None, missing="none", **kwds):
         # let them be none in case user wants to use inheritance
         if offset is not None:
             if offset.ndim == 1:
@@ -144,7 +145,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
 
 class PoissonZiGMLE(GenericLikelihoodModel):
-    '''Maximum Likelihood Estimation of Poisson Model
+    """Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same statistical model
     as discretemod.Poisson but adds offset and zero-inflation.
@@ -156,9 +157,9 @@ class PoissonZiGMLE(GenericLikelihoodModel):
 
     There are numerical problems if there is no zero-inflation.
 
-    '''
+    """
 
-    def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
+    def __init__(self, endog, exog=None, offset=None, missing="none", **kwds):
         # let them be none in case user wants to use inheritance
         self.k_extra = 1
         super().__init__(
@@ -179,7 +180,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         self.start_params = np.hstack((np.ones(self.nparams), 0))
         # need to add zi params to nparams
         self.nparams += 1
-        self.cloneattr = ['start_params']
+        self.cloneattr = ["start_params"]
         # needed for t_test and summary
         # Note: no added to super __init__ which also adjusts df_resid
         # self.exog_names.append('zi')

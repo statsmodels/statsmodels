@@ -57,9 +57,9 @@ def mixture_rvs(prob, size, dist, kwargs=None):
     for i in range(len(prob)):
         sample_idx = idx[..., i]
         sample_size = sample_idx.sum()
-        loc = kwargs[i].get('loc', 0)
-        scale = kwargs[i].get('scale', 1)
-        args = kwargs[i].get('args', ())
+        loc = kwargs[i].get("loc", 0)
+        scale = kwargs[i].get("scale", 1)
+        args = kwargs[i].get("args", ())
         sample[sample_idx] = dist[i].rvs(
             *args, **dict(loc=loc, scale=scale, size=sample_size)
         )
@@ -67,14 +67,14 @@ def mixture_rvs(prob, size, dist, kwargs=None):
 
 
 class MixtureDistribution:
-    '''univariate mixture distribution
+    """univariate mixture distribution
 
     for simple case for now (unbound support)
     does not yet inherit from scipy.stats.distributions
 
     adding pdf to mixture_rvs, some restrictions on broadcasting
     Currently it does not hold any state, all arguments included in each method.
-    '''
+    """
 
     # def __init__(self, prob, size, dist, kwargs=None):
 
@@ -122,9 +122,9 @@ class MixtureDistribution:
             kwargs = ({},)*len(prob)
 
         for i in range(len(prob)):
-            loc = kwargs[i].get('loc', 0)
-            scale = kwargs[i].get('scale', 1)
-            args = kwargs[i].get('args', ())
+            loc = kwargs[i].get("loc", 0)
+            scale = kwargs[i].get("scale", 1)
+            args = kwargs[i].get("args", ())
             if i == 0:  # assume all broadcast the same as the first dist
                 pdf_ = prob[i] * dist[i].pdf(x, *args, loc=loc, scale=scale)
             else:
@@ -174,9 +174,9 @@ class MixtureDistribution:
             kwargs = ({},)*len(prob)
 
         for i in range(len(prob)):
-            loc = kwargs[i].get('loc', 0)
-            scale = kwargs[i].get('scale', 1)
-            args = kwargs[i].get('args', ())
+            loc = kwargs[i].get("loc", 0)
+            scale = kwargs[i].get("scale", 1)
+            args = kwargs[i].get("args", ())
             if i == 0:  # assume all broadcast the same as the first dist
                 cdf_ = prob[i] * dist[i].cdf(x, *args, loc=loc, scale=scale)
             else:

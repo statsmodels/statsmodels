@@ -518,7 +518,7 @@ class TestDetrend:
 
     def test_detrend_dataframe(self):
         columns = ["one", "two"]
-        index = [c for c in "abcde"]
+        index = list("abcde")
         data = pd.DataFrame(self.data_2d, columns=columns, index=index)
 
         detrended = tools.detrend(data, order=1, axis=0)
@@ -640,16 +640,16 @@ class TestAddTrend:
         expected = np.vstack((self.c, self.c, self.t)).T
         assert_equal(added, expected)
 
-        with pytest.raises(ValueError, match="x contains one or more constant "
-                           "columns. Column\\(s\\) col_1 are constant. Adding"
-                           " a constant with trend='c' is not allowed."):
+        with pytest.raises(ValueError, match=r"x contains one or more constant "
+                           r"columns. Column\(s\) col_1 are constant. Adding"
+                           r" a constant with trend='c' is not allowed."):
             add_trend_to = pd.DataFrame([self.t, self.c]).T
             add_trend_to.columns = ["col_0", "col_1"]
             tools.add_trend(x=add_trend_to, trend="c", has_constant="raise")
 
-        with pytest.raises(ValueError, match="x contains one or more constant "
-                           "columns. Column\\(s\\) 1 are constant. Adding"
-                           " a constant with trend='ct' is not allowed."):
+        with pytest.raises(ValueError, match=r"x contains one or more constant "
+                           r"columns. Column\(s\) 1 are constant. Adding"
+                           r" a constant with trend='ct' is not allowed."):
             add_trend_to = pd.DataFrame([self.t, self.c]).T
             tools.add_trend(x=add_trend_to, trend="ct", has_constant="raise")
 

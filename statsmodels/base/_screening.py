@@ -6,6 +6,7 @@ License: BSD-3
 """
 
 from collections import defaultdict
+
 import numpy as np
 
 from statsmodels.base._penalties import SCADSmoothed
@@ -142,15 +143,15 @@ class VariableScreening:
 
     def __init__(self, model, pen_weight=None, use_weights=True, k_add=30,
                  k_max_add=30, threshold_trim=1e-4, k_max_included=20,
-                 ranking_attr='resid_pearson', ranking_project=True):
+                 ranking_attr="resid_pearson", ranking_project=True):
 
         self.model = model
         self.model_class = model.__class__
         self.init_kwds = model._get_init_kwds()
         # pen_weight and penal are explicitly included
         # TODO: check what we want to do here
-        self.init_kwds.pop('pen_weight', None)
-        self.init_kwds.pop('penal', None)
+        self.init_kwds.pop("pen_weight", None)
+        self.init_kwds.pop("penal", None)
 
         self.endog = model.endog
         self.exog_keep = model.exog
@@ -187,7 +188,7 @@ class VariableScreening:
             ex_incl = res_pen.model.exog[:, keep]
             exog = exog - ex_incl.dot(np.linalg.pinv(ex_incl).dot(exog))
 
-        if self.ranking_attr == 'predicted_poisson':
+        if self.ranking_attr == "predicted_poisson":
             # I keep this for more experiments
 
             # TODO: does it really help to change/trim params
@@ -198,9 +199,9 @@ class VariableScreening:
             predicted = res_pen.model.predict(p)
             # this is currently hardcoded for Poisson
             resid_factor = (endog - predicted) / np.sqrt(predicted)
-        elif self.ranking_attr[:6] == 'model.':
+        elif self.ranking_attr[:6] == "model.":
             # use model method, this is intended for score_factor
-            attr = self.ranking_attr.split('.')[1]
+            attr = self.ranking_attr.split(".")[1]
             resid_factor = getattr(res_pen.model, attr)(res_pen.params)
             if resid_factor.ndim == 2:
                 # for score_factor when extra params are in model
@@ -212,7 +213,7 @@ class VariableScreening:
             mom_cond = np.abs(resid_factor.dot(exog))**2
         return mom_cond
 
-    def screen_exog(self, exog, endog=None, maxiter=100, method='bfgs',
+    def screen_exog(self, exog, endog=None, maxiter=100, method="bfgs",
                     disp=False, fit_kwds=None):
         """screen and select variables (columns) in exog
 
@@ -254,7 +255,7 @@ class VariableScreening:
         x = np.column_stack((x0, x1))
         nobs, k_vars = x.shape
         fkwds = fit_kwds if fit_kwds is not None else {}
-        fit_kwds = {'maxiter': 200, 'disp': False}
+        fit_kwds = {"maxiter": 200, "disp": False}
         fit_kwds.update(fkwds)
 
         history = defaultdict(list)
@@ -324,10 +325,10 @@ class VariableScreening:
             mask_excl = np.ones(k_vars, dtype=bool)
             mask_excl[idx_nonzero] = False
             idx_excl = np.nonzero(mask_excl)[0]
-            history['idx_nonzero'].append(idx_nonzero)
-            history['keep'].append(keep)
-            history['params_keep'].append(start_params)
-            history['idx_added'].append(idx)
+            history["idx_nonzero"].append(idx_nonzero)
+            history["keep"].append(keep)
+            history["params_keep"].append(start_params)
+            history["idx_added"].append(idx)
 
             if (len(idx_nonzero) == len(idx_old) and
                     (idx_nonzero == idx_old).all()):
@@ -355,7 +356,7 @@ class VariableScreening:
                                   warn_convergence=False,
                                   **fit_kwds)
         # set exog_names for final model
-        xnames = ['var%4d' % ii for ii in idx_nonzero]
+        xnames = ["var%4d" % ii for ii in idx_nonzero]
         res_final.model.exog_names[k_keep:] = xnames[k_keep:]
 
         res = ScreeningResults(self,
@@ -416,7 +417,7 @@ class VariableScreening:
         exog_winner = np.column_stack(exog_winner)
         res_screen_final = self.screen_exog(exog_winner, maxiter=20)
 
-        exog_winner_names = ['var%d_%d' % (bidx, idx)
+        exog_winner_names = ["var%d_%d" % (bidx, idx)
                              for bidx, batch in enumerate(exog_idx)
                              for idx in batch]
 
@@ -427,7 +428,7 @@ class VariableScreening:
         final_names = np.array(exog_winner_names)[ex_final_idx]
         res_screen_final.idx_nonzero_batches = np.array(idx_full)[ex_final_idx]
         res_screen_final.exog_final_names = final_names
-        history = {'idx_nonzero': res_idx,
-                   'idx_exog': exog_idx}
+        history = {"idx_nonzero": res_idx,
+                   "idx_exog": exog_idx}
         res_screen_final.history_batches = history
         return res_screen_final

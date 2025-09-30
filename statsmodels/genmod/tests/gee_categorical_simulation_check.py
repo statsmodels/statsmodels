@@ -7,13 +7,20 @@ See the generated file "gee_categorical_simulation_check.txt" for
 results.
 """
 from statsmodels.compat.python import lrange
+
 import numpy as np
 from scipy import stats
-from statsmodels.genmod.generalized_estimating_equations import GEE, \
-    gee_setup_ordinal, gee_setup_nominal, \
-    gee_ordinal_starting_values, Multinomial
-from statsmodels.genmod.families import Binomial
+
 from statsmodels.genmod.cov_struct import GlobalOddsRatio
+from statsmodels.genmod.families import Binomial
+from statsmodels.genmod.generalized_estimating_equations import (
+    GEE,
+    Multinomial,
+    gee_ordinal_starting_values,
+    gee_setup_nominal,
+    gee_setup_ordinal,
+)
+
 from .gee_gaussian_simulation_check import GEE_simulator
 
 
@@ -178,13 +185,13 @@ def gendat_nominal():
     return ns, va, Multinomial(3), (lhs, rhs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     nrep = 100
 
     OUT = open("gee_categorical_simulation_check.txt", "w", encoding="utf-8")
 
-    np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
                         suppress=True)
 
     # Loop over data generating models

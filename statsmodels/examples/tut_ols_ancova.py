@@ -33,9 +33,10 @@ strongly rejected because differences in intercept are very large
 
 """
 
-import numpy as np
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+import numpy as np
+
+import statsmodels.api as sm
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 # fix a seed for these examples

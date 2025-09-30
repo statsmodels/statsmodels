@@ -3,10 +3,10 @@
 
 import numpy as np
 import numpy.testing as npt
-from statsmodels.distributions.mixture_rvs import (mv_mixture_rvs,
-                                                   MixtureDistribution)
-import statsmodels.sandbox.distributions.mv_normal as mvd
 from scipy import stats
+
+from statsmodels.distributions.mixture_rvs import MixtureDistribution, mv_mixture_rvs
+import statsmodels.sandbox.distributions.mv_normal as mvd
 
 
 class TestMixtureDistributions:

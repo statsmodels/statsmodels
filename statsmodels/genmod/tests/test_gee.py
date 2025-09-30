@@ -24,12 +24,13 @@ import pandas as pd
 import pytest
 from scipy.stats.distributions import norm
 
+from statsmodels import tools
 from statsmodels.compat import lrange
 import statsmodels.discrete.discrete_model as discrete
 from statsmodels.genmod import cov_struct, families
 import statsmodels.genmod.generalized_estimating_equations as gee
 import statsmodels.regression.linear_model as lm
-import statsmodels.tools as tools
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 try:
     import matplotlib.pyplot as plt
@@ -728,19 +729,19 @@ class TestGEE:
         endog = exog_sub.sum(1) + 3 * np.random.normal(size=n)
 
         # Mismatched cov_struct
-        with pytest.warns(UserWarning):
-            mod_sub = gee.GEE(
-                endog, exog_sub, group, cov_struct=cov_struct.Exchangeable()
-            )
-            res_sub = mod_sub.fit()
-            mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
+        mod_sub = gee.GEE(
+            endog, exog_sub, group, cov_struct=cov_struct.Exchangeable()
+        )
+        res_sub = mod_sub.fit()
+        mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
+        with pytest.warns(UserWarning, match="Model and submodel have"):
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched family
-        with pytest.warns(UserWarning):
-            mod_sub = gee.GEE(endog, exog_sub, group, family=families.Gaussian())
-            res_sub = mod_sub.fit()
-            mod = gee.GEE(endog, exog, group, family=families.Poisson())
+        mod_sub = gee.GEE(endog, exog_sub, group, family=families.Gaussian())
+        res_sub = mod_sub.fit()
+        mod = gee.GEE(endog, exog, group, family=families.Poisson())
+        with pytest.warns(SpecificationWarning, match="Model and submodel have"):
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched size
@@ -751,19 +752,19 @@ class TestGEE:
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched weights
-        with pytest.warns(UserWarning):
-            w = np.random.uniform(size=n)
-            mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
-            res_sub = mod_sub.fit()
-            mod = gee.GEE(endog, exog, group)
+        w = np.random.uniform(size=n)
+        mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
+        res_sub = mod_sub.fit()
+        mod = gee.GEE(endog, exog, group)
+        with pytest.warns(SpecificationWarning, match="Model and submodel should"):
             mod.compare_score_test(res_sub)  # smoketest
 
         # Parent and submodel are the same dimension
-        with pytest.warns(UserWarning):
-            w = np.random.uniform(size=n)
-            mod_sub = gee.GEE(endog, exog, group)
-            res_sub = mod_sub.fit()
-            mod = gee.GEE(endog, exog, group)
+        w = np.random.uniform(size=n)
+        mod_sub = gee.GEE(endog, exog, group)
+        res_sub = mod_sub.fit()
+        mod = gee.GEE(endog, exog, group)
+        with pytest.warns(SpecificationWarning, match="Model and submodel have"):
             mod.compare_score_test(res_sub)  # smoketest
 
     def test_constraint_covtype(self):
@@ -2222,11 +2223,11 @@ def test_ql_diff(family):
 
 
 def test_qic_warnings():
-    with pytest.warns(UserWarning):
-        fam = families.Gaussian()
-        y, x1, _, g = simple_qic_data(fam)
-        model = gee.GEE(y, x1, family=fam, groups=g)
-        result = model.fit()
+    fam = families.Gaussian()
+    y, x1, _, g = simple_qic_data(fam)
+    model = gee.GEE(y, x1, family=fam, groups=g)
+    result = model.fit()
+    with pytest.warns(UserWarning, match="QIC values obtained using"):
         result.qic()
 
 

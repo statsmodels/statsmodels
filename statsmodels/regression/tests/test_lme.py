@@ -23,6 +23,7 @@ from statsmodels.regression.mixed_linear_model import (
     _smw_solver,
 )
 import statsmodels.tools.numdiff as nd
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 from .results import lme_r_results
 
@@ -171,7 +172,7 @@ class TestMixedLM:
             # See GH#5628; because this test fails unpredictably but only on
             #  OSX, we only xfail it there.
             if PLATFORM_OSX:
-                pytest.xfail("fails on OSX due to unresolved " "numerical differences")
+                pytest.xfail("fails on OSX due to unresolved numerical differences")
             else:
                 raise
 
@@ -1283,12 +1284,10 @@ def test_singular():
     df = pd.DataFrame(data, columns=["Y", "X"])
     df["class"] = pd.Series([i % 3 for i in df.index], index=df.index)
 
-    with pytest.warns(Warning) as wrn:
-        md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
+    md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
+    with pytest.warns(SingularMatrixWarning, match="The random effects covariance"):
         mdf = md.fit()
-        mdf.summary()
-        if not wrn:
-            pytest.fail("warning expected")
+    mdf.summary()
 
 
 def test_get_distribution():

@@ -4,7 +4,7 @@ Linear Algebra solvers and other helpers
 
 import numpy as np
 
-__all__ = ["logdet_symm", "stationary_solve", "transf_constraints", "matrix_sqrt"]
+__all__ = ["logdet_symm", "matrix_sqrt", "stationary_solve", "transf_constraints"]
 
 from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 

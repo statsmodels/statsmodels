@@ -16,7 +16,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.regression.linear_model import OLS
-import statsmodels.sandbox.regression.gmm as gmm
+from statsmodels.sandbox.regression import gmm
 from statsmodels.tools.tools import add_constant
 
 
@@ -971,9 +971,6 @@ class TestIV2SLSSt1(CheckIV2SLS):
     @classmethod
     def setup_class(cls):
         exog = exog_st  # with const at end
-        OLS(endog, exog).fit().params
-        nobs, k_instr = instrument.shape
-
         mod = gmm.IV2SLS(endog, exog, instrument)
         res = mod.fit()
         cls.res1 = res

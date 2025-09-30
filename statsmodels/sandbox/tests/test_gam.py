@@ -310,7 +310,7 @@ class TestGAMGamma(BaseGAM):
 
 
 @pytest.mark.xfail(
-    reason="Passing wrong number of args/kwargs " "to _parse_args_rvs",
+    reason="Passing wrong number of args/kwargs to _parse_args_rvs",
     strict=True,
     raises=TypeError,
 )
@@ -327,7 +327,7 @@ class TestGAMNegativeBinomial(BaseGAM):
         cls.init()
 
     @pytest.mark.xfail(
-        reason="Passing wrong number of args/kwargs " "to _parse_args_rvs",
+        reason="Passing wrong number of args/kwargs to _parse_args_rvs",
         strict=True,
         raises=TypeError,
     )
@@ -337,7 +337,7 @@ class TestGAMNegativeBinomial(BaseGAM):
         super().test_fitted()
 
     @pytest.mark.xfail(
-        reason="Passing wrong number of args/kwargs " "to _parse_args_rvs",
+        reason="Passing wrong number of args/kwargs to _parse_args_rvs",
         strict=True,
         raises=TypeError,
     )

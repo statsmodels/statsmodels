@@ -92,22 +92,21 @@ class CombineResults:
             if use_t is False:
                 crit = stats.norm.isf(alpha / 2)
                 self.ci_sample_distr = "normal"
+            elif nobs is not None:
+                df_resid = nobs - 1
+                crit = stats.t.isf(alpha / 2, df_resid)
+                self.ci_sample_distr = "t"
             else:
-                if nobs is not None:
-                    df_resid = nobs - 1
-                    crit = stats.t.isf(alpha / 2, df_resid)
-                    self.ci_sample_distr = "t"
-                else:
-                    msg = (
-                        "`use_t=True` requires `nobs` for each sample "
-                        "or `ci_func`. Using normal distribution for "
-                        "confidence interval of individual samples."
-                    )
-                    import warnings
+                msg = (
+                    "`use_t=True` requires `nobs` for each sample "
+                    "or `ci_func`. Using normal distribution for "
+                    "confidence interval of individual samples."
+                )
+                import warnings
 
-                    warnings.warn(msg, InvalidTestWarning, stacklevel=2)
-                    crit = stats.norm.isf(alpha / 2)
-                    self.ci_sample_distr = "normal"
+                warnings.warn(msg, InvalidTestWarning, stacklevel=2)
+                crit = stats.norm.isf(alpha / 2)
+                self.ci_sample_distr = "normal"
 
             # sgn = np.asarray([-1, 1])
             # ci_eff = self.eff + sgn * crit * self.sd_eff

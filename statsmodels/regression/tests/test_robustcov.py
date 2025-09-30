@@ -87,10 +87,9 @@ class CheckOLSRobust:
             # f-pvalue is not directly available in Stata results, but is in ivreg2
             if hasattr(res2, "Fp"):
                 assert_allclose(ft.pvalue, res2.Fp, rtol=rtol)
-        else:
-            if not getattr(self, "skip_f", False):
-                dof_corr = res1.df_resid * 1.0 / res1.nobs
-                assert_allclose(ft.fvalue * dof_corr, res2.F, rtol=rtol)
+        elif not getattr(self, "skip_f", False):
+            dof_corr = res1.df_resid * 1.0 / res1.nobs
+            assert_allclose(ft.fvalue * dof_corr, res2.F, rtol=rtol)
 
         if hasattr(res2, "df_r"):
             assert_equal(ft.df_num, res2.df_m)

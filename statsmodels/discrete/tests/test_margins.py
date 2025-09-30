@@ -84,7 +84,7 @@ class TestNegBinMargin(CheckMarginMixin):
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomial(endog, exog)
-        res = mod.fit(start_params=start_params, method='nm', maxiter=2000)
+        res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff()
         cls.res = res
         cls.margeff = marge
@@ -103,7 +103,7 @@ class TestNegBinMarginDummy(CheckMarginMixin):
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomial(endog, exog)
-        res = mod.fit(start_params=start_params, method='nm', maxiter=2000)
+        res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff(dummy=True)
         cls.res = res
         cls.margeff = marge
@@ -122,7 +122,7 @@ class TestNegBinPMargin(CheckMarginMixin):
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomialP(endog, exog)   # checks also that default p=2
-        res = mod.fit(start_params=start_params, method='nm', maxiter=2000)
+        res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff()
         cls.res = res
         cls.margeff = marge

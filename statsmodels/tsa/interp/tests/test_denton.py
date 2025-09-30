@@ -1,4 +1,5 @@
 import numpy as np
+
 from statsmodels.tsa.interp import dentonm
 
 
@@ -33,4 +34,4 @@ def test_denton_quarterly2():
 
 if __name__ == "__main__":
     import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
+    pytest.main([__file__, "-vvs", "-x", "--pdb"])

@@ -6,8 +6,8 @@ License: BSD-3
 """
 
 import numpy as np
-from statsmodels.tools.testing import Holder
 
+from statsmodels.tools.testing import Holder
 
 # > ccogk = CovOgk(hbk, control = CovControlOgk(beta=0.9, smrob="s_mad"))
 # > cat(convert(ccogk$cov, name="cov"))
@@ -17,7 +17,7 @@ cov = np.array([
     0.115486111111111, -0.0216666666666667, 0.139311111111111,
     0.115486111111111, 1.05683055555556, -0.1179, 0.0791333333333334,
     -0.0216666666666667, -0.1179, 0.305733333333333
-    ]).reshape(4, 4, order='F')
+    ]).reshape(4, 4, order="F")
 # > cat(convert(ccogk$center, name="center"))
 center = np.array([
     1.51333333333333, 1.80833333333333, 1.70166666666667, -0.06
@@ -31,7 +31,7 @@ cov_raw = np.array([
     -0.0993064484478497, 0.366369160423435, 0.136984423781046,
     1.48544656301605, 0.00519089032391373, 0.190853625223746,
     -0.0993064484478496, 0.00519089032391377, 0.50256738790616
-    ]).reshape(4, 4, order='F')
+    ]).reshape(4, 4, order="F")
 # > cat(convert(ccogk$raw.center, name="center_raw"))
 center_raw = np.array([
     1.31579959868769, 2.20579763353799, 2.21911403105542, 0.00899362163513043
@@ -80,7 +80,7 @@ cov = np.array([
     0.178466666666667, 1.02606666666667, -0.126633333333333,
     0.0748888888888889, 0.0199555555555556, -0.126633333333333,
     0.307155555555555
-    ]).reshape(4, 4, order='F')
+    ]).reshape(4, 4, order="F")
 # > cat(convert(ccogk$center, name="center"))
 center = np.array([
     1.55833333333333, 1.80333333333333, 1.66, -0.0866666666666667
@@ -92,7 +92,7 @@ cov_raw = np.array([
     0.0184287391597945, 0.236094218667106, 0.374939637956948,
     1.47721455029234, 0.083480499238493, 0.237198197389775,
     0.0184287391597945, 0.083480499238493, 0.347944274344394
-    ]).reshape(4, 4, order='F')
+    ]).reshape(4, 4, order="F")
 # > cat(convert(ccogk$raw.center, name="center_raw"))
 center_raw = np.array([
     1.568388618305, 1.81083915058248, 1.91970363122717, -0.1005398925951

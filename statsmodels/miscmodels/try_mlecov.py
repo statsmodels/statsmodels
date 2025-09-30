@@ -1,9 +1,9 @@
-'''Multivariate Normal Model with full covariance matrix
+"""Multivariate Normal Model with full covariance matrix
 
 toeplitz structure is not exploited, need cholesky or inv for toeplitz
 
 Author: josef-pktd
-'''
+"""
 
 import numpy as np
 from scipy import linalg
@@ -19,11 +19,11 @@ from statsmodels.tsa.arima_process import (
 
 
 def mvn_loglike_sum(x, sigma):
-    '''loglike multivariate normal
+    """loglike multivariate normal
 
     copied from GLS and adjusted names
     not sure why this differes from mvn_loglike
-    '''
+    """
     nobs = len(x)
     nobs2 = nobs / 2.0
     SSR = (x**2).sum()
@@ -36,14 +36,14 @@ def mvn_loglike_sum(x, sigma):
 
 
 def mvn_loglike(x, sigma):
-    '''loglike multivariate normal
+    """loglike multivariate normal
 
     assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs)
 
     brute force from formula
     no checking of correct inputs
     use of inv and log-det should be replace with something more efficient
-    '''
+    """
     # see numpy thread
     # Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
     sigmainv = linalg.inv(sigma)
@@ -58,14 +58,14 @@ def mvn_loglike(x, sigma):
 
 
 def mvn_loglike_chol(x, sigma):
-    '''loglike multivariate normal
+    """loglike multivariate normal
 
     assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs)
 
     brute force from formula
     no checking of correct inputs
     use of inv and log-det should be replace with something more efficient
-    '''
+    """
     # see numpy thread
     # Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
     sigmainv = np.linalg.inv(sigma)
@@ -75,7 +75,7 @@ def mvn_loglike_chol(x, sigma):
     logdetsigma = np.log(np.linalg.det(sigma))
     nobs = len(x)
     from scipy import stats
-    print('scipy.stats')
+    print("scipy.stats")
     print(np.log(stats.norm.pdf(x_whitened)).sum())
 
     llf = - np.dot(x_whitened.T, x_whitened)
@@ -135,7 +135,7 @@ def getpoly(self, params):
 
 
 class MLEGLS(GenericLikelihoodModel):
-    '''ARMA model with exact loglikelhood for short time series
+    """ARMA model with exact loglikelhood for short time series
 
     Inverts (nobs, nobs) matrix, use only for nobs <= 200 or so.
 
@@ -148,14 +148,14 @@ class MLEGLS(GenericLikelihoodModel):
     This might be missing the error variance. Does it assume error is
        distributed N(0,1)
     Maybe extend to mean handling, or assume it is already removed.
-    '''
+    """
 
     def _params2cov(self, params, nobs):
-        '''get autocovariance matrix from ARMA regression parameter
+        """get autocovariance matrix from ARMA regression parameter
 
         ar parameters are assumed to have rhs parameterization
 
-        '''
+        """
         ar = np.r_[[1], -params[:self.nar]]
         ma = np.r_[[1], params[-self.nma:]]
         # print('ar', ar
@@ -187,7 +187,7 @@ class MLEGLS(GenericLikelihoodModel):
         return res
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     nobs = 50
     ar = [1.0, -0.8, 0.1]
     ma = [1.0,  0.1,  0.2]
@@ -199,7 +199,7 @@ if __name__ == '__main__':
     mod.nar, mod.nma = 2, 2   # needs to be added, no init method
     mod.nobs = len(y)
     res = mod.fit(start_params=[0.1, -0.8, 0.2, 0.1, 1.])
-    print('DGP', ar, ma)
+    print("DGP", ar, ma)
     print(res.params)
     from statsmodels.regression import yule_walker
     print(yule_walker(y, 2))

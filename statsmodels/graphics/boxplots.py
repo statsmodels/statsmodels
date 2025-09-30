@@ -8,7 +8,7 @@ from scipy.stats import gaussian_kde
 
 from . import utils
 
-__all__ = ["violinplot", "beanplot"]
+__all__ = ["beanplot", "violinplot"]
 
 
 def violinplot(
@@ -241,8 +241,6 @@ def _set_ticks_labels(ax, data, labels, positions, plot_opts):
 
         if label_rotation:
             setp(xticknames, rotation=label_rotation)
-
-    return
 
 
 def beanplot(

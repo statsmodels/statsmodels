@@ -1084,7 +1084,7 @@ def test_conf_int_single_regressor():
     res = OLS(y, x).fit()
     conf_int = res.conf_int()
     np.testing.assert_equal(conf_int.shape, (1, 2))
-    np.testing.assert_(isinstance(conf_int, pd.DataFrame))
+    assert isinstance(conf_int, pd.DataFrame)
 
 
 def test_summary_as_latex():
@@ -1097,7 +1097,7 @@ def test_summary_as_latex():
     y = dta.endog
     res = OLS(y, x).fit()
     if SP_LT_116:
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match=r".*kurtosistest.*"):
             table = res.summary().as_latex()
     else:
         table = res.summary().as_latex()

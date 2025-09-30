@@ -6,8 +6,9 @@ Notes
 These functions have not been formally tested.
 """
 
-from scipy import stats
 import numpy as np
+from scipy import stats
+
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 
@@ -72,7 +73,7 @@ def omni_normtest(resids, axis=0):
     if n < 8:
         from warnings import warn
         warn("omni_normtest is not valid with less than 8 observations; %i "
-             "samples were given." % int(n), ValueWarning)
+             "samples were given." % int(n), ValueWarning, stacklevel=2)
         return np.nan, np.nan
 
     return stats.normaltest(resids, axis=axis)

@@ -141,7 +141,7 @@ class HoldIt:
             txt.append(f"{prefix}comment = '{comment}'")
 
         for x in what:
-            txt.append(f"{prefix}{x} = {repr(getattr(self, x))}")
+            txt.append(f"{prefix}{x} = {getattr(self, x)!r}")
         txt.extend(["", ""])  # add empty lines at end
         if filename is not None:
             with open(filename, "a+", encoding="utf-8") as fd:
@@ -200,7 +200,7 @@ def generate_armarep(filen="testsave.py"):
         header=False,
         comment=(
             "''mlab.garchma(-res_armarep.ar[1:], res_armarep.ma[1:], 20)\n"
-            + "mlab.garchar(-res_armarep.ar[1:], res_armarep.ma[1:], 20)''"
+            "mlab.garchar(-res_armarep.ar[1:], res_armarep.ma[1:], 20)''"
         ),
     )
 

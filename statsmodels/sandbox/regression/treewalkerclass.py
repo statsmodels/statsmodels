@@ -506,7 +506,7 @@ if __name__ == "__main__":
     datadict = dict(
         zip(
             ["Air", "Train", "Bus", "Car"],
-            ["Airdata", "Traindata", "Busdata", "Cardata"],
+            ["Airdata", "Traindata", "Busdata", "Cardata"]
         )
     )
 
@@ -567,7 +567,7 @@ if __name__ == "__main__":
         "top": [],
     }
 
-    datadict2 = dict([i for i in zip("abcdefgh", lrange(8))])
+    datadict2 = dict(list(zip("abcdefgh", lrange(8))))
     datadict2.update(
         {"top": 1000, "B1": 100, "B2": 200, "B21": 21, "B22": 22, "B3": 300}
     )

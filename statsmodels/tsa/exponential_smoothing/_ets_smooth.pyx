@@ -2,9 +2,10 @@
 #cython: wraparound=False, boundscheck=False, cdivision=True, cpow=True
 
 from cpython cimport bool
-import numpy as np
-cimport numpy as np
 
+import numpy as np
+
+cimport numpy as np
 
 np.import_array()
 

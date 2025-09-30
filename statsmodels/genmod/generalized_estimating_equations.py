@@ -49,8 +49,8 @@ from statsmodels.discrete.discrete_margins import (
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.genmod import cov_struct as cov_structs, families
+from statsmodels.genmod.families import varfuncs
 from statsmodels.genmod.families.links import Link
-import statsmodels.genmod.families.varfuncs as varfuncs
 from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
@@ -99,7 +99,7 @@ class ParameterConstraint:
 
         if rhs.ndim > 1:
             raise ValueError(
-                "The right hand side of the constraint " "must be a vector."
+                "The right hand side of the constraint must be a vector."
             )
 
         if len(rhs) != lhs.shape[0]:
@@ -479,7 +479,7 @@ def _check_args(endog, exog, groups, time, offset, exposure):
 
     if endog.size != exog.shape[0]:
         raise ValueError(
-            "Leading dimension of 'exog' should match " "length of 'endog'"
+            "Leading dimension of 'exog' should match length of 'endog'"
         )
 
     if groups.size != endog.size:
@@ -607,19 +607,17 @@ class GEE(GLM):
         # Handle the family argument
         if family is None:
             family = families.Gaussian()
-        else:
-            if not issubclass(family.__class__, families.Family):
-                raise ValueError("GEE: `family` must be a genmod " "family instance")
+        elif not issubclass(family.__class__, families.Family):
+            raise ValueError("GEE: `family` must be a genmod family instance")
         self.family = family
 
         # Handle the cov_struct argument
         if cov_struct is None:
             cov_struct = cov_structs.Independence()
-        else:
-            if not issubclass(cov_struct.__class__, cov_structs.CovStruct):
-                raise ValueError(
-                    "GEE: `cov_struct` must be a genmod " "cov_struct instance"
-                )
+        elif not issubclass(cov_struct.__class__, cov_structs.CovStruct):
+            raise ValueError(
+                "GEE: `cov_struct` must be a genmod cov_struct instance"
+            )
 
         self.cov_struct = cov_struct
 
@@ -896,7 +894,7 @@ class GEE(GLM):
             warnings.warn(msg, SpecificationWarning, stacklevel=2)
         if not isinstance(self.cov_struct, type(submod.cov_struct)):
             warnings.warn(
-                "Model and submodel have different GEE covariance " "structures.",
+                "Model and submodel have different GEE covariance structures.",
                 SpecificationWarning,
                 stacklevel=2,
             )
@@ -1402,7 +1400,7 @@ class GEE(GLM):
         bcov, ncov, _ = self._covmat()
         if bcov is None:
             warnings.warn(
-                "Estimated covariance structure for GEE " "estimates is singular",
+                "Estimated covariance structure for GEE estimates is singular",
                 ConvergenceWarning,
                 stacklevel=2,
             )
@@ -1416,7 +1414,7 @@ class GEE(GLM):
             mean_params, bcov = self._handle_constraint(mean_params, bcov)
             if mean_params is None:
                 warnings.warn(
-                    "Unable to estimate constrained GEE " "parameters.",
+                    "Unable to estimate constrained GEE parameters.",
                     ConvergenceWarning,
                     stacklevel=2,
                 )
@@ -1425,7 +1423,7 @@ class GEE(GLM):
             y, ncov = self._handle_constraint(x, ncov)
             if y is None:
                 warnings.warn(
-                    "Unable to estimate constrained GEE " "parameters.",
+                    "Unable to estimate constrained GEE parameters.",
                     ConvergenceWarning,
                     stacklevel=2,
                 )
@@ -1435,7 +1433,7 @@ class GEE(GLM):
                 y, bc_cov = self._handle_constraint(x, bc_cov)
                 if x is None:
                     warnings.warn(
-                        "Unable to estimate constrained GEE " "parameters.",
+                        "Unable to estimate constrained GEE parameters.",
                         ConvergenceWarning,
                         stacklevel=2,
                     )
@@ -1948,12 +1946,11 @@ class GEEResults(GLMResults):
                 cov = self.cov_robust_bc
 
             self.cov_params_default = cov
-        else:
-            if self.cov_type != cov_type:
-                raise ValueError(
-                    "cov_type in argument is different from "
-                    "already attached cov_type"
-                )
+        elif self.cov_type != cov_type:
+            raise ValueError(
+                "cov_type in argument is different from "
+                "already attached cov_type"
+            )
 
     @cache_readonly
     def resid(self):
@@ -2526,9 +2523,8 @@ class OrdinalGEE(GEE):
 
         if family is None:
             family = families.Binomial()
-        else:
-            if not isinstance(family, families.Binomial):
-                raise ValueError("ordinal GEE must use a Binomial family")
+        elif not isinstance(family, families.Binomial):
+            raise ValueError("ordinal GEE must use a Binomial family")
 
         if cov_struct is None:
             cov_struct = cov_structs.OrdinalIndependence()

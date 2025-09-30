@@ -47,13 +47,13 @@ def _next_regular(target):
             p35 *= 3
             if p35 == target:
                 return p35
-        if p35 < match:
-            match = p35
+        # if p35 < match: match = p35
+        match = min(p35, match)
         p5 *= 5
         if p5 == target:
             return p5
-    if p5 < match:
-        match = p5
+    #  if p5 < match: match = p5
+    match = min(match, p5)
     return match
 
 
@@ -70,9 +70,9 @@ def _valarray(shape, value=np.nan, typecode=None):
 
 if SP_LT_16:
     # copied from scipy, added to scipy in 1.6.0
-    from ._scipy_multivariate_t import multivariate_t  # noqa: F401
+    from ._scipy_multivariate_t import multivariate_t
 else:
-    from scipy.stats import multivariate_t  # noqa: F401
+    from scipy.stats import multivariate_t
 
 
 def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
@@ -133,3 +133,17 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
         from scipy._lib._util import _lazywhere
 
         return _lazywhere(cond, args, f1, fill_value, f2)
+
+
+__all__ = [
+    "SCIPY_GT_14",
+    "SP_LT_15",
+    "SP_LT_16",
+    "SP_LT_17",
+    "SP_LT_19",
+    "SP_LT_115",
+    "SP_LT_116",
+    "SP_VERSION",
+    "apply_where",
+    "multivariate_t",
+]

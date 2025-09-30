@@ -8,15 +8,14 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose
-from statsmodels.regression.linear_model import WLS
 
-from statsmodels.tools.tools import add_constant
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
-from statsmodels.regression._prediction import get_prediction
 from statsmodels.genmod._prediction import params_transform_univariate
-from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import links
-
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.regression._prediction import get_prediction
+from statsmodels.regression.linear_model import WLS
+from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.tools.tools import add_constant
 
 # from example wls.py
 

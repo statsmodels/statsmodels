@@ -6,11 +6,12 @@ from a mixture of gaussians. Distribution has been chosen to be reasoanbly close
 to normal.
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
-import matplotlib.pyplot as plt
-import statsmodels.nonparametric.api as npar
+
 from statsmodels.distributions.mixture_rvs import mixture_rvs
+import statsmodels.nonparametric.api as npar
 
 # example from test_kde.py mixture of two normal distributions
 np.random.seed(12345)

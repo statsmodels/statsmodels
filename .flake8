@@ -1,6 +1,10 @@
 [flake8]
 exclude = .git,build,docs,archive
 max-line-length = 88
+extend-select =
+    B904,
+    # B905, # Enable when Python 3.10 is the minimum
+
 extend-ignore =
     # Required to allow black formatting
     E203,
@@ -9,3 +13,10 @@ extend-ignore =
     # E501: Line too long (### > 88 characters) (Needed for black)
     E701,
     # E701: Multiple statements on one line (colon) (Needed for black)
+
+per-file-ignores =
+    statsmodels/examples/tests/test_notebooks.py: F401
+    statsmodels/discrete/tests/results/results_predict.py: E131, E251
+    statsmodels/discrete/tests/results/results_truncated_st.py: E131, E251
+    statsmodels/treatment/tests/results/results_teffects.py: E124, E128, E131
+

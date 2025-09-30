@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_, assert_allclose
+from numpy.testing import assert_allclose
 import pytest
 
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import (
@@ -18,7 +18,7 @@ from statsmodels.tsa.statespace import sarimax
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.1.5 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.1.5 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_515():
     # Difference and demean the series
@@ -105,7 +105,7 @@ def test_innovations_ma_invalid():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.2.4 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.2.4 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_524():
     # Difference and demean the series
@@ -123,10 +123,10 @@ def test_brockwell_davis_example_524():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.2.4 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.2.4 in Brockwell and Davis (2016)"
 )
 @pytest.mark.xfail(
-    reason="Suspicious result reported in Brockwell and Davis" " (2016)."
+    reason="Suspicious result reported in Brockwell and Davis (2016)."
 )
 def test_brockwell_davis_example_524_variance():
     # See `test_brockwell_davis_example_524` for the main test
@@ -150,7 +150,7 @@ def test_brockwell_davis_example_524_variance():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.2.5 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.2.5 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_525():
     # Difference and demean the series
@@ -173,7 +173,7 @@ def test_brockwell_davis_example_525():
 
 
 @pytest.mark.low_precision(
-    "Test against Example 5.4.1 in Brockwell and Davis" " (2016)"
+    "Test against Example 5.4.1 in Brockwell and Davis (2016)"
 )
 def test_brockwell_davis_example_541():
     # Difference and demean the series
@@ -306,7 +306,7 @@ def test_innovations_mle_integrated():
     endog = np.r_[0, np.cumsum(lake.copy())]
 
     start_params = [0, np.var(lake.copy())]
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Provided `endog` series"):
         p, mleres = innovations_mle(
             endog, order=(1, 1, 0), demean=False, start_params=start_params
         )
@@ -345,14 +345,14 @@ def test_innovations_mle_misc():
     # Check that when Hannan-Rissanen estimates non-stationary starting
     # parameters, innovations_mle sets it to zero
     hr, _ = hannan_rissanen(endog, ar_order=1, demean=False)
-    assert_(hr.ar_params[0] > 1)
+    assert (hr.ar_params[0] > 1)
     _, res = innovations_mle(endog, order=(1, 0, 0))
     assert_allclose(res.start_params[0], 0)
 
     # Check that when Hannan-Rissanen estimates non-invertible starting
     # parameters, innovations_mle sets it to zero
     hr, _ = hannan_rissanen(endog, ma_order=1, demean=False)
-    assert_(hr.ma_params[0] > 1)
+    assert (hr.ma_params[0] > 1)
     _, res = innovations_mle(endog, order=(0, 0, 1))
     assert_allclose(res.start_params[0], 0)
 

@@ -1,13 +1,13 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.testing import assert_almost_equal
-import matplotlib.pyplot as plt
+
+from statsmodels.miscmodels.tmodel import TArma
 import statsmodels.sandbox.tsa.fftarma as fa
-from statsmodels.tsa.descriptivestats import TsaDescriptive
-from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import ARMA
 from statsmodels.tsa.arima_process import arma_generate_sample
-from statsmodels.miscmodels.tmodel import TArma
-
+from statsmodels.tsa.arma_mle import Arma
+from statsmodels.tsa.descriptivestats import TsaDescriptive
 
 x = fa.ArmaFft([1, -0.5], [1.0, 0.4], 40).generate_sample(size=200, burnin=1000)
 d = TsaDescriptive(x)

@@ -225,7 +225,7 @@ class Independence(CovStruct):
         return rslt
 
     def summary(self):
-        return "Observations within a cluster are modeled " "as being independent."
+        return "Observations within a cluster are modeled as being independent."
 
 
 class Unstructured(CovStruct):
@@ -1414,7 +1414,7 @@ class Equivalence(CovStruct):
 
         if (pairs is not None) and (labels is not None):
             raise ValueError(
-                "Equivalence cov_struct accepts only one of `pairs` " "and `labels`"
+                "Equivalence cov_struct accepts only one of `pairs` and `labels`"
             )
 
         if pairs is not None:

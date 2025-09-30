@@ -105,7 +105,7 @@ class CountDiagnostic:
             kwds["y_values"] = np.arange(bin_edges[-2] + 1)
         probs = self.results.predict(which="prob", **kwds)
         res = test_chisquare_prob(
-            self.results, probs, bin_edges=bin_edges, method=method
+            self.results, probs, bin_edges=bin_edges
         )
         return res
 

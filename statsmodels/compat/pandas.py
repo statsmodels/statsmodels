@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Mapping, Optional, TypeVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, TypeVar
+
 import numpy as np
 from packaging.version import Version, parse
 import pandas as pd
@@ -21,32 +22,32 @@ if TYPE_CHECKING:
 FuncType: TypeAlias = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 __all__ = [
+    "FUTURE_STACK",
+    "MONTH_END",
+    "PD_LT_1_0_0",
+    "PD_LT_1_4",
+    "PD_LT_2",
+    "PD_LT_3",
+    "QUARTER_END",
+    "YEAR_END",
+    "Appender",
+    "Substitution",
     "assert_frame_equal",
     "assert_index_equal",
     "assert_series_equal",
-    "data_klasses",
-    "frequencies",
-    "is_numeric_dtype",
-    "testing",
     "cache_readonly",
-    "deprecate_kwarg",
-    "Appender",
-    "Substitution",
-    "is_int_index",
-    "is_float_index",
-    "make_dataframe",
-    "to_numpy",
-    "PD_LT_1_0_0",
-    "get_cached_func",
-    "get_cached_doc",
     "call_cached_func",
-    "PD_LT_1_4",
-    "PD_LT_2",
-    "MONTH_END",
-    "QUARTER_END",
-    "YEAR_END",
-    "FUTURE_STACK",
-    "PD_LT_3",
+    "data_klasses",
+    "deprecate_kwarg",
+    "frequencies",
+    "get_cached_doc",
+    "get_cached_func",
+    "is_float_index",
+    "is_int_index",
+    "is_numeric_dtype",
+    "make_dataframe",
+    "testing",
+    "to_numpy",
 ]
 
 version = parse(pd.__version__)
@@ -71,9 +72,9 @@ except ImportError:
 data_klasses = (pd.Series, pd.DataFrame)
 
 try:
-    import pandas.testing as testing
+    from pandas import testing
 except ImportError:
-    import pandas.util.testing as testing
+    from pandas.util import testing
 
 assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal

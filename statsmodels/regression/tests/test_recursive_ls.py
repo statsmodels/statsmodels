@@ -143,12 +143,14 @@ def test_ols():
     assert_allclose(actual_bic, res_ols.bic)
 
 
-def test_glm(constraints=None):
+@pytest.mark.parametrize("constraints", [None, "m1 + unemp = 1"], ids=["No constraint", "Constrained"])
+def test_glm(constraints):
     # More comprehensive tests against GLM estimates (this is sort of redundant
     # given `test_ols`, but this is mostly to complement the tests in
     # `test_glm_constrained`)
     endog = dta.infl
     exog = add_constant(dta[["unemp", "m1"]])
+    constraints = None
 
     mod = RecursiveLS(endog, exog, constraints=constraints)
     res = mod.fit()
@@ -236,10 +238,6 @@ def test_glm(constraints=None):
     # See gh#1733 for details on why the BIC does not match while AIC does
     # actual_bic = bic(llf_alternative, res.nobs_effective, res.df_model)
     # assert_allclose(actual_bic, res_glm.bic)
-
-
-def test_glm_constrained():
-    test_glm(constraints="m1 + unemp = 1")
 
 
 def test_filter():
@@ -431,7 +429,7 @@ def test_cusum():
 def test_stata():
     # Test the cusum and cusumsq statistics against Stata (cusum6)
     mod = RecursiveLS(endog, exog, loglikelihood_burn=3)
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Care should be used when applying"):
         res = mod.fit()
     d = max(res.nobs_diffuse, res.loglikelihood_burn)
 
@@ -540,12 +538,12 @@ def test_multiple_constraints():
 def test_fix_params():
     mod = RecursiveLS([0, 1, 0, 1], [1, 1, 1, 1])
     with pytest.raises(
-        ValueError, match=("Linear constraints on coefficients" " should be given")
+        ValueError, match=("Linear constraints on coefficients should be given")
     ):
         with mod.fix_params({"const": 0.1}):
             mod.fit()
 
     with pytest.raises(
-        ValueError, match=("Linear constraints on coefficients" " should be given")
+        ValueError, match=("Linear constraints on coefficients should be given")
     ):
         mod.fit_constrained({"const": 0.1})

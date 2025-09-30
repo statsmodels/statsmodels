@@ -21,14 +21,22 @@ cdef int SMOOTH_ALTERNATIVE
 cdef int SMOOTH_UNIVARIATE
 
 # Typical imports
+
 cimport numpy as np
 
-from statsmodels.tsa.statespace._representation cimport (
-    sStatespace, dStatespace, cStatespace, zStatespace
-)
 from statsmodels.tsa.statespace._kalman_filter cimport (
-    sKalmanFilter, dKalmanFilter, cKalmanFilter, zKalmanFilter
+    cKalmanFilter,
+    dKalmanFilter,
+    sKalmanFilter,
+    zKalmanFilter,
 )
+from statsmodels.tsa.statespace._representation cimport (
+    cStatespace,
+    dStatespace,
+    sStatespace,
+    zStatespace,
+)
+
 
 # Single precision
 cdef class sKalmanSmoother(object):

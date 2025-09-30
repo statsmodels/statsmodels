@@ -1,4 +1,5 @@
 from statsmodels.compat.platform import PLATFORM_LINUX32
+from statsmodels.compat.scipy import SP_LT_116
 
 import numpy as np
 from numpy.testing import (
@@ -12,7 +13,6 @@ import pytest
 
 import statsmodels.api as sm
 
-from ...compat.scipy import SP_LT_116
 from .results.results_discrete import RandHIE
 from .test_discrete import CheckModelMixin
 
@@ -62,7 +62,7 @@ class CheckGeneric(CheckModelMixin):
 
     def test_null(self):
         # call llnull, so null model is attached, side effect of cached attribute
-        self.res1.llnull
+        assert isinstance(self.res1.llnull, float)
         # check model instead of value
         exog_null = self.res1.res_null.model.exog
         exog_infl_null = self.res1.res_null.model.exog_infl

@@ -7,8 +7,7 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
-from statsmodels.stats.gof import (chisquare, chisquare_power,
-                                   chisquare_effectsize)
+from statsmodels.stats.gof import chisquare, chisquare_effectsize, chisquare_power
 from statsmodels.tools.testing import Holder
 
 
@@ -33,8 +32,8 @@ def test_chisquare():
     res1.statistic = 2.084086388178453
     res1.parameter = 4
     res1.p_value = 0.72029651761105
-    res1.method = 'Chi-squared test for given probabilities'
-    res1.data_name = 'freq'
+    res1.method = "Chi-squared test for given probabilities"
+    res1.data_name = "freq"
     res1.observed = np.array([
          1048, 660, 510, 420, 362
         ])
@@ -51,8 +50,8 @@ def test_chisquare():
     res2.statistic = 0.01492063492063492
     res2.parameter = 4
     res2.p_value = 0.999972309849908
-    res2.method = 'Chi-squared test for given probabilities'
-    res2.data_name = 'freq'
+    res2.method = "Chi-squared test for given probabilities"
+    res2.data_name = "freq"
     res2.observed = np.array([
          1048, 660, 510, 420, 362
         ])

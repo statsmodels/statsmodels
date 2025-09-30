@@ -1,4 +1,4 @@
-import matplotlib.lines as lines
+from matplotlib import lines
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,14 +9,14 @@ def tukeyplot(results, dim=None, yticklabels=None):
     fig = plt.figure()
     fsp = fig.add_subplot(111)
     fsp.axis([-50, 50, 0.5, 10.5])
-    fsp.set_title('95 % family-wise confidence level')
+    fsp.set_title("95 % family-wise confidence level")
     fsp.title.set_y(1.025)
     fsp.set_yticks(np.arange(1, 11))
-    fsp.set_yticklabels(['V-T', 'V-S', 'T-S', 'V-P', 'T-P', 'S-P', 'V-M',
-                         'T-M', 'S-M', 'P-M'])
+    fsp.set_yticklabels(["V-T", "V-S", "T-S", "V-P", "T-P", "S-P", "V-M",
+                         "T-M", "S-M", "P-M"])
     # fsp.yaxis.set_major_locator(mticker.MaxNLocator(npairs))
-    fsp.yaxis.grid(True, linestyle='-', color='gray')
-    fsp.set_xlabel('Differences in mean levels of Var', labelpad=8)
+    fsp.yaxis.grid(True, linestyle="-", color="gray")
+    fsp.set_xlabel("Differences in mean levels of Var", labelpad=8)
     fsp.xaxis.tick_bottom()
     fsp.yaxis.tick_left()
 
@@ -68,7 +68,7 @@ def tukeyplot(results, dim=None, yticklabels=None):
     #    l = plt.plot(data, [npairs-pair]*len(data), color='black',
     #                linewidth=.5, marker="|", markevery=1)
 
-    fsp.axvline(x=0, linestyle="--", color='black')
+    fsp.axvline(x=0, linestyle="--", color="black")
 
     fig.subplots_adjust(bottom=.125)
 

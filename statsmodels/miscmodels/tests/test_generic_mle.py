@@ -7,22 +7,21 @@ Author: Josef Perktold
 
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_almost_equal, assert_array_less
 from scipy import stats
-from statsmodels.base.model import GenericLikelihoodModel
 
-from numpy.testing import (assert_array_less, assert_almost_equal,
-                           assert_allclose)
+from statsmodels.base.model import GenericLikelihoodModel
 
 
 class MyPareto(GenericLikelihoodModel):
-    '''Maximum Likelihood Estimation pareto distribution
+    """Maximum Likelihood Estimation pareto distribution
 
     first version: iid case, with constant parameters
-    '''
+    """
 
     def initialize(self):   # TODO needed or not
         super().initialize()
-        extra_params_names = ['shape', 'loc', 'scale']
+        extra_params_names = ["shape", "loc", "scale"]
         self._set_extra_params_names(extra_params_names)
 
         # start_params needs to be attribute
@@ -66,14 +65,14 @@ class CheckGenericMixin:
 
     def test_summary(self):
         summ = self.res1.summary()
-        check_str = 'P>|t|' if self.res1.use_t else 'P>|z|'
+        check_str = "P>|t|" if self.res1.use_t else "P>|z|"
         assert check_str in str(summ)
 
     def test_use_t_summary(self):
         orig_val = self.res1.use_t
         self.res1.use_t = True
         summ = self.res1.summary()
-        assert 'P>|t|' in str(summ)
+        assert "P>|t|" in str(summ)
         self.res1.use_t = orig_val
 
     def test_ttest(self):
@@ -126,7 +125,7 @@ class TestMyPareto1(CheckGenericMixin):
         mod_par.df_model = 0
         mod_par.k_extra = k_extra = 3
         mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model - k_extra
-        mod_par.data.xnames = ['shape', 'loc', 'scale']
+        mod_par.data.xnames = ["shape", "loc", "scale"]
 
         cls.mod = mod_par
         cls.res1 = mod_par.fit(disp=None)
@@ -163,7 +162,7 @@ class TestMyParetoRestriction(CheckGenericMixin):
         mod_par.df_model = 0
         mod_par.k_extra = k_extra = 2
         mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model - k_extra
-        mod_par.data.xnames = ['shape', 'scale']
+        mod_par.data.xnames = ["shape", "scale"]
 
         cls.mod = mod_par
         cls.res1 = mod_par.fit(disp=None)
@@ -176,9 +175,9 @@ class TestMyParetoRestriction(CheckGenericMixin):
 class TwoPeakLLHNoExog(GenericLikelihoodModel):
     """Fit height of signal peak over background."""
     start_params = [10, 1000]
-    cloneattr = ['start_params', 'signal', 'background']
-    exog_names = ['n_signal', 'n_background']
-    endog_names = ['alpha']
+    cloneattr = ["start_params", "signal", "background"]
+    exog_names = ["n_signal", "n_background"]
+    endog_names = ["alpha"]
 
     def __init__(self, endog, exog=None, signal=None, background=None,
                  *args, **kwargs):

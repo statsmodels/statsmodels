@@ -4,117 +4,124 @@ Statespace Tools
 Author: Chad Fulton
 License: Simplified-BSD
 """
-import numpy as np
-from scipy.linalg import solve_sylvester
-import pandas as pd
-
 from statsmodels.compat.pandas import Appender
-from statsmodels.tools.data import _is_using_pandas
-from scipy.linalg.blas import find_best_blas_type
-from . import (_initialization, _representation, _kalman_filter,
-               _kalman_smoother, _simulation_smoother,
-               _cfa_simulation_smoother, _tools)
 
+import numpy as np
+import pandas as pd
+from scipy.linalg import solve_sylvester
+from scipy.linalg.blas import find_best_blas_type
+
+from statsmodels.tools.data import _is_using_pandas
+
+from . import (
+    _cfa_simulation_smoother,
+    _initialization,
+    _kalman_filter,
+    _kalman_smoother,
+    _representation,
+    _simulation_smoother,
+    _tools,
+)
 
 compatibility_mode = False
 has_trmm = True
 prefix_dtype_map = {
-    's': np.float32, 'd': np.float64, 'c': np.complex64, 'z': np.complex128
+    "s": np.float32, "d": np.float64, "c": np.complex64, "z": np.complex128
 }
 prefix_initialization_map = {
-    's': _initialization.sInitialization,
-    'd': _initialization.dInitialization,
-    'c': _initialization.cInitialization,
-    'z': _initialization.zInitialization
+    "s": _initialization.sInitialization,
+    "d": _initialization.dInitialization,
+    "c": _initialization.cInitialization,
+    "z": _initialization.zInitialization
 }
 prefix_statespace_map = {
-    's': _representation.sStatespace, 'd': _representation.dStatespace,
-    'c': _representation.cStatespace, 'z': _representation.zStatespace
+    "s": _representation.sStatespace, "d": _representation.dStatespace,
+    "c": _representation.cStatespace, "z": _representation.zStatespace
 }
 prefix_kalman_filter_map = {
-    's': _kalman_filter.sKalmanFilter,
-    'd': _kalman_filter.dKalmanFilter,
-    'c': _kalman_filter.cKalmanFilter,
-    'z': _kalman_filter.zKalmanFilter
+    "s": _kalman_filter.sKalmanFilter,
+    "d": _kalman_filter.dKalmanFilter,
+    "c": _kalman_filter.cKalmanFilter,
+    "z": _kalman_filter.zKalmanFilter
 }
 prefix_kalman_smoother_map = {
-    's': _kalman_smoother.sKalmanSmoother,
-    'd': _kalman_smoother.dKalmanSmoother,
-    'c': _kalman_smoother.cKalmanSmoother,
-    'z': _kalman_smoother.zKalmanSmoother
+    "s": _kalman_smoother.sKalmanSmoother,
+    "d": _kalman_smoother.dKalmanSmoother,
+    "c": _kalman_smoother.cKalmanSmoother,
+    "z": _kalman_smoother.zKalmanSmoother
 }
 prefix_simulation_smoother_map = {
-    's': _simulation_smoother.sSimulationSmoother,
-    'd': _simulation_smoother.dSimulationSmoother,
-    'c': _simulation_smoother.cSimulationSmoother,
-    'z': _simulation_smoother.zSimulationSmoother
+    "s": _simulation_smoother.sSimulationSmoother,
+    "d": _simulation_smoother.dSimulationSmoother,
+    "c": _simulation_smoother.cSimulationSmoother,
+    "z": _simulation_smoother.zSimulationSmoother
 }
 prefix_cfa_simulation_smoother_map = {
-    's': _cfa_simulation_smoother.sCFASimulationSmoother,
-    'd': _cfa_simulation_smoother.dCFASimulationSmoother,
-    'c': _cfa_simulation_smoother.cCFASimulationSmoother,
-    'z': _cfa_simulation_smoother.zCFASimulationSmoother
+    "s": _cfa_simulation_smoother.sCFASimulationSmoother,
+    "d": _cfa_simulation_smoother.dCFASimulationSmoother,
+    "c": _cfa_simulation_smoother.cCFASimulationSmoother,
+    "z": _cfa_simulation_smoother.zCFASimulationSmoother
 }
 prefix_pacf_map = {
-    's': _tools._scompute_coefficients_from_multivariate_pacf,
-    'd': _tools._dcompute_coefficients_from_multivariate_pacf,
-    'c': _tools._ccompute_coefficients_from_multivariate_pacf,
-    'z': _tools._zcompute_coefficients_from_multivariate_pacf
+    "s": _tools._scompute_coefficients_from_multivariate_pacf,
+    "d": _tools._dcompute_coefficients_from_multivariate_pacf,
+    "c": _tools._ccompute_coefficients_from_multivariate_pacf,
+    "z": _tools._zcompute_coefficients_from_multivariate_pacf
 }
 prefix_sv_map = {
-    's': _tools._sconstrain_sv_less_than_one,
-    'd': _tools._dconstrain_sv_less_than_one,
-    'c': _tools._cconstrain_sv_less_than_one,
-    'z': _tools._zconstrain_sv_less_than_one
+    "s": _tools._sconstrain_sv_less_than_one,
+    "d": _tools._dconstrain_sv_less_than_one,
+    "c": _tools._cconstrain_sv_less_than_one,
+    "z": _tools._zconstrain_sv_less_than_one
 }
 prefix_reorder_missing_matrix_map = {
-    's': _tools.sreorder_missing_matrix,
-    'd': _tools.dreorder_missing_matrix,
-    'c': _tools.creorder_missing_matrix,
-    'z': _tools.zreorder_missing_matrix
+    "s": _tools.sreorder_missing_matrix,
+    "d": _tools.dreorder_missing_matrix,
+    "c": _tools.creorder_missing_matrix,
+    "z": _tools.zreorder_missing_matrix
 }
 prefix_reorder_missing_vector_map = {
-    's': _tools.sreorder_missing_vector,
-    'd': _tools.dreorder_missing_vector,
-    'c': _tools.creorder_missing_vector,
-    'z': _tools.zreorder_missing_vector
+    "s": _tools.sreorder_missing_vector,
+    "d": _tools.dreorder_missing_vector,
+    "c": _tools.creorder_missing_vector,
+    "z": _tools.zreorder_missing_vector
 }
 prefix_copy_missing_matrix_map = {
-    's': _tools.scopy_missing_matrix,
-    'd': _tools.dcopy_missing_matrix,
-    'c': _tools.ccopy_missing_matrix,
-    'z': _tools.zcopy_missing_matrix
+    "s": _tools.scopy_missing_matrix,
+    "d": _tools.dcopy_missing_matrix,
+    "c": _tools.ccopy_missing_matrix,
+    "z": _tools.zcopy_missing_matrix
 }
 prefix_copy_missing_vector_map = {
-    's': _tools.scopy_missing_vector,
-    'd': _tools.dcopy_missing_vector,
-    'c': _tools.ccopy_missing_vector,
-    'z': _tools.zcopy_missing_vector
+    "s": _tools.scopy_missing_vector,
+    "d": _tools.dcopy_missing_vector,
+    "c": _tools.ccopy_missing_vector,
+    "z": _tools.zcopy_missing_vector
 }
 prefix_copy_index_matrix_map = {
-    's': _tools.scopy_index_matrix,
-    'd': _tools.dcopy_index_matrix,
-    'c': _tools.ccopy_index_matrix,
-    'z': _tools.zcopy_index_matrix
+    "s": _tools.scopy_index_matrix,
+    "d": _tools.dcopy_index_matrix,
+    "c": _tools.ccopy_index_matrix,
+    "z": _tools.zcopy_index_matrix
 }
 prefix_copy_index_vector_map = {
-    's': _tools.scopy_index_vector,
-    'd': _tools.dcopy_index_vector,
-    'c': _tools.ccopy_index_vector,
-    'z': _tools.zcopy_index_vector
+    "s": _tools.scopy_index_vector,
+    "d": _tools.dcopy_index_vector,
+    "c": _tools.ccopy_index_vector,
+    "z": _tools.zcopy_index_vector
 }
 prefix_compute_smoothed_state_weights_map = {
-    's': _tools._scompute_smoothed_state_weights,
-    'd': _tools._dcompute_smoothed_state_weights,
-    'c': _tools._ccompute_smoothed_state_weights,
-    'z': _tools._zcompute_smoothed_state_weights
+    "s": _tools._scompute_smoothed_state_weights,
+    "d": _tools._dcompute_smoothed_state_weights,
+    "c": _tools._ccompute_smoothed_state_weights,
+    "z": _tools._zcompute_smoothed_state_weights
 }
 
 
 def set_mode(compatibility=None):
     if compatibility:
-        raise NotImplementedError('Compatibility mode is only available in'
-                                  ' statsmodels <= 0.9')
+        raise NotImplementedError("Compatibility mode is only available in"
+                                  " statsmodels <= 0.9")
 
 
 def companion_matrix(polynomial):
@@ -320,8 +327,8 @@ def concat(series, axis=0, allow_mix=False):
     max_ndim = np.max(ndim)
 
     if max_ndim > 2:
-        raise ValueError('`tools.concat` does not support arrays with 3 or'
-                         ' more dimensions.')
+        raise ValueError("`tools.concat` does not support arrays with 3 or"
+                         " more dimensions.")
 
     # Make sure the iterable is mutable
     if isinstance(series, tuple):
@@ -358,17 +365,17 @@ def concat(series, axis=0, allow_mix=False):
                 s_columns = pd.Index([s.name])
 
             if axis == 0 and not base_columns.equals(s_columns):
-                raise ValueError('Columns must match to concatenate along'
-                                 ' rows.')
+                raise ValueError("Columns must match to concatenate along"
+                                 " rows.")
             elif axis == 1 and not series[0].index.equals(s.index):
-                raise ValueError('Index must match to concatenate along'
-                                 ' columns.')
+                raise ValueError("Index must match to concatenate along"
+                                 " columns.")
         concatenated = pd.concat(series, axis=axis)
     elif np.all(~is_pandas) or allow_mix:
         concatenated = np.concatenate(series, axis=axis)
     else:
-        raise ValueError('Attempted to concatenate Pandas objects with'
-                         ' non-Pandas objects with `allow_mix=False`.')
+        raise ValueError("Attempted to concatenate Pandas objects with"
+                         " non-Pandas objects with `allow_mix=False`.")
 
     return concatenated
 
@@ -690,7 +697,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
         forwards.append(
             linalg.solve_triangular(
                 backward_factors[s], partial_autocorrelations[s].T,
-                lower=True, trans='T'))
+                lower=True, trans="T"))
         forwards[0] = np.dot(forward_factors[s], forwards[0].T)
 
         # P' L^{-1} = x
@@ -699,7 +706,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
         backwards.append(
             linalg.solve_triangular(
                 forward_factors[s], partial_autocorrelations[s],
-                lower=True, trans='T'))
+                lower=True, trans="T"))
         backwards[0] = np.dot(backward_factors[s], backwards[0].T)
 
         # Update the variance
@@ -880,9 +887,9 @@ def constrain_stationary_multivariate(unconstrained, variance,
     order //= k_endog
 
     if order < 1:
-        raise ValueError('Must have order at least 1')
+        raise ValueError("Must have order at least 1")
     if k_endog < 1:
-        raise ValueError('Must have at least 1 endogenous variable')
+        raise ValueError("Must have at least 1 endogenous variable")
 
     if prefix is None:
         prefix, dtype, _ = find_best_blas_type(
@@ -1472,28 +1479,28 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
 
     # Enforce dimension
     if ndim not in [2, 3]:
-        raise ValueError('Invalid value for %s matrix. Requires a'
-                         ' 2- or 3-dimensional array, got %d dimensions' %
+        raise ValueError("Invalid value for %s matrix. Requires a"
+                         " 2- or 3-dimensional array, got %d dimensions" %
                          (name, ndim))
     # Enforce the shape of the matrix
     if not shape[0] == nrows:
-        raise ValueError('Invalid dimensions for %s matrix: requires %d'
-                         ' rows, got %d' % (name, nrows, shape[0]))
+        raise ValueError("Invalid dimensions for %s matrix: requires %d"
+                         " rows, got %d" % (name, nrows, shape[0]))
     if not shape[1] == ncols:
-        raise ValueError('Invalid dimensions for %s matrix: requires %d'
-                         ' columns, got %d' % (name, ncols, shape[1]))
+        raise ValueError("Invalid dimensions for %s matrix: requires %d"
+                         " columns, got %d" % (name, ncols, shape[1]))
 
     # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 2 or shape[-1] == 1):
-        raise ValueError('Invalid dimensions for %s matrix: time-varying'
-                         ' matrices cannot be given unless `nobs` is specified'
-                         ' (implicitly when a dataset is bound or else set'
-                         ' explicity)' % name)
+        raise ValueError("Invalid dimensions for %s matrix: time-varying"
+                         " matrices cannot be given unless `nobs` is specified"
+                         " (implicitly when a dataset is bound or else set"
+                         " explicity)" % name)
 
     # Enforce time-varying array size
     if ndim == 3 and nobs is not None and shape[-1] not in [1, nobs]:
-        raise ValueError('Invalid dimensions for time-varying %s'
-                         ' matrix. Requires shape (*,*,%d), got %s' %
+        raise ValueError("Invalid dimensions for time-varying %s"
+                         " matrix. Requires shape (*,*,%d), got %s" %
                          (name, nobs, str(shape)))
 
 
@@ -1522,25 +1529,25 @@ def validate_vector_shape(name, shape, nrows, nobs):
     ndim = len(shape)
     # Enforce dimension
     if ndim not in [1, 2]:
-        raise ValueError('Invalid value for %s vector. Requires a'
-                         ' 1- or 2-dimensional array, got %d dimensions' %
+        raise ValueError("Invalid value for %s vector. Requires a"
+                         " 1- or 2-dimensional array, got %d dimensions" %
                          (name, ndim))
     # Enforce the shape of the vector
     if not shape[0] == nrows:
-        raise ValueError('Invalid dimensions for %s vector: requires %d'
-                         ' rows, got %d' % (name, nrows, shape[0]))
+        raise ValueError("Invalid dimensions for %s vector: requires %d"
+                         " rows, got %d" % (name, nrows, shape[0]))
 
     # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 1 or shape[-1] == 1):
-        raise ValueError('Invalid dimensions for %s vector: time-varying'
-                         ' vectors cannot be given unless `nobs` is specified'
-                         ' (implicitly when a dataset is bound or else set'
-                         ' explicity)' % name)
+        raise ValueError("Invalid dimensions for %s vector: time-varying"
+                         " vectors cannot be given unless `nobs` is specified"
+                         " (implicitly when a dataset is bound or else set"
+                         " explicity)" % name)
 
     # Enforce time-varying array size
     if ndim == 2 and shape[1] not in [1, nobs]:
-        raise ValueError('Invalid dimensions for time-varying %s'
-                         ' vector. Requires shape (*,%d), got %s' %
+        raise ValueError("Invalid dimensions for time-varying %s"
+                         " vector. Requires shape (*,%d), got %s" %
                          (name, nobs, str(shape)))
 
 
@@ -1583,7 +1590,7 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     reorder = prefix_reorder_missing_matrix_map[prefix]
 
     if not inplace:
-        matrix = np.copy(matrix, order='F')
+        matrix = np.copy(matrix, order="F")
 
     reorder(matrix, np.asfortranarray(missing), reorder_rows, reorder_cols,
             is_diagonal)
@@ -1618,7 +1625,7 @@ def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
     reorder = prefix_reorder_missing_vector_map[prefix]
 
     if not inplace:
-        vector = np.copy(vector, order='F')
+        vector = np.copy(vector, order="F")
 
     reorder(vector, np.asfortranarray(missing))
 
@@ -1666,13 +1673,13 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     copy = prefix_copy_missing_matrix_map[prefix]
 
     if not inplace:
-        B = np.copy(B, order='F')
+        B = np.copy(B, order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
     try:
         if not A.is_f_contig():
-            raise ValueError()
+            raise ValueError
     except (AttributeError, ValueError):
         A = np.asfortranarray(A)
 
@@ -1711,13 +1718,13 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     copy = prefix_copy_missing_vector_map[prefix]
 
     if not inplace:
-        b = np.copy(b, order='F')
+        b = np.copy(b, order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
     try:
         if not a.is_f_contig():
-            raise ValueError()
+            raise ValueError
     except (AttributeError, ValueError):
         a = np.asfortranarray(a)
 
@@ -1767,13 +1774,13 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     copy = prefix_copy_index_matrix_map[prefix]
 
     if not inplace:
-        B = np.copy(B, order='F')
+        B = np.copy(B, order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
     try:
         if not A.is_f_contig():
-            raise ValueError()
+            raise ValueError
     except (AttributeError, ValueError):
         A = np.asfortranarray(A)
 
@@ -1812,13 +1819,13 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     copy = prefix_copy_index_vector_map[prefix]
 
     if not inplace:
-        b = np.copy(b, order='F')
+        b = np.copy(b, order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
     try:
         if not a.is_f_contig():
-            raise ValueError()
+            raise ValueError
     except (AttributeError, ValueError):
         a = np.asfortranarray(a)
 
@@ -1847,15 +1854,15 @@ def prepare_exog(exog):
 
 def prepare_trend_spec(trend):
     # Trend
-    if trend is None or trend == 'n':
+    if trend is None or trend == "n":
         polynomial_trend = np.ones(0)
-    elif trend == 'c':
+    elif trend == "c":
         polynomial_trend = np.r_[1]
-    elif trend == 't':
+    elif trend == "t":
         polynomial_trend = np.r_[0, 1]
-    elif trend == 'ct':
+    elif trend == "ct":
         polynomial_trend = np.r_[1, 1]
-    elif trend == 'ctt':
+    elif trend == "ctt":
         # TODO deprecate ctt?
         polynomial_trend = np.r_[1, 1, 1]
     else:
@@ -1930,8 +1937,8 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
         compute_prior_weights = compute_j[0] == 0
     # Validate that compute_prior_weights is valid
     if compute_prior_weights and compute_j[0] != 0:
-        raise ValueError('If `compute_prior_weights` is set to True, then'
-                         ' `compute_j` must include the time period 0.')
+        raise ValueError("If `compute_prior_weights` is set to True, then"
+                         " `compute_j` must include the time period 0.")
 
     # Compute the weights
     weights, state_intercept_weights, prior_weights, _ = func(
@@ -1947,7 +1954,7 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
         # Transpose m, p, t, j, -> t, m, p, j so that we can use the
         # `reorder_missing_matrix` function
         weights = np.asfortranarray(weights.transpose(2, 0, 1, 3).reshape(
-            shape[2] * shape[0], shape[1], shape[3], order='C'))
+            shape[2] * shape[0], shape[1], shape[3], order="C"))
         missing = np.asfortranarray(missing.astype(np.int32))
         reorder_missing_matrix(weights, missing, reorder_cols=True,
                                inplace=True)
@@ -2160,17 +2167,17 @@ def get_impact_dates(previous_model, updated_model, impact_date=None,
     # specify exactly two of start, end, periods.
     if impact_date is not None:
         if not (start is None and end is None and periods is None):
-            raise ValueError('Cannot use the `impact_date` argument in'
-                             ' combination with `start`, `end`, or'
-                             ' `periods`.')
+            raise ValueError("Cannot use the `impact_date` argument in"
+                             " combination with `start`, `end`, or"
+                             " `periods`.")
         start = impact_date
         periods = 1
     if start is None and end is None and periods is None:
         start = previous_model.nobs - 1
         end = previous_model.nobs - 1
     if int(start is None) + int(end is None) + int(periods is None) != 1:
-        raise ValueError('Of the three parameters: start, end, and'
-                         ' periods, exactly two must be specified')
+        raise ValueError("Of the three parameters: start, end, and"
+                         " periods, exactly two must be specified")
     # If we have the `periods` object, we need to convert `start`/`end` to
     # integers so that we can compute the other one. That's because
     # _get_prediction_index doesn't support a `periods` argument

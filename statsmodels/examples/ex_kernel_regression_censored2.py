@@ -6,6 +6,7 @@ Author: Josef Perktold
 """
 
 import numpy as np
+
 import statsmodels.nonparametric.api as nparam
 
 if __name__ == "__main__":

@@ -407,7 +407,7 @@ macrodata_result = array([
      214.469, 1653.6, 0.18, 9.2, 307.226, 3.37, -3.19),
     (2009.0, 3.0, 12990.341, 9256.0, 1486.398, 1044.088, 10040.6,
      216.385, 1673.9, 0.12, 9.6, 308.013, 3.56, -3.44)],
-    dtype=[('year', 'i4'), ('quarter', 'i2'), ('realgdp', 'f4'),
-           ('realcons', 'f4'), ('realinv', 'f4'), ('realgovt', 'f4'),
-           ('realdpi', 'f4'), ('cpi', 'f4'), ('m1', 'f4'), ('tbilrate', 'f4'),
-           ('unemp', 'f4'), ('pop', 'f4'), ('infl', 'f4'), ('realint', 'f4')])
+    dtype=[("year", "i4"), ("quarter", "i2"), ("realgdp", "f4"),
+           ("realcons", "f4"), ("realinv", "f4"), ("realgovt", "f4"),
+           ("realdpi", "f4"), ("cpi", "f4"), ("m1", "f4"), ("tbilrate", "f4"),
+           ("unemp", "f4"), ("pop", "f4"), ("infl", "f4"), ("realint", "f4")])

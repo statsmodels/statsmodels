@@ -10,6 +10,7 @@ License: Simplified-BSD
 
 cimport numpy as np
 
+
 cpdef skim_smoother_log(int nobs, int k_regimes, int order,
                     np.float32_t [:, :, :] regime_transition,
                     np.float32_t [:, :] predicted_joint_probabilities,

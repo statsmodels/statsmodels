@@ -7,10 +7,8 @@ Author: Josef Perktold
 
 import numpy as np
 
-from statsmodels.genmod.generalized_estimating_equations import GEE, GEEMargins
-
 from statsmodels.genmod.families import Gaussian
-
+from statsmodels.genmod.generalized_estimating_equations import GEE, GEEMargins
 from statsmodels.genmod.tests import gee_gaussian_simulation_check as gees
 
 da, va = gees.gen_gendat_ar0(0.6)()

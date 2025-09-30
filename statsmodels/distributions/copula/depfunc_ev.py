@@ -10,6 +10,7 @@ License: BSD-3
 
 import numpy as np
 from scipy import stats
+
 from statsmodels.tools.numdiff import _approx_fprime_cs_scalar, approx_hess
 
 
@@ -43,14 +44,14 @@ class PickandDependence:
 
 
 class AsymLogistic(PickandDependence):
-    '''asymmetric logistic model of Tawn 1988
+    """asymmetric logistic model of Tawn 1988
 
     special case: a1=a2=1 : Gumbel
 
     restrictions:
      - theta in (0,1]
      - a1, a2 in [0,1]
-    '''
+    """
     k_args = 3
 
     def _check_args(self, a1, a2, theta):
@@ -89,14 +90,14 @@ transform_tawn = AsymLogistic()
 
 
 class AsymNegLogistic(PickandDependence):
-    '''asymmetric negative logistic model of Joe 1990
+    """asymmetric negative logistic model of Joe 1990
 
     special case:  a1=a2=1 : symmetric negative logistic of Galambos 1978
 
     restrictions:
      - theta in (0,inf)
      - a1, a2 in (0,1]
-    '''
+    """
     k_args = 3
 
     def _check_args(self, a1, a2, theta):
@@ -144,7 +145,7 @@ transform_joe = AsymNegLogistic()
 
 
 class AsymMixed(PickandDependence):
-    '''asymmetric mixed model of Tawn 1988
+    """asymmetric mixed model of Tawn 1988
 
     special case:  k=0, theta in [0,1] : symmetric mixed model of
         Tiago de Oliveira 1980
@@ -154,7 +155,7 @@ class AsymMixed(PickandDependence):
      - theta + 3*k > 0
      - theta + k <= 1
      - theta + 2*k <= 1
-    '''
+    """
     k_args = 2
 
     def _check_args(self, theta, k):
@@ -180,14 +181,14 @@ transform_tawn2 = AsymMixed()
 
 
 class AsymBiLogistic(PickandDependence):
-    '''bilogistic model of Coles and Tawn 1994, Joe, Smith and Weissman 1992
+    """bilogistic model of Coles and Tawn 1994, Joe, Smith and Weissman 1992
 
     restrictions:
      - (beta, delta) in (0,1)^2 or
      - (beta, delta) in (-inf,0)^2
 
     not vectorized because of numerical integration
-    '''
+    """
     k_args = 2
 
     def _check_args(self, beta, delta):
@@ -213,13 +214,13 @@ transform_bilogistic = AsymBiLogistic()
 
 
 class HR(PickandDependence):
-    '''model of Huesler Reiss 1989
+    """model of Huesler Reiss 1989
 
     special case:  a1=a2=1 : symmetric negative logistic of Galambos 1978
 
     restrictions:
      - lambda in (0,inf)
-    '''
+    """
     k_args = 1
 
     def _check_args(self, lamda):
@@ -233,6 +234,7 @@ class HR(PickandDependence):
         term = np.log((1. - t) / t) * 0.5 / lamda
 
         from scipy.stats import norm
+
         # use special if I want to avoid stats import
         transf = ((1 - t) * norm._cdf(lamda + term) +
                   t * norm._cdf(lamda - term))
@@ -294,12 +296,12 @@ transform_hr = HR()
 
 # def transform_tev(t, rho, df):
 class TEV(PickandDependence):
-    '''t-EV model of Demarta and McNeil 2005
+    """t-EV model of Demarta and McNeil 2005
 
     restrictions:
      - rho in (-1,1)
      - x > 0
-    '''
+    """
     k_args = 2
 
     def _check_args(self, rho, df):
@@ -314,6 +316,7 @@ class TEV(PickandDependence):
         #    raise ValueError('invalid args')
 
         from scipy.stats import t as stats_t
+
         # use special if I want to avoid stats import
 
         term1 = (np.power(t/(1.-t), 1./x) - rho)  # for t

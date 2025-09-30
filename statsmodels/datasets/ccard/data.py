@@ -1,7 +1,7 @@
 """Bill Greene's credit scoring data."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """Used with express permission of the original author, who
 retains all rights."""
@@ -52,4 +52,4 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'ccard.csv', convert_float=True)
+    return du.load_csv(__file__, "ccard.csv", convert_float=True)

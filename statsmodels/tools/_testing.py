@@ -10,8 +10,7 @@ The first group of functions provide consistency checks
 """
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_
-
+from numpy.testing import assert_, assert_allclose
 import pandas as pd
 
 
@@ -96,9 +95,10 @@ def check_ftest_pvalues(results):
 def check_fitted(results):
     import pytest
 
+    from statsmodels.discrete.discrete_model import DiscreteResults
+
     # ignore wrapper for isinstance check
     from statsmodels.genmod.generalized_linear_model import GLMResults
-    from statsmodels.discrete.discrete_model import DiscreteResults
 
     # possibly unwrap -- GEE has no wrapper
     results = getattr(results, "_results", results)
@@ -130,12 +130,13 @@ def check_predict_types(results):
     p_exog = np.squeeze(np.asarray(res.model.exog[:2]))
 
     # ignore wrapper for isinstance check
-    from statsmodels.genmod.generalized_linear_model import GLMResults
-    from statsmodels.discrete.discrete_model import DiscreteResults
     from statsmodels.compat.pandas import (
         assert_frame_equal,
         assert_series_equal,
     )
+
+    from statsmodels.discrete.discrete_model import DiscreteResults
+    from statsmodels.genmod.generalized_linear_model import GLMResults
 
     # possibly unwrap -- GEE has no wrapper
     results = getattr(results, "_results", results)

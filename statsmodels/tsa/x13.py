@@ -26,9 +26,9 @@ from statsmodels.tools.sm_exceptions import (
 )
 from statsmodels.tools.tools import Bunch
 
-__all__ = ["x13_arima_select_order", "x13_arima_analysis"]
+__all__ = ["x13_arima_analysis", "x13_arima_select_order"]
 
-_binary_names = ("x13as.exe", "x13as", "x12a.exe", "x12a", "x13as_ascii", "x13as_html")
+BINARY_NAMES = ("x13as.exe", "x13as", "x12a.exe", "x12a", "x13as_ascii", "x13as_html")
 
 
 class _freq_to_period:
@@ -45,7 +45,10 @@ _freq_to_period = _freq_to_period()
 
 _period_to_freq = {12: "M", 4: "Q"}
 _log_to_x12 = {True: "log", False: "none", None: "auto"}
-_bool_to_yes_no = lambda x: "yes" if x else "no"  # noqa:E731
+
+
+def _bool_to_yes_no(x):
+    return "yes" if x else "no"
 
 
 def _find_x12(x12path=None, prefer_x13=True):
@@ -55,7 +58,7 @@ def _find_x12(x12path=None, prefer_x13=True):
     X13PATH must be defined. If prefer_x13 is True, only X13PATH is searched
     for. If it is false, only X12PATH is searched for.
     """
-    global _binary_names
+    _binary_names = BINARY_NAMES
     if x12path is not None and x12path.endswith(_binary_names):
         # remove binary from path if path is not a directory
         if not os.path.isdir(x12path):
@@ -80,8 +83,7 @@ def _find_x12(x12path=None, prefer_x13=True):
         except OSError:
             pass
 
-    else:
-        return False
+    return False
 
 
 def _check_x12(x12path=None):
@@ -189,10 +191,10 @@ def _check_errors(errors, rawspec_text):
     errors = errors[errors.find("spc:") + 4 :].strip()
     if errors and "ERROR" in errors:
         if rawspec_text is not None:
-            warn("User-provided rawspec file has errors. Please check.")
+            warn("User-provided rawspec file has errors. Please check.", stacklevel=2)
         raise X13Error(errors)
     elif errors and "WARNING" in errors:
-        warn(errors, X13Warning)
+        warn(errors, X13Warning, stacklevel=2)
 
 
 def _convert_out_to_series(x, dates, name):
@@ -519,13 +521,13 @@ def x13_arima_analysis(
         try:
             with open(rawspec) as f:
                 rawspec_text = f.read()
-        except OSError:
+        except OSError as os_err:
             if "{" in rawspec:
                 rawspec_text = rawspec
             else:
                 raise ValueError(
-                    "rawspec argument provided but not valid path" " or spec string"
-                )
+                    "rawspec argument provided but not valid path or spec string"
+                ) from os_err
 
         # merge series {} properties created above into raw spec file
         spec = re.sub(
@@ -601,9 +603,17 @@ def x13_arima_analysis(
             os.remove(ftempout.name)
         except OSError:
             if os.path.exists(ftempin.name):
-                warn(f"Failed to delete resource {ftempin.name}", IOWarning)
+                warn(
+                    f"Failed to delete resource {ftempin.name}",
+                    IOWarning,
+                    stacklevel=2
+                )
             if os.path.exists(ftempout.name):
-                warn(f"Failed to delete resource {ftempout.name}", IOWarning)
+                warn(
+                    f"Failed to delete resource {ftempout.name}",
+                    IOWarning,
+                    stacklevel=2
+                )
 
     seasadj = _convert_out_to_series(seasadj, endog.index, "seasadj")
     trend = _convert_out_to_series(trend, endog.index, "trend")

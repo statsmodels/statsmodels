@@ -1,13 +1,12 @@
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
 
-from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
+from statsmodels.genmod.cov_struct import Independence
 from statsmodels.genmod.families import links
 from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.genmod.cov_struct import Independence
-
-from numpy.testing import assert_allclose
+from statsmodels.genmod.generalized_linear_model import GLM
 
 
 class CheckGEEGLM:
