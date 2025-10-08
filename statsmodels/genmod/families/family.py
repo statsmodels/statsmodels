@@ -803,9 +803,22 @@ class Gamma(Family):
         -----
         .. math::
 
-           ll_i = var\_weights_i / scale * (\ln(var\_weights_i * endog_i /
+        ll_i = var\_weights_i / scale * (\ln(var\_weights_i * endog_i /
            (scale * \mu_i)) - (var\_weights_i * endog_i) /
-           (scale * \mu_i)) - \ln \Gamma(var\_weights_i / scale) - \ln(\mu_i)
+           (scale * \mu_i)) - \ln \Gamma(var\_weights_i / scale) - \ln(\endog_i)
+
+        Note on weights parameterization
+        --------------------------------
+        statsmodels follows the SPSS/SAS definition for variance weights:
+        Var(endog_i) = scale * mu_i² / var_weights_i — i.e., the effective
+        dispersion is scale / var_weights_i.
+
+        McCullagh & Nelder (1989) treat var_weights_i as a pure multiplier
+        on the log-likelihood with Var(endog_i) = scale * mu_i². This leads
+        to a log-likelihood that differs only by a constant in
+        (endog_i, var_weights_i, scale), not mu_i. So estimates of β and
+        deviance are identical, but absolute log-likelihood values (e.g., AIC)
+        will differ by a constant.
         """
         endog_mu = self._clean(endog / mu)
         weight_scale = var_weights / scale
