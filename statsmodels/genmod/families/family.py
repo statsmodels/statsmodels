@@ -803,9 +803,9 @@ class Gamma(Family):
         -----
         .. math::
 
-        ll_i = var\_weights_i / scale * (\ln(var\_weights_i * endog_i /
-           (scale * \mu_i)) - (var\_weights_i * endog_i) /
-           (scale * \mu_i)) - \ln \Gamma(var\_weights_i / scale) - \ln(\endog_i)
+            ll_i = var\_weights_i / scale * (\ln(var\_weights_i * endog_i /
+                (scale * \mu_i)) - (var\_weights_i * endog_i) /
+                (scale * \mu_i)) - \ln \Gamma(var\_weights_i / scale) - \ln(\endog_i)
 
         Note on weights parameterization
         --------------------------------
@@ -819,6 +819,11 @@ class Gamma(Family):
         (endog_i, var_weights_i, scale), not mu_i. So estimates of β and
         deviance are identical, but absolute log-likelihood values (e.g., AIC)
         will differ by a constant.
+
+        References
+        ----------
+        McCullagh, P., and Nelder, J.A. (1989). *Generalized Linear Models*,
+        2nd Edition. Chapman & Hall/CRC.
         """
         endog_mu = self._clean(endog / mu)
         weight_scale = var_weights / scale
