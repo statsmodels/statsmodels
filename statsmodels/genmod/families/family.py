@@ -804,8 +804,8 @@ class Gamma(Family):
         .. math::
 
             ll_i = var\_weights_i / scale * (\ln(var\_weights_i * endog_i /
-                (scale * \mu_i)) - (var\_weights_i * endog_i) /
-                (scale * \mu_i)) - \ln \Gamma(var\_weights_i / scale) - \ln(\endog_i)
+            (scale * \mu_i)) - (var\_weights_i * endog_i) /
+            (scale * \mu_i)) - \ln \Gamma(var\_weights_i / scale) - \ln(\endog_i)
 
         Note on weights parameterization
         --------------------------------
