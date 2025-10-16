@@ -9,6 +9,7 @@ in ANOVA
 from statsmodels.compat.python import lmap
 
 import numpy as np
+import pandas as pd
 import numpy.lib.recfunctions
 
 from statsmodels.regression.linear_model import OLS
@@ -32,7 +33,7 @@ dta_use = np.ma.column_stack[[dta[col] for col in 'y sex age'.split()]]
 """
 
 
-dta = np.genfromtxt("dftest3.data")
+dta = pd.read_csv("dftest3.data", header=None).values
 print(dta.shape)
 mask = np.isnan(dta)
 print("rows with missing values", mask.any(1).sum())
@@ -327,7 +328,7 @@ print(anova_str % anovadict(rest1))
 # -------------------
 
 # read data set and drop rows with missing data
-dta = np.genfromtxt("dftest3.data", dt_b, missing=".", usemask=True)
+dta = pd.read_csv("dftest3.data", header=None, na_values=".").values
 print("missing", [dta.mask[k].sum() for k in dta.dtype.names])
 m = dta.mask.view(bool)
 droprows = m.reshape(-1, len(dta.dtype.names)).any(1)

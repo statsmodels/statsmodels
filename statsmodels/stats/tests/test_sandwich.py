@@ -9,6 +9,7 @@ Created on Sat Dec 17 08:39:16 2011
 Author: Josef Perktold
 """
 import numpy as np
+import pandas as pd
 from numpy.testing import assert_allclose, assert_almost_equal
 
 from statsmodels.regression.linear_model import OLS
@@ -24,7 +25,7 @@ def test_cov_cluster_2groups():
     import os
     cur_dir = os.path.abspath(os.path.dirname(__file__))
     fpath = os.path.join(cur_dir, "test_data.txt")
-    pet = np.genfromtxt(fpath)
+    pet = pd.read_csv(fpath, header=None).values
     endog = pet[:, -1]
     group = pet[:, 0].astype(int)
     time = pet[:, 1].astype(int)

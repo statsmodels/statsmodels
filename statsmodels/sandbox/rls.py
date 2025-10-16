@@ -5,6 +5,7 @@ License: Simplified BSD
 """
 
 import numpy as np
+import pandas as pd 
 
 from statsmodels.regression.linear_model import GLS, RegressionResults
 
@@ -153,7 +154,7 @@ class RLS(GLS):
 if __name__ == "__main__":
     import statsmodels.api as sm
 
-    dta = np.genfromtxt("./rlsdata.txt", names=True)
+    dta = pd.read_csv("./rlsdata.txt")
     design = np.column_stack(
         (
             dta["Y"],
