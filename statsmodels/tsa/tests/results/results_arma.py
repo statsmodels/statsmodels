@@ -3,36 +3,21 @@ Results for ARMA models.  Produced by gretl.
 """
 import os
 
-from numpy import genfromtxt
+import pandas as pd
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-with open(current_path+"/yhat_exact_nc.csv", "rb") as fd:
-    yhat_mle = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
+yhat_mle = pd.read_csv(current_path+"/yhat_exact_nc.csv", header=None, skiprows=1).values
+yhat_css = pd.read_csv(current_path+"/yhat_css_nc.csv", header=None, skiprows=1).values
+yhatc_mle = pd.read_csv(current_path+"/yhat_exact_c.csv", header=None, skiprows=1).values
 
-with open(current_path+"/yhat_css_nc.csv", "rb") as fd:
-    yhat_css = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
+yhatc_css = pd.read_csv(current_path+"/yhat_css_c.csv", header=None, skiprows=1).values
 
-with open(current_path+"/yhat_exact_c.csv", "rb") as fd:
-    yhatc_mle = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
+resids_mle = pd.read_csv(current_path + "/resids_exact_nc.csv", header=None, skiprows=1).values
+resids_css = pd.read_csv(current_path + "/resids_css_nc.csv", header=None, skiprows=1).values
+residsc_mle = pd.read_csv(current_path + "/resids_exact_c.csv", header=None, skiprows=1).values
+residsc_css = pd.read_csv(current_path + "/resids_css_c.csv", header=None, skiprows=1).values
 
-with open(current_path+"/yhat_css_c.csv", "rb") as fd:
-    yhatc_css = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
-
-with open(current_path+"/resids_exact_nc.csv", "rb") as fd:
-    resids_mle = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
-
-with open(current_path+"/resids_css_nc.csv", "rb") as fd:
-    resids_css = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
-
-with open(current_path+"/resids_exact_c.csv", "rb") as fd:
-    residsc_mle = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
-
-with open(current_path+"/resids_css_c.csv", "rb") as fd:
-    residsc_css = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
-
-with open(current_path+"/results_arma_forecasts.csv", "rb") as fd:
-    forecast_results = genfromtxt(fd, names=True, delimiter=",", dtype=float)
-
+forecast_results = pd.read_csv(current_path+"/results_arma_forecasts.csv", header=0, dtype=float)
 
 class Y_arma11:
     def __init__(self, method="mle"):

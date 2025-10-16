@@ -15,6 +15,7 @@ TODO:
 from statsmodels.compat.python import lmap
 
 import numpy as np
+import pandas as pd
 
 # from scipy import stats
 import statsmodels.api as sm
@@ -263,7 +264,7 @@ if __name__ == "__main__":
             ("y", float),
         ]
     )
-    dta = np.genfromtxt("dftest3.data", dt_b, missing=".", usemask=True)
+    dta = pd.read_csv("dftest3.data", header=None, na_values=".").values
     print("missing", [dta.mask[k].sum() for k in dta.dtype.names])
     m = dta.mask.view(bool)
     droprows = m.reshape(-1, len(dta.dtype.names)).any(1)
