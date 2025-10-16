@@ -13,6 +13,8 @@
 
 # # Discrete Choice Models Overview
 
+import numpy as np
+
 
 import statsmodels.api as sm
 

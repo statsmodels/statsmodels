@@ -53,10 +53,17 @@
 # \end{align}
 # $$
 
+<<<<<<< HEAD
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+=======
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy.stats import norm
+
 
 import statsmodels.api as sm
 
@@ -180,6 +187,11 @@ class LocalLinearTrend(sm.tsa.statespace.MLEModel):
 # linear trend model. The following example is from Commandeur and Koopman
 # (2007), section 3.4., modeling motor vehicle fatalities in Finland.
 
+from io import BytesIO
+from zipfile import ZipFile
+
+
+import requests
 
 # Download the dataset
 df = pd.read_table(

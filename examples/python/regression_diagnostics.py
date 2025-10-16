@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+<<<<<<< HEAD
 import statsmodels.formula.api as smf
 import statsmodels.stats.api as sms
 
@@ -41,6 +42,11 @@ def display(name, test):
     for lbl, val in zip(name, test, strict=True):
         out = val if isinstance(val, str) else float(val)
         print(f"{lbl}: {out}")
+
+=======
+from statsmodels.compat import lzip
+import statsmodels.formula.api as smf
+import statsmodels.stats.api as sms
 
 
 # Load data

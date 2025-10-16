@@ -35,10 +35,13 @@ from pandas_datareader.data import DataReader
 import requests
 
 import statsmodels.api as sm
+<<<<<<< HEAD
 
 usrec = DataReader(
     "USREC", "fred", start=datetime(1947, 1, 1), end=datetime(2013, 4, 1)
 )
+=======
+
 
 
 # ### Hamilton (1989) switching model of GNP

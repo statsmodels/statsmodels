@@ -12,8 +12,6 @@ python enumerate-api.py --diff statsmodels-legacy.json
 
 which produces a RST file that can be included in the docs or edited.
 """
-from setuptools import find_packages
-
 import argparse
 import importlib
 import inspect
@@ -21,6 +19,8 @@ import json
 import logging
 from pathlib import Path
 from pkgutil import iter_modules
+
+from setuptools import find_packages
 
 
 def find_modules(path):

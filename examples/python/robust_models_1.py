@@ -13,14 +13,18 @@
 
 # # M-Estimators for Robust Linear Modeling
 
+<<<<<<< HEAD
 
 from statsmodels.compat import lmap
+
+=======
 
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 
 import statsmodels.api as sm
+from statsmodels.compat import lmap
 
 # * An M-estimator minimizes the function
 #

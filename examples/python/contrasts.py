@@ -15,6 +15,10 @@
 
 
 import numpy as np
+import pandas as pd
+
+import statsmodels.api as sm
+
 
 # This document is based heavily on this excellent resource from UCLA
 # http://www.ats.ucla.edu/stat/r/library/contrast_coding.htm
@@ -47,6 +51,7 @@ import numpy as np
 
 
 import pandas as pd
+
 
 url = "https://stats.idre.ucla.edu/stat/data/hsb2.csv"
 hsb2 = pd.read_table(url, delimiter=",")

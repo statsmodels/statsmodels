@@ -31,6 +31,9 @@ from pandas_datareader.data import DataReader
 
 import statsmodels.api as sm
 
+
+import statsmodels.api as sm
+
 usrec = DataReader(
     "USREC", "fred", start=datetime(1947, 1, 1), end=datetime(2013, 4, 1)
 )
@@ -167,6 +170,9 @@ print(res_fedfunds2.expected_durations)
 # Because the models can be often difficult to estimate, for the 3-regime
 # model we employ a search over starting parameters to improve results,
 # specifying 20 random search repetitions.
+
+# Get the additional data
+from statsmodels.tsa.regime_switching.tests.test_markov_regression import inf, ogap
 
 
 # Get the additional data

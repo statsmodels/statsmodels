@@ -49,11 +49,9 @@ DECIMAL_0 = 0
 @pytest.fixture(scope="module")
 def iris():
     cur_dir = Path(__file__).resolve().parent
-    return np.genfromtxt(
-        Path(cur_dir).joinpath("results", "iris.csv"),
-        delimiter=",",
-        skip_header=1,
-    )
+    return pd.read_csv(
+        Path(cur_dir).joinpath("results", "iris.csv")
+    ).values
 
 
 class CheckModelResultsMixin:

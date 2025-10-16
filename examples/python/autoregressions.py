@@ -64,6 +64,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+from statsmodels.tsa.api import acf, graphics, pacf
+
 from statsmodels.tsa.ar_model import AutoReg, ar_select_order
 
 # This cell sets the plotting style, registers pandas date converters for

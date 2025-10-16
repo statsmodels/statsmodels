@@ -63,8 +63,9 @@ class TestLowess:
     @staticmethod
     def generate(name, fname, x="x", y="y", out="out", kwargs=None, decimal=7):
         kwargs = {} if kwargs is None else kwargs
-        data = np.genfromtxt(Path(rpath).joinpath(fname), delimiter=",", names=True)
+        data = pd.read_csv(Path(rpath).joinpath(fname))
         assert_almost_equal.description = name
+        data = pd.read_csv(fpath, dtype=float)
         if callable(kwargs):
             kwargs = kwargs(data)
         result = lowess(data[y], data[x], **kwargs)
@@ -138,9 +139,10 @@ class TestLowess:
     def test_options(self):
         rs = np.random.RandomState(8437973)
         rfile = Path(rpath).joinpath("test_lowess_simple.csv")
-        test_data = np.genfromtxt(Path(rfile).open("rb"), delimiter=",", names=True)
+        test_data = pd.read_csv(rfile, header=None, names=["x", "y", "out"])
         y, x = test_data["y"], test_data["x"]
-        expected_lowess = np.array([test_data["x"], test_data["out"]]).T
+        expected_lowess = np.column_stack([test_data["x"].to_numpy(),
+                                            test_data["out"].to_numpy()])
 
         # check skip sorting
         actual_lowess1 = lowess(y, x, is_sorted=True)
@@ -241,7 +243,7 @@ class TestLowess:
     def test_exog_predict(self):
         rs = np.random.RandomState(8437971)
         rfile = Path(rpath).joinpath("test_lowess_simple.csv")
-        test_data = np.genfromtxt(Path(rfile).open("rb"), delimiter=",", names=True)
+        test_data = pd.read_csv(rfile, header=None, names=["x", "y", "out"])
         y, x = test_data["y"], test_data["x"]
         target = lowess(y, x, is_sorted=True)
 

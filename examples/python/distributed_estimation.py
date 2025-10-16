@@ -73,6 +73,9 @@ debiased_OLS_fit = debiased_OLS_mod.fit(
 # Then we run through a slightly more complicated example which uses the
 # GLM model class.
 
+from statsmodels.genmod.families import Gaussian
+from statsmodels.genmod.generalized_linear_model import GLM
+
 
 from statsmodels.genmod.families import Gaussian
 from statsmodels.genmod.generalized_linear_model import GLM

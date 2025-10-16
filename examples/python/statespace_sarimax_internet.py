@@ -18,10 +18,23 @@
 # feature is the ability of the model to work on datasets with missing
 # values.
 
+<<<<<<< HEAD
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+import statsmodels.api as sm
+=======
+from io import BytesIO
+from zipfile import ZipFile
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import requests
+from scipy.stats import norm
 
 import statsmodels.api as sm
 

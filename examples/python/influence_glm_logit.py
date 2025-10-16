@@ -25,8 +25,13 @@
 # measures described in Pregibon (1981), for example those related to
 # deviance and effects on confidence intervals.
 
+<<<<<<< HEAD
 
 import os.path
+
+=======
+import os.path
+
 
 import matplotlib.pyplot as plt
 import pandas as pd

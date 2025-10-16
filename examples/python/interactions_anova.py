@@ -18,13 +18,20 @@
 #
 # Download and format data:
 
+from urllib.request import urlopen
+
+import numpy as np
+
 
 import os
 
 import matplotlib.pyplot as plt
+<<<<<<< HEAD
 import numpy as np
 import pandas as pd
 import requests
+=======
+
 
 from statsmodels.formula.api import ols
 from statsmodels.graphics.api import abline_plot, interaction_plot

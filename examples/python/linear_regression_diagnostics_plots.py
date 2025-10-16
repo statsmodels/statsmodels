@@ -58,6 +58,8 @@ res.summary()
 #
 #     a. vif
 
+import matplotlib.pyplot as plt
+
 
 # base code
 

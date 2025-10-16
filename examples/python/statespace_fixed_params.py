@@ -23,8 +23,15 @@
 # 3. Fix all parameters (so that no parameters are estimated)
 #
 
+<<<<<<< HEAD
 
 import matplotlib.pyplot as plt
+=======
+from importlib import reload
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 import pandas as pd
 from pandas_datareader.data import DataReader
 

@@ -25,6 +25,8 @@
 # First we load some data. We have included the R data in the notebook for
 # expedience.
 
+import os
+
 
 import matplotlib.pyplot as plt
 import numpy as np
