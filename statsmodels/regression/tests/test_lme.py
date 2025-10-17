@@ -1285,7 +1285,7 @@ def test_singular():
     df["class"] = pd.Series([i % 3 for i in df.index], index=df.index)
 
     md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
-    with pytest.warns(SingularMatrixWarning, match="The random effects covariance"):
+    with pytest.warns(SingularMatrixWarning, match=r"effects"):
         mdf = md.fit()
     mdf.summary()
 

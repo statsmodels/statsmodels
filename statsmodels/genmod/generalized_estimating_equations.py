@@ -2938,7 +2938,7 @@ class NominalGEE(GEE):
                 u = np.zeros(len(endog_cuts), dtype=np.float64)
                 u[thresh_ix] = 1
                 exog_out[jrow, :] = np.kron(u, exog_row)
-                endog_out[jrow] = int(endog_value == thresh)
+                endog_out[jrow] = int(np.squeeze(endog_value == thresh))
                 groups_out[jrow] = group_value
                 time_out[jrow] = time_value
                 offset_out[jrow] = offset_value
