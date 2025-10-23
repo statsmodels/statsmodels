@@ -25,7 +25,7 @@ def test_cov_cluster_2groups():
     import os
     cur_dir = os.path.abspath(os.path.dirname(__file__))
     fpath = os.path.join(cur_dir, "test_data.txt")
-    pet = pd.read_csv(fpath, header=None).values
+    pet = pd.read_csv(fpath, delimiter=" ", header=None).values
     endog = pet[:, -1]
     group = pet[:, 0].astype(int)
     time = pet[:, 1].astype(int)
