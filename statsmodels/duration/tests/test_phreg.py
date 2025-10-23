@@ -56,7 +56,7 @@ class TestPHReg:
     @staticmethod
     def load_file(fname):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
-        df = pd.read_csv(os.path.join(cur_dir, "results", fname), delimiter=" ")
+        df = pd.read_csv(os.path.join(cur_dir, "results", fname), delimiter=" ", header=None)
         data = df.values
         time = data[:, 0]
         status = data[:, 1]
