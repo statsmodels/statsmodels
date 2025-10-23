@@ -372,6 +372,32 @@ def test_distr(case, close_figures):
 
     assert_allclose(res.resid_pearson, (y2 - mean) / np.sqrt(var_), rtol=1e-13)
 
+   
+    # which dict for distributions
+    
+    which_dict = {
+        Logit: ['mean', 'var', 'prob', 'linear'],
+        Probit: ['mean', 'var', 'prob', 'linear'],
+        ZeroInflatedPoisson: ['mean', 'var', 'prob', 'linear'],
+        ZeroInflatedGeneralizedPoisson: ['mean', 'var', 'prob', 'linear'],
+        ZeroInflatedNegativeBinomialP: ['mean', 'var', 'prob', 'linear'],
+        GeneralizedPoisson: ['mean', 'var', 'prob', 'linear'],
+        NegativeBinomial: ['mean', 'var', 'prob', 'linear']
+    }
+
+    # loop through and test
+    
+    if cls_model in which_dict:
+        # for each which, conduct smoke and shape test
+        for which in which_dict[cls_model]:
+            probs = res.predict(which=which, y_values=np.arange(5))
+            assert probs.shape == (len(mod.endog), 5)
+            probs2 = res.get_prediction(
+                which=which, y_values=np.arange(5), average=True)
+            assert_allclose(probs2.predicted, probs.mean(0), rtol=1e-10)
+    
+    
+    
     if not issubclass(cls_model, BinaryModel):
         # smoke, shape, consistency test
         probs = res.predict(which="prob", y_values=np.arange(5))
