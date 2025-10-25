@@ -18,7 +18,6 @@
 #
 # where $y_t$ is a $\text{k_endog} \times 1$ vector.
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 

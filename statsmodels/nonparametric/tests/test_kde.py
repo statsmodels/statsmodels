@@ -16,16 +16,16 @@ from statsmodels.sandbox.nonparametric import kernels
 curdir = os.path.dirname(os.path.abspath(__file__))
 rfname = os.path.join(curdir, "results", "results_kde.csv")
 # print rfname
-KDEResults = pd.read_csv(rfname)
+KDEResults = pd.read_csv(rfname, delimiter=",")
 
 rfname = os.path.join(curdir, "results", "results_kde_univ_weights.csv")
-KDEWResults = pd.read_csv(rfname)
+KDEWResults = pd.read_csv(rfname, delimiter=",")
 
 # get results from R
 curdir = os.path.dirname(os.path.abspath(__file__))
 rfname = os.path.join(curdir, "results", "results_kcde.csv")
 # print rfname
-KCDEResults = pd.read_csv(rfname)
+KCDEResults = pd.read_csv(rfname, delimiter=",")
 
 # setup test data
 
@@ -182,7 +182,7 @@ class TestKdeWeights(CheckKDE):
                  bw="silverman")
         cls.res1 = res1
         fname = os.path.join(curdir, "results", "results_kde_weights.csv")
-        cls.res_density = pd.read_csv(fname, skiprows=1).values
+        cls.res_density = pd.read_csv(fname, header=None).to_numpy().ravel()
 
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
@@ -203,7 +203,7 @@ class TestKDEGaussFFT(CheckKDE):
         res1.fit(kernel="gau", fft=True, bw="silverman")
         cls.res1 = res1
         rfname2 = os.path.join(curdir, "results", "results_kde_fft.csv")
-        cls.res_density = pd.read_csv(rfname2, header=None).values
+        cls.res_density = pd.read_csv(rfname2, header=None).to_numpy().ravel()
 
 
 class CheckKDEWeights:

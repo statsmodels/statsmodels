@@ -64,8 +64,9 @@ class TestLowess:
     @staticmethod
     def generate(name, fname, x="x", y="y", out="out", kwargs=None, decimal=7):
         kwargs = {} if kwargs is None else kwargs
-        data = pd.read_csv(os.path.join(rpath, fname))
+        fpath = os.path.join(rpath, fname)
         assert_almost_equal.description = name
+        data = pd.read_csv(fpath, dtype=float)
         if callable(kwargs):
             kwargs = kwargs(data)
         result = lowess(data[y], data[x], **kwargs)
@@ -138,7 +139,7 @@ class TestLowess:
 
     def test_options(self):
         rfile = os.path.join(rpath, "test_lowess_simple.csv")
-        test_data = pd.read_csv(rfile, header=None, names=["x", "y", "out"])
+        test_data = pd.read_csv(rfile, dtype=float)
         y, x = test_data["y"], test_data["x"]
         expected_lowess = np.array([test_data["x"], test_data["out"]]).T
 
@@ -239,7 +240,7 @@ class TestLowess:
 
     def test_exog_predict(self):
         rfile = os.path.join(rpath, "test_lowess_simple.csv")
-        test_data = pd.read_csv(rfile, header=None, names=["x", "y", "out"])
+        test_data = pd.read_csv(rfile, dtype=float)
         y, x = test_data["y"], test_data["x"]
         target = lowess(y, x, is_sorted=True)
 
