@@ -187,7 +187,7 @@ class TestKdeWeights(CheckKDE):
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
         kde_vals = [self.res1.evaluate(xi) for xi in self.res1.support]
-        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
+        kde_vals = np.asarray(kde_vals, dtype=float).ravel()  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
