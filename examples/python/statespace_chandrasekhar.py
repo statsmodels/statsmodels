@@ -9,7 +9,6 @@
 
 # ## State space models - Chandrasekhar recursions
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pandas_datareader.data import DataReader

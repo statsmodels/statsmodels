@@ -29,8 +29,6 @@
 # below we follow the steps of their paper, using a slightly updated
 # dataset.
 
-from IPython.display import Latex, display
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
