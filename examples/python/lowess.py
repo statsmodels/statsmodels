@@ -19,6 +19,7 @@
 import numpy as np
 import pylab
 import seaborn as sns
+
 import statsmodels.api as sm
 
 sns.set_style("darkgrid")

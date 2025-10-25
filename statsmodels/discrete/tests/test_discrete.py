@@ -2581,9 +2581,8 @@ def test_perfect_prediction():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     iris_dir = os.path.join(cur_dir, "..", "..", "genmod", "tests", "results")
     iris_dir = os.path.abspath(iris_dir)
-    iris = np.genfromtxt(
-        os.path.join(iris_dir, "iris.csv"), delimiter=",", skip_header=1
-    )
+    iris_df = pd.read_csv(os.path.join(iris_dir, "iris.csv"))
+    iris = iris_df.values
     y = iris[:, -1]
     X = iris[:, :-1]
     X = X[y != 2]

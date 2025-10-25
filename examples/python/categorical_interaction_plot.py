@@ -14,9 +14,10 @@
 # it using the interaction_plot function, which internally re-codes the
 # x-factor categories to integers.
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+
 from statsmodels.graphics.factorplots import interaction_plot
 
 np.random.seed(12345)
