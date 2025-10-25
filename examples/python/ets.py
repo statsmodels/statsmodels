@@ -29,8 +29,8 @@
 # [1] Hyndman, Rob J., and George Athanasopoulos. *Forecasting: principles
 # and practice*, 3rd edition, OTexts, 2019. https://www.otexts.org/fpp3/7
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel

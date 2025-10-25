@@ -94,7 +94,7 @@ class CheckKDE:
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(kde_vals, self.res_density, self.decimal_density)
+        npt.assert_almost_equal(kde_vals, self.res_density.ravel(), self.decimal_density)
 
 
 class TestKDEGauss(CheckKDE):
@@ -235,9 +235,8 @@ class CheckKDEWeights:
         reason="Not almost equal to 7 decimals", raises=AssertionError, strict=True
     )
     def test_density(self):
-        npt.assert_almost_equal(
-            self.res1.density, self.res_density, self.decimal_density
-        )
+        npt.assert_almost_equal(self.res1.density, self.res_density.ravel(),
+                                self.decimal_density)
 
     def test_evaluate(self):
         if self.kernel_name == "cos":

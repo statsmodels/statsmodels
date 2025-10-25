@@ -39,18 +39,17 @@
 
 import numpy as np
 import pandas as pd
-from scipy import stats, optimize
+from scipy import optimize, stats
 
-from statsmodels.regression.linear_model import WLS
 from statsmodels.genmod.generalized_linear_model import GLM
-
+from statsmodels.regression.linear_model import WLS
 from statsmodels.stats.meta_analysis import (
-    effectsize_smd,
-    effectsize_2proportions,
-    combine_effects,
+    _fit_tau_iter_mm,
     _fit_tau_iterative,
     _fit_tau_mm,
-    _fit_tau_iter_mm,
+    combine_effects,
+    effectsize_2proportions,
+    effectsize_smd,
 )
 
 # increase line length for pandas

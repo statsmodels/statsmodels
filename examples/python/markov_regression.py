@@ -15,14 +15,16 @@
 # documentation, which can be found at
 # http://www.stata.com/manuals14/tsmswitch.pdf.
 
+from datetime import datetime
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
 
 # NBER recessions
 from pandas_datareader.data import DataReader
-from datetime import datetime
+
+import statsmodels.api as sm
 
 usrec = DataReader("USREC",
                    "fred",
@@ -147,7 +149,7 @@ print(res_fedfunds2.expected_durations)
 # specifying 20 random search repetitions.
 
 # Get the additional data
-from statsmodels.tsa.regime_switching.tests.test_markov_regression import ogap, inf
+from statsmodels.tsa.regime_switching.tests.test_markov_regression import inf, ogap
 
 dta_ogap = pd.Series(ogap,
                      index=pd.date_range("1954-07-01", "2010-10-01",
