@@ -313,7 +313,7 @@ class TestGLSARGretl:
 
         names = "date   residual        leverage       influence        DFFITS".split()
         cur_dir = os.path.abspath(os.path.dirname(__file__))
-        fpath = os.path.join(cur_dir, "results/leverage_influence_ols_nostars.txt")
+        fpath = os.path.join(cur_dir, "results", "leverage_influence_ols_nostars.txt")
         lev = pd.read_csv(fpath, skiprows=3, skipfooter=1, engine="python", sep=r"\s+",
                           header=None, names=names)
         # either numpy 1.6 or python 3.2 changed behavior
