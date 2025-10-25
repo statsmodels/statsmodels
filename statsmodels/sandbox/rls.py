@@ -5,7 +5,7 @@ License: Simplified BSD
 """
 
 import numpy as np
-import pandas as pd 
+import pandas as pd
 
 from statsmodels.regression.linear_model import GLS, RegressionResults
 

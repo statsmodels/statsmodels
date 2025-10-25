@@ -1,10 +1,12 @@
-from statsmodels.datasets.macrodata import load_pandas
-from statsmodels.tsa.base.datetools import dates_from_range
-from statsmodels.tsa.arima_model import ARIMA
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
+
 import statsmodels.api as sm
+from statsmodels.datasets.macrodata import load_pandas
+from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.base.datetools import dates_from_range
+
 plt.interactive(False)
 
 # let's examine an ARIMA model of CPI

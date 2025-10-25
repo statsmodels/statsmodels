@@ -25,6 +25,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 import statsmodels.api as sm
 
 # Sunspots dataset is used. It contains yearly (1700-2008) data on

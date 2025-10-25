@@ -21,6 +21,7 @@
 # standard PCA in this case.
 
 import matplotlib.pyplot as plt
+
 import statsmodels.api as sm
 from statsmodels.multivariate.pca import PCA
 

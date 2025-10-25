@@ -9,8 +9,8 @@ in ANOVA
 from statsmodels.compat.python import lmap
 
 import numpy as np
-import pandas as pd
 import numpy.lib.recfunctions
+import pandas as pd
 
 from statsmodels.regression.linear_model import OLS
 

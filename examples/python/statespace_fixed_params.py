@@ -20,12 +20,13 @@
 #
 
 from importlib import reload
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
-
 from pandas_datareader.data import DataReader
+
+import statsmodels.api as sm
 
 # To illustrate, we will use the Consumer Price Index for Apparel, which
 # has a time-varying level and a strong seasonal component.

@@ -13,9 +13,10 @@
 # nested and crossed designs.
 
 import numpy as np
+import pandas as pd
+
 import statsmodels.api as sm
 from statsmodels.regression.mixed_linear_model import VCSpec
-import pandas as pd
 
 # Make the notebook reproducible
 

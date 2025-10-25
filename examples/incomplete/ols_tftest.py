@@ -14,6 +14,7 @@ This example was written mostly for cross-checks and refactoring.
 import numpy as np
 import numpy.testing as npt
 from scipy import stats
+
 import statsmodels.api as sm
 
 print('\n\n Example 1: Longley Data, high multicollinearity')

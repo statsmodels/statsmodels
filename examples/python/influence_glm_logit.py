@@ -22,11 +22,12 @@
 # deviance and effects on confidence intervals.
 
 import os.path
-import pandas as pd
-import matplotlib.pyplot as plt
 
-from statsmodels.genmod.generalized_linear_model import GLM
+import matplotlib.pyplot as plt
+import pandas as pd
+
 from statsmodels.genmod import families
+from statsmodels.genmod.generalized_linear_model import GLM
 
 plt.rc("figure", figsize=(16, 8))
 plt.rc("font", size=14)

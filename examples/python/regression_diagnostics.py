@@ -23,13 +23,13 @@
 
 # ## Estimate a regression model
 
-from statsmodels.compat import lzip
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+from statsmodels.compat import lzip
 import statsmodels.formula.api as smf
 import statsmodels.stats.api as sms
-import matplotlib.pyplot as plt
 
 # Load data
 url = "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/csv/HistData/Guerry.csv"

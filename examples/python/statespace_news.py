@@ -21,10 +21,11 @@
 # `sm.tsa.SARIMAX`, `sm.tsa.UnobservedComponents`, `sm.tsa.VARMAX`, and
 # `sm.tsa.DynamicFactor`.
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
 
 macrodata = sm.datasets.macrodata.load_pandas().data
 macrodata.index = pd.period_range('1959Q1', '2009Q3', freq='Q')

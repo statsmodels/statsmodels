@@ -12,8 +12,9 @@
 # The following illustrates some options for the boxplot in statsmodels.
 # These include `violin_plot` and `bean_plot`.
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 import statsmodels.api as sm
 
 # ## Bean Plots
@@ -102,8 +103,8 @@ fig = beanplot(age,
 
 # Based of example script `example_enhanced_boxplots.py` (by Ralf Gommers)
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 import statsmodels.api as sm
 

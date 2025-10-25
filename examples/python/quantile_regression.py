@@ -25,11 +25,12 @@
 # We first need to load some modules and to retrieve the data.
 # Conveniently, the Engel dataset is shipped with ``statsmodels``.
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
-import matplotlib.pyplot as plt
 
 data = sm.datasets.engel.load_pandas().data
 data.head()
