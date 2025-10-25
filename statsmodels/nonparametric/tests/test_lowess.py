@@ -141,7 +141,8 @@ class TestLowess:
         rfile = os.path.join(rpath, "test_lowess_simple.csv")
         test_data = pd.read_csv(rfile, dtype=float)
         y, x = test_data["y"], test_data["x"]
-        expected_lowess = np.array([test_data["x"], test_data["out"]]).T
+        expected_lowess = np.column_stack([test_data["x"].to_numpy(),
+                                            test_data["out"].to_numpy()])
 
         # check skip sorting
         actual_lowess1 = lowess(y, x, is_sorted=True)
