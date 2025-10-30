@@ -292,9 +292,7 @@ class GLM(base.LikelihoodModel):
     interpretation. The loglikelihood is not correctly specified in this case,
     and statistics based on it, such AIC or likelihood ratio tests, are not
     appropriate.
-    """.format(
-        extra_params=base._missing_param_doc
-    )
+    """.format(extra_params=base._missing_param_doc)
     # Maximum number of endogenous variables when using a formula
     _formula_max_endog = 2
 
@@ -433,9 +431,7 @@ class GLM(base.LikelihoodModel):
 
         if exposure is not None:
             if not isinstance(self.family.link, families.links.Log):
-                raise ValueError(
-                    "exposure can only be used with the log link function"
-                )
+                raise ValueError("exposure can only be used with the log link function")
             elif exposure.shape[0] != endog.shape[0]:
                 raise ValueError("exposure is not the same length as endog")
 
@@ -1281,7 +1277,9 @@ class GLM(base.LikelihoodModel):
             try:
                 scale = float(scale)
             except Exception as exc:
-                raise type(exc)("scale must be a float if given and no a string.") from exc
+                raise type(exc)(
+                    "scale must be a float if given and no a string."
+                ) from exc
         self.scaletype = scale
 
         if method.lower() == "irls":
@@ -1384,7 +1382,8 @@ class GLM(base.LikelihoodModel):
             oim = True
 
         try:
-            cov_p = np.linalg.inv(-self.hessian(rslt.params, observed=oim)) / scale
+            hessian = -self.hessian(rslt.params, observed=oim)
+            cov_p = np.linalg.inv(hessian) / scale
         except LinAlgError:
             warnings.warn(
                 "Inverting hessian failed, no bse or cov_params available",
@@ -1874,7 +1873,7 @@ class GLMResults(base.LikelihoodModelResults):
             self.cov_type = "nonrobust"
             self.cov_kwds = {
                 "description": "Standard Errors assume that the covariance matrix of "
-                               "the errors is correctly specified."
+                "the errors is correctly specified."
             }
 
         else:
