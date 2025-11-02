@@ -15,8 +15,8 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 from scipy import stats
-from typing import Callable
 from statsmodels.graphics import utils
+
 
 def _rotate_cdf(u, v, rotation, base_copula_cdf):
     """
@@ -588,5 +588,3 @@ class Copula(ABC):
 
         """
         raise NotImplementedError
-    
-    
