@@ -15,8 +15,63 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 from scipy import stats
-
+from typing import Callable
 from statsmodels.graphics import utils
+
+def _rotate_cdf(u, v, rotation, base_copula_cdf):
+    """
+    Rotate a base copula CDF by 0, 90, 180, or 270 degrees.
+
+    Parameters
+    ----------
+    u : array_like
+        First uniform margin in (0, 1).
+    v : array_like
+        Second uniform margin in (0, 1).
+    rotation : {0, 90, 180, 270}
+        Rotation angle (degrees).
+    base_copula_cdf : callable
+        Function like base_copula_cdf(u, v) returning C(u, v).
+
+    Returns
+    -------
+    ndarray
+        Rotated copula CDF evaluated at (u, v).
+
+    Notes
+    -----
+    Definitions follow the standard symmetry/rotation identities:
+        0°   : C(u, v)
+        90°  : u - C(u, 1 - v)
+        180° : u + v - 1 + C(1 - u, 1 - v)   (survival copula)
+        270° : v - C(1 - u, v)
+
+    The copula CDF methods expect (n, k_dim) inputs.
+    u and v are flattened to 1-D, stacked into (n, 2) arrays before
+    calling `base_copula_cdf`, and the output is reshaped to match
+    the original input grid.
+    """
+    u = np.asarray(u)
+    v = np.asarray(v)
+    u_flat = u.ravel()
+    v_flat = v.ravel()
+
+    if rotation == 0:
+        uv = np.column_stack((u_flat, v_flat))
+        val = base_copula_cdf(uv)
+    elif rotation == 90:
+        uv = np.column_stack((u_flat, 1 - v_flat))
+        val = u_flat - base_copula_cdf(uv)
+    elif rotation == 180:
+        uv = np.column_stack((1 - u_flat, 1 - v_flat))
+        val = u_flat + v_flat - 1 + base_copula_cdf(uv)
+    elif rotation == 270:
+        uv = np.column_stack((1 - u_flat, v_flat))
+        val = v_flat - base_copula_cdf(uv)
+    else:
+        raise ValueError("rotation must be one of {0, 90, 180, 270}")
+
+    return val.reshape(u.shape)
 
 
 class CopulaDistribution:
@@ -533,3 +588,5 @@ class Copula(ABC):
 
         """
         raise NotImplementedError
+    
+    
