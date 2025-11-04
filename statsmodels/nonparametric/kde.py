@@ -265,7 +265,7 @@ class KDEUnivariate:
 
         def entr(x, s):
             pdf = kern.density(s, x)
-            return pdf * np.log(pdf + 1e-12)
+            return np.squeeze(pdf * np.log(pdf + 1e-12))
 
         kern = self.kernel
 
