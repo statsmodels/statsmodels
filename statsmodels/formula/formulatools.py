@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
 
@@ -54,8 +55,8 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
         # Objects that support the dataframe API should be converted to a
         # dataframe to avoid problems with patsy. (This also works for
         # dataframes themselves.)
-        if hasattr(Y, "__dataframe__"):
-            Y = Y.__dataframe__()._df
+        if isinstance(Y, pd.DataFrame) or hasattr(Y, "__dataframe__"):
+            Y = pd.DataFrame(Y)
         result = mgr.get_matrices(
             formula,
             Y,
