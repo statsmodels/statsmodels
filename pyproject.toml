@@ -283,6 +283,7 @@ filterwarnings = [
     "error:get_state is deprecated:FutureWarning",
     "error:Conversion of an array with ndim:DeprecationWarning:",
     "error:the matrix subclass is not the recommended::",
+    "error:The Dataframe Interchange Protocol::",
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",
