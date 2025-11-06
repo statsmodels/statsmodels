@@ -1,7 +1,8 @@
 import numpy as np
+import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
-import pandas as pd
+
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
 
