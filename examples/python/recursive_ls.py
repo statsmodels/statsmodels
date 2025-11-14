@@ -26,8 +26,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
 from pandas_datareader.data import DataReader
+
+import statsmodels.api as sm
 
 np.set_printoptions(suppress=True)
 

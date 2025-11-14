@@ -9,8 +9,8 @@
 
 # # Dates in timeseries models
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 
 import statsmodels.api as sm
 from statsmodels.tsa.ar_model import AutoReg, ar_select_order
