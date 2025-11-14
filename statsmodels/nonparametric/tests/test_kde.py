@@ -75,11 +75,11 @@ class CheckKDE:
         # inDomain is not vectorized
         # kde_vals = self.res1.evaluate(self.res1.support)
         kde_vals = [np.squeeze(self.res1.evaluate(xi)) for xi in self.res1.support]
-        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
+        kde_vals = np.asarray(kde_vals, dtype=float).ravel()  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(kde_vals, self.res_density.ravel(),
+        npt.assert_almost_equal(kde_vals, np.asarray(self.res_density, dtype=float).ravel(),
                                 self.decimal_density)
 
 
@@ -89,16 +89,16 @@ class TestKDEGauss(CheckKDE):
         res1 = KDE(Xi)
         res1.fit(kernel="gau", fft=False, bw="silverman")
         cls.res1 = res1
-        cls.res_density = KDEResults["gau_d"]
+        cls.res_density = KDEResults["gau_d"].to_numpy()
 
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
         kde_vals = [self.res1.evaluate(xi) for xi in self.res1.support]
-        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
+        kde_vals = np.asarray(kde_vals, dtype=float).ravel()  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(kde_vals, self.res_density,
+        npt.assert_almost_equal(kde_vals, np.asarray(self.res_density, dtype=float).ravel(),
                                 self.decimal_density)
 
     # The following tests are regression tests
@@ -130,7 +130,7 @@ class TestKDEGaussPandas(TestKDEGauss):
         res1 = KDE(pd.Series(Xi))
         res1.fit(kernel="gau", fft=False, bw="silverman")
         cls.res1 = res1
-        cls.res_density = KDEResults["gau_d"]
+        cls.res_density = KDEResults["gau_d"].to_numpy()
 
 
 class TestKDEEpanechnikov(CheckKDE):
@@ -139,7 +139,7 @@ class TestKDEEpanechnikov(CheckKDE):
         res1 = KDE(Xi)
         res1.fit(kernel="epa", fft=False, bw="silverman")
         cls.res1 = res1
-        cls.res_density = KDEResults["epa2_d"]
+        cls.res_density = KDEResults["epa2_d"].to_numpy()
 
 
 class TestKDETriangular(CheckKDE):
@@ -148,7 +148,7 @@ class TestKDETriangular(CheckKDE):
         res1 = KDE(Xi)
         res1.fit(kernel="tri", fft=False, bw="silverman")
         cls.res1 = res1
-        cls.res_density = KDEResults["tri_d"]
+        cls.res_density = KDEResults["tri_d"].to_numpy()
 
 
 class TestKDEBiweight(CheckKDE):
@@ -157,7 +157,7 @@ class TestKDEBiweight(CheckKDE):
         res1 = KDE(Xi)
         res1.fit(kernel="biw", fft=False, bw="silverman")
         cls.res1 = res1
-        cls.res_density = KDEResults["biw_d"]
+        cls.res_density = KDEResults["biw_d"].to_numpy()
 
 
 # FIXME: enable/xfail/skip or delete
