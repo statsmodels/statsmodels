@@ -825,7 +825,7 @@ def het_breuschpagan(resid, exog_het, robust=True):
     return lm, stats.chi2.sf(lm, nvars - 1), fval, fpval
 
 
-def het_white(resid, exog):
+def het_white(resid, exog,cross_terms=True):
     """
     White's Lagrange Multiplier Test for Heteroscedasticity.
 
@@ -835,8 +835,10 @@ def het_white(resid, exog):
         The residuals. The squared residuals are used as the endogenous
         variable.
     exog : array_like
-        The explanatory variables for the variance. Squares and interaction
-        terms are automatically included in the auxiliary regression.
+        The explanatory variables for the variance. Squares terms are automatically 
+        included in the auxiliary regression.
+    cross_terms : bool, default True
+        Flag indicating whether to include cross terms (x1*x2, x1*x3,...).
 
     Returns
     -------
@@ -861,15 +863,19 @@ def het_white(resid, exog):
     ----------
     Greene section 11.4.1 5th edition p. 222. Test statistic reproduces
     Greene 5th, example 11.3.
+    Damodar N. Gujarati, Basic Econometrics, section 11.5. Pg 387.
     """
     x = array_like(exog, "exog", ndim=2)
     y = array_like(resid, "resid", ndim=2, shape=(x.shape[0], 1))
     _check_het_test(x, "White's heteroskedasticity")
     nobs, nvars0 = x.shape
-    i0, i1 = np.triu_indices(nvars0)
-    exog = x[:, i0] * x[:, i1]
-    nobs, nvars = exog.shape
-    assert nvars == nvars0 * (nvars0 - 1) / 2. + nvars0
+    if not cross_terms:
+        exog = x**2
+    else:
+        i0, i1 = np.triu_indices(nvars0)
+        exog = x[:, i0] * x[:, i1]
+        nobs, nvars = exog.shape
+        assert nvars == nvars0 * (nvars0 - 1) / 2. + nvars0
     resols = OLS(y ** 2, exog).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
