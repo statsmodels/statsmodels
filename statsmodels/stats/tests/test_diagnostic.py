@@ -282,15 +282,15 @@ class TestDiagnosticG:
         )
         assert_almost_equal(hw, hw_values)
 
-    def test_het_white_no_cross_terms(self):
+    def test_het_white_no_interaction_terms(self):
         res = self.res
 
-        hw = smdia.het_white(res.resid, res.model.exog,cross_terms=False)
+        hw = smdia.het_white(res.resid, res.model.exog, interaction_terms=False)
         hw_values = (
-            13.25091965953952
-            0.001326170478134868
-            6.985287047470471
-            0.001169716842511783
+            13.25091965953952,
+            0.001326170478134868,
+            6.985287047470471,
+            0.001169716842511783,
         )
 
         assert_almost_equal(hw, hw_values)
