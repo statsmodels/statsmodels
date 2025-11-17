@@ -55,6 +55,7 @@ class ARIMA111:
 
             # from stata
             # forecast = pd.read_csv(open(cur_dir+"/arima111_forecasts.csv"))
+            # forecast = forecast.iloc[:, 1:].to_numpy()
             # self.forecast = forecast[203:,1]
             # self.fcerr = forecast[203:,2]
             # self.fc_conf_int = forecast[203:,3:]
