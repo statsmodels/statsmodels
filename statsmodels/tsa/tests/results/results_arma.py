@@ -5,7 +5,6 @@ import os
 
 import pandas as pd
 
-
 current_path = os.path.dirname(os.path.abspath(__file__))
 yhat_mle = pd.read_csv(current_path+"/yhat_exact_nc.csv", header=None, skiprows=1).values
 yhat_css = pd.read_csv(current_path+"/yhat_css_nc.csv", header=None, skiprows=1).values
