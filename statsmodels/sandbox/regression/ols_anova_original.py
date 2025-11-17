@@ -32,7 +32,7 @@ dta_use = np.ma.column_stack[[dta[col] for col in 'y sex age'.split()]]
 """
 
 
-dta = pd.read_csv("dftest3.data", header=None).values
+dta = np.genfromtxt("dftest3.data")
 print(dta.shape)
 mask = np.isnan(dta)
 print("rows with missing values", mask.any(1).sum())
