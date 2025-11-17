@@ -196,7 +196,7 @@ class TestKdeWeights(CheckKDE):
         res1.fit(kernel="gau", gridsize=50, weights=weights, fft=False, bw="silverman")
         cls.res1 = res1
         fname = os.path.join(curdir, "results", "results_kde_weights.csv")
-        cls.res_density = pd.read_csv(fname, header=None, dtype=float).to_numpy().ravel()
+        cls.res_density = pd.read_csv(fname, header=0, dtype=float).to_numpy().ravel()
 
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
