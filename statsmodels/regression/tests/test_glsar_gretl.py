@@ -316,7 +316,7 @@ class TestGLSARGretl:
         fpath = os.path.join(cur_dir, "results", "leverage_influence_ols_nostars.txt")
         lev = pd.read_csv(fpath, skiprows=3, skipfooter=3, engine="python", sep=r"\s+",
                           header=None, names=names)
-        
+
         res = res_ols  # for easier copying
 
         cov_hac = sw.cov_hac_simple(res, nlags=4, use_correction=False)
