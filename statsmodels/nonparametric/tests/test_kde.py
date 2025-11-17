@@ -75,7 +75,7 @@ class CheckKDE:
         # inDomain is not vectorized
         # kde_vals = self.res1.evaluate(self.res1.support)
         kde_vals = [np.squeeze(self.res1.evaluate(xi)) for xi in self.res1.support]
-        kde_vals = np.asarray(kde_vals, dtype=float).ravel()  # kde_vals is a "column_list"
+        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
@@ -94,7 +94,7 @@ class TestKDEGauss(CheckKDE):
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
         kde_vals = [self.res1.evaluate(xi) for xi in self.res1.support]
-        kde_vals = np.asarray(kde_vals, dtype=float).ravel()  # kde_vals is a "column_list"
+        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
@@ -187,7 +187,7 @@ class TestKdeWeights(CheckKDE):
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
         kde_vals = [self.res1.evaluate(xi) for xi in self.res1.support]
-        kde_vals = np.asarray(kde_vals, dtype=float).ravel()  # kde_vals is a "column_list"
+        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
@@ -223,23 +223,21 @@ class CheckKDEWeights:
     @pytest.mark.xfail(reason="Not almost equal to 7 decimals",
                        raises=AssertionError, strict=True)
     def test_density(self):
-        npt.assert_almost_equal(self.res1.density,
-                                np.asarray(self.res_density).ravel(),
+        npt.assert_almost_equal(self.res1.density, self.res_density,
                                 self.decimal_density)
 
     def test_evaluate(self):
         if self.kernel_name == "cos":
             pytest.skip("Cosine kernel fails against Stata")
         kde_vals = [self.res1.evaluate(xi) for xi in self.x]
-        kde_vals = np.asarray(kde_vals, dtype=float).ravel()  # kde_vals is a "column_list"
-        npt.assert_almost_equal(kde_vals,
-                                np.asarray(self.res_density).ravel(),
+        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
+        npt.assert_almost_equal(kde_vals, self.res_density,
                                 self.decimal_density)
 
     def test_compare(self):
         xx = self.res1.support
         kde_vals = [np.squeeze(self.res1.evaluate(xi)) for xi in xx]
-        kde_vals = np.asarray(kde_vals, dtype=float).ravel()  # kde_vals is a "column_list"
+        kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0

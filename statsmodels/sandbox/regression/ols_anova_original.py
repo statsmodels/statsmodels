@@ -10,7 +10,6 @@ from statsmodels.compat.python import lmap
 
 import numpy as np
 import numpy.lib.recfunctions
-import pandas as pd
 
 from statsmodels.regression.linear_model import OLS
 
@@ -328,7 +327,7 @@ print(anova_str % anovadict(rest1))
 # -------------------
 
 # read data set and drop rows with missing data
-dta = pd.read_csv("dftest3.data", header=None, na_values=".").values
+dta = np.genfromtxt("dftest3.data", dt_b, missing=".", usemask=True)
 print("missing", [dta.mask[k].sum() for k in dta.dtype.names])
 m = dta.mask.view(bool)
 droprows = m.reshape(-1, len(dta.dtype.names)).any(1)
