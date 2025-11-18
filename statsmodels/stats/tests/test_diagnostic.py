@@ -272,7 +272,7 @@ class TestDiagnosticG:
     def test_het_white(self):
         res = self.res
 
-        # Reference values from Eviews 
+        # Reference values from Eviews
         hw = smsdia.het_white(res.resid, res.model.exog)
         hw_values = (
             33.503722896538441,
