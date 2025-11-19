@@ -100,10 +100,10 @@ class GLM(base.LikelihoodModel):
         and should be added by the user (models specified using a formula
         include an intercept by default). See `statsmodels.tools.add_constant`.
     family : family class instance
-        The default is Gaussian.  To specify the binomial distribution
-        family = sm.family.Binomial()
+        The default is Gaussian.  To specify the binomial distribution, use
+        family = sm.families.Binomial().
         Each family can take a link instance as an argument.  See
-        statsmodels.family.family for more information.
+        sm.families.family for more information.
     offset : array_like or None
         An offset to be included in the model.  If provided, must be
         an array whose length is the number of rows in exog.
@@ -157,19 +157,19 @@ class GLM(base.LikelihoodModel):
         The number of iterations that fit has run.  Initialized at 0.
     family : family class instance
         The distribution family of the model. Can be any family in
-        statsmodels.families.  Default is Gaussian.
+        sm.families.  Default is Gaussian.
     mu : ndarray
         The mean response of the transformed variable.  `mu` is the value of
         the inverse of the link function at lin_pred, where lin_pred is the
         linear predicted value of the WLS fit of the transformed variable.
         `mu` is only available after fit is called.  See
-        statsmodels.families.family.fitted of the distribution family for more
+        sm.families.family.fitted of the distribution family for more
         information.
     n_trials : ndarray
         See Notes. Note that `n_trials` is a reference to the data so that if
         data is already an array and it is changed, then `n_trials` changes
         as well. `n_trials` is the number of binomial trials and only available
-        with that distribution. See statsmodels.families.Binomial for more
+        with that distribution. See sm.families.Binomial for more
         information.
     normalized_cov_params : ndarray
         The p x p normalized covariance of the design / exogenous data.
@@ -185,7 +185,7 @@ class GLM(base.LikelihoodModel):
         fit is called.  The default is None.  See GLM.fit for more information.
     weights : ndarray
         The value of the weights after the last iteration of fit.  Only
-        available after fit is called.  See statsmodels.families.family for
+        available after fit is called.  See sm.families.family for
         the specific distribution weighting functions.
 
     Examples
@@ -1897,8 +1897,8 @@ class GLMResults(base.LikelihoodModelResults):
         """
         Pearson residuals.  The Pearson residuals are defined as
         (`endog` - `mu`)/sqrt(VAR(`mu`)) where VAR is the distribution
-        specific variance function.  See statsmodels.families.family and
-        statsmodels.families.varfuncs for more information.
+        specific variance function.  See sm.families.family and
+        sm.families.varfuncs for more information.
         """
         return (
             np.sqrt(self._n_trials)
@@ -1911,7 +1911,7 @@ class GLMResults(base.LikelihoodModelResults):
     def resid_working(self):
         """
         Working residuals.  The working residuals are defined as
-        `resid_response`/link'(`mu`).  See statsmodels.family.links for the
+        `resid_response`/link'(`mu`).  See sm.family.links for the
         derivatives of the link functions.  They are defined analytically.
         """
         # Isn't self.resid_response is already adjusted by _n_trials?
@@ -1922,7 +1922,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def resid_anscombe(self):
         """
-        Anscombe residuals.  See statsmodels.families.family for distribution-
+        Anscombe residuals.  See sm.families.family for distribution-
         specific Anscombe residuals. Currently, the unscaled residuals are
         provided. In a future version, the scaled residuals will be provided.
         """
@@ -1931,7 +1931,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def resid_anscombe_scaled(self):
         """
-        Scaled Anscombe residuals.  See statsmodels.families.family for
+        Scaled Anscombe residuals.  See sm.families.family for
         distribution-specific Anscombe residuals.
         """
         return self.family.resid_anscombe(
@@ -1944,7 +1944,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def resid_anscombe_unscaled(self):
         """
-        Unscaled Anscombe residuals.  See statsmodels.families.family for
+        Unscaled Anscombe residuals.  See sm.families.family for
         distribution-specific Anscombe residuals.
         """
         return self.family.resid_anscombe(
@@ -1954,7 +1954,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def resid_deviance(self):
         """
-        Deviance residuals.  See statsmodels.families.family for distribution-
+        Deviance residuals.  See sm.families.family for distribution-
         specific deviance residuals.
         """
         dev = self.family.resid_dev(
@@ -2023,7 +2023,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def deviance(self):
         """
-        See statsmodels.families.family for the distribution-specific deviance
+        See sm.families.family for the distribution-specific deviance
         functions.
         """
         return self.family.deviance(
@@ -2086,7 +2086,7 @@ class GLMResults(base.LikelihoodModelResults):
     def llf(self):
         """
         Value of the loglikelihood function evalued at params.
-        See statsmodels.families.family for distribution-specific
+        See sm.families.family for distribution-specific
         loglikelihoods.  The result uses the concentrated
         log-likelihood if the family is Gaussian and the link is linear,
         otherwise it uses the non-concentrated log-likelihood evaluated
