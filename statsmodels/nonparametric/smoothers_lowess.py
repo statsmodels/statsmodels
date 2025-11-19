@@ -95,7 +95,9 @@ def lowess(
     are less problematic. The weights downgrade the influence of
     points with large residuals. In the extreme case, points whose
     residuals are larger than 6 times the median absolute residual
-    are given weight 0.
+    are given weight 0. If during iterations, the median absolute
+    residual becomes less than 1e-7 (basically zero), iterations
+    are stopped as the algorithm becomes unstable.
 
     `delta` can be used to save computations. For each `x_i`, regressions
     are skipped for points closer than `delta`. The next regression is
