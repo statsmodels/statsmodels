@@ -2204,13 +2204,13 @@ class MixedLM(base.LikelihoodModel):
             "disp",
             "maxls",
         ]
-        for x in fit_kwargs.keys():
-            if x not in _allowed_kwargs:
-                warnings.warn(
-                    "Argument %s not used by MixedLM.fit" % x,
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+        #for x in fit_kwargs.keys():
+        #    if x not in _allowed_kwargs:
+        #        warnings.warn(
+        #            "Argument %s not used by MixedLM.fit" % x,
+        #            RuntimeWarning,
+        #            stacklevel=2,
+        #        )
 
         if method is None:
             method = ["bfgs", "lbfgs", "cg"]
