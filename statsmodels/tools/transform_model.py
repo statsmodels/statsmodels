@@ -48,11 +48,11 @@ class StandardizeTransform:
         if const_idx is None:
             const_idx = np.nonzero(self.scale == 0)[0]
             if len(const_idx) == 0:
-                const_idx = 'n'
+                const_idx = "n"
             else:
                 const_idx = int(np.squeeze(const_idx))
 
-        if const_idx != 'n':
+        if const_idx != "n":
             self.mean[const_idx] = 0
             self.scale[const_idx] = 1
 
@@ -86,7 +86,7 @@ class StandardizeTransform:
         """
 
         params_new = params / self.scale
-        if self.const_idx != 'n':
+        if self.const_idx != "n":
             params_new[self.const_idx] -= (params_new * self.mean).sum()
 
         return params_new

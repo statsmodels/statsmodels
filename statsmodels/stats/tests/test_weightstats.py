@@ -1,4 +1,4 @@
-'''tests for weightstats, compares with replication
+"""tests for weightstats, compares with replication
 
 no failures but needs cleanup
 update 2012-09-09:
@@ -13,15 +13,20 @@ update 2012-09-09:
 Author: Josef Perktold
 License: BSD (3-clause)
 
-'''
+"""
 
 import numpy as np
-from scipy import stats
+from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pandas as pd
-from numpy.testing import assert_, assert_almost_equal, assert_allclose
+from scipy import stats
 
-from statsmodels.stats.weightstats import (DescrStatsW, CompareMeans,
-                                           ttest_ind, ztest, zconfint)
+from statsmodels.stats.weightstats import (
+    CompareMeans,
+    DescrStatsW,
+    ttest_ind,
+    zconfint,
+    ztest,
+)
 from statsmodels.tools.testing import Holder
 
 
@@ -174,22 +179,20 @@ class TestWeightstats:
         x2 = m2 + np.random.randn(n2)
         x1_2d = m1 + np.random.randn(n1, 3)
         x2_2d = m2 + np.random.randn(n2, 3)
-        w1 = np.random.randint(1,4, n1)
-        w2 = np.random.randint(1,4, n2)
+        w1 = np.random.randint(1, 4, n1)
+        w2 = np.random.randint(1, 4, n2)
         cls.x1, cls.x2 = x1, x2
         cls.w1, cls.w2 = w1, w2
         cls.x1_2d, cls.x2_2d = x1_2d, x2_2d
 
     def test_weightstats_1(self):
         x1, x2 = self.x1, self.x2
-        w1, w2 = self.w1, self.w2
         w1_ = 2. * np.ones(len(x1))
         w2_ = 2. * np.ones(len(x2))
 
-        d1 = DescrStatsW(x1)
         #        print ttest_ind(x1, x2)
         #        print ttest_ind(x1, x2, usevar='unequal')
-        #        #print ttest_ind(x1, x2, usevar='unequal')
+        #        # print ttest_ind(x1, x2, usevar='unequal')
         #        print stats.ttest_ind(x1, x2)
         #        print ttest_ind(x1, x2, usevar='unequal', alternative='larger')
         #        print ttest_ind(x1, x2, usevar='unequal', alternative='smaller')
@@ -249,7 +252,7 @@ class TestWeightstats:
         assert_almost_equal(np.corrcoef(x2r_2d.T), d2w_2d.corrcoef, 14)
 
         #        print d1w_2d.ttest_mean(3)
-        #        #scipy.stats.ttest is also vectorized
+        #        # scipy.stats.ttest is also vectorized
         #        print stats.ttest_1samp(x1r_2d, 3)
         t, p, d = d1w_2d.ttest_mean(3)
         assert_almost_equal([t, p], stats.ttest_1samp(x1r_2d, 3), 11)
@@ -305,7 +308,7 @@ class TestWeightstats:
         # smoke test for summary
         from statsmodels.iolib.table import SimpleTable
         for use_t in [True, False]:
-            for usevar in ['pooled', 'unequal']:
+            for usevar in ["pooled", "unequal"]:
                 smry = cm1.summary(use_t=use_t, usevar=usevar)
                 assert_(isinstance(smry, SimpleTable))
 
@@ -323,7 +326,7 @@ class TestWeightstats:
         # smoke test for summary
         from statsmodels.iolib.table import SimpleTable
         for use_t in [True, False]:
-            for usevar in ['pooled', 'unequal']:
+            for usevar in ["pooled", "unequal"]:
                 smry = cm1.summary(use_t=use_t, usevar=usevar)
                 assert_(isinstance(smry, SimpleTable))
 
@@ -386,22 +389,22 @@ class CheckWeightstats1dMixin:
         cm2 = CompareMeans(DescrStatsW(x1, weights=w1, ddof=1),
                            DescrStatsW(x2, weights=w2, ddof=2))
 
-        res0 = cm0.ttest_ind(usevar='unequal')
-        res1 = cm1.ttest_ind(usevar='unequal')
-        res2 = cm2.ttest_ind(usevar='unequal')
+        res0 = cm0.ttest_ind(usevar="unequal")
+        res1 = cm1.ttest_ind(usevar="unequal")
+        res2 = cm2.ttest_ind(usevar="unequal")
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
 
         # check confint independent of user ddof
-        res0 = cm0.tconfint_diff(usevar='pooled')
-        res1 = cm1.tconfint_diff(usevar='pooled')
-        res2 = cm2.tconfint_diff(usevar='pooled')
+        res0 = cm0.tconfint_diff(usevar="pooled")
+        res1 = cm1.tconfint_diff(usevar="pooled")
+        res2 = cm2.tconfint_diff(usevar="pooled")
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
 
-        res0 = cm0.tconfint_diff(usevar='unequal')
-        res1 = cm1.tconfint_diff(usevar='unequal')
-        res2 = cm2.tconfint_diff(usevar='unequal')
+        res0 = cm0.tconfint_diff(usevar="unequal")
+        res1 = cm1.tconfint_diff(usevar="unequal")
+        res2 = cm2.tconfint_diff(usevar="unequal")
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
 
@@ -515,13 +518,13 @@ def test_ttest_ind_with_uneq_var():
     b = (1.1, 2.9, 4.2)
     pr = 0.53619490753126731
     tr = -0.68649512735572582
-    t, p, df = ttest_ind(a, b, usevar='unequal')
+    t, p, df = ttest_ind(a, b, usevar="unequal")
     assert_almost_equal([t, p], [tr, pr], 13)
 
     a = (1, 2, 3, 4)
     pr = 0.84354139131608286
     tr = -0.2108663315950719
-    t, p, df = ttest_ind(a, b, usevar='unequal')
+    t, p, df = ttest_ind(a, b, usevar="unequal")
     assert_almost_equal([t, p], [tr, pr], 13)
 
 
@@ -572,9 +575,9 @@ ztest_.p_value = 5.711530850508982e-11
 ztest_.conf_int = np.array([1.230415246535603, 2.280948389828034])
 ztest_.estimate = np.array([7.01818181818182, 5.2625])
 ztest_.null_value = 0
-ztest_.alternative = 'two.sided'
-ztest_.method = 'Two-sample z-Test'
-ztest_.data_name = 'x and y'
+ztest_.alternative = "two.sided"
+ztest_.method = "Two-sample z-Test"
+ztest_.data_name = "x and y"
 # > zt = z.test(x, sigma.x=0.57676142668828667, y,
 #               sigma.y=0.57676142668828667, alternative="less")
 # > cat_items(zt, "ztest_smaller.")
@@ -584,9 +587,9 @@ ztest_smaller.p_value = 0.999999999971442
 ztest_smaller.conf_int = np.array([np.nan, 2.196499421109045])
 ztest_smaller.estimate = np.array([7.01818181818182, 5.2625])
 ztest_smaller.null_value = 0
-ztest_smaller.alternative = 'less'
-ztest_smaller.method = 'Two-sample z-Test'
-ztest_smaller.data_name = 'x and y'
+ztest_smaller.alternative = "less"
+ztest_smaller.method = "Two-sample z-Test"
+ztest_smaller.data_name = "x and y"
 # > zt = z.test(x, sigma.x=0.57676142668828667, y,
 #               sigma.y=0.57676142668828667, alternative="greater")
 # > cat_items(zt, "ztest_larger.")
@@ -596,9 +599,9 @@ ztest_larger.p_value = 2.855760072861813e-11
 ztest_larger.conf_int = np.array([1.314864215254592, np.nan])
 ztest_larger.estimate = np.array([7.01818181818182, 5.2625])
 ztest_larger.null_value = 0
-ztest_larger.alternative = 'greater'
-ztest_larger.method = 'Two-sample z-Test'
-ztest_larger.data_name = 'x and y'
+ztest_larger.alternative = "greater"
+ztest_larger.method = "Two-sample z-Test"
+ztest_larger.data_name = "x and y"
 
 
 # > zt = z.test(x, sigma.x=0.57676142668828667, y,
@@ -610,9 +613,9 @@ ztest_mu.p_value = 0.00480642898427981
 ztest_mu.conf_int = np.array([1.230415246535603, 2.280948389828034])
 ztest_mu.estimate = np.array([7.01818181818182, 5.2625])
 ztest_mu.null_value = 1
-ztest_mu.alternative = 'two.sided'
-ztest_mu.method = 'Two-sample z-Test'
-ztest_mu.data_name = 'x and y'
+ztest_mu.alternative = "two.sided"
+ztest_mu.method = "Two-sample z-Test"
+ztest_mu.data_name = "x and y"
 
 # > zt = z.test(x, sigma.x=0.57676142668828667, y,
 #               sigma.y=0.57676142668828667, mu=1, alternative="greater")
@@ -623,9 +626,9 @@ ztest_larger_mu.p_value = 0.002403214492139871
 ztest_larger_mu.conf_int = np.array([1.314864215254592, np.nan])
 ztest_larger_mu.estimate = np.array([7.01818181818182, 5.2625])
 ztest_larger_mu.null_value = 1
-ztest_larger_mu.alternative = 'greater'
-ztest_larger_mu.method = 'Two-sample z-Test'
-ztest_larger_mu.data_name = 'x and y'
+ztest_larger_mu.alternative = "greater"
+ztest_larger_mu.method = "Two-sample z-Test"
+ztest_larger_mu.data_name = "x and y"
 
 # > zt = z.test(x, sigma.x=0.57676142668828667, y,
 #               sigma.y=0.57676142668828667, mu=2, alternative="less")
@@ -636,9 +639,9 @@ ztest_smaller_mu.p_value = 0.1809787183191324
 ztest_smaller_mu.conf_int = np.array([np.nan, 2.196499421109045])
 ztest_smaller_mu.estimate = np.array([7.01818181818182, 5.2625])
 ztest_smaller_mu.null_value = 2
-ztest_smaller_mu.alternative = 'less'
-ztest_smaller_mu.method = 'Two-sample z-Test'
-ztest_smaller_mu.data_name = 'x and y'
+ztest_smaller_mu.alternative = "less"
+ztest_smaller_mu.method = "Two-sample z-Test"
+ztest_smaller_mu.data_name = "x and y"
 
 # > zt = z.test(x, sigma.x=0.46436662631627995, mu=6.4,
 #               alternative="two.sided")
@@ -649,9 +652,9 @@ ztest_mu_1s.p_value = 1.009110038015147e-05
 ztest_mu_1s.conf_int = np.array([6.74376372125119, 7.29259991511245])
 ztest_mu_1s.estimate = 7.01818181818182
 ztest_mu_1s.null_value = 6.4
-ztest_mu_1s.alternative = 'two.sided'
-ztest_mu_1s.method = 'One-sample z-Test'
-ztest_mu_1s.data_name = 'x'
+ztest_mu_1s.alternative = "two.sided"
+ztest_mu_1s.method = "One-sample z-Test"
+ztest_mu_1s.data_name = "x"
 
 # > zt = z.test(x, sigma.x=0.46436662631627995, mu=7.4, alternative="less")
 # > cat_items(zt, "ztest_smaller_mu_1s.")
@@ -661,9 +664,9 @@ ztest_smaller_mu_1s.p_value = 0.00319523783881176
 ztest_smaller_mu_1s.conf_int = np.array([np.nan, 7.248480744895716])
 ztest_smaller_mu_1s.estimate = 7.01818181818182
 ztest_smaller_mu_1s.null_value = 7.4
-ztest_smaller_mu_1s.alternative = 'less'
-ztest_smaller_mu_1s.method = 'One-sample z-Test'
-ztest_smaller_mu_1s.data_name = 'x'
+ztest_smaller_mu_1s.alternative = "less"
+ztest_smaller_mu_1s.method = "One-sample z-Test"
+ztest_smaller_mu_1s.data_name = "x"
 
 # > zt = z.test(x, sigma.x=0.46436662631627995, mu=6.4, alternative="greater")
 # > cat_items(zt, "ztest_greater_mu_1s.")
@@ -673,9 +676,9 @@ ztest_larger_mu_1s.p_value = 5.045550190097003e-06
 ztest_larger_mu_1s.conf_int = np.array([6.78788289146792, np.nan])
 ztest_larger_mu_1s.estimate = 7.01818181818182
 ztest_larger_mu_1s.null_value = 6.4
-ztest_larger_mu_1s.alternative = 'greater'
-ztest_larger_mu_1s.method = 'One-sample z-Test'
-ztest_larger_mu_1s.data_name = 'x'
+ztest_larger_mu_1s.alternative = "greater"
+ztest_larger_mu_1s.method = "One-sample z-Test"
+ztest_larger_mu_1s.data_name = "x"
 
 # > zt = z.test(x, sigma.x=0.46436662631627995, y, sigma.y=0.7069805008424409)
 # > cat_items(zt, "ztest_unequal.")
@@ -685,10 +688,10 @@ ztest_unequal.p_value = 8.89450168270109e-10
 ztest_unequal.conf_int = np.array([1.19415646579981, 2.31720717056382])
 ztest_unequal.estimate = np.array([7.01818181818182, 5.2625])
 ztest_unequal.null_value = 0
-ztest_unequal.alternative = 'two.sided'
-ztest_unequal.usevar = 'unequal'
-ztest_unequal.method = 'Two-sample z-Test'
-ztest_unequal.data_name = 'x and y'
+ztest_unequal.alternative = "two.sided"
+ztest_unequal.usevar = "unequal"
+ztest_unequal.method = "Two-sample z-Test"
+ztest_unequal.data_name = "x and y"
 
 # > zt = z.test(x, sigma.x=0.46436662631627995, y, sigma.y=0.7069805008424409, alternative="less")
 # > cat_items(zt, "ztest_smaller_unequal.")
@@ -698,10 +701,10 @@ ztest_smaller_unequal.p_value = 0.999999999555275
 ztest_smaller_unequal.conf_int = np.array([np.nan, 2.22692874913371])
 ztest_smaller_unequal.estimate = np.array([7.01818181818182, 5.2625])
 ztest_smaller_unequal.null_value = 0
-ztest_smaller_unequal.alternative = 'less'
-ztest_smaller_unequal.usevar = 'unequal'
-ztest_smaller_unequal.method = 'Two-sample z-Test'
-ztest_smaller_unequal.data_name = 'x and y'
+ztest_smaller_unequal.alternative = "less"
+ztest_smaller_unequal.usevar = "unequal"
+ztest_smaller_unequal.method = "Two-sample z-Test"
+ztest_smaller_unequal.data_name = "x and y"
 
 # > zt = z.test(x, sigma.x=0.46436662631627995, y, sigma.y=0.7069805008424409, alternative="greater")
 # > cat_items(zt, "ztest_larger_unequal.")
@@ -711,15 +714,15 @@ ztest_larger_unequal.p_value = 4.44725034576265e-10
 ztest_larger_unequal.conf_int = np.array([1.28443488722992, np.nan])
 ztest_larger_unequal.estimate = np.array([7.01818181818182, 5.2625])
 ztest_larger_unequal.null_value = 0
-ztest_larger_unequal.alternative = 'greater'
-ztest_larger_unequal.usevar = 'unequal'
-ztest_larger_unequal.method = 'Two-sample z-Test'
-ztest_larger_unequal.data_name = 'x and y'
+ztest_larger_unequal.alternative = "greater"
+ztest_larger_unequal.usevar = "unequal"
+ztest_larger_unequal.method = "Two-sample z-Test"
+ztest_larger_unequal.data_name = "x and y"
 
 
-alternatives = {'less': 'smaller',
-                'greater': 'larger',
-                'two.sided': 'two-sided'}
+alternatives = {"less": "smaller",
+                "greater": "larger",
+                "two.sided": "two-sided"}
 
 
 class TestZTest:
@@ -743,13 +746,15 @@ class TestZTest:
         for tc in [ztest_, ztest_smaller, ztest_larger,
                    ztest_mu, ztest_smaller_mu, ztest_larger_mu]:
 
-            zstat, pval = ztest(x1, x2, value=tc.null_value,
-                                alternative=alternatives[tc.alternative])
+            zstat, pval = ztest(
+                x1, x2, value=tc.null_value, alternative=alternatives[tc.alternative]
+            )
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
-            zstat, pval = cm.ztest_ind(value=tc.null_value,
-                                alternative=alternatives[tc.alternative])
+            zstat, pval = cm.ztest_ind(
+                value=tc.null_value, alternative=alternatives[tc.alternative]
+            )
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
@@ -788,8 +793,9 @@ class TestZTest:
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
-            zstat, pval = d1.ztest_mean(value=tc.null_value,
-                                 alternative=alternatives[tc.alternative])
+            zstat, pval = d1.ztest_mean(
+                value=tc.null_value, alternative=alternatives[tc.alternative]
+            )
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 

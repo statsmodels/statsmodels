@@ -5,7 +5,7 @@ from statsmodels.compat.pandas import (
 )
 
 import numpy as np
-from numpy.testing import assert_, assert_equal, assert_raises
+from numpy.testing import assert_equal
 import pandas as pd
 import pytest
 
@@ -15,6 +15,7 @@ from statsmodels.formula import handle_formula_data
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.sm_exceptions import MissingDataError
 
 # FIXME: do not leave commented-out, enable or move/remove
 # class TestDates:
@@ -74,7 +75,7 @@ class TestArrays:
         # HACK: because numpy main after NA stuff assert_equal fails on
         # pandas indices
         # FIXME: see if this can be de-hacked
-        np.testing.assert_(np.all(self.data.row_labels == self.row_labels))
+        assert np.all(self.data.row_labels == self.row_labels)
 
 
 class TestArrays2dEndog(TestArrays):
@@ -388,7 +389,8 @@ def test_alignment():
     exog = pd.DataFrame(data)
 
     # TODO: which index do we get??
-    np.testing.assert_raises(ValueError, OLS, *(endog, exog))
+    with pytest.raises(ValueError):
+        OLS(endog, exog)
 
 
 class TestMultipleEqsArrays(TestArrays):
@@ -494,7 +496,7 @@ class TestMissingArray:
         sm_data.handle_data(np.random.random(20), np.random.random((20, 2)), "raise")
 
     def test_raise(self):
-        with pytest.raises(Exception):
+        with pytest.raises(MissingDataError):
             # TODO: be more specific about exception
             sm_data.handle_data(self.y, self.X, "raise")
 
@@ -516,7 +518,7 @@ class TestMissingArray:
         assert data.k_constant == 0
 
     def test_endog_only_raise(self):
-        with pytest.raises(Exception):
+        with pytest.raises(MissingDataError):
             # TODO: be more specific about exception
             sm_data.handle_data(self.y, None, "raise")
 
@@ -569,7 +571,7 @@ class TestMissingPandas:
         )
 
     def test_raise(self):
-        with pytest.raises(Exception):
+        with pytest.raises(MissingDataError):
             # TODO: be more specific about exception
             sm_data.handle_data(self.y, self.X, "raise")
 
@@ -593,7 +595,7 @@ class TestMissingPandas:
         assert data.k_constant == 0
 
     def test_endog_only_raise(self):
-        with pytest.raises(Exception):
+        with pytest.raises(MissingDataError):
             # TODO: be more specific about exception
             sm_data.handle_data(self.y, None, "raise")
 
@@ -637,7 +639,7 @@ class TestMissingPandas:
             ]
         )
         data = sm_data.handle_data(self.y, self.X, "drop")
-        np.testing.assert_(data.row_labels.equals(labels))
+        assert data.row_labels.equals(labels)
 
 
 class TestConstant:
@@ -742,7 +744,7 @@ class CheckHasConstant:
             assert_equal(mod.k_constant, result[0])
             assert_equal(mod.data.k_constant, result[0])
             if result[1] is None:
-                assert_(mod.data.const_idx is None)
+                assert mod.data.const_idx is None
             else:
                 assert_equal(mod.data.const_idx, result[1])
 
@@ -894,7 +896,7 @@ def test_formula_missing_extra_arrays():
 
     formula = "y_missing ~ X_missing"
 
-    ((endog, exog), missing_idx, design_info) = handle_formula_data(
+    ((endog, exog), missing_idx, model_spec) = handle_formula_data(
         data, None, formula, depth=2, missing="drop"
     )
 
@@ -911,7 +913,7 @@ def test_formula_missing_extra_arrays():
     assert_equal(data_nona["weights"].values, model_data.weights)
 
     tmp = handle_formula_data(data, None, formula, depth=2, missing="drop")
-    (endog, exog), missing_idx, design_info = tmp
+    (endog, exog), missing_idx, model_spec = tmp
     weights_2d = np.random.randn(10, 10)
     weights_2d[[8, 7], [7, 8]] = np.nan  # symmetric missing values
     kwargs.update({"weights": weights_2d, "missing_idx": missing_idx})
@@ -924,10 +926,11 @@ def test_formula_missing_extra_arrays():
     assert_equal(weights_2d[good_idx][:, good_idx], model_data2.weights)
 
     tmp = handle_formula_data(data, None, formula, depth=2, missing="drop")
-    (endog, exog), missing_idx, design_info = tmp
+    (endog, exog), missing_idx, model_spec = tmp
 
     kwargs.update({"weights": weights_wrong_size, "missing_idx": missing_idx})
-    assert_raises(ValueError, sm_data.handle_data, endog, exog, **kwargs)
+    with pytest.raises(ValueError):
+        sm_data.handle_data(endog, exog, **kwargs)
 
 
 def test_raise_nonfinite_exog():
@@ -939,6 +942,8 @@ def test_raise_nonfinite_exog():
     y = np.array([-0.6, -0.1, 0.0, -0.7, -0.5, 0.5, 0.1, -0.8, -2.0, 1.1])
 
     x[1, 1] = np.inf
-    assert_raises(MissingDataError, OLS, y, x)
+    with pytest.raises(MissingDataError):
+        OLS(y, x)
     x[1, 1] = np.nan
-    assert_raises(MissingDataError, OLS, y, x)
+    with pytest.raises(MissingDataError):
+        OLS(y, x)

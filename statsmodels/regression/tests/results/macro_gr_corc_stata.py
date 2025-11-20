@@ -1,6 +1,7 @@
 import numpy as np
 
 from statsmodels.tools.testing import ParamsTableTestBunch
+
 est = dict(
     N=201,
     df_m=2,
@@ -61,9 +62,9 @@ params_table = np.array([
     1.9720174778363,
     0]).reshape(3, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'g_realgdp L.realint _cons'.split()
+params_table_rownames = "g_realgdp L.realint _cons".split()
 
 cov = np.array([
     .04609356125016,
@@ -76,9 +77,9 @@ cov = np.array([
     -.10312637237487,
     1.1416832888557]).reshape(3, 3)
 
-cov_colnames = 'g_realgdp L.realint _cons'.split()
+cov_colnames = "g_realgdp L.realint _cons".split()
 
-cov_rownames = 'g_realgdp L.realint _cons'.split()
+cov_rownames = "g_realgdp L.realint _cons".split()
 
 fittedvalues = np.array([
     34.092961143383,
@@ -284,9 +285,9 @@ fittedvalues = np.array([
     -12.334881925913,
     4.3341943478598])
 
-fittedvalues_colnames = 'fittedvalues'.split()
+fittedvalues_colnames = "fittedvalues".split()
 
-fittedvalues_rownames = ['r'+str(n) for n in range(1, 203)]
+fittedvalues_rownames = ["r"+str(n) for n in range(1, 203)]
 
 fittedvalues_se = np.array([
     1.6473872957314,
@@ -492,9 +493,9 @@ fittedvalues_se = np.array([
     1.1648858140616,
     1.3964393384387])
 
-fittedvalues_se_colnames = 'fittedvalues_se'.split()
+fittedvalues_se_colnames = "fittedvalues_se".split()
 
-fittedvalues_se_rownames = ['r'+str(n) for n in range(1, 203)]
+fittedvalues_se_rownames = ["r"+str(n) for n in range(1, 203)]
 
 
 results = ParamsTableTestBunch(

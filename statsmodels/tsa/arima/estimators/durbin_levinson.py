@@ -59,9 +59,9 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
 
     # Make sure we have a consecutive process
     if not max_spec.is_ar_consecutive:
-        raise ValueError('Durbin-Levinson estimation unavailable for models'
-                         ' with seasonal or otherwise non-consecutive AR'
-                         ' orders.')
+        raise ValueError("Durbin-Levinson estimation unavailable for models"
+                         " with seasonal or otherwise non-consecutive AR"
+                         " orders.")
 
     gamma = acovf(endog, adjusted=adjusted, fft=True, demean=demean,
                   nlag=max_spec.ar_order)
@@ -101,7 +101,7 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
 
         # Construct other results
     other_results = Bunch({
-        'spec': spec,
+        "spec": spec,
     })
 
     return out, other_results

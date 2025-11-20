@@ -8,8 +8,8 @@ License: BSD-3
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.tools.validation import array_like
 
 
@@ -282,7 +282,7 @@ def test_cov(cov, nobs, cov_null):
     ----------
     Bartlett, M. S. 1954. “A Note on the Multiplying Factors for Various Χ2
     Approximations.” Journal of the Royal Statistical Society. Series B
-    (Methodological) 16 (2): 296–98.
+    (Methodological) 16 (2): 296-98.
 
     Rencher, Alvin C., and William F. Christensen. 2012. Methods of
     Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and
@@ -346,7 +346,7 @@ def test_cov_spherical(cov, nobs):
     ----------
     Bartlett, M. S. 1954. “A Note on the Multiplying Factors for Various Χ2
     Approximations.” Journal of the Royal Statistical Society. Series B
-    (Methodological) 16 (2): 296–98.
+    (Methodological) 16 (2): 296-98.
 
     Rencher, Alvin C., and William F. Christensen. 2012. Methods of
     Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and
@@ -586,8 +586,8 @@ def test_cov_oneway(cov_list, nobs_list):
                        statistic_chi2=statistic_chi2,
                        pvalue_chi2=pvalue_chi2,
                        df_chi2=df_chi2,
-                       distr_chi2='chi2',
+                       distr_chi2="chi2",
                        statistic_f=statistic_f,
                        pvalue_f=pvalue_f,
                        df_f=df_f,
-                       distr_f='F')
+                       distr_f="F")

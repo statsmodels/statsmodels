@@ -5,16 +5,19 @@ import pytest
 
 @pytest.mark.xfail(strict=True)
 def test_regression_summary():
-    #little luck getting this test to pass (It should?), can be used for
-    #visual testing of the regression.summary table
-    #fixed, might fail at minute changes
-    from statsmodels.regression.tests.test_regression import TestOLS
-    #from test_regression import TestOLS
-    import time
+    # little luck getting this test to pass (It should?), can be used for
+    # visual testing of the regression.summary table
+    # fixed, might fail at minute changes
     from string import Template
+
+    # from test_regression import TestOLS
+    import time
+
+    from statsmodels.regression.tests.test_regression import TestOLS
     t = time.localtime()
     desired = Template(
-'''     Summary of Regression Results
+        """\
+     Summary of Regression Results
 =======================================
 | Dependent Variable:                y|
 | Model:                           OLS|
@@ -44,35 +47,27 @@ def test_regression_summary():
 | Log likelihood:                -109.6   Prob(JB):                  0.7103  |
 | AIC criterion:                  233.2   Skew:                      0.4200  |
 | BIC criterion:                  238.6   Kurtosis:                   2.434  |
-------------------------------------------------------------------------------'''
-).substitute(XXcurrentXdateXX = str(time.strftime("%a, %d %b %Y",t)),
-             XXtimeXXX = str(time.strftime("%H:%M:%S",t)))
+------------------------------------------------------------------------------"""
+    ).substitute(
+        XXcurrentXdateXX=str(time.strftime("%a, %d %b %Y", t)),
+        XXtimeXXX=str(time.strftime("%H:%M:%S", t)),
+    )
     desired = str(desired)
     aregression = TestOLS()
     TestOLS.setup_class()
     results = aregression.res1
     # be quiet!
-    original_filters = warnings.filters[:] # copy original
+    original_filters = warnings.filters[:]  # copy original
     warnings.simplefilter("ignore")
     try:
         r_summary = str(results.summary_old())
     finally:
-        warnings.filters = original_filters # restore filters
+        warnings.filters = original_filters  # restore filters
 
-##    print('###')
-##    print(r_summary)
-##    print('###')
-##    print(desired)
-##    print('###')
     actual = r_summary
-    import numpy as np
-    actual = '\n'.join(line.rstrip() for line in actual.split('\n'))
-#    print len(actual), len(desired)
-#    print repr(actual)
-#    print repr(desired)
+    actual = "\n".join(line.rstrip() for line in actual.split("\n"))
 #    counter = 0
 #    for c1,c2 in zip(actual, desired):
 #        if not c1==c2 and counter<20:
-#            print c1,c2
 #            counter += 1
-    np.testing.assert_(actual == desired)
+    assert actual == desired

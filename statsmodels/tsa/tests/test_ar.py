@@ -1,6 +1,8 @@
 """
 Test AR Model
 """
+from __future__ import annotations
+
 from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.pytest import pytest_warns
 
@@ -73,8 +75,7 @@ def gen_ols_regressors(ar, seasonal, trend, exog):
             seasons = seasons.iloc[:, 1:]
         reg.append(seasons)
     if maxlag:
-        for lag in lags:
-            reg.append(y.shift(lag))
+        reg.extend([y.shift(lag) for lag in lags])
     if exog:
         x = rs.standard_normal((nobs, exog))
         cols = [f"x.{i}" for i in range(exog)]
@@ -229,7 +230,7 @@ class CheckARMixin:
         self.res1.save(fh)
         fh.seek(0, 0)
         res_unpickled = self.res1.__class__.load(fh)
-        assert type(res_unpickled) is type(self.res1)  # noqa: E721
+        assert type(res_unpickled) is type(self.res1)
 
     @pytest.mark.smoke
     def test_summary(self):
@@ -426,7 +427,7 @@ def test_autoreg_predict_smoke(ar_data):
 
 
 @pytest.mark.matplotlib
-def test_parameterless_autoreg():
+def test_parameterless_autoreg(close_figures):
     data = gen_data(250, 0, False)
     mod = AutoReg(data.endog, 0, trend="n", seasonal=False, exog=None)
     res = mod.fit()
@@ -714,7 +715,7 @@ def test_autoreg_series():
     dates = period_range(start="1959Q1", periods=len(dta), freq="Q")
     dta.index = dates
     ar = AutoReg(dta, lags=15).fit()
-    ar.bse
+    assert isinstance(ar.bse, pd.Series)
 
 
 def test_ar_order_select():
@@ -1069,7 +1070,7 @@ def test_autoreg_forecast_period_index():
 
 
 @pytest.mark.matplotlib
-def test_autoreg_plot_err():
+def test_autoreg_plot_err(close_figures):
     y = np.random.standard_normal(100)
     mod = AutoReg(y, lags=[1, 3])
     res = mod.fit()

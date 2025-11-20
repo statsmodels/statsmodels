@@ -17,6 +17,7 @@ Barron-Kenny approach.
 """
 import numpy as np
 import pandas as pd
+
 from statsmodels.graphics.utils import maybe_name_or_idx
 
 
@@ -124,9 +125,17 @@ class Mediation:
     Software 59:5.  http://www.jstatsoft.org/v59/i05/paper
     """
 
-    def __init__(self, outcome_model, mediator_model, exposure, mediator=None,
-                 moderators=None, outcome_fit_kwargs=None, mediator_fit_kwargs=None,
-                 outcome_predict_kwargs=None):
+    def __init__(
+        self,
+        outcome_model,
+        mediator_model,
+        exposure,
+        mediator=None,
+        moderators=None,
+        outcome_fit_kwargs=None,
+        mediator_fit_kwargs=None,
+        outcome_predict_kwargs=None,
+    ):
 
         self.outcome_model = outcome_model
         self.mediator_model = mediator_model
@@ -134,58 +143,58 @@ class Mediation:
         self.moderators = moderators if moderators is not None else {}
 
         if mediator is None:
-            self.mediator = self._guess_endog_name(mediator_model, 'mediator')
+            self.mediator = self._guess_endog_name(mediator_model, "mediator")
         else:
             self.mediator = mediator
 
-        self._outcome_fit_kwargs = (outcome_fit_kwargs if outcome_fit_kwargs
-                is not None else {})
-        self._mediator_fit_kwargs = (mediator_fit_kwargs if mediator_fit_kwargs
-                is not None else {})
-        self._outcome_predict_kwargs = (outcome_predict_kwargs if
-                outcome_predict_kwargs is not None else {})
+        self._outcome_fit_kwargs = (
+            outcome_fit_kwargs if outcome_fit_kwargs is not None else {}
+        )
+        self._mediator_fit_kwargs = (
+            mediator_fit_kwargs if mediator_fit_kwargs is not None else {}
+        )
+        self._outcome_predict_kwargs = (
+            outcome_predict_kwargs if outcome_predict_kwargs is not None else {}
+        )
 
         # We will be changing these so need to copy.
         self._outcome_exog = outcome_model.exog.copy()
         self._mediator_exog = mediator_model.exog.copy()
 
         # Position of the exposure variable in the mediator model.
-        self._exp_pos_mediator = self._variable_pos('exposure', 'mediator')
+        self._exp_pos_mediator = self._variable_pos("exposure", "mediator")
 
         # Position of the exposure variable in the outcome model.
-        self._exp_pos_outcome = self._variable_pos('exposure', 'outcome')
+        self._exp_pos_outcome = self._variable_pos("exposure", "outcome")
 
         # Position of the mediator variable in the outcome model.
-        self._med_pos_outcome = self._variable_pos('mediator', 'outcome')
-
+        self._med_pos_outcome = self._variable_pos("mediator", "outcome")
 
     def _variable_pos(self, var, model):
-        if model == 'mediator':
+        if model == "mediator":
             mod = self.mediator_model
         else:
             mod = self.outcome_model
 
-        if var == 'mediator':
+        if var == "mediator":
             return maybe_name_or_idx(self.mediator, mod)[1]
 
         exp = self.exposure
         exp_is_2 = ((len(exp) == 2) and not isinstance(exp, str))
 
         if exp_is_2:
-            if model == 'outcome':
+            if model == "outcome":
                 return exp[0]
-            elif model == 'mediator':
+            elif model == "mediator":
                 return exp[1]
         else:
             return maybe_name_or_idx(exp, mod)[1]
 
-
     def _guess_endog_name(self, model, typ):
-        if hasattr(model, 'formula'):
+        if hasattr(model, "formula"):
             return model.formula.split("~")[0].strip()
         else:
-            raise ValueError('cannot infer %s name without formula' % typ)
-
+            raise ValueError("cannot infer %s name without formula" % typ)
 
     def _simulate_params(self, result):
         """
@@ -195,14 +204,13 @@ class Mediation:
         cov = result.cov_params()
         return np.random.multivariate_normal(mn, cov)
 
-
     def _get_mediator_exog(self, exposure):
         """
         Return the mediator exog matrix with exposure set to the given
         value.  Set values of moderated variables as needed.
         """
         mediator_exog = self._mediator_exog
-        if not hasattr(self.mediator_model, 'formula'):
+        if not hasattr(self.mediator_model, "formula"):
             mediator_exog[:, self._exp_pos_mediator] = exposure
             for ix in self.moderators:
                 v = self.moderators[ix]
@@ -221,7 +229,6 @@ class Mediation:
 
         return mediator_exog
 
-
     def _get_outcome_exog(self, exposure, mediator):
         """
         Retun the exog design matrix with mediator and exposure set to
@@ -229,7 +236,7 @@ class Mediation:
         needed.
         """
         outcome_exog = self._outcome_exog
-        if not hasattr(self.outcome_model, 'formula'):
+        if not hasattr(self.outcome_model, "formula"):
             outcome_exog[:, self._med_pos_outcome] = mediator
             outcome_exog[:, self._exp_pos_outcome] = exposure
             for ix in self.moderators:
@@ -250,7 +257,6 @@ class Mediation:
 
         return outcome_exog
 
-
     def _fit_model(self, model, fit_kwargs, boot=False):
         klass = model.__class__
         init_kwargs = model._get_init_kwds()
@@ -262,7 +268,6 @@ class Mediation:
             exog = exog[ii, :]
         outcome_model = klass(endog, exog, **init_kwargs)
         return outcome_model.fit(**fit_kwargs)
-
 
     def fit(self, method="parametric", n_rep=1000):
         """
@@ -280,17 +285,19 @@ class Mediation:
 
         if method.startswith("para"):
             # Initial fit to unperturbed data.
-            outcome_result = self._fit_model(self.outcome_model, self._outcome_fit_kwargs)
-            mediator_result = self._fit_model(self.mediator_model, self._mediator_fit_kwargs)
-        elif not method.startswith("boot"):
-            raise ValueError(
-                "method must be either 'parametric' or 'bootstrap'"
+            outcome_result = self._fit_model(
+                self.outcome_model, self._outcome_fit_kwargs
             )
+            mediator_result = self._fit_model(
+                self.mediator_model, self._mediator_fit_kwargs
+            )
+        elif not method.startswith("boot"):
+            raise ValueError("method must be either 'parametric' or 'bootstrap'")
 
         indirect_effects = [[], []]
         direct_effects = [[], []]
 
-        for iter in range(n_rep):
+        for _ in range(n_rep):
 
             if method == "parametric":
                 # Realization of outcome model parameters from sampling distribution
@@ -299,11 +306,13 @@ class Mediation:
                 # Realization of mediation model parameters from sampling distribution
                 mediation_params = self._simulate_params(mediator_result)
             else:
-                outcome_result = self._fit_model(self.outcome_model,
-                                                 self._outcome_fit_kwargs, boot=True)
+                outcome_result = self._fit_model(
+                    self.outcome_model, self._outcome_fit_kwargs, boot=True
+                )
                 outcome_params = outcome_result.params
-                mediator_result = self._fit_model(self.mediator_model,
-                                                  self._mediator_fit_kwargs, boot=True)
+                mediator_result = self._fit_model(
+                    self.mediator_model, self._mediator_fit_kwargs, boot=True
+                )
                 mediation_params = mediator_result.params
 
             # predicted outcomes[tm][te] is the outcome when the
@@ -315,14 +324,14 @@ class Mediation:
                 kwargs = {"exog": mex}
                 if hasattr(mediator_result, "scale"):
                     kwargs["scale"] = mediator_result.scale
-                gen = self.mediator_model.get_distribution(mediation_params,
-                                                           **kwargs)
+                gen = self.mediator_model.get_distribution(mediation_params, **kwargs)
                 potential_mediator = gen.rvs(mex.shape[0])
 
                 for te in 0, 1:
                     oex = self._get_outcome_exog(te, potential_mediator)
-                    po = self.outcome_model.predict(outcome_params, oex,
-                            **self._outcome_predict_kwargs)
+                    po = self.outcome_model.predict(
+                        outcome_params, oex, **self._outcome_predict_kwargs
+                    )
                     predicted_outcomes[tm][te] = po
 
             for t in 0, 1:
@@ -409,6 +418,6 @@ class MediationResults:
             smry.iloc[i, 2] = np.percentile(vec, 100 * (1 - alpha / 2))
             smry.iloc[i, 3] = _pvalue(vec)
 
-        smry = smry.apply(pd.to_numeric, errors='coerce')
+        smry = smry.apply(pd.to_numeric, errors="coerce")
 
         return smry

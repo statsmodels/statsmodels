@@ -15,7 +15,6 @@ from numpy.testing import (
     assert_almost_equal,
     assert_array_less,
     assert_equal,
-    assert_raises,
 )
 import pandas as pd
 from pandas.testing import assert_series_equal
@@ -25,6 +24,7 @@ from scipy import stats
 import statsmodels.api as sm
 from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
 from statsmodels.tools.numdiff import (
     approx_fprime,
@@ -108,7 +108,7 @@ class CheckModelResultsMixin:
         resid2 = copy.copy(self.res2.resids)
         resid2[:, 2] *= self.res1.family.link.deriv(self.res1.mu) ** 2
 
-        atol = 10 ** (-self.decimal_resids)
+        atol = float(10 ** (-self.decimal_resids))
         resid_a = self.res1.resid_anscombe_unscaled
         resids = np.column_stack(
             (
@@ -541,7 +541,7 @@ class TestGaussianInverse(CheckModelResultsMixin):
         nobs = 100
         x = np.arange(nobs)
         np.random.seed(54321)
-        y = 1.0 + 2.0 * x + x**2 + 0.1 * np.random.randn(nobs)
+        cls.y = 1.0 + 2.0 * x + x**2 + 0.1 * np.random.randn(nobs)
         cls.X = np.c_[np.ones((nobs, 1)), x, x**2]
         cls.y_inv = (1.0 + 0.02 * x + 0.001 * x**2) ** -1 + 0.001 * np.random.randn(
             nobs
@@ -722,6 +722,7 @@ class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
         s = glm.scoretest(mod, data["lwt"]**2)
         s**2
         """
+        assert isinstance(cmd_r, str)
 
 
 # class TestGlmBernoulliIdentity(CheckModelResultsMixin):
@@ -977,7 +978,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=DomainWarning)
-            with pytest.warns(UserWarning):
+            with pytest.warns(ValueWarning, match="Negative binomial dispersio"):
                 fam = sm.families.NegativeBinomial()
 
         cls.res1 = GLM(cls.data.endog, cls.data.exog, family=fam).fit(scale="x2")
@@ -1246,22 +1247,15 @@ def test_formula_missing_exposure():
 
     exposure = pd.Series(np.random.uniform(size=5))
     df.loc[3, "Bar"] = 4  # nan not relevant for Valueerror for shape mismatch
-    assert_raises(
-        ValueError,
-        smf.glm,
-        "Foo ~ Bar",
-        data=df,
-        exposure=exposure,
-        family=family,
-    )
-    assert_raises(
-        ValueError,
-        GLM,
-        df.Foo,
-        df[["constant", "Bar"]],
-        exposure=exposure,
-        family=family,
-    )
+    with pytest.raises(ValueError):
+        smf.glm("Foo ~ Bar", data=df, exposure=exposure, family=family)
+    with pytest.raises(ValueError):
+        GLM(
+            df.Foo,
+            df[["constant", "Bar"]],
+            exposure=exposure,
+            family=family,
+        )
 
 
 @pytest.mark.matplotlib
@@ -1361,7 +1355,7 @@ def test_summary():
         fa = sm.families.Gaussian()
         model = sm.GLM(endog, exog, family=fa)
         rslt = model.fit(method=method)
-        s = rslt.summary()
+        rslt.summary()
 
 
 def check_score_hessian(results):
@@ -1371,14 +1365,20 @@ def check_score_hessian(results):
     # avoid checking score at MLE, score close to zero
     sc = results.model.score(params * 0.98, scale=1)
     # cs currently (0.9) does not work for all families
-    llfunc = lambda x: results.model.loglike(x, scale=1)  # noqa
+
+    def llfunc(x):
+        return results.model.loglike(x, scale=1)
+
     sc2 = approx_fprime(params * 0.98, llfunc)
     assert_allclose(sc, sc2, rtol=1e-4, atol=1e-4)
 
     hess = results.model.hessian(params, scale=1)
     hess2 = approx_hess(params, llfunc)
     assert_allclose(hess, hess2, rtol=1e-4)
-    scfunc = lambda x: results.model.score(x, scale=1)  # noqa
+
+    def scfunc(x):
+        return results.model.score(x, scale=1)
+
     hess3 = approx_fprime(params, scfunc)
     assert_allclose(hess, hess3, rtol=1e-4)
 
@@ -1472,7 +1472,8 @@ def test_gradient_irls():
                     skip_one = True
                 # the following fails with Identity link, because endog < 0
                 # elif family_class == fam.Gamma:
-                #     lin_pred = 0.5 * exog.sum(1) + np.random.uniform(size=exog.shape[0])
+                #     lin_pred = 0.5 * exog.sum(1) + \
+                #     np.random.uniform(size=exog.shape[0])
                 else:
                     lin_pred = np.random.uniform(size=exog.shape[0])
 
@@ -2169,7 +2170,7 @@ class TestWtdTweediePower15(CheckWtdDuplicationMixin):
         cls.res2 = GLM(cls.endog_big, cls.exog_big, family=family_link).fit()
 
 
-def test_wtd_patsy_missing():
+def test_wtd_formula_with_missing():
     import pandas as pd
 
     data = cpunish.load()
@@ -2746,7 +2747,7 @@ class TestRegularized:
                 assert_allclose(params, sm_result.params, atol=1e-2, rtol=0.3)
 
                 # The penalized log-likelihood that we are maximizing.
-                def plf(params):
+                def plf(params, model, endog, alpha, L1_wt):
                     llf = model.loglike(params) / len(endog)
                     llf = llf - alpha * (
                         (1 - L1_wt) * np.sum(params**2) / 2
@@ -2755,8 +2756,8 @@ class TestRegularized:
                     return llf
 
                 # Confirm that we are doing better than glmnet.
-                llf_r = plf(params)
-                llf_sm = plf(sm_result.params)
+                llf_r = plf(params, model, endog, alpha, L1_wt)
+                llf_sm = plf(sm_result.params, model, endog, alpha, L1_wt)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 
@@ -2773,7 +2774,7 @@ class TestConvergence:
         cls.model = GLM(data.endog, data.exog, family=sm.families.Binomial())
 
     def _when_converged(self, atol=1e-8, rtol=0, tol_criterion="deviance"):
-        for i, dev in enumerate(self.res.fit_history[tol_criterion]):
+        for i, _ in enumerate(self.res.fit_history[tol_criterion]):
             orig = self.res.fit_history[tol_criterion][i]
             new = self.res.fit_history[tol_criterion][i + 1]
             if np.allclose(orig, new, atol=atol, rtol=rtol):
@@ -2983,8 +2984,6 @@ def test_output_exposure_null(reset_randomstate):
 def test_qaic():
 
     # Example from documentation of R package MuMIn
-    import patsy
-
     ldose = np.concatenate((np.arange(6), np.arange(6)))
     sex = ["M"] * 6 + ["F"] * 6
     numdead = [10, 4, 9, 12, 18, 20, 0, 2, 6, 10, 12, 16]
@@ -2993,7 +2992,8 @@ def test_qaic():
     df["SF"] = df["numdead"]
 
     y = df[["numalive", "numdead"]].values
-    x = patsy.dmatrix("sex*ldose", data=df, return_type="dataframe")
+    mgr = FormulaManager()
+    x = mgr.get_matrices("sex*ldose", data=df)
     m = GLM(y, x, family=sm.families.Binomial())
     r = m.fit()
     scale = 2.412699
@@ -3037,11 +3037,11 @@ def test_tweedie_score():
 
             pa = result.params + 0.2 * np.random.normal(size=result.params.size)
 
-            ngrad = approx_fprime_cs(pa, lambda x: model.loglike(x, scale=1))
+            from functools import partial
+            ngrad = approx_fprime_cs(pa, partial(model.loglike, scale=1))
             agrad = model.score(pa, scale=1)
             assert_allclose(ngrad, agrad, atol=1e-8, rtol=1e-8)
-
-            nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
+            nhess = approx_hess_cs(pa, partial(model.loglike, scale=1))
             ahess = model.hessian(pa, scale=1)
             assert_allclose(nhess, ahess, atol=5e-8, rtol=5e-8)
 

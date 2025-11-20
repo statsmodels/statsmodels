@@ -6,6 +6,7 @@ Author: Josef Perktold
 """
 
 import collections
+
 import numpy as np
 
 from statsmodels.tools.testing import Holder

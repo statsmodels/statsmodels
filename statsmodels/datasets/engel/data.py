@@ -1,11 +1,11 @@
 """Name of dataset."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = """Engel (1857) food expenditure data"""
-SOURCE      = """
+COPYRIGHT = """This is public domain."""
+TITLE = """Engel (1857) food expenditure data"""
+SOURCE = """
 This dataset was used in Koenker and Bassett (1982) and distributed alongside
 the ``quantreg`` package for R.
 
@@ -16,12 +16,12 @@ Roger Koenker (2012). quantreg: Quantile Regression. R package version 4.94.
 http://CRAN.R-project.org/package=quantreg
 """
 
-DESCRSHORT  = """Engel food expenditure data."""
+DESCRSHORT = """Engel food expenditure data."""
 
-DESCRLONG   = """Data on income and food expenditure for 235 working class households in 1857 Belgium."""
+DESCRLONG = """Data on income and food expenditure for 235 working class households in 1857 Belgium."""
 
-#suggested notes
-NOTE        = """::
+# suggested notes
+NOTE = """::
 
     Number of observations: 235
     Number of variables: 2
@@ -29,6 +29,7 @@ NOTE        = """::
         income - annual household income (Belgian francs)
         foodexp - annual household food expenditure (Belgian francs)
 """
+
 
 def load():
     """
@@ -48,4 +49,4 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'engel.csv')
+    return du.load_csv(__file__, "engel.csv")

@@ -1,4 +1,5 @@
 import numpy as np
+
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
@@ -153,13 +154,13 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     init_args = model._get_init_kwds()
     # we do not need a copy of init_args b/c get_init_kwds provides new dict
-    init_args['hasconst'] = False
-    model_offset = init_args.pop('offset', None)
-    if 'exposure' in init_args and init_args['exposure'] is not None:
+    init_args["hasconst"] = False
+    model_offset = init_args.pop("offset", None)
+    if "exposure" in init_args and init_args["exposure"] is not None:
         if model_offset is None:
-            model_offset = np.log(init_args.pop('exposure'))
+            model_offset = np.log(init_args.pop("exposure"))
         else:
-            model_offset += np.log(init_args.pop('exposure'))
+            model_offset += np.log(init_args.pop("exposure"))
 
     fgh_list = [
         _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
@@ -242,7 +243,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         klass = rslt.__class__
 
     # Not all models have a scale
-    if hasattr(rslt, 'scale'):
+    if hasattr(rslt, "scale"):
         scale = rslt.scale
     else:
         scale = 1.
@@ -261,7 +262,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     refit.regularized = True
     refit.converged = converged
     refit.method = method
-    refit.fit_history = {'iteration': itr + 1}
+    refit.fit_history = {"iteration": itr + 1}
 
     # Restore df in model class, see issue #1723 for discussion.
     model.df_model, model.df_resid = p, q
@@ -379,10 +380,11 @@ class RegularizedResults(Results):
 
 class RegularizedResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
-        'params': 'columns',
-        'resid': 'rows',
-        'fittedvalues': 'rows',
+        "params": "columns",
+        "resid": "rows",
+        "fittedvalues": "rows",
     }
     _wrap_attrs = _attrs
-wrap.populate_wrapper(RegularizedResultsWrapper,  # noqa:E305
-                      RegularizedResults)
+
+
+wrap.populate_wrapper(RegularizedResultsWrapper, RegularizedResults)

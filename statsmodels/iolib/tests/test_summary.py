@@ -1,26 +1,26 @@
-'''examples to check summary, not converted to tests yet
+"""examples to check summary, not converted to tests yet
 
 
-'''
+"""
 
-import numpy as np  # noqa: F401
-import pytest
+import numpy as np
 from numpy.testing import assert_equal
+import pytest
 
 from statsmodels.datasets import macrodata
-from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.tools import add_constant
 
 
 def test_escaped_variable_name():
     # Rename 'cpi' column to 'CPI_'
     data = macrodata.load().data
-    data.rename(columns={'cpi': 'CPI_'}, inplace=True)
+    data.rename(columns={"cpi": "CPI_"}, inplace=True)
 
-    mod = OLS.from_formula('CPI_ ~ 1 + np.log(realgdp)', data=data)
+    mod = OLS.from_formula("CPI_ ~ 1 + np.log(realgdp)", data=data)
     res = mod.fit()
-    assert 'CPI\\_' in res.summary().as_latex()
-    assert 'CPI_' in res.summary().as_text()
+    assert "CPI\\_" in res.summary().as_latex()
+    assert "CPI_" in res.summary().as_text()
 
 
 def test_wrong_len_xname(reset_randomstate):
@@ -28,14 +28,14 @@ def test_wrong_len_xname(reset_randomstate):
     x = np.random.randn(100, 2)
     res = OLS(y, x).fit()
     with pytest.raises(ValueError):
-        res.summary(xname=['x1'])
+        res.summary(xname=["x1"])
     with pytest.raises(ValueError):
-        res.summary(xname=['x1', 'x2', 'x3'])
+        res.summary(xname=["x1", "x2", "x3"])
 
 
 class TestSummaryLatex:
     def test__repr_latex_(self):
-        desired = r'''
+        desired = r"""
 \begin{center}
 \begin{tabular}{lcccccc}
 \toprule
@@ -46,22 +46,22 @@ class TestSummaryLatex:
 \bottomrule
 \end{tabular}
 \end{center}
-'''
+"""
         x = [1, 5, 7, 3, 5, 5, 8, 3, 3, 4, 6, 4, 2, 7, 4, 2, 1, 9, 2, 6]
         x = add_constant(x)
         y = [6, 4, 2, 7, 4, 2, 1, 9, 2, 6, 1, 5, 7, 3, 5, 5, 8, 3, 3, 4]
         reg = OLS(y, x).fit()
 
         actual = reg.summary().tables[1]._repr_latex_()
-        actual = '\n%s\n' % actual
+        actual = "\n%s\n" % actual
         assert_equal(actual, desired)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     from statsmodels.regression.tests.test_regression import TestOLS
 
-    #def mytest():
+    # def mytest():
     aregression = TestOLS()
     TestOLS.setup_class()
     results = aregression.res1
@@ -69,12 +69,11 @@ if __name__ == '__main__':
     print(r_summary)
     olsres = results
 
-    print('\n\n')
+    print("\n\n")
 
     r_summary = str(results.summary())
     print(r_summary)
-    print('\n\n')
-
+    print("\n\n")
 
     from statsmodels.discrete.tests.test_discrete import TestProbitNewton
 
@@ -83,31 +82,31 @@ if __name__ == '__main__':
     results = aregression.res1
     r_summary = str(results.summary())
     print(r_summary)
-    print('\n\n')
+    print("\n\n")
 
     probres = results
 
     from statsmodels.robust.tests.test_rlm import TestHampel
 
     aregression = TestHampel()
-    #TestHampel.setup_class()
+    # TestHampel.setup_class()
     results = aregression.res1
     r_summary = str(results.summary())
     print(r_summary)
     rlmres = results
 
-    print('\n\n')
+    print("\n\n")
 
     from statsmodels.genmod.tests.test_glm import TestGlmBinomial
 
     aregression = TestGlmBinomial()
-    #TestGlmBinomial.setup_class()
+    # TestGlmBinomial.setup_class()
     results = aregression.res1
     r_summary = str(results.summary())
     print(r_summary)
 
-    #print(results.summary2(return_fmt='latex'))
-    #print(results.summary2(return_fmt='csv'))
+    # print(results.summary2(return_fmt='latex'))
+    # print(results.summary2(return_fmt='csv'))
 
     smry = olsres.summary()
     print(smry.as_csv())

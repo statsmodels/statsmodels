@@ -1,12 +1,14 @@
-import numpy as np
 from collections import defaultdict
+
+import numpy as np
+
 import statsmodels.base.model as base
-from statsmodels.genmod import families
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.genmod.families import links
-from statsmodels.genmod.families import varfuncs
-import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula.formulatools import advance_eval_env
+from statsmodels.genmod import families
+from statsmodels.genmod.families import links, varfuncs
+from statsmodels.genmod.generalized_linear_model import GLM
+import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
 
 
@@ -78,7 +80,7 @@ class QIFAutoregressive(QIFCovariance):
     def mat(self, dim, term):
 
         if dim < 3:
-            msg = ("Groups must have size at least 3 for " +
+            msg = ("Groups must have size at least 3 for "
                    "autoregressive covariance.")
             raise ValueError(msg)
 
@@ -127,15 +129,14 @@ class QIF(base.Model):
     """
 
     def __init__(self, endog, exog, groups, family=None,
-                 cov_struct=None, missing='none', **kwargs):
+                 cov_struct=None, missing="none", **kwargs):
 
         # Handle the family argument
         if family is None:
             family = families.Gaussian()
-        else:
-            if not issubclass(family.__class__, families.Family):
-                raise ValueError("QIF: `family` must be a genmod "
-                                 "family instance")
+        elif not issubclass(family.__class__, families.Family):
+            raise ValueError("QIF: `family` must be a genmod "
+                             "family instance")
         self.family = family
 
         self._fit_history = defaultdict(list)
@@ -143,10 +144,9 @@ class QIF(base.Model):
         # Handle the cov_struct argument
         if cov_struct is None:
             cov_struct = QIFIndependence()
-        else:
-            if not isinstance(cov_struct, QIFCovariance):
-                raise ValueError(
-                    "QIF: `cov_struct` must be a QIFCovariance instance")
+        elif not isinstance(cov_struct, QIFCovariance):
+            raise ValueError(
+                "QIF: `cov_struct` must be a QIFCovariance instance")
         self.cov_struct = cov_struct
 
         groups = np.asarray(groups)
@@ -329,10 +329,10 @@ class QIF(base.Model):
 
         if isinstance(groups, str):
             groups = data[groups]
-
+        advance_eval_env(kwargs)
         model = super().from_formula(
-                   formula, data=data, subset=subset,
-                   groups=groups, *args, **kwargs)
+            formula, data, *args,  subset=subset, groups=groups, **kwargs
+        )
 
         return model
 
@@ -473,27 +473,27 @@ class QIFResults(base.LikelihoodModelResults):
         statsmodels.iolib.summary.Summary : class to hold summary results
         """
 
-        top_left = [('Dep. Variable:', None),
-                    ('Method:', ['QIF']),
-                    ('Family:', [self.model.family.__class__.__name__]),
-                    ('Covariance structure:',
+        top_left = [("Dep. Variable:", None),
+                    ("Method:", ["QIF"]),
+                    ("Family:", [self.model.family.__class__.__name__]),
+                    ("Covariance structure:",
                      [self.model.cov_struct.__class__.__name__]),
-                    ('Date:', None),
-                    ('Time:', None),
+                    ("Date:", None),
+                    ("Time:", None),
                     ]
 
         NY = [len(y) for y in self.model.groups_ix]
 
-        top_right = [('No. Observations:', [sum(NY)]),
-                     ('No. clusters:', [len(NY)]),
-                     ('Min. cluster size:', [min(NY)]),
-                     ('Max. cluster size:', [max(NY)]),
-                     ('Mean cluster size:', ["%.1f" % np.mean(NY)]),
-                     ('Scale:', ["%.3f" % self.scale]),
+        top_right = [("No. Observations:", [sum(NY)]),
+                     ("No. clusters:", [len(NY)]),
+                     ("Min. cluster size:", [min(NY)]),
+                     ("Max. cluster size:", [max(NY)]),
+                     ("Mean cluster size:", ["%.1f" % np.mean(NY)]),
+                     ("Scale:", ["%.3f" % self.scale]),
                      ]
 
         if title is None:
-            title = self.model.__class__.__name__ + ' ' +\
+            title = self.model.__class__.__name__ + " " +\
                 "Regression Results"
 
         # Override the exog variable names if xname is provided as an

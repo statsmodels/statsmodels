@@ -5,13 +5,10 @@ Created on Mon Oct 28 15:25:14 2013
 Author: Josef Perktold
 """
 
+import warnings
+
 import numpy as np
-from numpy.testing import (
-    assert_allclose,
-    assert_equal,
-    assert_raises,
-    assert_warns,
-)
+from numpy.testing import assert_allclose, assert_equal
 import pytest
 from scipy import stats
 
@@ -69,7 +66,7 @@ class CheckOLSRobust:
         res1 = self.res1
         res2 = self.res2
         rtol = getattr(self, "rtol", 1e-10)
-        rtolh = getattr(self, "rtolh", 1e-12)
+        getattr(self, "rtolh", 1e-12)
         mat = np.eye(len(res1.params))
         tt = res1.t_test(mat, cov_p=self.cov_robust)
         # has 'effect', 'pvalue', 'sd', 'tvalue'
@@ -85,15 +82,14 @@ class CheckOLSRobust:
 
         ft = res1.f_test(mat[:-1], cov_p=self.cov_robust)
         if self.small:
-            #'df_denom', 'df_num', 'fvalue', 'pvalue'
+            # 'df_denom', 'df_num', 'fvalue', 'pvalue'
             assert_allclose(ft.fvalue, res2.F, rtol=rtol)
             # f-pvalue is not directly available in Stata results, but is in ivreg2
             if hasattr(res2, "Fp"):
                 assert_allclose(ft.pvalue, res2.Fp, rtol=rtol)
-        else:
-            if not getattr(self, "skip_f", False):
-                dof_corr = res1.df_resid * 1.0 / res1.nobs
-                assert_allclose(ft.fvalue * dof_corr, res2.F, rtol=rtol)
+        elif not getattr(self, "skip_f", False):
+            dof_corr = res1.df_resid * 1.0 / res1.nobs
+            assert_allclose(ft.fvalue * dof_corr, res2.F, rtol=rtol)
 
         if hasattr(res2, "df_r"):
             assert_equal(ft.df_num, res2.df_m)
@@ -119,9 +115,7 @@ class TestOLSRobust1(CheckOLSRobust):
         d2 = macrodata.load_pandas().data
         g_gdp = 400 * np.diff(np.log(d2["realgdp"].values))
         g_inv = 400 * np.diff(np.log(d2["realinv"].values))
-        exogg = add_constant(
-            np.c_[g_gdp, d2["realint"][:-1].values], prepend=False
-        )
+        exogg = add_constant(np.c_[g_gdp, d2["realint"][:-1].values], prepend=False)
 
         cls.res1 = OLS(g_inv, exogg).fit()
 
@@ -293,8 +287,8 @@ class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         r_pval = 0.0307306938402991
         r_chi2 = 4.667944083588736
         r_df = 1
-        assert_warns(InvalidTestWarning, res1.compare_lr_test, res_ols2)
-        import warnings
+        with pytest.warns(InvalidTestWarning):
+            res1.compare_lr_test(res_ols2)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -303,7 +297,8 @@ class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         assert_allclose(pval, r_pval, rtol=1e-11)
         assert_equal(df, r_df)
 
-        assert_warns(InvalidTestWarning, res1.compare_f_test, res_ols2)
+        with pytest.warns(InvalidTestWarning):
+            res1.compare_f_test(res_ols2)
         # fva, pval, df = res1.compare_f_test(res_ols2)
 
 
@@ -350,9 +345,9 @@ class TestOLSRobust2LargeNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         super().test_confint()
 
 
-#######################################################
+#
 #    cluster robust standard errors
-#######################################################
+#
 
 
 class CheckOLSRobustCluster(CheckOLSRobust):
@@ -405,9 +400,7 @@ class TestOLSRobustCluster2(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.rtolh = 1e-10
 
 
-class TestOLSRobustCluster2Input(
-    CheckOLSRobustCluster, CheckOLSRobustNewMixin
-):
+class TestOLSRobustCluster2Input(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup_method(self):
@@ -436,21 +429,20 @@ class TestOLSRobustCluster2Input(
     def test_too_many_groups(self):
         long_groups = self.groups.reshape(-1, 1)
         groups3 = np.hstack((long_groups, long_groups, long_groups))
-        assert_raises(
-            ValueError,
-            self.res1.get_robustcov_results,
-            "cluster",
-            groups=groups3,
-            use_correction=True,
-            use_t=True,
-        )
+        with pytest.raises(ValueError):
+            self.res1.get_robustcov_results(
+                "cluster",
+                groups=groups3,
+                use_correction=True,
+                use_t=True,
+            )
 
     def test_2way_dataframe(self):
         import pandas as pd
 
         long_groups = self.groups.reshape(-1, 1)
         groups2 = pd.DataFrame(np.hstack((long_groups, long_groups)))
-        res = self.res1.get_robustcov_results(
+        self.res1.get_robustcov_results(
             "cluster", groups=groups2, use_correction=True, use_t=True
         )
 
@@ -489,9 +481,7 @@ class TestOLSRobustCluster2Fit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         assert_allclose(res1.conf_int(), ci, rtol=5e-7, atol=1e-20)
 
 
-class TestOLSRobustCluster2Large(
-    CheckOLSRobustCluster, CheckOLSRobustNewMixin
-):
+class TestOLSRobustCluster2Large(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup_method(self):
@@ -522,9 +512,7 @@ class TestOLSRobustCluster2Large(
         super().test_fvalue()
 
 
-class TestOLSRobustCluster2LargeFit(
-    CheckOLSRobustCluster, CheckOLSRobustNewMixin
-):
+class TestOLSRobustCluster2LargeFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup_method(self):
@@ -574,9 +562,7 @@ class TestOLSRobustClusterGS(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
         self.cov_robust = res_ols.cov_params()
-        cov1 = sw.cov_nw_groupsum(
-            self.res1, 4, self.time, use_correction=False
-        )
+        cov1 = sw.cov_nw_groupsum(self.res1, 4, self.time, use_correction=False)
         se1 = sw.se_cov(cov1)
         self.bse_robust2 = se1
         self.cov_robust2 = cov1
@@ -594,17 +580,13 @@ class TestOLSRobustClusterGSFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     def setup_method(self):
         res_ols = self.res1.model.fit(
             cov_type="nw-groupsum",
-            cov_kwds=dict(
-                time=self.time, maxlags=4, use_correction=False, use_t=True
-            ),
+            cov_kwds=dict(time=self.time, maxlags=4, use_correction=False, use_t=True),
         )
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
         self.cov_robust = res_ols.cov_params()
-        cov1 = sw.cov_nw_groupsum(
-            self.res1, 4, self.time, use_correction=False
-        )
+        cov1 = sw.cov_nw_groupsum(self.res1, 4, self.time, use_correction=False)
         se1 = sw.se_cov(cov1)
         self.bse_robust2 = se1
         self.cov_robust2 = cov1
@@ -656,9 +638,7 @@ class TestOLSRobustClusterNWP(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         assert_allclose(res_ols.bse, self.res1.bse, rtol=1e-12)
 
 
-class TestOLSRobustClusterNWPGroupsFit(
-    CheckOLSRobustCluster, CheckOLSRobustNewMixin
-):
+class TestOLSRobustClusterNWPGroupsFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup_method(self):
@@ -712,15 +692,11 @@ class TestOLSRobustCluster2G(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.small = True
         self.res2 = res2.results_cluster_2groups_small
 
-        self.rtol = (
-            0.35  # only f_pvalue and confint for constant differ >rtol=0.05
-        )
+        self.rtol = 0.35  # only f_pvalue and confint for constant differ >rtol=0.05
         self.rtolh = 1e-10
 
 
-class TestOLSRobustCluster2GLarge(
-    CheckOLSRobustCluster, CheckOLSRobustNewMixin
-):
+class TestOLSRobustCluster2GLarge(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup_method(self):
@@ -748,9 +724,9 @@ class TestOLSRobustCluster2GLarge(
         self.rtolh = 1e-10
 
 
-######################################
+#
 #                 WLS
-######################################
+#
 
 
 class CheckWLSRobustCluster(CheckOLSRobust):
@@ -767,9 +743,7 @@ class CheckWLSRobustCluster(CheckOLSRobust):
         dtapa_exog = dtapa.exog[:200]
         exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
         # asserts do not work for pandas
-        cls.res1 = WLS(
-            dtapa_endog, exog, weights=1 / dtapa_exog["value"]
-        ).fit()
+        cls.res1 = WLS(dtapa_endog, exog, weights=1 / dtapa_exog["value"]).fit()
 
         firm_names, firm_id = np.unique(
             np.asarray(dtapa_exog[["firm"]], "S20"), return_inverse=True
@@ -807,9 +781,7 @@ class TestWLSRobustCluster2(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
 
 
 # not available yet for WLS
-class TestWLSRobustCluster2Large(
-    CheckWLSRobustCluster, CheckOLSRobustNewMixin
-):
+class TestWLSRobustCluster2Large(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup_method(self):
@@ -871,9 +843,7 @@ class TestWLSOLSRobustSmall:
         dtapa_exog = dtapa.exog[:200]
         exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
         # asserts do not work for pandas
-        cls.res_wls = WLS(
-            dtapa_endog, exog, weights=1 / dtapa_exog["value"]
-        ).fit()
+        cls.res_wls = WLS(dtapa_endog, exog, weights=1 / dtapa_exog["value"]).fit()
         w_sqrt = 1 / np.sqrt(np.asarray(dtapa_exog["value"]))
         cls.res_ols = OLS(
             dtapa_endog * w_sqrt, np.asarray(exog) * w_sqrt[:, None]
@@ -919,12 +889,8 @@ class TestWLSOLSRobustSmall:
         assert_allclose(res1.bse, res2.bse, rtol=1e-13)
         assert_allclose(res1.pvalues, res2.pvalues, rtol=1e-12)
 
-        tt = res2.t_test(
-            np.eye(len(res2.params)), cov_p=res2.normalized_cov_params
-        )
-        assert_allclose(
-            res2.cov_params(), res2.normalized_cov_params, rtol=1e-13
-        )
+        tt = res2.t_test(np.eye(len(res2.params)), cov_p=res2.normalized_cov_params)
+        assert_allclose(res2.cov_params(), res2.normalized_cov_params, rtol=1e-13)
         assert_allclose(res2.bse, tt.sd, rtol=1e-13)
         assert_allclose(res2.pvalues, tt.pvalue, rtol=1e-13)
         assert_allclose(res2.tvalues, tt.tvalue, rtol=1e-13)
@@ -933,12 +899,8 @@ class TestWLSOLSRobustSmall:
         mod = self.res_wls.model
         mod3 = WLS(mod.endog, mod.exog, weights=mod.weights)
         res3 = mod3.fit(cov_type=cov_type, cov_kwds=kwds)
-        tt = res3.t_test(
-            np.eye(len(res3.params)), cov_p=res3.normalized_cov_params
-        )
-        assert_allclose(
-            res3.cov_params(), res3.normalized_cov_params, rtol=1e-13
-        )
+        tt = res3.t_test(np.eye(len(res3.params)), cov_p=res3.normalized_cov_params)
+        assert_allclose(res3.cov_params(), res3.normalized_cov_params, rtol=1e-13)
         assert_allclose(res3.bse, tt.sd, rtol=1e-13)
         assert_allclose(res3.pvalues, tt.pvalue, rtol=1e-13)
         assert_allclose(res3.tvalues, tt.tvalue, rtol=1e-13)

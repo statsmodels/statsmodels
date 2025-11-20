@@ -38,13 +38,15 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+
 import numpy as np
 from packaging.version import Version, parse
 
 __all__ = [
     "NP_LT_2",
-    "NP_LT_123",
+    "NP_LT_24",
     "NP_LT_114",
+    "NP_LT_123",
     "lstsq",
     "np_matrix_rank",
     "np_new_unique",
@@ -53,6 +55,7 @@ __all__ = [
 NP_LT_114 = parse(np.__version__) < Version("1.13.99")
 NP_LT_123 = parse(np.__version__) < Version("1.22.99")
 NP_LT_2 = parse(np.__version__) < Version("1.99.99")
+NP_LT_24 = parse(np.__version__) < Version("2.3.99")
 
 np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique

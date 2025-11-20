@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_scree(eigenvals, total_var, ncomp=None, x_label='factor'):
+def plot_scree(eigenvals, total_var, ncomp=None, x_label="factor"):
     """
     Plot of the ordered eigenvalues and variance explained for the loadings
 
@@ -30,7 +30,7 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label='factor'):
     #    vals = np.cumsum(vals)
 
     ax = fig.add_subplot(121)
-    ax.plot(np.arange(ncomp), vals[: ncomp], 'b-o')
+    ax.plot(np.arange(ncomp), vals[: ncomp], "b-o")
     ax.autoscale(tight=True)
     xlim = np.array(ax.get_xlim())
     sp = xlim[1] - xlim[0]
@@ -43,16 +43,16 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label='factor'):
     sp = ylim[1] - ylim[0]
     ylim += scale * np.array([-sp, sp])
     ax.set_ylim(ylim)
-    ax.set_title('Scree Plot')
-    ax.set_ylabel('Eigenvalue')
+    ax.set_title("Scree Plot")
+    ax.set_ylabel("Eigenvalue")
     ax.set_xlabel(x_label)
 
     per_variance = vals / total_var
     cumper_variance = np.cumsum(per_variance)
     ax = fig.add_subplot(122)
 
-    ax.plot(np.arange(ncomp), per_variance[: ncomp], 'b-o')
-    ax.plot(np.arange(ncomp), cumper_variance[: ncomp], 'g--o')
+    ax.plot(np.arange(ncomp), per_variance[: ncomp], "b-o")
+    ax.plot(np.arange(ncomp), cumper_variance[: ncomp], "g--o")
     ax.autoscale(tight=True)
     xlim = np.array(ax.get_xlim())
     sp = xlim[1] - xlim[0]
@@ -65,17 +65,17 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label='factor'):
     sp = ylim[1] - ylim[0]
     ylim += scale * np.array([-sp, sp])
     ax.set_ylim(ylim)
-    ax.set_title('Variance Explained')
-    ax.set_ylabel('Proportion')
+    ax.set_title("Variance Explained")
+    ax.set_ylabel("Proportion")
     ax.set_xlabel(x_label)
-    ax.legend(['Proportion', 'Cumulative'], loc=5)
+    ax.legend(["Proportion", "Cumulative"], loc=5)
     fig.tight_layout()
     return fig
 
 
 def plot_loadings(loadings, col_names=None, row_names=None,
                   loading_pairs=None, percent_variance=None,
-                  title='Factor patterns'):
+                  title="Factor patterns"):
     """
     Plot factor loadings in 2-d plots
 
@@ -102,7 +102,7 @@ def plot_loadings(loadings, col_names=None, row_names=None,
     if loading_pairs is None:
         loading_pairs = []
         for i in range(n_factor):
-            for j in range(i + 1,n_factor):
+            for j in range(i + 1, n_factor):
                 loading_pairs.append([i, j])
     if col_names is None:
         col_names = ["factor %d" % i for i in range(n_factor)]
@@ -118,11 +118,11 @@ def plot_loadings(loadings, col_names=None, row_names=None,
         for k in range(loadings.shape[0]):
             plt.text(loadings[k, i], loadings[k, j],
                      row_names[k], fontsize=12)
-        ax.plot(loadings[:, i], loadings[:, j], 'bo')
+        ax.plot(loadings[:, i], loadings[:, j], "bo")
         ax.set_title(title)
         if percent_variance is not None:
-            x_str = f'{col_names[i]} ({percent_variance[i]:.1f}%)'
-            y_str = f'{col_names[j]} ({percent_variance[j]:.1f}%)'
+            x_str = f"{col_names[i]} ({percent_variance[i]:.1f}%)"
+            y_str = f"{col_names[j]} ({percent_variance[j]:.1f}%)"
             ax.set_xlabel(x_str)
             ax.set_ylabel(y_str)
         else:
@@ -131,9 +131,9 @@ def plot_loadings(loadings, col_names=None, row_names=None,
         v = 1.05
         xlim = np.array([-v, v])
         ylim = np.array([-v, v])
-        ax.plot(xlim, [0, 0], 'k--')
-        ax.plot([0, 0], ylim, 'k--')
-        ax.set_aspect('equal', 'datalim')
+        ax.plot(xlim, [0, 0], "k--")
+        ax.plot([0, 0], ylim, "k--")
+        ax.set_aspect("equal", "datalim")
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         fig.tight_layout()

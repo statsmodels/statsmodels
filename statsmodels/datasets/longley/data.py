@@ -1,11 +1,11 @@
 """Longley dataset"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is public domain."""
+TITLE = __doc__
+SOURCE = """
 The classic 1967 Longley Data
 
 http://www.itl.nist.gov/div898/strd/lls/data/Longley.shtml
@@ -17,13 +17,13 @@ http://www.itl.nist.gov/div898/strd/lls/data/Longley.shtml
         the American Statistical Association.  62.319, 819-41.
 """
 
-DESCRSHORT  = """"""
+DESCRSHORT = """"""
 
-DESCRLONG   = """The Longley dataset contains various US macroeconomic
+DESCRLONG = """The Longley dataset contains various US macroeconomic
 variables that are known to be highly collinear.  It has been used to appraise
 the accuracy of least squares routines."""
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 16
 
@@ -39,7 +39,6 @@ NOTE        = """::
             POP - Population
             YEAR - Year (1947 - 1962)
 """
-
 
 
 def load():
@@ -68,6 +67,6 @@ def load_pandas():
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'longley.csv')
+    data = du.load_csv(__file__, "longley.csv")
     data = data.iloc[:, [1, 2, 3, 4, 5, 6, 7]].astype(float)
     return data

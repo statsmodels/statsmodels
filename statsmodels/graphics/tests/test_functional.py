@@ -1,8 +1,9 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pytest
 
-from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.datasets import elnino
 from statsmodels.graphics.functional import (
     banddepth,
@@ -65,7 +66,7 @@ def test_hdr_basic(close_figures):
         assert_equal([1982, 1983, 1997, 1998], outliers)
         assert_equal(labels[hdr.outliers_idx], outliers)
     except OSError:
-        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+        pytest.xfail("Multiprocess randomly crashes in Windows testing")
 
 
 @pytest.mark.slow
@@ -79,7 +80,7 @@ def test_hdr_basic_brute(close_figures, reset_randomstate):
 
         assert_almost_equal(hdr.median, median_t, decimal=2)
     except OSError:
-        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+        pytest.xfail("Multiprocess randomly crashes in Windows testing")
 
 
 @pytest.mark.skipif(
@@ -102,7 +103,7 @@ def test_hdr_plot(close_figures):
         ax.set_xticklabels(["", "Mar", "Jun", "Sep", "Dec"])
         ax.set_xlim([-0.2, 11.2])
     except OSError:
-        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+        pytest.xfail("Multiprocess randomly crashes in Windows testing")
 
 
 @pytest.mark.skipif(
@@ -121,7 +122,7 @@ def test_hdr_alpha(close_figures):
                                     20.0, 19.3, 19.2, 19.4, 20.1, 21.3]])
         assert_almost_equal(hdr.extra_quantiles, extra_quant_t, decimal=0)
     except OSError:
-        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+        pytest.xfail("Multiprocess randomly crashes in Windows testing")
 
 
 @pytest.mark.skipif(
@@ -149,7 +150,7 @@ def test_hdr_multiple_alpha(close_figures):
         assert_almost_equal(hdr.extra_quantiles, np.vstack(extra_quant_t),
                             decimal=0)
     except OSError:
-        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+        pytest.xfail("Multiprocess randomly crashes in Windows testing")
 
 
 @pytest.mark.skipif(
@@ -167,7 +168,7 @@ def test_hdr_threshold(close_figures):
         outliers = labels[labels_pos]
         assert_equal([1968, 1982, 1983, 1997, 1998], outliers)
     except OSError:
-        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+        pytest.xfail("Multiprocess randomly crashes in Windows testing")
 
 
 @pytest.mark.skipif(
@@ -177,14 +178,14 @@ def test_hdr_threshold(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_bw(close_figures):
     try:
-        _, hdr = hdrboxplot(data, bw='cv_ml', seed=12345)
+        _, hdr = hdrboxplot(data, bw="cv_ml", seed=12345)
 
         median_t = [24.25, 25.64, 25.99, 25.04, 23.71, 22.38,
 
                     21.31, 20.44, 20.24, 20.51, 21.19, 22.38]
         assert_almost_equal(hdr.median, median_t, decimal=2)
     except OSError:
-        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+        pytest.xfail("Multiprocess randomly crashes in Windows testing")
 
 
 @pytest.mark.skipif(
@@ -200,7 +201,7 @@ def test_hdr_ncomp(close_figures):
                     21.32, 20.45, 20.25, 20.53, 21.20, 22.39]
         assert_almost_equal(hdr.median, median_t, decimal=2)
     except OSError:
-        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+        pytest.xfail("Multiprocess randomly crashes in Windows testing")
 
 
 def test_banddepth_BD2():
@@ -211,7 +212,7 @@ def test_banddepth_BD2():
     y4 = -1 + 0.3 * np.cos(xx + np.pi/6)
 
     data = np.asarray([y1, y2, y3, y4])
-    depth = banddepth(data, method='BD2')
+    depth = banddepth(data, method="BD2")
     expected_depth = [0.5, 5./6, 5./6, 0.5]
     assert_almost_equal(depth, expected_depth)
 
@@ -225,7 +226,7 @@ def test_banddepth_BD2():
     # plt.close(fig)
 
 
-def test_banddepth_MBD():
+def test_banddepth_MBD(close_figures):
     xx = np.arange(5001) / 5000.
     y1 = np.zeros(xx.shape)
     y2 = 2 * xx - 1
@@ -233,7 +234,7 @@ def test_banddepth_MBD():
     y4 = np.ones(xx.shape) * -0.25
 
     data = np.asarray([y1, y2, y3, y4])
-    depth = banddepth(data, method='MBD')
+    depth = banddepth(data, method="MBD")
     expected_depth = [5./6, (2*(0.75-3./8)+3)/6, 3.5/6, (2*3./8+3)/6]
     assert_almost_equal(depth, expected_depth, decimal=4)
 

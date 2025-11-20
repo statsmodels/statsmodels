@@ -10,12 +10,12 @@ import numpy as np
 from scipy import stats
 from scipy.special import ncfdtrinc
 
+from statsmodels.stats.base import HolderTuple
+
 # functions that use scipy.special instead of boost based function in stats
 from statsmodels.stats.power import ncf_cdf, ncf_ppf
-
 from statsmodels.stats.robust_compare import TrimmedMean, scale_transform
 from statsmodels.tools.testing import Holder
-from statsmodels.stats.base import HolderTuple
 
 
 def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
@@ -378,7 +378,7 @@ def confint_noncentrality(f_stat, df, alpha=0.05,
     ----------
     .. [1] Steiger, James H. 2004. “Beyond the F Test: Effect Size Confidence
        Intervals and Tests of Close Fit in the Analysis of Variance and
-       Contrast Analysis.” Psychological Methods 9 (2): 164–82.
+       Contrast Analysis.” Psychological Methods 9 (2): 164-82.
        https://doi.org/10.1037/1082-989X.9.2.164.
 
     See Also
@@ -494,7 +494,7 @@ def anova_generic(means, variances, nobs, use_var="unequal",
                "welch_correction": welch_correction
                }
     if means.ndim != 1:
-        raise ValueError('data (means, ...) has to be one-dimensional')
+        raise ValueError("data (means, ...) has to be one-dimensional")
     nobs_t = nobs.sum()
     n_groups = len(means)
     # mean_t = (nobs * means).sum() / nobs_t
@@ -652,11 +652,11 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
     ----------
     Brown, Morton B., and Alan B. Forsythe. 1974. “The Small Sample Behavior
     of Some Statistics Which Test the Equality of Several Means.”
-    Technometrics 16 (1) (February 1): 129–132. doi:10.2307/1267501.
+    Technometrics 16 (1) (February 1): 129-132. doi:10.2307/1267501.
 
     Mehrotra, Devan V. 1997. “Improving the Brown-Forsythe Solution to the
     Generalized Behrens-Fisher Problem.” Communications in Statistics -
-    Simulation and Computation 26 (3): 1139–1145.
+    Simulation and Computation 26 (3): 1139-1145.
     doi:10.1080/03610919708813431.
     """
     if groups is not None:
@@ -666,8 +666,8 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
         # uniques = None  # not used yet, add to info?
         pass
     args = list(map(np.asarray, data))
-    if any([x.ndim != 1 for x in args]):
-        raise ValueError('data arrays have to be one-dimensional')
+    if any(x.ndim != 1 for x in args):
+        raise ValueError("data arrays have to be one-dimensional")
 
     nobs = np.array([len(x) for x in args], float)
     # n_groups = len(args)  # not used
@@ -754,12 +754,12 @@ def equivalence_oneway_generic(f_stat, n_groups, nobs, equiv_margin, df,
 
     Cribbie, Robert A., Chantal A. Arpin-Cribbie, and Jamie A. Gruman. 2009.
     “Tests of Equivalence for One-Way Independent Groups Designs.” The Journal
-    of Experimental Education 78 (1): 1–13.
+    of Experimental Education 78 (1): 1-13.
     https://doi.org/10.1080/00220970903224552.
 
     Jan, Show-Li, and Gwowen Shieh. 2019. “On the Extended Welch Test for
     Assessing Equivalence of Standardized Means.” Statistics in
-    Biopharmaceutical Research 0 (0): 1–8.
+    Biopharmaceutical Research 0 (0): 1-8.
     https://doi.org/10.1080/19466315.2019.1654915.
 
     """
@@ -990,7 +990,7 @@ def power_equivalence_oneway(f2_alt, equiv_margin, nobs_t, n_groups=None,
 def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
                                       k_mc=1000, trim_frac=0,
                                       options_var=None, margin_type="f2"
-                                      ):  # , anova_options=None):  #TODO
+                                      ):  # , anova_options=None):  # TODO
     """Simulate Power for oneway equivalence test (Wellek's Anova)
 
     This function is experimental and written to evaluate asymptotic power
@@ -1141,8 +1141,8 @@ def test_scale_oneway(data, method="bf", center="median", transform="abs",
     return res
 
 
-def equivalence_scale_oneway(data, equiv_margin, method='bf', center='median',
-                             transform='abs', trim_frac_mean=0.,
+def equivalence_scale_oneway(data, equiv_margin, method="bf", center="median",
+                             transform="abs", trim_frac_mean=0.,
                              trim_frac_anova=0.):
     """Oneway Anova test for equivalence of scale, variance or dispersion
 

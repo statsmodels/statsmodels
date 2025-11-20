@@ -5,14 +5,13 @@ Created on Sun Jun 30 20:25:22 2013
 Author: Josef Perktold
 """
 
-import pytest
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.testing import Holder
 from statsmodels.miscmodels.tmodel import TLinearModel
-
+from statsmodels.tools.testing import Holder
+from statsmodels.tools.tools import add_constant
 
 mm = Holder()
 mm.date_label = ["Apr.1982",  "Apr.1983", "Apr.1984", "Apr.1985", "Apr.1986",
@@ -100,16 +99,16 @@ class CheckTLinearModelMixin:
         fittedvalues = res1.predict()
         resid = res1.model.endog - fittedvalues
         assert_allclose(fittedvalues, res2.loc_fit.fitted_values, rtol=0.00025)
-        assert_allclose(resid, res2.loc_fit.residuals, atol=2e-6) #rtol=0.00036)
-        #TODO: no resid available as attribute
-        #assert_allclose(res1.resid, res2.loc_fit.residuals)
-        #assert_allclose(res1.fittedvalues, res2.loc_fit.fitted_values)
+        assert_allclose(resid, res2.loc_fit.residuals, atol=2e-6)  # rtol=0.00036)
+        # TODO: no resid available as attribute
+        # assert_allclose(res1.resid, res2.loc_fit.residuals)
+        # assert_allclose(res1.fittedvalues, res2.loc_fit.fitted_values)
 
     def test_formula(self):
         res1 = self.res1
         resf = self.resf
         # converges slightly differently why?
-        assert_allclose(res1.params, resf.params,  atol=1e-4) #rtol=2e-5,
+        assert_allclose(res1.params, resf.params,  atol=1e-4)  # rtol=2e-5,
         assert_allclose(res1.bse, resf.bse, rtol=5e-5)
 
         assert_allclose(res1.model.endog, resf.model.endog, rtol=1e-10)
@@ -146,10 +145,12 @@ class TestTModel(CheckTLinearModelMixin):
         endog = mm.m_marietta
         exog = add_constant(mm.CRSP)
         mod = TLinearModel(endog, exog)
-        res = mod.fit(method='bfgs', disp=False)
-        modf = TLinearModel.from_formula("price ~ CRSP",
-                                data={"price":mm.m_marietta, "CRSP":mm.CRSP})
-        resf = modf.fit(method='bfgs', disp=False)
+        res = mod.fit(method="bfgs", disp=False)
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = TLinearModel.from_formula(
+                "price ~ CRSP", data={"price": mm.m_marietta, "CRSP": mm.CRSP}
+            )
+        resf = modf.fit(method="bfgs", disp=False)
         from .results_tmodel import res_t_dfest as res2
         cls.res2 = res2
         cls.res1 = res  # take from module scope temporarily
@@ -164,14 +165,15 @@ class TestTModelFixed:
         endog = mm.m_marietta
         exog = add_constant(mm.CRSP)
         mod = TLinearModel(endog, exog, fix_df=3)
-        res = mod.fit(method='bfgs', disp=False)
-        modf = TLinearModel.from_formula("price ~ CRSP",
-                                data={"price":mm.m_marietta, "CRSP":mm.CRSP},
-                                fix_df=3)
-        resf = modf.fit(method='bfgs', disp=False)
-        #TODO: no reference results yet
-        #from results_tmodel import res_t_dfest as res2
-        #cls.res2 = res2
+        res = mod.fit(method="bfgs", disp=False)
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = TLinearModel.from_formula(
+                "price ~ CRSP", data={"price": mm.m_marietta, "CRSP": mm.CRSP}, fix_df=3
+            )
+        resf = modf.fit(method="bfgs", disp=False)
+        # TODO: no reference results yet
+        # from results_tmodel import res_t_dfest as res2
+        # cls.res2 = res2
         cls.res1 = res  # take from module scope temporarily
         cls.resf = resf
         cls.k_extra = 1

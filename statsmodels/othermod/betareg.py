@@ -14,15 +14,21 @@ Psychological methods 11.1 (2006): 54.
 
 import numpy as np
 from scipy.special import gammaln as lgamma
-import patsy
 
+from statsmodels.base.model import (
+    GenericLikelihoodModel,
+    GenericLikelihoodModelResults,
+    _LLRMixin,
+)
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.formulatools import advance_eval_env
+from statsmodels.genmod import families
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.base.model import (
-    GenericLikelihoodModel, GenericLikelihoodModelResults, _LLRMixin)
-from statsmodels.genmod import families
 
+LOGIT_LINK = families.links.Logit()
+LOG_LINK = families.links.Log()
 
 _init_example = """
 
@@ -95,28 +101,38 @@ class BetaModel(GenericLikelihoodModel):
     --------
     :ref:`links`
 
-    """.format(example=_init_example)
+    """.format(
+        example=_init_example
+    )
 
-    def __init__(self, endog, exog, exog_precision=None,
-                 link=families.links.Logit(),
-                 link_precision=families.links.Log(), **kwds):
+    def __init__(
+        self,
+        endog,
+        exog,
+        exog_precision=None,
+        link=LOGIT_LINK,
+        link_precision=LOG_LINK,
+        **kwds,
+    ):
 
         etmp = np.array(endog)
         assert np.all((0 < etmp) & (etmp < 1))
         if exog_precision is None:
-            extra_names = ['precision']
-            exog_precision = np.ones((len(endog), 1), dtype='f')
+            extra_names = ["precision"]
+            exog_precision = np.ones((len(endog), 1), dtype="f")
         else:
-            extra_names = ['precision-%s' % zc for zc in
-                           (exog_precision.columns
-                            if hasattr(exog_precision, 'columns')
-                            else range(1, exog_precision.shape[1] + 1))]
+            extra_names = [
+                "precision-%s" % zc
+                for zc in (
+                    exog_precision.columns
+                    if hasattr(exog_precision, "columns")
+                    else range(1, exog_precision.shape[1] + 1)
+                )
+            ]
 
-        kwds['extra_params_names'] = extra_names
+        kwds["extra_params_names"] = extra_names
 
-        super().__init__(endog, exog,
-                         exog_precision=exog_precision,
-                         **kwds)
+        super().__init__(endog, exog, exog_precision=exog_precision, **kwds)
         self.link = link
         self.link_precision = link_precision
         # not needed, handled by super:
@@ -128,28 +144,28 @@ class BetaModel(GenericLikelihoodModel):
         self.df_resid = self.nobs - self.nparams
         assert len(self.exog_precision) == len(self.endog)
         self.hess_type = "oim"
-        if 'exog_precision' not in self._init_keys:
-            self._init_keys.extend(['exog_precision'])
-        self._init_keys.extend(['link', 'link_precision'])
-        self._null_drop_keys = ['exog_precision']
-        del kwds['extra_params_names']
+        if "exog_precision" not in self._init_keys:
+            self._init_keys.extend(["exog_precision"])
+        self._init_keys.extend(["link", "link_precision"])
+        self._null_drop_keys = ["exog_precision"]
+        del kwds["extra_params_names"]
         self._check_kwargs(kwds)
         self.results_class = BetaResults
         self.results_class_wrapper = BetaResultsWrapper
 
     @classmethod
-    def from_formula(cls, formula, data, exog_precision_formula=None,
-                     *args, **kwargs):
+    def from_formula(cls, formula, data, exog_precision_formula=None, *args, **kwargs):
         if exog_precision_formula is not None:
-            if 'subset' in kwargs:
-                d = data.ix[kwargs['subset']]
-                Z = patsy.dmatrix(exog_precision_formula, d)
-            else:
-                Z = patsy.dmatrix(exog_precision_formula, data)
-            kwargs['exog_precision'] = Z
 
-        return super().from_formula(formula, data, *args,
-                                    **kwargs)
+            mgr = FormulaManager()
+            if "subset" in kwargs:
+                d = data.ix[kwargs["subset"]]
+                Z = mgr.get_matrices(exog_precision_formula, d, pandas=False)
+            else:
+                Z = mgr.get_matrices(exog_precision_formula, data, pandas=False)
+            kwargs["exog_precision"] = Z
+        advance_eval_env(kwargs)
+        return super().from_formula(formula, data, *args, **kwargs)
 
     def _get_exogs(self):
         return (self.exog, self.exog_precision)
@@ -183,7 +199,7 @@ class BetaModel(GenericLikelihoodModel):
             which = "linear-precision"
 
         k_mean = self.exog.shape[1]
-        if which in ["mean",  "linear"]:
+        if which in ["mean", "linear"]:
             if exog is None:
                 exog = self.exog
             params_mean = params[:k_mean]
@@ -208,14 +224,10 @@ class BetaModel(GenericLikelihoodModel):
                 res = linpred_prec
 
         elif which == "var":
-            res = self._predict_var(
-                params,
-                exog=exog,
-                exog_precision=exog_precision
-                )
+            res = self._predict_var(params, exog=exog, exog_precision=exog_precision)
 
         else:
-            raise ValueError('which = %s is not available' % which)
+            raise ValueError("which = %s is not available" % which)
 
         return res
 
@@ -260,8 +272,7 @@ class BetaModel(GenericLikelihoodModel):
         Predicted conditional variance.
         """
         mean = self.predict(params, exog=exog)
-        precision = self._predict_precision(params,
-                                            exog_precision=exog_precision)
+        precision = self._predict_precision(params, exog_precision=exog_precision)
 
         var_endog = mean * (1 - mean) / (1 + precision)
         return var_endog
@@ -321,10 +332,13 @@ class BetaModel(GenericLikelihoodModel):
         alpha = np.clip(mu * phi, eps_lb, np.inf)
         beta = np.clip((1 - mu) * phi, eps_lb, np.inf)
 
-        ll = (lgamma(phi) - lgamma(alpha)
-              - lgamma(beta)
-              + (mu * phi - 1) * np.log(y)
-              + (((1 - mu) * phi) - 1) * np.log(1 - y))
+        ll = (
+            lgamma(phi)
+            - lgamma(alpha)
+            - lgamma(beta)
+            + (mu * phi - 1) * np.log(y)
+            + (((1 - mu) * phi) - 1) * np.log(1 - y)
+        )
 
         return ll
 
@@ -388,6 +402,7 @@ class BetaModel(GenericLikelihoodModel):
 
         """
         from scipy import special
+
         digamma = special.psi
 
         y = self.endog if endog is None else endog
@@ -404,22 +419,20 @@ class BetaModel(GenericLikelihoodModel):
         alpha = np.clip(mu * phi, eps_lb, np.inf)
         beta = np.clip((1 - mu) * phi, eps_lb, np.inf)
 
-        ystar = np.log(y / (1. - y))
+        ystar = np.log(y / (1.0 - y))
         dig_beta = digamma(beta)
         mustar = digamma(alpha) - dig_beta
         yt = np.log(1 - y)
         mut = dig_beta - digamma(phi)
 
-        t = 1. / self.link.deriv(mu)
-        h = 1. / self.link_precision.deriv(phi)
-        #
+        t = 1.0 / self.link.deriv(mu)
+        h = 1.0 / self.link_precision.deriv(phi)
         sf1 = phi * t * (ystar - mustar)
         sf2 = h * (mu * (ystar - mustar) + yt - mut)
 
         return (sf1, sf2)
 
-    def score_hessian_factor(self, params, return_hessian=False,
-                             observed=True):
+    def score_hessian_factor(self, params, return_hessian=False, observed=True):
         """Derivatives of loglikelihood function w.r.t. linear predictors.
 
         This calculates score and hessian factors at the same time, because
@@ -446,6 +459,7 @@ class BetaModel(GenericLikelihoodModel):
             TODO: check why there are minus
         """
         from scipy import special
+
         digamma = special.psi
 
         y, X, Z = self.endog, self.exog, self.exog_precision
@@ -462,26 +476,29 @@ class BetaModel(GenericLikelihoodModel):
         alpha = np.clip(mu * phi, eps_lb, np.inf)
         beta = np.clip((1 - mu) * phi, eps_lb, np.inf)
 
-        ystar = np.log(y / (1. - y))
+        ystar = np.log(y / (1.0 - y))
         dig_beta = digamma(beta)
         mustar = digamma(alpha) - dig_beta
         yt = np.log(1 - y)
         mut = dig_beta - digamma(phi)
 
-        t = 1. / self.link.deriv(mu)
-        h = 1. / self.link_precision.deriv(phi)
+        t = 1.0 / self.link.deriv(mu)
+        h = 1.0 / self.link_precision.deriv(phi)
 
-        ymu_star = (ystar - mustar)
+        ymu_star = ystar - mustar
         sf1 = phi * t * ymu_star
         sf2 = h * (mu * ymu_star + yt - mut)
 
         if return_hessian:
-            trigamma = lambda x: special.polygamma(1, x)  # noqa
+
+            def trigamma(x):
+                return special.polygamma(1, x)
+
             trig_beta = trigamma(beta)
             var_star = trigamma(alpha) + trig_beta
             var_t = trig_beta - trigamma(phi)
 
-            c = - trig_beta
+            c = -trig_beta
             s = self.link.deriv2(mu)
             q = self.link_precision.deriv2(phi)
 
@@ -497,7 +514,7 @@ class BetaModel(GenericLikelihoodModel):
 
             jgg = h**2 * (mu**2 * var_star + 2 * mu * c + var_t)
             if observed:
-                jgg += (mu * ymu_star + yt - mut) * q * h**3    # **3 ?
+                jgg += (mu * ymu_star + yt - mut) * q * h**3  # **3 ?
 
             return (sf1, sf2), (-jbb, -jbg, -jgg)
         else:
@@ -545,8 +562,9 @@ class BetaModel(GenericLikelihoodModel):
             observed = False
         else:
             observed = True
-        _, hf = self.score_hessian_factor(params, return_hessian=True,
-                                          observed=observed)
+        _, hf = self.score_hessian_factor(
+            params, return_hessian=True, observed=observed
+        )
 
         hf11, hf12, hf22 = hf
 
@@ -557,10 +575,10 @@ class BetaModel(GenericLikelihoodModel):
         return np.block([[d11, d12], [d12.T, d22]])
 
     def hessian_factor(self, params, observed=True):
-        """Derivatives of loglikelihood function w.r.t. linear predictors.
-        """
-        _, hf = self.score_hessian_factor(params, return_hessian=True,
-                                          observed=observed)
+        """Derivatives of loglikelihood function w.r.t. linear predictors."""
+        _, hf = self.score_hessian_factor(
+            params, return_hessian=True, observed=observed
+        )
         return hf
 
     def _start_params(self, niter=2, return_intermediate=False):
@@ -595,11 +613,12 @@ class BetaModel(GenericLikelihoodModel):
         # WLS for the precision equations uses weights that only take
         # account of the link transformation of the precision endog.
         from statsmodels.regression.linear_model import OLS, WLS
+
         res_m = OLS(self.link(self.endog), self.exog).fit()
         fitted = self.link.inverse(res_m.fittedvalues)
         resid = self.endog - fitted
 
-        prec_i = fitted * (1 - fitted) / np.maximum(np.abs(resid), 1e-2)**2 - 1
+        prec_i = fitted * (1 - fitted) / np.maximum(np.abs(resid), 1e-2) ** 2 - 1
         res_p = OLS(self.link_precision(prec_i), self.exog_precision).fit()
         prec_fitted = self.link_precision.inverse(res_p.fittedvalues)
         # sp = np.concatenate((res_m.params, res_p.params))
@@ -608,17 +627,16 @@ class BetaModel(GenericLikelihoodModel):
             y_var_inv = (1 + prec_fitted) / (fitted * (1 - fitted))
             # y_var = fitted * (1 - fitted) / (1 + prec_fitted)
 
-            ylink_var_inv = y_var_inv / self.link.deriv(fitted)**2
-            res_m2 = WLS(self.link(self.endog), self.exog,
-                         weights=ylink_var_inv).fit()
+            ylink_var_inv = y_var_inv / self.link.deriv(fitted) ** 2
+            res_m2 = WLS(self.link(self.endog), self.exog, weights=ylink_var_inv).fit()
             fitted = self.link.inverse(res_m2.fittedvalues)
             resid2 = self.endog - fitted
 
-            prec_i2 = (fitted * (1 - fitted) /
-                       np.maximum(np.abs(resid2), 1e-2)**2 - 1)
-            w_p = 1. / self.link_precision.deriv(prec_fitted)**2
-            res_p2 = WLS(self.link_precision(prec_i2), self.exog_precision,
-                         weights=w_p).fit()
+            prec_i2 = fitted * (1 - fitted) / np.maximum(np.abs(resid2), 1e-2) ** 2 - 1
+            w_p = 1.0 / self.link_precision.deriv(prec_fitted) ** 2
+            res_p2 = WLS(
+                self.link_precision(prec_i2), self.exog_precision, weights=w_p
+            ).fit()
             prec_fitted = self.link_precision.inverse(res_p2.fittedvalues)
             sp2 = np.concatenate((res_m2.params, res_p2.params))
 
@@ -627,8 +645,7 @@ class BetaModel(GenericLikelihoodModel):
 
         return sp2
 
-    def fit(self, start_params=None, maxiter=1000, disp=False,
-            method='bfgs', **kwds):
+    def fit(self, start_params=None, maxiter=1000, disp=False, method="bfgs", **kwds):
         """
         Fit the model by maximum likelihood.
 
@@ -653,8 +670,8 @@ class BetaModel(GenericLikelihoodModel):
 
         if start_params is None:
             start_params = self._start_params()
-#           # http://www.ime.usp.br/~sferrari/beta.pdf suggests starting phi
-#           # on page 8
+        #           # http://www.ime.usp.br/~sferrari/beta.pdf suggests starting phi
+        #           # on page 8
 
         if "cov_type" in kwds:
             # this is a workaround because we cannot tell super to use eim
@@ -664,9 +681,9 @@ class BetaModel(GenericLikelihoodModel):
         else:
             self.hess_type = "oim"
 
-        res = super().fit(start_params=start_params,
-                          maxiter=maxiter, method=method,
-                          disp=disp, **kwds)
+        res = super().fit(
+            start_params=start_params, maxiter=maxiter, method=method, disp=disp, **kwds
+        )
         if not isinstance(res, BetaResultsWrapper):
             # currently GenericLikelihoodModel doe not add wrapper
             res = BetaResultsWrapper(res)
@@ -742,8 +759,9 @@ class BetaModel(GenericLikelihoodModel):
             distribution.
         """
         mean = self.predict(params, exog=exog)
-        precision = self.predict(params, exog_precision=exog_precision,
-                                 which="precision")
+        precision = self.predict(
+            params, exog_precision=exog_precision, which="precision"
+        )
         return precision * mean, precision * (1 - mean)
 
     def get_distribution(self, params, exog=None, exog_precision=None):
@@ -780,8 +798,10 @@ class BetaModel(GenericLikelihoodModel):
         results will be produced.
         """
         from scipy import stats
-        args = self.get_distribution_params(params, exog=exog,
-                                            exog_precision=exog_precision)
+
+        args = self.get_distribution_params(
+            params, exog=exog, exog_precision=exog_precision
+        )
         distr = stats.beta(*args)
         return distr
 
@@ -823,8 +843,7 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
         """
         return self.pseudo_rsquared(kind="lr")
 
-    def get_distribution_params(self, exog=None, exog_precision=None,
-                                transform=True):
+    def get_distribution_params(self, exog=None, exog_precision=None, transform=True):
         """
         Return distribution parameters converted from model prediction.
 
@@ -845,8 +864,9 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
             distribution.
         """
         mean = self.predict(exog=exog, transform=transform)
-        precision = self.predict(exog_precision=exog_precision,
-                                 which="precision", transform=transform)
+        precision = self.predict(
+            exog_precision=exog_precision, which="precision", transform=transform
+        )
         return precision * mean, precision * (1 - mean)
 
     def get_distribution(self, exog=None, exog_precision=None, transform=True):
@@ -884,9 +904,10 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
         results will be produced.
         """
         from scipy import stats
-        args = self.get_distribution_params(exog=exog,
-                                            exog_precision=exog_precision,
-                                            transform=transform)
+
+        args = self.get_distribution_params(
+            exog=exog, exog_precision=exog_precision, transform=transform
+        )
         args = (np.asarray(arg) for arg in args)
         distr = stats.beta(*args)
         return distr
@@ -923,6 +944,7 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
 
         """
         from statsmodels.stats.outliers_influence import MLEInfluence
+
         return MLEInfluence(self)
 
     def bootstrap(self, *args, **kwargs):
@@ -933,5 +955,4 @@ class BetaResultsWrapper(lm.RegressionResultsWrapper):
     pass
 
 
-wrap.populate_wrapper(BetaResultsWrapper,
-                      BetaResults)
+wrap.populate_wrapper(BetaResultsWrapper, BetaResults)

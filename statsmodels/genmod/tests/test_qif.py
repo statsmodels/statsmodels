@@ -2,10 +2,15 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
-from statsmodels.genmod.qif import (QIF, QIFIndependence, QIFExchangeable,
-                                    QIFAutoregressive)
-from statsmodels.tools.numdiff import approx_fprime
+
 from statsmodels.genmod import families
+from statsmodels.genmod.qif import (
+    QIF,
+    QIFAutoregressive,
+    QIFExchangeable,
+    QIFIndependence,
+)
+from statsmodels.tools.numdiff import approx_fprime
 
 
 @pytest.mark.parametrize("fam", [families.Gaussian(), families.Poisson(),
@@ -111,3 +116,37 @@ def test_formula(cov_struct):
     if not isinstance(cov_struct, QIFIndependence):
         _ = result2.bic
         _ = result2.aic
+
+
+def test_formula_environment():
+    """Test that QIF uses the right environment for formulas."""
+
+    rng = np.random.default_rng(3423)
+
+    x1 = rng.normal(size=100)
+    y = x1 + rng.normal(size=100)
+    groups = np.kron(np.arange(25), np.ones(4))
+
+    def times_two(x):
+        return 2 * x
+
+    cov_struct = QIFIndependence()
+
+    result_direct = QIF(
+        y,
+        times_two(x1).reshape(-1, 1),
+        groups=groups,
+        cov_struct=cov_struct
+    ).fit()
+
+    df = pd.DataFrame({"y": y, "x1": x1, "groups": groups})
+
+    result_formula = QIF.from_formula(
+        "y ~ 0 + times_two(x1)",
+        groups="groups",
+        cov_struct=cov_struct,
+        data=df
+    ).fit()
+
+    assert_allclose(result_direct.params, result_formula.params)
+    assert_allclose(result_direct.bse, result_formula.bse)

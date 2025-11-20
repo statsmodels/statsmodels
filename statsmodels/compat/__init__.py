@@ -1,23 +1,23 @@
 from statsmodels.tools._test_runner import PytestTester
 
 from .python import (
-    asunicode,
     asbytes,
     asstr,
+    asunicode,
+    lfilter,
+    lmap,
     lrange,
     lzip,
-    lmap,
-    lfilter,
 )
 
 __all__ = [
-    "asunicode",
     "asbytes",
     "asstr",
+    "asunicode",
+    "lfilter",
+    "lmap",
     "lrange",
     "lzip",
-    "lmap",
-    "lfilter",
     "test",
 ]
 

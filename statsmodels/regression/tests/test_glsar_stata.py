@@ -6,11 +6,11 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 
+from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import GLSAR
 from statsmodels.tools.tools import add_constant
-from statsmodels.datasets import macrodata
 
 
 class CheckStataResultsMixin:
@@ -29,7 +29,7 @@ class CheckStataResultsPMixin(CheckStataResultsMixin):
     def test_predicted(self):
         res, results = self.res, self.results
         assert_allclose(res.fittedvalues, results.fittedvalues, rtol=0.002)
-        predicted = res.predict(res.model.exog) #should be equal
+        predicted = res.predict(res.model.exog)  # should be equal
         assert_allclose(predicted, results.fittedvalues, rtol=0.0016)
         # not yet
         # assert_almost_equal(res.fittedvalues_se, results.fittedvalues_se, 4)
@@ -40,9 +40,9 @@ class TestGLSARCorc(CheckStataResultsPMixin):
     @classmethod
     def setup_class(cls):
         d2 = macrodata.load_pandas().data
-        g_gdp = 400*np.diff(np.log(d2['realgdp'].values))
-        g_inv = 400*np.diff(np.log(d2['realinv'].values))
-        exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1].values], prepend=False)
+        g_gdp = 400*np.diff(np.log(d2["realgdp"].values))
+        g_inv = 400*np.diff(np.log(d2["realinv"].values))
+        exogg = add_constant(np.c_[g_gdp, d2["realint"][:-1].values], prepend=False)
 
         mod1 = GLSAR(g_inv, exogg, 1)
         cls.res = mod1.iterative_fit(5)
@@ -62,25 +62,25 @@ class TestGLSARCorc(CheckStataResultsPMixin):
         exog = self.res.model.exog
         mod1 = GLSAR(endog, exog, 3)
         res = mod1.iterative_fit(10)
-        mod_arma = ARIMA(endog, order=(3,0,0), exog=exog[:, :-1])
+        mod_arma = ARIMA(endog, order=(3, 0, 0), exog=exog[:, :-1])
         res_arma = mod_arma.fit()
-        assert_allclose(res.params, res_arma.params[[1,2,0]], atol=0.01, rtol=1e-2)
+        assert_allclose(res.params, res_arma.params[[1, 2, 0]], atol=0.01, rtol=1e-2)
         assert_allclose(res.model.rho, res_arma.params[3:6], atol=0.05, rtol=1e-3)
-        assert_allclose(res.bse, res_arma.bse[[1,2,0]], atol=0.1, rtol=1e-3)
+        assert_allclose(res.bse, res_arma.bse[[1, 2, 0]], atol=0.1, rtol=1e-3)
 
-        assert_equal(len(res.history['params']), 5)
+        assert_equal(len(res.history["params"]), 5)
         # this should be identical, history has last fit
-        assert_equal(res.history['params'][-1], res.params)
+        assert_equal(res.history["params"][-1], res.params)
 
         res2 = mod1.iterative_fit(4, rtol=0)
-        assert_equal(len(res2.history['params']), 4)
-        assert_equal(len(res2.history['rho']), 4)
+        assert_equal(len(res2.history["params"]), 4)
+        assert_equal(len(res2.history["rho"]), 4)
 
     def test_glsar_iter0(self):
         endog = self.res.model.endog
         exog = self.res.model.exog
 
-        rho = np.array([ 0.207,  0.275,  1.033])
+        rho = np.array([0.207,  0.275,  1.033])
         mod1 = GLSAR(endog, exog, rho)
         res1 = mod1.fit()
         res0 = mod1.iterative_fit(0)

@@ -5,16 +5,21 @@ Author: Josef Perktod
 License: BSD-3
 """
 import numpy as np
-from scipy import stats
+
 # import matplotlib.pyplot as plt
 from numpy.testing import assert_allclose
+from scipy import stats
 
 from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.distributions.copula.api import (
-    ClaytonCopula, GaussianCopula, FrankCopula,
-    GumbelCopula, IndependenceCopula, CopulaDistribution)
-
 from statsmodels.distributions.copula import depfunc_ev as dep
+from statsmodels.distributions.copula.api import (
+    ClaytonCopula,
+    CopulaDistribution,
+    FrankCopula,
+    GaussianCopula,
+    GumbelCopula,
+    IndependenceCopula,
+)
 from statsmodels.distributions.copula.extreme_value import ExtremeValueCopula
 
 

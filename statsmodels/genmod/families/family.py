@@ -1,11 +1,14 @@
-'''
+"""
 The one parameter exponential family distributions used by GLM.
-'''
+"""
+
 # TODO: quasi, quasibinomial, quasipoisson
 # see
 # http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
 # for comparison to R, and McCullagh and Nelder
 
+
+from statsmodels.compat.scipy import SP_LT_17
 
 import inspect
 import warnings
@@ -13,10 +16,10 @@ import warnings
 import numpy as np
 from scipy import special, stats
 
-from statsmodels.compat.scipy import SP_LT_17
 from statsmodels.tools.sm_exceptions import (
     ValueWarning,
-    )
+)
+
 from . import links as L, varfuncs as V
 
 FLOAT_EPS = np.finfo(float).eps
@@ -43,6 +46,7 @@ class Family:
     --------
     :ref:`links` : Further details on links.
     """
+
     # TODO: change these class attributes, use valid somewhere...
     valid = [-np.inf, np.inf]
     links = []
@@ -118,7 +122,7 @@ class Family:
 
         Only the Binomial family takes a different initial value.
         """
-        return (y + y.mean())/2.
+        return (y + y.mean()) / 2.0
 
     def weights(self, mu):
         r"""
@@ -140,9 +144,9 @@ class Family:
 
            w = 1 / (g'(\mu)^2  * Var(\mu))
         """
-        return 1. / (self.link.deriv(mu)**2 * self.variance(mu))
+        return 1.0 / (self.link.deriv(mu) ** 2 * self.variance(mu))
 
-    def deviance(self, endog, mu, var_weights=1., freq_weights=1., scale=1.):
+    def deviance(self, endog, mu, var_weights=1.0, freq_weights=1.0, scale=1.0):
         r"""
         The deviance function evaluated at (endog, mu, var_weights,
         freq_weights, scale) for the distribution.
@@ -187,7 +191,7 @@ class Family:
         resid_dev = self._resid_dev(endog, mu)
         return np.sum(resid_dev * freq_weights * var_weights / scale)
 
-    def resid_dev(self, endog, mu, var_weights=1., scale=1.):
+    def resid_dev(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The deviance residuals
 
@@ -221,7 +225,7 @@ class Family:
         """
         resid_dev = self._resid_dev(endog, mu)
         resid_dev *= var_weights / scale
-        return np.sign(endog - mu) * np.sqrt(np.clip(resid_dev, 0., np.inf))
+        return np.sign(endog - mu) * np.sqrt(np.clip(resid_dev, 0.0, np.inf))
 
     def fitted(self, lin_pred):
         r"""
@@ -259,7 +263,7 @@ class Family:
         """
         return self.link(mu)
 
-    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The log-likelihood function for each observation in terms of the fitted
         mean response for the distribution.
@@ -290,7 +294,7 @@ class Family:
         """
         raise NotImplementedError
 
-    def loglike(self, endog, mu, var_weights=1., freq_weights=1., scale=1.):
+    def loglike(self, endog, mu, var_weights=1.0, freq_weights=1.0, scale=1.0):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -328,7 +332,7 @@ class Family:
         ll_obs = self.loglike_obs(endog, mu, var_weights, scale)
         return np.sum(ll_obs * freq_weights)
 
-    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The Anscombe residuals
 
@@ -405,19 +409,18 @@ class Poisson(Family):
     statsmodels.genmod.families.family.Family : Parent class for all links.
     :ref:`links` : Further details on links.
     """
+
     links = [L.Log, L.Identity, L.Sqrt]
     variance = V.mu
     valid = [0, np.inf]
-    safe_links = [L.Log, ]
+    safe_links = [
+        L.Log,
+    ]
 
     def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.Log()
-        super().__init__(
-            link=link,
-            variance=Poisson.variance,
-            check_link=check_link
-            )
+        super().__init__(link=link, variance=Poisson.variance, check_link=check_link)
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -446,7 +449,7 @@ class Poisson(Family):
         resid_dev = endog * np.log(endog_mu) - (endog - mu)
         return 2 * resid_dev
 
-    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The log-likelihood function for each observation in terms of the fitted
         mean response for the Poisson distribution.
@@ -474,10 +477,11 @@ class Poisson(Family):
             ll_i = var\_weights_i / scale * (endog_i * \ln(\mu_i) - \mu_i -
             \ln \Gamma(endog_i + 1))
         """
-        return var_weights / scale * (endog * np.log(mu) - mu -
-                                      special.gammaln(endog + 1))
+        return (
+            var_weights / scale * (endog * np.log(mu) - mu - special.gammaln(endog + 1))
+        )
 
-    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The Anscombe residuals
 
@@ -505,12 +509,15 @@ class Poisson(Family):
            resid\_anscombe_i = (3/2) * (endog_i^{2/3} - \mu_i^{2/3}) /
            \mu_i^{1/6} * \sqrt(var\_weights)
         """
-        resid = ((3 / 2.) * (endog**(2 / 3.) - mu**(2 / 3.)) /
-                 (mu ** (1 / 6.) * scale ** 0.5))
+        resid = (
+            (3 / 2.0)
+            * (endog ** (2 / 3.0) - mu ** (2 / 3.0))
+            / (mu ** (1 / 6.0) * scale**0.5)
+        )
         resid *= np.sqrt(var_weights)
         return resid
 
-    def get_distribution(self, mu, scale=1., var_weights=1.):
+    def get_distribution(self, mu, scale=1.0, var_weights=1.0):
         r"""
         Frozen Poisson distribution instance for given parameters
 
@@ -569,11 +576,7 @@ class Gaussian(Family):
     def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.Identity()
-        super().__init__(
-            link=link,
-            variance=Gaussian.variance,
-            check_link=check_link
-            )
+        super().__init__(link=link, variance=Gaussian.variance, check_link=check_link)
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -599,7 +602,7 @@ class Gaussian(Family):
         """
         return (endog - mu) ** 2
 
-    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The log-likelihood function for each observation in terms of the fitted
         mean response for the Gaussian distribution.
@@ -649,7 +652,7 @@ class Gaussian(Family):
         ll_obs /= 2
         return ll_obs
 
-    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The Anscombe residuals
 
@@ -680,11 +683,11 @@ class Gaussian(Family):
            resid\_anscombe_i = (Y_i - \mu_i) / \sqrt{scale} *
            \sqrt(var\_weights)
         """
-        resid = (endog - mu) / scale ** 0.5
+        resid = (endog - mu) / scale**0.5
         resid *= np.sqrt(var_weights)
         return resid
 
-    def get_distribution(self, mu, scale, var_weights=1.):
+    def get_distribution(self, mu, scale, var_weights=1.0):
         r"""
         Frozen Gaussian distribution instance for given parameters
 
@@ -735,18 +738,17 @@ class Gamma(Family):
     statsmodels.genmod.families.family.Family : Parent class for all links.
     :ref:`links` : Further details on links.
     """
+
     links = [L.Log, L.Identity, L.InversePower]
     variance = V.mu_squared
-    safe_links = [L.Log, ]
+    safe_links = [
+        L.Log,
+    ]
 
     def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.InversePower()
-        super().__init__(
-            link=link,
-            variance=Gamma.variance,
-            check_link=check_link
-            )
+        super().__init__(link=link, variance=Gamma.variance, check_link=check_link)
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -775,7 +777,7 @@ class Gamma(Family):
         resid_dev = -np.log(endog_mu) + (endog - mu) / mu
         return 2 * resid_dev
 
-    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The log-likelihood function for each observation in terms of the fitted
         mean response for the Gamma distribution.
@@ -801,9 +803,27 @@ class Gamma(Family):
         -----
         .. math::
 
-           ll_i = var\_weights_i / scale * (\ln(var\_weights_i * endog_i /
-           (scale * \mu_i)) - (var\_weights_i * endog_i) /
-           (scale * \mu_i)) - \ln \Gamma(var\_weights_i / scale) - \ln(\mu_i)
+            ll_i = var\_weights_i / scale * (\ln(var\_weights_i * endog_i /
+            (scale * \mu_i)) - (var\_weights_i * endog_i) /
+            (scale * \mu_i)) - \ln \Gamma(var\_weights_i / scale) - \ln(\endog_i)
+
+        Note on weights parameterization
+        --------------------------------
+        statsmodels follows the SPSS/SAS definition for variance weights:
+        Var(endog_i) = scale * mu_i² / var_weights_i — i.e., the effective
+        dispersion is scale / var_weights_i.
+
+        McCullagh & Nelder (1989) treat var_weights_i as a pure multiplier
+        on the log-likelihood with Var(endog_i) = scale * mu_i². This leads
+        to a log-likelihood that differs only by a constant in
+        (endog_i, var_weights_i, scale), not mu_i. So estimates of β and
+        deviance are identical, but absolute log-likelihood values (e.g., AIC)
+        will differ by a constant.
+
+        References
+        ----------
+        McCullagh, P., and Nelder, J.A. (1989). *Generalized Linear Models*,
+        2nd Edition. Chapman & Hall/CRC.
         """
         endog_mu = self._clean(endog / mu)
         weight_scale = var_weights / scale
@@ -816,7 +836,7 @@ class Gamma(Family):
         # in R it's the dispersion, though there is a loss of precision vs.
         # our results due to an assumed difference in implementation
 
-    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The Anscombe residuals
 
@@ -844,11 +864,13 @@ class Gamma(Family):
            resid\_anscombe_i = 3 * (endog_i^{1/3} - \mu_i^{1/3}) / \mu_i^{1/3}
            / \sqrt{scale} * \sqrt(var\_weights)
         """
-        resid = 3 * (endog**(1/3.) - mu**(1/3.)) / mu**(1/3.) / scale ** 0.5
+        resid = (
+            3 * (endog ** (1 / 3.0) - mu ** (1 / 3.0)) / mu ** (1 / 3.0) / scale**0.5
+        )
         resid *= np.sqrt(var_weights)
         return resid
 
-    def get_distribution(self, mu, scale, var_weights=1.):
+    def get_distribution(self, mu, scale, var_weights=1.0):
         r"""
         Frozen Gamma distribution instance for given parameters
 
@@ -914,8 +936,16 @@ class Binomial(Family):
     number of trials for each row.
     """
 
-    links = [L.Logit, L.Probit, L.Cauchy, L.Log, L.LogC, L.CLogLog, L.LogLog,
-             L.Identity]
+    links = [
+        L.Logit,
+        L.Probit,
+        L.Cauchy,
+        L.Log,
+        L.LogC,
+        L.CLogLog,
+        L.LogLog,
+        L.Identity,
+    ]
     variance = V.binary  # this is not used below in an effort to include n
 
     # Other safe links, e.g. cloglog and probit are subclasses
@@ -930,20 +960,18 @@ class Binomial(Family):
         # overwritten by initialize if needed but always used to initialize
         # variance since endog is assumed/forced to be (0,1)
         super().__init__(
-            link=link,
-            variance=V.Binomial(n=self.n),
-            check_link=check_link
-            )
+            link=link, variance=V.Binomial(n=self.n), check_link=check_link
+        )
 
     def starting_mu(self, y):
         r"""
         The starting values for the IRLS algorithm for the Binomial family.
         A good choice for the binomial family is :math:`\mu_0 = (Y_i + 0.5)/2`
         """
-        return (y + .5)/2
+        return (y + 0.5) / 2
 
     def initialize(self, endog, freq_weights):
-        '''
+        """
         Initialize the response variable.
 
         Parameters
@@ -961,18 +989,20 @@ class Binomial(Family):
         (successes, failures) and
         successes/(success + failures) is returned.  And n is set to
         successes + failures.
-        '''
+        """
         # if not np.all(np.asarray(freq_weights) == 1):
         #     self.variance = V.Binomial(n=freq_weights)
         if endog.ndim > 1 and endog.shape[1] > 2:
-            raise ValueError('endog has more than 2 columns. The Binomial '
-                             'link supports either a single response variable '
-                             'or a paired response variable.')
+            raise ValueError(
+                "endog has more than 2 columns. The Binomial "
+                "link supports either a single response variable "
+                "or a paired response variable."
+            )
         elif endog.ndim > 1 and endog.shape[1] > 1:
             y = endog[:, 0]
             # overwrite self.freq_weights for deviance below
             self.n = endog.sum(1)
-            return y*1./self.n, self.n
+            return y * 1.0 / self.n, self.n
         else:
             return endog, np.ones(endog.shape[0])
 
@@ -1000,11 +1030,11 @@ class Binomial(Family):
            (1 - endog_i) * \ln((1 - endog_i) / (1 - \mu_i)))
         """
         endog_mu = self._clean(endog / (mu + 1e-20))
-        n_endog_mu = self._clean((1. - endog) / (1. - mu + 1e-20))
+        n_endog_mu = self._clean((1.0 - endog) / (1.0 - mu + 1e-20))
         resid_dev = endog * np.log(endog_mu) + (1 - endog) * np.log(n_endog_mu)
         return 2 * self.n * resid_dev
 
-    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The log-likelihood function for each observation in terms of the fitted
         mean response for the Binomial distribution.
@@ -1047,17 +1077,20 @@ class Binomial(Family):
         defined in Binomial initialize.  This simply makes :math:`y_i` the
         original number of successes.
         """
-        n = self.n     # Number of trials
+        n = self.n  # Number of trials
         y = endog * n  # Number of successes
 
         # note that mu is still in (0,1), i.e. not converted back
         return (
-            special.gammaln(n + 1) - special.gammaln(y + 1) -
-            special.gammaln(n - y + 1) + y * np.log(mu / (1 - mu + 1e-20)) +
-            n * np.log(1 - mu + 1e-20)) * var_weights
+            special.gammaln(n + 1)
+            - special.gammaln(y + 1)
+            - special.gammaln(n - y + 1)
+            + y * np.log((mu + 1e-20) / (1 - mu + 1e-20))
+            + n * np.log(1 - mu + 1e-20)
+        ) * var_weights
 
-    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
-        r'''
+    def resid_anscombe(self, endog, mu, var_weights=1.0, scale=1.0):
+        r"""
         The Anscombe residuals
 
         Parameters
@@ -1106,20 +1139,22 @@ class Binomial(Family):
 
         Cox, DR and Snell, EJ. (1968) "A General Definition of Residuals."
             Journal of the Royal Statistical Society B. 30, 248-75.
-        '''
+        """
         endog = endog * self.n  # convert back to successes
         mu = mu * self.n  # convert back to successes
 
         def cox_snell(x):
-            return special.betainc(2/3., 2/3., x) * special.beta(2/3., 2/3.)
+            return special.betainc(2 / 3.0, 2 / 3.0, x) * special.beta(2 / 3.0, 2 / 3.0)
 
-        resid = (self.n ** (2/3.) * (cox_snell(endog * 1. / self.n) -
-                                     cox_snell(mu * 1. / self.n)) /
-                 (mu * (1 - mu * 1. / self.n) * scale ** 3) ** (1 / 6.))
+        resid = (
+            self.n ** (2 / 3.0)
+            * (cox_snell(endog * 1.0 / self.n) - cox_snell(mu * 1.0 / self.n))
+            / (mu * (1 - mu * 1.0 / self.n) * scale**3) ** (1 / 6.0)
+        )
         resid *= np.sqrt(var_weights)
         return resid
 
-    def get_distribution(self, mu, scale=1., var_weights=1., n_trials=1):
+    def get_distribution(self, mu, scale=1.0, var_weights=1.0, n_trials=1):
         r"""
         Frozen Binomial distribution instance for given parameters
 
@@ -1182,16 +1217,17 @@ class InverseGaussian(Family):
 
     links = [L.InverseSquared, L.InversePower, L.Identity, L.Log]
     variance = V.mu_cubed
-    safe_links = [L.InverseSquared, L.Log, ]
+    safe_links = [
+        L.InverseSquared,
+        L.Log,
+    ]
 
     def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.InverseSquared()
         super().__init__(
-            link=link,
-            variance=InverseGaussian.variance,
-            check_link=check_link
-            )
+            link=link, variance=InverseGaussian.variance, check_link=check_link
+        )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -1215,9 +1251,9 @@ class InverseGaussian(Family):
 
            resid\_dev_i = 1 / (endog_i * \mu_i^2) * (endog_i - \mu_i)^2
         """
-        return 1. / (endog * mu ** 2) * (endog - mu) ** 2
+        return 1.0 / (endog * mu**2) * (endog - mu) ** 2
 
-    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The log-likelihood function for each observation in terms of the fitted
         mean response for the Inverse Gaussian distribution.
@@ -1247,12 +1283,12 @@ class InverseGaussian(Family):
            (scale * endog_i * \mu_i^2) + \ln(scale * \endog_i^3 /
            var\_weights_i) - \ln(2 * \pi))
         """
-        ll_obs = -var_weights * (endog - mu) ** 2 / (scale * endog * mu ** 2)
-        ll_obs += -np.log(scale * endog ** 3 / var_weights) - np.log(2 * np.pi)
+        ll_obs = -var_weights * (endog - mu) ** 2 / (scale * endog * mu**2)
+        ll_obs += -np.log(scale * endog**3 / var_weights) - np.log(2 * np.pi)
         ll_obs /= 2
         return ll_obs
 
-    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The Anscombe residuals
 
@@ -1285,7 +1321,7 @@ class InverseGaussian(Family):
         resid *= np.sqrt(var_weights)
         return resid
 
-    def get_distribution(self, mu, scale, var_weights=1.):
+    def get_distribution(self, mu, scale, var_weights=1.0):
         r"""
         Frozen Inverse Gaussian distribution instance for given parameters
 
@@ -1355,25 +1391,31 @@ class NegativeBinomial(Family):
 
     with :math:`E[Y]=\mu\,` and :math:`Var[Y]=\mu+\alpha\mu^2`.
     """
+
     links = [L.Log, L.CLogLog, L.Identity, L.NegativeBinomial, L.Power]
     # TODO: add the ability to use the power links with an if test
     # similar to below
     variance = V.nbinom
-    safe_links = [L.Log, ]
+    safe_links = [
+        L.Log,
+    ]
 
-    def __init__(self, link=None, alpha=1., check_link=True):
-        self.alpha = 1. * alpha  # make it at least float
+    def __init__(self, link=None, alpha=1.0, check_link=True):
+        self.alpha = 1.0 * alpha  # make it at least float
         if alpha is self.__init__.__defaults__[1]:  # `is` is intentional
-            warnings.warn("Negative binomial dispersion parameter alpha not "
-                          f"set. Using default value alpha={alpha}.",
-                          ValueWarning)
+            warnings.warn(
+                "Negative binomial dispersion parameter alpha not "
+                f"set. Using default value alpha={alpha}.",
+                ValueWarning,
+                stacklevel=2,
+            )
         if link is None:
             link = L.Log()
         super().__init__(
             link=link,
             variance=V.NegativeBinomial(alpha=self.alpha),
-            check_link=check_link
-            )
+            check_link=check_link,
+        )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -1406,7 +1448,7 @@ class NegativeBinomial(Family):
         resid_dev -= endog_alpha * np.log(endog_alpha / mu_alpha)
         return 2 * resid_dev
 
-    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The log-likelihood function for each observation in terms of the fitted
         mean response for the Negative Binomial distribution.
@@ -1458,7 +1500,7 @@ class NegativeBinomial(Family):
         ll_obs -= special.gammaln(endog + 1)
         return var_weights / scale * ll_obs
 
-    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The Anscombe residuals
 
@@ -1495,17 +1537,23 @@ class NegativeBinomial(Family):
         Note that for the (unregularized) Beta function, one has
         :math:`Beta(z,a,b) = z^a/a * H2F1(a,1-b,a+1,z)`
         """
-        def hyp2f1(x):
-            return special.hyp2f1(2 / 3., 1 / 3., 5 / 3., x)
 
-        resid = (3 / 2. * (endog ** (2 / 3.) * hyp2f1(-self.alpha * endog) -
-                           mu ** (2 / 3.) * hyp2f1(-self.alpha * mu)) /
-                 (mu * (1 + self.alpha * mu) *
-                 scale ** 3) ** (1 / 6.))
+        def hyp2f1(x):
+            return special.hyp2f1(2 / 3.0, 1 / 3.0, 5 / 3.0, x)
+
+        resid = (
+            3
+            / 2.0
+            * (
+                endog ** (2 / 3.0) * hyp2f1(-self.alpha * endog)
+                - mu ** (2 / 3.0) * hyp2f1(-self.alpha * mu)
+            )
+            / (mu * (1 + self.alpha * mu) * scale**3) ** (1 / 6.0)
+        )
         resid *= np.sqrt(var_weights)
         return resid
 
-    def get_distribution(self, mu, scale=1., var_weights=1.):
+    def get_distribution(self, mu, scale=1.0, var_weights=1.0):
         r"""
         Frozen NegativeBinomial distribution instance for given parameters
 
@@ -1524,7 +1572,7 @@ class NegativeBinomial(Family):
         distribution instance
 
         """
-        size = 1. / self.alpha
+        size = 1.0 / self.alpha
         prob = size / (size + mu)
         return stats.nbinom(size, prob)
 
@@ -1573,23 +1621,23 @@ class Tweedie(Family):
     estimated using the ``estimate_tweedie_power`` function that is part of the
     statsmodels.genmod.generalized_linear_model.GLM class.
     """
+
     links = [L.Log, L.Power]
     variance = V.Power(power=1.5)
     safe_links = [L.Log, L.Power]
 
-    def __init__(self, link=None, var_power=1., eql=False, check_link=True):
+    def __init__(self, link=None, var_power=1.0, eql=False, check_link=True):
         self.var_power = var_power
         self.eql = eql
         if eql and (var_power < 1 or var_power > 2):
-            raise ValueError("Tweedie: if EQL=True then var_power must fall "
-                             "between 1 and 2")
+            raise ValueError(
+                "Tweedie: if EQL=True then var_power must fall between 1 and 2"
+            )
         if link is None:
             link = L.Log()
         super().__init__(
-            link=link,
-            variance=V.Power(power=var_power * 1.),
-            check_link=check_link
-            )
+            link=link, variance=V.Power(power=var_power * 1.0), check_link=check_link
+        )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -1645,18 +1693,19 @@ class Tweedie(Family):
         """
         p = self.var_power
         if p == 1:
-            dev = np.where(endog == 0,
-                           mu,
-                           endog * np.log(endog / mu) + (mu - endog))
+            dev = np.where(endog == 0, mu, endog * np.log(endog / mu) + (mu - endog))
         elif p == 2:
             endog1 = self._clean(endog)
             dev = ((endog - mu) / mu) - np.log(endog1 / mu)
         else:
-            dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
-                   endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
+            dev = (
+                endog ** (2 - p) / ((1 - p) * (2 - p))
+                - endog * mu ** (1 - p) / (1 - p)
+                + mu ** (2 - p) / (2 - p)
+            )
         return 2 * dev
 
-    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The log-likelihood function for each observation in terms of the fitted
         mean response for the Tweedie distribution.
@@ -1697,17 +1746,11 @@ class Tweedie(Family):
         endog = np.atleast_1d(endog)
         if p == 1:
             return Poisson().loglike_obs(
-                endog=endog,
-                mu=mu,
-                var_weights=var_weights,
-                scale=scale
+                endog=endog, mu=mu, var_weights=var_weights, scale=scale
             )
         elif p == 2:
             return Gamma().loglike_obs(
-                endog=endog,
-                mu=mu,
-                var_weights=var_weights,
-                scale=scale
+                endog=endog, mu=mu, var_weights=var_weights, scale=scale
             )
 
         if not self.eql:
@@ -1748,21 +1791,23 @@ class Tweedie(Family):
                 x = ((p - 1) * scale / endog) ** alpha
                 x /= (2 - p) * scale
                 wb = special.wright_bessel(-alpha, 0, x)
-                ll_obs[idx] += np.log(1/endog * wb)
+                ll_obs[idx] += np.log(1 / endog * wb)
             return ll_obs
         else:
             # Equations 4 of Kaas
             llf = np.log(2 * np.pi * scale) + p * np.log(endog)
             llf -= np.log(var_weights)
             llf /= -2
-            u = (endog ** (2 - p)
-                 - (2 - p) * endog * mu ** (1 - p)
-                 + (1 - p) * mu ** (2 - p))
+            u = (
+                endog ** (2 - p)
+                - (2 - p) * endog * mu ** (1 - p)
+                + (1 - p) * mu ** (2 - p)
+            )
             u *= var_weights / (scale * (1 - p) * (2 - p))
 
         return llf - u
 
-    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1.0, scale=1.0):
         r"""
         The Anscombe residuals
 
@@ -1806,8 +1851,9 @@ class Tweedie(Family):
         if self.var_power == 3:
             resid = np.log(endog / mu) / np.sqrt(mu * scale)
         else:
-            c = (3. - self.var_power) / 3.
-            resid = ((1. / c) * (endog ** c - mu ** c) /
-                     mu ** (self.var_power / 6.)) / scale ** 0.5
+            c = (3.0 - self.var_power) / 3.0
+            resid = (
+                (1.0 / c) * (endog**c - mu**c) / mu ** (self.var_power / 6.0)
+            ) / scale**0.5
         resid *= np.sqrt(var_weights)
         return resid

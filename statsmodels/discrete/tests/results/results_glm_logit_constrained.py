@@ -36,7 +36,7 @@ est = dict(
            cmdline="glm grade  gpa tuce psi, family(binomial)",
            cmd="glm",
            predict="glim_p",
-           marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+           marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
            marginsok="default",
            hac_lag="30",
            vcetype="OIM",
@@ -76,9 +76,9 @@ params_table = np.array([
     -3.3561286905433, np.nan,  1.9599639845401,                0
     ]).reshape(4, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'gpa tuce psi _cons'.split()
+params_table_rownames = "gpa tuce psi _cons".split()
 
 cov = np.array([
     1.5950200254665, -.03692058012179,  .42761557297075, -4.5734780841711,
@@ -87,17 +87,17 @@ cov = np.array([
     -4.5734780841711, -.34625566662867, -2.3591604492672,  24.317955316083
     ]).reshape(4, 4)
 
-cov_colnames = 'gpa tuce psi _cons'.split()
+cov_colnames = "gpa tuce psi _cons".split()
 
-cov_rownames = 'gpa tuce psi _cons'.split()
+cov_rownames = "gpa tuce psi _cons".split()
 
 infocrit = np.array([
     32, np.nan, -12.889634222131,                4,
     33.779268444263,  39.642212055462])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 
 results_noconstraint = ParamsTableTestBunch(
@@ -147,7 +147,7 @@ est = dict(
            cmdline="glm grade  gpa tuce psi, family(binomial) vce(robust)",
            cmd="glm",
            predict="glim_p",
-           marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+           marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
            marginsok="default",
            hac_lag="30",
            vcetype="Robust",
@@ -187,9 +187,9 @@ params_table = np.array([
     -2.6712634030626, np.nan,  1.9599639845401,                0
     ]).reshape(4, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'gpa tuce psi _cons'.split()
+params_table_rownames = "gpa tuce psi _cons".split()
 
 cov = np.array([
     1.6585006464861,  .00630184631279,  .20368998146717, -5.7738061195745,
@@ -198,17 +198,17 @@ cov = np.array([
     -5.7738061195745, -.34768562593344, -1.5315997267117,  27.886335102141
     ]).reshape(4, 4)
 
-cov_colnames = 'gpa tuce psi _cons'.split()
+cov_colnames = "gpa tuce psi _cons".split()
 
-cov_rownames = 'gpa tuce psi _cons'.split()
+cov_rownames = "gpa tuce psi _cons".split()
 
 infocrit = np.array([
     32, np.nan, -12.889634222131,                4,
     33.779268444263,  39.642212055462])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 
 results_noconstraint_robust = ParamsTableTestBunch(
@@ -258,7 +258,7 @@ est = dict(
            cmdline="glm grade  gpa tuce psi, family(binomial) constraints(1)",
            cmd="glm",
            predict="glim_p",
-           marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+           marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
            marginsok="default",
            hac_lag="30",
            vcetype="OIM",
@@ -298,9 +298,9 @@ params_table = np.array([
     -6.3994319916434, np.nan,  1.9599639845401,                0
     ]).reshape(4, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'gpa tuce psi _cons'.split()
+params_table_rownames = "gpa tuce psi _cons".split()
 
 cov = np.array([
     0,                0,                0,                0,
@@ -309,17 +309,17 @@ cov = np.array([
     0, -.45036648979107,  -1.126241119498,  11.158456476868
     ]).reshape(4, 4)
 
-cov_colnames = 'gpa tuce psi _cons'.split()
+cov_colnames = "gpa tuce psi _cons".split()
 
-cov_rownames = 'gpa tuce psi _cons'.split()
+cov_rownames = "gpa tuce psi _cons".split()
 
 infocrit = np.array([
     32, np.nan, -12.889848643302,                3,
     31.779697286605,  36.176904995004])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 
 results_constraint1 = ParamsTableTestBunch(
@@ -369,7 +369,7 @@ est = dict(
            cmdline="glm grade  gpa tuce psi, family(binomial) constraints(2)",
            cmd="glm",
            predict="glim_p",
-           marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+           marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
            marginsok="default",
            hac_lag="30",
            vcetype="OIM",
@@ -409,9 +409,9 @@ params_table = np.array([
     -3.4349087027211, np.nan,  1.9599639845401,                0
     ]).reshape(4, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'gpa tuce psi _cons'.split()
+params_table_rownames = "gpa tuce psi _cons".split()
 
 cov = np.array([
     .85862555638391, -.00408642741742,  .85862555638391, -3.1725052764862,
@@ -420,17 +420,17 @@ cov = np.array([
     -3.1725052764862, -.40376368789892, -3.1725052764862,  21.523826226433
     ]).reshape(4, 4)
 
-cov_colnames = 'gpa tuce psi _cons'.split()
+cov_colnames = "gpa tuce psi _cons".split()
 
-cov_rownames = 'gpa tuce psi _cons'.split()
+cov_rownames = "gpa tuce psi _cons".split()
 
 infocrit = np.array([
     32, np.nan, -12.944141004448,                3,
     31.888282008895,  36.285489717294])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predict_mu = np.array([
     .02720933393726,  .05877785527304,  .17341537851768,  .02240274574181,
@@ -443,9 +443,9 @@ predict_mu = np.array([
     .83387563062407,  .93837010344092,  .55200183830167,  .13940358008872
     ])
 
-predict_mu_colnames = 'predict_mu'.split()
+predict_mu_colnames = "predict_mu".split()
 
-predict_mu_rownames = ['r'+str(n) for n in range(1, 33)]
+predict_mu_rownames = ["r"+str(n) for n in range(1, 33)]
 
 predict_linpred_std = np.array([
     1.2186852972383,  .98250143329647,  .71300625338041,  1.7281112031272,
@@ -458,9 +458,9 @@ predict_linpred_std = np.array([
     .96511132361274,  1.2127047415358,  .61923877005984,  .80300912367498
     ])
 
-predict_linpred_std_colnames = 'predict_linpred_std'.split()
+predict_linpred_std_colnames = "predict_linpred_std".split()
 
-predict_linpred_std_rownames = ['r'+str(n) for n in range(1, 33)]
+predict_linpred_std_rownames = ["r"+str(n) for n in range(1, 33)]
 
 predict_hat = np.array([
     .03931157544567,  .05340381182541,  .07287215399916,  .06540404284993,
@@ -473,9 +473,9 @@ predict_hat = np.array([
     .12902962938834,  .08505028097419,  .09482722348113,  .07735963673184
     ])
 
-predict_hat_colnames = 'predict_hat'.split()
+predict_hat_colnames = "predict_hat".split()
 
-predict_hat_rownames = ['r'+str(n) for n in range(1, 33)]
+predict_hat_rownames = ["r"+str(n) for n in range(1, 33)]
 
 
 results_constraint2 = ParamsTableTestBunch(
@@ -531,10 +531,10 @@ est = dict(
            deviance_s=25.88828200889509,
            dispers=.892699379617072,
            deviance=25.88828200889509,
-           cmdline="glm grade  gpa tuce psi, family(binomial) constraints(2) vce(robust)",  # noqa:E501
+           cmdline="glm grade  gpa tuce psi, family(binomial) constraints(2) vce(robust)",
            cmd="glm",
            predict="glim_p",
-           marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+           marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
            marginsok="default",
            hac_lag="30",
            vcetype="Robust",
@@ -574,9 +574,9 @@ params_table = np.array([
     -3.6876725244938, np.nan,  1.9599639845401,                0
     ]).reshape(4, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'gpa tuce psi _cons'.split()
+params_table_rownames = "gpa tuce psi _cons".split()
 
 cov = np.array([
     .6990532570796,  .01512804251258,   .6990532570796, -2.9662622048441,
@@ -585,17 +585,17 @@ cov = np.array([
     -2.9662622048441,  -.3968065659911, -2.9662622048441,  20.343836987269
     ]).reshape(4, 4)
 
-cov_colnames = 'gpa tuce psi _cons'.split()
+cov_colnames = "gpa tuce psi _cons".split()
 
-cov_rownames = 'gpa tuce psi _cons'.split()
+cov_rownames = "gpa tuce psi _cons".split()
 
 infocrit = np.array([
     32, np.nan, -12.944141004448,                3,
     31.888282008895,  36.285489717294])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 
 results_constraint2_robust = ParamsTableTestBunch(
@@ -632,7 +632,7 @@ est = dict(
            cmd="logit",
            estat_cmd="logit_estat",
            predict="logit_p",
-           marginsnotok="stdp DBeta DEviance DX2 DDeviance Hat Number Residuals RStandard SCore",  # noqa:E501
+           marginsnotok="stdp DBeta DEviance DX2 DDeviance Hat Number Residuals RStandard SCore",
            title="Logistic regression",
            chi2type="Wald",
            opt="moptimize",
@@ -659,9 +659,9 @@ params_table = np.array([
     -3.4349091074867, np.nan,  1.9599639845401,                0
     ]).reshape(4, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'gpa tuce psi _cons'.split()
+params_table_rownames = "gpa tuce psi _cons".split()
 
 cov = np.array([
     .85862567386816, -.00408642236043,  .85862567386816,  -3.172505858545,
@@ -670,17 +670,17 @@ cov = np.array([
     -3.172505858545, -.40376374127778,  -3.172505858545,  21.523829776841
     ]).reshape(4, 4)
 
-cov_colnames = 'gpa tuce psi _cons'.split()
+cov_colnames = "gpa tuce psi _cons".split()
 
-cov_rownames = 'gpa tuce psi _cons'.split()
+cov_rownames = "gpa tuce psi _cons".split()
 
 infocrit = np.array([
     32, np.nan, -12.944141004448,                3,
     31.888282008895,  36.285489717294])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 
 results_logit_constraint2 = ParamsTableTestBunch(

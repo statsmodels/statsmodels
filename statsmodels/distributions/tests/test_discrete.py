@@ -1,22 +1,21 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
-
 from scipy import stats
-from scipy.stats import poisson, nbinom
-
-from statsmodels.compat.python import PYTHON_IMPL_WASM
-from statsmodels.tools.tools import Bunch
+from scipy.stats import nbinom, poisson
 
 from statsmodels.distributions.discrete import (
-    genpoisson_p,
-    truncatedpoisson,
-    truncatednegbin,
-    zipoisson,
-    zinegbin,
-    zigenpoisson,
     DiscretizedCount,
-    DiscretizedModel
-    )
+    DiscretizedModel,
+    genpoisson_p,
+    truncatednegbin,
+    truncatedpoisson,
+    zigenpoisson,
+    zinegbin,
+    zipoisson,
+)
+from statsmodels.tools.tools import Bunch
 
 
 class TestGenpoisson_p:

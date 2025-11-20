@@ -3,7 +3,9 @@
 from pandas
 License: Simplified BSD
 """
+
 import numpy as np
+
 from statsmodels.regression.linear_model import GLS, RegressionResults
 
 
@@ -37,7 +39,7 @@ class RLS(GLS):
     A Pedagogical Note", The Review of Economics and Statistics, 1991.
     """
 
-    def __init__(self, endog, exog, constr, param=0., sigma=None):
+    def __init__(self, endog, exog, constr, param=0.0, sigma=None):
         N, Q = exog.shape
         constr = np.asarray(constr)
         if constr.ndim == 1:
@@ -45,7 +47,7 @@ class RLS(GLS):
         else:
             K, P = constr.shape
         if Q != P:
-            raise Exception('Constraints and design do not align')
+            raise Exception("Constraints and design do not align")
         self.ncoeffs = Q
         self.nconstraint = K
         self.constraint = constr
@@ -53,7 +55,7 @@ class RLS(GLS):
             param = np.ones((K,)) * param
         self.param = param
         if sigma is None:
-            sigma = 1.
+            sigma = 1.0
         if np.isscalar(sigma):
             sigma = np.ones(N) * sigma
         sigma = np.squeeze(sigma)
@@ -66,6 +68,7 @@ class RLS(GLS):
         super(GLS, self).__init__(endog, exog)
 
     _rwexog = None
+
     @property
     def rwexog(self):
         """Whitened exogenous variables augmented with restrictions"""
@@ -73,15 +76,16 @@ class RLS(GLS):
             P = self.ncoeffs
             K = self.nconstraint
             design = np.zeros((P + K, P + K))
-            design[:P, :P] = np.dot(self.wexog.T, self.wexog) #top left
+            design[:P, :P] = np.dot(self.wexog.T, self.wexog)  # top left
             constr = np.reshape(self.constraint, (K, P))
-            design[:P, P:] = constr.T #top right partition
-            design[P:, :P] = constr #bottom left partition
-            design[P:, P:] = np.zeros((K, K)) #bottom right partition
+            design[:P, P:] = constr.T  # top right partition
+            design[P:, :P] = constr  # bottom left partition
+            design[P:, P:] = np.zeros((K, K))  # bottom right partition
             self._rwexog = design
         return self._rwexog
 
     _inv_rwexog = None
+
     @property
     def inv_rwexog(self):
         """Inverse of self.rwexog"""
@@ -90,6 +94,7 @@ class RLS(GLS):
         return self._inv_rwexog
 
     _rwendog = None
+
     @property
     def rwendog(self):
         """Whitened endogenous variable augmented with restriction parameters"""
@@ -103,6 +108,7 @@ class RLS(GLS):
         return self._rwendog
 
     _ncp = None
+
     @property
     def rnorm_cov_params(self):
         """Parameter covariance under restrictions"""
@@ -112,6 +118,7 @@ class RLS(GLS):
         return self._ncp
 
     _wncp = None
+
     @property
     def wrnorm_cov_params(self):
         """
@@ -128,12 +135,13 @@ class RLS(GLS):
         return self._wncp
 
     _coeffs = None
+
     @property
     def coeffs(self):
         """Estimated parameters"""
         if self._coeffs is None:
             betaLambda = np.dot(self.inv_rwexog, self.rwendog)
-            self._coeffs = betaLambda[:self.ncoeffs]
+            self._coeffs = betaLambda[: self.ncoeffs]
         return self._coeffs
 
     def fit(self):
@@ -141,11 +149,19 @@ class RLS(GLS):
         lfit = RegressionResults(self, self.coeffs, normalized_cov_params=rncp)
         return lfit
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     import statsmodels.api as sm
-    dta = np.genfromtxt('./rlsdata.txt', names=True)
-    design = np.column_stack((dta['Y'],dta['Y']**2,dta[['NE','NC','W','S']].view(float).reshape(dta.shape[0],-1)))
+
+    dta = np.genfromtxt("./rlsdata.txt", names=True)
+    design = np.column_stack(
+        (
+            dta["Y"],
+            dta["Y"] ** 2,
+            dta[["NE", "NC", "W", "S"]].view(float).reshape(dta.shape[0], -1),
+        )
+    )
     design = sm.add_constant(design, prepend=True)
-    rls_mod = RLS(dta['G'],design, constr=[0,0,0,1,1,1,1])
+    rls_mod = RLS(dta["G"], design, constr=[0, 0, 0, 1, 1, 1, 1])
     rls_fit = rls_mod.fit()
     print(rls_fit.params)

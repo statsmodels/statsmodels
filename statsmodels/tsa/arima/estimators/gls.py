@@ -4,28 +4,37 @@ Feasible generalized least squares for regression with SARIMA errors.
 Author: Chad Fulton
 License: BSD-3
 """
-import numpy as np
+
 import warnings
 
-from statsmodels.tools.tools import add_constant, Bunch
+import numpy as np
+
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, SpecificationWarning
+from statsmodels.tools.tools import Bunch, add_constant
+from statsmodels.tsa.arima.estimators.burg import burg
+from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
+from statsmodels.tsa.arima.estimators.innovations import innovations, innovations_mle
+from statsmodels.tsa.arima.estimators.statespace import statespace
+from statsmodels.tsa.arima.estimators.yule_walker import yule_walker
+from statsmodels.tsa.arima.params import SARIMAXParams
+from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.innovations import arma_innovations
 from statsmodels.tsa.statespace.tools import diff
 
-from statsmodels.tsa.arima.estimators.yule_walker import yule_walker
-from statsmodels.tsa.arima.estimators.burg import burg
-from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
-from statsmodels.tsa.arima.estimators.innovations import (
-    innovations, innovations_mle)
-from statsmodels.tsa.arima.estimators.statespace import statespace
 
-from statsmodels.tsa.arima.specification import SARIMAXSpecification
-from statsmodels.tsa.arima.params import SARIMAXParams
-
-
-def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
-        include_constant=None, n_iter=None, max_iter=50, tolerance=1e-8,
-        arma_estimator='innovations_mle', arma_estimator_kwargs=None):
+def gls(
+    endog,
+    exog=None,
+    order=(0, 0, 0),
+    seasonal_order=(0, 0, 0, 0),
+    include_constant=None,
+    n_iter=None,
+    max_iter=50,
+    tolerance=1e-8,
+    arma_estimator="innovations_mle",
+    arma_estimator_kwargs=None,
+):
     """
     Estimate ARMAX parameters by GLS.
 
@@ -113,7 +122,7 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
     if include_constant is None:
         include_constant = not integrated
     elif include_constant and integrated:
-        raise ValueError('Cannot include a constant in an integrated model.')
+        raise ValueError("Cannot include a constant in an integrated model.")
 
     # Handle including the constant (need to do it now so that the constant
     # parameter can be included in the specification as part of `exog`.)
@@ -121,8 +130,9 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
         exog = np.ones_like(endog) if exog is None else add_constant(exog)
 
     # Create the SARIMAX specification
-    spec = SARIMAXSpecification(endog, exog=exog, order=order,
-                                seasonal_order=seasonal_order)
+    spec = SARIMAXSpecification(
+        endog, exog=exog, order=order, seasonal_order=seasonal_order
+    )
     endog = spec.endog
     exog = spec.exog
 
@@ -131,15 +141,25 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
         # TODO: this is the approach suggested by BD (see Remark 1 in
         # section 6.6.2 and Example 6.6.3), but maybe there are some cases
         # where we don't want to force this behavior on the user?
-        warnings.warn('Provided `endog` and `exog` series have been'
-                      ' differenced to eliminate integration prior to GLS'
-                      ' parameter estimation.')
-        endog = diff(endog, k_diff=spec.diff,
-                     k_seasonal_diff=spec.seasonal_diff,
-                     seasonal_periods=spec.seasonal_periods)
-        exog = diff(exog, k_diff=spec.diff,
-                    k_seasonal_diff=spec.seasonal_diff,
-                    seasonal_periods=spec.seasonal_periods)
+        warnings.warn(
+            "Provided `endog` and `exog` series have been"
+            " differenced to eliminate integration prior to GLS"
+            " parameter estimation.",
+            SpecificationWarning,
+            stacklevel=2,
+        )
+        endog = diff(
+            endog,
+            k_diff=spec.diff,
+            k_seasonal_diff=spec.seasonal_diff,
+            seasonal_periods=spec.seasonal_periods,
+        )
+        exog = diff(
+            exog,
+            k_diff=spec.diff,
+            k_seasonal_diff=spec.seasonal_diff,
+            seasonal_periods=spec.seasonal_periods,
+        )
     augmented = np.c_[endog, exog]
 
     # Validate arma_estimator
@@ -181,55 +201,69 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
 
     def _check_arma_estimator_kwargs(kwargs, method):
         if kwargs:
-            raise ValueError(
-                f"arma_estimator_kwargs not supported for method {method}"
-            )
+            raise ValueError(f"arma_estimator_kwargs not supported for method {method}")
 
     for i in range(1, max_iter + 1):
         prev = exog_params
 
         # Step 2: ARMA
         # TODO: allow estimator-specific kwargs?
-        if arma_estimator == 'yule_walker':
+        if arma_estimator == "yule_walker":
             p_arma, res_arma = yule_walker(
-                resid, ar_order=spec.ar_order, demean=False,
-                **arma_estimator_kwargs)
-        elif arma_estimator == 'burg':
+                resid, ar_order=spec.ar_order, demean=False, **arma_estimator_kwargs
+            )
+        elif arma_estimator == "burg":
             _check_arma_estimator_kwargs(arma_estimator_kwargs, "burg")
-            p_arma, res_arma = burg(resid, ar_order=spec.ar_order,
-                                    demean=False)
-        elif arma_estimator == 'innovations':
+            p_arma, res_arma = burg(resid, ar_order=spec.ar_order, demean=False)
+        elif arma_estimator == "innovations":
             _check_arma_estimator_kwargs(arma_estimator_kwargs, "innovations")
-            out, res_arma = innovations(resid, ma_order=spec.ma_order,
-                                        demean=False)
+            out, res_arma = innovations(resid, ma_order=spec.ma_order, demean=False)
             p_arma = out[-1]
-        elif arma_estimator == 'hannan_rissanen':
+        elif arma_estimator == "hannan_rissanen":
             p_arma, res_arma = hannan_rissanen(
-                resid, ar_order=spec.ar_order, ma_order=spec.ma_order,
-                demean=False, **arma_estimator_kwargs)
+                resid,
+                ar_order=spec.ar_order,
+                ma_order=spec.ma_order,
+                demean=False,
+                **arma_estimator_kwargs,
+            )
         else:
             # For later iterations, use a "warm start" for parameter estimates
             # (speeds up estimation and convergence)
             start_params = (
-                None if i == 1 else np.r_[ar_params, ma_params,
-                                          seasonal_ar_params,
-                                          seasonal_ma_params, sigma2])
+                None
+                if i == 1
+                else np.r_[
+                    ar_params, ma_params, seasonal_ar_params, seasonal_ma_params, sigma2
+                ]
+            )
             # Note: in each case, we do not pass in the order of integration
             # since we have already differenced the series
             tmp_order = (spec.order[0], 0, spec.order[2])
-            tmp_seasonal_order = (spec.seasonal_order[0], 0,
-                                  spec.seasonal_order[2],
-                                  spec.seasonal_order[3])
-            if arma_estimator == 'innovations_mle':
+            tmp_seasonal_order = (
+                spec.seasonal_order[0],
+                0,
+                spec.seasonal_order[2],
+                spec.seasonal_order[3],
+            )
+            if arma_estimator == "innovations_mle":
                 p_arma, res_arma = innovations_mle(
-                    resid, order=tmp_order, seasonal_order=tmp_seasonal_order,
-                    demean=False, start_params=start_params,
-                    **arma_estimator_kwargs)
+                    resid,
+                    order=tmp_order,
+                    seasonal_order=tmp_seasonal_order,
+                    demean=False,
+                    start_params=start_params,
+                    **arma_estimator_kwargs,
+                )
             else:
                 p_arma, res_arma = statespace(
-                    resid, order=tmp_order, seasonal_order=tmp_seasonal_order,
-                    include_constant=False, start_params=start_params,
-                    **arma_estimator_kwargs)
+                    resid,
+                    order=tmp_order,
+                    seasonal_order=tmp_seasonal_order,
+                    include_constant=False,
+                    start_params=start_params,
+                    **arma_estimator_kwargs,
+                )
 
         ar_params = p_arma.ar_params
         seasonal_ar_params = p_arma.seasonal_ar_params
@@ -260,8 +294,8 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
                 "or applying a nonlinear transformation (e.g., natural log)."
             )
         tmp, _ = arma_innovations.arma_innovations(
-            augmented, ar_params=ar_params, ma_params=ma_params,
-            normalize=True)
+            augmented, ar_params=ar_params, ma_params=ma_params, normalize=True
+        )
         u = tmp[:, 0]
         x = tmp[:, 1:]
 
@@ -293,23 +327,29 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
             break
     else:
         if n_iter is None:
-            warnings.warn('Feasible GLS failed to converge in %d iterations.'
-                          ' Consider increasing the maximum number of'
-                          ' iterations using the `max_iter` argument or'
-                          ' reducing the required tolerance using the'
-                          ' `tolerance` argument.' % max_iter)
+            warnings.warn(
+                f"Feasible GLS failed to converge in {max_iter} iterations."
+                " Consider increasing the maximum number of"
+                " iterations using the `max_iter` argument or"
+                " reducing the required tolerance using the"
+                " `tolerance` argument.",
+                ConvergenceWarning,
+                stacklevel=2,
+            )
 
     # Construct final results
     p = parameters[-1]
-    other_results = Bunch({
-        'spec': spec,
-        'params': parameters,
-        'converged': converged,
-        'differences': differences,
-        'iterations': i,
-        'arma_estimator': arma_estimator,
-        'arma_estimator_kwargs': arma_estimator_kwargs,
-        'arma_results': arma_results,
-    })
+    other_results = Bunch(
+        {
+            "spec": spec,
+            "params": parameters,
+            "converged": converged,
+            "differences": differences,
+            "iterations": i,
+            "arma_estimator": arma_estimator,
+            "arma_estimator_kwargs": arma_estimator_kwargs,
+            "arma_results": arma_results,
+        }
+    )
 
     return p, other_results

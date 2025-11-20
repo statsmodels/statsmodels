@@ -1,18 +1,31 @@
 """
 Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 """
+
 from statsmodels.compat.python import lrange
 
 import numpy as np
 
+from statsmodels.graphics import utils
 from statsmodels.graphics.plottools import rainbow
-import statsmodels.graphics.utils as utils
 
 
-def interaction_plot(x, trace, response, func="mean", ax=None, plottype='b',
-                     xlabel=None, ylabel=None, colors=None, markers=None,
-                     linestyles=None, legendloc='best', legendtitle=None,
-                     **kwargs):
+def interaction_plot(
+    x,
+    trace,
+    response,
+    func="mean",
+    ax=None,
+    plottype="b",
+    xlabel=None,
+    ylabel=None,
+    colors=None,
+    markers=None,
+    linestyles=None,
+    legendloc="best",
+    legendtitle=None,
+    **kwargs,
+):
     """
     Interaction plot for factor level statistics.
 
@@ -92,32 +105,33 @@ def interaction_plot(x, trace, response, func="mean", ax=None, plottype='b',
     """
 
     from pandas import DataFrame
+
     fig, ax = utils.create_mpl_ax(ax)
 
-    response_name = ylabel or getattr(response, 'name', 'response')
+    response_name = ylabel or getattr(response, "name", "response")
     func_name = getattr(func, "__name__", str(func))
-    ylabel = f'{func_name} of {response_name}'
-    xlabel = xlabel or getattr(x, 'name', 'X')
-    legendtitle = legendtitle or getattr(trace, 'name', 'Trace')
+    ylabel = f"{func_name} of {response_name}"
+    xlabel = xlabel or getattr(x, "name", "X")
+    legendtitle = legendtitle or getattr(trace, "name", "Trace")
 
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
 
     x_values = x_levels = None
     if isinstance(x[0], str):
-        x_levels = [l for l in np.unique(x)]
+        x_levels = np.unique(x).tolist()
         x_values = lrange(len(x_levels))
         x = _recode(x, dict(zip(x_levels, x_values)))
 
     data = DataFrame(dict(x=x, trace=trace, response=response))
-    plot_data = data.groupby(['trace', 'x']).aggregate(func).reset_index()
+    plot_data = data.groupby(["trace", "x"]).aggregate(func).reset_index()
 
     # return data
     # check plot args
-    n_trace = len(plot_data['trace'].unique())
+    n_trace = len(plot_data["trace"].unique())
 
-    linestyles = ['-'] * n_trace if linestyles is None else linestyles
-    markers = ['.'] * n_trace if markers is None else markers
+    linestyles = ["-"] * n_trace if linestyles is None else linestyles
+    markers = ["."] * n_trace if markers is None else markers
     colors = rainbow(n_trace) if colors is None else colors
 
     if len(linestyles) != n_trace:
@@ -127,30 +141,48 @@ def interaction_plot(x, trace, response, func="mean", ax=None, plottype='b',
     if len(colors) != n_trace:
         raise ValueError("Must be a color for each trace level")
 
-    if plottype == 'both' or plottype == 'b':
-        for i, (values, group) in enumerate(plot_data.groupby('trace')):
+    if plottype == "both" or plottype == "b":
+        for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
-            label = str(group['trace'].values[0])
-            ax.plot(group['x'], group['response'], color=colors[i],
-                    marker=markers[i], label=label,
-                    linestyle=linestyles[i], **kwargs)
-    elif plottype == 'line' or plottype == 'l':
-        for i, (values, group) in enumerate(plot_data.groupby('trace')):
+            label = str(group["trace"].values[0])
+            ax.plot(
+                group["x"],
+                group["response"],
+                color=colors[i],
+                marker=markers[i],
+                label=label,
+                linestyle=linestyles[i],
+                **kwargs,
+            )
+    elif plottype == "line" or plottype == "l":
+        for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
-            label = str(group['trace'].values[0])
-            ax.plot(group['x'], group['response'], color=colors[i],
-                    label=label, linestyle=linestyles[i], **kwargs)
-    elif plottype == 'scatter' or plottype == 's':
-        for i, (values, group) in enumerate(plot_data.groupby('trace')):
+            label = str(group["trace"].values[0])
+            ax.plot(
+                group["x"],
+                group["response"],
+                color=colors[i],
+                label=label,
+                linestyle=linestyles[i],
+                **kwargs,
+            )
+    elif plottype == "scatter" or plottype == "s":
+        for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
-            label = str(group['trace'].values[0])
-            ax.scatter(group['x'], group['response'], color=colors[i],
-                    label=label, marker=markers[i], **kwargs)
+            label = str(group["trace"].values[0])
+            ax.scatter(
+                group["x"],
+                group["response"],
+                color=colors[i],
+                label=label,
+                marker=markers[i],
+                **kwargs,
+            )
 
     else:
         raise ValueError("Plot type %s not understood" % plottype)
     ax.legend(loc=legendloc, title=legendtitle)
-    ax.margins(.1)
+    ax.margins(0.1)
 
     if all([x_levels, x_values]):
         ax.set_xticks(x_values)
@@ -159,7 +191,7 @@ def interaction_plot(x, trace, response, func="mean", ax=None, plottype='b',
 
 
 def _recode(x, levels):
-    """ Recode categorial data to int factor.
+    """Recode categorial data to int factor.
 
     Parameters
     ----------
@@ -174,6 +206,7 @@ def _recode(x, levels):
     out : instance numpy.ndarray
     """
     from pandas import Series
+
     name = None
     index = None
 
@@ -182,16 +215,16 @@ def _recode(x, levels):
         index = x.index
         x = x.values
 
-    if x.dtype.type not in [np.str_, np.object_]:
-        raise ValueError('This is not a categorial factor.'
-                         ' Array of str type required.')
+    if x.dtype.type not in [np.str_, np.object_, str]:
+        raise ValueError(
+            "This is not a categorial factor. Array of str type required."
+        )
 
     elif not isinstance(levels, dict):
-        raise ValueError('This is not a valid value for levels.'
-                         ' Dict required.')
+        raise ValueError("This is not a valid value for levels. Dict required.")
 
     elif not (np.unique(x) == np.unique(list(levels.keys()))).all():
-        raise ValueError('The levels do not match the array values.')
+        raise ValueError("The levels do not match the array values.")
 
     else:
         out = np.empty(x.shape[0], dtype=int)

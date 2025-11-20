@@ -1,6 +1,7 @@
 """
 Compatibility tools for various data structure inputs
 """
+
 from statsmodels.compat.numpy import NP_LT_2
 
 import numpy as np
@@ -9,6 +10,7 @@ import pandas as pd
 
 def _check_period_index(x, freq="M"):
     from pandas import DatetimeIndex, PeriodIndex
+
     if not isinstance(x.index, (DatetimeIndex, PeriodIndex)):
         raise ValueError("The index must be a DatetimeIndex or PeriodIndex")
 
@@ -17,18 +19,33 @@ def _check_period_index(x, freq="M"):
     else:
         inferred_freq = pd.infer_freq(x.index)
     if not inferred_freq.startswith(freq):
-        raise ValueError("Expected frequency {}. Got {}".format(freq,
-                                                                inferred_freq))
+        raise ValueError("Expected frequency {}. Got {}".format(freq, inferred_freq))
+
+
 def is_series(obj):
     return isinstance(obj, pd.Series)
+
 
 def is_data_frame(obj):
     return isinstance(obj, pd.DataFrame)
 
 
 def is_design_matrix(obj):
-    from patsy import DesignMatrix
+    try:
+        from patsy import DesignMatrix
+    except ImportError:
+        return False
+
     return isinstance(obj, DesignMatrix)
+
+
+def is_model_matrix(obj):
+    try:
+        from formulaic import ModelMatrix
+    except ImportError:
+        return False
+
+    return isinstance(obj, ModelMatrix)
 
 
 def _is_structured_ndarray(obj):
@@ -54,7 +71,7 @@ def interpret_data(data, colnames=None, rownames=None):
         values = np.asarray(data)
 
         if colnames is None:
-            colnames = ['Y_%d' % i for i in range(values.shape[1])]
+            colnames = ["Y_%d" % i for i in range(values.shape[1])]
     elif is_data_frame(data):
         # XXX: hack
         data = data.dropna()
@@ -62,20 +79,21 @@ def interpret_data(data, colnames=None, rownames=None):
         colnames = data.columns
         rownames = data.index
     else:  # pragma: no cover
-        raise TypeError('Cannot handle input type {typ}'
-                        .format(typ=type(data).__name__))
+        raise TypeError(
+            "Cannot handle input type {typ}".format(typ=type(data).__name__)
+        )
 
     if not isinstance(colnames, list):
         colnames = list(colnames)
 
     # sanity check
     if len(colnames) != values.shape[1]:
-        raise ValueError('length of colnames does not match number '
-                         'of columns in data')
+        raise ValueError(
+            "length of colnames does not match number of columns in data"
+        )
 
     if rownames is not None and len(rownames) != len(values):
-        raise ValueError('length of rownames does not match number '
-                         'of rows in data')
+        raise ValueError("length of rownames does not match number of rows in data")
 
     return values, colnames, rownames
 
@@ -85,33 +103,37 @@ def struct_to_ndarray(arr):
 
 
 def _is_using_ndarray_type(endog, exog):
-    return (type(endog) is np.ndarray and
-            (type(exog) is np.ndarray or exog is None))
+    return type(endog) is np.ndarray and (type(exog) is np.ndarray or exog is None)
 
 
 def _is_using_ndarray(endog, exog):
-    return (isinstance(endog, np.ndarray) and
-            (isinstance(exog, np.ndarray) or exog is None))
+    return isinstance(endog, np.ndarray) and (
+        isinstance(exog, np.ndarray) or exog is None
+    )
+
+
+def _is_using_ndarray_like(endog, exog):
+    return hasattr(endog, "__array__") and hasattr(exog, "__array__")
 
 
 def _is_using_pandas(endog, exog):
     from statsmodels.compat.pandas import data_klasses as klasses
-    return (isinstance(endog, klasses) or isinstance(exog, klasses))
+
+    return isinstance(endog, klasses) or isinstance(exog, klasses)
 
 
-def _is_array_like(endog, exog):
-    try:  # do it like this in case of mixed types, ie., ndarray and list
-        endog = np.asarray(endog)
-        exog = np.asarray(exog)
-        return True
-    except:
-        return False
+def _is_using_pandas_like(endog, exog):
+    return hasattr(endog, "__dataframe__") or hasattr(exog, "__dataframe__")
 
 
 def _is_using_patsy(endog, exog):
     # we get this when a structured array is passed through a formula
-    return (is_design_matrix(endog) and
-            (is_design_matrix(exog) or exog is None))
+    return is_design_matrix(endog) and (is_design_matrix(exog) or exog is None)
+
+
+def _is_using_formulaic(endog, exog):
+    # we get this when a structured array is passed through a formula
+    return is_model_matrix(endog) and (is_model_matrix(exog) or exog is None)
 
 
 def _is_recarray(data):
@@ -122,6 +144,7 @@ def _is_recarray(data):
         return isinstance(data, np.core.recarray)
     else:
         return isinstance(data, np.rec.recarray)
+
 
 def _as_array_with_name(obj, default_name):
     """

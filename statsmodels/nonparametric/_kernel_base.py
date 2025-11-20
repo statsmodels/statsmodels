@@ -16,12 +16,11 @@ except ImportError:
 
 from . import kernels
 
-
 kernel_func = dict(wangryzin=kernels.wang_ryzin,
                    aitchisonaitken=kernels.aitchison_aitken,
                    gaussian=kernels.gaussian,
-                   aitchison_aitken_reg = kernels.aitchison_aitken_reg,
-                   wangryzin_reg = kernels.wang_ryzin_reg,
+                   aitchison_aitken_reg=kernels.aitchison_aitken_reg,
+                   wangryzin_reg=kernels.wang_ryzin_reg,
                    gauss_convolution=kernels.gaussian_convolution,
                    wangryzin_convolution=kernels.wang_ryzin_convolution,
                    aitchisonaitken_convolution=kernels.aitchison_aitken_convolution,
@@ -58,32 +57,50 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
     else:
         sub_data = data[bound[0]:bound[1], :]
 
-    if class_type == 'KDEMultivariate':
+    if class_type == "KDEMultivariate":
         from .kernel_density import KDEMultivariate
+
         var_type = class_vars[0]
-        sub_model = KDEMultivariate(sub_data, var_type, bw=bw,
-                        defaults=EstimatorSettings(efficient=False))
-    elif class_type == 'KDEMultivariateConditional':
+        sub_model = KDEMultivariate(
+            sub_data, var_type, bw=bw, defaults=EstimatorSettings(efficient=False)
+        )
+    elif class_type == "KDEMultivariateConditional":
         from .kernel_density import KDEMultivariateConditional
+
         k_dep, dep_type, indep_type = class_vars
         endog = sub_data[:, :k_dep]
         exog = sub_data[:, k_dep:]
-        sub_model = KDEMultivariateConditional(endog, exog, dep_type,
-            indep_type, bw=bw, defaults=EstimatorSettings(efficient=False))
-    elif class_type == 'KernelReg':
+        sub_model = KDEMultivariateConditional(
+            endog,
+            exog,
+            dep_type,
+            indep_type,
+            bw=bw,
+            defaults=EstimatorSettings(efficient=False),
+        )
+    elif class_type == "KernelReg":
         from .kernel_regression import KernelReg
+
         var_type, k_vars, reg_type = class_vars
         endog = _adjust_shape(sub_data[:, 0], 1)
         exog = _adjust_shape(sub_data[:, 1:], k_vars)
-        sub_model = KernelReg(endog=endog, exog=exog, reg_type=reg_type,
-                              var_type=var_type, bw=bw,
-                              defaults=EstimatorSettings(efficient=False))
+        sub_model = KernelReg(
+            endog=endog,
+            exog=exog,
+            reg_type=reg_type,
+            var_type=var_type,
+            bw=bw,
+            defaults=EstimatorSettings(efficient=False),
+        )
+
     else:
-        raise ValueError("class_type not recognized, should be one of " \
-                 "{KDEMultivariate, KDEMultivariateConditional, KernelReg}")
+        raise ValueError(
+            "class_type not recognized, should be one of "
+            "{KDEMultivariate, KDEMultivariateConditional, KernelReg}"
+        )
 
     # Compute dispersion in next 4 lines
-    if class_type == 'KernelReg':
+    if class_type == "KernelReg":
         sub_data = sub_data[:, 1:]
 
     dispersion = _compute_min_std_IQR(sub_data)
@@ -91,7 +108,7 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
     fct = dispersion * n_sub**(-1. / (n_cvars + co))
     fct[ix_unord] = n_sub**(-2. / (n_cvars + do))
     fct[ix_ord] = n_sub**(-2. / (n_cvars + do))
-    sample_scale_sub = sub_model.bw / fct  #TODO: check if correct
+    sample_scale_sub = sub_model.bw / fct  # TODO: check if correct
     bw_sub = sub_model.bw
     return sample_scale_sub, bw_sub
 
@@ -119,7 +136,7 @@ class GenericKDE :
         The default values for bw is 'normal_reference'.
         """
         if bw is None:
-            bw = 'normal_reference'
+            bw = "normal_reference"
 
         if not isinstance(bw, str):
             self._bw_method = "user-specified"
@@ -128,9 +145,9 @@ class GenericKDE :
             # The user specified a bandwidth selection method
             self._bw_method = bw
             # Workaround to avoid instance methods in __dict__
-            if bw == 'normal_reference':
+            if bw == "normal_reference":
                 bwfunc = self._normal_reference
-            elif bw == 'cv_ml':
+            elif bw == "cv_ml":
                 bwfunc = self._cv_ml
             else:  # bw == 'cv_ls'
                 bwfunc = self._cv_ls
@@ -161,7 +178,6 @@ class GenericKDE :
         """Helper method to be able to pass needed vars to _compute_subset.
 
         Needs to be implemented by subclasses."""
-        pass
 
     def _compute_efficient(self, bw):
         """
@@ -176,7 +192,7 @@ class GenericKDE :
         """
 
         if bw is None:
-            self._bw_method = 'normal_reference'
+            self._bw_method = "normal_reference"
         if isinstance(bw, str):
             self._bw_method = bw
         else:
@@ -186,7 +202,7 @@ class GenericKDE :
         nobs = self.nobs
         n_sub = self.n_sub
         data = copy.deepcopy(self.data)
-        n_cvars = self.data_type.count('c')
+        n_cvars = self.data_type.count("c")
         co = 4  # 2*order of continuous kernel
         do = 4  # 2*order of discrete kernel
         _, ix_ord, ix_unord = _get_type_pos(self.data_type)
@@ -209,8 +225,8 @@ class GenericKDE :
             # `res` is a list of tuples (sample_scale_sub, bw_sub)
             res = joblib.Parallel(n_jobs=self.n_jobs)(
                 joblib.delayed(_compute_subset)(
-                    class_type, data, bw, co, do, n_cvars, ix_ord, ix_unord, \
-                    n_sub, class_vars, self.randomize, bounds[i]) \
+                    class_type, data, bw, co, do, n_cvars, ix_ord, ix_unord,
+                    n_sub, class_vars, self.randomize, bounds[i])
                 for i in range(n_blocks))
         else:
             res = []
@@ -229,8 +245,8 @@ class GenericKDE :
         m_scale = order_func(sample_scale, axis=0)
         # TODO: Check if 1/5 is correct in line below!
         bw = m_scale * s * nobs**(-1. / (n_cvars + co))
-        bw[ix_ord] = m_scale[ix_ord] * nobs**(-2./ (n_cvars + do))
-        bw[ix_unord] = m_scale[ix_unord] * nobs**(-2./ (n_cvars + do))
+        bw[ix_ord] = m_scale[ix_ord] * nobs**(-2.0 / (n_cvars + do))
+        bw[ix_unord] = m_scale[ix_unord] * nobs**(-2.0 / (n_cvars + do))
 
         if self.return_only_bw:
             bw = np.median(only_bw, axis=0)
@@ -428,9 +444,9 @@ class LeaveOneOut:
 
 
 def _get_type_pos(var_type):
-    ix_cont = np.array([c == 'c' for c in var_type])
-    ix_ord = np.array([c == 'o' for c in var_type])
-    ix_unord = np.array([c == 'u' for c in var_type])
+    ix_cont = np.array([c == "c" for c in var_type])
+    ix_ord = np.array([c == "o" for c in var_type])
+    ix_unord = np.array([c == "u" for c in var_type])
     return ix_cont, ix_ord, ix_unord
 
 
@@ -453,8 +469,8 @@ def _adjust_shape(dat, k_vars):
     return dat
 
 
-def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
-         okertype='wangryzin', ukertype='aitchisonaitken', tosum=True):
+def gpke(bw, data, data_predict, var_type, ckertype="gaussian",
+         okertype="wangryzin", ukertype="aitchisonaitken", tosum=True):
     r"""
     Returns the non-normalized Generalized Product Kernel Estimator
 
@@ -498,19 +514,19 @@ def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
                 k\left(\frac{X_{iq}-x_{q}}{h_{q}}\right)
     """
     kertypes = dict(c=ckertype, o=okertype, u=ukertype)
-    #Kval = []
-    #for ii, vtype in enumerate(var_type):
+    # Kval = []
+    # for ii, vtype in enumerate(var_type):
     #    func = kernel_func[kertypes[vtype]]
     #    Kval.append(func(bw[ii], data[:, ii], data_predict[ii]))
 
-    #Kval = np.column_stack(Kval)
+    # Kval = np.column_stack(Kval)
 
     Kval = np.empty(data.shape)
     for ii, vtype in enumerate(var_type):
         func = kernel_func[kertypes[vtype]]
         Kval[:, ii] = func(bw[ii], data[:, ii], data_predict[ii])
 
-    iscontinuous = np.array([c == 'c' for c in var_type])
+    iscontinuous = np.array([c == "c" for c in var_type])
     dens = Kval.prod(axis=1) / np.prod(bw[iscontinuous])
     if tosum:
         return dens.sum(axis=0)

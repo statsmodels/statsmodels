@@ -878,7 +878,7 @@ class CompareMeans:
         # assume nobs is available
 
     #        if not hasattr(self.d1, 'nobs'):
-    #            d1.nobs1 = d1.sum_weights.astype(float)  #float just to make sure
+    #            d1.nobs1 = d1.sum_weights.astype(float)  # float just to make sure
     #        self.nobs2 = d2.sum_weights.astype(float)
 
     @classmethod
@@ -935,8 +935,6 @@ class CompareMeans:
 
         d1 = self.d1
         d2 = self.d2
-
-        confint_percents = 100 - alpha * 100
 
         if use_t:
             tstat, pvalue, _ = self.ttest_ind(usevar=usevar, value=value)
@@ -1274,14 +1272,14 @@ class CompareMeans:
 
 
 # does not work for 2d, does not take weights into account
-##    def test_equal_var(self):
-##        """Levene test for independence
-##
-##        """
-##        d1 = self.d1
-##        d2 = self.d2
-##        #rewrite this, for now just use scipy.stats
-##        return stats.levene(d1.data, d2.data)
+#    def test_equal_var(self):
+#        """Levene test for independence
+#
+#        """
+#        d1 = self.d1
+#        d2 = self.d2
+#        # rewrite this, for now just use scipy.stats
+#        return stats.levene(d1.data, d2.data)
 
 
 def ttest_ind(
@@ -1434,8 +1432,8 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
 
     where md is the mean, expected value of the difference x1 - x2
 
-    If the pvalue is smaller than a threshold,say 0.05, then we reject the
-    hypothesis that the difference between the two samples is larger than the
+    If the pvalue is smaller than a threshold, say 0.05, then we reject the
+    hypothesis that the difference between the two samples is larger than
     the thresholds given by low and upp.
 
     Parameters

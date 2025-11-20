@@ -39,9 +39,9 @@ kernel_switch = dict(
 
 def _checkisfit(self):
     try:
-        self.density
-    except Exception:
-        raise ValueError("Call fit to fit the density first")
+        _ = self.density
+    except Exception as exc:
+        raise ValueError("Call fit to fit the density first") from exc
 
 
 # Kernel Density Estimator Class
@@ -265,7 +265,7 @@ class KDEUnivariate:
 
         def entr(x, s):
             pdf = kern.density(s, x)
-            return pdf * np.log(pdf + 1e-12)
+            return np.squeeze(pdf * np.log(pdf + 1e-12))
 
         kern = self.kernel
 
@@ -578,7 +578,7 @@ def kdensityfft(
     # This is the Silverman binning function, but I believe it's buggy (SS)
     # weighting according to Silverman
     #    count = counts(x,grid)
-    #    binned = np.zeros_like(grid)    #xi_{k} in Silverman
+    #    binned = np.zeros_like(grid)    # xi_{k} in Silverman
     #    j = 0
     #    for k in range(int(gridsize-1)):
     #        if count[k]>0: # there are points of x in the grid here

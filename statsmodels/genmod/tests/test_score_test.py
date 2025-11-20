@@ -8,12 +8,12 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_allclose
 
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.genmod import families
-from statsmodels.discrete.discrete_model import Poisson
-import statsmodels.stats._diagnostic_other as diao
-import statsmodels.discrete._diagnostics_count as diac
 from statsmodels.base._parameter_inference import score_test
+import statsmodels.discrete._diagnostics_count as diac
+from statsmodels.discrete.discrete_model import Poisson
+from statsmodels.genmod import families
+from statsmodels.genmod.generalized_linear_model import GLM
+import statsmodels.stats._diagnostic_other as diao
 
 
 class CheckScoreTest():
@@ -21,9 +21,9 @@ class CheckScoreTest():
     def test_wald_score(self):
         mod_full = self.model_full
         mod_drop = self.model_drop
-        restriction = 'x5=0, x6=0'
+        restriction = "x5=0, x6=0"
         res_full = mod_full.fit()
-        res_constr = mod_full.fit_constrained('x5=0, x6=0')
+        res_constr = mod_full.fit_constrained("x5=0, x6=0")
         res_drop = mod_drop.fit()
 
         wald = res_full.wald_test(restriction, scalar=True)
@@ -42,7 +42,7 @@ class CheckScoreTest():
         # regression number
         assert_allclose(lm_constr[1], self.res_pvalue[0], rtol=1e-12, atol=1e-14)
 
-        cov_type='HC0'
+        cov_type = "HC0"
         res_full_hc = mod_full.fit(cov_type=cov_type, start_params=res_full.params)
         wald = res_full_hc.wald_test(restriction, scalar=True)
         lm_constr = np.hstack(score_test(res_constr, cov_type=cov_type))
@@ -102,7 +102,7 @@ class TestScoreTest(CheckScoreTest):
         if cls.dispersed:
             het = np.random.randn(nobs)
             y = np.random.poisson(np.exp(x.sum(1) * 0.5 + het))
-            #y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
+            # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
             y = np.random.poisson(np.exp(x.sum(1) * 0.5))
 
@@ -179,7 +179,7 @@ class TestScoreTestPoisson(TestScoreTest):
         if cls.dispersed:
             het = np.random.randn(nobs)
             y = np.random.poisson(np.exp(x.sum(1) * 0.5 + het))
-            #y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
+            # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
             y = np.random.poisson(np.exp(x.sum(1) * 0.5))
 
@@ -234,7 +234,7 @@ class TestScoreTestGaussian(CheckScoreTest):
         if cls.dispersed:
             het = np.random.randn(nobs)
             y = np.random.randn(nobs) + x.sum(1) * 0.5 + het
-            #y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
+            # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
             y = np.random.randn(nobs) + x.sum(1) * 0.5
 

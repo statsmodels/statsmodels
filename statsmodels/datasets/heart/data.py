@@ -1,19 +1,19 @@
 """Heart Transplant Data, Miller 1976"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """???"""
+COPYRIGHT = """???"""
 
-TITLE       = """Transplant Survival Data"""
+TITLE = """Transplant Survival Data"""
 
-SOURCE      = """Miller, R. (1976). Least squares regression with censored data. Biometrica, 63 (3). 449-464.
+SOURCE = """Miller, R. (1976). Least squares regression with censored data. Biometrica, 63 (3). 449-464.
 
 """
 
-DESCRSHORT  = """Survival times after receiving a heart transplant"""
+DESCRSHORT = """Survival times after receiving a heart transplant"""
 
-DESCRLONG   = """This data contains the survival time after receiving a heart transplant, the age of the patient and whether or not the survival time was censored.
+DESCRLONG = """This data contains the survival time after receiving a heart transplant, the age of the patient and whether or not the survival time was censored.
 """
 
 NOTE = """::
@@ -50,4 +50,4 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'heart.csv')
+    return du.load_csv(__file__, "heart.csv")

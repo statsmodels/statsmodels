@@ -1,7 +1,8 @@
-from statsmodels.tools import linalg
 import numpy as np
 from numpy.testing import assert_allclose
 from scipy.linalg import toeplitz
+
+from statsmodels.tools import linalg
 
 
 def test_stationary_solve_1d():

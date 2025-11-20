@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 from statsmodels.compat.pandas import PD_LT_2, Appender, is_numeric_dtype
 from statsmodels.compat.scipy import SP_LT_19
 
-from typing import Union
-from collections.abc import Sequence
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,9 @@ from statsmodels.tools.validation import (
     float_like,
     int_like,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 PERCENTILES = (1, 5, 10, 25, 50, 75, 90, 95, 99)
 QUANTILES = np.array(PERCENTILES) / 100.0
@@ -331,14 +335,10 @@ class Description:
             "freq": [f"freq_{i}" for i in range(1, self._ntop + 1)],
         }
 
-        for key in replacements:
+        for key, value in replacements.items():
             if key in self._stats:
                 idx = self._stats.index(key)
-                self._stats = (
-                    self._stats[:idx]
-                    + replacements[key]
-                    + self._stats[idx + 1 :]
-                )
+                self._stats = self._stats[:idx] + value + self._stats[idx + 1 :]
 
         self._percentiles = array_like(
             percentiles, "percentiles", maxdim=1, dtype="d"
@@ -408,7 +408,7 @@ class Description:
             if np.isscalar(mode_res[0]):
                 return float(mode_res[0]), mode_res[1]
             if mode_res[0].shape[0] > 0:
-                return [float(val) for val in mode_res]
+                return [float(np.squeeze(val)) for val in mode_res]
             return np.nan, np.nan
 
         mode_values = df.apply(_mode).T
@@ -533,7 +533,7 @@ class Description:
             The statistics of the categorical columns
         """
 
-        df = self._data.loc[:, [col for col in self._is_cat_like]]
+        df = self._data.loc[:, list(self._is_cat_like)]
         k = df.shape[1]
         cols = df.columns
         vc = {col: df[col].value_counts(normalize=True) for col in df}
@@ -542,8 +542,7 @@ class Description:
         )
         top = {}
         freq = {}
-        for col in vc:
-            single = vc[col]
+        for col, single in vc.items():
             if single.shape[0] >= self._ntop:
                 top[col] = single.index[: self._ntop]
                 freq[col] = np.asarray(single.iloc[:5])
@@ -596,7 +595,7 @@ class Description:
         stubs = [str(idx) for idx in df.index]
         data = []
         for _, row in df.iterrows():
-            data.append([v for v in row])
+            data.append(list(row))
 
         def _formatter(v):
             if isinstance(v, str):

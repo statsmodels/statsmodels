@@ -3,13 +3,13 @@ from itertools import product
 import warnings
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_array_equal
 import pandas as pd
 import pytest
-from numpy.testing import assert_allclose, assert_array_equal
 
 from statsmodels import tools
 from statsmodels.regression.linear_model import WLS
-from statsmodels.regression.rolling import RollingWLS, RollingOLS
+from statsmodels.regression.rolling import RollingOLS, RollingWLS
 
 
 def gen_data(nobs, nvar, const, pandas=False, missing=0.0, weights=False):
@@ -202,14 +202,14 @@ def test_save_load(data):
     res.save(fh)
     fh.seek(0, 0)
     res_unpickled = res.__class__.load(fh)
-    assert type(res_unpickled) is type(res)  # noqa: E721
+    assert type(res_unpickled) is type(res)
 
     fh = BytesIO()
     # test wrapped results load save pickle
     res.save(fh, remove_data=True)
     fh.seek(0, 0)
     res_unpickled = res.__class__.load(fh)
-    assert type(res_unpickled) is type(res)  # noqa: E721
+    assert type(res_unpickled) is type(res)
 
 
 def test_formula():
@@ -226,7 +226,7 @@ def test_formula():
 
 
 @pytest.mark.matplotlib
-def test_plot():
+def test_plot(close_figures):
     import matplotlib.pyplot as plt
 
     y, x, w = gen_data(250, 3, True, pandas=True)
@@ -241,12 +241,14 @@ def test_plot():
     res.plot_recursive_coefficient(
         variables=[0, 2], alpha=None, figsize=(30, 7)
     )
+    plt.close("all")
     res.plot_recursive_coefficient(
         variables=["x0"], alpha=None, figsize=(30, 7)
     )
     res.plot_recursive_coefficient(
         variables=["x0", "x1", "x2"], alpha=None, figsize=(30, 7)
     )
+    plt.close("all")
     with pytest.raises(ValueError, match="variable x4 is not an integer"):
         res.plot_recursive_coefficient(variables="x4")
 

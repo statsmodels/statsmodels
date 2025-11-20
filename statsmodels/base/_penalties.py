@@ -18,6 +18,7 @@ The penaties should be smooth so that they can be subtracted from log
 likelihood functions and optimized using standard methods (i.e. L1
 penalties do not belong here).
 """
+
 import numpy as np
 
 
@@ -36,9 +37,9 @@ class Penalty:
     The class has a member called `alpha` that scales the weights.
     """
 
-    def __init__(self, weights=1.):
+    def __init__(self, weights=1.0):
         self.weights = weights
-        self.alpha = 1.
+        self.alpha = 1.0
 
     def func(self, params):
         """
@@ -81,8 +82,8 @@ class Penalty:
         """
         if np.size(self.weights) > 1:
             if len(params) == 1:
-                raise  # raise to identify models where this would be needed
-                return 0.
+                # raise to identify models where this would be needed
+                raise NotImplementedError
 
         return self.weights
 
@@ -96,7 +97,8 @@ class NonePenalty(Penalty):
         super().__init__()
         if kwds:
             import warnings
-            warnings.warn('keyword arguments are be ignored')
+
+            warnings.warn("keyword arguments are be ignored", stacklevel=2)
 
     def func(self, params):
         if params.ndim == 2:
@@ -117,7 +119,7 @@ class L2(Penalty):
     The L2 (ridge) penalty.
     """
 
-    def __init__(self, weights=1.):
+    def __init__(self, weights=1.0):
         super().__init__(weights)
 
     def func(self, params):
@@ -137,7 +139,7 @@ class L2Univariate(Penalty):
 
     def __init__(self, weights=None):
         if weights is None:
-            self.weights = 1.
+            self.weights = 1.0
         else:
             self.weights = weights
 
@@ -156,22 +158,22 @@ class PseudoHuber(Penalty):
     The pseudo-Huber penalty.
     """
 
-    def __init__(self, dlt, weights=1.):
+    def __init__(self, dlt, weights=1.0):
         super().__init__(weights)
         self.dlt = dlt
 
     def func(self, params):
-        v = np.sqrt(1 + (params / self.dlt)**2)
+        v = np.sqrt(1 + (params / self.dlt) ** 2)
         v -= 1
         v *= self.dlt**2
         return np.sum(self.weights * self.alpha * v, 0)
 
     def deriv(self, params):
-        v = np.sqrt(1 + (params / self.dlt)**2)
+        v = np.sqrt(1 + (params / self.dlt) ** 2)
         return params * self.weights * self.alpha / v
 
     def deriv2(self, params):
-        v = np.power(1 + (params / self.dlt)**2, -3/2)
+        v = np.power(1 + (params / self.dlt) ** 2, -3 / 2)
         return self.weights * self.alpha * v
 
 
@@ -216,7 +218,7 @@ class SCAD(Penalty):
     1348-1360.
     """
 
-    def __init__(self, tau, c=3.7, weights=1.):
+    def __init__(self, tau, c=3.7, weights=1.0):
         super().__init__(weights)
         self.tau = tau
         self.c = c
@@ -233,9 +235,9 @@ class SCAD(Penalty):
         res[mask1] = tau * p_abs[mask1]
         mask2 = ~mask1 & ~mask3
         p_abs2 = p_abs[mask2]
-        tmp = (p_abs2**2 - 2 * self.c * tau * p_abs2 + tau**2)
+        tmp = p_abs2**2 - 2 * self.c * tau * p_abs2 + tau**2
         res[mask2] = -tmp / (2 * (self.c - 1))
-        res[mask3] = (self.c + 1) * tau**2 / 2.
+        res[mask3] = (self.c + 1) * tau**2 / 2.0
 
         return (self.weights * res).sum(0)
 
@@ -307,19 +309,19 @@ class SCADSmoothed(SCAD):
     all penalty classes.
     """
 
-    def __init__(self, tau, c=3.7, c0=None, weights=1., restriction=None):
+    def __init__(self, tau, c=3.7, c0=None, weights=1.0, restriction=None):
         super().__init__(tau, c=c, weights=weights)
         self.tau = tau
         self.c = c
         self.c0 = c0 if c0 is not None else tau * 0.1
         if self.c0 > tau:
-            raise ValueError('c0 cannot be larger than tau')
+            raise ValueError("c0 cannot be larger than tau")
 
         # get coefficients for quadratic approximation
         c0 = self.c0
         # need to temporarily override weights for call to super
         weights = self.weights
-        self.weights = 1.
+        self.weights = 1.0
         deriv_c0 = super().deriv(c0)
         value_c0 = super().func(c0)
         self.weights = weights
@@ -337,7 +339,7 @@ class SCADSmoothed(SCAD):
         # need to temporarily override weights for call to super
         # Note: we have the same problem with `restriction`
         self_weights = self.weights
-        self.weights = 1.
+        self.weights = 1.0
         value = super().func(params[None, ...])
         self.weights = self_weights
 
@@ -358,11 +360,11 @@ class SCADSmoothed(SCAD):
             params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
         self_weights = self.weights
-        self.weights = 1.
+        self.weights = 1.0
         value = super().deriv(params)
         self.weights = self_weights
 
-        #change the segment corrsponding to quadratic approximation
+        # change the segment corrsponding to quadratic approximation
         p = np.atleast_1d(params)
         mask = np.abs(p) < self.c0
         value[mask] = 2 * self.aq2 * p[mask]
@@ -379,7 +381,7 @@ class SCADSmoothed(SCAD):
             params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
         self_weights = self.weights
-        self.weights = 1.
+        self.weights = 1.0
         value = super().deriv2(params)
         self.weights = self_weights
 
@@ -391,8 +393,7 @@ class SCADSmoothed(SCAD):
         if self.restriction is not None and np.size(params) > 1:
             # note: super returns 1d array for diag, i.e. hessian_diag
             # TODO: weights are missing
-            return (self.restriction.T * (weights * value)
-                    ).dot(self.restriction)
+            return (self.restriction.T * (weights * value)).dot(self.restriction)
         else:
             return weights * value
 
@@ -425,7 +426,7 @@ class ConstraintsPenalty:
 
         self.penalty = penalty
         if weights is None:
-            self.weights = 1.
+            self.weights = 1.0
         else:
             self.weights = weights
 
@@ -477,7 +478,7 @@ class ConstraintsPenalty:
         if self.restriction is not None:
             return self.weights * value.T.dot(self.restriction)
         else:
-            return (self.weights * value.T)
+            return self.weights * value.T
 
     grad = deriv
 
@@ -503,7 +504,7 @@ class ConstraintsPenalty:
         if self.restriction is not None:
             # note: univariate penalty returns 1d array for diag,
             # i.e. hessian_diag
-            v = (self.restriction.T * value * self.weights)
+            v = self.restriction.T * value * self.weights
             value = v.dot(self.restriction)
         else:
             value = np.diag(self.weights * value)
@@ -512,18 +513,16 @@ class ConstraintsPenalty:
 
 
 class L2ConstraintsPenalty(ConstraintsPenalty):
-    """convenience class of ConstraintsPenalty with L2 penalization
-    """
+    """convenience class of ConstraintsPenalty with L2 penalization"""
 
     def __init__(self, weights=None, restriction=None, sigma_prior=None):
 
         if sigma_prior is not None:
-            raise NotImplementedError('sigma_prior is not implemented yet')
+            raise NotImplementedError("sigma_prior is not implemented yet")
 
         penalty = L2Univariate()
 
-        super().__init__(penalty, weights=weights,
-                                                  restriction=restriction)
+        super().__init__(penalty, weights=weights, restriction=restriction)
 
 
 class CovariancePenalty:
@@ -581,6 +580,6 @@ class PSD(CovariancePenalty):
 
     def deriv(self, mat, mat_inv):
         cy = mat_inv.copy()
-        cy = 2*cy - np.diag(np.diag(cy))
-        i,j = np.tril_indices(mat.shape[0])
-        return -self.weight * cy[i,j]
+        cy = 2 * cy - np.diag(np.diag(cy))
+        i, j = np.tril_indices(mat.shape[0])
+        return -self.weight * cy[i, j]

@@ -8,11 +8,9 @@ import warnings
 
 import numpy as np
 from numpy.testing import (
-    assert_,
     assert_allclose,
     assert_almost_equal,
     assert_equal,
-    assert_raises,
 )
 import pandas as pd
 from pandas import DataFrame, Series, date_range
@@ -26,7 +24,7 @@ from statsmodels.tools.sm_exceptions import (
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
-    ValueWarning,
+    SingularMatrixWarning,
 )
 
 # Remove imports when range unit root test gets an R implementation
@@ -349,7 +347,7 @@ class TestPACF(CheckCorrGram):
 
     @pytest.mark.skipif(PYTHON_IMPL_WASM, reason="No fp exception support in WASM")
     def test_yw_singular(self):
-        with pytest.warns(ValueWarning):
+        with pytest.warns(SingularMatrixWarning):
             pacf(np.ones(30), nlags=6)
 
     def test_ld(self):
@@ -679,7 +677,7 @@ def test_coint_identical_series():
     with pytest.warns(CollinearityWarning):
         c = coint(y, y, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
-    assert_(np.isneginf(c[0]))
+    assert (np.isneginf(c[0]))
 
 
 def test_coint_perfect_collinearity():
@@ -693,7 +691,7 @@ def test_coint_perfect_collinearity():
     with warnings.catch_warnings(record=True):
         c = coint(y, x, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
-    assert_(np.isneginf(c[0]))
+    assert (np.isneginf(c[0]))
 
 
 class TestGrangerCausality:
@@ -772,7 +770,8 @@ class TestKPSS:
             kpss(self.x, nlags="legacy")
 
         x = np.random.rand(20, 2)
-        assert_raises(ValueError, kpss, x)
+        with pytest.raises(ValueError):
+            kpss(x)
 
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
@@ -785,7 +784,8 @@ class TestKPSS:
         with pytest.warns(InterpolationWarning):
             kpss(self.x, "CT", nlags="legacy")
 
-        assert_raises(ValueError, kpss, self.x, "unclear hypothesis", nlags="legacy")
+        with pytest.raises(ValueError):
+            kpss(self.x, "unclear hypothesis", nlags="legacy")
 
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
@@ -956,7 +956,9 @@ class TestRUR:
             direction = "larger"
 
         if direction:
-            warnings.warn(warn_msg.format(direction=direction), InterpolationWarning)
+            warnings.warn(
+                warn_msg.format(direction=direction), InterpolationWarning, stacklevel=2
+            )
 
         crit_dict = {
             "10%": inter_crit[0, 3],
@@ -983,18 +985,19 @@ class TestRUR:
             range_unit_root_test(self.x)
 
         x = np.random.rand(20, 2)
-        assert_raises(ValueError, range_unit_root_test, x)
+        with pytest.raises(ValueError):
+            range_unit_root_test(x)
 
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
             rur_stat, _, _ = range_unit_root_test(self.x)
-            simple_rur_stat, _, _ = self.simple_rur(self.x)
+        simple_rur_stat, _, _ = self.simple_rur(self.x)
         assert_almost_equal(rur_stat, simple_rur_stat, DECIMAL_3)
 
     def test_pval(self):
         with pytest.warns(InterpolationWarning):
             _, pval, _ = range_unit_root_test(self.x)
-            _, simple_pval, _ = self.simple_rur(self.x)
+        _, simple_pval, _ = self.simple_rur(self.x)
         assert_equal(pval, simple_pval)
 
     def test_store(self):
@@ -1091,10 +1094,10 @@ def test_arma_order_select_ic():
     assert_almost_equal(res.bic.values, bic.values, 5)
     assert_equal(res.aic_min_order, (1, 2))
     assert_equal(res.bic_min_order, (1, 2))
-    assert_(res.aic.index.equals(aic.index))
-    assert_(res.aic.columns.equals(aic.columns))
-    assert_(res.bic.index.equals(bic.index))
-    assert_(res.bic.columns.equals(bic.columns))
+    assert (res.aic.index.equals(aic.index))
+    assert (res.aic.columns.equals(aic.columns))
+    assert (res.bic.index.equals(bic.index))
+    assert (res.bic.columns.equals(bic.columns))
 
     index = pd.date_range("2000-1-1", freq=MONTH_END, periods=len(y))
     y_series = pd.Series(y, index=index)
@@ -1108,8 +1111,8 @@ def test_arma_order_select_ic():
 
     res = arma_order_select_ic(y, ic="aic", trend="n")
     assert_almost_equal(res.aic.values, aic.values, 5)
-    assert_(res.aic.index.equals(aic.index))
-    assert_(res.aic.columns.equals(aic.columns))
+    assert (res.aic.index.equals(aic.index))
+    assert (res.aic.columns.equals(aic.columns))
     assert_equal(res.aic_min_order, (1, 2))
 
 

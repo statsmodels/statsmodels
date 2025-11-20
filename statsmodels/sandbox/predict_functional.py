@@ -6,16 +6,18 @@ non-focus variables.  This is especially useful when conducting a
 functional regression in which the role of x is modeled with b-splines
 or other basis functions.
 """
-import pandas as pd
-import patsy
-import numpy as np
-import warnings
 
-from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.compat.pandas import Appender
 
-_predict_functional_doc =\
-    """
+import warnings
+
+import numpy as np
+import pandas as pd
+
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.tools.sm_exceptions import ValueWarning
+
+_predict_functional_doc = """
     Predictions and contrasts of a fitted model as a function of a given covariate.
 
     The value of the focus variable varies along a sequence of its
@@ -141,6 +143,8 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
         are fixed at specified or computed values.
     fexog : data frame
         The data frame `dexog` processed through the model formula.
+    fvals : ndarray
+        The values of the focus variable at which the prediction is made.
     """
 
     model = result.model
@@ -151,8 +155,8 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     if values is None:
         values = {}
 
-    if exog[focus_var].dtype is np.dtype('O'):
-        raise ValueError('focus variable may not have object type')
+    if exog[focus_var].dtype is np.dtype("O"):
+        raise ValueError("focus variable may not have object type")
 
     colnames = list(summaries.keys()) + list(values.keys()) + [focus_var]
     dtypes = [exog[x].dtype for x in colnames]
@@ -166,9 +170,12 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     unmatched = varl - set(colnames)
     unmatched = list(unmatched)
     if len(unmatched) > 0:
-        warnings.warn("%s in data frame but not in summaries or values."
-                      % ", ".join(["'%s'" % x for x in unmatched]),
-                      ValueWarning)
+        warnings.warn(
+            "%s in data frame but not in summaries or values."
+            % ", ".join(["'%s'" % x for x in unmatched]),
+            ValueWarning,
+            stacklevel=2,
+        )
 
     # Initialize at zero so each column can be converted to any dtype.
     ix = range(num_points)
@@ -190,8 +197,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     for ky in values.keys():
         fexog[ky] = values[ky]
 
-    dexog = patsy.dmatrix(model.data.design_info, fexog,
-                          return_type='dataframe')
+    dexog = FormulaManager().get_matrices(model.data.model_spec, fexog, pandas=True)
     return dexog, fexog, fvals
 
 
@@ -225,9 +231,12 @@ def _make_exog_from_arrays(result, focus_var, summaries, values, num_points):
     unmatched = set(exog_names) - set(colnames)
     unmatched = list(unmatched)
     if len(unmatched) > 0:
-        warnings.warn("%s in model but not in `summaries` or `values`."
-                      % ", ".join(["'%s'" % x for x in unmatched]),
-                      ValueWarning)
+        warnings.warn(
+            "%s in model but not in `summaries` or `values`."
+            % ", ".join(["'%s'" % x for x in unmatched]),
+            ValueWarning,
+            stacklevel=2,
+        )
 
     # The values of the 'focus variable' are a sequence of percentiles
     pctls = np.linspace(0, 100, num_points).tolist()
@@ -251,14 +260,16 @@ def _make_exog_from_arrays(result, focus_var, summaries, values, num_points):
 def _make_exog(result, focus_var, summaries, values, num_points):
 
     # Branch depending on whether the model was fit with a formula.
-    if hasattr(result.model.data, "frame"):
-        dexog, fexog, fvals = _make_exog_from_formula(result, focus_var,
-                                       summaries, values, num_points)
-    else:
-        exog, fvals = _make_exog_from_arrays(result, focus_var, summaries,
-                                 values, num_points)
-        dexog, fexog = exog, exog
 
+    if hasattr(result.model.data, "frame"):
+        dexog, fexog, fvals = _make_exog_from_formula(
+            result, focus_var, summaries, values, num_points
+        )
+    else:
+        exog, fvals = _make_exog_from_arrays(
+            result, focus_var, summaries, values, num_points
+        )
+        dexog, fexog = exog, exog
     return dexog, fexog, fvals
 
 
@@ -273,25 +284,40 @@ def _check_args(values, summaries, values2, summaries2):
     if summaries2 is None:
         summaries2 = {}
 
-    for (s,v) in (summaries, values), (summaries2, values2):
+    for s, v in (summaries, values), (summaries2, values2):
         ky = set(v.keys()) & set(s.keys())
         ky = list(ky)
         if len(ky) > 0:
-            raise ValueError("One or more variable names are contained in both `summaries` and `values`:" +
-                             ", ".join(ky))
+            raise ValueError(
+                "One or more variable names are contained in both `summaries` and "
+                "`values`:" + ", ".join(ky)
+            )
 
     return values, summaries, values2, summaries2
 
 
 @Appender(_predict_functional_doc)
-def predict_functional(result, focus_var, summaries=None, values=None,
-                       summaries2=None, values2=None, alpha=0.05,
-                       ci_method="pointwise", linear=True, num_points=10,
-                       exog=None, exog2=None, **kwargs):
+def predict_functional(
+    result,
+    focus_var,
+    summaries=None,
+    values=None,
+    summaries2=None,
+    values2=None,
+    alpha=0.05,
+    ci_method="pointwise",
+    linear=True,
+    num_points=10,
+    exog=None,
+    exog2=None,
+    **kwargs,
+):
 
     if ci_method not in ("pointwise", "scheffe", "simultaneous"):
-        raise ValueError('confidence band method must be one of '
-                         '`pointwise`, `scheffe`, and `simultaneous`.')
+        raise ValueError(
+            "confidence band method must be one of "
+            "`pointwise`, `scheffe`, and `simultaneous`."
+        )
 
     contrast = (values2 is not None) or (summaries2 is not None)
 
@@ -302,36 +328,37 @@ def predict_functional(result, focus_var, summaries=None, values=None,
     if exog is not None:
 
         if any(x is not None for x in [summaries, summaries2, values, values2]):
-            raise ValueError("if `exog` is provided then do not "
-                             "provide `summaries` or `values`")
+            raise ValueError(
+                "if `exog` is provided then do not provide `summaries` or `values`"
+            )
 
         fexog = exog
-        dexog = patsy.dmatrix(model.data.design_info,
-                              fexog, return_type='dataframe')
+        dexog = FormulaManager().get_matrices(model.data.model_spec, fexog, pandas=True)
         fvals = exog[focus_var]
 
         if exog2 is not None:
             fexog2 = exog
-            dexog2 = patsy.dmatrix(model.data.design_info,
-                                   fexog2, return_type='dataframe')
+            FormulaManager().get_matrices(model.data.model_spec, fexog2, pandas=True)
             fvals2 = fvals
 
     else:
 
-        values, summaries, values2, summaries2 = _check_args(values,
-                                                             summaries,
-                                                             values2,
-                                                             summaries2)
+        values, summaries, values2, summaries2 = _check_args(
+            values, summaries, values2, summaries2
+        )
 
-        dexog, fexog, fvals = _make_exog(result, focus_var, summaries,
-                                         values, num_points)
+        dexog, fexog, fvals = _make_exog(
+            result, focus_var, summaries, values, num_points
+        )
 
         if len(summaries2) + len(values2) > 0:
-            dexog2, fexog2, fvals2 = _make_exog(result, focus_var, summaries2,
-                                                values2, num_points)
+            dexog2, fexog2, fvals2 = _make_exog(
+                result, focus_var, summaries2, values2, num_points
+            )
 
-    from statsmodels.genmod.generalized_linear_model import GLM
     from statsmodels.genmod.generalized_estimating_equations import GEE
+    from statsmodels.genmod.generalized_linear_model import GLM
+
     if isinstance(result.model, (GLM, GEE)):
         kwargs_pred = kwargs.copy()
         kwargs_pred.update({"which": "linear"})
@@ -344,12 +371,12 @@ def predict_functional(result, focus_var, summaries=None, values=None,
         pred = pred - pred2
         dexog = dexog - dexog2
 
-    if ci_method == 'pointwise':
+    if ci_method == "pointwise":
 
         t_test = result.t_test(dexog)
         cb = t_test.conf_int(alpha=alpha)
 
-    elif ci_method == 'scheffe':
+    elif ci_method == "scheffe":
 
         t_test = result.t_test(dexog)
         sd = t_test.sd
@@ -357,6 +384,7 @@ def predict_functional(result, focus_var, summaries=None, values=None,
 
         # Scheffe's method
         from scipy.stats.distributions import f as fdist
+
         df1 = result.model.exog.shape[1]
         df2 = result.model.exog.shape[0] - df1
         qf = fdist.cdf(1 - alpha, df1, df2)
@@ -364,12 +392,12 @@ def predict_functional(result, focus_var, summaries=None, values=None,
         cb[:, 0] = pred - fx
         cb[:, 1] = pred + fx
 
-    elif ci_method == 'simultaneous':
+    elif ci_method == "simultaneous":
 
         sigma, c = _glm_basic_scr(result, dexog, alpha)
         cb = np.zeros((dexog.shape[0], 2))
-        cb[:, 0] = pred - c*sigma
-        cb[:, 1] = pred + c*sigma
+        cb[:, 0] = pred - c * sigma
+        cb[:, 1] = pred + c * sigma
 
     if not linear:
         # May need to support other models with link-like functions.
@@ -417,7 +445,7 @@ def _glm_basic_scr(result, exog, alpha):
 
     # Proposition 3.1 of Sun et al.
     A = hess / n
-    B = np.linalg.cholesky(A).T # Upper Cholesky triangle
+    B = np.linalg.cholesky(A).T  # Upper Cholesky triangle
 
     # The variance and SD of the linear predictor at each row of exog.
     sigma2 = (np.dot(exog, cov) * exog).sum(axis=1)
@@ -436,7 +464,7 @@ def _glm_basic_scr(result, exog, alpha):
     # The root of this function is the multiplier for the confidence
     # band, see Sun et al. equation 35.
     def func(c):
-        return kappa_0 * np.exp(-c**2/2) / np.pi + 2*(1 - norm.cdf(c)) - alpha
+        return kappa_0 * np.exp(-(c**2) / 2) / np.pi + 2 * (1 - norm.cdf(c)) - alpha
 
     from scipy.optimize import brentq
 

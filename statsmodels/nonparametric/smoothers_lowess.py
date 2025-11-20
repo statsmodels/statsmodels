@@ -7,11 +7,22 @@ Author : Josef Perktold
 """
 
 import numpy as np
+
 from ._smoothers_lowess import lowess as _lowess
 
-def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=False,
-           missing='drop', return_sorted=True):
-    '''LOWESS (Locally Weighted Scatterplot Smoothing)
+
+def lowess(
+    endog,
+    exog,
+    frac=2.0 / 3.0,
+    it=3,
+    delta=0.0,
+    xvals=None,
+    is_sorted=False,
+    missing="drop",
+    return_sorted=True,
+):
+    """LOWESS (Locally Weighted Scatterplot Smoothing)
 
     A lowess function that outs smoothed estimates of endog
     at the given exog values from points (exog, endog)
@@ -132,60 +143,59 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
     >>> z = lowess(y, x, frac= 1./3, it=0)
     >>> w = lowess(y, x, frac=1./3)
 
-    '''
+    """
 
     endog = np.asarray(endog, float)
     exog = np.asarray(exog, float)
 
     # Whether xvals argument was provided
-    given_xvals = (xvals is not None)
+
+    given_xvals = xvals is not None
 
     # Inputs should be vectors (1-D arrays) of the
     # same length.
-    if exog.ndim != 1:
-        raise ValueError('exog must be a vector')
-    if endog.ndim != 1:
-        raise ValueError('endog must be a vector')
-    if endog.shape[0] != exog.shape[0] :
-        raise ValueError('exog and endog must have same length')
 
+    if exog.ndim != 1:
+        raise ValueError("exog must be a vector")
+    if endog.ndim != 1:
+        raise ValueError("endog must be a vector")
+    if endog.shape[0] != exog.shape[0]:
+        raise ValueError("exog and endog must have same length")
     if xvals is not None:
         xvals = np.ascontiguousarray(xvals)
         if xvals.ndim != 1:
-            raise ValueError('exog_predict must be a vector')
-
-    if missing in ['drop', 'raise']:
-        mask_valid = (np.isfinite(exog) & np.isfinite(endog))
+            raise ValueError("exog_predict must be a vector")
+    if missing in ["drop", "raise"]:
+        mask_valid = np.isfinite(exog) & np.isfinite(endog)
         all_valid = np.all(mask_valid)
         if all_valid:
             y = endog
             x = exog
+        elif missing == "drop":
+            x = exog[mask_valid]
+            y = endog[mask_valid]
         else:
-            if missing == 'drop':
-                x = exog[mask_valid]
-                y = endog[mask_valid]
-            else:
-                raise ValueError('nan or inf found in data')
-    elif missing == 'none':
+            raise ValueError("nan or inf found in data")
+    elif missing == "none":
         y = endog
         x = exog
-        all_valid = True   # we assume it's true if missing='none'
+        all_valid = True  # we assume it's true if missing='none'
     else:
         raise ValueError("missing can only be 'none', 'drop' or 'raise'")
-
     if not is_sorted:
         # Sort both inputs according to the ascending order of x values
+
         sort_index = np.argsort(x)
         x = np.array(x[sort_index])
         y = np.array(y[sort_index])
-
     if not given_xvals:
         # If given no explicit x values, we use the x-values in the exog array
+
         xvals = exog
         xvalues = x
 
         xvals_all_valid = all_valid
-        if missing == 'drop':
+        if missing == "drop":
             xvals_mask_valid = mask_valid
     else:
         if delta != 0.0:
@@ -194,26 +204,24 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
         mask_valid = np.isfinite(xvals)
         if missing == "raise":
             raise ValueError("NaN values in xvals with missing='raise'")
-        elif missing == 'drop':
+        elif missing == "drop":
             xvals_mask_valid = mask_valid
-
         xvalues = xvals
         xvals_all_valid = True if missing == "none" else np.all(mask_valid)
         # With explicit xvals, we ignore 'return_sorted' and always
         # use the order provided
+
         return_sorted = False
 
-        if missing in ['drop', 'raise']:
+        if missing in ["drop", "raise"]:
             xvals_mask_valid = np.isfinite(xvals)
             xvals_all_valid = np.all(xvals_mask_valid)
             if xvals_all_valid:
                 xvalues = xvals
+            elif missing == "drop":
+                xvalues = xvals[xvals_mask_valid]
             else:
-                if missing == 'drop':
-                    xvalues = xvals[xvals_mask_valid]
-                else:
-                    raise ValueError("nan or inf found in xvals")
-
+                raise ValueError("nan or inf found in xvals")
         if not is_sorted:
             sort_index = np.argsort(xvalues)
             xvalues = np.array(xvalues[sort_index])
@@ -223,22 +231,34 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
     x = np.ascontiguousarray(x)
     if not given_xvals:
         # Run LOWESS on the data points
-        res, _ = _lowess(y, x, x, np.ones_like(x),
-                        frac=frac, it=it, delta=delta, given_xvals=False)
+
+        res, _ = _lowess(
+            y, x, x, np.ones_like(x), frac=frac, it=it, delta=delta, given_xvals=False
+        )
     else:
         # First run LOWESS on the data points to get the weights of the data points
         # using it-1 iterations, last iter done next
+
         if it > 0:
-            _, weights = _lowess(y, x, x, np.ones_like(x),
-                                frac=frac, it=it-1, delta=delta, given_xvals=False)
+            _, weights = _lowess(
+                y,
+                x,
+                x,
+                np.ones_like(x),
+                frac=frac,
+                it=it - 1,
+                delta=delta,
+                given_xvals=False,
+            )
         else:
             weights = np.ones_like(x)
         xvalues = np.ascontiguousarray(xvalues, dtype=float)
         # Then run once more using those supplied weights at the points provided by xvals
         # No extra iterations are performed here since weights are fixed
-        res, _ = _lowess(y, x, xvalues, weights,
-                        frac=frac, it=0, delta=delta, given_xvals=True)
 
+        res, _ = _lowess(
+            y, x, xvalues, weights, frac=frac, it=0, delta=delta, given_xvals=True
+        )
     _, yfitted = res.T
 
     if return_sorted:
@@ -247,19 +267,18 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
 
         # rebuild yfitted with original indices
         # a bit messy: y might have been selected twice
+
         if not is_sorted:
             yfitted_ = np.empty_like(xvalues)
             yfitted_.fill(np.nan)
             yfitted_[sort_index] = yfitted
             yfitted = yfitted_
-        else:
-            yfitted = yfitted
-
+        # else (not needed) yfitted = yfitted
         if not xvals_all_valid:
             yfitted_ = np.empty_like(xvals)
             yfitted_.fill(np.nan)
             yfitted_[xvals_mask_valid] = yfitted
             yfitted = yfitted_
-
         # we do not need to return exog anymore
+
         return yfitted

@@ -2,7 +2,7 @@ from statsmodels.compat.python import lrange
 
 import numpy as np
 
-import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tsa.vector_ar import util
 
 
 class MPLConfigurator:
@@ -16,18 +16,18 @@ class MPLConfigurator:
 
     def set_fontsize(self, size):
         import matplotlib as mpl
-        old_size = mpl.rcParams['font.size']
-        mpl.rcParams['font.size'] = size
+        old_size = mpl.rcParams["font.size"]
+        mpl.rcParams["font.size"] = size
 
         def revert():
-            mpl.rcParams['font.size'] = old_size
+            mpl.rcParams["font.size"] = old_size
 
         self._inverse_actions.append(revert)
 
 
-#-------------------------------------------------------------------------------
+#
 # Plotting functions
-
+#
 def plot_mts(Y, names=None, index=None):
     """
     Plot multiple time series
@@ -71,14 +71,12 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
     for j in range(k):
         ax = plt.subplot(rows, cols, j+1)
 
-        p1 = ax.plot(prange, prior[:, j], 'k', label='Observed')
-        p2 = ax.plot(rng_f, np.r_[prior[-1:, j], forc[:, j]], 'k--',
-                     label='Forecast')
+        ax.plot(prange, prior[:, j], "k", label="Observed")
+        ax.plot(rng_f, np.r_[prior[-1:, j], forc[:, j]], "k--", label="Forecast")
 
         if plot_stderr:
-            p3 = ax.plot(rng_err, err_upper[:, j], 'k-.',
-                         label='Forc 2 STD err')
-            ax.plot(rng_err, err_lower[:, j], 'k-.')
+            ax.plot(rng_err, err_upper[:, j], "k-.", label="Forc 2 STD err")
+            ax.plot(rng_err, err_lower[:, j], "k-.")
 
         if names is not None:
             ax.set_title(names[j])
@@ -89,8 +87,8 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
     return fig
 
 
-def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
-                    error_fmt='k--', alpha=0.05, stderr_type = 'asym'):
+def plot_with_error(y, error, x=None, axes=None, value_fmt="k",
+                    error_fmt="k--", alpha=0.05, stderr_type="asym"):
     """
     Make plot with optional error bars
 
@@ -105,16 +103,19 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
         axes = plt.gca()
 
     x = x if x is not None else lrange(len(y))
-    plot_action = lambda y, fmt: axes.plot(x, y, fmt)
+
+    def plot_action(y, fmt):
+        return axes.plot(x, y, fmt)
+
     plot_action(y, value_fmt)
 
-    #changed this
+    # changed this
     if error is not None:
-        if stderr_type == 'asym':
+        if stderr_type == "asym":
             q = util.norm_signif_level(alpha)
             plot_action(y - q * error, error_fmt)
             plot_action(y + q * error, error_fmt)
-        if stderr_type in ('mc','sz1','sz2','sz3'):
+        if stderr_type in ("mc", "sz1", "sz2", "sz3"):
             plot_action(error[0], error_fmt)
             plot_action(error[1], error_fmt)
 
@@ -141,8 +142,8 @@ def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None,
                        xlabel=xlabel, ax=ax)
 
             if err_bound is not None:
-                ax.axhline(err_bound, color='k', linestyle='--')
-                ax.axhline(-err_bound, color='k', linestyle='--')
+                ax.axhline(err_bound, color="k", linestyle="--")
+                ax.axhline(-err_bound, color="k", linestyle="--")
 
     adjust_subplots()
     config.revert()
@@ -161,7 +162,7 @@ def acorr_plot(acorr, linewidth=8, xlabel=None, ax=None):
 
     ax.vlines(xlabel, [0], acorr, lw=linewidth)
 
-    ax.axhline(0, color='k')
+    ax.axhline(0, color="k")
     ax.set_ylim([-1, 1])
 
     # hack?
@@ -182,12 +183,13 @@ def adjust_subplots(**kwds):
     plt.subplots_adjust(**passed_kwds)
 
 
-#-------------------------------------------------------------------------------
+#
 # Multiple impulse response (cum_effects, etc.) cplots
+#
 
 def irf_grid_plot(values, stderr, impcol, rescol, names, title,
                   signif=0.05, hlines=None, subplot_params=None,
-                  plot_params=None, figsize=(10,10), stderr_type='asym'):
+                  plot_params=None, figsize=(10, 10), stderr_type="asym"):
     """
     Reusable function to make flexible grid plots of impulse responses and
     comulative effects
@@ -213,7 +215,7 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
 
     fig.suptitle(title, fontsize=14)
 
-    subtitle_temp = r'%s$\rightarrow$%s'
+    subtitle_temp = r"%s$\rightarrow$%s"
 
     k = len(names)
 
@@ -223,24 +225,24 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
 
         # HACK?
         if stderr is not None:
-            if stderr_type == 'asym':
+            if stderr_type == "asym":
                 sig = np.sqrt(stderr[:, j * k + i, j * k + i])
                 plot_with_error(values[:, i, j], sig, x=rng, axes=ax,
-                                alpha=signif, value_fmt='b', stderr_type=stderr_type)
-            if stderr_type in ('mc','sz1','sz2','sz3'):
+                                alpha=signif, value_fmt="b", stderr_type=stderr_type)
+            if stderr_type in ("mc", "sz1", "sz2", "sz3"):
                 errs = stderr[0][:, i, j], stderr[1][:, i, j]
                 plot_with_error(values[:, i, j], errs, x=rng, axes=ax,
-                                alpha=signif, value_fmt='b', stderr_type=stderr_type)
+                                alpha=signif, value_fmt="b", stderr_type=stderr_type)
         else:
             plot_with_error(values[:, i, j], None, x=rng, axes=ax,
-                            value_fmt='b')
+                            value_fmt="b")
 
-        ax.axhline(0, color='k')
+        ax.axhline(0, color="k")
 
         if hlines is not None:
-            ax.axhline(hlines[i,j], color='k')
+            ax.axhline(hlines[i, j], color="k")
 
-        sz = subplot_params.get('fontsize', 12)
+        sz = subplot_params.get("fontsize", 12)
         ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
 
     return fig
@@ -270,5 +272,5 @@ def _get_irf_plot_config(names, impcol, rescol):
 
     return nrows, ncols, to_plot
 
-#-------------------------------------------------------------------------------
+#
 # Forecast error variance decomposition

@@ -12,17 +12,17 @@ from numpy.linalg import slogdet
 from statsmodels.tools.decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
+from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
-import statsmodels.tsa.vector_ar.util as util
 from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
 
 def svar_ckerr(svar_type, A, B):
-    if A is None and (svar_type == 'A' or svar_type == 'AB'):
-        raise ValueError('SVAR of type A or AB but A array not given.')
-    if B is None and (svar_type == 'B' or svar_type == 'AB'):
+    if A is None and (svar_type == "A" or svar_type == "AB"):
+        raise ValueError("SVAR of type A or AB but A array not given.")
+    if B is None and (svar_type == "B" or svar_type == "AB"):
 
-        raise ValueError('SVAR of type B or AB but B array not given.')
+        raise ValueError("SVAR of type B or AB but B array not given.")
 
 
 class SVAR(tsbase.TimeSeriesModel):
@@ -54,16 +54,16 @@ class SVAR(tsbase.TimeSeriesModel):
     y = deprecated_alias("y", "endog", remove_version="0.11.0")
 
     def __init__(self, endog, svar_type, dates=None,
-                 freq=None, A=None, B=None, missing='none'):
+                 freq=None, A=None, B=None, missing="none"):
         super().__init__(endog, None, dates, freq, missing=missing)
-        #(self.endog, self.names,
+        # (self.endog, self.names,
         # self.dates) = data_util.interpret_data(endog, names, dates)
 
         self.neqs = self.endog.shape[1]
 
-        types = ['A', 'B', 'AB']
+        types = ["A", "B", "AB"]
         if svar_type not in types:
-            raise ValueError('SVAR type not recognized, must be in '
+            raise ValueError("SVAR type not recognized, must be in "
                              + str(types))
         self.svar_type = svar_type
 
@@ -78,18 +78,20 @@ class SVAR(tsbase.TimeSeriesModel):
             A = np.identity(self.neqs)
             self.A_mask = A_mask = np.zeros(A.shape, dtype=bool)
         else:
-            A_mask = np.logical_or(A == 'E', A == 'e')
+            A = A.astype("U")
+            A_mask = np.logical_or(A == "E", A == "e")
             self.A_mask = A_mask
         if B is None:
             B = np.identity(self.neqs)
             self.B_mask = B_mask = np.zeros(B.shape, dtype=bool)
         else:
-            B_mask = np.logical_or(B == 'E', B == 'e')
+            B = B.astype("U")
+            B_mask = np.logical_or(B == "E", B == "e")
             self.B_mask = B_mask
 
         # convert A and B to numeric
-        #TODO: change this when masked support is better or with formula
-        #integration
+        # TODO: change this when masked support is better or with formula
+        # integration
         Anum = np.zeros(A.shape, dtype=float)
         Anum[~A_mask] = A[~A_mask]
         Anum[A_mask] = np.nan
@@ -100,12 +102,12 @@ class SVAR(tsbase.TimeSeriesModel):
         Bnum[B_mask] = np.nan
         self.B = Bnum
 
-        #LikelihoodModel.__init__(self, endog)
+        # LikelihoodModel.__init__(self, endog)
 
-        #super().__init__(endog)
+        # super().__init__(endog)
 
-    def fit(self, A_guess=None, B_guess=None, maxlags=None, method='ols',
-            ic=None, trend='c', verbose=False, s_method='mle',
+    def fit(self, A_guess=None, B_guess=None, maxlags=None, method="ols",
+            ic=None, trend="c", verbose=False, s_method="mle",
             solver="bfgs", override=False, maxiter=500, maxfun=500):
         """
         Fit the SVAR model and solve for structural parameters
@@ -167,10 +169,9 @@ class SVAR(tsbase.TimeSeriesModel):
                                  % (ic, sorted(selections)))
             lags = selections[ic]
             if verbose:
-                print('Using %d based on %s criterion' %  (lags, ic))
-        else:
-            if lags is None:
-                lags = 1
+                print("Using %d based on %s criterion" % (lags, ic))
+        elif lags is None:
+            lags = 1
 
         self.nobs = len(self.endog) - lags
 
@@ -189,31 +190,29 @@ class SVAR(tsbase.TimeSeriesModel):
         var_type = self.svar_type.lower()
 
         n_masked_a = self.A_mask.sum()
-        if var_type in ['ab', 'a']:
+        if var_type in ["ab", "a"]:
             if A_guess is None:
                 A_guess = np.array([.1]*n_masked_a)
-            else:
-                if len(A_guess) != n_masked_a:
-                    msg = 'len(A_guess) = %s, there are %s parameters in A'
-                    raise ValueError(msg % (len(A_guess), n_masked_a))
+            elif len(A_guess) != n_masked_a:
+                msg = "len(A_guess) = %s, there are %s parameters in A"
+                raise ValueError(msg % (len(A_guess), n_masked_a))
         else:
             A_guess = []
 
         n_masked_b = self.B_mask.sum()
-        if var_type in ['ab', 'b']:
+        if var_type in ["ab", "b"]:
             if B_guess is None:
                 B_guess = np.array([.1]*n_masked_b)
-            else:
-                if len(B_guess) != n_masked_b:
-                    msg = 'len(B_guess) = %s, there are %s parameters in B'
-                    raise ValueError(msg % (len(B_guess), n_masked_b))
+            elif len(B_guess) != n_masked_b:
+                msg = "len(B_guess) = %s, there are %s parameters in B"
+                raise ValueError(msg % (len(B_guess), n_masked_b))
         else:
             B_guess = []
 
         return np.r_[A_guess, B_guess]
 
     def _estimate_svar(self, start_params, lags, maxiter, maxfun,
-                       trend='c', solver="nm", override=False):
+                       trend="c", solver="nm", override=False):
         """
         lags : int
         trend : {str, None}
@@ -221,7 +220,7 @@ class SVAR(tsbase.TimeSeriesModel):
         """
         k_trend = util.get_trendorder(trend)
         y = self.endog
-        z = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
+        z = util.get_var_endog(y, lags, trend=trend, has_constant="raise")
         y_sample = y[lags:]
 
         # Lutkepohl p75, about 5x faster than stated formula
@@ -241,7 +240,7 @@ class SVAR(tsbase.TimeSeriesModel):
         df_resid = avobs - (self.neqs * lags + k_trend)
 
         sse = np.dot(resid.T, resid)
-        #TODO: should give users the option to use a dof correction or not
+        # TODO: should give users the option to use a dof correction or not
         omega = sse / df_resid
         self.sigma_u = omega
 
@@ -267,7 +266,7 @@ class SVAR(tsbase.TimeSeriesModel):
         is estimated
         """
 
-        #TODO: this does not look robust if A or B is None
+        # TODO: this does not look robust if A or B is None
         A = self.A
         B = self.B
         A_mask = self.A_mask
@@ -284,9 +283,9 @@ class SVAR(tsbase.TimeSeriesModel):
         neqs = self.neqs
         sigma_u = self.sigma_u
 
-        W = np.dot(npl.inv(B),A)
-        trc_in = np.dot(np.dot(W.T,W),sigma_u)
-        sign, b_logdet = slogdet(B**2) #numpy 1.4 compat
+        W = np.dot(npl.inv(B), A)
+        trc_in = np.dot(np.dot(W.T, W), sigma_u)
+        sign, b_logdet = slogdet(B**2)  # numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
         likl = -nobs/2. * (neqs * np.log(2 * np.pi) -
@@ -308,16 +307,25 @@ class SVAR(tsbase.TimeSeriesModel):
         Return numerical gradient
         """
         loglike = self.loglike
-        return approx_fprime(AB_mask, loglike, epsilon=1e-8)
+        if AB_mask.ndim > 1:
+            AB_mask = AB_mask.ravel()
+        grad = approx_fprime(AB_mask, loglike, epsilon=1e-8)
+
+        # workaround shape of grad if only one parameter #9302
+        if AB_mask.size == 1 and grad.ndim == 2:
+            grad = grad.ravel()
+        return grad
 
     def hessian(self, AB_mask):
         """
         Returns numerical hessian.
         """
         loglike = self.loglike
+        if AB_mask.ndim > 1:
+            AB_mask = AB_mask.ravel()
         return approx_hess(AB_mask, loglike)
 
-    def _solve_AB(self, start_params, maxiter, override=False, solver='bfgs'):
+    def _solve_AB(self, start_params, maxiter, override=False, solver="bfgs"):
         """
         Solves for MLE estimate of structural parameters
 
@@ -338,7 +346,7 @@ class SVAR(tsbase.TimeSeriesModel):
         -------
         A_solve, B_solve: ML solutions for A, B matrices
         """
-        #TODO: this could stand a refactor
+        # TODO: this could stand a refactor
         A_mask = self.A_mask
         B_mask = self.B_mask
         A = self.A
@@ -352,13 +360,19 @@ class SVAR(tsbase.TimeSeriesModel):
             J = self._compute_J(A, B)
             self.check_order(J)
             self.check_rank(J)
-        else: #TODO: change to a warning?
+        else:  # TODO: change to a warning?
             print("Order/rank conditions have not been checked")
 
+        if solver == "bfgs":
+            kwargs = {"gtol": 1e-5}
+        else:
+            kwargs = {}
         retvals = super().fit(start_params=start_params,
                               method=solver, maxiter=maxiter,
-                              gtol=1e-20, disp=False).params
+                              disp=False, **kwargs).params
 
+        if retvals.ndim > 1:
+            retvals = retvals.ravel()
         A[A_mask] = retvals[:A_len]
         B[B_mask] = retvals[A_len:]
 
@@ -366,55 +380,55 @@ class SVAR(tsbase.TimeSeriesModel):
 
     def _compute_J(self, A_solve, B_solve):
 
-        #first compute appropriate duplication matrix
+        # first compute appropriate duplication matrix
         # taken from Magnus and Neudecker (1980),
-        #"The Elimination Matrix: Some Lemmas and Applications
+        # "The Elimination Matrix: Some Lemmas and Applications
         # the creation of the D_n matrix follows MN (1980) directly,
-        #while the rest follows Hamilton (1994)
+        # while the rest follows Hamilton (1994)
 
         neqs = self.neqs
         sigma_u = self.sigma_u
         A_mask = self.A_mask
         B_mask = self.B_mask
 
-        #first generate duplication matrix, see MN (1980) for notation
+        # first generate duplication matrix, see MN (1980) for notation
 
         D_nT = np.zeros([int((1.0 / 2) * (neqs) * (neqs + 1)), neqs**2])
 
         for j in range(neqs):
-            i=j
+            i = j
             while j <= i < neqs:
-                u=np.zeros([int((1.0/2)*neqs*(neqs+1)), 1])
+                u = np.zeros([int((1.0/2)*neqs*(neqs+1)), 1])
                 u[int(j * neqs + (i + 1) - (1.0 / 2) * (j + 1) * j - 1)] = 1
-                Tij=np.zeros([neqs,neqs])
-                Tij[i,j]=1
-                Tij[j,i]=1
-                D_nT=D_nT+np.dot(u,(Tij.ravel('F')[:,None]).T)
-                i=i+1
+                Tij = np.zeros([neqs, neqs])
+                Tij[i, j] = 1
+                Tij[j, i] = 1
+                D_nT = D_nT+np.dot(u, (Tij.ravel("F")[:, None]).T)
+                i = i+1
 
-        D_n=D_nT.T
-        D_pl=npl.pinv(D_n)
+        D_n = D_nT.T
+        D_pl = npl.pinv(D_n)
 
-        #generate S_B
+        # generate S_B
         S_B = np.zeros((neqs**2, len(A_solve[A_mask])))
         S_D = np.zeros((neqs**2, len(B_solve[B_mask])))
 
         j = 0
         j_d = 0
         if len(A_solve[A_mask]) != 0:
-            A_vec = np.ravel(A_mask, order='F')
+            A_vec = np.ravel(A_mask, order="F")
             for k in range(neqs**2):
                 if A_vec[k]:
-                    S_B[k,j] = -1
+                    S_B[k, j] = -1
                     j += 1
         if len(B_solve[B_mask]) != 0:
-            B_vec = np.ravel(B_mask, order='F')
+            B_vec = np.ravel(B_mask, order="F")
             for k in range(neqs**2):
                 if B_vec[k]:
-                    S_D[k,j_d] = 1
-                    j_d +=1
+                    S_D[k, j_d] = 1
+                    j_d += 1
 
-        #now compute J
+        # now compute J
         invA = npl.inv(A_solve)
         J_p1i = np.dot(np.dot(D_pl, np.kron(sigma_u, invA)), S_B)
         J_p1 = -2.0 * J_p1i
@@ -545,11 +559,11 @@ class SVARResults(SVARProcess, VARResults):
     tvalues
     """
 
-    _model_type = 'SVAR'
+    _model_type = "SVAR"
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  A=None, B=None, A_mask=None, B_mask=None, model=None,
-                 trend='c', names=None, dates=None):
+                 trend="c", names=None, dates=None):
 
         self.model = model
         self.endog = endog
@@ -559,7 +573,7 @@ class SVARResults(SVARProcess, VARResults):
         self.n_totobs, self.neqs = self.endog.shape
         self.nobs = self.n_totobs - lag_order
         k_trend = util.get_trendorder(trend)
-        if k_trend > 0: # make this the polynomial trend order
+        if k_trend > 0:  # make this the polynomial trend order
             trendorder = k_trend - 1
         else:
             trendorder = None
@@ -579,16 +593,15 @@ class SVARResults(SVARProcess, VARResults):
         intercept = self.params[0]
         coefs = reshaped.swapaxes(1, 2).copy()
 
-        #SVAR components
-        #TODO: if you define these here, you do not also have to define
-        #them in SVAR process, but I left them for now -ss
+        # SVAR components
+        # TODO: if you define these here, you do not also have to define
+        # them in SVAR process, but I left them for now -ss
         self.A = A
         self.B = B
         self.A_mask = A_mask
         self.B_mask = B_mask
 
-        super().__init__(coefs, intercept, sigma_u, A, B,
-                                          names=names)
+        super().__init__(coefs, intercept, sigma_u, A, B, names=names)
 
     def irf(self, periods=10, var_order=None):
         """
@@ -603,7 +616,7 @@ class SVARResults(SVARProcess, VARResults):
         irf : IRAnalysis
         """
         A = self.A
-        B= self.B
+        B = self.B
         P = np.dot(npl.inv(A), B)
 
         return IRAnalysis(self, P=P, periods=periods, svar=True)
@@ -640,12 +653,10 @@ class SVARResults(SVARProcess, VARResults):
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
         """
         neqs = self.neqs
-        mean = self.mean()
         k_ar = self.k_ar
         coefs = self.coefs
         sigma_u = self.sigma_u
         intercept = self.intercept
-        df_model = self.df_model
         nobs = self.nobs
 
         ma_coll = np.zeros((repl, steps + 1, neqs, neqs))

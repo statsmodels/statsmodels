@@ -10,20 +10,17 @@ import warnings
 
 import numpy as np
 
-from statsmodels.tools.decorators import cache_readonly
-
-from statsmodels.stats.diagnostic_gen import (
-    test_chisquare_binning
-    )
 from statsmodels.discrete._diagnostics_count import (
-    test_poisson_dispersion,
-    # _test_poisson_dispersion_generic,
-    test_poisson_zeroinflation_jh,
-    test_poisson_zeroinflation_broek,
-    test_poisson_zeros,
+    plot_probs,
     test_chisquare_prob,
-    plot_probs
-    )
+    test_poisson_dispersion,
+    test_poisson_zeroinflation_broek,
+    test_poisson_zeroinflation_jh,
+    test_poisson_zeros,
+)
+from statsmodels.stats.diagnostic_gen import test_chisquare_binning
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import ModelWarning
 
 
 class CountDiagnostic:
@@ -107,21 +104,19 @@ class CountDiagnostic:
             # TODO: verify upper bound, we drop last bin (may be open, inf)
             kwds["y_values"] = np.arange(bin_edges[-2] + 1)
         probs = self.results.predict(which="prob", **kwds)
-        res = test_chisquare_prob(self.results, probs, bin_edges=bin_edges,
-                                  method=method)
+        res = test_chisquare_prob(
+            self.results, probs, bin_edges=bin_edges
+        )
         return res
 
-    def plot_probs(self, label='predicted', upp_xlim=None,
-                   fig=None):
-        """Plot observed versus predicted frequencies for entire sample.
-        """
+    def plot_probs(self, label="predicted", upp_xlim=None, fig=None):
+        """Plot observed versus predicted frequencies for entire sample."""
         probs_predicted = self.probs_predicted.sum(0)
         k_probs = len(probs_predicted)
-        freq = np.bincount(self.results.model.endog.astype(int),
-                           minlength=k_probs)[:k_probs]
-        fig = plot_probs(freq, probs_predicted,
-                         label=label, upp_xlim=upp_xlim,
-                         fig=fig)
+        freq = np.bincount(self.results.model.endog.astype(int), minlength=k_probs)[
+            :k_probs
+        ]
+        fig = plot_probs(freq, probs_predicted, label=label, upp_xlim=upp_xlim, fig=fig)
         return fig
 
 
@@ -189,7 +184,11 @@ class PoissonDiagnostic(CountDiagnostic):
         """
         if method == "prob":
             if exog_infl is not None:
-                warnings.warn('exog_infl is only used if method = "broek"')
+                warnings.warn(
+                    'exog_infl is only used if method = "broek"',
+                    ModelWarning,
+                    stacklevel=2,
+                )
             res = test_poisson_zeros(self.results)
         elif method == "broek":
             if exog_infl is None:
@@ -198,14 +197,20 @@ class PoissonDiagnostic(CountDiagnostic):
                 exog_infl = np.asarray(exog_infl)
                 if exog_infl.ndim == 1:
                     exog_infl = exog_infl[:, None]
-                res = test_poisson_zeroinflation_jh(self.results,
-                                                    exog_infl=exog_infl)
+                res = test_poisson_zeroinflation_jh(self.results, exog_infl=exog_infl)
 
         return res
 
-    def _chisquare_binned(self, sort_var=None, bins=10, k_max=None, df=None,
-                          sort_method="quicksort", frac_upp=0.1,
-                          alpha_nc=0.05):
+    def _chisquare_binned(
+        self,
+        sort_var=None,
+        bins=10,
+        k_max=None,
+        df=None,
+        sort_method="quicksort",
+        frac_upp=0.1,
+        alpha_nc=0.05,
+    ):
         """Hosmer-Lemeshow style test for count data.
 
         Note, this does not take into account that parameters are estimated.
@@ -243,8 +248,14 @@ class PoissonDiagnostic(CountDiagnostic):
         counts[:, -1] += 1 - counts.sum(1)
 
         # TODO: what's the correct df, same as for multinomial/ordered ?
-        res = test_chisquare_binning(counts, expected, sort_var=sort_var,
-                                     bins=bins, df=df, ordered=True,
-                                     sort_method=sort_method,
-                                     alpha_nc=alpha_nc)
+        res = test_chisquare_binning(
+            counts,
+            expected,
+            sort_var=sort_var,
+            bins=bins,
+            df=df,
+            ordered=True,
+            sort_method=sort_method,
+            alpha_nc=alpha_nc,
+        )
         return res

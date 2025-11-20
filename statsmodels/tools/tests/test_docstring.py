@@ -1,6 +1,6 @@
 import pytest
 
-from statsmodels.tools.docstring import Docstring, remove_parameters, Parameter
+from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
 
 good = """
 This is the summary.
@@ -88,60 +88,60 @@ func(x, y, z=1)
 
 def test_remove_parameter():
     ds = Docstring(good)
-    ds.remove_parameters('x')
-    assert 'x : int' not in str(ds)
+    ds.remove_parameters("x")
+    assert "x : int" not in str(ds)
 
     ds = Docstring(good)
-    ds.remove_parameters(['x', 'y'])
-    assert 'x : int' not in str(ds)
-    assert 'y : float' not in str(ds)
+    ds.remove_parameters(["x", "y"])
+    assert "x : int" not in str(ds)
+    assert "y : float" not in str(ds)
 
     with pytest.raises(ValueError):
-        Docstring(good).remove_parameters(['w'])
+        Docstring(good).remove_parameters(["w"])
 
-    ds = remove_parameters(good, 'x')
-    assert 'x : int' not in ds
+    ds = remove_parameters(good, "x")
+    assert "x : int" not in ds
     assert isinstance(ds, str)
 
 
 def test_insert_parameters():
-    new = Parameter('w', 'ndarray', ['An array input.'])
+    new = Parameter("w", "ndarray", ["An array input."])
     ds = Docstring(good)
-    ds.insert_parameters('y', new)
-    assert 'w : ndarray' in str(ds)
-    assert 'An array input.' in str(ds)
+    ds.insert_parameters("y", new)
+    assert "w : ndarray" in str(ds)
+    assert "An array input." in str(ds)
 
-    other = Parameter('q', 'DataFrame', ['A pandas dataframe.'])
+    other = Parameter("q", "DataFrame", ["A pandas dataframe."])
     ds = Docstring(good)
     ds.insert_parameters(None, [new, other])
-    assert 'w : ndarray' in str(ds)
-    assert 'An array input.' in str(ds)
-    assert 'q : DataFrame' in str(ds)
-    assert 'A pandas dataframe.' in str(ds)
-    assert '---\nw : ndarray' in str(ds)
+    assert "w : ndarray" in str(ds)
+    assert "An array input." in str(ds)
+    assert "q : DataFrame" in str(ds)
+    assert "A pandas dataframe." in str(ds)
+    assert "---\nw : ndarray" in str(ds)
 
     ds = Docstring(good)
     with pytest.raises(ValueError):
-        ds.insert_parameters('unknown', new)
+        ds.insert_parameters("unknown", new)
 
 
 def test_set_unknown():
     ds = Docstring(good)
     with pytest.raises(ValueError):
-        ds._ds['Unknown'] = ['unknown']
+        ds._ds["Unknown"] = ["unknown"]
 
 
 def test_replace_block():
     ds = Docstring(good)
-    ds.replace_block('summary', ['The is the new summary.'])
-    assert 'The is the new summary.' in str(ds)
+    ds.replace_block("summary", ["The is the new summary."])
+    assert "The is the new summary." in str(ds)
 
     ds = Docstring(good)
-    ds.replace_block('summary', 'The is the new summary.')
-    assert 'The is the new summary.' in str(ds)
+    ds.replace_block("summary", "The is the new summary.")
+    assert "The is the new summary." in str(ds)
 
     with pytest.raises(ValueError):
-        ds.replace_block('unknown', ['The is the new summary.'])
+        ds.replace_block("unknown", ["The is the new summary."])
 
 
 def test_repeat():
@@ -156,13 +156,13 @@ def test_bad():
 
 def test_empty_ds():
     ds = Docstring(None)
-    ds.replace_block('summary', ['The is the new summary.'])
+    ds.replace_block("summary", ["The is the new summary."])
 
-    ds.remove_parameters('x')
+    ds.remove_parameters("x")
 
-    new = Parameter('w', 'ndarray', ['An array input.'])
-    ds.insert_parameters('y', new)
-    assert str(ds) == 'None'
+    new = Parameter("w", "ndarray", ["An array input."])
+    ds.insert_parameters("y", new)
+    assert str(ds) == "None"
 
 
 def test_yield_return():

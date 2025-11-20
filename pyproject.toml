@@ -1,14 +1,379 @@
 [build-system]
-# These are strictly build requirements. Runtime requirements are listed in
-# INSTALL_REQUIRES in setup.py
+build-backend = 'mesonpy'
 requires = [
-    "setuptools>=69.0.2",
-    "cython>=3.0.10,<4",  # Sync with CYTHON_MIN_VER in setup
+    'meson-python',
+    "cython>=3.0.13,<4",  # Sync with CYTHON_MIN_VER in setup
     "numpy>=2.0.0,<3",
     "scipy>=1.13,<2",
-    "setuptools_scm[toml]>=8,<9"
+    "setuptools_scm>=9.2.0,<10",
 ]
-build-backend = "setuptools.build_meta"
 
-[tool.setuptools_scm]
-write_to = "statsmodels/_version.py"
+[project]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Scientific/Engineering",
+]
+description = "Statistical computations and models for Python"
+dynamic = ["version"]
+keywords = [
+    "statistics",
+    "econometrics",
+    "time series",
+    "regression",
+    "anova",
+    "statistical tests",
+    "linear models",
+    "generalized linear models",
+    "discrete choice models",
+    "robust linear models",
+    "mixed linear models",
+    "time series analysis",
+    "state space models",
+    "vector autoregression",
+    "volatility modeling",
+    "unit root tests",
+    "cointegration tests",
+    "nonparametric methods",
+    "multivariate statistics"
+]
+license = "BSD-3-Clause"
+license-files = [ "LICENSE.txt" ]
+maintainers = [
+    { name = "statsmodels Developers", email = "pystatsmodels@googlegroups.com" },
+]
+name = "statsmodels"
+dependencies = [
+    "numpy>=1.22.3,<3",  # released March 2022
+    "scipy>=1.8,!=1.9.2",  # released Feb 2022, 1.9.2 blocked due to bug
+    "pandas>=1.4,!=2.1.0",  # released Feb 2022, 2.1.0 blocked due to bug
+    "patsy>=0.5.6",  # released December 2023
+    "packaging>=21.3",  # released Nov 2021
+    "formulaic>=1.1.0",  # released December 2024
+]
+readme = "README.rst"
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+test = [
+    # test
+    "pytest>=8.4.1,<9",
+    "pytest-randomly",
+    "pytest-xdist",
+    "pytest-cov",
+    "coverage[toml]",
+    "meson",
+    'ninja; sys_platform != "emscripten"',
+]
+doc = [
+    # Requirements for doc build, in addition to requirements.txt
+    "sphinx",
+    # Avoid warnings which break Sphinx by pinning pandas
+    "pandas>=2.2.2,!=2.1.0",
+    "sphinx-immaterial",
+    "jupyter",
+    "notebook",
+    "nbsphinx",
+    "nbconvert",
+    "pyyaml",
+    "pandas-datareader",
+    "simplegeneric",
+    "seaborn",
+    "numpydoc",
+    "theano-pymc; os_name != 'nt'",
+    "pymc3; os_name != 'nt'",
+    "arviz; os_name != 'nt'",
+    "jinja2==3.0.3",
+    "pickleshare",
+    "pytest>=8.4.1,<9",
+]
+dev = [
+    # build
+    "cython>=3.0.10,<4",
+    "setuptools_scm~=9.0",
+    "meson-python>=0.18.0",
+    "meson",
+    "ninja",
+    # run
+    "matplotlib>=3",
+    "colorama",
+    "joblib",
+    # Remove due to failures on azure CI
+    # cvxopt; os_name != "win32"
+    # Pin on Win32
+    "pywinpty; os_name == 'nt'",
+    # code quality
+    "flake8",
+    "flake8-bugbear",
+    "isort",
+    "ruff",
+]
+
+[project.urls]
+homepage = "https://www.statsmodels.org"
+documentation = "https://www.statsmodels.org/stable/index.html"
+repository = "https://github.com/statsmodels/statsmodels"
+changelog = "https://bashtage.github.io/arch/changes.html"
+bugtracker = "https://github.com/statsmodels/statsmodels/issues"
+
+[tool.meson-python.args]
+setup = ['--vsenv']
+
+[tool.ruff]
+line-length = 88
+fix = false
+target-version = "py39"
+
+[tool.ruff.lint]
+typing-modules = ["statsmodels.compat.python", "compat.python"]
+
+select = [
+  # pyflakes
+  "F",
+  # pycodestyle
+  "E", "W",
+  # flake8-2020
+  "YTT",
+  # flake8-bugbear
+  "B",
+  # flake8-quotes
+  "Q",
+  # flake8-debugger
+  "T10",
+  # flake8-gettext
+  "INT",
+  # pylint
+  "PL",
+  # flake8-pytest-style
+  "PT",
+  # misc lints
+  "PIE",
+  # flake8-pyi
+  "PYI",
+  # tidy imports
+  "TID",
+  # implicit string concatenation
+  "ISC",
+  # flake8-type-checking
+  "TC",
+  # comprehensions
+  "C4",
+  # pygrep-hooks
+  "PGH",
+  # Ruff-specific rules
+  "RUF",
+  # flake8-bandit: exec-builtin
+  "S102",
+  # Perflint
+  "PERF",
+  # flynt
+  "FLY",
+  # flake8-future-annotations
+  "FA",
+  # unconventional-import-alias
+  "ICN001",
+  # flake8-slots
+  "SLOT",
+  # flake8-raise
+  "RSE"
+]
+
+ignore = [
+  # Required to allow black formatting
+  # Whitespace before ':' (Needed for black)
+  "E203",
+  # Line too long (### > 88 characters) (Needed for black)
+  "E501",
+  # Multiple statements on one line (colon) (E701)
+  "E701",
+
+  ### Intentionally disabled
+  # Too many arguments to function call
+  "PLR0913", # 635
+  # Too many returns
+  "PLR0911", # 11
+  # Too many branches
+  "PLR0912", # 217
+  # Too many statements
+  "PLR0915", # 220
+  # Redefined loop name
+  "PLW2901", # 55
+  # incorrect-dict-iterator, flags valid Series.items usage
+  "PERF102", # 6
+  # try-except-in-loop, becomes useless in Python 3.11
+  "PERF203", # 9
+  # pytest-parametrize-names-wrong-type
+  "PT006", # 37
+  # pytest-raises-with-multiple-statements
+  "PT012", # 11
+  # Docstring contains ambiguous letter
+  "RUF002", # Do Not Enable
+  # Magic number
+  "PLR2004", # 697
+  # import-outside-toplevel
+  "PLC0415", # 835
+
+  ### TODO: Enable gradually
+  # Too many uses of dict(...) instread of {...}
+  # Would be good enforce eventually
+  "C408", # 322
+  # Too many places without match= in pytest raises
+  # Would be goot enforce eventually
+  "PT011", # 511
+  "RUF013", # Enable when Py 3.10 is min
+  "RUF059", # 319
+  "PERF401", # 53
+  # collection-literal-concatenation
+  "RUF005", # 186
+  # pairwise-over-zipped
+  "RUF007", # 1
+  # mutable-class-default
+  "RUF012", #  178
+  # repeated-equality-comparison
+  "PLR1714", # 28
+  # Object does not implement `__hash__` method
+  "PLW1641", # 2
+]
+
+[tool.ruff.lint.per-file-ignores]
+# relative imports allowed for asv_bench
+"statsmodels/__init__.py" = ["PT028"]
+"statsmodels/tsa/vector_ar/var_model.py" = ["PT028"]
+"statsmodels/stats/rates.py" = ["PT028"]
+"statsmodels/stats/proportion.py" = ["PT028"]
+"statsmodels/stats/oneway.py" = ["PT028"]
+"statsmodels/stats/multivariate.py" = ["PT028"]
+"statsmodels/stats/diagnostic_gen.py" = ["PT028"]
+"statsmodels/discrete/_diagnostics_count.py" = ["PT028"]
+"statsmodels/examples/tests/test_notebooks.py" = ["F401"]
+[tool.pytest.ini_options]
+minversion = "8.4.1"
+addopts = "--strict --durations=30 --junitxml=test-data.xml"
+testpaths = "statsmodels"
+xfail_strict = true
+empty_parameter_set_mark = "fail_at_collect"
+filterwarnings = [
+    "ignore:`formatargspec`:DeprecationWarning:statsmodels",
+    "ignore:Using or importing:DeprecationWarning",
+    "ignore:Session._key_changed is deprecated:DeprecationWarning",
+    "error:Support for multi-dimensional:DeprecationWarning",
+    "error:Mutating unit root tests is deprecated:FutureWarning",
+    "error:Lag selection has changed:DeprecationWarning",
+    "error:More than 20 figures have been opened:RuntimeWarning:",
+    "error:Inequality constraints incompatible::",
+    "error:Parameters are not consistent with a::",
+    "ignore:The --strict option is deprecated:pytest.PytestDeprecationWarning",
+    "error:The default for reindex:FutureWarning:",
+    "error:Values in x were outside bounds:RuntimeWarning:",
+    "error:The random_state property is deprecated:FutureWarning",
+    "error:random_state is deprecated:FutureWarning",
+    "error:seed is deprecated:FutureWarning",
+    "error:get_state is deprecated:FutureWarning",
+    "error:Conversion of an array with ndim:DeprecationWarning:",
+    "error:the matrix subclass is not the recommended::",
+    "error:The Dataframe Interchange Protocol::",
+    # Strict checks disabled
+    # "error:overflow encountered in square:RuntimeWarning",
+    # "error:invalid value encountered in cos:RuntimeWarning",
+    # "error:divide by zero encountered in double_scalars:RuntimeWarning",
+    # "error:invalid value encountered in log:RuntimeWarning",
+    # "error:invalid value encountered in sqrt:RuntimeWarning:",
+    # "error:overflow encountered in double_scalars:RuntimeWarning:",
+    # "error:overflow encountered in multiply:RuntimeWarning:",
+]
+junit_family = "xunit2"
+markers = [
+    "example: mark a test that runs example code",
+    "matplotlib: mark a test that requires matplotlib",
+    "slow: mark a test as slow",
+    "smoke: mark a test as a smoketest",
+    "low_precision: mark a test as low precision",
+    "todo: mark a test as incomplete"
+]
+
+[tool.isort]
+profile = "black"
+src_paths = ["statsmodels"]
+sections = ["FUTURE","COMPAT","STDLIB","THIRDPARTY","FIRSTPARTY","LOCALFOLDER"]
+known_first_party = ["statsmodels"]
+known_compat = ["statsmodels.compat.*","setuptools,setuptools.*"]
+known_third_party=["Cython","numpy","matplotlib","pandas","patsy","pytest","cvxopt","cython"]
+line_length=88
+force_grid_wrap=0
+multi_line_output=3
+combine_as_imports=true
+force_sort_within_sections=true
+include_trailing_comma=true
+use_parentheses=true
+
+[tool.coverage.run]
+source = ["statsmodels"]
+branch = true
+plugins = ["Cython.Coverage"]
+omit = [
+    # print_version is untestable
+    "*/print_version.py",
+    # skip compatibility code
+    "*/compat/*",
+    # Unused file
+    "*/results/gee_generate_tests.py",
+    # Results for tests
+    "*/tests/results/*",
+    # Simulation checks
+    "*/tests/*_simulation_check.py",
+    # Misc non-test files in test directories
+    "*/tests/_*",
+    "*/tests/e*",
+    "*/tests/c*",
+    "*/tests/d*",
+    "*/tests/g*",
+    "*/tests/m*",
+    "*/tests/p*",
+    "*/tests/r*",
+    "*/tests/s*",
+    "*/_version.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+ignore_errors = false
+# Regexes for lines to exclude from consideration
+exclude_also = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+
+    # Do not complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+    "if pdf_output:",
+
+    # Do not complain if tests do not hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "except NotImplementedError",
+    "except ImportError",
+    "except (HTTPError, URLError, SSLError, timeout)",
+    "except IGNORED_EXCEPTIONS",
+
+    # Ignore pass
+    "pass",
+
+    # Do not complain if non-runnable code is not run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+]
+
+[tool.coverage.html]
+directory = "coverage_html_report"

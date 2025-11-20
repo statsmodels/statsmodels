@@ -6,11 +6,10 @@ License: BSD-3
 """
 import numpy as np
 
-from statsmodels.tools.tools import Bunch
 from statsmodels.regression import linear_model
-
-from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.params import SARIMAXParams
+from statsmodels.tsa.arima.specification import SARIMAXSpecification
 
 
 def burg(endog, ar_order=0, demean=True):
@@ -58,8 +57,8 @@ def burg(endog, ar_order=0, demean=True):
         endog = endog * 1.0
 
     if not spec.is_ar_consecutive:
-        raise ValueError('Burg estimation unavailable for models with'
-                         ' seasonal or otherwise non-consecutive AR orders.')
+        raise ValueError("Burg estimation unavailable for models with"
+                         " seasonal or otherwise non-consecutive AR orders.")
 
     p = SARIMAXParams(spec=spec)
 
@@ -71,7 +70,7 @@ def burg(endog, ar_order=0, demean=True):
 
         # Construct other results
     other_results = Bunch({
-        'spec': spec,
+        "spec": spec,
     })
 
     return p, other_results

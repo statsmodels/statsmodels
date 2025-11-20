@@ -10,7 +10,7 @@ from statsmodels.tools.tools import add_constant
 
 from . import utils
 
-__all__ = ["qqplot", "qqplot_2samples", "qqline", "ProbPlot"]
+__all__ = ["ProbPlot", "qqline", "qqplot", "qqplot_2samples"]
 
 
 class ProbPlot:
@@ -228,7 +228,7 @@ class ProbPlot:
         elif distargs or loc != 0 or scale != 1:
             try:
                 self.dist = dist(*distargs, **dict(loc=loc, scale=scale))
-            except Exception:
+            except Exception as exc:
                 distargs = ", ".join([str(da) for da in distargs])
                 cmd = "dist({distargs}, loc={loc}, scale={scale})"
                 cmd = cmd.format(distargs=distargs, loc=loc, scale=scale)
@@ -237,7 +237,7 @@ class ProbPlot:
                     "can occur if distargs contains loc or scale. "
                     "The distribution initialization command "
                     "is:\n{cmd}".format(cmd=cmd)
-                )
+                ) from exc
             self.loc = loc
             self.scale = scale
             self.fit_params = np.r_[distargs, loc, scale]
@@ -257,12 +257,12 @@ class ProbPlot:
         """Theoretical quantiles"""
         try:
             return self.dist.ppf(self.theoretical_percentiles)
-        except TypeError:
+        except TypeError as exc:
             msg = f"{self.dist.name} requires more parameters to compute ppf"
-            raise TypeError(msg)
+            raise TypeError(msg) from exc
         except Exception as exc:
             msg = f"failed to compute the ppf of {self.dist.name}"
-            raise type(exc)(msg)
+            raise type(exc)(msg) from exc
 
     @cache_readonly
     def sorted_data(self):
@@ -446,8 +446,8 @@ class ProbPlot:
 
             if len(s_self) > len(s_other):
                 raise ValueError(
-                    "Sample size of `other` must be equal or "
-                    + "larger than this `ProbPlot` instance"
+                    "Sample size of `other` must be equal or larger than "
+                    "this `ProbPlot` instance"
                 )
             elif len(s_self) < len(s_other):
                 # Use quantiles of the smaller set and interpolate quantiles of
@@ -684,7 +684,9 @@ def qqplot(
     return fig
 
 
-def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
+def qqplot_2samples(
+    data1, data2, xlabel=None, ylabel=None, line=None, ax=None, **kwargs
+):
     """
     Q-Q Plot of two samples' quantiles.
 
@@ -722,6 +724,8 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
+    **kwargs
+        Additional keyword arguments to be passed to the underlying plot function.
 
     Returns
     -------
@@ -765,7 +769,9 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
     if not isinstance(data2, ProbPlot):
         data2 = ProbPlot(data2)
     if data2.data.shape[0] > data1.data.shape[0]:
-        fig = data1.qqplot(xlabel=xlabel, ylabel=ylabel, line=line, other=data2, ax=ax)
+        fig = data1.qqplot(
+            xlabel=xlabel, ylabel=ylabel, line=line, other=data2, ax=ax, **kwargs
+        )
     else:
         fig = data2.qqplot(
             xlabel=ylabel,
@@ -774,6 +780,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
             other=data1,
             ax=ax,
             swap=True,
+            **kwargs,
         )
 
     return fig
@@ -1025,10 +1032,17 @@ def _do_plot(x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs)
     fig, ax = utils.create_mpl_ax(ax)
     ax.set_xmargin(0.02)
 
+    if "color" in plot_style and fmt:
+        if fmt[0] in ("b", "g", "r", "c", "m", "y", "k", "w"):
+            fmt = fmt[1:]
+    args = [x, y]
+    if fmt:
+        # Only pass fmt if it is not empty
+        args += [fmt]
     if step:
-        ax.step(x, y, fmt, where=where, **plot_style)
+        ax.step(*args, where=where, **plot_style)
     else:
-        ax.plot(x, y, fmt, **plot_style)
+        ax.plot(*args, **plot_style)
     if line:
         if line not in ["r", "q", "45", "s"]:
             msg = "%s option for line not understood" % line

@@ -6,22 +6,23 @@ Author: Padarn Wilson
 """
 
 import numpy as np
-from scipy import stats
-
-from statsmodels.sandbox.nonparametric import kernels
-from statsmodels.distributions.mixture_rvs import mixture_rvs
-from statsmodels.nonparametric.bandwidths import select_bandwidth
-from statsmodels.nonparametric.bandwidths import bw_normal_reference
-
-
 from numpy.testing import assert_allclose
 import pytest
+from scipy import stats
+
+from statsmodels.distributions.mixture_rvs import mixture_rvs
+from statsmodels.nonparametric.bandwidths import bw_normal_reference, select_bandwidth
+from statsmodels.sandbox.nonparametric import kernels
 
 # setup test data
 
 np.random.seed(12345)
-Xi = mixture_rvs([.25,.75], size=200, dist=[stats.norm, stats.norm],
-                kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
+Xi = mixture_rvs(
+    [.25, .75],
+    size=200,
+    dist=[stats.norm, stats.norm],
+    kwargs=(dict(loc=-1, scale=.5), dict(loc=1, scale=.5))
+)
 
 
 class TestBandwidthCalculation:
@@ -35,7 +36,7 @@ class TestBandwidthCalculation:
         kern = kernels.Gaussian()
 
         bw_calc = [0, 0, 0]
-        for ii, bw in enumerate(['scott','silverman','normal_reference']):
+        for ii, bw in enumerate(["scott", "silverman", "normal_reference"]):
             bw_calc[ii] = select_bandwidth(Xi, bw, kern)
 
         assert_allclose(bw_expected, bw_calc)
@@ -84,7 +85,7 @@ class BandwidthZero:
     def test_bandwidth_zero(self):
 
         kern = kernels.Gaussian()
-        for bw in ['scott', 'silverman', 'normal_reference']:
+        for bw in ["scott", "silverman", "normal_reference"]:
             with pytest.raises(RuntimeError,
                                match="Selected KDE bandwidth is 0"):
                 select_bandwidth(self.xx, bw, kern)

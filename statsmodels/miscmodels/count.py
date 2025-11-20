@@ -30,19 +30,20 @@ Issues
 import numpy as np
 from scipy import stats
 from scipy.special import factorial
+
 from statsmodels.base.model import GenericLikelihoodModel
 
 
 def maxabs(arr1, arr2):
     return np.max(np.abs(arr1 - arr2))
 
+
 def maxabsrel(arr1, arr2):
     return np.max(np.abs(arr2 / arr1 - 1))
 
 
-
 class PoissonGMLE(GenericLikelihoodModel):
-    '''Maximum Likelihood Estimation of Poisson Model
+    """Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same
     statistical model as discretemod.Poisson.
@@ -52,7 +53,7 @@ class PoissonGMLE(GenericLikelihoodModel):
     and all resulting statistics are based on numerical
     differentiation.
 
-    '''
+    """
 
     # copied from discretemod.Poisson
     def nloglikeobs(self, params):
@@ -74,11 +75,11 @@ class PoissonGMLE(GenericLikelihoodModel):
         """
         XB = np.dot(self.exog, params)
         endog = self.endog
-        return np.exp(XB) -  endog*XB + np.log(factorial(endog))
+        return np.exp(XB) - endog*XB + np.log(factorial(endog))
 
     def predict_distribution(self, exog):
-        '''return frozen scipy.stats distribution with mu at estimated prediction
-        '''
+        """return frozen scipy.stats distribution with mu at estimated prediction
+        """
         if not hasattr(self, "result"):
             # TODO: why would this be ValueError instead of AttributeError?
             # TODO: Why even make this a Model attribute in the first place?
@@ -91,9 +92,8 @@ class PoissonGMLE(GenericLikelihoodModel):
             return stats.poisson(mu, loc=0)
 
 
-
 class PoissonOffsetGMLE(GenericLikelihoodModel):
-    '''Maximum Likelihood Estimation of Poisson Model
+    """Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same
     statistical model as discretemod.Poisson but adds offset
@@ -103,20 +103,19 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
     and all resulting statistics are based on numerical
     differentiation.
 
-    '''
+    """
 
-    def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
+    def __init__(self, endog, exog=None, offset=None, missing="none", **kwds):
         # let them be none in case user wants to use inheritance
         if offset is not None:
             if offset.ndim == 1:
-                offset = offset[:,None] #need column
+                offset = offset[:, None]  # need column
             self.offset = offset.ravel()
         else:
             self.offset = 0.
-        super().__init__(endog, exog, missing=missing,
-                **kwds)
+        super().__init__(endog, exog, missing=missing, **kwds)
 
-#this was added temporarily for bug-hunting, but should not be needed
+# this was added temporarily for bug-hunting, but should not be needed
 #    def loglike(self, params):
 #        return -self.nloglikeobs(params).sum(0)
 
@@ -141,11 +140,12 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
         XB = self.offset + np.dot(self.exog, params)
         endog = self.endog
-        nloglik = np.exp(XB) -  endog*XB + np.log(factorial(endog))
+        nloglik = np.exp(XB) - endog*XB + np.log(factorial(endog))
         return nloglik
 
+
 class PoissonZiGMLE(GenericLikelihoodModel):
-    '''Maximum Likelihood Estimation of Poisson Model
+    """Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same statistical model
     as discretemod.Poisson but adds offset and zero-inflation.
@@ -157,33 +157,33 @@ class PoissonZiGMLE(GenericLikelihoodModel):
 
     There are numerical problems if there is no zero-inflation.
 
-    '''
+    """
 
-    def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
+    def __init__(self, endog, exog=None, offset=None, missing="none", **kwds):
         # let them be none in case user wants to use inheritance
         self.k_extra = 1
-        super().__init__(endog, exog, missing=missing,
-                extra_params_names=["zi"], **kwds)
+        super().__init__(
+            endog, exog, missing=missing, extra_params_names=["zi"], **kwds
+        )
         if offset is not None:
             if offset.ndim == 1:
-                offset = offset[:,None] #need column
-            self.offset = offset.ravel()  #which way?
+                offset = offset[:, None]  # need column
+            self.offset = offset.ravel()  # which way?
         else:
             self.offset = 0.
 
-        #TODO: it's not standard pattern to use default exog
+        # TODO: it's not standard pattern to use default exog
         if exog is None:
-            self.exog = np.ones((self.nobs,1))
+            self.exog = np.ones((self.nobs, 1))
         self.nparams = self.exog.shape[1]
-        #what's the shape in regression for exog if only constant
+        # what's the shape in regression for exog if only constant
         self.start_params = np.hstack((np.ones(self.nparams), 0))
         # need to add zi params to nparams
         self.nparams += 1
-        self.cloneattr = ['start_params']
+        self.cloneattr = ["start_params"]
         # needed for t_test and summary
         # Note: no added to super __init__ which also adjusts df_resid
         # self.exog_names.append('zi')
-
 
     # original copied from discretemod.Poisson
     def nloglikeobs(self, params):
@@ -204,12 +204,12 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
         beta = params[:-1]
-        gamm = 1 / (1 + np.exp(params[-1]))  #check this
+        gamm = 1 / (1 + np.exp(params[-1]))  # check this
         # replace with np.dot(self.exogZ, gamma)
-        #print(np.shape(self.offset), self.exog.shape, beta.shape
+        # print(np.shape(self.offset), self.exog.shape, beta.shape
         XB = self.offset + np.dot(self.exog, beta)
         endog = self.endog
-        nloglik = -np.log(1-gamm) + np.exp(XB) -  endog*XB + np.log(factorial(endog))
-        nloglik[endog==0] = - np.log(gamm + np.exp(-nloglik[endog==0]))
+        nloglik = -np.log(1-gamm) + np.exp(XB) - endog*XB + np.log(factorial(endog))
+        nloglik[endog == 0] = - np.log(gamm + np.exp(-nloglik[endog == 0]))
 
         return nloglik

@@ -56,12 +56,12 @@ def default_kwargs_base():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def default_kwargs():
     return default_kwargs_base()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def default_kwargs_short():
     kwargs = default_kwargs_base()
     y = kwargs["y"][:-1]

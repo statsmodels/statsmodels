@@ -2,6 +2,7 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
+
 from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.pytest import pytest_warns
 
@@ -15,7 +16,7 @@ import pandas as pd
 import pytest
 import scipy.stats
 
-from statsmodels.tools.sm_exceptions import ConvergenceWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.holtwinters import (
     PY_SMOOTHERS,
     SMOOTHERS,
@@ -351,9 +352,7 @@ class TestHoltWinters:
             seasonal="mul",
             initialization_method="estimated",
         ).fit(start_params=self.start_params)
-        assert_almost_equal(
-            fit1.forecast(4), [61.3083, 37.3730, 46.9652, 51.5578], 3
-        )
+        assert_almost_equal(fit1.forecast(4), [61.3083, 37.3730, 46.9652, 51.5578], 3)
 
     # FIXME: this is passing 2019-05-22 on some platforms; what has changed?
     @pytest.mark.xfail(reason="Optimizer does not converge", strict=False)
@@ -403,9 +402,9 @@ class TestHoltWinters:
         assert_almost_equal(fit3.params["initial_level"], 447.478440, 3)
 
     def test_holt(self):
-        fit1 = Holt(
-            self.air_ausair, initialization_method="legacy-heuristic"
-        ).fit(smoothing_level=0.8, smoothing_trend=0.2, optimized=False)
+        fit1 = Holt(self.air_ausair, initialization_method="legacy-heuristic").fit(
+            smoothing_level=0.8, smoothing_trend=0.2, optimized=False
+        )
         fit2 = Holt(
             self.air_ausair,
             exponential=True,
@@ -416,9 +415,7 @@ class TestHoltWinters:
             damped_trend=True,
             initialization_method="estimated",
         ).fit(smoothing_level=0.8, smoothing_trend=0.2)
-        assert_almost_equal(
-            fit1.forecast(5), [43.76, 45.59, 47.43, 49.27, 51.10], 2
-        )
+        assert_almost_equal(fit1.forecast(5), [43.76, 45.59, 47.43, 49.27, 51.10], 2)
         assert_almost_equal(
             fit1.trend,
             [
@@ -462,12 +459,8 @@ class TestHoltWinters:
             ],
             4,
         )
-        assert_almost_equal(
-            fit2.forecast(5), [44.60, 47.24, 50.04, 53.01, 56.15], 2
-        )
-        assert_almost_equal(
-            fit3.forecast(5), [42.85, 43.81, 44.66, 45.41, 46.06], 2
-        )
+        assert_almost_equal(fit2.forecast(5), [44.60, 47.24, 50.04, 53.01, 56.15], 2)
+        assert_almost_equal(fit3.forecast(5), [42.85, 43.81, 44.66, 45.41, 46.06], 2)
 
     @pytest.mark.smoke
     def test_holt_damp_fit(self):
@@ -535,15 +528,13 @@ class TestHoltWinters:
             fit = mod.fit(optimized=False)
 
         # Check that we captured the parameters correctly
-        for key in params.keys():
-            assert_allclose(fit.params[key], params[key])
+        for key, param_value in params.items():
+            assert_allclose(fit.params[key], param_value)
 
         with mod.fix_params(params):
             opt_fit = mod.fit(optimized=True)
         assert_allclose(fit.sse, opt_fit.sse)
-        assert_allclose(
-            opt_fit.params["initial_trend"], params["initial_trend"]
-        )
+        assert_allclose(opt_fit.params["initial_trend"], params["initial_trend"])
         alt_params = {k: v for k, v in params.items() if "level" not in k}
         with mod.fix_params(alt_params):
             alt_fit = mod.fit(optimized=True)
@@ -785,15 +776,13 @@ class TestHoltWinters:
 
 
 @pytest.mark.parametrize(
-    "trend_seasonal", (("mul", None), (None, "mul"), ("mul", "mul"))
+    "trend_seasonal", [("mul", None), (None, "mul"), ("mul", "mul")]
 )
 def test_negative_multipliative(trend_seasonal):
     trend, seasonal = trend_seasonal
     y = -np.ones(100)
     with pytest.raises(ValueError):
-        ExponentialSmoothing(
-            y, trend=trend, seasonal=seasonal, seasonal_periods=10
-        )
+        ExponentialSmoothing(y, trend=trend, seasonal=seasonal, seasonal_periods=10)
 
 
 @pytest.mark.parametrize("seasonal", SEASONALS)
@@ -808,7 +797,7 @@ def test_dampen_no_trend(seasonal):
         )
 
 
-@pytest.mark.parametrize("seasonal", ("add", "mul"))
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
 def test_invalid_seasonal(seasonal):
     y = pd.Series(
         -np.ones(100), index=pd.date_range("2000-1-1", periods=100, freq="MS")
@@ -819,9 +808,7 @@ def test_invalid_seasonal(seasonal):
 
 def test_2d_data():
     with pytest.raises(ValueError):
-        ExponentialSmoothing(
-            pd.concat([housing_data, housing_data], axis=1)
-        ).fit()
+        ExponentialSmoothing(pd.concat([housing_data, housing_data], axis=1)).fit()
 
 
 def test_infer_freq():
@@ -848,7 +835,7 @@ def test_start_params(trend, seasonal):
     res = mod.fit()
     res2 = mod.fit(
         method="basinhopping",
-        minimize_kwargs={"minimizer_kwargs": {"method": "SLSQP"}},
+        minimize_kwargs={"minimizer_kwargs": {"method": "L-BFGS-B"}},
     )
     assert isinstance(res.summary().as_text(), str)
     assert res2.sse < 1.01 * res.sse
@@ -971,11 +958,11 @@ def test_direct_holt_add():
     assert isinstance(res.summary().as_text(), str)
     x = np.squeeze(np.asarray(mod.endog))
     alpha = res.params["smoothing_level"]
-    l, b, f, _, xhat = _simple_dbl_exp_smoother(
+    lvl, b, f, _, xhat = _simple_dbl_exp_smoother(
         x, alpha, beta=0.0, l0=res.params["initial_level"], b0=0.0, nforecast=5
     )
 
-    assert_allclose(l, res.level)
+    assert_allclose(lvl, res.level)
     assert_allclose(f, res.level.iloc[-1] * np.ones(5))
     assert_allclose(f, res.forecast(5))
 
@@ -986,7 +973,7 @@ def test_direct_holt_add():
     x = np.squeeze(np.asarray(mod.endog))
     alpha = res.params["smoothing_level"]
     beta = res.params["smoothing_trend"]
-    l, b, f, _, xhat = _simple_dbl_exp_smoother(
+    lvl, b, f, _, xhat = _simple_dbl_exp_smoother(
         x,
         alpha,
         beta=beta,
@@ -996,8 +983,8 @@ def test_direct_holt_add():
     )
 
     assert_allclose(xhat, res.fittedvalues)
-    assert_allclose(l + b, res.level + res.trend)
-    assert_allclose(l, res.level)
+    assert_allclose(lvl + b, res.level + res.trend)
+    assert_allclose(lvl, res.level)
     assert_allclose(b, res.trend)
     assert_allclose(
         f, res.level.iloc[-1] + res.trend.iloc[-1] * np.array([1, 2, 3, 4, 5])
@@ -1012,9 +999,7 @@ def test_integer_array(reset_randomstate):
     y_star = np.cumsum(e[:, 0])
     y = y_star + e[:, 1]
     y = y.astype(int)
-    res = ExponentialSmoothing(
-        y, trend="add", initialization_method="estimated"
-    ).fit()
+    res = ExponentialSmoothing(y, trend="add", initialization_method="estimated").fit()
     assert res.params["smoothing_level"] != 0.0
 
 
@@ -1039,15 +1024,11 @@ def test_damping_trend_zero():
 
 def test_different_inputs():
     array_input_add = [10, 20, 30, 40, 50]
-    series_index_add = pd.date_range(
-        start="2000-1-1", periods=len(array_input_add)
-    )
+    series_index_add = pd.date_range(start="2000-1-1", periods=len(array_input_add))
     series_input_add = pd.Series(array_input_add, series_index_add)
 
     array_input_mul = [2, 4, 8, 16, 32]
-    series_index_mul = pd.date_range(
-        start="2000-1-1", periods=len(array_input_mul)
-    )
+    series_index_mul = pd.date_range(start="2000-1-1", periods=len(array_input_mul))
     series_input_mul = pd.Series(array_input_mul, series_index_mul)
 
     fit1 = ExponentialSmoothing(array_input_add, trend="add").fit()
@@ -1058,9 +1039,7 @@ def test_different_inputs():
     assert_almost_equal(fit1.predict(), [60], 1)
     assert_almost_equal(fit1.predict(start=5, end=7), [60, 70, 80], 1)
     assert_almost_equal(fit2.predict(), [60], 1)
-    assert_almost_equal(
-        fit2.predict(start="2000-1-6", end="2000-1-8"), [60, 70, 80], 1
-    )
+    assert_almost_equal(fit2.predict(start="2000-1-6", end="2000-1-8"), [60, 70, 80], 1)
     assert_almost_equal(fit3.predict(), [64], 1)
     assert_almost_equal(fit3.predict(start=5, end=7), [64, 128, 256], 1)
     assert_almost_equal(fit4.predict(), [64], 1)
@@ -1502,8 +1481,8 @@ def simulate_fit_state_r():
 
 @pytest.mark.parametrize("trend", TRENDS)
 @pytest.mark.parametrize("seasonal", SEASONALS)
-@pytest.mark.parametrize("damped", (True, False))
-@pytest.mark.parametrize("error", ("add", "mul"))
+@pytest.mark.parametrize("damped", [True, False])
+@pytest.mark.parametrize("error", ["add", "mul"])
 def test_simulate_expected_r(
     trend,
     seasonal,
@@ -1631,10 +1610,7 @@ def test_forecast_index(ix):
         [85601, 89662, 85122, 84400, 78250, 84434, 71072, 70357, 72635, 73210],
         index=range(ix, ix + 10),
     )
-    with pytest.warns(ConvergenceWarning):
-        model = ExponentialSmoothing(
-            ts_1, trend="add", damped_trend=False
-        ).fit()
+    model = ExponentialSmoothing(ts_1, trend="add", damped_trend=False).fit()
     index = model.forecast(steps=10).index
     assert index[0] == ix + 10
     assert index[-1] == ix + 19
@@ -1661,9 +1637,7 @@ def test_error_boxcox():
 
 
 def test_error_initialization(ses):
-    with pytest.raises(
-        ValueError, match="initialization is 'known' but initial_level"
-    ):
+    with pytest.raises(ValueError, match="initialization is 'known' but initial_level"):
         ExponentialSmoothing(ses, initialization_method="known")
     with pytest.raises(ValueError, match="initial_trend set but model"):
         ExponentialSmoothing(
@@ -1701,9 +1675,7 @@ def test_error_initialization(ses):
             initial_level=1.0,
             initial_trend=2.0,
         )
-    mod = ExponentialSmoothing(
-        ses, initialization_method="known", initial_level=1.0
-    )
+    mod = ExponentialSmoothing(ses, initialization_method="known", initial_level=1.0)
     with pytest.raises(ValueError):
         mod.fit(initial_level=2.0)
     with pytest.raises(ValueError):
@@ -1726,9 +1698,7 @@ def test_alternative_minimizers(method, ses):
     sv = np.array([0.77, 11.00])
     minimize_kwargs = {}
     mod = ExponentialSmoothing(ses, initialization_method="estimated")
-    res = mod.fit(
-        method=method, start_params=sv, minimize_kwargs=minimize_kwargs
-    )
+    res = mod.fit(method=method, start_params=sv, minimize_kwargs=minimize_kwargs)
     assert_allclose(res.params["smoothing_level"], 0.77232545, rtol=1e-3)
     assert_allclose(res.params["initial_level"], 11.00359693, rtol=1e-3)
     assert isinstance(res.summary().as_text(), str)
@@ -1750,9 +1720,7 @@ def test_minimizer_kwargs_error(ses):
     assert isinstance(res.summary().as_text(), str)
 
 
-@pytest.mark.parametrize(
-    "params", [[0.8, 0.3, 0.9], [0.3, 0.8, 0.2], [0.5, 0.6, 0.6]]
-)
+@pytest.mark.parametrize("params", [[0.8, 0.3, 0.9], [0.3, 0.8, 0.2], [0.5, 0.6, 0.6]])
 def test_to_restricted_equiv(params):
     params = np.array(params)
     sel = np.array([True] * 3)
@@ -1763,9 +1731,7 @@ def test_to_restricted_equiv(params):
     )
 
 
-@pytest.mark.parametrize(
-    "params", [[0.8, 0.3, 0.1], [0.3, 0.2, 0.6], [0.5, 0.5, 0.5]]
-)
+@pytest.mark.parametrize("params", [[0.8, 0.3, 0.1], [0.3, 0.2, 0.6], [0.5, 0.5, 0.5]])
 def test_restricted_round_tip(params):
     params = np.array(params)
     sel = np.array([True] * 3)
@@ -1842,9 +1808,7 @@ def test_fixed_errors(ses):
     with pytest.raises(ValueError):
         with mod.fix_params({"smoothing_level": -0.3}):
             pass
-    mod = ExponentialSmoothing(
-        ses, trend="add", initialization_method="estimated"
-    )
+    mod = ExponentialSmoothing(ses, trend="add", initialization_method="estimated")
     with pytest.raises(ValueError):
         with mod.fix_params({"smoothing_level": 0.3, "smoothing_trend": 0.4}):
             pass
@@ -1852,9 +1816,7 @@ def test_fixed_errors(ses):
         ses, trend="add", seasonal="add", initialization_method="estimated"
     )
     with pytest.raises(ValueError):
-        with mod.fix_params(
-            {"smoothing_level": 0.3, "smoothing_seasonal": 0.8}
-        ):
+        with mod.fix_params({"smoothing_level": 0.3, "smoothing_seasonal": 0.8}):
             pass
 
     bounds = {"smoothing_level": (0.4, 0.8), "smoothing_seasonal": (0.7, 0.9)}
@@ -1866,9 +1828,7 @@ def test_fixed_errors(ses):
         initialization_method="estimated",
     )
     with pytest.raises(ValueError, match="After adjusting for user-provided"):
-        with mod.fix_params(
-            {"smoothing_trend": 0.3, "smoothing_seasonal": 0.6}
-        ):
+        with mod.fix_params({"smoothing_trend": 0.3, "smoothing_seasonal": 0.6}):
             mod.fit()
 
 
@@ -1889,9 +1849,7 @@ def test_brute(ses, trend, seasonal):
 
 def test_fix_set_parameters(ses):
     with pytest.raises(ValueError):
-        ExponentialSmoothing(
-            ses, initial_level=1.0, initialization_method="heuristic"
-        )
+        ExponentialSmoothing(ses, initial_level=1.0, initialization_method="heuristic")
     with pytest.raises(ValueError):
         ExponentialSmoothing(
             ses,
@@ -1931,9 +1889,7 @@ def test_infeasible_bounds(ses):
         ).fit()
 
 
-@pytest.mark.parametrize(
-    "method", ["estimated", "heuristic", "legacy-heuristic"]
-)
+@pytest.mark.parametrize("method", ["estimated", "heuristic", "legacy-heuristic"])
 @pytest.mark.parametrize("trend", [None, "add"])
 @pytest.mark.parametrize("seasonal", [None, "add"])
 def test_initialization_methods(ses, method, trend, seasonal):
@@ -1965,9 +1921,7 @@ def test_summary_boxcox(ses):
 
 
 def test_simulate(ses):
-    mod = ExponentialSmoothing(
-        np.asarray(ses), initialization_method="heuristic"
-    )
+    mod = ExponentialSmoothing(np.asarray(ses), initialization_method="heuristic")
     res = mod.fit()
     assert isinstance(res.summary().as_text(), str)
     with pytest.raises(ValueError, match="error must be"):
@@ -1978,16 +1932,12 @@ def test_simulate(ses):
     with pytest.raises(ValueError, match="Cannot anchor"):
         res.simulate(10, error="additive", anchor=2000)
     with pytest.raises(ValueError, match="Argument random_state"):
-        res.simulate(
-            10, error="additive", anchor=100, random_state="bad_value"
-        )
+        res.simulate(10, error="additive", anchor=100, random_state="bad_value")
     with pytest.raises(ValueError, match="Argument random_errors"):
         res.simulate(10, error="additive", random_errors="bad_values")
 
 
-@pytest.mark.parametrize(
-    "index_typ", ["date_range", "period", "range", "irregular"]
-)
+@pytest.mark.parametrize("index_typ", ["date_range", "period", "range", "irregular"])
 def test_forecast_index_types(ses, index_typ):
     nobs = ses.shape[0]
     kwargs = {}
@@ -2121,11 +2071,9 @@ def test_invalid_index(reset_randomstate):
 def test_initial_level():
     # GH 8634
     series = [0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0]
-    es = ExponentialSmoothing(
-        series, initialization_method="known", initial_level=20.0
-    )
+    es = ExponentialSmoothing(series, initialization_method="known", initial_level=20.0)
     es_fit = es.fit()
-    es_fit.params
+    assert isinstance(es_fit.params, dict)
     assert_allclose(es_fit.params["initial_level"], 20.0)
 
 

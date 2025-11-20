@@ -38,6 +38,7 @@ from statsmodels.stats._lilliefors import (
     kstest_normal,
     lilliefors,
 )
+from statsmodels.stats._results_store import ResultsStore
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -48,11 +49,27 @@ from statsmodels.tools.validation import (
 )
 from statsmodels.tsa.tsatools import lagmat
 
-__all__ = ["kstest_fit", "lilliefors", "kstest_normal", "kstest_exponential",
-           "normal_ad", "compare_cox", "compare_j", "acorr_breusch_godfrey",
-           "acorr_ljungbox", "acorr_lm", "het_arch", "het_breuschpagan",
-           "het_goldfeldquandt", "het_white", "spec_white", "linear_lm",
-           "linear_rainbow", "linear_harvey_collier", "anderson_statistic"]
+__all__ = [
+    "acorr_breusch_godfrey",
+    "acorr_ljungbox",
+    "acorr_lm",
+    "anderson_statistic",
+    "compare_cox",
+    "compare_j",
+    "het_arch",
+    "het_breuschpagan",
+    "het_goldfeldquandt",
+    "het_white",
+    "kstest_exponential",
+    "kstest_fit",
+    "kstest_normal",
+    "lilliefors",
+    "linear_harvey_collier",
+    "linear_lm",
+    "linear_rainbow",
+    "normal_ad",
+    "spec_white",
+]
 
 
 NESTED_ERROR = """\
@@ -102,11 +119,6 @@ def _check_nested_results(results_x, results_z):
     else:
         nested = nested or _check_nested_exog(z, x)
     return nested
-
-
-class ResultsStore:
-    def __str__(self):
-        return getattr(self, '_str', self.__class__.__name__)
 
 
 def compare_cox(results_x, results_z, store=False):
@@ -410,7 +422,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     10  214.106992  1.827374e-40
     """
     # Avoid cyclic import
-    from statsmodels.tsa.stattools import acf
+    from statsmodels.tsa.stattools._stattools import acf
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
     model_df = int_like(model_df, "model_df", optional=False)
@@ -795,9 +807,9 @@ def het_breuschpagan(resid, exog_het, robust=True):
        5th edition. (2002).
     .. [2]  Breusch, T. S.; Pagan, A. R. (1979). "A Simple Test for
        Heteroskedasticity and Random Coefficient Variation". Econometrica.
-       47 (5): 1287–1294.
+       47 (5): 1287-1294.
     .. [3] Koenker, R. (1981). "A note on studentizing a test for
-       heteroskedasticity". Journal of Econometrics 17 (1): 107–112.
+       heteroskedasticity". Journal of Econometrics 17 (1): 107-112.
     """
     x = array_like(exog_het, "exog_het", ndim=2)
     _check_het_test(x, "The Breusch-Pagan")
@@ -933,12 +945,12 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
     nobs, nvars = x.shape
     if split is None:
         split = nobs // 2
-    elif (0 < split) and (split < 1):
+    elif (0 < split < 1):
         split = int(nobs * split)
 
     if drop is None:
         start2 = split
-    elif (0 < drop) and (drop < 1):
+    elif (0 < drop < 1):
         start2 = split + int(nobs * drop)
     else:
         start2 = split + drop
@@ -968,8 +980,7 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
 
     if store:
         res = ResultsStore()
-        res.__doc__ = "Test Results for Goldfeld-Quandt test of" \
-                      "heterogeneity"
+        res.__doc__ = "Test Results for Goldfeld-Quandt test of heterogeneity"
         res.fval = fval
         res.fpval = fpval
         res.df_fval = (resols2.df_resid, resols1.df_resid)
@@ -1067,8 +1078,8 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     else:
         try:
             power = np.array(power, dtype=int)
-        except Exception:
-            raise ValueError("power must be an integer or list of integers")
+        except Exception as exc:
+            raise ValueError("power must be an integer or list of integers") from exc
         if power.ndim != 1 or len(set(power)) != power.shape[0] or \
                 (power < 2).any():
             raise ValueError("power must contains distinct integers all >= 2")
@@ -1206,13 +1217,13 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
                 order_by = [order_by]
             try:
                 cols = res.model.data.orig_exog[order_by].copy()
-            except (IndexError, KeyError):
+            except (IndexError, KeyError) as exc:
                 raise TypeError("order_by must contain valid column names "
                                 "from the exog data used to construct res,"
-                                "and exog must be a pandas DataFrame.")
+                                "and exog must be a pandas DataFrame.") from exc
             name = "__index__"
             while name in cols:
-                name += '_'
+                name += "_"
             cols[name] = np.arange(cols.shape[0])
             cols = cols.sort_values(order_by)
             order_by = np.asarray(cols[name])
@@ -1236,7 +1247,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
         except np.linalg.LinAlgError:
             err = exog - exog.mean(0)
             vi = np.linalg.inv(err.T @ err / nobs)
-        dist = cdist(exog, center_obs, metric='mahalanobis', VI=vi)
+        dist = cdist(exog, center_obs, metric="mahalanobis", VI=vi)
         idx = np.argsort(dist.ravel())
         endog = endog[idx]
         exog = exog[idx]
@@ -1479,7 +1490,7 @@ skip large enough to ensure that the first OLS estimator is well-defined.
     y0 = y[:skip]
     # add Ridge to start (not in jplv)
     xtxi = np.linalg.inv(np.dot(x0.T, x0) + lamda * np.eye(nvars))
-    xty = np.dot(x0.T, y0)  # xi * y   #np.dot(xi, y)
+    xty = np.dot(x0.T, y0)  # xi * y   # np.dot(xi, y)
     beta = np.dot(xtxi, xty)
     rparams[skip - 1] = beta
     yipred = np.dot(x[skip - 1], beta)
@@ -1508,7 +1519,7 @@ skip large enough to ensure that the first OLS estimator is well-defined.
 
     rresid_scaled = rresid / np.sqrt(rvarraw)  # N(0,sigma2) distributed
     nrr = nobs - skip
-    # sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
+    # sigma2 = rresid_scaled[skip-1:].var(ddof=1)  # var or sum of squares ?
     # Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
     # Gretl uses: by reverse engineering matching their numbers
     sigma2 = rresid_scaled[skip:].var(ddof=1)
@@ -1658,16 +1669,16 @@ def breaks_cusumolsresid(resid, ddof=0):
 #    """
 #    resid = recolsresid.ravel()
 #    nobssigma2 = (resid**2).sum()
-#    #B is asymptotically a Brownian Bridge
+#    # B is asymptotically a Brownian Bridge
 #    B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
 #    nobs = len(resid)
-#    denom = 1. + 2. * np.arange(nobs)/(nobs-1.) #not sure about limits
+#    denom = 1. + 2. * np.arange(nobs)/(nobs-1.) # not sure about limits
 #    sup_b = np.abs(B/denom).max()
-#    #asymptotically distributed as standard Brownian Bridge
+#    # asymptotically distributed as standard Brownian Bridge
 #    crit = [(1,1.63), (5, 1.36), (10, 1.22)]
-#    #Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian
+#    # Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian
 #    Bridge
 #    #>>> stats.kstwobign.isf([0.01,0.05,0.1])
-#    #array([ 1.62762361,  1.35809864,  1.22384787])
+#    # array([ 1.62762361,  1.35809864,  1.22384787])
 #    pval = stats.kstwobign.sf(sup_b)
 #    return sup_b, pval, crit

@@ -31,11 +31,15 @@ References
 import numpy as np
 
 from . import kernels
-from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
-    LeaveOneOut, _adjust_shape
+from ._kernel_base import (
+    EstimatorSettings,
+    GenericKDE,
+    LeaveOneOut,
+    _adjust_shape,
+    gpke,
+)
 
-
-__all__ = ['KDEMultivariate', 'KDEMultivariateConditional', 'EstimatorSettings']
+__all__ = ["EstimatorSettings", "KDEMultivariate", "KDEMultivariateConditional"]
 
 
 class KDEMultivariate(GenericKDE):
@@ -105,7 +109,7 @@ class KDEMultivariate(GenericKDE):
         self.data_type = var_type
         self.nobs, self.k_vars = np.shape(self.data)
         if self.nobs <= self.k_vars:
-            raise ValueError("The number of observations must be larger " \
+            raise ValueError("The number of observations must be larger "
                              "than the number of variables.")
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
@@ -238,7 +242,7 @@ class KDEMultivariate(GenericKDE):
                                 var_type=self.var_type,
                                 ckertype="gaussian_cdf",
                                 ukertype="aitchisonaitken_cdf",
-                                okertype='wangryzin_cdf') / self.nobs)
+                                okertype="wangryzin_cdf") / self.nobs)
 
         cdf_est = np.squeeze(cdf_est)
         return cdf_est
@@ -278,8 +282,8 @@ class KDEMultivariate(GenericKDE):
         .. [2] Racine, J., Li, Q. "Nonparametric Estimation of Distributions
                 with Categorical and Continuous Data." Working Paper. (2000)
         """
-        #F = 0
-        #for i in range(self.nobs):
+        # F = 0
+        # for i in range(self.nobs):
         #    k_bar_sum = gpke(bw, data=-self.data,
         #                     data_predict=-self.data[i, :],
         #                     var_type=self.var_type,
@@ -287,8 +291,8 @@ class KDEMultivariate(GenericKDE):
         #                     okertype='wangryzin_convolution',
         #                     ukertype='aitchisonaitken_convolution')
         #    F += k_bar_sum
-        ## there is a + because loo_likelihood returns the negative
-        #return (F / self.nobs**2 + self.loo_likelihood(bw) * \
+        # there is a + because loo_likelihood returns the negative
+        # return (F / self.nobs**2 + self.loo_likelihood(bw) * \
         #        2 / ((self.nobs) * (self.nobs - 1)))
 
         # The code below is equivalent to the commented-out code above.  It's
@@ -301,7 +305,7 @@ class KDEMultivariate(GenericKDE):
         nobs = self.nobs
         data = -self.data
         var_type = self.var_type
-        ix_cont = np.array([c == 'c' for c in var_type])
+        ix_cont = np.array([c == "c" for c in var_type])
         _bw_cont_product = bw[ix_cont].prod()
         Kval = np.empty(data.shape)
         for i in range(nobs):
@@ -333,7 +337,7 @@ class KDEMultivariate(GenericKDE):
 
     def _get_class_vars_type(self):
         """Helper method to be able to pass needed vars to _compute_subset."""
-        class_type = 'KDEMultivariate'
+        class_type = "KDEMultivariate"
         class_vars = (self.var_type, )
         return class_type, class_vars
 
@@ -590,7 +594,7 @@ class KDEMultivariateConditional(GenericKDE):
                              var_type=self.dep_type,
                              ckertype="gaussian_cdf",
                              ukertype="aitchisonaitken_cdf",
-                             okertype='wangryzin_cdf', tosum=False)
+                             okertype="wangryzin_cdf", tosum=False)
 
             cdf_exog = gpke(self.bw[self.k_dep:], data=self.exog,
                             data_predict=exog_predict[i, :],
@@ -666,9 +670,9 @@ class KDEMultivariateConditional(GenericKDE):
                            var_type=self.indep_type, tosum=False)
             K2_Yi_Yj = gpke(bw[0:self.k_dep], data=Ye_L,
                             data_predict=Ye_R, var_type=self.dep_type,
-                            ckertype='gauss_convolution',
-                            okertype='wangryzin_convolution',
-                            ukertype='aitchisonaitken_convolution',
+                            ckertype="gauss_convolution",
+                            okertype="wangryzin_convolution",
+                            ukertype="aitchisonaitken_convolution",
                             tosum=False)
             G = (K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj).sum() / nobs**2
             f_X_Y = gpke(bw, data=-Z, data_predict=-self.data[ii, :],
@@ -682,6 +686,6 @@ class KDEMultivariateConditional(GenericKDE):
 
     def _get_class_vars_type(self):
         """Helper method to be able to pass needed vars to _compute_subset."""
-        class_type = 'KDEMultivariateConditional'
+        class_type = "KDEMultivariateConditional"
         class_vars = (self.k_dep, self.dep_type, self.indep_type)
         return class_type, class_vars

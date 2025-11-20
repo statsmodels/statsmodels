@@ -5,15 +5,14 @@ import pandas as pd
 import pytest
 
 from statsmodels.tools.validation import (
-    array_like,
     PandasWrapper,
+    array_like,
     bool_like,
     dict_like,
     float_like,
     int_like,
     string_like,
 )
-
 from statsmodels.tools.validation.validation import _right_squeeze
 
 
@@ -247,7 +246,7 @@ def test_wrap_pandas_append_non_string():
     assert wrapped.name == expected
 
     a = gen_data(2, True)
-    a.columns = [i for i in range(a.shape[1])]
+    a.columns = list(range(a.shape[1]))
     b = gen_data(2, False)
     wrapped = PandasWrapper(a).wrap(b, append="appended")
     expected = [f"{c}_appended" for c in a.columns]
@@ -292,7 +291,7 @@ def test_string():
         string_like(b"4", "value")
     with pytest.raises(
         ValueError,
-        match="value must be one of: 'apple'," " 'banana', 'cherry'",
+        match="value must be one of: 'apple', 'banana', 'cherry'",
     ):
         string_like("date", "value", options=("apple", "banana", "cherry"))
 

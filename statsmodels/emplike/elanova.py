@@ -10,9 +10,10 @@ General References
 Owen, A. B. (2001). Empirical Likelihood. Chapman and Hall.
 """
 import numpy as np
-from .descriptive import _OptFuncts
 from scipy import optimize
 from scipy.stats import chi2
+
+from .descriptive import _OptFuncts
 
 
 class _ANOVAOpt(_OptFuncts):
@@ -43,8 +44,7 @@ class _ANOVAOpt(_OptFuncts):
         obs_num = 0
         for arr_num in range(len(endog)):
             new_obs_num = obs_num + len(endog[arr_num])
-            endog_asarray[obs_num: new_obs_num, arr_num] = endog[arr_num] - \
-              mu
+            endog_asarray[obs_num: new_obs_num, arr_num] = endog[arr_num] - mu
             obs_num = new_obs_num
         est_vect = endog_asarray
         wts = np.ones(est_vect.shape[0]) * (1. / (est_vect.shape[0]))

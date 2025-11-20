@@ -118,8 +118,7 @@ class Table:
             self.table[self.table == 0] = 0.5
 
     def __str__(self):
-        s = ("A %dx%d contingency table with counts:\n" %
-             tuple(self.table.shape))
+        s = "A %dx%d contingency table with counts:\n" % tuple(self.table.shape)
         s += np.array_str(self.table)
         return s
 
@@ -225,13 +224,15 @@ class Table:
             col_scores = np.arange(self.table.shape[1])
 
         if len(row_scores) != self.table.shape[0]:
-            msg = ("The length of `row_scores` must match the first " +
-                   "dimension of `table`.")
+            msg = (
+                "The length of `row_scores` must match the first dimension of `table`."
+            )
             raise ValueError(msg)
 
         if len(col_scores) != self.table.shape[1]:
-            msg = ("The length of `col_scores` must match the second " +
-                   "dimension of `table`.")
+            msg = (
+                "The length of `col_scores` must match the second dimension of `table`."
+            )
             raise ValueError(msg)
 
         # The test statistic
@@ -299,8 +300,7 @@ class Table:
         itab = np.outer(row, col)
 
         if isinstance(self.table_orig, pd.DataFrame):
-            itab = pd.DataFrame(itab, self.table_orig.index,
-                                self.table_orig.columns)
+            itab = pd.DataFrame(itab, self.table_orig.index, self.table_orig.columns)
 
         return itab
 
@@ -372,8 +372,9 @@ class Table:
         rslt[0:-1, 0:-1] = tab
 
         if isinstance(self.table_orig, pd.DataFrame):
-            rslt = pd.DataFrame(rslt, index=self.table_orig.index,
-                                columns=self.table_orig.columns)
+            rslt = pd.DataFrame(
+                rslt, index=self.table_orig.index, columns=self.table_orig.columns
+            )
 
         return rslt
 
@@ -412,8 +413,9 @@ class Table:
         rslt[0:-1, 0:-1] = tab
 
         if isinstance(self.table_orig, pd.DataFrame):
-            rslt = pd.DataFrame(rslt, index=self.table_orig.index,
-                                columns=self.table_orig.columns)
+            rslt = pd.DataFrame(
+                rslt, index=self.table_orig.index, columns=self.table_orig.columns
+            )
 
         return rslt
 
@@ -456,7 +458,7 @@ class SquareTable(Table):
         table = _make_df_square(table)  # Non-pandas passes through
         k1, k2 = table.shape
         if k1 != k2:
-            raise ValueError('table must be square')
+            raise ValueError("table must be square")
 
         super().__init__(table, shift_zeros)
 
@@ -507,11 +509,11 @@ class SquareTable(Table):
         k = self.table.shape[0]
         upp_idx = np.triu_indices(k, 1)
 
-        tril = self.table.T[upp_idx]   # lower triangle in column order
-        triu = self.table[upp_idx]     # upper triangle in row order
+        tril = self.table.T[upp_idx]  # lower triangle in column order
+        triu = self.table[upp_idx]  # upper triangle in row order
 
-        statistic = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
-        df = k * (k-1) / 2.
+        statistic = ((tril - triu) ** 2 / (tril + triu + 1e-20)).sum()
+        df = k * (k - 1) / 2.0
         pvalue = stats.chi2.sf(statistic, df)
 
         b = _Bunch()
@@ -555,7 +557,7 @@ class SquareTable(Table):
         """
 
         if self.table.shape[0] < 1:
-            raise ValueError('table is empty')
+            raise ValueError("table is empty")
         elif self.table.shape[0] == 1:
             b = _Bunch()
             b.statistic = 0
@@ -584,18 +586,21 @@ class SquareTable(Table):
 
         if method == "bhapkar":
             vmat = -(pr + pr.T) - np.outer(d, d)
-            dv = col + row - 2*np.diag(pr) - d**2
+            dv = col + row - 2 * np.diag(pr) - d**2
             np.fill_diagonal(vmat, dv)
         elif method == "stuart_maxwell":
             vmat = -(pr + pr.T)
-            dv = row + col - 2*np.diag(pr)
+            dv = row + col - 2 * np.diag(pr)
             np.fill_diagonal(vmat, dv)
 
         try:
             statistic = n_obs * np.dot(d, np.linalg.solve(vmat, d))
         except np.linalg.LinAlgError:
-            warnings.warn("Unable to invert covariance matrix",
-                          sm_exceptions.SingularMatrixWarning)
+            warnings.warn(
+                "Unable to invert covariance matrix",
+                sm_exceptions.SingularMatrixWarning,
+                stacklevel=2,
+            )
             b = _Bunch()
             b.statistic = np.nan
             b.pvalue = np.nan
@@ -632,10 +637,13 @@ class SquareTable(Table):
         stubs = ["Symmetry", "Homogeneity"]
         sy = self.symmetry()
         hm = self.homogeneity()
-        data = [[fmt % sy.statistic, fmt % sy.pvalue, '%d' % sy.df],
-                [fmt % hm.statistic, fmt % hm.pvalue, '%d' % hm.df]]
-        tab = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
-                                table_dec_above='')
+        data = [
+            [fmt % sy.statistic, fmt % sy.pvalue, "%d" % sy.df],
+            [fmt % hm.statistic, fmt % hm.pvalue, "%d" % hm.df],
+        ]
+        tab = iolib.SimpleTable(
+            data, headers, stubs, data_aligns="r", table_dec_above=""
+        )
 
         return tab
 
@@ -711,8 +719,9 @@ class Table2x2(SquareTable):
         Returns the odds ratio for a 2x2 table.
         """
 
-        return (self.table[0, 0] * self.table[1, 1] /
-                (self.table[0, 1] * self.table[1, 0]))
+        return (
+            self.table[0, 0] * self.table[1, 1] / (self.table[0, 1] * self.table[1, 0])
+        )
 
     @cache_readonly
     def log_oddsratio_se(self):
@@ -812,7 +821,7 @@ class Table2x2(SquareTable):
 
         n = self.table.sum(1)
         p = self.table[:, 0] / n
-        va = np.sum((1 - p) / (n*p))
+        va = np.sum((1 - p) / (n * p))
         return np.sqrt(va)
 
     def riskratio_pvalue(self, null=1):
@@ -899,23 +908,39 @@ class Table2x2(SquareTable):
             return float_format % x
 
         headers = ["Estimate", "SE", "LCB", "UCB", "p-value"]
-        stubs = ["Odds ratio", "Log odds ratio", "Risk ratio",
-                 "Log risk ratio"]
+        stubs = ["Odds ratio", "Log odds ratio", "Risk ratio", "Log risk ratio"]
 
         lcb1, ucb1 = self.oddsratio_confint(alpha, method)
         lcb2, ucb2 = self.log_oddsratio_confint(alpha, method)
         lcb3, ucb3 = self.riskratio_confint(alpha, method)
         lcb4, ucb4 = self.log_riskratio_confint(alpha, method)
-        data = [[fmt(x) for x in [self.oddsratio, "", lcb1, ucb1,
-                                  self.oddsratio_pvalue()]],
-                [fmt(x) for x in [self.log_oddsratio, self.log_oddsratio_se,
-                                  lcb2, ucb2, self.oddsratio_pvalue()]],
-                [fmt(x) for x in [self.riskratio, "", lcb3, ucb3,
-                                  self.riskratio_pvalue()]],
-                [fmt(x) for x in [self.log_riskratio, self.log_riskratio_se,
-                                  lcb4, ucb4, self.riskratio_pvalue()]]]
-        tab = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
-                                table_dec_above='')
+        data = [
+            [fmt(x) for x in [self.oddsratio, "", lcb1, ucb1, self.oddsratio_pvalue()]],
+            [
+                fmt(x)
+                for x in [
+                    self.log_oddsratio,
+                    self.log_oddsratio_se,
+                    lcb2,
+                    ucb2,
+                    self.oddsratio_pvalue(),
+                ]
+            ],
+            [fmt(x) for x in [self.riskratio, "", lcb3, ucb3, self.riskratio_pvalue()]],
+            [
+                fmt(x)
+                for x in [
+                    self.log_riskratio,
+                    self.log_riskratio_se,
+                    lcb4,
+                    ucb4,
+                    self.riskratio_pvalue(),
+                ]
+            ],
+        ]
+        tab = iolib.SimpleTable(
+            data, headers, stubs, data_aligns="r", table_dec_above=""
+        )
         return tab
 
 
@@ -947,9 +972,9 @@ class StratifiedTable:
             sp = tables.shape
             if (len(sp) != 3) or (sp[0] != 2) or (sp[1] != 2):
                 raise ValueError("If an ndarray, argument must be 2x2xn")
-            table = tables * 1.  # use atleast float dtype
+            table = tables * 1.0  # use atleast float dtype
         else:
-            if any([np.asarray(x).shape != (2, 2) for x in tables]):
+            if any(np.asarray(x).shape != (2, 2) for x in tables):
                 m = "If `tables` is a list, all of its elements should be 2x2"
                 raise ValueError(m)
 
@@ -1008,8 +1033,9 @@ class StratifiedTable:
         """
 
         if not isinstance(data, pd.DataFrame):
-            data1 = pd.DataFrame(index=np.arange(data.shape[0]),
-                                 columns=[var1, var2, strata])
+            data1 = pd.DataFrame(
+                index=np.arange(data.shape[0]), columns=[var1, var2, strata]
+            )
             data1[data1.columns[var1]] = data[:, var1]
             data1[data1.columns[var2]] = data[:, var2]
             data1[data1.columns[strata]] = data[:, strata]
@@ -1046,14 +1072,13 @@ class StratifiedTable:
             A bunch containing the chi^2 test statistic and p-value.
         """
 
-        statistic = np.sum(self.table[0, 0, :] -
-                           self._apb * self._apc / self._n)
+        statistic = np.sum(self.table[0, 0, :] - self._apb * self._apc / self._n)
         statistic = np.abs(statistic)
         if correction:
             statistic -= 0.5
         statistic = statistic**2
         denom = self._apb * self._apc * self._bpd * self._cpd
-        denom /= (self._n**2 * (self._n - 1))
+        denom /= self._n**2 * (self._n - 1)
         denom = np.sum(denom)
         statistic /= denom
 
@@ -1116,10 +1141,9 @@ class StratifiedTable:
         mid = self._apd * self._bc / self._n**2
         mid += (1 - self._apd / self._n) * self._ad / self._n
         mid = np.sum(mid)
-        mid /= (adns * bcns)
+        mid /= adns * bcns
         lor_va += mid
-        lor_va += np.sum((1 - self._apd / self._n) *
-                         self._bc / self._n) / bcns**2
+        lor_va += np.sum((1 - self._apd / self._n) * self._bc / self._n) / bcns**2
         lor_va /= 2
         lor_se = np.sqrt(lor_va)
         return lor_se
@@ -1211,15 +1235,19 @@ class StratifiedTable:
         c = -r * self._apb * self._apc
 
         # Expected value of first cell
-        dr = np.sqrt(b**2 - 4*a*c)
-        e11 = (-b + dr) / (2*a)
+        dr = np.sqrt(b**2 - 4 * a * c)
+        e11 = (-b + dr) / (2 * a)
 
         # Variance of the first cell
-        v11 = (1 / e11 + 1 / (self._apc - e11) + 1 / (self._apb - e11) +
-               1 / (self._dma + e11))
+        v11 = (
+            1 / e11
+            + 1 / (self._apc - e11)
+            + 1 / (self._apb - e11)
+            + 1 / (self._dma + e11)
+        )
         v11 = 1 / v11
 
-        statistic = np.sum((table[0, 0, :] - e11)**2 / v11)
+        statistic = np.sum((table[0, 0, :] - e11) ** 2 / v11)
 
         if adjust:
             adj = table[0, 0, :].sum() - e11.sum()
@@ -1256,36 +1284,41 @@ class StratifiedTable:
                 return x
             return float_format % x
 
-        co_lcb, co_ucb = self.oddsratio_pooled_confint(
-            alpha=alpha, method=method)
-        clo_lcb, clo_ucb = self.logodds_pooled_confint(
-            alpha=alpha, method=method)
+        co_lcb, co_ucb = self.oddsratio_pooled_confint(alpha=alpha, method=method)
+        clo_lcb, clo_ucb = self.logodds_pooled_confint(alpha=alpha, method=method)
         headers = ["Estimate", "LCB", "UCB"]
         stubs = ["Pooled odds", "Pooled log odds", "Pooled risk ratio", ""]
-        data = [[fmt(x) for x in [self.oddsratio_pooled, co_lcb, co_ucb]],
-                [fmt(x) for x in [self.logodds_pooled, clo_lcb, clo_ucb]],
-                [fmt(x) for x in [self.riskratio_pooled, "", ""]],
-                ['', '', '']]
-        tab1 = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
-                                 table_dec_above='')
+        data = [
+            [fmt(x) for x in [self.oddsratio_pooled, co_lcb, co_ucb]],
+            [fmt(x) for x in [self.logodds_pooled, clo_lcb, clo_ucb]],
+            [fmt(x) for x in [self.riskratio_pooled, "", ""]],
+            ["", "", ""],
+        ]
+        tab1 = iolib.SimpleTable(
+            data, headers, stubs, data_aligns="r", table_dec_above=""
+        )
 
         headers = ["Statistic", "P-value", ""]
         stubs = ["Test of OR=1", "Test constant OR"]
         rslt1 = self.test_null_odds()
         rslt2 = self.test_equal_odds()
-        data = [[fmt(x) for x in [rslt1.statistic, rslt1.pvalue, ""]],
-                [fmt(x) for x in [rslt2.statistic, rslt2.pvalue, ""]]]
+        data = [
+            [fmt(x) for x in [rslt1.statistic, rslt1.pvalue, ""]],
+            [fmt(x) for x in [rslt2.statistic, rslt2.pvalue, ""]],
+        ]
         tab2 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
         tab1.extend(tab2)
 
         headers = ["", "", ""]
         stubs = ["Number of tables", "Min n", "Max n", "Avg n", "Total n"]
         ss = self.table.sum(0).sum(0)
-        data = [["%d" % self.table.shape[2], '', ''],
-                ["%d" % min(ss), '', ''],
-                ["%d" % max(ss), '', ''],
-                ["%.0f" % np.mean(ss), '', ''],
-                ["%d" % sum(ss), '', '', '']]
+        data = [
+            ["%d" % self.table.shape[2], "", ""],
+            ["%d" % min(ss), "", ""],
+            ["%d" % max(ss), "", ""],
+            ["%.0f" % np.mean(ss), "", ""],
+            ["%d" % sum(ss), "", "", ""],
+        ]
         tab3 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
         tab1.extend(tab3)
 
@@ -1338,14 +1371,12 @@ def mcnemar(table, exact=True, correction=True):
         # SciPy 1.7+ requires int arguments
         int_sum = int(n1 + n2)
         if int_sum != (n1 + n2):
-            raise ValueError(
-                "exact can only be used with tables containing integers."
-            )
+            raise ValueError("exact can only be used with tables containing integers.")
         pvalue = stats.binom.cdf(statistic, int_sum, 0.5) * 2
         pvalue = np.minimum(pvalue, 1)  # limit to 1 if n1==n2
     else:
         corr = int(correction)  # convert bool to 0 or 1
-        statistic = (np.abs(n1 - n2) - corr)**2 / (1. * (n1 + n2))
+        statistic = (np.abs(n1 - n2) - corr) ** 2 / (1.0 * (n1 + n2))
         df = 1
         pvalue = stats.chi2.sf(statistic, df)
 
@@ -1409,8 +1440,11 @@ def cochrans_q(x, return_object=True):
     assert count_row_ss == count_col_ss  # just a calculation check
 
     # From the SAS manual
-    q_stat = ((k-1) * (k * np.sum(count_col_success**2) - count_col_ss**2)
-              / (k * count_row_ss - np.sum(count_row_success**2)))
+    q_stat = (
+        (k - 1)
+        * (k * np.sum(count_col_success**2) - count_col_ss**2)
+        / (k * count_row_ss - np.sum(count_row_success**2))
+    )
 
     # Note: the denominator looks just like k times the variance of
     # the columns

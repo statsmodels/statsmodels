@@ -6,23 +6,21 @@ import os
 
 import numpy as np
 from numpy.random import standard_normal
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
-import pytest
-
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
-
-from scipy.stats import norm as Gaussian
+import pytest
 from scipy import stats
+from scipy.stats import norm as Gaussian
 
 import statsmodels.api as sm
-import statsmodels.robust.scale as scale
-from statsmodels.robust.scale import mad, scale_tau
+from statsmodels.robust import scale
 import statsmodels.robust.norms as rnorms
+from statsmodels.robust.scale import mad, scale_tau
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
-file_name = 'hbk.csv'
-file_path = os.path.join(cur_dir, 'results', file_name)
+file_name = "hbk.csv"
+file_path = os.path.join(cur_dir, "results", file_name)
 dta_hbk = pd.read_csv(file_path)
 
 
@@ -341,8 +339,8 @@ def test_tau_scale1():
 def test_tau_scale2():
     import pandas as pd
     cur_dir = os.path.abspath(os.path.dirname(__file__))
-    file_name = 'hbk.csv'
-    file_path = os.path.join(cur_dir, 'results', file_name)
+    file_name = "hbk.csv"
+    file_path = os.path.join(cur_dir, "results", file_name)
     dta_hbk = pd.read_csv(file_path)
 
     # from R robustbase
@@ -393,7 +391,9 @@ def test_scale_iter():
     x = x[:, 0]  # 1d only ?
     v = v[0]
 
-    meef_scale = lambda x: rnorms.TukeyBiweight().rho(x)  # noqa
+    def meef_scale(x):
+        return rnorms.TukeyBiweight().rho(x)
+
     scale_bias = 0.43684963023076195
     s = scale._scale_iter(x, meef_scale=meef_scale, scale_bias=scale_bias)
     assert_allclose(s, v, rtol=1e-1)

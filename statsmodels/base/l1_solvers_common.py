@@ -40,12 +40,11 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
     ------
     Warning message if QC check fails.
     """
-    ## Check for fatal errors
+    # Check for fatal errors
     assert not np.isnan(params).max()
-    assert (params == params.ravel('F')).min(), \
-        "params should have already been 1-d"
+    assert (params == params.ravel("F")).min(), "params should have already been 1-d"
 
-    ## Start the theory compliance check
+    # Start the theory compliance check
     fprime = score(params)
     k_params = len(params)
 
@@ -55,43 +54,51 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
             # If |fprime| is too big, then something went wrong
             if (abs(fprime[i]) - alpha[i]) / alpha[i] > qc_tol:
                 passed_array[i] = False
-    qc_dict = dict(
-        fprime=fprime, alpha=alpha, params=params, passed_array=passed_array)
+    qc_dict = dict(fprime=fprime, alpha=alpha, params=params, passed_array=passed_array)
     passed = passed_array.min()
     if not passed:
         num_failed = (~passed_array).sum()
-        message = 'QC check did not pass for %d out of %d parameters' % (
-            num_failed, k_params)
-        message += '\nTry increasing solver accuracy or number of iterations'\
-            ', decreasing alpha, or switch solvers'
+        message = "QC check did not pass for %d out of %d parameters" % (
+            num_failed,
+            k_params,
+        )
+        message += (
+            "\nTry increasing solver accuracy or number of iterations"
+            ", decreasing alpha, or switch solvers"
+        )
         if qc_verbose:
             message += _get_verbose_addon(qc_dict)
 
         import warnings
-        warnings.warn(message, ConvergenceWarning)
+
+        warnings.warn(message, ConvergenceWarning, stacklevel=2)
 
     return passed
 
 
 def _get_verbose_addon(qc_dict):
-    alpha = qc_dict['alpha']
-    params = qc_dict['params']
-    fprime = qc_dict['fprime']
-    passed_array = qc_dict['passed_array']
+    alpha = qc_dict["alpha"]
+    params = qc_dict["params"]
+    fprime = qc_dict["fprime"]
+    passed_array = qc_dict["passed_array"]
 
-    addon = '\n------ verbose QC printout -----------------'
-    addon = '\n------ Recall the problem was rescaled by 1 / nobs ---'
-    addon += '\n|%-10s|%-10s|%-10s|%-10s|' % (
-        'passed', 'alpha', 'fprime', 'param')
-    addon += '\n--------------------------------------------'
+    addon = "\n------ verbose QC printout -----------------"
+    addon = "\n------ Recall the problem was rescaled by 1 / nobs ---"
+    addon += "\n|%-10s|%-10s|%-10s|%-10s|" % ("passed", "alpha", "fprime", "param")
+    addon += "\n--------------------------------------------"
     for i in range(len(alpha)):
-        addon += '\n|%-10s|%-10.3e|%-10.3e|%-10.3e|' % (
-                passed_array[i], alpha[i], fprime[i], params[i])
+        addon += "\n|%-10s|%-10.3e|%-10.3e|%-10.3e|" % (
+            passed_array[i],
+            alpha[i],
+            fprime[i],
+            params[i],
+        )
     return addon
 
 
-def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
-        size_trim_tol, auto_trim_tol):
+def do_trim_params(
+    params, k_params, alpha, score, passed, trim_mode, size_trim_tol, auto_trim_tol
+):
     """
     Trims (set to zero) params that are zero at the theoretical minimum.
     Uses heuristics to account for the solver not actually finding the minimum.
@@ -132,32 +139,34 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
     trimmed : ndarray of booleans
         trimmed[i] == True if the ith parameter was trimmed.
     """
-    ## Trim the small params
+    # Trim the small params
     trimmed = [False] * k_params
 
-    if trim_mode == 'off':
+    if trim_mode == "off":
         trimmed = np.array([False] * k_params)
-    elif trim_mode == 'auto' and not passed:
+    elif trim_mode == "auto" and not passed:
         import warnings
-        msg = "Could not trim params automatically due to failed QC check. " \
-              "Trimming using trim_mode == 'size' will still work."
-        warnings.warn(msg, ConvergenceWarning)
+
+        msg = (
+            "Could not trim params automatically due to failed QC check. "
+            "Trimming using trim_mode == 'size' will still work."
+        )
+        warnings.warn(msg, ConvergenceWarning, stacklevel=2)
         trimmed = np.array([False] * k_params)
-    elif trim_mode == 'auto' and passed:
+    elif trim_mode == "auto" and passed:
         fprime = score(params)
         for i in range(k_params):
             if alpha[i] != 0:
                 if (alpha[i] - abs(fprime[i])) / alpha[i] > auto_trim_tol:
                     params[i] = 0.0
                     trimmed[i] = True
-    elif trim_mode == 'size':
+    elif trim_mode == "size":
         for i in range(k_params):
             if alpha[i] != 0:
                 if abs(params[i]) < size_trim_tol:
                     params[i] = 0.0
                     trimmed[i] = True
     else:
-        raise ValueError(
-            "trim_mode == %s, which is not recognized" % (trim_mode))
+        raise ValueError("trim_mode == %s, which is not recognized" % (trim_mode))
 
     return params, np.asarray(trimmed)

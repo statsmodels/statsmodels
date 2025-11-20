@@ -1,21 +1,23 @@
-from statsmodels.tools.sm_exceptions import CacheWriteWarning
 from statsmodels.compat.pandas import cache_readonly as PandasCacheReadonly
 
 import warnings
 
-__all__ = ['cache_readonly', 'cache_writable', 'deprecated_alias',
-           'ResettableCache']
+from statsmodels.tools.sm_exceptions import CacheWriteWarning
+
+__all__ = ["ResettableCache", "cache_readonly", "cache_writable", "deprecated_alias"]
 
 
 class ResettableCache(dict):
     """DO NOT USE. BACKWARD COMPAT ONLY"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__dict__ = self
 
 
-def deprecated_alias(old_name, new_name, remove_version=None, msg=None,
-                     warning=FutureWarning):
+def deprecated_alias(
+    old_name, new_name, remove_version=None, msg=None, warning=FutureWarning
+):
     """
     Deprecate attribute in favor of alternative name.
 
@@ -56,9 +58,9 @@ def deprecated_alias(old_name, new_name, remove_version=None, msg=None,
     """
 
     if msg is None:
-        msg = f'{old_name} is a deprecated alias for {new_name}'
+        msg = f"{old_name} is a deprecated alias for {new_name}"
         if remove_version is not None:
-            msg += ', will be removed in version %s' % remove_version
+            msg += ", will be removed in version %s" % remove_version
 
     def fget(self):
         warnings.warn(msg, warning, stacklevel=2)
@@ -77,7 +79,7 @@ class CachedAttribute:
     def __init__(self, func, cachename=None):
         self.fget = func
         self.name = func.__name__
-        self.cachename = cachename or '_cache'
+        self.cachename = cachename or "_cache"
 
     def __get__(self, obj, type=None):
         if obj is None:
@@ -99,7 +101,7 @@ class CachedAttribute:
 
     def __set__(self, obj, value):
         errmsg = "The attribute '%s' cannot be overwritten" % self.name
-        warnings.warn(errmsg, CacheWriteWarning)
+        warnings.warn(errmsg, CacheWriteWarning, stacklevel=2)
 
 
 class CachedWritableAttribute(CachedAttribute):
@@ -119,17 +121,16 @@ class _cache_readonly(property):
         self.cachename = cachename
 
     def __call__(self, func):
-        return CachedAttribute(func,
-                               cachename=self.cachename)
+        return CachedAttribute(func, cachename=self.cachename)
 
 
 class cache_writable(_cache_readonly):
     """
     Decorator for CachedWritableAttribute
     """
+
     def __call__(self, func):
-        return CachedWritableAttribute(func,
-                                       cachename=self.cachename)
+        return CachedWritableAttribute(func, cachename=self.cachename)
 
 
 # Use pandas since it works with docs correctly

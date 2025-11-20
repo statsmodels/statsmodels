@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     EXAMPLE_FILES = glob.glob('python/*.py')
     for example in EXAMPLE_FILES:
-        KNOWN_BAD_FILE = any([bf in example for bf in BAD_FILES])
+        KNOWN_BAD_FILE = any(bf in example for bf in BAD_FILES)
         with open(example, encoding="utf-8") as pyfile:
             code = pyfile.read()
             try:

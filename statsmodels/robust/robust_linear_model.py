@@ -13,19 +13,19 @@ PJ Huber.  1973,  'The 1972 Wald Memorial Lectures: Robust Regression:
 R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
+
 import numpy as np
-import scipy.stats as stats
+from scipy import stats
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression._tools as reg_tools
 import statsmodels.regression.linear_model as lm
-import statsmodels.robust.norms as norms
-import statsmodels.robust.scale as scale
+from statsmodels.robust import norms, scale
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
-__all__ = ['RLM']
+__all__ = ["RLM"]
 
 
 def _check_convergence(criterion, iteration, tol, maxiter):
@@ -103,19 +103,18 @@ class RLM(base.LikelihoodModel):
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
     """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc
+        params=base._model_params_doc, extra_params=base._missing_param_doc
     )
 
-    def __init__(self, endog, exog, M=None, missing='none',
-                 **kwargs):
+    def __init__(self, endog, exog, M=None, missing="none", **kwargs):
         self._check_kwargs(kwargs)
         self.M = M if M is not None else norms.HuberT()
-        super(base.LikelihoodModel, self).__init__(endog, exog,
-                                                   missing=missing, **kwargs)
+        super(base.LikelihoodModel, self).__init__(
+            endog, exog, missing=missing, **kwargs
+        )
         self._initialize()
         # things to remove_data
-        self._data_attr.extend(['weights', 'pinv_wexog'])
+        self._data_attr.extend(["weights", "pinv_wexog"])
 
     def _initialize(self):
         """
@@ -124,10 +123,10 @@ class RLM(base.LikelihoodModel):
         Resets the history and number of iterations.
         """
         self.pinv_wexog = np.linalg.pinv(self.exog)
-        self.normalized_cov_params = np.dot(self.pinv_wexog,
-                                            np.transpose(self.pinv_wexog))
-        self.df_resid = (float(self.exog.shape[0] -
-                               np.linalg.matrix_rank(self.exog)))
+        self.normalized_cov_params = np.dot(
+            self.pinv_wexog, np.transpose(self.pinv_wexog)
+        )
+        self.df_resid = float(self.exog.shape[0] - np.linalg.matrix_rank(self.exog))
         self.df_model = float(np.linalg.matrix_rank(self.exog) - 1)
         self.nobs = float(self.endog.shape[0])
 
@@ -168,14 +167,14 @@ class RLM(base.LikelihoodModel):
         return self.M(tmp_resid / tmp_results.scale).sum()
 
     def _update_history(self, tmp_results, history, conv):
-        history['params'].append(tmp_results.params)
-        history['scale'].append(tmp_results.scale)
-        if conv == 'dev':
-            history['deviance'].append(self.deviance(tmp_results))
-        elif conv == 'sresid':
-            history['sresid'].append(tmp_results.resid / tmp_results.scale)
-        elif conv == 'weights':
-            history['weights'].append(tmp_results.model.weights)
+        history["params"].append(tmp_results.params)
+        history["scale"].append(tmp_results.scale)
+        if conv == "dev":
+            history["deviance"].append(self.deviance(tmp_results))
+        elif conv == "sresid":
+            history["sresid"].append(tmp_results.resid / tmp_results.scale)
+        elif conv == "weights":
+            history["weights"].append(tmp_results.model.weights)
         return history
 
     def _estimate_scale(self, resid):
@@ -183,20 +182,30 @@ class RLM(base.LikelihoodModel):
         Estimates the scale based on the option provided to the fit method.
         """
         if isinstance(self.scale_est, str):
-            if self.scale_est.lower() == 'mad':
+            if self.scale_est.lower() == "mad":
                 return scale.mad(resid, center=0)
             else:
-                raise ValueError("Option %s for scale_est not understood" %
-                                 self.scale_est)
+                raise ValueError(
+                    "Option %s for scale_est not understood" % self.scale_est
+                )
         elif isinstance(self.scale_est, scale.HuberScale):
             return self.scale_est(self.df_resid, self.nobs, resid)
         else:
             # use df correction to match HuberScale
             return self.scale_est(resid) * np.sqrt(self.nobs / self.df_resid)
 
-    def fit(self, maxiter=50, tol=1e-8, scale_est='mad', init=None, cov='H1',
-            update_scale=True, conv='dev', start_params=None, start_scale=None,
-            ):
+    def fit(
+        self,
+        maxiter=50,
+        tol=1e-8,
+        scale_est="mad",
+        init=None,
+        cov="H1",
+        update_scale=True,
+        conv="dev",
+        start_params=None,
+        start_scale=None,
+    ):
         """
         Fits the model using iteratively reweighted least squares.
 
@@ -264,13 +273,17 @@ class RLM(base.LikelihoodModel):
         else:
             start_params = np.asarray(start_params, dtype=np.double).squeeze()
             start_params = np.atleast_1d(start_params)
-            if (start_params.shape[0] != self.exog.shape[1] or
-                    start_params.ndim != 1):
-                raise ValueError('start_params must by a 1-d array with {} '
-                                 'values'.format(self.exog.shape[1]))
-            fake_wls = reg_tools._MinimalWLS(self.endog, self.exog,
-                                             weights=np.ones_like(self.endog),
-                                             check_weights=False)
+            if start_params.shape[0] != self.exog.shape[1] or start_params.ndim != 1:
+                raise ValueError(
+                    "start_params must by a 1-d array with {} "
+                    "values".format(self.exog.shape[1])
+                )
+            fake_wls = reg_tools._MinimalWLS(
+                self.endog,
+                self.exog,
+                weights=np.ones_like(self.endog),
+                check_weights=False,
+            )
             wls_results = fake_wls.results(start_params)
 
         if not init and not start_scale:
@@ -281,17 +294,17 @@ class RLM(base.LikelihoodModel):
                 self.scale_est = scale_est = "fixed"
 
         history = dict(params=[np.inf], scale=[])
-        if conv == 'coefs':
-            criterion = history['params']
-        elif conv == 'dev':
+        if conv == "coefs":
+            criterion = history["params"]
+        elif conv == "dev":
             history.update(dict(deviance=[np.inf]))
-            criterion = history['deviance']
-        elif conv == 'sresid':
+            criterion = history["deviance"]
+        elif conv == "sresid":
             history.update(dict(sresid=[np.inf]))
-            criterion = history['sresid']
-        elif conv == 'weights':
+            criterion = history["sresid"]
+        elif conv == "weights":
             history.update(dict(weights=[np.inf]))
-            criterion = history['weights']
+            criterion = history["weights"]
 
         # done one iteration so update
         history = self._update_history(wls_results, history, conv)
@@ -300,30 +313,40 @@ class RLM(base.LikelihoodModel):
         while not converged:
             if self.scale == 0.0:
                 import warnings
-                warnings.warn('Estimated scale is 0.0 indicating that the most'
-                              ' last iteration produced a perfect fit of the '
-                              'weighted data.', ConvergenceWarning)
+
+                warnings.warn(
+                    "Estimated scale is 0.0 indicating that the most"
+                    " last iteration produced a perfect fit of the "
+                    "weighted data.",
+                    ConvergenceWarning,
+                    stacklevel=2,
+                )
                 break
             self.weights = self.M.weights(wls_results.resid / self.scale)
-            wls_results = reg_tools._MinimalWLS(self.endog, self.exog,
-                                                weights=self.weights,
-                                                check_weights=True).fit()
+            wls_results = reg_tools._MinimalWLS(
+                self.endog, self.exog, weights=self.weights, check_weights=True
+            ).fit()
             if update_scale is True:
                 self.scale = self._estimate_scale(wls_results.resid)
             history = self._update_history(wls_results, history, conv)
             iteration += 1
             converged = _check_convergence(criterion, iteration, tol, maxiter)
-        results = RLMResults(self, wls_results.params,
-                             self.normalized_cov_params, self.scale)
+        results = RLMResults(
+            self, wls_results.params, self.normalized_cov_params, self.scale
+        )
 
-        history['iteration'] = iteration
+        history["iteration"] = iteration
         results.fit_history = history
-        results.fit_options = dict(cov=cov.upper(), scale_est=scale_est,
-                                   norm=self.M.__class__.__name__, conv=conv)
+        results.fit_options = dict(
+            cov=cov.upper(),
+            scale_est=scale_est,
+            norm=self.M.__class__.__name__,
+            conv=conv,
+        )
         # norm is not changed in fit, no old state
 
         # doing the next causes exception
-        # self.cov = self.scale_est = None #reset for additional fits
+        # self.cov = self.scale_est = None # reset for additional fits
         # iteration and history could contain wrong state with repeated fit
         return RLMResultsWrapper(results)
 
@@ -422,7 +445,7 @@ class RLMResults(base.LikelihoodModelResults):
         self.nobs = model.nobs
         self._cache = {}
         # for remove_data
-        self._data_in_cache.extend(['sresid'])
+        self._data_in_cache.extend(["sresid"])
 
         self.cov_params_default = self.bcov_scaled
         # TODO: "pvals" should come from chisq on bse?
@@ -456,32 +479,41 @@ class RLMResults(base.LikelihoodModelResults):
         model = self.model
         m = np.mean(model.M.psi_deriv(self.sresid))
         var_psiprime = np.var(model.M.psi_deriv(self.sresid))
-        k = 1 + (self.df_model + 1) / self.nobs * var_psiprime / m ** 2
+        k = 1 + (self.df_model + 1) / self.nobs * var_psiprime / m**2
 
         if model.cov == "H1":
             ss_psi = np.sum(model.M.psi(self.sresid) ** 2)
             s_psi_deriv = np.sum(model.M.psi_deriv(self.sresid))
-            return k ** 2 * (1 / self.df_resid * ss_psi * self.scale ** 2) /\
-                ((1 / self.nobs * s_psi_deriv) ** 2) *\
-                model.normalized_cov_params
+            return (
+                k**2
+                * (1 / self.df_resid * ss_psi * self.scale**2)
+                / ((1 / self.nobs * s_psi_deriv) ** 2)
+                * model.normalized_cov_params
+            )
         else:
-            W = np.dot(model.M.psi_deriv(self.sresid) * model.exog.T,
-                       model.exog)
+            W = np.dot(model.M.psi_deriv(self.sresid) * model.exog.T, model.exog)
             W_inv = np.linalg.inv(W)
             # [W_jk]^-1 = [SUM(psi_deriv(Sr_i)*x_ij*x_jk)]^-1
             # where Sr are the standardized residuals
             if model.cov == "H2":
                 # These are correct, based on Huber (1973) 8.13
-                return k * (1 / self.df_resid) * np.sum(
-                    model.M.psi(self.sresid) ** 2) * self.scale ** 2 \
-                       / ((1 / self.nobs) *
-                          np.sum(model.M.psi_deriv(self.sresid))) * W_inv
+                return (
+                    k
+                    * (1 / self.df_resid)
+                    * np.sum(model.M.psi(self.sresid) ** 2)
+                    * self.scale**2
+                    / ((1 / self.nobs) * np.sum(model.M.psi_deriv(self.sresid)))
+                    * W_inv
+                )
             elif model.cov == "H3":
-                return k ** -1 * 1 / self.df_resid * np.sum(
-                    model.M.psi(self.sresid) ** 2) * self.scale ** 2 \
-                       * np.dot(
-                    np.dot(W_inv, np.dot(model.exog.T, model.exog)),
-                    W_inv)
+                return (
+                    k**-1
+                    * 1
+                    / self.df_resid
+                    * np.sum(model.M.psi(self.sresid) ** 2)
+                    * self.scale**2
+                    * np.dot(np.dot(W_inv, np.dot(model.exog.T, model.exog)), W_inv)
+                )
 
     @cache_readonly
     def pvalues(self):
@@ -495,42 +527,53 @@ class RLMResults(base.LikelihoodModelResults):
     def chisq(self):
         return (self.params / self.bse) ** 2
 
-    def summary(self, yname=None, xname=None, title=0, alpha=.05,
-                return_fmt='text'):
+    def summary(self, yname=None, xname=None, title=0, alpha=0.05, return_fmt="text"):
         """
         This is for testing the new summary setup
         """
-        top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
-                    ('Method:', ['IRLS']),
-                    ('Norm:', [self.fit_options['norm']]),
-                    ('Scale Est.:', [self.fit_options['scale_est']]),
-                    ('Cov Type:', [self.fit_options['cov']]),
-                    ('Date:', None),
-                    ('Time:', None),
-                    ('No. Iterations:', ["%d" % self.fit_history['iteration']])
-                    ]
-        top_right = [('No. Observations:', None),
-                     ('Df Residuals:', None),
-                     ('Df Model:', None)
-                     ]
+        top_left = [
+            ("Dep. Variable:", None),
+            ("Model:", None),
+            ("Method:", ["IRLS"]),
+            ("Norm:", [self.fit_options["norm"]]),
+            ("Scale Est.:", [self.fit_options["scale_est"]]),
+            ("Cov Type:", [self.fit_options["cov"]]),
+            ("Date:", None),
+            ("Time:", None),
+            ("No. Iterations:", ["%d" % self.fit_history["iteration"]]),
+        ]
+        top_right = [
+            ("No. Observations:", None),
+            ("Df Residuals:", None),
+            ("Df Model:", None),
+        ]
 
         if title is not None:
             title = "Robust linear Model Regression Results"
 
         # boiler plate
         from statsmodels.iolib.summary import Summary
+
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                              use_t=self.use_t)
+        smry.add_table_2cols(
+            self,
+            gleft=top_left,
+            gright=top_right,
+            yname=yname,
+            xname=xname,
+            title=title,
+        )
+        smry.add_table_params(
+            self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t
+        )
 
         # add warnings/notes, added to text format only
         etext = []
-        wstr = ("If the model instance has been used for another fit with "
-                "different fit parameters, then the fit options might not be "
-                "the correct ones anymore .")
+        wstr = (
+            "If the model instance has been used for another fit with "
+            "different fit parameters, then the fit options might not be "
+            "the correct ones anymore ."
+        )
         etext.append(wstr)
 
         if etext:
@@ -538,8 +581,9 @@ class RLMResults(base.LikelihoodModelResults):
 
         return smry
 
-    def summary2(self, xname=None, yname=None, title=None, alpha=.05,
-                 float_format="%.4f"):
+    def summary2(
+        self, xname=None, yname=None, title=None, alpha=0.05, float_format="%.4f"
+    ):
         """Experimental summary function for regression results
 
         Parameters
@@ -569,9 +613,16 @@ class RLMResults(base.LikelihoodModelResults):
         statsmodels.iolib.summary2.Summary : class to hold summary results
         """
         from statsmodels.iolib import summary2
+
         smry = summary2.Summary()
-        smry.add_base(results=self, alpha=alpha, float_format=float_format,
-                      xname=xname, yname=yname, title=title)
+        smry.add_base(
+            results=self,
+            alpha=alpha,
+            float_format=float_format,
+            xname=xname,
+            yname=yname,
+            title=title,
+        )
 
         return smry
 
@@ -580,4 +631,4 @@ class RLMResultsWrapper(lm.RegressionResultsWrapper):
     pass
 
 
-wrap.populate_wrapper(RLMResultsWrapper, RLMResults)  # noqa:E305
+wrap.populate_wrapper(RLMResultsWrapper, RLMResults)

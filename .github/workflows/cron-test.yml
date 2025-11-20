@@ -1,0 +1,46 @@
+name: Build wheels
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '37 0 * * 2' # 2/weekly
+
+jobs:
+  build_wheels:
+    name: ${{ matrix.os }}, Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        python: [cp314]
+        os: [ubuntu-latest, windows-latest]
+    env:
+      BUILD_COMMIT: "main"
+      MKL_NUM_THREADS: 1
+      OMP_NUM_THREADS: 1
+      OPENLAS_NUM_THREADS: 1
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - uses: pypa/cibuildwheel@v3.3.0
+        env:
+          CIBW_BUILD: ${{ matrix.python }}-*
+          CIBW_BEFORE_BUILD: python -m pip install pip --upgrade
+          CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['--skip-slow','-n','auto','--skip-examples'])"
+          CIBW_TEST_REQUIRES: pytest pytest-xdist  pytest-cov matplotlib numpy scipy pandas seaborn
+          CIBW_SKIP: "pp* *-musllinux_* *-win32"
+          CIBW_ARCHS_LINUX: "x86_64"

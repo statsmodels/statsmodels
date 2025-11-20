@@ -14,8 +14,7 @@ NOTE: As it is, this module does not interact with the existing API
 import numpy as np
 from scipy.special import erf
 
-
-#TODO:
+# TODO:
 # - make sure we only receive int input for wang-ryzin and aitchison-aitken
 # - Check for the scalar Xi case everywhere
 
@@ -184,7 +183,7 @@ def aitchison_aitken_cdf(h, Xi, x_u):
     ordered = np.zeros(Xi.size)
     num_levels = Xi_vals.size
     for x in Xi_vals:
-        if x <= x_u:  #FIXME: why a comparison for unordered variables?
+        if x <= x_u:  # FIXME: why a comparison for unordered variables?
             ordered += aitchison_aitken(h, Xi, x, num_levels=num_levels)
 
     return ordered

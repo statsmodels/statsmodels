@@ -1,6 +1,7 @@
 import numpy as np
 
-def _make_index(prob,size):
+
+def _make_index(prob, size):
     """
     Returns a boolean index for given probabilities.
 
@@ -10,9 +11,10 @@ def _make_index(prob,size):
     being True and a 25% chance of the second column being True. The
     columns are mutually exclusive.
     """
-    rv = np.random.uniform(size=(size,1))
+    rv = np.random.uniform(size=(size, 1))
     cumprob = np.cumsum(prob)
-    return np.logical_and(np.r_[0,cumprob[:-1]] <= rv, rv < cumprob)
+    return np.logical_and(np.r_[0, cumprob[:-1]] <= rv, rv < cumprob)
+
 
 def mixture_rvs(prob, size, dist, kwargs=None):
     """
@@ -50,34 +52,34 @@ def mixture_rvs(prob, size, dist, kwargs=None):
     if kwargs is None:
         kwargs = ({},)*len(prob)
 
-    idx = _make_index(prob,size)
+    idx = _make_index(prob, size)
     sample = np.empty(size)
     for i in range(len(prob)):
-        sample_idx = idx[...,i]
+        sample_idx = idx[..., i]
         sample_size = sample_idx.sum()
-        loc = kwargs[i].get('loc',0)
-        scale = kwargs[i].get('scale',1)
-        args = kwargs[i].get('args',())
-        sample[sample_idx] = dist[i].rvs(*args, **dict(loc=loc,scale=scale,
-            size=sample_size))
+        loc = kwargs[i].get("loc", 0)
+        scale = kwargs[i].get("scale", 1)
+        args = kwargs[i].get("args", ())
+        sample[sample_idx] = dist[i].rvs(
+            *args, **dict(loc=loc, scale=scale, size=sample_size)
+        )
     return sample
 
 
 class MixtureDistribution:
-    '''univariate mixture distribution
+    """univariate mixture distribution
 
     for simple case for now (unbound support)
     does not yet inherit from scipy.stats.distributions
 
     adding pdf to mixture_rvs, some restrictions on broadcasting
     Currently it does not hold any state, all arguments included in each method.
-    '''
+    """
 
-    #def __init__(self, prob, size, dist, kwargs=None):
+    # def __init__(self, prob, size, dist, kwargs=None):
 
     def rvs(self, prob, size, dist, kwargs=None):
         return mixture_rvs(prob, size, dist, kwargs=kwargs)
-
 
     def pdf(self, x, prob, dist, kwargs=None):
         """
@@ -120,10 +122,10 @@ class MixtureDistribution:
             kwargs = ({},)*len(prob)
 
         for i in range(len(prob)):
-            loc = kwargs[i].get('loc',0)
-            scale = kwargs[i].get('scale',1)
-            args = kwargs[i].get('args',())
-            if i == 0:  #assume all broadcast the same as the first dist
+            loc = kwargs[i].get("loc", 0)
+            scale = kwargs[i].get("scale", 1)
+            args = kwargs[i].get("args", ())
+            if i == 0:  # assume all broadcast the same as the first dist
                 pdf_ = prob[i] * dist[i].pdf(x, *args, loc=loc, scale=scale)
             else:
                 pdf_ += prob[i] * dist[i].pdf(x, *args, loc=loc, scale=scale)
@@ -172,10 +174,10 @@ class MixtureDistribution:
             kwargs = ({},)*len(prob)
 
         for i in range(len(prob)):
-            loc = kwargs[i].get('loc',0)
-            scale = kwargs[i].get('scale',1)
-            args = kwargs[i].get('args',())
-            if i == 0:  #assume all broadcast the same as the first dist
+            loc = kwargs[i].get("loc", 0)
+            scale = kwargs[i].get("scale", 1)
+            args = kwargs[i].get("args", ())
+            if i == 0:  # assume all broadcast the same as the first dist
                 cdf_ = prob[i] * dist[i].cdf(x, *args, loc=loc, scale=scale)
             else:
                 cdf_ += prob[i] * dist[i].cdf(x, *args, loc=loc, scale=scale)
@@ -225,55 +227,60 @@ def mv_mixture_rvs(prob, size, dist, nvars, **kwargs):
     if kwargs is None:
         kwargs = ({},)*len(prob)
 
-    idx = _make_index(prob,size)
+    idx = _make_index(prob, size)
     sample = np.empty((size, nvars))
     for i in range(len(prob)):
-        sample_idx = idx[...,i]
+        sample_idx = idx[..., i]
         sample_size = sample_idx.sum()
-        #loc = kwargs[i].get('loc',0)
-        #scale = kwargs[i].get('scale',1)
-        #args = kwargs[i].get('args',())
+        # loc = kwargs[i].get('loc',0)
+        # scale = kwargs[i].get('scale',1)
+        # args = kwargs[i].get('args',())
         # use int to avoid numpy bug with np.random.multivariate_normal
         sample[sample_idx] = dist[i].rvs(size=int(sample_size))
     return sample
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     from scipy import stats
 
-    obs_dist = mixture_rvs([.25,.75], size=10000, dist=[stats.norm, stats.beta],
-                kwargs=(dict(loc=-1,scale=.5),dict(loc=1,scale=1,args=(1,.5))))
-
-
+    obs_dist = mixture_rvs(
+        [0.25, 0.75],
+        size=10000,
+        dist=[stats.norm, stats.beta],
+        kwargs=(dict(loc=-1, scale=0.5), dict(loc=1, scale=1, args=(1, 0.5))),
+    )
 
     nobs = 10000
     mix = MixtureDistribution()
-##    mrvs = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
-##                   kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.75)))
+    #    mrvs = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
+    #                   kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.75)))
 
-    mix_kwds = (dict(loc=-1,scale=.25),dict(loc=1,scale=.75))
-    mrvs = mix.rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
-                   kwargs=mix_kwds)
+    mix_kwds = (dict(loc=-1, scale=0.25), dict(loc=1, scale=0.75))
+    mrvs = mix.rvs(
+        [1 / 3.0, 2 / 3.0], size=nobs, dist=[stats.norm, stats.norm], kwargs=mix_kwds
+    )
 
-    grid = np.linspace(-4,4, 100)
-    mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
-                   kwargs=mix_kwds)
-    mcdf = mix.cdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
-                   kwargs=mix_kwds)
+    grid = np.linspace(-4, 4, 100)
+    mpdf = mix.pdf(
+        grid, [1 / 3.0, 2 / 3.0], dist=[stats.norm, stats.norm], kwargs=mix_kwds
+    )
+    mcdf = mix.cdf(
+        grid, [1 / 3.0, 2 / 3.0], dist=[stats.norm, stats.norm], kwargs=mix_kwds
+    )
 
     doplot = 1
     if doplot:
         import matplotlib.pyplot as plt
-        plt.figure()
-        plt.hist(mrvs, bins=50, normed=True, color='red')
-        plt.title('histogram of sample and pdf')
-        plt.plot(grid, mpdf, lw=2, color='black')
 
         plt.figure()
-        plt.hist(mrvs, bins=50, normed=True, cumulative=True, color='red')
-        plt.title('histogram of sample and pdf')
-        plt.plot(grid, mcdf, lw=2, color='black')
+        plt.hist(mrvs, bins=50, normed=True, color="red")
+        plt.title("histogram of sample and pdf")
+        plt.plot(grid, mpdf, lw=2, color="black")
+
+        plt.figure()
+        plt.hist(mrvs, bins=50, normed=True, cumulative=True, color="red")
+        plt.title("histogram of sample and pdf")
+        plt.plot(grid, mcdf, lw=2, color="black")
 
         plt.show()

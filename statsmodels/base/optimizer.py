@@ -2,19 +2,22 @@
 Functions that are general enough to use for any model fitting. The idea is
 to untie these from LikelihoodModel so that they may be re-used generally.
 """
+
 from __future__ import annotations
 
-from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
+from statsmodels.compat.scipy import SP_LT_15, SP_LT_17, SP_LT_115
 
-from typing import Any
-from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from scipy import optimize
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
-    extra = set(list(kwargs.keys())).difference(list(allowed))
+    extra = set(kwargs.keys()).difference(list(allowed))
     if extra:
         import warnings
 
@@ -24,7 +27,8 @@ def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
             f"{method} is: {', '.join(allowed)}. The list of unsupported "
             f"keyword arguments passed include: {', '.join(extra)}. After "
             "release 0.14, this will raise.",
-            FutureWarning
+            FutureWarning,
+            stacklevel=2,
         )
 
 
@@ -35,9 +39,21 @@ def _check_method(method, methods):
 
 
 class Optimizer:
-    def _fit(self, objective, gradient, start_params, fargs, kwargs,
-             hessian=None, method='newton', maxiter=100, full_output=True,
-             disp=True, callback=None, retall=False):
+    def _fit(
+        self,
+        objective,
+        gradient,
+        start_params,
+        fargs,
+        kwargs,
+        hessian=None,
+        method="newton",
+        maxiter=100,
+        full_output=True,
+        disp=True,
+        callback=None,
+        retall=False,
+    ):
         """
         Fit function for any model with an objective function.
 
@@ -216,24 +232,33 @@ class Optimizer:
         """
         # TODO: generalize the regularization stuff
         # Extract kwargs specific to fit_regularized calling fit
-        extra_fit_funcs = kwargs.get('extra_fit_funcs', dict())
+        extra_fit_funcs = kwargs.get("extra_fit_funcs", {})
 
-        methods = ['newton', 'nm', 'bfgs', 'lbfgs', 'powell', 'cg', 'ncg',
-                   'basinhopping', 'minimize']
+        methods = [
+            "newton",
+            "nm",
+            "bfgs",
+            "lbfgs",
+            "powell",
+            "cg",
+            "ncg",
+            "basinhopping",
+            "minimize",
+        ]
         methods += extra_fit_funcs.keys()
         method = method.lower()
         _check_method(method, methods)
 
         fit_funcs = {
-            'newton': _fit_newton,
-            'nm': _fit_nm,  # Nelder-Mead
-            'bfgs': _fit_bfgs,
-            'lbfgs': _fit_lbfgs,
-            'cg': _fit_cg,
-            'ncg': _fit_ncg,
-            'powell': _fit_powell,
-            'basinhopping': _fit_basinhopping,
-            'minimize': _fit_minimize  # wrapper for scipy.optimize.minimize
+            "newton": _fit_newton,
+            "nm": _fit_nm,  # Nelder-Mead
+            "bfgs": _fit_bfgs,
+            "lbfgs": _fit_lbfgs,
+            "cg": _fit_cg,
+            "ncg": _fit_ncg,
+            "powell": _fit_powell,
+            "basinhopping": _fit_basinhopping,
+            "minimize": _fit_minimize,  # wrapper for scipy.optimize.minimize
         }
 
         # NOTE: fit_regularized checks the methods for these but it should be
@@ -242,15 +267,31 @@ class Optimizer:
             fit_funcs.update(extra_fit_funcs)
 
         func = fit_funcs[method]
-        xopt, retvals = func(objective, gradient, start_params, fargs, kwargs,
-                             disp=disp, maxiter=maxiter, callback=callback,
-                             retall=retall, full_output=full_output,
-                             hess=hessian)
+        xopt, retvals = func(
+            objective,
+            gradient,
+            start_params,
+            fargs,
+            kwargs,
+            disp=disp,
+            maxiter=maxiter,
+            callback=callback,
+            retall=retall,
+            full_output=full_output,
+            hess=hessian,
+        )
 
-        optim_settings = {'optimizer': method, 'start_params': start_params,
-                          'maxiter': maxiter, 'full_output': full_output,
-                          'disp': disp, 'fargs': fargs, 'callback': callback,
-                          'retall': retall, "extra_fit_funcs": extra_fit_funcs}
+        optim_settings = {
+            "optimizer": method,
+            "start_params": start_params,
+            "maxiter": maxiter,
+            "full_output": full_output,
+            "disp": disp,
+            "fargs": fargs,
+            "callback": callback,
+            "retall": retall,
+            "extra_fit_funcs": extra_fit_funcs,
+        }
         optim_settings.update(kwargs)
         # set as attributes or return?
         return xopt, retvals, optim_settings
@@ -278,13 +319,23 @@ class Optimizer:
         raise NotImplementedError
 
 
-########################################
+#
 # Helper functions to fit
 
 
-def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
-                  maxiter=100, callback=None, retall=False,
-                  full_output=True, hess=None):
+def _fit_minimize(
+    f,
+    score,
+    start_params,
+    fargs,
+    kwargs,
+    disp=True,
+    maxiter=100,
+    callback=None,
+    retall=False,
+    full_output=True,
+    hess=None,
+):
     """
     Fit using scipy minimize, where kwarg `min_method` defines the algorithm.
 
@@ -329,62 +380,93 @@ def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
         information returned from the solver used. If it is False, this is
         None.
     """
-    kwargs.setdefault('min_method', 'BFGS')
+    kwargs.setdefault("min_method", "BFGS")
 
     # prepare options dict for minimize
-    filter_opts = ['extra_fit_funcs', 'niter', 'min_method', 'tol', 'bounds', 'constraints']
+    filter_opts = [
+        "extra_fit_funcs",
+        "niter",
+        "min_method",
+        "tol",
+        "bounds",
+        "constraints",
+    ]
     options = {k: v for k, v in kwargs.items() if k not in filter_opts}
-    options['disp'] = disp
-    options['maxiter'] = maxiter
+    options["disp"] = disp
+    options["maxiter"] = maxiter
 
     # Use Hessian/Jacobian only if they're required by the method
-    no_hess = ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'COBYLA', 'SLSQP']
-    no_jac = ['Nelder-Mead', 'Powell', 'COBYLA']
-    if kwargs['min_method'] in no_hess:
+    no_hess = ["Nelder-Mead", "Powell", "CG", "BFGS", "COBYLA", "SLSQP"]
+    no_jac = ["Nelder-Mead", "Powell", "COBYLA"]
+    if kwargs["min_method"] in no_hess:
         hess = None
-    if kwargs['min_method'] in no_jac:
+    if kwargs["min_method"] in no_jac:
         score = None
 
     # Use bounds/constraints only if they're allowed by the method
-    has_bounds = ['L-BFGS-B', 'TNC', 'SLSQP', 'trust-constr']
+    has_bounds = ["L-BFGS-B", "TNC", "SLSQP", "trust-constr"]
     # Added in SP 1.5
     if not SP_LT_15:
-        has_bounds += ['Powell']
+        has_bounds += ["Powell"]
     # Added in SP 1.7
     if not SP_LT_17:
-        has_bounds += ['Nelder-Mead']
-    has_constraints = ['COBYLA', 'SLSQP', 'trust-constr']
+        has_bounds += ["Nelder-Mead"]
+    has_constraints = ["COBYLA", "SLSQP", "trust-constr"]
 
-    if 'bounds' in kwargs.keys() and kwargs['min_method'] in has_bounds:
-        bounds = kwargs['bounds']
+    if "bounds" in kwargs.keys() and kwargs["min_method"] in has_bounds:
+        bounds = kwargs["bounds"]
     else:
         bounds = None
 
-    if 'constraints' in kwargs.keys() and kwargs['min_method'] in has_constraints:
-        constraints = kwargs['constraints']
+    if "constraints" in kwargs.keys() and kwargs["min_method"] in has_constraints:
+        constraints = kwargs["constraints"]
     else:
         constraints = ()
 
-    res = optimize.minimize(f, start_params, args=fargs, method=kwargs['min_method'],
-                            jac=score, hess=hess, bounds=bounds, constraints=constraints,
-                            callback=callback, options=options)
+    res = optimize.minimize(
+        f,
+        start_params,
+        args=fargs,
+        method=kwargs["min_method"],
+        jac=score,
+        hess=hess,
+        bounds=bounds,
+        constraints=constraints,
+        callback=callback,
+        options=options,
+    )
 
     xopt = res.x
     retvals = None
     if full_output:
-        nit = getattr(res, 'nit', np.nan)  # scipy 0.14 compat
-        retvals = {'fopt': res.fun, 'iterations': nit,
-                   'fcalls': res.nfev, 'warnflag': res.status,
-                   'converged': res.success}
+        nit = getattr(res, "nit", np.nan)  # scipy 0.14 compat
+        retvals = {
+            "fopt": res.fun,
+            "iterations": nit,
+            "fcalls": res.nfev,
+            "warnflag": res.status,
+            "converged": res.success,
+        }
         if retall:
-            retvals.update({'allvecs': res.values()})
+            retvals.update({"allvecs": res.values()})
 
     return xopt, retvals
 
 
-def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
-                maxiter=100, callback=None, retall=False,
-                full_output=True, hess=None, ridge_factor=1e-10):
+def _fit_newton(
+    f,
+    score,
+    start_params,
+    fargs,
+    kwargs,
+    disp=True,
+    maxiter=100,
+    callback=None,
+    retall=False,
+    full_output=True,
+    hess=None,
+    ridge_factor=1e-10,
+):
     """
     Fit using Newton-Raphson algorithm.
 
@@ -432,15 +514,14 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
         None.
     """
     check_kwargs(kwargs, ("tol", "ridge_factor"), "newton")
-    tol = kwargs.setdefault('tol', 1e-8)
-    ridge_factor = kwargs.setdefault('ridge_factor', 1e-10)
+    tol = kwargs.setdefault("tol", 1e-8)
+    ridge_factor = kwargs.setdefault("ridge_factor", 1e-10)
     iterations = 0
     oldparams = np.inf
     newparams = np.asarray(start_params)
     if retall:
         history = [oldparams, newparams]
-    while (iterations < maxiter and np.any(np.abs(newparams -
-                                                  oldparams) > tol)):
+    while iterations < maxiter and np.any(np.abs(newparams - oldparams) > tol):
         H = np.asarray(hess(newparams))
         # regularize Hessian, not clear what ridge factor should be
         # keyword option with absolute default 1e-10, see #1847
@@ -457,8 +538,7 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
     if iterations == maxiter:
         warnflag = 1
         if disp:
-            print("Warning: Maximum number of iterations has been "
-                  "exceeded.")
+            print("Warning: Maximum number of iterations has been exceeded.")
             print("         Current function value: %f" % fval)
             print("         Iterations: %d" % iterations)
     else:
@@ -468,16 +548,24 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
             print("         Current function value: %f" % fval)
             print("         Iterations %d" % iterations)
     if full_output:
-        (xopt, fopt, niter,
-         gopt, hopt) = (newparams, f(newparams, *fargs),
-                        iterations, score(newparams),
-                        hess(newparams))
+        (xopt, fopt, niter, gopt, hopt) = (
+            newparams,
+            f(newparams, *fargs),
+            iterations,
+            score(newparams),
+            hess(newparams),
+        )
         converged = not warnflag
-        retvals = {'fopt': fopt, 'iterations': niter, 'score': gopt,
-                   'Hessian': hopt, 'warnflag': warnflag,
-                   'converged': converged}
+        retvals = {
+            "fopt": fopt,
+            "iterations": niter,
+            "score": gopt,
+            "Hessian": hopt,
+            "warnflag": warnflag,
+            "converged": converged,
+        }
         if retall:
-            retvals.update({'allvecs': history})
+            retvals.update({"allvecs": history})
 
     else:
         xopt = newparams
@@ -486,9 +574,19 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
     return xopt, retvals
 
 
-def _fit_bfgs(f, score, start_params, fargs, kwargs, disp=True,
-              maxiter=100, callback=None, retall=False,
-              full_output=True, hess=None):
+def _fit_bfgs(
+    f,
+    score,
+    start_params,
+    fargs,
+    kwargs,
+    disp=True,
+    maxiter=100,
+    callback=None,
+    retall=False,
+    full_output=True,
+    hess=None,
+):
     """
     Fit using Broyden-Fletcher-Goldfarb-Shannon algorithm.
 
@@ -534,25 +632,40 @@ def _fit_bfgs(f, score, start_params, fargs, kwargs, disp=True,
         None.
     """
     check_kwargs(kwargs, ("gtol", "norm", "epsilon"), "bfgs")
-    gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
-    norm = kwargs.setdefault('norm', np.inf)
-    epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
-    retvals = optimize.fmin_bfgs(f, start_params, score, args=fargs,
-                                 gtol=gtol, norm=norm, epsilon=epsilon,
-                                 maxiter=maxiter, full_output=full_output,
-                                 disp=disp, retall=retall, callback=callback)
+    gtol = kwargs.setdefault("gtol", 1.0000000000000001e-05)
+    norm = kwargs.setdefault("norm", np.inf)
+    epsilon = kwargs.setdefault("epsilon", 1.4901161193847656e-08)
+    retvals = optimize.fmin_bfgs(
+        f,
+        start_params,
+        score,
+        args=fargs,
+        gtol=gtol,
+        norm=norm,
+        epsilon=epsilon,
+        maxiter=maxiter,
+        full_output=full_output,
+        disp=disp,
+        retall=retall,
+        callback=callback,
+    )
     if full_output:
         if not retall:
             xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag = retvals
         else:
-            (xopt, fopt, gopt, Hinv, fcalls,
-             gcalls, warnflag, allvecs) = retvals
+            (xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag, allvecs) = retvals
         converged = not warnflag
-        retvals = {'fopt': fopt, 'gopt': gopt, 'Hinv': Hinv,
-                   'fcalls': fcalls, 'gcalls': gcalls, 'warnflag':
-                       warnflag, 'converged': converged}
+        retvals = {
+            "fopt": fopt,
+            "gopt": gopt,
+            "Hinv": Hinv,
+            "fcalls": fcalls,
+            "gcalls": gcalls,
+            "warnflag": warnflag,
+            "converged": converged,
+        }
         if retall:
-            retvals.update({'allvecs': allvecs})
+            retvals.update({"allvecs": allvecs})
     else:
         xopt = retvals
         retvals = None
@@ -560,8 +673,19 @@ def _fit_bfgs(f, score, start_params, fargs, kwargs, disp=True,
     return xopt, retvals
 
 
-def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
-               callback=None, retall=False, full_output=True, hess=None):
+def _fit_lbfgs(
+    f,
+    score,
+    start_params,
+    fargs,
+    kwargs,
+    disp=True,
+    maxiter=100,
+    callback=None,
+    retall=False,
+    full_output=True,
+    hess=None,
+):
     """
     Fit using Limited-memory Broyden-Fletcher-Goldfarb-Shannon algorithm.
 
@@ -614,23 +738,33 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
     """
     check_kwargs(
         kwargs,
-        ("m", "pgtol", "factr", "maxfun", "epsilon", "approx_grad", "bounds", "loglike_and_score", "iprint"),
-        "lbfgs"
+        (
+            "m",
+            "pgtol",
+            "factr",
+            "maxfun",
+            "epsilon",
+            "approx_grad",
+            "bounds",
+            "loglike_and_score",
+            "iprint",
+        ),
+        "lbfgs",
     )
     # Use unconstrained optimization by default.
-    bounds = kwargs.setdefault('bounds', [(None, None)] * len(start_params))
-    kwargs.setdefault('iprint', 0)
+    bounds = kwargs.setdefault("bounds", [(None, None)] * len(start_params))
+    kwargs.setdefault("iprint", 0)
 
     # Pass the following keyword argument names through to fmin_l_bfgs_b
     # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
     # default values.
-    names = ('m', 'pgtol', 'factr', 'maxfun', 'epsilon', 'approx_grad')
+    names = ("m", "pgtol", "factr", "maxfun", "epsilon", "approx_grad")
     extra_kwargs = {x: kwargs[x] for x in names if x in kwargs}
 
     # Extract values for the options related to the gradient.
-    approx_grad = kwargs.get('approx_grad', False)
-    loglike_and_score = kwargs.get('loglike_and_score', None)
-    epsilon = kwargs.get('epsilon', None)
+    approx_grad = kwargs.get("approx_grad", False)
+    loglike_and_score = kwargs.get("loglike_and_score", None)
+    epsilon = kwargs.get("epsilon", None)
 
     # The approx_grad flag has superpowers nullifying the score function arg.
     if approx_grad:
@@ -645,24 +779,37 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
     # The third option is to use the score component of a provided
     # function that simultaneously evaluates the log likelihood and score.
     if epsilon and not approx_grad:
-        raise ValueError('a finite-differences epsilon was provided '
-                         'even though we are not using approx_grad')
+        raise ValueError(
+            "a finite-differences epsilon was provided "
+            "even though we are not using approx_grad"
+        )
     if approx_grad and loglike_and_score:
-        raise ValueError('gradient approximation was requested '
-                         'even though an analytic loglike_and_score function '
-                         'was given')
+        raise ValueError(
+            "gradient approximation was requested "
+            "even though an analytic loglike_and_score function "
+            "was given"
+        )
     if loglike_and_score:
-        func = lambda p, *a: tuple(-x for x in loglike_and_score(p, *a))
+
+        def func(p, *a):
+            return tuple(-x for x in loglike_and_score(p, *a))
+
     elif score:
         func = f
-        extra_kwargs['fprime'] = score
+        extra_kwargs["fprime"] = score
     elif approx_grad:
         func = f
-
-    retvals = optimize.fmin_l_bfgs_b(func, start_params, maxiter=maxiter,
-                                     callback=callback, args=fargs,
-                                     bounds=bounds, disp=disp,
-                                     **extra_kwargs)
+    if SP_LT_115:
+        extra_kwargs["disp"] = disp
+    retvals = optimize.fmin_l_bfgs_b(
+        func,
+        start_params,
+        maxiter=maxiter,
+        callback=callback,
+        args=fargs,
+        bounds=bounds,
+        **extra_kwargs,
+    )
 
     if full_output:
         xopt, fopt, d = retvals
@@ -670,14 +817,19 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
         # 0 if converged
         # 1 if too many function evaluations or too many iterations
         # 2 if stopped for another reason, given in d['task']
-        warnflag = d['warnflag']
-        converged = (warnflag == 0)
-        gopt = d['grad']
-        fcalls = d['funcalls']
-        iterations = d['nit']
-        retvals = {'fopt': fopt, 'gopt': gopt, 'fcalls': fcalls,
-                   'warnflag': warnflag, 'converged': converged,
-                   'iterations': iterations}
+        warnflag = d["warnflag"]
+        converged = warnflag == 0
+        gopt = d["grad"]
+        fcalls = d["funcalls"]
+        iterations = d["nit"]
+        retvals = {
+            "fopt": fopt,
+            "gopt": gopt,
+            "fcalls": fcalls,
+            "warnflag": warnflag,
+            "converged": converged,
+            "iterations": iterations,
+        }
     else:
         xopt = retvals[0]
         retvals = None
@@ -685,9 +837,19 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
     return xopt, retvals
 
 
-def _fit_nm(f, score, start_params, fargs, kwargs, disp=True,
-            maxiter=100, callback=None, retall=False,
-            full_output=True, hess=None):
+def _fit_nm(
+    f,
+    score,
+    start_params,
+    fargs,
+    kwargs,
+    disp=True,
+    maxiter=100,
+    callback=None,
+    retall=False,
+    full_output=True,
+    hess=None,
+):
     """
     Fit using Nelder-Mead algorithm.
 
@@ -733,24 +895,37 @@ def _fit_nm(f, score, start_params, fargs, kwargs, disp=True,
         None.
     """
     check_kwargs(kwargs, ("xtol", "ftol", "maxfun"), "nm")
-    xtol = kwargs.setdefault('xtol', 0.0001)
-    ftol = kwargs.setdefault('ftol', 0.0001)
-    maxfun = kwargs.setdefault('maxfun', None)
-    retvals = optimize.fmin(f, start_params, args=fargs, xtol=xtol,
-                            ftol=ftol, maxiter=maxiter, maxfun=maxfun,
-                            full_output=full_output, disp=disp, retall=retall,
-                            callback=callback)
+    xtol = kwargs.setdefault("xtol", 0.0001)
+    ftol = kwargs.setdefault("ftol", 0.0001)
+    maxfun = kwargs.setdefault("maxfun", None)
+    retvals = optimize.fmin(
+        f,
+        start_params,
+        args=fargs,
+        xtol=xtol,
+        ftol=ftol,
+        maxiter=maxiter,
+        maxfun=maxfun,
+        full_output=full_output,
+        disp=disp,
+        retall=retall,
+        callback=callback,
+    )
     if full_output:
         if not retall:
             xopt, fopt, niter, fcalls, warnflag = retvals
         else:
             xopt, fopt, niter, fcalls, warnflag, allvecs = retvals
         converged = not warnflag
-        retvals = {'fopt': fopt, 'iterations': niter,
-                   'fcalls': fcalls, 'warnflag': warnflag,
-                   'converged': converged}
+        retvals = {
+            "fopt": fopt,
+            "iterations": niter,
+            "fcalls": fcalls,
+            "warnflag": warnflag,
+            "converged": converged,
+        }
         if retall:
-            retvals.update({'allvecs': allvecs})
+            retvals.update({"allvecs": allvecs})
     else:
         xopt = retvals
         retvals = None
@@ -758,9 +933,19 @@ def _fit_nm(f, score, start_params, fargs, kwargs, disp=True,
     return xopt, retvals
 
 
-def _fit_cg(f, score, start_params, fargs, kwargs, disp=True,
-            maxiter=100, callback=None, retall=False,
-            full_output=True, hess=None):
+def _fit_cg(
+    f,
+    score,
+    start_params,
+    fargs,
+    kwargs,
+    disp=True,
+    maxiter=100,
+    callback=None,
+    retall=False,
+    full_output=True,
+    hess=None,
+):
     """
     Fit using Conjugate Gradient algorithm.
 
@@ -806,23 +991,37 @@ def _fit_cg(f, score, start_params, fargs, kwargs, disp=True,
         None.
     """
     check_kwargs(kwargs, ("gtol", "norm", "epsilon"), "cg")
-    gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
-    norm = kwargs.setdefault('norm', np.inf)
-    epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
-    retvals = optimize.fmin_cg(f, start_params, score, gtol=gtol, norm=norm,
-                               epsilon=epsilon, maxiter=maxiter,
-                               full_output=full_output, disp=disp,
-                               retall=retall, callback=callback)
+    gtol = kwargs.setdefault("gtol", 1.0000000000000001e-05)
+    norm = kwargs.setdefault("norm", np.inf)
+    epsilon = kwargs.setdefault("epsilon", 1.4901161193847656e-08)
+    retvals = optimize.fmin_cg(
+        f,
+        start_params,
+        score,
+        gtol=gtol,
+        norm=norm,
+        epsilon=epsilon,
+        maxiter=maxiter,
+        full_output=full_output,
+        disp=disp,
+        retall=retall,
+        callback=callback,
+    )
     if full_output:
         if not retall:
             xopt, fopt, fcalls, gcalls, warnflag = retvals
         else:
             xopt, fopt, fcalls, gcalls, warnflag, allvecs = retvals
         converged = not warnflag
-        retvals = {'fopt': fopt, 'fcalls': fcalls, 'gcalls': gcalls,
-                   'warnflag': warnflag, 'converged': converged}
+        retvals = {
+            "fopt": fopt,
+            "fcalls": fcalls,
+            "gcalls": gcalls,
+            "warnflag": warnflag,
+            "converged": converged,
+        }
         if retall:
-            retvals.update({'allvecs': allvecs})
+            retvals.update({"allvecs": allvecs})
 
     else:
         xopt = retvals
@@ -831,9 +1030,19 @@ def _fit_cg(f, score, start_params, fargs, kwargs, disp=True,
     return xopt, retvals
 
 
-def _fit_ncg(f, score, start_params, fargs, kwargs, disp=True,
-             maxiter=100, callback=None, retall=False,
-             full_output=True, hess=None):
+def _fit_ncg(
+    f,
+    score,
+    start_params,
+    fargs,
+    kwargs,
+    disp=True,
+    maxiter=100,
+    callback=None,
+    retall=False,
+    full_output=True,
+    hess=None,
+):
     """
     Fit using Newton Conjugate Gradient algorithm.
 
@@ -879,26 +1088,40 @@ def _fit_ncg(f, score, start_params, fargs, kwargs, disp=True,
         None.
     """
     check_kwargs(kwargs, ("fhess_p", "avextol", "epsilon"), "ncg")
-    fhess_p = kwargs.setdefault('fhess_p', None)
-    avextol = kwargs.setdefault('avextol', 1.0000000000000001e-05)
-    epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
-    retvals = optimize.fmin_ncg(f, start_params, score, fhess_p=fhess_p,
-                                fhess=hess, args=fargs, avextol=avextol,
-                                epsilon=epsilon, maxiter=maxiter,
-                                full_output=full_output, disp=disp,
-                                retall=retall, callback=callback)
+    fhess_p = kwargs.setdefault("fhess_p", None)
+    avextol = kwargs.setdefault("avextol", 1.0000000000000001e-05)
+    epsilon = kwargs.setdefault("epsilon", 1.4901161193847656e-08)
+    retvals = optimize.fmin_ncg(
+        f,
+        start_params,
+        score,
+        fhess_p=fhess_p,
+        fhess=hess,
+        args=fargs,
+        avextol=avextol,
+        epsilon=epsilon,
+        maxiter=maxiter,
+        full_output=full_output,
+        disp=disp,
+        retall=retall,
+        callback=callback,
+    )
     if full_output:
         if not retall:
             xopt, fopt, fcalls, gcalls, hcalls, warnflag = retvals
         else:
-            xopt, fopt, fcalls, gcalls, hcalls, warnflag, allvecs = \
-                retvals
+            xopt, fopt, fcalls, gcalls, hcalls, warnflag, allvecs = retvals
         converged = not warnflag
-        retvals = {'fopt': fopt, 'fcalls': fcalls, 'gcalls': gcalls,
-                   'hcalls': hcalls, 'warnflag': warnflag,
-                   'converged': converged}
+        retvals = {
+            "fopt": fopt,
+            "fcalls": fcalls,
+            "gcalls": gcalls,
+            "hcalls": hcalls,
+            "warnflag": warnflag,
+            "converged": converged,
+        }
         if retall:
-            retvals.update({'allvecs': allvecs})
+            retvals.update({"allvecs": allvecs})
     else:
         xopt = retvals
         retvals = None
@@ -906,9 +1129,19 @@ def _fit_ncg(f, score, start_params, fargs, kwargs, disp=True,
     return xopt, retvals
 
 
-def _fit_powell(f, score, start_params, fargs, kwargs, disp=True,
-                maxiter=100, callback=None, retall=False,
-                full_output=True, hess=None):
+def _fit_powell(
+    f,
+    score,
+    start_params,
+    fargs,
+    kwargs,
+    disp=True,
+    maxiter=100,
+    callback=None,
+    retall=False,
+    full_output=True,
+    hess=None,
+):
     """
     Fit using Powell's conjugate direction algorithm.
 
@@ -954,27 +1187,40 @@ def _fit_powell(f, score, start_params, fargs, kwargs, disp=True,
         None.
     """
     check_kwargs(kwargs, ("xtol", "ftol", "maxfun", "start_direc"), "powell")
-    xtol = kwargs.setdefault('xtol', 0.0001)
-    ftol = kwargs.setdefault('ftol', 0.0001)
-    maxfun = kwargs.setdefault('maxfun', None)
-    start_direc = kwargs.setdefault('start_direc', None)
-    retvals = optimize.fmin_powell(f, start_params, args=fargs, xtol=xtol,
-                                   ftol=ftol, maxiter=maxiter, maxfun=maxfun,
-                                   full_output=full_output, disp=disp,
-                                   retall=retall, callback=callback,
-                                   direc=start_direc)
+    xtol = kwargs.setdefault("xtol", 0.0001)
+    ftol = kwargs.setdefault("ftol", 0.0001)
+    maxfun = kwargs.setdefault("maxfun", None)
+    start_direc = kwargs.setdefault("start_direc", None)
+    retvals = optimize.fmin_powell(
+        f,
+        start_params,
+        args=fargs,
+        xtol=xtol,
+        ftol=ftol,
+        maxiter=maxiter,
+        maxfun=maxfun,
+        full_output=full_output,
+        disp=disp,
+        retall=retall,
+        callback=callback,
+        direc=start_direc,
+    )
     if full_output:
         if not retall:
             xopt, fopt, direc, niter, fcalls, warnflag = retvals
         else:
-            xopt, fopt, direc, niter, fcalls, warnflag, allvecs = \
-                retvals
+            xopt, fopt, direc, niter, fcalls, warnflag, allvecs = retvals
         converged = not warnflag
-        retvals = {'fopt': fopt, 'direc': direc, 'iterations': niter,
-                   'fcalls': fcalls, 'warnflag': warnflag,
-                   'converged': converged}
+        retvals = {
+            "fopt": fopt,
+            "direc": direc,
+            "iterations": niter,
+            "fcalls": fcalls,
+            "warnflag": warnflag,
+            "converged": converged,
+        }
         if retall:
-            retvals.update({'allvecs': allvecs})
+            retvals.update({"allvecs": allvecs})
     else:
         xopt = retvals
         retvals = None
@@ -982,9 +1228,19 @@ def _fit_powell(f, score, start_params, fargs, kwargs, disp=True,
     return xopt, retvals
 
 
-def _fit_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
-                      maxiter=100, callback=None, retall=False,
-                      full_output=True, hess=None):
+def _fit_basinhopping(
+    f,
+    score,
+    start_params,
+    fargs,
+    kwargs,
+    disp=True,
+    maxiter=100,
+    callback=None,
+    retall=False,
+    full_output=True,
+    hess=None,
+):
     """
     Fit using Basin-hopping algorithm.
 
@@ -1032,35 +1288,42 @@ def _fit_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
     check_kwargs(
         kwargs,
         ("niter", "niter_success", "T", "stepsize", "interval", "minimizer", "seed"),
-        "basinhopping"
+        "basinhopping",
     )
-    kwargs = {k: v for k, v in kwargs.items()}
-    niter = kwargs.setdefault('niter', 100)
-    niter_success = kwargs.setdefault('niter_success', None)
-    T = kwargs.setdefault('T', 1.0)
-    stepsize = kwargs.setdefault('stepsize', 0.5)
-    interval = kwargs.setdefault('interval', 50)
+    kwargs = dict(kwargs.items())
+    niter = kwargs.setdefault("niter", 100)
+    niter_success = kwargs.setdefault("niter_success", None)
+    T = kwargs.setdefault("T", 1.0)
+    stepsize = kwargs.setdefault("stepsize", 0.5)
+    interval = kwargs.setdefault("interval", 50)
     seed = kwargs.get("seed")
-    minimizer_kwargs = kwargs.get('minimizer', {})
-    minimizer_kwargs['args'] = fargs
-    minimizer_kwargs['jac'] = score
-    method = minimizer_kwargs.get('method', None)
-    if method and method != 'L-BFGS-B':  # l_bfgs_b does not take a hessian
-        minimizer_kwargs['hess'] = hess
+    minimizer_kwargs = kwargs.get("minimizer", {})
+    minimizer_kwargs["args"] = fargs
+    minimizer_kwargs["jac"] = score
+    method = minimizer_kwargs.get("method", None)
+    if method and method != "L-BFGS-B":  # l_bfgs_b does not take a hessian
+        minimizer_kwargs["hess"] = hess
 
-    retvals = optimize.basinhopping(f, start_params,
-                                    minimizer_kwargs=minimizer_kwargs,
-                                    niter=niter, niter_success=niter_success,
-                                    T=T, stepsize=stepsize, disp=disp,
-                                    callback=callback, interval=interval,
-                                    seed=seed)
+    retvals = optimize.basinhopping(
+        f,
+        start_params,
+        minimizer_kwargs=minimizer_kwargs,
+        niter=niter,
+        niter_success=niter_success,
+        T=T,
+        stepsize=stepsize,
+        disp=disp,
+        callback=callback,
+        interval=interval,
+        seed=seed,
+    )
     xopt = retvals.x
     if full_output:
         retvals = {
-            'fopt': retvals.fun,
-            'iterations': retvals.nit,
-            'fcalls': retvals.nfev,
-            'converged': 'completed successfully' in retvals.message[0]
+            "fopt": retvals.fun,
+            "iterations": retvals.nit,
+            "fcalls": retvals.nfev,
+            "converged": "completed successfully" in retvals.message[0],
         }
     else:
         retvals = None

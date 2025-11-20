@@ -14,7 +14,7 @@ def test_plot_corr(close_figures):
 
     plot_corr(corr_matrix, xnames=[], ynames=hie_data.names)
 
-    plot_corr(corr_matrix, normcolor=True, title='', cmap='jet')
+    plot_corr(corr_matrix, normcolor=True, title="", cmap="jet")
 
 
 @pytest.mark.matplotlib
@@ -26,4 +26,4 @@ def test_plot_corr_grid(close_figures):
 
     plot_corr_grid([corr_matrix] * 5, xnames=[], ynames=hie_data.names)
 
-    plot_corr_grid([corr_matrix] * 3, normcolor=True, titles='', cmap='jet')
+    plot_corr_grid([corr_matrix] * 3, normcolor=True, titles="", cmap="jet")

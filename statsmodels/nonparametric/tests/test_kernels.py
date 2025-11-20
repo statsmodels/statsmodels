@@ -16,30 +16,30 @@ from statsmodels.sandbox.nonparametric import kernels
 DEBUG = 0
 
 curdir = os.path.dirname(os.path.abspath(__file__))
-fname = 'results/results_kernel_regression.csv'
+fname = "results/results_kernel_regression.csv"
 results = pd.read_csv(os.path.join(curdir, fname))
 
-y = results['accident'].to_numpy(copy=True)
-x = results['service'].to_numpy(copy=True)
+y = results["accident"].to_numpy(copy=True)
+x = results["service"].to_numpy(copy=True)
 positive = x >= 0
 x = np.log(x[positive])
 y = y[positive]
-xg = np.linspace(x.min(), x.max(), 40) # grid points default in Stata
+xg = np.linspace(x.min(), x.max(), 40)  # grid points default in Stata
 
 
 # FIXME: do not leave this commented-out; use or move/remove
-#kern_name = 'gau'
-#kern = kernels.Gaussian()
-#kern_name = 'epan2'
-#kern = kernels.Epanechnikov()
-#kern_name = 'rec'
-#kern = kernels.Uniform()  # ours looks awful
-#kern_name = 'tri'
-#kern = kernels.Triangular()
-#kern_name = 'cos'
-#kern = kernels.Cosine()  #does not match up, nan in Stata results ?
-#kern_name = 'bi'
-#kern = kernels.Biweight()
+# kern_name = 'gau'
+# kern = kernels.Gaussian()
+# kern_name = 'epan2'
+# kern = kernels.Epanechnikov()
+# kern_name = 'rec'
+# kern = kernels.Uniform()  # ours looks awful
+# kern_name = 'tri'
+# kern = kernels.Triangular()
+# kern_name = 'cos'
+# kern = kernels.Cosine()  # does not match up, nan in Stata results ?
+# kern_name = 'bi'
+# kern = kernels.Biweight()
 
 
 class CheckKernelMixin:
@@ -52,13 +52,13 @@ class CheckKernelMixin:
     def test_smoothconf(self):
         kern_name = self.kern_name
         kern = self.kern
-        #fittedg = np.array([kernels.Epanechnikov().smoothconf(x, y, xi) for xi in xg])
+        # fittedg = np.array([kernels.Epanechnikov().smoothconf(x, y, xi) for xi in xg])
         fittedg = np.array([kern.smoothconf(x, y, xi) for xi in xg])
         # attach for inspection from outside of test run
         self.fittedg = fittedg
 
-        res_fitted = results['s_' + kern_name]
-        res_se = results['se_' + kern_name]
+        res_fitted = results["s_" + kern_name]
+        res_se = results["se_" + kern_name]
         crit = 1.9599639845400545  # norm.isf(0.05 / 2)
         # implied standard deviation from conf_int
         se = (fittedg[:, 2] - fittedg[:, 1]) / crit
@@ -79,7 +79,7 @@ class CheckKernelMixin:
         assert_allclose(se[se_valid], res_se[se_valid], rtol=self.se_rtol, atol=0.2)
         # check that most values are closer
         mask = np.abs(se - res_se) > (0.2 + 0.2 * res_se)
-        if not hasattr(self, 'se_n_diff'):
+        if not hasattr(self, "se_n_diff"):
             se_n_diff = 40 * 0.125
         else:
             se_n_diff = self.se_n_diff
@@ -94,29 +94,28 @@ class CheckKernelMixin:
         assert_allclose(fittedg[se_valid, 0], res_low[se_valid],
                         rtol=self.low_rtol, atol=self.low_atol)
 
-        #assert_allclose(fitted, res_fitted, rtol=0, atol=1e-6)
+        # assert_allclose(fitted, res_fitted, rtol=0, atol=1e-6)
 
     @pytest.mark.slow
     @pytest.mark.smoke  # TOOD: make this an actual test?
     def test_smoothconf_data(self):
         kern = self.kern
-        crit = 1.9599639845400545  # norm.isf(0.05 / 2)
         # no reference results saved to csv yet
-        fitted_x = np.array([kern.smoothconf(x, y, xi) for xi in x])
+        np.array([kern.smoothconf(x, y, xi) for xi in x])
 
 
 class TestEpan(CheckKernelMixin):
-    kern_name = 'epan2'
+    kern_name = "epan2"
     kern = kernels.Epanechnikov()
 
 
 class TestGau(CheckKernelMixin):
-    kern_name = 'gau'
+    kern_name = "gau"
     kern = kernels.Gaussian()
 
 
 class TestUniform(CheckKernelMixin):
-    kern_name = 'rec'
+    kern_name = "rec"
     kern = kernels.Uniform()
     se_rtol = 0.8
     se_n_diff = 8
@@ -126,7 +125,7 @@ class TestUniform(CheckKernelMixin):
 
 
 class TestTriangular(CheckKernelMixin):
-    kern_name = 'tri'
+    kern_name = "tri"
     kern = kernels.Triangular()
     se_n_diff = 10
     upp_rtol = 0.15
@@ -135,7 +134,7 @@ class TestTriangular(CheckKernelMixin):
 
 class TestCosine(CheckKernelMixin):
     # Stata results for Cosine look strange, has nans
-    kern_name = 'cos'
+    kern_name = "cos"
     kern = kernels.Cosine2()
 
     @pytest.mark.xfail(reason="NaN mismatch",
@@ -145,7 +144,7 @@ class TestCosine(CheckKernelMixin):
 
 
 class TestBiweight(CheckKernelMixin):
-    kern_name = 'bi'
+    kern_name = "bi"
     kern = kernels.Biweight()
     se_n_diff = 9
     low_rtol = 0.3

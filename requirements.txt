@@ -4,3 +4,4 @@ scipy>=1.8,!=1.9.2  # released Feb 2022, 1.9.2 blocked due to bug
 pandas>=1.4,!=2.1.0  # released Feb 2022, 2.1.0 blocked due to bug
 patsy>=0.5.6  # released December 2023
 packaging>=21.3  # released Nov 2021
+formulaic>=1.1.0  # released December 2024

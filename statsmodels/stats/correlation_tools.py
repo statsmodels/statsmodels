@@ -6,15 +6,19 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-import numpy as np
-import scipy.sparse as sparse
-from scipy.sparse.linalg import svds
-from scipy.optimize import fminbound
 import warnings
 
-from statsmodels.tools.tools import Bunch
+import numpy as np
+from scipy import sparse
+from scipy.optimize import fminbound
+from scipy.sparse.linalg import svds
+
 from statsmodels.tools.sm_exceptions import (
-    IterationLimitWarning, iteration_limit_doc)
+    IterationLimitWarning,
+    SpecificationWarning,
+    iteration_limit_doc,
+)
+from statsmodels.tools.tools import Bunch
 
 
 def clip_evals(x, value=0):  # threshold=0, value=0):
@@ -25,7 +29,7 @@ def clip_evals(x, value=0):  # threshold=0, value=0):
 
 
 def corr_nearest(corr, threshold=1e-15, n_fact=100):
-    '''
+    """
     Find the nearest correlation matrix that is positive semi-definite.
 
     The function iteratively adjust the correlation matrix by clipping the
@@ -67,7 +71,7 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
     corr_clipped
     cov_nearest
 
-    '''
+    """
     k_vars = corr.shape[0]
     if k_vars != corr.shape[1]:
         raise ValueError("matrix is not square")
@@ -76,7 +80,7 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
     x_new = corr.copy()
     diag_idx = np.arange(k_vars)
 
-    for ii in range(int(len(corr) * n_fact)):
+    for _ in range(int(len(corr) * n_fact)):
         x_adj = x_new - diff
         x_psd, clipped = clip_evals(x_adj, value=threshold)
         if not clipped:
@@ -86,13 +90,13 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
         x_new = x_psd.copy()
         x_new[diag_idx, diag_idx] = 1
     else:
-        warnings.warn(iteration_limit_doc, IterationLimitWarning)
+        warnings.warn(iteration_limit_doc, IterationLimitWarning, stacklevel=2)
 
     return x_new
 
 
 def corr_clipped(corr, threshold=1e-15):
-    '''
+    """
     Find a near correlation matrix that is positive semi-definite
 
     This function clips the eigenvalues, replacing eigenvalues smaller than
@@ -140,7 +144,7 @@ def corr_clipped(corr, threshold=1e-15):
     corr_nearest
     cov_nearest
 
-    '''
+    """
     x_new, clipped = clip_evals(corr, value=threshold)
     if not clipped:
         return corr
@@ -151,8 +155,7 @@ def corr_clipped(corr, threshold=1e-15):
     return x_new
 
 
-def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
-                return_all=False):
+def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=False):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
 
@@ -205,9 +208,10 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
     corr_clipped
     """
 
-    from statsmodels.stats.moment_helpers import cov2corr, corr2cov
+    from statsmodels.stats.moment_helpers import corr2cov, cov2corr
+
     cov_, std_ = cov2corr(cov, return_std=True)
-    if method == 'clipped':
+    if method == "clipped":
         corr_ = corr_clipped(cov_, threshold=threshold)
     else:  # method == 'nearest'
         corr_ = corr_nearest(cov_, threshold=threshold, n_fact=n_fact)
@@ -220,8 +224,9 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
         return cov_
 
 
-def _nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1,
-                      sig2=0.9, gam=1e-4, maxiter=100):
+def _nmono_linesearch(
+    obj, grad, x, d, obj_hist, M=10, sig1=0.1, sig2=0.9, gam=1e-4, maxiter=100
+):
     """
     Implements the non-monotone line search of Grippo et al. (1986),
     as described in Birgin, Martinez and Raydan (2013).
@@ -280,34 +285,46 @@ def _nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1,
     Software (preprint).
     """
 
-    alpha = 1.
+    alpha = 1.0
     last_obval = obj(x)
     obj_max = max(obj_hist[-M:])
 
-    for iter in range(maxiter):
+    for _ in range(maxiter):
 
-        obval = obj(x + alpha*d)
+        obval = obj(x + alpha * d)
         g = grad(x)
         gtd = (g * d).sum()
 
-        if obval <= obj_max + gam*alpha*gtd:
-            return alpha, x + alpha*d, obval, g
+        if obval <= obj_max + gam * alpha * gtd:
+            return alpha, x + alpha * d, obval, g
 
-        a1 = -0.5*alpha**2*gtd / (obval - last_obval - alpha*gtd)
+        a1 = -0.5 * alpha**2 * gtd / (obval - last_obval - alpha * gtd)
 
-        if (sig1 <= a1) and (a1 <= sig2*alpha):
+        if (sig1 <= a1 <= sig2 * alpha):
             alpha = a1
         else:
-            alpha /= 2.
+            alpha /= 2.0
 
         last_obval = obval
 
     return None, None, None, None
 
 
-def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
-               ctol=1e-3, maxiter_nmls=200, lam_min=1e-30,
-               lam_max=1e30, sig1=0.1, sig2=0.9, gam=1e-4):
+def _spg_optim(
+    func,
+    grad,
+    start,
+    project,
+    maxiter=1e4,
+    M=10,
+    ctol=1e-3,
+    maxiter_nmls=200,
+    lam_min=1e-30,
+    lam_max=1e30,
+    sig1=0.1,
+    sig2=0.9,
+    gam=1e-4,
+):
     """
     Implements the spectral projected gradient method for minimizing a
     differentiable function on a convex domain.
@@ -349,26 +366,28 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
     http://www.ime.usp.br/~egbirgin/publications/bmr5.pdf
     """
 
-    lam = min(10*lam_min, lam_max)
+    lam = min(10 * lam_min, lam_max)
 
     params = start.copy()
     gval = grad(params)
 
-    obj_hist = [func(params), ]
+    obj_hist = [
+        func(params),
+    ]
 
-    for itr in range(int(maxiter)):
+    for _ in range(int(maxiter)):
 
         # Check convergence
         df = params - gval
         project(df)
         df -= params
         if np.max(np.abs(df)) < ctol:
-            return Bunch(**{"Converged": True, "params": params,
-                            "objective_values": obj_hist,
-                            "Message": "Converged successfully"})
+            return Bunch(
+                Converged=True, params=params, objective_values=obj_hist, Message="Converged successfully"
+            )
 
         # The line search direction
-        d = params - lam*gval
+        d = params - lam * gval
         project(d)
         d -= params
 
@@ -383,30 +402,31 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
             sig1=sig1,
             sig2=sig2,
             gam=gam,
-            maxiter=maxiter_nmls)
+            maxiter=maxiter_nmls,
+        )
 
         if alpha is None:
-            return Bunch(**{"Converged": False, "params": params,
-                            "objective_values": obj_hist,
-                            "Message": "Failed in nmono_linesearch"})
+            return Bunch(
+                Converged=False, params=params, objective_values=obj_hist, Message="Failed in nmono_linesearch"
+            )
 
         obj_hist.append(fval)
         s = params1 - params
         y = gval1 - gval
 
-        sy = (s*y).sum()
+        sy = (s * y).sum()
         if sy <= 0:
             lam = lam_max
         else:
-            ss = (s*s).sum()
-            lam = max(lam_min, min(ss/sy, lam_max))
+            ss = (s * s).sum()
+            lam = max(lam_min, min(ss / sy, lam_max))
 
         params = params1
         gval = gval1
 
-    return Bunch(**{"Converged": False, "params": params,
-                    "objective_values": obj_hist,
-                    "Message": "spg_optim did not converge"})
+    return Bunch(
+        Converged=False, params=params, objective_values=obj_hist, Message="spg_optim did not converge"
+    )
 
 
 def _project_correlation_factors(X):
@@ -416,7 +436,7 @@ def _project_correlation_factors(X):
 
     The input matrix is modified in-place.
     """
-    nm = np.sqrt((X*X).sum(1))
+    nm = np.sqrt((X * X).sum(1))
     ii = np.flatnonzero(nm > 1)
     if len(ii) > 0:
         X[ii, :] /= nm[ii][:, None]
@@ -538,8 +558,9 @@ class FactoredPSDMatrix:
         return logdet
 
 
-def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
-                        lam_max=1e30, maxiter=1000):
+def corr_nearest_factor(
+    corr, rank, ctol=1e-6, lam_min=1e-30, lam_max=1e30, maxiter=1000
+):
     """
     Find the nearest correlation matrix with factor structure to a
     given square matrix.
@@ -650,8 +671,8 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
             gr -= np.dot(corr1, X)
         else:
             gr -= corr1.dot(X)
-        gr -= (X*X).sum(1)[:, None] * X
-        return 4*gr
+        gr -= (X * X).sum(1)[:, None] * X
+        return 4 * gr
 
     # The objective function (sum of squared deviations between fitted
     # and observed arrays).
@@ -660,26 +681,34 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
             M = np.dot(X, X.T)
             np.fill_diagonal(M, 0)
             M -= corr1
-            fval = (M*M).sum()
+            fval = (M * M).sum()
             return fval
         else:
-            fval = 0.
+            fval = 0.0
             # Control the size of intermediates
             max_ws = 1e6
             bs = int(max_ws / X.shape[0])
             ir = 0
             while ir < X.shape[0]:
-                ir2 = min(ir+bs, X.shape[0])
+                ir2 = min(ir + bs, X.shape[0])
                 u = np.dot(X[ir:ir2, :], X.T)
                 ii = np.arange(u.shape[0])
-                u[ii, ir+ii] = 0
+                u[ii, ir + ii] = 0
                 u -= np.asarray(corr1[ir:ir2, :].todense())
-                fval += (u*u).sum()
+                fval += (u * u).sum()
                 ir += bs
             return fval
 
-    rslt = _spg_optim(func, grad, X, _project_correlation_factors, ctol=ctol,
-                      lam_min=lam_min, lam_max=lam_max, maxiter=maxiter)
+    rslt = _spg_optim(
+        func,
+        grad,
+        X,
+        _project_correlation_factors,
+        ctol=ctol,
+        lam_min=lam_min,
+        lam_max=lam_max,
+        maxiter=maxiter,
+    )
     root = rslt.params
     diag = 1 - (root**2).sum(1)
     soln = FactoredPSDMatrix(diag, root)
@@ -756,8 +785,8 @@ def cov_nearest_factor_homog(cov, rank):
 
     def fun(k):
         Lambda_t = Lambda - k
-        v = tss + m*(k**2) + np.sum(Lambda_t**2) - 2*k*ts
-        v += 2*k*np.sum(Lambda_t) - 2*np.sum(np.diag(QSQ) * Lambda_t)
+        v = tss + m * (k**2) + np.sum(Lambda_t**2) - 2 * k * ts
+        v += 2 * k * np.sum(Lambda_t) - 2 * np.sum(np.diag(QSQ) * Lambda_t)
         return v
 
     # Get the optimal decomposition
@@ -825,7 +854,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     nrow, ncol = data.shape
 
     if minabs is None:
-        minabs = 1. / float(ncol)
+        minabs = 1.0 / float(ncol)
 
     # Row-standardize the data
     data = data.copy()
@@ -927,7 +956,7 @@ class GaussianMultivariateKernel(MultivariateKernel):
     """
 
     def call(self, x, loc):
-        return np.exp(-(x - loc)**2 / (2 * self.bw2)).sum(1) / self.bwk
+        return np.exp(-((x - loc) ** 2) / (2 * self.bw2)).sum(1) / self.bwk
 
 
 def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
@@ -994,8 +1023,8 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
         if g not in ix:
             ix[g] = []
         ix[g].append(i)
-    for g in ix.keys():
-        ix[g] = np.sort(ix[g])
+    for g, group_lbls in ix.items():
+        ix[g] = np.sort(group_lbls)
 
     if kernel is None:
         kernel = GaussianMultivariateKernel()
@@ -1012,9 +1041,9 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
         kx = kernel.call(x, loc)
         ky = kernel.call(y, loc)
 
-        cm, cw = 0., 0.
+        cm, cw = 0.0, 0.0
 
-        for g, ii in ix.items():
+        for ii in ix.values():
 
             m = len(ii)
             j1, j2 = np.indices((m, m))
@@ -1028,9 +1057,11 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
             cw += w.sum()
 
         if cw < 1e-10:
-            msg = ("Effective sample size is 0.  The bandwidth may be too " +
-                   "small, or you are outside the range of your data.")
-            warnings.warn(msg)
+            msg = (
+                "Effective sample size is 0.  The bandwidth may be too "
+                "small, or you are outside the range of your data."
+            )
+            warnings.warn(msg, SpecificationWarning, stacklevel=2)
             return np.nan * np.ones_like(cm)
 
         return cm / cw

@@ -7,8 +7,10 @@ License: BSD-3
 """
 
 import numpy as np
-from scipy import stats
 import pandas as pd
+from scipy import stats
+
+from statsmodels.formula._manager import FormulaManager
 
 
 # this is similar to ContrastResults after t_test, copied and adjusted
@@ -41,10 +43,10 @@ class PredictionResults:
         self.var_resid = var_resid
         self.row_labels = row_labels
 
-        if dist is None or dist == 'norm':
+        if dist is None or dist == "norm":
             self.dist = stats.norm
             self.dist_args = ()
-        elif dist == 't':
+        elif dist == "t":
             self.dist = stats.t
             self.dist_args = (self.df,)
         else:
@@ -106,12 +108,12 @@ class PredictionResults:
         ci_obs = self.conf_int(alpha=alpha, obs=True)  # need to split
         ci_mean = self.conf_int(alpha=alpha, obs=False)
         to_include = {}
-        to_include['mean'] = self.predicted_mean
-        to_include['mean_se'] = self.se_mean
-        to_include['mean_ci_lower'] = ci_mean[:, 0]
-        to_include['mean_ci_upper'] = ci_mean[:, 1]
-        to_include['obs_ci_lower'] = ci_obs[:, 0]
-        to_include['obs_ci_upper'] = ci_obs[:, 1]
+        to_include["mean"] = self.predicted_mean
+        to_include["mean_se"] = self.se_mean
+        to_include["mean_ci_lower"] = ci_mean[:, 0]
+        to_include["mean_ci_upper"] = ci_mean[:, 1]
+        to_include["obs_ci_lower"] = ci_obs[:, 0]
+        to_include["obs_ci_upper"] = ci_obs[:, 1]
 
         self.table = to_include
         # pandas dict does not handle 2d_array
@@ -157,16 +159,15 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     """
 
     # prepare exog and row_labels, based on base Results.predict
-    if transform and hasattr(self.model, 'formula') and exog is not None:
-        from patsy import dmatrix
+    if transform and hasattr(self.model, "formula") and exog is not None:
         if isinstance(exog, pd.Series):
             # GH-6509
             exog = pd.DataFrame(exog)
-        exog = dmatrix(self.model.data.design_info, exog)
+        exog = FormulaManager().get_matrices(self.model.data.model_spec, exog)
 
     if exog is not None:
         if row_labels is None:
-            row_labels = getattr(exog, 'index', None)
+            row_labels = getattr(exog, "index", None)
             if callable(row_labels):
                 row_labels = None
 
@@ -181,17 +182,17 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     else:
         exog = self.model.exog
         if weights is None:
-            weights = getattr(self.model, 'weights', None)
+            weights = getattr(self.model, "weights", None)
 
         if row_labels is None:
-            row_labels = getattr(self.model.data, 'row_labels', None)
+            row_labels = getattr(self.model.data, "row_labels", None)
 
     # need to handle other arrays, TODO: is delegating to model possible ?
     if weights is not None:
         weights = np.asarray(weights)
         if (weights.size > 1 and
                 (weights.ndim != 1 or weights.shape[0] == exog.shape[1])):
-            raise ValueError('weights has wrong shape')
+            raise ValueError("weights has wrong shape")
 
     if pred_kwds is None:
         pred_kwds = {}
@@ -203,13 +204,13 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     # TODO: check that we have correct scale, Refactor scale #???
     # special case for now:
-    if self.cov_type == 'fixed scale':
-        var_resid = self.cov_kwds['scale']
+    if self.cov_type == "fixed scale":
+        var_resid = self.cov_kwds["scale"]
 
     if weights is not None:
         var_resid /= weights
 
-    dist = ['norm', 't'][self.use_t]
+    dist = ["norm", "t"][self.use_t]
     return PredictionResults(predicted_mean, var_pred_mean, var_resid,
                              df=self.df_resid, dist=dist,
                              row_labels=row_labels)

@@ -1,7 +1,8 @@
+from statsmodels.compat.pandas import Substitution
+
 import numpy as np
 from scipy.stats import scoreatpercentile
 
-from statsmodels.compat.pandas import Substitution
 from statsmodels.sandbox.nonparametric import kernels
 
 
@@ -23,7 +24,7 @@ def _select_sigma(x, percentile=25):
         return std_dev
 
 
-## Univariate Rule of Thumb Bandwidths ##
+# Univariate Rule of Thumb Bandwidths
 def bw_scott(x, kernel=None):
     """
     Scott's Rule of Thumb
@@ -56,6 +57,7 @@ def bw_scott(x, kernel=None):
     A = _select_sigma(x)
     n = len(x)
     return 1.059 * A * n ** (-0.2)
+
 
 def bw_silverman(x, kernel=None):
     """
@@ -136,11 +138,10 @@ def bw_normal_reference(x, kernel=None):
     n = len(x)
     return C * A * n ** (-0.2)
 
-## Plug-In Methods ##
+# Plug-In Methods
+# Least Squares Cross-Validation
+# Helper Functions
 
-## Least Squares Cross-Validation ##
-
-## Helper Functions ##
 
 bandwidth_funcs = {
     "scott": bw_scott,
@@ -176,9 +177,11 @@ def select_bandwidth(x, bw, kernel):
     bandwidth = bandwidth_funcs[bw](x, kernel)
     if np.any(bandwidth == 0):
         # eventually this can fall back on another selection criterion.
-        err = "Selected KDE bandwidth is 0. Cannot estimate density. " \
-              "Either provide the bandwidth during initialization or use " \
-              "an alternative method."
+        err = (
+            "Selected KDE bandwidth is 0. Cannot estimate density. "
+            "Either provide the bandwidth during initialization or use "
+            "an alternative method."
+        )
         raise RuntimeError(err)
     else:
         return bandwidth

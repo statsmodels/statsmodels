@@ -1,4 +1,4 @@
-'''Tests for multipletests and fdr pvalue corrections
+"""Tests for multipletests and fdr pvalue corrections
 
 Author : Josef Perktold
 
@@ -11,21 +11,23 @@ are tested against R:multtest
 'fdr_gbs', 'fdr_2sbky' I did not find them in R, currently tested for
     consistency only
 
-'''
-import pytest
+"""
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal,
-                           assert_allclose)
-
-from statsmodels.stats.multitest import (multipletests, fdrcorrection,
-                                         fdrcorrection_twostage,
-                                         NullDistribution,
-                                         local_fdr, multitest_methods_names)
-from statsmodels.stats.multicomp import tukeyhsd
-from scipy.stats.distributions import norm
-import scipy
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 from packaging import version
+import pytest
+import scipy
+from scipy.stats.distributions import norm
 
+from statsmodels.stats.multicomp import tukeyhsd
+from statsmodels.stats.multitest import (
+    NullDistribution,
+    fdrcorrection,
+    fdrcorrection_twostage,
+    local_fdr,
+    multipletests,
+    multitest_methods_names,
+)
 
 pval0 = np.array([
     0.838541367553,  0.642193923795,  0.680845947633,
@@ -76,19 +78,19 @@ res_multtest1 = np.array([
 
 
 res_multtest2_columns = [
-    'rawp', 'Bonferroni', 'Holm', 'Hochberg', 'SidakSS', 'SidakSD',
-    'BH', 'BY', 'ABH', 'TSBH_0.05']
+    "rawp", "Bonferroni", "Holm", "Hochberg", "SidakSS", "SidakSD",
+    "BH", "BY", "ABH", "TSBH_0.05"]
 
 rmethods = {
-    'rawp': (0, 'pval'),
-    'Bonferroni': (1, 'b'),
-    'Holm': (2, 'h'),
-    'Hochberg': (3, 'sh'),
-    'SidakSS': (4, 's'),
-    'SidakSD': (5, 'hs'),
-    'BH': (6, 'fdr_i'),
-    'BY': (7, 'fdr_n'),
-    'TSBH_0.05': (9, 'fdr_tsbh')
+    "rawp": (0, "pval"),
+    "Bonferroni": (1, "b"),
+    "Holm": (2, "h"),
+    "Hochberg": (3, "sh"),
+    "SidakSS": (4, "s"),
+    "SidakSD": (5, "hs"),
+    "BH": (6, "fdr_i"),
+    "BY": (7, "fdr_n"),
+    "TSBH_0.05": (9, "fdr_tsbh")
 }
 
 NA = np.nan
@@ -102,7 +104,7 @@ res_multtest2 = np.array([
      0.02378486270400004, 0.023808512, 0.023808512, 0.023808512, 0.012,
      0.012, 0.012, 0.012, 0.012, 0.012, 0.0294, 0.0294, 0.0294, 0.0294,
      0.0294, 0.0294, NA, NA, NA, NA, NA, NA, 0, 0, 0, 0, 0, 0
-    ]).reshape(6, 10, order='F')
+    ]).reshape(6, 10, order="F")
 
 res_multtest3 = np.array([
      0.001, 0.002, 0.003, 0.004, 0.005, 0.05, 0.06, 0.07, 0.08, 0.09, 0.01,
@@ -123,7 +125,7 @@ res_multtest3 = np.array([
      0.2636071428571428, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 0.005,
      0.005, 0.005, 0.005, 0.005, 0.04166666666666667, 0.04285714285714286,
      0.04375, 0.04444444444444445, 0.045
-    ]).reshape(10, 10, order='F')
+    ]).reshape(10, 10, order="F")
 
 res0_large = np.array([
      0.00031612, 0.0003965, 0.00048442, 0.00051932, 0.00101436, 0.00121506,
@@ -190,12 +192,12 @@ res0_large = np.array([
      0.43070808375, 0.43070808375, 0.43070808375, 0.4657937592,
      0.5013728192307692, 0.5431810875, 0.5431810875, 0.622398456206897,
      0.623229229
-    ]).reshape(30, 10, order='F')
+    ]).reshape(30, 10, order="F")
 
 
 class CheckMultiTestsMixin:
 
-    @pytest.mark.parametrize('key,val', sorted(rmethods.items()))
+    @pytest.mark.parametrize("key,val", sorted(rmethods.items()))
     def test_multi_pvalcorrection_rmethods(self, key, val):
         # test against R package multtest mt.rawp2adjp
 
@@ -215,16 +217,16 @@ class CheckMultiTestsMixin:
         res_multtest = self.res2
         pval0 = res_multtest[:, 0]
 
-        pvalscorr = np.sort(fdrcorrection(pval0, method='n')[1])
+        pvalscorr = np.sort(fdrcorrection(pval0, method="n")[1])
         assert_almost_equal(pvalscorr, res_multtest[:, 7], 15)
-        pvalscorr = np.sort(fdrcorrection(pval0, method='i')[1])
+        pvalscorr = np.sort(fdrcorrection(pval0, method="i")[1])
         assert_almost_equal(pvalscorr, res_multtest[:, 6], 15)
 
 
 class TestMultiTests1(CheckMultiTestsMixin):
     @classmethod
     def setup_class(cls):
-        cls.methods = ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']
+        cls.methods = ["b", "s", "sh", "hs", "h", "fdr_i", "fdr_n"]
         cls.alpha = 0.1
         cls.res2 = res_multtest1
 
@@ -233,7 +235,7 @@ class TestMultiTests2(CheckMultiTestsMixin):
     # case: all hypothesis rejected (except 'b' and 's'
     @classmethod
     def setup_class(cls):
-        cls.methods = ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']
+        cls.methods = ["b", "s", "sh", "hs", "h", "fdr_i", "fdr_n"]
         cls.alpha = 0.05
         cls.res2 = res_multtest2
 
@@ -241,8 +243,8 @@ class TestMultiTests2(CheckMultiTestsMixin):
 class TestMultiTests3(CheckMultiTestsMixin):
     @classmethod
     def setup_class(cls):
-        cls.methods = ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
-                       'fdr_tsbh']
+        cls.methods = ["b", "s", "sh", "hs", "h", "fdr_i", "fdr_n",
+                       "fdr_tsbh"]
         cls.alpha = 0.05
         cls.res2 = res0_large
 
@@ -250,20 +252,20 @@ class TestMultiTests3(CheckMultiTestsMixin):
 class TestMultiTests4(CheckMultiTestsMixin):
     # in simulations, all two stage fdr, fdr_tsbky, fdr_tsbh, fdr_gbs, have in
     # some cases (cases with large Alternative) an FDR that looks too large
-    # this is the first case #rejected = 12, DGP : has 10 false
+    # this is the first case # rejected = 12, DGP : has 10 false
     @classmethod
     def setup_class(cls):
-        cls.methods = ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
-                       'fdr_tsbh']
+        cls.methods = ["b", "s", "sh", "hs", "h", "fdr_i", "fdr_n",
+                       "fdr_tsbh"]
         cls.alpha = 0.05
         cls.res2 = res_multtest3
 
 
-@pytest.mark.parametrize('alpha', [0.01, 0.05, 0.1])
-@pytest.mark.parametrize('method', ['b', 's', 'sh', 'hs', 'h', 'hommel',
-                                    'fdr_i', 'fdr_n', 'fdr_tsbky',
-                                    'fdr_tsbh', 'fdr_gbs'])
-@pytest.mark.parametrize('ii', list(range(11)))
+@pytest.mark.parametrize("alpha", [0.01, 0.05, 0.1])
+@pytest.mark.parametrize("method", ["b", "s", "sh", "hs", "h", "hommel",
+                                    "fdr_i", "fdr_n", "fdr_tsbky",
+                                    "fdr_tsbh", "fdr_gbs"])
+@pytest.mark.parametrize("ii", list(range(11)))
 def test_pvalcorrection_reject(alpha, method, ii):
     # consistency test for reject boolean and pvalscorr
 
@@ -273,7 +275,7 @@ def test_pvalcorrection_reject(alpha, method, ii):
     reject, pvalscorr = multipletests(pval1, alpha=alpha,
                                       method=method)[:2]
 
-    msg = 'case %s %3.2f rejected:%d\npval_raw=%r\npvalscorr=%r' % (
+    msg = "case %s %3.2f rejected:%d\npval_raw=%r\npvalscorr=%r" % (
                      method, alpha, reject.sum(), pval1, pvalscorr)
     assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
 
@@ -305,7 +307,7 @@ def test_hommel():
         0.9538400000000001,  0.9538400000000001,  0.9538400000000001,
         0.9538400000000001])
 
-    rej, pvalscorr, _, _ = multipletests(pval0, alpha=0.1, method='ho')
+    rej, pvalscorr, _, _ = multipletests(pval0, alpha=0.1, method="ho")
     assert_almost_equal(pvalscorr, result_ho, 15)
     assert_equal(rej, result_ho < 0.1)
 
@@ -337,8 +339,8 @@ def test_fdr_bky():
 
     # issue #8619, problems if no or all rejected, ordering
     pvals = np.array([0.2, 0.8, 0.3, 0.5, 1])
-    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bky')
-    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbky')
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method="bky")
+    res2 = multipletests(pvals, alpha=0.05, method="fdr_tsbky")
     assert_equal(res1[0], res2[0])
     assert_allclose(res1[1], res2[1], atol=6e-5)
     # confirmed with Prism
@@ -357,20 +359,20 @@ def test_fdr_twostage():
     # bh twostage fdr
     k = 0
     # same pvalues as one-stage fdr
-    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
-    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bh', maxiter=k,
+    res0 = multipletests(pvals, alpha=0.05, method="fdr_bh")
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method="bh", maxiter=k,
                                   iter=None)
-    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbh', maxiter=k)
+    res2 = multipletests(pvals, alpha=0.05, method="fdr_tsbh", maxiter=k)
     assert_allclose(res1[1], res0[1])
     assert_allclose(res2[1], res1[1])
 
     k = 1
     # pvalues corrected by first stage number of rejections
-    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
-    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bh', maxiter=k,
+    res0 = multipletests(pvals, alpha=0.05, method="fdr_bh")
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method="bh", maxiter=k,
                                   iter=None)
-    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbh', maxiter=k)
-    res3 = multipletests(pvals, alpha=0.05, method='fdr_tsbh')
+    res2 = multipletests(pvals, alpha=0.05, method="fdr_tsbh", maxiter=k)
+    res3 = multipletests(pvals, alpha=0.05, method="fdr_tsbh")
     assert_allclose(res1[1], res0[1] * (1 - res0[0].sum() / n))
     assert_allclose(res2[1], res1[1])
     assert_allclose(res3[1], res1[1])  # check default maxiter
@@ -379,26 +381,26 @@ def test_fdr_twostage():
     fact = 1 + 0.05
     k = 0
     # same pvalues as one-stage fdr
-    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
-    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bky', maxiter=k,
+    res0 = multipletests(pvals, alpha=0.05, method="fdr_bh")
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method="bky", maxiter=k,
                                   iter=None)
-    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbky', maxiter=k)
+    res2 = multipletests(pvals, alpha=0.05, method="fdr_tsbky", maxiter=k)
     assert_allclose(res1[1], np.clip(res0[1] * fact, 0, 1))
     assert_allclose(res2[1], res1[1])
 
     k = 1
     # pvalues corrected by first stage number of rejections
-    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
-    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bky', maxiter=k,
+    res0 = multipletests(pvals, alpha=0.05, method="fdr_bh")
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method="bky", maxiter=k,
                                   iter=None)
-    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbky', maxiter=k)
-    res3 = multipletests(pvals, alpha=0.05, method='fdr_tsbky')
+    res2 = multipletests(pvals, alpha=0.05, method="fdr_tsbky", maxiter=k)
+    res3 = multipletests(pvals, alpha=0.05, method="fdr_tsbky")
     assert_allclose(res1[1], res0[1] * (1 - res0[0].sum() / n) * fact)
     assert_allclose(res2[1], res1[1])
     assert_allclose(res3[1], res1[1])  # check default maxiter
 
 
-@pytest.mark.parametrize('method', sorted(multitest_methods_names))
+@pytest.mark.parametrize("method", sorted(multitest_methods_names))
 def test_issorted(method):
     # test that is_sorted keyword works correctly
     # the fdrcorrection functions are tested indirectly
@@ -416,7 +418,7 @@ def test_issorted(method):
     assert_allclose(res2[0][sortrevind], res1[0], rtol=1e-10)
 
 
-@pytest.mark.parametrize('method', sorted(multitest_methods_names))
+@pytest.mark.parametrize("method", sorted(multitest_methods_names))
 def test_floating_precision(method):
     # issue #7465
     pvals = np.full(6000, 0.99)
@@ -427,7 +429,7 @@ def test_floating_precision(method):
 def test_tukeyhsd():
     # example multicomp in R p 83
 
-    res = '''\
+    res = """\
     pair      diff        lwr        upr       p adj
     P-M   8.150000 -10.037586 26.3375861 0.670063958
     S-M  -3.258333 -21.445919 14.9292527 0.982419709
@@ -439,7 +441,7 @@ def test_tukeyhsd():
     T-S  27.066667   8.879081 45.2542527 0.002027122
     V-S   8.050000 -10.137586 26.2375861 0.679824487
     V-T -19.016667 -37.204253 -0.8290806 0.037710044
-    '''
+    """
 
     res = np.array([
         [8.150000,  -10.037586, 26.3375861, 0.670063958],
@@ -465,7 +467,7 @@ def test_tukeyhsd():
 
     # Remove this check when minimum SciPy version is 1.7+ (gh-8035)
     scipy_version = (version.parse(scipy.version.version) >=
-                     version.parse('1.7.0'))
+                     version.parse("1.7.0"))
     rtol = 1e-5 if scipy_version else 1e-2
     assert_allclose(myres[8][small_pvals_idx], res[small_pvals_idx, 3],
                     rtol=rtol)
@@ -515,9 +517,9 @@ def test_null_distribution():
                     rtol=1e-13)
 
 
-@pytest.mark.parametrize('estimate_prob', [True, False])
-@pytest.mark.parametrize('estimate_scale', [True, False])
-@pytest.mark.parametrize('estimate_mean', [True, False])
+@pytest.mark.parametrize("estimate_prob", [True, False])
+@pytest.mark.parametrize("estimate_scale", [True, False])
+@pytest.mark.parametrize("estimate_mean", [True, False])
 def test_null_constrained(estimate_mean, estimate_scale, estimate_prob):
 
     # Create a mixed population of Z-scores: 1000 standard normal and

@@ -6,26 +6,25 @@ Author: Josef Perktold
 from statsmodels.compat.pandas import testing as pdt
 
 import os.path
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
-
 import pytest
 
-from statsmodels.regression.linear_model import OLS
-from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
-
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.outliers_influence import MLEInfluence
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
-file_name = 'binary_constrict.csv'
-file_path = os.path.join(cur_dir, 'results', file_name)
+file_name = "binary_constrict.csv"
+file_path = os.path.join(cur_dir, "results", file_name)
 data_bin = pd.read_csv(file_path, index_col=0)
 
-file_name = 'results_influence_logit.csv'
-file_path = os.path.join(cur_dir, 'results', file_name)
+file_name = "results_influence_logit.csv"
+file_path = os.path.join(cur_dir, "results", file_name)
 results_sas_df = pd.read_csv(file_path, index_col=0)
 
 
@@ -35,7 +34,7 @@ def test_influence_glm_bernoulli():
     df = data_bin
     results_sas = np.asarray(results_sas_df)
 
-    res = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
+    res = GLM(df["constrict"], df[["const", "log_rate", "log_volumne"]],
               family=families.Binomial()).fit(attach_wls=True, atol=1e-10)
 
     infl = res.get_influence(observed=False)
@@ -63,7 +62,7 @@ class InfluenceCompareExact:
         assert_allclose(infl0.resid_studentized,
                         infl1.resid_studentized, rtol=1e-12, atol=1e-7)
 
-        cd_rtol = getattr(self, 'cd_rtol', 1e-7)
+        cd_rtol = getattr(self, "cd_rtol", 1e-7)
         assert_allclose(infl0.cooks_distance[0], infl1.cooks_distance[0],
                         rtol=cd_rtol, atol=1e-14)  # very small values possible
         assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=1e-9, atol=5e-9)
@@ -77,24 +76,27 @@ class InfluenceCompareExact:
     @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_plots(self, close_figures):
+        import matplotlib.pyplot as plt
+
         infl1 = self.infl1
         infl0 = self.infl0
 
-        fig = infl0.plot_influence(external=False)
-        fig = infl1.plot_influence(external=False)
+        infl0.plot_influence(external=False)
+        infl1.plot_influence(external=False)
 
-        fig = infl0.plot_index('resid', threshold=0.2, title='')
-        fig = infl1.plot_index('resid', threshold=0.2, title='')
+        infl0.plot_index("resid", threshold=0.2, title="")
+        infl1.plot_index("resid", threshold=0.2, title="")
+        plt.close("all")
 
-        fig = infl0.plot_index('dfbeta', idx=1, threshold=0.2, title='')
-        fig = infl1.plot_index('dfbeta', idx=1, threshold=0.2, title='')
+        infl0.plot_index("dfbeta", idx=1, threshold=0.2, title="")
+        infl1.plot_index("dfbeta", idx=1, threshold=0.2, title="")
 
-        fig = infl0.plot_index('cook', idx=1, threshold=0.2, title='')
-        fig = infl1.plot_index('cook', idx=1, threshold=0.2, title='')
+        infl0.plot_index("cook", idx=1, threshold=0.2, title="")
+        infl1.plot_index("cook", idx=1, threshold=0.2, title="")
+        plt.close("all")
 
-        fig = infl0.plot_index('hat', idx=1, threshold=0.2, title='')
-        fig = infl1.plot_index('hat', idx=1, threshold=0.2, title='')
-
+        infl0.plot_index("hat", idx=1, threshold=0.2, title="")
+        infl1.plot_index("hat", idx=1, threshold=0.2, title="")
 
     def test_summary(self):
         infl1 = self.infl1
@@ -109,14 +111,14 @@ class InfluenceCompareExact:
 def _check_looo(self):
     infl = self.infl1
     # unwrap if needed
-    results = getattr(infl.results, '_results', infl.results)
+    results = getattr(infl.results, "_results", infl.results)
 
     res_looo = infl._res_looo
     mask_infl = infl.cooks_distance[0] > 2 * infl.cooks_distance[0].std()
     mask_low = ~mask_infl
-    diff_params = results.params - res_looo['params']
+    diff_params = results.params - res_looo["params"]
     assert_allclose(infl.d_params[mask_low], diff_params[mask_low], atol=0.05)
-    assert_allclose(infl.params_one[mask_low], res_looo['params'][mask_low], rtol=0.01)
+    assert_allclose(infl.params_one[mask_low], res_looo["params"][mask_low], rtol=0.01)
 
 
 class TestInfluenceLogitGLMMLE(InfluenceCompareExact):
@@ -124,8 +126,11 @@ class TestInfluenceLogitGLMMLE(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         df = data_bin
-        res = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
-              family=families.Binomial()).fit(attach_wls=True, atol=1e-10)
+        res = GLM(
+            df["constrict"],
+            df[["const", "log_rate", "log_volumne"]],
+            family=families.Binomial(),
+        ).fit(attach_wls=True, atol=1e-10)
 
         cls.infl1 = res.get_influence()
         cls.infl0 = MLEInfluence(res)
@@ -182,13 +187,16 @@ class TestInfluenceGaussianGLMMLE(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         from .test_diagnostic import get_duncan_data
-        endog, exog, labels = get_duncan_data()
-        data = pd.DataFrame(np.column_stack((endog, exog)),
-                        columns='y const var1 var2'.split(),
-                        index=labels)
 
-        res = GLM.from_formula('y ~ const + var1 + var2 - 1', data).fit()
-        #res = GLM(endog, exog).fit()
+        endog, exog, labels = get_duncan_data()
+        data = pd.DataFrame(
+            np.column_stack((endog, exog)),
+            columns="y const var1 var2".split(),
+            index=labels,
+        )
+
+        res = GLM.from_formula("y ~ const + var1 + var2 - 1", data).fit()
+        # res = GLM(endog, exog).fit()
 
         cls.infl1 = res.get_influence()
         cls.infl0 = MLEInfluence(res)
@@ -202,13 +210,16 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         from .test_diagnostic import get_duncan_data
-        endog, exog, labels = get_duncan_data()
-        data = pd.DataFrame(np.column_stack((endog, exog)),
-                        columns='y const var1 var2'.split(),
-                        index=labels)
 
-        res0 = GLM.from_formula('y ~ const + var1 + var2 - 1', data).fit()
-        res1 = OLS.from_formula('y ~ const + var1 + var2 - 1', data).fit()
+        endog, exog, labels = get_duncan_data()
+        data = pd.DataFrame(
+            np.column_stack((endog, exog)),
+            columns="y const var1 var2".split(),
+            index=labels,
+        )
+
+        res0 = GLM.from_formula("y ~ const + var1 + var2 - 1", data).fit()
+        res1 = OLS.from_formula("y ~ const + var1 + var2 - 1", data).fit()
         cls.infl1 = res1.get_influence()
         cls.infl0 = res0.get_influence()
 
@@ -224,7 +235,7 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
                         infl1.resid_studentized, rtol=1e-12, atol=1e-7)
         assert_allclose(infl0.cooks_distance, infl1.cooks_distance,
                         rtol=1e-7, atol=1e-14)  # very small values possible
-        assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=0.1) # changed
+        assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=0.1)  # changed
         # OLSInfluence only has looo dfbeta/d_params
         assert_allclose(infl0.d_params, infl1.dfbeta, rtol=1e-9, atol=1e-14)
         # d_fittedvalues is not available in OLSInfluence, i.e. only scaled dffits
@@ -245,7 +256,7 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
         df0 = infl0.summary_frame()
         df1 = infl1.summary_frame()
         # just some basic check on overlap except for dfbetas
-        cols = ['cooks_d', 'standard_resid', 'hat_diag', 'dffits_internal']
+        cols = ["cooks_d", "standard_resid", "hat_diag", "dffits_internal"]
         assert_allclose(df0[cols].values, df1[cols].values, rtol=1e-5)
         pdt.assert_index_equal(df0.index, df1.index)
 
@@ -255,11 +266,11 @@ class TestInfluenceLogitCompare(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         df = data_bin
-        mod = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
+        mod = GLM(df["constrict"], df[["const", "log_rate", "log_volumne"]],
                   family=families.Binomial())
         res = mod.fit(method="newton", tol=1e-10)
         from statsmodels.discrete.discrete_model import Logit
-        mod2 = Logit(df['constrict'], df[['const', 'log_rate', 'log_volumne']])
+        mod2 = Logit(df["constrict"], df[["const", "log_rate", "log_volumne"]])
         res2 = mod2.fit(method="newton", tol=1e-10)
 
         cls.infl1 = res.get_influence()
@@ -271,11 +282,11 @@ class TestInfluenceProbitCompare(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         df = data_bin
-        mod = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
+        mod = GLM(df["constrict"], df[["const", "log_rate", "log_volumne"]],
                   family=families.Binomial(link=families.links.Probit()))
         res = mod.fit(method="newton", tol=1e-10)
         from statsmodels.discrete.discrete_model import Probit
-        mod2 = Probit(df['constrict'], df[['const', 'log_rate', 'log_volumne']])
+        mod2 = Probit(df["constrict"], df[["const", "log_rate", "log_volumne"]])
         res2 = mod2.fit(method="newton", tol=1e-10)
 
         cls.infl1 = MLEInfluence(res)  # res.get_influence()
@@ -309,12 +320,12 @@ class TestInfluencePoissonCompare(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         df = data_bin
-        mod = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
+        mod = GLM(df["constrict"], df[["const", "log_rate", "log_volumne"]],
                   family=families.Poisson())
         res = mod.fit(attach_wls=True, atol=1e-10)
         from statsmodels.discrete.discrete_model import Poisson
-        mod2 = Poisson(df['constrict'],
-                       df[['const', 'log_rate', 'log_volumne']])
+        mod2 = Poisson(df["constrict"],
+                       df[["const", "log_rate", "log_volumne"]])
         res2 = mod2.fit(tol=1e-10)
 
         cls.infl0 = res.get_influence()

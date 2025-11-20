@@ -1,17 +1,16 @@
 import io
 import os
 
-import pytest
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
-import patsy
+import pytest
+
 from statsmodels.api import families
-from statsmodels.tools.sm_exceptions import (
-    ValueWarning,
-    )
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.othermod.betareg import BetaModel
+from statsmodels.tools.sm_exceptions import ValueWarning
+
 from .results import results_betareg as resultsb
 
 links = families.links
@@ -55,8 +54,8 @@ expected_methylation_mean = pd.read_table(
 expected_methylation_precision = pd.read_table(
     io.StringIO(_methylation_estimates_precision), sep=r"\s+")
 
-income = pd.read_csv(os.path.join(res_dir, 'foodexpenditure.csv'))
-methylation = pd.read_csv(os.path.join(res_dir, 'methylation-test.csv'))
+income = pd.read_csv(os.path.join(res_dir, "foodexpenditure.csv"))
+methylation = pd.read_csv(os.path.join(res_dir, "methylation-test.csv"))
 
 
 def check_same(a, b, eps, name):
@@ -75,8 +74,15 @@ class TestBetaModel:
         model = "I(food/income) ~ income + persons"
         cls.income_fit = BetaModel.from_formula(model, income).fit()
 
+        def times_two(x):
+            return 2 * x
+
+        model = "I(food/income) ~ times_two(income) + persons"
+        cls.income_fit_eval_env = BetaModel.from_formula(model, income).fit()
+
         model = cls.model = "methylation ~ gender + CpG"
-        Z = cls.Z = patsy.dmatrix("~ age", methylation)
+        mgr = FormulaManager()
+        Z = cls.Z = mgr.get_matrices("~ age", methylation, pandas=False)
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                      link_precision=links.Identity())
         cls.meth_fit = mod.fit()
@@ -86,35 +92,35 @@ class TestBetaModel:
 
     def test_income_coefficients(self):
         rslt = self.income_fit
-        assert_close(rslt.params[:-1], expected_income_mean['Estimate'], 1e-3)
-        assert_close(rslt.tvalues[:-1], expected_income_mean['zvalue'], 0.1)
-        assert_close(rslt.pvalues[:-1], expected_income_mean['Pr(>|z|)'], 1e-3)
+        assert_close(rslt.params[:-1], expected_income_mean["Estimate"], 1e-3)
+        assert_close(rslt.tvalues[:-1], expected_income_mean["zvalue"], 0.1)
+        assert_close(rslt.pvalues[:-1], expected_income_mean["Pr(>|z|)"], 1e-3)
 
     def test_income_precision(self):
 
         rslt = self.income_fit
         # note that we have to exp the phi results for now.
         assert_close(np.exp(rslt.params[-1:]),
-                     expected_income_precision['Estimate'], 1e-3)
+                     expected_income_precision["Estimate"], 1e-3)
         # yield check_same, rslt.tvalues[-1:],
         #                   expected_income_precision['zvalue'], 0.1, "z-score"
         assert_close(rslt.pvalues[-1:],
-                     expected_income_precision['Pr(>|z|)'], 1e-3)
+                     expected_income_precision["Pr(>|z|)"], 1e-3)
 
     def test_methylation_coefficients(self):
         rslt = self.meth_fit
         assert_close(rslt.params[:-2],
-                     expected_methylation_mean['Estimate'], 1e-2)
+                     expected_methylation_mean["Estimate"], 1e-2)
         assert_close(rslt.tvalues[:-2],
-                     expected_methylation_mean['zvalue'], 0.1)
+                     expected_methylation_mean["zvalue"], 0.1)
         assert_close(rslt.pvalues[:-2],
-                     expected_methylation_mean['Pr(>|z|)'], 1e-2)
+                     expected_methylation_mean["Pr(>|z|)"], 1e-2)
 
     def test_methylation_precision(self):
         # R results are from log link_precision
         rslt = self.meth_log_fit
         assert_allclose(rslt.params[-2:],
-                        expected_methylation_precision['Estimate'],
+                        expected_methylation_precision["Estimate"],
                         atol=1e-5, rtol=1e-10)
         #     expected_methylation_precision['Estimate']
         # yield check_same, links.logit()(rslt.params[-2:]),
@@ -124,7 +130,7 @@ class TestBetaModel:
 
     def test_precision_formula(self):
         m = BetaModel.from_formula(self.model, methylation,
-                                   exog_precision_formula='~ age',
+                                   exog_precision_formula="~ age",
                                    link_precision=links.Identity())
         rslt = m.fit()
         assert_close(rslt.params, self.meth_fit.params, 1e-10)
@@ -132,7 +138,7 @@ class TestBetaModel:
 
         with pytest.warns(ValueWarning, match="unknown kwargs"):
             BetaModel.from_formula(self.model, methylation,
-                                   exog_precision_formula='~ age',
+                                   exog_precision_formula="~ age",
                                    link_precision=links.Identity(),
                                    junk=False)
 
@@ -160,6 +166,15 @@ class TestBetaModel:
         resid = rslt.model.endog - mean
         assert_allclose(rslt.resid, resid, rtol=1e-12)
         assert_allclose(rslt.resid_pearson, resid / np.sqrt(var), rtol=1e-12)
+
+    def test_eval_env(self):
+        assert "times_two(income)" in self.income_fit_eval_env.params.index
+        # Loose check that the eval env scaler worked
+        assert_allclose(
+            self.income_fit.params["income"],
+            2 * self.income_fit_eval_env.params["times_two(income)"],
+            rtol=1e-02
+        )
 
 
 class TestBetaMeth():
@@ -218,9 +233,9 @@ class TestBetaMeth():
     def test_resid(self):
         res1 = self.res1
         res2 = self.res2
-        assert_allclose(res1.fittedvalues, res2.resid['fittedvalues'],
+        assert_allclose(res1.fittedvalues, res2.resid["fittedvalues"],
                         rtol=1e-8)
-        assert_allclose(res1.resid, res2.resid['response'],
+        assert_allclose(res1.resid, res2.resid["response"],
                         atol=1e-8, rtol=1e-8)
 
     def test_oim(self):
@@ -342,7 +357,8 @@ class TestBetaIncome():
     def setup_class(cls):
 
         formula = "I(food/income) ~ income + persons"
-        exog_prec = patsy.dmatrix("~ persons", income)
+        mgr = FormulaManager()
+        exog_prec = mgr.get_matrices("~ persons", income)
         mod_income = BetaModel.from_formula(
             formula,
             income,
@@ -388,8 +404,8 @@ class TestBetaIncome():
 
         influ0 = MLEInfluence(res1)
         influ = res1.get_influence()
-        attrs = ['cooks_distance', 'd_fittedvalues', 'd_fittedvalues_scaled',
-                 'd_params', 'dfbetas', 'hat_matrix_diag', 'resid_studentized'
+        attrs = ["cooks_distance", "d_fittedvalues", "d_fittedvalues_scaled",
+                 "d_params", "dfbetas", "hat_matrix_diag", "resid_studentized"
                  ]
         for attr in attrs:
             getattr(influ, attr)

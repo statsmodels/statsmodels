@@ -38,7 +38,7 @@ class ConstrainedCompareMixin:
         cls.idx_c = [1]
         cls.exogc = xc = x[:, cls.idx_uc]
         mod_ols_c = OLS(y - 0.5 * x[:, 1], xc)
-        mod_ols_c.exog_names[:] = ['const', 'x2', 'x3', 'x4']
+        mod_ols_c.exog_names[:] = ["const", "x2", "x3", "x4"]
         cls.mod2 = mod_ols_c
         cls.init()
 
@@ -70,7 +70,7 @@ class TestGLMGaussianOffset(ConstrainedCompareMixin):
         cls.res2 = cls.mod2.fit()
         mod = GLM(cls.endog, cls.exogc,
                   offset=0.5 * cls.exog[:, cls.idx_c].squeeze())
-        mod.exog_names[:] = ['const', 'x2', 'x3', 'x4']
+        mod.exog_names[:] = ["const", "x2", "x3", "x4"]
         cls.res1 = mod.fit()
         cls.idx_p_uc = np.arange(cls.exogc.shape[1])
 
@@ -81,19 +81,19 @@ class TestGLMGaussianConstrained(ConstrainedCompareMixin):
     def init(cls):
         cls.res2 = cls.mod2.fit()
         mod = GLM(cls.endog, cls.exog)
-        mod.exog_names[:] = ['const', 'x1', 'x2', 'x3', 'x4']
-        cls.res1 = mod.fit_constrained('x1=0.5')
+        mod.exog_names[:] = ["const", "x1", "x2", "x3", "x4"]
+        cls.res1 = mod.fit_constrained("x1=0.5")
 
 
 class TestGLMGaussianOffsetHC(ConstrainedCompareMixin):
 
     @classmethod
     def init(cls):
-        cov_type = 'HC0'
+        cov_type = "HC0"
         cls.res2 = cls.mod2.fit(cov_type=cov_type)
         mod = GLM(cls.endog, cls.exogc,
                   offset=0.5 * cls.exog[:, cls.idx_c].squeeze())
-        mod.exog_names[:] = ['const', 'x2', 'x3', 'x4']
+        mod.exog_names[:] = ["const", "x2", "x3", "x4"]
         cls.res1 = mod.fit(cov_type=cov_type)
         cls.idx_p_uc = np.arange(cls.exogc.shape[1])
 
@@ -102,11 +102,11 @@ class TestGLMGaussianConstrainedHC(ConstrainedCompareMixin):
 
     @classmethod
     def init(cls):
-        cov_type = 'HC0'
+        cov_type = "HC0"
         cls.res2 = cls.mod2.fit(cov_type=cov_type)
         mod = GLM(cls.endog, cls.exog)
-        mod.exog_names[:] = ['const', 'x1', 'x2', 'x3', 'x4']
-        cls.res1 = mod.fit_constrained('x1=0.5', cov_type=cov_type)
+        mod.exog_names[:] = ["const", "x1", "x2", "x3", "x4"]
+        cls.res1 = mod.fit_constrained("x1=0.5", cov_type=cov_type)
 
 
 class ConstrainedCompareWtdMixin(ConstrainedCompareMixin):
@@ -128,7 +128,7 @@ class ConstrainedCompareWtdMixin(ConstrainedCompareMixin):
         cls.idx_c = [1]
         cls.exogc = xc = x[:, cls.idx_uc]
         mod_ols_c = WLS(y - 0.5 * x[:, 1], xc, weights=cls.aweights)
-        mod_ols_c.exog_names[:] = ['const', 'x2', 'x3', 'x4']
+        mod_ols_c.exog_names[:] = ["const", "x2", "x3", "x4"]
         cls.mod2 = mod_ols_c
         cls.init()
 
@@ -141,7 +141,7 @@ class TestGLMWtdGaussianOffset(ConstrainedCompareWtdMixin):
         mod = GLM(cls.endog, cls.exogc,
                   offset=0.5 * cls.exog[:, cls.idx_c].squeeze(),
                   var_weights=cls.aweights)
-        mod.exog_names[:] = ['const', 'x2', 'x3', 'x4']
+        mod.exog_names[:] = ["const", "x2", "x3", "x4"]
         cls.res1 = mod.fit()
         cls.idx_p_uc = np.arange(cls.exogc.shape[1])
 
@@ -152,20 +152,20 @@ class TestGLMWtdGaussianConstrained(ConstrainedCompareWtdMixin):
     def init(cls):
         cls.res2 = cls.mod2.fit()
         mod = GLM(cls.endog, cls.exog, var_weights=cls.aweights)
-        mod.exog_names[:] = ['const', 'x1', 'x2', 'x3', 'x4']
-        cls.res1 = mod.fit_constrained('x1=0.5')
+        mod.exog_names[:] = ["const", "x1", "x2", "x3", "x4"]
+        cls.res1 = mod.fit_constrained("x1=0.5")
 
 
 class TestGLMWtdGaussianOffsetHC(ConstrainedCompareWtdMixin):
 
     @classmethod
     def init(cls):
-        cov_type = 'HC0'
+        cov_type = "HC0"
         cls.res2 = cls.mod2.fit(cov_type=cov_type)
         mod = GLM(cls.endog, cls.exogc,
                   offset=0.5 * cls.exog[:, cls.idx_c].squeeze(),
                   var_weights=cls.aweights)
-        mod.exog_names[:] = ['const', 'x2', 'x3', 'x4']
+        mod.exog_names[:] = ["const", "x2", "x3", "x4"]
         cls.res1 = mod.fit(cov_type=cov_type)
         cls.idx_p_uc = np.arange(cls.exogc.shape[1])
 
@@ -174,11 +174,11 @@ class TestGLMWtdGaussianConstrainedHC(ConstrainedCompareWtdMixin):
 
     @classmethod
     def init(cls):
-        cov_type = 'HC0'
+        cov_type = "HC0"
         cls.res2 = cls.mod2.fit(cov_type=cov_type)
         mod = GLM(cls.endog, cls.exog, var_weights=cls.aweights)
-        mod.exog_names[:] = ['const', 'x1', 'x2', 'x3', 'x4']
-        cls.res1 = mod.fit_constrained('x1=0.5', cov_type=cov_type)
+        mod.exog_names[:] = ["const", "x1", "x2", "x3", "x4"]
+        cls.res1 = mod.fit_constrained("x1=0.5", cov_type=cov_type)
 
 
 class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
@@ -187,7 +187,7 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
     def setup_class(cls):
         from statsmodels.datasets.star98 import load
 
-        #from statsmodels.genmod.tests.results.results_glm import Star98
+        # from statsmodels.genmod.tests.results.results_glm import Star98
         data = load()
         data.exog = np.asarray(data.exog)
         data.endog = np.asarray(data.endog)
@@ -216,8 +216,8 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
         assert_allclose(res1.resid_response, res2.resid_response, rtol=1e-8)
 
     def test_glm_attr(self):
-        for attr in ['llf', 'null_deviance', 'aic', 'df_resid',
-                     'df_model', 'pearson_chi2', 'scale']:
+        for attr in ["llf", "null_deviance", "aic", "df_resid",
+                     "df_model", "pearson_chi2", "scale"]:
             assert_allclose(getattr(self.res1, attr),
                             getattr(self.res2, attr), rtol=1e-10)
         with warnings.catch_warnings():
@@ -233,19 +233,19 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
 
         use_f = False
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', ValueWarning)
+            warnings.simplefilter("ignore", ValueWarning)
             wt2 = res2.wald_test(np.eye(k2)[1:], use_f=use_f, scalar=True)
             wt1 = res1.wald_test(np.eye(k1)[1:], use_f=use_f, scalar=True)
-        assert_allclose(wt2.pvalue, wt1.pvalue, atol=1e-20) # pvalue = 0
+        assert_allclose(wt2.pvalue, wt1.pvalue, atol=1e-20)  # pvalue = 0
         assert_allclose(wt2.statistic, wt1.statistic, rtol=1e-8)
         assert_equal(wt2.df_denom, wt1.df_denom)
 
         use_f = True
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', ValueWarning)
+            warnings.simplefilter("ignore", ValueWarning)
             wt2 = res2.wald_test(np.eye(k2)[1:], use_f=use_f, scalar=True)
             wt1 = res1.wald_test(np.eye(k1)[1:], use_f=use_f, scalar=True)
-        assert_allclose(wt2.pvalue, wt1.pvalue, rtol=1) # pvalue = 8e-273
+        assert_allclose(wt2.pvalue, wt1.pvalue, rtol=1)  # pvalue = 8e-273
         assert_allclose(wt2.statistic, wt1.statistic, rtol=1e-8)
         assert_equal(wt2.df_denom, wt1.df_denom)
         assert_equal(wt2.df_num, wt1.df_num)
@@ -256,8 +256,8 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
             # RuntimeWarnings because of truedivide and scipy distributions
             # Future to silence BIC warning
             warnings.simplefilter("ignore", FutureWarning)
-            warnings.simplefilter('ignore', ValueWarning)
-            warnings.simplefilter('ignore', RuntimeWarning)
+            warnings.simplefilter("ignore", ValueWarning)
+            warnings.simplefilter("ignore", RuntimeWarning)
             self.res1.summary()
             self.res1.summary2()
 
@@ -265,8 +265,8 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
 class TestGLMBinomialCountConstrainedHC(TestGLMBinomialCountConstrained):
     @classmethod
     def init(cls):
-        cls.res2 = cls.mod2.fit(cov_type='HC0')
+        cls.res2 = cls.mod2.fit(cov_type="HC0")
         k = cls.mod1.exog.shape[1]
         cls.idx_p_uc = np.arange(k - 5)
         constraints = np.eye(k)[-5:]
-        cls.res1 = cls.mod1.fit_constrained(constraints, cov_type='HC0')
+        cls.res1 = cls.mod1.fit_constrained(constraints, cov_type="HC0")

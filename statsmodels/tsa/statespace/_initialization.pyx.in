@@ -4,7 +4,7 @@
 """
 State Space Models - Initialization
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -27,7 +27,7 @@ cimport cython
 
 np.import_array()
 
-from statsmodels.src.math cimport *
+from statsmodels.includes.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 cimport statsmodels.tsa.statespace._tools as tools

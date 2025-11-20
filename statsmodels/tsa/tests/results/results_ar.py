@@ -39,7 +39,7 @@ class ARLagResults:
                 5.596116931659277,  5.716592528473011, 248.572915484827206,
                 5.515935627515806,  5.601455679120634,  5.729461000735226,
                 248.654927915301300]
-            self.ic = np.asarray(ic).reshape(4, -1, order='F')
+            self.ic = np.asarray(ic).reshape(4, -1, order="F")
 
 
 class ARResultsOLS:
@@ -183,7 +183,7 @@ class ARResultsMLE:
             # NOTE: Stata's estimated parameters differ from gretl
             filename = os.path.join(cur_dir, "ARMLEConstantPredict.csv")
             filename2 = os.path.join(cur_dir,
-                                     'results_ar_forecast_mle_dynamic.csv')
+                                     "results_ar_forecast_mle_dynamic.csv")
             predictresults = np.loadtxt(filename, delimiter=",")
             pv = predictresults[:, 1]
             dynamicpv = np.genfromtxt(filename2, delimiter=",", skip_header=1)

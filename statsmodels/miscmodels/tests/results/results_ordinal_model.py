@@ -2,9 +2,11 @@
 Test Results for ordinal models from R MASS lib
 """
 
-import numpy as np
 import os
+
+import numpy as np
 import pandas as pd
+
 from statsmodels.tools.testing import Holder
 
 # R (v3.4.4) code inspired from
@@ -12,37 +14,37 @@ from statsmodels.tools.testing import Holder
 # library(readr) # to open the file
 # library(MASS) # to perform ordinal regression
 #
-# ## load the data, 400 rows with 3 exogs(2 binaries, 1 float)
-# ##and target 3-ordinal variable
+# # load the data, 400 rows with 3 exogs(2 binaries, 1 float)
+# # and target 3-ordinal variable
 # ologit_ucla <- read_csv("ologit_ucla.csv")
 # ologit_ucla$apply <- as.factor(ologit_ucla$apply)
 # ologit_ucla$apply <- factor(ologit_ucla$apply,
 #               levels=c("unlikely", "somewhat likely", "very likely"))
 #
-# ## fit ordered logit model
+# # fit ordered logit model
 # r_logit <- polr(apply ~ pared + public + gpa,
 #          data = ologit_ucla,
 #          method = 'logit', # or 'probit'
 #          Hess=TRUE)
 #
-# ## fit ordered probit model
+# # fit ordered probit model
 # r_probit <- polr(apply ~ pared + public + gpa,
 #      data = ologit_ucla,
 #      method = 'probit',
 #      Hess=TRUE)
 #
-# ## fit ordered cloglog model
+# # fit ordered cloglog model
 # r_cloglog <- polr(apply ~ pared + public + gpa,
 #          data = ologit_ucla,
 #          method = 'cloglog',
 #          Hess=TRUE)
 #
-# ## with r = r_logit or r_probit or r_cloglog
-# ## we add p-values
+# # with r = r_logit or r_probit or r_cloglog
+# # we add p-values
 # (ctable <- coef(summary(r)))
 # p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
 # (ctable <- cbind(ctable, "p value" = p))
-# ## show 7 first predictions
+# # show 7 first predictions
 # head(predict(r, subset(ologit_ucla,
 #                        select=c("pared", "public","gpa")), type='prob'),7)
 
@@ -52,15 +54,15 @@ df = pd.read_csv(os.path.join(cur_dir, "ologit_ucla.csv"))
 
 # df_unordered['apply'] is pd.Categorical with ordered = False
 df_unordered = df.copy()
-df_unordered['apply'] = pd.Categorical(df['apply'], ordered=False)
+df_unordered["apply"] = pd.Categorical(df["apply"], ordered=False)
 # but categories are set in order
-df_unordered['apply'] = df_unordered['apply'].cat.set_categories(
-    ['unlikely', 'somewhat likely', 'very likely'])
+df_unordered["apply"] = df_unordered["apply"].cat.set_categories(
+    ["unlikely", "somewhat likely", "very likely"])
 
 # df['apply'] is pd.Categorical with ordered = True
-df['apply'] = pd.Categorical(df['apply'], ordered=True)
-df['apply'] = df['apply'].cat.set_categories(
-    ['unlikely', 'somewhat likely', 'very likely'])
+df["apply"] = pd.Categorical(df["apply"], ordered=True)
+df["apply"] = df["apply"].cat.set_categories(
+    ["unlikely", "somewhat likely", "very likely"])
 
 data_store.df_unordered = df_unordered
 data_store.df = df

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+
 from statsmodels.base.model import LikelihoodModelResults
 
 
@@ -280,7 +281,7 @@ class MI:
         self.skip = skip
 
         # Burn-in
-        for k in range(burn):
+        for _ in range(burn):
             imp.update()
 
     def fit(self, results_cb=None):
@@ -303,9 +304,9 @@ class MI:
         par, cov = [], []
         all_results = []
 
-        for k in range(self.nrep):
+        for _ in range(self.nrep):
 
-            for k in range(self.skip+1):
+            for __ in range(self.skip+1):
                 self.imp.update()
 
             da = self.imp.data
@@ -420,7 +421,7 @@ class MIResults(LikelihoodModelResults):
         info["Sample size:"] = "%d" % self.mi.imp.data.shape[0]
         info["Num. imputations"] = "%d" % self.mi.nrep
 
-        smry.add_dict(info, align='l', float_format=float_format)
+        smry.add_dict(info, align="l", float_format=float_format)
 
         param = summary2.summary_params(self, alpha=alpha)
         param["FMI"] = self.fmi

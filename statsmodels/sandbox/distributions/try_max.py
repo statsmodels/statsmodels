@@ -1,10 +1,10 @@
-'''
+"""
 
 adjusted from Denis on pystatsmodels mailing list
 
 there might still be problems with loc and scale,
 
-'''
+"""
 
 from scipy import stats
 
@@ -12,47 +12,51 @@ __date__ = "2010-12-29 dec"
 
 
 class MaxDist(stats.rv_continuous):
-    """ max of n of scipy.stats normal expon ...
-        Example:
-            maxnormal10 = RVmax( scipy.stats.norm, 10 )
-            sample = maxnormal10( size=1000 )
-            sample.cdf = cdf ^ n,  ppf ^ (1/n)
+    """max of n of scipy.stats normal expon ...
+    Example:
+        maxnormal10 = RVmax( scipy.stats.norm, 10 )
+        sample = maxnormal10( size=1000 )
+        sample.cdf = cdf ^ n,  ppf ^ (1/n)
     """
 
     def __init__(self, dist, n):
         self.dist = dist
         self.n = n
-        extradoc = 'maximumdistribution is the distribution of the ' \
-                   + 'maximum of n i.i.d. random variable'
-        super().__init__(name='maxdist', a=dist.a, b=dist.b,
-                         longname='A maximumdistribution',
-                         # extradoc = extradoc
-                         )
+        super().__init__(
+            name="maxdist",
+            a=dist.a,
+            b=dist.b,
+            longname="A maximumdistribution",
+            # extradoc = extradoc
+        )
 
     def _pdf(self, x, *args, **kw):
-        return self.n * self.dist.pdf(x, *args, **kw) \
+        return (
+            self.n
+            * self.dist.pdf(x, *args, **kw)
             * self.dist.cdf(x, *args, **kw) ** (self.n - 1)
+        )
 
     def _cdf(self, x, *args, **kw):
         return self.dist.cdf(x, *args, **kw) ** self.n
 
     def _ppf(self, q, *args, **kw):
         # y = F(x) ^ n  <=>  x = F-1( y ^ 1/n)
-        return self.dist.ppf(q ** (1. / self.n), *args, **kw)
+        return self.dist.ppf(q ** (1.0 / self.n), *args, **kw)
 
 
-##    def rvs( self, *args, **kw ):
-##       size = kw.pop( "size", 1 )
-##       u = np.random.uniform( size=size, **kw ) ** (1 / self.n)
-##       return self.dist.ppf( u, **kw )
+#    def rvs( self, *args, **kw ):
+#       size = kw.pop( "size", 1 )
+#       u = np.random.uniform( size=size, **kw ) ** (1 / self.n)
+#       return self.dist.ppf( u, **kw )
 
 
 maxdistr = MaxDist(stats.norm, 10)
 
 print(maxdistr.rvs(size=10))
-print(maxdistr.stats(moments='mvsk'))
+print(maxdistr.stats(moments="mvsk"))
 
-'''
+"""
 >>> print maxdistr.stats(moments = 'mvsk')
 (array(1.5387527308351818), array(0.34434382328492852), array(0.40990510188513779), array(0.33139861783918922))
 >>> rvs = np.random.randn(1000,10)
@@ -75,4 +79,4 @@ print(maxdistr.stats(moments='mvsk'))
 0.99999999999999956
 
 
-'''
+"""

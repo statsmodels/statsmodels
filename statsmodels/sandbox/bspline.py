@@ -1,4 +1,4 @@
-'''
+"""
 Bspines and smoothing splines.
 
 General references:
@@ -13,22 +13,22 @@ General references:
 
     Hutchison, M. and Hoog, F. "Smoothing noisy data with spline functions."
     Numerische Mathematik, 47(1), 99-106.
-'''
-
-import numpy as np
-import numpy.linalg as L
-
-from scipy.linalg import solveh_banded
-from scipy.optimize import golden
-from models import _hbspline     #removed because this was segfaulting
+"""
 
 # Issue warning regarding heavy development status of this module
 import warnings
+
+from models import _hbspline  # removed because this was segfaulting
+import numpy as np
+import numpy.linalg as L
+from scipy.linalg import solveh_banded
+from scipy.optimize import golden
+
 _msg = """
 The bspline code is technology preview and requires significant work
 on the public API and documentation. The API will likely change in the future
 """
-warnings.warn(_msg, FutureWarning)
+warnings.warn(_msg, FutureWarning, stacklevel=2)
 
 
 def _band2array(a, lower=0, symmetric=False, hermitian=False):
@@ -50,7 +50,7 @@ def _band2array(a, lower=0, symmetric=False, hermitian=False):
 
     if not lower:
         for j in range(r):
-            _b = np.diag(a[r-1-j],k=j)[j:(n+j),j:(n+j)]
+            _b = np.diag(a[r - 1 - j], k=j)[j : (n + j), j : (n + j)]
             _a += _b
             if symmetric and j > 0:
                 _a += _b.T
@@ -58,7 +58,7 @@ def _band2array(a, lower=0, symmetric=False, hermitian=False):
                 _a += _b.conjugate().T
     else:
         for j in range(r):
-            _b = np.diag(a[j],k=j)[0:n,0:n]
+            _b = np.diag(a[j], k=j)[0:n, 0:n]
             _a += _b
             if symmetric and j > 0:
                 _a += _b.T
@@ -84,9 +84,10 @@ def _upper2lower(ub):
     lb = np.zeros(ub.shape, ub.dtype)
     nrow, ncol = ub.shape
     for i in range(ub.shape[0]):
-        lb[i,0:(ncol-i)] = ub[nrow-1-i,i:ncol]
-        lb[i,(ncol-i):] = ub[nrow-1-i,0:i]
+        lb[i, 0 : (ncol - i)] = ub[nrow - 1 - i, i:ncol]
+        lb[i, (ncol - i) :] = ub[nrow - 1 - i, 0:i]
     return lb
+
 
 def _lower2upper(lb):
     """
@@ -103,9 +104,10 @@ def _lower2upper(lb):
     ub = np.zeros(lb.shape, lb.dtype)
     nrow, ncol = lb.shape
     for i in range(lb.shape[0]):
-        ub[nrow-1-i,i:ncol] = lb[i,0:(ncol-i)]
-        ub[nrow-1-i,0:i] = lb[i,(ncol-i):]
+        ub[nrow - 1 - i, i:ncol] = lb[i, 0 : (ncol - i)]
+        ub[nrow - 1 - i, 0:i] = lb[i, (ncol - i) :]
     return ub
+
 
 def _triangle2unit(tb, lower=0):
     """
@@ -172,16 +174,15 @@ def _zero_triband(a, lower=0):
     nrow, ncol = a.shape
     if lower:
         for i in range(nrow):
-            a[i, (ncol-i):] = 0.
+            a[i, (ncol - i) :] = 0.0
     else:
         for i in range(nrow):
-            a[i, 0:i] = 0.
+            a[i, 0:i] = 0.0
     return a
 
 
 class BSpline:
-
-    '''
+    """
 
     Bsplines of a given order and specified knots.
 
@@ -204,10 +205,11 @@ class BSpline:
        x      -- an optional set of x values at which to evaluate the
                  Bspline to avoid extra evaluation in the __call__ method
 
-    '''
+    """
+
     # FIXME: update parameter names, replace single character names
     # FIXME: `order` should be actual spline order (implemented as order+1)
-    ## FIXME: update the use of spline order in extension code (evaluate is recursively called)
+    # FIXME: update the use of spline order in extension code (evaluate is recursively called)
     # FIXME: eliminate duplicate M and m attributes (m is order, M is related to tau size)
 
     def __init__(self, knots, order=4, M=None, coef=None, x=None):
@@ -215,14 +217,16 @@ class BSpline:
         knots = np.squeeze(np.unique(np.asarray(knots)))
 
         if knots.ndim != 1:
-            raise ValueError('expecting 1d array for knots')
+            raise ValueError("expecting 1d array for knots")
 
         self.m = order
         if M is None:
             M = self.m
         self.M = M
 
-        self.tau = np.hstack([[knots[0]]*(self.M-1), knots, [knots[-1]]*(self.M-1)])
+        self.tau = np.hstack(
+            [[knots[0]] * (self.M - 1), knots, [knots[-1]] * (self.M - 1)]
+        )
 
         self.K = knots.shape[0] - 2
         if coef is None:
@@ -230,7 +234,7 @@ class BSpline:
         else:
             self.coef = np.squeeze(coef)
             if self.coef.shape != (self.K + 2 * self.M - self.m):
-                raise ValueError('coefficients of Bspline have incorrect shape')
+                raise ValueError("coefficients of Bspline have incorrect shape")
         if x is not None:
             self.x = x
 
@@ -291,14 +295,14 @@ class BSpline:
         _shape = x.shape
         if _shape == ():
             x.shape = (1,)
-        x.shape = (np.product(_shape,axis=0),)
+        x.shape = (np.product(_shape, axis=0),)
         if i < self.tau.shape[0] - 1:
             # TODO: OWNDATA flags...
-            v = _hbspline.evaluate(x, self.tau, self.m, d, i, i+1)
+            v = _hbspline.evaluate(x, self.tau, self.m, d, i, i + 1)
         else:
             return np.zeros(x.shape, np.float64)
 
-        if (i == self.tau.shape[0] - self.m):
+        if i == self.tau.shape[0] - self.m:
             v = np.where(np.equal(x, self.tau[-1]), 1, v)
         v.shape = _shape
         return v
@@ -326,7 +330,7 @@ class BSpline:
         _shape = x.shape
         if _shape == ():
             x.shape = (1,)
-        x.shape = (np.product(_shape,axis=0),)
+        x.shape = (np.product(_shape, axis=0),)
 
         if upper is None:
             upper = self.tau.shape[0] - self.m
@@ -340,14 +344,18 @@ class BSpline:
             v = _hbspline.evaluate(x, self.tau, self.m, int(d), lower, upper)
         else:
             if d.shape[0] != 2:
-                raise ValueError("if d is not an integer, expecting a jx2 \
+                raise ValueError(
+                    "if d is not an integer, expecting a jx2 \
                    array with first row indicating order \
-                   of derivative, second row coefficient in front.")
+                   of derivative, second row coefficient in front."
+                )
             v = 0
             for i in range(d.shape[1]):
-                v += d[1,i] * _hbspline.evaluate(x, self.tau, self.m, d[0,i], lower, upper)
+                v += d[1, i] * _hbspline.evaluate(
+                    x, self.tau, self.m, d[0, i], lower, upper
+                )
 
-        v.shape = (upper-lower,) + _shape
+        v.shape = (upper - lower,) + _shape
         if upper == self.tau.shape[0] - self.m:
             v[-1] = np.where(np.equal(x, self.tau[-1]), 1, v[-1])
         return v
@@ -391,36 +399,43 @@ class BSpline:
         else:
             d = np.asarray(d)
             if d.shape[0] != 2:
-                raise ValueError("if d is not an integer, expecting a jx2 \
+                raise ValueError(
+                    "if d is not an integer, expecting a jx2 \
                    array with first row indicating order \
-                   of derivative, second row coefficient in front.")
+                   of derivative, second row coefficient in front."
+                )
             if d.shape == (2,):
-                d.shape = (2,1)
+                d.shape = (2, 1)
             self.g = 0
             for i in range(d.shape[1]):
                 for j in range(d.shape[1]):
-                    self.g += d[1,i]* d[1,j] * _hbspline.gram(self.tau, self.m, int(d[0,i]), int(d[0,j]))
+                    self.g += (
+                        d[1, i]
+                        * d[1, j]
+                        * _hbspline.gram(self.tau, self.m, int(d[0, i]), int(d[0, j]))
+                    )
         self.g = self.g.T
         self.d = d
         return np.nan_to_num(self.g)
 
+
 class SmoothingSpline(BSpline):
 
-    penmax = 30.
+    penmax = 30.0
     method = "target_df"
     target_df = 5
     default_pen = 1.0e-03
     optimize = True
 
-    '''
+    """
     A smoothing spline, which can be used to smooth scatterplots, i.e.
     a list of (x,y) tuples.
 
     See fit method for more information.
 
-    '''
+    """
 
-    def fit(self, y, x=None, weights=None, pen=0.):
+    def fit(self, y, x=None, weights=None, pen=0.0):
         """
         Fit the smoothing spline to a set of (x,y) pairs.
 
@@ -461,21 +476,21 @@ class SmoothingSpline(BSpline):
         else:
             bt = self.basis(x)
 
-        if pen == 0.: # cannot use cholesky for singular matrices
+        if pen == 0.0:  # cannot use cholesky for singular matrices
             banded = False
 
         if x.shape != y.shape:
-            raise ValueError('x and y shape do not agree, by default x are \
-               the Bspline\'s internal knots')
-
-        if pen >= self.penmax:
-            pen = self.penmax
-
+            raise ValueError(
+                "x and y shape do not agree, by default x are \
+               the Bspline's internal knots"
+            )
+        # if pen >= self.penmax: pen = self.penmax
+        pen = min(pen, self.penmax)
 
         if weights is not None:
             self.weights = weights
         else:
-            self.weights = 1.
+            self.weights = 1.0
 
         _w = np.sqrt(self.weights)
         bt *= _w
@@ -484,7 +499,7 @@ class SmoothingSpline(BSpline):
 
         mask = np.flatnonzero(1 - np.all(np.equal(bt, 0), axis=0))
 
-        bt = bt[:,mask]
+        bt = bt[:, mask]
         y = y[mask]
 
         self.df_total = y.shape[0]
@@ -495,21 +510,19 @@ class SmoothingSpline(BSpline):
         if not banded:
             self.btb = np.dot(bt, bt.T)
             _g = _band2array(self.g, lower=1, symmetric=True)
-            self.coef, _, self.rank = L.lstsq(self.btb + pen*_g, bty)[0:3]
+            self.coef, _, self.rank = L.lstsq(self.btb + pen * _g, bty)[0:3]
             self.rank = min(self.rank, self.btb.shape[0])
             del _g
         else:
             self.btb = np.zeros(self.g.shape, np.float64)
             nband, nbasis = self.g.shape
             for i in range(nbasis):
-                for k in range(min(nband, nbasis-i)):
-                    self.btb[k,i] = (bt[i] * bt[i+k]).sum()
+                for k in range(min(nband, nbasis - i)):
+                    self.btb[k, i] = (bt[i] * bt[i + k]).sum()
 
-            bty.shape = (1,bty.shape[0])
+            bty.shape = (1, bty.shape[0])
             self.pen = pen
-            self.chol, self.coef = solveh_banded(self.btb +
-                                                 pen*self.g,
-                                                 bty, lower=1)
+            self.chol, self.coef = solveh_banded(self.btb + pen * self.g, bty, lower=1)
 
         self.coef = np.squeeze(self.coef)
         self.resid = y * self.weights - np.dot(self.coef, bt)
@@ -522,13 +535,12 @@ class SmoothingSpline(BSpline):
     def smooth(self, y, x=None, weights=None):
 
         if self.method == "target_df":
-            if hasattr(self, 'pen'):
+            if hasattr(self, "pen"):
                 self.fit(y, x=x, weights=weights, pen=self.pen)
             else:
                 self.fit_target_df(y, x=x, weights=weights, df=self.target_df)
         elif self.method == "optimize_gcv":
             self.fit_optimize_gcv(y, x=x, weights=weights)
-
 
     def gcv(self):
         """
@@ -576,8 +588,9 @@ class SmoothingSpline(BSpline):
         else:
             return self.rank
 
-    def fit_target_df(self, y, x=None, df=None, weights=None, tol=1.0e-03,
-                      apen=0, bpen=1.0e-03):
+    def fit_target_df(
+        self, y, x=None, df=None, weights=None, tol=1.0e-03, apen=0, bpen=1.0e-03
+    ):
         """
         Fit smoothing spline with approximately df degrees of freedom
         used in the fit, i.e. so that self.trace() is approximately df.
@@ -604,7 +617,7 @@ class SmoothingSpline(BSpline):
 
         df = df or self.target_df
 
-        olddf = y.shape[0] - self.m
+        y.shape[0] - self.m
 
         if hasattr(self, "pen"):
             self.fit(y, x=x, weights=weights, pen=self.pen)
@@ -614,7 +627,7 @@ class SmoothingSpline(BSpline):
             if curdf > df:
                 apen, bpen = self.pen, 2 * self.pen
             else:
-                apen, bpen = 0., self.pen
+                apen, bpen = 0.0, self.pen
 
         while True:
 
@@ -624,15 +637,17 @@ class SmoothingSpline(BSpline):
             if curdf > df:
                 apen, bpen = curpen, 2 * curpen
             else:
-                apen, bpen = apen, curpen
+                # apen unchanged
+                bpen = curpen
             if apen >= self.penmax:
-                raise ValueError("penalty too large, try setting penmax \
-                   higher or decreasing df")
+                raise ValueError(
+                    "penalty too large, try setting penmax \
+                   higher or decreasing df"
+                )
             if np.fabs(curdf - df) / df < tol:
                 break
 
-    def fit_optimize_gcv(self, y, x=None, weights=None, tol=1.0e-03,
-                         brack=(-100,20)):
+    def fit_optimize_gcv(self, y, x=None, weights=None, tol=1.0e-03, brack=(-100, 20)):
         """
         Fit smoothing spline trying to optimize GCV.
 
@@ -660,4 +675,4 @@ class SmoothingSpline(BSpline):
             a = self.gcv()
             return a
 
-        a = golden(_gcv, args=(y,x), brack=brack, tol=tol)
+        golden(_gcv, args=(y, x), brack=brack, tol=tol)

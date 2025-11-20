@@ -191,8 +191,8 @@ def get_index_loc(key, index):
         #   (e.g. a non-numeric string) will raise a ValueError if the
         #   index is RangeIndex (otherwise will raise an IndexError)
         #   (as of Pandas 0.22)
-        except (IndexError, ValueError) as e:
-            raise KeyError(str(e))
+        except (IndexError, ValueError) as exc:
+            raise KeyError(str(exc)) from exc
         loc = key
     else:
         loc = index.get_loc(key)
@@ -243,42 +243,40 @@ def get_index_label_loc(key, index, row_labels):
     """
     try:
         loc, index, index_was_expanded = get_index_loc(key, index)
-    except KeyError as e:
-        try:
-            if not isinstance(key, (int, np.integer)):
-                loc = row_labels.get_loc(key)
+    except KeyError:
+        if not isinstance(key, (int, np.integer)):
+            loc = row_labels.get_loc(key)
+        else:
+            raise
+        # Require scalar
+        # Pandas may return a slice if there are multiple matching
+        # locations that are monotonic increasing (otherwise it may
+        # return an array of integer locations, see below).
+        if isinstance(loc, slice):
+            loc = loc.start
+        if isinstance(loc, np.ndarray):
+            # Pandas may return a mask (boolean array), for e.g.:
+            # pd.Index(list('abcb')).get_loc('b')
+            if loc.dtype == bool:
+                # Return the first True value
+                # (we know there is at least one True value if we're
+                # here because otherwise the get_loc call would have
+                # raised an exception)
+                loc = np.argmax(loc)
+            # Finally, Pandas may return an integer array of
+            # locations that match the given value, for e.g.
+            # pd.DatetimeIndex(['2001-02', '2001-01']).get_loc('2001')
+            # (this appears to be slightly undocumented behavior, since
+            # only int, slice, and mask are mentioned in docs for
+            # pandas.Index.get_loc as of 0.23.4)
             else:
-                raise
-            # Require scalar
-            # Pandas may return a slice if there are multiple matching
-            # locations that are monotonic increasing (otherwise it may
-            # return an array of integer locations, see below).
-            if isinstance(loc, slice):
-                loc = loc.start
-            if isinstance(loc, np.ndarray):
-                # Pandas may return a mask (boolean array), for e.g.:
-                # pd.Index(list('abcb')).get_loc('b')
-                if loc.dtype == bool:
-                    # Return the first True value
-                    # (we know there is at least one True value if we're
-                    # here because otherwise the get_loc call would have
-                    # raised an exception)
-                    loc = np.argmax(loc)
-                # Finally, Pandas may return an integer array of
-                # locations that match the given value, for e.g.
-                # pd.DatetimeIndex(['2001-02', '2001-01']).get_loc('2001')
-                # (this appears to be slightly undocumented behavior, since
-                # only int, slice, and mask are mentioned in docs for
-                # pandas.Index.get_loc as of 0.23.4)
-                else:
-                    loc = loc[0]
-            if not isinstance(loc, numbers.Integral):
-                raise
+                loc = loc[0]
+        if not isinstance(loc, numbers.Integral):
+            raise
 
-            index = row_labels[: loc + 1]
-            index_was_expanded = False
-        except:
-            raise e
+        index = row_labels[: loc + 1]
+        index_was_expanded = False
+
     return loc, index, index_was_expanded
 
 
@@ -358,22 +356,22 @@ def get_prediction_index(
         start, _, start_oos = get_index_label_loc(
             start, base_index, data.row_labels
         )
-    except KeyError:
+    except KeyError as exc:
         raise KeyError(
             "The `start` argument could not be matched to a"
             " location related to the index of the data."
-        )
+        ) from exc
     if end is None:
         end = max(start, len(base_index) - 1)
     try:
         end, end_index, end_oos = get_index_label_loc(
             end, base_index, data.row_labels
         )
-    except KeyError:
+    except KeyError as exc:
         raise KeyError(
             "The `end` argument could not be matched to a"
             " location related to the index of the data."
-        )
+        ) from exc
 
     # Handle slices (if the given index keys cover more than one date)
     if isinstance(start, slice):
@@ -554,7 +552,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     if not isinstance(_index, Index):
                         raise ValueError("Could not coerce to date index")
                     index = _index
-                except:
+                except Exception as exc:
                     # Only want to actually raise an exception if `dates` was
                     # provided but cannot be coerced. If we got the index from
                     # the row_labels, we'll just ignore it and use the integer
@@ -563,7 +561,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                         raise ValueError(
                             "Non-date index index provided to"
                             " `dates` argument."
-                        )
+                        ) from exc
             # Now, if we were given, or coerced, a date-based index, make sure
             # it has an associated frequency
             if isinstance(index, (DatetimeIndex, PeriodIndex)):
@@ -575,11 +573,10 @@ class TimeSeriesModel(base.LikelihoodModel):
                         inferred_freq = True
                         if freq is not None:
                             warnings.warn(
-                                "No frequency information was"
-                                " provided, so inferred frequency %s"
-                                " will be used." % freq,
+                                "No frequency information was provided, so inferred "
+                                f"frequency {freq} will be used.",
                                 ValueWarning,
-                                stacklevel = 2,
+                                stacklevel=2,
                             )
 
                 # Convert the passed freq to a pandas offset object
@@ -633,7 +630,6 @@ class TimeSeriesModel(base.LikelihoodModel):
         # Get attributes of the index
         has_index = index is not None
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
-        period_index = isinstance(index, PeriodIndex)
         int_index = is_int_index(index)
         range_index = isinstance(index, RangeIndex)
         has_freq = index.freq is not None if date_index else None
@@ -769,7 +765,9 @@ class TimeSeriesModel(base.LikelihoodModel):
             base_index = self._index
         return get_index_label_loc(key, base_index, self.data.row_labels)
 
-    def _get_prediction_index(self, start, end, index=None, silent=False) -> tuple[int, int, int, Index | None]:
+    def _get_prediction_index(
+        self, start, end, index=None, silent=False
+    ) -> tuple[int, int, int, Index | None]:
         """
         Get the location of a specific key in an index or model row labels
 
@@ -874,5 +872,5 @@ class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
 
 
 wrap.populate_wrapper(
-    TimeSeriesResultsWrapper, TimeSeriesModelResults  # noqa:E305
+    TimeSeriesResultsWrapper, TimeSeriesModelResults
 )

@@ -6,12 +6,11 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-import warnings
-
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
 from collections import defaultdict
+import warnings
 
 import numpy as np
 
@@ -19,12 +18,15 @@ from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import maybe_unwrap_results
 
 # outliers test convenience wrapper
 
-def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
-                 order=False, cutoff=None):
+
+def outlier_test(
+    model_results, method="bonf", alpha=0.05, labels=None, order=False, cutoff=None
+):
     """
     Outlier Tests for RegressionResults instances.
 
@@ -70,14 +72,17 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
     df = df_resid - 1.
     """
     from scipy import stats  # lazy import
+
     if labels is None:
-        labels = getattr(model_results.model.data, 'row_labels', None)
-    infl = getattr(model_results, 'get_influence', None)
+        labels = getattr(model_results.model.data, "row_labels", None)
+    infl = getattr(model_results, "get_influence", None)
     if infl is None:
         results = maybe_unwrap_results(model_results)
-        raise AttributeError("model_results object %s does not have a "
-                             "get_influence "
-                             "method." % results.__class__.__name__)
+        raise AttributeError(
+            "model_results object %s does not have a "
+            "get_influence "
+            "method." % results.__class__.__name__
+        )
     resid = infl().resid_studentized_external
     if order:
         idx = np.abs(resid).argsort()[::-1]
@@ -97,13 +102,17 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
 
     if labels is not None:
         from pandas import DataFrame
-        return DataFrame(data,
-                         columns=['student_resid', 'unadj_p', method + "(p)"],
-                         index=np.asarray(labels)[mask])
+
+        return DataFrame(
+            data,
+            columns=["student_resid", "unadj_p", method + "(p)"],
+            index=np.asarray(labels)[mask],
+        )
     return data
 
 
 # influence measures
+
 
 def reset_ramsey(res, degree=5):
     """Ramsey's RESET specification test for linear models
@@ -136,11 +145,11 @@ def reset_ramsey(res, degree=5):
     k_vars = res.model.exog.shape[1]
     # vander without constant and x, and drop constant
     norm_values = np.asarray(res.fittedvalues)
-    norm_values = norm_values / np.sqrt((norm_values ** 2).mean())
+    norm_values = norm_values / np.sqrt((norm_values**2).mean())
     y_fitted_vander = np.vander(norm_values, order)[:, :-2]
     exog = np.column_stack((res.model.exog, y_fitted_vander))
-    exog /= np.sqrt((exog ** 2).mean(0))
-    endog = res.model.endog / (res.model.endog ** 2).mean()
+    exog /= np.sqrt((exog**2).mean(0))
+    endog = res.model.endog / (res.model.endog**2).mean()
     res_aux = OLS(endog, exog).fit()
     # r_matrix = np.eye(degree, exog.shape[1], k_vars)
     r_matrix = np.eye(degree - 1, exog.shape[1], k_vars)
@@ -194,39 +203,65 @@ def variance_inflation_factor(exog, exog_idx):
     mask = np.arange(k_vars) != exog_idx
     x_noti = exog[:, mask]
     r_squared_i = OLS(x_i, x_noti).fit().rsquared
-    vif = 1. / (1. - r_squared_i)
+    vif = 1.0 / (1.0 - r_squared_i)
     return vif
 
 
 class _BaseInfluenceMixin:
-    """common methods between OLSInfluence and MLE/GLMInfluence
-    """
+    """common methods between OLSInfluence and MLE/GLMInfluence"""
 
-    @Appender(_plot_influence_doc.format(**{'extra_params_doc': ""}))
-    def plot_influence(self, external=None, alpha=.05, criterion="cooks",
-                       size=48, plot_alpha=.75, ax=None, **kwargs):
+    @Appender(_plot_influence_doc.format(extra_params_doc=""))
+    def plot_influence(
+        self,
+        external=None,
+        alpha=0.05,
+        criterion="cooks",
+        size=48,
+        plot_alpha=0.75,
+        ax=None,
+        **kwargs,
+    ):
 
         if external is None:
-            external = hasattr(self, '_cache') and 'res_looo' in self._cache
+            external = hasattr(self, "_cache") and "res_looo" in self._cache
         from statsmodels.graphics.regressionplots import _influence_plot
+
         if self.hat_matrix_diag is not None:
-            res = _influence_plot(self.results, self, external=external,
-                                  alpha=alpha,
-                                  criterion=criterion, size=size,
-                                  plot_alpha=plot_alpha, ax=ax, **kwargs)
+            res = _influence_plot(
+                self.results,
+                self,
+                external=external,
+                alpha=alpha,
+                criterion=criterion,
+                size=size,
+                plot_alpha=plot_alpha,
+                ax=ax,
+                **kwargs,
+            )
         else:
-            warnings.warn("Plot uses pearson residuals and exog hat matrix.")
-            res = _influence_plot(self.results, self, external=external,
-                                  alpha=alpha,
-                                  criterion=criterion, size=size,
-                                  leverage=self.hat_matrix_exog_diag,
-                                  resid=self.resid,
-                                  plot_alpha=plot_alpha, ax=ax, **kwargs)
+            warnings.warn(
+                "Plot uses pearson residuals and exog hat matrix.",
+                SpecificationWarning,
+                stacklevel=2,
+            )
+            res = _influence_plot(
+                self.results,
+                self,
+                external=external,
+                alpha=alpha,
+                criterion=criterion,
+                size=size,
+                leverage=self.hat_matrix_exog_diag,
+                resid=self.resid,
+                plot_alpha=plot_alpha,
+                ax=ax,
+                **kwargs,
+            )
         return res
 
-    def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,
-                    **kwds):
+    def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None, **kwds):
         from statsmodels.graphics import utils
+
         fig, ax = utils.create_mpl_ax(ax)
         if title is None:
             title = "Index Plot"
@@ -234,7 +269,7 @@ class _BaseInfluenceMixin:
         index = np.arange(nobs)
         ax.scatter(index, y, **kwds)
 
-        if threshold == 'all':
+        if threshold == "all":
             large_points = np.ones(nobs, np.bool_)
         else:
             large_points = np.abs(y) > threshold
@@ -243,10 +278,14 @@ class _BaseInfluenceMixin:
         labels = self.results.model.data.row_labels
         if labels is None:
             labels = np.arange(nobs)
-        ax = utils.annotate_axes(np.where(large_points)[0], labels,
-                                 lzip(index, y),
-                                 lzip(-psize, psize), "large",
-                                 ax)
+        ax = utils.annotate_axes(
+            np.where(large_points)[0],
+            labels,
+            lzip(index, y),
+            lzip(-psize, psize),
+            "large",
+            ax,
+        )
 
         font = {"fontsize": 16, "color": "black"}
         ax.set_ylabel(ylabel, **font)
@@ -254,8 +293,9 @@ class _BaseInfluenceMixin:
         ax.set_title(title, **font)
         return fig
 
-    def plot_index(self, y_var='cooks', threshold=None, title=None, ax=None,
-                   idx=None, **kwds):
+    def plot_index(
+        self, y_var="cooks", threshold=None, title=None, ax=None, idx=None, **kwds
+    ):
         """index plot for influence attributes
 
         Parameters
@@ -282,21 +322,21 @@ class _BaseInfluenceMixin:
         criterion = y_var  # alias
         if threshold is None:
             # TODO: criterion specific defaults
-            threshold = 'all'
+            threshold = "all"
 
-        if criterion == 'dfbeta':
+        if criterion == "dfbeta":
             y = self.dfbetas[:, idx]
-            ylabel = 'DFBETA for ' + self.results.model.exog_names[idx]
-        elif criterion.startswith('cook'):
+            ylabel = "DFBETA for " + self.results.model.exog_names[idx]
+        elif criterion.startswith("cook"):
             y = self.cooks_distance[0]
             ylabel = "Cook's distance"
-        elif criterion.startswith('hat') or criterion.startswith('lever'):
+        elif criterion.startswith(("hat", "lever")):
             y = self.hat_matrix_diag
             ylabel = "Leverage (diagonal of hat matrix)"
-        elif criterion.startswith('cook'):
+        elif criterion.startswith("cook"):
             y = self.cooks_distance[0]
             ylabel = "Cook's distance"
-        elif criterion.startswith('resid_stu'):
+        elif criterion.startswith("resid_stu"):
             y = self.resid_studentized
             ylabel = "Internally Studentized Residuals"
         else:
@@ -306,8 +346,9 @@ class _BaseInfluenceMixin:
                 y = y[idx]
             ylabel = y_var
 
-        fig = self._plot_index(y, ylabel, threshold=threshold, title=title,
-                               ax=ax, **kwds)
+        fig = self._plot_index(
+            y, ylabel, threshold=threshold, title=title, ax=ax, **kwds
+        )
         return fig
 
 
@@ -380,8 +421,16 @@ class MLEInfluence(_BaseInfluenceMixin):
     ZeroInflatedPoisson.
     """
 
-    def __init__(self, results, resid=None, endog=None, exog=None,
-                 hat_matrix_diag=None, cov_params=None, scale=None):
+    def __init__(
+        self,
+        results,
+        resid=None,
+        endog=None,
+        exog=None,
+        hat_matrix_diag=None,
+        cov_params=None,
+        scale=None,
+    ):
         # this __init__ attaches attributes that we don't really need
         self.results = results = maybe_unwrap_results(results)
         # TODO: check for extra params in e.g. NegBin
@@ -394,12 +443,11 @@ class MLEInfluence(_BaseInfluenceMixin):
             self.resid = resid
         else:
             self.resid = getattr(results, "resid_pearson", None)
-            if self.resid is not None: # and scale != 1:
+            if self.resid is not None:  # and scale != 1:
                 # GLM and similar does not divide resid_pearson by scale
                 self.resid = self.resid / np.sqrt(self.scale)
 
-        self.cov_params = (cov_params if cov_params is not None
-                           else results.cov_params())
+        self.cov_params = cov_params if cov_params is not None else results.cov_params()
         self.model_class = results.model.__class__
 
         self.hessian = self.results.model.hessian(self.results.params)
@@ -413,18 +461,20 @@ class MLEInfluence(_BaseInfluenceMixin):
 
         This is the analogue of the hat matrix diagonal for general MLE.
         """
-        if hasattr(self, '_hat_matrix_diag'):
+        if hasattr(self, "_hat_matrix_diag"):
             return self._hat_matrix_diag
 
         try:
-            dsdy = self.results.model._deriv_score_obs_dendog(
-                self.results.params)
+            dsdy = self.results.model._deriv_score_obs_dendog(self.results.params)
         except NotImplementedError:
             dsdy = None
 
         if dsdy is None:
-            warnings.warn("hat matrix is not available, missing derivatives",
-                          UserWarning)
+            warnings.warn(
+                "hat matrix is not available, missing derivatives",
+                UserWarning,
+                stacklevel=2,
+            )
             return None
 
         dmu_dp = self.results.model._deriv_mean_dparams(self.results.params)
@@ -436,9 +486,7 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def hat_matrix_exog_diag(self):
-        """Diagonal of the hat_matrix using only exog as in OLS
-
-        """
+        """Diagonal of the hat_matrix using only exog as in OLS"""
         get_exogs = getattr(self.results.model, "_get_exogs", None)
         if get_exogs is not None:
             exog = np.column_stack(get_exogs())
@@ -494,8 +542,9 @@ class MLEInfluence(_BaseInfluenceMixin):
         chi-square distribution instead of F-distribution, or if we make it
         dependent on the fit keyword use_t.
         """
-        cooks_d2 = (self.d_params * np.linalg.solve(self.cov_params,
-                                                    self.d_params.T).T).sum(1)
+        cooks_d2 = (
+            self.d_params * np.linalg.solve(self.cov_params, self.d_params.T).T
+        ).sum(1)
         cooks_d2 /= self.k_params
         from scipy import stats
 
@@ -532,6 +581,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         predictor. (This occured in an example for GeneralizedPoisson)
         """
         from statsmodels.genmod.generalized_linear_model import GLM
+
         sf = self.results.model.score_factor(self.results.params)
         hf = self.results.model.hessian_factor(self.results.params)
         if isinstance(sf, tuple):
@@ -607,8 +657,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         # we only need unchanging parts, alpha for confint could change
         with warnings.catch_warnings():
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.filterwarnings("ignore", message=msg,
-                                    category=FutureWarning)
+            warnings.filterwarnings("ignore", message=msg, category=FutureWarning)
             pred = self.results.get_prediction()
         return pred
 
@@ -671,27 +720,32 @@ class MLEInfluence(_BaseInfluenceMixin):
         # row and column labels
         data = self.results.model.data
         row_labels = data.row_labels
-        beta_labels = ['dfb_' + i for i in data.xnames]
+        beta_labels = ["dfb_" + i for i in data.xnames]
 
         # grab the results
         if self.hat_matrix_diag is not None:
-            summary_data = DataFrame(dict(
-                cooks_d=self.cooks_distance[0],
-                standard_resid=self.resid_studentized,
-                hat_diag=self.hat_matrix_diag,
-                dffits_internal=self.d_fittedvalues_scaled),
-                index=row_labels)
+            summary_data = DataFrame(
+                dict(
+                    cooks_d=self.cooks_distance[0],
+                    standard_resid=self.resid_studentized,
+                    hat_diag=self.hat_matrix_diag,
+                    dffits_internal=self.d_fittedvalues_scaled,
+                ),
+                index=row_labels,
+            )
         else:
-            summary_data = DataFrame(dict(
-                cooks_d=self.cooks_distance[0],
-                # standard_resid=self.resid_studentized,
-                # hat_diag=self.hat_matrix_diag,
-                dffits_internal=self.d_fittedvalues_scaled),
-                index=row_labels)
+            summary_data = DataFrame(
+                dict(
+                    cooks_d=self.cooks_distance[0],
+                    # standard_resid=self.resid_studentized,
+                    # hat_diag=self.hat_matrix_diag,
+                    dffits_internal=self.d_fittedvalues_scaled,
+                ),
+                index=row_labels,
+            )
 
         # NOTE: if we do not give columns, order of above will be arbitrary
-        dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
-                           index=row_labels)
+        dfbeta = DataFrame(self.dfbetas, columns=beta_labels, index=row_labels)
 
         return dfbeta.join(summary_data)
 
@@ -751,8 +805,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def resid_press(self):
-        """PRESS residuals
-        """
+        """PRESS residuals"""
         hii = self.hat_matrix_diag
         return self.resid / (1 - hii)
 
@@ -779,8 +832,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def ess_press(self):
-        """Error sum of squares of PRESS residuals
-        """
+        """Error sum of squares of PRESS residuals"""
         return np.dot(self.resid_press, self.resid_press)
 
     @cache_readonly
@@ -863,7 +915,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         """
         hii = self.hat_matrix_diag
         # Eubank p.93, 94
-        cooks_d2 = self.resid_studentized ** 2 / self.k_vars
+        cooks_d2 = self.resid_studentized**2 / self.k_vars
         cooks_d2 *= hii / (1 - hii)
 
         from scipy import stats
@@ -886,7 +938,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         # -> move definition of sigma_error to the __init__
         hii = self.hat_matrix_diag
         dffits_ = self.resid_studentized_internal * np.sqrt(hii / (1 - hii))
-        dffits_threshold = 2 * np.sqrt(self.k_vars * 1. / self.nobs)
+        dffits_threshold = 2 * np.sqrt(self.k_vars * 1.0 / self.nobs)
         return dffits_, dffits_threshold
 
     @cache_readonly
@@ -915,7 +967,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         # -> move definition of sigma_error to the __init__
         hii = self.hat_matrix_diag
         dffits_ = self.resid_studentized_external * np.sqrt(hii / (1 - hii))
-        dffits_threshold = 2 * np.sqrt(self.k_vars * 1. / self.nobs)
+        dffits_threshold = 2 * np.sqrt(self.k_vars * 1.0 / self.nobs)
         return dffits_, dffits_threshold
 
     @cache_readonly
@@ -946,7 +998,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         uses results from leave-one-observation-out loop
         """
-        return np.asarray(self._res_looo['mse_resid'])
+        return np.asarray(self._res_looo["mse_resid"])
 
     @property
     def params_not_obsi(self):
@@ -954,7 +1006,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         uses results from leave-one-observation-out loop
         """
-        return np.asarray(self._res_looo['params'])
+        return np.asarray(self._res_looo["params"])
 
     @property
     def det_cov_params_not_obsi(self):
@@ -962,7 +1014,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         uses results from leave-one-observation-out loop
         """
-        return np.asarray(self._res_looo['det_cov_params'])
+        return np.asarray(self._res_looo["det_cov_params"])
 
     @cache_readonly
     def cov_ratio(self):
@@ -973,8 +1025,9 @@ class OLSInfluence(_BaseInfluenceMixin):
         requires leave one out loop for observations
         """
         # do not use inplace division / because then we change original
-        cov_ratio = (self.det_cov_params_not_obsi
-                     / np.linalg.det(self.results.cov_params()))
+        cov_ratio = self.det_cov_params_not_obsi / np.linalg.det(
+            self.results.cov_params()
+        )
         return cov_ratio
 
     @cache_readonly
@@ -1000,7 +1053,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         """
         return np.sqrt(self.resid_var)
 
-    def _ols_xnoti(self, drop_idx, endog_idx='endog', store=True):
+    def _ols_xnoti(self, drop_idx, endog_idx="endog", store=True):
         """regression results from LOVO auxiliary regression with cache
 
 
@@ -1025,7 +1078,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         """
         # reverse the structure, access store, if fail calculate ?
         # this creates keys in store even if store = false ! bug
-        if endog_idx == 'endog':
+        if endog_idx == "endog":
             stored = self.aux_regression_endog
             if hasattr(stored, drop_idx):
                 return stored[drop_idx]
@@ -1074,7 +1127,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         cv_iter = LeaveOneOut(self.k_vars)
         res_loo = defaultdict(list)
-        for inidx, outidx in cv_iter:
+        for inidx, _ in cv_iter:
             for att in attributes:
                 res_i = self.model_class(endog, exog[:, inidx]).fit()
                 res_loo[att].append(getattr(res_i, att))
@@ -1111,8 +1164,7 @@ class OLSInfluence(_BaseInfluenceMixin):
             mse_resid[outidx] = res_i.mse_resid
             det_cov_params[outidx] = get_det_cov_params(res_i)
 
-        return dict(params=params, mse_resid=mse_resid,
-                    det_cov_params=det_cov_params)
+        return dict(params=params, mse_resid=mse_resid, det_cov_params=det_cov_params)
 
     def summary_frame(self):
         """
@@ -1145,21 +1197,22 @@ class OLSInfluence(_BaseInfluenceMixin):
         # row and column labels
         data = self.results.model.data
         row_labels = data.row_labels
-        beta_labels = ['dfb_' + i for i in data.xnames]
+        beta_labels = ["dfb_" + i for i in data.xnames]
 
         # grab the results
-        summary_data = DataFrame(dict(
-            cooks_d=self.cooks_distance[0],
-            standard_resid=self.resid_studentized_internal,
-            hat_diag=self.hat_matrix_diag,
-            dffits_internal=self.dffits_internal[0],
-            student_resid=self.resid_studentized_external,
-            dffits=self.dffits[0],
-        ),
-            index=row_labels)
+        summary_data = DataFrame(
+            dict(
+                cooks_d=self.cooks_distance[0],
+                standard_resid=self.resid_studentized_internal,
+                hat_diag=self.hat_matrix_diag,
+                dffits_internal=self.dffits_internal[0],
+                student_resid=self.resid_studentized_external,
+                dffits=self.dffits[0],
+            ),
+            index=row_labels,
+        )
         # NOTE: if we do not give columns, order of above will be arbitrary
-        dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
-                           index=row_labels)
+        dfbeta = DataFrame(self.dfbetas, columns=beta_labels, index=row_labels)
 
         return dfbeta.join(summary_data)
 
@@ -1192,16 +1245,17 @@ class OLSInfluence(_BaseInfluenceMixin):
         #                      self.dffits,
         #                      self.dfbetas
         #                      ]
-        table_raw = [('obs', np.arange(self.nobs)),
-                     ('endog', self.endog),
-                     ('fitted\nvalue', self.results.fittedvalues),
-                     ("Cook's\nd", self.cooks_distance[0]),
-                     ("student.\nresidual", self.resid_studentized_internal),
-                     ('hat diag', self.hat_matrix_diag),
-                     ('dffits \ninternal', self.dffits_internal[0]),
-                     ("ext.stud.\nresidual", self.resid_studentized_external),
-                     ('dffits', self.dffits[0])
-                     ]
+        table_raw = [
+            ("obs", np.arange(self.nobs)),
+            ("endog", self.endog),
+            ("fitted\nvalue", self.results.fittedvalues),
+            ("Cook's\nd", self.cooks_distance[0]),
+            ("student.\nresidual", self.resid_studentized_internal),
+            ("hat diag", self.hat_matrix_diag),
+            ("dffits \ninternal", self.dffits_internal[0]),
+            ("ext.stud.\nresidual", self.resid_studentized_external),
+            ("dffits", self.dffits[0]),
+        ]
         colnames, data = lzip(*table_raw)  # unzip
         data = np.column_stack(data)
         self.table_data = data
@@ -1209,12 +1263,12 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         from statsmodels.iolib.table import SimpleTable, default_html_fmt
         from statsmodels.iolib.tableformatting import fmt_base
+
         fmt = deepcopy(fmt_base)
         fmt_html = deepcopy(default_html_fmt)
-        fmt['data_fmts'] = ["%4d"] + [float_fmt] * (data.shape[1] - 1)
+        fmt["data_fmts"] = ["%4d"] + [float_fmt] * (data.shape[1] - 1)
         # fmt_html['data_fmts'] = fmt['data_fmts']
-        return SimpleTable(data, headers=colnames, txt_fmt=fmt,
-                           html_fmt=fmt_html)
+        return SimpleTable(data, headers=colnames, txt_fmt=fmt, html_fmt=fmt_html)
 
 
 def summary_table(res, alpha=0.05):
@@ -1246,10 +1300,13 @@ def summary_table(res, alpha=0.05):
     # Note: using hat_matrix only works for fitted values
     predict_mean_se = np.sqrt(infl.hat_matrix_diag * res.mse_resid)
 
-    tppf = stats.t.isf(alpha / 2., res.df_resid)
-    predict_mean_ci = np.column_stack([
-        res.fittedvalues - tppf * predict_mean_se,
-        res.fittedvalues + tppf * predict_mean_se])
+    tppf = stats.t.isf(alpha / 2.0, res.df_resid)
+    predict_mean_ci = np.column_stack(
+        [
+            res.fittedvalues - tppf * predict_mean_se,
+            res.fittedvalues + tppf * predict_mean_se,
+        ]
+    )
 
     # standard error for predicted observation
     tmp = wls_prediction_std(res, alpha=alpha)
@@ -1260,27 +1317,39 @@ def summary_table(res, alpha=0.05):
     # standard deviation of residual
     resid_se = np.sqrt(res.mse_resid * (1 - infl.hat_matrix_diag))
 
-    table_sm = np.column_stack([
-        np.arange(res.nobs) + 1,
-        res.model.endog,
-        res.fittedvalues,
-        predict_mean_se,
-        predict_mean_ci[:, 0],
-        predict_mean_ci[:, 1],
-        predict_ci[:, 0],
-        predict_ci[:, 1],
-        res.resid,
-        resid_se,
-        infl.resid_studentized_internal,
-        infl.cooks_distance[0]
-    ])
+    table_sm = np.column_stack(
+        [
+            np.arange(res.nobs) + 1,
+            res.model.endog,
+            res.fittedvalues,
+            predict_mean_se,
+            predict_mean_ci[:, 0],
+            predict_mean_ci[:, 1],
+            predict_ci[:, 0],
+            predict_ci[:, 1],
+            res.resid,
+            resid_se,
+            infl.resid_studentized_internal,
+            infl.cooks_distance[0],
+        ]
+    )
 
-    # colnames, data = lzip(*table_raw) #unzip
+    # colnames, data = lzip(*table_raw) # unzip
     data = table_sm
-    ss2 = ['Obs', 'Dep Var\nPopulation', 'Predicted\nValue',
-           'Std Error\nMean Predict', 'Mean ci\n95% low', 'Mean ci\n95% upp',
-           'Predict ci\n95% low', 'Predict ci\n95% upp', 'Residual',
-           'Std Error\nResidual', 'Student\nResidual', "Cook's\nD"]
+    ss2 = [
+        "Obs",
+        "Dep Var\nPopulation",
+        "Predicted\nValue",
+        "Std Error\nMean Predict",
+        "Mean ci\n95% low",
+        "Mean ci\n95% upp",
+        "Predict ci\n95% low",
+        "Predict ci\n95% upp",
+        "Residual",
+        "Std Error\nResidual",
+        "Student\nResidual",
+        "Cook's\nD",
+    ]
     colnames = ss2
     # self.table_data = data
     # data = np.column_stack(data)
@@ -1288,12 +1357,12 @@ def summary_table(res, alpha=0.05):
 
     from statsmodels.iolib.table import SimpleTable, default_html_fmt
     from statsmodels.iolib.tableformatting import fmt_base
+
     fmt = deepcopy(fmt_base)
     fmt_html = deepcopy(default_html_fmt)
-    fmt['data_fmts'] = ["%4d"] + ["%6.3f"] * (data.shape[1] - 1)
+    fmt["data_fmts"] = ["%4d"] + ["%6.3f"] * (data.shape[1] - 1)
     # fmt_html['data_fmts'] = fmt['data_fmts']
-    st = SimpleTable(data, headers=colnames, txt_fmt=fmt,
-                     html_fmt=fmt_html)
+    st = SimpleTable(data, headers=colnames, txt_fmt=fmt, html_fmt=fmt_html)
 
     return st, data, ss2
 
@@ -1352,7 +1421,7 @@ class GLMInfluence(MLEInfluence):
         argument to GLMInfluence or computes it using the results method
         `get_hat_matrix`.
         """
-        if hasattr(self, '_hat_matrix_diag'):
+        if hasattr(self, "_hat_matrix_diag"):
             return self._hat_matrix_diag
         else:
             return self.results.get_hat_matrix()
@@ -1406,7 +1475,7 @@ class GLMInfluence(MLEInfluence):
         """
         hii = self.hat_matrix_diag
         # Eubank p.93, 94
-        cooks_d2 = self.resid_studentized ** 2 / self.k_vars
+        cooks_d2 = self.resid_studentized**2 / self.k_vars
         cooks_d2 *= hii / (1 - hii)
 
         from scipy import stats
@@ -1446,20 +1515,22 @@ class GLMInfluence(MLEInfluence):
 
     @property
     def _fittedvalues_one(self):
-        """experimental code
-        """
-        warnings.warn('this ignores offset and exposure', UserWarning)
+        """experimental code"""
+        warnings.warn("this ignores offset and exposure", UserWarning, stacklevel=2)
         # TODO: we need to handle offset, exposure and weights
         # use original model exog not transformed influence exog
         exog = self.results.model.exog
-        fitted = np.array([self.results.model.predict(pi, exog[i])
-                           for i, pi in enumerate(self.params_one)])
+        fitted = np.array(
+            [
+                self.results.model.predict(pi, exog[i])
+                for i, pi in enumerate(self.params_one)
+            ]
+        )
         return fitted.squeeze()
 
     @property
     def _diff_fittedvalues_one(self):
-        """experimental code
-        """
+        """experimental code"""
         # in discrete we cannot reuse results.fittedvalues
         return self.results.predict() - self._fittedvalues_one
 
@@ -1480,22 +1551,24 @@ class GLMInfluence(MLEInfluence):
         add options.
         """
         from statsmodels.sandbox.tools.cross_val import LeaveOneOut
-        get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
+
+        def get_det_cov_params(res):
+            return np.linalg.det(res.cov_params())
 
         endog = self.results.model.endog
         exog = self.results.model.exog
 
         init_kwds = self.results.model._get_init_kwds()
         # We need to drop obs also from extra arrays
-        freq_weights = init_kwds.pop('freq_weights')
-        var_weights = init_kwds.pop('var_weights')
-        offset = offset_ = init_kwds.pop('offset')
-        exposure = exposure_ = init_kwds.pop('exposure')
-        n_trials = init_kwds.pop('n_trials', None)
+        freq_weights = init_kwds.pop("freq_weights")
+        var_weights = init_kwds.pop("var_weights")
+        offset = offset_ = init_kwds.pop("offset")
+        exposure = exposure_ = init_kwds.pop("exposure")
+        n_trials = init_kwds.pop("n_trials", None)
         # family Binomial creates `n` i.e. `n_trials`
         # we need to reset it
         # TODO: figure out how to do this properly
-        if hasattr(init_kwds['family'], 'initialize'):
+        if hasattr(init_kwds["family"], "initialize"):
             # assume we have Binomial
             is_binomial = True
         else:
@@ -1512,22 +1585,28 @@ class GLMInfluence(MLEInfluence):
             if exposure is not None:
                 exposure_ = exposure[inidx]
             if n_trials is not None:
-                init_kwds['n_trials'] = n_trials[inidx]
+                init_kwds["n_trials"] = n_trials[inidx]
 
-            mod_i = self.model_class(endog[inidx], exog[inidx],
-                                     offset=offset_,
-                                     exposure=exposure_,
-                                     freq_weights=freq_weights[inidx],
-                                     var_weights=var_weights[inidx],
-                                     **init_kwds)
+            mod_i = self.model_class(
+                endog[inidx],
+                exog[inidx],
+                offset=offset_,
+                exposure=exposure_,
+                freq_weights=freq_weights[inidx],
+                var_weights=var_weights[inidx],
+                **init_kwds,
+            )
             if is_binomial:
-                mod_i.family.n = init_kwds['n_trials']
-            res_i = mod_i.fit(start_params=self.results.params,
-                              method='newton')
+                mod_i.family.n = init_kwds["n_trials"]
+            res_i = mod_i.fit(start_params=self.results.params, method="newton")
             params[outidx] = res_i.params.copy()
             scale[outidx] = res_i.scale
             det_cov_params[outidx] = get_det_cov_params(res_i)
 
-        return dict(params=params, scale=scale, mse_resid=scale,
-                    # alias for now
-                    det_cov_params=det_cov_params)
+        return dict(
+            params=params,
+            scale=scale,
+            mse_resid=scale,
+            # alias for now
+            det_cov_params=det_cov_params,
+        )

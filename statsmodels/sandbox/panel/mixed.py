@@ -17,11 +17,13 @@ With correctly specified model, convergence is fast, in 6 iterations in
 example.
 
 """
+
 import numpy as np
 import numpy.linalg as L
 
 from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.tools.decorators import cache_readonly
+
 
 class Unit:
     """
@@ -57,7 +59,6 @@ class Unit:
     centered in this case. (That's how it looks to me. JP)
     """
 
-
     def __init__(self, endog, exog_fe, exog_re):
 
         self.Y = endog
@@ -69,8 +70,7 @@ class Unit:
         """covariance of observations (nobs_i, nobs_i)  (JP check)
         Display (3.3) from Laird, Lange, Stram (see help(Unit))
         """
-        self.S = (np.identity(self.n) * sigma**2 +
-                  np.dot(self.Z, np.dot(D, self.Z.T)))
+        self.S = np.identity(self.n) * sigma**2 + np.dot(self.Z, np.dot(D, self.Z.T))
 
     def _compute_W(self):
         """inverse covariance of observations (nobs_i, nobs_i)  (JP check)
@@ -110,16 +110,16 @@ class Unit:
         Displays (3.2)-(3.5).
         """
 
-        self._compute_S(D, sigma)    #random effect plus error covariance
-        self._compute_W()            #inv(S)
-        self._compute_r(a)           #residual after removing fixed effects/exogs
-        self._compute_b(D)           #?  coefficients on random exog, Z ?
+        self._compute_S(D, sigma)  # random effect plus error covariance
+        self._compute_W()  # inv(S)
+        self._compute_r(a)  # residual after removing fixed effects/exogs
+        self._compute_b(D)  # ?  coefficients on random exog, Z ?
 
     def compute_xtwy(self):
         """
         Utility function to compute X^tWY (transposed ?) for Unit instance.
         """
-        return np.dot(np.dot(self.W, self.Y), self.X) #is this transposed ?
+        return np.dot(np.dot(self.W, self.Y), self.X)  # is this transposed ?
 
     def compute_xtwx(self):
         """
@@ -158,18 +158,20 @@ class Unit:
         """
 
         if ML:
-            return (np.log(L.det(self.W)) - (self.r * np.dot(self.W, self.r)).sum()) / 2.
+            return (
+                np.log(L.det(self.W)) - (self.r * np.dot(self.W, self.r)).sum()
+            ) / 2.0
         else:
             if a is None:
-                raise ValueError('need fixed effect a for REML contribution to log-likelihood')
+                raise ValueError(
+                    "need fixed effect a for REML contribution to log-likelihood"
+                )
             r = self.Y - np.dot(self.X, a)
-            return (np.log(L.det(self.W)) - (r * np.dot(self.W, r)).sum()) / 2.
+            return (np.log(L.det(self.W)) - (r * np.dot(self.W, r)).sum()) / 2.0
 
     def deviance(self, ML=False):
-        '''deviance defined as 2 times the negative loglikelihood
-
-        '''
-        return - 2 * self.logL(ML=ML)
+        """deviance defined as 2 times the negative loglikelihood"""
+        return -2 * self.logL(ML=ML)
 
 
 class OneWayMixed:
@@ -249,23 +251,23 @@ class OneWayMixed:
         self.n_units = self.m
 
         self.N = sum(unit.X.shape[0] for unit in self.units)
-        self.nobs = self.N     #alias for now
+        self.nobs = self.N  # alias for now
 
         # Determine size of fixed effects
         d = self.units[0].X
         self.p = d.shape[1]  # d.shape = p
-        self.k_exog_fe = self.p   #alias for now
+        self.k_exog_fe = self.p  # alias for now
         self.a = np.zeros(self.p, np.float64)
 
         # Determine size of D, and sensible initial estimates
         # of sigma and D
         d = self.units[0].Z
         self.q = d.shape[1]  # Z.shape = q
-        self.k_exog_re = self.q   #alias for now
-        self.D = np.zeros((self.q,)*2, np.float64)
-        self.sigma = 1.
+        self.k_exog_re = self.q  # alias for now
+        self.D = np.zeros((self.q,) * 2, np.float64)
+        self.sigma = 1.0
 
-        self.dev = np.inf   #initialize for iterations, move it?
+        self.dev = np.inf  # initialize for iterations, move it?
 
     def _compute_a(self):
         """fixed effects parameters
@@ -293,7 +295,7 @@ class OneWayMixed:
 
         sigma is the standard deviation of the noise (residual)
         """
-        sigmasq = 0.
+        sigmasq = 0.0
         for unit in self.units:
             if ML:
                 W = unit.W
@@ -302,8 +304,7 @@ class OneWayMixed:
                 W = unit.P
             t = unit.r - np.dot(unit.Z, unit.b)
             sigmasq += np.power(t, 2).sum()
-            sigmasq += self.sigma**2 * np.trace(np.identity(unit.n) -
-                                               self.sigma**2 * W)
+            sigmasq += self.sigma**2 * np.trace(np.identity(unit.n) - self.sigma**2 * W)
         self.sigma = np.sqrt(sigmasq / self.N)
 
     def _compute_D(self, ML=False):
@@ -315,7 +316,7 @@ class OneWayMixed:
         If ML, this is (3.7) in Laird, Lange, Stram (see help(Mixed)),
         otherwise it corresponds to (3.9).
         """
-        D = 0.
+        D = 0.0
         for unit in self.units:
             if ML:
                 W = unit.W
@@ -336,7 +337,7 @@ class OneWayMixed:
         """
         return self.Sinv
 
-    #----------- alias (JP)   move to results class ?
+    # ----------- alias (JP)   move to results class ?
 
     def cov_random(self):
         """
@@ -350,52 +351,46 @@ class OneWayMixed:
 
     @property
     def params(self):
-        '''
+        """
         estimated coefficients for exogeneous variables or fixed effects
 
         see _compute_a, alias for self.a
-        '''
+        """
         return self.a
 
     @property
     def params_random_units(self):
-        '''random coefficients for each unit
-
-        '''
+        """random coefficients for each unit"""
         return np.array([unit.b for unit in self.units])
 
     def cov_params(self):
-        '''
+        """
         estimated covariance for coefficients for exogeneous variables or fixed effects
 
         see cov_fixed, and Sinv in _compute_a
-        '''
+        """
         return self.cov_fixed()
-
 
     @property
     def bse(self):
-        '''
+        """
         standard errors of estimated coefficients for exogeneous variables (fixed)
 
-        '''
+        """
         return np.sqrt(np.diag(self.cov_params()))
 
-    #----------- end alias
+    # ----------- end alias
 
     def deviance(self, ML=False):
-        '''deviance defined as 2 times the negative loglikelihood
-
-        '''
+        """deviance defined as 2 times the negative loglikelihood"""
         return -2 * self.logL(ML=ML)
-
 
     def logL(self, ML=False):
         """
         Return log-likelihood, REML by default.
         """
-        #I do not know what the difference between REML and ML is here.
-        logL = 0.
+        # I do not know what the difference between REML and ML is here.
+        logL = 0.0
 
         for unit in self.units:
             logL += unit.logL(a=self.a, ML=ML)
@@ -419,65 +414,69 @@ class OneWayMixed:
                 Z = unit.Z.reshape((unit.Z.shape[0], 1))
                 unit.b = L.lstsq(Z, unit.r, rcond=-1)[0]
 
-            sigmasq += (np.power(unit.Y, 2).sum() -
-                        (self.a * np.dot(unit.X.T, unit.Y)).sum() -
-                        (unit.b * np.dot(unit.Z.T, unit.r)).sum())
+            sigmasq += (
+                np.power(unit.Y, 2).sum()
+                - (self.a * np.dot(unit.X.T, unit.Y)).sum()
+                - (unit.b * np.dot(unit.Z.T, unit.r)).sum()
+            )
             D += np.multiply.outer(unit.b, unit.b)
             t += L.pinv(np.dot(unit.Z.T, unit.Z))
 
-        #TODO: JP added df_resid check
-        self.df_resid = (self.N - (self.m - 1) * self.q - self.p)
-        sigmasq /= (self.N - (self.m - 1) * self.q - self.p)
+        # TODO: JP added df_resid check
+        self.df_resid = self.N - (self.m - 1) * self.q - self.p
+        sigmasq /= self.N - (self.m - 1) * self.q - self.p
         self.sigma = np.sqrt(sigmasq)
         self.D = (D - sigmasq * t) / self.m
 
     def cont(self, ML=False, rtol=1.0e-05, params_rtol=1e-5, params_atol=1e-4):
-        '''convergence check for iterative estimation
-
-        '''
+        """convergence check for iterative estimation"""
 
         self.dev, old = self.deviance(ML=ML), self.dev
 
-        #self.history.append(np.hstack((self.dev, self.a)))
-        self.history['llf'].append(self.dev)
-        self.history['params'].append(self.a.copy())
-        self.history['D'].append(self.D.copy())
+        # self.history.append(np.hstack((self.dev, self.a)))
+        self.history["llf"].append(self.dev)
+        self.history["params"].append(self.a.copy())
+        self.history["D"].append(self.D.copy())
 
-        if np.fabs((self.dev - old) / self.dev) < rtol:   #why is there times `*`?
-            #print np.fabs((self.dev - old)), self.dev, old
-            self.termination = 'llf'
+        if np.fabs((self.dev - old) / self.dev) < rtol:  # why is there times `*`?
+            # print np.fabs((self.dev - old)), self.dev, old
+            self.termination = "llf"
             return False
 
-        #break if parameters converged
-        #TODO: check termination conditions, OR or AND
+        # break if parameters converged
+        # TODO: check termination conditions, OR or AND
         if np.all(np.abs(self.a - self._a_old) < (params_rtol * self.a + params_atol)):
-            self.termination = 'params'
+            self.termination = "params"
             return False
 
-        self._a_old =  self.a.copy()
+        self._a_old = self.a.copy()
         return True
 
-    def fit(self, maxiter=100, ML=False, rtol=1.0e-05, params_rtol=1e-6, params_atol=1e-6):
+    def fit(
+        self, maxiter=100, ML=False, rtol=1.0e-05, params_rtol=1e-6, params_atol=1e-6
+    ):
 
-        #initialize for convergence criteria
+        # initialize for convergence criteria
         self._a_old = np.inf * self.a
-        self.history = {'llf':[], 'params':[], 'D':[]}
-
-        for i in range(maxiter):
-            self._compute_a()              #a, Sinv :  params, cov_params of fixed exog
-            self._compute_sigma(ML=ML)     #sigma   MLE or REML of sigma ?
-            self._compute_D(ML=ML)         #D :  covariance of random effects, MLE or REML
-            if not self.cont(ML=ML, rtol=rtol, params_rtol=params_rtol,
-                                             params_atol=params_atol):
+        self.history = {"llf": [], "params": [], "D": []}
+        iterations = 0
+        for _ in range(maxiter):
+            iterations += 1
+            self._compute_a()  # a, Sinv :  params, cov_params of fixed exog
+            self._compute_sigma(ML=ML)  # sigma   MLE or REML of sigma ?
+            self._compute_D(ML=ML)  # D :  covariance of random effects, MLE or REML
+            if not self.cont(
+                ML=ML, rtol=rtol, params_rtol=params_rtol, params_atol=params_atol
+            ):
                 break
-        else: #if end of loop is reached without break
-            self.termination = 'maxiter'
-            print('Warning: maximum number of iterations reached')
+        else:  # if end of loop is reached without break
+            self.termination = "maxiter"
+            print("Warning: maximum number of iterations reached")
 
-        self.iterations = i
+        self.iterations = iterations
 
         results = OneWayMixedResults(self)
-        #compatibility functions for fixed effects/exog
+        # compatibility functions for fixed effects/exog
         results.scale = 1
         results.normalized_cov_params = self.cov_params()
 
@@ -485,20 +484,18 @@ class OneWayMixed:
 
 
 class OneWayMixedResults(LikelihoodModelResults):
-    '''Results class for OneWayMixed models
+    """Results class for OneWayMixed models"""
 
-    '''
     def __init__(self, model):
-        #TODO: check, change initialization to more standard pattern
+        # TODO: check, change initialization to more standard pattern
         self.model = model
         self.params = model.params
 
-
-    #need to overwrite this because we do not have a standard
-    #model.loglike yet
-    #TODO: what todo about REML loglike, logL is not normalized
+    # need to overwrite this because we do not have a standard
+    # model.loglike yet
     @cache_readonly
     def llf(self):
+        # TODO: what todo about REML loglike, logL is not normalized
         return self.model.logL(ML=True)
 
     @property
@@ -508,12 +505,12 @@ class OneWayMixedResults(LikelihoodModelResults):
     def cov_random(self):
         return self.model.cov_random()
 
-    def mean_random(self, idx='lastexog'):
-        if idx == 'lastexog':
-            meanr = self.params[-self.model.k_exog_re:]
+    def mean_random(self, idx="lastexog"):
+        if idx == "lastexog":
+            meanr = self.params[-self.model.k_exog_re :]
         elif isinstance(idx, list):
             if not len(idx) == self.model.k_exog_re:
-                raise ValueError('length of idx different from k_exog_re')
+                raise ValueError("length of idx different from k_exog_re")
             else:
                 meanr = self.params[idx]
         else:
@@ -525,7 +522,7 @@ class OneWayMixedResults(LikelihoodModelResults):
         return np.sqrt(np.diag(self.cov_random()))
 
     def plot_random_univariate(self, bins=None, use_loc=True):
-        '''create plot of marginal distribution of random effects
+        """create plot of marginal distribution of random effects
 
         Parameters
         ----------
@@ -549,10 +546,11 @@ class OneWayMixedResults(LikelihoodModelResults):
         Bin edges will not make sense if loc or scale differ across random
         effect distributions.
 
-        '''
-        #outsource this
+        """
+        # outsource this
         import matplotlib.pyplot as plt
         from scipy.stats import norm as normal
+
         fig = plt.figure()
         k = self.model.k_exog_re
         if k > 3:
@@ -560,36 +558,35 @@ class OneWayMixedResults(LikelihoodModelResults):
         else:
             rows, cols = k, 1
         if bins is None:
-            #bins = self.model.n_units // 20    #TODO: just roughly, check
-            #bins = np.sqrt(self.model.n_units)
-            bins = 5 + 2 * self.model.n_units**(1./3.)
+            # bins = self.model.n_units // 20    # TODO: just roughly, check
+            # bins = np.sqrt(self.model.n_units)
+            bins = 5 + 2 * self.model.n_units ** (1.0 / 3.0)
 
         if use_loc:
             loc = self.mean_random()
         else:
-            loc = [0]*k
+            loc = [0] * k
 
         scale = self.std_random()
 
         for ii in range(k):
             ax = fig.add_subplot(rows, cols, ii)
 
-            freq, bins_, _ = ax.hist(loc[ii] + self.params_random_units[:,ii],
-                                    bins=bins, normed=True)
+            freq, bins_, _ = ax.hist(
+                loc[ii] + self.params_random_units[:, ii], bins=bins, normed=True
+            )
             points = np.linspace(bins_[0], bins_[-1], 200)
 
-            #ax.plot(points, normal.pdf(points, loc=loc, scale=scale))
-            #loc of sample is approx. zero, with Z appended to X
-            #alternative, add fixed  to mean
-            ax.set_title('Random Effect %d Marginal Distribution' % ii)
-            ax.plot(points,
-                    normal.pdf(points, loc=loc[ii], scale=scale[ii]),
-                    'r')
+            # ax.plot(points, normal.pdf(points, loc=loc, scale=scale))
+            # loc of sample is approx. zero, with Z appended to X
+            # alternative, add fixed  to mean
+            ax.set_title("Random Effect %d Marginal Distribution" % ii)
+            ax.plot(points, normal.pdf(points, loc=loc[ii], scale=scale[ii]), "r")
 
         return fig
 
     def plot_scatter_pairs(self, idx1, idx2, title=None, ax=None):
-        '''create scatter plot of two random effects
+        """create scatter plot of two random effects
 
         Parameters
         ----------
@@ -612,18 +609,19 @@ class OneWayMixedResults(LikelihoodModelResults):
         -----
         Still needs ellipse from estimated parameters
 
-        '''
+        """
         import matplotlib.pyplot as plt
+
         if ax is None:
             fig = plt.figure()
-            ax = fig.add_subplot(1,1,1)
+            ax = fig.add_subplot(1, 1, 1)
             ax_or_fig = fig
 
-        re1 = self.params_random_units[:,idx1]
-        re2 = self.params_random_units[:,idx2]
-        ax.plot(re1, re2, 'o', alpha=0.75)
+        re1 = self.params_random_units[:, idx1]
+        re2 = self.params_random_units[:, idx2]
+        ax.plot(re1, re2, "o", alpha=0.75)
         if title is None:
-            title = 'Random Effects %d and %d' % (idx1, idx2)
+            title = "Random Effects %d and %d" % (idx1, idx2)
         ax.set_title(title)
         ax_or_fig = ax
 
@@ -631,16 +629,20 @@ class OneWayMixedResults(LikelihoodModelResults):
 
     def plot_scatter_all_pairs(self, title=None):
         from statsmodels.graphics.plot_grids import scatter_ellipse
+
         if self.model.k_exog_re < 2:
-            raise ValueError('less than two variables available')
+            raise ValueError("less than two variables available")
 
-        return scatter_ellipse(self.params_random_units,
-                               #ell_kwds not implemented yet
-                               ell_kwds={'color':'r'})
+        return scatter_ellipse(
+            self.params_random_units,
+            # ell_kwds not implemented yet
+            ell_kwds={"color": "r"},
+        )
 
-#        #note I have written this already as helper function, get it
+
+#        # note I have written this already as helper function, get it
 #        import matplotlib.pyplot as plt
-#        #from scipy.stats import norm as normal
+#        # from scipy.stats import norm as normal
 #        fig = plt.figure()
 #        k = self.model.k_exog_re
 #        n_plots = k * (k - 1) // 2

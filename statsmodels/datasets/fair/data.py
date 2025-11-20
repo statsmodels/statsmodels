@@ -1,26 +1,26 @@
 """Fair's Extramarital Affairs Data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """Included with permission of the author."""
-TITLE       = """Affairs dataset"""
-SOURCE      = """
+COPYRIGHT = """Included with permission of the author."""
+TITLE = """Affairs dataset"""
+SOURCE = """
 Fair, Ray. 1978. "A Theory of Extramarital Affairs," `Journal of Political
 Economy`, February, 45-61.
 
 The data is available at http://fairmodel.econ.yale.edu/rayfair/pdf/2011b.htm
 """
 
-DESCRSHORT  = """Extramarital affair data."""
+DESCRSHORT = """Extramarital affair data."""
 
-DESCRLONG   = """Extramarital affair data used to explain the allocation
+DESCRLONG = """Extramarital affair data used to explain the allocation
 of an individual's time among work, time spent with a spouse, and time
 spent with a paramour. The data is used as an example of regression
 with censored data."""
 
-#suggested notes
-NOTE        = """::
+# suggested notes
+NOTE = """::
 
     Number of observations: 6366
     Number of variables: 9
@@ -68,4 +68,4 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'fair.csv', convert_float=True)
+    return du.load_csv(__file__, "fair.csv", convert_float=True)

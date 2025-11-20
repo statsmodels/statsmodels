@@ -8,26 +8,37 @@ Created on 08/07/2015
 """
 
 import os
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
-from scipy.linalg import block_diag
 import pytest
+from scipy.linalg import block_diag
 
-from statsmodels.tools.linalg import matrix_sqrt
-from statsmodels.gam.smooth_basis import (
-    UnivariatePolynomialSmoother, PolynomialSmoother, BSplines,
-    GenericSmoothers, UnivariateCubicSplines, CyclicCubicSplines)
-from statsmodels.gam.generalized_additive_model import (
-    GLMGam, LogitGam, make_augmented_matrix, penalized_wls)
-from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
-    MultivariateGAMCV, MultivariateGAMCVPath, _split_train_test_smoothers)
-from statsmodels.gam.gam_penalties import (UnivariateGamPenalty,
-                                           MultivariateGamPenalty)
 from statsmodels.gam.gam_cross_validation.cross_validators import KFold
-from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
+    MultivariateGAMCV,
+    MultivariateGAMCVPath,
+    _split_train_test_smoothers,
+)
+from statsmodels.gam.gam_penalties import MultivariateGamPenalty, UnivariateGamPenalty
+from statsmodels.gam.generalized_additive_model import (
+    GLMGam,
+    LogitGam,
+    make_augmented_matrix,
+    penalized_wls,
+)
+from statsmodels.gam.smooth_basis import (
+    BSplines,
+    CyclicCubicSplines,
+    GenericSmoothers,
+    PolynomialSmoother,
+    UnivariateCubicSplines,
+    UnivariatePolynomialSmoother,
+)
 from statsmodels.genmod.families.family import Gaussian
-from statsmodels.genmod.generalized_linear_model import lm
+from statsmodels.genmod.generalized_linear_model import GLM, lm
+from statsmodels.tools.linalg import matrix_sqrt
 
 sigmoid = np.vectorize(lambda x: 1.0 / (1.0 + np.exp(-x)))
 
@@ -180,7 +191,7 @@ def test_gam_glm():
     alpha = 0.1  # chosen by trial and error
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
+    res_glm_gam = glm_gam.fit(method="bfgs", max_start_irls=0,
                               disp=1, maxiter=10000)
     y_gam0 = np.dot(bsplines.basis, res_glm_gam.params)
     y_gam = np.asarray(res_glm_gam.fittedvalues)
@@ -260,7 +271,7 @@ def test_multivariate_penalty():
         mgp = MultivariateGamPenalty(multivariate_smoother=pol, alpha=alphas,
                                      weights=weights)
 
-    for i in range(10):
+    for _ in range(10):
         params1 = np.random.randint(-3, 3, pol.smoothers[0].dim_basis)
         params2 = np.random.randint(-3, 3, pol.smoothers[1].dim_basis)
         params = np.concatenate([params1, params2])
@@ -321,7 +332,7 @@ def test_multivariate_gam_1d_data():
     # "nm" converges to a different params, "bfgs" params are close to pirls
     # res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
     #                           disp=1, maxiter=10000, maxfun=5000)
-    res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
+    res_glm_gam = glm_gam.fit(method="pirls", max_start_irls=0,
                               disp=1, maxiter=10000)
     y_gam = res_glm_gam.fittedvalues
 
@@ -397,7 +408,7 @@ def test_multivariate_gam_cv_path():
     gam_cv_res = gam_cv.fit()  # noqa: F841
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=gam_cv.alpha_cv)
-    res_glm_gam = glm_gam.fit(method='irls', max_start_irls=0,
+    res_glm_gam = glm_gam.fit(method="irls", max_start_irls=0,
                               disp=1, maxiter=10000)
     y_est = res_glm_gam.predict(bsplines.basis)
 
@@ -511,10 +522,10 @@ def test_cyclic_cubic_splines():
                              "cubic_cyclic_splines_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
 
-    x = data_from_r[['x0', 'x2']].values
-    y = data_from_r['y'].values
-    y_est_mgcv = data_from_r[['y_est']].values  # noqa: F841
-    s_mgcv = data_from_r[['s(x0)', 's(x2)']].values
+    x = data_from_r[["x0", "x2"]].values
+    y = data_from_r["y"].values
+    y_est_mgcv = data_from_r[["y_est"]].values  # noqa: F841
+    s_mgcv = data_from_r[["s(x0)", "s(x2)"]].values
 
     dfs = [10, 10]
     ccs = CyclicCubicSplines(x, df=dfs)
@@ -522,7 +533,7 @@ def test_cyclic_cubic_splines():
     # TODO: if alpha changes in pirls this should be updated
 
     gam = GLMGam(y, smoother=ccs, alpha=alpha)
-    gam_res = gam.fit(method='pirls')
+    gam_res = gam.fit(method="pirls")
 
     s0 = np.dot(ccs.basis[:, ccs.mask[0]],
                 gam_res.params[ccs.mask[0]])
@@ -567,10 +578,10 @@ def test_multivariate_cubic_splines():
     y0 -= y0.mean()
 
     alphas = [1e-3, 1e-3]
-    cs = CubicSplines(x, df=[10, 10], constraints='center')
+    cs = CubicSplines(x, df=[10, 10], constraints="center")
 
     gam = GLMGam(y, exog=np.ones((n, 1)), smoother=cs, alpha=alphas)
-    gam_res = gam.fit(method='pirls')
+    gam_res = gam.fit(method="pirls")
 
     y_est = gam_res.fittedvalues
     y_est -= y_est.mean()
@@ -609,15 +620,15 @@ def test_glm_pirls_compatibility():
     alphas = [5.75] * 2
     alphas_glm = [1.2] * 2  # noqa: F841
     # using constraints avoids singular exog.
-    cs = BSplines(x, df=[10, 10], degree=[3, 3], constraints='center')
+    cs = BSplines(x, df=[10, 10], degree=[3, 3], constraints="center")
 
     gam_pirls = GLMGam(y, smoother=cs, alpha=alphas)
     gam_glm = GLMGam(y, smoother=cs, alpha=alphas)
 
-    gam_res_glm = gam_glm.fit(method='nm', max_start_irls=0,
+    gam_res_glm = gam_glm.fit(method="nm", max_start_irls=0,
                               disp=1, maxiter=20000)
     gam_res_glm = gam_glm.fit(start_params=gam_res_glm.params,
-                              method='bfgs', max_start_irls=0,
+                              method="bfgs", max_start_irls=0,
                               disp=1, maxiter=20000)
     gam_res_pirls = gam_pirls.fit()
 
@@ -682,7 +693,7 @@ def test_partial_values2():
     bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2,
                         include_intercept=[True, False])
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
+    res_glm_gam = glm_gam.fit(method="pirls", max_start_irls=0,
                               disp=0, maxiter=5000)
     glm = GLM(y, bsplines.basis)  # noqa: F841
 
@@ -720,7 +731,7 @@ def test_partial_values():
     # TODO: alpha found by trial and error to pass assert
     alpha = 0.025 / 115 * 500
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs')
+    res_glm_gam = glm_gam.fit(maxiter=10000, method="bfgs")
     # TODO: if IRLS is used res_glm_gam has not partial_values.
 
     univ_bsplines = bsplines.smoothers[0]  # noqa: F841
@@ -733,7 +744,7 @@ def test_partial_values():
 
 
 @pytest.mark.matplotlib
-def test_partial_plot():
+def test_partial_plot(close_figures):
     # verify that plot and partial_values method agree
     # the model only has one component so partial values is the same as
     # fittedvalues
@@ -754,7 +765,7 @@ def test_partial_plot():
 
     alpha = 0.03
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs')
+    res_glm_gam = glm_gam.fit(maxiter=10000, method="bfgs")
     fig = res_glm_gam.plot_partial(0)
     xp, yp = fig.axes[0].get_children()[0].get_data()
     # Note xp and yp are sorted by x
@@ -780,10 +791,10 @@ def test_cov_params():
     y = x[:, 0] * x[:, 0] + np.random.normal(0, .01, n)
     y -= y.mean()
 
-    bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2, constraints='center')
+    bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2, constraints="center")
     alpha = [0, 0]
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
+    res_glm_gam = glm_gam.fit(method="pirls", max_start_irls=0,
                               disp=0, maxiter=5000)
     glm = GLM(y, bsplines.basis)
     res_glm = glm.fit()
@@ -793,13 +804,13 @@ def test_cov_params():
 
     alpha = 1e-13
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
+    res_glm_gam = glm_gam.fit(method="pirls", max_start_irls=0,
                               disp=0, maxiter=5000)
 
     assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params(),
                     atol=1e-10)
 
-    res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
+    res_glm_gam = glm_gam.fit(method="bfgs", max_start_irls=0,
                               disp=0, maxiter=5000)
 
     assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params(),

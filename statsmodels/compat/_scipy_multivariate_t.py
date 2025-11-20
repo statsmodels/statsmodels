@@ -1,15 +1,12 @@
-# flake8: noqa: E501
 #
 # Author: Joris Vankerschaver 2013
 #
 
 import numpy as np
-import scipy.linalg
 from scipy._lib import doccer
-from scipy.special import gammaln
-
 from scipy._lib._util import check_random_state
-
+import scipy.linalg
+from scipy.special import gammaln
 from scipy.stats import mvn
 
 _LOG_2PI = np.log(2 * np.pi)
@@ -70,7 +67,7 @@ def _eigvalsh_to_eps(spectrum, cond=None, rcond=None):
         cond = rcond
     if cond in [None, -1]:
         t = spectrum.dtype.char.lower()
-        factor = {'f': 1E3, 'd': 1E6}
+        factor = {"f": 1E3, "d": 1E6}
         cond = factor[t] * np.finfo(t).eps
     eps = cond * np.max(abs(spectrum))
     return eps
@@ -145,10 +142,10 @@ class _PSD:
 
         eps = _eigvalsh_to_eps(s, cond, rcond)
         if np.min(s) < -eps:
-            raise ValueError('the input matrix must be positive semidefinite')
+            raise ValueError("the input matrix must be positive semidefinite")
         d = s[s > eps]
         if len(d) < len(s) and not allow_singular:
-            raise np.linalg.LinAlgError('singular matrix')
+            raise np.linalg.LinAlgError("singular matrix")
         s_pinv = _pinv_1d(s, eps)
         U = np.multiply(u, np.sqrt(s_pinv))
 
@@ -240,15 +237,15 @@ _mvn_doc_frozen_callparams_note = \
     """See class definition for a detailed description of parameters."""
 
 mvn_docdict_params = {
-    '_mvn_doc_default_callparams': _mvn_doc_default_callparams,
-    '_mvn_doc_callparams_note': _mvn_doc_callparams_note,
-    '_doc_random_state': _doc_random_state
+    "_mvn_doc_default_callparams": _mvn_doc_default_callparams,
+    "_mvn_doc_callparams_note": _mvn_doc_callparams_note,
+    "_doc_random_state": _doc_random_state
 }
 
 mvn_docdict_noparams = {
-    '_mvn_doc_default_callparams': _mvn_doc_frozen_callparams,
-    '_mvn_doc_callparams_note': _mvn_doc_frozen_callparams_note,
-    '_doc_random_state': _doc_random_state
+    "_mvn_doc_default_callparams": _mvn_doc_frozen_callparams,
+    "_mvn_doc_callparams_note": _mvn_doc_frozen_callparams_note,
+    "_doc_random_state": _doc_random_state
 }
 
 
@@ -373,10 +370,9 @@ class multivariate_normal_gen(multi_rv_generic):
             else:
                 mean = np.asarray(mean, dtype=float)
                 dim = mean.size
-        else:
-            if not np.isscalar(dim):
-                raise ValueError("Dimension of random variable must be "
-                                 "a scalar.")
+        elif not np.isscalar(dim):
+            raise ValueError("Dimension of random variable must be "
+                             "a scalar.")
 
         # Check input sizes and return full arrays for mean and cov if
         # necessary
@@ -539,8 +535,10 @@ class multivariate_normal_gen(multi_rv_generic):
         """
         lower = np.full(mean.shape, -np.inf)
         # mvnun expects 1-d arguments, so process points sequentially
-        func1d = lambda x_slice: mvn.mvnun(lower, x_slice, mean, cov,
-                                           maxpts, abseps, releps)[0]
+
+        def func1d(x_slice):
+            return mvn.mvnun(lower, x_slice, mean, cov, maxpts, abseps, releps)[0]
+
         out = np.apply_along_axis(func1d, -1, x)
         return _squeeze_output(out)
 
@@ -769,8 +767,7 @@ class multivariate_normal_frozen(multi_rv_frozen):
         return 0.5 * (rank * (_LOG_2PI + 1) + log_pdet)
 
 
-_mvt_doc_default_callparams = \
-"""
+_mvt_doc_default_callparams = """
 loc : array_like, optional
     Location of the distribution. (default ``0``)
 shape : array_like, optional
@@ -782,26 +779,28 @@ allow_singular : bool, optional
     Whether to allow a singular matrix. (default ``False``)
 """
 
-_mvt_doc_callparams_note = \
-"""Setting the parameter `loc` to ``None`` is equivalent to having `loc`
+_mvt_doc_callparams_note = """\
+Setting the parameter `loc` to ``None`` is equivalent to having `loc`
 be the zero-vector. The parameter `shape` can be a scalar, in which case
 the shape matrix is the identity times that value, a vector of
 diagonal entries for the shape matrix, or a two-dimensional array_like.
 """
 
-_mvt_doc_frozen_callparams_note = \
-"""See class definition for a detailed description of parameters."""
+
+_mvt_doc_frozen_callparams_note = (
+    """See class definition for a detailed description of parameters."""
+)
 
 mvt_docdict_params = {
-    '_mvt_doc_default_callparams': _mvt_doc_default_callparams,
-    '_mvt_doc_callparams_note': _mvt_doc_callparams_note,
-    '_doc_random_state': _doc_random_state
+    "_mvt_doc_default_callparams": _mvt_doc_default_callparams,
+    "_mvt_doc_callparams_note": _mvt_doc_callparams_note,
+    "_doc_random_state": _doc_random_state,
 }
 
 mvt_docdict_noparams = {
-    '_mvt_doc_default_callparams': "",
-    '_mvt_doc_callparams_note': _mvt_doc_frozen_callparams_note,
-    '_doc_random_state': _doc_random_state
+    "_mvt_doc_default_callparams": "",
+    "_mvt_doc_callparams_note": _mvt_doc_frozen_callparams_note,
+    "_doc_random_state": _doc_random_state,
 }
 
 
@@ -1185,7 +1184,7 @@ multivariate_t = multivariate_t_gen()
 
 # Set frozen generator docstrings from corresponding docstrings in
 # matrix_normal_gen and fill in default strings in class docstrings
-for name in ['logpdf', 'pdf', 'rvs']:
+for name in ["logpdf", "pdf", "rvs"]:
     method = multivariate_t_gen.__dict__[name]
     method_frozen = multivariate_t_frozen.__dict__[name]
     method_frozen.__doc__ = doccer.docformat(method.__doc__,

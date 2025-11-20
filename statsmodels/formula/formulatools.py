@@ -1,27 +1,18 @@
-import statsmodels.tools.data as data_util
-from patsy import dmatrices, NAAction
 import numpy as np
+import pandas as pd
+
+from statsmodels.formula._manager import FormulaManager
 
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
+
+__all__ = ["advance_eval_env", "formula_handler", "handle_formula_data"]
 
 # this is a mutable object, so editing it should show up in the below
 formula_handler = {}
 
 
-class NAAction(NAAction):
-    # monkey-patch so we can handle missing values in 'extra' arrays later
-    def _handle_NA_drop(self, values, is_NAs, origins):
-        total_mask = np.zeros(is_NAs[0].shape[0], dtype=bool)
-        for is_NA in is_NAs:
-            total_mask |= is_NA
-        good_mask = ~total_mask
-        self.missing_mask = total_mask
-        # "..." to handle 1- versus 2-dim indexing
-        return [v[good_mask, ...] for v in values]
-
-
-def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
+def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
     """
     Returns endog, exog, and the model specification from arrays and formula.
 
@@ -49,63 +40,66 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     if isinstance(formula, tuple(formula_handler.keys())):
         return formula_handler[type(formula)]
 
-    na_action = NAAction(on_NA=missing)
-
+    na_action = FormulaManager().get_na_action(action=missing)
+    mgr = FormulaManager()
     if X is not None:
-        if data_util._is_using_pandas(Y, X):
-            result = dmatrices(formula, (Y, X), depth,
-                               return_type='dataframe', NA_action=na_action)
-        else:
-            result = dmatrices(formula, (Y, X), depth,
-                               return_type='dataframe', NA_action=na_action)
+        result = mgr.get_matrices(
+            formula,
+            (Y, X),
+            eval_env=depth,
+            pandas=True,
+            na_action=na_action,
+            attach_spec=True,
+        )
     else:
-        if data_util._is_using_pandas(Y, None):
-            result = dmatrices(formula, Y, depth, return_type='dataframe',
-                               NA_action=na_action)
-        else:
-            result = dmatrices(formula, Y, depth, return_type='dataframe',
-                               NA_action=na_action)
+        # Objects that support the dataframe API should be converted to a
+        # dataframe to avoid problems with patsy. (This also works for
+        # dataframes themselves.)
+        if isinstance(Y, pd.DataFrame) or hasattr(Y, "__dataframe__"):
+            Y = pd.DataFrame(Y)
+        result = mgr.get_matrices(
+            formula,
+            Y,
+            eval_env=depth,
+            pandas=True,
+            na_action=na_action,
+        )
 
-    # if missing == 'raise' there's not missing_mask
-    missing_mask = getattr(na_action, 'missing_mask', None)
+    missing_mask = mgr.missing_mask
     if not np.any(missing_mask):
         missing_mask = None
     if len(result) > 1:  # have RHS design
-        design_info = result[1].design_info  # detach it from DataFrame
+        model_spec = mgr.spec  # detach it from DataFrame
     else:
-        design_info = None
-    # NOTE: is there ever a case where we'd need LHS design_info?
-    return result, missing_mask, design_info
-
-
-def _remove_intercept_patsy(terms):
-    """
-    Remove intercept from Patsy terms.
-    """
-    from patsy.desc import INTERCEPT
-    if INTERCEPT in terms:
-        terms.remove(INTERCEPT)
-    return terms
-
-
-def _has_intercept(design_info):
-    from patsy.desc import INTERCEPT
-    return INTERCEPT in design_info.terms
-
-
-def _intercept_idx(design_info):
-    """
-    Returns boolean array index indicating which column holds the intercept.
-    """
-    from patsy.desc import INTERCEPT
-    from numpy import array
-    return array([INTERCEPT == i for i in design_info.terms])
+        model_spec = None
+    # NOTE: is there ever a case where we'd need LHS's model_spec?
+    return result, missing_mask, model_spec
 
 
 def make_hypotheses_matrices(model_results, test_formula):
-    """
-    """
-    from patsy.constraint import linear_constraint
+    """ """
+    from statsmodels.formula._manager import FormulaManager
+
+    mgr = FormulaManager()
+
     exog_names = model_results.model.exog_names
-    LC = linear_constraint(test_formula, exog_names)
-    return LC
+    lc = mgr.get_linear_constraints(test_formula, exog_names)
+    return lc
+
+
+def advance_eval_env(kwargs):
+    """
+    Adjusts the keyword arguments for from_formula to account for the patsy
+    eval environment being passed down once on the stack. Adjustments are
+    made in place.
+    Parameters
+    ----------
+    kwargs : dict
+        The dictionary of keyword arguments passed to `from_formula`.
+    """
+
+    eval_env = kwargs.get("eval_env", None)
+    if eval_env is None:
+        kwargs["eval_env"] = 2
+    elif eval_env == -1:
+        kwargs["eval_env"] = FormulaManager().get_empty_eval_env()

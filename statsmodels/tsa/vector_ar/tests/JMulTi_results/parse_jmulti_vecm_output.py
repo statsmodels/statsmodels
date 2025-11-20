@@ -164,7 +164,7 @@ def load_results_jmulti(dataset):
                 # JMulTi: no deterministic section in VAR repr.
                 del section_header[-1]
                 del sections[-1]
-        results = dict()
+        results = {}
         results["est"] = dict.fromkeys(sections)
         results["se"] = dict.fromkeys(sections)
         results["t"] = dict.fromkeys(sections)
@@ -289,7 +289,7 @@ def load_results_jmulti(dataset):
             if "Covariance:" in line:
                 sigmau_section_reached = True
                 row = re.findall(regex_est, line)
-                rows_to_parse = len(row)  # Sigma_u quadratic ==> #rows==#cols
+                rows_to_parse = len(row)  # Sigma_u quadratic ==> # rows==#cols
                 sigma_u = np.empty((rows_to_parse, rows_to_parse))
             row = re.findall(regex_est, line)
             rows_to_parse -= 1
@@ -305,7 +305,7 @@ def load_results_jmulti(dataset):
                   dt_string + "_fc5" + ".txt"
         fc_file = os.path.join(here, fc_file)
         fc, lower, upper, plu_min = [], [], [], []
-        fc_file = open(fc_file, encoding='latin_1')
+        fc_file = open(fc_file, encoding="latin_1")
         for line in fc_file:
             str_number = r"(\s+-?\d+\.\d{4}\s*?)"
             regex_number = re.compile(str_number)
@@ -330,8 +330,8 @@ def load_results_jmulti(dataset):
         # ---------------------------------------------------------------------
         # parse output related to Granger-causality:
         results["granger_caus"] = dict.fromkeys(["p", "test_stat"])
-        results["granger_caus"]["p"] = dict()
-        results["granger_caus"]["test_stat"] = dict()
+        results["granger_caus"]["p"] = {}
+        results["granger_caus"]["test_stat"] = {}
         vn = dataset.variable_names
         # all possible combinations of potentially causing variables
         # (at least 1 variable and not all variables together):
@@ -362,8 +362,8 @@ def load_results_jmulti(dataset):
         # ---------------------------------------------------------------------
         # parse output related to instant causality:
         results["inst_caus"] = dict.fromkeys(["p", "test_stat"])
-        results["inst_caus"]["p"] = dict()
-        results["inst_caus"]["test_stat"] = dict()
+        results["inst_caus"]["p"] = {}
+        results["inst_caus"]["test_stat"] = {}
         vn = dataset.variable_names
         # all possible combinations of potentially causing variables
         # (at least 1 variable and not all variables together):
@@ -403,7 +403,7 @@ def load_results_jmulti(dataset):
         ir_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                   dt_string + "_ir" + ".txt"
         ir_file = os.path.join(here, ir_file)
-        ir_file = open(ir_file, encoding='latin_1')
+        ir_file = open(ir_file, encoding="latin_1")
         causing = None
         caused = None
         data = None
@@ -439,8 +439,8 @@ def load_results_jmulti(dataset):
         lagorder_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                         dt_string + "_lagorder" + ".txt"
         lagorder_file = os.path.join(here, lagorder_file)
-        lagorder_file = open(lagorder_file, encoding='latin_1')
-        results["lagorder"] = dict()
+        lagorder_file = open(lagorder_file, encoding="latin_1")
+        results["lagorder"] = {}
         aic_start = "Akaike Info Criterion:"
         fpe_start = "Final Prediction Error:"
         hqic_start = "Hannan-Quinn Criterion:"
@@ -461,8 +461,8 @@ def load_results_jmulti(dataset):
         test_norm_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                          dt_string + "_diag" + ".txt"
         test_norm_file = os.path.join(here, test_norm_file)
-        test_norm_file = open(test_norm_file, encoding='latin_1')
-        results["test_norm"] = dict()
+        test_norm_file = open(test_norm_file, encoding="latin_1")
+        results["test_norm"] = {}
         reading_values = False
         line_start_statistic = "joint test statistic:"
         line_start_pvalue = " p-value:"
@@ -486,8 +486,8 @@ def load_results_jmulti(dataset):
         whiteness_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                          dt_string + "_diag" + ".txt"
         whiteness_file = os.path.join(here, whiteness_file)
-        whiteness_file = open(whiteness_file, encoding='latin_1')
-        results["whiteness"] = dict()
+        whiteness_file = open(whiteness_file, encoding="latin_1")
+        results["whiteness"] = {}
         section_start_marker = "PORTMANTEAU TEST"
         order_start = "tested order:"
         statistic_start = "test statistic:"

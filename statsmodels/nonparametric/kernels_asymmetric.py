@@ -5,20 +5,20 @@ References
 
 .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
    Asymmetric Kernel Density Estimators and Smoothed Histograms with
-   Application to Income Data.” Econometric Theory 21 (2): 390–412.
+   Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
 .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
-   Computational Statistics & Data Analysis 31 (2): 131–45.
+   Computational Statistics & Data Analysis 31 (2): 131-45.
    https://doi.org/10.1016/S0167-9473(99)00010-9.
 
 .. [3] Chen, Song Xi. 2000. “Probability Density Function Estimation Using
    Gamma Kernels.”
-   Annals of the Institute of Statistical Mathematics 52 (3): 471–80.
+   Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
    https://doi.org/10.1023/A:1004165218295.
 
 .. [4] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
    Lognormal Kernel Estimators for Modelling Durations in High Frequency
-   Financial Data.” Annals of Economics and Finance 4: 103–24.
+   Financial Data.” Annals of Economics and Finance 4: 103-24.
 
 .. [5] Micheaux, Pierre Lafaye de, and Frédéric Ouimet. 2020. “A Study of Seven
    Asymmetric Kernels for the Estimation of Cumulative Distribution Functions,”
@@ -26,11 +26,11 @@ References
 
 .. [6] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
    “Asymmetric Kernels for Boundary Modification in Distribution Function
-   Estimation.” REVSTAT, 1–27.
+   Estimation.” REVSTAT, 1-27.
 
 .. [7] Scaillet, O. 2004. “Density Estimation Using Inverse and Reciprocal
    Inverse Gaussian Kernels.”
-   Journal of Nonparametric Statistics 16 (1–2): 217–26.
+   Journal of Nonparametric Statistics 16 (1-2): 217-26.
    https://doi.org/10.1080/10485250310001624819.
 
 
@@ -207,10 +207,10 @@ kernel_pdf_beta.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
-       Computational Statistics & Data Analysis 31 (2): 131–45.
+       Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
     """.format(doc_params=doc_params)
 
@@ -229,10 +229,10 @@ kernel_cdf_beta.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
-       Computational Statistics & Data Analysis 31 (2): 131–45.
+       Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
     """.format(doc_params=doc_params)
 
@@ -283,10 +283,10 @@ kernel_pdf_beta2.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
-       Computational Statistics & Data Analysis 31 (2): 131–45.
+       Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
     """.format(doc_params=doc_params)
 
@@ -337,10 +337,10 @@ kernel_cdf_beta2.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
-       Computational Statistics & Data Analysis 31 (2): 131–45.
+       Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
     """.format(doc_params=doc_params)
 
@@ -360,11 +360,11 @@ kernel_pdf_gamma.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 2000. “Probability Density Function Estimation Using
        Gamma Krnels.”
-       Annals of the Institute of Statistical Mathematics 52 (3): 471–80.
+       Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
     """.format(doc_params=doc_params)
 
@@ -385,11 +385,11 @@ kernel_cdf_gamma.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 2000. “Probability Density Function Estimation Using
        Gamma Krnels.”
-       Annals of the Institute of Statistical Mathematics 52 (3): 471–80.
+       Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
     """.format(doc_params=doc_params)
 
@@ -444,11 +444,11 @@ kernel_pdf_gamma2.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 2000. “Probability Density Function Estimation Using
        Gamma Krnels.”
-       Annals of the Institute of Statistical Mathematics 52 (3): 471–80.
+       Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
     """.format(doc_params=doc_params)
 
@@ -479,11 +479,11 @@ kernel_cdf_gamma2.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 2000. “Probability Density Function Estimation Using
        Gamma Krnels.”
-       Annals of the Institute of Statistical Mathematics 52 (3): 471–80.
+       Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
     """.format(doc_params=doc_params)
 
@@ -542,7 +542,7 @@ kernel_pdf_invgauss.__doc__ = """\
     ----------
     .. [1] Scaillet, O. 2004. “Density Estimation Using Inverse and Reciprocal
        Inverse Gaussian Kernels.”
-       Journal of Nonparametric Statistics 16 (1–2): 217–26.
+       Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
     """.format(doc_params=doc_params)
 
@@ -573,7 +573,7 @@ kernel_cdf_invgauss.__doc__ = """\
     ----------
     .. [1] Scaillet, O. 2004. “Density Estimation Using Inverse and Reciprocal
        Inverse Gaussian Kernels.”
-       Journal of Nonparametric Statistics 16 (1–2): 217–26.
+       Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
     """.format(doc_params=doc_params)
 
@@ -597,7 +597,7 @@ kernel_pdf_recipinvgauss.__doc__ = """\
     ----------
     .. [1] Scaillet, O. 2004. “Density Estimation Using Inverse and Reciprocal
        Inverse Gaussian Kernels.”
-       Journal of Nonparametric Statistics 16 (1–2): 217–26.
+       Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
     """.format(doc_params=doc_params)
 
@@ -633,7 +633,7 @@ kernel_cdf_recipinvgauss.__doc__ = """\
     ----------
     .. [1] Scaillet, O. 2004. “Density Estimation Using Inverse and Reciprocal
        Inverse Gaussian Kernels.”
-       Journal of Nonparametric Statistics 16 (1–2): 217–26.
+       Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
     """.format(doc_params=doc_params)
 
@@ -652,7 +652,7 @@ kernel_pdf_bs.__doc__ = """\
     ----------
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
-       Financial Data.” Annals of Economics and Finance 4: 103–24.
+       Financial Data.” Annals of Economics and Finance 4: 103-24.
     """.format(doc_params=doc_params)
 
 
@@ -670,10 +670,10 @@ kernel_cdf_bs.__doc__ = """\
     ----------
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
-       Financial Data.” Annals of Economics and Finance 4: 103–24.
+       Financial Data.” Annals of Economics and Finance 4: 103-24.
     .. [2] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
-       Estimation.” REVSTAT, 1–27.
+       Estimation.” REVSTAT, 1-27.
     """.format(doc_params=doc_params)
 
 
@@ -703,7 +703,7 @@ kernel_pdf_lognorm.__doc__ = """\
     ----------
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
-       Financial Data.” Annals of Economics and Finance 4: 103–24.
+       Financial Data.” Annals of Economics and Finance 4: 103-24.
     """.format(doc_params=doc_params)
 
 
@@ -733,7 +733,7 @@ kernel_cdf_lognorm.__doc__ = """\
     ----------
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
-       Financial Data.” Annals of Economics and Finance 4: 103–24.
+       Financial Data.” Annals of Economics and Finance 4: 103-24.
     """.format(doc_params=doc_params)
 
 
@@ -768,7 +768,7 @@ kernel_pdf_weibull.__doc__ = """\
     ----------
     .. [1] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
-       Estimation.” REVSTAT, 1–27.
+       Estimation.” REVSTAT, 1-27.
     """.format(doc_params=doc_params)
 
 
@@ -790,7 +790,7 @@ kernel_cdf_weibull.__doc__ = """\
     ----------
     .. [1] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
-       Estimation.” REVSTAT, 1–27.
+       Estimation.” REVSTAT, 1-27.
     """.format(doc_params=doc_params)
 
 

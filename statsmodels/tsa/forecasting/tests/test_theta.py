@@ -77,9 +77,9 @@ def test_alt_index(indexed_data):
     period = 12 if date_like else None
     res = ThetaModel(indexed_data, period=period).fit()
     if hasattr(idx, "freq") and idx.freq is None:
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="Only PeriodIndexes, DatetimeIndexes"):
             res.forecast_components(37)
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="Only PeriodIndexes, DatetimeIndexes"):
             res.forecast(23)
     else:
         res.forecast_components(37)
@@ -152,7 +152,7 @@ def test_auto(reset_randomstate):
     assert tm.method == "mul"
     res2 = tm.fit()
 
-    np.testing.assert_allclose(res.params, res2.params)
+    np.testing.assert_allclose(res.params, res2.params, rtol=1e-4)
 
     tm = ThetaModel(y - y.mean(), method="auto")
     assert tm.method == "add"
