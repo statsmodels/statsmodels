@@ -1841,7 +1841,7 @@ def test_regularized_poisson_mcp():
     groups = np.kron(np.arange(ng), np.ones(gs))
 
     model = gee.GEE(y, x, groups=groups, family=families.Poisson())
-    result = model.fit_regularized(0.0000001, gamma=3, method='mcp')
+    result = model.fit_regularized(0.0000001, method='mcp')
 
     assert_allclose(result.params, 0.7 * np.r_[0, 1, 0, -1, 0],
                     rtol=0.01, atol=0.12)
@@ -1905,7 +1905,7 @@ def test_regularized_gaussian_mcp():
     y = lpr + e
 
     model = gee.GEE(y, x, cov_struct=cov_struct.Exchangeable(), groups=groups)
-    result = model.fit_regularized(0.01, gamma=3, method='mcp', maxiter=100)
+    result = model.fit_regularized(0.01, method='mcp', maxiter=100)
 
     ex = np.zeros(200)
     ex[0:4] = np.r_[2, 3, 1.5, 2]
