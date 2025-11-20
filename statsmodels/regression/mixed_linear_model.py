@@ -2194,16 +2194,8 @@ class MixedLM(base.LikelihoodModel):
         A MixedLMResults instance.
         """
 
-        _allowed_kwargs = [
-            "gtol",
-            "maxiter",
-            "eps",
-            "maxcor",
-            "ftol",
-            "tol",
-            "disp",
-            "maxls",
-        ]
+        if "cov_type" in fit_kwargs:
+            raise NotImplementedError("cov_type is not supported in MixedLM.fit")
 
         if method is None:
             method = ["bfgs", "lbfgs", "cg"]
