@@ -3,7 +3,7 @@ from statsmodels.compat.scipy import SP_LT_116
 import warnings
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pytest
 
 from statsmodels import datasets
@@ -26,6 +26,11 @@ from .results import (
     results_truncated_st as results_ts,
 )
 from .results.results_discrete import RandHIE
+from .test_discrete import (
+    CheckL1Compatability,
+    CheckLikelihoodModelL1,
+    load_randhie,
+)
 
 
 class CheckResults:
@@ -556,3 +561,208 @@ class TestHurdleNegbinSimulated(CheckHurdlePredict):
             k_extra=df_null - 1,
             exog_names=["zm_const", "zm_x1", "zm_alpha", "const", "x1", "alpha"],
         )
+
+
+class TestRegularizedHurdleSimulated(CheckHurdlePredict):
+
+    @classmethod
+    def setup_class(cls):
+
+        # Follow the same setup as the other hurdle simulation
+        nobs = 2000
+        exog = np.column_stack((np.ones(nobs), np.linspace(0, 3, nobs)))
+        y_fake = np.arange(nobs) // (nobs / 3)  # need some zeros and non-zeros
+        mod = HurdleCountModel(y_fake, exog, dist="negbin", zerodist="negbin")
+        p_dgp = np.array([-0.4, 2, 0.5, 0.2, 0.5, 0.5])
+        k_params = p_dgp.size
+        probs = mod.predict(p_dgp, which="prob", y_values=np.arange(50))
+        cdf = probs.cumsum(1)
+        n = cdf.shape[0]
+        cdf = np.column_stack((cdf, np.ones(n)))
+        rng = np.random.default_rng(987456348)
+        u = rng.random((n, 1))
+        endog = np.argmin(cdf < u, axis=1)
+
+        mod_hnb = HurdleCountModel(endog, exog, dist="negbin", zerodist="negbin")
+        cls.res1 = mod_hnb.fit_regularized(
+            # Non-zero starting parameters are required when fitting a negative
+            # binomial with regularization
+            start_params=np.ones(k_params),
+            method="l1",
+            # Regularization in the zero model must be weak for mean predictions
+            # to match analytically derived expected values
+            alpha=np.array([0.01, 0.01, 0, 1, 1, 0]),
+            maxiter=300
+        )
+
+        df_model = 2
+        df_null = k_params - df_model
+        df_resid = nobs - k_params
+        cls.res2 = Holder(
+            nobs=nobs,
+            k_params=k_params,
+            df_model=df_model,
+            df_null=df_null,
+            df_resid=df_resid,
+            k_extra=df_null - 1,
+            exog_names=[
+                "zm_const", "zm_x1", "zm_alpha", "const", "x1", "alpha",
+            ],
+        )
+
+
+class TestHurdleL1(CheckLikelihoodModelL1):
+
+    @classmethod
+    def setup_class(cls):
+        endog = DATA["docvis"]
+        exog_names = ["aget", "totchr", "const"]
+        exog = DATA[exog_names]
+        cls.res1 = HurdleCountModel(
+            endog=endog, exog=exog, dist="poisson", zerodist="poisson"
+        ).fit_regularized(method="l1", alpha=1)
+        cls.res2 = results_t.hurdle_l1
+
+
+class TestHurdleL1Compatibility(CheckL1Compatability):
+    """
+    Many inherited tests must be overridden to separately test both the zero
+    model and the main model in the Hurdle, but the inherited tests for degrees
+    of freedom and bad r matrix are still good.
+    """
+
+    @classmethod
+    def setup_class(cls):
+        cls.kvars = 10  # Number of variables
+        cls.m = 7  # Number of unregularized parameters
+        rand_data = load_randhie()
+        rand_data.endog = np.asarray(rand_data.endog)
+        rand_data.exog = np.asarray(rand_data.exog, dtype=float)
+        rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
+        rand_exog_st = (rand_exog - rand_exog.mean(0)) / rand_exog.std(0)
+        rand_exog = np.hstack((np.ones((rand_exog_st.shape[0], 1)), rand_exog_st))
+        # Drop some columns and do an unregularized fit
+        exog_no_PSI = rand_exog[:, : cls.m]
+        mod_unreg = HurdleCountModel(
+            rand_data.endog, exog_no_PSI, dist="negbin", zerodist="poisson"
+        )
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=0)
+        # Do a regularized fit with alpha such that it effectively drops the
+        # last column
+        alpha = 10 * len(rand_data.endog) * np.ones(2 * cls.kvars + 1)
+        alpha[: cls.m] = 0
+        alpha[cls.kvars: cls.kvars + cls.m] = 0
+        # Do not penalize alpha in nbp main model
+        alpha[-1] = 0
+
+        mod_reg = HurdleCountModel(
+            rand_data.endog, rand_exog, dist="negbin", zerodist="poisson"
+        )
+        cls.res_reg = mod_reg.fit_regularized(
+            # Non-zero starting parameters are required when fitting a negative
+            # binomial with regularization
+            start_params=np.ones(2 * cls.kvars + 1),
+            method="l1",
+            alpha=alpha,
+            disp=False,
+            acc=1e-10,
+            maxiter=2000,
+            trim_mode="auto",
+        )
+        cls.k_extra1 = 0  # no extra parameter in poisson
+        cls.k_extra2 = 1  # 1 extra parameter in nbp
+
+    def test_params(self):
+        kvars = self.kvars
+        m = self.m
+        k_extra1 = self.k_extra1
+        assert_almost_equal(
+            self.res_unreg.params[:m], self.res_reg.params[:m], 4
+        )
+        assert_almost_equal(
+            self.res_unreg.params[m + k_extra1: m + k_extra1 + m],
+            self.res_reg.params[kvars + k_extra1: kvars + k_extra1 + m],
+            4,
+        )
+        # The last entries in the regularized zero and main models should be
+        # close to zero
+        assert_almost_equal(0, self.res_reg.params[m : kvars], 4)
+        assert_almost_equal(0, self.res_reg.params[kvars + k_extra1 + m: -1], 4)
+
+    def test_cov_params(self):
+        kvars = self.kvars
+        m = self.m
+        k_extra1 = self.k_extra1
+        # The restricted cov_params should be equal, both in the zero model...
+        assert_almost_equal(
+            self.res_unreg.cov_params()[:m, :m],
+            self.res_reg.cov_params()[:m, :m],
+            1,
+        )
+        # ...and in the main model
+        assert_almost_equal(
+            self.res_unreg.cov_params()[
+                m + k_extra1:m + k_extra1 + m, m + k_extra1:m + k_extra1 + m
+            ],
+            self.res_reg.cov_params()[
+                kvars + k_extra1:kvars + k_extra1 + m,
+                kvars + k_extra1:kvars + k_extra1 + m,
+            ],
+            1,
+        )
+
+    def test_t_test(self):
+        kvars = self.kvars
+        m = self.m
+        k_extra1 = self.k_extra1
+        t_unreg = self.res_unreg.t_test(np.eye(len(self.res_unreg.params)))
+        t_reg = self.res_reg.t_test(np.eye(len(self.res_reg.params)))
+        # Zero model
+        assert_almost_equal(t_unreg.effect[:m], t_reg.effect[:m], 3)
+        assert_almost_equal(t_unreg.sd[:m], t_reg.sd[:m], 3)
+        assert_almost_equal(np.nan, t_reg.sd[m])
+        assert_allclose(t_unreg.tvalue[:m], t_reg.tvalue[:m], atol=3e-3)
+        assert_almost_equal(np.nan, t_reg.tvalue[m])
+        # Main model
+        assert_almost_equal(
+            t_unreg.effect[m + k_extra1:m + k_extra1 + m],
+            t_reg.effect[kvars + k_extra1:kvars + k_extra1 + m],
+            3,
+        )
+        assert_almost_equal(
+            t_unreg.sd[m + k_extra1:m + k_extra1 + m],
+            t_reg.sd[kvars + k_extra1:kvars + k_extra1 + m],
+            3,
+        )
+        assert_almost_equal(np.nan, t_reg.sd[kvars + k_extra1 + m])
+        assert_allclose(
+            t_unreg.tvalue[m + k_extra1:m + k_extra1 + m],
+            t_reg.tvalue[kvars + k_extra1:kvars + k_extra1 + m],
+            atol=3e-3,
+        )
+        assert_almost_equal(np.nan, t_reg.tvalue[kvars + k_extra1 + m])
+
+    def test_f_test(self):
+        m = self.m
+        kvars = self.kvars
+        k_extra1 = self.k_extra1
+        # Zero model
+        f_unreg_zero = self.res_unreg.f_test(
+            np.eye(len(self.res_unreg.params))[:m]
+        )
+        f_reg_zero = self.res_reg.f_test(np.eye(len(self.res_reg.params))[:m])
+        assert_allclose(
+            f_unreg_zero.fvalue, f_reg_zero.fvalue, rtol=3e-5, atol=1e-3
+        )
+        assert_almost_equal(f_unreg_zero.pvalue, f_reg_zero.pvalue, 3)
+        # Main model
+        f_unreg_main = self.res_unreg.f_test(
+            np.eye(len(self.res_unreg.params))[m + k_extra1:m + k_extra1 + m]
+        )
+        f_reg_main = self.res_reg.f_test(
+            np.eye(len(self.res_reg.params))[kvars + k_extra1:kvars + k_extra1 + m]
+        )
+        assert_allclose(
+            f_unreg_main.fvalue, f_reg_main.fvalue, rtol=3e-5, atol=1e-3
+        )
+        assert_almost_equal(f_unreg_main.pvalue, f_reg_main.pvalue, 3)

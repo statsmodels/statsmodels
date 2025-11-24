@@ -1273,7 +1273,7 @@ class HurdleCountModel(CountModel):
             auto_trim_tol=auto_trim_tol,
             size_trim_tol=size_trim_tol,
             qc_tol=qc_tol,
-            **kwargs
+            **kwargs,
         )
         start_params1 = results1.params
         results2 = self.model2.fit_regularized(
@@ -1288,7 +1288,7 @@ class HurdleCountModel(CountModel):
             auto_trim_tol=auto_trim_tol,
             size_trim_tol=size_trim_tol,
             qc_tol=qc_tol,
-            **kwargs
+            **kwargs,
         )
         start_params2 = results2.params
         start_params = np.append(start_params1, start_params2)
@@ -1305,7 +1305,7 @@ class HurdleCountModel(CountModel):
             auto_trim_tol=auto_trim_tol,
             size_trim_tol=size_trim_tol,
             qc_tol=qc_tol,
-            **kwargs
+            **kwargs,
         )
         cntfit.mle_retvals["converged"] = [
             results1.mle_retvals["converged"], results2.mle_retvals["converged"]
@@ -1344,7 +1344,7 @@ class HurdleCountModel(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         k_zero = (
@@ -1639,15 +1639,15 @@ class L1HurdleCountResults(HurdleCountResults):
             cov_kwds=cov_kwds,
             use_t=use_t
         )
-        # TODO: mixins could eliminate the need for the below duplicated code
+        # TODO: mixins might eliminate the need for the below duplicated code
         #  (cf. .discrete_model.L1CountResults)
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been zeroed out.
         self.trimmed = mlefit.mle_retvals["trimmed"]
         self.nnz_params = (~self.trimmed).sum()
 
-        # Set degrees of freedom. In doing so, adjust for extra parameters which
-        # are not included in df_model.
+        # Set degrees of freedom. Adjust for extra parameters not included in
+        # df_model.
         k_extra = getattr(self.model, "k_extra", 0)
         self.df_model = self.nnz_params - 1 - k_extra
         self.df_resid = self.model.endog.shape[0] - self.nnz_params
