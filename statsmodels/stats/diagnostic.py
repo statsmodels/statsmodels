@@ -824,6 +824,7 @@ def het_breuschpagan(resid, exog_het, robust=True):
     # Note: degrees of freedom for LM test is nvars minus constant
     return lm, stats.chi2.sf(lm, nvars - 1), fval, fpval
 
+
 def het_white(resid, exog, interaction_terms=True):
     """
     White's Lagrange Multiplier Test for Heteroscedasticity.
