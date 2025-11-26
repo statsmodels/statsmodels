@@ -24,7 +24,7 @@ jobs:
     if: github.repository == 'statsmodels/statsmodels'
     steps:
       - name: Checkout statsmodels
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-tags: true
