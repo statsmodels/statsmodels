@@ -9,12 +9,12 @@
 
 # # M-Estimators for Robust Linear Modeling
 
-from statsmodels.compat import lmap
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
-import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
+from statsmodels.compat import lmap
 
 # * An M-estimator minimizes the function
 #
@@ -214,8 +214,8 @@ sm.robust.scale.mad(fat_tails)
 
 # ### Duncan's Occupational Prestige data - M-estimation for outliers
 
-from statsmodels.graphics.api import abline_plot
 from statsmodels.formula.api import ols, rlm
+from statsmodels.graphics.api import abline_plot
 
 prestige = sm.datasets.get_rdataset("Duncan", "carData", cache=True).data
 

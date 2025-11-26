@@ -10,6 +10,8 @@
 # # Contrasts Overview
 
 import numpy as np
+import pandas as pd
+
 import statsmodels.api as sm
 
 # This document is based heavily on this excellent resource from UCLA
@@ -41,7 +43,6 @@ import statsmodels.api as sm
 
 # #### Example Data
 
-import pandas as pd
 
 url = "https://stats.idre.ucla.edu/stat/data/hsb2.csv"
 hsb2 = pd.read_table(url, delimiter=",")

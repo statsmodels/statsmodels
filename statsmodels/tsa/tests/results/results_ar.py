@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import pandas as pd
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -186,7 +187,7 @@ class ARResultsMLE:
                                      "results_ar_forecast_mle_dynamic.csv")
             predictresults = np.loadtxt(filename, delimiter=",")
             pv = predictresults[:, 1]
-            dynamicpv = np.genfromtxt(filename2, delimiter=",", skip_header=1)
+            dynamicpv = pd.read_csv(filename2, skiprows=1, header=None).values
 
             # cases - in sample predict
             # start = 0 (fitted values)

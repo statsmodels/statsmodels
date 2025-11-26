@@ -22,10 +22,12 @@
 # expedience.
 
 import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing, Holt
+
+from statsmodels.tsa.api import ExponentialSmoothing, Holt, SimpleExpSmoothing
 
 data = [
     446.6565,
