@@ -824,7 +824,6 @@ def het_breuschpagan(resid, exog_het, robust=True):
     # Note: degrees of freedom for LM test is nvars minus constant
     return lm, stats.chi2.sf(lm, nvars - 1), fval, fpval
 
-
 def het_white(resid, exog, interaction_terms=True):
     """
     White's Lagrange Multiplier Test for Heteroscedasticity.
@@ -857,13 +856,10 @@ def het_white(resid, exog, interaction_terms=True):
     -----
     Assumes x contains constant (for counting dof).
 
-    question: does f-statistic make sense? constant ?
-
     References
     ----------
-    Greene section 11.4.1 5th edition p. 222. Test statistic reproduces
-    Greene 5th, example 11.3.
-    Damodar N. Gujarati, Basic Econometrics, section 11.5. Pg 387.
+    .. [1] Greene, William H. Econometric analysis. 5th Edition. Pearson Education, 2002.
+    .. [2] Damodar N. Gujarati, Basic Econometrics, section 11.5. Pg 387.
     """
     x = array_like(exog, "exog", ndim=2)
     y = array_like(resid, "resid", ndim=2, shape=(x.shape[0], 1))
@@ -875,16 +871,10 @@ def het_white(resid, exog, interaction_terms=True):
         i0, i1 = np.triu_indices(nvars0)
         exog = x[:, i0] * x[:, i1]
         nobs, nvars = exog.shape
-        assert nvars == nvars0 * (nvars0 - 1) / 2. + nvars0
     resols = OLS(y ** 2, exog).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
-    # Note: degrees of freedom for LM test is nvars minus constant
-    # degrees of freedom take possible reduced rank in exog into account
-    # df_model checks the rank to determine df
-    # extra calculation that can be removed:
-    assert resols.df_model == np.linalg.matrix_rank(exog) - 1
     lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 

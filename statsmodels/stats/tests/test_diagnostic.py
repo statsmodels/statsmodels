@@ -272,7 +272,7 @@ class TestDiagnosticG:
     def test_het_white(self):
         res = self.res
 
-        # Reference values from Eviews 
+        # Reference values from Eviews
         hw = smsdia.het_white(res.resid, res.model.exog)
         hw_values = (
             33.503722896538441,
@@ -285,14 +285,13 @@ class TestDiagnosticG:
     def test_het_white_no_interaction_terms(self):
         res = self.res
 
-        hw = smdia.het_white(res.resid, res.model.exog, interaction_terms=False)
+        hw = smsdia.het_white(res.resid, res.model.exog, interaction_terms=False)
         hw_values = (
             13.25091965953952,
             0.001326170478134868,
             6.985287047470471,
             0.001169716842511783,
         )
-
         assert_almost_equal(hw, hw_values)
 
     def test_het_white_error(self):
