@@ -40,6 +40,8 @@ from statsmodels.distributions.tools import (
     frequencies_fromdata,
 )
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
+import numpy as np
+from statsmodels.distributions.copula.copulas import _rotate_cdf
 
 uniform = stats.uniform
 
@@ -873,3 +875,27 @@ class TestGumbelCopula(CheckModernCopula):
 class TestGumbelCopula_3d(CheckRvsDim):
     copula = GumbelCopula(theta=1.5, k_dim=3)
     dim = 3
+
+
+class TestClaytonCopulaRotation:
+    """Basic tests for rotated versions of the Clayton copula."""
+
+    @classmethod
+    def setup_class(cls):
+        cls.copula = ClaytonCopula(theta=2.0)
+        grid = np.linspace(0.1, 0.9, 5)
+        cls.U, cls.V = np.meshgrid(grid, grid, indexing="ij")
+
+    def test_rotate_cdf_values_range(self):
+        for rotation in [90, 180, 270]:
+            C = _rotate_cdf(self.U, self.V, rotation, self.copula.cdf)
+            assert np.all(np.isfinite(C))
+            assert np.all((C >= -1e-12) & (C <= 1 + 1e-12))
+
+    def test_rotate_cdf_monotonicity(self):
+        for rotation in [90, 180, 270]:
+            C = _rotate_cdf(self.U, self.V, rotation, self.copula.cdf)
+            diff_u = np.diff(C, axis=0)
+            diff_v = np.diff(C, axis=1)
+            assert np.all(diff_u >= -1e-10)
+            assert np.all(diff_v >= -1e-10)
