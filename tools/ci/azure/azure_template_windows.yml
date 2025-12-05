@@ -44,22 +44,22 @@ jobs:
       python -m pip install --upgrade pip setuptools wheel
     displayName: 'Update essentials'
 
-  - script: |
+  - pwsh: |
       python -m pip install -r requirements.txt
       python -m pip install -r requirements-dev.txt
     displayName: 'Install dependencies'
 
-  - script: |
+  - pwsh: |
       python -m pip list
     displayName: 'List Configuration'
 
-  - script: |
+  - pwsh: |
       python -m pip install -e . -v --no-build-isolation
     displayName: 'Build Cython Extensions'
 
-  - script: |
+  - pwsh: |
       pytest statsmodels --skip-examples --junitxml=junit/test-results.xml -n 2 --durations=50
-    displayName: 'pytest'
+    displayName: 'Run pytest'
 
   - task: PublishTestResults@2
     inputs:
