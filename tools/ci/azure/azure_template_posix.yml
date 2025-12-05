@@ -20,10 +20,11 @@ jobs:
         python_312_latest:
           python.version: '3.12'
           coverage: true
+          lint: true
         python_311_latest:
           python.version: '3.11'
           lint: true
-          CYTHON: 3.0.10
+          CYTHON_VERSION: 3.0.12
           coverage: true
         python_310_latest_install:
           python.version: '3.10'
@@ -103,6 +104,7 @@ jobs:
   - script: |
       echo "Installing to site packages"
       if [[ $TEST_SDIST ]]; then
+        python -m pip install --upgrade build
         python -m build . --sdist
         TAIL=".tar.gz"
       else
