@@ -864,7 +864,7 @@ def plot_predict(
 
     if alpha is not None:
         label = f"{1-alpha:.0%} confidence interval"
-        ci = pred.conf_int(alpha)
+        ci = pred.conf_int(alpha=alpha)
         conf_int = np.asarray(ci)
 
         ax.fill_between(
