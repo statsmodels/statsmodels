@@ -29,8 +29,8 @@ jobs:
         python.version: '3.13'
         python.architecture: 'x64'
       python314t_win_latest:
-        python.version: '3.14t'
-        python.architecture: 'x64'
+        python.version: '3.14'
+        python.architecture: 'x64-freethreaded'
     maxParallel: 10
 
   steps:
