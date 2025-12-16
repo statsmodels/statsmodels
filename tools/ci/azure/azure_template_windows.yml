@@ -28,6 +28,9 @@ jobs:
       python313_win_latest:
         python.version: '3.13'
         python.architecture: 'x64'
+      python314t_win_latest:
+        python.version: '3.14'
+        python.architecture: 'x64-freethreaded'
     maxParallel: 10
 
   steps:
@@ -35,7 +38,7 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
       architecture: '$(python.architecture)'
-    displayName: 'Use Python $(python.version)'
+    displayName: 'Use Python $(python.version) $(python.architecture)'
 
   - script: |
       python -m pip install --upgrade pip setuptools wheel

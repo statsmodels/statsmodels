@@ -17,24 +17,32 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
+        python_314t_latest:
+          python.version: '3.14'
+          python.architecture: 'x64-freethreaded'
         python_312_latest:
           python.version: '3.12'
+          python.architecture: 'x64'
           coverage: true
           lint: true
         python_311_latest:
           python.version: '3.11'
+          python.architecture: 'x64'
           lint: true
           CYTHON_VERSION: 3.0.12
           coverage: true
         python_311_wheel:
           python.version: '3.11'
+          python.architecture: 'x64'
           test.install: true
         python_312_sdist:
           python.version: '3.12'
+          python.architecture: 'x64'
           test.install: true
           TEST_SDIST: true
         python_39:
           python.version: '3.9'
+          python.architecture: 'x64'
           USE_MATPLOTLIB_VERSION: false
           USE_CVXOPT: false
           SCIPY_VERSION: 1.8.1
@@ -45,6 +53,7 @@ jobs:
           lint: true
         python_310_legacy_blas:
           python.version: '3.10'
+          python.architecture: 'x64'
           use.conda: true
           coverage: true
           NUMPY_VERSION: 2.0.0
@@ -56,35 +65,45 @@ jobs:
           lint: true
         python310_numpy124:
           python.version: '3.10'
+          python.architecture: 'x64'
           NUMPY_VERSION: 1.24.4
           SCIPY_VERSION: 1.9.3
           PANDAS_VERSION: 1.5.3
           MATPLOTLIB_VERSION: 3.6.0
         python_313_copy_on_write:
           python.version: '3.13'
+          python.architecture: 'x64'
           SM_TEST_COPY_ON_WRITE: 1
           lint: true
         python_312_pre:
           python.version: '3.12'
+          python.architecture: 'x64'
           pip.pre: true
         python_312_formulaic:
           python.version: '3.12'
+          python.architecture: 'x64'
           SM_FORMULA_ENGINE: "formulaic"
         python_312_no_patsy:
           python.version: '3.12'
+          python.architecture: 'x64'
           PIP_UNINSTALL: "patsy"
         python_312_no_formulaic:
           python.version: '3.12'
+          python.architecture: 'x64'
           PIP_UNINSTALL: "formulaic"
       ${{ if eq(parameters.name, 'macOS') }}:
         python310_macos_latest:
           python.version: '3.10'
+          python.architecture: 'x64'
         python311_macos_latest:
           python.version: '3.11'
+          python.architecture: 'x64'
         python312_macos_latest:
           python.version: '3.12'
+          python.architecture: 'x64'
         python313_macos_latest_install:
           python.version: '3.13'
+          python.architecture: 'x64'
           test.install: true
     maxParallel: 10
 
@@ -92,8 +111,8 @@ jobs:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '$(python.version)'
-      architecture: 'x64'
-    displayName: 'Use Python $(python.version)'
+      architecture: '$(python.architecture)'
+    displayName: 'Use Python $(python.version) $(python.architecture)'
 
   - bash: |
       echo "##vso[task.prependpath]$CONDA/bin"
