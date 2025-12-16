@@ -38,7 +38,7 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
       architecture: '$(python.architecture)'
-    displayName: 'Use Python $(python.version)'
+    displayName: 'Use Python $(python.version) $(python.architecture)'
 
   - script: |
       python -m pip install --upgrade pip setuptools wheel
