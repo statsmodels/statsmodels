@@ -30,8 +30,9 @@ Stats
 
 The Highlights
 ==============
-This release bring official Pyodide support to a statsmodel release. It is otherwise identical to
-the previous release.
+This release bring official Pyodide support to a statsmodel release. It also adds a fast implementation of the medcouple robust skewness estimator (O(n log n), optional via ``use_fast=True``).
+
+It is otherwise identical to the previous release.
 
 Special thanks to Agriya Khetarpal for working through Pyodide-specific issues, and
 improving other areas of statsmodels while doing so.
@@ -43,3 +44,4 @@ Merged Pull Requests
 The following Pull Requests were merged since the last release:
 
 - :pr:`9365`: Backport of #9270: add Pyodide support and CI jobs for v0.14.x
+- :pr:`XXXX`: ENH: Add fast medcouple implementation (use_fast=True) with O(n log n) complexity, legacy version kept for small/tied datasets
