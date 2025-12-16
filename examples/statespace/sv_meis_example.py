@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 # Import MEIS components
-from meis import MEISMixin, MEISResults
+from statsmodels.tsa.statespace.meis import MEISMixin, MEISResults
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 
 class StochasticVolatilityStudentT(MEISMixin, MLEModel):
