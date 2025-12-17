@@ -250,6 +250,45 @@ class RecursiveLS(MLEModel):
             Array of parameters.
         """
 
+    def extend(self, endog, exog=None, **kwargs):
+        """
+        Extend the model with additional data
+
+        Parameters
+        ----------
+        endog : array_like
+            New observations from the modeled time-series process.
+        exog : array_like, optional
+            New observations of exogenous regressors, shaped (nobs, k_exog).
+        **kwargs
+            Additional arguments passed to the base extend method.
+
+        Returns
+        -------
+        Representation
+            Extended state space representation
+
+        Notes
+        -----
+        Converts exog to the required design matrix format internally.
+        """
+        if exog is not None:
+            exog = np.asanyarray(exog)
+            if exog.ndim == 1:
+                exog = exog[:, None]
+            
+            nobs_new = exog.shape[0]
+            design = np.zeros((self.k_endog, self.k_states, nobs_new))
+            design[0] = exog[:, :, None].T
+            
+            if self._r_matrix is not None:
+                design[1:, :] = self._r_matrix[:, :, None]
+            
+            kwargs['design'] = design
+            exog = None
+        
+        return super().extend(endog, exog=exog, **kwargs)
+
 
 class RecursiveLSResults(MLEResults):
     """
@@ -511,20 +550,50 @@ class RecursiveLSResults(MLEResults):
         else:
             return self.uncentered_tss / (self.df_resid + self.df_model)
 
-    @Appender(MLEResults.get_prediction.__doc__)
     def get_prediction(self, start=None, end=None, dynamic=False,
                        information_set="predicted", signal_only=False,
-                       index=None, **kwargs):
-        # Note: need to override this, because we currently do not support
-        # dynamic prediction or forecasts when there are constraints.
+                       index=None, exog=None, **kwargs):
+        """
+        In-sample and out-of-sample prediction
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting.
+        dynamic : bool, int, str, or datetime, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction.
+        information_set : str, optional
+            The information set to condition on. Default is 'predicted'.
+        signal_only : bool, optional
+            Whether to compute predictions of only the "signal" component.
+            Default is False.
+        index : array_like, optional
+            Index to associate with the predicted results.
+        exog : array_like, optional
+            Exogenous regressors for out-of-sample prediction, shaped
+            (out_of_sample, k_exog). Required for out-of-sample prediction.
+        **kwargs
+            Additional keyword arguments.
+
+        Returns
+        -------
+        PredictionResults
+            Prediction results object
+
+        Notes
+        -----
+        For out-of-sample prediction, provide future exog values via the
+        `exog` parameter or a `design` matrix via kwargs.
+        """
         if start is None:
             start = self.model._index[0]
 
-        # Handle start, end, dynamic
         start, end, out_of_sample, prediction_index = (
             self.model._get_prediction_index(start, end, index))
 
-        # Handle `dynamic`
         if isinstance(dynamic, (bytes, str)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
 
@@ -533,13 +602,34 @@ class RecursiveLSResults(MLEResults):
                                       " dynamic prediction in models with"
                                       " constraints.")
 
-        # Perform the prediction
-        # This is a (k_endog x npredictions) array; do not want to squeeze in
-        # case of npredictions = 1
+        if out_of_sample > 0 and exog is not None:
+            exog = np.asanyarray(exog)
+            if exog.ndim == 1:
+                exog = exog[:, None]
+            
+            if exog.shape[0] != out_of_sample:
+                raise ValueError(
+                    "The exog array must have %d observations for "
+                    "out-of-sample prediction, but got %d." % 
+                    (out_of_sample, exog.shape[0]))
+            
+            if exog.shape[1] != self.model.k_exog:
+                raise ValueError(
+                    "The exog array must have %d columns, but got %d." %
+                    (self.model.k_exog, exog.shape[1]))
+            
+            design = np.zeros((self.model.k_endog, self.model.k_states, 
+                             out_of_sample))
+            design[0] = exog[:, :, None].T
+            
+            if self.model._r_matrix is not None:
+                design[1:, :] = self.model._r_matrix[:, :, None]
+            
+            kwargs['design'] = design
+
         prediction_results = self.filter_results.predict(
             start, end + out_of_sample + 1, dynamic, **kwargs)
 
-        # Return a new mlemodel.PredictionResults object
         res_obj = PredictionResults(self, prediction_results,
                                     information_set=information_set,
                                     signal_only=signal_only,
