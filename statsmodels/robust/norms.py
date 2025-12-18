@@ -109,7 +109,7 @@ class LeastSquares(RobustNorm):
         return np.inf
 
     def rho(self, z):
-        """
+        r"""
         The least squares estimator rho function
 
         Parameters
@@ -120,13 +120,18 @@ class LeastSquares(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = (1/2.)*z**2
+            rho is defined component-wise as
+
+            .. math::
+
+                \rho(z_i) = \frac{z_i^2}{2} \quad \text{for } i
+                \in (1, 2, \ldots, n).
         """
 
         return z**2 * 0.5
 
     def psi(self, z):
-        """
+        r"""
         The psi function for the least squares estimator
 
         The analytic derivative of rho
@@ -139,13 +144,17 @@ class LeastSquares(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z
+            psi is defined component-wise as
+
+            .. math::
+
+                \psi(z_i) = z_i \quad \text{for } i \in (1, 2, \ldots, n).
         """
 
         return np.asarray(z)
 
     def weights(self, z):
-        """
+        r"""
         The least squares estimator weighting function for the IRLS algorithm.
 
         The psi function scaled by the input z
@@ -158,7 +167,12 @@ class LeastSquares(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = np.ones(z.shape)
+            weights are defined component-wise as
+
+            .. math::
+
+                \text{weights}(z_i) = 1.0 \quad \text{for } i
+                \in (1, 2, \ldots, n).
         """
 
         z = np.asarray(z)
@@ -235,9 +249,16 @@ class HuberT(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = .5*z**2            for \|z\| <= t
+            rho is defined component-wise as
 
-            rho(z) = \|z\|*t - .5*t**2    for \|z\| > t
+            .. math::
+
+                \rho(z_i) =
+                    \begin{cases}
+                        \frac{z_i^2}{2},& \text{if } \lvert z_i \rvert \le t \\
+                        \lvert z_i \rvert \ t - \frac{t^2}{2},
+                            & \text{if } \lvert z_i \rvert > t
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -258,9 +279,15 @@ class HuberT(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z      for \|z\| <= t
+            psi is defined component-wise as
 
-            psi(z) = sign(z)*t for \|z\| > t
+            .. math::
+
+                \psi(z_i) =
+                    \begin{cases}
+                        z_i, & \text{if } \lvert z_i \rvert \le t \\
+                        \text{sign}(z_i) t, & \text{if } \lvert z_i \rvert > t
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -280,9 +307,16 @@ class HuberT(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = 1          for \|z\| <= t
+            weights are defined component-wise as
 
-            weights(z) = t/\|z\|      for \|z\| > t
+            .. math::
+
+                \text{weights}(z_i) =
+                    \begin{cases}
+                        1,& \text{if } \lvert z_i \rvert \le t \\
+                        \frac{t}{\lvert z_i \rvert},
+                            & \text{if }\lvert z_i \rvert > t
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
         z_isscalar = np.isscalar(z)
         z = np.atleast_1d(z)
@@ -356,7 +390,13 @@ class RamsayE(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = a**-2 * (1 - exp(-a*\|z\|)*(1 + a*\|z\|))
+            rho is defined component-wise as
+
+            .. math::
+
+                \rho(z_i) = a^{-2} (1 - \exp(-a \lvert z_i \rvert) \
+                (1 + a \lvert z_i \rvert)) \quad \text{for } i
+                \in (1, 2, \ldots, n).
         """
         z = np.asarray(z)
         return (1 - np.exp(-self.a * np.abs(z)) *
@@ -376,7 +416,13 @@ class RamsayE(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z*exp(-a*\|z\|)
+            psi is defined component-wise as
+
+            .. math::
+
+                \psi(z_i) = z_i \exp(-a \lvert z_i \rvert) \quad \text{for } i
+                \in (1, 2, \ldots, n).
+
         """
         z = np.asarray(z)
         return z * np.exp(-self.a * np.abs(z))
@@ -395,7 +441,12 @@ class RamsayE(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = exp(-a*\|z\|)
+            weights are defined component-wise as
+
+            .. math::
+
+                \text{weights}(z_i) = \exp(-a \lvert z_i \rvert) \quad \text{
+                for } i \in (1, 2, \ldots, n).
         """
 
         z = np.asarray(z)
@@ -471,12 +522,16 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         rho : ndarray
-            The elements of rho are defined as:
+            rho is defined component-wise as
 
             .. math::
 
-                rho(z) & = a^2 *(1-cos(z/a)), |z| \leq a\pi \\
-                rho(z) & = 2a^2, |z|>a\pi
+                \rho(z_i) =
+                    \begin{cases}
+                        a^2 (1 - \cos(\frac{z_i}{a})),
+                            & \text{if } \lvert z_i \rvert \le a\pi \\
+                        2a^2, & \text{if } \lvert z_i \rvert > a\pi
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
 
         a = self.a
@@ -499,9 +554,16 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = a * sin(z/a)   for \|z\| <= a*pi
+            psi is defined component-wise as
 
-            psi(z) = 0              for \|z\| > a*pi
+            .. math::
+
+                \psi(z_i) =
+                    \begin{cases}
+                        a \sin\left(\frac{z_i}{a}\right),
+                            & \text{if } \lvert z_i \rvert \leq a\pi \\
+                        0, & \text{if } \lvert z_i \rvert > a\pi
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
 
         a = self.a
@@ -523,9 +585,16 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = sin(z/a) / (z/a)     for \|z\| <= a*pi
+            weights are defined component-wise as
 
-            weights(z) = 0                    for \|z\| > a*pi
+            .. math::
+
+                \text{weights}(z_i) =
+                    \begin{cases}
+                        \sin(\frac{z_i}{a}) \frac{a}{z_i},
+                            & \text{if } \lvert z_i \rvert \le a\pi\\
+                        0, & \text{if } \lvert z_i \rvert > a\pi
+                    \end{cases}\quad \text{for } i \in (1, 2, \ldots, n).
         """
         a = self.a
         z = np.asarray(z)
@@ -610,9 +679,15 @@ class TrimmedMean(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = (1/2.)*z**2    for \|z\| <= c
+            rho is defined component-wise as
 
-            rho(z) = (1/2.)*c**2              for \|z\| > c
+            .. math::
+
+                \rho(z_i) =
+                \begin{cases}
+                    \frac{z_i^2}{2}, & \text{if } \lvert z_i \rvert \le c \\
+                    \frac{c^2}{2}, & \text{if } \lvert z_i \rvert > c
+                \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
 
         z = np.asarray(z)
@@ -633,9 +708,15 @@ class TrimmedMean(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z              for \|z\| <= c
+            psi is defined component-wise as
 
-            psi(z) = 0              for \|z\| > c
+            .. math::
+
+                \psi(z_i) =
+                    \begin{cases}
+                        z_i, & \text{if } \lvert z_i \rvert \le c \\
+                        0, & \text{if } \lvert z_i \rvert > c
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -655,9 +736,15 @@ class TrimmedMean(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = 1             for \|z\| <= c
+            weights are defined component-wise as
 
-            weights(z) = 0             for \|z\| > c
+            .. math::
+
+                \text{weights}(z_i) =
+                    \begin{cases}
+                      1, & \text{if } \lvert z_i \rvert \le c \\
+                      0, & \text{if } \lvert z_i \rvert > c
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -741,13 +828,20 @@ class Hampel(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = z**2 / 2                     for \|z\| <= a
+            rho is defined component-wise as
 
-            rho(z) = a*\|z\| - 1/2.*a**2               for a < \|z\| <= b
+            .. math::
 
-            rho(z) = a*(c - \|z\|)**2 / (c - b) / 2    for b < \|z\| <= c
-
-            rho(z) = a*(b + c - a) / 2                 for \|z\| > c
+                \rho(z_i) =
+                    \begin{cases}
+                        \frac{z_i^2}{2}, & \text{if } \lvert z_i \rvert \le a \\
+                        a \lvert z_i \rvert - \frac{a^2}{2},
+                            & \text{if } a < \lvert z_i \rvert \le b \\
+                        \frac{a}{2(c - b)} (c - \lvert z_i \rvert)^2,
+                            &\text{if } b < \lvert z_i \rvert \le c \\
+                        \frac{a}{2}  (b + c - a),
+                            & \text{if }\lvert z_i \rvert > c
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
         a, b, c = self.a, self.b, self.c
 
@@ -784,13 +878,19 @@ class Hampel(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z                            for \|z\| <= a
+            psi is defined component-wise as
 
-            psi(z) = a*sign(z)                    for a < \|z\| <= b
+            .. math::
 
-            psi(z) = a*sign(z)*(c - \|z\|)/(c-b)    for b < \|z\| <= c
-
-            psi(z) = 0                            for \|z\| > c
+                \psi(z_i) =
+                    \begin{cases}
+                        z_i, & \text{if } \lvert z_i \rvert \le a \\
+                        a \ \text{sign}(z_i),
+                            & \text{if } a < \lvert z_i\rvert \le b \\
+                        \frac{a}{c - b} \text{sign}(z_i) (c -\lvert z_i \rvert),
+                            &\text{if } b < \lvert z_i \rvert \le c \\
+                        0, & \text{if } \lvert z_i \rvert > c \\
+                    \end{cases}\quad \text{for } i \in (1, 2, \ldots, n).
         """
         a, b, c = self.a, self.b, self.c
 
@@ -825,13 +925,20 @@ class Hampel(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = 1                                for \|z\| <= a
+            weights are defined component-wise as
 
-            weights(z) = a/\|z\|                          for a < \|z\| <= b
+            .. math::
 
-            weights(z) = a*(c - \|z\|)/(\|z\|*(c-b))      for b < \|z\| <= c
-
-            weights(z) = 0                                for \|z\| > c
+                \text{weights}(z_i) =
+                    \begin{cases}
+                        1, & \text{if } \lvert z_i \rvert \le a \\
+                        \frac{a}{\lvert z_i \rvert},
+                            &\text{if } a < \lvert z_i \rvert \le b \\
+                        \frac{a}{\lvert z_i \rvert (c - b)}
+                            (c - \lvert z_i \rvert),
+                                &\text{if } b < \lvert z_i \rvert \le c \\
+                        0, & \text{if } \lvert z_i \rvert > c \\
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
         a, b, c = self.a, self.b, self.c
 
@@ -961,9 +1068,17 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = -(1 - (z/c)**2)**3 * c**2/6 + c**2/6   for \|z\| <= R
+            rho is defined component-wise as
 
-            rho(z) = 0                              for \|z\| > R
+            .. math::
+
+                \rho(z_i) =
+                    \begin{cases}
+                        -\left(1 - \left(\frac{z_i}{c}\right)^2\right)^3
+                            \frac{c^2}{6} + \frac{c^2}{6},
+                                & \text{if } \lvert z_i\rvert \le R \\
+                        0, & \text{if } \lvert z_i \rvert > R
+                    \end{cases}
         """
         subset = self._subset(z)
         factor = self.c**2 / 6.
@@ -983,9 +1098,16 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z*(1 - (z/c)**2)**2        for \|z\| <= R
+            psi is defined component-wise as
 
-            psi(z) = 0                           for \|z\| > R
+            .. math::
+
+                \psi(z_i) =
+                    \begin{cases}
+                        z_i \left(1 - \left(\frac{z_i}{c}\right)^2\right)^2,
+                            & \text{if } \lvert z_i \rvert \le R \\
+                        0 & \text{if } \lvert z_i \rvert > R
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).
         """
 
         z = np.asarray(z)
@@ -1006,9 +1128,17 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         weights : ndarray
-            psi(z) = (1 - (z/c)**2)**2          for \|z\| <= R
+            weights are defined component-wise as
 
-            psi(z) = 0                          for \|z\| > R
+            .. math::
+
+                \text{weights}(z_i) =
+                    \begin{cases}
+                        \left(1 - \left(\frac{z_i}{c}\right)^2\right)^2,
+                            & \text{if }\lvert z_i \rvert \le R \\
+                        0, & \text{if } \lvert z_i \rvert > R
+                    \end{cases}\quad \text{for } i \in (1, 2, \ldots, n).
+
         """
         z = np.asarray(z)
         subset = self._subset(z)
@@ -1086,12 +1216,18 @@ class TukeyQuartic(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = 1 / 2 * z**2 * (1 - 4 / (k + 2) * x**k +
-                     1 / (k + 1) * x**(2 * k))   for \|z\| <= c
+            rho is defined component-wise as
 
-            rho(z) = 0                              for \|z\| > c
+            .. math::
 
-            where x = z / c
+                \rho(z_i) =
+                    \begin{cases}
+                        \frac{1}{2} z_i^2 (1 - \frac{4}{k+2} x^k +
+                        \frac{1}{k+1} x^{2k}),
+                            & \text{if } \lvert z_i \rvert \le c \\
+                        0, & \text{if } \lvert z_i \rvert > c
+                    \end{cases} \quad \text{for } i \in (1, 2, \ldots, n).\\
+                \text{where } x = z_i / c
         """
         c = self.c
         k = self.k
@@ -1127,9 +1263,16 @@ class TukeyQuartic(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z*(1 - (z/c)**4)**2        for \|z\| <= c
+            psi is defined component-wise as
 
-            psi(z) = psi(c)                     for \|z\| > c
+            .. math::
+
+                \psi(z_i) =
+                    \begin{cases}
+                        z_i \left(1 - \left(\frac{z_i}{c}\right)^k\right)^2,
+                            &\text{if } \lvert z_i \rvert \le c \\
+                        c, & \text{if } \lvert z_i \rvert > c
+                   \end{cases}\quad \text{for } i \in (1, 2, \ldots, n).
         """
         k = self.k
         z = np.asarray(z)
@@ -1150,9 +1293,16 @@ class TukeyQuartic(RobustNorm):
         Returns
         -------
         weights : ndarray
-            psi(z) = (1 - (z/c)**4)**2          for \|z\| <= R
+            weights are defined component-wise as
 
-            psi(z) = 0                          for \|z\| > R
+            ..math:
+
+                \text{weights}(z_i) =
+                    \begin{cases}
+                        \left(1 - \left(\frac{z_i}{c}\right)^k\right)^2,
+                            & \text{if }\lvert z_i \rvert \le R \\
+                        0, & \text{if } \lvert z_i \rvert > R
+                    \end{cases}\quad \text{for } i \in (1, 2, \ldots, n).
         """
         k = self.k
         z = np.asarray(z)
@@ -1213,7 +1363,7 @@ class StudentT(RobustNorm):
         return np.inf
 
     def rho(self, z):
-        """
+        r"""
         The rho function of the StudentT norm.
 
         Parameters
@@ -1224,8 +1374,16 @@ class StudentT(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = (c**2 * df / 2.) * log(df + (z / c)**2) - const
-            The ``const`` shifts the rho function so that rho(0) = 0.
+            rho is defined component-wise as
+
+            .. math::
+
+                \rho(z_i) = \left(c^2 \ \frac{df}{2}
+                          \log\left(df + \frac{z_i}{c}^2\right) - const  \right)
+                \quad \text{for } i \in (1, 2, \ldots, n).
+
+            The :math:`const` shifts the :math:`\rho` function so
+            that :math:`\rho(0) = 0`.
         """
         c = self.c
         df = self.df
@@ -1234,7 +1392,7 @@ class StudentT(RobustNorm):
         return (c**2 * df / 2.) * np.log(df + (z / c)**2) - const
 
     def psi(self, z):
-        """
+        r"""
         The psi function of the StudentT norm.
 
         The analytic derivative of rho.
@@ -1247,7 +1405,13 @@ class StudentT(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z
+            psi is defined component-wise as
+
+            .. math::
+
+                \psi(z_i) = \frac{z_i  \times df }
+                    {df + \left(\frac{z_i}{c}\right)^2}
+                \quad \text{for } i \in (1, 2, \ldots, n).
         """
 
         c = self.c
@@ -1256,7 +1420,7 @@ class StudentT(RobustNorm):
         return z * df / (df + (z / c)**2)
 
     def weights(self, z):
-        """
+        r"""
         The weighting function for the IRLS algorithm of the StudentT norm.
 
         The psi function scaled by the input z
@@ -1269,7 +1433,13 @@ class StudentT(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = np.ones(z.shape)
+            weights are defined component-wise as
+
+            .. math::
+
+                \text{weights}(z_i) =
+                \frac{df}{df + \left(\frac{z_i}{c}\right)^2}
+                \quad \text{for } i \in (1, 2, \ldots, n).
         """
 
         c = self.c
