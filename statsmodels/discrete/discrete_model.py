@@ -519,7 +519,7 @@ class BinaryModel(DiscreteModel):
                 raise ValueError("endog must be in the unit interval.")
 
         if offset is None:
-            delattr(self, "offset")
+            del self.offset
 
             if not self._continuous_ok and np.any(self.endog != np.round(self.endog)):
                 raise ValueError("endog must be binary, either 0 or 1")
@@ -1051,9 +1051,9 @@ class CountModel(DiscreteModel):
             self.offset = np.asarray(self.offset)
         self._check_inputs(self.offset, self.exposure, self.endog)
         if offset is None:
-            delattr(self, "offset")
+            del self.offset
         if exposure is None:
-            delattr(self, "exposure")
+            del self.exposure
 
         # promote dtype to float64 if needed
         dt = np.promote_types(self.endog.dtype, np.float64)
