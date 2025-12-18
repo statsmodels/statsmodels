@@ -622,8 +622,10 @@ class RecursiveLSResults(MLEResults):
                              out_of_sample))
             design[0] = exog[:, :, None].T
             
-            if self.model._r_matrix is not None:
-                design[1:, :] = self.model._r_matrix[:, :, None]
+            # Note: the following lines are unreachable because of the guard
+            # at line 600, but we keep them here for future implementation
+            # if self.model._r_matrix is not None:
+            #     design[1:, :] = self.model._r_matrix[:, :, None]
             
             kwargs['design'] = design
 
