@@ -17,6 +17,10 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
+        python_314t_parallel:
+          python.version: '3.14'
+          python.architecture: 'x64-freethreaded'
+          parallel: true
         python_314t_latest:
           python.version: '3.14'
           python.architecture: 'x64-freethreaded'
@@ -178,7 +182,7 @@ jobs:
       exit ${LAST_EXIT_CODE}
       popd
     displayName: 'Run tests (site-packages)'
-    condition: eq(variables['test.install'], 'true')
+    condition: and(eq(variables['test.install'], 'true'), ne(variables['parallel'], 'true'))
 
   - script: |
       echo "Testing editable install"
@@ -188,7 +192,14 @@ jobs:
       echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
       pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
     displayName: 'Run tests (editable)'
-    condition: and(ne(variables['test.install'], 'true'), ne(variables['pip.pre'], 'true'))
+    condition: and(ne(variables['test.install'], 'true'), ne(variables['pip.pre'], 'true'), ne(variables['parallel'], 'true'))
+
+  - script:
+      echo "Testing in parallel mode"
+      export PYTHON_GIL=0
+      pytest statsmodels/nonparametric/tests/ --parallel-threads 4 --junitxml=junit/test-results.xml
+    displayName: 'Run tests (parallel)'
+    condition: eq(variables['parallel'], 'true')
 
   - script: |
       echo "Testing pip-pre"
