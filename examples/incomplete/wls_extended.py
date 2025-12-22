@@ -5,9 +5,10 @@ example is extended to look at the meaning of rsquared in WLS,
 at outliers, compares with RLM and a short bootstrap
 
 """
-import numpy as np
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+import numpy as np
+
+import statsmodels.api as sm
 
 data = sm.datasets.ccard.load()
 data.exog = sm.add_constant(data.exog, prepend=False)

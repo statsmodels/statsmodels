@@ -14,8 +14,9 @@
 # using proportional hazards regression.  These examples
 # are based on simulated data.
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 import statsmodels.api as sm
 from statsmodels.stats.mediation import Mediation
 

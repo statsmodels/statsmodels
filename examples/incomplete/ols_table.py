@@ -1,10 +1,11 @@
 """Example: statsmodels.OLS
 """
 
-from statsmodels.datasets.longley import load
-import statsmodels.api as sm
-from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 import numpy as np
+
+import statsmodels.api as sm
+from statsmodels.datasets.longley import load
+from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 
 data = load()
 

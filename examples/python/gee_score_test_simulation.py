@@ -24,11 +24,12 @@
 # The level and power of the tests are considered below to assess the
 # performance of the tests.
 
-import pandas as pd
-import numpy as np
-from scipy.stats.distributions import norm, poisson
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy.stats.distributions import norm, poisson
+
+import statsmodels.api as sm
 
 # The function defined in the following cell uses a copula approach to
 # simulate correlated random values that marginally follow a negative
