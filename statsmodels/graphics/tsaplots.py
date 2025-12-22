@@ -879,3 +879,141 @@ def plot_predict(
     ax.legend(loc="best")
 
     return fig
+
+
+def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **kwargs):
+    """
+    Seasonal-Diagnostic Plot, as described by [1]_.
+
+
+    Parameters
+    ----------
+    x : DecomposeResult
+        The result of your seasonal decomposition.
+    period : int
+        The length of the period. Should match the `period` parameter used to
+        decompose the series.
+    subplots : int or array of int
+        If `period` is large, `subplots` can be used to specify how many should
+        be plotted. If `subplots` is an `int`, the periods are selected evenly
+        from `range(period)`. If `subplots` is an array of `int`, the periods
+        with those indices will be selected for the subplots. By default,
+        `subplots=period`.
+    labels : array of str
+        Labels for the displayed period subplots.
+    nrows : int
+        The number of rows on which to display the plots.
+
+
+    Returns
+    -------
+    fig : Figure
+        Returns an matplotlib object of type Figure with the
+        Seasonal-Diagnostic Plot.
+
+
+    Examples
+    --------
+    >>> from statsmodels.datasets import co2
+    >>> from statsmodels.tsa.seasonal import STL
+    >>> from statsmodels.graphics.tsaplots import seasonal_diagnostic_plot
+
+    >>> data = (co2.load().data
+    ...         .loc[lambda df: df.index.isocalendar().week<53]
+    ...         .loc['1986-01-01':]
+    ... )
+
+    >>> res = STL(data, period=52, seasonal=21).fit()
+    >>> _ = seasonal_diagnostic_plot(res, period=52, subplots=6, nrows=2)
+
+    .. plot:: plots/graphics_tsa_plot_sdp1.py
+
+    >>> from statsmodels.datasets import elnino
+    >>> from statsmodels.tsa.seasonal import STL
+    >>> from statsmodels.graphics.tsaplots import seasonal_diagnostic_plot
+    >>> import pandas as pdc
+
+    >>> from statsmodels.datasets import elnino
+    >>> from statsmodels.tsa.seasonal import STL
+    >>> from statsmodels.graphics.tsaplots import seasonal_diagnostic_plot
+    >>> import pandas as pd
+
+    >>> month_dict = {'JAN':1, 'FEB':2, 'MAR':3, 'APR':4, 'MAY':5, 'JUN':6,
+    ...               'JUL':7, 'AUG':8, 'SEP':9, 'OCT':10, 'NOV':11, 'DEC':12}
+    >>> data = (elnino.load().data
+    ...    .rename(columns=month_dict)
+    ...    .melt(id_vars=['YEAR'], var_name='month')
+    ...    .assign(day=1,
+    ...            date = lambda df: pd.to_datetime(
+    ...                    df[['YEAR', 'month', 'day']]))
+    ...    .drop(columns=['YEAR', 'month', 'day'])
+    ...    .set_index('date')
+    ...    .sort_index()
+    ...   )
+
+    >>> res = STL(data, period=12, seasonal=53).fit()
+    >>> labels=['January', 'February', 'March', 'November']
+    >>> _ = seasonal_diagnostic_plot(res, period=12, subplots=[0,1,2,10],
+    ...                              labels=labels, nrows=2)
+
+    .. plot:: plots/graphics_tsa_plot_sdp2.py
+
+    References
+    ----------
+    Cleveland, Robert B., William S. Cleveland, Jean E. McRage, Irma
+    Terpenning (1990) "STL: A Seasonal-Trend Decomposition Procedure
+    Based on Loess". Journal of Official Statistics, 6 (1), 3-33.
+
+    """
+    plt = utils._import_mpl()
+
+    def seasonplot(x, period, period_length, ax=None):
+
+        where = [period_length * i + period
+                 for i in range(x.seasonal.size // period_length)]
+        seasonal_k = x.seasonal.iloc[where]
+        residual_k = x.resid.iloc[where]
+        mean = seasonal_k.mean()
+
+        ax.plot(seasonal_k.index, seasonal_k + residual_k - mean, '.')
+        ax.plot(seasonal_k.index, seasonal_k - mean)
+        return ax
+
+    if subplots is None:
+        subplots = period
+
+    if isinstance(subplots, int):
+        if subplots > period:
+            raise Exception('subplots cannot be larger than period.')
+        p_to_plot = np.floor(
+                        np.arange(subplots) * period / subplots
+                        ).astype(int)
+    elif (isinstance(subplots, (list, np.ndarray))
+          and all(isinstance(i, int) for i in subplots)):
+        p_to_plot = subplots
+        subplots = len(p_to_plot)
+    else:
+        raise Exception('subplots must be either an int or a list of ints.')
+
+    if labels is None:
+        labels = [f'Cycle-subseries {int(i + 1)}' for i in p_to_plot]
+    elif len(labels) != subplots:
+        raise Exception('The number of labels does not match the number of '
+                        'periods to plot.')
+
+    kwargs.setdefault('ncols', np.ceil(subplots / nrows).astype(int))
+    kwargs.setdefault('figsize', (kwargs['ncols'] * 2, nrows * 2 + 0.5))
+    fig, axs = plt.subplots(sharex=True, sharey=True,
+                            squeeze=False, nrows=nrows, **kwargs)
+
+    for i, ax in enumerate(fig.get_axes()):
+        if i < subplots:
+            ax = seasonplot(x, p_to_plot[i], period, ax=ax)
+            ax.set_title(str(labels[i]))
+            ax.set(xlabel="", ylabel="")
+        else:
+            fig.delaxes(ax)
+            continue
+
+    fig.tight_layout(w_pad=0.1)
+    return fig
