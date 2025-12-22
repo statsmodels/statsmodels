@@ -1,6 +1,7 @@
 """
 Seasonal Decomposition by Moving Averages
 """
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -94,12 +95,16 @@ def seasonal_decompose(
         The moving average method used in filtering.
         If True (default), a centered moving average is computed using the
         filt. If False, the filter coefficients are for past values only.
-    extrapolate_trend : int or 'freq', optional
+    extrapolate_trend : int or 'period', optional
         If set to > 0, the trend resulting from the convolution is
         linear least-squares extrapolated on both ends (or the single one
         if two_sided is False) considering this many (+1) closest points.
-        If set to 'freq', use `freq` closest points. Setting this parameter
-        results in no NaN values in trend or resid components.
+        If set to 'period', use `period` closest points. Setting this parameter
+        results in no NaN values in trend or resid components. The default is 0.
+
+        .. deprecated: 0.14
+            `extrapolate_trend="freq"` is deprecated and will be removed,
+            use `extrapolate_trend=period` instead.
 
     Returns
     -------
@@ -182,6 +187,13 @@ def seasonal_decompose(
     trend = convolution_filter(x, filt, nsides)
 
     if extrapolate_trend == "freq":
+        warnings.warn(
+            "`extrapolate_trend='freq'` is deprecated and will be "
+            "removed in 0.16, use `extrapolate_trend='freq'` instead.",
+            FutureWarning
+        )
+
+    if extrapolate_trend in ("freq", "period"):
         extrapolate_trend = period - 1
 
     if extrapolate_trend > 0:
