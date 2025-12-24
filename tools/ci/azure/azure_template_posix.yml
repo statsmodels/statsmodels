@@ -24,6 +24,7 @@ jobs:
         python_314t_latest:
           python.version: '3.14'
           python.architecture: 'x64-freethreaded'
+          PANDAS_VERSION: 3.0.0rc0
         python_312_latest:
           python.version: '3.12'
           python.architecture: 'x64'
