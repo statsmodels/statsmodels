@@ -11,13 +11,13 @@ nparam = sm.nonparametric
 class KDETestBase:
     def setup_method(self):
         nobs = 60
-        np.random.seed(123456)
-        self.o = np.random.binomial(2, 0.7, size=(nobs, 1))
-        self.o2 = np.random.binomial(3, 0.7, size=(nobs, 1))
-        self.c1 = np.random.normal(size=(nobs, 1))
-        self.c2 = np.random.normal(10, 1, size=(nobs, 1))
-        self.c3 = np.random.normal(10, 2, size=(nobs, 1))
-        self.noise = np.random.normal(size=(nobs, 1))
+        rs = np.random.RandomState(123456)
+        self.o = rs.binomial(2, 0.7, size=(nobs, 1))
+        self.o2 = rs.binomial(3, 0.7, size=(nobs, 1))
+        self.c1 = rs.normal(size=(nobs, 1))
+        self.c2 = rs.normal(10, 1, size=(nobs, 1))
+        self.c3 = rs.normal(10, 2, size=(nobs, 1))
+        self.noise = rs.normal(size=(nobs, 1))
         b0 = 0.3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
@@ -63,7 +63,7 @@ class KDETestBase:
             0, 0, 0, 0
         ]
 
-        self.weights = np.random.random(nobs)
+        self.weights = rs.random(nobs)
 
 
 class TestKDEUnivariate(KDETestBase):
@@ -221,9 +221,9 @@ class TestKDEMultivariate(KDETestBase):
     @pytest.mark.slow
     def test_continuous_cvls_efficient(self):
         nobs = 400
-        np.random.seed(12345)
-        C1 = np.random.normal(size=(nobs,))
-        C2 = np.random.normal(2, 1, size=(nobs,))
+        rs = np.random.RandomState(12345)
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
         Y = 0.3 + 1.2 * C1 - 0.9 * C2
         dens_efficient = nparam.KDEMultivariate(
             data=[Y, C1],
@@ -240,9 +240,9 @@ class TestKDEMultivariate(KDETestBase):
     @pytest.mark.slow
     def test_continuous_cvml_efficient(self):
         nobs = 400
-        np.random.seed(12345)
-        C1 = np.random.normal(size=(nobs,))
-        C2 = np.random.normal(2, 1, size=(nobs,))
+        rs = np.random.RandomState(12345)
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
         Y = 0.3 + 1.2 * C1 - 0.9 * C2
 
         dens_efficient = nparam.KDEMultivariate(
@@ -260,9 +260,9 @@ class TestKDEMultivariate(KDETestBase):
     @pytest.mark.slow
     def test_efficient_notrandom(self):
         nobs = 400
-        np.random.seed(12345)
-        C1 = np.random.normal(size=(nobs,))
-        C2 = np.random.normal(2, 1, size=(nobs,))
+        rs = np.random.RandomState(12345)
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
         Y = 0.3 + 1.2 * C1 - 0.9 * C2
 
         dens_efficient = nparam.KDEMultivariate(
@@ -278,9 +278,9 @@ class TestKDEMultivariate(KDETestBase):
 
     def test_efficient_user_specified_bw(self):
         nobs = 400
-        np.random.seed(12345)
-        C1 = np.random.normal(size=(nobs,))
-        C2 = np.random.normal(2, 1, size=(nobs,))
+        rs = np.random.RandomState(12345)
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
         bw_user = [0.23, 434697.22]
 
         dens = nparam.KDEMultivariate(
@@ -417,10 +417,10 @@ class TestKDEMultivariateConditional(KDETestBase):
     @pytest.mark.slow
     def test_continuous_cvml_efficient(self):
         nobs = 500
-        np.random.seed(12345)
-        ovals = np.random.binomial(2, 0.5, size=(nobs,))
-        C1 = np.random.normal(size=(nobs,))
-        noise = np.random.normal(size=(nobs,))
+        rs = np.random.RandomState(12345)
+        ovals = rs.binomial(2, 0.5, size=(nobs,))
+        C1 = rs.normal(size=(nobs,))
+        noise = rs.normal(size=(nobs,))
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
@@ -443,9 +443,9 @@ class TestKDEMultivariateConditional(KDETestBase):
 
     def test_efficient_user_specified_bw(self):
         nobs = 400
-        np.random.seed(12345)
-        C1 = np.random.normal(size=(nobs,))
-        C2 = np.random.normal(2, 1, size=(nobs,))
+        rs = np.random.RandomState(12345)
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
         bw_user = [0.23, 434697.22]
 
         dens = nparam.KDEMultivariate(
