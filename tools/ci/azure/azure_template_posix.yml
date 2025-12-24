@@ -197,7 +197,7 @@ jobs:
 
   - script:
       echo "Testing in parallel mode"
-      export PYTHON_GIL=0
+      export PYTHON_GIL="0"
       pytest statsmodels/nonparametric/tests/ --parallel-threads 4 --junitxml=junit/test-results.xml
     displayName: 'Run tests (parallel)'
     condition: eq(variables['parallel'], 'true')
