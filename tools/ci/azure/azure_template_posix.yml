@@ -195,7 +195,7 @@ jobs:
     displayName: 'Run tests (editable)'
     condition: and(ne(variables['test.install'], 'true'), ne(variables['pip.pre'], 'true'), ne(variables['parallel'], 'true'))
 
-  - script:
+  - script: |
       echo "Testing in parallel mode"
       export PYTHON_GIL="0"
       pytest statsmodels/nonparametric/tests/ --parallel-threads 4 --junitxml=junit/test-results.xml
