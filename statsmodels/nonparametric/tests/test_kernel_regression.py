@@ -204,6 +204,7 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_allclose(sm_mfx[0:10, 1], mfx2[0:10], rtol=2e-1)
 
     @pytest.mark.slow
+    @pytest.mark.thread_unsafe('relies on global random state')
     def test_continuous_cvls_efficient(self):
         nobs = 500
         rs = np.random.RandomState(12345)
