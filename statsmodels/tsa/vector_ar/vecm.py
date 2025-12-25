@@ -402,13 +402,14 @@ def _r_matrices(delta_y_1_T, y_lag1, delta_x):
     .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
 
-    # todo: rewrite m such that a big (TxT) matrix is avoided
-    nobs = y_lag1.shape[1]
-    m = np.identity(nobs) - (
-        delta_x.T.dot(inv(delta_x.dot(delta_x.T))).dot(delta_x)
-    )  # p. 291
-    r0 = delta_y_1_T.dot(m)  # p. 292
-    r1 = y_lag1.dot(m)
+    delta_x_t = delta_x.T
+    xx_inv = inv(delta_x.dot(delta_x_t))
+
+    def _residualize(mat):
+        return mat - mat.dot(delta_x_t).dot(xx_inv).dot(delta_x)
+
+    r0 = _residualize(delta_y_1_T)  # p. 292
+    r1 = _residualize(y_lag1)
     return r0, r1
 
 
