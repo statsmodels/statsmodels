@@ -124,9 +124,13 @@ def ensure_patsy_compat():
         return
     try:
         import patsy.util
-        try:
-            monkey_patch_cat_dtype()
-        except Exception:
-            pass
+    except ImportError:
+        # patsy not installed skip applying the patch now
+        return
+    try:
+        monkey_patch_cat_dtype()
+        _patsy_compat_applied = True
     except Exception:
-        pass
+        # Intentionally ignored to avoid breaking import time behavior
+        return
+
