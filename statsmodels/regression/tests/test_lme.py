@@ -97,6 +97,7 @@ class TestMixedLM:
 
     # Test analytic scores and Hessian using numeric differentiation
     @pytest.mark.slow
+    @pytest.mark.high_memory
     @pytest.mark.parametrize("use_sqrt", [False, True])
     @pytest.mark.parametrize("reml", [False, True])
     @pytest.mark.parametrize("profile_fe", [False, True])
@@ -1104,6 +1105,7 @@ def test_summary_col():
 
 
 @pytest.mark.slow
+@pytest.mark.high_memory
 def test_random_effects_getters():
     # Simulation-based test to make sure that the BLUPs and actual
     # random effects line up.

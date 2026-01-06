@@ -21,7 +21,7 @@ from statsmodels.distributions.copula.api import (
     transforms as tra,
 )
 import statsmodels.distributions.tools as dt
-
+import pytest
 
 def test_bernstein_distribution_1d():
     grid = dt._Grid([501])
@@ -134,6 +134,7 @@ class TestBernsteinBeta2d:
         cls.distr = cad
         cls.bpd = BernsteinDistributionBV(cdf_g)
 
+    @pytest.mark.high_memory
     def test_basic(self):
         bpd = self.bpd
         grid = self.grid

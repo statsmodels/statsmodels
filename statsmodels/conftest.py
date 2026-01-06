@@ -51,6 +51,8 @@ def pytest_addoption(parser):
     )
     parser.addoption("--skip-smoke", action="store_true", help="skip smoke tests")
     parser.addoption("--only-smoke", action="store_true", help="run only smoke tests")
+    parser.addoption("--skip-high-memory", action="store_true", help="skip high memory usage tests")
+    parser.addoption("--only-high-memory", action="store_true", help="run only high memory usage tests")
 
 
 def pytest_runtest_setup(item):
@@ -74,6 +76,13 @@ def pytest_runtest_setup(item):
 
     if "smoke" not in item.keywords and item.config.getoption("--only-smoke"):
         pytest.skip("skipping due to --only-smoke")
+
+    if "high_memory" in item.keywords and item.config.getoption("--skip-high-memory"):
+        pytest.skip("skipping due to --skip-high-memory")
+
+    if "high_memory" not in item.keywords and item.config.getoption("--only-high-memory"):
+        pytest.skip("skipping due to --only-high-memory")
+
 
 
 def pytest_configure(config):

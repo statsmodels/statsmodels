@@ -298,7 +298,8 @@ markers = [
     "example: mark a test that runs example code",
     "matplotlib: mark a test that requires matplotlib",
     "slow: mark a test as slow",
-    "smoke: mark a test as a smoketest",
+    "smoke: mark a test as a smoke test",
+    "high_memory: mark a test as a high memory utilization test",
     "low_precision: mark a test as low precision",
     "todo: mark a test as incomplete"
 ]
