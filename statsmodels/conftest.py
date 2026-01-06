@@ -84,7 +84,6 @@ def pytest_runtest_setup(item):
         pytest.skip("skipping due to --only-high-memory")
 
 
-
 def pytest_configure(config):
     try:
         import matplotlib as mpl

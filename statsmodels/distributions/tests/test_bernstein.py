@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
+import pytest
 from scipy import stats
 
 from statsmodels.distributions.bernstein import (
@@ -21,7 +22,7 @@ from statsmodels.distributions.copula.api import (
     transforms as tra,
 )
 import statsmodels.distributions.tools as dt
-import pytest
+
 
 def test_bernstein_distribution_1d():
     grid = dt._Grid([501])
