@@ -29,7 +29,7 @@ _math_pxd = [
 #_cython_tree = declare_dependency(sources: [
 _cython_tree = [fs.copyfile('__init__.py')]
 cython_args = []
-cython_c_args =  ['-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION']
+cython_c_args =  ['-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION', '-DCYTHON_FREETHREADING_COMPATIBLE=1']
 if get_option('cython-coverage')
   cython_args += ['--directive', 'linetrace=true']
   cython_c_args += ['-DCYTHON_TRACE_NOGIL=1']
