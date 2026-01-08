@@ -71,6 +71,7 @@ test = [
     # test
     "pytest>=8.4.1,<9",
     "pytest-randomly",
+    "pytest-run-parallel",
     "pytest-xdist",
     "pytest-cov",
     "coverage[toml]",
