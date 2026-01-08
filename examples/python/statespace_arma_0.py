@@ -13,13 +13,12 @@
 # `statsmodels.tsa.statespace.SARIMAX` class rather than the
 # `statsmodels.tsa.ARMA` class.
 
-import numpy as np
-from scipy import stats
-import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy import stats
 
 import statsmodels.api as sm
-
 from statsmodels.graphics.api import qqplot
 
 # ## Sunspots Data

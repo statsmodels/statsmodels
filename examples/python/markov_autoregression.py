@@ -25,11 +25,12 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import requests
-import statsmodels.api as sm
 
 # NBER recessions
 from pandas_datareader.data import DataReader
+import requests
+
+import statsmodels.api as sm
 
 usrec = DataReader("USREC",
                    "fred",

@@ -1,8 +1,9 @@
 """
 Using dates with timeseries models
 """
-import statsmodels.api as sm
 import pandas as pd
+
+import statsmodels.api as sm
 
 # Getting started
 # ---------------

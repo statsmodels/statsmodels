@@ -1,5 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from pandas.plotting import register_matplotlib_converters
 
 from statsmodels.datasets import co2

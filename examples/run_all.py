@@ -14,6 +14,7 @@ def no_show(*args):
 if __name__ == '__main__':
     import glob
     import sys
+
     import matplotlib.pyplot as plt
 
     if not SHOW_PLOT:

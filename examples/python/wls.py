@@ -11,8 +11,9 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import statsmodels.api as sm
 from scipy import stats
+
+import statsmodels.api as sm
 from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 
 np.random.seed(1024)

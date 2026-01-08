@@ -4,6 +4,7 @@
 from statsmodels.compat.python import asbytes, lmap
 
 import numpy as np
+import pandas as pd
 
 import statsmodels.api as sm
 from statsmodels.sandbox.regression.gmm import IV2SLS
@@ -151,11 +152,7 @@ print(resiv2.params)
 run_greene = 0
 if run_greene:
     try:
-        data3 = np.genfromtxt(
-            "/home/skipper/school/MetricsII/Greene \
-TableF5-1.txt",
-            names=True,
-        )
+        data3 = pd.read_csv("sysregdata.txt", skiprows=1, header=None).values
     except Exception as exc:
         raise ValueError(
             "Based on Greene TableF5-1.  You should download it "

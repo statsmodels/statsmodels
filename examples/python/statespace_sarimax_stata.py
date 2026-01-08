@@ -32,14 +32,17 @@
 # 2. n-step-ahead out-of-sample forecasting
 # 3. n-step-ahead in-sample dynamic prediction
 
+from datetime import datetime
+from io import BytesIO
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
-from datetime import datetime
 import requests
-from io import BytesIO
+from scipy.stats import norm
+
+import statsmodels.api as sm
+
 # Register converters to avoid warnings
 pd.plotting.register_matplotlib_converters()
 plt.rc("figure", figsize=(16, 8))

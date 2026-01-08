@@ -7,8 +7,8 @@ Author: Josef Perktold
 
 from urllib.request import urlretrieve
 
-import numpy as np
 from numpy.testing import assert_almost_equal
+import pandas as pd
 
 import statsmodels.api as sm
 import statsmodels.stats.sandwich_covariance as sw
@@ -16,7 +16,7 @@ import statsmodels.stats.sandwich_covariance as sw
 # requires Petersen's test_data
 # http://www.kellogg.northwestern.edu/faculty/petersen/htm/papers/se/test_data.txt
 try:
-    pet = np.genfromtxt("test_data.txt")
+    pet = pd.read_csv("test_data.txt", header=None).values
     print("using local file")
 except OSError:
     urlretrieve(
@@ -24,7 +24,7 @@ except OSError:
         "test_data.txt",
     )
     print("downloading file")
-    pet = np.genfromtxt("test_data.txt")
+    pet = pd.read_csv("test_data.txt", header=None).values
 
 
 endog = pet[:, -1]

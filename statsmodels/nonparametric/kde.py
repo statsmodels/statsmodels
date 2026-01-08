@@ -194,7 +194,7 @@ class KDEUnivariate:
         # put here to ensure empty cache after re-fit with new options
         self.kernel.weights = weights
         if weights is not None:
-            self.kernel.weights /= weights.sum()
+            self.kernel.weights = weights / weights.sum()
         self._cache = {}
         return self
 

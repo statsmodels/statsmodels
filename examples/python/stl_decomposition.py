@@ -25,8 +25,8 @@
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 from pandas.plotting import register_matplotlib_converters
+import seaborn as sns
 
 register_matplotlib_converters()
 sns.set_style("darkgrid")

@@ -45,10 +45,11 @@
 # In all cases, the data is at the monthly frequency and has been
 # seasonally adjusted; the time-frame considered is 1972 - 2005.
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
 
 np.set_printoptions(precision=4, suppress=True, linewidth=120)
 

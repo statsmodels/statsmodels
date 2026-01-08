@@ -66,7 +66,7 @@ def load_data(fname, icept=True):
     """
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    Z = np.genfromtxt(os.path.join(cur_dir, "results", fname), delimiter=",")
+    Z = pd.read_csv(os.path.join(cur_dir, "results", fname), header=None).values
 
     group = Z[:, 0]
     endog = Z[:, 1]
