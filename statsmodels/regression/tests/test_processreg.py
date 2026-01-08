@@ -85,6 +85,7 @@ def run_arrays(n, get_model, noise):
 
 
 @pytest.mark.slow
+@pytest.mark.high_memory
 @pytest.mark.parametrize("noise", [False, True])
 def test_arrays(noise):
 
@@ -163,6 +164,7 @@ def run_formula(n, get_model, noise):
 
 
 @pytest.mark.slow
+@pytest.mark.high_memory
 @pytest.mark.parametrize("noise", [False, True])
 def test_formulas(noise):
 
