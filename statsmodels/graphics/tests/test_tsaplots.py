@@ -9,6 +9,7 @@ import numpy as np
 from numpy.testing import assert_, assert_equal
 import pandas as pd
 import pytest
+import scipy.stats as stats
 
 from statsmodels.datasets import elnino, macrodata
 from statsmodels.graphics.tsaplots import (
@@ -226,10 +227,12 @@ def test_plot_accf_grid(close_figures):
     ma = np.r_[1.0, 0.9]
     armaprocess = tsp.ArmaProcess(ar, ma)
     rs = np.random.RandomState(1234)
-    x = np.vstack([
-        armaprocess.generate_sample(100, distrvs=rs.standard_normal),
-        armaprocess.generate_sample(100, distrvs=rs.standard_normal),
-    ]).T
+    x = np.vstack(
+        [
+            armaprocess.generate_sample(100, distrvs=rs.standard_normal),
+            armaprocess.generate_sample(100, distrvs=rs.standard_normal),
+        ]
+    ).T
     plot_accf_grid(x)
     plot_accf_grid(pd.DataFrame({"x": x[:, 0], "y": x[:, 1]}))
     plot_accf_grid(x, fig=fig, lags=10)
@@ -243,8 +246,7 @@ def test_plot_accf_grid(close_figures):
 
 
 @pytest.mark.skipif(
-    PYTHON_IMPL_WASM,
-    reason="Matplotlib uses different backend in WASM"
+    PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM"
 )
 @pytest.mark.matplotlib
 def test_plot_month(close_figures):
@@ -303,15 +305,14 @@ def test_plot_quarter(close_figures):
     dta = macrodata.load_pandas().data
     dates = lmap(
         "-Q".join,
-        zip(
-            dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str)
-        ),
+        zip(dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str)),
     )
     # test dates argument
     quarter_plot(dta.unemp.values, dates)
 
     # test with a DatetimeIndex with no freq
     from statsmodels.compat.pandas import PD_LT_2_2_0
+
     FREQ = "QS-Oct" if PD_LT_2_2_0 else "QS-OCT"
     dta.set_index(pd.DatetimeIndex(dates, freq=FREQ), inplace=True)
     quarter_plot(dta.unemp)
@@ -371,9 +372,7 @@ def test_predict_plot(use_pandas, model_and_args, alpha, close_figures):
         y[i] += 1.8 * y[i - 1] - 0.9 * y[i - 2]
     y = y[100:]
     if use_pandas:
-        index = pd.date_range(
-            "1960-1-1", freq=MONTH_END, periods=y.shape[0] + 24
-        )
+        index = pd.date_range("1960-1-1", freq=MONTH_END, periods=y.shape[0] + 24)
         start = index[index.shape[0] // 2]
         end = index[-1]
         y = pd.Series(y, index=index[:-24])
@@ -388,9 +387,50 @@ def test_predict_plot(use_pandas, model_and_args, alpha, close_figures):
 @pytest.mark.matplotlib
 def test_plot_pacf_small_sample(close_figures):
     idx = [pd.Timestamp.now() + pd.Timedelta(seconds=i) for i in range(10)]
-    df = pd.DataFrame(
-        index=idx,
-        columns=["a"],
-        data=list(range(10))
-    )
+    df = pd.DataFrame(index=idx, columns=["a"], data=list(range(10)))
     plot_pacf(df)
+
+
+@pytest.mark.matplotlib
+def test_plot_predict_passes_alpha_to_conf_int(close_figures):
+
+    from matplotlib.collections import FillBetweenPolyCollection
+    import matplotlib.pyplot as plt
+
+    # Create a small, reproducible time series
+    rs = np.random.RandomState(98765432)
+    data = rs.normal(size=100)
+
+    model = ARIMA(data, order=(1, 0, 0))
+    res = model.fit()
+
+    # Create 0 predictions, one with a cust0m alpha
+    plot0 = plot_predict(res)
+    plot1 = plot_predict(res, alpha=0.32)
+
+    for child in plot0.get_children():
+        if isinstance(child, plt.Axes):
+            axes0 = child
+    for child in plot1.get_children():
+        if isinstance(child, plt.Axes):
+            axes1 = child
+
+    for child in axes0.get_children():
+        if isinstance(child, FillBetweenPolyCollection):
+            poly_coll_0 = child
+    for child in axes1.get_children():
+        if isinstance(child, FillBetweenPolyCollection):
+            poly_coll_1 = child
+
+    vert_0 = poly_coll_0.get_paths()[0].vertices
+    vert_1 = poly_coll_1.get_paths()[0].vertices
+
+    loc = 15
+    assert vert_1[loc, 0] == vert_0[loc, 0]
+    spread_0 = vert_0[vert_0[:, 0] == loc, 1]
+    spread_1 = vert_1[vert_1[:, 0] == loc, 1]
+    # Check that the ratio of the CI's matched the expected value
+    np.testing.assert_allclose(
+        np.diff(spread_0) / np.diff(spread_1),
+        stats.norm.ppf(0.025) / stats.norm.ppf(0.16),
+    )

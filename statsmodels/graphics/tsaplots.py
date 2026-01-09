@@ -1,4 +1,5 @@
 """Correlation plot functions."""
+
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import calendar
@@ -79,9 +80,7 @@ def _plot_corr(
         lags = lags.astype(float)
         lags[np.argmin(lags)] -= 0.5
         lags[np.argmax(lags)] += 0.5
-        ax.fill_between(
-            lags, confint[:, 0] - acf_x, confint[:, 1] - acf_x, alpha=0.25
-        )
+        ax.fill_between(lags, confint[:, 0] - acf_x, confint[:, 1] - acf_x, alpha=0.25)
 
 
 @deprecate_kwarg("unbiased", "adjusted")
@@ -378,20 +377,20 @@ def plot_pacf(
 
 
 def plot_ccf(
-        x,
-        y,
-        *,
-        ax=None,
-        lags=None,
-        negative_lags=False,
-        alpha=0.05,
-        use_vlines=True,
-        adjusted=False,
-        fft=False,
-        title="Cross-correlation",
-        auto_ylims=False,
-        vlines_kwargs=None,
-        **kwargs,
+    x,
+    y,
+    *,
+    ax=None,
+    lags=None,
+    negative_lags=False,
+    alpha=0.05,
+    use_vlines=True,
+    adjusted=False,
+    fft=False,
+    title="Cross-correlation",
+    auto_ylims=False,
+    vlines_kwargs=None,
+    **kwargs,
 ):
     """
     Plot the cross-correlation function
@@ -466,9 +465,7 @@ def plot_ccf(
     if negative_lags:
         lags = -lags
 
-    ccf_res = ccf(
-        x, y, adjusted=adjusted, fft=fft, alpha=alpha, nlags=nlags + 1
-    )
+    ccf_res = ccf(x, y, adjusted=adjusted, fft=fft, alpha=alpha, nlags=nlags + 1)
     if alpha is not None:
         ccf_xy, confint = ccf_res
     else:
@@ -493,22 +490,22 @@ def plot_ccf(
 
 
 def plot_accf_grid(
-        x,
-        *,
-        varnames=None,
-        fig=None,
-        lags=None,
-        negative_lags=True,
-        alpha=0.05,
-        use_vlines=True,
-        adjusted=False,
-        fft=False,
-        missing="none",
-        zero=True,
-        auto_ylims=False,
-        bartlett_confint=False,
-        vlines_kwargs=None,
-        **kwargs,
+    x,
+    *,
+    varnames=None,
+    fig=None,
+    lags=None,
+    negative_lags=True,
+    alpha=0.05,
+    use_vlines=True,
+    adjusted=False,
+    fft=False,
+    missing="none",
+    zero=True,
+    auto_ylims=False,
+    bartlett_confint=False,
+    vlines_kwargs=None,
+    **kwargs,
 ):
     """
     Plot auto/cross-correlation grid
@@ -603,6 +600,7 @@ def plot_accf_grid(
 
         def get_var(i):
             return x.iloc[:, i]
+
     else:
         varnames = varnames or [f"x[{i}]" for i in range(m)]
 
@@ -679,9 +677,7 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
         x_plot = np.arange(start, start + nobs)
         ticks.append(x_plot.mean())
         ax.plot(x_plot, df.values, "k")
-        ax.hlines(
-            df.values.mean(), x_plot[0], x_plot[-1], colors="r", linewidth=3
-        )
+        ax.hlines(df.values.mean(), x_plot[0], x_plot[-1], colors="r", linewidth=3)
         start += nobs
 
     ax.set_xticks(ticks)
