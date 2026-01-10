@@ -562,7 +562,7 @@ def get_prediction_linear(
         pred_kwds = {}
 
     k1 = exog.shape[1]
-    if len(self.params > k1):
+    if len(self.params) > k1:
         # TODO: we allow endpoint transformation only for the first link
         index = np.arange(k1)
     else:
@@ -820,7 +820,7 @@ def get_prediction(
     elif (which == "mean") and (use_endpoint is True) and (average is False):
         # endpoint transformation
         k1 = self.model.exog.shape[1]
-        if len(self.params > k1):
+        if len(self.params) > k1:
             # TODO: we allow endpoint transformation only for the first link
             index = np.arange(k1)
         else:
