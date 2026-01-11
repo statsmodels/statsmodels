@@ -291,34 +291,6 @@ def plot_regress_exog(results, exog_idx, fig=None):
     return fig
 
 
-def _partial_regression(endog, exog_i, exog_others):
-    """Partial regression.
-
-    regress endog on exog_i conditional on exog_others
-
-    uses OLS
-
-    Parameters
-    ----------
-    endog : array_like
-    exog : array_like
-    exog_others : array_like
-
-    Returns
-    -------
-    res1c : OLS results instance
-
-    (res1a, res1b) : tuple of OLS results instances
-         results from regression of endog on exog_others and of exog_i on
-         exog_others
-    """
-    # FIXME: This function does not appear to be used.
-    res1a = OLS(endog, exog_others).fit()
-    res1b = OLS(exog_i, exog_others).fit()
-    res1c = OLS(res1a.resid, res1b.resid).fit()
-
-    return res1c, (res1a, res1b)
-
 
 def plot_partregress(
     endog,
