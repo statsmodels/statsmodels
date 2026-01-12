@@ -85,7 +85,7 @@ def lowess(endog, exog, frac=2./3, it=3):
 
     This gives a similar comparison for when it is 0 vs not.
 
-    >>> import scipy.stats as stats
+    >>> from scipy import stats
     >>> x = np.random.uniform(low=-2*np.pi, high=2*np.pi, size=500)
     >>> y = np.sin(x) + stats.cauchy.rvs(size=len(x))
     >>> z = lowess(y, x, frac= 1./3, it=0)
