@@ -6,7 +6,6 @@ License: BSD-3
 
 """
 
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
 import pytest
@@ -14,19 +13,21 @@ from scipy import stats
 
 import statsmodels.nonparametric.kernels_asymmetric as kern
 
-kernels_rplus = [("gamma", 0.1),
-                 ("gamma2", 0.1),
-                 ("invgamma", 0.02),
-                 ("invgauss", 0.01),
-                 ("recipinvgauss", 0.1),
-                 ("bs", 0.1),
-                 ("lognorm", 0.01),
-                 ("weibull", 0.1),
-                 ]
+kernels_rplus = [
+    ("gamma", 0.1),
+    ("gamma2", 0.1),
+    ("invgamma", 0.02),
+    ("invgauss", 0.01),
+    ("recipinvgauss", 0.1),
+    ("bs", 0.1),
+    ("lognorm", 0.01),
+    ("weibull", 0.1),
+]
 
-kernels_unit = [("beta", 0.005),
-                ("beta2", 0.005),
-                ]
+kernels_unit = [
+    ("beta", 0.005),
+    ("beta2", 0.005),
+]
 
 
 class CheckKernels:
@@ -47,9 +48,9 @@ class CheckKernels:
         kce = np.asarray(kce)
 
         # average mean squared error
-        amse = ((kde - self.pdf_dgp)**2).mean()
+        amse = ((kde - self.pdf_dgp) ** 2).mean()
         assert_array_less(amse, self.amse_pdf)
-        amse = ((kce - self.cdf_dgp)**2).mean()
+        amse = ((kce - self.cdf_dgp) ** 2).mean()
         assert_array_less(amse, self.amse_cdf)
 
     def test_kernels_vectorized(self, case):

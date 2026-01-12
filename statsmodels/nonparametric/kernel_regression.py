@@ -43,6 +43,7 @@ from ._kernel_base import (
     _compute_min_std_IQR,
     _get_type_pos,
     gpke,
+    initialize_generator,
     kernel_func,
 )
 
@@ -91,25 +92,50 @@ class KernelReg(GenericKDE):
         The kernel used for the unordered discrete variables.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
+    seed : {int, Generator, RandomState}, optional
+        A seed to use. If None, will use the global RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
 
     Attributes
     ----------
     bw : array_like
         The bandwidth parameters.
     """
-    def __init__(self, endog, exog, var_type, reg_type="ll", bw="cv_ls",
-                 ckertype="gaussian", okertype="wangryzin",
-                 ukertype="aitchisonaitken", defaults=None):
+
+    def __init__(
+        self,
+        endog,
+        exog,
+        var_type,
+        reg_type="ll",
+        bw="cv_ls",
+        ckertype="gaussian",
+        okertype="wangryzin",
+        ukertype="aitchisonaitken",
+        defaults=None,
+        *,
+        seed=None,
+    ):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
         self.ckertype = ckertype
         self.okertype = okertype
         self.ukertype = ukertype
-        if not (self.ckertype in kernel_func and self.ukertype in kernel_func
-                and self.okertype in kernel_func):
-            raise ValueError("user specified kernel must be a supported "
-                             "kernel from statsmodels.nonparametric.kernels.")
+        if not (
+            self.ckertype in kernel_func
+            and self.ukertype in kernel_func
+            and self.okertype in kernel_func
+        ):
+            raise ValueError(
+                "user specified kernel must be a supported "
+                "kernel from statsmodels.nonparametric.kernels."
+            )
 
         self.k_vars = len(self.var_type)
         self.endog = _adjust_shape(endog, 1)
@@ -119,11 +145,14 @@ class KernelReg(GenericKDE):
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
+        self.seed = seed
+        self._generator = initialize_generator(seed)
         if not isinstance(bw, str):
             bw = np.asarray(bw)
             if len(bw) != self.k_vars:
-                raise ValueError("bw must have the same dimension as the "
-                                 "number of variables.")
+                raise ValueError(
+                    "bw must have the same dimension as the number of variables."
+                )
         if not self.efficient:
             self.bw = self._compute_reg_bw(bw)
         else:
@@ -176,12 +205,16 @@ class KernelReg(GenericKDE):
         Unlike other methods, this one requires that `data_predict` be 1D.
         """
         nobs, k_vars = exog.shape
-        ker = gpke(bw, data=exog, data_predict=data_predict,
-                   var_type=self.var_type,
-                   ckertype=self.ckertype,
-                   ukertype=self.ukertype,
-                   okertype=self.okertype,
-                   tosum=False) / float(nobs)
+        ker = gpke(
+            bw,
+            data=exog,
+            data_predict=data_predict,
+            var_type=self.var_type,
+            ckertype=self.ckertype,
+            ukertype=self.ukertype,
+            okertype=self.okertype,
+            tosum=False,
+        ) / float(nobs)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
         # ix_cont = np.arange(self.k_vars)  # Use all vars instead of continuous only
@@ -233,23 +266,31 @@ class KernelReg(GenericKDE):
         B_x : ndarray
             The marginal effects.
         """
-        ker_x = gpke(bw, data=exog, data_predict=data_predict,
-                     var_type=self.var_type,
-                     ckertype=self.ckertype,
-                     ukertype=self.ukertype,
-                     okertype=self.okertype,
-                     tosum=False)
+        ker_x = gpke(
+            bw,
+            data=exog,
+            data_predict=data_predict,
+            var_type=self.var_type,
+            ckertype=self.ckertype,
+            ukertype=self.ukertype,
+            okertype=self.okertype,
+            tosum=False,
+        )
         ker_x = np.reshape(ker_x, np.shape(endog))
         G_numer = (ker_x * endog).sum(axis=0)
         G_denom = ker_x.sum(axis=0)
         G = G_numer / G_denom
         nobs = exog.shape[0]
         f_x = G_denom / float(nobs)
-        ker_xc = gpke(bw, data=exog, data_predict=data_predict,
-                      var_type=self.var_type,
-                      ckertype="d_gaussian",
-                      # okertype='wangryzin_reg',
-                      tosum=False)
+        ker_xc = gpke(
+            bw,
+            data=exog,
+            data_predict=data_predict,
+            var_type=self.var_type,
+            ckertype="d_gaussian",
+            # okertype='wangryzin_reg',
+            tosum=False,
+        )
 
         ker_xc = ker_xc[:, np.newaxis]
         d_mx = -(endog * ker_xc).sum(axis=0) / float(nobs)  # * np.prod(bw[:, ix_cont]))
@@ -281,21 +322,33 @@ class KernelReg(GenericKDE):
         """
         H = np.empty((self.nobs, self.nobs))
         for j in range(self.nobs):
-            H[:, j] = gpke(bw, data=self.exog, data_predict=self.exog[j, :],
-                           ckertype=self.ckertype, ukertype=self.ukertype,
-                           okertype=self.okertype, var_type=self.var_type,
-                           tosum=False)
+            H[:, j] = gpke(
+                bw,
+                data=self.exog,
+                data_predict=self.exog[j, :],
+                ckertype=self.ckertype,
+                ukertype=self.ukertype,
+                okertype=self.okertype,
+                var_type=self.var_type,
+                tosum=False,
+            )
 
         denom = H.sum(axis=1)
         H = H / denom
-        gx = KernelReg(endog=self.endog, exog=self.exog, var_type=self.var_type,
-                       reg_type=self.reg_type, bw=bw,
-                       defaults=EstimatorSettings(efficient=False)).fit()[0]
+        gx = KernelReg(
+            endog=self.endog,
+            exog=self.exog,
+            var_type=self.var_type,
+            reg_type=self.reg_type,
+            bw=bw,
+            defaults=EstimatorSettings(efficient=False),
+        ).fit()[0]
         gx = np.reshape(gx, (self.nobs, 1))
-        sigma = ((self.endog - gx)**2).sum(axis=0) / float(self.nobs)
+        sigma = ((self.endog - gx) ** 2).sum(axis=0) / float(self.nobs)
 
-        frac = (1 + np.trace(H) / float(self.nobs)) / \
-               (1 - (np.trace(H) + 2) / float(self.nobs))
+        frac = (1 + np.trace(H) / float(self.nobs)) / (
+            1 - (np.trace(H) + 2) / float(self.nobs)
+        )
         # siga = np.dot(self.endog.T, (I - H).T)
         # sigb = np.dot((I - H), self.endog)
         # sigma = np.dot(siga, sigb) / float(self.nobs)
@@ -336,8 +389,7 @@ class KernelReg(GenericKDE):
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
             Y = next(LOO_Y)
-            G = func(bw, endog=Y, exog=-X_not_i,
-                     data_predict=-self.exog[ii, :])[0]
+            G = func(bw, endog=Y, exog=-X_not_i, data_predict=-self.exog[ii, :])[0]
             L += (self.endog[ii] - G) ** 2
 
         # Note: There might be a way to vectorize this. See p.72 in [1]
@@ -362,9 +414,8 @@ class KernelReg(GenericKDE):
         Y = np.squeeze(self.endog)
         Yhat = self.fit()[0]
         Y_bar = np.mean(Yhat)
-        R2_numer = (((Y - Y_bar) * (Yhat - Y_bar)).sum())**2
-        R2_denom = ((Y - Y_bar)**2).sum(axis=0) * \
-                   ((Yhat - Y_bar)**2).sum(axis=0)
+        R2_numer = (((Y - Y_bar) * (Yhat - Y_bar)).sum()) ** 2
+        R2_denom = ((Y - Y_bar) ** 2).sum(axis=0) * ((Yhat - Y_bar) ** 2).sum(axis=0)
         return R2_numer / R2_denom
 
     def fit(self, data_predict=None):
@@ -394,8 +445,9 @@ class KernelReg(GenericKDE):
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.k_vars))
         for i in range(N_data_predict):
-            mean_mfx = func(self.bw, self.endog, self.exog,
-                            data_predict=data_predict[i, :])
+            mean_mfx = func(
+                self.bw, self.endog, self.exog, data_predict=data_predict[i, :]
+            )
             mean[i] = np.squeeze(mean_mfx[0])
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
@@ -427,9 +479,9 @@ class KernelReg(GenericKDE):
             if np.any(ix_ord[var_pos]) or np.any(ix_unord[var_pos]):
                 raise ValueError("Discrete variable in hypothesis. Must be continuous")
 
-            Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot)
+            Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot, seed=self.seed)
         else:
-            Sig = TestRegCoefD(self, var_pos, nboot)
+            Sig = TestRegCoefD(self, var_pos, nboot, seed=self.seed)
 
         return Sig.sig
 
@@ -505,27 +557,51 @@ class KernelCensoredReg(KernelReg):
         Value at which the dependent variable is censored
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
+    seed : {int, Generator, RandomState}, optional
+        A seed to use. If None, will use the global RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
 
     Attributes
     ----------
     bw : array_like
         The bandwidth parameters
     """
-    def __init__(self, endog, exog, var_type, reg_type, bw="cv_ls",
-                 ckertype="gaussian",
-                 ukertype="aitchison_aitken_reg",
-                 okertype="wangryzin_reg",
-                 censor_val=0, defaults=None):
+
+    def __init__(
+        self,
+        endog,
+        exog,
+        var_type,
+        reg_type,
+        bw="cv_ls",
+        ckertype="gaussian",
+        ukertype="aitchison_aitken_reg",
+        okertype="wangryzin_reg",
+        censor_val=0,
+        defaults=None,
+        *,
+        seed=None,
+    ):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
         self.ckertype = ckertype
         self.okertype = okertype
         self.ukertype = ukertype
-        if not (self.ckertype in kernel_func and self.ukertype in kernel_func
-                and self.okertype in kernel_func):
-            raise ValueError("user specified kernel must be a supported "
-                             "kernel from statsmodels.nonparametric.kernels.")
+        if not (
+            self.ckertype in kernel_func
+            and self.ukertype in kernel_func
+            and self.okertype in kernel_func
+        ):
+            raise ValueError(
+                "user specified kernel must be a supported "
+                "kernel from statsmodels.nonparametric.kernels."
+            )
 
         self.k_vars = len(self.var_type)
         self.endog = _adjust_shape(endog, 1)
@@ -533,6 +609,7 @@ class KernelCensoredReg(KernelReg):
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
+        self._generator = initialize_generator(seed)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
         self.censor_val = censor_val
@@ -548,7 +625,7 @@ class KernelCensoredReg(KernelReg):
 
     def censored(self, censor_val):
         # see pp. 341-344 in [1]
-        self.d = (self.endog != censor_val) * 1.
+        self.d = (self.endog != censor_val) * 1.0
         ix = np.argsort(np.squeeze(self.endog))
         self.sortix = ix
         self.sortix_rev = np.zeros(ix.shape, int)
@@ -561,8 +638,8 @@ class KernelCensoredReg(KernelReg):
         for i in range(1, self.nobs + 1):
             P = 1
             for j in range(1, i):
-                P *= ((self.nobs - j)/(float(self.nobs)-j+1))**self.d[j-1]
-            self.W_in[i-1, 0] = P * self.d[i-1] / (float(self.nobs) - i + 1)
+                P *= ((self.nobs - j) / (float(self.nobs) - j + 1)) ** self.d[j - 1]
+            self.W_in[i - 1, 0] = P * self.d[i - 1] / (float(self.nobs) - i + 1)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -601,11 +678,16 @@ class KernelCensoredReg(KernelReg):
         Unlike other methods, this one requires that data_predict be 1D
         """
         nobs, k_vars = exog.shape
-        ker = gpke(bw, data=exog, data_predict=data_predict,
-                   var_type=self.var_type,
-                   ckertype=self.ckertype,
-                   ukertype=self.ukertype,
-                   okertype=self.okertype, tosum=False)
+        ker = gpke(
+            bw,
+            data=exog,
+            data_predict=data_predict,
+            var_type=self.var_type,
+            ckertype=self.ckertype,
+            ukertype=self.ukertype,
+            okertype=self.okertype,
+            tosum=False,
+        )
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
 
@@ -670,8 +752,7 @@ class KernelCensoredReg(KernelReg):
         for ii, X_not_i in enumerate(LOO_X):
             Y = next(LOO_Y)
             w = next(LOO_W)
-            G = func(bw, endog=Y, exog=-X_not_i,
-                     data_predict=-self.exog[ii, :], W=w)[0]
+            G = func(bw, endog=Y, exog=-X_not_i, data_predict=-self.exog[ii, :], W=w)[0]
             L += (self.endog[ii] - G) ** 2
 
         # Note: There might be a way to vectorize this. See p.72 in [1]
@@ -691,9 +772,13 @@ class KernelCensoredReg(KernelReg):
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.k_vars))
         for i in range(N_data_predict):
-            mean_mfx = func(self.bw, self.endog, self.exog,
-                            data_predict=data_predict[i, :],
-                            W=self.W_in)
+            mean_mfx = func(
+                self.bw,
+                self.endog,
+                self.exog,
+                data_predict=data_predict[i, :],
+                W=self.W_in,
+            )
             mean[i] = np.squeeze(mean_mfx[0])
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
@@ -728,6 +813,14 @@ class TestRegCoefC:
         Significantly increases computational time. But pivot statistics
         have more desirable properties
         (See references)
+    seed : {int, Generator, RandomState}, optional
+        A seed to use. If None, will use the global RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
 
     Attributes
     ----------
@@ -751,11 +844,13 @@ class TestRegCoefC:
 
     Chapter 12 in [1].
     """
+
     # Significance of continuous vars in nonparametric regression
     # Racine: Consistent Significance Testing for Nonparametric Regression
     # Journal of Business & Economics Statistics
-    def __init__(self, model, test_vars, nboot=400, nested_res=400,
-                 pivot=False):
+    def __init__(
+        self, model, test_vars, nboot=400, nested_res=400, pivot=False, seed=None
+    ):
         self.nboot = nboot
         self.nres = nested_res
         self.test_vars = test_vars
@@ -768,6 +863,7 @@ class TestRegCoefC:
         self.gx = model.est[model.reg_type]
         self.test_vars = test_vars
         self.pivot = pivot
+        self._generator = initialize_generator(seed)
         self.run()
 
     def run(self):
@@ -817,7 +913,7 @@ class TestRegCoefC:
         n = np.shape(Y)[0]
         lam = np.empty(shape=(self.nres,))
         for i in range(self.nres):
-            ind = np.random.randint(0, n, size=(n, 1))
+            ind = self._integers(0, n, size=(n, 1))
             Y1 = Y[ind, 0]
             X1 = X[ind, :]
             lam[i] = self._compute_lambda(Y1, X1)
@@ -833,20 +929,26 @@ class TestRegCoefC:
         bootstrapping the sample.  The null hypothesis is rejected if the test
         statistic is larger than the 90, 95, 99 percentiles.
         """
-        t_dist = np.empty(shape=(self.nboot, ))
+        t_dist = np.empty(shape=(self.nboot,))
         Y = self.endog
         X = copy.deepcopy(self.exog)
         n = np.shape(Y)[0]
 
         X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)
         # Calculate the restricted mean. See p. 372 in [8]
-        M = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                      defaults=EstimatorSettings(efficient=False)).fit()[0]
+        M = KernelReg(
+            Y,
+            X,
+            self.var_type,
+            self.model.reg_type,
+            self.bw,
+            defaults=EstimatorSettings(efficient=False),
+        ).fit()[0]
         M = np.reshape(M, (n, 1))
         e = Y - M
         e = e - np.mean(e)  # recenter residuals
         for i in range(self.nboot):
-            ind = np.random.randint(0, n, size=(n, 1))
+            ind = self._integers(0, n, size=(n, 1))
             e_boot = e[ind, 0]
             Y_boot = M + e_boot
             t_dist[i] = self._compute_test_stat(Y_boot, self.exog)
@@ -861,6 +963,19 @@ class TestRegCoefC:
             sig = "***"
 
         return sig
+
+    def _integers(self, low: int, upper: int, size: tuple[int, int]):
+        if self._generator is None:
+            return np.random.randint(low, upper, size=size)
+        elif isinstance(self._generator, np.random.RandomState):
+            return self._generator.randint(low, upper, size=size)
+        else:
+            return self._generator.integers(low, upper, size=size)
+
+    def _uniform(self, low: float, upper: float, size: tuple[int, int]):
+        if self._generator is None:
+            return np.random.uniform(low, upper, size=size)
+        return self._generator.uniform(low, upper, size=size)
 
 
 class TestRegCoefD(TestRegCoefC):
@@ -907,15 +1022,21 @@ class TestRegCoefD(TestRegCoefC):
         dom_x = np.sort(np.unique(self.exog[:, self.test_vars]))
 
         n = np.shape(X)[0]
-        model = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                          defaults=EstimatorSettings(efficient=False))
+        model = KernelReg(
+            Y,
+            X,
+            self.var_type,
+            self.model.reg_type,
+            self.bw,
+            defaults=EstimatorSettings(efficient=False),
+        )
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0
 
         m0 = model.fit(data_predict=X1)[0]
         m0 = np.reshape(m0, (n, 1))
         zvec = np.zeros((n, 1))
-        for i in dom_x[1:] :
+        for i in dom_x[1:]:
             X1[:, self.test_vars] = i
             m1 = model.fit(data_predict=X1)[0]
             m1 = np.reshape(m1, (n, 1))
@@ -933,16 +1054,16 @@ class TestRegCoefD(TestRegCoefC):
         n = np.shape(X)[0]
         u = Y - m
         u = u - np.mean(u)  # center
-        fct1 = (1 - 5**0.5) / 2.
-        fct2 = (1 + 5**0.5) / 2.
+        fct1 = (1 - 5**0.5) / 2.0
+        fct2 = (1 + 5**0.5) / 2.0
         u1 = fct1 * u
         u2 = fct2 * u
-        r = fct2 / (5 ** 0.5)
+        r = fct2 / (5**0.5)
         I_dist = np.empty((self.nboot, 1))
         for j in range(self.nboot):
             u_boot = copy.deepcopy(u2)
 
-            prob = np.random.uniform(0, 1, size=(n, 1))
+            prob = self._uniform(0, 1, size=(n, 1))
             ind = prob < r
             u_boot[ind] = u1[ind]
             Y_boot = m + u_boot

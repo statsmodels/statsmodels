@@ -18,10 +18,10 @@ from statsmodels.sandbox.nonparametric import kernels
 
 np.random.seed(12345)
 Xi = mixture_rvs(
-    [.25, .75],
+    [0.25, 0.75],
     size=200,
     dist=[stats.norm, stats.norm],
-    kwargs=(dict(loc=-1, scale=.5), dict(loc=1, scale=.5))
+    kwargs=(dict(loc=-1, scale=0.5), dict(loc=1, scale=0.5)),
 )
 
 
@@ -29,9 +29,7 @@ class TestBandwidthCalculation:
 
     def test_calculate_bandwidth_gaussian(self):
 
-        bw_expected = [0.29774853596742024,
-                       0.25304408155871411,
-                       0.29781147113698891]
+        bw_expected = [0.29774853596742024, 0.25304408155871411, 0.29781147113698891]
 
         kern = kernels.Gaussian()
 
@@ -86,8 +84,7 @@ class BandwidthZero:
 
         kern = kernels.Gaussian()
         for bw in ["scott", "silverman", "normal_reference"]:
-            with pytest.raises(RuntimeError,
-                               match="Selected KDE bandwidth is 0"):
+            with pytest.raises(RuntimeError, match="Selected KDE bandwidth is 0"):
                 select_bandwidth(self.xx, bw, kern)
 
 

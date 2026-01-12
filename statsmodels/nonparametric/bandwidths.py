@@ -89,7 +89,7 @@ def bw_silverman(x, kernel=None):
     """
     A = _select_sigma(x)
     n = len(x)
-    return .9 * A * n ** (-0.2)
+    return 0.9 * A * n ** (-0.2)
 
 
 def bw_normal_reference(x, kernel=None):
@@ -137,6 +137,7 @@ def bw_normal_reference(x, kernel=None):
     A = _select_sigma(x)
     n = len(x)
     return C * A * n ** (-0.2)
+
 
 # Plug-In Methods
 # Least Squares Cross-Validation
