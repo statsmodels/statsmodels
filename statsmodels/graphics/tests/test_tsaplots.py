@@ -9,7 +9,7 @@ import numpy as np
 from numpy.testing import assert_, assert_equal
 import pandas as pd
 import pytest
-import scipy.stats as stats
+from scipy import stats
 
 from statsmodels.datasets import elnino, macrodata
 from statsmodels.graphics.tsaplots import (
@@ -394,7 +394,16 @@ def test_plot_pacf_small_sample(close_figures):
 @pytest.mark.matplotlib
 def test_plot_predict_passes_alpha_to_conf_int(close_figures):
 
-    from matplotlib.collections import FillBetweenPolyCollection
+    from statsmodels.compat.matplotlib import MPL_LT_310
+
+    if MPL_LT_310:
+        from matplotlib.collections import PolyCollection
+
+        COLLECTION_TYPE = PolyCollection
+    else:
+        from matplotlib.collections import FillBetweenPolyCollection
+
+        COLLECTION_TYPE = FillBetweenPolyCollection
     import matplotlib.pyplot as plt
 
     # Create a small, reproducible time series
@@ -416,10 +425,10 @@ def test_plot_predict_passes_alpha_to_conf_int(close_figures):
             axes1 = child
 
     for child in axes0.get_children():
-        if isinstance(child, FillBetweenPolyCollection):
+        if isinstance(child, COLLECTION_TYPE):
             poly_coll_0 = child
     for child in axes1.get_children():
-        if isinstance(child, FillBetweenPolyCollection):
+        if isinstance(child, COLLECTION_TYPE):
             poly_coll_1 = child
 
     vert_0 = poly_coll_0.get_paths()[0].vertices
