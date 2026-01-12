@@ -258,6 +258,7 @@ class CheckKDEWeights:
         hw = ci[:, 1] - kde_vals
         npt.assert_allclose(hw, crit * np.sqrt(v), rtol=1e-10)
 
+    @pytest.mark.thread_unsafe('modifies state')
     def test_kernel_constants(self):
         kern = self.res1.kernel
 
