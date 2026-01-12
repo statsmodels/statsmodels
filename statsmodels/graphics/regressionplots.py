@@ -291,7 +291,6 @@ def plot_regress_exog(results, exog_idx, fig=None):
     return fig
 
 
-
 def plot_partregress(
     endog,
     exog_i,
