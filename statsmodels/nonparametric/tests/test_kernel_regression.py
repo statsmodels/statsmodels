@@ -400,7 +400,6 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_allclose(sm_mfx[0:10, 1], mfx2[0:10], rtol=2e-1)
 
     @pytest.mark.slow
-    @pytest.mark.thread_unsafe("relies on global random state")
     def test_continuous_cvls_efficient(self):
         nobs = 500
         rs = np.random.RandomState(12345)
@@ -418,6 +417,7 @@ class TestKernelReg(KernelRegressionTestBase):
             var_type="c",
             bw="cv_ls",
             defaults=nparam.EstimatorSettings(efficient=True, n_sub=100),
+            seed=20260111,
         )
 
         model = nparam.KernelReg(
@@ -467,14 +467,13 @@ class TestKernelReg(KernelRegressionTestBase):
         bw_expected = [0.3987821, 0.50933458]
         npt.assert_allclose(model.bw, bw_expected, rtol=1e-3)
 
-    @pytest.mark.thread_unsafe("relies on global random state")
     def test_significance_continuous(self):
         nobs = 250
-        np.random.seed(12345)
-        C1 = np.random.normal(size=(nobs,))
-        C2 = np.random.normal(2, 1, size=(nobs,))
-        C3 = np.random.beta(0.5, 0.2, size=(nobs,))
-        noise = np.random.normal(size=(nobs,))
+        rs = np.random.RandomState(12345)
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
+        C3 = rs.beta(0.5, 0.2, size=(nobs,))
+        noise = rs.normal(size=(nobs,))
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         Y = b1 * C1 + b2 * C2 + noise
@@ -482,15 +481,15 @@ class TestKernelReg(KernelRegressionTestBase):
         # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
         model = nparam.KernelReg(
-            endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw
+            endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, seed=20260111
         )
         nboot = 45  # Number of bootstrap samples
         sig_var12 = model.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
-        npt.assert_equal(sig_var12 == "Not Significant", False)
+        assert sig_var12 == "Not Significant"
         sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
-        npt.assert_equal(sig_var1 == "Not Significant", False)
+        assert sig_var1 != "Not Significant"
         sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
-        npt.assert_equal(sig_var2 == "Not Significant", True)
+        assert sig_var2 == "Not Significant"
 
     @pytest.mark.thread_unsafe("Intentionally relies on global random state")
     @pytest.mark.slow
@@ -545,6 +544,38 @@ class TestKernelReg(KernelRegressionTestBase):
             nparam.KernelReg(
                 endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, seed="a"
             )
+
+    @pytest.mark.slow
+    def test_significance_seed_thread_safe(self):
+        nobs = 250
+        rs = np.random.RandomState(12345)
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
+        C3 = rs.beta(0.5, 0.2, size=(nobs,))
+        noise = rs.normal(size=(nobs,))
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        Y = b1 * C1 + b2 * C2 + noise
+
+        # This is the cv_ls bandwidth estimated earlier
+        bw = [11108137.1087194, 1333821.85150218]
+        seed = 12345
+        model_0 = nparam.KernelReg(
+            endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, seed=seed
+        )
+        model_1 = nparam.KernelReg(
+            endog=[Y],
+            exog=[C1, C3],
+            reg_type="ll",
+            var_type="cc",
+            bw=bw,
+            seed=np.random.default_rng(seed),
+        )
+
+        nboot = 45  # Number of bootstrap samples
+        sig_var12_0 = model_0.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        sig_var12_1 = model_1.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        assert sig_var12_0 == sig_var12_1
 
     @pytest.mark.slow
     def test_significance_discrete(self):
