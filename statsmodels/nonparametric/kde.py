@@ -11,6 +11,7 @@ https://en.wikipedia.org/wiki/Kernel_%28statistics%29
 
 Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
+
 import numpy as np
 from scipy import integrate, stats
 
@@ -33,7 +34,7 @@ kernel_switch = dict(
     triw=kernels.Triweight,
     cos=kernels.Cosine,
     cos2=kernels.Cosine2,
-    tric=kernels.Tricube
+    tric=kernels.Tricube,
 )
 
 
@@ -422,17 +423,13 @@ def kdensity(
     b = np.max(x, axis=0) + cut * bw
     grid = np.linspace(a, b, gridsize)
 
-    k = (
-        x.T - grid[:, None]
-    ) / bw  # uses broadcasting to make a gridsize x nobs
+    k = (x.T - grid[:, None]) / bw  # uses broadcasting to make a gridsize x nobs
 
     # set kernel bandwidth
     kern.seth(bw)
 
     # truncate to domain
-    if (
-        kern.domain is not None
-    ):  # will not work for piecewise kernels like parzen
+    if kern.domain is not None:  # will not work for piecewise kernels like parzen
         z_lo, z_high = kern.domain
         domain_mask = (k < z_lo) | (k > z_high)
         k = kern(k)  # estimate density

@@ -89,7 +89,7 @@ def bw_silverman(x, kernel=None):
     """
     A = _select_sigma(x)
     n = len(x)
-    return .9 * A * n ** (-0.2)
+    return 0.9 * A * n ** (-0.2)
 
 
 def bw_normal_reference(x, kernel=None):
@@ -138,6 +138,7 @@ def bw_normal_reference(x, kernel=None):
     n = len(x)
     return C * A * n ** (-0.2)
 
+
 # Plug-In Methods
 # Least Squares Cross-Validation
 # Helper Functions
@@ -173,7 +174,7 @@ def select_bandwidth(x, bw, kernel):
     """
     bw = bw.lower()
     if bw not in bandwidth_funcs:
-        raise ValueError("Bandwidth %s not understood" % bw)
+        raise ValueError(f"Bandwidth {bw} not understood")
     bandwidth = bandwidth_funcs[bw](x, kernel)
     if np.any(bandwidth == 0):
         # eventually this can fall back on another selection criterion.
