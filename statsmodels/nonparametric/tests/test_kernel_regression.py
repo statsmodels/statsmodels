@@ -330,10 +330,10 @@ class TestKernelReg(KernelRegressionTestBase):
     def test_continuous_mfx_ll_cvls(self):
         nobs = 200
         rs = np.random.RandomState(1234)
-        C1 = rs.normal(size=(nobs, ))
-        C2 = rs.normal(2, 1, size=(nobs, ))
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
         C3 = rs.beta(0.5, 0.2, size=(nobs,))
-        noise = rs.normal(size=(nobs, ))
+        noise = rs.normal(size=(nobs,))
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
@@ -350,10 +350,10 @@ class TestKernelReg(KernelRegressionTestBase):
     def test_mixed_mfx_ll_cvls(self):
         nobs = 200
         rs = np.random.RandomState(1234)
-        ovals = rs.binomial(2, 0.5, size=(nobs, ))
-        C1 = rs.normal(size=(nobs, ))
-        C2 = rs.normal(2, 1, size=(nobs, ))
-        noise = rs.normal(size=(nobs, ))
+        ovals = rs.binomial(2, 0.5, size=(nobs,))
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
+        noise = rs.normal(size=(nobs,))
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
@@ -400,7 +400,7 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_allclose(sm_mfx[0:10, 1], mfx2[0:10], rtol=2e-1)
 
     @pytest.mark.slow
-    @pytest.mark.thread_unsafe('relies on global random state')
+    @pytest.mark.thread_unsafe("relies on global random state")
     def test_continuous_cvls_efficient(self):
         nobs = 500
         rs = np.random.RandomState(12345)
@@ -429,9 +429,9 @@ class TestKernelReg(KernelRegressionTestBase):
     def test_censored_ll_cvls(self):
         nobs = 200
         rs = np.random.RandomState(1234)
-        C1 = rs.normal(size=(nobs, ))
-        C2 = rs.normal(2, 1, size=(nobs, ))
-        noise = rs.normal(size=(nobs, ))
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
+        noise = rs.normal(size=(nobs,))
         Y = 0.3 + 1.2 * C1 - 0.9 * C2 + noise
         Y[Y > 0] = 0  # censor the data
         model = nparam.KernelCensoredReg(
@@ -449,9 +449,9 @@ class TestKernelReg(KernelRegressionTestBase):
     def test_continuous_lc_aic(self):
         nobs = 200
         rs = np.random.RandomState(1234)
-        C1 = rs.normal(size=(nobs, ))
-        C2 = rs.normal(2, 1, size=(nobs, ))
-        noise = rs.normal(size=(nobs, ))
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
+        noise = rs.normal(size=(nobs,))
         Y = 0.3 + 1.2 * C1 - 0.9 * C2 + noise
         # self.write2file('RegData.csv', (Y, C1, C2))
 
@@ -467,7 +467,7 @@ class TestKernelReg(KernelRegressionTestBase):
         bw_expected = [0.3987821, 0.50933458]
         npt.assert_allclose(model.bw, bw_expected, rtol=1e-3)
 
-    @pytest.mark.thread_unsafe('relies on global random state')
+    @pytest.mark.thread_unsafe("relies on global random state")
     def test_significance_continuous(self):
         nobs = 250
         np.random.seed(12345)
@@ -544,10 +544,10 @@ class TestKernelReg(KernelRegressionTestBase):
     def test_significance_discrete(self):
         nobs = 200
         rs = np.random.RandomState(12345)
-        ovals = rs.binomial(2, 0.5, size=(nobs, ))
-        C2 = rs.normal(2, 1, size=(nobs, ))
+        ovals = rs.binomial(2, 0.5, size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
         C3 = rs.beta(0.5, 0.2, size=(nobs,))
-        noise = rs.normal(size=(nobs, ))
+        noise = rs.normal(size=(nobs,))
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         Y = b1 * ovals + b2 * C2 + noise

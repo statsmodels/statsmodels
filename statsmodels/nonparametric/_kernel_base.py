@@ -3,6 +3,8 @@ Module containing the base object for multivariate kernel density and
 regression, plus some utilities.
 """
 
+from __future__ import annotations
+
 import copy
 
 import numpy as np
