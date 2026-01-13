@@ -258,6 +258,20 @@ def test_formula_missing_data():
     assert_equal(res.fittedvalues, res2, check_index_type=False)
 
 
+
+def test_eval_env_dict_is_used_in_patsy():
+    data = pd.DataFrame({"x": [1, 2, 3], "y": [2, 4, 6]})
+    z = [10, 20, 30]
+    mgr = FormulaManager(engine="patsy")
+    y, X = mgr.get_matrices(
+        "y ~ x + z",
+        data=data,
+        eval_env={"z": z},
+        pandas=True,
+    )
+    assert "z" in X.columns
+
+
 def test_predict_nondataframe():
     df = pd.DataFrame(
         [[3, 0.030], [10, 0.060], [20, 0.120]], columns=["BSA", "Absorbance"]
