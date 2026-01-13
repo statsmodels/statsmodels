@@ -183,7 +183,7 @@ def aitchison_aitken_cdf(h, Xi, x_u):
     ordered = np.zeros(Xi.size)
     num_levels = Xi_vals.size
     for x in Xi_vals:
-        if x <= x_u:  # FIXME: why a comparison for unordered variables?
+        if x <= x_u:
             ordered += aitchison_aitken(h, Xi, x, num_levels=num_levels)
 
     return ordered

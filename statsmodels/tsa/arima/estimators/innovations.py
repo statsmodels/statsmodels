@@ -10,7 +10,10 @@ import warnings
 import numpy as np
 from scipy.optimize import minimize
 
-from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    SpecificationWarning,
+)
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 from statsmodels.tsa.arima.params import SARIMAXParams
@@ -267,7 +270,12 @@ def innovations_mle(
     minimize_kwargs["options"].setdefault("maxiter", 100)
     minimize_results = minimize(obj, unconstrained_start_params, **minimize_kwargs)
 
-    # TODO: show warning if convergence failed.
+    if not minimize_results.success:
+        warnings.warn(
+            "Maximum Likelihood optimization failed to converge. Check"
+            " `minimize_results` for more information.",
+            ConvergenceWarning,
+        )
 
     # Reverse the transformation to get the optimal parameters
     p.params = spec.constrain_params(minimize_results.x)
