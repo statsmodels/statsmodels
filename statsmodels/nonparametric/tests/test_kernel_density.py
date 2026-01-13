@@ -620,6 +620,7 @@ class TestKDEMultivariateConditional(KDETestBase):
             indep_type="c",
             bw="cv_ml",
             defaults=nparam.EstimatorSettings(efficient=True, n_sub=50),
+            seed=12345,
         )
 
         # dens = nparam.KDEMultivariateConditional(endog=[Y], exog=[C1],

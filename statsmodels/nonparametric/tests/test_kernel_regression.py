@@ -492,6 +492,7 @@ class TestKernelReg(KernelRegressionTestBase):
         sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
         npt.assert_equal(sig_var2 == "Not Significant", True)
 
+    @pytest.mark.thread_unsafe("Intentionally relies on global random state")
     @pytest.mark.slow
     def test_significance_seed(self):
         nobs = 250
@@ -539,6 +540,11 @@ class TestKernelReg(KernelRegressionTestBase):
         sig_var12_2 = model_2.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
         sig_var12_3 = model_3.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
         assert sig_var12_2 == sig_var12_3
+
+        with pytest.raises(TypeError, match="Seed must be a"):
+            nparam.KernelReg(
+                endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, seed="a"
+            )
 
     @pytest.mark.slow
     def test_significance_discrete(self):

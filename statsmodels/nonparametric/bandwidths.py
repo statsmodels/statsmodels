@@ -174,7 +174,7 @@ def select_bandwidth(x, bw, kernel):
     """
     bw = bw.lower()
     if bw not in bandwidth_funcs:
-        raise ValueError("Bandwidth %s not understood" % bw)
+        raise ValueError(f"Bandwidth {bw} not understood")
     bandwidth = bandwidth_funcs[bw](x, kernel)
     if np.any(bandwidth == 0):
         # eventually this can fall back on another selection criterion.

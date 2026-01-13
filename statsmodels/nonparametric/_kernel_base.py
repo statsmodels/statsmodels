@@ -645,5 +645,5 @@ def initialize_generator(
     elif isinstance(seed, int):
         return np.random.default_rng(seed)
     elif not isinstance(seed, (np.random.Generator, np.random.RandomState)):
-        raise TypeError("Seed must be an Generator, RandomState, integeer or None ")
+        raise TypeError("Seed must be a Generator, RandomState, integer or None ")
     return seed
