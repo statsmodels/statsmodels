@@ -893,8 +893,6 @@ class TestWLS_GLS(CheckRegressionResults):
         cls.res1 = WLS(endog, exog, weights=1 / sigma).fit()
         cls.res2 = GLS(endog, exog, sigma=sigma).fit()
 
-    def check_confidenceintervals(self, conf1, conf2):  # FIXME: never called
-        assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 
 def test_wls_missing():
@@ -919,8 +917,6 @@ class TestWLS_OLS(CheckRegressionResults):
         cls.res1 = OLS(endog, exog).fit()
         cls.res2 = WLS(endog, exog).fit()
 
-    def check_confidenceintervals(self, conf1, conf2):  # FIXME: never called
-        assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 
 class TestGLS_OLS(CheckRegressionResults):
@@ -933,8 +929,6 @@ class TestGLS_OLS(CheckRegressionResults):
         cls.res1 = GLS(endog, exog).fit()
         cls.res2 = OLS(endog, exog).fit()
 
-    def check_confidenceintervals(self, conf1, conf2):  # FIXME: never called
-        assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 
 # FIXME: do not leave this commented-out sitting here
@@ -991,8 +985,6 @@ class TestDataDimensions(CheckRegressionResults):
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
 
-    def check_confidenceintervals(self, conf1, conf2):  # FIXME: never called
-        assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 
 class TestGLS_large_data(TestDataDimensions):
