@@ -1,10 +1,10 @@
 from statsmodels.compat.pandas import PD_LT_2
 
 import numpy as np
-import pandas as pd
 
 
 def _safe_is_pandas_categorical_dtype(dt):
+    import pandas as pd
     if PD_LT_2:
         return pd.api.types.is_categorical_dtype(dt)
     return isinstance(dt, pd.CategoricalDtype)
@@ -115,3 +115,22 @@ def get_all_sorted_knots(
         )
 
     return all_knots
+
+_patsy_compat_applied = False
+
+def ensure_patsy_compat():
+    global _patsy_compat_applied
+    if _patsy_compat_applied:
+        return
+    try:
+        import patsy.util
+    except ImportError:
+        # patsy not installed skip applying the patch now
+        return
+    try:
+        monkey_patch_cat_dtype()
+        _patsy_compat_applied = True
+    except Exception:
+        # Intentionally ignored to avoid breaking import time behavior
+        return
+
