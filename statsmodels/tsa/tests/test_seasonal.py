@@ -794,25 +794,25 @@ class TestDecompose:
 
     def test_interpolate_trend(self):
         x = np.arange(12)
-        freq = 4
-        trend = seasonal_decompose(x, period=freq).trend
+        period = 4
+        trend = seasonal_decompose(x, period=period).trend
         assert_equal(trend[0], np.nan)
 
-        trend = seasonal_decompose(x, period=freq, extrapolate_trend=5).trend
+        trend = seasonal_decompose(x, period=period, extrapolate_trend=5).trend
         assert_almost_equal(trend, x)
 
-        trend = seasonal_decompose(x, period=freq, extrapolate_trend="freq").trend
+        trend = seasonal_decompose(x, period=period, extrapolate_trend="period").trend
         assert_almost_equal(trend, x)
 
-        trend = seasonal_decompose(x[:, None], period=freq, extrapolate_trend=5).trend
+        trend = seasonal_decompose(x[:, None], period=period, extrapolate_trend=5).trend
         assert_almost_equal(trend, x)
 
         # 2d case
         x = np.tile(np.arange(12), (2, 1)).T
-        trend = seasonal_decompose(x, period=freq, extrapolate_trend=1).trend
+        trend = seasonal_decompose(x, period=period, extrapolate_trend=1).trend
         assert_almost_equal(trend, x)
 
-        trend = seasonal_decompose(x, period=freq, extrapolate_trend="freq").trend
+        trend = seasonal_decompose(x, period=period, extrapolate_trend="period").trend
         assert_almost_equal(trend, x)
 
     def test_raises(self):
@@ -937,11 +937,11 @@ def test_seasonal_decompose_multiple():
 
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("model", ["additive", "multiplicative"])
-@pytest.mark.parametrize("freq", [4, 12])
+@pytest.mark.parametrize("period", [4, 12])
 @pytest.mark.parametrize("two_sided", [True, False])
 @pytest.mark.parametrize("extrapolate_trend", [True, False])
 def test_seasonal_decompose_plot(
-    model, freq, two_sided, extrapolate_trend, close_figures
+    model, period, two_sided, extrapolate_trend, close_figures
 ):
     x = np.array(
         [
@@ -983,7 +983,7 @@ def test_seasonal_decompose_plot(
     x2 = np.r_[x[12:], x[:12]]
     x = np.c_[x, x2]
     res = seasonal_decompose(
-        x, period=freq, two_sided=two_sided, extrapolate_trend=extrapolate_trend
+        x, period=period, two_sided=two_sided, extrapolate_trend=extrapolate_trend
     )
     fig = res.plot()
 
