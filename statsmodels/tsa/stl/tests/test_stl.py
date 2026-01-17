@@ -303,6 +303,183 @@ def test_plot(default_kwargs, close_figures):
     res.plot()
 
 
+def estimate(y_, x, X_):
+    X = X_[~np.isnan(y_)]
+    y = y_[~np.isnan(y_)]
+    x0, xmin, xmax = X_[x, 1], X_[0, 1], X_[-1, 1]
+    h = max(x0-xmin, xmax-x0)
+    wi = [(1-(np.abs(xi-x0)/h)**3)**3 for xi in X[:, 1].A1]
+    W = np.diag(wi)
+    inv = X.T.dot(W).dot(X).I
+    H = X_[x].dot(inv).dot(X.T)
+    return H.dot(W).dot(y).item()
+
+
+def test_est(default_kwargs):
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs)
+
+    y = np.array([1, 2, 4, 8, 16])
+    X = np.matrix([np.ones(5), [0, 1, 2, 3, 4]]).T
+    ys_expect = [estimate(y, xs, X) for xs in range(5)]
+    ys = [res._estimate(y, xs, 0, 5) for xs in range(5)]
+    assert_allclose(ys, ys_expect)
+
+
+def test_est_nans(default_kwargs):
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs)
+
+    y = np.array([1, 2, 4, np.nan, 16, 32])
+    X = np.matrix([np.ones(6), [0, 1, 2, 3, 4, 5]]).T
+    ys_expect = np.array([estimate(y, xs, X) for xs in range(6)])
+    ys = [res._estimate(y, xs, 0, 6) for xs in range(6)]
+    assert_allclose(ys, ys_expect)
+
+
+def test_get_maxmin_0_nan(default_kwargs):
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs)
+
+    X = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+         20, 21, 22, 23, 24, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    tests = [
+        (1, 1, 5), (2, 1, 5), (3, 1, 5), (4, 2, 6),
+        (11, 9, 13), (12, 10, 14), (13, 11, 15), (14, 12, 16), (15, 13, 17),
+        (22, 20, 24), (23, 21, 25), (24, 21, 25), (25, 21, 25), (26, 21, 25)
+    ]
+
+    for (xs, xmin_exp, xmax_exp) in tests:
+        xmin, xmax = res._get_maxmin(X, 25, xs, 5)
+        assert (xmin, xmax) == (xmin_exp, xmax_exp)
+
+    xmin, xmax = res._get_maxmin(X, 25, 1, 35)
+    assert (xmin, xmax) == (1, 25)
+
+
+def test_get_maxmin_1_nan(default_kwargs):
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs)
+
+    X = [1, 2, 3, np.nan, 5, 6, 7, 8, 9, 10, 11, np.nan, 13, 14, 15, 16, 17,
+         18, 19, 20, np.nan, 22, 23, 24, 25, 0, 0, 0]
+    tests = [
+        (1, 1, 6), (2, 1, 6), (3, 1, 6), (4, 2, 7), (5, 2, 7),
+        (11, 9, 14), (12, 10, 15), (13, 10, 15), (14, 11, 16), (15, 13, 17),
+        (25, 20, 25), (24, 20, 25), (23, 20, 25), (22, 19, 24), (21, 19, 24)
+    ]
+
+    for (xs, xmin_exp, xmax_exp) in tests:
+        xmin, xmax = res._get_maxmin(X, 25, xs, 5)
+        assert (xmin, xmax) == (xmin_exp, xmax_exp)
+
+
+def test_get_maxmin_more_nan(default_kwargs):
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs)
+
+    X = [1, 2, 3, np.nan, np.nan, 6, 7, 8, 9, np.nan, 11, np.nan, 13, 14,
+         np.nan, np.nan, 17, np.nan, 19, 20, np.nan, 22, 23, 24, np.nan]
+    tests = [
+        (-1, 1, 7), (0, 1, 7),
+        (1, 1, 7), (2, 1, 7), (3, 1, 7), (4, 1, 7), (5, 2, 8),
+        (6, 3, 9), (7, 3, 9), (8, 6, 11), (9, 6, 11), (10, 7, 13),
+        (11, 8, 14), (12, 8, 14), (13, 9, 17), (14, 11, 19), (15, 11, 19),
+        (16, 13, 20), (17, 13, 20), (18, 14, 22), (19, 17, 23), (20, 17, 23),
+        (21, 19, 24), (22, 19, 24), (23, 19, 24), (24, 19, 24), (25, 19, 24),
+        (26, 19, 24), (27, 19, 24)
+    ]
+
+    for (xs, xmin_exp, xmax_exp) in tests:
+        xmin, xmax = res._get_maxmin(X, 25, xs, 5)
+        assert (xmin, xmax) == (xmin_exp, xmax_exp)
+
+
+def test_endog_with_nulls(default_kwargs):
+    class_kwargs, inner, outer = _to_class_kwargs(default_kwargs)
+
+    len_ = class_kwargs['trend']
+    Y = class_kwargs['endog']
+    for i in [2, 11, 16, 90, 104, 107, 124, 125, 174, 216, 287, 340, ]:
+        Y[i] = np.nan
+
+    mod = STL(**class_kwargs)
+
+    nsh = (len_ + 2) // 2
+    nleft = 0
+    nright = len_
+    res = []
+    for i in range(len(Y)):
+        if (i + 1) > nsh and nright != len(Y):
+            nleft += 1
+            nright += 1
+        res.append(mod._estimate(Y, i, nleft, nright))
+    assert not any(np.isnan(res))
+
+
+def test_decomp_with_nulls(default_kwargs):
+    class_kwargs, outer_iter, inner_iter = _to_class_kwargs(default_kwargs)
+
+    for i in [2, 11, 16, 90, 104, 107, 124, 125, 174, 216, 287, 340, ]:
+        class_kwargs['endog'][i] = np.nan
+
+    mod = STL(**class_kwargs)
+    res = mod.fit(inner_iter=5, outer_iter=0)
+
+    assert not any(np.isnan(res.seasonal))
+
+
+def test_decomp_with_nulls_is_close(default_kwargs):
+    class_kwargs, outer_iter, inner_iter = _to_class_kwargs(default_kwargs)
+
+    res = STL(**class_kwargs).fit(inner_iter, outer_iter)
+    for i in [2, 11, 16, 90, 104, 107, 124, 125, 174, 216, 287, 340, ]:
+        class_kwargs['endog'][i] = np.nan
+
+    res_nulls = STL(**class_kwargs).fit(inner_iter, outer_iter)
+
+    # Because the input series are not equal, we only expect the output
+    # decomposition to be roughly equal. Here we test whether at each
+    # point, `x1 > 0.1 + (1.001 * x2)` and the other way around. Because
+    # res.seasonal has some values very close to 0, we need atol as well.
+    assert_allclose(res.seasonal, res_nulls.seasonal, rtol=0.001, atol=0.1)
+    assert_allclose(res.trend, res_nulls.trend, rtol=0.001)
+
+
+# Values produced by R standard function STL().
+def test_r_is_close(default_kwargs):
+    r_res_path = os.path.join(cur_dir, "results", "stl_co2_r_result.csv")
+    r_res = pd.read_csv(r_res_path, sep=r'\s+', header=6,
+                        names=['m', 'y', 'seasonal', 'trend', 'remainder'],
+                        usecols=['seasonal', 'trend', 'remainder'])
+    class_kwargs, outer_iter, inner_iter = _to_class_kwargs(default_kwargs)
+    res = STL(**class_kwargs).fit(inner_iter=inner_iter, outer_iter=outer_iter)
+
+    # Values produced by R are very close but don't match exactly.
+    assert_allclose(res.seasonal, r_res['seasonal'], rtol=1e-6, atol=1e-5)
+    assert_allclose(res.trend, r_res['trend'], rtol=1e-6, atol=1e-5)
+
+
+# The R stlplus package performs STL decomposition allowing missing values.
+def test_r_stlplus_is_close(default_kwargs):
+    r_res_path = os.path.join(cur_dir, "results", "stl_co2_weekly_r_result.csv")
+
+    r_res = pd.read_csv(r_res_path, sep=r'\s+', header=1,
+                        nrows=2276,
+                        names=['rowno', 'raw', 'seasonal', 'trend', 'resid',
+                               'weights', 'ss', 'subseries'])
+
+    data = (co2.load().data
+            .pipe(lambda df: df[df.index.isocalendar().week < 53])
+            )
+    res = STL(data, period=52, seasonal=35).fit()
+
+    # Values produced by R are very close but don't match exactly.
+    # Note that for seasonal, we are using rtol 10 times bigger.
+    assert_allclose(res.seasonal, r_res['seasonal'], rtol=1e-5, atol=1e-5)
+    assert_allclose(res.trend, r_res['trend'], rtol=1e-6, atol=1e-5)
+
+
 def test_default_trend(default_kwargs):
     # GH 6686
     class_kwargs, _, _ = _to_class_kwargs(default_kwargs)

@@ -364,6 +364,205 @@ cdef class STL(object):
 
         return DecomposeResult(self.endog, season, trend, resid, rw)
 
+
+    def _get_maxmin(self, X, n, xs, neigh_size):
+        """
+        This is a convenience function to test _get_maxmin_().
+
+        Parameters
+        ----------
+        X : array_like
+            The series which we are smoothing.
+        n : int
+            The length of the series we are smoothing. Should never be more
+            than `len(X)`.
+        xs : int
+            The position at which we are estimating with loess.
+        neigh_size : int
+            The loess bandwidth.
+
+        Returns
+        -------
+        (int, int)
+            A pair of integers, the maximum and minimum values so that
+            X[min:max] contains at most `neigh_size` valid (not NAN) values.
+            min should be >= 1 and max <= n. 
+        """
+        return self._get_maxmin_(X, n, xs, neigh_size)
+
+
+    cdef (int, int) _get_maxmin_(self, X, n, xs, neigh_size):
+        if n>len(X):
+            n = len(X)
+        if xs>n:
+            xs = n
+        if xs<1:
+            xs = 1
+        if isnan(X[xs-1]):
+            valid=0
+            xmin=xs+1
+            xmax=xs-1
+        else:
+            valid=1
+            xmin = xmax = xs
+        series_min, series_max = 1, n
+        valid_over = valid_under = 0
+        distance = 0
+        while valid < neigh_size and distance <= n:
+            distance += 1
+            if xs+distance <= series_max and not isnan(X[xs+distance-1]):
+                xmax = xs + distance
+                valid += 1
+                valid_over += 1
+
+            if xs-distance >= series_min and not isnan(X[xs-distance-1]):
+                xmin = xs - distance
+                valid += 1
+                valid_under +=1
+
+        if valid <= neigh_size:
+            return (xmin, xmax)
+        # Note that if valid > neigh_size, the last iteration of the while
+        # loop must have produced two valid observations. 
+        elif valid_over <= valid_under:
+            xmin += 1
+            while isnan(X[xmin-1]):
+                xmin += 1
+            return (xmin, xmax)
+        else:
+            xmax -= 1
+            while isnan(X[xmax-1]):
+                xmax -= 1
+            return (xmin, xmax)
+
+
+    def _ss_test(self):
+        """
+        This is a convenience function to test self._ss()
+
+        Notes
+        -----
+        The _ss() function performs the seasonal smoothing of the STL
+        decomposition. It uses the detrended series `(self._y - self._trend)`
+        as a base and places the result in self._work[1,:]
+        """
+        y = self._ya
+        work = self._work
+        trend = self._trend
+        for i in range(self.nobs):
+            work[0, i] = y[i] - trend[i]
+        self._ss()
+
+
+    def _smooth(self, y, n, len_, ideg=1, njump=1, userw=False, rw=None,
+                ys=None, res=None):
+        """
+        This is a convenience function to test self._ess()
+
+
+        Parameters
+        ----------
+        y : array_like
+            The series which we want to smooth.
+        n : int
+            The size of the series which we want to smooth. You must have
+            `n < len(Y)`
+        len_ : int
+            The bandwidth of the loess regression. q in the original paper.
+        ideg : int, optional
+            The degree of the loess regression. Only 0 and 1 are implemented.
+            Defaults to 1. 
+        njump : int, optional
+            The jump parameter of the loess regression. Calculates every other
+            `njump` value and interpolates in between. Defaults to 1 (calculate
+            every value).
+        userw : bool, optional
+            Whether or not to use weighted loess. Defaults to `False`. 
+        rw : array_like, optional
+            If `userw`, the array of weights for the regression. Must be the
+            same size as y. Required if `userw`
+        ys : array_like, optional
+            Used as an output value by the original self._ess() function. Will
+            match the return value of this function. If provided must have the
+            same size as `y`. 
+        res : array_like, optional
+            Used by the original self._ess() function to pass to self._est() as
+            the w parameter. An empty array of the same size as `y`. 
+
+
+        Returns
+        -------
+        array_like
+            The series `y` smoothed by loess with the given parameters.  
+        """
+        y = array_like(y, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
+        n_ = y.shape[0]
+        if n > n_:
+            pass#print('This might be an error!')
+
+        if ys is None:
+            ys = array_like(range(n_), "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
+
+        if res is None:
+            res = array_like(range(n_), "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
+
+        self._ess(y, n, len_, ideg, njump, userw, rw, ys, res)
+        return ys
+
+
+    def _estimate(self, y, xs, nleft, nright, n=None, len=None, ideg=1, w=None, userw=False, rw=None):
+        """
+        This is a convenience method to test the cython function _est.
+
+        Parameters
+        ----------
+        y : array_like
+            The observed series from which the point in the loess regression
+            is estimated.
+        xs : int
+            The index of the value to estimate.
+        nleft : int
+            The index of the leftmost value to use in the estimate (included).
+        nright : int
+            The index of the rightmost value to use in the estimate (excluded).
+        n : int
+            The size of the array. Defaults to the length of y.
+        len : int
+            The size of the bandwidth, defaults to `nright - nleft`
+        ideg : int, optional
+            The degree of the regression to fit. If not 0, assumed to be 1.
+        w : array_like
+            An empty array, used by self._est() to store the kernel weights
+            output by the tricube function. 
+        userw : bool, optional
+            Whether or not to use weighted least squares. 
+        rw : array_like
+           The weights for weighted least squares.
+
+        Returns
+        -------
+        double
+            Returns the loess estimated value at xs. Should be compared to y[xs].
+
+        """
+
+        y = array_like(y, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
+        if rw is None:
+            rw = [1 for _ in y]
+            rw = array_like(rw, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
+        if n is None:
+            n = y.shape[0]
+        if len is None:
+            len = nright - nleft
+        if w is None:
+            w = array_like(range(n), "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
+
+        # The _est code uses 1-indexed values so we shift `xs` and `nleft` to the right.
+        # But the _est code uses inclusive bounds so we don't shift `nright`.
+        ys = self._est(y, n, len, ideg, xs+1, nleft+1, nright, w, userw, rw)
+        return ys
+
+
     cdef void _onestp(self, int inner_iter):
         """
         y, n, np, ns, nt, nl, isdeg, itdeg, ildeg, nsjump,
@@ -407,10 +606,13 @@ cdef class STL(object):
                       trend, work[2, :])
 
     cdef double _est(self, double[::1] y, int n, int len_, int ideg, int xs,
-                     int nleft, int nright, double[::1] w, bint userw,
+                     int nleft_old, int nright_old, double[::1] w, bint userw,
                      double[::1] rw):
         cdef double rng, a, b, c, h, h1, h9, r, ys
         cdef Py_ssize_t j
+        cdef int nleft, nright
+
+        (nleft, nright) = self._get_maxmin(y, n, xs, len_)
 
         # Removed ok and ys, which are scalar return values
         rng = n - 1.0
@@ -430,6 +632,8 @@ cdef class STL(object):
                     w[j] = (1.0 - (r / h) ** 3) ** 3
                 if userw:
                     w[j] = w[j] * rw[j]
+                if isnan(y[j]):
+                    continue
                 a = a + w[j]
         if a <= 0:
             return NAN
@@ -438,17 +642,25 @@ cdef class STL(object):
         if h > 0 and ideg > 0:
             a = 0.0
             for j in range(nleft - 1, nright):
+                if isnan(y[j]):
+                    continue
                 a = a + w[j] * (j + 1)
             b = xs - a
             c = 0.0
             for j in range(nleft - 1, nright):
+                if isnan(y[j]):
+                    continue
                 c = c + w[j] * (j + 1 - a) ** 2
             if sqrt(c) > .001 * rng:
                 b = b / c
                 for j in range(nleft - 1, nright):
+                    if isnan(y[j]):
+                        continue
                     w[j] = w[j] * (b * (j + 1 - a) + 1.0)
         ys = 0.0
         for j in range(nleft - 1, nright):
+            if isnan(y[j]):
+                continue
             ys = ys + w[j] * y[j]
 
         return ys
@@ -603,6 +815,7 @@ cdef class STL(object):
 
             self._ess(work1, k, ns, isdeg, nsjump, userw, work3, work2[1:],
                       work4)
+
             xs = 0
             nright = min(ns, k)
             work2[0] = self._est(work1, k, ns, isdeg, xs, 1, nright, work4,
