@@ -953,6 +953,7 @@ class ETSModel(base.StateSpaceMLEModel):
         disp=True,
         callback=None,
         return_params=False,
+        method="lbfgs",
         **kwargs,
     ):
         r"""
@@ -1003,12 +1004,137 @@ class ETSModel(base.StateSpaceMLEModel):
         return_params : bool, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
+        method : str, optional
+            The `method` determines which solver from `scipy.optimize`
+            is used, and it can be chosen from among the following strings:
+
+            - 'newton' for Newton-Raphson, 'nm' for Nelder-Mead
+            - 'bfgs' for Broyden-Fletcher-Goldfarb-Shanno (BFGS)
+            - 'lbfgs' for limited-memory BFGS with optional box constraints
+            - 'powell' for modified Powell's method
+            - 'cg' for conjugate gradient
+            - 'ncg' for Newton-conjugate gradient
+            - 'basinhopping' for global basin-hopping solver
+            - 'minimize' for generic wrapper of scipy minimize (BFGS by default)
+
+            The explicit arguments in `fit` are passed to the solver,
+            with the exception of the basin-hopping solver. Each
+            solver has several optional arguments that are not the same across
+            solvers. See the notes section below (or scipy.optimize) for the
+            available arguments and for the list of explicit arguments that the
+            basin-hopping solver supports.
         **kwargs
             Additional keyword arguments to pass to the optimizer.
 
         Returns
         -------
         results : ETSResults
+
+        Notes
+        -----
+        The 'basinhopping' solver ignores `maxiter`, `retall`, `full_output`
+        explicit arguments.
+
+        Optional arguments for solvers (see returned Results.mle_settings)::
+
+            'newton'
+                tol : float
+                    Relative error in params acceptable for convergence.
+            'nm' -- Nelder Mead
+                xtol : float
+                    Relative error in params acceptable for convergence
+                ftol : float
+                    Relative error in loglike(params) acceptable for
+                    convergence
+                maxfun : int
+                    Maximum number of function evaluations to make.
+            'bfgs'
+                gtol : float
+                    Stop when norm of gradient is less than gtol.
+                norm : float
+                    Order of norm (np.Inf is max, -np.Inf is min)
+                epsilon
+                    If fprime is approximated, use this value for the step
+                    size. Only relevant if LikelihoodModel.score is None.
+            'lbfgs'
+                m : int
+                    This many terms are used for the Hessian approximation.
+                factr : float
+                    A stop condition that is a variant of relative error.
+                pgtol : float
+                    A stop condition that uses the projected gradient.
+                epsilon
+                    If fprime is approximated, use this value for the step
+                    size. Only relevant if LikelihoodModel.score is None.
+                maxfun : int
+                    Maximum number of function evaluations to make.
+                bounds : sequence
+                    (min, max) pairs for each element in x,
+                    defining the bounds on that parameter.
+                    Use None for one of min or max when there is no bound
+                    in that direction.
+            'cg'
+                gtol : float
+                    Stop when norm of gradient is less than gtol.
+                norm : float
+                    Order of norm (np.Inf is max, -np.Inf is min)
+                epsilon : float
+                    If fprime is approximated, use this value for the step
+                    size. Can be scalar or vector.  Only relevant if
+                    Likelihoodmodel.score is None.
+            'ncg'
+                fhess_p : callable f'(x,*args)
+                    Function which computes the Hessian of f times an arbitrary
+                    vector, p.  Should only be supplied if
+                    LikelihoodModel.hessian is None.
+                avextol : float
+                    Stop when the average relative error in the minimizer
+                    falls below this amount.
+                epsilon : float or ndarray
+                    If fhess is approximated, use this value for the step size.
+                    Only relevant if Likelihoodmodel.hessian is None.
+            'powell'
+                xtol : float
+                    Line-search error tolerance
+                ftol : float
+                    Relative error in loglike(params) for acceptable for
+                    convergence.
+                maxfun : int
+                    Maximum number of function evaluations to make.
+                start_direc : ndarray
+                    Initial direction set.
+            'basinhopping'
+                niter : int
+                    The number of basin hopping iterations.
+                niter_success : int
+                    Stop the run if the global minimum candidate remains the
+                    same for this number of iterations.
+                T : float
+                    The "temperature" parameter for the accept or reject
+                    criterion. Higher "temperatures" mean that larger jumps
+                    in function value will be accepted. For best results
+                    `T` should be comparable to the separation (in function
+                    value) between local minima.
+                stepsize : float
+                    Initial step size for use in the random displacement.
+                interval : int
+                    The interval for how often to update the `stepsize`.
+                minimizer : dict
+                    Extra keyword arguments to be passed to the minimizer
+                    `scipy.optimize.minimize()`, for example 'method' - the
+                    minimization method (e.g. 'L-BFGS-B'), or 'tol' - the
+                    tolerance for termination. Other arguments are mapped from
+                    explicit argument of `fit`:
+                      - `args` <- `fargs`
+                      - `jac` <- `score`
+                      - `hess` <- `hess`
+            'minimize'
+                min_method : str, optional
+                    Name of minimization method to use.
+                    Any method specific arguments can be passed directly.
+                    For a list of methods and their arguments, see
+                    documentation of `scipy.optimize.minimize`.
+                    If no method is specified, then BFGS is used.
         """
 
         if start_params is None:
@@ -1040,21 +1166,45 @@ class ETSModel(base.StateSpaceMLEModel):
             is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
             fixed_values = np.empty_like(internal_start_params)
             params_without_fixed = []
-            kwargs["bounds"] = []
+
+            supported_methods = (
+                "newton",
+                "nm",
+                "bfgs",
+                "lbfgs",
+                "powell",
+                "cg",
+                "ncg",
+                "basinhopping",
+                "minimize"
+            )
+            method = string_like(
+                method,
+                "method",
+                options=supported_methods,
+                lower=False,
+                optional=True,
+            )
+
+            if method == "lbfgs":
+                kwargs["bounds"] = []
+                kwargs["approx_grad"] = True
+
             for i in range(self._k_params_internal):
                 if bounds[i][0] == bounds[i][1]:
                     is_fixed[i] = True
                     fixed_values[i] = bounds[i][0]
                 else:
                     params_without_fixed.append(internal_start_params[i])
-                    kwargs["bounds"].append(bounds[i])
+
+                    if method == "lbfgs":
+                        kwargs["bounds"].append(bounds[i])
             params_without_fixed = np.asarray(params_without_fixed)
 
             # pre-allocate memory for smoothing results
             yhat = np.zeros(self.nobs)
             xhat = np.zeros((self.nobs, self._k_states_internal))
 
-            kwargs["approx_grad"] = True
             with self.use_internal_loglike():
                 mlefit = super().fit(
                     params_without_fixed,
@@ -1066,7 +1216,7 @@ class ETSModel(base.StateSpaceMLEModel):
                         use_beta_star,
                         use_gamma_star,
                     ),
-                    method="lbfgs",
+                    method=method,
                     maxiter=maxiter,
                     full_output=full_output,
                     disp=disp,
