@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
+import pytest
 from scipy import stats
 
 from statsmodels.distributions.bernstein import (
@@ -134,6 +135,7 @@ class TestBernsteinBeta2d:
         cls.distr = cad
         cls.bpd = BernsteinDistributionBV(cdf_g)
 
+    @pytest.mark.high_memory
     def test_basic(self):
         bpd = self.bpd
         grid = self.grid

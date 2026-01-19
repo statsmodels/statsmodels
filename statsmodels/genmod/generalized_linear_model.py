@@ -372,9 +372,9 @@ class GLM(base.LikelihoodModel):
             self.var_weights,
         )
         if offset is None:
-            delattr(self, "offset")
+            del self.offset
         if exposure is None:
-            delattr(self, "exposure")
+            del self.exposure
 
         self.nobs = self.endog.shape[0]
 

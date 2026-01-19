@@ -2,6 +2,9 @@
 Module containing the base object for multivariate kernel density and
 regression, plus some utilities.
 """
+
+from __future__ import annotations
+
 import copy
 
 import numpy as np
@@ -10,25 +13,28 @@ from scipy.stats.mstats import mquantiles
 
 try:
     import joblib
+
     has_joblib = True
 except ImportError:
     has_joblib = False
 
 from . import kernels
 
-kernel_func = dict(wangryzin=kernels.wang_ryzin,
-                   aitchisonaitken=kernels.aitchison_aitken,
-                   gaussian=kernels.gaussian,
-                   aitchison_aitken_reg=kernels.aitchison_aitken_reg,
-                   wangryzin_reg=kernels.wang_ryzin_reg,
-                   gauss_convolution=kernels.gaussian_convolution,
-                   wangryzin_convolution=kernels.wang_ryzin_convolution,
-                   aitchisonaitken_convolution=kernels.aitchison_aitken_convolution,
-                   gaussian_cdf=kernels.gaussian_cdf,
-                   aitchisonaitken_cdf=kernels.aitchison_aitken_cdf,
-                   wangryzin_cdf=kernels.wang_ryzin_cdf,
-                   d_gaussian=kernels.d_gaussian,
-                   tricube=kernels.tricube)
+kernel_func = dict(
+    wangryzin=kernels.wang_ryzin,
+    aitchisonaitken=kernels.aitchison_aitken,
+    gaussian=kernels.gaussian,
+    aitchison_aitken_reg=kernels.aitchison_aitken_reg,
+    wangryzin_reg=kernels.wang_ryzin_reg,
+    gauss_convolution=kernels.gaussian_convolution,
+    wangryzin_convolution=kernels.wang_ryzin_convolution,
+    aitchisonaitken_convolution=kernels.aitchison_aitken_convolution,
+    gaussian_cdf=kernels.gaussian_cdf,
+    aitchisonaitken_cdf=kernels.aitchison_aitken_cdf,
+    wangryzin_cdf=kernels.wang_ryzin_cdf,
+    d_gaussian=kernels.d_gaussian,
+    tricube=kernels.tricube,
+)
 
 
 def _compute_min_std_IQR(data):
@@ -41,9 +47,22 @@ def _compute_min_std_IQR(data):
     return dispersion
 
 
-def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
-                    ix_unord, n_sub, class_vars, randomize, bound):
-    """"Compute bw on subset of data.
+def _compute_subset(
+    class_type,
+    data,
+    bw,
+    co,
+    do,
+    n_cvars,
+    ix_ord,
+    ix_unord,
+    n_sub,
+    class_vars,
+    randomize,
+    bound,
+    generator,
+):
+    """ "Compute bw on subset of data.
 
     Called from ``GenericKDE._compute_efficient_*``.
 
@@ -52,10 +71,10 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
     Needs to be outside the class in order for joblib to be able to pickle it.
     """
     if randomize:
-        np.random.shuffle(data)
+        generator.shuffle(data)
         sub_data = data[:n_sub, :]
     else:
-        sub_data = data[bound[0]:bound[1], :]
+        sub_data = data[bound[0] : bound[1], :]
 
     if class_type == "KDEMultivariate":
         from .kernel_density import KDEMultivariate
@@ -105,18 +124,19 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
 
     dispersion = _compute_min_std_IQR(sub_data)
 
-    fct = dispersion * n_sub**(-1. / (n_cvars + co))
-    fct[ix_unord] = n_sub**(-2. / (n_cvars + do))
-    fct[ix_ord] = n_sub**(-2. / (n_cvars + do))
+    fct = dispersion * n_sub ** (-1.0 / (n_cvars + co))
+    fct[ix_unord] = n_sub ** (-2.0 / (n_cvars + do))
+    fct[ix_ord] = n_sub ** (-2.0 / (n_cvars + do))
     sample_scale_sub = sub_model.bw / fct  # TODO: check if correct
     bw_sub = sub_model.bw
     return sample_scale_sub, bw_sub
 
 
-class GenericKDE :
+class GenericKDE:
     """
     Base class for density estimation and regression KDE classes.
     """
+
     def _compute_bw(self, bw):
         """
         Computes the bandwidth of the data.
@@ -212,7 +232,7 @@ class GenericKDE :
             # randomize chooses blocks of size n_sub, independent of nobs
             bounds = [None] * self.n_res
         else:
-            bounds = [(i * n_sub, (i+1) * n_sub) for i in range(nobs // n_sub)]
+            bounds = [(i * n_sub, (i + 1) * n_sub) for i in range(nobs // n_sub)]
             if nobs % n_sub > 0:
                 bounds.append((nobs - nobs % n_sub, nobs))
 
@@ -225,16 +245,42 @@ class GenericKDE :
             # `res` is a list of tuples (sample_scale_sub, bw_sub)
             res = joblib.Parallel(n_jobs=self.n_jobs)(
                 joblib.delayed(_compute_subset)(
-                    class_type, data, bw, co, do, n_cvars, ix_ord, ix_unord,
-                    n_sub, class_vars, self.randomize, bounds[i])
-                for i in range(n_blocks))
+                    class_type,
+                    data,
+                    bw,
+                    co,
+                    do,
+                    n_cvars,
+                    ix_ord,
+                    ix_unord,
+                    n_sub,
+                    class_vars,
+                    self.randomize,
+                    bounds[i],
+                    self._generator,
+                )
+                for i in range(n_blocks)
+            )
         else:
             res = []
             for i in range(n_blocks):
-                res.append(_compute_subset(class_type, data, bw, co, do,
-                                           n_cvars, ix_ord, ix_unord, n_sub,
-                                           class_vars, self.randomize,
-                                           bounds[i]))
+                res.append(
+                    _compute_subset(
+                        class_type,
+                        data,
+                        bw,
+                        co,
+                        do,
+                        n_cvars,
+                        ix_ord,
+                        ix_unord,
+                        n_sub,
+                        class_vars,
+                        self.randomize,
+                        bounds[i],
+                        self._generator,
+                    )
+                )
 
         for i in range(n_blocks):
             sample_scale[i, :] = res[i][0]
@@ -244,9 +290,9 @@ class GenericKDE :
         order_func = np.median if self.return_median else np.mean
         m_scale = order_func(sample_scale, axis=0)
         # TODO: Check if 1/5 is correct in line below!
-        bw = m_scale * s * nobs**(-1. / (n_cvars + co))
-        bw[ix_ord] = m_scale[ix_ord] * nobs**(-2.0 / (n_cvars + do))
-        bw[ix_unord] = m_scale[ix_unord] * nobs**(-2.0 / (n_cvars + do))
+        bw = m_scale * s * nobs ** (-1.0 / (n_cvars + co))
+        bw[ix_ord] = m_scale[ix_ord] * nobs ** (-2.0 / (n_cvars + do))
+        bw[ix_unord] = m_scale[ix_unord] * nobs ** (-2.0 / (n_cvars + do))
 
         if self.return_only_bw:
             bw = np.median(only_bw, axis=0)
@@ -278,7 +324,7 @@ class GenericKDE :
         variables.
         """
         X = np.std(self.data, axis=0)
-        return 1.06 * X * self.nobs ** (- 1. / (4 + self.data.shape[1]))
+        return 1.06 * X * self.nobs ** (-1.0 / (4 + self.data.shape[1]))
 
     def _set_bw_bounds(self, bw):
         """
@@ -287,8 +333,8 @@ class GenericKDE :
         """
         bw[bw < 0] = 1e-10
         _, ix_ord, ix_unord = _get_type_pos(self.data_type)
-        bw[ix_ord] = np.minimum(bw[ix_ord], 1.)
-        bw[ix_unord] = np.minimum(bw[ix_unord], 1.)
+        bw[ix_ord] = np.minimum(bw[ix_ord], 1.0)
+        bw[ix_unord] = np.minimum(bw[ix_unord], 1.0)
 
         return bw
 
@@ -318,8 +364,15 @@ class GenericKDE :
         """
         # the initial value for the optimization is the normal_reference
         h0 = self._normal_reference()
-        bw = optimize.fmin(self.loo_likelihood, x0=h0, args=(np.log, ),
-                           maxiter=1e3, maxfun=1e3, disp=0, xtol=1e-3)
+        bw = optimize.fmin(
+            self.loo_likelihood,
+            x0=h0,
+            args=(np.log,),
+            maxiter=1e3,
+            maxfun=1e3,
+            disp=0,
+            xtol=1e-3,
+        )
         bw = self._set_bw_bounds(bw)  # bound bw if necessary
         return bw
 
@@ -342,8 +395,7 @@ class GenericKDE :
         (``KDEMultivariate``) kernel density estimation.
         """
         h0 = self._normal_reference()
-        bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0,
-                           xtol=1e-3)
+        bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0, xtol=1e-3)
         bw = self._set_bw_bounds(bw)  # bound bw if necessary
         return bw
 
@@ -398,8 +450,17 @@ class EstimatorSettings:
     >>> settings = EstimatorSettings(randomize=True, n_jobs=3)
     >>> k_dens = KDEMultivariate(data, var_type, defaults=settings)
     """
-    def __init__(self, efficient=False, randomize=False, n_res=25, n_sub=50,
-                 return_median=True, return_only_bw=False, n_jobs=-1):
+
+    def __init__(
+        self,
+        efficient=False,
+        randomize=False,
+        n_res=25,
+        n_sub=50,
+        return_median=True,
+        return_only_bw=False,
+        n_jobs=-1,
+    ):
         self.efficient = efficient
         self.randomize = randomize
         self.n_res = n_res
@@ -430,6 +491,7 @@ class LeaveOneOut:
     A little lighter weight than sklearn LOO. We do not need test index.
     Also passes views on X, not the index.
     """
+
     def __init__(self, X):
         self.X = np.asarray(X)
 
@@ -451,7 +513,7 @@ def _get_type_pos(var_type):
 
 
 def _adjust_shape(dat, k_vars):
-    """ Returns an array of shape (nobs, k_vars) for use with `gpke`."""
+    """Returns an array of shape (nobs, k_vars) for use with `gpke`."""
     dat = np.asarray(dat)
     if dat.ndim > 2:
         dat = np.squeeze(dat)
@@ -469,8 +531,16 @@ def _adjust_shape(dat, k_vars):
     return dat
 
 
-def gpke(bw, data, data_predict, var_type, ckertype="gaussian",
-         okertype="wangryzin", ukertype="aitchisonaitken", tosum=True):
+def gpke(
+    bw,
+    data,
+    data_predict,
+    var_type,
+    ckertype="gaussian",
+    okertype="wangryzin",
+    ukertype="aitchisonaitken",
+    tosum=True,
+):
     r"""
     Returns the non-normalized Generalized Product Kernel Estimator
 
@@ -532,3 +602,48 @@ def gpke(bw, data, data_predict, var_type, ckertype="gaussian",
         return dens.sum(axis=0)
     else:
         return dens
+
+
+def initialize_generator(
+    seed: None | int | np.random.RandomState | np.random.Generator,
+) -> np.random.Generator | np.random.RandomState:
+    """
+    Handle seed transformation to a NumPy random generator object
+
+    Parameters
+    ----------
+    seed : {int, Generator, RandomState, None}, optional
+        If an initialized NumPy random Generator or an initialized RandomState,
+        the object is returned unchanged. If it is an integer, the value is
+        passed ot numpy.random.default_rng. If None, the functions will continue
+        to use the legacy singleton RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
+
+
+    Returns
+    -------
+    generator: {RandomState, BitGenerator}
+
+        The object that is used for random number generation.
+    """
+    if seed is None:
+        import warnings
+
+        warnings.warn(
+            "After 0.17 or January 2028, whichever comes first, the "
+            "default behavior will switch to using an entropy initialized "
+            "numpy.random.Generator.",
+            FutureWarning,
+            stacklevel=3,
+        )
+        return np.random.mtrand._rand
+    elif isinstance(seed, int):
+        return np.random.default_rng(seed)
+    elif not isinstance(seed, (np.random.Generator, np.random.RandomState)):
+        raise TypeError("Seed must be a Generator, RandomState, integer or None ")
+    return seed

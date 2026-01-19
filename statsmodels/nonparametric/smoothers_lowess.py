@@ -135,7 +135,7 @@ def lowess(
     This gives a similar comparison for when it is 0 vs not.
 
     >>> import numpy as np
-    >>> import scipy.stats as stats
+    >>> from scipy import stats
     >>> import statsmodels.api as sm
     >>> lowess = sm.nonparametric.lowess
     >>> x = np.random.uniform(low = -2*np.pi, high = 2*np.pi, size=500)

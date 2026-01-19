@@ -1,6 +1,3 @@
-subdir('_filters')
-subdir('_smoothers')
-
 _statspece_tree = _tsa_tree + [
     fs.copyfile('__init__.py'),
     fs.copyfile('_cfa_simulation_smoother.pxd'),
@@ -12,6 +9,8 @@ _statspece_tree = _tsa_tree + [
     fs.copyfile('_tools.pxd')
 ]
 
+subdir('_filters')
+subdir('_smoothers')
 
 statspece_cython_gen = generator(cython,
   arguments : cython_args,

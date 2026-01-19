@@ -27,7 +27,7 @@ jobs:
       OPENLAS_NUM_THREADS: 1
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0
@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: '3.x'
 
-      - uses: pypa/cibuildwheel@v3.2.1
+      - uses: pypa/cibuildwheel@v3.3.1
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_BEFORE_BUILD: python -m pip install pip --upgrade

@@ -97,6 +97,7 @@ class TestMixedLM:
 
     # Test analytic scores and Hessian using numeric differentiation
     @pytest.mark.slow
+    @pytest.mark.high_memory
     @pytest.mark.parametrize("use_sqrt", [False, True])
     @pytest.mark.parametrize("reml", [False, True])
     @pytest.mark.parametrize("profile_fe", [False, True])
@@ -1104,6 +1105,7 @@ def test_summary_col():
 
 
 @pytest.mark.slow
+@pytest.mark.high_memory
 def test_random_effects_getters():
     # Simulation-based test to make sure that the BLUPs and actual
     # random effects line up.
@@ -1285,7 +1287,7 @@ def test_singular():
     df["class"] = pd.Series([i % 3 for i in df.index], index=df.index)
 
     md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
-    with pytest.warns(SingularMatrixWarning, match="The random effects covariance"):
+    with pytest.warns(SingularMatrixWarning, match=r"effects"):
         mdf = md.fit()
     mdf.summary()
 

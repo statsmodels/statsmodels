@@ -474,11 +474,11 @@ class FormulaManager:
                 or formula.strip().startswith("~")
             ):
                 output = patsy.dmatrix(
-                    formula, data, eval_env=eval_env, return_type=return_type, **kwargs
+                    formula, data, eval_env=_eval_env, return_type=return_type, **kwargs
                 )
             else:  # "~" in formula:
                 output = patsy.dmatrices(
-                    formula, data, eval_env=eval_env, return_type=return_type, **kwargs
+                    formula, data, eval_env=_eval_env, return_type=return_type, **kwargs
                 )
             if isinstance(output, tuple):
                 self._spec = output[1].design_info

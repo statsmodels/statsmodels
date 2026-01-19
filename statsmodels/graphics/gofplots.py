@@ -94,7 +94,7 @@ class ProbPlot:
     degrees of freedom:
 
     >>> # example 2
-    >>> import scipy.stats as stats
+    >>> from scipy import stats
     >>> pplot = sm.ProbPlot(res, stats.t, distargs=(4,))
     >>> fig = pplot.qqplot()
     >>> h = plt.title("Ex. 2 - qqplot - residuals against quantiles of t-dist")
@@ -658,7 +658,7 @@ def qqplot(
     qqplot of the residuals against quantiles of t-distribution with 4 degrees
     of freedom:
 
-    >>> import scipy.stats as stats
+    >>> from scipy import stats
     >>> fig = sm.qqplot(res, stats.t, distargs=(4,))
     >>> plt.show()
 

@@ -71,6 +71,7 @@ test = [
     # test
     "pytest>=8.4.1,<9",
     "pytest-randomly",
+    "pytest-run-parallel",
     "pytest-xdist",
     "pytest-cov",
     "coverage[toml]",
@@ -283,6 +284,7 @@ filterwarnings = [
     "error:get_state is deprecated:FutureWarning",
     "error:Conversion of an array with ndim:DeprecationWarning:",
     "error:the matrix subclass is not the recommended::",
+    "error:The Dataframe Interchange Protocol::",
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",
@@ -297,7 +299,8 @@ markers = [
     "example: mark a test that runs example code",
     "matplotlib: mark a test that requires matplotlib",
     "slow: mark a test as slow",
-    "smoke: mark a test as a smoketest",
+    "smoke: mark a test as a smoke test",
+    "high_memory: mark a test as a high memory utilization test",
     "low_precision: mark a test as low precision",
     "todo: mark a test as incomplete"
 ]
