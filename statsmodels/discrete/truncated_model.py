@@ -8,6 +8,7 @@ from copy import deepcopy
 import warnings
 
 import numpy as np
+from scipy.linalg import block_diag
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -20,6 +21,8 @@ from statsmodels.discrete.discrete_model import (
     NegativeBinomialP,
     Poisson,
     _discrete_results_docs,
+    _l1_results_attr,
+    _validate_l1_method,
 )
 from statsmodels.distributions.discrete import (
     truncatednegbin,
@@ -1111,6 +1114,10 @@ class HurdleCountModel(CountModel):
             missing=missing,
             **kwargs
             )
+        if len(exog.shape) == 1:
+            self.k_exog = 1
+        else:
+            self.k_exog = exog.shape[1]
         self.k_extra1 = 0
         self.k_extra2 = 0
 
@@ -1202,7 +1209,6 @@ class HurdleCountModel(CountModel):
 
         # fix up cov_params,
         # we could use normalized cov_params directly, unless it's not used
-        from scipy.linalg import block_diag
         result._results.normalized_cov_params = None
         try:
             cov1 = results1._results.cov_params()
@@ -1219,6 +1225,175 @@ class HurdleCountModel(CountModel):
         return result
 
     fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def fit_regularized(
+        self,
+        start_params=None,
+        method="l1",
+        maxiter="defined_by_method",
+        full_output=1,
+        disp=1,
+        callback=None,
+        alpha=0,
+        trim_mode="auto",
+        auto_trim_tol=0.01,
+        size_trim_tol=1e-4,
+        qc_tol=0.03,
+        **kwargs,
+    ):
+        _validate_l1_method(method)
+
+        if np.size(alpha) == 1:
+            # Do not penalize extra parameters if alpha is a scalar
+            alpha = alpha * np.concatenate([
+                np.ones(self.k_exog),
+                np.zeros(self.k_extra1),
+                np.ones(self.k_exog),
+                np.zeros(self.k_extra2),
+            ])
+        alpha1 = alpha[: self.k_exog + self.k_extra1]
+        alpha2 = alpha[self.k_exog + self.k_extra1 :]
+
+        if start_params is None:
+            start_params1 = None
+            start_params2 = None
+        else:
+            start_params1 = start_params[: self.k_exog + self.k_extra1]
+            start_params2 = start_params[self.k_exog + self.k_extra1 :]
+
+        results1 = self.model1.fit_regularized(
+            start_params=start_params1,
+            method=method,
+            maxiter=maxiter,
+            full_output=full_output,
+            disp=False,
+            callback=callback,
+            alpha=alpha1,
+            trim_mode=trim_mode,
+            auto_trim_tol=auto_trim_tol,
+            size_trim_tol=size_trim_tol,
+            qc_tol=qc_tol,
+            **kwargs,
+        )
+        start_params1 = results1.params
+        results2 = self.model2.fit_regularized(
+            start_params=start_params2,
+            method=method,
+            maxiter=maxiter,
+            full_output=full_output,
+            disp=False,
+            callback=callback,
+            alpha=alpha2,
+            trim_mode=trim_mode,
+            auto_trim_tol=auto_trim_tol,
+            size_trim_tol=size_trim_tol,
+            qc_tol=qc_tol,
+            **kwargs,
+        )
+        start_params2 = results2.params
+        start_params = np.append(start_params1, start_params2)
+
+        cntfit = super(CountModel, self).fit_regularized(
+            start_params=start_params,
+            method=method,
+            maxiter=maxiter,
+            full_output=full_output,
+            disp=disp,
+            callback=callback,
+            alpha=alpha,
+            trim_mode=trim_mode,
+            auto_trim_tol=auto_trim_tol,
+            size_trim_tol=size_trim_tol,
+            qc_tol=qc_tol,
+            **kwargs,
+        )
+        cntfit.mle_retvals["converged"] = [
+            results1.mle_retvals["converged"], results2.mle_retvals["converged"]
+        ]
+        self.k_extra1 += getattr(results1._results, "k_extra", 0)
+        self.k_extra2 += getattr(results2._results, "k_extra", 0)
+        self.k_extra = (self.k_extra1 + self.k_extra2 + 1)
+        xnames1 = ["zm_" + name for name in self.model1.exog_names]
+        self.exog_names[:] = xnames1 + self.model2.exog_names
+        cntfit.normalized_cov_params = None
+        try:
+            cov1 = results1._results.cov_params()
+            cov2 = results2._results.cov_params()
+            cntfit.normalized_cov_params = block_diag(cov1, cov2)
+        except ValueError as e:
+            if "need covariance" not in str(e):
+                # could be some other problem
+                raise
+
+        hurdlefit = self.result_class_reg(
+            self, cntfit, results_zero=results1, results_count=results2
+        )
+        return self.result_class_reg_wrapper(hurdlefit)
+
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
+
+    def score_obs(self, params):
+        """
+        Hurdle model score (gradient) vector of the log-likelihood.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e., the first derivative of the
+            log-likelihood function, evaluated at `params`
+        """
+        k_zero = (
+            int((len(params) - self.k_extra1 - self.k_extra2) / 2)
+            + self.k_extra1
+        )
+        params_zero = params[:k_zero]
+        params_main = params[k_zero:]
+        score_zero = self.model1.score_obs(params_zero)
+        # The score of the main model is only defined for non-zero elements of
+        # endog due to under-the-hood masking in left-truncated models. Since
+        # those entries contribute nothing to the gradient, we can just fill
+        # them with 0.
+        score_main = np.zeros((self.exog.shape[0], self.k_exog + self.k_extra2))
+        truncated_score_main = self.model2.score_obs(params_main)
+        nonzero_idx = np.nonzero(self.endog)[0]
+        score_main[nonzero_idx, :] = truncated_score_main
+        return np.hstack((score_zero, score_main))
+
+    def score(self, params):
+        return self.score_obs(params).sum(0)
+
+    def hessian(self, params):
+        """
+        Hurdle model Hessian matrix of the log-likelihood. When the zero and
+        main models are separately estimated, this is a block diagonal matrix of
+        the two models' Hessians.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (k_vars, k_vars)
+            The Hessian, second derivative of loglikelihood function, evaluated
+            at `params`
+        """
+        k_zero = (
+            int((len(params) - self.k_extra1 - self.k_extra2) / 2)
+            + self.k_extra1
+        )
+        params_zero = params[:k_zero]
+        params_main = params[k_zero:]
+        hessian_zero = self.model1.hessian(params_zero)
+        hessian_main = self.model2.hessian(params_main)
+        hessian = block_diag(hessian_zero, hessian_main)
+        return hessian
 
     def predict(self, params, exog=None, exposure=None,
                 offset=None, which="mean", y_values=None):
@@ -1439,8 +1614,43 @@ class HurdleCountResults(CountResults):
         return np.append(self.results_zero.bse, self.results_count.bse)
 
 
-class L1HurdleCountResults(L1CountResults, HurdleCountResults):
-    pass
+class L1HurdleCountResults(HurdleCountResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description": "A results class for Hurdle model fit by l1 regularization",
+        "extra_attr": _l1_results_attr
+    }
+
+    def __init__(
+        self,
+        model,
+        mlefit,
+        results_zero,
+        results_count,
+        cov_type="nonrobust",
+        cov_kwds=None,
+        use_t=None,
+    ):
+        super().__init__(
+            model=model,
+            mlefit=mlefit,
+            results_zero=results_zero,
+            results_count=results_count,
+            cov_type=cov_type,
+            cov_kwds=cov_kwds,
+            use_t=use_t
+        )
+        # TODO: mixins might eliminate the need for the below duplicated code
+        #  (cf. .discrete_model.L1CountResults)
+        # self.trimmed is a boolean array with T/F telling whether or not that
+        # entry in params has been zeroed out.
+        self.trimmed = mlefit.mle_retvals["trimmed"]
+        self.nnz_params = (~self.trimmed).sum()
+
+        # Set degrees of freedom. Adjust for extra parameters not included in
+        # df_model.
+        k_extra = getattr(self.model, "k_extra", 0)
+        self.df_model = self.nnz_params - 1 - k_extra
+        self.df_resid = self.model.endog.shape[0] - self.nnz_params
 
 
 class HurdleCountResultsWrapper(lm.RegressionResultsWrapper):
