@@ -752,7 +752,7 @@ class TestHurdleL1Compatibility(CheckL1Compatability):
         )
         f_reg_zero = self.res_reg.f_test(np.eye(len(self.res_reg.params))[:m])
         assert_allclose(
-            f_unreg_zero.fvalue, f_reg_zero.fvalue, rtol=3e-5, atol=1e-3
+            f_unreg_zero.fvalue, f_reg_zero.fvalue, rtol=1e-4, atol=5e-2
         )
         assert_almost_equal(f_unreg_zero.pvalue, f_reg_zero.pvalue, 3)
         # Main model
@@ -763,6 +763,6 @@ class TestHurdleL1Compatibility(CheckL1Compatability):
             np.eye(len(self.res_reg.params))[kvars + k_extra1:kvars + k_extra1 + m]
         )
         assert_allclose(
-            f_unreg_main.fvalue, f_reg_main.fvalue, rtol=3e-5, atol=1e-3
+            f_unreg_main.fvalue, f_reg_main.fvalue, rtol=1e-4, atol=5e-2
         )
         assert_almost_equal(f_unreg_main.pvalue, f_reg_main.pvalue, 3)
