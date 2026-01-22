@@ -115,3 +115,11 @@ class TestDescriptiveStatistics(GenRes):
     def test_test_corr_weights(self):
         assert_almost_equal(self.mvres1.test_corr(.5, return_weights=1)[2],
                             self.res2.test_corr_weights, 4)
+
+    def test_descstat_invalid_input(self):
+        with pytest.raises(ValueError):
+            DescStat(np.array([]))
+        with pytest.raises(ValueError):
+            DescStat(5)
+        with pytest.raises(ValueError):
+            DescStat(np.zeros((2, 2, 2)))
