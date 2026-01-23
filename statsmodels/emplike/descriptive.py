@@ -41,6 +41,15 @@ def DescStat(endog):
         If k=1, the function returns a univariate instance, DescStatUV.
         If k>1, the function returns a multivariate instance, DescStatMV.
     """
+    endog = np.asarray(endog)
+
+    if endog.size == 0:
+        raise ValueError("endog must contain data")
+    if endog.ndim == 0:
+        endog = endog.reshape(1,1)
+    if endog.ndim > 2:
+        raise ValueError("endog must be 1D or 2D")
+    
     if endog.ndim == 1:
         endog = endog.reshape(len(endog), 1)
     if endog.shape[1] == 1:
