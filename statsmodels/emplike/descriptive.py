@@ -43,8 +43,10 @@ def DescStat(endog):
     """
     endog = np.asarray(endog)
 
-    if endog.ndim == 0 or endog.size == 0:
+    if endog.size == 0:
         raise ValueError("endog must contain data")
+    if endog.ndim == 0:
+        endog = endog.reshape(1,1)
     if endog.ndim > 2:
         raise ValueError("endog must be 1D or 2D")
     
