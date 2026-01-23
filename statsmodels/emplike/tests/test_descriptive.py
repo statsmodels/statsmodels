@@ -126,6 +126,6 @@ class TestDescriptiveStatistics(GenRes):
             np.zeros((2, 2, 2)),    
         ],
     )
-    def test_descstat_invalid_input(endog):
+    def test_descstat_invalid_input(self, endog):
         with pytest.raises(ValueError):
             DescStat(endog)
