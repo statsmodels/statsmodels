@@ -248,6 +248,7 @@ class HuberT(RobustNorm):
         test = self._subset(z)
         return (test * 0.5 * z**2 +
                 (1 - test) * (np.abs(z) * self.t - 0.5 * self.t**2))
+
     def psi(self, z):
         r"""
         The psi function for Huber's t estimator
@@ -262,15 +263,10 @@ class HuberT(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z      for \|z\| <= t
+            psi(z) = z      for |z| <= t
 
-            psi(z) = sign(z)*t for \|z\| > t
+            psi(z) = sign(z)*t for |z| > t
         """
-        z = np.asarray(z)
-        test = self._subset(z)
-        return test * z + (1 - test) * self.t * np.sign(z)
-
-    
         z = np.asarray(z)
         test = self._subset(z)
         return test * z + (1 - test) * self.t * np.sign(z)
@@ -319,7 +315,6 @@ class HuberT(RobustNorm):
         Used to estimate the robust covariance matrix.
         """
         return np.less_equal(np.abs(z), self.t).astype(float)
-    
 
 
 class RamsayE(RobustNorm):
@@ -1113,7 +1108,7 @@ class TukeyQuartic(RobustNorm):
 
         .. math::
 
-            \rho(z) = \begin{cases} 
+            \rho(z) = \begin{cases}
             \frac{1}{2} z^2 \left(1 - \frac{4}{k + 2} x^k + \frac{1}{k + 1} x^{2k}\right) & \text{for } |z| \le c \\
             \rho(c) & \text{for } |z| > c
             \end{cases}
