@@ -681,6 +681,7 @@ if __name__ == "__main__":
 
     # using Monette-Fox slides and Marden class notes for linear algebra /
     # orthogonal complement
+    # Fixed URL length
     # https://people.math.aau.dk/~rw/Undervisning/MM_BI/Handouts/anova_orthog.pdf
 
     table = anova_lm(moore_lm, typ=2)

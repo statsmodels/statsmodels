@@ -1110,7 +1110,7 @@ class TukeyQuartic(RobustNorm):
 
             \rho(z) = \begin{cases}
             \frac{1}{2} z^2 \left(1 - \frac{4}{k + 2} x^k + \frac{1}{k + 1} x^{2k}\right) & \text{for } |z| \le c \\
-            \rho(c) & \text{for } |z| > c
+            \rho(c) & \text{for } | z | > c
             \end{cases}
 
         where :math:`x = z / c`.
