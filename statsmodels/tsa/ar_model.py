@@ -236,15 +236,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
             self._deterministics = deterministic
             self._user_deterministic = True
         else:
-            self._deterministics = DeterministicProcess(
-                index, additional_terms=terms
-            )
+            self._deterministics = DeterministicProcess(index, additional_terms=terms)
         self._exog_names: list[str] = []
         self._k_ar = 0
         self._old_names = bool_like(old_names, "old_names", optional=False)
-        if deterministic is not None and (
-            self._trend != "n" or self._seasonal
-        ):
+        if deterministic is not None and (self._trend != "n" or self._seasonal):
             warnings.warn(
                 'When using deterministic, trend must be "n" and '
                 "seasonal must be False.",
@@ -326,9 +322,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 np.any(_lags_arr < 1)
                 or np.unique(_lags_arr).shape[0] != _lags_arr.shape[0]
             ):
-                raise ValueError(
-                    "All values in lags must be positive and distinct."
-                )
+                raise ValueError("All values in lags must be positive and distinct.")
             self._maxlag = np.max(_lags_arr)
             _lags = [int(v) for v in _lags_arr]
         else:
@@ -355,9 +349,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         exog_names = []
         endog_names = self.endog_names
         x, y = lagmat(self.endog, maxlag, original="sep")
-        exog_names.extend(
-            [endog_names + f".L{lag}" for lag in self._lags]
-        )
+        exog_names.extend([endog_names + f".L{lag}" for lag in self._lags])
         if len(self._lags) < maxlag:
             x = x[:, np.asarray(self._lags) - 1]
         self._k_ar = x.shape[1]
@@ -405,6 +397,15 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 "parameters."
             )
         self._y, self._x = y, x
+        if "c" in self._trend:
+            self.k_constant = 1
+        elif self._x.shape[1]:
+            aug_x = np.hstack((self._x, np.ones((x.shape[0], 1))))
+            rank = np.linalg.matrix_rank(aug_x)
+            self.k_constant = int(rank == self._x.shape[1])
+        else:
+            self.k_constant = 0
+
         self._exog_names = exog_names
 
     def fit(
@@ -475,9 +476,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             )
 
         ols_mod = OLS(self._y, self._x)
-        ols_res = ols_mod.fit(
-            cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t
-        )
+        ols_res = ols_mod.fit(cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
         cov_params = ols_res.cov_params()
         use_t = ols_res.use_t
         if cov_type == "nonrobust" and not use_t:
@@ -773,9 +772,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         return params, _exog, _exog_oos, start, end, num_oos
 
     def _parse_dynamic(self, dynamic, start):
-        if isinstance(
-            dynamic, (str, bytes, pd.Timestamp, dt.datetime, pd.Period)
-        ):
+        if isinstance(dynamic, (str, bytes, pd.Timestamp, dt.datetime, pd.Period)):
             dynamic_loc, _, _ = self._get_index_loc(dynamic)
             # Adjust since relative to start
             dynamic_loc -= start
@@ -861,18 +858,13 @@ class AutoReg(tsa_model.TimeSeriesModel):
                     "exog variable used to create the model {1}."
                 )
                 raise ValueError(msg.format(exog.shape, self.exog.shape))
-            if (
-                exog_oos is not None
-                and exog_oos.shape[1] != self.exog.shape[1]
-            ):
+            if exog_oos is not None and exog_oos.shape[1] != self.exog.shape[1]:
                 msg = (
                     "The number of columns in exog_oos ({0}) must match "
                     "the number of columns  in the exog variable used to "
                     "create the model ({1})."
                 )
-                raise ValueError(
-                    msg.format(exog_oos.shape[1], self.exog.shape[1])
-                )
+                raise ValueError(msg.format(exog_oos.shape[1], self.exog.shape[1]))
             if num_oos > 0 and exog_oos is None:
                 raise ValueError(
                     "exog_oos must be provided when producing "
@@ -888,9 +880,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
         if (isinstance(dynamic, bool) and not dynamic) or self._maxlag == 0:
             # If model has no lags, static and dynamic are identical
-            return self._static_predict(
-                params, start, end, num_oos, exog, exog_oos
-            )
+            return self._static_predict(params, start, end, num_oos, exog, exog_oos)
         dynamic = self._parse_dynamic(dynamic, start)
 
         return self._dynamic_predict(
@@ -1122,8 +1112,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         """
         The residuals of the model.
         """
-        model = self.model
-        endog = model.endog.squeeze()
+        endog = self.model.endog.squeeze()
         return endog[self._hold_back :] - self.fittedvalues
 
     def _lag_repr(self):
@@ -1178,6 +1167,59 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         model is fit by `mle`.
         """
         return self.model.predict(self.params)[self._hold_back :]
+
+    @cache_readonly
+    def rsquared(self):
+        """
+        R-squared of the model.
+
+        This is defined here as 1 - `ssr`/`centered_tss` if the constant is
+        included in the model and 1 - `ssr`/`uncentered_tss` if the constant is
+        omitted.
+        """
+        if self.model.k_constant:
+            return 1 - self.ssr / self.centered_tss
+        else:
+            return 1 - self.ssr / self.uncentered_tss
+
+    @cache_readonly
+    def ssr(self):
+        """Sum of squared (whitened) residuals."""
+        resid = self.resid
+        return np.dot(resid, resid)
+
+    @cache_readonly
+    def centered_tss(self):
+        """The total (weighted) sum of squares centered about the mean."""
+        y = np.squeeze(self.model._y)
+        centered_y = y - y.mean()
+        return float(np.dot(centered_y, centered_y))
+
+    @cache_readonly
+    def uncentered_tss(self):
+        """
+        Uncentered sum of squares.
+
+        The sum of the squared values of the (whitened) endogenous response
+        variable.
+        """
+        y = np.squeeze(self.model._y)
+        return float(np.dot(y, y))
+
+    @cache_readonly
+    def ess(self):
+        """
+        The explained sum of squares.
+
+        If a constant is present, the centered total sum of squares minus the
+        sum of squared residuals. If there is no constant, the uncentered total
+        sum of squares is used.
+        """
+
+        if self.model.k_constant:
+            return self.centered_tss - self.ssr
+        else:
+            return self.uncentered_tss - self.ssr
 
     def test_serial_correlation(self, lags=None, model_df=None):
         """
@@ -1348,9 +1390,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         smry.tables.append(tab)
         smry.tables.append(spacer)
         arch_lm = self.test_heteroskedasticity()
-        values = [
-            [i + 1] + row for i, row in enumerate(arch_lm.values.tolist())
-        ]
+        values = [[i + 1] + row for i, row in enumerate(arch_lm.values.tolist())]
         data_fmts = ("%10d", "%10.3f", "%10.3f", "%10d")
         tab = SimpleTable(
             values,
@@ -1363,9 +1403,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         return smry
 
     @Appender(remove_parameters(AutoReg.predict.__doc__, "params"))
-    def predict(
-        self, start=None, end=None, dynamic=False, exog=None, exog_oos=None
-    ):
+    def predict(self, start=None, end=None, dynamic=False, exog=None, exog_oos=None):
         return self.model.predict(
             self._params,
             start=start,
@@ -1496,8 +1534,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 mean = mean.iloc[-oos:]
         elif not in_sample:
             raise ValueError(
-                "in_sample is False but there are no"
-                "out-of-sample forecasts to plot."
+                "in_sample is False but there are no out-of-sample forecasts to plot."
             )
         ax.plot(mean, zorder=2, label="Forecast")
 
@@ -1712,9 +1749,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         ]
 
         smry = Summary()
-        smry.add_table_2cols(
-            self, gleft=top_left, gright=top_right, title=title
-        )
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, title=title)
         smry.add_table_params(self, alpha=alpha, use_t=False)
 
         # Make the roots table
@@ -1870,10 +1905,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 "exog must be None when the original model did not contain "
                 "exog variables"
             )
-        if (
-            existing.exog is not None
-            and existing.exog.shape[1] != mod.exog.shape[1]
-        ):
+        if existing.exog is not None and existing.exog.shape[1] != mod.exog.shape[1]:
             raise ValueError(
                 "The number of exog variables passed must match the original "
                 f"number of exog values ({existing.exog.shape[1]})"
@@ -1998,8 +2030,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         if no_exog != (exog is None):
             if no_exog:
                 err = (
-                    "Original model does not contain exog data but exog data "
-                    "passed"
+                    "Original model does not contain exog data but exog data passed"
                 )
             else:
                 err = "Original model has exog data but not exog data passed"
@@ -2007,15 +2038,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         if isinstance(existing.data.orig_endog, (pd.Series, pd.DataFrame)):
             endog = _check(existing.data.orig_endog, endog, "endog")
         else:
-            endog = _check(
-                existing.endog, np.asarray(endog), "endog", use_pandas=False
-            )
+            endog = _check(existing.endog, np.asarray(endog), "endog", use_pandas=False)
         if isinstance(existing.data.orig_exog, (pd.Series, pd.DataFrame)):
             exog = _check(existing.data.orig_exog, exog, "exog")
         elif exog is not None:
-            exog = _check(
-                existing.exog, np.asarray(exog), "endog", use_pandas=False
-            )
+            exog = _check(existing.exog, np.asarray(exog), "endog", use_pandas=False)
         return self.apply(endog, exog, refit=refit, fit_kwargs=fit_kwargs)
 
 
@@ -2129,9 +2156,7 @@ def ar_select_order(
         df_model = res.df_model
         sigma2 = 1.0 / nobs * sumofsq(res.resid)
         llf = -nobs * (np.log(2 * np.pi * sigma2) + 1) / 2
-        res = SimpleNamespace(
-            nobs=nobs, df_model=df_model, sigma2=sigma2, llf=llf
-        )
+        res = SimpleNamespace(nobs=nobs, df_model=df_model, sigma2=sigma2, llf=llf)
 
         aic = call_cached_func(AutoRegResults.aic, res)
         bic = call_cached_func(AutoRegResults.bic, res)
@@ -2141,9 +2166,7 @@ def ar_select_order(
 
     def ic_no_data():
         """Fake mod and results to handle no regressor case"""
-        mod = SimpleNamespace(
-            nobs=y.shape[0], endog=y, exog=np.empty((y.shape[0], 0))
-        )
+        mod = SimpleNamespace(nobs=y.shape[0], endog=y, exog=np.empty((y.shape[0], 0)))
         llf = OLS.loglike(mod, np.empty(0))
         res = SimpleNamespace(
             resid=y, nobs=y.shape[0], llf=llf, df_model=0, k_constant=0
@@ -2167,9 +2190,7 @@ def ar_select_order(
         bits = bits.view(np.uint8)
         bits = np.unpackbits(bits).reshape(-1, 32)
         for i in range(4):
-            bits[:, 8 * i : 8 * (i + 1)] = bits[:, 8 * i : 8 * (i + 1)][
-                :, ::-1
-            ]
+            bits[:, 8 * i : 8 * (i + 1)] = bits[:, 8 * i : 8 * (i + 1)][:, ::-1]
         masks = bits[:, :maxlag]
         for mask in masks:
             sel[base_col : base_col + maxlag] = mask

@@ -1,6 +1,7 @@
 """
 Test AR Model
 """
+
 from __future__ import annotations
 
 from statsmodels.compat.pandas import MONTH_END
@@ -102,10 +103,7 @@ for param in params:
         final.append(param)
 params = final
 names = ("AR", "Seasonal", "Trend", "Exog", "Cov Type")
-ids = [
-    ", ".join([n + ": " + str(p) for n, p in zip(names, param)])
-    for param in params
-]
+ids = [", ".join([n + ": " + str(p) for n, p in zip(names, param)]) for param in params]
 
 
 @pytest.fixture(scope="module", params=params, ids=ids)
@@ -132,6 +130,11 @@ attributes = [
     "scale",
     "tvalues",
     "use_t",
+    "ssr",
+    "ess",
+    "uncentered_tss",
+    "centered_tss",
+    "rsquared",
 ]
 
 
@@ -163,13 +166,18 @@ def fix_ols_attribute(val, attrib, res):
 @pytest.mark.parametrize("attribute", attributes)
 def test_equiv_ols_autoreg(ols_autoreg_result, attribute):
     a, o = ols_autoreg_result
+
+    assert a.model.k_constant == o.model.k_constant, (
+        a.model.k_constant,
+        o.model.k_constant,
+    )
     ols_a = getattr(o, attribute)
     ar_a = getattr(a, attribute)
     if callable(ols_a):
         ols_a = ols_a()
         ar_a = ar_a()
     ols_a = fix_ols_attribute(ols_a, attribute, o)
-    assert_allclose(ols_a, ar_a)
+    assert_allclose(ols_a, ar_a, atol=1e-12)
 
 
 def test_conf_int_ols_autoreg(ols_autoreg_result):
@@ -253,14 +261,10 @@ params = product(
 )
 params = list(params)
 params = [
-    param
-    for param in params
-    if (param[0] or param[1] != "n" or param[2] or param[3])
+    param for param in params if (param[0] or param[1] != "n" or param[2] or param[3])
 ]
 params = [
-    param
-    for param in params
-    if not param[2] or (param[2] and (param[4] or param[6]))
+    param for param in params if not param[2] or (param[2] and (param[4] or param[6]))
 ]
 param_fmt = """\
 lags: {0}, trend: {1}, seasonal: {2}, nexog: {3}, periods: {4}, \
@@ -274,9 +278,7 @@ def gen_data(nobs, nexog, pandas, seed=92874765):
     endog = rs.standard_normal(nobs)
     exog = rs.standard_normal((nobs, nexog)) if nexog else None
     if pandas:
-        index = pd.date_range(
-            dt.datetime(1999, 12, 31), periods=nobs, freq=MONTH_END
-        )
+        index = pd.date_range(dt.datetime(1999, 12, 31), periods=nobs, freq=MONTH_END)
         endog = pd.Series(endog, name="endog", index=index)
         if nexog:
             cols = [f"exog.{i}" for i in range(exog.shape[1])]
@@ -329,14 +331,10 @@ params = product(
 )
 params = list(params)
 params = [
-    param
-    for param in params
-    if (param[0] or param[1] != "n" or param[2] or param[3])
+    param for param in params if (param[0] or param[1] != "n" or param[2] or param[3])
 ]
 params = [
-    param
-    for param in params
-    if not param[2] or (param[2] and (param[4] or param[6]))
+    param for param in params if not param[2] or (param[2] and (param[4] or param[6]))
 ]
 param_fmt = """\
 lags: {0}, trend: {1}, seasonal: {2}, nexog: {3}, periods: {4}, \
@@ -402,6 +400,8 @@ def test_autoreg_predict_smoke(ar_data):
         missing=ar_data.missing,
     )
     res = mod.fit()
+    summary = res.summary()
+    assert isinstance(summary, Summary)
     exog_oos = None
     if ar_data.exog is not None:
         exog_oos = np.empty((1, ar_data.exog.shape[1]))
@@ -724,9 +724,7 @@ def test_ar_order_select():
     y = arma_generate_sample([1, -0.75, 0.3], [1], 100)
     ts = Series(
         y,
-        index=date_range(
-            start=dt.datetime(1990, 1, 1), periods=100, freq=MONTH_END
-        ),
+        index=date_range(start=dt.datetime(1990, 1, 1), periods=100, freq=MONTH_END),
     )
     res = ar_select_order(ts, maxlag=12, ic="aic")
     assert tuple(res.ar_lags) == (1, 2)
@@ -805,7 +803,7 @@ def test_autoreg_roots():
 def test_equiv_dynamic(reset_randomstate):
     e = np.random.standard_normal(1001)
     y = np.empty(1001)
-    y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9 ** 2))
+    y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9**2))
     for i in range(1, 1001):
         y[i] = 0.9 * y[i - 1] + e[i]
     mod = AutoReg(y, 1)
@@ -829,7 +827,7 @@ def test_dynamic_against_sarimax():
     rs = np.random.RandomState(12345678)
     e = rs.standard_normal(1001)
     y = np.empty(1001)
-    y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9 ** 2))
+    y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9**2))
     for i in range(1, 1001):
         y[i] = 0.9 * y[i - 1] + e[i]
     smod = SARIMAX(y, order=(1, 0, 0), trend="c")
@@ -852,15 +850,13 @@ def test_predict_seasonal():
     rs = np.random.RandomState(12345678)
     e = rs.standard_normal(1001)
     y = np.empty(1001)
-    y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9 ** 2))
+    y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9**2))
     effects = 10 * np.cos(np.arange(12) / 11 * 2 * np.pi)
     for i in range(1, 1001):
         y[i] = 10 + 0.9 * y[i - 1] + e[i] + effects[i % 12]
     ys = pd.Series(
         y,
-        index=pd.date_range(
-            dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END
-        ),
+        index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END),
     )
 
     mod = AutoReg(ys, 1, seasonal=True)
@@ -892,14 +888,12 @@ def test_predict_exog():
     e = rs.standard_normal(1001)
     y = np.empty(1001)
     x = rs.standard_normal((1001, 2))
-    y[:3] = e[:3] * np.sqrt(1.0 / (1 - 0.9 ** 2)) + x[:3].sum(1)
+    y[:3] = e[:3] * np.sqrt(1.0 / (1 - 0.9**2)) + x[:3].sum(1)
     for i in range(3, 1001):
         y[i] = 10 + 0.9 * y[i - 1] - 0.5 * y[i - 3] + e[i] + x[i].sum()
     ys = pd.Series(
         y,
-        index=pd.date_range(
-            dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END
-        ),
+        index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END),
     )
     xdf = pd.DataFrame(x, columns=["x0", "x1"], index=ys.index)
     mod = AutoReg(ys, [1, 3], trend="c", exog=xdf)
@@ -943,14 +937,11 @@ def test_predict_irregular_ar():
     rs = np.random.RandomState(12345678)
     e = rs.standard_normal(1001)
     y = np.empty(1001)
-    y[:3] = e[:3] * np.sqrt(1.0 / (1 - 0.9 ** 2))
+    y[:3] = e[:3] * np.sqrt(1.0 / (1 - 0.9**2))
     for i in range(3, 1001):
         y[i] = 10 + 0.9 * y[i - 1] - 0.5 * y[i - 3] + e[i]
     ys = pd.Series(
-        y,
-        index=pd.date_range(
-            dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END
-        )
+        y, index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END)
     )
     mod = AutoReg(ys, [1, 3], trend="ct")
     res = mod.fit()
@@ -964,21 +955,14 @@ def test_predict_irregular_ar():
     direct[1] = c + t * 902 + ar[0] * direct[0] + ar[1] * y[898]
     direct[2] = c + t * 903 + ar[0] * direct[1] + ar[1] * y[899]
     for i in range(3, 201):
-        direct[i] = (
-            c + t * (901 + i) + ar[0] * direct[i - 1] + ar[1] * direct[i - 3]
-        )
+        direct[i] = c + t * (901 + i) + ar[0] * direct[i - 1] + ar[1] * direct[i - 3]
     direct = pd.Series(
         direct, index=pd.date_range(ys.index[900], periods=201, freq=MONTH_END)
     )
     assert_series_equal(pred, direct)
 
     pred = res.predict(900)
-    direct = (
-        c
-        + t * np.arange(901, 901 + 101)
-        + ar[0] * y[899:-1]
-        + ar[1] * y[897:-3]
-    )
+    direct = c + t * np.arange(901, 901 + 101) + ar[0] * y[899:-1] + ar[1] * y[897:-3]
     idx = pd.date_range(ys.index[900], periods=101, freq=MONTH_END)
     direct = pd.Series(direct, index=idx)
     assert_series_equal(pred, direct)
@@ -989,25 +973,17 @@ def test_forecast_start_end_equiv(dynamic):
     rs = np.random.RandomState(12345678)
     e = rs.standard_normal(1001)
     y = np.empty(1001)
-    y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9 ** 2))
+    y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9**2))
     effects = 10 * np.cos(np.arange(12) / 11 * 2 * np.pi)
     for i in range(1, 1001):
         y[i] = 10 + 0.9 * y[i - 1] + e[i] + effects[i % 12]
     ys = pd.Series(
-        y, index=pd.date_range(
-            dt.datetime(1950, 1, 1),
-            periods=1001,
-            freq=MONTH_END
-        )
+        y, index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END)
     )
     mod = AutoReg(ys, 1, seasonal=True)
     res = mod.fit()
     pred_int = res.predict(1000, 1020, dynamic=dynamic)
-    dates = pd.date_range(
-        dt.datetime(1950, 1, 1),
-        periods=1021,
-        freq=MONTH_END
-    )
+    dates = pd.date_range(dt.datetime(1950, 1, 1), periods=1021, freq=MONTH_END)
     pred_dates = res.predict(dates[1000], dates[1020], dynamic=dynamic)
     assert_series_equal(pred_int, pred_dates)
 
@@ -1031,9 +1007,7 @@ def test_deterministic(reset_randomstate):
     m2 = AutoReg(y, trend="ct", seasonal=True, lags=2, period=12)
     res2 = m2.fit()
     assert_almost_equal(np.asarray(res.params), np.asarray(res2.params))
-    with pytest.warns(
-        SpecificationWarning, match="When using deterministic, trend"
-    ):
+    with pytest.warns(SpecificationWarning, match="When using deterministic, trend"):
         AutoReg(y, trend="ct", seasonal=False, lags=2, deterministic=dp)
     with pytest.raises(TypeError, match="deterministic must be"):
         AutoReg(y, 2, deterministic="ct")
@@ -1127,9 +1101,7 @@ def test_dynamic_predictions_oos(ar2):
     d25_end = res.predict(dynamic=25, end=61)
     s10_d15_end = res.predict(start=10, dynamic=15, end=61)
     end = ar2.index[-1] + 12 * (ar2.index[-1] - ar2.index[-2])
-    sd_index_end = res.predict(
-        start=ar2.index[10], dynamic=ar2.index[25], end=end
-    )
+    sd_index_end = res.predict(start=ar2.index[10], dynamic=ar2.index[25], end=end)
     assert_allclose(s10_d15_end, sd_index_end)
     assert_allclose(d25_end[25:], sd_index_end[15:])
 
@@ -1325,9 +1297,7 @@ def test_autoreg_append(append_data, use_pandas, lags, trend, seasonal):
         y_both = np.asarray(y_both)
         x_both = np.asarray(x_both)
 
-    res = AutoReg(
-        y, lags=lags, trend=trend, seasonal=seasonal, period=period
-    ).fit()
+    res = AutoReg(y, lags=lags, trend=trend, seasonal=seasonal, period=period).fit()
     res_append = res.append(y_oos, refit=True)
     res_direct = AutoReg(
         y_both, lags=lags, trend=trend, seasonal=seasonal, period=period
