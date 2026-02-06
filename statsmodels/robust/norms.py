@@ -227,6 +227,15 @@ class HuberT(RobustNorm):
         r"""
         The robust criterion function for Huber's t.
 
+        Huber's T is defined piecewise:
+
+        .. math::
+
+            \rho(z) = \begin{cases}
+                \frac{1}{2} z^{2} & \text{for } |z| \leq t \\
+                |z| t - \frac{1}{2} t^{2} & \text{for } |z| > t
+            \end{cases}
+
         Parameters
         ----------
         z : array_like
@@ -235,9 +244,7 @@ class HuberT(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = .5*z**2            for \|z\| <= t
-
-            rho(z) = \|z\|*t - .5*t**2    for \|z\| > t
+            The evaluated robust criterion function.
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -246,9 +253,16 @@ class HuberT(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function for Huber's t estimator
+        The psi function for Huber's t estimator.
 
-        The analytic derivative of rho
+        The analytic derivative of :meth:`rho`:
+
+        .. math::
+
+            \psi(z) = \begin{cases}
+                z & \text{for } |z| \leq t \\
+                \text{sign}(z) \cdot t & \text{for } |z| > t
+            \end{cases}
 
         Parameters
         ----------
@@ -258,9 +272,7 @@ class HuberT(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z      for \|z\| <= t
-
-            psi(z) = sign(z)*t for \|z\| > t
+            The evaluated psi function.
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -268,9 +280,16 @@ class HuberT(RobustNorm):
 
     def weights(self, z):
         r"""
-        Huber's t weighting function for the IRLS algorithm
+        Huber's t weighting function for the IRLS algorithm.
 
-        The psi function scaled by z
+        The :meth:`psi` function scaled by the input *z*:
+
+        .. math::
+
+            w(z) = \begin{cases}
+                1 & \text{for } |z| \leq t \\
+                \frac{t}{|z|} & \text{for } |z| > t
+            \end{cases}
 
         Parameters
         ----------
@@ -280,9 +299,7 @@ class HuberT(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = 1          for \|z\| <= t
-
-            weights(z) = t/\|z\|      for \|z\| > t
+            The evaluated weighting function.
         """
         z_isscalar = np.isscalar(z)
         z = np.atleast_1d(z)
@@ -297,8 +314,25 @@ class HuberT(RobustNorm):
         return v
 
     def psi_deriv(self, z):
-        """
-        The derivative of Huber's t psi function
+        r"""
+        The derivative of Huber's t psi function.
+
+        .. math::
+
+            \psi'(z) = \begin{cases}
+                1 & \text{for } |z| \leq t \\
+                0 & \text{for } |z| > t
+            \end{cases}
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        psi_deriv : ndarray
+            The evaluated derivative of the psi function.
 
         Notes
         -----
