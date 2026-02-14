@@ -62,6 +62,7 @@ __all__ = [
     "pacf_burg",
     "pacf_ols",
     "pacf_yw",
+    "pccf",
     "q_stat",
     "range_unit_root_test",
     "zivot_andrews",
@@ -1150,6 +1151,17 @@ def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
         level given by alpha and the standard deviation calculated as
         1/sqrt(len(x)) [1]. Shape (nlags, 2). Returned if alpha is not None.
 
+    See Also
+    --------
+    statsmodels.tsa.stattools.pccf
+        Partial cross-correlation function.
+    statsmodels.tsa.stattools.acf
+        Autocorrelation function.
+    statsmodels.tsa.stattools.pacf
+        Partial autocorrelation function.
+    statsmodels.graphics.tsaplots.plot_ccf
+        Plot cross-correlations and confidence intervals.
+
     Notes
     -----
     If adjusted is True, the denominator for the cross-correlation is adjusted.
@@ -1170,6 +1182,258 @@ def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
 
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(len(x))
+        confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
+        return ret, confint
+    else:
+        return ret
+
+
+def _pccf_yw(x, y, nlags):
+    """PCCF via multivariate Levinson-Durbin recursion."""
+    nobs = len(x)
+    xo = x - x.mean()
+    yo = y - y.mean()
+
+    gamma = np.empty((nlags + 1, 2, 2))
+    for h in range(nlags + 1):
+        if h == 0:
+            gamma[h] = [[xo.dot(xo), yo.dot(xo)],
+                        [xo.dot(yo), yo.dot(yo)]]
+        else:
+            gamma[h] = [[xo[h:].dot(xo[:-h]), yo[h:].dot(xo[:-h])],
+                        [xo[h:].dot(yo[:-h]), yo[h:].dot(yo[:-h])]]
+    gamma /= nobs
+
+    if np.linalg.matrix_rank(gamma[0]) < 2:
+        return np.full(nlags, np.nan)
+
+    sig_f = gamma[0].copy()
+    sig_b = gamma[0].copy()
+
+    phi_prev = [None] * (nlags + 1)
+    psi_prev = [None] * (nlags + 1)
+
+    pccf_vals = np.empty(nlags)
+
+    for s in range(1, nlags + 1):
+        delta_f = gamma[s].copy()
+        delta_b = gamma[s].T.copy()
+        for j in range(1, s):
+            delta_f -= phi_prev[j] @ gamma[s - j]
+            delta_b -= psi_prev[j] @ gamma[s - j].T
+
+        d_f = np.sqrt(np.diag(sig_f))
+        d_b = np.sqrt(np.diag(sig_b))
+
+        if d_f[0] < 1e-15 or d_b[1] < 1e-15:
+            pccf_vals[s - 1:] = np.nan
+            break
+
+        pccf_vals[s - 1] = delta_f[0, 1] / (d_f[0] * d_b[1])
+
+        phi_ss = delta_f @ np.linalg.inv(sig_b)
+        psi_ss = delta_b @ np.linalg.inv(sig_f)
+
+        phi_new = [None] * (nlags + 1)
+        psi_new = [None] * (nlags + 1)
+        phi_new[s] = phi_ss
+        psi_new[s] = psi_ss
+        for j in range(1, s):
+            phi_new[j] = phi_prev[j] - phi_ss @ psi_prev[s - j]
+            psi_new[j] = psi_prev[j] - psi_ss @ phi_prev[s - j]
+
+        sig_f = sig_f - phi_ss @ delta_b
+        sig_b = sig_b - psi_ss @ delta_f
+        phi_prev = phi_new
+        psi_prev = psi_new
+
+    return pccf_vals
+
+
+def _pccf_ols(x, y, nlags):
+    """PCCF via OLS regression on intervening observations."""
+    nobs = len(x)
+    pccf_vals = []
+
+    for h in range(1, nlags + 1):
+        if h == 1:
+            resid_x = x[:nobs - 1]
+            resid_y = y[1:nobs]
+        else:
+            indices = np.arange(0, nobs - h)
+            if len(indices) < 2:
+                pccf_vals.append(np.nan)
+                continue
+
+            carriers = add_constant(np.column_stack(
+                [x[indices + j] for j in range(1, h)]
+                + [y[indices + j] for j in range(1, h)]
+            ))
+            targets = np.column_stack([x[indices], y[indices + h]])
+            coeffs = lstsq(carriers, targets, rcond=None)[0]
+            resids = targets - carriers.dot(coeffs)
+            resid_x = resids[:, 0]
+            resid_y = resids[:, 1]
+
+        if resid_x.size < 2:
+            pccf_vals.append(np.nan)
+        else:
+            pccf_vals.append(
+                np.corrcoef(resid_x, resid_y)[0, 1]
+            )
+
+    return np.array(pccf_vals)
+
+
+def pccf(
+    x: ArrayLike1D,
+    y: ArrayLike1D,
+    *,
+    nlags: int | None = None,
+    method: Literal["yw", "ols"] = "yw",
+    alpha: float | None = None,
+) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
+    """
+    Partial Cross-Correlation Function.
+
+    Computes the (1,2) element of the partial lag correlation
+    matrix P(s) for the bivariate series (x, y) at lags
+    1, 2, ..., nlags. At lag h, this is the correlation between
+    x_t and y_{t+h} after removing the linear dependence on all
+    intervening observations of both series.
+
+    Parameters
+    ----------
+    x, y : array_like
+        The time series data to use in the calculation.
+    nlags : int, optional
+        Number of lags to return partial cross-correlations for.
+        If not provided, uses
+        min(10 * np.log10(nobs), nobs - 1).
+    method : {"yw", "ols"}, default "yw"
+        Specifies which method for the calculations to use.
+
+        - "yw" : Yule-Walker via the multivariate Levinson-Durbin
+          recursion applied to the 2x2 autocovariance matrix
+          sequence. This is the default and is significantly faster
+          than OLS, especially for large lag orders.
+        - "ols" : OLS regression of x_t and y_{t+h} on all
+          intervening observations.
+    alpha : float, optional
+        If a number is given, the confidence intervals for the
+        given level are returned. For instance if alpha=.05,
+        95 % confidence intervals are returned where the standard
+        deviation is 1/sqrt(n).
+
+    Returns
+    -------
+    pccf : ndarray
+        The partial cross-correlation function for lags
+        1, 2, ..., nlags.
+    confint : ndarray, optional
+        Confidence intervals for the PCCF at lags
+        1, 2, ..., nlags using the level given by alpha. Shape
+        (nlags, 2). Returned if alpha is not None.
+
+    See Also
+    --------
+    statsmodels.tsa.stattools.ccf
+        Cross-correlation function.
+    statsmodels.tsa.stattools.acf
+        Autocorrelation function.
+    statsmodels.tsa.stattools.pacf
+        Partial autocorrelation function.
+    statsmodels.graphics.tsaplots.plot_pccf
+        Plot partial cross-correlations and confidence intervals.
+
+    Notes
+    -----
+    The PCCF at lag h is the (1,2) element of the partial lag
+    correlation matrix P(h) defined by Heyse and Wei (1985) [2]_.
+
+    pccf(x, y) is not symmetric: pccf(x, y) != pccf(y, x) in
+    general. The (1,2) element measures the partial association
+    from x to y, while pccf(y, x) measures the reverse direction.
+
+    The "yw" method uses the multivariate Levinson-Durbin recursion
+    on the bivariate autocovariance matrix sequence. For stationary
+    series, this is asymptotically equivalent to OLS by the
+    Frisch-Waugh-Lovell theorem [3]_, but is O(n * nlags) versus
+    O(n * nlags^3) for OLS. The two methods may differ
+    substantially on non-stationary (e.g. trending) data.
+
+    The "ols" method computes pccf(h) as the sample correlation
+    between the backward residual (x_t regressed on the
+    intervening observations) and the forward residual (y_{t+h}
+    regressed on the same intervening observations). Both
+    regressions include an intercept. For h=1, there are no
+    intervening observations, so pccf(1) reduces to the
+    cross-correlation at lag 1.
+
+    For a bivariate VAR(p) process, P(h) = 0 for h > p,
+    providing a useful identification tool.
+
+    If the series are perfectly collinear or constant, the sample
+    autocovariance matrix is singular and the "yw" method returns
+    NaN for all lags.
+
+    The confidence intervals use the asymptotic standard deviation
+    1/sqrt(n), following Wei (2006, Section 11.2) [1]_.
+
+    References
+    ----------
+    .. [1] Wei, W. W. S. (2006). Time Series Analysis:
+       Univariate and Multivariate Methods, 2nd edition.
+       Pearson.
+    .. [2] Heyse, J. F. and Wei, W. W. S. (1985). Inverse
+       and partial lag autocorrelation for vector time series.
+       American Statistical Association Proceedings of Business
+       and Economic Statistics Section, pp. 233-237.
+    .. [3] Frisch, R. and Waugh, F. V. (1933). Partial time
+       regressions as compared with individual trends.
+       Econometrica, 1(4), 387-401.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from statsmodels.tsa.stattools import pccf
+    >>> rng = np.random.default_rng(12345)
+    >>> x = rng.standard_normal(100)
+    >>> y = 0.5 * x + rng.standard_normal(100)
+    >>> result = pccf(x, y, nlags=5)
+    >>> result_with_ci = pccf(x, y, nlags=5, alpha=0.05)
+    >>> result_with_ci[0].shape
+    (5,)
+    >>> result_with_ci[1].shape
+    (5, 2)
+    """
+    x = array_like(x, "x")
+    y = array_like(y, "y")
+    nlags = int_like(nlags, "nlags", optional=True)
+    method = string_like(method, "method", options=("yw", "ols"))
+    alpha = float_like(alpha, "alpha", optional=True)
+
+    nobs = len(x)
+    if len(y) != nobs:
+        raise ValueError("x and y must have the same length")
+
+    if nlags is None:
+        nlags = max(min(int(10 * np.log10(nobs)), nobs - 1), 1)
+
+    if nlags <= 0:
+        raise ValueError("nlags must be a positive integer")
+    if nlags >= nobs:
+        raise ValueError(
+            "nlags must be less than the length of the series"
+        )
+
+    if method == "yw":
+        ret = _pccf_yw(x, y, nlags)
+    else:
+        ret = _pccf_ols(x, y, nlags)
+
+    if alpha is not None:
+        interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(nobs)
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
         return ret, confint
     else:
