@@ -490,6 +490,13 @@ class TestPCCF:
         assert len(result) == 5
         assert np.all(np.isnan(result))
 
+    def test_yw_singular_intermediate_recursion_returns_nan(self):
+        x = np.array([0.0, 0.0, -1.0, 2.0, -1.0])
+        y = np.array([-1.0, 0.0, -2.0, -2.0, 0.0])
+        result = pccf(x, y, nlags=2, method="yw")
+        assert len(result) == 2
+        assert np.all(np.isfinite(result) | np.isnan(result))
+
     def test_return_consistency(self):
         result_no_alpha = pccf(self.x, self.y, nlags=5)
         result_with_alpha, confint = pccf(

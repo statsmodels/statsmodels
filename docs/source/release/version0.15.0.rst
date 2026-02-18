@@ -7,7 +7,7 @@ Release 0.15.0
 Release summary
 ===============
 
-statsmodels is using github to store the updated documentation. Two version are available:
+statsmodels is using GitHub to store the updated documentation. Two versions are available:
 
 - `Stable <https://www.statsmodels.org/>`_, the latest release
 - `Development <https://www.statsmodels.org/devel/>`_, the latest build of the main branch

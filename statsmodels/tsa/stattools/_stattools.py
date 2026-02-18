@@ -1222,17 +1222,26 @@ def _pccf_yw(x, y, nlags):
             delta_f -= phi_prev[j] @ gamma[s - j]
             delta_b -= psi_prev[j] @ gamma[s - j].T
 
-        d_f = np.sqrt(np.diag(sig_f))
-        d_b = np.sqrt(np.diag(sig_b))
-
-        if d_f[0] < 1e-15 or d_b[1] < 1e-15:
+        v_f = sig_f[0, 0]
+        v_b = sig_b[1, 1]
+        if not np.isfinite(v_f) or not np.isfinite(v_b):
+            pccf_vals[s - 1:] = np.nan
+            break
+        if v_f <= 1e-15 or v_b <= 1e-15:
             pccf_vals[s - 1:] = np.nan
             break
 
-        pccf_vals[s - 1] = delta_f[0, 1] / (d_f[0] * d_b[1])
+        d_f = np.sqrt(v_f)
+        d_b = np.sqrt(v_b)
 
-        phi_ss = delta_f @ np.linalg.inv(sig_b)
-        psi_ss = delta_b @ np.linalg.inv(sig_f)
+        pccf_vals[s - 1] = delta_f[0, 1] / (d_f * d_b)
+
+        try:
+            phi_ss = np.linalg.solve(sig_b.T, delta_f.T).T
+            psi_ss = np.linalg.solve(sig_f.T, delta_b.T).T
+        except np.linalg.LinAlgError:
+            pccf_vals[s - 1:] = np.nan
+            break
 
         phi_new = [None] * (nlags + 1)
         psi_new = [None] * (nlags + 1)
