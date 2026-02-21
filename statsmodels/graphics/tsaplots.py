@@ -10,7 +10,7 @@ import pandas as pd
 
 from statsmodels.graphics import utils
 from statsmodels.tools.validation import array_like
-from statsmodels.tsa.stattools import acf, ccf, pacf
+from statsmodels.tsa.stattools import acf, ccf, pacf, pccf
 
 if TYPE_CHECKING:
     from statsmodels.tsa.base.prediction import PredictionResults
@@ -476,6 +476,134 @@ def plot_ccf(
         ax,
         title,
         ccf_xy,
+        confint,
+        lags,
+        irregular,
+        use_vlines,
+        vlines_kwargs,
+        auto_ylims=auto_ylims,
+        skip_lag0_confint=False,
+        **kwargs,
+    )
+
+    return fig
+
+
+def plot_pccf(
+    x,
+    y,
+    *,
+    ax=None,
+    lags=None,
+    method="yw",
+    alpha=0.05,
+    use_vlines=True,
+    title="Partial Cross-correlation",
+    auto_ylims=False,
+    vlines_kwargs=None,
+    **kwargs,
+):
+    """
+    Plot the partial cross-correlation function
+
+    Partial cross-correlations between ``x`` and the lags of ``y``
+    are calculated.
+
+    The lags are shown on the horizontal axis and the partial
+    cross-correlations on the vertical axis.
+
+    Parameters
+    ----------
+    x, y : array_like
+        Arrays of time-series values.
+    ax : AxesSubplot, optional
+        If given, this subplot is used to plot in, otherwise a new
+        figure with one subplot is created.
+    lags : {int, array_like}, optional
+        An int or array of lag values, used on the horizontal axis.
+        Uses ``np.arange(lags)`` when lags is an int.  If not
+        provided, ``lags=np.arange(len(corr))`` is used.
+    method : {"yw", "ols"}, default "yw"
+        Specifies which method for the calculations to use.
+
+        - "yw" : Yule-Walker via the multivariate Levinson-Durbin
+          recursion.
+        - "ols" : OLS regression of x_t and y_{t+h} on all
+          intervening observations.
+    alpha : scalar, optional
+        If a number is given, the confidence intervals for the
+        given level are plotted, e.g. if alpha=.05, 95 %
+        confidence intervals are shown.
+        If None, confidence intervals are not shown on the plot.
+    use_vlines : bool, optional
+        If True, shows vertical lines and markers for the
+        correlation values. If False, only shows markers.  The
+        default marker is 'o'; it can be overridden with a
+        ``marker`` kwarg.
+    title : str, optional
+        Title to place on plot. Default is
+        'Partial Cross-correlation'.
+    auto_ylims : bool, optional
+        If True, adjusts automatically the vertical axis limits
+        to PCCF values.
+    vlines_kwargs : dict, optional
+        Optional dictionary of keyword arguments that are passed
+        to vlines.
+    **kwargs : kwargs, optional
+        Optional keyword arguments that are directly passed on to
+        the Matplotlib ``plot`` and ``axhline`` functions.
+
+    Returns
+    -------
+    Figure
+        The figure where the plot is drawn. This is either an
+        existing figure if the `ax` argument is provided, or a
+        newly created figure if `ax` is None.
+
+    See Also
+    --------
+    statsmodels.graphics.tsaplots.plot_ccf
+    statsmodels.graphics.tsaplots.plot_pacf
+    statsmodels.graphics.tsaplots.plot_acf
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import matplotlib.pyplot as plt
+    >>> import statsmodels.api as sm
+
+    >>> dta = sm.datasets.macrodata.load_pandas().data
+    >>> diffed = dta.diff().dropna()
+    >>> sm.graphics.tsa.plot_pccf(
+    ...     diffed["unemp"], diffed["infl"]
+    ... )
+    >>> plt.show()
+    """
+    fig, ax = utils.create_mpl_ax(ax)
+
+    lags, nlags, irregular = _prepare_data_corr_plot(x, lags, True)
+    vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
+
+    pccf_res = pccf(x, y, alpha=alpha, nlags=nlags, method=method)
+    if alpha is not None:
+        pccf_xy, confint = pccf_res
+    else:
+        pccf_xy = pccf_res
+        confint = None
+
+    if irregular:
+        lags = lags[lags > 0]
+        pccf_xy = pccf_xy[lags - 1]
+        if confint is not None:
+            confint = confint[lags - 1]
+        irregular = False
+    else:
+        lags = lags[1:nlags + 1]
+
+    _plot_corr(
+        ax,
+        title,
+        pccf_xy,
         confint,
         lags,
         irregular,

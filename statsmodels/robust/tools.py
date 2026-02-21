@@ -58,7 +58,7 @@ def _var_normal(norm):
 
     """
     num = stats.norm.expect(lambda x: norm.psi(x) ** 2)
-    denom = stats.norm.expect(lambda x: norm.psi_deriv(x))**2
+    denom = stats.norm.expect(norm.psi_deriv)**2
     return num / denom
 
 
@@ -215,7 +215,7 @@ def tuning_s_estimator_mean(norm, breakdown=None):
     def func(c):
         norm_ = norm
         norm_._set_tuning_param(c, inplace=True)
-        bp = stats.norm.expect(lambda x: norm_.rho(x)) / norm_.max_rho()
+        bp = stats.norm.expect(norm_.rho) / norm_.max_rho()
         return bp
 
     res = []
@@ -223,7 +223,7 @@ def tuning_s_estimator_mean(norm, breakdown=None):
         c_bp = optimize.brentq(lambda c0, bp: func(c0) - bp, 0.1, 10, args=(bp,))
         norm._set_tuning_param(c_bp, inplace=True)  # inplace modification
         eff = 1 / _var_normal(norm)
-        b = stats.norm.expect(lambda x : norm.rho(x))
+        b = stats.norm.expect(norm.rho)
         res.append([bp, eff, c_bp, b])
 
     if np.size(bps) > 1:
