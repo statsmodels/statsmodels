@@ -466,7 +466,18 @@ class DiscreteModel(base.LikelihoodModel):
         if nnz_params > 0:
             H_restricted = H[nz_idx[:, None], nz_idx]
             # Covariance estimate for the nonzero params
-            H_restricted_inv = np.linalg.inv(-H_restricted)
+            try:
+                H_restricted_inv = np.linalg.inv(-H_restricted)
+            except np.linalg.LinAlgError as e:
+                raise np.linalg.LinAlgError(
+                    "Hessian matrix is singular and cannot be inverted. "
+                    "This is often caused by perfect or quasi-perfect separation "
+                    "in the data, where one or more predictors perfectly predict "
+                    "the outcome, or by multicollinearity among predictors. "
+                    "Consider checking your data for separation, removing "
+                    "redundant predictors, or increasing the regularization "
+                    "penalty (alpha)."
+                ) from e
         else:
             H_restricted_inv = np.zeros(0)
 
