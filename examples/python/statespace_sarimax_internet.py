@@ -84,7 +84,7 @@ for p in range(6):
         try:
             res = mod.fit(disp=False)
             aic_full.iloc[p, q] = res.aic
-        except:
+        except Exception:
             aic_full.iloc[p, q] = np.nan
 
         # Estimate the model with missing datapoints
@@ -94,7 +94,7 @@ for p in range(6):
         try:
             res = mod.fit(disp=False)
             aic_miss.iloc[p, q] = res.aic
-        except:
+        except Exception:
             aic_miss.iloc[p, q] = np.nan
 
 # For the models estimated over the full (non-missing) dataset, the AIC
