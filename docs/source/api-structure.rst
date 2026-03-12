@@ -121,7 +121,7 @@ Functions and classes::
 Modules ::
 
     from statsmodels.datasets import macrodata
-    import statsmodels.stats import diagnostic
+    from statsmodels.stats import diagnostic
 
 Modules with aliases ::
 
