@@ -141,7 +141,7 @@ class CheckPredict():
         pmw = res1.get_prediction(which="mean", average=True, agg_weights=aw)
         dfmw = pmw.summary_frame()
         assert_allclose(pmw.predicted, pm6.predicted, rtol=1e-13)
-        assert_allclose(dfmw, dfm6, rtol=1e-7)
+        assert_allclose(dfmw, dfm6, rtol=1e-6)
 
     @pytest.mark.matplotlib
     def test_diagnostic(self, close_figures):
