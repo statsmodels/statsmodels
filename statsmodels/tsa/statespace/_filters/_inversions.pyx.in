@@ -25,6 +25,7 @@ import numpy as np
 from statsmodels.includes.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
+include "statsmodels/tsa/statespace/_blas_int.pxi"
 
 from statsmodels.tsa.statespace._kalman_filter cimport (
     MEMORY_NO_SMOOTHING, MEMORY_NO_STD_FORECAST)
@@ -63,7 +64,8 @@ cdef {{cython_type}} {{prefix}}inverse_univariate({{prefix}}KalmanFilter kfilter
 
     # #### Intermediate values
     cdef:
-        int inc = 1
+        blas_int inc = 1
+        blas_int _k_endogstates = model._k_endogstates
         {{cython_type}} scalar
 
     # Take the inverse of the forecast error covariance matrix
@@ -81,8 +83,8 @@ cdef {{cython_type}} {{prefix}}inverse_univariate({{prefix}}KalmanFilter kfilter
                                     ' covariance matrix encountered at'
                                     ' period %d' % kfilter.t)
     kfilter._tmp2[0] = scalar * kfilter._forecast_error[0]
-    blas.{{prefix}}copy(&model._k_endogstates, model._design, &inc, kfilter._tmp3, &inc)
-    blas.{{prefix}}scal(&model._k_endogstates, &scalar, kfilter._tmp3, &inc)
+    blas.{{prefix}}copy(&_k_endogstates, model._design, &inc, kfilter._tmp3, &inc)
+    blas.{{prefix}}scal(&_k_endogstates, &scalar, kfilter._tmp3, &inc)
 
     if not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
         kfilter._standardized_forecast_error[0] = kfilter._forecast_error[0] * scalar**0.5
@@ -105,13 +107,16 @@ cdef {{cython_type}} {{prefix}}factorize_cholesky({{prefix}}KalmanFilter kfilter
     returns the determinant that was passed in.
     """
     cdef:
-        int inc = 1
-        int info
+        blas_int inc = 1
+        blas_int info
         int i
+        blas_int k_endog2 = kfilter.k_endog2
+        blas_int k_endog = kfilter.k_endog
+        blas_int _k_endog = model._k_endog
 
     if not kfilter.converged or not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
-        blas.{{prefix}}copy(&kfilter.k_endog2, kfilter._forecast_error_cov, &inc, kfilter._forecast_error_fac, &inc)
-        lapack.{{prefix}}potrf("U", &model._k_endog, kfilter._forecast_error_fac, &kfilter.k_endog, &info)
+        blas.{{prefix}}copy(&k_endog2, kfilter._forecast_error_cov, &inc, kfilter._forecast_error_fac, &inc)
+        lapack.{{prefix}}potrf("U", &_k_endog, kfilter._forecast_error_fac, &k_endog, &info)
 
         if info < 0:
             raise np.linalg.LinAlgError('Illegal value in forecast error'
@@ -144,16 +149,19 @@ cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{pr
     returns the determinant that was passed in.
     """
     cdef:
-        int inc = 1
-        int info
+        blas_int inc = 1
+        blas_int info
         int i
+        blas_int k_endog2 = kfilter.k_endog2
+        blas_int k_endog = kfilter.k_endog
+        blas_int _k_endog = model._k_endog
 
     if not kfilter.converged:
         # Perform LU decomposition into `forecast_error_fac`
-        blas.{{prefix}}copy(&kfilter.k_endog2, kfilter._forecast_error_cov, &inc, kfilter._forecast_error_fac, &inc)
+        blas.{{prefix}}copy(&k_endog2, kfilter._forecast_error_cov, &inc, kfilter._forecast_error_fac, &inc)
 
-        lapack.{{prefix}}getrf(&model._k_endog, &model._k_endog,
-                        kfilter._forecast_error_fac, &kfilter.k_endog,
+        lapack.{{prefix}}getrf(&_k_endog, &_k_endog,
+                        kfilter._forecast_error_fac, &k_endog,
                         kfilter._forecast_error_ipiv, &info)
 
         if info < 0:
@@ -185,9 +193,12 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
     returns the determinant that was passed in.
     """
     cdef:
-        int info
-        int inc = 1
+        blas_int info
+        blas_int inc = 1
         int i, j
+        blas_int k_endog = kfilter.k_endog
+        blas_int _k_endog = model._k_endog
+        blas_int _k_states = model._k_states
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
 
@@ -199,10 +210,10 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
         # (in the notation of DK, kfilter._forecast_error_fac holds L_t', and
         # we want to solve the equation L_t' v_t^s = v_t)
         if not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
-            blas.{{prefix}}copy(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._standardized_forecast_error, &inc)
-            lapack.{{prefix}}trtrs("U", "T", "N", &model._k_endog, &inc,
-                                   kfilter._forecast_error_fac, &kfilter.k_endog,
-                                   kfilter._standardized_forecast_error, &kfilter.k_endog, &info)
+            blas.{{prefix}}copy(&k_endog, kfilter._forecast_error, &inc, kfilter._standardized_forecast_error, &inc)
+            lapack.{{prefix}}trtrs("U", "T", "N", &_k_endog, &inc,
+                                   kfilter._forecast_error_fac, &k_endog,
+                                   kfilter._standardized_forecast_error, &k_endog, &info)
 
             if info != 0:
                 raise np.linalg.LinAlgError('Error computing standardized'
@@ -210,7 +221,7 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
                                             % kfilter.t)
 
         # Continue taking the inverse
-        lapack.{{prefix}}potri("U", &model._k_endog, kfilter._forecast_error_fac, &kfilter.k_endog, &info)
+        lapack.{{prefix}}potri("U", &_k_endog, kfilter._forecast_error_fac, &k_endog, &info)
 
         # ?potri only fills in the upper triangle of the symmetric array, and
         # since the ?symm and ?symv routines are not available as of scipy
@@ -227,33 +238,33 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
     # $\\#_2 = F_t^{-1} v_t$
     #blas.{{prefix}}symv("U", &model._k_endog, &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
     #               kfilter._forecast_error, &inc, &beta, kfilter._tmp2, &inc)
-    blas.{{prefix}}gemv("N", &model._k_endog, &model._k_endog,
-                   &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
+    blas.{{prefix}}gemv("N", &_k_endog, &_k_endog,
+                   &alpha, kfilter._forecast_error_fac, &k_endog,
                            kfilter._forecast_error, &inc,
                    &beta, kfilter._tmp2, &inc)
 
     # `tmp3` array used here, dimension $(p \times m)$
     # $\\#_3 = F_t^{-1} Z_t$
-    #blas.{{prefix}}symm("L", "U", &kfilter.k_endog, &kfilter.k_states,
-    #               &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
-    #                       kfilter._design, &kfilter.k_endog,
-    #               &beta, kfilter._tmp3, &kfilter.k_endog)
-    blas.{{prefix}}gemm("N", "N", &model._k_endog, &model._k_states, &model._k_endog,
-                   &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
-                           model._design, &model._k_endog,
-                   &beta, kfilter._tmp3, &kfilter.k_endog)
+    #blas.{{prefix}}symm("L", "U", &k_endog, &kfilter.k_states,
+    #               &alpha, kfilter._forecast_error_fac, &k_endog,
+    #                       kfilter._design, &k_endog,
+    #               &beta, kfilter._tmp3, &k_endog)
+    blas.{{prefix}}gemm("N", "N", &_k_endog, &_k_states, &_k_endog,
+                   &alpha, kfilter._forecast_error_fac, &k_endog,
+                           model._design, &_k_endog,
+                   &beta, kfilter._tmp3, &k_endog)
 
     if not (kfilter.conserve_memory & MEMORY_NO_SMOOTHING > 0):
         # `tmp4` array used here, dimension $(p \times p)$
         # $\\#_4 = F_t^{-1} H_t$
-        #blas.{{prefix}}symm("L", "U", &kfilter.k_endog, &kfilter.k_endog,
-        #               &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
-        #                       kfilter._obs_cov, &kfilter.k_endog,
-        #               &beta, kfilter._tmp4, &kfilter.k_endog)
-        blas.{{prefix}}gemm("N", "N", &model._k_endog, &model._k_endog, &model._k_endog,
-                       &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
-                               model._obs_cov, &model._k_endog,
-                       &beta, kfilter._tmp4, &kfilter.k_endog)
+        #blas.{{prefix}}symm("L", "U", &k_endog, &k_endog,
+        #               &alpha, kfilter._forecast_error_fac, &k_endog,
+        #                       kfilter._obs_cov, &k_endog,
+        #               &beta, kfilter._tmp4, &k_endog)
+        blas.{{prefix}}gemm("N", "N", &_k_endog, &_k_endog, &_k_endog,
+                       &alpha, kfilter._forecast_error_fac, &k_endog,
+                               model._obs_cov, &_k_endog,
+                       &beta, kfilter._tmp4, &k_endog)
 
     return determinant
 
@@ -265,8 +276,12 @@ cdef {{cython_type}} {{prefix}}inverse_lu({{prefix}}KalmanFilter kfilter, {{pref
     returns the determinant that was passed in.
     """
     cdef:
-        int info
-        int inc = 1
+        blas_int info
+        blas_int inc = 1
+        blas_int k_endog = kfilter.k_endog
+        blas_int _k_endog = model._k_endog
+        blas_int _k_states = model._k_states
+        blas_int ldwork = kfilter.ldwork
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
 
@@ -275,32 +290,32 @@ cdef {{cython_type}} {{prefix}}inverse_lu({{prefix}}KalmanFilter kfilter, {{pref
         determinant = {{prefix}}factorize_lu(kfilter, model, determinant)
 
         # Continue taking the inverse
-        lapack.{{prefix}}getri(&model._k_endog, kfilter._forecast_error_fac, &kfilter.k_endog,
-               kfilter._forecast_error_ipiv, kfilter._forecast_error_work, &kfilter.ldwork, &info)
+        lapack.{{prefix}}getri(&_k_endog, kfilter._forecast_error_fac, &k_endog,
+               kfilter._forecast_error_ipiv, kfilter._forecast_error_work, &ldwork, &info)
 
     # Get `tmp2` and `tmp3` via matrix multiplications
 
     # `tmp2` array used here, dimension $(p \times 1)$
     # $\\#_2 = F_t^{-1} v_t$
-    blas.{{prefix}}gemv("N", &model._k_endog, &model._k_endog,
-                   &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
+    blas.{{prefix}}gemv("N", &_k_endog, &_k_endog,
+                   &alpha, kfilter._forecast_error_fac, &k_endog,
                            kfilter._forecast_error, &inc,
                    &beta, kfilter._tmp2, &inc)
 
     # `tmp3` array used here, dimension $(p \times m)$
     # $\\#_3 = F_t^{-1} Z_t$
-    blas.{{prefix}}gemm("N", "N", &model._k_endog, &model._k_states, &model._k_endog,
-                   &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
-                           model._design, &model._k_endog,
-                   &beta, kfilter._tmp3, &kfilter.k_endog)
+    blas.{{prefix}}gemm("N", "N", &_k_endog, &_k_states, &_k_endog,
+                   &alpha, kfilter._forecast_error_fac, &k_endog,
+                           model._design, &_k_endog,
+                   &beta, kfilter._tmp3, &k_endog)
 
     if not (kfilter.conserve_memory & MEMORY_NO_SMOOTHING > 0):
         # `tmp4` array used here, dimension $(p \times p)$
         # $\\#_4 = F_t^{-1} H_t$
-        blas.{{prefix}}gemm("N", "N", &model._k_endog, &model._k_endog, &model._k_endog,
-                       &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
-                               model._obs_cov, &model._k_endog,
-                       &beta, kfilter._tmp4, &kfilter.k_endog)
+        blas.{{prefix}}gemm("N", "N", &_k_endog, &_k_endog, &_k_endog,
+                       &alpha, kfilter._forecast_error_fac, &k_endog,
+                               model._obs_cov, &_k_endog,
+                       &beta, kfilter._tmp4, &k_endog)
 
     return determinant
 
@@ -312,8 +327,14 @@ cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{
     returns the determinant that was passed in.
     """
     cdef:
-        int info, i, j
-        int inc = 1
+        blas_int info
+        int i, j
+        blas_int inc = 1
+        blas_int k_endog = kfilter.k_endog
+        blas_int k_endog2 = kfilter.k_endog2
+        blas_int k_endogstates = kfilter.k_endogstates
+        blas_int _k_endog = model._k_endog
+        blas_int _k_states = model._k_states
 
     if not kfilter.converged:
         # Perform the Cholesky decomposition and get the determinant
@@ -323,10 +344,10 @@ cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{
     # (in the notation of DK, kfilter._forecast_error_fac holds L_t', and
     # we want to solve the equation L_t' v_t^s = v_t)
     if not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
-        blas.{{prefix}}copy(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._standardized_forecast_error, &inc)
-        lapack.{{prefix}}trtrs("U", "T", "N", &model._k_endog, &inc,
-                               kfilter._forecast_error_fac, &kfilter.k_endog,
-                               kfilter._standardized_forecast_error, &kfilter.k_endog, &info)
+        blas.{{prefix}}copy(&k_endog, kfilter._forecast_error, &inc, kfilter._standardized_forecast_error, &inc)
+        lapack.{{prefix}}trtrs("U", "T", "N", &_k_endog, &inc,
+                               kfilter._forecast_error_fac, &k_endog,
+                               kfilter._standardized_forecast_error, &k_endog, &info)
 
         if info != 0:
                 raise np.linalg.LinAlgError('Error computing standardized'
@@ -336,29 +357,29 @@ cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{
     # Solve the linear systems
     # `tmp2` array used here, dimension $(p \times 1)$
     # $F_t \\#_2 = v_t$
-    blas.{{prefix}}copy(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
-    lapack.{{prefix}}potrs("U", &model._k_endog, &inc, kfilter._forecast_error_fac, &kfilter.k_endog, kfilter._tmp2, &kfilter.k_endog, &info)
+    blas.{{prefix}}copy(&k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
+    lapack.{{prefix}}potrs("U", &_k_endog, &inc, kfilter._forecast_error_fac, &k_endog, kfilter._tmp2, &k_endog, &info)
 
     # `tmp3` array used here, dimension $(p \times m)$
     # $F_t \\#_3 = Z_t$
     if model._k_states == model.k_states and model._k_endog == model.k_endog:
-        blas.{{prefix}}copy(&kfilter.k_endogstates, model._design, &inc, kfilter._tmp3, &inc)
+        blas.{{prefix}}copy(&k_endogstates, model._design, &inc, kfilter._tmp3, &inc)
     else:
         for i in range(model._k_states): # columns
             for j in range(model._k_endog): # rows
                 kfilter._tmp3[j + i*kfilter.k_endog] = model._design[j + i*model._k_endog]
-    lapack.{{prefix}}potrs("U", &model._k_endog, &model._k_states, kfilter._forecast_error_fac, &kfilter.k_endog, kfilter._tmp3, &kfilter.k_endog, &info)
+    lapack.{{prefix}}potrs("U", &_k_endog, &_k_states, kfilter._forecast_error_fac, &k_endog, kfilter._tmp3, &k_endog, &info)
 
     if not (kfilter.conserve_memory & MEMORY_NO_SMOOTHING > 0):
         # `tmp4` array used here, dimension $(p \times p)$
         # $F_t \\#_4 = H_t$
         if model._k_states == model.k_states and model._k_endog == model.k_endog:
-            blas.{{prefix}}copy(&kfilter.k_endog2, model._obs_cov, &inc, kfilter._tmp4, &inc)
+            blas.{{prefix}}copy(&k_endog2, model._obs_cov, &inc, kfilter._tmp4, &inc)
         else:
             for i in range(model._k_endog): # columns
                 for j in range(model._k_endog): # rows
                     kfilter._tmp4[j + i*kfilter.k_endog] = model._obs_cov[j + i*model._k_endog]
-        lapack.{{prefix}}potrs("U", &model._k_endog, &model._k_endog, kfilter._forecast_error_fac, &kfilter.k_endog, kfilter._tmp4, &kfilter.k_endog, &info)
+        lapack.{{prefix}}potrs("U", &_k_endog, &_k_endog, kfilter._forecast_error_fac, &k_endog, kfilter._tmp4, &k_endog, &info)
 
     return determinant
 
@@ -370,8 +391,13 @@ cdef {{cython_type}} {{prefix}}solve_lu({{prefix}}KalmanFilter kfilter, {{prefix
     returns the determinant that was passed in.
     """
     cdef:
-        int info
-        int inc = 1
+        blas_int info
+        blas_int inc = 1
+        blas_int k_endog = kfilter.k_endog
+        blas_int k_endog2 = kfilter.k_endog2
+        blas_int k_endogstates = kfilter.k_endogstates
+        blas_int _k_endog = model._k_endog
+        blas_int _k_states = model._k_states
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
 
@@ -382,32 +408,32 @@ cdef {{cython_type}} {{prefix}}solve_lu({{prefix}}KalmanFilter kfilter, {{prefix
     # Solve the linear systems
     # `tmp2` array used here, dimension $(p \times 1)$
     # $F_t \\#_2 = v_t$
-    blas.{{prefix}}copy(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
-    lapack.{{prefix}}getrs("N", &model._k_endog, &inc, kfilter._forecast_error_fac, &kfilter.k_endog,
-                    kfilter._forecast_error_ipiv, kfilter._tmp2, &kfilter.k_endog, &info)
+    blas.{{prefix}}copy(&k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
+    lapack.{{prefix}}getrs("N", &_k_endog, &inc, kfilter._forecast_error_fac, &k_endog,
+                    kfilter._forecast_error_ipiv, kfilter._tmp2, &k_endog, &info)
 
     # `tmp3` array used here, dimension $(p \times m)$
     # $F_t \\#_3 = Z_t$
     if model._k_states == model.k_states and model._k_endog == model.k_endog:
-        blas.{{prefix}}copy(&kfilter.k_endogstates, model._design, &inc, kfilter._tmp3, &inc)
+        blas.{{prefix}}copy(&k_endogstates, model._design, &inc, kfilter._tmp3, &inc)
     else:
         for i in range(model._k_states): # columns
             for j in range(model._k_endog): # rows
                 kfilter._tmp3[j + i*kfilter.k_endog] = model._design[j + i*model._k_endog]
-    lapack.{{prefix}}getrs("N", &model._k_endog, &model._k_states, kfilter._forecast_error_fac, &kfilter.k_endog,
-                    kfilter._forecast_error_ipiv, kfilter._tmp3, &kfilter.k_endog, &info)
+    lapack.{{prefix}}getrs("N", &_k_endog, &_k_states, kfilter._forecast_error_fac, &k_endog,
+                    kfilter._forecast_error_ipiv, kfilter._tmp3, &k_endog, &info)
 
     if not (kfilter.conserve_memory & MEMORY_NO_SMOOTHING > 0):
         # `tmp4` array used here, dimension $(p \times p)$
         # $F_t \\#_4 = H_t$
         if model._k_states == model.k_states and model._k_endog == model.k_endog:
-            blas.{{prefix}}copy(&kfilter.k_endog2, model._obs_cov, &inc, kfilter._tmp4, &inc)
+            blas.{{prefix}}copy(&k_endog2, model._obs_cov, &inc, kfilter._tmp4, &inc)
         else:
             for i in range(model._k_endog): # columns
                 for j in range(model._k_endog): # rows
                     kfilter._tmp4[j + i*kfilter.k_endog] = model._obs_cov[j + i*model._k_endog]
-        lapack.{{prefix}}getrs("N", &model._k_endog, &model._k_endog, kfilter._forecast_error_fac, &kfilter.k_endog,
-                        kfilter._forecast_error_ipiv, kfilter._tmp4, &kfilter.k_endog, &info)
+        lapack.{{prefix}}getrs("N", &_k_endog, &_k_endog, kfilter._forecast_error_fac, &k_endog,
+                        kfilter._forecast_error_ipiv, kfilter._tmp4, &k_endog, &info)
 
     return determinant
 
