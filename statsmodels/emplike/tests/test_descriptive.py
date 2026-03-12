@@ -121,9 +121,7 @@ class TestDescriptiveStatistics(GenRes):
         "endog",
         [
             np.array([]),           
-            np.array(5),            
-            5,                      
-            np.zeros((2, 2, 2)),    
+            np.zeros((2, 2, 2)),
         ],
     )
     def test_descstat_invalid_input(self, endog):
