@@ -1,6 +1,3 @@
-subdir('_filters')
-subdir('_smoothers')
-
 _statspece_tree = _tsa_tree + [
     fs.copyfile('__init__.py'),
     fs.copyfile('_cfa_simulation_smoother.pxd'),
@@ -12,6 +9,14 @@ _statspece_tree = _tsa_tree + [
     fs.copyfile('_tools.pxd')
 ]
 
+_blas_int_pxi = configure_file(
+  input: '_blas_int.pxi.in',
+  output: '_blas_int.pxi',
+  configuration: _blas_int_conf,
+)
+
+subdir('_filters')
+subdir('_smoothers')
 
 statspece_cython_gen = generator(cython,
   arguments : cython_args,

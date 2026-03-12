@@ -47,6 +47,7 @@ np.import_array()
 
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
+include "statsmodels/tsa/statespace/_blas_int.pxi"
 cimport statsmodels.tsa.statespace._tools as tools
 
 cdef int FORTRAN = 1
@@ -82,7 +83,7 @@ cdef class {{prefix}}CFASimulationSmoother(object):
     """
 
     def __init__(self, {{prefix}}Statespace model):
-        cdef int inc = 1
+        cdef blas_int inc = 1
         cdef:
             np.npy_intp dim1[1]
             np.npy_intp dim2[2]
@@ -203,12 +204,18 @@ cdef class {{prefix}}CFASimulationSmoother(object):
         # "lower diagonal ordered form" - see e.g. Scipy's documentation page
         # for linalg.cholesky_banded for details of the storage format
         cdef:
-            int t, i, j, rows, ld, info
+            int t, i, j
+            blas_int rows, ld, info
             int reset_missing = 0
-            int inc = 1
+            blas_int inc = 1
             {{cython_type}} alpha = 1.0
             {{cython_type}} beta = 0.0
             {{cython_type}} gamma = -1.0
+            blas_int k_states = self.k_states
+            blas_int k_states2 = self.k_states2
+            blas_int _k_endog = self.model._k_endog
+            blas_int _k_endog2 = self.model._k_endog2
+            blas_int _k_endogstates = self.model._k_endogstates
             int time_varying_obs_intercept = self.model.obs_intercept.shape[1] > 1
             int time_varying_design = self.model.design.shape[2] > 1
             int time_varying_obs_cov = self.model.obs_cov.shape[2] > 1
@@ -225,13 +232,13 @@ cdef class {{prefix}}CFASimulationSmoother(object):
         if self.model.initialized_diffuse:
             self.initial_state_cov_inv[:] = 0.
         else:
-            blas.{{prefix}}copy(&self.k_states2, self.model._initial_state_cov, &inc, self._initial_state_cov_inv, &inc)
-            lapack.{{prefix}}potrf("L", &self.k_states, self._initial_state_cov_inv, &self.k_states, &info)
+            blas.{{prefix}}copy(&k_states2, self.model._initial_state_cov, &inc, self._initial_state_cov_inv, &inc)
+            lapack.{{prefix}}potrf("L", &k_states, self._initial_state_cov_inv, &k_states, &info)
             if info > 0:
                 raise np.linalg.LinAlgError('Non-positive-definite initial state covariance matrix.')
             elif info < 0:
                 raise np.linalg.LinAlgError('Invalid value in initial state covariance matrix.')
-            lapack.{{prefix}}potri("L", &self.k_states, self._initial_state_cov_inv, &self.k_states, &info)
+            lapack.{{prefix}}potri("L", &k_states, self._initial_state_cov_inv, &k_states, &info)
 
         # Iterate over periods
         j = 0  # this will be a column counter
@@ -248,59 +255,64 @@ cdef class {{prefix}}CFASimulationSmoother(object):
             # Invert selected_state_cov
             # (again, we actually need the inverse itself)
             if t == 0 or time_varying_selected_state_cov:
-                blas.{{prefix}}copy(&self.k_states2, self.model._selected_state_cov, &inc, self._selected_state_cov_inv, &inc)
-                lapack.{{prefix}}potrf("L", &self.k_states, self._selected_state_cov_inv, &self.k_states, &info)
+                blas.{{prefix}}copy(&k_states2, self.model._selected_state_cov, &inc, self._selected_state_cov_inv, &inc)
+                lapack.{{prefix}}potrf("L", &k_states, self._selected_state_cov_inv, &k_states, &info)
                 if info > 0:
                     raise np.linalg.LinAlgError('Non-positive-definite selected state covariance matrix encountered at period %d' % t)
                 elif info < 0:
                     raise np.linalg.LinAlgError('Invalid value in selected state covariance matrix encountered at period %d' % t)
-                lapack.{{prefix}}potri("L", &self.k_states, self._selected_state_cov_inv, &self.k_states, &info)
+                lapack.{{prefix}}potri("L", &k_states, self._selected_state_cov_inv, &k_states, &info)
 
             # T(RQRi)T + (RQRi)
             if (t == 0 or time_varying_transition or
                     time_varying_selected_state_cov):
                 # QiT = (RQRi) @ T
-                blas.{{prefix}}symm("L", "L", &self.k_states, &self.k_states,
-                                    &alpha, self._selected_state_cov_inv, &self.k_states,
-                                        self.model._transition, &self.k_states,
-                                    &beta, self._QiT, &self.k_states)
+                blas.{{prefix}}symm("L", "L", &k_states, &k_states,
+                                    &alpha, self._selected_state_cov_inv, &k_states,
+                                        self.model._transition, &k_states,
+                                    &beta, self._QiT, &k_states)
 
                 # TQiT = T.T @ QiT
-                blas.{{prefix}}gemm("T", "N", &self.k_states, &self.k_states, &self.k_states,
-                                    &alpha, self.model._transition, &self.k_states,
-                                        self._QiT, &self.k_states,
-                                    &beta, self._TQiT, &self.k_states)
+                blas.{{prefix}}gemm("T", "N", &k_states, &k_states, &k_states,
+                                    &alpha, self.model._transition, &k_states,
+                                        self._QiT, &k_states,
+                                    &beta, self._TQiT, &k_states)
 
                 # TQiTpQ = TQiT + RQRi
                 # Note: there will not be correct entries in the upper triangle, because
                 # selected_state_cov was only set in the lower triangle. However, that's
                 # okay because we only reference the lower triangle, below
-                blas.{{prefix}}copy(&self.k_states2, self._selected_state_cov_inv, &inc, self._TQiTpQ, &inc)
-                blas.{{prefix}}axpy(&self.k_states2, &alpha, self._TQiT, &inc, self._TQiTpQ, &inc)
+                blas.{{prefix}}copy(&k_states2, self._selected_state_cov_inv, &inc, self._TQiTpQ, &inc)
+                blas.{{prefix}}axpy(&k_states2, &alpha, self._TQiT, &inc, self._TQiTpQ, &inc)
 
             # Z (Hi) Z
             if t == 0 or reset_missing or time_varying_design or time_varying_obs_cov:
 
                 # Cholesky of obs_cov
                 if t == 0 or reset_missing or time_varying_obs_cov:
-                    blas.{{prefix}}copy(&self.model._k_endog2, self.model._obs_cov, &inc, self._obs_cov_fac, &inc)
-                    lapack.{{prefix}}potrf("L", &self.model._k_endog, self._obs_cov_fac, &self.model._k_endog, &info)
+                    _k_endog = self.model._k_endog
+                    _k_endog2 = self.model._k_endog2
+                    _k_endogstates = self.model._k_endogstates
+                    blas.{{prefix}}copy(&_k_endog2, self.model._obs_cov, &inc, self._obs_cov_fac, &inc)
+                    lapack.{{prefix}}potrf("L", &_k_endog, self._obs_cov_fac, &_k_endog, &info)
                     if info > 0:
                         raise np.linalg.LinAlgError('Non-positive-definite observation covariance matrix encountered at period %d' % t)
                     elif info < 0:
                         raise np.linalg.LinAlgError('Invalid value in observation covariance matrix encountered at period %d' % t)
 
                 # HiZ = Hi Z
-                blas.{{prefix}}copy(&self.model._k_endogstates, self.model._design, &inc, self._HiZ, &inc)
-                lapack.{{prefix}}potrs("L", &self.model._k_endog, &self.k_states,
-                                       self._obs_cov_fac, &self.model._k_endog,
-                                       self._HiZ, &self.model._k_endog, &info)
+                _k_endog = self.model._k_endog
+                _k_endogstates = self.model._k_endogstates
+                blas.{{prefix}}copy(&_k_endogstates, self.model._design, &inc, self._HiZ, &inc)
+                lapack.{{prefix}}potrs("L", &_k_endog, &k_states,
+                                       self._obs_cov_fac, &_k_endog,
+                                       self._HiZ, &_k_endog, &info)
 
                 # ZHiZ = Z.T @ HiZ
-                blas.{{prefix}}gemm("T", "N", &self.k_states, &self.k_states, &self.model._k_endog,
-                                    &alpha, self.model._design, &self.model._k_endog,
-                                        self._HiZ, &self.model._k_endog,
-                                    &beta, self._ZHiZ, &self.k_states)
+                blas.{{prefix}}gemm("T", "N", &k_states, &k_states, &_k_endog,
+                                    &alpha, self.model._design, &_k_endog,
+                                        self._HiZ, &_k_endog,
+                                    &beta, self._ZHiZ, &k_states)
 
             # Fill in K and posterior_cov_inv_chol (which is right now just
             # going to contain posterior_cov_inv, and then we will take the
@@ -324,10 +336,10 @@ cdef class {{prefix}}CFASimulationSmoother(object):
                     blas.{{prefix}}axpy(&rows, &alpha, &self.ZHiZ[i, i], &inc,
                                                         &self.posterior_cov_inv_chol[0, j], &inc)
                     # K[q - i:q + q - i, col] = -QiT[:q, i]
-                    blas.{{prefix}}copy(&self.k_states, &self.QiT[0, i], &inc, &self.K[rows, j], &inc)
-                    blas.{{prefix}}scal(&self.k_states, &gamma, &self.K[rows, j], &inc)
+                    blas.{{prefix}}copy(&k_states, &self.QiT[0, i], &inc, &self.K[rows, j], &inc)
+                    blas.{{prefix}}scal(&k_states, &gamma, &self.K[rows, j], &inc)
                     # P[q - i:q + q - i, col] = -QiT[:q, i]
-                    blas.{{prefix}}copy(&self.k_states, &self.K[rows, j], &inc,
+                    blas.{{prefix}}copy(&k_states, &self.K[rows, j], &inc,
                                                                &self.posterior_cov_inv_chol[rows, j], &inc)
 
                 # Last period is different
@@ -346,12 +358,12 @@ cdef class {{prefix}}CFASimulationSmoother(object):
             # Prior mean
             if t == 0:
                 # prior_mean[:, 0] = initial_state
-                blas.{{prefix}}copy(&self.k_states, self.model._initial_state, &inc, &self.prior_mean[0, 0], &inc)
+                blas.{{prefix}}copy(&k_states, self.model._initial_state, &inc, &self.prior_mean[0, 0], &inc)
             else:
                 # prior_mean[:, t] = c[:, t] + T @ prior_mean[:, t-1]
-                blas.{{prefix}}copy(&self.k_states, self.model._state_intercept, &inc, &self.prior_mean[0, t], &inc)
-                blas.{{prefix}}gemv("N", &self.k_states, &self.k_states,
-                                    &alpha, self.model._transition, &self.k_states,
+                blas.{{prefix}}copy(&k_states, self.model._state_intercept, &inc, &self.prior_mean[0, t], &inc)
+                blas.{{prefix}}gemv("N", &k_states, &k_states,
+                                    &alpha, self.model._transition, &k_states,
                                             &self.prior_mean[0, t - 1], &inc,
                                     &alpha, &self.prior_mean[0, t], &inc)
 
@@ -359,19 +371,21 @@ cdef class {{prefix}}CFASimulationSmoother(object):
             if self.model.nmissing[t] == self.model.k_endog:
                 self.posterior_mean[:, t] = 0
             else:
-                blas.{{prefix}}copy(&self.model._k_endog, self.model._obs, &inc, &self.ymd[0], &inc)
-                blas.{{prefix}}axpy(&self.model._k_endog, &gamma, self.model._obs_intercept, &inc, &self.ymd[0], &inc)
-                blas.{{prefix}}gemv("T", &self.model._k_endog, &self.k_states,
-                                         &alpha, self._HiZ, &self.model._k_endog,
+                _k_endog = self.model._k_endog
+                blas.{{prefix}}copy(&_k_endog, self.model._obs, &inc, &self.ymd[0], &inc)
+                blas.{{prefix}}axpy(&_k_endog, &gamma, self.model._obs_intercept, &inc, &self.ymd[0], &inc)
+                blas.{{prefix}}gemv("T", &_k_endog, &k_states,
+                                         &alpha, self._HiZ, &_k_endog,
                                                 &self.ymd[0], &inc,
                                          &beta, &self.posterior_mean[0, t], &inc)
 
         # Orders of sparse matrices
-        order = self.model.nobs * self.k_states
+        cdef blas_int blas_order = self.order
+        cdef blas_int blas_lower_bandwidth = self.lower_bandwidth
         ld = self.lower_bandwidth + 1
 
         # Compute the sparse Cholesky factor of posterior cov
-        lapack.{{prefix}}pbtrf("L", &self.order, &self.lower_bandwidth,
+        lapack.{{prefix}}pbtrf("L", &blas_order, &blas_lower_bandwidth,
                                &self.posterior_cov_inv_chol[0, 0], &ld,
                                &info)
         if info > 0:
@@ -381,17 +395,19 @@ cdef class {{prefix}}CFASimulationSmoother(object):
 
         # Compute the posterior mean
         # posterior_mean = P^{-1} (K prior_mean + ZHimd)
-        blas.{{prefix}}{{if combined_prefix == 'd'}}s{{else}}h{{endif}}bmv("L", &self.order, &self.lower_bandwidth,
+        blas.{{prefix}}{{if combined_prefix == 'd'}}s{{else}}h{{endif}}bmv("L", &blas_order, &blas_lower_bandwidth,
                             &alpha, self._K, &ld,
                                     &self.prior_mean[0, 0], &inc,
                             &alpha, &self.posterior_mean[0, 0], &inc)
-        lapack.{{prefix}}pbtrs("L", &self.order, &self.lower_bandwidth, &inc,
+        lapack.{{prefix}}pbtrs("L", &blas_order, &blas_lower_bandwidth, &inc,
                                &self.posterior_cov_inv_chol[0, 0], &ld,
-                               &self.posterior_mean[0, 0], &self.order, &info)
+                               &self.posterior_mean[0, 0], &blas_order, &info)
 
     cpdef simulate(self, variates=None):
-        cdef int inc = 1
-        cdef int ld = self.lower_bandwidth + 1
+        cdef blas_int inc = 1
+        cdef blas_int ld = self.lower_bandwidth + 1
+        cdef blas_int blas_order = self.order
+        cdef blas_int blas_lower_bandwidth = self.lower_bandwidth
         cdef {{cython_type}} alpha = 1.0
         cdef {{cython_type}} [:] u
 
@@ -406,12 +422,12 @@ cdef class {{prefix}}CFASimulationSmoother(object):
 
         # Solve L' x = u to get x \sim N(0, P^{-1})
         # (L = posterior_cov_inv_chol is lower triangular)
-        blas.{{prefix}}tbsv("L", "T", "N", &self.order, &self.lower_bandwidth,
+        blas.{{prefix}}tbsv("L", "T", "N", &blas_order, &blas_lower_bandwidth,
                             &self.posterior_cov_inv_chol[0, 0], &ld,
                             &u[0], &inc)
 
         # Add in the posterior mean
-        blas.{{prefix}}axpy(&self.order, &alpha, &self.posterior_mean[0, 0], &inc, &u[0], &inc)
+        blas.{{prefix}}axpy(&blas_order, &alpha, &self.posterior_mean[0, 0], &inc, &u[0], &inc)
 
         return np.array(u).reshape(self.model.nobs, self.k_states).T
 

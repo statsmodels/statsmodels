@@ -86,6 +86,7 @@ np.import_array()
 from statsmodels.includes.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
+include "statsmodels/tsa/statespace/_blas_int.pxi"
 cimport statsmodels.tsa.statespace._tools as tools
 
 {{for prefix, types in TYPES.items()}}
@@ -649,7 +650,10 @@ cdef class {{prefix}}KalmanFilter(object):
         self.forecast_error_work = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._forecast_error_work = &self.forecast_error_work[0,0]
         dim1[0] = self.k_endog;
-        self.forecast_error_ipiv = np.PyArray_ZEROS(1, dim1, np.NPY_INT, FORTRAN)
+        if sizeof(blas_int) == 4:
+            self.forecast_error_ipiv = np.PyArray_ZEROS(1, dim1, np.NPY_INT32, FORTRAN)
+        else:
+            self.forecast_error_ipiv = np.PyArray_ZEROS(1, dim1, np.NPY_INT64, FORTRAN)
         self._forecast_error_ipiv = &self.forecast_error_ipiv[0]
 
         # Holds arrays of dimension $(m \times m)$ and $(m \times r)$
@@ -1056,7 +1060,9 @@ cdef class {{prefix}}KalmanFilter(object):
     cdef void initialize_filter_object_pointers(self):
         cdef:
             int t = self.t
-            int inc = 1
+            blas_int inc = 1
+            blas_int _k_states = self.model._k_states
+            blas_int _k_states2 = self.model._k_states2
         # Indices for arrays that may or may not be stored completely
         cdef:
             int forecast_mean_t = t
@@ -1111,9 +1117,9 @@ cdef class {{prefix}}KalmanFilter(object):
             # This means that the zeroth entry in the time-dimension can hold the
             # input array (even though it is no different than what is held in the
             # initial_state_* arrays).
-            blas.{{prefix}}copy(&self.model._k_states, self.model._initial_state, &inc, self._input_state, &inc)
-            blas.{{prefix}}copy(&self.model._k_states2, self.model._initial_state_cov, &inc, self._input_state_cov, &inc)
-            blas.{{prefix}}copy(&self.model._k_states2, self.model._initial_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc)
+            blas.{{prefix}}copy(&_k_states, self.model._initial_state, &inc, self._input_state, &inc)
+            blas.{{prefix}}copy(&_k_states2, self.model._initial_state_cov, &inc, self._input_state_cov, &inc)
+            blas.{{prefix}}copy(&_k_states2, self.model._initial_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc)
 
         # Now we can check if we are in a diffuse period. If we are but we are
         # not using the univariate method, then we may need to perform the
@@ -1223,29 +1229,34 @@ cdef class {{prefix}}KalmanFilter(object):
     cdef void post_convergence(self):
         # Constants
         cdef:
-            int inc = 1
+            blas_int inc = 1
+            blas_int k_endog2 = self.k_endog2
+            blas_int k_states2 = self.k_states2
+            blas_int k_endogstates = self.k_endogstates
 
         if self.converged:
             # $F_t$
-            blas.{{prefix}}copy(&self.k_endog2, self._converged_forecast_error_cov, &inc, self._forecast_error_cov, &inc)
+            blas.{{prefix}}copy(&k_endog2, self._converged_forecast_error_cov, &inc, self._forecast_error_cov, &inc)
             # $P_{t|t}$
-            blas.{{prefix}}copy(&self.k_states2, self._converged_filtered_state_cov, &inc, self._filtered_state_cov, &inc)
+            blas.{{prefix}}copy(&k_states2, self._converged_filtered_state_cov, &inc, self._filtered_state_cov, &inc)
             # $P_t$
-            blas.{{prefix}}copy(&self.k_states2, self._converged_predicted_state_cov, &inc, self._predicted_state_cov, &inc)
+            blas.{{prefix}}copy(&k_states2, self._converged_predicted_state_cov, &inc, self._predicted_state_cov, &inc)
             # $K_t$
-            blas.{{prefix}}copy(&self.k_endogstates, self._converged_kalman_gain, &inc, self._kalman_gain, &inc)
+            blas.{{prefix}}copy(&k_endogstates, self._converged_kalman_gain, &inc, self._kalman_gain, &inc)
             # $|F_t|$
             self.determinant = self.converged_determinant
             # $M_t$
-            blas.{{prefix}}copy(&self.k_endogstates, self._converged_M, &inc, self._M, &inc)
+            blas.{{prefix}}copy(&k_endogstates, self._converged_M, &inc, self._M, &inc)
 
     cdef void numerical_stability(self):
-        cdef int inc = 1
-        cdef int k_states
+        cdef blas_int inc = 1
+        cdef blas_int k_states
         cdef int i, j
         cdef int predicted_cov_t = self.t
         cdef {{cython_type}} alpha = 1.0
         cdef {{cython_type}} scalar = 0.5
+        cdef blas_int blas_k_states = self.k_states
+        cdef blas_int k_states2 = self.k_states2
 
         if self.conserve_memory & MEMORY_NO_PREDICTED_COV:
             predicted_cov_t = 1
@@ -1259,25 +1270,26 @@ cdef class {{prefix}}KalmanFilter(object):
             # See Grewal (2001), Section 6.3.1.1
             for i in range(self.k_states):
                 k_states = self.k_states - i
-                blas.{{prefix}}axpy(&k_states, &alpha, &self.predicted_state_cov[i, i, predicted_cov_t], &self.k_states,
+                blas.{{prefix}}axpy(&k_states, &alpha, &self.predicted_state_cov[i, i, predicted_cov_t], &blas_k_states,
                                                        &self.predicted_state_cov[i, i, predicted_cov_t], &inc)
                 blas.{{prefix}}copy(&k_states, &self.predicted_state_cov[i, i, predicted_cov_t], &inc,
-                                               &self.predicted_state_cov[i, i, predicted_cov_t], &self.k_states)
-            blas.{{prefix}}scal(&self.k_states2, &scalar, &self.predicted_state_cov[0, 0, predicted_cov_t], &inc)
+                                               &self.predicted_state_cov[i, i, predicted_cov_t], &blas_k_states)
+            blas.{{prefix}}scal(&k_states2, &scalar, &self.predicted_state_cov[0, 0, predicted_cov_t], &inc)
 
     cdef int check_diffuse(self):
         cdef:
-            int inc = 1
+            blas_int inc = 1
+            blas_int k_states2 = self.k_states2
             {{cython_type}} alpha = 1.0
             {{cython_type}} beta = 0.0
             {{cython_type}} scalar
 
         if self.t == self.nobs_diffuse:
             {{if combined_prefix == 'd'}}
-            if blas.{{prefix}}dot(&self.k_states2, self._input_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc) > self.tolerance_diffuse:
+            if blas.{{prefix}}dot(&k_states2, self._input_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc) > self.tolerance_diffuse:
                 self.nobs_diffuse = self.nobs_diffuse + 1
             {{else}}
-            blas.{{prefix}}gemv("N", &inc, &self.k_states2, &alpha, self._input_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc, &beta, self._tmp00, &inc)
+            blas.{{prefix}}gemv("N", &inc, &k_states2, &alpha, self._input_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc, &beta, self._tmp00, &inc)
             if {{combined_prefix}}abs(self._tmp00[0]) > self.tolerance_diffuse:
                 self.nobs_diffuse = self.nobs_diffuse + 1
             {{endif}}
@@ -1287,10 +1299,14 @@ cdef class {{prefix}}KalmanFilter(object):
     cdef void check_convergence(self):
         # Constants
         cdef:
-            int inc = 1, missing_flag = 0
+            blas_int inc = 1
+            int missing_flag = 0
             {{cython_type}} alpha = 1.0
             {{cython_type}} beta = 0.0
             {{cython_type}} gamma = -1.0
+            blas_int k_states2 = self.k_states2
+            blas_int k_endog2 = self.k_endog2
+            blas_int k_endogstates = self.k_endogstates
         # Indices for arrays that may or may not be stored completely
         cdef:
             int forecast_cov_t = self.t
@@ -1316,22 +1332,22 @@ cdef class {{prefix}}KalmanFilter(object):
             # `tmp0` array used here, dimension $(m \times m)$
             # `tmp00` array used here, dimension $(1 \times 1)$
             if self.filter_timing == TIMING_INIT_PREDICTED:
-                blas.{{prefix}}copy(&self.k_states2, self._input_state_cov, &inc, self._tmp0, &inc)
-                blas.{{prefix}}axpy(&self.k_states2, &gamma, self._predicted_state_cov, &inc, self._tmp0, &inc)
+                blas.{{prefix}}copy(&k_states2, self._input_state_cov, &inc, self._tmp0, &inc)
+                blas.{{prefix}}axpy(&k_states2, &gamma, self._predicted_state_cov, &inc, self._tmp0, &inc)
             elif self.t > 0:
-                blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0,0,predicted_cov_t], &inc, self._tmp0, &inc)
-                blas.{{prefix}}axpy(&self.k_states2, &gamma, &self.predicted_state_cov[0,0,predicted_cov_t-1], &inc, self._tmp0, &inc)
+                blas.{{prefix}}copy(&k_states2, &self.predicted_state_cov[0,0,predicted_cov_t], &inc, self._tmp0, &inc)
+                blas.{{prefix}}axpy(&k_states2, &gamma, &self.predicted_state_cov[0,0,predicted_cov_t-1], &inc, self._tmp0, &inc)
             else:
                 return
 
 
             {{if combined_prefix == 'd'}}
-            if blas.{{prefix}}dot(&self.k_states2, self._tmp0, &inc, self._tmp0, &inc) < self.tolerance:
+            if blas.{{prefix}}dot(&k_states2, self._tmp0, &inc, self._tmp0, &inc) < self.tolerance:
                 self.converged = 1
                 self.period_converged = self.t
 
             {{else}}
-            blas.{{prefix}}gemv("N", &inc, &self.k_states2, &alpha, self._tmp0, &inc, self._tmp0, &inc, &beta, self._tmp00, &inc)
+            blas.{{prefix}}gemv("N", &inc, &k_states2, &alpha, self._tmp0, &inc, self._tmp0, &inc, &beta, self._tmp00, &inc)
             if {{combined_prefix}}abs(self._tmp00[0]) < self.tolerance:
                 self.converged = 1
                 self.period_converged = self.t
@@ -1341,55 +1357,59 @@ cdef class {{prefix}}KalmanFilter(object):
             # converged storage
             if self.converged == 1:
                 # $F_t$
-                blas.{{prefix}}copy(&self.k_endog2, &self.forecast_error_cov[0, 0, forecast_cov_t], &inc, self._converged_forecast_error_cov, &inc)
+                blas.{{prefix}}copy(&k_endog2, &self.forecast_error_cov[0, 0, forecast_cov_t], &inc, self._converged_forecast_error_cov, &inc)
                 # $P_{t|t}$
-                blas.{{prefix}}copy(&self.k_states2, &self.filtered_state_cov[0, 0, filtered_cov_t], &inc, self._converged_filtered_state_cov, &inc)
+                blas.{{prefix}}copy(&k_states2, &self.filtered_state_cov[0, 0, filtered_cov_t], &inc, self._converged_filtered_state_cov, &inc)
                 # $P_t$
-                blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, predicted_cov_t], &inc, self._converged_predicted_state_cov, &inc)
+                blas.{{prefix}}copy(&k_states2, &self.predicted_state_cov[0, 0, predicted_cov_t], &inc, self._converged_predicted_state_cov, &inc)
                 # $|F_t|$
                 self.converged_determinant = self.determinant
                 # $K_t$
-                blas.{{prefix}}copy(&self.k_endogstates, &self.kalman_gain[0, 0, gain_t], &inc, self._converged_kalman_gain, &inc)
+                blas.{{prefix}}copy(&k_endogstates, &self.kalman_gain[0, 0, gain_t], &inc, self._converged_kalman_gain, &inc)
                 # $M_t$
-                blas.{{prefix}}copy(&self.k_endogstates, &self.M[0, 0, predicted_cov_t], &inc, self._converged_M, &inc)
+                blas.{{prefix}}copy(&k_endogstates, &self.M[0, 0, predicted_cov_t], &inc, self._converged_M, &inc)
 
     cdef void migrate_storage(self):
         cdef:
-            int inc = 1
+            blas_int inc = 1
             int diffuse = self.check_diffuse()
+            blas_int k_endog = self.k_endog
+            blas_int k_endog2 = self.k_endog2
+            blas_int k_states = self.k_states
+            blas_int k_states2 = self.k_states2
 
 
         # Forecast: 1 -> 0
         if self.conserve_memory & MEMORY_NO_FORECAST_MEAN > 0:
-            blas.{{prefix}}copy(&self.k_endog, &self.forecast[0, 1], &inc, &self.forecast[0, 0], &inc)
-            blas.{{prefix}}copy(&self.k_endog, &self.forecast_error[0, 1], &inc, &self.forecast_error[0, 0], &inc)
+            blas.{{prefix}}copy(&k_endog, &self.forecast[0, 1], &inc, &self.forecast[0, 0], &inc)
+            blas.{{prefix}}copy(&k_endog, &self.forecast_error[0, 1], &inc, &self.forecast_error[0, 0], &inc)
         if self.conserve_memory & MEMORY_NO_FORECAST_COV > 0:
-            blas.{{prefix}}copy(&self.k_endog2, &self.forecast_error_cov[0, 0, 1], &inc, &self.forecast_error_cov[0, 0, 0], &inc)
+            blas.{{prefix}}copy(&k_endog2, &self.forecast_error_cov[0, 0, 1], &inc, &self.forecast_error_cov[0, 0, 0], &inc)
 
         # Filtered: 1 -> 0
         if self.conserve_memory & MEMORY_NO_FILTERED_MEAN > 0:
-            blas.{{prefix}}copy(&self.k_states, &self.filtered_state[0, 1], &inc, &self.filtered_state[0, 0], &inc)
+            blas.{{prefix}}copy(&k_states, &self.filtered_state[0, 1], &inc, &self.filtered_state[0, 0], &inc)
         if self.conserve_memory & MEMORY_NO_FILTERED_COV > 0:
-            blas.{{prefix}}copy(&self.k_states2, &self.filtered_state_cov[0, 0, 1], &inc, &self.filtered_state_cov[0, 0, 0], &inc)
+            blas.{{prefix}}copy(&k_states2, &self.filtered_state_cov[0, 0, 1], &inc, &self.filtered_state_cov[0, 0, 0], &inc)
 
         if self.conserve_memory & MEMORY_NO_PREDICTED_MEAN > 0:
             # Predicted: 1 -> 0
-            blas.{{prefix}}copy(&self.k_states, &self.predicted_state[0, 1], &inc, &self.predicted_state[0, 0], &inc)
+            blas.{{prefix}}copy(&k_states, &self.predicted_state[0, 1], &inc, &self.predicted_state[0, 0], &inc)
             # Predicted: 2 -> 1
             if self.filter_timing == TIMING_INIT_PREDICTED:
-                blas.{{prefix}}copy(&self.k_states, &self.predicted_state[0, 2], &inc, &self.predicted_state[0, 1], &inc)
+                blas.{{prefix}}copy(&k_states, &self.predicted_state[0, 2], &inc, &self.predicted_state[0, 1], &inc)
 
         if self.conserve_memory & MEMORY_NO_PREDICTED_COV > 0:
             # Predicted: 1 -> 0
-            blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, 1], &inc, &self.predicted_state_cov[0, 0, 0], &inc)
+            blas.{{prefix}}copy(&k_states2, &self.predicted_state_cov[0, 0, 1], &inc, &self.predicted_state_cov[0, 0, 0], &inc)
             if diffuse:
-                blas.{{prefix}}copy(&self.k_states2, &self.predicted_diffuse_state_cov[0, 0, 1], &inc, &self.predicted_diffuse_state_cov[0, 0, 0], &inc)
+                blas.{{prefix}}copy(&k_states2, &self.predicted_diffuse_state_cov[0, 0, 1], &inc, &self.predicted_diffuse_state_cov[0, 0, 0], &inc)
 
             # Predicted: 2 -> 1
             if self.filter_timing == TIMING_INIT_PREDICTED:
-                blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, 2], &inc, &self.predicted_state_cov[0, 0, 1], &inc)
+                blas.{{prefix}}copy(&k_states2, &self.predicted_state_cov[0, 0, 2], &inc, &self.predicted_state_cov[0, 0, 1], &inc)
                 if diffuse:
-                    blas.{{prefix}}copy(&self.k_states2, &self.predicted_diffuse_state_cov[0, 0, 2], &inc, &self.predicted_diffuse_state_cov[0, 0, 1], &inc)
+                    blas.{{prefix}}copy(&k_states2, &self.predicted_diffuse_state_cov[0, 0, 2], &inc, &self.predicted_diffuse_state_cov[0, 0, 1], &inc)
 
 
 {{endfor}}
