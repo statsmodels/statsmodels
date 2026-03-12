@@ -680,7 +680,8 @@ if __name__ == "__main__":
     # higher-order terms
 
     # using Monette-Fox slides and Marden class notes for linear algebra /
-    # orthogonal complement
-    # https://netfiles.uiuc.edu/jimarden/www/Classes/STAT324/
+    # Reference for Orthogonal Projections/complement in ANOVA:
+    # https://people.math.aau.dk/~rw/Undervisning/MM_BI/
+# Handouts/anova_orthog.pdf
 
     table = anova_lm(moore_lm, typ=2)
