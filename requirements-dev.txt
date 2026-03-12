@@ -19,6 +19,7 @@ pytest-run-parallel
 pytest-xdist
 pytest-cov
 coverage[toml]
+jinja2
 
 # Pin on Win32
 pywinpty; os_name == "nt"
