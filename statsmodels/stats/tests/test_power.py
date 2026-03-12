@@ -8,7 +8,8 @@ Created on Sat Mar 09 08:44:49 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.platform import PLATFORM_WIN
+
+from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
 
 import copy
 import warnings
@@ -78,7 +79,11 @@ class CheckPowerMixin:
         kwds.update(self.kwds_extra)
         # kwds_extra are used as argument, but not as target for root
         for key in self.kwds:
-            if PLATFORM_WIN and isinstance(self, TestTTPowerOneS1) and key == "alpha":
+            if (
+                (PLATFORM_WIN or PLATFORM_OSX)
+                and isinstance(self, TestTTPowerOneS1)
+                and key == "alpha"
+            ):
                 pytest.xfail("alpha test failing on recent SciPy on Windows")
 
             # keep print to check whether tests are really executed
