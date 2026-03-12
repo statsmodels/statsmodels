@@ -1769,8 +1769,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
         # - Factor blocks summary table --------------------------------------
         data = self.factor_block_orders.reset_index()
-        data["block"] = data["block"].map(
-            lambda factor_names: ", ".join(factor_names))
+        data["block"] = data["block"].map(", ".join)
         try:
             data[["order"]] = data[["order"]].map(str)
         except AttributeError:
