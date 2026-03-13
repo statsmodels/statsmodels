@@ -241,30 +241,11 @@ class GenericKDE:
         only_bw = np.empty((n_blocks, self.k_vars))
 
         class_type, class_vars = self._get_class_vars_type()
-        if has_joblib:
-            # `res` is a list of tuples (sample_scale_sub, bw_sub)
-            res = joblib.Parallel(n_jobs=self.n_jobs)(
-                joblib.delayed(_compute_subset)(
-                    class_type,
-                    data,
-                    bw,
-                    co,
-                    do,
-                    n_cvars,
-                    ix_ord,
-                    ix_unord,
-                    n_sub,
-                    class_vars,
-                    self.randomize,
-                    bounds[i],
-                    self._generator,
-                )
-                for i in range(n_blocks)
-            )
-        else:
-            res = []
+
+        def _compute_serial():
+            out = []
             for i in range(n_blocks):
-                res.append(
+                out.append(
                     _compute_subset(
                         class_type,
                         data,
@@ -281,6 +262,35 @@ class GenericKDE:
                         self._generator,
                     )
                 )
+            return out
+
+        if has_joblib:
+            # `res` is a list of tuples (sample_scale_sub, bw_sub)
+            try:
+                res = joblib.Parallel(n_jobs=self.n_jobs)(
+                    joblib.delayed(_compute_subset)(
+                        class_type,
+                        data,
+                        bw,
+                        co,
+                        do,
+                        n_cvars,
+                        ix_ord,
+                        ix_unord,
+                        n_sub,
+                        class_vars,
+                        self.randomize,
+                        bounds[i],
+                        self._generator,
+                    )
+                    for i in range(n_blocks)
+                )
+            except AttributeError as err:
+                if "_temp_folder_manager" not in str(err):
+                    raise
+                res = _compute_serial()
+        else:
+            res = _compute_serial()
 
         for i in range(n_blocks):
             sample_scale[i, :] = res[i][0]
