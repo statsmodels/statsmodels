@@ -2345,6 +2345,16 @@ class MixedLM(base.LikelihoodModel):
             )
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
+        if hasattr(self.exog, "names"):
+            fe_params = pd.Series(fe_params, self.exog.names)
+
+        if hasattr(self.exog_re, "names"):
+            na = self.exog_re.names
+            cov_re = pd.DataFrame(fe_params, columns=na, index=na)
+
+        if hasattr(self.exog_vc, "names"):
+            vcomp = pd.Series(vcomp, self.exog_vc.names)
+
         # Prepare a results class instance
         params_packed = params.get_packed(use_sqrt=False, has_fe=True)
         results = MixedLMResults(self, params_packed, pcov / scale)
