@@ -1681,7 +1681,7 @@ def score_test_proportions_2indep(
 
         if ratio != 1:
             a = nobs * ratio
-            b = -(nobs1 * ratio + count1 + nobs2 + count0 * ratio)
+            b = -(nobs1 * ratio + count1 + nobs0 + count0 * ratio)
             c = count
             prop0 = (-b - np.sqrt(b**2 - 4 * a * c)) / (2 * a)
             prop1 = prop0 * ratio
