@@ -17,16 +17,6 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import MissingDataError
 
-# FIXME: do not leave commented-out, enable or move/remove
-# class TestDates:
-#    @classmethod
-#    def setup_class(cls):
-#        nrows = 10
-#        cls.dates_result = cls.dates_results = np.random.random(nrows)
-#
-#    def test_dates(self):
-#        np.testing.assert_equal(data.wrap_output(self.dates_input, 'dates'),
-#                                self.dates_result)
 
 
 class TestArrays:
