@@ -41,7 +41,7 @@ import warnings
 import numpy as np
 from scipy import optimize, stats
 from scipy.linalg import cholesky, toeplitz
-from scipy.linalg.lapack import dtrtri
+from scipy.linalg.lapack import get_lapack_funcs
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -76,6 +76,7 @@ __all__ = [
     "RegressionResultsWrapper",
 ]
 
+dtrtri = get_lapack_funcs("trtri", dtype="float64", ilp64="preferred")
 
 _fit_regularized_doc = r"""
         Return a regularized fit to a linear regression model.

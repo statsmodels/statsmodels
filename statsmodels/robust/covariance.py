@@ -26,7 +26,7 @@ doi:10.1109/TSP.2011.2138698.
 
 import numpy as np
 from scipy import linalg, stats
-from scipy.linalg.lapack import dtrtri
+from scipy.linalg.lapack import get_lapack_funcs
 
 import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
@@ -644,6 +644,8 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     else:
         c = np.diag(mad(x, center=0) ** 2)
 
+    dtrtri = get_lapack_funcs('trtri', dtype=np.float64, ilp64='preferred')
+    
     # Tyler's M-estimator of shape (scatter) matrix
     n_iter = 0
     for _ in range(maxiter):
