@@ -874,6 +874,58 @@ sampling.
    simulation_smoother.SimulationSmoothResults
    cfa_simulation_smoother.CFASimulationSmoother
 
+Modified Efficient Importance Sampling (MEIS)
+---------------------------------------------
+
+The MEIS module provides likelihood evaluation and parameter estimation for
+partially non-Gaussian state space models using the algorithm of
+Koopman, Lit & Nguyen (2018). This extends the state space framework to handle
+observation densities that are not Gaussian (e.g., Student's-t, Poisson,
+binomial) by constructing a Gaussian importance density through iterative
+regression and evaluating the likelihood via importance sampling with bias
+correction.
+
+To use MEIS, create a custom model by subclassing both ``MEISMixin`` and
+``MLEModel``, and implement three methods:
+
+- ``update(params)`` - set the state space matrices
+- ``transform_states_to_signal(alpha)`` - map the state vector to a 1-D signal
+- ``loglikelihood_obs(t, theta_t)`` - return the non-Gaussian observation
+  log-density :math:`\log p(y_t \mid \theta_t)`
+
+Then call ``fit_meis()`` instead of ``fit()`` to estimate parameters.
+
+.. code-block:: python
+
+   from statsmodels.tsa.statespace.mlemodel import MLEModel
+   from statsmodels.tsa.statespace.meis import MEISMixin
+
+   class MyModel(MEISMixin, MLEModel):
+       def update(self, params, **kwargs):
+           ...  # set SSM matrices
+
+       def transform_states_to_signal(self, alpha):
+           ...  # map state vector to 1-D signal
+
+       def loglikelihood_obs(self, t, theta_t):
+           ...  # non-Gaussian observation log-density
+
+   model = MyModel(endog)
+   results = model.fit_meis(start_params=[...], M=500, seed=42)
+
+   # Extract importance-weighted smoothed signal
+   theta_smooth, draws, weights = results.smooth_signal(M=200)
+
+.. autosummary::
+   :toctree: generated/
+
+   meis.MEISMixin
+   meis.MEISResults
+   meis.MEISImportanceDensity
+   meis.MEISLikelihood
+   meis.DurbinKoopmanSimulator
+   meis.extract_signal_meis
+
 Statespace Tools
 ----------------
 

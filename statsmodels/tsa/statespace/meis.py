@@ -1,18 +1,46 @@
 """
-Modified Efficient Importance Sampling (MEIS) for statsmodels
-Following Koopman, Lit & Nguyen (2018) - Statistica Neerlandica
+Modified Efficient Importance Sampling (MEIS) for state space models.
 
-Reference:
-Koopman, S. J., Lit, R., & Nguyen, T. M. (2018). Modified efficient importance
-sampling for partially non-Gaussian state space models. Statistica Neerlandica,
-73(1), 44-62.
+Implements the MEIS algorithm of Koopman, Lit & Nguyen (2018) for
+maximum likelihood estimation of partially non-Gaussian state space
+models. The key idea is to construct a Gaussian importance density
+by iteratively matching the curvature of the true observation density
+via regression, then evaluate the likelihood using importance sampling
+with bias correction.
+
+Classes
+-------
+DurbinKoopmanSimulator
+    Simulation smoother following Durbin & Koopman (2002).
+MEISImportanceDensity
+    Iterative construction of the Gaussian importance density.
+MEISLikelihood
+    MEIS-based log-likelihood evaluation with bias correction.
+MEISMixin
+    Mixin class adding ``fit_meis`` to ``MLEModel`` subclasses.
+MEISResults
+    Results container for MEIS estimation.
+
+Functions
+---------
+extract_signal_meis
+    Importance-weighted signal extraction.
+
+References
+----------
+.. [1] Koopman, S. J., Lit, R., & Nguyen, T. M. (2018).
+   Modified efficient importance sampling for partially non-Gaussian
+   state space models. *Statistica Neerlandica*, 73(1), 44--62.
+.. [2] Durbin, J., & Koopman, S. J. (2002). A simple and efficient
+   simulation smoother for state space time series analysis.
+   *Biometrika*, 89(3), 603--615.
 """
 import warnings
 import numpy as np
 from scipy.linalg import cholesky
 from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.kalman_smoother import KalmanSmoother
-from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResults
+from statsmodels.tsa.statespace.mlemodel import MLEResults
 
 # Numerical constants
 _EPS = 1e-12
@@ -22,6 +50,34 @@ _MAX_B = 1e6   # Maximum abs(b_t) to prevent numerical explosion
 _THETA_CLIP = 30.0
 _LOG_EXP_CLIP = 700.0
 _RIDGE = 1e-10
+
+
+# We use numpy.random.Generator (not the legacy np.random.seed / np.random.randn)
+# because:
+#   1. Generator is a *local* random state — it does not mutate the global
+#      numpy RNG, so calling MEIS won't silently reset a user's random stream.
+#   2. It is thread-safe: two concurrent MEIS calls each get their own state.
+#   3. np.random.seed has been discouraged by NumPy since v1.17 (2019); new
+#      code in statsmodels should prefer Generator (see NEP 19).
+def _check_rng(rng):
+    """Normalise *rng* to a ``numpy.random.Generator`` instance.
+
+    Parameters
+    ----------
+    rng : {None, int, numpy.random.Generator}
+        * ``None`` — return a new default Generator (unseeded).
+        * ``int``  — return ``default_rng(seed)`` for reproducibility.
+        * ``Generator`` — return as-is.
+
+    Returns
+    -------
+    numpy.random.Generator
+    """
+    if rng is None:
+        return np.random.default_rng()
+    if isinstance(rng, np.random.Generator):
+        return rng
+    return np.random.default_rng(rng)
 
 
 # =============================================================================
@@ -47,13 +103,20 @@ class DurbinKoopmanSimulator:
         # store a placeholder for the last simulated state draw
         self.simulated_state = None
 
-    def simulate(self, seed=None):
-        """Draw one sample using the Durbin–Koopman algorithm."""
-        if seed is not None:
-            np.random.seed(seed)
+    def simulate(self, rng=None):
+        """
+        Draw one sample from the smoothing distribution.
+
+        Parameters
+        ----------
+        rng : {None, int, numpy.random.Generator}
+            Random number generator instance or seed. If ``None``, the
+            global NumPy default is used.
+        """
+        rng = _check_rng(rng)
 
         # Step 1-2: Sample disturbances and generate y⁺
-        eps_plus, eta_plus, y_plus, alpha_plus = self._generate_plus()
+        eps_plus, eta_plus, y_plus, alpha_plus = self._generate_plus(rng)
 
         # Step 3: Smooth y⁺
         _, _, alpha_bar_plus = self._smooth(y_plus)
@@ -66,7 +129,7 @@ class DurbinKoopmanSimulator:
         # alpha_plus returned (k_states, nobs)
         self.simulated_state = alpha_bar - alpha_bar_plus + alpha_plus
 
-    def _generate_plus(self):
+    def _generate_plus(self, rng):
         """Generate y⁺ from sampled disturbances using model matrices."""
         # Get matrices as time-varying 3D arrays with third axis == nobs
         Z = self._get_matrix("design")  # shape (k_endog, k_states, nobs)
@@ -85,7 +148,7 @@ class DurbinKoopmanSimulator:
         a_0, P_0 = self._get_initial_state()
         try:
             L = cholesky(P_0 + _RIDGE * np.eye(self.k_states), lower=True)
-            alpha_plus[:, 0] = a_0 + L @ np.random.randn(self.k_states)
+            alpha_plus[:, 0] = a_0 + L @ rng.standard_normal(self.k_states)
         except Exception:
             alpha_plus[:, 0] = a_0
 
@@ -100,14 +163,14 @@ class DurbinKoopmanSimulator:
             # Sample ε⁺ ~ N(0, H_t)
             try:
                 L_H = cholesky(H_t + _RIDGE * np.eye(self.k_endog), lower=True)
-                eps_plus[:, t] = L_H @ np.random.randn(self.k_endog)
+                eps_plus[:, t] = L_H @ rng.standard_normal(self.k_endog)
             except Exception:
                 eps_plus[:, t] = np.zeros(self.k_endog)
 
             # Sample η⁺ ~ N(0, Q_t)
             try:
                 L_Q = cholesky(Q_t + _RIDGE * np.eye(self.k_posdef), lower=True)
-                eta_plus[:, t] = L_Q @ np.random.randn(self.k_posdef)
+                eta_plus[:, t] = L_Q @ rng.standard_normal(self.k_posdef)
             except Exception:
                 eta_plus[:, t] = np.zeros(self.k_posdef)
 
@@ -261,13 +324,41 @@ class DurbinKoopmanSimulator:
 # =============================================================================
 
 class MEISImportanceDensity:
-    """
-    MEIS Importance Density following Koopman et al. (2018).
+    r"""
+    MEIS importance density for partially non-Gaussian state space models.
 
-    The importance density is given by equation (10):
-    g(y_t|α_t; ψ) = exp(a_t + b_t θ_t - (1/2) c_t θ_t²)
+    Constructs a Gaussian approximation to the observation density by
+    iteratively matching curvature via OLS regression on simulated
+    signals.  The importance density has the form (equation 10 of [1]_):
 
-    where θ_t = Z_t(α_t) is the signal.
+    .. math::
+
+        g(y_t | \alpha_t; \psi)
+        = \exp\!\bigl(a_t + b_t \theta_t - \tfrac12 c_t \theta_t^2\bigr)
+
+    where :math:`\theta_t = Z_t \alpha_t` is the signal.
+
+    Parameters
+    ----------
+    model : MLEModel
+        State space model that provides ``loglikelihood_obs(t, theta_t)``.
+    M : int
+        Number of importance samples per iteration.
+    max_iter : int
+        Maximum number of MEIS fitting iterations.
+    tol : float
+        Convergence tolerance on max change in *b* and *c*.
+
+    Attributes
+    ----------
+    b_t : ndarray, shape (nobs, q_signal)
+        Linear coefficients of the importance density.
+    c_t : ndarray, shape (nobs, q_signal)
+        Quadratic (precision) coefficients of the importance density.
+
+    References
+    ----------
+    .. [1] Koopman, Lit & Nguyen (2018), Statistica Neerlandica.
     """
 
     def __init__(self, model, M=500, max_iter=50, tol=1e-3):
@@ -288,12 +379,12 @@ class MEISImportanceDensity:
         endog_arr = np.asarray(endog)
         if endog_arr.ndim == 1:
             endog_arr = endog_arr.reshape(-1, 1)
-        
+
         self.b_t = np.zeros((self.nobs, self.q_signal))
         # Initialize b_t with the observed data for each signal component
         for k in range(min(self.q_signal, endog_arr.shape[1])):
             self.b_t[:, k] = endog_arr[:, k]
-        
+
         self.c_t = np.ones((self.nobs, self.q_signal))  # Start at 1.0 (standard Gaussian)
 
         # cache for last built approx (so simulate/logg/weights use same approx)
@@ -303,27 +394,35 @@ class MEISImportanceDensity:
 
     def fit(self, verbose=False, seed=None):
         """
-        Fit importance density iteratively using weighted least squares.
-        Algorithm from Section 3.3 of Koopman et al. (2018).
+        Fit importance density parameters iteratively.
+
+        Uses the algorithm from Section 3.3 of Koopman et al. (2018):
+        simulate signals from the current Gaussian approximation, then
+        update ``b_t`` and ``c_t`` via OLS regression of
+        ``log p(y_t | theta_t)`` on ``(1, theta_t, -0.5*theta_t**2)``.
+
+        Parameters
+        ----------
+        verbose : bool
+            If True, print convergence diagnostics each iteration.
+        seed : {None, int, numpy.random.Generator}
+            Seed or Generator for reproducibility.
+
+        Returns
+        -------
+        self
         """
-        #if seed is not None:
-        #    np.random.seed(seed)
+        rng = _check_rng(seed)
 
         for iteration in range(self.max_iter):
             b_old = self.b_t.copy()
             c_old = self.c_t.copy()
 
             # Step 2: Simulate θ from current approximation (equation 11)
-            theta_draws = self.simulate_signal(self.b_t, self.c_t, seed=seed)
+            theta_draws = self.simulate_signal(self.b_t, self.c_t, seed=rng)
 
-            # Print diagnostics about theta draws
-            if verbose:
-                theta_mean = np.mean(theta_draws, axis=0)  # (q_signal, nobs)
-                theta_std = np.std(theta_draws, axis=0)
-                print(f"[MEIS Iter {iteration+1}] theta_draws: mean(first 3)={theta_mean[0,:3]}, std(first 3)={theta_std[0,:3]}")
-
-            # Step 3: Update β_t using weighted least squares (equation 16)
-            self._update_parameters(theta_draws, verbose=verbose)
+            # Step 3: Update β_t using OLS (equation 16)
+            self._update_parameters(theta_draws)
 
             # Step 4: Check convergence
             b_change = np.max(np.abs(self.b_t - b_old))
@@ -331,9 +430,8 @@ class MEISImportanceDensity:
 
             # Print diagnostics for each iteration
             if verbose:
-                print(f"[MEIS Iter {iteration+1}] max|db|={b_change:.6g}, max|dc|={c_change:.6g}")
-                print(f"  b_t (first 5): {self.b_t[:5, 0]}")
-                print(f"  c_t (first 5): {self.c_t[:5, 0]}")
+                print(f"[MEIS Iter {iteration+1}] "
+                      f"max|db|={b_change:.6g}, max|dc|={c_change:.6g}")
 
             if b_change < self.tol and c_change < self.tol:
                 if verbose:
@@ -345,13 +443,30 @@ class MEISImportanceDensity:
 
     def simulate_signal(self, b_t, c_t, M=None, seed=None):
         """
-        Simulate signal θ_t using Durbin-Koopman simulation smoother.
-        Section 3.3, Step 2.
+        Simulate signal draws from the Gaussian approximation.
+
+        Builds a pseudo-observation model from ``b_t`` and ``c_t``, then
+        draws ``M`` state vectors using the Durbin--Koopman simulation
+        smoother (Section 3.3, Step 2).
+
+        Parameters
+        ----------
+        b_t : ndarray, shape (nobs, q_signal)
+            Current linear parameters.
+        c_t : ndarray, shape (nobs, q_signal)
+            Current precision parameters.
+        M : int, optional
+            Number of draws (defaults to ``self.M``).
+        seed : {None, int, numpy.random.Generator}
+            Seed or Generator for reproducibility.
+
+        Returns
+        -------
+        theta_draws : ndarray, shape (M, q_signal, nobs)
         """
         if M is None:
             M = self.M
-        if seed is not None:
-            np.random.seed(seed)
+        rng = _check_rng(seed)
 
         # Build Gaussian approximation model (equation 11)
         approx = self._build_approximation(b_t, c_t)
@@ -363,7 +478,7 @@ class MEISImportanceDensity:
         theta_draws = np.zeros((M, self.q_signal, self.nobs))
 
         for i in range(M):
-            sim.simulate(seed=seed + i if seed is not None else None)
+            sim.simulate(rng=rng)
             # Extract signal θ_t = Z_t(α_t) from first q_signal states
             theta_draws[i, :, :] = sim.simulated_state[:self.q_signal, :]
 
@@ -423,7 +538,7 @@ class MEISImportanceDensity:
 
         approx["obs_cov"] = H_approx
         approx.bind(z.T.copy())
-        
+
         # Copy initialization from original model instead of always using diffuse
         # This is critical for convergence - using diffuse when the model has
         # known initialization causes the simulation smoother to produce draws
@@ -455,13 +570,14 @@ class MEISImportanceDensity:
 
         return approx
 
-    def _update_parameters(self, theta_draws, verbose=False):
+    def _update_parameters(self, theta_draws):
         """
-        Update b_t and c_t using plain (unweighted) OLS for each time t and each
-        signal component k.
+        Update b_t and c_t via OLS regression.
 
-        Using unweighted OLS avoids instability coming from highly variable importance
-        weights.
+        For each time *t* and signal component *k*, regresses
+        ``log p(y_t | theta_t)`` on ``(1, theta_tk, -0.5*theta_tk**2)``
+        and extracts updated *b* and *c* from the regression
+        coefficients.
         """
         M = int(theta_draws.shape[0])
 
@@ -470,17 +586,7 @@ class MEISImportanceDensity:
             p_it = np.zeros(M)
             for i in range(M):
                 theta_t = theta_draws[i, :, t]
-                # model.loglikelihood_obs expects (t, theta) in your codebase
                 p_it[i] = self.model.loglikelihood_obs(t, theta_t)
-
-            # DEBUG: Print detailed info for t=0
-            if verbose and t == 0:
-                print(f"  [DEBUG t=0] theta draws: min={np.min(theta_draws[:, 0, 0]):.4f}, max={np.max(theta_draws[:, 0, 0]):.4f}, mean={np.mean(theta_draws[:, 0, 0]):.4f}, std={np.std(theta_draws[:, 0, 0]):.4f}")
-                print(f"  [DEBUG t=0] p_it (loglik): min={np.min(p_it):.4f}, max={np.max(p_it):.4f}, mean={np.mean(p_it):.4f}")
-                y_0 = self.model.endog[0, 0] if hasattr(self.model, 'endog') else 0
-                obs_var = getattr(self.model, 'obs_var', 1.0)
-                print(f"  [DEBUG t=0] y_0={y_0:.4f}, obs_var={obs_var:.4f}")
-                print(f"  [DEBUG t=0] Expected: b_0={y_0/obs_var:.4f}, c_0={1/obs_var:.4f}")
 
             # Update each signal component k using unweighted OLS
             for k in range(self.q_signal):
@@ -500,11 +606,7 @@ class MEISImportanceDensity:
                     # ridge regularization scaled to trace of VtV to be robust across scales
                     lam = _RIDGE * max(1.0, np.trace(VtV) / max(1, VtV.shape[0]))
                     beta = np.linalg.solve(VtV + lam * np.eye(3), Vtp)
-                    
-                    # DEBUG: Print OLS results for t=0
-                    if verbose and t == 0:
-                        print(f"  [DEBUG t=0] OLS beta: a={beta[0]:.4f}, b={beta[1]:.4f}, c={beta[2]:.4f}")
-                    
+
                     # Extract b_t and c_t: beta = (a*, b_t, c_t)
                     # Clamp both to reasonable bounds to prevent explosion
                     self.b_t[t, k] = np.clip(beta[1], -_MAX_B, _MAX_B)
@@ -523,8 +625,19 @@ class MEISImportanceDensity:
 
 class MEISLikelihood:
     """
-    MEIS Likelihood computation.
-    Section 3.2, equations (12) and (13).
+    MEIS log-likelihood evaluator with bias correction.
+
+    Implements equations (12), (13), and (17) of Koopman et al. (2018):
+    simulate importance-weighted draws, evaluate ``log g(y; psi)`` via
+    the Kalman filter on the Gaussian approximation, and apply the
+    second-order bias correction of Section 4.1.
+
+    Parameters
+    ----------
+    model : MLEModel
+        State space model with ``loglikelihood_obs``.
+    importance_density : MEISImportanceDensity
+        Fitted importance density.
     """
 
     def __init__(self, model, importance_density):
@@ -532,7 +645,26 @@ class MEISLikelihood:
         self.importance_density = importance_density
 
     def compute_loglikelihood(self, M=None, seed=None):
-        """Compute MEIS log-likelihood (equation 17)."""
+        """
+        Compute the MEIS log-likelihood estimate.
+
+        Parameters
+        ----------
+        M : int, optional
+            Number of importance samples (defaults to the value used
+            when fitting the importance density).
+        seed : {None, int, numpy.random.Generator}
+            Seed or Generator for reproducibility.
+
+        Returns
+        -------
+        loglik : float
+            Estimated log-likelihood.
+        u_bar : float
+            Mean of centred importance weights (should be near 1).
+        s2_u : float
+            Variance of centred importance weights.
+        """
         if M is None:
             M = self.importance_density.M
 
@@ -562,7 +694,7 @@ class MEISLikelihood:
         return float(loglik), float(u_bar), float(s2_u)
 
     def _compute_log_g(self):
-        """Compute log g(y; ψ) using Kalman filter (equation 17)."""
+        """Compute log g(y; psi) via the Kalman filter on the approximation."""
         try:
             # Prefer cached approx from importance_density if present
             imp = self.importance_density
@@ -588,14 +720,14 @@ class MEISLikelihood:
             res = ks.smooth()
             kalman_llf = float(res.llf) if hasattr(res, 'llf') else 0.0
 
-            # FIX 4: NO spurious correction! Just return Kalman filter likelihood
+            # Return Kalman filter likelihood of the approximating model
             return float(kalman_llf)
         except Exception as e:
             warnings.warn(f"Could not compute log g: {e}")
             return 0.0
 
     def _compute_weights(self, theta_draws):
-        """Compute importance weights (equation 12) with correct a_t formula."""
+        """Compute log importance weights log[p/g] (equation 12)."""
         M, q, nobs = theta_draws.shape
         log_weights = np.zeros(M)
 
@@ -629,7 +761,23 @@ class MEISLikelihood:
 
 
 class MEISMixin:
-    """Mixin to add MEIS to MLEModel."""
+    """
+    Mixin class that adds MEIS estimation to ``MLEModel`` subclasses.
+
+    The user model must implement:
+
+    * ``loglikelihood_obs(t, theta_t)`` -- return the scalar
+      log-density ``log p(y_t | theta_t)``.
+    * Standard ``MLEModel`` interface: ``update``, ``param_names``,
+      ``start_params``, ``transform_params``, ``untransform_params``.
+
+    Optionally:
+
+    * ``q_signal`` attribute (int) -- dimension of the signal
+      (defaults to ``k_endog``).
+    * ``transform_states_to_signal(alpha)`` -- map state vector to
+      signal (defaults to identity).
+    """
 
     def _initialize_meis(self, M=500, max_iter=50, tol=1e-3):
         return MEISImportanceDensity(self, M=M, max_iter=max_iter, tol=tol)
@@ -637,15 +785,40 @@ class MEISMixin:
     def fit_meis(self, start_params=None, M=500, meis_iter=50,
                  transformed=False, method='nm', maxiter=50,
                  disp=True, seed=None, **kwargs):
-        """Fit using MEIS.
+        """
+        Estimate parameters by maximising the MEIS log-likelihood.
+
+        Replaces the Kalman-filter-based ``loglike`` with a MEIS-based
+        version, delegates to ``MLEModel.fit``, then restores the
+        original likelihood.
 
         Parameters
         ----------
+        start_params : array_like, optional
+            Starting parameter values (constrained space). Automatically
+            converted to unconstrained space when ``transformed=False``.
+        M : int
+            Number of importance samples.
+        meis_iter : int
+            Maximum MEIS fitting iterations per likelihood evaluation.
         transformed : bool
-            Default False (recommended). When False, optimizer works in
-            unconstrained (log) space which prevents negative variances.
-            start_params should be constrained (actual) parameter values;
-            they will be auto-converted to unconstrained space internally.
+            If False (default), the optimiser works in unconstrained
+            space, which prevents negative variances.
+        method : str
+            Optimisation method passed to ``MLEModel.fit``
+            (e.g. ``'nm'``, ``'powell'``, ``'lbfgs'``).
+        maxiter : int
+            Maximum optimiser iterations.
+        disp : bool
+            Whether to display convergence information.
+        seed : {None, int, numpy.random.Generator}
+            Seed or Generator for reproducibility.
+        **kwargs
+            Additional keyword arguments passed to ``MLEModel.fit``.
+
+        Returns
+        -------
+        MEISResults
         """
         self._meis_cache = {}
         original_loglike = getattr(self, 'loglike', None)
@@ -672,7 +845,7 @@ class MEISMixin:
                 return self._meis_cache[param_key]
 
             meis = self._initialize_meis(M=M, max_iter=meis_iter)
-            meis.fit(seed=seed, verbose=disp)
+            meis.fit(seed=seed, verbose=False)
 
             likelihood = MEISLikelihood(self, meis)
             loglik, u_bar, s2_u = likelihood.compute_loglikelihood(seed=seed)
@@ -705,7 +878,27 @@ class MEISMixin:
         return results
 
     def smooth_signal_meis(self, params=None, M=100, meis_iter=10):
-        """Get smoothed signal (Section 4.2)."""
+        """
+        Compute the importance-weighted smoothed signal (Section 4.2).
+
+        Parameters
+        ----------
+        params : array_like, optional
+            Parameter values; if given, ``update(params)`` is called first.
+        M : int
+            Number of importance samples.
+        meis_iter : int
+            Maximum MEIS fitting iterations.
+
+        Returns
+        -------
+        theta_smooth : ndarray, shape (q_signal, nobs)
+            Weighted mean of signal draws.
+        theta_draws : ndarray, shape (M, q_signal, nobs)
+            Raw signal draws.
+        weights : ndarray, shape (M,)
+            Normalised importance weights.
+        """
         if params is not None:
             self.update(params)
 
@@ -716,7 +909,21 @@ class MEISMixin:
 
 
 class MEISResults(MLEResults):
-    """MEIS Results."""
+    """
+    Results class for MEIS estimation.
+
+    Wraps a standard ``MLEResults`` object with MEIS-specific
+    post-estimation methods.
+
+    Parameters
+    ----------
+    model : MLEModel
+        The estimated model.
+    params : ndarray
+        Estimated parameter vector.
+    base_results : MLEResults
+        The underlying results from ``MLEModel.fit``.
+    """
 
     def __init__(self, model, params, base_results):
         self.__dict__.update(base_results.__dict__)
@@ -724,11 +931,54 @@ class MEISResults(MLEResults):
         self.params = np.asarray(params)
 
     def smooth_signal(self, M=100, meis_iter=10):
-        return self.model.smooth_signal_meis(params=self.params, M=M, meis_iter=meis_iter)
+        """
+        Compute importance-weighted smoothed signal at estimated params.
+
+        Parameters
+        ----------
+        M : int
+            Number of importance samples.
+        meis_iter : int
+            Maximum MEIS fitting iterations.
+
+        Returns
+        -------
+        theta_smooth : ndarray, shape (q_signal, nobs)
+        theta_draws : ndarray, shape (M, q_signal, nobs)
+        weights : ndarray, shape (M,)
+        """
+        return self.model.smooth_signal_meis(params=self.params, M=M,
+                                             meis_iter=meis_iter)
 
 
 def extract_signal_meis(model, meis, M=None, seed=None):
-    """Extract smoothed signal using MEIS (Section 4.2)."""
+    """
+    Extract the smoothed signal using importance-weighted averaging.
+
+    Draws ``M`` signal trajectories from the fitted importance density,
+    computes importance weights ``p / g``, and returns the weighted
+    mean signal together with the raw draws and normalised weights.
+
+    Parameters
+    ----------
+    model : MLEModel
+        Model with ``loglikelihood_obs``.
+    meis : MEISImportanceDensity
+        Fitted importance density.
+    M : int, optional
+        Number of draws (defaults to ``meis.M``).
+    seed : {None, int, numpy.random.Generator}
+        Seed or Generator for reproducibility.
+
+    Returns
+    -------
+    theta_smooth : ndarray, shape (q_signal, nobs)
+        Weighted mean signal.
+    theta_draws : ndarray, shape (M, q_signal, nobs)
+        Individual signal draws.
+    weights : ndarray, shape (M,)
+        Normalised importance weights.
+    """
     if M is None:
         M = meis.M
 

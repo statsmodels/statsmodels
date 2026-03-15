@@ -23,7 +23,6 @@ from scipy import stats, optimize
 from scipy.special import gammaln
 import matplotlib.pyplot as plt
 
-# Import MEIS from the fixed implementation
 from statsmodels.tsa.statespace.meis import MEISMixin, MEISLikelihood
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 
@@ -274,7 +273,7 @@ def estimate_params(model, true_params, M=200, meis_iter=20, method='L-BFGS-B'):
     print("\n" + "=" * 70)
     print("MAXIMUM LIKELIHOOD ESTIMATION VIA MEIS")
     print("=" * 70)
-    print(f"Estimating: mu, phi, sigma_eta, nu")
+    print("Estimating: mu, phi, sigma_eta, nu")
     print(f"True values: mu={true_params[0]:.4f}, phi={true_params[1]:.4f}, "
           f"sigma_eta={true_params[2]:.4f}, nu={true_params[3]:.2f}")
     print(f"MEIS settings: M={M}, max_iter={meis_iter}")
@@ -485,15 +484,15 @@ def run_example(n=500, M=200, meis_iter=20, seed=42, method='L-BFGS-B'):
     print("=" * 70)
     print("STOCHASTIC VOLATILITY: FULL PARAMETER ESTIMATION WITH MEIS")
     print("=" * 70)
-    print(f"Estimating all 4 parameters: mu, phi, sigma_eta, nu")
+    print("Estimating all 4 parameters: mu, phi, sigma_eta, nu")
 
     # True parameters
     true_params = np.array([0.0, 0.98, 0.15, 10.0])  # [mu, phi, sigma_eta, nu]
 
-    print(f"\nSimulation settings:")
+    print("\nSimulation settings:")
     print(f"  n = {n} observations")
     print(f"  seed = {seed}")
-    print(f"  True parameters:")
+    print("  True parameters:")
     print(f"    mu        = {true_params[0]:.4f}")
     print(f"    phi       = {true_params[1]:.4f}")
     print(f"    sigma_eta = {true_params[2]:.4f}")
@@ -504,7 +503,7 @@ def run_example(n=500, M=200, meis_iter=20, seed=42, method='L-BFGS-B'):
     sim_model = StochasticVolatilityStudentT(np.zeros(n))
     y_sim, theta_true = sim_model.simulate(true_params, nsimulations=n, seed=seed)
 
-    print(f"\nData statistics:")
+    print("\nData statistics:")
     print(f"  mean  = {np.mean(y_sim):.4f}")
     print(f"  std   = {np.std(y_sim):.4f}")
     print(f"  min   = {np.min(y_sim):.4f}")
@@ -524,11 +523,11 @@ def run_example(n=500, M=200, meis_iter=20, seed=42, method='L-BFGS-B'):
     print("\n" + "=" * 70)
     print("EXAMPLE COMPLETE!")
     print("=" * 70)
-    print(f"\nKey results:")
-    print(f"  • All 4 parameters estimated successfully")
-    print(f"  • Optimization converged: {result.success}")
-    print(f"  • Final log-likelihood: {-result.fun:.2f}")
-    print(f"  • Saved diagnostic plots to: sv_meis_full_estimation.png")
+    print("\nKey results:")
+    print("  \u2022 All 4 parameters estimated successfully")
+    print(f"  \u2022 Optimization converged: {result.success}")
+    print(f"  \u2022 Final log-likelihood: {-result.fun:.2f}")
+    print("  \u2022 Saved diagnostic plots to: sv_meis_full_estimation.png")
 
     return {
         'result': result,

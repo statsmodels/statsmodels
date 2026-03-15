@@ -7,11 +7,11 @@ makes it easy to (a) plot the MEIS-based log-likelihood as a function of
 sigma_eta and (b) debug / inspect behavior.
 
 Usage:
-    python sv_meis_example3.py        # runs full example (may be slow)
-    python sv_meis_example3.py --smoke  # quick smoke test (small n, small M)
+    python sv_meis_example.py        # runs full example (may be slow)
+    python sv_meis_example.py --smoke  # quick smoke test (small n, small M)
 
 Notes:
-- This script depends on your local `meis3` implementation exposing
+- This script depends on your local `meis` implementation exposing
   MEISMixin, MEISResults and MEISLikelihood (the MEIS importance + likelihood).
 - We perform a grid evaluation of sigma_eta and pick the maximizing value.
   Grid evaluation is deterministic and simple to inspect; you can later
@@ -25,8 +25,7 @@ from scipy import stats
 from scipy.special import gammaln
 import matplotlib.pyplot as plt
 
-# Import MEIS pieces from your module. meis3 must be on PYTHONPATH / same dir.
-from statsmodels.tsa.statespace.meis import MEISMixin, MEISResults, MEISLikelihood
+from statsmodels.tsa.statespace.meis import MEISMixin, MEISLikelihood
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 
 # Numerical clip constants reused from meis module (tune if needed)

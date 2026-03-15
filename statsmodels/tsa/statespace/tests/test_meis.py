@@ -11,7 +11,7 @@ import pytest
 from numpy.testing import assert_allclose
 import warnings
 
-from statsmodels.tsa.statespace.meis import MEISMixin, MEISImportanceDensity, MEISLikelihood
+from statsmodels.tsa.statespace.meis import MEISMixin, MEISLikelihood
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 
 # small positive floor for variances to avoid numerical issues in tests
@@ -97,7 +97,7 @@ class GaussianLocalLevel(MEISMixin, MLEModel):
         # For approximate diffuse, use ~10x the state variance
         initial_var = max(10.0 * self.state_var, 1.0)
         initial_cov = np.array([[initial_var]])
-        
+
         try:
             self.ssm.initialize_known(initial_state, initial_cov)
         except Exception:
@@ -287,9 +287,10 @@ class TestGaussianValidation:
             assert_allclose(ll_meis, ll_kf, rtol=0, atol=tolerance,
                             err_msg=f"Failed for obs_var={obs_var}, state_var={state_var}")
 
+    @pytest.mark.slow
     def test_parameter_estimates_match_kf(self):
         """
-        New test: compare estimated parameters (obs_var, state_var) obtained
+        Test: compare estimated parameters (obs_var, state_var) obtained
         by standard KF-based MLE and by MEIS-based MLE (fit_meis).
         The estimates should be close (within a tolerance that accounts for
         Monte Carlo noise in the MEIS likelihood).
