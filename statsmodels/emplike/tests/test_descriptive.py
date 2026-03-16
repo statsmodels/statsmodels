@@ -120,7 +120,7 @@ class TestDescriptiveStatistics(GenRes):
     @pytest.mark.parametrize(
         "endog",
         [
-            np.array([]),           
+            np.array([]),
             np.zeros((2, 2, 2)),
         ],
     )

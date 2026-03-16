@@ -47,15 +47,14 @@ def DescStat(endog):
         raise ValueError("endog must contain data")
     if endog.ndim == 0:
         endog = endog.reshape(1,1)
-    if endog.ndim > 2:
-        raise ValueError("endog must be 1D or 2D")
-    
-    if endog.ndim == 1:
+    elif endog.ndim == 1:
         endog = endog.reshape(len(endog), 1)
+    elif endog.ndim > 2:
+        raise ValueError("endog must be 1D or 2D")
+
     if endog.shape[1] == 1:
         return DescStatUV(endog)
-    if endog.shape[1] > 1:
-        return DescStatMV(endog)
+    return DescStatMV(endog)
 
 
 class _OptFuncts:
