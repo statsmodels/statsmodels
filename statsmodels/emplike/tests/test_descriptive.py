@@ -1,6 +1,6 @@
 import numpy as np
-import pytest
 from numpy.testing import assert_almost_equal
+import pytest
 
 from statsmodels.datasets import star98
 from statsmodels.emplike.descriptive import DescStat
