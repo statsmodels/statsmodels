@@ -46,7 +46,7 @@ def DescStat(endog):
     if endog.size == 0:
         raise ValueError("endog must contain data")
     if endog.ndim == 0:
-        endog = endog.reshape(1,1)
+        endog = endog.reshape(1, 1)
     elif endog.ndim == 1:
         endog = endog.reshape(len(endog), 1)
     elif endog.ndim > 2:
