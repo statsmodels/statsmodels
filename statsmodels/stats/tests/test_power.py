@@ -79,19 +79,26 @@ class CheckPowerMixin:
         kwds.update(self.kwds_extra)
         # kwds_extra are used as argument, but not as target for root
         for key in self.kwds:
-            if (
-                (PLATFORM_WIN or PLATFORM_OSX)
-                and isinstance(self, TestTTPowerOneS1)
-                and key == "alpha"
-            ):
-                pytest.xfail("alpha test failing on recent SciPy on Windows")
+            if key == "alpha":
+                if (PLATFORM_WIN and isinstance(self, TestTTPowerOneS1)) or (
+                    PLATFORM_OSX
+                    and isinstance(self, (TestTTPowerOneS1, TestTTPowerTwoS1))
+                ):
+                    pytest.xfail(
+                        f"alpha test failing test {self.__class__} for key {key} on "
+                        f"recent SciPy on Windows and Darwin"
+                    )
 
-            # keep print to check whether tests are really executed
-            # print 'testing roots', key
             value = kwds[key]
             kwds[key] = None
-
-            result = self.cls().solve_power(**kwds)
+            try:
+                result = self.cls().solve_power(**kwds)
+            except Exception as exc:
+                msg = (
+                    f"class: {self.__class__.__name__}, key: {key}, "
+                    f"value: {value}, kwds: {kwds}"
+                )
+                raise AssertionError(msg) from exc
             assert_allclose(result, value, rtol=0.001, err_msg=key + " failed")
             # yield can be used to investigate specific errors
             # yield assert_allclose, result, value, 0.001, 0, key+' failed'
