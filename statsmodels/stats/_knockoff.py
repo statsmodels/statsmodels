@@ -71,8 +71,7 @@ class RegressionFDR:
     sdp approach requires that the cvxopt package be installed.
     """
 
-    def __init__(self, endog, exog, regeffects, method="knockoff",
-                 **kwargs):
+    def __init__(self, endog, exog, regeffects, method="knockoff", **kwargs):
 
         if hasattr(exog, "columns"):
             self.xnames = exog.columns
@@ -100,8 +99,7 @@ class RegressionFDR:
 
         self.stats = regeffects.stats(self)
 
-        unq, inv, cnt = np.unique(self.stats, return_inverse=True,
-                                  return_counts=True)
+        unq, inv, cnt = np.unique(self.stats, return_inverse=True, return_counts=True)
 
         # The denominator of the FDR
         cc = np.cumsum(cnt)
@@ -160,9 +158,7 @@ def _design_knockoff_sdp(exog):
     try:
         from cvxopt import matrix, solvers
     except ImportError as exc:
-        raise ValueError(
-            "SDP knockoff designs require installation of cvxopt"
-        ) from exc
+        raise ValueError("SDP knockoff designs require installation of cvxopt") from exc
 
     nobs, nvar = exog.shape
 
@@ -183,8 +179,8 @@ def _design_knockoff_sdp(exog):
     h1 = 2 * Sigma
     h1 = matrix(h1)
     i, j = np.diag_indices(nvar)
-    G1 = np.zeros((nvar*nvar, nvar))
-    G1[i*nvar + j, i] = 1
+    G1 = np.zeros((nvar * nvar, nvar))
+    G1[i * nvar + j, i] = 1
     G1 = matrix(G1)
 
     solvers.options["show_progress"] = False
@@ -213,7 +209,7 @@ def _design_knockoff_equi(exog):
 
     nobs, nvar = exog.shape
 
-    if nobs < 2*nvar:
+    if nobs < 2 * nvar:
         msg = "The equivariant knockoff can ony be used when n >= 2*p"
         raise ValueError(msg)
 
@@ -224,9 +220,15 @@ def _design_knockoff_equi(exog):
 
     xcov = np.dot(exog.T, exog)
     ev, _ = np.linalg.eig(xcov)
+
+    if np.iscomplexobj(ev):
+        if np.all(ev.imag == 0):
+            ev = ev.real
+        else:
+            raise RuntimeError("Expected real eigenvalues, got imaginary.")
     evmin = np.min(ev)
 
-    sl = min(2*evmin, 1)
+    sl = min(2 * evmin, 1)
     sl = sl * np.ones(nvar)
 
     exogn = _get_knmat(exog, xcov, sl)
