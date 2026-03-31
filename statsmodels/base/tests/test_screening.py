@@ -5,9 +5,12 @@ Author: Josef Perktold
 
 """
 
+from statsmodels.compat.platform import PLATFORM_WIN_ARM64
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
+import pytest
 
 from statsmodels.base._penalized import PenalizedMixin
 from statsmodels.base._screening import VariableScreening
@@ -33,15 +36,14 @@ def _get_poisson_data():
 
     nobs, k_vars = 100, 500
     k_nonzero = 5
-    x = (np.random.rand(nobs, k_vars) +
-         1. * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+    x = (np.random.rand(nobs, k_vars) + 1.0 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
     x *= 1.2
 
     x = (x - x.mean(0)) / x.std(0)
     x[:, 0] = 1
     beta = np.zeros(k_vars)
     idx_nonzero_true = [0, 100, 300, 400, 411]
-    beta[idx_nonzero_true] = 1. / np.arange(1, k_nonzero + 1)
+    beta[idx_nonzero_true] = 1.0 / np.arange(1, k_nonzero + 1)
     beta = np.sqrt(beta)  # make small coefficients larger
     linpred = x.dot(beta)
     mu = np.exp(linpred)
@@ -58,8 +60,9 @@ def test_poisson_screening():
 
     xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
     xnames_true[0] = "const"
-    parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true,
-                              columns=["true"])
+    parameters = pd.DataFrame(
+        beta[idx_nonzero_true], index=xnames_true, columns=["true"]
+    )
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = Poisson(y, xframe_true).fit()
@@ -92,13 +95,14 @@ def test_screen_iterated():
 
     nobs, k_nonzero = 100, 5
 
-    x = (np.random.rand(nobs, k_nonzero - 1) +
-         1.0 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+    x = (
+        np.random.rand(nobs, k_nonzero - 1) + 1.0 * (np.random.rand(nobs, 1) - 0.5)
+    ) * 2 - 1
     x *= 1.2
     x = (x - x.mean(0)) / x.std(0)
     x = np.column_stack((np.ones(nobs), x))
 
-    beta = 1. / np.arange(1, k_nonzero + 1)
+    beta = 1.0 / np.arange(1, k_nonzero + 1)
     beta = np.sqrt(beta)  # make small coefficients larger
     linpred = x.dot(beta)
     mu = np.exp(linpred)
@@ -113,8 +117,11 @@ def test_screen_iterated():
 
         n_batches = 6
         for i in range(n_batches):
-            x = (0.05 * common + np.random.rand(nobs, k_vars) +
-                 1.0 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+            x = (
+                0.05 * common
+                + np.random.rand(nobs, k_vars)
+                + 1.0 * (np.random.rand(nobs, 1) - 0.5)
+            ) * 2 - 1
             x *= 1.2
             if i < k_nonzero - 1:
                 # hide a nonezero
@@ -123,7 +130,7 @@ def test_screen_iterated():
             yield x
 
     dummy = np.ones(nobs)
-    dummy[:nobs // 2] = 0
+    dummy[: nobs // 2] = 0
     exog_keep = np.column_stack((np.ones(nobs), dummy))
     for k in [1, 2]:
         mod_initial = PoissonPenalized(y, exog_keep[:, :k], pen_weight=nobs * 500)
@@ -133,13 +140,11 @@ def test_screen_iterated():
         final = screener.screen_exog_iterator(exog_iterator())
         names = ["var0_10", "var1_10", "var2_10", "var3_10"]
         assert_equal(final.exog_final_names, names)
-        idx_full = np.array([[0, 10],
-                             [1, 10],
-                             [2, 10],
-                             [3, 10]], dtype=np.int64)
+        idx_full = np.array([[0, 10], [1, 10], [2, 10], [3, 10]], dtype=np.int64)
         assert_equal(final.idx_nonzero_batches, idx_full)
 
 
+@pytest.mark.skipif(PLATFORM_WIN_ARM64, reason="Segfaults on Win ARM64")
 def test_glmpoisson_screening():
 
     y, x, idx_nonzero_true, beta = _get_poisson_data()
@@ -147,7 +152,9 @@ def test_glmpoisson_screening():
 
     xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
     xnames_true[0] = "const"
-    parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true, columns=["true"])
+    parameters = pd.DataFrame(
+        beta[idx_nonzero_true], index=xnames_true, columns=["true"]
+    )
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = GLMPenalized(y, xframe_true, family=family.Poisson()).fit()
@@ -180,15 +187,14 @@ def _get_logit_data():
 
     nobs, k_vars = 300, 500
     k_nonzero = 5
-    x = (np.random.rand(nobs, k_vars) +
-         0.01 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+    x = (np.random.rand(nobs, k_vars) + 0.01 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
     x *= 1.2
 
     x = (x - x.mean(0)) / x.std(0)
     x[:, 0] = 1
     beta = np.zeros(k_vars)
     idx_nonzero_true = [0, 100, 300, 400, 411]
-    beta[idx_nonzero_true] = 1. / np.arange(1, k_nonzero + 1)**0.5
+    beta[idx_nonzero_true] = 1.0 / np.arange(1, k_nonzero + 1) ** 0.5
     beta = np.sqrt(beta)  # make small coefficients larger
     linpred = x.dot(beta)
     mu = 1 / (1 + np.exp(-linpred))
@@ -205,8 +211,9 @@ def test_logit_screening():
 
     xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
     xnames_true[0] = "const"
-    parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true,
-                              columns=["true"])
+    parameters = pd.DataFrame(
+        beta[idx_nonzero_true], index=xnames_true, columns=["true"]
+    )
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = Logit(y, xframe_true).fit()
@@ -247,13 +254,15 @@ def test_glmlogit_screening():
     nobs = len(y)
 
     # test uses
-    screener_kwds = dict(pen_weight=nobs * 0.75, threshold_trim=1e-3,
-                         ranking_attr="model.score_factor")
+    screener_kwds = dict(
+        pen_weight=nobs * 0.75, threshold_trim=1e-3, ranking_attr="model.score_factor"
+    )
 
     xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
     xnames_true[0] = "const"
-    parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true,
-                              columns=["true"])
+    parameters = pd.DataFrame(
+        beta[idx_nonzero_true], index=xnames_true, columns=["true"]
+    )
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = GLMPenalized(y, xframe_true, family=family.Binomial()).fit()
@@ -292,15 +301,14 @@ def _get_gaussian_data():
 
     nobs, k_vars = 100, 500
     k_nonzero = 5
-    x = (np.random.rand(nobs, k_vars) +
-         0.01 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+    x = (np.random.rand(nobs, k_vars) + 0.01 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
     x *= 1.2
 
     x = (x - x.mean(0)) / x.std(0)
     x[:, 0] = 1  # make first column into constant
     beta = np.zeros(k_vars)
     idx_nonzero_true = [0, 1, 300, 400, 411]
-    beta[idx_nonzero_true] = 1. / np.arange(1, k_nonzero + 1)
+    beta[idx_nonzero_true] = 1.0 / np.arange(1, k_nonzero + 1)
     beta = np.sqrt(beta)  # make small coefficients larger
     linpred = x.dot(beta)
     y = linpred + 0.1 * np.random.randn(len(linpred))
@@ -308,6 +316,7 @@ def _get_gaussian_data():
     return y, x, idx_nonzero_true, beta
 
 
+@pytest.mark.skipif(PLATFORM_WIN_ARM64, reason="Segfaults on Win ARM64")
 def test_glmgaussian_screening():
 
     y, x, idx_nonzero_true, beta = _get_gaussian_data()
@@ -316,13 +325,15 @@ def test_glmgaussian_screening():
     y = y - y.mean(0)
 
     # test uses
-    screener_kwds = dict(pen_weight=nobs * 0.75, threshold_trim=1e-3,
-                         ranking_attr="model.score_factor")
+    screener_kwds = dict(
+        pen_weight=nobs * 0.75, threshold_trim=1e-3, ranking_attr="model.score_factor"
+    )
 
     xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
     xnames_true[0] = "const"
-    parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true,
-                              columns=["true"])
+    parameters = pd.DataFrame(
+        beta[idx_nonzero_true], index=xnames_true, columns=["true"]
+    )
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = GLMPenalized(y, xframe_true, family=family.Gaussian()).fit()
