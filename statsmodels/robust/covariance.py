@@ -644,8 +644,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     else:
         c = np.diag(mad(x, center=0) ** 2)
 
-    dtrtri = get_lapack_funcs('trtri', dtype=np.float64, ilp64='preferred')
-    
+    dtrtri = get_lapack_funcs("trtri", dtype=np.float64, ilp64="preferred")
     # Tyler's M-estimator of shape (scatter) matrix
     n_iter = 0
     for _ in range(maxiter):
