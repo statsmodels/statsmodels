@@ -570,7 +570,8 @@ class Docstring:
     def __init__(self, docstring):
         self._ds = None
         self._docstring = docstring
-        if docstring is None:
+        if docstring is None or not docstring.strip():
+            self._docstring = None
             return
         self._ds = NumpyDocString(docstring)
 
