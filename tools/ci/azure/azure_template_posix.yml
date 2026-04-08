@@ -198,6 +198,7 @@ jobs:
   - script: |
       echo "Testing in parallel mode"
       export PYTHON_GIL="0"
+      # joblib creates difficult to debug exceptions during parallel runs
       python -m pip uninstall joblib -y
       pytest statsmodels/nonparametric/tests/ --parallel-threads 4 --junitxml=junit/test-results.xml
     displayName: 'Run tests (parallel)'
