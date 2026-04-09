@@ -85,9 +85,7 @@ class RLM(base.LikelihoodModel):
     >>> import statsmodels.api as sm
     >>> data = sm.datasets.stackloss.load()
     >>> data.exog = sm.add_constant(data.exog)
-    >>> rlm_model = sm.RLM(data.endog, data.exog,
-         M=sm.robust.norms.HuberT())
-
+    >>> rlm_model = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
     >>> rlm_results = rlm_model.fit()
     >>> rlm_results.params
     array([  0.82938433,   0.92606597,  -0.12784672, -41.02649835])

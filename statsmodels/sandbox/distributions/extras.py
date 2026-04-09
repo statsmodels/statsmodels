@@ -1164,7 +1164,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
                         increase MAXPTS to decrease ERROR; 1.048330348e-006
     0.166666546218
     >>> print(mvstdnormcdf([-np.inf,-np.inf,-100.0],[0.0,0.0,0.0], corr,
-         maxpts=100000, abseps=1e-8))
+    ...     maxpts=100000, abseps=1e-8))
     0.166666588293
 
     """

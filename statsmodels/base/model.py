@@ -2103,9 +2103,9 @@ class LikelihoodModelResults(Results):
         C(Duration, Sum):C(Weight, Sum)    0.176002      0.83912310946              2        51
 
         >>> res_poi = Poisson.from_formula("Days ~ C(Weight) * C(Duration)",
-             data).fit(cov_type='HC0')
+        ...     data).fit(cov_type='HC0')
         >>> wt = res_poi.wald_test_terms(skip_single=False,
-             combine_terms=['Duration', 'Weight'])
+        ...     combine_terms=['Duration', 'Weight'])
         >>> print(wt)
                                     chi2             P>chi2  df constraint
         Intercept              15.695625  7.43960374424e-05              1
