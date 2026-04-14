@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import PD_LT_3
+from statsmodels.compat.patsy import ensure_patsy_compat
 
 from collections import defaultdict
 import os
@@ -17,7 +18,7 @@ DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
 if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
     raise ValueError(f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}")
 
-from statsmodels.compat.patsy import ensure_patsy_compat
+
 ensure_patsy_compat()
 
 try:

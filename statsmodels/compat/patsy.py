@@ -1,5 +1,7 @@
 from statsmodels.compat.pandas import PD_LT_2
 
+import functools
+
 import numpy as np
 
 
@@ -116,21 +118,16 @@ def get_all_sorted_knots(
 
     return all_knots
 
-_patsy_compat_applied = False
 
+@functools.cache
 def ensure_patsy_compat():
-    global _patsy_compat_applied
-    if _patsy_compat_applied:
-        return
     try:
-        import patsy.util
+        import patsy.util  # noqa: F401
     except ImportError:
         # patsy not installed skip applying the patch now
         return
     try:
         monkey_patch_cat_dtype()
-        _patsy_compat_applied = True
     except Exception:
         # Intentionally ignored to avoid breaking import time behavior
         return
-
