@@ -971,8 +971,8 @@ class MixedLM(base.LikelihoodModel):
         different across the schools.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
-        >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc, \
-                                  re_formula='1', groups='school', data=data)
+        >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc,
+        ...     re_formula='1', groups='school', data=data)
 
         Now suppose we also have a previous test score called
         'pretest'.  If we want the relationship between pretest
@@ -980,17 +980,16 @@ class MixedLM(base.LikelihoodModel):
         specify a random slope for the pretest score
 
         >>> vc = {'classroom': '0 + C(classroom)', 'pretest': '0 + pretest'}
-        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc, \
-                                  re_formula='1', groups='school', data=data)
+        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
+        ...     re_formula='1', groups='school', data=data)
 
         The following model is almost equivalent to the previous one,
         but here the classroom random intercept and pretest slope may
         be correlated.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
-        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc, \
-                                  re_formula='1 + pretest', groups='school', \
-                                  data=data)
+        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
+        ...     re_formula='1 + pretest', groups='school', data=data)
         """
 
         if "groups" not in kwargs.keys():
