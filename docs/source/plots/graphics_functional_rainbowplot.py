@@ -6,8 +6,8 @@ Author: Ralf Gommers
 
 """
 
-#Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
-#surface temperature data.
+# Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
+# surface temperature data.
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,7 +16,7 @@ import statsmodels.api as sm
 
 data = sm.datasets.elnino.load()
 
-#Create a rainbow plot:
+# Create a rainbow plot:
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
@@ -28,4 +28,4 @@ ax.set_xticks(np.arange(13, step=3) - 1)
 ax.set_xticklabels(["", "Mar", "Jun", "Sep", "Dec"])
 ax.set_xlim([-0.2, 11.2])
 
-#plt.show()
+# plt.show()
