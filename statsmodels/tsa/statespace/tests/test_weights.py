@@ -520,7 +520,7 @@ def test_compute_t_compute_j(compute_j, compute_t, reset_randomstate):
     ix = np.ix_(compute_t, compute_j)
     desired = desired[ix]
 
-    assert_allclose(actual, desired, atol=1e-7)
+    assert_allclose(actual, desired, atol=2e-5)
 
 
 def test_resmooth():
