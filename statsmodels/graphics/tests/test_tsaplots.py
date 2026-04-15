@@ -20,8 +20,8 @@ from statsmodels.graphics.tsaplots import (
     plot_pacf,
     plot_predict,
     quarter_plot,
+    seasonal_diagnostic_plot,
     seasonal_plot,
-    seasonal_diagnostic_plot
 )
 from statsmodels.tsa import arima_process as tsp
 from statsmodels.tsa.ar_model import AutoReg
@@ -448,29 +448,41 @@ def test_plot_predict_passes_alpha_to_conf_int(close_figures):
 
 
 def get_elnino_stl():
-    month_dict = {'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
-                  'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12}
-    data = (elnino.load().data
-            .rename(columns=month_dict)
-            .melt(id_vars=['YEAR'], var_name='month')
-            .assign(day=1,
-                    date=lambda df: pd.to_datetime(
-                        df[['YEAR', 'month', 'day']]))
-            .drop(columns=['YEAR', 'month', 'day'])
-            .set_index('date')
-            .sort_index()
-            )
+    month_dict = {
+        "JAN": 1,
+        "FEB": 2,
+        "MAR": 3,
+        "APR": 4,
+        "MAY": 5,
+        "JUN": 6,
+        "JUL": 7,
+        "AUG": 8,
+        "SEP": 9,
+        "OCT": 10,
+        "NOV": 11,
+        "DEC": 12,
+    }
+    data = (
+        elnino.load()
+        .data.rename(columns=month_dict)
+        .melt(id_vars=["YEAR"], var_name="month")
+        .assign(day=1, date=lambda df: pd.to_datetime(df[["YEAR", "month", "day"]]))
+        .drop(columns=["YEAR", "month", "day"])
+        .set_index("date")
+        .sort_index()
+    )
 
     return STL(data, period=12, seasonal=53).fit()
 
 
 @pytest.mark.matplotlib
-def test_seasonal_diagnostic_plot():
+def test_seasonal_diagnostic_plot(close_figures):
 
     res = get_elnino_stl()
-    labels = ['January', 'February', 'March', 'November']
-    fig = seasonal_diagnostic_plot(res, period=12, subplots=[0, 1, 2, 10],
-                                   labels=labels, nrows=2)
+    labels = ["January", "February", "March", "November"]
+    fig = seasonal_diagnostic_plot(
+        res, period=12, subplots=[0, 1, 2, 10], labels=labels, nrows=2
+    )
 
     assert isinstance(fig, plt.Figure)
 
@@ -478,41 +490,41 @@ def test_seasonal_diagnostic_plot():
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("subplots", [1, 2, 7, 12])
 @pytest.mark.parametrize("nrows", [1, 2, 7, 12])
-def test_sdp_numbers(subplots, nrows):
+def test_sdp_numbers(subplots, nrows, close_figures):
     res = get_elnino_stl()
     fig = seasonal_diagnostic_plot(res, period=12, subplots=subplots, nrows=nrows)
     assert isinstance(fig, plt.Figure)
 
 
 @pytest.mark.matplotlib
-def test_sdp_labels():
+def test_sdp_labels(close_figures):
     res = get_elnino_stl()
 
     # too few
-    with pytest.raises(Exception):
-        labels = ['a', 'b', 'c']
+    with pytest.raises(ValueError):
+        labels = ["a", "b", "c"]
         _ = seasonal_diagnostic_plot(res, period=12, labels=labels)
 
     # too many
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         labels = range(13)
         _ = seasonal_diagnostic_plot(res, period=12, labels=labels)
 
     # just right
-    labels = 'abcdefghijkl'
+    labels = "abcdefghijkl"
     fig = seasonal_diagnostic_plot(res, period=12, labels=labels)
     assert isinstance(fig, plt.Figure)
 
 
 @pytest.mark.matplotlib
-def test_sdp_invalid_subplots():
+def test_sdp_invalid_subplots(close_figures):
     res = get_elnino_stl()
 
     # too many
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         _ = seasonal_diagnostic_plot(res, period=12, subplots=13)
 
     # too many
-    with pytest.raises(Exception):
+    with pytest.raises(TypeError):
         sp = range(13)
         _ = seasonal_diagnostic_plot(res, period=12, subplots=sp)

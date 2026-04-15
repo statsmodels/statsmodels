@@ -964,13 +964,14 @@ def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **k
 
     def seasonplot(x, period, period_length, ax=None):
 
-        where = [period_length * i + period
-                 for i in range(x.seasonal.size // period_length)]
+        where = [
+            period_length * i + period for i in range(x.seasonal.size // period_length)
+        ]
         seasonal_k = x.seasonal.iloc[where]
         residual_k = x.resid.iloc[where]
         mean = seasonal_k.mean()
 
-        ax.plot(seasonal_k.index, seasonal_k + residual_k - mean, '.')
+        ax.plot(seasonal_k.index, seasonal_k + residual_k - mean, ".")
         ax.plot(seasonal_k.index, seasonal_k - mean)
         return ax
 
@@ -979,27 +980,28 @@ def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **k
 
     if isinstance(subplots, int):
         if subplots > period:
-            raise Exception('subplots cannot be larger than period.')
-        p_to_plot = np.floor(
-                        np.arange(subplots) * period / subplots
-                        ).astype(int)
-    elif (isinstance(subplots, (list, np.ndarray))
-          and all(isinstance(i, int) for i in subplots)):
+            raise ValueError("subplots cannot be larger than period.")
+        p_to_plot = np.floor(np.arange(subplots) * period / subplots).astype(int)
+    elif isinstance(subplots, (list, np.ndarray)) and all(
+        isinstance(i, int) for i in subplots
+    ):
         p_to_plot = subplots
         subplots = len(p_to_plot)
     else:
-        raise Exception('subplots must be either an int or a list of ints.')
+        raise TypeError("subplots must be either an int or a list of ints.")
 
     if labels is None:
-        labels = [f'Cycle-subseries {int(i + 1)}' for i in p_to_plot]
+        labels = [f"Cycle-subseries {int(i + 1)}" for i in p_to_plot]
     elif len(labels) != subplots:
-        raise Exception('The number of labels does not match the number of '
-                        'periods to plot.')
+        raise ValueError(
+            "The number of labels does not match the number of periods to plot."
+        )
 
-    kwargs.setdefault('ncols', np.ceil(subplots / nrows).astype(int))
-    kwargs.setdefault('figsize', (kwargs['ncols'] * 2, nrows * 2 + 0.5))
-    fig, axs = plt.subplots(sharex=True, sharey=True,
-                            squeeze=False, nrows=nrows, **kwargs)
+    kwargs.setdefault("ncols", np.ceil(subplots / nrows).astype(int))
+    kwargs.setdefault("figsize", (kwargs["ncols"] * 2, nrows * 2 + 0.5))
+    fig, axs = plt.subplots(
+        sharex=True, sharey=True, squeeze=False, nrows=nrows, **kwargs
+    )
 
     for i, ax in enumerate(fig.get_axes()):
         if i < subplots:
