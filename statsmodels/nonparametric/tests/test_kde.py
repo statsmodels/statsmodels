@@ -94,8 +94,11 @@ class CheckKDE:
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(kde_vals, np.asarray(self.res_density, dtype=float).ravel(),
-                                self.decimal_density)
+        npt.assert_almost_equal(
+            kde_vals,
+            np.asarray(self.res_density, dtype=float).ravel(),
+            self.decimal_density,
+        )
 
 
 class TestKDEGauss(CheckKDE):
@@ -113,8 +116,11 @@ class TestKDEGauss(CheckKDE):
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
         kde_vals[~mask_valid] = 0
-        npt.assert_almost_equal(kde_vals, np.asarray(self.res_density, dtype=float).ravel(),
-                                self.decimal_density)
+        npt.assert_almost_equal(
+            kde_vals,
+            np.asarray(self.res_density, dtype=float).ravel(),
+            self.decimal_density,
+        )
 
     # The following tests are regression tests
     # Values have been checked to be very close to R 'ks' package (Dec 2013)
@@ -216,7 +222,9 @@ class TestKDEGaussFFT(CheckKDE):
         res1.fit(kernel="gau", fft=True, bw="silverman")
         cls.res1 = res1
         rfname2 = os.path.join(curdir, "results", "results_kde_fft.csv")
-        cls.res_density = pd.read_csv(rfname2, header=None, dtype=float).to_numpy().ravel()
+        cls.res_density = (
+            pd.read_csv(rfname2, header=None, dtype=float).to_numpy().ravel()
+        )
 
 
 class CheckKDEWeights:
@@ -237,16 +245,16 @@ class CheckKDEWeights:
         reason="Not almost equal to 7 decimals", raises=AssertionError, strict=True
     )
     def test_density(self):
-        npt.assert_almost_equal(self.res1.density, self.res_density,
-                                self.decimal_density)
+        npt.assert_almost_equal(
+            self.res1.density, self.res_density, self.decimal_density
+        )
 
     def test_evaluate(self):
         if self.kernel_name == "cos":
             pytest.skip("Cosine kernel fails against Stata")
         kde_vals = [self.res1.evaluate(xi) for xi in self.x]
         kde_vals = np.squeeze(kde_vals)  # kde_vals is a "column_list"
-        npt.assert_almost_equal(kde_vals, self.res_density,
-                                self.decimal_density)
+        npt.assert_almost_equal(kde_vals, self.res_density, self.decimal_density)
 
     def test_compare(self):
         xx = self.res1.support

@@ -139,13 +139,14 @@ class TestLowess:
 
     def test_options(self):
         rfile = os.path.join(rpath, "test_lowess_simple.csv")
-        test_data = pd.read_csv(rfile, dtype=float).sort_values("x").reset_index(drop=True)
-        y = test_data["y"].to_numpy()
-        x = test_data["x"].to_numpy()
-        expected_lowess = np.column_stack([
-            test_data["x"].to_numpy(),
-            test_data["out"].to_numpy()
-        ])
+        test_data = (
+            pd.read_csv(rfile, dtype=float).sort_values("x").reset_index(drop=True)
+        )
+        y = np.array(test_data["y"])
+        x = np.array(test_data["x"])
+        expected_lowess = np.column_stack(
+            [test_data["x"].to_numpy(), test_data["out"].to_numpy()]
+        )
 
         # check skip sorting
         actual_lowess1 = lowess(y, x, is_sorted=True)
@@ -244,9 +245,11 @@ class TestLowess:
 
     def test_exog_predict(self):
         rfile = os.path.join(rpath, "test_lowess_simple.csv")
-        test_data = pd.read_csv(rfile, dtype=float).sort_values("x").reset_index(drop=True)
-        y = test_data["y"].to_numpy()
-        x = test_data["x"].to_numpy()
+        test_data = (
+            pd.read_csv(rfile, dtype=float).sort_values("x").reset_index(drop=True)
+        )
+        y = np.array(test_data["y"])
+        x = np.array(test_data["x"])
         target = lowess(y, x, is_sorted=True)
 
         # Test specifying exog_predict explicitly

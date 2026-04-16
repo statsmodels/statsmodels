@@ -1,4 +1,6 @@
 """Module for functional boxplots."""
+import pytest
+
 from statsmodels.compat.numpy import NP_LT_123
 
 import numpy as np
@@ -314,8 +316,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     data_r = pca.factors
 
     # Create gaussian kernel
-    ks_gaussian = KDEMultivariate(data_r, bw=bw,
-                                  var_type="c" * data_r.shape[1])
+    with pytest.warns(FutureWarning, match="After 0.17"):
+        ks_gaussian = KDEMultivariate(data_r, bw=bw, var_type="c" * data_r.shape[1])
 
     # Boundaries of the n-variate space
     bounds = np.array([data_r.min(axis=0), data_r.max(axis=0)]).T
