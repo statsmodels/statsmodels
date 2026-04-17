@@ -16,6 +16,7 @@ from numpy.testing import (
     assert_array_less,
     assert_equal,
 )
+import pandas as pd
 
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import GLSAR, OLS
@@ -312,15 +313,9 @@ class TestGLSARGretl:
 
         names = "date   residual        leverage       influence        DFFITS".split()
         cur_dir = os.path.abspath(os.path.dirname(__file__))
-        fpath = os.path.join(cur_dir, "results/leverage_influence_ols_nostars.txt")
-        lev = np.genfromtxt(fpath, skip_header=3, skip_footer=1,
-                            converters={0: lambda s: s})
-        # either numpy 1.6 or python 3.2 changed behavior
-        if np.isnan(lev[-1]["f1"]):
-            lev = np.genfromtxt(fpath, skip_header=3, skip_footer=2,
-                                converters={0: lambda s: s})
-
-        lev.dtype.names = names
+        fpath = os.path.join(cur_dir, "results", "leverage_influence_ols_nostars.txt")
+        lev = pd.read_csv(fpath, skiprows=3, skipfooter=3, engine="python", sep=r"\s+",
+                          header=None, names=names)
 
         res = res_ols  # for easier copying
 

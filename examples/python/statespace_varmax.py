@@ -20,8 +20,8 @@
 
 import numpy as np
 import pandas as pd
+
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
 
 dta = sm.datasets.webuse('lutkepohl2', 'https://www.stata-press.com/data/r12/')
 dta.index = dta.qtr

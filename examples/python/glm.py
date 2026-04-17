@@ -9,10 +9,11 @@
 
 # # Generalized Linear Models
 
-import numpy as np
-import statsmodels.api as sm
-from scipy import stats
 from matplotlib import pyplot as plt
+import numpy as np
+from scipy import stats
+
+import statsmodels.api as sm
 
 plt.rc("figure", figsize=(16, 8))
 plt.rc("font", size=14)
