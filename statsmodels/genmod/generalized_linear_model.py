@@ -596,12 +596,44 @@ class GLM(base.LikelihoodModel):
         hessian_factor : ndarray, 1d
             A 1d weight vector used in the calculation of the Hessian.
             The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+
+        Notes
+        -----
+        For exponential family GLMs, the Observed Information Matrix (OIM)
+        generally differs from the Fisher Information Matrix (Expected
+        Information Matrix, EIM) by a curvature term involving :math:`(y - \\mu)`.
+
+        However, when the link function is **canonical** for the given family
+        (e.g., Logit for Binomial, Log for Poisson, Identity for Gaussian),
+        the OIM and EIM are mathematically equivalent:
+
+        .. math::
+
+            \\text{OIM} = \\text{EIM} = -X^T W X
+
+        This method automatically detects when a canonical link is being used
+        and skips the computation of the curvature term, resulting in
+        computational savings especially for large datasets.
+
+        The canonical links for common families are:
+
+        - Gaussian: Identity
+        - Binomial: Logit
+        - Poisson: Log
+        - Gamma: InversePower
+        - InverseGaussian: InverseSquared
+        - NegativeBinomial: Log
         """
 
         # calculating eim_factor
         mu = self.predict(params)
         if scale is None:
             scale = self.estimate_scale(mu)
+
+        # Optimization: For canonical links, OIM equals EIM.
+        # We can skip the curvature term computation entirely.
+        if observed and self.family.is_canonical_link:
+            observed = False
 
         eim_factor = 1 / (self.family.link.deriv(mu) ** 2 * self.family.variance(mu))
         eim_factor *= self.iweights * self.n_trials
