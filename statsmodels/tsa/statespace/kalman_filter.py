@@ -14,6 +14,7 @@ from statsmodels.tools.sm_exceptions import ValueWarning
 
 from . import tools
 from .representation import FrozenRepresentation, OptionWrapper, Representation
+from .initialization import Initialization
 from .tools import reorder_missing_matrix, reorder_missing_vector
 
 # Define constants
@@ -2062,16 +2063,13 @@ class FilterResults(FrozenRepresentation):
             kwargs["filter_method"] = (
                 self.model.filter_method & ~FILTER_CHANDRASEKHAR)
 
-            # TODO: there is a corner case here when the filter has not
-            #       exited the diffuse filter, in which case this known
-            #       initialization is not correct.
-            # Even if we have not stored all predicted values (means and covs),
-            # we can still do pure out-of-sample forecasting because we will
-            # always have stored the last predicted values. In this case, we
-            # will initialize the forecasting filter with these values
             if self.memory_no_predicted:
                 constant = self.predicted_state[..., -1]
                 stationary_cov = self.predicted_state_cov[..., -1]
+                diffuse_cov = (
+                    self.predicted_diffuse_state_cov[..., -1]
+                    if self.predicted_diffuse_state_cov is not None
+                    else None)
             # Otherwise initialize with the predicted state / cov from the
             # existing results, at index kf_start (note that the time
             # dimension of predicted_state and predicted_state_cov is
@@ -2081,10 +2079,21 @@ class FilterResults(FrozenRepresentation):
             else:
                 constant = self.predicted_state[..., kf_start]
                 stationary_cov = self.predicted_state_cov[..., kf_start]
+                diffuse_cov = (
+                    self.predicted_diffuse_state_cov[..., kf_start]
+                    if self.predicted_diffuse_state_cov is not None
+                    else None)
 
-            kwargs.update({"initialization": "known",
-                           "constant": constant,
-                           "stationary_cov": stationary_cov})
+            # If we are still in the diffuse phase, we must use a diffuse
+            # initialization
+            if diffuse_cov is not None and np.any(diffuse_cov > 0):
+                kwargs['initialization'] = Initialization.from_components(
+                    self.k_states, a=constant, Pstar=stationary_cov,
+                    Pinf=diffuse_cov)
+            else:
+                kwargs.update({"initialization": "known",
+                               "constant": constant,
+                               "stationary_cov": stationary_cov})
 
             # Construct the new endogenous array.
             endog = np.zeros((nforecast, self.k_endog)) * np.nan
