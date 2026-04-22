@@ -155,7 +155,10 @@ def corr_clipped(corr, threshold=1e-15):
     return x_new
 
 
-def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=False):
+def cov_nearest(
+    cov, method="clipped", threshold=1e-15, n_fact=100, return_all=False,
+    min_diag=None
+):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
 
@@ -177,6 +180,13 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
         if False (default), then only the covariance matrix is returned.
         If True, then correlation matrix and standard deviation are
         additionally returned.
+    min_diag : float or None
+        If not None, diagonal elements of ``cov`` that are below ``min_diag``
+        are clipped to ``min_diag`` before processing. A warning is issued
+        when clipping occurs. This is required when the input has zero or
+        negative diagonal elements, which would otherwise produce NaN values
+        (since the method works via correlation matrix conversion). A small
+        positive value such as ``1e-8`` is recommended.
 
     Returns
     -------
@@ -202,6 +212,10 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
 
     Assumes input covariance matrix is symmetric.
 
+    If the input covariance matrix has zeros or negative values on the
+    diagonal, the correlation matrix conversion will produce NaN values.
+    Pass ``min_diag`` to clamp those entries to a small positive number.
+
     See Also
     --------
     corr_nearest
@@ -209,6 +223,30 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
     """
 
     from statsmodels.stats.moment_helpers import corr2cov, cov2corr
+
+    cov = np.asarray(cov)
+    diag = np.diag(cov).copy()
+
+    if min_diag is not None:
+        below = diag < min_diag
+        if np.any(below):
+            warnings.warn(
+                f"{below.sum()} diagonal element(s) of the covariance matrix "
+                f"are below min_diag={min_diag!r} and have been clipped. "
+                "The returned covariance matrix has modified diagonal entries.",
+                UserWarning,
+                stacklevel=2,
+            )
+            cov = cov.copy()
+            cov[np.diag_indices_from(cov)] = np.where(below, min_diag, diag)
+    elif np.any(diag <= 0):
+        raise ValueError(
+            "cov_nearest requires all diagonal elements to be positive. "
+            "The input covariance matrix has zero or negative diagonal "
+            "entries, which prevents conversion to a correlation matrix. "
+            "Pass min_diag=<small positive number> (e.g. min_diag=1e-8) to "
+            "clamp those entries and proceed."
+        )
 
     cov_, std_ = cov2corr(cov, return_std=True)
     if method == "clipped":
