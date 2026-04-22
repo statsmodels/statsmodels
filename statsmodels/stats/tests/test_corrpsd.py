@@ -683,3 +683,39 @@ class Test_Factor:
         fcor *= np.abs(fcor) >= 0.2
 
         assert_allclose(tcor.todense(), fcor, rtol=0.25, atol=1e-3)
+
+
+class TestCovNearestZeroDiag:
+    """GH-9675: cov_nearest should handle zero/negative diagonal entries."""
+
+    def test_zero_diag_raises_without_min_diag(self):
+        mat = np.array([[2.0, 0.0], [0.0, 0.0]])
+        with pytest.raises(ValueError, match="min_diag"):
+            cov_nearest(mat)
+
+    def test_negative_diag_raises_without_min_diag(self):
+        mat = np.array([[2.0, 0.0], [0.0, -1e-8]])
+        with pytest.raises(ValueError, match="min_diag"):
+            cov_nearest(mat)
+
+    def test_min_diag_clips_zero_and_warns(self):
+        mat = np.array([[2.0, 0.0], [0.0, 0.0]])
+        with pytest.warns(UserWarning, match="min_diag"):
+            result = cov_nearest(mat, min_diag=1e-8)
+        assert np.all(np.isfinite(result))
+        assert result[0, 0] == pytest.approx(2.0)
+
+    def test_min_diag_no_warning_when_diag_positive(self):
+        mat = np.array([[2.0, 0.5], [0.5, 1.0]])
+        import warnings as _w
+        with _w.catch_warnings():
+            _w.simplefilter("error")
+            result = cov_nearest(mat, min_diag=1e-8)
+        assert np.all(np.isfinite(result))
+
+    def test_min_diag_both_methods(self):
+        mat = np.array([[2.0, 0.0], [0.0, 0.0]])
+        for method in ("clipped", "nearest"):
+            with pytest.warns(UserWarning):
+                result = cov_nearest(mat, method=method, min_diag=1e-8)
+            assert np.all(np.isfinite(result)), f"NaN in result for method={method}"
