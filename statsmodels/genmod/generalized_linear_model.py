@@ -1370,11 +1370,6 @@ class GLM(base.LikelihoodModel):
         mu = self.predict(rslt.params)
         scale = self.estimate_scale(mu)
 
-        if rslt.normalized_cov_params is None:
-            cov_p = None
-        else:
-            cov_p = rslt.normalized_cov_params / scale
-
         if cov_type.lower() == "eim":
             oim = False
             cov_type = "nonrobust"
@@ -1390,7 +1385,10 @@ class GLM(base.LikelihoodModel):
                 HessianInversionWarning,
                 stacklevel=2,
             )
-            cov_p = None
+            if rslt.normalized_cov_params is not None:
+                cov_p = rslt.normalized_cov_params / scale
+            else:
+                cov_p = None
 
         results_class = getattr(self, "_results_class", GLMResults)
         results_class_wrapper = getattr(
