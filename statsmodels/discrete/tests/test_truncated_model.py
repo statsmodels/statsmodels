@@ -17,6 +17,7 @@ from statsmodels.distributions.discrete import (
     truncatedpoisson,
 )
 from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tools.testing import Holder
 from statsmodels.tools.tools import add_constant
@@ -480,6 +481,29 @@ class CheckHurdlePredict:
 
         # smoke test
         res1.summary()
+
+    def test_score_numerical(self):
+        model = self.res1.model
+        params = self.res1.params
+        analytical_score = model.score(params)
+        numerical_score = approx_fprime(params, model.loglike)
+        assert_allclose(analytical_score, numerical_score, rtol=1e-3, atol=1e-4)
+
+    def test_score_consistency(self):
+        model = self.res1.model
+        params = self.res1.params
+        score_from_obs = model.score_obs(params).sum(0)
+        direct_score = model.score(params)
+        assert_allclose(score_from_obs, direct_score, rtol=1e-12)
+
+    def test_hessian_numerical(self):
+        model = self.res1.model
+        params = self.res1.params
+        analytical_hessian = model.hessian(params)
+        numerical_hessian = approx_hess(params, model.loglike)
+        assert_allclose(
+            analytical_hessian, numerical_hessian, rtol=1e-4, atol=1e-5
+        )
 
     def test_predict(self, close_figures):
         res1 = self.res1
