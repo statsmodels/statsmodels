@@ -86,7 +86,6 @@ np.import_array()
 from statsmodels.includes.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
-include "statsmodels/tsa/statespace/_blas_int.pxi"
 cimport statsmodels.tsa.statespace._tools as tools
 
 {{for prefix, types in TYPES.items()}}
