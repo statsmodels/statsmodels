@@ -145,10 +145,10 @@ if prefix == 's':
 }}
 
 
-cdef bint _{{prefix}}select1({{cython_type}} * a):
+cdef blas_bint _{{prefix}}select1({{cython_type}} * a):
     return 0
 
-cdef bint _{{prefix}}select2({{cython_type}} * a, {{cython_type}} * b):
+cdef blas_bint _{{prefix}}select2({{cython_type}} * a, {{cython_type}} * b):
     return 0
 
 cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}} * q, int n, int complex_step=False) except *:
@@ -182,7 +182,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
     cdef:
         blas_int sdim
         blas_int lwork = 3*n
-        blas_int bwork
+        blas_bint bwork
     cdef np.npy_intp dim1[1]
     cdef {{cython_type}} [::1,:] work
     cdef {{cython_type}} [:] wr

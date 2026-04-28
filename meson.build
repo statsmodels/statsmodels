@@ -21,8 +21,10 @@ scipy_has_blas_int = cy.compiles(
 _blas_int_conf = configuration_data()
 if scipy_has_blas_int
   _blas_int_conf.set('BLAS_INT_DEF', 'from scipy.linalg.cython_blas cimport blas_int')
+  _blas_int_conf.set('BLAS_BINT_DEF', 'from scipy.linalg.cython_blas cimport blas_bint')
 else
   _blas_int_conf.set('BLAS_INT_DEF', 'ctypedef int blas_int')
+  _blas_int_conf.set('BLAS_BINT_DEF', 'ctypedef bint blas_bint')
 endif
 
 if not cy.version().version_compare('>=3.0.10')
