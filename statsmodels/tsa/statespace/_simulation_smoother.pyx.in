@@ -50,6 +50,7 @@ np.import_array()
 
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
+include "statsmodels/tsa/statespace/_blas_int.pxi"
 cimport statsmodels.tsa.statespace._tools as tools
 
 cdef int FORTRAN = 1
@@ -80,7 +81,7 @@ cdef class {{prefix}}SimulationSmoother(object):
                  int smoother_output=SMOOTHER_ALL,
                  int simulation_output=SIMULATE_ALL,
                  int nobs=-1):
-        cdef int inc = 1
+        cdef blas_int inc = 1
         # If nobs != 1, then we are only simulating a new series (i.e. we are
         # not simulation smoothing)
         self.simulate_only = (nobs != -1)
@@ -89,7 +90,7 @@ cdef class {{prefix}}SimulationSmoother(object):
             np.npy_intp dim2[2]
         cdef {{cython_type}} [::1,:] obs
         cdef {{cython_type}} [::1,:] secondary_obs
-        cdef int nobs_endog
+        cdef blas_int nobs_endog
 
         # Use model nobs by default
         if nobs == -1:
@@ -339,18 +340,18 @@ cdef class {{prefix}}SimulationSmoother(object):
         Draw a simulation
         """
         cdef:
-            int inc = 1
-            int info
+            blas_int inc = 1
+            blas_int info
             int measurement_idx, state_idx, t
-            int k_endog = self.model.k_endog
-            int k_states = self.model.k_states
-            int k_states2 = self.model.k_states**2
-            int k_posdef = self.model.k_posdef
-            int k_posdef2 = self.model.k_posdef**2
-            int nobs_endog = self.nobs * self.model.k_endog
-            int nobs_kstates = self.nobs * self.model.k_states
-            int nobs1_kstates = (self.nobs+1) * self.model.k_states
-            int nobs_posdef = self.nobs * self.model.k_posdef
+            blas_int k_endog = self.model.k_endog
+            blas_int k_states = self.model.k_states
+            blas_int k_states2 = self.model.k_states**2
+            blas_int k_posdef = self.model.k_posdef
+            blas_int k_posdef2 = self.model.k_posdef**2
+            blas_int nobs_endog = self.nobs * self.model.k_endog
+            blas_int nobs_kstates = self.nobs * self.model.k_states
+            blas_int nobs1_kstates = (self.nobs+1) * self.model.k_states
+            blas_int nobs_posdef = self.nobs * self.model.k_posdef
         cdef:
             {{cython_type}} alpha = 1.0
             {{cython_type}} gamma = -1.0
@@ -562,9 +563,9 @@ cdef class {{prefix}}SimulationSmoother(object):
 
     cdef {{cython_type}} generate_obs(self, int t, {{cython_type}} * obs, {{cython_type}} * state, {{cython_type}} * variates):
         cdef:
-            int inc = 1
-            int k_endog = self.model.k_endog
-            int k_states = self.model.k_states
+            blas_int inc = 1
+            blas_int k_endog = self.model.k_endog
+            blas_int k_states = self.model.k_states
             int design_t = 0
             int obs_intercept_t = 0
         cdef:
@@ -595,9 +596,9 @@ cdef class {{prefix}}SimulationSmoother(object):
 
     cdef {{cython_type}} generate_state(self, int t, {{cython_type}} * state, {{cython_type}} * input_state, {{cython_type}} * variates):
         cdef:
-            int inc = 1
-            int k_states = self.model.k_states
-            int k_posdef = self.model.k_posdef
+            blas_int inc = 1
+            blas_int k_states = self.model.k_states
+            blas_int k_posdef = self.model.k_posdef
             int state_intercept_t = 0
             int transition_t = 0
             int selection_t = 0
@@ -628,24 +629,26 @@ cdef class {{prefix}}SimulationSmoother(object):
 
     cdef void cholesky(self, {{cython_type}} * source, {{cython_type}} * destination, int n):
         cdef:
-            int inc = 1
-            int n2 = n**2
-            int info
+            blas_int inc = 1
+            blas_int n2 = n**2
+            blas_int info
+            blas_int blas_n = n
         if n == 1:
             destination[0] = source[0]**0.5
         else:
             blas.{{prefix}}copy(&n2, source, &inc, destination, &inc)
-            lapack.{{prefix}}potrf("L", &n, destination, &n, &info)
+            lapack.{{prefix}}potrf("L", &blas_n, destination, &blas_n, &info)
 
     cdef void transform_variates(self, {{cython_type}} * variates, {{cython_type}} * cholesky_factor, int n):
         cdef:
-            int inc = 1
+            blas_int inc = 1
+            blas_int blas_n = n
 
         # Overwrites variate
         if n == 1:
             variates[0] = cholesky_factor[0] * variates[0]
         else:
-            blas.{{prefix}}trmv("L", "N", "N", &n, cholesky_factor, &n,
+            blas.{{prefix}}trmv("L", "N", "N", &blas_n, cholesky_factor, &blas_n,
                                                    variates, &inc)
 
 {{endfor}}
