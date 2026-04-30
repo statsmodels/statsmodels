@@ -238,6 +238,7 @@ def test_plot_pccf(close_figures):
     plot_pccf(x1, x2, ax=ax, lags=10)
     plot_pccf(x1, x2, ax=ax)
     plot_pccf(x1, x2, ax=ax, alpha=None)
+    plot_pccf(x1, x2, ax=ax, alpha=None, auto_ylims=True)
     plot_pccf(x1, x2, ax=ax, title="PCCF")
     plot_pccf(x1, x2, ax=ax, auto_ylims=True)
     plot_pccf(x1, x2, ax=ax, use_vlines=False)

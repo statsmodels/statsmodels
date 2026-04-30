@@ -1378,8 +1378,8 @@ def pccf(
     intervening observations) and the forward residual (y_{t+h}
     regressed on the same intervening observations). Both
     regressions include an intercept. For h=1, there are no
-    intervening observations, so pccf(1) reduces to the
-    cross-correlation at lag 1.
+    intervening observations, so pccf(1) is the correlation between
+    x[:-1] and y[1:].
 
     For a bivariate VAR(p) process, P(h) = 0 for h > p,
     providing a useful identification tool.

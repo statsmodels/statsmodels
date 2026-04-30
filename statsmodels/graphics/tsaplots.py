@@ -67,9 +67,16 @@ def _plot_corr(
 
     ax.set_ylim(-1, 1)
     if auto_ylims:
+        lower = np.minimum(0, min(acf_x))
+        upper = np.maximum(0, max(acf_x))
+        if confint is not None:
+            lower = np.minimum(lower, min(confint[:, 0] - acf_x))
+            upper = np.maximum(upper, max(confint[:, 1] - acf_x))
+        if lower == upper:
+            lower, upper = -1, 1
         ax.set_ylim(
-            1.25 * np.minimum(min(acf_x), min(confint[:, 0] - acf_x)),
-            1.25 * np.maximum(max(acf_x), max(confint[:, 1] - acf_x)),
+            1.25 * lower,
+            1.25 * upper,
         )
 
     if confint is not None:
