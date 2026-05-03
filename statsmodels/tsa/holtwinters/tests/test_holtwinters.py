@@ -927,8 +927,8 @@ def test_use_boxcox_fit_override():
     )
     # When use_boxcox=True at model init, Box-Cox IS applied
     # (lambda ~= 0.5 for this data, not False/0)
-    assert isinstance(res.params["use_boxcox"], float), (
-        f"Expected float lambda, got {type(res.params['use_boxcox'])}"
+    assert res.params["lamda"] is not None, (
+        f"Expected fitted lambda, got {res.params["lamda"]}"
     )
 
 
