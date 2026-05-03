@@ -1095,7 +1095,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         data = self._data
         damped = self.damped_trend
         phi = phi if damped else 1.0
-        if self._use_boxcox is None:
+        if self._use_boxcox is not None:
             if use_boxcox == "log":
                 lamda = 0.0
                 y = boxcox(data, lamda)

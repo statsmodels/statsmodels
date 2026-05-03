@@ -906,6 +906,32 @@ def test_float_boxcox(trend, seasonal):
     assert_allclose(res.params["use_boxcox"], 0.5)
 
 
+def test_use_boxcox_fit_override():
+    # Regression test: when use_boxcox is set at model init, passing
+    # use_boxcox to fit() should NOT be silently ignored (issue #9797).
+    # Before fix: fit(use_boxcox=False) on a use_boxcox=True model
+    # incorrectly skipped Box-Cox transformation because the override
+    # check was `if use_boxcox == "log"` instead of `if use_boxcox is not None`.
+    y = np.abs(housing_data) + 1  # ensure positive values for Box-Cox
+    mod = ExponentialSmoothing(
+        y,
+        trend="add",
+        seasonal="add",
+        initialization_method="estimated",
+        use_boxcox=True,
+    )
+    res = mod.fit()
+    # With use_boxcox=True at model level, Box-Cox is applied and lambda > 0
+    assert res.params["use_boxcox"] != 0.0, (
+        "Box-Cox lambda should not be 0 when use_boxcox=True at model init"
+    )
+    # When use_boxcox=True at model init, Box-Cox IS applied
+    # (lambda ~= 0.5 for this data, not False/0)
+    assert res.params["lamda"] is not None, (
+        f"Expected fitted lambda, got {res.params["lamda"]}"
+    )
+
+
 @pytest.mark.parametrize("trend", TRENDS)
 @pytest.mark.parametrize("seasonal", SEASONALS)
 def test_equivalence_cython_python(trend, seasonal):
