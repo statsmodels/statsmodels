@@ -530,15 +530,15 @@ def plot_pccf(
         An int or array of lag values, used on the horizontal axis.
         Uses ``np.arange(lags)`` when lags is an int.  If not
         provided, ``lags=np.arange(len(corr))`` is used.
-    method : {"ywm", "yw", "ols"}, default "ywm"
+    method : str, default "ywm"
         Specifies which method for the calculations to use.
 
-        - "ywm" or "ywmle" : Yule-Walker via the multivariate
-          Levinson-Durbin recursion without sample-size adjustment
-          in the autocovariance denominator. Default.
-        - "yw" or "ywadjusted" : Yule-Walker via the multivariate
-          Levinson-Durbin recursion with sample-size adjustment in
-          the autocovariance denominator.
+        - "ywm", "ywmle" or "yw_mle" : Yule-Walker via the
+          multivariate Levinson-Durbin recursion without sample-size
+          adjustment in the autocovariance denominator. Default.
+        - "yw", "ywa", "ywadjusted" or "yw_adjusted" : Yule-Walker
+          via the multivariate Levinson-Durbin recursion with
+          sample-size adjustment in the autocovariance denominator.
         - "ols" : OLS regression of x_t and y_{t+h} on all
           intervening observations.
     alpha : scalar, optional

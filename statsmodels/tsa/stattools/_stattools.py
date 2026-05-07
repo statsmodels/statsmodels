@@ -1291,6 +1291,8 @@ def _pccf_ols(x, y, nlags):
 
         if resid_x.size < 2:
             pccf_vals.append(np.nan)
+        elif np.ptp(resid_x) == 0 or np.ptp(resid_y) == 0:
+            pccf_vals.append(np.nan)
         else:
             pccf_vals.append(np.corrcoef(resid_x, resid_y)[0, 1])
 
@@ -1331,15 +1333,15 @@ def pccf(
         Number of lags to return partial cross-correlations for.
         If not provided, uses
         min(10 * np.log10(nobs), nobs // 2 - 1).
-    method : {"ywm", "yw", "ols"}, default "ywm"
+    method : str, default "ywm"
         Specifies which method for the calculations to use.
 
-        - "ywm" or "ywmle" : Yule-Walker via the multivariate
-          Levinson-Durbin recursion without sample-size adjustment
-          in the autocovariance denominator. Default.
-        - "yw" or "ywadjusted" : Yule-Walker via the multivariate
-          Levinson-Durbin recursion with sample-size adjustment in
-          the autocovariance denominator.
+        - "ywm", "ywmle" or "yw_mle" : Yule-Walker via the
+          multivariate Levinson-Durbin recursion without sample-size
+          adjustment in the autocovariance denominator. Default.
+        - "yw", "ywa", "ywadjusted" or "yw_adjusted" : Yule-Walker
+          via the multivariate Levinson-Durbin recursion with
+          sample-size adjustment in the autocovariance denominator.
         - "ols" : OLS regression of x_t and y_{t+h} on all
           intervening observations.
     alpha : float, optional
@@ -1399,6 +1401,9 @@ def pccf(
     If the series are perfectly collinear or constant, the sample
     autocovariance matrix is singular and the Yule-Walker methods
     return NaN for all lags.
+
+    The OLS method returns NaN for lags where either residual series
+    has zero variance.
 
     The confidence intervals use the asymptotic standard deviation
     1/sqrt(n), following Wei (2006, Section 11.2) [1]_.
