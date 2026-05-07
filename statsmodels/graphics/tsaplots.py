@@ -502,7 +502,7 @@ def plot_pccf(
     *,
     ax=None,
     lags=None,
-    method="yw",
+    method="ywm",
     alpha=0.05,
     use_vlines=True,
     title="Partial Cross-correlation",
@@ -530,11 +530,15 @@ def plot_pccf(
         An int or array of lag values, used on the horizontal axis.
         Uses ``np.arange(lags)`` when lags is an int.  If not
         provided, ``lags=np.arange(len(corr))`` is used.
-    method : {"yw", "ols"}, default "yw"
+    method : {"ywm", "yw", "ols"}, default "ywm"
         Specifies which method for the calculations to use.
 
-        - "yw" : Yule-Walker via the multivariate Levinson-Durbin
-          recursion.
+        - "ywm" or "ywmle" : Yule-Walker via the multivariate
+          Levinson-Durbin recursion without sample-size adjustment
+          in the autocovariance denominator. Default.
+        - "yw" or "ywadjusted" : Yule-Walker via the multivariate
+          Levinson-Durbin recursion with sample-size adjustment in
+          the autocovariance denominator.
         - "ols" : OLS regression of x_t and y_{t+h} on all
           intervening observations.
     alpha : scalar, optional
@@ -605,7 +609,7 @@ def plot_pccf(
             confint = confint[lags - 1]
         irregular = False
     else:
-        lags = lags[1:nlags + 1]
+        lags = lags[1 : nlags + 1]
 
     _plot_corr(
         ax,
@@ -994,7 +998,7 @@ def plot_predict(
         ax.plot(x, mean, label="forecast")
 
     if alpha is not None:
-        label = f"{1-alpha:.0%} confidence interval"
+        label = f"{1 - alpha:.0%} confidence interval"
         ci = pred.conf_int(alpha=alpha)
         conf_int = np.asarray(ci)
 

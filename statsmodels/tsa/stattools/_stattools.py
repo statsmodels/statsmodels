@@ -896,7 +896,7 @@ def pacf_ols(
     if nlags is None:
         nlags = max(min(int(10 * np.log10(nobs)), nobs // 2), 1)
     if nlags > nobs // 2:
-        raise ValueError(f"nlags must be smaller than nobs // 2 ({nobs//2})")
+        raise ValueError(f"nlags must be smaller than nobs // 2 ({nobs // 2})")
     pacf = np.empty(nlags + 1)
     pacf[0] = 1.0
     if efficient:
@@ -1188,7 +1188,7 @@ def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
         return ret
 
 
-def _pccf_yw(x, y, nlags):
+def _pccf_yw(x, y, nlags, adjusted=False):
     """PCCF via multivariate Levinson-Durbin recursion."""
     nobs = len(x)
     xo = x - x.mean()
@@ -1197,12 +1197,13 @@ def _pccf_yw(x, y, nlags):
     gamma = np.empty((nlags + 1, 2, 2))
     for h in range(nlags + 1):
         if h == 0:
-            gamma[h] = [[xo.dot(xo), yo.dot(xo)],
-                        [xo.dot(yo), yo.dot(yo)]]
+            gamma[h] = [[xo.dot(xo), yo.dot(xo)], [xo.dot(yo), yo.dot(yo)]]
         else:
-            gamma[h] = [[xo[h:].dot(xo[:-h]), yo[h:].dot(xo[:-h])],
-                        [xo[h:].dot(yo[:-h]), yo[h:].dot(yo[:-h])]]
-    gamma /= nobs
+            gamma[h] = [
+                [xo[h:].dot(xo[:-h]), yo[h:].dot(xo[:-h])],
+                [xo[h:].dot(yo[:-h]), yo[h:].dot(yo[:-h])],
+            ]
+        gamma[h] /= nobs - h if adjusted else nobs
 
     if np.linalg.matrix_rank(gamma[0]) < 2:
         return np.full(nlags, np.nan)
@@ -1225,11 +1226,11 @@ def _pccf_yw(x, y, nlags):
         v_f = sig_f[0, 0]
         v_b = sig_b[1, 1]
         if not np.isfinite(v_f) or not np.isfinite(v_b):
-            pccf_vals[s - 1:] = np.nan
+            pccf_vals[s - 1 :] = np.nan
             break
         tol = np.finfo(np.float64).eps * gamma[0].trace()
         if v_f <= tol or v_b <= tol:
-            pccf_vals[s - 1:] = np.nan
+            pccf_vals[s - 1 :] = np.nan
             break
 
         d_f = np.sqrt(v_f)
@@ -1241,7 +1242,7 @@ def _pccf_yw(x, y, nlags):
             phi_ss = np.linalg.solve(sig_b.T, delta_f.T).T
             psi_ss = np.linalg.solve(sig_f.T, delta_b.T).T
         except np.linalg.LinAlgError:
-            pccf_vals[s - 1:] = np.nan
+            pccf_vals[s - 1 :] = np.nan
             break
 
         phi_new = [None] * (nlags + 1)
@@ -1267,7 +1268,7 @@ def _pccf_ols(x, y, nlags):
 
     for h in range(1, nlags + 1):
         if h == 1:
-            resid_x = x[:nobs - 1]
+            resid_x = x[: nobs - 1]
             resid_y = y[1:nobs]
         else:
             indices = np.arange(0, nobs - h)
@@ -1276,10 +1277,12 @@ def _pccf_ols(x, y, nlags):
                 pccf_vals.append(np.nan)
                 continue
 
-            carriers = add_constant(np.column_stack(
-                [x[indices + j] for j in range(1, h)]
-                + [y[indices + j] for j in range(1, h)]
-            ))
+            carriers = add_constant(
+                np.column_stack(
+                    [x[indices + j] for j in range(1, h)]
+                    + [y[indices + j] for j in range(1, h)]
+                )
+            )
             targets = np.column_stack([x[indices], y[indices + h]])
             coeffs = lstsq(carriers, targets, rcond=None)[0]
             resids = targets - carriers.dot(coeffs)
@@ -1289,9 +1292,7 @@ def _pccf_ols(x, y, nlags):
         if resid_x.size < 2:
             pccf_vals.append(np.nan)
         else:
-            pccf_vals.append(
-                np.corrcoef(resid_x, resid_y)[0, 1]
-            )
+            pccf_vals.append(np.corrcoef(resid_x, resid_y)[0, 1])
 
     return np.array(pccf_vals)
 
@@ -1301,7 +1302,16 @@ def pccf(
     y: ArrayLike1D,
     *,
     nlags: int | None = None,
-    method: Literal["yw", "ols"] = "yw",
+    method: Literal[
+        "yw",
+        "ywa",
+        "ywadjusted",
+        "yw_adjusted",
+        "ywm",
+        "ywmle",
+        "yw_mle",
+        "ols",
+    ] = "ywm",
     alpha: float | None = None,
 ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
     """
@@ -1320,14 +1330,16 @@ def pccf(
     nlags : int, optional
         Number of lags to return partial cross-correlations for.
         If not provided, uses
-        min(10 * np.log10(nobs), nobs - 1).
-    method : {"yw", "ols"}, default "yw"
+        min(10 * np.log10(nobs), nobs // 2 - 1).
+    method : {"ywm", "yw", "ols"}, default "ywm"
         Specifies which method for the calculations to use.
 
-        - "yw" : Yule-Walker via the multivariate Levinson-Durbin
-          recursion applied to the 2x2 autocovariance matrix
-          sequence. This is the default and is significantly faster
-          than OLS, especially for large lag orders.
+        - "ywm" or "ywmle" : Yule-Walker via the multivariate
+          Levinson-Durbin recursion without sample-size adjustment
+          in the autocovariance denominator. Default.
+        - "yw" or "ywadjusted" : Yule-Walker via the multivariate
+          Levinson-Durbin recursion with sample-size adjustment in
+          the autocovariance denominator.
         - "ols" : OLS regression of x_t and y_{t+h} on all
           intervening observations.
     alpha : float, optional
@@ -1366,11 +1378,11 @@ def pccf(
     general. The (1,2) element measures the partial association
     from x to y, while pccf(y, x) measures the reverse direction.
 
-    The "yw" method uses the multivariate Levinson-Durbin recursion
-    on the bivariate autocovariance matrix sequence. For stationary
-    series, this is asymptotically equivalent to OLS by the
-    Frisch-Waugh-Lovell theorem [3]_, but is O(n * nlags) versus
-    O(n * nlags^3) for OLS. The two methods may differ
+    The Yule-Walker methods use the multivariate Levinson-Durbin
+    recursion on the bivariate autocovariance matrix sequence. For
+    stationary series, this is asymptotically equivalent to OLS by
+    the Frisch-Waugh-Lovell theorem [3]_, but is O(n * nlags)
+    versus O(n * nlags^3) for OLS. The two methods may differ
     substantially on non-stationary (e.g. trending) data.
 
     The "ols" method computes pccf(h) as the sample correlation
@@ -1385,8 +1397,8 @@ def pccf(
     providing a useful identification tool.
 
     If the series are perfectly collinear or constant, the sample
-    autocovariance matrix is singular and the "yw" method returns
-    NaN for all lags.
+    autocovariance matrix is singular and the Yule-Walker methods
+    return NaN for all lags.
 
     The confidence intervals use the asymptotic standard deviation
     1/sqrt(n), following Wei (2006, Section 11.2) [1]_.
@@ -1421,31 +1433,42 @@ def pccf(
     x = array_like(x, "x")
     y = array_like(y, "y")
     nlags = int_like(nlags, "nlags", optional=True)
-    method = string_like(method, "method", options=("yw", "ols"))
+    methods = (
+        "ols",
+        "yw",
+        "ywa",
+        "ywadjusted",
+        "yw_adjusted",
+        "ywm",
+        "ywmle",
+        "yw_mle",
+    )
+    method = string_like(method, "method", options=methods)
     alpha = float_like(alpha, "alpha", optional=True)
 
     nobs = len(x)
     if len(y) != nobs:
         raise ValueError("x and y must have the same length")
     if np.any(~np.isfinite(x)) or np.any(~np.isfinite(y)):
-        raise MissingDataError(
-            "x and y must not contain NaN or inf values"
-        )
+        raise MissingDataError("x and y must not contain NaN or inf values")
 
     if nlags is None:
-        nlags = max(min(int(10 * np.log10(nobs)), nobs - 1), 1)
-
-    if nlags <= 0:
+        nlags = min(int(10 * np.log10(nobs)), nobs // 2 - 1)
+        nlags = max(nlags, 1)
+    elif nlags <= 0:
         raise ValueError("nlags must be a positive integer")
-    if nlags >= nobs:
+    if nlags > nobs // 2:
         raise ValueError(
-            "nlags must be less than the length of the series"
+            "Can only compute partial correlations for lags up to 50% "
+            f"of the sample size. The requested nlags {nlags} must be "
+            f"<= {nobs // 2}."
         )
 
-    if method == "yw":
-        ret = _pccf_yw(x, y, nlags)
-    else:
+    if method == "ols":
         ret = _pccf_ols(x, y, nlags)
+    else:
+        adjusted = method in ("yw", "ywa", "ywadjusted", "yw_adjusted")
+        ret = _pccf_yw(x, y, nlags, adjusted=adjusted)
 
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(nobs)
@@ -1837,8 +1860,9 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError(
-            "Insufficient observations. Maximum allowable "
-            "lag is {}".format(int((x.shape[0] - int(addconst)) / 3) - 1)
+            "Insufficient observations. Maximum allowable lag is {}".format(
+                int((x.shape[0] - int(addconst)) / 3) - 1
+            )
         )
 
     resli = {}

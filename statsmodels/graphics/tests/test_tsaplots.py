@@ -242,6 +242,8 @@ def test_plot_pccf(close_figures):
     plot_pccf(x1, x2, ax=ax, title="PCCF")
     plot_pccf(x1, x2, ax=ax, auto_ylims=True)
     plot_pccf(x1, x2, ax=ax, use_vlines=False)
+    plot_pccf(x1, x2, ax=ax, method="yw")
+    plot_pccf(x1, x2, ax=ax, method="ywmle")
     plot_pccf(x1, x2, ax=ax, method="ols")
 
 
@@ -264,9 +266,7 @@ def test_plot_pccf_irregular_lags(close_figures):
     line = ax.lines[-1]
     expected_lags = lags[lags > 0]
     assert_equal(line.get_xdata(), expected_lags)
-    assert_allclose(
-        line.get_ydata(), pccf_xy[expected_lags - 1], atol=1e-14
-    )
+    assert_allclose(line.get_ydata(), pccf_xy[expected_lags - 1], atol=1e-14)
 
 
 @pytest.mark.matplotlib

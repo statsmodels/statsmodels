@@ -414,16 +414,20 @@ class TestPCCF:
         assert_almost_equal(self.res1, self.pccf, DECIMAL_8)
 
     def test_pccf_hand_computed(self):
-        x = np.array([2.1, 4.5, 1.3, 6.8, 3.2, 5.7, 0.9, 7.4,
-                      2.8, 4.1, 6.3, 1.7, 5.5, 3.9, 7.1])
-        y = np.array([3.4, 2.7, 5.1, 1.8, 4.6, 3.3, 6.2, 2.5,
-                      4.8, 3.1, 5.5, 2.2, 4.3, 3.7, 5.9])
+        x = np.array(
+            [2.1, 4.5, 1.3, 6.8, 3.2, 5.7, 0.9, 7.4, 2.8, 4.1, 6.3, 1.7, 5.5, 3.9, 7.1]
+        )
+        y = np.array(
+            [3.4, 2.7, 5.1, 1.8, 4.6, 3.3, 6.2, 2.5, 4.8, 3.1, 5.5, 2.2, 4.3, 3.7, 5.9]
+        )
         result = pccf(x, y, nlags=3, method="ols")
-        expected = np.array([
-            0.46195683919821806,
-            0.11931602624087348,
-            0.5204421499138578,
-        ])
+        expected = np.array(
+            [
+                0.46195683919821806,
+                0.11931602624087348,
+                0.5204421499138578,
+            ]
+        )
         assert_almost_equal(result, expected, DECIMAL_8)
 
     def test_confint(self):
@@ -432,24 +436,18 @@ class TestPCCF:
             self.x, self.y, nlags=self.nlags, method="ols", alpha=alpha
         )
         assert_equal(res2, self.res1)
-        assert_almost_equal(
-            res2 - confint[:, 0], confint[:, 1] - res2, DECIMAL_8
-        )
+        assert_almost_equal(res2 - confint[:, 0], confint[:, 1] - res2, DECIMAL_8)
         alpha1 = stats.norm.cdf(
             confint[:, 1] - res2,
             scale=1.0 / np.sqrt(len(self.x)),
         )
-        assert_almost_equal(
-            alpha1, np.repeat(1 - alpha / 2.0, self.nlags), DECIMAL_8
-        )
+        assert_almost_equal(alpha1, np.repeat(1 - alpha / 2.0, self.nlags), DECIMAL_8)
 
     def test_confint_widths(self):
         alphas = [0.01, 0.05, 0.10]
         widths = {}
         for a in alphas:
-            _, confint = pccf(
-                self.x, self.y, nlags=5, method="ols", alpha=a
-            )
+            _, confint = pccf(self.x, self.y, nlags=5, method="ols", alpha=a)
             widths[a] = confint[:, 1] - confint[:, 0]
         assert np.all(widths[0.01] > widths[0.05])
         assert np.all(widths[0.05] > widths[0.10])
@@ -480,9 +478,9 @@ class TestPCCF:
         with pytest.raises(ValueError):
             pccf(self.x, self.y, nlags=-1)
         with pytest.raises(ValueError):
-            pccf(self.x[:10], self.y[:10], nlags=10)
+            pccf(self.x[:10], self.y[:10], nlags=6)
 
-    @pytest.mark.parametrize("method", ["ols", "yw"])
+    @pytest.mark.parametrize("method", ["ols", "yw", "ywm"])
     def test_constant_series(self, method):
         x_const = np.ones(50)
         y_const = np.ones(50) * 2.0
@@ -499,9 +497,7 @@ class TestPCCF:
 
     def test_return_consistency(self):
         result_no_alpha = pccf(self.x, self.y, nlags=5)
-        result_with_alpha, confint = pccf(
-            self.x, self.y, nlags=5, alpha=0.05
-        )
+        result_with_alpha, confint = pccf(self.x, self.y, nlags=5, alpha=0.05)
         assert_almost_equal(result_no_alpha, result_with_alpha, DECIMAL_8)
         assert confint.shape == (5, 2)
         assert np.all(confint[:, 0] <= result_with_alpha)
@@ -510,15 +506,15 @@ class TestPCCF:
     def test_default_nlags(self):
         result = pccf(self.x, self.y)
         nobs = len(self.x)
-        expected_nlags = min(int(10 * np.log10(nobs)), nobs - 1)
+        expected_nlags = min(int(10 * np.log10(nobs)), nobs // 2 - 1)
         assert len(result) == expected_nlags
 
     def test_nan_fallback_large_lag(self):
         x_short = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
         y_short = np.array([2.0, 3.0, 1.0, 4.0, 2.0])
-        result = pccf(x_short, y_short, nlags=4, method="ols")
-        assert len(result) == 4
-        assert np.isnan(result[3])
+        result = pccf(x_short, y_short, nlags=2, method="ols")
+        assert len(result) == 2
+        assert np.isnan(result[1])
 
     def test_var1_pccf_cutoff(self):
         rng = np.random.default_rng(98765)
@@ -555,7 +551,7 @@ class TestPCCF:
             e = rng.standard_normal(2)
             x[t] = 0.5 * x[t - 1] + 0.2 * y[t - 1] + e[0]
             y[t] = 0.3 * x[t - 1] + 0.4 * y[t - 1] + e[1]
-        yw = pccf(x, y, nlags=5, method="yw")
+        yw = pccf(x, y, nlags=5, method="ywm")
         ols = pccf(x, y, nlags=5, method="ols")
         assert_almost_equal(yw, ols, decimal=2)
 
@@ -563,8 +559,24 @@ class TestPCCF:
         with pytest.raises(ValueError):
             pccf(self.x, self.y, nlags=5, method="invalid")
 
+    def test_yw_method_aliases(self):
+        ywm = pccf(self.x, self.y, nlags=5, method="ywm")
+        ywmle = pccf(self.x, self.y, nlags=5, method="ywmle")
+        yw_mle = pccf(self.x, self.y, nlags=5, method="yw_mle")
+        assert_almost_equal(ywm, ywmle, DECIMAL_8)
+        assert_almost_equal(ywm, yw_mle, DECIMAL_8)
+
+        yw = pccf(self.x, self.y, nlags=5, method="yw")
+        ywa = pccf(self.x, self.y, nlags=5, method="ywa")
+        ywadjusted = pccf(self.x, self.y, nlags=5, method="ywadjusted")
+        yw_adjusted = pccf(self.x, self.y, nlags=5, method="yw_adjusted")
+        assert_almost_equal(yw, ywa, DECIMAL_8)
+        assert_almost_equal(yw, ywadjusted, DECIMAL_8)
+        assert_almost_equal(yw, yw_adjusted, DECIMAL_8)
+
     def test_yw_analytical_var1(self):
         from scipy.linalg import solve_discrete_lyapunov
+
         A = np.array([[0.6, 0.3], [0.2, 0.5]])
         Q = np.eye(2)
         G0 = solve_discrete_lyapunov(A, Q)
@@ -611,7 +623,7 @@ class TestPCCF:
         z[0] = rng.standard_normal(2)
         for t in range(1, n):
             z[t] = A @ z[t - 1] + rng.standard_normal(2)
-        result = pccf(z[:, 0], z[:, 1], nlags=nlags, method="yw")
+        result = pccf(z[:, 0], z[:, 1], nlags=nlags, method="ywm")
         assert_almost_equal(result[0], expected[0], decimal=1)
         assert_almost_equal(result[1:], expected[1:], decimal=1)
 
@@ -644,11 +656,11 @@ class TestPCCF:
 
     def test_ols_underdetermined_returns_nan(self):
         rng = np.random.default_rng(42)
-        x = rng.standard_normal(20)
-        y = rng.standard_normal(20)
+        x = rng.standard_normal(30)
+        y = rng.standard_normal(30)
         result = pccf(x, y, nlags=15, method="ols")
         for h in range(1, 16):
-            n_obs = 20 - h
+            n_obs = 30 - h
             n_cols = 2 * (h - 1) + 1
             if n_obs <= n_cols and h > 1:
                 assert np.isnan(result[h - 1]), (
@@ -937,7 +949,7 @@ def test_coint_identical_series():
     with pytest.warns(CollinearityWarning):
         c = coint(y, y, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
-    assert (np.isneginf(c[0]))
+    assert np.isneginf(c[0])
 
 
 def test_coint_perfect_collinearity():
@@ -951,7 +963,7 @@ def test_coint_perfect_collinearity():
     with warnings.catch_warnings(record=True):
         c = coint(y, x, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
-    assert (np.isneginf(c[0]))
+    assert np.isneginf(c[0])
 
 
 class TestGrangerCausality:
@@ -1354,10 +1366,10 @@ def test_arma_order_select_ic():
     assert_almost_equal(res.bic.values, bic.values, 5)
     assert_equal(res.aic_min_order, (1, 2))
     assert_equal(res.bic_min_order, (1, 2))
-    assert (res.aic.index.equals(aic.index))
-    assert (res.aic.columns.equals(aic.columns))
-    assert (res.bic.index.equals(bic.index))
-    assert (res.bic.columns.equals(bic.columns))
+    assert res.aic.index.equals(aic.index)
+    assert res.aic.columns.equals(aic.columns)
+    assert res.bic.index.equals(bic.index)
+    assert res.bic.columns.equals(bic.columns)
 
     index = pd.date_range("2000-1-1", freq=MONTH_END, periods=len(y))
     y_series = pd.Series(y, index=index)
@@ -1371,8 +1383,8 @@ def test_arma_order_select_ic():
 
     res = arma_order_select_ic(y, ic="aic", trend="n")
     assert_almost_equal(res.aic.values, aic.values, 5)
-    assert (res.aic.index.equals(aic.index))
-    assert (res.aic.columns.equals(aic.columns))
+    assert res.aic.index.equals(aic.index)
+    assert res.aic.columns.equals(aic.columns)
     assert_equal(res.aic_min_order, (1, 2))
 
 
@@ -1673,7 +1685,6 @@ class SetupZivotAndrews:
 
 
 class TestZivotAndrews(SetupZivotAndrews):
-
     # failure mode tests
     def test_fail_regression_type(self):
         with pytest.raises(ValueError):
