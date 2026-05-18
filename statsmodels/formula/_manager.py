@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from statsmodels.compat.pandas import PD_LT_3
 from statsmodels.compat.patsy import ensure_patsy_compat
+from statsmodels.tools.data import _to_pandas
 
 from collections import defaultdict
 import os
@@ -453,6 +454,8 @@ class FormulaManager:
             If pandas is True, returns one or more DataFrames. If False,
             returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
         """
+        # Convert Polars/interchange protocol objects to pandas
+        data = _to_pandas(data)
         _check_data(data)
         data = _maybe_convert_data(data)
         if isinstance(eval_env, (int, np.integer)):

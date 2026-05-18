@@ -166,3 +166,75 @@ def _as_array_with_name(obj, default_name):
     if is_series(obj):
         return (np.asarray(obj), obj.name)
     return (np.asarray(obj), default_name)
+
+
+def _is_using_polars(endog, exog):
+    """
+    Check if endog or exog is a Polars DataFrame or Series.
+
+    Parameters
+    ----------
+    endog : array_like
+        Endogenous variable
+    exog : array_like or None
+        Exogenous variable(s)
+
+    Returns
+    -------
+    bool
+        True if either endog or exog is a Polars object
+    """
+    for obj in [endog, exog]:
+        if obj is not None:
+            module_name = type(obj).__module__
+            if module_name.startswith("polars"):
+                return True
+    return False
+
+
+def _to_pandas(obj):
+    """
+    Convert a DataFrame/Series implementing __dataframe__ protocol or to_pandas()
+    (e.g., Polars) to a pandas object.
+
+    This function enables compatibility with libraries that implement the
+    DataFrame Interchange Protocol (PEP 683), such as Polars.
+
+    Parameters
+    ----------
+    obj : array_like
+        Input object to potentially convert
+
+    Returns
+    -------
+    obj_converted : object
+        Returns unchanged if already pandas, numpy, None, list, or tuple.
+        Converts to pandas DataFrame/Series if obj has .to_pandas() method
+        (Polars) or implements __dataframe__ protocol.
+    """
+    # Return unchanged if already a pandas object, numpy array, None, list, or tuple
+    if obj is None or isinstance(obj, (np.ndarray, pd.Series, pd.DataFrame)):
+        return obj
+    if isinstance(obj, (list, tuple)):
+        return obj  # handle_data will convert these to np.asarray
+
+    # Try Polars native conversion (both DataFrame and Series have .to_pandas())
+    if hasattr(obj, "to_pandas"):
+        try:
+            return obj.to_pandas()
+        except Exception:
+            pass  # Fall through to other methods
+
+    # Try DataFrame interchange protocol (PEP 683)
+    if hasattr(obj, "__dataframe__"):
+        try:
+            # pandas >= 1.5 has pd.api.interchange.from_dataframe
+            return pd.api.interchange.from_dataframe(obj)
+        except (AttributeError, NotImplementedError):
+            # Fallback: pd.DataFrame(obj) uses __dataframe__ protocol
+            try:
+                return pd.DataFrame(obj)
+            except Exception:
+                pass  # Fall through and return original
+
+    return obj
