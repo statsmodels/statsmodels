@@ -218,14 +218,7 @@ def _to_pandas(obj):
     # Try Polars native conversion (both DataFrame and Series have .to_pandas())
     if hasattr(obj, "to_pandas"):
         try:
-            # use_pyarrow=False avoids requiring pyarrow as a dependency
-            return obj.to_pandas(use_pyarrow=False)
-        except TypeError:
-            # Older versions may not support use_pyarrow parameter
-            try:
-                return obj.to_pandas()
-            except Exception:
-                pass  # Fall through and return original
+            return obj.to_pandas()
         except Exception:
             pass  # Fall through and return original
 

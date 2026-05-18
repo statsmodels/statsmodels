@@ -21,6 +21,7 @@ pytest-cov
 coverage[toml]
 jinja2
 polars>=1.0.0
+pyarrow>=14.0.0
 narwhals>=1.0
 
 # Pin on Win32
