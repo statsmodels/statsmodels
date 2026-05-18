@@ -12,7 +12,6 @@ import pytest
 import statsmodels.formula.api as smf
 from statsmodels.genmod.api import GLM, Logit
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.testing import assert_frame_equal, assert_series_equal
 
 # Skip entire module if polars is not installed
 pl = pytest.importorskip("polars")

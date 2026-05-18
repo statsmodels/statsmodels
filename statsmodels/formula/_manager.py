@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from statsmodels.compat.pandas import PD_LT_3
 from statsmodels.compat.patsy import ensure_patsy_compat
-from statsmodels.tools.data import _to_pandas
 
 from collections import defaultdict
 import os
@@ -11,6 +10,8 @@ import warnings
 
 import numpy as np
 import pandas as pd
+
+from statsmodels.tools.data import _to_pandas
 
 HAVE_PATSY = False
 HAVE_FORMULAIC = False

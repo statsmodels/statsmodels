@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools.data import _to_pandas
