@@ -9,8 +9,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from statsmodels.discrete.discrete_model import Logit
 import statsmodels.formula.api as smf
-from statsmodels.genmod.api import GLM, Logit
+from statsmodels.genmod.api import GLM
 from statsmodels.regression.linear_model import OLS
 
 # Skip entire module if polars is not installed
@@ -323,3 +324,204 @@ class TestPolarsEdgeCases:
         assert list(df_pandas.columns) == list(df_polars.columns)
         np.testing.assert_array_equal(df_pandas["a"].values, df_polars["a"].to_numpy())
         np.testing.assert_array_almost_equal(df_pandas["b"].values, df_polars["b"].to_numpy())
+
+
+class TestToPandasConversion:
+    """Test _to_pandas() conversion function with various input types."""
+
+    def test_to_pandas_with_none(self):
+        """Test _to_pandas returns None unchanged."""
+        from statsmodels.tools.data import _to_pandas
+
+        result = _to_pandas(None)
+        assert result is None
+
+    def test_to_pandas_with_numpy_array(self):
+        """Test _to_pandas returns numpy array unchanged."""
+        from statsmodels.tools.data import _to_pandas
+
+        arr = np.array([1, 2, 3, 4, 5])
+        result = _to_pandas(arr)
+        assert result is arr
+        np.testing.assert_array_equal(result, arr)
+
+    def test_to_pandas_with_pandas_series(self):
+        """Test _to_pandas returns pandas Series unchanged."""
+        from statsmodels.tools.data import _to_pandas
+
+        series = pd.Series([1, 2, 3, 4, 5])
+        result = _to_pandas(series)
+        assert result is series
+
+    def test_to_pandas_with_pandas_dataframe(self):
+        """Test _to_pandas returns pandas DataFrame unchanged."""
+        from statsmodels.tools.data import _to_pandas
+
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        result = _to_pandas(df)
+        assert result is df
+
+    def test_to_pandas_with_list(self):
+        """Test _to_pandas returns list unchanged."""
+        from statsmodels.tools.data import _to_pandas
+
+        lst = [1, 2, 3, 4, 5]
+        result = _to_pandas(lst)
+        assert result is lst
+
+    def test_to_pandas_with_tuple(self):
+        """Test _to_pandas returns tuple unchanged."""
+        from statsmodels.tools.data import _to_pandas
+
+        tpl = (1, 2, 3, 4, 5)
+        result = _to_pandas(tpl)
+        assert result is tpl
+
+    def test_to_pandas_with_polars_series(self):
+        """Test _to_pandas converts Polars Series to pandas Series."""
+        from statsmodels.tools.data import _to_pandas
+
+        polars_series = pl.Series("test", values=[1, 2, 3, 4, 5])
+        result = _to_pandas(polars_series)
+
+        assert isinstance(result, pd.Series)
+        np.testing.assert_array_equal(result.values, [1, 2, 3, 4, 5])
+
+    def test_to_pandas_with_polars_dataframe(self):
+        """Test _to_pandas converts Polars DataFrame to pandas DataFrame."""
+        from statsmodels.tools.data import _to_pandas
+
+        polars_df = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        result = _to_pandas(polars_df)
+
+        assert isinstance(result, pd.DataFrame)
+        assert list(result.columns) == ["a", "b"]
+        np.testing.assert_array_equal(result["a"].values, [1, 2, 3])
+        np.testing.assert_array_equal(result["b"].values, [4, 5, 6])
+
+    def test_to_pandas_with_non_convertible_object(self):
+        """Test _to_pandas returns non-convertible object unchanged."""
+        from statsmodels.tools.data import _to_pandas
+
+        # An object that can't be converted
+        obj = {"key": "value"}
+        result = _to_pandas(obj)
+        assert result is obj
+
+    def test_to_pandas_with_failing_to_pandas_method(self):
+        """Test _to_pandas handles exception in to_pandas() gracefully."""
+        from statsmodels.tools.data import _to_pandas
+
+        class BrokenToPandas:
+            def to_pandas(self):
+                raise ValueError("Conversion failed")
+
+        obj = BrokenToPandas()
+        result = _to_pandas(obj)
+        # Should return original object when to_pandas() fails
+        assert result is obj
+
+    def test_to_pandas_with_failing_dataframe_protocol(self):
+        """Test _to_pandas handles exception in __dataframe__ protocol."""
+        from statsmodels.tools.data import _to_pandas
+
+        class BrokenDataframeProtocol:
+            def __dataframe__(self, nan_as_null=False, allow_copy=True):
+                raise NotImplementedError("Protocol not implemented")
+
+        obj = BrokenDataframeProtocol()
+        result = _to_pandas(obj)
+        # Should return original object when __dataframe__ protocol fails
+        assert result is obj
+
+    def test_to_pandas_with_failing_dataframe_conversion(self):
+        """Test _to_pandas handles exception in pd.DataFrame() conversion."""
+        from statsmodels.tools.data import _to_pandas
+
+        class UnconvertibleDataframeProtocol:
+            def __dataframe__(self, nan_as_null=False, allow_copy=True):
+                # Return something that pd.DataFrame() can't convert
+                return None
+
+        obj = UnconvertibleDataframeProtocol()
+        result = _to_pandas(obj)
+        # Should return original object when all conversions fail
+        assert result is obj
+
+
+class TestIsUsingPolars:
+    """Test _is_using_polars() detection function."""
+
+    def test_is_using_polars_with_polars_series(self):
+        """Test _is_using_polars detects Polars Series."""
+        from statsmodels.tools.data import _is_using_polars
+
+        polars_series = pl.Series("test", values=[1, 2, 3])
+        result = _is_using_polars(polars_series, None)
+        assert result is True
+
+    def test_is_using_polars_with_polars_dataframe(self):
+        """Test _is_using_polars detects Polars DataFrame."""
+        from statsmodels.tools.data import _is_using_polars
+
+        polars_df = pl.DataFrame({"a": [1, 2, 3]})
+        result = _is_using_polars(None, polars_df)
+        assert result is True
+
+    def test_is_using_polars_with_both_polars(self):
+        """Test _is_using_polars with both endog and exog as Polars."""
+        from statsmodels.tools.data import _is_using_polars
+
+        polars_series = pl.Series("test", values=[1, 2, 3])
+        polars_df = pl.DataFrame({"a": [1, 2, 3]})
+        result = _is_using_polars(polars_series, polars_df)
+        assert result is True
+
+    def test_is_using_polars_with_pandas_series(self):
+        """Test _is_using_polars returns False for pandas Series."""
+        from statsmodels.tools.data import _is_using_polars
+
+        pandas_series = pd.Series([1, 2, 3])
+        result = _is_using_polars(pandas_series, None)
+        assert result is False
+
+    def test_is_using_polars_with_pandas_dataframe(self):
+        """Test _is_using_polars returns False for pandas DataFrame."""
+        from statsmodels.tools.data import _is_using_polars
+
+        pandas_df = pd.DataFrame({"a": [1, 2, 3]})
+        result = _is_using_polars(None, pandas_df)
+        assert result is False
+
+    def test_is_using_polars_with_numpy_array(self):
+        """Test _is_using_polars returns False for numpy array."""
+        from statsmodels.tools.data import _is_using_polars
+
+        arr = np.array([1, 2, 3])
+        result = _is_using_polars(arr, None)
+        assert result is False
+
+    def test_is_using_polars_with_both_pandas(self):
+        """Test _is_using_polars with both endog and exog as pandas."""
+        from statsmodels.tools.data import _is_using_polars
+
+        pandas_series = pd.Series([1, 2, 3])
+        pandas_df = pd.DataFrame({"a": [1, 2, 3]})
+        result = _is_using_polars(pandas_series, pandas_df)
+        assert result is False
+
+    def test_is_using_polars_with_none_endog_and_exog(self):
+        """Test _is_using_polars returns False with None inputs."""
+        from statsmodels.tools.data import _is_using_polars
+
+        result = _is_using_polars(None, None)
+        assert result is False
+
+    def test_is_using_polars_with_mixed_polars_and_pandas(self):
+        """Test _is_using_polars detects Polars even when mixed with pandas."""
+        from statsmodels.tools.data import _is_using_polars
+
+        polars_series = pl.Series("test", values=[1, 2, 3])
+        pandas_df = pd.DataFrame({"a": [1, 2, 3]})
+        result = _is_using_polars(polars_series, pandas_df)
+        assert result is True
