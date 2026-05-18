@@ -11,8 +11,8 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 from scipy import stats
+import seaborn as sns
 
 sns.set_style("darkgrid")
 sns.mpl.rc("figure", figsize=(8, 8))
@@ -33,9 +33,11 @@ sns.mpl.rc("figure", figsize=(8, 8))
 # In this case, we are using the Gumbel copula and fix its hyperparameter
 # `theta=2`. We can visualize it's 2-dimensional PDF.
 
-from statsmodels.distributions.copula.api import (CopulaDistribution,
-                                                  GumbelCopula,
-                                                  IndependenceCopula)
+from statsmodels.distributions.copula.api import (
+    CopulaDistribution,
+    GumbelCopula,
+    IndependenceCopula,
+)
 
 copula = GumbelCopula(theta=2)
 _ = copula.plot_pdf()  # returns a matplotlib figure

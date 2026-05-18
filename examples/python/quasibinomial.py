@@ -21,11 +21,13 @@
 # https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/v
 # iewer.htm#statug_glimmix_sect016.htm
 
-import statsmodels.api as sm
+from io import StringIO
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from io import StringIO
+
+import statsmodels.api as sm
 
 # The raw data, expressed as percentages.  We will divide by 100
 # to obtain proportions.

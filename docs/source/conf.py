@@ -12,14 +12,14 @@
 # serve to show the default.
 
 import contextlib
-from packaging.version import parse
 import os
 from os.path import dirname, join
 import sys
-from jinja2 import FileSystemLoader, Environment
 
-import yaml
+from jinja2 import Environment, FileSystemLoader
 from numpydoc.xref import DEFAULT_LINKS
+from packaging.version import parse
+import yaml
 
 from statsmodels import __version__
 

@@ -1,13 +1,12 @@
 import os
 
 import numpy as np
-from numpy import genfromtxt
+import pandas as pd
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 path = os.path.join(cur_dir, "results_arima_forecasts.csv")
-with open(path, "rb") as fd:
-    forecast_results = genfromtxt(fd, names=True, delimiter=",", dtype=float)
+forecast_results = pd.read_csv(path)
 
 # NOTE:
 # stata gives no indication of no convergence for 112 CSS but gives a
@@ -55,8 +54,8 @@ class ARIMA111:
             # these bse are approx [.205811, .0457010, .0897565]
 
             # from stata
-            # forecast = genfromtxt(open(cur_dir+"/arima111_forecasts.csv"),
-            #                delimiter=",", skip_header=1, usecols=[1,2,3,4,5])
+            # forecast = pd.read_csv(open(cur_dir+"/arima111_forecasts.csv"))
+            # forecast = forecast.iloc[:, 1:].to_numpy()
             # self.forecast = forecast[203:,1]
             # self.fcerr = forecast[203:,2]
             # self.fc_conf_int = forecast[203:,3:]

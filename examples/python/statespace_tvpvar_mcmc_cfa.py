@@ -10,12 +10,13 @@
 # ## TVP-VAR, MCMC, and sparse simulation smoothing
 
 from importlib import reload
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
+from scipy.stats import invgamma, invwishart
 
-from scipy.stats import invwishart, invgamma
+import statsmodels.api as sm
 
 # Get the macro dataset
 dta = sm.datasets.macrodata.load_pandas().data

@@ -17,8 +17,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
 from scipy import stats
+
+import statsmodels.api as sm
 from statsmodels.formula.api import logit
 
 print(sm.datasets.fair.SOURCE)

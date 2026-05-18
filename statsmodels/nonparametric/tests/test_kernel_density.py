@@ -341,9 +341,10 @@ class TestKDEMultivariate(KDETestBase):
 
     def test_pdf_mixeddata_CV_ML(self):
         # Test ML cross-validation
-        dens_ml = nparam.KDEMultivariate(
-            data=[self.c1, self.o, self.c2], var_type="coc", bw="cv_ml"
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens_ml = nparam.KDEMultivariate(
+                data=[self.c1, self.o, self.c2], var_type="coc", bw="cv_ml"
+            )
         R_bw = [1.021563, 2.806409e-14, 0.5142077]
         npt.assert_allclose(dens_ml.bw, R_bw, atol=0.1, rtol=0.1)
 
@@ -369,7 +370,8 @@ class TestKDEMultivariate(KDETestBase):
 
     def test_pdf_ordered(self):
         # Test for only ordered data
-        dens = nparam.KDEMultivariate(data=[self.oecd], var_type="o", bw="cv_ls")
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens = nparam.KDEMultivariate(data=[self.oecd], var_type="o", bw="cv_ls")
         sm_result = np.squeeze(dens.pdf()[0:5])
         R_result = [0.7236395, 0.7236395, 0.2763605, 0.2763605, 0.7236395]
         # lower tol here. only 2nd decimal
@@ -384,17 +386,19 @@ class TestKDEMultivariate(KDETestBase):
         npt.assert_allclose(dens.bw, R_result, atol=1e-2)
 
     def test_continuous_cdf(self):
-        dens = nparam.KDEMultivariate(
-            data=[self.Italy_gdp, self.growth], var_type="cc", bw="cv_ml"
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens = nparam.KDEMultivariate(
+                data=[self.Italy_gdp, self.growth], var_type="cc", bw="cv_ml"
+            )
         sm_result = dens.cdf()[0:5]
         R_result = [0.192180770, 0.299505196, 0.557303666, 0.513387712, 0.210985350]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
     def test_mixeddata_cdf(self):
-        dens = nparam.KDEMultivariate(
-            data=[self.Italy_gdp, self.oecd], var_type="cu", bw="cv_ml"
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens = nparam.KDEMultivariate(
+                data=[self.Italy_gdp, self.oecd], var_type="cu", bw="cv_ml"
+            )
         sm_result = dens.cdf()[0:5]
         R_result = [0.54700010, 0.65907039, 0.89676865, 0.74132941, 0.25291361]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
@@ -464,38 +468,41 @@ class TestKDEMultivariate(KDETestBase):
         C2 = rs.normal(2, 1, size=(nobs,))
         bw_user = [0.23, 434697.22]
 
-        dens = nparam.KDEMultivariate(
-            data=[C1, C2],
-            var_type="cc",
-            bw=bw_user,
-            defaults=nparam.EstimatorSettings(
-                efficient=True, randomize=False, n_sub=100
-            ),
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens = nparam.KDEMultivariate(
+                data=[C1, C2],
+                var_type="cc",
+                bw=bw_user,
+                defaults=nparam.EstimatorSettings(
+                    efficient=True, randomize=False, n_sub=100
+                ),
+            )
         npt.assert_equal(dens.bw, bw_user)
 
 
 class TestKDEMultivariateConditional(KDETestBase):
     @pytest.mark.slow
     def test_mixeddata_CV_LS(self):
-        dens_ls = nparam.KDEMultivariateConditional(
-            endog=[self.Italy_gdp],
-            exog=[self.Italy_year],
-            dep_type="c",
-            indep_type="o",
-            bw="cv_ls",
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens_ls = nparam.KDEMultivariateConditional(
+                endog=[self.Italy_gdp],
+                exog=[self.Italy_year],
+                dep_type="c",
+                indep_type="o",
+                bw="cv_ls",
+            )
         # R result: [1.6448, 0.2317373]
         npt.assert_allclose(dens_ls.bw, [1.01203728, 0.31905144], atol=1e-5)
 
     def test_continuous_CV_ML(self):
-        dens_ml = nparam.KDEMultivariateConditional(
-            endog=[self.Italy_gdp],
-            exog=[self.growth],
-            dep_type="c",
-            indep_type="c",
-            bw="cv_ml",
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens_ml = nparam.KDEMultivariateConditional(
+                endog=[self.Italy_gdp],
+                exog=[self.growth],
+                dep_type="c",
+                indep_type="c",
+                bw="cv_ml",
+            )
         # Results from R
         npt.assert_allclose(dens_ml.bw, [0.5341164, 0.04510836], atol=1e-3)
 
@@ -514,13 +521,14 @@ class TestKDEMultivariateConditional(KDETestBase):
         # Hardcode here the bw that will be calculated is we had used
         # ``bw='cv_ml'``.  That calculation is slow, and tested in other tests.
         bw_cv_ml = np.array([0.010043, 12095254.7])  # TODO: odd numbers (?!)
-        dens = nparam.KDEMultivariateConditional(
-            endog=[self.growth],
-            exog=[self.Italy_gdp],
-            dep_type="c",
-            indep_type="c",
-            bw=bw_cv_ml,
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens = nparam.KDEMultivariateConditional(
+                endog=[self.growth],
+                exog=[self.Italy_gdp],
+                dep_type="c",
+                indep_type="c",
+                bw=bw_cv_ml,
+            )
         sm_result = np.squeeze(dens.pdf()[0:5])
         R_result = [11.97964, 12.73290, 13.23037, 13.46438, 12.22779]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
@@ -549,26 +557,28 @@ class TestKDEMultivariateConditional(KDETestBase):
 
     def test_continuous_normal_ref(self):
         # test for normal reference rule of thumb with continuous data
-        dens_nm = nparam.KDEMultivariateConditional(
-            endog=[self.Italy_gdp],
-            exog=[self.growth],
-            dep_type="c",
-            indep_type="c",
-            bw="normal_reference",
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens_nm = nparam.KDEMultivariateConditional(
+                endog=[self.Italy_gdp],
+                exog=[self.growth],
+                dep_type="c",
+                indep_type="c",
+                bw="normal_reference",
+            )
         sm_result = dens_nm.bw
         R_result = [1.283532, 0.01535401]
         # TODO: here we need a smaller tolerance.check!
         npt.assert_allclose(sm_result, R_result, atol=1e-1)
 
         # test default bandwidth method, should be normal_reference
-        dens_nm2 = nparam.KDEMultivariateConditional(
-            endog=[self.Italy_gdp],
-            exog=[self.growth],
-            dep_type="c",
-            indep_type="c",
-            bw=None,
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens_nm2 = nparam.KDEMultivariateConditional(
+                endog=[self.Italy_gdp],
+                exog=[self.growth],
+                dep_type="c",
+                indep_type="c",
+                bw=None,
+            )
 
         assert_allclose(dens_nm2.bw, dens_nm.bw, rtol=1e-10)
         assert_equal(dens_nm2._bw_method, "normal_reference")
@@ -576,13 +586,14 @@ class TestKDEMultivariateConditional(KDETestBase):
         repr(dens_nm2)
 
     def test_continuous_cdf(self):
-        dens_nm = nparam.KDEMultivariateConditional(
-            endog=[self.Italy_gdp],
-            exog=[self.growth],
-            dep_type="c",
-            indep_type="c",
-            bw="normal_reference",
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens_nm = nparam.KDEMultivariateConditional(
+                endog=[self.Italy_gdp],
+                exog=[self.growth],
+                dep_type="c",
+                indep_type="c",
+                bw="normal_reference",
+            )
         sm_result = dens_nm.cdf()[0:5]
         R_result = [0.81304920, 0.95046942, 0.86878727, 0.71961748, 0.38685423]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
@@ -636,14 +647,15 @@ class TestKDEMultivariateConditional(KDETestBase):
         C2 = rs.normal(2, 1, size=(nobs,))
         bw_user = [0.23, 434697.22]
 
-        dens = nparam.KDEMultivariate(
-            data=[C1, C2],
-            var_type="cc",
-            bw=bw_user,
-            defaults=nparam.EstimatorSettings(
-                efficient=True, randomize=False, n_sub=100
-            ),
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            dens = nparam.KDEMultivariate(
+                data=[C1, C2],
+                var_type="cc",
+                bw=bw_user,
+                defaults=nparam.EstimatorSettings(
+                    efficient=True, randomize=False, n_sub=100
+                ),
+            )
         npt.assert_equal(dens.bw, bw_user)
 
 

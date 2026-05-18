@@ -32,6 +32,7 @@ References
 import copy
 
 import numpy as np
+import pytest
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
@@ -887,14 +888,15 @@ class TestRegCoefC:
         n = np.shape(X)[0]
         Y = _adjust_shape(Y, 1)
         X = _adjust_shape(X, self.k_vars)
-        b = KernelReg(
-            Y,
-            X,
-            self.var_type,
-            self.model.reg_type,
-            self.bw,
-            defaults=EstimatorSettings(efficient=False),
-        ).fit()[1]
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            b = KernelReg(
+                Y,
+                X,
+                self.var_type,
+                self.model.reg_type,
+                self.bw,
+                defaults=EstimatorSettings(efficient=False),
+            ).fit()[1]
 
         b = b[:, self.test_vars]
         b = np.reshape(b, (n, len(self.test_vars)))
@@ -936,14 +938,15 @@ class TestRegCoefC:
 
         X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)
         # Calculate the restricted mean. See p. 372 in [8]
-        M = KernelReg(
-            Y,
-            X,
-            self.var_type,
-            self.model.reg_type,
-            self.bw,
-            defaults=EstimatorSettings(efficient=False),
-        ).fit()[0]
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            M = KernelReg(
+                Y,
+                X,
+                self.var_type,
+                self.model.reg_type,
+                self.bw,
+                defaults=EstimatorSettings(efficient=False),
+            ).fit()[0]
         M = np.reshape(M, (n, 1))
         e = Y - M
         e = e - np.mean(e)  # recenter residuals

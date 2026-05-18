@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.graphics.tsaplots import plot_predict
-from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.arima_process import arma_generate_sample
 
 np.random.seed(12345)
 

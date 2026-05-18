@@ -14,15 +14,16 @@
 # feature is the ability of the model to work on datasets with missing
 # values.
 
-import numpy as np
-import pandas as pd
-from scipy.stats import norm
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
-
-import requests
 from io import BytesIO
 from zipfile import ZipFile
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import requests
+from scipy.stats import norm
+
+import statsmodels.api as sm
 
 # Download the dataset
 dk = requests.get('http://www.ssfpack.com/files/DK-data.zip').content
