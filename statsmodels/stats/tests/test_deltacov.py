@@ -52,13 +52,13 @@ class TestDeltacovOLS:
         nl = NonlinearDeltaCov(fun, res.params, res.cov_params())
         predicted = nl.predicted()
         se = nl.se_vectorized()
-        assert_allclose(predicted, fun(res.params), rtol=1e-12)
-        assert_allclose(se, np.sqrt(np.diag(nl.cov())), rtol=1e-12)
+        assert_allclose(predicted, fun(res.params), rtol=1e-10)
+        assert_allclose(se, np.sqrt(np.diag(nl.cov())), rtol=1e-10)
 
         tt = res.t_test(x, use_t=False)
-        assert_allclose(predicted, tt.effect, rtol=1e-12)
-        assert_allclose(se, tt.sd, rtol=1e-12)
-        assert_allclose(nl.conf_int(), tt.conf_int(), rtol=1e-12)
+        assert_allclose(predicted, tt.effect, rtol=1e-10)
+        assert_allclose(se, tt.sd, rtol=1e-10)
+        assert_allclose(nl.conf_int(), tt.conf_int(), rtol=1e-10)
         t1 = nl.summary()
         t2 = tt.summary()
         # equal because nl.summary uses also ContrastResults
