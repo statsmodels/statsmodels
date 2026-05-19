@@ -1217,7 +1217,8 @@ def test_smoothed_state_autocovariances_forwards(missing, filter_univariate,
 @pytest.mark.parametrize("missing", ["all", "partial", "mixed", None])
 @pytest.mark.parametrize("filter_univariate", [True, False])
 @pytest.mark.parametrize("tvp", [True, False])
-def test_smoothed_state_autocovariances_forwards_oos(missing,
+def test_smoothed_state_autocovariances_forwards_oos(reset_randomstate,
+                                                     missing,
                                                      filter_univariate, tvp):
     # Out-of-sample model
     # Note: in TVP case, we need to first generate the larger model, and then
@@ -1294,7 +1295,8 @@ def test_smoothed_state_autocovariances_forwards_oos(missing,
 @pytest.mark.parametrize("missing", ["all", "partial", "mixed", None])
 @pytest.mark.parametrize("filter_univariate", [True, False])
 @pytest.mark.parametrize("tvp", [True, False])
-def test_smoothed_state_autocovariances_backwards_oos(missing,
+def test_smoothed_state_autocovariances_backwards_oos(reset_randomstate,
+                                                      missing,
                                                       filter_univariate, tvp):
     # Out-of-sample model
     # Note: in TVP case, we need to first generate the larger model, and then
