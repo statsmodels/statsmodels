@@ -168,30 +168,6 @@ def _as_array_with_name(obj, default_name):
     return (np.asarray(obj), default_name)
 
 
-def _is_using_polars(endog, exog):
-    """
-    Check if endog or exog is a Polars DataFrame or Series.
-
-    Parameters
-    ----------
-    endog : array_like
-        Endogenous variable
-    exog : array_like or None
-        Exogenous variable(s)
-
-    Returns
-    -------
-    bool
-        True if either endog or exog is a Polars object
-    """
-    for obj in [endog, exog]:
-        if obj is not None:
-            module_name = type(obj).__module__
-            if module_name.startswith("polars"):
-                return True
-    return False
-
-
 def _to_pandas(obj):
     """
     Convert a Polars DataFrame/Series to a pandas object via .to_pandas().
