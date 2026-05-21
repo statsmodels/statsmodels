@@ -55,7 +55,7 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
         # Objects that support the dataframe API should be converted to a
         # dataframe to avoid problems with patsy. (This also works for
         # dataframes themselves.)
-        # _to_pandas handles Polars and other interchange protocol objects
+        # _to_pandas converts Polars DataFrames/Series to pandas
         Y = _to_pandas(Y)
         result = mgr.get_matrices(
             formula,

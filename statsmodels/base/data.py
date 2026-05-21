@@ -697,7 +697,7 @@ def handle_data_class_factory(endog, exog):
 
 
 def handle_data(endog, exog, missing="none", hasconst=None, **kwargs):
-    # Convert Polars/interchange protocol objects to pandas
+    # Convert Polars objects to pandas
     endog = data_util._to_pandas(endog)
     exog = data_util._to_pandas(exog)
 

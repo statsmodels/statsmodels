@@ -180,22 +180,15 @@ def _to_pandas(obj):
     Returns
     -------
     obj_converted : object
-        Returns unchanged if already pandas, numpy, None, list, or tuple.
-        Converts to pandas DataFrame/Series if obj has a .to_pandas() method
-        (e.g., Polars). Returns the original object unchanged if conversion
-        is not possible.
+        Returns a pandas DataFrame/Series if obj is a Polars DataFrame/Series.
+        Returns the original object unchanged otherwise.
     """
-    # Return unchanged if already a pandas object, numpy array, None, list, or tuple
-    if obj is None or isinstance(obj, (np.ndarray, pd.Series, pd.DataFrame)):
-        return obj
-    if isinstance(obj, (list, tuple)):
-        return obj  # handle_data will convert these to np.asarray
+    try:
+        import polars as pl
 
-    # Try Polars native conversion (both DataFrame and Series have .to_pandas())
-    if hasattr(obj, "to_pandas"):
-        try:
+        if isinstance(obj, (pl.DataFrame, pl.Series)):
             return obj.to_pandas()
-        except Exception:
-            pass  # Fall through and return original
+    except ImportError:
+        pass
 
     return obj

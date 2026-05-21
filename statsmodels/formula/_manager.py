@@ -455,7 +455,7 @@ class FormulaManager:
             If pandas is True, returns one or more DataFrames. If False,
             returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
         """
-        # Convert Polars/interchange protocol objects to pandas
+        # Convert Polars objects to pandas
         data = _to_pandas(data)
         _check_data(data)
         data = _maybe_convert_data(data)
