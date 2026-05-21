@@ -110,4 +110,4 @@ statsmodels/setup.cfg
 statsmodels/LICENSE.txt
 
 # Dataset downloads
-statsmodels/datasets/tests/*.zip
+statsmodels/datasets/tests/*.ziptest_polars_coverage.py
