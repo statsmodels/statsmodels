@@ -7,6 +7,12 @@ from statsmodels.compat.numpy import NP_LT_2
 import numpy as np
 import pandas as pd
 
+try:
+    import polars as pl
+    _POLARS_TYPES = (pl.DataFrame, pl.Series)
+except ImportError:
+    _POLARS_TYPES = ()
+
 
 def _check_period_index(x, freq="M"):
     from pandas import DatetimeIndex, PeriodIndex
@@ -183,12 +189,6 @@ def _to_pandas(obj):
         Returns a pandas DataFrame/Series if obj is a Polars DataFrame/Series.
         Returns the original object unchanged otherwise.
     """
-    try:
-        import polars as pl
-
-        if isinstance(obj, (pl.DataFrame, pl.Series)):
-            return obj.to_pandas()
-    except ImportError:
-        pass
-
+    if _POLARS_TYPES and isinstance(obj, _POLARS_TYPES):
+        return obj.to_pandas()
     return obj
