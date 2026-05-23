@@ -2771,7 +2771,9 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         info["Log-Likelihood:"] = self.llf
         info["Converged:"] = "Yes" if self.converged else "No"
         smry.add_dict(info)
-        smry.add_title("Mixed Linear Model Regression Results")
+        if title is None:
+            title = "Mixed Linear Model Regression Results"
+        smry.add_title(title)
 
         float_fmt = "%.3f"
 

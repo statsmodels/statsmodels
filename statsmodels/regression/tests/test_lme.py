@@ -797,6 +797,12 @@ class TestMixedLMSummary:
         actual = summ.tables[1].index.values  # Second table is summary of params
         assert_equal(np.asarray(actual), desired)
 
+    def test_summary_title(self):
+        # Test that the `title` argument is reflected in the summary.
+        title = "Custom MixedLM Summary"
+        summ = self.res.summary(title=title)
+        assert_equal(summ.title, title)
+
 
 # ------------------------------------------------------------------
 
