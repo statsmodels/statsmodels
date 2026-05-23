@@ -30,7 +30,7 @@ Stats
 
 The Highlights
 ==============
-This is a Python 3.11 compatability release only.  There are no significant
+This is a Python 3.11 compatibility release only.  There are no significant
 new features or bug fixes.
 
 Submodules
