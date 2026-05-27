@@ -6,6 +6,7 @@ Created on Wed May 30 15:11:09 2018
 
 import numpy as np
 from scipy import stats
+from statsmodels.stats.base import HolderTuple
 
 
 # this is a copy from stats._diagnostic_other to avoid circular imports
@@ -73,7 +74,12 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
         # Let's assume inner is invertible, TODO: check if usecase for pinv exists
         lm_stat = wscore.dot(np.linalg.solve(inner, wscore))
     pval = stats.chi2.sf(lm_stat, k_constraints)
-    return lm_stat, pval, k_constraints
+    return HolderTuple(
+        statistic=lm_stat,
+        pvalue=pval,
+        df=k_constraints,
+        distribution="chi2",
+    )
 
 
 def score_test(self, exog_extra=None, params_constrained=None,
@@ -266,7 +272,11 @@ def score_test(self, exog_extra=None, params_constrained=None,
         # temporary to try out
         chi2stat = _lm_robust(score, r_matrix, hinv, cov_score, cov_params=V)
         pval = stats.chi2.sf(chi2stat, k_constraints)
-        return chi2stat, pval
+        return HolderTuple(
+            statistic=chi2stat,
+            pvalue=pval,
+            distribution="chi2",
+        )
     else:
         msg = 'Only cov_type "nonrobust" and "HC0" are available.'
         raise NotImplementedError(msg)
@@ -275,7 +285,12 @@ def score_test(self, exog_extra=None, params_constrained=None,
         chi2stat = score.dot(np.linalg.solve(cov_score_test, score[:, None]))
         pval = stats.chi2.sf(chi2stat, k_constraints)
         # return a stats results instance instead?  Contrast?
-        return chi2stat, pval, k_constraints
+        return HolderTuple(
+            statistic=chi2stat,
+            pvalue=pval,
+            df=k_constraints,
+            distribution="chi2",
+        )
     elif hypothesis == "separate":
         diff = score
         bse = np.sqrt(np.diag(cov_score_test))
