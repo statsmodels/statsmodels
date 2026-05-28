@@ -448,3 +448,25 @@ def test_reproducible_simulation(random_state_type):
     random_state = get_random_state(random_state_type)
     sim2 = res.simulate(1, random_state=random_state)
     assert_allclose(sim1, sim2)
+
+def test_alternative_estimators_seasonal_differencing():
+    # Dummy data
+    np.random.seed(12345)
+    endog = np.random.standard_normal(48)
+
+    # D=1, no seasonal AR (P=0), no seasonal MA
+    order = (1, 0, 1)
+    seasonal_order = (0, 1, 0, 12)
+
+    mod_gls = ARIMA(endog, order=order, seasonal_order=seasonal_order)
+    try:
+        res_gls = mod_gls.fit(method='gls')
+    except Exception as exc:
+        pytest.fail(f"ARIMA fit with method='gls' failed on seasonal differencing: {exc}")
+
+    mod_hr = ARIMA(endog, order=order, seasonal_order=seasonal_order)
+    try:
+        res_hr = mod_hr.fit(method='hannan_rissanen')
+    except Exception as exc:
+        pytest.fail(f"ARIMA fit with method='hannan_rissanen' failed on seasonal differencing: {exc}")
+         

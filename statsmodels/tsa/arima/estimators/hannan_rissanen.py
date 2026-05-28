@@ -12,9 +12,11 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.tsatools import lagmat
+from statsmodels.tsa.statespace.tools import diff
 
 
-def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
+def hannan_rissanen(endog, ar_order=0, ma_order=0, 
+                    seasonal_order=(0, 0, 0, 0), demean=True, 
                     initial_ar_order=None, unbiased=None,
                     fixed_params=None):
     """
@@ -92,11 +94,25 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
        "Automatic Modeling Methods for Univariate Series."
        A Course in Time Series Analysis, 171-201.
     """
-    spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order)
+    spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order, seasonal_order=seasonal_order)
+
+    if spec.max_seasonal_ar_order > 0 or spec.max_seasonal_ma_order > 0:
+        raise ValueError(
+            "Hannan-Rissanen does not support seasonal MA or AR"
+        )
 
     fixed_params = _validate_fixed_params(fixed_params, spec.param_names)
 
     endog = spec.endog
+
+    if spec.is_integrated:
+        endog = diff(
+            endog,
+            k_diff=spec.diff,
+            k_seasonal_diff=spec.seasonal_diff,
+            seasonal_periods=spec.seasonal_periods,
+        )
+
     if demean:
         endog = endog - endog.mean()
 

@@ -693,10 +693,13 @@ class SARIMAXSpecification:
                                  % titles[estimator])
 
         # Now go through specific disqualifications for each estimator
+        has_seasonal_ar_or_ma = (self.max_seasonal_ar_order > 0
+                                  or self.max_seasonal_ma_order > 0)
+
         if estimator in ["yule_walker", "burg"]:
-            if has_seasonal:
+            if has_seasonal_ar_or_ma:
                 raise ValueError("%s estimator does not support seasonal"
-                                 " components." % titles[estimator])
+                                 " AR or MA components." % titles[estimator])
             if not self.is_ar_consecutive:
                 raise ValueError("%s estimator does not support"
                                  " non-consecutive autoregressive lags."
@@ -705,9 +708,9 @@ class SARIMAXSpecification:
                 raise ValueError("%s estimator does not support moving average"
                                  " components." % titles[estimator])
         elif estimator == "innovations":
-            if has_seasonal:
+            if has_seasonal_ar_or_ma:
                 raise ValueError("Innovations estimator does not support"
-                                 " seasonal components.")
+                                 " seasonal AR or MA components.")
             if not self.is_ma_consecutive:
                 raise ValueError("Innovations estimator does not support"
                                  " non-consecutive moving average lags.")
@@ -715,9 +718,9 @@ class SARIMAXSpecification:
                 raise ValueError("Innovations estimator does not support"
                                  " autoregressive components.")
         elif estimator == "hannan_rissanen":
-            if has_seasonal:
+            if has_seasonal_ar_or_ma:
                 raise ValueError("Hannan-Rissanen estimator does not support"
-                                 " seasonal components.")
+                                 " seasonal AR or MA components.")
         elif estimator == "innovations_mle":
             if self.enforce_stationarity is False:
                 raise ValueError("Innovations MLE estimator does not support"
