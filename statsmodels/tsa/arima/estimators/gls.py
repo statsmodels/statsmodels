@@ -199,7 +199,7 @@ def gls(
     converged = False if n_iter is None else None
     i = 0
 
-    if arma_estimator in ['hannan_rissanen', 'yule_walker', 'burg', 'innovations']:
+    if arma_estimator in ["hannan_rissanen", "yule_walker", "burg", "innovations"]:
         if spec.max_seasonal_ar_order > 0 or spec.max_seasonal_ma_order > 0:
             raise ValueError(
                 f"The selected ARMA estimator '{arma_estimator}' does not support "

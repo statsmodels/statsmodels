@@ -462,7 +462,7 @@ def test_alternative_estimators_seasonal_differencing():
     # hannan_rissanen should accept seasonal-differencing-only models
     mod_hr = ARIMA(endog, order=order, seasonal_order=seasonal_order)
     try:
-        mod_hr.fit(method='hannan_rissanen')
+        mod_hr.fit(method="hannan_rissanen")
     except Exception as exc:
         pytest.fail(
             f"hannan_rissanen failed on seasonal-differencing-only model:"
@@ -472,7 +472,7 @@ def test_alternative_estimators_seasonal_differencing():
     # yule_walker: AR-only model with seasonal differencing
     mod_yw = ARIMA(endog, order=(2, 0, 0), seasonal_order=seasonal_order)
     try:
-        mod_yw.fit(method='yule_walker')
+        mod_yw.fit(method="yule_walker")
     except Exception as exc:
         pytest.fail(
             f"yule_walker failed on seasonal-differencing-only model: {exc}"
@@ -481,5 +481,4 @@ def test_alternative_estimators_seasonal_differencing():
     # Seasonal AR term (P=1) should still be rejected by hannan_rissanen
     with pytest.raises(ValueError, match="seasonal"):
         ARIMA(endog, order=(1, 0, 0),
-              seasonal_order=(1, 0, 0, 12)).fit(method='hannan_rissanen')
-ssanen')
+              seasonal_order=(1, 0, 0, 12)).fit(method="hannan_rissanen")
