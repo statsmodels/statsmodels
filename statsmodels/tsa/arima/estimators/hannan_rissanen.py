@@ -15,8 +15,8 @@ from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tsa.statespace.tools import diff
 
 
-def hannan_rissanen(endog, ar_order=0, ma_order=0, 
-                    seasonal_order=(0, 0, 0, 0), demean=True, 
+def hannan_rissanen(endog, ar_order=0, ma_order=0,
+                    seasonal_order=(0, 0, 0, 0), demean=True,
                     initial_ar_order=None, unbiased=None,
                     fixed_params=None):
     """

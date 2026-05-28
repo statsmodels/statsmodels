@@ -662,7 +662,6 @@ class SARIMAXSpecification:
         """
         has_ar = self.max_ar_order != 0
         has_ma = self.max_ma_order != 0
-        has_seasonal = self.seasonal_periods != 0
         has_missing = self._has_missing
 
         titles = {
@@ -694,7 +693,7 @@ class SARIMAXSpecification:
 
         # Now go through specific disqualifications for each estimator
         has_seasonal_ar_or_ma = (self.max_seasonal_ar_order > 0
-                                  or self.max_seasonal_ma_order > 0)
+                                 or self.max_seasonal_ma_order > 0)
 
         if estimator in ["yule_walker", "burg"]:
             if has_seasonal_ar_or_ma:
