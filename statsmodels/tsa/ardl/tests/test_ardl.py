@@ -846,6 +846,6 @@ def test_uecm_resid():
         {"lry": 1, "ibo": 3, "ide": 2},
     )
     res = mod.fit()
-    
+
     # Assert that the override fix is working
-    assert_allclose(res.resid, res.model._y - res.fittedvalues)
+    np.testing.assert_allclose(res.resid, res.model._y - res.fittedvalues)
