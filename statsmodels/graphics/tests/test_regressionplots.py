@@ -420,6 +420,7 @@ class TestAddEllipse:
         y = x + np.random.normal(size=100)
 
         from statsmodels.graphics.regressionplots import add_ellipse, add_lowess
+
         # Test add_ellipse
         fig_out = add_ellipse(x, y, ax=ax)
         assert_equal(isinstance(fig_out, plt.Figure), True)

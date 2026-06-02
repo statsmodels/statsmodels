@@ -90,11 +90,11 @@ def add_lowess(exog=None, endog=None, ax=None, lines_idx=0, frac=0.2, **lowess_k
     Figure
         The figure that holds the instance.
     """
-    if hasattr(exog, 'get_lines'):
+    if hasattr(exog, "get_lines"):
         # backwards compatibility: add_lowess(ax, lines_idx=0, ...)
         ax = exog
         exog = None
-        if endog is not None and 'lines_idx' not in lowess_kwargs:
+        if endog is not None and "lines_idx" not in lowess_kwargs:
             lines_idx = endog
         endog = None
 
@@ -132,7 +132,7 @@ def add_ellipse(exog=None, endog=None, ax=None, alpha=0.95, **ellipse_kwargs):
     Figure
         The figure that holds the instance.
     """
-    if hasattr(exog, 'get_lines'):
+    if hasattr(exog, "get_lines"):
         ax = exog
         exog = None
 
@@ -162,7 +162,7 @@ def add_ellipse(exog=None, endog=None, ax=None, alpha=0.95, **ellipse_kwargs):
     # Width and height scaled by chi2 quantile
     width, height = 2 * scale * np.sqrt(vals)
 
-    ellipse_kwds = dict(edgecolor='blue', facecolor='none', linewidth=1.5)
+    ellipse_kwds = dict(edgecolor="blue", facecolor="none", linewidth=1.5)
     if ellipse_kwargs:
         ellipse_kwds.update(ellipse_kwargs)
 
