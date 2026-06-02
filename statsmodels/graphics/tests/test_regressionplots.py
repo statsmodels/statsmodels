@@ -418,7 +418,7 @@ class TestAddEllipse:
         np.random.seed(12345)
         x = np.random.normal(size=100)
         y = x + np.random.normal(size=100)
-        
+
         from statsmodels.graphics.regressionplots import add_ellipse, add_lowess
         # Test add_ellipse
         fig_out = add_ellipse(x, y, ax=ax)
@@ -428,5 +428,5 @@ class TestAddEllipse:
         # Test add_lowess with new signature (exog, endog passed explicitly)
         fig_out2 = add_lowess(x, y, ax=ax)
         assert_equal(isinstance(fig_out2, plt.Figure), True)
-        
+
         close_or_save(pdf, fig)

@@ -14,7 +14,6 @@ update
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
-import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import numpy as np
 import pandas as pd
@@ -76,7 +75,7 @@ def add_lowess(exog=None, endog=None, ax=None, lines_idx=0, frac=0.2, **lowess_k
     endog : array_like, optional
         Data for the y-axis. If None, it will be extracted from the axis lines.
     ax : AxesSubplot, optional
-        The Axes to which to add the plot. If not provided and `exog` is an 
+        The Axes to which to add the plot. If not provided and `exog` is an
         Axes instance, it will be used as `ax` for backwards compatibility.
     lines_idx : int
         This is the line on the existing plot to which you want to add
@@ -98,7 +97,7 @@ def add_lowess(exog=None, endog=None, ax=None, lines_idx=0, frac=0.2, **lowess_k
         if endog is not None and 'lines_idx' not in lowess_kwargs:
             lines_idx = endog
         endog = None
-        
+
     if exog is None and endog is None:
         y0 = ax.get_lines()[lines_idx]._y
         x0 = ax.get_lines()[lines_idx]._x
@@ -114,7 +113,7 @@ def add_lowess(exog=None, endog=None, ax=None, lines_idx=0, frac=0.2, **lowess_k
 def add_ellipse(exog=None, endog=None, ax=None, alpha=0.95, **ellipse_kwargs):
     """
     Add a confidence ellipse to a plot axis.
-    
+
     Parameters
     ----------
     exog : array_like, 1-dim
@@ -127,7 +126,7 @@ def add_ellipse(exog=None, endog=None, ax=None, alpha=0.95, **ellipse_kwargs):
         Confidence level (e.g., 0.95 for 95%).
     ellipse_kwargs
         Additional keyword arguments are passed to the Matplotlib `Ellipse` patch.
-        
+
     Returns
     -------
     Figure
@@ -136,13 +135,13 @@ def add_ellipse(exog=None, endog=None, ax=None, alpha=0.95, **ellipse_kwargs):
     if hasattr(exog, 'get_lines'):
         ax = exog
         exog = None
-        
+
     if exog is None or endog is None:
         raise ValueError("exog and endog must be provided")
-        
+
     x = np.asarray(exog)
     y = np.asarray(endog)
-    
+
     if x.size != y.size:
         raise ValueError("x and y must be the same size")
 
@@ -162,11 +161,11 @@ def add_ellipse(exog=None, endog=None, ax=None, alpha=0.95, **ellipse_kwargs):
 
     # Width and height scaled by chi2 quantile
     width, height = 2 * scale * np.sqrt(vals)
-    
+
     ellipse_kwds = dict(edgecolor='blue', facecolor='none', linewidth=1.5)
     if ellipse_kwargs:
         ellipse_kwds.update(ellipse_kwargs)
-        
+
     ellipse = Ellipse((mean_x, mean_y), width, height, angle=angle, **ellipse_kwds)
     ax.add_patch(ellipse)
     return ax.figure
@@ -210,7 +209,6 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     `poverty` and `hs_grad` as variables and `murder` as the response
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
 
     >>> data = sm.datasets.statecrime.load_pandas().data
     >>> murder = data['murder']
@@ -304,7 +302,6 @@ def plot_regress_exog(results, exog_idx, fig=None):
     and CCPR plot for poverty rate.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 6))
@@ -456,7 +453,6 @@ def plot_partregress(
     are removed by OLS regression.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
 
     >>> crime_data = sm.datasets.statecrime.load_pandas()
     >>> sm.graphics.plot_partregress(endog='murder', exog_i='hs_grad',
@@ -613,7 +609,6 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     >>> from statsmodels.graphics.regressionplots import plot_partregress_grid
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 6))
@@ -719,7 +714,6 @@ def plot_ccpr(results, exog_idx, ax=None):
     of poverty ('poverty').
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> crime_data = sm.datasets.statecrime.load_pandas()
@@ -803,7 +797,6 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
     of all other variables in the model.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 8))
@@ -894,7 +887,6 @@ def abline_plot(
     >>> ax = fig.axes[0]
     >>> ax.scatter(X[:,1], y)
     >>> ax.margins(.1)
-    >>> import matplotlib.pyplot as plt
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_abline.py
