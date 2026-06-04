@@ -427,7 +427,7 @@ class TestAddEllipse:
         assert len(ax.patches) > 0
 
         # Test add_lowess with new signature (exog, endog passed explicitly)
-        fig_out2 = add_lowess(x, y, ax=ax)
+        fig_out2 = add_lowess(ax, exog=x, endog=y)
         assert_equal(isinstance(fig_out2, plt.Figure), True)
 
         close_or_save(pdf, fig)
