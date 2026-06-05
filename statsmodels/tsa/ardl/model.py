@@ -2100,7 +2100,7 @@ class UECMResults(ARDLResults):
             return pd.DataFrame(val, columns=lbls, index=lbls)
         return pd.Series(val, index=lbls, name=name)
 
-    @cache_readonly
+    @property
     def resid(self):
         """
         The residuals of the model.
