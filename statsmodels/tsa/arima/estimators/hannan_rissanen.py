@@ -110,6 +110,11 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     if initial_ar_order is None:
         initial_ar_order = max(np.floor(np.log(nobs)**2).astype(int),
                                2 * max(max_ar_order, max_ma_order))
+    try:
+        _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order)
+    except ValueError:
+        raise
+
     # Create a spec, just to validate the initial autoregressive order
     _ = SARIMAXSpecification(endog, ar_order=initial_ar_order)
 
@@ -327,6 +332,50 @@ def _validate_fixed_params(fixed_params, spec_param_names):
         )
 
     return fixed_params
+
+
+def _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order):
+    """
+    Validate order parameters for Hannan-Rissanen estimation.
+
+    Parameters
+    ----------
+    nobs : int
+        Number of observations.
+    max_ar_order : int
+        Maximum AR order.
+    max_ma_order : int
+        Maximum MA order.
+    initial_ar_order : int
+        Initial AR order used in the first step.
+
+    Raises
+    ------
+    ValueError
+        If `ar_order` or `ma_order` is greater than or equal to `nobs`.
+    ValueError
+        If `initial_ar_order` is greater than or equal to `nobs`.
+    ValueError
+        If `initial_ar_order` is less than or equal to `ar_order` or `ma_order`.
+    """
+    if max_ar_order >= nobs:
+        raise ValueError(
+            f"ar_order ({max_ar_order}) must be less than nobs ({nobs})."
+        )
+    if max_ma_order >= nobs:
+        raise ValueError(
+            f"ma_order ({max_ma_order}) must be less than nobs ({nobs})."
+        )
+    if initial_ar_order >= nobs:
+        raise ValueError(
+            f"initial_ar_order ({initial_ar_order}) must be less than"
+            f" nobs ({nobs})."
+        )
+    if initial_ar_order <= max(max_ar_order, max_ma_order):
+        raise ValueError(
+            f"initial_ar_order ({initial_ar_order}) must be greater than"
+            f" ar_order ({max_ar_order}) and ma_order ({max_ma_order})."
+        )
 
 
 def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
