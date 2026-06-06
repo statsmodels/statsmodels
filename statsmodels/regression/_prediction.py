@@ -95,8 +95,8 @@ class PredictionResults:
         Returns
         -------
         ci : ndarray, (nobs, 2)
-            The array has the lower and the upper limit of the interval
-            in the columns.
+            The lower and upper bound of the interval for each observation.
+            Column 0 contains the lower bound, column 1 the upper bound.
         """
 
         se = self.se_obs if obs else self.se_mean
