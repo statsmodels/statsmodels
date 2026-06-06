@@ -27,7 +27,6 @@ __all__ = [
     "Probit",
 ]
 
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -54,6 +53,7 @@ from statsmodels.tools.sm_exceptions import (
     PerfectSeparationWarning,
     SpecificationWarning,
 )
+from statsmodels.tools.docstring_helpers import Appender
 
 try:
     import cvxopt  # noqa:F401

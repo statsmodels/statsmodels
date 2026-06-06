@@ -32,7 +32,6 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 from __future__ import annotations
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
 from typing import TYPE_CHECKING, Literal
@@ -57,6 +56,7 @@ from statsmodels.tools.sm_exceptions import (
 )
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.validation import bool_like, float_like, string_like
+from statsmodels.tools.docstring_helpers import Appender
 
 from . import _prediction as pred
 

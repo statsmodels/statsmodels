@@ -7,7 +7,6 @@ docs:
 http://www.stata.com/manuals13/xtxtgee.pdf
 """
 
-from statsmodels.compat.pandas import Appender
 
 from collections import defaultdict
 import warnings
@@ -24,6 +23,7 @@ from statsmodels.tools.sm_exceptions import (
     SingularMatrixWarning,
 )
 from statsmodels.tools.validation import bool_like
+from statsmodels.tools.docstring_helpers import Appender
 
 
 class CovStruct:

@@ -6,7 +6,6 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
 from collections import defaultdict
@@ -20,6 +19,7 @@ from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import maybe_unwrap_results
+from statsmodels.tools.docstring_helpers import Appender
 
 # outliers test convenience wrapper
 

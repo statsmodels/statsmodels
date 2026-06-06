@@ -5,7 +5,6 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -27,6 +26,7 @@ from statsmodels.formula.formulatools import advance_eval_env
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.docstring_helpers import Appender
 
 
 class OrderedModel(GenericLikelihoodModel):

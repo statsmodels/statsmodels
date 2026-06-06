@@ -23,7 +23,6 @@ LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
 from collections import defaultdict
@@ -70,6 +69,7 @@ from statsmodels.tools.sm_exceptions import (
     SpecificationWarning,
     ValueWarning,
 )
+from statsmodels.tools.docstring_helpers import Appender
 
 
 class ParameterConstraint:

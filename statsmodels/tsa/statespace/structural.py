@@ -7,7 +7,6 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-from statsmodels.compat.pandas import Appender
 
 from warnings import warn
 
@@ -16,6 +15,7 @@ import numpy as np
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.sm_exceptions import OutputWarning, SpecificationWarning
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tsa.filters.hp_filter import hpfilter
 from statsmodels.tsa.tsatools import lagmat
 

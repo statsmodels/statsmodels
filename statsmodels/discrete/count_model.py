@@ -4,7 +4,6 @@ __all__ = [
     "ZeroInflatedPoisson",
 ]
 
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -30,6 +29,7 @@ import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.docstring_helpers import Appender
 
 _doc_zi_params = """
     exog_infl : array_like or None

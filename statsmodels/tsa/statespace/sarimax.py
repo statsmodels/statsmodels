@@ -4,7 +4,6 @@ SARIMAX Model
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from statsmodels.compat.pandas import Appender
 
 from warnings import warn
 
@@ -22,6 +21,7 @@ from statsmodels.tsa.tsatools import lagmat
 
 from .initialization import Initialization
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
+from statsmodels.tools.docstring_helpers import Appender
 from .tools import (
     companion_matrix,
     constrain_stationary_univariate,

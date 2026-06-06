@@ -6,8 +6,6 @@ import numpy as np
 from packaging.version import Version, parse
 import pandas as pd
 from pandas.util._decorators import (
-    Appender,
-    Substitution,
     cache_readonly,
     deprecate_kwarg as pd_deprecate_kwarg,
 )
@@ -30,7 +28,6 @@ __all__ = [
     "PD_LT_3",
     "QUARTER_END",
     "YEAR_END",
-    "Appender",
     "Substitution",
     "assert_frame_equal",
     "assert_index_equal",

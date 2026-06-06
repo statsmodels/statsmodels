@@ -11,7 +11,6 @@ update
 
 """
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
 import numpy as np
@@ -33,6 +32,7 @@ from ._regressionplots_doc import (
     _plot_leverage_resid2_doc,
     _plot_partial_residuals_doc,
 )
+from statsmodels.tools.docstring_helpers import Appender
 
 __all__ = [
     "abline_plot",

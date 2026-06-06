@@ -13,7 +13,7 @@ without dependencies.
 * numerical precision will vary and depend on the choice of stepsizes
 """
 
-from statsmodels.compat.pandas import Appender, Substitution
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 
 # TODO:
 # * some cleanup

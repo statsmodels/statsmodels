@@ -18,7 +18,6 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
 
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -51,6 +50,7 @@ from statsmodels.tools.sm_exceptions import (
     PerfectSeparationWarning,
 )
 from statsmodels.tools.validation import float_like
+from statsmodels.tools.docstring_helpers import Appender
 
 # need import in module instead of lazily to copy `__doc__`
 from . import families
