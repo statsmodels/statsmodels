@@ -753,12 +753,12 @@ def _fit_lbfgs(
     )
     # Use unconstrained optimization by default.
     bounds = kwargs.setdefault("bounds", [(None, None)] * len(start_params))
-    kwargs.setdefault("iprint", 0)
+    kwargs.setdefault("iprint", -1 if not disp else 1)
 
     # Pass the following keyword argument names through to fmin_l_bfgs_b
     # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
     # default values.
-    names = ("m", "pgtol", "factr", "maxfun", "epsilon", "approx_grad")
+    names = ("m", "pgtol", "factr", "maxfun", "epsilon", "approx_grad", "iprint")
     extra_kwargs = {x: kwargs[x] for x in names if x in kwargs}
 
     # Extract values for the options related to the gradient.
