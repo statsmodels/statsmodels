@@ -71,7 +71,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=
             inner = R.dot(V).dot(R.T)
 
         # lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
-        # Let's assume inner is invertible,# TODO: check if usecase for pinv exists
+        # Let's assume inner is invertible, TODO: check if usecase for pinv exists
         lm_stat = wscore.dot(np.linalg.solve(inner, wscore))
     pval = stats.chi2.sf(lm_stat, k_constraints)
     return HolderTuple(
@@ -361,7 +361,7 @@ def _scorehess_extra(
     # print(r_matrix.shape, k_cm, k_cp, k_mean_new, k_prec_new)
     # print(index_mean, index_prec)
     r_matrix[:k_cm, index_mean] = np.eye(k_cm)
-    r_matrix[k_cm:  k_cm + k_cp, index_prec] = np.eye(k_cp)
+    r_matrix[k_cm: k_cm + k_cp, index_prec] = np.eye(k_cp)
 
     if hasattr(model, "score_hessian_factor"):
         sf, hf = model.score_hessian_factor(params, return_hessian=True, **hess_kwds)
