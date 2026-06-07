@@ -190,3 +190,17 @@ def test_minimize_scipy_nm():
         disp=0,
     )
     assert_almost_equal(xopt, [2, 3.5], 4)
+
+
+def test_lbfgs_disp_false_no_output(capsys):
+    xopt, _ = _fit_lbfgs(
+        dummy_func,
+        dummy_score,
+        [1.0],
+        (),
+        {},
+        full_output=False,
+        disp=False,
+    )
+    captured = capsys.readouterr()
+    assert captured.out == ""
