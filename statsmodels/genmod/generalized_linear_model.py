@@ -43,6 +43,7 @@ from statsmodels.tools.decorators import (
     cached_value,
 )
 from statsmodels.tools.docstring import Docstring
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     DomainWarning,
@@ -50,7 +51,6 @@ from statsmodels.tools.sm_exceptions import (
     PerfectSeparationWarning,
 )
 from statsmodels.tools.validation import float_like
-from statsmodels.tools.docstring_helpers import Appender
 
 # need import in module instead of lazily to copy `__doc__`
 from . import families

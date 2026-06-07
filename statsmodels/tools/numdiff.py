@@ -13,8 +13,6 @@ without dependencies.
 * numerical precision will vary and depend on the choice of stepsizes
 """
 
-from statsmodels.tools.docstring_helpers import Appender, Substitution
-
 # TODO:
 # * some cleanup
 # * check numerical accuracy (and bugs) with numdifftools and analytical
@@ -46,6 +44,8 @@ from statsmodels.tools.docstring_helpers import Appender, Substitution
 # in example: if J = d x*beta / d beta then J'J == X'X
 #    similar to https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
 import numpy as np
+
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 
 # NOTE: we only do double precision internally so far
 EPS = np.finfo(float).eps

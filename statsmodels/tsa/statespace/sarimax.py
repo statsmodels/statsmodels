@@ -13,6 +13,7 @@ import pandas as pd
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.params import SARIMAXParams
@@ -21,7 +22,6 @@ from statsmodels.tsa.tsatools import lagmat
 
 from .initialization import Initialization
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
-from statsmodels.tools.docstring_helpers import Appender
 from .tools import (
     companion_matrix,
     constrain_stationary_univariate,

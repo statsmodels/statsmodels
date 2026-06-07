@@ -24,8 +24,8 @@ import numpy as np
 from scipy import linalg, optimize, signal
 
 from statsmodels.tools.docstring import Docstring, remove_parameters
-from statsmodels.tools.validation import array_like
 from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.validation import array_like
 
 if NP_LT_2:
     ComplexWarning = np.ComplexWarning

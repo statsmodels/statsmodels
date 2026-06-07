@@ -25,8 +25,8 @@ from statsmodels.formula.formulatools import advance_eval_env
 # for results wrapper:
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 
 class OrderedModel(GenericLikelihoodModel):

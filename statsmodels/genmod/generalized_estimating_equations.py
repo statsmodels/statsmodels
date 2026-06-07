@@ -60,6 +60,7 @@ from statsmodels.graphics._regressionplots_doc import (
 # used for wrapper:
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     DomainWarning,
@@ -69,7 +70,6 @@ from statsmodels.tools.sm_exceptions import (
     SpecificationWarning,
     ValueWarning,
 )
-from statsmodels.tools.docstring_helpers import Appender
 
 
 class ParameterConstraint:

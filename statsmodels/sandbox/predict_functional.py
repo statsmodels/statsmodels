@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
-from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 _predict_functional_doc = """
     Predictions and contrasts of a fitted model as a function of a given covariate.
