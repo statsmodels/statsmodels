@@ -9,6 +9,7 @@ from pandas.util._decorators import (
     cache_readonly,
     deprecate_kwarg as pd_deprecate_kwarg,
 )
+
 from statsmodels.tools.docstring_helpers import Appender, Substitution
 
 if TYPE_CHECKING:
