@@ -17,7 +17,6 @@ Author: josefpktd
 License: BSD
 """
 from statsmodels.compat.numpy import NP_LT_2
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -25,6 +24,7 @@ import numpy as np
 from scipy import linalg, optimize, signal
 
 from statsmodels.tools.docstring import Docstring, remove_parameters
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import array_like
 
 if NP_LT_2:

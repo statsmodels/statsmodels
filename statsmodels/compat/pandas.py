@@ -6,11 +6,11 @@ import numpy as np
 from packaging.version import Version, parse
 import pandas as pd
 from pandas.util._decorators import (
-    Appender,
-    Substitution,
     cache_readonly,
     deprecate_kwarg as pd_deprecate_kwarg,
 )
+
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 
 if TYPE_CHECKING:
     try:

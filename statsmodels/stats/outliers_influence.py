@@ -6,7 +6,6 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
 from collections import defaultdict
@@ -18,6 +17,7 @@ from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import maybe_unwrap_results
 

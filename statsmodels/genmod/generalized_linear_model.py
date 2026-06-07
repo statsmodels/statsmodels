@@ -18,7 +18,6 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
 
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -44,6 +43,7 @@ from statsmodels.tools.decorators import (
     cached_value,
 )
 from statsmodels.tools.docstring import Docstring
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     DomainWarning,

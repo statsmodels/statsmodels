@@ -11,7 +11,6 @@ update
 
 """
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
 import numpy as np
@@ -24,6 +23,7 @@ from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.regression.linear_model import GLS, OLS, WLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import maybe_unwrap_results
 
 from ._regressionplots_doc import (

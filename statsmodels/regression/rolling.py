@@ -9,8 +9,6 @@ License: 3-clause BSD
 """
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import (
-    Appender,
-    Substitution,
     cache_readonly,
     call_cached_func,
     get_cached_doc,
@@ -29,6 +27,7 @@ from statsmodels.regression.linear_model import (
     RegressionModel,
     RegressionResults,
 )
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.validation import array_like, int_like, string_like
 
 

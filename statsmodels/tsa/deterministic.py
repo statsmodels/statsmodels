@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from statsmodels.compat.pandas import (
     PD_LT_2_2_0,
-    Appender,
     is_int_index,
     to_numpy,
 )
@@ -16,6 +15,7 @@ import pandas as pd
 from scipy.linalg import qr
 
 from statsmodels.iolib.summary import d_or_f
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import (
     bool_like,
     float_like,
