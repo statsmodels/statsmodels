@@ -9,6 +9,7 @@ from pandas.util._decorators import (
     cache_readonly,
     deprecate_kwarg as pd_deprecate_kwarg,
 )
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 
 if TYPE_CHECKING:
     try:
@@ -28,6 +29,7 @@ __all__ = [
     "PD_LT_3",
     "QUARTER_END",
     "YEAR_END",
+    "Appender",
     "Substitution",
     "assert_frame_equal",
     "assert_index_equal",
