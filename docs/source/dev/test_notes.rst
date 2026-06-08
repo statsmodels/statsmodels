@@ -12,9 +12,12 @@ using a development install of statsmodels in a `venv` by running:
 .. code-block:: bash
 
     python -m venv .venv
+    source .venv/bin/activate
     python -m pip install -e ".[develop]"
 
-from the root directory of the git repository. The flag ``-e`` is for editable.
+from the root directory of the git repository. On Windows, replace the
+activation step with ``.venv\Scripts\activate``.
+The flag ``-e`` is for editable.
 
 This command compiles the C code and add statsmodels to your activate python
 environment by creating links from your python environment's libraries
