@@ -292,8 +292,6 @@ class CombineResults:
 
         Parameters
         ----------
-        ax : None or matplotlib axis instance
-            If ax is provided, then the plot will be added to it.
         alpha : float in (0, 1)
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
@@ -335,6 +333,7 @@ class CombineResults:
             intervals=hw,
             lines=res_df.index,
             line_order=res_df.index,
+            ax=ax,
             **kwds,
         )
         return fig

@@ -365,5 +365,9 @@ class TestMetaBinOR:
         res1.plot_forest(use_t=False)
         res1.plot_forest(use_exp=True, use_t=False)
         res1.plot_forest(alpha=0.01, use_t=False)
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        fig_out = res1.plot_forest(ax=ax, use_t=False)
+        assert fig_out is fig
         with pytest.raises(TypeError, match="unexpected keyword"):
             res1.plot_forest(junk=5, use_t=False)
