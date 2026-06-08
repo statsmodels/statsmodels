@@ -379,3 +379,8 @@ exclude_also = [
 
 [tool.coverage.html]
 directory = "coverage_html_report"
+
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
