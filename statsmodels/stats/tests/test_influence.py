@@ -50,6 +50,26 @@ def test_influence_glm_bernoulli():
     assert_allclose(c_bar, results_sas[:, 9], atol=6e-5)
 
 
+def test_glminfluence_direct_constructor():
+    # Regression test for GH#9415: GLMInfluence constructed directly
+    # (without hat_matrix_diag) called get_hat_matrix instead of
+    # get_hat_matrix_diag, raising AttributeError.
+    from statsmodels.stats.outliers_influence import GLMInfluence
+
+    df = data_bin
+    res = GLM(
+        df["constrict"],
+        df[["const", "log_rate", "log_volumne"]],
+        family=families.Binomial(),
+    ).fit(attach_wls=True, atol=1e-10)
+
+    infl_direct = GLMInfluence(res)
+    infl_method = res.get_influence()
+
+    assert_allclose(infl_direct.cooks_distance[0],
+                    infl_method.cooks_distance[0], rtol=1e-12)
+
+
 class InfluenceCompareExact:
     # Mixin to compare and test two Influence instances
 
