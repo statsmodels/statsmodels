@@ -184,9 +184,3 @@ class cache_readonly(property):
             cache[self.__name__] = val
         return val
 
-# cached_value and cached_data behave identically to cache_readonly, but
-# are used by `remove_data` to
-#   a) identify array-like attributes to remove (cached_data)
-#   b) make sure certain values are evaluated before caching (cached_value)
-cached_data = cache_readonly
-cached_value = cache_readonly
