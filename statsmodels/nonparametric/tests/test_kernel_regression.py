@@ -253,13 +253,14 @@ class KernelRegressionTestBase:
 
 class TestKernelReg(KernelRegressionTestBase):
     def test_ordered_lc_cvls(self):
-        model = nparam.KernelReg(
-            endog=[self.Italy_gdp],
-            exog=[self.Italy_year],
-            reg_type="lc",
-            var_type="o",
-            bw="cv_ls",
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            model = nparam.KernelReg(
+                endog=[self.Italy_gdp],
+                exog=[self.Italy_year],
+                reg_type="lc",
+                var_type="o",
+                bw="cv_ls",
+            )
         sm_bw = model.bw
         R_bw = 0.1390096
 
@@ -305,13 +306,14 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
     def test_continuousdata_ll_cvls(self):
-        model = nparam.KernelReg(
-            endog=[self.y],
-            exog=[self.c1, self.c2],
-            reg_type="ll",
-            var_type="cc",
-            bw="cv_ls",
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            model = nparam.KernelReg(
+                endog=[self.y],
+                exog=[self.c1, self.c2],
+                reg_type="ll",
+                var_type="cc",
+                bw="cv_ls",
+            )
 
         sm_bw = model.bw
         R_bw = [1.717891, 2.449415]
@@ -340,9 +342,10 @@ class TestKernelReg(KernelRegressionTestBase):
         b3 = 2.3
         Y = b0 + b1 * C1 + b2 * C2 + b3 * C3 + noise
         bw_cv_ls = np.array([0.96075, 0.5682, 0.29835])
-        model = nparam.KernelReg(
-            endog=[Y], exog=[C1, C2, C3], reg_type="ll", var_type="ccc", bw=bw_cv_ls
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            model = nparam.KernelReg(
+                endog=[Y], exog=[C1, C2, C3], reg_type="ll", var_type="ccc", bw=bw_cv_ls
+            )
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=2e-1)
@@ -360,9 +363,14 @@ class TestKernelReg(KernelRegressionTestBase):
         b3 = 2.3
         Y = b0 + b1 * C1 + b2 * C2 + b3 * ovals + noise
         bw_cv_ls = np.array([1.04726, 1.67485, 0.39852])
-        model = nparam.KernelReg(
-            endog=[Y], exog=[C1, C2, ovals], reg_type="ll", var_type="cco", bw=bw_cv_ls
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            model = nparam.KernelReg(
+                endog=[Y],
+                exog=[C1, C2, ovals],
+                reg_type="ll",
+                var_type="cco",
+                bw=bw_cv_ls,
+            )
         sm_mean, sm_mfx = model.fit()
         # TODO: add expected result
         sm_R2 = model.r_squared()  # noqa: F841
@@ -603,14 +611,15 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_equal(sig_var2 == "Not Significant", True)
 
     def test_user_specified_kernel(self):
-        model = nparam.KernelReg(
-            endog=[self.y],
-            exog=[self.c1, self.c2],
-            reg_type="ll",
-            var_type="cc",
-            bw="cv_ls",
-            ckertype="tricube",
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            model = nparam.KernelReg(
+                endog=[self.y],
+                exog=[self.c1, self.c2],
+                reg_type="ll",
+                var_type="cc",
+                bw="cv_ls",
+                ckertype="tricube",
+            )
         # Bandwidth
         sm_bw = model.bw
         R_bw = [0.581663, 0.5652]
@@ -628,15 +637,16 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
     def test_censored_user_specified_kernel(self):
-        model = nparam.KernelCensoredReg(
-            endog=[self.y],
-            exog=[self.c1, self.c2],
-            reg_type="ll",
-            var_type="cc",
-            bw="cv_ls",
-            censor_val=0,
-            ckertype="tricube",
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            model = nparam.KernelCensoredReg(
+                endog=[self.y],
+                exog=[self.c1, self.c2],
+                reg_type="ll",
+                var_type="cc",
+                bw="cv_ls",
+                censor_val=0,
+                ckertype="tricube",
+            )
         # Bandwidth
         sm_bw = model.bw
         R_bw = [0.581663, 0.5652]
@@ -677,15 +687,16 @@ class TestKernelReg(KernelRegressionTestBase):
         Y[Y > 0] = 0  # censor the data
 
         bw_user = [0.23, 434697.22]
-        model = nparam.KernelCensoredReg(
-            endog=[Y],
-            exog=[C1, C2],
-            reg_type="ll",
-            var_type="cc",
-            bw=bw_user,
-            censor_val=0,
-            defaults=nparam.EstimatorSettings(efficient=True),
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            model = nparam.KernelCensoredReg(
+                endog=[Y],
+                exog=[C1, C2],
+                reg_type="ll",
+                var_type="cc",
+                bw=bw_user,
+                censor_val=0,
+                defaults=nparam.EstimatorSettings(efficient=True),
+            )
         # Bandwidth
         npt.assert_equal(model.bw, bw_user)
 

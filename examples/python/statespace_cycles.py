@@ -28,12 +28,12 @@
 # This notebook demonstrates applying these models to separate trend from
 # cycle in the U.S. unemployment rate.
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
-
 from pandas_datareader.data import DataReader
+
+import statsmodels.api as sm
 
 endog = DataReader('UNRATE', 'fred', start='1954-01-01')
 endog.index.freq = endog.index.inferred_freq
