@@ -16,7 +16,7 @@ import pytest
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.outliers_influence import MLEInfluence, variance_inflation_factor
+from statsmodels.stats.outliers_influence import GLMInfluence, MLEInfluence, variance_inflation_factor
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -51,11 +51,8 @@ def test_influence_glm_bernoulli():
 
 
 def test_glminfluence_direct_constructor():
-    # Regression test for GH#9415: GLMInfluence constructed directly
-    # (without hat_matrix_diag) called get_hat_matrix instead of
-    # get_hat_matrix_diag, raising AttributeError.
-    from statsmodels.stats.outliers_influence import GLMInfluence
-
+    # GH#9415: GLMInfluence constructed directly raised AttributeError
+    # on cooks_distance
     df = data_bin
     res = GLM(
         df["constrict"],
