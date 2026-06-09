@@ -1373,7 +1373,7 @@ class GLSAR(GLS):
             if len(self.rho.shape) not in [0, 1]:
                 raise ValueError("AR parameters must be a scalar or a vector")
             if self.rho.shape == ():
-                self.rho.shape = (1,)
+                self.rho = np.reshape(self.rho, (1,), copy=False)
             self.order = self.rho.shape[0]
         if exog is None:
             # JP this looks wrong, should be a regression on constant

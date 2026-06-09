@@ -12,6 +12,8 @@ from pandas.util._decorators import (
 
 from statsmodels.tools.docstring_helpers import Appender, Substitution
 
+pd.set_option("future.infer_freq_returns_offset", True)
+
 if TYPE_CHECKING:
     try:
         from typing import TypeAlias

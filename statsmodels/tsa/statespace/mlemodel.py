@@ -176,7 +176,8 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Base class may allow 1-dim data, whereas we need 2-dim
         if endog.ndim == 1:
-            endog.shape = (endog.shape[0], 1)  # this will be C-contiguous
+            # this will be C-contiguous
+            endog = np.reshape(endog, (endog.shape[0], 1), copy=False)
 
         return endog, exog
 

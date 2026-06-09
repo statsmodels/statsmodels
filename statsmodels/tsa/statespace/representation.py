@@ -822,10 +822,10 @@ class Representation:
         if endog.ndim == 1:
             # In the case of nobs x 0 arrays
             if self.k_endog == 1:
-                endog.shape = (endog.shape[0], 1)
+                endog = np.reshape(endog, (endog.shape[0], 1), copy=False)
             # In the case of k_endog x 0 arrays
             else:
-                endog.shape = (1, endog.shape[0])
+                endog = np.reshape(endog, (1, endog.shape[0]), copy=False)
         if not endog.ndim == 2:
             raise ValueError(
                 "Invalid endogenous array provided; must be 2-dimensional."

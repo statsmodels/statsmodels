@@ -366,7 +366,7 @@ def contrastfromcols(L, D, pseudo=None):
     Lp = np.dot(D, C.T)
 
     if len(Lp.shape) == 1:
-        Lp.shape = (n, 1)
+        Lp = np.reshape(Lp, (n, 1), copy=False)
 
     if np.linalg.matrix_rank(Lp) != Lp.shape[1]:
         Lp = fullrank(Lp)
