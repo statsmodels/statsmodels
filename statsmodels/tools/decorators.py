@@ -136,19 +136,57 @@ class cache_writable(_cache_readonly):
         return CachedWritableAttribute(func, cachename=self.cachename)
 
 
-# Use pandas since it works with docs correctly
-cache_readonly = PandasCacheReadonly
+class cache_readonly(property):
+    """
+    Decorator for read-only, cached properties.
+
+    Acts as a property that is computed once and then stored in the
+    instance's ``_cache`` dictionary. This allows ``remove_data``
+    to identify and clear cached values.
+
+    Vendored to replace pandas._libs.properties.cache_readonly
+    which is a private C extension.
+
+    Parameters
+    ----------
+    func : callable
+        The function to cache.
+
+    Examples
+    --------
+    >>> class Foo:
+    ...     @cache_readonly
+    ...     def bar(self):
+    ...         return 42
+    >>> f = Foo()
+    >>> f.bar
+    42
+    """
+
+    def __init__(self, func):
+        self.func = func
+        self.__doc__ = getattr(func, "__doc__", None)
+        self.__name__ = func.__name__
+        self.__module__ = func.__module__
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        # Use _cache dict — same as pandas implementation
+        # This is required for remove_data() to work correctly
+        try:
+            cache = obj._cache
+        except AttributeError:
+            cache = obj._cache = {}
+        val = cache.get(self.__name__, None)
+        if val is None:
+            val = self.func(obj)
+            cache[self.__name__] = val
+        return val
+
 # cached_value and cached_data behave identically to cache_readonly, but
 # are used by `remove_data` to
 #   a) identify array-like attributes to remove (cached_data)
 #   b) make sure certain values are evaluated before caching (cached_value)
-# TODO: Disabled since the subclasses break doc strings
-# class cached_data(PandasCacheReadonly):
-#     pass
-
-cached_data = PandasCacheReadonly
-
-# class cached_value(PandasCacheReadonly):
-#     pass
-
-cached_value = PandasCacheReadonly
+cached_data = cache_readonly
+cached_value = cache_readonly
