@@ -78,22 +78,25 @@ class PredictionResults:
 
     def conf_int(self, obs=False, alpha=0.05):
         """
-        Returns the confidence interval of the value, `effect` of the
-        constraint.
-
-        This is currently only available for t and z tests.
+        Confidence or prediction interval for the predicted values.
 
         Parameters
         ----------
+        obs : bool, optional
+            If False (default), return the confidence interval for the mean
+            prediction, using the standard error of the mean (``se_mean``).
+            If True, return the prediction interval for a new observation,
+            using the standard error of the observation (``se_obs``), which
+            also accounts for the residual variance.
         alpha : float, optional
             The significance level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
 
         Returns
         -------
-        ci : ndarray, (k_constraints, 2)
-            The array has the lower and the upper limit of the confidence
-            interval in the columns.
+        ci : ndarray, (nobs, 2)
+            The lower and upper bound of the interval for each observation.
+            Column 0 contains the lower bound, column 1 the upper bound.
         """
 
         se = self.se_obs if obs else self.se_mean
