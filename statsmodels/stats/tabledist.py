@@ -13,7 +13,7 @@ check: instead of bound checking I could use the fill-value of the
 interpolators
 """
 import numpy as np
-from scipy.interpolate import Rbf, interp1d, interp2d
+from scipy.interpolate import Rbf, interp1d
 
 from statsmodels.tools.decorators import cache_readonly
 
@@ -113,13 +113,6 @@ class TableDist:
         polyn = [interp1d(self.size, self.crit_table[:, i])
                  for i in range(self.n_alpha)]
         return polyn
-
-    @cache_readonly
-    def poly2d(self):
-        # check for monotonicity ?
-        # fix this, interp needs increasing
-        poly2d = interp2d(self.size, self.alpha, self.crit_table)
-        return poly2d
 
     @cache_readonly
     def polyrbf(self):
