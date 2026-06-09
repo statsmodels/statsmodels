@@ -28,6 +28,7 @@ __all__ = [
     "PD_LT_1_4",
     "PD_LT_2",
     "PD_LT_3",
+    "PD_LT_3_1_0",
     "QUARTER_END",
     "YEAR_END",
     "Appender",
@@ -52,6 +53,7 @@ __all__ = [
 
 version = parse(pd.__version__)
 
+PD_LT_3_1_0 = version < Version("3.0.99")
 PD_LT_2_2_0 = version < Version("2.1.99")
 PD_LT_2_1_0 = version < Version("2.0.99")
 PD_LT_1_0_0 = version < Version("0.99.0")
