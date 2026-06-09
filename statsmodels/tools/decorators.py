@@ -136,7 +136,7 @@ class cache_writable(_cache_readonly):
         return CachedWritableAttribute(func, cachename=self.cachename)
 
 
-class cache_readonly(property):
+class cache_readonly:
     """
     Decorator for read-only, cached properties.
 
@@ -165,6 +165,7 @@ class cache_readonly(property):
 
     def __init__(self, func):
         self.func = func
+        self.fget = func
         self.__doc__ = getattr(func, "__doc__", None)
         self.__name__ = func.__name__
         self.__module__ = func.__module__
