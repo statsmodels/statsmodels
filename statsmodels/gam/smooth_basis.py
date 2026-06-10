@@ -749,7 +749,7 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
 
         if x.ndim == 1:
             self.x = x.copy()
-            self.x.shape = (len(x), 1)
+            self.x = np.reshape(self.x, (len(x), 1), copy=False)
         else:
             self.x = x
 

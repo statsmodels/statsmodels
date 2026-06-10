@@ -294,8 +294,8 @@ class BSpline:
         x = np.asarray(x, np.float64)
         _shape = x.shape
         if _shape == ():
-            x.shape = (1,)
-        x.shape = (np.product(_shape, axis=0),)
+            x = np.reshape(x, (1,), copy=False)
+        x = np.reshape(x, (np.product(_shape, axis=0),), copy=False)
         if i < self.tau.shape[0] - 1:
             # TODO: OWNDATA flags...
             v = _hbspline.evaluate(x, self.tau, self.m, d, i, i + 1)
@@ -329,8 +329,8 @@ class BSpline:
         x = np.asarray(x)
         _shape = x.shape
         if _shape == ():
-            x.shape = (1,)
-        x.shape = (np.product(_shape, axis=0),)
+            x = np.reshape(x, (1,), copy=False)
+        x = np.reshape(x, (np.product(_shape, axis=0),), copy=False)
 
         if upper is None:
             upper = self.tau.shape[0] - self.m
@@ -355,7 +355,7 @@ class BSpline:
                     x, self.tau, self.m, d[0, i], lower, upper
                 )
 
-        v.shape = (upper - lower,) + _shape
+        v = np.reshape(v, (upper - lower,) + _shape, copy=False)
         if upper == self.tau.shape[0] - self.m:
             v[-1] = np.where(np.equal(x, self.tau[-1]), 1, v[-1])
         return v
@@ -405,7 +405,7 @@ class BSpline:
                    of derivative, second row coefficient in front."
                 )
             if d.shape == (2,):
-                d.shape = (2, 1)
+                d = np.reshape(d, (2, 1), copy=False)
             self.g = 0
             for i in range(d.shape[1]):
                 for j in range(d.shape[1]):
@@ -520,7 +520,7 @@ class SmoothingSpline(BSpline):
                 for k in range(min(nband, nbasis - i)):
                     self.btb[k, i] = (bt[i] * bt[i + k]).sum()
 
-            bty.shape = (1, bty.shape[0])
+            bty = np.reshape(bty, (1, bty.shape[0]), copy=False)
             self.pen = pen
             self.chol, self.coef = solveh_banded(self.btb + pen * self.g, bty, lower=1)
 

@@ -67,7 +67,7 @@ def combine_indices(groups, prefix="", sep=".", return_labels=False):
         #     assert (t[0] == dt)
         #
         # uni.dtype = dt
-        # uni.shape = (uni.size//ncols, ncols)
+        # uni = np.reshape(uni, (uni.size//ncols, ncols), copy=False)
 
     if return_labels:
         label = [(prefix+sep.join(["%s"]*len(uni[0]))) % tuple(ii)
