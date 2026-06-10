@@ -2664,6 +2664,7 @@ class RegressionResults(base.LikelihoodModelResults):
         # TODO: make it DRYer   repeated code for checking kwargs
         if cov_type in ["fixed scale", "fixed_scale"]:
             res.cov_kwds["description"] = descriptions["fixed_scale"]
+            
             res.cov_kwds["scale"] = scale = kwargs.get("scale", 1.0)
             res.scale = scale
             res.cov_params_default = scale * res.normalized_cov_params
