@@ -6,7 +6,8 @@ import warnings
 
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
 
-__all__ = ["ResettableCache", "cache_readonly", "cache_writable", "deprecated_alias"]
+__all__ = ["ResettableCache", "cache_readonly", "cache_writable","cached_data",
+    "cached_value", "deprecated_alias"]
 
 
 class ResettableCache(dict):
@@ -185,3 +186,9 @@ class cache_readonly:
             cache[self.__name__] = val
         return val
 
+# cached_value and cached_data behave identically to cache_readonly, but
+# are used by `remove_data` to
+#   a) identify array-like attributes to remove (cached_data)
+#   b) make sure certain values are evaluated before caching (cached_value)
+cached_data = cache_readonly
+cached_value = cache_readonly
