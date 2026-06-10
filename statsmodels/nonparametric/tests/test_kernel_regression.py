@@ -520,9 +520,10 @@ class TestKernelReg(KernelRegressionTestBase):
         bw = [11108137.1087194, 1333821.85150218]
         seed = 12345
         np.random.seed(seed)
-        model_0 = nparam.KernelReg(
-            endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            model_0 = nparam.KernelReg(
+                endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw
+            )
         model_1 = nparam.KernelReg(
             endog=[Y],
             exog=[C1, C3],
@@ -544,7 +545,8 @@ class TestKernelReg(KernelRegressionTestBase):
         )
 
         nboot = 45  # Number of bootstrap samples
-        sig_var12_0 = model_0.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            sig_var12_0 = model_0.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
         sig_var12_1 = model_1.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
         assert sig_var12_0 == sig_var12_1
 
@@ -610,9 +612,11 @@ class TestKernelReg(KernelRegressionTestBase):
             )
         # This was also tested with local constant estimator
         nboot = 45  # Number of bootstrap samples
-        sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
         npt.assert_equal(sig_var1 == "Not Significant", False)
-        sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
         npt.assert_equal(sig_var2 == "Not Significant", True)
 
     def test_user_specified_kernel(self):

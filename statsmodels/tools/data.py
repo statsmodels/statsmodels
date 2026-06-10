@@ -18,6 +18,8 @@ def _check_period_index(x, freq="M"):
         inferred_freq = x.index.freqstr
     else:
         inferred_freq = pd.infer_freq(x.index)
+        if isinstance(inferred_freq, pd.tseries.offsets.BaseOffset):
+            inferred_freq = inferred_freq.freqstr
     if not inferred_freq.startswith(freq):
         raise ValueError("Expected frequency {}. Got {}".format(freq, inferred_freq))
 

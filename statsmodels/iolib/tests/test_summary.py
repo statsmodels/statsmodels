@@ -15,7 +15,7 @@ from statsmodels.tools.tools import add_constant
 def test_escaped_variable_name():
     # Rename 'cpi' column to 'CPI_'
     data = macrodata.load().data
-    data.rename(columns={"cpi": "CPI_"}, inplace=True)
+    data = data.rename(columns={"cpi": "CPI_"})
 
     mod = OLS.from_formula("CPI_ ~ 1 + np.log(realgdp)", data=data)
     res = mod.fit()
