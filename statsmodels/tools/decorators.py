@@ -186,6 +186,10 @@ class cache_readonly:
             cache[self.__name__] = val
         return val
 
+    def __set__(self, obj, values):
+        raise AttributeError(
+            f"The attribute '{self.__name__}' cannot be set."
+        )
 # cached_value and cached_data behave identically to cache_readonly, but
 # are used by `remove_data` to
 #   a) identify array-like attributes to remove (cached_data)
