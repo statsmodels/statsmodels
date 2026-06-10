@@ -12,7 +12,11 @@ from pandas.util._decorators import (
 
 from statsmodels.tools.docstring_helpers import Appender, Substitution
 
-pd.set_option("future.infer_freq_returns_offset", True)
+try:
+    pd.set_option("future.infer_freq_returns_offset", True)
+except pd.errors.OptionError:
+    # Do nothing if key doesn't exist
+    pass
 
 if TYPE_CHECKING:
     try:
