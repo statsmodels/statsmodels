@@ -1,3 +1,5 @@
+from statsmodels.compat.numpy import inplace_reshape
+
 import numpy as np
 from scipy import stats
 from scipy.stats import f as fdist, t as student_t
@@ -366,7 +368,7 @@ def contrastfromcols(L, D, pseudo=None):
     Lp = np.dot(D, C.T)
 
     if len(Lp.shape) == 1:
-        Lp = np.reshape(Lp, (n, 1), copy=False)
+        Lp = inplace_reshape(Lp, (n, 1))
 
     if np.linalg.matrix_rank(Lp) != Lp.shape[1]:
         Lp = fullrank(Lp)

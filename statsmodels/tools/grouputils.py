@@ -62,13 +62,6 @@ def combine_indices(groups, prefix="", sep=".", return_labels=False):
     if is2d:
         uni = uni.view(dt).reshape(-1, ncols)
 
-        # avoiding a view would be
-        # for t in uni.dtype.fields.values():
-        #     assert (t[0] == dt)
-        #
-        # uni.dtype = dt
-        # uni = np.reshape(uni, (uni.size//ncols, ncols), copy=False)
-
     if return_labels:
         label = [(prefix+sep.join(["%s"]*len(uni[0]))) % tuple(ii)
                  for ii in uni]

@@ -7,6 +7,7 @@ Author: Josef Perktold
 Created on Fri Jun  5 16:32:00 2015
 """
 
+from statsmodels.compat.numpy import inplace_reshape
 from statsmodels.compat.patsy import get_all_sorted_knots
 from statsmodels.compat.python import with_metaclass
 
@@ -749,7 +750,7 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
 
         if x.ndim == 1:
             self.x = x.copy()
-            self.x = np.reshape(self.x, (len(x), 1), copy=False)
+            self.x = inplace_reshape(self.x, (len(x), 1))
         else:
             self.x = x
 

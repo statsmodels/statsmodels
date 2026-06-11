@@ -4,6 +4,7 @@ State Space Representation
 Author: Chad Fulton
 License: Simplified-BSD
 """
+from statsmodels.compat.numpy import inplace_reshape
 
 import warnings
 
@@ -822,10 +823,10 @@ class Representation:
         if endog.ndim == 1:
             # In the case of nobs x 0 arrays
             if self.k_endog == 1:
-                endog = np.reshape(endog, (endog.shape[0], 1), copy=False)
+                endog = inplace_reshape(endog, (endog.shape[0], 1))
             # In the case of k_endog x 0 arrays
             else:
-                endog = np.reshape(endog, (1, endog.shape[0]), copy=False)
+                endog = inplace_reshape(endog, (1, endog.shape[0]))
         if not endog.ndim == 2:
             raise ValueError(
                 "Invalid endogenous array provided; must be 2-dimensional."

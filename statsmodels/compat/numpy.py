@@ -47,6 +47,7 @@ __all__ = [
     "NP_LT_24",
     "NP_LT_114",
     "NP_LT_123",
+    "inplace_reshape",
     "lstsq",
     "np_matrix_rank",
     "np_new_unique",
@@ -69,3 +70,11 @@ def lstsq(a, b, rcond=None):
     if NP_LT_114 and rcond is None:
         rcond = -1
     return np.linalg.lstsq(a, b, rcond=rcond)
+
+
+def inplace_reshape(arr, shape: tuple[int, ...]) -> np.ndarray:
+    try:
+        return arr.reshape(shape, copy=False)
+    except:
+        arr.shape = shape
+        return arr
