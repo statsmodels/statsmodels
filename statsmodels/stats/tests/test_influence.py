@@ -6,6 +6,7 @@ Author: Josef Perktold
 from statsmodels.compat.pandas import testing as pdt
 
 import os.path
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -15,7 +16,7 @@ import pytest
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.outliers_influence import MLEInfluence
+from statsmodels.stats.outliers_influence import MLEInfluence, variance_inflation_factor
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -330,3 +331,37 @@ class TestInfluencePoissonCompare(InfluenceCompareExact):
 
         cls.infl0 = res.get_influence()
         cls.infl1 = res2.get_influence()
+
+
+def test_vif_instability():
+    np.random.seed(42)
+    n = 500
+    x1 = np.random.uniform(1000, 100000, n)
+    x2 = np.random.uniform(5, 50, n)
+
+    exog = np.column_stack([
+        np.ones(n),
+        np.log(x1),
+        1.0 / x2,
+        x1,
+        x2
+    ])
+
+    # 1. Test happy path (standardize=True)
+    vif_const = variance_inflation_factor(exog, 0, standardize=True)
+    assert_allclose(vif_const, 1.0, atol=1e-2)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        variance_inflation_factor(exog, 1, standardize=True)
+
+    # 2. Test legacy path warning and explosion (standardize=False)
+    with pytest.warns(UserWarning, match="The design matrix is poorly conditioned"):
+        vif_legacy = variance_inflation_factor(exog, 0, standardize=False)
+    assert vif_legacy > 100
+
+    # 3. Test that standardize=False computes perfectly on clean, well-conditioned data
+    clean_exog = np.column_stack([np.ones(100), np.random.normal(0, 1, (100, 2))])
+    vif_true = variance_inflation_factor(clean_exog, 1, standardize=True)
+    vif_false = variance_inflation_factor(clean_exog, 1, standardize=False)
+    assert_allclose(vif_true, vif_false, rtol=1e-7)
