@@ -72,9 +72,9 @@ def lstsq(a, b, rcond=None):
     return np.linalg.lstsq(a, b, rcond=rcond)
 
 
-def inplace_reshape(arr, shape: tuple[int, ...]) -> np.ndarray:
+def inplace_reshape(arr: np.ndarray, shape: tuple[int, ...]) -> np.ndarray:
     try:
         return arr.reshape(shape, copy=False)
-    except:
+    except TypeError:
         arr.shape = shape
         return arr
