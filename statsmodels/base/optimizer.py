@@ -8,6 +8,7 @@ from __future__ import annotations
 from statsmodels.compat.scipy import SP_LT_15, SP_LT_17, SP_LT_115, SP_LT_118
 
 from typing import TYPE_CHECKING, Any
+import warnings
 
 import numpy as np
 from scipy import optimize
@@ -19,8 +20,6 @@ if TYPE_CHECKING:
 def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
     extra = set(kwargs.keys()).difference(list(allowed))
     if extra:
-        import warnings
-
         warnings.warn(
             "Keyword arguments have been passed to the optimizer that have "
             "no effect. The list of allowed keyword arguments for method "
@@ -806,15 +805,22 @@ def _fit_lbfgs(
         func = f
     if SP_LT_115:
         extra_kwargs["disp"] = disp
-    retvals = optimize.fmin_l_bfgs_b(
-        func,
-        start_params,
-        maxiter=maxiter,
-        callback=callback,
-        args=fargs,
-        bounds=bounds,
-        **extra_kwargs,
-    )
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*iprint.*",
+            category=DeprecationWarning,
+        )
+        retvals = optimize.fmin_l_bfgs_b(
+            func,
+            start_params,
+            maxiter=maxiter,
+            callback=callback,
+            args=fargs,
+            bounds=bounds,
+            **extra_kwargs,
+        )
 
     if full_output:
         xopt, fopt, d = retvals

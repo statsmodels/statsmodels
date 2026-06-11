@@ -1,4 +1,5 @@
-"""Testing numerical differentiation
+"""
+Testing numerical differentiation
 
 Still some problems, with API (args tuple versus *args)
 finite difference Hessian has some problems that I did not look at yet

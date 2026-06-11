@@ -1,3 +1,5 @@
+"""Random number generator helpers."""
+
 import numpy as np
 from scipy import stats
 
@@ -39,6 +41,7 @@ def check_random_state(seed=None):
             `scipy.stats.qmc.QMCEngine`}
 
         Random number generator.
+
     """
     if hasattr(stats, "qmc") and isinstance(seed, stats.qmc.QMCEngine):
         return seed
