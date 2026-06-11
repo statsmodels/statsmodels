@@ -20,7 +20,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import eval_measures
-from statsmodels.tools.decorators import cache_readonly, cache_writable
+from statsmodels.tools._decorators import cache_readonly, cache_writable
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.sm_exceptions import SpecificationWarning

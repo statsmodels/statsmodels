@@ -12,8 +12,8 @@ from functools import reduce
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series, isnull
 
+from statsmodels.tools._decorators import cache_readonly, cache_writable
 import statsmodels.tools.data as data_util
-from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import MissingDataError
 
 

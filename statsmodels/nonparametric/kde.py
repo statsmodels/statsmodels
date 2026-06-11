@@ -16,7 +16,7 @@ import numpy as np
 from scipy import integrate, stats
 
 from statsmodels.sandbox.nonparametric import kernels
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.validation import array_like, float_like
 
 from . import bandwidths

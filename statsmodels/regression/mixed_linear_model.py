@@ -157,7 +157,7 @@ import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools import data as data_tools
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     SingularMatrixWarning,

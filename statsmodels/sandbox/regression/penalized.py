@@ -39,7 +39,7 @@ import numpy as np
 
 from statsmodels.regression.feasible_gls import atleast_2dcols
 from statsmodels.regression.linear_model import GLS, OLS, RegressionResults
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class TheilGLS(GLS):

@@ -14,7 +14,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import RegressionResultsWrapper
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 __docformat__ = "restructuredtext en"
 

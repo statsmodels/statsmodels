@@ -30,8 +30,8 @@ from statsmodels.genmod.generalized_linear_model import (
     _check_convergence,
 )
 import statsmodels.regression.linear_model as lm
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.linalg import matrix_sqrt
 
 # import statsmodels.regression._tools as reg_tools  # TODO: use this for pirls

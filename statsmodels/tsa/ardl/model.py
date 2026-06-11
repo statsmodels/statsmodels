@@ -18,7 +18,7 @@ from statsmodels.base.data import PandasData
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import Summary, summary_params
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
 from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.sm_exceptions import SpecificationWarning

@@ -19,7 +19,7 @@ from scipy import stats
 
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.stats.stattools import jarque_bera
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import (
