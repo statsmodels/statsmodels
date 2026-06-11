@@ -801,7 +801,7 @@ def _fit_lbfgs(
     elif score:
         func = f
         extra_kwargs["fprime"] = score
-    elif approx_grad:
+    else:  # approx_grad
         func = f
     if SP_LT_115:
         extra_kwargs["disp"] = disp
