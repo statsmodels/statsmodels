@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.numpy import inplace_reshape
 from statsmodels.compat.pandas import is_int_index
 
 import contextlib
@@ -176,7 +177,8 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Base class may allow 1-dim data, whereas we need 2-dim
         if endog.ndim == 1:
-            endog.shape = (endog.shape[0], 1)  # this will be C-contiguous
+            # this will be C-contiguous
+            endog = inplace_reshape(endog, (endog.shape[0], 1))
 
         return endog, exog
 

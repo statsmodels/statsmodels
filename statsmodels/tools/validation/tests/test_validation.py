@@ -354,7 +354,7 @@ def integer(request):
         complex(2.3 + 0j),
         "apple",
         1.0 + 0j,
-        np.timedelta64(2),
+        np.timedelta64(2, "s"),
     )
 )
 def not_integer(request):

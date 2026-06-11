@@ -32,6 +32,7 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 from __future__ import annotations
 
+from statsmodels.compat.numpy import inplace_reshape
 from statsmodels.compat.python import lrange, lzip
 
 from typing import TYPE_CHECKING, Literal
@@ -1373,7 +1374,7 @@ class GLSAR(GLS):
             if len(self.rho.shape) not in [0, 1]:
                 raise ValueError("AR parameters must be a scalar or a vector")
             if self.rho.shape == ():
-                self.rho.shape = (1,)
+                self.rho = inplace_reshape(self.rho, (1,))
             self.order = self.rho.shape[0]
         if exog is None:
             # JP this looks wrong, should be a regression on constant

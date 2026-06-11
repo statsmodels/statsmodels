@@ -664,8 +664,12 @@ def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     assert_equal(mod.ssm.endog.ndim, 2)
     assert_equal(mod.ssm.endog.flags["F_CONTIGUOUS"], True)
     assert_equal(mod.ssm.endog.shape, (k_endog, nobs))
-    assert_equal(mod.ssm.endog.base is mod.endog or not mod.endog.flags.writeable, True)
-
+    if mod.ssm.endog.base.ndim > 1:
+        assert (mod.ssm.endog.base is mod.endog or not mod.endog.flags.writeable)
+    else:
+        # Added to handle changes in numpy where shape cannot be assigned to
+        # Even though array is no copy, the reshaped array is a new object
+        np.testing.assert_equal(mod.ssm.endog.base, mod.endog.ravel())
     return mod
 
 

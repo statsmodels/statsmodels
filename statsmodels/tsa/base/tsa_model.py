@@ -10,6 +10,7 @@ import numbers
 import warnings
 
 import numpy as np
+import pandas as pd
 from pandas import (
     DatetimeIndex,
     Index,
@@ -572,9 +573,13 @@ class TimeSeriesModel(base.LikelihoodModel):
                     if freq is not None:
                         inferred_freq = True
                         if freq is not None:
+                            if isinstance(freq, pd.tseries.offsets.BaseOffset):
+                                freqstr = freq.freqstr
+                            else:
+                                freqstr = str(freq)
                             warnings.warn(
                                 "No frequency information was provided, so inferred "
-                                f"frequency {freq} will be used.",
+                                f"frequency {freqstr} will be used.",
                                 ValueWarning,
                                 stacklevel=2,
                             )
