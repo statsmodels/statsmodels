@@ -1,3 +1,5 @@
+"""Decorators and descriptors used for cached attributes."""
+
 from statsmodels.compat.pandas import cache_readonly as PandasCacheReadonly
 
 import warnings
@@ -8,9 +10,10 @@ __all__ = ["ResettableCache", "cache_readonly", "cache_writable", "deprecated_al
 
 
 class ResettableCache(dict):
-    """DO NOT USE. BACKWARD COMPAT ONLY"""
+    """Dictionary cache retained for backward compatibility."""
 
     def __init__(self, *args, **kwargs):
+        """Initialize the cache."""
         super().__init__(*args, **kwargs)
         self.__dict__ = self
 
@@ -55,8 +58,8 @@ def deprecated_alias(
     >>> foo.nvars
     __main__:1: FutureWarning: nvars is a deprecated alias for neqs
     3
-    """
 
+    """
     if msg is None:
         msg = f"{old_name} is a deprecated alias for {new_name}"
         if remove_version is not None:
@@ -75,6 +78,7 @@ def deprecated_alias(
 
 
 class CachedAttribute:
+    """Descriptor that caches a read-only attribute on first access."""
 
     def __init__(self, func, cachename=None):
         self.fget = func
@@ -105,6 +109,8 @@ class CachedAttribute:
 
 
 class CachedWritableAttribute(CachedAttribute):
+    """Descriptor that caches an attribute and permits reassignment."""
+
     def __set__(self, obj, value):
         _cache = getattr(obj, self.cachename)
         name = self.name
@@ -112,9 +118,7 @@ class CachedWritableAttribute(CachedAttribute):
 
 
 class _cache_readonly(property):
-    """
-    Decorator for CachedAttribute
-    """
+    """Decorate a method as a CachedAttribute."""
 
     def __init__(self, cachename=None):
         self.func = None
@@ -125,11 +129,10 @@ class _cache_readonly(property):
 
 
 class cache_writable(_cache_readonly):
-    """
-    Decorator for CachedWritableAttribute
-    """
+    """Decorate a method as a CachedWritableAttribute."""
 
     def __call__(self, func):
+        """Return a writable cached descriptor for func."""
         return CachedWritableAttribute(func, cachename=self.cachename)
 
 

@@ -40,6 +40,7 @@ class Appender:
     indents : int, optional
         Number of indents (4-space blocks) added to all lines of the
         addendum. Default is 0.
+
     """
 
     addendum: str | None
@@ -94,6 +95,7 @@ class Substitution:
     **kwargs : str
         Keyword arguments for %(name)s-style substitution.
         Cannot be combined with positional args.
+
     """
 
     def __init__(self, *args: object, **kwargs: object) -> None:
@@ -133,6 +135,7 @@ def indent(text: str | None, indents: int = 1) -> str:
     -------
     str
         Indented text, or "" if input was None/empty.
+
     """
     if not text or not isinstance(text, str):
         return ""
