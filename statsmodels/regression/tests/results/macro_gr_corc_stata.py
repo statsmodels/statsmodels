@@ -1,3 +1,5 @@
+"""Reference Stata results for Cochrane-Orcutt regression tests."""
+
 import numpy as np
 
 from statsmodels.tools.testing import ParamsTableTestBunch

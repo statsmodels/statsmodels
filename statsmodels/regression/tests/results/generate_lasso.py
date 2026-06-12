@@ -1,5 +1,3 @@
-import numpy as np
-
 """
 Generate data sets for testing OLS.fit_regularized
 
@@ -9,6 +7,8 @@ results file "glmnet_r_results.py".
 Currently only tests OLS.  Our implementation covers GLS, but it's not
 clear if glmnet does.
 """
+
+import numpy as np
 
 n = 300
 p = 5
