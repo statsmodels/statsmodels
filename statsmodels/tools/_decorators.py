@@ -6,8 +6,14 @@ import warnings
 
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
 
-__all__ = ["ResettableCache", "cache_readonly", "cache_writable","cached_data",
-    "cached_value", "deprecated_alias"]
+__all__ = [
+    "ResettableCache",
+    "cache_readonly",
+    "cache_writable",
+    "cached_data",
+    "cached_value",
+    "deprecated_alias",
+]
 
 
 class ResettableCache(dict):
@@ -187,9 +193,9 @@ class cache_readonly:
         return val
 
     def __set__(self, obj, values):
-        raise AttributeError(
-            f"The attribute '{self.__name__}' cannot be set."
-        )
+        raise AttributeError(f"The attribute '{self.__name__}' cannot be set.")
+
+
 # cached_value and cached_data behave identically to cache_readonly, but
 # are used by `remove_data` to
 #   a) identify array-like attributes to remove (cached_data)
