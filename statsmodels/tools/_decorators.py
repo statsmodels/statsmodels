@@ -1,7 +1,5 @@
 """Decorators and descriptors used for cached attributes."""
 
-from statsmodels.compat.pandas import cache_readonly as PandasCacheReadonly
-
 import warnings
 
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
