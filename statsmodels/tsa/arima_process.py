@@ -617,7 +617,7 @@ def deconvolve(num, den, n=None):
     ----------
     num : array_like
         signal or lag polynomial
-    denom : array_like
+    den : array_like
         coefficients of lag polynomial (linear filter)
     n : None or int
         number of terms of quotient
