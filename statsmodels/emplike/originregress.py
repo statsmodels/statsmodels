@@ -21,6 +21,7 @@ from scipy import optimize
 from scipy.stats import chi2
 
 from statsmodels.regression.linear_model import OLS, RegressionResults
+
 # When descriptive merged, this will be changed
 from statsmodels.tools.tools import add_constant
 
@@ -74,7 +75,8 @@ class ELOriginRegress:
         restricted_model = OLS(self.endog, exog_with)
         restricted_fit = restricted_model.fit()
         restricted_el = restricted_fit.el_test(
-        np.array([0]), np.array([0]), ret_params=1)
+            np.array([0]), np.array([0]), ret_params=1
+        )
         params = np.squeeze(restricted_el[3])
         beta_hat_llr = restricted_el[0]
         llf = np.sum(np.log(restricted_el[2]))
@@ -155,8 +157,10 @@ class OriginResults(RegressionResults):
         self.params = np.squeeze(params)
         self.llr = est_llr
         self.llf_el = llf_el
-    def el_test(self, b0_vals, param_nums, method='nm',
-                            stochastic_exog=1, return_weights=0):
+
+    def el_test(
+        self, b0_vals, param_nums, method="nm", stochastic_exog=1, return_weights=0
+    ):
         """
         Returns the llr and p-value for a hypothesized parameter value
         for a regression that goes through the origin.
@@ -194,9 +198,13 @@ class OriginResults(RegressionResults):
         """
         b0_vals = np.hstack((0, b0_vals))
         param_nums = np.hstack((0, param_nums))
-        test_res = self.model.fit().el_test(b0_vals, param_nums, method=method,
-                                  stochastic_exog=stochastic_exog,
-                                  return_weights=return_weights)
+        test_res = self.model.fit().el_test(
+            b0_vals,
+            param_nums,
+            method=method,
+            stochastic_exog=stochastic_exog,
+            return_weights=return_weights,
+        )
         llr_test = test_res[0]
         llr_res = llr_test - self.llr
         pval = chi2.sf(llr_res, self.model.exog.shape[1] - 1)
@@ -205,9 +213,15 @@ class OriginResults(RegressionResults):
         else:
             return llr_res, pval
 
-    def conf_int_el(self, param_num, upper_bound=None,
-                       lower_bound=None, sig=.05, method='nm',
-                       stochastic_exog=True):
+    def conf_int_el(
+        self,
+        param_num,
+        upper_bound=None,
+        lower_bound=None,
+        sig=0.05,
+        method="nm",
+        stochastic_exog=True,
+    ):
         """
         Returns the confidence interval for a regression parameter when the
         regression is forced through the origin.

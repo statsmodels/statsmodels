@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats.distributions import chi2, norm
+
 from statsmodels.graphics import utils
 
 
@@ -33,7 +34,7 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
         n = np.bincount(rtime, weights=weights, minlength=ml)
     if entry is not None:
         n = np.cumsum(n) - n
-        rentry = np.searchsorted(utime, entry, side='left')
+        rentry = np.searchsorted(utime, entry, side="left")
         if weights is None:
             n0 = np.bincount(rentry, minlength=ml)
         else:
@@ -246,7 +247,10 @@ class CumIncidenceRight:
             exog = self.exog = np.asarray(exog)
             nobs = exog.shape[0]
             kw = nobs**(-1/3.0) * bw_factor
-            kfunc = lambda x: np.exp(-x**2 / kw**2).sum(1)
+
+            def kfunc(x):
+                return np.exp(-x ** 2 / kw ** 2).sum(1)
+
             x = _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
                                      dimred)
             self.times = x[0]
@@ -347,7 +351,10 @@ class SurvfuncRight:
             exog = self.exog = np.asarray(exog)
             nobs = exog.shape[0]
             kw = nobs**(-1/3.0) * bw_factor
-            kfunc = lambda x: np.exp(-x**2 / kw**2).sum(1)
+
+            def kfunc(x):
+                return np.exp(-x ** 2 / kw ** 2).sum(1)
+
             x = _kernel_survfunc(time, status, exog, kfunc, freq_weights)
             self.surv_prob = x[0]
             self.surv_times = x[1]
@@ -412,7 +419,7 @@ class SurvfuncRight:
 
         return self.surv_times[ii[0]]
 
-    def quantile_ci(self, p, alpha=0.05, method='cloglog'):
+    def quantile_ci(self, p, alpha=0.05, method="cloglog"):
         """
         Returns a confidence interval for a survival quantile.
 
@@ -451,20 +458,38 @@ class SurvfuncRight:
 
         method = method.lower()
         if method == "cloglog":
-            g = lambda x: np.log(-np.log(x))
-            gprime = lambda x: -1 / (x * np.log(x))
+
+            def g(x):
+                return np.log(-np.log(x))
+
+            def gprime(x):
+                return -1 / (x * np.log(x))
         elif method == "linear":
-            g = lambda x: x
-            gprime = lambda x: 1
+
+            def g(x):
+                return x
+
+            def gprime(x):
+                return 1
         elif method == "log":
             g = np.log
-            gprime = lambda x: 1 / x
+
+            def gprime(x):
+                return 1 / x
         elif method == "logit":
-            g = lambda x: np.log(x / (1 - x))
-            gprime = lambda x: 1 / (x * (1 - x))
+
+            def g(x):
+                return np.log(x / (1 - x))
+
+            def gprime(x):
+                return 1 / (x * (1 - x))
         elif method == "asinsqrt":
-            g = lambda x: np.arcsin(np.sqrt(x))
-            gprime = lambda x: 1 / (2 * np.sqrt(x) * np.sqrt(1 - x))
+
+            def g(x):
+                return np.arcsin(np.sqrt(x))
+
+            def gprime(x):
+                return 1 / (2 * np.sqrt(x) * np.sqrt(1 - x))
         else:
             raise ValueError("unknown method")
 
@@ -665,7 +690,7 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
 
         if entry is not None:
             n = np.cumsum(n) - n
-            rentry = np.searchsorted(utimes, entry0, side='left')
+            rentry = np.searchsorted(utimes, entry0, side="left")
             n0 = np.bincount(rentry, minlength=ml)
             n0 = np.cumsum(n0) - n0
             nr = n0 - n
@@ -714,7 +739,7 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
 
     # use the first group as a reference
     for g in range(1, dfs+1):
-        # Difference between observed and  expected number of events in the group #g
+        # Difference between observed and  expected number of events in the group # g
         oe = obsv[g] - r[g]*obs
 
         # build one row of the dfs x dfs variance matrix
@@ -782,7 +807,7 @@ def plot_survfunc(survfuncs, ax=None):
     # a list.
     try:
         assert type(survfuncs[0]) is SurvfuncRight
-    except:
+    except TypeError:
         survfuncs = [survfuncs]
 
     for gx, sf in enumerate(survfuncs):
@@ -801,15 +826,15 @@ def plot_survfunc(survfuncs, ax=None):
 
         label = getattr(sf, "title", "Group %d" % (gx + 1))
 
-        li, = ax.step(surv_times, surv_prob, '-', label=label, lw=2,
-                      where='post')
+        li, = ax.step(surv_times, surv_prob, "-", label=label, lw=2,
+                      where="post")
 
         # Plot the censored points.
         ii = np.flatnonzero(np.logical_not(sf.status))
         ti = np.unique(sf.time[ii])
         jj = np.searchsorted(surv_times, ti) - 1
         sp = surv_prob[jj]
-        ax.plot(ti, sp, '+', ms=12, color=li.get_color(),
+        ax.plot(ti, sp, "+", ms=12, color=li.get_color(),
                 label=label + " points")
 
     ax.set_ylim(0, 1.01)

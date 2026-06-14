@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from statsmodels.compat.pandas import PD_LT_3
+from statsmodels.compat.patsy import ensure_patsy_compat
+
 from collections import defaultdict
 import os
 from typing import Any, Literal, Mapping, NamedTuple, Sequence
@@ -15,6 +18,9 @@ DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
 if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
     raise ValueError(f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}")
 
+
+ensure_patsy_compat()
+
 try:
     import patsy
     import patsy.missing
@@ -29,8 +35,7 @@ try:
                 total_mask |= is_NA
             good_mask = ~total_mask
             self.missing_mask = total_mask
-            # "..." to handle 1- versus 2-dim indexing
-            return [v[good_mask, ...] for v in values]
+            return [v[good_mask, ...] if v.ndim > 1 else v[good_mask] for v in values]
 
     HAVE_PATSY = True
 
@@ -43,7 +48,7 @@ except ImportError:
 
 
 try:
-    import formulaic  # noqa: F401
+    import formulaic
     import formulaic.parser
     import formulaic.utils.constraints
 
@@ -79,7 +84,22 @@ def _check_data(data):
             "deprecated and will be removed in a future version of statsmodels. "
             "DataFrames are the only supported data structure.",
             DeprecationWarning,
+            stacklevel=2,
         )
+
+
+def _maybe_convert_data(data):
+    if (
+        not isinstance(data, pd.DataFrame)
+        or PD_LT_3
+        or not any(isinstance(dt, pd.StringDtype) for dt in data.dtypes)
+    ):
+        return data
+    data = data.copy()
+    for col in data:
+        if isinstance(data[col].dtype, pd.StringDtype):
+            data[col] = data[col].astype(object)
+    return data
 
 
 class _FormulaOption:
@@ -354,7 +374,7 @@ class FormulaManager:
             rhs_formula = _formula
             lhs_formula = None
         include_intercept = any(
-            [(term.degree == 0 and str(term) == "1") for term in rhs_formula]
+            (term.degree == 0 and str(term) == "1") for term in rhs_formula
         )
         parser = formulaic.parser.DefaultFormulaParser(
             feature_flags=feature_flags, include_intercept=include_intercept
@@ -363,7 +383,7 @@ class FormulaManager:
         categorical_variables = list(rhs.model_spec.factor_contrasts.keys())
 
         def all_cat(term):
-            return all([f in categorical_variables for f in term.factors])
+            return all(f in categorical_variables for f in term.factors)
 
         def drop_terms(term_list, terms):
             for term in terms:
@@ -382,7 +402,7 @@ class FormulaManager:
             ]
             conts[tuple(sorted(cont))].append((term, term.degree))
         final_conts = []
-        for key, value in conts.items():
+        for _, value in conts.items():
             tmp = sorted(value, key=lambda term_degree: term_degree[1])
             final_conts.extend([value[0] for value in tmp])
         if lhs_formula is not None:
@@ -408,7 +428,7 @@ class FormulaManager:
         | pd.DataFrame
         | tuple[pd.DataFrame, pd.DataFrame]
     ):
-        f"""
+        """
         Get the model matrices or design matrices from a formula and data.
 
         Parameters
@@ -434,6 +454,7 @@ class FormulaManager:
             returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
         """
         _check_data(data)
+        data = _maybe_convert_data(data)
         if isinstance(eval_env, (int, np.integer)):
             eval_env = int(eval_env) + 1
         if self._using_patsy:
@@ -448,7 +469,7 @@ class FormulaManager:
             else:
                 _eval_env = eval_env
                 if isinstance(eval_env, patsy.eval.EvalEnvironment):
-                    warnings.warn(EVAL_ENV_WARNING, FutureWarning)
+                    warnings.warn(EVAL_ENV_WARNING, FutureWarning, stacklevel=2)
             if (
                 isinstance(
                     formula, (patsy.design_info.DesignInfo, patsy.desc.ModelDesc)
@@ -457,11 +478,11 @@ class FormulaManager:
                 or formula.strip().startswith("~")
             ):
                 output = patsy.dmatrix(
-                    formula, data, eval_env=eval_env, return_type=return_type, **kwargs
+                    formula, data, eval_env=_eval_env, return_type=return_type, **kwargs
                 )
             else:  # "~" in formula:
                 output = patsy.dmatrices(
-                    formula, data, eval_env=eval_env, return_type=return_type, **kwargs
+                    formula, data, eval_env=_eval_env, return_type=return_type, **kwargs
                 )
             if isinstance(output, tuple):
                 self._spec = output[1].design_info
@@ -499,7 +520,7 @@ class FormulaManager:
                 from patsy.eval import EvalEnvironment
 
                 if isinstance(eval_env, EvalEnvironment):
-                    warnings.warn(EVAL_ENV_WARNING, FutureWarning)
+                    warnings.warn(EVAL_ENV_WARNING, FutureWarning, stacklevel=2)
 
                     ns = eval_env._namespaces
                     _eval_env = {}

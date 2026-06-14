@@ -20,15 +20,11 @@ class PerfectSeparationError(Exception):
     Error due to perfect prediction in discrete models
     """
 
-    pass
-
 
 class MissingDataError(Exception):
     """
     Error raised if variables contain missing values when forbidden
     """
-
-    pass
 
 
 class X13NotFoundError(Exception):
@@ -36,15 +32,11 @@ class X13NotFoundError(Exception):
     Error locating the X13 binary
     """
 
-    pass
-
 
 class X13Error(Exception):
     """
     Error when running modes using X13
     """
-
-    pass
 
 
 class ParseError(Exception):
@@ -64,7 +56,6 @@ class X13Warning(Warning):
     """
     Unexpected conditions when using X13
     """
-    pass
 
 
 class IOWarning(RuntimeWarning):
@@ -72,14 +63,11 @@ class IOWarning(RuntimeWarning):
     Resource not deleted
     """
 
-    pass
-
 
 class ModuleUnavailableWarning(Warning):
     """
     Non-fatal import error
     """
-    pass
 
 
 module_unavailable_doc = """
@@ -91,14 +79,12 @@ class ModelWarning(UserWarning):
     """
     Base internal Warning class to simplify end-user filtering
     """
-    pass
 
 
 class ConvergenceWarning(ModelWarning):
     """
     Nonlinear optimizer failed to converge to a unique solution
     """
-    pass
 
 
 convergence_doc = """
@@ -111,15 +97,11 @@ class CacheWriteWarning(ModelWarning):
     Attempting to write to a read-only cached value
     """
 
-    pass
-
 
 class IterationLimitWarning(ModelWarning):
     """
     Iteration limit reached without convergence
     """
-
-    pass
 
 
 iteration_limit_doc = """
@@ -132,15 +114,11 @@ class InvalidTestWarning(ModelWarning):
     Test not applicable to model
     """
 
-    pass
-
 
 class NotImplementedWarning(ModelWarning):
     """
     Non-fatal function non-implementation
     """
-
-    pass
 
 
 class OutputWarning(ModelWarning):
@@ -148,15 +126,11 @@ class OutputWarning(ModelWarning):
     Function output contains atypical values
     """
 
-    pass
-
 
 class DomainWarning(ModelWarning):
     """
     Variables are not compliant with required domain constraints
     """
-
-    pass
 
 
 class ValueWarning(ModelWarning):
@@ -164,15 +138,11 @@ class ValueWarning(ModelWarning):
     Non-fatal out-of-range value given
     """
 
-    pass
-
 
 class EstimationWarning(ModelWarning):
     """
     Unexpected condition encountered during estimation
     """
-
-    pass
 
 
 class SingularMatrixWarning(ModelWarning):
@@ -180,15 +150,11 @@ class SingularMatrixWarning(ModelWarning):
     Non-fatal matrix inversion affects output results
     """
 
-    pass
-
 
 class HypothesisTestWarning(ModelWarning):
     """
     Issue occurred when performing hypothesis test
     """
-
-    pass
 
 
 class InterpolationWarning(ModelWarning):
@@ -196,15 +162,11 @@ class InterpolationWarning(ModelWarning):
     Table granularity and limits restrict interpolation
     """
 
-    pass
-
 
 class PrecisionWarning(ModelWarning):
     """
     Numerical implementation affects precision
     """
-
-    pass
 
 
 class SpecificationWarning(ModelWarning):
@@ -212,15 +174,11 @@ class SpecificationWarning(ModelWarning):
     Non-fatal model specification issue
     """
 
-    pass
-
 
 class HessianInversionWarning(ModelWarning):
     """
     Hessian noninvertible and standard errors unavailable
     """
-
-    pass
 
 
 class CollinearityWarning(ModelWarning):
@@ -228,23 +186,17 @@ class CollinearityWarning(ModelWarning):
     Variables are highly collinear
     """
 
-    pass
-
 
 class PerfectSeparationWarning(ModelWarning):
     """
     Perfect separation or prediction
     """
 
-    pass
-
 
 class InfeasibleTestError(RuntimeError):
     """
     Test statistic cannot be computed
     """
-
-    pass
 
 
 recarray_exception = """

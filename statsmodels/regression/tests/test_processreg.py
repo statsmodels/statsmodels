@@ -1,14 +1,14 @@
 from statsmodels.compat.platform import PLATFORM_OSX
 
-from statsmodels.regression.process_regression import (
-       ProcessMLE, GaussianCovariance)
+import collections
+
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-import collections
+from statsmodels.regression.process_regression import GaussianCovariance, ProcessMLE
 import statsmodels.tools.numdiff as nd
-from numpy.testing import assert_allclose, assert_equal
 
 
 # Parameters for a test model, with or without additive
@@ -63,7 +63,7 @@ def setup1(n, get_model, noise):
     for i, g in enumerate(groups):
         ix[g].append(i)
 
-    for g, ii in ix.items():
+    for ii in ix.values():
         c = gc.get_cov(time[ii], sc[ii], sm[ii])
         r = np.linalg.cholesky(c)
         y[ii] += np.dot(r, np.random.normal(size=len(ii)))
@@ -85,6 +85,7 @@ def run_arrays(n, get_model, noise):
 
 
 @pytest.mark.slow
+@pytest.mark.high_memory
 @pytest.mark.parametrize("noise", [False, True])
 def test_arrays(noise):
 
@@ -163,6 +164,7 @@ def run_formula(n, get_model, noise):
 
 
 @pytest.mark.slow
+@pytest.mark.high_memory
 @pytest.mark.parametrize("noise", [False, True])
 def test_formulas(noise):
 

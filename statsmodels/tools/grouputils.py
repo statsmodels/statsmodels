@@ -1,4 +1,5 @@
-"""Tools for working with groups
+"""
+Tools for working with groups
 
 This provides several functions to work with groups and a Group class that
 keeps track of the different representations and has methods to work more
@@ -13,6 +14,7 @@ Created on Wed Nov 30 14:28:24 2011 : combine_indices
 changes: add Group class
 
 Notes
+-----
 ~~~~~
 
 This reverses the class I used before, where the class was for the data and
@@ -25,17 +27,20 @@ what if a category level has zero elements? This can happen with subset
 Not all methods and options have been tried out yet after refactoring
 
 need more efficient loop if groups are sorted -> see GroupSorted.group_iter
+
 """
 from statsmodels.compat.python import lrange, lzip
+
 import numpy as np
 import pandas as pd
-
-import statsmodels.tools.data as data_util
 from pandas import Index, MultiIndex
 
+import statsmodels.tools.data as data_util
 
-def combine_indices(groups, prefix='', sep='.', return_labels=False):
-    """use np.unique to get integer group indices for product, intersection
+
+def combine_indices(groups, prefix="", sep=".", return_labels=False):
+    """
+    Use np.unique to get integer group indices for product, intersection
     """
     if isinstance(groups, tuple):
         groups = np.column_stack(groups)
@@ -49,9 +54,9 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
     if is2d:
         ncols = groups.shape[1]
         if not groups.flags.c_contiguous:
-            groups = np.array(groups, order='C')
+            groups = np.array(groups, order="C")
 
-        groups_ = groups.view([('', groups.dtype)] * groups.shape[1])
+        groups_ = groups.view([("", groups.dtype)] * groups.shape[1])
     else:
         groups_ = groups
 
@@ -61,15 +66,8 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
     if is2d:
         uni = uni.view(dt).reshape(-1, ncols)
 
-        # avoiding a view would be
-        # for t in uni.dtype.fields.values():
-        #     assert (t[0] == dt)
-        #
-        # uni.dtype = dt
-        # uni.shape = (uni.size//ncols, ncols)
-
     if return_labels:
-        label = [(prefix+sep.join(['%s']*len(uni[0]))) % tuple(ii)
+        label = [(prefix+sep.join(["%s"]*len(uni[0]))) % tuple(ii)
                  for ii in uni]
         return uni_inv, uni_idx, uni, label
     else:
@@ -78,7 +76,8 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
 
 # written for and used in try_covariance_grouploop.py
 def group_sums(x, group, use_bincount=True):
-    """simple bincount version, again
+    """
+    Simple bincount version, again
 
     group : ndarray, integer
         assumed to be consecutive integers
@@ -94,7 +93,7 @@ def group_sums(x, group, use_bincount=True):
     if x.ndim == 1:
         x = x[:, None]
     elif x.ndim > 2 and use_bincount:
-        raise ValueError('not implemented yet')
+        raise ValueError("not implemented yet")
 
     if use_bincount:
 
@@ -117,7 +116,8 @@ def group_sums(x, group, use_bincount=True):
 
 
 def group_sums_dummy(x, group_dummy):
-    """sum by groups given group dummy variable
+    """
+    Sum by groups given group dummy variable
 
     group_dummy can be either ndarray or sparse matrix
     """
@@ -130,7 +130,8 @@ def group_sums_dummy(x, group_dummy):
 # TODO: See if this can be entirely replaced by Grouping.dummy_sparse;
 #  see GH#5687
 def dummy_sparse(groups):
-    """create a sparse indicator from a group array with integer labels
+    """
+    Create a sparse indicator from a group array with integer labels
 
     Parameters
     ----------
@@ -148,7 +149,6 @@ def dummy_sparse(groups):
 
     Examples
     --------
-
     >>> g = np.array([0, 0, 2, 1, 1, 2, 0])
     >>> indi = dummy_sparse(g)
     >>> indi
@@ -174,6 +174,7 @@ def dummy_sparse(groups):
             [1, 0, 0],
             [0, 0, 1],
             [1, 0, 0]], dtype=int8)
+
     """
     from scipy import sparse
 
@@ -185,8 +186,9 @@ def dummy_sparse(groups):
 
 
 class Group:
+    """Represent grouping labels and derived encodings."""
 
-    def __init__(self, group, name=''):
+    def __init__(self, group, name=""):
 
         # self.group = np.asarray(group)  # TODO: use checks in combine_indices
         self.name = name
@@ -198,10 +200,10 @@ class Group:
         self.n_groups = len(self.uni)
 
         # put this here so they can be overwritten before calling labels
-        self.separator = '.'
+        self.separator = "."
         self.prefix = self.name
         if self.prefix:
-            self.prefix = self.prefix + '='
+            self.prefix = self.prefix + "="
 
     # cache decorator
     def counts(self):
@@ -215,10 +217,10 @@ class Group:
         sep = self.separator
 
         if uni.ndim > 1:
-            label = [(prefix+sep.join(['%s']*len(uni[0]))) % tuple(ii)
+            label = [(prefix+sep.join(["%s"]*len(uni[0]))) % tuple(ii)
                      for ii in uni]
         else:
-            label = [prefix + '%s' % ii for ii in uni]
+            label = [prefix + "%s" % ii for ii in uni]
         return label
 
     def dummy(self, drop_idx=None, sparse=False, dtype=int):
@@ -257,7 +259,9 @@ class Group:
 
 
 class GroupSorted(Group):
-    def __init__(self, group, name=''):
+    """Represent grouping labels that are already sorted by group."""
+
+    def __init__(self, group, name=""):
         super(self.__class__, self).__init__(group, name=name)
 
         idx = (np.nonzero(np.diff(group))[0]+1).tolist()
@@ -268,7 +272,8 @@ class GroupSorted(Group):
             yield slice(low, upp)
 
     def lag_indices(self, lag):
-        """return the index array for lagged values
+        """
+        Return the index array for lagged values
 
         Warning: if k is larger then the number of observations for an
         individual, then no values for that individual are returned.
@@ -313,9 +318,11 @@ def _make_generic_names(index):
 
 
 class Grouping:
+    """Represent a pandas-style grouping index and related transformations."""
+
     def __init__(self, index, names=None):
         """
-        index : index-like
+        Index : index-like
             Can be pandas MultiIndex or Index or array-like. If array-like
             and is a MultipleIndex (more than one grouping variable),
             groups are expected to be in each row. E.g., [('red', 1),
@@ -327,10 +334,11 @@ class Grouping:
         Notes
         -----
         If index is already a pandas Index then there is no copy.
+
         """
         if isinstance(index, (Index, MultiIndex)):
             if names is not None:
-                if hasattr(index, 'set_names'):  # newer pandas
+                if hasattr(index, "set_names"):  # newer pandas
                     index.set_names(names, inplace=True)
                 else:
                     index.names = names
@@ -342,7 +350,7 @@ class Grouping:
                 self.index = Index(index, name=names)
             if names is None:
                 names = _make_generic_names(self.index)
-                if hasattr(self.index, 'set_names'):
+                if hasattr(self.index, "set_names"):
                     self.index.set_names(names, inplace=True)
                 else:
                     self.index.names = names
@@ -353,14 +361,14 @@ class Grouping:
 
     @property
     def index_shape(self):
-        if hasattr(self.index, 'levshape'):
+        if hasattr(self.index, "levshape"):
             return self.index.levshape
         else:
             return self.index.shape
 
     @property
     def levels(self):
-        if hasattr(self.index, 'levels'):
+        if hasattr(self.index, "levels"):
             return self.index.levels
         else:
             return pd.Categorical(self.index).levels
@@ -368,9 +376,9 @@ class Grouping:
     @property
     def labels(self):
         # this was index_int, but that's not a very good name...
-        codes = getattr(self.index, 'codes', None)
+        codes = getattr(self.index, "codes", None)
         if codes is None:
-            if hasattr(self.index, 'labels'):
+            if hasattr(self.index, "labels"):
                 codes = self.index.labels
             else:
                 codes = pd.Categorical(self.index).codes[None]
@@ -388,7 +396,8 @@ class Grouping:
         # This needs to reset cache
         if names is None:
             names = self.group_names
-        self = Grouping(index, names)
+        # Does nothing ??
+        Grouping(index, names)
 
     def get_slices(self, level=0):
         """
@@ -421,18 +430,18 @@ class Grouping:
             test = pd.DataFrame(lrange(len(index)), index=index)
             test_sorted = test.sort()
             if not test.index.equals(test_sorted.index):
-                raise Exception('Data is not be sorted')
+                raise Exception("Data is not be sorted")
         if unique:
             if len(index) != len(index.unique()):
-                raise Exception('Duplicate index entries')
+                raise Exception("Duplicate index entries")
 
     def sort(self, data, index=None):
-        """Applies a (potentially hierarchical) sort operation on a numpy array
+        """
+        Applies a (potentially hierarchical) sort operation on a numpy array
         or pandas series/dataframe based on the grouping index or a
         user-supplied index.  Returns an object of the same type as the
         original data as well as the matching (sorted) Pandas index.
         """
-
         if index is None:
             index = self.index
         if data_util._is_using_ndarray_type(data, None):
@@ -449,14 +458,16 @@ class Grouping:
             out = out.sort_index()
             return out, out.index
         else:
-            msg = 'data must be a Numpy array or a Pandas Series/DataFrame'
+            msg = "data must be a Numpy array or a Pandas Series/DataFrame"
             raise ValueError(msg)
 
     def transform_dataframe(self, dataframe, function, level=0, **kwargs):
-        """Apply function to each column, by group
-        Assumes that the dataframe already has a proper index"""
+        """
+        Apply function to each column, by group
+        Assumes that the dataframe already has a proper index
+        """
         if dataframe.shape[0] != self.nobs:
-            raise Exception('dataframe does not have the same shape as index')
+            raise Exception("dataframe does not have the same shape as index")
         out = dataframe.groupby(level=level).apply(function, **kwargs)
         if 1 in out.shape:
             return np.ravel(out)
@@ -464,22 +475,24 @@ class Grouping:
             return np.array(out)
 
     def transform_array(self, array, function, level=0, **kwargs):
-        """Apply function to each column, by group
+        """
+        Apply function to each column, by group
         """
         if array.shape[0] != self.nobs:
-            raise Exception('array does not have the same shape as index')
+            raise Exception("array does not have the same shape as index")
         dataframe = pd.DataFrame(array, index=self.index)
         return self.transform_dataframe(dataframe, function, level=level,
                                         **kwargs)
 
     def transform_slices(self, array, function, level=0, **kwargs):
-        """Apply function to each group. Similar to transform_array but does
+        """
+        Apply function to each group. Similar to transform_array but does
         not coerce array to a DataFrame and back and only works on a 1D or 2D
         numpy array. function is called function(group, group_idx, **kwargs).
         """
         array = np.asarray(array)
         if array.shape[0] != self.nobs:
-            raise Exception('array does not have the same shape as index')
+            raise Exception("array does not have the same shape as index")
         # always reset because level is given. need to refactor this.
         self.get_slices(level=level)
         processed = []
@@ -502,16 +515,13 @@ class Grouping:
         return self._dummies
 
     def dummy_sparse(self, level=0):
-        """create a sparse indicator from a group array with integer labels
+        """
+        Create a sparse indicator from a group array with integer labels.
 
         Parameters
         ----------
-        groups : ndarray, int, 1d (nobs,)
-            An array of group indicators for each observation. Group levels
-            are assumed to be defined as consecutive integers, i.e.
-            range(n_groups) where n_groups is the number of group levels.
-            A group level with no observations for it will still produce a
-            column of zeros.
+        level : int
+            Grouping level used to form the sparse indicator.
 
         Returns
         -------
@@ -521,7 +531,6 @@ class Grouping:
 
         Examples
         --------
-
         >>> g = np.array([0, 0, 2, 1, 1, 2, 0])
         >>> indi = dummy_sparse(g)
         >>> indi
@@ -547,6 +556,7 @@ class Grouping:
                 [1, 0, 0],
                 [0, 0, 1],
                 [1, 0, 0]], dtype=int8)
+
         """
         indi = dummy_sparse(self.labels[level])
         self._dummies = indi

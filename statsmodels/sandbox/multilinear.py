@@ -10,6 +10,7 @@ multigroup:
     rest. It allows to test if the variables in the group are significantly
     more significant than outside the group.
 """
+
 import logging
 
 import numpy as np
@@ -55,8 +56,16 @@ def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
     return res_series.dropna()
 
 
-def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
-             alpha=0.05, subset=None, model_type=OLS, **kwargs):
+def multiOLS(
+    model,
+    dataframe,
+    column_list=None,
+    method="fdr_bh",
+    alpha=0.05,
+    subset=None,
+    model_type=OLS,
+    **kwargs,
+):
     """apply a linear model to several endogenous variables on a dataframe
 
     Take a linear model definition via formula and a dataframe that will be
@@ -192,18 +201,18 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     # mangle them togheter and sort by complexive p-value
     summary = pd.DataFrame(col_results)
     # order by the p-value: the most useful model first!
-    summary = summary.T.sort_values([('pvals', '_f_test')])
-    summary.index.name = 'endogenous vars'
+    summary = summary.T.sort_values([("pvals", "_f_test")])
+    summary.index.name = "endogenous vars"
     # implementing the pvalue correction method
     smt = stats.multipletests
-    for (key1, key2) in summary:
-        if key1 != 'pvals':
+    for key1, key2 in summary:
+        if key1 != "pvals":
             continue
         p_values = summary[key1, key2]
         corrected = smt(p_values, method=method, alpha=alpha)[1]
         # extend the dataframe of results with the column
         # of the corrected p_values
-        summary['adj_' + key1, key2] = corrected
+        summary["adj_" + key1, key2] = corrected
     return summary
 
 
@@ -220,9 +229,11 @@ def _test_group(pvalues, group_name, group, exact=True):
     cross_index = [c for c in group if c in pvalues.index]
     missing = [c for c in group if c not in pvalues.index]
     if missing:
-        s = ('the test is not well defined if the group '
-             'has elements not presents in the significativity '
-             'array. group name: {}, missing elements: {}')
+        s = (
+            "the test is not well defined if the group "
+            "has elements not presents in the significativity "
+            "array. group name: {}, missing elements: {}"
+        )
         logging.warning(s.format(group_name, missing))
     # how many are significant and not in the group
     group_total = 1.0 * len(cross_index)
@@ -238,8 +249,7 @@ def _test_group(pvalues, group_name, group, exact=True):
     # is the group more represented or less?
     part = group_sign, group_nonsign, extern_sign, extern_nonsign
     # increase = (group_sign / group_total) > (total_significant / totals)
-    increase = np.log((totals * group_sign)
-                      / (total_significant * group_total))
+    increase = np.log((totals * group_sign) / (total_significant * group_total))
     return pvalue, increase, part
 
 
@@ -333,16 +343,16 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     }
     for group_name, group_list in groups.items():
         res = _test_group(pvals, group_name, group_list, exact)
-        results['pvals'][group_name] = res[0]
-        results['increase'][group_name] = res[1]
-        results['_in_sign'][group_name] = res[2][0]
-        results['_in_non'][group_name] = res[2][1]
-        results['_out_sign'][group_name] = res[2][2]
-        results['_out_non'][group_name] = res[2][3]
-    result_df = pd.DataFrame(results).sort_values('pvals')
+        results["pvals"][group_name] = res[0]
+        results["increase"][group_name] = res[1]
+        results["_in_sign"][group_name] = res[2][0]
+        results["_in_non"][group_name] = res[2][1]
+        results["_out_sign"][group_name] = res[2][2]
+        results["_out_non"][group_name] = res[2][3]
+    result_df = pd.DataFrame(results).sort_values("pvals")
     if not keep_all:
         result_df = result_df[result_df.increase]
     smt = stats.multipletests
-    corrected = smt(result_df['pvals'], method='fdr_bh', alpha=alpha)[1]
-    result_df['adj_pvals'] = corrected
+    corrected = smt(result_df["pvals"], method="fdr_bh", alpha=alpha)[1]
+    result_df["adj_pvals"] = corrected
     return result_df

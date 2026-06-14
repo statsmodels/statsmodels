@@ -5,20 +5,20 @@ References
 
 .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
    Asymmetric Kernel Density Estimators and Smoothed Histograms with
-   Application to Income Data.” Econometric Theory 21 (2): 390–412.
+   Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
 .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
-   Computational Statistics & Data Analysis 31 (2): 131–45.
+   Computational Statistics & Data Analysis 31 (2): 131-45.
    https://doi.org/10.1016/S0167-9473(99)00010-9.
 
 .. [3] Chen, Song Xi. 2000. “Probability Density Function Estimation Using
    Gamma Kernels.”
-   Annals of the Institute of Statistical Mathematics 52 (3): 471–80.
+   Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
    https://doi.org/10.1023/A:1004165218295.
 
 .. [4] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
    Lognormal Kernel Estimators for Modelling Durations in High Frequency
-   Financial Data.” Annals of Economics and Finance 4: 103–24.
+   Financial Data.” Annals of Economics and Finance 4: 103-24.
 
 .. [5] Micheaux, Pierre Lafaye de, and Frédéric Ouimet. 2020. “A Study of Seven
    Asymmetric Kernels for the Estimation of Cumulative Distribution Functions,”
@@ -26,11 +26,11 @@ References
 
 .. [6] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
    “Asymmetric Kernels for Boundary Modification in Distribution Function
-   Estimation.” REVSTAT, 1–27.
+   Estimation.” REVSTAT, 1-27.
 
 .. [7] Scaillet, O. 2004. “Density Estimation Using Inverse and Reciprocal
    Inverse Gaussian Kernels.”
-   Journal of Nonparametric Statistics 16 (1–2): 217–26.
+   Journal of Nonparametric Statistics 16 (1-2): 217-26.
    https://doi.org/10.1080/10485250310001624819.
 
 
@@ -120,8 +120,9 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         k = batch_size // len(sample)
         n = len(x) // k
         x_split = np.array_split(x, n)
-        pdf = np.concatenate([(kfunc(xi[:, None], sample, bw) @ weights)
-                              for xi in x_split])
+        pdf = np.concatenate(
+            [(kfunc(xi[:, None], sample, bw) @ weights) for xi in x_split]
+        )
 
     return pdf
 
@@ -187,8 +188,9 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         k = batch_size // len(sample)
         n = len(x) // k
         x_split = np.array_split(x, n)
-        cdf = np.concatenate([(kfunc(xi[:, None], sample, bw) @ weights)
-                              for xi in x_split])
+        cdf = np.concatenate(
+            [(kfunc(xi[:, None], sample, bw) @ weights) for xi in x_split]
+        )
 
     return cdf
 
@@ -207,12 +209,14 @@ kernel_pdf_beta.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
-       Computational Statistics & Data Analysis 31 (2): 131–45.
+       Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_cdf_beta(x, sample, bw):
@@ -229,12 +233,14 @@ kernel_cdf_beta.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
-       Computational Statistics & Data Analysis 31 (2): 131–45.
+       Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_pdf_beta2(x, sample, bw):
@@ -283,12 +289,14 @@ kernel_pdf_beta2.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
-       Computational Statistics & Data Analysis 31 (2): 131–45.
+       Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_cdf_beta2(x, sample, bw):
@@ -337,12 +345,14 @@ kernel_cdf_beta2.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
-       Computational Statistics & Data Analysis 31 (2): 131–45.
+       Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_pdf_gamma(x, sample, bw):
@@ -360,13 +370,15 @@ kernel_pdf_gamma.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 2000. “Probability Density Function Estimation Using
        Gamma Krnels.”
-       Annals of the Institute of Statistical Mathematics 52 (3): 471–80.
+       Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_cdf_gamma(x, sample, bw):
@@ -385,13 +397,15 @@ kernel_cdf_gamma.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 2000. “Probability Density Function Estimation Using
        Gamma Krnels.”
-       Annals of the Institute of Statistical Mathematics 52 (3): 471–80.
+       Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def _kernel_pdf_gamma(x, sample, bw):
@@ -423,13 +437,13 @@ def kernel_pdf_gamma2(x, sample, bw):
     if np.size(x) == 1:
         # without vectorizing, easier to read
         if x < 2 * bw:
-            a = (x / bw)**2 + 1
+            a = (x / bw) ** 2 + 1
         else:
             a = x / bw
     else:
         a = x / bw
         mask = x < 2 * bw
-        a[mask] = a[mask]**2 + 1
+        a[mask] = a[mask] ** 2 + 1
     pdf = stats.gamma.pdf(sample, a, scale=bw)
 
     return pdf
@@ -444,13 +458,15 @@ kernel_pdf_gamma2.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 2000. “Probability Density Function Estimation Using
        Gamma Krnels.”
-       Annals of the Institute of Statistical Mathematics 52 (3): 471–80.
+       Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_cdf_gamma2(x, sample, bw):
@@ -458,13 +474,13 @@ def kernel_cdf_gamma2(x, sample, bw):
     if np.size(x) == 1:
         # without vectorizing
         if x < 2 * bw:
-            a = (x / bw)**2 + 1
+            a = (x / bw) ** 2 + 1
         else:
             a = x / bw
     else:
         a = x / bw
         mask = x < 2 * bw
-        a[mask] = a[mask]**2 + 1
+        a[mask] = a[mask] ** 2 + 1
     pdf = stats.gamma.sf(sample, a, scale=bw)
 
     return pdf
@@ -479,13 +495,15 @@ kernel_cdf_gamma2.__doc__ = """\
     ----------
     .. [1] Bouezmarni, Taoufik, and Olivier Scaillet. 2005. “Consistency of
        Asymmetric Kernel Density Estimators and Smoothed Histograms with
-       Application to Income Data.” Econometric Theory 21 (2): 390–412.
+       Application to Income Data.” Econometric Theory 21 (2): 390-412.
 
     .. [2] Chen, Song Xi. 2000. “Probability Density Function Estimation Using
        Gamma Krnels.”
-       Annals of the Institute of Statistical Mathematics 52 (3): 471–80.
+       Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_pdf_invgamma(x, sample, bw):
@@ -505,7 +523,9 @@ kernel_pdf_invgamma.__doc__ = """\
     .. [1] Micheaux, Pierre Lafaye de, and Frédéric Ouimet. 2020. “A Study of
        Seven Asymmetric Kernels for the Estimation of Cumulative Distribution
        Functions,” November. https://arxiv.org/abs/2011.14893v1.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_cdf_invgamma(x, sample, bw):
@@ -523,7 +543,9 @@ kernel_cdf_invgamma.__doc__ = """\
     .. [1] Micheaux, Pierre Lafaye de, and Frédéric Ouimet. 2020. “A Study of
        Seven Asymmetric Kernels for the Estimation of Cumulative Distribution
        Functions,” November. https://arxiv.org/abs/2011.14893v1.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_pdf_invgauss(x, sample, bw):
@@ -542,9 +564,11 @@ kernel_pdf_invgauss.__doc__ = """\
     ----------
     .. [1] Scaillet, O. 2004. “Density Estimation Using Inverse and Reciprocal
        Inverse Gaussian Kernels.”
-       Journal of Nonparametric Statistics 16 (1–2): 217–26.
+       Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_pdf_invgauss_(x, sample, bw):
@@ -552,8 +576,11 @@ def kernel_pdf_invgauss_(x, sample, bw):
 
     Scaillet 2004
     """
-    pdf = (1 / np.sqrt(2 * np.pi * bw * sample**3) *
-           np.exp(- 1 / (2 * bw * x) * (sample / x - 2 + x / sample)))
+    pdf = (
+        1
+        / np.sqrt(2 * np.pi * bw * sample**3)
+        * np.exp(-1 / (2 * bw * x) * (sample / x - 2 + x / sample))
+    )
     return pdf.mean(-1)
 
 
@@ -573,9 +600,11 @@ kernel_cdf_invgauss.__doc__ = """\
     ----------
     .. [1] Scaillet, O. 2004. “Density Estimation Using Inverse and Reciprocal
        Inverse Gaussian Kernels.”
-       Journal of Nonparametric Statistics 16 (1–2): 217–26.
+       Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_pdf_recipinvgauss(x, sample, bw):
@@ -597,9 +626,11 @@ kernel_pdf_recipinvgauss.__doc__ = """\
     ----------
     .. [1] Scaillet, O. 2004. “Density Estimation Using Inverse and Reciprocal
        Inverse Gaussian Kernels.”
-       Journal of Nonparametric Statistics 16 (1–2): 217–26.
+       Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_pdf_recipinvgauss_(x, sample, bw):
@@ -608,9 +639,11 @@ def kernel_pdf_recipinvgauss_(x, sample, bw):
     Scaillet 2004
     """
 
-    pdf = (1 / np.sqrt(2 * np.pi * bw * sample) *
-           np.exp(- (x - bw) / (2 * bw) * sample / (x - bw) - 2 +
-                  (x - bw) / sample))
+    pdf = (
+        1
+        / np.sqrt(2 * np.pi * bw * sample)
+        * np.exp(-(x - bw) / (2 * bw) * sample / (x - bw) - 2 + (x - bw) / sample)
+    )
     return pdf
 
 
@@ -633,9 +666,11 @@ kernel_cdf_recipinvgauss.__doc__ = """\
     ----------
     .. [1] Scaillet, O. 2004. “Density Estimation Using Inverse and Reciprocal
        Inverse Gaussian Kernels.”
-       Journal of Nonparametric Statistics 16 (1–2): 217–26.
+       Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(doc_params=doc_params)
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_pdf_bs(x, sample, bw):
@@ -652,8 +687,10 @@ kernel_pdf_bs.__doc__ = """\
     ----------
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
-       Financial Data.” Annals of Economics and Finance 4: 103–24.
-    """.format(doc_params=doc_params)
+       Financial Data.” Annals of Economics and Finance 4: 103-24.
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_cdf_bs(x, sample, bw):
@@ -670,11 +707,13 @@ kernel_cdf_bs.__doc__ = """\
     ----------
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
-       Financial Data.” Annals of Economics and Finance 4: 103–24.
+       Financial Data.” Annals of Economics and Finance 4: 103-24.
     .. [2] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
-       Estimation.” REVSTAT, 1–27.
-    """.format(doc_params=doc_params)
+       Estimation.” REVSTAT, 1-27.
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_pdf_lognorm(x, sample, bw):
@@ -686,7 +725,7 @@ def kernel_pdf_lognorm(x, sample, bw):
     # Funke and Kawka 2015 (table 1) use bw (or bw**2) corresponding to
     #    variance of normal pdf
     # bw = np.exp(bw_**2 / 4) - 1  # this is inverse transformation
-    bw_ = np.sqrt(4*np.log(1+bw))
+    bw_ = np.sqrt(4 * np.log(1 + bw))
     return stats.lognorm.pdf(sample, bw_, scale=x)
 
 
@@ -703,8 +742,10 @@ kernel_pdf_lognorm.__doc__ = """\
     ----------
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
-       Financial Data.” Annals of Economics and Finance 4: 103–24.
-    """.format(doc_params=doc_params)
+       Financial Data.” Annals of Economics and Finance 4: 103-24.
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_cdf_lognorm(x, sample, bw):
@@ -716,7 +757,7 @@ def kernel_cdf_lognorm(x, sample, bw):
     # Funke and Kawka 2015 (table 1) use bw (or bw**2) corresponding to
     #    variance of normal pdf
     # bw = np.exp(bw_**2 / 4) - 1  # this is inverse transformation
-    bw_ = np.sqrt(4*np.log(1+bw))
+    bw_ = np.sqrt(4 * np.log(1 + bw))
     return stats.lognorm.sf(sample, bw_, scale=x)
 
 
@@ -733,8 +774,10 @@ kernel_cdf_lognorm.__doc__ = """\
     ----------
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
-       Financial Data.” Annals of Economics and Finance 4: 103–24.
-    """.format(doc_params=doc_params)
+       Financial Data.” Annals of Economics and Finance 4: 103-24.
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_pdf_lognorm_(x, sample, bw):
@@ -743,8 +786,12 @@ def kernel_pdf_lognorm_(x, sample, bw):
     Jin, Kawczak 2003
     """
     term = 8 * np.log(1 + bw)  # this is 2 * variance in normal pdf
-    pdf = (1 / np.sqrt(term * np.pi) / sample *
-           np.exp(- (np.log(x) - np.log(sample))**2 / term))
+    pdf = (
+        1
+        / np.sqrt(term * np.pi)
+        / sample
+        * np.exp(-((np.log(x) - np.log(sample)) ** 2) / term)
+    )
     return pdf.mean(-1)
 
 
@@ -753,8 +800,7 @@ def kernel_pdf_weibull(x, sample, bw):
 
     # need shape-scale parameterization for scipy
     # references use m, lambda parameterization
-    return stats.weibull_min.pdf(sample, 1 / bw,
-                                 scale=x / special.gamma(1 + bw))
+    return stats.weibull_min.pdf(sample, 1 / bw, scale=x / special.gamma(1 + bw))
 
 
 kernel_pdf_weibull.__doc__ = """\
@@ -768,8 +814,10 @@ kernel_pdf_weibull.__doc__ = """\
     ----------
     .. [1] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
-       Estimation.” REVSTAT, 1–27.
-    """.format(doc_params=doc_params)
+       Estimation.” REVSTAT, 1-27.
+    """.format(
+    doc_params=doc_params
+)
 
 
 def kernel_cdf_weibull(x, sample, bw):
@@ -777,8 +825,7 @@ def kernel_cdf_weibull(x, sample, bw):
 
     # need shape-scale parameterization for scipy
     # references use m, lambda parameterization
-    return stats.weibull_min.sf(sample, 1 / bw,
-                                scale=x / special.gamma(1 + bw))
+    return stats.weibull_min.sf(sample, 1 / bw, scale=x / special.gamma(1 + bw))
 
 
 kernel_cdf_weibull.__doc__ = """\
@@ -790,8 +837,10 @@ kernel_cdf_weibull.__doc__ = """\
     ----------
     .. [1] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
-       Estimation.” REVSTAT, 1–27.
-    """.format(doc_params=doc_params)
+       Estimation.” REVSTAT, 1-27.
+    """.format(
+    doc_params=doc_params
+)
 
 
 # produced wth
@@ -808,7 +857,7 @@ kernel_dict_cdf = {
     "lognorm": kernel_cdf_lognorm,
     "recipinvgauss": kernel_cdf_recipinvgauss,
     "weibull": kernel_cdf_weibull,
-    }
+}
 
 kernel_dict_pdf = {
     "beta": kernel_pdf_beta,
@@ -821,4 +870,4 @@ kernel_dict_pdf = {
     "lognorm": kernel_pdf_lognorm,
     "recipinvgauss": kernel_pdf_recipinvgauss,
     "weibull": kernel_pdf_weibull,
-    }
+}

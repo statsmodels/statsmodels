@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+"""Print installed dependency versions for diagnostics."""
+
 from functools import reduce
 import os
 from os.path import dirname
@@ -7,6 +9,7 @@ import sys
 
 
 def safe_version(module, attr="__version__", *others):
+    """Return a version attribute from a module, or a fallback message."""
     if not isinstance(attr, list):
         attr = [attr]
     try:
@@ -51,9 +54,9 @@ def _show_versions_only():
         print("cython: Not installed")
 
     try:
-        import numpy
+        import numpy as np
 
-        print("numpy: %s" % safe_version(numpy))
+        print("numpy: %s" % safe_version(np))
     except ImportError:
         print("numpy: Not installed")
 
@@ -65,9 +68,9 @@ def _show_versions_only():
         print("scipy: Not installed")
 
     try:
-        import pandas
+        import pandas as pd
 
-        print("pandas: %s" % safe_version(pandas))
+        print("pandas: %s" % safe_version(pd))
     except ImportError:
         print("pandas: Not installed")
 
@@ -169,6 +172,7 @@ def show_versions(show_dirs=True):
     ----------
     show_dirs : bool
         Flag indicating to show module locations
+
     """
     if not show_dirs:
         _show_versions_only()
@@ -211,9 +215,9 @@ def show_versions(show_dirs=True):
         print("cython: Not installed")
 
     try:
-        import numpy
+        import numpy as np
 
-        print("numpy: {} ({})".format(safe_version(numpy), dirname(numpy.__file__)))
+        print("numpy: {} ({})".format(safe_version(np), dirname(np.__file__)))
     except ImportError:
         print("numpy: Not installed")
 
@@ -225,12 +229,12 @@ def show_versions(show_dirs=True):
         print("scipy: Not installed")
 
     try:
-        import pandas
+        import pandas as pd
 
         print(
             "pandas: {} ({})".format(
-                safe_version(pandas, "__version__"),
-                dirname(pandas.__file__),
+                safe_version(pd, "__version__"),
+                dirname(pd.__file__),
             )
         )
     except ImportError:

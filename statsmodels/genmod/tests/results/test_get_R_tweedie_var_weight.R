@@ -1,4 +1,4 @@
-# R code to dump fair test dataset to 
+# R code to dump fair test dataset to
 # checking compatibility.
 #
 # Usage:
@@ -79,22 +79,22 @@ out2py <- function(model, name, resid_csv = FALSE){
   pyprint(model$coefficients, prefix = "res['params'] = ")
   pyprint(diag(vcov(model))^0.5, prefix = "res['bse'] = ")
   cat(sprintf("res['deviance'] = %f\n", model$deviance))
-  
+
   ll = logLik(model)
-  
+
   if (is.na(ll)) {
     cat("res['ll'] = np.nan\n")
   } else {
     cat(sprintf("res['ll'] = %f\n", ll))
   }
-  
+
   cat("res['resids_colnames'] = [\n    'resid_response', 'resid_pearson', 'resid_deviance', 'resid_working']\n" )
-  
+
   r <- cbind(residuals.glm(model, 'response'),
              residuals.glm(model, 'pearson'),
              residuals.glm(model, 'deviance'),
              residuals.glm(model, 'working'))
-  
+
   if (is.character(resid_csv)) {
     write.csv(r, resid_csv, row.names = FALSE)
     cat(sprintf("csv_path = os.path.join(dir_path, '%s')\n", resid_csv))

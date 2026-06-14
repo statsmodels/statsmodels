@@ -30,12 +30,12 @@ class CheckCointJoh:
     def test_table_trace(self):
         table1 = np.column_stack((self.res.lr1, self.res.cvt))
         assert_almost_equal(table1,
-                            self.res1_m.reshape(table1.shape, order='F'))
+                            self.res1_m.reshape(table1.shape, order="F"))
 
     def test_table_maxeval(self):
         table2 = np.column_stack((self.res.lr2, self.res.cvm))
         assert_almost_equal(table2,
-                            self.res2_m.reshape(table2.shape, order='F'))
+                            self.res2_m.reshape(table2.shape, order="F"))
 
     def test_normalization(self):
         # GH 5517
@@ -78,7 +78,7 @@ class TestCointJoh12(CheckCointJoh):
 
             -0.001868995544352928, 0.05993345996347871, 0.01213394328069316, 0.02096614212178651,
             -0.08624395993789938, 0.02108183181049973, -0.08470307289295617, -5.135072530480897e-005])
-        cls.evec_m = evec.reshape(cls.res.evec.shape, order='F')
+        cls.evec_m = evec.reshape(cls.res.evec.shape, order="F")
 
         cls.eig_m = np.array([0.3586376068088151, 0.2812806889719111, 0.2074818815675726,  0.141259991767926, 0.09880133062878599, 0.08704563854307619,  0.048471840356709, 0.01919823444066367])
 
@@ -101,9 +101,9 @@ class TestCointJoh09(CheckCointJoh):
     def setup_class(cls):
         cls.res = coint_johansen(dta, 0, 9)
         cls.nobs_r = 173 - 1 - 9
-        #fprintf(1, '%18.16g, ', r1)
+        # fprintf(1, '%18.16g, ', r1)
         cls.res1_m = np.array([307.6888935095814,  205.3839229398245,  129.1330243009336,   83.3101865760208,  52.51955460357912,  30.20027050520502,  13.84158157562689, 0.4117390188204866,           153.6341,           120.3673,             91.109,            65.8202,            44.4929,            27.0669,            13.4294,             2.7055,            159.529,           125.6185,            95.7542,            69.8189,            47.8545,            29.7961,            15.4943,             3.8415,           171.0905,           135.9825,           104.9637,            77.8202,            54.6815,            35.4628,            19.9349,             6.6349])
-        #r2 = [res.lr2 res.cvm]
+        # r2 = [res.lr2 res.cvm]
         cls.res2_m = np.array([102.3049705697569,  76.25089863889085,  45.82283772491284,   30.7906319724417,  22.31928409837409,  16.35868892957814,   13.4298425568064, 0.4117390188204866,            49.2855,            43.2947,            37.2786,            31.2379,            25.1236,            18.8928,            12.2971,             2.7055,            52.3622,            46.2299,            40.0763,            33.8777,            27.5858,            21.1314,            14.2639,             3.8415,            58.6634,            52.3069,            45.8662,            39.3693,            32.7172,             25.865,              18.52,             6.6349])
 
 

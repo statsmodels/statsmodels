@@ -1,5 +1,6 @@
-from statsmodels.regression.linear_model import OLS
 import numpy as np
+
+from statsmodels.regression.linear_model import OLS
 
 
 def _calc_nodewise_row(exog, idx, alpha):

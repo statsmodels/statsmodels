@@ -15,14 +15,14 @@ License: Simplified-BSD
 import os
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
 import pandas as pd
 import pytest
 
 from statsmodels import datasets
 from statsmodels.tsa.statespace.mlemodel import MLEModel
-from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -43,16 +43,16 @@ class TestClark1989:
     def setup_class(cls, dtype=float, alternate_timing=False, **kwargs):
 
         cls.true = results_kalman_filter.uc_bi
-        cls.true_states = pd.DataFrame(cls.true['states'])
+        cls.true_states = pd.DataFrame(cls.true["states"])
 
         # GDP and Unemployment, Quarterly, 1948.1 - 1995.3
         data = pd.DataFrame(
-            cls.true['data'],
-            index=pd.date_range('1947-01-01', '1995-07-01', freq='QS'),
-            columns=['GDP', 'UNEMP']
+            cls.true["data"],
+            index=pd.date_range("1947-01-01", "1995-07-01", freq="QS"),
+            columns=["GDP", "UNEMP"]
         )[4:]
-        data['GDP'] = np.log(data['GDP'])
-        data['UNEMP'] = (data['UNEMP']/100)
+        data["GDP"] = np.log(data["GDP"])
+        data["UNEMP"] = (data["UNEMP"]/100)
 
         k_states = 6
         cls.mlemodel = MLEModel(data, k_states=k_states, **kwargs)
@@ -70,7 +70,7 @@ class TestClark1989:
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, sigma_vl, sigma_ec,
          phi_1, phi_2, alpha_1, alpha_2, alpha_3) = np.array(
-            cls.true['parameters'],
+            cls.true["parameters"],
         )
         cls.model.design[([1, 1, 1], [1, 2, 3], [0, 0, 0])] = [
             alpha_1, alpha_2, alpha_3
@@ -241,7 +241,7 @@ class TestClark1989:
 class TestClark1989Alternate(TestClark1989):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -251,23 +251,23 @@ class MultivariateMissingGeneralObsCov:
     @classmethod
     def setup_class(cls, which, dtype=float, alternate_timing=False, **kwargs):
         # Results
-        path = os.path.join(current_path, 'results',
-                            'results_smoothing_generalobscov_R.csv')
+        path = os.path.join(current_path, "results",
+                            "results_smoothing_generalobscov_R.csv")
         cls.desired = pd.read_csv(path)
 
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01',
-                                  end='2009-7-01', freq='QS')
-        obs = dta[['realgdp', 'realcons', 'realinv']].diff().iloc[1:]
+        dta.index = pd.date_range(start="1959-01-01",
+                                  end="2009-7-01", freq="QS")
+        obs = dta[["realgdp", "realcons", "realinv"]].diff().iloc[1:]
 
-        if which == 'all':
+        if which == "all":
             obs.iloc[:50, :] = np.nan
             obs.iloc[119:130, :] = np.nan
-        elif which == 'partial':
+        elif which == "partial":
             obs.iloc[0:50, 0] = np.nan
             obs.iloc[119:130, 0] = np.nan
-        elif which == 'mixed':
+        elif which == "mixed":
             obs.iloc[0:50, 0] = np.nan
             obs.iloc[19:70, 1] = np.nan
             obs.iloc[39:90, 2] = np.nan
@@ -276,12 +276,12 @@ class MultivariateMissingGeneralObsCov:
 
         # Create the model
         mod = MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
-        mod['design'] = np.eye(3)
+        mod["design"] = np.eye(3)
         X = (np.arange(9) + 1).reshape((3, 3)) / 10.
-        mod['obs_cov'] = np.dot(X, X.T)
-        mod['transition'] = np.eye(3)
-        mod['selection'] = np.eye(3)
-        mod['state_cov'] = np.eye(3)
+        mod["obs_cov"] = np.dot(X, X.T)
+        mod["transition"] = np.eye(3)
+        mod["selection"] = np.eye(3)
+        mod["state_cov"] = np.eye(3)
         mod.initialize_approximate_diffuse(1e6)
         cls.model = mod.ssm
 
@@ -439,7 +439,7 @@ class TestMultivariateGeneralObsCov(MultivariateMissingGeneralObsCov):
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class('none')
+        super().setup_class("none")
 
 
 class TestMultivariateAllMissingGeneralObsCov(
@@ -452,7 +452,7 @@ class TestMultivariateAllMissingGeneralObsCov(
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class('all')
+        super().setup_class("all")
 
 
 class TestMultivariatePartialMissingGeneralObsCov(
@@ -465,7 +465,7 @@ class TestMultivariatePartialMissingGeneralObsCov(
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class('partial')
+        super().setup_class("partial")
 
     def test_forecasts(self):
         assert_almost_equal(
@@ -491,7 +491,7 @@ class TestMultivariateMixedMissingGeneralObsCov(
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class('mixed')
+        super().setup_class("mixed")
 
     def test_forecasts(self):
         assert_almost_equal(
@@ -508,25 +508,25 @@ class TestMultivariateMixedMissingGeneralObsCov(
 
 class TestMultivariateVAR:
     @classmethod
-    def setup_class(cls, which='none', **kwargs):
+    def setup_class(cls, which="none", **kwargs):
         # Results
-        path = os.path.join(current_path, 'results',
-                            'results_smoothing_generalobscov_R.csv')
+        path = os.path.join(current_path, "results",
+                            "results_smoothing_generalobscov_R.csv")
         cls.desired = pd.read_csv(path)
 
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01',
-                                  end='2009-7-01', freq='QS')
-        obs = dta[['realgdp', 'realcons', 'realinv']].diff().iloc[1:]
+        dta.index = pd.date_range(start="1959-01-01",
+                                  end="2009-7-01", freq="QS")
+        obs = dta[["realgdp", "realcons", "realinv"]].diff().iloc[1:]
 
-        if which == 'all':
+        if which == "all":
             obs.iloc[:50, :] = np.nan
             obs.iloc[119:130, :] = np.nan
-        elif which == 'partial':
+        elif which == "partial":
             obs.iloc[0:50, 0] = np.nan
             obs.iloc[119:130, 0] = np.nan
-        elif which == 'mixed':
+        elif which == "mixed":
             obs.iloc[0:50, 0] = np.nan
             obs.iloc[19:70, 1] = np.nan
             obs.iloc[39:90, 2] = np.nan
@@ -535,17 +535,17 @@ class TestMultivariateVAR:
 
         # Create the model
         mod = MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
-        mod['design'] = np.eye(3)
-        mod['obs_cov'] = np.array([
+        mod["design"] = np.eye(3)
+        mod["obs_cov"] = np.array([
             [609.0746647855,    0.,              0.],
             [0.,                1.8774916622,    0.],
             [0.,                0.,            124.6768281675]])
-        mod['transition'] = np.array([
+        mod["transition"] = np.array([
             [-0.8110473405,  1.8005304445,  1.0215975772],
             [-1.9846632699,  2.4091302213,  1.9264449765],
             [0.9181658823,  -0.2442384581, -0.6393462272]])
-        mod['selection'] = np.eye(3)
-        mod['state_cov'] = np.array([
+        mod["selection"] = np.eye(3)
+        mod["state_cov"] = np.array([
             [1552.9758843938,   612.7185121905,   877.6157204992],
             [612.7185121905,    467.8739411204,    70.608037339],
             [877.6157204992,     70.608037339,    900.5440385836]])
@@ -692,14 +692,14 @@ def test_time_varying_transition():
     # Conventional filter / smoother
     mod1 = SARIMAX(endog, order=(1, 0, 0), measurement_error=True)
     mod1.update([2., 1., 1.])
-    mod1.ssm['transition'] = transition
+    mod1.ssm["transition"] = transition
     res1 = mod1.ssm.smooth()
 
     # Univariate filter / smoother
     mod2 = SARIMAX(endog, order=(1, 0, 0), measurement_error=True)
     mod2.ssm.filter_univariate = True
     mod2.update([2., 1., 1.])
-    mod2.ssm['transition'] = transition
+    mod2.ssm["transition"] = transition
     res2 = mod2.ssm.smooth()
 
     # Simulation smoothers

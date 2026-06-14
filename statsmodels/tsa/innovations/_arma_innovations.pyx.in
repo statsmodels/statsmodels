@@ -23,7 +23,7 @@ TYPES = {
 import numpy as np
 import warnings
 from statsmodels.tsa import arima_process
-from statsmodels.src.math cimport NPY_PI, dlog, zlog
+from statsmodels.includes.math cimport M_PI, dlog, zlog
 cimport numpy as cnp
 cimport cython
 
@@ -479,7 +479,7 @@ cpdef {{prefix}}arma_loglikeobs_fast({{cython_type}} [:] endog,
     dim1[0] = nobs;
     llf_obs = cnp.PyArray_ZEROS(1, dim1, {{typenum}}, C)
 
-    const = {{combined_prefix}}log(2*NPY_PI)
+    const = {{combined_prefix}}log(2*M_PI)
     for i in range(nobs):
         llf_obs[i] = -0.5 * u[i]**2 / (sigma2 * v[i]) - 0.5 * (const + {{combined_prefix}}log(sigma2 * v[i]))
 

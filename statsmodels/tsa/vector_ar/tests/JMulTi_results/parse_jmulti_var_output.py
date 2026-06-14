@@ -90,7 +90,7 @@ def load_results_jmulti(dataset, dt_s_list):
         if dt_string == "nc":
             del section_headers[-1]
 
-        results = dict()
+        results = {}
         results["est"] = dict.fromkeys(section_headers)
         results["se"] = dict.fromkeys(section_headers)
         results["t"] = dict.fromkeys(section_headers)
@@ -108,7 +108,7 @@ def load_results_jmulti(dataset, dt_s_list):
         # parse information about \alpha, \beta, \Gamma, deterministic of VECM
         # and A_i and deterministic of corresponding VAR:
         section = -1
-        params_file = open(params_file, encoding='latin_1')
+        params_file = open(params_file, encoding="latin_1")
         for line in params_file:
             if section == -1 and section_headers[section+1] not in line:
                 continue
@@ -182,7 +182,7 @@ def load_results_jmulti(dataset, dt_s_list):
         # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
         regex_est = re.compile(r"\s+\S+e\S+")
         sigmau_section_reached = False
-        sigmau_file = open(sigmau_file, encoding='latin_1')
+        sigmau_file = open(sigmau_file, encoding="latin_1")
         for line in sigmau_file:
             if line.startswith("Log Likelihood:"):
                 line = line[len("Log Likelihood:"):]
@@ -193,7 +193,7 @@ def load_results_jmulti(dataset, dt_s_list):
             if "Covariance:" in line:
                 sigmau_section_reached = True
                 row = re.findall(regex_est, line)
-                rows_to_parse = len(row)  # Sigma_u quadratic ==> #rows==#cols
+                rows_to_parse = len(row)  # Sigma_u quadratic ==> # rows==#cols
                 sigma_u = np.empty((rows_to_parse, rows_to_parse))
             row = re.findall(regex_est, line)
             rows_to_parse -= 1
@@ -209,7 +209,7 @@ def load_results_jmulti(dataset, dt_s_list):
             + "_fc5" + ".txt"
         fc_file = os.path.join(here, fc_file)
         fc, lower, upper, plu_min = [], [], [], []
-        fc_file = open(fc_file, encoding='latin_1')
+        fc_file = open(fc_file, encoding="latin_1")
         for line in fc_file:
             str_number = r"(\s+-?\d+\.\d{3}\s*)"
             regex_number = re.compile(str_number)
@@ -233,11 +233,11 @@ def load_results_jmulti(dataset, dt_s_list):
         # ---------------------------------------------------------------------
         # parse output related to Granger-caus. and instantaneous causality:
         results["granger_caus"] = dict.fromkeys(["p", "test_stat"])
-        results["granger_caus"]["p"] = dict()
-        results["granger_caus"]["test_stat"] = dict()
+        results["granger_caus"]["p"] = {}
+        results["granger_caus"]["test_stat"] = {}
         results["inst_caus"] = dict.fromkeys(["p", "test_stat"])
-        results["inst_caus"]["p"] = dict()
-        results["inst_caus"]["test_stat"] = dict()
+        results["inst_caus"]["p"] = {}
+        results["inst_caus"]["test_stat"] = {}
         vn = dataset.variable_names
         # all possible combinations of potentially causing variables
         # (at least 1 variable and not all variables together):
@@ -275,7 +275,7 @@ def load_results_jmulti(dataset, dt_s_list):
         ir_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_ir" + ".txt"
         ir_file = os.path.join(here, ir_file)
-        ir_file = open(ir_file, encoding='latin_1')
+        ir_file = open(ir_file, encoding="latin_1")
         causing = None
         caused = None
         data = None
@@ -311,8 +311,8 @@ def load_results_jmulti(dataset, dt_s_list):
         lagorder_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_lagorder" + ".txt"
         lagorder_file = os.path.join(here, lagorder_file)
-        lagorder_file = open(lagorder_file, encoding='latin_1')
-        results["lagorder"] = dict()
+        lagorder_file = open(lagorder_file, encoding="latin_1")
+        results["lagorder"] = {}
         aic_start = "Akaike Info Criterion:"
         fpe_start = "Final Prediction Error:"
         hqic_start = "Hannan-Quinn Criterion:"
@@ -333,8 +333,8 @@ def load_results_jmulti(dataset, dt_s_list):
         test_norm_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_diag" + ".txt"
         test_norm_file = os.path.join(here, test_norm_file)
-        test_norm_file = open(test_norm_file, encoding='latin_1')
-        results["test_norm"] = dict()
+        test_norm_file = open(test_norm_file, encoding="latin_1")
+        results["test_norm"] = {}
         section_start_marker = "TESTS FOR NONNORMALITY"
         section_reached = False
         subsection_start_marker = "Introduction to Multiple Time Series A"
@@ -365,8 +365,8 @@ def load_results_jmulti(dataset, dt_s_list):
         whiteness_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_diag" + ".txt"
         whiteness_file = os.path.join(here, whiteness_file)
-        whiteness_file = open(whiteness_file, encoding='latin_1')
-        results["whiteness"] = dict()
+        whiteness_file = open(whiteness_file, encoding="latin_1")
+        results["whiteness"] = {}
         section_start_marker = "PORTMANTEAU TEST"
         order_start = "tested order:"
         statistic_start = "test statistic:"

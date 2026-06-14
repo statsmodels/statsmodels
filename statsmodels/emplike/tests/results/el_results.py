@@ -288,7 +288,7 @@ class RegressionResults:
     Results for EL Regression
     """
     def __init__(self):
-        self.source = 'Matlab'
+        self.source = "Matlab"
         self.test_beta0 = (1.758104, .184961, np.array([
             0.04326392, 0.04736749,  0.03573865,  0.04770535,  0.04721684,
             0.04718301,  0.07088816,  0.05631242,  0.04865098,  0.06572099,
@@ -328,7 +328,7 @@ class ANOVAResults:
     Results for ANOVA
     """
     def __init__(self):
-        self.source = 'Matlab'
+        self.source = "Matlab"
         self.compute_ANOVA = (.426163, .51387, np.array([9.582371]), np.array([
             0.018494,  0.01943,   0.016624,  0.0172,    0.016985,  0.01922,
             0.016532,  0.015985,  0.016769,  0.017631,  0.017677,  0.017984,

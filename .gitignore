@@ -1,7 +1,7 @@
 *.py[oc]
-# setup.py working directory
+# setup working directory
 build
-# setup.py dist directory
+# setup dist directory
 dist
 #docs build and others
 #generated  #not yet? generated for dataset not rebuild

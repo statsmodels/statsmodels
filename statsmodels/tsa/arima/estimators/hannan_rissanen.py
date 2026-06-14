@@ -5,14 +5,13 @@ Author: Chad Fulton
 License: BSD-3
 """
 import numpy as np
-
 from scipy.signal import lfilter
-from statsmodels.tools.tools import Bunch
-from statsmodels.regression.linear_model import OLS, yule_walker
-from statsmodels.tsa.tsatools import lagmat
 
-from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.regression.linear_model import OLS, yule_walker
+from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.params import SARIMAXParams
+from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tsa.tsatools import lagmat
 
 
 def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
@@ -91,7 +90,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
        Introduction to Time Series and Forecasting. Springer.
     .. [2] Gomez, Victor, and Agustin Maravall. 2001.
        "Automatic Modeling Methods for Univariate Series."
-       A Course in Time Series Analysis, 171–201.
+       A Course in Time Series Analysis, 171-201.
     """
     spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order)
 
@@ -111,6 +110,11 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     if initial_ar_order is None:
         initial_ar_order = max(np.floor(np.log(nobs)**2).astype(int),
                                2 * max(max_ar_order, max_ma_order))
+    try:
+        _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order)
+    except ValueError:
+        raise
+
     # Create a spec, just to validate the initial autoregressive order
     _ = SARIMAXSpecification(endog, ar_order=initial_ar_order)
 
@@ -120,7 +124,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     )
 
     # Compute lagged endog
-    lagged_endog = lagmat(endog, max_ar_order, trim='both')
+    lagged_endog = lagmat(endog, max_ar_order, trim="both")
 
     # If no AR or MA components, this is just a variance computation
     mod = None
@@ -160,13 +164,13 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     else:
         # Step 1: Compute long AR model via Yule-Walker, get residuals
         initial_ar_params, _ = yule_walker(
-            endog, order=initial_ar_order, method='mle')
-        X = lagmat(endog, initial_ar_order, trim='both')
+            endog, order=initial_ar_order, method="mle")
+        X = lagmat(endog, initial_ar_order, trim="both")
         y = endog[initial_ar_order:]
         resid = y - X.dot(initial_ar_params)
 
         # Get lagged residuals for `exog` in least-squares regression
-        lagged_resid = lagmat(resid, max_ma_order, trim='both')
+        lagged_resid = lagmat(resid, max_ma_order, trim="both")
 
         # Step 2: estimate ARMA model via least squares
         ix = initial_ar_order + max_ma_order - max_ar_order
@@ -261,8 +265,8 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
             V = lfilter([1], ar_coef, Z)
             W = lfilter(np.r_[1, -ma_coef[1:]], [1], Z)
 
-            lagged_V = lagmat(V, max_ar_order, trim='both')
-            lagged_W = lagmat(W, max_ma_order, trim='both')
+            lagged_V = lagmat(V, max_ar_order, trim="both")
+            lagged_W = lagmat(W, max_ma_order, trim="both")
 
             exog = np.c_[
                 lagged_V[
@@ -293,9 +297,9 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
 
     # Construct results
     other_results = Bunch({
-        'spec': spec,
-        'initial_ar_order': initial_ar_order,
-        'resid': resid
+        "spec": spec,
+        "initial_ar_order": initial_ar_order,
+        "resid": resid
     })
     return p, other_results
 
@@ -323,11 +327,55 @@ def _validate_fixed_params(fixed_params, spec_param_names):
 
     if len(invalid_param_names) > 0:
         raise ValueError(
-            f"Invalid fixed parameter(s): {sorted(list(invalid_param_names))}."
-            f" Please select among {sorted(list(valid_param_names))}."
+            f"Invalid fixed parameter(s): {sorted(invalid_param_names)}."
+            f" Please select among {sorted(valid_param_names)}."
         )
 
     return fixed_params
+
+
+def _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order):
+    """
+    Validate order parameters for Hannan-Rissanen estimation.
+
+    Parameters
+    ----------
+    nobs : int
+        Number of observations.
+    max_ar_order : int
+        Maximum AR order.
+    max_ma_order : int
+        Maximum MA order.
+    initial_ar_order : int
+        Initial AR order used in the first step.
+
+    Raises
+    ------
+    ValueError
+        If `ar_order` or `ma_order` is greater than or equal to `nobs`.
+    ValueError
+        If `initial_ar_order` is greater than or equal to `nobs`.
+    ValueError
+        If `initial_ar_order` is less than or equal to `ar_order` or `ma_order`.
+    """
+    if max_ar_order >= nobs:
+        raise ValueError(
+            f"ar_order ({max_ar_order}) must be less than nobs ({nobs})."
+        )
+    if max_ma_order >= nobs:
+        raise ValueError(
+            f"ma_order ({max_ma_order}) must be less than nobs ({nobs})."
+        )
+    if initial_ar_order >= nobs:
+        raise ValueError(
+            f"initial_ar_order ({initial_ar_order}) must be less than"
+            f" nobs ({nobs})."
+        )
+    if initial_ar_order <= max(max_ar_order, max_ma_order):
+        raise ValueError(
+            f"initial_ar_order ({initial_ar_order}) must be greater than"
+            f" ar_order ({max_ar_order}) and ma_order ({max_ma_order})."
+        )
 
 
 def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,

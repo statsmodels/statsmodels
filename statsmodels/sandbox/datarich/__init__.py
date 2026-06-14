@@ -1,4 +1,4 @@
-'''
+"""
 
 Econometrics for a Datarich Environment
 =======================================
@@ -162,4 +162,4 @@ FactorModelMultivariate : follow pattern for univariate version and use
 
 
 
-'''
+"""

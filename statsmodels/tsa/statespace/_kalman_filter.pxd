@@ -4,7 +4,7 @@
 """
 Kalman Filter declarations
 
-Author: Chad Fulton  
+Author: Chad Fulton 
 License: Simplified-BSD
 """
 
@@ -57,11 +57,16 @@ cdef int TIMING_INIT_FILTERED
 cdef int TIMING_INIT_PREDICTED
 
 # Typical imports
+
 cimport numpy as np
 
 from statsmodels.tsa.statespace._representation cimport (
-    sStatespace, dStatespace, cStatespace, zStatespace
+    cStatespace,
+    dStatespace,
+    sStatespace,
+    zStatespace,
 )
+
 
 # Single precision
 cdef class sKalmanFilter(object):

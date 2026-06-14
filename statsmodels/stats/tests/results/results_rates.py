@@ -7,6 +7,7 @@ License: BSD-3
 """
 
 import numpy as np
+
 from statsmodels.tools.testing import Holder
 
 NA = np.nan
@@ -23,10 +24,10 @@ res.conf_int = np.array([
     ])
 res.estimate = 2.10999757175465
 res.null_value = 1
-res.alternative = 'two.sided'
-res.method = ('Exact two-sided Poisson test (sum of minimum likelihood'
-              ' method)')
-res.data_name = 'c(60, 30) time base: c(51477.5, 54308.7)'
+res.alternative = "two.sided"
+res.method = ("Exact two-sided Poisson test (sum of minimum likelihood"
+              " method)")
+res.data_name = "c(60, 30) time base: c(51477.5, 54308.7)"
 
 
 # > pe = poisson.exact(c(60, 30), c(51477.5, 54308.7), tsmethod="minlike",
@@ -41,7 +42,7 @@ res.conf_int = np.array([
     ])
 res.estimate = 2.10999757175465
 res.null_value = 1
-res.alternative = 'two.sided'
-res.method = ('Exact two-sided Poisson test (sum of minimum'
-              ' likelihood method), mid-p version')
-res.data_name = 'c(60, 30) time base: c(51477.5, 54308.7)'
+res.alternative = "two.sided"
+res.method = ("Exact two-sided Poisson test (sum of minimum"
+              " likelihood method), mid-p version")
+res.data_name = "c(60, 30) time base: c(51477.5, 54308.7)"

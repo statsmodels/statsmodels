@@ -16,7 +16,7 @@ est = dict(
     predict="regres_p",
     depvar="lconsump",
     marginsok="XB default",
-    cmdline="tgmixed lconsump lincome lprice, prior(lprice -0.7 0.15 lincome 1 0.15) cov(lprice lincome -0.01)",  # noqa:E501
+    cmdline="tgmixed lconsump lincome lprice, prior(lprice -0.7 0.15 lincome 1 0.15) cov(lprice lincome -0.01)",
     prior="lprice -0.7 0.15 lincome 1 0.15",
     properties="b V",
 )
@@ -30,27 +30,27 @@ params_table = np.array([
     7.2078740490733,  4.509300573e-06,  1.0302270250519,  1.9030609507775,
     14,  2.1447866879178,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'lincome lprice _cons'.split()
+params_table_rownames = "lincome lprice _cons".split()
 
 cov = np.array([
     .01068933438529, -.00081953185523,  -.0199747086722, -.00081953185523,
     .00122255079374, -.00064024357954,  -.0199747086722, -.00064024357954,
     .04140330733319]).reshape(3, 3)
 
-cov_colnames = 'lincome lprice _cons'.split()
+cov_colnames = "lincome lprice _cons".split()
 
-cov_rownames = 'lincome lprice _cons'.split()
+cov_rownames = "lincome lprice _cons".split()
 
 cov_prior = np.array([
     .0225,             -.01,                0,             -.01,
     .0225,                0,                0,                0,
     0]).reshape(3, 3)
 
-cov_prior_colnames = 'lincome lprice _cons'.split()
+cov_prior_colnames = "lincome lprice _cons".split()
 
-cov_prior_rownames = 'lincome lprice _cons'.split()
+cov_prior_rownames = "lincome lprice _cons".split()
 
 
 results_theil_textile = ParamsTableTestBunch(

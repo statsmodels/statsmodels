@@ -1,14 +1,19 @@
 """Correlation plot functions."""
+
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import calendar
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
 from statsmodels.graphics import utils
 from statsmodels.tools.validation import array_like
-from statsmodels.tsa.stattools import acf, pacf, ccf
+from statsmodels.tsa.stattools import acf, ccf, pacf
+
+if TYPE_CHECKING:
+    from statsmodels.tsa.base.prediction import PredictionResults
 
 
 def _prepare_data_corr_plot(x, lags, zero):
@@ -75,9 +80,7 @@ def _plot_corr(
         lags = lags.astype(float)
         lags[np.argmin(lags)] -= 0.5
         lags[np.argmax(lags)] += 0.5
-        ax.fill_between(
-            lags, confint[:, 0] - acf_x, confint[:, 1] - acf_x, alpha=0.25
-        )
+        ax.fill_between(lags, confint[:, 0] - acf_x, confint[:, 1] - acf_x, alpha=0.25)
 
 
 @deprecate_kwarg("unbiased", "adjusted")
@@ -374,20 +377,20 @@ def plot_pacf(
 
 
 def plot_ccf(
-        x,
-        y,
-        *,
-        ax=None,
-        lags=None,
-        negative_lags=False,
-        alpha=0.05,
-        use_vlines=True,
-        adjusted=False,
-        fft=False,
-        title="Cross-correlation",
-        auto_ylims=False,
-        vlines_kwargs=None,
-        **kwargs,
+    x,
+    y,
+    *,
+    ax=None,
+    lags=None,
+    negative_lags=False,
+    alpha=0.05,
+    use_vlines=True,
+    adjusted=False,
+    fft=False,
+    title="Cross-correlation",
+    auto_ylims=False,
+    vlines_kwargs=None,
+    **kwargs,
 ):
     """
     Plot the cross-correlation function
@@ -462,9 +465,7 @@ def plot_ccf(
     if negative_lags:
         lags = -lags
 
-    ccf_res = ccf(
-        x, y, adjusted=adjusted, fft=fft, alpha=alpha, nlags=nlags + 1
-    )
+    ccf_res = ccf(x, y, adjusted=adjusted, fft=fft, alpha=alpha, nlags=nlags + 1)
     if alpha is not None:
         ccf_xy, confint = ccf_res
     else:
@@ -489,22 +490,22 @@ def plot_ccf(
 
 
 def plot_accf_grid(
-        x,
-        *,
-        varnames=None,
-        fig=None,
-        lags=None,
-        negative_lags=True,
-        alpha=0.05,
-        use_vlines=True,
-        adjusted=False,
-        fft=False,
-        missing="none",
-        zero=True,
-        auto_ylims=False,
-        bartlett_confint=False,
-        vlines_kwargs=None,
-        **kwargs,
+    x,
+    *,
+    varnames=None,
+    fig=None,
+    lags=None,
+    negative_lags=True,
+    alpha=0.05,
+    use_vlines=True,
+    adjusted=False,
+    fft=False,
+    missing="none",
+    zero=True,
+    auto_ylims=False,
+    bartlett_confint=False,
+    vlines_kwargs=None,
+    **kwargs,
 ):
     """
     Plot auto/cross-correlation grid
@@ -599,8 +600,9 @@ def plot_accf_grid(
 
         def get_var(i):
             return x.iloc[:, i]
+
     else:
-        varnames = varnames or [f'x[{i}]' for i in range(m)]
+        varnames = varnames or [f"x[{i}]" for i in range(m)]
 
         x = np.asarray(x)
 
@@ -614,7 +616,7 @@ def plot_accf_grid(
                 plot_acf(
                     get_var(i),
                     ax=ax,
-                    title=f'ACF({varnames[i]})',
+                    title=f"ACF({varnames[i]})",
                     lags=lags,
                     alpha=alpha,
                     use_vlines=use_vlines,
@@ -632,7 +634,7 @@ def plot_accf_grid(
                     get_var(i),
                     get_var(j),
                     ax=ax,
-                    title=f'CCF({varnames[i]}, {varnames[j]})',
+                    title=f"CCF({varnames[i]}, {varnames[j]})",
                     lags=lags,
                     negative_lags=negative_lags and i > j,
                     alpha=alpha,
@@ -668,16 +670,14 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
     fig, ax = utils.create_mpl_ax(ax)
     start = 0
     ticks = []
-    for season, df in grouped_x:
+    for _, df in grouped_x:
         df = df.copy()  # or sort balks for series. may be better way
         df.sort_index()
         nobs = len(df)
         x_plot = np.arange(start, start + nobs)
         ticks.append(x_plot.mean())
         ax.plot(x_plot, df.values, "k")
-        ax.hlines(
-            df.values.mean(), x_plot[0], x_plot[-1], colors="r", linewidth=3
-        )
+        ax.hlines(df.values.mean(), x_plot[0], x_plot[-1], colors="r", linewidth=3)
         start += nobs
 
     ax.set_xticks(ticks)
@@ -845,7 +845,6 @@ def plot_predict(
 
     _ = _import_mpl()
     fig, ax = create_mpl_ax(ax)
-    from statsmodels.tsa.base.prediction import PredictionResults
 
     # use predict so you set dates
     pred: PredictionResults = result.get_prediction(
@@ -861,7 +860,7 @@ def plot_predict(
 
     if alpha is not None:
         label = f"{1-alpha:.0%} confidence interval"
-        ci = pred.conf_int(alpha)
+        ci = pred.conf_int(alpha=alpha)
         conf_int = np.asarray(ci)
 
         ax.fill_between(
@@ -875,4 +874,143 @@ def plot_predict(
 
     ax.legend(loc="best")
 
+    return fig
+
+
+def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **kwargs):
+    """
+    Seasonal-Diagnostic Plot, as described by [1]_.
+
+    Parameters
+    ----------
+    x : DecomposeResult
+        The result of your seasonal decomposition.
+    period : int
+        The length of the period. Should match the `period` parameter used to
+        decompose the series.
+    subplots : int or array of int
+        If `period` is large, `subplots` can be used to specify how many should
+        be plotted. If `subplots` is an `int`, the periods are selected evenly
+        from `range(period)`. If `subplots` is an array of `int`, the periods
+        with those indices will be selected for the subplots. By default,
+        `subplots=period`.
+    labels : array of str
+        Labels for the displayed period subplots.
+    nrows : int
+        The number of rows on which to display the plots.
+
+
+    Returns
+    -------
+    fig : Figure
+        Returns an matplotlib object of type Figure with the
+        Seasonal-Diagnostic Plot.
+
+
+    Examples
+    --------
+    >>> from statsmodels.datasets import co2
+    >>> from statsmodels.tsa.seasonal import STL
+    >>> from statsmodels.graphics.tsaplots import seasonal_diagnostic_plot
+
+    >>> data = (co2.load().data
+    ...         .loc[lambda df: df.index.isocalendar().week<53]
+    ...         .loc['1986-01-01':]
+    ... )
+
+    >>> res = STL(data, period=52, seasonal=21).fit()
+    >>> _ = seasonal_diagnostic_plot(res, period=52, subplots=6, nrows=2)
+
+    .. plot:: plots/graphics_tsa_plot_sdp1.py
+
+    >>> from statsmodels.datasets import elnino
+    >>> from statsmodels.tsa.seasonal import STL
+    >>> from statsmodels.graphics.tsaplots import seasonal_diagnostic_plot
+    >>> import pandas as pdc
+
+    >>> from statsmodels.datasets import elnino
+    >>> from statsmodels.tsa.seasonal import STL
+    >>> from statsmodels.graphics.tsaplots import seasonal_diagnostic_plot
+    >>> import pandas as pd
+
+    >>> month_dict = {'JAN':1, 'FEB':2, 'MAR':3, 'APR':4, 'MAY':5, 'JUN':6,
+    ...               'JUL':7, 'AUG':8, 'SEP':9, 'OCT':10, 'NOV':11, 'DEC':12}
+    >>> data = (elnino.load().data
+    ...    .rename(columns=month_dict)
+    ...    .melt(id_vars=['YEAR'], var_name='month')
+    ...    .assign(day=1,
+    ...            date = lambda df: pd.to_datetime(
+    ...                    df[['YEAR', 'month', 'day']]))
+    ...    .drop(columns=['YEAR', 'month', 'day'])
+    ...    .set_index('date')
+    ...    .sort_index()
+    ...   )
+
+    >>> res = STL(data, period=12, seasonal=53).fit()
+    >>> labels=['January', 'February', 'March', 'November']
+    >>> _ = seasonal_diagnostic_plot(res, period=12, subplots=[0,1,2,10],
+    ...                              labels=labels, nrows=2)
+
+    .. plot:: plots/graphics_tsa_plot_sdp2.py
+
+    References
+    ----------
+    Cleveland, Robert B., William S. Cleveland, Jean E. McRage, Irma
+    Terpenning (1990) "STL: A Seasonal-Trend Decomposition Procedure
+    Based on Loess". Journal of Official Statistics, 6 (1), 3-33.
+
+    """
+    plt = utils._import_mpl()
+
+    def seasonplot(x, period, period_length, ax=None):
+
+        where = [
+            period_length * i + period for i in range(x.seasonal.size // period_length)
+        ]
+        seasonal_k = x.seasonal.iloc[where]
+        residual_k = x.resid.iloc[where]
+        mean = seasonal_k.mean()
+
+        ax.plot(seasonal_k.index, seasonal_k + residual_k - mean, ".")
+        ax.plot(seasonal_k.index, seasonal_k - mean)
+        return ax
+
+    if subplots is None:
+        subplots = period
+
+    if isinstance(subplots, int):
+        if subplots > period:
+            raise ValueError("subplots cannot be larger than period.")
+        p_to_plot = np.floor(np.arange(subplots) * period / subplots).astype(int)
+    elif isinstance(subplots, (list, np.ndarray)) and all(
+        isinstance(i, int) for i in subplots
+    ):
+        p_to_plot = subplots
+        subplots = len(p_to_plot)
+    else:
+        raise TypeError("subplots must be either an int or a list of ints.")
+
+    if labels is None:
+        labels = [f"Cycle-subseries {int(i + 1)}" for i in p_to_plot]
+    elif len(labels) != subplots:
+        raise ValueError(
+            "The number of labels does not match the number of periods to plot."
+        )
+
+    kwargs.setdefault("ncols", np.ceil(subplots / nrows).astype(int))
+    kwargs.setdefault("figsize", (kwargs["ncols"] * 2, nrows * 2 + 0.5))
+    fig, axs = plt.subplots(
+        sharex=True, sharey=True, squeeze=False, nrows=nrows, **kwargs
+    )
+
+    for i, ax in enumerate(fig.get_axes()):
+        if i < subplots:
+            ax = seasonplot(x, p_to_plot[i], period, ax=ax)
+            ax.set_title(str(labels[i]))
+            ax.set(xlabel="", ylabel="")
+        else:
+            fig.delaxes(ax)
+            continue
+
+    fig.tight_layout(w_pad=0.1)
     return fig

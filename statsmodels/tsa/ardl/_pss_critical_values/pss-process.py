@@ -71,9 +71,9 @@ if __name__ == "__main__":
     threshold = {}
 
     hp = 2
-    for key in final:
+    for key, final_value in final.items():
         print(key)
-        data = final[key]
+        data = final_value
         score = {}
         lr = LinearRegression(fit_intercept=False)
         for lp in (2, 3):
@@ -102,8 +102,8 @@ if __name__ == "__main__":
         if small_p[key][2] < 0:
             max_stat[key] = small_p[key][1] / (-2 * small_p[key][2])
 
-    for key in large_p:
-        large_p[key] = [round(val, 5) for val in large_p[key]]
+    for key, large_p_value in large_p.items():
+        large_p[key] = [round(val, 5) for val in large_p_value]
         small_p[key] = [round(val, 5) for val in small_p[key]]
 
     raw_code = f"""

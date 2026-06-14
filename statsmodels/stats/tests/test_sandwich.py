@@ -9,11 +9,11 @@ Created on Sat Dec 17 08:39:16 2011
 Author: Josef Perktold
 """
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.tools import add_constant
 import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.tools.tools import add_constant
 
 
 def test_cov_cluster_2groups():
@@ -57,9 +57,9 @@ def test_cov_cluster_2groups():
 def test_hac_simple():
     from statsmodels.datasets import macrodata
     d2 = macrodata.load_pandas().data
-    g_gdp = 400 * np.diff(np.log(d2['realgdp'].values))
-    g_inv = 400 * np.diff(np.log(d2['realinv'].values))
-    exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1].values])
+    g_gdp = 400 * np.diff(np.log(d2["realgdp"].values))
+    g_inv = 400 * np.diff(np.log(d2["realinv"].values))
+    exogg = add_constant(np.c_[g_gdp, d2["realint"][:-1].values])
     res_olsg = OLS(g_inv, exogg).fit()
 
     # > NeweyWest(fm, lag = 4, prewhite = FALSE, sandwich = TRUE,

@@ -202,7 +202,7 @@ class OaxacaBlinder:
         int_eff_list = []
         exp_eff_list = []
         unexp_eff_list = []
-        for _ in range(0, n):
+        for _ in range(n):
             endog = np.column_stack((self.bi_col, self.endog))
             exog = self.exog
             amount = len(endog)

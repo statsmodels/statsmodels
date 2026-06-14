@@ -8,21 +8,23 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import os
+
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
-import os
 
 from statsmodels import datasets
 from statsmodels.tsa.statespace import dynamic_factor
-from statsmodels.tsa.statespace.mlemodel import MLEModel
-from statsmodels.tsa.statespace.kalman_filter import (
-    FILTER_UNIVARIATE)
+from statsmodels.tsa.statespace.kalman_filter import FILTER_UNIVARIATE
 from statsmodels.tsa.statespace.kalman_smoother import (
-    SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
-    SMOOTH_UNIVARIATE)
+    SMOOTH_ALTERNATIVE,
+    SMOOTH_CLASSICAL,
+    SMOOTH_UNIVARIATE,
+)
+from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
-from numpy.testing import assert_equal, assert_allclose
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -37,13 +39,13 @@ class Trivariate:
 
         # GDP and Unemployment, Quarterly, 1948.1 - 1995.3
         data = pd.DataFrame(
-            cls.results['data'],
-            index=pd.date_range('1947-01-01', '1995-07-01', freq='QS'),
-            columns=['GDP', 'UNEMP']
+            cls.results["data"],
+            index=pd.date_range("1947-01-01", "1995-07-01", freq="QS"),
+            columns=["GDP", "UNEMP"]
         )[4:]
-        data['GDP'] = np.log(data['GDP'])
-        data['UNEMP'] = (data['UNEMP']/100)
-        data['X'] = np.exp(data['GDP']) * data['UNEMP']
+        data["GDP"] = np.log(data["GDP"])
+        data["UNEMP"] = (data["UNEMP"]/100)
+        data["X"] = np.exp(data["GDP"]) * data["UNEMP"]
 
         k_states = 2
         cls.mlemodel = MLEModel(data, k_states=k_states, **kwargs)
@@ -52,16 +54,16 @@ class Trivariate:
             cls.model.timing_init_filtered = True
 
         # Statespace representation
-        cls.model['selection'] = np.eye(cls.model.k_states)
+        cls.model["selection"] = np.eye(cls.model.k_states)
 
         # Update matrices with test parameters
-        cls.model['design'] = np.array([[0.5, 0.2],
+        cls.model["design"] = np.array([[0.5, 0.2],
                                         [0,   0.8],
                                         [1,  -0.5]])
-        cls.model['transition'] = np.array([[0.4, 0.5],
+        cls.model["transition"] = np.array([[0.4, 0.5],
                                             [1,   0]])
-        cls.model['obs_cov'] = np.diag([0.2, 1.1, 0.5])
-        cls.model['state_cov'] = np.diag([2., 1])
+        cls.model["obs_cov"] = np.diag([0.2, 1.1, 0.5])
+        cls.model["state_cov"] = np.diag([2., 1])
 
         # Initialization
         cls.model.initialize_approximate_diffuse()
@@ -229,8 +231,7 @@ class TestTrivariateConventional(Trivariate):
 class TestTrivariateConventionalAlternate(TestTrivariateConventional):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -272,7 +273,7 @@ class TestTrivariateConventionalPartialMissingAlternate(
         TestTrivariateConventionalPartialMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -314,8 +315,7 @@ class TestTrivariateConventionalAllMissingAlternate(
         TestTrivariateConventionalAllMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -352,8 +352,7 @@ class TestTrivariateUnivariate(Trivariate):
 class TestTrivariateUnivariateAlternate(TestTrivariateUnivariate):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True,  **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -395,7 +394,7 @@ class TestTrivariateUnivariatePartialMissingAlternate(
         TestTrivariateUnivariatePartialMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -437,8 +436,7 @@ class TestTrivariateUnivariateAllMissingAlternate(
         TestTrivariateUnivariateAllMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            alternate_timing=True, *args, **kwargs)
+        super().setup_class(*args, alternate_timing=True, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1
@@ -449,15 +447,15 @@ class TestDFM:
     def create_model(cls, obs, **kwargs):
         # Create the model with typical state space
         mod = MLEModel(obs, k_states=2, k_posdef=2, **kwargs)
-        mod['design'] = np.array([[-32.47143586, 17.33779024],
+        mod["design"] = np.array([[-32.47143586, 17.33779024],
                                   [-7.40264169, 1.69279859],
                                   [-209.04702853, 125.2879374]])
-        mod['obs_cov'] = np.diag(
+        mod["obs_cov"] = np.diag(
             np.array([0.0622668, 1.95666886, 58.37473642]))
-        mod['transition'] = np.array([[0.29935707, 0.33289005],
+        mod["transition"] = np.array([[0.29935707, 0.33289005],
                                       [-0.7639868, 1.2844237]])
-        mod['selection'] = np.eye(2)
-        mod['state_cov'] = np.array([[1.2, -0.25],
+        mod["selection"] = np.eye(2)
+        mod["state_cov"] = np.array([[1.2, -0.25],
                                      [-0.25, 1.1]])
         mod.initialize_approximate_diffuse(1e6)
         return mod
@@ -475,21 +473,21 @@ class TestDFM:
         return out
 
     @classmethod
-    def setup_class(cls, which='mixed', *args, **kwargs):
+    def setup_class(cls, which="mixed", *args, **kwargs):
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01',
-                                  end='2009-7-01', freq='QS')
-        levels = dta[['realgdp', 'realcons', 'realinv']]
+        dta.index = pd.date_range(start="1959-01-01",
+                                  end="2009-7-01", freq="QS")
+        levels = dta[["realgdp", "realcons", "realinv"]]
         obs = np.log(levels).diff().iloc[1:] * 400
 
-        if which == 'all':
+        if which == "all":
             obs.iloc[:50, :] = np.nan
             obs.iloc[119:130, :] = np.nan
-        elif which == 'partial':
+        elif which == "partial":
             obs.iloc[0:50, 0] = np.nan
             obs.iloc[119:130, 0] = np.nan
-        elif which == 'mixed':
+        elif which == "mixed":
             obs.iloc[0:50, 0] = np.nan
             obs.iloc[19:70, 1] = np.nan
             obs.iloc[39:90, 2] = np.nan
@@ -525,18 +523,18 @@ class TestDFM:
                            initial_state_variates=isv)
 
         # Create the model with augmented state space
-        kwargs.pop('filter_collapsed', None)
+        kwargs.pop("filter_collapsed", None)
         mod = MLEModel(obs, k_states=4, k_posdef=2, **kwargs)
-        mod['design', :3, :2] = np.array([[-32.47143586, 17.33779024],
+        mod["design", :3, :2] = np.array([[-32.47143586, 17.33779024],
                                           [-7.40264169, 1.69279859],
                                           [-209.04702853, 125.2879374]])
-        mod['obs_cov'] = np.diag(
+        mod["obs_cov"] = np.diag(
             np.array([0.0622668, 1.95666886, 58.37473642]))
-        mod['transition', :2, :2] = np.array([[0.29935707, 0.33289005],
+        mod["transition", :2, :2] = np.array([[0.29935707, 0.33289005],
                                               [-0.7639868, 1.2844237]])
-        mod['transition', 2:, :2] = np.eye(2)
-        mod['selection', :2, :2] = np.eye(2)
-        mod['state_cov'] = np.array([[1.2, -0.25],
+        mod["transition", 2:, :2] = np.eye(2)
+        mod["selection", :2, :2] = np.eye(2)
+        mod["state_cov"] = np.array([[1.2, -0.25],
                                      [-0.25, 1.1]])
 
         mod.initialize_approximate_diffuse(1e6)
@@ -691,8 +689,7 @@ class TestDFM:
 class TestDFMClassicalSmoothing(TestDFM):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
+        super().setup_class(*args, smooth_method=SMOOTH_CLASSICAL, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.smooth_method, SMOOTH_CLASSICAL)
@@ -705,8 +702,7 @@ class TestDFMClassicalSmoothing(TestDFM):
 class TestDFMUnivariateSmoothing(TestDFM):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+        super().setup_class(*args, filter_method=FILTER_UNIVARIATE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.smooth_method, 0)
@@ -718,8 +714,7 @@ class TestDFMUnivariateSmoothing(TestDFM):
 class TestDFMAlternativeSmoothing(TestDFM):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(
-            smooth_method=SMOOTH_ALTERNATIVE, **kwargs)
+        super().setup_class(smooth_method=SMOOTH_ALTERNATIVE, **kwargs)
 
     def test_smooth_method(self):
         assert_equal(self.model.smooth_method, SMOOTH_ALTERNATIVE)
@@ -733,7 +728,7 @@ class TestDFMMeasurementDisturbance(TestDFM):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         super().setup_class(
-            smooth_method=SMOOTH_CLASSICAL, which='none', **kwargs)
+            smooth_method=SMOOTH_CLASSICAL, which="none", **kwargs)
 
     def test_smoothed_state_disturbance(self):
         assert_allclose(

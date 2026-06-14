@@ -1,4 +1,4 @@
-'''get versions of mstats percentile functions that also work with non-masked arrays
+"""get versions of mstats percentile functions that also work with non-masked arrays
 
 uses dispatch to mstats version for difficult cases:
   - data is masked array
@@ -20,23 +20,23 @@ weighted plotting_positions
 - add weighted quantiles
 
 
-'''
+"""
+
 import numpy as np
 from numpy import ma
 from scipy import stats
 
-#from numpy.ma import nomask
+# from numpy.ma import nomask
 
 
+#
+# Percentiles
+#
 
 
-#####--------------------------------------------------------------------------
-#---- --- Percentiles ---
-#####--------------------------------------------------------------------------
-
-
-def quantiles(a, prob=list([.25,.5,.75]), alphap=.4, betap=.4, axis=None,
-               limit=(), masknan=False):
+def quantiles(
+    a, prob=(0.25, 0.5, 0.75), alphap=0.4, betap=0.4, axis=None, limit=(), masknan=False
+):
     """
     Computes empirical quantiles for a data array.
 
@@ -122,69 +122,81 @@ def quantiles(a, prob=list([.25,.5,.75]), alphap=.4, betap=.4, axis=None,
     """
 
     if isinstance(a, np.ma.MaskedArray):
-        return stats.mstats.mquantiles(a, prob=prob, alphap=alphap, betap=alphap, axis=axis,
-               limit=limit)
+        return stats.mstats.mquantiles(
+            a, prob=prob, alphap=alphap, betap=alphap, axis=axis, limit=limit
+        )
     if limit:
-        marr = stats.mstats.mquantiles(a, prob=prob, alphap=alphap, betap=alphap, axis=axis,
-               limit=limit)
+        marr = stats.mstats.mquantiles(
+            a, prob=prob, alphap=alphap, betap=alphap, axis=axis, limit=limit
+        )
         return ma.filled(marr, fill_value=np.nan)
     if masknan:
         nanmask = np.isnan(a)
         if nanmask.any():
             marr = ma.array(a, mask=nanmask)
-            marr = stats.mstats.mquantiles(marr, prob=prob, alphap=alphap, betap=alphap,
-                              axis=axis, limit=limit)
+            marr = stats.mstats.mquantiles(
+                marr, prob=prob, alphap=alphap, betap=alphap, axis=axis, limit=limit
+            )
             return ma.filled(marr, fill_value=np.nan)
 
     # Initialization & checks ---------
     data = np.asarray(a)
 
     p = np.array(prob, copy=False, ndmin=1)
-    m = alphap + p*(1.-alphap-betap)
+    m = alphap + p * (1.0 - alphap - betap)
 
     isrolled = False
-    #from _quantiles1d
-    if (axis is None):
-        data = data.ravel()  #reshape(-1,1)
+    # from _quantiles1d
+    if axis is None:
+        data = data.ravel()  # reshape(-1,1)
         axis = 0
     else:
         axis = np.arange(data.ndim)[axis]
         data = np.rollaxis(data, axis)
-        isrolled = True # keep track, maybe can be removed
+        isrolled = True  # keep track, maybe can be removed
 
     x = np.sort(data, axis=0)
     n = x.shape[0]
     returnshape = list(data.shape)
     returnshape[axis] = p
 
-    #TODO: check these
+    # TODO: check these
     if n == 0:
         return np.empty(len(p), dtype=float)
     elif n == 1:
         return np.resize(x, p.shape)
-    aleph = (n*p + m)
-    k = np.floor(aleph.clip(1, n-1)).astype(int)
-    ind = [None]*x.ndim
+    aleph = n * p + m
+    k = np.floor(aleph.clip(1, n - 1)).astype(int)
+    ind = [None] * x.ndim
     ind[0] = slice(None)
-    gamma = (aleph-k).clip(0,1)[ind]
-    q = (1.-gamma)*x[k-1] + gamma*x[k]
+    gamma = (aleph - k).clip(0, 1)[ind]
+    q = (1.0 - gamma) * x[k - 1] + gamma * x[k]
     if isrolled:
-        return np.rollaxis(q, 0, axis+1)
+        return np.rollaxis(q, 0, axis + 1)
     else:
         return q
 
-def scoreatpercentile(data, per, limit=(), alphap=.4, betap=.4, axis=0, masknan=None):
+
+def scoreatpercentile(data, per, limit=(), alphap=0.4, betap=0.4, axis=0, masknan=None):
     """Calculate the score at the given 'per' percentile of the
     sequence a.  For example, the score at per=50 is the median.
 
     This function is a shortcut to mquantile
     """
     per = np.asarray(per, float)
-    if (per < 0).any() or (per > 100.).any():
-        raise ValueError("The percentile should be between 0. and 100. !"\
-                         " (got %s)" % per)
-    return quantiles(data, prob=[per/100.], alphap=alphap, betap=betap,
-                      limit=limit, axis=axis, masknan=masknan).squeeze()
+    if (per < 0).any() or (per > 100.0).any():
+        raise ValueError(
+            "The percentile should be between 0. and 100. ! (got %s)" % per
+        )
+    return quantiles(
+        data,
+        prob=[per / 100.0],
+        alphap=alphap,
+        betap=betap,
+        limit=limit,
+        axis=axis,
+        masknan=masknan,
+    ).squeeze()
 
 
 def plotting_positions(data, alpha=0.4, beta=0.4, axis=0, masknan=False):
@@ -236,20 +248,24 @@ def plotting_positions(data, alpha=0.4, beta=0.4, axis=0, masknan=False):
         if axis is None or data.ndim == 1:
             return stats.mstats.plotting_positions(data, alpha=alpha, beta=beta)
         else:
-            return ma.apply_along_axis(stats.mstats.plotting_positions, axis, data, alpha=alpha, beta=beta)
+            return ma.apply_along_axis(
+                stats.mstats.plotting_positions, axis, data, alpha=alpha, beta=beta
+            )
     if masknan:
         nanmask = np.isnan(data)
         if nanmask.any():
             marr = ma.array(data, mask=nanmask)
-            #code duplication:
+            # code duplication:
             if axis is None or data.ndim == 1:
                 marr = stats.mstats.plotting_positions(marr, alpha=alpha, beta=beta)
             else:
-                marr = ma.apply_along_axis(stats.mstats.plotting_positions, axis, marr, alpha=alpha, beta=beta)
+                marr = ma.apply_along_axis(
+                    stats.mstats.plotting_positions, axis, marr, alpha=alpha, beta=beta
+                )
             return ma.filled(marr, fill_value=np.nan)
 
     data = np.asarray(data)
-    if data.size == 1:    # use helper function instead
+    if data.size == 1:  # use helper function instead
         data = np.atleast_1d(data)
         axis = 0
     if axis is None:
@@ -258,17 +274,20 @@ def plotting_positions(data, alpha=0.4, beta=0.4, axis=0, masknan=False):
     n = data.shape[axis]
     if data.ndim == 1:
         plpos = np.empty(data.shape, dtype=float)
-        plpos[data.argsort()] = (np.arange(1,n+1) - alpha)/(n+1.-alpha-beta)
+        plpos[data.argsort()] = (np.arange(1, n + 1) - alpha) / (n + 1.0 - alpha - beta)
     else:
-        #nd assignment instead of second argsort does not look easy
-        plpos = (data.argsort(axis).argsort(axis) + 1. - alpha)/(n+1.-alpha-beta)
+        # nd assignment instead of second argsort does not look easy
+        plpos = (data.argsort(axis).argsort(axis) + 1.0 - alpha) / (
+            n + 1.0 - alpha - beta
+        )
     return plpos
+
 
 meppf = plotting_positions
 
-def plotting_positions_w1d(data, weights=None, alpha=0.4, beta=0.4,
-                           method='notnormed'):
-    '''Weighted plotting positions (or empirical percentile points) for the data.
+
+def plotting_positions_w1d(data, weights=None, alpha=0.4, beta=0.4, method="notnormed"):
+    """Weighted plotting positions (or empirical percentile points) for the data.
 
     observations are weighted and the plotting positions are defined as
     (ws-alpha)/(n-alpha-beta), where:
@@ -286,95 +305,150 @@ def plotting_positions_w1d(data, weights=None, alpha=0.4, beta=0.4,
     --------
     plotting_positions : unweighted version that works also with more than one
         dimension and has other options
-    '''
+    """
 
     x = np.atleast_1d(data)
     if x.ndim > 1:
-        raise ValueError('currently implemented only for 1d')
+        raise ValueError("currently implemented only for 1d")
     if weights is None:
         weights = np.ones(x.shape)
     else:
-        weights = np.array(weights, float, copy=False, ndmin=1) #atleast_1d(weights)
+        weights = np.array(weights, float, copy=False, ndmin=1)  # atleast_1d(weights)
         if weights.shape != x.shape:
-            raise ValueError('if weights is given, it needs to be the same'
-                             'shape as data')
+            raise ValueError(
+                "if weights is given, it needs to be the sameshape as data"
+            )
     n = len(x)
     xargsort = x.argsort()
     ws = weights[xargsort].cumsum()
     res = np.empty(x.shape)
-    if method == 'normed':
-        res[xargsort] = (1.*ws/ws[-1]*n-alpha)/(n+1.-alpha-beta)
+    if method == "normed":
+        res[xargsort] = (1.0 * ws / ws[-1] * n - alpha) / (n + 1.0 - alpha - beta)
     else:
-        res[xargsort] = (1.*ws-alpha)/(ws[-1]+1.-alpha-beta)
+        res[xargsort] = (1.0 * ws - alpha) / (ws[-1] + 1.0 - alpha - beta)
     return res
 
-def edf_normal_inverse_transformed(x, alpha=3./8, beta=3./8, axis=0):
-    '''rank based normal inverse transformed cdf
-    '''
+
+def edf_normal_inverse_transformed(x, alpha=3.0 / 8, beta=3.0 / 8, axis=0):
+    """rank based normal inverse transformed cdf"""
     from scipy import stats
+
     ranks = plotting_positions(x, alpha=alpha, beta=alpha, axis=0, masknan=False)
     ranks_transf = stats.norm.ppf(ranks)
     return ranks_transf
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
 
     x = np.arange(5)
     print(plotting_positions(x))
-    x = np.arange(10).reshape(-1,2)
+    x = np.arange(10).reshape(-1, 2)
     print(plotting_positions(x))
     print(quantiles(x, axis=0))
     print(quantiles(x, axis=None))
     print(quantiles(x, axis=1))
     xm = ma.array(x)
     x2 = x.astype(float)
-    x2[1,0] = np.nan
+    x2[1, 0] = np.nan
     print(plotting_positions(xm, axis=0))
 
     # test 0d, 1d
     for sl1 in [slice(None), 0]:
-        print((plotting_positions(xm[sl1,0]) == plotting_positions(x[sl1,0])).all())
-        print((quantiles(xm[sl1,0]) == quantiles(x[sl1,0])).all())
-        print((stats.mstats.mquantiles(ma.fix_invalid(x2[sl1,0])) == quantiles(x2[sl1,0], masknan=1)).all())
+        print((plotting_positions(xm[sl1, 0]) == plotting_positions(x[sl1, 0])).all())
+        print((quantiles(xm[sl1, 0]) == quantiles(x[sl1, 0])).all())
+        print(
+            (
+                stats.mstats.mquantiles(ma.fix_invalid(x2[sl1, 0]))
+                == quantiles(x2[sl1, 0], masknan=1)
+            ).all()
+        )
 
-    #test 2d
+    # test 2d
     for ax in [0, 1, None, -1]:
         print((plotting_positions(xm, axis=ax) == plotting_positions(x, axis=ax)).all())
         print((quantiles(xm, axis=ax) == quantiles(x, axis=ax)).all())
-        print((stats.mstats.mquantiles(ma.fix_invalid(x2), axis=ax) == quantiles(x2, axis=ax, masknan=1)).all())
+        print(
+            (
+                stats.mstats.mquantiles(ma.fix_invalid(x2), axis=ax)
+                == quantiles(x2, axis=ax, masknan=1)
+            ).all()
+        )
 
-    #stats version does not have axis
-    print((stats.mstats.plotting_positions(ma.fix_invalid(x2)) == plotting_positions(x2, axis=None, masknan=1)).all())
+    # stats version does not have axis
+    print(
+        (
+            stats.mstats.plotting_positions(ma.fix_invalid(x2))
+            == plotting_positions(x2, axis=None, masknan=1)
+        ).all()
+    )
 
-    #test 3d
-    x3 = np.dstack((x,x)).T
-    for ax in [1,2]:
-        print((plotting_positions(x3, axis=ax)[0] == plotting_positions(x.T, axis=ax-1)).all())
+    # test 3d
+    x3 = np.dstack((x, x)).T
+    for ax in [1, 2]:
+        print(
+            (
+                plotting_positions(x3, axis=ax)[0]
+                == plotting_positions(x.T, axis=ax - 1)
+            ).all()
+        )
 
-    np.testing.assert_equal(plotting_positions(np.arange(10), alpha=0.35, beta=1-0.35), (1+np.arange(10)-0.35)/10)
-    np.testing.assert_equal(plotting_positions(np.arange(10), alpha=0.4, beta=0.4), (1+np.arange(10)-0.4)/(10+0.2))
-    np.testing.assert_equal(plotting_positions(np.arange(10)), (1+np.arange(10)-0.4)/(10+0.2))
-    print('')
-    print(scoreatpercentile(x, [10,90]))
-    print(plotting_positions_w1d(x[:,0]))
-    print((plotting_positions_w1d(x[:,0]) == plotting_positions(x[:,0])).all())
+    np.testing.assert_equal(
+        plotting_positions(np.arange(10), alpha=0.35, beta=1 - 0.35),
+        (1 + np.arange(10) - 0.35) / 10,
+    )
+    np.testing.assert_equal(
+        plotting_positions(np.arange(10), alpha=0.4, beta=0.4),
+        (1 + np.arange(10) - 0.4) / (10 + 0.2),
+    )
+    np.testing.assert_equal(
+        plotting_positions(np.arange(10)), (1 + np.arange(10) - 0.4) / (10 + 0.2)
+    )
+    print("")
+    print(scoreatpercentile(x, [10, 90]))
+    print(plotting_positions_w1d(x[:, 0]))
+    print((plotting_positions_w1d(x[:, 0]) == plotting_positions(x[:, 0])).all())
 
-
-    #weights versus replicating multiple occurencies of same x value
+    # weights versus replicating multiple occurencies of same x value
     w1 = [1, 1, 2, 1, 1]
     plotexample = 1
     if plotexample:
         import matplotlib.pyplot as plt
-        plt.figure()
-        plt.title('ppf, cdf values on horizontal axis')
-        plt.step(plotting_positions_w1d(x[:,0], weights=w1, method='0'), x[:,0], where='post')
-        plt.step(stats.mstats.plotting_positions(np.repeat(x[:,0],w1,axis=0)),np.repeat(x[:,0],w1,axis=0),where='post')
-        plt.plot(plotting_positions_w1d(x[:,0], weights=w1, method='0'), x[:,0], '-o')
-        plt.plot(stats.mstats.plotting_positions(np.repeat(x[:,0],w1,axis=0)),np.repeat(x[:,0],w1,axis=0), '-o')
 
         plt.figure()
-        plt.title('cdf, cdf values on vertical axis')
-        plt.step(x[:,0], plotting_positions_w1d(x[:,0], weights=w1, method='0'),where='post')
-        plt.step(np.repeat(x[:,0],w1,axis=0), stats.mstats.plotting_positions(np.repeat(x[:,0],w1,axis=0)),where='post')
-        plt.plot(x[:,0], plotting_positions_w1d(x[:,0], weights=w1, method='0'), '-o')
-        plt.plot(np.repeat(x[:,0],w1,axis=0), stats.mstats.plotting_positions(np.repeat(x[:,0],w1,axis=0)), '-o')
+        plt.title("ppf, cdf values on horizontal axis")
+        plt.step(
+            plotting_positions_w1d(x[:, 0], weights=w1, method="0"),
+            x[:, 0],
+            where="post",
+        )
+        plt.step(
+            stats.mstats.plotting_positions(np.repeat(x[:, 0], w1, axis=0)),
+            np.repeat(x[:, 0], w1, axis=0),
+            where="post",
+        )
+        plt.plot(plotting_positions_w1d(x[:, 0], weights=w1, method="0"), x[:, 0], "-o")
+        plt.plot(
+            stats.mstats.plotting_positions(np.repeat(x[:, 0], w1, axis=0)),
+            np.repeat(x[:, 0], w1, axis=0),
+            "-o",
+        )
+
+        plt.figure()
+        plt.title("cdf, cdf values on vertical axis")
+        plt.step(
+            x[:, 0],
+            plotting_positions_w1d(x[:, 0], weights=w1, method="0"),
+            where="post",
+        )
+        plt.step(
+            np.repeat(x[:, 0], w1, axis=0),
+            stats.mstats.plotting_positions(np.repeat(x[:, 0], w1, axis=0)),
+            where="post",
+        )
+        plt.plot(x[:, 0], plotting_positions_w1d(x[:, 0], weights=w1, method="0"), "-o")
+        plt.plot(
+            np.repeat(x[:, 0], w1, axis=0),
+            stats.mstats.plotting_positions(np.repeat(x[:, 0], w1, axis=0)),
+            "-o",
+        )
     plt.show()

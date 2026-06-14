@@ -1,10 +1,7 @@
-from statsmodels.compat.patsy import monkey_patch_cat_dtype
-
 from statsmodels._version import __version__, __version_tuple__
 
 __version_info__ = __version_tuple__
 
-monkey_patch_cat_dtype()
 
 debug_warnings = False
 

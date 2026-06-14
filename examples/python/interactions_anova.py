@@ -378,7 +378,7 @@ print(table8)
 
 try:
     rehab_table = pd.read_csv("rehab.table")
-except:
+except Exception:
     url = "http://stats191.stanford.edu/data/rehab.csv"
     rehab_table = pd.read_table(url, delimiter=",")
     rehab_table.to_csv("rehab.table")
@@ -398,7 +398,7 @@ print(rehab_lm.summary())
 
 try:
     kidney_table = pd.read_table("./kidney.table")
-except:
+except Exception:
     url = "http://stats191.stanford.edu/data/kidney.table"
     kidney_table = pd.read_csv(url, delim_whitespace=True)
 

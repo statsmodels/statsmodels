@@ -1,5 +1,5 @@
-#Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
-#surface temperature data.
+# Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
+# surface temperature data.
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,16 +8,16 @@ import statsmodels.api as sm
 
 data = sm.datasets.elnino.load()
 
-#Create a HDR functional boxplot. We see that the years 1982-83 and 1997-98 are
-#outliers; these are the years where El Nino (a climate pattern
-#characterized by warming up of the sea surface and higher air pressures)
-#occurred with unusual intensity.
+# Create a HDR functional boxplot. We see that the years 1982-83 and 1997-98 are
+# outliers; these are the years where El Nino (a climate pattern
+# characterized by warming up of the sea surface and higher air pressures)
+# occurred with unusual intensity.
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
-fig, res = sm.graphics.hdrboxplot(data.raw_data.iloc[:, 1:],
-                                  labels=data.raw_data.iloc[:, 0].astype(int),
-                                  ax=ax)
+fig, res = sm.graphics.hdrboxplot(
+    data.raw_data.iloc[:, 1:], labels=data.raw_data.iloc[:, 0].astype(int), ax=ax
+)
 
 ax.plot([0, 10], [25, 25])
 ax.set_xlabel("Month of the year")

@@ -25,7 +25,7 @@ if 0 in examples:
     Y = np.array((1, 3, 4, 5, 8, 10, 9))
     rho = 2
     model = GLSAR(Y, X, 2)
-    for i in range(6):
+    for _ in range(6):
         results = model.fit()
         print('AR coefficients:', model.rho)
         rho, sigma = yule_walker(results.resid, order=model.order)
@@ -76,7 +76,7 @@ if 1 in examples:
     print(res.params)
     print(mod1.rho)
     mod1 = GLSAR(y1, X1, 2)
-    for i in range(5):
+    for _ in range(5):
         res1 = mod1.iterative_fit(2)
         print(mod1.rho)
         print(res1.params)
@@ -86,7 +86,7 @@ if 2 in examples:
     print('with AR(0)', par0)
     parold = par0
     mod0 = GLSAR(Y, X, 1)
-    for i in range(5):
+    for _ in range(5):
         res0 = mod0.iterative_fit(1)
         print('rho', mod0.rho)
         parnew = res0.params
@@ -103,7 +103,7 @@ Y = noise
 if 3 in examples:
     print('\nExample 3: pure AR(2), GLSAR versus Yule_Walker')
     model3 = GLSAR(Y, rho=2)
-    for i in range(5):
+    for _ in range(5):
         results = model3.fit()
         print("AR coefficients:", model3.rho, results.params)
         rho, sigma = yule_walker(results.resid, order=model3.order)
@@ -125,7 +125,7 @@ if 4 in examples:
     print('\nExample 4: demeaned pure AR(2), GLSAR versus Yule_Walker')
     Ydemeaned = Y - Y.mean()
     model4 = GLSAR(Ydemeaned, rho=2)
-    for i in range(5):
+    for _ in range(5):
         results = model4.fit()
         print("AR coefficients:", model3.rho, results.params)
         rho, sigma = yule_walker(results.resid, order=model4.order)

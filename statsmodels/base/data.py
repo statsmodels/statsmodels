@@ -120,7 +120,6 @@ class ModelData:
                     break
                 except (NameError, mgr.factor_evaluation_error) as e:
                     exc.append(e)  # why do I need a reference from outside except block
-                    pass
             else:
                 raise exc[-1]
 
@@ -226,7 +225,7 @@ class ModelData:
         # deal with other arrays
         combined_2d = ()
         combined_2d_names = []
-        if len(kwargs):
+        if kwargs:
             for key, value_array in kwargs.items():
                 if value_array is None or np.ndim(value_array) == 0:
                     none_array_names += [key]
@@ -245,7 +244,7 @@ class ModelData:
                     combined_2d_names += [key]
                 else:
                     raise ValueError(
-                        "Arrays with more than 2 dimensions " "are not yet handled"
+                        "Arrays with more than 2 dimensions are not yet handled"
                     )
 
         if missing_idx is not None:
@@ -333,10 +332,12 @@ class ModelData:
     def _convert_endog_exog(self, endog, exog):
 
         # for consistent outputs if endog is (n,1)
-        yarr = self._get_yarr(endog)
+        # We call __array__() to convert to an array if the object is array-like
+        # but not yet an array. For actual ndarrays, this does nothing.
+        yarr = self._get_yarr(endog.__array__())
         xarr = None
         if exog is not None:
-            xarr = self._get_xarr(exog)
+            xarr = self._get_xarr(exog.__array__())
             if xarr.ndim == 1:
                 xarr = xarr[:, None]
             if xarr.ndim != 2:
@@ -681,6 +682,10 @@ def handle_data_class_factory(endog, exog):
         klass = PatsyData
     elif data_util._is_using_formulaic(endog, exog):
         klass = FormulaicData
+    elif data_util._is_using_ndarray_like(endog, exog):
+        klass = ModelData
+    elif data_util._is_using_pandas_like(endog, exog):
+        klass = PandasData
     # keep this check last
     elif data_util._is_using_ndarray(endog, exog):
         klass = ModelData

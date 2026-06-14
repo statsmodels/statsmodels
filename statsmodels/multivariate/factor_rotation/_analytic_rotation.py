@@ -141,7 +141,7 @@ def promax(A, k=2):
     assert k > 0
     # define rotation target using varimax rotation:
     from ._wrappers import rotate_factors
-    V, T = rotate_factors(A, 'varimax')
+    V, T = rotate_factors(A, "varimax")
     H = np.abs(V)**k/V
     # solve procrustes problem
     S = procrustes(A, H)  # np.linalg.inv(A.T.dot(A)).dot(A.T).dot(H);

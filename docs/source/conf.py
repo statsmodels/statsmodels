@@ -429,7 +429,7 @@ import statsmodels.api as sm
 import statsmodels.tsa.api as tsa
 import statsmodels.formula.api as smf
 import numpy as np
-import scipy.stats as stats
+from scipy import stats
 import matplotlib.pyplot as plt
 import pandas as pd
 """

@@ -59,10 +59,10 @@ params_table = np.array([
     7.088958545805, np.nan,  1.9599639845401,                0
     ]).reshape(8, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
-                         '3.agecat', '4.agecat', '5.agecat', '_cons']
+params_table_rownames = ["lnpyears", "smokes", "1b.agecat", "2.agecat",
+                         "3.agecat", "4.agecat", "5.agecat", "_cons"]
 
 cov = np.array([
     .40441190871844, -.59566294916097,                0,   .1055698685775,
@@ -83,11 +83,11 @@ cov = np.array([
     -2.7206801001387, -5.8333014154113,  -8.993394678922,  36.331985220299
     ]).reshape(8, 8)
 
-cov_colnames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
-                '3.agecat', '4.agecat', '5.agecat', '_cons']
+cov_colnames = ["lnpyears", "smokes", "1b.agecat", "2.agecat",
+                "3.agecat", "4.agecat", "5.agecat", "_cons"]
 
-cov_rownames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
-                '3.agecat', '4.agecat', '5.agecat', '_cons']
+cov_rownames = ["lnpyears", "smokes", "1b.agecat", "2.agecat",
+                "3.agecat", "4.agecat", "5.agecat", "_cons"]
 
 
 results_noexposure_noconstraint = ParamsTableTestBunch(
@@ -155,10 +155,10 @@ params_table = np.array([
     -41.297719029467,                0, -8.2951719702059, -7.5434794534381,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                         '4.agecat', '5.agecat', '_cons']
+params_table_rownames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                         "4.agecat", "5.agecat", "_cons"]
 
 cov = np.array([
     .01152920125677,                0, -.00061561668833, -.00090117889461,
@@ -175,11 +175,11 @@ cov = np.array([
     -.0289198676971, -.02869169455392, -.02871436265941, -.02905000614546,
     .036772595135]).reshape(7, 7)
 
-cov_colnames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                '4.agecat', '5.agecat', '_cons']
+cov_colnames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                "4.agecat", "5.agecat", "_cons"]
 
-cov_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                '4.agecat', '5.agecat', '_cons']
+cov_rownames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                "4.agecat", "5.agecat", "_cons"]
 
 
 results_exposure_noconstraint = ParamsTableTestBunch(
@@ -248,10 +248,10 @@ params_table = np.array([
     -1.476233315779, np.nan,  1.9599639845401,                0
     ]).reshape(8, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
-                         '3.agecat', '4.agecat', '5.agecat', '_cons']
+params_table_rownames = ["lnpyears", "smokes", "1b.agecat", "2.agecat",
+                         "3.agecat", "4.agecat", "5.agecat", "_cons"]
 
 cov = np.array([
     .0171797439346, -.02561346650005,                0,  .00445310785396,
@@ -272,11 +272,11 @@ cov = np.array([
     -.14290240509701, -.32621483141938, -.32621483141938,  1.5734864548889
     ]).reshape(8, 8)
 
-cov_colnames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
-                '3.agecat', '4.agecat', '5.agecat', '_cons']
+cov_colnames = ["lnpyears", "smokes", "1b.agecat", "2.agecat",
+                "3.agecat", "4.agecat", "5.agecat", "_cons"]
 
-cov_rownames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
-                '3.agecat', '4.agecat', '5.agecat', '_cons']
+cov_rownames = ["lnpyears", "smokes", "1b.agecat", "2.agecat",
+                "3.agecat", "4.agecat", "5.agecat", "_cons"]
 
 
 results_noexposure_constraint = ParamsTableTestBunch(
@@ -344,10 +344,10 @@ params_table = np.array([
     -41.274049546467,                0, -8.2857777341639, -7.5345254391986,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                         '4.agecat', '5.agecat', '_cons']
+params_table_rownames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                         "4.agecat", "5.agecat", "_cons"]
 
 cov = np.array([
     .01151508241338,                0, -.00061947268694, -.00090708285562,
@@ -364,11 +364,11 @@ cov = np.array([
     -.02891793401778, -.02868865719866, -.02881420109427, -.02881420109427,
     .03672953668345]).reshape(7, 7)
 
-cov_colnames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                '4.agecat', '5.agecat', '_cons']
+cov_colnames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                "4.agecat", "5.agecat", "_cons"]
 
-cov_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                '4.agecat', '5.agecat', '_cons']
+cov_rownames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                "4.agecat", "5.agecat", "_cons"]
 
 
 results_exposure_constraint = ParamsTableTestBunch(
@@ -437,10 +437,10 @@ params_table = np.array([
     -6.9803041169553, np.nan,  1.9599639845401,                0
     ]).reshape(8, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
-                         '3.agecat', '4.agecat', '5.agecat', '_cons']
+params_table_rownames = ["lnpyears", "smokes", "1b.agecat", "2.agecat",
+                         "3.agecat", "4.agecat", "5.agecat", "_cons"]
 
 cov = np.array([
     .01711639917181, -.02559852137367,                0,  .00475026273828,
@@ -461,11 +461,11 @@ cov = np.array([
     -.14512177326509, -.32873181469848, -.32873181469848,  1.5719033807586
     ]).reshape(8, 8)
 
-cov_colnames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
-                '3.agecat', '4.agecat', '5.agecat', '_cons']
+cov_colnames = ["lnpyears", "smokes", "1b.agecat", "2.agecat",
+                "3.agecat", "4.agecat", "5.agecat", "_cons"]
 
-cov_rownames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
-                '3.agecat', '4.agecat', '5.agecat', '_cons']
+cov_rownames = ["lnpyears", "smokes", "1b.agecat", "2.agecat",
+                "3.agecat", "4.agecat", "5.agecat", "_cons"]
 
 
 results_noexposure_constraint2 = ParamsTableTestBunch(
@@ -533,10 +533,10 @@ params_table = np.array([
     -41.316087245761,                0, -8.2993992919175, -7.5476429165999,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                         '4.agecat', '5.agecat', '_cons']
+params_table_rownames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                         "4.agecat", "5.agecat", "_cons"]
 
 cov = np.array([
     .01151472500521,                0, -.00061274288972, -.00089685568608,
@@ -553,11 +553,11 @@ cov = np.array([
     -.02892164840477,  -.0286943943397, -.02885716752919, -.02885716752919,
     .03677884328645]).reshape(7, 7)
 
-cov_colnames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                '4.agecat', '5.agecat', '_cons']
+cov_colnames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                "4.agecat", "5.agecat", "_cons"]
 
-cov_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                '4.agecat', '5.agecat', '_cons']
+cov_rownames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                "4.agecat", "5.agecat", "_cons"]
 
 
 results_exposure_constraint2 = ParamsTableTestBunch(
@@ -627,10 +627,10 @@ params_table = np.array([
     -31.951270144281,  5.18748229e-224, -8.4095680102177, -7.4374741982996,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                         '4.agecat', '5.agecat', '_cons']
+params_table_rownames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                         "4.agecat", "5.agecat", "_cons"]
 
 cov = np.array([
     .0137450618599,                0,  .00249770233028,  .00412347653263,
@@ -647,11 +647,11 @@ cov = np.array([
     -.04609122424924, -.04726310745444, -.04794543190806, -.04794543190806,
     .06149788552196]).reshape(7, 7)
 
-cov_colnames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                '4.agecat', '5.agecat', '_cons']
+cov_colnames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                "4.agecat", "5.agecat", "_cons"]
 
-cov_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
-                '4.agecat', '5.agecat', '_cons']
+cov_rownames = ["smokes", "1b.agecat", "2.agecat", "3.agecat",
+                "4.agecat", "5.agecat", "_cons"]
 
 
 results_exposure_constraint2_robust = ParamsTableTestBunch(

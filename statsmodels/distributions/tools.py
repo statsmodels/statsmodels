@@ -5,12 +5,14 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+
 import warnings
 
 import numpy as np
 from scipy import interpolate, stats
 
 # helper functions to work on a grid of cdf and pdf, histogram
+
 
 class _Grid:
     """Create Grid values and indices, grid in [0, 1]^d
@@ -47,8 +49,8 @@ class _Grid:
         x_marginal = [np.arange(ki) / (ki - 1) for ki in k_grid]
 
         idx_flat = np.column_stack(
-                np.unravel_index(np.arange(np.prod(k_grid)), k_grid)
-                ).astype(float)
+            np.unravel_index(np.arange(np.prod(k_grid)), k_grid)
+        ).astype(float)
         x_flat = idx_flat / idx_flat.max(0)
         if eps != 0:
             x_marginal = [np.clip(xi, eps, 1 - eps) for xi in x_marginal]
@@ -139,8 +141,8 @@ def average_grid(values, coords=None, _method="slicing"):
 
     elif _method == "convolve":
         from scipy import signal
-        p = signal.convolve(values, 0.5**k_dim * np.ones([2] * k_dim),
-                            mode="valid")
+
+        p = signal.convolve(values, 0.5**k_dim * np.ones([2] * k_dim), mode="valid")
 
     if coords is not None:
         dx = np.array(1)
@@ -185,7 +187,7 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
     for _ in range(maxiter):
         pc0 = pc.copy()
         for ax in range(pc.ndim):
-            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            axs = tuple(i for i in range(pc.ndim) if not i == ax)
             pc0 /= pc.sum(axis=axs, keepdims=True)
         pc = pc0
         pc /= pc.sum()
@@ -193,7 +195,7 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
         # check convergence
         mptps = []
         for ax in range(pc.ndim):
-            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            axs = tuple(i for i in range(pc.ndim) if not i == ax)
             marg = pc.sum(axis=axs, keepdims=False)
             mptps.append(np.ptp(marg))
         if max(mptps) < tol:
@@ -202,8 +204,12 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
 
     if not converged:
         from statsmodels.tools.sm_exceptions import ConvergenceWarning
-        warnings.warn("Iterations did not converge, maxiter reached",
-                      ConvergenceWarning)
+
+        warnings.warn(
+            "Iterations did not converge, maxiter reached",
+            ConvergenceWarning,
+            stacklevel=2,
+        )
     return pc
 
 
@@ -330,6 +336,7 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
 
 # functions to evaluate bernstein polynomials
 
+
 def _eval_bernstein_1d(x, fvals, method="binom"):
     """Evaluate 1-dimensional bernstein polynomial given grid of values.
 
@@ -358,7 +365,7 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
     k_terms = fvals.shape[-1]
     xx = np.asarray(x)
     k = np.arange(k_terms).astype(float)
-    n = k_terms - 1.
+    n = k_terms - 1.0
 
     if method.lower() == "binom":
         # Divide by 0 RuntimeWarning here
@@ -367,7 +374,7 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
             poly_base = stats.binom.pmf(k, n, xx[..., None])
         bp_values = (fvals * poly_base).sum(-1)
     elif method.lower() == "bpoly":
-        bpb = interpolate.BPoly(fvals[:, None], [0., 1])
+        bpb = interpolate.BPoly(fvals[:, None], [0.0, 1])
         bp_values = bpb(x)
     elif method.lower() == "beta":
         # Divide by 0 RuntimeWarning here
@@ -413,8 +420,9 @@ def _eval_bernstein_2d(x, fvals):
     k2 = np.arange(k_terms[1]).astype(float)
 
     # we are building a nobs x n1 x n2 array
-    poly_base = (stats.binom.pmf(k1[None, :, None], n1, x1[:, None, None]) *
-                 stats.binom.pmf(k2[None, None, :], n2, x2[:, None, None]))
+    poly_base = stats.binom.pmf(
+        k1[None, :, None], n1, x1[:, None, None]
+    ) * stats.binom.pmf(k2[None, None, :], n2, x2[:, None, None])
     bp_values = (fvals * poly_base).sum(-1).sum(-1)
 
     return bp_values
@@ -449,7 +457,7 @@ def _eval_bernstein_dd(x, fvals):
     poly_base = np.zeros(x.shape[0])
     for i in range(k_dim):
         ki = np.arange(k_terms[i]).astype(float)
-        for _ in range(i+1):
+        for _ in range(i + 1):
             ki = ki[..., None]
         ni = k_terms[i] - 1
         xi = xx[:, i]
@@ -458,7 +466,7 @@ def _eval_bernstein_dd(x, fvals):
     poly_base = np.exp(poly_base)
     bp_values = fvals.T[..., None] * poly_base
 
-    for i in range(k_dim):
+    for _ in range(k_dim):
         bp_values = bp_values.sum(0)
 
     return bp_values

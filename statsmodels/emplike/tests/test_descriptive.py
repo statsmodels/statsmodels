@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.testing import assert_almost_equal
+import pytest
 
 from statsmodels.datasets import star98
 from statsmodels.emplike.descriptive import DescStat
@@ -115,3 +116,14 @@ class TestDescriptiveStatistics(GenRes):
     def test_test_corr_weights(self):
         assert_almost_equal(self.mvres1.test_corr(.5, return_weights=1)[2],
                             self.res2.test_corr_weights, 4)
+
+    @pytest.mark.parametrize(
+        "endog",
+        [
+            np.array([]),
+            np.zeros((2, 2, 2)),
+        ],
+    )
+    def test_descstat_invalid_input(self, endog):
+        with pytest.raises(ValueError):
+            DescStat(endog)

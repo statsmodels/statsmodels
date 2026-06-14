@@ -1,12 +1,19 @@
 import numpy as np
-from numpy.testing import assert_equal, assert_, assert_allclose
-from statsmodels.regression.linear_model import OLS
-from statsmodels.genmod.generalized_linear_model import GLM
+from numpy.testing import assert_, assert_allclose, assert_equal
+
+from statsmodels.base.distributed_estimation import (
+    DistributedModel,
+    _calc_grad,
+    _calc_wdesign_mat,
+    _est_regularized_debiased,
+    _est_regularized_naive,
+    _est_unregularized_naive,
+    _join_debiased,
+    _join_naive,
+)
 from statsmodels.genmod.families import Binomial
-from statsmodels.base.distributed_estimation import _calc_grad, \
-    _calc_wdesign_mat, _est_regularized_debiased, _join_debiased, \
-    _est_regularized_naive, _est_unregularized_naive, _join_naive, \
-    DistributedModel
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.regression.linear_model import OLS
 
 
 def _data_gen(endog, exog, partitions):

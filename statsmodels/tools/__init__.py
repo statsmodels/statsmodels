@@ -1,6 +1,9 @@
-from .tools import add_constant, categorical
+"""Utility functions and testing helpers for statsmodels."""
+
 from statsmodels.tools._test_runner import PytestTester
 
-__all__ = ['test', 'add_constant', 'categorical']
+from .tools import add_constant, categorical
+
+__all__ = ["add_constant", "categorical", "test"]
 
 test = PytestTester()

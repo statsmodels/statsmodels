@@ -6,8 +6,9 @@ Author(s): Gerard E. Dallal and Leland WilkinsonSource: The American
 Statistician, Vol. 40, No. 4 (Nov., 1986), pp. 294-296
 """
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
 
+from statsmodels.stats import tabledist
 from statsmodels.stats.tabledist import TableDist
 
 
@@ -99,3 +100,26 @@ def test_tabledist():
             for c in crit_lf[i, :-1]]
     vals = np.array(vals).reshape(-1, lf.n_alpha - 1)
     assert (vals > lf.alpha[:-1]).all()
+
+
+def test_no_interp2d():
+    # GH#8909: scipy.interpolate.interp2d was removed in SciPy 1.14.0. Its only
+    # usage was the unused TableDist.poly2d method, which raised
+    # NotImplementedError when called. Ensure neither the removed dependency nor
+    # the dead method is referenced anymore, while the surviving interpolation
+    # methods still work.
+    assert not hasattr(tabledist, "interp2d")
+    assert "poly2d" not in vars(TableDist)
+
+    alpha = np.array([0.2, 0.15, 0.1, 0.05, 0.01, 0.001])[::-1]
+    size = np.array([4, 5, 6, 7, 8, 9, 10], float)
+    crit = np.array([[303, 321, 346, 376, 413, 433],
+                     [289, 303, 319, 343, 397, 439],
+                     [269, 281, 297, 323, 371, 424],
+                     [252, 264, 280, 304, 351, 402],
+                     [239, 250, 265, 288, 333, 384],
+                     [227, 238, 252, 274, 317, 365],
+                     [217, 228, 241, 262, 304, 352]])[:, ::-1] / 1000.
+    lf = TableDist(alpha, size, crit)
+    assert_almost_equal(lf.crit(0.15, 5), lf.crit3(0.15, 5), decimal=3)
+    assert 0 < lf.prob(0.30, 5) < 1

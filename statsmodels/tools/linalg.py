@@ -1,10 +1,10 @@
-"""
-Linear Algebra solvers and other helpers
-"""
+"""Linear algebra solvers and other helpers."""
+
 import numpy as np
 
-__all__ = ["logdet_symm", "stationary_solve", "transf_constraints",
-           "matrix_sqrt"]
+__all__ = ["logdet_symm", "matrix_sqrt", "stationary_solve", "transf_constraints"]
+
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 
 def logdet_symm(m, check_symm=False):
@@ -15,18 +15,22 @@ def logdet_symm(m, check_symm=False):
     ----------
     m : array_like
         2d array that is positive-definite (and symmetric)
+    check_symm : bool
+        If True, check that `m` is symmetric before factorizing.
 
     Returns
     -------
     logdet : float
         The log-determinant of m.
+
     """
     from scipy import linalg
+
     if check_symm:
         if not np.all(m == m.T):  # would be nice to short-circuit check
             raise ValueError("m is not symmetric.")
     c, _ = linalg.cho_factor(m, lower=True)
-    return 2*np.sum(np.log(c.diagonal()))
+    return 2 * np.sum(np.log(c.diagonal()))
 
 
 def stationary_solve(r, b):
@@ -48,8 +52,8 @@ def stationary_solve(r, b):
     Returns
     -------
     The solution to the linear system.
-    """
 
+    """
     db = r[0:1]
 
     dim = b.ndim
@@ -68,7 +72,7 @@ def stationary_solve(r, b):
 
         rn = r[j]
         a = (rn - np.dot(rf, db)) / (1 - np.dot(rf, db[::-1]))
-        z = db - a*db[::-1]
+        z = db - a * db[::-1]
         db = np.concatenate((z, np.r_[a]))
 
     if dim == 1:
@@ -78,7 +82,8 @@ def stationary_solve(r, b):
 
 
 def transf_constraints(constraints):
-    """use QR to get transformation matrix to impose constraint
+    """
+    Use QR to get transformation matrix to impose constraint
 
     Parameters
     ----------
@@ -103,8 +108,8 @@ def transf_constraints(constraints):
     --------
     statsmodels.base._constraints.TransformRestriction : class to impose
         constraints by reparameterization used by `_fit_constrained`.
-    """
 
+    """
     from scipy import linalg
 
     m = constraints.shape[0]
@@ -113,9 +118,9 @@ def transf_constraints(constraints):
     return transf
 
 
-def matrix_sqrt(mat, inverse=False, full=False, nullspace=False,
-                threshold=1e-15):
-    """matrix square root for symmetric matrices
+def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15):
+    """
+    Matrix square root for symmetric matrices
 
     Usage is for decomposing a covariance function S into a square root R
     such that
@@ -149,12 +154,16 @@ def matrix_sqrt(mat, inverse=False, full=False, nullspace=False,
     -------
     msqrt : ndarray
         matrix square root or square root of inverse matrix.
+
     """
     # see also scipy.linalg null_space
     u, s, v = np.linalg.svd(mat)
     if np.any(s < -threshold):
         import warnings
-        warnings.warn('some singular values are negative')
+
+        warnings.warn(
+            "some singular values are negative", SingularMatrixWarning, stacklevel=2
+        )
 
     if not nullspace:
         mask = s > threshold

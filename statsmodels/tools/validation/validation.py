@@ -1,5 +1,9 @@
-from typing import Any, Optional
+"""Validation helpers for array-like and scalar inputs."""
+
+from __future__ import annotations
+
 from collections.abc import Mapping
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -22,6 +26,7 @@ def _right_squeeze(arr, stop_dim=0):
     squeezed : ndarray
         Array with all trailing singleton dimensions (0 or 1) removed.
         Singleton dimensions for dimension < stop_dim are retained.
+
     """
     last = arr.ndim
     for s in reversed(arr.shape):
@@ -132,6 +137,7 @@ def array_like(
     Traceback (most recent call last):
      ...
     ValueError: x is required to have shape (*, 4, 4) but has shape (4, 10, 4)
+
     """
     if optional and obj is None:
         return None
@@ -176,6 +182,7 @@ class PandasWrapper:
     Raises if ``orig`` is a pandas type but obj and and ``orig`` have
     different numbers of elements in axis 0. Also raises if the ndim of obj
     is larger than 2.
+
     """
 
     def __init__(self, pandas_obj):
@@ -203,6 +210,7 @@ class PandasWrapper:
         -------
         array_like
             A pandas Series or DataFrame, depending on the shape of obj.
+
         """
         obj = np.asarray(obj)
         if not self._is_pandas:
@@ -241,7 +249,7 @@ class PandasWrapper:
 
 def bool_like(value, name, optional=False, strict=False):
     """
-    Convert to bool or raise if not bool_like
+    Convert to bool or raise if not bool_like.
 
     Parameters
     ----------
@@ -259,6 +267,7 @@ def bool_like(value, name, optional=False, strict=False):
     -------
     converted : bool
         value converted to a bool
+
     """
     if optional and value is None:
         return value
@@ -273,18 +282,18 @@ def bool_like(value, name, optional=False, strict=False):
         value = value.squeeze()
     try:
         return bool(value)
-    except Exception:
+    except Exception as exc:
         raise TypeError(
             "{} must be a bool (or bool-compatible)"
             "{}".format(name, extra_text)
-        )
+        ) from exc
 
 
 def int_like(
     value: Any, name: str, optional: bool = False, strict: bool = False
 ) -> Optional[int]:
     """
-    Convert to int or raise if not int_like
+    Convert to int or raise if not int_like.
 
     Parameters
     ----------
@@ -302,6 +311,7 @@ def int_like(
     -------
     converted : int
         value converted to a int
+
     """
     if optional and value is None:
         return None
@@ -327,7 +337,7 @@ def int_like(
 
 def required_int_like(value: Any, name: str, strict: bool = False) -> int:
     """
-    Convert to int or raise if not int_like
+    Convert to int or raise if not int_like.
 
     Parameters
     ----------
@@ -335,8 +345,6 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
         Value to verify
     name : str
         Variable name for exceptions
-    optional : bool
-        Flag indicating whether None is allowed
     strict : bool
         If True, then only allow int or np.integer that are not bool. If False,
         allow types that support integer division by 1 and conversion to int.
@@ -345,6 +353,7 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
     -------
     converted : int
         value converted to a int
+
     """
     _int = int_like(value, name, optional=False, strict=strict)
     assert _int is not None
@@ -353,7 +362,7 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
 
 def float_like(value, name, optional=False, strict=False):
     """
-    Convert to float or raise if not float_like
+    Convert to float or raise if not float_like.
 
     Parameters
     ----------
@@ -366,13 +375,14 @@ def float_like(value, name, optional=False, strict=False):
     strict : bool
         If True, then only allow int, np.integer, float or np.inexact that are
         not bool or complex. If False, allow complex types with 0 imag part or
-        any other type that is float like in the sense that it support
+        any other type that is float-like in the sense that it supports
         multiplication by 1.0 and conversion to float.
 
     Returns
     -------
     converted : float
         value converted to a float
+
     """
     if optional and value is None:
         return None
@@ -403,7 +413,7 @@ def float_like(value, name, optional=False, strict=False):
 
 def string_like(value, name, optional=False, options=None, lower=True):
     """
-    Check if object is string-like and raise if not
+    Check if object is string-like and raise if not.
 
     Parameters
     ----------
@@ -429,6 +439,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
         If the value is not a string or None when optional is True.
     ValueError
         If the input is not in ``options`` when ``options`` is set.
+
     """
     if value is None:
         return None
@@ -449,7 +460,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
 
 def dict_like(value, name, optional=False, strict=True):
     """
-    Check if dict_like (dict, Mapping) or raise if not
+    Check if dict_like (dict, Mapping) or raise if not.
 
     Parameters
     ----------
@@ -466,6 +477,7 @@ def dict_like(value, name, optional=False, strict=True):
     -------
     converted : dict_like
         value
+
     """
     if optional and value is None:
         return None

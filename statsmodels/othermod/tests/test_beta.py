@@ -54,8 +54,8 @@ expected_methylation_mean = pd.read_table(
 expected_methylation_precision = pd.read_table(
     io.StringIO(_methylation_estimates_precision), sep=r"\s+")
 
-income = pd.read_csv(os.path.join(res_dir, 'foodexpenditure.csv'))
-methylation = pd.read_csv(os.path.join(res_dir, 'methylation-test.csv'))
+income = pd.read_csv(os.path.join(res_dir, "foodexpenditure.csv"))
+methylation = pd.read_csv(os.path.join(res_dir, "methylation-test.csv"))
 
 
 def check_same(a, b, eps, name):
@@ -92,35 +92,35 @@ class TestBetaModel:
 
     def test_income_coefficients(self):
         rslt = self.income_fit
-        assert_close(rslt.params[:-1], expected_income_mean['Estimate'], 1e-3)
-        assert_close(rslt.tvalues[:-1], expected_income_mean['zvalue'], 0.1)
-        assert_close(rslt.pvalues[:-1], expected_income_mean['Pr(>|z|)'], 1e-3)
+        assert_close(rslt.params[:-1], expected_income_mean["Estimate"], 1e-3)
+        assert_close(rslt.tvalues[:-1], expected_income_mean["zvalue"], 0.1)
+        assert_close(rslt.pvalues[:-1], expected_income_mean["Pr(>|z|)"], 1e-3)
 
     def test_income_precision(self):
 
         rslt = self.income_fit
         # note that we have to exp the phi results for now.
         assert_close(np.exp(rslt.params[-1:]),
-                     expected_income_precision['Estimate'], 1e-3)
+                     expected_income_precision["Estimate"], 1e-3)
         # yield check_same, rslt.tvalues[-1:],
         #                   expected_income_precision['zvalue'], 0.1, "z-score"
         assert_close(rslt.pvalues[-1:],
-                     expected_income_precision['Pr(>|z|)'], 1e-3)
+                     expected_income_precision["Pr(>|z|)"], 1e-3)
 
     def test_methylation_coefficients(self):
         rslt = self.meth_fit
         assert_close(rslt.params[:-2],
-                     expected_methylation_mean['Estimate'], 1e-2)
+                     expected_methylation_mean["Estimate"], 1e-2)
         assert_close(rslt.tvalues[:-2],
-                     expected_methylation_mean['zvalue'], 0.1)
+                     expected_methylation_mean["zvalue"], 0.1)
         assert_close(rslt.pvalues[:-2],
-                     expected_methylation_mean['Pr(>|z|)'], 1e-2)
+                     expected_methylation_mean["Pr(>|z|)"], 1e-2)
 
     def test_methylation_precision(self):
         # R results are from log link_precision
         rslt = self.meth_log_fit
         assert_allclose(rslt.params[-2:],
-                        expected_methylation_precision['Estimate'],
+                        expected_methylation_precision["Estimate"],
                         atol=1e-5, rtol=1e-10)
         #     expected_methylation_precision['Estimate']
         # yield check_same, links.logit()(rslt.params[-2:]),
@@ -130,7 +130,7 @@ class TestBetaModel:
 
     def test_precision_formula(self):
         m = BetaModel.from_formula(self.model, methylation,
-                                   exog_precision_formula='~ age',
+                                   exog_precision_formula="~ age",
                                    link_precision=links.Identity())
         rslt = m.fit()
         assert_close(rslt.params, self.meth_fit.params, 1e-10)
@@ -138,7 +138,7 @@ class TestBetaModel:
 
         with pytest.warns(ValueWarning, match="unknown kwargs"):
             BetaModel.from_formula(self.model, methylation,
-                                   exog_precision_formula='~ age',
+                                   exog_precision_formula="~ age",
                                    link_precision=links.Identity(),
                                    junk=False)
 
@@ -233,9 +233,9 @@ class TestBetaMeth():
     def test_resid(self):
         res1 = self.res1
         res2 = self.res2
-        assert_allclose(res1.fittedvalues, res2.resid['fittedvalues'],
+        assert_allclose(res1.fittedvalues, res2.resid["fittedvalues"],
                         rtol=1e-8)
-        assert_allclose(res1.resid, res2.resid['response'],
+        assert_allclose(res1.resid, res2.resid["response"],
                         atol=1e-8, rtol=1e-8)
 
     def test_oim(self):
@@ -404,8 +404,8 @@ class TestBetaIncome():
 
         influ0 = MLEInfluence(res1)
         influ = res1.get_influence()
-        attrs = ['cooks_distance', 'd_fittedvalues', 'd_fittedvalues_scaled',
-                 'd_params', 'dfbetas', 'hat_matrix_diag', 'resid_studentized'
+        attrs = ["cooks_distance", "d_fittedvalues", "d_fittedvalues_scaled",
+                 "d_params", "dfbetas", "hat_matrix_diag", "resid_studentized"
                  ]
         for attr in attrs:
             getattr(influ, attr)

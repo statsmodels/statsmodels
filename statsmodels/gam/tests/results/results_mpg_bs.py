@@ -1,18 +1,18 @@
 import numpy as np
-from statsmodels.tools.tools import Bunch
 
+from statsmodels.tools.tools import Bunch
 
 mpg_bs = Bunch()
 
 mpg_bs.smooth0 = Bunch()
-mpg_bs.smooth0.term = 'weight'
+mpg_bs.smooth0.term = "weight"
 mpg_bs.smooth0.bs_dim = 12
 mpg_bs.smooth0.dim = 1
 mpg_bs.smooth0.p_order = np.array([
     3, 2
     ])
-mpg_bs.smooth0.by = 'NA'
-mpg_bs.smooth0.label = 's(weight)'
+mpg_bs.smooth0.by = "NA"
+mpg_bs.smooth0.label = "s(weight)"
 mpg_bs.smooth0.sp = -1
 mpg_bs.smooth0.m = np.array([
     3, 2
@@ -26,7 +26,7 @@ mpg_bs.smooth0.rank = 10
 mpg_bs.smooth0.null_space_dim = 1
 mpg_bs.smooth0.df = 11
 mpg_bs.smooth0.S_scale = 2.44395544177397e-06
-mpg_bs.smooth0.vn = 'weight'
+mpg_bs.smooth0.vn = "weight"
 mpg_bs.smooth0.first_para = 5
 mpg_bs.smooth0.last_para = 15
 mpg_bs.smooth0.S = np.array([
@@ -71,7 +71,7 @@ mpg_bs.smooth0.S = np.array([
     -0.00142523589453221, 0.00234383478372281, 0.00147745030481206,
     0.00285258581655637, 0.00255839876648785, -0.0111654555301857,
     0.00794139033444708
-    ]).reshape(11, 11, order='F')
+    ]).reshape(11, 11, order="F")
 
 mpg_bs.coefficients = np.array([
     29.6272774569595, -6.21365498504518, 1.43986598470837, 1.01128095138012,
@@ -381,7 +381,7 @@ mpg_bs.R = np.array([
     -0.0351898170323615, -0.00506295245698965, 0.000521970211206223,
     0.172268163286512, 0.0600225535087082, -0.0453855401632395,
     -0.0806877659326075, 1.10081916052039, 0, 0, 0, 0, 0
-    ]).reshape(24, 24, order='F')
+    ]).reshape(24, 24, order="F")
 
 mpg_bs.sp = np.array([
     0.830689464223685, 425.361212061649
@@ -580,7 +580,7 @@ mpg_bs.Ve = np.array([
     -0.313722205092763, -0.13018206203756, 0.0117075505963417,
     0.0587657751998836, 0.210671136673819, 0.320444922617657,
     0.077428034437221, 1.41062610423399, 3.20765551205844
-    ]).reshape(24, 24, order='F')
+    ]).reshape(24, 24, order="F")
 
 mpg_bs.Vp = np.array([
     1.226257739946, -0.598954657895286, -0.693991747115123,
@@ -775,7 +775,7 @@ mpg_bs.Vp = np.array([
     -0.12956213066101, 0.0326656898702012, 0.0898255256880958,
     0.241496481383994, 0.339886403782703, 0.249267438526421,
     0.746794237585425, 3.59868564812178
-    ]).reshape(24, 24, order='F')
+    ]).reshape(24, 24, order="F")
 
 mpg_bs.rV = np.array([
     -0.0297518795017788, -0.0279144173114223, -0.0184650622756606,
@@ -970,13 +970,13 @@ mpg_bs.rV = np.array([
     -0.0609219372551081, -0.013009064200119, 0.0192798284833754,
     0.0264362938415028, 0.0497024606324435, 0.0643121575768081,
     0.0663163083142627, 0.0640123302445087, 0.0750880869238639
-    ]).reshape(24, 24, order='F')
+    ]).reshape(24, 24, order="F")
 
 mpg_bs.gcv_ubre = 5.16162045425616
 mpg_bs.aic = 909.585145453506
 mpg_bs.rank = 24
 mpg_bs.gcv_ubre_dev = 5.16162045425363
-mpg_bs.method = 'GCV'
+mpg_bs.method = "GCV"
 mpg_bs.cmX = np.array([
     1, 0.901477832512315, 0.58128078817734, 0.374384236453202, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -997,7 +997,7 @@ mpg_bs.offset = np.array([
     ])
 mpg_bs.df_residual = 185.099985812547
 mpg_bs.min_edf = 6
-mpg_bs.optimizer = 'magic'
+mpg_bs.optimizer = "magic"
 mpg_bs.p_coeff = np.array([
     29.6272774569595, -6.21365498504518, 1.43986598470837, 1.01128095138012
     ])
@@ -1235,7 +1235,7 @@ mpg_bs.cov_unscaled = np.array([
     -0.0729173883583565, -0.0275284441796622, 0.00694057449961806,
     0.0190854917034619, 0.0513114624886664, 0.072216656566408,
     0.0529625804413154, 0.158673552049344, 0.764623246615722
-    ]).reshape(24, 24, order='F')
+    ]).reshape(24, 24, order="F")
 
 mpg_bs.cov_scaled = mpg_bs.cov_unscaled * mpg_bs.scale
 
@@ -1245,20 +1245,20 @@ mpg_bs.p_table = np.array([
     0.82715120287436, 26.7547479434413, -8.50062655963349, 1.7936840513851,
     1.22260712172806, 1.61958620027156e-65, 6.17307801841172e-15,
     0.0744959485685591, 0.223032563883354
-    ]).reshape(4, 4, order='F')
+    ]).reshape(4, 4, order="F")
 
 mpg_bs.pTerms_table = np.array([
     1, 2, 72.2606519063463, 1.75474558676481, 6.1730780184117e-15,
     0.175815884801339
-    ]).reshape(2, 3, order='F')
+    ]).reshape(2, 3, order="F")
 
 mpg_bs.s_table = np.array([
     10.2535689759835, 3.64644521146987, 10.8058511361601, 4.39467905741677,
     12.2156111509682, 15.7813555049275, 4.72304400617769e-18,
     6.21718617954453e-12
-    ]).reshape(2, 4, order='F')
+    ]).reshape(2, 4, order="F")
 
-mpg_bs.method = 'GCV'
+mpg_bs.method = "GCV"
 mpg_bs.sp_criterion = 5.16162045425616
 mpg_bs.rank = 24
 mpg_bs.np = 24

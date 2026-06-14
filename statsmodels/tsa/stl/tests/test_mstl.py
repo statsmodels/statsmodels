@@ -7,21 +7,21 @@ import pytest
 from statsmodels.tsa.seasonal import MSTL
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def mstl_results():
     cur_dir = Path(__file__).parent.resolve()
     file_path = cur_dir / "results/mstl_test_results.csv"
     return pd.read_csv(file_path)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def data_pd():
     cur_dir = Path(__file__).parent.resolve()
     file_path = cur_dir / "results/mstl_elec_vic.csv"
     return pd.read_csv(file_path, index_col=["ds"], parse_dates=["ds"])
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def data(data_pd):
     return data_pd["y"].values
 

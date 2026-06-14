@@ -6,14 +6,14 @@ License: BSD-3
 """
 
 import numpy as np
+
 from statsmodels.base.model import Model
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.testing import Holder
-
-from statsmodels.robust.robust_linear_model import RLM
-import statsmodels.robust.norms as rnorms
-import statsmodels.robust.scale as rscale
 from statsmodels.robust.covariance import _get_detcov_startidx
+import statsmodels.robust.norms as rnorms
+from statsmodels.robust.robust_linear_model import RLM
+import statsmodels.robust.scale as rscale
+from statsmodels.tools.testing import Holder
 
 
 class RLMDetS(Model):
@@ -32,21 +32,21 @@ class RLMDetS(Model):
 
     .. [1] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
-       Computational and Graphical Statistics 21 (3): 618–37.
+       Computational and Graphical Statistics 21 (3): 618-37.
        https://doi.org/10.1080/10618600.2012.672100.
 
     .. [2] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck.
        2015. “The DetS and DetMM Estimators for Multivariate Location and
-       Scatter.” Computational Statistics & Data Analysis 81 (January): 64–75.
+       Scatter.” Computational Statistics & Data Analysis 81 (January): 64-75.
        https://doi.org/10.1016/j.csda.2014.07.013.
 
     .. [3] Rousseeuw, Peter J., Stefan Van Aelst, Katrien Van Driessen, and
         Jose Agulló. 2004. “Robust Multivariate Regression.”
-        Technometrics 46 (3): 293–305.
+        Technometrics 46 (3): 293-305.
 
     .. [4] Salibian-Barrera, Matías, and Víctor J. Yohai. 2006. “A Fast
        Algorithm for S-Regression Estimates.” Journal of Computational and
-       Graphical Statistics 15 (2): 414–27.
+       Graphical Statistics 15 (2): 414-27.
 
 
     """

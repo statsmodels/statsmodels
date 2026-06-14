@@ -14,8 +14,7 @@ NOTE: As it is, this module does not interact with the existing API
 import numpy as np
 from scipy.special import erf
 
-
-#TODO:
+# TODO:
 # - make sure we only receive int input for wang-ryzin and aitchison-aitken
 # - Check for the scalar Xi case everywhere
 
@@ -122,7 +121,7 @@ def gaussian(h, Xi, x):
     kernel_value : ndarray, shape (nobs, K)
         The value of the kernel function at each training point for each var.
     """
-    return (1. / np.sqrt(2 * np.pi)) * np.exp(-(Xi - x)**2 / (h**2 * 2.))
+    return (1.0 / np.sqrt(2 * np.pi)) * np.exp(-((Xi - x) ** 2) / (h**2 * 2.0))
 
 
 def tricube(h, Xi, x):
@@ -144,12 +143,12 @@ def tricube(h, Xi, x):
     """
     u = (Xi - x) / h
     u[np.abs(u) > 1] = 0
-    return (70. / 81) * (1 - np.abs(u)**3)**3
+    return (70.0 / 81) * (1 - np.abs(u) ** 3) ** 3
 
 
 def gaussian_convolution(h, Xi, x):
-    """ Calculates the Gaussian Convolution Kernel """
-    return (1. / np.sqrt(4 * np.pi)) * np.exp(- (Xi - x)**2 / (h**2 * 4.))
+    """Calculates the Gaussian Convolution Kernel"""
+    return (1.0 / np.sqrt(4 * np.pi)) * np.exp(-((Xi - x) ** 2) / (h**2 * 4.0))
 
 
 def wang_ryzin_convolution(h, Xi, Xj):
@@ -168,8 +167,9 @@ def aitchison_aitken_convolution(h, Xi, Xj):
     ordered = np.zeros(Xi.size)
     num_levels = Xi_vals.size
     for x in Xi_vals:
-        ordered += aitchison_aitken(h, Xi, x, num_levels=num_levels) * \
-                   aitchison_aitken(h, Xj, x, num_levels=num_levels)
+        ordered += aitchison_aitken(h, Xi, x, num_levels=num_levels) * aitchison_aitken(
+            h, Xj, x, num_levels=num_levels
+        )
 
     return ordered
 
@@ -184,7 +184,7 @@ def aitchison_aitken_cdf(h, Xi, x_u):
     ordered = np.zeros(Xi.size)
     num_levels = Xi_vals.size
     for x in Xi_vals:
-        if x <= x_u:  #FIXME: why a comparison for unordered variables?
+        if x <= x_u:  # FIXME: why a comparison for unordered variables?
             ordered += aitchison_aitken(h, Xi, x, num_levels=num_levels)
 
     return ordered

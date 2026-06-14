@@ -7,10 +7,12 @@ See the generated file "gee_poisson_simulation_check.txt" for results.
 """
 
 import numpy as np
+
+from statsmodels.genmod.cov_struct import Exchangeable, Independence
 from statsmodels.genmod.families import Poisson
-from .gee_gaussian_simulation_check import GEE_simulator
 from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.genmod.cov_struct import Exchangeable,Independence
+
+from .gee_gaussian_simulation_check import GEE_simulator
 
 
 class Exchangeable_simulator(GEE_simulator):
@@ -45,16 +47,16 @@ class Exchangeable_simulator(GEE_simulator):
                   self.scale_inv)
         OUT.write("\n")
 
-
     def simulate(self):
 
         endog, exog, group, time = [], [], [], []
 
         # Get a basis for the orthogonal complement to params.
         f = np.sum(self.params**2)
-        u,s,vt = np.linalg.svd(np.eye(len(self.params)) -
-                               np.outer(self.params, self.params) / f)
-        params0 = u[:,np.flatnonzero(s > 1e-6)]
+        u, s, vt = np.linalg.svd(
+            np.eye(len(self.params)) - np.outer(self.params, self.params) / f
+        )
+        params0 = u[:, np.flatnonzero(s > 1e-6)]
 
         for i in range(self.ngroups):
 
@@ -107,7 +109,6 @@ class Overdispersed_simulator(GEE_simulator):
     dparams[0] is the common correlation coefficient
     """
 
-
     def print_dparams(self, dparams_est):
         OUT.write("Estimated inverse scale parameter:       %8.4f\n" %
                   dparams_est[0])
@@ -115,16 +116,16 @@ class Overdispersed_simulator(GEE_simulator):
                   self.scale_inv)
         OUT.write("\n")
 
-
     def simulate(self):
 
         endog, exog, group, time = [], [], [], []
 
         # Get a basis for the orthogonal complement to params.
-        f = np.sum(self.params**2)
-        u,s,vt = np.linalg.svd(np.eye(len(self.params)) -
-                               np.outer(self.params, self.params) / f)
-        params0 = u[:,np.flatnonzero(s > 1e-6)]
+        # Unused, commented out
+        # f = np.sum(self.params**2)
+        # u,s,vt = np.linalg.svd(np.eye(len(self.params)) -
+        #                       np.outer(self.params, self.params) / f)
+        # params0 = u[:,np.flatnonzero(s > 1e-6)]
 
         for i in range(self.ngroups):
 
@@ -154,7 +155,6 @@ class Overdispersed_simulator(GEE_simulator):
         self.group = np.concatenate(group)
 
 
-
 def gendat_exchangeable():
     exs = Exchangeable_simulator()
     exs.params = np.r_[2., 0.2, 0.2, -0.1, -0.2]
@@ -162,6 +162,7 @@ def gendat_exchangeable():
     exs.dparams = [0.3,]
     exs.simulate()
     return exs, Exchangeable()
+
 
 def gendat_overdispersed():
     exs = Overdispersed_simulator()
@@ -175,7 +176,7 @@ def gendat_overdispersed():
 
 if __name__ == "__main__":
 
-    np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
                         suppress=True)
 
     OUT = open("gee_poisson_simulation_check.txt", "w", encoding="utf-8")
@@ -195,7 +196,7 @@ if __name__ == "__main__":
         std_errors = []
         dparams = []
 
-        for j in range(nrep):
+        for _ in range(nrep):
 
             da, va = gendat()
             ga = Poisson()
@@ -207,7 +208,7 @@ if __name__ == "__main__":
             mdf = md.fit()
 
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
-            mdf = md.fit(start_params = mdf.params)
+            mdf = md.fit(start_params=mdf.params)
             if mdf is None or (not mdf.converged):
                 print("Failed to converge")
                 continue
@@ -217,7 +218,7 @@ if __name__ == "__main__":
             params.append(np.asarray(mdf.params))
             std_errors.append(np.asarray(mdf.standard_errors))
 
-            da,va = gendat()
+            da, va = gendat()
             ga = Poisson()
 
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va,

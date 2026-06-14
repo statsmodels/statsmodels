@@ -1,18 +1,23 @@
-'''Multiple Testing and P-Value Correction
+"""Multiple Testing and P-Value Correction
 
 
 Author: Josef Perktold
 License: BSD-3
 
-'''
-
+"""
 
 import numpy as np
 
 from statsmodels.stats._knockoff import RegressionFDR
 
-__all__ = ['fdrcorrection', 'fdrcorrection_twostage', 'local_fdr',
-           'multipletests', 'NullDistribution', 'RegressionFDR']
+__all__ = [
+    "NullDistribution",
+    "RegressionFDR",
+    "fdrcorrection",
+    "fdrcorrection_twostage",
+    "local_fdr",
+    "multipletests",
+]
 
 # ==============================================
 #
@@ -22,36 +27,45 @@ __all__ = ['fdrcorrection', 'fdrcorrection_twostage', 'local_fdr',
 
 
 def _ecdf(x):
-    '''no frills empirical cdf used in fdrcorrection
-    '''
+    """
+    No frills empirical cdf used in fdrcorrection
+
+    Parameters
+    ----------
+    x : ndarray
+        The data to use
+    """
     nobs = len(x)
-    return np.arange(1,nobs+1)/float(nobs)
+    return np.arange(1, nobs + 1) / float(nobs)
 
-multitest_methods_names = {'b': 'Bonferroni',
-                           's': 'Sidak',
-                           'h': 'Holm',
-                           'hs': 'Holm-Sidak',
-                           'sh': 'Simes-Hochberg',
-                           'ho': 'Hommel',
-                           'fdr_bh': 'FDR Benjamini-Hochberg',
-                           'fdr_by': 'FDR Benjamini-Yekutieli',
-                           'fdr_tsbh': 'FDR 2-stage Benjamini-Hochberg',
-                           'fdr_tsbky': 'FDR 2-stage Benjamini-Krieger-Yekutieli',
-                           'fdr_gbs': 'FDR adaptive Gavrilov-Benjamini-Sarkar'
-                           }
 
-_alias_list = [['b', 'bonf', 'bonferroni'],
-               ['s', 'sidak'],
-               ['h', 'holm'],
-               ['hs', 'holm-sidak'],
-               ['sh', 'simes-hochberg'],
-               ['ho', 'hommel'],
-               ['fdr_bh', 'fdr_i', 'fdr_p', 'fdri', 'fdrp'],
-               ['fdr_by', 'fdr_n', 'fdr_c', 'fdrn', 'fdrcorr'],
-               ['fdr_tsbh', 'fdr_2sbh'],
-               ['fdr_tsbky', 'fdr_2sbky', 'fdr_twostage'],
-               ['fdr_gbs']
-               ]
+multitest_methods_names = {
+    "b": "Bonferroni",
+    "s": "Sidak",
+    "h": "Holm",
+    "hs": "Holm-Sidak",
+    "sh": "Simes-Hochberg",
+    "ho": "Hommel",
+    "fdr_bh": "FDR Benjamini-Hochberg",
+    "fdr_by": "FDR Benjamini-Yekutieli",
+    "fdr_tsbh": "FDR 2-stage Benjamini-Hochberg",
+    "fdr_tsbky": "FDR 2-stage Benjamini-Krieger-Yekutieli",
+    "fdr_gbs": "FDR adaptive Gavrilov-Benjamini-Sarkar",
+}
+
+_alias_list = [
+    ["b", "bonf", "bonferroni"],
+    ["s", "sidak"],
+    ["h", "holm"],
+    ["hs", "holm-sidak"],
+    ["sh", "simes-hochberg"],
+    ["ho", "hommel"],
+    ["fdr_bh", "fdr_i", "fdr_p", "fdri", "fdrp"],
+    ["fdr_by", "fdr_n", "fdr_c", "fdrn", "fdrcorr"],
+    ["fdr_tsbh", "fdr_2sbh"],
+    ["fdr_tsbky", "fdr_2sbky", "fdr_twostage"],
+    ["fdr_gbs"],
+]
 
 
 multitest_alias = {}
@@ -60,10 +74,10 @@ for m in _alias_list:
     for a in m[1:]:
         multitest_alias[a] = m[0]
 
-def multipletests(pvals, alpha=0.05, method='hs',
-                  maxiter=1,
-                  is_sorted=False,
-                  returnsorted=False):
+
+def multipletests(
+    pvals, alpha=0.05, method="hs", maxiter=1, is_sorted=False, returnsorted=False
+):
     """
     Test results and p-value correction for multiple tests
 
@@ -145,6 +159,7 @@ def multipletests(pvals, alpha=0.05, method='hs',
     evaluation of n partitions, where n is the number of p-values.
     """
     import gc
+
     pvals = np.asarray(pvals)
     alphaf = alpha  # Notation ?
 
@@ -153,19 +168,18 @@ def multipletests(pvals, alpha=0.05, method='hs',
         pvals = np.take(pvals, sortind)
 
     ntests = len(pvals)
-    alphacSidak = 1 - np.power((1. - alphaf), 1./ntests)
+    alphacSidak = 1 - np.power((1.0 - alphaf), 1.0 / ntests)
     alphacBonf = alphaf / float(ntests)
-    if method.lower() in ['b', 'bonf', 'bonferroni']:
+    if method.lower() in ["b", "bonf", "bonferroni"]:
         reject = pvals <= alphacBonf
         pvals_corrected = pvals * float(ntests)
 
-    elif method.lower() in ['s', 'sidak']:
+    elif method.lower() in ["s", "sidak"]:
         reject = pvals <= alphacSidak
         pvals_corrected = -np.expm1(ntests * np.log1p(-pvals))
 
-    elif method.lower() in ['hs', 'holm-sidak']:
-        alphacSidak_all = 1 - np.power((1. - alphaf),
-                                       1./np.arange(ntests, 0, -1))
+    elif method.lower() in ["hs", "holm-sidak"]:
+        alphacSidak_all = 1 - np.power((1.0 - alphaf), 1.0 / np.arange(ntests, 0, -1))
         notreject = pvals > alphacSidak_all
         del alphacSidak_all
 
@@ -182,12 +196,11 @@ def multipletests(pvals, alpha=0.05, method='hs',
         # It's eqivalent to 1 - np.power((1. - pvals),
         #                           np.arange(ntests, 0, -1))
         # but prevents the issue of the floating point precision
-        pvals_corrected_raw = -np.expm1(np.arange(ntests, 0, -1) *
-                                        np.log1p(-pvals))
+        pvals_corrected_raw = -np.expm1(np.arange(ntests, 0, -1) * np.log1p(-pvals))
         pvals_corrected = np.maximum.accumulate(pvals_corrected_raw)
         del pvals_corrected_raw
 
-    elif method.lower() in ['h', 'holm']:
+    elif method.lower() in ["h", "holm"]:
         notreject = pvals > alphaf / np.arange(ntests, 0, -1)
         nr_index = np.nonzero(notreject)[0]
         if nr_index.size == 0:
@@ -202,7 +215,7 @@ def multipletests(pvals, alpha=0.05, method='hs',
         del pvals_corrected_raw
         gc.collect()
 
-    elif method.lower() in ['sh', 'simes-hochberg']:
+    elif method.lower() in ["sh", "simes-hochberg"]:
         alphash = alphaf / np.arange(ntests, 0, -1)
         reject = pvals <= alphash
         rejind = np.nonzero(reject)
@@ -213,59 +226,57 @@ def multipletests(pvals, alpha=0.05, method='hs',
         pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
         del pvals_corrected_raw
 
-    elif method.lower() in ['ho', 'hommel']:
+    elif method.lower() in ["ho", "hommel"]:
         # we need a copy because we overwrite it in a loop
         a = pvals.copy()
         for m in range(ntests, 1, -1):
-            cim = np.min(m * pvals[-m:] / np.arange(1,m+1.))
+            cim = np.min(m * pvals[-m:] / np.arange(1, m + 1.0))
             a[-m:] = np.maximum(a[-m:], cim)
             a[:-m] = np.maximum(a[:-m], np.minimum(m * pvals[:-m], cim))
         pvals_corrected = a
         reject = a <= alphaf
 
-    elif method.lower() in ['fdr_bh', 'fdr_i', 'fdr_p', 'fdri', 'fdrp']:
+    elif method.lower() in ["fdr_bh", "fdr_i", "fdr_p", "fdri", "fdrp"]:
         # delegate, call with sorted pvals
-        reject, pvals_corrected = fdrcorrection(pvals, alpha=alpha,
-                                                 method='indep',
-                                                 is_sorted=True)
-    elif method.lower() in ['fdr_by', 'fdr_n', 'fdr_c', 'fdrn', 'fdrcorr']:
+        reject, pvals_corrected = fdrcorrection(
+            pvals, alpha=alpha, method="indep", is_sorted=True
+        )
+    elif method.lower() in ["fdr_by", "fdr_n", "fdr_c", "fdrn", "fdrcorr"]:
         # delegate, call with sorted pvals
-        reject, pvals_corrected = fdrcorrection(pvals, alpha=alpha,
-                                                 method='n',
-                                                 is_sorted=True)
-    elif method.lower() in ['fdr_tsbky', 'fdr_2sbky', 'fdr_twostage']:
+        reject, pvals_corrected = fdrcorrection(
+            pvals, alpha=alpha, method="n", is_sorted=True
+        )
+    elif method.lower() in ["fdr_tsbky", "fdr_2sbky", "fdr_twostage"]:
         # delegate, call with sorted pvals
-        reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha,
-                                                         method='bky',
-                                                         maxiter=maxiter,
-                                                         is_sorted=True)[:2]
-    elif method.lower() in ['fdr_tsbh', 'fdr_2sbh']:
+        reject, pvals_corrected = fdrcorrection_twostage(
+            pvals, alpha=alpha, method="bky", maxiter=maxiter, is_sorted=True
+        )[:2]
+    elif method.lower() in ["fdr_tsbh", "fdr_2sbh"]:
         # delegate, call with sorted pvals
-        reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha,
-                                                         method='bh',
-                                                         maxiter=maxiter,
-                                                         is_sorted=True)[:2]
+        reject, pvals_corrected = fdrcorrection_twostage(
+            pvals, alpha=alpha, method="bh", maxiter=maxiter, is_sorted=True
+        )[:2]
 
-    elif method.lower() in ['fdr_gbs']:
-        #adaptive stepdown in Gavrilov, Benjamini, Sarkar, Annals of Statistics 2009
-##        notreject = pvals > alphaf / np.arange(ntests, 0, -1) #alphacSidak
-##        notrejectmin = np.min(np.nonzero(notreject))
-##        notreject[notrejectmin:] = True
-##        reject = ~notreject
+    elif method.lower() in ["fdr_gbs"]:
+        # adaptive stepdown in Gavrilov, Benjamini, Sarkar, Annals of Statistics 2009
+        #        notreject = pvals > alphaf / np.arange(ntests, 0, -1) # alphacSidak
+        #        notrejectmin = np.min(np.nonzero(notreject))
+        #        notreject[notrejectmin:] = True
+        #        reject = ~notreject
 
         ii = np.arange(1, ntests + 1)
-        q = (ntests + 1. - ii)/ii * pvals / (1. - pvals)
-        pvals_corrected_raw = np.maximum.accumulate(q) #up requirementd
+        q = (ntests + 1.0 - ii) / ii * pvals / (1.0 - pvals)
+        pvals_corrected_raw = np.maximum.accumulate(q)  # up requirementd
 
         pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
         del pvals_corrected_raw
         reject = pvals_corrected <= alpha
 
     else:
-        raise ValueError('method not recognized')
+        raise ValueError("method not recognized")
 
-    if pvals_corrected is not None: #not necessary anymore
-        pvals_corrected[pvals_corrected>1] = 1
+    if pvals_corrected is not None:  # not necessary anymore
+        pvals_corrected[pvals_corrected > 1] = 1
     if is_sorted or returnsorted:
         return reject, pvals_corrected, alphacSidak, alphacBonf
     else:
@@ -277,8 +288,8 @@ def multipletests(pvals, alpha=0.05, method='hs',
         return reject_, pvals_corrected_, alphacSidak, alphacBonf
 
 
-def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
-    '''
+def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
+    """
     pvalue correction for false discovery rate.
 
     This covers Benjamini/Hochberg for independent or positively correlated and
@@ -327,7 +338,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     --------
     multipletests
 
-    '''
+    """
     pvals = np.asarray(pvals)
     assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
 
@@ -337,17 +348,17 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     else:
         pvals_sorted = pvals  # alias
 
-    if method in ['i', 'indep', 'p', 'poscorr']:
+    if method in ["i", "indep", "p", "poscorr"]:
         ecdffactor = _ecdf(pvals_sorted)
-    elif method in ['n', 'negcorr']:
-        cm = np.sum(1./np.arange(1, len(pvals_sorted)+1))   #corrected this
+    elif method in ["n", "negcorr"]:
+        cm = np.sum(1.0 / np.arange(1, len(pvals_sorted) + 1))  # corrected this
         ecdffactor = _ecdf(pvals_sorted) / cm
-##    elif method in ['n', 'negcorr']:
-##        cm = np.sum(np.arange(len(pvals)))
-##        ecdffactor = ecdf(pvals_sorted)/cm
+    #    elif method in ['n', 'negcorr']:
+    #        cm = np.sum(np.arange(len(pvals)))
+    #        ecdffactor = ecdf(pvals_sorted)/cm
     else:
-        raise ValueError('only indep and negcorr implemented')
-    reject = pvals_sorted <= ecdffactor*alpha
+        raise ValueError("only indep and negcorr implemented")
+    reject = pvals_sorted <= ecdffactor * alpha
     if reject.any():
         rejectmax = max(np.nonzero(reject)[0])
         reject[:rejectmax] = True
@@ -355,7 +366,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     pvals_corrected_raw = pvals_sorted / ecdffactor
     pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
     del pvals_corrected_raw
-    pvals_corrected[pvals_corrected>1] = 1
+    pvals_corrected[pvals_corrected > 1] = 1
     if not is_sorted:
         pvals_corrected_ = np.empty_like(pvals_corrected)
         pvals_corrected_[pvals_sortind] = pvals_corrected
@@ -367,11 +378,10 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
         return reject, pvals_corrected
 
 
-def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
-                           maxiter=1,
-                           iter=None,
-                           is_sorted=False):
-    '''(iterated) two stage linear step-up procedure with estimation of number of true
+def fdrcorrection_twostage(
+    pvals, alpha=0.05, method="bky", maxiter=1, iter=None, is_sorted=False
+):
+    """(iterated) two stage linear step-up procedure with estimation of number of true
     hypotheses
 
     Benjamini, Krieger and Yekuteli, procedure in Definition 6
@@ -445,38 +455,39 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
 
     TODO: What should be returned?
 
-    '''
+    """
     pvals = np.asarray(pvals)
 
     if iter is not None:
         import warnings
+
         msg = "iter keyword is deprecated, use maxiter keyword instead."
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(msg, FutureWarning, stacklevel=2)
 
     if iter is False:
         maxiter = 1
-    elif iter is True or maxiter in [-1, None] :
+    elif iter is True or maxiter in [-1, None]:
         maxiter = len(pvals)
     # otherwise we use maxiter
-
 
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)
         pvals = np.take(pvals, pvals_sortind)
 
     ntests = len(pvals)
-    if method == 'bky':
-        fact = (1.+alpha)
+    if method == "bky":
+        fact = 1.0 + alpha
         alpha_prime = alpha / fact
-    elif method == 'bh':
-        fact = 1.
+    elif method == "bh":
+        fact = 1.0
         alpha_prime = alpha
     else:
         raise ValueError("only 'bky' and 'bh' are available as method")
 
     alpha_stages = [alpha_prime]
-    rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_prime, method='indep',
-                                   is_sorted=True)
+    rej, pvalscorr = fdrcorrection(
+        pvals, alpha=alpha_prime, method="indep", is_sorted=True
+    )
     r1 = rej.sum()
     if (r1 == 0) or (r1 == ntests):
         # return rej, pvalscorr * fact, ntests - r1, alpha_stages
@@ -485,15 +496,16 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
         ri = r1
     else:
         ri_old = ri = r1
-        ntests0 = ntests # needed if maxiter=0
+        ntests0 = ntests  # needed if maxiter=0
         # while True:
         for it in range(maxiter):
             ntests0 = 1.0 * ntests - ri_old
             alpha_star = alpha_prime * ntests / ntests0
             alpha_stages.append(alpha_star)
-            #print ntests0, alpha_star
-            rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_star, method='indep',
-                                           is_sorted=True)
+            # print ntests0, alpha_star
+            rej, pvalscorr = fdrcorrection(
+                pvals, alpha=alpha_star, method="indep", is_sorted=True
+            )
             ri = rej.sum()
             if (it >= maxiter - 1) or ri == ri_old:
                 break
@@ -504,11 +516,11 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
 
         # make adjustment to pvalscorr to reflect estimated number of Non-Null cases
         # decision is then pvalscorr < alpha  (or <=)
-        pvalscorr *= ntests0 * 1.0 /  ntests
-        if method == 'bky':
-            pvalscorr *= (1. + alpha)
+        pvalscorr *= ntests0 * 1.0 / ntests
+        if method == "bky":
+            pvalscorr *= 1.0 + alpha
 
-    pvalscorr[pvalscorr>1] = 1
+    pvalscorr[pvalscorr > 1] = 1
     if not is_sorted:
         pvalscorr_ = np.empty_like(pvalscorr)
         pvalscorr_[pvals_sortind] = pvalscorr
@@ -520,8 +532,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
         return rej, pvalscorr, ntests - ri, alpha_stages
 
 
-def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
-              nbins=30, alpha=0):
+def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7, nbins=30, alpha=0):
     """
     Calculate local FDR values for a list of Z-scores.
 
@@ -568,8 +579,7 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
     >>> fdr = local_fdr(zscores, null_pdf=null.pdf)
     """
 
-    from statsmodels.genmod.generalized_linear_model import GLM
-    from statsmodels.genmod.generalized_linear_model import families
+    from statsmodels.genmod.generalized_linear_model import GLM, families
     from statsmodels.regression.linear_model import OLS
 
     # Bins for Poisson modeling of the marginal Z-score density
@@ -588,14 +598,16 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
 
     # Rescale the design matrix
     sd = dmat.std(0)
-    ii = sd >1e-8
+    ii = sd > 1e-8
     dmat[:, ii] /= sd[ii]
 
     start = OLS(np.log(1 + zhist), dmat).fit().params
 
     # Poisson regression
     if alpha > 0:
-        md = GLM(zhist, dmat, family=families.Poisson()).fit_regularized(L1_wt=0, alpha=alpha, start_params=start)
+        md = GLM(zhist, dmat, family=families.Poisson()).fit_regularized(
+            L1_wt=0, alpha=alpha, start_params=start
+        )
     else:
         md = GLM(zhist, dmat, family=families.Poisson()).fit(start_params=start)
 
@@ -670,8 +682,15 @@ class NullDistribution:
     http://nipy.org/nipy/labs/enn.html#nipy.algorithms.statistics.empirical_pvalue.NormalEmpiricalNull.fdr
     """
 
-    def __init__(self, zscores, null_lb=-1, null_ub=1, estimate_mean=True,
-                 estimate_scale=True, estimate_null_proportion=False):
+    def __init__(
+        self,
+        zscores,
+        null_lb=-1,
+        null_ub=1,
+        estimate_mean=True,
+        estimate_scale=True,
+        estimate_null_proportion=False,
+    ):
 
         # Extract the null z-scores
         ii = np.flatnonzero((zscores >= null_lb) & (zscores <= null_ub))
@@ -686,9 +705,9 @@ class NullDistribution:
         # parameters fixed as specified.
         def xform(params):
 
-            mean = 0.
-            sd = 1.
-            prob = 1.
+            mean = 0.0
+            sd = 1.0
+            prob = 1.0
 
             ii = 0
             if estimate_mean:
@@ -702,9 +721,7 @@ class NullDistribution:
 
             return mean, sd, prob
 
-
         from scipy.stats.distributions import norm
-
 
         def fun(params):
             """
@@ -722,8 +739,7 @@ class NullDistribution:
             d, s, p = xform(params)
 
             # Mass within the central region
-            central_mass = (norm.cdf((null_ub - d) / s) -
-                            norm.cdf((null_lb - d) / s))
+            central_mass = norm.cdf((null_ub - d) / s) - norm.cdf((null_lb - d) / s)
 
             # Probability that a Z-score is null and is in the central region
             cp = p * central_mass
@@ -733,22 +749,21 @@ class NullDistribution:
 
             # Truncated Gaussian term for null Z-scores
             zv = (zscores0 - d) / s
-            rval += np.sum(-zv**2 / 2) - n_zs0 * np.log(s)
+            rval += np.sum(-(zv**2) / 2) - n_zs0 * np.log(s)
             rval -= n_zs0 * np.log(central_mass)
 
             return -rval
 
-
         # Estimate the parameters
         from scipy.optimize import minimize
+
         # starting values are mean = 0, scale = 1, p0 ~ 1
-        mz = minimize(fun, np.r_[0., 0, 3], method="Nelder-Mead")
-        mean, sd, prob = xform(mz['x'])
+        mz = minimize(fun, np.r_[0.0, 0, 3], method="Nelder-Mead")
+        mean, sd, prob = xform(mz["x"])
 
         self.mean = mean
         self.sd = sd
         self.null_proportion = prob
-
 
     # The fitted null density function
     def pdf(self, zscores):
@@ -768,4 +783,4 @@ class NullDistribution:
         """
 
         zval = (zscores - self.mean) / self.sd
-        return np.exp(-0.5*zval**2 - np.log(self.sd) - 0.5*np.log(2*np.pi))
+        return np.exp(-0.5 * zval**2 - np.log(self.sd) - 0.5 * np.log(2 * np.pi))

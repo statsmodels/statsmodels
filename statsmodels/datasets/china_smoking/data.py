@@ -1,22 +1,22 @@
 """Smoking and lung cancer in eight cities in China."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """Intern. J. Epidemiol. (1992)"""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """Intern. J. Epidemiol. (1992)"""
+TITLE = __doc__
+SOURCE = """
 Transcribed from Z. Liu, Smoking and Lung Cancer Incidence in China,
 Intern. J. Epidemiol., 21:197-201, (1992).
 """
 
-DESCRSHORT  = """Co-occurrence of lung cancer and smoking in 8 Chinese cities."""
+DESCRSHORT = """Co-occurrence of lung cancer and smoking in 8 Chinese cities."""
 
-DESCRLONG   = """This is a series of 8 2x2 contingency tables showing the co-occurrence
+DESCRLONG = """This is a series of 8 2x2 contingency tables showing the co-occurrence
 of lung cancer and smoking in 8 Chinese cities.
 """
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 8
     Number of Variables - 3
@@ -37,8 +37,8 @@ def load_pandas():
     Dataset
         See DATASET_PROPOSAL.txt for more information.
     """
-    raw_data = du.load_csv(__file__, 'china_smoking.csv')
-    data = raw_data.set_index('Location')
+    raw_data = du.load_csv(__file__, "china_smoking.csv")
+    data = raw_data.set_index("Location")
     dset = du.Dataset(data=data, title="Smoking and lung cancer in Chinese regions")
     dset.raw_data = raw_data
     return dset

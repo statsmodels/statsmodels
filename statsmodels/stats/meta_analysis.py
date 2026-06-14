@@ -11,6 +11,7 @@ import pandas as pd
 from scipy import stats
 
 from statsmodels.stats.base import HolderTuple
+from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
 
 class CombineResults:
@@ -36,8 +37,7 @@ class CombineResults:
         # memoize ci_samples
         self.cache_ci = {}
 
-    def conf_int_samples(self, alpha=0.05, use_t=None, nobs=None,
-                         ci_func=None):
+    def conf_int_samples(self, alpha=0.05, use_t=None, nobs=None, ci_func=None):
         """confidence intervals for the effect size estimate of samples
 
         Additional information needs to be provided for confidence intervals
@@ -92,19 +92,21 @@ class CombineResults:
             if use_t is False:
                 crit = stats.norm.isf(alpha / 2)
                 self.ci_sample_distr = "normal"
+            elif nobs is not None:
+                df_resid = nobs - 1
+                crit = stats.t.isf(alpha / 2, df_resid)
+                self.ci_sample_distr = "t"
             else:
-                if nobs is not None:
-                    df_resid = nobs - 1
-                    crit = stats.t.isf(alpha / 2, df_resid)
-                    self.ci_sample_distr = "t"
-                else:
-                    msg = ("`use_t=True` requires `nobs` for each sample "
-                           "or `ci_func`. Using normal distribution for "
-                           "confidence interval of individual samples.")
-                    import warnings
-                    warnings.warn(msg)
-                    crit = stats.norm.isf(alpha / 2)
-                    self.ci_sample_distr = "normal"
+                msg = (
+                    "`use_t=True` requires `nobs` for each sample "
+                    "or `ci_func`. Using normal distribution for "
+                    "confidence interval of individual samples."
+                )
+                import warnings
+
+                warnings.warn(msg, InvalidTestWarning, stacklevel=2)
+                crit = stats.norm.isf(alpha / 2)
+                self.ci_sample_distr = "normal"
 
             # sgn = np.asarray([-1, 1])
             # ci_eff = self.eff + sgn * crit * self.sd_eff
@@ -190,10 +192,7 @@ class CombineResults:
                 minus 1.
         """
         pvalue = stats.chi2.sf(self.q, self.k - 1)
-        res = HolderTuple(statistic=self.q,
-                          pvalue=pvalue,
-                          df=self.k - 1,
-                          distr="chi2")
+        res = HolderTuple(statistic=self.q, pvalue=pvalue, df=self.k - 1, distr="chi2")
         return res
 
     def summary_array(self, alpha=0.05, use_t=None):
@@ -223,23 +222,33 @@ class CombineResults:
         """
 
         ci_low, ci_upp = self.conf_int_samples(alpha=alpha, use_t=use_t)
-        res = np.column_stack([self.eff, self.sd_eff,
-                               ci_low, ci_upp,
-                               self.weights_rel_fe, self.weights_rel_re])
+        res = np.column_stack(
+            [
+                self.eff,
+                self.sd_eff,
+                ci_low,
+                ci_upp,
+                self.weights_rel_fe,
+                self.weights_rel_re,
+            ]
+        )
 
         ci = self.conf_int(alpha=alpha, use_t=use_t)
-        res_fe = [[self.mean_effect_fe, self.sd_eff_w_fe,
-                   ci[0][0], ci[0][1], 1, np.nan]]
-        res_re = [[self.mean_effect_re, self.sd_eff_w_re,
-                   ci[1][0], ci[1][1], np.nan, 1]]
-        res_fe_wls = [[self.mean_effect_fe, self.sd_eff_w_fe_hksj,
-                       ci[2][0], ci[2][1], 1, np.nan]]
-        res_re_wls = [[self.mean_effect_re, self.sd_eff_w_re_hksj,
-                       ci[3][0], ci[3][1], np.nan, 1]]
+        res_fe = [
+            [self.mean_effect_fe, self.sd_eff_w_fe, ci[0][0], ci[0][1], 1, np.nan]
+        ]
+        res_re = [
+            [self.mean_effect_re, self.sd_eff_w_re, ci[1][0], ci[1][1], np.nan, 1]
+        ]
+        res_fe_wls = [
+            [self.mean_effect_fe, self.sd_eff_w_fe_hksj, ci[2][0], ci[2][1], 1, np.nan]
+        ]
+        res_re_wls = [
+            [self.mean_effect_re, self.sd_eff_w_re_hksj, ci[3][0], ci[3][1], np.nan, 1]
+        ]
 
-        res = np.concatenate([res, res_fe, res_re, res_fe_wls, res_re_wls],
-                             axis=0)
-        column_names = ['eff', "sd_eff", "ci_low", "ci_upp", "w_fe", "w_re"]
+        res = np.concatenate([res, res_fe, res_re, res_fe_wls, res_re_wls], axis=0)
+        column_names = ["eff", "sd_eff", "ci_low", "ci_upp", "w_fe", "w_re"]
         return res, column_names
 
     def summary_frame(self, alpha=0.05, use_t=None):
@@ -268,15 +277,17 @@ class CombineResults:
         """
         if use_t is None:
             use_t = self.use_t
-        labels = (list(self.row_names) +
-                  ["fixed effect", "random effect",
-                   "fixed effect wls", "random effect wls"])
+        labels = list(self.row_names) + [
+            "fixed effect",
+            "random effect",
+            "fixed effect wls",
+            "random effect wls",
+        ]
         res, col_names = self.summary_array(alpha=alpha, use_t=use_t)
         results = pd.DataFrame(res, index=labels, columns=col_names)
         return results
 
-    def plot_forest(self, alpha=0.05, use_t=None, use_exp=False,
-                    ax=None, **kwds):
+    def plot_forest(self, alpha=0.05, use_t=None, use_exp=False, ax=None, **kwds):
         """Forest plot with means and confidence intervals
 
         Parameters
@@ -314,12 +325,18 @@ class CombineResults:
 
         """
         from statsmodels.graphics.dotplots import dot_plot
+
         res_df = self.summary_frame(alpha=alpha, use_t=use_t)
         if use_exp:
             res_df = np.exp(res_df[["eff", "ci_low", "ci_upp"]])
         hw = np.abs(res_df[["ci_low", "ci_upp"]] - res_df[["eff"]].values)
-        fig = dot_plot(points=res_df["eff"], intervals=hw,
-                       lines=res_df.index, line_order=res_df.index, **kwds)
+        fig = dot_plot(
+            points=res_df["eff"],
+            intervals=hw,
+            lines=res_df.index,
+            line_order=res_df.index,
+            **kwds,
+        )
         return fig
 
 
@@ -377,8 +394,7 @@ def effectsize_smd(mean1, sd1, nobs1, mean2, sd2, nobs2):
     #    row_names = list(range(k))
     # crit = stats.norm.isf(alpha / 2)
     # var_diff_uneq = sd1**2 / nobs1 + sd2**2 / nobs2
-    var_diff = (sd1**2 * (nobs1 - 1) +
-                sd2**2 * (nobs2 - 1)) / (nobs1 + nobs2 - 2)
+    var_diff = (sd1**2 * (nobs1 - 1) + sd2**2 * (nobs2 - 1)) / (nobs1 + nobs2 - 2)
     sd_diff = np.sqrt(var_diff)
     nobs = nobs1 + nobs2
     bias_correction = 1 - 3 / (4 * nobs - 9)
@@ -388,8 +404,9 @@ def effectsize_smd(mean1, sd1, nobs1, mean2, sd2, nobs2):
     return smd_bc, var_smdbc
 
 
-def effectsize_2proportions(count1, nobs1, count2, nobs2, statistic="diff",
-                            zero_correction=None, zero_kwds=None):
+def effectsize_2proportions(
+    count1, nobs1, count2, nobs2, statistic="diff", zero_correction=None, zero_kwds=None
+):
     """Effects sizes for two sample binomial proportions
 
     Parameters
@@ -504,8 +521,15 @@ def effectsize_2proportions(count1, nobs1, count2, nobs2, statistic="diff",
     return eff, var_eff
 
 
-def combine_effects(effect, variance, method_re="iterated", row_names=None,
-                    use_t=False, alpha=0.05, **kwds):
+def combine_effects(
+    effect,
+    variance,
+    method_re="iterated",
+    row_names=None,
+    use_t=False,
+    alpha=0.05,
+    **kwds,
+):
     """combining effect sizes for effect sizes using meta-analysis
 
     This currently does not use np.asarray, all computations are possible in
@@ -594,7 +618,7 @@ def combine_effects(effect, variance, method_re="iterated", row_names=None,
     # random effects computation
 
     q = (weights_fe * eff**2).sum(0)
-    q -= (weights_fe * eff).sum()**2 / w_total_fe
+    q -= (weights_fe * eff).sum() ** 2 / w_total_fe
     df = k - 1
 
     if method_re.lower() in ["iterated", "pm"]:
@@ -616,10 +640,10 @@ def combine_effects(effect, variance, method_re="iterated", row_names=None,
     # ci_low_eff_re = mean_effect_re - crit * sd_eff_w_re
     # ci_upp_eff_re = mean_effect_re + crit * sd_eff_w_re
 
-    scale_hksj_re = (weights_re * (eff - mean_effect_re)**2).sum() / df
-    scale_hksj_fe = (weights_fe * (eff - mean_effect_fe)**2).sum() / df
-    var_hksj_re = (weights_rel_re * (eff - mean_effect_re)**2).sum() / df
-    var_hksj_fe = (weights_rel_fe * (eff - mean_effect_fe)**2).sum() / df
+    scale_hksj_re = (weights_re * (eff - mean_effect_re) ** 2).sum() / df
+    scale_hksj_fe = (weights_fe * (eff - mean_effect_fe) ** 2).sum() / df
+    var_hksj_re = (weights_rel_re * (eff - mean_effect_re) ** 2).sum() / df
+    var_hksj_fe = (weights_rel_fe * (eff - mean_effect_fe) ** 2).sum() / df
 
     res = CombineResults(**locals())
     return res
@@ -655,10 +679,10 @@ def _fit_tau_iterative(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
     tau2 = tau2_start
     k = eff.shape[0]
     converged = False
-    for i in range(maxiter):
+    for _ in range(maxiter):
         w = 1 / (var_eff + tau2)
         m = w.dot(eff) / w.sum(0)
-        resid_sq = (eff - m)**2
+        resid_sq = (eff - m) ** 2
         q_w = w.dot(resid_sq)
         # estimating equation
         ee = q_w - (k - 1)
@@ -699,7 +723,7 @@ def _fit_tau_mm(eff, var_eff, weights):
     w = weights
 
     m = w.dot(eff) / w.sum(0)
-    resid_sq = (eff - m)**2
+    resid_sq = (eff - m) ** 2
     q_w = w.dot(resid_sq)
     w_t = w.sum()
     expect = w.dot(var_eff) - (w**2).dot(var_eff) / w_t

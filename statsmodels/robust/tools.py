@@ -58,7 +58,7 @@ def _var_normal(norm):
 
     """
     num = stats.norm.expect(lambda x: norm.psi(x) ** 2)
-    denom = stats.norm.expect(lambda x: norm.psi_deriv(x))**2
+    denom = stats.norm.expect(norm.psi_deriv)**2
     return num / denom
 
 
@@ -215,15 +215,15 @@ def tuning_s_estimator_mean(norm, breakdown=None):
     def func(c):
         norm_ = norm
         norm_._set_tuning_param(c, inplace=True)
-        bp = stats.norm.expect(lambda x: norm_.rho(x)) / norm_.max_rho()
+        bp = stats.norm.expect(norm_.rho) / norm_.max_rho()
         return bp
 
     res = []
     for bp in bps:
-        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)
+        c_bp = optimize.brentq(lambda c0, bp: func(c0) - bp, 0.1, 10, args=(bp,))
         norm._set_tuning_param(c_bp, inplace=True)  # inplace modification
         eff = 1 / _var_normal(norm)
-        b = stats.norm.expect(lambda x : norm.rho(x))
+        b = stats.norm.expect(norm.rho)
         res.append([bp, eff, c_bp, b])
 
     if np.size(bps) > 1:
@@ -333,7 +333,7 @@ def eff_mvmean(norm, k_vars):
 
     .. [1] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators
        and M-Estimators of Multivariate Location and Covariance.”
-       The Annals of Statistics 17 (4): 1662–83.
+       The Annals of Statistics 17 (4): 1662-83.
 
     """
     k = k_vars  # shortcut
@@ -380,7 +380,7 @@ def eff_mvshape(norm, k_vars):
 
     .. [1] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators
        and M-Estimators of Multivariate Location and Covariance.”
-       The Annals of Statistics 17 (4): 1662–83.
+       The Annals of Statistics 17 (4): 1662-83.
 
     """
 
@@ -449,36 +449,6 @@ def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
     p_tune = optimize.brentq(func, limits[0], limits[1])
     return p_tune
 
-
-#  ##### tables
-
-tukeybiweight_bp = {
-    # breakdown point : (tuning parameter, efficiency, scale bias)
-    0.50: (1.547645, 0.286826, 0.199600),
-    0.45: (1.756059, 0.369761, 0.231281),
-    0.40: (1.987965, 0.461886, 0.263467),
-    0.35: (2.251831, 0.560447, 0.295793),
-    0.30: (2.560843, 0.661350, 0.327896),
-    0.25: (2.937015, 0.759040, 0.359419),
-    0.20: (3.420681, 0.846734, 0.390035),
-    0.15: (4.096255, 0.917435, 0.419483),
-    0.10: (5.182361, 0.966162, 0.447614),
-    0.05: (7.545252, 0.992424, 0.474424),
-    }
-
-tukeybiweight_eff = {
-    # efficiency : (tuning parameter, breakdown point)
-    0.65: (2.523102, 0.305646),
-    0.70: (2.697221, 0.280593),
-    0.75: (2.897166, 0.254790),
-    0.80: (3.136909, 0.227597),
-    0.85: (3.443690, 0.197957),
-    0.90: (3.882662, 0.163779),
-    0.95: (4.685065, 0.119414),
-    0.97: (5.596823, 0.087088),
-    0.98: (5.920719, 0.078604),
-    0.99: (7.041392, 0.056969),
-    }
 
 # relative efficiency for M and MM estimator of multivariate location
 # Table 2 from Kudraszow and Maronna JMA 2011

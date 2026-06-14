@@ -52,8 +52,8 @@ class Y_arma11:
             self.sigma2 = 0.994743350844 ** 2
             self.cov_params = [[0.0017704, -0.0010612],
                                [-0.0010612, 0.0037119]]
-            self.forecast = forecast_results['fc11']
-            self.forecasterr = forecast_results['fe11']
+            self.forecast = forecast_results["fc11"]
+            self.forecasterr = forecast_results["fe11"]
         elif method == "css":
             self.params = [0.791515576984, 0.383078056824]
             self.aic = 710.994047176570
@@ -175,8 +175,8 @@ class Y_arma41:
             self.pvalues = [1.10e-18, 0.0010, 0.4626, 5.48e-15, 0.7769]
             self.tvalues = [8.824, -3.279, -.7345, 7.815, .2833]
             self.sigma2 = 0.911409665692 ** 2
-            self.forecast = forecast_results['fc41']
-            self.forecasterr = forecast_results['fe41']
+            self.forecast = forecast_results["fc41"]
+            self.forecasterr = forecast_results["fe41"]
         elif method == "css":
             self.params = [0.868370308475, -0.459433478113, -0.086098063077,
                            0.635050245511, 0.033645204508]
@@ -298,8 +298,8 @@ class Y_arma50:
             self.pvalues = [7.51e-31, 4.42e-05, 2.38e-05, 0.0034, 0.1584]
             self.tvalues = [11.55, -4.084, 4.226, 2.929, -1.410]
             self.sigma2 = 0.938374940397 ** 2
-            self.forecast = forecast_results['fc50']
-            self.forecasterr = forecast_results['fe50']
+            self.forecast = forecast_results["fc50"]
+            self.forecasterr = forecast_results["fe50"]
         elif method == "css":
             # NOTE: some results use x-12 arima because gretl uses
             #   LS estimates for AR CSS
@@ -396,8 +396,8 @@ class Y_arma11c:
             self.pvalues = [1.04e-70, 5.02e-33, 2.35e-9]
             self.tvalues = [17.78, 11.97, 5.971]
             self.sigma2 = 1.039168068701 ** 2
-            self.forecast = forecast_results['fc11c']
-            self.forecasterr = forecast_results['fe11c']
+            self.forecast = forecast_results["fc11c"]
+            self.forecasterr = forecast_results["fe11c"]
         elif method == "css":
             # NOTE: params, bse, cov_params, tvalues taken from R;
             #   commented-out versions below are from gretl
@@ -552,8 +552,8 @@ class Y_arma41c:
             self.pvalues = [0.7024, 7.50e-34, 0.0036, 0.0009, 1.77e-43, 0.0193]
             self.tvalues = [0.3821, 12.13, -2.909, -3.306, 13.83, 2.340]
             self.sigma2 = 0.915487643192 ** 2
-            self.forecast = forecast_results['fc41c']
-            self.forecasterr = forecast_results['fe41c']
+            self.forecast = forecast_results["fc41c"]
+            self.forecasterr = forecast_results["fe41c"]
         elif method == "css":
             # NOTE: params, bse, cov_params, tvalues taken from R;
             #   commented-out versions below are from
@@ -710,8 +710,8 @@ class Y_arma50c:
             self.pvalues = [1.50e-46, 9.06e-34, 6.53e-05, .0010, .0003, .0060]
             self.tvalues = [14.33, 12.11, -3.993, 3.283, 3.659, -2.750]
             self.sigma2 = 0.973930886014 ** 2
-            self.forecast = forecast_results['fc50c']
-            self.forecasterr = forecast_results['fe50c']
+            self.forecast = forecast_results["fc50c"]
+            self.forecasterr = forecast_results["fe50c"]
         elif method == "css":
             # NOTE: params, bse, cov_params, tvalues taken from R;
             #   commented-out versions below are from

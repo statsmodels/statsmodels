@@ -9,14 +9,12 @@ License: 3-clause BSD
 """
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import (
-    Appender,
-    Substitution,
     cache_readonly,
     call_cached_func,
     get_cached_doc,
 )
 
-from collections import namedtuple
+from typing import NamedTuple
 
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series
@@ -29,6 +27,7 @@ from statsmodels.regression.linear_model import (
     RegressionModel,
     RegressionResults,
 )
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.validation import array_like, int_like, string_like
 
 
@@ -38,20 +37,17 @@ def strip4(line):
     return line
 
 
-RollingStore = namedtuple(
-    "RollingStore",
-    [
-        "params",
-        "ssr",
-        "llf",
-        "nobs",
-        "s2",
-        "xpxi",
-        "xeex",
-        "centered_tss",
-        "uncentered_tss",
-    ],
-)
+class RollingStore(NamedTuple):
+    params: np.ndarray
+    ssr: np.ndarray
+    llf: np.ndarray
+    nobs: np.ndarray
+    s2: np.ndarray
+    xpxi: np.ndarray
+    xeex: np.ndarray
+    centered_tss: np.ndarray
+    uncentered_tss: np.ndarray
+
 
 common_params = "\n".join(map(strip4, model._model_params_doc.split("\n")))
 window_parameters = """\

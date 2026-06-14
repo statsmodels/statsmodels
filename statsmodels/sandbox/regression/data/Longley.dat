@@ -7,8 +7,8 @@ File Format:   ASCII
 
 Procedure:     Linear Least Squares Regression
 
-Reference:     Longley, J. W. (1967).  
-               An Appraisal of Least Squares Programs for the 
+Reference:     Longley, J. W. (1967).
+               An Appraisal of Least Squares Programs for the
                Electronic Computer from the Viewpoint of the User.
                Journal of the American Statistical Association, 62, pp. 819-841.
 
@@ -44,9 +44,9 @@ Model:         Polynomial Class
 
                Certified Analysis of Variance Table
 
-Source of Degrees of     Sums of             Mean  
+Source of Degrees of     Sums of             Mean
 Variation  Freedom       Squares            Squares          F Statistic
-              
+
 Regression    6      184172401.944494   30695400.3240823   330.285339234588
 Residual      9      836424.055505915   92936.0061673238
 

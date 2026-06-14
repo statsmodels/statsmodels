@@ -6,18 +6,20 @@ References
 
 Dunn, Peter K. and Smyth,  Gordon K. 2001. Tweedie family densities: methods of
     evaluation. In Proceedings of the 16th International Workshop on
-    Statistical Modelling, Odense, Denmark, 2–6 July.
+    Statistical Modelling, Odense, Denmark, 2-6 July.
 
 Jørgensen, B., Demétrio, C.G.B., Kristensen, E., Banta, G.T., Petersen, H.C.,
-    Delefosse, M.: Bias-corrected Pearson estimating functions for Taylor’s
+    Delefosse, M.: Bias-corrected Pearson estimating functions for Taylor`s
     power law applied to benthic macrofauna data. Stat. Probab. Lett. 81,
-    749–758 (2011)
+    749-758 (2011)
 
 Smyth G.K. and Jørgensen B. 2002. Fitting Tweedie's compound Poisson model to
-    insurance claims data: dispersion modelling. ASTIN Bulletin 32: 143–157
+    insurance claims data: dispersion modelling. ASTIN Bulletin 32: 143-157
 """
+
+from statsmodels.compat.scipy import apply_where
+
 import numpy as np
-from scipy._lib._util import _lazywhere
 from scipy.special import gammaln
 
 
@@ -31,9 +33,13 @@ def _alpha(p):
 
 def _logWj(y, j, p, phi):
     alpha = _alpha(p)
-    logz = (-alpha * np.log(y) + alpha * np.log(p - 1) - (1 - alpha) *
-            np.log(phi) - np.log(2 - p))
-    return (j * logz - gammaln(1 + j) - gammaln(-alpha * j))
+    logz = (
+        -alpha * np.log(y)
+        + alpha * np.log(p - 1)
+        - (1 - alpha) * np.log(phi)
+        - np.log(2 - p)
+    )
+    return j * logz - gammaln(1 + j) - gammaln(-alpha * j)
 
 
 def kappa(mu, p):
@@ -76,20 +82,21 @@ def density_otherwise(y, mu, p, phi):
 
 
 def series_density(y, mu, p, phi):
-    density = _lazywhere(np.array(y) > 0,
-                         (y, mu, p, phi),
-                         f=density_otherwise,
-                         f2=density_at_zero)
+    density = apply_where(
+        np.array(y) > 0, (y, mu, p, phi), f1=density_otherwise, f2=density_at_zero
+    )
     return density
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from scipy import stats
-    n = stats.poisson.rvs(.1, size=10000000)
-    y = stats.gamma.rvs(.1, scale=30000, size=10000000)
+
+    n = stats.poisson.rvs(0.1, size=10000000)
+    y = stats.gamma.rvs(0.1, scale=30000, size=10000000)
     y = n * y
     mu = stats.gamma.rvs(10, scale=30, size=10000000)
     import time
+
     t = time.time()
     out = series_density(y=y, mu=mu, p=1.5, phi=20)
-    print(f'That took {time.time() - t} seconds')
+    print(f"That took {time.time() - t} seconds")

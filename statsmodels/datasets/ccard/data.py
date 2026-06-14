@@ -1,25 +1,25 @@
 """Bill Greene's credit scoring data."""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """Used with express permission of the original author, who
+COPYRIGHT = """Used with express permission of the original author, who
 retains all rights."""
-TITLE       = __doc__
-SOURCE      = """
+TITLE = __doc__
+SOURCE = """
 William Greene's `Econometric Analysis`
 
 More information can be found at the web site of the text:
 http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm
 """
 
-DESCRSHORT  = """William Greene's credit scoring data"""
+DESCRSHORT = """William Greene's credit scoring data"""
 
-DESCRLONG   = """More information on this data can be found on the
+DESCRLONG = """More information on this data can be found on the
 homepage for Greene's `Econometric Analysis`. See source.
 """
 
-NOTE        = """::
+NOTE = """::
 
     Number of observations - 72
     Number of variables - 5
@@ -52,4 +52,4 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'ccard.csv', convert_float=True)
+    return du.load_csv(__file__, "ccard.csv", convert_float=True)

@@ -214,9 +214,7 @@ def holt_win_init(x, hw_args: HoltWintersArgs):
     """Initialization for the Holt Winters Seasonal Models"""
     hw_args.p[hw_args.xi.astype(bool)] = x
     if hw_args.transform:
-        alpha, beta, gamma = to_restricted(
-            hw_args.p, hw_args.xi, hw_args.bounds
-        )
+        alpha, beta, gamma = to_restricted(hw_args.p, hw_args.xi, hw_args.bounds)
     else:
         alpha, beta, gamma = hw_args.p[:3]
 
@@ -242,9 +240,7 @@ def holt_win__mul(x, hw_args: HoltWintersArgs):
     Minimization Function
     (,M)
     """
-    (_, _, _, _, alphac, _, gammac, y_alpha, y_gamma) = holt_win_init(
-        x, hw_args
-    )
+    (_, _, _, _, alphac, _, gammac, y_alpha, y_gamma) = holt_win_init(x, hw_args)
     lvl = hw_args.lvl
     s = hw_args.s
     m = hw_args.m
@@ -267,12 +263,8 @@ def holt_win__add(x, hw_args: HoltWintersArgs):
     s = hw_args.s
     m = hw_args.m
     for i in range(1, hw_args.n):
-        lvl[i] = (
-            (y_alpha[i - 1]) - (alpha * s[i - 1]) + (alphac * (lvl[i - 1]))
-        )
-        s[i + m - 1] = (
-            y_gamma[i - 1] - (gamma * (lvl[i - 1])) + (gammac * s[i - 1])
-        )
+        lvl[i] = (y_alpha[i - 1]) - (alpha * s[i - 1]) + (alphac * (lvl[i - 1]))
+        s[i + m - 1] = y_gamma[i - 1] - (gamma * (lvl[i - 1])) + (gammac * s[i - 1])
     return hw_args.y - lvl - s[: -(m - 1)]
 
 
@@ -298,9 +290,7 @@ def holt_win_add_mul_dam(x, hw_args: HoltWintersArgs):
     s = hw_args.s
     m = hw_args.m
     for i in range(1, hw_args.n):
-        lvl[i] = (y_alpha[i - 1] / s[i - 1]) + (
-            alphac * (lvl[i - 1] + phi * b[i - 1])
-        )
+        lvl[i] = (y_alpha[i - 1] / s[i - 1]) + (alphac * (lvl[i - 1] + phi * b[i - 1]))
         b[i] = (beta * (lvl[i] - lvl[i - 1])) + (betac * phi * b[i - 1])
         s[i + m - 1] = (y_gamma[i - 1] / (lvl[i - 1] + phi * b[i - 1])) + (
             gammac * s[i - 1]
@@ -330,9 +320,7 @@ def holt_win_mul_mul_dam(x, hw_args: HoltWintersArgs):
     b = hw_args.b
     m = hw_args.m
     for i in range(1, hw_args.n):
-        lvl[i] = (y_alpha[i - 1] / s[i - 1]) + (
-            alphac * (lvl[i - 1] * b[i - 1] ** phi)
-        )
+        lvl[i] = (y_alpha[i - 1] / s[i - 1]) + (alphac * (lvl[i - 1] * b[i - 1] ** phi))
         b[i] = (beta * (lvl[i] / lvl[i - 1])) + (betac * b[i - 1] ** phi)
         s[i + m - 1] = (y_gamma[i - 1] / (lvl[i - 1] * b[i - 1] ** phi)) + (
             gammac * s[i - 1]

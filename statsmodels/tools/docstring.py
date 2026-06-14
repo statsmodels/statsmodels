@@ -1,12 +1,12 @@
 """
 Substantially copied from NumpyDoc 1.0pre.
 """
-from collections import namedtuple
 from collections.abc import Mapping
 import copy
 import inspect
 import re
 import textwrap
+from typing import NamedTuple
 
 from statsmodels.tools.sm_exceptions import ParseError
 
@@ -36,6 +36,7 @@ class Reader:
         ----------
         data : str
            String with lines separated by '\n'.
+
         """
         if isinstance(data, list):
             self._str = data
@@ -102,11 +103,15 @@ class Reader:
         return not "".join(self._str).strip()
 
 
-Parameter = namedtuple("Parameter", ["name", "type", "desc"])
+class Parameter(NamedTuple):
+    name: str
+    type: type
+    desc: str
 
 
 class NumpyDocString(Mapping):
-    """Parses a numpydoc string to an abstract representation
+    """
+    Parses a numpydoc string to an abstract representation
 
     Instances define a mapping from section title to structured data.
     """
@@ -172,16 +177,16 @@ class NumpyDocString(Mapping):
             return True
 
         l2 = self._doc.peek(1).strip()  # ---------- or ==========
-        return l2.startswith("-" * len(l1)) or l2.startswith("=" * len(l1))
+        return l2.startswith(("-" * len(l1), "=" * len(l1)))
 
     def _strip(self, doc):
         i = 0
         j = 0
-        for i, line in enumerate(doc):
+        for line in doc:
             if line.strip():
                 break
 
-        for j, line in enumerate(doc[::-1]):
+        for line in doc[::-1]:
             if line.strip():
                 break
 
@@ -217,11 +222,10 @@ class NumpyDocString(Mapping):
             header = r.read().strip()
             if " : " in header:
                 arg_name, arg_type = header.split(" : ")[:2]
+            elif single_element_is_type:
+                arg_name, arg_type = "", header
             else:
-                if single_element_is_type:
-                    arg_name, arg_type = "", header
-                else:
-                    arg_name, arg_type = header, ""
+                arg_name, arg_type = header, ""
 
             desc = r.read_to_next_unindented_line()
             desc = dedent_lines(desc)
@@ -257,19 +261,19 @@ class NumpyDocString(Mapping):
     _func_rgx = re.compile(r"^\s*" + _funcname + r"\s*")
     _line_rgx = re.compile(
         r"^\s*"
-        + r"(?P<allfuncs>"
+        r"(?P<allfuncs>"
         + _funcname  # group for all function names
         + r"(?P<morefuncs>([,]\s+"
         + _funcnamenext
         + r")*)"
-        + r")"
-        +  # end of "allfuncs"
+        + r")"  # end of "allfuncs"
+        +
         # Some function lists have a trailing comma (or period)
-        r"(?P<trailing>[,\.])?"
-        + _description
+        r"(?P<trailing>[,\.])?" + _description
     )
 
     # Empty <DESC> elements are replaced with '..'
+
     empty_description = ".."
 
     def _parse_see_also(self, content):
@@ -279,7 +283,6 @@ class NumpyDocString(Mapping):
         another_func_name : Descriptive text
         func_name1, func_name2, :meth:`func_name`, func_name3
         """
-
         items = []
 
         def parse_item_name(text):
@@ -328,7 +331,7 @@ class NumpyDocString(Mapping):
     def _parse_index(self, section, content):
         """
         .. index: default
-           :refguide: something, else, and more
+        :refguide: something, else, and more
         """
 
         def strip_each_in(lst):
@@ -563,12 +566,14 @@ class Docstring:
     ----------
     docstring : str
         The docstring to modify.
+
     """
 
     def __init__(self, docstring):
         self._ds = None
         self._docstring = docstring
-        if docstring is None:
+        if docstring is None or not docstring.strip():
+            self._docstring = None
             return
         self._ds = NumpyDocString(docstring)
 
@@ -578,6 +583,7 @@ class Docstring:
         ----------
         parameters : str, list[str]
             The names of the parameters to remove.
+
         """
         if self._docstring is None:
             # Protection against -oo execution
@@ -602,6 +608,7 @@ class Docstring:
             docstring.
         parameters : Parameter, list[Parameter]
             A Parameter of a list of Parameters.
+
         """
         if self._docstring is None:
             # Protection against -oo execution
@@ -617,7 +624,7 @@ class Docstring:
                     loc = i + 1
                     break
             if loc < 0:
-                raise ValueError()
+                raise ValueError
             params = self._ds["Parameters"][:loc] + parameters
             params += self._ds["Parameters"][loc:]
             self._ds["Parameters"] = params
@@ -631,6 +638,7 @@ class Docstring:
         block : object
             The replacement block. The structure of the replacement block must
             match how the block is stored by NumpyDocString.
+
         """
         if self._docstring is None:
             # Protection against -oo execution
@@ -690,6 +698,7 @@ def remove_parameters(docstring, parameters):
     -------
     str
         The modified docstring.
+
     """
     if docstring is None:
         return

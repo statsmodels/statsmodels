@@ -1,46 +1,47 @@
 __all__ = [
+    "GEE",
+    "GLM",
+    "GLS",
+    "GLSAR",
+    "MANOVA",
+    "MI",
+    "MICE",
+    "OLS",
+    "PCA",
+    "RLM",
+    "WLS",
     "BayesGaussMI",
     "BinomialBayesMixedGLM",
     "ConditionalLogit",
     "ConditionalMNLogit",
     "ConditionalPoisson",
     "Factor",
-    "GEE",
-    "GLM",
     "GLMGam",
-    "GLS",
-    "GLSAR",
     "GeneralizedPoisson",
     "HurdleCountModel",
     "Logit",
-    "MANOVA",
-    "MI",
-    "MICE",
     "MICEData",
     "MNLogit",
     "MixedLM",
     "NegativeBinomial",
     "NegativeBinomialP",
     "NominalGEE",
-    "OLS",
     "OrdinalGEE",
-    "PCA",
     "PHReg",
     "Poisson",
     "PoissonBayesMixedGLM",
     "ProbPlot",
     "Probit",
     "QuantReg",
-    "RLM",
     "RecursiveLS",
     "SurvfuncRight",
-    "TruncatedLFPoisson",
     "TruncatedLFNegativeBinomialP",
-    "WLS",
+    "TruncatedLFPoisson",
     "ZeroInflatedGeneralizedPoisson",
     "ZeroInflatedNegativeBinomialP",
     "ZeroInflatedPoisson",
     "__version__",
+    "__version_info__",
     "add_constant",
     "categorical",
     "cov_struct",
@@ -68,16 +69,17 @@ __all__ = [
     "test",
     "tools",
     "tsa",
-    "webdoc",
-    "__version_info__"
+    "webdoc"
 ]
 
 
+from statsmodels._version import (
+    version as __version__,
+    version_tuple as __version_info__,
+)
+
 from . import datasets, distributions, iolib, regression, robust, tools
 from .__init__ import test
-from statsmodels._version import (
-    version as __version__, version_tuple as __version_info__
-)
 from .discrete.conditional_models import (
     ConditionalLogit,
     ConditionalMNLogit,
@@ -98,10 +100,10 @@ from .discrete.discrete_model import (
     Probit,
 )
 from .discrete.truncated_model import (
-    TruncatedLFPoisson,
-    TruncatedLFNegativeBinomialP,
     HurdleCountModel,
-    )
+    TruncatedLFNegativeBinomialP,
+    TruncatedLFPoisson,
+)
 from .duration import api as duration
 from .duration.hazard_regression import PHReg
 from .duration.survfunc import SurvfuncRight

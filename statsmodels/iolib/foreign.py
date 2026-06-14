@@ -10,7 +10,7 @@ import numpy as np
 from statsmodels.iolib.openfile import get_file_obj
 
 
-def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
+def savetxt(fname, X, names=None, fmt="%.18e", delimiter=" "):
     """
     Save an array to a text file.
 
@@ -98,7 +98,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
     >>> savetxt('test.out', x, fmt='%1.4e')   # use exponential notation
     """
 
-    with get_file_obj(fname, 'w') as fh:
+    with get_file_obj(fname, "w") as fh:
         X = np.asarray(X)
 
         # Handle 1-dimensional arrays
@@ -118,14 +118,14 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
         # E.g. '%10.5f\t%10d' or ('%10.5f', '$10d')
         if isinstance(fmt, (list, tuple)):
             if len(fmt) != ncol:
-                raise AttributeError('fmt has wrong shape.  %s' % str(fmt))
+                raise AttributeError("fmt has wrong shape.  %s" % str(fmt))
             format = delimiter.join(fmt)
         elif isinstance(fmt, str):
-            if fmt.count('%') == 1:
+            if fmt.count("%") == 1:
                 fmt = [fmt, ]*ncol
                 format = delimiter.join(fmt)
-            elif fmt.count('%') != ncol:
-                raise AttributeError('fmt has wrong number of %% formats.  %s'
+            elif fmt.count("%") != ncol:
+                raise AttributeError("fmt has wrong number of %% formats.  %s"
                                      % fmt)
             else:
                 format = fmt
@@ -134,7 +134,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
         if names is None and X.dtype.names:
             names = X.dtype.names
         if names is not None:
-            fh.write(delimiter.join(names) + '\n')
+            fh.write(delimiter.join(names) + "\n")
 
         for row in X:
-            fh.write(format % tuple(row) + '\n')
+            fh.write(format % tuple(row) + "\n")

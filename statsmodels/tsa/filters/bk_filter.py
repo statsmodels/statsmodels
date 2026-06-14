@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import fftconvolve
 
-from statsmodels.tools.validation import array_like, PandasWrapper
+from statsmodels.tools.validation import PandasWrapper, array_like
 
 
 def bkfilter(x, low=6, high=32, K=12):
@@ -83,7 +83,7 @@ def bkfilter(x, low=6, high=32, K=12):
     # adjust bweights (symmetrically) by below before demeaning
     # Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
     pw = PandasWrapper(x)
-    x = array_like(x, 'x', maxdim=2)
+    x = array_like(x, "x", maxdim=2)
     omega_1 = 2. * np.pi / high  # convert from freq. to periodicity
     omega_2 = 2. * np.pi / low
     bweights = np.zeros(2 * K + 1)
@@ -95,7 +95,7 @@ def bkfilter(x, low=6, high=32, K=12):
     bweights -= bweights.mean()  # make sure weights sum to zero
     if x.ndim == 2:
         bweights = bweights[:, None]
-    x = fftconvolve(x, bweights, mode='valid')
+    x = fftconvolve(x, bweights, mode="valid")
     # get a centered moving avg/convolution
 
-    return pw.wrap(x, append='cycle', trim_start=K, trim_end=K)
+    return pw.wrap(x, append="cycle", trim_start=K, trim_end=K)

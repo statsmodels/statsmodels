@@ -9,6 +9,7 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from scipy import stats
+
 import statsmodels.distributions.tools as dt
 
 
@@ -66,10 +67,10 @@ def test_average_grid():
 
 def test_grid_class():
 
-    res = {'k_grid': [3, 5],
-           'x_marginal': [np.array([0., 0.5, 1.]),
+    res = {"k_grid": [3, 5],
+           "x_marginal": [np.array([0., 0.5, 1.]),
                           np.array([0., 0.25, 0.5, 0.75, 1.])],
-           'idx_flat.T': np.array([
+           "idx_flat.T": np.array([
                [0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 2., 2., 2., 2., 2.],
                [0., 1., 2., 3., 4., 0., 1., 2., 3., 4., 0., 1., 2., 3., 4.]])
            }
@@ -88,9 +89,9 @@ def test_grid_class():
 
     # 1-dim
     gg = dt._Grid([5], eps=0.001)
-    res = {'k_grid': [5],
-           'x_marginal': [np.array([0.001, 0.25, 0.5, 0.75, 0.999])],
-           'idx_flat.T': np.array([[0., 1., 2., 3., 4.]])
+    res = {"k_grid": [5],
+           "x_marginal": [np.array([0.001, 0.25, 0.5, 0.75, 0.999])],
+           "idx_flat.T": np.array([[0., 1., 2., 3., 4.]])
            }
     assert_equal(gg.k_grid, res["k_grid"])
     assert gg.x_marginal, res["x_marginal"]
@@ -100,11 +101,11 @@ def test_grid_class():
 
     # 3-dim
     gg = dt._Grid([3, 3, 2], eps=0.)
-    res = {'k_grid': [3, 3, 2],
-           'x_marginal': [np.array([0., 0.5, 1.]),
+    res = {"k_grid": [3, 3, 2],
+           "x_marginal": [np.array([0., 0.5, 1.]),
                           np.array([0., 0.5, 1.]),
                           np.array([0., 1.])],
-           'idx_flat.T': np.array([
+           "idx_flat.T": np.array([
                [0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1., 2., 2., 2., 2.,
                 2., 2.],
                [0., 0., 1., 1., 2., 2., 0., 0., 1., 1., 2., 2., 0., 0., 1., 1.,

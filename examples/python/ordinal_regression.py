@@ -11,7 +11,7 @@
 
 import numpy as np
 import pandas as pd
-import scipy.stats as stats
+from scipy import stats
 
 from statsmodels.miscmodels.ordinal_model import OrderedModel
 

@@ -21,12 +21,17 @@ References
 
 [5] http://www.stat.ucla.edu/research/gpa/GPderfree.txt
 """
-from ._wrappers import rotate_factors
-
-from ._analytic_rotation import target_rotation, procrustes, promax
 from statsmodels.tools._test_runner import PytestTester
 
-__all__ = ['rotate_factors', 'target_rotation', 'procrustes', 'promax',
-           'test']
+from ._analytic_rotation import procrustes, promax, target_rotation
+from ._wrappers import rotate_factors
+
+__all__ = [
+           "procrustes",
+           "promax",
+           "rotate_factors",
+           "target_rotation",
+           "test",
+]
 
 test = PytestTester()

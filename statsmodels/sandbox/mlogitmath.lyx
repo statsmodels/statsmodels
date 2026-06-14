@@ -35,8 +35,8 @@
 \paperpagestyle default
 \tracking_changes false
 \output_changes false
-\author "" 
-\author "" 
+\author ""
+\author ""
 \end_header
 
 \begin_body
@@ -46,20 +46,20 @@ Notes on mlogit.
 \end_layout
 
 \begin_layout Standard
-Assume that 
+Assume that
 \begin_inset Formula $J=3$
 \end_inset
 
-, so that there are 
+, so that there are
 \begin_inset Formula $2$
 \end_inset
 
- vectors of parameters for 
+ vectors of parameters for
 \begin_inset Formula $J-1$
 \end_inset
 
 .
- For now the parameters are passed around as 
+ For now the parameters are passed around as
 \begin_inset Formula \[
 \left[\beta_{1}^{\prime}\beta_{2}^{\prime}\right]\]
 
@@ -69,7 +69,7 @@ Assume that
 \end_layout
 
 \begin_layout Standard
-So if 
+So if
 \begin_inset Formula $K=3$
 \end_inset
 
@@ -89,7 +89,7 @@ b_{12} & b_{22}\end{array}\right]^{\prime}\]
 (changed to rows and added prime above, so this all changes and the score
  is also just transposed and flattend along the zero axis.) This is flattened
  along the zero axis for the sake of the solvers.
- So that it is passed internally as 
+ So that it is passed internally as
 \begin_inset Formula \[
 \left[\begin{array}{cccccc}
 b_{10} & b_{20} & b_{11} & b_{21} & b_{12} & b_{22}\end{array}\right]\]
@@ -109,7 +109,7 @@ Now the matrix of score vectors is
 \end_layout
 
 \begin_layout Standard
-In Dhrymes notation, this would be column vectors 
+In Dhrymes notation, this would be column vectors
 \begin_inset Formula $\left(\partial\ln L/\partial\beta_{j}\right)^{\prime}\text{ for }j=1,2$
 \end_inset
 
@@ -119,7 +119,7 @@ In Dhrymes notation, this would be column vectors
  So that the solvers can handle this, though, it gets flattened but the
  score gets flattened along the first axis to make things easier, which
  is going to make things tricky.
- Now, in traditional notation, the Hessian would be 
+ Now, in traditional notation, the Hessian would be
 \begin_inset Formula \[
 \frac{\partial^{2}\ln L}{\partial\beta_{j}\partial\beta_{j}}=\frac{\partial}{\partial\beta_{j}}\vec{\left[\left(\frac{\partial\ln L}{\partial\beta_{j}}\right)\right]}\]
 
@@ -129,58 +129,58 @@ In Dhrymes notation, this would be column vectors
 \end_layout
 
 \begin_layout Standard
-where 
+where
 \begin_inset Formula $\vec{}$
 \end_inset
 
- denotes a vectorized matrix, i.e., for a 
+ denotes a vectorized matrix, i.e., for a
 \begin_inset Formula $n\times m$
 \end_inset
 
- matrix 
+ matrix
 \begin_inset Formula $X$
 \end_inset
 
-, 
+,
 \begin_inset Formula $\vec{X}=\left(x_{\cdot1}^{\prime},x_{\cdot2}^{\prime},...,x_{\cdot m}^{\prime}\right)^{\prime}$
 \end_inset
 
- such that 
+ such that
 \begin_inset Formula $x_{\cdot1}$
 \end_inset
 
- is the first 
+ is the first
 \begin_inset Formula $n$
 \end_inset
 
- elements of column 1 of 
+ elements of column 1 of
 \begin_inset Formula $X$
 \end_inset
 
 .
- This matrix is 
+ This matrix is
 \begin_inset Formula $mn\times n$
 \end_inset
 
 .
- In our case 
+ In our case
 \begin_inset Formula $\ln L$
 \end_inset
 
- is a scalar so 
+ is a scalar so
 \begin_inset Formula $m=1$
 \end_inset
 
-, so each second derivative is 
+, so each second derivative is
 \begin_inset Formula $n\times n$
 \end_inset
 
- and 
+ and
 \begin_inset Formula $n=K=3$
 \end_inset
 
  in our example.
- Given our score 
+ Given our score
 \begin_inset Quotes eld
 \end_inset
 

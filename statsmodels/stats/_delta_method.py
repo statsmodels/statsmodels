@@ -9,7 +9,7 @@ from scipy import stats
 
 
 class NonlinearDeltaCov:
-    '''Asymptotic covariance by Deltamethod
+    """Asymptotic covariance by Deltamethod
 
     The function is designed for 2d array, with rows equal to
     the number of equations or constraints and columns equal to the number
@@ -46,7 +46,7 @@ class NonlinearDeltaCov:
         Not yet implemented.
 
 
-    '''
+    """
     def __init__(self, func, params, cov_params, deriv=None, func_args=None):
         self.fun = func
         self.params = params
@@ -54,7 +54,7 @@ class NonlinearDeltaCov:
         self._grad = deriv
         self.func_args = func_args if func_args is not None else ()
         if func_args is not None:
-            raise NotImplementedError('func_args not yet implemented')
+            raise NotImplementedError("func_args not yet implemented")
 
     def grad(self, params=None, **kwds):
         """First derivative, jacobian of func evaluated at params.
@@ -204,7 +204,7 @@ class NonlinearDeltaCov:
             dist_args = ()
         else:
             if df is None:
-                raise ValueError('t distribution requires df')
+                raise ValueError("t distribution requires df")
             dist = stats.t
             dist_args = (df,)
 
@@ -220,7 +220,7 @@ class NonlinearDeltaCov:
         upper = predicted + q * se
         ci = np.column_stack((lower, upper))
         if ci.shape[1] != 2:
-            raise RuntimeError('something wrong: ci not 2 columns')
+            raise RuntimeError("something wrong: ci not 2 columns")
         return ci
 
     def summary(self, xname=None, alpha=0.05, title=None, use_t=False,
@@ -273,6 +273,6 @@ class NonlinearDeltaCov:
                                  df_denom=df_resid)
         else:
             cr = ContrastResults(effect=predicted, statistic=statistic, sd=se,
-                                 df_denom=None, distribution='norm')
+                                 df_denom=None, distribution="norm")
 
         return cr.summary(xname=xname, alpha=alpha, title=title)

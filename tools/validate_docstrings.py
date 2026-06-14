@@ -444,7 +444,7 @@ class Docstring:
     def start_blank_lines(self):
         i = None
         if self.raw_doc:
-            for i, row in enumerate(self.raw_doc.split("\n")):
+            for _, row in enumerate(self.raw_doc.split("\n")):
                 if row.strip():
                     break
         return i
@@ -453,7 +453,7 @@ class Docstring:
     def end_blank_lines(self):
         i = None
         if self.raw_doc:
-            for i, row in enumerate(reversed(self.raw_doc.split("\n"))):
+            for _, row in enumerate(reversed(self.raw_doc.split("\n"))):
                 if row.strip():
                     break
         return i
@@ -904,7 +904,7 @@ def get_validation_data(doc):
         else:
             if len(doc.returns) == 1 and doc.returns[0].name:
                 errs.append(error("RT02"))
-            for name_or_type, type_, desc in doc.returns:
+            for _, _, desc in doc.returns:
                 if not desc:
                     errs.append(error("RT03"))
                 else:
@@ -1138,7 +1138,7 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
             sys.stderr.write(
                 "{} Warnings found:\n".format(len(result["warnings"]))
             )
-            for wrn_code, wrn_desc in result["warnings"]:
+            for _, wrn_desc in result["warnings"]:
                 sys.stderr.write(f"\t{wrn_desc}\n")
 
         if not result["errors"]:

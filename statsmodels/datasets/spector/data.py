@@ -1,24 +1,24 @@
 """Spector and Mazzeo (1980) - Program Effectiveness Data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """Used with express permission of the original author, who
+COPYRIGHT = """Used with express permission of the original author, who
 retains all rights. """
-TITLE       = __doc__
-SOURCE      = """
+TITLE = __doc__
+SOURCE = """
 http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm
 
 The raw data was downloaded from Bill Greene's Econometric Analysis web site,
 though permission was obtained from the original researcher, Dr. Lee Spector,
 Professor of Economics, Ball State University."""
 
-DESCRSHORT  = """Experimental data on the effectiveness of the personalized
+DESCRSHORT = """Experimental data on the effectiveness of the personalized
 system of instruction (PSI) program"""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 32
 
@@ -60,7 +60,7 @@ def load_pandas():
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'spector.csv', sep=r'\s')
+    data = du.load_csv(__file__, "spector.csv", sep=r"\s")
     data = du.strip_column_names(data)
     data = data.iloc[:, [1, 2, 3, 4]]
     return data.astype(float)

@@ -2,7 +2,6 @@ import numpy as np
 
 from statsmodels.tools.tools import Bunch
 
-
 epanechnikov_hsheather_q75 = Bunch()
 epanechnikov_hsheather_q75.table = np.array([
     [.6440143,  .0122001,   52.79,  0.000,    .6199777,   .6680508],

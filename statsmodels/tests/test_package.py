@@ -1,7 +1,7 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 import subprocess
 import sys
-
-from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 import pytest
 

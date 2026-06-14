@@ -272,13 +272,25 @@ class TestDiagnosticG:
     def test_het_white(self):
         res = self.res
 
-        # TODO: regressiontest, compare with Greene or Gretl or Stata
+        # Reference values from Eviews
         hw = smsdia.het_white(res.resid, res.model.exog)
         hw_values = (
             33.503722896538441,
             2.9887960597830259e-06,
             7.7945101228430946,
             1.0354575277704231e-06,
+        )
+        assert_almost_equal(hw, hw_values)
+
+    def test_het_white_no_interaction_terms(self):
+        res = self.res
+
+        hw = smsdia.het_white(res.resid, res.model.exog, interaction_terms=False)
+        hw_values = (
+            13.25091965953952,
+            0.001326170478134868,
+            6.985287047470471,
+            0.001169716842511783,
         )
         assert_almost_equal(hw, hw_values)
 
@@ -701,7 +713,7 @@ class TestDiagnosticG:
         )  # Brownian Bridge
 
         k_vars = 3
-        cs_ols = smsdia.breaks_cusumolsresid(self.res.resid, ddof=k_vars)  #
+        cs_ols = smsdia.breaks_cusumolsresid(self.res.resid, ddof=k_vars)
         compare_to_reference(cs_ols, cusum_ols, decimal=(12, 12))
 
     def test_breaks_hansen(self):
@@ -968,7 +980,7 @@ class TestDiagnosticG:
     def test_normality(self):
         res = self.res
 
-        # > library(nortest) #Lilliefors (Kolmogorov-Smirnov) normality test
+        # > library(nortest) # Lilliefors (Kolmogorov-Smirnov) normality test
         # > lt = lillie.test(residuals(fm))
         # > mkhtest(lt, "lilliefors", "-")
         lilliefors1 = dict(
@@ -1071,7 +1083,7 @@ class TestDiagnosticG:
         )
 
         # slow:
-        # infl._get_all_obs()  #slow, nobs estimation loop, called implicitly
+        # infl._get_all_obs()  # slow, nobs estimation loop, called implicitly
         dffits, dffth = infl.dffits
         assert_almost_equal(dffits, lsdiag["dfits"], decimal=12)
         assert_almost_equal(
@@ -1908,7 +1920,7 @@ def test_small_skip(reset_randomstate):
 # M1 + fitted(M2) 1.591505670785873 0.7384552861695823 2.15518 0.0323546 *
 # M2 + fitted(M1) 1.305687653016899 0.4808385176653064 2.71544 0.0072039 **
 # ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# Signif. codes:  0`***` 0.001`**` 0.01`*` 0.05`.` 0.1` ` 1
 #
 #
 #  = lm(ginv ~ ggdp + tbilrate)
@@ -1922,7 +1934,7 @@ def test_small_skip(reset_randomstate):
 # fitted(M1) ~ M2 -0.782030488930356 0.599696502782265 -1.30404    0.19222
 # fitted(M2) ~ M1 -2.248817107408537 0.392656854330139 -5.72718 1.0211e-08 ***
 # ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# Signif. codes:  0`***` 0.001`**` 0.01`*` 0.05`.` 0.1` ` 1
 #
 #
 #
@@ -1937,7 +1949,7 @@ def test_small_skip(reset_randomstate):
 # M1 vs. ME    198 -1 4.64481 0.0323546 *
 # M2 vs. ME    198 -1 7.37361 0.0072039 **
 # ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# Signif. codes:  0`***` 0.001`**` 0.01`*` 0.05`.` 0.1` ` 1
 #
 #
 # > fm4 = lm(realinv ~ realgdp + realint, data=d)
@@ -1955,7 +1967,7 @@ def test_small_skip(reset_randomstate):
 # M1 + log(fit(M1))-fit(M2) 6.2013e-07 ***
 # M2 + fit(M1)-exp(fit(M2)) < 2.22e-16 ***
 # ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# Signif. codes:  0`***` 0.001`**` 0.01`*` 0.05`.` 0.1` ` 1
 
 @pytest.mark.smoke
 def test_diagnostics_pandas(reset_randomstate):

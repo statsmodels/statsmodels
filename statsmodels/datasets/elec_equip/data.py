@@ -5,7 +5,7 @@ import pandas as pd
 
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This is public domain."""
 TITLE = __doc__
@@ -52,8 +52,8 @@ def load():
 
 def _get_data():
     curr_dir = os.path.split(os.path.abspath(__file__))[0]
-    data = pd.read_csv(os.path.join(curr_dir, 'elec_equip.csv'))
-    data.index = pd.to_datetime(data.pop('DATE'))
+    data = pd.read_csv(os.path.join(curr_dir, "elec_equip.csv"))
+    data.index = pd.to_datetime(data.pop("DATE"))
     return data
 
 

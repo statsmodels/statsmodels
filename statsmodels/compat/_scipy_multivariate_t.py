@@ -1,15 +1,12 @@
-# flake8: noqa: E501
 #
 # Author: Joris Vankerschaver 2013
 #
 
 import numpy as np
-import scipy.linalg
 from scipy._lib import doccer
-from scipy.special import gammaln
-
 from scipy._lib._util import check_random_state
-
+import scipy.linalg
+from scipy.special import gammaln
 from scipy.stats import mvn
 
 _LOG_2PI = np.log(2 * np.pi)
@@ -70,7 +67,7 @@ def _eigvalsh_to_eps(spectrum, cond=None, rcond=None):
         cond = rcond
     if cond in [None, -1]:
         t = spectrum.dtype.char.lower()
-        factor = {'f': 1E3, 'd': 1E6}
+        factor = {"f": 1e3, "d": 1e6}
         cond = factor[t] * np.finfo(t).eps
     eps = cond * np.max(abs(spectrum))
     return eps
@@ -93,7 +90,7 @@ def _pinv_1d(v, eps=1e-5):
         A vector of pseudo-inverted numbers.
 
     """
-    return np.array([0 if abs(x) <= eps else 1/x for x in v], dtype=float)
+    return np.array([0 if abs(x) <= eps else 1 / x for x in v], dtype=float)
 
 
 class _PSD:
@@ -136,8 +133,15 @@ class _PSD:
 
     """
 
-    def __init__(self, M, cond=None, rcond=None, lower=True,
-                 check_finite=True, allow_singular=True):
+    def __init__(
+        self,
+        M,
+        cond=None,
+        rcond=None,
+        lower=True,
+        check_finite=True,
+        allow_singular=True,
+    ):
         # Compute the symmetric eigendecomposition.
         # Note that eigh takes care of array conversion, chkfinite,
         # and assertion that the matrix is square.
@@ -145,10 +149,10 @@ class _PSD:
 
         eps = _eigvalsh_to_eps(s, cond, rcond)
         if np.min(s) < -eps:
-            raise ValueError('the input matrix must be positive semidefinite')
+            raise ValueError("the input matrix must be positive semidefinite")
         d = s[s > eps]
         if len(d) < len(s) and not allow_singular:
-            raise np.linalg.LinAlgError('singular matrix')
+            raise np.linalg.LinAlgError("singular matrix")
         s_pinv = _pinv_1d(s, eps)
         U = np.multiply(u, np.sqrt(s_pinv))
 
@@ -173,13 +177,14 @@ class multi_rv_generic:
     distributions.
 
     """
+
     def __init__(self, seed=None):
         super().__init__()
         self._random_state = check_random_state(seed)
 
     @property
     def random_state(self):
-        """ Get or set the RandomState object for generating random variates.
+        """Get or set the RandomState object for generating random variates.
 
         This can be either None, int, a RandomState instance, or a
         np.random.Generator instance.
@@ -208,6 +213,7 @@ class multi_rv_frozen:
     Class which encapsulates common functionality between all frozen
     multivariate distributions.
     """
+
     @property
     def random_state(self):
         return self._dist._random_state
@@ -226,8 +232,7 @@ allow_singular : bool, optional
     Whether to allow a singular covariance matrix.  (Default: False)
 """
 
-_mvn_doc_callparams_note = \
-    """Setting the parameter `mean` to `None` is equivalent to having `mean`
+_mvn_doc_callparams_note = """Setting the parameter `mean` to `None` is equivalent to having `mean`
     be the zero-vector. The parameter `cov` can be a scalar, in which case
     the covariance matrix is the identity times that value, a vector of
     diagonal entries for the covariance matrix, or a two-dimensional
@@ -236,19 +241,20 @@ _mvn_doc_callparams_note = \
 
 _mvn_doc_frozen_callparams = ""
 
-_mvn_doc_frozen_callparams_note = \
+_mvn_doc_frozen_callparams_note = (
     """See class definition for a detailed description of parameters."""
+)
 
 mvn_docdict_params = {
-    '_mvn_doc_default_callparams': _mvn_doc_default_callparams,
-    '_mvn_doc_callparams_note': _mvn_doc_callparams_note,
-    '_doc_random_state': _doc_random_state
+    "_mvn_doc_default_callparams": _mvn_doc_default_callparams,
+    "_mvn_doc_callparams_note": _mvn_doc_callparams_note,
+    "_doc_random_state": _doc_random_state,
 }
 
 mvn_docdict_noparams = {
-    '_mvn_doc_default_callparams': _mvn_doc_frozen_callparams,
-    '_mvn_doc_callparams_note': _mvn_doc_frozen_callparams_note,
-    '_doc_random_state': _doc_random_state
+    "_mvn_doc_default_callparams": _mvn_doc_frozen_callparams,
+    "_mvn_doc_callparams_note": _mvn_doc_frozen_callparams_note,
+    "_doc_random_state": _doc_random_state,
 }
 
 
@@ -348,9 +354,9 @@ class multivariate_normal_gen(multi_rv_generic):
         See `multivariate_normal_frozen` for more information.
 
         """
-        return multivariate_normal_frozen(mean, cov,
-                                          allow_singular=allow_singular,
-                                          seed=seed)
+        return multivariate_normal_frozen(
+            mean, cov, allow_singular=allow_singular, seed=seed
+        )
 
     def _process_parameters(self, dim, mean, cov):
         """
@@ -373,10 +379,8 @@ class multivariate_normal_gen(multi_rv_generic):
             else:
                 mean = np.asarray(mean, dtype=float)
                 dim = mean.size
-        else:
-            if not np.isscalar(dim):
-                raise ValueError("Dimension of random variable must be "
-                                 "a scalar.")
+        elif not np.isscalar(dim):
+            raise ValueError("Dimension of random variable must be a scalar.")
 
         # Check input sizes and return full arrays for mean and cov if
         # necessary
@@ -389,12 +393,11 @@ class multivariate_normal_gen(multi_rv_generic):
         cov = np.asarray(cov, dtype=float)
 
         if dim == 1:
-            mean.shape = (1,)
-            cov.shape = (1, 1)
+            mean = np.reshape(mean, (1,), copy=False)
+            cov = np.reshape(cov, (1, 1), copy=False)
 
         if mean.ndim != 1 or mean.shape[0] != dim:
-            raise ValueError("Array 'mean' must be a vector of length %d." %
-                             dim)
+            raise ValueError("Array 'mean' must be a vector of length %d." % dim)
         if cov.ndim == 0:
             cov = cov * np.eye(dim)
         elif cov.ndim == 1:
@@ -402,16 +405,22 @@ class multivariate_normal_gen(multi_rv_generic):
         elif cov.ndim == 2 and cov.shape != (dim, dim):
             rows, cols = cov.shape
             if rows != cols:
-                msg = ("Array 'cov' must be square if it is two dimensional,"
-                       " but cov.shape = %s." % str(cov.shape))
+                msg = (
+                    "Array 'cov' must be square if it is two dimensional,"
+                    " but cov.shape = %s." % str(cov.shape)
+                )
             else:
-                msg = ("Dimension mismatch: array 'cov' is of shape %s,"
-                       " but 'mean' is a vector of length %d.")
+                msg = (
+                    "Dimension mismatch: array 'cov' is of shape %s,"
+                    " but 'mean' is a vector of length %d."
+                )
                 msg = msg % (str(cov.shape), len(mean))
             raise ValueError(msg)
         elif cov.ndim > 2:
-            raise ValueError("Array 'cov' must be at most two-dimensional,"
-                             " but cov.ndim = %d" % cov.ndim)
+            raise ValueError(
+                "Array 'cov' must be at most two-dimensional,"
+                " but cov.ndim = %d" % cov.ndim
+            )
 
         return dim, mean, cov
 
@@ -539,13 +548,23 @@ class multivariate_normal_gen(multi_rv_generic):
         """
         lower = np.full(mean.shape, -np.inf)
         # mvnun expects 1-d arguments, so process points sequentially
-        func1d = lambda x_slice: mvn.mvnun(lower, x_slice, mean, cov,
-                                           maxpts, abseps, releps)[0]
+
+        def func1d(x_slice):
+            return mvn.mvnun(lower, x_slice, mean, cov, maxpts, abseps, releps)[0]
+
         out = np.apply_along_axis(func1d, -1, x)
         return _squeeze_output(out)
 
-    def logcdf(self, x, mean=None, cov=1, allow_singular=False, maxpts=None,
-               abseps=1e-5, releps=1e-5):
+    def logcdf(
+        self,
+        x,
+        mean=None,
+        cov=1,
+        allow_singular=False,
+        maxpts=None,
+        abseps=1e-5,
+        releps=1e-5,
+    ):
         """
         Log of the multivariate normal cumulative distribution function.
 
@@ -583,8 +602,16 @@ class multivariate_normal_gen(multi_rv_generic):
         out = np.log(self._cdf(x, mean, cov, maxpts, abseps, releps))
         return out
 
-    def cdf(self, x, mean=None, cov=1, allow_singular=False, maxpts=None,
-            abseps=1e-5, releps=1e-5):
+    def cdf(
+        self,
+        x,
+        mean=None,
+        cov=1,
+        allow_singular=False,
+        maxpts=None,
+        abseps=1e-5,
+        releps=1e-5,
+    ):
         """
         Multivariate normal cumulative distribution function.
 
@@ -677,8 +704,16 @@ multivariate_normal = multivariate_normal_gen()
 
 
 class multivariate_normal_frozen(multi_rv_frozen):
-    def __init__(self, mean=None, cov=1, allow_singular=False, seed=None,
-                 maxpts=None, abseps=1e-5, releps=1e-5):
+    def __init__(
+        self,
+        mean=None,
+        cov=1,
+        allow_singular=False,
+        seed=None,
+        maxpts=None,
+        abseps=1e-5,
+        releps=1e-5,
+    ):
         """
         Create a frozen multivariate normal distribution.
 
@@ -724,8 +759,7 @@ class multivariate_normal_frozen(multi_rv_frozen):
 
         """
         self._dist = multivariate_normal_gen(seed)
-        self.dim, self.mean, self.cov = self._dist._process_parameters(
-                                                            None, mean, cov)
+        self.dim, self.mean, self.cov = self._dist._process_parameters(None, mean, cov)
         self.cov_info = _PSD(self.cov, allow_singular=allow_singular)
         if not maxpts:
             maxpts = 1000000 * self.dim
@@ -735,8 +769,9 @@ class multivariate_normal_frozen(multi_rv_frozen):
 
     def logpdf(self, x):
         x = self._dist._process_quantiles(x, self.dim)
-        out = self._dist._logpdf(x, self.mean, self.cov_info.U,
-                                 self.cov_info.log_pdet, self.cov_info.rank)
+        out = self._dist._logpdf(
+            x, self.mean, self.cov_info.U, self.cov_info.log_pdet, self.cov_info.rank
+        )
         return _squeeze_output(out)
 
     def pdf(self, x):
@@ -747,8 +782,9 @@ class multivariate_normal_frozen(multi_rv_frozen):
 
     def cdf(self, x):
         x = self._dist._process_quantiles(x, self.dim)
-        out = self._dist._cdf(x, self.mean, self.cov, self.maxpts, self.abseps,
-                              self.releps)
+        out = self._dist._cdf(
+            x, self.mean, self.cov, self.maxpts, self.abseps, self.releps
+        )
         return _squeeze_output(out)
 
     def rvs(self, size=1, random_state=None):
@@ -769,8 +805,7 @@ class multivariate_normal_frozen(multi_rv_frozen):
         return 0.5 * (rank * (_LOG_2PI + 1) + log_pdet)
 
 
-_mvt_doc_default_callparams = \
-"""
+_mvt_doc_default_callparams = """
 loc : array_like, optional
     Location of the distribution. (default ``0``)
 shape : array_like, optional
@@ -782,26 +817,28 @@ allow_singular : bool, optional
     Whether to allow a singular matrix. (default ``False``)
 """
 
-_mvt_doc_callparams_note = \
-"""Setting the parameter `loc` to ``None`` is equivalent to having `loc`
+_mvt_doc_callparams_note = """\
+Setting the parameter `loc` to ``None`` is equivalent to having `loc`
 be the zero-vector. The parameter `shape` can be a scalar, in which case
 the shape matrix is the identity times that value, a vector of
 diagonal entries for the shape matrix, or a two-dimensional array_like.
 """
 
-_mvt_doc_frozen_callparams_note = \
-"""See class definition for a detailed description of parameters."""
+
+_mvt_doc_frozen_callparams_note = (
+    """See class definition for a detailed description of parameters."""
+)
 
 mvt_docdict_params = {
-    '_mvt_doc_default_callparams': _mvt_doc_default_callparams,
-    '_mvt_doc_callparams_note': _mvt_doc_callparams_note,
-    '_doc_random_state': _doc_random_state
+    "_mvt_doc_default_callparams": _mvt_doc_default_callparams,
+    "_mvt_doc_callparams_note": _mvt_doc_callparams_note,
+    "_doc_random_state": _doc_random_state,
 }
 
 mvt_docdict_noparams = {
-    '_mvt_doc_default_callparams': "",
-    '_mvt_doc_callparams_note': _mvt_doc_frozen_callparams_note,
-    '_doc_random_state': _doc_random_state
+    "_mvt_doc_default_callparams": "",
+    "_mvt_doc_callparams_note": _mvt_doc_frozen_callparams_note,
+    "_doc_random_state": _doc_random_state,
 }
 
 
@@ -883,19 +920,19 @@ class multivariate_t_gen(multi_rv_generic):
         self.__doc__ = doccer.docformat(self.__doc__, mvt_docdict_params)
         self._random_state = check_random_state(seed)
 
-    def __call__(self, loc=None, shape=1, df=1, allow_singular=False,
-                 seed=None):
+    def __call__(self, loc=None, shape=1, df=1, allow_singular=False, seed=None):
         """
         Create a frozen multivariate t-distribution. See
         `multivariate_t_frozen` for parameters.
 
         """
         if df == np.inf:
-            return multivariate_normal_frozen(mean=loc, cov=shape,
-                                              allow_singular=allow_singular,
-                                              seed=seed)
-        return multivariate_t_frozen(loc=loc, shape=shape, df=df,
-                                     allow_singular=allow_singular, seed=seed)
+            return multivariate_normal_frozen(
+                mean=loc, cov=shape, allow_singular=allow_singular, seed=seed
+            )
+        return multivariate_t_frozen(
+            loc=loc, shape=shape, df=df, allow_singular=allow_singular, seed=seed
+        )
 
     def pdf(self, x, loc=None, shape=1, df=1, allow_singular=False):
         """
@@ -925,8 +962,9 @@ class multivariate_t_gen(multi_rv_generic):
         dim, loc, shape, df = self._process_parameters(loc, shape, df)
         x = self._process_quantiles(x, dim)
         shape_info = _PSD(shape, allow_singular=allow_singular)
-        logpdf = self._logpdf(x, loc, shape_info.U, shape_info.log_pdet, df,
-                              dim, shape_info.rank)
+        logpdf = self._logpdf(
+            x, loc, shape_info.U, shape_info.log_pdet, df, dim, shape_info.rank
+        )
         return np.exp(logpdf)
 
     def logpdf(self, x, loc=None, shape=1, df=1):
@@ -962,8 +1000,9 @@ class multivariate_t_gen(multi_rv_generic):
         dim, loc, shape, df = self._process_parameters(loc, shape, df)
         x = self._process_quantiles(x, dim)
         shape_info = _PSD(shape)
-        return self._logpdf(x, loc, shape_info.U, shape_info.log_pdet, df, dim,
-                            shape_info.rank)
+        return self._logpdf(
+            x, loc, shape_info.U, shape_info.log_pdet, df, dim, shape_info.rank
+        )
 
     def _logpdf(self, x, loc, prec_U, log_pdet, df, dim, rank):
         """Utility method `pdf`, `logpdf` for parameters.
@@ -1002,9 +1041,9 @@ class multivariate_t_gen(multi_rv_generic):
         t = 0.5 * (df + dim)
         A = gammaln(t)
         B = gammaln(0.5 * df)
-        C = dim/2. * np.log(df * np.pi)
+        C = dim / 2.0 * np.log(df * np.pi)
         D = 0.5 * log_pdet
-        E = -t * np.log(1 + (1./df) * maha)
+        E = -t * np.log(1 + (1.0 / df) * maha)
 
         return _squeeze_output(A - B - C - D + E)
 
@@ -1099,12 +1138,11 @@ class multivariate_t_gen(multi_rv_generic):
             dim = loc.size
 
         if dim == 1:
-            loc.shape = (1,)
-            shape.shape = (1, 1)
+            loc = np.reshape(loc, (1,), copy=False)
+            shape = np.reshape(shape, (1, 1), copy=False)
 
         if loc.ndim != 1 or loc.shape[0] != dim:
-            raise ValueError("Array 'loc' must be a vector of length %d." %
-                             dim)
+            raise ValueError("Array 'loc' must be a vector of length %d." % dim)
         if shape.ndim == 0:
             shape = shape * np.eye(dim)
         elif shape.ndim == 1:
@@ -1112,16 +1150,22 @@ class multivariate_t_gen(multi_rv_generic):
         elif shape.ndim == 2 and shape.shape != (dim, dim):
             rows, cols = shape.shape
             if rows != cols:
-                msg = ("Array 'cov' must be square if it is two dimensional,"
-                       " but cov.shape = %s." % str(shape.shape))
+                msg = (
+                    "Array 'cov' must be square if it is two dimensional,"
+                    " but cov.shape = %s." % str(shape.shape)
+                )
             else:
-                msg = ("Dimension mismatch: array 'cov' is of shape %s,"
-                       " but 'loc' is a vector of length %d.")
+                msg = (
+                    "Dimension mismatch: array 'cov' is of shape %s,"
+                    " but 'loc' is a vector of length %d."
+                )
                 msg = msg % (str(shape.shape), len(loc))
             raise ValueError(msg)
         elif shape.ndim > 2:
-            raise ValueError("Array 'cov' must be at most two-dimensional,"
-                             " but cov.ndim = %d" % shape.ndim)
+            raise ValueError(
+                "Array 'cov' must be at most two-dimensional,"
+                " but cov.ndim = %d" % shape.ndim
+            )
 
         # Process degrees of freedom.
         if df is None:
@@ -1136,8 +1180,7 @@ class multivariate_t_gen(multi_rv_generic):
 
 class multivariate_t_frozen(multi_rv_frozen):
 
-    def __init__(self, loc=None, shape=1, df=1, allow_singular=False,
-                 seed=None):
+    def __init__(self, loc=None, shape=1, df=1, allow_singular=False, seed=None):
         """
         Create a frozen multivariate t distribution.
 
@@ -1166,18 +1209,21 @@ class multivariate_t_frozen(multi_rv_frozen):
         x = self._dist._process_quantiles(x, self.dim)
         U = self.shape_info.U
         log_pdet = self.shape_info.log_pdet
-        return self._dist._logpdf(x, self.loc, U, log_pdet, self.df, self.dim,
-                                  self.shape_info.rank)
+        return self._dist._logpdf(
+            x, self.loc, U, log_pdet, self.df, self.dim, self.shape_info.rank
+        )
 
     def pdf(self, x):
         return np.exp(self.logpdf(x))
 
     def rvs(self, size=1, random_state=None):
-        return self._dist.rvs(loc=self.loc,
-                              shape=self.shape,
-                              df=self.df,
-                              size=size,
-                              random_state=random_state)
+        return self._dist.rvs(
+            loc=self.loc,
+            shape=self.shape,
+            df=self.df,
+            size=size,
+            random_state=random_state,
+        )
 
 
 multivariate_t = multivariate_t_gen()
@@ -1185,9 +1231,8 @@ multivariate_t = multivariate_t_gen()
 
 # Set frozen generator docstrings from corresponding docstrings in
 # matrix_normal_gen and fill in default strings in class docstrings
-for name in ['logpdf', 'pdf', 'rvs']:
+for name in ["logpdf", "pdf", "rvs"]:
     method = multivariate_t_gen.__dict__[name]
     method_frozen = multivariate_t_frozen.__dict__[name]
-    method_frozen.__doc__ = doccer.docformat(method.__doc__,
-                                             mvt_docdict_noparams)
+    method_frozen.__doc__ = doccer.docformat(method.__doc__, mvt_docdict_noparams)
     method.__doc__ = doccer.docformat(method.__doc__, mvt_docdict_params)

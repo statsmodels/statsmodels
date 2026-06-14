@@ -1,10 +1,12 @@
+import warnings
+
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
-from statsmodels.imputation import mice
+
 import statsmodels.api as sm
-from numpy.testing import assert_equal, assert_allclose
-import warnings
+from statsmodels.imputation import mice
 
 try:
     import matplotlib.pyplot as plt
@@ -75,18 +77,18 @@ class TestMICEData:
         imp_data = mice.MICEData(df)
         nrow, ncol = df.shape
 
-        assert_allclose(imp_data.ix_miss['x1'], np.arange(60))
-        assert_allclose(imp_data.ix_obs['x1'], np.arange(60, 200))
-        assert_allclose(imp_data.ix_miss['x2'], np.arange(40))
-        assert_allclose(imp_data.ix_miss['x3'], np.arange(10, 30, 2))
-        assert_allclose(imp_data.ix_obs['x3'],
+        assert_allclose(imp_data.ix_miss["x1"], np.arange(60))
+        assert_allclose(imp_data.ix_obs["x1"], np.arange(60, 200))
+        assert_allclose(imp_data.ix_miss["x2"], np.arange(40))
+        assert_allclose(imp_data.ix_miss["x3"], np.arange(10, 30, 2))
+        assert_allclose(imp_data.ix_obs["x3"],
                         np.concatenate((np.arange(10),
                                         np.arange(11, 30, 2),
                                         np.arange(30, 200))))
         assert_equal([set(imp_data.data[col]) for col in imp_data.data],
                      [set(df[col].dropna()) for col in df])
 
-        for k in range(3):
+        for _ in range(3):
             imp_data.update_all()
             assert_equal(imp_data.data.shape[0], nrow)
             assert_equal(imp_data.data.shape[1], ncol)
@@ -94,21 +96,21 @@ class TestMICEData:
             assert_equal([set(imp_data.data[col]) for col in imp_data.data],
                          [set(df[col].dropna()) for col in df])
 
-        fml = 'x1 ~ x2 + x3 + x4 + x5 + y'
-        assert_equal(imp_data.conditional_formula['x1'], fml)
+        fml = "x1 ~ x2 + x3 + x4 + x5 + y"
+        assert_equal(imp_data.conditional_formula["x1"], fml)
 
         # Order of 3 and 4 is not deterministic
         # since both have 10 missing
         assert tuple(imp_data._cycle_order) in (
-            ('x5', 'x3', 'x4', 'y', 'x2', 'x1'),
-            ('x5', 'x4', 'x3', 'y', 'x2', 'x1')
+            ("x5", "x3", "x4", "y", "x2", "x1"),
+            ("x5", "x4", "x3", "y", "x2", "x1")
         )
 
         # Should make a copy
         assert df is not imp_data.data
 
         (endog_obs, exog_obs, exog_miss,
-         predict_obs_kwds, predict_miss_kwds) = imp_data.get_split_data('x3')
+         predict_obs_kwds, predict_miss_kwds) = imp_data.get_split_data("x3")
         assert_equal(len(endog_obs), 190)
         assert_equal(exog_obs.shape, [190, 6])
         assert_equal(exog_miss.shape, [10, 6])
@@ -118,14 +120,14 @@ class TestMICEData:
 
         df = gendat()
         # There need to be some ints in here for the error to be thrown
-        df['intcol'] = np.arange(len(df))
-        df['intcol'] = df.intcol.astype('int32')
+        df["intcol"] = np.arange(len(df))
+        df["intcol"] = df.intcol.astype("int32")
 
         miceData = mice.MICEData(df)
 
-        with pd.option_context('mode.chained_assignment', 'warn'):
+        with pd.option_context("mode.chained_assignment", "warn"):
             with warnings.catch_warnings(record=True) as ws:
-                warnings.simplefilter('always')
+                warnings.simplefilter("always")
                 miceData.update_all()
                 # Only include pandas warnings. There are many from patsy
                 # and sometimes warnings from other packages here
@@ -138,7 +140,7 @@ class TestMICEData:
         imp_data = mice.MICEData(df)
 
         all_x = []
-        for j in range(2):
+        for _ in range(2):
             x = imp_data.next_sample()
             assert isinstance(x, pd.DataFrame)
             assert_equal(df.shape, x.shape)
@@ -146,7 +148,6 @@ class TestMICEData:
 
         # The returned dataframes are all the same object
         assert all_x[0] is all_x[1]
-
 
     def test_pertmeth(self):
         # Test with specified perturbation method.
@@ -160,7 +161,7 @@ class TestMICEData:
 
             imp_data = mice.MICEData(df, perturbation_method=pert_meth)
 
-            for k in range(2):
+            for _ in range(2):
                 imp_data.update_all()
                 assert_equal(imp_data.data.shape[0], nrow)
                 assert_equal(imp_data.data.shape[1], ncol)
@@ -169,8 +170,8 @@ class TestMICEData:
         # Order of 3 and 4 is not deterministic
         # since both have 10 missing
         assert tuple(imp_data._cycle_order) in (
-            ('x5', 'x3', 'x4', 'y', 'x2', 'x1'),
-            ('x5', 'x4', 'x3', 'y', 'x2', 'x1')
+            ("x5", "x3", "x4", "y", "x2", "x1"),
+            ("x5", "x4", "x3", "y", "x2", "x1")
         )
 
     def test_phreg(self):
@@ -184,10 +185,10 @@ class TestMICEData:
         time = np.where(event_time < obs_time, event_time, obs_time)
         status = np.where(time == event_time, 1, 0)
         df = pd.DataFrame({"time": time, "status": status, "x1": x1, "x2": x2})
-        df.loc[10:40, 'time'] = np.nan
-        df.loc[10:40, 'status'] = np.nan
-        df.loc[30:50, 'x1'] = np.nan
-        df.loc[40:60, 'x2'] = np.nan
+        df.loc[10:40, "time"] = np.nan
+        df.loc[10:40, "status"] = np.nan
+        df.loc[30:50, "x1"] = np.nan
+        df.loc[40:60, "x2"] = np.nan
 
         from statsmodels.duration.hazard_regression import PHReg
 
@@ -207,13 +208,17 @@ class TestMICEData:
             x = idata.next_sample()
             assert isinstance(x, pd.DataFrame)
 
-        assert all([val == (299, 4) for val in hist])
+        assert all(val == (299, 4) for val in hist)
 
     def test_set_imputer(self):
         # Test with specified perturbation method.
 
-        from statsmodels.regression.linear_model import RegressionResultsWrapper
-        from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
+        from statsmodels.genmod.generalized_linear_model import (
+            GLMResultsWrapper,
+        )
+        from statsmodels.regression.linear_model import (
+            RegressionResultsWrapper,
+        )
 
         df = gendat()
         orig = df.copy()
@@ -221,9 +226,9 @@ class TestMICEData:
         nrow, ncol = df.shape
 
         imp_data = mice.MICEData(df)
-        imp_data.set_imputer('x1', 'x3 + x4 + x3*x4')
-        imp_data.set_imputer('x2', 'x4 + I(x5**2)')
-        imp_data.set_imputer('x3', model_class=sm.GLM,
+        imp_data.set_imputer("x1", "x3 + x4 + x3*x4")
+        imp_data.set_imputer("x2", "x4 + I(x5**2)")
+        imp_data.set_imputer("x3", model_class=sm.GLM,
                              init_kwds={"family": sm.families.Binomial()})
 
         imp_data.update_all()
@@ -232,27 +237,25 @@ class TestMICEData:
         assert_allclose(orig[mx], imp_data.data[mx])
         for j in range(1, 6):
             if j == 3:
-                assert_equal(isinstance(imp_data.models['x3'], sm.GLM), True)
-                assert_equal(isinstance(imp_data.models['x3'].family, sm.families.Binomial), True)
-                assert_equal(isinstance(imp_data.results['x3'], GLMResultsWrapper), True)
+                assert_equal(isinstance(imp_data.models["x3"], sm.GLM), True)
+                assert_equal(isinstance(imp_data.models["x3"].family, sm.families.Binomial), True)
+                assert_equal(isinstance(imp_data.results["x3"], GLMResultsWrapper), True)
             else:
-                assert_equal(isinstance(imp_data.models['x%d' % j], sm.OLS), True)
-                assert_equal(isinstance(imp_data.results['x%d' % j], RegressionResultsWrapper), True)
+                assert_equal(isinstance(imp_data.models["x%d" % j], sm.OLS), True)
+                assert_equal(isinstance(imp_data.results["x%d" % j], RegressionResultsWrapper), True)
 
-        fml = 'x1 ~ x3 + x4 + x3*x4'
-        assert_equal(imp_data.conditional_formula['x1'], fml)
+        fml = "x1 ~ x3 + x4 + x3*x4"
+        assert_equal(imp_data.conditional_formula["x1"], fml)
 
-        fml = 'x4 ~ x1 + x2 + x3 + x5 + y'
-        assert_equal(imp_data.conditional_formula['x4'], fml)
+        fml = "x4 ~ x1 + x2 + x3 + x5 + y"
+        assert_equal(imp_data.conditional_formula["x4"], fml)
 
         # Order of 3 and 4 is not deterministic
         # since both have 10 missing
         assert tuple(imp_data._cycle_order) in (
-            ('x5', 'x3', 'x4', 'y', 'x2', 'x1'),
-            ('x5', 'x4', 'x3', 'y', 'x2', 'x1')
+            ("x5", "x3", "x4", "y", "x2", "x1"),
+            ("x5", "x4", "x3", "y", "x2", "x1")
         )
-
-
 
     @pytest.mark.matplotlib
     def test_plot_missing_pattern(self, close_figures):
@@ -264,12 +267,13 @@ class TestMICEData:
             for hide_complete_rows in False, True:
                 for color_row_patterns in False, True:
                     plt.clf()
-                    fig = imp_data.plot_missing_pattern(row_order=row_order,
-                                      hide_complete_rows=hide_complete_rows,
-                                      color_row_patterns=color_row_patterns)
+                    fig = imp_data.plot_missing_pattern(
+                        row_order=row_order,
+                        hide_complete_rows=hide_complete_rows,
+                        color_row_patterns=color_row_patterns
+                    )
                     close_or_save(pdf, fig)
                     close_figures()
-
 
     @pytest.mark.matplotlib
     def test_plot_bivariate(self, close_figures):
@@ -280,11 +284,10 @@ class TestMICEData:
 
         plt.clf()
         for plot_points in False, True:
-            fig = imp_data.plot_bivariate('x2', 'x4', plot_points=plot_points)
-            fig.get_axes()[0].set_title('plot_bivariate')
+            fig = imp_data.plot_bivariate("x2", "x4", plot_points=plot_points)
+            fig.get_axes()[0].set_title("plot_bivariate")
             close_or_save(pdf, fig)
             close_figures()
-
 
     @pytest.mark.matplotlib
     def test_fit_obs(self, close_figures):
@@ -295,11 +298,10 @@ class TestMICEData:
 
         plt.clf()
         for plot_points in False, True:
-            fig = imp_data.plot_fit_obs('x4', plot_points=plot_points)
-            fig.get_axes()[0].set_title('plot_fit_scatterplot')
+            fig = imp_data.plot_fit_obs("x4", plot_points=plot_points)
+            fig.get_axes()[0].set_title("plot_fit_scatterplot")
             close_or_save(pdf, fig)
             close_figures()
-
 
     @pytest.mark.matplotlib
     def test_plot_imputed_hist(self, close_figures):
@@ -309,9 +311,9 @@ class TestMICEData:
         imp_data.update_all()
 
         plt.clf()
-        for plot_points in False, True:
-            fig = imp_data.plot_imputed_hist('x4')
-            fig.get_axes()[0].set_title('plot_imputed_hist')
+        for _ in False, True:
+            fig = imp_data.plot_imputed_hist("x4")
+            fig.get_axes()[0].set_title("plot_imputed_hist")
             close_or_save(pdf, fig)
             close_figures()
 
@@ -328,8 +330,7 @@ class TestMICE:
         assert issubclass(result.__class__, mice.MICEResults)
 
         # Smoke test for results
-        smr = result.summary()
-
+        result.summary()
 
     def test_MICE1(self):
 
@@ -337,31 +338,33 @@ class TestMICE:
         imp_data = mice.MICEData(df)
         mi = mice.MICE("y ~ x1 + x2 + x1:x2", sm.OLS, imp_data)
 
-        from statsmodels.regression.linear_model import RegressionResultsWrapper
+        from statsmodels.regression.linear_model import (
+            RegressionResultsWrapper,
+        )
 
-        for j in range(3):
+        for _ in range(3):
             x = mi.next_sample()
             assert issubclass(x.__class__, RegressionResultsWrapper)
-
 
     def test_MICE1_regularized(self):
 
         df = gendat()
-        imp = mice.MICEData(df, perturbation_method='boot')
-        imp.set_imputer('x1', 'x2 + y', fit_kwds={'alpha': 1, 'L1_wt': 0})
+        imp = mice.MICEData(df, perturbation_method="boot")
+        imp.set_imputer("x1", "x2 + y", fit_kwds={"alpha": 1, "L1_wt": 0})
         imp.update_all()
-
 
     def test_MICE2(self):
 
-        from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
+        from statsmodels.genmod.generalized_linear_model import (
+            GLMResultsWrapper,
+        )
 
         df = gendat()
         imp_data = mice.MICEData(df)
         mi = mice.MICE("x3 ~ x1 + x2", sm.GLM, imp_data,
                        init_kwds={"family": sm.families.Binomial()})
 
-        for j in range(3):
+        for _ in range(3):
             x = mi.next_sample()
             assert isinstance(x, GLMResultsWrapper)
             assert isinstance(x.family, sm.families.Binomial)
@@ -394,7 +397,7 @@ def test_micedata_miss1():
     # test for #4375
     gen = np.random.RandomState(3897)
     data = pd.DataFrame(gen.rand(50, 4))
-    data.columns = ['var1', 'var2', 'var3', 'var4']
+    data.columns = ["var1", "var2", "var3", "var4"]
     # one column with a single missing value
     data.iloc[1, 1] = np.nan
     data.iloc[[1, 3], 2] = np.nan
@@ -404,10 +407,12 @@ def test_micedata_miss1():
 
     assert_equal(data_imp.data.isnull().values.sum(), 0)
 
-    ix_miss = {'var1': np.array([], dtype=np.int64),
-                 'var2': np.array([1], dtype=np.int64),
-                 'var3': np.array([1, 3], dtype=np.int64),
-                 'var4': np.array([], dtype=np.int64)}
+    ix_miss = {
+        "var1": np.array([], dtype=np.int64),
+        "var2": np.array([1], dtype=np.int64),
+        "var3": np.array([1, 3], dtype=np.int64),
+        "var4": np.array([], dtype=np.int64)
+    }
 
-    for k in ix_miss:
-        assert_equal(data_imp.ix_miss[k], ix_miss[k])
+    for key, val in ix_miss.items():
+        assert_equal(data_imp.ix_miss[key], val)

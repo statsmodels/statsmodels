@@ -17,3 +17,4 @@ pymc3; os_name != "nt"
 arviz; os_name != "nt"
 jinja2==3.0.3
 pickleshare
+pytest>=8.4.1,<9

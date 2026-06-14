@@ -59,18 +59,18 @@ def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
     p = SARIMAXParams(spec=spec)
 
     if not spec.is_ar_consecutive:
-        raise ValueError('Yule-Walker estimation unavailable for models with'
-                         ' seasonal or non-consecutive AR orders.')
+        raise ValueError("Yule-Walker estimation unavailable for models with"
+                         " seasonal or non-consecutive AR orders.")
 
     # Estimate parameters
-    method = 'adjusted' if adjusted else 'mle'
+    method = "adjusted" if adjusted else "mle"
     p.ar_params, sigma = linear_model.yule_walker(
         endog, order=ar_order, demean=demean, method=method)
     p.sigma2 = sigma**2
 
     # Construct other results
     other_results = Bunch({
-        'spec': spec,
+        "spec": spec,
     })
 
     return p, other_results

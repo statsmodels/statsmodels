@@ -1,14 +1,35 @@
+"""Utilities for adding independent columns to design matrices."""
+
 import numpy as np
 
 
 def add_indep(x, varnames, dtype=None):
-    '''
-    construct array with independent columns
+    """
+    Construct an array with independent columns.
+
+    Parameters
+    ----------
+    x : array_like
+        Candidate columns. If `x` is a 2-dimensional ndarray, columns are
+        assumed to represent variables and rows observations.
+    varnames : list[str]
+        Names corresponding to the columns in `x`.
+    dtype : dtype, optional
+        dtype used to construct the output array. If omitted, uses the dtype
+        of the first candidate column.
+
+    Returns
+    -------
+    xout : ndarray
+        Array containing only linearly independent columns.
+    varnames_new : list[str]
+        Names of the retained columns.
 
     x is either iterable (list, tuple) or instance of ndarray or a subclass
     of it.  If x is an ndarray, then each column is assumed to represent a
     variable with observations in rows.
-    '''
+
+    """
     # TODO: this needs tests for subclasses
 
     if isinstance(x, np.ndarray) and x.ndim == 2:
@@ -23,7 +44,6 @@ def add_indep(x, varnames, dtype=None):
     rank_old = 0
     varnames_new = []
     varnames_dropped = []
-    keepindx = []
     for (xi, ni) in zip(x, varnames):
         xout[:, count] = xi
         rank_new = np.linalg.matrix_rank(xout)

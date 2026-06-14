@@ -177,7 +177,7 @@ class BaseProbplotMixin:
             alpha=0.5,
         )
 
-    def test_fit_params(self):
+    def test_fit_params(self, close_figures):
         assert self.prbplt.fit_params[-2] == self.prbplt.loc
         assert self.prbplt.fit_params[-1] == self.prbplt.scale
 
@@ -237,13 +237,13 @@ class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
         self.line = "45"
         super().setup_method()
 
-    def test_loc_set(self):
+    def test_loc_set(self, close_figures):
         assert self.prbplt.loc == 8.5
 
-    def test_scale_set(self):
+    def test_scale_set(self, close_figures):
         assert self.prbplt.scale == 3.0
 
-    def test_exceptions(self):
+    def test_exceptions(self, close_figures):
         with pytest.raises(ValueError):
             ProbPlot(self.data, dist=stats.norm(loc=8.5, scale=3.0), fit=True)
         with pytest.raises(ValueError):
@@ -284,16 +284,16 @@ class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
         self.line = "45"
         super().setup_method()
 
-    def test_loc_set(self):
+    def test_loc_set(self, close_figures):
         assert self.prbplt.loc == 8
 
-    def test_scale_set(self):
+    def test_scale_set(self, close_figures):
         assert self.prbplt.scale == 3
 
-    def test_loc_set_in_dist(self):
+    def test_loc_set_in_dist(self, close_figures):
         assert self.prbplt.dist.mean() == 8.0
 
-    def test_scale_set_in_dist(self):
+    def test_scale_set_in_dist(self, close_figures):
         assert self.prbplt.dist.var() == 9.0
 
 
@@ -348,7 +348,7 @@ def test_invalid_dist_config(close_figures):
 
 
 @pytest.mark.matplotlib
-def test_qqplot_unequal():
+def test_qqplot_unequal(close_figures):
     rs = np.random.RandomState(0)
     data1 = rs.standard_normal(100)
     data2 = rs.standard_normal(200)
@@ -491,7 +491,7 @@ class TestQQLine:
         self.fmt = "bo-"
 
     @pytest.mark.matplotlib
-    def test_badline(self):
+    def test_badline(self, close_figures):
         with pytest.raises(ValueError):
             qqline(self.ax, "junk")
 
@@ -657,13 +657,12 @@ def test_correct_labels(close_figures, reset_randomstate, line, x_size, y_size, 
         else:
             assert "X" in x_label
             assert "Y" in y_label
+    elif not labels:
+        assert "1st" in x_label
+        assert "2nd" in y_label
     else:
-        if not labels:
-            assert "1st" in x_label
-            assert "2nd" in y_label
-        else:
-            assert "X" in x_label
-            assert "Y" in y_label
+        assert "X" in x_label
+        assert "Y" in y_label
 
 
 @pytest.mark.matplotlib
@@ -704,3 +703,17 @@ def test_qqplot_2samples_labels():
     assert ax.get_xlabel() == "Sample 1"
     assert ax.get_ylabel() == "Sample 2"
     plt.close(ax.figure)
+
+
+@pytest.mark.matplotlib
+def test_qqplot_2samples_kwargs(close_figures):
+    data1 = np.random.normal(0, 1, 100)
+    data2 = np.random.normal(0, 1, 100)
+    fig_with_kwarg = qqplot_2samples(data1, data2, color="cyan")
+    ax = fig_with_kwarg.get_axes()[0]
+    scatter = ax.get_children()[0]
+    assert scatter.get_color() == "cyan"
+    fig_without_kwarg = qqplot_2samples(data1, data2)
+    ax_default = fig_without_kwarg.get_axes()[0]
+    scatter_default = ax_default.get_children()[0]
+    assert scatter_default.get_color() != "cyan"

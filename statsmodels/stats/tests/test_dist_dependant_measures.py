@@ -91,8 +91,8 @@ class TestDistDependenceMeasures:
             statistic, pval, _ = ddm.distance_covariance_test(
                 self.x, self.y, method="emp", B=200
             )
-            assert_almost_equal(statistic, self.test_stat_emp_exp, 0)
-            assert_almost_equal(pval, self.pval_asym_exp, 3)
+        assert_almost_equal(statistic, self.test_stat_emp_exp, 0)
+        assert_almost_equal(pval, self.pval_asym_exp, 3)
 
     def test_statistics_for_2d_input(self):
         stats = ddm.distance_statistics(
@@ -142,7 +142,7 @@ class TestDistDependenceMeasures:
         try:
             iris = get_rdataset("iris").data.values[:, :4]
         except IGNORED_EXCEPTIONS:
-            pytest.skip('Failed with HTTPError or URLError, these are random')
+            pytest.skip("Failed with HTTPError or URLError, these are random")
 
         x = np.asarray(iris[:50], dtype=float)
         y = np.asarray(iris[50:100], dtype=float)
@@ -182,7 +182,7 @@ class TestDistDependenceMeasures:
         try:
             quakes = get_rdataset("quakes").data.values[:, :3]
         except IGNORED_EXCEPTIONS:
-            pytest.skip('Failed with HTTPError or URLError, these are random')
+            pytest.skip("Failed with HTTPError or URLError, these are random")
 
         x = np.asarray(quakes[:50], dtype=float)
         y = np.asarray(quakes[50:100], dtype=float)

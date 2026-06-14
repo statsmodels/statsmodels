@@ -1,4 +1,5 @@
 """Module for functional boxplots."""
+
 from statsmodels.compat.numpy import NP_LT_123
 
 import numpy as np
@@ -10,16 +11,18 @@ from statsmodels.nonparametric.kernel_density import KDEMultivariate
 
 try:
     from scipy.optimize import brute, differential_evolution, fmin
+
     have_de_optim = True
 except ImportError:
     from scipy.optimize import brute, fmin
+
     have_de_optim = False
 import itertools
 from multiprocessing import Pool
 
 from . import utils
 
-__all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
+__all__ = ["banddepth", "fboxplot", "hdrboxplot", "rainbowplot"]
 
 
 class HdrResults:
@@ -29,15 +32,22 @@ class HdrResults:
         self.__dict__.update(kwds)
 
     def __repr__(self):
-        msg = ("HDR boxplot summary:\n"
-               "-> median:\n{}\n"
-               "-> 50% HDR (max, min):\n{}\n"
-               "-> 90% HDR (max, min):\n{}\n"
-               "-> Extra quantiles (max, min):\n{}\n"
-               "-> Outliers:\n{}\n"
-               "-> Outliers indices:\n{}\n"
-               ).format(self.median, self.hdr_50, self.hdr_90,
-                        self.extra_quantiles, self.outliers, self.outliers_idx)
+        msg = (
+            "HDR boxplot summary:\n"
+            "-> median:\n{}\n"
+            "-> 50% HDR (max, min):\n{}\n"
+            "-> 90% HDR (max, min):\n{}\n"
+            "-> Extra quantiles (max, min):\n{}\n"
+            "-> Outliers:\n{}\n"
+            "-> Outliers indices:\n{}\n"
+        ).format(
+            self.median,
+            self.hdr_50,
+            self.hdr_90,
+            self.extra_quantiles,
+            self.outliers,
+            self.outliers_idx,
+        )
 
         return msg
 
@@ -102,7 +112,7 @@ def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
     if band[0] < pdf < band[1]:
         value = sign * _inverse_transform(pca, x)[0][idx]
     else:
-        value = 1E6
+        value = 1e6
     return value
 
 
@@ -134,26 +144,56 @@ def _min_max_band(args):
     """
     idx, (band, pca, bounds, ks_gaussian, use_brute, seed) = args
     if have_de_optim and not use_brute:
-        max_ = differential_evolution(_curve_constrained, bounds=bounds,
-                                      args=(idx, -1, band, pca, ks_gaussian),
-                                      maxiter=7, seed=seed).x
-        min_ = differential_evolution(_curve_constrained, bounds=bounds,
-                                      args=(idx, 1, band, pca, ks_gaussian),
-                                      maxiter=7, seed=seed).x
+        max_ = differential_evolution(
+            _curve_constrained,
+            bounds=bounds,
+            args=(idx, -1, band, pca, ks_gaussian),
+            maxiter=7,
+            seed=seed,
+        ).x
+        min_ = differential_evolution(
+            _curve_constrained,
+            bounds=bounds,
+            args=(idx, 1, band, pca, ks_gaussian),
+            maxiter=7,
+            seed=seed,
+        ).x
     else:
-        max_ = brute(_curve_constrained, ranges=bounds, finish=fmin,
-                     args=(idx, -1, band, pca, ks_gaussian))
+        max_ = brute(
+            _curve_constrained,
+            ranges=bounds,
+            finish=fmin,
+            args=(idx, -1, band, pca, ks_gaussian),
+        )
 
-        min_ = brute(_curve_constrained, ranges=bounds, finish=fmin,
-                     args=(idx, 1, band, pca, ks_gaussian))
+        min_ = brute(
+            _curve_constrained,
+            ranges=bounds,
+            finish=fmin,
+            args=(idx, 1, band, pca, ks_gaussian),
+        )
 
-    band = (_inverse_transform(pca, max_)[0][idx],
-            _inverse_transform(pca, min_)[0][idx])
+    band = (
+        _inverse_transform(pca, max_)[0][idx],
+        _inverse_transform(pca, min_)[0][idx],
+    )
     return band
 
 
-def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
-               xdata=None, labels=None, ax=None, use_brute=False, seed=None):
+def hdrboxplot(
+    data,
+    ncomp=2,
+    alpha=None,
+    threshold=0.95,
+    bw=None,
+    xdata=None,
+    labels=None,
+    ax=None,
+    use_brute=False,
+    seed=None,
+    *,
+    kernel_seed=None,
+):
     """
     High Density Region boxplot
 
@@ -198,6 +238,14 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
         Seed value to pass to scipy.optimize.differential_evolution. Can be an
         integer or RandomState instance. If None, then the default RandomState
         provided by np.random is used.
+    kernel_seed : {int, Generator, RandomState}, optional
+        A seed to use for the kernel density. If None, will use the global RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
 
     Returns
     -------
@@ -299,7 +347,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     if labels is None:
         # For use with pandas, get the labels
-        if hasattr(data, 'index'):
+        if hasattr(data, "index"):
             labels = data.index
         else:
             labels = np.arange(len(data))
@@ -314,8 +362,9 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     data_r = pca.factors
 
     # Create gaussian kernel
-    ks_gaussian = KDEMultivariate(data_r, bw=bw,
-                                  var_type='c' * data_r.shape[1])
+    ks_gaussian = KDEMultivariate(
+        data_r, bw=bw, var_type="c" * data_r.shape[1], seed=kernel_seed
+    )
 
     # Boundaries of the n-variate space
     bounds = np.array([data_r.min(axis=0), data_r.max(axis=0)]).T
@@ -331,21 +380,23 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     n_quantiles = len(alpha)
     pdf_r = ks_gaussian.pdf(data_r).flatten()
     if NP_LT_123:
-        pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
-                                 interpolation='linear')
-                   for i in range(n_quantiles)]
+        pvalues = [
+            np.percentile(pdf_r, (1 - alpha[i]) * 100, interpolation="linear")
+            for i in range(n_quantiles)
+        ]
     else:
-        pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
-                                 method='midpoint')
-                   for i in range(n_quantiles)]
+        pvalues = [
+            np.percentile(pdf_r, (1 - alpha[i]) * 100, method="midpoint")
+            for i in range(n_quantiles)
+        ]
 
     # Find mean, outliers curves
     if have_de_optim and not use_brute:
-        median = differential_evolution(lambda x: - ks_gaussian.pdf(x),
-                                        bounds=bounds, maxiter=5, seed=seed).x
+        median = differential_evolution(
+            lambda x: -ks_gaussian.pdf(x), bounds=bounds, maxiter=5, seed=seed
+        ).x
     else:
-        median = brute(lambda x: - ks_gaussian.pdf(x),
-                       ranges=bounds, finish=fmin)
+        median = brute(lambda x: -ks_gaussian.pdf(x), ranges=bounds, finish=fmin)
 
     outliers_idx = np.where(pdf_r < pvalues[alpha.index(threshold)])[0]
     labels_outlier = [labels[i] for i in outliers_idx]
@@ -388,13 +439,14 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
         try:
             max_pdf = pvalues[alpha.index(band[1])]
         except IndexError:
-            max_pdf = 1E6
+            max_pdf = 1e6
         band = [min_pdf, max_pdf]
 
         pool = Pool()
-        data = zip(range(dim), itertools.repeat((band, pca,
-                                                 bounds, ks_gaussian,
-                                                 seed, use_brute)))
+        data = zip(
+            range(dim),
+            itertools.repeat((band, pca, bounds, ks_gaussian, seed, use_brute)),
+        )
         band_quantiles = pool.map(_min_max_band, data)
         pool.terminate()
         pool.close()
@@ -403,13 +455,13 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
         return band_quantiles
 
-    extra_alpha = [i for i in alpha
-                   if 0.5 != i and 0.9 != i and threshold != i]
+    extra_alpha = [i for i in alpha if 0.5 != i and 0.9 != i and threshold != i]
     if len(extra_alpha) > 0:
         extra_quantiles = []
         for x in extra_alpha:
-            for y in _band_quantiles([x], use_brute=use_brute, seed=seed):
-                extra_quantiles.append(y)
+            extra_quantiles.extend(
+                list(_band_quantiles([x], use_brute=use_brute, seed=seed))
+            )
     else:
         extra_quantiles = []
 
@@ -418,62 +470,77 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     hdr_90 = _band_quantiles([0.9, 0.5], use_brute=use_brute, seed=seed)
     hdr_50 = _band_quantiles([0.5], use_brute=use_brute, seed=seed)
 
-    hdr_res = HdrResults({
-                            "median": median,
-                            "hdr_50": hdr_50,
-                            "hdr_90": hdr_90,
-                            "extra_quantiles": extra_quantiles,
-                            "outliers": outliers,
-                            "outliers_idx": outliers_idx
-                         })
+    hdr_res = HdrResults(
+        {
+            "median": median,
+            "hdr_50": hdr_50,
+            "hdr_90": hdr_90,
+            "extra_quantiles": extra_quantiles,
+            "outliers": outliers,
+            "outliers_idx": outliers_idx,
+        }
+    )
 
     # Plots
-    ax.plot(np.array([xdata] * n_samples).T, data.T,
-            c='c', alpha=.1, label=None)
-    ax.plot(xdata, median, c='k', label='Median')
+    ax.plot(np.array([xdata] * n_samples).T, data.T, c="c", alpha=0.1, label=None)
+    ax.plot(xdata, median, c="k", label="Median")
     fill_betweens = []
-    fill_betweens.append(ax.fill_between(xdata, *hdr_50, color='gray',
-                                         alpha=.4,  label='50% HDR'))
-    fill_betweens.append(ax.fill_between(xdata, *hdr_90, color='gray',
-                                         alpha=.3, label='90% HDR'))
+    fill_betweens.append(
+        ax.fill_between(xdata, *hdr_50, color="gray", alpha=0.4, label="50% HDR")
+    )
+    fill_betweens.append(
+        ax.fill_between(xdata, *hdr_90, color="gray", alpha=0.3, label="90% HDR")
+    )
 
     if len(extra_quantiles) != 0:
-        ax.plot(np.array([xdata] * len(extra_quantiles)).T,
-                np.array(extra_quantiles).T,
-                c='y', ls='-.', alpha=.4, label='Extra quantiles')
+        ax.plot(
+            np.array([xdata] * len(extra_quantiles)).T,
+            np.array(extra_quantiles).T,
+            c="y",
+            ls="-.",
+            alpha=0.4,
+            label="Extra quantiles",
+        )
 
     if len(outliers) != 0:
         for ii, outlier in enumerate(outliers):
             if labels_outlier is None:
-                label = 'Outliers'
+                label = "Outliers"
             else:
                 label = str(labels_outlier[ii])
-            ax.plot(xdata, outlier, ls='--', alpha=0.7, label=label)
+            ax.plot(xdata, outlier, ls="--", alpha=0.7, label=label)
 
     handles, labels = ax.get_legend_handles_labels()
 
     # Proxy artist for fill_between legend entry
     # See https://matplotlib.org/1.3.1/users/legend_guide.html
     plt = _import_mpl()
-    for label, fill_between in zip(['50% HDR', '90% HDR'], fill_betweens):
-        p = plt.Rectangle((0, 0), 1, 1,
-                          fc=fill_between.get_facecolor()[0])
+    for label, fill_between in zip(["50% HDR", "90% HDR"], fill_betweens):
+        p = plt.Rectangle((0, 0), 1, 1, fc=fill_between.get_facecolor()[0])
         handles.append(p)
         labels.append(label)
 
     by_label = dict(zip(labels, handles))
     if len(outliers) != 0:
-        by_label.pop('Median')
-        by_label.pop('50% HDR')
-        by_label.pop('90% HDR')
+        by_label.pop("Median")
+        by_label.pop("50% HDR")
+        by_label.pop("90% HDR")
 
-    ax.legend(by_label.values(), by_label.keys(), loc='best')
+    ax.legend(by_label.values(), by_label.keys(), loc="best")
 
     return fig, hdr_res
 
 
-def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
-             wfactor=1.5, ax=None, plot_opts=None):
+def fboxplot(
+    data,
+    xdata=None,
+    labels=None,
+    depth=None,
+    method="MBD",
+    wfactor=1.5,
+    ax=None,
+    plot_opts=None,
+):
     """
     Plot functional boxplot.
 
@@ -593,9 +660,10 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     fig, ax = utils.create_mpl_ax(ax)
 
     plot_opts = {} if plot_opts is None else plot_opts
-    if plot_opts.get('cmap_outliers') is None:
+    if plot_opts.get("cmap_outliers") is None:
         from matplotlib.cm import rainbow_r
-        plot_opts['cmap_outliers'] = rainbow_r
+
+        plot_opts["cmap_outliers"] = rainbow_r
 
     data = np.asarray(data)
     if xdata is None:
@@ -603,13 +671,12 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     # Calculate band depth if required.
     if depth is None:
-        if method not in ['MBD', 'BD2']:
+        if method not in ["MBD", "BD2"]:
             raise ValueError("Unknown value for parameter `method`.")
 
         depth = banddepth(data, method=method)
-    else:
-        if depth.size != data.shape[0]:
-            raise ValueError("Provided `depth` array is not of correct size.")
+    elif depth.size != data.shape[0]:
+        raise ValueError("Provided `depth` array is not of correct size.")
 
     # Inner area is 25%-75% region of band-depth ordered curves.
     ix_depth = np.argsort(depth)[::-1]
@@ -627,8 +694,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     ix_outliers = []
     ix_nonout = []
     for ii in range(data.shape[0]):
-        if (np.any(data[ii, :] > upper_fence) or
-                np.any(data[ii, :] < lower_fence)):
+        if np.any(data[ii, :] > upper_fence) or np.any(data[ii, :] < lower_fence):
             ix_outliers.append(ii)
         else:
             ix_nonout.append(ii)
@@ -638,28 +704,41 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     # Plot envelope of all non-outlying data
     lower_nonout = data[ix_nonout, :].min(axis=0)
     upper_nonout = data[ix_nonout, :].max(axis=0)
-    ax.fill_between(xdata, lower_nonout, upper_nonout,
-                    color=plot_opts.get('c_outer', (0.75, 0.75, 0.75)))
+    ax.fill_between(
+        xdata,
+        lower_nonout,
+        upper_nonout,
+        color=plot_opts.get("c_outer", (0.75, 0.75, 0.75)),
+    )
 
     # Plot central 50% region
-    ax.fill_between(xdata, lower, upper,
-                    color=plot_opts.get('c_inner', (0.5, 0.5, 0.5)))
+    ax.fill_between(
+        xdata, lower, upper, color=plot_opts.get("c_inner", (0.5, 0.5, 0.5))
+    )
 
     # Plot median curve
-    ax.plot(xdata, median_curve, color=plot_opts.get('c_median', 'k'),
-            lw=plot_opts.get('lw_median', 2))
+    ax.plot(
+        xdata,
+        median_curve,
+        color=plot_opts.get("c_median", "k"),
+        lw=plot_opts.get("lw_median", 2),
+    )
 
     # Plot outliers
-    cmap = plot_opts.get('cmap_outliers')
+    cmap = plot_opts.get("cmap_outliers")
     for ii, ix in enumerate(ix_outliers):
         label = str(labels[ix]) if labels is not None else None
-        ax.plot(xdata, data[ix, :],
-                color=cmap(float(ii) / (len(ix_outliers)-1)), label=label,
-                lw=plot_opts.get('lw_outliers', 1))
+        ax.plot(
+            xdata,
+            data[ix, :],
+            color=cmap(float(ii) / (len(ix_outliers) - 1)),
+            label=label,
+            lw=plot_opts.get("lw_outliers", 1),
+        )
 
-    if plot_opts.get('draw_nonout', False):
+    if plot_opts.get("draw_nonout", False):
         for ix in ix_nonout:
-            ax.plot(xdata, data[ix, :], 'k-', lw=0.5)
+            ax.plot(xdata, data[ix, :], "k-", lw=0.5)
 
     if labels is not None:
         ax.legend()
@@ -667,8 +746,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     return fig, depth, ix_depth, ix_outliers
 
 
-def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
-                cmap=None):
+def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
     """
     Create a rainbow plot for a set of curves.
 
@@ -743,6 +821,7 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
 
     if cmap is None:
         from matplotlib.cm import rainbow_r
+
         cmap = rainbow_r
 
     data = np.asarray(data)
@@ -751,29 +830,28 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
 
     # Calculate band depth if required.
     if depth is None:
-        if method not in ['MBD', 'BD2']:
+        if method not in ["MBD", "BD2"]:
             raise ValueError("Unknown value for parameter `method`.")
 
         depth = banddepth(data, method=method)
-    else:
-        if depth.size != data.shape[0]:
-            raise ValueError("Provided `depth` array is not of correct size.")
+    elif depth.size != data.shape[0]:
+        raise ValueError("Provided `depth` array is not of correct size.")
 
     ix_depth = np.argsort(depth)[::-1]
 
     # Plot all curves, colored by depth
     num_curves = data.shape[0]
     for ii in range(num_curves):
-        ax.plot(xdata, data[ix_depth[ii], :], c=cmap(ii / (num_curves - 1.)))
+        ax.plot(xdata, data[ix_depth[ii], :], c=cmap(ii / (num_curves - 1.0)))
 
     # Plot the median curve
     median_curve = data[ix_depth[0], :]
-    ax.plot(xdata, median_curve, 'k-', lw=2)
+    ax.plot(xdata, median_curve, "k-", lw=2)
 
     return fig
 
 
-def banddepth(data, method='MBD'):
+def banddepth(data, method="MBD"):
     """
     Calculate the band depth for a set of functional curves.
 
@@ -843,9 +921,9 @@ def banddepth(data, method='MBD'):
         up = n - rmat
         return ((np.sum(up * down, axis=1) / p) + n - 1) / comb(n, 2)
 
-    if method == 'BD2':
+    if method == "BD2":
         depth = _fbd2()
-    elif method == 'MBD':
+    elif method == "MBD":
         depth = _fmbd()
     else:
         raise ValueError("Unknown input value for parameter `method`.")

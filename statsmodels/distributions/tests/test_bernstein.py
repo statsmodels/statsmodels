@@ -8,14 +8,20 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
+import pytest
 from scipy import stats
 
-from statsmodels.distributions.copula.api import (
-        CopulaDistribution, ArchimedeanCopula)
-from statsmodels.distributions.copula.api import transforms as tra
-import statsmodels.distributions.tools as dt
 from statsmodels.distributions.bernstein import (
-    BernsteinDistribution, BernsteinDistributionBV, BernsteinDistributionUV)
+    BernsteinDistribution,
+    BernsteinDistributionBV,
+    BernsteinDistributionUV,
+)
+from statsmodels.distributions.copula.api import (
+    ArchimedeanCopula,
+    CopulaDistribution,
+    transforms as tra,
+)
+import statsmodels.distributions.tools as dt
 
 
 def test_bernstein_distribution_1d():
@@ -129,6 +135,7 @@ class TestBernsteinBeta2d:
         cls.distr = cad
         cls.bpd = BernsteinDistributionBV(cdf_g)
 
+    @pytest.mark.high_memory
     def test_basic(self):
         bpd = self.bpd
         grid = self.grid

@@ -6,14 +6,15 @@ import os
 import warnings
 
 import numpy as np
-import statsmodels.stats.contingency_tables as ctab
-import pandas as pd
 from numpy.testing import assert_allclose, assert_equal
+import pandas as pd
+
 import statsmodels.api as sm
+import statsmodels.stats.contingency_tables as ctab
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 fname = "contingency_table_r_results.csv"
-fpath = os.path.join(cur_dir, 'results', fname)
+fpath = os.path.join(cur_dir, "results", fname)
 r_results = pd.read_csv(fpath)
 
 
@@ -33,7 +34,7 @@ tables[2] = np.asarray([[20, 10, 5],
 
 def test_homogeneity():
 
-    for k,table in enumerate(tables):
+    for k, table in enumerate(tables):
         st = sm.stats.SquareTable(table, shift_zeros=False)
         hm = st.homogeneity()
         assert_allclose(hm.statistic, r_results.loc[k, "homog_stat"])
@@ -63,7 +64,7 @@ def test_SquareTable_from_data():
                  rslt3.summary().as_text())
 
     s = str(rslt1)
-    assert_equal(s.startswith('A 5x5 contingency table with counts:'), True)
+    assert_equal(s.startswith("A 5x5 contingency table with counts:"), True)
     assert_equal(rslt1.table[0, 0], 8.)
 
 
@@ -151,10 +152,14 @@ def test_resids():
           [0.3424, 0.3885, 0.0054, 1.6886]]
 
     # These are regression tests
-    pr = np.array([[-2.14562121, -2.28538719, -0.26923882,  4.7649169 ],
-                   [ 0.58514314,  0.62325942,  0.07342547, -1.29946443]])
-    sr = np.array([[-2.55112945, -2.6338782 , -0.34712127,  5.5751083 ],
-                   [ 2.55112945,  2.6338782 ,  0.34712127, -5.5751083 ]])
+    pr = np.array([
+        [-2.14562121, -2.28538719, -0.26923882,  4.76491690],
+        [+0.58514314,  0.62325942,  0.07342547, -1.29946443]
+    ])
+    sr = np.array([
+        [-2.55112945, -2.6338782 , -0.34712127,  5.57510830],
+        [+2.55112945,  2.6338782 ,  0.34712127, -5.57510830]
+    ])
 
     tab = ctab.Table(table)
     assert_allclose(tab.fittedvalues, fit, atol=1e-4, rtol=1e-4)
@@ -165,7 +170,7 @@ def test_resids():
 
 def test_ordinal_association():
 
-    for k,table in enumerate(tables):
+    for k, table in enumerate(tables):
 
         row_scores = 1 + np.arange(table.shape[0])
         col_scores = 1 + np.arange(table.shape[1])
@@ -204,7 +209,7 @@ def test_chi2_association():
 
 def test_symmetry():
 
-    for k,table in enumerate(tables):
+    for k, table in enumerate(tables):
         st = sm.stats.SquareTable(table, shift_zeros=False)
         b = st.symmetry()
         assert_allclose(b.statistic, r_results.loc[k, "bowker_stat"])
@@ -230,6 +235,7 @@ def test_mcnemar():
     b4 = ctab.mcnemar(tables[0], exact=True)
     assert_allclose(b4.pvalue, r_results.loc[0, "homog_binom_p"])
 
+
 def test_from_data_stratified():
 
     df = pd.DataFrame([[1, 1, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 0],
@@ -243,6 +249,7 @@ def test_from_data_stratified():
     # Test ndarray
     tab1 = ctab.StratifiedTable.from_data(0, 1, 2, np.asarray(df))
     assert_equal(tab1.table, e)
+
 
 def test_from_data_2x2():
 
@@ -333,28 +340,23 @@ class CheckStratifiedMixin:
         tables_pandas = [pd.DataFrame(x) for x in tables]
         cls.rslt_pandas = ctab.StratifiedTable(tables_pandas)
 
-
     def test_oddsratio_pooled(self):
         assert_allclose(self.rslt.oddsratio_pooled, self.oddsratio_pooled,
                         rtol=1e-4, atol=1e-4)
 
-
     def test_logodds_pooled(self):
         assert_allclose(self.rslt.logodds_pooled, self.logodds_pooled,
                         rtol=1e-4, atol=1e-4)
-
 
     def test_null_odds(self):
         rslt = self.rslt.test_null_odds(correction=True)
         assert_allclose(rslt.statistic, self.mh_stat, rtol=1e-4, atol=1e-5)
         assert_allclose(rslt.pvalue, self.mh_pvalue, rtol=1e-4, atol=1e-4)
 
-
     def test_oddsratio_pooled_confint(self):
         lcb, ucb = self.rslt.oddsratio_pooled_confint()
         assert_allclose(lcb, self.or_lcb, rtol=1e-4, atol=1e-4)
         assert_allclose(ucb, self.or_ucb, rtol=1e-4, atol=1e-4)
-
 
     def test_logodds_pooled_confint(self):
         lcb, ucb = self.rslt.logodds_pooled_confint()
@@ -362,7 +364,6 @@ class CheckStratifiedMixin:
                         atol=1e-4)
         assert_allclose(ucb, np.log(self.or_ucb), rtol=1e-4,
                         atol=1e-4)
-
 
     def test_equal_odds(self):
 
@@ -377,14 +378,12 @@ class CheckStratifiedMixin:
         assert_allclose(rslt.statistic, self.or_homog_adj, rtol=1e-4, atol=1e-4)
         assert_allclose(rslt.pvalue, self.or_homog_adj_p, rtol=1e-4, atol=1e-4)
 
-
     def test_pandas(self):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             assert_equal(self.rslt.summary().as_text(),
                          self.rslt_pandas.summary().as_text())
-
 
     def test_from_data(self):
 
@@ -523,6 +522,7 @@ class TestStratified3(CheckStratifiedMixin):
         cls.or_homog_adj = 18.83297
         cls.or_homog_adj_p = 0.002064786
 
+
 class Check2x2Mixin:
     @classmethod
     def initialize(cls):
@@ -532,18 +532,14 @@ class Check2x2Mixin:
     def test_oddsratio(self):
         assert_allclose(self.tbl_obj.oddsratio, self.oddsratio)
 
-
     def test_log_oddsratio(self):
         assert_allclose(self.tbl_obj.log_oddsratio, self.log_oddsratio)
-
 
     def test_log_oddsratio_se(self):
         assert_allclose(self.tbl_obj.log_oddsratio_se, self.log_oddsratio_se)
 
-
     def test_oddsratio_pvalue(self):
         assert_allclose(self.tbl_obj.oddsratio_pvalue(), self.oddsratio_pvalue)
-
 
     def test_oddsratio_confint(self):
         lcb1, ucb1 = self.tbl_obj.oddsratio_confint(0.05)
@@ -551,22 +547,17 @@ class Check2x2Mixin:
         assert_allclose(lcb1, lcb2)
         assert_allclose(ucb1, ucb2)
 
-
     def test_riskratio(self):
         assert_allclose(self.tbl_obj.riskratio, self.riskratio)
-
 
     def test_log_riskratio(self):
         assert_allclose(self.tbl_obj.log_riskratio, self.log_riskratio)
 
-
     def test_log_riskratio_se(self):
         assert_allclose(self.tbl_obj.log_riskratio_se, self.log_riskratio_se)
 
-
     def test_riskratio_pvalue(self):
         assert_allclose(self.tbl_obj.riskratio_pvalue(), self.riskratio_pvalue)
-
 
     def test_riskratio_confint(self):
         lcb1, ucb1 = self.tbl_obj.riskratio_confint(0.05)
@@ -574,13 +565,11 @@ class Check2x2Mixin:
         assert_allclose(lcb1, lcb2)
         assert_allclose(ucb1, ucb2)
 
-
     def test_log_riskratio_confint(self):
         lcb1, ucb1 = self.tbl_obj.log_riskratio_confint(0.05)
         lcb2, ucb2 = self.log_riskratio_confint
         assert_allclose(lcb1, lcb2)
         assert_allclose(ucb1, ucb2)
-
 
     def test_from_data(self):
         assert_equal(self.tbl_obj.summary().as_text(),
@@ -611,16 +600,16 @@ class Test2x2_1(Check2x2Mixin):
         cls.log_riskratio = 0.
         cls.log_riskratio_se = 1 / np.sqrt(2)
         cls.riskratio_pvalue = 1.
-        cls.riskratio_confint = [0.25009765325990629,
-                                  3.9984381579173824]
-        cls.log_riskratio_confint = [-1.3859038243496782,
-                                      1.3859038243496782]
-        ss = [  '               Estimate   SE   LCB    UCB   p-value',
-                '---------------------------------------------------',
-                'Odds ratio        1.000        0.063 15.988   1.000',
-                'Log odds ratio    0.000 1.414 -2.772  2.772   1.000',
-                'Risk ratio        1.000        0.250  3.998   1.000',
-                'Log risk ratio    0.000 0.707 -1.386  1.386   1.000',
-                '---------------------------------------------------']
-        cls.summary_string = '\n'.join(ss)
+        cls.riskratio_confint = [0.25009765325990629, 3.9984381579173824]
+        cls.log_riskratio_confint = [-1.3859038243496782, 1.3859038243496782]
+        ss = [
+            "               Estimate   SE   LCB    UCB   p-value",
+            "---------------------------------------------------",
+            "Odds ratio        1.000        0.063 15.988   1.000",
+            "Log odds ratio    0.000 1.414 -2.772  2.772   1.000",
+            "Risk ratio        1.000        0.250  3.998   1.000",
+            "Log risk ratio    0.000 0.707 -1.386  1.386   1.000",
+            "---------------------------------------------------"
+        ]
+        cls.summary_string = "\n".join(ss)
         cls.initialize()

@@ -9,17 +9,20 @@ License: BSD-3
 import io
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-from numpy.testing import assert_equal, assert_allclose
-
-from statsmodels.regression.linear_model import WLS
 from statsmodels.genmod.generalized_linear_model import GLM
-
+from statsmodels.regression.linear_model import WLS
 from statsmodels.stats.meta_analysis import (
-    effectsize_smd, effectsize_2proportions, combine_effects,
-    _fit_tau_iterative, _fit_tau_mm, _fit_tau_iter_mm)
+    _fit_tau_iter_mm,
+    _fit_tau_iterative,
+    _fit_tau_mm,
+    combine_effects,
+    effectsize_2proportions,
+    effectsize_smd,
+)
 
 from .results import results_meta
 
@@ -355,7 +358,7 @@ class TestMetaBinOR:
         assert_allclose(res_glm.params, res2.TE_random, rtol=1e-13)
 
     @pytest.mark.matplotlib
-    def test_plot(self):
+    def test_plot(self, close_figures):
         # smoke tests
         res1 = self.res1
         # `use_t=False` avoids warning about missing nobs for use_t is true

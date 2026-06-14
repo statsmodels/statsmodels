@@ -5,7 +5,6 @@ from numpy.testing import (
     assert_allclose,
     assert_almost_equal,
     assert_equal,
-    assert_raises,
 )
 import pandas as pd
 import pytest
@@ -817,11 +816,14 @@ class TestDecompose:
         assert_almost_equal(trend, x)
 
     def test_raises(self):
-        assert_raises(ValueError, seasonal_decompose, self.data.values)
-        assert_raises(ValueError, seasonal_decompose, self.data, "m", period=4)
+        with pytest.raises(ValueError):
+            seasonal_decompose(self.data.values)
+        with pytest.raises(ValueError):
+            seasonal_decompose(self.data, "m", period=4)
         x = self.data.astype(float).copy()
         x.iloc[2] = np.nan
-        assert_raises(ValueError, seasonal_decompose, x)
+        with pytest.raises(ValueError):
+            seasonal_decompose(x)
 
 
 def test_seasonal_decompose_too_short(reset_randomstate):

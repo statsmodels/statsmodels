@@ -5,14 +5,20 @@ Author: Chad Fulton
 License: BSD-3
 """
 import warnings
+
 import numpy as np
 
 from statsmodels.tools.tools import Bunch
-from statsmodels.tsa.statespace import mlemodel, initialization
+from statsmodels.tsa.statespace import initialization, mlemodel
 from statsmodels.tsa.statespace.kalman_smoother import (
-    SMOOTHER_STATE, SMOOTHER_STATE_COV, SMOOTHER_STATE_AUTOCOV)
+    SMOOTHER_STATE,
+    SMOOTHER_STATE_AUTOCOV,
+    SMOOTHER_STATE_COV,
+)
 from statsmodels.tsa.statespace.tools import (
-    constrain_stationary_univariate, unconstrain_stationary_univariate)
+    constrain_stationary_univariate,
+    unconstrain_stationary_univariate,
+)
 
 
 class QuarterlyAR1(mlemodel.MLEModel):
@@ -49,14 +55,14 @@ class QuarterlyAR1(mlemodel.MLEModel):
     """
     def __init__(self, endog):
         super().__init__(endog, k_states=5, k_posdef=1,
-                         initialization='stationary')
-        self['design'] = [1, 2, 3, 2, 1]
-        self['transition', 1:, :-1] = np.eye(4)
-        self['selection', 0, 0] = 1.
+                         initialization="stationary")
+        self["design"] = [1, 2, 3, 2, 1]
+        self["transition", 1:, :-1] = np.eye(4)
+        self["selection", 0, 0] = 1.
 
     @property
     def param_names(self):
-        return ['phi', 'sigma2']
+        return ["phi", "sigma2"]
 
     @property
     def start_params(self):
@@ -69,16 +75,16 @@ class QuarterlyAR1(mlemodel.MLEModel):
             out = super().fit(*args, **kwargs)
         return out
 
-    def fit_em(self, start_params=None, transformed=True, cov_type='none',
+    def fit_em(self, start_params=None, transformed=True, cov_type="none",
                cov_kwds=None, maxiter=500, tolerance=1e-6,
                em_initialization=True, mstep_method=None, full_output=True,
                return_params=False, low_memory=False):
         if self._has_fixed_params:
-            raise NotImplementedError('Cannot fit using the EM algorithm while'
-                                      ' holding some parameters fixed.')
+            raise NotImplementedError("Cannot fit using the EM algorithm while"
+                                      " holding some parameters fixed.")
         if low_memory:
-            raise ValueError('Cannot fit using the EM algorithm when using'
-                             ' low_memory option.')
+            raise ValueError("Cannot fit using the EM algorithm when using"
+                             " low_memory option.")
 
         if start_params is None:
             start_params = self.start_params
@@ -102,7 +108,7 @@ class QuarterlyAR1(mlemodel.MLEModel):
             params.append(out[1])
             if em_initialization:
                 init = initialization.Initialization(
-                    self.k_states, 'known',
+                    self.k_states, "known",
                     constant=out[0].smoothed_state[..., 0],
                     stationary_cov=out[0].smoothed_state_cov[..., 0])
             if i > 0:
@@ -125,11 +131,8 @@ class QuarterlyAR1(mlemodel.MLEModel):
 
             # Save the output
             if full_output:
-                em_retvals = Bunch(**{'params': np.array(params),
-                                      'llf': np.array(llf),
-                                      'iter': i})
-                em_settings = Bunch(**{'tolerance': tolerance,
-                                       'maxiter': maxiter})
+                em_retvals = Bunch(params=np.array(params), llf=np.array(llf), iter=i)
+                em_settings = Bunch(tolerance=tolerance, maxiter=maxiter)
             else:
                 em_retvals = None
                 em_settings = None
@@ -207,5 +210,5 @@ class QuarterlyAR1(mlemodel.MLEModel):
     def update(self, params, **kwargs):
         super().update(params, **kwargs)
 
-        self['transition', 0, 0] = params[0]
-        self['state_cov', 0, 0] = params[1]
+        self["transition", 0, 0] = params[0]
+        self["state_cov", 0, 0] = params[1]

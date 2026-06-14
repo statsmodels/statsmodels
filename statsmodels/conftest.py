@@ -4,13 +4,14 @@ import logging
 import os
 
 import numpy as np
+from packaging.version import Version, parse
 import pandas as pd
 import pytest
 
 try:
-    import matplotlib
+    import matplotlib as mpl
 
-    matplotlib.use("agg")
+    mpl.use("agg")
     HAVE_MATPLOTLIB = True
 except ImportError:
     HAVE_MATPLOTLIB = False
@@ -18,18 +19,12 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-try:
-    default = pd.options.mode.copy_on_write
-    cow = os.environ.get("SM_TEST_COPY_ON_WRITE", "")
-    if cow:
-        cow = default
-    else:
-        cow = cow.lower() in ("true", "1")
-    pd.options.mode.copy_on_write = cow
-    if cow != default:
-        logger.critical(f"TEST CONFIGURATION: Copy on Write {cow}")
-except AttributeError:
-    pass
+
+set_cow = "SM_TEST_COPY_ON_WRITE" in os.environ
+cow_flag = os.environ.get("SM_TEST_COPY_ON_WRITE", "").lower() in ("true", "1")
+if set_cow and parse(pd.__version__) < Version("2.99.99"):
+    pd.options.mode.copy_on_write = cow_flag
+    logger.critical(f"TEST CONFIGURATION: Copy on Write {cow_flag}")
 
 formula_engine = os.environ.get("SM_FORMULA_ENGINE", "patsy")
 if formula_engine == "formulaic":
@@ -56,6 +51,8 @@ def pytest_addoption(parser):
     )
     parser.addoption("--skip-smoke", action="store_true", help="skip smoke tests")
     parser.addoption("--only-smoke", action="store_true", help="run only smoke tests")
+    parser.addoption("--skip-high-memory", action="store_true", help="skip high memory usage tests")
+    parser.addoption("--only-high-memory", action="store_true", help="run only high memory usage tests")
 
 
 def pytest_runtest_setup(item):
@@ -80,12 +77,18 @@ def pytest_runtest_setup(item):
     if "smoke" not in item.keywords and item.config.getoption("--only-smoke"):
         pytest.skip("skipping due to --only-smoke")
 
+    if "high_memory" in item.keywords and item.config.getoption("--skip-high-memory"):
+        pytest.skip("skipping due to --skip-high-memory")
+
+    if "high_memory" not in item.keywords and item.config.getoption("--only-high-memory"):
+        pytest.skip("skipping due to --only-high-memory")
+
 
 def pytest_configure(config):
     try:
-        import matplotlib
+        import matplotlib as mpl
 
-        matplotlib.use("agg")
+        mpl.use("agg")
         try:
             from pandas.plotting import register_matplotlib_converters
 
@@ -96,7 +99,7 @@ def pytest_configure(config):
         pass
 
 
-@pytest.fixture()
+@pytest.fixture
 def close_figures():
     """
     Fixture that closes all figures after a test function has completed
@@ -124,10 +127,10 @@ def close_figures():
             close_figures()
     """
     try:
-        import matplotlib.pyplot
+        import matplotlib.pyplot as plt
 
         def close():
-            matplotlib.pyplot.close("all")
+            plt.close("all")
 
     except ImportError:
 
@@ -138,7 +141,7 @@ def close_figures():
     close()
 
 
-@pytest.fixture()
+@pytest.fixture
 def reset_randomstate():
     """
     Fixture that set the global RandomState to the fixed seed 1
@@ -180,3 +183,22 @@ def pytest_collection_modifyitems(config, items):
                     item.keywords["xfail"] = new_mark
     else:
         pass
+
+
+@pytest.fixture(autouse=True)
+def check_figures_closed():
+    try:
+        import matplotlib.pyplot as plt
+
+        def count():
+            return len(plt.get_fignums())
+
+    except ImportError:
+
+        def count():
+            return 0
+
+    initial = count()
+    yield
+    cnt = count()
+    assert cnt <= initial, f"test created {cnt - initial} figure(s)"

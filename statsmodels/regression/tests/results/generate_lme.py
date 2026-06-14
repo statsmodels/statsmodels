@@ -5,8 +5,9 @@ After running this script, run lme_results.R with R
 to update the output.
 """
 
-import numpy as np
 import os
+
+import numpy as np
 
 np.random.seed(348491)
 

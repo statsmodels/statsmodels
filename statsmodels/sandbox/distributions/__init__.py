@@ -1,4 +1,4 @@
-'''temporary location for enhancements to scipy.stats
+"""temporary location for enhancements to scipy.stats
 
 includes
 ^^^^^^^^
@@ -20,4 +20,4 @@ status
 mixed status : from not-working to well-tested
 
 
-'''
+"""

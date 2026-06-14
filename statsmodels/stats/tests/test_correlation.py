@@ -1,7 +1,10 @@
 import numpy as np
-from statsmodels.stats.correlation_tools import (
-        kernel_covariance, GaussianMultivariateKernel)
 from numpy.testing import assert_allclose
+
+from statsmodels.stats.correlation_tools import (
+    GaussianMultivariateKernel,
+    kernel_covariance,
+)
 
 
 def test_kernel_covariance():

@@ -73,55 +73,56 @@ example: Gamma looks good in average bias and average RMSE (RMISE)
 
 
 """
+
 from statsmodels.compat.python import lrange
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
-
-from scipy import stats
 import pytest
+from scipy import stats
 
-from statsmodels.sandbox.gam import AdditiveModel
-from statsmodels.sandbox.gam import Model as GAM #?
 from statsmodels.genmod.families import family, links
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
+from statsmodels.sandbox.gam import AdditiveModel, Model as GAM  # ?
 
 
 class Dummy:
     pass
 
+
 class CheckAM:
 
     def test_predict(self):
-        assert_almost_equal(self.res1.y_pred,
-                            self.res2.y_pred, decimal=2)
-        assert_almost_equal(self.res1.y_predshort,
-                            self.res2.y_pred[:10], decimal=2)
+        assert_almost_equal(self.res1.y_pred, self.res2.y_pred, decimal=2)
+        assert_almost_equal(self.res1.y_predshort, self.res2.y_pred[:10], decimal=2)
 
-    @pytest.mark.xfail(reason="Unknown, results do not match expected",
-                       raises=AssertionError, strict=True)
+    @pytest.mark.xfail(
+        reason="Unknown, results do not match expected",
+        raises=AssertionError,
+        strict=True,
+    )
     def test_fitted(self):
         # check definition of fitted in GLM: eta or mu
-        assert_almost_equal(self.res1.y_pred,
-                            self.res2.fittedvalues, decimal=2)
-        assert_almost_equal(self.res1.y_predshort,
-                            self.res2.fittedvalues[:10], decimal=2)
+        assert_almost_equal(self.res1.y_pred, self.res2.fittedvalues, decimal=2)
+        assert_almost_equal(
+            self.res1.y_predshort, self.res2.fittedvalues[:10], decimal=2
+        )
 
     def test_params(self):
-        #note: only testing slope coefficients
-        #constant is far off in example 4 versus 2
-        assert_almost_equal(self.res1.params[1:],
-                            self.res2.params[1:], decimal=2)
-        #constant
-        assert_almost_equal(self.res1.params[1],
-                            self.res2.params[1], decimal=2)
+        # note: only testing slope coefficients
+        # constant is far off in example 4 versus 2
+        assert_almost_equal(self.res1.params[1:], self.res2.params[1:], decimal=2)
+        # constant
+        assert_almost_equal(self.res1.params[1], self.res2.params[1], decimal=2)
 
-    @pytest.mark.xfail(reason="res_ps attribute does not exist",
-                       strict=True, raises=AttributeError)
+    @pytest.mark.xfail(
+        reason="res_ps attribute does not exist", strict=True, raises=AttributeError
+    )
     def test_df(self):
         # not used yet, copied from PolySmoother tests
         assert_equal(self.res_ps.df_model(), self.res2.df_model)
-        assert_equal(self.res_ps.df_fit(), self.res2.df_model) #alias
+        assert_equal(self.res_ps.df_fit(), self.res2.df_model)  # alias
         assert_equal(self.res_ps.df_resid(), self.res2.df_resid)
 
 
@@ -129,33 +130,31 @@ class CheckGAM(CheckAM):
 
     def test_mu(self):
         # problem with scale for precision
-        assert_almost_equal(self.res1.mu_pred,
-                            self.res2.mu_pred, decimal=0)
+        assert_almost_equal(self.res1.mu_pred, self.res2.mu_pred, decimal=0)
 
     def test_prediction(self):
         # problem with scale for precision
-        assert_almost_equal(self.res1.y_predshort,
-                            self.res2.y_pred[:10], decimal=2)
+        assert_almost_equal(self.res1.y_predshort, self.res2.y_pred[:10], decimal=2)
 
 
 class BaseAM:
 
     @classmethod
     def setup_class(cls):
-        #DGP: simple polynomial
+        # DGP: simple polynomial
         order = 3
         nobs = 200
         lb, ub = -3.5, 3
         x1 = np.linspace(lb, ub, nobs)
-        x2 = np.sin(2*x1)
-        x = np.column_stack((x1/x1.max()*1, 1.*x2))
-        exog = (x[:,:,None]**np.arange(order+1)[None, None, :]).reshape(nobs, -1)
-        idx = lrange((order+1)*2)
-        del idx[order+1]
-        exog_reduced = exog[:,idx]  #remove duplicate constant
-        y_true = exog.sum(1) #/ 4.
-        #z = y_true #alias check
-        #d = x
+        x2 = np.sin(2 * x1)
+        x = np.column_stack((x1 / x1.max() * 1, 1.0 * x2))
+        exog = (x[:, :, None] ** np.arange(order + 1)[None, None, :]).reshape(nobs, -1)
+        idx = lrange((order + 1) * 2)
+        del idx[order + 1]
+        exog_reduced = exog[:, idx]  # remove duplicate constant
+        y_true = exog.sum(1)  # / 4.
+        # z = y_true # alias check
+        # d = x
 
         cls.nobs = nobs
         cls.y_true, cls.x, cls.exog = y_true, x, exog_reduced
@@ -165,7 +164,7 @@ class TestAdditiveModel(BaseAM, CheckAM):
 
     @classmethod
     def setup_class(cls):
-        super().setup_class() #initialize DGP
+        super().setup_class()  # initialize DGP
 
         nobs = cls.nobs
         y_true, x, exog = cls.y_true, cls.x, cls.exog
@@ -176,14 +175,14 @@ class TestAdditiveModel(BaseAM, CheckAM):
 
         m = AdditiveModel(x)
         m.fit(y)
-        res_gam = m.results #TODO: currently attached to class
+        res_gam = m.results  # TODO: currently attached to class
 
         res_ols = OLS(y, exog).fit()
 
-        #Note: there still are some naming inconsistencies
-        cls.res1 = res1 = Dummy() #for gam model
-        #res2 = Dummy() #for benchmark
-        cls.res2 = res2 = res_ols  #reuse existing ols results, will add additional
+        # Note: there still are some naming inconsistencies
+        cls.res1 = res1 = Dummy()  # for gam model
+        # res2 = Dummy() # for benchmark
+        cls.res2 = res2 = res_ols  # reuse existing ols results, will add additional
 
         res1.y_pred = res_gam.predict(x)
         res2.y_pred = res_ols.model.predict(res_ols.params, exog)
@@ -192,7 +191,7 @@ class TestAdditiveModel(BaseAM, CheckAM):
         slopes = [i for ss in m.smoothers for i in ss.params[1:]]
 
         const = res_gam.alpha + sum([ss.params[1] for ss in m.smoothers])
-        #print const, slopes
+        # print const, slopes
         res1.params = np.array([const] + slopes)
 
     def test_fitted(self):
@@ -207,7 +206,7 @@ class BaseGAM(BaseAM, CheckGAM):
     def init(cls):
         nobs = cls.nobs
         y_true, x, exog = cls.y_true, cls.x, cls.exog
-        if not hasattr(cls, 'scale'):
+        if not hasattr(cls, "scale"):
             scale = 1
         else:
             scale = cls.scale
@@ -223,29 +222,29 @@ class BaseGAM(BaseAM, CheckGAM):
         except TypeError:
             y_obs = cls.rvs(mu_true, size=nobs)
 
-        m = GAM(y_obs, x, family=f)  #TODO: y_obs is twice __init__ and fit
+        m = GAM(y_obs, x, family=f)  # TODO: y_obs is twice __init__ and fit
         m.fit(y_obs, maxiter=100)
         res_gam = m.results
-        cls.res_gam = res_gam   #attached for debugging
-        cls.mod_gam = m   #attached for debugging
+        cls.res_gam = res_gam  # attached for debugging
+        cls.mod_gam = m  # attached for debugging
 
         res_glm = GLM(y_obs, exog, family=f).fit()
 
-        #Note: there still are some naming inconsistencies
-        cls.res1 = res1 = Dummy() #for gam model
-        #res2 = Dummy() #for benchmark
-        cls.res2 = res2 = res_glm  #reuse existing glm results, will add additional
+        # Note: there still are some naming inconsistencies
+        cls.res1 = res1 = Dummy()  # for gam model
+        # res2 = Dummy() # for benchmark
+        cls.res2 = res2 = res_glm  # reuse existing glm results, will add additional
 
-        #eta in GLM terminology
+        # eta in GLM terminology
         res2.y_pred = res_glm.model.predict(res_glm.params, exog, which="linear")
         res1.y_pred = res_gam.predict(x)
-        res1.y_predshort = res_gam.predict(x[:10]) #, linear=True)
+        res1.y_predshort = res_gam.predict(x[:10])  # , linear=True)
 
-        #mu
+        # mu
         res2.mu_pred = res_glm.model.predict(res_glm.params, exog, which="mean")
         res1.mu_pred = res_gam.mu
 
-        #parameters
+        # parameters
         slopes = [i for ss in m.smoothers for i in ss.params[1:]]
         const = res_gam.alpha + sum([ss.params[1] for ss in m.smoothers])
         res1.params = np.array([const] + slopes)
@@ -255,18 +254,19 @@ class TestGAMPoisson(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super().setup_class() #initialize DGP
+        super().setup_class()  # initialize DGP
 
         cls.family = family.Poisson()
         cls.rvs = stats.poisson.rvs
 
         cls.init()
 
+
 class TestGAMBinomial(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super().setup_class() #initialize DGP
+        super().setup_class()  # initialize DGP
 
         cls.family = family.Binomial()
         cls.rvs = stats.bernoulli.rvs
@@ -274,16 +274,17 @@ class TestGAMBinomial(BaseGAM):
         cls.init()
 
 
-@pytest.mark.xfail(reason="Unknown, results do not match expected.",
-                   strict=True, raises=AssertionError)
+@pytest.mark.xfail(
+    reason="Unknown, results do not match expected.", strict=True, raises=AssertionError
+)
 class TestGAMGaussianLogLink(BaseGAM):
-    #test failure, but maybe precision issue, not far off
-    #>>> np.mean(np.abs(tt.res2.mu_pred - tt.mu_true))
-    #0.80409736263199649
-    #>>> np.mean(np.abs(tt.res2.mu_pred - tt.mu_true))/tt.mu_true.mean()
-    #0.023258245077813208
-    #>>> np.mean((tt.res2.mu_pred - tt.mu_true)**2)/tt.mu_true.mean()
-    #0.022989403735692578
+    # test failure, but maybe precision issue, not far off
+    # >>> np.mean(np.abs(tt.res2.mu_pred - tt.mu_true))
+    # 0.80409736263199649
+    # >>> np.mean(np.abs(tt.res2.mu_pred - tt.mu_true))/tt.mu_true.mean()
+    # 0.023258245077813208
+    # >>> np.mean((tt.res2.mu_pred - tt.mu_true)**2)/tt.mu_true.mean()
+    # 0.022989403735692578
 
     @classmethod
     def setup_class(cls):
@@ -300,7 +301,7 @@ class TestGAMGamma(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super().setup_class() #initialize DGP
+        super().setup_class()  # initialize DGP
 
         cls.family = family.Gamma(links.Log())
         cls.rvs = stats.gamma.rvs
@@ -308,9 +309,11 @@ class TestGAMGamma(BaseGAM):
         cls.init()
 
 
-@pytest.mark.xfail(reason="Passing wrong number of args/kwargs "
-                          "to _parse_args_rvs",
-                   strict=True, raises=TypeError)
+@pytest.mark.xfail(
+    reason="Passing wrong number of args/kwargs to _parse_args_rvs",
+    strict=True,
+    raises=TypeError,
+)
 class TestGAMNegativeBinomial(BaseGAM):
     # TODO: rvs generation does not work, nbinom needs 2 parameters
 
@@ -323,17 +326,21 @@ class TestGAMNegativeBinomial(BaseGAM):
 
         cls.init()
 
-    @pytest.mark.xfail(reason="Passing wrong number of args/kwargs "
-                              "to _parse_args_rvs",
-                       strict=True, raises=TypeError)
+    @pytest.mark.xfail(
+        reason="Passing wrong number of args/kwargs to _parse_args_rvs",
+        strict=True,
+        raises=TypeError,
+    )
     def test_fitted(self):
         # We have to override the base class method in order to correctly
         #  specify the type of failure we are expecting.
         super().test_fitted()
 
-    @pytest.mark.xfail(reason="Passing wrong number of args/kwargs "
-                              "to _parse_args_rvs",
-                       strict=True, raises=TypeError)
+    @pytest.mark.xfail(
+        reason="Passing wrong number of args/kwargs to _parse_args_rvs",
+        strict=True,
+        raises=TypeError,
+    )
     def test_df(self):
         # We have to override the base class method in order to correctly
         #  specify the type of failure we are expecting.

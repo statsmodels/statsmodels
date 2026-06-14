@@ -16,7 +16,7 @@ Grabbing Changes from Others
 If you need to push changes from others, you can link to their repository by doing::
 
     git remote add contrib-name git://github.com/contrib-name/statsmodels.git
-    get fetch contrib-name
+    git fetch contrib-name
     git branch shiny-new-feature --track contrib-name/shiny-new-feature
     git checkout shiny-new-feature
 

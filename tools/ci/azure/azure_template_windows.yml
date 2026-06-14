@@ -22,12 +22,15 @@ jobs:
       python310_win_latest:
         python.version: '3.10'
         python.architecture: 'x64'
-      python311_win_latest:
-        python.version: '3.11'
-        python.architecture: 'x64'
       python312_win_latest:
         python.version: '3.12'
         python.architecture: 'x64'
+      python313_win_latest:
+        python.version: '3.13'
+        python.architecture: 'x64'
+      python314t_win_latest:
+        python.version: '3.14'
+        python.architecture: 'x64-freethreaded'
     maxParallel: 10
 
   steps:
@@ -35,28 +38,33 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
       architecture: '$(python.architecture)'
-    displayName: 'Use Python $(python.version)'
+    displayName: 'Use Python $(python.version) $(python.architecture)'
 
   - script: |
       python -m pip install --upgrade pip setuptools wheel
     displayName: 'Update essentials'
 
-  - script: |
+  - pwsh: |
       python -m pip install -r requirements.txt
       python -m pip install -r requirements-dev.txt
     displayName: 'Install dependencies'
 
-  - script: |
+  - pwsh: |
       python -m pip list
     displayName: 'List Configuration'
 
-  - script: |
-      python -m pip install -e . -v --no-build-isolation
+  - pwsh: |
+      python -m pip install -vv --no-build-isolation --config-settings=editable-verbose=true --editable .
     displayName: 'Build Cython Extensions'
 
-  - script: |
-      pytest statsmodels --skip-examples --junitxml=junit/test-results.xml -n 2 --durations=50
-    displayName: 'pytest'
+  - pwsh: |
+      ruff check statsmodels
+      isort --check-only statsmodels
+    displayName: "Lint"
+
+  - pwsh: |
+      pytest statsmodels --skip-examples --skip-high-memory --junitxml=junit/test-results.xml -n 2 --durations=50
+    displayName: 'Run pytest'
 
   - task: PublishTestResults@2
     inputs:

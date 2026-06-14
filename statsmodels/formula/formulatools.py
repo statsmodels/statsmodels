@@ -1,11 +1,12 @@
 import numpy as np
+import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
 
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
 
-__all__ = ["handle_formula_data", "formula_handler", "advance_eval_env"]
+__all__ = ["advance_eval_env", "formula_handler", "handle_formula_data"]
 
 # this is a mutable object, so editing it should show up in the below
 formula_handler = {}
@@ -51,6 +52,11 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
             attach_spec=True,
         )
     else:
+        # Objects that support the dataframe API should be converted to a
+        # dataframe to avoid problems with patsy. (This also works for
+        # dataframes themselves.)
+        if isinstance(Y, pd.DataFrame) or hasattr(Y, "__dataframe__"):
+            Y = pd.DataFrame(Y)
         result = mgr.get_matrices(
             formula,
             Y,

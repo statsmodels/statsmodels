@@ -35,7 +35,7 @@ test statistic and then the normal CDF of this value is computed to produce
 the p-value.
 """
 
-__all__ = ["large_p", "small_p", "crit_vals", "crit_percentiles", "stat_star"]
+__all__ = ["crit_percentiles", "crit_vals", "large_p", "small_p", "stat_star"]
 
 large_p = {
     (1, 1, False): [0.2231, 0.91426, 0.10102, 0.00569],

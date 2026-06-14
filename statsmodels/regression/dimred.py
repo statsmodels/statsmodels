@@ -64,7 +64,7 @@ class SlicedInverseReg(_DimReductionRegression):
         # Sample size per slice
         if len(kwargs) > 0:
             msg = "SIR.fit does not take any extra keyword arguments"
-            warnings.warn(msg)
+            warnings.warn(msg, RuntimeWarning, stacklevel=2)
 
         # Number of slices
         n_slice = self.exog.shape[0] // slice_n
@@ -145,7 +145,7 @@ class SlicedInverseReg(_DimReductionRegression):
                 fmat = np.dot(np.dot(covx, jm), qcv)
                 fmat += np.dot(covxa, np.dot(umat, covxa.T))
                 fmat += np.dot(covxa, np.linalg.solve(Q, np.dot(jm.T, covx)))
-                ft[q*ndim + r] = fmat
+                ft[q * ndim + r] = fmat
 
         ch = np.linalg.solve(Q, np.dot(covxa.T, mn.T))
         cu = mn - np.dot(covxa, ch).T
@@ -154,13 +154,14 @@ class SlicedInverseReg(_DimReductionRegression):
             v = mn[i, :]
             for q in range(p):
                 for r in range(ndim):
-                    f = np.dot(u, np.dot(ft[q*ndim + r], v))
+                    f = np.dot(u, np.dot(ft[q * ndim + r], v))
                     gr[q, r] -= 2 * ph[i] * f
 
         return gr.ravel()
 
-    def fit_regularized(self, ndim=1, pen_mat=None, slice_n=20, maxiter=100,
-                        gtol=1e-3, **kwargs):
+    def fit_regularized(
+        self, ndim=1, pen_mat=None, slice_n=20, maxiter=100, gtol=1e-3, **kwargs
+    ):
         """
         Estimate the EDR space using regularized SIR.
 
@@ -203,7 +204,7 @@ class SlicedInverseReg(_DimReductionRegression):
 
         if len(kwargs) > 0:
             msg = "SIR.fit_regularized does not take keyword arguments"
-            warnings.warn(msg)
+            warnings.warn(msg, RuntimeWarning, stacklevel=2)
 
         if pen_mat is None:
             raise ValueError("pen_mat is a required argument")
@@ -241,21 +242,21 @@ class SlicedInverseReg(_DimReductionRegression):
         if start_params is None:
             params = np.zeros((self.k_vars, ndim))
             params[0:ndim, 0:ndim] = np.eye(ndim)
-            params = params
         else:
             if start_params.shape[1] != ndim:
                 msg = "Shape of start_params is not compatible with ndim"
                 raise ValueError(msg)
             params = start_params
 
-        params, _, cnvrg = _grass_opt(params, self._regularized_objective,
-                                      self._regularized_grad, maxiter, gtol)
+        params, _, cnvrg = _grass_opt(
+            params, self._regularized_objective, self._regularized_grad, maxiter, gtol
+        )
 
         if not cnvrg:
             g = self._regularized_grad(params.ravel())
             gn = np.sqrt(np.dot(g, g))
             msg = "SIR.fit_regularized did not converge, |g|=%f" % gn
-            warnings.warn(msg)
+            warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         results = DimReductionResults(self, params, eigs=None)
         return DimReductionResultsWrapper(results)
@@ -308,10 +309,11 @@ class PrincipalHessianDirections(_DimReductionRegression):
 
         if resid:
             from statsmodels.regression.linear_model import OLS
+
             r = OLS(y, x).fit()
             y = r.resid
 
-        cm = np.einsum('i,ij,ik->jk', y, x, x)
+        cm = np.einsum("i,ij,ik->jk", y, x, x)
         cm /= len(y)
 
         cx = np.cov(x.T)
@@ -407,8 +409,8 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
             vn /= self.exog.shape[0]
 
             c = np.mean(ns)
-            k1 = c * (c - 1) / ((c - 1)**2 + 1)
-            k2 = (c - 1) / ((c - 1)**2 + 1)
+            k1 = c * (c - 1) / ((c - 1) ** 2 + 1)
+            k2 = (c - 1) / ((c - 1) ** 2 + 1)
             av2 = k1 * av - k2 * vn
 
             vm = np.eye(p) - 2 * sum(cv) / len(cv) + av2
@@ -437,19 +439,18 @@ class DimReductionResults(model.Results):
     """
 
     def __init__(self, model, params, eigs):
-        super().__init__(
-              model, params)
+        super().__init__(model, params)
         self.eigs = eigs
 
 
 class DimReductionResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
-        'params': 'columns',
+        "params": "columns",
     }
     _wrap_attrs = _attrs
 
-wrap.populate_wrapper(DimReductionResultsWrapper,  # noqa:E305
-                      DimReductionResults)
+
+wrap.populate_wrapper(DimReductionResultsWrapper, DimReductionResults)
 
 
 def _grass_opt(params, fun, grad, maxiter, gtol):
@@ -512,16 +513,16 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
         paramsm = params.reshape((p, d))
         pa0 = np.dot(paramsm, vt.T)
 
-        def geo(t):
+        def geo(t, pa0, s, u, vt):
             # Parameterize the geodesic path in the direction
             # of the gradient as a function of a real value t.
             pa = pa0 * np.cos(s * t) + u * np.sin(s * t)
             return np.dot(pa, vt).ravel()
 
         # Try to find a downhill step along the geodesic path.
-        step = 2.
+        step = 2.0
         while step > 1e-10:
-            pa = geo(-step)
+            pa = geo(-step, pa0, s, u, vt)
             f1 = fun(pa)
             if f1 < f0:
                 params = pa
@@ -677,21 +678,20 @@ class CovarianceReduction(_DimReductionRegression):
         if start_params is None:
             params = np.zeros((p, d))
             params[0:d, 0:d] = np.eye(d)
-            params = params
         else:
             params = start_params
 
         # _grass_opt is designed for minimization, we are doing maximization
         # here so everything needs to be flipped.
-        params, llf, cnvrg = _grass_opt(params, lambda x: -self.loglike(x),
-                                        lambda x: -self.score(x), maxiter,
-                                        gtol)
+        params, llf, cnvrg = _grass_opt(
+            params, lambda x: -self.loglike(x), lambda x: -self.score(x), maxiter, gtol
+        )
         llf *= -1
         if not cnvrg:
             g = self.score(params.ravel())
             gn = np.sqrt(np.sum(g * g))
             msg = "CovReduce optimization did not converge, |g|=%f" % gn
-            warnings.warn(msg, ConvergenceWarning)
+            warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         results = DimReductionResults(self, params, eigs=None)
         results.llf = llf

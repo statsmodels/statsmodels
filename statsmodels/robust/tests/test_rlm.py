@@ -29,13 +29,13 @@ def load_stackloss():
 
 
 class CheckRlmResultsMixin:
-    '''
+    """
     res2 contains  results from Rmodelwrap or were obtained from a statistical
     packages such as R, Stata, or SAS and written to results.results_rlm
 
     Covariance matrices were obtained from SAS and are imported from
     results.results_rlm
-    '''
+    """
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
@@ -47,7 +47,7 @@ class CheckRlmResultsMixin:
 
     # TODO: get other results from SAS, though if it works for one...
     def test_confidenceintervals(self):
-        if not hasattr(self.res2, 'conf_int'):
+        if not hasattr(self.res2, "conf_int"):
             pytest.skip("Results from R")
 
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int(),
@@ -72,7 +72,7 @@ class CheckRlmResultsMixin:
                             DECIMAL_4)
 
     def test_bcov_unscaled(self):
-        if not hasattr(self.res2, 'bcov_unscaled'):
+        if not hasattr(self.res2, "bcov_unscaled"):
             pytest.skip("No unscaled cov matrix from SAS")
 
         assert_almost_equal(self.res1.bcov_unscaled,
@@ -89,7 +89,7 @@ class CheckRlmResultsMixin:
                             self.decimal_bcov_scaled)
 
     def test_tvalues(self):
-        if not hasattr(self.res2, 'tvalues'):
+        if not hasattr(self.res2, "tvalues"):
             pytest.skip("No tvalues in benchmark")
 
         assert_allclose(self.res1.tvalues, self.res2.tvalues, rtol=0.003)
@@ -294,7 +294,7 @@ class TestRlmSresid(CheckRlmResultsMixin):
         cls.decimal_scale = DECIMAL_3
 
         model = RLM(cls.data.endog, cls.data.exog, M=norms.HuberT())
-        results = model.fit(conv='sresid')
+        results = model.fit(conv="sresid")
         h2 = model.fit(cov="H2").bcov_scaled
         h3 = model.fit(cov="H3").bcov_scaled
         cls.res1 = results
@@ -311,8 +311,8 @@ def test_missing():
     # see GH#2083
     import statsmodels.formula.api as smf
 
-    d = pd.DataFrame({'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan]})
-    smf.rlm('Foo ~ Bar', data=d)
+    d = pd.DataFrame({"Foo": [1, 2, 10, 149], "Bar": [1, 2, 3, np.nan]})
+    smf.rlm("Foo ~ Bar", data=d)
 
 
 def test_rlm_start_values():
@@ -338,7 +338,7 @@ def test_rlm_start_values_errors():
         model.fit(start_params=start_params)
 
 
-@pytest.fixture(scope='module',
+@pytest.fixture(scope="module",
                 params=[norms.AndrewWave, norms.LeastSquares, norms.HuberT,
                         norms.TrimmedMean, norms.TukeyBiweight, norms.Hampel,
                         norms.RamsayE])
@@ -346,7 +346,7 @@ def norm(request):
     return request.param()
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def perfect_fit_data(request):
     from statsmodels.tools.tools import Bunch
     rs = np.random.RandomState(1249328932)
@@ -370,7 +370,7 @@ def test_perfect_const(perfect_fit_data, norm):
     assert_allclose(res.params, np.array([3.2, 0, 0]), atol=1e-8)
 
 
-@pytest.mark.parametrize('conv', ('weights', 'coefs', 'sresid'))
+@pytest.mark.parametrize("conv", ["weights", "coefs", "sresid"])
 def test_alt_criterion(conv):
     data = load_stackloss()
     data.exog = sm.add_constant(data.exog, prepend=False)
@@ -385,5 +385,5 @@ def test_bad_criterion():
     data.endog = np.asarray(data.endog)
     data.exog = sm.add_constant(data.exog, prepend=False)
     mod = RLM(data.endog, data.exog, M=norms.HuberT())
-    with pytest.raises(ValueError, match='Convergence argument unknown'):
-        mod.fit(conv='unknown')
+    with pytest.raises(ValueError, match="Convergence argument unknown"):
+        mod.fit(conv="unknown")

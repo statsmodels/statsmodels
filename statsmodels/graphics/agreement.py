@@ -135,7 +135,7 @@ def mean_diff_plot(
         limit_of_agreement = sd_limit * std_diff
         lower = mean_diff - limit_of_agreement
         upper = mean_diff + limit_of_agreement
-        for j, lim in enumerate([lower, upper]):
+        for _, lim in enumerate([lower, upper]):
             ax.axhline(lim, **limit_lines_kwds)
         ax.annotate(
             f"-{sd_limit} SD: {lower:0.2g}",

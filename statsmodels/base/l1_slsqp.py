@@ -4,7 +4,8 @@ scipy.optimize.slsqp
 """
 import numpy as np
 from scipy.optimize import fmin_slsqp
-import statsmodels.base.l1_solvers_common as l1_solvers_common
+
+from statsmodels.base import l1_solvers_common
 
 
 def fit_l1_slsqp(
@@ -48,68 +49,76 @@ def fit_l1_slsqp(
     acc : float (default 1e-6)
         Requested accuracy as used by slsqp
     """
-    start_params = np.array(start_params).ravel('F')
+    start_params = np.array(start_params).ravel("F")
 
-    ### Extract values
+    # Extract values
     # k_params is total number of covariates,
     # possibly including a leading constant.
     k_params = len(start_params)
     # The start point
     x0 = np.append(start_params, np.fabs(start_params))
     # alpha is the regularization parameter
-    alpha = np.array(kwargs['alpha_rescaled']).ravel('F')
+    alpha = np.array(kwargs["alpha_rescaled"]).ravel("F")
     # Make sure it's a vector
     alpha = alpha * np.ones(k_params)
     assert alpha.min() >= 0
     # Convert display parameters to scipy.optimize form
     disp_slsqp = _get_disp_slsqp(disp, retall)
     # Set/retrieve the desired accuracy
-    acc = kwargs.setdefault('acc', 1e-10)
+    acc = kwargs.setdefault("acc", 1e-10)
 
-    ### Wrap up for use in fmin_slsqp
-    func = lambda x_full: _objective_func(f, x_full, k_params, alpha, *args)
-    f_ieqcons_wrap = lambda x_full: _f_ieqcons(x_full, k_params)
-    fprime_wrap = lambda x_full: _fprime(score, x_full, k_params, alpha)
-    fprime_ieqcons_wrap = lambda x_full: _fprime_ieqcons(x_full, k_params)
+    # Wrap up for use in fmin_slsqp
 
-    ### Call the solver
+    def func(x_full):
+        return _objective_func(f, x_full, k_params, alpha, *args)
+
+    def f_ieqcons_wrap(x_full):
+        return _f_ieqcons(x_full, k_params)
+
+    def fprime_wrap(x_full):
+        return _fprime(score, x_full, k_params, alpha)
+
+    def fprime_ieqcons_wrap(x_full):
+        return _fprime_ieqcons(x_full, k_params)
+
+    # Call the solver
     results = fmin_slsqp(
         func, x0, f_ieqcons=f_ieqcons_wrap, fprime=fprime_wrap, acc=acc,
         iter=maxiter, disp=disp_slsqp, full_output=full_output,
         fprime_ieqcons=fprime_ieqcons_wrap)
     params = np.asarray(results[0][:k_params])
 
-    ### Post-process
+    # Post-process
     # QC
-    qc_tol = kwargs['qc_tol']
-    qc_verbose = kwargs['qc_verbose']
+    qc_tol = kwargs["qc_tol"]
+    qc_verbose = kwargs["qc_verbose"]
     passed = l1_solvers_common.qc_results(
         params, alpha, score, qc_tol, qc_verbose)
     # Possibly trim
-    trim_mode = kwargs['trim_mode']
-    size_trim_tol = kwargs['size_trim_tol']
-    auto_trim_tol = kwargs['auto_trim_tol']
+    trim_mode = kwargs["trim_mode"]
+    size_trim_tol = kwargs["size_trim_tol"]
+    auto_trim_tol = kwargs["auto_trim_tol"]
     params, trimmed = l1_solvers_common.do_trim_params(
         params, k_params, alpha, score, passed, trim_mode, size_trim_tol,
         auto_trim_tol)
 
-    ### Pack up return values for statsmodels optimizers
+    # Pack up return values for statsmodels optimizers
     # TODO These retvals are returned as mle_retvals...but the fit was not ML.
     # This could be confusing someday.
     if full_output:
         x_full, fx, its, imode, smode = results
         fopt = func(np.asarray(x_full))
         converged = (imode == 0)
-        warnflag = str(imode) + ' ' + smode
+        warnflag = str(imode) + " " + smode
         iterations = its
-        gopt = float('nan')     # Objective is non-differentiable
-        hopt = float('nan')
+        gopt = float("nan")     # Objective is non-differentiable
+        hopt = float("nan")
         retvals = {
-            'fopt': fopt, 'converged': converged, 'iterations': iterations,
-            'gopt': gopt, 'hopt': hopt, 'trimmed': trimmed,
-            'warnflag': warnflag}
+            "fopt": fopt, "converged": converged, "iterations": iterations,
+            "gopt": gopt, "hopt": hopt, "trimmed": trimmed,
+            "warnflag": warnflag}
 
-    ### Return
+    # Return
     if full_output:
         return params, retvals
     else:
@@ -133,7 +142,7 @@ def _objective_func(f, x_full, k_params, alpha, *args):
     """
     x_params = x_full[:k_params]
     x_added = x_full[k_params:]
-    ## Return
+    # Return
     return f(x_params, *args) + (alpha * x_added).sum()
 
 
@@ -160,9 +169,9 @@ def _fprime_ieqcons(x_full, k_params):
     """
     Derivative of the inequality constraints
     """
-    I = np.eye(k_params)  # noqa:E741
-    A = np.concatenate((I, I), axis=1)
-    B = np.concatenate((-I, I), axis=1)
+    eye = np.eye(k_params)
+    A = np.concatenate((eye, eye), axis=1)
+    B = np.concatenate((-eye, eye), axis=1)
     C = np.concatenate((A, B), axis=0)
-    ## Return
+    # Return
     return C

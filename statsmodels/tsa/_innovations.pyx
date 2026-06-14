@@ -1,9 +1,7 @@
 #cython: language_level=3, wraparound=False, cdivision=True, boundscheck=False
 import numpy as np
 
-
-from statsmodels.tools.validation import (array_like, PandasWrapper,
-                                          int_like, float_like)
+from statsmodels.tools.validation import PandasWrapper, array_like, float_like, int_like
 
 
 def innovations_algo(acov, nobs=None, rtol=None):
