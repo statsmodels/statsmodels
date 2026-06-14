@@ -33,6 +33,7 @@ class PredictionResults:
         that exposes a `ppf` method.
     row_labels : list[str]
         Row labels used in summary frame.
+
     """
 
     def __init__(self, predicted_mean, var_pred_mean, var_resid,
@@ -97,8 +98,8 @@ class PredictionResults:
         ci : ndarray, (nobs, 2)
             The lower and upper bound of the interval for each observation.
             Column 0 contains the lower bound, column 1 the upper bound.
-        """
 
+        """
         se = self.se_obs if obs else self.se_mean
 
         q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
@@ -134,6 +135,8 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     Parameters
     ----------
+    self : RegressionResults
+        Results instance used to generate predictions.
     exog : array_like, optional
         The values for which you want to predict.
     transform : bool, optional
@@ -149,9 +152,9 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     row_labels : list
         A list of row labels to use.  If not provided, read `exog` is
         available.
-    **kwargs
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, see the predict
-        method of the model for the details.
+        method of the model for details.
 
     Returns
     -------
@@ -159,8 +162,8 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
-    """
 
+    """
     # prepare exog and row_labels, based on base Results.predict
     if transform and hasattr(self.model, "formula") and exog is not None:
         if isinstance(exog, pd.Series):

@@ -63,7 +63,9 @@ class RecursiveLS(MLEModel):
     .. [*] Durbin, James, and Siem Jan Koopman. 2012.
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
+
     """
+
     def __init__(self, endog, exog, constraints=None, **kwargs):
         # Standardize data
         endog_using_pandas = _is_using_pandas(endog, None)
@@ -161,6 +163,7 @@ class RecursiveLS(MLEModel):
         Returns
         -------
         RecursiveLSResults
+
         """
         smoother_results = self.smooth(return_ssm=True)
 
@@ -243,11 +246,14 @@ class RecursiveLS(MLEModel):
         transformed : bool, optional
             Whether or not `params` is already transformed. If set to False,
             `transform_params` is called. Default is True..
+        **kwargs
+            Additional keyword arguments passed to the state space update method.
 
         Returns
         -------
         params : array_like
             Array of parameters.
+
         """
 
 
@@ -270,6 +276,7 @@ class RecursiveLSResults(MLEResults):
     --------
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.mlemodel.MLEResults
+
     """
 
     def __init__(self, model, params, filter_results, cov_type="opg",
@@ -316,6 +323,7 @@ class RecursiveLSResults(MLEResults):
                           the variance/covariance of the component
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
+
         """
         out = None
         spec = self.specification
@@ -359,6 +367,7 @@ class RecursiveLSResults(MLEResults):
         variance is not necessarily equal to unity as the mean need not be
         equal to zero", and he defines an alternative version (which are
         not provided here).
+
         """
         return (self.filter_results.standardized_forecasts_error[0] *
                 self.scale**0.5)
@@ -401,6 +410,7 @@ class RecursiveLSResults(MLEResults):
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
+
         """
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         return (np.cumsum(self.resid_recursive[d:]) /
@@ -438,6 +448,7 @@ class RecursiveLSResults(MLEResults):
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
+
         """
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         numer = np.cumsum(self.resid_recursive[d:]**2)
@@ -462,24 +473,24 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def ssr(self):
-        """ssr"""
+        """Sum of squared recursive residuals."""
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         return (self.nobs - d) * self.filter_results.obs_cov[0, 0, 0]
 
     @cache_readonly
     def centered_tss(self):
-        """Centered tss"""
+        """Centered total sum of squares."""
         return np.sum((self.filter_results.endog[0] -
                        np.mean(self.filter_results.endog))**2)
 
     @cache_readonly
     def uncentered_tss(self):
-        """uncentered tss"""
+        """Uncentered total sum of squares."""
         return np.sum((self.filter_results.endog[0])**2)
 
     @cache_readonly
     def ess(self):
-        """ess"""
+        """Explained sum of squares."""
         if self.k_constant:
             return self.centered_tss - self.ssr
         else:
@@ -487,7 +498,7 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def rsquared(self):
-        """rsquared"""
+        """R-squared."""
         if self.k_constant:
             return 1 - self.ssr / self.centered_tss
         else:
@@ -495,17 +506,17 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def mse_model(self):
-        """mse_model"""
+        """Mean squared error of the model."""
         return self.ess / self.df_model
 
     @cache_readonly
     def mse_resid(self):
-        """mse_resid"""
+        """Mean squared error of the residuals."""
         return self.ssr / self.df_resid
 
     @cache_readonly
     def mse_total(self):
-        """mse_total"""
+        """Total mean squared error."""
         if self.k_constant:
             return self.centered_tss / (self.df_resid + self.df_model)
         else:
@@ -573,6 +584,7 @@ class RecursiveLSResults(MLEResults):
         Notes
         -----
         All plots contain (1 - `alpha`) %  confidence intervals.
+
         """
         # Get variables
         if isinstance(variables, (int, str)):
@@ -675,6 +687,7 @@ class RecursiveLSResults(MLEResults):
         Brown et al. (1975); it is likely they did that because they needed
         three initial observations to get the initial OLS estimates, whereas
         we do not need to do that.
+
         """
         # Get the constant associated with the significance level
         if alpha == 0.01:
@@ -728,6 +741,7 @@ class RecursiveLSResults(MLEResults):
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
+
         """
         # Create the plot
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
@@ -770,6 +784,7 @@ class RecursiveLSResults(MLEResults):
         critical values suggested in Edgerton and Wells (1994) which allows
         computing relatively good approximations for any number of
         observations.
+
         """
         # Get the approximate critical value associated with the significance
         # level
@@ -827,6 +842,7 @@ class RecursiveLSResults(MLEResults):
            "Critical Values for the Cusumsq Statistic
            in Medium and Large Sized Samples."
            Oxford Bulletin of Economics and Statistics 56 (3): 355-65.
+
         """
         # Create the plot
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig

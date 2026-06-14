@@ -1,3 +1,5 @@
+"""Tests for linear mixed effects models."""
+
 from statsmodels.compat.platform import PLATFORM_OSX
 
 import csv
@@ -44,6 +46,7 @@ class R_Results:
         dependent random effects.
     ds_ix : int
         The number of the data set
+
     """
 
     def __init__(self, meth, irfs, ds_ix):

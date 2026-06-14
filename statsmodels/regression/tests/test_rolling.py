@@ -1,3 +1,5 @@
+"""Tests for rolling regression models."""
+
 from io import BytesIO
 from itertools import product
 import warnings
