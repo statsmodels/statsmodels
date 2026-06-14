@@ -37,9 +37,9 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
     Parameters
     ----------
-    o : Iterable
+    observed : Iterable
         Observed values
-    e : Iterable
+    expected : Iterable
         Expected values
     lambd : {float, str}
         * float : exponent `a` for power discrepancy
