@@ -7,6 +7,7 @@ import itertools
 import warnings
 
 import numpy as np
+from scipy.special import logsumexp
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -17,7 +18,6 @@ from statsmodels.discrete.discrete_model import (
 from statsmodels.formula.formulatools import advance_eval_env
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import ModelWarning
-from scipy.special import logsumexp
 
 
 class _ConditionalModel(base.LikelihoodModel):
@@ -630,7 +630,7 @@ class ConditionalMNLogit(_ConditionalModel):
             # Extract itertools.permutations(y) to the list
             iter_ = np.array(list(itertools.permutations(y)))
 
-            #Instead of iterative exponential value of sums of
+            # Instead of iterative exponential value of sums of
             # selected elements and their product by selected
             # elements from self.exog, we calculate them at
             # once (exp_sum, exog_exp_multy).
@@ -655,7 +655,6 @@ class ConditionalMNLogit(_ConditionalModel):
             grad -= denomg / denom
 
         return grad.flatten()
-
 
 
 class ConditionalResultsWrapper(lm.RegressionResultsWrapper):
