@@ -8,7 +8,7 @@ import scipy.stats
 
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase

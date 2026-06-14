@@ -15,7 +15,7 @@ interpolators
 import numpy as np
 from scipy.interpolate import Rbf, interp1d
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class TableDist:

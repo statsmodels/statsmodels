@@ -19,7 +19,7 @@ from statsmodels.discrete._diagnostics_count import (
     test_poisson_zeros,
 )
 from statsmodels.stats.diagnostic_gen import test_chisquare_binning
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ModelWarning
 
 

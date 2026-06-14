@@ -8,7 +8,7 @@ from scipy.optimize import minimize
 from statsmodels.base.model import Model
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.iolib import summary2
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     EstimationWarning,

@@ -154,7 +154,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import (
     array_like,

@@ -21,7 +21,7 @@ import numpy as np
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.formula.formulatools import advance_eval_env
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 

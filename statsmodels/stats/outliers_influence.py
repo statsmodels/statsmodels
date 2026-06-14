@@ -6,7 +6,6 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
 from collections import defaultdict
@@ -17,7 +16,8 @@ import numpy as np
 from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multitest import multipletests
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import maybe_unwrap_results
 
@@ -209,7 +209,9 @@ def variance_inflation_factor(exog, exog_idx, *, standardize=True):
         means = np.mean(exog, axis=0)
         safe_mask = stds > 1e-10
         working = exog.copy()
-        working[:, safe_mask] = (exog[:, safe_mask] - means[safe_mask]) / stds[safe_mask]
+        working[:, safe_mask] = (exog[:, safe_mask] - means[safe_mask]) / stds[
+            safe_mask
+        ]
     else:
         working = exog
 
@@ -219,7 +221,7 @@ def variance_inflation_factor(exog, exog_idx, *, standardize=True):
             f"The design matrix is poorly conditioned (condition number={cond_num:.2e}). "
             "VIF calculations may be numerically unstable.",
             UserWarning,
-            stacklevel=2
+            stacklevel=2,
         )
 
     x_i = working[:, exog_idx]

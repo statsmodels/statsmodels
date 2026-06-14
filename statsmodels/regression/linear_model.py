@@ -49,7 +49,7 @@ from statsmodels.emplike.elregress import _ELRegOpts
 
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
-from statsmodels.tools.decorators import cache_readonly, cache_writable
+from statsmodels.tools._decorators import cache_readonly, cache_writable
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     InvalidTestWarning,
