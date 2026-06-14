@@ -67,8 +67,9 @@ class KDEUnivariate:
 
     See Also
     --------
-    KDEMultivariate
-    kdensity, kdensityfft
+    KDEMultivariate : Multivariate Kernel Density Estimator.
+    kdensity : Kernel density estimator using direct evaluation.
+    kdensityfft : Kernel density estimator using FFT, faster than kdensity for large nobs.
 
     Examples
     --------
