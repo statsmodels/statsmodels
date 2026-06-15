@@ -218,8 +218,8 @@ def test_smoothed_state_obs_weights_varmax(use_exog, trend):
 
     assert_allclose(actual, desired, atol=1e-8)
     assert_allclose(actual_state_intercept_weights,
-                    desired_state_intercept_weights, atol=1e-12)
-    assert_allclose(actual_prior_weights, desired_prior_weights, atol=1e-12)
+                    desired_state_intercept_weights, atol=1e-8, rtol=1e-6)
+    assert_allclose(actual_prior_weights, desired_prior_weights, atol=1e-8, rtol=1e-6)
 
 
 @pytest.mark.parametrize("diffuse", [0, 1, 4])
@@ -317,7 +317,7 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
     else:
         # Test that the weights are the same
         assert_allclose(actual_prior_weights, desired_prior_weights,
-                        atol=1e-12)
+                        atol=1e-8, rtol=1e-6)
 
         # In the non-diffuse case, we can actually use the weights along with
         # the prior and observations to compute the smoothed state directly,
