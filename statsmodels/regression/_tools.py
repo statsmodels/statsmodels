@@ -34,6 +34,7 @@ class _MinimalWLS:
 
     Does not perform any checks on the input data for type or shape
     compatibility
+
     """
 
     msg = "NaN, inf or invalid value detected in {0}, estimation infeasible."
@@ -91,6 +92,7 @@ class _MinimalWLS:
         See Also
         --------
         statsmodels.regression.linear_model.WLS
+
         """
         if method == "pinv":
             pinv_wexog = np.linalg.pinv(self.wexog)
@@ -114,6 +116,7 @@ class _MinimalWLS:
         -----
         Allows results to be constructed from either existing parameters or
         when estimated using using ``fit``
+
         """
         fitted_values = self.exog.dot(params)
         resid = self.endog - fitted_values

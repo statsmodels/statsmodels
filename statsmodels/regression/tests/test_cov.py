@@ -1,4 +1,5 @@
-"""Example: minimal OLS
+"""
+Example: minimal OLS
 
 """
 

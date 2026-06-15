@@ -5,7 +5,7 @@ from scipy import stats
 
 from statsmodels.distributions import ECDF
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.tools import add_constant
 
 from . import utils

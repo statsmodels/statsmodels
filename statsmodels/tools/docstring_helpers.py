@@ -8,7 +8,101 @@ Vendored to remove statsmodels' dependency on pandas private API.
 
 from __future__ import annotations
 
+from functools import wraps
 from textwrap import dedent
+from typing import Any, Callable, Mapping, TypeVar
+import warnings
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def deprecate_kwarg(
+    old_arg_name: str,
+    new_arg_name: str | None,
+    mapping: Mapping[Any, Any] | Callable[[Any], Any] | None = None,
+    stacklevel: int = 2,
+) -> Callable[[F], F]:
+    """
+    Decorator to deprecate a keyword argument of a function.
+
+    Vendored from pandas.util._decorators to remove dependency on
+    pandas private API.
+
+    Parameters
+    ----------
+    old_arg_name : str
+        Name of argument in function to deprecate.
+    new_arg_name : str or None
+        Name of preferred argument in function. Use None to raise
+        warning that ``old_arg_name`` keyword is deprecated with
+        no replacement.
+    mapping : dict or callable, optional
+        If mapping is present, use it to translate old arguments to
+        new arguments. A callable must do its own value checking;
+        values not found in a dict will be forwarded unchanged.
+    stacklevel : int, default 2
+        Stack level for the warning.
+
+    Examples
+    --------
+    The following deprecates 'cols', using 'columns' instead:
+
+    >>> @deprecate_kwarg(old_arg_name='cols', new_arg_name='columns')
+    ... def f(columns=''):
+    ...     print(columns)
+    """
+    if mapping is not None and not hasattr(mapping, "get") and not callable(mapping):
+        raise TypeError(
+            "mapping from old to new argument values must be dict or callable!"
+        )
+
+    def _deprecate_kwarg(func: F) -> F:
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            __tracebackhide__ = True
+            old_arg_value = kwargs.pop(old_arg_name, None)
+
+            if old_arg_value is not None:
+                if new_arg_name is None:
+                    msg = (
+                        f"the {old_arg_name!r} keyword is deprecated and "
+                        "will be removed in a future version. Please take "
+                        f"steps to stop the use of {old_arg_name!r}"
+                    )
+                    warnings.warn(msg, FutureWarning, stacklevel=stacklevel)
+                    kwargs[old_arg_name] = old_arg_value
+                    return func(*args, **kwargs)
+
+                elif mapping is not None:
+                    if callable(mapping):
+                        new_arg_value = mapping(old_arg_value)
+                    else:
+                        new_arg_value = mapping.get(old_arg_value, old_arg_value)
+                    msg = (
+                        f"the {old_arg_name}={old_arg_value!r} keyword is "
+                        f"deprecated, use "
+                        f"{new_arg_name}={new_arg_value!r} instead."
+                    )
+                else:
+                    new_arg_value = old_arg_value
+                    msg = (
+                        f"the {old_arg_name!r} keyword is deprecated, "
+                        f"use {new_arg_name!r} instead."
+                    )
+
+                warnings.warn(msg, FutureWarning, stacklevel=stacklevel)
+                if kwargs.get(new_arg_name) is not None:
+                    msg = (
+                        f"Can only specify {old_arg_name!r} "
+                        f"or {new_arg_name!r}, not both."
+                    )
+                    raise TypeError(msg)
+                kwargs[new_arg_name] = new_arg_value
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return _deprecate_kwarg
 
 
 class Appender:
@@ -40,6 +134,7 @@ class Appender:
     indents : int, optional
         Number of indents (4-space blocks) added to all lines of the
         addendum. Default is 0.
+
     """
 
     addendum: str | None
@@ -94,6 +189,7 @@ class Substitution:
     **kwargs : str
         Keyword arguments for %(name)s-style substitution.
         Cannot be combined with positional args.
+
     """
 
     def __init__(self, *args: object, **kwargs: object) -> None:
@@ -133,6 +229,7 @@ def indent(text: str | None, indents: int = 1) -> str:
     -------
     str
         Indented text, or "" if input was None/empty.
+
     """
     if not text or not isinstance(text, str):
         return ""

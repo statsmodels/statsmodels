@@ -20,12 +20,12 @@ from statsmodels.stats.contrast import (
     WaldTestResults,
     t_test_pairwise,
 )
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tools.decorators import (
+from statsmodels.tools._decorators import (
     cache_readonly,
     cached_data,
     cached_value,
 )
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.sm_exceptions import (
     HessianInversionWarning,

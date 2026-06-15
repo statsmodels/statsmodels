@@ -98,7 +98,6 @@ Notation:
   fit a model.
 
 Notes:
-
 1. Three different parameterizations are used in different places.
 The regression slopes (usually called `fe_params`) are identical in
 all three parameterizations, but the variance parameters differ.  The
@@ -141,6 +140,7 @@ difficult and unnecessary to calculate the Hessian of the profiled log
 likelihood function, so that calculation is not implemented here.
 Therefore, optimization methods requiring the Hessian matrix such as
 the Newton-Raphson algorithm cannot be used for model fitting.
+
 """
 
 from io import StringIO
@@ -157,7 +157,7 @@ import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools import data as data_tools
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     SingularMatrixWarning,
@@ -171,7 +171,6 @@ def _dot(x, y):
     """
     Returns the dot product of the arrays, works for sparse and dense.
     """
-
     if isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
         return np.dot(x, y)
     elif sparse.issparse(x):
@@ -210,7 +209,6 @@ def _dotsum(x, y):
     Returns sum(x * y), where '*' is the pointwise product, computed
     efficiently for dense and sparse matrices.
     """
-
     if sparse.issparse(x):
         return x.multiply(y).sum()
     else:
@@ -278,6 +276,7 @@ class MixedLMParams:
     -----
     This object represents the parameter state for the model in which
     the scale parameter has been profiled out.
+
     """
 
     def __init__(self, k_fe, k_re, k_vc):
@@ -313,6 +312,7 @@ class MixedLMParams:
         Returns
         -------
         A MixedLMParams object.
+
         """
         k_re2 = int(k_re * (k_re + 1) / 2)
 
@@ -373,8 +373,8 @@ class MixedLMParams:
         Returns
         -------
         A MixedLMParams object.
-        """
 
+        """
         if vcomp is None:
             vcomp = np.empty(0)
         if fe_params is None:
@@ -422,8 +422,8 @@ class MixedLMParams:
         has_fe : bool
             If True, the fixed effects parameters are included
             in the packed result, otherwise they are omitted.
-        """
 
+        """
         if self.k_re > 0:
             if use_sqrt:
                 try:
@@ -485,8 +485,8 @@ def _smw_solver(s, A, AtA, Qi, di):
     -----
     Uses Sherman-Morrison-Woodbury identity:
         https://en.wikipedia.org/wiki/Woodbury_matrix_identity
-    """
 
+    """
     # Use SMW identity
     qmat = AtA / s
     m = Qi.shape[0]
@@ -558,8 +558,8 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     -----
     Uses the matrix determinant lemma:
         https://en.wikipedia.org/wiki/Matrix_determinant_lemma
-    """
 
+    """
     p = A.shape[0]
     ld = p * np.log(s)
     qmat = AtA / s
@@ -703,6 +703,7 @@ class MixedLM(base.LikelihoodModel):
     >>> vc['2'] = {k : exog_re.loc[g[k], 1] for k in g}
     >>> model = sm.MixedLM(endog, exog, groups, vcomp=vc)
     >>> result = model.fit()
+
     """
 
     def __init__(
@@ -921,6 +922,8 @@ class MixedLM(base.LikelihoodModel):
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
             model. Assumes df is a `pandas.DataFrame`
+        use_sparse : bool
+            If True, use sparse matrices for variance component design matrices.
         missing : str
             Either 'none' or 'drop'
         args : extra arguments
@@ -990,8 +993,8 @@ class MixedLM(base.LikelihoodModel):
         >>> vc = {'classroom': '0 + C(classroom)'}
         >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
         ...     re_formula='1 + pretest', groups='school', data=data)
-        """
 
+        """
         if "groups" not in kwargs.keys():
             raise AttributeError(
                 "'groups' is a required keyword argument " + "in MixedLM.from_formula"
@@ -1120,6 +1123,7 @@ class MixedLM(base.LikelihoodModel):
         -------
         An array of fitted values.  Note that these predicted values
         only reflect the fixed effects mean structure of the model.
+
         """
         if exog is None:
             exog = self.exog
@@ -1136,7 +1140,6 @@ class MixedLM(base.LikelihoodModel):
         Returns `array` split into subarrays corresponding to the
         grouping structure.
         """
-
         if array is None:
             return None
 
@@ -1162,6 +1165,8 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
+        start_params : array_like, optional
+            Starting values for the optimization.
         method : str of Penalty object
             Method for regularization.  If a string, must be 'l1'.
         alpha : array_like
@@ -1206,8 +1211,8 @@ class MixedLM(base.LikelihoodModel):
         http://www.jstatsoft.org/v33/i01/paper
 
         http://statweb.stanford.edu/~tibs/stat315a/Supplements/fuse.pdf
-        """
 
+        """
         if isinstance(method, str) and (method.lower() != "l1"):
             raise ValueError("Invalid regularization method")
 
@@ -1332,8 +1337,8 @@ class MixedLM(base.LikelihoodModel):
             The GLS estimates of the fixed effects parameters.
         singular : bool
             True if the covariance is singular
-        """
 
+        """
         if self.k_fe == 0:
             return np.array([]), False
 
@@ -1410,8 +1415,8 @@ class MixedLM(base.LikelihoodModel):
         transformed parameters (i.e. with the Cholesky square root
         covariance and square root transformed variance components),
         then P[i] = lin[i] * R + R' * quad[i] * R
-        """
 
+        """
         k_fe, k_re, k_re2, k_vc = self.k_fe, self.k_re, self.k_re2, self.k_vc
         k_tot = k_fe + k_re2 + k_vc
         ix = np.tril_indices(self.k_re)
@@ -1466,6 +1471,7 @@ class MixedLM(base.LikelihoodModel):
         Returns an expanded version of vcomp, in which each variance
         parameter is copied as many times as there are independent
         realizations of the variance component in the given group.
+
         """
         if len(vcomp) == 0:
             return np.empty(0)
@@ -1529,8 +1535,8 @@ class MixedLM(base.LikelihoodModel):
         The scale parameter `scale` is always profiled out of the
         log-likelihood.  In addition, if `profile_fe` is true the
         fixed effects parameters are also profiled out.
-        """
 
+        """
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(
                 params, self.k_fe, self.k_re, self.use_sqrt, has_fe=False
@@ -1631,7 +1637,6 @@ class MixedLM(base.LikelihoodModel):
             If not None, the generator ends when this index
             is reached.
         """
-
         axr = solver(ex_r)
 
         # Regular random effects
@@ -1664,8 +1669,8 @@ class MixedLM(base.LikelihoodModel):
         The score vector that is returned is computed with respect to
         the parameterization defined by this model instance's
         `use_sqrt` attribute.
-        """
 
+        """
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(
                 params, self.k_fe, self.k_re, self.use_sqrt, has_fe=False
@@ -1734,8 +1739,8 @@ class MixedLM(base.LikelihoodModel):
         `score_re` is taken with respect to the parameterization in
         which `cov_re` is represented through its lower triangle
         (without taking the Cholesky square root).
-        """
 
+        """
         fe_params = params.fe_params
         cov_re = params.cov_re
         vcomp = params.vcomp
@@ -1885,8 +1890,8 @@ class MixedLM(base.LikelihoodModel):
         score_vc : array_like
             The score vector with respect to variance components
             parameters.
-        """
 
+        """
         score_fe, score_re, score_vc = self.score_full(params, calc_fe=calc_fe)
         params_vec = params.get_packed(use_sqrt=True, has_fe=True)
 
@@ -1924,8 +1929,8 @@ class MixedLM(base.LikelihoodModel):
         sing : boolean
             If True, the covariance matrix is singular and a
             pseudo-inverse is returned.
-        """
 
+        """
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(
                 params, self.k_fe, self.k_re, use_sqrt=self.use_sqrt, has_fe=True
@@ -2099,8 +2104,8 @@ class MixedLM(base.LikelihoodModel):
         -------
         scale : float
             The estimated error variance.
-        """
 
+        """
         try:
             cov_re_inv = np.linalg.inv(cov_re)
         except np.linalg.LinAlgError:
@@ -2191,8 +2196,8 @@ class MixedLM(base.LikelihoodModel):
         Returns
         -------
         A MixedLMResults instance.
-        """
 
+        """
         _allowed_kwargs = [
             "gtol",
             "maxiter",
@@ -2397,6 +2402,7 @@ class _mixedlm_distribution:
     parameters are divided by the scale parameter.
 
     This class is used in Mediation, and possibly elsewhere.
+
     """
 
     def __init__(self, model, params, scale, exog):
@@ -2423,7 +2429,6 @@ class _mixedlm_distribution:
 
         The parameter n is ignored, but required by the interface
         """
-
         model = self.model
 
         # Fixed effects
@@ -2489,6 +2494,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     See Also
     --------
     statsmodels.LikelihoodModelResults
+
     """
 
     def __init__(self, model, params, cov_params):
@@ -2579,6 +2585,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             A dictionary mapping the distinct `group` values to the
             conditional means of the random effects for the group
             given the data.
+
         """
         try:
             cov_re_inv = np.linalg.inv(self.cov_re)
@@ -2628,8 +2635,8 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             A dictionary mapping the distinct values of the `group`
             variable to the conditional covariance matrix of the
             random effects given the data.
-        """
 
+        """
         try:
             cov_re_inv = np.linalg.inv(self.cov_re)
         except np.linalg.LinAlgError:
@@ -2693,6 +2700,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             The results for the test are attributes of this results instance.
             The available results have the same elements as the parameter table
             in `summary()`.
+
         """
         if r_matrix.shape[1] != self.k_fe:
             raise ValueError("r_matrix for t-test should have %d columns" % self.k_fe)
@@ -2730,8 +2738,8 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         See Also
         --------
         statsmodels.iolib.summary2.Summary : class to hold summary results
-        """
 
+        """
         from statsmodels.iolib import summary2
 
         smry = summary2.Summary()
@@ -2899,8 +2907,8 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         Notes
         -----
         Only variance parameters can be profiled.
-        """
 
+        """
         pmodel = self.model
         k_fe = pmodel.k_fe
         k_re = pmodel.k_re

@@ -86,7 +86,7 @@ def test_ols():
     # full OLS loglikelihood (i.e. without the scale concentrated out).
     desired = mod_ols.loglike(res_ols.params, scale=res_ols.scale)
     assert_allclose(res.llf_recursive, desired)
-    # Alternatively, we can constrcut the concentrated OLS loglikelihood
+    # Alternatively, we can construct the concentrated OLS loglikelihood
     # by computing the scale term with `nobs` in the denominator rather than
     # `nobs - d`.
     scale_alternative = (

@@ -6,7 +6,7 @@ import numpy as np
 import numpy.linalg as la
 import scipy.linalg as L
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 import statsmodels.tsa.tsatools as tsa
 from statsmodels.tsa.vector_ar import plotting, util
 

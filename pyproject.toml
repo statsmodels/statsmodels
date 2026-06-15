@@ -285,6 +285,11 @@ filterwarnings = [
     "error:Conversion of an array with ndim:DeprecationWarning:",
     "error:the matrix subclass is not the recommended::",
     "error:The Dataframe Interchange Protocol::",
+    "error:Setting the shape:DeprecationWarning:",
+    "error:After 0.17 or January 2028:FutureWarning:",
+    "error:A future version of pandas:",
+    "error:The inplace keyword in::",
+    "error:Keyword arguments have been passed:FutureWarning:"
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",
@@ -379,3 +384,8 @@ exclude_also = [
 
 [tool.coverage.html]
 directory = "coverage_html_report"
+
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]

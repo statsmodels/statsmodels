@@ -63,7 +63,7 @@ from statsmodels.regression.linear_model import (
     RegressionResultsWrapper,
 )
 import statsmodels.stats.sandwich_covariance as smcov
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.tools import _ensure_2d
 

@@ -17,7 +17,7 @@ from statsmodels.distributions.tools import (
     cdf2prob_grid,
     prob2cdf_grid,
 )
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class BernsteinDistribution:

@@ -1,9 +1,8 @@
 """
-
 Created on Mon Mar 18 15:48:23 2013
 Author: Josef Perktold
 
-TODO:
+Todo:
   - test behavior if nans or infs are encountered during the evaluation.
     now partially robust to nans, if increasing can be determined or is given.
   - rewrite core loop to use for...except instead of while.
@@ -22,7 +21,8 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                      start_low=None, start_upp=None, increasing=None,
                      max_it=100, maxiter_bq=100, factor=10,
                      full_output=False):
-    """find the root of a function in one variable by expanding and brentq
+    """
+    Find the root of a function in one variable by expanding and brentq
 
     Assumes function ``func`` is monotonic.
 

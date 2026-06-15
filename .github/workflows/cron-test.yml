@@ -36,11 +36,11 @@ jobs:
         with:
           python-version: '3.x'
 
-      - uses: pypa/cibuildwheel@d16cc544083d96996f923fc4b318fee3cb14b34e #v3.4.1
+      - uses: pypa/cibuildwheel@a0a973acdc9e7b7f8b04ac5c80e6883a5a102615 #v4.1.0
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_BEFORE_BUILD: python -m pip install pip --upgrade
           CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['--skip-slow','-n','auto','--skip-examples'])"
-          CIBW_TEST_REQUIRES: pytest pytest-xdist  pytest-cov matplotlib numpy scipy pandas seaborn
+          CIBW_TEST_REQUIRES: pytest pytest-xdist  pytest-cov pytest-run-parallel matplotlib numpy scipy pandas seaborn
           CIBW_SKIP: "pp* *-musllinux_* *-win32"
           CIBW_ARCHS_LINUX: "x86_64"

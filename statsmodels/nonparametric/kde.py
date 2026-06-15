@@ -16,7 +16,7 @@ import numpy as np
 from scipy import integrate, stats
 
 from statsmodels.sandbox.nonparametric import kernels
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.validation import array_like, float_like
 
 from . import bandwidths
@@ -67,8 +67,9 @@ class KDEUnivariate:
 
     See Also
     --------
-    KDEMultivariate
-    kdensity, kdensityfft
+    KDEMultivariate : Multivariate Kernel Density Estimator.
+    kdensity : Kernel density estimator using direct evaluation.
+    kdensityfft : Kernel density estimator using FFT, faster than kdensity for large nobs.
 
     Examples
     --------

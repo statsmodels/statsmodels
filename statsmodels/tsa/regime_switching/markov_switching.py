@@ -13,7 +13,7 @@ from scipy.special import logsumexp
 
 from statsmodels.base.data import PandasData
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.sm_exceptions import EstimationWarning

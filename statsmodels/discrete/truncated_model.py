@@ -26,7 +26,7 @@ from statsmodels.distributions.discrete import (
     truncatedpoisson,
 )
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 

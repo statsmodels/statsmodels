@@ -67,24 +67,22 @@ def test_itsmr():
     assert_allclose(np.inner(tmp, tmp) / len(u), 0.4773580109, atol=1e-4)
 
 
-@pytest.mark.xfail(reason="TODO: improve checks on valid order parameters.")
 def test_initial_order():
     endog = np.arange(20) * 1.0
-    # TODO: shouldn't allow initial_ar_order <= ar_order
-    hannan_rissanen(endog, ar_order=2, ma_order=0, initial_ar_order=1)
-    # TODO: shouldn't allow initial_ar_order <= ma_order
-    hannan_rissanen(endog, ar_order=0, ma_order=2, initial_ar_order=1)
-    # TODO: shouldn't allow initial_ar_order >= dataset
-    hannan_rissanen(endog, ar_order=0, ma_order=2, initial_ar_order=20)
+    with pytest.raises(ValueError, match="initial_ar_order"):
+        hannan_rissanen(endog, ar_order=2, ma_order=0, initial_ar_order=1)
+    with pytest.raises(ValueError, match="initial_ar_order"):
+        hannan_rissanen(endog, ar_order=0, ma_order=2, initial_ar_order=1)
+    with pytest.raises(ValueError, match="initial_ar_order"):
+        hannan_rissanen(endog, ar_order=0, ma_order=2, initial_ar_order=20)
 
 
-@pytest.mark.xfail(reason="TODO: improve checks on valid order parameters.")
 def test_invalid_orders():
     endog = np.arange(2) * 1.0
-    # TODO: shouldn't allow ar_order >= dataset
-    hannan_rissanen(endog, ar_order=2)
-    # TODO: shouldn't allow ma_order >= dataset
-    hannan_rissanen(endog, ma_order=2)
+    with pytest.raises(ValueError, match="ar_order"):
+        hannan_rissanen(endog, ar_order=2)
+    with pytest.raises(ValueError, match="ma_order"):
+        hannan_rissanen(endog, ma_order=2)
 
 
 @pytest.mark.todo("Improve checks on valid order parameters.")

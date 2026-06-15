@@ -36,12 +36,12 @@ from statsmodels.graphics._regressionplots_doc import (
 )
 import statsmodels.regression._tools as reg_tools
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.data import _as_array_with_name
-from statsmodels.tools.decorators import (
+from statsmodels.tools._decorators import (
     cache_readonly,
     cached_data,
     cached_value,
 )
+from statsmodels.tools.data import _as_array_with_name
 from statsmodels.tools.docstring import Docstring
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
@@ -1369,11 +1369,6 @@ class GLM(base.LikelihoodModel):
 
         mu = self.predict(rslt.params)
         scale = self.estimate_scale(mu)
-
-        if rslt.normalized_cov_params is None:
-            cov_p = None
-        else:
-            cov_p = rslt.normalized_cov_params / scale
 
         if cov_type.lower() == "eim":
             oim = False
