@@ -24,13 +24,13 @@ jobs:
     if: github.repository == 'statsmodels/statsmodels'
     steps:
       - name: Checkout statsmodels
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #v6
         with:
           submodules: recursive
           fetch-tags: true
           persist-credentials: false
 
-      - uses: pypa/cibuildwheel@v3.4.1
+      - uses: pypa/cibuildwheel@d16cc544083d96996f923fc4b318fee3cb14b34e #v3.4.1
         env:
           CIBW_PLATFORM: pyodide
           CIBW_BUILD: cp312-*
