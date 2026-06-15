@@ -1581,3 +1581,14 @@ def test_slim_summary(reset_randomstate):
     assert len(slim_summ.tables) == 2
     assert summ.tables[0].as_text() != slim_summ.tables[0].as_text()
     assert slim_summ.tables[1].as_text() == summ.tables[1].as_text()
+
+
+def test_slim_summary_skips_diagnostics(reset_randomstate):
+    # GH#9054 the slim summary omits the normality/residual diagnostics, so it
+    # should not compute them. omni_normtest raises for complex-valued data, so
+    # a slim summary must succeed there even when the full summary cannot.
+    y = np.random.standard_normal(50) + 1j * np.random.standard_normal(50)
+    x = add_constant(np.random.standard_normal((50, 2)))
+    res = OLS(y, x).fit()
+    summ = res.summary(slim=True)
+    assert len(summ.tables) == 2
