@@ -1592,3 +1592,6 @@ def test_slim_summary_skips_diagnostics(reset_randomstate):
     res = OLS(y, x).fit()
     summ = res.summary(slim=True)
     assert len(summ.tables) == 2
+    # diagn must still exist after a slim summary, populated with the
+    # always-computed condition-number diagnostics.
+    assert set(res.diagn) == {"condno", "mineigval"}

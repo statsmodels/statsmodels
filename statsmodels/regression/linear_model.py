@@ -2898,6 +2898,9 @@ class RegressionResults(base.LikelihoodModelResults):
         eigvals = self.eigenvals
         condno = self.condition_number
 
+        # TODO: Avoid adding attributes in non-__init__
+        self.diagn = dict(condno=condno, mineigval=eigvals[-1])
+
         # TODO not used yet
         # diagn_left_header = ['Models stats']
         # diagn_right_header = ['Residual stats']
@@ -2950,16 +2953,13 @@ class RegressionResults(base.LikelihoodModelResults):
             jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
             omni, omnipv = omni_normtest(self.wresid)
 
-            # TODO: Avoid adding attributes in non-__init__
-            self.diagn = dict(
+            self.diagn.update(
                 jb=jb,
                 jbpv=jbpv,
                 skew=skew,
                 kurtosis=kurtosis,
                 omni=omni,
                 omnipv=omnipv,
-                condno=condno,
-                mineigval=eigvals[-1],
             )
 
             diagn_left = [
