@@ -239,6 +239,7 @@ class KDETestBase:
         ]
 
         self.weights = rs.random(nobs)
+        self.weights_orig = self.weights.copy()
 
 
 class TestKDEUnivariate(KDETestBase):
@@ -267,13 +268,14 @@ class TestKDEUnivariate(KDETestBase):
         npt.assert_allclose(kde_vals, kde_expected, atol=1e-6)
         npt.assert_allclose(kde_vals0, kde_expected, atol=1e-6)
 
-    def test_weighted_pdf_non_fft(self):
+    def test_weighted_pdf_non_fft(self, reset_randomstate):
 
         kde = nparam.KDEUnivariate(self.noise)
-        kde.fit(weights=self.weights, fft=False, bw="scott")
+        weights = self.weights_orig.copy()
+        kde.fit(weights=weights, fft=False, bw="scott")
 
         grid = kde.support
-        testx = [grid[10 * i] for i in range(6)]
+        testx = np.array([grid[10 * i] for i in range(6)])
 
         # Test against values from R 'ks' package
         kde_expected = [
