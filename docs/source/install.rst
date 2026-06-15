@@ -115,7 +115,7 @@ Python has been built using a variety of different Windows C compilers.
 clarify which version of Python uses which compiler by default.
 
 macOS
-^^^
+^^^^^
 
 Installing statsmodels on macOS requires installing `gcc` which provides
 a suitable C compiler. We recommend installing Xcode and the Command Line
