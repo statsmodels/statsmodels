@@ -371,3 +371,125 @@ def test_innovations_mle_invalid():
         innovations_mle(endog, order=(1, 0, 0), start_params=[1.0, 1.0])
     with pytest.raises(ValueError):
         innovations_mle(endog, order=(0, 0, 1), start_params=[1.0, 1.0])
+
+
+def test_innovations_mle_fixed_params_ar():
+    endog = lake.copy()
+    endog = endog - endog.mean()
+
+    start_params = [0.0, 0.0, np.var(endog)]
+
+    p_free, _ = innovations_mle(
+        endog, order=(1, 0, 1), demean=False, start_params=start_params
+    )
+    p_fixed, _ = innovations_mle(
+        endog,
+        order=(1, 0, 1),
+        demean=False,
+        start_params=start_params,
+        fixed_params={"ar.L1": 0.5},
+    )
+
+    assert_allclose(p_fixed.ar_params[0], 0.5)
+    assert not np.isclose(p_fixed.ma_params[0], p_free.ma_params[0])
+    assert not np.isclose(p_fixed.sigma2, p_free.sigma2)
+
+
+def test_innovations_mle_fixed_params_ma():
+    endog = lake.copy()
+    endog = endog - endog.mean()
+
+    start_params = [0.0, 0.0, np.var(endog)]
+
+    p_free, _ = innovations_mle(
+        endog, order=(1, 0, 1), demean=False, start_params=start_params
+    )
+    p_fixed, _ = innovations_mle(
+        endog,
+        order=(1, 0, 1),
+        demean=False,
+        start_params=start_params,
+        fixed_params={"ma.L1": 0.0},
+    )
+
+    assert_allclose(p_fixed.ma_params[0], 0.0)
+    assert not np.isclose(p_fixed.ar_params[0], p_free.ar_params[0])
+
+
+def test_innovations_mle_fixed_params_both():
+    endog = lake.copy()
+    endog = endog - endog.mean()
+
+    start_params = [0.0, 0.0, np.var(endog)]
+
+    p_fixed, _ = innovations_mle(
+        endog,
+        order=(1, 0, 1),
+        demean=False,
+        start_params=start_params,
+        fixed_params={"ar.L1": 0.5, "ma.L1": 0.0},
+    )
+
+    assert_allclose(p_fixed.ar_params[0], 0.5)
+    assert_allclose(p_fixed.ma_params[0], 0.0)
+    assert np.isfinite(p_fixed.sigma2) and p_fixed.sigma2 > 0
+
+
+def test_innovations_mle_fixed_params_statespace():
+    endog = lake.copy()
+    endog = endog - endog.mean()
+
+    start_params = [0.0, 0.0, np.var(endog)]
+
+    p, mleres = innovations_mle(
+        endog,
+        order=(1, 0, 1),
+        demean=False,
+        start_params=start_params,
+        fixed_params={"ar.L1": 0.5},
+    )
+
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 1))
+    res = mod.filter(p.params)
+    assert_allclose(-mleres.minimize_results.fun, res.llf)
+
+
+def test_innovations_mle_fixed_params_no_fixed():
+    endog = lake.copy()
+    endog = endog - endog.mean()
+
+    start_params = [0.0, 0.0, np.var(endog)]
+
+    p_baseline, _ = innovations_mle(
+        endog, order=(1, 0, 1), demean=False, start_params=start_params
+    )
+    p_none, _ = innovations_mle(
+        endog,
+        order=(1, 0, 1),
+        demean=False,
+        start_params=start_params,
+        fixed_params=None,
+    )
+    p_empty, _ = innovations_mle(
+        endog,
+        order=(1, 0, 1),
+        demean=False,
+        start_params=start_params,
+        fixed_params={},
+    )
+
+    assert_allclose(p_none.params, p_baseline.params)
+    assert_allclose(p_empty.params, p_baseline.params)
+
+
+def test_innovations_mle_fixed_params_invalid():
+    endog = lake.copy()
+
+    with pytest.raises(ValueError, match="Invalid fixed parameter"):
+        innovations_mle(endog, order=(1, 0, 1), fixed_params={"sigma2": 1.0})
+
+    with pytest.raises(ValueError, match="Invalid fixed parameter"):
+        innovations_mle(endog, order=(1, 0, 1), fixed_params={"ar.L5": 0.5})
+
+    with pytest.raises(ValueError, match="Invalid fixed parameter"):
+        innovations_mle(endog, order=(1, 0, 1), fixed_params={"not_a_param": 0.0})
