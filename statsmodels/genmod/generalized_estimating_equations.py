@@ -59,7 +59,7 @@ from statsmodels.graphics._regressionplots_doc import (
 
 # used for wrapper:
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly, cached_data
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
@@ -2630,6 +2630,78 @@ class OrdinalGEE(GEE):
         result = model.fit()
         return result.params
 
+    def predict(self, params, exog=None, offset=None, which="mean"):
+        """
+        Return predicted values for a design matrix.
+
+        Parameters
+        ----------
+        params : array_like
+            Parameters / coefficients of a GEE model.
+        exog : array_like, optional
+            Design / exogenous data in the original ``(nobs, k)`` form used
+            to fit the model. If ``exog`` is None, then the original design
+            matrix ``exog_orig`` is used.
+        offset : array_like, optional
+            Offset values. If ``offset`` is None and ``exog`` is None, then
+            the model's ``offset_orig`` is used. If ``offset`` is None and
+            ``exog`` is provided, then 0 is used.
+        which : {'mean', 'linear'}, optional
+            Statistic to predict. Default is 'mean'.
+
+            - 'mean' returns the predicted probabilities for each category.
+              The returned array has shape ``(nobs, ncat)``.
+            - 'linear' returns the linear predictor for each threshold.
+              The returned array has shape ``(nobs, ncut)``.
+
+        Returns
+        -------
+        ndarray
+            See ``which``.
+
+        Notes
+        -----
+        Any ``offset`` provided here takes precedence over the ``offset``
+        used in the model fit. If ``exog`` is passed as an argument here,
+        then any ``offset`` values in the fit will be ignored.
+        """
+
+        if exog is None:
+            exog = self.exog_orig
+            if offset is None:
+                offset = self.offset_orig
+        elif offset is None:
+            offset = 0.0
+
+        exog = np.asarray(exog)
+        params = np.asarray(params)
+
+        ncut = len(self.endog_values) - 1
+
+        thresholds = params[:ncut]
+        slopes = params[ncut:]
+
+        xb = np.dot(exog, slopes)
+        lin_pred = xb[:, None] + thresholds[None, :]
+        if offset is not None:
+            offset = np.asarray(offset)
+            if offset.ndim == 1:
+                offset = offset[:, None]
+            lin_pred += offset
+
+        if which == "linear":
+            return lin_pred
+        elif which == "mean":
+            surv = self.family.link.inverse(lin_pred)
+            surv = np.concatenate(
+                (np.ones((len(surv), 1)), surv, np.zeros((len(surv), 1))),
+                axis=1,
+            )
+            probs = -np.diff(surv, axis=1)
+            return probs
+        else:
+            raise ValueError(f'The which value "{which}" is not recognized')
+
     @Appender(_gee_fit_doc)
     def fit(
         self,
@@ -2674,6 +2746,14 @@ class OrdinalGEEResults(GEEResults):
         "This class summarizes the fit of a marginal regression model"
         "for an ordinal response using GEE.\n" + _gee_results_doc
     )
+
+    @cached_data
+    def mu(self):
+        """
+        The estimated mean response on the expanded indicator scale.
+        """
+        linpred = self.model.predict(self.params, which="linear")
+        return self.model.family.link.inverse(linpred).ravel()
 
     def plot_distribution(self, ax=None, exog_values=None):
         """
@@ -2961,6 +3041,77 @@ class NominalGEE(GEE):
 
         return endog_out, exog_out, groups_out, time_out, offset_out
 
+    def predict(self, params, exog=None, offset=None, which="mean"):
+        """
+        Return predicted values for a design matrix.
+
+        Parameters
+        ----------
+        params : array_like
+            Parameters / coefficients of a GEE model.
+        exog : array_like, optional
+            Design / exogenous data in the original ``(nobs, k)`` form used
+            to fit the model. If ``exog`` is None, then the original design
+            matrix ``exog_orig`` is used.
+        offset : array_like, optional
+            Offset values. If ``offset`` is None and ``exog`` is None, then
+            the model's ``offset_orig`` is used. If ``offset`` is None and
+            ``exog`` is provided, then 0 is used.
+        which : {'mean', 'linear'}, optional
+            Statistic to predict. Default is 'mean'.
+
+            - 'mean' returns the predicted probabilities for each category.
+              The returned array has shape ``(nobs, ncat)``.
+            - 'linear' returns the linear predictor for each non-reference
+              category. The returned array has shape ``(nobs, ncut)``.
+
+        Returns
+        -------
+        ndarray
+            See ``which``.
+
+        Notes
+        -----
+        Any ``offset`` provided here takes precedence over the ``offset``
+        used in the model fit. If ``exog`` is passed as an argument here,
+        then any ``offset`` values in the fit will be ignored.
+        """
+
+        if exog is None:
+            exog = self.exog_orig
+            if offset is None:
+                offset = self.offset_orig
+        elif offset is None:
+            offset = 0.0
+
+        exog = np.asarray(exog)
+        params = np.asarray(params)
+
+        ncut = self.ncut
+        k = exog.shape[1]
+
+        params_m = params.reshape(ncut, k)
+
+        lin_pred = np.dot(exog, params_m.T)
+        if offset is not None:
+            offset = np.asarray(offset)
+            if offset.ndim == 1:
+                offset = offset[:, None]
+            lin_pred += offset
+
+        if which == "linear":
+            return lin_pred
+        elif which == "mean":
+            # Use the log-sum-exp trick for numerical stability.
+            lpr_max = np.max(lin_pred, axis=1, keepdims=True)
+            e_lpr = np.exp(lin_pred - lpr_max)
+            denom = e_lpr.sum(axis=1, keepdims=True) + np.exp(-lpr_max)
+            probs = e_lpr / denom
+            ref_prob = np.exp(-lpr_max) / denom
+            return np.concatenate((probs, ref_prob), axis=1)
+        else:
+            raise ValueError(f'The which value "{which}" is not recognized')
+
     def mean_deriv(self, exog, lin_pred):
         """
         Derivative of the expected endog with respect to the parameters.
@@ -3112,6 +3263,14 @@ class NominalGEEResults(GEEResults):
         "This class summarizes the fit of a marginal regression model"
         "for a nominal response using GEE.\n" + _gee_results_doc
     )
+
+    @cached_data
+    def mu(self):
+        """
+        The estimated mean response on the expanded indicator scale.
+        """
+        probs = self.model.predict(self.params)
+        return probs[:, :-1].ravel()
 
     def plot_distribution(self, ax=None, exog_values=None):
         """

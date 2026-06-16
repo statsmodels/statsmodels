@@ -19,6 +19,7 @@ from numpy.testing import (
     assert_almost_equal,
     assert_array_less,
     assert_equal,
+    assert_raises,
 )
 import pandas as pd
 import pytest
@@ -248,6 +249,68 @@ class TestGEE:
 
         assert_allclose(results.params, -logit_results.params, rtol=1e-5)
         assert_allclose(results.bse, logit_results.bse, rtol=1e-5)
+
+    def test_nominal_predict(self):
+        # Check that NominalGEE.predict returns category probabilities.
+
+        np.random.seed(34234)
+        endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
+        exog = np.ones((8, 2))
+        exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
+        groups = np.arange(8)
+
+        model = gee.NominalGEE(endog, exog, groups)
+        result = model.fit(cov_type="naive", start_params=[3.295837, -2.197225])
+
+        # Predict on the original design.
+        probs = result.predict()
+        assert_equal(probs.shape, (8, 2))
+        assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+        assert_allclose((probs >= 0).all(axis=1), True)
+        assert_allclose((probs <= 1).all(axis=1), True)
+
+        # Linear predictor has one column per non-reference category.
+        linpred = result.predict(which="linear")
+        assert_equal(linpred.shape, (8, 1))
+
+        # The linear predictor matches a direct matrix product.
+        params_m = np.asarray(result.params).reshape(1, 2)
+        assert_allclose(linpred, np.dot(exog, params_m.T), rtol=1e-10)
+
+        # The non-reference probabilities match the model's fittedvalues.
+        assert_allclose(probs[:, :-1].ravel(), result._results.fittedvalues, rtol=1e-10)
+
+        # Predict on new data.
+        new_exog = np.array([[1, 1], [1, 2]], dtype=np.float64)
+        new_probs = result.predict(exog=new_exog)
+        assert_equal(new_probs.shape, (2, 2))
+        assert_allclose(new_probs.sum(axis=1), 1, rtol=1e-10)
+
+        # Invalid which raises ValueError.
+        assert_raises(ValueError, result.predict, which="invalid")
+
+    def test_nominal_predict_offset(self):
+        # Check that NominalGEE.predict handles an offset correctly.
+
+        np.random.seed(34234)
+        endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
+        exog = np.ones((8, 2))
+        exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
+        groups = np.arange(8)
+        offset = np.r_[0.1, -0.2, 0.0, 0.3, -0.1, 0.2, -0.3, 0.0]
+
+        model = gee.NominalGEE(endog, exog, groups, offset=offset)
+        result = model.fit(cov_type="naive", start_params=[3.295837, -2.197225])
+
+        # Predicted probabilities sum to one.
+        probs = result.predict()
+        assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+
+        # Predictions with explicit offset on new data differ from no-offset.
+        new_exog = np.array([[1, 1], [1, 2]], dtype=np.float64)
+        probs_no_offset = result.predict(exog=new_exog)
+        probs_with_offset = result.predict(exog=new_exog, offset=np.r_[0.5, -0.5])
+        assert_raises(AssertionError, assert_allclose, probs_no_offset, probs_with_offset)
 
     def test_weighted(self):
 
@@ -1025,6 +1088,77 @@ class TestGEE:
         # Check that we get the correct results type
         assert_equal(type(rslt), gee.OrdinalGEEResultsWrapper)
         assert_equal(type(rslt._results), gee.OrdinalGEEResults)
+
+    def test_ordinal_predict(self):
+        # Check that OrdinalGEE.predict returns category probabilities.
+
+        family = families.Binomial()
+        endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
+        va = cov_struct.GlobalOddsRatio("ordinal")
+        mod = gee.OrdinalGEE(endog, exog, groups, None, family, va)
+        rslt = mod.fit()
+
+        nobs = len(endog)
+        ncat = len(mod.endog_values)
+        ncut = ncat - 1
+
+        # Predict on the original design.
+        probs = rslt.predict()
+        assert_equal(probs.shape, (nobs, ncat))
+        assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+        assert_allclose((probs >= 0).all(axis=1), True)
+        assert_allclose((probs <= 1).all(axis=1), True)
+
+        # Linear predictor has one column per threshold.
+        linpred = rslt.predict(which="linear")
+        assert_equal(linpred.shape, (nobs, ncut))
+
+        # The linear predictor matches a direct matrix product.
+        params_arr = np.asarray(rslt.params)
+        thresholds = params_arr[:ncut]
+        slopes = params_arr[ncut:]
+        expected = np.dot(exog, slopes)[:, None] + thresholds[None, :]
+        assert_allclose(linpred, expected, rtol=1e-10)
+
+        # The threshold survival probabilities match the model's fittedvalues.
+        surv = mod.family.link.inverse(linpred)
+        assert_allclose(surv.ravel(), rslt._results.fittedvalues, rtol=1e-10)
+
+        # Category probabilities are consistent with the survival function.
+        cumprob = np.cumsum(probs[:, :-1], axis=1)
+        assert_allclose(1 - cumprob, surv, rtol=1e-10)
+
+        # Predict on new data.
+        new_exog = exog[:5, :]
+        new_probs = rslt.predict(exog=new_exog)
+        assert_equal(new_probs.shape, (5, ncat))
+        assert_allclose(new_probs.sum(axis=1), 1, rtol=1e-10)
+
+        # Invalid which raises ValueError.
+        assert_raises(ValueError, rslt.predict, which="invalid")
+
+    def test_ordinal_predict_offset(self):
+        # Check that OrdinalGEE.predict handles an offset correctly.
+
+        np.random.seed(434)
+        n = 40
+        y = np.random.randint(0, 3, n)
+        groups = np.arange(n)
+        x = np.random.normal(size=(n, 2))
+        offset = np.random.normal(size=n)
+
+        model = gee.OrdinalGEE(y, x, groups, offset=offset)
+        rslt = model.fit()
+
+        # Predicted probabilities sum to one.
+        probs = rslt.predict()
+        assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+
+        # Predictions with explicit offset on new data differ from no-offset.
+        new_x = x[:5, :]
+        probs_no_offset = rslt.predict(exog=new_x)
+        probs_with_offset = rslt.predict(exog=new_x, offset=np.ones(5))
+        assert_raises(AssertionError, assert_allclose, probs_no_offset, probs_with_offset)
 
     @pytest.mark.smoke
     def test_ordinal_formula(self):
