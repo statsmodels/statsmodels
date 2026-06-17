@@ -2667,6 +2667,9 @@ def test_issue_341():
     np.testing.assert_equal(res1.predict(x[None]).shape, (1, 7))
 
 
+@pytest.mark.thread_unsafe(
+    "Rethrowing warning can lead to spurious fails with threading"
+)
 def test_negative_binomial_default_alpha_param():
     with pytest.warns(
         UserWarning, match="Negative binomial dispersion parameter alpha not set"
