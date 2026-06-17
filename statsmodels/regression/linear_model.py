@@ -2689,6 +2689,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds["description"] = descriptions["fixed_scale"]
 
             res.cov_kwds["scale"] = scale = kwargs.get("scale", 1.0)
+            res.scale = scale
             res.cov_params_default = scale * res.normalized_cov_params
         elif cov_type.upper() in ("HC0", "HC1", "HC2", "HC3"):
             if kwargs:
