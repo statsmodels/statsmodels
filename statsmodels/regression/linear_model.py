@@ -2895,23 +2895,11 @@ class RegressionResults(base.LikelihoodModelResults):
         alpha = float_like(alpha, "alpha", optional=False)
         slim = bool_like(slim, "slim", optional=False, strict=True)
 
-        jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
-        omni, omnipv = omni_normtest(self.wresid)
-
         eigvals = self.eigenvals
         condno = self.condition_number
 
         # TODO: Avoid adding attributes in non-__init__
-        self.diagn = dict(
-            jb=jb,
-            jbpv=jbpv,
-            skew=skew,
-            kurtosis=kurtosis,
-            omni=omni,
-            omnipv=omnipv,
-            condno=condno,
-            mineigval=eigvals[-1],
-        )
+        self.diagn = dict(condno=condno, mineigval=eigvals[-1])
 
         # TODO not used yet
         # diagn_left_header = ['Models stats']
@@ -2962,6 +2950,18 @@ class RegressionResults(base.LikelihoodModelResults):
             top_right = [elem for elem in top_right if elem[0] in slimlist]
             top_right = top_right + [("", [])] * (len(top_left) - len(top_right))
         else:
+            jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
+            omni, omnipv = omni_normtest(self.wresid)
+
+            self.diagn.update(
+                jb=jb,
+                jbpv=jbpv,
+                skew=skew,
+                kurtosis=kurtosis,
+                omni=omni,
+                omnipv=omnipv,
+            )
+
             diagn_left = [
                 ("Omnibus:", ["%#6.3f" % omni]),
                 ("Prob(Omnibus):", ["%#6.3f" % omnipv]),
