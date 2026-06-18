@@ -1587,7 +1587,7 @@ def test_slim_summary_skips_diagnostics(reset_randomstate, monkeypatch):
     # GH#9054 the slim summary omits the normality/residual diagnostics, so it
     # must not compute them. Make omni_normtest raise to prove the slim summary
     # never calls it, while the full summary still does.
-    import statsmodels.stats.stattools as stattools
+    from statsmodels.stats import stattools
 
     def _boom(*args, **kwargs):
         raise RuntimeError("diagnostics should not be computed for slim summary")
