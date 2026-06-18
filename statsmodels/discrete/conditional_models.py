@@ -621,7 +621,7 @@ class ConditionalMNLogit(_ConditionalModel):
         lpr = np.dot(self.exog, pmat)
 
         grad = np.zeros((q, c))
-        for ii in np.array(self._grp_ix):
+        for ii in self._grp_ix:
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
