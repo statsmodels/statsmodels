@@ -1789,7 +1789,14 @@ class GEE(GLM):
         if "ex" in transform:
             margeff *= exog
         if "ey" in transform:
-            margeff /= self.predict(params, exog)[:, None]
+            # Use the fitted mean on the modeling (expanded-indicator) scale
+            # rather than self.predict.  NominalGEE and OrdinalGEE override
+            # predict to return category probabilities on the original
+            # (nobs, ncat) scale, which is incompatible with the per-row
+            # marginal effects computed here.  family.fitted reproduces the
+            # value that predict returned before those overrides were added.
+            fitted = self.family.fitted(np.dot(exog, params))
+            margeff /= fitted[:, None]
         if count_idx is not None:
             from statsmodels.discrete.discrete_margins import (
                 _get_count_effects,
@@ -2630,7 +2637,7 @@ class OrdinalGEE(GEE):
         result = model.fit()
         return result.params
 
-    def predict(self, params, exog=None, offset=None, which="mean"):
+    def predict(self, params, exog=None, offset=None, which="mean", linear=None):
         """
         Return predicted values for a design matrix.
 
@@ -2654,6 +2661,11 @@ class OrdinalGEE(GEE):
             - 'linear' returns the linear predictor for each threshold.
               The returned array has shape ``(nobs, ncut)``.
 
+        linear : bool
+            The ``linear`` keyword is deprecated and will be removed, use
+            the ``which`` keyword instead. If True, returns the linear
+            predicted values (equivalent to ``which="linear"``).
+
         Returns
         -------
         ndarray
@@ -2664,7 +2676,20 @@ class OrdinalGEE(GEE):
         Any ``offset`` provided here takes precedence over the ``offset``
         used in the model fit. If ``exog`` is passed as an argument here,
         then any ``offset`` values in the fit will be ignored.
+
+        Because the model uses a shared slope with one intercept per
+        threshold, the category probabilities are valid for any ``exog`` as
+        long as the fitted thresholds are monotone. The thresholds are
+        estimated without an ordering constraint, so in the rare case that
+        they are not monotone some returned probabilities may be negative; a
+        warning is issued when this occurs.
         """
+
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+            if linear is True:
+                which = "linear"
 
         if exog is None:
             exog = self.exog_orig
@@ -2698,9 +2723,30 @@ class OrdinalGEE(GEE):
                 axis=1,
             )
             probs = -np.diff(surv, axis=1)
+            if np.any(probs < -1e-10):
+                warnings.warn(
+                    "Some predicted probabilities are negative. This occurs "
+                    "when the fitted OrdinalGEE thresholds are not monotone, "
+                    "which indicates a degenerate fit rather than a coherent "
+                    "ordinal model.",
+                    ValueWarning,
+                    stacklevel=2,
+                )
             return probs
         else:
             raise ValueError(f'The which value "{which}" is not recognized')
+
+    def get_distribution(self, *args, **kwargs):
+        """
+        Not implemented for OrdinalGEE.
+
+        A single scipy frozen distribution cannot represent an ordinal
+        response. Use ``predict`` to obtain category probabilities.
+        """
+        raise NotImplementedError(
+            "get_distribution is not defined for OrdinalGEE; use predict to "
+            "obtain category probabilities."
+        )
 
     @Appender(_gee_fit_doc)
     def fit(
@@ -2754,6 +2800,18 @@ class OrdinalGEEResults(GEEResults):
         """
         linpred = self.model.predict(self.params, which="linear")
         return self.model.family.link.inverse(linpred).ravel()
+
+    def get_distribution(self, *args, **kwargs):
+        """
+        Not implemented for OrdinalGEE.
+
+        A single scipy frozen distribution cannot represent an ordinal
+        response. Use ``predict`` to obtain category probabilities.
+        """
+        raise NotImplementedError(
+            "get_distribution is not defined for OrdinalGEE; use predict to "
+            "obtain category probabilities."
+        )
 
     def plot_distribution(self, ax=None, exog_values=None):
         """
@@ -3041,7 +3099,7 @@ class NominalGEE(GEE):
 
         return endog_out, exog_out, groups_out, time_out, offset_out
 
-    def predict(self, params, exog=None, offset=None, which="mean"):
+    def predict(self, params, exog=None, offset=None, which="mean", linear=None):
         """
         Return predicted values for a design matrix.
 
@@ -3065,6 +3123,11 @@ class NominalGEE(GEE):
             - 'linear' returns the linear predictor for each non-reference
               category. The returned array has shape ``(nobs, ncut)``.
 
+        linear : bool
+            The ``linear`` keyword is deprecated and will be removed, use
+            the ``which`` keyword instead. If True, returns the linear
+            predicted values (equivalent to ``which="linear"``).
+
         Returns
         -------
         ndarray
@@ -3076,6 +3139,12 @@ class NominalGEE(GEE):
         used in the model fit. If ``exog`` is passed as an argument here,
         then any ``offset`` values in the fit will be ignored.
         """
+
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+            if linear is True:
+                which = "linear"
 
         if exog is None:
             exog = self.exog_orig
@@ -3089,6 +3158,13 @@ class NominalGEE(GEE):
 
         ncut = self.ncut
         k = exog.shape[1]
+
+        if params.size != ncut * k:
+            raise ValueError(
+                f"params has length {params.size}, but exog with {k} columns "
+                f"requires {ncut * k} parameters ({ncut} non-reference "
+                f"categories times {k} covariates)."
+            )
 
         params_m = params.reshape(ncut, k)
 
@@ -3214,6 +3290,18 @@ class NominalGEE(GEE):
 
         return dmat
 
+    def get_distribution(self, *args, **kwargs):
+        """
+        Not implemented for NominalGEE.
+
+        A single scipy frozen distribution cannot represent a multinomial
+        response. Use ``predict`` to obtain category probabilities.
+        """
+        raise NotImplementedError(
+            "get_distribution is not defined for NominalGEE; use predict to "
+            "obtain category probabilities."
+        )
+
     @Appender(_gee_fit_doc)
     def fit(
         self,
@@ -3271,6 +3359,18 @@ class NominalGEEResults(GEEResults):
         """
         probs = self.model.predict(self.params)
         return probs[:, :-1].ravel()
+
+    def get_distribution(self, *args, **kwargs):
+        """
+        Not implemented for NominalGEE.
+
+        A single scipy frozen distribution cannot represent a multinomial
+        response. Use ``predict`` to obtain category probabilities.
+        """
+        raise NotImplementedError(
+            "get_distribution is not defined for NominalGEE; use predict to "
+            "obtain category probabilities."
+        )
 
     def plot_distribution(self, ax=None, exog_values=None):
         """
