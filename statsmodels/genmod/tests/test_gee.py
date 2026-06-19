@@ -321,9 +321,11 @@ class TestGEE:
         assert_equal(new_probs.shape, (5, ncat))
         assert_allclose(new_probs.sum(axis=1), 1, rtol=1e-10)
 
-        # Invalid which raises ValueError; mismatched params/exog is reported.
+        # Invalid which raises ValueError; mismatched params/exog is reported;
+        # exposure is not supported.
         assert_raises(ValueError, result.predict, which="invalid")
         assert_raises(ValueError, model.predict, result.params[:-1], exog)
+        assert_raises(ValueError, result.predict, exposure=1.0)
 
     def test_nominal_predict_offset(self):
         # Check that NominalGEE.predict handles an offset correctly.
@@ -356,9 +358,31 @@ class TestGEE:
         # The model offset is ignored once exog is supplied (GLM convention).
         probs_no_offset = result.predict(exog=new_exog)
         probs_with_offset = result.predict(exog=new_exog, offset=new_offset)
-        assert_raises(
-            AssertionError, assert_allclose, probs_no_offset, probs_with_offset
-        )
+        assert not np.allclose(probs_no_offset, probs_with_offset)
+
+    def test_nominal_predict_reference_dominant(self):
+        # Regression test for log-sum-exp overflow: when the reference category
+        # dominates (every non-reference linear predictor is large and
+        # negative), predict must return finite probabilities that sum to one,
+        # not NaN from exp(-lpr_max) overflowing.
+        endog = np.r_[0, 0, 1, 1, 2, 2]
+        exog = np.ones((6, 2))
+        exog[:, 1] = np.r_[0, 1, 0, 1, 0, 1]
+        groups = np.arange(6)
+
+        model = gee.NominalGEE(endog, exog, groups)
+        k = exog.shape[1]
+
+        # Intercept of -800 for every non-reference category drives each
+        # non-reference linear predictor to ~-800 (reference logit is 0).
+        params = np.zeros(model.ncut * k)
+        params[::k] = -800.0
+
+        probs = model.predict(params, exog=exog)
+        assert np.all(np.isfinite(probs))
+        assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+        # The reference category (last column) carries essentially all mass.
+        assert_allclose(probs[:, -1], 1, rtol=1e-10)
 
     def test_weighted(self):
 
@@ -1206,8 +1230,9 @@ class TestGEE:
         assert_equal(new_probs.shape, (5, ncat))
         assert_allclose(new_probs.sum(axis=1), 1, rtol=1e-10)
 
-        # Invalid which raises ValueError.
+        # Invalid which raises ValueError; exposure is not supported.
         assert_raises(ValueError, rslt.predict, which="invalid")
+        assert_raises(ValueError, rslt.predict, exposure=1.0)
 
     def test_ordinal_predict_offset(self):
         # Check that OrdinalGEE.predict handles an offset correctly.
@@ -1248,15 +1273,16 @@ class TestGEE:
         # The model offset is ignored once exog is supplied (GLM convention).
         probs_no_offset = rslt.predict(exog=new_x)
         probs_with_offset = rslt.predict(exog=new_x, offset=new_offset)
-        assert_raises(
-            AssertionError, assert_allclose, probs_no_offset, probs_with_offset
-        )
+        assert not np.allclose(probs_no_offset, probs_with_offset)
 
-    def test_nominal_ordinal_margeff_elasticity(self):
+    def test_nominal_ordinal_margeff(self):
         # Regression guard: NominalGEE/OrdinalGEE override predict to return a
-        # 2-D (nobs, ncat) array, but get_margeff's elasticity transforms
-        # ("eyex"/"eydx") need the fitted mean on the expanded modeling scale.
-        # _derivative_exog must therefore not rely on the overridden predict.
+        # 2-D (nobs, ncat) array, but get_margeff computes effects on the
+        # expanded design and needs the fitted mean on that scale -- both for
+        # the elasticity transforms ("eyex"/"eydx") and for the dummy/count
+        # effect differences computed via the discrete-margins helpers.
+        # _derivative_exog must therefore route the mean through the
+        # expanded-scale adapter rather than the overridden predict.
         endog, exog, groups = load_data("gee_nominal_1.csv", icept=False)
         rn = gee.NominalGEE(
             endog, exog, groups, cov_struct=cov_struct.Independence()
@@ -1272,6 +1298,32 @@ class TestGEE:
             for method in ("dydx", "eyex", "eydx"):
                 marg = rslt.get_margeff(method=method)
                 assert np.all(np.isfinite(np.asarray(marg.margeff)))
+
+        # Dummy/count effects difference predictions on the expanded design via
+        # the discrete-margins helpers. Use at="all": the delta-method standard
+        # errors hit a separate, pre-existing GLM limitation for models that
+        # carry an offset (Nominal/OrdinalGEE always do internally). The design
+        # uses two covariates (== the number of non-reference categories) to
+        # avoid an unrelated mean_deriv_exog shape limitation when k != ncut.
+        rng = np.random.RandomState(3)
+        n = 120
+        endog = rng.randint(0, 3, n)  # 3 categories -> ncut == 2
+        groups = np.arange(n)
+        dummy_exog = np.column_stack(
+            [np.ones(n), (rng.uniform(size=n) > 0.5).astype(float)]
+        )
+        count_exog = np.column_stack(
+            [np.ones(n), rng.poisson(2, n).astype(float)]
+        )
+        for exog, kwds in (
+            (dummy_exog, dict(dummy=True)),
+            (count_exog, dict(count=True)),
+        ):
+            rd = gee.NominalGEE(
+                endog, exog, groups, cov_struct=cov_struct.Independence()
+            ).fit()
+            marg = rd.get_margeff(at="all", **kwds)
+            assert np.all(np.isfinite(np.asarray(marg.margeff)))
 
     def test_ordinal_predict_nonmonotone_warns(self):
         # OrdinalGEE is a proportional-odds model (shared slope, one intercept
@@ -1316,6 +1368,43 @@ class TestGEE:
             assert_raises(
                 NotImplementedError, rslt.model.get_distribution, rslt.params
             )
+
+    def test_nominal_ordinal_predict_formula(self):
+        # predict must work through the formula API: result.predict() on the
+        # original data, and result.predict(exog=DataFrame) on new data with
+        # the new exog transformed via the (pre-expansion) formula spec.
+        rng = np.random.RandomState(434)
+        n = 60
+        groups = np.arange(n)
+        df = pd.DataFrame({
+            "y": rng.randint(0, 3, n),
+            "x1": rng.normal(size=n),
+            "x2": rng.normal(size=n),
+        })
+        new_df = df[["x1", "x2"]].iloc[:5]
+        new_arr = np.asarray(new_df)
+
+        for Cls in (gee.OrdinalGEE, gee.NominalGEE):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                rslt = Cls.from_formula(
+                    "y ~ 0 + x1 + x2", groups, data=df
+                ).fit()
+            ncat = len(rslt.model.endog_values)
+
+            probs = np.asarray(rslt.predict())
+            assert_equal(probs.shape, (n, ncat))
+            assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+
+            # New data as a DataFrame is transformed via the formula and gives
+            # the same result as predicting on the equivalent array.
+            probs_df = np.asarray(rslt.predict(exog=new_df))
+            probs_arr = np.asarray(
+                rslt.predict(exog=new_arr, transform=False)
+            )
+            assert_equal(probs_df.shape, (5, ncat))
+            assert_allclose(probs_df, probs_arr, rtol=1e-10)
+            assert_allclose(probs_df, probs[:5], rtol=1e-10)
 
     @pytest.mark.smoke
     def test_ordinal_formula(self):

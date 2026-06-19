@@ -495,6 +495,28 @@ def _check_args(endog, exog, groups, time, offset, exposure):
         raise ValueError("'exposure' and 'endog' should have the same size")
 
 
+class _ExpandedMeanModel:
+    """
+    Minimal adapter exposing ``predict`` as the fitted mean on the expanded
+    (modeling) scale, i.e. ``family.fitted(exog @ params)``.
+
+    Marginal effects are computed on the expanded design matrix, and the
+    discrete-margins helpers call ``model.predict(params, exog)`` expecting
+    that expanded-scale mean.  ``NominalGEE`` and ``OrdinalGEE`` override
+    ``predict`` to return original-scale category probabilities, so this
+    adapter is passed to ``_derivative_exog`` machinery in their place.  For
+    every other GEE family it reproduces the value the inherited
+    ``GLM.predict`` returns for an explicitly supplied ``exog`` (offset and
+    exposure are 0 in that case).
+    """
+
+    def __init__(self, family):
+        self.family = family
+
+    def predict(self, params, exog):
+        return self.family.fitted(np.dot(exog, params))
+
+
 class GEE(GLM):
 
     __doc__ = (
@@ -1786,24 +1808,25 @@ class GEE(GLM):
 
         margeff = self.mean_deriv_exog(exog, params, offset_exposure)
 
+        # Marginal effects operate on the expanded design and need the fitted
+        # mean on that scale.  NominalGEE and OrdinalGEE override predict to
+        # return original-scale category probabilities, which is incompatible
+        # here, so route the mean through an adapter that always returns
+        # family.fitted(exog @ params).  For every other GEE family this is
+        # exactly what self.predict returned for an explicitly supplied exog.
+        mean_model = _ExpandedMeanModel(self.family)
+
         if "ex" in transform:
             margeff *= exog
         if "ey" in transform:
-            # Use the fitted mean on the modeling (expanded-indicator) scale
-            # rather than self.predict.  NominalGEE and OrdinalGEE override
-            # predict to return category probabilities on the original
-            # (nobs, ncat) scale, which is incompatible with the per-row
-            # marginal effects computed here.  family.fitted reproduces the
-            # value that predict returned before those overrides were added.
-            fitted = self.family.fitted(np.dot(exog, params))
-            margeff /= fitted[:, None]
+            margeff /= mean_model.predict(params, exog)[:, None]
         if count_idx is not None:
             from statsmodels.discrete.discrete_margins import (
                 _get_count_effects,
             )
 
             margeff = _get_count_effects(
-                margeff, exog, count_idx, transform, self, params
+                margeff, exog, count_idx, transform, mean_model, params
             )
         if dummy_idx is not None:
             from statsmodels.discrete.discrete_margins import (
@@ -1811,7 +1834,7 @@ class GEE(GLM):
             )
 
             margeff = _get_dummy_effects(
-                margeff, exog, dummy_idx, transform, self, params
+                margeff, exog, dummy_idx, transform, mean_model, params
             )
         return margeff
 
@@ -2553,6 +2576,14 @@ class OrdinalGEE(GEE):
             constraint,
         )
 
+        # __init__ does not forward **kwargs to super (endog/exog are expanded
+        # into the indicator design first), which would otherwise drop the
+        # formula model specification passed by from_formula.  Preserve it on
+        # the model so result.predict() can transform new exog supplied as a
+        # DataFrame (predict operates on the original, pre-expansion design).
+        if kwargs.get("model_spec") is not None:
+            self.model_spec = kwargs["model_spec"]
+
     def setup_ordinal(self, endog, exog, groups, time, offset):
         """
         Restructure ordinal data as binary indicators so that they can
@@ -2637,7 +2668,10 @@ class OrdinalGEE(GEE):
         result = model.fit()
         return result.params
 
-    def predict(self, params, exog=None, offset=None, which="mean", linear=None):
+    def predict(
+        self, params, exog=None, exposure=None, offset=None, which="mean",
+        linear=None,
+    ):
         """
         Return predicted values for a design matrix.
 
@@ -2649,6 +2683,9 @@ class OrdinalGEE(GEE):
             Design / exogenous data in the original ``(nobs, k)`` form used
             to fit the model. If ``exog`` is None, then the original design
             matrix ``exog_orig`` is used.
+        exposure : array_like, optional
+            Not supported; accepted only for signature compatibility with
+            ``GLM.predict``. Passing a non-None value raises ``ValueError``.
         offset : array_like, optional
             Offset values. If ``offset`` is None and ``exog`` is None, then
             the model's ``offset_orig`` is used. If ``offset`` is None and
@@ -2657,7 +2694,9 @@ class OrdinalGEE(GEE):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the predicted probabilities for each category.
-              The returned array has shape ``(nobs, ncat)``.
+              The returned array has shape ``(nobs, ncat)``, with columns
+              ordered by the sorted unique response values
+              (``self.endog_values``).
             - 'linear' returns the linear predictor for each threshold.
               The returned array has shape ``(nobs, ncut)``.
 
@@ -2691,6 +2730,9 @@ class OrdinalGEE(GEE):
             if linear is True:
                 which = "linear"
 
+        if exposure is not None:
+            raise ValueError("exposure is not supported")
+
         if exog is None:
             exog = self.exog_orig
             if offset is None:
@@ -2702,6 +2744,14 @@ class OrdinalGEE(GEE):
         params = np.asarray(params)
 
         ncut = len(self.endog_values) - 1
+        k = exog.shape[1]
+
+        if params.size != ncut + k:
+            raise ValueError(
+                f"params has length {params.size}, but exog with {k} columns "
+                f"requires {ncut + k} parameters ({ncut} thresholds plus {k} "
+                f"covariate coefficients)."
+            )
 
         thresholds = params[:ncut]
         slopes = params[ncut:]
@@ -3012,6 +3062,11 @@ class NominalGEE(GEE):
             constraint,
         )
 
+        # See OrdinalGEE.__init__: preserve the formula model specification so
+        # result.predict() can transform new exog supplied as a DataFrame.
+        if kwargs.get("model_spec") is not None:
+            self.model_spec = kwargs["model_spec"]
+
     def _starting_params(self):
         exposure = getattr(self, "exposure", None)
         model = GEE(
@@ -3099,7 +3154,10 @@ class NominalGEE(GEE):
 
         return endog_out, exog_out, groups_out, time_out, offset_out
 
-    def predict(self, params, exog=None, offset=None, which="mean", linear=None):
+    def predict(
+        self, params, exog=None, exposure=None, offset=None, which="mean",
+        linear=None,
+    ):
         """
         Return predicted values for a design matrix.
 
@@ -3111,6 +3169,9 @@ class NominalGEE(GEE):
             Design / exogenous data in the original ``(nobs, k)`` form used
             to fit the model. If ``exog`` is None, then the original design
             matrix ``exog_orig`` is used.
+        exposure : array_like, optional
+            Not supported; accepted only for signature compatibility with
+            ``GLM.predict``. Passing a non-None value raises ``ValueError``.
         offset : array_like, optional
             Offset values. If ``offset`` is None and ``exog`` is None, then
             the model's ``offset_orig`` is used. If ``offset`` is None and
@@ -3119,7 +3180,10 @@ class NominalGEE(GEE):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the predicted probabilities for each category.
-              The returned array has shape ``(nobs, ncat)``.
+              The returned array has shape ``(nobs, ncat)``, with columns
+              ordered by the sorted unique response values
+              (``self.endog_values``); the reference category (the largest
+              value) is the last column.
             - 'linear' returns the linear predictor for each non-reference
               category. The returned array has shape ``(nobs, ncut)``.
 
@@ -3145,6 +3209,9 @@ class NominalGEE(GEE):
             warnings.warn(msg, FutureWarning, stacklevel=2)
             if linear is True:
                 which = "linear"
+
+        if exposure is not None:
+            raise ValueError("exposure is not supported")
 
         if exog is None:
             exog = self.exog_orig
@@ -3178,8 +3245,11 @@ class NominalGEE(GEE):
         if which == "linear":
             return lin_pred
         elif which == "mean":
-            # Use the log-sum-exp trick for numerical stability.
-            lpr_max = np.max(lin_pred, axis=1, keepdims=True)
+            # Use the log-sum-exp trick for numerical stability. The max
+            # includes the reference category's linear predictor (which is 0)
+            # so that np.exp(-lpr_max) cannot overflow when every
+            # non-reference linear predictor is large and negative.
+            lpr_max = np.maximum(np.max(lin_pred, axis=1, keepdims=True), 0.0)
             e_lpr = np.exp(lin_pred - lpr_max)
             denom = e_lpr.sum(axis=1, keepdims=True) + np.exp(-lpr_max)
             probs = e_lpr / denom
