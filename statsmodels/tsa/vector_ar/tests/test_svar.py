@@ -103,3 +103,12 @@ def test_oneparam():
 
     # regression number
     assert_allclose(results.A[0, 1], -0.075818, atol=1e-5)
+
+
+def test_summary_no_user_exog():
+    np.random.seed(0)
+    data = np.random.randn(200, 3)
+    B = np.asarray([[1, "E", "E"], [0, 1, "E"], [0, 0, 1]], dtype="U")
+    results = SVAR(data, svar_type="B", B=B).fit(maxlags=2, solver="newton")
+    assert results.k_exog_user == 0
+    results.summary()
