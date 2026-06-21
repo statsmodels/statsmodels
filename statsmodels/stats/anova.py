@@ -384,6 +384,12 @@ def anova_lm(*args, **kwargs):
     table["ssr"] = [mdl.ssr for mdl in args]
     table["df_resid"] = [mdl.df_resid for mdl in args]
     table.loc[table.index[1:], "df_diff"] = -np.diff(table["df_resid"].values)
+    if np.any(table["df_diff"].dropna() < 0):
+        raise ValueError(
+            "Models must be passed in order of increasing complexity "
+            "(decreasing residual degrees of freedom). "
+            "Ensure the most restricted model is passed first."
+        )
     table["ss_diff"] = -table["ssr"].diff()
     if test == "F":
         table["F"] = table["ss_diff"] / table["df_diff"] / scale
