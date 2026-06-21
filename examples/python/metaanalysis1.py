@@ -39,10 +39,8 @@
 
 import numpy as np
 import pandas as pd
-from scipy import optimize, stats
 
 from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.regression.linear_model import WLS
 from statsmodels.stats.meta_analysis import (
     _fit_tau_iter_mm,
     _fit_tau_iterative,

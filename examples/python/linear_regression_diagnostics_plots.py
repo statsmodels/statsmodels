@@ -50,8 +50,6 @@ res.summary()
 #
 #     a. vif
 
-from typing import Type
-
 import matplotlib.pyplot as plt
 
 # base code
