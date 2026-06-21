@@ -1,4 +1,5 @@
 """Spector and Mazzeo (1980) - Program Effectiveness Data"""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

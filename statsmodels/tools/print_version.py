@@ -27,7 +27,7 @@ def _show_versions_only():
 
     import os
 
-    (sysname, nodename, release, version, machine) = os.uname()
+    sysname, nodename, release, version, machine = os.uname()
     print(f"OS: {sysname} {release} {version} {machine}")
     print("byteorder: %s" % sys.byteorder)
     print("LC_ALL: %s" % os.environ.get("LC_ALL", "None"))

@@ -96,8 +96,9 @@ from statsmodels.tsa.stattools import kpss
 def kpss_test(timeseries):
     print("Results of KPSS Test:")
     kpsstest = kpss(timeseries, regression="c", nlags="auto")
-    kpss_output = pd.Series(kpsstest[0:3],
-                            index=["Test Statistic", "p-value", "Lags Used"])
+    kpss_output = pd.Series(
+        kpsstest[0:3], index=["Test Statistic", "p-value", "Lags Used"]
+    )
     for key, value in kpsstest[3].items():
         kpss_output["Critical Value (%s)" % key] = value
     print(kpss_output)
@@ -154,8 +155,9 @@ kpss_test(sunspots["SUNACTIVITY"])
 #
 # Differencing is applied on the data and the result is plotted.
 
-sunspots["SUNACTIVITY_diff"] = sunspots["SUNACTIVITY"] - sunspots[
-    "SUNACTIVITY"].shift(1)
+sunspots["SUNACTIVITY_diff"] = sunspots["SUNACTIVITY"] - sunspots["SUNACTIVITY"].shift(
+    1
+)
 sunspots["SUNACTIVITY_diff"].dropna().plot(figsize=(12, 8))
 
 # ADF test is now applied on these detrended values and stationarity is

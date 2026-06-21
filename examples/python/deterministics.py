@@ -32,11 +32,7 @@ plt.rc("font", size=16)
 from statsmodels.tsa.deterministic import DeterministicProcess
 
 index = pd.RangeIndex(0, 100)
-det_proc = DeterministicProcess(index,
-                                constant=True,
-                                order=1,
-                                seasonal=True,
-                                period=5)
+det_proc = DeterministicProcess(index, constant=True, order=1, seasonal=True, period=5)
 det_proc.in_sample()
 
 # The `out_of_sample` returns the next `steps` values after the end of the
@@ -117,22 +113,18 @@ class BrokenTimeTrend(DeterministicTerm):
         return "Broken Time Trend"
 
     def _eq_attr(self):
-        return (self._break_period, )
+        return (self._break_period,)
 
     def in_sample(self, index: pd.Index):
         nobs = index.shape[0]
         terms = np.zeros((nobs, 2))
-        terms[self._break_period:, 0] = 1
-        terms[self._break_period:, 1] = np.arange(self._break_period + 1,
-                                                  nobs + 1)
-        return pd.DataFrame(terms,
-                            columns=["const_break", "trend_break"],
-                            index=index)
+        terms[self._break_period :, 0] = 1
+        terms[self._break_period :, 1] = np.arange(self._break_period + 1, nobs + 1)
+        return pd.DataFrame(terms, columns=["const_break", "trend_break"], index=index)
 
-    def out_of_sample(self,
-                      steps: int,
-                      index: pd.Index,
-                      forecast_index: pd.Index = None):
+    def out_of_sample(
+        self, steps: int, index: pd.Index, forecast_index: pd.Index = None
+    ):
         # Always call extend index first
         fcast_index = self._extend_index(index, steps, forecast_index)
         nobs = index.shape[0]
@@ -140,9 +132,9 @@ class BrokenTimeTrend(DeterministicTerm):
         # Assume break period is in-sample
         terms[:, 0] = 1
         terms[:, 1] = np.arange(nobs + 1, nobs + steps + 1)
-        return pd.DataFrame(terms,
-                            columns=["const_break", "trend_break"],
-                            index=fcast_index)
+        return pd.DataFrame(
+            terms, columns=["const_break", "trend_break"], index=fcast_index
+        )
 
 
 btt = BrokenTimeTrend(60)
@@ -163,15 +155,14 @@ class ExogenousProcess(DeterministicTerm):
         return "Custom Exog Process"
 
     def _eq_attr(self):
-        return (id(self._data), )
+        return (id(self._data),)
 
     def in_sample(self, index: pd.Index):
         return self._data.loc[index]
 
-    def out_of_sample(self,
-                      steps: int,
-                      index: pd.Index,
-                      forecast_index: pd.Index = None):
+    def out_of_sample(
+        self, steps: int, index: pd.Index, forecast_index: pd.Index = None
+    ):
         forecast_index = self._extend_index(index, steps, forecast_index)
         return self._data.loc[forecast_index]
 
@@ -179,8 +170,7 @@ class ExogenousProcess(DeterministicTerm):
 import numpy as np
 
 gen = np.random.default_rng(98765432101234567890)
-exog = pd.DataFrame(gen.integers(100, size=(300, 2)),
-                    columns=["exog1", "exog2"])
+exog = pd.DataFrame(gen.integers(100, size=(300, 2)), columns=["exog1", "exog2"])
 exog.head()
 
 ep = ExogenousProcess(exog)

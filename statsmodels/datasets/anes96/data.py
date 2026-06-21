@@ -1,4 +1,5 @@
 """American National Election Survey 1996"""
+
 from numpy import log
 
 from statsmodels.datasets import utils as du
@@ -13,7 +14,9 @@ http://www.electionstudies.org/
 The American National Election Studies.
 """
 
-DESCRSHORT = """This data is a subset of the American National Election Studies of 1996."""
+DESCRSHORT = (
+    """This data is a subset of the American National Election Studies of 1996."""
+)
 
 DESCRLONG = DESCRSHORT
 
@@ -115,5 +118,5 @@ def load():
 def _get_data():
     data = du.load_csv(__file__, "anes96.csv", sep=r"\s")
     data = du.strip_column_names(data)
-    data["logpopul"] = log(data["popul"] + .1)
+    data["logpopul"] = log(data["popul"] + 0.1)
     return data.astype(float)

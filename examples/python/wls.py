@@ -29,12 +29,12 @@ np.random.seed(1024)
 
 nsample = 50
 x = np.linspace(0, 20, nsample)
-X = np.column_stack((x, (x - 5)**2))
+X = np.column_stack((x, (x - 5) ** 2))
 X = sm.add_constant(X)
 beta = [5.0, 0.5, -0.01]
 sig = 0.5
 w = np.ones(nsample)
-w[nsample * 6 // 10:] = 3
+w[nsample * 6 // 10 :] = 3
 y_true = np.dot(X, beta)
 e = np.random.normal(size=nsample)
 y = y_true + sig * w * e
@@ -61,14 +61,16 @@ print(res_wls.params)
 # Compare the WLS standard errors to  heteroscedasticity corrected OLS
 # standard errors:
 
-se = np.vstack([
-    [res_wls.bse],
-    [res_ols.bse],
-    [res_ols.HC0_se],
-    [res_ols.HC1_se],
-    [res_ols.HC2_se],
-    [res_ols.HC3_se],
-])
+se = np.vstack(
+    [
+        [res_wls.bse],
+        [res_ols.bse],
+        [res_ols.HC0_se],
+        [res_ols.HC1_se],
+        [res_ols.HC2_se],
+        [res_ols.HC3_se],
+    ]
+)
 se = np.round(se, 4)
 colnames = ["x1", "const"]
 rownames = ["WLS", "OLS", "OLS_HC0", "OLS_HC1", "OLS_HC3", "OLS_HC3"]

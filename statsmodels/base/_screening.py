@@ -61,6 +61,7 @@ class ScreeningResults:
         'idx_nonzero' is based ond the array that includes exog_keep, while
         'idx_exog' is the index based on the exog of the batch.
     """
+
     def __init__(self, screener, **kwds):
         self.screener = screener
         self.__dict__.update(**kwds)
@@ -141,9 +142,18 @@ class VariableScreening:
     currently only single columns are selected, no terms (multi column exog)
     """
 
-    def __init__(self, model, pen_weight=None, use_weights=True, k_add=30,
-                 k_max_add=30, threshold_trim=1e-4, k_max_included=20,
-                 ranking_attr="resid_pearson", ranking_project=True):
+    def __init__(
+        self,
+        model,
+        pen_weight=None,
+        use_weights=True,
+        k_add=30,
+        k_max_add=30,
+        threshold_trim=1e-4,
+        k_max_included=20,
+        ranking_attr="resid_pearson",
+        ranking_project=True,
+    ):
 
         self.model = model
         self.model_class = model.__class__
@@ -174,13 +184,11 @@ class VariableScreening:
         self.ranking_project = ranking_project
 
     def _get_penal(self, weights=None):
-        """create new Penalty instance
-        """
+        """create new Penalty instance"""
         return SCADSmoothed(0.1, c0=0.0001, weights=weights)
 
     def ranking_measure(self, res_pen, exog, keep=None):
-        """compute measure for ranking exog candidates for inclusion
-        """
+        """compute measure for ranking exog candidates for inclusion"""
         endog = self.endog
 
         if self.ranking_project:
@@ -206,15 +214,16 @@ class VariableScreening:
             if resid_factor.ndim == 2:
                 # for score_factor when extra params are in model
                 resid_factor = resid_factor[:, 0]
-            mom_cond = np.abs(resid_factor.dot(exog))**2
+            mom_cond = np.abs(resid_factor.dot(exog)) ** 2
         else:
             # use results attribute
             resid_factor = getattr(res_pen, self.ranking_attr)
-            mom_cond = np.abs(resid_factor.dot(exog))**2
+            mom_cond = np.abs(resid_factor.dot(exog)) ** 2
         return mom_cond
 
-    def screen_exog(self, exog, endog=None, maxiter=100, method="bfgs",
-                    disp=False, fit_kwds=None):
+    def screen_exog(
+        self, exog, endog=None, maxiter=100, method="bfgs", disp=False, fit_kwds=None
+    ):
         """screen and select variables (columns) in exog
 
         Parameters
@@ -282,7 +291,7 @@ class VariableScreening:
             # indices of exog in current expansion model
             idx = np.concatenate((idx_nonzero, idx_excl[mom_cond > threshold]))
             start_params2 = np.zeros(len(idx))
-            start_params2[:len(start_params)] = start_params
+            start_params2[: len(start_params)] = start_params
 
             if self.use_weights:
                 weights = np.ones(len(idx))
@@ -290,21 +299,27 @@ class VariableScreening:
                 # modify Penalty instance attached to self
                 # damgerous if res_pen is reused
                 self.penal.weights = weights
-            mod_pen = model_class(endog, x[:, idx], penal=self.penal,
-                                  pen_weight=self.pen_weight,
-                                  **self.init_kwds)
+            mod_pen = model_class(
+                endog,
+                x[:, idx],
+                penal=self.penal,
+                pen_weight=self.pen_weight,
+                **self.init_kwds,
+            )
 
-            res_pen = mod_pen.fit(method=method,
-                                  start_params=start_params2,
-                                  warn_convergence=False, skip_hessian=True,
-                                  **fit_kwds)
+            res_pen = mod_pen.fit(
+                method=method,
+                start_params=start_params2,
+                warn_convergence=False,
+                skip_hessian=True,
+                **fit_kwds,
+            )
 
             keep = np.abs(res_pen.params) > self.threshold_trim
             # use largest params to keep
             if keep.sum() > self.k_max_included:
                 # TODO we can use now np.partition with partial sort
-                thresh_params = np.sort(np.abs(res_pen.params))[
-                                                        -self.k_max_included]
+                thresh_params = np.sort(np.abs(res_pen.params))[-self.k_max_included]
                 keep2 = np.abs(res_pen.params) > thresh_params
                 keep = np.logical_and(keep, keep2)
 
@@ -330,8 +345,7 @@ class VariableScreening:
             history["params_keep"].append(start_params)
             history["idx_added"].append(idx)
 
-            if (len(idx_nonzero) == len(idx_old) and
-                    (idx_nonzero == idx_old).all()):
+            if len(idx_nonzero) == len(idx_old) and (idx_nonzero == idx_old).all():
                 converged = True
                 break
             idx_old = idx_nonzero
@@ -346,29 +360,32 @@ class VariableScreening:
             penal = self._get_penal(weights=weights)
         else:
             penal = self.penal
-        mod_final = model_class(endog, x[:, idx_nonzero],
-                                penal=penal,
-                                pen_weight=self.pen_weight,
-                                **self.init_kwds)
+        mod_final = model_class(
+            endog,
+            x[:, idx_nonzero],
+            penal=penal,
+            pen_weight=self.pen_weight,
+            **self.init_kwds,
+        )
 
-        res_final = mod_final.fit(method=method,
-                                  start_params=start_params,
-                                  warn_convergence=False,
-                                  **fit_kwds)
+        res_final = mod_final.fit(
+            method=method, start_params=start_params, warn_convergence=False, **fit_kwds
+        )
         # set exog_names for final model
         xnames = ["var%4d" % ii for ii in idx_nonzero]
         res_final.model.exog_names[k_keep:] = xnames[k_keep:]
 
-        res = ScreeningResults(self,
-                               results_pen=res_pen,
-                               results_final=res_final,
-                               idx_nonzero=idx_nonzero,
-                               idx_exog=idx_nonzero[k_keep:] - k_keep,
-                               idx_excl=idx_excl,
-                               history=history,
-                               converged=converged,
-                               iterations=iterations
-                               )
+        res = ScreeningResults(
+            self,
+            results_pen=res_pen,
+            results_final=res_final,
+            idx_nonzero=idx_nonzero,
+            idx_exog=idx_nonzero[k_keep:] - k_keep,
+            idx_excl=idx_excl,
+            history=history,
+            converged=converged,
+            iterations=iterations,
+        )
         return res
 
     def screen_exog_iterator(self, exog_iterator):
@@ -417,18 +434,17 @@ class VariableScreening:
         exog_winner = np.column_stack(exog_winner)
         res_screen_final = self.screen_exog(exog_winner, maxiter=20)
 
-        exog_winner_names = ["var%d_%d" % (bidx, idx)
-                             for bidx, batch in enumerate(exog_idx)
-                             for idx in batch]
+        exog_winner_names = [
+            "var%d_%d" % (bidx, idx)
+            for bidx, batch in enumerate(exog_idx)
+            for idx in batch
+        ]
 
-        idx_full = [(bidx, idx)
-                    for bidx, batch in enumerate(exog_idx)
-                    for idx in batch]
+        idx_full = [(bidx, idx) for bidx, batch in enumerate(exog_idx) for idx in batch]
         ex_final_idx = res_screen_final.idx_nonzero[k_keep:] - k_keep
         final_names = np.array(exog_winner_names)[ex_final_idx]
         res_screen_final.idx_nonzero_batches = np.array(idx_full)[ex_final_idx]
         res_screen_final.exog_final_names = final_names
-        history = {"idx_nonzero": res_idx,
-                   "idx_exog": exog_idx}
+        history = {"idx_nonzero": res_idx, "idx_exog": exog_idx}
         res_screen_final.history_batches = history
         return res_screen_final

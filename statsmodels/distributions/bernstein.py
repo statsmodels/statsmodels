@@ -44,7 +44,7 @@ class BernsteinDistribution:
         self.cdf_grid = cdf_grid = np.asarray(cdf_grid)
         self.k_dim = cdf_grid.ndim
         self.k_grid = cdf_grid.shape
-        self.k_grid_product = np.prod([i-1 for i in self.k_grid])
+        self.k_grid_product = np.prod([i - 1 for i in self.k_grid])
         self._grid = _Grid(self.k_grid)
 
     @classmethod
@@ -197,8 +197,9 @@ class BernsteinDistribution:
                     xgi = self._grid.x_marginal[j][idx[j]]
                     # Note: x_marginal starts at 0
                     #       x_marginal ends with 1 but that is not used by idx
-                    rvsi.append(stats.beta.rvs(n * xgi + 1, n * (1-xgi) + 0,
-                                               size=rvs_mnl[i]))
+                    rvsi.append(
+                        stats.beta.rvs(n * xgi + 1, n * (1 - xgi) + 0, size=rvs_mnl[i])
+                    )
                 rvs_m.append(np.column_stack(rvsi))
 
         rvsm = np.concatenate(rvs_m)
@@ -226,6 +227,7 @@ class BernsteinDistributionUV(BernsteinDistribution):
 
     def pdf(self, x, method="binom"):
         # TODO: check usage of k_grid_product. Should this go into eval?
-        pdf_ = self.k_grid_product * _eval_bernstein_1d(x, self.prob_grid,
-                                                        method=method)
+        pdf_ = self.k_grid_product * _eval_bernstein_1d(
+            x, self.prob_grid, method=method
+        )
         return pdf_

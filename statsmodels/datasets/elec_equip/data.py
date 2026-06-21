@@ -1,4 +1,5 @@
 """Euro area 18 - Total Turnover Index, Manufacture of electrical equipment"""
+
 import os
 
 import pandas as pd

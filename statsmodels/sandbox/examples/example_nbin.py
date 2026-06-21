@@ -228,6 +228,7 @@ class CountResults(GenericLikelihoodModelResults):
 
 # Score function for NB-P
 
+
 def _score_nbp(y, X, beta, thet, Q):
     r"""
     Negative Binomial Score -- type P likelihood from Greene (2007)

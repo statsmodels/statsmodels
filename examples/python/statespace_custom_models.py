@@ -106,10 +106,7 @@ class TVRegression(sm.tsa.statespace.MLEModel):
     def __init__(self, y_t, x_t, w_t):
         exog = np.c_[x_t, w_t]  # shaped nobs x 2
 
-        super().__init__(endog=y_t,
-                                           exog=exog,
-                                           k_states=2,
-                                           initialization="diffuse")
+        super().__init__(endog=y_t, exog=exog, k_states=2, initialization="diffuse")
 
         # Since the design matrix is time-varying, it must be
         # shaped k_endog x k_states x nobs
@@ -146,7 +143,8 @@ class TVRegression(sm.tsa.statespace.MLEModel):
         """
         constrained = unconstrained.copy()
         constrained[self.positive_parameters] = (
-            constrained[self.positive_parameters]**2)
+            constrained[self.positive_parameters] ** 2
+        )
         return constrained
 
     def untransform_params(self, constrained):
@@ -156,7 +154,8 @@ class TVRegression(sm.tsa.statespace.MLEModel):
         """
         unconstrained = constrained.copy()
         unconstrained[self.positive_parameters] = (
-            unconstrained[self.positive_parameters]**0.5)
+            unconstrained[self.positive_parameters] ** 0.5
+        )
         return unconstrained
 
     def update(self, params, **kwargs):
@@ -345,10 +344,7 @@ class TVRegressionExtended(sm.tsa.statespace.MLEModel):
     def __init__(self, y_t, x_t, w_t):
         exog = np.c_[x_t, w_t]  # shaped nobs x 2
 
-        super().__init__(endog=y_t,
-                                                   exog=exog,
-                                                   k_states=2,
-                                                   initialization="diffuse")
+        super().__init__(endog=y_t, exog=exog, k_states=2, initialization="diffuse")
 
         # Since the design matrix is time-varying, it must be
         # shaped k_endog x k_states x nobs
@@ -363,9 +359,7 @@ class TVRegressionExtended(sm.tsa.statespace.MLEModel):
 
     @property
     def param_names(self):
-        return [
-            "intercept", "var.e", "var.x.coeff", "var.w.coeff", "rho1", "rho2"
-        ]
+        return ["intercept", "var.e", "var.x.coeff", "var.w.coeff", "rho1", "rho2"]
 
     @property
     def start_params(self):
@@ -388,7 +382,8 @@ class TVRegressionExtended(sm.tsa.statespace.MLEModel):
         """
         constrained = unconstrained.copy()
         constrained[self.positive_parameters] = (
-            constrained[self.positive_parameters]**2)
+            constrained[self.positive_parameters] ** 2
+        )
         return constrained
 
     def untransform_params(self, constrained):
@@ -398,7 +393,8 @@ class TVRegressionExtended(sm.tsa.statespace.MLEModel):
         """
         unconstrained = constrained.copy()
         unconstrained[self.positive_parameters] = (
-            unconstrained[self.positive_parameters]**0.5)
+            unconstrained[self.positive_parameters] ** 0.5
+        )
         return unconstrained
 
     def update(self, params, **kwargs):
@@ -505,8 +501,7 @@ def gen_data_for_model3():
 
     def gen_alpha1(alpha1, alpha2):
         w1 = np.sqrt(true_values["var_w1"]) * np.random.randn()
-        return true_values["delta1"] * alpha1 + true_values[
-            "delta2"] * alpha2 + w1
+        return true_values["delta1"] * alpha1 + true_values["delta2"] * alpha2 + w1
 
     def gen_alpha2(alpha2):
         w2 = np.sqrt(true_values["var_w2"]) * np.random.randn()
@@ -642,10 +637,9 @@ class MultipleYsModel(sm.tsa.statespace.MLEModel):
 
         exog = np.c_[s_t, np.repeat(1, len(s_t))]  # exog.shape => (nobs, 2)
 
-        super().__init__(endog=np.c_[i_t, m_t],
-                                              exog=exog,
-                                              k_states=2,
-                                              initialization="diffuse")
+        super().__init__(
+            endog=np.c_[i_t, m_t], exog=exog, k_states=2, initialization="diffuse"
+        )
 
         self.ssm["design"] = np.zeros((self.k_endog, self.k_states, self.nobs))
         self.ssm["design", 0, 0, :] = s_t
@@ -657,13 +651,9 @@ class MultipleYsModel(sm.tsa.statespace.MLEModel):
         self.ssm["transition"] = np.eye(self.k_states)
 
         # Dictionary of positions to names
-        self.position_dict = OrderedDict(var_e1=1,
-                                         var_e2=2,
-                                         var_w1=3,
-                                         var_w2=4,
-                                         delta1=5,
-                                         delta2=6,
-                                         delta3=7)
+        self.position_dict = OrderedDict(
+            var_e1=1, var_e2=2, var_w1=3, var_w2=4, delta1=5, delta2=6, delta3=7
+        )
         self.initial_values = starting_values
         self.positive_parameters = slice(0, 4)
 
@@ -677,13 +667,15 @@ class MultipleYsModel(sm.tsa.statespace.MLEModel):
         Initial values
         """
         # (optional) Use scale for var_e1 and var_e2 starting values
-        params = np.r_[self.initial_values["var_e1"],
-                       self.initial_values["var_e2"],
-                       self.initial_values["var_w1"],
-                       self.initial_values["var_w2"],
-                       self.initial_values["delta1"],
-                       self.initial_values["delta2"],
-                       self.initial_values["delta3"], ]
+        params = np.r_[
+            self.initial_values["var_e1"],
+            self.initial_values["var_e2"],
+            self.initial_values["var_w1"],
+            self.initial_values["var_w2"],
+            self.initial_values["delta1"],
+            self.initial_values["delta2"],
+            self.initial_values["delta3"],
+        ]
         return params
 
     def transform_params(self, unconstrained):
@@ -694,7 +686,8 @@ class MultipleYsModel(sm.tsa.statespace.MLEModel):
         """
         constrained = unconstrained.copy()
         constrained[self.positive_parameters] = (
-            constrained[self.positive_parameters]**2)
+            constrained[self.positive_parameters] ** 2
+        )
         return constrained
 
     def untransform_params(self, constrained):
@@ -703,7 +696,8 @@ class MultipleYsModel(sm.tsa.statespace.MLEModel):
         """
         unconstrained = constrained.copy()
         unconstrained[self.positive_parameters] = (
-            unconstrained[self.positive_parameters]**0.5)
+            unconstrained[self.positive_parameters] ** 0.5
+        )
         return unconstrained
 
     def update(self, params, **kwargs):
@@ -711,9 +705,7 @@ class MultipleYsModel(sm.tsa.statespace.MLEModel):
 
         # The following line is not needed (by default, this matrix is initialized by zeroes),
         # But I leave it here so the dimensions are clearer
-        self["obs_intercept"] = np.repeat([np.array([0, 0])],
-                                          self.nobs,
-                                          axis=0).T
+        self["obs_intercept"] = np.repeat([np.array([0, 0])], self.nobs, axis=0).T
 
         self["obs_cov", 0, 0] = params[0]
         self["obs_cov", 1, 1] = params[1]
@@ -761,14 +753,14 @@ class Loglike(tt.Op):
         self.score = Score(self.model)
 
     def perform(self, node, inputs, outputs):
-        (theta, ) = inputs  # contains the vector of parameters
+        (theta,) = inputs  # contains the vector of parameters
         llf = self.model.loglike(theta)
         outputs[0][0] = np.array(llf)  # output the log-likelihood
 
     def grad(self, inputs, g):
         # the method that calculates the gradients - it actually returns the
         # vector-Jacobian product - g[0] is a vector of parameter values
-        (theta, ) = inputs  # our parameters
+        (theta,) = inputs  # our parameters
         out = [g[0] * self.score(theta)]
         return out
 
@@ -781,7 +773,7 @@ class Score(tt.Op):
         self.model = model
 
     def perform(self, node, inputs, outputs):
-        (theta, ) = inputs
+        (theta,) = inputs
         outputs[0][0] = self.model.score(theta)
 
 

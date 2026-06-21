@@ -88,7 +88,8 @@ class CFASimulationSmoother:
         self.prefix_simulation_smoother_map = (
             cfa_simulation_smoother_classes
             if cfa_simulation_smoother_classes is not None
-            else tools.prefix_cfa_simulation_smoother_map.copy())
+            else tools.prefix_cfa_simulation_smoother_map.copy()
+        )
 
         self._simulation_smoothers = {}
 
@@ -121,7 +122,8 @@ class CFASimulationSmoother:
         """
         if self._posterior_mean is None:
             self._posterior_mean = np.array(
-                self._simulation_smoother.posterior_mean, copy=True)
+                self._simulation_smoother.posterior_mean, copy=True
+            )
         return self._posterior_mean
 
     @property
@@ -141,7 +143,8 @@ class CFASimulationSmoother:
         """
         if self._posterior_cov_inv_chol is None:
             self._posterior_cov_inv_chol = np.array(
-                self._simulation_smoother.posterior_cov_inv_chol, copy=True)
+                self._simulation_smoother.posterior_cov_inv_chol, copy=True
+            )
         return self._posterior_cov_inv_chol
 
     @property
@@ -169,9 +172,11 @@ class CFASimulationSmoother:
         """
         if self._posterior_cov is None:
             from scipy.linalg import cho_solve_banded
+
             inv_chol = self.posterior_cov_inv_chol_sparse
             self._posterior_cov = cho_solve_banded(
-                (inv_chol, True), np.eye(inv_chol.shape[1]))
+                (inv_chol, True), np.eye(inv_chol.shape[1])
+            )
         return self._posterior_cov
 
     def simulate(self, variates=None, update_posterior=True):
@@ -229,9 +234,9 @@ class CFASimulationSmoother:
 
         # Validate variates and get in required datatype
         if variates is not None:
-            tools.validate_matrix_shape("variates", variates.shape,
-                                        self.model.k_states,
-                                        self.model.nobs, 1)
+            tools.validate_matrix_shape(
+                "variates", variates.shape, self.model.k_states, self.model.nobs, 1
+            )
             variates = np.ravel(variates, order="F").astype(dtype)
 
         # (Re) initialize the state
@@ -240,8 +245,7 @@ class CFASimulationSmoother:
         # Construct the Cython simulation smoother instance, if necessary
         if create or prefix not in self._simulation_smoothers:
             cls = self.prefix_simulation_smoother_map[prefix]
-            self._simulation_smoothers[prefix] = cls(
-                self.model._statespaces[prefix])
+            self._simulation_smoothers[prefix] = cls(self.model._statespaces[prefix])
         sim = self._simulation_smoothers[prefix]
 
         # Update posterior moments, if requested

@@ -120,8 +120,7 @@ pd.DataFrame(
 # both exog in `SARIMAX` and the trend in `ARIMA` are treated as linear
 # regression models with ARMA errors.
 
-sarimax_exog_res = SARIMAX(y, exog=np.ones_like(y), order=(1, 0, 0),
-                           trend="n").fit()
+sarimax_exog_res = SARIMAX(y, exog=np.ones_like(y), order=(1, 0, 0), trend="n").fit()
 print(sarimax_exog_res.summary())
 
 # ### Using `exog` in `SARIMAX` and `ARIMA`
@@ -465,8 +464,12 @@ psi = -0.6
 beta = 20
 epsilon = eta.copy()
 for i in range(13, eta.shape[0]):
-    epsilon[i] = (rho * epsilon[i - 1] + psi * epsilon[i - 12] -
-                  (rho * psi) * epsilon[i - 13] + eta[i])
+    epsilon[i] = (
+        rho * epsilon[i - 1]
+        + psi * epsilon[i - 12]
+        - (rho * psi) * epsilon[i - 13]
+        + eta[i]
+    )
 y = beta + epsilon
 y = y[200:]
 
@@ -485,13 +488,13 @@ import matplotlib.pyplot as plt
 plt.rc("figure", figsize=(10, 10))
 plt.rc("font", size=14)
 
-_ = plt.scatter(res.resid[:13], eta[200:200 + 13])
+_ = plt.scatter(res.resid[:13], eta[200 : 200 + 13])
 
 # Looking at the next 24 residuals and shocks, we see there is nearly
 # perfect correlation. This is expected in large samples once the less
 # accurate residuals are ignored.
 
-_ = plt.scatter(res.resid[13:37], eta[200 + 13:200 + 37])
+_ = plt.scatter(res.resid[13:37], eta[200 + 13 : 200 + 37])
 
 # Next, we simulate an ARIMA(1,1,0), and include a time trend.
 

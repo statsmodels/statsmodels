@@ -10,14 +10,17 @@ from statsmodels.tsa.innovations import arma_innovations
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
-@pytest.mark.parametrize("ar_params,ma_params,sigma2", [
-    (np.array([]), np.array([]), 1),
-    (np.array([0.]), np.array([0.]), 1),
-    (np.array([0.9]), np.array([]), 1),
-    (np.array([]), np.array([0.9]), 1),
-    (np.array([0.2, -0.4, 0.1, 0.1]), np.array([0.5, 0.1]), 1.123),
-    (np.array([0.5, 0.1]), np.array([0.2, -0.4, 0.1, 0.1]), 1.123),
-])
+@pytest.mark.parametrize(
+    "ar_params,ma_params,sigma2",
+    [
+        (np.array([]), np.array([]), 1),
+        (np.array([0.0]), np.array([0.0]), 1),
+        (np.array([0.9]), np.array([]), 1),
+        (np.array([]), np.array([0.9]), 1),
+        (np.array([0.2, -0.4, 0.1, 0.1]), np.array([0.5, 0.1]), 1.123),
+        (np.array([0.5, 0.1]), np.array([0.2, -0.4, 0.1, 0.1]), 1.123),
+    ],
+)
 def test_innovations_algo_filter_kalman_filter(ar_params, ma_params, sigma2):
     # Test the innovations algorithm and filter against the Kalman filter
     # for exact likelihood evaluation of an ARMA process
@@ -26,11 +29,9 @@ def test_innovations_algo_filter_kalman_filter(ar_params, ma_params, sigma2):
 
     # Innovations algorithm approach
     llf = arma_innovations.arma_loglike(endog, ar_params, ma_params, sigma2)
-    llf_obs = arma_innovations.arma_loglikeobs(endog, ar_params, ma_params,
-                                               sigma2)
+    llf_obs = arma_innovations.arma_loglikeobs(endog, ar_params, ma_params, sigma2)
     score = arma_innovations.arma_score(endog, ar_params, ma_params, sigma2)
-    score_obs = arma_innovations.arma_scoreobs(endog, ar_params, ma_params,
-                                               sigma2)
+    score_obs = arma_innovations.arma_scoreobs(endog, ar_params, ma_params, sigma2)
 
     # Kalman filter apparoach
     mod = SARIMAX(endog, order=(len(ar_params), 0, len(ma_params)))

@@ -2,6 +2,7 @@
 Summary Table formating
 This is here to help keep the formating consistent across the different models
 """
+
 import copy
 
 gen_fmt = {
@@ -20,7 +21,7 @@ gen_fmt = {
     "header_align": "r",
     "data_aligns": "r",
     "stubs_align": "l",
-    "fmt": "txt"
+    "fmt": "txt",
 }
 
 # Note table_1l_fmt over rides the below formating unless it is not
@@ -41,7 +42,7 @@ fmt_1_right = {
     "header_align": "r",
     "data_aligns": "r",
     "stubs_align": "l",
-    "fmt": "txt"
+    "fmt": "txt",
 }
 
 fmt_2 = {
@@ -60,7 +61,7 @@ fmt_2 = {
     "header_align": "r",
     "data_aligns": "r",
     "stubs_align": "l",
-    "fmt": "txt"
+    "fmt": "txt",
 }
 
 
@@ -81,7 +82,7 @@ fmt_base = {
     "header_align": "r",
     "data_aligns": "r",
     "stubs_align": "l",
-    "fmt": "txt"
+    "fmt": "txt",
 }
 
 fmt_2cols = copy.deepcopy(fmt_base)
@@ -126,7 +127,8 @@ fmt_latex = {
     "stub_align": "l",
     "stub_fmt": "%s",
     "table_dec_above": "\\hline",
-    "table_dec_below": "\\hline"}
+    "table_dec_below": "\\hline",
+}
 
 fmt_txt = {
     "colsep": " ",
@@ -149,4 +151,5 @@ fmt_txt = {
     "stub_fmt": "%s",
     "table_dec_above": "-",
     "table_dec_below": None,
-    "title_align": "c"}
+    "title_align": "c",
+}

@@ -21,8 +21,17 @@ class ContrastResults:
     normal, the t, the F or the chisquare distribution.
     """
 
-    def __init__(self, t=None, F=None, sd=None, effect=None, df_denom=None,
-                 df_num=None, alpha=0.05, **kwds):
+    def __init__(
+        self,
+        t=None,
+        F=None,
+        sd=None,
+        effect=None,
+        df_denom=None,
+        df_num=None,
+        alpha=0.05,
+        **kwds,
+    ):
 
         self.effect = effect  # Let it be None for F
         if F is not None:
@@ -92,7 +101,7 @@ class ContrastResults:
         """
         if self.effect is not None:
             # confidence intervals
-            q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
+            q = self.dist.ppf(1 - alpha / 2.0, *self.dist_args)
             lower = self.effect - q * self.sd
             upper = self.effect + q * self.sd
             return np.column_stack((lower, upper))
@@ -280,6 +289,7 @@ class Contrast:
     >>> np.allclose(c3.contrast_matrix, test2)
     True
     """
+
     def _get_matrix(self):
         """
         Gets the contrast_matrix property
@@ -314,6 +324,7 @@ class Contrast:
             self.rank = self.matrix.shape[1]
         except (AttributeError, IndexError):
             self.rank = 1
+
 
 # TODO: fix docstring after usage is settled
 
@@ -357,7 +368,7 @@ def contrastfromcols(L, D, pseudo=None):
         raise ValueError("shape of L and D mismatched")
 
     if pseudo is None:
-        pseudo = np.linalg.pinv(D)    # D^+ \approx= ((dot(D.T,D))^(-1),D.T)
+        pseudo = np.linalg.pinv(D)  # D^+ \approx= ((dot(D.T,D))^(-1),D.T)
 
     if L.shape[0] == n:
         C = np.dot(pseudo, L).T
@@ -381,8 +392,7 @@ def contrastfromcols(L, D, pseudo=None):
 class WaldTestResults:
     # for F and chi2 tests of joint hypothesis, mainly for vectorized
 
-    def __init__(self, statistic, distribution, dist_args, table=None,
-                 pvalues=None):
+    def __init__(self, statistic, distribution, dist_args, table=None, pvalues=None):
         self.table = table
 
         self.distribution = distribution
@@ -417,8 +427,7 @@ class WaldTestResults:
 
     @property
     def col_names(self):
-        """column names for summary table
-        """
+        """column names for summary table"""
 
         pr_test = "P>%s" % self.distribution
         col_names = [self.distribution, pr_test, "df constraint"]
@@ -446,11 +455,11 @@ class WaldTestResults:
 
 
 def _get_pairs_labels(k_level, level_names):
-    """helper function for labels for pairwise comparisons
-    """
+    """helper function for labels for pairwise comparisons"""
     idx_pairs_all = np.triu_indices(k_level, 1)
-    labels = [f"{level_names[name[1]]}-{level_names[name[0]]}"
-              for name in zip(*idx_pairs_all)]
+    labels = [
+        f"{level_names[name[1]]}-{level_names[name[0]]}" for name in zip(*idx_pairs_all)
+    ]
     return labels
 
 
@@ -496,8 +505,9 @@ def _contrast_pairs(k_params, k_level, idx_start):
     return contrasts
 
 
-def t_test_multi(result, contrasts, method="hs", alpha=0.05, ci_method=None,
-                 contrast_names=None):
+def t_test_multi(
+    result, contrasts, method="hs", alpha=0.05, ci_method=None, contrast_names=None
+):
     """perform t_test and add multiplicity correction to results dataframe
 
     Parameters
@@ -540,6 +550,7 @@ class MultiCompResult:
 
     currently just a minimal class to hold attributes.
     """
+
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
@@ -579,8 +590,9 @@ def _embed_constraints(contrasts, k_params, idx_start, index=None):
     return c
 
 
-def _constraints_factor(encoding_matrix, comparison="pairwise", k_params=None,
-                        idx_start=None):
+def _constraints_factor(
+    encoding_matrix, comparison="pairwise", k_params=None, idx_start=None
+):
     """helper function to create constraints based on encoding matrix
 
     Parameters
@@ -612,6 +624,7 @@ def _constraints_factor(encoding_matrix, comparison="pairwise", k_params=None,
     k_level, k_p = cm.shape
 
     import statsmodels.sandbox.stats.multicomp as mc
+
     if comparison in ["pairwise", "pw", "pairs"]:
         c_all = -mc.contrast_allpairs(k_level)
     else:
@@ -620,14 +633,14 @@ def _constraints_factor(encoding_matrix, comparison="pairwise", k_params=None,
     contrasts = c_all.dot(cm)
     if k_params is not None:
         if idx_start is None:
-            raise ValueError("if k_params is not None, then idx_start is "
-                             "required")
+            raise ValueError("if k_params is not None, then idx_start is " "required")
         contrasts = _embed_constraints(contrasts, k_params, idx_start)
     return contrasts
 
 
-def t_test_pairwise(result, term_name, method="hs", alpha=0.05,
-                    factor_labels=None, ignore=False):
+def t_test_pairwise(
+    result, term_name, method="hs", alpha=0.05, factor_labels=None, ignore=False
+):
     """
     Perform pairwise t_test with multiple testing corrected p-values.
 
@@ -690,7 +703,9 @@ def t_test_pairwise(result, term_name, method="hs", alpha=0.05,
         if len(factor_labels) == len(cat):
             cat = factor_labels
         else:
-            raise ValueError("factor_labels has the wrong length, should be %d" % len(cat))
+            raise ValueError(
+                "factor_labels has the wrong length, should be %d" % len(cat)
+            )
 
     k_level = len(cat)
     cm = mgr.get_contrast_matrix(term, factor, model_spec)
@@ -699,16 +714,25 @@ def t_test_pairwise(result, term_name, method="hs", alpha=0.05,
     labels = _get_pairs_labels(k_level, cat)
 
     import statsmodels.sandbox.stats.multicomp as mc
+
     c_all_pairs = -mc.contrast_allpairs(k_level)
     contrasts_sub = c_all_pairs.dot(cm)
     contrasts = _embed_constraints(contrasts_sub, k_params, idx_start)
-    res_df = t_test_multi(result, contrasts, method=method, ci_method=None,
-                          alpha=alpha, contrast_names=labels)
-    res = MultiCompResult(result_frame=res_df,
-                          contrasts=contrasts,
-                          term=term,
-                          contrast_labels=labels,
-                          term_encoding_matrix=cm)
+    res_df = t_test_multi(
+        result,
+        contrasts,
+        method=method,
+        ci_method=None,
+        alpha=alpha,
+        contrast_names=labels,
+    )
+    res = MultiCompResult(
+        result_frame=res_df,
+        contrasts=contrasts,
+        term=term,
+        contrast_labels=labels,
+        term_encoding_matrix=cm,
+    )
     return res
 
 
@@ -780,8 +804,9 @@ def wald_test_noncent(params, r_matrix, value, results, diff=None, joint=True):
     return nc
 
 
-def wald_test_noncent_generic(params, r_matrix, value, cov_params, diff=None,
-                              joint=True):
+def wald_test_noncent_generic(
+    params, r_matrix, value, cov_params, diff=None, joint=True
+):
     """noncentrality parameter for a wald test
 
     The null hypothesis is ``diff = r_matrix @ params - value = 0``

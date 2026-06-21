@@ -16,6 +16,7 @@ General References
 Owen, A.B. (2001). Empirical Likelihood.  Chapman and Hall. p. 82.
 
 """
+
 import numpy as np
 from scipy import optimize
 from scipy.stats import chi2
@@ -53,6 +54,7 @@ class ELOriginRegress:
     nvar : float
         Number of exogenous regressors.
     """
+
     def __init__(self, endog, exog):
         self.endog = endog
         self.exog = exog
@@ -60,7 +62,7 @@ class ELOriginRegress:
         try:
             self.nvar = float(exog.shape[1])
         except IndexError:
-            self.nvar = 1.
+            self.nvar = 1.0
 
     def fit(self):
         """
@@ -152,6 +154,7 @@ class OriginResults(RegressionResults):
     >>> fitted.conf_int()
     TypeError: unsupported operand type(s) for *: 'instancemethod' and 'float'
     """
+
     def __init__(self, model, params, est_llr, llf_el):
         self.model = model
         self.params = np.squeeze(params)
@@ -254,11 +257,11 @@ class OriginResults(RegressionResults):
         r0 = chi2.ppf(1 - sig, 1)
         param_num = np.array([param_num])
         if upper_bound is None:
-            ci = np.asarray(self.model.fit().conf_int(.0001))
-            upper_bound = (np.squeeze(ci[param_num])[1])
+            ci = np.asarray(self.model.fit().conf_int(0.0001))
+            upper_bound = np.squeeze(ci[param_num])[1]
         if lower_bound is None:
-            ci = np.asarray(self.model.fit().conf_int(.0001))
-            lower_bound = (np.squeeze(ci[param_num])[0])
+            ci = np.asarray(self.model.fit().conf_int(0.0001))
+            lower_bound = np.squeeze(ci[param_num])[0]
 
         def f(b0):
             b0 = np.array([b0])

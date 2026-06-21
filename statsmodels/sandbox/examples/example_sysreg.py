@@ -200,22 +200,16 @@ TableF5-1.txt",
     wexog = sm.add_constant(wexog, prepend=False)
     params = sm.GLS(data3["realinvs"][1:], wexog).fit().params
 
-    print(
-        "These are the simultaneous equation estimates for Greene's \
-example 13-1 (Also application 13-1 in 6th edition."
-    )
+    print("These are the simultaneous equation estimates for Greene's \
+example 13-1 (Also application 13-1 in 6th edition.")
     print(sem_params)
     print("The first set of parameters is correct.  The second set is not.")
-    print(
-        "Compare to the solution manual at \
-http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm"
-    )
+    print("Compare to the solution manual at \
+http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm")
     print("The reason is the restriction on (y_t - y_1)")
     print("Compare to R script GreeneEx15_1.s")
-    print(
-        "Somehow R carries y.1 in yd to know that it needs to be \
-instrumented"
-    )
+    print("Somehow R carries y.1 in yd to know that it needs to be \
+instrumented")
     print("If we replace our estimate with the instrumented one")
     print(params)
     print("We get the right estimate")

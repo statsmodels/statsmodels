@@ -57,7 +57,7 @@ def target_rotation(A, H, full_rank=False):
     """
     ATH = A.T.dot(H)
     if full_rank or np.linalg.matrix_rank(ATH) == A.shape[1]:
-        T = sp.linalg.fractional_matrix_power(ATH.dot(ATH.T), -1/2).dot(ATH)
+        T = sp.linalg.fractional_matrix_power(ATH.dot(ATH.T), -1 / 2).dot(ATH)
     else:
         U, D, V = np.linalg.svd(ATH, full_matrices=False)
         T = U.dot(V)
@@ -141,8 +141,9 @@ def promax(A, k=2):
     assert k > 0
     # define rotation target using varimax rotation:
     from ._wrappers import rotate_factors
+
     V, T = rotate_factors(A, "varimax")
-    H = np.abs(V)**k/V
+    H = np.abs(V) ** k / V
     # solve procrustes problem
     S = procrustes(A, H)  # np.linalg.inv(A.T.dot(A)).dot(A.T).dot(H);
     # normalize

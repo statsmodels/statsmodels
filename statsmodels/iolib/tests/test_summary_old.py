@@ -14,6 +14,7 @@ def test_regression_summary():
     import time
 
     from statsmodels.regression.tests.test_regression import TestOLS
+
     t = time.localtime()
     desired = Template(
         """\
@@ -66,8 +67,8 @@ def test_regression_summary():
 
     actual = r_summary
     actual = "\n".join(line.rstrip() for line in actual.split("\n"))
-#    counter = 0
-#    for c1,c2 in zip(actual, desired):
-#        if not c1==c2 and counter<20:
-#            counter += 1
+    #    counter = 0
+    #    for c1,c2 in zip(actual, desired):
+    #        if not c1==c2 and counter<20:
+    #            counter += 1
     assert actual == desired

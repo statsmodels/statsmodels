@@ -25,8 +25,9 @@ def test_panel_robust_cov():
     # Stata example/data seems to miss last firm
     dtapa_endog = dtapa.endog[:200]
     dtapa_exog = dtapa.exog[:200]
-    res = OLS(dtapa_endog, add_constant(dtapa_exog[["value", "capital"]],
-              prepend=False)).fit()
+    res = OLS(
+        dtapa_endog, add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+    ).fit()
 
     # time indicator in range(max Ti)
     time = np.require(dtapa_exog[["year"]], requirements="W")
@@ -34,11 +35,12 @@ def test_panel_robust_cov():
     time = np.squeeze(time).astype(int)
 
     # sw.cov_nw_panel requires bounds instead of index
-    tidx = [(i*20, 20*(i+1)) for i in range(10)]
+    tidx = [(i * 20, 20 * (i + 1)) for i in range(10)]
 
     # firm index in range(n_firms)
-    firm_names, firm_id = np.unique(np.asarray(dtapa_exog[["firm"]], "S20"),
-                                    return_inverse=True)
+    firm_names, firm_id = np.unique(
+        np.asarray(dtapa_exog[["firm"]], "S20"), return_inverse=True
+    )
 
     # panel newey west standard errors
     cov = sw.cov_nw_panel(res, 0, tidx, use_correction="hac")

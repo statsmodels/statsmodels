@@ -47,6 +47,7 @@ class NonlinearDeltaCov:
 
 
     """
+
     def __init__(self, func, params, cov_params, deriv=None, func_args=None):
         self.fun = func
         self.params = params
@@ -83,16 +84,17 @@ class NonlinearDeltaCov:
             # copied from discrete_margins
             try:
                 from statsmodels.tools.numdiff import approx_fprime_cs
+
                 jac = approx_fprime_cs(params, self.fun, **kwds)
             except TypeError:  # norm.cdf doesn't take complex values
                 from statsmodels.tools.numdiff import approx_fprime
+
                 jac = approx_fprime(params, self.fun, **kwds)
 
             return jac
 
     def cov(self):
-        """Covariance matrix of the transformed random variable.
-        """
+        """Covariance matrix of the transformed random variable."""
         g = self.grad()
         covar = np.dot(np.dot(g, self.cov_params), g.T)
         return covar
@@ -144,9 +146,7 @@ class NonlinearDeltaCov:
         return lmstat, stats.chi2.sf(lmstat, df_constraints)
 
     def var(self):
-        """standard error for each equation (row) treated separately
-
-        """
+        """standard error for each equation (row) treated separately"""
         g = self.grad()
         var = (np.dot(g, self.cov_params) * g).sum(-1)
 
@@ -155,14 +155,13 @@ class NonlinearDeltaCov:
         return var
 
     def se_vectorized(self):
-        """standard error for each equation (row) treated separately
-
-        """
+        """standard error for each equation (row) treated separately"""
         var = self.var()
         return np.sqrt(var)
 
-    def conf_int(self, alpha=0.05, use_t=False, df=None, var_extra=None,
-                 predicted=None, se=None):
+    def conf_int(
+        self, alpha=0.05, use_t=False, df=None, var_extra=None, predicted=None, se=None
+    ):
         """
         Confidence interval for predicted based on delta method.
 
@@ -215,7 +214,7 @@ class NonlinearDeltaCov:
         if var_extra is not None:
             se = np.sqrt(se**2 + var_extra)
 
-        q = dist.ppf(1 - alpha / 2., *dist_args)
+        q = dist.ppf(1 - alpha / 2.0, *dist_args)
         lower = predicted - q * se
         upper = predicted + q * se
         ci = np.column_stack((lower, upper))
@@ -223,8 +222,7 @@ class NonlinearDeltaCov:
             raise RuntimeError("something wrong: ci not 2 columns")
         return ci
 
-    def summary(self, xname=None, alpha=0.05, title=None, use_t=False,
-                df=None):
+    def summary(self, xname=None, alpha=0.05, title=None, use_t=False, df=None):
         """Summarize the Results of the nonlinear transformation.
 
         This provides a parameter table equivalent to `t_test` and reuses
@@ -258,6 +256,7 @@ class NonlinearDeltaCov:
         """
         # this is an experimental reuse of ContrastResults
         from statsmodels.stats.contrast import ContrastResults
+
         predicted = self.predicted()
         se = self.se_vectorized()
         # TODO check shape for scalar case, ContrastResults requires iterable
@@ -269,10 +268,16 @@ class NonlinearDeltaCov:
         statistic = predicted / se
         if use_t:
             df_resid = df
-            cr = ContrastResults(effect=predicted, t=statistic, sd=se,
-                                 df_denom=df_resid)
+            cr = ContrastResults(
+                effect=predicted, t=statistic, sd=se, df_denom=df_resid
+            )
         else:
-            cr = ContrastResults(effect=predicted, statistic=statistic, sd=se,
-                                 df_denom=None, distribution="norm")
+            cr = ContrastResults(
+                effect=predicted,
+                statistic=statistic,
+                sd=se,
+                df_denom=None,
+                distribution="norm",
+            )
 
         return cr.summary(xname=xname, alpha=alpha, title=title)

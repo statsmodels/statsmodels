@@ -665,7 +665,7 @@ def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     assert_equal(mod.ssm.endog.flags["F_CONTIGUOUS"], True)
     assert_equal(mod.ssm.endog.shape, (k_endog, nobs))
     if mod.ssm.endog.base.ndim > 1:
-        assert (mod.ssm.endog.base is mod.endog or not mod.endog.flags.writeable)
+        assert mod.ssm.endog.base is mod.endog or not mod.endog.flags.writeable
     else:
         # Added to handle changes in numpy where shape cannot be assigned to
         # Even though array is no copy, the reshaped array is a new object
@@ -1243,25 +1243,25 @@ def check_states_index(states, ix, predicted_ix, cols):
     smoothed_cov_ix = pd.MultiIndex.from_product([ix, cols]).swaplevel()
 
     # Predicted
-    assert (states.predicted.index.equals(predicted_ix))
-    assert (states.predicted.columns.equals(cols))
+    assert states.predicted.index.equals(predicted_ix)
+    assert states.predicted.columns.equals(cols)
 
-    assert (states.predicted_cov.index.equals(predicted_cov_ix))
-    assert (states.predicted.columns.equals(cols))
+    assert states.predicted_cov.index.equals(predicted_cov_ix)
+    assert states.predicted.columns.equals(cols)
 
     # Filtered
-    assert (states.filtered.index.equals(ix))
-    assert (states.filtered.columns.equals(cols))
+    assert states.filtered.index.equals(ix)
+    assert states.filtered.columns.equals(cols)
 
-    assert (states.filtered_cov.index.equals(filtered_cov_ix))
-    assert (states.filtered.columns.equals(cols))
+    assert states.filtered_cov.index.equals(filtered_cov_ix)
+    assert states.filtered.columns.equals(cols)
 
     # Smoothed
-    assert (states.smoothed.index.equals(ix))
-    assert (states.smoothed.columns.equals(cols))
+    assert states.smoothed.index.equals(ix)
+    assert states.smoothed.columns.equals(cols)
 
-    assert (states.smoothed_cov.index.equals(smoothed_cov_ix))
-    assert (states.smoothed.columns.equals(cols))
+    assert states.smoothed_cov.index.equals(smoothed_cov_ix)
+    assert states.smoothed.columns.equals(cols)
 
 
 def test_states_index_periodindex():

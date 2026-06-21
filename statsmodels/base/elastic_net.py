@@ -43,7 +43,7 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
         nobs = model.nobs
         pen_llf = alpha[k] * (1 - L1_wt) * np.sum(params**2) / 2
         llf = model.loglike(np.r_[params], **loglike_kwds)
-        return - llf / nobs + pen_llf
+        return -llf / nobs + pen_llf
 
     def npscore(params, model):
         nobs = model.nobs
@@ -60,10 +60,21 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     return nploglike, npscore, nphess
 
 
-def fit_elasticnet(model, method="coord_descent", maxiter=100,
-                   alpha=0., L1_wt=1., start_params=None, cnvrg_tol=1e-7,
-                   zero_tol=1e-8, refit=False, check_step=True,
-                   loglike_kwds=None, score_kwds=None, hess_kwds=None):
+def fit_elasticnet(
+    model,
+    method="coord_descent",
+    maxiter=100,
+    alpha=0.0,
+    L1_wt=1.0,
+    start_params=None,
+    cnvrg_tol=1e-7,
+    zero_tol=1e-8,
+    refit=False,
+    check_step=True,
+    loglike_kwds=None,
+    score_kwds=None,
+    hess_kwds=None,
+):
     """
     Return an elastic net regularized fit to a regression model.
 
@@ -164,7 +175,8 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     fgh_list = [
         _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
-        for k in range(k_exog)]
+        for k in range(k_exog)
+    ]
 
     converged = False
 
@@ -191,18 +203,26 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
             # Create a one-variable model for optimization.
             model_1var = model.__class__(
-                model.endog, model.exog[:, k], offset=offset, **init_args)
+                model.endog, model.exog[:, k], offset=offset, **init_args
+            )
 
             # Do the one-dimensional optimization.
             func, grad, hess = fgh_list[k]
             params[k] = _opt_1d(
-                func, grad, hess, model_1var, params[k], alpha[k]*L1_wt,
-                tol=btol, check_step=check_step)
+                func,
+                grad,
+                hess,
+                model_1var,
+                params[k],
+                alpha[k] * L1_wt,
+                tol=btol,
+                check_step=check_step,
+            )
 
             # Update the active set
             if itr > 0 and np.abs(params[k]) < zero_tol:
                 params_zero[k] = True
-                params[k] = 0.
+                params[k] = 0.0
 
         # Check for convergence
         pchange = np.max(np.abs(params - params_save))
@@ -224,8 +244,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     cov = np.zeros((k_exog, k_exog))
     init_args = {k: getattr(model, k, None) for k in model._init_keys}
     if len(ii) > 0:
-        model1 = model.__class__(
-            model.endog, model.exog[:, ii], **init_args)
+        model1 = model.__class__(model.endog, model.exog[:, ii], **init_args)
         rslt = model1.fit()
         params[ii] = rslt.params
         cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
@@ -246,7 +265,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     if hasattr(rslt, "scale"):
         scale = rslt.scale
     else:
-        scale = 1.
+        scale = 1.0
 
     # The degrees of freedom should reflect the number of parameters
     # in the refit model, not including the zeros that are displayed
@@ -270,8 +289,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     return refit
 
 
-def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
-            check_step=True):
+def _opt_1d(func, grad, hess, model, start, L1_wt, tol, check_step=True):
     """
     One-dimensional helper for elastic net.
 
@@ -327,11 +345,11 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
     f = func(x, model)
     b = grad(x, model)
     c = hess(x, model)
-    d = b - c*x
+    d = b - c * x
 
     # The optimum is achieved by hard thresholding to zero
     if L1_wt > np.abs(d):
-        return 0.
+        return 0.0
 
     # x + h is the minimizer of the Q(x) + L1_wt*abs(x)
     if d >= 0:
@@ -346,13 +364,14 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
     # OLS
     if not check_step:
         return x + h
-    f1 = func(x + h, model) + L1_wt*np.abs(x + h)
-    if f1 <= f + L1_wt*np.abs(x) + 1e-10:
+    f1 = func(x + h, model) + L1_wt * np.abs(x + h)
+    if f1 <= f + L1_wt * np.abs(x) + 1e-10:
         return x + h
 
     # Fallback for models where the loss is not quadratic
     from scipy.optimize import brent
-    x_opt = brent(func, args=(model,), brack=(x-1, x+1), tol=tol)
+
+    x_opt = brent(func, args=(model,), brack=(x - 1, x + 1), tol=tol)
     return x_opt
 
 
@@ -367,6 +386,7 @@ class RegularizedResults(Results):
     params : ndarray
         The estimated (regularized) parameters.
     """
+
     def __init__(self, model, params):
         super().__init__(model, params)
 

@@ -1,4 +1,5 @@
 """Open the system browser to search or view online documentation."""
+
 from urllib.parse import urlencode
 import webbrowser
 

@@ -63,12 +63,8 @@ def test_number_of_seasonal_components(data, periods, windows, expected):
     "periods, windows",
     [((3, 5), 1), (7, (3, 5))],
 )
-def test_raise_value_error_when_periods_and_windows_diff_lengths(
-    periods, windows
-):
-    with pytest.raises(
-        ValueError, match="Periods and windows must have same length"
-    ):
+def test_raise_value_error_when_periods_and_windows_diff_lengths(periods, windows):
+    with pytest.raises(ValueError, match="Periods and windows must have same length"):
         MSTL(endog=[1, 2, 3, 4, 5], periods=periods, windows=windows)
 
 
@@ -108,9 +104,7 @@ def test_stl_kwargs_smoke(data):
         "outer_iter": 3,
     }
     periods = (5, 6, 7)
-    mod = MSTL(
-        endog=data, periods=periods, lmbda="auto", stl_kwargs=stl_kwargs
-    )
+    mod = MSTL(endog=data, periods=periods, lmbda="auto", stl_kwargs=stl_kwargs)
     mod.fit()
 
 
@@ -178,9 +172,7 @@ def test_output_invariant_to_period_order(
 ):
     mod1 = MSTL(endog=data, periods=periods_ordered, windows=windows_ordered)
     res1 = mod1.fit()
-    mod2 = MSTL(
-        endog=data, periods=periods_not_ordered, windows=windows_not_ordered
-    )
+    mod2 = MSTL(endog=data, periods=periods_not_ordered, windows=windows_not_ordered)
     res2 = mod2.fit()
 
     assert_equal(res1.observed, res2.observed)

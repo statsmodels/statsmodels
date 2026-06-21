@@ -24,10 +24,9 @@ import matplotlib.pyplot as plt
 from pandas_datareader.data import DataReader
 from datetime import datetime
 
-usrec = DataReader("USREC",
-                   "fred",
-                   start=datetime(1947, 1, 1),
-                   end=datetime(2013, 4, 1))
+usrec = DataReader(
+    "USREC", "fred", start=datetime(1947, 1, 1), end=datetime(2013, 4, 1)
+)
 
 # ### Federal funds rate with switching intercept
 #
@@ -56,10 +55,9 @@ usrec = DataReader("USREC",
 # Get the federal funds rate data
 from statsmodels.tsa.regime_switching.tests.test_markov_regression import fedfunds
 
-dta_fedfunds = pd.Series(fedfunds,
-                         index=pd.date_range("1954-07-01",
-                                             "2010-10-01",
-                                             freq="QS"))
+dta_fedfunds = pd.Series(
+    fedfunds, index=pd.date_range("1954-07-01", "2010-10-01", freq="QS")
+)
 
 # Plot the data
 dta_fedfunds.plot(title="Federal funds rate", figsize=(12, 3))
@@ -78,7 +76,8 @@ res_fedfunds.summary()
 # high federal funds rate existed.
 
 res_fedfunds.smoothed_marginal_probabilities[1].plot(
-    title="Probability of being in the high regime", figsize=(12, 3))
+    title="Probability of being in the high regime", figsize=(12, 3)
+)
 
 # From the estimated transition matrix we can calculate the expected
 # duration of a low regime versus a high regime.
@@ -110,9 +109,9 @@ print(res_fedfunds.expected_durations)
 # $p_{00}, p_{10}, \mu_0, \mu_1, \beta_0, \beta_1, \sigma^2$.
 
 # Fit the model
-mod_fedfunds2 = sm.tsa.MarkovRegression(dta_fedfunds.iloc[1:],
-                                        k_regimes=2,
-                                        exog=dta_fedfunds.iloc[:-1])
+mod_fedfunds2 = sm.tsa.MarkovRegression(
+    dta_fedfunds.iloc[1:], k_regimes=2, exog=dta_fedfunds.iloc[:-1]
+)
 res_fedfunds2 = mod_fedfunds2.fit()
 
 res_fedfunds2.summary()
@@ -129,7 +128,8 @@ res_fedfunds2.summary()
 # see quite a bit more variability.
 
 res_fedfunds2.smoothed_marginal_probabilities[0].plot(
-    title="Probability of being in the high regime", figsize=(12, 3))
+    title="Probability of being in the high regime", figsize=(12, 3)
+)
 
 # Finally, the expected durations of each regime have decreased quite a
 # bit.
@@ -149,25 +149,18 @@ print(res_fedfunds2.expected_durations)
 # Get the additional data
 from statsmodels.tsa.regime_switching.tests.test_markov_regression import ogap, inf
 
-dta_ogap = pd.Series(ogap,
-                     index=pd.date_range("1954-07-01", "2010-10-01",
-                                         freq="QS"))
-dta_inf = pd.Series(inf,
-                    index=pd.date_range("1954-07-01", "2010-10-01", freq="QS"))
+dta_ogap = pd.Series(ogap, index=pd.date_range("1954-07-01", "2010-10-01", freq="QS"))
+dta_inf = pd.Series(inf, index=pd.date_range("1954-07-01", "2010-10-01", freq="QS"))
 
 exog = pd.concat((dta_fedfunds.shift(), dta_ogap, dta_inf), axis=1).iloc[4:]
 
 # Fit the 2-regime model
-mod_fedfunds3 = sm.tsa.MarkovRegression(dta_fedfunds.iloc[4:],
-                                        k_regimes=2,
-                                        exog=exog)
+mod_fedfunds3 = sm.tsa.MarkovRegression(dta_fedfunds.iloc[4:], k_regimes=2, exog=exog)
 res_fedfunds3 = mod_fedfunds3.fit()
 
 # Fit the 3-regime model
 np.random.seed(12345)
-mod_fedfunds4 = sm.tsa.MarkovRegression(dta_fedfunds.iloc[4:],
-                                        k_regimes=3,
-                                        exog=exog)
+mod_fedfunds4 = sm.tsa.MarkovRegression(dta_fedfunds.iloc[4:], k_regimes=3, exog=exog)
 res_fedfunds4 = mod_fedfunds4.fit(search_reps=20)
 
 res_fedfunds3.summary()
@@ -213,10 +206,9 @@ fig.tight_layout()
 # Get the federal funds rate data
 from statsmodels.tsa.regime_switching.tests.test_markov_regression import areturns
 
-dta_areturns = pd.Series(areturns,
-                         index=pd.date_range("2004-05-04",
-                                             "2014-5-03",
-                                             freq="W"))
+dta_areturns = pd.Series(
+    areturns, index=pd.date_range("2004-05-04", "2014-5-03", freq="W")
+)
 
 # Plot the data
 dta_areturns.plot(title="Absolute returns, S&P500", figsize=(12, 3))
@@ -238,4 +230,5 @@ res_areturns.summary()
 # indication of one regime guiding the economy.
 
 res_areturns.smoothed_marginal_probabilities[0].plot(
-    title="Probability of being in a low-variance regime", figsize=(12, 3))
+    title="Probability of being in a low-variance regime", figsize=(12, 3)
+)

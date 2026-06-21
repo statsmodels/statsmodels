@@ -40,6 +40,7 @@ the diffuse observations.
 Author: Chad Fulton
 License: Simplified-BSD
 """
+
 from statsmodels.compat.platform import PLATFORM_WIN
 
 import os
@@ -65,6 +66,7 @@ macrodata.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
 
 
 # - Model definitions --------------------------------------------------------
+
 
 def model_local_level(endog=None, params=None, direct=False):
     if endog is None:
@@ -120,8 +122,7 @@ def model_local_linear_trend(endog=None, params=None, direct=False):
         # Fill in the system matrices for a local level model
         ssm["design", 0, 0] = 1
         ssm["obs_cov", 0, 0] = sigma2_y
-        ssm["transition"] = np.array([[1, 1],
-                                      [0, 1]])
+        ssm["transition"] = np.array([[1, 1], [0, 1]])
         ssm["selection"] = np.eye(2)
         ssm["state_cov"] = np.diag([sigma2_mu, sigma2_beta])
     else:
@@ -154,8 +155,7 @@ def model_common_level(endog=None, params=None, restricted=False):
         # ssm.filter_univariate = True  # should not be required
 
         # Fill in the system matrices for a common trend model
-        ssm["design"] = np.array([[1, 0],
-                                  [theta, 1]])
+        ssm["design"] = np.array([[1, 0], [theta, 1]])
         ssm["obs_cov"] = np.eye(2)
         ssm["transition"] = np.eye(2)
         ssm["selection", 0, 0] = 1
@@ -188,8 +188,7 @@ def model_var1(endog=None, params=None, measurement_error=False, init=None):
             params = np.r_[params, 4, 5]
 
     # Model
-    mod = VARMAX(endog, order=(1, 0), trend="n",
-                 measurement_error=measurement_error)
+    mod = VARMAX(endog, order=(1, 0), trend="n", measurement_error=measurement_error)
     mod.update(params)
     ssm = mod.ssm
     if init is None:
@@ -204,7 +203,7 @@ def model_dfm(endog=None, params=None, factor_order=2):
         levels = macrodata[["realgdp", "realcons"]]
         endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
     if params is None:
-        params = np.r_[0.5, 1., 1.5, 2., 0.9, 0.1]
+        params = np.r_[0.5, 1.0, 1.5, 2.0, 0.9, 0.1]
 
     # Model
     mod = DynamicFactor(endog, k_factors=1, factor_order=factor_order)
@@ -281,19 +280,20 @@ class TestLocalLinearTrendAnalytic:
         assert_allclose(res.forecasts_error[0, 0], y1)
         assert_allclose(res.kalman_gain[:, 0, 0], [1, 0])
         assert_allclose(res.predicted_state[:, 1], [y1, 0])
-        P2 = sigma2_y * np.array([[1 + q_mu, 0],
-                                  [0, q_beta]])
+        P2 = sigma2_y * np.array([[1 + q_mu, 0], [0, q_beta]])
         assert_allclose(res.predicted_state_cov[:, :, 1], P2)
-        assert_allclose(res.predicted_diffuse_state_cov[0, 0, 1],
-                        np.ones((2, 2)))
+        assert_allclose(res.predicted_diffuse_state_cov[0, 0, 1], np.ones((2, 2)))
 
         # assert_allclose(res.kalman_gain[:, 0, 1], [2, 1])
         assert_allclose(res.predicted_state[:, 2], [2 * y2 - y1, y2 - y1])
-        P3 = sigma2_y * np.array([[5 + 2 * q_mu + q_beta, 3 + q_mu + q_beta],
-                                  [3 + q_mu + q_beta, 2 + q_mu + 2 * q_beta]])
+        P3 = sigma2_y * np.array(
+            [
+                [5 + 2 * q_mu + q_beta, 3 + q_mu + q_beta],
+                [3 + q_mu + q_beta, 2 + q_mu + 2 * q_beta],
+            ]
+        )
         assert_allclose(res.predicted_state_cov[:, :, 2], P3)
-        assert_allclose(res.predicted_diffuse_state_cov[:, :, 2],
-                        np.zeros((2, 2)))
+        assert_allclose(res.predicted_diffuse_state_cov[:, :, 2], np.zeros((2, 2)))
 
         # Miscellaneous
         assert_equal(res.nobs_diffuse, 2)
@@ -312,8 +312,7 @@ class TestLocalLinearTrendAnalyticMissing(TestLocalLinearTrendAnalytic):
         y2 = np.nan
         y3 = 6.123123
         endog = np.r_[y1, y2, y3, [1] * 7]
-        super().setup_class(
-            endog=endog)
+        super().setup_class(endog=endog)
 
     def test_results(self):
         ssm = self.ssm
@@ -328,11 +327,12 @@ class TestLocalLinearTrendAnalyticMissing(TestLocalLinearTrendAnalytic):
         q_beta = sigma2_beta / sigma2_y
         a4 = [1.5 * y3 - 0.5 * y1, 0.5 * y3 - 0.5 * y1]
         assert_allclose(res.predicted_state[:, 3], a4)
-        P4 = sigma2_y * np.array([
-            [2.5 + 1.5 * q_mu + 1.25 * q_beta,
-             1 + 0.5 * q_mu + 1.25 * q_beta],
-            [1 + 0.5 * q_mu + 1.25 * q_beta,
-             0.5 + 0.5 * q_mu + 2.25 * q_beta]])
+        P4 = sigma2_y * np.array(
+            [
+                [2.5 + 1.5 * q_mu + 1.25 * q_beta, 1 + 0.5 * q_mu + 1.25 * q_beta],
+                [1 + 0.5 * q_mu + 1.25 * q_beta, 0.5 + 0.5 * q_mu + 2.25 * q_beta],
+            ]
+        )
         assert_allclose(res.predicted_state_cov[:, :, 3], P4)
 
         # Miscellaneous
@@ -366,8 +366,7 @@ def test_common_level_analytic():
     #                [-theta, 1]])
     # assert_allclose(res.kalman_gain[..., 0], K0)
     assert_allclose(res.predicted_state[:, 1], [y11, y21 - theta * y11])
-    P2 = np.array([[1 + sigma2_mu, -theta],
-                   [-theta, 1 + theta**2]])
+    P2 = np.array([[1 + sigma2_mu, -theta], [-theta, 1 + theta**2]])
     assert_allclose(res.predicted_state_cov[..., 1], P2)
     assert_allclose(res.predicted_diffuse_state_cov[..., 1], np.zeros((2, 2)))
 
@@ -435,10 +434,13 @@ class CheckSSMResults:
         if rtol_diffuse is not None:
             d = self.d
             if rtol_diffuse != np.inf:
-                assert_allclose(actual.T[:d], desired.T[:d], rtol=rtol_diffuse,
-                                atol=self.atol_diffuse)
-        assert_allclose(actual.T[d:], desired.T[d:], rtol=self.rtol,
-                        atol=self.atol)
+                assert_allclose(
+                    actual.T[:d],
+                    desired.T[:d],
+                    rtol=rtol_diffuse,
+                    atol=self.atol_diffuse,
+                )
+        assert_allclose(actual.T[d:], desired.T[d:], rtol=self.rtol, atol=self.atol)
 
     # - Filtered results tests -----------------------------------------------
 
@@ -539,8 +541,7 @@ class CheckSSMResults:
 
     # - Smoothed intermediate tests ------------------------------------------
 
-    @pytest.mark.skip("This is not computed in the univariate method or "
-                      "by KFAS.")
+    @pytest.mark.skip("This is not computed in the univariate method or " "by KFAS.")
     def test_smoothing_error(self, rtol_diffuse=None):
         actual = self.results_a.smoothing_error
         desired = self.results_b.smoothing_error
@@ -593,26 +594,23 @@ class CheckSSMResults:
 
     # - Simulation smoother results tests ------------------------------------
 
-    @pytest.mark.xfail(reason="No sim_a attribute",
-                       raises=AttributeError, strict=True)
+    @pytest.mark.xfail(reason="No sim_a attribute", raises=AttributeError, strict=True)
     def test_simulation_smoothed_state(self):
-        assert_allclose(
-            self.sim_a.simulated_state,
-            self.sim_a.simulated_state)
+        assert_allclose(self.sim_a.simulated_state, self.sim_a.simulated_state)
 
-    @pytest.mark.xfail(reason="No sim_a attribute",
-                       raises=AttributeError, strict=True)
+    @pytest.mark.xfail(reason="No sim_a attribute", raises=AttributeError, strict=True)
     def test_simulation_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.sim_a.simulated_measurement_disturbance,
-            self.sim_a.simulated_measurement_disturbance)
+            self.sim_a.simulated_measurement_disturbance,
+        )
 
-    @pytest.mark.xfail(reason="No sim_a attribute",
-                       raises=AttributeError, strict=True)
+    @pytest.mark.xfail(reason="No sim_a attribute", raises=AttributeError, strict=True)
     def test_simulation_smoothed_state_disturbance(self):
         assert_allclose(
             self.sim_a.simulated_state_disturbance,
-            self.sim_a.simulated_state_disturbance)
+            self.sim_a.simulated_state_disturbance,
+        )
 
 
 class CheckApproximateDiffuseMixin:
@@ -622,6 +620,7 @@ class CheckApproximateDiffuseMixin:
     different between the exact and approximate approach for many quantities,
     so we do not test them here.
     """
+
     approximate_diffuse_variance = 1e6
 
     @classmethod
@@ -636,7 +635,8 @@ class CheckApproximateDiffuseMixin:
             init_approx = Initialization(
                 cls.ssm.k_states,
                 "approximate_diffuse",
-                approximate_diffuse_variance=kappa)
+                approximate_diffuse_variance=kappa,
+            )
         cls.ssm.initialize(init_approx)
         cls.results_b = cls.ssm.smooth()
 
@@ -645,8 +645,9 @@ class CheckApproximateDiffuseMixin:
 
     def test_initialization_approx(self):
         kappa = self.approximate_diffuse_variance
-        assert_allclose(self.results_b.initial_state_cov,
-                        np.eye(self.ssm.k_states) * kappa)
+        assert_allclose(
+            self.results_b.initial_state_cov, np.eye(self.ssm.k_states) * kappa
+        )
         assert_equal(self.results_b.initial_diffuse_state_cov, None)
 
 
@@ -654,6 +655,7 @@ class CheckKFASMixin:
     """
     Test against values from KFAS
     """
+
     @classmethod
     def setup_class(cls, *args, **kwargs):
         kwargs.setdefault("filter_univariate", True)
@@ -680,12 +682,14 @@ class CheckKFASMixin:
         Finf = cls.results_b.forecasts_error_diffuse_cov.T
         Finf_nonsingular_obs = np.c_[[np.diag(Finf_t) for Finf_t in Finf]] > 0
         nonmissing = ~np.isnan(cls.ssm.endog).T
-        constant = (-0.5 * np.log(2 * np.pi) *
-                    (Finf_nonsingular_obs * nonmissing).sum(axis=1))
-        cls.results_b.llf_obs += constant[:cls.results_a.nobs_diffuse].sum()
+        constant = (
+            -0.5 * np.log(2 * np.pi) * (Finf_nonsingular_obs * nonmissing).sum(axis=1)
+        )
+        cls.results_b.llf_obs += constant[: cls.results_a.nobs_diffuse].sum()
 
 
 # - VAR(1) -------------------------------------------------------------------
+
 
 class CheckVAR1(CheckSSMResults):
     @classmethod
@@ -711,7 +715,8 @@ class TestVAR1_Approx(CheckApproximateDiffuseMixin, CheckVAR1):
 
 class TestVAR1_KFAS(CheckKFASMixin, CheckVAR1):
     results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_R.csv")
+        current_path, "results", "results_exact_initial_var1_R.csv"
+    )
 
 
 # - VAR(1) + Measurement error -----------------------------------------------
@@ -724,8 +729,9 @@ class CheckVAR1MeasurementError(CheckVAR1):
         super().setup_class(**kwargs)
 
 
-class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
-                                      CheckVAR1MeasurementError):
+class TestVAR1MeasurementError_Approx(
+    CheckApproximateDiffuseMixin, CheckVAR1MeasurementError
+):
     # Note: somewhat fragile, we need to increase the approximate variance to
     # 1e9 for the tests to pass at the appropriate level of precision, but
     # we cannot increase too much more than this because then we start get
@@ -742,14 +748,13 @@ class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
         # y: array([[[ 3.355072, -0.600856],
         #            [-0.600856,  4.221227]]])
         rtol_diffuse = None
-        super().test_smoothed_measurement_disturbance_cov(
-                rtol_diffuse=rtol_diffuse)
+        super().test_smoothed_measurement_disturbance_cov(rtol_diffuse=rtol_diffuse)
 
 
 class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
     results_path = os.path.join(
-        current_path, "results",
-        "results_exact_initial_var1_measurement_error_R.csv")
+        current_path, "results", "results_exact_initial_var1_measurement_error_R.csv"
+    )
 
 
 # - VAR(1) + Missing data ----------------------------------------------------
@@ -788,13 +793,13 @@ class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
         # y: array([[[-12.083676,   0.      ],
         #            [  0.      ,   0.      ]],
         rtol_diffuse = None
-        super().test_smoothed_state_cov(
-            rtol_diffuse=rtol_diffuse)
+        super().test_smoothed_state_cov(rtol_diffuse=rtol_diffuse)
 
 
 class TestVAR1Missing_KFAS(CheckKFASMixin, CheckVAR1Missing):
     results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_missing_R.csv")
+        current_path, "results", "results_exact_initial_var1_missing_R.csv"
+    )
 
     def test_forecasts_error_cov(self):
         # TODO: fails for the general version of forecasts_error_cov because
@@ -838,14 +843,11 @@ class CheckVAR1Mixed(CheckVAR1):
 
     def test_initialization(self):
         stationary_init = 3.5714285714285716
-        assert_allclose(self.results_a.initial_state_cov,
-                        np.diag([0, stationary_init]))
-        assert_allclose(self.results_a.initial_diffuse_state_cov,
-                        np.diag([1, 0]))
+        assert_allclose(self.results_a.initial_state_cov, np.diag([0, stationary_init]))
+        assert_allclose(self.results_a.initial_diffuse_state_cov, np.diag([1, 0]))
 
 
-class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin,
-                           CheckVAR1):
+class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin, CheckVAR1):
     @classmethod
     def setup_class(cls, **kwargs):
         kwargs["approx"] = True
@@ -854,34 +856,34 @@ class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin,
     def test_initialization_approx(self):
         stationary_init = 3.5714285714285716
         kappa = self.approximate_diffuse_variance
-        assert_allclose(self.results_b.initial_state_cov,
-                        np.diag([kappa, stationary_init]))
+        assert_allclose(
+            self.results_b.initial_state_cov, np.diag([kappa, stationary_init])
+        )
         assert_equal(self.results_b.initial_diffuse_state_cov, None)
 
 
 class TestVAR1Mixed_KFAS(CheckVAR1Mixed, CheckKFASMixin, CheckVAR1):
     # TODO: fails
     results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_mixed_R.csv")
+        current_path, "results", "results_exact_initial_var1_mixed_R.csv"
+    )
 
     # TODO: KFAS disagrees for the diffuse observations for all of these
     # states, but it appears that they have a bug (e.g. since the approximate
     # diffuse case agrees with us), so we should double-check against a third
     # package (RATS?)
     def test_predicted_state(self):
-        super().test_predicted_state(
-            rtol_diffuse=np.inf)
+        super().test_predicted_state(rtol_diffuse=np.inf)
 
     def test_filtered_state(self):
-        super().test_filtered_state(
-            rtol_diffuse=np.inf)
+        super().test_filtered_state(rtol_diffuse=np.inf)
 
     def test_smoothed_state(self):
-        super().test_smoothed_state(
-            rtol_diffuse=np.inf)
+        super().test_smoothed_state(rtol_diffuse=np.inf)
 
 
 # - DFM ----------------------------------------------------------------------
+
 
 class CheckDFM(CheckSSMResults):
     @classmethod
@@ -911,7 +913,8 @@ class TestDFM_Approx(CheckApproximateDiffuseMixin, CheckDFM):
 
 class TestDFM_KFAS(CheckKFASMixin, CheckDFM):
     results_path = os.path.join(
-        current_path, "results", "results_exact_initial_dfm_R.csv")
+        current_path, "results", "results_exact_initial_dfm_R.csv"
+    )
 
     # TODO: KFAS disagrees for the diffuse observations for all of these
     # states, but it appears that they have a bug (e.g. since the approximate
@@ -928,6 +931,7 @@ class TestDFM_KFAS(CheckKFASMixin, CheckDFM):
 
 
 # - DFM + Collapsed ----------------------------------------------------------
+
 
 class CheckDFMCollapsed(CheckSSMResults):
     @classmethod
@@ -980,14 +984,12 @@ def test_irrelevant_state():
     endog = macrodata.infl
 
     spec = {
-        "freq_seasonal": [{"period": 8, "harmonics": 6},
-                          {"period": 36, "harmonics": 6}]
+        "freq_seasonal": [{"period": 8, "harmonics": 6}, {"period": 36, "harmonics": 6}]
     }
 
     # Approximate diffuse version
     mod = UnobservedComponents(endog, "llevel", **spec)
-    mod.ssm.initialization = Initialization(mod.k_states,
-                                            "approximate_diffuse")
+    mod.ssm.initialization = Initialization(mod.k_states, "approximate_diffuse")
     res = mod.smooth([3.4, 7.2, 0.01, 0.01])
 
     # Exact diffuse version
@@ -997,8 +999,7 @@ def test_irrelevant_state():
     res2 = mod2.smooth([3.4, 7.2, 0.01, 0.01])
 
     # Check that e.g. the filtered state for the level is equal
-    assert_allclose(res.filtered_state[0, 25:],
-                    res2.filtered_state[0, 25:], atol=1e-5)
+    assert_allclose(res.filtered_state[0, 25:], res2.filtered_state[0, 25:], atol=1e-5)
 
 
 def test_nondiagonal_obs_cov(reset_randomstate):
@@ -1018,13 +1019,12 @@ def test_nondiagonal_obs_cov(reset_randomstate):
     rtol = 0.002 if PLATFORM_WIN else 1e-4
     # Here we'll just test a few values
     assert_allclose(res1.llf, res2.llf, rtol=rtol, atol=atol)
-    assert_allclose(res1.forecasts[0], res2.forecasts[0],
-                    rtol=rtol, atol=atol)
-    assert_allclose(res1.filtered_state, res2.filtered_state,
-                    rtol=rtol, atol=atol)
-    assert_allclose(res1.filtered_state_cov, res2.filtered_state_cov,
-                    rtol=rtol, atol=atol)
-    assert_allclose(res1.smoothed_state, res2.smoothed_state,
-                    rtol=rtol, atol=atol)
-    assert_allclose(res1.smoothed_state_cov, res2.smoothed_state_cov,
-                    rtol=rtol, atol=atol)
+    assert_allclose(res1.forecasts[0], res2.forecasts[0], rtol=rtol, atol=atol)
+    assert_allclose(res1.filtered_state, res2.filtered_state, rtol=rtol, atol=atol)
+    assert_allclose(
+        res1.filtered_state_cov, res2.filtered_state_cov, rtol=rtol, atol=atol
+    )
+    assert_allclose(res1.smoothed_state, res2.smoothed_state, rtol=rtol, atol=atol)
+    assert_allclose(
+        res1.smoothed_state_cov, res2.smoothed_state_cov, rtol=rtol, atol=atol
+    )

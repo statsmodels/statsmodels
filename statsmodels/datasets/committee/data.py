@@ -1,4 +1,5 @@
 """First 100 days of the US House of Representatives 1995"""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

@@ -94,14 +94,12 @@ fig.tight_layout(pad=1.0)
 # underlying assumptions such as homoskedasticity and <br />
 # linearity.
 
-fig = sm.graphics.plot_partregress("prestige",
-                                   "income", ["income", "education"],
-                                   data=prestige)
+fig = sm.graphics.plot_partregress(
+    "prestige", "income", ["income", "education"], data=prestige
+)
 fig.tight_layout(pad=1.0)
 
-fig = sm.graphics.plot_partregress("prestige",
-                                   "income", ["education"],
-                                   data=prestige)
+fig = sm.graphics.plot_partregress("prestige", "income", ["education"], data=prestige)
 fig.tight_layout(pad=1.0)
 
 # As you can see the partial regression plot confirms the influence of
@@ -110,9 +108,9 @@ fig.tight_layout(pad=1.0)
 # prestige. Dropping these cases confirms this.
 
 subset = ~prestige.index.isin(["conductor", "RR.engineer", "minister"])
-prestige_model2 = ols("prestige ~ income + education",
-                      data=prestige,
-                      subset=subset).fit()
+prestige_model2 = ols(
+    "prestige ~ income + education", data=prestige, subset=subset
+).fit()
 print(prestige_model2.summary())
 
 # For a quick check of all the regressors, you can use
@@ -199,8 +197,7 @@ fig.tight_layout(pad=1.0)
 
 dta = sm.datasets.statecrime.load_pandas().data
 
-crime_model = ols("murder ~ urban + poverty + hs_grad + single",
-                  data=dta).fit()
+crime_model = ols("murder ~ urban + poverty + hs_grad + single", data=dta).fit()
 print(crime_model.summary())
 
 # ### Partial Regression Plots (Crime Data)
@@ -208,9 +205,9 @@ print(crime_model.summary())
 fig = sm.graphics.plot_partregress_grid(crime_model)
 fig.tight_layout(pad=1.0)
 
-fig = sm.graphics.plot_partregress("murder",
-                                   "hs_grad", ["urban", "poverty", "single"],
-                                   data=dta)
+fig = sm.graphics.plot_partregress(
+    "murder", "hs_grad", ["urban", "poverty", "single"], data=dta
+)
 fig.tight_layout(pad=1.0)
 
 # ### Leverage-Resid<sup>2</sup> Plot

@@ -21,11 +21,9 @@ filelist = [
     "example_pca_regression.py",
 ]
 
-cont = input(
-    """Are you sure you want to run all of the examples?
+cont = input("""Are you sure you want to run all of the examples?
 This is done mainly to check that they are up to date.
-(y/n) >>> """
-)
+(y/n) >>> """)
 if "y" in cont.lower():
     for run_all_f in filelist:
         try:

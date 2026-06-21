@@ -30,8 +30,9 @@ def test_noncent_chi2():
     mean = stats.ncx2.mean(df, res.nc)
     assert_allclose(chi2_stat, mean, rtol=1e-8)
 
-    assert_allclose(stats.ncx2.cdf(chi2_stat, df, res.confint), [0.975, 0.025],
-                    rtol=1e-8)
+    assert_allclose(
+        stats.ncx2.cdf(chi2_stat, df, res.confint), [0.975, 0.025], rtol=1e-8
+    )
 
 
 def test_noncent_f():
@@ -50,8 +51,9 @@ def test_noncent_f():
     assert_allclose(f_stat, mean, rtol=1e-8)
 
     # Relax tolerance due to changes in SciPy and Boost
-    assert_allclose(stats.ncf.cdf(f_stat, df1, df2, res.confint),
-                    [0.975, 0.025], rtol=5e-5)
+    assert_allclose(
+        stats.ncf.cdf(f_stat, df1, df2, res.confint), [0.975, 0.025], rtol=5e-5
+    )
 
 
 def test_noncent_t():
@@ -75,5 +77,4 @@ def test_noncent_t():
     assert_allclose(t_stat, mean, rtol=1e-8)
 
     # Tolerancee relaxed due to Boost integration in SciPy
-    assert_allclose(stats.nct.cdf(t_stat, df, res.confint), [0.975, 0.025],
-                    rtol=1e-6)
+    assert_allclose(stats.nct.cdf(t_stat, df, res.confint), [0.975, 0.025], rtol=1e-6)

@@ -1,4 +1,5 @@
 """El Nino dataset, 1950 - 2010"""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

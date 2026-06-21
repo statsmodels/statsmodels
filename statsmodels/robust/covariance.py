@@ -1767,8 +1767,10 @@ class CovDetMCD:
         if h is None:
             h = (nobs + k_vars + 1) // 2  # check with literature
         if mean_func is None:
+
             def mean_func(x):
                 return np.median(x, axis=0)
+
         if scale_func is None:
             scale_func = mad
         if options_start is None:
@@ -2008,6 +2010,7 @@ class CovDetS:
 
             def mean_func(x):
                 return np.median(x, axis=0)
+
         if scale_func is None:
             scale_func = mad
         if options_start is None:

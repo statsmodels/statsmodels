@@ -147,9 +147,22 @@ class SimpleTable(list):
         with open('c:/temp/temp.tex','w') as fh:
             fh.write( tbl.as_latex_tabular() )
     """
-    def __init__(self, data, headers=None, stubs=None, title="",
-                 datatypes=None, csv_fmt=None, txt_fmt=None, ltx_fmt=None,
-                 html_fmt=None, celltype=None, rowtype=None, **fmt_dict):
+
+    def __init__(
+        self,
+        data,
+        headers=None,
+        stubs=None,
+        title="",
+        datatypes=None,
+        csv_fmt=None,
+        txt_fmt=None,
+        ltx_fmt=None,
+        html_fmt=None,
+        celltype=None,
+        rowtype=None,
+        **fmt_dict,
+    ):
         """
         Parameters
         ----------
@@ -202,7 +215,7 @@ class SimpleTable(list):
             txt=self._txt_fmt,
             csv=self._csv_fmt,
             html=self._html_fmt,
-            latex=self._latex_fmt
+            latex=self._latex_fmt,
         )
         self._Cell = celltype or Cell
         self._Row = rowtype or Row
@@ -241,8 +254,7 @@ class SimpleTable(list):
             self.insert_stubs(0, stubs)
 
     def insert(self, idx, row, datatype=None):
-        """Return None.  Insert a row into a table.
-        """
+        """Return None.  Insert a row into a table."""
         if datatype is None:
             try:
                 datatype = row.datatype
@@ -342,13 +354,11 @@ class SimpleTable(list):
         try:
             return self._colwidths[key]
         except KeyError:
-            self._colwidths[key] = self._get_colwidths(output_format,
-                                                       **fmt_dict)
+            self._colwidths[key] = self._get_colwidths(output_format, **fmt_dict)
             return self._colwidths[key]
 
     def _get_fmt(self, output_format, **fmt_dict):
-        """Return dict, the formatting options.
-        """
+        """Return dict, the formatting options."""
         output_format = get_output_format(output_format)
         # first get the default formatting
         try:
@@ -440,8 +450,7 @@ class SimpleTable(list):
                         # (with a nice line if it's the top of the whole table)
                         formatted_rows.append(table_dec_above)
             if row != last:
-                formatted_rows.append(
-                    row.as_string(output_format="latex", **fmt))
+                formatted_rows.append(row.as_string(output_format="latex", **fmt))
             prev_aligns = aligns
         # tabular does not support caption, but make it available for
         # figure environment
@@ -500,8 +509,16 @@ class Row(list):
     """Provides a table row as a list of cells.
     A row can belong to a SimpleTable, but does not have to.
     """
-    def __init__(self, seq, datatype="data", table=None, celltype=None,
-                 dec_below="row_dec_below", **fmt_dict):
+
+    def __init__(
+        self,
+        seq,
+        datatype="data",
+        table=None,
+        celltype=None,
+        dec_below="row_dec_below",
+        **fmt_dict,
+    ):
         """
         Parameters
         ----------
@@ -547,8 +564,7 @@ class Row(list):
         self.insert(loc, stub)
 
     def _get_fmt(self, output_format, **fmt_dict):
-        """Return dict, the formatting options.
-        """
+        """Return dict, the formatting options."""
         output_format = get_output_format(output_format)
         # first get the default formatting
         try:
@@ -600,13 +616,11 @@ class Row(list):
             content = cell.format(width, output_format=output_format, **fmt)
             formatted_cells.append(content)
         formatted_row = row_pre + colsep.join(formatted_cells) + row_post
-        formatted_row = self._decorate_below(formatted_row, output_format,
-                                             **fmt)
+        formatted_row = self._decorate_below(formatted_row, output_format, **fmt)
         return formatted_row
 
     def _decorate_below(self, row_as_string, output_format, **fmt_dict):
-        """This really only makes sense for the text and latex output formats.
-        """
+        """This really only makes sense for the text and latex output formats."""
         dec_below = fmt_dict.get(self.dec_below, None)
         if dec_below is None:
             result = row_as_string
@@ -616,13 +630,11 @@ class Row(list):
                 row0len = len(row_as_string)
                 dec_len = len(dec_below)
                 repeat, addon = divmod(row0len, dec_len)
-                result = row_as_string + "\n" + (dec_below * repeat +
-                                                 dec_below[:addon])
+                result = row_as_string + "\n" + (dec_below * repeat + dec_below[:addon])
             elif output_format == "latex":
                 result = row_as_string + "\n" + dec_below
             else:
-                raise ValueError("I cannot decorate a %s header." %
-                                 output_format)
+                raise ValueError("I cannot decorate a %s header." % output_format)
         return result
 
     @property
@@ -634,6 +646,7 @@ class Cell:
     """Provides a table cell.
     A cell can belong to a Row, but does not have to.
     """
+
     def __init__(self, data="", datatype=None, row=None, **fmt_dict):
         if isinstance(data, Cell):
             # might have passed a Cell instance
@@ -651,8 +664,7 @@ class Cell:
         return "%s" % self.data
 
     def _get_fmt(self, output_format, **fmt_dict):
-        """Return dict, the formatting options.
-        """
+        """Return dict, the formatting options."""
         output_format = get_output_format(output_format)
         # first get the default formatting
         try:
@@ -755,6 +767,7 @@ class Cell:
     def set_datatype(self, val):
         # TODO: add checking
         self._datatype = val
+
     datatype = property(get_datatype, set_datatype)
 
 
@@ -895,26 +908,24 @@ default_latex_fmt = dict(
     empty="",
     missing="--",
     # replacements will be processed in lexicographical order
-    replacements={"#": r"\#",
-                  "$": r"\$",
-                  "%": r"\%",
-                  "&": r"\&",
-                  ">": r"$>$",
-                  "_": r"\_",
-                  "|": r"$|$"}
+    replacements={
+        "#": r"\#",
+        "$": r"\$",
+        "%": r"\%",
+        "&": r"\&",
+        ">": r"$>$",
+        "_": r"\_",
+        "|": r"$|$",
+    },
 )
 
 default_fmts = dict(
     html=default_html_fmt,
     txt=default_txt_fmt,
     latex=default_latex_fmt,
-    csv=default_csv_fmt
+    csv=default_csv_fmt,
 )
-output_format_translations = dict(
-    htm="html",
-    text="txt",
-    ltx="latex"
-)
+output_format_translations = dict(htm="html", text="txt", ltx="latex")
 
 
 def get_output_format(output_format):

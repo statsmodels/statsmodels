@@ -552,9 +552,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         if self.endog.ndim > 1 and self.endog.shape[1] > 1:
             raise ValueError("Must have univariate endogenous data.")
         if self.k_regimes < 2:
-            raise ValueError(
-                "Markov switching models must have at least two regimes."
-            )
+            raise ValueError("Markov switching models must have at least two regimes.")
         if not (self.exog_tvtp is None or self.exog_tvtp.shape[0] == self.nobs):
             raise ValueError(
                 "Time-varying transition probabilities exogenous"
@@ -1364,9 +1362,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
             # Save the output
             if full_output:
-                em_retvals = Bunch(
-                    params=np.array(params), llf=np.array(llf), iter=i
-                )
+                em_retvals = Bunch(params=np.array(params), llf=np.array(llf), iter=i)
                 em_settings = Bunch(tolerance=tolerance, maxiter=maxiter)
             else:
                 em_retvals = None
@@ -2337,6 +2333,4 @@ class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
     )
 
 
-wrap.populate_wrapper(
-    MarkovSwitchingResultsWrapper, MarkovSwitchingResults
-)
+wrap.populate_wrapper(MarkovSwitchingResultsWrapper, MarkovSwitchingResults)

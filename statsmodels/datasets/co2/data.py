@@ -1,4 +1,5 @@
 """Mauna Loa Weekly Atmospheric CO2 Data"""
+
 import pandas as pd
 
 from statsmodels.datasets import utils as du

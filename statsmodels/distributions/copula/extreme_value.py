@@ -1,4 +1,4 @@
-""" Extreme Value Copulas
+"""Extreme Value Copulas
 Created on Fri Jan 29 19:19:45 2021
 
 Author: Josef Perktold
@@ -12,10 +12,9 @@ from .copulas import Copula
 
 
 def copula_bv_ev(u, transform, args=()):
-    """generic bivariate extreme value copula
-    """
+    """generic bivariate extreme value copula"""
     u, v = u
-    return np.exp(np.log(u * v) * (transform(np.log(u)/np.log(u*v), *args)))
+    return np.exp(np.log(u * v) * (transform(np.log(u) / np.log(u * v), *args)))
 
 
 class ExtremeValueCopula(Copula):
@@ -92,8 +91,7 @@ class ExtremeValueCopula(Copula):
         # currently only Bivariate
         u, v = np.asarray(u).T
         args = self._handle_args(args)
-        cdfv = np.exp(np.log(u * v) *
-                      self.transform(np.log(u)/np.log(u*v), *args))
+        cdfv = np.exp(np.log(u * v) * self.transform(np.log(u) / np.log(u * v), *args))
         return cdfv
 
     def pdf(self, u, args=()):
@@ -124,8 +122,11 @@ class ExtremeValueCopula(Copula):
         dep = tr(t, *args)
         d1 = tr.deriv(t, *args)
         d2 = tr.deriv2(t, *args)
-        pdf_ = cdf / (u1 * u2) * ((dep + (1 - t) * d1) * (dep - t * d1) -
-                                  d2 * (1 - t) * t / log_u12)
+        pdf_ = (
+            cdf
+            / (u1 * u2)
+            * ((dep + (1 - t) * d1) * (dep - t * d1) - d2 * (1 - t) * t / log_u12)
+        )
 
         return pdf_
 

@@ -344,9 +344,7 @@ def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional
     if ub is None:
         ub = loc + self.b * scale  # (self.b - loc)/(1.0*scale)
     if conditional:
-        invfac = self.sf(lb, loc, scale, *args) - self.sf(
-            ub, loc, scale, *args
-        )
+        invfac = self.sf(lb, loc, scale, *args) - self.sf(ub, loc, scale, *args)
     else:
         invfac = 1.0
     return integrate.quad(fun, lb, ub, args=args)[0] / invfac

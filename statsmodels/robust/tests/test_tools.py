@@ -38,7 +38,7 @@ results_menenez = [
     # rounding problem in Hampel, menenez use a as tuning parameter
     (Hampel(), [4.4208, 5.5275, 7.006, 8.0456]),
     (TrimmedMean(), [2.5003, 2.7955, 3.1365, 3.3682]),
-    ]
+]
 
 
 @pytest.mark.parametrize("case", results_menenez)

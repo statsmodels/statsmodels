@@ -8,9 +8,7 @@ import numpy as np
 PATH = os.environ.get("PSS_PATH", "..")
 
 
-def pss_block(
-    seed, k, case, i1, block_id, m=2_000_000, t=1_000, save=True, path="./"
-):
+def pss_block(seed, k, case, i1, block_id, m=2_000_000, t=1_000, save=True, path="./"):
     file_name = f"pss-k-{k}-case-{case}-i1-{i1}-block-{block_id}.npz"
     file_name = os.path.join(path, file_name)
     if save and os.path.exists(file_name):

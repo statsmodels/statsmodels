@@ -2,6 +2,7 @@
 Simulate critical values for finite sample distribution
 and estimate asymptotic expansion parameters for the lilliefors tests
 """
+
 from collections import defaultdict
 import datetime as dt
 import gzip
@@ -16,16 +17,42 @@ from yapf.yapflib.yapf_api import FormatCode
 import statsmodels.api as sm
 
 NUM_SIM = 10000000
-MAX_MEMORY = 2 ** 28
-SAMPLE_SIZES = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-                20, 25, 30, 40, 50, 100, 200, 400, 800, 1600]
+MAX_MEMORY = 2**28
+SAMPLE_SIZES = [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    25,
+    30,
+    40,
+    50,
+    100,
+    200,
+    400,
+    800,
+    1600,
+]
 MIN_SAMPLE_SIZE = {"normal": 4, "exp": 3}
 MAX_SIZE = max(SAMPLE_SIZES)
 MAX_SIM_SIZE = MAX_MEMORY // (MAX_SIZE * 8)
 PERCENTILES = [1, 5, 10, 25, 50, 75, 90, 92.5, 95, 97.5, 99, 99.5, 99.7, 99.9]
 seed = 113682199084250344115761738871133961874
-seed = np.array([(seed >> (32 * i)) % 2 ** 32 for i in range(4)],
-                dtype=np.uint32)
+seed = np.array([(seed >> (32 * i)) % 2**32 for i in range(4)], dtype=np.uint32)
 
 
 def simulations(sim_type, save=False):
@@ -41,8 +68,7 @@ def simulations(sim_type, save=False):
         else:
             dist = rs.standard_exponential
         rvs = dist((MAX_SIZE, this_iter))
-        sample_sizes = [ss for ss in SAMPLE_SIZES if
-                        ss >= MIN_SAMPLE_SIZE[sim_type]]
+        sample_sizes = [ss for ss in SAMPLE_SIZES if ss >= MIN_SAMPLE_SIZE[sim_type]]
         for ss in sample_sizes:
             sample = rvs[:ss]
             mu = sample.mean(0)
@@ -62,13 +88,13 @@ def simulations(sim_type, save=False):
             d_minus = (cdf - minus[:, None]).max(0)
             d = np.max(np.abs(np.c_[d_plus, d_minus]), 1)
             results[ss].append(d)
-        logging.log(logging.INFO,
-                    "Completed {}, remaining {}".format(NUM_SIM - remaining,
-                                                        remaining))
+        logging.log(
+            logging.INFO,
+            "Completed {}, remaining {}".format(NUM_SIM - remaining, remaining),
+        )
         elapsed = dt.datetime.now() - start
         rem = elapsed.total_seconds() / (NUM_SIM - remaining) * remaining
-        logging.log(logging.INFO,
-                    f"({sim_type}) Time remaining {rem:0.1f}s")
+        logging.log(logging.INFO, f"({sim_type}) Time remaining {rem:0.1f}s")
 
     for key in results:
         results[key] = np.concatenate(results[key])
@@ -88,12 +114,12 @@ def simulations(sim_type, save=False):
     all_y = np.zeros(num * len(PERCENTILES))
     loc = 0
     for i, perc in enumerate(PERCENTILES):
-        y = pd.DataFrame(results).quantile(perc / 100.)
+        y = pd.DataFrame(results).quantile(perc / 100.0)
         y = y.loc[start:]
-        all_y[loc:loc + len(y)] = np.log(y)
+        all_y[loc : loc + len(y)] = np.log(y)
         x = y.index.values.astype(float)
-        all_x[loc:loc + len(y), -2:] = np.c_[np.log(x), np.log(x) ** 2]
-        all_x[loc:loc + len(y), i:(i + 1)] = 1
+        all_x[loc : loc + len(y), -2:] = np.c_[np.log(x), np.log(x) ** 2]
+        all_x[loc : loc + len(y), i : (i + 1)] = 1
         loc += len(y)
     w = np.ones_like(all_y).reshape(len(PERCENTILES), -1)
     w[6:, -5:] = 3

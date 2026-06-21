@@ -84,8 +84,8 @@ def bkfilter(x, low=6, high=32, K=12):
     # Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
     pw = PandasWrapper(x)
     x = array_like(x, "x", maxdim=2)
-    omega_1 = 2. * np.pi / high  # convert from freq. to periodicity
-    omega_2 = 2. * np.pi / low
+    omega_1 = 2.0 * np.pi / high  # convert from freq. to periodicity
+    omega_2 = 2.0 * np.pi / low
     bweights = np.zeros(2 * K + 1)
     bweights[K] = (omega_2 - omega_1) / np.pi  # weight at zero freq.
     j = np.arange(1, int(K) + 1)

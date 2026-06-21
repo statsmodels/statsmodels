@@ -38,7 +38,7 @@ def plothist(x, distfn, args, loc, scale, right=1):
     #    print('args in plothist', args)
     # add a 'best fit' line
     # yt = stats.norm.pdf( bins, loc=loc, scale=scale)
-    yt = distfn.pdf(bins,  loc, scale, *args)
+    yt = distfn.pdf(bins, loc, scale, *args)
     yt[yt > maxheight] = maxheight
     plt.plot(bins, yt, "r--", linewidth=1)
     ys = (
@@ -381,9 +381,7 @@ if __name__ == "__main__":
             ks_stat, ks_pval = stats.kstest(rvs_normed, distname, arg_est)
             print("kstest", ks_stat, ks_pval)
             quant = 0.1
-            crit = distfn.ppf(
-                1 - quant * float(rind), loc_est, scale_est, *par_est
-            )
+            crit = distfn.ppf(1 - quant * float(rind), loc_est, scale_est, *par_est)
             tail_prob = stats.t.sf(crit, dgp_arg, scale=dgp_scale)
             print("crit, prob", quant, crit, tail_prob)
             results.append(

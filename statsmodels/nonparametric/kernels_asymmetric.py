@@ -214,9 +214,7 @@ kernel_pdf_beta.__doc__ = """\
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
        Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_cdf_beta(x, sample, bw):
@@ -238,9 +236,7 @@ kernel_cdf_beta.__doc__ = """\
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
        Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_pdf_beta2(x, sample, bw):
@@ -294,9 +290,7 @@ kernel_pdf_beta2.__doc__ = """\
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
        Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_cdf_beta2(x, sample, bw):
@@ -350,9 +344,7 @@ kernel_cdf_beta2.__doc__ = """\
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
        Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_pdf_gamma(x, sample, bw):
@@ -376,9 +368,7 @@ kernel_pdf_gamma.__doc__ = """\
        Gamma Krnels.”
        Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_cdf_gamma(x, sample, bw):
@@ -403,9 +393,7 @@ kernel_cdf_gamma.__doc__ = """\
        Gamma Krnels.”
        Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def _kernel_pdf_gamma(x, sample, bw):
@@ -464,9 +452,7 @@ kernel_pdf_gamma2.__doc__ = """\
        Gamma Krnels.”
        Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_cdf_gamma2(x, sample, bw):
@@ -501,9 +487,7 @@ kernel_cdf_gamma2.__doc__ = """\
        Gamma Krnels.”
        Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_pdf_invgamma(x, sample, bw):
@@ -523,9 +507,7 @@ kernel_pdf_invgamma.__doc__ = """\
     .. [1] Micheaux, Pierre Lafaye de, and Frédéric Ouimet. 2020. “A Study of
        Seven Asymmetric Kernels for the Estimation of Cumulative Distribution
        Functions,” November. https://arxiv.org/abs/2011.14893v1.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_cdf_invgamma(x, sample, bw):
@@ -543,9 +525,7 @@ kernel_cdf_invgamma.__doc__ = """\
     .. [1] Micheaux, Pierre Lafaye de, and Frédéric Ouimet. 2020. “A Study of
        Seven Asymmetric Kernels for the Estimation of Cumulative Distribution
        Functions,” November. https://arxiv.org/abs/2011.14893v1.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_pdf_invgauss(x, sample, bw):
@@ -566,9 +546,7 @@ kernel_pdf_invgauss.__doc__ = """\
        Inverse Gaussian Kernels.”
        Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_pdf_invgauss_(x, sample, bw):
@@ -602,9 +580,7 @@ kernel_cdf_invgauss.__doc__ = """\
        Inverse Gaussian Kernels.”
        Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_pdf_recipinvgauss(x, sample, bw):
@@ -628,9 +604,7 @@ kernel_pdf_recipinvgauss.__doc__ = """\
        Inverse Gaussian Kernels.”
        Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_pdf_recipinvgauss_(x, sample, bw):
@@ -668,9 +642,7 @@ kernel_cdf_recipinvgauss.__doc__ = """\
        Inverse Gaussian Kernels.”
        Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_pdf_bs(x, sample, bw):
@@ -688,9 +660,7 @@ kernel_pdf_bs.__doc__ = """\
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
        Financial Data.” Annals of Economics and Finance 4: 103-24.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_cdf_bs(x, sample, bw):
@@ -711,9 +681,7 @@ kernel_cdf_bs.__doc__ = """\
     .. [2] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
        Estimation.” REVSTAT, 1-27.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_pdf_lognorm(x, sample, bw):
@@ -743,9 +711,7 @@ kernel_pdf_lognorm.__doc__ = """\
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
        Financial Data.” Annals of Economics and Finance 4: 103-24.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_cdf_lognorm(x, sample, bw):
@@ -775,9 +741,7 @@ kernel_cdf_lognorm.__doc__ = """\
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
        Financial Data.” Annals of Economics and Finance 4: 103-24.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_pdf_lognorm_(x, sample, bw):
@@ -815,9 +779,7 @@ kernel_pdf_weibull.__doc__ = """\
     .. [1] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
        Estimation.” REVSTAT, 1-27.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 def kernel_cdf_weibull(x, sample, bw):
@@ -838,9 +800,7 @@ kernel_cdf_weibull.__doc__ = """\
     .. [1] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
        Estimation.” REVSTAT, 1-27.
-    """.format(
-    doc_params=doc_params
-)
+    """.format(doc_params=doc_params)
 
 
 # produced wth

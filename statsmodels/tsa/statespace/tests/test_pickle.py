@@ -12,6 +12,7 @@ Kim, Chang-Jin, and Charles R. Nelson. 1999.
 Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
+
 import pickle
 
 import numpy as np
@@ -33,7 +34,7 @@ def data():
     data_ = pd.DataFrame(
         true["data"],
         index=pd.date_range("1947-01-01", "1995-07-01", freq="QS"),
-        columns=["GDP"]
+        columns=["GDP"],
     )
     data_["lgdp"] = np.log(data_["GDP"])
     return data_
@@ -94,19 +95,24 @@ def test_kalman_filter_pickle(data):
     model.bind(data["lgdp"].values)
 
     model.design[:, :, 0] = [1, 1, 0, 0]
-    model.transition[([0, 0, 1, 1, 2, 3],
-                      [0, 3, 1, 2, 1, 3],
-                      [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
+    model.transition[([0, 0, 1, 1, 2, 3], [0, 3, 1, 2, 1, 3], [0, 0, 0, 0, 0, 0])] = [
+        1,
+        1,
+        0,
+        0,
+        1,
+        1,
+    ]
     model.selection = np.eye(model.k_states)
 
     # Update matrices with given parameters
-    (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(
-        true["parameters"]
-    )
+    sigma_v, sigma_e, sigma_w, phi_1, phi_2 = np.array(true["parameters"])
     model.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
-    model.state_cov[
-        np.diag_indices(k_states) + (np.zeros(k_states, dtype=int),)] = [
-        sigma_v ** 2, sigma_e ** 2, 0, sigma_w ** 2
+    model.state_cov[np.diag_indices(k_states) + (np.zeros(k_states, dtype=int),)] = [
+        sigma_v**2,
+        sigma_e**2,
+        0,
+        sigma_w**2,
     ]
 
     # Initialization
@@ -116,7 +122,7 @@ def test_kalman_filter_pickle(data):
     # Initialization: modification
     initial_state_cov = np.dot(
         np.dot(model.transition[:, :, 0], initial_state_cov),
-        model.transition[:, :, 0].T
+        model.transition[:, :, 0].T,
     )
     model.initialize_known(initial_state, initial_state_cov)
     pkl_mod = pickle.loads(pickle.dumps(model))
@@ -124,20 +130,28 @@ def test_kalman_filter_pickle(data):
     results = model.filter()
     pkl_results = pkl_mod.filter()
 
-    assert_allclose(results.llf_obs[true["start"]:].sum(),
-                    pkl_results.llf_obs[true["start"]:].sum())
-    assert_allclose(results.filtered_state[0][true["start"]:],
-                    pkl_results.filtered_state[0][true["start"]:])
-    assert_allclose(results.filtered_state[1][true["start"]:],
-                    pkl_results.filtered_state[1][true["start"]:])
-    assert_allclose(results.filtered_state[3][true["start"]:],
-                    pkl_results.filtered_state[3][true["start"]:])
+    assert_allclose(
+        results.llf_obs[true["start"] :].sum(),
+        pkl_results.llf_obs[true["start"] :].sum(),
+    )
+    assert_allclose(
+        results.filtered_state[0][true["start"] :],
+        pkl_results.filtered_state[0][true["start"] :],
+    )
+    assert_allclose(
+        results.filtered_state[1][true["start"] :],
+        pkl_results.filtered_state[1][true["start"] :],
+    )
+    assert_allclose(
+        results.filtered_state[3][true["start"] :],
+        pkl_results.filtered_state[3][true["start"] :],
+    )
 
 
 def test_representation_pickle():
     nobs = 10
     k_endog = 2
-    arr = np.arange(nobs * k_endog).reshape(k_endog, nobs) * 1.
+    arr = np.arange(nobs * k_endog).reshape(k_endog, nobs) * 1.0
     endog = np.asfortranarray(arr)
     mod = Representation(endog, k_states=2)
     pkl_mod = pickle.loads(pickle.dumps(mod))

@@ -922,14 +922,14 @@ def test_use_boxcox_fit_override():
     )
     res = mod.fit()
     # With use_boxcox=True at model level, Box-Cox is applied and lambda > 0
-    assert res.params["use_boxcox"] != 0.0, (
-        "Box-Cox lambda should not be 0 when use_boxcox=True at model init"
-    )
+    assert (
+        res.params["use_boxcox"] != 0.0
+    ), "Box-Cox lambda should not be 0 when use_boxcox=True at model init"
     # When use_boxcox=True at model init, Box-Cox IS applied
     # (lambda ~= 0.5 for this data, not False/0)
-    assert res.params["lamda"] is not None, (
-        f"Expected fitted lambda, got {res.params['lamda']}"
-    )
+    assert (
+        res.params["lamda"] is not None
+    ), f"Expected fitted lambda, got {res.params['lamda']}"
 
 
 @pytest.mark.parametrize("trend", TRENDS)
@@ -1994,7 +1994,7 @@ def test_forecast_index_types(ses, index_typ):
             trend="add",
             seasonal="add",
             initialization_method="heuristic",
-            **kwargs
+            **kwargs,
         ).fit()
     with pytest_warns(forecast_warning):
         fcast = res.forecast(36)

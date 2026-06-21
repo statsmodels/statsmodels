@@ -30,7 +30,7 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label="factor"):
     #    vals = np.cumsum(vals)
 
     ax = fig.add_subplot(121)
-    ax.plot(np.arange(ncomp), vals[: ncomp], "b-o")
+    ax.plot(np.arange(ncomp), vals[:ncomp], "b-o")
     ax.autoscale(tight=True)
     xlim = np.array(ax.get_xlim())
     sp = xlim[1] - xlim[0]
@@ -51,8 +51,8 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label="factor"):
     cumper_variance = np.cumsum(per_variance)
     ax = fig.add_subplot(122)
 
-    ax.plot(np.arange(ncomp), per_variance[: ncomp], "b-o")
-    ax.plot(np.arange(ncomp), cumper_variance[: ncomp], "g--o")
+    ax.plot(np.arange(ncomp), per_variance[:ncomp], "b-o")
+    ax.plot(np.arange(ncomp), cumper_variance[:ncomp], "g--o")
     ax.autoscale(tight=True)
     xlim = np.array(ax.get_xlim())
     sp = xlim[1] - xlim[0]
@@ -73,9 +73,14 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label="factor"):
     return fig
 
 
-def plot_loadings(loadings, col_names=None, row_names=None,
-                  loading_pairs=None, percent_variance=None,
-                  title="Factor patterns"):
+def plot_loadings(
+    loadings,
+    col_names=None,
+    row_names=None,
+    loading_pairs=None,
+    percent_variance=None,
+    title="Factor patterns",
+):
     """
     Plot factor loadings in 2-d plots
 
@@ -116,8 +121,7 @@ def plot_loadings(loadings, col_names=None, row_names=None,
         figs.append(fig)
         ax = fig.add_subplot(111)
         for k in range(loadings.shape[0]):
-            plt.text(loadings[k, i], loadings[k, j],
-                     row_names[k], fontsize=12)
+            plt.text(loadings[k, i], loadings[k, j], row_names[k], fontsize=12)
         ax.plot(loadings[:, i], loadings[:, j], "bo")
         ax.set_title(title)
         if percent_variance is not None:

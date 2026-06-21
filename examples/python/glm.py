@@ -53,9 +53,9 @@ print(res.summary())
 
 # ### Quantities of interest
 
-print('Total number of trials:', data.endog.iloc[:, 0].sum())
-print('Parameters: ', res.params)
-print('T-values: ', res.tvalues)
+print("Total number of trials:", data.endog.iloc[:, 0].sum())
+print("Parameters: ", res.params)
+print("T-values: ", res.tvalues)
 
 # First differences: We hold all explanatory variables constant at their
 # means and manipulate the percentage of low income households to assess its
@@ -65,8 +65,7 @@ means = data.exog.mean(axis=0)
 means25 = means.copy()
 means25.iloc[0] = stats.scoreatpercentile(data.exog.iloc[:, 0], 25)
 means75 = means.copy()
-means75.iloc[0] = lowinc_75per = stats.scoreatpercentile(
-    data.exog.iloc[:, 0], 75)
+means75.iloc[0] = lowinc_75per = stats.scoreatpercentile(data.exog.iloc[:, 0], 75)
 resp_25 = res.predict(means25)
 resp_75 = res.predict(means75)
 diff = resp_75 - resp_25
@@ -94,9 +93,9 @@ ax.scatter(yhat, y)
 line_fit = sm.OLS(y, sm.add_constant(yhat, prepend=True)).fit()
 abline_plot(model_results=line_fit, ax=ax)
 
-ax.set_title('Model Fit Plot')
-ax.set_ylabel('Observed values')
-ax.set_xlabel('Fitted values')
+ax.set_title("Model Fit Plot")
+ax.set_ylabel("Observed values")
+ax.set_xlabel("Fitted values")
 
 # Plot yhat vs. Pearson residuals:
 
@@ -105,9 +104,9 @@ fig, ax = plt.subplots()
 ax.scatter(yhat, res.resid_pearson)
 ax.hlines(0, 0, 1)
 ax.set_xlim(0, 1)
-ax.set_title('Residual Dependence Plot')
-ax.set_ylabel('Pearson Residuals')
-ax.set_xlabel('Fitted values')
+ax.set_title("Residual Dependence Plot")
+ax.set_ylabel("Pearson Residuals")
+ax.set_xlabel("Fitted values")
 
 # Histogram of standardized deviance residuals:
 
@@ -118,13 +117,13 @@ fig, ax = plt.subplots()
 resid = res.resid_deviance.copy()
 resid_std = stats.zscore(resid)
 ax.hist(resid_std, bins=25)
-ax.set_title('Histogram of standardized deviance residuals')
+ax.set_title("Histogram of standardized deviance residuals")
 
 # QQ Plot of Deviance Residuals:
 
 from statsmodels import graphics
 
-graphics.gofplots.qqplot(resid, line='r')
+graphics.gofplots.qqplot(resid, line="r")
 
 # ## GLM: Gamma for proportional count response
 #
@@ -147,9 +146,9 @@ print(data2.endog.head())
 
 # ### Model Fit and summary
 
-glm_gamma = sm.GLM(data2.endog,
-                   data2.exog,
-                   family=sm.families.Gamma(sm.families.links.Log()))
+glm_gamma = sm.GLM(
+    data2.endog, data2.exog, family=sm.families.Gamma(sm.families.links.Log())
+)
 glm_results = glm_gamma.fit()
 print(glm_results.summary())
 
@@ -162,12 +161,10 @@ x = np.arange(nobs2)
 np.random.seed(54321)
 X = np.column_stack((x, x**2))
 X = sm.add_constant(X, prepend=False)
-lny = np.exp(-(.03 * x + .0001 * x**2 - 1.0)) + .001 * np.random.rand(nobs2)
+lny = np.exp(-(0.03 * x + 0.0001 * x**2 - 1.0)) + 0.001 * np.random.rand(nobs2)
 
 # ### Fit and summary (artificial data)
 
-gauss_log = sm.GLM(lny,
-                   X,
-                   family=sm.families.Gaussian(sm.families.links.Log()))
+gauss_log = sm.GLM(lny, X, family=sm.families.Gaussian(sm.families.links.Log()))
 gauss_log_results = gauss_log.fit()
 print(gauss_log_results.summary())

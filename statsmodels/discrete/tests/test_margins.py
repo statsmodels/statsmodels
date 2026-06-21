@@ -36,8 +36,9 @@ class CheckMarginMixin:
         assert_allclose(self.margeff.margeff, self.res1.params[sl], rtol=1e-5 * rf)
         assert_allclose(self.margeff.margeff_se, self.res1.bse[sl], rtol=1e-6 * rf)
         assert_allclose(self.margeff.pvalues, self.res1.pvalues[sl], rtol=5e-6 * rf)
-        assert_allclose(self.margeff.conf_int(), res1.margins_table[sl, 4:6],
-                        rtol=1e-6 * rf)
+        assert_allclose(
+            self.margeff.conf_int(), res1.margins_table[sl, 4:6], rtol=1e-6 * rf
+        )
 
 
 class TestPoissonMargin(CheckMarginMixin):
@@ -45,8 +46,7 @@ class TestPoissonMargin(CheckMarginMixin):
     @classmethod
     def setup_class(cls):
         # here we do not need to check convergence from default start_params
-        start_params = [14.1709, 0.7085, -3.4548, -0.539, 3.2368,  -7.9299,
-                        -5.0529]
+        start_params = [14.1709, 0.7085, -3.4548, -0.539, 3.2368, -7.9299, -5.0529]
         mod_poi = Poisson(endog, exog)
         res_poi = mod_poi.fit(start_params=start_params)
         # res_poi = mod_poi.fit(maxiter=100)
@@ -64,8 +64,7 @@ class TestPoissonMarginDummy(CheckMarginMixin):
     @classmethod
     def setup_class(cls):
         # here we do not need to check convergence from default start_params
-        start_params = [14.1709, 0.7085, -3.4548, -0.539, 3.2368,  -7.9299,
-                        -5.0529]
+        start_params = [14.1709, 0.7085, -3.4548, -0.539, 3.2368, -7.9299, -5.0529]
         mod_poi = Poisson(endog, exog)
         res_poi = mod_poi.fit(start_params=start_params)
         marge_poi = res_poi.get_margeff(dummy=True)
@@ -81,8 +80,7 @@ class TestNegBinMargin(CheckMarginMixin):
     @classmethod
     def setup_class(cls):
         # here we do not need to check convergence from default start_params
-        start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
-                        -2.88, 1.14]
+        start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552, -2.88, 1.14]
         mod = NegativeBinomial(endog, exog)
         res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff()
@@ -100,8 +98,7 @@ class TestNegBinMarginDummy(CheckMarginMixin):
     @classmethod
     def setup_class(cls):
         # here we do not need to check convergence from default start_params
-        start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
-                        -2.88, 1.14]
+        start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552, -2.88, 1.14]
         mod = NegativeBinomial(endog, exog)
         res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff(dummy=True)
@@ -119,9 +116,8 @@ class TestNegBinPMargin(CheckMarginMixin):
     @classmethod
     def setup_class(cls):
         # here we do not need to check convergence from default start_params
-        start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
-                        -2.88, 1.14]
-        mod = NegativeBinomialP(endog, exog)   # checks also that default p=2
+        start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552, -2.88, 1.14]
+        mod = NegativeBinomialP(endog, exog)  # checks also that default p=2
         res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff()
         cls.res = res

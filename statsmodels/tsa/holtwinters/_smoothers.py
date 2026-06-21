@@ -240,7 +240,7 @@ def holt_win__mul(x, hw_args: HoltWintersArgs):
     Minimization Function
     (,M)
     """
-    (_, _, _, _, alphac, _, gammac, y_alpha, y_gamma) = holt_win_init(x, hw_args)
+    _, _, _, _, alphac, _, gammac, y_alpha, y_gamma = holt_win_init(x, hw_args)
     lvl = hw_args.lvl
     s = hw_args.s
     m = hw_args.m
@@ -256,9 +256,7 @@ def holt_win__add(x, hw_args: HoltWintersArgs):
     Minimization Function
     (,A)
     """
-    (alpha, _, gamma, _, alphac, _, gammac, y_alpha, y_gamma) = holt_win_init(
-        x, hw_args
-    )
+    alpha, _, gamma, _, alphac, _, gammac, y_alpha, y_gamma = holt_win_init(x, hw_args)
     lvl = hw_args.lvl
     s = hw_args.s
     m = hw_args.m

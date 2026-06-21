@@ -5,6 +5,7 @@ example is extended to look at the meaning of rsquared in WLS,
 at outliers, compares with RLM and a short bootstrap
 
 """
+
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
@@ -27,7 +28,7 @@ plt.grid()
 # it becomes the constant, so we would want to perform
 # this type of regression without an explicit constant in the design
 
-wls_fit = sm.WLS(data.endog, data.exog[:, :-1], weights=1/incomesq).fit()
+wls_fit = sm.WLS(data.endog, data.exog[:, :-1], weights=1 / incomesq).fit()
 
 # This however, leads to difficulties in interpreting the post-estimation
 # statistics.  statsmodels does not yet handle this elegantly, but
@@ -36,13 +37,13 @@ wls_fit = sm.WLS(data.endog, data.exog[:, :-1], weights=1/incomesq).fit()
 # explained sum of squares
 ess = wls_fit.uncentered_tss - wls_fit.ssr
 # rsquared
-rsquared = ess/wls_fit.uncentered_tss
+rsquared = ess / wls_fit.uncentered_tss
 # mean squared error of the model
-mse_model = ess/(wls_fit.df_model + 1)  # add back the dof of the constant
+mse_model = ess / (wls_fit.df_model + 1)  # add back the dof of the constant
 # f statistic
-fvalue = mse_model/wls_fit.mse_resid
+fvalue = mse_model / wls_fit.mse_resid
 # adjusted r-squared
-rsquared_adj = 1 - (wls_fit.nobs)/(wls_fit.df_resid)*(1-rsquared)
+rsquared_adj = 1 - (wls_fit.nobs) / (wls_fit.df_resid) * (1 - rsquared)
 
 
 # Trying to figure out what's going on in this example
@@ -52,28 +53,27 @@ rsquared_adj = 1 - (wls_fit.nobs)/(wls_fit.df_resid)*(1-rsquared)
 #  from the regressors and keep the constant in then the reported rsquared
 #  stays small. Below also compared using squared or sqrt of weight variable.
 # TODO: need to add 45 degree line to graphs
-wls_fit3 = sm.WLS(data.endog, data.exog[:, (0, 1, 3, 4)],
-                  weights=1/incomesq).fit()
+wls_fit3 = sm.WLS(data.endog, data.exog[:, (0, 1, 3, 4)], weights=1 / incomesq).fit()
 print(wls_fit3.summary())
-print('corrected rsquared')
-print((wls_fit3.uncentered_tss - wls_fit3.ssr)/wls_fit3.uncentered_tss)
+print("corrected rsquared")
+print((wls_fit3.uncentered_tss - wls_fit3.ssr) / wls_fit3.uncentered_tss)
 plt.figure()
-plt.title('WLS dropping heteroscedasticity variable from regressors')
-plt.plot(data.endog, wls_fit3.fittedvalues, 'o')
+plt.title("WLS dropping heteroscedasticity variable from regressors")
+plt.plot(data.endog, wls_fit3.fittedvalues, "o")
 plt.xlim([0, 2000])
 # @savefig wls_drop_het.png
 plt.ylim([0, 2000])
-print('raw correlation of endog and fittedvalues')
+print("raw correlation of endog and fittedvalues")
 print(np.corrcoef(data.endog, wls_fit.fittedvalues))
-print('raw correlation coefficient of endog and fittedvalues squared')
-print(np.corrcoef(data.endog, wls_fit.fittedvalues)[0, 1]**2)
+print("raw correlation coefficient of endog and fittedvalues squared")
+print(np.corrcoef(data.endog, wls_fit.fittedvalues)[0, 1] ** 2)
 
 # compare with robust regression,
 # heteroscedasticity correction downweights the outliers
 rlm_fit = sm.RLM(data.endog, data.exog).fit()
 plt.figure()
-plt.title('using robust for comparison')
-plt.plot(data.endog, rlm_fit.fittedvalues, 'o')
+plt.title("using robust for comparison")
+plt.plot(data.endog, rlm_fit.fittedvalues, "o")
 plt.xlim([0, 2000])
 # @savefig wls_robust_compare.png
 plt.ylim([0, 2000])
@@ -84,8 +84,9 @@ plt.ylim([0, 2000])
 
 # two helper functions
 
+
 def getrsq(fitresult):
-    '''calculates rsquared residual, total and explained sums of squares
+    """calculates rsquared residual, total and explained sums of squares
 
     Parameters
     ----------
@@ -98,8 +99,8 @@ def getrsq(fitresult):
     residual sum of squares
     (centered) total sum of squares
     explained sum of squares (for centered)
-    '''
-    if hasattr(fitresult, 'resid') and hasattr(fitresult, 'model'):
+    """
+    if hasattr(fitresult, "resid") and hasattr(fitresult, "model"):
         resid = fitresult.resid
         endog = fitresult.model.endog
         nobs = fitresult.nobs
@@ -109,12 +110,12 @@ def getrsq(fitresult):
         nobs = resid.shape[0]
 
     rss = np.dot(resid, resid)
-    tss = np.var(endog)*nobs
-    return 1-rss/tss, rss, tss, tss-rss
+    tss = np.var(endog) * nobs
+    return 1 - rss / tss, rss, tss, tss - rss
 
 
 def index_trim_outlier(resid, k):
-    '''returns indices to residual array with k outliers removed
+    """returns indices to residual array with k outliers removed
 
     Parameters
     ----------
@@ -136,7 +137,7 @@ def index_trim_outlier(resid, k):
     Outliers are defined as the k observations with the largest
     absolute values.
 
-    '''
+    """
     sort_index = np.argsort(np.abs(resid))
     # index of non-outlier
     trimmed_index = np.sort(sort_index[:-k])
@@ -148,57 +149,69 @@ def index_trim_outlier(resid, k):
 # ---------------------------------------------------------------------------
 
 olskeep, olsoutl = index_trim_outlier(ols_fit.resid, 2)
-print('ols outliers', olsoutl, ols_fit.resid[olsoutl])
+print("ols outliers", olsoutl, ols_fit.resid[olsoutl])
 ols_fit_rm2 = sm.OLS(data.endog[olskeep], data.exog[olskeep, :]).fit()
 rlm_fit_rm2 = sm.RLM(data.endog[olskeep], data.exog[olskeep, :]).fit()
 
 results = [ols_fit, ols_fit_rm2, rlm_fit, rlm_fit_rm2]
 # Note: I think incomesq is already square
-for weights in [1/incomesq, 1/incomesq**2, np.sqrt(incomesq)]:
-    print('\nComparison OLS and WLS with and without outliers')
+for weights in [1 / incomesq, 1 / incomesq**2, np.sqrt(incomesq)]:
+    print("\nComparison OLS and WLS with and without outliers")
     wls_fit0 = sm.WLS(data.endog, data.exog, weights=weights).fit()
-    wls_fit_rm2 = sm.WLS(data.endog[olskeep], data.exog[olskeep, :],
-                         weights=weights[olskeep]).fit()
+    wls_fit_rm2 = sm.WLS(
+        data.endog[olskeep], data.exog[olskeep, :], weights=weights[olskeep]
+    ).fit()
     wlskeep, wlsoutl = index_trim_outlier(ols_fit.resid, 2)
-    print('2 outliers candidates and residuals')
+    print("2 outliers candidates and residuals")
     print(wlsoutl, wls_fit.resid[olsoutl])
     # redundant because ols and wls outliers are the same:
     #  wls_fit_rm2_ = sm.WLS(data.endog[wlskeep], data.exog[wlskeep, :],
     #                        weights=1/incomesq[wlskeep]).fit()
 
-    print('outliers ols, wls:', olsoutl, wlsoutl)
+    print("outliers ols, wls:", olsoutl, wlsoutl)
 
-    print('rsquared')
-    print('ols vs ols rm2', ols_fit.rsquared, ols_fit_rm2.rsquared)
-    print('wls vs wls rm2', wls_fit0.rsquared, wls_fit_rm2.rsquared)
-    print('compare R2_resid  versus  R2_wresid')
-    print('ols minus 2', getrsq(ols_fit_rm2)[0],)
+    print("rsquared")
+    print("ols vs ols rm2", ols_fit.rsquared, ols_fit_rm2.rsquared)
+    print("wls vs wls rm2", wls_fit0.rsquared, wls_fit_rm2.rsquared)
+    print("compare R2_resid  versus  R2_wresid")
+    print(
+        "ols minus 2",
+        getrsq(ols_fit_rm2)[0],
+    )
     print(getrsq((ols_fit_rm2.wresid, ols_fit_rm2.model.wendog))[0])
-    print('wls        ', getrsq(wls_fit)[0],)
+    print(
+        "wls        ",
+        getrsq(wls_fit)[0],
+    )
     print(getrsq((wls_fit.wresid, wls_fit.model.wendog))[0])
 
-    print('wls minus 2', getrsq(wls_fit_rm2)[0])
+    print("wls minus 2", getrsq(wls_fit_rm2)[0])
     # next is same as wls_fit_rm2.rsquared for cross checking
     print(getrsq((wls_fit_rm2.wresid, wls_fit_rm2.model.wendog))[0])
     results.extend([wls_fit0, wls_fit_rm2])
 
-print('     ols             ols_rm2       rlm           rlm_rm2     '
-      'wls (lin)    wls_rm2 (lin)   '
-      'wls (squ)   wls_rm2 (squ)  '
-      'wls (sqrt)   wls_rm2 (sqrt)')
-print('Parameter estimates')
+print(
+    "     ols             ols_rm2       rlm           rlm_rm2     "
+    "wls (lin)    wls_rm2 (lin)   "
+    "wls (squ)   wls_rm2 (squ)  "
+    "wls (sqrt)   wls_rm2 (sqrt)"
+)
+print("Parameter estimates")
 print(np.column_stack([r.params for r in results]))
-print('R2 original data, next line R2 weighted data')
-print(np.column_stack([getattr(r, 'rsquared', None) for r in results]))
+print("R2 original data, next line R2 weighted data")
+print(np.column_stack([getattr(r, "rsquared", None) for r in results]))
 
-print('Standard errors')
-print(np.column_stack([getattr(r, 'bse', None) for r in results]))
-print('Heteroscedasticity robust standard errors (with ols)')
-print('with outliers')
-print(np.column_stack([getattr(ols_fit, se, None)
-                       for se in ['HC0_se', 'HC1_se', 'HC2_se', 'HC3_se']]))
+print("Standard errors")
+print(np.column_stack([getattr(r, "bse", None) for r in results]))
+print("Heteroscedasticity robust standard errors (with ols)")
+print("with outliers")
+print(
+    np.column_stack(
+        [getattr(ols_fit, se, None) for se in ["HC0_se", "HC1_se", "HC2_se", "HC3_se"]]
+    )
+)
 
-'''
+"""
 # ..
 # ..
 # ..     ols             ols_rm2       rlm           rlm_rm2     wls (lin)    wls_rm2 (lin)   wls (squ)   wls_rm2 (squ)  wls (sqrt)   wls_rm2 (sqrt)
@@ -240,7 +253,7 @@ print(np.column_stack([getattr(ols_fit, se, None)
 # ..
 # ..
 # ..
-'''  # noqa:E501
+"""  # noqa:E501
 
 # a quick bootstrap analysis
 # --------------------------
@@ -251,7 +264,7 @@ print(np.column_stack([getattr(ols_fit, se, None)
 
 nobs, nvar = data.exog.shape
 niter = 2000
-bootres = np.zeros((niter, nvar*2))
+bootres = np.zeros((niter, nvar * 2))
 
 for it in range(niter):
     rind = np.random.randint(nobs, size=nobs)
@@ -262,25 +275,26 @@ for it in range(niter):
     bootres[it, nvar:] = res.bse
 
 np.set_printoptions(linewidth=200)
-print('Bootstrap Results of parameters and parameter standard deviation  OLS')
-print('Parameter estimates')
-print('median', np.median(bootres[:, :5], 0))
-print('mean  ', np.mean(bootres[:, :5], 0))
-print('std   ', np.std(bootres[:, :5], 0))
+print("Bootstrap Results of parameters and parameter standard deviation  OLS")
+print("Parameter estimates")
+print("median", np.median(bootres[:, :5], 0))
+print("mean  ", np.mean(bootres[:, :5], 0))
+print("std   ", np.std(bootres[:, :5], 0))
 
-print('Standard deviation of parameter estimates')
-print('median', np.median(bootres[:, 5:], 0))
-print('mean  ', np.mean(bootres[:, 5:], 0))
-print('std   ', np.std(bootres[:, 5:], 0))
+print("Standard deviation of parameter estimates")
+print("median", np.median(bootres[:, 5:], 0))
+print("mean  ", np.mean(bootres[:, 5:], 0))
+print("std   ", np.std(bootres[:, 5:], 0))
 
 plt.figure()
 for i in range(4):
-    plt.subplot(2, 2, i+1)
+    plt.subplot(2, 2, i + 1)
     plt.hist(bootres[:, i], 50)
-    plt.title('var%d' % i)
+    plt.title("var%d" % i)
 # @savefig wls_bootstrap.png
-plt.figtext(0.5, 0.935,  'OLS Bootstrap',
-            ha='center', color='black', weight='bold', size='large')
+plt.figtext(
+    0.5, 0.935, "OLS Bootstrap", ha="center", color="black", weight="bold", size="large"
+)
 
 # **With WLS on sample with outliers removed**
 
@@ -290,42 +304,51 @@ incomesq_rm2 = incomesq[olskeep]
 
 nobs, nvar = data_exog.shape
 niter = 500  # a bit slow
-bootreswls = np.zeros((niter, nvar*2))
+bootreswls = np.zeros((niter, nvar * 2))
 
 for it in range(niter):
     rind = np.random.randint(nobs, size=nobs)
     endog = data_endog[rind]
     exog = data_exog[rind, :]
-    res = sm.WLS(endog, exog, weights=1/incomesq[rind, :]).fit()
+    res = sm.WLS(endog, exog, weights=1 / incomesq[rind, :]).fit()
     bootreswls[it, :nvar] = res.params
     bootreswls[it, nvar:] = res.bse
 
-print('Bootstrap Results of parameters and parameter standard deviation',)
-print('WLS removed 2 outliers from sample')
-print('Parameter estimates')
-print('median', np.median(bootreswls[:, :5], 0))
-print('mean  ', np.mean(bootreswls[:, :5], 0))
-print('std   ', np.std(bootreswls[:, :5], 0))
+print(
+    "Bootstrap Results of parameters and parameter standard deviation",
+)
+print("WLS removed 2 outliers from sample")
+print("Parameter estimates")
+print("median", np.median(bootreswls[:, :5], 0))
+print("mean  ", np.mean(bootreswls[:, :5], 0))
+print("std   ", np.std(bootreswls[:, :5], 0))
 
-print('Standard deviation of parameter estimates')
-print('median', np.median(bootreswls[:, 5:], 0))
-print('mean  ', np.mean(bootreswls[:, 5:], 0))
-print('std   ', np.std(bootreswls[:, 5:], 0))
+print("Standard deviation of parameter estimates")
+print("median", np.median(bootreswls[:, 5:], 0))
+print("mean  ", np.mean(bootreswls[:, 5:], 0))
+print("std   ", np.std(bootreswls[:, 5:], 0))
 
 plt.figure()
 for i in range(4):
-    plt.subplot(2, 2, i+1)
+    plt.subplot(2, 2, i + 1)
     plt.hist(bootreswls[:, i], 50)
-    plt.title('var%d' % i)
+    plt.title("var%d" % i)
 # @savefig wls_bootstrap_rm2.png
-plt.figtext(0.5, 0.935,  'WLS rm2 Bootstrap',
-            ha='center', color='black', weight='bold', size='large')
+plt.figtext(
+    0.5,
+    0.935,
+    "WLS rm2 Bootstrap",
+    ha="center",
+    color="black",
+    weight="bold",
+    size="large",
+)
 
 
 # ..plt.show()
 # ..plt.close('all')
 
-'''
+"""
 # ::
 #
 #    The following a random variables not fixed by a seed
@@ -399,4 +422,4 @@ plt.figtext(0.5, 0.935,  'WLS rm2 Bootstrap',
 #   without a constant. In this case autodedection would not work this
 #   way. Also, I'm not sure whether a ddof keyword parameter can also
 #   handle the hasconst case.
-'''  # noqa:E501
+"""  # noqa:E501

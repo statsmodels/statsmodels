@@ -5,6 +5,7 @@ Only Gaussian models are currently checked.
 
 See the generated file "gee_simulation_check.txt" for results.
 """
+
 from statsmodels.compat.python import lrange
 
 from itertools import product
@@ -16,8 +17,7 @@ from statsmodels.genmod.cov_struct import Autoregressive, Nested
 from statsmodels.genmod.families import Gaussian
 from statsmodels.genmod.generalized_estimating_equations import GEE
 
-np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
-                    suppress=True)
+np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x}, suppress=True)
 
 
 OUT = open("gee_simulation_check.txt", "w", encoding="utf-8")
@@ -69,17 +69,15 @@ class GEE_simulator:
 class AR_simulator(GEE_simulator):
 
     # The distance function for determining AR correlations.
-    distfun = [lambda x, y: np.sqrt(np.sum((x-y)**2)),]
+    distfun = [
+        lambda x, y: np.sqrt(np.sum((x - y) ** 2)),
+    ]
 
     def print_dparams(self, dparams_est):
-        OUT.write("AR coefficient estimate:   %8.4f\n" %
-                  dparams_est[0])
-        OUT.write("AR coefficient truth:      %8.4f\n" %
-                  self.dparams[0])
-        OUT.write("Error variance estimate:   %8.4f\n" %
-                  dparams_est[1])
-        OUT.write("Error variance truth:      %8.4f\n" %
-                  self.error_sd**2)
+        OUT.write("AR coefficient estimate:   %8.4f\n" % dparams_est[0])
+        OUT.write("AR coefficient truth:      %8.4f\n" % self.dparams[0])
+        OUT.write("Error variance estimate:   %8.4f\n" % dparams_est[1])
+        OUT.write("Error variance truth:      %8.4f\n" % self.error_sd**2)
         OUT.write("\n")
 
     def simulate(self):
@@ -88,10 +86,16 @@ class AR_simulator(GEE_simulator):
 
         for i in range(self.ngroups):
 
-            gsize = np.random.randint(self.group_size_range[0],
-                                      self.group_size_range[1])
+            gsize = np.random.randint(
+                self.group_size_range[0], self.group_size_range[1]
+            )
 
-            group.append([i,] * gsize)
+            group.append(
+                [
+                    i,
+                ]
+                * gsize
+            )
 
             time1 = np.random.normal(size=(gsize, 2))
             time.append(time1)
@@ -101,11 +105,10 @@ class AR_simulator(GEE_simulator):
             exog.append(exog1)
 
             # Pairwise distances within the cluster
-            distances = scipy.spatial.distance.cdist(time1, time1,
-                                                     self.distfun[0])
+            distances = scipy.spatial.distance.cdist(time1, time1, self.distfun[0])
 
             # Pairwise correlations within the cluster
-            correlations = self.dparams[0]**distances
+            correlations = self.dparams[0] ** distances
             correlations_sr = np.linalg.cholesky(correlations)
 
             errors = np.dot(correlations_sr, np.random.normal(size=gsize))
@@ -155,8 +158,10 @@ class Nested_simulator(GEE_simulator):
             iterators = [lrange(n) for n in self.nest_sizes]
 
             # The random effects
-            variances = [np.sqrt(v)*np.random.normal(size=n)
-                         for v, n in zip(vcomp, self.nest_sizes)]
+            variances = [
+                np.sqrt(v) * np.random.normal(size=n)
+                for v, n in zip(vcomp, self.nest_sizes)
+            ]
 
             gpe = np.random.normal() * np.sqrt(group_effect_var)
 
@@ -182,9 +187,9 @@ class Nested_simulator(GEE_simulator):
                 endog.append(endog1)
 
                 for j in range(len(nest)):
-                    nest_all[j].add(tuple(nest[0:j+1]))
+                    nest_all[j].add(tuple(nest[0 : j + 1]))
 
-                nest1 = [len(x)-1 for x in nest_all]
+                nest1 = [len(x) - 1 for x in nest_all]
                 id_matrix.append(nest1[0:-1])
 
         self.exog = np.array(exog)
@@ -207,9 +212,12 @@ def gen_gendat_ar0(ar):
         ars.ngroups = 200
         ars.params = np.r_[0, -1, 1, 0, 0.5]
         ars.error_sd = 2
-        ars.dparams = [ar,]
+        ars.dparams = [
+            ar,
+        ]
         ars.simulate()
         return ars, Autoregressive()
+
     return gendat_ar0
 
 
@@ -219,30 +227,33 @@ def gen_gendat_ar1(ar):
         ars.ngroups = 200
         ars.params = np.r_[0, -0.8, 1.2, 0, 0.5]
         ars.error_sd = 2
-        ars.dparams = [ar,]
+        ars.dparams = [
+            ar,
+        ]
         ars.simulate()
         return ars, Autoregressive()
+
     return gendat_ar1
 
 
 def gendat_nested0():
     ns = Nested_simulator()
-    ns.error_sd = 1.
-    ns.params = np.r_[0., 1, 1, -1, -1]
+    ns.error_sd = 1.0
+    ns.params = np.r_[0.0, 1, 1, -1, -1]
     ns.ngroups = 50
     ns.nest_sizes = [10, 5]
-    ns.dparams = [2., 1.]
+    ns.dparams = [2.0, 1.0]
     ns.simulate()
     return ns, Nested(ns.id_matrix)
 
 
 def gendat_nested1():
     ns = Nested_simulator()
-    ns.error_sd = 2.
+    ns.error_sd = 2.0
     ns.params = np.r_[0, 1, 1.3, -0.8, -1.2]
     ns.ngroups = 50
     ns.nest_sizes = [10, 5]
-    ns.dparams = [1., 3.]
+    ns.dparams = [1.0, 3.0]
     ns.simulate()
     return ns, Nested(ns.id_matrix)
 
@@ -253,8 +264,12 @@ gendats = [gen_gendat_ar0(ar) for ar in (0, 0.3, 0.6)]
 gendats.extend([gen_gendat_ar1(ar) for ar in (0, 0.3, 0.6)])
 gendats.extend([gendat_nested0, gendat_nested1])
 
-lhs = np.array([[0., 1, 1, 0, 0],])
-rhs = np.r_[0.,]
+lhs = np.array(
+    [
+        [0.0, 1, 1, 0, 0],
+    ]
+)
+rhs = np.r_[0.0,]
 
 # Loop over data generating models
 for gendat in gendats:
@@ -280,8 +295,7 @@ for gendat in gendats:
         da, va = gendat()
         ga = Gaussian()
 
-        md = GEE(da.endog, da.exog, da.group, da.time, ga, va,
-                 constraint=(lhs, rhs))
+        md = GEE(da.endog, da.exog, da.group, da.time, ga, va, constraint=(lhs, rhs))
         mdf = md.fit()
         score = md.score_test_results
         pvalue = score["p-value"]

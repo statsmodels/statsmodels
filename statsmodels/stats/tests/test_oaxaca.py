@@ -15,9 +15,7 @@ from statsmodels.tools.tools import add_constant
 pandas_df = load_pandas()
 endog = pandas_df.endog.values
 exog = add_constant(pandas_df.exog.values, prepend=False)
-pd_endog, pd_exog = pandas_df.endog, add_constant(
-    pandas_df.exog, prepend=False
-)
+pd_endog, pd_exog = pandas_df.endog, add_constant(pandas_df.exog, prepend=False)
 
 
 class TestOaxaca:
@@ -280,9 +278,7 @@ class TestPooledModel:
     def test_results(self):
         unexp, exp, gap = self.pooled_model.params
         unexp_std, exp_std = self.pooled_model.std
-        pool_params_stata_results = np.array(
-            [27.940908, 130.809536, 158.75044]
-        )
+        pool_params_stata_results = np.array([27.940908, 130.809536, 158.75044])
         pool_std_stata_results = np.array([89.209487, 58.612367])
 
         np.testing.assert_almost_equal(unexp, pool_params_stata_results[0], 3)

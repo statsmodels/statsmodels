@@ -6,6 +6,7 @@ This script checks ordinal and nominal models for multinomial data.
 See the generated file "gee_categorical_simulation_check.txt" for
 results.
 """
+
 from statsmodels.compat.python import lrange
 
 import numpy as np
@@ -34,8 +35,7 @@ class ordinal_simulator(GEE_simulator):
         return np.concatenate((self.thresholds, self.params))
 
     def starting_values(self, nconstraints):
-        beta = gee_ordinal_starting_values(self.endog,
-                                           len(self.params))
+        beta = gee_ordinal_starting_values(self.endog, len(self.params))
         if nconstraints > 0:
             m = self.exog_ex.shape[1] - nconstraints
             beta = beta[0:m]
@@ -44,8 +44,7 @@ class ordinal_simulator(GEE_simulator):
 
     def print_dparams(self, dparams_est):
         OUT.write("Odds ratio estimate:   %8.4f\n" % dparams_est[0])
-        OUT.write("Odds ratio truth:      %8.4f\n" %
-                  self.dparams[0])
+        OUT.write("Odds ratio truth:      %8.4f\n" % self.dparams[0])
         OUT.write("\n")
 
     def simulate(self):
@@ -54,10 +53,16 @@ class ordinal_simulator(GEE_simulator):
 
         for i in range(self.ngroups):
 
-            gsize = np.random.randint(self.group_size_range[0],
-                                      self.group_size_range[1])
+            gsize = np.random.randint(
+                self.group_size_range[0], self.group_size_range[1]
+            )
 
-            group.append([i,] * gsize)
+            group.append(
+                [
+                    i,
+                ]
+                * gsize
+            )
 
             time1 = np.random.normal(size=(gsize, 2))
             time.append(time1)
@@ -98,10 +103,16 @@ class nominal_simulator(GEE_simulator):
 
         for i in range(self.ngroups):
 
-            gsize = np.random.randint(self.group_size_range[0],
-                                      self.group_size_range[1])
+            gsize = np.random.randint(
+                self.group_size_range[0], self.group_size_range[1]
+            )
 
-            group.append([i,] * gsize)
+            group.append(
+                [
+                    i,
+                ]
+                * gsize
+            )
 
             time1 = np.random.normal(size=(gsize, 2))
             time.append(time1)
@@ -117,8 +128,7 @@ class nominal_simulator(GEE_simulator):
             m = len(self.params)
             endog1 = []
             for k in range(gsize):
-                pdist = stats.rv_discrete(values=(lrange(m),
-                                                  prob[k, :]))
+                pdist = stats.rv_discrete(values=(lrange(m), prob[k, :]))
                 endog1.append(pdist.rvs())
 
             endog.append(np.asarray(endog1))
@@ -133,28 +143,27 @@ class nominal_simulator(GEE_simulator):
 def gendat_ordinal():
 
     os = ordinal_simulator()
-    os.params = np.r_[0., 1]
+    os.params = np.r_[0.0, 1]
     os.ngroups = 200
     os.thresholds = [1, 0, -1]
-    os.dparams = [1.,]
+    os.dparams = [
+        1.0,
+    ]
     os.simulate()
 
-    data = np.concatenate((os.endog[:, None], os.exog,
-                           os.group[:, None]), axis=1)
+    data = np.concatenate((os.endog[:, None], os.exog, os.group[:, None]), axis=1)
 
-    os.endog_ex, os.exog_ex, os.intercepts, os.nthresh = \
-        gee_setup_ordinal(data, 0)
+    os.endog_ex, os.exog_ex, os.intercepts, os.nthresh = gee_setup_ordinal(data, 0)
 
     os.group_ex = os.exog_ex[:, -1]
     os.exog_ex = os.exog_ex[:, 0:-1]
 
-    os.exog_ex = np.concatenate((os.intercepts, os.exog_ex),
-                                axis=1)
+    os.exog_ex = np.concatenate((os.intercepts, os.exog_ex), axis=1)
 
     va = GlobalOddsRatio(4, "ordinal")
 
-    lhs = np.array([[0., 0., 0, 1., 0.], [0., 0, 0, 0, 1]])
-    rhs = np.r_[0., 1]
+    lhs = np.array([[0.0, 0.0, 0, 1.0, 0.0], [0.0, 0, 0, 0, 1]])
+    rhs = np.r_[0.0, 1]
 
     return os, va, Binomial(), (lhs, rhs)
 
@@ -164,23 +173,33 @@ def gendat_nominal():
     ns = nominal_simulator()
 
     # The last component of params must be identically zero
-    ns.params = [np.r_[0., 1], np.r_[-1., 0], np.r_[0., 0]]
+    ns.params = [np.r_[0.0, 1], np.r_[-1.0, 0], np.r_[0.0, 0]]
     ns.ngroups = 200
-    ns.dparams = [1., ]
+    ns.dparams = [
+        1.0,
+    ]
     ns.simulate()
 
-    data = np.concatenate((ns.endog[:, None], ns.exog,
-                           ns.group[:, None]), axis=1)
+    data = np.concatenate((ns.endog[:, None], ns.exog, ns.group[:, None]), axis=1)
 
-    ns.endog_ex, ns.exog_ex, ns.exog_ne, ns.nlevel = \
-        gee_setup_nominal(data, 0, [3,])
+    ns.endog_ex, ns.exog_ex, ns.exog_ne, ns.nlevel = gee_setup_nominal(
+        data,
+        0,
+        [
+            3,
+        ],
+    )
 
     ns.group_ex = ns.exog_ne[:, 0]
 
     va = GlobalOddsRatio(3, "nominal")
 
-    lhs = np.array([[0., 1., 1, 0],])
-    rhs = np.r_[0.,]
+    lhs = np.array(
+        [
+            [0.0, 1.0, 1, 0],
+        ]
+    )
+    rhs = np.r_[0.0,]
 
     return ns, va, Multinomial(3), (lhs, rhs)
 
@@ -191,8 +210,7 @@ if __name__ == "__main__":
 
     OUT = open("gee_categorical_simulation_check.txt", "w", encoding="utf-8")
 
-    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
-                        suppress=True)
+    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x}, suppress=True)
 
     # Loop over data generating models
     gendats = [gendat_nominal, gendat_ordinal]
@@ -210,8 +228,7 @@ if __name__ == "__main__":
 
             beta = da.starting_values(0)
 
-            md = GEE(da.endog_ex, da.exog_ex, da.group_ex, None,
-                     mt, va)
+            md = GEE(da.endog_ex, da.exog_ex, da.group_ex, None, mt, va)
             mdf = md.fit(start_params=beta)
 
             if mdf is None:
@@ -228,8 +245,15 @@ if __name__ == "__main__":
 
             beta = da.starting_values(constraint[0].shape[0])
 
-            md = GEE(da.endog_ex, da.exog_ex, da.group_ex, None,
-                     mt, va, constraint=constraint)
+            md = GEE(
+                da.endog_ex,
+                da.exog_ex,
+                da.group_ex,
+                None,
+                mt,
+                va,
+                constraint=constraint,
+            )
             mdf = md.fit(start_params=beta)
 
             if mdf is None:
@@ -261,8 +285,7 @@ if __name__ == "__main__":
         OUT.write("Absolute difference: ")
         OUT.write(np.array_str(eparams - true_params) + "\n")
         OUT.write("Relative difference: ")
-        OUT.write(np.array_str((eparams - true_params) / true_params)
-                  + "\n")
+        OUT.write(np.array_str((eparams - true_params) / true_params) + "\n")
         OUT.write("\n")
 
         OUT.write("Checking standard errors:\n")
@@ -273,8 +296,7 @@ if __name__ == "__main__":
         OUT.write("Absolute difference: ")
         OUT.write(np.array_str(sdparams - std_errors) + "\n")
         OUT.write("Relative difference: ")
-        OUT.write(np.array_str((sdparams - std_errors) / std_errors)
-                  + "\n")
+        OUT.write(np.array_str((sdparams - std_errors) / std_errors) + "\n")
         OUT.write("\n")
 
         OUT.write("Checking constrained estimation:\n")
@@ -282,8 +304,7 @@ if __name__ == "__main__":
 
         pvalues.sort()
         for q in np.arange(0.1, 0.91, 0.1):
-            OUT.write("%10.3f %10.3f\n" %
-                      (pvalues[int(q*len(pvalues))], q))
+            OUT.write("%10.3f %10.3f\n" % (pvalues[int(q * len(pvalues))], q))
 
         OUT.write("=" * 80 + "\n\n")
 

@@ -24,8 +24,9 @@ Psychometrika, 67, 7-19.
 import numpy as np
 
 
-def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
-        rotation_method="orthogonal", tol=1e-5):
+def GPA(
+    A, ff=None, vgQ=None, T=None, max_tries=501, rotation_method="orthogonal", tol=1e-5
+):
     r"""
     The gradient projection algorithm (GPA) minimizes a target function
     :math:`\phi(L)`, where :math:`L` is a matrix with rotated factors.
@@ -61,8 +62,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
     """
     # pre processing
     if rotation_method not in ["orthogonal", "oblique"]:
-        raise ValueError("rotation_method should be one of "
-                         "{orthogonal, oblique}")
+        raise ValueError("rotation_method should be one of " "{orthogonal, oblique}")
     if vgQ is None:
         if ff is None:
             raise ValueError("ff should be provided if vgQ is not")
@@ -96,25 +96,25 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         # determine Gp
         if rotation_method == "orthogonal":
             M = (T.T).dot(G)
-            S = (M + M.T)/2
+            S = (M + M.T) / 2
             Gp = G - T.dot(S)
         else:  # i.e. if rotation_method == 'oblique':
-            Gp = G-T.dot(np.diag(np.sum(T*G, axis=0)))
+            Gp = G - T.dot(np.diag(np.sum(T * G, axis=0)))
         s = np.linalg.norm(Gp, "fro")
         table.append([i_try, f, np.log10(s), al])
         # if we are close stop
         if s < tol:
             break
         # update T
-        al = 2*al
+        al = 2 * al
         for _ in range(11):
             # determine Tt
-            X = T - al*Gp
+            X = T - al * Gp
             if rotation_method == "orthogonal":
                 U, D, V = np.linalg.svd(X, full_matrices=False)
                 Tt = U.dot(V)
             else:  # i.e. if rotation_method == 'oblique':
-                v = 1/np.sqrt(np.sum(X**2, axis=0))
+                v = 1 / np.sqrt(np.sum(X**2, axis=0))
                 Tt = X.dot(np.diag(v))
             # calculate objective using Tt
             if derivative_free:
@@ -127,9 +127,9 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
                 L = A.dot(Ti.T)
                 ft, Gq = vgQ(L=L)
             # if sufficient improvement in objective -> use this T
-            if ft < f-.5*s**2*al:
+            if ft < f - 0.5 * s**2 * al:
                 break
-            al = al/2
+            al = al / 2
         # post processing for next iteration
         T = Tt
         f = ft
@@ -157,7 +157,7 @@ def Gf(T, ff):
         for s in range(k):
             dT = np.zeros((k, k))
             dT[r, s] = ep
-            G[r, s] = (ff(T+dT)-ff(T-dT))/(2*ep)
+            G[r, s] = (ff(T + dT) - ff(T - dT)) / (2 * ep)
     return G
 
 
@@ -174,14 +174,13 @@ def rotateA(A, T, rotation_method="orthogonal"):
     elif rotation_method == "oblique":
         L = A.dot(np.linalg.inv(T.T))
     else:  # i.e. if rotation_method == 'oblique':
-        raise ValueError("rotation_method should be one of "
-                         "{orthogonal, oblique}")
+        raise ValueError("rotation_method should be one of " "{orthogonal, oblique}")
     return L
 
 
-def oblimin_objective(L=None, A=None, T=None, gamma=0,
-                      rotation_method="orthogonal",
-                      return_gradient=True):
+def oblimin_objective(
+    L=None, A=None, T=None, gamma=0, rotation_method="orthogonal", return_gradient=True
+):
     r"""
     Objective function for the oblimin family for orthogonal or
     oblique rotation wich minimizes:
@@ -251,15 +250,15 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
         L = rotateA(A, T, rotation_method=rotation_method)
     p, k = L.shape
     L2 = L**2
-    N = np.ones((k, k))-np.eye(k)
+    N = np.ones((k, k)) - np.eye(k)
     if np.isclose(gamma, 0):
         X = L2.dot(N)
     else:
-        C = np.ones((p, p))/p
-        X = (np.eye(p) - gamma*C).dot(L2).dot(N)
-    phi = np.sum(L2*X)/4
+        C = np.ones((p, p)) / p
+        X = (np.eye(p) - gamma * C).dot(L2).dot(N)
+    phi = np.sum(L2 * X) / 4
     if return_gradient:
-        Gphi = L*X
+        Gphi = L * X
         return phi, Gphi
     else:
         return phi
@@ -319,19 +318,19 @@ def orthomax_objective(L=None, A=None, T=None, gamma=0, return_gradient=True):
     if np.isclose(gamma, 0):
         X = L2
     else:
-        C = np.ones((p, p))/p
-        X = (np.eye(p)-gamma*C).dot(L2)
-    phi = -np.sum(L2*X)/4
+        C = np.ones((p, p)) / p
+        X = (np.eye(p) - gamma * C).dot(L2)
+    phi = -np.sum(L2 * X) / 4
     if return_gradient:
-        Gphi = -L*X
+        Gphi = -L * X
         return phi, Gphi
     else:
         return phi
 
 
-def CF_objective(L=None, A=None, T=None, kappa=0,
-                 rotation_method="orthogonal",
-                 return_gradient=True):
+def CF_objective(
+    L=None, A=None, T=None, kappa=0, rotation_method="orthogonal", return_gradient=True
+):
     r"""
     Objective function for the Crawford-Ferguson family for orthogonal
     and oblique rotation wich minimizes the following objective:
@@ -403,16 +402,16 @@ def CF_objective(L=None, A=None, T=None, kappa=0,
     X = None
     if not np.isclose(kappa, 1):
         N = np.ones((k, k)) - np.eye(k)
-        X = (1 - kappa)*L2.dot(N)
+        X = (1 - kappa) * L2.dot(N)
     if not np.isclose(kappa, 0):
         M = np.ones((p, p)) - np.eye(p)
         if X is None:
-            X = kappa*M.dot(L2)
+            X = kappa * M.dot(L2)
         else:
-            X += kappa*M.dot(L2)
+            X += kappa * M.dot(L2)
     phi = np.sum(L2 * X) / 4
     if return_gradient:
-        Gphi = L*X
+        Gphi = L * X
         return phi, Gphi
     else:
         return phi
@@ -464,8 +463,8 @@ def vgQ_target(H, L=None, A=None, T=None, rotation_method="orthogonal"):
         assert A is not None
         assert T is not None
         L = rotateA(A, T, rotation_method=rotation_method)
-    q = np.linalg.norm(L-H, "fro")**2
-    Gq = 2*(L-H)
+    q = np.linalg.norm(L - H, "fro") ** 2
+    Gq = 2 * (L - H)
     return q, Gq
 
 
@@ -508,7 +507,7 @@ def ff_target(H, L=None, A=None, T=None, rotation_method="orthogonal"):
         assert A is not None
         assert T is not None
         L = rotateA(A, T, rotation_method=rotation_method)
-    return np.linalg.norm(L-H, "fro")**2
+    return np.linalg.norm(L - H, "fro") ** 2
 
 
 def vgQ_partial_target(H, W=None, L=None, A=None, T=None):
@@ -555,8 +554,8 @@ def vgQ_partial_target(H, W=None, L=None, A=None, T=None):
         assert A is not None
         assert T is not None
         L = rotateA(A, T, rotation_method="orthogonal")
-    q = np.linalg.norm(W*(L-H), "fro")**2
-    Gq = 2*W*(L-H)
+    q = np.linalg.norm(W * (L - H), "fro") ** 2
+    Gq = 2 * W * (L - H)
     return q, Gq
 
 
@@ -598,5 +597,5 @@ def ff_partial_target(H, W=None, L=None, A=None, T=None):
         assert A is not None
         assert T is not None
         L = rotateA(A, T, rotation_method="orthogonal")
-    q = np.linalg.norm(W*(L-H), "fro")**2
+    q = np.linalg.norm(W * (L - H), "fro") ** 2
     return q

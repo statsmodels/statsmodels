@@ -36,8 +36,15 @@ class PredictionResults:
 
     """
 
-    def __init__(self, predicted_mean, var_pred_mean, var_resid,
-                 df=None, dist=None, row_labels=None):
+    def __init__(
+        self,
+        predicted_mean,
+        var_pred_mean,
+        var_resid,
+        df=None,
+        dist=None,
+        row_labels=None,
+    ):
         self.predicted = predicted_mean
         self.var_pred = var_pred_mean
         self.df = df
@@ -102,7 +109,7 @@ class PredictionResults:
         """
         se = self.se_obs if obs else self.se_mean
 
-        q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
+        q = self.dist.ppf(1 - alpha / 2.0, *self.dist_args)
         lower = self.predicted_mean - q * se
         upper = self.predicted_mean + q * se
         return np.column_stack((lower, upper))
@@ -123,13 +130,13 @@ class PredictionResults:
         # pandas dict does not handle 2d_array
         # data = np.column_stack(list(to_include.values()))
         # names = ....
-        res = pd.DataFrame(to_include, index=self.row_labels,
-                           columns=to_include.keys())
+        res = pd.DataFrame(to_include, index=self.row_labels, columns=to_include.keys())
         return res
 
 
-def get_prediction(self, exog=None, transform=True, weights=None,
-                   row_labels=None, pred_kwds=None):
+def get_prediction(
+    self, exog=None, transform=True, weights=None, row_labels=None, pred_kwds=None
+):
     """
     Compute prediction results.
 
@@ -196,8 +203,9 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     # need to handle other arrays, TODO: is delegating to model possible ?
     if weights is not None:
         weights = np.asarray(weights)
-        if (weights.size > 1 and
-                (weights.ndim != 1 or weights.shape[0] == exog.shape[1])):
+        if weights.size > 1 and (
+            weights.ndim != 1 or weights.shape[0] == exog.shape[1]
+        ):
             raise ValueError("weights has wrong shape")
 
     if pred_kwds is None:
@@ -217,6 +225,11 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         var_resid /= weights
 
     dist = ["norm", "t"][self.use_t]
-    return PredictionResults(predicted_mean, var_pred_mean, var_resid,
-                             df=self.df_resid, dist=dist,
-                             row_labels=row_labels)
+    return PredictionResults(
+        predicted_mean,
+        var_pred_mean,
+        var_resid,
+        df=self.df_resid,
+        dist=dist,
+        row_labels=row_labels,
+    )

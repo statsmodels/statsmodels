@@ -268,9 +268,7 @@ def pdf_moments_st(cnt):
 
     N = len(cnt)
     if N < 2:
-        raise ValueError(
-            "At least two moments must be given to approximate the pdf."
-        )
+        raise ValueError("At least two moments must be given to approximate the pdf.")
 
     totp = poly1d(1)
     sig = sqrt(cnt[1])
@@ -391,9 +389,7 @@ def pdf_moments(cnt):
     """
     N = len(cnt)
     if N < 2:
-        raise ValueError(
-            "At least two moments must be given to approximate the pdf."
-        )
+        raise ValueError("At least two moments must be given to approximate the pdf.")
 
     mc, mc2, mc3, mc4 = cnt
     skew = mc3 / mc2**1.5

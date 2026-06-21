@@ -1,5 +1,4 @@
-"""Example: statsmodels.OLS
-"""
+"""Example: statsmodels.OLS"""
 
 from statsmodels.datasets.longley import load
 import statsmodels.api as sm
@@ -54,16 +53,16 @@ if rescale == 3:
     resparams[:-1, :] *= rescale_ratio[:, None]
 
 txt_fmt1 = default_txt_fmt
-numformat = '%10.4f'
+numformat = "%10.4f"
 txt_fmt1 = dict(data_fmts=[numformat])
-rowstubs = data.names[1:] + ['const']
-headers = ['all'] + ['drop %s' % name for name in data.names[1:]]
+rowstubs = data.names[1:] + ["const"]
+headers = ["all"] + ["drop %s" % name for name in data.names[1:]]
 tabl = SimpleTable(resparams, headers, rowstubs, txt_fmt=txt_fmt1)
 
 nanstring = numformat % np.nan
 nn = len(nanstring)
-nanrep = ' ' * (nn - 1)
-nanrep = nanrep[:nn // 2] + '-' + nanrep[nn // 2:]
+nanrep = " " * (nn - 1)
+nanrep = nanrep[: nn // 2] + "-" + nanrep[nn // 2 :]
 
-print('Longley data - sensitivity to dropping an explanatory variable')
+print("Longley data - sensitivity to dropping an explanatory variable")
 print(str(tabl).replace(nanstring, nanrep))

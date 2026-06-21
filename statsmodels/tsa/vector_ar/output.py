@@ -22,7 +22,7 @@ _default_table_fmt = dict(
     header_align="r",
     data_aligns="r",
     stubs_align="l",
-    fmt="txt"
+    fmt="txt",
 )
 
 
@@ -45,7 +45,7 @@ class VARSummary:
         header_align="r",
         data_aligns="r",
         stubs_align="l",
-        fmt="txt"
+        fmt="txt",
     )
 
     part1_fmt = dict(
@@ -98,17 +98,17 @@ class VARSummary:
 
         # Header information
         part1title = "Summary of Regression Results"
-        part1data = [[model._model_type],
-                     ["OLS"],  # TODO: change when fit methods change
-                     [time.strftime("%a, %d, %b, %Y", t)],
-                     [time.strftime("%H:%M:%S", t)]]
+        part1data = [
+            [model._model_type],
+            ["OLS"],  # TODO: change when fit methods change
+            [time.strftime("%a, %d, %b, %Y", t)],
+            [time.strftime("%H:%M:%S", t)],
+        ]
         part1header = None
-        part1stubs = ("Model:",
-                      "Method:",
-                      "Date:",
-                      "Time:")
-        part1 = SimpleTable(part1data, part1header, part1stubs,
-                            title=part1title, txt_fmt=self.part1_fmt)
+        part1stubs = ("Model:", "Method:", "Date:", "Time:")
+        part1 = SimpleTable(
+            part1data, part1header, part1stubs, title=part1title, txt_fmt=self.part1_fmt
+        )
 
         return str(part1)
 
@@ -119,21 +119,17 @@ class VARSummary:
 
         model = self.model
 
-        part2Lstubs = ("No. of Equations:",
-                       "Nobs:",
-                       "Log likelihood:",
-                       "AIC:")
-        part2Rstubs = ("BIC:",
-                       "HQIC:",
-                       "FPE:",
-                       "Det(Omega_mle):")
+        part2Lstubs = ("No. of Equations:", "Nobs:", "Log likelihood:", "AIC:")
+        part2Rstubs = ("BIC:", "HQIC:", "FPE:", "Det(Omega_mle):")
         part2Ldata = [[model.neqs], [model.nobs], [model.llf], [model.aic]]
         part2Rdata = [[model.bic], [model.hqic], [model.fpe], [model.detomega]]
         part2Lheader = None
-        part2L = SimpleTable(part2Ldata, part2Lheader, part2Lstubs,
-                             txt_fmt=self.part2_fmt)
-        part2R = SimpleTable(part2Rdata, part2Lheader, part2Rstubs,
-                             txt_fmt=self.part2_fmt)
+        part2L = SimpleTable(
+            part2Ldata, part2Lheader, part2Lstubs, txt_fmt=self.part2_fmt
+        )
+        part2R = SimpleTable(
+            part2Rdata, part2Lheader, part2Rstubs, txt_fmt=self.part2_fmt
+        )
         part2L.extend_right(part2R)
 
         return str(part2L)
@@ -144,10 +140,12 @@ class VARSummary:
 
         Xnames = self.model.exog_names
 
-        data = lzip(model.params.T.ravel(),
-                    model.stderr.T.ravel(),
-                    model.tvalues.T.ravel(),
-                    model.pvalues.T.ravel())
+        data = lzip(
+            model.params.T.ravel(),
+            model.stderr.T.ravel(),
+            model.tvalues.T.ravel(),
+            model.pvalues.T.ravel(),
+        )
 
         header = ("coefficient", "std. error", "t-stat", "prob")
 
@@ -157,8 +155,13 @@ class VARSummary:
             section = "Results for equation %s" % model.names[i]
             buf.write(section + "\n")
 
-            table = SimpleTable(data[dim * i : dim * (i + 1)], header,
-                                Xnames, title=None, txt_fmt=self.default_fmt)
+            table = SimpleTable(
+                data[dim * i : dim * (i + 1)],
+                header,
+                Xnames,
+                title=None,
+                txt_fmt=self.default_fmt,
+            )
             buf.write(str(table) + "\n")
 
             if i < k - 1:
@@ -183,16 +186,23 @@ def normality_summary(results):
 
 
 def hypothesis_test_table(results, title, null_hyp):
-    fmt = dict(_default_table_fmt,
-               data_fmts=["%#15.6F", "%#15.6F", "%#15.3F", "%s"])
+    fmt = dict(_default_table_fmt, data_fmts=["%#15.6F", "%#15.6F", "%#15.3F", "%s"])
 
     buf = StringIO()
-    table = SimpleTable([[results["statistic"],
-                          results["crit_value"],
-                          results["pvalue"],
-                          str(results["df"])]],
-                        ["Test statistic", "Critical Value", "p-value",
-                         "df"], [""], title=None, txt_fmt=fmt)
+    table = SimpleTable(
+        [
+            [
+                results["statistic"],
+                results["crit_value"],
+                results["pvalue"],
+                str(results["df"]),
+            ]
+        ],
+        ["Test statistic", "Critical Value", "p-value", "df"],
+        [""],
+        title=None,
+        txt_fmt=fmt,
+    )
 
     buf.write(title + "\n")
     buf.write(str(table) + "\n")

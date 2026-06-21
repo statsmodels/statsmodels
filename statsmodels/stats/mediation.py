@@ -15,6 +15,7 @@ In the case of linear models with no interactions involving the
 mediator, the results should be similar or identical to the earlier
 Barron-Kenny approach.
 """
+
 import numpy as np
 import pandas as pd
 
@@ -180,7 +181,7 @@ class Mediation:
             return maybe_name_or_idx(self.mediator, mod)[1]
 
         exp = self.exposure
-        exp_is_2 = ((len(exp) == 2) and not isinstance(exp, str))
+        exp_is_2 = (len(exp) == 2) and not isinstance(exp, str)
 
         if exp_is_2:
             if model == "outcome":
@@ -335,8 +336,12 @@ class Mediation:
                     predicted_outcomes[tm][te] = po
 
             for t in 0, 1:
-                indirect_effects[t].append(predicted_outcomes[1][t] - predicted_outcomes[0][t])
-                direct_effects[t].append(predicted_outcomes[t][1] - predicted_outcomes[t][0])
+                indirect_effects[t].append(
+                    predicted_outcomes[1][t] - predicted_outcomes[0][t]
+                )
+                direct_effects[t].append(
+                    predicted_outcomes[t][1] - predicted_outcomes[t][0]
+                )
 
         for t in 0, 1:
             indirect_effects[t] = np.asarray(indirect_effects[t]).T
@@ -379,7 +384,9 @@ class MediationResults:
         self.ACME_tx = indirect_effects_avg[1]
         self.ADE_ctrl = direct_effects_avg[0]
         self.ADE_tx = direct_effects_avg[1]
-        self.total_effect = (self.ACME_ctrl + self.ACME_tx + self.ADE_ctrl + self.ADE_tx) / 2
+        self.total_effect = (
+            self.ACME_ctrl + self.ACME_tx + self.ADE_ctrl + self.ADE_tx
+        ) / 2
 
         self.prop_med_ctrl = self.ACME_ctrl / self.total_effect
         self.prop_med_tx = self.ACME_tx / self.total_effect
@@ -394,23 +401,40 @@ class MediationResults:
         """
 
         columns = ["Estimate", "Lower CI bound", "Upper CI bound", "P-value"]
-        index = ["ACME (control)", "ACME (treated)",
-                 "ADE (control)", "ADE (treated)",
-                 "Total effect",
-                 "Prop. mediated (control)",
-                 "Prop. mediated (treated)",
-                 "ACME (average)", "ADE (average)",
-                 "Prop. mediated (average)"]
+        index = [
+            "ACME (control)",
+            "ACME (treated)",
+            "ADE (control)",
+            "ADE (treated)",
+            "Total effect",
+            "Prop. mediated (control)",
+            "Prop. mediated (treated)",
+            "ACME (average)",
+            "ADE (average)",
+            "Prop. mediated (average)",
+        ]
         smry = pd.DataFrame(columns=columns, index=index)
 
-        for i, vec in enumerate([self.ACME_ctrl, self.ACME_tx,
-                                 self.ADE_ctrl, self.ADE_tx,
-                                 self.total_effect, self.prop_med_ctrl,
-                                 self.prop_med_tx, self.ACME_avg,
-                                 self.ADE_avg, self.prop_med_avg]):
+        for i, vec in enumerate(
+            [
+                self.ACME_ctrl,
+                self.ACME_tx,
+                self.ADE_ctrl,
+                self.ADE_tx,
+                self.total_effect,
+                self.prop_med_ctrl,
+                self.prop_med_tx,
+                self.ACME_avg,
+                self.ADE_avg,
+                self.prop_med_avg,
+            ]
+        ):
 
-            if ((vec is self.prop_med_ctrl) or (vec is self.prop_med_tx) or
-                    (vec is self.prop_med_avg)):
+            if (
+                (vec is self.prop_med_ctrl)
+                or (vec is self.prop_med_tx)
+                or (vec is self.prop_med_avg)
+            ):
                 smry.iloc[i, 0] = np.median(vec)
             else:
                 smry.iloc[i, 0] = vec.mean()

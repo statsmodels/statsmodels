@@ -1,4 +1,5 @@
 """Star98 Educational Testing dataset."""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

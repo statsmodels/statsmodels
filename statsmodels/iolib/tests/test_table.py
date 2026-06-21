@@ -27,8 +27,9 @@ stub2 1.95038 2.65765
         test1data = [[1.30312, 2.73999], [1.95038, 2.65765]]
         test1stubs = ("stub1", "stub2")
         test1header = ("header1", "header2")
-        actual = SimpleTable(test1data, test1header, test1stubs,
-                             txt_fmt=default_txt_fmt)
+        actual = SimpleTable(
+            test1data, test1header, test1stubs, txt_fmt=default_txt_fmt
+        )
         actual = "\n%s\n" % actual.as_text()
         assert_equal(desired, str(actual))
 
@@ -82,23 +83,24 @@ stub R2 C2  40.95038  40.65765
 
     def test_simple_table_4(self):
         # Basic test, test_simple_table_4 test uses custom txt_fmt
-        txt_fmt1 = dict(data_fmts=["%3.2f", "%d"],
-                        empty_cell=" ",
-                        colwidths=1,
-                        colsep=" * ",
-                        row_pre="* ",
-                        row_post=" *",
-                        table_dec_above="*",
-                        table_dec_below="*",
-                        header_dec_below="*",
-                        header_fmt="%s",
-                        stub_fmt="%s",
-                        title_align="r",
-                        header_align="r",
-                        data_aligns="r",
-                        stubs_align="l",
-                        fmt="txt"
-                        )
+        txt_fmt1 = dict(
+            data_fmts=["%3.2f", "%d"],
+            empty_cell=" ",
+            colwidths=1,
+            colsep=" * ",
+            row_pre="* ",
+            row_post=" *",
+            table_dec_above="*",
+            table_dec_below="*",
+            header_dec_below="*",
+            header_fmt="%s",
+            stub_fmt="%s",
+            title_align="r",
+            header_align="r",
+            data_aligns="r",
+            stubs_align="l",
+            fmt="txt",
+        )
         ltx_fmt1 = default_latex_fmt.copy()
         html_fmt1 = default_html_fmt.copy()
         cell0data = 0.0000
@@ -108,8 +110,14 @@ stub R2 C2  40.95038  40.65765
         table1data = [row0data, row1data]
         test1stubs = ("stub1", "stub2")
         test1header = ("header1", "header2")
-        tbl = SimpleTable(table1data, test1header, test1stubs, txt_fmt=txt_fmt1,
-                          ltx_fmt=ltx_fmt1, html_fmt=html_fmt1)
+        tbl = SimpleTable(
+            table1data,
+            test1header,
+            test1stubs,
+            txt_fmt=txt_fmt1,
+            ltx_fmt=ltx_fmt1,
+            html_fmt=html_fmt1,
+        )
 
         def test_txt_fmt1(self):
             # Limited test of custom txt_fmt
@@ -169,6 +177,7 @@ stub R2 C2  40.95038  40.65765
             stripped = "\n".join([line.rstrip() for line in tbl.as_html().split("\n")])
             actual = f"\n{stripped}\n"
             assert_equal(actual, desired)
+
         test_txt_fmt1(self)
         test_ltx_fmt1(self)
         test_html_fmt1(self)
@@ -198,6 +207,7 @@ stub R2 C2  40.95038  40.65765
 """
             actual = "\n%s\n" % tbl_c.as_latex_tabular(center=False)
             assert_equal(actual, desired)
+
         test_ltx_special_chars(self)
 
     def test_regression_with_tuples(self):
@@ -216,6 +226,7 @@ stub R2 C2  40.95038  40.65765
         reg = OLS(exo_df[[("x", "sum")]], endo_df).fit()
         interesting_lines = []
         import warnings
+
         with warnings.catch_warnings():
             # Catch ominormal warning, not interesting here
             warnings.simplefilter("ignore")
@@ -223,9 +234,11 @@ stub R2 C2  40.95038  40.65765
                 if "_" in line:
                     interesting_lines.append(line[:38])
 
-        desired = ["Dep. Variable:                  x_sum ",
-                   "y_sum          1.4595      0.209      ",
-                   "y_max          0.2432      0.035      "]
+        desired = [
+            "Dep. Variable:                  x_sum ",
+            "y_sum          1.4595      0.209      ",
+            "y_max          0.2432      0.035      ",
+        ]
 
         assert_equal(sorted(desired), sorted(interesting_lines))
 
@@ -241,8 +254,9 @@ stub2 1.95038     2.6
         test1data = [[1.30312, 2.73], [1.95038, 2.6]]
         test1stubs = ("stub1", "stub2")
         test1header = ("header1", "header2")
-        actual = SimpleTable(test1data, test1header, test1stubs,
-                             txt_fmt=default_txt_fmt)
+        actual = SimpleTable(
+            test1data, test1header, test1stubs, txt_fmt=default_txt_fmt
+        )
         actual = "\n%s\n" % actual.as_text()
         assert_equal(desired, str(actual))
 
@@ -262,7 +276,6 @@ stub2 1.95038     2.6
         testdata = [[5.394, 29.3], [343, 34.2]]
         teststubs = ("stub1", "stub2")
         testheader = ("header1", "header2")
-        tbl = SimpleTable(testdata, testheader, teststubs,
-                          txt_fmt=default_txt_fmt)
+        tbl = SimpleTable(testdata, testheader, teststubs, txt_fmt=default_txt_fmt)
         actual = "\n%s\n" % tbl._repr_latex_()
         assert_equal(actual, desired)

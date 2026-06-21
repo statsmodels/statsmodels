@@ -144,10 +144,7 @@ class BayesGaussMI:
 
         # Set the user-visible data set.
         if self.exog_names is not None:
-            self.data = pd.DataFrame(
-                           self._data,
-                           columns=self.exog_names,
-                           copy=False)
+            self.data = pd.DataFrame(self._data, columns=self.exog_names, copy=False)
         else:
             self.data = self._data
 
@@ -160,8 +157,9 @@ class BayesGaussMI:
         # https://stats.stackexchange.com/questions/28744/multivariate-normal-posterior
 
         # Posterior covariance matrix of the mean
-        cm = np.linalg.solve(self.cov/self.nobs + self.mean_prior,
-                             self.mean_prior / self.nobs)
+        cm = np.linalg.solve(
+            self.cov / self.nobs + self.mean_prior, self.mean_prior / self.nobs
+        )
         cm = np.dot(self.cov, cm)
 
         # Posterior mean of the mean
@@ -237,9 +235,20 @@ class MI:
     to 0/1.
     """
 
-    def __init__(self, imp, model, model_args_fn=None, model_kwds_fn=None,
-                 formula=None, fit_args=None, fit_kwds=None, xfunc=None,
-                 burn=100, nrep=20, skip=10):
+    def __init__(
+        self,
+        imp,
+        model,
+        model_args_fn=None,
+        model_kwds_fn=None,
+        formula=None,
+        fit_args=None,
+        fit_kwds=None,
+        xfunc=None,
+        burn=100,
+        nrep=20,
+        skip=10,
+    ):
 
         # The imputer
         self.imp = imp
@@ -253,26 +262,34 @@ class MI:
         self.formula = formula
 
         if model_args_fn is None:
+
             def f(x):
                 return []
+
             model_args_fn = f
         self.model_args_fn = model_args_fn
 
         if model_kwds_fn is None:
+
             def f(x):
                 return {}
+
             model_kwds_fn = f
         self.model_kwds_fn = model_kwds_fn
 
         if fit_args is None:
+
             def f(x):
                 return []
+
             fit_args = f
         self.fit_args = fit_args
 
         if fit_kwds is None:
+
             def f(x):
                 return {}
+
             fit_kwds = f
         self.fit_kwds = fit_kwds
 
@@ -306,7 +323,7 @@ class MI:
 
         for _ in range(self.nrep):
 
-            for __ in range(self.skip+1):
+            for __ in range(self.skip + 1):
                 self.imp.update()
 
             da = self.imp.data
@@ -315,12 +332,11 @@ class MI:
                 da = self.xfunc(da)
 
             if self.formula is None:
-                model = self.model(*self.model_args_fn(da),
-                                   **self.model_kwds_fn(da))
+                model = self.model(*self.model_args_fn(da), **self.model_kwds_fn(da))
             else:
                 model = self.model.from_formula(
-                          self.formula, *self.model_args_fn(da),
-                          **self.model_kwds_fn(da))
+                    self.formula, *self.model_args_fn(da), **self.model_kwds_fn(da)
+                )
 
             result = model.fit(*self.fit_args(da), **self.fit_kwds(da))
 
@@ -358,10 +374,10 @@ class MI:
         bcov = np.atleast_2d(bcov)
 
         # Overall covariance
-        covp = wcov + (1 + 1/float(m))*bcov
+        covp = wcov + (1 + 1 / float(m)) * bcov
 
         # Fraction of missing information
-        fmi = (1 + 1/float(m)) * np.diag(bcov) / np.diag(covp)
+        fmi = (1 + 1 / float(m)) * np.diag(bcov) / np.diag(covp)
 
         return params, covp, fmi
 
@@ -390,7 +406,7 @@ class MIResults(LikelihoodModelResults):
         self.mi = mi
         self._model = model
 
-    def summary(self, title=None, alpha=.05):
+    def summary(self, title=None, alpha=0.05):
         """
         Summarize the results of running multiple imputation.
 

@@ -88,12 +88,8 @@ class TestChem:
         n = scale.norms.HuberT()
         n.t = 1.5
         h = scale.Huber(norm=n)
-        assert_almost_equal(
-            scale.huber(self.chem)[0], h(self.chem)[0], DECIMAL
-        )
-        assert_almost_equal(
-            scale.huber(self.chem)[1], h(self.chem)[1], DECIMAL
-        )
+        assert_almost_equal(scale.huber(self.chem)[0], h(self.chem)[0], DECIMAL)
+        assert_almost_equal(scale.huber(self.chem)[1], h(self.chem)[1], DECIMAL)
 
     def test_huber_Hampel(self):
         hh = scale.Huber(norm=scale.norms.Hampel())
@@ -231,9 +227,7 @@ class TestQn:
             DECIMAL,
         )
         # sunspot.year from datasets in R only goes up to 289
-        assert_almost_equal(
-            scale.qn_scale(self.sunspot[0:289]), 33.50901, DECIMAL
-        )
+        assert_almost_equal(scale.qn_scale(self.sunspot[0:289]), 33.50901, DECIMAL)
 
     def test_qn_empty(self):
         empty = np.empty(0)
@@ -338,6 +332,7 @@ def test_tau_scale1():
 
 def test_tau_scale2():
     import pandas as pd
+
     cur_dir = os.path.abspath(os.path.dirname(__file__))
     file_name = "hbk.csv"
     file_path = os.path.join(cur_dir, "results", file_name)
@@ -353,12 +348,14 @@ def test_tau_scale2():
     # > scaleTau2(hbk[,4], mu.too = TRUE, consistency = FALSE)
     # [1] -0.0443521228044396  0.8343974588144727
 
-    res2 = np.array([
-        [1.55545438650723, 1.93522607240954],
-        [1.87924505206092, 1.72121373687210],
-        [1.74163126730520, 1.81045973143159],
-        [-0.0443521228044396, 0.8343974588144727]
-        ])
+    res2 = np.array(
+        [
+            [1.55545438650723, 1.93522607240954],
+            [1.87924505206092, 1.72121373687210],
+            [1.74163126730520, 1.81045973143159],
+            [-0.0443521228044396, 0.8343974588144727],
+        ]
+    )
     res1 = scale_tau(dta_hbk, normalize=False, ddof=0)
     assert_allclose(np.asarray(res1).T, res2, rtol=1e-13)
 
@@ -371,12 +368,14 @@ def test_tau_scale2():
     # > scaleTau2(hbk[,4], mu.too = TRUE, consistency = TRUE)
     # [1] -0.0443521228044396  0.8676986653327993
 
-    res2 = np.array([
-        [1.55545438650723, 2.01246188181448],
-        [1.87924505206092, 1.78990821036102],
-        [1.74163126730520, 1.88271605576794],
-        [-0.0443521228044396, 0.8676986653327993]
-        ])
+    res2 = np.array(
+        [
+            [1.55545438650723, 2.01246188181448],
+            [1.87924505206092, 1.78990821036102],
+            [1.74163126730520, 1.88271605576794],
+            [-0.0443521228044396, 0.8676986653327993],
+        ]
+    )
     res1 = scale_tau(dta_hbk, ddof=0)
     assert_allclose(np.asarray(res1).T, res2, rtol=1e-13)
 
@@ -413,7 +412,7 @@ def test_scale_iter():
     assert_allclose(s_biw, 1.0326176662, rtol=1e-9)  # regression test number
 
 
-class TestMScale():
+class TestMScale:
 
     def test_huber_equivalence(self):
         np.random.seed(54321)
@@ -439,7 +438,7 @@ class TestMScale():
         scale_bias = 0.19959963130721095
         mscale_biw = scale.MScale(chi, scale_bias)
         scale0 = mscale_biw(ry)
-        scale1 = 0.817260483784376   # from R RobStatTM scaleM
+        scale1 = 0.817260483784376  # from R RobStatTM scaleM
         assert_allclose(scale0, scale1, rtol=1e-6)
 
 
@@ -447,15 +446,15 @@ def test_scale_trimmed_approx():
     scale_trimmed = scale.scale_trimmed  # shorthand
     nobs = 500
     np.random.seed(965578)
-    x = 2*np.random.randn(nobs)
+    x = 2 * np.random.randn(nobs)
     x[:10] = 60
 
     alpha = 0.2
     res = scale_trimmed(x, alpha)
     assert_allclose(res.scale, 2, rtol=1e-1)
-    s = scale_trimmed(np.column_stack((x, 2*x)), alpha).scale
+    s = scale_trimmed(np.column_stack((x, 2 * x)), alpha).scale
     assert_allclose(s, [2, 4], rtol=1e-1)
-    s = scale_trimmed(np.column_stack((x, 2*x)).T, alpha, axis=1).scale
+    s = scale_trimmed(np.column_stack((x, 2 * x)).T, alpha, axis=1).scale
     assert_allclose(s, [2, 4], rtol=1e-1)
     s = scale_trimmed(np.column_stack((x, x)).T, alpha, axis=None).scale
     assert_allclose(s, [2], rtol=1e-1)

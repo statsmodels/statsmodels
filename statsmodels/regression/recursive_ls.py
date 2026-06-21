@@ -5,7 +5,6 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-
 import numpy as np
 import pandas as pd
 
@@ -24,11 +23,13 @@ from statsmodels.tsa.statespace.mlemodel import (
 from statsmodels.tsa.statespace.tools import concat
 
 # Columns are alpha = 0.1, 0.05, 0.025, 0.01, 0.005
-_cusum_squares_scalars = np.array([
-    [1.0729830,   1.2238734,  1.3581015,  1.5174271,  1.6276236],
-    [-0.6698868, -0.6700069, -0.6701218, -0.6702672, -0.6703724],
-    [-0.5816458, -0.7351697, -0.8858694, -1.0847745, -1.2365861]
-])
+_cusum_squares_scalars = np.array(
+    [
+        [1.0729830, 1.2238734, 1.3581015, 1.5174271, 1.6276236],
+        [-0.6698868, -0.6700069, -0.6701218, -0.6702672, -0.6703724],
+        [-0.5816458, -0.7351697, -0.8858694, -1.0847745, -1.2365861],
+    ]
+)
 
 
 class RecursiveLS(MLEModel):
@@ -91,6 +92,7 @@ class RecursiveLS(MLEModel):
         if constraints is not None:
             from statsmodels.base.data import handle_data
             from statsmodels.formula._manager import FormulaManager
+
             data = handle_data(endog, exog, **kwargs)
             names = data.param_names
             lc = FormulaManager().get_linear_constraints(constraints, names)
@@ -100,8 +102,7 @@ class RecursiveLS(MLEModel):
             nobs = len(endog)
             constraint_endog = np.zeros((nobs, len(self._r_matrix)))
             if endog_using_pandas:
-                constraint_endog = pd.DataFrame(constraint_endog,
-                                                index=endog.index)
+                constraint_endog = pd.DataFrame(constraint_endog, index=endog.index)
                 endog = concat([endog, constraint_endog], axis=1)
                 # Complexity needed to handle multiple version of pandas
                 # Pandas >= 2 can use endog.iloc[:, 1:] = self._q_matrix.T
@@ -118,8 +119,7 @@ class RecursiveLS(MLEModel):
             kwargs.pop(name, None)
 
         # Initialize the state space representation
-        super().__init__(
-            endog, k_states=self.k_exog, exog=exog, **kwargs)
+        super().__init__(endog, k_states=self.k_exog, exog=exog, **kwargs)
 
         # Use univariate filtering by default
         self.ssm.filter_univariate = True
@@ -136,7 +136,7 @@ class RecursiveLS(MLEModel):
 
         # Notice that the filter output does not depend on the measurement
         # variance, so we set it here to 1
-        self["obs_cov", 0, 0] = 1.
+        self["obs_cov", 0, 0] = 1.0
         self["transition"] = np.eye(self.k_states)
 
         # Linear constraints are technically imposed by adding "fake" endog
@@ -147,14 +147,17 @@ class RecursiveLS(MLEModel):
 
     @classmethod
     def from_formula(cls, formula, data, subset=None, constraints=None):
-        return super(MLEModel, cls).from_formula(formula, data, subset,
-                                                 constraints=constraints)
+        return super(MLEModel, cls).from_formula(
+            formula, data, subset, constraints=constraints
+        )
 
     def _validate_can_fix_params(self, param_names):
-        raise ValueError("Linear constraints on coefficients should be given"
-                         " using the `constraints` argument in constructing."
-                         " the model. Other parameter constraints are not"
-                         " available in the resursive least squares model.")
+        raise ValueError(
+            "Linear constraints on coefficients should be given"
+            " using the `constraints` argument in constructing."
+            " the model. Other parameter constraints are not"
+            " available in the resursive least squares model."
+        )
 
     def fit(self):
         """
@@ -174,9 +177,9 @@ class RecursiveLS(MLEModel):
 
     def filter(self, return_ssm=False, **kwargs):
         # Get the state space output
-        result = super().filter([], transformed=True,
-                                cov_type="none",
-                                return_ssm=True, **kwargs)
+        result = super().filter(
+            [], transformed=True, cov_type="none", return_ssm=True, **kwargs
+        )
 
         # Wrap in a results object
         if not return_ssm:
@@ -184,22 +187,25 @@ class RecursiveLS(MLEModel):
             cov_kwds = {
                 "custom_cov_type": "nonrobust",
                 "custom_cov_params": result.filtered_state_cov[:, :, -1],
-                "custom_description": ("Parameters and covariance matrix"
-                                       " estimates are RLS estimates"
-                                       " conditional on the entire sample.")
+                "custom_description": (
+                    "Parameters and covariance matrix"
+                    " estimates are RLS estimates"
+                    " conditional on the entire sample."
+                ),
             }
             result = RecursiveLSResultsWrapper(
-                RecursiveLSResults(self, params, result, cov_type="custom",
-                                   cov_kwds=cov_kwds)
+                RecursiveLSResults(
+                    self, params, result, cov_type="custom", cov_kwds=cov_kwds
+                )
             )
 
         return result
 
     def smooth(self, return_ssm=False, **kwargs):
         # Get the state space output
-        result = super().smooth([], transformed=True,
-                                cov_type="none",
-                                return_ssm=True, **kwargs)
+        result = super().smooth(
+            [], transformed=True, cov_type="none", return_ssm=True, **kwargs
+        )
 
         # Wrap in a results object
         if not return_ssm:
@@ -207,13 +213,16 @@ class RecursiveLS(MLEModel):
             cov_kwds = {
                 "custom_cov_type": "nonrobust",
                 "custom_cov_params": result.filtered_state_cov[:, :, -1],
-                "custom_description": ("Parameters and covariance matrix"
-                                       " estimates are RLS estimates"
-                                       " conditional on the entire sample.")
+                "custom_description": (
+                    "Parameters and covariance matrix"
+                    " estimates are RLS estimates"
+                    " conditional on the entire sample."
+                ),
             }
             result = RecursiveLSResultsWrapper(
-                RecursiveLSResults(self, params, result, cov_type="custom",
-                                   cov_kwds=cov_kwds)
+                RecursiveLSResults(
+                    self, params, result, cov_type="custom", cov_kwds=cov_kwds
+                )
             )
 
         return result
@@ -279,10 +288,8 @@ class RecursiveLSResults(MLEResults):
 
     """
 
-    def __init__(self, model, params, filter_results, cov_type="opg",
-                 **kwargs):
-        super().__init__(
-            model, params, filter_results, cov_type, **kwargs)
+    def __init__(self, model, params, filter_results, cov_type="opg", **kwargs):
+        super().__init__(model, params, filter_results, cov_type, **kwargs)
 
         # Since we are overriding params with things that are not MLE params,
         # need to adjust df's
@@ -294,13 +301,19 @@ class RecursiveLSResults(MLEResults):
         self._init_kwds = self.model._get_init_kwds()
 
         # Save the model specification
-        self.specification = Bunch(k_exog=self.model.k_exog, k_constraints=self.model.k_constraints)
+        self.specification = Bunch(
+            k_exog=self.model.k_exog, k_constraints=self.model.k_constraints
+        )
 
         # Adjust results to remove "faux" endog from the constraints
         if self.model._r_matrix is not None:
-            for name in ["forecasts", "forecasts_error",
-                         "forecasts_error_cov", "standardized_forecasts_error",
-                         "forecasts_error_diffuse_cov"]:
+            for name in [
+                "forecasts",
+                "forecasts_error",
+                "forecasts_error_cov",
+                "standardized_forecasts_error",
+                "forecasts_error_diffuse_cov",
+            ]:
                 setattr(self, name, getattr(self, name)[0:1])
 
     @property
@@ -332,14 +345,14 @@ class RecursiveLSResults(MLEResults):
         out = Bunch(
             filtered=self.filtered_state[start:end],
             filtered_cov=self.filtered_state_cov[start:end, start:end],
-            smoothed=None, smoothed_cov=None,
-            offset=offset
+            smoothed=None,
+            smoothed_cov=None,
+            offset=offset,
         )
         if self.smoothed_state is not None:
             out.smoothed = self.smoothed_state[start:end]
         if self.smoothed_state_cov is not None:
-            out.smoothed_cov = (
-                self.smoothed_state_cov[start:end, start:end])
+            out.smoothed_cov = self.smoothed_state_cov[start:end, start:end]
         return out
 
     @cache_readonly
@@ -369,8 +382,7 @@ class RecursiveLSResults(MLEResults):
         not provided here).
 
         """
-        return (self.filter_results.standardized_forecasts_error[0] *
-                self.scale**0.5)
+        return self.filter_results.standardized_forecasts_error[0] * self.scale**0.5
 
     @cache_readonly
     def cusum(self):
@@ -413,8 +425,9 @@ class RecursiveLSResults(MLEResults):
 
         """
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
-        return (np.cumsum(self.resid_recursive[d:]) /
-                np.std(self.resid_recursive[d:], ddof=1))
+        return np.cumsum(self.resid_recursive[d:]) / np.std(
+            self.resid_recursive[d:], ddof=1
+        )
 
     @cache_readonly
     def cusum_squares(self):
@@ -451,7 +464,7 @@ class RecursiveLSResults(MLEResults):
 
         """
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
-        numer = np.cumsum(self.resid_recursive[d:]**2)
+        numer = np.cumsum(self.resid_recursive[d:] ** 2)
         denom = numer[-1]
         return numer / denom
 
@@ -461,8 +474,8 @@ class RecursiveLSResults(MLEResults):
         (float) Loglikelihood at observation, computed from recursive residuals
         """
         from scipy.stats import norm
-        return np.log(norm.pdf(self.resid_recursive, loc=0,
-                               scale=self.scale**0.5))
+
+        return np.log(norm.pdf(self.resid_recursive, loc=0, scale=self.scale**0.5))
 
     @cache_readonly
     def llf_recursive(self):
@@ -480,13 +493,14 @@ class RecursiveLSResults(MLEResults):
     @cache_readonly
     def centered_tss(self):
         """Centered total sum of squares."""
-        return np.sum((self.filter_results.endog[0] -
-                       np.mean(self.filter_results.endog))**2)
+        return np.sum(
+            (self.filter_results.endog[0] - np.mean(self.filter_results.endog)) ** 2
+        )
 
     @cache_readonly
     def uncentered_tss(self):
         """Uncentered total sum of squares."""
-        return np.sum((self.filter_results.endog[0])**2)
+        return np.sum((self.filter_results.endog[0]) ** 2)
 
     @cache_readonly
     def ess(self):
@@ -523,43 +537,57 @@ class RecursiveLSResults(MLEResults):
             return self.uncentered_tss / (self.df_resid + self.df_model)
 
     @Appender(MLEResults.get_prediction.__doc__)
-    def get_prediction(self, start=None, end=None, dynamic=False,
-                       information_set="predicted", signal_only=False,
-                       index=None, **kwargs):
+    def get_prediction(
+        self,
+        start=None,
+        end=None,
+        dynamic=False,
+        information_set="predicted",
+        signal_only=False,
+        index=None,
+        **kwargs,
+    ):
         # Note: need to override this, because we currently do not support
         # dynamic prediction or forecasts when there are constraints.
         if start is None:
             start = self.model._index[0]
 
         # Handle start, end, dynamic
-        start, end, out_of_sample, prediction_index = (
-            self.model._get_prediction_index(start, end, index))
+        start, end, out_of_sample, prediction_index = self.model._get_prediction_index(
+            start, end, index
+        )
 
         # Handle `dynamic`
         if isinstance(dynamic, (bytes, str)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
 
         if self.model._r_matrix is not None and (out_of_sample or dynamic):
-            raise NotImplementedError("Cannot yet perform out-of-sample or"
-                                      " dynamic prediction in models with"
-                                      " constraints.")
+            raise NotImplementedError(
+                "Cannot yet perform out-of-sample or"
+                " dynamic prediction in models with"
+                " constraints."
+            )
 
         # Perform the prediction
         # This is a (k_endog x npredictions) array; do not want to squeeze in
         # case of npredictions = 1
         prediction_results = self.filter_results.predict(
-            start, end + out_of_sample + 1, dynamic, **kwargs)
+            start, end + out_of_sample + 1, dynamic, **kwargs
+        )
 
         # Return a new mlemodel.PredictionResults object
-        res_obj = PredictionResults(self, prediction_results,
-                                    information_set=information_set,
-                                    signal_only=signal_only,
-                                    row_labels=prediction_index)
+        res_obj = PredictionResults(
+            self,
+            prediction_results,
+            information_set=information_set,
+            signal_only=signal_only,
+            row_labels=prediction_index,
+        )
         return PredictionResultsWrapper(res_obj)
 
-    def plot_recursive_coefficient(self, variables=0, alpha=0.05,
-                                   legend_loc="upper left", fig=None,
-                                   figsize=None):
+    def plot_recursive_coefficient(
+        self, variables=0, alpha=0.05, legend_loc="upper left", fig=None, figsize=None
+    ):
         r"""
         Plot the recursively estimated coefficients on a given variable
 
@@ -602,6 +630,7 @@ class RecursiveLSResults(MLEResults):
         from scipy.stats import norm
 
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
+
         plt = _import_mpl()
         fig = create_mpl_fig(fig, figsize)
 
@@ -618,34 +647,33 @@ class RecursiveLSResults(MLEResults):
 
             # Plot the coefficient
             coef = self.recursive_coefficients
-            ax.plot(dates[d:], coef.filtered[variable, d:],
-                    label="Recursive estimates: %s" % exog_names[variable])
+            ax.plot(
+                dates[d:],
+                coef.filtered[variable, d:],
+                label="Recursive estimates: %s" % exog_names[variable],
+            )
 
             # Legend
             handles, labels = ax.get_legend_handles_labels()
 
             # Get the critical value for confidence intervals
             if alpha is not None:
-                critical_value = norm.ppf(1 - alpha / 2.)
+                critical_value = norm.ppf(1 - alpha / 2.0)
 
                 # Plot confidence intervals
                 std_errors = np.sqrt(coef.filtered_cov[variable, variable, :])
-                ci_lower = (
-                    coef.filtered[variable] - critical_value * std_errors)
-                ci_upper = (
-                    coef.filtered[variable] + critical_value * std_errors)
+                ci_lower = coef.filtered[variable] - critical_value * std_errors
+                ci_upper = coef.filtered[variable] + critical_value * std_errors
                 ci_poly = ax.fill_between(
                     dates[d:], ci_lower[d:], ci_upper[d:], alpha=0.2
                 )
-                ci_label = ("$%.3g \\%%$ confidence interval"
-                            % ((1 - alpha)*100))
+                ci_label = "$%.3g \\%%$ confidence interval" % ((1 - alpha) * 100)
 
                 # Only add CI to legend for the first plot
                 if i == 0:
                     # Proxy artist for fill_between legend entry
                     # See https://matplotlib.org/1.3.1/users/legend_guide.html
-                    p = plt.Rectangle((0, 0), 1, 1,
-                                      fc=ci_poly.get_facecolor()[0])
+                    p = plt.Rectangle((0, 0), 1, 1, fc=ci_poly.get_facecolor()[0])
 
                     handles.append(p)
                     labels.append(ci_label)
@@ -701,7 +729,7 @@ class RecursiveLSResults(MLEResults):
 
         # Get the points for the significance bound lines
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
-        tmp = (self.nobs - d - ddof)**0.5
+        tmp = (self.nobs - d - ddof) ** 0.5
 
         def upper_line(x):
             return scalar * tmp + 2 * scalar * (x - d) / tmp
@@ -710,8 +738,7 @@ class RecursiveLSResults(MLEResults):
             points = np.array([d, self.nobs])
         return -upper_line(points), upper_line(points)
 
-    def plot_cusum(self, alpha=0.05, legend_loc="upper left",
-                   fig=None, figsize=None):
+    def plot_cusum(self, alpha=0.05, legend_loc="upper left", fig=None, figsize=None):
         r"""
         Plot the CUSUM statistic and significance bounds.
 
@@ -745,6 +772,7 @@ class RecursiveLSResults(MLEResults):
         """
         # Create the plot
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
+
         _import_mpl()
         fig = create_mpl_fig(fig, figsize)
         ax = fig.add_subplot(1, 1, 1)
@@ -762,8 +790,12 @@ class RecursiveLSResults(MLEResults):
 
         # Plot significance bounds
         lower_line, upper_line = self._cusum_significance_bounds(alpha)
-        ax.plot([dates[d], dates[-1]], upper_line, "k--",
-                label="%d%% significance" % (alpha * 100))
+        ax.plot(
+            [dates[d], dates[-1]],
+            upper_line,
+            "k--",
+            label="%d%% significance" % (alpha * 100),
+        )
         ax.plot([dates[d], dates[-1]], lower_line, "k--")
 
         ax.legend(loc=legend_loc)
@@ -804,8 +836,9 @@ class RecursiveLSResults(MLEResults):
 
         return line - crit, line + crit
 
-    def plot_cusum_squares(self, alpha=0.05, legend_loc="upper left",
-                           fig=None, figsize=None):
+    def plot_cusum_squares(
+        self, alpha=0.05, legend_loc="upper left", fig=None, figsize=None
+    ):
         r"""
         Plot the CUSUM of squares statistic and significance bounds.
 
@@ -846,6 +879,7 @@ class RecursiveLSResults(MLEResults):
         """
         # Create the plot
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
+
         _import_mpl()
         fig = create_mpl_fig(fig, figsize)
         ax = fig.add_subplot(1, 1, 1)
@@ -864,8 +898,12 @@ class RecursiveLSResults(MLEResults):
 
         # Plot significance bounds
         lower_line, upper_line = self._cusum_squares_significance_bounds(alpha)
-        ax.plot([dates[d], dates[-1]], upper_line, "k--",
-                label="%d%% significance" % (alpha * 100))
+        ax.plot(
+            [dates[d], dates[-1]],
+            upper_line,
+            "k--",
+            label="%d%% significance" % (alpha * 100),
+        )
         ax.plot([dates[d], dates[-1]], lower_line, "k--")
 
         ax.legend(loc=legend_loc)
@@ -875,11 +913,9 @@ class RecursiveLSResults(MLEResults):
 
 class RecursiveLSResultsWrapper(MLEResultsWrapper):
     _attrs = {}
-    _wrap_attrs = wrap.union_dicts(MLEResultsWrapper._wrap_attrs,
-                                   _attrs)
+    _wrap_attrs = wrap.union_dicts(MLEResultsWrapper._wrap_attrs, _attrs)
     _methods = {}
-    _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
-                                     _methods)
+    _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods, _methods)
 
 
 wrap.populate_wrapper(RecursiveLSResultsWrapper, RecursiveLSResults)

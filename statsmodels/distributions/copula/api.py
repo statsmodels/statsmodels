@@ -25,5 +25,5 @@ __all__ = [
     "StudentTCopula",
     "depfunc_ev",
     "rvs_kernel",
-    "transforms"
+    "transforms",
 ]

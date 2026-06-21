@@ -2,6 +2,7 @@
 
 author: Yichuan Liu
 """
+
 from statsmodels.compat.pandas import Substitution
 
 import numpy as np
@@ -60,6 +61,7 @@ class MANOVA(Model):
     .. [*] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/
        statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
     """
+
     _formula_max_endog = None
 
     def __init__(self, endog, exog, missing="none", hasconst=None, **kwargs):
@@ -71,8 +73,10 @@ class MANOVA(Model):
         self._fittedmod = _multivariate_ols_fit(self.endog, self.exog)
 
     def fit(self):
-        raise NotImplementedError("fit is not needed to use MANOVA. Call"
-                                  "mv_test directly on a MANOVA instance.")
+        raise NotImplementedError(
+            "fit is not needed to use MANOVA. Call"
+            "mv_test directly on a MANOVA instance."
+        )
 
     @Substitution(hypotheses_doc=_hypotheses_doc)
     def mv_test(self, hypotheses=None, skip_intercept_test=False):

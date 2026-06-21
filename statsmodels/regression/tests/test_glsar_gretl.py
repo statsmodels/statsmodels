@@ -55,17 +55,19 @@ class TestGLSARGretl:
         mod_g1 = GLSAR(endogg, exogg, rho=-0.108136)
         res_g1 = mod_g1.fit()
 
-        mod_g2 = GLSAR(endogg, exogg, rho=-0.108136)   # -0.1335859) from R
+        mod_g2 = GLSAR(endogg, exogg, rho=-0.108136)  # -0.1335859) from R
         res_g2 = mod_g2.iterative_fit(maxiter=5)
 
         rho = -0.108136
 
         #                 coefficient   std. error   t-ratio    p-value 95% CONFIDENCE INTERVAL
-        partable = np.array([
-            [-9.50990,  0.990456, -9.602, 3.65e-018, -11.4631, -7.55670],
-            [+4.37040,  0.208146, 21.00,  2.93e-052,  3.95993, 4.78086],
-            [-0.579253, 0.268009, -2.161, 0.0319, -1.10777, -0.0507346]
-        ])
+        partable = np.array(
+            [
+                [-9.50990, 0.990456, -9.602, 3.65e-018, -11.4631, -7.55670],
+                [+4.37040, 0.208146, 21.00, 2.93e-052, 3.95993, 4.78086],
+                [-0.579253, 0.268009, -2.161, 0.0319, -1.10777, -0.0507346],
+            ]
+        )
 
         # Statistics based on the rho-differenced data:
 
@@ -79,7 +81,7 @@ class TestGLSARGretl:
             fvalue=("F(2, 198)", 221.0475),
             f_pvalue=("P-value(F)", 3.56e-51),
             resid_acf1=("rho", -0.003481),
-            dw=("Durbin-Watson", 1.993858)
+            dw=("Durbin-Watson", 1.993858),
         )
 
         # fstatistic, p-value, df1, df2
@@ -105,11 +107,11 @@ class TestGLSARGretl:
         # assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) # not in gretl
         # assert_almost_equal(res.rsquared, result_gretl_g1['rsquared'][1], decimal=7) # FAIL
         # assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=7) # FAIL
-        assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1["mse_resid_sqrt"][1], decimal=5)
+        assert_almost_equal(
+            np.sqrt(res.mse_resid), result_gretl_g1["mse_resid_sqrt"][1], decimal=5
+        )
         assert_almost_equal(res.fvalue, result_gretl_g1["fvalue"][1], decimal=4)
-        assert_allclose(res.f_pvalue,
-                        result_gretl_g1["f_pvalue"][1],
-                        rtol=1e-2)
+        assert_allclose(res.f_pvalue, result_gretl_g1["f_pvalue"][1], rtol=1e-2)
         # assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
 
         # arch
@@ -133,7 +135,9 @@ class TestGLSARGretl:
         # assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) # not in gretl
         # assert_almost_equal(res.rsquared, result_gretl_g1['rsquared'][1], decimal=7) # FAIL
         # assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=7) # FAIL
-        assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1["mse_resid_sqrt"][1], decimal=5)
+        assert_almost_equal(
+            np.sqrt(res.mse_resid), result_gretl_g1["mse_resid_sqrt"][1], decimal=5
+        )
         assert_almost_equal(res.fvalue, result_gretl_g1["fvalue"][1], decimal=0)
         assert_almost_equal(res.f_pvalue, result_gretl_g1["f_pvalue"][1], decimal=6)
         # assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) # TODO
@@ -271,27 +275,29 @@ class TestGLSARGretl:
         # coefficient   std. error   t-ratio    p-value 95% CONFIDENCE INTERVAL
         # for confidence interval t(199, 0.025) = 1.972
 
-        partable = np.array([
-            [-9.48167,      1.17709,     -8.055,    7.17e-014, -11.8029, -7.16049],
-            [4.37422,      0.328787,    13.30,     2.62e-029, 3.72587, 5.02258],
-            [-0.613997,     0.293619,    -2.091,    0.0378, -1.19300, -0.0349939]]
+        partable = np.array(
+            [
+                [-9.48167, 1.17709, -8.055, 7.17e-014, -11.8029, -7.16049],
+                [4.37422, 0.328787, 13.30, 2.62e-029, 3.72587, 5.02258],
+                [-0.613997, 0.293619, -2.091, 0.0378, -1.19300, -0.0349939],
+            ]
         )
 
         result_gretl_g1 = dict(
-                    endog_mean=("Mean dependent var", 3.257395),
-                    endog_std=("S.D. dependent var", 18.73915),
-                    ssr=("Sum squared resid", 22799.68),
-                    mse_resid_sqrt=("S.E. of regression", 10.70380),
-                    rsquared=("R-squared", 0.676978),
-                    rsquared_adj=("Adjusted R-squared", 0.673731),
-                    fvalue=("F(2, 199)", 90.79971),
-                    f_pvalue=("P-value(F)", 9.53e-29),
-                    llf=("Log-likelihood", -763.9752),
-                    aic=("Akaike criterion", 1533.950),
-                    bic=("Schwarz criterion", 1543.875),
-                    hqic=("Hannan-Quinn", 1537.966),
-                    resid_acf1=("rho", -0.107341),
-                    dw=("Durbin-Watson", 2.213805)
+            endog_mean=("Mean dependent var", 3.257395),
+            endog_std=("S.D. dependent var", 18.73915),
+            ssr=("Sum squared resid", 22799.68),
+            mse_resid_sqrt=("S.E. of regression", 10.70380),
+            rsquared=("R-squared", 0.676978),
+            rsquared_adj=("Adjusted R-squared", 0.673731),
+            fvalue=("F(2, 199)", 90.79971),
+            f_pvalue=("P-value(F)", 9.53e-29),
+            llf=("Log-likelihood", -763.9752),
+            aic=("Akaike criterion", 1533.950),
+            bic=("Schwarz criterion", 1543.875),
+            hqic=("Hannan-Quinn", 1537.966),
+            resid_acf1=("rho", -0.107341),
+            dw=("Durbin-Watson", 2.213805),
         )
 
         # for logs: dropping 70 nan or incomplete observations, T=133
@@ -314,12 +320,14 @@ class TestGLSARGretl:
         names = "date   residual        leverage       influence        DFFITS".split()
         cur_dir = os.path.abspath(os.path.dirname(__file__))
         fpath = os.path.join(cur_dir, "results/leverage_influence_ols_nostars.txt")
-        lev = np.genfromtxt(fpath, skip_header=3, skip_footer=1,
-                            converters={0: lambda s: s})
+        lev = np.genfromtxt(
+            fpath, skip_header=3, skip_footer=1, converters={0: lambda s: s}
+        )
         # either numpy 1.6 or python 3.2 changed behavior
         if np.isnan(lev[-1]["f1"]):
-            lev = np.genfromtxt(fpath, skip_header=3, skip_footer=2,
-                                converters={0: lambda s: s})
+            lev = np.genfromtxt(
+                fpath, skip_header=3, skip_footer=2, converters={0: lambda s: s}
+            )
 
         lev.dtype.names = names
 
@@ -333,10 +341,18 @@ class TestGLSARGretl:
         # TODO
 
         assert_almost_equal(res.ssr, result_gretl_g1["ssr"][1], decimal=2)
-        assert_almost_equal(res.llf, result_gretl_g1["llf"][1], decimal=4)  # not in gretl
-        assert_almost_equal(res.rsquared, result_gretl_g1["rsquared"][1], decimal=6)  # FAIL
-        assert_almost_equal(res.rsquared_adj, result_gretl_g1["rsquared_adj"][1], decimal=6)  # FAIL
-        assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1["mse_resid_sqrt"][1], decimal=5)
+        assert_almost_equal(
+            res.llf, result_gretl_g1["llf"][1], decimal=4
+        )  # not in gretl
+        assert_almost_equal(
+            res.rsquared, result_gretl_g1["rsquared"][1], decimal=6
+        )  # FAIL
+        assert_almost_equal(
+            res.rsquared_adj, result_gretl_g1["rsquared_adj"][1], decimal=6
+        )  # FAIL
+        assert_almost_equal(
+            np.sqrt(res.mse_resid), result_gretl_g1["mse_resid_sqrt"][1], decimal=5
+        )
         # f-value is based on cov_hac I guess
         # res2 = res.get_robustcov_results(cov_type='HC1')
         # TODO: fvalue differs from Gretl, trying any of the HCx
@@ -384,9 +400,10 @@ def test_GLSARlag():
     # test that results for lag>1 is close to lag=1, and smaller ssr
 
     from statsmodels.datasets import macrodata
+
     d2 = macrodata.load_pandas().data
-    g_gdp = 400*np.diff(np.log(d2["realgdp"].values))
-    g_inv = 400*np.diff(np.log(d2["realinv"].values))
+    g_gdp = 400 * np.diff(np.log(d2["realgdp"].values))
+    g_inv = 400 * np.diff(np.log(d2["realinv"].values))
     exogg = add_constant(np.c_[g_gdp, d2["realint"][:-1].values], prepend=False)
 
     mod1 = GLSAR(g_inv, exogg, 1)
@@ -398,8 +415,7 @@ def test_GLSARlag():
     assert_array_less(np.abs(res1.params / res4.params - 1), 0.03)
     assert_array_less(res4.ssr, res1.ssr)
     assert_array_less(np.abs(res4.bse / res1.bse) - 1, 0.015)
-    assert_array_less(np.abs((res4.fittedvalues / res1.fittedvalues - 1).mean()),
-                      0.015)
+    assert_array_less(np.abs((res4.fittedvalues / res1.fittedvalues - 1).mean()), 0.015)
     assert_equal(len(mod4.rho), 4)
 
 

@@ -175,8 +175,8 @@ from pandas_datareader.data import DataReader
 # apparel, as measured by the consumer price index. A graph of the data
 # indicates strong seasonality.
 
-cpi_apparel = DataReader('CPIAPPNS', 'fred', start='1986')
-cpi_apparel.index = pd.DatetimeIndex(cpi_apparel.index, freq='MS')
+cpi_apparel = DataReader("CPIAPPNS", "fred", start="1986")
+cpi_apparel.index = pd.DatetimeIndex(cpi_apparel.index, freq="MS")
 inf_apparel = np.log(cpi_apparel).diff().iloc[1:] * 1200
 inf_apparel.plot(figsize=(15, 5))
 
@@ -200,17 +200,15 @@ inf_apparel.plot(figsize=(15, 5))
 # setting that we do allow for convergence.
 
 # Model that will apply Kalman filter recursions
-mod_kf = sm.tsa.SARIMAX(inf_apparel,
-                        order=(6, 0, 0),
-                        seasonal_order=(15, 0, 0, 12),
-                        tolerance=0)
+mod_kf = sm.tsa.SARIMAX(
+    inf_apparel, order=(6, 0, 0), seasonal_order=(15, 0, 0, 12), tolerance=0
+)
 print(mod_kf.k_states)
 
 # Model that will apply Chandrasekhar recursions
-mod_ch = sm.tsa.SARIMAX(inf_apparel,
-                        order=(6, 0, 0),
-                        seasonal_order=(15, 0, 0, 12),
-                        tolerance=0)
+mod_ch = sm.tsa.SARIMAX(
+    inf_apparel, order=(6, 0, 0), seasonal_order=(15, 0, 0, 12), tolerance=0
+)
 mod_ch.ssm.filter_chandrasekhar = True
 
 # We time computation of the log-likelihood function, using the following
@@ -237,15 +235,11 @@ mod_ch.ssm.filter_chandrasekhar = True
 # `tolerance=0` argument:
 
 # Model that will apply Kalman filter recursions
-mod_kf = sm.tsa.SARIMAX(inf_apparel,
-                        order=(6, 0, 0),
-                        seasonal_order=(15, 0, 0, 12))
+mod_kf = sm.tsa.SARIMAX(inf_apparel, order=(6, 0, 0), seasonal_order=(15, 0, 0, 12))
 print(mod_kf.k_states)
 
 # Model that will apply Chandrasekhar recursions
-mod_ch = sm.tsa.SARIMAX(inf_apparel,
-                        order=(6, 0, 0),
-                        seasonal_order=(15, 0, 0, 12))
+mod_ch = sm.tsa.SARIMAX(inf_apparel, order=(6, 0, 0), seasonal_order=(15, 0, 0, 12))
 mod_ch.ssm.filter_chandrasekhar = True
 
 # Again, we time computation of the log-likelihood function, using the
@@ -271,8 +265,10 @@ mod_ch.ssm.filter_chandrasekhar = True
 # was achieved:
 
 res_kf = mod_kf.filter(mod_kf.start_params)
-print('Convergence at t=%d, of T=%d total observations' %
-      (res_kf.filter_results.period_converged, res_kf.nobs))
+print(
+    "Convergence at t=%d, of T=%d total observations"
+    % (res_kf.filter_results.period_converged, res_kf.nobs)
+)
 
 # Since convergence happened relatively early, we are already avoiding the
 # expensive matrix multiplications in more than half of the periods.

@@ -132,9 +132,7 @@ fit.fittedvalues.plot(label="statsmodels fit")
 plt.ylabel("Annual oil production in Saudi Arabia (Mt)")
 
 # obtained from R
-params_R = [
-    0.99989969, 0.11888177503085334, 0.80000197, 36.46466837, 34.72584983
-]
+params_R = [0.99989969, 0.11888177503085334, 0.80000197, 36.46466837, 34.72584983]
 yhat = model.smooth(params_R).fittedvalues
 yhat.plot(label="R fit", linestyle="--")
 
@@ -152,9 +150,7 @@ fit_heuristic.fittedvalues.plot(label="heuristic", linestyle="--")
 plt.ylabel("Annual oil production in Saudi Arabia (Mt)")
 
 # obtained from R
-params = [
-    0.99989969, 0.11888177503085334, 0.80000197, 36.46466837, 34.72584983
-]
+params = [0.99989969, 0.11888177503085334, 0.80000197, 36.46466837, 34.72584983]
 yhat = model.smooth(params).fittedvalues
 yhat.plot(label="with R params", linestyle=":")
 

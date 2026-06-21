@@ -55,12 +55,12 @@ np.set_printoptions(precision=4, suppress=True, linewidth=120)
 from pandas_datareader.data import DataReader
 
 # Get the datasets from FRED
-start = '1979-01-01'
-end = '2014-12-01'
-indprod = DataReader('IPMAN', 'fred', start=start, end=end)
-income = DataReader('W875RX1', 'fred', start=start, end=end)
-sales = DataReader('CMRMTSPL', 'fred', start=start, end=end)
-emp = DataReader('PAYEMS', 'fred', start=start, end=end)
+start = "1979-01-01"
+end = "2014-12-01"
+indprod = DataReader("IPMAN", "fred", start=start, end=end)
+income = DataReader("W875RX1", "fred", start=start, end=end)
+sales = DataReader("CMRMTSPL", "fred", start=start, end=end)
+emp = DataReader("PAYEMS", "fred", start=start, end=end)
 # dta = pd.concat((indprod, income, sales, emp), axis=1)
 # dta.columns = ['indprod', 'income', 'sales', 'emp']
 
@@ -91,10 +91,10 @@ emp = DataReader('PAYEMS', 'fred', start=start, end=end)
 # HMRMT_growth.loc[prev_month].values)
 
 dta = pd.concat((indprod, income, sales, emp), axis=1)
-dta.columns = ['indprod', 'income', 'sales', 'emp']
+dta.columns = ["indprod", "income", "sales", "emp"]
 dta.index.freq = dta.index.inferred_freq
 
-dta.loc[:, 'indprod':'emp'].plot(subplots=True, layout=(2, 2), figsize=(15, 6))
+dta.loc[:, "indprod":"emp"].plot(subplots=True, layout=(2, 2), figsize=(15, 6))
 
 # Stock and Watson (1991) report that for their datasets, they could not
 # reject the null hypothesis of a unit root in each series (so the series
@@ -105,20 +105,20 @@ dta.loc[:, 'indprod':'emp'].plot(subplots=True, layout=(2, 2), figsize=(15, 6))
 # differences (of the logs) of the variables, demeaned and standardized.
 
 # Create log-differenced series
-dta['dln_indprod'] = (np.log(dta.indprod)).diff() * 100
-dta['dln_income'] = (np.log(dta.income)).diff() * 100
-dta['dln_sales'] = (np.log(dta.sales)).diff() * 100
-dta['dln_emp'] = (np.log(dta.emp)).diff() * 100
+dta["dln_indprod"] = (np.log(dta.indprod)).diff() * 100
+dta["dln_income"] = (np.log(dta.income)).diff() * 100
+dta["dln_sales"] = (np.log(dta.sales)).diff() * 100
+dta["dln_emp"] = (np.log(dta.emp)).diff() * 100
 
 # De-mean and standardize
-dta['std_indprod'] = (dta['dln_indprod'] -
-                      dta['dln_indprod'].mean()) / dta['dln_indprod'].std()
-dta['std_income'] = (dta['dln_income'] -
-                     dta['dln_income'].mean()) / dta['dln_income'].std()
-dta['std_sales'] = (dta['dln_sales'] -
-                    dta['dln_sales'].mean()) / dta['dln_sales'].std()
-dta['std_emp'] = (dta['dln_emp'] -
-                  dta['dln_emp'].mean()) / dta['dln_emp'].std()
+dta["std_indprod"] = (dta["dln_indprod"] - dta["dln_indprod"].mean()) / dta[
+    "dln_indprod"
+].std()
+dta["std_income"] = (dta["dln_income"] - dta["dln_income"].mean()) / dta[
+    "dln_income"
+].std()
+dta["std_sales"] = (dta["dln_sales"] - dta["dln_sales"].mean()) / dta["dln_sales"].std()
+dta["std_emp"] = (dta["dln_emp"] - dta["dln_emp"].mean()) / dta["dln_emp"].std()
 
 # ## Dynamic factors
 #
@@ -206,11 +206,11 @@ dta['std_emp'] = (dta['dln_emp'] -
 # parameters in the standard LBFGS optimization method.
 
 # Get the endogenous data
-endog = dta.loc['1979-02-01':, 'std_indprod':'std_emp']
+endog = dta.loc["1979-02-01":, "std_indprod":"std_emp"]
 
 # Create the model
 mod = sm.tsa.DynamicFactor(endog, k_factors=1, factor_order=2, error_order=2)
-initial_res = mod.fit(method='powell', disp=False)
+initial_res = mod.fit(method="powell", disp=False)
 res = mod.fit(initial_res.params, disp=False)
 
 # ## Estimates
@@ -260,18 +260,15 @@ fig, ax = plt.subplots(figsize=(13, 3))
 
 # Plot the factor
 dates = endog.index._mpl_repr()
-ax.plot(dates, res.factors.filtered[0], label='Factor')
+ax.plot(dates, res.factors.filtered[0], label="Factor")
 ax.legend()
 
 # Retrieve and also plot the NBER recession indicators
-rec = DataReader('USREC', 'fred', start=start, end=end)
+rec = DataReader("USREC", "fred", start=start, end=end)
 ylim = ax.get_ylim()
-ax.fill_between(dates[:-3],
-                ylim[0],
-                ylim[1],
-                rec.values[:-4, 0],
-                facecolor='k',
-                alpha=0.1)
+ax.fill_between(
+    dates[:-3], ylim[0], ylim[1], rec.values[:-4, 0], facecolor="k", alpha=0.1
+)
 
 # ## Post-estimation
 #
@@ -309,8 +306,7 @@ res.plot_coefficients_of_determination(figsize=(8, 2))
 # factor. We will compare it to the coincident index on published by the
 # Federal Reserve Bank of Philadelphia (USPHCI on FRED).
 
-usphci = DataReader('USPHCI', 'fred', start='1979-01-01',
-                    end='2014-12-01')['USPHCI']
+usphci = DataReader("USPHCI", "fred", start="1979-01-01", end="2014-12-01")["USPHCI"]
 usphci.plot(figsize=(13, 3))
 
 dusphci = usphci.diff()[1:].values
@@ -319,19 +315,18 @@ dusphci = usphci.diff()[1:].values
 def compute_coincident_index(mod, res):
     # Estimate W(1)
     spec = res.specification
-    design = mod.ssm['design']
-    transition = mod.ssm['transition']
+    design = mod.ssm["design"]
+    transition = mod.ssm["transition"]
     ss_kalman_gain = res.filter_results.kalman_gain[:, :, -1]
     k_states = ss_kalman_gain.shape[0]
 
     W1 = np.linalg.inv(
-        np.eye(k_states) -
-        np.dot(np.eye(k_states) - np.dot(ss_kalman_gain, design), transition)
+        np.eye(k_states)
+        - np.dot(np.eye(k_states) - np.dot(ss_kalman_gain, design), transition)
     ).dot(ss_kalman_gain)[0]
 
     # Compute the factor mean vector
-    factor_mean = np.dot(
-        W1, dta.loc['1972-02-01':, 'dln_indprod':'dln_emp'].mean())
+    factor_mean = np.dot(W1, dta.loc["1972-02-01":, "dln_indprod":"dln_emp"].mean())
 
     # Normalize the factors
     factor = res.factors.filtered[0]
@@ -349,8 +344,7 @@ def compute_coincident_index(mod, res):
     coincident_index = pd.Series(coincident_index, index=dta.index).iloc[1:]
 
     # Normalize to use the same base year as USPHCI
-    coincident_index *= (usphci.loc['1992-07-01'] /
-                         coincident_index.loc['1992-07-01'])
+    coincident_index *= usphci.loc["1992-07-01"] / coincident_index.loc["1992-07-01"]
 
     return coincident_index
 
@@ -365,18 +359,15 @@ coincident_index = compute_coincident_index(mod, res)
 
 # Plot the factor
 dates = endog.index._mpl_repr()
-ax.plot(dates, coincident_index, label='Coincident index')
-ax.plot(usphci.index._mpl_repr(), usphci, label='USPHCI')
-ax.legend(loc='lower right')
+ax.plot(dates, coincident_index, label="Coincident index")
+ax.plot(usphci.index._mpl_repr(), usphci, label="USPHCI")
+ax.legend(loc="lower right")
 
 # Retrieve and also plot the NBER recession indicators
 ylim = ax.get_ylim()
-ax.fill_between(dates[:-3],
-                ylim[0],
-                ylim[1],
-                rec.values[:-4, 0],
-                facecolor='k',
-                alpha=0.1)
+ax.fill_between(
+    dates[:-3], ylim[0], ylim[1], rec.values[:-4, 0], facecolor="k", alpha=0.1
+)
 
 # ## Appendix 1: Extending the dynamic factor model
 #
@@ -652,24 +643,23 @@ from statsmodels.tsa.statespace import tools
 class ExtendedDFM(sm.tsa.DynamicFactor):
     def __init__(self, endog, **kwargs):
         # Setup the model as if we had a factor order of 4
-        super().__init__(endog,
-                                          k_factors=1,
-                                          factor_order=4,
-                                          error_order=2,
-                                          **kwargs)
+        super().__init__(endog, k_factors=1, factor_order=4, error_order=2, **kwargs)
 
         # Note: `self.parameters` is an ordered dict with the
         # keys corresponding to parameter types, and the values
         # the number of parameters of that type.
         # Add the new parameters
-        self.parameters['new_loadings'] = 3
+        self.parameters["new_loadings"] = 3
 
         # Cache a slice for the location of the 4 factor AR
         # parameters (a_1, ..., a_4) in the full parameter vector
-        offset = (self.parameters['factor_loadings'] +
-                  self.parameters['exog'] + self.parameters['error_cov'])
-        self._params_factor_ar = np.s_[offset:offset + 2]
-        self._params_factor_zero = np.s_[offset + 2:offset + 4]
+        offset = (
+            self.parameters["factor_loadings"]
+            + self.parameters["exog"]
+            + self.parameters["error_cov"]
+        )
+        self._params_factor_ar = np.s_[offset : offset + 2]
+        self._params_factor_zero = np.s_[offset + 2 : offset + 4]
 
     @property
     def start_params(self):
@@ -683,8 +673,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
         # Add the corresponding names for the new loading parameters
         #  (the name can be anything you like)
         return super().param_names + [
-            'loading.L%d.f1.%s' % (i, self.endog_names[3])
-            for i in range(1, 4)
+            "loading.L%d.f1.%s" % (i, self.endog_names[3]) for i in range(1, 4)
         ]
 
     def transform_params(self, unconstrained):
@@ -694,8 +683,9 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
         # Redo the factor AR constraint, since we only want an AR(2),
         # and the previous constraint was for an AR(4)
         ar_params = unconstrained[self._params_factor_ar]
-        constrained[self._params_factor_ar] = (
-            tools.constrain_stationary_univariate(ar_params))
+        constrained[self._params_factor_ar] = tools.constrain_stationary_univariate(
+            ar_params
+        )
 
         # Return all the parameters
         return np.r_[constrained, unconstrained[-3:]]
@@ -707,8 +697,9 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
         # Redo the factor AR unconstrained, since we only want an AR(2),
         # and the previous unconstrained was for an AR(4)
         ar_params = constrained[self._params_factor_ar]
-        unconstrained[self._params_factor_ar] = (
-            tools.unconstrain_stationary_univariate(ar_params))
+        unconstrained[self._params_factor_ar] = tools.unconstrain_stationary_univariate(
+            ar_params
+        )
 
         # Return all the parameters
         return np.r_[unconstrained, constrained[-3:]]
@@ -720,12 +711,10 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
         params[self._params_factor_zero] = 0
 
         # Now perform the usual DFM update, but exclude our new parameters
-        super().update(params[:-3],
-                                        transformed=True,
-                                        **kwargs)
+        super().update(params[:-3], transformed=True, **kwargs)
 
         # Finally, set our new parameters in the design matrix
-        self.ssm['design', 3, 1:4] = params[-3:]
+        self.ssm["design", 3, 1:4] = params[-3:]
 
 
 # So what did we just do?
@@ -789,9 +778,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # Create the model
 extended_mod = ExtendedDFM(endog)
 initial_extended_res = extended_mod.fit(maxiter=1000, disp=False)
-extended_res = extended_mod.fit(initial_extended_res.params,
-                                method='nm',
-                                maxiter=1000)
+extended_res = extended_mod.fit(initial_extended_res.params, method="nm", maxiter=1000)
 print(extended_res.summary(separate_params=False))
 
 # Although this model increases the likelihood, it is not preferred by the
@@ -806,26 +793,18 @@ extended_res.plot_coefficients_of_determination(figsize=(8, 2))
 fig, ax = plt.subplots(figsize=(13, 3))
 
 # Compute the index
-extended_coincident_index = compute_coincident_index(extended_mod,
-                                                     extended_res)
+extended_coincident_index = compute_coincident_index(extended_mod, extended_res)
 
 # Plot the factor
 dates = endog.index._mpl_repr()
-ax.plot(dates, coincident_index, '-', linewidth=1, label='Basic model')
-ax.plot(dates,
-        extended_coincident_index,
-        '--',
-        linewidth=3,
-        label='Extended model')
-ax.plot(usphci.index._mpl_repr(), usphci, label='USPHCI')
-ax.legend(loc='lower right')
-ax.set(title='Coincident indices, comparison')
+ax.plot(dates, coincident_index, "-", linewidth=1, label="Basic model")
+ax.plot(dates, extended_coincident_index, "--", linewidth=3, label="Extended model")
+ax.plot(usphci.index._mpl_repr(), usphci, label="USPHCI")
+ax.legend(loc="lower right")
+ax.set(title="Coincident indices, comparison")
 
 # Retrieve and also plot the NBER recession indicators
 ylim = ax.get_ylim()
-ax.fill_between(dates[:-3],
-                ylim[0],
-                ylim[1],
-                rec.values[:-4, 0],
-                facecolor='k',
-                alpha=0.1)
+ax.fill_between(
+    dates[:-3], ylim[0], ylim[1], rec.values[:-4, 0], facecolor="k", alpha=0.1
+)

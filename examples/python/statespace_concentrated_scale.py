@@ -15,7 +15,7 @@ import pandas as pd
 import statsmodels.api as sm
 
 dta = sm.datasets.macrodata.load_pandas().data
-dta.index = pd.date_range(start='1959Q1', end='2009Q4', freq='Q')
+dta.index = pd.date_range(start="1959Q1", end="2009Q4", freq="Q")
 
 # ### Introduction
 #
@@ -76,17 +76,15 @@ dta.index = pd.date_range(start='1959Q1', end='2009Q4', freq='Q')
 
 
 class LocalLevel(sm.tsa.statespace.MLEModel):
-    _start_params = [1., 1.]
-    _param_names = ['var.level', 'var.irregular']
+    _start_params = [1.0, 1.0]
+    _param_names = ["var.level", "var.irregular"]
 
     def __init__(self, endog):
-        super().__init__(endog,
-                                         k_states=1,
-                                         initialization='diffuse')
+        super().__init__(endog, k_states=1, initialization="diffuse")
 
-        self['design', 0, 0] = 1
-        self['transition', 0, 0] = 1
-        self['selection', 0, 0] = 1
+        self["design", 0, 0] = 1
+        self["transition", 0, 0] = 1
+        self["selection", 0, 0] = 1
 
     def transform_params(self, unconstrained):
         return unconstrained**2
@@ -97,8 +95,8 @@ class LocalLevel(sm.tsa.statespace.MLEModel):
     def update(self, params, **kwargs):
         params = super().update(params, **kwargs)
 
-        self['state_cov', 0, 0] = params[0]
-        self['obs_cov', 0, 0] = params[1]
+        self["state_cov", 0, 0] = params[0]
+        self["obs_cov", 0, 0] = params[1]
 
 
 # There are two parameters in this model that must be chosen: `var.level`
@@ -149,18 +147,16 @@ print(res.mle_retvals)
 
 
 class LocalLevelConcentrated(sm.tsa.statespace.MLEModel):
-    _start_params = [1.]
-    _param_names = ['ratio.irregular']
+    _start_params = [1.0]
+    _param_names = ["ratio.irregular"]
 
     def __init__(self, endog):
-        super().__init__(endog,
-                                                     k_states=1,
-                                                     initialization='diffuse')
+        super().__init__(endog, k_states=1, initialization="diffuse")
 
-        self['design', 0, 0] = 1
-        self['transition', 0, 0] = 1
-        self['selection', 0, 0] = 1
-        self['state_cov', 0, 0] = 1
+        self["design", 0, 0] = 1
+        self["transition", 0, 0] = 1
+        self["selection", 0, 0] = 1
+        self["state_cov", 0, 0] = 1
 
         self.ssm.filter_concentrated = True
 
@@ -172,7 +168,7 @@ class LocalLevelConcentrated(sm.tsa.statespace.MLEModel):
 
     def update(self, params, **kwargs):
         params = super().update(params, **kwargs)
-        self['obs_cov', 0, 0] = params[0]
+        self["obs_cov", 0, 0] = params[0]
 
 
 # Again, we can use the built-in `fit` method to find the maximum
@@ -202,13 +198,13 @@ print(res_conc.mle_retvals)
 # $\sigma_*^2 = \sigma_\eta^2$. Using these definitions, we can see that
 # both models produce nearly identical results:
 
-print('Original model')
-print('var.level     = %.5f' % res.params[0])
-print('var.irregular = %.5f' % res.params[1])
+print("Original model")
+print("var.level     = %.5f" % res.params[0])
+print("var.irregular = %.5f" % res.params[1])
 
-print('\nConcentrated model')
-print('scale         = %.5f' % res_conc.scale)
-print('h * scale     = %.5f' % (res_conc.params[0] * res_conc.scale))
+print("\nConcentrated model")
+print("scale         = %.5f" % res_conc.scale)
+print("h * scale     = %.5f" % (res_conc.params[0] * res_conc.scale))
 
 # ### Example: SARIMAX
 #
@@ -217,32 +213,33 @@ print('h * scale     = %.5f' % (res_conc.params[0] * res_conc.scale))
 # concentrating the scale out.
 
 # Typical approach
-mod_ar = sm.tsa.SARIMAX(dta.cpi, order=(1, 0, 0), trend='ct')
+mod_ar = sm.tsa.SARIMAX(dta.cpi, order=(1, 0, 0), trend="ct")
 res_ar = mod_ar.fit(disp=False)
 
 # Estimating the model with the scale concentrated out
-mod_ar_conc = sm.tsa.SARIMAX(dta.cpi,
-                             order=(1, 0, 0),
-                             trend='ct',
-                             concentrate_scale=True)
+mod_ar_conc = sm.tsa.SARIMAX(
+    dta.cpi, order=(1, 0, 0), trend="ct", concentrate_scale=True
+)
 res_ar_conc = mod_ar_conc.fit(disp=False)
 
 # These two approaches produce about the same loglikelihood and
 # parameters, although the model with the concentrated scale was able to
 # improve the fit very slightly:
 
-print('Loglikelihood')
-print('- Original model:     %.4f' % res_ar.llf)
-print('- Concentrated model: %.4f' % res_ar_conc.llf)
+print("Loglikelihood")
+print("- Original model:     %.4f" % res_ar.llf)
+print("- Concentrated model: %.4f" % res_ar_conc.llf)
 
-print('\nParameters')
-print('- Original model:     %.4f, %.4f, %.4f, %.4f' % tuple(res_ar.params))
-print('- Concentrated model: %.4f, %.4f, %.4f, %.4f' %
-      (tuple(res_ar_conc.params) + (res_ar_conc.scale, )))
+print("\nParameters")
+print("- Original model:     %.4f, %.4f, %.4f, %.4f" % tuple(res_ar.params))
+print(
+    "- Concentrated model: %.4f, %.4f, %.4f, %.4f"
+    % (tuple(res_ar_conc.params) + (res_ar_conc.scale,))
+)
 
 # This time, about 1/3 fewer iterations of the optimizer are required
 # under the concentrated approach:
 
-print('Optimizer iterations')
-print('- Original model:     %d' % res_ar.mle_retvals['iterations'])
-print('- Concentrated model: %d' % res_ar_conc.mle_retvals['iterations'])
+print("Optimizer iterations")
+print("- Original model:     %d" % res_ar.mle_retvals["iterations"])
+print("- Concentrated model: %d" % res_ar_conc.mle_retvals["iterations"])

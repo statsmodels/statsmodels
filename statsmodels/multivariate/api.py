@@ -1,11 +1,4 @@
-__all__ = [
-    "MANOVA",
-    "PCA",
-    "CanCorr",
-    "Factor",
-    "FactorResults",
-    "factor_rotation"
-]
+__all__ = ["MANOVA", "PCA", "CanCorr", "Factor", "FactorResults", "factor_rotation"]
 
 from . import factor_rotation
 from .cancorr import CanCorr

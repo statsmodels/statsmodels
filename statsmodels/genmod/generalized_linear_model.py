@@ -18,7 +18,6 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
 
-
 import warnings
 
 import numpy as np

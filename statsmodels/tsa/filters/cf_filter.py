@@ -80,8 +80,8 @@ def cffilter(x, low=6, high=32, drift=True):
     pw = PandasWrapper(x)
     x = array_like(x, "x", ndim=2)
     nobs, nseries = x.shape
-    a = 2*np.pi/high
-    b = 2*np.pi/low
+    a = 2 * np.pi / high
+    b = 2 * np.pi / low
 
     if drift:  # get drift adjusted series
         x = x - np.arange(nobs)[:, None] * (x[-1] - x[0]) / (nobs - 1)
@@ -93,10 +93,15 @@ def cffilter(x, low=6, high=32, drift=True):
     y = np.zeros((nobs, nseries))
 
     for i in range(nobs):
-        B = -.5 * Bj[0] - np.sum(Bj[1:-i - 2])
-        A = -Bj[0] - np.sum(Bj[1:-i - 2]) - np.sum(Bj[1:i]) - B
-        y[i] = (Bj[0] * x[i] + np.dot(Bj[1:-i - 2].T, x[i + 1:-1]) +
-                B * x[-1] + np.dot(Bj[1:i].T, x[1:i][::-1]) + A * x[0])
+        B = -0.5 * Bj[0] - np.sum(Bj[1 : -i - 2])
+        A = -Bj[0] - np.sum(Bj[1 : -i - 2]) - np.sum(Bj[1:i]) - B
+        y[i] = (
+            Bj[0] * x[i]
+            + np.dot(Bj[1 : -i - 2].T, x[i + 1 : -1])
+            + B * x[-1]
+            + np.dot(Bj[1:i].T, x[1:i][::-1])
+            + A * x[0]
+        )
     y = y.squeeze()
 
     cycle, trend = y.squeeze(), x.squeeze() - y
@@ -106,6 +111,7 @@ def cffilter(x, low=6, high=32, drift=True):
 
 if __name__ == "__main__":
     import statsmodels as sm
+
     dta = sm.datasets.macrodata.load().data[["infl", "tbilrate"]].view((float, 2))[1:]
     cycle, trend = cffilter(dta, 6, 32, drift=True)
     dta = sm.datasets.macrodata.load().data["tbilrate"][1:]

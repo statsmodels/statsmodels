@@ -8,6 +8,7 @@ Created on Sat Dec 17 08:39:16 2011
 
 Author: Josef Perktold
 """
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 
@@ -22,6 +23,7 @@ def test_cov_cluster_2groups():
     # http://www.kellogg.northwestern.edu/faculty/petersen
     #      .../htm/papers/se/test_data.txt
     import os
+
     cur_dir = os.path.abspath(os.path.dirname(__file__))
     fpath = os.path.join(cur_dir, "test_data.txt")
     pet = np.genfromtxt(fpath)
@@ -56,6 +58,7 @@ def test_cov_cluster_2groups():
 
 def test_hac_simple():
     from statsmodels.datasets import macrodata
+
     d2 = macrodata.load_pandas().data
     g_gdp = 400 * np.diff(np.log(d2["realgdp"].values))
     g_inv = 400 * np.diff(np.log(d2["realinv"].values))
@@ -69,7 +72,7 @@ def test_hac_simple():
     cov1_r = [
         [+1.40643899878678802, -0.3180328707083329709, -0.060621111216488610],
         [-0.31803287070833292, 0.1097308348999818661, +0.000395311760301478],
-        [-0.06062111121648865, 0.0003953117603014895, +0.087511528912470993]
+        [-0.06062111121648865, 0.0003953117603014895, +0.087511528912470993],
     ]
 
     # > NeweyWest(fm, lag = 4, prewhite = FALSE, sandwich = TRUE,
@@ -79,7 +82,7 @@ def test_hac_simple():
     cov2_r = [
         [+1.3855512908840137, -0.313309610252268500, -0.059720797683570477],
         [-0.3133096102522685, +0.108101169035130618, +0.000389440793564339],
-        [-0.0597207976835705, +0.000389440793564336, +0.086211852740503622]
+        [-0.0597207976835705, +0.000389440793564336, +0.086211852740503622],
     ]
 
     cov1 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=True)

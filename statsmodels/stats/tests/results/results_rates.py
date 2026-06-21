@@ -19,14 +19,11 @@ res_pexact_cond = res = Holder()
 res.statistic = 60
 res.parameter = 43.7956463130352
 res.p_value = 0.000675182658686321
-res.conf_int = np.array([
-    1.34983090611567, 3.27764509862914
-    ])
+res.conf_int = np.array([1.34983090611567, 3.27764509862914])
 res.estimate = 2.10999757175465
 res.null_value = 1
 res.alternative = "two.sided"
-res.method = ("Exact two-sided Poisson test (sum of minimum likelihood"
-              " method)")
+res.method = "Exact two-sided Poisson test (sum of minimum likelihood" " method)"
 res.data_name = "c(60, 30) time base: c(51477.5, 54308.7)"
 
 
@@ -37,12 +34,11 @@ res_pexact_cond_midp = res = Holder()
 res.statistic = 60
 res.parameter = 43.7956463130352
 res.p_value = 0.000557262406619052
-res.conf_int = np.array([
-    NA, NA
-    ])
+res.conf_int = np.array([NA, NA])
 res.estimate = 2.10999757175465
 res.null_value = 1
 res.alternative = "two.sided"
-res.method = ("Exact two-sided Poisson test (sum of minimum"
-              " likelihood method), mid-p version")
+res.method = (
+    "Exact two-sided Poisson test (sum of minimum" " likelihood method), mid-p version"
+)
 res.data_name = "c(60, 30) time base: c(51477.5, 54308.7)"

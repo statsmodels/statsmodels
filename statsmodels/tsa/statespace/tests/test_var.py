@@ -10,6 +10,7 @@ CSS approach is the conditional loglikelihood.
 Author: Chad Fulton
 License: Simplified-BSD
 """
+
 import os
 
 import numpy as np
@@ -22,7 +23,8 @@ from .results import results_var_R
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 results_var_R_output = pd.read_csv(
-    os.path.join(current_path, "results", "results_var_R_output.csv"))
+    os.path.join(current_path, "results", "results_var_R_output.csv")
+)
 
 up2 = os.path.split(os.path.split(current_path)[0])[0]
 dta = pd.read_stata(os.path.join(up2, "tests", "results", "lutkepohl2.dta"))
@@ -47,8 +49,7 @@ def check_irf(test, mod, results, params=None):
     # state_cov matrix for this part of the test
     Sigma_u_mle = mod["state_cov"]
     nobs_effective = mod.nobs - mod.k_ar
-    df_resid = (nobs_effective -
-                (mod.k_ar * mod.k_endog + mod.k_trend + mod.k_exog))
+    df_resid = nobs_effective - (mod.k_ar * mod.k_endog + mod.k_trend + mod.k_exog)
     Sigma_u = Sigma_u_mle * nobs_effective / df_resid
 
     L = np.linalg.cholesky(Sigma_u)
@@ -61,24 +62,20 @@ def check_irf(test, mod, results, params=None):
         impulse_to = endog.columns[i]
 
         # Non-orthogonalized
-        columns = [f"{test}.irf.{impulse_to}.{name}"
-                   for name in endog.columns]
-        assert_allclose(res.impulse_responses(10, i),
-                        results_var_R_output[columns])
+        columns = [f"{test}.irf.{impulse_to}.{name}" for name in endog.columns]
+        assert_allclose(res.impulse_responses(10, i), results_var_R_output[columns])
 
         # Orthogonalized
-        columns = [f"{test}.irf.ortho.{impulse_to}.{name}"
-                   for name in endog.columns]
-        assert_allclose(res.impulse_responses(10, i, orthogonalized=True),
-                        results_var_R_output[columns])
+        columns = [f"{test}.irf.ortho.{impulse_to}.{name}" for name in endog.columns]
+        assert_allclose(
+            res.impulse_responses(10, i, orthogonalized=True),
+            results_var_R_output[columns],
+        )
 
         # Orthogonalized, cumulated
-        columns = [f"{test}.irf.cumu.{impulse_to}.{name}"
-                   for name in endog.columns]
-        result = res.impulse_responses(10, i,
-                                       orthogonalized=True, cumulative=True)
-        assert_allclose(result,
-                        results_var_R_output[columns])
+        columns = [f"{test}.irf.cumu.{impulse_to}.{name}" for name in endog.columns]
+        result = res.impulse_responses(10, i, orthogonalized=True, cumulative=True)
+        assert_allclose(result, results_var_R_output[columns])
 
 
 def test_var_basic():
@@ -147,16 +144,19 @@ def test_var_ct_as_exog0():
     # VAR(2), no built-in trend, constant and time trend as exog
     # Here we start the time-trend at 0
     results = results_var_R.res_ct_as_exog0
-    mod = varmax.VARMAX(endog, order=(2, 0), exog=exog0[:, :2], trend="n",
-                        loglikelihood_burn=2)
+    mod = varmax.VARMAX(
+        endog, order=(2, 0), exog=exog0[:, :2], trend="n", loglikelihood_burn=2
+    )
     res = mod.smooth(results["params"])
 
     assert_allclose(res.llf, results["llf"])
 
     # Forecast
     columns = [f"{test}.fcast.{name}.fcst" for name in endog.columns]
-    assert_allclose(res.forecast(10, exog=exog0_fcast[:, :2]),
-                    results_var_R_output[columns].iloc[:10])
+    assert_allclose(
+        res.forecast(10, exog=exog0_fcast[:, :2]),
+        results_var_R_output[columns].iloc[:10],
+    )
 
     # IRF
     check_irf(test, mod, results)
@@ -171,8 +171,9 @@ def test_var_ct_as_exog1():
     # Here we start the time-trend at 1 and so we can compare to the built-in
     # trend results "res_ct"
     results = results_var_R.res_ct
-    mod = varmax.VARMAX(endog, order=(2, 0), exog=exog1[:, :2], trend="n",
-                        loglikelihood_burn=2)
+    mod = varmax.VARMAX(
+        endog, order=(2, 0), exog=exog1[:, :2], trend="n", loglikelihood_burn=2
+    )
     # Since the params were given for the built-in trend case, we need to
     # re-order them
     params = results["params"]
@@ -183,8 +184,10 @@ def test_var_ct_as_exog1():
 
     # Forecast
     columns = [f"{test}.fcast.{name}.fcst" for name in endog.columns]
-    assert_allclose(res.forecast(10, exog=exog1_fcast[:, :2]),
-                    results_var_R_output[columns].iloc[:10])
+    assert_allclose(
+        res.forecast(10, exog=exog1_fcast[:, :2]),
+        results_var_R_output[columns].iloc[:10],
+    )
 
     # IRF
     check_irf(test, mod, results, params)
@@ -199,10 +202,9 @@ def test_var_ctt():
     # Note that this is comparing against trend as exog in the R package,
     # since it does not have a built-in option for trend**2
     results = results_var_R.res_ctt_as_exog1
-    mod = varmax.VARMAX(endog, order=(2, 0), trend="ctt",
-                        loglikelihood_burn=2)
+    mod = varmax.VARMAX(endog, order=(2, 0), trend="ctt", loglikelihood_burn=2)
     params = results["params"]
-    params = np.r_[params[-(6+9):-6], params[:-(6+9)], params[-6:]]
+    params = np.r_[params[-(6 + 9) : -6], params[: -(6 + 9)], params[-6:]]
     res = mod.smooth(params)
 
     assert_allclose(res.llf, results["llf"])
@@ -224,16 +226,18 @@ def test_var_ct_exog():
     results = results_var_R.res_ct_exog
     exog = dta["inc"].loc["1960Q2":"1978"]
     exog_fcast = dta[["inc"]].loc["1979Q1":"1981Q2"]
-    mod = varmax.VARMAX(endog, order=(2, 0), exog=exog, trend="ct",
-                        loglikelihood_burn=2)
+    mod = varmax.VARMAX(
+        endog, order=(2, 0), exog=exog, trend="ct", loglikelihood_burn=2
+    )
     res = mod.smooth(results["params"])
 
     assert_allclose(res.llf, results["llf"])
 
     # Forecast
     columns = [f"{test}.fcast.{name}.fcst" for name in endog.columns]
-    assert_allclose(res.forecast(10, exog=exog_fcast),
-                    results_var_R_output[columns].iloc[:10])
+    assert_allclose(
+        res.forecast(10, exog=exog_fcast), results_var_R_output[columns].iloc[:10]
+    )
 
     # IRF
     check_irf(test, mod, results)
@@ -248,16 +252,16 @@ def test_var_c_2exog():
     results = results_var_R.res_c_2exog
     exog = dta[["inc", "inv"]].loc["1960Q2":"1978"]
     exog_fcast = dta[["inc", "inv"]].loc["1979Q1":"1981Q2"]
-    mod = varmax.VARMAX(endog, order=(2, 0), exog=exog, trend="c",
-                        loglikelihood_burn=2)
+    mod = varmax.VARMAX(endog, order=(2, 0), exog=exog, trend="c", loglikelihood_burn=2)
     res = mod.smooth(results["params"])
 
     assert_allclose(res.llf, results["llf"])
 
     # Forecast
     columns = [f"{test}.fcast.{name}.fcst" for name in endog.columns]
-    assert_allclose(res.forecast(10, exog=exog_fcast),
-                    results_var_R_output[columns].iloc[:10])
+    assert_allclose(
+        res.forecast(10, exog=exog_fcast), results_var_R_output[columns].iloc[:10]
+    )
 
     # IRF
     check_irf(test, mod, results)

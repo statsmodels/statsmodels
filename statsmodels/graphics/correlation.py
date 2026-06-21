@@ -7,13 +7,21 @@ example for usage with different options in
 statsmodels/sandbox/examples/thirdparty/ex_ratereturn.py
 
 """
+
 import numpy as np
 
 from . import utils
 
 
-def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
-              ax=None, cmap="RdYlBu_r"):
+def plot_corr(
+    dcorr,
+    xnames=None,
+    ynames=None,
+    title=None,
+    normcolor=False,
+    ax=None,
+    cmap="RdYlBu_r",
+):
     """Plot correlation of many variables in a tight color grid.
 
     Parameters
@@ -81,8 +89,14 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     else:
         vmin, vmax = None, None
 
-    axim = ax.imshow(dcorr, cmap=cmap, interpolation="nearest",
-                     extent=(0, nvars, 0, nvars), vmin=vmin, vmax=vmax)
+    axim = ax.imshow(
+        dcorr,
+        cmap=cmap,
+        interpolation="nearest",
+        extent=(0, nvars, 0, nvars),
+        vmin=vmin,
+        vmax=vmax,
+    )
 
     # create list of label positions
     labelPos = np.arange(0, nvars) + 0.5
@@ -91,17 +105,17 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         ax.set_yticks([])
     elif ynames is not None:
         ax.set_yticks(labelPos)
-        ax.set_yticks(labelPos[:-1]+0.5, minor=True)
-        ax.set_yticklabels(ynames[::-1], fontsize="small",
-                           horizontalalignment="right")
+        ax.set_yticks(labelPos[:-1] + 0.5, minor=True)
+        ax.set_yticklabels(ynames[::-1], fontsize="small", horizontalalignment="right")
 
     if isinstance(xnames, list) and len(xnames) == 0:
         ax.set_xticks([])
     elif xnames is not None:
         ax.set_xticks(labelPos)
-        ax.set_xticks(labelPos[:-1]+0.5, minor=True)
-        ax.set_xticklabels(xnames, fontsize="small", rotation=45,
-                           horizontalalignment="right")
+        ax.set_xticks(labelPos[:-1] + 0.5, minor=True)
+        ax.set_xticklabels(
+            xnames, fontsize="small", rotation=45, horizontalalignment="right"
+        )
 
     if not title == "":
         ax.set_title(title)
@@ -121,8 +135,16 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     return fig
 
 
-def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None,
-                   ynames=None, fig=None, cmap="RdYlBu_r"):
+def plot_corr_grid(
+    dcorrs,
+    titles=None,
+    ncols=None,
+    normcolor=False,
+    xnames=None,
+    ynames=None,
+    fig=None,
+    cmap="RdYlBu_r",
+):
     """
     Create a grid of correlation plots.
 
@@ -185,7 +207,7 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
         ynames = xnames
 
     if not titles:
-        titles = [""]*len(dcorrs)
+        titles = [""] * len(dcorrs)
 
     n_plots = len(dcorrs)
     if ncols is not None:
@@ -204,12 +226,19 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
     fig = utils.create_mpl_fig(fig, figsize=(vsize * aspect + 1, vsize))
 
     for i, c in enumerate(dcorrs):
-        ax = fig.add_subplot(nrows, ncols, i+1)
+        ax = fig.add_subplot(nrows, ncols, i + 1)
         # Ensure to only plot labels on bottom row and left column
-        _xnames = xnames if nrows * ncols - (i+1) < ncols else []
-        _ynames = ynames if (i+1) % ncols == 1 else []
-        plot_corr(c, xnames=_xnames, ynames=_ynames, title=titles[i],
-                  normcolor=normcolor, ax=ax, cmap=cmap)
+        _xnames = xnames if nrows * ncols - (i + 1) < ncols else []
+        _ynames = ynames if (i + 1) % ncols == 1 else []
+        plot_corr(
+            c,
+            xnames=_xnames,
+            ynames=_ynames,
+            title=titles[i],
+            normcolor=normcolor,
+            ax=ax,
+            cmap=cmap,
+        )
 
     # Adjust figure margins and add a colorbar
     fig.subplots_adjust(bottom=0.1, left=0.09, right=0.9, top=0.9)

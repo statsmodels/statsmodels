@@ -146,9 +146,7 @@ class TheilGLS(GLS):
         k_constraints, k_exog = r_matrix.shape
         self.r_matrix = r_matrix
         if k_exog != self.exog.shape[1]:
-            raise ValueError(
-                "r_matrix needs to have the same number of columnsas exog"
-            )
+            raise ValueError("r_matrix needs to have the same number of columnsas exog")
 
         if q_matrix is not None:
             self.q_matrix = atleast_2dcols(q_matrix)

@@ -189,11 +189,7 @@ fig = res.plot_diagnostics(fig=fig, lags=30)
 # We can also include seasonal dummies.  These are all insignificant since
 # the model is using year-over-year changes.
 
-sel = ar_select_order(yoy_housing,
-                      13,
-                      glob=True,
-                      seasonal=True,
-                      old_names=False)
+sel = ar_select_order(yoy_housing, 13, glob=True, seasonal=True, old_names=False)
 sel.ar_lags
 res = sel.model.fit()
 print(res.summary())
@@ -236,14 +232,13 @@ fig = res_glob.plot_predict(start=714, end=732)
 # similar. I also include an AR(5) which has very different dynamics
 
 res_ar5 = AutoReg(ind_prod, 5, old_names=False).fit()
-predictions = pd.DataFrame({
-    "AR(5)":
-    res_ar5.predict(start=714, end=726),
-    "AR(13)":
-    res.predict(start=714, end=726),
-    "Restr. AR(13)":
-    res_glob.predict(start=714, end=726),
-})
+predictions = pd.DataFrame(
+    {
+        "AR(5)": res_ar5.predict(start=714, end=726),
+        "AR(13)": res.predict(start=714, end=726),
+        "Restr. AR(13)": res_glob.predict(start=714, end=726),
+    }
+)
 _, ax = plt.subplots()
 ax = predictions.plot(ax=ax)
 
@@ -273,15 +268,12 @@ import numpy as np
 
 start = ind_prod.index[-24]
 forecast_index = pd.date_range(start, freq=ind_prod.index.freq, periods=36)
-cols = [
-    "-".join(str(val) for val in (idx.year, idx.month))
-    for idx in forecast_index
-]
+cols = ["-".join(str(val) for val in (idx.year, idx.month)) for idx in forecast_index]
 forecasts = pd.DataFrame(index=forecast_index, columns=cols)
 for i in range(1, 24):
-    fcast = res_glob.predict(start=forecast_index[i],
-                             end=forecast_index[i + 12],
-                             dynamic=True)
+    fcast = res_glob.predict(
+        start=forecast_index[i], end=forecast_index[i + 12], dynamic=True
+    )
     forecasts.loc[fcast.index, cols[i]] = fcast
 _, ax = plt.subplots(figsize=(16, 10))
 ind_prod.iloc[-24:].plot(ax=ax, color="black", linestyle="--")

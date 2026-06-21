@@ -1,6 +1,7 @@
 """
 Miscellaneous utility code for VAR estimation
 """
+
 from statsmodels.compat.pandas import frequencies
 from statsmodels.compat.python import asbytes
 
@@ -29,12 +30,11 @@ def get_var_endog(y, lags, trend="c", has_constant="skip"):
     """
     nobs = len(y)
     # Ravel C order, need to put in descending order
-    Z = np.array([y[t-lags : t][::-1].ravel() for t in range(lags, nobs)])
+    Z = np.array([y[t - lags : t][::-1].ravel() for t in range(lags, nobs)])
 
     # Add constant, trend, etc.
     if trend != "n":
-        Z = tsa.add_trend(Z, prepend=True, trend=trend,
-                          has_constant=has_constant)
+        Z = tsa.add_trend(Z, prepend=True, trend=trend, has_constant=has_constant)
 
     return Z
 
@@ -72,7 +72,7 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
         for name in names:
             if not isinstance(name, str):
                 name = str(name)  # will need consistent unicode handling
-            lag_names.append("L"+str(i)+"."+name)
+            lag_names.append("L" + str(i) + "." + name)
 
     # handle the constant name
     if trendorder != 0:
@@ -118,9 +118,11 @@ def comp_matrix(coefs):
 
     # Set I_K matrices
     if p > 1:
-        result[np.arange(k1, kp), np.arange(kp-k1)] = 1
+        result[np.arange(k1, kp), np.arange(kp - k1)] = 1
 
     return result
+
+
 #
 # Miscellaneous stuff
 #
@@ -154,8 +156,9 @@ def parse_lutkepohl_data(path):  # pragma: no cover
             year, freq, start_point = m.groups()
             break
 
-    data = (pd.read_csv(path, delimiter=r"\s+", header=to_skip+1)
-            .to_records(index=False))
+    data = pd.read_csv(path, delimiter=r"\s+", header=to_skip + 1).to_records(
+        index=False
+    )
 
     n = len(data)
 
@@ -166,7 +169,7 @@ def parse_lutkepohl_data(path):  # pragma: no cover
     offsets = {
         asbytes("Q"): frequencies.BQuarterEnd(),
         asbytes("M"): frequencies.BMonthEnd(),
-        asbytes("A"): frequencies.BYearEnd()
+        asbytes("A"): frequencies.BYearEnd(),
     }
 
     # create an instance
@@ -191,7 +194,15 @@ def acf_to_acorr(acf):
     return acf / np.sqrt(np.outer(diag, diag))
 
 
-def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None, nsimulations=None):
+def varsim(
+    coefs,
+    intercept,
+    sig_u,
+    steps=100,
+    initial_values=None,
+    seed=None,
+    nsimulations=None,
+):
     """
     Simulate VAR(p) process, given coefficients and assuming Gaussian noise
 
@@ -248,7 +259,9 @@ def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None, n
         result_shape = (nsimulations, steps, k)
     if sig_u is None:
         sig_u = np.eye(k)
-    ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps*nsimulations).reshape(nsimulations, steps, k)
+    ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps * nsimulations).reshape(
+        nsimulations, steps, k
+    )
     result = np.zeros((nsimulations, steps, k))
     if intercept is not None:
         # intercept can be 2-D like an offset variable
@@ -261,17 +274,21 @@ def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None, n
     else:
         result[:, p:] = ugen[:, p:]
 
-    initial_values = array_like(initial_values, "initial_values", optional=True, maxdim=2)
+    initial_values = array_like(
+        initial_values, "initial_values", optional=True, maxdim=2
+    )
     if initial_values is not None:
         if not (initial_values.shape == (p, k) or initial_values.shape == (k,)):
-            raise ValueError("initial_values should have shape (p, k) or (k,) where p is the number of lags and k is the number of equations.")
+            raise ValueError(
+                "initial_values should have shape (p, k) or (k,) where p is the number of lags and k is the number of equations."
+            )
         result[:, :p] = initial_values
 
     # add in AR terms
     for t in range(p, steps):
         ygen = result[:, t]
         for j in range(p):
-            ygen += np.dot(coefs[j], result[:, t-j-1].T).T
+            ygen += np.dot(coefs[j], result[:, t - j - 1].T).T
 
     return result.reshape(result_shape)
 
@@ -315,7 +332,7 @@ def vech(A):
         b = i
         while b < length:
             vechvec.append(A[b, i])
-            b = b+1
+            b = b + 1
     vechvec = np.asarray(vechvec)
     return vechvec
 
@@ -350,7 +367,7 @@ def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
     if n_seasons > 0:
         season_exog = np.zeros((len_endog, n_seasons - 1))
         for i in range(n_seasons - 1):
-            season_exog[(i-first_period) % n_seasons::n_seasons, i] = 1
+            season_exog[(i - first_period) % n_seasons :: n_seasons, i] = 1
 
         if centered:
             season_exog -= 1 / n_seasons

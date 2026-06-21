@@ -4,6 +4,7 @@ State Space Representation
 Author: Chad Fulton
 License: Simplified-BSD
 """
+
 from statsmodels.compat.numpy import inplace_reshape
 
 import warnings
@@ -437,9 +438,7 @@ class Representation:
             return matrix[slice_]
         # Otherwise, we have only a single slice index, but it is not a string
         else:
-            raise IndexError(
-                "First index must the name of a valid state space matrix."
-            )
+            raise IndexError("First index must the name of a valid state space matrix.")
 
     def __setitem__(self, key, value):
         _type = type(key)
@@ -477,9 +476,7 @@ class Representation:
         # Otherwise we got a single non-string key, (e.g. mod[:]), which is
         # invalid
         else:
-            raise IndexError(
-                "First index must the name of a valid state space matrix."
-            )
+            raise IndexError("First index must the name of a valid state space matrix.")
 
     def _clone_kwargs(self, endog, **kwargs):
         """

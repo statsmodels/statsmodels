@@ -34,10 +34,10 @@ methods = [
     ("aipw", res_st.results_aipw),
     ("aipw_wls", res_st.results_aipw_wls),
     ("ipw_ra", res_st.results_ipwra),
-    ]
+]
 
 
-class TestTEffects():
+class TestTEffects:
 
     @classmethod
     def setup_class(cls):
@@ -67,8 +67,7 @@ class TestTEffects():
         assert_allclose(res1.params[:2], res2.table[:2, 0], rtol=1e-5)
         assert_allclose(res1.bse[:2], res2.table[:2, 1], rtol=1e-3)
         assert_allclose(res1.tvalues[:2], res2.table[:2, 2], rtol=1e-3)
-        assert_allclose(res1.pvalues[:2], res2.table[:2, 3],
-                        rtol=1e-4, atol=1e-15)
+        assert_allclose(res1.pvalues[:2], res2.table[:2, 3], rtol=1e-4, atol=1e-15)
         ci = res1.conf_int()
         assert_allclose(ci[:2, 0], res2.table[:2, 4], rtol=5e-4)
         assert_allclose(ci[:2, 1], res2.table[:2, 5], rtol=5e-4)
@@ -80,8 +79,7 @@ class TestTEffects():
             # IPW, no outcome regression
             idx = [0, 1, 7, 2, 3, 4, 5, 6]
         elif k_p == 18:
-            idx = [0, 1, 6, 2, 3, 4, 5, 11, 7, 8, 9, 10, 17, 12, 13, 14,
-                   15, 16]
+            idx = [0, 1, 6, 2, 3, 4, 5, 11, 7, 8, 9, 10, 17, 12, 13, 14, 15, 16]
         elif k_p == 12:
             # RA, no selection regression
             idx = [0, 1, 6, 2, 3, 4, 5, 11, 7, 8, 9, 10]
@@ -108,8 +106,7 @@ class TestTEffects():
             assert_allclose(res1.params[:2], table[:2, 0], rtol=5e-5)
             assert_allclose(res1.bse[:2], table[:2, 1], rtol=1e-3)
             assert_allclose(res1.tvalues[:2], table[:2, 2], rtol=1e-3)
-            assert_allclose(res1.pvalues[:2], table[:2, 3],
-                            rtol=1e-4, atol=1e-15)
+            assert_allclose(res1.pvalues[:2], table[:2, 3], rtol=1e-4, atol=1e-15)
             ci = res1.conf_int()
             assert_allclose(ci[:2, 0], table[:2, 4], rtol=5e-4)
             assert_allclose(ci[:2, 1], table[:2, 5], rtol=5e-4)
@@ -118,5 +115,4 @@ class TestTEffects():
             res1 = getattr(teff, meth)(return_results=False, effect_group=0)
             res0 = getattr(teff, meth)(return_results=True, effect_group=0)
             assert_allclose(res1, res0.effect, rtol=1e-12)
-            assert_allclose(res0.start_params, res0.results_gmm.params,
-                            rtol=1e-12)
+            assert_allclose(res0.start_params, res0.results_gmm.params, rtol=1e-12)

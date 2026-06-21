@@ -36,6 +36,7 @@ enhancements:
 
 
 """
+
 import numpy as np
 from scipy import integrate, special, stats
 
@@ -208,7 +209,9 @@ def inner_cont(polys, lower, upper, weight=None):
                     lambda x, p1, p2: p1(x) * p2(x) * weight(x), lower, upper, (p1, p2)
                 )
             else:
-                innp, err = integrate.quad(lambda x, p1, p2: p1(x) * p2(x), lower, upper, (p1, p2))
+                innp, err = integrate.quad(
+                    lambda x, p1, p2: p1(x) * p2(x), lower, upper, (p1, p2)
+                )
             innerprod[i, j] = innp
             interr[i, j] = err
             if not i == j:
@@ -266,7 +269,9 @@ def is_orthonormal_cont(polys, lower, upper, rtol=0, atol=1e-08):
         for j in range(i + 1):
             p1 = polys[i]
             p2 = polys[j]
-            innerprod = integrate.quad(lambda x, p1, p2: p1(x) * p2(x), lower, upper, (p1, p2))[0]
+            innerprod = integrate.quad(
+                lambda x, p1, p2: p1(x) * p2(x), lower, upper, (p1, p2)
+            )[0]
             # print i,j, innerprod
             if not np.allclose(innerprod, i == j, rtol=rtol, atol=atol):
                 return False
@@ -472,7 +477,11 @@ if __name__ == "__main__":
 
         for i, p in enumerate(polys[:5]):
             for j, p2 in enumerate(polys[:5]):
-                print(i, j, integrate.quad(lambda x, p, p2: p(x) * p2(x), -1, 1, (p, p2))[0])
+                print(
+                    i,
+                    j,
+                    integrate.quad(lambda x, p, p2: p(x) * p2(x), -1, 1, (p, p2))[0],
+                )
 
         for p in polys:
             print(integrate.quad(lambda x, p: p(x) ** 2, -1, 1, (p,)))

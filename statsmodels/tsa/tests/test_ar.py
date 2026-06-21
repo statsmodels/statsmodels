@@ -832,6 +832,7 @@ def test_dynamic_against_sarimax():
         y[i] = 0.9 * y[i - 1] + e[i]
     smod = SARIMAX(y, order=(1, 0, 0), trend="c")
     from statsmodels.compat.scipy import SP_LT_118
+
     kwargs = {"iprint": -1} if SP_LT_118 else {}
     sres = smod.fit(disp=False, **kwargs)
     mod = AutoReg(y, 1)

@@ -809,7 +809,7 @@ class MixedLM(base.LikelihoodModel):
         if not self.data._param_names:
             # HACK: could have been set in from_formula already
             # needs refactor
-            (param_names, exog_re_names, exog_re_names_full) = self._make_param_names(
+            param_names, exog_re_names, exog_re_names_full = self._make_param_names(
                 exog_re
             )
             self.data.param_names = param_names
@@ -1090,7 +1090,7 @@ class MixedLM(base.LikelihoodModel):
         mod = super().from_formula(formula, data, *args, **kwargs)
 
         # expand re names to account for pairs of RE
-        (param_names, exog_re_names, exog_re_names_full) = mod._make_param_names(
+        param_names, exog_re_names, exog_re_names_full = mod._make_param_names(
             exog_re_names
         )
 
@@ -3046,6 +3046,7 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
                 return rl.readline()
 
             return rlu
+
         lr = _line_reader(fml)
         g = tokenize.generate_tokens(lr)
         for tok in g:

@@ -50,7 +50,7 @@ def mixture_rvs(prob, size, dist, kwargs=None):
         raise ValueError("prob does not sum to 1")
 
     if kwargs is None:
-        kwargs = ({},)*len(prob)
+        kwargs = ({},) * len(prob)
 
     idx = _make_index(prob, size)
     sample = np.empty(size)
@@ -119,7 +119,7 @@ class MixtureDistribution:
             raise ValueError("prob does not sum to 1")
 
         if kwargs is None:
-            kwargs = ({},)*len(prob)
+            kwargs = ({},) * len(prob)
 
         for i in range(len(prob)):
             loc = kwargs[i].get("loc", 0)
@@ -171,7 +171,7 @@ class MixtureDistribution:
             raise ValueError("prob does not sum to 1")
 
         if kwargs is None:
-            kwargs = ({},)*len(prob)
+            kwargs = ({},) * len(prob)
 
         for i in range(len(prob)):
             loc = kwargs[i].get("loc", 0)
@@ -225,7 +225,7 @@ def mv_mixture_rvs(prob, size, dist, nvars, **kwargs):
         raise ValueError("prob does not sum to 1")
 
     if kwargs is None:
-        kwargs = ({},)*len(prob)
+        kwargs = ({},) * len(prob)
 
     idx = _make_index(prob, size)
     sample = np.empty((size, nvars))

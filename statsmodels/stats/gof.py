@@ -1,4 +1,4 @@
-'''extra statistical function and helper functions
+"""extra statistical function and helper functions
 
 contains:
 
@@ -16,7 +16,8 @@ changes
 -------
 2013-02-25 : add chisquare_power, effectsize and "value"
 
-'''
+"""
+
 from statsmodels.compat.python import lrange
 
 import numpy as np
@@ -127,18 +128,20 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     elif lambd == "modified_loglikeratio":
         a = -1
     elif lambd == "cressie_read":
-        a = 2/3.0
+        a = 2 / 3.0
     else:
-        raise ValueError("lambd has to be a number or one of "
-                         "loglikeratio, freeman_tukey, pearson, "
-                         "modified_loglikeratio or cressie_read")
+        raise ValueError(
+            "lambd has to be a number or one of "
+            "loglikeratio, freeman_tukey, pearson, "
+            "modified_loglikeratio or cressie_read"
+        )
 
     n = np.sum(o, axis=axis)
     nt = n
     if n.size > 1:
         n = np.atleast_2d(n)
         if axis == 1:
-            nt = n.T     # need both for 2d, n and nt for broadcasting
+            nt = n.T  # need both for 2d, n and nt for broadcasting
         if e.ndim == 1:
             e = np.atleast_2d(e)
             if axis == 0:
@@ -149,25 +152,31 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
         # Could add this to return later if someone cares about it
         # p = e
     elif not np.allclose(np.sum(e, axis=axis), n, rtol=1e-8, atol=0):
-        raise ValueError("observed and expected need to have the same "
-                         "number of observations, or e needs to add to 1")
+        raise ValueError(
+            "observed and expected need to have the same "
+            "number of observations, or e needs to add to 1"
+        )
     # p in the other case, if added to return later
     # else:
     #     p = e/(1.0*nt)
     k = o.shape[axis]
     if e.shape[axis] != k:
-        raise ValueError("observed and expected need to have the same "
-                         "number of bins")
+        raise ValueError(
+            "observed and expected need to have the same " "number of bins"
+        )
 
     # Note: taken from formulas, to simplify cancel n
-    if a == 0:   # log likelihood ratio
-        D_obs = 2*n * np.sum(o/(1.0*nt) * np.log(o/e), axis=axis)
+    if a == 0:  # log likelihood ratio
+        D_obs = 2 * n * np.sum(o / (1.0 * nt) * np.log(o / e), axis=axis)
     elif a == -1:  # modified log likelihood ratio
-        D_obs = 2*n * np.sum(e/(1.0*nt) * np.log(e/o), axis=axis)
+        D_obs = 2 * n * np.sum(e / (1.0 * nt) * np.log(e / o), axis=axis)
     else:
-        D_obs = 2*n/a/(a+1) * np.sum(o/(1.0*nt) * ((o/e)**a - 1), axis=axis)
+        D_obs = (
+            2 * n / a / (a + 1) * np.sum(o / (1.0 * nt) * ((o / e) ** a - 1), axis=axis)
+        )
 
-    return D_obs, stats.chi2.sf(D_obs, k-1-ddof)
+    return D_obs, stats.chi2.sf(D_obs, k - 1 - ddof)
+
 
 # TODO: need also binning for continuous distribution
 #      and separated binning function to be used for powerdiscrepancy
@@ -243,7 +252,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
     freq, hsupp = np.histogram(rvs, histsupp)
     # cdfs = distfn.cdf(distsupp,*arg)
 
-    (chis, pval) = stats.chisquare(np.array(freq), n * distmass)
+    chis, pval = stats.chisquare(np.array(freq), n * distmass)
 
     return (
         chis,
@@ -300,14 +309,14 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     """
 
     # define parameters for test
-#    n=2000
+    #    n=2000
     n = len(rvs)
 
-    wsupp = 1.0/nsupp
+    wsupp = 1.0 / nsupp
 
-#    distfn = getattr(stats, distname)
-#    np.random.seed(9765456)
-#    rvs = distfn.rvs(size=n,*arg)
+    #    distfn = getattr(stats, distname)
+    #    np.random.seed(9765456)
+    #    rvs = distfn.rvs(size=n,*arg)
 
     # construct intervals with minimum mass 1/nsupp
     # intervalls are left-half-open as in a cdf difference
@@ -317,27 +326,27 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     distmass = []
     for ii in distsupport:
         current = distfn.cdf(ii, *arg)
-        if current - last >= wsupp-1e-14:
+        if current - last >= wsupp - 1e-14:
             distsupp.append(ii)
             distmass.append(current - last)
             last = current
-            if current > (1-wsupp):
+            if current > (1 - wsupp):
                 break
     if distsupp[-1] < distfn.b:
         distsupp.append(distfn.b)
-        distmass.append(1-last)
+        distmass.append(1 - last)
     distsupp = np.array(distsupp)
     distmass = np.array(distmass)
 
     # convert intervals to right-half-open as required by histogram
-    histsupp = distsupp+1e-8
+    histsupp = distsupp + 1e-8
     histsupp[0] = distfn.a
 
     # find sample frequencies and perform chisquare test
     freq, hsupp = np.histogram(rvs, histsupp)
     # freq,hsupp = np.histogram(rvs,histsupp,new=True)
     distfn.cdf(distsupp, *arg)
-    return np.array(freq), n*distmass, histsupp
+    return np.array(freq), n * distmass, histsupp
 
 
 # -*- coding: utf-8 -*-
@@ -351,7 +360,7 @@ License: BSD-3
 
 
 def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
-    '''chisquare goodness-of-fit test
+    """chisquare goodness-of-fit test
 
     The null hypothesis is that the distance between the expected distribution
     and the observed frequencies is ``value``. The alternative hypothesis is
@@ -380,7 +389,7 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     powerdiscrepancy
     scipy.stats.chisquare
 
-    '''
+    """
 
     f_obs = np.asarray(f_obs)
     n_bins = len(f_obs)
@@ -392,7 +401,7 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
 
     f_exp = np.asarray(f_exp, float)
 
-    chisq = ((f_obs - f_exp)**2 / f_exp).sum(0)
+    chisq = ((f_obs - f_exp) ** 2 / f_exp).sum(0)
     if value == 0:
         pvalue = stats.chi2.sf(chisq, n_bins - 1 - ddof)
     else:
@@ -401,7 +410,7 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     if return_basic:
         return chisq, pvalue
     else:
-        return chisq, pvalue    # TODO: replace with TestResults
+        return chisq, pvalue  # TODO: replace with TestResults
 
 
 def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
@@ -490,12 +499,12 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
     probs0 = probs0 / probs0.sum(axis)
     probs1 = probs1 / probs1.sum(axis)
 
-    d2 = ((probs1 - probs0)**2 / probs0).sum(axis)
+    d2 = ((probs1 - probs0) ** 2 / probs0).sum(axis)
 
     if correction is not None:
         nobs, df = correction
         diff = ((probs1 - probs0) / probs0).sum(axis)
-        d2 = np.maximum((d2 * nobs - diff - df) / (nobs - 1.), 0)
+        d2 = np.maximum((d2 * nobs - diff - df) / (nobs - 1.0), 0)
 
     if cohen:
         return np.sqrt(d2)

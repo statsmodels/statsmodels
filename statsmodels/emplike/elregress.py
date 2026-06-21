@@ -12,6 +12,7 @@ General References
 Owen, A.B.(2001). Empirical Likelihood. Chapman and Hall
 
 """
+
 import numpy as np
 
 from statsmodels.emplike.descriptive import _OptFuncts
@@ -29,6 +30,7 @@ class _ELRegOpts(_OptFuncts):
     OLSResults : Results instance
         A fitted OLS result.
     """
+
     def __init__(self):
         pass
 

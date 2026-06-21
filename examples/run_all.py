@@ -1,17 +1,18 @@
 """
 Run all python examples to make sure they do not raise
 """
+
 import tempfile
 
 SHOW_PLOT = False
-BAD_FILES = ['robust_models_1']
+BAD_FILES = ["robust_models_1"]
 
 
 def no_show(*args):
     pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import glob
     import sys
     import matplotlib.pyplot as plt
@@ -22,10 +23,10 @@ if __name__ == '__main__':
 
     SAVE_STDOUT = sys.stdout
     SAVE_STDERR = sys.stderr
-    REDIRECT_STDOUT = tempfile.TemporaryFile('w')
-    REDIRECT_STDERR = tempfile.TemporaryFile('w')
+    REDIRECT_STDOUT = tempfile.TemporaryFile("w")
+    REDIRECT_STDERR = tempfile.TemporaryFile("w")
 
-    EXAMPLE_FILES = glob.glob('python/*.py')
+    EXAMPLE_FILES = glob.glob("python/*.py")
     for example in EXAMPLE_FILES:
         KNOWN_BAD_FILE = any(bf in example for bf in BAD_FILES)
         with open(example, encoding="utf-8") as pyfile:
@@ -36,18 +37,18 @@ if __name__ == '__main__':
                 exec(code)
             except Exception as e:
                 sys.stderr = SAVE_STDERR
-                print(f'FAIL: {example}', file=sys.stderr)
+                print(f"FAIL: {example}", file=sys.stderr)
                 if KNOWN_BAD_FILE:
-                    print('This FAIL is expected', file=sys.stderr)
+                    print("This FAIL is expected", file=sys.stderr)
                 else:
-                    print('The last error was: ', file=sys.stderr)
+                    print("The last error was: ", file=sys.stderr)
                     print(e.__class__.__name__, file=sys.stderr)
                     print(e, file=sys.stderr)
             else:
                 sys.stdout = SAVE_STDOUT
-                print(f'SUCCESS: {example}')
+                print(f"SUCCESS: {example}")
             finally:
-                plt.close('all')
+                plt.close("all")
 
     REDIRECT_STDOUT.close()
     REDIRECT_STDERR.close()

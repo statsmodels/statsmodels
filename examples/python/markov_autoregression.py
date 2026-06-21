@@ -31,10 +31,9 @@ import statsmodels.api as sm
 # NBER recessions
 from pandas_datareader.data import DataReader
 
-usrec = DataReader("USREC",
-                   "fred",
-                   start=datetime(1947, 1, 1),
-                   end=datetime(2013, 4, 1))
+usrec = DataReader(
+    "USREC", "fred", start=datetime(1947, 1, 1), end=datetime(2013, 4, 1)
+)
 
 # ### Hamilton (1989) switching model of GNP
 #
@@ -82,10 +81,9 @@ dta_hamilton = dta.rgnp
 dta_hamilton.plot(title="Growth rate of Real GNP", figsize=(12, 3))
 
 # Fit the model
-mod_hamilton = sm.tsa.MarkovAutoregression(dta_hamilton,
-                                           k_regimes=2,
-                                           order=4,
-                                           switching_ar=False)
+mod_hamilton = sm.tsa.MarkovAutoregression(
+    dta_hamilton, k_regimes=2, order=4, switching_ar=False
+)
 res_hamilton = mod_hamilton.fit()
 
 res_hamilton.summary()
@@ -101,23 +99,13 @@ res_hamilton.summary()
 fig, axes = plt.subplots(2, figsize=(7, 7))
 ax = axes[0]
 ax.plot(res_hamilton.filtered_marginal_probabilities[0])
-ax.fill_between(usrec.index,
-                0,
-                1,
-                where=usrec["USREC"].values,
-                color="k",
-                alpha=0.1)
+ax.fill_between(usrec.index, 0, 1, where=usrec["USREC"].values, color="k", alpha=0.1)
 ax.set_xlim(dta_hamilton.index[4], dta_hamilton.index[-1])
 ax.set(title="Filtered probability of recession")
 
 ax = axes[1]
 ax.plot(res_hamilton.smoothed_marginal_probabilities[0])
-ax.fill_between(usrec.index,
-                0,
-                1,
-                where=usrec["USREC"].values,
-                color="k",
-                alpha=0.1)
+ax.fill_between(usrec.index, 0, 1, where=usrec["USREC"].values, color="k", alpha=0.1)
 ax.set_xlim(dta_hamilton.index[4], dta_hamilton.index[-1])
 ax.set(title="Smoothed probability of recession")
 
@@ -153,12 +141,8 @@ print(res_hamilton.expected_durations)
 # default, the variance is assumed to be the same across regimes).
 
 # Get the dataset
-ew_excs = requests.get(
-    "http://econ.korea.ac.kr/~cjkim/MARKOV/data/ew_excs.prn").content
-raw = pd.read_table(BytesIO(ew_excs),
-                    header=None,
-                    skipfooter=1,
-                    engine="python")
+ew_excs = requests.get("http://econ.korea.ac.kr/~cjkim/MARKOV/data/ew_excs.prn").content
+raw = pd.read_table(BytesIO(ew_excs), header=None, skipfooter=1, engine="python")
 raw.index = pd.date_range("1926-01-01", "1995-12-01", freq="MS")
 
 dta_kns = raw.loc[:"1986"] - raw.loc[:"1986"].mean()
@@ -167,10 +151,9 @@ dta_kns = raw.loc[:"1986"] - raw.loc[:"1986"].mean()
 dta_kns[0].plot(title="Excess returns", figsize=(12, 3))
 
 # Fit the model
-mod_kns = sm.tsa.MarkovRegression(dta_kns,
-                                  k_regimes=3,
-                                  trend="n",
-                                  switching_variance=True)
+mod_kns = sm.tsa.MarkovRegression(
+    dta_kns, k_regimes=3, trend="n", switching_variance=True
+)
 res_kns = mod_kns.fit()
 
 res_kns.summary()
@@ -186,13 +169,11 @@ ax.set(title="Smoothed probability of a low-variance regime for stock returns")
 
 ax = axes[1]
 ax.plot(res_kns.smoothed_marginal_probabilities[1])
-ax.set(
-    title="Smoothed probability of a medium-variance regime for stock returns")
+ax.set(title="Smoothed probability of a medium-variance regime for stock returns")
 
 ax = axes[2]
 ax.plot(res_kns.smoothed_marginal_probabilities[2])
-ax.set(
-    title="Smoothed probability of a high-variance regime for stock returns")
+ax.set(title="Smoothed probability of a high-variance regime for stock returns")
 
 fig.tight_layout()
 
@@ -231,31 +212,28 @@ fig.tight_layout()
 # determined or exogenous regressors $x_{t-1}$.
 
 # Get the dataset
-filardo = requests.get(
-    "http://econ.korea.ac.kr/~cjkim/MARKOV/data/filardo.prn").content
-dta_filardo = pd.read_table(BytesIO(filardo),
-                            sep=" +",
-                            header=None,
-                            skipfooter=1,
-                            engine="python")
+filardo = requests.get("http://econ.korea.ac.kr/~cjkim/MARKOV/data/filardo.prn").content
+dta_filardo = pd.read_table(
+    BytesIO(filardo), sep=" +", header=None, skipfooter=1, engine="python"
+)
 dta_filardo.columns = ["month", "ip", "leading"]
 dta_filardo.index = pd.date_range("1948-01-01", "1991-04-01", freq="MS")
 
 dta_filardo["dlip"] = np.log(dta_filardo["ip"]).diff() * 100
 # Deflated pre-1960 observations by ratio of std. devs.
 # See hmt_tvp.opt or Filardo (1994) p. 302
-std_ratio = (dta_filardo["dlip"]["1960-01-01":].std() /
-             dta_filardo["dlip"][:"1959-12-01"].std())
-dta_filardo[
-    "dlip"][:"1959-12-01"] = dta_filardo["dlip"][:"1959-12-01"] * std_ratio
+std_ratio = (
+    dta_filardo["dlip"]["1960-01-01":].std() / dta_filardo["dlip"][:"1959-12-01"].std()
+)
+dta_filardo["dlip"][:"1959-12-01"] = dta_filardo["dlip"][:"1959-12-01"] * std_ratio
 
 dta_filardo["dlleading"] = np.log(dta_filardo["leading"]).diff() * 100
-dta_filardo["dmdlleading"] = dta_filardo["dlleading"] - dta_filardo[
-    "dlleading"].mean()
+dta_filardo["dmdlleading"] = dta_filardo["dlleading"] - dta_filardo["dlleading"].mean()
 
 # Plot the data
 dta_filardo["dlip"].plot(
-    title="Standardized growth rate of industrial production", figsize=(13, 3))
+    title="Standardized growth rate of industrial production", figsize=(13, 3)
+)
 plt.figure()
 dta_filardo["dmdlleading"].plot(title="Leading indicator", figsize=(13, 3))
 
@@ -293,12 +271,7 @@ res_filardo.summary()
 fig, ax = plt.subplots(figsize=(12, 3))
 
 ax.plot(res_filardo.smoothed_marginal_probabilities[0])
-ax.fill_between(usrec.index,
-                0,
-                1,
-                where=usrec["USREC"].values,
-                color="gray",
-                alpha=0.2)
+ax.fill_between(usrec.index, 0, 1, where=usrec["USREC"].values, color="gray", alpha=0.2)
 ax.set_xlim(dta_filardo.index[6], dta_filardo.index[-1])
 ax.set(title="Smoothed probability of a low-production state")
 
@@ -307,7 +280,8 @@ ax.set(title="Smoothed probability of a low-production state")
 #
 
 res_filardo.expected_durations[0].plot(
-    title="Expected duration of a low-production state", figsize=(12, 3))
+    title="Expected duration of a low-production state", figsize=(12, 3)
+)
 
 # During recessions, the expected duration of a low-production state is
 # much higher than in an expansion.

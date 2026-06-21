@@ -600,9 +600,7 @@ class BinaryModel(DiscreteModel):
             var_ = mu * (1 - mu)
             return var_
         else:
-            raise ValueError(
-                '`which` must be one of "mean", "linear", or "var"'
-            )
+            raise ValueError('`which` must be one of "mean", "linear", or "var"')
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(
@@ -2110,16 +2108,14 @@ class GeneralizedPoisson(CountModel):
         a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu ** (-q)).sum() / df_resid
         return a
 
-    @Appender(
-        """
+    @Appender("""
         use_transparams : bool
             This parameter enable internal transformation to impose
             non-negativity. True to enable. Default is False.
             use_transparams=True imposes the no underdispersion (alpha > 0)
             constraint. In case use_transparams=True and method="newton" or
             "ncg" transformation is ignored.
-        """
-    )
+        """)
     @Appender(DiscreteModel.fit.__doc__)
     def fit(
         self,
@@ -3293,9 +3289,7 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """.format(
-        extra_params=base._missing_param_doc + _check_rank_doc
-    )
+    """.format(extra_params=base._missing_param_doc + _check_rank_doc)
 
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         super().__init__(endog, exog, check_rank=check_rank, **kwargs)
@@ -4929,7 +4923,7 @@ class DiscreteResults(base.LikelihoodModelResults):
                 self.cov_type = "nonrobust"
                 self.cov_kwds = {
                     "description": "Standard Errors assume that the covariance matrix "
-                                   "of the errors is correctly specified."
+                    "of the errors is correctly specified."
                 }
             else:
                 if cov_kwds is None:

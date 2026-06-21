@@ -27,6 +27,7 @@ Issues
 
 
 """
+
 import numpy as np
 from scipy import stats
 from scipy.special import factorial
@@ -75,11 +76,10 @@ class PoissonGMLE(GenericLikelihoodModel):
         """
         XB = np.dot(self.exog, params)
         endog = self.endog
-        return np.exp(XB) - endog*XB + np.log(factorial(endog))
+        return np.exp(XB) - endog * XB + np.log(factorial(endog))
 
     def predict_distribution(self, exog):
-        """return frozen scipy.stats distribution with mu at estimated prediction
-        """
+        """return frozen scipy.stats distribution with mu at estimated prediction"""
         if not hasattr(self, "result"):
             # TODO: why would this be ValueError instead of AttributeError?
             # TODO: Why even make this a Model attribute in the first place?
@@ -112,12 +112,12 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
                 offset = offset[:, None]  # need column
             self.offset = offset.ravel()
         else:
-            self.offset = 0.
+            self.offset = 0.0
         super().__init__(endog, exog, missing=missing, **kwds)
 
-# this was added temporarily for bug-hunting, but should not be needed
-#    def loglike(self, params):
-#        return -self.nloglikeobs(params).sum(0)
+    # this was added temporarily for bug-hunting, but should not be needed
+    #    def loglike(self, params):
+    #        return -self.nloglikeobs(params).sum(0)
 
     # original copied from discretemod.Poisson
     def nloglikeobs(self, params):
@@ -140,7 +140,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
         XB = self.offset + np.dot(self.exog, params)
         endog = self.endog
-        nloglik = np.exp(XB) - endog*XB + np.log(factorial(endog))
+        nloglik = np.exp(XB) - endog * XB + np.log(factorial(endog))
         return nloglik
 
 
@@ -170,7 +170,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
                 offset = offset[:, None]  # need column
             self.offset = offset.ravel()  # which way?
         else:
-            self.offset = 0.
+            self.offset = 0.0
 
         # TODO: it's not standard pattern to use default exog
         if exog is None:
@@ -209,7 +209,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         # print(np.shape(self.offset), self.exog.shape, beta.shape
         XB = self.offset + np.dot(self.exog, beta)
         endog = self.endog
-        nloglik = -np.log(1-gamm) + np.exp(XB) - endog*XB + np.log(factorial(endog))
-        nloglik[endog == 0] = - np.log(gamm + np.exp(-nloglik[endog == 0]))
+        nloglik = -np.log(1 - gamm) + np.exp(XB) - endog * XB + np.log(factorial(endog))
+        nloglik[endog == 0] = -np.log(gamm + np.exp(-nloglik[endog == 0]))
 
         return nloglik

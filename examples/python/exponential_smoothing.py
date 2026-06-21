@@ -149,23 +149,24 @@ print("Figure 7.1: Oil production in Saudi Arabia from 1996 to 2007.")
 # $\alpha$ value for us. This is the recommended approach.
 
 fit1 = SimpleExpSmoothing(oildata, initialization_method="heuristic").fit(
-    smoothing_level=0.2, optimized=False)
+    smoothing_level=0.2, optimized=False
+)
 fcast1 = fit1.forecast(3).rename(r"$\alpha=0.2$")
 fit2 = SimpleExpSmoothing(oildata, initialization_method="heuristic").fit(
-    smoothing_level=0.6, optimized=False)
+    smoothing_level=0.6, optimized=False
+)
 fcast2 = fit2.forecast(3).rename(r"$\alpha=0.6$")
 fit3 = SimpleExpSmoothing(oildata, initialization_method="estimated").fit()
-fcast3 = fit3.forecast(3).rename(r"$\alpha=%s$" %
-                                 fit3.model.params["smoothing_level"])
+fcast3 = fit3.forecast(3).rename(r"$\alpha=%s$" % fit3.model.params["smoothing_level"])
 
 plt.figure(figsize=(12, 8))
 plt.plot(oildata, marker="o", color="black")
 plt.plot(fit1.fittedvalues, marker="o", color="blue")
-(line1, ) = plt.plot(fcast1, marker="o", color="blue")
+(line1,) = plt.plot(fcast1, marker="o", color="blue")
 plt.plot(fit2.fittedvalues, marker="o", color="red")
-(line2, ) = plt.plot(fcast2, marker="o", color="red")
+(line2,) = plt.plot(fcast2, marker="o", color="red")
 plt.plot(fit3.fittedvalues, marker="o", color="green")
-(line3, ) = plt.plot(fcast3, marker="o", color="green")
+(line3,) = plt.plot(fcast3, marker="o", color="green")
 plt.legend([line1, line2, line3], [fcast1.name, fcast2.name, fcast3.name])
 
 # ## Holt's Method
@@ -181,28 +182,27 @@ plt.legend([line1, line2, line3], [fcast1.name, fcast2.name, fcast3.name])
 # but allow the dampening parameter $\phi$ to be optimized while fixing the
 # values for $\alpha=0.8$ and $\beta=0.2$
 
-fit1 = Holt(air, initialization_method="estimated").fit(smoothing_level=0.8,
-                                                        smoothing_trend=0.2,
-                                                        optimized=False)
+fit1 = Holt(air, initialization_method="estimated").fit(
+    smoothing_level=0.8, smoothing_trend=0.2, optimized=False
+)
 fcast1 = fit1.forecast(5).rename("Holt's linear trend")
-fit2 = Holt(air, exponential=True,
-            initialization_method="estimated").fit(smoothing_level=0.8,
-                                                   smoothing_trend=0.2,
-                                                   optimized=False)
+fit2 = Holt(air, exponential=True, initialization_method="estimated").fit(
+    smoothing_level=0.8, smoothing_trend=0.2, optimized=False
+)
 fcast2 = fit2.forecast(5).rename("Exponential trend")
-fit3 = Holt(air, damped_trend=True,
-            initialization_method="estimated").fit(smoothing_level=0.8,
-                                                   smoothing_trend=0.2)
+fit3 = Holt(air, damped_trend=True, initialization_method="estimated").fit(
+    smoothing_level=0.8, smoothing_trend=0.2
+)
 fcast3 = fit3.forecast(5).rename("Additive damped trend")
 
 plt.figure(figsize=(12, 8))
 plt.plot(air, marker="o", color="black")
 plt.plot(fit1.fittedvalues, color="blue")
-(line1, ) = plt.plot(fcast1, marker="o", color="blue")
+(line1,) = plt.plot(fcast1, marker="o", color="blue")
 plt.plot(fit2.fittedvalues, color="red")
-(line2, ) = plt.plot(fcast2, marker="o", color="red")
+(line2,) = plt.plot(fcast2, marker="o", color="red")
 plt.plot(fit3.fittedvalues, color="green")
-(line3, ) = plt.plot(fcast3, marker="o", color="green")
+(line3,) = plt.plot(fcast3, marker="o", color="green")
 plt.legend([line1, line2, line3], [fcast1.name, fcast2.name, fcast3.name])
 
 # ### Seasonally adjusted data
@@ -216,14 +216,13 @@ plt.legend([line1, line2, line3], [fcast1.name, fcast2.name, fcast3.name])
 
 fit1 = SimpleExpSmoothing(livestock2, initialization_method="estimated").fit()
 fit2 = Holt(livestock2, initialization_method="estimated").fit()
-fit3 = Holt(livestock2, exponential=True,
-            initialization_method="estimated").fit()
-fit4 = Holt(livestock2, damped_trend=True,
-            initialization_method="estimated").fit(damping_trend=0.98)
-fit5 = Holt(livestock2,
-            exponential=True,
-            damped_trend=True,
-            initialization_method="estimated").fit()
+fit3 = Holt(livestock2, exponential=True, initialization_method="estimated").fit()
+fit4 = Holt(livestock2, damped_trend=True, initialization_method="estimated").fit(
+    damping_trend=0.98
+)
+fit5 = Holt(
+    livestock2, exponential=True, damped_trend=True, initialization_method="estimated"
+).fit()
 params = [
     "smoothing_level",
     "smoothing_trend",
@@ -247,10 +246,9 @@ results
 # components of the above table's fits.
 
 for fit in [fit2, fit4]:
-    pd.DataFrame(np.c_[fit.level, fit.trend]).rename(columns={
-        0: "level",
-        1: "slope"
-    }).plot(subplots=True)
+    pd.DataFrame(np.c_[fit.level, fit.trend]).rename(
+        columns={0: "level", 1: "slope"}
+    ).plot(subplots=True)
 plt.show()
 print(
     "Figure 7.4: Level and slope components for Holt’s linear trend method and the additive damped trend method."
@@ -265,16 +263,15 @@ fit1 = SimpleExpSmoothing(livestock2, initialization_method="estimated").fit()
 fcast1 = fit1.forecast(9).rename("SES")
 fit2 = Holt(livestock2, initialization_method="estimated").fit()
 fcast2 = fit2.forecast(9).rename("Holt's")
-fit3 = Holt(livestock2, exponential=True,
-            initialization_method="estimated").fit()
+fit3 = Holt(livestock2, exponential=True, initialization_method="estimated").fit()
 fcast3 = fit3.forecast(9).rename("Exponential")
-fit4 = Holt(livestock2, damped_trend=True,
-            initialization_method="estimated").fit(damping_trend=0.98)
+fit4 = Holt(livestock2, damped_trend=True, initialization_method="estimated").fit(
+    damping_trend=0.98
+)
 fcast4 = fit4.forecast(9).rename("Additive Damped")
-fit5 = Holt(livestock2,
-            exponential=True,
-            damped_trend=True,
-            initialization_method="estimated").fit()
+fit5 = Holt(
+    livestock2, exponential=True, damped_trend=True, initialization_method="estimated"
+).fit()
 fcast5 = fit5.forecast(9).rename("Multiplicative Damped")
 
 ax = livestock2.plot(color="black", marker="o", figsize=(12, 8))
@@ -341,9 +338,9 @@ fit4 = ExponentialSmoothing(
     use_boxcox=True,
     initialization_method="estimated",
 ).fit()
-results = pd.DataFrame(index=[
-    r"$\alpha$", r"$\beta$", r"$\phi$", r"$\gamma$", r"$l_0$", "$b_0$", "SSE"
-])
+results = pd.DataFrame(
+    index=[r"$\alpha$", r"$\beta$", r"$\phi$", r"$\gamma$", r"$l_0$", "$b_0$", "SSE"]
+)
 params = [
     "smoothing_level",
     "smoothing_trend",
@@ -368,16 +365,12 @@ ax.set_xlabel("Year")
 fit1.fittedvalues.plot(ax=ax, style="--", color="red")
 fit2.fittedvalues.plot(ax=ax, style="--", color="green")
 
-fit1.forecast(8).rename("Holt-Winters (add-add-seasonal)").plot(ax=ax,
-                                                                style="--",
-                                                                marker="o",
-                                                                color="red",
-                                                                legend=True)
-fit2.forecast(8).rename("Holt-Winters (add-mul-seasonal)").plot(ax=ax,
-                                                                style="--",
-                                                                marker="o",
-                                                                color="green",
-                                                                legend=True)
+fit1.forecast(8).rename("Holt-Winters (add-add-seasonal)").plot(
+    ax=ax, style="--", marker="o", color="red", legend=True
+)
+fit2.forecast(8).rename("Holt-Winters (add-mul-seasonal)").plot(
+    ax=ax, style="--", marker="o", color="green", legend=True
+)
 
 plt.show()
 print(
@@ -482,11 +475,9 @@ ax.set_ylabel("International visitor night in Australia (millions)")
 ax.set_xlabel("Year")
 fit.fittedvalues.plot(ax=ax, style="--", color="green")
 simulations.plot(ax=ax, style="-", alpha=0.05, color="grey", legend=False)
-fit.forecast(8).rename("Holt-Winters (add-mul-seasonal)").plot(ax=ax,
-                                                               style="--",
-                                                               marker="o",
-                                                               color="green",
-                                                               legend=True)
+fit.forecast(8).rename("Holt-Winters (add-mul-seasonal)").plot(
+    ax=ax, style="--", marker="o", color="green", legend=True
+)
 plt.show()
 
 # Simulations can also be started at different points in time, and there
@@ -499,11 +490,9 @@ fit = ExponentialSmoothing(
     seasonal="mul",
     initialization_method="estimated",
 ).fit()
-simulations = fit.simulate(16,
-                           anchor="2009-01-01",
-                           repetitions=100,
-                           error="mul",
-                           random_errors="bootstrap")
+simulations = fit.simulate(
+    16, anchor="2009-01-01", repetitions=100, error="mul", random_errors="bootstrap"
+)
 
 ax = aust.plot(
     figsize=(10, 6),
@@ -515,9 +504,7 @@ ax.set_ylabel("International visitor night in Australia (millions)")
 ax.set_xlabel("Year")
 fit.fittedvalues.plot(ax=ax, style="--", color="green")
 simulations.plot(ax=ax, style="-", alpha=0.05, color="grey", legend=False)
-fit.forecast(8).rename("Holt-Winters (add-mul-seasonal)").plot(ax=ax,
-                                                               style="--",
-                                                               marker="o",
-                                                               color="green",
-                                                               legend=True)
+fit.forecast(8).rename("Holt-Winters (add-mul-seasonal)").plot(
+    ax=ax, style="--", marker="o", color="green", legend=True
+)
 plt.show()

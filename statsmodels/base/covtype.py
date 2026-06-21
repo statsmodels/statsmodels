@@ -16,31 +16,30 @@ descriptions = {
     "HC2": "Standard Errors are heteroscedasticity robust (HC2)",
     "HC3": "Standard Errors are heteroscedasticity robust (HC3)",
     "HAC": "Standard Errors are heteroscedasticity and autocorrelation "
-           "robust (HAC) using {maxlags} lags and "
-           "{correction} small sample correction",
+    "robust (HAC) using {maxlags} lags and "
+    "{correction} small sample correction",
     "fixed_scale": "Standard Errors are based on fixed scale",
     "cluster": "Standard Errors are robust to cluster correlation (cluster)",
-    "HAC-Panel": "Standard Errors are robust to "
-                 "cluster correlation (HAC-Panel)",
+    "HAC-Panel": "Standard Errors are robust to " "cluster correlation (HAC-Panel)",
     "HAC-Groupsum": "Driscoll and Kraay Standard Errors are robust to "
-                    "cluster correlation (HAC-Groupsum)",
+    "cluster correlation (HAC-Groupsum)",
     "none": "Covariance matrix not calculated.",
     "approx": "Covariance matrix calculated using numerical ({approx_type}) "
-              "differentiation.",
+    "differentiation.",
     "OPG": "Covariance matrix calculated using the outer product of "
-           "gradients ({approx_type}).",
+    "gradients ({approx_type}).",
     "OIM": "Covariance matrix calculated using the observed information "
-           "matrix ({approx_type}) described in Harvey (1989).",
+    "matrix ({approx_type}) described in Harvey (1989).",
     "robust": "Quasi-maximum likelihood covariance matrix used for "
-              "robustness to some misspecifications; calculated using "
-              "numerical ({approx_type}) differentiation.",
+    "robustness to some misspecifications; calculated using "
+    "numerical ({approx_type}) differentiation.",
     "robust-OIM": "Quasi-maximum likelihood covariance matrix used for "
-                  "robustness to some misspecifications; calculated using the "
-                  "observed information matrix ({approx_type}) described in "
-                  "Harvey (1989).",
+    "robustness to some misspecifications; calculated using the "
+    "observed information matrix ({approx_type}) described in "
+    "Harvey (1989).",
     "robust-approx": "Quasi-maximum likelihood covariance matrix used for "
-                     "robustness to some misspecifications; calculated using "
-                     "numerical ({approx_type}) differentiation.",
+    "robustness to some misspecifications; calculated using "
+    "numerical ({approx_type}) differentiation.",
 }
 
 

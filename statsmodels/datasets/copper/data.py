@@ -1,4 +1,5 @@
 """World Copper Prices 1951-1975 dataset."""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

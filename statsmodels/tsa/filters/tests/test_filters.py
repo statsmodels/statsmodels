@@ -1010,30 +1010,30 @@ class TestFilters:
         end = datetime(1958, 12, 31)
         x = self.data[0]
         res = convolution_filter(x, [0.75, 0.25])
-        assert (res.index[0] == start)
-        assert (res.index[-1] == end)
+        assert res.index[0] == start
+        assert res.index[-1] == end
 
         res = convolution_filter(x, [0.75, 0.25], nsides=1)
-        assert (res.index[0] == start)
+        assert res.index[0] == start
         # with no nan-padding q1 if not
-        assert (res.index[-1] == end)
+        assert res.index[-1] == end
 
         res = recursive_filter(x, [0.75, 0.25])
-        assert (res.index[0] == start)
-        assert (res.index[-1] == end)
+        assert res.index[0] == start
+        assert res.index[-1] == end
 
         x = self.datana
         res = recursive_filter(x, [0.75, 0.25])
-        assert (res.index[0] == start)
-        assert (res.index[-1] == end)
+        assert res.index[0] == start
+        assert res.index[-1] == end
 
     def test_pandas2d(self):
         start = datetime(1951, 3, 31)
         end = datetime(1958, 12, 31)
         x = concat((self.data[0], self.data[0]), axis=1)
         res = convolution_filter(x, [[0.75, 0.75], [0.25, 0.25]])
-        assert (res.index[0] == start)
-        assert (res.index[-1] == end)
+        assert res.index[0] == start
+        assert res.index[-1] == end
 
     def test_odd_length_filter(self):
         start = datetime(1951, 3, 31)

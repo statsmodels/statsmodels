@@ -304,9 +304,7 @@ def test_dynamic_factor_validate():
         with mod3.fix_params({"L1.f1.f1": 0.3}):
             pass
 
-    constraints = {
-        "L1.f1.f1": 0.3, "L1.f2.f1": 0.1, "L1.f1.f2": -0.05, "L1.f2.f2": 0.1
-    }
+    constraints = {"L1.f1.f1": 0.3, "L1.f2.f1": 0.1, "L1.f1.f2": -0.05, "L1.f2.f2": 0.1}
     with mod3.fix_params(constraints):
         assert_(mod3._has_fixed_params)
         assert_equal(mod3._fixed_params, constraints)

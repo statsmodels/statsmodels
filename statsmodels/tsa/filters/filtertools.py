@@ -8,6 +8,7 @@ Created on Sat Oct 23 17:18:03 2010
 
 Author: Josef-pktd
 """
+
 # not original copied from various experimental scripts
 # version control history is there
 
@@ -39,14 +40,16 @@ def _pad_nans(x, head=None, tail=None):
         if head is None and tail is None:
             return x
         elif head and tail:
-            return np.r_[[[np.nan] * x.shape[1]] * head, x,
-                         [[np.nan] * x.shape[1]] * tail]
+            return np.r_[
+                [[np.nan] * x.shape[1]] * head, x, [[np.nan] * x.shape[1]] * tail
+            ]
         elif tail is None:
             return np.r_[[[np.nan] * x.shape[1]] * head, x]
         elif head is None:
             return np.r_[x, [[np.nan] * x.shape[1]] * tail]
     else:
         raise ValueError("Nan-padding for ndim > 2 not implemented")
+
 
 # original changes and examples in sandbox.tsa.try_var_convolve
 
@@ -73,12 +76,13 @@ def fftconvolveinv(in1, in2, mode="full"):
     """
     s1 = np.array(in1.shape)
     s2 = np.array(in2.shape)
-    complex_result = (np.issubdtype(in1.dtype, np.complex) or
-                      np.issubdtype(in2.dtype, np.complex))
-    size = s1+s2-1
+    complex_result = np.issubdtype(in1.dtype, np.complex) or np.issubdtype(
+        in2.dtype, np.complex
+    )
+    size = s1 + s2 - 1
 
     # Always use 2**n-sized FFT
-    fsize = 2**np.ceil(np.log2(size))
+    fsize = 2 ** np.ceil(np.log2(size))
     IN1 = fft.fftn(in1, fsize)
     # IN1 *= fftn(in2,fsize) # JP: this looks like the only change I made
     IN1 /= fft.fftn(in2, fsize)  # use inverse filter
@@ -98,7 +102,7 @@ def fftconvolveinv(in1, in2, mode="full"):
             osize = s2
         return trim_centered(ret, osize)
     elif mode == "valid":
-        return trim_centered(ret, abs(s2-s1)+1)
+        return trim_centered(ret, abs(s2 - s1) + 1)
 
 
 # code duplication with fftconvolveinv
@@ -133,12 +137,13 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
         s2 = max(s2, s3)  # try this looks reasonable for ARMA
         # s2 = s3
 
-    complex_result = (np.issubdtype(in1.dtype, np.complex) or
-                      np.issubdtype(in2.dtype, np.complex))
-    size = s1+s2-1
+    complex_result = np.issubdtype(in1.dtype, np.complex) or np.issubdtype(
+        in2.dtype, np.complex
+    )
+    size = s1 + s2 - 1
 
     # Always use 2**n-sized FFT
-    fsize = 2**np.ceil(np.log2(size))
+    fsize = 2 ** np.ceil(np.log2(size))
     # convolve shorter ones first, not sure if it matters
     IN1 = in1.copy()  # TODO: Is this correct?
     if in2 is not None:
@@ -162,7 +167,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
             osize = s2
         return trim_centered(ret, osize)
     elif mode == "valid":
-        return trim_centered(ret, abs(s2-s1)+1)
+        return trim_centered(ret, abs(s2 - s1) + 1)
 
 
 # original changes and examples in sandbox.tsa.try_var_convolve
@@ -210,7 +215,7 @@ def recursive_filter(x, ar_coeff, init=None):
     else:
         zi = None
 
-    y = signal.lfilter([1.], np.r_[1, -ar_coeff], x, zi=zi)
+    y = signal.lfilter([1.0], np.r_[1, -ar_coeff], x, zi=zi)
 
     if init is not None:
         result = y[0]
@@ -276,8 +281,8 @@ def convolution_filter(x, filt, nsides=2):
         trim_head = len(filt) - 1
         trim_tail = None
     elif nsides == 2:
-        trim_head = int(np.ceil(len(filt)/2.) - 1) or None
-        trim_tail = int(np.ceil(len(filt)/2.) - len(filt) % 2) or None
+        trim_head = int(np.ceil(len(filt) / 2.0) - 1) or None
+        trim_tail = int(np.ceil(len(filt) / 2.0) - len(filt) % 2) or None
     else:  # pragma : no cover
         raise ValueError("nsides must be 1 or 2")
 
@@ -294,12 +299,12 @@ def convolution_filter(x, filt, nsides=2):
         if nsides == 2:
             for i in range(nvar):
                 # could also use np.convolve, but easier for swiching to fft
-                result[:, i] = signal.convolve(x[:, i], filt[:, i],
-                                               mode="valid")
+                result[:, i] = signal.convolve(x[:, i], filt[:, i], mode="valid")
         elif nsides == 1:
             for i in range(nvar):
-                result[:, i] = signal.convolve(x[:, i], np.r_[0, filt[:, i]],
-                                               mode="valid")
+                result[:, i] = signal.convolve(
+                    x[:, i], np.r_[0, filt[:, i]], mode="valid"
+                )
     result = _pad_nans(result, trim_head, trim_tail)
     return pw.wrap(result)
 
@@ -356,8 +361,11 @@ def miso_lfilter(ar, ma, x, useic=False):
 
     # TODO: initialize also x for correlate
     if useic:
-        return signal.lfilter([1], ar, inp,
-                              zi=signal.lfiltic(np.array([1., 0.]), ar,
-                                                useic))[0][:nobs], inp[:nobs]
+        return (
+            signal.lfilter(
+                [1], ar, inp, zi=signal.lfiltic(np.array([1.0, 0.0]), ar, useic)
+            )[0][:nobs],
+            inp[:nobs],
+        )
     else:
         return signal.lfilter([1], ar, inp)[:nobs], inp[:nobs]

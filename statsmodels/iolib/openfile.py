@@ -1,6 +1,7 @@
 """
 Handle file opening for read/write
 """
+
 from pathlib import Path
 
 from numpy.lib._iotools import _is_string_like

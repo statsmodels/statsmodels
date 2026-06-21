@@ -8,7 +8,6 @@ License: BSD-3
 
 """
 
-
 import numpy as np
 from scipy import stats
 from scipy.stats import rankdata
@@ -118,8 +117,7 @@ class RankCompareResult(HolderTuple):
         if self.use_t is False:
             return _zconfint_generic(diff, std_diff, alpha, alternative)
         else:
-            return _tconfint_generic(diff, std_diff, self.df, alpha,
-                                     alternative)
+            return _tconfint_generic(diff, std_diff, self.df, alpha, alternative)
 
     def test_prob_superior(self, value=0.5, alternative="two-sided"):
         """test for superiority probability
@@ -159,19 +157,15 @@ class RankCompareResult(HolderTuple):
 
         # corresponds to a one-sample test and either p0 or diff could be used
         if not self.use_t:
-            stat, pv = _zstat_generic(self.prob1, p0, std_diff, alternative,
-                                      diff=0)
+            stat, pv = _zstat_generic(self.prob1, p0, std_diff, alternative, diff=0)
             distr = "normal"
         else:
-            stat, pv = _tstat_generic(self.prob1, p0, std_diff, self.df,
-                                      alternative, diff=0)
+            stat, pv = _tstat_generic(
+                self.prob1, p0, std_diff, self.df, alternative, diff=0
+            )
             distr = "t"
 
-        res = HolderTuple(statistic=stat,
-                          pvalue=pv,
-                          df=self.df,
-                          distribution=distr
-                          )
+        res = HolderTuple(statistic=stat, pvalue=pv, df=self.df, distribution=distr)
         return res
 
     def tost_prob_superior(self, low, upp):
@@ -222,19 +216,18 @@ class RankCompareResult(HolderTuple):
         # idx_max = 1 if t1.pvalue < t2.pvalue else 0
         idx_max = np.asarray(t1.pvalue < t2.pvalue, int)
         title = "Equivalence test for Prob(x1 > x2) + 0.5 Prob(x1 = x2) "
-        res = HolderTuple(statistic=np.choose(idx_max,
-                                              [t1.statistic, t2.statistic]),
-                          # pvalue=[t1.pvalue, t2.pvalue][idx_max], # python
-                          # use np.choose for vectorized selection
-                          pvalue=np.choose(idx_max, [t1.pvalue, t2.pvalue]),
-                          results_larger=t1,
-                          results_smaller=t2,
-                          title=title
-                          )
+        res = HolderTuple(
+            statistic=np.choose(idx_max, [t1.statistic, t2.statistic]),
+            # pvalue=[t1.pvalue, t2.pvalue][idx_max], # python
+            # use np.choose for vectorized selection
+            pvalue=np.choose(idx_max, [t1.pvalue, t2.pvalue]),
+            results_larger=t1,
+            results_smaller=t2,
+            title=title,
+        )
         return res
 
-    def confint_lintransf(self, const=-1, slope=2, alpha=0.05,
-                          alternative="two-sided"):
+    def confint_lintransf(self, const=-1, slope=2, alpha=0.05, alternative="two-sided"):
         """confidence interval of a linear transformation of prob1
 
         This computes the confidence interval for
@@ -344,10 +337,14 @@ class RankCompareResult(HolderTuple):
         title = "Probability sample 1 is stochastically larger"
         from statsmodels.iolib.summary import summary_params
 
-        summ = summary_params((self, effect, sd, statistic,
-                               pvalues, ci),
-                              yname=yname, xname=xname2, use_t=use_t,
-                              title=title, alpha=alpha)
+        summ = summary_params(
+            (self, effect, sd, statistic, pvalues, ci),
+            yname=yname,
+            xname=xname2,
+            use_t=use_t,
+            title=title,
+            alpha=alpha,
+        )
         return summ
 
 
@@ -488,22 +485,34 @@ def rank_compare_2indep(x1, x2, use_t=True):
         df = None
 
     # other info
-    var1 = S1 / (nobs - nobs1)**2
-    var2 = S2 / (nobs - nobs2)**2
-    var_prob = (var1 / nobs1 + var2 / nobs2)
+    var1 = S1 / (nobs - nobs1) ** 2
+    var2 = S2 / (nobs - nobs2) ** 2
+    var_prob = var1 / nobs1 + var2 / nobs2
     var = nobs * (var1 / nobs1 + var2 / nobs2)
     prob1 = (meanr1 - (nobs1 + 1) / 2) / nobs2
     prob2 = (meanr2 - (nobs2 + 1) / 2) / nobs1
 
-    return RankCompareResult(statistic=wbfn, pvalue=pvalue, s1=S1, s2=S2,
-                             var1=var1, var2=var2, var=var,
-                             var_prob=var_prob,
-                             nobs1=nobs1, nobs2=nobs2, nobs=nobs,
-                             mean1=meanr1, mean2=meanr2,
-                             prob1=prob1, prob2=prob2,
-                             somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
-                             df=df, use_t=use_t
-                             )
+    return RankCompareResult(
+        statistic=wbfn,
+        pvalue=pvalue,
+        s1=S1,
+        s2=S2,
+        var1=var1,
+        var2=var2,
+        var=var,
+        var_prob=var_prob,
+        nobs1=nobs1,
+        nobs2=nobs2,
+        nobs=nobs,
+        mean1=meanr1,
+        mean2=meanr2,
+        prob1=prob1,
+        prob2=prob2,
+        somersd1=prob1 * 2 - 1,
+        somersd2=prob2 * 2 - 1,
+        df=df,
+        use_t=use_t,
+    )
 
 
 def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
@@ -571,21 +580,33 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
     var1 = (cdfm2**2 * freq1).sum() - prob1**2
     var2 = (cdfm1**2 * freq2).sum() - prob2**2
 
-    var_prob = (var1 / (nobs1 - ddof) + var2 / (nobs2 - ddof))
+    var_prob = var1 / (nobs1 - ddof) + var2 / (nobs2 - ddof)
     nobs = nobs1 + nobs2
     var = nobs * var_prob
     vn1 = var1 * nobs2 * nobs1 / (nobs1 - ddof)
     vn2 = var2 * nobs1 * nobs2 / (nobs2 - ddof)
-    df = (vn1 + vn2)**2 / (vn1**2 / (nobs1 - 1) + vn2**2 / (nobs2 - 1))
-    res = RankCompareResult(statistic=None, pvalue=None, s1=None, s2=None,
-                            var1=var1, var2=var2, var=var,
-                            var_prob=var_prob,
-                            nobs1=nobs1, nobs2=nobs2, nobs=nobs,
-                            mean1=None, mean2=None,
-                            prob1=prob1, prob2=prob2,
-                            somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
-                            df=df, use_t=use_t
-                            )
+    df = (vn1 + vn2) ** 2 / (vn1**2 / (nobs1 - 1) + vn2**2 / (nobs2 - 1))
+    res = RankCompareResult(
+        statistic=None,
+        pvalue=None,
+        s1=None,
+        s2=None,
+        var1=var1,
+        var2=var2,
+        var=var,
+        var_prob=var_prob,
+        nobs1=nobs1,
+        nobs2=nobs2,
+        nobs=nobs,
+        mean1=None,
+        mean2=None,
+        prob1=prob1,
+        prob2=prob2,
+        somersd1=prob1 * 2 - 1,
+        somersd2=prob2 * 2 - 1,
+        df=df,
+        use_t=use_t,
+    )
 
     return res
 
@@ -721,9 +742,7 @@ def _compute_rank_placements(x1, x2) -> Holder:
     n_2 = len(x2)
 
     # Overall ranks for each obs among combined sample
-    overall_ranks_pooled = rankdata(
-        np.r_[x1, x2], method="average"
-    )
+    overall_ranks_pooled = rankdata(np.r_[x1, x2], method="average")
     overall_ranks_1 = overall_ranks_pooled[:n_1]
     overall_ranks_2 = overall_ranks_pooled[n_1:]
     # Within group ranks for each obs
@@ -872,8 +891,7 @@ def samplesize_rank_compare_onetail(
             " must have at least one element."
         )
     if not (
-        np.all(np.isfinite(reference_sample))
-        and np.all(np.isfinite(synthetic_sample))
+        np.all(np.isfinite(reference_sample)) and np.all(np.isfinite(synthetic_sample))
     ):
         raise ValueError(
             "All elements of `synthetic_sample` and `reference_sample`"
@@ -885,8 +903,7 @@ def samplesize_rank_compare_onetail(
         raise ValueError("Power must be between 0 and 1 non-inclusive.")
     if not (0 < nobs_ratio):
         raise ValueError(
-            "Ratio of reference group to treatment group must be"
-            " strictly positive."
+            "Ratio of reference group to treatment group must be" " strictly positive."
         )
     if alternative not in ("two-sided", "larger", "smaller"):
         raise ValueError(
@@ -905,9 +922,9 @@ def samplesize_rank_compare_onetail(
     placements_syn = rank_place.placements_1
     placements_ref = rank_place.placements_2
 
-    relative_effect = (
-        np.mean(placements_syn) - np.mean(placements_ref)
-    ) / (n_syn + n_ref) + 0.5
+    relative_effect = (np.mean(placements_syn) - np.mean(placements_ref)) / (
+        n_syn + n_ref
+    ) + 0.5
 
     # Values [0.499, 0.501] considered 'practically' = 0.5 (0.1% atol)
     if np.isclose(relative_effect, 0.5, atol=1e-3):
@@ -939,20 +956,14 @@ def samplesize_rank_compare_onetail(
         )
 
     sd_overall = np.sqrt(
-        np.sum(
-            (overall_ranks_pooled - (n_syn + n_ref + 1) / 2) ** 2
-        )
+        np.sum((overall_ranks_pooled - (n_syn + n_ref + 1) / 2) ** 2)
         / (n_syn + n_ref) ** 3
     )
-    var_ref = (
-        np.sum(
-            (placements_ref - np.mean(placements_ref)) ** 2
-        ) / (n_ref * (n_syn ** 2))
+    var_ref = np.sum((placements_ref - np.mean(placements_ref)) ** 2) / (
+        n_ref * (n_syn**2)
     )
-    var_syn = (
-        np.sum(
-            (placements_syn - np.mean(placements_syn)) ** 2
-        ) / ((n_ref ** 2) * n_syn)
+    var_syn = np.sum((placements_syn - np.mean(placements_syn)) ** 2) / (
+        (n_ref**2) * n_syn
     )
 
     quantile_prob = (1 - alpha / 2) if alternative == "two-sided" else (1 - alpha)
@@ -962,16 +973,12 @@ def samplesize_rank_compare_onetail(
     # Convert `nobs_ratio` to proportion of total allocated to reference group
     prop_treatment = 1 / (1 + nobs_ratio)
     prop_reference = 1 - prop_treatment
-    var_terms = np.sqrt(
-        prop_reference * var_syn + (1 - prop_reference) * var_ref
-    )
+    var_terms = np.sqrt(prop_reference * var_syn + (1 - prop_reference) * var_ref)
     quantiles_terms = sd_overall * quantile_alpha + quantile_power * var_terms
     # Add a small epsilon to avoid division by zero when there is no
     # treatment effect, i.e. p_hat = 0.5
     nobs_total = (quantiles_terms**2) / (
-        prop_reference
-        * (1 - prop_reference)
-        * (relative_effect - 0.5 + 1e-12) ** 2
+        prop_reference * (1 - prop_reference) * (relative_effect - 0.5 + 1e-12) ** 2
     )
     nobs_treat = nobs_total * (1 - prop_reference)
     nobs_ref = nobs_total * prop_reference

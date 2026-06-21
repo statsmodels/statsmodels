@@ -29,7 +29,7 @@ class TestDeltacovOLS:
         x = res.model.exog
 
         def fun(params):
-            return np.dot(x, params)**2
+            return np.dot(x, params) ** 2
 
         nl = NonlinearDeltaCov(fun, res.params, res.cov_params())
         nlm = res._get_wald_nonlinear(fun)
@@ -70,8 +70,9 @@ class TestDeltacovOLS:
 
         df = res.df_resid
         tt = res.t_test(x, use_t=True)
-        assert_allclose(nl.conf_int(use_t=True, df=df), tt.conf_int(),
-                        rtol=1e-12, atol=1e-10)
+        assert_allclose(
+            nl.conf_int(use_t=True, df=df), tt.conf_int(), rtol=1e-12, atol=1e-10
+        )
         t1 = nl.summary(use_t=True, df=df)
         t2 = tt.summary()
         # equal because nl.summary uses also ContrastResults
@@ -93,6 +94,7 @@ class TestDeltacovOLS:
 def test_deltacov_margeff():
     # compare with discrete margins
     import statsmodels.discrete.tests.test_discrete as dt
+
     tc = dt.TestPoissonNewton()
     tc.setup_class()
     res_poi = tc.res1

@@ -14,6 +14,7 @@ General references:
     Hutchison, M. and Hoog, F. "Smoothing noisy data with spline functions."
     Numerische Mathematik, 47(1), 99-106.
 """
+
 from statsmodels.compat.numpy import inplace_reshape
 
 # Issue warning regarding heavy development status of this module
@@ -345,11 +346,9 @@ class BSpline:
             v = _hbspline.evaluate(x, self.tau, self.m, int(d), lower, upper)
         else:
             if d.shape[0] != 2:
-                raise ValueError(
-                    "if d is not an integer, expecting a jx2 \
+                raise ValueError("if d is not an integer, expecting a jx2 \
                    array with first row indicating order \
-                   of derivative, second row coefficient in front."
-                )
+                   of derivative, second row coefficient in front.")
             v = 0
             for i in range(d.shape[1]):
                 v += d[1, i] * _hbspline.evaluate(
@@ -400,11 +399,9 @@ class BSpline:
         else:
             d = np.asarray(d)
             if d.shape[0] != 2:
-                raise ValueError(
-                    "if d is not an integer, expecting a jx2 \
+                raise ValueError("if d is not an integer, expecting a jx2 \
                    array with first row indicating order \
-                   of derivative, second row coefficient in front."
-                )
+                   of derivative, second row coefficient in front.")
             if d.shape == (2,):
                 d = inplace_reshape(d, (2, 1))
             self.g = 0
@@ -481,10 +478,8 @@ class SmoothingSpline(BSpline):
             banded = False
 
         if x.shape != y.shape:
-            raise ValueError(
-                "x and y shape do not agree, by default x are \
-               the Bspline's internal knots"
-            )
+            raise ValueError("x and y shape do not agree, by default x are \
+               the Bspline's internal knots")
         # if pen >= self.penmax: pen = self.penmax
         pen = min(pen, self.penmax)
 
@@ -641,10 +636,8 @@ class SmoothingSpline(BSpline):
                 # apen unchanged
                 bpen = curpen
             if apen >= self.penmax:
-                raise ValueError(
-                    "penalty too large, try setting penmax \
-                   higher or decreasing df"
-                )
+                raise ValueError("penalty too large, try setting penmax \
+                   higher or decreasing df")
             if np.fabs(curdf - df) / df < tol:
                 break
 

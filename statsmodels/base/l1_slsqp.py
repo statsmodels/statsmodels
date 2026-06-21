@@ -2,6 +2,7 @@
 Holds files for l1 regularization of LikelihoodModel, using
 scipy.optimize.slsqp
 """
+
 import numpy as np
 from scipy.optimize import fmin_slsqp
 
@@ -9,8 +10,18 @@ from statsmodels.base import l1_solvers_common
 
 
 def fit_l1_slsqp(
-        f, score, start_params, args, kwargs, disp=False, maxiter=1000,
-        callback=None, retall=False, full_output=False, hess=None):
+    f,
+    score,
+    start_params,
+    args,
+    kwargs,
+    disp=False,
+    maxiter=1000,
+    callback=None,
+    retall=False,
+    full_output=False,
+    hess=None,
+):
     """
     Solve the l1 regularized problem using scipy.optimize.fmin_slsqp().
 
@@ -83,24 +94,30 @@ def fit_l1_slsqp(
 
     # Call the solver
     results = fmin_slsqp(
-        func, x0, f_ieqcons=f_ieqcons_wrap, fprime=fprime_wrap, acc=acc,
-        iter=maxiter, disp=disp_slsqp, full_output=full_output,
-        fprime_ieqcons=fprime_ieqcons_wrap)
+        func,
+        x0,
+        f_ieqcons=f_ieqcons_wrap,
+        fprime=fprime_wrap,
+        acc=acc,
+        iter=maxiter,
+        disp=disp_slsqp,
+        full_output=full_output,
+        fprime_ieqcons=fprime_ieqcons_wrap,
+    )
     params = np.asarray(results[0][:k_params])
 
     # Post-process
     # QC
     qc_tol = kwargs["qc_tol"]
     qc_verbose = kwargs["qc_verbose"]
-    passed = l1_solvers_common.qc_results(
-        params, alpha, score, qc_tol, qc_verbose)
+    passed = l1_solvers_common.qc_results(params, alpha, score, qc_tol, qc_verbose)
     # Possibly trim
     trim_mode = kwargs["trim_mode"]
     size_trim_tol = kwargs["size_trim_tol"]
     auto_trim_tol = kwargs["auto_trim_tol"]
     params, trimmed = l1_solvers_common.do_trim_params(
-        params, k_params, alpha, score, passed, trim_mode, size_trim_tol,
-        auto_trim_tol)
+        params, k_params, alpha, score, passed, trim_mode, size_trim_tol, auto_trim_tol
+    )
 
     # Pack up return values for statsmodels optimizers
     # TODO These retvals are returned as mle_retvals...but the fit was not ML.
@@ -108,15 +125,20 @@ def fit_l1_slsqp(
     if full_output:
         x_full, fx, its, imode, smode = results
         fopt = func(np.asarray(x_full))
-        converged = (imode == 0)
+        converged = imode == 0
         warnflag = str(imode) + " " + smode
         iterations = its
-        gopt = float("nan")     # Objective is non-differentiable
+        gopt = float("nan")  # Objective is non-differentiable
         hopt = float("nan")
         retvals = {
-            "fopt": fopt, "converged": converged, "iterations": iterations,
-            "gopt": gopt, "hopt": hopt, "trimmed": trimmed,
-            "warnflag": warnflag}
+            "fopt": fopt,
+            "converged": converged,
+            "iterations": iterations,
+            "gopt": gopt,
+            "hopt": hopt,
+            "trimmed": trimmed,
+            "warnflag": warnflag,
+        }
 
     # Return
     if full_output:

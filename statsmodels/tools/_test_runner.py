@@ -28,4 +28,4 @@ class PytestTester:
             print(f"Exit status: {status}")
             sys.exit(status)
 
-        return (status == 0)
+        return status == 0

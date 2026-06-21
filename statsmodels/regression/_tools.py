@@ -39,8 +39,9 @@ class _MinimalWLS:
 
     msg = "NaN, inf or invalid value detected in {0}, estimation infeasible."
 
-    def __init__(self, endog, exog, weights=1.0, check_endog=False,
-                 check_weights=False):
+    def __init__(
+        self, endog, exog, weights=1.0, check_endog=False, check_weights=False
+    ):
         self.endog = endog
         self.exog = exog
         self.weights = weights
@@ -101,8 +102,7 @@ class _MinimalWLS:
             Q, R = np.linalg.qr(self.wexog)
             params = np.linalg.solve(R, np.dot(Q.T, self.wendog))
         else:
-            params, _, _, _ = np.linalg.lstsq(self.wexog, self.wendog,
-                                              rcond=-1)
+            params, _, _, _ = np.linalg.lstsq(self.wexog, self.wendog, rcond=-1)
         return self.results(params)
 
     def results(self, params):
@@ -124,5 +124,10 @@ class _MinimalWLS:
         df_resid = self.wexog.shape[0] - self.wexog.shape[1]
         scale = np.dot(wresid, wresid) / df_resid
 
-        return Bunch(params=params, fittedvalues=fitted_values, resid=resid,
-                     model=self, scale=scale)
+        return Bunch(
+            params=params,
+            fittedvalues=fitted_values,
+            resid=resid,
+            model=self,
+            scale=scale,
+        )

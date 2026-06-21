@@ -2028,9 +2028,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         no_exog = existing.exog is None
         if no_exog != (exog is None):
             if no_exog:
-                err = (
-                    "Original model does not contain exog data but exog data passed"
-                )
+                err = "Original model does not contain exog data but exog data passed"
             else:
                 err = "Original model has exog data but not exog data passed"
             raise ValueError(err)

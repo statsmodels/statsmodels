@@ -4,6 +4,7 @@ State space approach to estimating SARIMAX models.
 Author: Chad Fulton
 License: BSD-3
 """
+
 import numpy as np
 
 from statsmodels.tools.tools import Bunch, add_constant
@@ -12,10 +13,18 @@ from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
-def statespace(endog, exog=None, order=(0, 0, 0),
-               seasonal_order=(0, 0, 0, 0), include_constant=True,
-               enforce_stationarity=True, enforce_invertibility=True,
-               concentrate_scale=False, start_params=None, fit_kwargs=None):
+def statespace(
+    endog,
+    exog=None,
+    order=(0, 0, 0),
+    seasonal_order=(0, 0, 0, 0),
+    include_constant=True,
+    enforce_stationarity=True,
+    enforce_invertibility=True,
+    concentrate_scale=False,
+    start_params=None,
+    fit_kwargs=None,
+):
     """
     Estimate SARIMAX parameters using state space methods.
 
@@ -79,10 +88,14 @@ def statespace(endog, exog=None, order=(0, 0, 0),
 
     # Create the specification
     spec = SARIMAXSpecification(
-        endog, exog=exog, order=order, seasonal_order=seasonal_order,
+        endog,
+        exog=exog,
+        order=order,
+        seasonal_order=seasonal_order,
         enforce_stationarity=enforce_stationarity,
         enforce_invertibility=enforce_invertibility,
-        concentrate_scale=concentrate_scale)
+        concentrate_scale=concentrate_scale,
+    )
     endog = spec.endog
     exog = spec.exog
     p = SARIMAXParams(spec=spec)
@@ -93,19 +106,27 @@ def statespace(endog, exog=None, order=(0, 0, 0),
         sp.params = start_params
 
         if spec.enforce_stationarity and not sp.is_stationary:
-            raise ValueError("Given starting parameters imply a non-stationary"
-                             " AR process with `enforce_stationarity=True`.")
+            raise ValueError(
+                "Given starting parameters imply a non-stationary"
+                " AR process with `enforce_stationarity=True`."
+            )
 
         if spec.enforce_invertibility and not sp.is_invertible:
-            raise ValueError("Given starting parameters imply a non-invertible"
-                             " MA process with `enforce_invertibility=True`.")
+            raise ValueError(
+                "Given starting parameters imply a non-invertible"
+                " MA process with `enforce_invertibility=True`."
+            )
 
     # Create and fit the state space model
-    mod = SARIMAX(endog, exog=exog, order=spec.order,
-                  seasonal_order=spec.seasonal_order,
-                  enforce_stationarity=spec.enforce_stationarity,
-                  enforce_invertibility=spec.enforce_invertibility,
-                  concentrate_scale=spec.concentrate_scale)
+    mod = SARIMAX(
+        endog,
+        exog=exog,
+        order=spec.order,
+        seasonal_order=spec.seasonal_order,
+        enforce_stationarity=spec.enforce_stationarity,
+        enforce_invertibility=spec.enforce_invertibility,
+        concentrate_scale=spec.concentrate_scale,
+    )
     if fit_kwargs is None:
         fit_kwargs = {}
     fit_kwargs.setdefault("disp", 0)
@@ -113,9 +134,11 @@ def statespace(endog, exog=None, order=(0, 0, 0),
 
     # Construct results
     p.params = res_ss.params
-    res = Bunch({
-        "spec": spec,
-        "statespace_results": res_ss,
-    })
+    res = Bunch(
+        {
+            "spec": spec,
+            "statespace_results": res_ss,
+        }
+    )
 
     return p, res

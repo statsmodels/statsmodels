@@ -896,7 +896,7 @@ def test_formula_missing_extra_arrays():
 
     formula = "y_missing ~ X_missing"
 
-    ((endog, exog), missing_idx, model_spec) = handle_formula_data(
+    (endog, exog), missing_idx, model_spec = handle_formula_data(
         data, None, formula, depth=2, missing="drop"
     )
 

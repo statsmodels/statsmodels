@@ -30,8 +30,9 @@ class TestLilliefors:
         # require(KScorrect)
         # LcKS(x_n+abs(min(x_n))+0.001, 'pexp')
 
-        d_ks_exp, p_exp = lilliefors(x_n + np.abs(x_n.min()) + 0.001,
-                                     dist="exp", pvalmethod="approx")
+        d_ks_exp, p_exp = lilliefors(
+            x_n + np.abs(x_n.min()) + 0.001, dist="exp", pvalmethod="approx"
+        )
         # assert normal
         assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
         assert_almost_equal(p_norm, 0.64175, decimal=3)
@@ -67,19 +68,19 @@ class TestLilliefors:
         assert_almost_equal(p_exp, 0.72540, decimal=3)
 
     def test_pval_bounds(self):
-        x = stats.norm.ppf((np.arange(10.) + 0.5) / 10)
+        x = stats.norm.ppf((np.arange(10.0) + 0.5) / 10)
         d_ks_n, p_n = lilliefors(x, dist="norm", pvalmethod="approx")
-        x = stats.expon.ppf((np.arange(10.) + 0.5) / 10)
+        x = stats.expon.ppf((np.arange(10.0) + 0.5) / 10)
         d_ks_e, p_e = lilliefors(x, dist="exp", pvalmethod="approx")
 
         assert_almost_equal(p_n, 0.99, decimal=7)
         assert_almost_equal(p_e, 0.99, decimal=7)
 
     def test_min_nobs(self):
-        x = np.arange(3.)
+        x = np.arange(3.0)
         with pytest.raises(ValueError):
             lilliefors(x, dist="norm", pvalmethod="approx")
-        x = np.arange(2.)
+        x = np.arange(2.0)
         with pytest.raises(ValueError):
             lilliefors(x, dist="exp", pvalmethod="approx")
 
@@ -130,8 +131,7 @@ def test_get_lilliefors_errors(reset_randomstate):
     with pytest.raises(ValueError):
         get_lilliefors_table(dist="unknown")
     with pytest.raises(ValueError):
-        kstest_fit(np.random.standard_normal(100), dist="unknown",
-                   pvalmethod="table")
+        kstest_fit(np.random.standard_normal(100), dist="unknown", pvalmethod="table")
 
 
 def test_ksstat(reset_randomstate):

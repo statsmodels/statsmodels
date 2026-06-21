@@ -26,7 +26,7 @@ data_student.head(5)
 
 data_student.dtypes
 
-data_student['apply'].dtype
+data_student["apply"].dtype
 
 # This dataset is about the probability for undergraduate students to
 # apply to graduate school given three exogenous variables:
@@ -52,11 +52,11 @@ data_student['apply'].dtype
 
 # ### Probit ordinal regression:
 
-mod_prob = OrderedModel(data_student['apply'],
-                        data_student[['pared', 'public', 'gpa']],
-                        distr='probit')
+mod_prob = OrderedModel(
+    data_student["apply"], data_student[["pared", "public", "gpa"]], distr="probit"
+)
 
-res_prob = mod_prob.fit(method='bfgs')
+res_prob = mod_prob.fit(method="bfgs")
 res_prob.summary()
 
 # In our model, we have 3 exogenous variables(the $\beta$s if we keep the
@@ -79,21 +79,21 @@ mod_prob.transform_threshold_params(res_prob.params[-num_of_thresholds:])
 
 # ### Logit ordinal regression:
 
-mod_log = OrderedModel(data_student['apply'],
-                       data_student[['pared', 'public', 'gpa']],
-                       distr='logit')
+mod_log = OrderedModel(
+    data_student["apply"], data_student[["pared", "public", "gpa"]], distr="logit"
+)
 
-res_log = mod_log.fit(method='bfgs', disp=False)
+res_log = mod_log.fit(method="bfgs", disp=False)
 res_log.summary()
 
-predicted = res_log.model.predict(res_log.params,
-                                  exog=data_student[['pared', 'public',
-                                                     'gpa']])
+predicted = res_log.model.predict(
+    res_log.params, exog=data_student[["pared", "public", "gpa"]]
+)
 predicted
 
 pred_choice = predicted.argmax(1)
-print('Fraction of correct choice predictions')
-print((np.asarray(data_student['apply'].values.codes) == pred_choice).mean())
+print("Fraction of correct choice predictions")
+print((np.asarray(data_student["apply"].values.codes) == pred_choice).mean())
 
 # ### Ordinal regression with a custom cumulative cLogLog distribution:
 
@@ -103,9 +103,9 @@ print((np.asarray(data_student['apply'].values.codes) == pred_choice).mean())
 # creating a subclass from `rv_continuous` and implementing a few methods.
 
 # using a SciPy distribution
-res_exp = OrderedModel(data_student['apply'],
-                       data_student[['pared', 'public', 'gpa']],
-                       distr=stats.expon).fit(method='bfgs', disp=False)
+res_exp = OrderedModel(
+    data_student["apply"], data_student[["pared", "public", "gpa"]], distr=stats.expon
+).fit(method="bfgs", disp=False)
 res_exp.summary()
 
 
@@ -121,9 +121,9 @@ class CLogLog(stats.rv_continuous):
 cloglog = CLogLog()
 
 # definition of the model and fitting
-res_cloglog = OrderedModel(data_student['apply'],
-                           data_student[['pared', 'public', 'gpa']],
-                           distr=cloglog).fit(method='bfgs', disp=False)
+res_cloglog = OrderedModel(
+    data_student["apply"], data_student[["pared", "public", "gpa"]], distr=cloglog
+).fit(method="bfgs", disp=False)
 res_cloglog.summary()
 
 # ### Using formulas - treatment of endog
@@ -131,10 +131,10 @@ res_cloglog.summary()
 # Pandas' ordered categorical and numeric values are supported as
 # dependent variable in formulas. Other types will raise a ValueError.
 
-modf_logit = OrderedModel.from_formula("apply ~ 0 + pared + public + gpa",
-                                       data_student,
-                                       distr='logit')
-resf_logit = modf_logit.fit(method='bfgs')
+modf_logit = OrderedModel.from_formula(
+    "apply ~ 0 + pared + public + gpa", data_student, distr="logit"
+)
+resf_logit = modf_logit.fit(method="bfgs")
 resf_logit.summary()
 
 # Using numerical codes for the dependent variable is supported but loses
@@ -142,12 +142,12 @@ resf_logit.summary()
 # unique values of the dependent variable sorted in alphanumeric order as in
 # the case without using formulas.
 
-data_student["apply_codes"] = data_student['apply'].cat.codes * 2 + 5
+data_student["apply_codes"] = data_student["apply"].cat.codes * 2 + 5
 data_student["apply_codes"].head()
 
-OrderedModel.from_formula("apply_codes ~ 0 + pared + public + gpa",
-                          data_student,
-                          distr='logit').fit().summary()
+OrderedModel.from_formula(
+    "apply_codes ~ 0 + pared + public + gpa", data_student, distr="logit"
+).fit().summary()
 
 resf_logit.predict(data_student.iloc[:5])
 
@@ -160,9 +160,9 @@ data_student.apply_str = pd.Categorical(data_student.apply_str, ordered=True)
 data_student.public = data_student.public.astype(float)
 data_student.pared = data_student.pared.astype(float)
 
-OrderedModel.from_formula("apply_str ~ 0 + pared + public + gpa",
-                          data_student,
-                          distr='logit')
+OrderedModel.from_formula(
+    "apply_str ~ 0 + pared + public + gpa", data_student, distr="logit"
+)
 
 # ### Using formulas - no constant in model
 #
@@ -200,8 +200,9 @@ data_student["dummy"] = (np.arange(nobs) < (nobs / 2)).astype(float)
 # Note "1 +" is here redundant because it is patsy's default.
 
 modfd_logit = OrderedModel.from_formula(
-    "apply ~ 1 + pared + public + gpa + C(dummy)", data_student, distr='logit')
-resfd_logit = modfd_logit.fit(method='bfgs')
+    "apply ~ 1 + pared + public + gpa + C(dummy)", data_student, distr="logit"
+)
+resfd_logit = modfd_logit.fit(method="bfgs")
 print(resfd_logit.summary())
 
 modfd_logit.k_vars
@@ -239,9 +240,10 @@ modfd_logit.k_constant
 modfd2_logit = OrderedModel.from_formula(
     "apply ~ 0 + pared + public + gpa + C(dummy)",
     data_student,
-    distr='logit',
-    hasconst=False)
-resfd2_logit = modfd2_logit.fit(method='bfgs')
+    distr="logit",
+    hasconst=False,
+)
+resfd2_logit = modfd2_logit.fit(method="bfgs")
 print(resfd2_logit.summary())
 
 resfd2_logit.predict(data_student.iloc[:5])
@@ -270,17 +272,15 @@ from statsmodels.tools.tools import add_constant
 # We drop the middle category from the data and keep the two extreme
 # categories.
 
-mask_drop = data_student['apply'] == "somewhat likely"
+mask_drop = data_student["apply"] == "somewhat likely"
 data2 = data_student.loc[~mask_drop, :]
 # we need to remove the category also from the Categorical Index
-data2['apply'].cat.remove_categories("somewhat likely", inplace=True)
+data2["apply"].cat.remove_categories("somewhat likely", inplace=True)
 data2.head()
 
-mod_log = OrderedModel(data2['apply'],
-                       data2[['pared', 'public', 'gpa']],
-                       distr='logit')
+mod_log = OrderedModel(data2["apply"], data2[["pared", "public", "gpa"]], distr="logit")
 
-res_log = mod_log.fit(method='bfgs', disp=False)
+res_log = mod_log.fit(method="bfgs", disp=False)
 res_log.summary()
 
 # The Logit model does not have a constant by default, we have to add it
@@ -295,10 +295,10 @@ res_log.summary()
 # the parameterization in terms of cut points in OrderedModel instead of
 # including and constant column in the design matrix.
 
-ex = add_constant(data2[['pared', 'public', 'gpa']], prepend=False)
-mod_logit = Logit(data2['apply'].cat.codes, ex)
+ex = add_constant(data2[["pared", "public", "gpa"]], prepend=False)
+mod_logit = Logit(data2["apply"].cat.codes, ex)
 
-res_logit = mod_logit.fit(method='bfgs', disp=False)
+res_logit = mod_logit.fit(method="bfgs", disp=False)
 
 res_logit.summary()
 
@@ -307,13 +307,11 @@ res_logit.summary()
 # As example we specify HAC covariance type even though we have cross-
 # sectional data and autocorrelation is not appropriate.
 
-res_logit_hac = mod_logit.fit(method='bfgs',
-                              disp=False,
-                              cov_type="hac",
-                              cov_kwds={"maxlags": 2})
-res_log_hac = mod_log.fit(method='bfgs',
-                          disp=False,
-                          cov_type="hac",
-                          cov_kwds={"maxlags": 2})
+res_logit_hac = mod_logit.fit(
+    method="bfgs", disp=False, cov_type="hac", cov_kwds={"maxlags": 2}
+)
+res_log_hac = mod_log.fit(
+    method="bfgs", disp=False, cov_type="hac", cov_kwds={"maxlags": 2}
+)
 
 res_logit_hac.bse.values - res_log_hac.bse

@@ -82,7 +82,7 @@ def _calc_nodewise_weight(exog, nodewise_row, idx, alpha):
     if not np.isscalar(alpha):
         alpha = alpha[ind]
 
-    d = np.linalg.norm(exog[:, idx] - exog[:, ind].dot(nodewise_row))**2
+    d = np.linalg.norm(exog[:, idx] - exog[:, ind].dot(nodewise_row)) ** 2
     d = np.sqrt(d / n + alpha * np.linalg.norm(nodewise_row, 1))
     return d
 
@@ -120,7 +120,7 @@ def _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l):
         ind = list(range(p))
         ind.pop(idx)
         approx_inv_cov[idx, ind] = nodewise_row_l[idx]
-    approx_inv_cov *= -1 / nodewise_weight_l[:, None]**2
+    approx_inv_cov *= -1 / nodewise_weight_l[:, None] ** 2
 
     return approx_inv_cov
 
@@ -166,15 +166,13 @@ class RegularizedInvCovariance:
             nodewise_row = _calc_nodewise_row(self.exog, idx, alpha)
             nodewise_row_l.append(nodewise_row)
 
-            nodewise_weight = _calc_nodewise_weight(self.exog, nodewise_row,
-                                                    idx, alpha)
+            nodewise_weight = _calc_nodewise_weight(self.exog, nodewise_row, idx, alpha)
             nodewise_weight_l.append(nodewise_weight)
 
         nodewise_row_l = np.array(nodewise_row_l)
         nodewise_weight_l = np.array(nodewise_weight_l)
 
-        approx_inv_cov = _calc_approx_inv_cov(nodewise_row_l,
-                                              nodewise_weight_l)
+        approx_inv_cov = _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l)
 
         self._approx_inv_cov = approx_inv_cov
 

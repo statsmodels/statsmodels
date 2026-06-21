@@ -1,4 +1,5 @@
 """Fair's Extramarital Affairs Data"""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

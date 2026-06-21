@@ -19,9 +19,10 @@ class TestANOVA:
         cls.res2 = ANOVAResults()
 
     def test_anova(self):
-        assert_almost_equal(self.res1.compute_ANOVA()[:2],
-                            self.res2.compute_ANOVA[:2], 4)
-        assert_almost_equal(self.res1.compute_ANOVA()[2],
-                            self.res2.compute_ANOVA[2], 4)
-        assert_almost_equal(self.res1.compute_ANOVA(return_weights=1)[3],
-                            self.res2.compute_ANOVA[3], 4)
+        assert_almost_equal(
+            self.res1.compute_ANOVA()[:2], self.res2.compute_ANOVA[:2], 4
+        )
+        assert_almost_equal(self.res1.compute_ANOVA()[2], self.res2.compute_ANOVA[2], 4)
+        assert_almost_equal(
+            self.res1.compute_ANOVA(return_weights=1)[3], self.res2.compute_ANOVA[3], 4
+        )

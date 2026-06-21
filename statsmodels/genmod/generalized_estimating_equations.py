@@ -98,9 +98,7 @@ class ParameterConstraint:
         rhs = np.atleast_1d(rhs.squeeze())
 
         if rhs.ndim > 1:
-            raise ValueError(
-                "The right hand side of the constraint must be a vector."
-            )
+            raise ValueError("The right hand side of the constraint must be a vector.")
 
         if len(rhs) != lhs.shape[0]:
             raise ValueError(
@@ -478,9 +476,7 @@ _gee_nominal_example = """
 def _check_args(endog, exog, groups, time, offset, exposure):
 
     if endog.size != exog.shape[0]:
-        raise ValueError(
-            "Leading dimension of 'exog' should match length of 'endog'"
-        )
+        raise ValueError("Leading dimension of 'exog' should match length of 'endog'")
 
     if groups.size != endog.size:
         raise ValueError("'groups' and 'endog' should have the same size")
@@ -615,9 +611,7 @@ class GEE(GLM):
         if cov_struct is None:
             cov_struct = cov_structs.Independence()
         elif not issubclass(cov_struct.__class__, cov_structs.CovStruct):
-            raise ValueError(
-                "GEE: `cov_struct` must be a genmod cov_struct instance"
-            )
+            raise ValueError("GEE: `cov_struct` must be a genmod cov_struct instance")
 
         self.cov_struct = cov_struct
 
@@ -777,9 +771,7 @@ class GEE(GLM):
         terms args and kwargs are passed on to the model
         instantiation. E.g., a numpy structured or rec array, a
         dictionary, or a pandas DataFrame.
-        """.format(
-            missing_param_doc=base._missing_param_doc
-        )
+        """.format(missing_param_doc=base._missing_param_doc)
 
         groups_name = "Groups"
         if isinstance(groups, str):
@@ -1948,8 +1940,7 @@ class GEEResults(GLMResults):
             self.cov_params_default = cov
         elif self.cov_type != cov_type:
             raise ValueError(
-                "cov_type in argument is different from "
-                "already attached cov_type"
+                "cov_type in argument is different from " "already attached cov_type"
             )
 
     @cache_readonly

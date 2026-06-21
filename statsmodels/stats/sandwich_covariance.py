@@ -100,6 +100,7 @@ for inference with clustered errors,” The Review of Economics and
 Statistics 90, no. 3 (2008): 414-427.
 
 """
+
 import numpy as np
 
 from statsmodels.stats.moment_helpers import se_cov
@@ -194,7 +195,7 @@ def cov_hc1(results):
     See statsmodels.RegressionResults
     """
 
-    het_scale = results.nobs/(results.df_resid)*(results.resid**2)
+    het_scale = results.nobs / (results.df_resid) * (results.resid**2)
     cov_hc1 = _HCCM(results, het_scale)
     return cov_hc1
 
@@ -212,7 +213,7 @@ def cov_hc2(results):
         )
     )
 
-    het_scale = results.resid**2/(1-h)
+    het_scale = results.resid**2 / (1 - h)
     cov_hc2_ = _HCCM(results, het_scale)
     return cov_hc2_
 
@@ -271,8 +272,9 @@ def _get_sandwich_arrays(results, cov_type=""):
             xu /= np.sqrt(np.asarray(results.model.freq_weights)[:, None])
 
     else:
-        raise ValueError("need either tuple of (jac, hessian_inv) or results"
-                         "instance")
+        raise ValueError(
+            "need either tuple of (jac, hessian_inv) or results" "instance"
+        )
 
     return xu, hessian_inv
 
@@ -298,11 +300,11 @@ def _HCCM1(results, scale):
 
     """
     if scale.ndim == 1:
-        H = np.dot(results.model.pinv_wexog,
-                   scale[:, None]*results.model.pinv_wexog.T)
+        H = np.dot(
+            results.model.pinv_wexog, scale[:, None] * results.model.pinv_wexog.T
+        )
     else:
-        H = np.dot(results.model.pinv_wexog,
-                   np.dot(scale, results.model.pinv_wexog.T))
+        H = np.dot(results.model.pinv_wexog, np.dot(scale, results.model.pinv_wexog.T))
     return H
 
 
@@ -333,6 +335,7 @@ def _HCCM2(hessian_inv, scale):
     H = np.dot(np.dot(xxi, scale), xxi.T)
     return H
 
+
 # TODO: other kernels, move ?
 
 
@@ -354,7 +357,7 @@ def weights_bartlett(nlags):
     """
 
     # with lag zero
-    return 1 - np.arange(nlags+1)/(nlags+1.)
+    return 1 - np.arange(nlags + 1) / (nlags + 1.0)
 
 
 def weights_uniform(nlags):
@@ -375,11 +378,10 @@ def weights_uniform(nlags):
     """
 
     # with lag zero
-    return np.ones(nlags+1)
+    return np.ones(nlags + 1)
 
 
-kernel_dict = {"bartlett": weights_bartlett,
-               "uniform": weights_uniform}
+kernel_dict = {"bartlett": weights_bartlett, "uniform": weights_uniform}
 
 
 def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
@@ -417,13 +419,13 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
         x = x[:, None]
     n_periods = x.shape[0]
     if nlags is None:
-        nlags = int(np.floor(4 * (n_periods / 100.)**(2./9.)))
+        nlags = int(np.floor(4 * (n_periods / 100.0) ** (2.0 / 9.0)))
 
     weights = weights_func(nlags)
 
     S = weights[0] * np.dot(x.T, x)  # weights[0] just for completeness, is 1
 
-    for lag in range(1, nlags+1):
+    for lag in range(1, nlags + 1):
         s = np.dot(x[lag:].T, x[:-lag])
         S += weights[lag] * (s + s.T)
 
@@ -561,8 +563,7 @@ def cov_cluster(results, group, use_correction=True):
     cov_c = _HCCM2(hessian_inv, scale)
 
     if use_correction:
-        cov_c *= (n_groups / (n_groups - 1.) *
-                  ((nobs-1.) / float(nobs - k_params)))
+        cov_c *= n_groups / (n_groups - 1.0) * ((nobs - 1.0) / float(nobs - k_params))
 
     return cov_c
 
@@ -598,8 +599,10 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
 
     if group2 is None:
         if group.ndim != 2 or group.shape[1] != 2:
-            raise ValueError("if group2 is not given, then groups needs to be "
-                             "an array with two columns")
+            raise ValueError(
+                "if group2 is not given, then groups needs to be "
+                "an array with two columns"
+            )
         group0 = group[:, 0]
         group1 = group[:, 1]
     else:
@@ -612,9 +615,9 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
     cov1 = cov_cluster(results, group1, use_correction=use_correction)
 
     # cov of cluster formed by intersection of two groups
-    cov01 = cov_cluster(results,
-                        combine_indices(group)[0],
-                        use_correction=use_correction)
+    cov01 = cov_cluster(
+        results, combine_indices(group)[0], use_correction=use_correction
+    )
 
     # robust cov matrix for union of groups
     cov_both = cov0 + cov1 - cov01
@@ -663,8 +666,9 @@ def cov_white_simple(results, use_correction=True):
     return cov_w
 
 
-def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
-                   use_correction=True):
+def cov_hac_simple(
+    results, nlags=None, weights_func=weights_bartlett, use_correction=True
+):
     """
     heteroscedasticity and autocorrelation robust covariance matrix (Newey-West)
 
@@ -709,7 +713,7 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
     return cov_hac
 
 
-cov_hac = cov_hac_simple   # alias for users
+cov_hac = cov_hac_simple  # alias for users
 
 # use time lags corrected for groups
 # the following were copied from a different experimental script,
@@ -727,9 +731,9 @@ def lagged_groups(x, lag, groupidx):
     out0 = []
     out_lagged = []
     for lo, up in groupidx:
-        if lo+lag < up:  # group is longer than lag
-            out0.append(x[lo+lag:up])
-            out_lagged.append(x[lo:up-lag])
+        if lo + lag < up:  # group is longer than lag
+            out0.append(x[lo + lag : up])
+            out_lagged.append(x[lo : up - lag])
 
     if out0 == []:
         raise ValueError("all groups are empty taking lags")
@@ -743,18 +747,19 @@ def S_nw_panel(xw, weights, groupidx):
 
     no reference for this, just accounting for time indices
     """
-    nlags = len(weights)-1
+    nlags = len(weights) - 1
 
     S = weights[0] * np.dot(xw.T, xw)  # weights just for completeness
-    for lag in range(1, nlags+1):
+    for lag in range(1, nlags + 1):
         xw0, xwlag = lagged_groups(xw, lag, groupidx)
         s = np.dot(xw0.T, xwlag)
         S += weights[lag] * (s + s.T)
     return S
 
 
-def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
-                 use_correction="hac"):
+def cov_nw_panel(
+    results, nlags, groupidx, weights_func=weights_bartlett, use_correction="hac"
+):
     """Panel HAC robust covariance matrix
 
     Assumes we have a panel of time series with consecutive, equal spaced time
@@ -817,18 +822,14 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
             cov_hac *= nobs / float(nobs - k_params)
         elif use_correction in ["c", "clu", "cluster"]:
             n_groups = len(groupidx)
-            cov_hac *= n_groups / (n_groups - 1.)
-            cov_hac *= ((nobs-1.) / float(nobs - k_params))
+            cov_hac *= n_groups / (n_groups - 1.0)
+            cov_hac *= (nobs - 1.0) / float(nobs - k_params)
 
     return cov_hac
 
 
 def cov_nw_groupsum(
-        results,
-        nlags,
-        time,
-        weights_func=weights_bartlett,
-        use_correction=0
+    results, nlags, time, weights_func=weights_bartlett, use_correction=0
 ):
     """Driscoll and Kraay Panel robust covariance matrix
 
@@ -899,7 +900,7 @@ def cov_nw_groupsum(
             cov_hac *= nobs / float(nobs - k_params)
         elif use_correction in ["c", "cluster"]:
             n_groups = len(np.unique(time))
-            cov_hac *= n_groups / (n_groups - 1.)
-            cov_hac *= ((nobs-1.) / float(nobs - k_params))
+            cov_hac *= n_groups / (n_groups - 1.0)
+            cov_hac *= (nobs - 1.0) / float(nobs - k_params)
 
     return cov_hac

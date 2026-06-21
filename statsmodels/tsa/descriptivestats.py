@@ -11,9 +11,7 @@ from . import stattools as stt
 
 # TODO: check subclassing for descriptive stats classes
 class TsaDescriptive:
-    """collection of descriptive statistical methods for time series
-
-    """
+    """collection of descriptive statistical methods for time series"""
 
     def __init__(self, data, label=None, name=""):
         self.data = data
@@ -22,16 +20,19 @@ class TsaDescriptive:
 
     def filter(self, num, den):
         from scipy.signal import lfilter
+
         xfiltered = lfilter(num, den, self.data)
         return self.__class__(xfiltered, self.label, self.name + "_filtered")
 
     def detrend(self, order=1):
         from . import tsatools
+
         xdetrended = tsatools.detrend(self.data, order=order)
         return self.__class__(xdetrended, self.label, self.name + "_detrended")
 
     def fit(self, order=(1, 0, 1), **kwds):
         from .arima_model import ARMA
+
         self.mod = ARMA(self.data)
         self.res = self.mod.fit(order=order, **kwds)
         # self.estimated_process =
@@ -56,6 +57,7 @@ class TsaDescriptive:
 
         if fig is None:
             import matplotlib.pyplot as plt
+
             fig = plt.figure()
         ax = fig.add_subplot(2, 2, 1)
         namestr = " for %s" % self.name if self.name else ""

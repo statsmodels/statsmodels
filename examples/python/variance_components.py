@@ -34,12 +34,9 @@ np.random.seed(3123)
 # the same label.
 
 
-def generate_nested(n_group1=200,
-                    n_group2=20,
-                    n_rep=10,
-                    group1_sd=2,
-                    group2_sd=3,
-                    unexplained_sd=4):
+def generate_nested(
+    n_group1=200, n_group2=20, n_rep=10, group1_sd=2, group2_sd=3, unexplained_sd=4
+):
 
     # Group 1 indicators
     group1 = np.kron(np.arange(n_group1), np.ones(n_group2 * n_rep))
@@ -49,8 +46,7 @@ def generate_nested(n_group1=200,
     effects1 = np.kron(u, np.ones(n_group2 * n_rep))
 
     # Group 2 indicators
-    group2 = np.kron(np.ones(n_group1),
-                     np.kron(np.arange(n_group2), np.ones(n_rep)))
+    group2 = np.kron(np.ones(n_group1), np.kron(np.arange(n_group2), np.ones(n_rep)))
 
     # Group 2 effects
     u = group2_sd * np.random.normal(size=n_group1 * n_group2)
@@ -127,16 +123,14 @@ print(result2.summary())
 # set with two levels of random structure.
 
 
-def generate_crossed(n_group1=100,
-                     n_group2=100,
-                     n_rep=4,
-                     group1_sd=2,
-                     group2_sd=3,
-                     unexplained_sd=4):
+def generate_crossed(
+    n_group1=100, n_group2=100, n_rep=4, group1_sd=2, group2_sd=3, unexplained_sd=4
+):
 
     # Group 1 indicators
-    group1 = np.kron(np.arange(n_group1, dtype=int),
-                     np.ones(n_group2 * n_rep, dtype=int))
+    group1 = np.kron(
+        np.arange(n_group1, dtype=int), np.ones(n_group2 * n_rep, dtype=int)
+    )
     group1 = group1[np.random.permutation(len(group1))]
 
     # Group 1 effects
@@ -144,8 +138,9 @@ def generate_crossed(n_group1=100,
     effects1 = u[group1]
 
     # Group 2 indicators
-    group2 = np.kron(np.arange(n_group2, dtype=int),
-                     np.ones(n_group2 * n_rep, dtype=int))
+    group2 = np.kron(
+        np.arange(n_group2, dtype=int), np.ones(n_group2 * n_rep, dtype=int)
+    )
     group2 = group2[np.random.permutation(len(group2))]
 
     # Group 2 effects

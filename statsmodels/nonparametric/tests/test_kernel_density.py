@@ -640,14 +640,14 @@ class TestKDEMultivariateConditional(KDETestBase):
         Y = b0 + b1 * C1 + b2 * ovals + noise
 
         dens_efficient = nparam.KDEMultivariateConditional(
-                endog=[Y],
-                exog=[C1],
-                dep_type="c",
-                indep_type="c",
-                bw="cv_ml",
-                defaults=nparam.EstimatorSettings(efficient=True, n_sub=50),
-                seed=12345,
-                )
+            endog=[Y],
+            exog=[C1],
+            dep_type="c",
+            indep_type="c",
+            bw="cv_ml",
+            defaults=nparam.EstimatorSettings(efficient=True, n_sub=50),
+            seed=12345,
+        )
 
         # dens = nparam.KDEMultivariateConditional(endog=[Y], exog=[C1],
         #                   dep_type='c', indep_type='c', bw='cv_ml')

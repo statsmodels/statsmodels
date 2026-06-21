@@ -26,102 +26,108 @@ from . import (
 compatibility_mode = False
 has_trmm = True
 prefix_dtype_map = {
-    "s": np.float32, "d": np.float64, "c": np.complex64, "z": np.complex128
+    "s": np.float32,
+    "d": np.float64,
+    "c": np.complex64,
+    "z": np.complex128,
 }
 prefix_initialization_map = {
     "s": _initialization.sInitialization,
     "d": _initialization.dInitialization,
     "c": _initialization.cInitialization,
-    "z": _initialization.zInitialization
+    "z": _initialization.zInitialization,
 }
 prefix_statespace_map = {
-    "s": _representation.sStatespace, "d": _representation.dStatespace,
-    "c": _representation.cStatespace, "z": _representation.zStatespace
+    "s": _representation.sStatespace,
+    "d": _representation.dStatespace,
+    "c": _representation.cStatespace,
+    "z": _representation.zStatespace,
 }
 prefix_kalman_filter_map = {
     "s": _kalman_filter.sKalmanFilter,
     "d": _kalman_filter.dKalmanFilter,
     "c": _kalman_filter.cKalmanFilter,
-    "z": _kalman_filter.zKalmanFilter
+    "z": _kalman_filter.zKalmanFilter,
 }
 prefix_kalman_smoother_map = {
     "s": _kalman_smoother.sKalmanSmoother,
     "d": _kalman_smoother.dKalmanSmoother,
     "c": _kalman_smoother.cKalmanSmoother,
-    "z": _kalman_smoother.zKalmanSmoother
+    "z": _kalman_smoother.zKalmanSmoother,
 }
 prefix_simulation_smoother_map = {
     "s": _simulation_smoother.sSimulationSmoother,
     "d": _simulation_smoother.dSimulationSmoother,
     "c": _simulation_smoother.cSimulationSmoother,
-    "z": _simulation_smoother.zSimulationSmoother
+    "z": _simulation_smoother.zSimulationSmoother,
 }
 prefix_cfa_simulation_smoother_map = {
     "s": _cfa_simulation_smoother.sCFASimulationSmoother,
     "d": _cfa_simulation_smoother.dCFASimulationSmoother,
     "c": _cfa_simulation_smoother.cCFASimulationSmoother,
-    "z": _cfa_simulation_smoother.zCFASimulationSmoother
+    "z": _cfa_simulation_smoother.zCFASimulationSmoother,
 }
 prefix_pacf_map = {
     "s": _tools._scompute_coefficients_from_multivariate_pacf,
     "d": _tools._dcompute_coefficients_from_multivariate_pacf,
     "c": _tools._ccompute_coefficients_from_multivariate_pacf,
-    "z": _tools._zcompute_coefficients_from_multivariate_pacf
+    "z": _tools._zcompute_coefficients_from_multivariate_pacf,
 }
 prefix_sv_map = {
     "s": _tools._sconstrain_sv_less_than_one,
     "d": _tools._dconstrain_sv_less_than_one,
     "c": _tools._cconstrain_sv_less_than_one,
-    "z": _tools._zconstrain_sv_less_than_one
+    "z": _tools._zconstrain_sv_less_than_one,
 }
 prefix_reorder_missing_matrix_map = {
     "s": _tools.sreorder_missing_matrix,
     "d": _tools.dreorder_missing_matrix,
     "c": _tools.creorder_missing_matrix,
-    "z": _tools.zreorder_missing_matrix
+    "z": _tools.zreorder_missing_matrix,
 }
 prefix_reorder_missing_vector_map = {
     "s": _tools.sreorder_missing_vector,
     "d": _tools.dreorder_missing_vector,
     "c": _tools.creorder_missing_vector,
-    "z": _tools.zreorder_missing_vector
+    "z": _tools.zreorder_missing_vector,
 }
 prefix_copy_missing_matrix_map = {
     "s": _tools.scopy_missing_matrix,
     "d": _tools.dcopy_missing_matrix,
     "c": _tools.ccopy_missing_matrix,
-    "z": _tools.zcopy_missing_matrix
+    "z": _tools.zcopy_missing_matrix,
 }
 prefix_copy_missing_vector_map = {
     "s": _tools.scopy_missing_vector,
     "d": _tools.dcopy_missing_vector,
     "c": _tools.ccopy_missing_vector,
-    "z": _tools.zcopy_missing_vector
+    "z": _tools.zcopy_missing_vector,
 }
 prefix_copy_index_matrix_map = {
     "s": _tools.scopy_index_matrix,
     "d": _tools.dcopy_index_matrix,
     "c": _tools.ccopy_index_matrix,
-    "z": _tools.zcopy_index_matrix
+    "z": _tools.zcopy_index_matrix,
 }
 prefix_copy_index_vector_map = {
     "s": _tools.scopy_index_vector,
     "d": _tools.dcopy_index_vector,
     "c": _tools.ccopy_index_vector,
-    "z": _tools.zcopy_index_vector
+    "z": _tools.zcopy_index_vector,
 }
 prefix_compute_smoothed_state_weights_map = {
     "s": _tools._scompute_smoothed_state_weights,
     "d": _tools._dcompute_smoothed_state_weights,
     "c": _tools._ccompute_smoothed_state_weights,
-    "z": _tools._zcompute_smoothed_state_weights
+    "z": _tools._zcompute_smoothed_state_weights,
 }
 
 
 def set_mode(compatibility=None):
     if compatibility:
-        raise NotImplementedError("Compatibility mode is only available in"
-                                  " statsmodels <= 0.9")
+        raise NotImplementedError(
+            "Compatibility mode is only available in" " statsmodels <= 0.9"
+        )
 
 
 def companion_matrix(polynomial):
@@ -204,8 +210,9 @@ def companion_matrix(polynomial):
         n = len(polynomial) - 1
 
         if n < 1:
-            raise ValueError("Companion matrix polynomials must include at"
-                             " least two terms.")
+            raise ValueError(
+                "Companion matrix polynomials must include at" " least two terms."
+            )
 
         if isinstance(polynomial, (list, tuple)):
             try:
@@ -237,11 +244,11 @@ def companion_matrix(polynomial):
             matrix[:, 0] = -polynomial[1:] / polynomial[0]
         elif identity_matrix:
             for i in range(n):
-                matrix[i * m:(i + 1) * m, :m] = -polynomial[i+1].T
+                matrix[i * m : (i + 1) * m, :m] = -polynomial[i + 1].T
         else:
             inv = np.linalg.inv(polynomial[0])
             for i in range(n):
-                matrix[i * m:(i + 1) * m, :m] = -np.dot(inv, polynomial[i+1]).T
+                matrix[i * m : (i + 1) * m, :m] = -np.dot(inv, polynomial[i + 1]).T
     return matrix
 
 
@@ -284,8 +291,9 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     if k_seasonal_diff is not None:
         while k_seasonal_diff > 0:
             if not pandas:
-                differenced = (differenced[seasonal_periods:] -
-                               differenced[:-seasonal_periods])
+                differenced = (
+                    differenced[seasonal_periods:] - differenced[:-seasonal_periods]
+                )
             else:
                 sdiffed = differenced.diff(seasonal_periods)
                 differenced = sdiffed[seasonal_periods:]
@@ -327,8 +335,9 @@ def concat(series, axis=0, allow_mix=False):
     max_ndim = np.max(ndim)
 
     if max_ndim > 2:
-        raise ValueError("`tools.concat` does not support arrays with 3 or"
-                         " more dimensions.")
+        raise ValueError(
+            "`tools.concat` does not support arrays with 3 or" " more dimensions."
+        )
 
     # Make sure the iterable is mutable
     if isinstance(series, tuple):
@@ -365,17 +374,17 @@ def concat(series, axis=0, allow_mix=False):
                 s_columns = pd.Index([s.name])
 
             if axis == 0 and not base_columns.equals(s_columns):
-                raise ValueError("Columns must match to concatenate along"
-                                 " rows.")
+                raise ValueError("Columns must match to concatenate along" " rows.")
             elif axis == 1 and not series[0].index.equals(s.index):
-                raise ValueError("Index must match to concatenate along"
-                                 " columns.")
+                raise ValueError("Index must match to concatenate along" " columns.")
         concatenated = pd.concat(series, axis=axis)
     elif np.all(~is_pandas) or allow_mix:
         concatenated = np.concatenate(series, axis=axis)
     else:
-        raise ValueError("Attempted to concatenate Pandas objects with"
-                         " non-Pandas objects with `allow_mix=False`.")
+        raise ValueError(
+            "Attempted to concatenate Pandas objects with"
+            " non-Pandas objects with `allow_mix=False`."
+        )
 
     return concatenated
 
@@ -468,13 +477,13 @@ def solve_discrete_lyapunov(a, q, complex_step=False):
         aH = a.conj().transpose()
         aHI_inv = np.linalg.inv(aH + eye)
         b = np.dot(aH - eye, aHI_inv)
-        c = 2*np.dot(np.dot(np.linalg.inv(a + eye), q), aHI_inv)
+        c = 2 * np.dot(np.dot(np.linalg.inv(a + eye), q), aHI_inv)
         return solve_sylvester(b.conj().transpose(), b, -c)
     else:
         aH = a.transpose()
         aHI_inv = np.linalg.inv(aH + eye)
         b = np.dot(aH - eye, aHI_inv)
-        c = 2*np.dot(np.dot(np.linalg.inv(a + eye), q), aHI_inv)
+        c = 2 * np.dot(np.dot(np.linalg.inv(a + eye), q), aHI_inv)
         return solve_sylvester(b.transpose(), b, -c)
 
 
@@ -507,7 +516,7 @@ def constrain_stationary_univariate(unconstrained):
 
     n = unconstrained.shape[0]
     y = np.zeros((n, n), dtype=unconstrained.dtype)
-    r = unconstrained/((1 + unconstrained**2)**0.5)
+    r = unconstrained / ((1 + unconstrained**2) ** 0.5)
     for k in range(n):
         for i in range(k):
             y[k, i] = y[k - 1, i] + r[k] * y[k - 1, k - i - 1]
@@ -543,17 +552,16 @@ def unconstrain_stationary_univariate(constrained):
     """
     n = constrained.shape[0]
     y = np.zeros((n, n), dtype=constrained.dtype)
-    y[n-1:] = -constrained
-    for k in range(n-1, 0, -1):
+    y[n - 1 :] = -constrained
+    for k in range(n - 1, 0, -1):
         for i in range(k):
-            y[k-1, i] = (y[k, i] - y[k, k]*y[k, k-i-1]) / (1 - y[k, k]**2)
+            y[k - 1, i] = (y[k, i] - y[k, k] * y[k, k - i - 1]) / (1 - y[k, k] ** 2)
     r = y.diagonal()
-    x = r / ((1 - r**2)**0.5)
+    x = r / ((1 - r**2) ** 0.5)
     return x
 
 
-def _constrain_sv_less_than_one_python(unconstrained, order=None,
-                                       k_endog=None):
+def _constrain_sv_less_than_one_python(unconstrained, order=None, k_endog=None):
     """
     Transform arbitrary matrices to matrices with singular values less than
     one.
@@ -601,8 +609,12 @@ def _constrain_sv_less_than_one_python(unconstrained, order=None,
 
 
 def _compute_coefficients_from_multivariate_pacf_python(
-        partial_autocorrelations, error_variance, transform_variance=False,
-        order=None, k_endog=None):
+    partial_autocorrelations,
+    error_variance,
+    transform_variance=False,
+    order=None,
+    k_endog=None,
+):
     """
     Transform matrices with singular values less than one to matrices
     corresponding to a stationary (or invertible) process.
@@ -659,11 +671,11 @@ def _compute_coefficients_from_multivariate_pacf_python(
         # exceptions from the Cholesky decompositions.
         # Note that this will still not always ensure positive definiteness,
         # and for k_endog, order large enough an exception may still be raised
-        error_variance = np.eye(k_endog) * (order + k_endog)**10
+        error_variance = np.eye(k_endog) * (order + k_endog) ** 10
 
-    forward_variances = [error_variance]   # \Sigma_s
+    forward_variances = [error_variance]  # \Sigma_s
     backward_variances = [error_variance]  # \Sigma_s^*,  s = 0, ..., p
-    autocovariances = [error_variance]     # \Gamma_s
+    autocovariances = [error_variance]  # \Gamma_s
     # \phi_{s,k}, s = 1, ..., p
     #             k = 1, ..., s+1
     forwards = []
@@ -696,8 +708,12 @@ def _compute_coefficients_from_multivariate_pacf_python(
         # L*' x' = P'
         forwards.append(
             linalg.solve_triangular(
-                backward_factors[s], partial_autocorrelations[s].T,
-                lower=True, trans="T"))
+                backward_factors[s],
+                partial_autocorrelations[s].T,
+                lower=True,
+                trans="T",
+            )
+        )
         forwards[0] = np.dot(forward_factors[s], forwards[0].T)
 
         # P' L^{-1} = x
@@ -705,8 +721,9 @@ def _compute_coefficients_from_multivariate_pacf_python(
         # L' x' = P
         backwards.append(
             linalg.solve_triangular(
-                forward_factors[s], partial_autocorrelations[s],
-                lower=True, trans="T"))
+                forward_factors[s], partial_autocorrelations[s], lower=True, trans="T"
+            )
+        )
         backwards[0] = np.dot(backward_factors[s], backwards[0].T)
 
         # Update the variance
@@ -719,34 +736,28 @@ def _compute_coefficients_from_multivariate_pacf_python(
         # Create the remaining k = 1, ..., s matrices,
         # only has an effect if s >= 1
         for k in range(s):
-            forwards.insert(k, prev_forwards[k] - np.dot(
-                forwards[-1], prev_backwards[s-(k+1)]))
+            forwards.insert(
+                k, prev_forwards[k] - np.dot(forwards[-1], prev_backwards[s - (k + 1)])
+            )
 
-            backwards.insert(k, prev_backwards[k] - np.dot(
-                backwards[-1], prev_forwards[s-(k+1)]))
+            backwards.insert(
+                k, prev_backwards[k] - np.dot(backwards[-1], prev_forwards[s - (k + 1)])
+            )
 
-            autocovariances[s+1] += np.dot(autocovariances[k+1],
-                                           prev_forwards[s-(k+1)].T)
+            autocovariances[s + 1] += np.dot(
+                autocovariances[k + 1], prev_forwards[s - (k + 1)].T
+            )
 
         # Create forward and backwards variances
-        forward_variances.append(
-            forward_variances[s] - np.dot(tmp, forwards[s].T)
-        )
+        forward_variances.append(forward_variances[s] - np.dot(tmp, forwards[s].T))
         backward_variances.append(
-            backward_variances[s] -
-            np.dot(
-                np.dot(backwards[s], forward_variances[s]),
-                backwards[s].T
-            )
+            backward_variances[s]
+            - np.dot(np.dot(backwards[s], forward_variances[s]), backwards[s].T)
         )
 
         # Cholesky factors
-        forward_factors.append(
-            linalg.cholesky(forward_variances[s+1], lower=True)
-        )
-        backward_factors.append(
-            linalg.cholesky(backward_variances[s+1], lower=True)
-        )
+        forward_factors.append(linalg.cholesky(forward_variances[s + 1], lower=True))
+        backward_factors.append(linalg.cholesky(backward_variances[s + 1], lower=True))
 
     # If we do not want to use the transformed variance, we need to
     # adjust the constrained matrices, as presented in Lemma 2.3, see above
@@ -761,21 +772,20 @@ def _compute_coefficients_from_multivariate_pacf_python(
         # => L M^{-1} = T
         initial_variance_factor = np.linalg.cholesky(initial_variance)
         transformed_variance_factor = np.linalg.cholesky(variance)
-        transform = np.dot(initial_variance_factor,
-                           np.linalg.inv(transformed_variance_factor))
+        transform = np.dot(
+            initial_variance_factor, np.linalg.inv(transformed_variance_factor)
+        )
         inv_transform = np.linalg.inv(transform)
 
         for i in range(order):
-            forwards[i] = (
-                np.dot(np.dot(transform, forwards[i]), inv_transform)
-            )
+            forwards[i] = np.dot(np.dot(transform, forwards[i]), inv_transform)
 
     return forwards, variance
 
 
-def constrain_stationary_multivariate_python(unconstrained, error_variance,
-                                             transform_variance=False,
-                                             prefix=None):
+def constrain_stationary_multivariate_python(
+    unconstrained, error_variance, transform_variance=False, prefix=None
+):
     r"""
     Transform unconstrained parameters used by the optimizer to constrained
     parameters used in likelihood evaluation for a vector autoregression.
@@ -849,7 +859,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
         order //= k_endog
 
         unconstrained = [
-            unconstrained[:k_endog, i*k_endog:(i+1)*k_endog]
+            unconstrained[:k_endog, i * k_endog : (i + 1) * k_endog]
             for i in range(order)
         ]
 
@@ -858,26 +868,27 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
 
     # Step 1: convert from arbitrary matrices to those with singular values
     # less than one.
-    sv_constrained = _constrain_sv_less_than_one_python(
-        unconstrained, order, k_endog)
+    sv_constrained = _constrain_sv_less_than_one_python(unconstrained, order, k_endog)
 
     # Step 2: convert matrices from our "partial autocorrelation matrix" space
     # (matrices with singular values less than one) to the space of stationary
     # coefficient matrices
     constrained, var = _compute_coefficients_from_multivariate_pacf_python(
-        sv_constrained, error_variance, transform_variance, order, k_endog)
+        sv_constrained, error_variance, transform_variance, order, k_endog
+    )
 
     if not use_list:
         constrained = np.concatenate(constrained, axis=1).reshape(
-            k_endog, k_endog * order)
+            k_endog, k_endog * order
+        )
 
     return constrained, var
 
 
 @Appender(constrain_stationary_multivariate_python.__doc__)
-def constrain_stationary_multivariate(unconstrained, variance,
-                                      transform_variance=False,
-                                      prefix=None):
+def constrain_stationary_multivariate(
+    unconstrained, variance, transform_variance=False, prefix=None
+):
 
     use_list = type(unconstrained) is list
     if use_list:
@@ -892,8 +903,7 @@ def constrain_stationary_multivariate(unconstrained, variance,
         raise ValueError("Must have at least 1 endogenous variable")
 
     if prefix is None:
-        prefix, dtype, _ = find_best_blas_type(
-            [unconstrained, variance])
+        prefix, dtype, _ = find_best_blas_type([unconstrained, variance])
     dtype = prefix_dtype_map[prefix]
 
     unconstrained = np.asfortranarray(unconstrained, dtype=dtype)
@@ -909,15 +919,15 @@ def constrain_stationary_multivariate(unconstrained, variance,
     # space (matrices with singular values less than one) to the space of
     # stationary coefficient matrices
     constrained, variance = prefix_pacf_map[prefix](
-        sv_constrained, variance, transform_variance, order, k_endog)
+        sv_constrained, variance, transform_variance, order, k_endog
+    )
 
     constrained = np.array(constrained, dtype=dtype)
     variance = np.array(variance, dtype=dtype)
 
     if use_list:
         constrained = [
-            constrained[:k_endog, i*k_endog:(i+1)*k_endog]
-            for i in range(order)
+            constrained[:k_endog, i * k_endog : (i + 1) * k_endog] for i in range(order)
         ]
 
     return constrained, variance
@@ -1021,15 +1031,15 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
     for s in range(maxlag + 1):
         sample_autocovariances.append(np.zeros((k_endog, k_endog)))
         for t in range(nobs - s):
-            sample_autocovariances[s] += np.outer(endog[t], endog[t+s])
+            sample_autocovariances[s] += np.outer(endog[t], endog[t + s])
         sample_autocovariances[s] /= nobs
 
     return sample_autocovariances
 
 
 def _compute_multivariate_acovf_from_coefficients(
-        coefficients, error_variance, maxlag=None,
-        forward_autocovariances=False):
+    coefficients, error_variance, maxlag=None, forward_autocovariances=False
+):
     r"""
     Compute multivariate autocovariances from vector autoregression coefficient
     matrices
@@ -1093,12 +1103,12 @@ def _compute_multivariate_acovf_from_coefficients(
         order //= k_endog
 
         coefficients = [
-            coefficients[:k_endog, i*k_endog:(i+1)*k_endog]
+            coefficients[:k_endog, i * k_endog : (i + 1) * k_endog]
             for i in range(order)
         ]
 
     if maxlag is None:
-        maxlag = order-1
+        maxlag = order - 1
 
     # Start with VAR(p): w_{t+1} = phi_1 w_t + ... + phi_p w_{t-p+1} + u_{t+1}
     # Then stack the VAR(p) into a VAR(1) in companion matrix form:
@@ -1118,15 +1128,13 @@ def _compute_multivariate_acovf_from_coefficients(
     # autocovariances of w_t: \Gamma_i = E w_t w_t+i with \Gamma_0 = Var(w_t)
     # Note: these are okay, checked against ArmaProcess
     autocovariances = [
-        stacked_cov[:k_endog, i*k_endog:(i+1)*k_endog]
-        for i in range(min(order, maxlag+1))
+        stacked_cov[:k_endog, i * k_endog : (i + 1) * k_endog]
+        for i in range(min(order, maxlag + 1))
     ]
 
-    for _ in range(maxlag - (order-1)):
+    for _ in range(maxlag - (order - 1)):
         stacked_cov = np.dot(companion, stacked_cov)
-        autocovariances += [
-            stacked_cov[:k_endog, -k_endog:]
-        ]
+        autocovariances += [stacked_cov[:k_endog, -k_endog:]]
 
     if forward_autocovariances:
         for i in range(len(autocovariances)):
@@ -1155,12 +1163,12 @@ def _compute_multivariate_sample_pacf(endog, maxlag):
     """
     sample_autocovariances = _compute_multivariate_sample_acovf(endog, maxlag)
 
-    return _compute_multivariate_pacf_from_autocovariances(
-        sample_autocovariances)
+    return _compute_multivariate_pacf_from_autocovariances(sample_autocovariances)
 
 
-def _compute_multivariate_pacf_from_autocovariances(autocovariances,
-                                                    order=None, k_endog=None):
+def _compute_multivariate_pacf_from_autocovariances(
+    autocovariances, order=None, k_endog=None
+):
     """
     Compute multivariate partial autocorrelations from autocovariances.
 
@@ -1196,7 +1204,7 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     from scipy import linalg
 
     if order is None:
-        order = len(autocovariances)-1
+        order = len(autocovariances) - 1
     if k_endog is None:
         k_endog = autocovariances[0].shape[0]
 
@@ -1210,7 +1218,7 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     #                    \phi_{s,s} \Gamma_1' ] {\Sigma_s^*}^{-1}
 
     # Forward and backward variances
-    forward_variances = []   # \Sigma_s
+    forward_variances = []  # \Sigma_s
     backward_variances = []  # \Sigma_s^*,  s = 0, ..., p
     # \phi_{s,k}, s = 1, ..., p
     #             k = 1, ..., s+1
@@ -1218,7 +1226,7 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     # \phi_{s,k}^*
     backwards = []
 
-    forward_factors = []   # L_s
+    forward_factors = []  # L_s
     backward_factors = []  # L_s^*,  s = 0, ..., p
 
     # Ultimately we want to construct the partial autocorrelation matrices
@@ -1245,42 +1253,38 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
         backward_variance = autocovariances[0].T.copy()
 
         for k in range(s):
-            forward_variance -= np.dot(prev_forwards[k],
-                                       autocovariances[k+1])
-            backward_variance -= np.dot(prev_backwards[k],
-                                        autocovariances[k+1].T)
+            forward_variance -= np.dot(prev_forwards[k], autocovariances[k + 1])
+            backward_variance -= np.dot(prev_backwards[k], autocovariances[k + 1].T)
 
         forward_variances.append(forward_variance)
         backward_variances.append(backward_variance)
 
         # Cholesky factors
-        forward_factors.append(
-            linalg.cholesky(forward_variances[s], lower=True)
-        )
-        backward_factors.append(
-            linalg.cholesky(backward_variances[s], lower=True)
-        )
+        forward_factors.append(linalg.cholesky(forward_variances[s], lower=True))
+        backward_factors.append(linalg.cholesky(backward_variances[s], lower=True))
 
         # Create the intermediate sum term
         if s == 0:
             # phi_11 = \Gamma_1' \Gamma_0^{-1}
             # phi_11 \Gamma_0 = \Gamma_1'
             # \Gamma_0 phi_11' = \Gamma_1
-            forwards.append(linalg.cho_solve(
-                (forward_factors[0], True), autocovariances[1]).T)
+            forwards.append(
+                linalg.cho_solve((forward_factors[0], True), autocovariances[1]).T
+            )
             # backwards.append(forwards[-1])
             # phi_11_star = \Gamma_1 \Gamma_0^{-1}
             # phi_11_star \Gamma_0 = \Gamma_1
             # \Gamma_0 phi_11_star' = \Gamma_1'
-            backwards.append(linalg.cho_solve(
-                (backward_factors[0], True), autocovariances[1].T).T)
+            backwards.append(
+                linalg.cho_solve((backward_factors[0], True), autocovariances[1].T).T
+            )
         else:
             # G := \Gamma_{s+1}' -
             #      \phi_{s,1} \Gamma_s' - .. - \phi_{s,s} \Gamma_1'
-            tmp_sum = autocovariances[s+1].T.copy()
+            tmp_sum = autocovariances[s + 1].T.copy()
 
             for k in range(s):
-                tmp_sum -= np.dot(prev_forwards[k], autocovariances[s-k].T)
+                tmp_sum -= np.dot(prev_forwards[k], autocovariances[s - k].T)
 
             # Create the "last" (k = s+1) matrix
             # Note: this is for k = s+1. However, below we then have to
@@ -1290,37 +1294,40 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
             # Sigma*' phi' = G'
             # Sigma* phi' = G'
             # (because Sigma* is symmetric)
-            forwards.append(linalg.cho_solve(
-                (backward_factors[s], True), tmp_sum.T).T)
+            forwards.append(linalg.cho_solve((backward_factors[s], True), tmp_sum.T).T)
 
             # phi = G' Sigma^{-1}
             # phi Sigma = G'
             # Sigma' phi' = G
             # Sigma phi' = G
             # (because Sigma is symmetric)
-            backwards.append(linalg.cho_solve(
-                (forward_factors[s], True), tmp_sum).T)
+            backwards.append(linalg.cho_solve((forward_factors[s], True), tmp_sum).T)
 
         # Create the remaining k = 1, ..., s matrices,
         # only has an effect if s >= 1
         for k in range(s):
-            forwards.insert(k, prev_forwards[k] - np.dot(
-                forwards[-1], prev_backwards[s-(k+1)]))
-            backwards.insert(k, prev_backwards[k] - np.dot(
-                backwards[-1], prev_forwards[s-(k+1)]))
+            forwards.insert(
+                k, prev_forwards[k] - np.dot(forwards[-1], prev_backwards[s - (k + 1)])
+            )
+            backwards.insert(
+                k, prev_backwards[k] - np.dot(backwards[-1], prev_forwards[s - (k + 1)])
+            )
 
         # Partial autocorrelation matrix: P_{s+1}
         # P = L^{-1} phi L*
         # L P = (phi L*)
-        partial_autocorrelations.append(linalg.solve_triangular(
-            forward_factors[s], np.dot(forwards[s], backward_factors[s]),
-            lower=True))
+        partial_autocorrelations.append(
+            linalg.solve_triangular(
+                forward_factors[s], np.dot(forwards[s], backward_factors[s]), lower=True
+            )
+        )
 
     return partial_autocorrelations
 
 
-def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
-                                                 order=None, k_endog=None):
+def _compute_multivariate_pacf_from_coefficients(
+    constrained, error_variance, order=None, k_endog=None
+):
     r"""
     Transform matrices corresponding to a stationary (or invertible) process
     to matrices with singular values less than one.
@@ -1377,8 +1384,9 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     _acovf = _compute_multivariate_acovf_from_coefficients
 
     autocovariances = [
-        autocovariance.T for autocovariance in
-        _acovf(constrained, error_variance, maxlag=order)]
+        autocovariance.T
+        for autocovariance in _acovf(constrained, error_variance, maxlag=order)
+    ]
 
     return _compute_multivariate_pacf_from_autocovariances(autocovariances)
 
@@ -1427,8 +1435,7 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
         order //= k_endog
 
         constrained = [
-            constrained[:k_endog, i*k_endog:(i+1)*k_endog]
-            for i in range(order)
+            constrained[:k_endog, i * k_endog : (i + 1) * k_endog] for i in range(order)
         ]
     else:
         order = len(constrained)
@@ -1438,12 +1445,14 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
     # coefficient matrices to our "partial autocorrelation matrix" space
     # (matrices with singular values less than one)
     partial_autocorrelations = _compute_multivariate_pacf_from_coefficients(
-        constrained, error_variance, order, k_endog)
+        constrained, error_variance, order, k_endog
+    )
 
     # Step 2: convert from arbitrary matrices to those with singular values
     # less than one.
     unconstrained = _unconstrain_sv_less_than_one(
-        partial_autocorrelations, order, k_endog)
+        partial_autocorrelations, order, k_endog
+    )
 
     if not use_list:
         unconstrained = np.concatenate(unconstrained, axis=1)
@@ -1479,29 +1488,37 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
 
     # Enforce dimension
     if ndim not in [2, 3]:
-        raise ValueError("Invalid value for %s matrix. Requires a"
-                         " 2- or 3-dimensional array, got %d dimensions" %
-                         (name, ndim))
+        raise ValueError(
+            "Invalid value for %s matrix. Requires a"
+            " 2- or 3-dimensional array, got %d dimensions" % (name, ndim)
+        )
     # Enforce the shape of the matrix
     if not shape[0] == nrows:
-        raise ValueError("Invalid dimensions for %s matrix: requires %d"
-                         " rows, got %d" % (name, nrows, shape[0]))
+        raise ValueError(
+            "Invalid dimensions for %s matrix: requires %d"
+            " rows, got %d" % (name, nrows, shape[0])
+        )
     if not shape[1] == ncols:
-        raise ValueError("Invalid dimensions for %s matrix: requires %d"
-                         " columns, got %d" % (name, ncols, shape[1]))
+        raise ValueError(
+            "Invalid dimensions for %s matrix: requires %d"
+            " columns, got %d" % (name, ncols, shape[1])
+        )
 
     # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 2 or shape[-1] == 1):
-        raise ValueError("Invalid dimensions for %s matrix: time-varying"
-                         " matrices cannot be given unless `nobs` is specified"
-                         " (implicitly when a dataset is bound or else set"
-                         " explicity)" % name)
+        raise ValueError(
+            "Invalid dimensions for %s matrix: time-varying"
+            " matrices cannot be given unless `nobs` is specified"
+            " (implicitly when a dataset is bound or else set"
+            " explicity)" % name
+        )
 
     # Enforce time-varying array size
     if ndim == 3 and nobs is not None and shape[-1] not in [1, nobs]:
-        raise ValueError("Invalid dimensions for time-varying %s"
-                         " matrix. Requires shape (*,*,%d), got %s" %
-                         (name, nobs, str(shape)))
+        raise ValueError(
+            "Invalid dimensions for time-varying %s"
+            " matrix. Requires shape (*,*,%d), got %s" % (name, nobs, str(shape))
+        )
 
 
 def validate_vector_shape(name, shape, nrows, nobs):
@@ -1529,31 +1546,43 @@ def validate_vector_shape(name, shape, nrows, nobs):
     ndim = len(shape)
     # Enforce dimension
     if ndim not in [1, 2]:
-        raise ValueError("Invalid value for %s vector. Requires a"
-                         " 1- or 2-dimensional array, got %d dimensions" %
-                         (name, ndim))
+        raise ValueError(
+            "Invalid value for %s vector. Requires a"
+            " 1- or 2-dimensional array, got %d dimensions" % (name, ndim)
+        )
     # Enforce the shape of the vector
     if not shape[0] == nrows:
-        raise ValueError("Invalid dimensions for %s vector: requires %d"
-                         " rows, got %d" % (name, nrows, shape[0]))
+        raise ValueError(
+            "Invalid dimensions for %s vector: requires %d"
+            " rows, got %d" % (name, nrows, shape[0])
+        )
 
     # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 1 or shape[-1] == 1):
-        raise ValueError("Invalid dimensions for %s vector: time-varying"
-                         " vectors cannot be given unless `nobs` is specified"
-                         " (implicitly when a dataset is bound or else set"
-                         " explicity)" % name)
+        raise ValueError(
+            "Invalid dimensions for %s vector: time-varying"
+            " vectors cannot be given unless `nobs` is specified"
+            " (implicitly when a dataset is bound or else set"
+            " explicity)" % name
+        )
 
     # Enforce time-varying array size
     if ndim == 2 and shape[1] not in [1, nobs]:
-        raise ValueError("Invalid dimensions for time-varying %s"
-                         " vector. Requires shape (*,%d), got %s" %
-                         (name, nobs, str(shape)))
+        raise ValueError(
+            "Invalid dimensions for time-varying %s"
+            " vector. Requires shape (*,%d), got %s" % (name, nobs, str(shape))
+        )
 
 
-def reorder_missing_matrix(matrix, missing, reorder_rows=False,
-                           reorder_cols=False, is_diagonal=False,
-                           inplace=False, prefix=None):
+def reorder_missing_matrix(
+    matrix,
+    missing,
+    reorder_rows=False,
+    reorder_cols=False,
+    is_diagonal=False,
+    inplace=False,
+    prefix=None,
+):
     """
     Reorder the rows or columns of a time-varying matrix where all non-missing
     values are in the upper left corner of the matrix.
@@ -1592,8 +1621,7 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     if not inplace:
         matrix = np.copy(matrix, order="F")
 
-    reorder(matrix, np.asfortranarray(missing), reorder_rows, reorder_cols,
-            is_diagonal)
+    reorder(matrix, np.asfortranarray(missing), reorder_rows, reorder_cols, is_diagonal)
 
     return matrix
 
@@ -1632,8 +1660,16 @@ def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
     return vector
 
 
-def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
-                        is_diagonal=False, inplace=False, prefix=None):
+def copy_missing_matrix(
+    A,
+    B,
+    missing,
+    missing_rows=False,
+    missing_cols=False,
+    is_diagonal=False,
+    inplace=False,
+    prefix=None,
+):
     """
     Copy the rows or columns of a time-varying matrix where all non-missing
     values are in the upper left corner of the matrix.
@@ -1683,8 +1719,7 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     except (AttributeError, ValueError):
         A = np.asfortranarray(A)
 
-    copy(A, B, np.asfortranarray(missing), missing_rows, missing_cols,
-         is_diagonal)
+    copy(A, B, np.asfortranarray(missing), missing_rows, missing_cols, is_diagonal)
 
     return B
 
@@ -1733,8 +1768,16 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     return b
 
 
-def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
-                      is_diagonal=False, inplace=False, prefix=None):
+def copy_index_matrix(
+    A,
+    B,
+    index,
+    index_rows=False,
+    index_cols=False,
+    is_diagonal=False,
+    inplace=False,
+    prefix=None,
+):
     """
     Copy the rows or columns of a time-varying matrix where all non-index
     values are in the upper left corner of the matrix.
@@ -1784,8 +1827,7 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     except (AttributeError, ValueError):
         A = np.asfortranarray(A)
 
-    copy(A, B, np.asfortranarray(index), index_rows, index_cols,
-         is_diagonal)
+    copy(A, B, np.asfortranarray(index), index_rows, index_cols, is_diagonal)
 
     return B
 
@@ -1893,7 +1935,9 @@ def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
     i = 0
     for k in polynomial_trend.nonzero()[0]:
         if k == 0:
-            trend_data[:, i] = np.ones(nobs,)
+            trend_data[:, i] = np.ones(
+                nobs,
+            )
         else:
             trend_data[:, i] = time_trend**k
         i += 1
@@ -1912,8 +1956,9 @@ def _safe_cond(a):
             return np.inf
 
 
-def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
-                                    compute_prior_weights=None, scale=1.0):
+def _compute_smoothed_state_weights(
+    ssm, compute_t=None, compute_j=None, compute_prior_weights=None, scale=1.0
+):
     # Get references to the Cython objects
     _model = ssm._statespace
     _kfilter = ssm._kalman_filter
@@ -1937,13 +1982,21 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
         compute_prior_weights = compute_j[0] == 0
     # Validate that compute_prior_weights is valid
     if compute_prior_weights and compute_j[0] != 0:
-        raise ValueError("If `compute_prior_weights` is set to True, then"
-                         " `compute_j` must include the time period 0.")
+        raise ValueError(
+            "If `compute_prior_weights` is set to True, then"
+            " `compute_j` must include the time period 0."
+        )
 
     # Compute the weights
     weights, state_intercept_weights, prior_weights, _ = func(
-        _smoother, _kfilter, _model, compute_t, compute_j, scale,
-        bool(compute_prior_weights))
+        _smoother,
+        _kfilter,
+        _model,
+        compute_t,
+        compute_j,
+        scale,
+        bool(compute_prior_weights),
+    )
 
     # Re-order missing entries correctly and transpose to the appropriate
     # shape
@@ -1953,14 +2006,17 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
         shape = weights.shape
         # Transpose m, p, t, j, -> t, m, p, j so that we can use the
         # `reorder_missing_matrix` function
-        weights = np.asfortranarray(weights.transpose(2, 0, 1, 3).reshape(
-            shape[2] * shape[0], shape[1], shape[3], order="C"))
+        weights = np.asfortranarray(
+            weights.transpose(2, 0, 1, 3).reshape(
+                shape[2] * shape[0], shape[1], shape[3], order="C"
+            )
+        )
         missing = np.asfortranarray(missing.astype(np.int32))
-        reorder_missing_matrix(weights, missing, reorder_cols=True,
-                               inplace=True)
+        reorder_missing_matrix(weights, missing, reorder_cols=True, inplace=True)
         # Transpose t, m, p, j -> t, j, m, p,
-        weights = (weights.reshape(shape[2], shape[0], shape[1], shape[3])
-                          .transpose(0, 3, 1, 2))
+        weights = weights.reshape(shape[2], shape[0], shape[1], shape[3]).transpose(
+            0, 3, 1, 2
+        )
     else:
         # Transpose m, p, t, j -> t, j, m, p
         weights = weights.transpose(2, 3, 0, 1)
@@ -1981,8 +2037,9 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
     return weights, state_intercept_weights, prior_weights
 
 
-def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
-                                   compute_prior_weights=None, resmooth=None):
+def compute_smoothed_state_weights(
+    results, compute_t=None, compute_j=None, compute_prior_weights=None, resmooth=None
+):
     r"""
     Construct the weights of observations and the prior on the smoothed state
 
@@ -2092,23 +2149,32 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
     # By default, resmooth if it appears the results have changed; check is
     # based on the smoothed state vector
     if resmooth is None:
-        resmooth = np.any(results.smoothed_state !=
-                          mod.ssm._kalman_smoother.smoothed_state)
+        resmooth = np.any(
+            results.smoothed_state != mod.ssm._kalman_smoother.smoothed_state
+        )
     # Resmooth if necessary, otherwise at least update the Cython model
     if resmooth:
-        mod.ssm.smooth(conserve_memory=0, update_representation=False,
-                       update_filter=False, update_smoother=False)
+        mod.ssm.smooth(
+            conserve_memory=0,
+            update_representation=False,
+            update_filter=False,
+            update_smoother=False,
+        )
     else:
         mod.ssm._initialize_representation()
 
     return _compute_smoothed_state_weights(
-        mod.ssm, compute_t=compute_t, compute_j=compute_j,
+        mod.ssm,
+        compute_t=compute_t,
+        compute_j=compute_j,
         compute_prior_weights=compute_prior_weights,
-        scale=results.filter_results.scale)
+        scale=results.filter_results.scale,
+    )
 
 
-def get_impact_dates(previous_model, updated_model, impact_date=None,
-                     start=None, end=None, periods=None):
+def get_impact_dates(
+    previous_model, updated_model, impact_date=None, start=None, end=None, periods=None
+):
     """
     Compute start/end periods and an index, often for impacts of data updates
 
@@ -2167,17 +2233,21 @@ def get_impact_dates(previous_model, updated_model, impact_date=None,
     # specify exactly two of start, end, periods.
     if impact_date is not None:
         if not (start is None and end is None and periods is None):
-            raise ValueError("Cannot use the `impact_date` argument in"
-                             " combination with `start`, `end`, or"
-                             " `periods`.")
+            raise ValueError(
+                "Cannot use the `impact_date` argument in"
+                " combination with `start`, `end`, or"
+                " `periods`."
+            )
         start = impact_date
         periods = 1
     if start is None and end is None and periods is None:
         start = previous_model.nobs - 1
         end = previous_model.nobs - 1
     if int(start is None) + int(end is None) + int(periods is None) != 1:
-        raise ValueError("Of the three parameters: start, end, and"
-                         " periods, exactly two must be specified")
+        raise ValueError(
+            "Of the three parameters: start, end, and"
+            " periods, exactly two must be specified"
+        )
     # If we have the `periods` object, we need to convert `start`/`end` to
     # integers so that we can compute the other one. That's because
     # _get_prediction_index doesn't support a `periods` argument
@@ -2191,8 +2261,9 @@ def get_impact_dates(previous_model, updated_model, impact_date=None,
         pass
 
     # Get the integer-based start, end and the prediction index
-    start, end, out_of_sample, prediction_index = (
-        updated_model._get_prediction_index(start, end))
+    start, end, out_of_sample, prediction_index = updated_model._get_prediction_index(
+        start, end
+    )
     end = end + out_of_sample
 
     return start, end, prediction_index

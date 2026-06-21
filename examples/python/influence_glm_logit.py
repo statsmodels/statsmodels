@@ -75,8 +75,7 @@ summ_df.sort_values("cooks_d", ascending=False)[:10]
 fig = infl.plot_influence()
 fig.tight_layout(pad=1.0)
 
-fig = infl.plot_index(y_var="cooks",
-                      threshold=2 * infl.cooks_distance[0].mean())
+fig = infl.plot_index(y_var="cooks", threshold=2 * infl.cooks_distance[0].mean())
 fig.tight_layout(pad=1.0)
 
 fig = infl.plot_index(y_var="resid", threshold=1)

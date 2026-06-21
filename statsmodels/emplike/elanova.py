@@ -9,6 +9,7 @@ General References
 
 Owen, A. B. (2001). Empirical Likelihood. Chapman and Hall.
 """
+
 import numpy as np
 from scipy import optimize
 from scipy.stats import chi2
@@ -22,6 +23,7 @@ class _ANOVAOpt(_OptFuncts):
     Class containing functions that are optimized over when
     conducting ANOVA.
     """
+
     def _opt_common_mu(self, mu):
         """
         Optimizes the likelihood under the null hypothesis that all groups have
@@ -44,13 +46,13 @@ class _ANOVAOpt(_OptFuncts):
         obs_num = 0
         for arr_num in range(len(endog)):
             new_obs_num = obs_num + len(endog[arr_num])
-            endog_asarray[obs_num: new_obs_num, arr_num] = endog[arr_num] - mu
+            endog_asarray[obs_num:new_obs_num, arr_num] = endog[arr_num] - mu
             obs_num = new_obs_num
         est_vect = endog_asarray
-        wts = np.ones(est_vect.shape[0]) * (1. / (est_vect.shape[0]))
+        wts = np.ones(est_vect.shape[0]) * (1.0 / (est_vect.shape[0]))
         eta_star = self._modif_newton(np.zeros(num_groups), est_vect, wts)
-        denom = 1. + np.dot(eta_star, est_vect.T)
-        self.new_weights = 1. / nobs * 1. / denom
+        denom = 1.0 + np.dot(eta_star, est_vect.T)
+        self.new_weights = 1.0 / nobs * 1.0 / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
 
@@ -110,8 +112,9 @@ class ANOVA(_ANOVAOpt):
             else:
                 return llr, pval, mu
         else:
-            res = optimize.fmin_powell(self._opt_common_mu, mu_start,
-                                       full_output=1, disp=False)
+            res = optimize.fmin_powell(
+                self._opt_common_mu, mu_start, full_output=1, disp=False
+            )
             llr = res[1]
             mu_common = float(np.squeeze(res[0]))
             pval = 1 - chi2.cdf(llr, self.num_groups - 1)

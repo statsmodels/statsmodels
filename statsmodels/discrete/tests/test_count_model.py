@@ -399,7 +399,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
             niter_success=None,
             disp=False,
             interval=1,
-            **seed
+            **seed,
         )
 
         assert_allclose(res_bh.params, self.res2.params, atol=1e-4, rtol=1e-4)

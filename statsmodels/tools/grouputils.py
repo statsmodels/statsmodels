@@ -29,6 +29,7 @@ Not all methods and options have been tried out yet after refactoring
 need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 
 """
+
 from statsmodels.compat.python import lrange, lzip
 
 import numpy as np
@@ -49,7 +50,7 @@ def combine_indices(groups, prefix="", sep=".", return_labels=False):
 
     dt = groups.dtype
 
-    is2d = (groups.ndim == 2)  # need to store
+    is2d = groups.ndim == 2  # need to store
 
     if is2d:
         ncols = groups.shape[1]
@@ -60,15 +61,13 @@ def combine_indices(groups, prefix="", sep=".", return_labels=False):
     else:
         groups_ = groups
 
-    uni, uni_idx, uni_inv = np.unique(groups_, return_index=True,
-                                      return_inverse=True)
+    uni, uni_idx, uni_inv = np.unique(groups_, return_index=True, return_inverse=True)
 
     if is2d:
         uni = uni.view(dt).reshape(-1, ncols)
 
     if return_labels:
-        label = [(prefix+sep.join(["%s"]*len(uni[0]))) % tuple(ii)
-                 for ii in uni]
+        label = [(prefix + sep.join(["%s"] * len(uni[0]))) % tuple(ii) for ii in uni]
         return uni_inv, uni_idx, uni, label
     else:
         return uni_inv, uni_idx, uni
@@ -102,10 +101,7 @@ def group_sums(x, group, use_bincount=True):
             group = pd.factorize(group)[0]
 
         return np.array(
-            [
-                np.bincount(group, weights=x[:, col])
-                for col in range(x.shape[1])
-            ]
+            [np.bincount(group, weights=x[:, col]) for col in range(x.shape[1])]
         )
     else:
         uniques = np.unique(group)
@@ -178,7 +174,7 @@ def dummy_sparse(groups):
     """
     from scipy import sparse
 
-    indptr = np.arange(len(groups)+1)
+    indptr = np.arange(len(groups) + 1)
     data = np.ones(len(groups), dtype=np.int8)
     indi = sparse.csr_matrix((data, groups, indptr))
 
@@ -217,8 +213,9 @@ class Group:
         sep = self.separator
 
         if uni.ndim > 1:
-            label = [(prefix+sep.join(["%s"]*len(uni[0]))) % tuple(ii)
-                     for ii in uni]
+            label = [
+                (prefix + sep.join(["%s"] * len(uni[0]))) % tuple(ii) for ii in uni
+            ]
         else:
             label = [prefix + "%s" % ii for ii in uni]
         return label
@@ -252,8 +249,7 @@ class Group:
 
     def group_demean(self, x, use_bincount=True):
         nobs = float(len(x))
-        means_g = group_sums(x / nobs, self.group_int,
-                             use_bincount=use_bincount)
+        means_g = group_sums(x / nobs, self.group_int, use_bincount=use_bincount)
         x_demeaned = x - means_g[self.group_int]  # check reverse_index?
         return x_demeaned, means_g
 
@@ -264,7 +260,7 @@ class GroupSorted(Group):
     def __init__(self, group, name=""):
         super(self.__class__, self).__init__(group, name=name)
 
-        idx = (np.nonzero(np.diff(group))[0]+1).tolist()
+        idx = (np.nonzero(np.diff(group))[0] + 1).tolist()
         self.groupidx = lzip([0] + idx, idx + [len(group)])
 
     def group_iter(self):
@@ -288,7 +284,7 @@ class GroupSorted(Group):
         not tested yet
         """
         lag_idx = np.asarray(self.groupidx)[:, 1] - lag  # asarray or already?
-        mask_ok = (lag <= lag_idx)
+        mask_ok = lag <= lag_idx
         # still an observation that belongs to the same individual
 
         return lag_idx[mask_ok]
@@ -314,7 +310,7 @@ def _make_hierarchical_index(index, names):
 def _make_generic_names(index):
     n_names = len(index.names)
     pad = str(len(str(n_names)))  # number of digits
-    return [("group{0:0"+pad+"}").format(i) for i in range(n_names)]
+    return [("group{0:0" + pad + "}").format(i) for i in range(n_names)]
 
 
 class Grouping:
@@ -409,8 +405,7 @@ class Grouping:
         groups = self.index.get_level_values(level).unique()
         groups = np.sort(np.array(groups))
         if isinstance(self.index, MultiIndex):
-            self.slices = [self.index.get_loc_level(x, level=level)[0]
-                           for x in groups]
+            self.slices = [self.index.get_loc_level(x, level=level)[0] for x in groups]
         else:
             self.slices = [self.index.get_loc(x) for x in groups]
 
@@ -481,8 +476,7 @@ class Grouping:
         if array.shape[0] != self.nobs:
             raise Exception("array does not have the same shape as index")
         dataframe = pd.DataFrame(array, index=self.index)
-        return self.transform_dataframe(dataframe, function, level=level,
-                                        **kwargs)
+        return self.transform_dataframe(dataframe, function, level=level, **kwargs)
 
     def transform_slices(self, array, function, level=0, **kwargs):
         """

@@ -1425,6 +1425,7 @@ def breakvar_heteroskedasticity_test(
 
         def pval_upper(test_statistics):
             return f.sf(test_statistics, numer_dof, denom_dof)
+
     else:
         from scipy.stats import chi2
 

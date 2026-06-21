@@ -1,6 +1,7 @@
 """
 Tools for working with dates
 """
+
 from statsmodels.compat.python import asstr, lmap, lrange, lzip
 
 import datetime
@@ -10,15 +11,15 @@ import numpy as np
 from pandas import to_datetime
 
 _quarter_to_day = {
-        "1" : (3, 31),
-        "2" : (6, 30),
-        "3" : (9, 30),
-        "4" : (12, 31),
-        "I" : (3, 31),
-        "II" : (6, 30),
-        "III" : (9, 30),
-        "IV" : (12, 31)
-        }
+    "1": (3, 31),
+    "2": (6, 30),
+    "3": (9, 30),
+    "4": (12, 31),
+    "I": (3, 31),
+    "II": (6, 30),
+    "III": (9, 30),
+    "IV": (12, 31),
+}
 
 
 _mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -140,15 +141,14 @@ def date_range_str(start, end=None, length=None):
         offset2 = length % annual_freq + (offset1 - 1)
     years = [str(yr) for yr in np.repeat(lrange(yr1 + 1, yr2), annual_freq)]
     # tack on first year
-    years = [(str(yr1))] * (annual_freq + 1 - offset1) + years
+    years = [str(yr1)] * (annual_freq + 1 - offset1) + years
     # tack on last year
-    years = years + [(str(yr2))] * offset2
+    years = years + [str(yr2)] * offset2
     if split != "a":
         offset = np.tile(np.arange(1, annual_freq + 1), yr2 - yr1 - 1).astype("S2")
         offset = np.r_[np.arange(offset1, annual_freq + 1).astype("S2"), offset]
         offset = np.r_[offset, np.arange(1, offset2 + 1).astype("S2")]
-        date_arr_range = ["".join([i, split, asstr(j)])
-                          for i, j in zip(years, offset)]
+        date_arr_range = ["".join([i, split, asstr(j)]) for i, j in zip(years, offset)]
     else:
         date_arr_range = years
     return date_arr_range

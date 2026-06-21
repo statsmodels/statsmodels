@@ -450,10 +450,8 @@ def gencrossentropy(px, py, pxpy, alpha=1, logbase=2, measure="T"):
 
 
 if __name__ == "__main__":
-    print(
-        'From Golan (2008) "Information and Entropy Econometrics -- A Review \
-and Synthesis'
-    )
+    print('From Golan (2008) "Information and Entropy Econometrics -- A Review \
+and Synthesis')
     print("Table 3.1")
     # Examples from Golan (2008)
 

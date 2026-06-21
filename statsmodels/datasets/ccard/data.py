@@ -1,4 +1,5 @@
 """Bill Greene's credit scoring data."""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

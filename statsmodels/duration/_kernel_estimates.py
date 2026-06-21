@@ -3,8 +3,7 @@ import numpy as np
 from statsmodels.duration.hazard_regression import PHReg
 
 
-def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
-                         dimred=True):
+def _kernel_cumincidence(time, status, exog, kfunc, freq_weights, dimred=True):
     """
     Calculates cumulative incidence functions using kernels.
 
@@ -95,8 +94,7 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
                 n_risk[i] = denom[ie]
 
             # Number of cause-specific deaths at each unique time.
-            d0 = np.bincount(rtime, weights=status0*kd[i],
-                             minlength=len(utime))
+            d0 = np.bincount(rtime, weights=status0 * kd[i], minlength=len(utime))
 
             # The cumulative incidence function probabilities.  Carry
             # forward once the effective sample size drops below 1.
@@ -178,7 +176,7 @@ def _kernel_survfunc(time, status, exog, kfunc, freq_weights):
     if freq_weights is not None:
         freq_weights = freq_weights / freq_weights.sum()
 
-    sprob = 0.
+    sprob = 0.0
     for i in range(n):
 
         kd = exog2d - exog2d[i, :]

@@ -23,7 +23,9 @@ def use_pandas(request):
 
 def gen_data(dim, use_pandas):
     if dim == 1:
-        out = np.empty(10,)
+        out = np.empty(
+            10,
+        )
         if use_pandas:
             out = pd.Series(out)
     elif dim == 2:

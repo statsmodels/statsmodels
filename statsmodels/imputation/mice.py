@@ -183,9 +183,7 @@ class MICEData:
     `data`.  The variable named `x1` has a conditional mean structure
     that includes an additional term for x2^2.
     {_mice_data_example_1}
-    """.format(
-        _mice_data_example_1=_mice_data_example_1
-    )
+    """.format(_mice_data_example_1=_mice_data_example_1)
 
     def __init__(
         self, data, perturbation_method="gaussian", k_pmm=20, history_callback=None
@@ -1185,9 +1183,7 @@ class MICE:
     Obtain a sequence of fitted analysis models without combining
     to obtain summary::
     {mice_example_2}
-    """.format(
-        mice_example_1=_mice_example_1, mice_example_2=_mice_example_2
-    )
+    """.format(mice_example_1=_mice_example_1, mice_example_2=_mice_example_2)
 
     def __init__(
         self, model_formula, model_class, data, n_skip=3, init_kwds=None, fit_kwds=None

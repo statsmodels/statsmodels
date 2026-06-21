@@ -882,9 +882,9 @@ def abline_plot(
 @Appender(
     _plot_influence_doc.format(
         extra_params_doc="results: object\n"
-                         "        Results for a fitted regression model.\n"
-                         "    influence: instance\n"
-                         "        The instance of Influence for model."
+        "        Results for a fitted regression model.\n"
+        "    influence: instance\n"
+        "        The instance of Influence for model."
     )
 )
 def _influence_plot(
@@ -965,7 +965,7 @@ def _influence_plot(
 @Appender(
     _plot_influence_doc.format(
         extra_params_doc="results : Results\n"
-                         "        Results for a fitted regression model."
+        "        Results for a fitted regression model."
     )
 )
 def influence_plot(

@@ -217,19 +217,23 @@ from IPython.display import display, Latex
 from pandas_datareader.data import DataReader
 
 # Get the raw data
-start = '1948-01'
-end = '2008-01'
-us_gnp = DataReader('GNPC96', 'fred', start=start, end=end)
-us_gnp_deflator = DataReader('GNPDEF', 'fred', start=start, end=end)
-us_monetary_base = DataReader('AMBSL', 'fred', start=start,
-                              end=end).resample('QS').mean()
-recessions = DataReader('USRECQ', 'fred', start=start,
-                        end=end).resample('QS').last().values[:, 0]
+start = "1948-01"
+end = "2008-01"
+us_gnp = DataReader("GNPC96", "fred", start=start, end=end)
+us_gnp_deflator = DataReader("GNPDEF", "fred", start=start, end=end)
+us_monetary_base = (
+    DataReader("AMBSL", "fred", start=start, end=end).resample("QS").mean()
+)
+recessions = (
+    DataReader("USRECQ", "fred", start=start, end=end)
+    .resample("QS")
+    .last()
+    .values[:, 0]
+)
 
 # Construct the dataframe
-dta = pd.concat(map(np.log, (us_gnp, us_gnp_deflator, us_monetary_base)),
-                axis=1)
-dta.columns = ['US GNP', 'US Prices', 'US monetary base']
+dta = pd.concat(map(np.log, (us_gnp, us_gnp_deflator, us_monetary_base)), axis=1)
+dta.columns = ["US GNP", "US Prices", "US monetary base"]
 dta.index.freq = dta.index.inferred_freq
 dates = dta.index._mpl_repr()
 
@@ -240,12 +244,9 @@ dates = dta.index._mpl_repr()
 ax = dta.plot(figsize=(13, 3))
 ylim = ax.get_ylim()
 ax.xaxis.grid()
-ax.fill_between(dates,
-                ylim[0] + 1e-5,
-                ylim[1] - 1e-5,
-                recessions,
-                facecolor='k',
-                alpha=0.1)
+ax.fill_between(
+    dates, ylim[0] + 1e-5, ylim[1] - 1e-5, recessions, facecolor="k", alpha=0.1
+)
 
 # ## Model
 #
@@ -275,10 +276,10 @@ ax.fill_between(dates,
 
 # Unrestricted model, using string specification
 unrestricted_model = {
-    'level': 'local linear trend',
-    'cycle': True,
-    'damped_cycle': True,
-    'stochastic_cycle': True
+    "level": "local linear trend",
+    "cycle": True,
+    "damped_cycle": True,
+    "stochastic_cycle": True,
 }
 
 # Unrestricted model, setting components directly
@@ -292,10 +293,10 @@ unrestricted_model = {
 
 # The restricted model forces a smooth trend
 restricted_model = {
-    'level': 'smooth trend',
-    'cycle': True,
-    'damped_cycle': True,
-    'stochastic_cycle': True
+    "level": "smooth trend",
+    "cycle": True,
+    "damped_cycle": True,
+    "stochastic_cycle": True,
 }
 
 # Restricted model, setting components directly
@@ -318,26 +319,26 @@ restricted_model = {
 # 5. Money, restricted model
 
 # Output
-output_mod = sm.tsa.UnobservedComponents(dta['US GNP'], **unrestricted_model)
-output_res = output_mod.fit(method='powell', disp=False)
+output_mod = sm.tsa.UnobservedComponents(dta["US GNP"], **unrestricted_model)
+output_res = output_mod.fit(method="powell", disp=False)
 
 # Prices
-prices_mod = sm.tsa.UnobservedComponents(dta['US Prices'],
-                                         **unrestricted_model)
-prices_res = prices_mod.fit(method='powell', disp=False)
+prices_mod = sm.tsa.UnobservedComponents(dta["US Prices"], **unrestricted_model)
+prices_res = prices_mod.fit(method="powell", disp=False)
 
-prices_restricted_mod = sm.tsa.UnobservedComponents(dta['US Prices'],
-                                                    **restricted_model)
-prices_restricted_res = prices_restricted_mod.fit(method='powell', disp=False)
+prices_restricted_mod = sm.tsa.UnobservedComponents(
+    dta["US Prices"], **restricted_model
+)
+prices_restricted_res = prices_restricted_mod.fit(method="powell", disp=False)
 
 # Money
-money_mod = sm.tsa.UnobservedComponents(dta['US monetary base'],
-                                        **unrestricted_model)
-money_res = money_mod.fit(method='powell', disp=False)
+money_mod = sm.tsa.UnobservedComponents(dta["US monetary base"], **unrestricted_model)
+money_res = money_mod.fit(method="powell", disp=False)
 
-money_restricted_mod = sm.tsa.UnobservedComponents(dta['US monetary base'],
-                                                   **restricted_model)
-money_restricted_res = money_restricted_mod.fit(method='powell', disp=False)
+money_restricted_mod = sm.tsa.UnobservedComponents(
+    dta["US monetary base"], **restricted_model
+)
+money_restricted_res = money_restricted_mod.fit(method="powell", disp=False)
 
 # Once we have fit these models, there are a variety of ways to display
 # the information. Looking at the model of US GNP, we can summarize the fit
@@ -356,7 +357,7 @@ print(output_res.summary())
 # plot of the observed data versus the one-step-ahead predictions of the
 # model to assess fit.
 
-fig = output_res.plot_components(legend_loc='lower right', figsize=(15, 9))
+fig = output_res.plot_components(legend_loc="lower right", figsize=(15, 9))
 
 # Finally, Harvey and Jaeger summarize the models in another way to
 # highlight the relative importances of the trend and cyclical components;
@@ -369,44 +370,62 @@ table_i = np.zeros((5, 6))
 
 start = dta.index[0]
 end = dta.index[-1]
-time_range = '%d:%d-%d:%d' % (start.year, start.quarter, end.year, end.quarter)
+time_range = "%d:%d-%d:%d" % (start.year, start.quarter, end.year, end.quarter)
 models = [
-    ('US GNP', time_range, 'None'),
-    ('US Prices', time_range, 'None'),
-    ('US Prices', time_range, r'$\sigma_\eta^2 = 0$'),
-    ('US monetary base', time_range, 'None'),
-    ('US monetary base', time_range, r'$\sigma_\eta^2 = 0$'),
+    ("US GNP", time_range, "None"),
+    ("US Prices", time_range, "None"),
+    ("US Prices", time_range, r"$\sigma_\eta^2 = 0$"),
+    ("US monetary base", time_range, "None"),
+    ("US monetary base", time_range, r"$\sigma_\eta^2 = 0$"),
 ]
 index = pd.MultiIndex.from_tuples(
-    models, names=['Series', 'Time range', 'Restrictions'])
+    models, names=["Series", "Time range", "Restrictions"]
+)
 parameter_symbols = [
-    r'$\sigma_\zeta^2$',
-    r'$\sigma_\eta^2$',
-    r'$\sigma_\kappa^2$',
-    r'$\rho$',
-    r'$2 \pi / \lambda_c$',
-    r'$\sigma_\varepsilon^2$',
+    r"$\sigma_\zeta^2$",
+    r"$\sigma_\eta^2$",
+    r"$\sigma_\kappa^2$",
+    r"$\rho$",
+    r"$2 \pi / \lambda_c$",
+    r"$\sigma_\varepsilon^2$",
 ]
 
 i = 0
-for res in (output_res, prices_res, prices_restricted_res, money_res,
-            money_restricted_res):
+for res in (
+    output_res,
+    prices_res,
+    prices_restricted_res,
+    money_res,
+    money_restricted_res,
+):
     if res.model.stochastic_level:
-        (sigma_irregular, sigma_level, sigma_trend, sigma_cycle,
-         frequency_cycle, damping_cycle) = res.params
+        (
+            sigma_irregular,
+            sigma_level,
+            sigma_trend,
+            sigma_cycle,
+            frequency_cycle,
+            damping_cycle,
+        ) = res.params
     else:
-        (sigma_irregular, sigma_level, sigma_cycle, frequency_cycle,
-         damping_cycle) = res.params
+        sigma_irregular, sigma_level, sigma_cycle, frequency_cycle, damping_cycle = (
+            res.params
+        )
         sigma_trend = np.nan
     period_cycle = 2 * np.pi / frequency_cycle
 
     table_i[i, :] = [
-        sigma_level * 1e7, sigma_trend * 1e7, sigma_cycle * 1e7, damping_cycle,
-        period_cycle, sigma_irregular * 1e7
+        sigma_level * 1e7,
+        sigma_trend * 1e7,
+        sigma_cycle * 1e7,
+        damping_cycle,
+        period_cycle,
+        sigma_irregular * 1e7,
     ]
     i += 1
 
-pd.set_option('float_format', lambda x: '%.4g' % np.round(x, 2)
-              if not np.isnan(x) else '-')
+pd.set_option(
+    "float_format", lambda x: "%.4g" % np.round(x, 2) if not np.isnan(x) else "-"
+)
 table_i = pd.DataFrame(table_i, index=index, columns=parameter_symbols)
 table_i

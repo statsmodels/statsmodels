@@ -25,16 +25,16 @@ from .family import (
 )
 
 __all__ = [
-           "Binomial",
-           "Family",
-           "Gamma",
-           "Gaussian",
-           "InverseGaussian",
-           "NegativeBinomial",
-           "Poisson",
-           "Tweedie",
-           "links",
-           "test",
+    "Binomial",
+    "Family",
+    "Gamma",
+    "Gaussian",
+    "InverseGaussian",
+    "NegativeBinomial",
+    "Poisson",
+    "Tweedie",
+    "links",
+    "test",
 ]
 
 test = PytestTester()

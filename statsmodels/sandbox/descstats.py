@@ -113,9 +113,7 @@ def descstats(data, cols=None, axis=0):
         Sign             |  M {:8.2f}   Pr >= |M|  <{:.4f}
         Signed Rank      |  S {:8.2f}   Pr >= |S|  <{:.4f}
 
-        """.format(
-            t, p_t, M, p_M, S, p_S
-        )
+        """.format(t, p_t, M, p_M, S, p_S)
         # Should this be part of a 'descstats'
         # in any event these should be split up, so that they can be called
         # individually and only returned together if someone calls summary

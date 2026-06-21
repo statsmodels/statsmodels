@@ -17,6 +17,7 @@ Hamilton, James D. 1994.
 Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
@@ -43,14 +44,18 @@ def get_model(univariate, missing=None, init=None):
             endog[:] = np.nan
 
         mod = mlemodel.MLEModel(endog, k_states=1, k_posdef=1)
-        mod["design", 0, 0] = 1.
+        mod["design", 0, 0] = 1.0
         mod["transition", 0, 0] = 0.5
-        mod["selection", 0, 0] = 1.
-        mod["state_cov", 0, 0] = 1.
-        mod["state_intercept", 0, 0] = 1.
+        mod["selection", 0, 0] = 1.0
+        mod["state_cov", 0, 0] = 1.0
+        mod["state_intercept", 0, 0] = 1.0
     else:
-        endog = np.array([[0.5, 1.2, -0.2, 0.3, -0.1, 0.4, 1.4, 0.9],
-                          [-0.2, -0.3, -0.1, 0.1, 0.01, 0.05, -0.13, -0.2]]).T
+        endog = np.array(
+            [
+                [0.5, 1.2, -0.2, 0.3, -0.1, 0.4, 1.4, 0.9],
+                [-0.2, -0.3, -0.1, 0.1, 0.01, 0.05, -0.13, -0.2],
+            ]
+        ).T
 
         if missing == "init":
             endog[0:2, :] = np.nan
@@ -62,18 +67,14 @@ def get_model(univariate, missing=None, init=None):
 
         mod = mlemodel.MLEModel(endog, k_states=3, k_posdef=2)
         mod["obs_intercept"] = np.array([0.5, 0.2])
-        mod["design"] = np.array([[0.1, -0.1, 0],
-                                  [0.2, 0.3, 0]])
-        mod["obs_cov"] = np.array([[5, -0.2],
-                                   [-0.2, 3.]])
+        mod["design"] = np.array([[0.1, -0.1, 0], [0.2, 0.3, 0]])
+        mod["obs_cov"] = np.array([[5, -0.2], [-0.2, 3.0]])
 
         mod["transition", 0, 0] = 1
-        mod["transition", 1:, 1:] = np.array([[0.5, -0.1],
-                                              [1., 0.]])
+        mod["transition", 1:, 1:] = np.array([[0.5, -0.1], [1.0, 0.0]])
         mod["selection", :2, :2] = np.eye(2)
-        mod["state_cov"] = np.array([[1.2, 0.2],
-                                     [0.2, 2.5]])
-        mod["state_intercept", :2] = np.array([1., -1.])
+        mod["state_cov"] = np.array([[1.2, 0.2], [0.2, 2.5]])
+        mod["state_intercept", :2] = np.array([1.0, -1.0])
 
     if init == "diffuse":
         mod.ssm.initialize_diffuse()
@@ -115,9 +116,15 @@ def check_filter_output(mod, periods, atol=0):
     assert_allclose(res_switch.scale, res_mv.scale)
     assert_allclose(res_switch.scale, res_uv.scale)
 
-    attrs = ["forecasts_error_diffuse_cov", "predicted_state",
-             "predicted_state_cov", "predicted_diffuse_state_cov",
-             "filtered_state", "filtered_state_cov", "llf_obs"]
+    attrs = [
+        "forecasts_error_diffuse_cov",
+        "predicted_state",
+        "predicted_state_cov",
+        "predicted_diffuse_state_cov",
+        "filtered_state",
+        "filtered_state_cov",
+        "llf_obs",
+    ]
     for attr in attrs:
         attr_mv = getattr(res_mv, attr)
         attr_uv = getattr(res_uv, attr)
@@ -171,10 +178,16 @@ def check_smoother_output(mod, periods, atol=1e-12):
 
     # Test attributes that are the same regardless of the univariate or
     # multivariate method
-    attrs = ["scaled_smoothed_estimator", "scaled_smoothed_estimator_cov",
-             "smoothed_state", "smoothed_state_cov", "smoothed_state_autocov",
-             "smoothed_state_disturbance", "smoothed_state_disturbance_cov",
-             "innovations_transition"]
+    attrs = [
+        "scaled_smoothed_estimator",
+        "scaled_smoothed_estimator_cov",
+        "smoothed_state",
+        "smoothed_state_cov",
+        "smoothed_state_autocov",
+        "smoothed_state_disturbance",
+        "smoothed_state_disturbance_cov",
+        "innovations_transition",
+    ]
     for attr in attrs:
         attr_mv = getattr(res_mv, attr)
         attr_uv = getattr(res_uv, attr)
@@ -186,8 +199,11 @@ def check_smoother_output(mod, periods, atol=1e-12):
         assert_allclose(attr_switch, attr_uv, atol=atol)
 
     # Test attributes that can differ for the univariate vs multivariate method
-    attrs = ["smoothing_error", "smoothed_measurement_disturbance",
-             "smoothed_measurement_disturbance_cov"]
+    attrs = [
+        "smoothing_error",
+        "smoothed_measurement_disturbance",
+        "smoothed_measurement_disturbance_cov",
+    ]
     for attr in attrs:
         attr_mv = getattr(res_mv, attr)
         attr_uv = getattr(res_uv, attr)
@@ -234,8 +250,7 @@ def test_basic(missing):
 
 @pytest.mark.parametrize("univariate", [True, False])
 @pytest.mark.parametrize("missing", [None, "init", "mixed", "all"])
-@pytest.mark.parametrize(
-    "init", ["stationary", "diffuse", "approximate_diffuse"])
+@pytest.mark.parametrize("init", ["stationary", "diffuse", "approximate_diffuse"])
 @pytest.mark.parametrize("periods", [np.s_[0], np.s_[4:6], np.s_[:]])
 def test_filter_output(univariate, missing, init, periods):
     # Test the output when the multivariate filter switches to the univariate
@@ -246,8 +261,7 @@ def test_filter_output(univariate, missing, init, periods):
 
 @pytest.mark.parametrize("univariate", [True, False])
 @pytest.mark.parametrize("missing", [None, "init", "mixed", "all"])
-@pytest.mark.parametrize("init",
-                         ["stationary", "diffuse", "approximate_diffuse"])
+@pytest.mark.parametrize("init", ["stationary", "diffuse", "approximate_diffuse"])
 @pytest.mark.parametrize("periods", [np.s_[0], np.s_[4:6], np.s_[:]])
 @pytest.mark.parametrize("option", [None, "alternate_timing"])
 def test_smoother_output(univariate, missing, init, periods, option):
@@ -272,26 +286,32 @@ def test_invalid_options():
     mod.initialize_known([0], [[0]])
 
     mod.ssm.set_inversion_method(0, solve_lu=True)
-    msg = ("Singular forecast error covariance matrix detected, but"
-           " multivariate filter cannot fall back to univariate"
-           " filter when the inversion method is set to anything"
-           " other than INVERT_UNIVARIATE or SOLVE_CHOLESKY.")
+    msg = (
+        "Singular forecast error covariance matrix detected, but"
+        " multivariate filter cannot fall back to univariate"
+        " filter when the inversion method is set to anything"
+        " other than INVERT_UNIVARIATE or SOLVE_CHOLESKY."
+    )
     with pytest.raises(NotImplementedError, match=msg):
         mod.ssm.filter()
 
     mod = get_model(univariate=True)
     mod.initialize_known([0], [[0]])
     mod.ssm.smooth_classical = True
-    msg = ("Cannot use classical smoothing when the multivariate filter has"
-           " fallen back to univariate filtering.")
+    msg = (
+        "Cannot use classical smoothing when the multivariate filter has"
+        " fallen back to univariate filtering."
+    )
     with pytest.raises(NotImplementedError, match=msg):
         mod.ssm.smooth()
 
     mod = get_model(univariate=True)
     mod.initialize_known([0], [[0]])
     mod.ssm.smooth_alternative = True
-    msg = ("Cannot use alternative smoothing when the multivariate filter has"
-           " fallen back to univariate filtering.")
+    msg = (
+        "Cannot use alternative smoothing when the multivariate filter has"
+        " fallen back to univariate filtering."
+    )
     with pytest.raises(NotImplementedError, match=msg):
         mod.ssm.smooth()
 
@@ -309,9 +329,14 @@ def test_sarimax(missing, periods, use_exact_diffuse):
     elif missing == "all":
         endog[:] = np.nan
 
-    mod = sarimax.SARIMAX(endog, order=(1, 1, 1), trend="t",
-                          seasonal_order=(1, 1, 1, 2), exog=exog,
-                          use_exact_diffuse=use_exact_diffuse)
+    mod = sarimax.SARIMAX(
+        endog,
+        order=(1, 1, 1),
+        trend="t",
+        seasonal_order=(1, 1, 1, 2),
+        exog=exog,
+        use_exact_diffuse=use_exact_diffuse,
+    )
     mod.update([0.1, 0.3, 0.5, 0.2, 0.05, -0.1, 1.0])
     check_filter_output(mod, periods, atol=1e-8)
     check_smoother_output(mod, periods)
@@ -331,8 +356,13 @@ def test_unobserved_components(missing, periods, use_exact_diffuse):
         endog[:] = np.nan
 
     mod = structural.UnobservedComponents(
-        endog, "llevel", exog=exog, seasonal=2, autoregressive=1,
-        use_exact_diffuse=use_exact_diffuse)
+        endog,
+        "llevel",
+        exog=exog,
+        seasonal=2,
+        autoregressive=1,
+        use_exact_diffuse=use_exact_diffuse,
+    )
     mod.update([1.0, 0.1, 0.3, 0.05, 0.15, 0.5])
     check_filter_output(mod, periods)
     check_smoother_output(mod, periods)
@@ -341,8 +371,12 @@ def test_unobserved_components(missing, periods, use_exact_diffuse):
 @pytest.mark.parametrize("missing", [None, "init", "mixed", "all"])
 @pytest.mark.parametrize("periods", [np.s_[0], np.s_[4:6], np.s_[:]])
 def test_varmax(missing, periods):
-    endog = np.array([[0.5, 1.2, -0.2, 0.3, -0.1, 0.4, 1.4, 0.9],
-                      [-0.2, -0.3, -0.1, 0.1, 0.01, 0.05, -0.13, -0.2]]).T
+    endog = np.array(
+        [
+            [0.5, 1.2, -0.2, 0.3, -0.1, 0.4, 1.4, 0.9],
+            [-0.2, -0.3, -0.1, 0.1, 0.01, 0.05, -0.13, -0.2],
+        ]
+    ).T
     exog = np.ones_like(endog[:, 0])
     if missing == "init":
         endog[0:2, :] = np.nan
@@ -361,8 +395,12 @@ def test_varmax(missing, periods):
 @pytest.mark.parametrize("missing", [None, "init", "mixed", "all"])
 @pytest.mark.parametrize("periods", [np.s_[0], np.s_[4:6], np.s_[:]])
 def test_dynamic_factor(missing, periods):
-    endog = np.array([[0.5, 1.2, -0.2, 0.3, -0.1, 0.4, 1.4, 0.9],
-                      [-0.2, -0.3, -0.1, 0.1, 0.01, 0.05, -0.13, -0.2]]).T
+    endog = np.array(
+        [
+            [0.5, 1.2, -0.2, 0.3, -0.1, 0.4, 1.4, 0.9],
+            [-0.2, -0.3, -0.1, 0.1, 0.01, 0.05, -0.13, -0.2],
+        ]
+    ).T
     exog = np.ones_like(endog[:, 0])
     if missing == "init":
         endog[0:2, :] = np.nan
@@ -372,8 +410,7 @@ def test_dynamic_factor(missing, periods):
     elif missing == "all":
         endog[:] = np.nan
 
-    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=2,
-                                       exog=exog)
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=2, exog=exog)
     mod.update([1.0, -0.5, 0.3, -0.1, 1.2, 2.3, 0.5, 0.1])
     check_filter_output(mod, periods)
     check_smoother_output(mod, periods)
@@ -415,28 +452,39 @@ def test_simulation_smoothing(missing):
     uf_uv = np.array(kfilter, copy=True)
     assert_allclose(uf_uv, 1)
     if missing == "mixed":
-        kfilter = (sim_switch._simulation_smoother
-                             .secondary_simulated_kfilter.univariate_filter)
+        kfilter = (
+            sim_switch._simulation_smoother.secondary_simulated_kfilter.univariate_filter
+        )
         uf_switch = np.array(kfilter, copy=True)
         assert_allclose(uf_switch[0], 1)
         assert_allclose(uf_switch[1:], 0)
-        kfilter = (sim_uv._simulation_smoother
-                         .secondary_simulated_kfilter.univariate_filter)
+        kfilter = (
+            sim_uv._simulation_smoother.secondary_simulated_kfilter.univariate_filter
+        )
         uf_uv = np.array(kfilter, copy=True)
         assert_allclose(uf_uv, 1)
 
     # Test all simulation smoothing output
-    attrs = ["generated_measurement_disturbance",
-             "generated_state_disturbance", "generated_obs", "generated_state",
-             "simulated_state", "simulated_measurement_disturbance",
-             "simulated_state_disturbance"]
+    attrs = [
+        "generated_measurement_disturbance",
+        "generated_state_disturbance",
+        "generated_obs",
+        "generated_state",
+        "simulated_state",
+        "simulated_measurement_disturbance",
+        "simulated_state_disturbance",
+    ]
     for attr in attrs:
         assert_allclose(getattr(sim_switch, attr), getattr(sim_uv, attr))
 
 
 def test_time_varying_model(reset_randomstate):
-    endog = np.array([[0.5, 1.2, -0.2, 0.3, -0.1, 0.4, 1.4, 0.9],
-                      [-0.2, -0.3, -0.1, 0.1, 0.01, 0.05, -0.13, -0.2]]).T
+    endog = np.array(
+        [
+            [0.5, 1.2, -0.2, 0.3, -0.1, 0.4, 1.4, 0.9],
+            [-0.2, -0.3, -0.1, 0.1, 0.01, 0.05, -0.13, -0.2],
+        ]
+    ).T
 
     # The basic model switches to the univariate method at observation 3,
     # because the forecast error covariance matrix will have a singular
@@ -445,7 +493,7 @@ def test_time_varying_model(reset_randomstate):
     mod_switch = TVSS(endog)
     mod_switch["design", ..., 3] = 0
     mod_switch["obs_cov", ..., 3] = 0
-    mod_switch["obs_cov", 1, 1, 3] = 1.
+    mod_switch["obs_cov", 1, 1, 3] = 1.0
     res_switch = mod_switch.ssm.smooth()
     kfilter = mod_switch.ssm._kalman_filter
     uf_switch = np.array(kfilter.univariate_filter, copy=True)
@@ -455,7 +503,7 @@ def test_time_varying_model(reset_randomstate):
     mod_uv = TVSS(endog)
     mod_uv["design", ..., 3] = 0
     mod_uv["obs_cov", ..., 3] = 0
-    mod_uv["obs_cov", 1, 1, 3] = 1.
+    mod_uv["obs_cov", 1, 1, 3] = 1.0
     mod_uv.ssm.filter_univariate = True
     res_uv = mod_uv.ssm.smooth()
     kfilter = mod_uv.ssm._kalman_filter
@@ -470,7 +518,7 @@ def test_time_varying_model(reset_randomstate):
     mod_mv = TVSS(endog_mv)
     mod_mv["design", ..., 3] = 0
     mod_mv["obs_cov", ..., 3] = 0
-    mod_mv["obs_cov", 1, 1, 3] = 1.
+    mod_mv["obs_cov", 1, 1, 3] = 1.0
     res_mv = mod_mv.ssm.smooth()
     kfilter = mod_mv.ssm._kalman_filter
     uf_mv = np.array(kfilter.univariate_filter, copy=True)

@@ -2,6 +2,7 @@
 
 author: Yichuan Liu
 """
+
 from statsmodels.compat.pandas import Substitution
 
 import numpy as np
@@ -92,8 +93,10 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
     nobs, k_endog = y.shape
     nobs1, k_exog = x.shape
     if nobs != nobs1:
-        raise ValueError("x(n=%d) and y(n=%d) should have the same number of "
-                         "rows!" % (nobs1, nobs))
+        raise ValueError(
+            "x(n=%d) and y(n=%d) should have the same number of "
+            "rows!" % (nobs1, nobs)
+        )
 
     # Calculate the matrices necessary for hypotheses testing
     df_resid = nobs - k_exog
@@ -116,7 +119,7 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
         u, s, v = svd(x, 0)
         if (s > tolerance).sum() < len(s):
             raise ValueError("Covariance of x singular!")
-        invs = 1. / s
+        invs = 1.0 / s
 
         params = v.T.dot(np.diag(invs)).dot(u.T).dot(y)
         inv_cov = v.T.dot(np.diag(np.power(invs, 2))).dot(v)
@@ -127,9 +130,7 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
         raise ValueError("%s is not a supported method!" % method)
 
 
-def multivariate_stats(eigenvals,
-                       r_err_sscp,
-                       r_contrast, df_resid, tolerance=1e-8):
+def multivariate_stats(eigenvals, r_err_sscp, r_contrast, df_resid, tolerance=1e-8):
     """
     For multivariate linear model Y = X * B
     Testing hypotheses
@@ -173,10 +174,13 @@ def multivariate_stats(eigenvals,
     n = (v - p - 1) / 2
 
     cols = ["Value", "Num DF", "Den DF", "F Value", "Pr > F"]
-    index = ["Wilks' lambda", "Pillai's trace",
-             "Hotelling-Lawley trace", "Roy's greatest root"]
-    results = pd.DataFrame(columns=cols,
-                           index=index)
+    index = [
+        "Wilks' lambda",
+        "Pillai's trace",
+        "Hotelling-Lawley trace",
+        "Roy's greatest root",
+    ]
+    results = pd.DataFrame(columns=cols, index=index)
 
     def fn(x):
         return np.real([x])[0]
@@ -189,14 +193,14 @@ def multivariate_stats(eigenvals,
 
     results.loc["Roy's greatest root", "Value"] = fn(eigv1.max())
 
-    r = v - (p - q + 1)/2
-    u = (p*q - 2) / 4
+    r = v - (p - q + 1) / 2
+    u = (p * q - 2) / 4
     df1 = p * q
-    if p*p + q*q - 5 > 0:
-        t = np.sqrt((p*p*q*q - 4) / (p*p + q*q - 5))
+    if p * p + q * q - 5 > 0:
+        t = np.sqrt((p * p * q * q - 4) / (p * p + q * q - 5))
     else:
         t = 1
-    df2 = r*t - 2*u
+    df2 = r * t - 2 * u
     lmd = results.loc["Wilks' lambda", "Value"]
     lmd = np.power(lmd, 1 / t)
     F = (1 - lmd) / lmd * df2 / df1
@@ -207,8 +211,8 @@ def multivariate_stats(eigenvals,
     results.loc["Wilks' lambda", "Pr > F"] = pval
 
     V = results.loc["Pillai's trace", "Value"]
-    df1 = s * (2*m + s + 1)
-    df2 = s * (2*n + s + 1)
+    df1 = s * (2 * m + s + 1)
+    df2 = s * (2 * n + s + 1)
     F = df2 / df1 * V / (s - V)
     results.loc["Pillai's trace", "Num DF"] = df1
     results.loc["Pillai's trace", "Den DF"] = df2
@@ -218,14 +222,14 @@ def multivariate_stats(eigenvals,
 
     U = results.loc["Hotelling-Lawley trace", "Value"]
     if n > 0:
-        b = (p + 2*n) * (q + 2*n) / 2 / (2*n + 1) / (n - 1)
+        b = (p + 2 * n) * (q + 2 * n) / 2 / (2 * n + 1) / (n - 1)
         df1 = p * q
-        df2 = 4 + (p*q + 2) / (b - 1)
+        df2 = 4 + (p * q + 2) / (b - 1)
         c = (df2 - 2) / 2 / n
         F = df2 / df1 * U / c
     else:
-        df1 = s * (2*m + s + 1)
-        df2 = s * (s*n + 1)
+        df1 = s * (2 * m + s + 1)
+        df2 = s * (s * n + 1)
         F = df2 / df1 / s * U
     results.loc["Hotelling-Lawley trace", "Num DF"] = df1
     results.loc["Hotelling-Lawley trace", "Den DF"] = df2
@@ -320,43 +324,53 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         elif len(hypo) == 4:
             name, L, M, C = hypo
         else:
-            raise ValueError("hypotheses must be a tuple of length 2, 3 or 4."
-                             " len(hypotheses)=%d" % len(hypo))
+            raise ValueError(
+                "hypotheses must be a tuple of length 2, 3 or 4."
+                " len(hypotheses)=%d" % len(hypo)
+            )
         mgr = FormulaManager()
         if any(isinstance(j, str) for j in L):
-            L = mgr.get_linear_constraints(L, variable_names=exog_names).constraint_matrix
+            L = mgr.get_linear_constraints(
+                L, variable_names=exog_names
+            ).constraint_matrix
         else:
             if not isinstance(L, np.ndarray) or len(L.shape) != 2:
                 raise ValueError("Contrast matrix L must be a 2-d array!")
             if L.shape[1] != k_xvar:
-                raise ValueError("Contrast matrix L should have the same "
-                                 "number of columns as exog! %d != %d" %
-                                 (L.shape[1], k_xvar))
+                raise ValueError(
+                    "Contrast matrix L should have the same "
+                    "number of columns as exog! %d != %d" % (L.shape[1], k_xvar)
+                )
         if M is None:
             M = np.eye(k_yvar)
         elif any(isinstance(j, str) for j in M):
-            M = mgr.get_linear_constraints(M, variable_names=endog_names).constraint_matrix.T
+            M = mgr.get_linear_constraints(
+                M, variable_names=endog_names
+            ).constraint_matrix.T
         elif M is not None:
             if not isinstance(M, np.ndarray) or len(M.shape) != 2:
                 raise ValueError("Transform matrix M must be a 2-d array!")
             if M.shape[0] != k_yvar:
-                raise ValueError("Transform matrix M should have the same "
-                                 "number of rows as the number of columns "
-                                 "of endog! %d != %d" %
-                                 (M.shape[0], k_yvar))
+                raise ValueError(
+                    "Transform matrix M should have the same "
+                    "number of rows as the number of columns "
+                    "of endog! %d != %d" % (M.shape[0], k_yvar)
+                )
         if C is None:
             C = np.zeros([L.shape[0], M.shape[1]])
         elif not isinstance(C, np.ndarray):
             raise ValueError("Constant matrix C must be a 2-d array!")
 
         if C.shape[0] != L.shape[0]:
-            raise ValueError("contrast L and constant C must have the same "
-                             "number of rows! %d!=%d"
-                             % (L.shape[0], C.shape[0]))
+            raise ValueError(
+                "contrast L and constant C must have the same "
+                "number of rows! %d!=%d" % (L.shape[0], C.shape[0])
+            )
         if C.shape[1] != M.shape[1]:
-            raise ValueError("transform M and constant C must have the same "
-                             "number of columns! %d!=%d"
-                             % (M.shape[1], C.shape[1]))
+            raise ValueError(
+                "transform M and constant C must have the same "
+                "number of columns! %d!=%d" % (M.shape[1], C.shape[1])
+            )
         E, H, q, df_resid = fn(L, M, C)
         EH = np.add(E, H)
         p = matrix_rank(EH)
@@ -365,9 +379,14 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         eigv2 = np.sort(eigvals(solve(EH, H)))
         stat_table = multivariate_stats(eigv2, p, q, df_resid)
 
-        results[name] = {"stat": stat_table, "contrast_L": L,
-                         "transform_M": M, "constant_C": C,
-                         "E": E, "H": H}
+        results[name] = {
+            "stat": stat_table,
+            "contrast_L": L,
+            "transform_M": M,
+            "constant_C": C,
+            "E": E,
+            "H": H,
+        }
     return results
 
 
@@ -396,6 +415,7 @@ class _MultivariateOLS(Model):
     exog : ndarray
         See Parameters.
     """
+
     _formula_max_endog = None
 
     def __init__(self, endog, exog, missing="none", hasconst=None, **kwargs):
@@ -412,8 +432,7 @@ class _MultivariateOLS(Model):
         self.data.cov_names = idx
 
     def fit(self, method="svd"):
-        self._fittedmod = _multivariate_ols_fit(
-            self.endog, self.exog, method=method)
+        self._fittedmod = _multivariate_ols_fit(self.endog, self.exog, method=method)
         return _MultivariateOLSResults(self)
 
 
@@ -421,9 +440,9 @@ class _MultivariateOLSResults(LikelihoodModelResults):
     """
     _MultivariateOLS results class
     """
+
     def __init__(self, fitted_mv_ols):
-        if (hasattr(fitted_mv_ols, "data") and
-                hasattr(fitted_mv_ols.data, "model_spec")):
+        if hasattr(fitted_mv_ols, "data") and hasattr(fitted_mv_ols.data, "model_spec"):
             self.model_spec = fitted_mv_ols.data.model_spec
         else:
             self.model_spec = None
@@ -515,8 +534,7 @@ class MultivariateLS(_MultivariateOLS):
     """
 
     def fit(self, method="svd", use_t=True):
-        _fittedmod = _multivariate_ols_fit(
-            self.endog, self.exog, method=method)
+        _fittedmod = _multivariate_ols_fit(self.endog, self.exog, method=method)
 
         params, df_resid, inv_cov, sscpr = _fittedmod
         normalized_cov_params = np.kron(sscpr, inv_cov) / df_resid
@@ -528,7 +546,7 @@ class MultivariateLS(_MultivariateOLS):
             scale=1,
             use_t=use_t,
             # extra kwargs are currently ignored
-            )
+        )
 
         res.df_resid = self.df_resid = df_resid
         res._fittedmod = _fittedmod
@@ -545,15 +563,16 @@ class MultivariateLS(_MultivariateOLS):
 
 
 class MultivariateLSResults(LikelihoodModelResults):
-    """Results for multivariate linear regression
-    """
+    """Results for multivariate linear regression"""
 
-    def __init__(self, model, params, normalized_cov_params=None, scale=1.,
-                 **kwargs):
-        super().__init__(model, params,
-                         normalized_cov_params=normalized_cov_params,
-                         scale=scale,
-                         **kwargs)
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.0, **kwargs):
+        super().__init__(
+            model,
+            params,
+            normalized_cov_params=normalized_cov_params,
+            scale=scale,
+            **kwargs,
+        )
 
         self.method = "Least Squares"
 
@@ -818,8 +837,9 @@ class MultivariateTestResults:
         df.index.set_names(["Effect", "Statistic"], inplace=True)
         return df
 
-    def summary(self, show_contrast_L=False, show_transform_M=False,
-                show_constant_C=False):
+    def summary(
+        self, show_contrast_L=False, show_transform_M=False, show_constant_C=False
+    ):
         """
         Summary of test results
 
@@ -845,13 +865,15 @@ class MultivariateTestResults:
             summ.add_df(df)
             if show_contrast_L:
                 summ.add_dict({key: " contrast L="})
-                df = pd.DataFrame(self.results[key]["contrast_L"],
-                                  columns=self.exog_names)
+                df = pd.DataFrame(
+                    self.results[key]["contrast_L"], columns=self.exog_names
+                )
                 summ.add_df(df)
             if show_transform_M:
                 summ.add_dict({key: " transform M="})
-                df = pd.DataFrame(self.results[key]["transform_M"],
-                                  index=self.endog_names)
+                df = pd.DataFrame(
+                    self.results[key]["transform_M"], index=self.endog_names
+                )
                 summ.add_df(df)
             if show_constant_C:
                 summ.add_dict({key: " constant C="})
@@ -863,11 +885,9 @@ class MultivariateTestResults:
 class MultivariateLSResultsWrapper(RegressionResultsWrapper):
     # copied and adapted from Multinomial wrapper
     _attrs = {"resid": "rows"}
-    _wrap_attrs = wrap.union_dicts(RegressionResultsWrapper._wrap_attrs,
-                                   _attrs)
+    _wrap_attrs = wrap.union_dicts(RegressionResultsWrapper._wrap_attrs, _attrs)
     _methods = {"conf_int": "multivariate_confint"}
-    _wrap_methods = wrap.union_dicts(RegressionResultsWrapper._wrap_methods,
-                                     _methods)
+    _wrap_methods = wrap.union_dicts(RegressionResultsWrapper._wrap_methods, _methods)
 
 
 wrap.populate_wrapper(MultivariateLSResultsWrapper, MultivariateLSResults)

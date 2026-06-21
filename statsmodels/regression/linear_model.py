@@ -30,6 +30,7 @@ R. Davidson and J.G. MacKinnon.  "Econometric Theory and Methods," Oxford,
 
 W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
+
 from __future__ import annotations
 
 from statsmodels.compat.numpy import inplace_reshape
@@ -1749,7 +1750,7 @@ class RegressionResults(base.LikelihoodModelResults):
             self.cov_type = "nonrobust"
             self.cov_kwds = {
                 "description": "Standard Errors assume that the covariance matrix of "
-                               "the errors is correctly specified."
+                "the errors is correctly specified."
             }
             if use_t is None:
                 use_t = True  # TODO: class default
@@ -3117,10 +3118,8 @@ class RegressionResults(base.LikelihoodModelResults):
         etext = []
 
         if not self.k_constant:
-            etext.append(
-                "R² is computed without centering (uncentered) since the \
-                model does not contain a constant."
-            )
+            etext.append("R² is computed without centering (uncentered) since the \
+                model does not contain a constant.")
         if hasattr(self, "cov_type"):
             etext.append(self.cov_kwds["description"])
         if self.model.exog.shape[0] < self.model.exog.shape[1]:
@@ -3129,20 +3128,14 @@ class RegressionResults(base.LikelihoodModelResults):
 
         # Warnings
         if eigvals[-1] < 1e-10:
-            warn = (
-                "The smallest eigenvalue is %6.3g. This might indicate that\
+            warn = "The smallest eigenvalue is %6.3g. This might indicate that\
                 there are strong multicollinearity problems or that the design\
-                matrix is singular."
-                % eigvals[-1]
-            )
+                matrix is singular." % eigvals[-1]
             etext.append(warn)
         elif condno > 1000:
-            warn = (
-                "The condition number is large, %6.3g. This might indicate\
+            warn = "The condition number is large, %6.3g. This might indicate\
                 that there are strong multicollinearity or other numerical\
-                problems."
-                % condno
-            )
+                problems." % condno
             etext.append(warn)
 
         if etext:

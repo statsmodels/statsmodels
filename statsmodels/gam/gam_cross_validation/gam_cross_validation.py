@@ -27,9 +27,9 @@ class BaseCV(with_metaclass(ABCMeta)):
         self.exog = exog
         self.endog = endog
         # TODO: cv_iterator.split only needs nobs from endog or exog
-        self.train_test_cv_indices = self.cv_iterator.split(self.exog,
-                                                            self.endog,
-                                                            label=None)
+        self.train_test_cv_indices = self.cv_iterator.split(
+            self.exog, self.endog, label=None
+        )
 
     def fit(self, **kwargs):
         # kwargs are the input values for the fit method of the
@@ -66,8 +66,14 @@ def _split_train_test_smoothers(x, smoothers, train_index, test_index):
 
         train_smoothers.append(
             UnivariateGenericSmoother(
-                train_x, train_basis, train_der_basis, train_der2_basis,
-                train_cov_der2, smoother.variable_name + " train"))
+                train_x,
+                train_basis,
+                train_der_basis,
+                train_der2_basis,
+                train_cov_der2,
+                smoother.variable_name + " train",
+            )
+        )
 
         test_basis = smoother.basis[test_index]
         test_der_basis = smoother.der_basis[test_index]
@@ -77,13 +83,17 @@ def _split_train_test_smoothers(x, smoothers, train_index, test_index):
 
         test_smoothers.append(
             UnivariateGenericSmoother(
-                test_x, test_basis, test_der_basis, train_der2_basis,
-                test_cov_der2, smoother.variable_name + " test"))
+                test_x,
+                test_basis,
+                test_der_basis,
+                train_der2_basis,
+                test_cov_der2,
+                smoother.variable_name + " test",
+            )
+        )
 
-    train_multivariate_smoothers = GenericSmoothers(x[train_index],
-                                                    train_smoothers)
-    test_multivariate_smoothers = GenericSmoothers(x[test_index],
-                                                   test_smoothers)
+    train_multivariate_smoothers = GenericSmoothers(x[train_index], train_smoothers)
+    test_multivariate_smoothers = GenericSmoothers(x[test_index], test_smoothers)
 
     return train_multivariate_smoothers, test_multivariate_smoothers
 
@@ -99,13 +109,12 @@ class MultivariateGAMCV(BaseCV):
         # TODO: super does not do anything with endog, exog, except get nobs
         # refactor to clean up what where `exog` and `exog_linear` is attached
         # exog is not used in super
-        super().__init__(
-            cv_iterator, endog, self.smoother.basis
-        )
+        super().__init__(cv_iterator, endog, self.smoother.basis)
 
     def _error(self, train_index, test_index, **kwargs):
         train_smoother, test_smoother = _split_train_test_smoothers(
-            self.smoother.x, self.smoother, train_index, test_index)
+            self.smoother.x, self.smoother, train_index, test_index
+        )
 
         endog_train = self.endog[train_index]
         endog_test = self.endog[test_index]
@@ -116,13 +125,18 @@ class MultivariateGAMCV(BaseCV):
             exog_linear_train = None
             exog_linear_test = None
 
-        gam = self.gam(endog_train, exog=exog_linear_train,
-                       smoother=train_smoother, alpha=self.alphas)
+        gam = self.gam(
+            endog_train,
+            exog=exog_linear_train,
+            smoother=train_smoother,
+            alpha=self.alphas,
+        )
         gam_res = gam.fit(**kwargs)
         # exog_linear_test and test_smoother.basis will be column_stacked
         #     but not transformed in predict
-        endog_est = gam_res.predict(exog_linear_test, test_smoother.basis,
-                                    transform=False)
+        endog_est = gam_res.predict(
+            exog_linear_test, test_smoother.basis, transform=False
+        )
 
         return self.cost(endog_test, endog_est)
 
@@ -144,18 +158,15 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
 
     def plot_path(self):
         from statsmodels.graphics.utils import _import_mpl
+
         plt = _import_mpl()
         plt.plot(self.alphas, self.cv_error, c="black")
-        plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std,
-                 c="blue")
-        plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std,
-                 c="blue")
+        plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std, c="blue")
+        plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std, c="blue")
 
         plt.plot(self.alphas, self.cv_error, "o", c="black")
-        plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std, "o",
-                 c="blue")
-        plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std, "o",
-                 c="blue")
+        plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std, "o", c="blue")
+        plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std, "o", c="blue")
 
         # TODO add return
 
@@ -189,19 +200,33 @@ class MultivariateGAMCVPath:
         self.endog = endog
         self.exog = exog
         self.cv_iterator = cv_iterator
-        self.cv_error = np.zeros(shape=(len(self.alphas_grid, )))
-        self.cv_std = np.zeros(shape=(len(self.alphas_grid, )))
+        self.cv_error = np.zeros(
+            shape=(
+                len(
+                    self.alphas_grid,
+                )
+            )
+        )
+        self.cv_std = np.zeros(
+            shape=(
+                len(
+                    self.alphas_grid,
+                )
+            )
+        )
         self.alpha_cv = None
 
     def fit(self, **kwargs):
         for i, alphas_i in enumerate(self.alphas_grid):
-            gam_cv = MultivariateGAMCV(smoother=self.smoother,
-                                       alphas=alphas_i,
-                                       gam=self.gam,
-                                       cost=self.cost,
-                                       endog=self.endog,
-                                       exog=self.exog,
-                                       cv_iterator=self.cv_iterator)
+            gam_cv = MultivariateGAMCV(
+                smoother=self.smoother,
+                alphas=alphas_i,
+                gam=self.gam,
+                cost=self.cost,
+                endog=self.endog,
+                exog=self.exog,
+                cv_iterator=self.cv_iterator,
+            )
             cv_err = gam_cv.fit(**kwargs)
             self.cv_error[i] = cv_err.mean()
             self.cv_std[i] = cv_err.std()

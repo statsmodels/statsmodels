@@ -90,11 +90,11 @@ class ForwardEffects(RegressionEffects):
             del vl[j]
             if self.pursuit:
                 for v in past:
-                    x -= np.dot(x, v)*v
+                    x -= np.dot(x, v) * v
                 past.append(x)
             rv = rv - np.dot(rv, x) * x
-        z1 = z[0:nvar//2]
-        z2 = z[nvar//2:]
+        z1 = z[0 : nvar // 2]
+        z2 = z[nvar // 2 :]
         st = np.where(z1 > z2, z1, z2) * np.sign(z1 - z2)
         return st
 
@@ -147,8 +147,7 @@ class RegModelEffects(RegressionEffects):
         Dictionary of keyword arguments for fit or fit_regularized
     """
 
-    def __init__(self, model_cls, regularized=False, model_kws=None,
-                 fit_kws=None):
+    def __init__(self, model_cls, regularized=False, model_kws=None, fit_kws=None):
         self.model_cls = model_cls
         self.regularized = regularized
         self.model_kws = model_kws if model_kws is not None else {}

@@ -51,8 +51,15 @@ class RLMDetS(Model):
 
     """
 
-    def __init__(self, endog, exog, norm=None, breakdown_point=0.5,
-                 col_indices=None, include_endog=False):
+    def __init__(
+        self,
+        endog,
+        exog,
+        norm=None,
+        breakdown_point=0.5,
+        col_indices=None,
+        include_endog=False,
+    ):
         super().__init__(endog, exog)
 
         if norm is None:
@@ -88,19 +95,18 @@ class RLMDetS(Model):
             return start_params_all
 
         starts = _get_detcov_startidx(
-            self.data_start, h, options_start=None, methods_cov="all")
+            self.data_start, h, options_start=None, methods_cov="all"
+        )
 
         start_params_all = [
             OLS(self.endog[idx], self.exog[idx]).fit().params
             for (idx, method) in starts
-            ]
+        ]
         return start_params_all
 
     def _fit_one(self, start_params, maxiter=100):
         mod = RLM(self.endog, self.exog, M=self.norm)
-        res = mod.fit(start_params=start_params,
-                      scale_est=self.mscale,
-                      maxiter=maxiter)
+        res = mod.fit(start_params=start_params, scale_est=self.mscale, maxiter=maxiter)
         return res
 
     def fit(self, h, maxiter=100, maxiter_step=5, start_params_extra=None):
@@ -115,7 +121,7 @@ class RLMDetS(Model):
                 scale=res_ii.scale,
                 params=res_ii.params,
                 method=ii,  # method  # TODO need start set method
-                )
+            )
 
         scale_all = np.array([i.scale for i in res.values()])
         scale_sorted = np.argsort(scale_all)
@@ -158,16 +164,25 @@ class RLMDetSMM(RLMDetS):
         S-estimator.
 
     """
-    def __init__(self, endog, exog, norm=None, efficiency=0.95,
-                 breakdown_point=0.5, col_indices=None, include_endog=False):
+
+    def __init__(
+        self,
+        endog,
+        exog,
+        norm=None,
+        efficiency=0.95,
+        breakdown_point=0.5,
+        col_indices=None,
+        include_endog=False,
+    ):
         super().__init__(
             endog,
             exog,
             norm=norm,
             breakdown_point=breakdown_point,
             col_indices=col_indices,
-            include_endog=include_endog
-            )
+            include_endog=include_endog,
+        )
 
         self.efficiency = efficiency
         if norm is None:
@@ -226,18 +241,13 @@ class RLMDetSMM(RLMDetS):
 
         mod_m = RLM(self.endog, self.exog, M=norm_m)
         res_mm = mod_m.fit(
-            start_params=start_params,
-            start_scale=start_scale,
-            update_scale=False
-            )
+            start_params=start_params, start_scale=start_scale, update_scale=False
+        )
 
         if not scale_binding:
             # we can compute this first and skip MM if scale decrease
             mod_sm = RLM(self.endog, self.exog, M=norm_m)
-            res_sm = mod_sm.fit(
-                start_params=start_params,
-                scale_est=self.mscale
-                )
+            res_sm = mod_sm.fit(start_params=start_params, scale_est=self.mscale)
 
         if not scale_binding and res_sm.scale < res_mm.scale:
             res = res_sm

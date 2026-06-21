@@ -4,6 +4,7 @@ Created on Fri Mar 09 16:00:27 2012
 
 Author: Josef Perktold
 """
+
 from statsmodels.compat.pandas import assert_series_equal
 
 from io import BytesIO
@@ -65,8 +66,7 @@ class RemoveDataPickle:
 
         if isinstance(pred1, pd.Series) and isinstance(pred2, pd.Series):
             assert_series_equal(pred1, pred2)
-        elif isinstance(pred1, pd.DataFrame) and isinstance(pred2,
-                                                            pd.DataFrame):
+        elif isinstance(pred1, pd.DataFrame) and isinstance(pred2, pd.DataFrame):
             assert pred1.equals(pred2)
         else:
             np.testing.assert_equal(pred2, pred1)
@@ -82,8 +82,7 @@ class RemoveDataPickle:
 
         if isinstance(pred1, pd.Series) and isinstance(pred3, pd.Series):
             assert_series_equal(pred1, pred3)
-        elif isinstance(pred1, pd.DataFrame) and isinstance(pred3,
-                                                            pd.DataFrame):
+        elif isinstance(pred1, pd.DataFrame) and isinstance(pred3, pd.DataFrame):
             assert pred1.equals(pred3)
         else:
             np.testing.assert_equal(pred3, pred1)
@@ -158,10 +157,8 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
         model = sm.Poisson(y_count, x)
 
         # use start_params to converge faster
-        start_params = np.array(
-            [0.75334818, 0.99425553, 1.00494724, 1.00247112])
-        self.results = model.fit(start_params=start_params, method="bfgs",
-                                 disp=0)
+        start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
+        self.results = model.fit(start_params=start_params, method="bfgs", disp=0)
 
         # TODO: temporary, fixed in main
         self.predict_kwds = dict(exposure=1, offset=0)
@@ -184,17 +181,16 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
         x = self.exog
         nobs = x.shape[0]
         np.random.seed(987689)
-        y_bin = (np.random.rand(nobs) < 1.0 / (
-                    1 + np.exp(x.sum(1) - x.mean()))).astype(int)
+        y_bin = (np.random.rand(nobs) < 1.0 / (1 + np.exp(x.sum(1) - x.mean()))).astype(
+            int
+        )
 
         # bug with default
         model = sm.Logit(y_bin, x)
 
         # use start_params to converge faster
-        start_params = np.array(
-            [-0.73403806, -1.00901514, -0.97754543, -0.95648212])
-        self.results = model.fit(start_params=start_params, method="bfgs",
-                                 disp=0)
+        start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
+        self.results = model.fit(start_params=start_params, method="bfgs", disp=0)
 
 
 class TestRemoveDataPickleRLM(RemoveDataPickle):
@@ -219,8 +215,7 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
     def test_cached_data_removed(self):
         res = self.results
         # fill data-like members of the cache
-        names = ["resid_response", "resid_deviance",
-                 "resid_pearson", "resid_anscombe"]
+        names = ["resid_response", "resid_deviance", "resid_pearson", "resid_anscombe"]
         for name in names:
             getattr(res, name)
         # check that the attributes are present before calling remove_data
@@ -264,8 +259,7 @@ class TestPickleFormula(RemoveDataPickle):
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
         cls.exog = pd.DataFrame(x, columns=["A", "B", "C"])
-        cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
-                              columns=cls.exog.columns)
+        cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)), columns=cls.exog.columns)
         cls.reduction_factor = 0.5
 
     def setup_method(self):
@@ -287,27 +281,25 @@ class TestPickleFormula2(RemoveDataPickle):
         data = np.random.randn(nobs, 4)
         data[:, 0] = data[:, 1:].sum(1)
         cls.data = pd.DataFrame(data, columns=["Y", "A", "B", "C"])
-        cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
-                              columns=cls.data.columns[1:])
+        cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)), columns=cls.data.columns[1:])
         cls.reduction_factor = 0.666
 
     def setup_method(self):
-        self.results = sm.OLS.from_formula("Y ~ A + B + C",
-                                           data=self.data).fit()
+        self.results = sm.OLS.from_formula("Y ~ A + B + C", data=self.data).fit()
 
 
 class TestPickleFormula3(TestPickleFormula2):
 
     def setup_method(self):
-        self.results = sm.OLS.from_formula("Y ~ A + B * C",
-                                           data=self.data).fit()
+        self.results = sm.OLS.from_formula("Y ~ A + B * C", data=self.data).fit()
 
 
 class TestPickleFormula4(TestPickleFormula2):
 
     def setup_method(self):
-        self.results = sm.OLS.from_formula("Y ~ np.log(abs(A) + 1) + B * C",
-                                           data=self.data).fit()
+        self.results = sm.OLS.from_formula(
+            "Y ~ np.log(abs(A) + 1) + B * C", data=self.data
+        ).fit()
 
 
 # we need log in module namespace for TestPickleFormula5
@@ -316,8 +308,9 @@ class TestPickleFormula4(TestPickleFormula2):
 class TestPickleFormula5(TestPickleFormula2):
 
     def setup_method(self):
-        self.results = sm.OLS.from_formula("Y ~ log(abs(A) + 1) + B * C",
-                                           data=self.data).fit()
+        self.results = sm.OLS.from_formula(
+            "Y ~ log(abs(A) + 1) + B * C", data=self.data
+        ).fit()
 
 
 class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):

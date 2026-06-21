@@ -4,6 +4,7 @@ SARIMAX parameters class.
 Author: Chad Fulton
 License: BSD-3
 """
+
 import numpy as np
 from numpy.polynomial import Polynomial
 import pandas as pd
@@ -73,7 +74,8 @@ class SARIMAXParams:
 
         # Cache for holding parameter values
         self._params_split = spec.split_params(
-            np.zeros(self.k_params) * np.nan, allow_infnan=True)
+            np.zeros(self.k_params) * np.nan, allow_infnan=True
+        )
         self._params = None
 
     @property
@@ -86,7 +88,8 @@ class SARIMAXParams:
         if np.isscalar(value):
             value = [value] * self.k_exog_params
         self._params_split["exog_params"] = validate_basic(
-            value, self.k_exog_params, title="exogenous coefficients")
+            value, self.k_exog_params, title="exogenous coefficients"
+        )
         self._params = None
 
     @property
@@ -99,7 +102,8 @@ class SARIMAXParams:
         if np.isscalar(value):
             value = [value] * self.k_ar_params
         self._params_split["ar_params"] = validate_basic(
-            value, self.k_ar_params, title="AR coefficients")
+            value, self.k_ar_params, title="AR coefficients"
+        )
         self._params = None
 
     @property
@@ -116,8 +120,7 @@ class SARIMAXParams:
         # Convert from the polynomial to the parameters, and set that way
         if isinstance(value, Polynomial):
             value = value.coef
-        value = validate_basic(value, self.spec.max_ar_order + 1,
-                               title="AR polynomial")
+        value = validate_basic(value, self.spec.max_ar_order + 1, title="AR polynomial")
         if value[0] != 1:
             raise ValueError("AR polynomial constant must be equal to 1.")
         ar_params = []
@@ -125,9 +128,11 @@ class SARIMAXParams:
             if i in self.spec.ar_lags:
                 ar_params.append(-value[i])
             elif value[i] != 0:
-                raise ValueError("AR polynomial includes non-zero values"
-                                 " for lags that are excluded in the"
-                                 " specification.")
+                raise ValueError(
+                    "AR polynomial includes non-zero values"
+                    " for lags that are excluded in the"
+                    " specification."
+                )
         self.ar_params = ar_params
 
     @property
@@ -140,7 +145,8 @@ class SARIMAXParams:
         if np.isscalar(value):
             value = [value] * self.k_ma_params
         self._params_split["ma_params"] = validate_basic(
-            value, self.k_ma_params, title="MA coefficients")
+            value, self.k_ma_params, title="MA coefficients"
+        )
         self._params = None
 
     @property
@@ -157,8 +163,7 @@ class SARIMAXParams:
         # Convert from the polynomial to the parameters, and set that way
         if isinstance(value, Polynomial):
             value = value.coef
-        value = validate_basic(value, self.spec.max_ma_order + 1,
-                               title="MA polynomial")
+        value = validate_basic(value, self.spec.max_ma_order + 1, title="MA polynomial")
         if value[0] != 1:
             raise ValueError("MA polynomial constant must be equal to 1.")
         ma_params = []
@@ -166,9 +171,11 @@ class SARIMAXParams:
             if i in self.spec.ma_lags:
                 ma_params.append(value[i])
             elif value[i] != 0:
-                raise ValueError("MA polynomial includes non-zero values"
-                                 " for lags that are excluded in the"
-                                 " specification.")
+                raise ValueError(
+                    "MA polynomial includes non-zero values"
+                    " for lags that are excluded in the"
+                    " specification."
+                )
         self.ma_params = ma_params
 
     @property
@@ -181,7 +188,8 @@ class SARIMAXParams:
         if np.isscalar(value):
             value = [value] * self.k_seasonal_ar_params
         self._params_split["seasonal_ar_params"] = validate_basic(
-            value, self.k_seasonal_ar_params, title="seasonal AR coefficients")
+            value, self.k_seasonal_ar_params, title="seasonal AR coefficients"
+        )
         self._params = None
 
     @property
@@ -194,8 +202,12 @@ class SARIMAXParams:
             expanded = np.zeros(self.spec.max_seasonal_ar_order)
             ix = np.array(self.spec.seasonal_ar_lags, dtype=int) - 1
             expanded[ix] = -self._params_split["seasonal_ar_params"]
-            coef = np.r_[1, np.pad(np.reshape(expanded, (-1, 1)),
-                                   [(0, 0), (s - 1, 0)], "constant").flatten()]
+            coef = np.r_[
+                1,
+                np.pad(
+                    np.reshape(expanded, (-1, 1)), [(0, 0), (s - 1, 0)], "constant"
+                ).flatten(),
+            ]
         return Polynomial(coef)
 
     @seasonal_ar_poly.setter
@@ -205,8 +217,11 @@ class SARIMAXParams:
         # Convert from the polynomial to the parameters, and set that way
         if isinstance(value, Polynomial):
             value = value.coef
-        value = validate_basic(value, 1 + s * self.spec.max_seasonal_ar_order,
-                               title="seasonal AR polynomial")
+        value = validate_basic(
+            value,
+            1 + s * self.spec.max_seasonal_ar_order,
+            title="seasonal AR polynomial",
+        )
         if value[0] != 1:
             raise ValueError("Polynomial constant must be equal to 1.")
         seasonal_ar_params = []
@@ -214,9 +229,11 @@ class SARIMAXParams:
             if i in self.spec.seasonal_ar_lags:
                 seasonal_ar_params.append(-value[s * i])
             elif value[s * i] != 0:
-                raise ValueError("AR polynomial includes non-zero values"
-                                 " for lags that are excluded in the"
-                                 " specification.")
+                raise ValueError(
+                    "AR polynomial includes non-zero values"
+                    " for lags that are excluded in the"
+                    " specification."
+                )
         self.seasonal_ar_params = seasonal_ar_params
 
     @property
@@ -229,7 +246,8 @@ class SARIMAXParams:
         if np.isscalar(value):
             value = [value] * self.k_seasonal_ma_params
         self._params_split["seasonal_ma_params"] = validate_basic(
-            value, self.k_seasonal_ma_params, title="seasonal MA coefficients")
+            value, self.k_seasonal_ma_params, title="seasonal MA coefficients"
+        )
         self._params = None
 
     @property
@@ -242,8 +260,12 @@ class SARIMAXParams:
             expanded = np.zeros(self.spec.max_seasonal_ma_order)
             ix = np.array(self.spec.seasonal_ma_lags, dtype=int) - 1
             expanded[ix] = self._params_split["seasonal_ma_params"]
-            coef = np.r_[1, np.pad(np.reshape(expanded, (-1, 1)),
-                                   [(0, 0), (s - 1, 0)], "constant").flatten()]
+            coef = np.r_[
+                1,
+                np.pad(
+                    np.reshape(expanded, (-1, 1)), [(0, 0), (s - 1, 0)], "constant"
+                ).flatten(),
+            ]
         return Polynomial(coef)
 
     @seasonal_ma_poly.setter
@@ -253,8 +275,11 @@ class SARIMAXParams:
         # Convert from the polynomial to the parameters, and set that way
         if isinstance(value, Polynomial):
             value = value.coef
-        value = validate_basic(value, 1 + s * self.spec.max_seasonal_ma_order,
-                               title="seasonal MA polynomial",)
+        value = validate_basic(
+            value,
+            1 + s * self.spec.max_seasonal_ma_order,
+            title="seasonal MA polynomial",
+        )
         if value[0] != 1:
             raise ValueError("Polynomial constant must be equal to 1.")
         seasonal_ma_params = []
@@ -262,9 +287,11 @@ class SARIMAXParams:
             if i in self.spec.seasonal_ma_lags:
                 seasonal_ma_params.append(value[s * i])
             elif value[s * i] != 0:
-                raise ValueError("MA polynomial includes non-zero values"
-                                 " for lags that are excluded in the"
-                                 " specification.")
+                raise ValueError(
+                    "MA polynomial includes non-zero values"
+                    " for lags that are excluded in the"
+                    " specification."
+                )
         self.seasonal_ma_params = seasonal_ma_params
 
     @property
@@ -276,7 +303,8 @@ class SARIMAXParams:
     def sigma2(self, params):
         length = int(not self.spec.concentrate_scale)
         self._params_split["sigma2"] = validate_basic(
-            params, length, title="sigma2").item()
+            params, length, title="sigma2"
+        ).item()
         self._params = None
 
     @property
@@ -319,10 +347,12 @@ class SARIMAXParams:
     @property
     def is_stationary(self):
         """(bool) Is the reduced autoregressive lag poylnomial stationary."""
-        validate_basic(self.ar_params, self.k_ar_params,
-                       title="AR coefficients")
-        validate_basic(self.seasonal_ar_params, self.k_seasonal_ar_params,
-                       title="seasonal AR coefficients")
+        validate_basic(self.ar_params, self.k_ar_params, title="AR coefficients")
+        validate_basic(
+            self.seasonal_ar_params,
+            self.k_seasonal_ar_params,
+            title="seasonal AR coefficients",
+        )
 
         ar_stationary = True
         seasonal_ar_stationary = True
@@ -337,10 +367,12 @@ class SARIMAXParams:
     def is_invertible(self):
         """(bool) Is the reduced moving average lag poylnomial invertible."""
         # Short-circuit if there is no MA component
-        validate_basic(self.ma_params, self.k_ma_params,
-                       title="MA coefficients")
-        validate_basic(self.seasonal_ma_params, self.k_seasonal_ma_params,
-                       title="seasonal MA coefficients")
+        validate_basic(self.ma_params, self.k_ma_params, title="MA coefficients")
+        validate_basic(
+            self.seasonal_ma_params,
+            self.k_seasonal_ma_params,
+            title="seasonal MA coefficients",
+        )
 
         ma_stationary = True
         seasonal_ma_stationary = True
@@ -386,11 +418,9 @@ class SARIMAXParams:
         if self.k_ma_params:
             components.append("ma=%s" % str(self.ma_params))
         if self.k_seasonal_ar_params:
-            components.append("seasonal_ar=%s" %
-                              str(self.seasonal_ar_params))
+            components.append("seasonal_ar=%s" % str(self.seasonal_ar_params))
         if self.k_seasonal_ma_params:
-            components.append("seasonal_ma=%s" %
-                              str(self.seasonal_ma_params))
+            components.append("seasonal_ma=%s" % str(self.seasonal_ma_params))
         if not self.spec.concentrate_scale:
             components.append("sigma2=%s" % self.sigma2)
         return "SARIMAXParams(%s)" % ", ".join(components)

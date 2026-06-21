@@ -20,7 +20,6 @@
 ------------------------------------------------------------------------------
 """
 
-
 # From Stata using Longley dataset as in the test and example for GLM
 """
 . glm totemp gnpdefl gnp unemp armed pop year

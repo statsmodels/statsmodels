@@ -62,10 +62,10 @@ class TestAnalyticRotation(unittest.TestCase):
         0.58020   0.46189
         0.63656   0.35255
         """)
-        assert (np.allclose(L, L_required, atol=1e-05))
+        assert np.allclose(L, L_required, atol=1e-05)
         T = target_rotation(A, H, full_rank=True)
         L = A.dot(T)
-        assert (np.allclose(L, L_required, atol=1e-05))
+        assert np.allclose(L, L_required, atol=1e-05)
 
     def test_orthogonal_target(self):
         """
@@ -98,7 +98,7 @@ class TestAnalyticRotation(unittest.TestCase):
 
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method="orthogonal")
         T_analytic = target_rotation(A, H)
-        assert (np.allclose(T, T_analytic, atol=1e-05))
+        assert np.allclose(T, T_analytic, atol=1e-05)
 
 
 class TestGPARotation(unittest.TestCase):
@@ -290,16 +290,22 @@ class TestGPARotation(unittest.TestCase):
         0.19801   0.71468
         0.30786   0.65933
         """)
-        assert (np.allclose(table, table_required, atol=1e-05))
-        assert (np.allclose(L, L_required, atol=1e-05))
+        assert np.allclose(table, table_required, atol=1e-05)
+        assert np.allclose(L, L_required, atol=1e-05)
         # oblimin criterion gives same result
 
         def vgQ(L=None, A=None, T=None):
-            return oblimin_objective(L=L, A=A, T=T, gamma=0, rotation_method="orthogonal", return_gradient=True)
+            return oblimin_objective(
+                L=L,
+                A=A,
+                T=T,
+                gamma=0,
+                rotation_method="orthogonal",
+                return_gradient=True,
+            )
 
-        L_oblimin, phi2, T2, table2 = GPA(A, vgQ=vgQ,
-                                          rotation_method="orthogonal")
-        assert (np.allclose(L, L_oblimin, atol=1e-05))
+        L_oblimin, phi2, T2, table2 = GPA(A, vgQ=vgQ, rotation_method="orthogonal")
+        assert np.allclose(L, L_oblimin, atol=1e-05)
         # derivative free quartimax
         out = self.get_quartimax_example_derivative_free()
         A, table_required, L_required = out
@@ -308,8 +314,8 @@ class TestGPARotation(unittest.TestCase):
             return orthomax_objective(L=L, A=A, T=T, gamma=0, return_gradient=False)
 
         L, phi, T, table = GPA(A, ff=ff, rotation_method="orthogonal")
-        assert (np.allclose(table, table_required, atol=1e-05))
-        assert (np.allclose(L, L_required, atol=1e-05))
+        assert np.allclose(table, table_required, atol=1e-05)
+        assert np.allclose(L, L_required, atol=1e-05)
 
     def test_equivalence_orthomax_oblimin(self):
         """
@@ -323,29 +329,39 @@ class TestGPARotation(unittest.TestCase):
         def vgQ(L=None, A=None, T=None):
             return orthomax_objective(L=L, A=A, T=T, gamma=gamma, return_gradient=True)
 
-        L_orthomax, phi, T, table = GPA(
-            A, vgQ=vgQ, rotation_method="orthogonal")
+        L_orthomax, phi, T, table = GPA(A, vgQ=vgQ, rotation_method="orthogonal")
 
         def vgQ(L=None, A=None, T=None):
-            return oblimin_objective(L=L, A=A, T=T, gamma=gamma, rotation_method="orthogonal", return_gradient=True)
+            return oblimin_objective(
+                L=L,
+                A=A,
+                T=T,
+                gamma=gamma,
+                rotation_method="orthogonal",
+                return_gradient=True,
+            )
 
-        L_oblimin, phi2, T2, table2 = GPA(A, vgQ=vgQ,
-                                          rotation_method="orthogonal")
-        assert (np.allclose(L_orthomax, L_oblimin, atol=1e-05))
+        L_oblimin, phi2, T2, table2 = GPA(A, vgQ=vgQ, rotation_method="orthogonal")
+        assert np.allclose(L_orthomax, L_oblimin, atol=1e-05)
         gamma = 1  # varimax
 
         def vgQ(L=None, A=None, T=None):
             return orthomax_objective(L=L, A=A, T=T, gamma=gamma, return_gradient=True)
 
-        L_orthomax, phi, T, table = GPA(
-            A, vgQ=vgQ, rotation_method="orthogonal")
+        L_orthomax, phi, T, table = GPA(A, vgQ=vgQ, rotation_method="orthogonal")
 
         def vgQ(L=None, A=None, T=None):
-            return oblimin_objective(L=L, A=A, T=T, gamma=gamma, rotation_method="orthogonal", return_gradient=True)
+            return oblimin_objective(
+                L=L,
+                A=A,
+                T=T,
+                gamma=gamma,
+                rotation_method="orthogonal",
+                return_gradient=True,
+            )
 
-        L_oblimin, phi2, T2, table2 = GPA(
-            A, vgQ=vgQ, rotation_method="orthogonal")
-        assert (np.allclose(L_orthomax, L_oblimin, atol=1e-05))
+        L_oblimin, phi2, T2, table2 = GPA(A, vgQ=vgQ, rotation_method="orthogonal")
+        assert np.allclose(L_orthomax, L_oblimin, atol=1e-05)
 
     def test_orthogonal_target(self):
         """
@@ -390,15 +406,15 @@ class TestGPARotation(unittest.TestCase):
         0.58020   0.46189
         0.63656   0.35255
         """)
-        assert (np.allclose(table, table_required, atol=1e-05))
-        assert (np.allclose(L, L_required, atol=1e-05))
+        assert np.allclose(table, table_required, atol=1e-05)
+        assert np.allclose(L, L_required, atol=1e-05)
 
         def ff(L=None, A=None, T=None):
             return ff_target(H, L=L, A=A, T=T)
 
         L2, phi, T2, table = GPA(A, ff=ff, rotation_method="orthogonal")
-        assert (np.allclose(L, L2, atol=1e-05))
-        assert (np.allclose(T, T2, atol=1e-05))
+        assert np.allclose(L, L2, atol=1e-05)
+        assert np.allclose(T, T2, atol=1e-05)
 
         def vgQ(L=None, A=None, T=None):
             return vgQ_target(H, L=L, A=A, T=T, rotation_method="oblique")
@@ -409,8 +425,8 @@ class TestGPARotation(unittest.TestCase):
             return ff_target(H, L=L, A=A, T=T, rotation_method="oblique")
 
         L2, phi, T2, table = GPA(A, ff=ff, rotation_method="oblique")
-        assert (np.allclose(L, L2, atol=1e-05))
-        assert (np.allclose(T, T2, atol=1e-05))
+        assert np.allclose(L, L2, atol=1e-05)
+        assert np.allclose(T, T2, atol=1e-05)
 
     def test_orthogonal_partial_target(self):
         """
@@ -466,15 +482,15 @@ class TestGPARotation(unittest.TestCase):
         0.57565   0.46754
         0.63308   0.35876
         """)
-        assert (np.allclose(table, table_required, atol=1e-05))
-        assert (np.allclose(L, L_required, atol=1e-05))
+        assert np.allclose(table, table_required, atol=1e-05)
+        assert np.allclose(L, L_required, atol=1e-05)
 
         def ff(L=None, A=None, T=None):
             return ff_partial_target(H, W, L=L, A=A, T=T)
 
         L2, phi, T2, table = GPA(A, ff=ff, rotation_method="orthogonal")
-        assert (np.allclose(L, L2, atol=1e-05))
-        assert (np.allclose(T, T2, atol=1e-05))
+        assert np.allclose(L, L2, atol=1e-05)
+        assert np.allclose(T, T2, atol=1e-05)
 
     def test_oblimin(self):
         # quartimin
@@ -484,35 +500,46 @@ class TestGPARotation(unittest.TestCase):
             return oblimin_objective(L=L, A=A, T=T, gamma=0, rotation_method="oblique")
 
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method="oblique")
-        assert (np.allclose(table, table_required, atol=1e-05))
-        assert (np.allclose(L, L_required, atol=1e-05))
+        assert np.allclose(table, table_required, atol=1e-05)
+        assert np.allclose(L, L_required, atol=1e-05)
         # quartimin derivative free
 
         def ff(L=None, A=None, T=None):
-            return oblimin_objective(L=L, A=A, T=T, gamma=0, rotation_method="oblique", return_gradient=False)
+            return oblimin_objective(
+                L=L, A=A, T=T, gamma=0, rotation_method="oblique", return_gradient=False
+            )
 
         L, phi, T, table = GPA(A, ff=ff, rotation_method="oblique")
-        assert (np.allclose(L, L_required, atol=1e-05))
-        assert (np.allclose(table, table_required, atol=1e-05))
+        assert np.allclose(L, L_required, atol=1e-05)
+        assert np.allclose(table, table_required, atol=1e-05)
         # biquartimin
         A, table_required, L_required = self.get_biquartimin_example()
 
         def vgQ(L=None, A=None, T=None):
-            return oblimin_objective(L=L, A=A, T=T, gamma=1 / 2, rotation_method="oblique")
+            return oblimin_objective(
+                L=L, A=A, T=T, gamma=1 / 2, rotation_method="oblique"
+            )
 
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method="oblique")
-        assert (np.allclose(table, table_required, atol=1e-05))
-        assert (np.allclose(L, L_required, atol=1e-05))
+        assert np.allclose(table, table_required, atol=1e-05)
+        assert np.allclose(L, L_required, atol=1e-05)
         # quartimin derivative free
         out = self.get_biquartimin_example_derivative_free()
         A, table_required, L_required = out
 
         def ff(L=None, A=None, T=None):
-            return oblimin_objective(L=L, A=A, T=T, gamma=1 / 2, rotation_method="oblique", return_gradient=False)
+            return oblimin_objective(
+                L=L,
+                A=A,
+                T=T,
+                gamma=1 / 2,
+                rotation_method="oblique",
+                return_gradient=False,
+            )
 
         L, phi, T, table = GPA(A, ff=ff, rotation_method="oblique")
-        assert (np.allclose(L, L_required, atol=1e-05))
-        assert (np.allclose(table, table_required, atol=1e-05))
+        assert np.allclose(L, L_required, atol=1e-05)
+        assert np.allclose(table, table_required, atol=1e-05)
 
     def test_CF(self):
         # quartimax
@@ -520,17 +547,31 @@ class TestGPARotation(unittest.TestCase):
         A, table_required, L_required = out
 
         def vgQ(L=None, A=None, T=None):
-            return CF_objective(L=L, A=A, T=T, kappa=0, rotation_method="orthogonal", return_gradient=True)
+            return CF_objective(
+                L=L,
+                A=A,
+                T=T,
+                kappa=0,
+                rotation_method="orthogonal",
+                return_gradient=True,
+            )
 
         L, phi, T, table = GPA(A, vgQ=vgQ, rotation_method="orthogonal")
-        assert (np.allclose(L, L_required, atol=1e-05))
+        assert np.allclose(L, L_required, atol=1e-05)
         # quartimax derivative free
 
         def ff(L=None, A=None, T=None):
-            return CF_objective(L=L, A=A, T=T, kappa=0, rotation_method="orthogonal", return_gradient=False)
+            return CF_objective(
+                L=L,
+                A=A,
+                T=T,
+                kappa=0,
+                rotation_method="orthogonal",
+                return_gradient=False,
+            )
 
         L, phi, T, table = GPA(A, ff=ff, rotation_method="orthogonal")
-        assert (np.allclose(L, L_required, atol=1e-05))
+        assert np.allclose(L, L_required, atol=1e-05)
         # varimax
         p, k = A.shape
 
@@ -540,16 +581,30 @@ class TestGPARotation(unittest.TestCase):
         L_vm, phi, T, table = GPA(A, vgQ=vgQ, rotation_method="orthogonal")
 
         def vgQ(L=None, A=None, T=None):
-            return CF_objective(L=L, A=A, T=T, kappa=1 / p, rotation_method="orthogonal", return_gradient=True)
+            return CF_objective(
+                L=L,
+                A=A,
+                T=T,
+                kappa=1 / p,
+                rotation_method="orthogonal",
+                return_gradient=True,
+            )
 
         L_CF, phi, T, table = GPA(A, vgQ=vgQ, rotation_method="orthogonal")
 
         def ff(L=None, A=None, T=None):
-            return CF_objective(L=L, A=A, T=T, kappa=1 / p, rotation_method="orthogonal", return_gradient=False)
+            return CF_objective(
+                L=L,
+                A=A,
+                T=T,
+                kappa=1 / p,
+                rotation_method="orthogonal",
+                return_gradient=False,
+            )
 
         L_CF_df, phi, T, table = GPA(A, ff=ff, rotation_method="orthogonal")
-        assert (np.allclose(L_vm, L_CF, atol=1e-05))
-        assert (np.allclose(L_CF, L_CF_df, atol=1e-05))
+        assert np.allclose(L_vm, L_CF, atol=1e-05)
+        assert np.allclose(L_CF, L_CF_df, atol=1e-05)
 
 
 class TestWrappers(unittest.TestCase):
@@ -597,16 +652,17 @@ class TestWrappers(unittest.TestCase):
 
     def _test_template(self, method, *method_args, **algorithms):
         A = self.get_A()
-        algorithm1 = "gpa" if "algorithm1" not in algorithms else algorithms[
-            "algorithm1"]
+        algorithm1 = (
+            "gpa" if "algorithm1" not in algorithms else algorithms["algorithm1"]
+        )
         if "algorithm`" not in algorithms:
             algorithm2 = "gpa_der_free"
         else:
             algorithms["algorithm1"]
         L1, T1 = rotate_factors(A, method, *method_args, algorithm=algorithm1)
         L2, T2 = rotate_factors(A, method, *method_args, algorithm=algorithm2)
-        assert (np.allclose(L1, L2, atol=1e-5))
-        assert (np.allclose(T1, T2, atol=1e-5))
+        assert np.allclose(L1, L2, atol=1e-5)
+        assert np.allclose(T1, T2, atol=1e-5)
 
     def test_methods(self):
         """
@@ -614,10 +670,18 @@ class TestWrappers(unittest.TestCase):
         http://www.stat.ucla.edu/research/gpa
         """
         # orthomax, oblimin and CF are tested indirectly
-        methods = ["quartimin", "biquartimin",
-                   "quartimax", "biquartimax", "varimax", "equamax",
-                   "parsimax", "parsimony",
-                   "target", "partial_target"]
+        methods = [
+            "quartimin",
+            "biquartimin",
+            "quartimax",
+            "biquartimax",
+            "varimax",
+            "equamax",
+            "parsimax",
+            "parsimony",
+            "target",
+            "partial_target",
+        ]
         for method in methods:
             method_args = []
             if method == "target":
@@ -626,8 +690,7 @@ class TestWrappers(unittest.TestCase):
                 method_args = [self.get_H(), "oblique"]
                 self._test_template(method, *method_args)
                 method_args = [self.get_H(), "orthogonal"]
-                self._test_template(method, *method_args,
-                                    algorithm2="analytic")
+                self._test_template(method, *method_args, algorithm2="analytic")
             elif method == "partial_target":
                 method_args = [self.get_H(), self.get_W()]
             self._test_template(method, *method_args)

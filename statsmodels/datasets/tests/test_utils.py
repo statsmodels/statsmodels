@@ -15,14 +15,15 @@ CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 IGNORED_EXCEPTIONS = (HTTPError, URLError, UnicodeEncodeError, timeout)
 if not PYTHON_IMPL_WASM:
     from ssl import SSLError
+
     IGNORED_EXCEPTIONS += (SSLError,)
 
 
 @pytest.mark.smoke
 def test_get_rdataset():
     test_url = (
-            "https://raw.githubusercontent.com/vincentarelbundock/"
-            "Rdatasets/master/csv/datasets/cars.csv"
+        "https://raw.githubusercontent.com/vincentarelbundock/"
+        "Rdatasets/master/csv/datasets/cars.csv"
     )
     internet_available = check_internet(test_url)
     if not internet_available:  # pragma: no cover
@@ -62,6 +63,7 @@ def test_get_rdataset_write_read_cache():
 def test_webuse():
     # test copied and adjusted from iolib/tests/test_foreign
     from statsmodels.iolib.tests.results.macrodata import macrodata_result
+
     res2 = np.array([list(row) for row in macrodata_result])
     base_gh = (
         "https://github.com/statsmodels/statsmodels/raw/main/"
@@ -82,6 +84,7 @@ def test_webuse_pandas():
     from statsmodels.compat.pandas import assert_frame_equal
 
     from statsmodels.datasets import macrodata
+
     dta = macrodata.load_pandas().data
     base_gh = (
         "https://github.com/statsmodels/statsmodels/raw/main/"

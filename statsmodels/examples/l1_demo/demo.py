@@ -157,7 +157,7 @@ def main():
         default=False,
     )
 
-    (options, args) = parser.parse_args()
+    options, args = parser.parse_args()
 
     assert len(args) == 1
     mode = args[0].lower()

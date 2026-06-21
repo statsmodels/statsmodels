@@ -55,12 +55,9 @@ xmat = np.random.normal(size=(n, p))
 # Construct labels showing which group each observation belongs to at each
 # level.
 
-groups_ix = np.kron(np.arange(n // group_size),
-                    np.ones(group_size)).astype(int)
-level1_ix = np.kron(np.arange(n // level1_size),
-                    np.ones(level1_size)).astype(int)
-level2_ix = np.kron(np.arange(n // level2_size),
-                    np.ones(level2_size)).astype(int)
+groups_ix = np.kron(np.arange(n // group_size), np.ones(group_size)).astype(int)
+level1_ix = np.kron(np.arange(n // level1_size), np.ones(level1_size)).astype(int)
+level2_ix = np.kron(np.arange(n // level2_size), np.ones(level2_size)).astype(int)
 
 # Simulate the random effects.
 

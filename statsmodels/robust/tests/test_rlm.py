@@ -1,6 +1,7 @@
 """
 Test functions for sm.rlm
 """
+
 import warnings
 
 import numpy as np
@@ -22,6 +23,7 @@ DECIMAL_1 = 1
 
 def load_stackloss():
     from statsmodels.datasets.stackloss import load
+
     data = load()
     data.endog = np.asarray(data.endog)
     data.exog = np.asarray(data.exog)
@@ -36,28 +38,26 @@ class CheckRlmResultsMixin:
     Covariance matrices were obtained from SAS and are imported from
     results.results_rlm
     """
+
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
     decimal_standarderrors = DECIMAL_4
 
     def test_standarderrors(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse,
-                            self.decimal_standarderrors)
+        assert_almost_equal(self.res1.bse, self.res2.bse, self.decimal_standarderrors)
 
     # TODO: get other results from SAS, though if it works for one...
     def test_confidenceintervals(self):
         if not hasattr(self.res2, "conf_int"):
             pytest.skip("Results from R")
 
-        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int(),
-                            DECIMAL_4)
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int(), DECIMAL_4)
 
     decimal_scale = DECIMAL_4
 
     def test_scale(self):
-        assert_almost_equal(self.res1.scale, self.res2.scale,
-                            self.decimal_scale)
+        assert_almost_equal(self.res1.scale, self.res2.scale, self.decimal_scale)
 
     def test_weights(self):
         assert_almost_equal(self.res1.weights, self.res2.weights, DECIMAL_4)
@@ -66,27 +66,23 @@ class CheckRlmResultsMixin:
         assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL_4)
 
     def test_degrees(self):
-        assert_almost_equal(self.res1.model.df_model, self.res2.df_model,
-                            DECIMAL_4)
-        assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid,
-                            DECIMAL_4)
+        assert_almost_equal(self.res1.model.df_model, self.res2.df_model, DECIMAL_4)
+        assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid, DECIMAL_4)
 
     def test_bcov_unscaled(self):
         if not hasattr(self.res2, "bcov_unscaled"):
             pytest.skip("No unscaled cov matrix from SAS")
 
-        assert_almost_equal(self.res1.bcov_unscaled,
-                            self.res2.bcov_unscaled, DECIMAL_4)
+        assert_almost_equal(self.res1.bcov_unscaled, self.res2.bcov_unscaled, DECIMAL_4)
 
     decimal_bcov_scaled = DECIMAL_4
 
     def test_bcov_scaled(self):
-        assert_almost_equal(self.res1.bcov_scaled, self.res2.h1,
-                            self.decimal_bcov_scaled)
-        assert_almost_equal(self.res1.h2, self.res2.h2,
-                            self.decimal_bcov_scaled)
-        assert_almost_equal(self.res1.h3, self.res2.h3,
-                            self.decimal_bcov_scaled)
+        assert_almost_equal(
+            self.res1.bcov_scaled, self.res2.h1, self.decimal_bcov_scaled
+        )
+        assert_almost_equal(self.res1.h2, self.res2.h2, self.decimal_bcov_scaled)
+        assert_almost_equal(self.res1.h3, self.res2.h3, self.decimal_bcov_scaled)
 
     def test_tvalues(self):
         if not hasattr(self.res2, "tvalues"):
@@ -128,6 +124,7 @@ class TestRlm(CheckRlmResultsMixin):
 
     def setup_method(self):
         from .results.results_rlm import Huber
+
         self.res2 = Huber()
 
     @pytest.mark.smoke
@@ -166,6 +163,7 @@ class TestHampel(TestRlm):
 
     def setup_method(self):
         from .results.results_rlm import Hampel
+
         self.res2 = Hampel()
 
 
@@ -186,6 +184,7 @@ class TestRlmBisquare(TestRlm):
 
     def setup_method(self):
         from .results.results_rlm import BiSquare
+
         self.res2 = BiSquare()
 
 
@@ -204,11 +203,13 @@ class TestRlmAndrews(TestRlm):
 
     def setup_method(self):
         from .results.results_rlm import Andrews
+
         self.res2 = Andrews()
 
 
 # --------------------------------------------------------------------
 # tests with Huber scaling
+
 
 class TestRlmHuber(CheckRlmResultsMixin):
     @classmethod
@@ -226,6 +227,7 @@ class TestRlmHuber(CheckRlmResultsMixin):
 
     def setup_method(self):
         from .results.results_rlm import HuberHuber
+
         self.res2 = HuberHuber()
 
 
@@ -244,6 +246,7 @@ class TestHampelHuber(TestRlm):
 
     def setup_method(self):
         from .results.results_rlm import HampelHuber
+
         self.res2 = HampelHuber()
 
 
@@ -262,6 +265,7 @@ class TestRlmBisquareHuber(TestRlm):
 
     def setup_method(self):
         from .results.results_rlm import BisquareHuber
+
         self.res2 = BisquareHuber()
 
 
@@ -280,6 +284,7 @@ class TestRlmAndrewsHuber(TestRlm):
 
     def setup_method(self):
         from .results.results_rlm import AndrewsHuber
+
         self.res2 = AndrewsHuber()
 
 
@@ -303,6 +308,7 @@ class TestRlmSresid(CheckRlmResultsMixin):
 
     def setup_method(self):
         from .results.results_rlm import Huber
+
         self.res2 = Huber()
 
 
@@ -338,10 +344,18 @@ def test_rlm_start_values_errors():
         model.fit(start_params=start_params)
 
 
-@pytest.fixture(scope="module",
-                params=[norms.AndrewWave, norms.LeastSquares, norms.HuberT,
-                        norms.TrimmedMean, norms.TukeyBiweight, norms.Hampel,
-                        norms.RamsayE])
+@pytest.fixture(
+    scope="module",
+    params=[
+        norms.AndrewWave,
+        norms.LeastSquares,
+        norms.HuberT,
+        norms.TrimmedMean,
+        norms.TukeyBiweight,
+        norms.Hampel,
+        norms.RamsayE,
+    ],
+)
 def norm(request):
     return request.param()
 
@@ -349,10 +363,11 @@ def norm(request):
 @pytest.fixture(scope="module")
 def perfect_fit_data(request):
     from statsmodels.tools.tools import Bunch
+
     rs = np.random.RandomState(1249328932)
     exog = rs.standard_normal((1000, 1))
-    endog = exog + exog ** 2
-    exog = sm.add_constant(np.c_[exog, exog ** 2])
+    endog = exog + exog**2
+    exog = sm.add_constant(np.c_[exog, exog**2])
     return Bunch(endog=endog, exog=exog, const=(3.2 * np.ones_like(endog)))
 
 

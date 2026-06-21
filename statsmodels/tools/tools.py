@@ -1,4 +1,5 @@
 """Utility functions used by statsmodels models."""
+
 import numpy as np
 import pandas as pd
 import scipy.linalg
@@ -45,8 +46,7 @@ def drop_missing(Y, X=None, axis=1):
         X = np.array(X)
         if X.ndim == 1:
             X = X[:, None]
-        keepidx = np.logical_and(~np.isnan(Y).any(axis),
-                                 ~np.isnan(X).any(axis))
+        keepidx = np.logical_and(~np.isnan(Y).any(axis), ~np.isnan(X).any(axis))
         return Y[keepidx], X[keepidx]
     else:
         keepidx = ~np.isnan(Y).any(axis)
@@ -173,6 +173,7 @@ def add_constant(data, prepend=True, has_constant="skip"):
     """
     if _is_using_pandas(data, None):
         from statsmodels.tsa.tsatools import add_trend
+
         return add_trend(data, trend="c", prepend=prepend, has_constant=has_constant)
 
     # Special case for NumPy
@@ -260,11 +261,10 @@ def pinv_extended(x, rcond=1e-15):
     cutoff = rcond * np.maximum.reduce(s)
     for i in range(min(n, m)):
         if s[i] > cutoff:
-            s[i] = 1./s[i]
+            s[i] = 1.0 / s[i]
         else:
-            s[i] = 0.
-    res = np.dot(np.transpose(vt), np.multiply(s[:, np.newaxis],
-                                               np.transpose(u)))
+            s[i] = 0.0
+    res = np.dot(np.transpose(vt), np.multiply(s[:, np.newaxis], np.transpose(u)))
     return res, s_orig
 
 
@@ -545,11 +545,11 @@ def matrix_rank(m, tol=None, method="qr"):
     m = array_like(m, "m", ndim=2)
     if method == "ip":
         m = m[:, np.any(m != 0, axis=0)]
-        m = m / np.sqrt((m ** 2).sum(0))
+        m = m / np.sqrt((m**2).sum(0))
         m = m.T @ m
         return np.linalg.matrix_rank(m, tol=tol, hermitian=True)
     elif method == "qr":
-        r, = scipy.linalg.qr(m, mode="r")
+        (r,) = scipy.linalg.qr(m, mode="r")
         abs_diag = np.abs(np.diag(r))
         if tol is None:
             tol = abs_diag[0] * m.shape[1] * np.finfo(float).eps

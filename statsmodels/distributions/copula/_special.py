@@ -9,9 +9,9 @@ import numpy as np
 from scipy.special import factorial
 
 
-class Sterling1():
-    """Stirling numbers of the first kind
-    """
+class Sterling1:
+    """Stirling numbers of the first kind"""
+
     # based on
     # https://rosettacode.org/wiki/Stirling_numbers_of_the_first_kind#Python
 
@@ -34,17 +34,16 @@ class Sterling1():
         return result
 
     def clear_cache(self):
-        """clear cache of Sterling numbers
-        """
+        """clear cache of Sterling numbers"""
         self._cache = {}
 
 
 sterling1 = Sterling1()
 
 
-class Sterling2():
-    """Stirling numbers of the second kind
-    """
+class Sterling2:
+    """Stirling numbers of the second kind"""
+
     # based on
     # https://rosettacode.org/wiki/Stirling_numbers_of_the_second_kind#Python
 
@@ -69,8 +68,7 @@ class Sterling2():
         return result
 
     def clear_cache(self):
-        """clear cache of Sterling numbers
-        """
+        """clear cache of Sterling numbers"""
         self._cache = {}
 
 
@@ -82,7 +80,7 @@ def li3(z):
 
     Li(-3, z)
     """
-    return z * (1 + 4 * z + z**2) / (1 - z)**4
+    return z * (1 + 4 * z + z**2) / (1 - z) ** 4
 
 
 def li4(z):
@@ -90,7 +88,7 @@ def li4(z):
 
     Li(-4, z)
     """
-    return z * (1 + z) * (1 + 10 * z + z**2) / (1 - z)**5
+    return z * (1 + z) * (1 + 10 * z + z**2) / (1 - z) ** 5
 
 
 def lin(n, z):
@@ -103,8 +101,9 @@ def lin(n, z):
     if np.size(z) > 1:
         z = np.array(z)[..., None]
 
-    k = np.arange(n+1)
+    k = np.arange(n + 1)
     st2 = np.array([sterling2(n + 1, ki + 1) for ki in k])
-    res = (-1)**(n+1) * np.sum(factorial(k) * st2 * (-1 / (1 - z))**(k+1),
-                               axis=-1)
+    res = (-1) ** (n + 1) * np.sum(
+        factorial(k) * st2 * (-1 / (1 - z)) ** (k + 1), axis=-1
+    )
     return res

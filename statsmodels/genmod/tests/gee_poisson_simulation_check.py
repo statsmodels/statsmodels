@@ -34,17 +34,13 @@ class Exchangeable_simulator(GEE_simulator):
     which can be solved (non-uniquely) for e and e_c.
     """
 
-    scale_inv = 1.
+    scale_inv = 1.0
 
     def print_dparams(self, dparams_est):
-        OUT.write("Estimated common pairwise correlation:   %8.4f\n" %
-                  dparams_est[0])
-        OUT.write("True common pairwise correlation:        %8.4f\n" %
-                  self.dparams[0])
-        OUT.write("Estimated inverse scale parameter:       %8.4f\n" %
-                  dparams_est[1])
-        OUT.write("True inverse scale parameter:            %8.4f\n" %
-                  self.scale_inv)
+        OUT.write("Estimated common pairwise correlation:   %8.4f\n" % dparams_est[0])
+        OUT.write("True common pairwise correlation:        %8.4f\n" % self.dparams[0])
+        OUT.write("Estimated inverse scale parameter:       %8.4f\n" % dparams_est[1])
+        OUT.write("True inverse scale parameter:            %8.4f\n" % self.scale_inv)
         OUT.write("\n")
 
     def simulate(self):
@@ -60,10 +56,16 @@ class Exchangeable_simulator(GEE_simulator):
 
         for i in range(self.ngroups):
 
-            gsize = np.random.randint(self.group_size_range[0],
-                                      self.group_size_range[1])
+            gsize = np.random.randint(
+                self.group_size_range[0], self.group_size_range[1]
+            )
 
-            group.append([i,] * gsize)
+            group.append(
+                [
+                    i,
+                ]
+                * gsize
+            )
 
             time1 = np.random.normal(size=(gsize, 2))
             time.append(time1)
@@ -110,10 +112,8 @@ class Overdispersed_simulator(GEE_simulator):
     """
 
     def print_dparams(self, dparams_est):
-        OUT.write("Estimated inverse scale parameter:       %8.4f\n" %
-                  dparams_est[0])
-        OUT.write("True inverse scale parameter:            %8.4f\n" %
-                  self.scale_inv)
+        OUT.write("Estimated inverse scale parameter:       %8.4f\n" % dparams_est[0])
+        OUT.write("True inverse scale parameter:            %8.4f\n" % self.scale_inv)
         OUT.write("\n")
 
     def simulate(self):
@@ -129,10 +129,16 @@ class Overdispersed_simulator(GEE_simulator):
 
         for i in range(self.ngroups):
 
-            gsize = np.random.randint(self.group_size_range[0],
-                                      self.group_size_range[1])
+            gsize = np.random.randint(
+                self.group_size_range[0], self.group_size_range[1]
+            )
 
-            group.append([i,] * gsize)
+            group.append(
+                [
+                    i,
+                ]
+                * gsize
+            )
 
             time1 = np.random.normal(size=(gsize, 2))
             time.append(time1)
@@ -157,18 +163,20 @@ class Overdispersed_simulator(GEE_simulator):
 
 def gendat_exchangeable():
     exs = Exchangeable_simulator()
-    exs.params = np.r_[2., 0.2, 0.2, -0.1, -0.2]
+    exs.params = np.r_[2.0, 0.2, 0.2, -0.1, -0.2]
     exs.ngroups = 200
-    exs.dparams = [0.3,]
+    exs.dparams = [
+        0.3,
+    ]
     exs.simulate()
     return exs, Exchangeable()
 
 
 def gendat_overdispersed():
     exs = Overdispersed_simulator()
-    exs.params = np.r_[2., 0.2, 0.2, -0.1, -0.2]
+    exs.params = np.r_[2.0, 0.2, 0.2, -0.1, -0.2]
     exs.ngroups = 200
-    exs.scale_inv = 2.
+    exs.scale_inv = 2.0
     exs.dparams = []
     exs.simulate()
     return exs, Independence()
@@ -176,8 +184,7 @@ def gendat_overdispersed():
 
 if __name__ == "__main__":
 
-    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
-                        suppress=True)
+    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x}, suppress=True)
 
     OUT = open("gee_poisson_simulation_check.txt", "w", encoding="utf-8")
 
@@ -185,7 +192,11 @@ if __name__ == "__main__":
 
     gendats = [gendat_exchangeable, gendat_overdispersed]
 
-    lhs = np.array([[0., 1, -1, 0, 0],])
+    lhs = np.array(
+        [
+            [0.0, 1, -1, 0, 0],
+        ]
+    )
     rhs = np.r_[0.0,]
 
     # Loop over data generating models
@@ -203,8 +214,7 @@ if __name__ == "__main__":
 
             # Poisson seems to be more sensitive to starting values,
             # so we run the independence model first.
-            md = GEE(da.endog, da.exog, da.group, da.time, ga,
-                     Independence())
+            md = GEE(da.endog, da.exog, da.group, da.time, ga, Independence())
             mdf = md.fit()
 
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
@@ -213,7 +223,7 @@ if __name__ == "__main__":
                 print("Failed to converge")
                 continue
 
-            scale_inv = 1. / md.estimate_scale()
+            scale_inv = 1.0 / md.estimate_scale()
             dparams.append(np.r_[va.dparams, scale_inv])
             params.append(np.asarray(mdf.params))
             std_errors.append(np.asarray(mdf.standard_errors))
@@ -221,8 +231,9 @@ if __name__ == "__main__":
             da, va = gendat()
             ga = Poisson()
 
-            md = GEE(da.endog, da.exog, da.group, da.time, ga, va,
-                     constraint=(lhs, rhs))
+            md = GEE(
+                da.endog, da.exog, da.group, da.time, ga, va, constraint=(lhs, rhs)
+            )
             mdf = md.fit()
             if mdf is None or (not mdf.converged):
                 print("Failed to converge")
@@ -233,8 +244,10 @@ if __name__ == "__main__":
             pvalues.append(pvalue)
 
         dparams_mean = np.array(sum(dparams) / len(dparams))
-        OUT.write("Results based on %d successful fits out of %d data sets.\n\n"
-                  % (len(dparams), nrep))
+        OUT.write(
+            "Results based on %d successful fits out of %d data sets.\n\n"
+            % (len(dparams), nrep)
+        )
         OUT.write("Checking dependence parameters:\n")
         da.print_dparams(dparams_mean)
 
@@ -252,8 +265,7 @@ if __name__ == "__main__":
         OUT.write("Absolute difference: ")
         OUT.write(np.array_str(eparams - da.params) + "\n")
         OUT.write("Relative difference: ")
-        OUT.write(np.array_str((eparams - da.params) / da.params)
-                  + "\n")
+        OUT.write(np.array_str((eparams - da.params) / da.params) + "\n")
         OUT.write("\n")
 
         OUT.write("Checking standard errors\n")
@@ -264,8 +276,7 @@ if __name__ == "__main__":
         OUT.write("Absolute difference: ")
         OUT.write(np.array_str(sdparams - std_errors) + "\n")
         OUT.write("Relative difference: ")
-        OUT.write(np.array_str((sdparams - std_errors) / std_errors)
-                  + "\n")
+        OUT.write(np.array_str((sdparams - std_errors) / std_errors) + "\n")
         OUT.write("\n")
 
         pvalues.sort()
@@ -276,8 +287,7 @@ if __name__ == "__main__":
         OUT.write(np.array_str(rhs) + "\n")
         OUT.write("Observed p-values   Expected Null p-values\n")
         for q in np.arange(0.1, 0.91, 0.1):
-            OUT.write("%20.3f %20.3f\n" %
-                      (pvalues[int(q*len(pvalues))], q))
+            OUT.write("%20.3f %20.3f\n" % (pvalues[int(q * len(pvalues))], q))
 
         OUT.write("=" * 80 + "\n\n")
 

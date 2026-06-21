@@ -158,9 +158,7 @@ class UnivariateFanGijbels1(_UnivariateFunction):
         )
 
 
-doc[
-    "description"
-] = """\
+doc["description"] = """\
 Fan and Gijbels example function 2
 
 sin plus a hump

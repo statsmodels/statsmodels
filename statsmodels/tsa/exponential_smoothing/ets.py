@@ -426,18 +426,14 @@ class ETSModel(base.StateSpaceMLEModel):
         missing="none",
     ):
 
-        super().__init__(
-            endog, exog=None, dates=dates, freq=freq, missing=missing
-        )
+        super().__init__(endog, exog=None, dates=dates, freq=freq, missing=missing)
 
         # MODEL DEFINITION
         # ================
         options = ("add", "mul", "additive", "multiplicative")
         # take first three letters of option -> either "add" or "mul"
         self.error = string_like(error, "error", options=options)[:3]
-        self.trend = string_like(
-            trend, "trend", options=options, optional=True
-        )
+        self.trend = string_like(trend, "trend", options=options, optional=True)
         if self.trend is not None:
             self.trend = self.trend[:3]
         self.damped_trend = bool_like(damped_trend, "damped_trend")
@@ -467,9 +463,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # reject invalid models
         if np.any(self.endog <= 0) and (
-            self.error == "mul"
-            or self.trend == "mul"
-            or self.seasonal == "mul"
+            self.error == "mul" or self.trend == "mul" or self.seasonal == "mul"
         ):
             raise ValueError(
                 "endog must be strictly positive when using "
@@ -638,12 +632,8 @@ class ETSModel(base.StateSpaceMLEModel):
                 raise ValueError("bounds must be a dictionary")
             for key in bounds:
                 if key not in self.param_names:
-                    raise ValueError(
-                        f"Invalid key: {key} in bounds dictionary"
-                    )
-                bounds[key] = array_like(
-                    bounds[key], f"bounds[{key}]", shape=(2,)
-                )
+                    raise ValueError(f"Invalid key: {key} in bounds dictionary")
+                bounds[key] = array_like(bounds[key], f"bounds[{key}]", shape=(2,))
             self.bounds = bounds
 
     @staticmethod
@@ -655,9 +645,7 @@ class ETSModel(base.StateSpaceMLEModel):
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         if endog.dtype != np.double:
-            endog = np.require(
-                data.orig_endog, requirements="WC", dtype=float
-            )
+            endog = np.require(data.orig_endog, requirements="WC", dtype=float)
         return endog, None
 
     @property
@@ -671,10 +659,7 @@ class ETSModel(base.StateSpaceMLEModel):
     @property
     def short_name(self):
         name = "".join(
-            [
-                str(s)[0].upper()
-                for s in [self.error, self.trend, self.seasonal]
-            ]
+            [str(s)[0].upper() for s in [self.error, self.trend, self.seasonal]]
         )
         if self.damped_trend:
             name = name[0:2] + "d" + name[2]
@@ -697,8 +682,7 @@ class ETSModel(base.StateSpaceMLEModel):
                 param_names += ["initial_trend"]
             if self.has_seasonal:
                 param_names += [
-                    f"initial_seasonal.{i}"
-                    for i in range(self.seasonal_periods)
+                    f"initial_seasonal.{i}" for i in range(self.seasonal_periods)
                 ]
         return param_names
 
@@ -717,9 +701,7 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.has_trend:
             names += ["initial_trend"]
         if self.has_seasonal:
-            names += [
-                f"initial_seasonal.{i}" for i in range(self.seasonal_periods)
-            ]
+            names += [f"initial_seasonal.{i}" for i in range(self.seasonal_periods)]
         return names
 
     @property
@@ -737,9 +719,7 @@ class ETSModel(base.StateSpaceMLEModel):
             "initial_level",
             "initial_trend",
         ]
-        param_names += [
-            f"initial_seasonal.{i}" for i in range(self.seasonal_periods)
-        ]
+        param_names += [f"initial_seasonal.{i}" for i in range(self.seasonal_periods)]
         return param_names
 
     @property
@@ -760,11 +740,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def _k_initial_states(self):
-        return (
-            1
-            + int(self.has_trend)
-            + +int(self.has_seasonal) * self.seasonal_periods
-        )
+        return 1 + int(self.has_trend) + +int(self.has_seasonal) * self.seasonal_periods
 
     @property
     def k_params(self):
@@ -901,8 +877,7 @@ class ETSModel(base.StateSpaceMLEModel):
             # make sure everything is within bounds
             if p in self.bounds:
                 internal_params[idx] = np.clip(
-                    internal_params[idx]
-                    + 1e-3,  # try not to start on boundary
+                    internal_params[idx] + 1e-3,  # try not to start on boundary
                     *self.bounds[p],
                 )
         return internal_params
@@ -1018,13 +993,9 @@ class ETSModel(base.StateSpaceMLEModel):
 
         if self._has_fixed_params and len(self._free_params_index) == 0:
             final_params = np.asarray(list(self._fixed_params.values()))
-            mlefit = Bunch(
-                params=start_params, mle_retvals=None, mle_settings=None
-            )
+            mlefit = Bunch(params=start_params, mle_retvals=None, mle_settings=None)
         else:
-            internal_start_params = self._convert_and_bound_start_params(
-                start_params
-            )
+            internal_start_params = self._convert_and_bound_start_params(start_params)
             bounds = self._setup_bounds()
 
             # check if we need to use the starred parameters
@@ -1144,9 +1115,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         if is_fixed is None:
             is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
-            fixed_values = np.empty(
-                self._k_params_internal, dtype=params.dtype
-            )
+            fixed_values = np.empty(self._k_params_internal, dtype=params.dtype)
         else:
             is_fixed = np.ascontiguousarray(is_fixed, dtype=np.int64)
 
@@ -1161,7 +1130,7 @@ class ETSModel(base.StateSpaceMLEModel):
             use_gamma_star,
         )
         res = self._residuals(yhat, data=data)
-        logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
+        logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res**2)) + 1)
         if self.error == "mul":
             # In some cases, yhat can become negative or zero, so that a
             # multiplicative model is no longer well-defined. Zero values
@@ -1219,9 +1188,7 @@ class ETSModel(base.StateSpaceMLEModel):
         """
         params = self._internal_params(np.asarray(params))
         yhat = np.zeros(self.nobs, dtype=params.dtype)
-        xhat = np.zeros(
-            (self.nobs, self._k_states_internal), dtype=params.dtype
-        )
+        xhat = np.zeros((self.nobs, self._k_states_internal), dtype=params.dtype)
         return self._loglike_internal(np.asarray(params), yhat, xhat)
 
     def _residuals(self, yhat, data=None):
@@ -1341,9 +1308,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         return hessian
 
-    def score(
-        self, params, approx_centered=False, approx_complex_step=True, **kwargs
-    ):
+    def score(self, params, approx_centered=False, approx_complex_step=True, **kwargs):
         method = kwargs.get("method", "approx")
 
         if method == "approx":
@@ -1367,6 +1332,7 @@ class ETSResults(base.StateSpaceMLEResults):
     """
     Results from an error, trend, seasonal (ETS) exponential smoothing model
     """
+
     def __init__(self, model, params, results):
         yhat, xhat = results
         self._llf = model.loglike(params)
@@ -1374,7 +1340,7 @@ class ETSResults(base.StateSpaceMLEResults):
         self._fittedvalues = yhat
         # scale is concentrated in this model formulation and corresponds to
         # mean squared residuals, see docstring of model.loglike
-        scale = np.mean(self._residuals ** 2)
+        scale = np.mean(self._residuals**2)
         super().__init__(model, params, scale=scale)
 
         # get model definition
@@ -1420,9 +1386,7 @@ class ETSResults(base.StateSpaceMLEResults):
             self.season = states[:, self.model._seasonal_index]
             # See GH 7893
             self.initial_seasonal = internal_params[6:][::-1]
-            self.initial_state[
-                self.model._seasonal_index :
-            ] = self.initial_seasonal
+            self.initial_state[self.model._seasonal_index :] = self.initial_seasonal
             self.gamma = self.params[self.model._seasonal_index]
             self.smoothing_seasonal = self.gamma
         if self.damped_trend:
@@ -1502,9 +1466,7 @@ class ETSResults(base.StateSpaceMLEResults):
         if start_idx == 0:
             return internal_params
         else:
-            internal_states = self.model._get_internal_states(
-                self.states, self.params
-            )
+            internal_states = self.model._get_internal_states(self.states, self.params)
             start_state = np.empty(6 + self.seasonal_periods)
             start_state[0:4] = internal_params[0:4]
             start_state[4:] = internal_states[start_idx - 1, :]
@@ -1530,62 +1492,52 @@ class ETSResults(base.StateSpaceMLEResults):
             phi = self.damping_trend
         model = self.model.short_name
         if model == "ANN":
-            return 1 + alpha ** 2 * (h - 1)
+            return 1 + alpha**2 * (h - 1)
         elif model == "AAN":
             return 1 + (h - 1) * (
-                alpha ** 2 + alpha * beta * h + beta ** 2 * h / 6 * (2 * h - 1)
+                alpha**2 + alpha * beta * h + beta**2 * h / 6 * (2 * h - 1)
             )
         elif model == "AAdN":
             return (
                 1
-                + alpha ** 2 * (h - 1)
+                + alpha**2 * (h - 1)
                 + (
                     (beta * phi * h)
                     / ((1 - phi) ** 2)
                     * (2 * alpha * (1 - phi) + beta * phi)
                 )
                 - (
-                    (beta * phi * (1 - phi ** h))
-                    / ((1 - phi) ** 2 * (1 - phi ** 2))
-                    * (
-                        2 * alpha * (1 - phi ** 2)
-                        + beta * phi * (1 + 2 * phi - phi ** h)
-                    )
+                    (beta * phi * (1 - phi**h))
+                    / ((1 - phi) ** 2 * (1 - phi**2))
+                    * (2 * alpha * (1 - phi**2) + beta * phi * (1 + 2 * phi - phi**h))
                 )
             )
         elif model == "ANA":
-            return 1 + alpha ** 2 * (h - 1) + gamma * k * (2 * alpha + gamma)
+            return 1 + alpha**2 * (h - 1) + gamma * k * (2 * alpha + gamma)
         elif model == "AAA":
             return (
                 1
                 + (h - 1)
-                * (
-                    alpha ** 2
-                    + alpha * beta * h
-                    + (beta ** 2) / 6 * h * (2 * h - 1)
-                )
+                * (alpha**2 + alpha * beta * h + (beta**2) / 6 * h * (2 * h - 1))
                 + gamma * k * (2 * alpha + gamma + beta * m * (k + 1))
             )
         elif model == "AAdA":
             return (
                 1
-                + alpha ** 2 * (h - 1)
+                + alpha**2 * (h - 1)
                 + gamma * k * (2 * alpha + gamma)
                 + (beta * phi * h)
                 / ((1 - phi) ** 2)
                 * (2 * alpha * (1 - phi) + beta * phi)
                 - (
-                    (beta * phi * (1 - phi ** h))
-                    / ((1 - phi) ** 2 * (1 - phi ** 2))
-                    * (
-                        2 * alpha * (1 - phi ** 2)
-                        + beta * phi * (1 + 2 * phi - phi ** h)
-                    )
+                    (beta * phi * (1 - phi**h))
+                    / ((1 - phi) ** 2 * (1 - phi**2))
+                    * (2 * alpha * (1 - phi**2) + beta * phi * (1 + 2 * phi - phi**h))
                 )
                 + (
                     (2 * beta * gamma * phi)
-                    / ((1 - phi) * (1 - phi ** m))
-                    * (k * (1 - phi ** m) - phi ** m * (1 - phi ** (m * k)))
+                    / ((1 - phi) * (1 - phi**m))
+                    * (k * (1 - phi**m) - phi**m * (1 - phi ** (m * k)))
                 )
             )
         else:
@@ -1785,9 +1737,7 @@ class ETSResults(base.StateSpaceMLEResults):
             phi,
             m,
             _,
-        ) = smooth._initialize_ets_smooth(
-            start_params, x, is_fixed, fixed_values
-        )
+        ) = smooth._initialize_ets_smooth(start_params, x, is_fixed, fixed_values)
         beta = alpha * beta_star
         gamma = (1 - alpha) * gamma_star
         # make x a 3 dimensional matrix: first dimension is nsimulations
@@ -1868,9 +1818,7 @@ class ETSResults(base.StateSpaceMLEResults):
                 eta = Y
                 kappa_l = 0 if mul_seasonal else S
                 kappa_b = (
-                    kappa_l / x[t - 1, 0, :]
-                    if mul_trend
-                    else kappa_l + x[t - 1, 0, :]
+                    kappa_l / x[t - 1, 0, :] if mul_trend else kappa_l + x[t - 1, 0, :]
                 )
                 kappa_s = 0 if mul_seasonal else L
 
@@ -1914,9 +1862,7 @@ class ETSResults(base.StateSpaceMLEResults):
         Dynamic prediction/forecasting
         """
         # forecast is the same as simulation without errors
-        return self.simulate(
-            steps, anchor=anchor, random_errors=np.zeros((steps, 1))
-        )
+        return self.simulate(steps, anchor=anchor, random_errors=np.zeros((steps, 1)))
 
     def _handle_prediction_index(self, start, dynamic, end, index):
         if start is None:
@@ -1929,9 +1875,7 @@ class ETSResults(base.StateSpaceMLEResults):
         # if end was outside of the sample, it is now the last point in the
         # sample
         if start > end + out_of_sample + 1:
-            raise ValueError(
-                "Prediction start cannot lie outside of the sample."
-            )
+            raise ValueError("Prediction start cannot lie outside of the sample.")
 
         # Handle `dynamic`
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
@@ -2154,9 +2098,7 @@ class ETSResults(base.StateSpaceMLEResults):
                 "initialization method: %s" % self.model.initialization_method
             ]
             params_stubs = names
-            params_data = [
-                [forg(params[i], prec=4)] for i in range(len(params))
-            ]
+            params_data = [[forg(params[i], prec=4)] for i in range(len(params))]
 
             initial_state_table = SimpleTable(
                 params_data, param_header, params_stubs, txt_fmt=fmt_params
@@ -2174,9 +2116,7 @@ class ETSResultsWrapper(wrap.ResultsWrapper):
         "season": "rows",
         "slope": "rows",
     }
-    _wrap_attrs = wrap.union_dicts(
-        tsbase.TimeSeriesResultsWrapper._wrap_attrs, _attrs
-    )
+    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs, _attrs)
     _methods = {"predict": "dates", "forecast": "dates"}
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods
@@ -2267,9 +2207,7 @@ class PredictionResults:
         self.row_labels = self.predicted_mean.index
         self.endog = np.empty(nsmooth + ndynamic) * np.nan
         if nsmooth > 0:
-            self.endog[0: (end - start + 1)] = results.data.endog[
-                start: (end + 1)
-            ]
+            self.endog[0 : (end - start + 1)] = results.data.endog[start : (end + 1)]
         self.model = Bunch(
             data=results.model.data.__class__(
                 endog=self.endog, predict_dates=self.row_labels
@@ -2314,17 +2252,17 @@ class PredictionResults:
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
-                steps[
-                    (start_dynamic - min(start_dynamic, start)):
-                    ] = range(1, ndynamic + 1)
+                steps[(start_dynamic - min(start_dynamic, start)) :] = range(
+                    1, ndynamic + 1
+                )
             # when we are doing out of sample only prediction,
             # start > end + 1, and
             # we only want to output beginning at start
             if start > end + 1:
                 ndiscard = start - (end + 1)
                 steps = steps[ndiscard:]
-            self.forecast_variance = (
-                results.mse * results._relative_forecast_variance(steps)
+            self.forecast_variance = results.mse * results._relative_forecast_variance(
+                steps
             )
 
     @property
@@ -2347,9 +2285,7 @@ class PredictionResults:
             simulated_upper_pi = np.quantile(
                 self.simulation_results, 1 - alpha / 2, axis=1
             )
-            simulated_lower_pi = np.quantile(
-                self.simulation_results, alpha / 2, axis=1
-            )
+            simulated_lower_pi = np.quantile(self.simulation_results, alpha / 2, axis=1)
             pred_int = np.vstack((simulated_lower_pi, simulated_upper_pi)).T
         else:
             q = norm.ppf(1 - alpha / 2)
@@ -2375,9 +2311,7 @@ class PredictionResults:
         to_include = {}
         to_include["mean"] = self.predicted_mean
         if self.method == "simulated":
-            to_include["mean_numerical"] = np.mean(
-                self.simulation_results, axis=1
-            )
+            to_include["mean_numerical"] = np.mean(self.simulation_results, axis=1)
         to_include["pi_lower"] = pred_int[:, 0]
         to_include["pi_upper"] = pred_int[:, 1]
 

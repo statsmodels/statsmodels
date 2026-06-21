@@ -44,23 +44,29 @@ varname Estimate StdError zvalue Pr(>|z|)
 age         -0.03471    0.03276  -1.059    0.289"""
 
 
-expected_income_mean = pd.read_table(
-    io.StringIO(_income_estimates_mean), sep=r"\s+")
+expected_income_mean = pd.read_table(io.StringIO(_income_estimates_mean), sep=r"\s+")
 expected_income_precision = pd.read_table(
-    io.StringIO(_income_estimates_precision), sep=r"\s+")
+    io.StringIO(_income_estimates_precision), sep=r"\s+"
+)
 
 expected_methylation_mean = pd.read_table(
-    io.StringIO(_methylation_estimates_mean), sep=r"\s+")
+    io.StringIO(_methylation_estimates_mean), sep=r"\s+"
+)
 expected_methylation_precision = pd.read_table(
-    io.StringIO(_methylation_estimates_precision), sep=r"\s+")
+    io.StringIO(_methylation_estimates_precision), sep=r"\s+"
+)
 
 income = pd.read_csv(os.path.join(res_dir, "foodexpenditure.csv"))
 methylation = pd.read_csv(os.path.join(res_dir, "methylation-test.csv"))
 
 
 def check_same(a, b, eps, name):
-    assert np.allclose(a, b, rtol=0.01, atol=eps), \
-            ("different from expected", name, list(a), list(b))
+    assert np.allclose(a, b, rtol=0.01, atol=eps), (
+        "different from expected",
+        name,
+        list(a),
+        list(b),
+    )
 
 
 def assert_close(a, b, eps):
@@ -83,11 +89,13 @@ class TestBetaModel:
         model = cls.model = "methylation ~ gender + CpG"
         mgr = FormulaManager()
         Z = cls.Z = mgr.get_matrices("~ age", methylation, pandas=False)
-        mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
-                                     link_precision=links.Identity())
+        mod = BetaModel.from_formula(
+            model, methylation, exog_precision=Z, link_precision=links.Identity()
+        )
         cls.meth_fit = mod.fit()
-        mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
-                                     link_precision=links.Log())
+        mod = BetaModel.from_formula(
+            model, methylation, exog_precision=Z, link_precision=links.Log()
+        )
         cls.meth_log_fit = mod.fit()
 
     def test_income_coefficients(self):
@@ -100,28 +108,28 @@ class TestBetaModel:
 
         rslt = self.income_fit
         # note that we have to exp the phi results for now.
-        assert_close(np.exp(rslt.params[-1:]),
-                     expected_income_precision["Estimate"], 1e-3)
+        assert_close(
+            np.exp(rslt.params[-1:]), expected_income_precision["Estimate"], 1e-3
+        )
         # yield check_same, rslt.tvalues[-1:],
         #                   expected_income_precision['zvalue'], 0.1, "z-score"
-        assert_close(rslt.pvalues[-1:],
-                     expected_income_precision["Pr(>|z|)"], 1e-3)
+        assert_close(rslt.pvalues[-1:], expected_income_precision["Pr(>|z|)"], 1e-3)
 
     def test_methylation_coefficients(self):
         rslt = self.meth_fit
-        assert_close(rslt.params[:-2],
-                     expected_methylation_mean["Estimate"], 1e-2)
-        assert_close(rslt.tvalues[:-2],
-                     expected_methylation_mean["zvalue"], 0.1)
-        assert_close(rslt.pvalues[:-2],
-                     expected_methylation_mean["Pr(>|z|)"], 1e-2)
+        assert_close(rslt.params[:-2], expected_methylation_mean["Estimate"], 1e-2)
+        assert_close(rslt.tvalues[:-2], expected_methylation_mean["zvalue"], 0.1)
+        assert_close(rslt.pvalues[:-2], expected_methylation_mean["Pr(>|z|)"], 1e-2)
 
     def test_methylation_precision(self):
         # R results are from log link_precision
         rslt = self.meth_log_fit
-        assert_allclose(rslt.params[-2:],
-                        expected_methylation_precision["Estimate"],
-                        atol=1e-5, rtol=1e-10)
+        assert_allclose(
+            rslt.params[-2:],
+            expected_methylation_precision["Estimate"],
+            atol=1e-5,
+            rtol=1e-10,
+        )
         #     expected_methylation_precision['Estimate']
         # yield check_same, links.logit()(rslt.params[-2:]),
         #     expected_methylation_precision['Estimate'], 1e-3, "estimate"
@@ -129,32 +137,43 @@ class TestBetaModel:
         #     expected_methylation_precision['zvalue'], 0.1, "z-score"
 
     def test_precision_formula(self):
-        m = BetaModel.from_formula(self.model, methylation,
-                                   exog_precision_formula="~ age",
-                                   link_precision=links.Identity())
+        m = BetaModel.from_formula(
+            self.model,
+            methylation,
+            exog_precision_formula="~ age",
+            link_precision=links.Identity(),
+        )
         rslt = m.fit()
         assert_close(rslt.params, self.meth_fit.params, 1e-10)
         assert isinstance(rslt.params, pd.Series)
 
         with pytest.warns(ValueWarning, match="unknown kwargs"):
-            BetaModel.from_formula(self.model, methylation,
-                                   exog_precision_formula="~ age",
-                                   link_precision=links.Identity(),
-                                   junk=False)
+            BetaModel.from_formula(
+                self.model,
+                methylation,
+                exog_precision_formula="~ age",
+                link_precision=links.Identity(),
+                junk=False,
+            )
 
     def test_scores(self):
         model, Z = self.model, self.Z
         for link in (links.Identity(), links.Log()):
-            mod2 = BetaModel.from_formula(model, methylation, exog_precision=Z,
-                                          link_precision=link)
+            mod2 = BetaModel.from_formula(
+                model, methylation, exog_precision=Z, link_precision=link
+            )
             rslt_m = mod2.fit()
 
             # evaluate away from optimum to get larger score
             analytical = rslt_m.model.score(rslt_m.params * 1.01)
             numerical = rslt_m.model._score_check(rslt_m.params * 1.01)
             assert_allclose(analytical, numerical, rtol=1e-6, atol=1e-6)
-            assert_allclose(link.inverse(analytical[3:]),
-                            link.inverse(numerical[3:]), rtol=5e-7, atol=5e-6)
+            assert_allclose(
+                link.inverse(analytical[3:]),
+                link.inverse(numerical[3:]),
+                rtol=5e-7,
+                atol=5e-6,
+            )
 
     def test_results_other(self):
 
@@ -173,18 +192,21 @@ class TestBetaModel:
         assert_allclose(
             self.income_fit.params["income"],
             2 * self.income_fit_eval_env.params["times_two(income)"],
-            rtol=1e-02
+            rtol=1e-02,
         )
 
 
-class TestBetaMeth():
+class TestBetaMeth:
 
     @classmethod
     def setup_class(cls):
         formula = "methylation ~ gender + CpG"
-        mod = BetaModel.from_formula(formula, methylation,
-                                     exog_precision_formula="~ age",
-                                     link_precision=links.Log())
+        mod = BetaModel.from_formula(
+            formula,
+            methylation,
+            exog_precision_formula="~ age",
+            link_precision=links.Log(),
+        )
         cls.res1 = mod.fit(cov_type="eim")
         cls.res2 = resultsb.results_meth
 
@@ -233,10 +255,8 @@ class TestBetaMeth():
     def test_resid(self):
         res1 = self.res1
         res2 = self.res2
-        assert_allclose(res1.fittedvalues, res2.resid["fittedvalues"],
-                        rtol=1e-8)
-        assert_allclose(res1.resid, res2.resid["response"],
-                        atol=1e-8, rtol=1e-8)
+        assert_allclose(res1.fittedvalues, res2.resid["fittedvalues"], rtol=1e-8)
+        assert_allclose(res1.resid, res2.resid["response"], atol=1e-8, rtol=1e-8)
 
     def test_oim(self):
         # estimate with default oim, cov_type nonrobust
@@ -268,8 +288,13 @@ class TestBetaMeth():
 
         # from R: > predict(res_meth, type="variance")
         var_r6 = [
-            3.1090848852102e-04, 2.4509604000073e-04, 3.7199753140565e-04,
-            2.8088261358738e-04, 2.7561111800350e-04, 3.3929220526847e-04]
+            3.1090848852102e-04,
+            2.4509604000073e-04,
+            3.7199753140565e-04,
+            2.8088261358738e-04,
+            2.7561111800350e-04,
+            3.3929220526847e-04,
+        ]
         n = 6
         assert_allclose(v2[:n], var_r6, rtol=1e-7)
 
@@ -278,24 +303,24 @@ class TestBetaMeth():
         mean6 = res1.predict(ex, transform=False)
         prec = res1.predict(which="precision")
         # todo: prec6 wrong exog if not used as keyword, no exception raised
-        prec6 = res1.predict(exog_precision=ex_prec, which="precision",
-                             transform=False)
-        var6 = res1.model._predict_var(res1.params, exog=ex,
-                                       exog_precision=ex_prec)
+        prec6 = res1.predict(exog_precision=ex_prec, which="precision", transform=False)
+        var6 = res1.model._predict_var(res1.params, exog=ex, exog_precision=ex_prec)
 
         assert_allclose(mean6, mean[:n], rtol=1e-13)
         assert_allclose(prec6, prec[:n], rtol=1e-13)
         assert_allclose(var6, var_[:n], rtol=1e-13)
         assert_allclose(var6, var_r6, rtol=1e-7)
 
-        distr6 = res1.model.get_distribution(res1.params,
-                                             exog=ex, exog_precision=ex_prec)
+        distr6 = res1.model.get_distribution(
+            res1.params, exog=ex, exog_precision=ex_prec
+        )
         m26, v26 = distr6.stats()
         assert_allclose(m26, m2[:n], rtol=1e-13)
         assert_allclose(v26, v2[:n], rtol=1e-13)
 
-        distr6f = res1.get_distribution(exog=ex, exog_precision=ex_prec,
-                                        transform=False)
+        distr6f = res1.get_distribution(
+            exog=ex, exog_precision=ex_prec, transform=False
+        )
         m26, v26 = distr6f.stats()
         assert_allclose(m26, m2[:n], rtol=1e-13)
         assert_allclose(v26, v2[:n], rtol=1e-13)
@@ -325,16 +350,16 @@ class TestBetaMeth():
         dfm = pm.summary_frame()
         assert_allclose(pm.predicted, mean6, rtol=1e-13)
         assert_equal(dfm.shape, (6, 4))
-        pv = res1.get_prediction(exog=df6, exog_precision=ex_prec,
-                                 which="var", average=False)
+        pv = res1.get_prediction(
+            exog=df6, exog_precision=ex_prec, which="var", average=False
+        )
         dfv = pv.summary_frame()
         assert_allclose(pv.predicted, var6, rtol=1e-13)
         assert_equal(dfv.shape, (6, 4))
         # smoke tests
         res1.get_prediction(which="linear", average=False)
         res1.get_prediction(which="precision", average=True)
-        res1.get_prediction(exog_precision=ex_prec, which="precision",
-                            average=False)
+        res1.get_prediction(exog_precision=ex_prec, which="precision", average=False)
         res1.get_prediction(which="linear-precision", average=True)
 
         # test agg_weights
@@ -351,7 +376,7 @@ class TestBetaMeth():
         assert_allclose(dfmw, dfm6, rtol=1e-13)
 
 
-class TestBetaIncome():
+class TestBetaIncome:
 
     @classmethod
     def setup_class(cls):
@@ -360,18 +385,13 @@ class TestBetaIncome():
         mgr = FormulaManager()
         exog_prec = mgr.get_matrices("~ persons", income)
         mod_income = BetaModel.from_formula(
-            formula,
-            income,
-            exog_precision=exog_prec,
-            link_precision=links.Log()
-            )
+            formula, income, exog_precision=exog_prec, link_precision=links.Log()
+        )
         res_income = mod_income.fit(method="newton")
 
         mod_restricted = BetaModel.from_formula(
-            formula,
-            income,
-            link_precision=links.Log()
-            )
+            formula, income, link_precision=links.Log()
+        )
         res_restricted = mod_restricted.fit(method="newton")
 
         cls.res1 = res_income
@@ -386,15 +406,19 @@ class TestBetaIncome():
         exog_prec_extra = res1.model.exog_precision[:, 1:]
 
         from statsmodels.base._parameter_inference import score_test
-        sc1 = score_test(res1, params_constrained=params_restr,
-                         k_constraints=1)
+
+        sc1 = score_test(res1, params_constrained=params_restr, k_constraints=1)
         sc2 = score_test(resr, exog_extra=(None, exog_prec_extra))
         assert_allclose(sc2[:2], sc1[:2])
 
-        sc1_hc = score_test(res1, params_constrained=params_restr,
-                            k_constraints=1, r_matrix=r_matrix, cov_type="HC0")
-        sc2_hc = score_test(resr, exog_extra=(None, exog_prec_extra),
-                            cov_type="HC0")
+        sc1_hc = score_test(
+            res1,
+            params_constrained=params_restr,
+            k_constraints=1,
+            r_matrix=r_matrix,
+            cov_type="HC0",
+        )
+        sc2_hc = score_test(resr, exog_extra=(None, exog_prec_extra), cov_type="HC0")
         assert_allclose(sc2_hc[:2], sc1_hc[:2])
 
     def test_influence(self):
@@ -404,9 +428,15 @@ class TestBetaIncome():
 
         influ0 = MLEInfluence(res1)
         influ = res1.get_influence()
-        attrs = ["cooks_distance", "d_fittedvalues", "d_fittedvalues_scaled",
-                 "d_params", "dfbetas", "hat_matrix_diag", "resid_studentized"
-                 ]
+        attrs = [
+            "cooks_distance",
+            "d_fittedvalues",
+            "d_fittedvalues_scaled",
+            "d_params",
+            "dfbetas",
+            "hat_matrix_diag",
+            "resid_studentized",
+        ]
         for attr in attrs:
             getattr(influ, attr)
 

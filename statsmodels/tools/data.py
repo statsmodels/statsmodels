@@ -96,9 +96,7 @@ def interpret_data(data, colnames=None, rownames=None):
 
     # sanity check
     if len(colnames) != values.shape[1]:
-        raise ValueError(
-            "length of colnames does not match number of columns in data"
-        )
+        raise ValueError("length of colnames does not match number of columns in data")
 
     if rownames is not None and len(rownames) != len(values):
         raise ValueError("length of rownames does not match number of rows in data")

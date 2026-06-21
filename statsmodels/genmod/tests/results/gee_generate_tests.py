@@ -28,13 +28,12 @@ def generate_logistic():
         n = np.random.randint(3, 6)  # Cluster size
 
         x = np.random.normal(size=(n, p))
-        x = rx*np.random.normal() + np.sqrt(1-rx**2)*x
-        x[:, 2] = r*x[:, 1] + np.sqrt(1-r**2)*x[:, 2]
-        pr = 1/(1+np.exp(-np.dot(x, beta)))
-        z = re*np.random.normal() +\
-            np.sqrt(1-re**2)*np.random.normal(size=n)
+        x = rx * np.random.normal() + np.sqrt(1 - rx**2) * x
+        x[:, 2] = r * x[:, 1] + np.sqrt(1 - r**2) * x[:, 2]
+        pr = 1 / (1 + np.exp(-np.dot(x, beta)))
+        z = re * np.random.normal() + np.sqrt(1 - re**2) * np.random.normal(size=n)
         u = norm.cdf(z)
-        y = 1*(u < pr)
+        y = 1 * (u < pr)
 
         for j in range(n):
             OUT.write("%d, %d," % (i, y[j]))
@@ -69,8 +68,8 @@ def generate_linear():
         n = np.random.randint(3, 6)  # Cluster size
 
         x = np.random.normal(size=(n, p))
-        x = rx*np.random.normal() + np.sqrt(1-rx**2)*x
-        x[:, 2] = r*x[:, 1] + np.sqrt(1-r**2)*x[:, 2]
+        x = rx * np.random.normal() + np.sqrt(1 - rx**2) * x
+        x[:, 2] = r * x[:, 1] + np.sqrt(1 - r**2) * x[:, 2]
         # TODO: should `e` be used somewhere?
         # e = np.sqrt(1-re**2)*np.random.normal(size=n) + re*np.random.normal()
         y = np.dot(x, beta) + np.random.normal(size=n)
@@ -109,10 +108,10 @@ def generate_nested_linear():
         x = np.random.normal(size=(10, p))
         y = np.dot(x, beta)
 
-        y += np.sqrt(v1)*np.random.normal()
-        y[0:5] += np.sqrt(v2)*np.random.normal()
-        y[5:10] += np.sqrt(v2)*np.random.normal()
-        y += np.sqrt(v3)*np.random.normal(size=10)
+        y += np.sqrt(v1) * np.random.normal()
+        y[0:5] += np.sqrt(v2) * np.random.normal()
+        y[5:10] += np.sqrt(v2) * np.random.normal()
+        y += np.sqrt(v3) * np.random.normal(size=10)
 
         for j in range(10):
             OUT.write("%d, %.3f," % (i, y[j]))
@@ -143,8 +142,7 @@ def generate_ordinal():
         pr = np.array([1, 0, -0.5]) + pr[:, None]
         pr = 1 / (1 + np.exp(-pr))
 
-        z = rz*np.random.normal() +\
-            np.sqrt(1-rz**2)*np.random.normal(size=n)
+        z = rz * np.random.normal() + np.sqrt(1 - rz**2) * np.random.normal(size=n)
         u = norm.cdf(z)
 
         y = (u[:, None] > pr).sum(1)
@@ -178,11 +176,10 @@ def generate_nominal():
         pr1 = np.exp(np.dot(x, beta1))[:, None]
         pr2 = np.exp(np.dot(x, beta2))[:, None]
         den = 1 + pr1 + pr2
-        pr = np.hstack((pr1/den, pr2/den, 1/den))
+        pr = np.hstack((pr1 / den, pr2 / den, 1 / den))
         cpr = np.cumsum(pr, 1)
 
-        z = rz*np.random.normal() +\
-            np.sqrt(1-rz**2)*np.random.normal(size=n)
+        z = rz * np.random.normal() + np.sqrt(1 - rz**2) * np.random.normal(size=n)
         u = norm.cdf(z)
 
         y = (u[:, None] > cpr).sum(1)

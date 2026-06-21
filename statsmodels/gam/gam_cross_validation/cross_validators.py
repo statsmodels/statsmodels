@@ -17,6 +17,7 @@ class BaseCrossValidator(with_metaclass(ABCMeta)):
     The BaseCrossValidator class is a base class for all the iterators that
     split the data in train and test as for example KFolds or LeavePOut
     """
+
     def __init__(self):
         pass
 
@@ -50,8 +51,7 @@ class KFold(BaseCrossValidator):
         self.shuffle = shuffle
 
     def split(self, X, y=None, label=None):
-        """yield index split into train and test sets
-        """
+        """yield index split into train and test sets"""
         # TODO: X and y are redundant, we only need nobs
 
         nobs = X.shape[0]

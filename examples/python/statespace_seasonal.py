@@ -48,10 +48,7 @@ plt.rc("font", size=14)
 
 
 # First we'll simulate the synthetic data
-def simulate_seasonal_term(periodicity,
-                           total_cycles,
-                           noise_std=1.,
-                           harmonics=None):
+def simulate_seasonal_term(periodicity, total_cycles, noise_std=1.0, harmonics=None):
     duration = periodicity * total_cycles
     assert duration == int(duration)
     duration = int(duration)
@@ -70,12 +67,16 @@ def simulate_seasonal_term(periodicity,
         for j in range(1, harmonics + 1):
             cos_j = np.cos(lambda_p * j)
             sin_j = np.sin(lambda_p * j)
-            gamma_jtp1[j - 1] = (gamma_jt[j - 1] * cos_j +
-                                 gamma_star_jt[j - 1] * sin_j +
-                                 noise_std * np.random.randn())
-            gamma_star_jtp1[j - 1] = (-gamma_jt[j - 1] * sin_j +
-                                      gamma_star_jt[j - 1] * cos_j +
-                                      noise_std * np.random.randn())
+            gamma_jtp1[j - 1] = (
+                gamma_jt[j - 1] * cos_j
+                + gamma_star_jt[j - 1] * sin_j
+                + noise_std * np.random.randn()
+            )
+            gamma_star_jtp1[j - 1] = (
+                -gamma_jt[j - 1] * sin_j
+                + gamma_star_jt[j - 1] * cos_j
+                + noise_std * np.random.randn()
+            )
         series[t] = np.sum(gamma_jtp1)
         gamma_jt = gamma_jtp1
         gamma_star_jt = gamma_star_jtp1
@@ -92,24 +93,23 @@ np.random.seed(8678309)
 
 terms = []
 for ix, _ in enumerate(periodicities):
-    s = simulate_seasonal_term(periodicities[ix],
-                               duration / periodicities[ix],
-                               harmonics=num_harmonics[ix],
-                               noise_std=std[ix])
+    s = simulate_seasonal_term(
+        periodicities[ix],
+        duration / periodicities[ix],
+        harmonics=num_harmonics[ix],
+        noise_std=std[ix],
+    )
     terms.append(s)
-terms.append(np.ones_like(terms[0]) * 10.)
+terms.append(np.ones_like(terms[0]) * 10.0)
 series = pd.Series(np.sum(terms, axis=0))
-df = pd.DataFrame(data={
-    'total': series,
-    '10(3)': terms[0],
-    '100(2)': terms[1],
-    'level': terms[2]
-})
-h1, = plt.plot(df['total'])
-h2, = plt.plot(df['10(3)'])
-h3, = plt.plot(df['100(2)'])
-h4, = plt.plot(df['level'])
-plt.legend(['total', '10(3)', '100(2)', 'level'])
+df = pd.DataFrame(
+    data={"total": series, "10(3)": terms[0], "100(2)": terms[1], "level": terms[2]}
+)
+(h1,) = plt.plot(df["total"])
+(h2,) = plt.plot(df["10(3)"])
+(h3,) = plt.plot(df["100(2)"])
+(h4,) = plt.plot(df["level"])
+plt.legend(["total", "10(3)", "100(2)", "level"])
 plt.show()
 
 # ### Unobserved components (frequency domain modeling)
@@ -145,20 +145,19 @@ plt.show()
 # \sigma^2_1)$, and  $\omega^{(2)}_{j,t}$ are i.i.d. $N(0, \sigma^2_2)$,
 # where $\sigma_1 = 2.$
 
-model = sm.tsa.UnobservedComponents(series.values,
-                                    level='fixed intercept',
-                                    freq_seasonal=[{
-                                        'period': 10,
-                                        'harmonics': 3
-                                    }, {
-                                        'period': 100,
-                                        'harmonics': 2
-                                    }])
+model = sm.tsa.UnobservedComponents(
+    series.values,
+    level="fixed intercept",
+    freq_seasonal=[{"period": 10, "harmonics": 3}, {"period": 100, "harmonics": 2}],
+)
 res_f = model.fit(disp=False)
 print(res_f.summary())
 # The first state variable holds our estimate of the intercept
-print("fixed intercept estimated as {:.3f}".format(
-    res_f.smoother_results.smoothed_state[0, -1:][0]))
+print(
+    "fixed intercept estimated as {:.3f}".format(
+        res_f.smoother_results.smoothed_state[0, -1:][0]
+    )
+)
 
 res_f.plot_components()
 plt.show()
@@ -198,18 +197,20 @@ model.ssm.transition[:, :, 0]
 # where $\epsilon_t$ is white noise, $\omega^{(1)}_{t}$ are i.i.d. $N(0,
 # \sigma^2_1)$, and  $\omega^{(2)}_{j,t}$ are i.i.d. $N(0, \sigma^2_2)$.
 
-model = sm.tsa.UnobservedComponents(series,
-                                    level='fixed intercept',
-                                    seasonal=10,
-                                    freq_seasonal=[{
-                                        'period': 100,
-                                        'harmonics': 2
-                                    }])
+model = sm.tsa.UnobservedComponents(
+    series,
+    level="fixed intercept",
+    seasonal=10,
+    freq_seasonal=[{"period": 100, "harmonics": 2}],
+)
 res_tf = model.fit(disp=False)
 print(res_tf.summary())
 # The first state variable holds our estimate of the intercept
-print("fixed intercept estimated as {:.3f}".format(
-    res_tf.smoother_results.smoothed_state[0, -1:][0]))
+print(
+    "fixed intercept estimated as {:.3f}".format(
+        res_tf.smoother_results.smoothed_state[0, -1:][0]
+    )
+)
 
 fig = res_tf.plot_components()
 fig.tight_layout(pad=1.0)
@@ -249,16 +250,17 @@ fig.tight_layout(pad=1.0)
 # where $\epsilon_t$ is white noise, $\omega^{(1)}_{t}$ are i.i.d. $N(0,
 # \sigma^2_1)$.
 
-model = sm.tsa.UnobservedComponents(series,
-                                    level='fixed intercept',
-                                    freq_seasonal=[{
-                                        'period': 100
-                                    }])
+model = sm.tsa.UnobservedComponents(
+    series, level="fixed intercept", freq_seasonal=[{"period": 100}]
+)
 res_lf = model.fit(disp=False)
 print(res_lf.summary())
 # The first state variable holds our estimate of the intercept
-print("fixed intercept estimated as {:.3f}".format(
-    res_lf.smoother_results.smoothed_state[0, -1:][0]))
+print(
+    "fixed intercept estimated as {:.3f}".format(
+        res_lf.smoother_results.smoothed_state[0, -1:][0]
+    )
+)
 
 fig = res_lf.plot_components()
 fig.tight_layout(pad=1.0)
@@ -285,14 +287,15 @@ fig.tight_layout(pad=1.0)
 # where $\epsilon_t$ is white noise, $\omega^{(1)}_{t}$ are i.i.d. $N(0,
 # \sigma^2_1)$.
 
-model = sm.tsa.UnobservedComponents(series,
-                                    level='fixed intercept',
-                                    seasonal=100)
+model = sm.tsa.UnobservedComponents(series, level="fixed intercept", seasonal=100)
 res_lt = model.fit(disp=False)
 print(res_lt.summary())
 # The first state variable holds our estimate of the intercept
-print("fixed intercept estimated as {:.3f}".format(
-    res_lt.smoother_results.smoothed_state[0, -1:][0]))
+print(
+    "fixed intercept estimated as {:.3f}".format(
+        res_lt.smoother_results.smoothed_state[0, -1:][0]
+    )
+)
 
 fig = res_lt.plot_components()
 fig.tight_layout(pad=1.0)
@@ -320,65 +323,69 @@ time_s = np.s_[:50]  # After this they basically agree
 fig1 = plt.figure()
 ax1 = fig1.add_subplot(111)
 idx = np.asarray(series.index)
-h1, = ax1.plot(idx[time_s],
-               res_f.freq_seasonal[0].filtered[time_s],
-               label='Double Freq. Seas')
-h2, = ax1.plot(idx[time_s],
-               res_tf.seasonal.filtered[time_s],
-               label='Mixed Domain Seas')
-h3, = ax1.plot(idx[time_s],
-               true_seasonal_10_3[time_s],
-               label='True Seasonal 10(3)')
-plt.legend([h1, h2, h3],
-           ['Double Freq. Seasonal', 'Mixed Domain Seasonal', 'Truth'],
-           loc=2)
-plt.title('Seasonal 10(3) component')
+(h1,) = ax1.plot(
+    idx[time_s], res_f.freq_seasonal[0].filtered[time_s], label="Double Freq. Seas"
+)
+(h2,) = ax1.plot(
+    idx[time_s], res_tf.seasonal.filtered[time_s], label="Mixed Domain Seas"
+)
+(h3,) = ax1.plot(idx[time_s], true_seasonal_10_3[time_s], label="True Seasonal 10(3)")
+plt.legend(
+    [h1, h2, h3], ["Double Freq. Seasonal", "Mixed Domain Seasonal", "Truth"], loc=2
+)
+plt.title("Seasonal 10(3) component")
 plt.show()
 
 time_s = np.s_[:50]  # After this they basically agree
 fig2 = plt.figure()
 ax2 = fig2.add_subplot(111)
-h21, = ax2.plot(idx[time_s],
-                res_f.freq_seasonal[1].filtered[time_s],
-                label='Double Freq. Seas')
-h22, = ax2.plot(idx[time_s],
-                res_tf.freq_seasonal[0].filtered[time_s],
-                label='Mixed Domain Seas')
-h23, = ax2.plot(idx[time_s],
-                true_seasonal_100_2[time_s],
-                label='True Seasonal 100(2)')
-plt.legend([h21, h22, h23],
-           ['Double Freq. Seasonal', 'Mixed Domain Seasonal', 'Truth'],
-           loc=2)
-plt.title('Seasonal 100(2) component')
+(h21,) = ax2.plot(
+    idx[time_s], res_f.freq_seasonal[1].filtered[time_s], label="Double Freq. Seas"
+)
+(h22,) = ax2.plot(
+    idx[time_s], res_tf.freq_seasonal[0].filtered[time_s], label="Mixed Domain Seas"
+)
+(h23,) = ax2.plot(
+    idx[time_s], true_seasonal_100_2[time_s], label="True Seasonal 100(2)"
+)
+plt.legend(
+    [h21, h22, h23], ["Double Freq. Seasonal", "Mixed Domain Seasonal", "Truth"], loc=2
+)
+plt.title("Seasonal 100(2) component")
 plt.show()
 
 time_s = np.s_[:100]
 
 fig3 = plt.figure()
 ax3 = fig3.add_subplot(111)
-h31, = ax3.plot(idx[time_s],
-                res_f.freq_seasonal[1].filtered[time_s] +
-                res_f.freq_seasonal[0].filtered[time_s],
-                label='Double Freq. Seas')
-h32, = ax3.plot(idx[time_s],
-                res_tf.freq_seasonal[0].filtered[time_s] +
-                res_tf.seasonal.filtered[time_s],
-                label='Mixed Domain Seas')
-h33, = ax3.plot(idx[time_s], true_sum[time_s], label='True Seasonal 100(2)')
-h34, = ax3.plot(idx[time_s],
-                res_lf.freq_seasonal[0].filtered[time_s],
-                label='Lazy Freq. Seas')
-h35, = ax3.plot(idx[time_s],
-                res_lt.seasonal.filtered[time_s],
-                label='Lazy Time Seas')
+(h31,) = ax3.plot(
+    idx[time_s],
+    res_f.freq_seasonal[1].filtered[time_s] + res_f.freq_seasonal[0].filtered[time_s],
+    label="Double Freq. Seas",
+)
+(h32,) = ax3.plot(
+    idx[time_s],
+    res_tf.freq_seasonal[0].filtered[time_s] + res_tf.seasonal.filtered[time_s],
+    label="Mixed Domain Seas",
+)
+(h33,) = ax3.plot(idx[time_s], true_sum[time_s], label="True Seasonal 100(2)")
+(h34,) = ax3.plot(
+    idx[time_s], res_lf.freq_seasonal[0].filtered[time_s], label="Lazy Freq. Seas"
+)
+(h35,) = ax3.plot(idx[time_s], res_lt.seasonal.filtered[time_s], label="Lazy Time Seas")
 
-plt.legend([h31, h32, h33, h34, h35], [
-    'Double Freq. Seasonal', 'Mixed Domain Seasonal', 'Truth',
-    'Lazy Freq. Seas', 'Lazy Time Seas'
-],
-           loc=1)
-plt.title('Seasonal components combined')
+plt.legend(
+    [h31, h32, h33, h34, h35],
+    [
+        "Double Freq. Seasonal",
+        "Mixed Domain Seasonal",
+        "Truth",
+        "Lazy Freq. Seas",
+        "Lazy Time Seas",
+    ],
+    loc=1,
+)
+plt.title("Seasonal components combined")
 plt.tight_layout(pad=1.0)
 
 # ##### Conclusions

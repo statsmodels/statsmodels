@@ -5,6 +5,7 @@ Unit tests table.py.
 :see: http://agiletesting.blogspot.com/2005/01/python-unit-testing-part-1-unittest.html
 :see: http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/305292
 """
+
 import numpy as np
 from numpy.testing import assert_equal
 
@@ -36,7 +37,7 @@ txt_fmt1 = dict(
     header_align="r",
     data_aligns="r",
     stubs_align="l",
-    fmt="txt"
+    fmt="txt",
 )
 cell0data = 0.0000
 cell1data = 1
@@ -52,7 +53,7 @@ tbl = SimpleTable(
     test1stubs,
     txt_fmt=txt_fmt1,
     ltx_fmt=ltx_fmt1,
-    html_fmt=html_fmt1
+    html_fmt=html_fmt1,
 )
 
 
@@ -67,8 +68,7 @@ def custom_labeller(cell):
 class TestCell:
     def test_celldata(self):
         celldata = cell0data, cell1data, row1data[0], row1data[1]
-        cells = [Cell(datum, datatype=i % 2)
-                 for i, datum in enumerate(celldata)]
+        cells = [Cell(datum, datatype=i % 2) for i, datum in enumerate(celldata)]
         for cell, datum in zip(cells, celldata):
             assert_equal(cell.data, datum)
 

@@ -5,6 +5,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+
 import numpy as np
 from scipy import special
 
@@ -57,14 +58,15 @@ def _noncentrality_chisquare(chi2_stat, df, alpha=0.05):
     nc_median = special.chndtrinc(chi2_stat, df, 0.5)
     ci = special.chndtrinc(chi2_stat, df, [1 - alpha_half, alpha_half])
 
-    res = Holder(nc=nc,
-                 confint=ci,
-                 nc_umvue=nc_umvue,
-                 nc_lzd=nc_lzd,
-                 nc_krs=nc_krs,
-                 nc_median=nc_median,
-                 name="Noncentrality for chisquare-distributed random variable"
-                 )
+    res = Holder(
+        nc=nc,
+        confint=ci,
+        nc_umvue=nc_umvue,
+        nc_lzd=nc_lzd,
+        nc_krs=nc_krs,
+        nc_median=nc_median,
+        name="Noncentrality for chisquare-distributed random variable",
+    )
     return res
 
 
@@ -107,13 +109,14 @@ def _noncentrality_f(f_stat, df1, df2, alpha=0.05):
     nc_median = special.ncfdtrinc(df1, df2, 0.5, f_stat)
     ci = special.ncfdtrinc(df1, df2, [1 - alpha_half, alpha_half], f_stat)
 
-    res = Holder(nc=nc,
-                 confint=ci,
-                 nc_umvue=nc_umvue,
-                 nc_krs=nc_krs,
-                 nc_median=nc_median,
-                 name="Noncentrality for F-distributed random variable"
-                 )
+    res = Holder(
+        nc=nc,
+        confint=ci,
+        nc_umvue=nc_umvue,
+        nc_krs=nc_krs,
+        nc_median=nc_median,
+        name="Noncentrality for F-distributed random variable",
+    )
     return res
 
 
@@ -149,15 +152,16 @@ def _noncentrality_t(t_stat, df, alpha=0.05):
     """
     alpha_half = alpha / 2
 
-    gfac = np.exp(special.gammaln(df/2.-0.5) - special.gammaln(df/2.))
-    c11 = np.sqrt(df/2.) * gfac
+    gfac = np.exp(special.gammaln(df / 2.0 - 0.5) - special.gammaln(df / 2.0))
+    c11 = np.sqrt(df / 2.0) * gfac
     nc = t_stat / c11
     nc_median = special.nctdtrinc(df, 0.5, t_stat)
     ci = special.nctdtrinc(df, [1 - alpha_half, alpha_half], t_stat)
 
-    res = Holder(nc=nc,
-                 confint=ci,
-                 nc_median=nc_median,
-                 name="Noncentrality for t-distributed random variable"
-                 )
+    res = Holder(
+        nc=nc,
+        confint=ci,
+        nc_median=nc_median,
+        name="Noncentrality for t-distributed random variable",
+    )
     return res

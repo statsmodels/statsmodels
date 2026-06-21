@@ -12,8 +12,9 @@ def tukeyplot(results, dim=None, yticklabels=None):
     fsp.set_title("95 % family-wise confidence level")
     fsp.title.set_y(1.025)
     fsp.set_yticks(np.arange(1, 11))
-    fsp.set_yticklabels(["V-T", "V-S", "T-S", "V-P", "T-P", "S-P", "V-M",
-                         "T-M", "S-M", "P-M"])
+    fsp.set_yticklabels(
+        ["V-T", "V-S", "T-S", "V-P", "T-P", "S-P", "V-M", "T-M", "S-M", "P-M"]
+    )
     # fsp.yaxis.set_major_locator(mticker.MaxNLocator(npairs))
     fsp.yaxis.grid(True, linestyle="-", color="gray")
     fsp.set_xlabel("Differences in mean levels of Var", labelpad=8)
@@ -27,7 +28,7 @@ def tukeyplot(results, dim=None, yticklabels=None):
 
     xlabels = fsp.get_xticklabels()
     for xlabel in xlabels:
-        xlabel.set_y(-.04)
+        xlabel.set_y(-0.04)
 
     yticklines = fsp.get_yticklines()
     for ytickline in yticklines:
@@ -36,7 +37,7 @@ def tukeyplot(results, dim=None, yticklabels=None):
 
     ylabels = fsp.get_yticklabels()
     for ylabel in ylabels:
-        ylabel.set_x(-.04)
+        ylabel.set_x(-0.04)
 
     for pair in range(npairs):
         data = 0.5 + results[pair] / 100.0
@@ -70,21 +71,23 @@ def tukeyplot(results, dim=None, yticklabels=None):
 
     fsp.axvline(x=0, linestyle="--", color="black")
 
-    fig.subplots_adjust(bottom=.125)
+    fig.subplots_adjust(bottom=0.125)
 
 
-results = np.array([
-    [-10.04391794,  26.34391794],
-    [-21.45225794,  14.93557794],
-    [+5.614412060,  42.00224794],
-    [-13.40225794,  22.98557794],
-    [-29.60225794,  +6.78557794],
-    [-2.535587940,  33.85224794],
-    [-21.55225794,  14.83557794],
-    [+8.872752060,  45.26058794],
-    [-10.14391794,  26.24391794],
-    [-37.21058794,  -0.82275206]
-])
+results = np.array(
+    [
+        [-10.04391794, 26.34391794],
+        [-21.45225794, 14.93557794],
+        [+5.614412060, 42.00224794],
+        [-13.40225794, 22.98557794],
+        [-29.60225794, +6.78557794],
+        [-2.535587940, 33.85224794],
+        [-21.55225794, 14.83557794],
+        [+8.872752060, 45.26058794],
+        [-10.14391794, 26.24391794],
+        [-37.21058794, -0.82275206],
+    ]
+)
 
 
 # plt.show()

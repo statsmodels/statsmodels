@@ -24,7 +24,7 @@ __all__ = [
     "test",
     "zigenpoisson",
     "zinegbin",
-    "zipoisson"
-    ]
+    "zipoisson",
+]
 
 test = PytestTester()

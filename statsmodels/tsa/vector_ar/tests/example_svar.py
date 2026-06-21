@@ -21,5 +21,6 @@ A_guess = np.asarray([0.5, 0.25, -0.38])
 B_guess = np.asarray([0.5, 0.1, 0.05])
 mymodel = SVAR(data, svar_type="AB", A=A, B=B, freq="Q")
 res = mymodel.fit(maxlags=3, maxiter=10000, maxfun=10000, solver="bfgs")
-res.irf(periods=30).plot(impulse="realgdp", plot_stderr=True,
-                         stderr_type="mc", repl=100)
+res.irf(periods=30).plot(
+    impulse="realgdp", plot_stderr=True, stderr_type="mc", repl=100
+)

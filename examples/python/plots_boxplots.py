@@ -67,11 +67,9 @@ def beanplot(data, plot_opts={}, jitter=False):
         "label_rotation": 30,
     }
     plot_opts_.update(plot_opts)
-    sm.graphics.beanplot(data,
-                         ax=ax,
-                         labels=labels,
-                         jitter=jitter,
-                         plot_opts=plot_opts_)
+    sm.graphics.beanplot(
+        data, ax=ax, labels=labels, jitter=jitter, plot_opts=plot_opts_
+    )
     ax.set_xlabel("Party identification of respondent.")
     ax.set_ylabel("Age")
 
@@ -82,21 +80,15 @@ fig = beanplot(age, plot_opts={"violin_width": 0.5, "violin_fc": "#66c2a5"})
 
 fig = beanplot(age, plot_opts={"violin_fc": "#66c2a5"})
 
-fig = beanplot(age,
-               plot_opts={
-                   "bean_size": 0.2,
-                   "violin_width": 0.75,
-                   "violin_fc": "#66c2a5"
-               })
+fig = beanplot(
+    age, plot_opts={"bean_size": 0.2, "violin_width": 0.75, "violin_fc": "#66c2a5"}
+)
 
 fig = beanplot(age, jitter=True, plot_opts={"violin_fc": "#66c2a5"})
 
-fig = beanplot(age,
-               jitter=True,
-               plot_opts={
-                   "violin_width": 0.5,
-                   "violin_fc": "#66c2a5"
-               })
+fig = beanplot(
+    age, jitter=True, plot_opts={"violin_width": 0.5, "violin_fc": "#66c2a5"}
+)
 
 # ## Advanced Box Plots
 
@@ -180,11 +172,7 @@ plot_opts = {
     "bean_color": "#FF6F00",
     "bean_mean_color": "#009D91",
 }
-sm.graphics.beanplot(age,
-                     ax=ax,
-                     labels=labels,
-                     jitter=True,
-                     plot_opts=plot_opts)
+sm.graphics.beanplot(age, ax=ax, labels=labels, jitter=True, plot_opts=plot_opts)
 
 ax.set_xlabel("Party identification of respondent.")
 ax.set_ylabel("Age")

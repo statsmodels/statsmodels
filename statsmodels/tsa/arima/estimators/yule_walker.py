@@ -4,6 +4,7 @@ Yule-Walker method for estimating AR(p) model parameters.
 Author: Chad Fulton
 License: BSD-3
 """
+
 from statsmodels.compat.pandas import deprecate_kwarg
 
 from statsmodels.regression import linear_model
@@ -59,18 +60,23 @@ def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
     p = SARIMAXParams(spec=spec)
 
     if not spec.is_ar_consecutive:
-        raise ValueError("Yule-Walker estimation unavailable for models with"
-                         " seasonal or non-consecutive AR orders.")
+        raise ValueError(
+            "Yule-Walker estimation unavailable for models with"
+            " seasonal or non-consecutive AR orders."
+        )
 
     # Estimate parameters
     method = "adjusted" if adjusted else "mle"
     p.ar_params, sigma = linear_model.yule_walker(
-        endog, order=ar_order, demean=demean, method=method)
+        endog, order=ar_order, demean=demean, method=method
+    )
     p.sigma2 = sigma**2
 
     # Construct other results
-    other_results = Bunch({
-        "spec": spec,
-    })
+    other_results = Bunch(
+        {
+            "spec": spec,
+        }
+    )
 
     return p, other_results

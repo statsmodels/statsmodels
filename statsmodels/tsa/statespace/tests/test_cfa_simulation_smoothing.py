@@ -4,6 +4,7 @@ Tests for CFA simulation smoothing
 Author: Chad Fulton
 License: BSD-3
 """
+
 import os
 
 import numpy as np
@@ -22,8 +23,16 @@ dta = np.log(dta[["realcons", "realgdp", "cpi"]]).diff().iloc[1:] * 400
 
 class CheckPosteriorMoments:
     @classmethod
-    def setup_class(cls, model_class, missing=None, mean_atol=0, cov_atol=0,
-                    use_complex=False, *args, **kwargs):
+    def setup_class(
+        cls,
+        model_class,
+        missing=None,
+        mean_atol=0,
+        cov_atol=0,
+        use_complex=False,
+        *args,
+        **kwargs,
+    ):
         cls.mean_atol = mean_atol
         cls.cov_atol = cov_atol
 
@@ -61,8 +70,9 @@ class CheckPosteriorMoments:
         assert_allclose(actual, self.res.smoothed_state, atol=self.mean_atol)
 
         # Test the values from the CFASimulationSmoother wrapper results
-        assert_allclose(self.sim_cfa.posterior_mean, self.res.smoothed_state,
-                        atol=self.mean_atol)
+        assert_allclose(
+            self.sim_cfa.posterior_mean, self.res.smoothed_state, atol=self.mean_atol
+        )
 
     def test_posterior_cov(self):
         # Test the values from the Cython results
@@ -72,9 +82,11 @@ class CheckPosteriorMoments:
         for t in range(self.mod.nobs):
             tm = t * self.mod.k_states
             t1m = tm + self.mod.k_states
-            assert_allclose(actual[tm:t1m, tm:t1m],
-                            self.res.smoothed_state_cov[..., t],
-                            atol=self.cov_atol)
+            assert_allclose(
+                actual[tm:t1m, tm:t1m],
+                self.res.smoothed_state_cov[..., t],
+                atol=self.cov_atol,
+            )
 
         # Test the values from the CFASimulationSmoother wrapper results
         actual = self.sim_cfa.posterior_cov
@@ -82,9 +94,11 @@ class CheckPosteriorMoments:
         for t in range(self.mod.nobs):
             tm = t * self.mod.k_states
             t1m = tm + self.mod.k_states
-            assert_allclose(actual[tm:t1m, tm:t1m],
-                            self.res.smoothed_state_cov[..., t],
-                            atol=self.cov_atol)
+            assert_allclose(
+                actual[tm:t1m, tm:t1m],
+                self.res.smoothed_state_cov[..., t],
+                atol=self.cov_atol,
+            )
 
 
 class TestDFM(CheckPosteriorMoments):
@@ -92,9 +106,7 @@ class TestDFM(CheckPosteriorMoments):
     def setup_class(cls, missing=None, *args, **kwargs):
         kwargs["k_factors"] = 1
         kwargs["factor_order"] = 1
-        super().setup_class(
-            dynamic_factor.DynamicFactor, missing, *args, **kwargs
-        )
+        super().setup_class(dynamic_factor.DynamicFactor, missing, *args, **kwargs)
 
 
 class TestDFMComplex(CheckPosteriorMoments):

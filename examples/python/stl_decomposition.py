@@ -390,9 +390,9 @@ co2 = [
     347.44,
     348.67,
 ]
-co2 = pd.Series(co2,
-                index=pd.date_range("1-1-1959", periods=len(co2), freq="M"),
-                name="CO2")
+co2 = pd.Series(
+    co2, index=pd.date_range("1-1-1959", periods=len(co2), freq="M"), name="CO2"
+)
 co2.describe()
 
 # The decomposition requires 1 input, the data series. If the data series
@@ -456,12 +456,9 @@ xlim = ax.set_xlim(elec_equip.index[0], elec_equip.index[-1])
 # `COMPONENT_deg` to 0. Here the degree makes little difference except in
 # the trend around the financial crisis of 2008.
 
-stl = STL(elec_equip,
-          period=12,
-          seasonal_deg=0,
-          trend_deg=0,
-          low_pass_deg=0,
-          robust=True)
+stl = STL(
+    elec_equip, period=12, seasonal_deg=0, trend_deg=0, low_pass_deg=0, robust=True
+)
 res_deg_0 = stl.fit()
 fig = res_robust.plot()
 add_stl_plot(fig, res_deg_0, ["Degree 1", "Degree 0"])
@@ -537,9 +534,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.forecasting.stl import STLForecast
 
 elec_equip.index.freq = elec_equip.index.inferred_freq
-stlf = STLForecast(elec_equip,
-                   ARIMA,
-                   model_kwargs=dict(order=(1, 1, 0), trend="t"))
+stlf = STLForecast(elec_equip, ARIMA, model_kwargs=dict(order=(1, 1, 0), trend="t"))
 stlf_res = stlf.fit()
 
 forecast = stlf_res.forecast(24)

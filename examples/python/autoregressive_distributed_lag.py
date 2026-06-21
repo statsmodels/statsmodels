@@ -101,12 +101,9 @@ _ = (data - data.mean()).plot()
 # the endogenous variable and 3 lags of each exogenous variable. `trend="c"`
 # indicates that a constant should be included in the model.
 
-sel_res = ardl_select_order(data.lrm,
-                            3,
-                            data[["lry", "ibo", "ide"]],
-                            3,
-                            ic="aic",
-                            trend="c")
+sel_res = ardl_select_order(
+    data.lrm, 3, data[["lry", "ibo", "ide"]], 3, ic="aic", trend="c"
+)
 print(f"The optimal order is: {sel_res.model.ardl_order}")
 
 # The optimal order is returned as the number of lags of the endogenous
@@ -127,13 +124,9 @@ res.summary()
 # allowed (3 here).  This option lets the model selection choose non-
 # contiguous lag specifications.
 
-sel_res = ardl_select_order(data.lrm,
-                            3,
-                            data[["lry", "ibo", "ide"]],
-                            3,
-                            ic="bic",
-                            trend="c",
-                            glob=True)
+sel_res = ardl_select_order(
+    data.lrm, 3, data[["lry", "ibo", "ide"]], 3, ic="bic", trend="c", glob=True
+)
 sel_res.model.ardl_order
 
 # While the `ardl_order` shows the largest included lag of each variable,
@@ -174,14 +167,9 @@ for i, val in enumerate(sel_res.bic.head(10)):
 # The specification below matches that model selected by
 # `ardl_select_order`.
 
-res = ARDL(data.lrm,
-           2,
-           data[["lry", "ibo", "ide"]], {
-               "lry": 1,
-               "ibo": 2,
-               "ide": 3
-           },
-           trend="c").fit()
+res = ARDL(
+    data.lrm, 2, data[["lry", "ibo", "ide"]], {"lry": 1, "ibo": 2, "ide": 3}, trend="c"
+).fit()
 res.summary()
 
 # ### NumPy Data
@@ -207,11 +195,7 @@ res = ARDL(
     data.lrm,
     2,
     data[["lry", "ibo", "ide"]],
-    {
-        "lry": 1,
-        "ibo": 2,
-        "ide": 3
-    },
+    {"lry": 1, "ibo": 2, "ide": 3},
     trend="c",
     causal=True,
 ).fit()
@@ -254,12 +238,9 @@ res.summary()
 
 from statsmodels.tsa.api import UECM
 
-sel_res = ardl_select_order(data.lrm,
-                            3,
-                            data[["lry", "ibo", "ide"]],
-                            3,
-                            ic="aic",
-                            trend="c")
+sel_res = ardl_select_order(
+    data.lrm, 3, data[["lry", "ibo", "ide"]], 3, ic="aic", trend="c"
+)
 
 ecm = UECM.from_ardl(sel_res.model)
 ecm_res = ecm.fit()
@@ -296,8 +277,7 @@ seasonal_ecm_res.ci_summary()
 
 # The residuals are somewhat more random in appearance.
 
-_ = seasonal_ecm_res.ci_resids.plot(
-    title="Cointegrating Error with Seasonality")
+_ = seasonal_ecm_res.ci_resids.plot(title="Cointegrating Error with Seasonality")
 
 # ## The relationship between Consumption and Growth
 #
@@ -308,16 +288,17 @@ _ = seasonal_ecm_res.ci_resids.plot(
 # Greene, W. H. (2000). Econometric analysis 4th edition. International
 # edition, New Jersey: Prentice Hall, 201-215.
 
-greene = pd.read_fwf(
-    "http://www.stern.nyu.edu/~wgreene/Text/Edition7/TableF5-2.txt")
+greene = pd.read_fwf("http://www.stern.nyu.edu/~wgreene/Text/Edition7/TableF5-2.txt")
 greene.head()
 
 # We then transform the index to be a pandas `DatetimeIndex` so that we
 # can easily use seasonal terms.
 
 index = pd.to_datetime(
-    greene.Year.astype("int").astype("str") + "Q" +
-    greene.qtr.astype("int").astype("str"))
+    greene.Year.astype("int").astype("str")
+    + "Q"
+    + greene.qtr.astype("int").astype("str")
+)
 greene.index = index
 greene.index.freq = greene.index.inferred_freq
 greene.head()
@@ -333,13 +314,9 @@ greene["g"] = np.log(greene.realgdp)
 # The selected model contains 5 lags of consumption and 2 of growth (0 and
 # 1). Here we include seasonal terms although these are not significant.
 
-sel_res = ardl_select_order(greene.c,
-                            8,
-                            greene[["g"]],
-                            8,
-                            trend="c",
-                            seasonal=True,
-                            ic="aic")
+sel_res = ardl_select_order(
+    greene.c, 8, greene[["g"]], 8, trend="c", seasonal=True, ic="aic"
+)
 ardl = sel_res.model
 ardl.ardl_order
 

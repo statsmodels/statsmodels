@@ -48,8 +48,7 @@ def test_average_grid():
     x2 = np.arange(4)
     y = x1[:, None] * x2
 
-    res1 = np.array([[0.75, 2.25, 3.75],
-                     [1.25, 3.75, 6.25]])
+    res1 = np.array([[0.75, 2.25, 3.75], [1.25, 3.75, 6.25]])
 
     res0 = dt.average_grid(y, coords=[x1, x2])
     assert_allclose(res0, res1, rtol=1e-13)
@@ -60,20 +59,57 @@ def test_average_grid():
 
     res0 = dt.average_grid(y, coords=[x1 / x1.max(), x2 / x2.max()])
     assert_allclose(res0, res1 / x1.max() / x2.max(), rtol=1e-13)
-    res0 = dt.average_grid(y, coords=[x1 / x1.max(), x2 / x2.max()],
-                           _method="convolve")
+    res0 = dt.average_grid(y, coords=[x1 / x1.max(), x2 / x2.max()], _method="convolve")
     assert_allclose(res0, res1 / x1.max() / x2.max(), rtol=1e-13)
 
 
 def test_grid_class():
 
-    res = {"k_grid": [3, 5],
-           "x_marginal": [np.array([0., 0.5, 1.]),
-                          np.array([0., 0.25, 0.5, 0.75, 1.])],
-           "idx_flat.T": np.array([
-               [0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 2., 2., 2., 2., 2.],
-               [0., 1., 2., 3., 4., 0., 1., 2., 3., 4., 0., 1., 2., 3., 4.]])
-           }
+    res = {
+        "k_grid": [3, 5],
+        "x_marginal": [
+            np.array([0.0, 0.5, 1.0]),
+            np.array([0.0, 0.25, 0.5, 0.75, 1.0]),
+        ],
+        "idx_flat.T": np.array(
+            [
+                [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    2.0,
+                    2.0,
+                    2.0,
+                    2.0,
+                    2.0,
+                ],
+                [
+                    0.0,
+                    1.0,
+                    2.0,
+                    3.0,
+                    4.0,
+                    0.0,
+                    1.0,
+                    2.0,
+                    3.0,
+                    4.0,
+                    0.0,
+                    1.0,
+                    2.0,
+                    3.0,
+                    4.0,
+                ],
+            ]
+        ),
+    }
     gg = dt._Grid([3, 5])
     assert_equal(gg.k_grid, res["k_grid"])
     assert gg.x_marginal, res["x_marginal"]
@@ -89,10 +125,11 @@ def test_grid_class():
 
     # 1-dim
     gg = dt._Grid([5], eps=0.001)
-    res = {"k_grid": [5],
-           "x_marginal": [np.array([0.001, 0.25, 0.5, 0.75, 0.999])],
-           "idx_flat.T": np.array([[0., 1., 2., 3., 4.]])
-           }
+    res = {
+        "k_grid": [5],
+        "x_marginal": [np.array([0.001, 0.25, 0.5, 0.75, 0.999])],
+        "idx_flat.T": np.array([[0.0, 1.0, 2.0, 3.0, 4.0]]),
+    }
     assert_equal(gg.k_grid, res["k_grid"])
     assert gg.x_marginal, res["x_marginal"]
     assert_allclose(gg.idx_flat, res["idx_flat.T"].T, atol=1e-12)
@@ -100,19 +137,79 @@ def test_grid_class():
     assert_allclose(gg.x_flat, res["x_marginal"][0][:, None], atol=1e-12)
 
     # 3-dim
-    gg = dt._Grid([3, 3, 2], eps=0.)
-    res = {"k_grid": [3, 3, 2],
-           "x_marginal": [np.array([0., 0.5, 1.]),
-                          np.array([0., 0.5, 1.]),
-                          np.array([0., 1.])],
-           "idx_flat.T": np.array([
-               [0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1., 2., 2., 2., 2.,
-                2., 2.],
-               [0., 0., 1., 1., 2., 2., 0., 0., 1., 1., 2., 2., 0., 0., 1., 1.,
-                2., 2.],
-               [0., 1., 0., 1., 0., 1., 0., 1., 0., 1., 0., 1., 0., 1., 0., 1.,
-                0., 1.]])
-           }
+    gg = dt._Grid([3, 3, 2], eps=0.0)
+    res = {
+        "k_grid": [3, 3, 2],
+        "x_marginal": [
+            np.array([0.0, 0.5, 1.0]),
+            np.array([0.0, 0.5, 1.0]),
+            np.array([0.0, 1.0]),
+        ],
+        "idx_flat.T": np.array(
+            [
+                [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    2.0,
+                    2.0,
+                    2.0,
+                    2.0,
+                    2.0,
+                    2.0,
+                ],
+                [
+                    0.0,
+                    0.0,
+                    1.0,
+                    1.0,
+                    2.0,
+                    2.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    1.0,
+                    2.0,
+                    2.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    1.0,
+                    2.0,
+                    2.0,
+                ],
+                [
+                    0.0,
+                    1.0,
+                    0.0,
+                    1.0,
+                    0.0,
+                    1.0,
+                    0.0,
+                    1.0,
+                    0.0,
+                    1.0,
+                    0.0,
+                    1.0,
+                    0.0,
+                    1.0,
+                    0.0,
+                    1.0,
+                    0.0,
+                    1.0,
+                ],
+            ]
+        ),
+    }
     assert_equal(gg.k_grid, res["k_grid"])
     assert gg.x_marginal, res["x_marginal"]
     assert_allclose(gg.idx_flat, res["idx_flat.T"].T, atol=1e-12)
@@ -143,8 +240,8 @@ def test_bernstein_2d():
         k_x = 2 * k
         # create flattened grid of bivariate values
         x2d = np.column_stack(
-                np.unravel_index(np.arange(k_x * k_x), (k_x, k_x))
-                ).astype(float)
+            np.unravel_index(np.arange(k_x * k_x), (k_x, k_x))
+        ).astype(float)
         x2d /= x2d.max(0)
 
         res_bp = evalbp(x2d, cd2d)

@@ -8,6 +8,7 @@ Authors: Josef Perktold & Peter Prescott
 License: BSD-3
 
 """
+
 import numpy as np
 
 from statsmodels.tools.validation import array_like
@@ -101,7 +102,7 @@ def rmspe(y, y_hat, axis=0, zeros=np.nan):
     loc = loc.ravel()
     percentage_error = np.full_like(error, zeros)
     percentage_error.flat[loc] = error.flat[loc] / y.flat[loc]
-    mspe = np.nanmean(percentage_error ** 2, axis=axis) * 100
+    mspe = np.nanmean(percentage_error**2, axis=axis) * 100
     return np.sqrt(mspe)
 
 

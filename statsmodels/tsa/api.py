@@ -60,7 +60,7 @@ __all__ = [
     "var",
     "x13_arima_analysis",
     "x13_arima_select_order",
-    "zivot_andrews"
+    "zivot_andrews",
 ]
 
 from statsmodels.graphics import tsaplots as graphics

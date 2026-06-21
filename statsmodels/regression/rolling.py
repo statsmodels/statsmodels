@@ -7,6 +7,7 @@ multiplication.
 Copyright (c) 2019 Kevin Sheppard
 License: 3-clause BSD
 """
+
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import (
     cache_readonly,
@@ -142,13 +143,11 @@ class RollingWLS:
         weights=None,
         min_nobs=None,
         missing="drop",
-        expanding=False
+        expanding=False,
     ):
         # Call Model.__init__ twice to use const detection in first pass
         # But to not drop in the second pass
-        missing = string_like(
-            missing, "missing", options=("drop", "raise", "skip")
-        )
+        missing = string_like(missing, "missing", options=("drop", "raise", "skip"))
         temp_msng = "drop" if missing != "raise" else "raise"
         Model.__init__(self, endog, exog, missing=temp_msng, hasconst=None)
         k_const = self.k_constant
@@ -184,9 +183,7 @@ class RollingWLS:
         self._skip_missing = missing == "skip"
 
     def _handle_data(self, endog, exog, missing, hasconst, **kwargs):
-        return Model._handle_data(
-            self, endog, exog, missing, hasconst, **kwargs
-        )
+        return Model._handle_data(self, endog, exog, missing, hasconst, **kwargs)
 
     def _find_nans(self):
         nans = np.isnan(self._y)
@@ -265,7 +262,7 @@ class RollingWLS:
     def _loglike(self, params, wy, wx, weights, nobs):
         nobs2 = nobs / 2.0
         wresid = wy - wx @ params
-        ssr = np.sum(wresid ** 2, axis=0)
+        ssr = np.sum(wresid**2, axis=0)
         llf = -np.log(ssr) * nobs2  # concentrated likelihood
         llf -= (1 + np.log(np.pi / nobs2)) * nobs2  # with constant
         llf += 0.5 * np.sum(np.log(weights))
@@ -332,9 +329,7 @@ class RollingWLS:
             Estimation results where all pre-sample values are nan-filled.
 
         """
-        method = string_like(
-            method, "method", options=("inv", "lstsq", "pinv")
-        )
+        method = string_like(method, "method", options=("inv", "lstsq", "pinv"))
         reset = int_like(reset, "reset", optional=True)
         reset = self._y.shape[0] if reset is None else reset
         if reset < 1:
@@ -377,9 +372,7 @@ class RollingWLS:
 
             self._fit_single(i, xpx, xpy, nobs, store, params_only, method)
 
-        return RollingRegressionResults(
-            self, store, self.k_constant, use_t, cov_type
-        )
+        return RollingRegressionResults(self, store, self.k_constant, use_t, cov_type)
 
     @classmethod
     @Appender(Model.from_formula.__doc__)
@@ -447,7 +440,7 @@ class RollingOLS(RollingWLS):
         *,
         min_nobs=None,
         missing="drop",
-        expanding=False
+        expanding=False,
     ):
         super().__init__(
             endog,
@@ -482,9 +475,7 @@ class RollingRegressionResults:
 
     _data_in_cache = tuple()
 
-    def __init__(
-        self, model, store: RollingStore, k_constant, use_t, cov_type
-    ):
+    def __init__(self, model, store: RollingStore, k_constant, use_t, cov_type):
         self.model = model
         self._params = store.params
         self._ssr = store.ssr
@@ -579,9 +570,7 @@ class RollingRegressionResults:
     @cache_readonly
     @Appender(get_cached_doc(RegressionResults.rsquared_adj))
     def rsquared_adj(self):
-        return self._wrap(
-            call_cached_func(RegressionResults.rsquared_adj, self)
-        )
+        return self._wrap(call_cached_func(RegressionResults.rsquared_adj, self))
 
     @cache_readonly
     @Appender(get_cached_doc(RegressionResults.nobs))
@@ -646,9 +635,7 @@ class RollingRegressionResults:
     @Appender(get_cached_doc(RegressionResults.f_pvalue))
     def f_pvalue(self):
         with np.errstate(invalid="ignore"):
-            return self._wrap(
-                call_cached_func(RegressionResults.f_pvalue, self)
-            )
+            return self._wrap(call_cached_func(RegressionResults.f_pvalue, self))
 
     @cache_readonly
     @Appender(get_cached_doc(RegressionResults.fvalue))
@@ -686,9 +673,7 @@ class RollingRegressionResults:
     @Appender(get_cached_doc(LikelihoodModelResults.tvalues))
     def tvalues(self):
         with np.errstate(invalid="ignore"):
-            return self._wrap(
-                call_cached_func(LikelihoodModelResults.tvalues, self)
-            )
+            return self._wrap(call_cached_func(LikelihoodModelResults.tvalues, self))
 
     @cache_readonly
     @Appender(get_cached_doc(LikelihoodModelResults.pvalues))
@@ -815,9 +800,7 @@ class RollingRegressionResults:
                     msg = (
                         "variable {} is not an integer and was not found "
                         "in the list of variable "
-                        "names: {}".format(
-                            variables[i], ", ".join(param_names)
-                        )
+                        "names: {}".format(variables[i], ", ".join(param_names))
                     )
                     raise ValueError(msg)
 
@@ -839,12 +822,8 @@ class RollingRegressionResults:
             if alpha is not None:
                 this_ci = np.reshape(ci[:, :, i], (-1, 2))
                 if not np.all(np.isnan(this_ci)):
-                    ax.plot(
-                        row_lbl, this_ci[:, 0][valid], "k:", label="Lower CI"
-                    )
-                    ax.plot(
-                        row_lbl, this_ci[:, 1][valid], "k:", label="Upper CI"
-                    )
+                    ax.plot(row_lbl, this_ci[:, 0][valid], "k:", label="Lower CI")
+                    ax.plot(row_lbl, this_ci[:, 1][valid], "k:", label="Upper CI")
                     if loc == 0:
                         ax.legend(loc=legend_loc)
             ax.set_xlim(row_lbl[0], row_lbl[-1])

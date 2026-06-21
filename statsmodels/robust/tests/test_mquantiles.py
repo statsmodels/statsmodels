@@ -28,7 +28,7 @@ def std_func(x):
     return 0.1 * np.exp(2.5 + 0.75 * np.abs(x))
 
 
-class TestMQuantiles():
+class TestMQuantiles:
 
     @classmethod
     def setup_class(cls):

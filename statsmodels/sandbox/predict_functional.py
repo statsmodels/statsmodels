@@ -7,7 +7,6 @@ functional regression in which the role of x is modeled with b-splines
 or other basis functions.
 """
 
-
 import warnings
 
 import numpy as np

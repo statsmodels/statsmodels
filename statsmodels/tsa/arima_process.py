@@ -16,6 +16,7 @@ Judge, ... (1985): The Theory and Practise of Econometrics
 Author: josefpktd
 License: BSD
 """
+
 from statsmodels.compat.numpy import NP_LT_2
 
 import warnings
@@ -51,9 +52,7 @@ The model's autoregressive parameters (ar) indicate that the process
 """
 
 
-def arma_generate_sample(
-    ar, ma, nsample, scale=1, distrvs=None, axis=0, burnin=0
-):
+def arma_generate_sample(ar, ma, nsample, scale=1, distrvs=None, axis=0, burnin=0):
     """
     Simulate data from an ARMA.
 
@@ -196,9 +195,7 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
     # Iteratively apply (BD, eq. 3.3.9) to solve for remaining autocovariances
     if nobs > m:
         zi = signal.lfiltic([1], ar, acovf[:m:][::-1])
-        acovf[m:] = signal.lfilter(
-            [1], ar, np.zeros(nobs - m, dtype=dtype), zi=zi
-        )[0]
+        acovf[m:] = signal.lfilter([1], ar, np.zeros(nobs - m, dtype=dtype), zi=zi)[0]
 
     return acovf[:nobs]
 
@@ -884,14 +881,10 @@ class ArmaProcess:
 
     def __repr__(self):
         msg = "ArmaProcess({0}, {1}, nobs={2}) at {3}"
-        return msg.format(
-            self.ar.tolist(), self.ma.tolist(), self.nobs, hex(id(self))
-        )
+        return msg.format(self.ar.tolist(), self.ma.tolist(), self.nobs, hex(id(self)))
 
     def __str__(self):
-        return "ArmaProcess\nAR: {}\nMA: {}".format(
-            self.ar.tolist(), self.ma.tolist()
-        )
+        return "ArmaProcess\nAR: {}\nMA: {}".format(self.ar.tolist(), self.ma.tolist())
 
     @Appender(remove_parameters(arma_acovf.__doc__, ["ar", "ma", "sigma2"]))
     def acovf(self, nobs=None):
@@ -909,9 +902,7 @@ class ArmaProcess:
         return arma_pacf(self.ar, self.ma, lags=lags)
 
     @Appender(
-        remove_parameters(
-            arma_periodogram.__doc__, ["ar", "ma", "worN", "whole"]
-        )
+        remove_parameters(arma_periodogram.__doc__, ["ar", "ma", "worN", "whole"])
     )
     def periodogram(self, nobs=None):
         nobs = nobs or self.nobs
@@ -1008,9 +999,7 @@ class ArmaProcess:
             return mainv, invertible
 
     @Appender(str(_generate_sample_doc))
-    def generate_sample(
-        self, nsample=100, scale=1.0, distrvs=None, axis=0, burnin=0
-    ):
+    def generate_sample(self, nsample=100, scale=1.0, distrvs=None, axis=0, burnin=0):
         return arma_generate_sample(
             self.ar, self.ma, nsample, scale, distrvs, axis=axis, burnin=burnin
         )

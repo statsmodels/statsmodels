@@ -729,9 +729,7 @@ class TestGEE:
         endog = exog_sub.sum(1) + 3 * np.random.normal(size=n)
 
         # Mismatched cov_struct
-        mod_sub = gee.GEE(
-            endog, exog_sub, group, cov_struct=cov_struct.Exchangeable()
-        )
+        mod_sub = gee.GEE(endog, exog_sub, group, cov_struct=cov_struct.Exchangeable())
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
         with pytest.warns(UserWarning, match="Model and submodel have"):

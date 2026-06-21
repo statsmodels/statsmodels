@@ -3038,6 +3038,7 @@ def test_tweedie_score():
             pa = result.params + 0.2 * np.random.normal(size=result.params.size)
 
             from functools import partial
+
             ngrad = approx_fprime_cs(pa, partial(model.loglike, scale=1))
             agrad = model.score(pa, scale=1)
             assert_allclose(ngrad, agrad, atol=1e-8, rtol=1e-8)

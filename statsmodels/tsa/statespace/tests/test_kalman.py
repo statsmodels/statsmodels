@@ -16,6 +16,7 @@ Hamilton, James D. 1994.
 Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
+
 import copy
 import os
 import pickle
@@ -38,12 +39,16 @@ from statsmodels.tsa.statespace.mlemodel import MLEModel
 from .results import results_kalman_filter
 
 prefix_statespace_map = {
-    "s": _representation.sStatespace, "d": _representation.dStatespace,
-    "c": _representation.cStatespace, "z": _representation.zStatespace
+    "s": _representation.sStatespace,
+    "d": _representation.dStatespace,
+    "c": _representation.cStatespace,
+    "z": _representation.zStatespace,
 }
 prefix_kalman_filter_map = {
-    "s": _kalman_filter.sKalmanFilter, "d": _kalman_filter.dKalmanFilter,
-    "c": _kalman_filter.cKalmanFilter, "z": _kalman_filter.zKalmanFilter
+    "s": _kalman_filter.sKalmanFilter,
+    "d": _kalman_filter.dKalmanFilter,
+    "c": _kalman_filter.cKalmanFilter,
+    "z": _kalman_filter.zKalmanFilter,
 }
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -59,6 +64,7 @@ class Clark1987:
 
     See `results.results_kalman_filter` for more information.
     """
+
     @classmethod
     def setup_class(cls, dtype=float, conserve_memory=0, loglikelihood_burn=0):
         cls.true = results_kalman_filter.uc_uni
@@ -68,7 +74,7 @@ class Clark1987:
         data = pd.DataFrame(
             cls.true["data"],
             index=pd.date_range("1947-01-01", "1995-07-01", freq="QS"),
-            columns=["GDP"]
+            columns=["GDP"],
         )
         data["lgdp"] = np.log(data["GDP"])
 
@@ -78,8 +84,7 @@ class Clark1987:
 
         # Observed data
         cls.obs = np.require(
-            np.array(data["lgdp"], ndmin=2, dtype=dtype, order="F"),
-            requirements="W"
+            np.array(data["lgdp"], ndmin=2, dtype=dtype, order="F"), requirements="W"
         )
 
         # Measurement equation
@@ -95,33 +100,36 @@ class Clark1987:
         # Transition equation
         cls.k_states = k_states = 4  # dimension of state space
         # transition matrix
-        cls.transition = np.zeros((k_states, k_states, 1),
-                                  dtype=dtype, order="F")
-        cls.transition[([0, 0, 1, 1, 2, 3],
-                        [0, 3, 1, 2, 1, 3],
-                        [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
+        cls.transition = np.zeros((k_states, k_states, 1), dtype=dtype, order="F")
+        cls.transition[([0, 0, 1, 1, 2, 3], [0, 3, 1, 2, 1, 3], [0, 0, 0, 0, 0, 0])] = [
+            1,
+            1,
+            0,
+            0,
+            1,
+            1,
+        ]
         # state intercept
         cls.state_intercept = np.zeros((k_states, 1), dtype=dtype, order="F")
         # selection matrix
-        cls.selection = np.asfortranarray(np.eye(k_states)[:, :, None],
-                                          dtype=dtype)
+        cls.selection = np.asfortranarray(np.eye(k_states)[:, :, None], dtype=dtype)
         # state covariance matrix
-        cls.state_cov = np.zeros((k_states, k_states, 1),
-                                 dtype=dtype, order="F")
+        cls.state_cov = np.zeros((k_states, k_states, 1), dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
         cls.initial_state = np.zeros((k_states,), dtype=dtype, order="F")
-        cls.initial_state_cov = np.asfortranarray(np.eye(k_states)*100,
-                                                  dtype=dtype)
+        cls.initial_state_cov = np.asfortranarray(np.eye(k_states) * 100, dtype=dtype)
 
         # Update matrices with given parameters
-        (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(
+        sigma_v, sigma_e, sigma_w, phi_1, phi_2 = np.array(
             cls.true["parameters"], dtype=dtype
         )
         cls.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
-        cls.state_cov[
-            np.diag_indices(k_states)+(np.zeros(k_states, dtype=int),)] = [
-            sigma_v**2, sigma_e**2, 0, sigma_w**2
+        cls.state_cov[np.diag_indices(k_states) + (np.zeros(k_states, dtype=int),)] = [
+            sigma_v**2,
+            sigma_e**2,
+            0,
+            sigma_w**2,
         ]
 
         # Initialization: modification
@@ -133,7 +141,7 @@ class Clark1987:
         cls.initial_state_cov = np.asfortranarray(
             np.dot(
                 np.dot(cls.transition[:, :, 0], cls.initial_state_cov),
-                cls.transition[:, :, 0].T
+                cls.transition[:, :, 0].T,
             )
         )
 
@@ -145,16 +153,24 @@ class Clark1987:
 
         # Instantiate the statespace model
         model = klass(
-            cls.obs, cls.design, cls.obs_intercept, cls.obs_cov,
-            cls.transition, cls.state_intercept, cls.selection,
-            cls.state_cov
+            cls.obs,
+            cls.design,
+            cls.obs_intercept,
+            cls.obs_cov,
+            cls.transition,
+            cls.state_intercept,
+            cls.selection,
+            cls.state_cov,
         )
         model.initialize_known(cls.initial_state, cls.initial_state_cov)
 
         # Initialize the appropriate Kalman filter
         klass = prefix_kalman_filter_map[prefix[0]]
-        kfilter = klass(model, conserve_memory=cls.conserve_memory,
-                        loglikelihood_burn=cls.loglikelihood_burn)
+        kfilter = klass(
+            model,
+            conserve_memory=cls.conserve_memory,
+            loglikelihood_burn=cls.loglikelihood_burn,
+        )
 
         return model, kfilter
 
@@ -176,16 +192,19 @@ class Clark1987:
 
     def test_filtered_state(self):
         assert_almost_equal(
-            self.result["state"][0][self.true["start"]:],
-            self.true_states.iloc[:, 0], 4
+            self.result["state"][0][self.true["start"] :],
+            self.true_states.iloc[:, 0],
+            4,
         )
         assert_almost_equal(
-            self.result["state"][1][self.true["start"]:],
-            self.true_states.iloc[:, 1], 4
+            self.result["state"][1][self.true["start"] :],
+            self.true_states.iloc[:, 1],
+            4,
         )
         assert_almost_equal(
-            self.result["state"][3][self.true["start"]:],
-            self.true_states.iloc[:, 2], 4
+            self.result["state"][3][self.true["start"] :],
+            self.true_states.iloc[:, 2],
+            4,
         )
 
     def test_pickled_filter(self):
@@ -195,10 +214,12 @@ class Clark1987:
         pickled()
 
         assert id(filter) != id(pickled)
-        assert_allclose(np.array(self.filter.filtered_state),
-                        np.array(pickled.filtered_state))
-        assert_allclose(np.array(self.filter.loglikelihood),
-                        np.array(pickled.loglikelihood))
+        assert_allclose(
+            np.array(self.filter.filtered_state), np.array(pickled.filtered_state)
+        )
+        assert_allclose(
+            np.array(self.filter.loglikelihood), np.array(pickled.loglikelihood)
+        )
 
     def test_copied_filter(self):
         copied = copy.deepcopy(self.filter)
@@ -207,48 +228,48 @@ class Clark1987:
         copied()
 
         assert id(filter) != id(copied)
-        assert_allclose(np.array(self.filter.filtered_state),
-                        np.array(copied.filtered_state))
+        assert_allclose(
+            np.array(self.filter.filtered_state), np.array(copied.filtered_state)
+        )
 
-        assert_allclose(np.array(self.filter.loglikelihood),
-                        np.array(copied.loglikelihood))
+        assert_allclose(
+            np.array(self.filter.loglikelihood), np.array(copied.loglikelihood)
+        )
 
 
 class TestClark1987Single(Clark1987):
     """
     Basic single precision test for the loglikelihood and filtered states.
     """
+
     @classmethod
     def setup_class(cls):
         # TODO: Can we be more specific?  How can a contributor help?
         pytest.skip("Not implemented")
-        super().setup_class(
-            dtype=np.float32, conserve_memory=0
-        )
+        super().setup_class(dtype=np.float32, conserve_memory=0)
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
 
     def test_loglike(self):
         assert_allclose(
-            self.result["loglike"](self.true["start"]), self.true["loglike"],
-            rtol=1e-3
+            self.result["loglike"](self.true["start"]), self.true["loglike"], rtol=1e-3
         )
 
     def test_filtered_state(self):
         assert_allclose(
-            self.result["state"][0][self.true["start"]:],
+            self.result["state"][0][self.true["start"] :],
             self.true_states.iloc[:, 0],
-            atol=1e-2
+            atol=1e-2,
         )
         assert_allclose(
-            self.result["state"][1][self.true["start"]:],
+            self.result["state"][1][self.true["start"] :],
             self.true_states.iloc[:, 1],
-            atol=1e-2
+            atol=1e-2,
         )
         assert_allclose(
-            self.result["state"][3][self.true["start"]:],
+            self.result["state"][3][self.true["start"] :],
             self.true_states.iloc[:, 2],
-            atol=1e-2
+            atol=1e-2,
         )
 
 
@@ -256,11 +277,10 @@ class TestClark1987Double(Clark1987):
     """
     Basic double precision test for the loglikelihood and filtered states.
     """
+
     @classmethod
     def setup_class(cls):
-        super().setup_class(
-            dtype=float, conserve_memory=0
-        )
+        super().setup_class(dtype=float, conserve_memory=0)
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
 
@@ -270,37 +290,35 @@ class TestClark1987SingleComplex(Clark1987):
     Basic single precision complex test for the loglikelihood and filtered
     states.
     """
+
     @classmethod
     def setup_class(cls):
         # TODO: Can we be more specific?  How can a contributor help?
         pytest.skip("Not implemented")
-        super().setup_class(
-            dtype=np.complex64, conserve_memory=0
-        )
+        super().setup_class(dtype=np.complex64, conserve_memory=0)
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
 
     def test_loglike(self):
         assert_allclose(
-            self.result["loglike"](self.true["start"]), self.true["loglike"],
-            rtol=1e-3
+            self.result["loglike"](self.true["start"]), self.true["loglike"], rtol=1e-3
         )
 
     def test_filtered_state(self):
         assert_allclose(
-            self.result["state"][0][self.true["start"]:],
+            self.result["state"][0][self.true["start"] :],
             self.true_states.iloc[:, 0],
-            atol=1e-2
+            atol=1e-2,
         )
         assert_allclose(
-            self.result["state"][1][self.true["start"]:],
+            self.result["state"][1][self.true["start"] :],
             self.true_states.iloc[:, 1],
-            atol=1e-2
+            atol=1e-2,
         )
         assert_allclose(
-            self.result["state"][3][self.true["start"]:],
+            self.result["state"][3][self.true["start"] :],
             self.true_states.iloc[:, 2],
-            atol=1e-2
+            atol=1e-2,
         )
 
 
@@ -309,11 +327,10 @@ class TestClark1987DoubleComplex(Clark1987):
     Basic double precision complex test for the loglikelihood and filtered
     states.
     """
+
     @classmethod
     def setup_class(cls):
-        super().setup_class(
-            dtype=complex, conserve_memory=0
-        )
+        super().setup_class(dtype=complex, conserve_memory=0)
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
 
@@ -322,11 +339,11 @@ class TestClark1987Conserve(Clark1987):
     """
     Memory conservation test for the loglikelihood and filtered states.
     """
+
     @classmethod
     def setup_class(cls):
         super().setup_class(
-            dtype=float,
-            conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
+            dtype=float, conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
         )
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
@@ -336,30 +353,33 @@ class Clark1987Forecast(Clark1987):
     """
     Forecasting test for the loglikelihood and filtered states.
     """
+
     @classmethod
     def setup_class(cls, dtype=float, nforecast=100, conserve_memory=0):
-        super().setup_class(
-            dtype, conserve_memory
-        )
+        super().setup_class(dtype, conserve_memory)
         cls.nforecast = nforecast
 
         # Add missing observations to the end (to forecast)
         cls._obs = cls.obs
-        cls.obs = np.array(np.r_[cls.obs[0, :], [np.nan]*nforecast],
-                           ndmin=2, dtype=dtype, order="F")
+        cls.obs = np.array(
+            np.r_[cls.obs[0, :], [np.nan] * nforecast], ndmin=2, dtype=dtype, order="F"
+        )
 
     def test_filtered_state(self):
         assert_almost_equal(
-            self.result["state"][0][self.true["start"]:-self.nforecast],
-            self.true_states.iloc[:, 0], 4
+            self.result["state"][0][self.true["start"] : -self.nforecast],
+            self.true_states.iloc[:, 0],
+            4,
         )
         assert_almost_equal(
-            self.result["state"][1][self.true["start"]:-self.nforecast],
-            self.true_states.iloc[:, 1], 4
+            self.result["state"][1][self.true["start"] : -self.nforecast],
+            self.true_states.iloc[:, 1],
+            4,
         )
         assert_almost_equal(
-            self.result["state"][3][self.true["start"]:-self.nforecast],
-            self.true_states.iloc[:, 2], 4
+            self.result["state"][3][self.true["start"] : -self.nforecast],
+            self.true_states.iloc[:, 2],
+            4,
         )
 
 
@@ -367,6 +387,7 @@ class TestClark1987ForecastDouble(Clark1987Forecast):
     """
     Basic double forecasting test for the loglikelihood and filtered states.
     """
+
     @classmethod
     def setup_class(cls):
         super().setup_class()
@@ -379,11 +400,10 @@ class TestClark1987ForecastDoubleComplex(Clark1987Forecast):
     Basic double complex forecasting test for the loglikelihood and filtered
     states.
     """
+
     @classmethod
     def setup_class(cls):
-        super().setup_class(
-            dtype=complex
-        )
+        super().setup_class(dtype=complex)
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
 
@@ -393,11 +413,11 @@ class TestClark1987ForecastConserve(Clark1987Forecast):
     Memory conservation forecasting test for the loglikelihood and filtered
     states.
     """
+
     @classmethod
     def setup_class(cls):
         super().setup_class(
-            dtype=float,
-            conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
+            dtype=float, conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
         )
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
@@ -408,29 +428,24 @@ class TestClark1987ConserveAll(Clark1987):
     Memory conservation forecasting test for the loglikelihood and filtered
     states.
     """
+
     @classmethod
     def setup_class(cls):
-        super().setup_class(
-            dtype=float, conserve_memory=MEMORY_CONSERVE
-        )
+        super().setup_class(dtype=float, conserve_memory=MEMORY_CONSERVE)
         cls.loglikelihood_burn = cls.true["start"]
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
 
     def test_loglike(self):
-        assert_almost_equal(
-            self.result["loglike"](0), self.true["loglike"], 5
-        )
+        assert_almost_equal(self.result["loglike"](0), self.true["loglike"], 5)
 
     def test_filtered_state(self):
         end = self.true_states.shape[0]
         assert_almost_equal(
-            self.result["state"][0][-1],
-            self.true_states.iloc[end-1, 0], 4
+            self.result["state"][0][-1], self.true_states.iloc[end - 1, 0], 4
         )
         assert_almost_equal(
-            self.result["state"][1][-1],
-            self.true_states.iloc[end-1, 1], 4
+            self.result["state"][1][-1], self.true_states.iloc[end - 1, 1], 4
         )
 
 
@@ -446,6 +461,7 @@ class Clark1989:
 
     See `results.results_kalman_filter` for more information.
     """
+
     @classmethod
     def setup_class(cls, dtype=float, conserve_memory=0, loglikelihood_burn=0):
         cls.true = results_kalman_filter.uc_bi
@@ -455,10 +471,10 @@ class Clark1989:
         data = pd.DataFrame(
             cls.true["data"],
             index=pd.date_range("1947-01-01", "1995-07-01", freq="QS"),
-            columns=["GDP", "UNEMP"]
+            columns=["GDP", "UNEMP"],
         )[4:]
         data["GDP"] = np.log(data["GDP"])
-        data["UNEMP"] = (data["UNEMP"]/100)
+        data["UNEMP"] = data["UNEMP"] / 100
 
         # Observed data
         cls.obs = np.array(data, ndmin=2, dtype=dtype, order="C").T
@@ -482,38 +498,48 @@ class Clark1989:
         # Transition equation
 
         # transition matrix
-        cls.transition = np.zeros((k_states, k_states, 1),
-                                  dtype=dtype, order="F")
-        cls.transition[([0, 0, 1, 1, 2, 3, 4, 5],
-                        [0, 4, 1, 2, 1, 2, 4, 5],
-                        [0, 0, 0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1, 1, 1]
+        cls.transition = np.zeros((k_states, k_states, 1), dtype=dtype, order="F")
+        cls.transition[
+            (
+                [0, 0, 1, 1, 2, 3, 4, 5],
+                [0, 4, 1, 2, 1, 2, 4, 5],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+            )
+        ] = [1, 1, 0, 0, 1, 1, 1, 1]
         # state intercept
         cls.state_intercept = np.zeros((k_states, 1), dtype=dtype, order="F")
         # selection matrix
-        cls.selection = np.asfortranarray(np.eye(k_states)[:, :, None],
-                                          dtype=dtype)
+        cls.selection = np.asfortranarray(np.eye(k_states)[:, :, None], dtype=dtype)
         # state covariance matrix
-        cls.state_cov = np.zeros((k_states, k_states, 1),
-                                 dtype=dtype, order="F")
+        cls.state_cov = np.zeros((k_states, k_states, 1), dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
         cls.initial_state = np.zeros((k_states,), dtype=dtype)
-        cls.initial_state_cov = np.asfortranarray(np.eye(k_states)*100,
-                                                  dtype=dtype)
+        cls.initial_state_cov = np.asfortranarray(np.eye(k_states) * 100, dtype=dtype)
 
         # Update matrices with given parameters
-        (sigma_v, sigma_e, sigma_w, sigma_vl, sigma_ec,
-         phi_1, phi_2, alpha_1, alpha_2, alpha_3) = np.array(
-            cls.true["parameters"], dtype=dtype
-        )
-        cls.design[([1, 1, 1], [1, 2, 3], [0, 0, 0])] = [
-            alpha_1, alpha_2, alpha_3
-        ]
+        (
+            sigma_v,
+            sigma_e,
+            sigma_w,
+            sigma_vl,
+            sigma_ec,
+            phi_1,
+            phi_2,
+            alpha_1,
+            alpha_2,
+            alpha_3,
+        ) = np.array(cls.true["parameters"], dtype=dtype)
+        cls.design[([1, 1, 1], [1, 2, 3], [0, 0, 0])] = [alpha_1, alpha_2, alpha_3]
         cls.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
         cls.obs_cov[1, 1, 0] = sigma_ec**2
-        cls.state_cov[
-            np.diag_indices(k_states)+(np.zeros(k_states, dtype=int),)] = [
-            sigma_v**2, sigma_e**2, 0, 0, sigma_w**2, sigma_vl**2
+        cls.state_cov[np.diag_indices(k_states) + (np.zeros(k_states, dtype=int),)] = [
+            sigma_v**2,
+            sigma_e**2,
+            0,
+            0,
+            sigma_w**2,
+            sigma_vl**2,
         ]
 
         # Initialization: modification
@@ -525,7 +551,7 @@ class Clark1989:
         cls.initial_state_cov = np.asfortranarray(
             np.dot(
                 np.dot(cls.transition[:, :, 0], cls.initial_state_cov),
-                cls.transition[:, :, 0].T
+                cls.transition[:, :, 0].T,
             )
         )
 
@@ -537,16 +563,24 @@ class Clark1989:
 
         # Instantiate the statespace model
         model = klass(
-            cls.obs, cls.design, cls.obs_intercept, cls.obs_cov,
-            cls.transition, cls.state_intercept, cls.selection,
-            cls.state_cov
+            cls.obs,
+            cls.design,
+            cls.obs_intercept,
+            cls.obs_cov,
+            cls.transition,
+            cls.state_intercept,
+            cls.selection,
+            cls.state_cov,
         )
         model.initialize_known(cls.initial_state, cls.initial_state_cov)
 
         # Initialize the appropriate Kalman filter
         klass = prefix_kalman_filter_map[prefix[0]]
-        kfilter = klass(model, conserve_memory=cls.conserve_memory,
-                        loglikelihood_burn=cls.loglikelihood_burn)
+        kfilter = klass(
+            model,
+            conserve_memory=cls.conserve_memory,
+            loglikelihood_burn=cls.loglikelihood_burn,
+        )
 
         return model, kfilter
 
@@ -565,25 +599,30 @@ class Clark1989:
         assert_almost_equal(
             # self.result['loglike'](self.true['start']),
             self.result["loglike"](0),
-            self.true["loglike"], 2
+            self.true["loglike"],
+            2,
         )
 
     def test_filtered_state(self):
         assert_almost_equal(
-            self.result["state"][0][self.true["start"]:],
-            self.true_states.iloc[:, 0], 4
+            self.result["state"][0][self.true["start"] :],
+            self.true_states.iloc[:, 0],
+            4,
         )
         assert_almost_equal(
-            self.result["state"][1][self.true["start"]:],
-            self.true_states.iloc[:, 1], 4
+            self.result["state"][1][self.true["start"] :],
+            self.true_states.iloc[:, 1],
+            4,
         )
         assert_almost_equal(
-            self.result["state"][4][self.true["start"]:],
-            self.true_states.iloc[:, 2], 4
+            self.result["state"][4][self.true["start"] :],
+            self.true_states.iloc[:, 2],
+            4,
         )
         assert_almost_equal(
-            self.result["state"][5][self.true["start"]:],
-            self.true_states.iloc[:, 3], 4
+            self.result["state"][5][self.true["start"] :],
+            self.true_states.iloc[:, 3],
+            4,
         )
 
 
@@ -592,6 +631,7 @@ class TestClark1989(Clark1989):
     Basic double precision test for the loglikelihood and filtered
     states with two-dimensional observation vector.
     """
+
     @classmethod
     def setup_class(cls):
         super().setup_class(dtype=float, conserve_memory=0)
@@ -604,11 +644,11 @@ class TestClark1989Conserve(Clark1989):
     Memory conservation test for the loglikelihood and filtered states with
     two-dimensional observation vector.
     """
+
     @classmethod
     def setup_class(cls):
         super().setup_class(
-            dtype=float,
-            conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
+            dtype=float, conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
         )
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
@@ -619,6 +659,7 @@ class Clark1989Forecast(Clark1989):
     Memory conservation test for the loglikelihood and filtered states with
     two-dimensional observation vector.
     """
+
     @classmethod
     def setup_class(cls, dtype=float, nforecast=100, conserve_memory=0):
         super().setup_class(dtype, conserve_memory)
@@ -627,11 +668,10 @@ class Clark1989Forecast(Clark1989):
         # Add missing observations to the end (to forecast)
         cls._obs = cls.obs
         cls.obs = np.array(
-            np.c_[
-                cls._obs,
-                np.r_[[np.nan, np.nan]*nforecast].reshape(2, nforecast)
-            ],
-            ndmin=2, dtype=dtype, order="F"
+            np.c_[cls._obs, np.r_[[np.nan, np.nan] * nforecast].reshape(2, nforecast)],
+            ndmin=2,
+            dtype=dtype,
+            order="F",
         )
 
         cls.model, cls.filter = cls.init_filter()
@@ -639,20 +679,24 @@ class Clark1989Forecast(Clark1989):
 
     def test_filtered_state(self):
         assert_almost_equal(
-            self.result["state"][0][self.true["start"]:-self.nforecast],
-            self.true_states.iloc[:, 0], 4
+            self.result["state"][0][self.true["start"] : -self.nforecast],
+            self.true_states.iloc[:, 0],
+            4,
         )
         assert_almost_equal(
-            self.result["state"][1][self.true["start"]:-self.nforecast],
-            self.true_states.iloc[:, 1], 4
+            self.result["state"][1][self.true["start"] : -self.nforecast],
+            self.true_states.iloc[:, 1],
+            4,
         )
         assert_almost_equal(
-            self.result["state"][4][self.true["start"]:-self.nforecast],
-            self.true_states.iloc[:, 2], 4
+            self.result["state"][4][self.true["start"] : -self.nforecast],
+            self.true_states.iloc[:, 2],
+            4,
         )
         assert_almost_equal(
-            self.result["state"][5][self.true["start"]:-self.nforecast],
-            self.true_states.iloc[:, 3], 4
+            self.result["state"][5][self.true["start"] : -self.nforecast],
+            self.true_states.iloc[:, 3],
+            4,
         )
 
 
@@ -660,6 +704,7 @@ class TestClark1989ForecastDouble(Clark1989Forecast):
     """
     Basic double forecasting test for the loglikelihood and filtered states.
     """
+
     @classmethod
     def setup_class(cls):
         super().setup_class()
@@ -672,11 +717,10 @@ class TestClark1989ForecastDoubleComplex(Clark1989Forecast):
     Basic double complex forecasting test for the loglikelihood and filtered
     states.
     """
+
     @classmethod
     def setup_class(cls):
-        super().setup_class(
-            dtype=complex
-        )
+        super().setup_class(dtype=complex)
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
 
@@ -686,11 +730,11 @@ class TestClark1989ForecastConserve(Clark1989Forecast):
     Memory conservation forecasting test for the loglikelihood and filtered
     states.
     """
+
     @classmethod
     def setup_class(cls):
         super().setup_class(
-            dtype=float,
-            conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
+            dtype=float, conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
         )
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
@@ -701,10 +745,12 @@ class TestClark1989ConserveAll(Clark1989):
     Memory conservation forecasting test for the loglikelihood and filtered
     states.
     """
+
     @classmethod
     def setup_class(cls):
         super().setup_class(
-            dtype=float, conserve_memory=MEMORY_CONSERVE,
+            dtype=float,
+            conserve_memory=MEMORY_CONSERVE,
         )
         # cls.loglikelihood_burn = cls.true['start']
         cls.loglikelihood_burn = 0
@@ -712,27 +758,21 @@ class TestClark1989ConserveAll(Clark1989):
         cls.result = cls.run_filter()
 
     def test_loglike(self):
-        assert_almost_equal(
-            self.result["loglike"](0), self.true["loglike"], 2
-        )
+        assert_almost_equal(self.result["loglike"](0), self.true["loglike"], 2)
 
     def test_filtered_state(self):
         end = self.true_states.shape[0]
         assert_almost_equal(
-            self.result["state"][0][-1],
-            self.true_states.iloc[end-1, 0], 4
+            self.result["state"][0][-1], self.true_states.iloc[end - 1, 0], 4
         )
         assert_almost_equal(
-            self.result["state"][1][-1],
-            self.true_states.iloc[end-1, 1], 4
+            self.result["state"][1][-1], self.true_states.iloc[end - 1, 1], 4
         )
         assert_almost_equal(
-            self.result["state"][4][-1],
-            self.true_states.iloc[end-1, 2], 4
+            self.result["state"][4][-1], self.true_states.iloc[end - 1, 2], 4
         )
         assert_almost_equal(
-            self.result["state"][5][-1],
-            self.true_states.iloc[end-1, 3], 4
+            self.result["state"][5][-1], self.true_states.iloc[end - 1, 3], 4
         )
 
 
@@ -777,10 +817,8 @@ def check_stationary_initialization_2dim(dtype=float):
     mod = MLEModel(endog, k_states=2, k_posdef=2)
     mod.ssm.initialize_stationary()
     intercept = np.array([2.3, -10.2], dtype=dtype)
-    phi = np.array([[0.8, 0.1],
-                    [-0.2, 0.7]], dtype=dtype)
-    sigma2 = np.array([[1.4, -0.2],
-                       [-0.2, 4.5]], dtype=dtype)
+    phi = np.array([[0.8, 0.1], [-0.2, 0.7]], dtype=dtype)
+    sigma2 = np.array([[1.4, -0.2], [-0.2, 4.5]], dtype=dtype)
 
     mod["state_intercept"] = intercept
     mod["transition"] = phi

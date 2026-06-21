@@ -50,11 +50,15 @@ def distance_indicators(x, epsilon=None, distance=1.5):
     x = array_like(x, "x")
 
     if epsilon is not None and epsilon <= 0:
-        raise ValueError("Threshold distance must be positive if specified."
-                         " Got epsilon of %f" % epsilon)
+        raise ValueError(
+            "Threshold distance must be positive if specified."
+            " Got epsilon of %f" % epsilon
+        )
     if distance <= 0:
-        raise ValueError("Threshold distance must be positive."
-                         " Got distance multiplier %f" % distance)
+        raise ValueError(
+            "Threshold distance must be positive."
+            " Got distance multiplier %f" % distance
+        )
 
     # TODO: add functionality to select epsilon optimally
     # TODO: and/or compute for a range of epsilons in [0.5*s, 2.0*s]?
@@ -94,7 +98,7 @@ def correlation_sum(indicators, embedding_dim):
         indicators_joint = indicators
     else:
         corrsum, indicators = correlation_sum(indicators, embedding_dim - 1)
-        indicators_joint = indicators[1:, 1:]*indicators[:-1, :-1]
+        indicators_joint = indicators[1:, 1:] * indicators[:-1, :-1]
 
     nobs = len(indicators_joint)
     corrsum = np.mean(indicators_joint[np.triu_indices(nobs, 1)])
@@ -145,20 +149,22 @@ def _var(indicators, max_dim):
     """
     nobs = len(indicators)
     corrsum_1dim, _ = correlation_sum(indicators, 1)
-    k = ((indicators.sum(1)**2).sum() - 3*indicators.sum() +
-         2*nobs) / (nobs * (nobs - 1) * (nobs - 2))
+    k = ((indicators.sum(1) ** 2).sum() - 3 * indicators.sum() + 2 * nobs) / (
+        nobs * (nobs - 1) * (nobs - 2)
+    )
 
     variances = np.zeros((1, max_dim - 1))
 
     for embedding_dim in range(2, max_dim + 1):
         tmp = 0
         for j in range(1, embedding_dim):
-            tmp += (k**(embedding_dim - j))*(corrsum_1dim**(2 * j))
-        variances[0, embedding_dim-2] = 4 * (
-            k**embedding_dim +
-            2 * tmp +
-            ((embedding_dim - 1)**2) * (corrsum_1dim**(2 * embedding_dim)) -
-            (embedding_dim**2) * k * (corrsum_1dim**(2 * embedding_dim - 2)))
+            tmp += (k ** (embedding_dim - j)) * (corrsum_1dim ** (2 * j))
+        variances[0, embedding_dim - 2] = 4 * (
+            k**embedding_dim
+            + 2 * tmp
+            + ((embedding_dim - 1) ** 2) * (corrsum_1dim ** (2 * embedding_dim))
+            - (embedding_dim**2) * k * (corrsum_1dim ** (2 * embedding_dim - 2))
+        )
 
     return variances, k
 
@@ -205,8 +211,10 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
     nobs_full = len(x)
 
     if max_dim < 2 or max_dim >= nobs_full:
-        raise ValueError("Maximum embedding dimension must be in the range"
-                         " [2,len(x)-1]. Got %d." % max_dim)
+        raise ValueError(
+            "Maximum embedding dimension must be in the range"
+            " [2,len(x)-1]. Got %d." % max_dim
+        )
 
     # Cache the indicators
     indicators = distance_indicators(x, epsilon, distance)
@@ -220,8 +228,8 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
 
     bds_stats = np.zeros((1, max_dim - 1))
     pvalues = np.zeros((1, max_dim - 1))
-    for embedding_dim in range(2, max_dim+1):
-        ninitial = (embedding_dim - 1)
+    for embedding_dim in range(2, max_dim + 1):
+        ninitial = embedding_dim - 1
         nobs = nobs_full - ninitial
 
         # Get estimates of 1-dimensional correlation integrals
@@ -237,7 +245,7 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
         bds_stats[0, embedding_dim - 2] = np.sqrt(nobs) * effect / sd
 
         # Calculate the p-value (two-tailed test)
-        pvalue = 2*stats.norm.sf(np.abs(bds_stats[0, embedding_dim - 2]))
+        pvalue = 2 * stats.norm.sf(np.abs(bds_stats[0, embedding_dim - 2]))
         pvalues[0, embedding_dim - 2] = pvalue
 
     return np.squeeze(bds_stats), np.squeeze(pvalues)

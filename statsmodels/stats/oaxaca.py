@@ -44,6 +44,7 @@ Journal of the American Statistical Association, 1955.
 A. S. Blinder "Wage Discrimination: Reduced Form and Structural
 Estimates," The Journal of Human Resources, 1973.
 """
+
 from textwrap import dedent
 
 import numpy as np
@@ -174,12 +175,8 @@ class OaxacaBlinder:
         self.exog_f_mean = np.mean(exog_f, axis=0)
         self.exog_s_mean = np.mean(exog_s, axis=0)
 
-        self._f_model = OLS(endog_f, exog_f).fit(
-            cov_type=cov_type, cov_kwds=cov_kwds
-        )
-        self._s_model = OLS(endog_s, exog_s).fit(
-            cov_type=cov_type, cov_kwds=cov_kwds
-        )
+        self._f_model = OLS(endog_f, exog_f).fit(cov_type=cov_type, cov_kwds=cov_kwds)
+        self._s_model = OLS(endog_s, exog_s).fit(cov_type=cov_type, cov_kwds=cov_kwds)
 
     def variance(self, decomp_type, n=5000, conf=0.99):
         """
@@ -328,12 +325,8 @@ class OaxacaBlinder:
         self.submitted_conf = conf
         self.submitted_weight = None
         std_val = None
-        self.endow_eff = (
-            self.exog_f_mean - self.exog_s_mean
-        ) @ self._s_model.params
-        self.coef_eff = self.exog_s_mean @ (
-            self._f_model.params - self._s_model.params
-        )
+        self.endow_eff = (self.exog_f_mean - self.exog_s_mean) @ self._s_model.params
+        self.coef_eff = self.exog_s_mean @ (self._f_model.params - self._s_model.params)
         self.int_eff = (self.exog_f_mean - self.exog_s_mean) @ (
             self._f_model.params - self._s_model.params
         )
@@ -521,15 +514,11 @@ class OaxacaResults:
         """
         if self.model_type == 2:
             if self.std is None:
-                print(
-                    dedent(
-                        f"""\
+                print(dedent(f"""\
                 Oaxaca-Blinder Two-fold Effects
                 Unexplained Effect: {self.params[0]:.5f}
                 Explained Effect: {self.params[1]:.5f}
-                Gap: {self.params[2]:.5f}"""
-                    )
-                )
+                Gap: {self.params[2]:.5f}"""))
             else:
                 print(
                     dedent(
@@ -550,20 +539,14 @@ class OaxacaResults:
                 )
         if self.model_type == 3:
             if self.std is None:
-                print(
-                    dedent(
-                        f"""\
+                print(dedent(f"""\
                 Oaxaca-Blinder Three-fold Effects
                 Endowment Effect: {self.params[0]:.5f}
                 Coefficient Effect: {self.params[1]:.5f}
                 Interaction Effect: {self.params[2]:.5f}
-                Gap: {self.params[3]:.5f}"""
-                    )
-                )
+                Gap: {self.params[3]:.5f}"""))
             else:
-                print(
-                    dedent(
-                        f"""\
+                print(dedent(f"""\
                 Oaxaca-Blinder Three-fold Effects
                 Endowment Effect: {self.params[0]:.5f}
                 Endowment Standard Error: {self.std[0]:.5f}
@@ -571,6 +554,4 @@ class OaxacaResults:
                 Coefficient Standard Error: {self.std[1]:.5f}
                 Interaction Effect: {self.params[2]:.5f}
                 Interaction Standard Error: {self.std[2]:.5f}
-                Gap: {self.params[3]:.5f}"""
-                    )
-                )
+                Gap: {self.params[3]:.5f}"""))

@@ -76,8 +76,7 @@ def check_ftest_pvalues(results):
 
     # automatic use_f based on results class use_t
     pvals = [
-        res.wald_test(np.eye(k_vars)[k], scalar=True).pvalue
-        for k in range(k_vars)
+        res.wald_test(np.eye(k_vars)[k], scalar=True).pvalue for k in range(k_vars)
     ]
     assert_allclose(pvals, res.pvalues, rtol=5e-10, atol=1e-25)
 
@@ -156,13 +155,9 @@ def check_predict_types(results):
         fitted = res.fittedvalues[:2]
         assert_allclose(fitted, res.predict(p_exog), rtol=1e-12)
         # this needs reshape to column-vector:
-        assert_allclose(
-            fitted, res.predict(np.squeeze(p_exog).tolist()), rtol=1e-12
-        )
+        assert_allclose(fitted, res.predict(np.squeeze(p_exog).tolist()), rtol=1e-12)
         # only one prediction:
-        assert_allclose(
-            fitted[:1], res.predict(p_exog[0].tolist()), rtol=1e-12
-        )
+        assert_allclose(fitted[:1], res.predict(p_exog[0].tolist()), rtol=1e-12)
         assert_allclose(fitted[:1], res.predict(p_exog[0]), rtol=1e-12)
 
         # Check that pandas wrapping works as expected

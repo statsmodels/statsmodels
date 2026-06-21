@@ -41,18 +41,21 @@ class TestGLSARCorc(CheckStataResultsPMixin):
     @classmethod
     def setup_class(cls):
         d2 = macrodata.load_pandas().data
-        g_gdp = 400*np.diff(np.log(d2["realgdp"].values))
-        g_inv = 400*np.diff(np.log(d2["realinv"].values))
+        g_gdp = 400 * np.diff(np.log(d2["realgdp"].values))
+        g_inv = 400 * np.diff(np.log(d2["realinv"].values))
         exogg = add_constant(np.c_[g_gdp, d2["realint"][:-1].values], prepend=False)
 
         mod1 = GLSAR(g_inv, exogg, 1)
         cls.res = mod1.iterative_fit(5)
 
         from .results.macro_gr_corc_stata import results
+
         cls.results = results
 
     def test_rho(self):
-        assert_almost_equal(self.res.model.rho, self.results.rho, 3)  # pylint: disable-msg=E1101
+        assert_almost_equal(
+            self.res.model.rho, self.results.rho, 3
+        )  # pylint: disable-msg=E1101
 
         assert_almost_equal(self.res.llf, self.results.ll, 4)
 
@@ -81,7 +84,7 @@ class TestGLSARCorc(CheckStataResultsPMixin):
         endog = self.res.model.endog
         exog = self.res.model.exog
 
-        rho = np.array([0.207,  0.275,  1.033])
+        rho = np.array([0.207, 0.275, 1.033])
         mod1 = GLSAR(endog, exog, rho)
         res1 = mod1.fit()
         res0 = mod1.iterative_fit(0)

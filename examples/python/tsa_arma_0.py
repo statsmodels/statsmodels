@@ -152,8 +152,7 @@ print(table.set_index("lag"))
 # series, say, CPI
 
 macrodta = sm.datasets.macrodata.load_pandas().data
-macrodta.index = pd.Index(sm.tsa.datetools.dates_from_range(
-    "1959Q1", "2009Q3"))
+macrodta.index = pd.Index(sm.tsa.datetools.dates_from_range("1959Q1", "2009Q3"))
 cpi = macrodta["cpi"]
 
 # #### Hint:

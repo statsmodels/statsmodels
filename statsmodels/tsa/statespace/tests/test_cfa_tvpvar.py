@@ -17,6 +17,7 @@ References
 Author: Chad Fulton
 License: BSD-3
 """
+
 import os
 
 import numpy as np
@@ -35,28 +36,25 @@ endog = np.log(dta[["realcons", "realgdp"]]).diff().iloc[1:13] * 400
 current_path = os.path.dirname(os.path.abspath(__file__))
 results_path = os.path.join(current_path, "results")
 results = {
-    "invP": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_invP.csv"), header=None),
+    "invP": pd.read_csv(os.path.join(results_path, "cfa_tvpvar_invP.csv"), header=None),
     "posterior_mean": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_posterior_mean.csv"),
-        header=None),
+        os.path.join(results_path, "cfa_tvpvar_posterior_mean.csv"), header=None
+    ),
     "state_variates": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_state_variates.csv"),
-        header=None),
-    "beta": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_beta.csv"), header=None),
-    "v10": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_v10.csv"), header=None),
-    "S10": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_S10.csv"), header=None),
+        os.path.join(results_path, "cfa_tvpvar_state_variates.csv"), header=None
+    ),
+    "beta": pd.read_csv(os.path.join(results_path, "cfa_tvpvar_beta.csv"), header=None),
+    "v10": pd.read_csv(os.path.join(results_path, "cfa_tvpvar_v10.csv"), header=None),
+    "S10": pd.read_csv(os.path.join(results_path, "cfa_tvpvar_S10.csv"), header=None),
     "Omega_11": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_Omega_11.csv"), header=None),
-    "vi0": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_vi0.csv"), header=None),
-    "Si0": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_Si0.csv"), header=None),
+        os.path.join(results_path, "cfa_tvpvar_Omega_11.csv"), header=None
+    ),
+    "vi0": pd.read_csv(os.path.join(results_path, "cfa_tvpvar_vi0.csv"), header=None),
+    "Si0": pd.read_csv(os.path.join(results_path, "cfa_tvpvar_Si0.csv"), header=None),
     "Omega_22": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_Omega_22.csv"), header=None)}
+        os.path.join(results_path, "cfa_tvpvar_Omega_22.csv"), header=None
+    ),
+}
 
 
 class TVPVAR(mlemodel.MLEModel):
@@ -65,8 +63,7 @@ class TVPVAR(mlemodel.MLEModel):
             endog = pd.DataFrame(endog)
 
         k = endog.shape[1]
-        augmented = lagmat(endog, 1, trim="both", original="in",
-                           use_pandas=True)
+        augmented = lagmat(endog, 1, trim="both", original="in", use_pandas=True)
         endog = augmented.iloc[:, :k]
         exog = add_constant(augmented.iloc[:, k:])
 
@@ -83,9 +80,9 @@ class TVPVAR(mlemodel.MLEModel):
         self["transition"] = np.eye(k_states)
         self["selection"] = np.eye(k_states)
 
-        self._obs_cov_slice = np.s_[:self.k_endog * (self.k_endog + 1) // 2]
+        self._obs_cov_slice = np.s_[: self.k_endog * (self.k_endog + 1) // 2]
         self._obs_cov_tril = np.tril_indices(self.k_endog)
-        self._state_cov_slice = np.s_[-self.k_states:]
+        self._state_cov_slice = np.s_[-self.k_states :]
         self._state_cov_ix = ("state_cov",) + np.diag_indices(self.k_states)
 
     @property
@@ -94,8 +91,9 @@ class TVPVAR(mlemodel.MLEModel):
         for i in range(self.k_endog):
             endog_name = self.endog_names[i]
             state_names += ["intercept.%s" % endog_name]
-            state_names += [f"L1.{other_name}->{endog_name}"
-                            for other_name in self.endog_names]
+            state_names += [
+                f"L1.{other_name}->{endog_name}" for other_name in self.endog_names
+            ]
         return state_names
 
     def update_direct(self, obs_cov, state_cov_diag):
@@ -144,8 +142,9 @@ def test_tvpvar():
     assert_allclose(sim.simulated_state, simulated_state_1)
 
     # Posterior for obs cov
-    fitted = np.matmul(mod["design"].transpose(2, 0, 1),
-                       sim.simulated_state.T[..., None])[..., 0]
+    fitted = np.matmul(
+        mod["design"].transpose(2, 0, 1), sim.simulated_state.T[..., None]
+    )[..., 0]
     resid = mod.endog - fitted
     df = v10 + mod.nobs
     scale = S10 + np.dot(resid.T, resid)
@@ -164,8 +163,7 @@ def test_tvpvar():
 
     # Update the model with variates drawn in the previous iteration (here we
     # use the saved test case variates)
-    mod.update_direct(results["Omega_11"].iloc[:, :2],
-                      results["Omega_22"].iloc[:, 0])
+    mod.update_direct(results["Omega_11"].iloc[:, :2], results["Omega_22"].iloc[:, 0])
     res = mod.ssm.smooth()
 
     # Simulate the state using the given variates
@@ -186,8 +184,9 @@ def test_tvpvar():
     assert_allclose(sim.simulated_state, simulated_state_2)
 
     # Posterior for obs cov
-    fitted = np.matmul(mod["design"].transpose(2, 0, 1),
-                       sim.simulated_state.T[..., None])[..., 0]
+    fitted = np.matmul(
+        mod["design"].transpose(2, 0, 1), sim.simulated_state.T[..., None]
+    )[..., 0]
     resid = mod.endog - fitted
     df = v10 + mod.nobs
     scale = S10 + np.dot(resid.T, resid)

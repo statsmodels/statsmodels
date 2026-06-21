@@ -69,7 +69,7 @@ __all__ = [
     "test",
     "tools",
     "tsa",
-    "webdoc"
+    "webdoc",
 ]
 
 

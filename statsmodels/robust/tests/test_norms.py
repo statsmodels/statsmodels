@@ -10,10 +10,10 @@ from statsmodels.tools.numdiff import (  # _approx_fprime_cs_scalar,  # not yet
 from .results import results_norms as res_r
 
 cases = [
-    (norms.Hampel, (1.5, 3.5, 8.), res_r.res_hampel),
+    (norms.Hampel, (1.5, 3.5, 8.0), res_r.res_hampel),
     (norms.TukeyBiweight, (4,), res_r.res_biweight),
     (norms.HuberT, (1.345,), res_r.res_huber),
-    ]
+]
 
 norms_other = [
     (norms.LeastSquares, ()),
@@ -26,7 +26,7 @@ norms_other = [
     (norms.TukeyQuartic, ()),
     (norms.StudentT, ()),
     # norms.MQuantileNorm,  # requires keywords in init
-    ]
+]
 
 dtypes = ["int", np.float64, np.complex128]
 

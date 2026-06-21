@@ -105,6 +105,7 @@ class ModelData:
             # NOTE: there may be a more performant way to do this
 
             from statsmodels.formula._manager import FormulaManager
+
             mgr = FormulaManager()
             exc = []
             try:

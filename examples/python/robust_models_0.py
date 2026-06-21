@@ -28,8 +28,9 @@ print(hub_results.params)
 print(hub_results.bse)
 print(
     hub_results.summary(
-        yname="y",
-        xname=["var_%d" % i for i in range(len(hub_results.params))]))
+        yname="y", xname=["var_%d" % i for i in range(len(hub_results.params))]
+    )
+)
 
 # Huber's T norm with 'H2' covariance matrix
 
@@ -41,8 +42,7 @@ print(hub_results2.bse)
 # matrix
 
 andrew_mod = sm.RLM(data.endog, data.exog, M=sm.robust.norms.AndrewWave())
-andrew_results = andrew_mod.fit(scale_est=sm.robust.scale.HuberScale(),
-                                cov="H3")
+andrew_results = andrew_mod.fit(scale_est=sm.robust.scale.HuberScale(), cov="H3")
 print("Parameters: ", andrew_results.params)
 
 # See ``help(sm.RLM.fit)`` for more options and ``module sm.robust.scale``
@@ -54,7 +54,7 @@ print("Parameters: ", andrew_results.params)
 
 nsample = 50
 x1 = np.linspace(0, 20, nsample)
-X = np.column_stack((x1, (x1 - 5)**2))
+X = np.column_stack((x1, (x1 - 5) ** 2))
 X = sm.add_constant(X)
 sig = 0.3  # smaller error variance makes OLS<->RLM contrast bigger
 beta = [5, 0.5, -0.0]

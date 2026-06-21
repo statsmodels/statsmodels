@@ -7,13 +7,15 @@ License: Simplified-BSD
 
 import numpy as np
 
-SMOOTHER_STATE = 0x01          # Durbin and Koopman (2012), Chapter 4.4.2
-SMOOTHER_STATE_COV = 0x02      # ibid., Chapter 4.4.3
-SMOOTHER_DISTURBANCE = 0x04    # ibid., Chapter 4.5
-SMOOTHER_DISTURBANCE_COV = 0x08    # ibid., Chapter 4.5
+SMOOTHER_STATE = 0x01  # Durbin and Koopman (2012), Chapter 4.4.2
+SMOOTHER_STATE_COV = 0x02  # ibid., Chapter 4.4.3
+SMOOTHER_DISTURBANCE = 0x04  # ibid., Chapter 4.5
+SMOOTHER_DISTURBANCE_COV = 0x08  # ibid., Chapter 4.5
 SMOOTHER_ALL = (
-    SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE |
-    SMOOTHER_DISTURBANCE_COV
+    SMOOTHER_STATE
+    | SMOOTHER_STATE_COV
+    | SMOOTHER_DISTURBANCE
+    | SMOOTHER_DISTURBANCE_COV
 )
 
 
@@ -38,41 +40,47 @@ class _KalmanSmoother:
         self.smoothed_measurement_disturbance_cov = None
 
         # Intermediate values
-        self.tmp_L = np.zeros((model.k_states, model.k_states, model.nobs),
-                              dtype=kfilter.dtype)
+        self.tmp_L = np.zeros(
+            (model.k_states, model.k_states, model.nobs), dtype=kfilter.dtype
+        )
 
         if smoother_output & (SMOOTHER_STATE | SMOOTHER_DISTURBANCE):
-            self.scaled_smoothed_estimator = (
-                np.zeros((model.k_states, model.nobs+1), dtype=kfilter.dtype))
-            self.smoothing_error = (
-                np.zeros((model.k_endog, model.nobs), dtype=kfilter.dtype))
+            self.scaled_smoothed_estimator = np.zeros(
+                (model.k_states, model.nobs + 1), dtype=kfilter.dtype
+            )
+            self.smoothing_error = np.zeros(
+                (model.k_endog, model.nobs), dtype=kfilter.dtype
+            )
         if smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
-            self.scaled_smoothed_estimator_cov = (
-                np.zeros((model.k_states, model.k_states, model.nobs + 1),
-                         dtype=kfilter.dtype))
+            self.scaled_smoothed_estimator_cov = np.zeros(
+                (model.k_states, model.k_states, model.nobs + 1), dtype=kfilter.dtype
+            )
 
         # State smoothing
         if smoother_output & SMOOTHER_STATE:
-            self.smoothed_state = np.zeros((model.k_states, model.nobs),
-                                           dtype=kfilter.dtype)
+            self.smoothed_state = np.zeros(
+                (model.k_states, model.nobs), dtype=kfilter.dtype
+            )
         if smoother_output & SMOOTHER_STATE_COV:
-            self.smoothed_state_cov = (
-                np.zeros((model.k_states, model.k_states, model.nobs),
-                         dtype=kfilter.dtype))
+            self.smoothed_state_cov = np.zeros(
+                (model.k_states, model.k_states, model.nobs), dtype=kfilter.dtype
+            )
 
         # Disturbance smoothing
         if smoother_output & SMOOTHER_DISTURBANCE:
-            self.smoothed_state_disturbance = (
-                np.zeros((model.k_posdef, model.nobs), dtype=kfilter.dtype))
-            self.smoothed_measurement_disturbance = (
-                np.zeros((model.k_endog, model.nobs), dtype=kfilter.dtype))
+            self.smoothed_state_disturbance = np.zeros(
+                (model.k_posdef, model.nobs), dtype=kfilter.dtype
+            )
+            self.smoothed_measurement_disturbance = np.zeros(
+                (model.k_endog, model.nobs), dtype=kfilter.dtype
+            )
         if smoother_output & SMOOTHER_DISTURBANCE_COV:
-            self.smoothed_state_disturbance_cov = (
-                np.zeros((model.k_posdef, model.k_posdef, model.nobs),
-                         dtype=kfilter.dtype))
-            self.smoothed_measurement_disturbance_cov = (
-                np.zeros((model.k_endog, model.k_endog, model.nobs),
-                         dtype=kfilter.dtype))
+            self.smoothed_state_disturbance_cov = np.zeros(
+                (model.k_posdef, model.k_posdef, model.nobs), dtype=kfilter.dtype
+            )
+            self.smoothed_measurement_disturbance_cov = np.zeros(
+                (model.k_endog, model.k_endog, model.nobs), dtype=kfilter.dtype
+            )
 
     def seek(self, t):
         if t >= self.model.nobs:
@@ -83,9 +91,9 @@ class _KalmanSmoother:
         return self
 
     def __call__(self):
-        self.seek(self.model.nobs-1)
+        self.seek(self.model.nobs - 1)
         # Perform backwards smoothing iterations
-        for _ in range(self.model.nobs-1, -1, -1):
+        for _ in range(self.model.nobs - 1, -1, -1):
             next(self)
 
     def next(self):
@@ -111,10 +119,8 @@ class _KalmanSmoother:
         smoothed_state_cov = self.smoothed_state_cov
         smoothed_state_disturbance = self.smoothed_state_disturbance
         smoothed_state_disturbance_cov = self.smoothed_state_disturbance_cov
-        smoothed_measurement_disturbance = (
-            self.smoothed_measurement_disturbance)
-        smoothed_measurement_disturbance_cov = (
-            self.smoothed_measurement_disturbance_cov)
+        smoothed_measurement_disturbance = self.smoothed_measurement_disturbance
+        smoothed_measurement_disturbance_cov = self.smoothed_measurement_disturbance_cov
         tmp_L = self.tmp_L
 
         # Seek the Cython Kalman filter to the right place, setup matrices
@@ -123,10 +129,8 @@ class _KalmanSmoother:
         _kfilter.initialize_filter_object_pointers()
         _kfilter.select_missing()
 
-        missing_entire_obs = (
-            _kfilter.model.nmissing[t] == _kfilter.model.k_endog)
-        missing_partial_obs = (
-            not missing_entire_obs and _kfilter.model.nmissing[t] > 0)
+        missing_entire_obs = _kfilter.model.nmissing[t] == _kfilter.model.k_endog
+        missing_partial_obs = not missing_entire_obs and _kfilter.model.nmissing[t] > 0
 
         # Get the appropriate (possibly time-varying) indices
         design_t = 0 if kfilter.design.shape[2] == 1 else t
@@ -149,18 +153,19 @@ class _KalmanSmoother:
         mask = ~kfilter.missing[:, t].astype(bool)
         if missing_partial_obs:
             design = np.array(
-                _kfilter.selected_design[:k_endog*model.k_states], copy=True
+                _kfilter.selected_design[: k_endog * model.k_states], copy=True
             ).reshape(k_endog, model.k_states, order="F")
             obs_cov = np.array(
-                _kfilter.selected_obs_cov[:k_endog**2], copy=True
+                _kfilter.selected_obs_cov[: k_endog**2], copy=True
             ).reshape(k_endog, k_endog)
             kalman_gain = kfilter.kalman_gain[:, mask, t]
 
-            forecasts_error_cov = np.array(
-                _kfilter.forecast_error_cov[:, :, t], copy=True
-                ).ravel(order="F")[:k_endog**2].reshape(k_endog, k_endog)
-            forecasts_error = np.array(
-                _kfilter.forecast_error[:k_endog, t], copy=True)
+            forecasts_error_cov = (
+                np.array(_kfilter.forecast_error_cov[:, :, t], copy=True)
+                .ravel(order="F")[: k_endog**2]
+                .reshape(k_endog, k_endog)
+            )
+            forecasts_error = np.array(_kfilter.forecast_error[:k_endog, t], copy=True)
             F_inv = np.linalg.inv(forecasts_error_cov)
         else:
             if missing_entire_obs:
@@ -183,70 +188,57 @@ class _KalmanSmoother:
         if smoother_output & (SMOOTHER_STATE | SMOOTHER_DISTURBANCE):
             if missing_entire_obs:
                 # smoothing_error is undefined here, keep it as zeros
-                scaled_smoothed_estimator[:, t - 1] = (
-                    transition.transpose().dot(scaled_smoothed_estimator[:, t])
+                scaled_smoothed_estimator[:, t - 1] = transition.transpose().dot(
+                    scaled_smoothed_estimator[:, t]
                 )
             else:
-                smoothing_error[:k_endog, t] = (
-                    F_inv.dot(forecasts_error) -
-                    kalman_gain.transpose().dot(
-                        scaled_smoothed_estimator[:, t])
-                )
-                scaled_smoothed_estimator[:, t - 1] = (
-                    design.transpose().dot(smoothing_error[:k_endog, t]) +
-                    transition.transpose().dot(scaled_smoothed_estimator[:, t])
-                )
+                smoothing_error[:k_endog, t] = F_inv.dot(
+                    forecasts_error
+                ) - kalman_gain.transpose().dot(scaled_smoothed_estimator[:, t])
+                scaled_smoothed_estimator[:, t - 1] = design.transpose().dot(
+                    smoothing_error[:k_endog, t]
+                ) + transition.transpose().dot(scaled_smoothed_estimator[:, t])
         if smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
             if missing_entire_obs:
                 scaled_smoothed_estimator_cov[:, :, t - 1] = (
-                    L.transpose().dot(
-                        scaled_smoothed_estimator_cov[:, :, t]
-                    ).dot(L)
+                    L.transpose().dot(scaled_smoothed_estimator_cov[:, :, t]).dot(L)
                 )
             else:
-                scaled_smoothed_estimator_cov[:, :, t - 1] = (
-                    design.transpose().dot(F_inv).dot(design) +
-                    L.transpose().dot(
-                        scaled_smoothed_estimator_cov[:, :, t]
-                    ).dot(L)
+                scaled_smoothed_estimator_cov[:, :, t - 1] = design.transpose().dot(
+                    F_inv
+                ).dot(design) + L.transpose().dot(
+                    scaled_smoothed_estimator_cov[:, :, t]
+                ).dot(
+                    L
                 )
 
         # State smoothing
         if smoother_output & SMOOTHER_STATE:
-            smoothed_state[:, t] = (
-                predicted_state +
-                predicted_state_cov.dot(scaled_smoothed_estimator[:, t - 1])
+            smoothed_state[:, t] = predicted_state + predicted_state_cov.dot(
+                scaled_smoothed_estimator[:, t - 1]
             )
         if smoother_output & SMOOTHER_STATE_COV:
-            smoothed_state_cov[:, :, t] = (
-                predicted_state_cov -
-                predicted_state_cov.dot(
-                    scaled_smoothed_estimator_cov[:, :, t - 1]
-                ).dot(predicted_state_cov)
-            )
+            smoothed_state_cov[:, :, t] = predicted_state_cov - predicted_state_cov.dot(
+                scaled_smoothed_estimator_cov[:, :, t - 1]
+            ).dot(predicted_state_cov)
 
         # Disturbance smoothing
         if smoother_output & (SMOOTHER_DISTURBANCE | SMOOTHER_DISTURBANCE_COV):
             QR = state_cov.dot(selection.transpose())
 
         if smoother_output & SMOOTHER_DISTURBANCE:
-            smoothed_state_disturbance[:, t] = (
-                QR.dot(scaled_smoothed_estimator[:, t])
-            )
+            smoothed_state_disturbance[:, t] = QR.dot(scaled_smoothed_estimator[:, t])
             # measurement disturbance is set to zero when all missing
             # (unconditional distribution)
             if not missing_entire_obs:
-                smoothed_measurement_disturbance[mask, t] = (
-                    obs_cov.dot(smoothing_error[:k_endog, t])
+                smoothed_measurement_disturbance[mask, t] = obs_cov.dot(
+                    smoothing_error[:k_endog, t]
                 )
 
         if smoother_output & SMOOTHER_DISTURBANCE_COV:
-            smoothed_state_disturbance_cov[:, :, t] = (
-                state_cov -
-                QR.dot(
-                    scaled_smoothed_estimator_cov[:, :, t]
-                ).dot(QR.transpose())
-            )
+            smoothed_state_disturbance_cov[:, :, t] = state_cov - QR.dot(
+                scaled_smoothed_estimator_cov[:, :, t]
+            ).dot(QR.transpose())
 
             if missing_entire_obs:
                 smoothed_measurement_disturbance_cov[:, :, t] = obs_cov
@@ -254,10 +246,12 @@ class _KalmanSmoother:
                 # For non-missing portion, calculate as usual
                 ix = np.ix_(mask, mask, [t])
                 smoothed_measurement_disturbance_cov[ix] = (
-                    obs_cov - obs_cov.dot(
-                        F_inv + kalman_gain.transpose().dot(
-                            scaled_smoothed_estimator_cov[:, :, t]
-                        ).dot(kalman_gain)
+                    obs_cov
+                    - obs_cov.dot(
+                        F_inv
+                        + kalman_gain.transpose()
+                        .dot(scaled_smoothed_estimator_cov[:, :, t])
+                        .dot(kalman_gain)
                     ).dot(obs_cov)
                 )[:, :, np.newaxis]
 
@@ -265,7 +259,8 @@ class _KalmanSmoother:
                 ix = np.ix_(~mask, ~mask, [t])
                 mod_ix = np.ix_(~mask, ~mask, [0])
                 smoothed_measurement_disturbance_cov[ix] = np.copy(
-                    model.obs_cov[:, :, obs_cov_t:obs_cov_t+1])[mod_ix]
+                    model.obs_cov[:, :, obs_cov_t : obs_cov_t + 1]
+                )[mod_ix]
 
         # Advance the smoother
         self.t -= 1

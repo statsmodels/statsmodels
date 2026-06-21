@@ -216,9 +216,7 @@ def _recode(x, levels):
         x = x.values
 
     if x.dtype.type not in [np.str_, np.object_, str]:
-        raise ValueError(
-            "This is not a categorial factor. Array of str type required."
-        )
+        raise ValueError("This is not a categorial factor. Array of str type required.")
 
     elif not isinstance(levels, dict):
         raise ValueError("This is not a valid value for levels. Dict required.")

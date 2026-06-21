@@ -32,6 +32,7 @@ TODO
 
 
 """
+
 # mostly copied from the examples directory written for trying out generic mle.
 
 import numpy as np
@@ -93,15 +94,16 @@ class TLinearModel(GenericLikelihoodModel):
             self.start_params = start_params
         else:
             from statsmodels.regression.linear_model import OLS
+
             res_ols = OLS(self.endog, self.exog).fit()
-            start_params = 0.1*np.ones(self.k_params)
-            start_params[:self.k_vars] = res_ols.params
+            start_params = 0.1 * np.ones(self.k_params)
+            start_params[: self.k_vars] = res_ols.params
 
             if self.fix_df is False:
 
                 if use_kurtosis:
                     kurt = stats.kurtosis(res_ols.resid)
-                    df = 6./kurt + 4
+                    df = 6.0 / kurt + 4
                 else:
                     df = 5
 
@@ -152,17 +154,17 @@ class TLinearModel(GenericLikelihoodModel):
         scale = np.abs(params[-1])  # TODO check behavior around zero
         loc = np.dot(self.exog, beta)
         endog = self.endog
-        x = (endog - loc)/scale
+        x = (endog - loc) / scale
         # next part is stats.t._logpdf
-        lPx = sps_gamln((df+1)/2) - sps_gamln(df/2.)
-        lPx -= 0.5*np_log(df*np_pi) + (df+1)/2.*np_log(1+(x**2)/df)
+        lPx = sps_gamln((df + 1) / 2) - sps_gamln(df / 2.0)
+        lPx -= 0.5 * np_log(df * np_pi) + (df + 1) / 2.0 * np_log(1 + (x**2) / df)
         lPx -= np_log(scale)  # correction for scale
         return -lPx
 
     def predict(self, params, exog=None):
         if exog is None:
             exog = self.exog
-        return np.dot(exog, params[:self.exog.shape[1]])
+        return np.dot(exog, params[: self.exog.shape[1]])
 
 
 class TArma(Arma):

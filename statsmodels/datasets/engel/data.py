@@ -1,4 +1,5 @@
 """Name of dataset."""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

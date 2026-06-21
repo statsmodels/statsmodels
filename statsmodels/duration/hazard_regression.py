@@ -15,7 +15,6 @@ hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
 
-
 import numpy as np
 
 from statsmodels.base import model

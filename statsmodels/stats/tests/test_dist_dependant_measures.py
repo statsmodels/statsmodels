@@ -68,7 +68,8 @@ class TestDistDependenceMeasures:
 
     def test_statistic_value_asym_method(self):
         statistic, pval, method = ddm.distance_covariance_test(
-            self.x, self.y, method="asym")
+            self.x, self.y, method="asym"
+        )
 
         assert method == "asym"
         assert_almost_equal(statistic, self.test_stat_asym_exp, 4)
@@ -96,8 +97,7 @@ class TestDistDependenceMeasures:
 
     def test_statistics_for_2d_input(self):
         stats = ddm.distance_statistics(
-            np.asarray(self.x, dtype=float),
-            np.asarray(self.y, dtype=float)
+            np.asarray(self.x, dtype=float), np.asarray(self.y, dtype=float)
         )
 
         assert_almost_equal(stats.test_statistic, self.test_stat_emp_exp, 0)
@@ -202,13 +202,10 @@ class TestDistDependenceMeasures:
         assert method == "emp"
 
     def test_dcor(self):
-        assert_almost_equal(ddm.distance_correlation(self.x, self.y),
-                            self.dcor_exp, 4)
+        assert_almost_equal(ddm.distance_correlation(self.x, self.y), self.dcor_exp, 4)
 
     def test_dcov(self):
-        assert_almost_equal(ddm.distance_covariance(self.x, self.y),
-                            self.dcov_exp, 4)
+        assert_almost_equal(ddm.distance_covariance(self.x, self.y), self.dcov_exp, 4)
 
     def test_dvar(self):
-        assert_almost_equal(ddm.distance_variance(self.x),
-                            self.dvar_x_exp, 4)
+        assert_almost_equal(ddm.distance_variance(self.x), self.dvar_x_exp, 4)

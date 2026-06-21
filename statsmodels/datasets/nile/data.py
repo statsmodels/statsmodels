@@ -1,4 +1,5 @@
 """Nile River Flows."""
+
 import pandas as pd
 
 from statsmodels.datasets import utils as du
@@ -47,7 +48,9 @@ def load_pandas():
     data = _get_data()
     # TODO: time series
     endog = pd.Series(data["volume"], index=data["year"].astype(int))
-    dataset = du.Dataset(data=data, names=list(data.columns), endog=endog, endog_name="volume")
+    dataset = du.Dataset(
+        data=data, names=list(data.columns), endog=endog, endog_name="volume"
+    )
     return dataset
 
 

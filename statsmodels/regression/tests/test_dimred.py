@@ -15,8 +15,8 @@ def test_poisson():
 
     # Generate a non-orthogonal design matrix
     xmat = np.random.normal(size=(500, 5))
-    xmat[:, 1] = 0.5*xmat[:, 0] + np.sqrt(1 - 0.5**2) * xmat[:, 1]
-    xmat[:, 3] = 0.5*xmat[:, 2] + np.sqrt(1 - 0.5**2) * xmat[:, 3]
+    xmat[:, 1] = 0.5 * xmat[:, 0] + np.sqrt(1 - 0.5**2) * xmat[:, 1]
+    xmat[:, 3] = 0.5 * xmat[:, 2] + np.sqrt(1 - 0.5**2) * xmat[:, 3]
 
     b = np.r_[0, 1, -1, 0, 0.5]
     lpr = np.dot(xmat, b)
@@ -35,14 +35,19 @@ def test_poisson():
             model = SAVE(y, xmat, bc=True)
             rslt = model.fit(slice_n=100)
         elif method == 3:
-            df = pd.DataFrame({"y": y,
-                               "x0": xmat[:, 0],
-                               "x1": xmat[:, 1],
-                               "x2": xmat[:, 2],
-                               "x3": xmat[:, 3],
-                               "x4": xmat[:, 4]})
+            df = pd.DataFrame(
+                {
+                    "y": y,
+                    "x0": xmat[:, 0],
+                    "x1": xmat[:, 1],
+                    "x2": xmat[:, 2],
+                    "x3": xmat[:, 3],
+                    "x4": xmat[:, 4],
+                }
+            )
             model = SlicedInverseReg.from_formula(
-                        "y ~ 0 + x0 + x1 + x2 + x3 + x4", data=df)
+                "y ~ 0 + x0 + x1 + x2 + x3 + x4", data=df
+            )
             rslt = model.fit()
         elif method == 4:
             model = PHD(y, xmat)
@@ -59,7 +64,7 @@ def test_poisson():
         # direction
         params = np.asarray(rslt.params)
         q = np.dot(params[:, 0], b)
-        q /= np.sqrt(np.sum(params[:, 0]**2))
+        q /= np.sqrt(np.sum(params[:, 0] ** 2))
         q /= np.sqrt(np.sum(b**2))
         assert_equal(np.abs(q) > 0.95, True)
 
@@ -80,12 +85,12 @@ def test_sir_regularized_numdiff():
     _ = model.fit()
 
     # Second difference penalty matrix.
-    fmat = np.zeros((p-2, p))
-    for i in range(p-2):
-        fmat[i, i:i+3] = [1, -2, 1]
+    fmat = np.zeros((p - 2, p))
+    for i in range(p - 2):
+        fmat[i, i : i + 3] = [1, -2, 1]
 
     with pytest.warns(UserWarning, match="SIR.fit_regularized did not"):
-        model.fit_regularized(2, 3*fmat)
+        model.fit_regularized(2, 3 * fmat)
 
     # Compare the gradients to the numerical derivatives
     for _ in range(5):
@@ -115,7 +120,7 @@ def test_sir_regularized_1d():
     fmat[0, 0:2] = [1, -1]
     fmat[1, 2:4] = [1, -1]
 
-    rslt2 = model.fit_regularized(1, 3*fmat)
+    rslt2 = model.fit_regularized(1, 3 * fmat)
 
     pa0 = np.zeros(p)
     pa0[0:4] = [1, 1, -1, -1]
@@ -135,8 +140,7 @@ def test_sir_regularized_1d():
     assert_equal(sim(pa0, pa2) < 1e-3, True)
 
     # Regularized SIR should have a smaller penalty value than traditional SIR
-    assert_equal(np.sum(np.dot(fmat, pa1)**2) > np.sum(np.dot(fmat, pa2)**2),
-                 True)
+    assert_equal(np.sum(np.dot(fmat, pa1) ** 2) > np.sum(np.dot(fmat, pa2) ** 2), True)
 
 
 def test_sir_regularized_2d():
@@ -184,7 +188,7 @@ def test_covreduce():
         c[0:2, 0:2] = np.dot(x.T, x)
 
         cr = np.linalg.cholesky(c)
-        m = 1000*k + 50*k
+        m = 1000 * k + 50 * k
         x = np.random.normal(size=(m, p))
         x = np.dot(x, cr.T)
         exog.append(x)
@@ -214,5 +218,4 @@ def test_covreduce():
             # Here we know the approximate truth
             projt = np.zeros((p, 2))
             projt[0:2, 0:2] = np.eye(2)
-            assert_allclose(np.trace(np.dot(proj.T, projt)), 2,
-                            rtol=1e-3, atol=1e-3)
+            assert_allclose(np.trace(np.dot(proj.T, projt)), 2, rtol=1e-3, atol=1e-3)

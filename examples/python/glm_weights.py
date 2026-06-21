@@ -63,8 +63,11 @@ np.bincount(data["affairs"].astype(int))
 
 data2 = data.copy()
 data2["const"] = 1
-dc = (data2["affairs rate_marriage age yrs_married const".split()].groupby(
-    "affairs rate_marriage age yrs_married".split()).count())
+dc = (
+    data2["affairs rate_marriage age yrs_married const".split()]
+    .groupby("affairs rate_marriage age yrs_married".split())
+    .count()
+)
 dc.reset_index(inplace=True)
 dc.rename(columns={"const": "freq"}, inplace=True)
 print(dc.shape)
@@ -81,7 +84,8 @@ dc.head()
 # the new variables. We also flatten the ``MultiIndex`` into a simple index.
 
 gr = data["affairs rate_marriage age yrs_married".split()].groupby(
-    "rate_marriage age yrs_married".split())
+    "rate_marriage age yrs_married".split()
+)
 df_a = gr.agg(["mean", "sum", "count"])
 
 
@@ -255,8 +259,7 @@ pd.concat([r.bse for r in results_all], axis=1, keys=names)
 pd.concat([r.pvalues for r in results_all], axis=1, keys=names)
 
 pd.DataFrame(
-    np.column_stack([[r.llf, r.deviance, r.pearson_chi2]
-                     for r in results_all]),
+    np.column_stack([[r.llf, r.deviance, r.pearson_chi2] for r in results_all]),
     columns=names,
     index=["llf", "deviance", "pearson chi2"],
 )
@@ -276,9 +279,9 @@ pd.DataFrame(
 
 # #### original observations and frequency weights
 
-glm = smf.glm("affairs ~ rate_marriage + yrs_married",
-              data=data,
-              family=sm.families.Poisson())
+glm = smf.glm(
+    "affairs ~ rate_marriage + yrs_married", data=data, family=sm.families.Poisson()
+)
 res_o2 = glm.fit()
 # print(res_f2.summary())
 res_o2.pearson_chi2 - res_o.pearson_chi2, res_o2.deviance - res_o.deviance, res_o2.llf - res_o.llf
@@ -322,22 +325,22 @@ res_a2.pearson_chi2 - res_a.pearson_chi2, res_a2.deviance - res_a.deviance, res_
 # computation of `pearson_chi2` and `resid_pearson`.
 
 res_e2.pearson_chi2, res_e.pearson_chi2, (res_e2.resid_pearson**2).sum(), (
-    res_e.resid_pearson**2).sum()
+    res_e.resid_pearson**2
+).sum()
 
-res_e._results.resid_response.mean(), res_e.model.family.variance(
-    res_e.mu)[:5], res_e.mu[:5]
+res_e._results.resid_response.mean(), res_e.model.family.variance(res_e.mu)[
+    :5
+], res_e.mu[:5]
 
-(res_e._results.resid_response**2 /
- res_e.model.family.variance(res_e.mu)).sum()
+(res_e._results.resid_response**2 / res_e.model.family.variance(res_e.mu)).sum()
 
-res_e2._results.resid_response.mean(), res_e2.model.family.variance(
-    res_e2.mu)[:5], res_e2.mu[:5]
+res_e2._results.resid_response.mean(), res_e2.model.family.variance(res_e2.mu)[
+    :5
+], res_e2.mu[:5]
 
-(res_e2._results.resid_response**2 /
- res_e2.model.family.variance(res_e2.mu)).sum()
+(res_e2._results.resid_response**2 / res_e2.model.family.variance(res_e2.mu)).sum()
 
-(res_e2._results.resid_response**2).sum(), (
-    res_e._results.resid_response**2).sum()
+(res_e2._results.resid_response**2).sum(), (res_e._results.resid_response**2).sum()
 
 # One possible reason for the incorrect sign is that we are subtracting
 # quadratic terms that are divided by different denominators. In some
@@ -350,17 +353,27 @@ res_e2._results.resid_response.mean(), res_e2.model.family.variance(
 # [#3616](https://github.com/statsmodels/statsmodels/issues/3616) is
 # intended to track this further.)
 
-((res_e2._results.resid_response**2 - res_e._results.resid_response**2) /
- res_e2.model.family.variance(res_e2.mu)).sum()
+(
+    (res_e2._results.resid_response**2 - res_e._results.resid_response**2)
+    / res_e2.model.family.variance(res_e2.mu)
+).sum()
 
-((res_a2._results.resid_response**2 - res_a._results.resid_response**2) /
- res_a2.model.family.variance(res_a2.mu) * res_a2.model.var_weights).sum()
+(
+    (res_a2._results.resid_response**2 - res_a._results.resid_response**2)
+    / res_a2.model.family.variance(res_a2.mu)
+    * res_a2.model.var_weights
+).sum()
 
-((res_f2._results.resid_response**2 - res_f._results.resid_response**2) /
- res_f2.model.family.variance(res_f2.mu) * res_f2.model.freq_weights).sum()
+(
+    (res_f2._results.resid_response**2 - res_f._results.resid_response**2)
+    / res_f2.model.family.variance(res_f2.mu)
+    * res_f2.model.freq_weights
+).sum()
 
-((res_o2._results.resid_response**2 - res_o._results.resid_response**2) /
- res_o2.model.family.variance(res_o2.mu)).sum()
+(
+    (res_o2._results.resid_response**2 - res_o._results.resid_response**2)
+    / res_o2.model.family.variance(res_o2.mu)
+).sum()
 
 # ## Remainder
 #
@@ -373,17 +386,25 @@ res_e2.resid_pearson.sum() - res_e.resid_pearson.sum()
 
 res_e2.mu[:5]
 
-res_a2.pearson_chi2, res_a.pearson_chi2, res_a2.resid_pearson.sum(
-), res_a.resid_pearson.sum()
+res_a2.pearson_chi2, res_a.pearson_chi2, res_a2.resid_pearson.sum(), res_a.resid_pearson.sum()
 
-((res_a2._results.resid_response**2) /
- res_a2.model.family.variance(res_a2.mu) * res_a2.model.var_weights).sum()
+(
+    (res_a2._results.resid_response**2)
+    / res_a2.model.family.variance(res_a2.mu)
+    * res_a2.model.var_weights
+).sum()
 
-((res_a._results.resid_response**2) / res_a.model.family.variance(res_a.mu) *
- res_a.model.var_weights).sum()
+(
+    (res_a._results.resid_response**2)
+    / res_a.model.family.variance(res_a.mu)
+    * res_a.model.var_weights
+).sum()
 
-((res_a._results.resid_response**2) / res_a.model.family.variance(res_a2.mu) *
- res_a.model.var_weights).sum()
+(
+    (res_a._results.resid_response**2)
+    / res_a.model.family.variance(res_a2.mu)
+    * res_a.model.var_weights
+).sum()
 
 res_e.model.endog[:5], res_e2.model.endog[:5]
 

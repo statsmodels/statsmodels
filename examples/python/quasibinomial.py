@@ -56,9 +56,9 @@ df["blotch"] /= 100
 # Fit the quasi-binomial regression with the standard variance
 # function.
 
-model1 = sm.GLM.from_formula("blotch ~ 0 + C(variety) + C(site)",
-                             family=sm.families.Binomial(),
-                             data=df)
+model1 = sm.GLM.from_formula(
+    "blotch ~ 0 + C(variety) + C(site)", family=sm.families.Binomial(), data=df
+)
 result1 = model1.fit(scale="X2")
 print(result1.summary())
 
@@ -77,7 +77,7 @@ plt.ylabel("Residual")
 
 class vf(sm.families.varfuncs.VarianceFunction):
     def __call__(self, mu):
-        return mu**2 * (1 - mu)**2
+        return mu**2 * (1 - mu) ** 2
 
     def deriv(self, mu):
         return 2 * mu - 6 * mu**2 + 4 * mu**3
@@ -88,9 +88,7 @@ class vf(sm.families.varfuncs.VarianceFunction):
 
 bin = sm.families.Binomial()
 bin.variance = vf()
-model2 = sm.GLM.from_formula("blotch ~ 0 + C(variety) + C(site)",
-                             family=bin,
-                             data=df)
+model2 = sm.GLM.from_formula("blotch ~ 0 + C(variety) + C(site)", family=bin, data=df)
 result2 = model2.fit(scale="X2")
 print(result2.summary())
 

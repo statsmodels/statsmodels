@@ -4,6 +4,7 @@ SARIMAX tools.
 Author: Chad Fulton
 License: BSD-3
 """
+
 import numpy as np
 
 
@@ -50,8 +51,7 @@ def standardize_lag_order(order, title=None):
 
     # Only integer orders are valid
     if not np.all(order == order.astype(int)):
-        raise ValueError("Invalid %s. Non-integer order (%s) given."
-                         % (title, order))
+        raise ValueError("Invalid %s. Non-integer order (%s) given." % (title, order))
     order = order.astype(int)
 
     # Only positive integers are valid
@@ -62,9 +62,11 @@ def standardize_lag_order(order, title=None):
     if order.ndim == 2 and order.shape[1] == 1:
         order = order[:, 0]
     elif order.ndim > 1:
-        raise ValueError("Invalid %s. Must be an integer or"
-                         " 1-dimensional array-like object (e.g. list,"
-                         " ndarray, etc.). Got %s." % (title, order))
+        raise ValueError(
+            "Invalid %s. Must be an integer or"
+            " 1-dimensional array-like object (e.g. list,"
+            " ndarray, etc.). Got %s." % (title, order)
+        )
 
     # Option 1: the typical integer response (implies including all
     # lags up through and including the value)
@@ -74,17 +76,19 @@ def standardize_lag_order(order, title=None):
         order = 0
     else:
         # Option 2: boolean list
-        has_zeros = (0 in order)
+        has_zeros = 0 in order
         has_multiple_ones = np.sum(order == 1) > 1
         has_gt_one = np.any(order > 1)
         if has_zeros or has_multiple_ones:
             if has_gt_one:
-                raise ValueError("Invalid %s. Appears to be a boolean list"
-                                 " (since it contains a 0 element and/or"
-                                 " multiple elements) but also contains"
-                                 " elements greater than 1 like a list of"
-                                 " lag orders." % title)
-            order = (np.where(order == 1)[0] + 1)
+                raise ValueError(
+                    "Invalid %s. Appears to be a boolean list"
+                    " (since it contains a 0 element and/or"
+                    " multiple elements) but also contains"
+                    " elements greater than 1 like a list of"
+                    " lag orders." % title
+                )
+            order = np.where(order == 1)[0] + 1
 
         # (Default) Option 3: list of lag orders to include
         else:
@@ -144,22 +148,23 @@ def validate_basic(params, length, allow_infnan=False, title=None):
         dtype = complex if any(is_complex) else float
         params = np.array(params, dtype=dtype)
     except TypeError as exc:
-        raise ValueError("Parameters vector%s includes invalid values."
-                         % title) from exc
+        raise ValueError(
+            "Parameters vector%s includes invalid values." % title
+        ) from exc
 
     # Check for NaN, inf
-    if not allow_infnan and (np.any(np.isnan(params)) or
-                             np.any(np.isinf(params))):
-        raise ValueError("Parameters vector%s includes NaN or Inf values."
-                         % title)
+    if not allow_infnan and (np.any(np.isnan(params)) or np.any(np.isinf(params))):
+        raise ValueError("Parameters vector%s includes NaN or Inf values." % title)
 
     params = np.atleast_1d(np.squeeze(params))
 
     # Check for right number of parameters
     if params.shape != (length,):
         plural = "" if length == 1 else "s"
-        raise ValueError("Specification%s implies %d parameter%s, but"
-                         " values with shape %s were provided."
-                         % (title, length, plural, params.shape))
+        raise ValueError(
+            "Specification%s implies %d parameter%s, but"
+            " values with shape %s were provided."
+            % (title, length, plural, params.shape)
+        )
 
     return params

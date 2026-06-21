@@ -111,9 +111,9 @@ def make_plot(labels):
     fig.subplots_adjust(0.1, 0.1, 0.75, 0.9)
     ax.set_xlabel("Year", size=17)
     ax.set_ylabel("Fertility", size=17)
-    legend = ax.legend(*ax.get_legend_handles_labels(),
-                       loc="center left",
-                       bbox_to_anchor=(1, 0.5))
+    legend = ax.legend(
+        *ax.get_legend_handles_labels(), loc="center left", bbox_to_anchor=(1, 0.5)
+    )
     legend.draw_frame(False)
 
 

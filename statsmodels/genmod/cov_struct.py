@@ -7,7 +7,6 @@ docs:
 http://www.stata.com/manuals13/xtxtgee.pdf
 """
 
-
 from collections import defaultdict
 import warnings
 

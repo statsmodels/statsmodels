@@ -78,8 +78,7 @@ class TestOptions(Options):
         assert_equal(model.filter_method, FILTER_CONVENTIONAL)
 
         model.filter_collapsed = True
-        assert_equal(model.filter_method,
-                     FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+        assert_equal(model.filter_method, FILTER_CONVENTIONAL | FILTER_COLLAPSED)
         model.filter_conventional = False
         assert_equal(model.filter_method, FILTER_COLLAPSED)
 
@@ -88,8 +87,7 @@ class TestOptions(Options):
         assert_equal(model.filter_method, FILTER_AUGMENTED)
 
         # Try setting via boolean via method
-        model.set_filter_method(filter_conventional=True,
-                                filter_augmented=False)
+        model.set_filter_method(filter_conventional=True, filter_augmented=False)
         assert_equal(model.filter_method, FILTER_CONVENTIONAL)
 
         # Try setting and unsetting all
@@ -98,10 +96,16 @@ class TestOptions(Options):
             setattr(model, name, True)
         assert_equal(
             model.filter_method,
-            FILTER_CONVENTIONAL | FILTER_EXACT_INITIAL | FILTER_AUGMENTED |
-            FILTER_SQUARE_ROOT | FILTER_UNIVARIATE | FILTER_COLLAPSED |
-            FILTER_EXTENDED | FILTER_UNSCENTED | FILTER_CONCENTRATED |
-            FILTER_CHANDRASEKHAR
+            FILTER_CONVENTIONAL
+            | FILTER_EXACT_INITIAL
+            | FILTER_AUGMENTED
+            | FILTER_SQUARE_ROOT
+            | FILTER_UNIVARIATE
+            | FILTER_COLLAPSED
+            | FILTER_EXTENDED
+            | FILTER_UNSCENTED
+            | FILTER_CONCENTRATED
+            | FILTER_CHANDRASEKHAR,
         )
         for name in model.filter_methods:
             setattr(model, name, False)
@@ -117,8 +121,7 @@ class TestOptions(Options):
         model.invert_univariate = True
         assert_equal(model.inversion_method, INVERT_UNIVARIATE)
         model.invert_cholesky = True
-        assert_equal(model.inversion_method,
-                     INVERT_UNIVARIATE | INVERT_CHOLESKY)
+        assert_equal(model.inversion_method, INVERT_UNIVARIATE | INVERT_CHOLESKY)
         model.invert_univariate = False
         assert_equal(model.inversion_method, INVERT_CHOLESKY)
 
@@ -127,10 +130,10 @@ class TestOptions(Options):
         assert_equal(model.inversion_method, INVERT_LU)
 
         # Try setting via boolean via method
-        model.set_inversion_method(invert_cholesky=True,
-                                   invert_univariate=True, invert_lu=False)
-        assert_equal(model.inversion_method,
-                     INVERT_UNIVARIATE | INVERT_CHOLESKY)
+        model.set_inversion_method(
+            invert_cholesky=True, invert_univariate=True, invert_lu=False
+        )
+        assert_equal(model.inversion_method, INVERT_UNIVARIATE | INVERT_CHOLESKY)
 
         # Try setting and unsetting all
         model.inversion_method = 0
@@ -138,8 +141,7 @@ class TestOptions(Options):
             setattr(model, name, True)
         assert_equal(
             model.inversion_method,
-            INVERT_UNIVARIATE | SOLVE_LU | INVERT_LU | SOLVE_CHOLESKY |
-            INVERT_CHOLESKY
+            INVERT_UNIVARIATE | SOLVE_LU | INVERT_LU | SOLVE_CHOLESKY | INVERT_CHOLESKY,
         )
         for name in model.inversion_methods:
             setattr(model, name, False)
@@ -182,8 +184,7 @@ class TestOptions(Options):
         model.memory_no_forecast = True
         assert_equal(model.conserve_memory, MEMORY_NO_FORECAST)
         model.memory_no_filtered = True
-        assert_equal(model.conserve_memory,
-                     MEMORY_NO_FORECAST | MEMORY_NO_FILTERED)
+        assert_equal(model.conserve_memory, MEMORY_NO_FORECAST | MEMORY_NO_FILTERED)
         model.memory_no_forecast = False
         assert_equal(model.conserve_memory, MEMORY_NO_FILTERED)
 
@@ -192,8 +193,7 @@ class TestOptions(Options):
         assert_equal(model.conserve_memory, MEMORY_NO_PREDICTED)
 
         # Try setting via boolean via method
-        model.set_conserve_memory(memory_no_filtered=True,
-                                  memory_no_predicted=False)
+        model.set_conserve_memory(memory_no_filtered=True, memory_no_predicted=False)
         assert_equal(model.conserve_memory, MEMORY_NO_FILTERED)
 
         # Try setting and unsetting all
@@ -204,9 +204,13 @@ class TestOptions(Options):
             setattr(model, name, True)
         assert_equal(
             model.conserve_memory,
-            MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
-            MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN |
-            MEMORY_NO_SMOOTHING | MEMORY_NO_STD_FORECAST
+            MEMORY_NO_FORECAST
+            | MEMORY_NO_PREDICTED
+            | MEMORY_NO_FILTERED
+            | MEMORY_NO_LIKELIHOOD
+            | MEMORY_NO_GAIN
+            | MEMORY_NO_SMOOTHING
+            | MEMORY_NO_STD_FORECAST,
         )
         assert_equal(model.conserve_memory & MEMORY_CONSERVE, MEMORY_CONSERVE)
         for name in model.memory_options:
@@ -227,8 +231,7 @@ class TestOptions(Options):
         model.smoother_state = True
         assert_equal(model.smoother_output, SMOOTHER_STATE)
         model.smoother_disturbance = True
-        assert_equal(model.smoother_output,
-                     SMOOTHER_STATE | SMOOTHER_DISTURBANCE)
+        assert_equal(model.smoother_output, SMOOTHER_STATE | SMOOTHER_DISTURBANCE)
         model.smoother_state = False
         assert_equal(model.smoother_output, SMOOTHER_DISTURBANCE)
 
@@ -237,8 +240,9 @@ class TestOptions(Options):
         assert_equal(model.smoother_output, SMOOTHER_DISTURBANCE_COV)
 
         # Try setting via boolean via method
-        model.set_smoother_output(smoother_disturbance=True,
-                                  smoother_disturbance_cov=False)
+        model.set_smoother_output(
+            smoother_disturbance=True, smoother_disturbance_cov=False
+        )
         assert_equal(model.smoother_output, SMOOTHER_DISTURBANCE)
 
         # Try setting and unsetting all
@@ -249,8 +253,11 @@ class TestOptions(Options):
             setattr(model, name, True)
         assert_equal(
             model.smoother_output,
-            SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_STATE_AUTOCOV |
-            SMOOTHER_DISTURBANCE | SMOOTHER_DISTURBANCE_COV
+            SMOOTHER_STATE
+            | SMOOTHER_STATE_COV
+            | SMOOTHER_STATE_AUTOCOV
+            | SMOOTHER_DISTURBANCE
+            | SMOOTHER_DISTURBANCE_COV,
         )
         assert_equal(model.smoother_output, SMOOTHER_ALL)
         for name in model.smoother_outputs:
@@ -264,9 +271,11 @@ class TestOptions(Options):
         # instance
 
         assert_equal(
-            self.model.get_simulation_output(SIMULATION_STATE),
-            SIMULATION_STATE)
+            self.model.get_simulation_output(SIMULATION_STATE), SIMULATION_STATE
+        )
         assert_equal(
-            self.model.get_simulation_output(simulate_state=True,
-                                             simulate_disturbance=True),
-            SIMULATION_ALL)
+            self.model.get_simulation_output(
+                simulate_state=True, simulate_disturbance=True
+            ),
+            SIMULATION_ALL,
+        )

@@ -125,21 +125,17 @@ def dosim(hyp, cov_struct=None, mcrep=500):
         y = negbinom(u, mu=mu[hyp], scale=scale)
 
         # Fit the null model
-        m0 = sm.GEE(y,
-                    x0,
-                    groups=grp,
-                    cov_struct=cov_struct,
-                    family=sm.families.Poisson())
-        r0 = m0.fit(scale='X2')
+        m0 = sm.GEE(
+            y, x0, groups=grp, cov_struct=cov_struct, family=sm.families.Poisson()
+        )
+        r0 = m0.fit(scale="X2")
         scales[0].append(r0.scale)
 
         # Fit the alternative model
-        m1 = sm.GEE(y,
-                    x,
-                    groups=grp,
-                    cov_struct=cov_struct,
-                    family=sm.families.Poisson())
-        r1 = m1.fit(scale='X2')
+        m1 = sm.GEE(
+            y, x, groups=grp, cov_struct=cov_struct, family=sm.families.Poisson()
+        )
+        r1 = m1.fit(scale="X2")
         scales[1].append(r1.scale)
 
         # Carry out the score test

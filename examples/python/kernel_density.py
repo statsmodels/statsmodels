@@ -42,8 +42,7 @@ from statsmodels.distributions.mixture_rvs import mixture_rvs
 
 # ## A univariate example
 
-np.random.seed(
-    12345)  # Seed the random number generator for reproducible results
+np.random.seed(12345)  # Seed the random number generator for reproducible results
 
 # We create a bimodal distribution: a mixture of two normal distributions
 # with locations at `-1` and `1`.
@@ -117,8 +116,9 @@ ax.plot(kde.support, kde.density, lw=3, label="KDE from samples", zorder=10)
 
 # Plot the true distribution
 true_values = (
-    stats.norm.pdf(loc=dist1_loc, scale=dist1_scale, x=kde.support) * weight1 +
-    stats.norm.pdf(loc=dist2_loc, scale=dist2_scale, x=kde.support) * weight2)
+    stats.norm.pdf(loc=dist1_loc, scale=dist1_scale, x=kde.support) * weight1
+    + stats.norm.pdf(loc=dist2_loc, scale=dist2_scale, x=kde.support) * weight2
+)
 ax.plot(kde.support, true_values, lw=3, label="True distribution", zorder=15)
 
 # Plot the samples
@@ -247,11 +247,7 @@ for i, kernel in enumerate(kernel_switch.keys()):
     kde.fit(kernel=kernel, fft=False, gridsize=2**10)
 
     # Create the plot
-    ax.plot(kde.support,
-            kde.density,
-            lw=3,
-            label="KDE from samples",
-            zorder=10)
+    ax.plot(kde.support, kde.density, lw=3, label="KDE from samples", zorder=10)
     ax.scatter(data, np.zeros_like(data), marker="x", color="red")
     plt.grid(True, zorder=-5)
     ax.set_xlim([-3, 3])
@@ -319,10 +315,7 @@ fig = plt.figure(figsize=(12, 5))
 ax = fig.add_subplot(111)
 
 ax.plot(kde.support, kde.cdf, lw=3, label="CDF")
-ax.plot(np.linspace(0, 1, num=kde.icdf.size),
-        kde.icdf,
-        lw=3,
-        label="Inverse CDF")
+ax.plot(np.linspace(0, 1, num=kde.icdf.size), kde.icdf, lw=3, label="Inverse CDF")
 ax.plot(kde.support, kde.sf, lw=3, label="Survival function")
 ax.legend(loc="best")
 ax.grid(True, zorder=-5)

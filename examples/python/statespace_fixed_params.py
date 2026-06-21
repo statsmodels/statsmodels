@@ -30,7 +30,7 @@ from pandas_datareader.data import DataReader
 # To illustrate, we will use the Consumer Price Index for Apparel, which
 # has a time-varying level and a strong seasonal component.
 
-endog = DataReader('CPIAPPNS', 'fred', start='1980').asfreq('MS')
+endog = DataReader("CPIAPPNS", "fred", start="1980").asfreq("MS")
 endog.plot(figsize=(15, 3))
 
 # It is well known (e.g. Harvey and Jaeger [1993]) that the HP filter
@@ -68,7 +68,7 @@ hp_cycle, hp_trend = sm.tsa.filters.hpfilter(endog, lamb=129600)
 
 # The unobserved components model above is the local linear trend, or
 # "lltrend", specification
-mod = sm.tsa.UnobservedComponents(endog, 'lltrend')
+mod = sm.tsa.UnobservedComponents(endog, "lltrend")
 print(mod.param_names)
 
 # The parameters of the unobserved components model (UCM) are written as:
@@ -85,7 +85,7 @@ print(mod.param_names)
 # estimation. Instead, we can directly run the Kalman filter and smoother at
 # our chosen parameters using the `smooth` method.
 
-res = mod.smooth([1., 0, 1. / 129600])
+res = mod.smooth([1.0, 0, 1.0 / 129600])
 print(res.summary())
 
 # The estimate that corresponds to the HP filter's trend estimate is given
@@ -99,8 +99,8 @@ ucm_trend = pd.Series(res.level.smoothed, index=endog.index)
 
 fig, ax = plt.subplots(figsize=(15, 3))
 
-ax.plot(hp_trend, label='HP estimate')
-ax.plot(ucm_trend, label='UCM estimate')
+ax.plot(hp_trend, label="HP estimate")
+ax.plot(ucm_trend, label="UCM estimate")
 ax.legend()
 
 # ### Adding a seasonal component
@@ -119,10 +119,9 @@ ax.legend()
 
 # Construct a local linear trend model with a stochastic seasonal
 # component of period 1 year
-mod = sm.tsa.UnobservedComponents(endog,
-                                  'lltrend',
-                                  seasonal=12,
-                                  stochastic_seasonal=True)
+mod = sm.tsa.UnobservedComponents(
+    endog, "lltrend", seasonal=12, stochastic_seasonal=True
+)
 print(mod.param_names)
 
 # In this case, we will continue to restrict the first three parameters as
@@ -136,11 +135,9 @@ print(mod.param_names)
 # that were not fixed will be estimated.
 
 # Here we restrict the first three parameters to specific values
-with mod.fix_params({
-        'sigma2.irregular': 1,
-        'sigma2.level': 0,
-        'sigma2.trend': 1. / 129600
-}):
+with mod.fix_params(
+    {"sigma2.irregular": 1, "sigma2.level": 0, "sigma2.trend": 1.0 / 129600}
+):
     # Now we fit any remaining parameters, which in this case
     # is just `sigma2.seasonal`
     res_restricted = mod.fit()
@@ -148,11 +145,9 @@ with mod.fix_params({
 # Alternatively, we could have simply used the `fit_constrained` method,
 # which also accepts a dictionary of constraints:
 
-res_restricted = mod.fit_constrained({
-    'sigma2.irregular': 1,
-    'sigma2.level': 0,
-    'sigma2.trend': 1. / 129600
-})
+res_restricted = mod.fit_constrained(
+    {"sigma2.irregular": 1, "sigma2.level": 0, "sigma2.trend": 1.0 / 129600}
+)
 
 # The summary output includes all parameters, but indicates that the first
 # three were fixed (and so were not estimated).
@@ -169,15 +164,12 @@ res_unrestricted = mod.fit()
 # seasonal components.
 
 # Construct the smoothed level estimates
-unrestricted_trend = pd.Series(res_unrestricted.level.smoothed,
-                               index=endog.index)
+unrestricted_trend = pd.Series(res_unrestricted.level.smoothed, index=endog.index)
 restricted_trend = pd.Series(res_restricted.level.smoothed, index=endog.index)
 
 # Construct the smoothed estimates of the seasonal pattern
-unrestricted_seasonal = pd.Series(res_unrestricted.seasonal.smoothed,
-                                  index=endog.index)
-restricted_seasonal = pd.Series(res_restricted.seasonal.smoothed,
-                                index=endog.index)
+unrestricted_seasonal = pd.Series(res_unrestricted.seasonal.smoothed, index=endog.index)
+restricted_seasonal = pd.Series(res_restricted.seasonal.smoothed, index=endog.index)
 
 # Comparing the estimated level, it is clear that the seasonal UCM with
 # fixed parameters still produces a trend that corresponds very closely
@@ -188,9 +180,9 @@ restricted_seasonal = pd.Series(res_restricted.seasonal.smoothed,
 
 fig, ax = plt.subplots(figsize=(15, 3))
 
-ax.plot(unrestricted_trend, label='MLE, with seasonal')
-ax.plot(restricted_trend, label='Fixed parameters, with seasonal')
-ax.plot(hp_trend, label='HP filter, no seasonal')
+ax.plot(unrestricted_trend, label="MLE, with seasonal")
+ax.plot(restricted_trend, label="Fixed parameters, with seasonal")
+ax.plot(hp_trend, label="HP filter, no seasonal")
 ax.legend()
 
 # Finally, the UCM with the parameter restrictions is still able to pick
@@ -198,6 +190,6 @@ ax.legend()
 
 fig, ax = plt.subplots(figsize=(15, 3))
 
-ax.plot(unrestricted_seasonal, label='MLE')
-ax.plot(restricted_seasonal, label='Fixed parameters')
+ax.plot(unrestricted_seasonal, label="MLE")
+ax.plot(restricted_seasonal, label="Fixed parameters")
 ax.legend()

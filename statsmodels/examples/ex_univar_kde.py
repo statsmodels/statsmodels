@@ -44,9 +44,7 @@ plt.plot(support[ix], rv.pdf(support[ix]), label="Actual")
 plt.plot(support[ix], dens_normal.pdf()[ix], label="Scott")
 plt.plot(support[ix], dens_cvls.pdf()[ix], label="CV_LS")
 plt.plot(support[ix], dens_cvml.pdf()[ix], label="CV_ML")
-plt.title(
-    "Nonparametric Estimation of the Density of Beta Distributed Random Variable"
-)
+plt.title("Nonparametric Estimation of the Density of Beta Distributed Random Variable")
 plt.legend(("Actual", "Scott", "CV_LS", "CV_ML"))
 
 # f distribution

@@ -72,8 +72,13 @@ def omni_normtest(resids, axis=0):
     n = resids.shape[axis]
     if n < 8:
         from warnings import warn
-        warn("omni_normtest is not valid with less than 8 observations; %i "
-             "samples were given." % int(n), ValueWarning, stacklevel=2)
+
+        warn(
+            "omni_normtest is not valid with less than 8 observations; %i "
+            "samples were given." % int(n),
+            ValueWarning,
+            stacklevel=2,
+        )
         return np.nan, np.nan
 
     return stats.normaltest(resids, axis=axis)
@@ -128,7 +133,7 @@ def jarque_bera(resids, axis=0):
 
     # Calculate the Jarque-Bera test for normality
     n = resids.shape[axis]
-    jb = (n / 6.) * (skew ** 2 + (1 / 4.) * (kurtosis - 3) ** 2)
+    jb = (n / 6.0) * (skew**2 + (1 / 4.0) * (kurtosis - 3) ** 2)
     jb_pv = stats.chi2.sf(jb, 2)
 
     return jb, jb_pv, skew, kurtosis
@@ -200,7 +205,7 @@ def robust_skewness(y, axis=0):
     mu_b = np.reshape(mu, shape)
     q2_b = np.reshape(q2, shape)
 
-    sigma = np.sqrt(np.mean(((y - mu_b)**2), axis))
+    sigma = np.sqrt(np.mean(((y - mu_b) ** 2), axis))
 
     sk1 = stats.skew(y, axis=axis)
     sk2 = (q1 + q3 - 2.0 * q2) / (q3 - q1)
@@ -353,21 +358,28 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
     """
-    if (axis is None or
-            (y.squeeze().ndim == 1 and y.ndim != 1)):
+    if axis is None or (y.squeeze().ndim == 1 and y.ndim != 1):
         y = y.ravel()
         axis = 0
 
     alpha, beta = ab
     delta, gamma = dg
 
-    perc = (12.5, 25.0, 37.5, 62.5, 75.0, 87.5,
-            delta, 100.0 - delta, gamma, 100.0 - gamma)
-    e1, e2, e3, e5, e6, e7, fd, f1md, fg, f1mg = np.percentile(y, perc,
-                                                               axis=axis)
+    perc = (
+        12.5,
+        25.0,
+        37.5,
+        62.5,
+        75.0,
+        87.5,
+        delta,
+        100.0 - delta,
+        gamma,
+        100.0 - gamma,
+    )
+    e1, e2, e3, e5, e6, e7, fd, f1md, fg, f1mg = np.percentile(y, perc, axis=axis)
 
-    expected_value = (expected_robust_kurtosis(ab, dg)
-                      if excess else np.zeros(4))
+    expected_value = expected_robust_kurtosis(ab, dg) if excess else np.zeros(4)
 
     kr1 = stats.kurtosis(y, axis, False) - expected_value[0]
     kr2 = ((e7 - e5) + (e3 - e1)) / (e6 - e2) - expected_value[1]

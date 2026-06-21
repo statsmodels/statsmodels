@@ -5,7 +5,6 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-
 import warnings
 
 import numpy as np

@@ -65,13 +65,15 @@ def gen_outcome(otype, mtime0):
 
 
 def build_df(ytime, ystatus, mtime0, mtime, mstatus):
-    df = pd.DataFrame({
-        "ytime": ytime,
-        "ystatus": ystatus,
-        "mtime": mtime,
-        "mstatus": mstatus,
-        "exp": exp,
-    })
+    df = pd.DataFrame(
+        {
+            "ytime": ytime,
+            "ystatus": ystatus,
+            "mtime": mtime,
+            "mstatus": mstatus,
+            "exp": exp,
+        }
+    )
     return df
 
 
@@ -85,12 +87,10 @@ def run(otype):
     ytime, ystatus = gen_outcome(otype, mtime0)
     df = build_df(ytime, ystatus, mtime0, mtime, mstatus)
 
-    outcome_model = sm.PHReg.from_formula("ytime ~ exp + mtime",
-                                          status="ystatus",
-                                          data=df)
-    mediator_model = sm.PHReg.from_formula("mtime ~ exp",
-                                           status="mstatus",
-                                           data=df)
+    outcome_model = sm.PHReg.from_formula(
+        "ytime ~ exp + mtime", status="ystatus", data=df
+    )
+    mediator_model = sm.PHReg.from_formula("mtime ~ exp", status="mstatus", data=df)
 
     med = Mediation(
         outcome_model,

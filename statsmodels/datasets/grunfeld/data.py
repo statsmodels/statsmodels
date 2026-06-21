@@ -1,4 +1,5 @@
 """Grunfeld (1950) Investment Data"""
+
 import pandas as pd
 
 from statsmodels.datasets import utils as du

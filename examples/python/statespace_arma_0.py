@@ -39,12 +39,10 @@ fig = sm.graphics.tsa.plot_acf(dta.values.squeeze(), lags=40, ax=ax1)
 ax2 = fig.add_subplot(212)
 fig = sm.graphics.tsa.plot_pacf(dta, lags=40, ax=ax2)
 
-arma_mod20 = sm.tsa.statespace.SARIMAX(dta, order=(2, 0, 0),
-                                       trend='c').fit(disp=False)
+arma_mod20 = sm.tsa.statespace.SARIMAX(dta, order=(2, 0, 0), trend="c").fit(disp=False)
 print(arma_mod20.params)
 
-arma_mod30 = sm.tsa.statespace.SARIMAX(dta, order=(3, 0, 0),
-                                       trend='c').fit(disp=False)
+arma_mod30 = sm.tsa.statespace.SARIMAX(dta, order=(3, 0, 0), trend="c").fit(disp=False)
 
 print(arma_mod20.aic, arma_mod20.bic, arma_mod20.hqic)
 
@@ -66,7 +64,7 @@ stats.normaltest(resid)
 
 fig = plt.figure(figsize=(12, 4))
 ax = fig.add_subplot(111)
-fig = qqplot(resid, line='q', ax=ax, fit=True)
+fig = qqplot(resid, line="q", ax=ax, fit=True)
 
 fig = plt.figure(figsize=(12, 8))
 ax1 = fig.add_subplot(211)
@@ -84,11 +82,11 @@ print(table)
 
 # * In-sample dynamic prediction. How good does our model do?
 
-predict_sunspots = arma_mod30.predict(start='1990', end='2012', dynamic=True)
+predict_sunspots = arma_mod30.predict(start="1990", end="2012", dynamic=True)
 
 fig, ax = plt.subplots(figsize=(12, 8))
-dta.loc['1950':].plot(ax=ax)
-predict_sunspots.plot(ax=ax, style='r')
+dta.loc["1950":].plot(ax=ax)
+predict_sunspots.plot(ax=ax, style="r")
 
 
 def mean_forecast_err(y, yhat):

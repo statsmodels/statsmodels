@@ -4,6 +4,7 @@ Created on Sun Sep 25 21:23:38 2011
 Author: Josef Perktold and Scipy developers
 License : BSD-3
 """
+
 import warnings
 
 import numpy as np
@@ -65,9 +66,7 @@ def anderson_statistic(x, dist="norm", fit=True, params=(), axis=0):
     sl2[axis] = slice(None, None, -1)
     sl2 = tuple(sl2)
     with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", message="divide by zero encountered in log1p"
-        )
+        warnings.filterwarnings("ignore", message="divide by zero encountered in log1p")
         ad_values = (2 * i[sl1] - 1.0) / nobs * (np.log(z) + np.log1p(-z[sl2]))
         s = np.sum(ad_values, axis=axis)
     a2 = -nobs - s
@@ -104,17 +103,17 @@ def normal_ad(x, axis=0):
     ad2 = anderson_statistic(x, dist="norm", fit=True, axis=axis)
     n = x.shape[axis]
 
-    ad2a = ad2 * (1 + 0.75 / n + 2.25 / n ** 2)
+    ad2a = ad2 * (1 + 0.75 / n + 2.25 / n**2)
 
     if np.size(ad2a) == 1:
-        if (ad2a >= 0.00 and ad2a < 0.200):
-            pval = 1 - np.exp(-13.436 + 101.14 * ad2a - 223.73 * ad2a ** 2)
+        if ad2a >= 0.00 and ad2a < 0.200:
+            pval = 1 - np.exp(-13.436 + 101.14 * ad2a - 223.73 * ad2a**2)
         elif ad2a < 0.340:
-            pval = 1 - np.exp(-8.318 + 42.796 * ad2a - 59.938 * ad2a ** 2)
+            pval = 1 - np.exp(-8.318 + 42.796 * ad2a - 59.938 * ad2a**2)
         elif ad2a < 0.600:
-            pval = np.exp(0.9177 - 4.279 * ad2a - 1.38 * ad2a ** 2)
+            pval = np.exp(0.9177 - 4.279 * ad2a - 1.38 * ad2a**2)
         elif ad2a <= 13:
-            pval = np.exp(1.2937 - 5.709 * ad2a + 0.0186 * ad2a ** 2)
+            pval = np.exp(1.2937 - 5.709 * ad2a + 0.0186 * ad2a**2)
         else:
             pval = 0.0  # is < 4.9542108058458799e-31
 
@@ -125,23 +124,23 @@ def normal_ad(x, axis=0):
             return np.nan * np.ones_like(ad2a)
 
         def pval1(ad2a):
-            return 1 - np.exp(-13.436 + 101.14 * ad2a - 223.73 * ad2a ** 2)
+            return 1 - np.exp(-13.436 + 101.14 * ad2a - 223.73 * ad2a**2)
 
         def pval2(ad2a):
-            return 1 - np.exp(-8.318 + 42.796 * ad2a - 59.938 * ad2a ** 2)
+            return 1 - np.exp(-8.318 + 42.796 * ad2a - 59.938 * ad2a**2)
 
         def pval3(ad2a):
-            return np.exp(0.9177 - 4.279 * ad2a - 1.38 * ad2a ** 2)
+            return np.exp(0.9177 - 4.279 * ad2a - 1.38 * ad2a**2)
 
         def pval4(ad2a):
-            return np.exp(1.2937 - 5.709 * ad2a + 0.0186 * ad2a ** 2)
+            return np.exp(1.2937 - 5.709 * ad2a + 0.0186 * ad2a**2)
 
         pvalli = [pval0, pval1, pval2, pval3, pval4]
 
         idx = np.searchsorted(bounds, ad2a, side="right")
         pval = np.nan * np.ones_like(ad2a)
         for i in range(5):
-            mask = (idx == i)
+            mask = idx == i
             pval[mask] = pvalli[i](ad2a[mask])
 
     return ad2, pval

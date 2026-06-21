@@ -8,7 +8,7 @@ import numpy as np
 from scipy import integrate, stats
 
 pi2 = np.pi**2
-pi2i = 1. / pi2
+pi2i = 1.0 / pi2
 
 
 def _term_integrate(rho):
@@ -28,10 +28,9 @@ def _term_integrate(rho):
     def f4(t, x):
         return np.arcsin((3 * sin(x) - sin(3 * x)) / (4 * cos(2 * x)))
 
-    fact = pi2i * (f1(None, rho) +
-                   2 * pi2i * f2(None, rho) +
-                   f3(None, rho) +
-                   0.5 * f4(None, rho))
+    fact = pi2i * (
+        f1(None, rho) + 2 * pi2i * f2(None, rho) + f3(None, rho) + 0.5 * f4(None, rho)
+    )
 
     return fact
 
@@ -95,18 +94,21 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
     if method in ["pearson", "gauss_rank"]:
         corr_n = corr
         if return_var:
-            var = (1 - rho**2)**2
+            var = (1 - rho**2) ** 2
 
     elif method.startswith("kendal"):
         corr_n = np.sin(np.pi / 2 * corr)
         if return_var:
-            var = (1 - rho**2) * np.pi**2 * (
-                  1./9 - 4 / np.pi**2 * np.arcsin(rho / 2)**2)
+            var = (
+                (1 - rho**2)
+                * np.pi**2
+                * (1.0 / 9 - 4 / np.pi**2 * np.arcsin(rho / 2) ** 2)
+            )
 
     elif method == "quadrant":
         corr_n = np.sin(np.pi / 2 * corr)
         if return_var:
-            var = (1 - rho**2) * (np.pi**2 / 4 - np.arcsin(rho)**2)
+            var = (1 - rho**2) * (np.pi**2 / 4 - np.arcsin(rho) ** 2)
 
     elif method.startswith("spearman"):
         corr_n = 2 * np.sin(np.pi / 6 * corr)
@@ -139,14 +141,17 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
 
             # todo check dimension, odeint return column (n, 1) array
             hmax = 1e-1
-            rf1 = integrate.odeint(f1 , 0, t=t, hmax=hmax).squeeze()
-            rf2 = integrate.odeint(f2 , 0, t=t, hmax=hmax).squeeze()
-            rf3 = integrate.odeint(f3 , 0, t=t, hmax=hmax).squeeze()
-            rf4 = integrate.odeint(f4 , 0, t=t, hmax=hmax).squeeze()
-            fact = 1 + 144 * (-9 / 4. * pi2i * np.arcsin(rhos / 2)**2 +
-                              pi2i * rf1 +
-                              2 * pi2i * rf2 + pi2i * rf3 +
-                              0.5 * pi2i * rf4)
+            rf1 = integrate.odeint(f1, 0, t=t, hmax=hmax).squeeze()
+            rf2 = integrate.odeint(f2, 0, t=t, hmax=hmax).squeeze()
+            rf3 = integrate.odeint(f3, 0, t=t, hmax=hmax).squeeze()
+            rf4 = integrate.odeint(f4, 0, t=t, hmax=hmax).squeeze()
+            fact = 1 + 144 * (
+                -9 / 4.0 * pi2i * np.arcsin(rhos / 2) ** 2
+                + pi2i * rf1
+                + 2 * pi2i * rf2
+                + pi2i * rf3
+                + 0.5 * pi2i * rf4
+            )
             # fact = 1 - 9 / 4 * pi2i * np.arcsin(rhos / 2)**2
             fact2 = np.zeros_like(var) * np.nan
             fact2[idx] = fact[1:]

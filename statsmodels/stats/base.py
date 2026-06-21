@@ -4,6 +4,7 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
+
 from statsmodels.compat.python import lzip
 
 import numpy as np
@@ -12,9 +13,7 @@ from statsmodels.tools.testing import Holder
 
 
 class HolderTuple(Holder):
-    """Holder class with indexing
-
-    """
+    """Holder class with indexing"""
 
     def __init__(self, tuple_=None, **kwds):
         super().__init__(**kwds)
@@ -64,8 +63,9 @@ class AllPairsResults:
 
     """
 
-    def __init__(self, pvals_raw, all_pairs, multitest_method="hs",
-                 levels=None, n_levels=None):
+    def __init__(
+        self, pvals_raw, all_pairs, multitest_method="hs", levels=None, n_levels=None
+    ):
         self.pvals_raw = pvals_raw
         self.all_pairs = all_pairs
         if n_levels is None:
@@ -79,8 +79,9 @@ class AllPairsResults:
         if levels is None:
             self.all_pairs_names = [f"{pairs}" for pairs in all_pairs]
         else:
-            self.all_pairs_names = [f"{levels[pairs[0]]}-{levels[pairs[1]]}"
-                                    for pairs in all_pairs]
+            self.all_pairs_names = [
+                f"{levels[pairs[0]]}-{levels[pairs[1]]}" for pairs in all_pairs
+            ]
 
     def pval_corrected(self, method=None):
         """p-values corrected for multiple testing problem
@@ -90,6 +91,7 @@ class AllPairsResults:
 
         """
         import statsmodels.stats.multitest as smt
+
         if method is None:
             method = self.multitest_method
         # TODO: breaks with method=None
@@ -116,11 +118,16 @@ class AllPairsResults:
         ``self.multitest_method``
         """
         import statsmodels.stats.multitest as smt
+
         maxlevel = max(len(ss) for ss in self.all_pairs_names)
 
-        text = ("Corrected p-values using %s p-value correction\n\n"
-                % smt.multitest_methods_names[self.multitest_method])
+        text = (
+            "Corrected p-values using %s p-value correction\n\n"
+            % smt.multitest_methods_names[self.multitest_method]
+        )
         text += "Pairs" + (" " * (maxlevel - 5 + 1)) + "p-values\n"
-        text += "\n".join(f"{pairs}  {pv:6.4g}" for (pairs, pv) in
-                          zip(self.all_pairs_names, self.pval_corrected()))
+        text += "\n".join(
+            f"{pairs}  {pv:6.4g}"
+            for (pairs, pv) in zip(self.all_pairs_names, self.pval_corrected())
+        )
         return text

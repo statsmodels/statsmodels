@@ -58,8 +58,9 @@ quantiles = np.arange(0.05, 0.96, 0.1)
 
 def fit_model(q):
     res = mod.fit(q=q)
-    return [q, res.params["Intercept"], res.params["income"]
-            ] + res.conf_int().loc["income"].tolist()
+    return [q, res.params["Intercept"], res.params["income"]] + res.conf_int().loc[
+        "income"
+    ].tolist()
 
 
 models = [fit_model(x) for x in quantiles]
@@ -67,10 +68,9 @@ models = pd.DataFrame(models, columns=["q", "a", "b", "lb", "ub"])
 
 ols = smf.ols("foodexp ~ income", data).fit()
 ols_ci = ols.conf_int().loc["income"].tolist()
-ols = dict(a=ols.params["Intercept"],
-           b=ols.params["income"],
-           lb=ols_ci[0],
-           ub=ols_ci[1])
+ols = dict(
+    a=ols.params["Intercept"], b=ols.params["income"], lb=ols_ci[0], ub=ols_ci[1]
+)
 
 print(models)
 print(ols)

@@ -7,9 +7,7 @@ from statsmodels.tsa.arima.estimators.durbin_levinson import durbin_levinson
 from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 
 
-@pytest.mark.low_precision(
-    "Test against Example 5.1.1 in Brockwell and Davis (2016)"
-)
+@pytest.mark.low_precision("Test against Example 5.1.1 in Brockwell and Davis (2016)")
 def test_brockwell_davis_example_511():
     # Note: this example is primarily tested in
     # test_yule_walker::test_brockwell_davis_example_511.

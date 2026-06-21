@@ -57,17 +57,20 @@ print(respondent1000)
 resp = dict(
     zip(
         range(1, 9),
-        respondent1000[[
-            "occupation",
-            "educ",
-            "occupation_husb",
-            "rate_marriage",
-            "age",
-            "yrs_married",
-            "children",
-            "religious",
-        ]].tolist(),
-    ))
+        respondent1000[
+            [
+                "occupation",
+                "educ",
+                "occupation_husb",
+                "rate_marriage",
+                "age",
+                "yrs_married",
+                "children",
+                "religious",
+            ]
+        ].tolist(),
+    )
+)
 resp.update({0: 1})
 print(resp)
 
@@ -118,13 +121,17 @@ print(sm.datasets.star98.NOTE)
 dta = sm.datasets.star98.load_pandas().data
 print(dta.columns)
 
-print(dta[[
-    "NABOVE", "NBELOW", "LOWINC", "PERASIAN", "PERBLACK", "PERHISP", "PERMINTE"
-]].head(10))
+print(
+    dta[
+        ["NABOVE", "NBELOW", "LOWINC", "PERASIAN", "PERBLACK", "PERHISP", "PERMINTE"]
+    ].head(10)
+)
 
-print(dta[[
-    "AVYRSEXP", "AVSALK", "PERSPENK", "PTRATIO", "PCTAF", "PCTCHRT", "PCTYRRND"
-]].head(10))
+print(
+    dta[
+        ["AVYRSEXP", "AVSALK", "PERSPENK", "PTRATIO", "PCTAF", "PCTCHRT", "PCTYRRND"]
+    ].head(10)
+)
 
 formula = "NABOVE + NBELOW ~ LOWINC + PERASIAN + PERBLACK + PERHISP + PCTCHRT "
 formula += "+ PCTYRRND + PERMINTE*AVYRSEXP*AVSALK + PERSPENK*PTRATIO*PCTAF"
@@ -137,7 +144,7 @@ stats.binom(5, 1.0 / 6).pmf(2)
 
 from scipy.special import comb
 
-comb(5, 2) * (1 / 6.0)**2 * (5 / 6.0)**3
+comb(5, 2) * (1 / 6.0) ** 2 * (5 / 6.0) ** 3
 
 from statsmodels.formula.api import glm
 

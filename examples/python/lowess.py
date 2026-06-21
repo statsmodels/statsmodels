@@ -53,20 +53,14 @@ pylab.autoscale(enable=True, axis="x", tight=True)
 # Now create a bootstrap confidence interval around the a LOWESS fit
 
 
-def lowess_with_confidence_bounds(x,
-                                  y,
-                                  eval_x,
-                                  N=200,
-                                  conf_interval=0.95,
-                                  lowess_kw=None):
+def lowess_with_confidence_bounds(
+    x, y, eval_x, N=200, conf_interval=0.95, lowess_kw=None
+):
     """
     Perform Lowess regression and determine a confidence interval by bootstrap resampling
     """
     # Lowess smoothing
-    smoothed = sm.nonparametric.lowess(exog=x,
-                                       endog=y,
-                                       xvals=eval_x,
-                                       **lowess_kw)
+    smoothed = sm.nonparametric.lowess(exog=x, endog=y, xvals=eval_x, **lowess_kw)
 
     # Perform bootstrap resamplings of the data
     # and  evaluate the smoothing at a fixed set of points
@@ -76,10 +70,9 @@ def lowess_with_confidence_bounds(x,
         sampled_x = x[sample]
         sampled_y = y[sample]
 
-        smoothed_values[i] = sm.nonparametric.lowess(exog=sampled_x,
-                                                     endog=sampled_y,
-                                                     xvals=eval_x,
-                                                     **lowess_kw)
+        smoothed_values[i] = sm.nonparametric.lowess(
+            exog=sampled_x, endog=sampled_y, xvals=eval_x, **lowess_kw
+        )
 
     # Get the confidence interval
     sorted_values = np.sort(smoothed_values, axis=0)
@@ -92,10 +85,9 @@ def lowess_with_confidence_bounds(x,
 
 # Compute the 95% confidence interval
 eval_x = np.linspace(0, 4 * np.pi, 31)
-smoothed, bottom, top = lowess_with_confidence_bounds(x,
-                                                      y,
-                                                      eval_x,
-                                                      lowess_kw={"frac": 0.1})
+smoothed, bottom, top = lowess_with_confidence_bounds(
+    x, y, eval_x, lowess_kw={"frac": 0.1}
+)
 
 # Plot the confidence interval and fit
 fig, ax = pylab.subplots()

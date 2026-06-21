@@ -506,7 +506,7 @@ if __name__ == "__main__":
     datadict = dict(
         zip(
             ["Air", "Train", "Bus", "Car"],
-            ["Airdata", "Traindata", "Busdata", "Cardata"]
+            ["Airdata", "Traindata", "Busdata", "Cardata"],
         )
     )
 

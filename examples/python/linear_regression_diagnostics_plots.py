@@ -28,7 +28,7 @@ import pandas as pd
 
 # Load data
 data_url = "https://raw.githubusercontent.com/nguyen-toan/ISLR/07fd968ea484b5f6febc7b392a28eb64329a4945/dataset/Advertising.csv"
-df = pd.read_csv(data_url).drop('Unnamed: 0', axis=1)
+df = pd.read_csv(data_url).drop("Unnamed: 0", axis=1)
 df.head()
 
 # Fitting linear model
@@ -58,28 +58,29 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 import matplotlib.pyplot as plt
 from typing import Type
 
-style_talk = 'seaborn-talk'  #refer to plt.style.available
+style_talk = "seaborn-talk"  # refer to plt.style.available
 
 
-class Linear_Reg_Diagnostic():
+class Linear_Reg_Diagnostic:
     """
     Diagnostic plots to identify potential problems in a linear regression fit.
     Mainly,
         a. non-linearity of data
         b. Correlation of error terms
-        c. non-constant variance 
+        c. non-constant variance
         d. outliers
         e. high-leverage points
         f. collinearity
 
     Author:
         Prajwal Kafle (p33ajkafle@gmail.com, where 3 = r)
-        Does not come with any sort of warranty. 
+        Does not come with any sort of warranty.
         Please test the code one your end before using.
     """
+
     def __init__(
-        self, results: type[
-            statsmodels.regression.linear_model.RegressionResultsWrapper]
+        self,
+        results: type[statsmodels.regression.linear_model.RegressionResultsWrapper],
     ) -> None:
         """
         For a linear regression model, generates following diagnostic plots:
@@ -94,7 +95,7 @@ class Linear_Reg_Diagnostic():
         e. vif
 
         Args:
-            results (Type[statsmodels.regression.linear_model.RegressionResultsWrapper]): 
+            results (Type[statsmodels.regression.linear_model.RegressionResultsWrapper]):
                 must be instance of statsmodels.regression.linear_model object
 
         Raises:
@@ -109,7 +110,7 @@ class Linear_Reg_Diagnostic():
         >>> df = pd.DataFrame({'x':x, 'y':y})
         >>> res = smf.ols(formula= "y ~ x", data=df).fit()
         >>> cls = Linear_Reg_Diagnostic(res)
-        >>> cls(plot_context="seaborn-v0_8")     
+        >>> cls(plot_context="seaborn-v0_8")
 
         In case you do not need all plots you can also independently make an individual plot/table
         in following ways
@@ -122,9 +123,12 @@ class Linear_Reg_Diagnostic():
         >>> cls.vif_table()
         """
 
-        if isinstance(
-                results, statsmodels.regression.linear_model.
-                RegressionResultsWrapper) is False:
+        if (
+            isinstance(
+                results, statsmodels.regression.linear_model.RegressionResultsWrapper
+            )
+            is False
+        ):
             raise TypeError(
                 "result must be instance of statsmodels.regression.linear_model.RegressionResultsWrapper object"
             )
@@ -143,7 +147,7 @@ class Linear_Reg_Diagnostic():
         self.cooks_distance = influence.cooks_distance[0]
         self.nparams = len(self.results.params)
 
-    def __call__(self, plot_context='seaborn-v0_8'):
+    def __call__(self, plot_context="seaborn-v0_8"):
         # print(plt.style.available)
         with plt.style.context(plot_context):
             fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
@@ -166,29 +170,25 @@ class Linear_Reg_Diagnostic():
         if ax is None:
             fig, ax = plt.subplots()
 
-        sns.residplot(x=self.y_predict,
-                      y=self.residual,
-                      lowess=True,
-                      scatter_kws={'alpha': 0.5},
-                      line_kws={
-                          'color': 'red',
-                          'lw': 1,
-                          'alpha': 0.8
-                      },
-                      ax=ax)
+        sns.residplot(
+            x=self.y_predict,
+            y=self.residual,
+            lowess=True,
+            scatter_kws={"alpha": 0.5},
+            line_kws={"color": "red", "lw": 1, "alpha": 0.8},
+            ax=ax,
+        )
 
         # annotations
         residual_abs = np.abs(self.residual)
         abs_resid = np.flip(np.sort(residual_abs))
         abs_resid_top_3 = abs_resid[:3]
         for i, _ in enumerate(abs_resid_top_3):
-            ax.annotate(i,
-                        xy=(self.y_predict[i], self.residual[i]),
-                        color='C3')
+            ax.annotate(i, xy=(self.y_predict[i], self.residual[i]), color="C3")
 
-        ax.set_title('Residuals vs Fitted', fontweight="bold")
-        ax.set_xlabel('Fitted values')
-        ax.set_ylabel('Residuals')
+        ax.set_title("Residuals vs Fitted", fontweight="bold")
+        ax.set_xlabel("Fitted values")
+        ax.set_ylabel("Residuals")
         return ax
 
     def qq_plot(self, ax=None):
@@ -202,21 +202,22 @@ class Linear_Reg_Diagnostic():
             fig, ax = plt.subplots()
 
         QQ = ProbPlot(self.residual_norm)
-        QQ.qqplot(line='45', alpha=0.5, lw=1, ax=ax)
+        QQ.qqplot(line="45", alpha=0.5, lw=1, ax=ax)
 
         # annotations
         abs_norm_resid = np.flip(np.argsort(np.abs(self.residual_norm)), 0)
         abs_norm_resid_top_3 = abs_norm_resid[:3]
         for r, i in enumerate(abs_norm_resid_top_3):
-            ax.annotate(i,
-                        xy=(np.flip(QQ.theoretical_quantiles,
-                                    0)[r], self.residual_norm[i]),
-                        ha='right',
-                        color='C3')
+            ax.annotate(
+                i,
+                xy=(np.flip(QQ.theoretical_quantiles, 0)[r], self.residual_norm[i]),
+                ha="right",
+                color="C3",
+            )
 
-        ax.set_title('Normal Q-Q', fontweight="bold")
-        ax.set_xlabel('Theoretical Quantiles')
-        ax.set_ylabel('Standardized Residuals')
+        ax.set_title("Normal Q-Q", fontweight="bold")
+        ax.set_xlabel("Theoretical Quantiles")
+        ax.set_ylabel("Standardized Residuals")
         return ax
 
     def scale_location_plot(self, ax=None):
@@ -232,28 +233,26 @@ class Linear_Reg_Diagnostic():
         residual_norm_abs_sqrt = np.sqrt(np.abs(self.residual_norm))
 
         ax.scatter(self.y_predict, residual_norm_abs_sqrt, alpha=0.5)
-        sns.regplot(x=self.y_predict,
-                    y=residual_norm_abs_sqrt,
-                    scatter=False,
-                    ci=False,
-                    lowess=True,
-                    line_kws={
-                        'color': 'red',
-                        'lw': 1,
-                        'alpha': 0.8
-                    },
-                    ax=ax)
+        sns.regplot(
+            x=self.y_predict,
+            y=residual_norm_abs_sqrt,
+            scatter=False,
+            ci=False,
+            lowess=True,
+            line_kws={"color": "red", "lw": 1, "alpha": 0.8},
+            ax=ax,
+        )
 
         # annotations
         abs_sq_norm_resid = np.flip(np.argsort(residual_norm_abs_sqrt), 0)
         abs_sq_norm_resid_top_3 = abs_sq_norm_resid[:3]
         for i in abs_sq_norm_resid_top_3:
-            ax.annotate(i,
-                        xy=(self.y_predict[i], residual_norm_abs_sqrt[i]),
-                        color='C3')
-        ax.set_title('Scale-Location', fontweight="bold")
-        ax.set_xlabel('Fitted values')
-        ax.set_ylabel(r'$\sqrt{|\mathrm{Standardized\ Residuals}|}$')
+            ax.annotate(
+                i, xy=(self.y_predict[i], residual_norm_abs_sqrt[i]), color="C3"
+            )
+        ax.set_title("Scale-Location", fontweight="bold")
+        ax.set_xlabel("Fitted values")
+        ax.set_ylabel(r"$\sqrt{|\mathrm{Standardized\ Residuals}|}$")
         return ax
 
     def leverage_plot(self, ax=None):
@@ -269,40 +268,31 @@ class Linear_Reg_Diagnostic():
 
         ax.scatter(self.leverage, self.residual_norm, alpha=0.5)
 
-        sns.regplot(x=self.leverage,
-                    y=self.residual_norm,
-                    scatter=False,
-                    ci=False,
-                    lowess=True,
-                    line_kws={
-                        'color': 'red',
-                        'lw': 1,
-                        'alpha': 0.8
-                    },
-                    ax=ax)
+        sns.regplot(
+            x=self.leverage,
+            y=self.residual_norm,
+            scatter=False,
+            ci=False,
+            lowess=True,
+            line_kws={"color": "red", "lw": 1, "alpha": 0.8},
+            ax=ax,
+        )
 
         # annotations
         leverage_top_3 = np.flip(np.argsort(self.cooks_distance), 0)[:3]
         for i in leverage_top_3:
-            ax.annotate(i,
-                        xy=(self.leverage[i], self.residual_norm[i]),
-                        color='C3')
+            ax.annotate(i, xy=(self.leverage[i], self.residual_norm[i]), color="C3")
 
         xtemp, ytemp = self.__cooks_dist_line(0.5)  # 0.5 line
-        ax.plot(xtemp,
-                ytemp,
-                label="Cook's distance",
-                lw=1,
-                ls='--',
-                color='red')
+        ax.plot(xtemp, ytemp, label="Cook's distance", lw=1, ls="--", color="red")
         xtemp, ytemp = self.__cooks_dist_line(1)  # 1 line
-        ax.plot(xtemp, ytemp, lw=1, ls='--', color='red')
+        ax.plot(xtemp, ytemp, lw=1, ls="--", color="red")
 
         ax.set_xlim(0, max(self.leverage) + 0.01)
-        ax.set_title('Residuals vs Leverage', fontweight="bold")
-        ax.set_xlabel('Leverage')
-        ax.set_ylabel('Standardized Residuals')
-        ax.legend(loc='upper right')
+        ax.set_title("Residuals vs Leverage", fontweight="bold")
+        ax.set_xlabel("Leverage")
+        ax.set_ylabel("Standardized Residuals")
+        ax.legend(loc="upper right")
         return ax
 
     def vif_table(self):
@@ -310,14 +300,13 @@ class Linear_Reg_Diagnostic():
         VIF table
 
         VIF, the variance inflation factor, is a measure of multicollinearity.
-        VIF > 5 for a variable indicates that it is highly collinear with the 
+        VIF > 5 for a variable indicates that it is highly collinear with the
         other input variables.
         """
         vif_df = pd.DataFrame()
         vif_df["Features"] = self.xvar_names
         vif_df["VIF Factor"] = [
-            variance_inflation_factor(self.xvar, i)
-            for i in range(self.xvar.shape[1])
+            variance_inflation_factor(self.xvar, i) for i in range(self.xvar.shape[1])
         ]
 
         print(vif_df.sort_values("VIF Factor").round(2))
@@ -390,7 +379,7 @@ cls.vif_table()
 cls = Linear_Reg_Diagnostic(res)
 fig, ax = cls()
 
-#fig.savefig('../../docs/source/_static/images/linear_regression_diagnosti
+# fig.savefig('../../docs/source/_static/images/linear_regression_diagnosti
 # cs_plots.png')
 
 # For detail discussions on the interpretation and caveats of the above

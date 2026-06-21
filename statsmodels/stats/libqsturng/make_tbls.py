@@ -1,5 +1,6 @@
 """this script builds the T table and A table for the upper
-   quantile stundentized range algorithm"""
+quantile stundentized range algorithm"""
+
 from statsmodels.compat.python import lmap, lrange
 
 import math
@@ -385,67 +386,18 @@ q0999 = """\
 #                 [alpha keys]        [v keys]
 #                   [table values as lists of floats]
 T = {
-    0.100:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0100.split("\n")
-        },
-    0.500:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0500.split("\n")
-        },
-    0.675:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0675.split("\n")
-        },
-
-    0.750:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0750.split("\n")
-        },
-    0.800:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0800.split("\n")
-        },
-    0.850:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0850.split("\n")
-        },
-    0.900:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0900.split("\n")
-        },
-    0.950:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0950.split("\n")
-        },
-    0.975:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0975.split("\n")
-        },
-    0.990:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0990.split("\n")
-        },
-    0.995:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0995.split("\n")
-        },
-    0.999:
-        {
-            float(L.split()[0]): lmap(float, L.split()[1:])
-            for L in q0999.split("\n")
-        },
+    0.100: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0100.split("\n")},
+    0.500: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0500.split("\n")},
+    0.675: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0675.split("\n")},
+    0.750: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0750.split("\n")},
+    0.800: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0800.split("\n")},
+    0.850: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0850.split("\n")},
+    0.900: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0900.split("\n")},
+    0.950: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0950.split("\n")},
+    0.975: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0975.split("\n")},
+    0.990: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0990.split("\n")},
+    0.995: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0995.split("\n")},
+    0.999: {float(L.split()[0]): lmap(float, L.split()[1:]) for L in q0999.split("\n")},
 }
 
 
@@ -496,24 +448,26 @@ _phi = scipy.stats.norm.isf
 def qhat(a, p, r, v):
 
     # eq. 2.3
-    p_ = (1. + p) / 2.0
+    p_ = (1.0 + p) / 2.0
 
-    f = a[0]*np.log(r-1.) + \
-        a[1]*np.log(r-1.)**2 + \
-        a[2]*np.log(r-1.)**3 + \
-        a[3]*np.log(r-1.)**4
+    f = (
+        a[0] * np.log(r - 1.0)
+        + a[1] * np.log(r - 1.0) ** 2
+        + a[2] * np.log(r - 1.0) ** 3
+        + a[3] * np.log(r - 1.0) ** 4
+    )
 
     # eq. 2.7 and 2.8 corrections
     for i, r_ in enumerate(r):
         if r_ == 3:
-            f[i] += -0.002 / (1. + 12. * _phi(p)**2)
+            f[i] += -0.002 / (1.0 + 12.0 * _phi(p) ** 2)
 
             if v <= 4.364:
-                f[i] += 1./517. - 1./(312.*v)
+                f[i] += 1.0 / 517.0 - 1.0 / (312.0 * v)
             else:
-                f[i] += 1./(191.*v)
+                f[i] += 1.0 / (191.0 * v)
 
-    return math.sqrt(2) * (f - 1.) * _tinv(p_, v)
+    return math.sqrt(2) * (f - 1.0) * _tinv(p_, v)
 
 
 def errfunc(a, p, r, v, q):
@@ -525,9 +479,9 @@ for p, p_vals in T:
     for v in p_vals:
         # eq. 2.4
         a0 = random(4)
-        a1, success = leastsq(errfunc, a0,
-                              args=(p, np.array(list(R.keys())),
-                                    v, np.array(T[p][v])))
+        a1, success = leastsq(
+            errfunc, a0, args=(p, np.array(list(R.keys())), v, np.array(T[p][v]))
+        )
 
         if v == 1e38:
             A[(p, inf)] = list(a1)

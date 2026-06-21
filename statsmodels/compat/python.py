@@ -5,9 +5,10 @@ Compatibility tools for differences between Python 2 and 3
 import platform
 import sys
 
-PYTHON_IMPL_WASM = (
-    sys.platform == "emscripten" or platform.machine() in ["wasm32", "wasm64"]
-)
+PYTHON_IMPL_WASM = sys.platform == "emscripten" or platform.machine() in [
+    "wasm32",
+    "wasm64",
+]
 
 
 def asunicode(x, _):
@@ -58,6 +59,7 @@ def lfilter(*args, **kwargs):
 
 def with_metaclass(meta, *bases):
     """Create a base class with a metaclass."""
+
     # This requires a bit of explanation: the basic idea is to make a dummy
     # metaclass for one level of class instantiation that replaces itself with
     # the actual metaclass.

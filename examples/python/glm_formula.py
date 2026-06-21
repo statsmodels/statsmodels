@@ -20,22 +20,24 @@ import statsmodels.formula.api as smf
 
 star98 = sm.datasets.star98.load_pandas().data
 formula = "SUCCESS ~ LOWINC + PERASIAN + PERBLACK + PERHISP + PCTCHRT +            PCTYRRND + PERMINTE*AVYRSEXP*AVSALK + PERSPENK*PTRATIO*PCTAF"
-dta = star98[[
-    "NABOVE",
-    "NBELOW",
-    "LOWINC",
-    "PERASIAN",
-    "PERBLACK",
-    "PERHISP",
-    "PCTCHRT",
-    "PCTYRRND",
-    "PERMINTE",
-    "AVYRSEXP",
-    "AVSALK",
-    "PERSPENK",
-    "PTRATIO",
-    "PCTAF",
-]].copy()
+dta = star98[
+    [
+        "NABOVE",
+        "NBELOW",
+        "LOWINC",
+        "PERASIAN",
+        "PERBLACK",
+        "PERHISP",
+        "PCTCHRT",
+        "PCTYRRND",
+        "PERMINTE",
+        "AVYRSEXP",
+        "AVSALK",
+        "PERSPENK",
+        "PTRATIO",
+        "PCTAF",
+    ]
+].copy()
 endog = dta["NABOVE"] / (dta["NABOVE"] + dta.pop("NBELOW"))
 del dta["NABOVE"]
 dta["SUCCESS"] = endog

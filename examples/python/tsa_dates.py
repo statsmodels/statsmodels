@@ -39,11 +39,7 @@ endog
 
 # Instantiate the model
 
-selection_res = ar_select_order(endog,
-                                9,
-                                old_names=False,
-                                seasonal=True,
-                                period=11)
+selection_res = ar_select_order(endog, 9, old_names=False, seasonal=True, period=11)
 pandas_ar_res = selection_res.model.fit()
 
 # Out-of-sample prediction

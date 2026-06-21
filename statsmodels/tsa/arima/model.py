@@ -135,11 +135,23 @@ class ARIMA(sarimax.SARIMAX):
     >>> res = mod.fit()
     >>> print(res.summary())
     """
-    def __init__(self, endog, exog=None, order=(0, 0, 0),
-                 seasonal_order=(0, 0, 0, 0), trend=None,
-                 enforce_stationarity=True, enforce_invertibility=True,
-                 concentrate_scale=False, trend_offset=1, dates=None,
-                 freq=None, missing="none", validate_specification=True):
+
+    def __init__(
+        self,
+        endog,
+        exog=None,
+        order=(0, 0, 0),
+        seasonal_order=(0, 0, 0, 0),
+        trend=None,
+        enforce_stationarity=True,
+        enforce_invertibility=True,
+        concentrate_scale=False,
+        trend_offset=1,
+        dates=None,
+        freq=None,
+        missing="none",
+        validate_specification=True,
+    ):
         # Default for trend
         # 'c' if there is no integration and 'n' otherwise
         # TODO: if trend='c', then we could alternatively use `demean=True` in
@@ -157,11 +169,20 @@ class ARIMA(sarimax.SARIMAX):
         # this criteria. Instead, we'll just make sure that the parameter
         # estimates from those methods satisfy the criteria.)
         self._spec_arima = SARIMAXSpecification(
-            endog, exog=exog, order=order, seasonal_order=seasonal_order,
-            trend=trend, enforce_stationarity=None, enforce_invertibility=None,
-            concentrate_scale=concentrate_scale, trend_offset=trend_offset,
-            dates=dates, freq=freq, missing=missing,
-            validate_specification=validate_specification)
+            endog,
+            exog=exog,
+            order=order,
+            seasonal_order=seasonal_order,
+            trend=trend,
+            enforce_stationarity=None,
+            enforce_invertibility=None,
+            concentrate_scale=concentrate_scale,
+            trend_offset=trend_offset,
+            dates=dates,
+            freq=freq,
+            missing=missing,
+            validate_specification=validate_specification,
+        )
         exog = self._spec_arima._model.data.orig_exog
 
         # Raise an error if we have a constant in an integrated model
@@ -178,34 +199,42 @@ class ARIMA(sarimax.SARIMAX):
                     " cannot be included in an ARIMA(1, 1, 1) model, but"
                     " including a linear trend, which would have the same"
                     " effect as fitting a constant to the differenced data,"
-                    " is allowed.")
+                    " is allowed."
+                )
 
         # Keep the given `exog` by removing the prepended trend variables
         input_exog = None
         if exog is not None:
             if _is_using_pandas(exog, None):
-                input_exog = exog.iloc[:, self._spec_arima.k_trend:]
+                input_exog = exog.iloc[:, self._spec_arima.k_trend :]
             else:
-                input_exog = exog[:, self._spec_arima.k_trend:]
+                input_exog = exog[:, self._spec_arima.k_trend :]
 
         # Initialize the base SARIMAX class
         # Note: we don't pass in a trend value to the base class, since ARIMA
         # standardizes the trend to always be part of exog, while the base
         # SARIMAX class puts it in the transition equation.
         super().__init__(
-            endog, exog, trend=None, order=order,
+            endog,
+            exog,
+            trend=None,
+            order=order,
             seasonal_order=seasonal_order,
             enforce_stationarity=enforce_stationarity,
             enforce_invertibility=enforce_invertibility,
-            concentrate_scale=concentrate_scale, dates=dates, freq=freq,
-            missing=missing, validate_specification=validate_specification)
+            concentrate_scale=concentrate_scale,
+            dates=dates,
+            freq=freq,
+            missing=missing,
+            validate_specification=validate_specification,
+        )
         self.trend = trend
 
         # Save the input exog and input exog names, so that we can refer to
         # them later (see especially `ARIMAResults.append`)
         self._input_exog = input_exog
         if exog is not None:
-            self._input_exog_names = self.exog_names[self._spec_arima.k_trend:]
+            self._input_exog_names = self.exog_names[self._spec_arima.k_trend :]
         else:
             self._input_exog_names = None
 
@@ -216,19 +245,33 @@ class ARIMA(sarimax.SARIMAX):
         self.k_trend = self._spec_arima.k_trend
 
         # Remove some init kwargs that aren't used in this model
-        unused = ["measurement_error", "time_varying_regression",
-                  "mle_regression", "simple_differencing",
-                  "hamilton_representation"]
+        unused = [
+            "measurement_error",
+            "time_varying_regression",
+            "mle_regression",
+            "simple_differencing",
+            "hamilton_representation",
+        ]
         self._init_keys = [key for key in self._init_keys if key not in unused]
 
     @property
     def _res_classes(self):
         return {"fit": (ARIMAResults, ARIMAResultsWrapper)}
 
-    def fit(self, start_params=None, transformed=True, includes_fixed=False,
-            method=None, method_kwargs=None, gls=None, gls_kwargs=None,
-            cov_type=None, cov_kwds=None, return_params=False,
-            low_memory=False):
+    def fit(
+        self,
+        start_params=None,
+        transformed=True,
+        includes_fixed=False,
+        method=None,
+        method_kwargs=None,
+        gls=None,
+        gls_kwargs=None,
+        cov_type=None,
+        cov_kwds=None,
+        return_params=False,
+        low_memory=False,
+    ):
         """
         Fit (estimate) the parameters of the model.
 
@@ -337,14 +380,19 @@ class ARIMA(sarimax.SARIMAX):
             method_kwargs = {}
         required_kwargs = []
         if method == "statespace":
-            required_kwargs = ["enforce_stationarity", "enforce_invertibility",
-                               "concentrate_scale"]
+            required_kwargs = [
+                "enforce_stationarity",
+                "enforce_invertibility",
+                "concentrate_scale",
+            ]
         elif method == "innovations_mle":
             required_kwargs = ["enforce_invertibility"]
         for name in required_kwargs:
             if name in method_kwargs:
-                raise ValueError('Cannot override model level value for "%s"'
-                                 ' when method="%s".' % (name, method))
+                raise ValueError(
+                    'Cannot override model level value for "%s"'
+                    ' when method="%s".' % (name, method)
+                )
             method_kwargs[name] = getattr(self, name)
 
         # Handle kwargs related to GLS estimation
@@ -356,9 +404,11 @@ class ARIMA(sarimax.SARIMAX):
         # parameters in this class?
         if start_params is not None:
             if method not in ["statespace", "innovations_mle"]:
-                raise ValueError('Estimation method "%s" does not use starting'
-                                 ' parameters, but `start_params` argument was'
-                                 ' given.' % method)
+                raise ValueError(
+                    'Estimation method "%s" does not use starting'
+                    " parameters, but `start_params` argument was"
+                    " given." % method
+                )
 
             method_kwargs["start_params"] = start_params
             method_kwargs["transformed"] = transformed
@@ -381,21 +431,31 @@ class ARIMA(sarimax.SARIMAX):
                         "with fixed parameters."
                     )
                 p, fit_details = estimate_gls(
-                    self.endog, exog=self.exog, order=self.order,
-                    seasonal_order=self.seasonal_order, include_constant=False,
-                    arma_estimator=method, arma_estimator_kwargs=method_kwargs,
-                    **gls_kwargs)
+                    self.endog,
+                    exog=self.exog,
+                    order=self.order,
+                    seasonal_order=self.seasonal_order,
+                    include_constant=False,
+                    arma_estimator=method,
+                    arma_estimator_kwargs=method_kwargs,
+                    **gls_kwargs,
+                )
             elif method != "statespace":
-                raise ValueError("If `exog` is given and GLS is disabled"
-                                 " (`gls=False`), then the only valid"
-                                 " method is 'statespace'. Got '%s'."
-                                 % method)
+                raise ValueError(
+                    "If `exog` is given and GLS is disabled"
+                    " (`gls=False`), then the only valid"
+                    " method is 'statespace'. Got '%s'." % method
+                )
             else:
                 method_kwargs.setdefault("disp", 0)
 
                 res = super().fit(
-                    return_params=return_params, low_memory=low_memory,
-                    cov_type=cov_type, cov_kwds=cov_kwds, **method_kwargs)
+                    return_params=return_params,
+                    low_memory=low_memory,
+                    cov_type=cov_type,
+                    cov_kwds=cov_kwds,
+                    **method_kwargs,
+                )
                 if not return_params:
                     res.fit_details = res.mlefit
         else:
@@ -406,68 +466,92 @@ class ARIMA(sarimax.SARIMAX):
             order = self._spec_arima.order
             seasonal_order = self._spec_arima.seasonal_order
             if self._spec_arima.is_integrated:
-                warnings.warn('Provided `endog` series has been differenced'
-                              ' to eliminate integration prior to parameter'
-                              ' estimation by method "%s".' % method,
-                              stacklevel=2,)
+                warnings.warn(
+                    "Provided `endog` series has been differenced"
+                    " to eliminate integration prior to parameter"
+                    ' estimation by method "%s".' % method,
+                    stacklevel=2,
+                )
                 endog = diff(
-                    endog, k_diff=self._spec_arima.diff,
+                    endog,
+                    k_diff=self._spec_arima.diff,
                     k_seasonal_diff=self._spec_arima.seasonal_diff,
-                    seasonal_periods=self._spec_arima.seasonal_periods)
+                    seasonal_periods=self._spec_arima.seasonal_periods,
+                )
                 if order[1] > 0:
                     order = (order[0], 0, order[2])
                 if seasonal_order[1] > 0:
-                    seasonal_order = (seasonal_order[0], 0, seasonal_order[2],
-                                      seasonal_order[3])
+                    seasonal_order = (
+                        seasonal_order[0],
+                        0,
+                        seasonal_order[2],
+                        seasonal_order[3],
+                    )
             if self._has_fixed_params:
                 method_kwargs["fixed_params"] = self._fixed_params.copy()
 
             # Now, estimate parameters
             if method == "yule_walker":
                 p, fit_details = yule_walker(
-                    endog, ar_order=order[0], demean=False,
-                    **method_kwargs)
+                    endog, ar_order=order[0], demean=False, **method_kwargs
+                )
             elif method == "burg":
-                p, fit_details = burg(endog, ar_order=order[0],
-                                      demean=False, **method_kwargs)
+                p, fit_details = burg(
+                    endog, ar_order=order[0], demean=False, **method_kwargs
+                )
             elif method == "hannan_rissanen":
                 p, fit_details = hannan_rissanen(
-                    endog, ar_order=order[0],
-                    ma_order=order[2], demean=False, **method_kwargs)
+                    endog,
+                    ar_order=order[0],
+                    ma_order=order[2],
+                    demean=False,
+                    **method_kwargs,
+                )
             elif method == "innovations":
                 p, fit_details = innovations(
-                    endog, ma_order=order[2], demean=False,
-                    **method_kwargs)
+                    endog, ma_order=order[2], demean=False, **method_kwargs
+                )
                 # innovations computes estimates through the given order, so
                 # we want to take the estimate associated with the given order
                 p = p[-1]
             elif method == "innovations_mle":
                 p, fit_details = innovations_mle(
-                    endog, order=order,
+                    endog,
+                    order=order,
                     seasonal_order=seasonal_order,
-                    demean=False, **method_kwargs)
+                    demean=False,
+                    **method_kwargs,
+                )
 
         # In all cases except method='statespace', we now need to extract the
         # parameters and, optionally, create a new results object
         if p is not None:
             # Need to check that fitted parameters satisfy given restrictions
-            if (self.enforce_stationarity
-                    and self._spec_arima.max_reduced_ar_order > 0
-                    and not p.is_stationary):
-                raise ValueError('Non-stationary autoregressive parameters'
-                                 ' found with `enforce_stationarity=True`.'
-                                 ' Consider setting it to False or using a'
-                                 ' different estimation method, such as'
-                                 ' method="statespace".')
+            if (
+                self.enforce_stationarity
+                and self._spec_arima.max_reduced_ar_order > 0
+                and not p.is_stationary
+            ):
+                raise ValueError(
+                    "Non-stationary autoregressive parameters"
+                    " found with `enforce_stationarity=True`."
+                    " Consider setting it to False or using a"
+                    " different estimation method, such as"
+                    ' method="statespace".'
+                )
 
-            if (self.enforce_invertibility
-                    and self._spec_arima.max_reduced_ma_order > 0
-                    and not p.is_invertible):
-                raise ValueError('Non-invertible moving average parameters'
-                                 ' found with `enforce_invertibility=True`.'
-                                 ' Consider setting it to False or using a'
-                                 ' different estimation method, such as'
-                                 ' method="statespace".')
+            if (
+                self.enforce_invertibility
+                and self._spec_arima.max_reduced_ma_order > 0
+                and not p.is_invertible
+            ):
+                raise ValueError(
+                    "Non-invertible moving average parameters"
+                    " found with `enforce_invertibility=True`."
+                    " Consider setting it to False or using a"
+                    " different estimation method, such as"
+                    ' method="statespace".'
+                )
 
             # Build the requested results
             if return_params:
@@ -479,13 +563,21 @@ class ARIMA(sarimax.SARIMAX):
                     self.ssm.set_conserve_memory(MEMORY_CONSERVE)
 
                 # Perform filtering / smoothing
-                if (self.ssm.memory_no_predicted or self.ssm.memory_no_gain
-                        or self.ssm.memory_no_smoothing):
+                if (
+                    self.ssm.memory_no_predicted
+                    or self.ssm.memory_no_gain
+                    or self.ssm.memory_no_smoothing
+                ):
                     func = self.filter
                 else:
                     func = self.smooth
-                res = func(p.params, transformed=True, includes_fixed=True,
-                           cov_type=cov_type, cov_kwds=cov_kwds)
+                res = func(
+                    p.params,
+                    transformed=True,
+                    includes_fixed=True,
+                    cov_type=cov_type,
+                    cov_kwds=cov_kwds,
+                )
 
                 # Save any details from the fit method
                 res.fit_details = fit_details
@@ -515,8 +607,9 @@ class ARIMAResults(sarimax.SARIMAXResults):
             self.model.exog_names = self.model._input_exog_names
 
         # Perform the appending procedure
-        out = super().append(endog, exog=exog, refit=refit,
-                             fit_kwargs=fit_kwargs, **kwargs)
+        out = super().append(
+            endog, exog=exog, refit=refit, fit_kwargs=fit_kwargs, **kwargs
+        )
 
         # Now we reverse the temporary change made above
         if exog is not None:
@@ -527,11 +620,11 @@ class ARIMAResults(sarimax.SARIMAXResults):
 
 class ARIMAResultsWrapper(sarimax.SARIMAXResultsWrapper):
     _attrs = {}
-    _wrap_attrs = wrap.union_dicts(
-        sarimax.SARIMAXResultsWrapper._wrap_attrs, _attrs)
+    _wrap_attrs = wrap.union_dicts(sarimax.SARIMAXResultsWrapper._wrap_attrs, _attrs)
     _methods = {}
     _wrap_methods = wrap.union_dicts(
-        sarimax.SARIMAXResultsWrapper._wrap_methods, _methods)
+        sarimax.SARIMAXResultsWrapper._wrap_methods, _methods
+    )
 
 
 wrap.populate_wrapper(ARIMAResultsWrapper, ARIMAResults)

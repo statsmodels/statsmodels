@@ -4,6 +4,7 @@
 Author: Chad Fulton
 License: BSD-3
 """
+
 import warnings
 
 import numpy as np
@@ -53,12 +54,12 @@ class QuarterlyAR1(mlemodel.MLEModel):
     the EM algorithm.
 
     """
+
     def __init__(self, endog):
-        super().__init__(endog, k_states=5, k_posdef=1,
-                         initialization="stationary")
+        super().__init__(endog, k_states=5, k_posdef=1, initialization="stationary")
         self["design"] = [1, 2, 3, 2, 1]
         self["transition", 1:, :-1] = np.eye(4)
-        self["selection", 0, 0] = 1.
+        self["selection", 0, 0] = 1.0
 
     @property
     def param_names(self):
@@ -75,16 +76,29 @@ class QuarterlyAR1(mlemodel.MLEModel):
             out = super().fit(*args, **kwargs)
         return out
 
-    def fit_em(self, start_params=None, transformed=True, cov_type="none",
-               cov_kwds=None, maxiter=500, tolerance=1e-6,
-               em_initialization=True, mstep_method=None, full_output=True,
-               return_params=False, low_memory=False):
+    def fit_em(
+        self,
+        start_params=None,
+        transformed=True,
+        cov_type="none",
+        cov_kwds=None,
+        maxiter=500,
+        tolerance=1e-6,
+        em_initialization=True,
+        mstep_method=None,
+        full_output=True,
+        return_params=False,
+        low_memory=False,
+    ):
         if self._has_fixed_params:
-            raise NotImplementedError("Cannot fit using the EM algorithm while"
-                                      " holding some parameters fixed.")
+            raise NotImplementedError(
+                "Cannot fit using the EM algorithm while"
+                " holding some parameters fixed."
+            )
         if low_memory:
-            raise ValueError("Cannot fit using the EM algorithm when using"
-                             " low_memory option.")
+            raise ValueError(
+                "Cannot fit using the EM algorithm when using" " low_memory option."
+            )
 
         if start_params is None:
             start_params = self.start_params
@@ -102,18 +116,18 @@ class QuarterlyAR1(mlemodel.MLEModel):
         i = 0
         delta = 0
         while i < maxiter and (i < 2 or (delta > tolerance)):
-            out = self._em_iteration(params[-1], init=init,
-                                     mstep_method=mstep_method)
+            out = self._em_iteration(params[-1], init=init, mstep_method=mstep_method)
             llf.append(out[0].llf_obs.sum())
             params.append(out[1])
             if em_initialization:
                 init = initialization.Initialization(
-                    self.k_states, "known",
+                    self.k_states,
+                    "known",
                     constant=out[0].smoothed_state[..., 0],
-                    stationary_cov=out[0].smoothed_state_cov[..., 0])
+                    stationary_cov=out[0].smoothed_state_cov[..., 0],
+                )
             if i > 0:
-                delta = (2 * (llf[-1] - llf[-2]) /
-                         (np.abs(llf[-1]) + np.abs(llf[-2])))
+                delta = 2 * (llf[-1] - llf[-2]) / (np.abs(llf[-1]) + np.abs(llf[-2]))
             i += 1
 
         # Just return the fitted parameters if requested
@@ -124,8 +138,9 @@ class QuarterlyAR1(mlemodel.MLEModel):
             if em_initialization:
                 base_init = self.ssm.initialization
                 self.ssm.initialization = init
-            result = self.smooth(params[-1], transformed=True,
-                                 cov_type=cov_type, cov_kwds=cov_kwds)
+            result = self.smooth(
+                params[-1], transformed=True, cov_type=cov_type, cov_kwds=cov_kwds
+            )
             if em_initialization:
                 self.ssm.initialization = base_init
 
@@ -147,8 +162,7 @@ class QuarterlyAR1(mlemodel.MLEModel):
         res = self._em_expectation_step(params0, init=init)
 
         # (M)aximization step
-        params1 = self._em_maximization_step(res, params0,
-                                             mstep_method=mstep_method)
+        params1 = self._em_maximization_step(res, params0, mstep_method=mstep_method)
 
         return res, params1
 
@@ -162,9 +176,9 @@ class QuarterlyAR1(mlemodel.MLEModel):
         # Perform smoothing, only saving what is required
         res = self.ssm.smooth(
             SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_STATE_AUTOCOV,
-            update_filter=False)
-        res.llf_obs = np.array(
-            self.ssm._kalman_filter.loglikelihood, copy=True)
+            update_filter=False,
+        )
+        res.llf_obs = np.array(self.ssm._kalman_filter.loglikelihood, copy=True)
         # Reset initialization
         if init is not None:
             self.ssm.initialization = base_init
@@ -197,15 +211,15 @@ class QuarterlyAR1(mlemodel.MLEModel):
 
     def transform_params(self, unconstrained):
         # array no longer accepts inhomogeneous inputs
-        return np.hstack([
-            constrain_stationary_univariate(unconstrained[:1]),
-            unconstrained[1]**2])
+        return np.hstack(
+            [constrain_stationary_univariate(unconstrained[:1]), unconstrained[1] ** 2]
+        )
 
     def untransform_params(self, constrained):
         # array no longer accepts inhomogeneous inputs
-        return np.hstack([
-            unconstrain_stationary_univariate(constrained[:1]),
-            constrained[1] ** 0.5])
+        return np.hstack(
+            [unconstrain_stationary_univariate(constrained[:1]), constrained[1] ** 0.5]
+        )
 
     def update(self, params, **kwargs):
         super().update(params, **kwargs)

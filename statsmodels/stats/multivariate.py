@@ -51,11 +51,7 @@ def test_mvmean(data, mean_null=0, return_results=True):
     df = (k_vars, nobs - k_vars)
     pvalue = stats.f.sf(statistic, df[0], df[1])
     if return_results:
-        res = HolderTuple(statistic=statistic,
-                          pvalue=pvalue,
-                          df=df,
-                          t2=t2,
-                          distr="F")
+        res = HolderTuple(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
         return res
     else:
         return statistic, pvalue
@@ -98,11 +94,7 @@ def test_mvmean_2indep(data1, data2):
     statistic = t2 / factor
     df = (k_vars, nobs_t - 1 - k_vars)
     pvalue = stats.f.sf(statistic, df[0], df[1])
-    return HolderTuple(statistic=statistic,
-                       pvalue=pvalue,
-                       df=df,
-                       t2=t2,
-                       distr="F")
+    return HolderTuple(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
 
 
 def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
@@ -162,13 +154,15 @@ def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
     mean = x.mean(0)
     cov = np.cov(x, rowvar=False, ddof=0)
 
-    ci = confint_mvmean_fromstats(mean, cov, nobs, lin_transf=lin_transf,
-                                  alpha=alpha, simult=simult)
+    ci = confint_mvmean_fromstats(
+        mean, cov, nobs, lin_transf=lin_transf, alpha=alpha, simult=simult
+    )
     return ci
 
 
-def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
-                             simult=False):
+def confint_mvmean_fromstats(
+    mean, cov, nobs, lin_transf=None, alpha=0.05, simult=False
+):
     """Confidence interval for linear transformation of a multivariate mean
 
     Either pointwise or simultaneous confidence intervals are returned.
@@ -301,20 +295,21 @@ def test_cov(cov, nobs, cov_null):
     k = cov.shape[0]
     n = nobs
 
-    fact = nobs - 1.
+    fact = nobs - 1.0
     fact *= 1 - (2 * k + 1 - 2 / (k + 1)) / (6 * (n - 1) - 1)
     fact2 = _logdet(S0) - _logdet(n / (n - 1) * S)
     fact2 += np.trace(n / (n - 1) * np.linalg.solve(S0, S)) - k
     statistic = fact * fact2
     df = k * (k + 1) / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(statistic=statistic,
-                       pvalue=pvalue,
-                       df=df,
-                       distr="chi2",
-                       null="equal value",
-                       cov_null=cov_null
-                       )
+    return HolderTuple(
+        statistic=statistic,
+        pvalue=pvalue,
+        df=df,
+        distr="chi2",
+        null="equal value",
+        cov_null=cov_null,
+    )
 
 
 def test_cov_spherical(cov, nobs):
@@ -366,12 +361,9 @@ def test_cov_spherical(cov, nobs):
     statistic *= k * np.log(np.trace(cov)) - _logdet(cov) - k * np.log(k)
     df = k * (k + 1) / 2 - 1
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(statistic=statistic,
-                       pvalue=pvalue,
-                       df=df,
-                       distr="chi2",
-                       null="spherical"
-                       )
+    return HolderTuple(
+        statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="spherical"
+    )
 
 
 def test_cov_diagonal(cov, nobs):
@@ -416,17 +408,13 @@ def test_cov_diagonal(cov, nobs):
     statistic = -(nobs - 1 - (2 * k + 5) / 6) * _logdet(R)
     df = k * (k - 1) / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(statistic=statistic,
-                       pvalue=pvalue,
-                       df=df,
-                       distr="chi2",
-                       null="diagonal"
-                       )
+    return HolderTuple(
+        statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="diagonal"
+    )
 
 
 def _get_blocks(mat, block_len):
-    """get diagonal blocks from matrix
-    """
+    """get diagonal blocks from matrix"""
     k = len(mat)
     idx = np.cumsum(block_len)
     if idx[-1] == k:
@@ -491,17 +479,14 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     a2 = k**2 - sum(ki**2 for ki in k_blocks)
     a3 = k**3 - sum(ki**3 for ki in k_blocks)
 
-    statistic = (nobs - 1 - (2 * a3 + 3 * a2) / (6. * a2))
+    statistic = nobs - 1 - (2 * a3 + 3 * a2) / (6.0 * a2)
     statistic *= logdet_blocks - _logdet(cov)
 
     df = a2 / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(statistic=statistic,
-                       pvalue=pvalue,
-                       df=df,
-                       distr="chi2",
-                       null="block-diagonal"
-                       )
+    return HolderTuple(
+        statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="block-diagonal"
+    )
 
 
 def test_cov_oneway(cov_list, nobs_list):
@@ -556,18 +541,18 @@ def test_cov_oneway(cov_list, nobs_list):
     k = cov_list[0].shape[0]
 
     cov_pooled = sum((n - 1) * c for (n, c) in zip(nobs_list, cov_list))
-    cov_pooled /= (nobs - m)
+    cov_pooled /= nobs - m
     stat0 = (nobs - m) * _logdet(cov_pooled)
     stat0 -= sum((n - 1) * _logdet(c) for (n, c) in zip(nobs_list, cov_list))
 
     # Box's chi2
     c1 = sum(1 / (n - 1) for n in nobs_list) - 1 / (nobs - m)
-    c1 *= (2 * k*k + 3 * k - 1) / (6 * (k + 1) * (m - 1))
+    c1 *= (2 * k * k + 3 * k - 1) / (6 * (k + 1) * (m - 1))
     df_chi2 = (m - 1) * k * (k + 1) / 2
     statistic_chi2 = (1 - c1) * stat0
     pvalue_chi2 = stats.chi2.sf(statistic_chi2, df_chi2)
 
-    c2 = sum(1 / (n - 1)**2 for n in nobs_list) - 1 / (nobs - m)**2
+    c2 = sum(1 / (n - 1) ** 2 for n in nobs_list) - 1 / (nobs - m) ** 2
     c2 *= (k - 1) * (k + 2) / (6 * (m - 1))
     a1 = df_chi2
     a2 = (a1 + 2) / abs(c2 - c1**2)
@@ -580,14 +565,16 @@ def test_cov_oneway(cov_list, nobs_list):
         statistic_f = a2 / a1 * tmp / (1 + tmp)
     df_f = (a1, a2)
     pvalue_f = stats.f.sf(statistic_f, *df_f)
-    return HolderTuple(statistic=statistic_f,  # name convention, using F here
-                       pvalue=pvalue_f,   # name convention, using F here
-                       statistic_base=stat0,
-                       statistic_chi2=statistic_chi2,
-                       pvalue_chi2=pvalue_chi2,
-                       df_chi2=df_chi2,
-                       distr_chi2="chi2",
-                       statistic_f=statistic_f,
-                       pvalue_f=pvalue_f,
-                       df_f=df_f,
-                       distr_f="F")
+    return HolderTuple(
+        statistic=statistic_f,  # name convention, using F here
+        pvalue=pvalue_f,  # name convention, using F here
+        statistic_base=stat0,
+        statistic_chi2=statistic_chi2,
+        pvalue_chi2=pvalue_chi2,
+        df_chi2=df_chi2,
+        distr_chi2="chi2",
+        statistic_f=statistic_f,
+        pvalue_f=pvalue_f,
+        df_f=df_f,
+        distr_f="F",
+    )

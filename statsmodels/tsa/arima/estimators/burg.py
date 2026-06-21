@@ -4,6 +4,7 @@ Burg's method for estimating AR(p) model parameters.
 Author: Chad Fulton
 License: BSD-3
 """
+
 import numpy as np
 
 from statsmodels.regression import linear_model
@@ -57,20 +58,23 @@ def burg(endog, ar_order=0, demean=True):
         endog = endog * 1.0
 
     if not spec.is_ar_consecutive:
-        raise ValueError("Burg estimation unavailable for models with"
-                         " seasonal or otherwise non-consecutive AR orders.")
+        raise ValueError(
+            "Burg estimation unavailable for models with"
+            " seasonal or otherwise non-consecutive AR orders."
+        )
 
     p = SARIMAXParams(spec=spec)
 
     if ar_order == 0:
         p.sigma2 = np.var(endog)
     else:
-        p.ar_params, p.sigma2 = linear_model.burg(endog, order=ar_order,
-                                                  demean=demean)
+        p.ar_params, p.sigma2 = linear_model.burg(endog, order=ar_order, demean=demean)
 
         # Construct other results
-    other_results = Bunch({
-        "spec": spec,
-    })
+    other_results = Bunch(
+        {
+            "spec": spec,
+        }
+    )
 
     return p, other_results

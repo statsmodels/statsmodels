@@ -4,6 +4,7 @@ Created on Mon Aug 16 16:19:55 2021
 Author: Josef Perktod
 License: BSD-3
 """
+
 import numpy as np
 
 # import matplotlib.pyplot as plt
@@ -42,17 +43,15 @@ class CopulaModel(GenericLikelihoodModel):
         params = np.atleast_1d(params)
         cd = self.copula_distribution
         # ll = cd.logpdf(self.endog, args=(params[:2], params[2:]))
-        cop_args = params[:self.k_copparams]
+        cop_args = params[: self.k_copparams]
         if cop_args.size == 0:
             cop_args = ()
         if len(params) > self.k_copparams:
-            marg_args = np.split(params[self.k_copparams:], 2)
+            marg_args = np.split(params[self.k_copparams :], 2)
         else:
             marg_args = None
 
-        ll = cd.logpdf(self.endog,
-                       cop_args=cop_args, marg_args=marg_args
-                       ).sum()
+        ll = cd.logpdf(self.endog, cop_args=cop_args, marg_args=marg_args).sum()
         return ll
 
 
@@ -65,7 +64,7 @@ def get_data(nobs):
     # copula creates new randomly initialized random state, see #7650
     rng = np.random.RandomState(98645713)
     rvs = cd_f.rvs(nobs, random_state=rng)
-    assert_allclose(rvs.mean(0), [-0.02936002,  0.06658304], atol=1e-7)
+    assert_allclose(rvs.mean(0), [-0.02936002, 0.06658304], atol=1e-7)
     return rvs
 
 
@@ -80,15 +79,15 @@ class CheckEVfit1:
 
         cev = CopulaDistribution(cop, [stats.norm, stats.norm], cop_args=None)
         k_marg = 4
-        mod = CopulaModel(cev, data_ev + [0.5, -0.1],
-                          k_params=self.k_copparams + k_marg)
+        mod = CopulaModel(
+            cev, data_ev + [0.5, -0.1], k_params=self.k_copparams + k_marg
+        )
 
         # TODO: patching for now
         mod.k_copparams = self.k_copparams
         mod.df_resid = len(mod.endog) - mod.nparams
         mod.df_model = mod.nparams - 0
-        res = mod.fit(start_params=list(args) + [0.5, 1, -0.1, 1],
-                      method="bfgs")
+        res = mod.fit(start_params=list(args) + [0.5, 1, -0.1, 1], method="bfgs")
         res = mod.fit(method="newton", start_params=res.params)
 
         assert mod.nparams == self.k_copparams + k_marg
@@ -104,15 +103,15 @@ class CheckEVfit1:
 
         cev = CopulaDistribution(cop, [stats.norm, stats.norm], cop_args=None)
         k_marg = 2
-        mod = CopulaModel(cev, data_ev + [0.5, -0.1],
-                          k_params=self.k_copparams + k_marg)
+        mod = CopulaModel(
+            cev, data_ev + [0.5, -0.1], k_params=self.k_copparams + k_marg
+        )
 
         # TODO: patching for now
         mod.k_copparams = self.k_copparams
         mod.df_resid = len(mod.endog) - mod.nparams
         mod.df_model = mod.nparams - 0
-        res = mod.fit(start_params=list(args) + [0.5, -0.1],
-                      method="bfgs")
+        res = mod.fit(start_params=list(args) + [0.5, -0.1], method="bfgs")
         # the following fails in TestEVAsymLogistic with nan loglike
         # res = mod.fit(method="newton", start_params=res.params)
 
@@ -137,15 +136,13 @@ class CheckEVfit0:
 
         cev = CopulaDistribution(cop, [stats.norm, stats.norm], cop_args=args)
         k_marg = 2
-        mod = CopulaModel(cev, data_ev + [0.5, -0.1],
-                          k_params=0 + k_marg)
+        mod = CopulaModel(cev, data_ev + [0.5, -0.1], k_params=0 + k_marg)
 
         # TODO: patching for now
         mod.k_copparams = 0
         mod.df_resid = len(mod.endog) - mod.nparams
         mod.df_model = mod.nparams - 0
-        res = mod.fit(start_params=[0.5, -0.1],
-                      method="bfgs")
+        res = mod.fit(start_params=[0.5, -0.1], method="bfgs")
         # the following fails in TestEVAsymLogistic with nan loglike
         # res = mod.fit(method="newton", start_params=res.params)
 
@@ -169,8 +166,7 @@ class TestEVHR(CheckEVfit):
         cls.copula = ExtremeValueCopula(transform=dep.HR())
         cls.cop_args = (1,)
         cls.k_copparams = 1
-        cls.copula_fixed = ExtremeValueCopula(transform=dep.HR(),
-                                              args=cls.cop_args)
+        cls.copula_fixed = ExtremeValueCopula(transform=dep.HR(), args=cls.cop_args)
 
 
 class TestEVAsymLogistic(CheckEVfit):
@@ -180,8 +176,9 @@ class TestEVAsymLogistic(CheckEVfit):
         cls.copula = ExtremeValueCopula(transform=dep.AsymLogistic())
         cls.cop_args = (0.1, 0.7, 0.7)
         cls.k_copparams = 3
-        cls.copula_fixed = ExtremeValueCopula(transform=dep.AsymLogistic(),
-                                              args=cls.cop_args)
+        cls.copula_fixed = ExtremeValueCopula(
+            transform=dep.AsymLogistic(), args=cls.cop_args
+        )
 
 
 class TestEVAsymMixed(CheckEVfit):
@@ -191,8 +188,9 @@ class TestEVAsymMixed(CheckEVfit):
         cls.copula = ExtremeValueCopula(transform=dep.AsymMixed())
         cls.cop_args = (0.5, 0.05)
         cls.k_copparams = 2
-        cls.copula_fixed = ExtremeValueCopula(transform=dep.AsymMixed(),
-                                              args=cls.cop_args)
+        cls.copula_fixed = ExtremeValueCopula(
+            transform=dep.AsymMixed(), args=cls.cop_args
+        )
 
 
 class TestFrank(CheckEVfit):

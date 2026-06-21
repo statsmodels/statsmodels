@@ -75,9 +75,7 @@ def test_equivalence_forecast(data, config, horizon, close_figures):
     if model is ETSModel:
         fit_kwarg["disp"] = False
     res = mod.fit(**fit_kwarg)
-    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(
-        fit_kwargs=fit_kwarg
-    )
+    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(fit_kwargs=fit_kwarg)
 
     seasonal = np.asarray(stl_fit.seasonal)[-12:]
     seasonal = np.tile(seasonal, 1 + horizon // 12)

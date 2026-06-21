@@ -677,7 +677,7 @@ def test_coint_identical_series():
     with pytest.warns(CollinearityWarning):
         c = coint(y, y, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
-    assert (np.isneginf(c[0]))
+    assert np.isneginf(c[0])
 
 
 def test_coint_perfect_collinearity():
@@ -691,7 +691,7 @@ def test_coint_perfect_collinearity():
     with warnings.catch_warnings(record=True):
         c = coint(y, x, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
-    assert (np.isneginf(c[0]))
+    assert np.isneginf(c[0])
 
 
 class TestGrangerCausality:
@@ -1094,10 +1094,10 @@ def test_arma_order_select_ic():
     assert_almost_equal(res.bic.values, bic.values, 5)
     assert_equal(res.aic_min_order, (1, 2))
     assert_equal(res.bic_min_order, (1, 2))
-    assert (res.aic.index.equals(aic.index))
-    assert (res.aic.columns.equals(aic.columns))
-    assert (res.bic.index.equals(bic.index))
-    assert (res.bic.columns.equals(bic.columns))
+    assert res.aic.index.equals(aic.index)
+    assert res.aic.columns.equals(aic.columns)
+    assert res.bic.index.equals(bic.index)
+    assert res.bic.columns.equals(bic.columns)
 
     index = pd.date_range("2000-1-1", freq=MONTH_END, periods=len(y))
     y_series = pd.Series(y, index=index)
@@ -1111,8 +1111,8 @@ def test_arma_order_select_ic():
 
     res = arma_order_select_ic(y, ic="aic", trend="n")
     assert_almost_equal(res.aic.values, aic.values, 5)
-    assert (res.aic.index.equals(aic.index))
-    assert (res.aic.columns.equals(aic.columns))
+    assert res.aic.index.equals(aic.index)
+    assert res.aic.columns.equals(aic.columns)
     assert_equal(res.aic_min_order, (1, 2))
 
 

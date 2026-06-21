@@ -2,6 +2,7 @@
 assert functions from numpy and pandas testing
 
 """
+
 from statsmodels.compat.pandas import testing as pdt
 
 import numpy.testing as npt
@@ -31,12 +32,15 @@ def bunch_factory(attribute, columns):
     bunch[column[i]] = bunch[attribute][:, i]
 
     """
+
     class FactoryBunch(Bunch):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             if not hasattr(self, attribute):
-                raise AttributeError("{} is required and must be passed to "
-                                     "the constructor".format(attribute))
+                raise AttributeError(
+                    "{} is required and must be passed to "
+                    "the constructor".format(attribute)
+                )
             for i, att in enumerate(columns):
                 self[att] = getattr(self, attribute)[:, i]
 
@@ -57,19 +61,24 @@ class Holder:
         self.__dict__.update(kwds)
 
     def __str__(self):
-        ss = "\n".join(str(k) + " = " + str(v).replace("\n", "\n    ")
-                       for k, v in vars(self).items())
+        ss = "\n".join(
+            str(k) + " = " + str(v).replace("\n", "\n    ")
+            for k, v in vars(self).items()
+        )
         return ss
 
     def __repr__(self):
         # use repr for values including nested cases as in tost
-        ss = "\n".join(str(k) + " = " + repr(v).replace("\n", "\n    ")
-                       for k, v in vars(self).items())
+        ss = "\n".join(
+            str(k) + " = " + repr(v).replace("\n", "\n    ")
+            for k, v in vars(self).items()
+        )
         ss = str(self.__class__) + "\n" + ss
         return ss
 
 
 # adjusted functions
+
 
 def assert_equal(actual, desired, err_msg="", verbose=True, **kwds):
     if isinstance(desired, pd.Index):

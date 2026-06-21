@@ -209,7 +209,7 @@ class Model:
             missing = "raise"
 
         tmp = handle_formula_data(data, None, formula, depth=eval_env, missing=missing)
-        ((endog, exog), missing_idx, model_spec) = tmp
+        (endog, exog), missing_idx, model_spec = tmp
         max_endog = cls._formula_max_endog
         if max_endog is not None and endog.ndim > 1 and endog.shape[1] > max_endog:
             raise ValueError(
@@ -1450,7 +1450,7 @@ class LikelihoodModelResults(Results):
                 self.cov_type = "nonrobust"
                 self.cov_kwds = {
                     "description": "Standard Errors assume that the covariance matrix "
-                                   "of the errors is correctly specified."
+                    "of the errors is correctly specified."
                 }
             else:
                 from statsmodels.base.covtype import get_robustcov_results
@@ -1471,9 +1471,7 @@ class LikelihoodModelResults(Results):
         self, cov_type="nonrobust", use_self=True, use_t=None, **cov_kwds
     ):
         if use_self is False:
-            raise ValueError(
-                "use_self should have been removed long ago.  See GH#4401"
-            )
+            raise ValueError("use_self should have been removed long ago.  See GH#4401")
         from statsmodels.base.covtype import get_robustcov_results
 
         if cov_kwds is None:
@@ -1483,7 +1481,7 @@ class LikelihoodModelResults(Results):
             self.cov_type = "nonrobust"
             self.cov_kwds = {
                 "description": "Standard Errors assume that the covariance matrix "
-                               "of the errors is correctly specified."
+                "of the errors is correctly specified."
             }
         else:
             # TODO: we should not need use_t in get_robustcov_results
@@ -1747,9 +1745,7 @@ class LikelihoodModelResults(Results):
             and self.normalized_cov_params is None
             and not hasattr(self, "cov_params_default")
         ):
-            raise ValueError(
-                "Need covariance of parameters for computing T statistics"
-            )
+            raise ValueError("Need covariance of parameters for computing T statistics")
         params = self.params.ravel(order="F")
         if num_params != params.shape[0]:
             raise ValueError("r_matrix and params are not aligned")
@@ -1981,9 +1977,7 @@ class LikelihoodModelResults(Results):
             and invcov is None
             and not hasattr(self, "cov_params_default")
         ):
-            raise ValueError(
-                "need covariance of parameters for computing F statistics"
-            )
+            raise ValueError("need covariance of parameters for computing F statistics")
 
         cparams = np.dot(r_matrix, params[:, None])
         J = float(r_matrix.shape[0])  # number of restrictions

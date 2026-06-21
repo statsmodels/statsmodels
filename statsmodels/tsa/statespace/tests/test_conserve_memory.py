@@ -5,7 +5,6 @@ Author: Chad Fulton
 License: BSD-3
 """
 
-
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
@@ -32,13 +31,11 @@ dta.index = pd.date_range(start="1959-01-01", end="2009-07-01", freq="QS")
 @pytest.mark.parametrize("univariate", [True, False])
 @pytest.mark.parametrize("diffuse", [True, False])
 @pytest.mark.parametrize("timing_init_filtered", [True, False])
-def test_memory_no_likelihood(concentrate, univariate, diffuse,
-                              timing_init_filtered):
+def test_memory_no_likelihood(concentrate, univariate, diffuse, timing_init_filtered):
     # Basic test that covers a variety of special filtering cases with a
     # simple univariate model
     endog = dta["infl"].iloc[:20]
-    mod = sarimax.SARIMAX(endog, order=(1, 0, 0),
-                          concentrate_scale=concentrate)
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0), concentrate_scale=concentrate)
     if timing_init_filtered:
         mod.timing_init_filtered = True
     if diffuse:
@@ -48,7 +45,7 @@ def test_memory_no_likelihood(concentrate, univariate, diffuse,
 
     params = [0.85]
     if not concentrate:
-        params.append(7.)
+        params.append(7.0)
     res1 = mod.filter(params)
     mod.ssm.memory_no_likelihood = True
     res2 = mod.filter(params)
@@ -65,16 +62,18 @@ def test_memory_no_likelihood(concentrate, univariate, diffuse,
 @pytest.mark.parametrize("univariate", [True, False])
 @pytest.mark.parametrize("diffuse", [True, False])
 @pytest.mark.parametrize("timing_init_filtered", [True, False])
-def test_memory_no_likelihood_extras(concentrate, univariate, diffuse,
-                                     timing_init_filtered):
+def test_memory_no_likelihood_extras(
+    concentrate, univariate, diffuse, timing_init_filtered
+):
     # Test that adds extra features (missing data, exog variables) to the
     # variety of special filtering cases in a univariate model
     endog = dta["infl"].iloc[:20].copy()
     endog.iloc[0] = np.nan
     endog.iloc[4:6] = np.nan
     exog = dta["realint"].iloc[:20]
-    mod = sarimax.SARIMAX(endog, order=(1, 0, 0), exog=exog,
-                          concentrate_scale=concentrate)
+    mod = sarimax.SARIMAX(
+        endog, order=(1, 0, 0), exog=exog, concentrate_scale=concentrate
+    )
     if timing_init_filtered:
         mod.timing_init_filtered = True
     if diffuse:
@@ -84,7 +83,7 @@ def test_memory_no_likelihood_extras(concentrate, univariate, diffuse,
 
     params = [1.2, 0.85]
     if not concentrate:
-        params.append(7.)
+        params.append(7.0)
     res1 = mod.filter(params)
     mod.ssm.memory_no_likelihood = True
     res2 = mod.filter(params)
@@ -128,8 +127,7 @@ def test_memory_no_likelihood_multivariate(univariate, diffuse):
 @pytest.mark.parametrize("univariate", [True, False])
 @pytest.mark.parametrize("diffuse", [True, False])
 @pytest.mark.parametrize("collapsed", [True, False])
-def test_memory_no_likelihood_multivariate_extra(univariate, diffuse,
-                                                 collapsed):
+def test_memory_no_likelihood_multivariate_extra(univariate, diffuse, collapsed):
     # Test with multivariate data, missing values, and collapsed approach
     endog = dta[["infl", "realint"]].iloc[:20].copy()
     endog.iloc[0, 0] = np.nan
@@ -165,8 +163,11 @@ def test_fit():
     res = mod.fit(disp=False)
 
     options_smooth = [
-        "memory_no_forecast", "memory_no_filtered", "memory_no_likelihood",
-        "memory_no_std_forecast"]
+        "memory_no_forecast",
+        "memory_no_filtered",
+        "memory_no_likelihood",
+        "memory_no_std_forecast",
+    ]
     for option in options_smooth:
         mod.ssm.set_conserve_memory(0)
         setattr(mod.ssm, option, True)
@@ -201,12 +202,16 @@ def test_fit():
         if option == "memory_no_std_forecast":
             assert_(res2.standardized_forecasts_error is None)
         else:
-            assert_allclose(res2.standardized_forecasts_error,
-                            res.standardized_forecasts_error)
+            assert_allclose(
+                res2.standardized_forecasts_error, res.standardized_forecasts_error
+            )
 
     options_filter_only = [
-        "memory_no_predicted", "memory_no_gain", "memory_no_smoothing",
-        "memory_conserve"]
+        "memory_no_predicted",
+        "memory_no_gain",
+        "memory_no_smoothing",
+        "memory_conserve",
+    ]
     for option in options_filter_only[2:]:
         mod.ssm.set_conserve_memory(0)
         setattr(mod.ssm, option, True)
@@ -227,8 +232,9 @@ def test_fit():
         if option in ["memory_no_gain", "memory_conserve"]:
             assert_(res2.filter_results._kalman_gain is None)
         else:
-            assert_allclose(res2.filter_results.kalman_gain,
-                            res.filter_results.kalman_gain)
+            assert_allclose(
+                res2.filter_results.kalman_gain, res.filter_results.kalman_gain
+            )
 
 
 def test_low_memory_filter():
@@ -253,8 +259,7 @@ def test_low_memory_fit():
     assert_equal(mod.ssm.conserve_memory, MEMORY_NO_GAIN)
 
 
-@pytest.mark.parametrize("conserve_memory", [
-    MEMORY_CONSERVE, MEMORY_NO_FORECAST_COV])
+@pytest.mark.parametrize("conserve_memory", [MEMORY_CONSERVE, MEMORY_NO_FORECAST_COV])
 def test_fittedvalues_resid_predict(conserve_memory):
     # Basic test that as long as MEMORY_NO_FORECAST_MEAN is not set, we should
     # be able to use fittedvalues, resid, predict() with dynamic=False and
@@ -269,8 +274,9 @@ def test_fittedvalues_resid_predict(conserve_memory):
 
     res1 = mod1.filter([0])
     res2 = mod2.filter([0])
-    assert_equal(res1.filter_results.conserve_memory,
-                 conserve_memory | MEMORY_NO_SMOOTHING)
+    assert_equal(
+        res1.filter_results.conserve_memory, conserve_memory | MEMORY_NO_SMOOTHING
+    )
     assert_equal(res2.filter_results.conserve_memory, MEMORY_NO_SMOOTHING)
 
     # Test output against known values
@@ -283,15 +289,19 @@ def test_fittedvalues_resid_predict(conserve_memory):
     # Test output against results without memory conservation
     assert_allclose(res1.fittedvalues, res2.fittedvalues)
     assert_allclose(res1.predict(), res2.predict())
-    assert_allclose(res1.predict(start=endog.index[10]),
-                    res2.predict(start=endog.index[10]))
+    assert_allclose(
+        res1.predict(start=endog.index[10]), res2.predict(start=endog.index[10])
+    )
     assert_allclose(res1.resid, res2.resid)
     assert_allclose(res1.forecast(3), res2.forecast(3))
 
-    assert_allclose(res1.test_normality("jarquebera"),
-                    res2.test_normality("jarquebera"))
-    assert_allclose(res1.test_heteroskedasticity("breakvar"),
-                    res2.test_heteroskedasticity("breakvar"))
+    assert_allclose(
+        res1.test_normality("jarquebera"), res2.test_normality("jarquebera")
+    )
+    assert_allclose(
+        res1.test_heteroskedasticity("breakvar"),
+        res2.test_heteroskedasticity("breakvar"),
+    )
     actual = res1.test_serial_correlation("ljungbox")
     desired = res2.test_serial_correlation("ljungbox")
     assert_allclose(actual, desired)
@@ -333,11 +343,12 @@ def test_invalid_fittedvalues_resid_predict():
 
     # Check that we can't do any prediction without forecast means
     res = mod.filter([0], conserve_memory=MEMORY_NO_FORECAST_MEAN)
-    assert_equal(res.filter_results.conserve_memory,
-                 MEMORY_NO_FORECAST_MEAN)
+    assert_equal(res.filter_results.conserve_memory, MEMORY_NO_FORECAST_MEAN)
 
-    message = ("In-sample prediction is not available if memory conservation"
-               " has been used to avoid storing forecast means.")
+    message = (
+        "In-sample prediction is not available if memory conservation"
+        " has been used to avoid storing forecast means."
+    )
     with pytest.raises(ValueError, match=message):
         res.predict()
     with pytest.raises(ValueError, match=message):
@@ -345,16 +356,17 @@ def test_invalid_fittedvalues_resid_predict():
 
     # Check that we can't do dynamic prediction without predicted means,
     # predicted covs
-    options = [
-        MEMORY_NO_PREDICTED_MEAN, MEMORY_NO_PREDICTED_COV, MEMORY_NO_PREDICTED]
+    options = [MEMORY_NO_PREDICTED_MEAN, MEMORY_NO_PREDICTED_COV, MEMORY_NO_PREDICTED]
     for option in options:
         res = mod.filter([0], conserve_memory=option)
         assert_equal(res.filter_results.conserve_memory, option)
 
-        message = ("In-sample dynamic prediction is not available if"
-                   " memory conservation has been used to avoid"
-                   " storing forecasted or predicted state means"
-                   " or covariances.")
+        message = (
+            "In-sample dynamic prediction is not available if"
+            " memory conservation has been used to avoid"
+            " storing forecasted or predicted state means"
+            " or covariances."
+        )
         with pytest.raises(ValueError, match=message):
             res.predict(dynamic=True)
         with pytest.raises(ValueError, match=message):

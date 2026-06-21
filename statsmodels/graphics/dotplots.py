@@ -3,13 +3,27 @@ import numpy as np
 from . import utils
 
 
-def dot_plot(points, intervals=None, lines=None, sections=None,
-             styles=None, marker_props=None, line_props=None,
-             split_names=None, section_order=None, line_order=None,
-             stacked=False, styles_order=None, striped=False,
-             horizontal=True, show_names="both",
-             fmt_left_name=None, fmt_right_name=None,
-             show_section_titles=None, ax=None):
+def dot_plot(
+    points,
+    intervals=None,
+    lines=None,
+    sections=None,
+    styles=None,
+    marker_props=None,
+    line_props=None,
+    split_names=None,
+    section_order=None,
+    line_order=None,
+    stacked=False,
+    styles_order=None,
+    striped=False,
+    horizontal=True,
+    show_names="both",
+    fmt_left_name=None,
+    fmt_right_name=None,
+    show_section_titles=None,
+    ax=None,
+):
     """
     Dot plotting (also known as forest and blobbogram).
 
@@ -205,8 +219,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
         lines_map[ky].append(i)
 
     # Get the size of the axes on the parent figure in inches
-    bbox = ax.get_window_extent().transformed(
-        fig.dpi_scale_trans.inverted())
+    bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     awidth, aheight = bbox.width, bbox.height
 
     # The number of lines in the plot.
@@ -219,20 +232,17 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
     if horizontal:
         # x coordinate is data, y coordinate is axes
-        trans = transforms.blended_transform_factory(ax.transData,
-                                                     ax.transAxes)
+        trans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
     else:
         # x coordinate is axes, y coordinate is data
-        trans = transforms.blended_transform_factory(ax.transAxes,
-                                                     ax.transData)
+        trans = transforms.blended_transform_factory(ax.transAxes, ax.transData)
 
     # Space used for a section title, in axes coordinates
     title_space_axes = section_title_space / aheight
 
     # Space between lines
     if horizontal:
-        dpos = (top - bottom - nsect_title*title_space_axes) /\
-            float(nrows)
+        dpos = (top - bottom - nsect_title * title_space_axes) / float(nrows)
     else:
         dpos = (top - bottom) / float(nrows)
 
@@ -249,9 +259,9 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     # nval is the maximum number of points on one line.
     nval = len(style_codes)
     if nval > 1:
-        stackd = dpos / (2.5*(float(nval)-1))
+        stackd = dpos / (2.5 * (float(nval) - 1))
     else:
-        stackd = 0.
+        stackd = 0.0
 
     # Map from style code to its integer position
     style_codes_map = {x: style_codes.index(x) for x in style_codes}
@@ -281,10 +291,10 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
     if horizontal:
         # The vertical position of the first line.
-        pos = top - dpos/2 if nsect == 1 else top
+        pos = top - dpos / 2 if nsect == 1 else top
     else:
         # The horizontal position of the first line.
-        pos = bottom + dpos/2
+        pos = bottom + dpos / 2
 
     # Points that have already been labeled
     labeled = set()
@@ -300,19 +310,25 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
             if horizontal:
 
-                y0 = pos + dpos/2 if k0 == lines0[0] else pos
+                y0 = pos + dpos / 2 if k0 == lines0[0] else pos
 
-                ax.fill_between((0, 1), (y0, y0),
-                                (pos-0.7*title_space_axes,
-                                 pos-0.7*title_space_axes),
-                                color="darkgrey",
-                                transform=ax.transAxes,
-                                zorder=1)
+                ax.fill_between(
+                    (0, 1),
+                    (y0, y0),
+                    (pos - 0.7 * title_space_axes, pos - 0.7 * title_space_axes),
+                    color="darkgrey",
+                    transform=ax.transAxes,
+                    zorder=1,
+                )
 
-                txt = ax.text(0.5, pos - 0.35*title_space_axes, k0,
-                              horizontalalignment="center",
-                              verticalalignment="center",
-                              transform=ax.transAxes)
+                txt = ax.text(
+                    0.5,
+                    pos - 0.35 * title_space_axes,
+                    k0,
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                    transform=ax.transAxes,
+                )
                 txt.set_fontweight("bold")
                 pos -= title_space_axes
 
@@ -320,17 +336,24 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
                 m = len([k for k in lines_map if k[0] == k0])
 
-                ax.fill_between((pos-dpos/2+0.01,
-                                 pos+(m-1)*dpos+dpos/2-0.01),
-                                (1.01, 1.01), (1.06, 1.06),
-                                color="darkgrey",
-                                transform=ax.transAxes,
-                                zorder=1, clip_on=False)
+                ax.fill_between(
+                    (pos - dpos / 2 + 0.01, pos + (m - 1) * dpos + dpos / 2 - 0.01),
+                    (1.01, 1.01),
+                    (1.06, 1.06),
+                    color="darkgrey",
+                    transform=ax.transAxes,
+                    zorder=1,
+                    clip_on=False,
+                )
 
-                txt = ax.text(pos + (m-1)*dpos/2, 1.02, k0,
-                              horizontalalignment="center",
-                              verticalalignment="bottom",
-                              transform=ax.transAxes)
+                txt = ax.text(
+                    pos + (m - 1) * dpos / 2,
+                    1.02,
+                    k0,
+                    horizontalalignment="center",
+                    verticalalignment="bottom",
+                    transform=ax.transAxes,
+                )
                 txt.set_fontweight("bold")
 
         jrow = 0
@@ -365,50 +388,72 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
             # Draw the stripe
             if striped and jrow % 2 == 0:
                 if horizontal:
-                    ax.fill_between((0, 1), (pos-dpos/2, pos-dpos/2),
-                                    (pos+dpos/2, pos+dpos/2),
-                                    color="lightgrey",
-                                    transform=ax.transAxes,
-                                    zorder=0)
+                    ax.fill_between(
+                        (0, 1),
+                        (pos - dpos / 2, pos - dpos / 2),
+                        (pos + dpos / 2, pos + dpos / 2),
+                        color="lightgrey",
+                        transform=ax.transAxes,
+                        zorder=0,
+                    )
                 else:
-                    ax.fill_between((pos-dpos/2, pos+dpos/2),
-                                    (0, 0), (1, 1),
-                                    color="lightgrey",
-                                    transform=ax.transAxes,
-                                    zorder=0)
+                    ax.fill_between(
+                        (pos - dpos / 2, pos + dpos / 2),
+                        (0, 0),
+                        (1, 1),
+                        color="lightgrey",
+                        transform=ax.transAxes,
+                        zorder=0,
+                    )
 
             jrow += 1
 
             # Draw the left margin label
             if show_names.lower() in ("left", "both"):
                 if horizontal:
-                    ax.text(-0.1/awidth, pos, left_label,
-                            horizontalalignment="right",
-                            verticalalignment="center",
-                            transform=ax.transAxes,
-                            family="monospace")
+                    ax.text(
+                        -0.1 / awidth,
+                        pos,
+                        left_label,
+                        horizontalalignment="right",
+                        verticalalignment="center",
+                        transform=ax.transAxes,
+                        family="monospace",
+                    )
                 else:
-                    ax.text(pos, -0.1/aheight, left_label,
-                            horizontalalignment="center",
-                            verticalalignment="top",
-                            transform=ax.transAxes,
-                            family="monospace")
+                    ax.text(
+                        pos,
+                        -0.1 / aheight,
+                        left_label,
+                        horizontalalignment="center",
+                        verticalalignment="top",
+                        transform=ax.transAxes,
+                        family="monospace",
+                    )
 
             # Draw the right margin label
             if show_names.lower() in ("right", "both"):
                 if right_label is not None:
                     if horizontal:
-                        ax.text(1 + 0.1/awidth, pos, right_label,
-                                horizontalalignment="left",
-                                verticalalignment="center",
-                                transform=ax.transAxes,
-                                family="monospace")
+                        ax.text(
+                            1 + 0.1 / awidth,
+                            pos,
+                            right_label,
+                            horizontalalignment="left",
+                            verticalalignment="center",
+                            transform=ax.transAxes,
+                            family="monospace",
+                        )
                     else:
-                        ax.text(pos, 1 + 0.1/aheight, right_label,
-                                horizontalalignment="center",
-                                verticalalignment="bottom",
-                                transform=ax.transAxes,
-                                family="monospace")
+                        ax.text(
+                            pos,
+                            1 + 0.1 / aheight,
+                            right_label,
+                            horizontalalignment="center",
+                            verticalalignment="bottom",
+                            transform=ax.transAxes,
+                            family="monospace",
+                        )
 
             # Save the vertical position so that we can place the
             # tick marks
@@ -420,7 +465,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
                 # Calculate the vertical offset
                 yo = 0
                 if stacked:
-                    yo = -dpos/5 + style_codes_map[styles[jp]]*stackd
+                    yo = -dpos / 5 + style_codes_map[styles[jp]] * stackd
 
                 pt = points[jp]
 
@@ -437,26 +482,52 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
                     # Draw the interval
                     if horizontal:
-                        ax.plot([lcb, ucb], [pos+yo, pos+yo], "-",
-                                transform=trans,
-                                **line_props[styles[jp]])
+                        ax.plot(
+                            [lcb, ucb],
+                            [pos + yo, pos + yo],
+                            "-",
+                            transform=trans,
+                            **line_props[styles[jp]],
+                        )
                     else:
-                        ax.plot([pos+yo, pos+yo], [lcb, ucb], "-",
-                                transform=trans,
-                                **line_props[styles[jp]])
+                        ax.plot(
+                            [pos + yo, pos + yo],
+                            [lcb, ucb],
+                            "-",
+                            transform=trans,
+                            **line_props[styles[jp]],
+                        )
 
                 # Plot the point
                 sl = styles[jp]
                 sll = sl if sl not in labeled else None
                 labeled.add(sl)
                 if horizontal:
-                    ax.plot([pt,], [pos+yo,], ls="None",
-                            transform=trans, label=sll,
-                            **marker_props[sl])
+                    ax.plot(
+                        [
+                            pt,
+                        ],
+                        [
+                            pos + yo,
+                        ],
+                        ls="None",
+                        transform=trans,
+                        label=sll,
+                        **marker_props[sl],
+                    )
                 else:
-                    ax.plot([pos+yo,], [pt,], ls="None",
-                            transform=trans, label=sll,
-                            **marker_props[sl])
+                    ax.plot(
+                        [
+                            pos + yo,
+                        ],
+                        [
+                            pt,
+                        ],
+                        ls="None",
+                        transform=trans,
+                        label=sll,
+                        **marker_props[sl],
+                    )
 
             if horizontal:
                 pos -= dpos
@@ -471,7 +542,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
         ax.spines["left"].set_color("none")
         ax.spines["right"].set_color("none")
         ax.spines["top"].set_color("none")
-        ax.spines["bottom"].set_position(("axes", -0.1/aheight))
+        ax.spines["bottom"].set_position(("axes", -0.1 / aheight))
         ax.set_ylim(0, 1)
         ax.yaxis.set_ticks(ticks)
         ax.autoscale_view(scaley=False, tight=True)
@@ -482,7 +553,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
         ax.spines["bottom"].set_color("none")
         ax.spines["right"].set_color("none")
         ax.spines["top"].set_color("none")
-        ax.spines["left"].set_position(("axes", -0.1/awidth))
+        ax.spines["left"].set_position(("axes", -0.1 / awidth))
         ax.set_xlim(0, 1)
         ax.xaxis.set_ticks(ticks)
         ax.autoscale_view(scalex=False, tight=True)

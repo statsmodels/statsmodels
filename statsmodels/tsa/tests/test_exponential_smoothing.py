@@ -1,6 +1,7 @@
 """
 Author: Samuel Scherrer
 """
+
 from statsmodels.compat.pandas import QUARTER_END
 from statsmodels.compat.platform import PLATFORM_LINUX32, PLATFORM_WIN
 
@@ -56,10 +57,22 @@ SEASONALS = ("add", "mul", None)
 DAMPED = (True, False)
 
 MODELS_DATA_SEASONAL = list(
-    product(ERRORS, TRENDS, ("add", "mul"), DAMPED, ("austourists",),)
+    product(
+        ERRORS,
+        TRENDS,
+        ("add", "mul"),
+        DAMPED,
+        ("austourists",),
+    )
 )
 MODELS_DATA_NONSEASONAL = list(
-    product(ERRORS, TRENDS, (None,), DAMPED, ("oildata",),)
+    product(
+        ERRORS,
+        TRENDS,
+        (None,),
+        DAMPED,
+        ("oildata",),
+    )
 )
 remove_invalid_models_from_list(MODELS_DATA_SEASONAL)
 remove_invalid_models_from_list(MODELS_DATA_NONSEASONAL)
@@ -76,9 +89,7 @@ def short_model_name(error, trend, seasonal, damped=False):
 
 
 ALL_MODELS_AND_DATA = MODELS_DATA_NONSEASONAL + MODELS_DATA_SEASONAL
-ALL_MODEL_IDS = [
-    short_model_name(*mod[:3], mod[3]) for mod in ALL_MODELS_AND_DATA
-]
+ALL_MODEL_IDS = [short_model_name(*mod[:3], mod[3]) for mod in ALL_MODELS_AND_DATA]
 
 
 @pytest.fixture(params=ALL_MODELS_AND_DATA, ids=ALL_MODEL_IDS)
@@ -139,7 +150,12 @@ def austourists_model_fit(austourists_model):
 
 @pytest.fixture
 def oildata_model(oildata):
-    return ETSModel(oildata, error="add", trend="add", damped_trend=True,)
+    return ETSModel(
+        oildata,
+        error="add",
+        trend="add",
+        damped_trend=True,
+    )
 
 
 #
@@ -323,11 +339,7 @@ def ets_austourists_fit_results_R():
     """
     Dictionary of ets fit results obtained with script ``results/fit_ets.R``.
     """
-    path = (
-        pathlib.Path(__file__).parent
-        / "results"
-        / "fit_ets_results_seasonal.json"
-    )
+    path = pathlib.Path(__file__).parent / "results" / "fit_ets_results_seasonal.json"
     return obtain_R_results(path)
 
 
@@ -337,9 +349,7 @@ def ets_oildata_fit_results_R():
     Dictionary of ets fit results obtained with script ``results/fit_ets.R``.
     """
     path = (
-        pathlib.Path(__file__).parent
-        / "results"
-        / "fit_ets_results_nonseasonal.json"
+        pathlib.Path(__file__).parent / "results" / "fit_ets_results_nonseasonal.json"
     )
     return obtain_R_results(path)
 
@@ -551,7 +561,12 @@ def test_bounded_fit(oildata):
     assert fit1.smoothing_trend == 0.99
 
     # same using with fix_params semantic
-    model2 = ETSModel(oildata, error="add", trend="add", damped_trend=True,)
+    model2 = ETSModel(
+        oildata,
+        error="add",
+        trend="add",
+        damped_trend=True,
+    )
     with model2.fix_params({"smoothing_trend": 0.99}):
         fit2 = model2.fit(disp=False)
     assert fit2.smoothing_trend == 0.99
@@ -671,7 +686,11 @@ def test_hessian(austourists_model_fit):
 
 def test_prediction_results(austourists_model_fit):
     # simple test case starting at 0
-    pred = austourists_model_fit.get_prediction(start=0, dynamic=30, end=40,)
+    pred = austourists_model_fit.get_prediction(
+        start=0,
+        dynamic=30,
+        end=40,
+    )
     summary = pred.summary_frame()
     assert len(summary["mean"].values) == 41
     assert np.all(~np.isnan(summary["mean"]))
@@ -777,9 +796,7 @@ def test_results_vs_statespace(statespace_comparison):
 
     # heteroskedasticity is somewhat different, because of burn in period?
     ets_het = ets_results.test_heteroskedasticity(method="breakvar")[0]
-    statespace_het = statespace_results.test_heteroskedasticity(
-        method="breakvar"
-    )[0]
+    statespace_het = statespace_results.test_heteroskedasticity(method="breakvar")[0]
     # het[0] is test statistic, het[1] p-value
     if not PLATFORM_LINUX32:
         # Skip on Linux-32 bit due to random failures. These values are not
@@ -793,9 +810,7 @@ def test_prediction_results_vs_statespace(statespace_comparison):
 
     # comparison of two predictions
     ets_pred = ets_results.get_prediction(start=10, dynamic=10, end=40)
-    statespace_pred = statespace_results.get_prediction(
-        start=10, dynamic=10, end=40
-    )
+    statespace_pred = statespace_results.get_prediction(start=10, dynamic=10, end=40)
 
     statespace_summary = statespace_pred.summary_frame()
     ets_summary = ets_pred.summary_frame()
@@ -818,7 +833,10 @@ def test_prediction_results_vs_statespace(statespace_comparison):
     )
 
     # comparison of dynamic prediction at end of sample -> this works
-    ets_pred = ets_results.get_prediction(start=60, end=80,)
+    ets_pred = ets_results.get_prediction(
+        start=60,
+        end=80,
+    )
     statespace_pred = statespace_results.get_prediction(start=60, end=80)
     statespace_summary = statespace_pred.summary_frame()
     ets_summary = ets_pred.summary_frame()
@@ -959,9 +977,7 @@ def test_convergence_simple():
     for i in range(1, e.shape[0]):
         y[i] = y[i - 1] - 0.2 * e[i - 1] + e[i]
     y = y[200:]
-    mod = holtwinters.ExponentialSmoothing(
-        y, initialization_method="estimated"
-    )
+    mod = holtwinters.ExponentialSmoothing(y, initialization_method="estimated")
     res = mod.fit()
     ets_res = ETSModel(y).fit()
 
@@ -1024,8 +1040,9 @@ def test_one_step_ahead(setup_model):
     fcast2 = res.forecast(steps=2)
     assert_allclose(fcast1.iloc[0], fcast2.iloc[0])
 
-    pred1 = res.get_prediction(start=model2.nobs, end=model2.nobs,
-                               simulate_repetitions=2)
+    pred1 = res.get_prediction(
+        start=model2.nobs, end=model2.nobs, simulate_repetitions=2
+    )
     res.get_prediction(start=model2.nobs, end=model2.nobs + 1, simulate_repetitions=2)
     df1 = pred1.summary_frame(alpha=0.05)
     df2 = pred1.summary_frame(alpha=0.05)
@@ -1042,7 +1059,7 @@ def test_estimated_initialization_short_data(oildata, trend, seasonal, nobs):
         trend=trend,
         seasonal=seasonal,
         seasonal_periods=4,
-        initialization_method="estimated"
+        initialization_method="estimated",
     ).fit()
     assert ~np.any(np.isnan(res.params))
 
@@ -1077,7 +1094,7 @@ def test_aicc_0_dof():
         initial_trend=0.0,
         error="add",
         trend="add",
-        damped_trend=True
+        damped_trend=True,
     )
     aicc = model.fit().aicc
     assert not np.isfinite(aicc)

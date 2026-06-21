@@ -18,23 +18,21 @@ def _get_pandas_wrapper(X, trim_head=None, trim_tail=None, names=None):
     if hasattr(X, "columns"):
         if names is None:
             names = X.columns
-        return lambda x : X.__class__(x, index=_index, columns=names)
+        return lambda x: X.__class__(x, index=_index, columns=names)
     else:
         if names is None:
             names = X.name
-        return lambda x : X.__class__(x, index=_index, name=names)
+        return lambda x: X.__class__(x, index=_index, name=names)
 
 
-def pandas_wrapper(func, trim_head=None, trim_tail=None, names=None, *args,
-                   **kwargs):
+def pandas_wrapper(func, trim_head=None, trim_tail=None, names=None, *args, **kwargs):
     @wraps(func)
     def new_func(X, *args, **kwargs):
         # quick pass-through for do nothing case
         if not _is_using_pandas(X, None):
             return func(X, *args, **kwargs)
 
-        wrapper_func = _get_pandas_wrapper(X, trim_head, trim_tail,
-                                           names)
+        wrapper_func = _get_pandas_wrapper(X, trim_head, trim_tail, names)
         ret = func(X, *args, **kwargs)
         ret = wrapper_func(ret)
         return ret
@@ -42,16 +40,16 @@ def pandas_wrapper(func, trim_head=None, trim_tail=None, names=None, *args,
     return new_func
 
 
-def pandas_wrapper_bunch(func, trim_head=None, trim_tail=None,
-                         names=None, *args, **kwargs):
+def pandas_wrapper_bunch(
+    func, trim_head=None, trim_tail=None, names=None, *args, **kwargs
+):
     @wraps(func)
     def new_func(X, *args, **kwargs):
         # quick pass-through for do nothing case
         if not _is_using_pandas(X, None):
             return func(X, *args, **kwargs)
 
-        wrapper_func = _get_pandas_wrapper(X, trim_head, trim_tail,
-                                           names)
+        wrapper_func = _get_pandas_wrapper(X, trim_head, trim_tail, names)
         ret = func(X, *args, **kwargs)
         ret = wrapper_func(ret)
         return ret
@@ -59,13 +57,15 @@ def pandas_wrapper_bunch(func, trim_head=None, trim_tail=None,
     return new_func
 
 
-def pandas_wrapper_predict(func, trim_head=None, trim_tail=None,
-                           columns=None, *args, **kwargs):
+def pandas_wrapper_predict(
+    func, trim_head=None, trim_tail=None, columns=None, *args, **kwargs
+):
     raise NotImplementedError
 
 
-def pandas_wrapper_freq(func, trim_head=None, trim_tail=None,
-                        freq_kw="freq", columns=None, *args, **kwargs):
+def pandas_wrapper_freq(
+    func, trim_head=None, trim_tail=None, freq_kw="freq", columns=None, *args, **kwargs
+):
     """
     Return a new function that catches the incoming X, checks if it's pandas,
     calls the functions as is. Then wraps the results in the incoming index.
@@ -80,11 +80,10 @@ def pandas_wrapper_freq(func, trim_head=None, trim_tail=None,
         if not _is_using_pandas(X, None):
             return func(X, *args, **kwargs)
 
-        wrapper_func = _get_pandas_wrapper(X, trim_head, trim_tail,
-                                           columns)
+        wrapper_func = _get_pandas_wrapper(X, trim_head, trim_tail, columns)
         index = X.index
         freq = index.inferred_freq
-        kwargs.update({freq_kw : freq_to_period(freq)})
+        kwargs.update({freq_kw: freq_to_period(freq)})
         ret = func(X, *args, **kwargs)
         ret = wrapper_func(ret)
         return ret

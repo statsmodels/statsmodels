@@ -1,4 +1,5 @@
 """Smoking and lung cancer in eight cities in China."""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

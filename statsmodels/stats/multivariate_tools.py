@@ -1,4 +1,4 @@
-'''Tools for multivariate analysis
+"""Tools for multivariate analysis
 
 
 Author : Josef Perktold
@@ -10,7 +10,8 @@ TODO:
 
 - names of functions, currently just "working titles"
 
-'''
+"""
+
 import numpy as np
 
 from statsmodels.tools.tools import Bunch
@@ -47,9 +48,7 @@ def partial_project(endog, exog):
     params = np.linalg.pinv(x2).dot(x1)
     predicted = x2.dot(params)
     residual = x1 - predicted
-    res = Bunch(params=params,
-                fittedvalues=predicted,
-                resid=residual)
+    res = Bunch(params=params, fittedvalues=predicted, resid=residual)
 
     return res
 
@@ -93,8 +92,8 @@ def cancorr(x1, x2, demean=True, standardize=False):
     """
     # x, y = x1, x2
     if demean or standardize:
-        x1 = (x1 - x1.mean(0))
-        x2 = (x2 - x2.mean(0))
+        x1 = x1 - x1.mean(0)
+        x2 = x2 - x2.mean(0)
 
     if standardize:
         # std does not make a difference to canonical correlation coefficients
@@ -168,14 +167,28 @@ def cc_ranktest(x1, x2, demean=True, fullrank=False):
     if fullrank:
         df = np.abs(k1 - k2) + 1
         value = nobs1 * cc2[-1]
-        w_value = nobs1 * (cc2[-1] / (1. - cc2[-1]))
-        return value, stats.chi2.sf(value, df), df, cc, w_value, stats.chi2.sf(w_value, df)
+        w_value = nobs1 * (cc2[-1] / (1.0 - cc2[-1]))
+        return (
+            value,
+            stats.chi2.sf(value, df),
+            df,
+            cc,
+            w_value,
+            stats.chi2.sf(w_value, df),
+        )
     else:
         r = np.arange(min(k1, k2))[::-1]
         df = (k1 - r) * (k2 - r)
         values = nobs1 * cc2[::-1].cumsum()
-        w_values = nobs1 * (cc2 / (1. - cc2))[::-1].cumsum()
-        return values, stats.chi2.sf(values, df), df, cc, w_values, stats.chi2.sf(w_values, df)
+        w_values = nobs1 * (cc2 / (1.0 - cc2))[::-1].cumsum()
+        return (
+            values,
+            stats.chi2.sf(values, df),
+            df,
+            cc,
+            w_values,
+            stats.chi2.sf(w_values, df),
+        )
 
 
 def cc_stats(x1, x2, demean=True):
@@ -212,17 +225,17 @@ def cc_stats(x1, x2, demean=True):
     nobs2, k2 = x2.shape
     cc = cancorr(x1, x2, demean=demean)
     cc2 = cc**2
-    lam = (cc2 / (1 - cc2))  # what if max cc2 is 1 ?
+    lam = cc2 / (1 - cc2)  # what if max cc2 is 1 ?
     # Problem: ccr might not care if x1 or x2 are reduced rank,
     #          but df will depend on rank
     df_model = k1 * k2  # df_hypothesis (we do not include mean in x1, x2)
     df_resid = k1 * (nobs1 - k2 - demean)
     m = 0.5 * (df_model - k1)
 
-    pt_value = cc2.sum()    # Pillai's trace
-    wl_value = np.product(1 / (1 + lam))   # Wilk's Lambda
-    ht_value = lam.sum()    # Hotelling's Trace
-    rm_value = lam.max()    # Roy's largest root
+    pt_value = cc2.sum()  # Pillai's trace
+    wl_value = np.product(1 / (1 + lam))  # Wilk's Lambda
+    ht_value = lam.sum()  # Hotelling's Trace
+    rm_value = lam.max()  # Roy's largest root
     # from scipy import stats
     # what's the distribution, the test statistic ?
     res = {}

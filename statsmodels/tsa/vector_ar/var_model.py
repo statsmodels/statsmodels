@@ -1833,9 +1833,7 @@ class VARResults(VARProcess):
         irf : IRAnalysis
         """
         if var_order is not None:
-            raise NotImplementedError(
-                "alternate variable order not implemented (yet)"
-            )
+            raise NotImplementedError("alternate variable order not implemented (yet)")
 
         return IRAnalysis(self, P=var_decomp, periods=periods)
 

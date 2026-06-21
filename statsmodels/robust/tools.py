@@ -58,7 +58,7 @@ def _var_normal(norm):
 
     """
     num = stats.norm.expect(lambda x: norm.psi(x) ** 2)
-    denom = stats.norm.expect(norm.psi_deriv)**2
+    denom = stats.norm.expect(norm.psi_deriv) ** 2
     return num / denom
 
 
@@ -100,20 +100,25 @@ def _var_normal_jump(norm):
 
 
     """
-    num = stats.norm.expect(lambda x: norm.psi(x)**2)
+    num = stats.norm.expect(lambda x: norm.psi(x) ** 2)
 
     def func(x):
         # derivative normal pdf
         # d/dx(exp(-x^2/2)/sqrt(2 π)) = -(e^(-x^2/2) x)/sqrt(2 π)
-        return norm.psi(x) * (- x * np.exp(-x**2/2) / np.sqrt(2 * np.pi))
+        return norm.psi(x) * (-x * np.exp(-(x**2) / 2) / np.sqrt(2 * np.pi))
 
     denom = integrate.quad(func, -np.inf, np.inf)[0]
     return num / denom**2
 
 
-def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
-                      bracket=None,
-                      ):
+def _get_tuning_param(
+    norm,
+    eff,
+    kwd="c",
+    kwargs=None,
+    use_jump=False,
+    bracket=None,
+):
     """Tuning parameter for RLM norms for required relative efficiency.
 
     Parameters
@@ -146,12 +151,15 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
         bracket = [0.1, 10]
 
     if not use_jump:
+
         def func(c):
             # kwds.update({kwd: c})
             # return _var_normal(norm(**kwds)) - 1 / eff
             norm._set_tuning_param(c, inplace=True)
             return _var_normal(norm) - 1 / eff
+
     else:
+
         def func(c):
             norm._set_tuning_param(c, inplace=True)
             return _var_normal_jump(norm) - 1 / eff
@@ -238,7 +246,7 @@ def tuning_s_estimator_mean(norm, breakdown=None):
         param=res[2],
         scale_bias=res[3],
         all=res,
-        )
+    )
 
     return res2
 
@@ -277,23 +285,25 @@ def scale_bias_cov(norm, k_vars):
 
     def rho(x):
         return norm.rho(np.sqrt(x))
+
     scale_bias = stats.chi2.expect(rho, args=(k_vars,))
     return scale_bias, scale_bias / norm.max_rho()
 
 
 def tuning_s_cov(norm, k_vars, breakdown_point=0.5, limits=()):
-    """Tuning parameter for multivariate S-estimator given breakdown point.
-    """
+    """Tuning parameter for multivariate S-estimator given breakdown point."""
     from .norms import TukeyBiweight  # avoid circular import
 
     if not limits:
         limits = (0.5, 30)
 
     if isinstance(norm, TukeyBiweight):
+
         def func(c):
             return scale_bias_cov_biw(c, k_vars)[1] - breakdown_point
+
     else:
-        norm = norm._set_tuning_param(2., inplace=False)  # create copy
+        norm = norm._set_tuning_param(2.0, inplace=False)  # create copy
 
         def func(c):
             norm._set_tuning_param(c, inplace=True)
@@ -438,10 +448,13 @@ def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
     norm = norm._set_tuning_param(1, inplace=False)
 
     if eff_mean:
+
         def func(c):
             norm._set_tuning_param(c, inplace=True)
             return eff_mvmean(norm, k_vars)[0] - efficiency
+
     else:
+
         def func(c):
             norm._set_tuning_param(c, inplace=True)
             return eff_mvshape(norm, k_vars)[0] - efficiency
@@ -456,47 +469,63 @@ def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
 # TODO: need to replace with more larger table and more digits.
 # (4, 0.95): 5.76 -. 5.81 to better match R rrcov and numerical integration
 tukeybiweight_mvmean_eff_km = {
-        (1, 0.8): 3.14, (2, 0.8): 3.51, (3, 0.8): 3.82, (4, 0.8): 4.1,
-        (5, 0.8): 4.34, (10, 0.8): 5.39,
-        (1, 0.9): 3.88, (2, 0.9): 4.28, (3, 0.9): 4.62, (4, 0.9): 4.91,
-        (5, 0.9): 5.18, (10, 0.9): 6.38,
-        (1, 0.95): 4.68, (2, 0.95): 5.12, (3, 0.95): 5.48, (4, 0.95): 5.81,
-        (5, 0.95): 6.1, (10, 0.95): 7.67,
-        }
+    (1, 0.8): 3.14,
+    (2, 0.8): 3.51,
+    (3, 0.8): 3.82,
+    (4, 0.8): 4.1,
+    (5, 0.8): 4.34,
+    (10, 0.8): 5.39,
+    (1, 0.9): 3.88,
+    (2, 0.9): 4.28,
+    (3, 0.9): 4.62,
+    (4, 0.9): 4.91,
+    (5, 0.9): 5.18,
+    (10, 0.9): 6.38,
+    (1, 0.95): 4.68,
+    (2, 0.95): 5.12,
+    (3, 0.95): 5.48,
+    (4, 0.95): 5.81,
+    (5, 0.95): 6.1,
+    (10, 0.95): 7.67,
+}
 
-_table_biweight_mvmean_eff = np.array([
-    [2.89717, 3.13691, 3.44369, 3.88266, 4.68506, 5.59682, 7.04139],
-    [3.26396, 3.51006, 3.82643, 4.2821, 5.12299, 6.0869, 7.62344],
-    [3.5721, 3.82354, 4.14794, 4.61754, 5.49025, 6.49697, 8.10889],
-    [3.84155, 4.09757, 4.42889, 4.91044, 5.81032, 6.85346, 8.52956],
-    [4.08323, 4.34327, 4.68065, 5.17267, 6.09627, 7.17117, 8.90335],
-    [4.30385, 4.56746, 4.91023, 5.41157, 6.35622, 7.45933, 9.24141],
-    [4.50783, 4.77466, 5.12228, 5.63199, 6.59558, 7.72408, 9.5512],
-    [4.69828, 4.96802, 5.32006, 5.83738, 6.81817, 7.96977, 9.83797],
-    [4.87744, 5.14986, 5.506, 6.03022, 7.02679, 8.19958, 10.10558],
-    [5.04704, 5.32191, 5.68171, 6.21243, 7.22354, 8.41594, 10.35696],
-    [5.20839, 5.48554, 5.84879, 6.38547, 7.41008, 8.62071, 10.59439],
-    [5.36254, 5.64181, 6.00827, 6.55051, 7.58772, 8.81538, 10.81968],
-    [5.51034, 5.7916, 6.16106, 6.7085, 7.75752, 9.00118, 11.03428],
-    [5.65249, 5.9356, 6.3079, 6.86021, 7.92034, 9.17908, 11.23939],
-    ])
+_table_biweight_mvmean_eff = np.array(
+    [
+        [2.89717, 3.13691, 3.44369, 3.88266, 4.68506, 5.59682, 7.04139],
+        [3.26396, 3.51006, 3.82643, 4.2821, 5.12299, 6.0869, 7.62344],
+        [3.5721, 3.82354, 4.14794, 4.61754, 5.49025, 6.49697, 8.10889],
+        [3.84155, 4.09757, 4.42889, 4.91044, 5.81032, 6.85346, 8.52956],
+        [4.08323, 4.34327, 4.68065, 5.17267, 6.09627, 7.17117, 8.90335],
+        [4.30385, 4.56746, 4.91023, 5.41157, 6.35622, 7.45933, 9.24141],
+        [4.50783, 4.77466, 5.12228, 5.63199, 6.59558, 7.72408, 9.5512],
+        [4.69828, 4.96802, 5.32006, 5.83738, 6.81817, 7.96977, 9.83797],
+        [4.87744, 5.14986, 5.506, 6.03022, 7.02679, 8.19958, 10.10558],
+        [5.04704, 5.32191, 5.68171, 6.21243, 7.22354, 8.41594, 10.35696],
+        [5.20839, 5.48554, 5.84879, 6.38547, 7.41008, 8.62071, 10.59439],
+        [5.36254, 5.64181, 6.00827, 6.55051, 7.58772, 8.81538, 10.81968],
+        [5.51034, 5.7916, 6.16106, 6.7085, 7.75752, 9.00118, 11.03428],
+        [5.65249, 5.9356, 6.3079, 6.86021, 7.92034, 9.17908, 11.23939],
+    ]
+)
 
-_table_biweight_mvshape_eff = np.array([
-    [3.57210, 3.82354, 4.14794, 4.61754, 5.49025, 6.49697, 8.10889],
-    [3.84155, 4.09757, 4.42889, 4.91044, 5.81032, 6.85346, 8.52956],
-    [4.08323, 4.34327, 4.68065, 5.17267, 6.09627, 7.17117, 8.90335],
-    [4.30385, 4.56746, 4.91023, 5.41157, 6.35622, 7.45933, 9.24141],
-    [4.50783, 4.77466, 5.12228, 5.63199, 6.59558, 7.72408, 9.55120],
-    [4.69828, 4.96802, 5.32006, 5.83738, 6.81817, 7.96977, 9.83797],
-    [4.87744, 5.14986, 5.50600, 6.03022, 7.02679, 8.19958, 10.10558],
-    [5.04704, 5.32191, 5.68171, 6.21243, 7.22354, 8.41594, 10.35696],
-    [5.20839, 5.48554, 5.84879, 6.38547, 7.41008, 8.62071, 10.59439],
-    [5.36254, 5.64181, 6.00827, 6.55051, 7.58772, 8.81538, 10.81968],
-    [5.51034, 5.79160, 6.16106, 6.70849, 7.75752, 9.00118, 11.03428],
-    [5.65249, 5.93560, 6.30790, 6.86021, 7.92034, 9.17908, 11.23939],
-    [5.78957, 6.07443, 6.44938, 7.00630, 8.07692, 9.34991, 11.43603],
-    [5.92206, 6.20858, 6.58604, 7.14731, 8.22785, 9.51437, 11.62502],
-    ])
+_table_biweight_mvshape_eff = np.array(
+    [
+        [3.57210, 3.82354, 4.14794, 4.61754, 5.49025, 6.49697, 8.10889],
+        [3.84155, 4.09757, 4.42889, 4.91044, 5.81032, 6.85346, 8.52956],
+        [4.08323, 4.34327, 4.68065, 5.17267, 6.09627, 7.17117, 8.90335],
+        [4.30385, 4.56746, 4.91023, 5.41157, 6.35622, 7.45933, 9.24141],
+        [4.50783, 4.77466, 5.12228, 5.63199, 6.59558, 7.72408, 9.55120],
+        [4.69828, 4.96802, 5.32006, 5.83738, 6.81817, 7.96977, 9.83797],
+        [4.87744, 5.14986, 5.50600, 6.03022, 7.02679, 8.19958, 10.10558],
+        [5.04704, 5.32191, 5.68171, 6.21243, 7.22354, 8.41594, 10.35696],
+        [5.20839, 5.48554, 5.84879, 6.38547, 7.41008, 8.62071, 10.59439],
+        [5.36254, 5.64181, 6.00827, 6.55051, 7.58772, 8.81538, 10.81968],
+        [5.51034, 5.79160, 6.16106, 6.70849, 7.75752, 9.00118, 11.03428],
+        [5.65249, 5.93560, 6.30790, 6.86021, 7.92034, 9.17908, 11.23939],
+        [5.78957, 6.07443, 6.44938, 7.00630, 8.07692, 9.34991, 11.43603],
+        [5.92206, 6.20858, 6.58604, 7.14731, 8.22785, 9.51437, 11.62502],
+    ]
+)
 
 
 def _convert_to_dict_mvmean_effs(eff_mean=True):
@@ -535,6 +564,7 @@ def tukeybiweight_mvmean_eff(k, eff, eff_mean=True):
     except KeyError:
         # compute and cache
         from .norms import TukeyBiweight  # avoid circular import
+
         norm = TukeyBiweight(c=1)
         tp = tuning_m_cov_eff(norm, k, efficiency=eff, eff_mean=eff_mean)
         table_dict[(k, eff)] = tp

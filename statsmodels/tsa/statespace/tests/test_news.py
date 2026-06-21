@@ -4,6 +4,7 @@ Tests for news results
 Author: Chad Fulton
 License: BSD-3
 """
+
 from statsmodels.compat.pandas import (
     FUTURE_STACK,
     assert_frame_equal,
@@ -30,8 +31,13 @@ dta.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
 def check_impact_indices(news, impact_dates, impacted_variables):
     # Note: the index for impacts is only a time index, because we compute
     # impacts for all variables during these time periods.
-    for attr in ["total_impacts", "update_impacts", "revision_impacts",
-                 "post_impacted_forecasts", "prev_impacted_forecasts"]:
+    for attr in [
+        "total_impacts",
+        "update_impacts",
+        "revision_impacts",
+        "post_impacted_forecasts",
+        "prev_impacted_forecasts",
+    ]:
         val = getattr(news, attr)
         assert_(val.index.equals(impact_dates))
         assert_equal(val.columns.tolist(), impacted_variables)
@@ -57,13 +63,15 @@ def check_revision_indices(news, revisions_index):
         desired_ix = revisions_index.to_frame().reset_index(drop=True)
         desired_iloc = desired_ix.copy()
         desired_iloc["revision date"] = [
-            dates.get_loc(date) for date in desired_ix["revision date"]]
+            dates.get_loc(date) for date in desired_ix["revision date"]
+        ]
         desired_iloc["revised variable"] = [
-            endog_names.index(name)
-            for name in desired_ix["revised variable"]]
+            endog_names.index(name) for name in desired_ix["revised variable"]
+        ]
 
-        assert_(news.revisions_iloc.equals(
-            desired_iloc.astype(news.revisions_iloc.dtypes)))
+        assert_(
+            news.revisions_iloc.equals(desired_iloc.astype(news.revisions_iloc.dtypes))
+        )
         assert_(news.revisions_ix.equals(desired_ix))
 
 
@@ -86,13 +94,13 @@ def check_update_indices(news, updates_index):
         desired_ix = updates_index.to_frame().reset_index(drop=True)
         desired_iloc = desired_ix.copy()
         desired_iloc["update date"] = [
-            dates.get_loc(date) for date in desired_ix["update date"]]
+            dates.get_loc(date) for date in desired_ix["update date"]
+        ]
         desired_iloc["updated variable"] = [
-            endog_names.index(name)
-            for name in desired_ix["updated variable"]]
+            endog_names.index(name) for name in desired_ix["updated variable"]
+        ]
 
-        assert_(news.updates_iloc.equals(
-            desired_iloc.astype(news.updates_iloc.dtypes)))
+        assert_(news.updates_iloc.equals(desired_iloc.astype(news.updates_iloc.dtypes)))
         assert_(news.updates_ix.equals(desired_ix))
 
 
@@ -103,7 +111,8 @@ def check_news_indices(news, updates_index, impact_dates):
         news_index = updates_index
     else:
         news_index = pd.MultiIndex.from_product(
-            [[], []], names=["update date", "updated variable"])
+            [[], []], names=["update date", "updated variable"]
+        )
     endog_names = news.previous.model.endog_names
     if isinstance(endog_names, str):
         endog_names = [endog_names]
@@ -117,11 +126,23 @@ def check_news_indices(news, updates_index, impact_dates):
     assert_(news.weights.columns.equals(weights_columns))
 
 
-def check_news(news, revisions, updates, impact_dates, impacted_variables,
-               revisions_index, updates_index,
-               revision_impacts, update_impacts,
-               prev_impacted_forecasts, post_impacted_forecasts,
-               update_forecasts, update_realized, news_desired, weights):
+def check_news(
+    news,
+    revisions,
+    updates,
+    impact_dates,
+    impacted_variables,
+    revisions_index,
+    updates_index,
+    revision_impacts,
+    update_impacts,
+    prev_impacted_forecasts,
+    post_impacted_forecasts,
+    update_forecasts,
+    update_realized,
+    news_desired,
+    weights,
+):
     # Note: we use atol=1e-12 to handle cases where impacts, etc. are equal to
     # zero, but numerical precision of the Kalman filter procedures gives an
     # answer of e.g. 1e-16.
@@ -158,15 +179,14 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
         assert_(np.all(news.revision_impacts.isnull()))
 
     # Total impacts
-    total_impacts = (news.revision_impacts.astype(float).fillna(0) +
-                     news.update_impacts.astype(float).fillna(0))
+    total_impacts = news.revision_impacts.astype(float).fillna(
+        0
+    ) + news.update_impacts.astype(float).fillna(0)
     assert_allclose(news.total_impacts, total_impacts, atol=1e-12)
 
     # - Impacted variable forecasts ------------------------------------------
-    assert_allclose(news.prev_impacted_forecasts, prev_impacted_forecasts,
-                    atol=1e-12)
-    assert_allclose(news.post_impacted_forecasts, post_impacted_forecasts,
-                    atol=1e-12)
+    assert_allclose(news.prev_impacted_forecasts, prev_impacted_forecasts, atol=1e-12)
+    assert_allclose(news.post_impacted_forecasts, post_impacted_forecasts, atol=1e-12)
 
     # - News -----------------------------------------------------------------
     assert_allclose(news.update_forecasts, update_forecasts, atol=1e-12)
@@ -178,80 +198,98 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
     assert_allclose(news.weights, weights, atol=1e-12)
 
     # - Table: data revisions ------------------------------------------------
-    assert_equal(news.data_revisions.columns.tolist(),
-                 ["revised", "observed (prev)", "detailed impacts computed"])
-    assert_equal(news.data_revisions.index.names,
-                 ["revision date", "revised variable"])
+    assert_equal(
+        news.data_revisions.columns.tolist(),
+        ["revised", "observed (prev)", "detailed impacts computed"],
+    )
+    assert_equal(news.data_revisions.index.names, ["revision date", "revised variable"])
     assert_(news.data_revisions.index.equals(revisions_index))
 
     # - Table: data updates --------------------------------------------------
-    assert_equal(news.data_updates.columns.tolist(),
-                 ["observed", "forecast (prev)"])
-    assert_equal(news.data_updates.index.names,
-                 ["update date", "updated variable"])
+    assert_equal(news.data_updates.columns.tolist(), ["observed", "forecast (prev)"])
+    assert_equal(news.data_updates.index.names, ["update date", "updated variable"])
     assert_(news.data_updates.index.equals(news.news.index))
-    assert_allclose(news.data_updates["forecast (prev)"],
-                    news.update_forecasts, atol=1e-12)
-    assert_allclose(news.data_updates["observed"], news.update_realized,
-                    atol=1e-12)
+    assert_allclose(
+        news.data_updates["forecast (prev)"], news.update_forecasts, atol=1e-12
+    )
+    assert_allclose(news.data_updates["observed"], news.update_realized, atol=1e-12)
 
     # - Table: details_by_impact ---------------------------------------------
     details_by_impact = news.details_by_impact
     desired = ["observed", "forecast (prev)", "news", "weight", "impact"]
     assert_equal(details_by_impact.columns.tolist(), desired)
-    desired = ["impact date", "impacted variable",
-               "update date", "updated variable"]
+    desired = ["impact date", "impacted variable", "update date", "updated variable"]
     assert_equal(details_by_impact.index.names, desired)
 
     if updates:
-        actual = (news.details_by_impact["forecast (prev)"]
-                      .drop_duplicates()
-                      .reset_index([0, 1])["forecast (prev)"])
+        actual = (
+            news.details_by_impact["forecast (prev)"]
+            .drop_duplicates()
+            .reset_index([0, 1])["forecast (prev)"]
+        )
         assert_allclose(actual, news.update_forecasts, atol=1e-12)
-        actual = (news.details_by_impact["observed"]
-                      .drop_duplicates().reset_index([0, 1])["observed"])
+        actual = (
+            news.details_by_impact["observed"]
+            .drop_duplicates()
+            .reset_index([0, 1])["observed"]
+        )
         assert_allclose(actual, news.update_realized, atol=1e-12)
-        actual = (news.details_by_impact["news"]
-                      .drop_duplicates().reset_index([0, 1])["news"])
+        actual = (
+            news.details_by_impact["news"].drop_duplicates().reset_index([0, 1])["news"]
+        )
         assert_allclose(actual, news.news, atol=1e-12)
 
         # Weights
-        assert_allclose(details_by_impact["weight"].unstack([0, 1]),
-                        news.weights, atol=1e-12)
+        assert_allclose(
+            details_by_impact["weight"].unstack([0, 1]), news.weights, atol=1e-12
+        )
 
         # Impact of news
-        actual = (news.details_by_impact["impact"]
-                      .unstack([2, 3]).sum(axis=1).unstack(1))
+        actual = news.details_by_impact["impact"].unstack([2, 3]).sum(axis=1).unstack(1)
         assert_allclose(actual, news.update_impacts, atol=1e-12)
 
     # - Table: details_by_update ---------------------------------------------
     details_by_update = news.details_by_update
     desired = ["news", "weight", "impact"]
     assert_equal(details_by_update.columns.tolist(), desired)
-    desired = ["update date", "updated variable", "observed",
-               "forecast (prev)", "impact date", "impacted variable"]
+    desired = [
+        "update date",
+        "updated variable",
+        "observed",
+        "forecast (prev)",
+        "impact date",
+        "impacted variable",
+    ]
     assert_equal(details_by_update.index.names, desired)
 
     if updates:
         # News
         # Special case for Pandas = 0.23, see above
-        actual = (news.details_by_update["news"]
-                      .drop_duplicates().reset_index([2, 3, 4, 5])["news"])
+        actual = (
+            news.details_by_update["news"]
+            .drop_duplicates()
+            .reset_index([2, 3, 4, 5])["news"]
+        )
         assert_allclose(actual, news.news, atol=1e-12)
 
         # Weights
-        assert_allclose(news.details_by_update["weight"].unstack([4, 5]),
-                        news.weights, atol=1e-12)
+        assert_allclose(
+            news.details_by_update["weight"].unstack([4, 5]), news.weights, atol=1e-12
+        )
 
         # Impact of news
-        actual = (news.details_by_update["impact"]
-                      .unstack([4, 5]).sum(axis=0).unstack(1))
+        actual = news.details_by_update["impact"].unstack([4, 5]).sum(axis=0).unstack(1)
         assert_allclose(actual, news.update_impacts, atol=1e-12)
 
     # - Table: impacts -------------------------------------------------------
     impacts = news.impacts
-    desired = ["estimate (prev)", "impact of revisions", "impact of news",
-               "total impact", "estimate (new)"]
+    desired = [
+        "estimate (prev)",
+        "impact of revisions",
+        "impact of news",
+        "total impact",
+        "estimate (new)",
+    ]
     assert_equal(impacts.columns.tolist(), desired)
     desired = ["impact date", "impacted variable"]
     assert_equal(impacts.index.names, desired)
@@ -300,14 +338,18 @@ def test_sarimax_time_invariant(revisions, updates, revisions_details_start):
         # the type of the comparison object that we're passing is "updated"
         comparison_type = "updated"
     if revisions:
-        endog1.iloc[-1] = 0.
+        endog1.iloc[-1] = 0.0
 
     # Get the previous results object and compute the news
     mod = sarimax.SARIMAX(endog1)
     res = mod.smooth([0.5, 1.0])
-    news = res.news(endog2, start="2009Q2", end="2010Q1",
-                    comparison_type=comparison_type,
-                    revisions_details_start=revisions_details_start)
+    news = res.news(
+        endog2,
+        start="2009Q2",
+        end="2010Q1",
+        comparison_type=comparison_type,
+        revisions_details_start=revisions_details_start,
+    )
 
     # Compute the true values for each combination of (revsions, updates)
     impact_dates = pd.period_range(start="2009Q2", end="2010Q1", freq="Q")
@@ -316,46 +358,57 @@ def test_sarimax_time_invariant(revisions, updates, revisions_details_start):
     # Revisions
     if revisions and updates:
         revisions_index = pd.MultiIndex.from_arrays(
-            [endog1.index[-1:], ["infl"]],
-            names=["revision date", "revised variable"])
+            [endog1.index[-1:], ["infl"]], names=["revision date", "revised variable"]
+        )
         # If we have updates, the revision is to 2009Q2
-        revision_impacts = endog2.iloc[-2] * 0.5**np.arange(4).reshape(4, 1)
+        revision_impacts = endog2.iloc[-2] * 0.5 ** np.arange(4).reshape(4, 1)
     elif revisions:
         revisions_index = pd.MultiIndex.from_arrays(
-            [endog1.index[-1:], ["infl"]],
-            names=["revision date", "revised variable"])
+            [endog1.index[-1:], ["infl"]], names=["revision date", "revised variable"]
+        )
         # With no updates, the revision is to 2009Q3
-        revision_impacts = np.r_[
-            0, endog2.iloc[-1] * 0.5**np.arange(3)].reshape(4, 1)
+        revision_impacts = np.r_[0, endog2.iloc[-1] * 0.5 ** np.arange(3)].reshape(4, 1)
     else:
         revisions_index = pd.MultiIndex.from_arrays(
-            [[], []], names=["revision date", "revised variable"])
+            [[], []], names=["revision date", "revised variable"]
+        )
         revision_impacts = None
 
     # Updates
     if updates:
         updates_index = pd.MultiIndex.from_arrays(
             [pd.period_range(start="2009Q3", periods=1, freq="Q"), ["infl"]],
-            names=["update date", "updated variable"])
-        update_impacts = np.array([[
-            0, endog.loc["2009Q3"] - 0.5 * endog.loc["2009Q2"],
-            0.5 * endog.loc["2009Q3"] - 0.5**2 * endog.loc["2009Q2"],
-            0.5**2 * endog.loc["2009Q3"] - 0.5**3 * endog.loc["2009Q2"]]]).T
+            names=["update date", "updated variable"],
+        )
+        update_impacts = np.array(
+            [
+                [
+                    0,
+                    endog.loc["2009Q3"] - 0.5 * endog.loc["2009Q2"],
+                    0.5 * endog.loc["2009Q3"] - 0.5**2 * endog.loc["2009Q2"],
+                    0.5**2 * endog.loc["2009Q3"] - 0.5**3 * endog.loc["2009Q2"],
+                ]
+            ]
+        ).T
     else:
         updates_index = pd.MultiIndex.from_arrays(
-            [[], []], names=["update date", "updated variable"])
+            [[], []], names=["update date", "updated variable"]
+        )
         update_impacts = None
     print(update_impacts)
 
     # Impact forecasts
     if updates:
-        prev_impacted_forecasts = np.r_[
-            endog1.iloc[-1] * 0.5**np.arange(4)].reshape(4, 1)
+        prev_impacted_forecasts = np.r_[endog1.iloc[-1] * 0.5 ** np.arange(4)].reshape(
+            4, 1
+        )
     else:
         prev_impacted_forecasts = np.r_[
-            endog1.iloc[-2], endog1.iloc[-1] * 0.5**np.arange(3)].reshape(4, 1)
+            endog1.iloc[-2], endog1.iloc[-1] * 0.5 ** np.arange(3)
+        ].reshape(4, 1)
     post_impacted_forecasts = np.r_[
-        endog2.iloc[-2], 0.5 ** np.arange(3) * endog2.iloc[-1]].reshape(4, 1)
+        endog2.iloc[-2], 0.5 ** np.arange(3) * endog2.iloc[-1]
+    ].reshape(4, 1)
 
     # News
     if updates:
@@ -364,9 +417,11 @@ def test_sarimax_time_invariant(revisions, updates, revisions_details_start):
         # have already been taken into account
         update_forecasts = [0.5 * endog2.loc["2009Q2"]]
         update_realized = [endog2.loc["2009Q3"]]
-        news_desired = [update_realized[i] - update_forecasts[i]
-                        for i in range(len(update_forecasts))]
-        weights = pd.DataFrame(np.r_[0, 0.5**np.arange(3)]).T
+        news_desired = [
+            update_realized[i] - update_forecasts[i]
+            for i in range(len(update_forecasts))
+        ]
+        weights = pd.DataFrame(np.r_[0, 0.5 ** np.arange(3)]).T
     else:
         update_forecasts = pd.Series([], dtype=np.float64)
         update_realized = pd.Series([], dtype=np.float64)
@@ -374,11 +429,23 @@ def test_sarimax_time_invariant(revisions, updates, revisions_details_start):
         weights = pd.DataFrame(np.zeros((0, 4)))
 
     # Run unit tests
-    check_news(news, revisions, updates, impact_dates, impacted_variables,
-               revisions_index, updates_index,
-               revision_impacts, update_impacts,
-               prev_impacted_forecasts, post_impacted_forecasts,
-               update_forecasts, update_realized, news_desired, weights)
+    check_news(
+        news,
+        revisions,
+        updates,
+        impact_dates,
+        impacted_variables,
+        revisions_index,
+        updates_index,
+        revision_impacts,
+        update_impacts,
+        prev_impacted_forecasts,
+        post_impacted_forecasts,
+        update_forecasts,
+        update_realized,
+        news_desired,
+        weights,
+    )
 
 
 @pytest.mark.parametrize("revisions", [True, False])
@@ -403,7 +470,7 @@ def test_sarimax_time_varying(revisions, updates, which):
         # the type of the comparison object that we're passing is "updated"
         comparison_type = "updated"
     if revisions:
-        endog1.iloc[-1] = 0.
+        endog1.iloc[-1] = 0.0
 
     exog1 = None
     exog2 = None
@@ -418,20 +485,37 @@ def test_sarimax_time_varying(revisions, updates, which):
     # time-varying), but with the coefficient set to zero (so that it will be
     # equivalent to the time-invariant model)
     mod1 = sarimax.SARIMAX(endog1, exog=exog1, trend=trend)
-    res1 = mod1.smooth([0., 0.5, 1.0])
-    news1 = res1.news(endog2, exog=exog2, start="2008Q1", end="2009Q3",
-                      comparison_type=comparison_type)
+    res1 = mod1.smooth([0.0, 0.5, 1.0])
+    news1 = res1.news(
+        endog2,
+        exog=exog2,
+        start="2008Q1",
+        end="2009Q3",
+        comparison_type=comparison_type,
+    )
 
     # Compute the news from a model without a trend term
     mod2 = sarimax.SARIMAX(endog1)
     res2 = mod2.smooth([0.5, 1.0])
-    news2 = res2.news(endog2, start="2008Q1", end="2009Q3",
-                      comparison_type=comparison_type)
+    news2 = res2.news(
+        endog2, start="2008Q1", end="2009Q3", comparison_type=comparison_type
+    )
 
-    attrs = ["total_impacts", "update_impacts", "revision_impacts", "news",
-             "weights", "update_forecasts", "update_realized",
-             "prev_impacted_forecasts", "post_impacted_forecasts",
-             "revisions_iloc", "revisions_ix", "updates_iloc", "updates_ix"]
+    attrs = [
+        "total_impacts",
+        "update_impacts",
+        "revision_impacts",
+        "news",
+        "weights",
+        "update_forecasts",
+        "update_realized",
+        "prev_impacted_forecasts",
+        "post_impacted_forecasts",
+        "revisions_iloc",
+        "revisions_ix",
+        "updates_iloc",
+        "updates_ix",
+    ]
 
     for attr in attrs:
         w = getattr(news1, attr)
@@ -463,7 +547,7 @@ def test_unobserved_components_time_varying(revisions, updates):
         # the type of the comparison object that we're passing is "updated"
         comparison_type = "updated"
     if revisions:
-        endog1.iloc[-1] = 0.
+        endog1.iloc[-1] = 0.0
 
     exog1 = np.ones_like(endog1)
     exog2 = np.ones_like(endog2)
@@ -473,19 +557,36 @@ def test_unobserved_components_time_varying(revisions, updates):
     # equivalent to the time-invariant model)
     mod1 = structural.UnobservedComponents(endog1, "llevel", exog=exog1)
     res1 = mod1.smooth([0.5, 0.2, 0.0])
-    news1 = res1.news(endog2, exog=exog2, start="2008Q1", end="2009Q3",
-                      comparison_type=comparison_type)
+    news1 = res1.news(
+        endog2,
+        exog=exog2,
+        start="2008Q1",
+        end="2009Q3",
+        comparison_type=comparison_type,
+    )
 
     # Compute the news from a model without a trend term
     mod2 = structural.UnobservedComponents(endog1, "llevel")
     res2 = mod2.smooth([0.5, 0.2])
-    news2 = res2.news(endog2, start="2008Q1", end="2009Q3",
-                      comparison_type=comparison_type)
+    news2 = res2.news(
+        endog2, start="2008Q1", end="2009Q3", comparison_type=comparison_type
+    )
 
-    attrs = ["total_impacts", "update_impacts", "revision_impacts", "news",
-             "weights", "update_forecasts", "update_realized",
-             "prev_impacted_forecasts", "post_impacted_forecasts",
-             "revisions_iloc", "revisions_ix", "updates_iloc", "updates_ix"]
+    attrs = [
+        "total_impacts",
+        "update_impacts",
+        "revision_impacts",
+        "news",
+        "weights",
+        "update_forecasts",
+        "update_realized",
+        "prev_impacted_forecasts",
+        "post_impacted_forecasts",
+        "revisions_iloc",
+        "revisions_ix",
+        "updates_iloc",
+        "updates_ix",
+    ]
 
     for attr in attrs:
         w = getattr(news1, attr)
@@ -515,14 +616,15 @@ def test_varmax_time_invariant(revisions, updates):
         comparison_type = "updated"
     if revisions:
         # TODO: add test for only one of the variables revising?
-        endog1.iloc[-1] = 0.
+        endog1.iloc[-1] = 0.0
 
     # Get the previous results object and compute the news
     mod = varmax.VARMAX(endog1, trend="n")
-    params = np.r_[0.5, 0.1, 0.2, 0.9, 1., 0.1, 1.1]
+    params = np.r_[0.5, 0.1, 0.2, 0.9, 1.0, 0.1, 1.1]
     res = mod.smooth(params)
-    news = res.news(endog2, start="2009Q2", end="2010Q1",
-                    comparison_type=comparison_type)
+    news = res.news(
+        endog2, start="2009Q2", end="2010Q1", comparison_type=comparison_type
+    )
 
     # Compute the true values for each combination of (revsions, updates)
     impact_dates = pd.period_range(start="2009Q2", end="2010Q1", freq="Q")
@@ -539,7 +641,8 @@ def test_varmax_time_invariant(revisions, updates):
     if revisions and updates:
         revisions_index = pd.MultiIndex.from_product(
             [endog1.index[-1:], ["realgdp", "unemp"]],
-            names=["revision date", "revised variable"])
+            names=["revision date", "revised variable"],
+        )
         # If we have updates, the revision is to 2009Q2
         # Note: this ".values" and all of those below are only required for
         # Pandas = 0.23, and can be removed once that is no longer a supported
@@ -549,44 +652,51 @@ def test_varmax_time_invariant(revisions, updates):
     elif revisions:
         revisions_index = pd.MultiIndex.from_product(
             [endog1.index[-1:], ["realgdp", "unemp"]],
-            names=["revision date", "revised variable"])
+            names=["revision date", "revised variable"],
+        )
         # With no updates, the revision is to 2009Q3
         tmp = endog2.iloc[-1].values
         revision_impacts = np.c_[Z @ tmp, T0 @ tmp, T1 @ tmp, T2 @ tmp].T
     else:
         revisions_index = pd.MultiIndex.from_product(
-            [[], []],
-            names=["revision date", "revised variable"])
+            [[], []], names=["revision date", "revised variable"]
+        )
         revision_impacts = None
 
     # Impact forecasts
     if updates:
         tmp = endog1.iloc[-1].values
-        prev_impacted_forecasts = np.c_[T0 @ tmp, T1 @ tmp,
-                                        T2 @ tmp, T3 @ tmp].T
+        prev_impacted_forecasts = np.c_[T0 @ tmp, T1 @ tmp, T2 @ tmp, T3 @ tmp].T
         tmp = endog2.iloc[-2].values
-        rev_impacted_forecasts = np.c_[T0 @ tmp, T1 @ tmp,
-                                       T2 @ tmp, T3 @ tmp].T
+        rev_impacted_forecasts = np.c_[T0 @ tmp, T1 @ tmp, T2 @ tmp, T3 @ tmp].T
     else:
         tmp = endog1.iloc[-1].values
         prev_impacted_forecasts = np.c_[
-            T0 @ endog1.iloc[-2], T0 @ tmp, T1 @ tmp, T2 @ tmp].T
+            T0 @ endog1.iloc[-2], T0 @ tmp, T1 @ tmp, T2 @ tmp
+        ].T
         tmp = endog2.iloc[-1].values
         rev_impacted_forecasts = np.c_[
-            T0 @ endog2.iloc[-2], T0 @ tmp, T1 @ tmp, T2 @ tmp].T
+            T0 @ endog2.iloc[-2], T0 @ tmp, T1 @ tmp, T2 @ tmp
+        ].T
     tmp = endog2.iloc[-1].values
     post_impacted_forecasts = np.c_[
-        T0 @ endog2.iloc[-2], T0 @ tmp, T1 @ tmp, T2 @ tmp].T
+        T0 @ endog2.iloc[-2], T0 @ tmp, T1 @ tmp, T2 @ tmp
+    ].T
 
     # Updates
     if updates:
         updates_index = pd.MultiIndex.from_product(
-            [pd.period_range(start="2009Q3", periods=1, freq="Q"),
-             ["realgdp", "unemp"]], names=["update date", "updated variable"])
+            [
+                pd.period_range(start="2009Q3", periods=1, freq="Q"),
+                ["realgdp", "unemp"],
+            ],
+            names=["update date", "updated variable"],
+        )
         update_impacts = post_impacted_forecasts - rev_impacted_forecasts
     else:
         updates_index = pd.MultiIndex.from_product(
-            [[], []], names=["update date", "updated variable"])
+            [[], []], names=["update date", "updated variable"]
+        )
         update_impacts = None
 
     # News
@@ -596,13 +706,15 @@ def test_varmax_time_invariant(revisions, updates):
         # have already been taken into account
         update_forecasts = T1 @ endog2.loc["2009Q2"].values
         update_realized = endog2.loc["2009Q3"].values
-        news_desired = [update_realized[i] - update_forecasts[i]
-                        for i in range(len(update_forecasts))]
+        news_desired = [
+            update_realized[i] - update_forecasts[i]
+            for i in range(len(update_forecasts))
+        ]
         columns = pd.MultiIndex.from_product(
             [impact_dates, impacted_variables],
-            names=["impact dates", "impacted variables"])
-        weights = pd.DataFrame(np.zeros((2, 8)), index=updates_index,
-                               columns=columns)
+            names=["impact dates", "impacted variables"],
+        )
+        weights = pd.DataFrame(np.zeros((2, 8)), index=updates_index, columns=columns)
         weights.loc[:, "2009Q2"] = Z
         weights.loc[:, "2009Q3"] = T0
         weights.loc[:, "2009Q4"] = T1.T
@@ -614,11 +726,23 @@ def test_varmax_time_invariant(revisions, updates):
         weights = pd.DataFrame(np.zeros((0, 8)))
 
     # Run unit tests
-    check_news(news, revisions, updates, impact_dates, impacted_variables,
-               revisions_index, updates_index,
-               revision_impacts, update_impacts,
-               prev_impacted_forecasts, post_impacted_forecasts,
-               update_forecasts, update_realized, news_desired, weights)
+    check_news(
+        news,
+        revisions,
+        updates,
+        impact_dates,
+        impacted_variables,
+        revisions_index,
+        updates_index,
+        revision_impacts,
+        update_impacts,
+        prev_impacted_forecasts,
+        post_impacted_forecasts,
+        update_forecasts,
+        update_realized,
+        news_desired,
+        weights,
+    )
 
 
 @pytest.mark.parametrize("revisions", [True, False])
@@ -646,7 +770,7 @@ def test_varmax_time_varying(revisions, updates, which):
         comparison_type = "updated"
     if revisions:
         # TODO: add test for only one of the variables revising?
-        endog1.iloc[-1] = 0.
+        endog1.iloc[-1] = 0.0
 
     exog1 = None
     exog2 = None
@@ -654,31 +778,48 @@ def test_varmax_time_varying(revisions, updates, which):
     if which == "exog":
         exog1 = np.ones_like(endog1["realgdp"])
         exog2 = np.ones_like(endog2["realgdp"])
-        params1 = np.r_[0.5, 0.1, 0.2, 0.9, 0., 0., 1., 0.1, 1.1]
-        params2 = np.r_[0.5, 0.1, 0.2, 0.9, 1., 0.1, 1.1]
+        params1 = np.r_[0.5, 0.1, 0.2, 0.9, 0.0, 0.0, 1.0, 0.1, 1.1]
+        params2 = np.r_[0.5, 0.1, 0.2, 0.9, 1.0, 0.1, 1.1]
     elif which == "trend":
         trend = "t"
-        params1 = np.r_[0., 0., 0.5, 0.1, 0.2, 0.9, 1., 0.1, 1.1]
-        params2 = np.r_[0.5, 0.1, 0.2, 0.9, 1., 0.1, 1.1]
+        params1 = np.r_[0.0, 0.0, 0.5, 0.1, 0.2, 0.9, 1.0, 0.1, 1.1]
+        params2 = np.r_[0.5, 0.1, 0.2, 0.9, 1.0, 0.1, 1.1]
 
     # Compute the news from a model with a trend/exog term (so the model is
     # time-varying), but with the coefficient set to zero (so that it will be
     # equivalent to the time-invariant model)
     mod1 = varmax.VARMAX(endog1, exog=exog1, trend=trend)
     res1 = mod1.smooth(params1)
-    news1 = res1.news(endog2, exog=exog2, start="2008Q1", end="2009Q3",
-                      comparison_type=comparison_type)
+    news1 = res1.news(
+        endog2,
+        exog=exog2,
+        start="2008Q1",
+        end="2009Q3",
+        comparison_type=comparison_type,
+    )
 
     # Compute the news from a model without a trend term
     mod2 = varmax.VARMAX(endog1, trend="n")
     res2 = mod2.smooth(params2)
-    news2 = res2.news(endog2, start="2008Q1", end="2009Q3",
-                      comparison_type=comparison_type)
+    news2 = res2.news(
+        endog2, start="2008Q1", end="2009Q3", comparison_type=comparison_type
+    )
 
-    attrs = ["total_impacts", "update_impacts", "revision_impacts", "news",
-             "weights", "update_forecasts", "update_realized",
-             "prev_impacted_forecasts", "post_impacted_forecasts",
-             "revisions_iloc", "revisions_ix", "updates_iloc", "updates_ix"]
+    attrs = [
+        "total_impacts",
+        "update_impacts",
+        "revision_impacts",
+        "news",
+        "weights",
+        "update_forecasts",
+        "update_realized",
+        "prev_impacted_forecasts",
+        "post_impacted_forecasts",
+        "revisions_iloc",
+        "revisions_ix",
+        "updates_iloc",
+        "updates_ix",
+    ]
 
     for attr in attrs:
         w = getattr(news1, attr)
@@ -713,7 +854,7 @@ def test_dynamic_factor_time_varying(revisions, updates):
         comparison_type = "updated"
     if revisions:
         # TODO: add test for only one of the variables revising?
-        endog1.iloc[-1] = 0.
+        endog1.iloc[-1] = 0.0
 
     exog1 = np.ones_like(endog1["realgdp"])
     exog2 = np.ones_like(endog2["realgdp"])
@@ -723,22 +864,38 @@ def test_dynamic_factor_time_varying(revisions, updates):
     # Compute the news from a model with an exog term (so the model is
     # time-varying), but with the coefficient set to zero (so that it will be
     # equivalent to the time-invariant model)
-    mod1 = dynamic_factor.DynamicFactor(endog1, exog=exog1,
-                                        k_factors=1, factor_order=2)
+    mod1 = dynamic_factor.DynamicFactor(endog1, exog=exog1, k_factors=1, factor_order=2)
     res1 = mod1.smooth(params1)
-    news1 = res1.news(endog2, exog=exog2, start="2008Q1", end="2009Q3",
-                      comparison_type=comparison_type)
+    news1 = res1.news(
+        endog2,
+        exog=exog2,
+        start="2008Q1",
+        end="2009Q3",
+        comparison_type=comparison_type,
+    )
 
     # Compute the news from a model without a trend term
     mod2 = dynamic_factor.DynamicFactor(endog1, k_factors=1, factor_order=2)
     res2 = mod2.smooth(params2)
-    news2 = res2.news(endog2, start="2008Q1", end="2009Q3",
-                      comparison_type=comparison_type)
+    news2 = res2.news(
+        endog2, start="2008Q1", end="2009Q3", comparison_type=comparison_type
+    )
 
-    attrs = ["total_impacts", "update_impacts", "revision_impacts", "news",
-             "weights", "update_forecasts", "update_realized",
-             "prev_impacted_forecasts", "post_impacted_forecasts",
-             "revisions_iloc", "revisions_ix", "updates_iloc", "updates_ix"]
+    attrs = [
+        "total_impacts",
+        "update_impacts",
+        "revision_impacts",
+        "news",
+        "weights",
+        "update_forecasts",
+        "update_realized",
+        "prev_impacted_forecasts",
+        "post_impacted_forecasts",
+        "revisions_iloc",
+        "revisions_ix",
+        "updates_iloc",
+        "updates_ix",
+    ]
 
     for attr in attrs:
         w = getattr(news1, attr)
@@ -762,7 +919,7 @@ def test_defaults(revisions, updates):
         endog2 = endog.loc[:"2009Q3"].copy()
     if revisions:
         # TODO: add test for only one of the variables revising?
-        endog1.iloc[-1] = 0.
+        endog1.iloc[-1] = 0.0
 
     # Get the previous results object and compute the news
     mod1 = sarimax.SARIMAX(endog1)
@@ -776,10 +933,21 @@ def test_defaults(revisions, updates):
     news_updated_results = res1.news(res2, comparison_type="updated")
     news_previous_results = res2.news(res1, comparison_type="previous")
 
-    attrs = ["total_impacts", "update_impacts", "revision_impacts", "news",
-             "weights", "update_forecasts", "update_realized",
-             "prev_impacted_forecasts", "post_impacted_forecasts",
-             "revisions_iloc", "revisions_ix", "updates_iloc", "updates_ix"]
+    attrs = [
+        "total_impacts",
+        "update_impacts",
+        "revision_impacts",
+        "news",
+        "weights",
+        "update_forecasts",
+        "update_realized",
+        "prev_impacted_forecasts",
+        "post_impacted_forecasts",
+        "revisions_iloc",
+        "revisions_ix",
+        "updates_iloc",
+        "updates_ix",
+    ]
 
     for attr in attrs:
         w = getattr(news_updated_data, attr)
@@ -830,8 +998,10 @@ def test_start_end_dates(use_periods):
     if use_periods:
         index_range = pd.period_range
     else:
+
         def index_range(*args, **kwargs):
             return pd.period_range(*args, **kwargs).to_timestamp(freq="Q")
+
         endog = endog.to_timestamp(freq="Q")
     mod = sarimax.SARIMAX(endog.iloc[:-1])
     res = mod.smooth([0.5, 1.0])
@@ -932,8 +1102,7 @@ def test_start_end_dates(use_periods):
             assert_(news.total_impacts.index.equals(predicted.index))
 
 
-@pytest.mark.parametrize("which", ["range", "range2", "int64",
-                                   "numpy", "list"])
+@pytest.mark.parametrize("which", ["range", "range2", "int64", "numpy", "list"])
 def test_start_end_int(which):
     endog = dta["infl"].copy()
     nobs = len(endog)
@@ -1019,8 +1188,7 @@ def test_invalid():
 @pytest.mark.parametrize("revisions_details_start", [True, -10, 200])
 def test_detailed_revisions(revisions_details_start):
     # Construct original and revised datasets
-    y = np.log(dta[["realgdp", "realcons",
-                    "realinv", "cpi"]]).diff().iloc[1:] * 100
+    y = np.log(dta[["realgdp", "realcons", "realinv", "cpi"]]).diff().iloc[1:] * 100
     y.iloc[-1, 0] = np.nan
 
     y_revised = y.copy()
@@ -1036,18 +1204,18 @@ def test_detailed_revisions(revisions_details_start):
 
     # Create model and results
     mod = varmax.VARMAX(y, trend="n")
-    ar_coeff = {
-        "realgdp": 0.9,
-        "realcons": 0.8,
-        "realinv": 0.7,
-        "cpi": 0.6
-    }
-    params = np.r_[np.diag(list(ar_coeff.values())).flatten(),
-                   [1, 0, 1, 0, 0, 1, 0, 0, 0, 1]]
+    ar_coeff = {"realgdp": 0.9, "realcons": 0.8, "realinv": 0.7, "cpi": 0.6}
+    params = np.r_[
+        np.diag(list(ar_coeff.values())).flatten(), [1, 0, 1, 0, 0, 1, 0, 0, 0, 1]
+    ]
     res = mod.smooth(params)
     res_revised = res.apply(y_revised)
-    news = res_revised.news(res, comparison_type="previous", tolerance=-1,
-                            revisions_details_start=revisions_details_start)
+    news = res_revised.news(
+        res,
+        comparison_type="previous",
+        tolerance=-1,
+        revisions_details_start=revisions_details_start,
+    )
 
     # Tests
     data_revisions = news.data_revisions
@@ -1060,30 +1228,31 @@ def test_detailed_revisions(revisions_details_start):
             # Need to manually cast to numpy for compatibility with
             # pandas==1.2.5
             np.array(data_revisions.loc[key, "detailed impacts computed"]),
-            True)
-        assert_allclose(revision_details.loc[key, "revised"],
-                        y_revised.loc[key])
-        assert_allclose(revision_details.loc[key, "observed (prev)"],
-                        y.loc[key])
+            True,
+        )
+        assert_allclose(revision_details.loc[key, "revised"], y_revised.loc[key])
+        assert_allclose(revision_details.loc[key, "observed (prev)"], y.loc[key])
         assert_allclose(revision_details.loc[key, "revision"], diff)
 
     # For revisions to the impact period, the own-weight is equal to 1.
     key = ("2009Q3", "realcons", "2009Q3", "realcons")
     assert_allclose(revision_details.loc[key, "weight"], 1)
-    assert_allclose(revision_details.loc[key, "impact"],
-                    revisions[("2009Q3", "realcons")])
+    assert_allclose(
+        revision_details.loc[key, "impact"], revisions[("2009Q3", "realcons")]
+    )
     key = ("2009Q3", "cpi", "2009Q3", "cpi")
     assert_allclose(revision_details.loc[key, "weight"], 1)
-    assert_allclose(revision_details.loc[key, "impact"],
-                    revisions[("2009Q3", "cpi")])
+    assert_allclose(revision_details.loc[key, "impact"], revisions[("2009Q3", "cpi")])
 
     # For revisions just before the impact period, all weights are equal to
     # zero unless there is a missing value in the impact period, in which case
     # the weight is equal to the AR coefficient
     key = ("2009Q2", "realgdp", "2009Q3", "realgdp")
     assert_allclose(revision_details.loc[key, "weight"], ar_coeff["realgdp"])
-    assert_allclose(revision_details.loc[key, "impact"],
-                    ar_coeff["realgdp"] * revisions[("2009Q2", "realgdp")])
+    assert_allclose(
+        revision_details.loc[key, "impact"],
+        ar_coeff["realgdp"] * revisions[("2009Q2", "realgdp")],
+    )
     key = ("2009Q2", "realinv", "2009Q3", "realinv")
     assert_allclose(revision_details.loc[key, "weight"], 0)
     assert_allclose(revision_details.loc[key, "impact"], 0)
@@ -1095,30 +1264,32 @@ def test_detailed_revisions(revisions_details_start):
 
     # Since we only have revisions, all impacts are due to revisions
     assert_allclose(news.impacts["impact of news"], 0)
-    assert_allclose(news.impacts["total impact"],
-                    news.impacts["impact of revisions"])
+    assert_allclose(news.impacts["total impact"], news.impacts["impact of revisions"])
 
     # Check the values for estimates
     for name in ["cpi", "realcons", "realinv"]:
         assert_allclose(
             news.impacts.loc[("2009Q3", name), "estimate (new)"],
-            y_revised.loc["2009Q3", name])
+            y_revised.loc["2009Q3", name],
+        )
         assert_allclose(
-            news.impacts.loc[("2009Q3", name), "estimate (prev)"],
-            y.loc["2009Q3", name])
+            news.impacts.loc[("2009Q3", name), "estimate (prev)"], y.loc["2009Q3", name]
+        )
     # Have to handle real GDP separately since the 2009Q3 value is missing
     name = "realgdp"
     assert_allclose(
         news.impacts.loc[("2009Q3", name), "estimate (new)"],
-        y_revised.loc["2009Q2", name] * ar_coeff[name])
+        y_revised.loc["2009Q2", name] * ar_coeff[name],
+    )
     assert_allclose(
         news.impacts.loc[("2009Q3", name), "estimate (prev)"],
-        y.loc["2009Q2", name] * ar_coeff[name])
+        y.loc["2009Q2", name] * ar_coeff[name],
+    )
 
     # Check that the values of revision impacts sum up correctly
     assert_allclose(
         news.impacts["impact of revisions"],
-        revision_details.groupby(level=[2, 3]).sum()["impact"]
+        revision_details.groupby(level=[2, 3]).sum()["impact"],
     )
 
 
@@ -1127,8 +1298,7 @@ def test_grouped_revisions(revisions_details_start):
     # Tests for computing revision impacts when all revisions are grouped
     # together (i.e. no detailed impacts are computed )
     # Construct original and revised datasets
-    y = np.log(dta[["realgdp", "realcons",
-                    "realinv", "cpi"]]).diff().iloc[1:] * 100
+    y = np.log(dta[["realgdp", "realcons", "realinv", "cpi"]]).diff().iloc[1:] * 100
     y.iloc[-1, 0] = np.nan
 
     y_revised = y.copy()
@@ -1144,18 +1314,18 @@ def test_grouped_revisions(revisions_details_start):
 
     # Create model and results
     mod = varmax.VARMAX(y, trend="n")
-    ar_coeff = {
-        "realgdp": 0.9,
-        "realcons": 0.8,
-        "realinv": 0.7,
-        "cpi": 0.6
-    }
-    params = np.r_[np.diag(list(ar_coeff.values())).flatten(),
-                   [1, 0, 1, 0, 0, 1, 0, 0, 0, 1]]
+    ar_coeff = {"realgdp": 0.9, "realcons": 0.8, "realinv": 0.7, "cpi": 0.6}
+    params = np.r_[
+        np.diag(list(ar_coeff.values())).flatten(), [1, 0, 1, 0, 0, 1, 0, 0, 0, 1]
+    ]
     res = mod.smooth(params)
     res_revised = res.apply(y_revised)
-    news = res_revised.news(res, comparison_type="previous", tolerance=-1,
-                            revisions_details_start=revisions_details_start)
+    news = res_revised.news(
+        res,
+        comparison_type="previous",
+        tolerance=-1,
+        revisions_details_start=revisions_details_start,
+    )
 
     # Tests
     data_revisions = news.data_revisions
@@ -1168,7 +1338,8 @@ def test_grouped_revisions(revisions_details_start):
             # Need to manually cast to numpy for compatibility with
             # pandas==1.2.5
             np.array(data_revisions.loc[key, "detailed impacts computed"]),
-            False)
+            False,
+        )
 
     # For grouped data, should not have any of revised, observed (prev),
     # revision, weight
@@ -1178,43 +1349,50 @@ def test_grouped_revisions(revisions_details_start):
 
     # Expected grouped impacts are the sum of the detailed impacts from
     # `test_detailed_revisions`
-    assert_allclose(revision_details.loc[key + ("realgdp",), "impact"],
-                    ar_coeff["realgdp"] * revisions[("2009Q2", "realgdp")])
-    assert_allclose(revision_details.loc[key + ("realcons",), "impact"],
-                    revisions[("2009Q3", "realcons")])
+    assert_allclose(
+        revision_details.loc[key + ("realgdp",), "impact"],
+        ar_coeff["realgdp"] * revisions[("2009Q2", "realgdp")],
+    )
+    assert_allclose(
+        revision_details.loc[key + ("realcons",), "impact"],
+        revisions[("2009Q3", "realcons")],
+    )
     assert_allclose(revision_details.loc[key + ("realinv",), "impact"], 0)
-    assert_allclose(revision_details.loc[key + ("cpi",), "impact"],
-                    revisions[("2009Q3", "cpi")])
+    assert_allclose(
+        revision_details.loc[key + ("cpi",), "impact"], revisions[("2009Q3", "cpi")]
+    )
 
     # Check the values for estimates
     for name in ["cpi", "realcons", "realinv"]:
         assert_allclose(
             news.impacts.loc[("2009Q3", name), "estimate (new)"],
-            y_revised.loc["2009Q3", name])
+            y_revised.loc["2009Q3", name],
+        )
         assert_allclose(
-            news.impacts.loc[("2009Q3", name), "estimate (prev)"],
-            y.loc["2009Q3", name])
+            news.impacts.loc[("2009Q3", name), "estimate (prev)"], y.loc["2009Q3", name]
+        )
     # Have to handle real GDP separately since the 2009Q3 value is missing
     name = "realgdp"
     assert_allclose(
         news.impacts.loc[("2009Q3", name), "estimate (new)"],
-        y_revised.loc["2009Q2", name] * ar_coeff[name])
+        y_revised.loc["2009Q2", name] * ar_coeff[name],
+    )
     assert_allclose(
         news.impacts.loc[("2009Q3", name), "estimate (prev)"],
-        y.loc["2009Q2", name] * ar_coeff[name])
+        y.loc["2009Q2", name] * ar_coeff[name],
+    )
 
     # Check that the values of revision impacts sum up correctly
     assert_allclose(
         news.impacts["impact of revisions"],
-        revision_details.groupby(level=[2, 3]).sum()["impact"]
+        revision_details.groupby(level=[2, 3]).sum()["impact"],
     )
 
 
 @pytest.mark.parametrize("revisions_details_start", [-1, 201])
 def test_mixed_revisions(revisions_details_start):
     # Construct original and revised datasets
-    y = np.log(dta[["realgdp", "realcons",
-                    "realinv", "cpi"]]).diff().iloc[1:] * 100
+    y = np.log(dta[["realgdp", "realcons", "realinv", "cpi"]]).diff().iloc[1:] * 100
     y.iloc[-1, 0] = np.nan
 
     y_revised = y.copy()
@@ -1230,18 +1408,18 @@ def test_mixed_revisions(revisions_details_start):
 
     # Create model and results
     mod = varmax.VARMAX(y, trend="n")
-    ar_coeff = {
-        "realgdp": 0.9,
-        "realcons": 0.8,
-        "realinv": 0.7,
-        "cpi": 0.6
-    }
-    params = np.r_[np.diag(list(ar_coeff.values())).flatten(),
-                   [1, 0, 1, 0, 0, 1, 0, 0, 0, 1]]
+    ar_coeff = {"realgdp": 0.9, "realcons": 0.8, "realinv": 0.7, "cpi": 0.6}
+    params = np.r_[
+        np.diag(list(ar_coeff.values())).flatten(), [1, 0, 1, 0, 0, 1, 0, 0, 0, 1]
+    ]
     res = mod.smooth(params)
     res_revised = res.apply(y_revised)
-    news = res_revised.news(res, comparison_type="previous", tolerance=-1,
-                            revisions_details_start=revisions_details_start)
+    news = res_revised.news(
+        res,
+        comparison_type="previous",
+        tolerance=-1,
+        revisions_details_start=revisions_details_start,
+    )
 
     # Tests
     data_revisions = news.data_revisions
@@ -1257,7 +1435,8 @@ def test_mixed_revisions(revisions_details_start):
             # Need to manually cast to numpy for compatibility with
             # pandas==1.2.5
             np.array(data_revisions.loc[key, "detailed impacts computed"]),
-            expected_details_computed)
+            expected_details_computed,
+        )
 
     # For grouped data, should not have any of revised, observed (prev),
     # revision, weight
@@ -1267,40 +1446,45 @@ def test_mixed_revisions(revisions_details_start):
 
     # Expected grouped impacts are the sum of the detailed impacts from
     # `test_detailed_revisions` for revisions to 2009Q2
-    assert_allclose(revision_details.loc[key + ("realgdp",), "impact"],
-                    ar_coeff["realgdp"] * revisions[("2009Q2", "realgdp")])
+    assert_allclose(
+        revision_details.loc[key + ("realgdp",), "impact"],
+        ar_coeff["realgdp"] * revisions[("2009Q2", "realgdp")],
+    )
     assert_allclose(revision_details.loc[key + ("realinv",), "impact"], 0)
 
     # Expected detailed impacts are for revisions to 2009Q3
     # (for revisions to the impact period, the own-weight is equal to 1)
     key = ("2009Q3", "realcons", "2009Q3", "realcons")
     assert_allclose(revision_details.loc[key, "weight"], 1)
-    assert_allclose(revision_details.loc[key, "impact"],
-                    revisions[("2009Q3", "realcons")])
+    assert_allclose(
+        revision_details.loc[key, "impact"], revisions[("2009Q3", "realcons")]
+    )
     key = ("2009Q3", "cpi", "2009Q3", "cpi")
     assert_allclose(revision_details.loc[key, "weight"], 1)
-    assert_allclose(revision_details.loc[key, "impact"],
-                    revisions[("2009Q3", "cpi")])
+    assert_allclose(revision_details.loc[key, "impact"], revisions[("2009Q3", "cpi")])
 
     # Check the values for estimates
     for name in ["cpi", "realcons", "realinv"]:
         assert_allclose(
             news.impacts.loc[("2009Q3", name), "estimate (new)"],
-            y_revised.loc["2009Q3", name])
+            y_revised.loc["2009Q3", name],
+        )
         assert_allclose(
-            news.impacts.loc[("2009Q3", name), "estimate (prev)"],
-            y.loc["2009Q3", name])
+            news.impacts.loc[("2009Q3", name), "estimate (prev)"], y.loc["2009Q3", name]
+        )
     # Have to handle real GDP separately since the 2009Q3 value is missing
     name = "realgdp"
     assert_allclose(
         news.impacts.loc[("2009Q3", name), "estimate (new)"],
-        y_revised.loc["2009Q2", name] * ar_coeff[name])
+        y_revised.loc["2009Q2", name] * ar_coeff[name],
+    )
     assert_allclose(
         news.impacts.loc[("2009Q3", name), "estimate (prev)"],
-        y.loc["2009Q2", name] * ar_coeff[name])
+        y.loc["2009Q2", name] * ar_coeff[name],
+    )
 
     # Check that the values of revision impacts sum up correctly
     assert_allclose(
         news.impacts["impact of revisions"],
-        revision_details.groupby(level=[2, 3]).sum()["impact"]
+        revision_details.groupby(level=[2, 3]).sum()["impact"],
     )

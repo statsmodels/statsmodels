@@ -6,9 +6,7 @@ from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake, oshorts
 from statsmodels.tsa.arima.estimators.gls import gls
 
 
-@pytest.mark.low_precision(
-    "Test against Example 6.6.1 in Brockwell and Davis (2016)"
-)
+@pytest.mark.low_precision("Test against Example 6.6.1 in Brockwell and Davis (2016)")
 def test_brockwell_davis_example_661():
     endog = oshorts.copy()
     exog = np.ones_like(endog)
@@ -27,9 +25,7 @@ def test_brockwell_davis_example_661():
     assert_allclose(res.ma_params, -0.848, atol=1e-3)
 
 
-@pytest.mark.low_precision(
-    "Test against Example 6.6.2 in Brockwell and Davis (2016)"
-)
+@pytest.mark.low_precision("Test against Example 6.6.2 in Brockwell and Davis (2016)")
 def test_brockwell_davis_example_662():
     endog = lake.copy()
     exog = np.c_[np.ones_like(endog), np.arange(1, len(endog) + 1) * 1.0]
@@ -77,15 +73,15 @@ def test_results():
     # Test for results output
     p, res = gls(endog, exog, order=(1, 0, 0))
 
-    assert ("params" in res)
-    assert ("converged" in res)
-    assert ("differences" in res)
-    assert ("iterations" in res)
-    assert ("arma_estimator" in res)
-    assert ("arma_results" in res)
+    assert "params" in res
+    assert "converged" in res
+    assert "differences" in res
+    assert "iterations" in res
+    assert "arma_estimator" in res
+    assert "arma_results" in res
 
-    assert (res.converged)
-    assert (res.iterations > 0)
+    assert res.converged
+    assert res.iterations > 0
     assert_equal(res.arma_estimator, "innovations_mle")
     assert_equal(len(res.params), res.iterations + 1)
     assert_equal(len(res.differences), res.iterations + 1)

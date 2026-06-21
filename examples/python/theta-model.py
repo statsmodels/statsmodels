@@ -117,7 +117,7 @@ print(res.summary())
 
 forecasts = {"housing": housing}
 for year in range(1995, 2020, 2):
-    sub = housing[:str(year)]
+    sub = housing[: str(year)]
     res = ThetaModel(sub).fit()
     fcast = res.forecast(24)
     forecasts[str(year)] = fcast
@@ -163,9 +163,7 @@ res.forecast_components(12)
 # We next look at personal consumption expenditure. This series has a
 # clear seasonal component and a drift.
 
-reader = pdr.fred.FredReader(["NA000349Q"],
-                             start="1980-01-01",
-                             end="2020-04-01")
+reader = pdr.fred.FredReader(["NA000349Q"], start="1980-01-01", end="2020-04-01")
 pce = reader.read()
 pce.columns = ["PCE"]
 pce.index.freq = "QS-OCT"
@@ -181,13 +179,15 @@ print(res.summary())
 # $\theta$ is close to 1, the drift is nearly absent.  As $\theta$
 # increases, the drift becomes more obvious.
 
-forecasts = pd.DataFrame({
-    "ln PCE": np.log(pce.PCE),
-    "theta=1.2": res.forecast(12, theta=1.2),
-    "theta=2": res.forecast(12),
-    "theta=3": res.forecast(12, theta=3),
-    "No damping": res.forecast(12, theta=np.inf),
-})
+forecasts = pd.DataFrame(
+    {
+        "ln PCE": np.log(pce.PCE),
+        "theta=1.2": res.forecast(12, theta=1.2),
+        "theta=2": res.forecast(12),
+        "theta=3": res.forecast(12, theta=3),
+        "No damping": res.forecast(12, theta=np.inf),
+    }
+)
 _ = forecasts.tail(36).plot()
 plt.title("Forecasts of ln PCE")
 plt.tight_layout(pad=1.0)
@@ -203,7 +203,7 @@ ax = res.plot_predict(24, theta=2)
 ln_pce = np.log(pce.PCE)
 forecasts = {"ln PCE": ln_pce}
 for year in range(1995, 2020, 3):
-    sub = ln_pce[:str(year)]
+    sub = ln_pce[: str(year)]
     res = ThetaModel(sub).fit()
     fcast = res.forecast(12)
     forecasts[str(year)] = fcast

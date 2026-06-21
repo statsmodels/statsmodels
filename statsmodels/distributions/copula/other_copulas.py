@@ -5,6 +5,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+
 import numpy as np
 from scipy import stats
 
@@ -34,12 +35,13 @@ class IndependenceCopula(Copula):
     copulas.
 
     """
+
     def __init__(self, k_dim=2):
         super().__init__(k_dim=k_dim)
 
     def _handle_args(self, args):
         if args != () and args is not None:
-            msg = ("Independence copula does not use copula parameters.")
+            msg = "Independence copula does not use copula parameters."
             raise ValueError(msg)
         else:
             return args

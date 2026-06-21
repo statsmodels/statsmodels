@@ -14,9 +14,7 @@ from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 
 
-@pytest.mark.low_precision(
-    "Test against Example 5.1.7 in Brockwell and Davis (2016)"
-)
+@pytest.mark.low_precision("Test against Example 5.1.7 in Brockwell and Davis (2016)")
 def test_brockwell_davis_example_517():
     # Get the lake data
     endog = lake.copy()

@@ -10,7 +10,6 @@ TODO: update script to use sharex, sharey, and visible=False
     http://matplotlib.sourceforge.net/mpl_toolkits/axes_grid/users/overview.html
 """
 
-
 import numpy as np
 from scipy import stats
 
@@ -25,21 +24,34 @@ def _make_ellipse(mean, cov, ax, level=0.95, color=None):
 
     v, w = np.linalg.eigh(cov)
     u = w[0] / np.linalg.norm(w[0])
-    angle = np.arctan(u[1]/u[0])
+    angle = np.arctan(u[1] / u[0])
     angle = 180 * angle / np.pi  # convert to degrees
     v = 2 * np.sqrt(v * stats.chi2.ppf(level, 2))  # get size corresponding to level
-    ell = Ellipse(mean[:2], v[0], v[1], angle=180 + angle, facecolor="none",
-                  edgecolor=color,
-                  # ls='dashed',  # for debugging
-                  lw=1.5)
+    ell = Ellipse(
+        mean[:2],
+        v[0],
+        v[1],
+        angle=180 + angle,
+        facecolor="none",
+        edgecolor=color,
+        # ls='dashed',  # for debugging
+        lw=1.5,
+    )
     ell.set_clip_box(ax.bbox)
     ell.set_alpha(0.5)
     ax.add_artist(ell)
 
 
-def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
-                    plot_kwds=None, add_titles=False, keep_ticks=False,
-                    fig=None):
+def scatter_ellipse(
+    data,
+    level=0.9,
+    varnames=None,
+    ell_kwds=None,
+    plot_kwds=None,
+    add_titles=False,
+    keep_ticks=False,
+    fig=None,
+):
     """Create a grid of scatter plots with confidence ellipses.
 
     ell_kwds, plot_kdes not used yet
@@ -109,11 +121,11 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
 
     for i in range(1, nvars):
         for j in range(i):
-            ax = fig.add_subplot(nvars-1, nvars-1, (i-1)*(nvars-1)+j+1)
-#                                 # sharey=ax_last) # sharey does not allow empty ticks?
-#            if j == 0:
-#                ax_last = ax
-#                ax.set_ylabel(varnames[i])
+            ax = fig.add_subplot(nvars - 1, nvars - 1, (i - 1) * (nvars - 1) + j + 1)
+            #                                 # sharey=ax_last) # sharey does not allow empty ticks?
+            #            if j == 0:
+            #                ax_last = ax
+            #                ax.set_ylabel(varnames[i])
             # TODO: make sure we have same xlim and ylim
 
             formatter = mticker.FormatStrFormatter("% 3.1f")
@@ -150,12 +162,12 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             dc = dcorr[idx[:, None], idx]
             xlim = ax.get_xlim()
             ylim = ax.get_ylim()
-#            xt = xlim[0] + 0.1 * (xlim[1] - xlim[0])
-#            yt = ylim[0] + 0.1 * (ylim[1] - ylim[0])
-#            if dc[1,0] < 0 :
-#                yt = ylim[0] + 0.1 * (ylim[1] - ylim[0])
-#            else:
-#                yt = ylim[1] - 0.2 * (ylim[1] - ylim[0])
+            #            xt = xlim[0] + 0.1 * (xlim[1] - xlim[0])
+            #            yt = ylim[0] + 0.1 * (ylim[1] - ylim[0])
+            #            if dc[1,0] < 0 :
+            #                yt = ylim[0] + 0.1 * (ylim[1] - ylim[0])
+            #            else:
+            #                yt = ylim[1] - 0.2 * (ylim[1] - ylim[0])
             yrangeq = ylim[0] + 0.4 * (ylim[1] - ylim[0])
             if dc[1, 0] < -0.25 or (dc[1, 0] < 0.25 and dmean[idx][1] > yrangeq):
                 yt = ylim[0] + 0.1 * (ylim[1] - ylim[0])

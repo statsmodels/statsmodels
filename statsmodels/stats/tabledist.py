@@ -12,6 +12,7 @@ change it to use one consistent notation
 check: instead of bound checking I could use the fill-value of the
 interpolators
 """
+
 import numpy as np
 from scipy.interpolate import Rbf, interp1d
 
@@ -60,8 +61,9 @@ class TableDist:
     is used for nobs > max(size).
     """
 
-    def __init__(self, alpha, size, crit_table, asymptotic=None,
-                 min_nobs=None, max_nobs=None):
+    def __init__(
+        self, alpha, size, crit_table, asymptotic=None, min_nobs=None, max_nobs=None
+    ):
         self.alpha = np.asarray(alpha)
         if self.alpha.ndim != 1:
             raise ValueError("alpha is not 1d")
@@ -77,8 +79,7 @@ class TableDist:
                 raise ValueError("alpha is not sorted")
         self.crit_table = np.asarray(crit_table)
         if self.crit_table.shape != (self.size.shape[0], self.alpha.shape[0]):
-            raise ValueError("crit_table must have shape"
-                             "(len(size), len(alpha))")
+            raise ValueError("crit_table must have shape" "(len(size), len(alpha))")
 
         self.n_alpha = len(alpha)
         self.signcrit = np.sign(np.diff(self.crit_table, 1).mean())
@@ -93,12 +94,13 @@ class TableDist:
             try:
                 cv = asymptotic(self.max_size + 1)
             except Exception as exc:
-                raise type(exc)("Calling asymptotic(self.size+1) failed. The "
-                                "error message was:"
-                                "\n\n{err_msg}".format(err_msg=exc.args[0])) from exc
+                raise type(exc)(
+                    "Calling asymptotic(self.size+1) failed. The "
+                    "error message was:"
+                    "\n\n{err_msg}".format(err_msg=exc.args[0])
+                ) from exc
             if len(cv) != len(alpha):
-                raise ValueError("asymptotic does not return len(alpha) "
-                                 "values")
+                raise ValueError("asymptotic does not return len(alpha) " "values")
             self.asymptotic = asymptotic
 
         self.min_nobs = max_size if min_nobs is None else min_nobs
@@ -110,15 +112,17 @@ class TableDist:
 
     @cache_readonly
     def polyn(self):
-        polyn = [interp1d(self.size, self.crit_table[:, i])
-                 for i in range(self.n_alpha)]
+        polyn = [
+            interp1d(self.size, self.crit_table[:, i]) for i in range(self.n_alpha)
+        ]
         return polyn
 
     @cache_readonly
     def polyrbf(self):
         xs, xa = np.meshgrid(self.size.astype(float), self.alpha)
-        polyrbf = Rbf(xs.ravel(), xa.ravel(), self.crit_table.T.ravel(),
-                      function="linear")
+        polyrbf = Rbf(
+            xs.ravel(), xa.ravel(), self.crit_table.T.ravel(), function="linear"
+        )
         return polyrbf
 
     def _critvals(self, n):
@@ -145,10 +149,11 @@ class TableDist:
             if self.asymptotic is not None:
                 cv = self.asymptotic(n)
             else:
-                raise ValueError("n is above max(size) and no asymptotic "
-                                 "distribtuion is provided")
+                raise ValueError(
+                    "n is above max(size) and no asymptotic " "distribtuion is provided"
+                )
         else:
-            cv = ([p(n) for p in self.polyn])
+            cv = [p(n) for p in self.polyn]
             if n > self.min_nobs:
                 w = (n - self.min_nobs) / (self.max_nobs - self.min_nobs)
                 w = min(1.0, w)
@@ -192,8 +197,8 @@ class TableDist:
             return interp1d(critv, alpha)(x)[()]
         else:
             # vectorized
-            cond_low = (x < critv[0])
-            cond_high = (x > critv[-1])
+            cond_low = x < critv[0]
+            cond_high = x > critv[-1]
             cond_interior = ~np.logical_or(cond_low, cond_high)
 
             probs = np.nan * np.ones(x.shape)  # mistake if nan left
@@ -226,8 +231,8 @@ class TableDist:
         critv = self._critvals(n)
 
         # vectorized
-        cond_ilow = (prob > alpha[0])
-        cond_ihigh = (prob < alpha[-1])
+        cond_ilow = prob > alpha[0]
+        cond_ihigh = prob < alpha[-1]
         cond_interior = np.logical_or(cond_ilow, cond_ihigh)
 
         # scalar
@@ -265,8 +270,8 @@ class TableDist:
         alpha = self.alpha
 
         # vectorized
-        cond_ilow = (prob > alpha[0])
-        cond_ihigh = (prob < alpha[-1])
+        cond_ilow = prob > alpha[0]
+        cond_ihigh = prob < alpha[-1]
         cond_interior = np.logical_or(cond_ilow, cond_ihigh)
 
         # scalar

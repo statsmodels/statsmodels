@@ -1,9 +1,12 @@
 """World Bank Fertility Data."""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"
 
-COPYRIGHT = """This data is distributed according to the World Bank terms of use. See SOURCE."""
+COPYRIGHT = (
+    """This data is distributed according to the World Bank terms of use. See SOURCE."""
+)
 TITLE = """World Bank Fertility Data"""
 SOURCE = """
 This data has been acquired from

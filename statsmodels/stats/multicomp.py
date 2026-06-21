@@ -57,5 +57,4 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var="equal"):
     statsmodels.sandbox.stats.multicomp.TukeyHSDResults
     """
 
-    return MultiComparison(endog, groups).tukeyhsd(alpha=alpha,
-                                                   use_var=use_var)
+    return MultiComparison(endog, groups).tukeyhsd(alpha=alpha, use_var=use_var)

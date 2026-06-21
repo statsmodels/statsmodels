@@ -2,6 +2,7 @@
 
 author: Yichuan Liu
 """
+
 import numpy as np
 from numpy.linalg import svd
 import pandas as pd
@@ -107,9 +108,17 @@ class CanCorr(Model):
         nobs, k_yvar = self.endog.shape
         nobs, k_xvar = self.exog.shape
         eigenvals = np.power(self.cancorr, 2)
-        stats = pd.DataFrame(columns=["Canonical Correlation", "Wilks' lambda",
-                                      "Num DF", "Den DF", "F Value", "Pr > F"],
-                             index=list(range(len(eigenvals) - 1, -1, -1)))
+        stats = pd.DataFrame(
+            columns=[
+                "Canonical Correlation",
+                "Wilks' lambda",
+                "Num DF",
+                "Den DF",
+                "F Value",
+                "Pr > F",
+            ],
+            index=list(range(len(eigenvals) - 1, -1, -1)),
+        )
         prod = 1
         for i in range(len(eigenvals) - 1, -1, -1):
             prod *= 1 - eigenvals[i]
@@ -118,8 +127,8 @@ class CanCorr(Model):
             r = (nobs - k_yvar - 1) - (p - q + 1) / 2
             u = (p * q - 2) / 4
             df1 = p * q
-            if p ** 2 + q ** 2 - 5 > 0:
-                t = np.sqrt(((p * q) ** 2 - 4) / (p ** 2 + q ** 2 - 5))
+            if p**2 + q**2 - 5 > 0:
+                t = np.sqrt(((p * q) ** 2 - 4) / (p**2 + q**2 - 5))
             else:
                 t = 1
             df2 = r * t - 2 * u
@@ -146,8 +155,7 @@ class CanCorr(Model):
         stats = stats.loc[ind, :]
 
         # Multivariate tests (remember x has mean removed)
-        stats_mv = multivariate_stats(eigenvals,
-                                      k_yvar, k_xvar, nobs - k_xvar - 1)
+        stats_mv = multivariate_stats(eigenvals, k_yvar, k_xvar, nobs - k_xvar - 1)
         return CanCorrTestResults(stats, stats_mv)
 
 
@@ -162,6 +170,7 @@ class CanCorrTestResults:
     stats_mv : DataFrame
         Contain the multivariate statistical tests results
     """
+
     def __init__(self, stats, stats_mv):
         self.stats = stats
         self.stats_mv = stats_mv

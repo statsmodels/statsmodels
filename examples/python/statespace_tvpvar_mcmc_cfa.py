@@ -19,7 +19,7 @@ from scipy.stats import invwishart, invgamma
 
 # Get the macro dataset
 dta = sm.datasets.macrodata.load_pandas().data
-dta.index = pd.date_range('1959Q1', '2009Q3', freq='QS')
+dta.index = pd.date_range("1959Q1", "2009Q3", freq="QS")
 
 # ### Background
 #
@@ -133,7 +133,7 @@ dta.index = pd.date_range('1959Q1', '2009Q3', freq='QS')
 # of "unobserved components" models, and can be constructed as follows:
 
 # Construct a local level model for inflation
-mod = sm.tsa.UnobservedComponents(dta.infl, 'llevel')
+mod = sm.tsa.UnobservedComponents(dta.infl, "llevel")
 
 # Fit the model's parameters (sigma2_varepsilon and sigma2_eta)
 # via maximum likelihood
@@ -142,7 +142,7 @@ print(res.params)
 
 # Create simulation smoother objects
 sim_kfs = mod.simulation_smoother()  # default method is KFS
-sim_cfa = mod.simulation_smoother(method='cfa')  # can specify CFA method
+sim_cfa = mod.simulation_smoother(method="cfa")  # can specify CFA method
 
 # The simulation smoother objects `sim_kfs` and `sim_cfa` have `simulate`
 # methods that perform simulation smoothing. Each time that `simulate` is
@@ -154,10 +154,8 @@ sim_cfa = mod.simulation_smoother(method='cfa')  # can specify CFA method
 # parameter estimates.
 
 nsimulations = 20
-simulated_state_kfs = pd.DataFrame(np.zeros((mod.nobs, nsimulations)),
-                                   index=dta.index)
-simulated_state_cfa = pd.DataFrame(np.zeros((mod.nobs, nsimulations)),
-                                   index=dta.index)
+simulated_state_kfs = pd.DataFrame(np.zeros((mod.nobs, nsimulations)), index=dta.index)
+simulated_state_cfa = pd.DataFrame(np.zeros((mod.nobs, nsimulations)), index=dta.index)
 
 for i in range(nsimulations):
     # Apply KFS simulation smoothing
@@ -178,18 +176,18 @@ for i in range(nsimulations):
 fig, axes = plt.subplots(2, figsize=(15, 6))
 
 # Plot data and KFS simulations
-dta.infl.plot(ax=axes[0], color='k')
-axes[0].set_title('Simulations based on KFS approach, MLE parameters')
-simulated_state_kfs.plot(ax=axes[0], color='C0', alpha=0.25, legend=False)
+dta.infl.plot(ax=axes[0], color="k")
+axes[0].set_title("Simulations based on KFS approach, MLE parameters")
+simulated_state_kfs.plot(ax=axes[0], color="C0", alpha=0.25, legend=False)
 
 # Plot data and CFA simulations
-dta.infl.plot(ax=axes[1], color='k')
-axes[1].set_title('Simulations based on CFA approach, MLE parameters')
-simulated_state_cfa.plot(ax=axes[1], color='C0', alpha=0.25, legend=False)
+dta.infl.plot(ax=axes[1], color="k")
+axes[1].set_title("Simulations based on CFA approach, MLE parameters")
+simulated_state_cfa.plot(ax=axes[1], color="C0", alpha=0.25, legend=False)
 
 # Add a legend, clean up layout
 handles, labels = axes[0].get_legend_handles_labels()
-axes[0].legend(handles[:2], ['Data', 'Simulated state'])
+axes[0].legend(handles[:2], ["Data", "Simulated state"])
 fig.tight_layout()
 
 # #### Updating the model's parameters
@@ -218,18 +216,19 @@ mod.update([4, 0.05])
 # Plot simulations
 for i in range(nsimulations):
     sim_kfs.simulate()
-    ax.plot(dta.index,
-            sim_kfs.simulated_state[0],
-            color='C0',
-            alpha=0.25,
-            label='Simulated state')
+    ax.plot(
+        dta.index,
+        sim_kfs.simulated_state[0],
+        color="C0",
+        alpha=0.25,
+        label="Simulated state",
+    )
 
 # Plot data
-dta.infl.plot(ax=ax, color='k', label='Data', zorder=-1)
+dta.infl.plot(ax=ax, color="k", label="Data", zorder=-1)
 
 # Add title, legend, clean up layout
-ax.set_title(
-    'Simulations with alternative parameterization yielding a smoother trend')
+ax.set_title("Simulations with alternative parameterization yielding a smoother trend")
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles[-2:], labels[-2:])
 fig.tight_layout()
@@ -250,17 +249,16 @@ fig.tight_layout()
 # included in Statsmodels.
 
 # Subset to the four variables of interest
-y = dta[['realgdp', 'cpi', 'unemp', 'tbilrate']].copy()
-y.columns = ['gdp', 'inf', 'unemp', 'int']
+y = dta[["realgdp", "cpi", "unemp", "tbilrate"]].copy()
+y.columns = ["gdp", "inf", "unemp", "int"]
 
 # Convert to real GDP growth and CPI inflation rates
-y[['gdp', 'inf']] = np.log(y[['gdp', 'inf']]).diff() * 100
+y[["gdp", "inf"]] = np.log(y[["gdp", "inf"]]).diff() * 100
 y = y.iloc[1:]
 
 fig, ax = plt.subplots(figsize=(15, 5))
 y.plot(ax=ax)
-ax.set_title(
-    'Evolution of macroeconomic variables included in TVP-VAR exercise')
+ax.set_title("Evolution of macroeconomic variables included in TVP-VAR exercise")
 
 # #### TVP-VAR model
 #
@@ -376,11 +374,7 @@ class TVPVAR(sm.tsa.statespace.MLEModel):
     # Steps 2-3 are best done in the class "constructor", i.e. the __init__ method
     def __init__(self, y):
         # Create a matrix with [y_t' : y_{t-1}'] for t = 2, ..., T
-        augmented = sm.tsa.lagmat(y,
-                                  1,
-                                  trim='both',
-                                  original='in',
-                                  use_pandas=True)
+        augmented = sm.tsa.lagmat(y, 1, trim="both", original="in", use_pandas=True)
         # Separate into y_t and z_t = [1 : y_{t-1}']
         p = y.shape[1]
         y_t = augmented.iloc[:, :p]
@@ -398,25 +392,25 @@ class TVPVAR(sm.tsa.statespace.MLEModel):
         # -> self.k_endog = p is the dimension of the observed vector
         # -> self.k_states = p * (p + 1) is the dimension of the observed vector
         # -> self.nobs = T is the number of observations in y_t
-        self['design'] = np.zeros((self.k_endog, self.k_states, self.nobs))
+        self["design"] = np.zeros((self.k_endog, self.k_states, self.nobs))
         for i in range(self.k_endog):
             start = i * (self.k_endog + 1)
             end = start + self.k_endog + 1
-            self['design', i, start:end, :] = z_t.T
+            self["design", i, start:end, :] = z_t.T
 
         # Construct the transition matrix T = I
-        self['transition'] = np.eye(k_states)
+        self["transition"] = np.eye(k_states)
 
         # Construct the selection matrix R = I
-        self['selection'] = np.eye(k_states)
+        self["selection"] = np.eye(k_states)
 
         # Step 3: Initialize the state vector as alpha_1 ~ N(0, 5I)
-        self.ssm.initialize('known', stationary_cov=5 * np.eye(self.k_states))
+        self.ssm.initialize("known", stationary_cov=5 * np.eye(self.k_states))
 
     # Step 4. Create a method that we can call to update H and Q
     def update_variances(self, obs_cov, state_cov_diag):
-        self['obs_cov'] = obs_cov
-        self['state_cov'] = np.diag(state_cov_diag)
+        self["obs_cov"] = obs_cov
+        self["state_cov"] = np.diag(state_cov_diag)
 
     # Finally, it can be convenient to define human-readable names for
     # each element of the state vector. These will be available in output
@@ -425,10 +419,9 @@ class TVPVAR(sm.tsa.statespace.MLEModel):
         state_names = np.empty((self.k_endog, self.k_endog + 1), dtype=object)
         for i in range(self.k_endog):
             endog_name = self.endog_names[i]
-            state_names[i] = (['intercept.%s' % endog_name] + [
-                f'L1.{other_name}->{endog_name}'
-                for other_name in self.endog_names
-            ])
+            state_names[i] = ["intercept.%s" % endog_name] + [
+                f"L1.{other_name}->{endog_name}" for other_name in self.endog_names
+            ]
         return state_names.ravel().tolist()
 
 
@@ -485,25 +478,25 @@ def plot_coefficients_by_equation(states):
     # state vector correspond to the first variable in y_t, which is GDP growth
     ax = axes[0, 0]
     states.iloc[:, :5].plot(ax=ax)
-    ax.set_title('GDP growth')
+    ax.set_title("GDP growth")
     ax.legend()
 
     # The next 5 elements correspond to inflation
     ax = axes[0, 1]
     states.iloc[:, 5:10].plot(ax=ax)
-    ax.set_title('Inflation rate')
+    ax.set_title("Inflation rate")
     ax.legend()
 
     # The next 5 elements correspond to unemployment
     ax = axes[1, 0]
     states.iloc[:, 10:15].plot(ax=ax)
-    ax.set_title('Unemployment equation')
+    ax.set_title("Unemployment equation")
     ax.legend()
 
     # The last 5 elements correspond to the interest rate
     ax = axes[1, 1]
     states.iloc[:, 15:20].plot(ax=ax)
-    ax.set_title('Interest rate equation')
+    ax.set_title("Interest rate equation")
     ax.legend()
 
     return ax
@@ -585,7 +578,7 @@ store_state_cov[0] = initial_state_cov_diag
 mod.update_variances(store_obs_cov[0], store_state_cov[0])
 
 # 3. Construct posterior samplers
-sim = mod.simulation_smoother(method='cfa')
+sim = mod.simulation_smoother(method="cfa")
 
 # As before, we could have used either the simulation smoother based on
 # the Kalman filter and smoother or that based on the Cholesky Factor
@@ -599,11 +592,11 @@ for i in range(niter):
     store_states[i + 1] = sim.simulated_state.T
 
     # 2. Simulate obs cov
-    fitted = np.matmul(mod['design'].transpose(2, 0, 1),
-                       store_states[i + 1][..., None])[..., 0]
+    fitted = np.matmul(
+        mod["design"].transpose(2, 0, 1), store_states[i + 1][..., None]
+    )[..., 0]
     resid = mod.endog - fitted
-    store_obs_cov[i + 1] = invwishart.rvs(v10 + mod.nobs,
-                                          S10 + resid.T @ resid)
+    store_obs_cov[i + 1] = invwishart.rvs(v10 + mod.nobs, S10 + resid.T @ resid)
 
     # 3. Simulate state cov variances
     resid = store_states[i + 1, 1:] - store_states[i + 1, :-1]
@@ -623,9 +616,11 @@ for i in range(niter):
 # http://joshuachan.org/code/code_TVPVAR.html)
 
 # Collect the posterior means of each time-varying coefficient
-states_posterior_mean = pd.DataFrame(np.mean(store_states[nburn + 1:], axis=0),
-                                     index=mod._index,
-                                     columns=mod.state_names)
+states_posterior_mean = pd.DataFrame(
+    np.mean(store_states[nburn + 1 :], axis=0),
+    index=mod._index,
+    columns=mod.state_names,
+)
 
 # Plot these means over time
 plot_coefficients_by_equation(states_posterior_mean)
@@ -639,20 +634,28 @@ plot_coefficients_by_equation(states_posterior_mean)
 import arviz as az
 
 # Collect the observation error covariance parameters
-az_obs_cov = az.convert_to_inference_data({
-    ('Var[%s]' % mod.endog_names[i] if i == j else 'Cov[%s, %s]' %
-     (mod.endog_names[i], mod.endog_names[j])): store_obs_cov[nburn + 1:, i, j]
-    for i in range(mod.k_endog) for j in range(i, mod.k_endog)
-})
+az_obs_cov = az.convert_to_inference_data(
+    {
+        (
+            "Var[%s]" % mod.endog_names[i]
+            if i == j
+            else "Cov[%s, %s]" % (mod.endog_names[i], mod.endog_names[j])
+        ): store_obs_cov[nburn + 1 :, i, j]
+        for i in range(mod.k_endog)
+        for j in range(i, mod.k_endog)
+    }
+)
 
 # Plot the credible intervals
 az.plot_forest(az_obs_cov, figsize=(8, 7))
 
 # Collect the state innovation variance parameters
-az_state_cov = az.convert_to_inference_data({
-    r'$\sigma^2$[%s]' % mod.state_names[i]: store_state_cov[nburn + 1:, i]
-    for i in range(mod.k_states)
-})
+az_state_cov = az.convert_to_inference_data(
+    {
+        r"$\sigma^2$[%s]" % mod.state_names[i]: store_state_cov[nburn + 1 :, i]
+        for i in range(mod.k_states)
+    }
+)
 
 # Plot the credible intervals
 az.plot_forest(az_state_cov, figsize=(8, 7))
@@ -671,7 +674,7 @@ az.plot_forest(az_state_cov, figsize=(8, 7))
 
 from statsmodels.tsa.statespace.simulation_smoother import SIMULATION_STATE
 
-sim_cfa = mod.simulation_smoother(method='cfa')
+sim_cfa = mod.simulation_smoother(method="cfa")
 sim_kfs = mod.simulation_smoother(simulation_output=SIMULATION_STATE)
 
 # Then we can use the following code to perform a basic timing exercise:

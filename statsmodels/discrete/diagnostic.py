@@ -104,9 +104,7 @@ class CountDiagnostic:
             # TODO: verify upper bound, we drop last bin (may be open, inf)
             kwds["y_values"] = np.arange(bin_edges[-2] + 1)
         probs = self.results.predict(which="prob", **kwds)
-        res = test_chisquare_prob(
-            self.results, probs, bin_edges=bin_edges
-        )
+        res = test_chisquare_prob(self.results, probs, bin_edges=bin_edges)
         return res
 
     def plot_probs(self, label="predicted", upp_xlim=None, fig=None):

@@ -45,12 +45,10 @@ pd.plotting.register_matplotlib_converters()
 #
 # The data are monthly returns for the factors or industry portfolios.
 
-factors = pdr.get_data_famafrench("F-F_Research_Data_Factors",
-                                  start="1-1-1926")[0]
+factors = pdr.get_data_famafrench("F-F_Research_Data_Factors", start="1-1-1926")[0]
 factors.head()
 
-industries = pdr.get_data_famafrench("10_Industry_Portfolios",
-                                     start="1-1-1926")[0]
+industries = pdr.get_data_famafrench("10_Industry_Portfolios", start="1-1-1926")[0]
 industries.head()
 
 # The first model estimated is a rolling version of the CAPM that
@@ -99,9 +97,7 @@ fig = rres.plot_recursive_coefficient(variables=exog_vars, figsize=(14, 18))
 
 joined = pd.concat([factors, industries], axis=1)
 joined["Mkt_RF"] = joined["Mkt-RF"]
-mod = RollingOLS.from_formula("HiTec ~ Mkt_RF + SMB + HML",
-                              data=joined,
-                              window=60)
+mod = RollingOLS.from_formula("HiTec ~ Mkt_RF + SMB + HML", data=joined, window=60)
 rres = mod.fit()
 rres.params.tail()
 

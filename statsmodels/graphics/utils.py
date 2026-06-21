@@ -1,4 +1,5 @@
 """Helper functions for graphics with Matplotlib."""
+
 from statsmodels.compat.python import lrange
 
 __all__ = ["create_mpl_ax", "create_mpl_fig"]
@@ -142,6 +143,7 @@ def annotate_axes(index, labels, points, offset_points, size, ax, **kwargs):
         label = labels[i]
         point = points[i]
         offset = offset_points[i]
-        ax.annotate(label, point, xytext=offset, textcoords="offset points",
-                    size=size, **kwargs)
+        ax.annotate(
+            label, point, xytext=offset, textcoords="offset points", size=size, **kwargs
+        )
     return ax

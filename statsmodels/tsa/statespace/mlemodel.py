@@ -2471,9 +2471,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         if iloc < 0:
             iloc = self.nobs + iloc
         if iloc >= self.nobs:
-            raise ValueError(
-                "Cannot anchor impulse responses outside of the sample."
-            )
+            raise ValueError("Cannot anchor impulse responses outside of the sample.")
 
         time_invariant = (
             self.ssm._design.shape[2]
@@ -2980,11 +2978,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if len(self.fixed_params) > 0:
             mask = np.ix_(self._free_params_index, self._free_params_index)
-            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            tmp, singular_values = pinv_extended(evaluated_hessian[mask])
             neg_cov = np.zeros_like(evaluated_hessian) * np.nan
             neg_cov[mask] = tmp
         else:
-            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+            neg_cov, singular_values = pinv_extended(evaluated_hessian)
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
@@ -3013,11 +3011,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if len(self.fixed_params) > 0:
             mask = np.ix_(self._free_params_index, self._free_params_index)
-            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            tmp, singular_values = pinv_extended(evaluated_hessian[mask])
             neg_cov = np.zeros_like(evaluated_hessian) * np.nan
             neg_cov[mask] = tmp
         else:
-            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+            neg_cov, singular_values = pinv_extended(evaluated_hessian)
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
@@ -3052,11 +3050,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             singular_values = np.empty(0)
         elif len(self.fixed_params) > 0:
             mask = np.ix_(self._free_params_index, self._free_params_index)
-            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            tmp, singular_values = pinv_extended(evaluated_hessian[mask])
             neg_cov = np.zeros_like(evaluated_hessian) * np.nan
             neg_cov[mask] = tmp
         else:
-            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+            neg_cov, singular_values = pinv_extended(evaluated_hessian)
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
@@ -3111,7 +3109,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
             cov_params[mask] = tmp
         else:
-            (cov_params, singular_values) = pinv_extended(
+            cov_params, singular_values = pinv_extended(
                 np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
             )
 
@@ -3160,7 +3158,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
             cov_params[mask] = tmp
         else:
-            (cov_params, singular_values) = pinv_extended(
+            cov_params, singular_values = pinv_extended(
                 np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
             )
 

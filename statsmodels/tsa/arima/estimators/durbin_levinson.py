@@ -4,6 +4,7 @@ Durbin-Levinson recursions for estimating AR(p) model parameters.
 Author: Chad Fulton
 License: BSD-3
 """
+
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import numpy as np
@@ -59,12 +60,15 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
 
     # Make sure we have a consecutive process
     if not max_spec.is_ar_consecutive:
-        raise ValueError("Durbin-Levinson estimation unavailable for models"
-                         " with seasonal or otherwise non-consecutive AR"
-                         " orders.")
+        raise ValueError(
+            "Durbin-Levinson estimation unavailable for models"
+            " with seasonal or otherwise non-consecutive AR"
+            " orders."
+        )
 
-    gamma = acovf(endog, adjusted=adjusted, fft=True, demean=demean,
-                  nlag=max_spec.ar_order)
+    gamma = acovf(
+        endog, adjusted=adjusted, fft=True, demean=demean, nlag=max_spec.ar_order
+    )
 
     # If no AR component, just a variance computation
     if max_spec.ar_order == 0:
@@ -77,15 +81,15 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
 
         Phi[0, 0] = gamma[1] / gamma[0]
         v[0] = gamma[0]
-        v[1] = v[0] * (1 - Phi[0, 0]**2)
+        v[1] = v[0] * (1 - Phi[0, 0] ** 2)
 
         for i in range(1, max_spec.ar_order):
-            tmp = Phi[i-1, :i]
+            tmp = Phi[i - 1, :i]
             Phi[i, i] = (gamma[i + 1] - np.dot(tmp, gamma[i:0:-1])) / v[i]
-            Phi[i, :i] = (tmp - Phi[i, i] * tmp[::-1])
-            v[i + 1] = v[i] * (1 - Phi[i, i]**2)
+            Phi[i, :i] = tmp - Phi[i, i] * tmp[::-1]
+            v[i + 1] = v[i] * (1 - Phi[i, i] ** 2)
 
-        ar_params = [None] + [Phi[i, :i + 1] for i in range(max_spec.ar_order)]
+        ar_params = [None] + [Phi[i, : i + 1] for i in range(max_spec.ar_order)]
         sigma2 = v
 
     # Compute output
@@ -100,8 +104,10 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
         out.append(p)
 
         # Construct other results
-    other_results = Bunch({
-        "spec": spec,
-    })
+    other_results = Bunch(
+        {
+            "spec": spec,
+        }
+    )
 
     return out, other_results

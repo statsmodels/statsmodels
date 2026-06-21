@@ -82,11 +82,13 @@ def load_results_jmulti(dataset, dt_s_list):
 
     for dt_s in dt_s_list:
         dt_string = dt_s_tup_to_string(dt_s)
-        params_file = dataset.__str__()+"_"+source+"_"+dt_string+".txt"
+        params_file = dataset.__str__() + "_" + source + "_" + dt_string + ".txt"
         params_file = os.path.join(here, params_file)
         # sections in jmulti output:
-        section_headers = ["Lagged endogenous term",  # parameter matrices
-                           "Deterministic term"]      # c, s, ct
+        section_headers = [
+            "Lagged endogenous term",  # parameter matrices
+            "Deterministic term",
+        ]  # c, s, ct
         if dt_string == "nc":
             del section_headers[-1]
 
@@ -110,10 +112,12 @@ def load_results_jmulti(dataset, dt_s_list):
         section = -1
         params_file = open(params_file, encoding="latin_1")
         for line in params_file:
-            if section == -1 and section_headers[section+1] not in line:
+            if section == -1 and section_headers[section + 1] not in line:
                 continue
-            if section < len(section_headers)-1 \
-                    and section_headers[section+1] in line:  # new section
+            if (
+                section < len(section_headers) - 1
+                and section_headers[section + 1] in line
+            ):  # new section
                 section += 1
                 continue
             if not started_reading_section:
@@ -125,17 +129,13 @@ def load_results_jmulti(dataset, dt_s_list):
                     if result == []:  # no values collected in section "Legend"
                         started_reading_section = False
                         continue
-                    results["est"][section_headers[section]] = np.column_stack(
-                            result)
+                    results["est"][section_headers[section]] = np.column_stack(result)
                     result = []
-                    results["se"][section_headers[section]] = np.column_stack(
-                            result_se)
+                    results["se"][section_headers[section]] = np.column_stack(result_se)
                     result_se = []
-                    results["t"][section_headers[section]] = np.column_stack(
-                            result_t)
+                    results["t"][section_headers[section]] = np.column_stack(result_t)
                     result_t = []
-                    results["p"][section_headers[section]] = np.column_stack(
-                            result_p)
+                    results["p"][section_headers[section]] = np.column_stack(result_p)
                     result_p = []
                     started_reading_section = False
                     continue
@@ -175,8 +175,9 @@ def load_results_jmulti(dataset, dt_s_list):
 
         # ---------------------------------------------------------------------
         # parse information regarding \Sigma_u
-        sigmau_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_Sigmau" + ".txt"
+        sigmau_file = (
+            dataset.__str__() + "_" + source + "_" + dt_string + "_Sigmau" + ".txt"
+        )
         sigmau_file = os.path.join(here, sigmau_file)
         rows_to_parse = 0
         # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
@@ -185,7 +186,7 @@ def load_results_jmulti(dataset, dt_s_list):
         sigmau_file = open(sigmau_file, encoding="latin_1")
         for line in sigmau_file:
             if line.startswith("Log Likelihood:"):
-                line = line[len("Log Likelihood:"):]
+                line = line[len("Log Likelihood:") :]
                 results["log_like"] = float(re.findall(regex_est, line)[0])
                 continue
             if not sigmau_section_reached and "Covariance:" not in line:
@@ -205,8 +206,7 @@ def load_results_jmulti(dataset, dt_s_list):
 
         # ---------------------------------------------------------------------
         # parse forecast related output:
-        fc_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_fc5" + ".txt"
+        fc_file = dataset.__str__() + "_" + source + "_" + dt_string + "_fc5" + ".txt"
         fc_file = os.path.join(here, fc_file)
         fc, lower, upper, plu_min = [], [], [], []
         fc_file = open(fc_file, encoding="latin_1")
@@ -241,14 +241,21 @@ def load_results_jmulti(dataset, dt_s_list):
         vn = dataset.variable_names
         # all possible combinations of potentially causing variables
         # (at least 1 variable and not all variables together):
-        var_combs = sublists(vn, 1, len(vn)-1)
+        var_combs = sublists(vn, 1, len(vn) - 1)
         if debug_mode:
             print("\n\n\n" + dt_string)
         for causing in var_combs:
             caused = tuple(name for name in vn if name not in causing)
-            causality_file = dataset.__str__() + "_" + source + "_" \
-                + dt_string + "_granger_causality_" \
-                + stringify_var_names(causing, "_") + ".txt"
+            causality_file = (
+                dataset.__str__()
+                + "_"
+                + source
+                + "_"
+                + dt_string
+                + "_granger_causality_"
+                + stringify_var_names(causing, "_")
+                + ".txt"
+            )
             causality_file = os.path.join(here, causality_file)
             causality_file = open(causality_file, encoding="latin_1")
             causality_results = []
@@ -261,19 +268,16 @@ def load_results_jmulti(dataset, dt_s_list):
                 number = float(number.group(0))
                 causality_results.append(number)
             causality_file.close()
-            results["granger_caus"]["test_stat"][(causing, caused)] = \
-                causality_results[0]
-            results["granger_caus"]["p"][(causing, caused)] =\
-                causality_results[1]
-            results["inst_caus"]["test_stat"][(causing, caused)] = \
-                causality_results[2]
-            results["inst_caus"]["p"][(causing, caused)] = \
-                causality_results[3]
+            results["granger_caus"]["test_stat"][(causing, caused)] = causality_results[
+                0
+            ]
+            results["granger_caus"]["p"][(causing, caused)] = causality_results[1]
+            results["inst_caus"]["test_stat"][(causing, caused)] = causality_results[2]
+            results["inst_caus"]["p"][(causing, caused)] = causality_results[3]
 
         # ---------------------------------------------------------------------
         # parse output related to impulse-response analysis:
-        ir_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_ir" + ".txt"
+        ir_file = dataset.__str__() + "_" + source + "_" + dt_string + "_ir" + ".txt"
         ir_file = os.path.join(here, ir_file)
         ir_file = open(ir_file, encoding="latin_1")
         causing = None
@@ -308,8 +312,9 @@ def load_results_jmulti(dataset, dt_s_list):
 
         # ---------------------------------------------------------------------
         # parse output related to lag order selection:
-        lagorder_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_lagorder" + ".txt"
+        lagorder_file = (
+            dataset.__str__() + "_" + source + "_" + dt_string + "_lagorder" + ".txt"
+        )
         lagorder_file = os.path.join(here, lagorder_file)
         lagorder_file = open(lagorder_file, encoding="latin_1")
         results["lagorder"] = {}
@@ -319,19 +324,20 @@ def load_results_jmulti(dataset, dt_s_list):
         bic_start = "Schwarz Criterion:"
         for line in lagorder_file:
             if line.startswith(aic_start):
-                results["lagorder"]["aic"] = int(line[len(aic_start):])
+                results["lagorder"]["aic"] = int(line[len(aic_start) :])
             elif line.startswith(fpe_start):
-                results["lagorder"]["fpe"] = int(line[len(fpe_start):])
+                results["lagorder"]["fpe"] = int(line[len(fpe_start) :])
             elif line.startswith(hqic_start):
-                results["lagorder"]["hqic"] = int(line[len(hqic_start):])
+                results["lagorder"]["hqic"] = int(line[len(hqic_start) :])
             elif line.startswith(bic_start):
-                results["lagorder"]["bic"] = int(line[len(bic_start):])
+                results["lagorder"]["bic"] = int(line[len(bic_start) :])
         lagorder_file.close()
 
         # ---------------------------------------------------------------------
         # parse output related to non-normality-test:
-        test_norm_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_diag" + ".txt"
+        test_norm_file = (
+            dataset.__str__() + "_" + source + "_" + dt_string + "_diag" + ".txt"
+        )
         test_norm_file = os.path.join(here, test_norm_file)
         test_norm_file = open(test_norm_file, encoding="latin_1")
         results["test_norm"] = {}
@@ -353,17 +359,18 @@ def load_results_jmulti(dataset, dt_s_list):
             if "joint_pvalue" in results["test_norm"].keys():
                 break
             if line.startswith(line_start_statistic):
-                line_end = line[len(line_start_statistic):]
+                line_end = line[len(line_start_statistic) :]
                 results["test_norm"]["joint_test_statistic"] = float(line_end)
             if line.startswith(line_start_pvalue):
-                line_end = line[len(line_start_pvalue):]
+                line_end = line[len(line_start_pvalue) :]
                 results["test_norm"]["joint_pvalue"] = float(line_end)
         test_norm_file.close()
 
         # ---------------------------------------------------------------------
         # parse output related to testing the whiteness of the residuals:
-        whiteness_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_diag" + ".txt"
+        whiteness_file = (
+            dataset.__str__() + "_" + source + "_" + dt_string + "_diag" + ".txt"
+        )
         whiteness_file = os.path.join(here, whiteness_file)
         whiteness_file = open(whiteness_file, encoding="latin_1")
         results["whiteness"] = {}
@@ -382,25 +389,26 @@ def load_results_jmulti(dataset, dt_s_list):
                 in_section = True
                 continue
             if line.startswith(order_start):
-                results["whiteness"]["tested order"] = int(
-                        line[len(order_start):])
+                results["whiteness"]["tested order"] = int(line[len(order_start) :])
                 continue
             if line.startswith(statistic_start):
                 results["whiteness"]["test statistic"] = float(
-                        line[len(statistic_start):])
+                    line[len(statistic_start) :]
+                )
                 continue
             if line.startswith(adj_statistic_start):
                 results["whiteness"]["test statistic adj."] = float(
-                        line[len(adj_statistic_start):])
+                    line[len(adj_statistic_start) :]
+                )
                 continue
             if line.startswith(p_start):  # same for unadjusted and adjusted
                 if not unadjusted_finished:
-                    results["whiteness"]["p-value"] = \
-                        float(line[len(p_start):])
+                    results["whiteness"]["p-value"] = float(line[len(p_start) :])
                     unadjusted_finished = True
                 else:
-                    results["whiteness"]["p-value adjusted"] = \
-                        float(line[len(p_start):])
+                    results["whiteness"]["p-value adjusted"] = float(
+                        line[len(p_start) :]
+                    )
                     break
         whiteness_file.close()
 

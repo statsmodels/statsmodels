@@ -12,8 +12,9 @@ from statsmodels.stats.covariance import (
 def test_transform_corr_normal():
 
     # numbers from footnote of Table 1 Boudt, Cornelissen, Croux 2012
-    vp, vgr, vs, vk, vmcd = np.array([[0.92, 0.92, 1.02, 1.01, 1.45],
-                                      [0.13, 0.13, 0.16, 0.15, 0.20]]).T
+    vp, vgr, vs, vk, vmcd = np.array(
+        [[0.92, 0.92, 1.02, 1.01, 1.45], [0.13, 0.13, 0.16, 0.15, 0.20]]
+    ).T
 
     rho = np.array([0.2, 0.8])
     for method in ["pearson", "gauss_rank"]:
@@ -45,20 +46,22 @@ def test_corr_qu_ns_REGRESSION():
     # regression tests, numbers from results
     nobs, k_vars = 100, 3
     mean = np.zeros(k_vars)
-    cov = linalg.toeplitz(1. / np.arange(1, k_vars+1))
+    cov = linalg.toeplitz(1.0 / np.arange(1, k_vars + 1))
 
     np.random.seed(187649)
     x = np.random.multivariate_normal(mean, cov, size=nobs)
     x = np.round(x, 3)
 
-    res_cns = np.array([[1.        , 0.39765225, 0.27222425],
-                        [0.39765225, 1.        , 0.38073085],
-                        [0.27222425, 0.38073085, 1.00000000]])
+    res_cns = np.array(
+        [
+            [1.0, 0.39765225, 0.27222425],
+            [0.39765225, 1.0, 0.38073085],
+            [0.27222425, 0.38073085, 1.00000000],
+        ]
+    )
     cns = corr_normal_scores(x)
     assert_allclose(cns, res_cns, atol=1e-4)
 
-    res_cnq = np.array([[1.  , 0.28, 0.12],
-                        [0.28, 1.  , 0.28],
-                        [0.12, 0.28, 1.00]])
+    res_cnq = np.array([[1.0, 0.28, 0.12], [0.28, 1.0, 0.28], [0.12, 0.28, 1.00]])
     cnq = corr_quadrant(x)
     assert_allclose(cnq, res_cnq, atol=1e-4)

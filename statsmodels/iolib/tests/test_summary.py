@@ -1,7 +1,4 @@
-"""examples to check summary, not converted to tests yet
-
-
-"""
+"""examples to check summary, not converted to tests yet"""
 
 import numpy as np
 from numpy.testing import assert_equal

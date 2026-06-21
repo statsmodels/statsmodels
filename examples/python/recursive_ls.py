@@ -45,7 +45,8 @@ endog = dta["WORLDCONSUMPTION"]
 # To the regressors in the dataset, we add a column of ones for an
 # intercept
 exog = sm.add_constant(
-    dta[["COPPERPRICE", "INCOMEINDEX", "ALUMPRICE", "INVENTORYINDEX"]])
+    dta[["COPPERPRICE", "INCOMEINDEX", "ALUMPRICE", "INVENTORYINDEX"]]
+)
 
 # First, construct and fit the model, and print a summary. Although the
 # `RLS` model computes the regression parameters recursively, so there are
@@ -105,20 +106,17 @@ def ewma(series, beta, n_window):
     scalar = (1 - beta) / (1 + beta)
     ma = []
     k = np.arange(n_window, 0, -1)
-    weights = np.r_[beta**k, 1, beta**k[::-1]]
+    weights = np.r_[beta**k, 1, beta ** k[::-1]]
     for t in range(n_window, nobs - n_window):
-        window = series.iloc[t - n_window:t + n_window + 1].values
+        window = series.iloc[t - n_window : t + n_window + 1].values
         ma.append(scalar * np.sum(weights * window))
-    return pd.Series(ma,
-                     name=series.name,
-                     index=series.iloc[n_window:-n_window].index)
+    return pd.Series(ma, name=series.name, index=series.iloc[n_window:-n_window].index)
 
 
-m2_ewma = ewma(
-    np.log(m2["M2SL"].resample("QS").mean()).diff().iloc[1:], 0.95, 10 * 4)
+m2_ewma = ewma(np.log(m2["M2SL"].resample("QS").mean()).diff().iloc[1:], 0.95, 10 * 4)
 cpi_ewma = ewma(
-    np.log(cpi["CPIAUCSL"].resample("QS").mean()).diff().iloc[1:], 0.95,
-    10 * 4)
+    np.log(cpi["CPIAUCSL"].resample("QS").mean()).diff().iloc[1:], 0.95, 10 * 4
+)
 
 # After constructing the moving averages using the $\beta = 0.95$ filter
 # of Lucas (with a window of 10 years on either side), we plot each of the
@@ -162,7 +160,8 @@ res.plot_cusum_squares()
 
 endog = dta["WORLDCONSUMPTION"]
 exog = sm.add_constant(
-    dta[["COPPERPRICE", "INCOMEINDEX", "ALUMPRICE", "INVENTORYINDEX"]])
+    dta[["COPPERPRICE", "INCOMEINDEX", "ALUMPRICE", "INVENTORYINDEX"]]
+)
 
 mod = sm.RecursiveLS(endog, exog, constraints="COPPERPRICE = ALUMPRICE")
 res = mod.fit()

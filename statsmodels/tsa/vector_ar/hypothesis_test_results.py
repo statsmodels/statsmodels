@@ -24,8 +24,10 @@ class HypothesisTestResults:
         A string describing the null hypothesis. It will be used in the
         summary.
     """
-    def __init__(self, test_statistic, crit_value, pvalue, df,
-                 signif, method, title, h0):
+
+    def __init__(
+        self, test_statistic, crit_value, pvalue, df, signif, method, title, h0
+    ):
         self.test_statistic = test_statistic
         self.crit_value = crit_value
         self.pvalue = pvalue
@@ -43,36 +45,54 @@ class HypothesisTestResults:
 
     def summary(self):
         """Return summary"""
-        title = self.title + ". " + self.h0 + ". " \
-                                  + self.conclusion_str + self.signif_str + "."
+        title = (
+            self.title
+            + ". "
+            + self.h0
+            + ". "
+            + self.conclusion_str
+            + self.signif_str
+            + "."
+        )
         data_fmt = {"data_fmts": ["%#0.4g", "%#0.4g", "%#0.3F", "%s"]}
         html_data_fmt = dict(data_fmt)
-        html_data_fmt["data_fmts"] = ["<td>" + i + "</td>"
-                                      for i in html_data_fmt["data_fmts"]]
-        return SimpleTable(data=[[self.test_statistic, self.crit_value,
-                                  self.pvalue, str(self.df)]],
-                           headers=["Test statistic", "Critical value",
-                                    "p-value", "df"],
-                           title=title,
-                           txt_fmt=data_fmt,
-                           html_fmt=html_data_fmt,
-                           ltx_fmt=data_fmt)
+        html_data_fmt["data_fmts"] = [
+            "<td>" + i + "</td>" for i in html_data_fmt["data_fmts"]
+        ]
+        return SimpleTable(
+            data=[[self.test_statistic, self.crit_value, self.pvalue, str(self.df)]],
+            headers=["Test statistic", "Critical value", "p-value", "df"],
+            title=title,
+            txt_fmt=data_fmt,
+            html_fmt=html_data_fmt,
+            ltx_fmt=data_fmt,
+        )
 
     def __str__(self):
-        return "<" + self.__module__ + "." + self.__class__.__name__ \
-                   + " object. " + self.h0 + ": " + self.conclusion \
-                   + self.signif_str \
-                   + f". Test statistic: {self.test_statistic:.3f}" \
-                   + f", critical value: {self.crit_value:.3f}>" \
-                   + f", p-value: {self.pvalue:.3f}>"
+        return (
+            "<"
+            + self.__module__
+            + "."
+            + self.__class__.__name__
+            + " object. "
+            + self.h0
+            + ": "
+            + self.conclusion
+            + self.signif_str
+            + f". Test statistic: {self.test_statistic:.3f}"
+            + f", critical value: {self.crit_value:.3f}>"
+            + f", p-value: {self.pvalue:.3f}>"
+        )
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        return np.allclose(self.test_statistic, other.test_statistic) \
-            and np.allclose(self.crit_value, other.crit_value) \
-            and np.allclose(self.pvalue, other.pvalue) \
+        return (
+            np.allclose(self.test_statistic, other.test_statistic)
+            and np.allclose(self.crit_value, other.crit_value)
+            and np.allclose(self.pvalue, other.pvalue)
             and np.allclose(self.signif, other.signif)
+        )
 
 
 class CausalityTestResults(HypothesisTestResults):
@@ -99,14 +119,26 @@ class CausalityTestResults(HypothesisTestResults):
         The kind of test. ``"f"`` indicates an F-test, ``"wald"`` indicates a
         Wald-test.
     """
-    def __init__(self, causing, caused, test_statistic, crit_value, pvalue, df,
-                 signif, test="granger", method=None):
+
+    def __init__(
+        self,
+        causing,
+        caused,
+        test_statistic,
+        crit_value,
+        pvalue,
+        df,
+        signif,
+        test="granger",
+        method=None,
+    ):
         self.causing = causing
         self.caused = caused
         self.test = test
         if method is None or method.lower() not in ["f", "wald"]:
-            raise ValueError('The method ("f" for F-test, "wald" for '
-                             "Wald-test) must not be None.")
+            raise ValueError(
+                'The method ("f" for F-test, "wald" for ' "Wald-test) must not be None."
+            )
         method = method.capitalize()
         # attributes used in summary and string representation:
         title = "Granger" if self.test == "granger" else "Instantaneous"
@@ -123,22 +155,20 @@ class CausalityTestResults(HypothesisTestResults):
         else:
             h0 += "[" + ", ".join(caused) + "]"
 
-        super().__init__(test_statistic, crit_value,
-                         pvalue, df, signif, method,
-                         title, h0)
+        super().__init__(
+            test_statistic, crit_value, pvalue, df, signif, method, title, h0
+        )
 
     def __eq__(self, other):
         basic_test = super().__eq__(other)
         if not basic_test:
             return False
         test = self.test == other.test
-        variables = (self.causing == other.causing and
-                     self.caused == other.caused)
+        variables = self.causing == other.causing and self.caused == other.caused
         # instantaneous causality is a symmetric relation ==> causing and
         # caused may be swapped
         if not variables and self.test == "inst":
-            variables = (self.causing == other.caused and
-                         self.caused == other.causing)
+            variables = self.causing == other.caused and self.caused == other.causing
         return test and variables
 
 
@@ -159,13 +189,14 @@ class NormalityTestResults(HypothesisTestResults):
     signif : float
         Significance level.
     """
+
     def __init__(self, test_statistic, crit_value, pvalue, df, signif):
         method = "Jarque-Bera"
         title = "normality (skew and kurtosis) test"
         h0 = "H_0: data generated by normally-distributed process"
-        super().__init__(test_statistic, crit_value,
-                         pvalue, df, signif,
-                         method, title, h0)
+        super().__init__(
+            test_statistic, crit_value, pvalue, df, signif, method, title, h0
+        )
 
 
 class WhitenessTestResults(HypothesisTestResults):
@@ -187,8 +218,8 @@ class WhitenessTestResults(HypothesisTestResults):
     nlags : int
         Number of lags tested.
     """
-    def __init__(self, test_statistic, crit_value, pvalue, df, signif, nlags,
-                 adjusted):
+
+    def __init__(self, test_statistic, crit_value, pvalue, df, signif, nlags, adjusted):
         self.lags = nlags
         self.adjusted = adjusted
         method = "Portmanteau"
@@ -197,12 +228,5 @@ class WhitenessTestResults(HypothesisTestResults):
             title = "Adjusted " + title
         h0 = f"H_0: residual autocorrelation up to lag {nlags} is zero"
         super().__init__(
-            test_statistic,
-            crit_value,
-            pvalue,
-            df,
-            signif,
-            method,
-            title,
-            h0
+            test_statistic, crit_value, pvalue, df, signif, method, title, h0
         )

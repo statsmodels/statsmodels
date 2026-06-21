@@ -51,7 +51,7 @@ print("R2: ", results.rsquared)
 nsample = 50
 sig = 0.5
 x = np.linspace(0, 20, nsample)
-X = np.column_stack((x, np.sin(x), (x - 5)**2, np.ones(nsample)))
+X = np.column_stack((x, np.sin(x), (x - 5) ** 2, np.ones(nsample)))
 beta = [0.5, 0.5, -0.02, 5.0]
 
 y_true = np.dot(X, beta)
@@ -211,10 +211,18 @@ print(condition_number)
 # dramatic effect on the coefficient estimates:
 
 ols_results2 = sm.OLS(y.iloc[:14], X.iloc[:14]).fit()
-print("Percentage change %4.2f%%\n" * 7 % tuple([
-    i for i in (ols_results2.params - ols_results.params) /
-    ols_results.params * 100
-]))
+print(
+    "Percentage change %4.2f%%\n"
+    * 7
+    % tuple(
+        [
+            i
+            for i in (ols_results2.params - ols_results.params)
+            / ols_results.params
+            * 100
+        ]
+    )
+)
 
 # We can also look at formal statistics for this such as the DFBETAS -- a
 # standardized measure of how much each coefficient changes when that
@@ -225,6 +233,6 @@ infl = ols_results.get_influence()
 # In general we may consider DBETAS in absolute value greater than
 # $2/\sqrt{N}$ to be influential observations
 
-2.0 / len(X)**0.5
+2.0 / len(X) ** 0.5
 
 print(infl.summary_frame().filter(regex="dfb"))

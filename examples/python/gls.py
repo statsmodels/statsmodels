@@ -38,8 +38,8 @@ ols_resid = sm.OLS(data.endog, data.exog).fit().resid
 # estimator for rho is to regress the residuals on the lagged residuals
 
 resid_fit = sm.OLS(
-    np.asarray(ols_resid)[1:],
-    sm.add_constant(np.asarray(ols_resid)[:-1])).fit()
+    np.asarray(ols_resid)[1:], sm.add_constant(np.asarray(ols_resid)[:-1])
+).fit()
 print(resid_fit.tvalues[1])
 print(resid_fit.pvalues[1])
 

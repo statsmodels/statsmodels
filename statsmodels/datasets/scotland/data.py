@@ -1,4 +1,5 @@
 """Taxation Powers Vote for the Scottish Parliament 1997 dataset."""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

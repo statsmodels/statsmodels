@@ -48,11 +48,7 @@ colors = ["r", "g", "blue"]
 factor_groups = salary_table.groupby(["E", "M"])
 for values, group in factor_groups:
     i, j = values
-    plt.scatter(group["X"],
-                group["S"],
-                marker=symbols[j],
-                color=colors[i - 1],
-                s=144)
+    plt.scatter(group["X"], group["S"], marker=symbols[j], color=colors[i - 1], s=144)
 plt.xlabel("Experience")
 plt.ylabel("Salary")
 
@@ -230,13 +226,9 @@ plt.ylabel("Salary")
 U = S - X * interX_lm32.params["X"]
 
 plt.figure(figsize=(6, 6))
-interaction_plot(E,
-                 M,
-                 U,
-                 colors=["red", "blue"],
-                 markers=["^", "D"],
-                 markersize=10,
-                 ax=plt.gca())
+interaction_plot(
+    E, M, U, colors=["red", "blue"], markers=["^", "D"], markersize=10, ax=plt.gca()
+)
 
 # ## Minority Employment Data
 
@@ -428,19 +420,20 @@ kidney_lm = ols("np.log(Days+1) ~ C(Duration) * C(Weight)", data=kt).fit()
 table10 = anova_lm(kidney_lm)
 
 print(
-    anova_lm(
-        ols("np.log(Days+1) ~ C(Duration) + C(Weight)", data=kt).fit(),
-        kidney_lm))
+    anova_lm(ols("np.log(Days+1) ~ C(Duration) + C(Weight)", data=kt).fit(), kidney_lm)
+)
 print(
     anova_lm(
         ols("np.log(Days+1) ~ C(Duration)", data=kt).fit(),
         ols("np.log(Days+1) ~ C(Duration) + C(Weight, Sum)", data=kt).fit(),
-    ))
+    )
+)
 print(
     anova_lm(
         ols("np.log(Days+1) ~ C(Weight)", data=kt).fit(),
         ols("np.log(Days+1) ~ C(Duration) + C(Weight, Sum)", data=kt).fit(),
-    ))
+    )
+)
 
 # ## Sum of squares
 #
@@ -452,16 +445,15 @@ print(
 #
 #  Do not use Type III with non-orthogonal contrast - ie., Treatment
 
-sum_lm = ols("np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)",
-             data=kt).fit()
+sum_lm = ols("np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)", data=kt).fit()
 
 print(anova_lm(sum_lm))
 print(anova_lm(sum_lm, typ=2))
 print(anova_lm(sum_lm, typ=3))
 
 nosum_lm = ols(
-    "np.log(Days+1) ~ C(Duration, Treatment) * C(Weight, Treatment)",
-    data=kt).fit()
+    "np.log(Days+1) ~ C(Duration, Treatment) * C(Weight, Treatment)", data=kt
+).fit()
 print(anova_lm(nosum_lm))
 print(anova_lm(nosum_lm, typ=2))
 print(anova_lm(nosum_lm, typ=3))

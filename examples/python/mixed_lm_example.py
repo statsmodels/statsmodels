@@ -163,11 +163,12 @@ print(mdf.summary())
 # / \sqrt{19.493 * 0.416} \approx 0.1)$.  So next we fit a model in which
 # the two random effects are constrained to be uncorrelated:
 
-0.294 / (19.493 * 0.416)**0.5
+0.294 / (19.493 * 0.416) ** 0.5
 
 md = smf.mixedlm("Weight ~ Time", data, groups=data["Pig"], re_formula="~Time")
 free = sm.regression.mixed_linear_model.MixedLMParams.from_components(
-    np.ones(2), np.eye(2))
+    np.ones(2), np.eye(2)
+)
 
 mdf = md.fit(free=free, method=["lbfgs"])
 print(mdf.summary())

@@ -354,11 +354,9 @@ class PCA:
             self._adjusted_data = self._fill_missing_em()
         elif self._missing is None:
             if not np.isfinite(self._adjusted_data).all():
-                raise ValueError(
-                    """\
+                raise ValueError("""\
 data contains non-finite values (inf, NaN). You should drop these values or
-use one of the methods for adjusting data for missing-values."""
-                )
+use one of the methods for adjusting data for missing-values.""")
         else:
             raise ValueError("missing method is not known.")
 

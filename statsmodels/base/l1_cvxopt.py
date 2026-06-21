@@ -1,14 +1,25 @@
 """
 Holds files for l1 regularization of LikelihoodModel, using cvxopt.
 """
+
 import numpy as np
 
 from statsmodels.base import l1_solvers_common
 
 
 def fit_l1_cvxopt_cp(
-        f, score, start_params, args, kwargs, disp=False, maxiter=100,
-        callback=None, retall=False, full_output=False, hess=None):
+    f,
+    score,
+    start_params,
+    args,
+    kwargs,
+    disp=False,
+    maxiter=100,
+    callback=None,
+    retall=False,
+    full_output=False,
+    hess=None,
+):
     """
     Solve the l1 regularized problem using cvxopt.solvers.cp
 
@@ -113,15 +124,14 @@ def fit_l1_cvxopt_cp(
     # QC
     qc_tol = kwargs["qc_tol"]
     qc_verbose = kwargs["qc_verbose"]
-    passed = l1_solvers_common.qc_results(
-        params, alpha, score, qc_tol, qc_verbose)
+    passed = l1_solvers_common.qc_results(params, alpha, score, qc_tol, qc_verbose)
     # Possibly trim
     trim_mode = kwargs["trim_mode"]
     size_trim_tol = kwargs["size_trim_tol"]
     auto_trim_tol = kwargs["auto_trim_tol"]
     params, trimmed = l1_solvers_common.do_trim_params(
-        params, k_params, alpha, score, passed, trim_mode, size_trim_tol,
-        auto_trim_tol)
+        params, k_params, alpha, score, passed, trim_mode, size_trim_tol, auto_trim_tol
+    )
 
     # Pack up return values for statsmodels
     # TODO These retvals are returned as mle_retvals...but the fit was not ML
@@ -130,12 +140,17 @@ def fit_l1_cvxopt_cp(
         gopt = float("nan")  # Objective is non-differentiable
         hopt = float("nan")
         iterations = float("nan")
-        converged = (results["status"] == "optimal")
+        converged = results["status"] == "optimal"
         warnflag = results["status"]
         retvals = {
-            "fopt": fopt, "converged": converged, "iterations": iterations,
-            "gopt": gopt, "hopt": hopt, "trimmed": trimmed,
-            "warnflag": warnflag}
+            "fopt": fopt,
+            "converged": converged,
+            "iterations": iterations,
+            "gopt": gopt,
+            "hopt": hopt,
+            "trimmed": trimmed,
+            "warnflag": warnflag,
+        }
     else:
         x = np.array(results["x"]).ravel()
         params = x[:k_params]

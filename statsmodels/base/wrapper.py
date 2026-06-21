@@ -8,6 +8,7 @@ class ResultsWrapper:
     Class which wraps a statsmodels estimation Results class and steps in to
     reattach metadata to results (if available)
     """
+
     _wrap_attrs = {}
     _wrap_methods = {}
 
@@ -93,6 +94,7 @@ class ResultsWrapper:
             The unpickled results instance.
         """
         from statsmodels.iolib.smpickle import load_pickle
+
         return load_pickle(fname)
 
 

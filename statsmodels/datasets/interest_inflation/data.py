@@ -1,4 +1,5 @@
 """(West) German interest and inflation rate 1972-1998"""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

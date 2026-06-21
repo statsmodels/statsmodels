@@ -78,7 +78,7 @@ class Clark1987:
         cls.model.selection = np.eye(cls.model.k_states)
 
         # Update matrices with given parameters
-        (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(cls.true["parameters"])
+        sigma_v, sigma_e, sigma_w, phi_1, phi_2 = np.array(cls.true["parameters"])
         cls.model.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
         cls.model.state_cov[
             np.diag_indices(k_states) + (np.zeros(k_states, dtype=int),)

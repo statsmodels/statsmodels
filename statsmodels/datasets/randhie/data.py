@@ -1,4 +1,5 @@
 """RAND Health Insurance Experiment Data"""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

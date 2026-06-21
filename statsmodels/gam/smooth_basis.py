@@ -34,8 +34,9 @@ def _equally_spaced_knots(x, df):
 def _R_compat_quantile(x, probs):
     # return np.percentile(x, 100 * np.asarray(probs))
     probs = np.asarray(probs)
-    quantiles = np.asarray([np.percentile(x, 100 * prob)
-                            for prob in probs.ravel(order="C")])
+    quantiles = np.asarray(
+        [np.percentile(x, 100 * prob) for prob in probs.ravel(order="C")]
+    )
     return quantiles.reshape(probs.shape, order="C")
 
 
@@ -62,9 +63,11 @@ def _eval_bspline_basis(x, knots, degree, deriv="all", include_intercept=True):
     # this and decide what to do with it, I'm going to play it safe and
     # disallow such points.
     if np.min(x) < np.min(knots) or np.max(x) > np.max(knots):
-        raise NotImplementedError("some data points fall outside the "
-                                  "outermost knots, and I'm not sure how "
-                                  "to handle them. (Patches accepted!)")
+        raise NotImplementedError(
+            "some data points fall outside the "
+            "outermost knots, and I'm not sure how "
+            "to handle them. (Patches accepted!)"
+        )
     # Thanks to Charles Harris for explaining splev. It's not well
     # documented, but basically it computes an arbitrary b-spline basis
     # given knots and degree on some specificed points (or derivatives
@@ -115,22 +118,28 @@ def compute_all_knots(x, df, degree):
     upper_bound = np.max(x)
     knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
     inner_knots = _R_compat_quantile(x, knot_quantiles)
-    all_knots = np.concatenate(([lower_bound, upper_bound] * order,
-                                inner_knots))
+    all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
     return all_knots, lower_bound, upper_bound, inner_knots
 
 
 def make_bsplines_basis(x, df, degree):
-    """ make a spline basis for x """
+    """make a spline basis for x"""
 
     all_knots, _, _, _ = compute_all_knots(x, df, degree)
     basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
     return basis, der_basis, der2_basis
 
 
-def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
-                       spacing="quantile", lower_bound=None,
-                       upper_bound=None, all_knots=None):
+def get_knots_bsplines(
+    x=None,
+    df=None,
+    knots=None,
+    degree=3,
+    spacing="quantile",
+    lower_bound=None,
+    upper_bound=None,
+    all_knots=None,
+):
     """knots for use in B-splines
 
     There are two main options for the knot placement
@@ -149,11 +158,9 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
     x_max = x.max()
 
     if degree < 0:
-        raise ValueError("degree must be greater than 0 (not %r)"
-                         % (degree,))
+        raise ValueError("degree must be greater than 0 (not %r)" % (degree,))
     if int(degree) != degree:
-        raise ValueError("degree must be an integer (not %r)"
-                         % (degree,))
+        raise ValueError("degree must be an integer (not %r)" % (degree,))
 
     # These are guaranteed to all be 1d vectors by the code above
     # x = np.concatenate(tmp["xs"])
@@ -163,18 +170,24 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
     if df is not None:
         n_inner_knots = df - order
         if n_inner_knots < 0:
-            raise ValueError("df=%r is too small for degree=%r; must be >= %s"
-                             % (df, degree,
-                                # We know that n_inner_knots is negative;
-                                # if df were that much larger, it would
-                                # have been zero, and things would work.
-                                df - n_inner_knots))
+            raise ValueError(
+                "df=%r is too small for degree=%r; must be >= %s"
+                % (
+                    df,
+                    degree,
+                    # We know that n_inner_knots is negative;
+                    # if df were that much larger, it would
+                    # have been zero, and things would work.
+                    df - n_inner_knots,
+                )
+            )
         if knots is not None:
             if len(knots) != n_inner_knots:
-                raise ValueError("df=%s with degree=%r implies %s knots, "
-                                 "but %s knots were provided"
-                                 % (df, degree,
-                                    n_inner_knots, len(knots)))
+                raise ValueError(
+                    "df=%s with degree=%r implies %s knots, "
+                    "but %s knots were provided"
+                    % (df, degree, n_inner_knots, len(knots))
+                )
         elif spacing == "quantile":
             # Need to compute inner knots
             knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
@@ -194,21 +207,22 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
         upper_bound = np.max(x)
 
     if lower_bound > upper_bound:
-        raise ValueError("lower_bound > upper_bound (%r > %r)"
-                         % (lower_bound, upper_bound))
+        raise ValueError(
+            "lower_bound > upper_bound (%r > %r)" % (lower_bound, upper_bound)
+        )
     inner_knots = np.asarray(inner_knots)
     if inner_knots.ndim > 1:
         raise ValueError("knots must be 1 dimensional")
     if np.any(inner_knots < lower_bound):
-        raise ValueError("some knot values (%s) fall below lower bound "
-                         "(%r)"
-                         % (inner_knots[inner_knots < lower_bound],
-                            lower_bound))
+        raise ValueError(
+            "some knot values (%s) fall below lower bound "
+            "(%r)" % (inner_knots[inner_knots < lower_bound], lower_bound)
+        )
     if np.any(inner_knots > upper_bound):
-        raise ValueError("some knot values (%s) fall above upper bound "
-                         "(%r)"
-                         % (inner_knots[inner_knots > upper_bound],
-                            upper_bound))
+        raise ValueError(
+            "some knot values (%s) fall above upper bound "
+            "(%r)" % (inner_knots[inner_knots > upper_bound], upper_bound)
+        )
 
     if spacing == "equal":
         diffs = np.arange(1, order + 1) * diff_knots
@@ -216,8 +230,7 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
         upper_knots = inner_knots[-1] + diffs
         all_knots = np.concatenate((lower_knots, inner_knots, upper_knots))
     else:
-        all_knots = np.concatenate(([lower_bound, upper_bound] * order,
-                                    inner_knots))
+        all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
     all_knots.sort()
 
     return all_knots
@@ -237,8 +250,9 @@ def _get_integration_points(knots, k_points=3):
     return x
 
 
-def get_covder2(smoother, k_points=3, integration_points=None,
-                skip_ctransf=False, deriv=2):
+def get_covder2(
+    smoother, k_points=3, integration_points=None, skip_ctransf=False, deriv=2
+):
     """
     Approximate integral of cross product of second derivative of smoother
 
@@ -279,7 +293,7 @@ def make_poly_basis(x, degree, intercept=True):
     der2_basis = np.zeros(shape=(nobs, degree + 1 - start))
 
     for i in range(start, degree + 1):
-        basis[:, i - start] = x ** i
+        basis[:, i - start] = x**i
         der_basis[:, i - start] = i * x ** (i - 1)
         der2_basis[:, i - start] = i * (i - 1) * x ** (i - 2)
 
@@ -302,9 +316,10 @@ def make_poly_basis(x, degree, intercept=True):
 # plt.plot(result.T)
 # plt.show()
 
+
 class UnivariateGamSmoother(with_metaclass(ABCMeta)):
-    """Base Class for single smooth component
-    """
+    """Base Class for single smooth component"""
+
     def __init__(self, x, constraints=None, variable_name="x"):
         self.x = x
         self.constraints = constraints
@@ -337,8 +352,9 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
                 self.cov_der2 = ctransf.T.dot(base4[3]).dot(ctransf)
 
         self.dim_basis = self.basis.shape[1]
-        self.col_names = [self.variable_name + "_s" + str(i)
-                          for i in range(self.dim_basis)]
+        self.col_names = [
+            self.variable_name + "_s" + str(i) for i in range(self.dim_basis)
+        ]
 
     @abstractmethod
     def _smooth_basis_for_single_variable(self):
@@ -346,29 +362,26 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
 
 
 class UnivariateGenericSmoother(UnivariateGamSmoother):
-    """Generic single smooth component
-    """
-    def __init__(self, x, basis, der_basis, der2_basis, cov_der2,
-                 variable_name="x"):
+    """Generic single smooth component"""
+
+    def __init__(self, x, basis, der_basis, der2_basis, cov_der2, variable_name="x"):
         self.basis = basis
         self.der_basis = der_basis
         self.der2_basis = der2_basis
         self.cov_der2 = cov_der2
 
-        super().__init__(
-            x, variable_name=variable_name)
+        super().__init__(x, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         return self.basis, self.der_basis, self.der2_basis, self.cov_der2
 
 
 class UnivariatePolynomialSmoother(UnivariateGamSmoother):
-    """polynomial single smooth component
-    """
+    """polynomial single smooth component"""
+
     def __init__(self, x, degree, variable_name="x"):
         self.degree = degree
-        super().__init__(
-            x, variable_name=variable_name)
+        super().__init__(x, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         # TODO: unclear description
@@ -382,7 +395,7 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
         der2_basis = np.zeros(shape=(self.nobs, self.degree))
         for i in range(self.degree):
             dg = i + 1
-            basis[:, i] = self.x ** dg
+            basis[:, i] = self.x**dg
             der_basis[:, i] = dg * self.x ** (dg - 1)
             if dg > 1:
                 der2_basis[:, i] = dg * (dg - 1) * self.x ** (dg - 2)
@@ -445,26 +458,32 @@ class UnivariateBSplines(UnivariateGamSmoother):
           If all knots are provided, then those will be taken as given and
           all other options will be ignored.
     """
-    def __init__(self, x, df, degree=3, include_intercept=False,
-                 constraints=None, variable_name="x",
-                 covder2_kwds=None, **knot_kwds):
+
+    def __init__(
+        self,
+        x,
+        df,
+        degree=3,
+        include_intercept=False,
+        constraints=None,
+        variable_name="x",
+        covder2_kwds=None,
+        **knot_kwds,
+    ):
         self.degree = degree
         self.df = df
         self.include_intercept = include_intercept
         self.knots = get_knots_bsplines(x, degree=degree, df=df, **knot_kwds)
-        self.covder2_kwds = (covder2_kwds if covder2_kwds is not None
-                             else {})
-        super().__init__(
-            x, constraints=constraints, variable_name=variable_name)
+        self.covder2_kwds = covder2_kwds if covder2_kwds is not None else {}
+        super().__init__(x, constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         basis, der_basis, der2_basis = _eval_bspline_basis(
-            self.x, self.knots, self.degree,
-            include_intercept=self.include_intercept)
+            self.x, self.knots, self.degree, include_intercept=self.include_intercept
+        )
         # cov_der2 = np.dot(der2_basis.T, der2_basis)
 
-        cov_der2 = get_covder2(self, skip_ctransf=True,
-                               **self.covder2_kwds)
+        cov_der2 = get_covder2(self, skip_ctransf=True, **self.covder2_kwds)
 
         return basis, der_basis, der2_basis, cov_der2
 
@@ -493,9 +512,13 @@ class UnivariateBSplines(UnivariateGamSmoother):
 
         if x_new is None:
             x_new = self.x
-        exog = _eval_bspline_basis(x_new, self.knots, self.degree,
-                                   deriv=deriv,
-                                   include_intercept=self.include_intercept)
+        exog = _eval_bspline_basis(
+            x_new,
+            self.knots,
+            self.degree,
+            deriv=deriv,
+            include_intercept=self.include_intercept,
+        )
 
         # ctransf does not exist yet when cov_der2 is computed
         ctransf = getattr(self, "ctransf", None)
@@ -510,8 +533,7 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
     Cubic splines as described in the wood's book in chapter 3
     """
 
-    def __init__(self, x, df, constraints=None, transform="domain",
-                 variable_name="x"):
+    def __init__(self, x, df, constraints=None, transform="domain", variable_name="x"):
 
         self.degree = 3
         self.df = df
@@ -519,8 +541,7 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
 
         self.x = x = self.transform_data(x, initialize=True)
         self.knots = _equally_spaced_knots(x, df)
-        super().__init__(
-            x, constraints=constraints, variable_name=variable_name)
+        super().__init__(x, constraints=constraints, variable_name=variable_name)
 
     def transform_data(self, x, initialize=False):
         tm = self.transform_data_method
@@ -536,8 +557,7 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
                 self.domain_upp = tm[1]
                 self.transform_data_method = "domain"
             else:
-                raise ValueError("transform should be None, 'domain' "
-                                 "or a tuple")
+                raise ValueError("transform should be None, 'domain' " "or a tuple")
             self.domain_diff = self.domain_upp - self.domain_low
 
         if self.transform_data_method == "domain":
@@ -557,7 +577,7 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
             self.transf_mean = np.zeros(basis.shape[1])
         s = self._splines_s()[:-1, :-1]
         if not self.constraints == "none":
-            ctransf = np.diag(1/np.max(np.abs(basis), axis=0))
+            ctransf = np.diag(1 / np.max(np.abs(basis), axis=0))
         else:
             ctransf = np.eye(basis.shape[1])
         # use np.eye to avoid rescaling
@@ -572,9 +592,11 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
 
     def _rk(self, x, z):
         p1 = ((z - 1 / 2) ** 2 - 1 / 12) * ((x - 1 / 2) ** 2 - 1 / 12) / 4
-        p2 = ((np.abs(z - x) - 1 / 2) ** 4 -
-              1 / 2 * (np.abs(z - x) - 1 / 2) ** 2 +
-              7 / 240) / 24.
+        p2 = (
+            (np.abs(z - x) - 1 / 2) ** 4
+            - 1 / 2 * (np.abs(z - x) - 1 / 2) ** 2
+            + 7 / 240
+        ) / 24.0
         return p1 - p2
 
     def _splines_x(self, x=None):
@@ -635,13 +657,13 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         The name for the underlying explanatory variable, x, used in for
         creating the column and parameter names for the basis functions.
     """
+
     def __init__(self, x, df, constraints=None, variable_name="x"):
         self.degree = 3
         self.df = df
         self.x = x
         self.knots = _equally_spaced_knots(x, df)
-        super().__init__(
-            x, constraints=constraints, variable_name=variable_name)
+        super().__init__(x, constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         mgr = FormulaManager()
@@ -700,22 +722,22 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         b = np.zeros((n, n))  # the b matrix on page 146 of Wood's book
         d = np.zeros((n, n))  # the d matrix on page 146 of Wood's book
 
-        b[0, 0] = (h[n - 1] + h[0]) / 3.
-        b[0, n - 1] = h[n - 1] / 6.
-        b[n - 1, 0] = h[n - 1] / 6.
+        b[0, 0] = (h[n - 1] + h[0]) / 3.0
+        b[0, n - 1] = h[n - 1] / 6.0
+        b[n - 1, 0] = h[n - 1] / 6.0
 
-        d[0, 0] = -1. / h[0] - 1. / h[n - 1]
-        d[0, n - 1] = 1. / h[n - 1]
-        d[n - 1, 0] = 1. / h[n - 1]
+        d[0, 0] = -1.0 / h[0] - 1.0 / h[n - 1]
+        d[0, n - 1] = 1.0 / h[n - 1]
+        d[n - 1, 0] = 1.0 / h[n - 1]
 
         for i in range(1, n):
-            b[i, i] = (h[i - 1] + h[i]) / 3.
-            b[i, i - 1] = h[i - 1] / 6.
-            b[i - 1, i] = h[i - 1] / 6.
+            b[i, i] = (h[i - 1] + h[i]) / 3.0
+            b[i, i - 1] = h[i - 1] / 6.0
+            b[i - 1, i] = h[i - 1] / 6.0
 
-            d[i, i] = -1. / h[i - 1] - 1. / h[i]
-            d[i, i - 1] = 1. / h[i - 1]
-            d[i - 1, i] = 1. / h[i - 1]
+            d[i, i] = -1.0 / h[i - 1] - 1.0 / h[i]
+            d[i, i - 1] = 1.0 / h[i - 1]
+            d[i - 1, i] = 1.0 / h[i - 1]
 
         return b, d
 
@@ -733,10 +755,9 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
 
 class AdditiveGamSmoother(with_metaclass(ABCMeta)):
-    """Base class for additive smooth components
-    """
-    def __init__(self, x, variable_names=None, include_intercept=False,
-                 **kwargs):
+    """Base class for additive smooth components"""
+
+    def __init__(self, x, variable_names=None, include_intercept=False, **kwargs):
 
         # get pandas names before using asarray
         if isinstance(x, pd.DataFrame):
@@ -764,16 +785,14 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
             if data_names is not None:
                 self.variable_names = data_names
             else:
-                self.variable_names = ["x" + str(i)
-                                       for i in range(self.k_variables)]
+                self.variable_names = ["x" + str(i) for i in range(self.k_variables)]
         else:
             self.variable_names = variable_names
 
         self.smoothers = self._make_smoothers_list()
         self.basis = np.hstack([smoother.basis for smoother in self.smoothers])
         self.dim_basis = self.basis.shape[1]
-        self.penalty_matrices = [smoother.cov_der2
-                                 for smoother in self.smoothers]
+        self.penalty_matrices = [smoother.cov_der2 for smoother in self.smoothers]
         self.col_names = []
         for smoother in self.smoothers:
             self.col_names.extend(smoother.col_names)
@@ -782,7 +801,7 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
         last_column = 0
         for smoother in self.smoothers:
             mask = np.array([False] * self.dim_basis)
-            mask[last_column:smoother.dim_basis + last_column] = True
+            mask[last_column : smoother.dim_basis + last_column] = True
             last_column = last_column + smoother.dim_basis
             self.mask.append(mask)
 
@@ -809,16 +828,15 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
         if x_new.ndim == 1 and self.k_variables == 1:
             x_new = x_new.reshape(-1, 1)
         exog = np.hstack(
-            [self.smoothers[i].transform(x_new[:, i])
-             for i in range(self.k_variables)]
+            [self.smoothers[i].transform(x_new[:, i]) for i in range(self.k_variables)]
         )
 
         return exog
 
 
 class GenericSmoothers(AdditiveGamSmoother):
-    """generic class for additive smooth components for GAM
-    """
+    """generic class for additive smooth components for GAM"""
+
     def __init__(self, x, smoothers):
         self.smoothers = smoothers
         super().__init__(x, variable_names=None)
@@ -828,8 +846,8 @@ class GenericSmoothers(AdditiveGamSmoother):
 
 
 class PolynomialSmoother(AdditiveGamSmoother):
-    """additive polynomial components for GAM
-    """
+    """additive polynomial components for GAM"""
+
     def __init__(self, x, degrees, variable_names=None):
         self.degrees = degrees
         super().__init__(x, variable_names=variable_names)
@@ -840,7 +858,8 @@ class PolynomialSmoother(AdditiveGamSmoother):
             uv_smoother = UnivariatePolynomialSmoother(
                 self.x[:, v],
                 degree=self.degrees[v],
-                variable_name=self.variable_names[v])
+                variable_name=self.variable_names[v],
+            )
             smoothers.append(uv_smoother)
         return smoothers
 
@@ -926,8 +945,17 @@ class BSplines(AdditiveGamSmoother):
     ``include_intercept`` will be automatically set to True to avoid
     dropping an additional column.
     """
-    def __init__(self, x, df, degree, include_intercept=False,
-                 constraints=None, variable_names=None, knot_kwds=None):
+
+    def __init__(
+        self,
+        x,
+        df,
+        degree,
+        include_intercept=False,
+        constraints=None,
+        variable_names=None,
+        knot_kwds=None,
+    ):
         if isinstance(degree, int):
             self.degrees = np.array([degree], dtype=int)
         else:
@@ -942,8 +970,9 @@ class BSplines(AdditiveGamSmoother):
         if constraints == "center":
             include_intercept = True
 
-        super().__init__(x, include_intercept=include_intercept,
-                         variable_names=variable_names)
+        super().__init__(
+            x, include_intercept=include_intercept, variable_names=variable_names
+        )
 
     def _make_smoothers_list(self):
         smoothers = []
@@ -951,10 +980,13 @@ class BSplines(AdditiveGamSmoother):
             kwds = self.knot_kwds[v] if self.knot_kwds else {}
             uv_smoother = UnivariateBSplines(
                 self.x[:, v],
-                df=self.dfs[v], degree=self.degrees[v],
+                df=self.dfs[v],
+                degree=self.degrees[v],
                 include_intercept=self.include_intercept[v],
                 constraints=self.constraints,
-                variable_name=self.variable_names[v], **kwds)
+                variable_name=self.variable_names[v],
+                **kwds,
+            )
             smoothers.append(uv_smoother)
 
         return smoothers
@@ -966,22 +998,25 @@ class CubicSplines(AdditiveGamSmoother):
     Note, these splines do NOT use the same spline basis as
     ``Cubic Regression Splines``.
     """
-    def __init__(self, x, df, constraints="center", transform="domain",
-                 variable_names=None):
+
+    def __init__(
+        self, x, df, constraints="center", transform="domain", variable_names=None
+    ):
         self.dfs = df
         self.constraints = constraints
         self.transform = transform
-        super().__init__(x, constraints=constraints,
-                         variable_names=variable_names)
+        super().__init__(x, constraints=constraints, variable_names=variable_names)
 
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
             uv_smoother = UnivariateCubicSplines(
-                            self.x[:, v], df=self.dfs[v],
-                            constraints=self.constraints,
-                            transform=self.transform,
-                            variable_name=self.variable_names[v])
+                self.x[:, v],
+                df=self.dfs[v],
+                constraints=self.constraints,
+                transform=self.transform,
+                variable_name=self.variable_names[v],
+            )
             smoothers.append(uv_smoother)
 
         return smoothers
@@ -1008,6 +1043,7 @@ class CyclicCubicSplines(AdditiveGamSmoother):
         creating the column and parameter names for the basis functions.
         If ``x`` is a pandas object, then the names will be taken from it.
     """
+
     def __init__(self, x, df, constraints=None, variable_names=None):
         self.dfs = df
         # TODO: move attaching constraints to super call
@@ -1019,11 +1055,14 @@ class CyclicCubicSplines(AdditiveGamSmoother):
         for v in range(self.k_variables):
             uv_smoother = UnivariateCubicCyclicSplines(
                 self.x[:, v],
-                df=self.dfs[v], constraints=self.constraints,
-                variable_name=self.variable_names[v])
+                df=self.dfs[v],
+                constraints=self.constraints,
+                variable_name=self.variable_names[v],
+            )
             smoothers.append(uv_smoother)
 
         return smoothers
+
 
 # class CubicRegressionSplines(BaseCubicSplines):
 #     # TODO: this class is still not tested

@@ -72,7 +72,8 @@ dframe1 = pd.DataFrame(data, columns=colnames)
 rownames
 
 mean2, sd2, nobs2, mean1, sd1, nobs1 = np.asarray(
-    dframe1[["mean_t", "sd_t", "n_t", "mean_c", "sd_c", "n_c"]]).T
+    dframe1[["mean_t", "sd_t", "n_t", "mean_c", "sd_c", "n_c"]]
+).T
 rownames = dframe1["study"]
 rownames.tolist()
 
@@ -91,11 +92,7 @@ eff, var_eff = effectsize_smd(mean2, sd2, nobs2, mean1, sd1, nobs1)
 # based on a moment estimator based on pearson chi2 from the fixed effects
 # estimate.
 
-res3 = combine_effects(eff,
-                       var_eff,
-                       method_re="chi2",
-                       use_t=True,
-                       row_names=rownames)
+res3 = combine_effects(eff, var_eff, method_re="chi2", use_t=True, row_names=rownames)
 # TODO: we still need better information about conf_int of individual
 # samples
 # We don't have enough information in the model for individual confidence
@@ -112,11 +109,7 @@ fig = res3.plot_forest()
 fig.set_figheight(6)
 fig.set_figwidth(6)
 
-res3 = combine_effects(eff,
-                       var_eff,
-                       method_re="chi2",
-                       use_t=False,
-                       row_names=rownames)
+res3 = combine_effects(eff, var_eff, method_re="chi2", use_t=False, row_names=rownames)
 # TODO: we still need better information about conf_int of individual
 # samples
 # We don't have enough information in the model for individual confidence
@@ -133,11 +126,9 @@ print(res3.summary_frame())
 # and variance estimate until convergence.
 #
 
-res4 = combine_effects(eff,
-                       var_eff,
-                       method_re="iterated",
-                       use_t=False,
-                       row_names=rownames)
+res4 = combine_effects(
+    eff, var_eff, method_re="iterated", use_t=False, row_names=rownames
+)
 res4_df = res4.summary_frame()
 print("method RE:", res4.method_re)
 print(res4.summary_frame())
@@ -150,25 +141,18 @@ fig = res4.plot_forest()
 
 eff = np.array([61.00, 61.40, 62.21, 62.30, 62.34, 62.60, 62.70, 62.84, 65.90])
 var_eff = np.array(
-    [0.2025, 1.2100, 0.0900, 0.2025, 0.3844, 0.5625, 0.0676, 0.0225, 1.8225])
+    [0.2025, 1.2100, 0.0900, 0.2025, 0.3844, 0.5625, 0.0676, 0.0225, 1.8225]
+)
 rownames = ["PTB", "NMi", "NIMC", "KRISS", "LGC", "NRC", "IRMM", "NIST", "LNE"]
 
-res2_DL = combine_effects(eff,
-                          var_eff,
-                          method_re="dl",
-                          use_t=True,
-                          row_names=rownames)
+res2_DL = combine_effects(eff, var_eff, method_re="dl", use_t=True, row_names=rownames)
 print("method RE:", res2_DL.method_re)
 print(res2_DL.summary_frame())
 fig = res2_DL.plot_forest()
 fig.set_figheight(6)
 fig.set_figwidth(6)
 
-res2_PM = combine_effects(eff,
-                          var_eff,
-                          method_re="pm",
-                          use_t=True,
-                          row_names=rownames)
+res2_PM = combine_effects(eff, var_eff, method_re="pm", use_t=True, row_names=rownames)
 print("method RE:", res2_PM.method_re)
 print(res2_PM.summary_frame())
 fig = res2_PM.plot_forest()
@@ -212,8 +196,9 @@ eff, var_eff = effectsize_2proportions(*dta, statistic="rd")
 
 eff, var_eff
 
-res5 = combine_effects(eff, var_eff, method_re="iterated",
-                       use_t=False)  # , row_names=rownames)
+res5 = combine_effects(
+    eff, var_eff, method_re="iterated", use_t=False
+)  # , row_names=rownames)
 res5_df = res5.summary_frame()
 print("method RE:", res5.method_re)
 print("RE variance tau2:", res5.tau2)
@@ -230,8 +215,9 @@ dta_c.T[1, 0] = 22
 dta_c.T
 
 eff, var_eff = effectsize_2proportions(*dta_c, statistic="rd")
-res5 = combine_effects(eff, var_eff, method_re="iterated",
-                       use_t=False)  # , row_names=rownames)
+res5 = combine_effects(
+    eff, var_eff, method_re="iterated", use_t=False
+)  # , row_names=rownames)
 res5_df = res5.summary_frame()
 print("method RE:", res5.method_re)
 print(res5.summary_frame())
@@ -270,8 +256,9 @@ res_glm = mod_glm.fit(scale=1.0)
 print(res_glm.summary().tables[1])
 
 # check results
-res_glm.scale, res_glm.conf_int() - res_frame.loc["fixed effect",
-                                                  ["ci_low", "ci_upp"]].values
+res_glm.scale, res_glm.conf_int() - res_frame.loc[
+    "fixed effect", ["ci_low", "ci_upp"]
+].values
 
 # Using HKSJ variance adjustment in meta-analysis is equivalent to
 # estimating the scale using pearson chi2, which is also the default for the
@@ -281,8 +268,9 @@ res_glm = mod_glm.fit(scale="x2")
 print(res_glm.summary().tables[1])
 
 # check results
-res_glm.scale, res_glm.conf_int() - res_frame.loc["fixed effect",
-                                                  ["ci_low", "ci_upp"]].values
+res_glm.scale, res_glm.conf_int() - res_frame.loc[
+    "fixed effect", ["ci_low", "ci_upp"]
+].values
 
 # ### Mantel-Hanszel odds-ratio using contingency tables
 #

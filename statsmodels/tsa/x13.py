@@ -604,15 +604,13 @@ def x13_arima_analysis(
         except OSError:
             if os.path.exists(ftempin.name):
                 warn(
-                    f"Failed to delete resource {ftempin.name}",
-                    IOWarning,
-                    stacklevel=2
+                    f"Failed to delete resource {ftempin.name}", IOWarning, stacklevel=2
                 )
             if os.path.exists(ftempout.name):
                 warn(
                     f"Failed to delete resource {ftempout.name}",
                     IOWarning,
-                    stacklevel=2
+                    stacklevel=2,
                 )
 
     seasadj = _convert_out_to_series(seasadj, endog.index, "seasadj")

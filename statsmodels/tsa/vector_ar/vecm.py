@@ -84,9 +84,7 @@ def select_order(
         if exog_coint is not None:
             exogs.append(exog_coint)
         if seasons > 0:
-            exogs.append(
-                seasonal_dummies(seasons, len(data)).reshape(-1, seasons - 1)
-            )
+            exogs.append(seasonal_dummies(seasons, len(data)).reshape(-1, seasons - 1))
         if exog is not None:
             exogs.append(exog)
         exogs = hstack(exogs) if exogs else None
@@ -100,8 +98,7 @@ def select_order(
     # -1 because k_ar_VECM == k_ar_VAR - 1
     # +1 because p == index +1 (we start with p=1, not p=0)
     selected_orders = {
-        ic_name: np.array(ic_value).argmin() - 1 + 1
-        for ic_name, ic_value in ic.items()
+        ic_name: np.array(ic_value).argmin() - 1 + 1 for ic_name, ic_value in ic.items()
     }
 
     return LagOrderResults(ic, selected_orders, True)
@@ -482,14 +479,11 @@ class CointRankResults:
         The test's significance level.
     """
 
-    def __init__(
-        self, rank, neqs, test_stats, crit_vals, method="trace", signif=0.05
-    ):
+    def __init__(self, rank, neqs, test_stats, crit_vals, method="trace", signif=0.05):
         self.rank = rank
         self.neqs = neqs
         self.r_1 = [
-            neqs if method == "trace" else i + 1
-            for i in range(min(rank + 1, neqs))
+            neqs if method == "trace" else i + 1 for i in range(min(rank + 1, neqs))
         ]
         self.test_stats = test_stats
         self.crit_vals = crit_vals
@@ -530,9 +524,7 @@ class CointRankResults:
         return self.summary().as_text()
 
 
-def select_coint_rank(
-    endog, det_order, k_ar_diff, method="trace", signif=0.05
-):
+def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
     """Calculate the cointegration rank of a VECM.
 
     Parameters
@@ -559,8 +551,7 @@ def select_coint_rank(
     """
     if method not in ["trace", "maxeig"]:
         raise ValueError(
-            "The method argument has to be either 'trace' or"
-            "'maximum eigenvalue'."
+            "The method argument has to be either 'trace' or" "'maximum eigenvalue'."
         )
 
     if det_order not in [-1, 0, 1]:
@@ -574,9 +565,7 @@ def select_coint_rank(
 
     possible_signif_values = [0.1, 0.05, 0.01]
     if signif not in possible_signif_values:
-        raise ValueError(
-            "Please choose a significance level from 0.1, 0.05, or 0.01"
-        )
+        raise ValueError("Please choose a significance level from 0.1, 0.05, or 0.01")
 
     coint_result = coint_johansen(endog, det_order, k_ar_diff)
     test_stat = coint_result.lr1 if method == "trace" else coint_result.lr2
@@ -643,8 +632,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
 
     if det_order not in [-1, 0, 1]:
         warnings.warn(
-            "Critical values are only available for a det_order of "
-            "-1, 0, or 1.",
+            "Critical values are only available for a det_order of " "-1, 0, or 1.",
             category=HypothesisTestWarning,
             stacklevel=2,
         )
@@ -661,11 +649,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     def detrend(y, order):
         if order == -1:
             return y
-        return (
-            OLS(y, np.vander(np.linspace(-1, 1, len(y)), order + 1))
-            .fit()
-            .resid
-        )
+        return OLS(y, np.vander(np.linspace(-1, 1, len(y)), order + 1)).fit().resid
 
     def resid(y, x):
         if x.size == 0:
@@ -954,10 +938,7 @@ class VECM(tsbase.TimeSeriesModel):
         first_season=0,
     ):
         super().__init__(endog, exog, dates, freq, missing=missing)
-        if (
-            exog_coint is not None
-            and not exog_coint.shape[0] == endog.shape[0]
-        ):
+        if exog_coint is not None and not exog_coint.shape[0] == endog.shape[0]:
             raise ValueError("exog_coint must have as many rows as enodg_tot!")
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VECM")
@@ -994,9 +975,7 @@ class VECM(tsbase.TimeSeriesModel):
         if method == "ml":
             return self._estimate_vecm_ml()
         else:
-            raise ValueError(
-                "{} not recognized, must be among {}".format(method, "ml")
-            )
+            raise ValueError("{} not recognized, must be among {}".format(method, "ml"))
 
     def _estimate_vecm_ml(self):
         y_1_T, delta_y_1_T, y_lag1, delta_x = _endog_matrices(
@@ -1417,9 +1396,7 @@ class VECMResults:
 
         self.alpha = alpha
         self.beta, self.det_coef_coint = np.vsplit(beta, [self.neqs])
-        self.gamma, self.det_coef = np.hsplit(
-            gamma, [self.neqs * (self.k_ar - 1)]
-        )
+        self.gamma, self.det_coef = np.hsplit(gamma, [self.neqs * (self.k_ar - 1)])
 
         if "ci" in deterministic:
             self.const_coint = self.det_coef_coint[:1, :]
@@ -1437,9 +1414,7 @@ class VECMResults:
             self.exog_coint_coefs = None
 
         split_const_season = 1 if "co" in deterministic else 0
-        split_season_lin = split_const_season + (
-            (seasons - 1) if seasons else 0
-        )
+        split_season_lin = split_const_season + ((seasons - 1) if seasons else 0)
         if "lo" in deterministic:
             split_lin_exog = split_season_lin + 1
         else:
@@ -1451,11 +1426,7 @@ class VECMResults:
 
         self.sigma_u = sigma_u
 
-        if (
-            y_lag1 is not None
-            and delta_x is not None
-            and delta_y_1_T is not None
-        ):
+        if y_lag1 is not None and delta_x is not None and delta_y_1_T is not None:
             self._delta_y_1_T = delta_y_1_T
             self._y_lag1 = y_lag1
             self._delta_x = delta_x
@@ -1476,9 +1447,7 @@ class VECMResults:
         K = self.neqs
         T = self.nobs
         r = self.coint_rank
-        s00, _, _, _, _, lambd, _ = _sij(
-            self._delta_x, self._delta_y_1_T, self._y_lag1
-        )
+        s00, _, _, _, _, lambd, _ = _sij(self._delta_x, self._delta_y_1_T, self._y_lag1)
         return (
             -K * T * np.log(2 * np.pi) / 2
             - T * (np.log(np.linalg.det(s00)) + sum(np.log(1 - lambd)[:r])) / 2
@@ -1523,7 +1492,7 @@ class VECMResults:
     def cov_params_wo_det(self):
         # rows & cols to be dropped (related to deterministic terms inside the
         # cointegration relation)
-        start_i = self.neqs ** 2  # first elements belong to alpha @ beta.T
+        start_i = self.neqs**2  # first elements belong to alpha @ beta.T
         end_i = start_i + self.neqs * self.det_coef_coint.shape[0]
         to_drop_i = np.arange(start_i, end_i)
 
@@ -1674,15 +1643,9 @@ class VECMResults:
 
     # confidence intervals
     def _make_conf_int(self, est, stderr, alpha):
-        struct_arr = np.zeros(
-            est.shape, dtype=[("lower", float), ("upper", float)]
-        )
-        struct_arr["lower"] = (
-            est - scipy.stats.norm.ppf(1 - alpha / 2) * stderr
-        )
-        struct_arr["upper"] = (
-            est + scipy.stats.norm.ppf(1 - alpha / 2) * stderr
-        )
+        struct_arr = np.zeros(est.shape, dtype=[("lower", float), ("upper", float)])
+        struct_arr["lower"] = est - scipy.stats.norm.ppf(1 - alpha / 2) * stderr
+        struct_arr["upper"] = est + scipy.stats.norm.ppf(1 - alpha / 2) * stderr
         return struct_arr
 
     def conf_int_alpha(self, alpha=0.05):
@@ -1713,10 +1676,7 @@ class VECMResults:
             A[0] += gamma[:, :K]
             A[self.k_ar - 1] = -gamma[:, K * (self.k_ar - 2) :]
             for i in range(1, self.k_ar - 1):
-                A[i] = (
-                    gamma[:, K * i : K * (i + 1)]
-                    - gamma[:, K * (i - 1) : K * i]
-                )
+                A[i] = gamma[:, K * i : K * (i + 1)] - gamma[:, K * (i - 1) : K * i]
         return A
 
     @cache_readonly
@@ -1754,23 +1714,21 @@ class VECMResults:
             return self.cov_params_wo_det
 
         vecm_var_transformation = np.zeros(
-            (self.neqs ** 2 * self.k_ar, self.neqs ** 2 * self.k_ar)
+            (self.neqs**2 * self.k_ar, self.neqs**2 * self.k_ar)
         )
-        eye = np.identity(self.neqs ** 2)
+        eye = np.identity(self.neqs**2)
         # for A_1:
-        vecm_var_transformation[
-            : self.neqs ** 2, : 2 * self.neqs ** 2
-        ] = hstack((eye, eye))
+        vecm_var_transformation[: self.neqs**2, : 2 * self.neqs**2] = hstack((eye, eye))
         # for A_i, where i = 2, ..., k_ar-1
         for i in range(2, self.k_ar):
-            start_row = self.neqs ** 2 + (i - 2) * self.neqs ** 2
-            start_col = self.neqs ** 2 + (i - 2) * self.neqs ** 2
+            start_row = self.neqs**2 + (i - 2) * self.neqs**2
+            start_col = self.neqs**2 + (i - 2) * self.neqs**2
             vecm_var_transformation[
-                start_row : start_row + self.neqs ** 2,
-                start_col : start_col + 2 * self.neqs ** 2,
+                start_row : start_row + self.neqs**2,
+                start_col : start_col + 2 * self.neqs**2,
             ] = hstack((-eye, eye))
         # for A_p:
-        vecm_var_transformation[-self.neqs ** 2 :, -self.neqs ** 2 :] = -eye
+        vecm_var_transformation[-self.neqs**2 :, -self.neqs**2 :] = -eye
         vvt = vecm_var_transformation
         return vvt @ self.cov_params_wo_det @ vvt.T
 
@@ -1932,13 +1890,9 @@ class VECMResults:
                 exog=exog,
             )
         else:
-            return forecast(
-                last_observations, self.var_rep, trend_coefs, steps, exog
-            )
+            return forecast(last_observations, self.var_rep, trend_coefs, steps, exog)
 
-    def plot_forecast(
-        self, steps, alpha=0.05, plot_conf_int=True, n_last_obs=None
-    ):
+    def plot_forecast(self, steps, alpha=0.05, plot_conf_int=True, n_last_obs=None):
         """
         Plot the forecast.
 
@@ -2063,15 +2017,13 @@ class VECMResults:
             num_det_terms += self.exog_coint.shape[1]
 
         # Make restriction matrix
-        C = np.zeros(
-            (num_restr, k * num_det_terms + k ** 2 * (p - 1)), dtype=float
-        )
+        C = np.zeros((num_restr, k * num_det_terms + k**2 * (p - 1)), dtype=float)
         cols_det = k * num_det_terms
         row = 0
         for j in range(p - 1):
             for ing_ind in causing_ind:
                 for ed_ind in caused_ind:
-                    C[row, cols_det + ed_ind + k * ing_ind + k ** 2 * j] = 1
+                    C[row, cols_det + ed_ind + k * ing_ind + k**2 * j] = 1
                     row += 1
         Ca = np.dot(C, vec(var_results.params[:-k].T))
 
@@ -2081,9 +2033,7 @@ class VECMResults:
 
         x_min_p = np.zeros((k * p, t))
         for i in range(p - 1):  # fll first k * k_ar rows of x_min_p
-            x_min_p[i * k : (i + 1) * k, :] = (
-                y[:, p - 1 - i : -1 - i] - y[:, :-p]
-            )
+            x_min_p[i * k : (i + 1) * k, :] = y[:, p - 1 - i : -1 - i] - y[:, :-p]
         x_min_p[-k:, :] = y[:, :-p]  # fill last rows of x_min_p
         x_min_p_components.append(x_min_p)
 
@@ -2283,12 +2233,9 @@ class VECMResults:
             if adjusted:
                 to_add /= self.nobs - t
             statistic += to_add
-        statistic *= self.nobs ** 2 if adjusted else self.nobs
+        statistic *= self.nobs**2 if adjusted else self.nobs
 
-        df = (
-            self.neqs ** 2 * (nlags - self.k_ar + 1)
-            - self.neqs * self.coint_rank
-        )
+        df = self.neqs**2 * (nlags - self.k_ar + 1) - self.neqs * self.coint_rank
         dist = scipy.stats.chi2(df)
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
@@ -2384,24 +2331,16 @@ class VECMResults:
             conf_int = self.conf_int_det_coef(alpha=alpha)
             lower = conf_int["lower"].flatten(order="F")
             upper = conf_int["upper"].flatten(order="F")
-            conf_int_lagged_params_components.append(
-                np.column_stack((lower, upper))
-            )
+            conf_int_lagged_params_components.append(np.column_stack((lower, upper)))
         if self.k_ar - 1 > 0:
             lagged_params_components.append(self.gamma.flatten())
             stderr_lagged_params_components.append(self.stderr_gamma.flatten())
-            tvalues_lagged_params_components.append(
-                self.tvalues_gamma.flatten()
-            )
-            pvalues_lagged_params_components.append(
-                self.pvalues_gamma.flatten()
-            )
+            tvalues_lagged_params_components.append(self.tvalues_gamma.flatten())
+            pvalues_lagged_params_components.append(self.pvalues_gamma.flatten())
             conf_int = self.conf_int_gamma(alpha=alpha)
             lower = conf_int["lower"].flatten()
             upper = conf_int["upper"].flatten()
-            conf_int_lagged_params_components.append(
-                np.column_stack((lower, upper))
-            )
+            conf_int_lagged_params_components.append(np.column_stack((lower, upper)))
 
         # if gamma or det_coef exists, then make a summary-table for them:
         if len(lagged_params_components) != 0:
@@ -2479,9 +2418,7 @@ class VECMResults:
 
             eq_name = self.model.endog_names[i]
             title = "Loading coefficients (alpha) for equation %s" % eq_name
-            table = make_table(
-                self, a, se_a, t_a, p_a, ci_a, mask, a_names, title
-            )
+            table = make_table(self, a, se_a, t_a, p_a, ci_a, mask, a_names, title)
             summary.tables.append(table)
 
         # ---------------------------------------------------------------------
@@ -2502,15 +2439,9 @@ class VECMResults:
             conf_int_coint_components.append(np.column_stack((lower, upper)))
         if self.det_coef_coint.size > 0:
             coint_components.append(self.det_coef_coint.flatten())
-            stderr_coint_components.append(
-                self.stderr_det_coef_coint.flatten()
-            )
-            tvalues_coint_components.append(
-                self.tvalues_det_coef_coint.flatten()
-            )
-            pvalues_coint_components.append(
-                self.pvalues_det_coef_coint.flatten()
-            )
+            stderr_coint_components.append(self.stderr_det_coef_coint.flatten())
+            tvalues_coint_components.append(self.tvalues_det_coef_coint.flatten())
+            pvalues_coint_components.append(self.pvalues_det_coef_coint.flatten())
             conf_int = self.conf_int_det_coef_coint(alpha=alpha)
             lower = conf_int["lower"].flatten()
             upper = conf_int["upper"].flatten()

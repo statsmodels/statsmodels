@@ -42,6 +42,7 @@ class CheckBDS:
 
     Test values from Kanzler's MATLAB program bds.
     """
+
     def test_stat(self):
         assert_almost_equal(self.res[0], self.bds_stats, DECIMAL_8)
 
@@ -53,6 +54,7 @@ class TestBDSSequence(CheckBDS):
     """
     BDS Test on np.arange(1,26)
     """
+
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 1]
@@ -67,6 +69,7 @@ class TestBDSNormal(CheckBDS):
     """
     BDS Test on np.random.normal(size=25)
     """
+
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 2]
@@ -81,6 +84,7 @@ class TestBDSCombined(CheckBDS):
     """
     BDS Test on np.r_[np.random.normal(size=25), np.random.uniform(size=25)]
     """
+
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 3]
@@ -99,6 +103,7 @@ class TestBDSGDPC1(CheckBDS):
     ----------
     http://research.stlouisfed.org/fred2/series/GDPC1
     """
+
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 4]

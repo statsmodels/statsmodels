@@ -5,8 +5,9 @@ from scipy.stats.distributions import chi2, norm
 from statsmodels.graphics import utils
 
 
-def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
-                         retall=True):
+def _calc_survfunc_right(
+    time, status, weights=None, entry=None, compress=True, retall=True
+):
     """
     Calculate the survival function and its standard error for a single
     group.
@@ -18,14 +19,14 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
     else:
         tx = np.concatenate((time, entry))
         utime, rtime = np.unique(tx, return_inverse=True)
-        rtime = rtime[0:len(time)]
+        rtime = rtime[0 : len(time)]
 
     # Number of deaths at each unique time.
     ml = len(utime)
     if weights is None:
         d = np.bincount(rtime, weights=status, minlength=ml)
     else:
-        d = np.bincount(rtime, weights=status*weights, minlength=ml)
+        d = np.bincount(rtime, weights=status * weights, minlength=ml)
 
     # Size of risk set just prior to each event time.
     if weights is None:
@@ -91,8 +92,9 @@ def _calc_incidence_right(time, status, weights=None):
 
     # Calculate the all-cause survival function.
     status0 = (status >= 1).astype(np.float64)
-    sp, utime, rtime, n, d = _calc_survfunc_right(time, status0, weights,
-                                                  compress=False, retall=False)
+    sp, utime, rtime, n, d = _calc_survfunc_right(
+        time, status0, weights, compress=False, retall=False
+    )
 
     ngrp = int(status.max())
 
@@ -103,8 +105,7 @@ def _calc_incidence_right(time, status, weights=None):
         if weights is None:
             d0 = np.bincount(rtime, weights=status0, minlength=len(utime))
         else:
-            d0 = np.bincount(rtime, weights=status0*weights,
-                             minlength=len(utime))
+            d0 = np.bincount(rtime, weights=status0 * weights, minlength=len(utime))
         d.append(d0)
 
     # The cumulative incidence function probabilities.
@@ -122,9 +123,9 @@ def _calc_incidence_right(time, status, weights=None):
     for k in range(ngrp):
 
         ra = da / (n * (n - da))
-        v = ip[k]**2 * np.cumsum(ra)
+        v = ip[k] ** 2 * np.cumsum(ra)
         v -= 2 * ip[k] * np.cumsum(ip[k] * ra)
-        v += np.cumsum(ip[k]**2 * ra)
+        v += np.cumsum(ip[k] ** 2 * ra)
 
         ra = (n - d[k]) * d[k] / n
         v += np.cumsum(sp0**2 * ra)
@@ -233,8 +234,16 @@ class CumIncidenceRight:
     https://arxiv.org/pdf/math/0409180.pdf
     """
 
-    def __init__(self, time, status, title=None, freq_weights=None,
-                 exog=None, bw_factor=1., dimred=True):
+    def __init__(
+        self,
+        time,
+        status,
+        title=None,
+        freq_weights=None,
+        exog=None,
+        bw_factor=1.0,
+        dimred=True,
+    ):
 
         _checkargs(time, status, None, freq_weights, None)
         time = self.time = np.asarray(time)
@@ -244,15 +253,15 @@ class CumIncidenceRight:
 
         if exog is not None:
             from ._kernel_estimates import _kernel_cumincidence
+
             exog = self.exog = np.asarray(exog)
             nobs = exog.shape[0]
-            kw = nobs**(-1/3.0) * bw_factor
+            kw = nobs ** (-1 / 3.0) * bw_factor
 
             def kfunc(x):
-                return np.exp(-x ** 2 / kw ** 2).sum(1)
+                return np.exp(-(x**2) / kw**2).sum(1)
 
-            x = _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
-                                     dimred)
+            x = _kernel_cumincidence(time, status, exog, kfunc, freq_weights, dimred)
             self.times = x[0]
             self.cinc = x[1]
             return
@@ -332,8 +341,16 @@ class SurvfuncRight:
     https://arxiv.org/pdf/math/0409180.pdf
     """
 
-    def __init__(self, time, status, entry=None, title=None,
-                 freq_weights=None, exog=None, bw_factor=1.):
+    def __init__(
+        self,
+        time,
+        status,
+        entry=None,
+        title=None,
+        freq_weights=None,
+        exog=None,
+        bw_factor=1.0,
+    ):
 
         _checkargs(time, status, entry, freq_weights, exog)
         time = self.time = np.asarray(time)
@@ -348,20 +365,20 @@ class SurvfuncRight:
             if entry is not None:
                 raise ValueError("exog and entry cannot both be present")
             from ._kernel_estimates import _kernel_survfunc
+
             exog = self.exog = np.asarray(exog)
             nobs = exog.shape[0]
-            kw = nobs**(-1/3.0) * bw_factor
+            kw = nobs ** (-1 / 3.0) * bw_factor
 
             def kfunc(x):
-                return np.exp(-x ** 2 / kw ** 2).sum(1)
+                return np.exp(-(x**2) / kw**2).sum(1)
 
             x = _kernel_survfunc(time, status, exog, kfunc, freq_weights)
             self.surv_prob = x[0]
             self.surv_times = x[1]
             return
 
-        x = _calc_survfunc_right(time, status, weights=freq_weights,
-                                 entry=entry)
+        x = _calc_survfunc_right(time, status, weights=freq_weights, entry=entry)
 
         self.surv_prob = x[0]
         self.surv_prob_se = x[1]
@@ -464,6 +481,7 @@ class SurvfuncRight:
 
             def gprime(x):
                 return -1 / (x * np.log(x))
+
         elif method == "linear":
 
             def g(x):
@@ -471,11 +489,13 @@ class SurvfuncRight:
 
             def gprime(x):
                 return 1
+
         elif method == "log":
             g = np.log
 
             def gprime(x):
                 return 1 / x
+
         elif method == "logit":
 
             def g(x):
@@ -483,6 +503,7 @@ class SurvfuncRight:
 
             def gprime(x):
                 return 1 / (x * (1 - x))
+
         elif method == "asinsqrt":
 
             def g(x):
@@ -490,11 +511,12 @@ class SurvfuncRight:
 
             def gprime(x):
                 return 1 / (2 * np.sqrt(x) * np.sqrt(1 - x))
+
         else:
             raise ValueError("unknown method")
 
         r = g(self.surv_prob) - g(1 - p)
-        r /= (gprime(self.surv_prob) * self.surv_prob_se)
+        r /= gprime(self.surv_prob) * self.surv_prob_se
 
         ii = np.flatnonzero(np.abs(r) <= tr)
         if len(ii) == 0:
@@ -571,7 +593,7 @@ class SurvfuncRight:
             denom = np.sqrt(nn) * np.log(self.surv_prob)
             theta = 1.3581 * (1 + nn * s2) / denom
             theta = np.exp(theta)
-            lcb = self.surv_prob**(1/theta)
+            lcb = self.surv_prob ** (1 / theta)
             ucb = self.surv_prob**theta
         elif transform == "arcsin":
             k = 1.3581
@@ -579,17 +601,16 @@ class SurvfuncRight:
             k *= np.sqrt(self.surv_prob / (1 - self.surv_prob))
             f = np.arcsin(np.sqrt(self.surv_prob))
             v = np.clip(f - k, 0, np.inf)
-            lcb = np.sin(v)**2
-            v = np.clip(f + k, -np.inf, np.pi/2)
-            ucb = np.sin(v)**2
+            lcb = np.sin(v) ** 2
+            v = np.clip(f + k, -np.inf, np.pi / 2)
+            ucb = np.sin(v) ** 2
         else:
             raise ValueError("Unknown transform")
 
         return lcb, ucb
 
 
-def survdiff(time, status, group, weight_type=None, strata=None,
-             entry=None, **kwargs):
+def survdiff(time, status, group, weight_type=None, strata=None, entry=None, **kwargs):
     """
     Test for the equality of two survival distributions.
 
@@ -634,28 +655,27 @@ def survdiff(time, status, group, weight_type=None, strata=None,
     gr = np.unique(group)
 
     if strata is None:
-        obs, var = _survdiff(time, status, group, weight_type, gr,
-                             entry, **kwargs)
+        obs, var = _survdiff(time, status, group, weight_type, gr, entry, **kwargs)
     else:
         strata = np.asarray(strata)
         stu = np.unique(strata)
-        obs, var = 0., 0.
+        obs, var = 0.0, 0.0
         for st in stu:
             # could be more efficient?
-            ii = (strata == st)
-            obs1, var1 = _survdiff(time[ii], status[ii], group[ii],
-                                   weight_type, gr, entry, **kwargs)
+            ii = strata == st
+            obs1, var1 = _survdiff(
+                time[ii], status[ii], group[ii], weight_type, gr, entry, **kwargs
+            )
             obs += obs1
             var += var1
 
     chisq = obs.dot(np.linalg.solve(var, obs))  # (O - E).T * V^(-1) * (O - E)
-    pvalue = 1 - chi2.cdf(chisq, len(gr)-1)
+    pvalue = 1 - chi2.cdf(chisq, len(gr) - 1)
 
     return chisq, pvalue
 
 
-def _survdiff(time, status, group, weight_type, gr, entry=None,
-              **kwargs):
+def _survdiff(time, status, group, weight_type, gr, entry=None, **kwargs):
     # logrank test for one stratum
     # calculations based on https://web.stanford.edu/~lutian/coursepdf/unit6.pdf
     # formula for variance better to take from https://web.stanford.edu/~lutian/coursepdf/survweek3.pdf
@@ -664,15 +684,14 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
     if entry is None:
         utimes, rtimes = np.unique(time, return_inverse=True)
     else:
-        utimes, rtimes = np.unique(np.concatenate((time, entry)),
-                                   return_inverse=True)
-        rtimes = rtimes[0:len(time)]
+        utimes, rtimes = np.unique(np.concatenate((time, entry)), return_inverse=True)
+        rtimes = rtimes[0 : len(time)]
 
     # Split entry times by group if present (should use pandas groupby)
     tse = [(gr_i, None) for gr_i in gr]
     if entry is not None:
         for k, _ in enumerate(gr):
-            ii = (group == gr[k])
+            ii = group == gr[k]
             entry1 = entry[ii]
             tse[k] = (gr[k], entry1)
 
@@ -682,10 +701,10 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
     ml = len(utimes)
     for g, entry0 in tse:
 
-        mk = (group == g)
+        mk = group == g
         n = np.bincount(rtimes, weights=mk, minlength=ml)
 
-        ob = np.bincount(rtimes, weights=status*mk, minlength=ml)
+        ob = np.bincount(rtimes, weights=status * mk, minlength=ml)
         obsv.append(ob)
 
         if entry is not None:
@@ -728,7 +747,9 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
             raise ValueError("weight_type not implemented")
 
     dfs = len(gr) - 1
-    r = np.vstack(nrisk) / np.clip(nrisk_tot, 1e-10, np.inf)[None, :]  # each line is timeseries of r's. line per group
+    r = (
+        np.vstack(nrisk) / np.clip(nrisk_tot, 1e-10, np.inf)[None, :]
+    )  # each line is timeseries of r's. line per group
 
     # The variance of event counts in each group.
     groups_oe = []
@@ -738,12 +759,14 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
     var_denom = np.clip(var_denom, 1e-10, np.inf)
 
     # use the first group as a reference
-    for g in range(1, dfs+1):
+    for g in range(1, dfs + 1):
         # Difference between observed and  expected number of events in the group # g
-        oe = obsv[g] - r[g]*obs
+        oe = obsv[g] - r[g] * obs
 
         # build one row of the dfs x dfs variance matrix
-        var_tensor_part = r[1:, :].T * (np.eye(1, dfs, g-1).ravel() - r[g, :, None])  # r*(1 - r) in multidim
+        var_tensor_part = r[1:, :].T * (
+            np.eye(1, dfs, g - 1).ravel() - r[g, :, None]
+        )  # r*(1 - r) in multidim
         var_scalar_part = obs * (nrisk_tot - obs) / var_denom
         var = var_tensor_part * var_scalar_part[:, None]
 
@@ -826,16 +849,14 @@ def plot_survfunc(survfuncs, ax=None):
 
         label = getattr(sf, "title", "Group %d" % (gx + 1))
 
-        li, = ax.step(surv_times, surv_prob, "-", label=label, lw=2,
-                      where="post")
+        (li,) = ax.step(surv_times, surv_prob, "-", label=label, lw=2, where="post")
 
         # Plot the censored points.
         ii = np.flatnonzero(np.logical_not(sf.status))
         ti = np.unique(sf.time[ii])
         jj = np.searchsorted(surv_times, ti) - 1
         sp = surv_prob[jj]
-        ax.plot(ti, sp, "+", ms=12, color=li.get_color(),
-                label=label + " points")
+        ax.plot(ti, sp, "+", ms=12, color=li.get_color(), label=label + " points")
 
     ax.set_ylim(0, 1.01)
 

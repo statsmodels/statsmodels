@@ -208,7 +208,8 @@ def seasonal_decompose(
 
     results = []
     for s, name in zip(
-        (seasonal, trend, resid, x), ("seasonal", "trend", "resid", None),
+        (seasonal, trend, resid, x),
+        ("seasonal", "trend", "resid", None),
     ):
         results.append(pw.wrap(s.squeeze(), columns=name))
     return DecomposeResult(

@@ -93,11 +93,8 @@ class SUR:
     # TODO: Does each equation need nobs to be the same?
     def __init__(self, sys, sigma=None, dfk=None):
         if len(sys) % 2 != 0:
-            raise ValueError(
-                "sys must be a list of pairs of endogenous and \
-exogenous variables.  Got length %s"
-                % len(sys)
-            )
+            raise ValueError("sys must be a list of pairs of endogenous and \
+exogenous variables.  Got length %s" % len(sys))
         if dfk:
             if dfk.lower() not in ["dfk1", "dfk2"]:
                 raise ValueError("dfk option %s not understood" % (dfk))
@@ -299,11 +296,8 @@ class Sem2SLS:
 
     def __init__(self, sys, indep_endog=None, instruments=None):
         if len(sys) % 2 != 0:
-            raise ValueError(
-                "sys must be a list of pairs of endogenous and \
-exogenous variables.  Got length %s"
-                % len(sys)
-            )
+            raise ValueError("sys must be a list of pairs of endogenous and \
+exogenous variables.  Got length %s" % len(sys))
         M = len(sys[1::2])
         self._M = M
         # The lists are probably a bad idea

@@ -6,7 +6,7 @@ __all__ = [
     "OrdinalGEE",
     "PoissonBayesMixedGLM",
     "cov_struct",
-    "families"
+    "families",
 ]
 from . import cov_struct, families
 from .bayes_mixed_glm import BinomialBayesMixedGLM, PoissonBayesMixedGLM

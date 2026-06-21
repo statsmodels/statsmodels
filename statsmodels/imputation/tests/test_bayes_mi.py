@@ -8,8 +8,15 @@ from statsmodels.imputation.bayes_mi import MI, BayesGaussMI
 
 def test_pat():
 
-    x = np.asarray([[1, np.nan, 3], [np.nan, 2, np.nan], [3, np.nan, 0],
-                    [np.nan, 1, np.nan], [3, 2, 1]])
+    x = np.asarray(
+        [
+            [1, np.nan, 3],
+            [np.nan, 2, np.nan],
+            [3, np.nan, 0],
+            [np.nan, 1, np.nan],
+            [3, 2, 1],
+        ]
+    )
     bm = BayesGaussMI(x)
     assert_allclose(bm.patterns[0], np.r_[0, 2])
     assert_allclose(bm.patterns[1], np.r_[1, 3])
@@ -21,7 +28,7 @@ def test_2x2():
     np.random.seed(3434)
     x = np.random.normal(size=(1000, 2))
     r = 0.5
-    x[:, 1] = r*x[:, 0] + np.sqrt(1-r**2)*x[:, 1]
+    x[:, 1] = r * x[:, 0] + np.sqrt(1 - r**2) * x[:, 1]
     x[:, 0] *= 2
     x[:, 1] *= 3
     x[:, 0] += 1
@@ -57,8 +64,8 @@ def test_2x2():
 
     assert_allclose(mean, np.r_[1, -2], 0.1)
     assert_allclose(dmean, np.r_[1, -2], 0.1)
-    assert_allclose(cov, np.asarray([[4, 6*r], [6*r, 9]]), 0.1)
-    assert_allclose(dcov, np.asarray([[4, 6*r], [6*r, 9]]), 0.1)
+    assert_allclose(cov, np.asarray([[4, 6 * r], [6 * r, 9]]), 0.1)
+    assert_allclose(dcov, np.asarray([[4, 6 * r], [6 * r, 9]]), 0.1)
 
 
 def test_MI():
@@ -86,12 +93,15 @@ def test_MI():
         r.summary()  # smoke test
         # TODO: why does the test tolerance need to be so slack?
         # There is unexpected variation across versions
-        assert_allclose(r.params, np.r_[
-            -0.05347919, -0.02479701, 0.10075517], 0.25, 0)
+        assert_allclose(r.params, np.r_[-0.05347919, -0.02479701, 0.10075517], 0.25, 0)
 
-        c = np.asarray([[0.00418232, 0.00029746, -0.00035057],
-                        [0.00029746, 0.00407264, 0.00019496],
-                        [-0.00035057, 0.00019496, 0.00509413]])
+        c = np.asarray(
+            [
+                [0.00418232, 0.00029746, -0.00035057],
+                [0.00029746, 0.00407264, 0.00019496],
+                [-0.00035057, 0.00019496, 0.00509413],
+            ]
+        )
         assert_allclose(r.cov_params(), c, 0.3, 0)
 
         # Test with ndarray and pandas input
@@ -109,15 +119,15 @@ def test_MI_stat():
 
     np.random.seed(414)
     z = np.random.normal(size=(1000, 3))
-    z[:, 0] += 0.5*z[:, 1]
+    z[:, 0] += 0.5 * z[:, 1]
 
     # Control the degree to which x2 proxies for x1
-    exp = [1/np.sqrt(500), 1/np.sqrt(1000)]
+    exp = [1 / np.sqrt(500), 1 / np.sqrt(1000)]
     fmi = [0.5, 0]
     for j, r in enumerate((0, 0.9999)):
 
         x = z.copy()
-        x[:, 2] = r*x[:, 1] + np.sqrt(1 - r**2)*x[:, 2]
+        x[:, 2] = r * x[:, 1] + np.sqrt(1 - r**2) * x[:, 2]
         x[0:500, 1] = np.nan
 
         def model_args(x):
@@ -147,8 +157,7 @@ def test_mi_formula():
     x[[1, 4, 3], 1] = np.nan
     x[[2, 11, 21], 2] = np.nan
     x[[11, 22, 99], 3] = np.nan
-    df = pd.DataFrame({"y": x[:, 0], "x1": x[:, 1],
-                       "x2": x[:, 2], "x3": x[:, 3]})
+    df = pd.DataFrame({"y": x[:, 0], "x1": x[:, 1], "x2": x[:, 2], "x3": x[:, 3]})
     fml = "y ~ 0 + x1 + x2 + x3"
 
     def model_kwds_fn(x):
@@ -156,8 +165,7 @@ def test_mi_formula():
 
     np.random.seed(2342)
     imp = BayesGaussMI(df.copy())
-    mi = MI(imp, sm.OLS, formula=fml, burn=0,
-            model_kwds_fn=model_kwds_fn)
+    mi = MI(imp, sm.OLS, formula=fml, burn=0, model_kwds_fn=model_kwds_fn)
 
     def results_cb(x):
         return x
@@ -166,12 +174,15 @@ def test_mi_formula():
     r.summary()  # smoke test
     # TODO: why does the test tolerance need to be so slack?
     # There is unexpected variation across versions
-    assert_allclose(r.params, np.r_[
-            -0.05347919, -0.02479701, 0.10075517], 0.25, 0)
+    assert_allclose(r.params, np.r_[-0.05347919, -0.02479701, 0.10075517], 0.25, 0)
 
-    c = np.asarray([[0.00418232, 0.00029746, -0.00035057],
-                    [0.00029746, 0.00407264, 0.00019496],
-                    [-0.00035057, 0.00019496, 0.00509413]])
+    c = np.asarray(
+        [
+            [0.00418232, 0.00029746, -0.00035057],
+            [0.00029746, 0.00407264, 0.00019496],
+            [-0.00035057, 0.00019496, 0.00509413],
+        ]
+    )
     assert_allclose(r.cov_params(), c, 0.3, 0)
 
     assert_equal(len(r.results), 20)

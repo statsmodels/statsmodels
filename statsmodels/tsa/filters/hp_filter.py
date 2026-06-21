@@ -94,11 +94,11 @@ def hpfilter(x, lamb=1600):
     nobs = len(x)
     eye = sparse.eye(nobs, nobs)
     offsets = np.array([0, 1, 2])
-    data = np.repeat([[1.], [-2.], [1.]], nobs, axis=1)
+    data = np.repeat([[1.0], [-2.0], [1.0]], nobs, axis=1)
     K = sparse.dia_matrix((data, offsets), shape=(nobs - 2, nobs))
 
     use_umfpack = True
-    trend = spsolve((eye+lamb*K.T.dot(K)).tocsc(), x, use_umfpack=use_umfpack)
+    trend = spsolve((eye + lamb * K.T.dot(K)).tocsc(), x, use_umfpack=use_umfpack)
 
     cycle = x - trend
     return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")

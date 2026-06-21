@@ -143,9 +143,7 @@ fig, ax = plt.subplots(figsize=(9, 4), dpi=300)
 inf.plot(ax=ax, style="-", label="Observed")
 
 # Plot predictions
-predict_mle.predicted_mean.plot(ax=ax,
-                                style="r.",
-                                label="One-step-ahead forecast")
+predict_mle.predicted_mean.plot(ax=ax, style="r.", label="One-step-ahead forecast")
 ax.fill_between(predict_mle_ci.index, lower, upper, color="r", alpha=0.1)
 ax.legend(loc="lower left")
 plt.show()
@@ -201,14 +199,14 @@ class Loglike(tt.Op):
         self.score = Score(self.model)
 
     def perform(self, node, inputs, outputs):
-        (theta, ) = inputs  # contains the vector of parameters
+        (theta,) = inputs  # contains the vector of parameters
         llf = self.model.loglike(theta)
         outputs[0][0] = np.array(llf)  # output the log-likelihood
 
     def grad(self, inputs, g):
         # the method that calculates the gradients - it actually returns the
         # vector-Jacobian product - g[0] is a vector of parameter values
-        (theta, ) = inputs  # our parameters
+        (theta,) = inputs  # our parameters
         out = [g[0] * self.score(theta)]
         return out
 
@@ -221,7 +219,7 @@ class Score(tt.Op):
         self.model = model
 
     def perform(self, node, inputs, outputs):
-        (theta, ) = inputs
+        (theta,) = inputs
         outputs[0][0] = self.model.score(theta)
 
 
@@ -327,9 +325,7 @@ fig, ax = plt.subplots(figsize=(9, 4), dpi=300)
 inf.plot(ax=ax, style="-", label="Observed")
 
 # Plot predictions
-predict_bayes.predicted_mean.plot(ax=ax,
-                                  style="r.",
-                                  label="One-step-ahead forecast")
+predict_bayes.predicted_mean.plot(ax=ax, style="r.", label="One-step-ahead forecast")
 ax.fill_between(predict_bayes_ci.index, lower, upper, color="r", alpha=0.1)
 ax.legend(loc="lower left")
 plt.show()
@@ -433,7 +429,6 @@ inf["CPIAUCNS"].plot(ax=ax, style="-", label="Observed data")
 
 # Plot estimate of the level term
 res_uc_mle.states.smoothed["level"].plot(ax=ax, label="Smoothed level (MLE)")
-res_uc_bayes.states.smoothed["level"].plot(ax=ax,
-                                           label="Smoothed level (Bayesian)")
+res_uc_bayes.states.smoothed["level"].plot(ax=ax, label="Smoothed level (Bayesian)")
 
 ax.legend(loc="lower left")

@@ -33,31 +33,33 @@ idx = ["income", "Intercept"]
 
 class CheckModelResultsMixin:
     def test_params(self):
-        assert_allclose(np.ravel(self.res1.params.loc[idx]),
-                        self.res2.table[:, 0], rtol=1e-3)
+        assert_allclose(
+            np.ravel(self.res1.params.loc[idx]), self.res2.table[:, 0], rtol=1e-3
+        )
 
     def test_bse(self):
         assert_equal(self.res1.scale, 1)
-        assert_allclose(np.ravel(self.res1.bse.loc[idx]),
-                        self.res2.table[:, 1], rtol=1e-3)
+        assert_allclose(
+            np.ravel(self.res1.bse.loc[idx]), self.res2.table[:, 1], rtol=1e-3
+        )
 
     def test_tvalues(self):
-        assert_allclose(np.ravel(self.res1.tvalues.loc[idx]),
-                        self.res2.table[:, 2], rtol=1e-2)
+        assert_allclose(
+            np.ravel(self.res1.tvalues.loc[idx]), self.res2.table[:, 2], rtol=1e-2
+        )
 
     def test_pvalues(self):
         pvals_stata = scipy.stats.t.sf(self.res2.table[:, 2], self.res2.df_r)
-        assert_allclose(np.ravel(self.res1.pvalues.loc[idx]),
-                        pvals_stata, rtol=1.1)
+        assert_allclose(np.ravel(self.res1.pvalues.loc[idx]), pvals_stata, rtol=1.1)
 
         # test that we use the t distribution for the p-values
         pvals_t = scipy.stats.t.sf(self.res1.tvalues, self.res2.df_r) * 2
-        assert_allclose(np.ravel(self.res1.pvalues),
-                        pvals_t, rtol=1e-9, atol=1e-10)
+        assert_allclose(np.ravel(self.res1.pvalues), pvals_t, rtol=1e-9, atol=1e-10)
 
     def test_conf_int(self):
-        assert_allclose(self.res1.conf_int().loc[idx],
-                        self.res2.table[:, -2:], rtol=1e-3)
+        assert_allclose(
+            self.res1.conf_int().loc[idx], self.res2.table[:, -2:], rtol=1e-3
+        )
 
     def test_nobs(self):
         assert_allclose(self.res1.nobs, self.res2.N, rtol=1e-3)
@@ -72,39 +74,38 @@ class CheckModelResultsMixin:
         assert_allclose(self.res1.prsquared, self.res2.psrsquared, rtol=1e-3)
 
     def test_sparsity(self):
-        assert_allclose(np.array(self.res1.sparsity),
-                        self.res2.sparsity, rtol=1e-3)
+        assert_allclose(np.array(self.res1.sparsity), self.res2.sparsity, rtol=1e-3)
 
     def test_bandwidth(self):
-        assert_allclose(np.array(self.res1.bandwidth),
-                        self.res2.kbwidth, rtol=1e-3)
+        assert_allclose(np.array(self.res1.bandwidth), self.res2.kbwidth, rtol=1e-3)
 
 
-d = {("biw", "bofinger"): biweight_bofinger,
-     ("biw", "chamberlain"): biweight_chamberlain,
-     ("biw", "hsheather"): biweight_hsheather,
-     ("cos", "bofinger"): cosine_bofinger,
-     ("cos", "chamberlain"): cosine_chamberlain,
-     ("cos", "hsheather"): cosine_hsheather,
-     ("gau", "bofinger"): gaussian_bofinger,
-     ("gau", "chamberlain"): gaussian_chamberlain,
-     ("gau", "hsheather"): gaussian_hsheather,
-     ("par", "bofinger"): parzen_bofinger,
-     ("par", "chamberlain"): parzen_chamberlain,
-     ("par", "hsheather"): parzen_hsheather,
-     # ('rec','bofinger'): rectangle_bofinger,
-     # ('rec','chamberlain'): rectangle_chamberlain,
-     # ('rec','hsheather'): rectangle_hsheather,
-     # ('tri','bofinger'): triangle_bofinger,
-     # ('tri','chamberlain'): triangle_chamberlain,
-     # ('tri','hsheather'): triangle_hsheather,
-     ("epa", "bofinger"): epan2_bofinger,
-     ("epa", "chamberlain"): epan2_chamberlain,
-     ("epa", "hsheather"): epan2_hsheather
-     # ('epa2', 'bofinger'): epan2_bofinger,
-     # ('epa2', 'chamberlain'): epan2_chamberlain,
-     # ('epa2', 'hsheather'): epan2_hsheather
-     }
+d = {
+    ("biw", "bofinger"): biweight_bofinger,
+    ("biw", "chamberlain"): biweight_chamberlain,
+    ("biw", "hsheather"): biweight_hsheather,
+    ("cos", "bofinger"): cosine_bofinger,
+    ("cos", "chamberlain"): cosine_chamberlain,
+    ("cos", "hsheather"): cosine_hsheather,
+    ("gau", "bofinger"): gaussian_bofinger,
+    ("gau", "chamberlain"): gaussian_chamberlain,
+    ("gau", "hsheather"): gaussian_hsheather,
+    ("par", "bofinger"): parzen_bofinger,
+    ("par", "chamberlain"): parzen_chamberlain,
+    ("par", "hsheather"): parzen_hsheather,
+    # ('rec','bofinger'): rectangle_bofinger,
+    # ('rec','chamberlain'): rectangle_chamberlain,
+    # ('rec','hsheather'): rectangle_hsheather,
+    # ('tri','bofinger'): triangle_bofinger,
+    # ('tri','chamberlain'): triangle_chamberlain,
+    # ('tri','hsheather'): triangle_hsheather,
+    ("epa", "bofinger"): epan2_bofinger,
+    ("epa", "chamberlain"): epan2_chamberlain,
+    ("epa", "hsheather"): epan2_hsheather,
+    # ('epa2', 'bofinger'): epan2_bofinger,
+    # ('epa2', 'chamberlain'): epan2_chamberlain,
+    # ('epa2', 'hsheather'): epan2_hsheather
+}
 
 
 def setup_fun(kernel="gau", bandwidth="bofinger"):
@@ -123,7 +124,7 @@ def test_fitted_residuals():
     mgr = FormulaManager()
     y, X = mgr.get_matrices("foodexp ~ income", data)
 
-    res = QuantReg(y, X).fit(q=.1)
+    res = QuantReg(y, X).fit(q=0.1)
     # Note: maxabs relative error with fitted is 1.789e-09
     assert_almost_equal(np.array(res.fittedvalues), Rquantreg.fittedvalues, 5)
     assert_almost_equal(np.array(res.predict()), Rquantreg.fittedvalues, 5)
@@ -137,8 +138,9 @@ class TestEpanechnikovHsheatherQ75(CheckModelResultsMixin):
         data = sm.datasets.engel.load_pandas().data
         mgr = FormulaManager()
         y, X = mgr.get_matrices("foodexp ~ income", data)
-        cls.res1 = QuantReg(y, X).fit(q=.75, vcov="iid", kernel="epa",
-                                      bandwidth="hsheather")
+        cls.res1 = QuantReg(y, X).fit(
+            q=0.75, vcov="iid", kernel="epa", bandwidth="hsheather"
+        )
         cls.res2 = epanechnikov_hsheather_q75
 
 
@@ -231,6 +233,7 @@ class TestParzeneHsheather(CheckModelResultsMixin):
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun("par", "hsheather")
 
+
 # class TestTriangleBofinger(CheckModelResultsMixin):
 #    @classmethod
 #    def setup_class(cls):
@@ -256,16 +259,14 @@ def test_zero_resid():
     res = QuantReg(y, X).fit(0.5, bandwidth="chamberlain")  # 'bofinger')
     res.summary()
 
-    assert_allclose(res.params,
-                    np.array([0.0, 0.96774163]),
-                    rtol=1e-4, atol=1e-20)
-    assert_allclose(res.bse,
-                    np.array([0.0447576, 0.01154867]),
-                    rtol=1e-4, atol=1e-20)
-    assert_allclose(res.resid,
-                    np.array([0.0, 3.22583680e-02,
-                              -3.22574272e-02, 9.40732912e-07]),
-                    rtol=1e-4, atol=1e-20)
+    assert_allclose(res.params, np.array([0.0, 0.96774163]), rtol=1e-4, atol=1e-20)
+    assert_allclose(res.bse, np.array([0.0447576, 0.01154867]), rtol=1e-4, atol=1e-20)
+    assert_allclose(
+        res.resid,
+        np.array([0.0, 3.22583680e-02, -3.22574272e-02, 9.40732912e-07]),
+        rtol=1e-4,
+        atol=1e-20,
+    )
 
     X = np.array([[1, 0], [0.1, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
     y = np.array([0, 1, 2, 3], dtype=np.float64)
@@ -273,13 +274,16 @@ def test_zero_resid():
     res = QuantReg(y, X).fit(0.5, bandwidth="chamberlain")
     res.summary()
 
-    assert_allclose(res.params, np.array([9.99982796e-08, 9.67741630e-01]),
-                    rtol=1e-4, atol=1e-20)
-    assert_allclose(res.bse, np.array([0.04455029, 0.01155251]), rtol=1e-4,
-                    atol=1e-20)
-    assert_allclose(res.resid, np.array([-9.99982796e-08, 3.22583598e-02,
-                                         -3.22574234e-02, 9.46361860e-07]),
-                    rtol=1e-4, atol=1e-20)
+    assert_allclose(
+        res.params, np.array([9.99982796e-08, 9.67741630e-01]), rtol=1e-4, atol=1e-20
+    )
+    assert_allclose(res.bse, np.array([0.04455029, 0.01155251]), rtol=1e-4, atol=1e-20)
+    assert_allclose(
+        res.resid,
+        np.array([-9.99982796e-08, 3.22583598e-02, -3.22574234e-02, 9.46361860e-07]),
+        rtol=1e-4,
+        atol=1e-20,
+    )
 
 
 def test_use_t_summary():
@@ -297,7 +301,7 @@ def test_alpha_summary():
     y = np.array([0, 1, 2, 3], dtype=np.float64)
 
     res = QuantReg(y, X).fit(0.5, bandwidth="chamberlain", use_t=True)
-    summ_20 = res.summary(alpha=.2)
+    summ_20 = res.summary(alpha=0.2)
     assert "[0.025      0.975]" not in str(summ_20)
     assert "[0.1        0.9]" in str(summ_20)
 
@@ -311,8 +315,9 @@ def test_remove_data():
 
 
 def test_collinear_matrix():
-    X = np.array([[1, 0, .5], [1, 0, .8],
-                  [1, 0, 1.5], [1, 0, .25]], dtype=np.float64)
+    X = np.array(
+        [[1, 0, 0.5], [1, 0, 0.8], [1, 0, 1.5], [1, 0, 0.25]], dtype=np.float64
+    )
     y = np.array([0, 1, 2, 3], dtype=np.float64)
 
     res_collinear = QuantReg(y, X).fit(0.5)
@@ -321,11 +326,11 @@ def test_collinear_matrix():
 
 def test_nontrivial_singular_matrix():
     x_one = np.random.random(1000)
-    x_two = np.random.random(1000)*10
+    x_two = np.random.random(1000) * 10
     x_three = np.random.random(1000)
     intercept = np.ones(1000)
 
-    y = np.random.random(1000)*5
+    y = np.random.random(1000) * 5
     X = np.column_stack((intercept, x_one, x_two, x_three, x_one))
 
     assert np.linalg.matrix_rank(X) < X.shape[1]

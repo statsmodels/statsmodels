@@ -121,7 +121,8 @@ class Simple:
 
     def code_with_intercept(self, levels):
         contrast = np.column_stack(
-            (np.ones(len(levels)), self._simple_contrast(levels)))
+            (np.ones(len(levels)), self._simple_contrast(levels))
+        )
         return ContrastMatrix(contrast, _name_levels("Simp.", levels))
 
     def code_without_intercept(self, levels):
@@ -181,8 +182,7 @@ print(res.summary())
 # level 2 compared with the mean at level 1. Ie.,
 
 res.params["C(race, Diff)[D.1]"]
-hsb2.groupby("race").mean()["write"][2] - hsb2.groupby(
-    "race").mean()["write"][1]
+hsb2.groupby("race").mean()["write"][2] - hsb2.groupby("race").mean()["write"][1]
 
 # ### Helmert Coding
 
@@ -213,9 +213,9 @@ grouped.mean()["write"][4] - grouped.mean()["write"][:3].mean()
 # hypothesis tests are the same.
 
 k = 4
-1.0 / k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k - 1].mean())
+1.0 / k * (grouped.mean()["write"][k] - grouped.mean()["write"][: k - 1].mean())
 k = 3
-1.0 / k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k - 1].mean())
+1.0 / k * (grouped.mean()["write"][k] - grouped.mean()["write"][: k - 1].mean())
 
 # ### Orthogonal Polynomial Coding
 

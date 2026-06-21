@@ -26,14 +26,14 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
 macrodata = sm.datasets.macrodata.load_pandas().data
-macrodata.index = pd.period_range('1959Q1', '2009Q3', freq='Q')
+macrodata.index = pd.period_range("1959Q1", "2009Q3", freq="Q")
 
 # ## Basic example
 #
 # A simple example is to use an AR(1) model to forecast inflation. Before
 # forecasting, let's take a look at the series:
 
-endog = macrodata['infl']
+endog = macrodata["infl"]
 endog.plot(figsize=(15, 5))
 
 # ### Constructing and estimating the model
@@ -47,7 +47,7 @@ endog.plot(figsize=(15, 5))
 # convenient tables showing the results.
 
 # Construct the model
-mod = sm.tsa.SARIMAX(endog, order=(1, 0, 0), trend='c')
+mod = sm.tsa.SARIMAX(endog, order=(1, 0, 0), trend="c")
 # Estimate the parameters
 res = mod.fit()
 
@@ -97,9 +97,9 @@ print(fcast_res2.summary_frame())
 # then you can alternatively specify the date through which you want
 # forecasts to be produced:
 
-print(res.forecast('2010Q2'))
+print(res.forecast("2010Q2"))
 
-fcast_res3 = res.get_forecast('2010Q2')
+fcast_res3 = res.get_forecast("2010Q2")
 print(fcast_res3.summary_frame())
 
 # ### Plotting the data, forecasts, and confidence intervals
@@ -111,16 +111,14 @@ fig, ax = plt.subplots(figsize=(15, 5))
 
 # Plot the data (here we are subsetting it to get a better look at the
 # forecasts)
-endog.loc['1999':].plot(ax=ax)
+endog.loc["1999":].plot(ax=ax)
 
 # Construct the forecasts
-fcast = res.get_forecast('2011Q4').summary_frame()
-fcast['mean'].plot(ax=ax, style='k--')
-ax.fill_between(fcast.index,
-                fcast['mean_ci_lower'],
-                fcast['mean_ci_upper'],
-                color='k',
-                alpha=0.1)
+fcast = res.get_forecast("2011Q4").summary_frame()
+fcast["mean"].plot(ax=ax, style="k--")
+ax.fill_between(
+    fcast.index, fcast["mean_ci_lower"], fcast["mean_ci_upper"], color="k", alpha=0.1
+)
 
 # ### Note on what to expect from forecasts
 #
@@ -169,7 +167,7 @@ ax.fill_between(fcast.index,
 training_obs = int(len(endog) * 0.8)
 
 training_endog = endog[:training_obs]
-training_mod = sm.tsa.SARIMAX(training_endog, order=(1, 0, 0), trend='c')
+training_mod = sm.tsa.SARIMAX(training_endog, order=(1, 0, 0), trend="c")
 training_res = training_mod.fit()
 
 # Print the estimated parameters
@@ -185,10 +183,9 @@ error = true - fcast
 # Print out the results
 print(
     pd.concat(
-        [true.rename('true'),
-         fcast.rename('forecast'),
-         error.rename('error')],
-        axis=1))
+        [true.rename("true"), fcast.rename("forecast"), error.rename("error")], axis=1
+    )
+)
 
 # To add on another observation, we can use the `append` or `extend`
 # results methods. Either method can produce the same forecasts, but they
@@ -217,8 +214,7 @@ print(
 # `refit=True` argument):
 
 # Step 1: append a new observation to the sample and refit the parameters
-append_res = training_res.append(endog[training_obs:training_obs + 1],
-                                 refit=True)
+append_res = training_res.append(endog[training_obs : training_obs + 1], refit=True)
 
 # Print the re-estimated parameters
 print(append_res.params)
@@ -238,10 +234,9 @@ error = true - fcast
 # Print out the results
 print(
     pd.concat(
-        [true.rename('true'),
-         fcast.rename('forecast'),
-         error.rename('error')],
-        axis=1))
+        [true.rename("true"), fcast.rename("forecast"), error.rename("error")], axis=1
+    )
+)
 
 # Putting it altogether, we can perform the recursive forecast evaluation
 # exercise as follows:
@@ -256,7 +251,7 @@ n_init_training = int(nobs * 0.8)
 
 # Create model for initial training sample, fit parameters
 init_training_endog = endog.iloc[:n_init_training]
-mod = sm.tsa.SARIMAX(training_endog, order=(1, 0, 0), trend='c')
+mod = sm.tsa.SARIMAX(training_endog, order=(1, 0, 0), trend="c")
 res = mod.fit()
 
 # Save initial forecast
@@ -265,7 +260,7 @@ forecasts[training_endog.index[-1]] = res.forecast(steps=nforecasts)
 # Step through the rest of the sample
 for t in range(n_init_training, nobs):
     # Update the results by appending the next observation
-    updated_endog = endog.iloc[t:t + 1]
+    updated_endog = endog.iloc[t : t + 1]
     res = res.append(updated_endog, refit=False)
 
     # Save the new set of forecasts
@@ -282,7 +277,8 @@ print(forecasts.iloc[:5, :5])
 
 # Construct the forecast errors
 forecast_errors = forecasts.apply(lambda column: endog - column).reindex(
-    forecasts.index)
+    forecasts.index
+)
 
 print(forecast_errors.iloc[:5, :5])
 
@@ -298,12 +294,12 @@ def flatten(column):
 
 
 flattened = forecast_errors.apply(flatten)
-flattened.index = (flattened.index + 1).rename('horizon')
+flattened.index = (flattened.index + 1).rename("horizon")
 
 print(flattened.iloc[:3, :5])
 
 # Compute the root mean square error
-rmse = (flattened**2).mean(axis=1)**0.5
+rmse = (flattened**2).mean(axis=1) ** 0.5
 
 print(rmse)
 
@@ -324,7 +320,7 @@ n_init_training = int(nobs * 0.8)
 
 # Create model for initial training sample, fit parameters
 init_training_endog = endog.iloc[:n_init_training]
-mod = sm.tsa.SARIMAX(training_endog, order=(1, 0, 0), trend='c')
+mod = sm.tsa.SARIMAX(training_endog, order=(1, 0, 0), trend="c")
 res = mod.fit()
 
 # Save initial forecast
@@ -333,7 +329,7 @@ forecasts[training_endog.index[-1]] = res.forecast(steps=nforecasts)
 # Step through the rest of the sample
 for t in range(n_init_training, nobs):
     # Update the results by appending the next observation
-    updated_endog = endog.iloc[t:t + 1]
+    updated_endog = endog.iloc[t : t + 1]
     res = res.extend(updated_endog)
 
     # Save the new set of forecasts
@@ -346,7 +342,8 @@ print(forecasts.iloc[:5, :5])
 
 # Construct the forecast errors
 forecast_errors = forecasts.apply(lambda column: endog - column).reindex(
-    forecasts.index)
+    forecasts.index
+)
 
 print(forecast_errors.iloc[:5, :5])
 
@@ -357,12 +354,12 @@ def flatten(column):
 
 
 flattened = forecast_errors.apply(flatten)
-flattened.index = (flattened.index + 1).rename('horizon')
+flattened.index = (flattened.index + 1).rename("horizon")
 
 print(flattened.iloc[:3, :5])
 
 # Compute the root mean square error
-rmse = (flattened**2).mean(axis=1)**0.5
+rmse = (flattened**2).mean(axis=1) ** 0.5
 
 print(rmse)
 
@@ -387,17 +384,17 @@ print(endog.index)
 # three examples of this:
 
 # Annual frequency, using a PeriodIndex
-index = pd.period_range(start='2000', periods=4, freq='A')
+index = pd.period_range(start="2000", periods=4, freq="A")
 endog1 = pd.Series([1, 2, 3, 4], index=index)
 print(endog1.index)
 
 # Quarterly frequency, using a DatetimeIndex
-index = pd.date_range(start='2000', periods=4, freq='QS')
+index = pd.date_range(start="2000", periods=4, freq="QS")
 endog2 = pd.Series([1, 2, 3, 4], index=index)
 print(endog2.index)
 
 # Monthly frequency, using a DatetimeIndex
-index = pd.date_range(start='2000', periods=4, freq='M')
+index = pd.date_range(start="2000", periods=4, freq="M")
 endog3 = pd.Series([1, 2, 3, 4], index=index)
 print(endog3.index)
 
@@ -405,10 +402,14 @@ print(endog3.index)
 # use that even if does not have a defined frequency. An example of that
 # kind of index is as follows - notice that it has `freq=None`:
 
-index = pd.DatetimeIndex([
-    '2000-01-01 10:08am', '2000-01-01 11:32am', '2000-01-01 5:32pm',
-    '2000-01-02 6:15am'
-])
+index = pd.DatetimeIndex(
+    [
+        "2000-01-01 10:08am",
+        "2000-01-01 11:32am",
+        "2000-01-01 5:32pm",
+        "2000-01-02 6:15am",
+    ]
+)
 endog4 = pd.Series([0.2, 0.5, -0.1, 0.1], index=index)
 print(endog4.index)
 
@@ -445,7 +446,7 @@ res.forecast(1)
 # Here we'll catch the exception to prevent printing too much of
 # the exception trace output in this notebook
 try:
-    res.forecast('2000-01-03')
+    res.forecast("2000-01-03")
 except KeyError as e:
     print(e)
 

@@ -79,8 +79,9 @@ class CheckExternalMixin:
     def test_quantiles(self):
         quant = np.asarray(self.quantiles, dtype=np.float64)
         for return_pandas in False, True:
-            qtl = self.descriptive.quantile(self.quantile_probs,
-                                            return_pandas=return_pandas)
+            qtl = self.descriptive.quantile(
+                self.quantile_probs, return_pandas=return_pandas
+            )
             qtl = np.asarray(qtl, dtype=np.float64)
             assert_allclose(qtl, quant, rtol=1e-4)
 
@@ -156,8 +157,11 @@ class TestSim2(CheckExternalMixin):
     var = [1.77426344, 0.61933542]
     std = [1.3320148, 0.78697867]
     quantiles = np.column_stack(
-        (np.r_[-2.55277, -1.40479, -0.61040, 0.52740, 2.66246],
-         np.r_[-1.49263, -1.15403, -0.16231, 0.16464, 1.83062]))
+        (
+            np.r_[-2.55277, -1.40479, -0.61040, 0.52740, 2.66246],
+            np.r_[-1.49263, -1.15403, -0.16231, 0.16464, 1.83062],
+        )
+    )
 
     @classmethod
     def setup_class(cls):
@@ -187,8 +191,8 @@ class TestWeightstats:
 
     def test_weightstats_1(self):
         x1, x2 = self.x1, self.x2
-        w1_ = 2. * np.ones(len(x1))
-        w2_ = 2. * np.ones(len(x2))
+        w1_ = 2.0 * np.ones(len(x1))
+        w2_ = 2.0 * np.ones(len(x2))
 
         #        print ttest_ind(x1, x2)
         #        print ttest_ind(x1, x2, usevar='unequal')
@@ -198,8 +202,10 @@ class TestWeightstats:
         #        print ttest_ind(x1, x2, usevar='unequal', alternative='smaller')
         #        print ttest_ind(x1, x2, usevar='unequal', weights=(w1_, w2_))
         #        print stats.ttest_ind(np.r_[x1, x1], np.r_[x2,x2])
-        assert_almost_equal(ttest_ind(x1, x2, weights=(w1_, w2_))[:2],
-                            stats.ttest_ind(np.r_[x1, x1], np.r_[x2, x2]))
+        assert_almost_equal(
+            ttest_ind(x1, x2, weights=(w1_, w2_))[:2],
+            stats.ttest_ind(np.r_[x1, x1], np.r_[x2, x2]),
+        )
 
     def test_weightstats_2(self):
         x1, x2 = self.x1, self.x2
@@ -213,8 +219,9 @@ class TestWeightstats:
         #        print 'random weights'
         #        print ttest_ind(x1, x2, weights=(w1, w2))
         #        print stats.ttest_ind(x1r, x2r)
-        assert_almost_equal(ttest_ind(x1, x2, weights=(w1, w2))[:2],
-                            stats.ttest_ind(x1r, x2r), 14)
+        assert_almost_equal(
+            ttest_ind(x1, x2, weights=(w1, w2))[:2], stats.ttest_ind(x1r, x2r), 14
+        )
         # not the same as new version with random weights/replication
         #        assert x1r.shape[0] == d1w.sum_weights
         #        assert x2r.shape[0] == d2w.sum_weights
@@ -233,8 +240,7 @@ class TestWeightstats:
         #        print d1w.ttest_mean(3)
         #        print stats.ttest_1samp(x1r, 3)
         assert_almost_equal(d1.ttest_mean(3)[:2], stats.ttest_1samp(x1, 3), 11)
-        assert_almost_equal(d1w.ttest_mean(3)[:2],
-                            stats.ttest_1samp(x1r, 3), 11)
+        assert_almost_equal(d1w.ttest_mean(3)[:2], stats.ttest_1samp(x1r, 3), 11)
 
     def test_weightstats_3(self):
         x1_2d, x2_2d = self.x1_2d, self.x2_2d
@@ -262,11 +268,11 @@ class TestWeightstats:
         resss = stats.ttest_ind(x1r_2d, x2r_2d)
         assert_almost_equal(ressm[:2], resss, 14)
 
-#        does not work for 2d, levene does not use weights
-#        cm = CompareMeans(d1w_2d, d2w_2d)
-#        ressm = cm.test_equal_var()
-#        resss = stats.levene(x1r_2d, x2r_2d)
-#        assert_almost_equal(ressm[:2], resss, 14)
+    #        does not work for 2d, levene does not use weights
+    #        cm = CompareMeans(d1w_2d, d2w_2d)
+    #        ressm = cm.test_equal_var()
+    #        resss = stats.levene(x1r_2d, x2r_2d)
+    #        assert_almost_equal(ressm[:2], resss, 14)
 
     def test_weightstats_ddof_tests(self):
         # explicit test that ttest and confint are independent of ddof
@@ -307,6 +313,7 @@ class TestWeightstats:
 
         # smoke test for summary
         from statsmodels.iolib.table import SimpleTable
+
         for use_t in [True, False]:
             for usevar in ["pooled", "unequal"]:
                 smry = cm1.summary(use_t=use_t, usevar=usevar)
@@ -325,6 +332,7 @@ class TestWeightstats:
 
         # smoke test for summary
         from statsmodels.iolib.table import SimpleTable
+
         for use_t in [True, False]:
             for usevar in ["pooled", "unequal"]:
                 smry = cm1.summary(use_t=use_t, usevar=usevar)
@@ -349,19 +357,18 @@ class CheckWeightstats1dMixin:
         std1 = d1w.std_ddof(ddof=1)
         assert_almost_equal(x1r.std(0, ddof=1), std1, 14)
 
-        assert_almost_equal(np.cov(x1r.T, bias=1-d1w.ddof), d1w.cov, 14)
+        assert_almost_equal(np.cov(x1r.T, bias=1 - d1w.ddof), d1w.cov, 14)
 
         # assert_almost_equal(np.corrcoef(x1r.T), d1w.corrcoef, 14)
 
     def test_ttest(self):
         x1r = self.x1r
         d1w = self.d1w
-        assert_almost_equal(d1w.ttest_mean(3)[:2],
-                            stats.ttest_1samp(x1r, 3), 11)
+        assert_almost_equal(d1w.ttest_mean(3)[:2], stats.ttest_1samp(x1r, 3), 11)
 
-#    def
-#        assert_almost_equal(ttest_ind(x1, x2, weights=(w1, w2))[:2],
-#                            stats.ttest_ind(x1r, x2r), 14)
+    #    def
+    #        assert_almost_equal(ttest_ind(x1, x2, weights=(w1, w2))[:2],
+    #                            stats.ttest_ind(x1r, x2r), 14)
 
     def test_ttest_2sample(self):
         x1, x2 = self.x1, self.x2
@@ -370,24 +377,28 @@ class CheckWeightstats1dMixin:
 
         # Note: stats.ttest_ind handles 2d/nd arguments
         res_sp = stats.ttest_ind(x1r, x2r)
-        assert_almost_equal(ttest_ind(x1, x2, weights=(w1, w2))[:2],
-                            res_sp, 14)
+        assert_almost_equal(ttest_ind(x1, x2, weights=(w1, w2))[:2], res_sp, 14)
 
         # check correct ttest independent of user ddof
-        cm = CompareMeans(DescrStatsW(x1, weights=w1, ddof=0),
-                          DescrStatsW(x2, weights=w2, ddof=1))
+        cm = CompareMeans(
+            DescrStatsW(x1, weights=w1, ddof=0), DescrStatsW(x2, weights=w2, ddof=1)
+        )
         assert_almost_equal(cm.ttest_ind()[:2], res_sp, 14)
 
-        cm = CompareMeans(DescrStatsW(x1, weights=w1, ddof=1),
-                          DescrStatsW(x2, weights=w2, ddof=2))
+        cm = CompareMeans(
+            DescrStatsW(x1, weights=w1, ddof=1), DescrStatsW(x2, weights=w2, ddof=2)
+        )
         assert_almost_equal(cm.ttest_ind()[:2], res_sp, 14)
 
-        cm0 = CompareMeans(DescrStatsW(x1, weights=w1, ddof=0),
-                           DescrStatsW(x2, weights=w2, ddof=0))
-        cm1 = CompareMeans(DescrStatsW(x1, weights=w1, ddof=0),
-                           DescrStatsW(x2, weights=w2, ddof=1))
-        cm2 = CompareMeans(DescrStatsW(x1, weights=w1, ddof=1),
-                           DescrStatsW(x2, weights=w2, ddof=2))
+        cm0 = CompareMeans(
+            DescrStatsW(x1, weights=w1, ddof=0), DescrStatsW(x2, weights=w2, ddof=0)
+        )
+        cm1 = CompareMeans(
+            DescrStatsW(x1, weights=w1, ddof=0), DescrStatsW(x2, weights=w2, ddof=1)
+        )
+        cm2 = CompareMeans(
+            DescrStatsW(x1, weights=w1, ddof=1), DescrStatsW(x2, weights=w2, ddof=2)
+        )
 
         res0 = cm0.ttest_ind(usevar="unequal")
         res1 = cm1.ttest_ind(usevar="unequal")
@@ -535,17 +546,17 @@ def test_ztest_ztost():
     x1 = [0, 1]
     w1 = [5, 15]
 
-    res2 = smprop.proportions_ztest(15, 20., value=0.5)
+    res2 = smprop.proportions_ztest(15, 20.0, value=0.5)
     d1 = DescrStatsW(x1, w1)
     res1 = d1.ztest_mean(0.5)
     assert_allclose(res1, res2, rtol=0.03, atol=0.003)
 
-    d2 = DescrStatsW(x1, np.array(w1)*21./20)
+    d2 = DescrStatsW(x1, np.array(w1) * 21.0 / 20)
     res1 = d2.ztest_mean(0.5)
     assert_almost_equal(res1, res2, decimal=12)
 
     res1 = d2.ztost_mean(0.4, 0.6)
-    res2 = smprop.proportions_ztost(15, 20., 0.4, 0.6)
+    res2 = smprop.proportions_ztost(15, 20.0, 0.4, 0.6)
     assert_almost_equal(res1[0], res2[0], decimal=12)
 
     x2 = [0, 1]
@@ -553,8 +564,7 @@ def test_ztest_ztost():
     # d2 = DescrStatsW(x1, np.array(w1)*21./20)
     d2 = DescrStatsW(x2, w2)
     res1 = ztest(d1.asrepeats(), d2.asrepeats())
-    res2 = smprop.proportions_chisquare(np.asarray([15, 10]),
-                                        np.asarray([20., 20]))
+    res2 = smprop.proportions_chisquare(np.asarray([15, 10]), np.asarray([20.0, 20]))
     # TODO: check this is this difference expected?, see test_proportion
     assert_allclose(res1[1], res2[1], rtol=0.03)
 
@@ -720,9 +730,7 @@ ztest_larger_unequal.method = "Two-sample z-Test"
 ztest_larger_unequal.data_name = "x and y"
 
 
-alternatives = {"less": "smaller",
-                "greater": "larger",
-                "two.sided": "two-sided"}
+alternatives = {"less": "smaller", "greater": "larger", "two.sided": "two-sided"}
 
 
 class TestZTest:
@@ -731,9 +739,8 @@ class TestZTest:
 
     @classmethod
     def setup_class(cls):
-        cls.x1 = np.array([7.8, 6.6, 6.5, 7.4, 7.3, 7., 6.4,
-                          7.1, 6.7, 7.6, 6.8])
-        cls.x2 = np.array([4.5, 5.4, 6.1, 6.1, 5.4, 5., 4.1, 5.5])
+        cls.x1 = np.array([7.8, 6.6, 6.5, 7.4, 7.3, 7.0, 6.4, 7.1, 6.7, 7.6, 6.8])
+        cls.x2 = np.array([4.5, 5.4, 6.1, 6.1, 5.4, 5.0, 4.1, 5.5])
         cls.d1 = DescrStatsW(cls.x1)
         cls.d2 = DescrStatsW(cls.x2)
         cls.cm = CompareMeans(cls.d1, cls.d2)
@@ -743,8 +750,14 @@ class TestZTest:
         cm = self.cm
 
         # tc : test cases
-        for tc in [ztest_, ztest_smaller, ztest_larger,
-                   ztest_mu, ztest_smaller_mu, ztest_larger_mu]:
+        for tc in [
+            ztest_,
+            ztest_smaller,
+            ztest_larger,
+            ztest_mu,
+            ztest_smaller_mu,
+            ztest_larger_mu,
+        ]:
 
             zstat, pval = ztest(
                 x1, x2, value=tc.null_value, alternative=alternatives[tc.alternative]
@@ -761,35 +774,40 @@ class TestZTest:
             # overwrite nan in R's confint
             tc_conf_int = tc.conf_int.copy()
             if np.isnan(tc_conf_int[0]):
-                tc_conf_int[0] = - np.inf
+                tc_conf_int[0] = -np.inf
             if np.isnan(tc_conf_int[1]):
                 tc_conf_int[1] = np.inf
 
             # Note: value is shifting our confidence interval in zconfint
-            ci = zconfint(x1, x2, value=0,
-                          alternative=alternatives[tc.alternative])
+            ci = zconfint(x1, x2, value=0, alternative=alternatives[tc.alternative])
             assert_allclose(ci, tc_conf_int, rtol=1e-10)
 
             ci = cm.zconfint_diff(alternative=alternatives[tc.alternative])
             assert_allclose(ci, tc_conf_int, rtol=1e-10)
 
-            ci = zconfint(x1, x2, value=tc.null_value,
-                          alternative=alternatives[tc.alternative])
+            ci = zconfint(
+                x1, x2, value=tc.null_value, alternative=alternatives[tc.alternative]
+            )
             assert_allclose(ci, tc_conf_int - tc.null_value, rtol=1e-10)
 
         # unequal variances
         for tc in [ztest_unequal, ztest_smaller_unequal, ztest_larger_unequal]:
-            zstat, pval = ztest(x1, x2, value=tc.null_value,
-                                alternative=alternatives[tc.alternative],
-                                usevar="unequal")
+            zstat, pval = ztest(
+                x1,
+                x2,
+                value=tc.null_value,
+                alternative=alternatives[tc.alternative],
+                usevar="unequal",
+            )
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
         # 1 sample test copy-paste
         d1 = self.d1
         for tc in [ztest_mu_1s, ztest_smaller_mu_1s, ztest_larger_mu_1s]:
-            zstat, pval = ztest(x1, value=tc.null_value,
-                                alternative=alternatives[tc.alternative])
+            zstat, pval = ztest(
+                x1, value=tc.null_value, alternative=alternatives[tc.alternative]
+            )
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
@@ -802,13 +820,12 @@ class TestZTest:
             # overwrite nan in R's confint
             tc_conf_int = tc.conf_int.copy()
             if np.isnan(tc_conf_int[0]):
-                tc_conf_int[0] = - np.inf
+                tc_conf_int[0] = -np.inf
             if np.isnan(tc_conf_int[1]):
                 tc_conf_int[1] = np.inf
 
             # Note: value is shifting our confidence interval in zconfint
-            ci = zconfint(x1, value=0,
-                          alternative=alternatives[tc.alternative])
+            ci = zconfint(x1, value=0, alternative=alternatives[tc.alternative])
             assert_allclose(ci, tc_conf_int, rtol=1e-10)
 
             ci = d1.zconfint_mean(alternative=alternatives[tc.alternative])

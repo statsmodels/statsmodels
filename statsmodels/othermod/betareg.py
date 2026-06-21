@@ -101,9 +101,7 @@ class BetaModel(GenericLikelihoodModel):
     --------
     :ref:`links`
 
-    """.format(
-        example=_init_example
-    )
+    """.format(example=_init_example)
 
     def __init__(
         self,

@@ -1,11 +1,12 @@
 """
 Empirical CDF Functions
 """
+
 import numpy as np
 from scipy.interpolate import interp1d
 
 
-def _conf_set(F, alpha=.05):
+def _conf_set(F, alpha=0.05):
     r"""
     Constructs a Dvoretzky-Kiefer-Wolfowitz confidence band for the eCDF.
 
@@ -28,7 +29,7 @@ def _conf_set(F, alpha=.05):
     Wasserman, L. 2006. `All of Nonparametric Statistics`. Springer.
     """
     nobs = len(F)
-    epsilon = np.sqrt(np.log(2./alpha) / (2 * nobs))
+    epsilon = np.sqrt(np.log(2.0 / alpha) / (2 * nobs))
     lower = np.clip(F - epsilon, 0, 1)
     upper = np.clip(F + epsilon, 0, 1)
     return lower, upper
@@ -78,7 +79,7 @@ class StepFunction:
     3.0
     """
 
-    def __init__(self, x, y, ival=0., sorted=False, side="left"):
+    def __init__(self, x, y, ival=0.0, sorted=False, side="left"):
 
         if side.lower() not in ["right", "left"]:
             msg = "side can take the values 'right' or 'left'"
@@ -136,10 +137,11 @@ class ECDF(StepFunction):
     >>> ecdf([3, 55, 0.5, 1.5])
     array([ 0.75,  1.  ,  0.  ,  0.25])
     """
+
     def __init__(self, x, side="right"):
         x = np.sort(np.asarray(x))
         nobs = len(x)
-        y = np.linspace(1./nobs, 1, nobs)
+        y = np.linspace(1.0 / nobs, 1, nobs)
         super().__init__(x, y, side=side, sorted=True)
         # TODO: make `step` an arg and have a linear interpolation option?
         # This is the path with `step` is True
@@ -198,6 +200,7 @@ class ECDFDiscrete(StepFunction):
     >>> print(e1.y, e2.y)
     [0.  0.2 0.4 0.8 1. ] [0.  0.2 0.4 0.8 1. ]
     """
+
     def __init__(self, x, freq_weights=None, side="right"):
         if freq_weights is None:
             x, freq_weights = np.unique(x, return_counts=True)

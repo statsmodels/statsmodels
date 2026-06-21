@@ -1,4 +1,5 @@
 """Danish Money Demand Data"""
+
 import pandas as pd
 
 from statsmodels.datasets import utils as du

@@ -80,21 +80,20 @@ class QIFAutoregressive(QIFCovariance):
     def mat(self, dim, term):
 
         if dim < 3:
-            msg = ("Groups must have size at least 3 for "
-                   "autoregressive covariance.")
+            msg = "Groups must have size at least 3 for " "autoregressive covariance."
             raise ValueError(msg)
 
         if term == 0:
             return np.eye(dim)
         elif term == 1:
             mat = np.zeros((dim, dim))
-            mat.flat[1::(dim+1)] = 1
+            mat.flat[1 :: (dim + 1)] = 1
             mat += mat.T
             return mat
         elif term == 2:
             mat = np.zeros((dim, dim))
             mat[0, 0] = 1
-            mat[dim-1, dim-1] = 1
+            mat[dim - 1, dim - 1] = 1
             return mat
         else:
             return None
@@ -128,15 +127,22 @@ class QIF(base.Model):
     www.jstor.org/stable/2673612
     """
 
-    def __init__(self, endog, exog, groups, family=None,
-                 cov_struct=None, missing="none", **kwargs):
+    def __init__(
+        self,
+        endog,
+        exog,
+        groups,
+        family=None,
+        cov_struct=None,
+        missing="none",
+        **kwargs,
+    ):
 
         # Handle the family argument
         if family is None:
             family = families.Gaussian()
         elif not issubclass(family.__class__, families.Family):
-            raise ValueError("QIF: `family` must be a genmod "
-                             "family instance")
+            raise ValueError("QIF: `family` must be a genmod " "family instance")
         self.family = family
 
         self._fit_history = defaultdict(list)
@@ -145,14 +151,12 @@ class QIF(base.Model):
         if cov_struct is None:
             cov_struct = QIFIndependence()
         elif not isinstance(cov_struct, QIFCovariance):
-            raise ValueError(
-                "QIF: `cov_struct` must be a QIFCovariance instance")
+            raise ValueError("QIF: `cov_struct` must be a QIFCovariance instance")
         self.cov_struct = cov_struct
 
         groups = np.asarray(groups)
 
-        super().__init__(endog, exog, groups=groups,
-                         missing=missing, **kwargs)
+        super().__init__(endog, exog, groups=groups, missing=missing, **kwargs)
 
         self.group_names = list(set(groups))
         self.nobs = len(self.endog)
@@ -171,8 +175,10 @@ class QIF(base.Model):
             raise ValueError(msg)
 
         if len(self.endog) != self.exog.shape[0]:
-            msg = ("QIF: the length of endog should be equal to the "
-                   "number of rows of exog.")
+            msg = (
+                "QIF: the length of endog should be equal to the "
+                "number of rows of exog."
+            )
             raise ValueError(msg)
 
     def objective(self, params):
@@ -219,7 +225,7 @@ class QIF(base.Model):
         fastlink = isinstance(
             self.family.link,
             # TODO: Remove links.identity after deprecation final
-            (links.Identity, links.identity)
+            (links.Identity, links.identity),
         )
 
         for ix in self.groups_ix:
@@ -236,20 +242,19 @@ class QIF(base.Model):
                 # the gradient as a sum of four terms.
                 c = self.cov_struct.mat(len(ix), j)
                 crs1 = np.dot(c, sresid) / sd
-                gi[jj:jj+p] = np.dot(deriv.T, crs1)
+                gi[jj : jj + p] = np.dot(deriv.T, crs1)
                 crs2 = np.dot(c, -deriv / sd[:, None]) / sd[:, None]
-                gi_deriv[jj:jj+p, :] = np.dot(deriv.T, crs2)
+                gi_deriv[jj : jj + p, :] = np.dot(deriv.T, crs2)
                 if not (fastlink and fastvar):
                     for k in range(p):
-                        m1 = np.dot(exog[ix, :].T,
-                                    idl2[ix] * exog[ix, k] * crs1)
+                        m1 = np.dot(exog[ix, :].T, idl2[ix] * exog[ix, k] * crs1)
                         if not fastvar:
-                            vx = -0.5 * vd[ix] * deriv[:, k] / va[ix]**1.5
+                            vx = -0.5 * vd[ix] * deriv[:, k] / va[ix] ** 1.5
                             m2 = np.dot(deriv.T, vx * np.dot(c, sresid))
                             m3 = np.dot(deriv.T, np.dot(c, vx * resid) / sd)
                         else:
                             m2, m3 = 0, 0
-                        gi_deriv[jj:jj+p, k] += m1 + m2 + m3
+                        gi_deriv[jj : jj + p, k] += m1 + m2 + m3
                 jj += p
 
             for j in range(p):
@@ -270,7 +275,7 @@ class QIF(base.Model):
 
         gcg = np.zeros(p)
         for j in range(p):
-            cn_deriv[j] /= len(self.groups_ix)**2
+            cn_deriv[j] /= len(self.groups_ix) ** 2
             u = np.linalg.solve(cmat, cn_deriv[j]).T
             u = np.linalg.solve(cmat, u)
             gcg[j] = np.dot(gn, np.dot(u, gn))
@@ -288,7 +293,7 @@ class QIF(base.Model):
         """
 
         if isinstance(self.family, (families.Binomial, families.Poisson)):
-            return 1.
+            return 1.0
 
         if hasattr(self, "ddof_scale"):
             ddof_scale = self.ddof_scale
@@ -303,8 +308,7 @@ class QIF(base.Model):
         return scale
 
     @classmethod
-    def from_formula(cls, formula, groups, data, subset=None,
-                     *args, **kwargs):
+    def from_formula(cls, formula, groups, data, subset=None, *args, **kwargs):
         """
         Create a QIF model instance from a formula and dataframe.
 
@@ -331,13 +335,12 @@ class QIF(base.Model):
             groups = data[groups]
         advance_eval_env(kwargs)
         model = super().from_formula(
-            formula, data, *args,  subset=subset, groups=groups, **kwargs
+            formula, data, *args, subset=subset, groups=groups, **kwargs
         )
 
         return model
 
-    def fit(self, maxiter=100, start_params=None, tol=1e-6, gtol=1e-4,
-            ddof_scale=None):
+    def fit(self, maxiter=100, start_params=None, tol=1e-6, gtol=1e-4, ddof_scale=None):
         """
         Fit a GLM to correlated data using QIF.
 
@@ -405,12 +408,10 @@ class QIF(base.Model):
 
 class QIFResults(base.LikelihoodModelResults):
     """Results class for QIF Regression"""
-    def __init__(self, model, params, cov_params, scale,
-                 use_t=False, **kwds):
 
-        super().__init__(
-            model, params, normalized_cov_params=cov_params,
-            scale=scale)
+    def __init__(self, model, params, cov_params, scale, use_t=False, **kwds):
+
+        super().__init__(model, params, normalized_cov_params=cov_params, scale=scale)
 
         self.qif, _, _, _, _ = self.model.objective(params)
 
@@ -423,7 +424,7 @@ class QIFResults(base.LikelihoodModelResults):
             msg = "AIC not available with QIFIndependence covariance"
             raise ValueError(msg)
         df = self.model.exog.shape[1]
-        return self.qif + 2*df
+        return self.qif + 2 * df
 
     @cache_readonly
     def bic(self):
@@ -434,17 +435,16 @@ class QIFResults(base.LikelihoodModelResults):
             msg = "BIC not available with QIFIndependence covariance"
             raise ValueError(msg)
         df = self.model.exog.shape[1]
-        return self.qif + np.log(self.model.nobs)*df
+        return self.qif + np.log(self.model.nobs) * df
 
     @cache_readonly
     def fittedvalues(self):
         """
         Returns the fitted values from the model.
         """
-        return self.model.family.link.inverse(
-                np.dot(self.model.exog, self.params))
+        return self.model.family.link.inverse(np.dot(self.model.exog, self.params))
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05):
         """
         Summarize the QIF regression results
 
@@ -473,28 +473,28 @@ class QIFResults(base.LikelihoodModelResults):
         statsmodels.iolib.summary.Summary : class to hold summary results
         """
 
-        top_left = [("Dep. Variable:", None),
-                    ("Method:", ["QIF"]),
-                    ("Family:", [self.model.family.__class__.__name__]),
-                    ("Covariance structure:",
-                     [self.model.cov_struct.__class__.__name__]),
-                    ("Date:", None),
-                    ("Time:", None),
-                    ]
+        top_left = [
+            ("Dep. Variable:", None),
+            ("Method:", ["QIF"]),
+            ("Family:", [self.model.family.__class__.__name__]),
+            ("Covariance structure:", [self.model.cov_struct.__class__.__name__]),
+            ("Date:", None),
+            ("Time:", None),
+        ]
 
         NY = [len(y) for y in self.model.groups_ix]
 
-        top_right = [("No. Observations:", [sum(NY)]),
-                     ("No. clusters:", [len(NY)]),
-                     ("Min. cluster size:", [min(NY)]),
-                     ("Max. cluster size:", [max(NY)]),
-                     ("Mean cluster size:", ["%.1f" % np.mean(NY)]),
-                     ("Scale:", ["%.3f" % self.scale]),
-                     ]
+        top_right = [
+            ("No. Observations:", [sum(NY)]),
+            ("No. clusters:", [len(NY)]),
+            ("Min. cluster size:", [min(NY)]),
+            ("Max. cluster size:", [max(NY)]),
+            ("Mean cluster size:", ["%.1f" % np.mean(NY)]),
+            ("Scale:", ["%.3f" % self.scale]),
+        ]
 
         if title is None:
-            title = self.model.__class__.__name__ + " " +\
-                "Regression Results"
+            title = self.model.__class__.__name__ + " " + "Regression Results"
 
         # Override the exog variable names if xname is provided as an
         # argument.
@@ -506,12 +506,17 @@ class QIFResults(base.LikelihoodModelResults):
 
         # Create summary table instance
         from statsmodels.iolib.summary import Summary
+
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=yname, xname=xname,
-                             title=title)
-        smry.add_table_params(self, yname=yname, xname=xname,
-                              alpha=alpha, use_t=False)
+        smry.add_table_2cols(
+            self,
+            gleft=top_left,
+            gright=top_right,
+            yname=yname,
+            xname=xname,
+            title=title,
+        )
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha, use_t=False)
 
         return smry
 

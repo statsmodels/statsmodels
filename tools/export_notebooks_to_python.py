@@ -24,13 +24,11 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
-parser = argparse.ArgumentParser(
-    description="""
+parser = argparse.ArgumentParser(description="""
 Sync notebooks to python by exporting. The exported files are
 always written in ../python relative to the notebooks. 
 Requires nbconvert and yapf.
-"""
-)
+""")
 parser.add_argument(
     "--full-path",
     "-fp",
@@ -119,8 +117,7 @@ def main():
         out_file = os.path.join(out_file, "..", "python", py_name)
         if is_newer(out_file, nb) and not force:
             logger.info(
-                "Skipping {}, exported version newer than "
-                "notebook".format(nb_name)
+                "Skipping {}, exported version newer than " "notebook".format(nb_name)
             )
             continue
         logger.info(f"Converting {nb_name}")

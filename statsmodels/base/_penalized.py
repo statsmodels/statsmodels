@@ -76,7 +76,7 @@ class PenalizedMixin:
         llf = super().loglike(params, **kwds)
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
-            llf -= 1/scale * pen_weight * self.penal.func(params)
+            llf -= 1 / scale * pen_weight * self.penal.func(params)
 
         return llf
 
@@ -92,13 +92,12 @@ class PenalizedMixin:
 
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
-            llf -= 1/scale * pen_weight / nobs_llf * self.penal.func(params)
+            llf -= 1 / scale * pen_weight / nobs_llf * self.penal.func(params)
 
         return llf
 
     def score_numdiff(self, params, pen_weight=None, method="fd", **kwds):
-        """score based on finite difference derivative
-        """
+        """score based on finite difference derivative"""
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -122,7 +121,7 @@ class PenalizedMixin:
         sc = super().score(params, **kwds)
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
-            sc -= 1/scale * pen_weight * self.penal.deriv(params)
+            sc -= 1 / scale * pen_weight * self.penal.deriv(params)
 
         return sc
 
@@ -137,13 +136,12 @@ class PenalizedMixin:
         nobs_sc = float(sc.shape[0])
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
-            sc -= 1/scale * pen_weight / nobs_sc * self.penal.deriv(params)
+            sc -= 1 / scale * pen_weight / nobs_sc * self.penal.deriv(params)
 
         return sc
 
     def hessian_numdiff(self, params, pen_weight=None, **kwds):
-        """hessian based on finite difference derivative
-        """
+        """hessian based on finite difference derivative"""
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -151,6 +149,7 @@ class PenalizedMixin:
             return self.loglike(p, pen_weight=pen_weight, **kwds)
 
         from statsmodels.tools.numdiff import approx_hess
+
         return approx_hess(params, loglike)
 
     def hessian(self, params, pen_weight=None, **kwds):
@@ -165,9 +164,9 @@ class PenalizedMixin:
             scale = self._handle_scale(params, **kwds)
             h = self.penal.deriv2(params)
             if h.ndim == 1:
-                hess -= 1/scale * np.diag(pen_weight * h)
+                hess -= 1 / scale * np.diag(pen_weight * h)
             else:
-                hess -= 1/scale * pen_weight * h
+                hess -= 1 / scale * pen_weight * h
 
         return hess
 

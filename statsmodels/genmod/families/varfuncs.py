@@ -1,6 +1,7 @@
 """
 Variance functions for use with the link functions in statsmodels.family.links
 """
+
 import numpy as np
 
 FLOAT_EPS = np.finfo(float).eps
@@ -85,7 +86,7 @@ class Power:
     mu_cubed = Power(power=3)
     """
 
-    def __init__(self, power=1.):
+    def __init__(self, power=1.0):
         self.power = power
 
     def __call__(self, mu):
@@ -201,7 +202,7 @@ class Binomial:
         """
         Derivative of the variance function v'(mu)
         """
-        return 1 - 2*mu
+        return 1 - 2 * mu
 
 
 binary = Binomial()
@@ -242,7 +243,7 @@ class NegativeBinomial:
     in (0,inf)
     """
 
-    def __init__(self, alpha=1.):
+    def __init__(self, alpha=1.0):
         self.alpha = alpha
 
     def _clean(self, p):
@@ -263,7 +264,7 @@ class NegativeBinomial:
             variance = mu + alpha*mu**2
         """
         p = self._clean(mu)
-        return p + self.alpha*p**2
+        return p + self.alpha * p**2
 
     def deriv(self, mu):
         """

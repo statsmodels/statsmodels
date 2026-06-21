@@ -11,7 +11,6 @@ License: BSD
 
 """
 
-
 try:
     import numdifftools as ndt
 except ImportError:

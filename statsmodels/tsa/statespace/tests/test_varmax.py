@@ -927,7 +927,11 @@ def test_misc_exog():
         assert isinstance(mod.start_params, np.ndarray)
         res = mod.fit(disp=False)
         assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
-        typ = pd.DataFrame if isinstance(mod.data.orig_endog, pd.DataFrame) else np.ndarray
+        typ = (
+            pd.DataFrame
+            if isinstance(mod.data.orig_endog, pd.DataFrame)
+            else np.ndarray
+        )
         assert isinstance(res.predict(), typ)
         assert isinstance(res.predict(dynamic=True), typ)
         assert isinstance(res.get_prediction().predicted_mean, typ)

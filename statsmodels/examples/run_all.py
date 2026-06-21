@@ -56,11 +56,9 @@ def noop(*args):
 
 plt.show = noop
 
-cont = input(
-    """Are you sure you want to run all of the examples?
+cont = input("""Are you sure you want to run all of the examples?
 This is done mainly to check that they are up to date.
-(y/n) >>> """
-)
+(y/n) >>> """)
 has_errors = []
 if "y" in cont.lower():
     for run_all_f in filelist:

@@ -40,6 +40,7 @@ def array_like(
         Whether to require contiguous memory.
 
     """
+
     def inner(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -51,7 +52,7 @@ def array_like(
                 if pos == 0:
                     args = (arg,) + args[1:]
                 else:
-                    args = args[:pos] + (arg,) + args[pos + 1:]
+                    args = args[:pos] + (arg,) + args[pos + 1 :]
             else:
                 arg = kwargs[name]
                 arg = v.array_like(

@@ -7,7 +7,6 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-
 from warnings import warn
 
 import numpy as np
@@ -448,7 +447,7 @@ class UnobservedComponents(MLEModel):
                         "Value of `%s` may be overridden when the trend"
                         " component is specified using a model string." % attribute,
                         SpecificationWarning,
-                        stacklevel=2
+                        stacklevel=2,
                     )
                     setattr(self, attribute, False)
 
@@ -518,7 +517,7 @@ class UnobservedComponents(MLEModel):
                 "Trend component specified without level component;"
                 " deterministic level component added.",
                 SpecificationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             self.level = True
             self.stochastic_level = False
@@ -536,7 +535,7 @@ class UnobservedComponents(MLEModel):
                 "Specified model does not contain a stochastic element;"
                 " irregular component added.",
                 SpecificationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             self.irregular = True
 
@@ -569,7 +568,7 @@ class UnobservedComponents(MLEModel):
             self.trend_specification = _mask_map.get(self.trend_mask, None)
 
         # Exogenous component
-        (self.k_exog, exog) = prepare_exog(exog)
+        self.k_exog, exog = prepare_exog(exog)
 
         self.regression = self.k_exog > 0
 
@@ -1893,6 +1892,4 @@ class UnobservedComponentsResultsWrapper(MLEResultsWrapper):
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods, _methods)
 
 
-wrap.populate_wrapper(
-    UnobservedComponentsResultsWrapper, UnobservedComponentsResults
-)
+wrap.populate_wrapper(UnobservedComponentsResultsWrapper, UnobservedComponentsResults)

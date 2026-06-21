@@ -128,16 +128,15 @@ class NBin(GenericLikelihoodModel):
 
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
         # we have one additional parameter and we need to add it for summary
-        self.exog_names.append('alpha')
+        self.exog_names.append("alpha")
         if start_params is None:
             # Reasonable starting values
-            start_params = np.append(np.zeros(self.exog.shape[1]), .5)
+            start_params = np.append(np.zeros(self.exog.shape[1]), 0.5)
             # intercept
             start_params[-2] = np.log(self.endog.mean())
-        return super().fit(start_params=start_params,
-                                     maxiter=maxiter,
-                                     maxfun=maxfun,
-                                     **kwds)
+        return super().fit(
+            start_params=start_params, maxiter=maxiter, maxfun=maxfun, **kwds
+        )
 
 
 # Two important things to notice:
@@ -188,10 +187,10 @@ res = mod.fit()
 
 #  Extract parameter estimates, standard errors, p-values, AIC, etc.:
 
-print('Parameters: ', res.params)
-print('Standard errors: ', res.bse)
-print('P-values: ', res.pvalues)
-print('AIC: ', res.aic)
+print("Parameters: ", res.params)
+print("Standard errors: ", res.bse)
+print("P-values: ", res.pvalues)
+print("AIC: ", res.aic)
 
 # As usual, you can obtain a full list of available information by typing
 # ``dir(res)``.

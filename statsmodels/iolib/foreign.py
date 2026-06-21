@@ -5,6 +5,7 @@ See Also
 --------
 numpy.lib.io
 """
+
 import numpy as np
 
 from statsmodels.iolib.openfile import get_file_obj
@@ -122,11 +123,12 @@ def savetxt(fname, X, names=None, fmt="%.18e", delimiter=" "):
             format = delimiter.join(fmt)
         elif isinstance(fmt, str):
             if fmt.count("%") == 1:
-                fmt = [fmt, ]*ncol
+                fmt = [
+                    fmt,
+                ] * ncol
                 format = delimiter.join(fmt)
             elif fmt.count("%") != ncol:
-                raise AttributeError("fmt has wrong number of %% formats.  %s"
-                                     % fmt)
+                raise AttributeError("fmt has wrong number of %% formats.  %s" % fmt)
             else:
                 format = fmt
 

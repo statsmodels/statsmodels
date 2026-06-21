@@ -50,8 +50,9 @@ help(norms.AndrewWave.weights)
 a = 1.339
 support = np.linspace(-np.pi * a, np.pi * a, 100)
 andrew = norms.AndrewWave(a=a)
-plot_weights(support, andrew.weights, [r"$-\pi*a$", "0", r"$\pi*a$"],
-             [-np.pi * a, 0, np.pi * a])
+plot_weights(
+    support, andrew.weights, [r"$-\pi*a$", "0", r"$\pi*a$"], [-np.pi * a, 0, np.pi * a]
+)
 
 # ### Hampel's 17A
 
@@ -95,8 +96,7 @@ help(norms.TrimmedMean.weights)
 c = 2
 support = np.linspace(-3 * c, 3 * c, 1000)
 trimmed = norms.TrimmedMean(c=c)
-plot_weights(support, trimmed.weights, ["-3*c", "0", "3*c"],
-             [-3 * c, 0, 3 * c])
+plot_weights(support, trimmed.weights, ["-3*c", "0", "3*c"], [-3 * c, 0, 3 * c])
 
 # ### Tukey's Biweight
 
@@ -387,7 +387,7 @@ for i in range(mc_iter):
     all_betas.append(beta_hat)
 
 all_betas = np.asarray(all_betas)
-se_loss = lambda x: np.linalg.norm(x, ord=2)**2
+se_loss = lambda x: np.linalg.norm(x, ord=2) ** 2
 se_beta = lmap(se_loss, all_betas - beta_true)
 
 # #### Squared error loss

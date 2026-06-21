@@ -5,15 +5,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 import statsmodels.api as sm
+
 plt.interactive(False)
 
 # let's examine an ARIMA model of CPI
 
-cpi = load_pandas().data['cpi']
-dates = dates_from_range('1959q1', '2009q3')
+cpi = load_pandas().data["cpi"]
+dates = dates_from_range("1959q1", "2009q3")
 cpi.index = dates
 
-res = ARIMA(cpi, (1, 1, 1), freq='Q').fit()
+res = ARIMA(cpi, (1, 1, 1), freq="Q").fit()
 print(res.summary())
 
 # we can look at the series
@@ -26,21 +27,21 @@ log_cpi = np.log(cpi)
 acf, confint_acf = sm.tsa.acf(log_cpi.diff().values[1:], alpha=0.05)[:2]
 # center the confidence intervals about zero
 # TODO: demean? --> confint_acf -= confint_acf.mean(1)[:, None]
-pacf = sm.tsa.pacf(log_cpi.diff().values[1:], method='ols')
+pacf = sm.tsa.pacf(log_cpi.diff().values[1:], method="ols")
 # confidence interval is now an option to pacf
-confint_pacf = stats.norm.ppf(1 - .025) * np.sqrt(1 / 202.)
+confint_pacf = stats.norm.ppf(1 - 0.025) * np.sqrt(1 / 202.0)
 
 fig = plt.figure()
 ax = fig.add_subplot(121)
-ax.set_title('Autocorrelation')
-ax.plot(range(41), acf, 'bo', markersize=5)
+ax.set_title("Autocorrelation")
+ax.plot(range(41), acf, "bo", markersize=5)
 ax.vlines(range(41), 0, acf)
-ax.fill_between(range(41), confint_acf[:, 0], confint_acf[:, 1], alpha=.25)
+ax.fill_between(range(41), confint_acf[:, 0], confint_acf[:, 1], alpha=0.25)
 fig.tight_layout()
 ax = fig.add_subplot(122, sharey=ax)
 ax.vlines(range(41), 0, pacf)
-ax.plot(range(41), pacf, 'bo', markersize=5)
-ax.fill_between(range(41), -confint_pacf, confint_pacf, alpha=.25)
+ax.plot(range(41), pacf, "bo", markersize=5)
+ax.fill_between(range(41), -confint_pacf, confint_pacf, alpha=0.25)
 
 
 # TODO: you'll be able to just to this when tsa-plots is in main

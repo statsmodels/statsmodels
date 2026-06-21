@@ -246,8 +246,7 @@ class HuberT(RobustNorm):
         """
         z = np.asarray(z)
         test = self._subset(z)
-        return (test * 0.5 * z**2 +
-                (1 - test) * (np.abs(z) * self.t - 0.5 * self.t**2))
+        return test * 0.5 * z**2 + (1 - test) * (np.abs(z) * self.t - 0.5 * self.t**2)
 
     def psi(self, z):
         r"""
@@ -335,7 +334,7 @@ class RamsayE(RobustNorm):
     continuous = 2
     redescending = "soft"
 
-    def __init__(self, a=.3):
+    def __init__(self, a=0.3):
         self.a = a
 
     def _set_tuning_param(self, c, inplace=False):
@@ -372,8 +371,7 @@ class RamsayE(RobustNorm):
             The value of the robust criterion function.
         """
         z = np.asarray(z)
-        return (1 - np.exp(-self.a * np.abs(z)) *
-                (1 + self.a * np.abs(z))) / self.a**2
+        return (1 - np.exp(-self.a * np.abs(z)) * (1 + self.a * np.abs(z))) / self.a**2
 
     def psi(self, z):
         r"""
@@ -497,8 +495,7 @@ class AndrewWave(RobustNorm):
         a = self.a
         z = np.asarray(z)
         test = self._subset(z)
-        return (test * a**2 * (1 - np.cos(z / a)) +
-                (1 - test) * a**2 * 2)
+        return test * a**2 * (1 - np.cos(z / a)) + (1 - test) * a**2 * 2
 
     def psi(self, z):
         r"""
@@ -587,7 +584,7 @@ class TrimmedMean(RobustNorm):
     continuous = 0
     redescending = "hard"
 
-    def __init__(self, c=2.):
+    def __init__(self, c=2.0):
         self.c = c
 
     def _set_tuning_param(self, c, inplace=False):
@@ -715,7 +712,7 @@ class Hampel(RobustNorm):
     continuous = 1
     redescending = "hard"
 
-    def __init__(self, a=2., b=4., c=8.):
+    def __init__(self, a=2.0, b=4.0, c=8.0):
         self.a = a
         self.b = b
         self.c = c
@@ -781,10 +778,10 @@ class Hampel(RobustNorm):
         dt = np.promote_types(z.dtype, "float")
         v = np.zeros(z.shape, dtype=dt)
         z = np.abs(z)
-        v[t1] = z[t1]**2 * 0.5
+        v[t1] = z[t1] ** 2 * 0.5
         # v[t2] = (a * (z[t2] - a) + a**2 * 0.5)
-        v[t2] = (a * z[t2] - a**2 * 0.5)
-        v[t3] = a * (c - z[t3])**2 / (c - b) * (-0.5)
+        v[t2] = a * z[t2] - a**2 * 0.5
+        v[t3] = a * (c - z[t3]) ** 2 / (c - b) * (-0.5)
         v[t34] += a * (b + c - a) * 0.5
 
         if z_isscalar:
@@ -881,8 +878,7 @@ class Hampel(RobustNorm):
         return v
 
     def psi_deriv(self, z):
-        """Derivative of psi function, second derivative of rho function.
-        """
+        """Derivative of psi function, second derivative of rho function."""
         a, b, c = self.a, self.b, self.c
 
         z_isscalar = np.isscalar(z)
@@ -946,8 +942,7 @@ class TukeyBiweight(RobustNorm):
         float : tuning parameter.
 
         """
-        if ((bp is None and eff is None) or
-                (bp is not None and eff is not None)):
+        if (bp is None and eff is None) or (bp is not None and eff is not None):
             raise ValueError("exactly one of bp and eff needs to be provided")
 
         if bp is not None:
@@ -994,8 +989,8 @@ class TukeyBiweight(RobustNorm):
             rho(z) = 0                              for \|z\| > R
         """
         subset = self._subset(z)
-        factor = self.c**2 / 6.
-        return -(1 - (z / self.c)**2)**3 * subset * factor + factor
+        factor = self.c**2 / 6.0
+        return -((1 - (z / self.c) ** 2) ** 3) * subset * factor + factor
 
     def psi(self, z):
         r"""
@@ -1018,7 +1013,7 @@ class TukeyBiweight(RobustNorm):
 
         z = np.asarray(z)
         subset = self._subset(z)
-        return z * (1 - (z / self.c)**2)**2 * subset
+        return z * (1 - (z / self.c) ** 2) ** 2 * subset
 
     def weights(self, z):
         r"""
@@ -1040,7 +1035,7 @@ class TukeyBiweight(RobustNorm):
         """
         z = np.asarray(z)
         subset = self._subset(z)
-        return (1 - (z / self.c)**2)**2 * subset
+        return (1 - (z / self.c) ** 2) ** 2 * subset
 
     def psi_deriv(self, z):
         """
@@ -1051,8 +1046,10 @@ class TukeyBiweight(RobustNorm):
         Used to estimate the robust covariance matrix.
         """
         subset = self._subset(z)
-        return subset * ((1 - (z/self.c)**2)**2
-                         - (4*z**2/self.c**2) * (1-(z/self.c)**2))
+        return subset * (
+            (1 - (z / self.c) ** 2) ** 2
+            - (4 * z**2 / self.c**2) * (1 - (z / self.c) ** 2)
+        )
 
 
 class TukeyQuartic(RobustNorm):
@@ -1166,7 +1163,7 @@ class TukeyQuartic(RobustNorm):
         k = self.k
         z = np.asarray(z)
         subset = self._subset(z)
-        return z * (1 - (z / self.c)**k)**2 * subset
+        return z * (1 - (z / self.c) ** k) ** 2 * subset
 
     def weights(self, z):
         r"""
@@ -1189,7 +1186,7 @@ class TukeyQuartic(RobustNorm):
         k = self.k
         z = np.asarray(z)
         subset = self._subset(z)
-        return (1 - (z / self.c)**k)**2 * subset
+        return (1 - (z / self.c) ** k) ** 2 * subset
 
     def psi_deriv(self, z):
         """
@@ -1262,8 +1259,8 @@ class StudentT(RobustNorm):
         c = self.c
         df = self.df
         z = np.asarray(z)
-        const = (c**2 * df / 2.) * np.log(df) if df != 0 else 0
-        return (c**2 * df / 2.) * np.log(df + (z / c)**2) - const
+        const = (c**2 * df / 2.0) * np.log(df) if df != 0 else 0
+        return (c**2 * df / 2.0) * np.log(df + (z / c) ** 2) - const
 
     def psi(self, z):
         """
@@ -1285,7 +1282,7 @@ class StudentT(RobustNorm):
         c = self.c
         df = self.df
         z = np.asarray(z)
-        return z * df / (df + (z / c)**2)
+        return z * df / (df + (z / c) ** 2)
 
     def weights(self, z):
         """
@@ -1307,7 +1304,7 @@ class StudentT(RobustNorm):
         c = self.c
         df = self.df
         z = np.asarray(z)
-        return df / (df + (z / c)**2)
+        return df / (df + (z / c) ** 2)
 
     def psi_deriv(self, z):
         """
@@ -1325,7 +1322,7 @@ class StudentT(RobustNorm):
         c = self.c
         df = self.df
         x = np.asarray(z) / c
-        return - 2 * df * x**2 / (df + x**2)**2 + df / (df + x**2)
+        return -2 * df * x**2 / (df + x**2) ** 2 + df / (df + x**2)
 
 
 class MQuantileNorm(RobustNorm):
@@ -1387,7 +1384,7 @@ class MQuantileNorm(RobustNorm):
     def _get_q(self, z):
 
         nobs = len(z)
-        mask_neg = (z < 0)  # if self.q < 0.5 else (z <= 0)  # maybe symmetric
+        mask_neg = z < 0  # if self.q < 0.5 else (z <= 0)  # maybe symmetric
         qq = np.empty(nobs)
         qq[mask_neg] = 1 - self.q
         qq[~mask_neg] = self.q
@@ -1472,8 +1469,9 @@ class MQuantileNorm(RobustNorm):
         return self.rho(z)
 
 
-def estimate_location(a, scale, norm=None, axis=0, initial=None,
-                      maxiter=30, tol=1.0e-06):
+def estimate_location(
+    a, scale, norm=None, axis=0, initial=None, maxiter=30, tol=1.0e-06
+):
     """
     M-estimator of location using self.norm and a current
     estimator of scale.
@@ -1514,11 +1512,10 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
         mu = initial
 
     for _ in range(maxiter):
-        W = norm.weights((a-mu)/scale)
-        nmu = np.sum(W*a, axis) / np.sum(W, axis)
+        W = norm.weights((a - mu) / scale)
+        nmu = np.sum(W * a, axis) / np.sum(W, axis)
         if np.all(np.less(np.abs(mu - nmu), scale * tol)):
             return nmu
         else:
             mu = nmu
-    raise ValueError("location estimator failed to converge in %d iterations"
-                     % maxiter)
+    raise ValueError("location estimator failed to converge in %d iterations" % maxiter)

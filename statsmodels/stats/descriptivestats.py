@@ -15,6 +15,7 @@ else:
     def is_categorical_dtype(dtype):
         return isinstance(dtype, pd.CategoricalDtype)
 
+
 from scipy import stats
 
 from statsmodels.iolib.table import SimpleTable
@@ -49,7 +50,7 @@ def nanptp(arr, axis=0):
 
 
 def nanuss(arr, axis=0):
-    return np.nansum(arr ** 2, axis=axis)
+    return np.nansum(arr**2, axis=axis)
 
 
 def nanpercentile(arr, axis=0):
@@ -298,29 +299,19 @@ class Description:
             col_types += "and " if col_types != "" else ""
             col_types += "categorical"
         if not numeric and not categorical:
-            raise ValueError(
-                "At least one of numeric and categorical must be True"
-            )
+            raise ValueError("At least one of numeric and categorical must be True")
         self._data = pd.DataFrame(data).select_dtypes(include)
         if self._data.shape[1] == 0:
 
-            raise ValueError(
-                f"Selecting {col_types} results in an empty DataFrame"
-            )
+            raise ValueError(f"Selecting {col_types} results in an empty DataFrame")
         self._is_numeric = [is_numeric_dtype(dt) for dt in self._data.dtypes]
-        self._is_cat_like = [
-            is_categorical_dtype(dt) for dt in self._data.dtypes
-        ]
+        self._is_cat_like = [is_categorical_dtype(dt) for dt in self._data.dtypes]
 
         if stats is not None:
             undef = [stat for stat in stats if stat not in DEFAULT_STATISTICS]
             if undef:
-                raise ValueError(
-                    f"{', '.join(undef)} are not known statistics"
-                )
-        self._stats = (
-            list(DEFAULT_STATISTICS) if stats is None else list(stats)
-        )
+                raise ValueError(f"{', '.join(undef)} are not known statistics")
+        self._stats = list(DEFAULT_STATISTICS) if stats is None else list(stats)
         self._ntop = int_like(ntop, "ntop")
         self._compute_top = "top" in self._stats
         self._compute_freq = "freq" in self._stats
@@ -341,9 +332,7 @@ class Description:
                 idx = self._stats.index(key)
                 self._stats = self._stats[:idx] + value + self._stats[idx + 1 :]
 
-        self._percentiles = array_like(
-            percentiles, "percentiles", maxdim=1, dtype="d"
-        )
+        self._percentiles = array_like(percentiles, "percentiles", maxdim=1, dtype="d")
         self._percentiles = np.sort(self._percentiles)
         if np.unique(self._percentiles).shape[0] != self._percentiles.shape[0]:
             raise ValueError("percentiles must be distinct")
@@ -401,7 +390,9 @@ class Description:
             q = stats.norm.ppf(1.0 - self._alpha / 2)
 
         def _mode(ser):
-            dtype = ser.dtype if isinstance(ser.dtype, np.dtype) else ser.dtype.numpy_dtype
+            dtype = (
+                ser.dtype if isinstance(ser.dtype, np.dtype) else ser.dtype.numpy_dtype
+            )
             ser_no_missing = ser.dropna().to_numpy(dtype=dtype)
             kwargs = {} if SP_LT_19 else {"keepdims": True}
             mode_res = stats.mode(ser_no_missing, **kwargs)
@@ -438,6 +429,7 @@ class Description:
         _df = df
         try:
             from pandas.api.types import is_extension_array_dtype
+
             _df = df.copy()
             for col in df:
                 if is_extension_array_dtype(df[col].dtype):
@@ -465,9 +457,7 @@ class Description:
         coef_var = std / nan_mean
 
         results = {
-            "nobs": pd.Series(
-                np.ones(k, dtype=np.int64) * df.shape[0], index=cols
-            ),
+            "nobs": pd.Series(np.ones(k, dtype=np.int64) * df.shape[0], index=cols),
             "missing": df.shape[0] - count,
             "mean": mean,
             "std_err": std_err,
@@ -538,9 +528,7 @@ class Description:
         k = df.shape[1]
         cols = df.columns
         vc = {col: df[col].value_counts(normalize=True) for col in df}
-        distinct = pd.Series(
-            {col: vc[col].shape[0] for col in vc}, dtype=np.int64
-        )
+        distinct = pd.Series({col: vc[col].shape[0] for col in vc}, dtype=np.int64)
         top = {}
         freq = {}
         for col, single in vc.items():
@@ -560,9 +548,7 @@ class Description:
         freq_df = pd.DataFrame(freq, dtype="object", index=index, columns=cols)
 
         results = {
-            "nobs": pd.Series(
-                np.ones(k, dtype=np.int64) * df.shape[0], index=cols
-            ),
+            "nobs": pd.Series(np.ones(k, dtype=np.int64) * df.shape[0], index=cols),
             "missing": df.shape[0] - df.count(),
             "distinct": distinct,
         }
@@ -619,9 +605,7 @@ class Description:
 
 
 ds = Docstring(Description.__doc__)
-ds.replace_block(
-    "Returns", Parameter(None, "DataFrame", ["Descriptive statistics"])
-)
+ds.replace_block("Returns", Parameter(None, "DataFrame", ["Descriptive statistics"]))
 ds.replace_block("Attributes", [])
 ds.replace_block(
     "See Also",

@@ -25,7 +25,7 @@ def test_HC_use():
     assert_almost_equal(cov12, results.cov_HC0[idx[:, None], idx], decimal=15)
 
     # test t_test
-    tvals = results.params/results.HC0_se
+    tvals = results.params / results.HC0_se
     ttest = results.t_test(np.eye(3), cov_p=results.cov_HC0)
     assert_almost_equal(ttest.tvalue, tvals, decimal=14)
     assert_almost_equal(ttest.sd, results.HC0_se, decimal=14)
@@ -35,5 +35,5 @@ def test_HC_use():
     slopes = results.params[:-1]
     idx = np.array([0, 1])
     cov_slopes = results.cov_HC0[idx[:, None], idx]
-    fval = np.dot(slopes, np.dot(np.linalg.inv(cov_slopes), slopes))/len(idx)
+    fval = np.dot(slopes, np.dot(np.linalg.inv(cov_slopes), slopes)) / len(idx)
     assert_allclose(ftest.fvalue, fval, rtol=12)

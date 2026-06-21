@@ -1,4 +1,5 @@
 """Breast Cancer Data"""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

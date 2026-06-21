@@ -1,6 +1,7 @@
 """
 Datasets module
 """
+
 from statsmodels.tools._test_runner import PytestTester
 
 from . import (

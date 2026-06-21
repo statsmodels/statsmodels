@@ -1,4 +1,5 @@
 """Yearly sunspots data 1700-2008"""
+
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"
@@ -33,8 +34,9 @@ def load_pandas():
     data = _get_data()
     # TODO: time series
     endog = data.set_index(data.YEAR).SUNACTIVITY
-    dataset = du.Dataset(data=data, names=list(data.columns),
-                         endog=endog, endog_name="volume")
+    dataset = du.Dataset(
+        data=data, names=list(data.columns), endog=endog, endog_name="volume"
+    )
     return dataset
 
 

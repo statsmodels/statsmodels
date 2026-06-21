@@ -12,6 +12,7 @@ Journal of Forecasting, 19(2), 287-290.
 Fioruci, J. A., Pellegrini, T. R., Louzada, F., & Petropoulos, F. (2015).
 The optimized theta method. arXiv preprint arXiv:1503.03529.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
@@ -135,7 +136,7 @@ class ThetaModel:
         deseasonalize: bool = True,
         use_test: bool = True,
         method: str = "auto",
-        difference: bool = False
+        difference: bool = False,
     ) -> None:
         self._y = array_like(endog, "endog", ndim=1)
         if isinstance(endog, pd.DataFrame):
@@ -144,9 +145,7 @@ class ThetaModel:
             self.endog_orig = endog
         self._period = int_like(period, "period", optional=True)
         self._deseasonalize = bool_like(deseasonalize, "deseasonalize")
-        self._use_test = (
-            bool_like(use_test, "use_test") and self._deseasonalize
-        )
+        self._use_test = bool_like(use_test, "use_test") and self._deseasonalize
         self._diff = bool_like(difference, "difference")
         self._method = string_like(
             method,
@@ -196,9 +195,7 @@ class ThetaModel:
         else:
             return y / res.seasonal, res.seasonal[: self._period]
 
-    def fit(
-        self, use_mle: bool = False, disp: bool = False
-    ) -> "ThetaModelResults":
+    def fit(self, use_mle: bool = False, disp: bool = False) -> "ThetaModelResults":
         r"""
         Estimate model parameters.
 
@@ -263,9 +260,7 @@ class ThetaModel:
             alpha = res.params[0]
             sigma2 = None
             one_step = res.forecast(1)
-        return ThetaModelResults(
-            b0, alpha, sigma2, one_step, seasonal, use_mle, self
-        )
+        return ThetaModelResults(b0, alpha, sigma2, one_step, seasonal, use_mle, self)
 
     @property
     def deseasonalize(self) -> bool:
@@ -472,9 +467,7 @@ class ThetaModelResults:
             index = pd.RangeIndex(0, self.model.endog_orig.shape[0])
         index = extend_index(steps, index)
 
-        df = pd.DataFrame(
-            {"trend": trend, "ses": ses, "seasonal": season}, index=index
-        )
+        df = pd.DataFrame({"trend": trend, "ses": ses, "seasonal": season}, index=index)
         return df
 
     def summary(self) -> Summary:
@@ -515,9 +508,7 @@ class ThetaModelResults:
             ("Sample:", [sample[0]]),
             ("", [sample[1]]),
         ]
-        method = (
-            "Multiplicative" if model.method.startswith("mul") else "Additive"
-        )
+        method = "Multiplicative" if model.method.startswith("mul") else "Additive"
         top_right = [
             ("No. Observations:", [str(self._nobs)]),
             ("Deseasonalized:", [str(model.deseasonalize)]),
@@ -535,9 +526,7 @@ class ThetaModelResults:
         else:
             top_right.extend([("", [""])] * 4)
 
-        smry.add_table_2cols(
-            self, gleft=top_left, gright=top_right, title=title
-        )
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, title=title)
         table_fmt = {"data_fmts": ["%s", "%#0.4g"], "data_aligns": "r"}
 
         data = np.asarray(self.params)[:, None]
@@ -579,9 +568,7 @@ class ThetaModelResults:
         assumes that innovations are normally distributed.
         """
         model_alpha = self.params.iloc[1]
-        sigma2_h = (
-            1 + np.arange(steps) * (1 + (model_alpha - 1) ** 2)
-        ) * self.sigma2
+        sigma2_h = (1 + np.arange(steps) * (1 + (model_alpha - 1) ** 2)) * self.sigma2
         sigma_h = np.sqrt(sigma2_h)
         quantile = stats.norm.ppf(alpha / 2)
         predictions = self.forecast(steps, theta)

@@ -11,9 +11,7 @@ if TYPE_CHECKING:
     from packaging.version import parse
 
     if parse(np.__version__) < parse("1.22.0"):
-        raise NotImplementedError(
-            "NumPy 1.22.0 or later required for type checking"
-        )
+        raise NotImplementedError("NumPy 1.22.0 or later required for type checking")
     from numpy.typing import (
         ArrayLike,
         DTypeLike,
@@ -27,9 +25,7 @@ if TYPE_CHECKING:
     NumericArray = NDArray[Any, np.dtype[_ExtendedFloatLike_co]]
     Float64Array = NDArray[Any, np.double]
     ArrayLike1D = Union[Sequence[Union[float, int]], NumericArray, Series]
-    ArrayLike2D = Union[
-        Sequence[Sequence[Union[float, int]]], NumericArray, DataFrame
-    ]
+    ArrayLike2D = Union[Sequence[Sequence[Union[float, int]]], NumericArray, DataFrame]
 else:
     ArrayLike = Any
     DTypeLike = Any

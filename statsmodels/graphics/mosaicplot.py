@@ -5,6 +5,7 @@ and informative way.
 
 see the docstring of the mosaic function for more informations.
 """
+
 # Author: Enrico Giampieri - 21 Jan 2013
 
 from statsmodels.compat.python import lrange, lzip
@@ -65,9 +66,7 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
     """
     x, y, w, h = float(x), float(y), float(width), float(height)
     if (w < 0) or (h < 0):
-        raise ValueError(
-            "dimension of the square less thanzero w={} h={}".format(w, h)
-        )
+        raise ValueError("dimension of the square less thanzero w={} h={}".format(w, h))
     proportions = _normalize_split(proportion)
 
     # extract the starting point and the dimension of each subdivision
@@ -246,6 +245,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
 def _single_hsv_to_rgb(hsv):
     """Transform a color from the hsv space to the rgb."""
     from matplotlib.colors import hsv_to_rgb
+
     return hsv_to_rgb(array(hsv).reshape(1, 1, 3)).reshape(3)
 
 
@@ -422,8 +422,10 @@ def _create_labels(rects, horizontal, ax, rotation):
     """
     categories = _categories_level(list(rects.keys()))
     if len(categories) > 4:
-        msg = ("maximum of 4 level supported for axes labeling... and 4"
-               "is already a lot of levels, are you sure you need them all?")
+        msg = (
+            "maximum of 4 level supported for axes labeling... and 4"
+            "is already a lot of levels, are you sure you need them all?"
+        )
         raise ValueError(msg)
     labels = {}
     # keep it fixed as will be used a lot of times
@@ -435,8 +437,12 @@ def _create_labels(rects, horizontal, ax, rotation):
     ax3 = ax.twiny()
     # this is the order of execution for horizontal disposition
     ticks_pos = [ax.set_xticks, ax.set_yticks, ax3.set_xticks, ax2.set_yticks]
-    ticks_lab = [ax.set_xticklabels, ax.set_yticklabels,
-                 ax3.set_xticklabels, ax2.set_yticklabels]
+    ticks_lab = [
+        ax.set_xticklabels,
+        ax.set_yticklabels,
+        ax3.set_xticklabels,
+        ax2.set_yticklabels,
+    ]
     # for the vertical one, rotate it by one
     if vertical:
         ticks_pos = ticks_pos[1:] + ticks_pos[:1]
@@ -469,7 +475,7 @@ def _create_labels(rects, horizontal, ax, rotation):
             # and use them to evaluate the mean position
             basekey = tuple(categories[i][index_select[i]] for i in range(level_idx))
             basekey = basekey + (value,)
-            subset = {k: v for k, v in items if basekey == k[:level_idx + 1]}
+            subset = {k: v for k, v in items if basekey == k[: level_idx + 1]}
             # now I extract the center of all the tiles and make a weighted
             # mean of all these center on the area of the tile
             # this should give me the (more or less) correct position
@@ -487,15 +493,23 @@ def _create_labels(rects, horizontal, ax, rotation):
         # now we add the labels of this level to the correct axis
 
         ticks_pos[level_idx](list(level_ticks.values()))
-        ticks_lab[level_idx](list(level_ticks.keys()),
-                             rotation=rotation[level_idx])
+        ticks_lab[level_idx](list(level_ticks.keys()), rotation=rotation[level_idx])
     return labels
 
 
-def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
-           properties=lambda key: None, labelizer=None,
-           title="", statistic=False, axes_label=True,
-           label_rotation=0.0):
+def mosaic(
+    data,
+    index=None,
+    ax=None,
+    horizontal=True,
+    gap=0.005,
+    properties=lambda key: None,
+    labelizer=None,
+    title="",
+    statistic=False,
+    axes_label=True,
+    label_rotation=0.0,
+):
     """Create a mosaic plot from a contingency table.
 
     It allows to visualize multivariate categorical data in a rigorous
@@ -644,8 +658,9 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     .. plot :: plots/graphics_mosaicplot_mosaic.py
     """
     if isinstance(data, DataFrame) and index is None:
-        raise ValueError("You must pass an index if data is a DataFrame."
-                         " See examples.")
+        raise ValueError(
+            "You must pass an index if data is a DataFrame." " See examples."
+        )
 
     from matplotlib.patches import Rectangle
 
@@ -658,8 +673,10 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     # if there is no specified way to create the labels
     # create a default one
     if labelizer is None:
+
         def labelizer(k):
             return "\n".join(k)
+
     if statistic:
         default_props = _statistical_coloring(data)
     else:

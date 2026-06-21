@@ -29,9 +29,7 @@ def test_basic(data):
         assert isinstance(pred.se_mean, pd.Series)
     frame = pred.summary_frame()
     assert isinstance(frame, pd.DataFrame)
-    assert list(
-        frame.columns == ["mean", "mean_se", "mean_ci_lower", "mean_ci_upper"]
-    )
+    assert list(frame.columns == ["mean", "mean_se", "mean_ci_lower", "mean_ci_upper"])
 
 
 @pytest.mark.parametrize("dist", [None, "norm", "t", stats.norm()])

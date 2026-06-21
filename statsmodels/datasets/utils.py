@@ -40,7 +40,7 @@ def webuse(data, baseurl="https://www.stata-press.com/data/r11/", as_df=True):
     Make sure baseurl has trailing forward slash. Does not do any
     error checking in response URLs.
     """
-    url = urljoin(baseurl, data+".dta")
+    url = urljoin(baseurl, data + ".dta")
     return read_stata(url)
 
 
@@ -93,8 +93,14 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
         data = data.set_index(names[index_idx])
 
     exog_name = list(exog.columns)
-    dataset = Dataset(data=data, names=list(names), endog=endog,
-                      exog=exog, endog_name=endog_name, exog_name=exog_name)
+    dataset = Dataset(
+        data=data,
+        names=list(names),
+        endog=endog,
+        exog=exog,
+        endog_name=endog_name,
+        exog_name=exog_name,
+    )
     return dataset
 
 
@@ -121,6 +127,7 @@ def _get_cache(cache):
 
 def _cache_it(data, cache_path):
     import zlib
+
     with open(cache_path, "wb") as zf:
         zf.write(zlib.compress(data))
 
@@ -181,8 +188,10 @@ def _get_data(base_url, dataname, cache, extension="csv"):
 def _get_dataset_meta(dataname, package, cache):
     # get the index, you'll probably want this cached because you have
     # to download info about all the data to get info about any of the data...
-    index_url = ("https://raw.githubusercontent.com/vincentarelbundock/"
-                 "Rdatasets/master/datasets.csv")
+    index_url = (
+        "https://raw.githubusercontent.com/vincentarelbundock/"
+        "Rdatasets/master/datasets.csv"
+    )
     data, _ = _urlopen_cached(index_url, cache)
     data = data.decode("utf-8", "strict")
     index = read_csv(StringIO(data))
@@ -233,10 +242,14 @@ def get_rdataset(dataname, package="datasets", cache=False):
     dataset is in the cache, it's used.
     """
     # NOTE: use raw github bc html site might not be most up to date
-    data_base_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
-                     "master/csv/"+package+"/")
-    docs_base_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
-                     "master/doc/"+package+"/rst/")
+    data_base_url = (
+        "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
+        "master/csv/" + package + "/"
+    )
+    docs_base_url = (
+        "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
+        "master/doc/" + package + "/rst/"
+    )
     cache = _get_cache(cache)
     data, from_cache = _get_data(data_base_url, dataname, cache)
     data = read_csv(data, index_col=0)
@@ -245,8 +258,14 @@ def get_rdataset(dataname, package="datasets", cache=False):
     title = _get_dataset_meta(dataname, package, cache)
     doc, _ = _get_data(docs_base_url, dataname, cache, "rst")
 
-    return Dataset(data=data, __doc__=doc.read(), package=package, title=title,
-                   from_cache=from_cache)
+    return Dataset(
+        data=data,
+        __doc__=doc.read(),
+        package=package,
+        title=title,
+        from_cache=from_cache,
+    )
+
 
 # The below function were taken from sklearn
 
@@ -267,8 +286,7 @@ def get_data_home(data_home=None):
     If the folder does not already exist, it is automatically created.
     """
     if data_home is None:
-        data_home = environ.get("STATSMODELS_DATA",
-                                join("~", "statsmodels_data"))
+        data_home = environ.get("STATSMODELS_DATA", join("~", "statsmodels_data"))
     data_home = expanduser(data_home)
     if not exists(data_home):
         makedirs(data_home)
