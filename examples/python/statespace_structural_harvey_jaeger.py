@@ -29,12 +29,15 @@
 # below we follow the steps of their paper, using a slightly updated
 # dataset.
 
+from IPython.display import Latex, display
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
 
-from IPython.display import display, Latex
+# Datasets
+from pandas_datareader.data import DataReader
+
+import statsmodels.api as sm
 
 # ## Unobserved Components
 #
@@ -213,8 +216,6 @@ from IPython.display import display, Latex
 # Python library [Pandas](https://pandas.pydata.org/) has the ability to
 # download data from FRED directly.
 
-# Datasets
-from pandas_datareader.data import DataReader
 
 # Get the raw data
 start = '1948-01'
