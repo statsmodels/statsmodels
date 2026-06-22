@@ -11,6 +11,7 @@ Generalized Least Squares with AR Errors
 import numpy as np
 import numpy.testing as npt
 from scipy import signal
+
 import statsmodels.api as sm
 from statsmodels.regression.linear_model import GLSAR, yule_walker
 

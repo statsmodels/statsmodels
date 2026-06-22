@@ -34,10 +34,11 @@
 # argument.
 # * The various kernel functions available using the `kernel` argument.
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
+
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 
 # ## A univariate example

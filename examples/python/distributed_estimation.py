@@ -15,6 +15,7 @@
 
 import numpy as np
 from scipy.stats.distributions import norm
+
 from statsmodels.base.distributed_estimation import DistributedModel
 
 
@@ -62,8 +63,8 @@ debiased_OLS_fit = debiased_OLS_mod.fit(zip(_endog_gen(y, m), _exog_gen(X, m)),
 # Then we run through a slightly more complicated example which uses the
 # GLM model class.
 
-from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import Gaussian
+from statsmodels.genmod.generalized_linear_model import GLM
 
 debiased_GLM_mod = DistributedModel(m,
                                     model_class=GLM,
@@ -89,8 +90,8 @@ naive_OLS_reg_params = naive_OLS_reg_mod.fit(zip(_endog_gen(y, m),
 # and naive averaging.
 
 from statsmodels.base.distributed_estimation import (
-    _est_unregularized_naive,
     DistributedResults,
+    _est_unregularized_naive,
 )
 
 naive_OLS_unreg_mod = DistributedModel(

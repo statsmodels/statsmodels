@@ -21,13 +21,14 @@
 # ## Loading modules and functions
 
 import numpy as np  # noqa:F401  needed in namespace for patsy
+
 import statsmodels.api as sm
+from statsmodels.formula.api import ols
 
 # #### Import convention
 
 # You can import explicitly from statsmodels.formula.api
 
-from statsmodels.formula.api import ols
 
 # Alternatively, you can just use the `formula` namespace of the main
 # `statsmodels.api`.

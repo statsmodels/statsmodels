@@ -15,6 +15,7 @@
 # Download and format data:
 
 from urllib.request import urlopen
+
 import numpy as np
 
 np.set_printoptions(precision=4, suppress=True)
@@ -23,8 +24,9 @@ import pandas as pd
 
 pd.set_option("display.width", 100)
 import matplotlib.pyplot as plt
+
 from statsmodels.formula.api import ols
-from statsmodels.graphics.api import interaction_plot, abline_plot
+from statsmodels.graphics.api import abline_plot, interaction_plot
 from statsmodels.stats.anova import anova_lm
 
 try:

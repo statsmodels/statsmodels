@@ -17,9 +17,10 @@
 # 3.3.3) of *An Introduction to Statistical Learning* (ISLR) book by James
 # et al., Springer.
 
+import pandas as pd
+
 import statsmodels
 import statsmodels.formula.api as smf
-import pandas as pd
 
 # #### Simple multiple linear regression
 #
@@ -49,14 +50,15 @@ res.summary()
 #
 #     a. vif
 
+import matplotlib.pyplot as plt
+
 # base code
 import numpy as np
 import seaborn as sns
-from statsmodels.tools.tools import maybe_unwrap_results
+
 from statsmodels.graphics.gofplots import ProbPlot
 from statsmodels.stats.outliers_influence import variance_inflation_factor
-import matplotlib.pyplot as plt
-from typing import Type
+from statsmodels.tools.tools import maybe_unwrap_results
 
 style_talk = 'seaborn-talk'  #refer to plt.style.available
 

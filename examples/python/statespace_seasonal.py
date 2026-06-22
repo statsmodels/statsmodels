@@ -29,10 +29,11 @@
 # model and showcase modeling of the seasonal terms in a few different ways
 # under the unobserved components modeling framework.
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
 
 plt.rc("figure", figsize=(16, 8))
 plt.rc("font", size=14)
