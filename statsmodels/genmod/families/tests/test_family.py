@@ -2,17 +2,18 @@
 Test functions for genmod.families.family
 """
 
+from statsmodels.compat.scipy import SP_LT_17
+
 import warnings
 
 import numpy as np
-import pytest
 from numpy.testing import assert_allclose, assert_almost_equal
+import pytest
 from scipy import integrate
 
 import statsmodels.genmod.families as F
-import statsmodels.genmod.families.links as L
-from statsmodels.compat.scipy import SP_LT_17
 from statsmodels.genmod.families.family import Binomial, Tweedie
+import statsmodels.genmod.families.links as L
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 all_links = {
