@@ -83,7 +83,7 @@ doc = [
     "sphinx",
     # Avoid warnings which break Sphinx by pinning pandas
     "pandas>=2.2.2,!=2.1.0",
-    "sphinx-immaterial",
+    "pydata-sphinx-theme",
     "jupyter",
     "notebook",
     "nbsphinx",
