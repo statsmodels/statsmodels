@@ -258,6 +258,7 @@ def test_formula_missing_data():
     assert_equal(res.fittedvalues, res2, check_index_type=False)
 
 
+@pytest.mark.skipif(PATSY_MISSING, reason="patsy is required")
 def test_eval_env_dict_is_used_in_patsy():
     data = pd.DataFrame({"x": [1, 2, 3], "y": [2, 4, 6]})
     z = [10, 20, 30]
