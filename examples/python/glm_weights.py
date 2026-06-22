@@ -11,8 +11,9 @@
 
 import numpy as np
 import pandas as pd
-import statsmodels.formula.api as smf
+
 import statsmodels.api as sm
+import statsmodels.formula.api as smf
 
 # ## Weighted GLM: Poisson response data
 #

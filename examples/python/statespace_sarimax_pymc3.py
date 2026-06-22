@@ -83,12 +83,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pymc3 as pm
-import statsmodels.api as sm
-import theano
-import theano.tensor as tt
 from pandas.plotting import register_matplotlib_converters
 from pandas_datareader.data import DataReader
+import pymc3 as pm
+import theano
+import theano.tensor as tt
+
+import statsmodels.api as sm
 
 plt.style.use("seaborn")
 register_matplotlib_converters()

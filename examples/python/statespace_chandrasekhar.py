@@ -11,10 +11,9 @@
 
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
-
 from pandas_datareader.data import DataReader
+
+import statsmodels.api as sm
 
 # Although most operations related to state space models rely on the
 # Kalman filtering recursions, in some special cases one can use a separate
