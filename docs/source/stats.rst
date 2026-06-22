@@ -749,6 +749,30 @@ to verify in an observational setting.
    MediationResults
 
 
+Intervening Variable Analysis
+------------------
+
+Intervening Variable analysis is similary to Mediation analysis, but without 
+the restraints of causal inference. In particular, intervening variable 
+analysis measures the indirect effect of a treatment variable on an outcome 
+variable via an intervening variable (also called a mediator). There are 
+two methods of analysis currenlty implemented, Sobel's classic method as 
+well as bootstrapping techniques.
+
+.. module:: statsmodels.stats.intervening_variable
+   :synopsis: Intervening Variable Anlaysis
+
+.. currentmodule:: statsmodels.stats.intervening_variable
+
+.. autosummary::
+   :toctree: generated/
+
+   InterveningVariable
+   InterveningVariableResults
+   
+   
+
+
 Oaxaca-Blinder Decomposition
 ----------------------------
 
