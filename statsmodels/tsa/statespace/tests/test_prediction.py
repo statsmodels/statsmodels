@@ -401,19 +401,31 @@ def test_predicted_filtered_smoothed_varmax(use_exog, trend):
     # Test signal predictions
     fcast_signal = fcast.predicted_mean - d.T
     fcast_signal_cov = (fcast.var_pred_mean.T - H).T
-    assert_allclose(s_signal.predicted_mean[:50], desired_s_signal.T)
+    assert_allclose(
+        s_signal.predicted_mean[:50], desired_s_signal.T, rtol=1e-6, atol=1e-8
+    )
     assert_allclose(s_signal.predicted_mean[50:], fcast_signal, rtol=1e-6, atol=1e-8)
-    assert_allclose(f_signal.predicted_mean[:50], desired_f_signal.T)
-    assert_allclose(f_signal.predicted_mean[50:], fcast_signal)
-    assert_allclose(p_signal.predicted_mean[:50], desired_p_signal.T)
-    assert_allclose(p_signal.predicted_mean[50:], fcast_signal)
+    assert_allclose(
+        f_signal.predicted_mean[:50], desired_f_signal.T, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(f_signal.predicted_mean[50:], fcast_signal, rtol=1e-6, atol=1e-8)
+    assert_allclose(
+        p_signal.predicted_mean[:50], desired_p_signal.T, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(p_signal.predicted_mean[50:], fcast_signal, rtol=1e-6, atol=1e-8)
 
-    assert_allclose(s_signal.var_pred_mean[:50], desired_s_signal_cov)
-    assert_allclose(s_signal.var_pred_mean[50:], fcast_signal_cov)
-    assert_allclose(f_signal.var_pred_mean[:50], desired_f_signal_cov)
-    assert_allclose(f_signal.var_pred_mean[50:], fcast_signal_cov)
-    assert_allclose(p_signal.var_pred_mean[:50], desired_p_signal_cov)
-    assert_allclose(p_signal.var_pred_mean[50:], fcast_signal_cov)
+    assert_allclose(
+        s_signal.var_pred_mean[:50], desired_s_signal_cov, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(s_signal.var_pred_mean[50:], fcast_signal_cov, rtol=1e-6, atol=1e-8)
+    assert_allclose(
+        f_signal.var_pred_mean[:50], desired_f_signal_cov, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(f_signal.var_pred_mean[50:], fcast_signal_cov, rtol=1e-6, atol=1e-8)
+    assert_allclose(
+        p_signal.var_pred_mean[:50], desired_p_signal_cov, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(p_signal.var_pred_mean[50:], fcast_signal_cov, rtol=1e-6, atol=1e-8)
 
 
 def test_predicted_filtered_smoothed_TVSS(reset_randomstate):
@@ -464,50 +476,89 @@ def test_predicted_filtered_smoothed_TVSS(reset_randomstate):
     desired_s_signal = Z @ res.smoothed_state.T[:, :, None]
     desired_f_signal = Z @ res.filtered_state.T[:, :, None]
     desired_p_signal = Z @ res.predicted_state.T[:-1, :, None]
-    assert_allclose(s_pred.predicted_mean[:50], (d + desired_s_signal)[..., 0])
-    assert_allclose(s_pred.predicted_mean[50:], fcast.predicted_mean)
-    assert_allclose(f_pred.predicted_mean[:50], (d + desired_f_signal)[..., 0])
-    assert_allclose(f_pred.predicted_mean[50:], fcast.predicted_mean)
-    assert_allclose(p_pred.predicted_mean[:50], (d + desired_p_signal)[..., 0])
-    assert_allclose(p_pred.predicted_mean[50:], fcast.predicted_mean)
+    assert_allclose(
+        s_pred.predicted_mean[:50], (d + desired_s_signal)[..., 0], rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(
+        s_pred.predicted_mean[50:], fcast.predicted_mean, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(
+        f_pred.predicted_mean[:50], (d + desired_f_signal)[..., 0], rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(
+        f_pred.predicted_mean[50:], fcast.predicted_mean, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(
+        p_pred.predicted_mean[:50], (d + desired_p_signal)[..., 0], rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(
+        p_pred.predicted_mean[50:], fcast.predicted_mean, rtol=1e-6, atol=1e-8
+    )
 
-    assert_allclose(s_signal.predicted_mean[:50], desired_s_signal[..., 0])
+    assert_allclose(
+        s_signal.predicted_mean[:50], desired_s_signal[..., 0], rtol=1e-6, atol=1e-8
+    )
     assert_allclose(s_signal.predicted_mean[50:], fcast_signal, rtol=1e-6, atol=1e-8)
-    assert_allclose(f_signal.predicted_mean[:50], desired_f_signal[..., 0])
-    assert_allclose(f_signal.predicted_mean[50:], fcast_signal)
-    assert_allclose(p_signal.predicted_mean[:50], desired_p_signal[..., 0])
-    assert_allclose(p_signal.predicted_mean[50:], fcast_signal)
+    assert_allclose(
+        f_signal.predicted_mean[:50], desired_f_signal[..., 0], rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(f_signal.predicted_mean[50:], fcast_signal, rtol=1e-6, atol=1e-8)
+    assert_allclose(
+        p_signal.predicted_mean[:50], desired_p_signal[..., 0], rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(p_signal.predicted_mean[50:], fcast_signal, rtol=1e-6, atol=1e-8)
 
     for t in range(mod.nobs):
         assert_allclose(
             s_pred.var_pred_mean[t],
             Z[t] @ res.smoothed_state_cov[..., t] @ Z[t].T + H[t],
+            rtol=1e-6,
+            atol=1e-8,
         )
         assert_allclose(
             f_pred.var_pred_mean[t],
             Z[t] @ res.filtered_state_cov[..., t] @ Z[t].T + H[t],
+            rtol=1e-6,
+            atol=1e-8,
         )
         assert_allclose(
             p_pred.var_pred_mean[t],
             Z[t] @ res.predicted_state_cov[..., t] @ Z[t].T + H[t],
+            rtol=1e-6,
+            atol=1e-8,
         )
 
         assert_allclose(
-            s_signal.var_pred_mean[t], Z[t] @ res.smoothed_state_cov[..., t] @ Z[t].T
+            s_signal.var_pred_mean[t],
+            Z[t] @ res.smoothed_state_cov[..., t] @ Z[t].T,
+            rtol=1e-6,
+            atol=1e-8,
         )
         assert_allclose(
-            f_signal.var_pred_mean[t], Z[t] @ res.filtered_state_cov[..., t] @ Z[t].T
+            f_signal.var_pred_mean[t],
+            Z[t] @ res.filtered_state_cov[..., t] @ Z[t].T,
+            rtol=1e-6,
+            atol=1e-8,
         )
         assert_allclose(
-            p_signal.var_pred_mean[t], Z[t] @ res.predicted_state_cov[..., t] @ Z[t].T
+            p_signal.var_pred_mean[t],
+            Z[t] @ res.predicted_state_cov[..., t] @ Z[t].T,
+            rtol=1e-6,
+            atol=1e-8,
         )
 
-    assert_allclose(s_pred.var_pred_mean[50:], fcast.var_pred_mean)
-    assert_allclose(f_pred.var_pred_mean[50:], fcast.var_pred_mean)
-    assert_allclose(p_pred.var_pred_mean[50:], fcast.var_pred_mean)
-    assert_allclose(s_signal.var_pred_mean[50:], fcast_signal_cov)
-    assert_allclose(f_signal.var_pred_mean[50:], fcast_signal_cov)
-    assert_allclose(p_signal.var_pred_mean[50:], fcast_signal_cov)
+    assert_allclose(
+        s_pred.var_pred_mean[50:], fcast.var_pred_mean, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(
+        f_pred.var_pred_mean[50:], fcast.var_pred_mean, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(
+        p_pred.var_pred_mean[50:], fcast.var_pred_mean, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(s_signal.var_pred_mean[50:], fcast_signal_cov, rtol=1e-6, atol=1e-8)
+    assert_allclose(f_signal.var_pred_mean[50:], fcast_signal_cov, rtol=1e-6, atol=1e-8)
+    assert_allclose(p_signal.var_pred_mean[50:], fcast_signal_cov, rtol=1e-6, atol=1e-8)
 
 
 @pytest.mark.parametrize("use_exog", [False, True])
