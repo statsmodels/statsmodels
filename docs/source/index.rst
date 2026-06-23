@@ -61,11 +61,11 @@ statsmodels documentation
 
    .. image:: images/statsmodels-logo-v2-horizontal.svg
       :alt: statsmodels
-      :class: sm-index-logo__image sm-index-logo__image--light
+      :class: sm-index-logo__image sm-index-logo__image--light only-light
 
    .. image:: images/statsmodels-logo-v3-horizontal.svg
       :alt: statsmodels
-      :class: sm-index-logo__image sm-index-logo__image--dark
+      :class: sm-index-logo__image sm-index-logo__image--dark only-dark
 
 :ref:`statsmodels <about:About statsmodels>` is a Python module that provides classes and functions for the estimation
 of many different statistical models, as well as for conducting statistical tests, and statistical
