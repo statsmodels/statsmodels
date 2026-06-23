@@ -185,7 +185,7 @@ html_theme_options = {
     "logo": {
         "text": "statsmodels",
         "image_light": "images/statsmodels-logo-v2-no-text.svg",
-        "image_dark": "images/statsmodels-logo-v2-no-text-light.svg",
+        "image_dark": "images/statsmodels-logo-v3-no-text-light.svg",
     },
     "navbar_start": ["navbar-logo"],
     "navbar_center": ["navbar-nav"],
@@ -260,6 +260,7 @@ html_favicon = "images/favicon.ico"
 html_static_path = ["_static"]
 
 html_css_files = [
+    "stylesheets/landing.css",
     "stylesheets/examples.css",
     "stylesheets/deprecation.css",
 ]
