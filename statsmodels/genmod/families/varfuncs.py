@@ -199,12 +199,13 @@ class Binomial:
     # TODO: inherit from super
     def deriv(self, mu):
         """
-        Derivative of the variance function v'(mu).
+        Derivative of the variance function V'(mu).
 
-        For the Binomial variance V(mu) = mu*(1 - mu/n), the derivative is
-        dV/dmu = 1 - 2*mu/n.
+        For the Binomial variance V(mu) = p*(1 - p)*n where p = mu/n, the
+        derivative with respect to mu is dV/dmu = 1 - 2*p.
         """
-        return 1 - 2 * mu / self.n
+        p = self._clean(mu / self.n)
+        return 1 - 2 * p
 
 
 binary = Binomial()
