@@ -146,3 +146,29 @@ def test_binomial_loglike_obs(mu, endog):
     else:
         # For our purposes, -40 is "approximately" -inf
         assert ll < -40
+
+
+def test_binomial_varfunc_deriv():
+    """Regression: Binomial.deriv should return 1 - 2*p where p = _clean(mu/n).
+
+    Prior to the fix, deriv returned 1 - 2*mu (correct only for n=1).
+    For n > 1 the formula was wrong; this test covers the general case.
+    """
+    from statsmodels.genmod.families.varfuncs import Binomial as BinomialVar
+
+    # n=10: deriv(mu) = 1 - 2*_clean(mu/10)
+    bv = BinomialVar(n=10)
+    mu_vals = np.array([1.0, 2.0, 5.0, 8.0])
+    expected = 1 - 2 * bv._clean(mu_vals / 10)
+    assert_allclose(bv.deriv(mu_vals), expected)
+
+    # n=1 (Bernoulli): old and new formula agree
+    bv1 = BinomialVar(n=1)
+    mu_01 = np.array([0.1, 0.3, 0.7, 0.9])
+    assert_allclose(bv1.deriv(mu_01), 1 - 2 * mu_01, rtol=1e-10)
+
+    # Finite-difference numerical check against V'(mu)
+    h = 1e-5
+    mu0 = 3.0
+    numerical = (bv(mu0 + h) - bv(mu0 - h)) / (2 * h)
+    assert_allclose(bv.deriv(mu0), numerical, rtol=1e-4)
