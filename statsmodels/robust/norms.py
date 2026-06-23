@@ -4,10 +4,18 @@ from . import _tables
 
 
 def _cabs(x):
-    """absolute value function that changes complex sign based on real sign
+    """Absolute value function that preserves the sign of the real component.
 
-    This could be useful for complex step derivatives of functions that
-    need abs. Not yet used.
+    This helper is designed for use with complex-step differentiation where standard absolute value operations may remove sign information required for derivative calculations.
+
+    Parameters
+    -----------
+    x: complex or array_like Complex valued input.
+
+    Returns
+    -------
+    complex or ndarray 
+    Absolute value of 'x' with sign determined by the real part.
     """
     sign = (x.real >= 0) * 2 - 1
     return sign * x
@@ -308,11 +316,19 @@ class HuberT(RobustNorm):
 
     def psi_deriv(self, z):
         """
-        The derivative of Huber's t psi function
+        Derivative of the Huber T psi function.
+
+        Parameters 
+        ----------
+        z: array_like Input residual values.
+
+        Returns
+        -------
+        ndarray Indicator values equal to 1 when '|z| <= t' and 0 otherwise.
 
         Notes
         -----
-        Used to estimate the robust covariance matrix.
+        Used when computing the robust covariance matrix in robustlinear models.
         """
         return np.less_equal(np.abs(z), self.t).astype(float)
 
@@ -1475,12 +1491,12 @@ class MQuantileNorm(RobustNorm):
 def estimate_location(a, scale, norm=None, axis=0, initial=None,
                       maxiter=30, tol=1.0e-06):
     """
-    M-estimator of location using self.norm and a current
-    estimator of scale.
+    Estimate a robust location parameter using an M-estimator.
 
-    This iteratively finds a solution to
+    This function iteratively computes the location parameterthat satisfies:
+            sum(psi((a-mu)/scale))=0
 
-    norm.psi((a-mu)/scale).sum() == 0
+    where 'psi' is the influence function defined by the selected robust norm.
 
     Parameters
     ----------
