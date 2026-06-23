@@ -2915,6 +2915,25 @@ def test_non_invertible_hessian_fails_summary():
         res.summary()
 
 
+def test_glm_fit_cov_p_fallback_on_linalg_error():
+    # GH-9776: when np.linalg.inv raises LinAlgError the non-IRLS fit path
+    # must fall back to rslt.normalized_cov_params/scale rather than None.
+    from unittest.mock import patch
+    from numpy.linalg import LinAlgError as _LinAlgError
+
+    data = cpunish.load_pandas()
+    mod = sm.GLM(data.endog, data.exog, family=sm.families.Poisson())
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with patch("numpy.linalg.inv", side_effect=_LinAlgError("singular")):
+            res = mod.fit(method="bfgs", max_start_irls=0, disp=False)
+
+    # BFGS sets normalized_cov_params via its own Hinv; the fixed fallback
+    # must propagate that value instead of discarding it.
+    assert res.normalized_cov_params is not None
+
+
 def test_int_scale():
     # GH-6627, make sure it works with int scale
     data = longley.load()
