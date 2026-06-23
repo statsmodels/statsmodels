@@ -10,7 +10,7 @@ try:
     import nbformat
 
     plat_win = sys.platform.startswith("win")
-    if plat_win and sys.version_info >= (3, 8):  # pragma: no cover
+    if plat_win and (3, 8) <= sys.version_info < (3, 14):  # pragma: no cover
         import asyncio
 
         try:

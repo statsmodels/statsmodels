@@ -174,8 +174,8 @@ cdef class STL(object):
     References
     ----------
     .. [1] R. B. Cleveland, W. S. Cleveland, J.E. McRae, and I. Terpenning
-        (1990) STL: A Seasonal-Trend Decomposition Procedure Based on LOESS.
-        Journal of Official Statistics, 6, 3-73.
+       (1990) STL: A Seasonal-Trend Decomposition Procedure Based on LOESS.
+       Journal of Official Statistics, 6, 3-73.
 
     Examples
     --------
@@ -199,6 +199,7 @@ cdef class STL(object):
     >>> plt.show()
 
     .. plot:: plots/stl_plot.py
+
     """
     cdef object endog
     cdef Py_ssize_t nobs
