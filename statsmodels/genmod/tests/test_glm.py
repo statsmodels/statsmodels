@@ -454,14 +454,6 @@ class TestGlmGaussian(CheckModelResultsMixin):
         )
 
 
-# FIXME: enable or delete
-#    def setup_method(self):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed."
-#        Gauss = r.gaussian
-#        self.res2 = RModel(self.data.endog, self.data.exog, r.glm, family=Gauss)
-#        self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
-#        self.res2.null_deviance = 185008826 # taken from R. Rpy bug?
 
 
 class TestGlmGaussianGradient(TestGlmGaussian):
@@ -519,13 +511,6 @@ class TestGaussianLog(CheckModelResultsMixin):
         cls.res2 = GaussianLog()
 
 
-# FIXME: enable or delete
-#    def setup(cls):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed"
-#        GaussLogLink = r.gaussian(link = "log")
-#        GaussLog_Res_R = RModel(cls.lny, cls.X, r.glm, family=GaussLogLink)
-#        cls.res2 = GaussLog_Res_R
 
 
 class TestGaussianInverse(CheckModelResultsMixin):
@@ -558,13 +543,6 @@ class TestGaussianInverse(CheckModelResultsMixin):
         cls.res2 = GaussianInverse()
 
 
-# FIXME: enable or delete
-#    def setup(cls):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed."
-#        InverseLink = r.gaussian(link = "inverse")
-#        InverseLink_Res_R = RModel(cls.y_inv, cls.X, r.glm, family=InverseLink)
-#        cls.res2 = InverseLink_Res_R
 
 
 class TestGlmBinomial(CheckModelResultsMixin):
@@ -793,12 +771,6 @@ class TestGlmGammaLog(CheckModelResultsMixin):
         cls.res2 = res2
 
 
-# FIXME: enable or delete
-#    def setup(cls):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed."
-#        cls.res2 = RModel(cls.data.endog, cls.data.exog, r.glm,
-#            family=r.Gamma(link="log"))
 #        cls.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
 #        cls.res2.bic = -154.1582089453923 # from Stata
 
@@ -822,12 +794,6 @@ class TestGlmGammaIdentity(CheckModelResultsMixin):
         cls.res2 = res2
 
 
-# FIXME: enable or delete
-#    def setup(cls):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed."
-#        cls.res2 = RModel(cls.data.endog, cls.data.exog, r.glm,
-#            family=r.Gamma(link="identity"))
 #        cls.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
 
 
@@ -912,12 +878,6 @@ class TestGlmInvgaussLog(CheckModelResultsMixin):
         cls.res2 = res2
 
 
-# FIXME: enable or delete
-#    def setup(cls):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed."
-#        cls.res2 = RModel(cls.data.endog, cls.data.exog, r.glm,
-#            family=r.inverse_gaussian(link="log"))
 #        cls.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
 #        cls.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
 
@@ -945,12 +905,6 @@ class TestGlmInvgaussIdentity(CheckModelResultsMixin):
         cls.res2 = InvGaussIdentity()
 
 
-# FIXME: enable or delete
-#    def setup(cls):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed."
-#        cls.res2 = RModel(cls.data.endog, cls.data.exog, r.glm,
-#            family=r.inverse_gaussian(link="identity"))
 #        cls.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
 #        cls.res2.llf = -12163.25545    # from Stata, big diff with R
 
@@ -990,20 +944,6 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.has_edispersion = True
 
 
-# FIXME: enable or delete
-#    def setup_method(self):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed"
-#        r.library('MASS')  # this does not work when done in rmodelwrap?
-#        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
-#                family=r.negative_binomial(1))
-#        self.res2.null_deviance = 27.8110469364343
-
-# FIXME: enable/xfail/skip or delete
-# class TestGlmNegbinomial_log(CheckModelResultsMixin):
-#    pass
-
-# FIXME: enable/xfail/skip or delete
 # class TestGlmNegbinomial_power(CheckModelResultsMixin):
 #    pass
 
