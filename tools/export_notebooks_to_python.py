@@ -5,10 +5,18 @@ import logging
 import os
 import textwrap
 
-import nbconvert
 import black
+import nbconvert
 
-BLACK_MODE = black.Mode(line_length=88)
+BLACK_MODE = black.Mode(
+    line_length=88,
+    target_versions={
+        black.TargetVersion.PY311,
+        black.TargetVersion.PY312,
+        black.TargetVersion.PY313,
+        black.TargetVersion.PY314,
+    },
+)
 
 BASE_PATH = os.path.split(os.path.abspath(__file__))[0]
 DO_NOT_EDIT = """
@@ -26,13 +34,11 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
-parser = argparse.ArgumentParser(
-    description="""
+parser = argparse.ArgumentParser(description="""
 Sync notebooks to python by exporting. The exported files are
 always written in ../python relative to the notebooks.
 Requires nbconvert and black.
-"""
-)
+""")
 parser.add_argument(
     "--full-path",
     "-fp",
@@ -121,8 +127,7 @@ def main():
         out_file = os.path.join(out_file, "..", "python", py_name)
         if is_newer(out_file, nb) and not force:
             logger.info(
-                "Skipping {}, exported version newer than "
-                "notebook".format(nb_name)
+                "Skipping {}, exported version newer than " "notebook".format(nb_name)
             )
             continue
         logger.info(f"Converting {nb_name}")
