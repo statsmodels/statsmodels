@@ -387,3 +387,13 @@ def test_bad_criterion():
     mod = RLM(data.endog, data.exog, M=norms.HuberT())
     with pytest.raises(ValueError, match="Convergence argument unknown"):
         mod.fit(conv="unknown")
+
+
+def test_fit_history_scale():
+    # GH#9219 fit_history["scale"] recorded the inner WLS fit's scale rather
+    # than the robust scale estimate, so the last entry did not match the
+    # robust scale reported on the results.
+    data = load_stackloss()
+    data.exog = sm.add_constant(np.asarray(data.exog), prepend=False)
+    res = RLM(np.asarray(data.endog), data.exog, M=norms.HuberT()).fit()
+    assert_allclose(res.fit_history["scale"][-1], res.scale)
