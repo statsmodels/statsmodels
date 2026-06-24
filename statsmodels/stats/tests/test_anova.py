@@ -1,9 +1,9 @@
 from io import StringIO
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
 from pandas import read_csv
+import pytest
 
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
