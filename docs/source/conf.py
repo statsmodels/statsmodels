@@ -196,7 +196,7 @@ html_theme_options = {
     "navigation_depth": 4,
     "collapse_navigation": True,
     "switcher": {
-        "json_url": "https://statsmodels.org/versions-pydata.json",
+        "json_url": "https://www.statsmodels.org/versions-pydata.json",
         "version_match": switcher_version_match,
     },
     "check_switcher": False,
