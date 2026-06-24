@@ -195,8 +195,7 @@ def mc2mvsk(args):
 
 
 def mnc2mvsk(args):
-    """convert central moments to mean, variance, skew, kurtosis
-    """
+    """convert central moments to mean, variance, skew, kurtosis"""
     X = _convert_to_multidim(args)
 
     def _local_counts(args):
@@ -211,6 +210,7 @@ def mnc2mvsk(args):
     res = np.apply_along_axis(_local_counts, 0, X)
     # for backward compatibility convert 1-dim output to list/tuple
     return _convert_from_multidim(res, tuple)
+
 
 # def mnc2mc(args):
 #    """convert four non-central moments to central moments
@@ -233,14 +233,15 @@ def cov2corr(cov, return_std=False):
     ----------
     cov : array_like, 2d
         covariance matrix, see Notes
+    return_std : bool
+        Whether to also return the standard deviation.
 
     Returns
     -------
-    corr : ndarray (subclass)
+    corr : array_like
         correlation matrix
-    return_std : bool
-        If this is true then the standard deviation is also returned.
-        By default only the correlation matrix is returned.
+    std : array_like
+        The standard deviation. Only returned if ``return_std`` is True.
 
     Notes
     -----
@@ -269,8 +270,8 @@ def corr2cov(corr, std):
 
     Returns
     -------
-    cov : ndarray (subclass)
-        covariance matrix
+    cov : array_like
+        Covariance matrix
 
     Notes
     -----
@@ -286,9 +287,7 @@ def corr2cov(corr, std):
 
 def se_cov(cov):
     """
-    get standard deviation from covariance matrix
-
-    just a shorthand function np.sqrt(np.diag(cov))
+    Standard deviation from covariance matrix
 
     Parameters
     ----------
@@ -299,5 +298,9 @@ def se_cov(cov):
     -------
     std : ndarray
         standard deviation from diagonal of cov
+
+    Notes
+    -----
+    Shorthand function np.sqrt(np.diag(cov))
     """
     return np.sqrt(np.diag(cov))
