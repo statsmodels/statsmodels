@@ -174,7 +174,7 @@ html_extra_path = [
     "version_info/versions-pydata.json",
 ]
 
-site_url = "https://statsmodels.org/"
+site_url = "https://www.statsmodels.org/"
 site_url += "stable/" if full_version == version else "devel/"
 html_baseurl = site_url
 

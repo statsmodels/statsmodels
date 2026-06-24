@@ -933,12 +933,15 @@ class NewsResults:
             impacts = impacts.reset_index()
             try:
                 impacts.iloc[:, :2] = impacts.iloc[:, :2].map(str)
-                impacts.iloc[:, 2:] = impacts.iloc[:, 2:].map(
-                    lambda num: "" if pd.isnull(num) else float_format % num)
+                for col in impacts.columns[2:]:
+                    impacts[col] = impacts[col].map(
+                        lambda num: "" if pd.isnull(num) else float_format % num
+                    )
             except AttributeError:
                 impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
                 impacts.iloc[:, 2:] = impacts.iloc[:, 2:].applymap(
-                    lambda num: "" if pd.isnull(num) else float_format % num)
+                    lambda num: "" if pd.isnull(num) else float_format % num
+                )
         # Sparsify the groupby column
         if sparsify and groupby in impacts:
             mask = impacts[groupby] == impacts[groupby].shift(1)
@@ -1322,16 +1325,18 @@ class NewsResults:
         data = pd.merge(
             self.data_updates, self.news, left_index=True,
             right_index=True).sort_index().reset_index()
+        str_cols = ["update date", "updated variable"]
         try:
-            data[["update date", "updated variable"]] = (
-                data[["update date", "updated variable"]].map(str))
-            data.iloc[:, 2:] = data.iloc[:, 2:].map(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num)
+            data[str_cols] = data[str_cols].map(str)
+            for col in data.columns[2:]:
+                data[col] = data[col].map(
+                    lambda num: "" if pd.isnull(num) else "%.2f" % num
+                )
         except AttributeError:
-            data[["update date", "updated variable"]] = (
-                data[["update date", "updated variable"]].applymap(str))
+            data[str_cols] = data[str_cols].applymap(str)
             data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num)
+                lambda num: "" if pd.isnull(num) else "%.2f" % num
+            )
 
         # Sparsify the date column
         if sparsify:
