@@ -7,7 +7,6 @@ docs:
 http://www.stata.com/manuals13/xtxtgee.pdf
 """
 
-from statsmodels.compat.pandas import Appender
 
 from collections import defaultdict
 import warnings
@@ -17,6 +16,7 @@ import pandas as pd
 from scipy import linalg as spl
 
 from statsmodels.stats.correlation_tools import cov_nearest
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     NotImplementedWarning,

@@ -15,14 +15,14 @@ hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
 
-from statsmodels.compat.pandas import Appender
 
 import numpy as np
 
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.formula.formulatools import advance_eval_env
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 _predict_docstring = """

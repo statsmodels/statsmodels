@@ -30,6 +30,7 @@ np.import_array()
 from statsmodels.includes.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
+include "statsmodels/tsa/statespace/_blas_int.pxi"
 cimport statsmodels.tsa.statespace._tools as tools
 
 {{for prefix, types in TYPES.items()}}
@@ -132,18 +133,21 @@ cdef class {{prefix}}Initialization(object):
 
     cdef int initialize_known_constant(self, int offset,
                                         {{cython_type}} [:] initial_state_mean) except 1:
-        cdef int inc = 1
-        blas.{{prefix}}copy(&self.k_states, &self.constant[0], &inc,
+        cdef blas_int inc = 1
+        cdef blas_int k_states = self.k_states
+        blas.{{prefix}}copy(&k_states, &self.constant[0], &inc,
                                      &initial_state_mean[offset], &inc)
 
         return 0
 
     cdef int initialize_known_stationary_cov(self, int offset,
                                               {{cython_type}} [::1, :] initial_stationary_state_cov) except 1:
-        cdef int i, inc = 1
+        cdef int i
+        cdef blas_int inc = 1
+        cdef blas_int k_states = self.k_states
         # Copy columns
         for i in range(self.k_states):
-            blas.{{prefix}}copy(&self.k_states, &self.stationary_cov[0, i], &inc,
+            blas.{{prefix}}copy(&k_states, &self.stationary_cov[0, i], &inc,
                                          &initial_stationary_state_cov[offset, offset + i], &inc)
 
         return 0
@@ -170,11 +174,14 @@ cdef class {{prefix}}Initialization(object):
 
         cdef:
             np.npy_intp dim2[2]
-            int i, info, inc = 1
-            int k_states2 = self.k_states**2
+            int i
+            blas_int info, inc = 1
+            blas_int k_states = self.k_states
+            blas_int k_states2 = self.k_states**2
+            blas_int model_k_states = model.k_states
             np.float64_t asum, tol = 1e-9
             cdef {{cython_type}} scalar
-            cdef int [::1,:] ipiv
+            cdef blas_int [::1,:] ipiv
 
         # Clear the unconditional mean (for this block)
         initial_state_mean[offset:offset + self.k_states] = 0
@@ -182,23 +189,26 @@ cdef class {{prefix}}Initialization(object):
         # Check if the state intercept is all zeros; if it is, then the
         # unconditional mean is also all zeros
         {{if combined_prefix == 'd'}}
-        asum = blas.{{prefix}}asum(&model.k_states, &model.state_intercept[0, 0], &inc)
+        asum = blas.{{prefix}}asum(&model_k_states, &model.state_intercept[0, 0], &inc)
         {{elif prefix == 'c'}}
-        asum = blas.scasum(&model.k_states, &model.state_intercept[0, 0], &inc)
+        asum = blas.scasum(&model_k_states, &model.state_intercept[0, 0], &inc)
         {{else}}
-        asum = blas.dzasum(&model.k_states, &model.state_intercept[0, 0], &inc)
+        asum = blas.dzasum(&model_k_states, &model.state_intercept[0, 0], &inc)
         {{endif}}
 
         # If the state intercept is non-zero, compute the mean
         if asum > tol:
             dim2[0] = self.k_states
             dim2[1] = self.k_states
-            ipiv = np.PyArray_ZEROS(2, dim2, np.NPY_INT32, FORTRAN)
+            if sizeof(blas_int) == 4:
+                ipiv = np.PyArray_ZEROS(2, dim2, np.NPY_INT32, FORTRAN)
+            else:
+                ipiv = np.PyArray_ZEROS(2, dim2, np.NPY_INT64, FORTRAN)
 
             # Create T - I
             # (copy colummns)
             for i in range(self.k_states):
-                blas.{{prefix}}copy(&self.k_states, &model.transition[offset,offset + i,0], &inc,
+                blas.{{prefix}}copy(&k_states, &model.transition[offset,offset + i,0], &inc,
                                                     &self._tmp_transition[0,i], &inc)
                 self._tmp_transition[i, i] = self._tmp_transition[i, i] - 1
             # Multiply by -1 to get I - T
@@ -206,14 +216,14 @@ cdef class {{prefix}}Initialization(object):
             blas.{{prefix}}scal(&k_states2, &scalar, &self._tmp_transition[0, 0], &inc)
 
             # c
-            blas.{{prefix}}copy(&self.k_states, &model.state_intercept[offset,0], &inc,
+            blas.{{prefix}}copy(&k_states, &model.state_intercept[offset,0], &inc,
                                                 &initial_state_mean[offset], &inc)
 
             # Solve (I - T) x = c
-            lapack.{{prefix}}getrf(&self.k_states, &self.k_states, &self._tmp_transition[0, 0], &self.k_states,
+            lapack.{{prefix}}getrf(&k_states, &k_states, &self._tmp_transition[0, 0], &k_states,
                                    &ipiv[0, 0], &info)
-            lapack.{{prefix}}getrs('N', &self.k_states, &inc, &self._tmp_transition[0, 0], &self.k_states,
-                                   &ipiv[0, 0], &initial_state_mean[offset], &self.k_states, &info)
+            lapack.{{prefix}}getrs('N', &k_states, &inc, &self._tmp_transition[0, 0], &k_states,
+                                   &ipiv[0, 0], &initial_state_mean[offset], &k_states, &info)
 
         return 0
 
@@ -221,8 +231,10 @@ cdef class {{prefix}}Initialization(object):
                                         {{cython_type}} [::1, :] initial_stationary_state_cov,
                                         int complex_step=False) except 1:
         cdef:
-            int i, inc = 1
-            int k_states2 = self.k_states**2
+            int i
+            blas_int inc = 1
+            blas_int k_states = self.k_states
+            blas_int k_states2 = self.k_states**2
 
         # Create selected state covariance matrix
         tools._{{prefix}}select_cov(self.k_states, model.k_posdef, model.k_states,
@@ -234,7 +246,7 @@ cdef class {{prefix}}Initialization(object):
         # Create a copy of the transition matrix
         # (copy colummns)
         for i in range(self.k_states):
-            blas.{{prefix}}copy(&self.k_states, &model.transition[offset,offset + i,0], &inc,
+            blas.{{prefix}}copy(&k_states, &model.transition[offset,offset + i,0], &inc,
                                                 &self._tmp_transition[0,i], &inc)
 
         # Solve the discrete Lyapunov equation to the get initial state
@@ -245,7 +257,7 @@ cdef class {{prefix}}Initialization(object):
         # Copy into initial_stationary_state_cov
         # (copy colummns)
         for i in range(self.k_states):
-            blas.{{prefix}}copy(&self.k_states, &self._tmp_selected_state_cov[0,i], &inc,
+            blas.{{prefix}}copy(&k_states, &self._tmp_selected_state_cov[0,i], &inc,
                                                 &initial_stationary_state_cov[offset,offset + i], &inc)
 
         return 0

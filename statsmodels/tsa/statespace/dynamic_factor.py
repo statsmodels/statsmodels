@@ -5,15 +5,14 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-from statsmodels.compat.pandas import Appender
-
 import numpy as np
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.multivariate.pca import PCA
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.tsatools import lagmat

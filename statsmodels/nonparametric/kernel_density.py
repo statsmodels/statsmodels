@@ -79,6 +79,15 @@ class KDEMultivariate(GenericKDE):
 
     defaults : EstimatorSettings instance, optional
         The default values for (efficient) bandwidth estimation.
+    seed : {int, Generator, RandomState}, optional
+        A seed to use. If None, will use the global RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
+
 
     Attributes
     ----------

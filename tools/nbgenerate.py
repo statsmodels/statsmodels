@@ -20,7 +20,7 @@ try:
 except ImportError:
     has_futures = False
 
-if sys.platform == "win32":
+if sys.platform == "win32" and sys.version_info < (3, 14):
     # Set the policy to prevent "Event loop is closed" error on Windows
     # https://github.com/encode/httpx/issues/914
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -93,7 +93,7 @@ def convert(src, dst, to="rst"):
     dispatch = {"rst": RSTExporter, "html": HTMLExporter}
     exporter = dispatch[to.lower()]()
 
-    (body, resources) = exporter.from_filename(src)
+    body, resources = exporter.from_filename(src)
     with open(dst, "w", encoding="utf-8") as f:
         f.write(body)
     return dst
@@ -174,8 +174,7 @@ def do_one(
     except TraitError:
         kernels = jupyter_client.kernelspec.find_kernel_specs()
         msg = (
-            "Could not find kernel named `%s`, Available kernels:\n %s"
-            % kernel_name,
+            "Could not find kernel named `%s`, Available kernels:\n %s" % kernel_name,
             kernels,
         )
         raise ValueError(msg)
@@ -326,8 +325,7 @@ parser.add_argument(
     "--skip-existing",
     dest="skip_existing",
     action="store_true",
-    help="Skip execution of an executed file exists and "
-    "is newer than the notebook.",
+    help="Skip execution of an executed file exists and " "is newer than the notebook.",
 )
 parser.add_argument(
     "--execution-blacklist",

@@ -7,7 +7,7 @@ import pandas as pd
 from scipy.stats import norm
 
 from statsmodels.base.data import PandasData
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
 from statsmodels.tools.numdiff import (
     _get_epsilon,

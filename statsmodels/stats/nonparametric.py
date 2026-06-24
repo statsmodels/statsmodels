@@ -831,8 +831,8 @@ def samplesize_rank_compare_onetail(
     the reference group sample size is larger, equal to, or smaller
     than the treatment group sample size, respectively.
 
-    Example
-    -------
+    Examples
+    --------
     The data for the placebo group of a clinical trial published in
     Thall and Vail [2] is shown below. A relevant effect for the treatment
     under investigation is considered to be a 50% reduction in the number

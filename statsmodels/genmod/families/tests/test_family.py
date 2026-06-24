@@ -53,7 +53,7 @@ binomial_links = {
     L.identity,
 }
 inverse_gaussian_links = {L.inverse_squared, L.inverse_power, L.identity, L.Log, L.log}
-negative_bionomial_links = {
+negative_binomial_links = {
     L.Log,
     L.log,
     L.CLogLog,
@@ -71,13 +71,14 @@ link_cases = [
     (F.Gamma, gamma_links),
     (F.Binomial, binomial_links),
     (F.InverseGaussian, inverse_gaussian_links),
-    (F.NegativeBinomial, negative_bionomial_links),
+    (F.NegativeBinomial, negative_binomial_links),
     (F.Tweedie, tweedie_links),
 ]
 
 
 @pytest.mark.parametrize("family, links", link_cases)
 def test_invalid_family_link(family, links):
+    """Assert that invalid links for a family raise a ValueError."""
     invalid_links = all_links - links
     with pytest.raises(ValueError):
         with warnings.catch_warnings():
@@ -93,6 +94,7 @@ def test_invalid_family_link(family, links):
 
 @pytest.mark.parametrize("family, links", link_cases)
 def test_family_link(family, links):
+    """Assert that valid links for a family do not raise a ValueError."""
     with warnings.catch_warnings():
         msg = (
             "Negative binomial dispersion parameter alpha not set. "
@@ -106,7 +108,8 @@ def test_family_link(family, links):
 
 @pytest.mark.parametrize("family, links", link_cases)
 def test_family_link_check(family, links):
-    # check that we can turn of all link checks
+    """Check that we can turn off all link checks."""
+
     class Hugo:
         pass
 

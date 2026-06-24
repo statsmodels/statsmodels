@@ -33,13 +33,13 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     is based on the asymptotic chi-square distribution of the test statistic.
 
     freeman_tukey:
-    D(x|\theta) = \sum_j (\sqrt{x_j} - \sqrt{e_j})^2
+    :math:`D(x|\theta) = \sum_j (\sqrt{x_j} - \sqrt{e_j})^2`
 
     Parameters
     ----------
-    o : Iterable
+    observed : Iterable
         Observed values
-    e : Iterable
+    expected : Iterable
         Expected values
     lambd : {float, str}
         * float : exponent `a` for power discrepancy

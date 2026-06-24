@@ -1,3 +1,5 @@
+"""Tests for linear mixed effects models."""
+
 from statsmodels.compat.platform import PLATFORM_OSX
 
 import csv
@@ -44,6 +46,7 @@ class R_Results:
         dependent random effects.
     ds_ix : int
         The number of the data set
+
     """
 
     def __init__(self, meth, irfs, ds_ix):
@@ -796,6 +799,12 @@ class TestMixedLMSummary:
         desired = ["const", "x1", "x2", "Random Effects"]
         actual = summ.tables[1].index.values  # Second table is summary of params
         assert_equal(np.asarray(actual), desired)
+
+    def test_summary_title(self):
+        # Test that the `title` argument is reflected in the summary.
+        title = "Custom MixedLM Summary"
+        summ = self.res.summary(title=title)
+        assert_equal(summ.title, title)
 
 
 # ------------------------------------------------------------------

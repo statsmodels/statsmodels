@@ -1,7 +1,7 @@
 from numpy.testing import assert_equal
 import pytest
 
-from statsmodels.tools.decorators import cache_readonly, deprecated_alias
+from statsmodels.tools._decorators import cache_readonly, deprecated_alias
 
 
 def test_cache_readonly():

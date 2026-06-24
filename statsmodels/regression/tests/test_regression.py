@@ -1581,3 +1581,29 @@ def test_slim_summary(reset_randomstate):
     assert len(slim_summ.tables) == 2
     assert summ.tables[0].as_text() != slim_summ.tables[0].as_text()
     assert slim_summ.tables[1].as_text() == summ.tables[1].as_text()
+
+
+def test_slim_summary_skips_diagnostics(reset_randomstate, monkeypatch):
+    # GH#9054 the slim summary omits the normality/residual diagnostics, so it
+    # must not compute them. Make omni_normtest raise to prove the slim summary
+    # never calls it, while the full summary still does.
+    from statsmodels.stats import stattools
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("diagnostics should not be computed for slim summary")
+
+    monkeypatch.setattr(stattools, "omni_normtest", _boom)
+
+    y = np.random.standard_normal(50)
+    x = add_constant(np.random.standard_normal((50, 2)))
+    res = OLS(y, x).fit()
+
+    slim_summ = res.summary(slim=True)
+    assert len(slim_summ.tables) == 2
+    # diagn must still exist after a slim summary, populated only with the
+    # always-computed condition-number diagnostics.
+    assert set(res.diagn) == {"condno", "mineigval"}
+
+    # the full summary does compute the normality diagnostics
+    with pytest.raises(RuntimeError):
+        res.summary()

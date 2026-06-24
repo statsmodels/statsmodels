@@ -1,3 +1,5 @@
+"""Tests for process regression models."""
+
 from statsmodels.compat.platform import PLATFORM_OSX
 
 import collections

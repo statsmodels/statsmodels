@@ -9,8 +9,6 @@ License: 3-clause BSD
 """
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import (
-    Appender,
-    Substitution,
     cache_readonly,
     call_cached_func,
     get_cached_doc,
@@ -29,6 +27,7 @@ from statsmodels.regression.linear_model import (
     RegressionModel,
     RegressionResults,
 )
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.validation import array_like, int_like, string_like
 
 
@@ -331,6 +330,7 @@ class RollingWLS:
         -------
         RollingRegressionResults
             Estimation results where all pre-sample values are nan-filled.
+
         """
         method = string_like(
             method, "method", options=("inv", "lstsq", "pinv")
@@ -477,6 +477,7 @@ class RollingRegressionResults:
         p-values.
     cov_type : str
         Name of covariance estimator
+
     """
 
     _data_in_cache = tuple()
@@ -637,6 +638,7 @@ class RollingRegressionResults:
             the returned covariance is a DataFrame with a MultiIndex with
             key (observation, variable), so that the covariance for
             observation with index i is cov.loc[i].
+
         """
         return self._wrap(self._cov_params)
 
@@ -785,6 +787,7 @@ class RollingRegressionResults:
         -------
         Figure
             The matplotlib Figure object.
+
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 

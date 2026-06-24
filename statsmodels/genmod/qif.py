@@ -9,7 +9,7 @@ from statsmodels.genmod import families
 from statsmodels.genmod.families import links, varfuncs
 from statsmodels.genmod.generalized_linear_model import GLM
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class QIFCovariance:

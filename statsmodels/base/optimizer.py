@@ -5,9 +5,10 @@ to untie these from LikelihoodModel so that they may be re-used generally.
 
 from __future__ import annotations
 
-from statsmodels.compat.scipy import SP_LT_15, SP_LT_17, SP_LT_115
+from statsmodels.compat.scipy import SP_LT_15, SP_LT_17, SP_LT_115, SP_LT_118
 
 from typing import TYPE_CHECKING, Any
+import warnings
 
 import numpy as np
 from scipy import optimize
@@ -19,8 +20,6 @@ if TYPE_CHECKING:
 def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
     extra = set(kwargs.keys()).difference(list(allowed))
     if extra:
-        import warnings
-
         warnings.warn(
             "Keyword arguments have been passed to the optimizer that have "
             "no effect. The list of allowed keyword arguments for method "
@@ -548,7 +547,7 @@ def _fit_newton(
             print("         Current function value: %f" % fval)
             print("         Iterations %d" % iterations)
     if full_output:
-        (xopt, fopt, niter, gopt, hopt) = (
+        xopt, fopt, niter, gopt, hopt = (
             newparams,
             f(newparams, *fargs),
             iterations,
@@ -653,7 +652,7 @@ def _fit_bfgs(
         if not retall:
             xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag = retvals
         else:
-            (xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag, allvecs) = retvals
+            xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag, allvecs = retvals
         converged = not warnflag
         retvals = {
             "fopt": fopt,
@@ -736,29 +735,34 @@ def _fit_lbfgs(
     its gradient with respect to the parameters do not have notationally
     consistent sign.
     """
+    lbfgs_allowed = (
+        "m",
+        "pgtol",
+        "factr",
+        "maxfun",
+        "epsilon",
+        "approx_grad",
+        "bounds",
+        "loglike_and_score",
+    )
+    if SP_LT_118:
+        lbfgs_allowed += ("iprint",)
     check_kwargs(
         kwargs,
-        (
-            "m",
-            "pgtol",
-            "factr",
-            "maxfun",
-            "epsilon",
-            "approx_grad",
-            "bounds",
-            "loglike_and_score",
-            "iprint",
-        ),
-        "lbfgs",
+        allowed=lbfgs_allowed,
+        method="lbfgs",
     )
     # Use unconstrained optimization by default.
     bounds = kwargs.setdefault("bounds", [(None, None)] * len(start_params))
-    kwargs.setdefault("iprint", 0)
 
     # Pass the following keyword argument names through to fmin_l_bfgs_b
     # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
     # default values.
     names = ("m", "pgtol", "factr", "maxfun", "epsilon", "approx_grad")
+    if SP_LT_118:
+        # iprint is deprecated in SciPy 1.15, error in 1.18
+        kwargs.setdefault("iprint", -1 if not disp else 1)
+        names += ("iprint",)
     extra_kwargs = {x: kwargs[x] for x in names if x in kwargs}
 
     # Extract values for the options related to the gradient.
@@ -797,19 +801,26 @@ def _fit_lbfgs(
     elif score:
         func = f
         extra_kwargs["fprime"] = score
-    elif approx_grad:
+    else:  # approx_grad
         func = f
     if SP_LT_115:
         extra_kwargs["disp"] = disp
-    retvals = optimize.fmin_l_bfgs_b(
-        func,
-        start_params,
-        maxiter=maxiter,
-        callback=callback,
-        args=fargs,
-        bounds=bounds,
-        **extra_kwargs,
-    )
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*iprint.*",
+            category=DeprecationWarning,
+        )
+        retvals = optimize.fmin_l_bfgs_b(
+            func,
+            start_params,
+            maxiter=maxiter,
+            callback=callback,
+            args=fargs,
+            bounds=bounds,
+            **extra_kwargs,
+        )
 
     if full_output:
         xopt, fopt, d = retvals

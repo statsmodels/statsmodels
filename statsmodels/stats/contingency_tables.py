@@ -33,7 +33,7 @@ from scipy import stats
 
 from statsmodels import iolib
 from statsmodels.tools import sm_exceptions
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 def _make_df_square(table):

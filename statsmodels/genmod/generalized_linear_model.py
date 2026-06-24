@@ -18,7 +18,6 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
 
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -37,13 +36,14 @@ from statsmodels.graphics._regressionplots_doc import (
 )
 import statsmodels.regression._tools as reg_tools
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.data import _as_array_with_name
-from statsmodels.tools.decorators import (
+from statsmodels.tools._decorators import (
     cache_readonly,
     cached_data,
     cached_value,
 )
+from statsmodels.tools.data import _as_array_with_name
 from statsmodels.tools.docstring import Docstring
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     DomainWarning,
@@ -1030,7 +1030,7 @@ class GLM(base.LikelihoodModel):
         offset : array_like, optional
             Offset values.  See notes for details.
         which : 'mean', 'linear', 'var'(optional)
-            Statitistic to predict. Default is 'mean'.
+            Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
               i.e. inverse of the model's link function of linear predictor.
@@ -1278,7 +1278,7 @@ class GLM(base.LikelihoodModel):
                 scale = float(scale)
             except Exception as exc:
                 raise type(exc)(
-                    "scale must be a float if given and no a string."
+                    "scale must be a float if given and not a string."
                 ) from exc
         self.scaletype = scale
 
@@ -1369,11 +1369,6 @@ class GLM(base.LikelihoodModel):
 
         mu = self.predict(rslt.params)
         scale = self.estimate_scale(mu)
-
-        if rslt.normalized_cov_params is None:
-            cov_p = None
-        else:
-            cov_p = rslt.normalized_cov_params / scale
 
         if cov_type.lower() == "eim":
             oim = False

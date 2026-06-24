@@ -1,5 +1,4 @@
 """
-
 Created on Tue Dec 20 20:24:20 2011
 
 Author: Josef Perktold
@@ -20,7 +19,8 @@ def atleast_2dcols(x):
 
 
 class GLSHet2(GLS):
-    """WLS with heteroscedasticity that depends on explanatory variables
+    """
+    WLS with heteroscedasticity that depends on explanatory variables
 
     note: mixing GLS sigma and weights for heteroscedasticity might not make
     sense
@@ -129,7 +129,9 @@ class GLSHet(WLS):
     Usage : see example ....
 
     TODO: test link option
+
     """
+
     def __init__(self, endog, exog, exog_var=None, weights=None, link=None):
         self.exog_var = atleast_2dcols(exog_var)
         if weights is None:
@@ -171,8 +173,8 @@ class GLSHet(WLS):
         Repeated calls to fit_iterative, will do one redundant pinv_wexog
         calculation. Calling fit_iterative(maxiter) ones does not do any
         redundant recalculations (whitening or calculating pinv_wexog).
-        """
 
+        """
         import collections
         self.history = collections.defaultdict(list)  # not really necessary
         res_resid = None  # if maxiter < 2 no updating

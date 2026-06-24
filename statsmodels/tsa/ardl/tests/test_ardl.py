@@ -835,3 +835,17 @@ def test_ardl_trend_ctt(data, y_lags, x_lags, causal):
     n_params += n_x * (int(not causal) + x_lags) if x_lags else 0
     assert res.params.shape[0] == n_params
     check_results(res)
+
+
+def test_uecm_resid():
+    """Test that UECMResults.resid is computed correctly using model._y."""
+    mod = UECM(
+        dane_data.lrm,
+        3,
+        dane_data[["lry", "ibo", "ide"]],
+        {"lry": 1, "ibo": 3, "ide": 2},
+    )
+    res = mod.fit()
+
+    # Assert that the override fix is working
+    np.testing.assert_allclose(res.resid, res.model._y - res.fittedvalues)

@@ -1,12 +1,12 @@
-"""
-Pytest runner that allows test to be run within python
-"""
+"""Pytest runner that allows tests to be run within Python."""
 
 import os
 import sys
 
 
 class PytestTester:
+    """Run a package test suite using pytest."""
+
     def __init__(self, package_path=None):
         f = sys._getframe(1)
         if package_path is None:

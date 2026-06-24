@@ -24,7 +24,7 @@ import numpy as np
 from scipy.special import kolmogorov as ksprob
 from scipy.stats import distributions
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 # from scipy.stats unchanged

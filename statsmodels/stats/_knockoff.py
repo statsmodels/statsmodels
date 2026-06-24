@@ -242,7 +242,9 @@ def _get_knmat(exog, xcov, sl):
     nobs, nvar = exog.shape
 
     ash = np.linalg.inv(xcov)
-    ash *= -np.outer(sl, sl)
+    # Change for numpy returning complex128
+    ash = ash * -np.outer(sl, sl)
+
     i, j = np.diag_indices(nvar)
     ash[i, j] += 2 * sl
 
@@ -250,7 +252,6 @@ def _get_knmat(exog, xcov, sl):
     u, _ = np.linalg.qr(exog)
     umat -= np.dot(u, np.dot(u.T, umat))
     umat, _ = np.linalg.qr(umat)
-
     ashr, xc, _ = np.linalg.svd(ash, 0)
     ashr *= np.sqrt(xc)
     ashr = ashr.T

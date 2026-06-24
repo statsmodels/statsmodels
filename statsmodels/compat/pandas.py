@@ -6,11 +6,17 @@ import numpy as np
 from packaging.version import Version, parse
 import pandas as pd
 from pandas.util._decorators import (
-    Appender,
-    Substitution,
     cache_readonly,
     deprecate_kwarg as pd_deprecate_kwarg,
 )
+
+from statsmodels.tools.docstring_helpers import Appender, Substitution
+
+try:
+    pd.set_option("future.infer_freq_returns_offset", True)
+except pd.errors.OptionError:
+    # Do nothing if key doesn't exist
+    pass
 
 if TYPE_CHECKING:
     try:
@@ -28,6 +34,7 @@ __all__ = [
     "PD_LT_1_4",
     "PD_LT_2",
     "PD_LT_3",
+    "PD_LT_3_1_0",
     "QUARTER_END",
     "YEAR_END",
     "Appender",
@@ -52,6 +59,7 @@ __all__ = [
 
 version = parse(pd.__version__)
 
+PD_LT_3_1_0 = version < Version("3.0.99")
 PD_LT_2_2_0 = version < Version("2.1.99")
 PD_LT_2_1_0 = version < Version("2.0.99")
 PD_LT_1_0_0 = version < Version("0.99.0")
