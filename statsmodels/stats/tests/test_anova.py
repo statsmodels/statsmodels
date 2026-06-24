@@ -1,7 +1,9 @@
 from io import StringIO
 
 import numpy as np
+import pandas as pd
 from pandas import read_csv
+import pytest
 
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
@@ -470,3 +472,37 @@ class TestAnova3HC3(TestAnovaLM):
 
         np.testing.assert_almost_equal(results["F"].values, F, 4)
         np.testing.assert_almost_equal(results["PR(>F)"].values, PrF)
+
+
+def test_anova_lm_model_order_error():
+    # Models passed in decreasing order of complexity should raise,
+    # rather than silently producing NaN via negative df_diff.
+    np.random.seed(42)
+    df = pd.DataFrame({
+        "y": np.random.randn(50),
+        "x1": np.random.randn(50),
+        "x2": np.random.randn(50),
+    })
+
+    model_small = ols("y ~ x1", data=df).fit()
+    model_large = ols("y ~ x1 + x2", data=df).fit()
+
+    error_msg = "Models must be passed in order of increasing complexity"
+    with pytest.raises(ValueError, match=error_msg):
+        anova_lm(model_large, model_small)
+
+
+def test_anova_lm_model_order_correct():
+    # Correct order should not raise and should produce a real p-value.
+    np.random.seed(42)
+    df = pd.DataFrame({
+        "y": np.random.randn(50),
+        "x1": np.random.randn(50),
+        "x2": np.random.randn(50),
+    })
+
+    model_small = ols("y ~ x1", data=df).fit()
+    model_large = ols("y ~ x1 + x2", data=df).fit()
+
+    result = anova_lm(model_small, model_large)
+    assert not np.isnan(result["Pr(>F)"].iloc[-1])
