@@ -16,7 +16,7 @@ import pytest
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.outliers_influence import MLEInfluence, variance_inflation_factor
+from statsmodels.stats.outliers_influence import GLMInfluence, MLEInfluence, variance_inflation_factor
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -48,6 +48,23 @@ def test_influence_glm_bernoulli():
 
     c_bar = infl.cooks_distance[0] * 3 * (1 - infl.hat_matrix_diag)
     assert_allclose(c_bar, results_sas[:, 9], atol=6e-5)
+
+
+def test_glminfluence_direct_constructor():
+    # GH#9415: GLMInfluence constructed directly raised AttributeError
+    # on cooks_distance
+    df = data_bin
+    res = GLM(
+        df["constrict"],
+        df[["const", "log_rate", "log_volumne"]],
+        family=families.Binomial(),
+    ).fit(attach_wls=True, atol=1e-10)
+
+    infl_direct = GLMInfluence(res)
+    infl_method = res.get_influence()
+
+    assert_allclose(infl_direct.cooks_distance[0],
+                    infl_method.cooks_distance[0], rtol=1e-12)
 
 
 class InfluenceCompareExact:
