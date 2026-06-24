@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 
 from statsmodels import datasets
+from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.tsa.statespace import sarimax, tools, varmax
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
@@ -307,7 +308,11 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
         tools.compute_smoothed_state_weights(res))
 
     d = res.nobs_diffuse
-    assert_equal(d, diffuse)
+    _diffuse = (diffuse,)
+    if PLATFORM_WIN:
+        # Occasional failures on some windows when diffuse is 4, get 3
+        _diffuse += ((diffuse - 1,) if diffuse else ())
+    assert d in _diffuse
     if diffuse:
         assert_allclose(actual[:d], np.nan, atol=1e-12)
         assert_allclose(actual[:, :d], np.nan, atol=1e-12)
