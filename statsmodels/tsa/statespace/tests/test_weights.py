@@ -5,13 +5,14 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.platform import PLATFORM_WIN
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
 from statsmodels import datasets
-from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.tsa.statespace import sarimax, tools, varmax
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
