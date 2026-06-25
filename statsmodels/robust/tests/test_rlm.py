@@ -396,4 +396,10 @@ def test_fit_history_scale():
     data = load_stackloss()
     data.exog = sm.add_constant(np.asarray(data.exog), prepend=False)
     res = RLM(np.asarray(data.endog), data.exog, M=norms.HuberT()).fit()
+    # Cross-checked against R MASS::rlm(stack.loss ~ ., data=stackloss,
+    # psi=psi.huber, k=1.345, scale.est="MAD"): robust scale s = 2.4407
+    # (statsmodels: 2.44054, agreeing to 4 significant figures). The pre-fix
+    # code recorded the inner WLS scale (~6.80) here instead of the robust
+    # scale, so this last entry did not match res.scale.
+    assert_allclose(res.scale, 2.4405, atol=1e-3)
     assert_allclose(res.fit_history["scale"][-1], res.scale)
