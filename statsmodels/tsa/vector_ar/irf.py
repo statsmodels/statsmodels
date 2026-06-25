@@ -87,7 +87,7 @@ class BaseIRAnalysis:
     def plot(self, orth=False, *, impulse=None, response=None,
              signif=0.05, plot_params=None, figsize=(10, 10),
              subplot_params=None, plot_stderr=True, stderr_type="asym",
-             repl=1000, seed=None, component=None):
+             repl=1000, seed=None, component=None, stderr=None):
         """
         Plot impulse responses
 
@@ -118,6 +118,9 @@ class BaseIRAnalysis:
         seed : int
             np.random.seed for Monte Carlo replications
         component: array or vector of principal component indices
+        stderr : ndarray, optional
+            A user-provided array of error bands. If provided, the internal
+            calculation of standard errors is bypassed.
         """
         svar = self.svar
 
@@ -134,6 +137,9 @@ class BaseIRAnalysis:
 
         if plot_stderr is False:
             stderr = None
+
+        elif stderr is not None:
+            pass
 
         elif stderr_type not in ["asym", "mc", "sz1", "sz2", "sz3"]:
             raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'")
@@ -171,7 +177,7 @@ class BaseIRAnalysis:
     def plot_cum_effects(self, orth=False, *, impulse=None, response=None,
                          signif=0.05, plot_params=None, figsize=(10, 10),
                          subplot_params=None, plot_stderr=True,
-                         stderr_type="asym", repl=1000, seed=None):
+                         stderr_type="asym", repl=1000, seed=None, stderr=None):
         """
         Plot cumulative impulse response functions
 
@@ -201,6 +207,9 @@ class BaseIRAnalysis:
             Number of replications for monte carlo standard errors
         seed : int
             np.random.seed for Monte Carlo replications
+        stderr : ndarray, optional
+            A user-provided array of error bands. If provided, the internal
+            calculation of standard errors is bypassed.
         """
 
         if orth:
@@ -212,7 +221,11 @@ class BaseIRAnalysis:
             cum_effects = self.cum_effects
             lr_effects = self.lr_effects
 
-        if stderr_type not in ["asym", "mc"]:
+        if not plot_stderr:
+            stderr = None
+        elif stderr is not None:
+            pass
+        elif stderr_type not in ["asym", "mc"]:
             raise ValueError("`stderr_type` must be one of 'asym', 'mc'")
         else:
             if stderr_type == "asym":
@@ -220,8 +233,6 @@ class BaseIRAnalysis:
             if stderr_type == "mc":
                 stderr = self.cum_errband_mc(orth=orth, repl=repl,
                                              signif=signif, seed=seed)
-        if not plot_stderr:
-            stderr = None
 
         fig = plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
                                      self.model.names, title, signif=signif,
