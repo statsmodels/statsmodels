@@ -2001,6 +2001,13 @@ class RegressionResults(base.LikelihoodModelResults):
         -------
         float or ndarray
             Reciprocal of the e-value, clipped at one.
+
+        Notes
+        -----
+        Classical p-values control Type I error at a fixed sample size.
+        Sequential p-values are valid under continuous monitoring:
+
+        ``P_H0(exists n such that p_n <= alpha) <= alpha``.
         """
         return self.p_values(
             r_matrix=r_matrix, savi=True, g=g, cov_p=cov_p, invcov=invcov
@@ -2023,6 +2030,13 @@ class RegressionResults(base.LikelihoodModelResults):
         array_like
             Each row contains [lower, upper] limits for the corresponding
             parameter at the current sample size.
+
+        Notes
+        -----
+        Classical confidence intervals cover the parameter at a fixed sample
+        size. Confidence sequences provide time-uniform coverage:
+
+        ``P(theta in C_n^alpha for all n) >= 1 - alpha``.
         """
         return self.conf_int(alpha=alpha, savi=True, g=g)
 
