@@ -39,6 +39,38 @@ DECIMAL_1 = 1
 DECIMAL_7 = 7
 DECIMAL_0 = 0
 
+
+def _sequential_evalue(fvalue, df_num, df_denom, nobs, g):
+    g_ratio = g / (g + nobs)
+    stat_ratio = df_num / df_denom * fvalue
+    log_evalue = (
+        df_num / 2 * np.log(g_ratio)
+        - (df_denom + df_num) / 2
+        * (np.log1p(g_ratio * stat_ratio) - np.log1p(stat_ratio))
+    )
+    return np.exp(log_evalue)
+
+
+def _gaussian_evalue(qvalue, df_num, nobs, g):
+    g_ratio = g / (g + nobs)
+    log_evalue = (
+        df_num / 2 * np.log(g_ratio)
+        + 0.5 * nobs / (g + nobs) * qvalue
+    )
+    return np.exp(log_evalue)
+
+
+def _sequential_radius(alpha, g, nobs, df_num, df_denom):
+    g_ratio = g / (g + nobs)
+    boundary = (alpha ** (2 / df_num) * g_ratio) ** (
+        df_num / (df_denom + df_num)
+    )
+    denom = boundary - g_ratio
+    if denom <= 0:
+        return np.inf
+    return df_denom / df_num * (1 - boundary) / denom
+
+
 try:
     import cvxopt  # noqa:F401
 
@@ -513,6 +545,134 @@ class TestTtest2:
 
     def test_effect(self):
         assert_almost_equal(self.Ttest1.effect, -1829.2025687186533, DECIMAL_4)
+
+
+class TestEValueInference:
+    @classmethod
+    def setup_class(cls):
+        rng = np.random.default_rng(987654321)
+        nobs = 200
+        x = np.column_stack((np.ones(nobs), rng.normal(size=(nobs, 3))))
+        scale = 1 + np.abs(x[:, 1])
+        beta = np.array([1.0, 0.75, 0.0, -0.5])
+        y = x @ beta + scale * rng.standard_normal(nobs)
+        cls.res = OLS(y, x).fit()
+        cls.res_wls = WLS(y, x, weights=1 / scale**2).fit()
+        cls.res_hc1 = OLS(y, x).fit(cov_type="HC1", use_t=True)
+        cls.res_hc1_z = OLS(y, x).fit(cov_type="HC1", use_t=False)
+
+    @pytest.mark.parametrize("g", [1.0, 2.5])
+    def test_e_values_from_tvalues(self, g):
+        res = self.res
+        expected = _sequential_evalue(
+            res.tvalues**2, 1, res.df_resid, res.nobs, g
+        )
+        assert_allclose(res.e_values(g=g), expected)
+        assert_allclose(res.p_values(savi=True, g=g), 1 / expected)
+        assert_allclose(res.sequential_p_values(g=g), 1 / expected)
+        assert_allclose(res.p_values(), res.pvalues)
+        assert_(np.all(res.sequential_p_values(g=g) >= res.pvalues))
+
+    def test_e_values_from_f_test(self):
+        res = self.res
+        r_matrix = np.eye(len(res.params))[1:3]
+        ft = res.f_test(r_matrix)
+        expected = _sequential_evalue(
+            ft.fvalue, ft.df_num, ft.df_denom, res.nobs, 2.0
+        )
+        assert_allclose(res.e_values(r_matrix, g=2.0), expected)
+        assert_allclose(res.p_values(r_matrix, savi=True, g=2.0), 1 / expected)
+        assert_allclose(res.sequential_p_values(r_matrix, g=2.0), 1 / expected)
+        assert_allclose(res.p_values(r_matrix), ft.pvalue)
+        assert_(res.sequential_p_values(r_matrix, g=2.0) >= ft.pvalue)
+
+    @pytest.mark.parametrize("df_num", [1, 3])
+    def test_e_values_converge_to_gaussian_e_process(self, df_num):
+        g = 2.5
+        qvalue = 8.0
+        fvalue = qvalue / df_num
+        df_offset = 10
+        nobs = 10_000_000
+        df_denom = nobs - df_offset
+
+        evalue = _sequential_evalue(fvalue, df_num, df_denom, nobs, g)
+        gaussian_evalue = _gaussian_evalue(qvalue, df_num, nobs, g)
+        assert_allclose(evalue, gaussian_evalue, rtol=1e-5)
+
+    @pytest.mark.parametrize("res_attr", ["res", "res_wls", "res_hc1"])
+    @pytest.mark.parametrize("g", [1.0, 2.5])
+    def test_savi_conf_ints_contain_classical_conf_int(self, res_attr, g):
+        res = getattr(self, res_attr)
+        alpha = 0.05
+        cs = res.conf_int(alpha=alpha, savi=True, g=g)
+        ci = res.conf_int(alpha=alpha)
+        radius = _sequential_radius(alpha, g, res.nobs, 1, res.df_resid)
+        expected = np.column_stack(
+            (
+                res.params - np.sqrt(radius) * res.bse,
+                res.params + np.sqrt(radius) * res.bse,
+            )
+        )
+        assert_allclose(cs, expected)
+        assert_allclose(res.confidence_sequences(alpha=alpha, g=g), expected)
+        assert_(np.all(cs[:, 0] <= ci[:, 0]))
+        assert_(np.all(cs[:, 1] >= ci[:, 1]))
+
+    def test_e_values_use_robust_covariance(self):
+        res = self.res_hc1
+        r_matrix = np.eye(len(res.params))[1:3]
+        ft = res.f_test(r_matrix)
+        expected = _sequential_evalue(
+            ft.fvalue, ft.df_num, ft.df_denom, res.nobs, 1.0
+        )
+        assert_allclose(
+            res.e_values(r_matrix),
+            expected,
+        )
+        assert_allclose(
+            res.e_values(),
+            _sequential_evalue(res.tvalues**2, 1, res.df_resid, res.nobs, 1.0),
+        )
+
+    @pytest.mark.parametrize(
+        "method", ["e_values", "sequential_p_values"]
+    )
+    def test_e_value_g_validation(self, method):
+        with pytest.raises(ValueError, match="g must be positive"):
+            getattr(self.res, method)(g=0)
+
+    def test_p_values_savi_g_validation(self):
+        with pytest.raises(ValueError, match="g must be positive"):
+            self.res.p_values(savi=True, g=0)
+
+    @pytest.mark.parametrize(
+        "res_attr, pvalue_header",
+        [("res", "P>|t|"), ("res_hc1_z", "P>|z|")],
+    )
+    def test_summary_evalues_replaces_pvalue_column(self, res_attr, pvalue_header):
+        res = getattr(self, res_attr)
+        summ = res.summary(evalues=True, g=2.5)
+        table = summ.tables[1]
+        text = table.as_text()
+        assert f" {pvalue_header} " not in text
+        assert " e " in text
+        assert_allclose(
+            [float(row[4].data) for row in table[1:]],
+            res.e_values(g=2.5),
+            rtol=5e-3,
+        )
+
+    def test_summary_evalues_does_not_change_default_summary(self):
+        assert " P>|t| " in self.res.summary().tables[1].as_text()
+
+    def test_summary_evalues_g_validation(self):
+        with pytest.raises(ValueError, match="g must be positive"):
+            self.res.summary(evalues=True, g=0)
+
+    @pytest.mark.parametrize("alpha", [0, 1])
+    def test_savi_conf_int_alpha_validation(self, alpha):
+        with pytest.raises(ValueError, match="alpha must be between 0 and 1"):
+            self.res.conf_int(alpha=alpha, savi=True)
 
 
 class TestGLS:
