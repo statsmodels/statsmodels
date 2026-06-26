@@ -43,9 +43,7 @@ E-Values and Sequential Inference
 ---------------------------------
 
 Fitted linear regression results provide anytime-valid sequential inference
-methods based on the fitted model's existing t and F statistics. Set
-``evalues=True`` in ``RegressionResults.summary`` to replace the classical
-p-value column in the coefficient table with e-values.
+methods based on the fitted model's existing t and F statistics.
 ``RegressionResults.e_values`` returns e-values for parameter-wise tests by
 default, or for a joint linear restriction when a restriction matrix or formula
 is supplied. ``RegressionResults.p_values(savi=True)`` returns reciprocal
@@ -53,9 +51,11 @@ e-values, and ``RegressionResults.conf_int(savi=True)`` returns safe
 anytime-valid confidence intervals. ``RegressionResults.sequential_p_values``
 and ``RegressionResults.confidence_sequences`` provide explicitly sequential
 names for the same anytime-valid p-values and parameter-wise confidence
-sequences. These methods use the current covariance estimator, so results refit
-or converted using robust covariance types such as ``HC1`` use the
-corresponding robust t and F statistics.
+sequences. Set ``evalues=True`` in ``RegressionResults.summary`` to replace
+the classical p-value column in the coefficient table with e-values. These
+methods use the current covariance estimator, so results refit or converted
+using robust covariance types such as ``HC1`` use the corresponding robust t
+and F statistics.
 
 Technical Documentation
 -----------------------
