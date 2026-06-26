@@ -102,8 +102,8 @@ General reference for regression models:
 
 Anytime-valid inference for linear models:
 
-* M. Lindon et al. "Anytime-Valid Linear Models and Regression Adjusted Causal
-  Inference in Randomized Experiments." Journal of the American Statistical
+* M. Lindon et al. "Anytime-Valid Inference in Linear Models with Applications
+  to Regression-Adjusted Causal Inference." Journal of the American Statistical
   Association, 2026. https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
 
 Econometrics references for regression models:

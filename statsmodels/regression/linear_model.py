@@ -1918,8 +1918,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         References
         ----------
-        .. [1] Lindon et al. (2026). Anytime-Valid Linear Models and
-           Regression Adjusted Causal Inference in Randomized Experiments.
+        .. [1] Lindon et al. (2026). Anytime-Valid Inference in Linear Models
+           with Applications to Regression-Adjusted Causal Inference.
            Journal of the American Statistical Association.
            https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
 
