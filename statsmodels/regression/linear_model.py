@@ -1955,16 +1955,18 @@ class RegressionResults(base.LikelihoodModelResults):
         -------
         float or ndarray
             Classical p-values when ``savi`` is False. Reciprocal e-values
-            when ``savi`` is True, which can exceed one when the evidence
-            against the null is weak.
+            clipped at one when ``savi`` is True.
         """
         savi = bool_like(savi, "savi", optional=False, strict=True)
         if not savi:
             if r_matrix is None:
                 return self.pvalues
             return self.f_test(r_matrix, cov_p=cov_p, invcov=invcov).pvalue
-        return 1 / self.e_values(
-            r_matrix=r_matrix, g=g, cov_p=cov_p, invcov=invcov
+        return np.minimum(
+            1,
+            1 / self.e_values(
+                r_matrix=r_matrix, g=g, cov_p=cov_p, invcov=invcov
+            ),
         )
 
     def sequential_p_values(self, r_matrix=None, g=1.0, cov_p=None, invcov=None):
@@ -1988,8 +1990,7 @@ class RegressionResults(base.LikelihoodModelResults):
         Returns
         -------
         float or ndarray
-            Reciprocal of the e-value. Values can exceed one when the evidence
-            against the null is weak.
+            Reciprocal of the e-value, clipped at one.
         """
         return self.p_values(
             r_matrix=r_matrix, savi=True, g=g, cov_p=cov_p, invcov=invcov

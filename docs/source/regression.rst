@@ -47,8 +47,8 @@ methods based on the fitted model's existing t and F statistics.
 ``RegressionResults.e_values`` returns e-values for parameter-wise tests by
 default, or for a joint linear restriction when a restriction matrix or formula
 is supplied. ``RegressionResults.p_values(savi=True)`` returns reciprocal
-e-values, and ``RegressionResults.conf_int(savi=True)`` returns safe
-anytime-valid confidence intervals. ``RegressionResults.sequential_p_values``
+e-values clipped at one, and ``RegressionResults.conf_int(savi=True)`` returns
+safe anytime-valid confidence intervals. ``RegressionResults.sequential_p_values``
 and ``RegressionResults.confidence_sequences`` provide explicitly sequential
 names for the same anytime-valid p-values and parameter-wise confidence
 sequences. Set ``savi=True`` in ``RegressionResults.summary`` to replace

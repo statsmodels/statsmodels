@@ -567,10 +567,12 @@ class TestEValueInference:
         expected = _evalue_from_f_stat(
             res.tvalues**2, 1, res.df_resid, res.nobs, g
         )
+        expected_pvalues = np.minimum(1, 1 / expected)
         assert_allclose(res.e_values(g=g), expected)
-        assert_allclose(res.p_values(savi=True, g=g), 1 / expected)
-        assert_allclose(res.sequential_p_values(g=g), 1 / expected)
+        assert_allclose(res.p_values(savi=True, g=g), expected_pvalues)
+        assert_allclose(res.sequential_p_values(g=g), expected_pvalues)
         assert_allclose(res.p_values(), res.pvalues)
+        assert_(np.all(res.p_values(savi=True, g=g) <= 1))
         assert_(np.all(res.sequential_p_values(g=g) >= res.pvalues))
 
     def test_e_values_from_f_test(self):
@@ -580,10 +582,16 @@ class TestEValueInference:
         expected = _evalue_from_f_stat(
             ft.fvalue, ft.df_num, ft.df_denom, res.nobs, 2.0
         )
+        expected_pvalue = np.minimum(1, 1 / expected)
         assert_allclose(res.e_values(r_matrix, g=2.0), expected)
-        assert_allclose(res.p_values(r_matrix, savi=True, g=2.0), 1 / expected)
-        assert_allclose(res.sequential_p_values(r_matrix, g=2.0), 1 / expected)
+        assert_allclose(
+            res.p_values(r_matrix, savi=True, g=2.0), expected_pvalue
+        )
+        assert_allclose(
+            res.sequential_p_values(r_matrix, g=2.0), expected_pvalue
+        )
         assert_allclose(res.p_values(r_matrix), ft.pvalue)
+        assert_(res.p_values(r_matrix, savi=True, g=2.0) <= 1)
         assert_(res.sequential_p_values(r_matrix, g=2.0) >= ft.pvalue)
 
     @pytest.mark.parametrize("df_num", [1, 3])
