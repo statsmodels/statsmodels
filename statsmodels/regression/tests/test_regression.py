@@ -649,25 +649,45 @@ class TestEValueInference:
         "res_attr, pvalue_header",
         [("res", "P>|t|"), ("res_hc1_z", "P>|z|")],
     )
-    def test_summary_evalues_replaces_pvalue_column(self, res_attr, pvalue_header):
+    def test_summary_savi_replaces_classical_inference(
+        self, res_attr, pvalue_header
+    ):
         res = getattr(self, res_attr)
-        summ = res.summary(evalues=True, g=2.5)
-        table = summ.tables[1]
-        text = table.as_text()
-        assert f" {pvalue_header} " not in text
-        assert " e " in text
+        g = 2.5
+        summ = res.summary(savi=True, g=g)
+        top_table = summ.tables[0]
+        coef_table = summ.tables[1]
+        top_text = top_table.as_text()
+        coef_text = coef_table.as_text()
+        assert "Prob (F-statistic):" not in top_text
+        assert "e (F-statistic):" in top_text
+        df_denom = getattr(res, "df_resid_inference", res.df_resid)
+        expected_f_evalue = _evalue_from_f_stat(
+            res.fvalue, res.df_model, df_denom, res.nobs, g
+        )
+        assert "%#6.3g" % expected_f_evalue in top_text
+        assert f" {pvalue_header} " not in coef_text
+        assert " e " in coef_text
         assert_allclose(
-            [float(row[4].data) for row in table[1:]],
-            res.e_values(g=2.5),
+            [float(row[4].data) for row in coef_table[1:]],
+            res.e_values(g=g),
             rtol=5e-3,
         )
+        assert_allclose(
+            [[float(row[5].data), float(row[6].data)] for row in coef_table[1:]],
+            res.conf_int(savi=True, g=g),
+            rtol=5e-3,
+            atol=5e-4,
+        )
 
-    def test_summary_evalues_does_not_change_default_summary(self):
-        assert " P>|t| " in self.res.summary().tables[1].as_text()
+    def test_summary_savi_does_not_change_default_summary(self):
+        summ = self.res.summary()
+        assert "Prob (F-statistic):" in summ.tables[0].as_text()
+        assert " P>|t| " in summ.tables[1].as_text()
 
-    def test_summary_evalues_g_validation(self):
+    def test_summary_savi_g_validation(self):
         with pytest.raises(ValueError, match="g must be positive"):
-            self.res.summary(evalues=True, g=0)
+            self.res.summary(savi=True, g=0)
 
     @pytest.mark.parametrize("alpha", [0, 1])
     def test_savi_conf_int_alpha_validation(self, alpha):

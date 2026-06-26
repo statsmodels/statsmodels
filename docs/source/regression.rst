@@ -51,11 +51,12 @@ e-values, and ``RegressionResults.conf_int(savi=True)`` returns safe
 anytime-valid confidence intervals. ``RegressionResults.sequential_p_values``
 and ``RegressionResults.confidence_sequences`` provide explicitly sequential
 names for the same anytime-valid p-values and parameter-wise confidence
-sequences. Set ``evalues=True`` in ``RegressionResults.summary`` to replace
-the classical p-value column in the coefficient table with e-values. These
-methods use the current covariance estimator, so results refit or converted
-using robust covariance types such as ``HC1`` use the corresponding robust t
-and F statistics.
+sequences. Set ``savi=True`` in ``RegressionResults.summary`` to replace
+classical p-values with e-values and coefficient confidence intervals with
+confidence sequences. This includes replacing the classical model-level F-test
+p-value with the corresponding e-value. These methods use the current
+covariance estimator, so results refit or converted using robust covariance
+types such as ``HC1`` use the corresponding robust t and F statistics.
 
 Technical Documentation
 -----------------------

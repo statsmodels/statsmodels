@@ -3069,7 +3069,7 @@ class RegressionResults(base.LikelihoodModelResults):
         title: str | None = None,
         alpha: float = 0.05,
         slim: bool = False,
-        evalues: bool = False,
+        savi: bool = False,
         g: float = 1.0,
     ):
         """
@@ -3087,17 +3087,18 @@ class RegressionResults(base.LikelihoodModelResults):
             Title for the top table. If not None, then this replaces the
             default title.
         alpha : float, optional
-            The significance level for the confidence intervals.
+            The significance level for the confidence intervals, or
+            confidence sequences when ``savi`` is True.
         slim : bool, optional
             Flag indicating to produce reduced set or diagnostic information.
             Default is False.
-        evalues : bool, optional
-            If True, replace the classical p-value column in the coefficient
-            table with e-values computed using the asymptotic ``g`` expression.
-            Default is False.
+        savi : bool, optional
+            If True, replace classical p-values with e-values and coefficient
+            confidence intervals with confidence sequences computed using the
+            asymptotic ``g`` expression. Default is False.
         g : float, optional
-            Positive tuning parameter used to compute e-values. The default is
-            1.
+            Positive tuning parameter used when ``savi`` is True. The default
+            is 1.
 
         Returns
         -------
@@ -3123,8 +3124,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         alpha = float_like(alpha, "alpha", optional=False)
         slim = bool_like(slim, "slim", optional=False, strict=True)
-        evalues = bool_like(evalues, "evalues", optional=False, strict=True)
-        if evalues:
+        savi = bool_like(savi, "savi", optional=False, strict=True)
+        if savi:
             g = _check_evalue_g(g)
 
         eigvals = self.eigenvals
@@ -3156,11 +3157,24 @@ class RegressionResults(base.LikelihoodModelResults):
             top_left.append(("Covariance Type:", [self.cov_type]))
 
         rsquared_type = "" if self.k_constant else " (uncentered)"
+        fvalue = self.fvalue
+        if savi:
+            if self.df_model > 0 and not np.isnan(fvalue):
+                df_denom = getattr(self, "df_resid_inference", self.df_resid)
+                f_significance = _evalue_from_f_stat(
+                    fvalue, self.df_model, df_denom, self.nobs, g
+                )
+            else:
+                f_significance = np.nan
+            f_significance_label = "e (F-statistic):"
+        else:
+            f_significance = self.f_pvalue
+            f_significance_label = "Prob (F-statistic):"
         top_right = [
             ("R-squared" + rsquared_type + ":", ["%#8.3f" % self.rsquared]),
             ("Adj. R-squared" + rsquared_type + ":", ["%#8.3f" % self.rsquared_adj]),
-            ("F-statistic:", ["%#8.4g" % self.fvalue]),
-            ("Prob (F-statistic):", ["%#6.3g" % self.f_pvalue]),
+            ("F-statistic:", ["%#8.4g" % fvalue]),
+            (f_significance_label, ["%#6.3g" % f_significance]),
             ("Log-Likelihood:", None),
             ("AIC:", ["%#8.4g" % self.aic]),
             ("BIC:", ["%#8.4g" % self.bic]),
@@ -3175,7 +3189,7 @@ class RegressionResults(base.LikelihoodModelResults):
                 "R-squared:",
                 "Adj. R-squared:",
                 "F-statistic:",
-                "Prob (F-statistic):",
+                f_significance_label,
             ]
             diagn_left = diagn_right = []
             top_left = [elem for elem in top_left if elem[0] in slimlist]
@@ -3223,17 +3237,17 @@ class RegressionResults(base.LikelihoodModelResults):
             xname=xname,
             title=title,
         )
-        if evalues:
-            evalue_results = (
+        if savi:
+            savi_results = (
                 self,
                 self.params,
                 self.bse,
                 self.tvalues,
                 self.e_values(g=g),
-                self.conf_int(alpha),
+                self.conf_int(alpha, savi=True, g=g),
             )
             table = summary_params(
-                evalue_results,
+                savi_results,
                 yname=yname,
                 xname=xname,
                 alpha=alpha,
