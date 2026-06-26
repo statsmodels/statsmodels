@@ -407,6 +407,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     skip_headers : bool
         If false (default), then the header row is added. If true, then no
         header row is added.
+
     Returns
     -------
     params_table : SimpleTable instance
