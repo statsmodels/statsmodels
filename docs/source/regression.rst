@@ -57,7 +57,11 @@ confidence sequences. This includes replacing the classical model-level F-test
 p-value with the corresponding e-value. These methods use the current
 covariance estimator, so results refit or converted using robust covariance
 types such as ``HC1`` use the corresponding robust t and F statistics. These
-methods are based on Lindon et al. (2026).
+methods are based on Lindon et al. (2026). For calibration of ``g``, see
+Remark 4.8 ("Practical choice of g") in Lindon et al. (2026), which discusses
+Bayesian, frequentist minimum detectable effect, and width-optimal choices;
+larger ``g`` values lengthen the infinite-width delayed start of confidence
+sequences.
 
 Technical Documentation
 -----------------------

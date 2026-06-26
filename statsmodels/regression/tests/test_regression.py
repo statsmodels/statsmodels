@@ -726,7 +726,7 @@ class TestEValueInference:
     def test_savi_matches_avlm_longley(self):
         data = longley.load_pandas().data
         # Expected values are from the avlm CRAN package, using R's longley
-        # data and the JASA paper's asymptotic g expression.
+        # data and the JASA paper's g-prior approximation.
         # https://cran.r-project.org/web/packages/avlm/index.html
         # https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
         # Scale the statsmodels copy to R's units before fitting the same
@@ -764,7 +764,7 @@ class TestEValueInference:
     def test_savi_hc0_coefficients_match_avlm_longley(self):
         data = longley.load_pandas().data
         # Expected values are from the avlm CRAN package, using R's longley
-        # data and the JASA paper's asymptotic g expression.
+        # data and the JASA paper's g-prior approximation.
         # https://cran.r-project.org/web/packages/avlm/index.html
         # https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
         # Scale the statsmodels copy to R's units before fitting the same

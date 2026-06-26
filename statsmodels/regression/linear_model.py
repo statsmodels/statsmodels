@@ -93,12 +93,6 @@ def _evalue_from_f_stat(fvalue, df_num, df_denom, nobs, g):
     df_denom = float_like(df_denom, "df_denom")
     nobs = float_like(nobs, "nobs")
     g = _check_evalue_g(g)
-    if df_num <= 0:
-        raise ValueError("df_num must be positive")
-    if df_denom <= 0:
-        raise ValueError("df_denom must be positive")
-    if nobs <= 0:
-        raise ValueError("nobs must be positive")
 
     g_ratio = g / (g + nobs)
     stat_ratio = df_num / df_denom * fvalue
@@ -118,12 +112,6 @@ def _savi_confidence_radius(alpha, g, nobs, df_num, df_denom):
     df_denom = float_like(df_denom, "df_denom")
     nobs = float_like(nobs, "nobs")
     g = _check_evalue_g(g)
-    if df_num <= 0:
-        raise ValueError("df_num must be positive")
-    if df_denom <= 0:
-        raise ValueError("df_denom must be positive")
-    if nobs <= 0:
-        raise ValueError("nobs must be positive")
 
     g_ratio = g / (g + nobs)
     boundary = (alpha ** (2 / df_num) * g_ratio) ** (
@@ -1841,7 +1829,10 @@ class RegressionResults(base.LikelihoodModelResults):
             intervals by inverting e-values. Default is False.
         g : float, optional
             Positive tuning parameter used when ``savi`` is True. The default
-            is 1.
+            is 1. See Remark 4.8 ("Practical choice of g") in Lindon et al.
+            (2026) for Bayesian, frequentist minimum detectable effect, and
+            width-optimal calibrations; larger ``g`` values lengthen the
+            infinite-width delayed start of confidence sequences.
 
         Returns
         -------
@@ -1856,21 +1847,6 @@ class RegressionResults(base.LikelihoodModelResults):
 
         """
         savi = bool_like(savi, "savi", optional=False, strict=True)
-        if not savi:
-            # keep method for docstring for now
-            ci = super().conf_int(alpha=alpha, cols=cols)
-            return ci
-
-        df_denom = getattr(self, "df_resid_inference", self.df_resid)
-        radius = _savi_confidence_radius(
-            alpha, g, self.nobs, 1.0, df_denom
-        )
-        q = np.sqrt(radius)
-        bse = self.bse
-        err = q * bse
-        err = np.where(bse == 0, 0, err)
-        lower = self.params - err
-        upper = self.params + err
         if cols is not None:
             warnings.warn(
                 "cols is deprecated and will be removed after 0.14 is "
@@ -1882,8 +1858,25 @@ class RegressionResults(base.LikelihoodModelResults):
                 stacklevel=2,
             )
             cols = np.asarray(cols)
-            lower = lower[cols]
-            upper = upper[cols]
+        if savi:
+            ci = self._savi_conf_int(alpha=alpha, g=g)
+        else:
+            ci = super().conf_int(alpha=alpha)
+        if cols is not None:
+            ci = ci[cols]
+        return ci
+
+    def _savi_conf_int(self, alpha=0.05, g=1.0):
+        df_denom = getattr(self, "df_resid_inference", self.df_resid)
+        radius = _savi_confidence_radius(
+            alpha, g, self.nobs, 1.0, df_denom
+        )
+        q = np.sqrt(radius)
+        bse = self.bse
+        err = q * bse
+        err = np.where(bse == 0, 0, err)
+        lower = self.params - err
+        upper = self.params + err
         return np.asarray(lzip(lower, upper))
 
     def e_values(self, r_matrix=None, g=1.0, cov_p=None, invcov=None):
@@ -1896,7 +1889,11 @@ class RegressionResults(base.LikelihoodModelResults):
             Linear restriction passed to ``f_test``. If None, returns
             parameter-wise e-values using the squared t-statistics.
         g : float, optional
-            Positive tuning parameter for the mixture. The default is 1.
+            Positive tuning parameter for the mixture. The default is 1. See
+            Remark 4.8 ("Practical choice of g") in Lindon et al. (2026) for
+            Bayesian, frequentist minimum detectable effect, and width-optimal
+            calibrations; larger ``g`` values lengthen the infinite-width
+            delayed start of confidence sequences.
         cov_p : array_like, optional
             Alternative estimate for the parameter covariance matrix passed
             to ``f_test`` when ``r_matrix`` is not None.
@@ -1912,9 +1909,12 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Notes
         -----
-        The calculation uses the asymptotic ``g`` expression applied to the
-        existing t or F statistic from the fitted model. If robust covariance
-        is active on the results instance, the robust covariance is used.
+        The calculation implements the ``g``-prior approximation
+        ``G_n`` in Equation (17) of Lindon et al. (2026), rather than the
+        exact ``E_n`` in Equation (9). If robust covariance is active on the
+        results instance, the same t or F statistic plug-in corresponds to
+        the heteroskedastic asymptotic e-process in Equation (22), which
+        recovers Equation (17) when ``Q_n / r`` is the usual F statistic.
 
         References
         ----------
@@ -1953,7 +1953,10 @@ class RegressionResults(base.LikelihoodModelResults):
             e-values. Default is False.
         g : float, optional
             Positive tuning parameter used when ``savi`` is True. The default
-            is 1.
+            is 1. See Remark 4.8 ("Practical choice of g") in Lindon et al.
+            (2026) for Bayesian, frequentist minimum detectable effect, and
+            width-optimal calibrations; larger ``g`` values lengthen the
+            infinite-width delayed start of confidence sequences.
         cov_p : array_like, optional
             Alternative estimate for the parameter covariance matrix passed
             to ``f_test`` or ``e_values`` when ``r_matrix`` is not None.
@@ -1989,7 +1992,11 @@ class RegressionResults(base.LikelihoodModelResults):
             Linear restriction passed to ``f_test``. If None, returns
             parameter-wise p-values using the squared t-statistics.
         g : float, optional
-            Positive tuning parameter for the mixture. The default is 1.
+            Positive tuning parameter for the mixture. The default is 1. See
+            Remark 4.8 ("Practical choice of g") in Lindon et al. (2026) for
+            Bayesian, frequentist minimum detectable effect, and width-optimal
+            calibrations; larger ``g`` values lengthen the infinite-width
+            delayed start of confidence sequences.
         cov_p : array_like, optional
             Alternative estimate for the parameter covariance matrix passed
             to ``f_test`` when ``r_matrix`` is not None.
@@ -2023,7 +2030,11 @@ class RegressionResults(base.LikelihoodModelResults):
             The significance level for the confidence sequences. The default
             `alpha` = .05 returns 95% confidence sequences.
         g : float, optional
-            Positive tuning parameter for the mixture. The default is 1.
+            Positive tuning parameter for the mixture. The default is 1. See
+            Remark 4.8 ("Practical choice of g") in Lindon et al. (2026) for
+            Bayesian, frequentist minimum detectable effect, and width-optimal
+            calibrations; larger ``g`` values lengthen the infinite-width
+            delayed start of confidence sequences.
 
         Returns
         -------
@@ -2038,7 +2049,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         ``P(theta in C_n^alpha for all n) >= 1 - alpha``.
         """
-        return self.conf_int(alpha=alpha, savi=True, g=g)
+        return self._savi_conf_int(alpha=alpha, g=g)
 
     @cache_readonly
     def nobs(self):
@@ -3119,11 +3130,14 @@ class RegressionResults(base.LikelihoodModelResults):
             Default is False.
         savi : bool, optional
             If True, replace classical p-values with e-values and coefficient
-            confidence intervals with confidence sequences computed using the
-            asymptotic ``g`` expression. Default is False.
+            confidence intervals with confidence sequences computed from the
+            fitted model's t and F statistics. Default is False.
         g : float, optional
             Positive tuning parameter used when ``savi`` is True. The default
-            is 1.
+            is 1. See Remark 4.8 ("Practical choice of g") in Lindon et al.
+            (2026) for Bayesian, frequentist minimum detectable effect, and
+            width-optimal calibrations; larger ``g`` values lengthen the
+            infinite-width delayed start of confidence sequences.
 
         Returns
         -------
