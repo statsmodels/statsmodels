@@ -56,7 +56,8 @@ classical p-values with e-values and coefficient confidence intervals with
 confidence sequences. This includes replacing the classical model-level F-test
 p-value with the corresponding e-value. These methods use the current
 covariance estimator, so results refit or converted using robust covariance
-types such as ``HC1`` use the corresponding robust t and F statistics.
+types such as ``HC1`` use the corresponding robust t and F statistics. These
+methods are based on Lindon et al. (2026).
 
 Technical Documentation
 -----------------------
@@ -98,6 +99,12 @@ References
 General reference for regression models:
 
 * D.C. Montgomery and E.A. Peck. "Introduction to Linear Regression Analysis." 2nd. Ed., Wiley, 1992.
+
+Anytime-valid inference for linear models:
+
+* M. Lindon et al. "Anytime-Valid Linear Models and Regression Adjusted Causal
+  Inference in Randomized Experiments." Journal of the American Statistical
+  Association, 2026. https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
 
 Econometrics references for regression models:
 

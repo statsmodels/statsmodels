@@ -697,6 +697,79 @@ class TestEValueInference:
         with pytest.raises(ValueError, match="g must be positive"):
             self.res.summary(savi=True, g=0)
 
+    def test_savi_matches_avlm_longley(self):
+        data = longley.load_pandas().data
+        # Expected values are from the avlm CRAN package, using R's longley
+        # data and the JASA paper's asymptotic g expression.
+        # https://cran.r-project.org/web/packages/avlm/index.html
+        # https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
+        # Scale the statsmodels copy to R's units before fitting the same
+        # model.
+        endog = data["TOTEMP"].to_numpy() / 1000
+        exog = np.column_stack(
+            (data["GNP"].to_numpy() / 1000, data["UNEMP"].to_numpy() / 10)
+        )
+        res = OLS(endog, add_constant(exog, prepend=True)).fit()
+        g = 2.5
+
+        avlm_pvalues = np.array(
+            [
+                2.3994985366968640e-06,
+                6.5452796798514853e-06,
+                1.3043518743909294e-01,
+            ]
+        )
+        avlm_conf_int = np.array(
+            [
+                [50.301901821972919038, 54.4624322783199232845],
+                [0.031635798521018964, 0.0440448555138813133],
+                [-0.012035233090925803, 0.0011637464493843685],
+            ]
+        )
+        avlm_f_pvalue = 5.3726884577847966e-06
+
+        assert_allclose(res.p_values(savi=True, g=g), avlm_pvalues)
+        assert_allclose(res.conf_int(savi=True, g=g), avlm_conf_int)
+        f_evalue = _evalue_from_f_stat(
+            res.fvalue, res.df_model, res.df_resid, res.nobs, g
+        )
+        assert_allclose(np.minimum(1, 1 / f_evalue), avlm_f_pvalue)
+
+    def test_savi_hc0_coefficients_match_avlm_longley(self):
+        data = longley.load_pandas().data
+        # Expected values are from the avlm CRAN package, using R's longley
+        # data and the JASA paper's asymptotic g expression.
+        # https://cran.r-project.org/web/packages/avlm/index.html
+        # https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
+        # Scale the statsmodels copy to R's units before fitting the same
+        # model.
+        endog = data["TOTEMP"].to_numpy() / 1000
+        exog = np.column_stack(
+            (data["GNP"].to_numpy() / 1000, data["UNEMP"].to_numpy() / 10)
+        )
+        res = OLS(endog, add_constant(exog, prepend=True)).fit(
+            cov_type="HC0", use_t=True
+        )
+        g = 2.5
+
+        avlm_pvalues = np.array(
+            [
+                2.3258728655056687e-06,
+                4.3782614065014952e-06,
+                4.8523079107576070e-02,
+            ]
+        )
+        avlm_conf_int = np.array(
+            [
+                [50.840615331130983634, 53.923718769161859],
+                [0.033030806719240489, 0.042649847315659788],
+                [-0.010841212821887157, -0.000030273819654277542],
+            ]
+        )
+
+        assert_allclose(res.p_values(savi=True, g=g), avlm_pvalues)
+        assert_allclose(res.conf_int(savi=True, g=g), avlm_conf_int)
+
     @pytest.mark.parametrize("alpha", [0, 1])
     def test_savi_conf_int_alpha_validation(self, alpha):
         with pytest.raises(ValueError, match="alpha must be between 0 and 1"):

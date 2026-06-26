@@ -1915,6 +1915,16 @@ class RegressionResults(base.LikelihoodModelResults):
         The calculation uses the asymptotic ``g`` expression applied to the
         existing t or F statistic from the fitted model. If robust covariance
         is active on the results instance, the robust covariance is used.
+
+        References
+        ----------
+        .. [1] Lindon et al. (2026). Anytime-Valid Linear Models and
+           Regression Adjusted Causal Inference in Randomized Experiments.
+           Journal of the American Statistical Association.
+           https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
+
+        .. [2] Lindon, M. avlm: Anytime-Valid Linear Models. CRAN.
+           https://cran.r-project.org/web/packages/avlm/index.html
         """
         df_denom = getattr(self, "df_resid_inference", self.df_resid)
         if r_matrix is None:
