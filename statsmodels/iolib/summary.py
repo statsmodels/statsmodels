@@ -387,7 +387,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
 
 def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
-                   skip_header=False, title=None, value_header=None):
+                   skip_header=False, title=None):
     '''create a summary table for the parameters
 
     Parameters
@@ -407,10 +407,6 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     skip_headers : bool
         If false (default), then the header row is added. If true, then no
         header row is added.
-    value_header : str, optional
-        If provided, replaces the p-value column header and formats the column
-        using the generic numeric formatter.
-
     Returns
     -------
     params_table : SimpleTable instance
@@ -442,8 +438,6 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     else:
         param_header = ["coef", "std err", "z", "P>|z|",
                         "[" + str(alpha/2), str(1-alpha/2) + "]"]
-    if value_header is not None:
-        param_header[3] = value_header
 
     if skip_header:
         param_header = None
@@ -461,14 +455,10 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     tvalues = np.asarray(tvalues)
     pvalues = np.asarray(pvalues)
     conf_int = np.asarray(conf_int)
-    if value_header is None:
-        value_data = ["%#6.3f" % (pvalues[i]) for i in exog_idx]
-    else:
-        value_data = [forg(pvalues[i]) for i in exog_idx]
     params_data = lzip([forg(params[i], prec=4) for i in exog_idx],
                        [forg(std_err[i]) for i in exog_idx],
                        [forg(tvalues[i]) for i in exog_idx],
-                       value_data,
+                       ["%#6.3f" % (pvalues[i]) for i in exog_idx],
                        [forg(conf_int[i, 0]) for i in exog_idx],
                        [forg(conf_int[i, 1]) for i in exog_idx])
     parameter_table = SimpleTable(params_data,

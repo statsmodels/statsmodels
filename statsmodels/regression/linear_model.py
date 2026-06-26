@@ -3237,7 +3237,7 @@ class RegressionResults(base.LikelihoodModelResults):
             title = self.model.__class__.__name__ + " " + "Regression Results"
 
         # create summary table instance
-        from statsmodels.iolib.summary import Summary, summary_params
+        from statsmodels.iolib.summary import Summary, forg, summary_params
 
         smry = Summary()
         smry.add_table_2cols(
@@ -3249,12 +3249,13 @@ class RegressionResults(base.LikelihoodModelResults):
             title=title,
         )
         if savi:
+            evalues = self.e_values(g=g)
             savi_results = (
                 self,
                 self.params,
                 self.bse,
                 self.tvalues,
-                self.e_values(g=g),
+                evalues,
                 self.conf_int(alpha, savi=True, g=g),
             )
             table = summary_params(
@@ -3263,8 +3264,11 @@ class RegressionResults(base.LikelihoodModelResults):
                 xname=xname,
                 alpha=alpha,
                 use_t=self.use_t,
-                value_header="e",
             )
+            if np.size(evalues):
+                table[0][4].data = "e"
+                for row, evalue in zip(table[1:], np.asarray(evalues).ravel()):
+                    row[4].data = forg(evalue)
             smry.tables.append(table)
         else:
             smry.add_table_params(

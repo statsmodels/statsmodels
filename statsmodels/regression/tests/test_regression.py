@@ -662,11 +662,17 @@ class TestEValueInference:
     ):
         res = getattr(self, res_attr)
         g = 2.5
+        default_summ = res.summary()
         summ = res.summary(savi=True, g=g)
+        default_top_table = default_summ.tables[0]
+        default_coef_table = default_summ.tables[1]
         top_table = summ.tables[0]
         coef_table = summ.tables[1]
+        default_top_text = default_top_table.as_text()
+        default_coef_text = default_coef_table.as_text()
         top_text = top_table.as_text()
         coef_text = coef_table.as_text()
+        assert "Prob (F-statistic):" in default_top_text
         assert "Prob (F-statistic):" not in top_text
         assert "e (F-statistic):" in top_text
         df_denom = getattr(res, "df_resid_inference", res.df_resid)
@@ -674,15 +680,35 @@ class TestEValueInference:
             res.fvalue, res.df_model, df_denom, res.nobs, g
         )
         assert "%#6.3g" % expected_f_evalue in top_text
+        assert_(
+            float(default_top_table[3][3].data)
+            != float(top_table[3][3].data)
+        )
+        assert f" {pvalue_header} " in default_coef_text
         assert f" {pvalue_header} " not in coef_text
         assert " e " in coef_text
+        default_values = np.array(
+            [float(row[4].data) for row in default_coef_table[1:]]
+        )
+        savi_values = np.array([float(row[4].data) for row in coef_table[1:]])
+        assert_(not np.allclose(default_values, savi_values))
         assert_allclose(
-            [float(row[4].data) for row in coef_table[1:]],
+            savi_values,
             res.e_values(g=g),
             rtol=5e-3,
         )
+        default_intervals = np.array(
+            [
+                [float(row[5].data), float(row[6].data)]
+                for row in default_coef_table[1:]
+            ]
+        )
+        savi_intervals = np.array(
+            [[float(row[5].data), float(row[6].data)] for row in coef_table[1:]]
+        )
+        assert_(not np.allclose(default_intervals, savi_intervals))
         assert_allclose(
-            [[float(row[5].data), float(row[6].data)] for row in coef_table[1:]],
+            savi_intervals,
             res.conf_int(savi=True, g=g),
             rtol=5e-3,
             atol=5e-4,
