@@ -80,19 +80,19 @@ __all__ = [
 dtrtri = get_lapack_funcs("trtri", dtype="float64", ilp64="preferred")
 
 
-def _check_sequential_g(g):
+def _check_evalue_g(g):
     g = float_like(g, "g")
     if g <= 0:
         raise ValueError("g must be positive")
     return g
 
 
-def _sequential_evalue(fvalue, df_num, df_denom, nobs, g):
+def _evalue_from_f_stat(fvalue, df_num, df_denom, nobs, g):
     fvalue = np.asarray(fvalue)
     df_num = float_like(df_num, "df_num")
     df_denom = float_like(df_denom, "df_denom")
     nobs = float_like(nobs, "nobs")
-    g = _check_sequential_g(g)
+    g = _check_evalue_g(g)
     if df_num <= 0:
         raise ValueError("df_num must be positive")
     if df_denom <= 0:
@@ -110,14 +110,14 @@ def _sequential_evalue(fvalue, df_num, df_denom, nobs, g):
     return np.exp(log_evalue)
 
 
-def _sequential_confidence_radius(alpha, g, nobs, df_num, df_denom):
+def _savi_confidence_radius(alpha, g, nobs, df_num, df_denom):
     alpha = float_like(alpha, "alpha")
     if alpha <= 0 or alpha >= 1:
         raise ValueError("alpha must be between 0 and 1")
     df_num = float_like(df_num, "df_num")
     df_denom = float_like(df_denom, "df_denom")
     nobs = float_like(nobs, "nobs")
-    g = _check_sequential_g(g)
+    g = _check_evalue_g(g)
     if df_num <= 0:
         raise ValueError("df_num must be positive")
     if df_denom <= 0:
@@ -1862,7 +1862,7 @@ class RegressionResults(base.LikelihoodModelResults):
             return ci
 
         df_denom = getattr(self, "df_resid_inference", self.df_resid)
-        radius = _sequential_confidence_radius(
+        radius = _savi_confidence_radius(
             alpha, g, self.nobs, 1.0, df_denom
         )
         q = np.sqrt(radius)
@@ -1925,7 +1925,7 @@ class RegressionResults(base.LikelihoodModelResults):
             fvalue = fres.fvalue
             df_num = fres.df_num
             df_denom = fres.df_denom
-        return _sequential_evalue(fvalue, df_num, df_denom, self.nobs, g)
+        return _evalue_from_f_stat(fvalue, df_num, df_denom, self.nobs, g)
 
     def p_values(
         self, r_matrix=None, savi=False, g=1.0, cov_p=None, invcov=None
@@ -3125,7 +3125,7 @@ class RegressionResults(base.LikelihoodModelResults):
         slim = bool_like(slim, "slim", optional=False, strict=True)
         evalues = bool_like(evalues, "evalues", optional=False, strict=True)
         if evalues:
-            g = _check_sequential_g(g)
+            g = _check_evalue_g(g)
 
         eigvals = self.eigenvals
         condno = self.condition_number

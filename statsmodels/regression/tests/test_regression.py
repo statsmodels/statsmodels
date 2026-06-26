@@ -40,7 +40,7 @@ DECIMAL_7 = 7
 DECIMAL_0 = 0
 
 
-def _sequential_evalue(fvalue, df_num, df_denom, nobs, g):
+def _evalue_from_f_stat(fvalue, df_num, df_denom, nobs, g):
     g_ratio = g / (g + nobs)
     stat_ratio = df_num / df_denom * fvalue
     log_evalue = (
@@ -60,7 +60,7 @@ def _gaussian_evalue(qvalue, df_num, nobs, g):
     return np.exp(log_evalue)
 
 
-def _sequential_radius(alpha, g, nobs, df_num, df_denom):
+def _savi_confidence_radius(alpha, g, nobs, df_num, df_denom):
     g_ratio = g / (g + nobs)
     boundary = (alpha ** (2 / df_num) * g_ratio) ** (
         df_num / (df_denom + df_num)
@@ -564,7 +564,7 @@ class TestEValueInference:
     @pytest.mark.parametrize("g", [1.0, 2.5])
     def test_e_values_from_tvalues(self, g):
         res = self.res
-        expected = _sequential_evalue(
+        expected = _evalue_from_f_stat(
             res.tvalues**2, 1, res.df_resid, res.nobs, g
         )
         assert_allclose(res.e_values(g=g), expected)
@@ -577,7 +577,7 @@ class TestEValueInference:
         res = self.res
         r_matrix = np.eye(len(res.params))[1:3]
         ft = res.f_test(r_matrix)
-        expected = _sequential_evalue(
+        expected = _evalue_from_f_stat(
             ft.fvalue, ft.df_num, ft.df_denom, res.nobs, 2.0
         )
         assert_allclose(res.e_values(r_matrix, g=2.0), expected)
@@ -595,7 +595,7 @@ class TestEValueInference:
         nobs = 10_000_000
         df_denom = nobs - df_offset
 
-        evalue = _sequential_evalue(fvalue, df_num, df_denom, nobs, g)
+        evalue = _evalue_from_f_stat(fvalue, df_num, df_denom, nobs, g)
         gaussian_evalue = _gaussian_evalue(qvalue, df_num, nobs, g)
         assert_allclose(evalue, gaussian_evalue, rtol=1e-5)
 
@@ -606,7 +606,7 @@ class TestEValueInference:
         alpha = 0.05
         cs = res.conf_int(alpha=alpha, savi=True, g=g)
         ci = res.conf_int(alpha=alpha)
-        radius = _sequential_radius(alpha, g, res.nobs, 1, res.df_resid)
+        radius = _savi_confidence_radius(alpha, g, res.nobs, 1, res.df_resid)
         expected = np.column_stack(
             (
                 res.params - np.sqrt(radius) * res.bse,
@@ -622,7 +622,7 @@ class TestEValueInference:
         res = self.res_hc1
         r_matrix = np.eye(len(res.params))[1:3]
         ft = res.f_test(r_matrix)
-        expected = _sequential_evalue(
+        expected = _evalue_from_f_stat(
             ft.fvalue, ft.df_num, ft.df_denom, res.nobs, 1.0
         )
         assert_allclose(
@@ -631,7 +631,7 @@ class TestEValueInference:
         )
         assert_allclose(
             res.e_values(),
-            _sequential_evalue(res.tvalues**2, 1, res.df_resid, res.nobs, 1.0),
+            _evalue_from_f_stat(res.tvalues**2, 1, res.df_resid, res.nobs, 1.0),
         )
 
     @pytest.mark.parametrize(
