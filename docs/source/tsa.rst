@@ -72,6 +72,7 @@ Descriptive Statistics and Tests
    stattools.pacf_burg
    stattools.ccovf
    stattools.ccf
+   stattools.pccf
    stattools.adfuller
    stattools.kpss
    stattools.leybourne

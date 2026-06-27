@@ -6,7 +6,7 @@ from io import BytesIO
 import locale
 
 import numpy as np
-from numpy.testing import assert_, assert_equal
+from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
 from scipy import stats
@@ -18,6 +18,7 @@ from statsmodels.graphics.tsaplots import (
     plot_acf,
     plot_ccf,
     plot_pacf,
+    plot_pccf,
     plot_predict,
     quarter_plot,
     seasonal_diagnostic_plot,
@@ -27,6 +28,7 @@ from statsmodels.tsa import arima_process as tsp
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.seasonal import STL
+from statsmodels.tsa.stattools import pccf
 
 try:
     from matplotlib import pyplot as plt
@@ -218,6 +220,53 @@ def test_plot_ccf(close_figures):
     plot_ccf(x1, x2, ax=ax, title="CCF")
     plot_ccf(x1, x2, ax=ax, auto_ylims=True)
     plot_ccf(x1, x2, ax=ax, use_vlines=False)
+
+
+@pytest.mark.matplotlib
+def test_plot_pccf(close_figures):
+    # Just test that it runs.
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1.0, -0.9]
+    ma = np.r_[1.0, 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    x1 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    x2 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    plot_pccf(x1, x2)
+    plot_pccf(x1, x2, ax=ax, lags=10)
+    plot_pccf(x1, x2, ax=ax)
+    plot_pccf(x1, x2, ax=ax, alpha=None)
+    plot_pccf(x1, x2, ax=ax, alpha=None, auto_ylims=True)
+    plot_pccf(x1, x2, ax=ax, title="PCCF")
+    plot_pccf(x1, x2, ax=ax, auto_ylims=True)
+    plot_pccf(x1, x2, ax=ax, use_vlines=False)
+    plot_pccf(x1, x2, ax=ax, method="yw")
+    plot_pccf(x1, x2, ax=ax, method="ywmle")
+    plot_pccf(x1, x2, ax=ax, method="ols")
+
+
+@pytest.mark.matplotlib
+def test_plot_pccf_irregular_lags(close_figures):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1.0, -0.9]
+    ma = np.r_[1.0, 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    x1 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    x2 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+
+    lags = np.array([0, 1, 3, 5])
+    plot_pccf(x1, x2, ax=ax, lags=lags, use_vlines=False)
+
+    pccf_xy = pccf(x1, x2, nlags=lags.max())
+    line = ax.lines[-1]
+    expected_lags = lags[lags > 0]
+    assert_equal(line.get_xdata(), expected_lags)
+    assert_allclose(line.get_ydata(), pccf_xy[expected_lags - 1], atol=1e-14)
 
 
 @pytest.mark.matplotlib
