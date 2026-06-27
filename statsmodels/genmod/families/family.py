@@ -100,6 +100,45 @@ class Family:
         self.link = link
         self.variance = variance
 
+    # Class attribute for canonical link type (overridden in subclasses)
+    _canonical_link_class = None
+
+    @property
+    def is_canonical_link(self):
+        r"""
+        Check if the current link function is the canonical link for this family.
+
+        Returns
+        -------
+        bool
+            True if the link function is the canonical link for this family.
+
+        Notes
+        -----
+        For exponential family distributions, the canonical link :math:`g`
+        satisfies :math:`\theta = g(\mu)`, where :math:`\theta` is the natural
+        parameter. When using the canonical link, the Observed Information
+        Matrix (OIM) equals the Fisher Information Matrix (Expected Information
+        Matrix, EIM). This allows for computational optimization in Hessian
+        calculations.
+
+        Canonical links for common families:
+
+        - Gaussian: Identity
+        - Binomial: Logit
+        - Poisson: Log
+        - Gamma: InversePower (power=-1)
+        - InverseGaussian: InverseSquared (power=-2)
+        - NegativeBinomial: Log
+        - Tweedie: Power(1-var_power)
+        """
+        if self._canonical_link_class is None:
+            return False
+        # Use type() instead of isinstance() to ensure exact type match.
+        # This prevents subclasses (e.g., Probit extends CDFLink extends Logit)
+        # from being incorrectly identified as canonical links.
+        return type(self.link) is self._canonical_link_class
+
     def starting_mu(self, y):
         r"""
         Starting value for mu in the IRLS algorithm.
@@ -416,6 +455,7 @@ class Poisson(Family):
     safe_links = [
         L.Log,
     ]
+    _canonical_link_class = L.Log
 
     def __init__(self, link=None, check_link=True):
         if link is None:
@@ -572,6 +612,7 @@ class Gaussian(Family):
     links = [L.Log, L.Identity, L.InversePower]
     variance = V.constant
     safe_links = links
+    _canonical_link_class = L.Identity
 
     def __init__(self, link=None, check_link=True):
         if link is None:
@@ -744,6 +785,7 @@ class Gamma(Family):
     safe_links = [
         L.Log,
     ]
+    _canonical_link_class = L.InversePower
 
     def __init__(self, link=None, check_link=True):
         if link is None:
@@ -950,6 +992,7 @@ class Binomial(Family):
 
     # Other safe links, e.g. cloglog and probit are subclasses
     safe_links = [L.Logit, L.CDFLink]
+    _canonical_link_class = L.Logit
 
     def __init__(self, link=None, check_link=True):  # , n=1.):
         if link is None:
@@ -1221,6 +1264,7 @@ class InverseGaussian(Family):
         L.InverseSquared,
         L.Log,
     ]
+    _canonical_link_class = L.InverseSquared
 
     def __init__(self, link=None, check_link=True):
         if link is None:
@@ -1399,6 +1443,7 @@ class NegativeBinomial(Family):
     safe_links = [
         L.Log,
     ]
+    _canonical_link_class = L.Log
 
     def __init__(self, link=None, alpha=1.0, check_link=True):
         self.alpha = 1.0 * alpha  # make it at least float
@@ -1625,6 +1670,7 @@ class Tweedie(Family):
     links = [L.Log, L.Power]
     variance = V.Power(power=1.5)
     safe_links = [L.Log, L.Power]
+    _canonical_link_class = L.Log
 
     def __init__(self, link=None, var_power=1.0, eql=False, check_link=True):
         self.var_power = var_power
