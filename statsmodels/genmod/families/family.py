@@ -74,8 +74,7 @@ class Family:
             if not isinstance(link, L.Link):
                 raise TypeError("The input should be a valid Link object.")
             if hasattr(self, "links"):
-                validlink = any([isinstance(link, _) for _ in self.links])
-                if not validlink:
+                if not any([isinstance(link, _) for _ in self.links]):
                     msg = "Invalid link for family, should be in %s. (got %s)"
                     raise ValueError(msg % (repr(self.links), link))
 
