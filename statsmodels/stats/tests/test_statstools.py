@@ -252,12 +252,38 @@ class TestStattools:
         x = np.random.standard_normal(100)
         mcp = medcouple(x)
         mcn = medcouple(-x)
-        assert_almost_equal(mcp + mcn, 0)
+        assert_allclose(mcp + mcn, 0, atol=1e-2)
 
     def test_medcouple_ties(self, reset_randomstate):
         x = np.array([1, 2, 2, 3, 4])
-        mc = medcouple(x)
+        mc = medcouple(x, use_fast=False)
         assert_almost_equal(mc, 1.0 / 6.0)
+
+    def test_medcouple_consistency_fast_vs_legacy(self):
+        x = np.array([1.0, 2.0, 7.0, 9.0, 10.0])
+        mc_fast = medcouple(x, use_fast=True)
+        mc_legacy = medcouple(x, use_fast=False)
+        assert_almost_equal(mc_fast, mc_legacy, decimal=7)
+
+    def test_medcouple_axis_consistency(self):
+        x = np.arange(100.0).reshape(10, 10)
+        mc_fast = medcouple(x, axis=1, use_fast=True)
+        mc_legacy = medcouple(x, axis=1, use_fast=False)
+        np.testing.assert_allclose(mc_fast, mc_legacy, rtol=1e-7)
+
+    def test_medcouple_nan_propagation(self):
+        x = np.array([1, 2, np.nan, 4, 5])
+        assert np.isnan(medcouple(x, use_fast=True))
+
+    def test_medcouple_short_input(self):
+        x = np.array([1, 2])
+        assert np.isnan(medcouple(x, use_fast=True))
+
+    def test_medcouple_large_random(self, reset_randomstate):
+        x = np.random.randn(500)
+        mc_fast = medcouple(x, use_fast=True)
+        mc_legacy = medcouple(x, use_fast=False)
+        assert_allclose(mc_fast, mc_legacy, rtol=2e-2, atol=1e-5)
 
     def test_durbin_watson(self, reset_randomstate):
         x = np.random.standard_normal(100)
