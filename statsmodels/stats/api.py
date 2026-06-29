@@ -40,6 +40,7 @@ from .diagnostic import (
     linear_lm,
     linear_rainbow,
     linear_reset,
+    pesaran_timmermann,
     recursive_olsresiduals,
     spec_white,
 )
@@ -201,6 +202,7 @@ __all__ = [
     "compare_cox",
     "compare_encompassing",
     "compare_j",
+    "pesaran_timmermann",
     "confint_effectsize_oneway",
     "confint_mvmean",
     "confint_mvmean_fromstats",
