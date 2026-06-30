@@ -4,6 +4,7 @@ Created on Fri Mar 09 16:00:27 2012
 
 Author: Josef Perktold
 """
+
 from statsmodels.compat.pandas import assert_series_equal
 
 from io import BytesIO
@@ -33,8 +34,8 @@ class RemoveDataPickle:
     @classmethod
     def setup_class(cls):
         nobs = 1000
-        np.random.seed(987689)
-        x = np.random.randn(nobs, 3)
+        rs = np.random.RandomState(987689)
+        x = rs.randn(nobs, 3)
         x = sm.add_constant(x)
         cls.exog = x
         cls.xf = 0.25 * np.ones((2, 4))
@@ -65,8 +66,7 @@ class RemoveDataPickle:
 
         if isinstance(pred1, pd.Series) and isinstance(pred2, pd.Series):
             assert_series_equal(pred1, pred2)
-        elif isinstance(pred1, pd.DataFrame) and isinstance(pred2,
-                                                            pd.DataFrame):
+        elif isinstance(pred1, pd.DataFrame) and isinstance(pred2, pd.DataFrame):
             assert pred1.equals(pred2)
         else:
             np.testing.assert_equal(pred2, pred1)
@@ -82,8 +82,7 @@ class RemoveDataPickle:
 
         if isinstance(pred1, pd.Series) and isinstance(pred3, pd.Series):
             assert_series_equal(pred1, pred3)
-        elif isinstance(pred1, pd.DataFrame) and isinstance(pred3,
-                                                            pd.DataFrame):
+        elif isinstance(pred1, pd.DataFrame) and isinstance(pred3, pd.DataFrame):
             assert pred1.equals(pred3)
         else:
             np.testing.assert_equal(pred3, pred1)
@@ -131,8 +130,8 @@ class TestRemoveDataPickleOLS(RemoveDataPickle):
     def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
-        np.random.seed(987689)
-        y = x.sum(axis=1) + np.random.randn(x.shape[0])
+        rs = np.random.RandomState(987689)
+        y = x.sum(axis=1) + rs.randn(x.shape[0])
         self.results = sm.OLS(y, self.exog).fit()
 
 
@@ -141,8 +140,8 @@ class TestRemoveDataPickleWLS(RemoveDataPickle):
     def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
-        np.random.seed(987689)
-        y = x.sum(axis=1) + np.random.randn(x.shape[0])
+        rs = np.random.RandomState(987689)
+        y = x.sum(axis=1) + rs.randn(x.shape[0])
         self.results = sm.WLS(y, self.exog, weights=np.ones(len(y))).fit()
 
 
@@ -151,17 +150,15 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
     def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
-        np.random.seed(987689)
-        y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        rs = np.random.RandomState(987689)
+        y_count = rs.poisson(np.exp(x.sum(1) - x.mean()))
 
         # bug with default
         model = sm.Poisson(y_count, x)
 
         # use start_params to converge faster
-        start_params = np.array(
-            [0.75334818, 0.99425553, 1.00494724, 1.00247112])
-        self.results = model.fit(start_params=start_params, method="bfgs",
-                                 disp=0)
+        start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
+        self.results = model.fit(start_params=start_params, method="bfgs", disp=0)
 
         # TODO: temporary, fixed in main
         self.predict_kwds = dict(exposure=1, offset=0)
@@ -171,7 +168,6 @@ class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
-        np.random.seed(987689)
         data = sm.datasets.randhie.load()
         mod = sm.NegativeBinomial(data.endog, data.exog)
         self.results = mod.fit(disp=0)
@@ -183,18 +179,15 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
         # fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
-        np.random.seed(987689)
-        y_bin = (np.random.rand(nobs) < 1.0 / (
-                    1 + np.exp(x.sum(1) - x.mean()))).astype(int)
+        rs = np.random.RandomState(987689)
+        y_bin = (rs.rand(nobs) < 1.0 / (1 + np.exp(x.sum(1) - x.mean()))).astype(int)
 
         # bug with default
         model = sm.Logit(y_bin, x)
 
         # use start_params to converge faster
-        start_params = np.array(
-            [-0.73403806, -1.00901514, -0.97754543, -0.95648212])
-        self.results = model.fit(start_params=start_params, method="bfgs",
-                                 disp=0)
+        start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
+        self.results = model.fit(start_params=start_params, method="bfgs", disp=0)
 
 
 class TestRemoveDataPickleRLM(RemoveDataPickle):
@@ -202,8 +195,8 @@ class TestRemoveDataPickleRLM(RemoveDataPickle):
     def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
-        np.random.seed(987689)
-        y = x.sum(axis=1) + np.random.randn(x.shape[0])
+        rs = np.random.RandomState(987689)
+        y = x.sum(axis=1) + rs.randn(x.shape[0])
         self.results = sm.RLM(y, self.exog).fit()
 
 
@@ -212,15 +205,14 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
     def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
-        np.random.seed(987689)
-        y = x.sum(axis=1) + np.random.randn(x.shape[0])
+        rs = np.random.RandomState(987689)
+        y = x.sum(axis=1) + rs.randn(x.shape[0])
         self.results = sm.GLM(y, self.exog).fit()
 
     def test_cached_data_removed(self):
         res = self.results
         # fill data-like members of the cache
-        names = ["resid_response", "resid_deviance",
-                 "resid_pearson", "resid_anscombe"]
+        names = ["resid_response", "resid_deviance", "resid_pearson", "resid_anscombe"]
         for name in names:
             getattr(res, name)
         # check that the attributes are present before calling remove_data
@@ -251,8 +243,8 @@ class TestRemoveDataPickleGLMConstrained(RemoveDataPickle):
     def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
-        np.random.seed(987689)
-        y = x.sum(axis=1) + np.random.randn(x.shape[0])
+        rs = np.random.RandomState(987689)
+        y = x.sum(axis=1) + rs.randn(x.shape[0])
         self.results = sm.GLM(y, self.exog).fit_constrained("x1=x2")
 
 
@@ -261,17 +253,16 @@ class TestPickleFormula(RemoveDataPickle):
     def setup_class(cls):
         super().setup_class()
         nobs = 10000
-        np.random.seed(987689)
-        x = np.random.randn(nobs, 3)
+        rs = np.random.RandomState(987689)
+        x = rs.randn(nobs, 3)
         cls.exog = pd.DataFrame(x, columns=["A", "B", "C"])
-        cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
-                              columns=cls.exog.columns)
+        cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)), columns=cls.exog.columns)
         cls.reduction_factor = 0.5
 
     def setup_method(self):
         x = self.exog
-        np.random.seed(123)
-        y = x.sum(axis=1) + np.random.randn(x.shape[0])
+        rs = np.random.RandomState(123)
+        y = x.sum(axis=1) + rs.randn(x.shape[0])
         y = pd.Series(y, name="Y")
         X = self.exog.copy()
         X["Y"] = y
@@ -283,31 +274,29 @@ class TestPickleFormula2(RemoveDataPickle):
     def setup_class(cls):
         super().setup_class()
         nobs = 500
-        np.random.seed(987689)
-        data = np.random.randn(nobs, 4)
+        rs = np.random.RandomState(987689)
+        data = rs.randn(nobs, 4)
         data[:, 0] = data[:, 1:].sum(1)
         cls.data = pd.DataFrame(data, columns=["Y", "A", "B", "C"])
-        cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
-                              columns=cls.data.columns[1:])
+        cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)), columns=cls.data.columns[1:])
         cls.reduction_factor = 0.666
 
     def setup_method(self):
-        self.results = sm.OLS.from_formula("Y ~ A + B + C",
-                                           data=self.data).fit()
+        self.results = sm.OLS.from_formula("Y ~ A + B + C", data=self.data).fit()
 
 
 class TestPickleFormula3(TestPickleFormula2):
 
     def setup_method(self):
-        self.results = sm.OLS.from_formula("Y ~ A + B * C",
-                                           data=self.data).fit()
+        self.results = sm.OLS.from_formula("Y ~ A + B * C", data=self.data).fit()
 
 
 class TestPickleFormula4(TestPickleFormula2):
 
     def setup_method(self):
-        self.results = sm.OLS.from_formula("Y ~ np.log(abs(A) + 1) + B * C",
-                                           data=self.data).fit()
+        self.results = sm.OLS.from_formula(
+            "Y ~ np.log(abs(A) + 1) + B * C", data=self.data
+        ).fit()
 
 
 # we need log in module namespace for TestPickleFormula5
@@ -316,8 +305,9 @@ class TestPickleFormula4(TestPickleFormula2):
 class TestPickleFormula5(TestPickleFormula2):
 
     def setup_method(self):
-        self.results = sm.OLS.from_formula("Y ~ log(abs(A) + 1) + B * C",
-                                           data=self.data).fit()
+        self.results = sm.OLS.from_formula(
+            "Y ~ log(abs(A) + 1) + B * C", data=self.data
+        ).fit()
 
 
 class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):
@@ -325,7 +315,7 @@ class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):
     def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
-        np.random.seed(987689)
-        y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        rs = np.random.RandomState(987689)
+        y_count = rs.poisson(np.exp(x.sum(1) - x.mean()))
         model = sm.Poisson(y_count, x)
         self.results = model.fit_regularized(method="l1", disp=0, alpha=10)

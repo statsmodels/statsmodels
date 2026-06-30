@@ -29,7 +29,7 @@ fit_funcs = {
 
 
 def dummy_func(x):
-    return x ** 2
+    return x**2
 
 
 def dummy_score(x):
@@ -84,13 +84,7 @@ def test_full_output_false(reset_randomstate):
 
         else:
             xopt, retvals = func(
-                dummy_func,
-                dummy_score,
-                [1.0],
-                (),
-                {},
-                full_output=False,
-                disp=0
+                dummy_func, dummy_score, [1.0], (), {}, full_output=False, disp=0
             )
         assert_(retvals is None)
         if method == "powell" and SP_LT_15:
@@ -116,13 +110,7 @@ def test_full_output(reset_randomstate):
 
         else:
             xopt, retvals = func(
-                dummy_func,
-                dummy_score,
-                [1.0],
-                (),
-                {},
-                full_output=True,
-                disp=0
+                dummy_func, dummy_score, [1.0], (), {}, full_output=True, disp=0
             )
 
         assert_(retvals is not None)

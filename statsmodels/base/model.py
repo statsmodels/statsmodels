@@ -2590,7 +2590,7 @@ class ResultMixin:
         """standard deviation of parameter estimates based on covjac"""
         return np.sqrt(np.diag(self.covjac))
 
-    def bootstrap(self, nrep=100, method="nm", disp=0, store=1):
+    def bootstrap(self, nrep=100, method="nm", disp=0, store=1, generator=None):
         """simple bootstrap to get mean and variance of estimator
 
         see notes
@@ -2606,6 +2606,9 @@ class ResultMixin:
         store : bool
             If true, then parameter estimates for all bootstrap iterations
             are attached in self.bootstrap_results
+        generator : np.random.RandomState or np.random.Generator, optional
+            Random generator to use in the bootstrap. If None, uses the
+            singleton RandomState provided by NumPy
 
         Returns
         -------
@@ -2628,7 +2631,14 @@ class ResultMixin:
         results = []
         hascloneattr = True if hasattr(self.model, "cloneattr") else False
         for _ in range(nrep):
-            rvsind = np.random.randint(self.nobs, size=self.nobs)
+            if generator is None:
+                rand_func = np.random.RandomState(8374462).randint
+            elif isinstance(generator, np.random.RandomState):
+                rand_func = generator.randint
+            else:
+                assert isinstance(generator, np.random.Generator)
+                rand_func = generator.integers
+            rvsind = rand_func(self.nobs, size=self.nobs)
             # this needs to set startparam and get other defining attributes
             # need a clone method on model
             if self.exog is not None:
