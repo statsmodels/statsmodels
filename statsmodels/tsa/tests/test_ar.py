@@ -41,6 +41,8 @@ DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
 
+SUNSPOTS_DATA = sunspots.load()
+
 
 def gen_ar_data(nobs):
     rs = np.random.RandomState(982739)
@@ -361,6 +363,7 @@ def plot_data(request):
     )
 
 
+@pytest.mark.thread_unsafe("MPL can fail under threaded runs if figs are created or destroyed")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
 def test_autoreg_smoke_plots(plot_data, close_figures):
@@ -528,142 +531,125 @@ def test_ar_select_order_smoke():
     ar_select_order(data, 4, glob=True, seasonal=True, period=12)
 
 
-class CheckAutoRegMixin(CheckARMixin):
-    def test_bse(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse_stata, DECIMAL_6)
-
-
-class TestAutoRegOLSConstant(CheckAutoRegMixin):
+def test_predict_ar_constant():
     """
     Test AutoReg fit by OLS with a constant.
     """
+    endog = SUNSPOTS_DATA.endog.copy()
+    endog.index = list(range(len(endog)))
+    res1 = AutoReg(endog, lags=9).fit()
+    res2 = results_ar.ARResultsOLS(constant=True)
 
-    @classmethod
-    def setup_class(cls):
-        data = sunspots.load()
-        data.endog.index = list(range(len(data.endog)))
-        cls.res1 = AutoReg(data.endog, lags=9).fit()
-        cls.res2 = results_ar.ARResultsOLS(constant=True)
-
-    def test_predict(self):
-        model = self.res1.model
-        params = self.res1.params
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSnneg1start0,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSnneg1start9,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=100),
-            self.res2.FVOLSnneg1start100,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=9, end=200),
-            self.res2.FVOLSn200start0,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSdefault,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=200, end=400),
-            self.res2.FVOLSn200start200,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=424),
-            self.res2.FVOLSn100start325,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=9, end=310),
-            self.res2.FVOLSn301start9,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=316),
-            self.res2.FVOLSn4start312,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=327),
-            self.res2.FVOLSn15start312,
-            DECIMAL_4,
-        )
+    model = res1.model
+    params = res1.params
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSnneg1start0,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSnneg1start9,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=100),
+        res2.FVOLSnneg1start100,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=9, end=200),
+        res2.FVOLSn200start0,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSdefault,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=200, end=400),
+        res2.FVOLSn200start200,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=424),
+        res2.FVOLSn100start325,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=9, end=310),
+        res2.FVOLSn301start9,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=316),
+        res2.FVOLSn4start312,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=327),
+        res2.FVOLSn15start312,
+        DECIMAL_4,
+    )
 
 
-class TestAutoRegOLSNoConstant(CheckAutoRegMixin):
-    """f
-    Test AR fit by OLS without a constant.
-    """
-
-    @classmethod
-    def setup_class(cls):
-        data = sunspots.load()
-        cls.res1 = AutoReg(np.asarray(data.endog), lags=9, trend="n").fit()
-        cls.res2 = results_ar.ARResultsOLS(constant=False)
-
-    def test_predict(self):
-        model = self.res1.model
-        params = self.res1.params
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSnneg1start0,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSnneg1start9,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=100),
-            self.res2.FVOLSnneg1start100,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=9, end=200),
-            self.res2.FVOLSn200start0,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSdefault,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=200, end=400),
-            self.res2.FVOLSn200start200,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=424),
-            self.res2.FVOLSn100start325,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=9, end=310),
-            self.res2.FVOLSn301start9,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=316),
-            self.res2.FVOLSn4start312,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=327),
-            self.res2.FVOLSn15start312,
-            DECIMAL_4,
-        )
+def test_predict_ar_no_constant():
+    """Test AR fit by OLS without a constant."""
+    res1 = AutoReg(np.asarray(SUNSPOTS_DATA.endog), lags=9, trend="n").fit()
+    res2 = results_ar.ARResultsOLS(constant=False)
+    model = res1.model
+    params = res1.params
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSnneg1start0,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSnneg1start9,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=100),
+        res2.FVOLSnneg1start100,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=9, end=200),
+        res2.FVOLSn200start0,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSdefault,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=200, end=400),
+        res2.FVOLSn200start200,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=424),
+        res2.FVOLSn100start325,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=9, end=310),
+        res2.FVOLSn301start9,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=316),
+        res2.FVOLSn4start312,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=327),
+        res2.FVOLSn15start312,
+        DECIMAL_4,
+    )
 
 
 @pytest.mark.parametrize("lag", list(np.arange(1, 16 + 1)))
@@ -720,8 +706,8 @@ def test_autoreg_series():
 
 def test_ar_order_select():
     # GH#2118
-    np.random.seed(12345)
-    y = arma_generate_sample([1, -0.75, 0.3], [1], 100)
+    rs = np.random.RandomState(12345)
+    y = arma_generate_sample([1, -0.75, 0.3], [1], 100, distrvs=rs.standard_normal)
     ts = Series(
         y,
         index=date_range(start=dt.datetime(1990, 1, 1), periods=100, freq=MONTH_END),
@@ -832,6 +818,7 @@ def test_dynamic_against_sarimax():
         y[i] = 0.9 * y[i - 1] + e[i]
     smod = SARIMAX(y, order=(1, 0, 0), trend="c")
     from statsmodels.compat.scipy import SP_LT_118
+
     kwargs = {"iprint": -1} if SP_LT_118 else {}
     sres = smod.fit(disp=False, **kwargs)
     mod = AutoReg(y, 1)

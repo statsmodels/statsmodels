@@ -363,9 +363,9 @@ def test_multivariate_acovf():
 
 def test_multivariate_pacf():
     # Test sample acovf in the univariate case against sm.tsa.acovf
-    np.random.seed(1234)
+    rs = np.random.RandomState(1234)
     x = np.arange(10000)
-    y = np.random.normal(size=10000)
+    y = rs.normal(size=10000)
     # Note: could make this test more precise with higher nobs, but no need to
     assert_allclose(
         tools._compute_multivariate_sample_pacf(np.c_[x, y], maxlag=1)[0],

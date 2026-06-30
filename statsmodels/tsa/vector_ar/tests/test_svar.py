@@ -78,10 +78,10 @@ class TestSVAR:
 
 def test_oneparam():
     # regression test, one parameter in A, B, issue #9302
-    np.random.seed(873562)
+    rs = np.random.RandomState(873562)
     lags = 2
     nobs = 200
-    y = np.random.randn(nobs, 3)
+    y = rs.randn(nobs, 3)
     y[1:] += 0.5 * y[:-1]
     A = np.asarray([[1, "E"], [0, 1.]])
     # A_guess = np.asarray([[1, 0.2], [0, 1.]])

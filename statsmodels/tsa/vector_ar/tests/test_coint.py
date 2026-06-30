@@ -149,9 +149,10 @@ class TestCointJoh25(CheckCointJoh):
 @pytest.mark.smoke
 def test_coint_johansen_0lag(reset_randomstate):
     # GH 5731
-    x_diff = np.random.normal(0, 1, 1000)
+    rs = np.random.RandomState(1927451)
+    x_diff = rs.normal(0, 1, 1000)
     x = pd.Series(np.cumsum(x_diff))
-    e1 = np.random.normal(0, 1, 1000)
+    e1 = rs.normal(0, 1, 1000)
     y = x + 5 + e1
     data = pd.concat([x, y], axis=1)
     result = coint_johansen(data, det_order=-1, k_ar_diff=0)

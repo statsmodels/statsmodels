@@ -188,6 +188,7 @@ class Clark1987:
             self.true_states.iloc[:, 2], 4
         )
 
+    @pytest.mark.thread_unsafe("Pickle can't be tested in parallel")
     def test_pickled_filter(self):
         pickled = pickle.loads(pickle.dumps(self.filter))
         #  Run the filters

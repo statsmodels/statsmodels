@@ -249,10 +249,11 @@ def test_ardl_holdback_exceptions(data):
 
 
 def test_ardl_fixed_exceptions(data):
-    fixed = np.random.standard_normal((2, 200))
+    rs = np.random.RandomState(992711)
+    fixed = rs.standard_normal((2, 200))
     with pytest.raises(ValueError, match="fixed must be an"):
         ARDL(data.y, 2, data.x, 2, fixed=fixed)
-    fixed = np.random.standard_normal((dane_data.lrm.shape[0], 2))
+    fixed = rs.standard_normal((dane_data.lrm.shape[0], 2))
     fixed[20, 0] = -np.inf
     with pytest.raises(ValueError, match="fixed must be an"):
         ARDL(data.y, 2, data.x, 2, fixed=fixed)

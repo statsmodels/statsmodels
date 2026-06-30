@@ -149,7 +149,8 @@ def test_validate_fixed_params(ar_order, ma_order, fixed_params, invalid_fixed_p
     # test validation with both _validate_fixed_params and directly with
     # hannan_rissanen
 
-    endog = np.random.normal(size=100)
+    rs = np.random.RandomState(2381235)
+    endog = rs.normal(size=100)
     spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order)
 
     if invalid_fixed_params is None:
@@ -356,7 +357,8 @@ def test_itsmr_with_fixed_params(fixed_params):
 
 def test_unbiased_error_with_fixed_params():
     # unbiased=True with fixed params should throw NotImplementedError for now
-    endog = np.random.normal(size=1000)
+    rs = np.random.RandomState(383382)
+    endog = rs.normal(size=1000)
     msg = (
         "Third step of Hannan-Rissanen estimation to remove parameter bias"
         " is not yet implemented for the case with fixed parameters."
@@ -370,7 +372,8 @@ def test_unbiased_error_with_fixed_params():
 def test_set_default_unbiased_with_fixed_params():
     # setting unbiased=None with fixed params should yield the exact same
     # results as setting unbiased=False
-    endog = np.random.normal(size=1000)
+    rs = np.random.RandomState(590193)
+    endog = rs.normal(size=1000)
     # unbiased=None
     p_1, other_results_2 = hannan_rissanen(
         endog, ar_order=1, ma_order=1, unbiased=None, fixed_params={"ar.L1": 0.69607715}

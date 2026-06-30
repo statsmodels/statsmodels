@@ -435,7 +435,8 @@ def test_hannan_rissanen_with_fixed_params(ar_order, ma_order, fixed_params):
     "random_state_type", [7, np.random.RandomState, np.random.default_rng]
 )
 def test_reproducible_simulation(random_state_type):
-    x = np.random.randn(100)
+    rg = np.random.RandomState(12345)
+    x = rg.randn(100)
     res = ARIMA(x, order=(1, 0, 0)).fit()
 
     def get_random_state(val):
@@ -453,8 +454,8 @@ def test_reproducible_simulation(random_state_type):
 def test_alternative_estimators_seasonal_differencing():
     # Seasonal differencing only (P=0, D=1, Q=0) should be accepted by
     # non-seasonal estimators; seasonal AR or MA terms should be rejected.
-    np.random.seed(12345)
-    endog = np.random.standard_normal(48)
+    rg = np.random.RandomState(12345)
+    endog = rg.standard_normal(48)
 
     order = (1, 0, 1)
     seasonal_order = (0, 1, 0, 12)
