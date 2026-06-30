@@ -32,7 +32,8 @@ DECIMAL_2 = 2
 @pytest.fixture
 def bivariate_var_data(reset_randomstate):
     """A bivariate dataset for VAR estimation"""
-    e = np.random.standard_normal((252, 2))
+    rs = np.random.RandomState(2382178)
+    e = rs.standard_normal((252, 2))
     y = np.zeros_like(e)
     y[:2] = e[:2]
     for i in range(2, 252):
@@ -896,7 +897,8 @@ def test_var_cov_params_pandas(bivariate_var_data):
 
 
 def test_summaries_exog(reset_randomstate):
-    y = np.random.standard_normal((500, 6))
+    rs = np.random.RandomState(2182378)
+    y = rs.standard_normal((500, 6))
     df = pd.DataFrame(y)
     cols = [f"endog_{i}" for i in range(2)] + [f"exog_{i}" for i in range(4)]
     df.columns = cols
@@ -921,14 +923,16 @@ def test_summaries_exog(reset_randomstate):
 
 def test_whiteness_nlag(reset_randomstate):
     # GH 6686
-    y = np.random.standard_normal((200, 2))
+    rs = np.random.RandomState(233078)
+    y = rs.standard_normal((200, 2))
     res = VAR(y).fit(maxlags=1, ic=None)
     with pytest.raises(ValueError, match="The whiteness test can only"):
         res.test_whiteness(1)
 
 
 def test_var_maxlag(reset_randomstate):
-    y = np.random.standard_normal((22, 10))
+    rs = np.random.RandomState(2382378)
+    y = rs.standard_normal((22, 10))
     VAR(y).fit(maxlags=None, ic="aic")
     with pytest.raises(ValueError, match="maxlags is too large"):
         VAR(y).fit(maxlags=8, ic="aic")
@@ -951,7 +955,8 @@ def test_correct_nobs():
     data = np.log(mdata).diff().dropna()
     data.index.freq = data.index.inferred_freq
     data_exog = pd.DataFrame(index=data.index)
-    data_exog["exovar1"] = np.random.normal(size=data_exog.shape[0])
+    rs = np.random.RandomState(238971)
+    data_exog["exovar1"] = rs.normal(size=data_exog.shape[0])
     # make a VAR model
     model = VAR(endog=data, exog=data_exog)
     results = model.fit(maxlags=1)
@@ -985,7 +990,8 @@ def test_0_lag(reset_randomstate):
 
 def test_forecast_wrong_shape_params(reset_randomstate):
     # GH 9412
-    y = np.random.rand(300, 2)
+    rs = np.random.RandomState(233751)
+    y = rs.rand(300, 2)
     mod = VAR(y)
     results = mod.fit(maxlags=1, ic="aic", trend="c")
     with pytest.raises(ValueError):

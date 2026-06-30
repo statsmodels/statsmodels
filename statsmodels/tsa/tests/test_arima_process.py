@@ -157,17 +157,16 @@ def _manual_arma_generate_sample(ar, ma, eta):
 
 @pytest.mark.parametrize("ar", arlist)
 @pytest.mark.parametrize("ma", malist)
-@pytest.mark.parametrize("dist", [np.random.standard_normal])
-def test_arma_generate_sample(dist, ar, ma):
+def test_arma_generate_sample(ar, ma):
     # Test that this generates a true ARMA process
     # (amounts to just a test that scipy.signal.lfilter does what we want)
     T = 100
-    np.random.seed(1234)
-    eta = dist(T)
+    rg = np.random.RandomState(1234)
+    eta = rg.standard_normal(T)
 
     # rep1: from module function
-    np.random.seed(1234)
-    rep1 = arma_generate_sample(ar, ma, T, distrvs=dist)
+    rg2 = np.random.RandomState(1234)
+    rep1 = arma_generate_sample(ar, ma, T, distrvs=rg2.standard_normal)
     # rep2: "manually" create the ARMA process
     ar_params = -1 * np.array(ar[1:])
     ma_params = np.array(ma[1:])
@@ -411,36 +410,36 @@ class TestArmaProcess:
 
     def test_generate_sample(self):
         process = ArmaProcess.from_coeffs([0.9])
-        np.random.seed(12345)
-        sample = process.generate_sample()
-        np.random.seed(12345)
-        expected = np.random.randn(100)
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(distrvs=rs.standard_normal)
+        rs = np.random.RandomState(12345)
+        expected = rs.randn(100)
         for i in range(1, 100):
             expected[i] = 0.9 * expected[i - 1] + expected[i]
         assert_almost_equal(sample, expected)
 
         process = ArmaProcess.from_coeffs([1.6, -0.9])
-        np.random.seed(12345)
-        sample = process.generate_sample()
-        np.random.seed(12345)
-        expected = np.random.randn(100)
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(distrvs=rs.standard_normal)
+        rs = np.random.RandomState(12345)
+        expected = rs.randn(100)
         expected[1] = 1.6 * expected[0] + expected[1]
         for i in range(2, 100):
             expected[i] = 1.6 * expected[i - 1] - 0.9 * expected[i - 2] + expected[i]
         assert_almost_equal(sample, expected)
 
         process = ArmaProcess.from_coeffs([1.6, -0.9])
-        np.random.seed(12345)
-        sample = process.generate_sample(burnin=100)
-        np.random.seed(12345)
-        expected = np.random.randn(200)
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(burnin=100, distrvs=rs.standard_normal)
+        rs = np.random.RandomState(12345)
+        expected = rs.randn(200)
         expected[1] = 1.6 * expected[0] + expected[1]
         for i in range(2, 200):
             expected[i] = 1.6 * expected[i - 1] - 0.9 * expected[i - 2] + expected[i]
         assert_almost_equal(sample, expected[100:])
 
-        np.random.seed(12345)
-        sample = process.generate_sample(nsample=(100, 5))
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(nsample=(100, 5), distrvs=rs.standard_normal)
         assert_equal(sample.shape, (100, 5))
 
     def test_impulse_response(self):

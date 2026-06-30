@@ -501,10 +501,10 @@ class TestDFM:
         k_endog = cls.model.k_endog
         k_posdef = cls.model.k_posdef
 
-        np.random.seed(1234)
-        mdv = np.random.normal(size=nobs * k_endog)
-        sdv = np.random.normal(size=nobs * k_posdef)
-        isv = np.random.normal(size=cls.model.k_states)
+        rs = np.random.RandomState(1234)
+        mdv = rs.normal(size=nobs * k_endog)
+        sdv = rs.normal(size=nobs * k_posdef)
+        isv = rs.normal(size=cls.model.k_states)
 
         # Collapsed filtering, smoothing, and simulation smoothing
         cls.model.filter_collapsed = True
@@ -754,7 +754,8 @@ class TestDFMMeasurementDisturbance(TestDFM):
 def test_dfm_missing(reset_randomstate):
     # This test is not captured by the TestTrivariate and TestDFM tests above
     # because it has k_states = 1
-    endog = np.random.normal(size=(100, 3))
+    rs = np.random.RandomState(328392)
+    endog = rs.normal(size=(100, 3))
     endog[0, :1] = np.nan
 
     mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)

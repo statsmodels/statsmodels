@@ -130,8 +130,8 @@ class TestLagmat:
         cols = list(cls.macro_df.columns)
         cls.realgdp_loc = cols.index("realgdp")
         cls.cpi_loc = cols.index("cpi")
-        np.random.seed(12345)
-        cls.random_data = np.random.randn(100)
+        rs = np.random.RandomState(12345)
+        cls.random_data = rs.randn(100)
 
         index = [
             str(int(yr)) + "-Q" + str(int(qu))
@@ -700,8 +700,8 @@ class TestLagmat2DS:
     def setup_class(cls):
         data = macrodata.load_pandas()
         cls.macro_df = data.data[["year", "quarter", "realgdp", "cpi"]]
-        np.random.seed(12345)
-        cls.random_data = np.random.randn(100)
+        rs = np.random.RandomState(12345)
+        cls.random_data = rs.randn(100)
         index = [
             str(int(yr)) + "-Q" + str(int(qu))
             for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)
@@ -808,7 +808,8 @@ class TestLagmat2DS:
 
 
 def test_grangercausality():
-    data = np.random.rand(100, 2)
+    rs = np.random.RandomState(66483)
+    data = rs.rand(100, 2)
     with pytest.warns(FutureWarning, match="verbose"):
         out = stattools.grangercausalitytests(data, maxlag=2, verbose=False)
     result, models = out[1]
