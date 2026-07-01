@@ -204,8 +204,8 @@ class CheckExtras():
         r_matrix[0, -1] = 1
         # use random expg_extra, then we don't reject null
         # exog_extra = res1.model.exog[:, 1:2]
-        np.random.seed(987125643)
-        exog_extra = 0.01 * np.random.randn(endog.shape[0])
+        rs = np.random.RandomState(987125643)
+        exog_extra = 0.01 * rs.randn(endog.shape[0])
 
         from statsmodels.base._parameter_inference import _scorehess_extra, score_test
 
@@ -327,10 +327,10 @@ models_influ = [
 
 
 def get_data_simulated():
-    np.random.seed(987456348)
+    rs = np.random.RandomState(987456348)
     nobs = 500
     x = np.ones((nobs, 1))
-    yn = np.random.randn(nobs)
+    yn = rs.randn(nobs)
     y = 1 * (1.5 + yn)**2
     y = np.trunc(y+0.5)
     return y, x

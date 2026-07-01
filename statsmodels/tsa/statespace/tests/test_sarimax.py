@@ -2083,11 +2083,11 @@ def test_misc_exog():
     # Tests for missing data
     nobs = 20
     k_endog = 1
-    np.random.seed(1208)
-    endog = np.random.normal(size=(nobs, k_endog))
+    rs = np.random.RandomState(1208)
+    endog = rs.normal(size=(nobs, k_endog))
     endog[:4, 0] = np.nan
-    exog1 = np.random.normal(size=(nobs, 1))
-    exog2 = np.random.normal(size=(nobs, 2))
+    exog1 = rs.normal(size=(nobs, 1))
+    exog2 = rs.normal(size=(nobs, 2))
 
     index = pd.date_range("1970-01-01", freq="QS", periods=nobs)
     endog_pd = pd.DataFrame(endog, index=index)
@@ -2115,16 +2115,16 @@ def test_misc_exog():
         assert isinstance(res.predict(dynamic=True), typ)
         assert isinstance(res.get_prediction().predicted_mean, typ)
 
-        oos_exog = np.random.normal(size=(1, mod.k_exog))
+        oos_exog = rs.normal(size=(1, mod.k_exog))
         assert isinstance(res.forecast(steps=1, exog=oos_exog), typ)
         assert isinstance(res.get_forecast(steps=1, exog=oos_exog).predicted_mean, typ)
 
         # Smoke tests for invalid exog
-        oos_exog = np.random.normal(size=(2, mod.k_exog))
+        oos_exog = rs.normal(size=(2, mod.k_exog))
         with pytest.raises(ValueError):
             res.forecast(steps=1, exog=oos_exog)
 
-        oos_exog = np.random.normal(size=(1, mod.k_exog + 1))
+        oos_exog = rs.normal(size=(1, mod.k_exog + 1))
         with pytest.raises(ValueError):
             res.forecast(steps=1, exog=oos_exog)
 
@@ -2137,16 +2137,16 @@ def test_misc_exog():
 def test_datasets():
     # Test that some unusual types of datasets work
 
-    np.random.seed(232849)
-    endog = np.random.binomial(1, 0.5, size=100)
-    exog = np.random.binomial(1, 0.5, size=100)
+    rs = np.random.RandomState(232849)
+    endog = rs.binomial(1, 0.5, size=100)
+    exog = rs.binomial(1, 0.5, size=100)
     mod = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
     mod.fit(disp=-1)
 
 
 def test_predict_custom_index():
-    np.random.seed(328423)
-    endog = pd.DataFrame(np.random.normal(size=50))
+    rs = np.random.RandomState(328423)
+    endog = pd.DataFrame(rs.normal(size=50))
     mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
     res = mod.smooth(mod.start_params)
     out = res.predict(start=1, end=1, index=["a"])
@@ -2156,9 +2156,9 @@ def test_predict_custom_index():
 def test_arima000():
     # Test an ARIMA(0, 0, 0) with measurement error model (i.e. just estimating
     # a variance term)
-    np.random.seed(328423)
+    rs = np.random.RandomState(328423)
     nobs = 50
-    endog = pd.DataFrame(np.random.normal(size=nobs))
+    endog = pd.DataFrame(rs.normal(size=nobs))
     mod = sarimax.SARIMAX(endog, order=(0, 0, 0), measurement_error=False)
     res = mod.smooth(mod.start_params)
     assert_allclose(res.smoothed_state, endog.T)
@@ -2169,7 +2169,7 @@ def test_arima000():
     assert_allclose(res.smoothed_state[1:, 1:], endog.diff()[1:].T)
 
     # Exogenous variables
-    error = np.random.normal(size=nobs)
+    error = rs.normal(size=nobs)
     endog = np.ones(nobs) * 10 + error
     exog = np.ones(nobs)
 
@@ -2412,11 +2412,11 @@ def check_concentrated_scale(filter_univariate=False):
         # Test simulate
         # Simulate is currently broken for time-varying models, so do not try
         # to test it here
-        np.random.seed(13847)
+        rs = np.random.RandomState(13847)
         if mod_conc.ssm.time_invariant:
-            measurement_shocks = np.random.normal(size=10)
-            state_shocks = np.random.normal(size=10)
-            initial_state = np.random.normal(size=(mod_conc.k_states, 1))
+            measurement_shocks = rs.normal(size=10)
+            state_shocks = rs.normal(size=10)
+            initial_state = rs.normal(size=(mod_conc.k_states, 1))
             actual = res_conc.simulate(
                 10, measurement_shocks, state_shocks, initial_state
             )

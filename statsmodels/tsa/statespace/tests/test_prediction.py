@@ -20,8 +20,8 @@ dta.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
 
 def test_predict_dates():
     index = pd.date_range(start="1950-01-01", periods=11, freq="D")
-    np.random.seed(324328)
-    endog = pd.Series(np.random.normal(size=10), index=index[:-1])
+    rs = np.random.RandomState(324328)
+    endog = pd.Series(rs.normal(size=10), index=index[:-1])
 
     # Basic test
     mod = sarimax.SARIMAX(endog, order=(1, 0, 0))

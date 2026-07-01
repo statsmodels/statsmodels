@@ -185,28 +185,28 @@ def test_framing_example_moderator_formula():
 def t_est_mixedlm():
 
     # check backwards compat of np.random
-    np.random.seed(3424)
-    mn = np.random.randn(5)
-    c = 1e-4 * (np.random.rand(5, 5) - 0.5)
+    rs = np.random.RandomState(3424)
+    mn = rs.randn(5)
+    c = 1e-4 * (rs.rand(5, 5) - 0.5)
     cov = np.eye(5) + c + c.T
-    rvs = np.random.multivariate_normal(mn, cov)
+    rvs = rs.multivariate_normal(mn, cov)
     rvs1 = [0.3357151, 1.26183927, 1.22539916, 0.85838887, -0.0493799]
     assert_allclose(rvs, rvs1, atol=1e-7)
 
-    np.random.seed(3424)
+    rs = np.random.RandomState(3424)
 
     n = 200
 
     # The exposure (not time varying)
-    x = np.random.normal(size=n)
+    x = rs.normal(size=n)
     xv = np.outer(x, np.ones(3))
 
     # The mediator (with random intercept)
     mx = np.asarray([4., 4, 1])
     mx /= np.sqrt(np.sum(mx**2))
     med = mx[0] * np.outer(x, np.ones(3))
-    med += mx[1] * np.outer(np.random.normal(size=n), np.ones(3))
-    med += mx[2] * np.random.normal(size=(n, 3))
+    med += mx[1] * np.outer(rs.normal(size=n), np.ones(3))
+    med += mx[2] * rs.normal(size=(n, 3))
 
     # The outcome (exposure and mediator effects)
     ey = np.outer(x, np.r_[0, 0.5, 1]) + med
@@ -214,9 +214,9 @@ def t_est_mixedlm():
     # Random structure of the outcome (random intercept and slope)
     ex = np.asarray([5., 2, 2])
     ex /= np.sqrt(np.sum(ex**2))
-    e = ex[0] * np.outer(np.random.normal(size=n), np.ones(3))
-    e += ex[1] * np.outer(np.random.normal(size=n), np.r_[-1, 0, 1])
-    e += ex[2] * np.random.normal(size=(n, 3))
+    e = ex[0] * np.outer(rs.normal(size=n), np.ones(3))
+    e += ex[1] * np.outer(rs.normal(size=n), np.r_[-1, 0, 1])
+    e += ex[2] * rs.normal(size=(n, 3))
     y = ey + e
 
     # Group membership
@@ -271,17 +271,17 @@ def t_est_mixedlm():
 
 def test_surv():
 
-    np.random.seed(2341)
+    rs = np.random.RandomState(2341)
 
     n = 1000
 
     # Generate exposures
-    exp = np.random.normal(size=n)
+    exp = rs.normal(size=n)
 
     # Generate mediators
     mn = np.exp(exp)
-    mtime0 = -mn * np.log(np.random.uniform(size=n))
-    ctime = -2 * mn * np.log(np.random.uniform(size=n))
+    mtime0 = -mn * np.log(rs.uniform(size=n))
+    ctime = -2 * mn * np.log(rs.uniform(size=n))
     mstatus = (ctime >= mtime0).astype(int)
     mtime = np.where(mtime0 <= ctime, mtime0, ctime)
 
@@ -297,8 +297,8 @@ def test_surv():
 
         # Generate outcomes
         mn = np.exp(-lp)
-        ytime0 = -mn * np.log(np.random.uniform(size=n))
-        ctime = -2 * mn * np.log(np.random.uniform(size=n))
+        ytime0 = -mn * np.log(rs.uniform(size=n))
+        ctime = -2 * mn * np.log(rs.uniform(size=n))
         ystatus = (ctime >= ytime0).astype(int)
         ytime = np.where(ytime0 <= ctime, ytime0, ctime)
 

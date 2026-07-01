@@ -810,9 +810,9 @@ class Test_ROS_RNADAdata(CheckROSMixin):
 
 class Test_NoOp_ZeroND(CheckROSMixin):
     decimal = 2
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     N = 20
-    res = np.random.lognormal(size=N)
+    res = rs.lognormal(size=N)
     cen = [False] * N
     rescol = "obs"
     cencol = "cen"

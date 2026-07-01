@@ -213,8 +213,8 @@ class TestProbPlotLongelyWithFit(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data)
         self.line = None
         super().setup_method()
@@ -222,8 +222,8 @@ class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, fit=True)
         self.line = "q"
         super().setup_method()
@@ -231,8 +231,8 @@ class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, dist=stats.norm(loc=8.5, scale=3.0))
         self.line = "45"
         super().setup_method()
@@ -260,9 +260,9 @@ class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
 
 class TestCompareSamplesDifferentSize:
     def setup_method(self):
-        np.random.seed(5)
-        self.data1 = ProbPlot(np.random.normal(loc=8.25, scale=3.25, size=37))
-        self.data2 = ProbPlot(np.random.normal(loc=8.25, scale=3.25, size=55))
+        rs = np.random.RandomState(5)
+        self.data1 = ProbPlot(rs.normal(loc=8.25, scale=3.25, size=37))
+        self.data2 = ProbPlot(rs.normal(loc=8.25, scale=3.25, size=55))
 
     @pytest.mark.matplotlib
     def test_qqplot(self, close_figures):
@@ -278,8 +278,8 @@ class TestCompareSamplesDifferentSize:
 
 class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, loc=8, scale=3)
         self.line = "45"
         super().setup_method()
@@ -472,9 +472,9 @@ class TestDoPlot:
 
 class TestQQLine:
     def setup_method(self):
-        np.random.seed(0)
-        self.x = np.sort(np.random.normal(loc=2.9, scale=1.2, size=37))
-        self.y = np.sort(np.random.normal(loc=3.0, scale=1.1, size=37))
+        rs = np.random.RandomState(0)
+        self.x = np.sort(rs.normal(loc=2.9, scale=1.2, size=37))
+        self.y = np.sort(rs.normal(loc=3.0, scale=1.1, size=37))
         try:
             import matplotlib.pyplot as plt
 

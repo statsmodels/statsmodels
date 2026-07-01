@@ -475,9 +475,9 @@ def test_rank_compare_ord():
 
 
 def test_rank_compare_vectorized():
-    np.random.seed(987126)
-    x1 = np.random.randint(0, 20, (50, 3))
-    x2 = np.random.randint(5, 25, (50, 3))
+    rs = np.random.RandomState(987126)
+    x1 = rs.randint(0, 20, (50, 3))
+    x2 = rs.randint(5, 25, (50, 3))
     res = rank_compare_2indep(x1, x2)
     tst = res.test_prob_superior(0.5)
     tost = res.tost_prob_superior(0.4, 0.6)

@@ -23,13 +23,13 @@ def test_predict_se():
     nsample = 50
     x1 = np.linspace(0, 20, nsample)
     x = np.c_[x1, (x1 - 5) ** 2, np.ones(nsample)]
-    np.random.seed(0)  # 9876789) #9876543)
+    rs = np.random.RandomState(0)  # 9876789) #9876543)
     beta = [0.5, -0.01, 5.0]
     y_true2 = np.dot(x, beta)
     w = np.ones(nsample)
     w[int(nsample * 6.0 / 10) :] = 3
     sig = 0.5
-    y2 = y_true2 + sig * w * np.random.normal(size=nsample)
+    y2 = y_true2 + sig * w * rs.normal(size=nsample)
     x2 = x[:, [0, 2]]
 
     # estimate OLS

@@ -805,8 +805,8 @@ def test_miscellaneous():
 
 
 def test_predict_custom_index():
-    np.random.seed(328423)
-    endog = pd.DataFrame(np.random.normal(size=(50, 2)))
+    rs = np.random.RandomState(328423)
+    endog = pd.DataFrame(rs.normal(size=(50, 2)))
     mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
     res = mod.smooth(mod.start_params)
     out = res.predict(start=1, end=1, index=["a"])

@@ -66,13 +66,13 @@ class TestPoissonMLE(CompareMixin):
     def setup_class(cls):
 
         # generate artificial data
-        np.random.seed(98765678)
+        rs = np.random.RandomState(98765678)
         nobs = 200
-        rvs = np.random.randn(nobs, 6)
+        rvs = rs.randn(nobs, 6)
         data_exog = rvs
         data_exog = sm.add_constant(data_exog, prepend=False)
         xbeta = 0.1 + 0.1 * rvs.sum(1)
-        data_endog = np.random.poisson(np.exp(xbeta))
+        data_endog = rs.poisson(np.exp(xbeta))
 
         # estimate discretemod.Poisson as benchmark
         cls.res_discrete = Poisson(data_endog, data_exog).fit(disp=0)
@@ -109,13 +109,13 @@ class TestPoissonOffset(CompareMixin):
     @classmethod
     def setup_class(cls):
         # generate artificial data
-        np.random.seed(98765678)
+        rs = np.random.RandomState(98765678)
         nobs = 200
-        rvs = np.random.randn(nobs, 6)
+        rvs = rs.randn(nobs, 6)
         data_exog = rvs
         data_exog = sm.add_constant(data_exog, prepend=False)
         xbeta = 1 + 0.1 * rvs.sum(1)
-        data_endog = np.random.poisson(np.exp(xbeta))
+        data_endog = rs.poisson(np.exp(xbeta))
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
         cls.res_glm = mod_glm.fit()
@@ -161,13 +161,13 @@ class TestPoissonZi(CompareMixin):
     def setup_class(cls):
 
         # generate artificial data
-        np.random.seed(98765678)
+        rs = np.random.RandomState(98765678)
         nobs = 200
-        rvs = np.random.randn(nobs, 6)
+        rvs = rs.randn(nobs, 6)
         data_exog = rvs
         data_exog = sm.add_constant(data_exog, prepend=False)
         xbeta = 1 + 0.1 * rvs.sum(1)
-        data_endog = np.random.poisson(np.exp(xbeta))
+        data_endog = rs.poisson(np.exp(xbeta))
         cls.k_extra = 1
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())

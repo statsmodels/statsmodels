@@ -187,8 +187,8 @@ class TestWeightedCohens(CheckCohens):
 
 def test_cohenskappa_weights():
     # some tests for equivalent results with different options
-    np.random.seed(9743678)
-    table = np.random.randint(0, 10, size=(5, 5)) + 5*np.eye(5)
+    rs = np.random.RandomState(9743678)
+    table = rs.randint(0, 10, size=(5, 5)) + 5*np.eye(5)
 
     # example aggregation, 2 groups of levels
     mat = np.array([[1, 1, 1, 0, 0], [0, 0, 0, 1, 1]])

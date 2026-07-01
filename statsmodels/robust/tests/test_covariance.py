@@ -21,8 +21,8 @@ dta_hbk = pd.read_csv(file_path)
 
 
 def test_mahalanobis():
-    np.random.seed(987676453)
-    x = np.random.randn(10, 3)
+    rs = np.random.RandomState(987676453)
+    x = rs.randn(10, 3)
 
     d1 = (x**2).sum(1)
     d0 = robcov.mahalanobis(x, np.eye(3))
@@ -40,10 +40,10 @@ def test_outliers_gy():
     # regression test and basic properties
     # no test for tie warnings
     seed = 567812  # 123
-    np.random.seed(seed)
+    rs = np.random.RandomState(seed)
 
     nobs = 1000
-    x = np.random.randn(nobs)
+    x = rs.randn(nobs)
     d = x**2
     d2 = d.copy()
     n_outl = 10
@@ -299,8 +299,8 @@ def test_robcov_SMOKE():
     mean = np.zeros(k_vars)
     cov = linalg.toeplitz(1. / np.arange(1, k_vars+1))
 
-    np.random.seed(187649)
-    x = np.random.multivariate_normal(mean, cov, size=nobs)
+    rs = np.random.RandomState(187649)
+    x = rs.multivariate_normal(mean, cov, size=nobs)
     n_outliers = 1
     x[0, :2] = 50
 

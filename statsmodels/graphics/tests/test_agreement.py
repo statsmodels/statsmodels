@@ -15,9 +15,9 @@ def test_mean_diff_plot(close_figures):
 
     # Seed the random number generator.
     # This ensures that the results below are reproducible.
-    np.random.seed(11111)
-    m1 = np.random.random(20)
-    m2 = np.random.random(20)
+    rs = np.random.RandomState(11111)
+    m1 = rs.random(20)
+    m2 = rs.random(20)
 
     fig = plt.figure()
     ax = fig.add_subplot(111)

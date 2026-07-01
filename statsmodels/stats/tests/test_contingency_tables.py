@@ -47,10 +47,10 @@ def test_homogeneity():
 
 def test_SquareTable_from_data():
 
-    np.random.seed(434)
+    rs = np.random.RandomState(434)
     df = pd.DataFrame(index=range(100), columns=["v1", "v2"])
-    df["v1"] = np.random.randint(0, 5, 100)
-    df["v2"] = np.random.randint(0, 5, 100)
+    df["v1"] = rs.randint(0, 5, 100)
+    df["v2"] = rs.randint(0, 5, 100)
     table = pd.crosstab(df["v1"], df["v2"])
 
     rslt1 = ctab.SquareTable(table)
@@ -194,9 +194,9 @@ def test_ordinal_association():
 
 def test_chi2_association():
 
-    np.random.seed(8743)
+    rs = np.random.RandomState(8743)
 
-    table = np.random.randint(10, 30, size=(4, 4))
+    table = rs.randint(10, 30, size=(4, 4))
 
     from scipy.stats import chi2_contingency
     rslt_scipy = chi2_contingency(table)
@@ -387,10 +387,10 @@ class CheckStratifiedMixin:
 
     def test_from_data(self):
 
-        np.random.seed(241)
+        rs = np.random.RandomState(241)
         df = pd.DataFrame(index=range(100), columns=("v1", "v2", "strat"))
-        df["v1"] = np.random.randint(0, 2, 100)
-        df["v2"] = np.random.randint(0, 2, 100)
+        df["v1"] = rs.randint(0, 2, 100)
+        df["v2"] = rs.randint(0, 2, 100)
         df["strat"] = np.kron(np.arange(10), np.ones(10))
 
         tables = []

@@ -18,13 +18,13 @@ if __name__ == "__main__":
 
     from statsmodels.sandbox.nonparametric import kernels, smoothers
 
-    np.random.seed(500)
+    rs = np.random.RandomState(500)
     nobs = 250
     sig_fac = 0.5
     # x = np.random.normal(size=nobs)
-    x = np.random.uniform(-2, 2, size=nobs)
+    x = rs.uniform(-2, 2, size=nobs)
     # y = np.array([np.sin(i*5)/i + 2*i + (3+i)*np.random.normal() for i in x])
-    y = np.sin(x * 5) / x + 2 * x + sig_fac * (3 + x) * np.random.normal(size=nobs)
+    y = np.sin(x * 5) / x + 2 * x + sig_fac * (3 + x) * rs.normal(size=nobs)
 
     K = kernels.Biweight(0.25)
     K2 = kernels.CustomKernel(lambda x: (1 - x * x) ** 2, 0.25, domain=[-1.0, 1.0])
