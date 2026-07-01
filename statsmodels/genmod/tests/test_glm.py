@@ -501,12 +501,12 @@ class TestGaussianLog(CheckModelResultsMixin):
 
         nobs = 100
         x = np.arange(nobs)
-        rs = np.random.RandomState(54321)
+        np.random.seed(54321)
         #        y = 1.0 - .02*x - .001*x**2 + 0.001 * np.random.randn(nobs)
         cls.X = np.c_[np.ones((nobs, 1)), x, x**2]
         cls.lny = np.exp(
             -(-1.0 + 0.02 * x + 0.0001 * x**2)
-        ) + 0.001 * rs.randn(nobs)
+        ) + 0.001 * np.random.randn(nobs)
 
         GaussLog_Model = GLM(
             cls.lny,
@@ -540,10 +540,10 @@ class TestGaussianInverse(CheckModelResultsMixin):
 
         nobs = 100
         x = np.arange(nobs)
-        rs = np.random.RandomState(54321)
-        cls.y = 1.0 + 2.0 * x + x**2 + 0.1 * rs.randn(nobs)
+        np.random.seed(54321)
+        cls.y = 1.0 + 2.0 * x + x**2 + 0.1 * np.random.randn(nobs)
         cls.X = np.c_[np.ones((nobs, 1)), x, x**2]
-        cls.y_inv = (1.0 + 0.02 * x + 0.001 * x**2) ** -1 + 0.001 * rs.randn(
+        cls.y_inv = (1.0 + 0.02 * x + 0.001 * x**2) ** -1 + 0.001 * np.random.randn(
             nobs
         )
         InverseLink_Model = GLM(
@@ -1051,11 +1051,11 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
 
     def test_offset_exposure(self):
         # exposure=x and offset=log(x) should have the same effect
-        rs = np.random.RandomState(382304)
-        endog = rs.randint(0, 10, 100)
-        exog = rs.normal(size=(100, 3))
-        exposure = rs.uniform(1, 2, 100)
-        offset = rs.uniform(1, 2, 100)
+        np.random.seed(382304)
+        endog = np.random.randint(0, 10, 100)
+        exog = np.random.normal(size=(100, 3))
+        exposure = np.random.uniform(1, 2, 100)
+        offset = np.random.uniform(1, 2, 100)
         mod1 = GLM(
             endog,
             exog,
@@ -1083,13 +1083,13 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         assert_allclose(resr1.params, resr2.params, rtol=1e-10)
 
     def test_predict(self):
-        rs = np.random.RandomState(382304)
-        endog = rs.randint(0, 10, 100)
-        exog = rs.normal(size=(100, 3))
-        exposure = rs.uniform(1, 2, 100)
+        np.random.seed(382304)
+        endog = np.random.randint(0, 10, 100)
+        exog = np.random.normal(size=(100, 3))
+        exposure = np.random.uniform(1, 2, 100)
         mod1 = GLM(endog, exog, family=sm.families.Poisson(), exposure=exposure).fit()
-        exog1 = rs.normal(size=(10, 3))
-        exposure1 = rs.uniform(1, 2, 10)
+        exog1 = np.random.normal(size=(10, 3))
+        exposure1 = np.random.uniform(1, 2, 10)
 
         # Doubling exposure time should double expected response
         pred1 = mod1.predict(exog=exog1, exposure=exposure1)
@@ -1104,7 +1104,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         assert_almost_equal(pred4, pred5)
 
         # Check offset defaults
-        offset = rs.uniform(1, 2, 100)
+        offset = np.random.uniform(1, 2, 100)
         mod2 = GLM(endog, exog, offset=offset, family=sm.families.Poisson()).fit()
         pred1 = mod2.predict()
         pred2 = mod2.predict(which="mean", offset=offset)
@@ -1114,7 +1114,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
 
         # Check that offset shifts the linear predictor
         mod3 = GLM(endog, exog, family=sm.families.Poisson()).fit()
-        offset = rs.uniform(1, 2, 10)
+        offset = np.random.uniform(1, 2, 10)
         with pytest.warns(FutureWarning):
             # deprecation warning for linear keyword
             pred1 = mod3.predict(exog=exog1, offset=offset, linear=True)
@@ -1143,13 +1143,13 @@ def test_score_test_ols():
     # nicer example than Longley
     from statsmodels.regression.linear_model import OLS
 
-    rs = np.random.RandomState(5)
+    np.random.seed(5)
     nobs = 100
     sige = 0.5
-    x = rs.uniform(0, 1, size=(nobs, 5))
+    x = np.random.uniform(0, 1, size=(nobs, 5))
     x[:, 0] = 1
     beta = 1.0 / np.arange(1.0, x.shape[1] + 1)
-    y = x.dot(beta) + sige * rs.randn(nobs)
+    y = x.dot(beta) + sige * np.random.randn(nobs)
 
     res_ols = OLS(y, x).fit()
     res_olsc = OLS(y, x[:, :-2]).fit()
@@ -1261,12 +1261,12 @@ def test_formula_missing_exposure():
 @pytest.mark.matplotlib
 def test_plots(close_figures):
 
-    rs = np.random.RandomState(378)
+    np.random.seed(378)
     n = 200
-    exog = rs.normal(size=(n, 2))
+    exog = np.random.normal(size=(n, 2))
     lin_pred = exog[:, 0] + exog[:, 1] ** 2
     prob = 1 / (1 + np.exp(-lin_pred))
-    endog = 1 * (rs.uniform(size=n) < prob)
+    endog = 1 * (np.random.uniform(size=n) < prob)
 
     model = sm.GLM(endog, exog, family=sm.families.Binomial())
     result = model.fit()
@@ -1306,7 +1306,7 @@ def test_plots(close_figures):
 
 def gen_endog(lin_pred, family_class, link, binom_version=0):
 
-    rs = np.random.RandomState(872)
+    np.random.seed(872)
 
     fam = sm.families
 
@@ -1314,20 +1314,20 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
 
     if family_class == fam.Binomial:
         if binom_version == 0:
-            endog = 1 * (rs.uniform(size=len(lin_pred)) < mu)
+            endog = 1 * (np.random.uniform(size=len(lin_pred)) < mu)
         else:
             endog = np.empty((len(lin_pred), 2))
             n = 10
             endog[:, 0] = (
-                rs.uniform(size=(len(lin_pred), n)) < mu[:, None]
+                np.random.uniform(size=(len(lin_pred), n)) < mu[:, None]
             ).sum(1)
             endog[:, 1] = n - endog[:, 0]
     elif family_class == fam.Poisson:
-        endog = rs.poisson(mu)
+        endog = np.random.poisson(mu)
     elif family_class == fam.Gamma:
-        endog = rs.gamma(2, mu)
+        endog = np.random.gamma(2, mu)
     elif family_class == fam.Gaussian:
-        endog = mu + 2 * rs.normal(size=len(lin_pred))
+        endog = mu + 2 * np.random.normal(size=len(lin_pred))
     elif family_class == fam.NegativeBinomial:
         from scipy.stats.distributions import nbinom
 
@@ -1344,12 +1344,12 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
 
 @pytest.mark.smoke
 def test_summary():
-    rs = np.random.RandomState(4323)
+    np.random.seed(4323)
 
     n = 100
-    exog = rs.normal(size=(n, 2))
+    exog = np.random.normal(size=(n, 2))
     exog[:, 0] = 1
-    endog = rs.normal(size=n)
+    endog = np.random.normal(size=n)
 
     for method in ["irls", "cg"]:
         fa = sm.families.Gaussian()
@@ -1388,7 +1388,7 @@ def test_gradient_irls():
 
     # TODO: Find working examples for inverse_squared link
 
-    rs = np.random.RandomState(87342)
+    np.random.seed(87342)
 
     fam = sm.families
     lnk = sm.families.links
@@ -1412,7 +1412,7 @@ def test_gradient_irls():
 
     n = 100
     p = 3
-    exog = rs.normal(size=(n, p))
+    exog = np.random.normal(size=(n, p))
     exog[:, 0] = 1
 
     skip_one = False
@@ -1459,7 +1459,7 @@ def test_gradient_irls():
                     fam.NegativeBinomial,
                     lnk.InverseSquared,
                 ):
-                    lin_pred = 0.1 + rs.uniform(size=exog.shape[0])
+                    lin_pred = 0.1 + np.random.uniform(size=exog.shape[0])
                     continue  # skip due to non-convergence
                 elif (family_class, link) == (
                     fam.NegativeBinomial,
@@ -1475,7 +1475,7 @@ def test_gradient_irls():
                 #     lin_pred = 0.5 * exog.sum(1) + \
                 #     np.random.uniform(size=exog.shape[0])
                 else:
-                    lin_pred = rs.uniform(size=exog.shape[0])
+                    lin_pred = np.random.uniform(size=exog.shape[0])
 
                 endog = gen_endog(lin_pred, family_class, link, binom_version)
 
@@ -1556,7 +1556,7 @@ def test_gradient_irls_eim():
 
     # TODO: Find working examples for inverse_squared link
 
-    rs = np.random.RandomState(87342)
+    np.random.seed(87342)
 
     fam = sm.families
     lnk = sm.families.links
@@ -1580,7 +1580,7 @@ def test_gradient_irls_eim():
 
     n = 100
     p = 3
-    exog = rs.normal(size=(n, p))
+    exog = np.random.normal(size=(n, p))
     exog[:, 0] = 1
 
     skip_one = False
@@ -1627,7 +1627,7 @@ def test_gradient_irls_eim():
                     fam.NegativeBinomial,
                     lnk.InverseSquared,
                 ):
-                    lin_pred = 0.1 + rs.uniform(size=exog.shape[0])
+                    lin_pred = 0.1 + np.random.uniform(size=exog.shape[0])
                     continue  # skip due to non-convergence
                 elif (family_class, link) == (
                     fam.NegativeBinomial,
@@ -1639,7 +1639,7 @@ def test_gradient_irls_eim():
                     # adding skip because of convergence failure
                     skip_one = True
                 else:
-                    lin_pred = rs.uniform(size=exog.shape[0])
+                    lin_pred = np.random.uniform(size=exog.shape[0])
 
                 endog = gen_endog(lin_pred, family_class, link, binom_version)
 
@@ -1695,10 +1695,10 @@ def test_gradient_irls_eim():
 
 def test_glm_irls_method():
     nobs, k_vars = 50, 4
-    rs = np.random.RandomState(987126)
-    x = rs.randn(nobs, k_vars - 1)
+    np.random.seed(987126)
+    x = np.random.randn(nobs, k_vars - 1)
     exog = add_constant(x, has_constant="add")
-    y = exog.sum(1) + rs.randn(nobs)
+    y = exog.sum(1) + np.random.randn(nobs)
 
     mod = GLM(y, exog)
     res1 = mod.fit()
@@ -1732,8 +1732,8 @@ class CheckWtdDuplicationMixin:
         cls.data.exog = np.asarray(cls.data.exog)
         cls.endog = cls.data.endog
         cls.exog = cls.data.exog
-        rs = np.random.RandomState(1234)
-        cls.weight = rs.randint(5, 100, len(cls.endog))
+        np.random.seed(1234)
+        cls.weight = np.random.randint(5, 100, len(cls.endog))
         cls.endog_big = np.repeat(cls.endog, cls.weight)
         cls.exog_big = np.repeat(cls.exog, cls.weight, axis=0)
 
@@ -2142,8 +2142,8 @@ class TestWtdTweediePower2(CheckWtdDuplicationMixin):
         cls.data = cpunish.load_pandas()
         cls.endog = cls.data.endog
         cls.exog = cls.data.exog[["INCOME", "SOUTH"]]
-        rs = np.random.RandomState(1234)
-        cls.weight = rs.randint(5, 100, len(cls.endog))
+        np.random.seed(1234)
+        cls.weight = np.random.randint(5, 100, len(cls.endog))
         cls.endog_big = np.repeat(cls.endog.values, cls.weight)
         cls.exog_big = np.repeat(cls.exog.values, cls.weight, axis=0)
         link = sm.families.links.Power()
@@ -2472,9 +2472,9 @@ class TestTweedieSpecialLog3(CheckTweedieSpecial):
 
 def gen_tweedie(p):
 
-    rs = np.random.RandomState(3242)
+    np.random.seed(3242)
     n = 500
-    x = rs.normal(size=(n, 4))
+    x = np.random.normal(size=(n, 4))
     lpr = np.dot(x, np.r_[1, -1, 0, 0.5])
     mu = np.exp(lpr)
     lam = 10 * mu ** (2 - p) / (2 - p)
@@ -2483,9 +2483,9 @@ def gen_tweedie(p):
 
     # Generate Tweedie values using commpound Poisson distribution
     y = np.empty(n)
-    N = rs.poisson(lam)
+    N = np.random.poisson(lam)
     for i in range(n):
-        y[i] = rs.gamma(alp, 1 / bet[i], N[i]).sum()
+        y[i] = np.random.gamma(alp, 1 / bet[i], N[i]).sum()
 
     return y, x
 
@@ -2570,14 +2570,14 @@ def test_tweedie_EQL_poisson_limit():
     # Test the limiting Poisson case of the Nelder/Pregibon/Tweedie
     # EQL.
 
-    rs = np.random.RandomState(3242)
+    np.random.seed(3242)
     n = 500
 
-    x = rs.normal(size=(n, 3))
+    x = np.random.normal(size=(n, 3))
     x[:, 0] = 1
     lpr = 4 + x[:, 1:].sum(1)
     mn = np.exp(lpr)
-    y = rs.poisson(mn)
+    y = np.random.poisson(mn)
 
     for scale in 1.0, "x2", "dev":
 
@@ -2599,14 +2599,14 @@ def test_tweedie_EQL_upper_limit():
     # EQL with var = mean^2.  These are tests against population
     # values so accuracy is not high.
 
-    rs = np.random.RandomState(3242)
+    np.random.seed(3242)
     n = 500
 
-    x = rs.normal(size=(n, 3))
+    x = np.random.normal(size=(n, 3))
     x[:, 0] = 1
     lpr = 4 + x[:, 1:].sum(1)
     mn = np.exp(lpr)
-    y = rs.poisson(mn)
+    y = np.random.poisson(mn)
 
     for scale in "x2", "dev", 1.0:
 
@@ -2682,14 +2682,14 @@ def test_glm_lasso_6431():
 
     # Based on issue #6431
     # Fails with newton-cg as optimizer
-    rs = np.random.RandomState(123)
+    np.random.seed(123)
 
     from statsmodels.regression.linear_model import OLS
 
     n = 50
     x = np.ones((n, 2))
     x[:, 1] = np.arange(0, n)
-    y = 1000 + x[:, 1] + rs.normal(0, 1, n)
+    y = 1000 + x[:, 1] + np.random.normal(0, 1, n)
 
     params = np.r_[999.82244338, 1.0077889]
 
@@ -2868,12 +2868,12 @@ class TestConvergence:
 
 def test_poisson_deviance():
     # see #3355 missing term in deviance if resid_response.sum() != 0
-    rs = np.random.RandomState(123987)
+    np.random.seed(123987)
     nobs, k_vars = 50, 3 - 1
-    x = sm.add_constant(rs.randn(nobs, k_vars))
+    x = sm.add_constant(np.random.randn(nobs, k_vars))
 
     mu_true = np.exp(x.sum(1))
-    y = rs.poisson(mu_true, size=nobs)
+    y = np.random.poisson(mu_true, size=nobs)
 
     mod = sm.GLM(y, x[:, :], family=sm.genmod.families.Poisson())
     res = mod.fit()
@@ -3011,9 +3011,9 @@ def test_qaic():
 
 def test_tweedie_score():
 
-    rs = np.random.RandomState(3242)
+    np.random.seed(3242)
     n = 500
-    x = rs.normal(size=(n, 4))
+    x = np.random.normal(size=(n, 4))
     lpr = np.dot(x, np.r_[1, -1, 0, 0.5])
     mu = np.exp(lpr)
 
@@ -3022,9 +3022,9 @@ def test_tweedie_score():
     alp = (2 - p0) / (p0 - 1)
     bet = 10 * mu ** (1 - p0) / (p0 - 1)
     y = np.empty(n)
-    N = rs.poisson(lam)
+    N = np.random.poisson(lam)
     for i in range(n):
-        y[i] = rs.gamma(alp, 1 / bet[i], N[i]).sum()
+        y[i] = np.random.gamma(alp, 1 / bet[i], N[i]).sum()
 
     for eql in [True, False]:
         for p in [1, 1.5, 2]:
@@ -3035,7 +3035,7 @@ def test_tweedie_score():
             model = GLM(y, x, family=fam)
             result = model.fit()
 
-            pa = result.params + 0.2 * rs.normal(size=result.params.size)
+            pa = result.params + 0.2 * np.random.normal(size=result.params.size)
 
             from functools import partial
             ngrad = approx_fprime_cs(pa, partial(model.loglike, scale=1))
@@ -3116,10 +3116,10 @@ def test_names_default():
 
 def test_glm_summary2_method():
     nobs, k_vars = 50, 4
-    rs = np.random.RandomState(987126)
-    x = rs.randn(nobs, k_vars - 1)
+    np.random.seed(987126)
+    x = np.random.randn(nobs, k_vars - 1)
     exog = add_constant(x, has_constant="add")
-    y = exog.sum(1) + rs.randn(nobs)
+    y = exog.sum(1) + np.random.randn(nobs)
 
     mod = GLM(y, exog)
     res1 = mod.fit()
