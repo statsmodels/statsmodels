@@ -50,10 +50,10 @@ class CountDiagnostic:
         return self.results.predict(which="prob", **kwds)
 
     def test_chisquare_prob(self, bin_edges=None, method=None):
-        """Moment test for binned probabilites using OPG.
+        """Moment test for binned probabilities using OPG.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         binedges : array_like or None
             This defines which counts are included in the test on frequencies
             and how counts are combined in bins.
