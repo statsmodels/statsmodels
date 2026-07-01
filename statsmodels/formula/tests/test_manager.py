@@ -433,24 +433,24 @@ def test_formula_manager_no_patsy():
 @require_formulaic
 @require_patsy
 def test_legacy_orderer(formula):
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     n = 100
     data = pd.DataFrame(
         {
-            "y": np.random.standard_normal(n),
-            "a": np.random.standard_normal(n),
-            "b": np.random.standard_normal(n),
-            "c": np.random.standard_normal(n),
+            "y": rs.standard_normal(n),
+            "a": rs.standard_normal(n),
+            "b": rs.standard_normal(n),
+            "c": rs.standard_normal(n),
             "d": pd.Series(
-                np.random.choice(["a", "b", "c"], size=n),
+                rs.choice(["a", "b", "c"], size=n),
                 dtype="category",
             ),
             "e": pd.Series(
-                np.random.choice(["a", "b", "c"], size=n),
+                rs.choice(["a", "b", "c"], size=n),
                 dtype="category",
             ),
             "f": pd.Series(
-                np.random.choice(["a", "b", "c"], size=n),
+                rs.choice(["a", "b", "c"], size=n),
                 dtype="category",
             ),
         }

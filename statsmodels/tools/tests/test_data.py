@@ -28,6 +28,7 @@ def test_formula_engine_use_detection_577():
     x = np.random.random((10, 2))
     df = pd.DataFrame(x, columns=["var1", "var2"])
     from statsmodels.formula._manager import FormulaManager
+
     mgr = FormulaManager()
     if mgr.engine == "patsy":
         test_func = data._is_using_patsy

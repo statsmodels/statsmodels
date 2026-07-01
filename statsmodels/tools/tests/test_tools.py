@@ -1,6 +1,7 @@
 """
 Test functions for models.tools
 """
+
 from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 from statsmodels.compat.python import lrange
 
@@ -58,9 +59,7 @@ class TestTools:
         with pytest.raises(ValueError):
             tools.add_constant(x, has_constant="raise")
 
-        assert_equal(
-            tools.add_constant(x, has_constant="add"), np.ones((5, 2))
-        )
+        assert_equal(tools.add_constant(x, has_constant="add"), np.ones((5, 2)))
 
     def test_add_constant_has_constant2d(self):
         x = np.asarray([[1, 1, 1, 1], [1, 2, 3, 4.0]]).T
