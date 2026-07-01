@@ -53,7 +53,7 @@ class CountDiagnostic:
         """Moment test for binned probabilities using OPG.
 
         Parameters
-        ---------
+        ----------
         binedges : array_like or None
             This defines which counts are included in the test on frequencies
             and how counts are combined in bins.
