@@ -306,12 +306,11 @@ def gen_mnlogit(n):
     y[u < cpr[:, 0]] = 0
 
     df = pd.DataFrame({"y": y, "x1": x1, "x2": x2, "g": g})
-    return df
+    return df, rs
 
 
 def test_conditional_mnlogit_grad():
-    rs = np.random.RandomState(323921)
-    df = gen_mnlogit(90)
+    df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
 
     # Compare the gradients to numeric gradients
@@ -324,9 +323,9 @@ def test_conditional_mnlogit_grad():
 
 def test_conditional_mnlogit_2d():
 
-    df = gen_mnlogit(90)
+    df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
-    result = model.fit()
+    result = model.fit(generator=rs)
 
     # Regression tests
     assert_allclose(
@@ -344,11 +343,10 @@ def test_conditional_mnlogit_2d():
 
 
 def test_conditional_mnlogit_3d():
-    rs = np.random.RandomState(323921)
-    df = gen_mnlogit(90)
+    df, rs = gen_mnlogit(90)
     df["x3"] = rs.normal(size=df.shape[0])
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2 + x3", groups="g", data=df)
-    result = model.fit()
+    result = model.fit(generator=rs)
 
     # Regression tests
     assert_allclose(
