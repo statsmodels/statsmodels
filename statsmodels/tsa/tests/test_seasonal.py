@@ -827,16 +827,17 @@ class TestDecompose:
 
 
 def test_seasonal_decompose_too_short(reset_randomstate):
+    rs = np.random.RandomState(43437241)
     dates = pd.date_range("2000-01-31", periods=4, freq=QUARTER_END)
     y = np.sin(np.arange(4) / 4 * 2 * np.pi)
-    y += np.random.standard_normal(y.size)
+    y += rs.standard_normal(y.size)
     y = pd.Series(y, name="y", index=dates)
     with pytest.raises(ValueError):
         seasonal_decompose(y)
 
     dates = pd.date_range("2000-01-31", periods=12, freq=MONTH_END)
     y = np.sin(np.arange(12) / 12 * 2 * np.pi)
-    y += np.random.standard_normal(y.size)
+    y += rs.standard_normal(y.size)
     y = pd.Series(y, name="y", index=dates)
     with pytest.raises(ValueError):
         seasonal_decompose(y)

@@ -541,7 +541,7 @@ class TestKernelReg(KernelRegressionTestBase):
             reg_type="ll",
             var_type="cc",
             bw=bw,
-            seed=rs.default_rng(seed),
+            seed=np.random.default_rng(seed),
         )
 
         nboot = 45  # Number of bootstrap samples
