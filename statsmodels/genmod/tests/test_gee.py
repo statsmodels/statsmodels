@@ -19,6 +19,7 @@ from numpy.testing import (
     assert_almost_equal,
     assert_array_less,
     assert_equal,
+    assert_raises,
 )
 import pandas as pd
 import pytest
@@ -30,7 +31,7 @@ import statsmodels.discrete.discrete_model as discrete
 from statsmodels.genmod import cov_struct, families
 import statsmodels.genmod.generalized_estimating_equations as gee
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.sm_exceptions import SpecificationWarning, ValueWarning
 
 try:
     import matplotlib.pyplot as plt
@@ -248,6 +249,140 @@ class TestGEE:
 
         assert_allclose(results.params, -logit_results.params, rtol=1e-5)
         assert_allclose(results.bse, logit_results.bse, rtol=1e-5)
+
+    def test_nominal_predict(self):
+        # Check that NominalGEE.predict returns category probabilities,
+        # validated against an independent multinomial-logit implementation.
+        #
+        # Under an independence working correlation the NominalGEE estimating
+        # equations coincide with the multinomial-logit score equations, so the
+        # predicted probabilities match MNLogit (and R's nnet::multinom) up to
+        # solver tolerance.  The pinned values below were confirmed with:
+        #
+        #   library(nnet)
+        #   Z <- read.csv("results/gee_nominal_1.csv", header=FALSE)
+        #   fit <- multinom(factor(Z[,2]) ~ 0 + Z[,3] + Z[,4])
+        #   round(fitted(fit)[1:5,], 8)
+
+        endog, exog, groups = load_data("gee_nominal_1.csv", icept=False)
+
+        model = gee.NominalGEE(endog, exog, groups,
+                               cov_struct=cov_struct.Independence())
+        result = model.fit()
+
+        ncat = len(model.endog_values)
+        ncut = model.ncut
+        nobs = len(endog)
+
+        probs = result.predict()
+        assert_equal(probs.shape, (nobs, ncat))
+        assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+        assert_array_less(-1e-12, probs)
+        assert_array_less(probs, 1 + 1e-12)
+
+        # Pinned probabilities, validated against R nnet::multinom (see above).
+        expected = np.array([
+            [0.71795494, 0.04700443, 0.23504063],
+            [0.54850664, 0.12290040, 0.32859296],
+            [0.84242458, 0.01449717, 0.14307825],
+            [0.66557818, 0.06641705, 0.26800477],
+            [0.53957468, 0.12799741, 0.33242791],
+        ])
+        assert_allclose(probs[:5], expected, rtol=1e-6, atol=1e-6)
+
+        # Independent cross-check against MNLogit (same per-category probs,
+        # regardless of which category each parameterization treats as the
+        # reference).
+        mn_probs = discrete.MNLogit(endog, exog).fit(disp=0).predict()
+        assert_allclose(probs, mn_probs, rtol=1e-5, atol=1e-7)
+
+        # Linear predictor has one column per non-reference category and
+        # matches a direct matrix product.
+        linpred = result.predict(which="linear")
+        assert_equal(linpred.shape, (nobs, ncut))
+        params_m = np.asarray(result.params).reshape(ncut, exog.shape[1])
+        assert_allclose(linpred, np.dot(exog, params_m.T), rtol=1e-10)
+
+        # Non-circular check that the expanded-scale fittedvalues are
+        # unchanged: the legacy _MultinomialLogit.inverse (used before predict
+        # was overridden) reproduces both the non-reference probabilities and
+        # fittedvalues.
+        legacy = gee._MultinomialLogit(ncut).inverse(linpred.ravel())
+        assert_allclose(legacy, probs[:, :-1].ravel(), rtol=1e-10)
+        assert_allclose(legacy, result._results.fittedvalues, rtol=1e-10)
+
+        # The deprecated linear keyword maps to which="linear".
+        with pytest.warns(FutureWarning):
+            assert_allclose(result.predict(linear=True), linpred, rtol=1e-12)
+
+        # Predict on new data.
+        new_exog = exog[:5, :]
+        new_probs = result.predict(exog=new_exog)
+        assert_equal(new_probs.shape, (5, ncat))
+        assert_allclose(new_probs.sum(axis=1), 1, rtol=1e-10)
+
+        # Invalid which raises ValueError; mismatched params/exog is reported;
+        # exposure is not supported.
+        assert_raises(ValueError, result.predict, which="invalid")
+        assert_raises(ValueError, model.predict, result.params[:-1], exog)
+        assert_raises(ValueError, result.predict, exposure=1.0)
+
+    def test_nominal_predict_offset(self):
+        # Check that NominalGEE.predict handles an offset correctly.
+
+        endog, exog, groups = load_data("gee_nominal_1.csv", icept=False)
+        rng = np.random.RandomState(34234)
+        offset = rng.normal(size=len(endog))
+
+        model = gee.NominalGEE(endog, exog, groups, offset=offset,
+                               cov_struct=cov_struct.Independence())
+        result = model.fit()
+
+        probs = result.predict()
+        assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+
+        # An explicit offset on new data reproduces a manual recomputation of
+        # the softmax with the reference category fixed at a linear value of 0.
+        new_exog = exog[:5, :]
+        new_offset = rng.normal(size=5)
+        params_m = np.asarray(result.params).reshape(model.ncut, exog.shape[1])
+        eta = np.dot(new_exog, params_m.T) + new_offset[:, None]
+        eta = np.column_stack((eta, np.zeros(eta.shape[0])))
+        eta -= eta.max(axis=1, keepdims=True)
+        manual = np.exp(eta)
+        manual /= manual.sum(axis=1, keepdims=True)
+        assert_allclose(
+            result.predict(exog=new_exog, offset=new_offset), manual, rtol=1e-10
+        )
+
+        # The model offset is ignored once exog is supplied (GLM convention).
+        probs_no_offset = result.predict(exog=new_exog)
+        probs_with_offset = result.predict(exog=new_exog, offset=new_offset)
+        assert not np.allclose(probs_no_offset, probs_with_offset)
+
+    def test_nominal_predict_reference_dominant(self):
+        # Regression test for log-sum-exp overflow: when the reference category
+        # dominates (every non-reference linear predictor is large and
+        # negative), predict must return finite probabilities that sum to one,
+        # not NaN from exp(-lpr_max) overflowing.
+        endog = np.r_[0, 0, 1, 1, 2, 2]
+        exog = np.ones((6, 2))
+        exog[:, 1] = np.r_[0, 1, 0, 1, 0, 1]
+        groups = np.arange(6)
+
+        model = gee.NominalGEE(endog, exog, groups)
+        k = exog.shape[1]
+
+        # Intercept of -800 for every non-reference category drives each
+        # non-reference linear predictor to ~-800 (reference logit is 0).
+        params = np.zeros(model.ncut * k)
+        params[::k] = -800.0
+
+        probs = model.predict(params, exog=exog)
+        assert np.all(np.isfinite(probs))
+        assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+        # The reference category (last column) carries essentially all mass.
+        assert_allclose(probs[:, -1], 1, rtol=1e-10)
 
     def test_weighted(self):
 
@@ -1025,6 +1160,251 @@ class TestGEE:
         # Check that we get the correct results type
         assert_equal(type(rslt), gee.OrdinalGEEResultsWrapper)
         assert_equal(type(rslt._results), gee.OrdinalGEEResults)
+
+    def test_ordinal_predict(self):
+        # Check that OrdinalGEE.predict returns category probabilities.
+        #
+        # The category probabilities are validated by an independent
+        # reconstruction from the fitted parameters: the cumulative-logit
+        # survival probabilities P(y > c_j) = expit(x'b + threshold_j) are
+        # differenced to obtain the per-category probabilities.  The pinned
+        # values guard against regressions in the fit + predict pipeline.
+        from scipy.special import expit
+
+        family = families.Binomial()
+        endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
+        va = cov_struct.GlobalOddsRatio("ordinal")
+        mod = gee.OrdinalGEE(endog, exog, groups, None, family, va)
+        rslt = mod.fit()
+
+        nobs = len(endog)
+        ncat = len(mod.endog_values)
+        ncut = ncat - 1
+
+        # Predict on the original design.
+        probs = rslt.predict()
+        assert_equal(probs.shape, (nobs, ncat))
+        assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+        assert_array_less(-1e-12, probs)
+        assert_array_less(probs, 1 + 1e-12)
+
+        # Linear predictor has one column per threshold and matches a direct
+        # matrix product.
+        linpred = rslt.predict(which="linear")
+        assert_equal(linpred.shape, (nobs, ncut))
+        params_arr = np.asarray(rslt.params)
+        thresholds = params_arr[:ncut]
+        slopes = params_arr[ncut:]
+        expected = np.dot(exog, slopes)[:, None] + thresholds[None, :]
+        assert_allclose(linpred, expected, rtol=1e-10)
+
+        # Independent reconstruction (uses scipy.expit, not the model link, and
+        # differences the survival curve by hand).
+        surv = expit(expected)
+        cat_probs = -np.diff(
+            np.column_stack((np.ones(nobs), surv, np.zeros(nobs))), axis=1
+        )
+        assert_allclose(probs, cat_probs, rtol=1e-10)
+
+        # The expanded-scale fittedvalues are the threshold survival
+        # probabilities (unchanged by the predict override).
+        assert_allclose(surv.ravel(), rslt._results.fittedvalues, rtol=1e-10)
+
+        # Pinned probabilities (regression guard for fit + predict).
+        expected_probs = np.array([
+            [0.55110511, 0.23064467, 0.06328116, 0.15496906],
+            [0.32155017, 0.25877266, 0.09762439, 0.32205278],
+            [0.11443507, 0.15935798, 0.09086408, 0.63534288],
+            [0.25766480, 0.24548874, 0.10340514, 0.39344132],
+            [0.00177105, 0.00337864, 0.00266891, 0.99218140],
+        ])
+        assert_allclose(probs[:5], expected_probs, rtol=1e-6, atol=1e-6)
+
+        # The deprecated linear keyword maps to which="linear".
+        with pytest.warns(FutureWarning):
+            assert_allclose(rslt.predict(linear=True), linpred, rtol=1e-12)
+
+        # Predict on new data.
+        new_exog = exog[:5, :]
+        new_probs = rslt.predict(exog=new_exog)
+        assert_equal(new_probs.shape, (5, ncat))
+        assert_allclose(new_probs.sum(axis=1), 1, rtol=1e-10)
+
+        # Invalid which raises ValueError; exposure is not supported.
+        assert_raises(ValueError, rslt.predict, which="invalid")
+        assert_raises(ValueError, rslt.predict, exposure=1.0)
+
+    def test_ordinal_predict_offset(self):
+        # Check that OrdinalGEE.predict handles an offset correctly.
+        from scipy.special import expit
+
+        np.random.seed(434)
+        n = 40
+        y = np.random.randint(0, 3, n)
+        groups = np.arange(n)
+        x = np.random.normal(size=(n, 2))
+        offset = np.random.normal(size=n)
+
+        model = gee.OrdinalGEE(y, x, groups, offset=offset)
+        rslt = model.fit()
+
+        # Predicted probabilities sum to one.
+        probs = rslt.predict()
+        assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+
+        # An explicit offset on new data reproduces a manual recomputation: the
+        # offset is added to every threshold's linear predictor.
+        new_x = x[:5, :]
+        new_offset = np.r_[0.5, -0.5, 1.0, -1.0, 0.0]
+        params_arr = np.asarray(rslt.params)
+        ncut = len(model.endog_values) - 1
+        lin = (
+            np.dot(new_x, params_arr[ncut:])[:, None]
+            + params_arr[:ncut][None, :]
+            + new_offset[:, None]
+        )
+        surv = expit(lin)
+        manual = -np.diff(
+            np.column_stack((np.ones(5), surv, np.zeros(5))), axis=1
+        )
+        assert_allclose(rslt.predict(exog=new_x, offset=new_offset), manual,
+                        rtol=1e-10)
+
+        # The model offset is ignored once exog is supplied (GLM convention).
+        probs_no_offset = rslt.predict(exog=new_x)
+        probs_with_offset = rslt.predict(exog=new_x, offset=new_offset)
+        assert not np.allclose(probs_no_offset, probs_with_offset)
+
+    def test_nominal_ordinal_margeff(self):
+        # Regression guard: NominalGEE/OrdinalGEE override predict to return a
+        # 2-D (nobs, ncat) array, but get_margeff computes effects on the
+        # expanded design and needs the fitted mean on that scale -- both for
+        # the elasticity transforms ("eyex"/"eydx") and for the dummy/count
+        # effect differences computed via the discrete-margins helpers.
+        # _derivative_exog must therefore route the mean through the
+        # expanded-scale adapter rather than the overridden predict.
+        endog, exog, groups = load_data("gee_nominal_1.csv", icept=False)
+        rn = gee.NominalGEE(
+            endog, exog, groups, cov_struct=cov_struct.Independence()
+        ).fit()
+
+        endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
+        ro = gee.OrdinalGEE(
+            endog, exog, groups, None, families.Binomial(),
+            cov_struct.GlobalOddsRatio("ordinal"),
+        ).fit()
+
+        for rslt in (rn, ro):
+            for method in ("dydx", "eyex", "eydx"):
+                marg = rslt.get_margeff(method=method)
+                assert np.all(np.isfinite(np.asarray(marg.margeff)))
+
+        # Dummy/count effects difference predictions on the expanded design via
+        # the discrete-margins helpers. Use at="all": the delta-method standard
+        # errors hit a separate, pre-existing GLM limitation for models that
+        # carry an offset (Nominal/OrdinalGEE always do internally). The design
+        # uses two covariates (== the number of non-reference categories) to
+        # avoid an unrelated mean_deriv_exog shape limitation when k != ncut.
+        rng = np.random.RandomState(3)
+        n = 120
+        endog = rng.randint(0, 3, n)  # 3 categories -> ncut == 2
+        groups = np.arange(n)
+        dummy_exog = np.column_stack(
+            [np.ones(n), (rng.uniform(size=n) > 0.5).astype(float)]
+        )
+        count_exog = np.column_stack(
+            [np.ones(n), rng.poisson(2, n).astype(float)]
+        )
+        for exog, kwds in (
+            (dummy_exog, dict(dummy=True)),
+            (count_exog, dict(count=True)),
+        ):
+            rd = gee.NominalGEE(
+                endog, exog, groups, cov_struct=cov_struct.Independence()
+            ).fit()
+            marg = rd.get_margeff(at="all", **kwds)
+            assert np.all(np.isfinite(np.asarray(marg.margeff)))
+
+    def test_ordinal_predict_nonmonotone_warns(self):
+        # OrdinalGEE is a proportional-odds model (shared slope, one intercept
+        # per threshold), so probabilities are valid for any exog as long as
+        # the fitted thresholds are monotone.  A normal fit does not warn; a
+        # non-monotone threshold vector yields negative probabilities and a
+        # warning.
+        family = families.Binomial()
+        endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
+        va = cov_struct.GlobalOddsRatio("ordinal")
+        mod = gee.OrdinalGEE(endog, exog, groups, None, family, va)
+        rslt = mod.fit()
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", ValueWarning)
+            probs = rslt.predict()
+        assert_array_less(-1e-12, probs)
+
+        params = np.asarray(rslt.params).copy()
+        params[0], params[1] = params[1], params[0]
+        with pytest.warns(ValueWarning, match="not monotone"):
+            bad_probs = mod.predict(params)
+        assert bad_probs.min() < 0
+
+    def test_nominal_ordinal_get_distribution_not_implemented(self):
+        # A single scipy frozen distribution cannot represent a multinomial or
+        # ordinal response, so get_distribution raises at both the model and
+        # results level (rather than erroring obscurely or returning nonsense).
+        endog, exog, groups = load_data("gee_nominal_1.csv", icept=False)
+        rn = gee.NominalGEE(
+            endog, exog, groups, cov_struct=cov_struct.Independence()
+        ).fit()
+
+        endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
+        ro = gee.OrdinalGEE(
+            endog, exog, groups, None, families.Binomial(),
+            cov_struct.GlobalOddsRatio("ordinal"),
+        ).fit()
+
+        for rslt in (rn, ro):
+            assert_raises(NotImplementedError, rslt.get_distribution)
+            assert_raises(
+                NotImplementedError, rslt.model.get_distribution, rslt.params
+            )
+
+    def test_nominal_ordinal_predict_formula(self):
+        # predict must work through the formula API: result.predict() on the
+        # original data, and result.predict(exog=DataFrame) on new data with
+        # the new exog transformed via the (pre-expansion) formula spec.
+        rng = np.random.RandomState(434)
+        n = 60
+        groups = np.arange(n)
+        df = pd.DataFrame({
+            "y": rng.randint(0, 3, n),
+            "x1": rng.normal(size=n),
+            "x2": rng.normal(size=n),
+        })
+        new_df = df[["x1", "x2"]].iloc[:5]
+        new_arr = np.asarray(new_df)
+
+        for Cls in (gee.OrdinalGEE, gee.NominalGEE):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                rslt = Cls.from_formula(
+                    "y ~ 0 + x1 + x2", groups, data=df
+                ).fit()
+            ncat = len(rslt.model.endog_values)
+
+            probs = np.asarray(rslt.predict())
+            assert_equal(probs.shape, (n, ncat))
+            assert_allclose(probs.sum(axis=1), 1, rtol=1e-10)
+
+            # New data as a DataFrame is transformed via the formula and gives
+            # the same result as predicting on the equivalent array.
+            probs_df = np.asarray(rslt.predict(exog=new_df))
+            probs_arr = np.asarray(
+                rslt.predict(exog=new_arr, transform=False)
+            )
+            assert_equal(probs_df.shape, (5, ncat))
+            assert_allclose(probs_df, probs_arr, rtol=1e-10)
+            assert_allclose(probs_df, probs[:5], rtol=1e-10)
 
     @pytest.mark.smoke
     def test_ordinal_formula(self):

@@ -59,7 +59,7 @@ from statsmodels.graphics._regressionplots_doc import (
 
 # used for wrapper:
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly, cached_data
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
@@ -493,6 +493,28 @@ def _check_args(endog, exog, groups, time, offset, exposure):
 
     if exposure is not None and (exposure.size != endog.size):
         raise ValueError("'exposure' and 'endog' should have the same size")
+
+
+class _ExpandedMeanModel:
+    """
+    Minimal adapter exposing ``predict`` as the fitted mean on the expanded
+    (modeling) scale, i.e. ``family.fitted(exog @ params)``.
+
+    Marginal effects are computed on the expanded design matrix, and the
+    discrete-margins helpers call ``model.predict(params, exog)`` expecting
+    that expanded-scale mean.  ``NominalGEE`` and ``OrdinalGEE`` override
+    ``predict`` to return original-scale category probabilities, so this
+    adapter is passed to ``_derivative_exog`` machinery in their place.  For
+    every other GEE family it reproduces the value the inherited
+    ``GLM.predict`` returns for an explicitly supplied ``exog`` (offset and
+    exposure are 0 in that case).
+    """
+
+    def __init__(self, family):
+        self.family = family
+
+    def predict(self, params, exog):
+        return self.family.fitted(np.dot(exog, params))
 
 
 class GEE(GLM):
@@ -1786,17 +1808,25 @@ class GEE(GLM):
 
         margeff = self.mean_deriv_exog(exog, params, offset_exposure)
 
+        # Marginal effects operate on the expanded design and need the fitted
+        # mean on that scale.  NominalGEE and OrdinalGEE override predict to
+        # return original-scale category probabilities, which is incompatible
+        # here, so route the mean through an adapter that always returns
+        # family.fitted(exog @ params).  For every other GEE family this is
+        # exactly what self.predict returned for an explicitly supplied exog.
+        mean_model = _ExpandedMeanModel(self.family)
+
         if "ex" in transform:
             margeff *= exog
         if "ey" in transform:
-            margeff /= self.predict(params, exog)[:, None]
+            margeff /= mean_model.predict(params, exog)[:, None]
         if count_idx is not None:
             from statsmodels.discrete.discrete_margins import (
                 _get_count_effects,
             )
 
             margeff = _get_count_effects(
-                margeff, exog, count_idx, transform, self, params
+                margeff, exog, count_idx, transform, mean_model, params
             )
         if dummy_idx is not None:
             from statsmodels.discrete.discrete_margins import (
@@ -1804,7 +1834,7 @@ class GEE(GLM):
             )
 
             margeff = _get_dummy_effects(
-                margeff, exog, dummy_idx, transform, self, params
+                margeff, exog, dummy_idx, transform, mean_model, params
             )
         return margeff
 
@@ -2546,6 +2576,14 @@ class OrdinalGEE(GEE):
             constraint,
         )
 
+        # __init__ does not forward **kwargs to super (endog/exog are expanded
+        # into the indicator design first), which would otherwise drop the
+        # formula model specification passed by from_formula.  Preserve it on
+        # the model so result.predict() can transform new exog supplied as a
+        # DataFrame (predict operates on the original, pre-expansion design).
+        if kwargs.get("model_spec") is not None:
+            self.model_spec = kwargs["model_spec"]
+
     def setup_ordinal(self, endog, exog, groups, time, offset):
         """
         Restructure ordinal data as binary indicators so that they can
@@ -2630,6 +2668,136 @@ class OrdinalGEE(GEE):
         result = model.fit()
         return result.params
 
+    def predict(
+        self, params, exog=None, exposure=None, offset=None, which="mean",
+        linear=None,
+    ):
+        """
+        Return predicted values for a design matrix.
+
+        Parameters
+        ----------
+        params : array_like
+            Parameters / coefficients of a GEE model.
+        exog : array_like, optional
+            Design / exogenous data in the original ``(nobs, k)`` form used
+            to fit the model. If ``exog`` is None, then the original design
+            matrix ``exog_orig`` is used.
+        exposure : array_like, optional
+            Not supported; accepted only for signature compatibility with
+            ``GLM.predict``. Passing a non-None value raises ``ValueError``.
+        offset : array_like, optional
+            Offset values. If ``offset`` is None and ``exog`` is None, then
+            the model's ``offset_orig`` is used. If ``offset`` is None and
+            ``exog`` is provided, then 0 is used.
+        which : {'mean', 'linear'}, optional
+            Statistic to predict. Default is 'mean'.
+
+            - 'mean' returns the predicted probabilities for each category.
+              The returned array has shape ``(nobs, ncat)``, with columns
+              ordered by the sorted unique response values
+              (``self.endog_values``).
+            - 'linear' returns the linear predictor for each threshold.
+              The returned array has shape ``(nobs, ncut)``.
+
+        linear : bool
+            The ``linear`` keyword is deprecated and will be removed, use
+            the ``which`` keyword instead. If True, returns the linear
+            predicted values (equivalent to ``which="linear"``).
+
+        Returns
+        -------
+        ndarray
+            See ``which``.
+
+        Notes
+        -----
+        Any ``offset`` provided here takes precedence over the ``offset``
+        used in the model fit. If ``exog`` is passed as an argument here,
+        then any ``offset`` values in the fit will be ignored.
+
+        Because the model uses a shared slope with one intercept per
+        threshold, the category probabilities are valid for any ``exog`` as
+        long as the fitted thresholds are monotone. The thresholds are
+        estimated without an ordering constraint, so in the rare case that
+        they are not monotone some returned probabilities may be negative; a
+        warning is issued when this occurs.
+        """
+
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+            if linear is True:
+                which = "linear"
+
+        if exposure is not None:
+            raise ValueError("exposure is not supported")
+
+        if exog is None:
+            exog = self.exog_orig
+            if offset is None:
+                offset = self.offset_orig
+        elif offset is None:
+            offset = 0.0
+
+        exog = np.asarray(exog)
+        params = np.asarray(params)
+
+        ncut = len(self.endog_values) - 1
+        k = exog.shape[1]
+
+        if params.size != ncut + k:
+            raise ValueError(
+                f"params has length {params.size}, but exog with {k} columns "
+                f"requires {ncut + k} parameters ({ncut} thresholds plus {k} "
+                f"covariate coefficients)."
+            )
+
+        thresholds = params[:ncut]
+        slopes = params[ncut:]
+
+        xb = np.dot(exog, slopes)
+        lin_pred = xb[:, None] + thresholds[None, :]
+        if offset is not None:
+            offset = np.asarray(offset)
+            if offset.ndim == 1:
+                offset = offset[:, None]
+            lin_pred += offset
+
+        if which == "linear":
+            return lin_pred
+        elif which == "mean":
+            surv = self.family.link.inverse(lin_pred)
+            surv = np.concatenate(
+                (np.ones((len(surv), 1)), surv, np.zeros((len(surv), 1))),
+                axis=1,
+            )
+            probs = -np.diff(surv, axis=1)
+            if np.any(probs < -1e-10):
+                warnings.warn(
+                    "Some predicted probabilities are negative. This occurs "
+                    "when the fitted OrdinalGEE thresholds are not monotone, "
+                    "which indicates a degenerate fit rather than a coherent "
+                    "ordinal model.",
+                    ValueWarning,
+                    stacklevel=2,
+                )
+            return probs
+        else:
+            raise ValueError(f'The which value "{which}" is not recognized')
+
+    def get_distribution(self, *args, **kwargs):
+        """
+        Not implemented for OrdinalGEE.
+
+        A single scipy frozen distribution cannot represent an ordinal
+        response. Use ``predict`` to obtain category probabilities.
+        """
+        raise NotImplementedError(
+            "get_distribution is not defined for OrdinalGEE; use predict to "
+            "obtain category probabilities."
+        )
+
     @Appender(_gee_fit_doc)
     def fit(
         self,
@@ -2674,6 +2842,26 @@ class OrdinalGEEResults(GEEResults):
         "This class summarizes the fit of a marginal regression model"
         "for an ordinal response using GEE.\n" + _gee_results_doc
     )
+
+    @cached_data
+    def mu(self):
+        """
+        The estimated mean response on the expanded indicator scale.
+        """
+        linpred = self.model.predict(self.params, which="linear")
+        return self.model.family.link.inverse(linpred).ravel()
+
+    def get_distribution(self, *args, **kwargs):
+        """
+        Not implemented for OrdinalGEE.
+
+        A single scipy frozen distribution cannot represent an ordinal
+        response. Use ``predict`` to obtain category probabilities.
+        """
+        raise NotImplementedError(
+            "get_distribution is not defined for OrdinalGEE; use predict to "
+            "obtain category probabilities."
+        )
 
     def plot_distribution(self, ax=None, exog_values=None):
         """
@@ -2874,6 +3062,11 @@ class NominalGEE(GEE):
             constraint,
         )
 
+        # See OrdinalGEE.__init__: preserve the formula model specification so
+        # result.predict() can transform new exog supplied as a DataFrame.
+        if kwargs.get("model_spec") is not None:
+            self.model_spec = kwargs["model_spec"]
+
     def _starting_params(self):
         exposure = getattr(self, "exposure", None)
         model = GEE(
@@ -2960,6 +3153,110 @@ class NominalGEE(GEE):
             endog_out = pd.Series(endog_out, name=self.endog_orig.name)
 
         return endog_out, exog_out, groups_out, time_out, offset_out
+
+    def predict(
+        self, params, exog=None, exposure=None, offset=None, which="mean",
+        linear=None,
+    ):
+        """
+        Return predicted values for a design matrix.
+
+        Parameters
+        ----------
+        params : array_like
+            Parameters / coefficients of a GEE model.
+        exog : array_like, optional
+            Design / exogenous data in the original ``(nobs, k)`` form used
+            to fit the model. If ``exog`` is None, then the original design
+            matrix ``exog_orig`` is used.
+        exposure : array_like, optional
+            Not supported; accepted only for signature compatibility with
+            ``GLM.predict``. Passing a non-None value raises ``ValueError``.
+        offset : array_like, optional
+            Offset values. If ``offset`` is None and ``exog`` is None, then
+            the model's ``offset_orig`` is used. If ``offset`` is None and
+            ``exog`` is provided, then 0 is used.
+        which : {'mean', 'linear'}, optional
+            Statistic to predict. Default is 'mean'.
+
+            - 'mean' returns the predicted probabilities for each category.
+              The returned array has shape ``(nobs, ncat)``, with columns
+              ordered by the sorted unique response values
+              (``self.endog_values``); the reference category (the largest
+              value) is the last column.
+            - 'linear' returns the linear predictor for each non-reference
+              category. The returned array has shape ``(nobs, ncut)``.
+
+        linear : bool
+            The ``linear`` keyword is deprecated and will be removed, use
+            the ``which`` keyword instead. If True, returns the linear
+            predicted values (equivalent to ``which="linear"``).
+
+        Returns
+        -------
+        ndarray
+            See ``which``.
+
+        Notes
+        -----
+        Any ``offset`` provided here takes precedence over the ``offset``
+        used in the model fit. If ``exog`` is passed as an argument here,
+        then any ``offset`` values in the fit will be ignored.
+        """
+
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+            if linear is True:
+                which = "linear"
+
+        if exposure is not None:
+            raise ValueError("exposure is not supported")
+
+        if exog is None:
+            exog = self.exog_orig
+            if offset is None:
+                offset = self.offset_orig
+        elif offset is None:
+            offset = 0.0
+
+        exog = np.asarray(exog)
+        params = np.asarray(params)
+
+        ncut = self.ncut
+        k = exog.shape[1]
+
+        if params.size != ncut * k:
+            raise ValueError(
+                f"params has length {params.size}, but exog with {k} columns "
+                f"requires {ncut * k} parameters ({ncut} non-reference "
+                f"categories times {k} covariates)."
+            )
+
+        params_m = params.reshape(ncut, k)
+
+        lin_pred = np.dot(exog, params_m.T)
+        if offset is not None:
+            offset = np.asarray(offset)
+            if offset.ndim == 1:
+                offset = offset[:, None]
+            lin_pred += offset
+
+        if which == "linear":
+            return lin_pred
+        elif which == "mean":
+            # Use the log-sum-exp trick for numerical stability. The max
+            # includes the reference category's linear predictor (which is 0)
+            # so that np.exp(-lpr_max) cannot overflow when every
+            # non-reference linear predictor is large and negative.
+            lpr_max = np.maximum(np.max(lin_pred, axis=1, keepdims=True), 0.0)
+            e_lpr = np.exp(lin_pred - lpr_max)
+            denom = e_lpr.sum(axis=1, keepdims=True) + np.exp(-lpr_max)
+            probs = e_lpr / denom
+            ref_prob = np.exp(-lpr_max) / denom
+            return np.concatenate((probs, ref_prob), axis=1)
+        else:
+            raise ValueError(f'The which value "{which}" is not recognized')
 
     def mean_deriv(self, exog, lin_pred):
         """
@@ -3063,6 +3360,18 @@ class NominalGEE(GEE):
 
         return dmat
 
+    def get_distribution(self, *args, **kwargs):
+        """
+        Not implemented for NominalGEE.
+
+        A single scipy frozen distribution cannot represent a multinomial
+        response. Use ``predict`` to obtain category probabilities.
+        """
+        raise NotImplementedError(
+            "get_distribution is not defined for NominalGEE; use predict to "
+            "obtain category probabilities."
+        )
+
     @Appender(_gee_fit_doc)
     def fit(
         self,
@@ -3112,6 +3421,26 @@ class NominalGEEResults(GEEResults):
         "This class summarizes the fit of a marginal regression model"
         "for a nominal response using GEE.\n" + _gee_results_doc
     )
+
+    @cached_data
+    def mu(self):
+        """
+        The estimated mean response on the expanded indicator scale.
+        """
+        probs = self.model.predict(self.params)
+        return probs[:, :-1].ravel()
+
+    def get_distribution(self, *args, **kwargs):
+        """
+        Not implemented for NominalGEE.
+
+        A single scipy frozen distribution cannot represent a multinomial
+        response. Use ``predict`` to obtain category probabilities.
+        """
+        raise NotImplementedError(
+            "get_distribution is not defined for NominalGEE; use predict to "
+            "obtain category probabilities."
+        )
 
     def plot_distribution(self, ax=None, exog_values=None):
         """
