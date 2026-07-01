@@ -48,12 +48,12 @@ def test_exact():
     # Test if we can recover exact factor-structured matrices with
     # default starting values.
 
-    np.random.seed(23324)
+    rs = np.random.RandomState(23324)
 
     # Works for larger k_var but slow for routine testing.
     for k_var in 5, 10, 25:
         for n_factor in 1, 2, 3:
-            load = np.random.normal(size=(k_var, n_factor))
+            load = rs.normal(size=(k_var, n_factor))
             uniq = np.linspace(1, 2, k_var)
             c = np.dot(load, load.T)
             c.flat[::c.shape[0]+1] += uniq
@@ -69,12 +69,12 @@ def test_exact_em():
     # Test if we can recover exact factor-structured matrices with
     # default starting values using the EM algorithm.
 
-    np.random.seed(23324)
+    rs = np.random.RandomState(23324)
 
     # Works for larger k_var but slow for routine testing.
     for k_var in 5, 10, 25:
         for n_factor in 1, 2, 3:
-            load = np.random.normal(size=(k_var, n_factor))
+            load = rs.normal(size=(k_var, n_factor))
             uniq = np.linspace(1, 2, k_var)
             c = np.dot(load, load.T)
             c.flat[::c.shape[0]+1] += uniq

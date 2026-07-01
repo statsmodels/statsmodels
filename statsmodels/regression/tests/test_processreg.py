@@ -218,12 +218,12 @@ def test_score_numdiff(noise):
     if noise:
         q += x_no.shape[1]
 
-    np.random.seed(342)
+    rs = np.random.RandomState(342)
 
     atol = 2e-3 if PLATFORM_OSX else 1e-2
     for _ in range(5):
         par0 = preg._get_start()
-        par = par0 + 0.1 * np.random.normal(size=q)
+        par = par0 + 0.1 * rs.normal(size=q)
         score = preg.score(par)
         score_nd = nd.approx_fprime(par, loglike, epsilon=1e-7)
         assert_allclose(score, score_nd, atol=atol, rtol=1e-4)

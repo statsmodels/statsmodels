@@ -519,7 +519,7 @@ class TestKernelReg(KernelRegressionTestBase):
         # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
         seed = 12345
-        np.random.seed(seed)
+        rs = np.random.RandomState(seed)
         with pytest.warns(FutureWarning, match="After 0.17"):
             model_0 = nparam.KernelReg(
                 endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw
@@ -541,7 +541,7 @@ class TestKernelReg(KernelRegressionTestBase):
             reg_type="ll",
             var_type="cc",
             bw=bw,
-            seed=np.random.default_rng(seed),
+            seed=rs.default_rng(seed),
         )
 
         nboot = 45  # Number of bootstrap samples
@@ -689,10 +689,10 @@ class TestKernelReg(KernelRegressionTestBase):
 
     def test_censored_efficient_user_specificed_bw(self):
         nobs = 200
-        np.random.seed(1234)
-        C1 = np.random.normal(size=(nobs,))
-        C2 = np.random.normal(2, 1, size=(nobs,))
-        noise = np.random.normal(size=(nobs,))
+        rs = np.random.RandomState(1234)
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
+        noise = rs.normal(size=(nobs,))
         Y = 0.3 + 1.2 * C1 - 0.9 * C2 + noise
         Y[Y > 0] = 0  # censor the data
 

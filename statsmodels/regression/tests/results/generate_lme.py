@@ -9,7 +9,7 @@ import os
 
 import numpy as np
 
-np.random.seed(348491)
+rs = np.random.RandomState(348491)
 
 # Number of groups
 ngroup = 100
@@ -39,18 +39,18 @@ for pr in [1, 2]:
             groups = []
             for i in range(ngroup):
 
-                n = np.random.randint(n_min, n_max, 1)
-                x_fe = np.random.normal(size=(n, pf))
+                n = rs.randint(n_min, n_max, 1)
+                x_fe = rs.normal(size=(n, pf))
                 x_re = np.zeros((n, pr))
                 u = np.linspace(-1, 1, n)
                 for j in range(pr):
                     x_re[:, j] = u**j
 
-                re = np.random.normal(size=pr) * re_sd
+                re = rs.normal(size=pr) * re_sd
 
                 expval = np.dot(x_fe, params) + np.dot(x_re, re)
 
-                endog.append(expval + sig*np.random.normal(size=n))
+                endog.append(expval + sig*rs.normal(size=n))
                 exog_fe.append(x_fe)
                 exog_re.append(x_re)
                 groups.append(i*np.ones(n))

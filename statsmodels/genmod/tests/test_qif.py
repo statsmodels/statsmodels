@@ -20,25 +20,25 @@ from statsmodels.tools.numdiff import approx_fprime
 def test_qif_numdiff(fam, cov_struct):
     # Test the analytic scores against numeric derivatives
 
-    np.random.seed(234234)
+    rs = np.random.RandomState(234234)
     n = 200
     q = 4
-    x = np.random.normal(size=(n, 3))
+    x = rs.normal(size=(n, 3))
     if isinstance(fam, families.Gaussian):
-        e = np.kron(np.random.normal(size=n//q), np.ones(q))
-        e = np.sqrt(0.5)*e + np.sqrt(1 - 0.5**2)*np.random.normal(size=n)
+        e = np.kron(rs.normal(size=n//q), np.ones(q))
+        e = np.sqrt(0.5)*e + np.sqrt(1 - 0.5**2)*rs.normal(size=n)
         y = x.sum(1) + e
     elif isinstance(fam, families.Poisson):
-        y = np.random.poisson(5, size=n)
+        y = rs.poisson(5, size=n)
     elif isinstance(fam, families.Binomial):
-        y = np.random.randint(0, 2, size=n)
+        y = rs.randint(0, 2, size=n)
     g = np.kron(np.arange(n//q), np.ones(q)).astype(int)
 
     model = QIF(y, x, groups=g, family=fam, cov_struct=cov_struct)
 
     for _ in range(5):
 
-        pt = np.random.normal(size=3)
+        pt = rs.normal(size=3)
 
         # Check the Jacobian of the vector of estimating equations.
         _, grad, _, _, gn_deriv = model.objective(pt)
@@ -61,24 +61,24 @@ def test_qif_numdiff(fam, cov_struct):
                          QIFAutoregressive()])
 def test_qif_fit(fam, cov_struct):
 
-    np.random.seed(234234)
+    rs = np.random.RandomState(234234)
 
     n = 1000
     q = 4
     params = np.r_[1, -0.5, 0.2]
-    x = np.random.normal(size=(n, len(params)))
+    x = rs.normal(size=(n, len(params)))
     if isinstance(fam, families.Gaussian):
-        e = np.kron(np.random.normal(size=n//q), np.ones(q))
-        e = np.sqrt(0.5)*e + np.sqrt(1 - 0.5**2)*np.random.normal(size=n)
+        e = np.kron(rs.normal(size=n//q), np.ones(q))
+        e = np.sqrt(0.5)*e + np.sqrt(1 - 0.5**2)*rs.normal(size=n)
         y = np.dot(x, params) + e
     elif isinstance(fam, families.Poisson):
         lpr = np.dot(x, params)
         mean = np.exp(lpr)
-        y = np.random.poisson(mean)
+        y = rs.poisson(mean)
     elif isinstance(fam, families.Binomial):
         lpr = np.dot(x, params)
         mean = 1 / (1 + np.exp(-lpr))
-        y = (np.random.uniform(0, 1, size=n) < mean).astype(int)
+        y = (rs.uniform(0, 1, size=n) < mean).astype(int)
     g = np.kron(np.arange(n // q), np.ones(q)).astype(int)
 
     model = QIF(y, x, groups=g, family=fam, cov_struct=cov_struct)
@@ -95,10 +95,10 @@ def test_qif_fit(fam, cov_struct):
                          QIFAutoregressive()])
 def test_formula(cov_struct):
 
-    np.random.seed(3423)
+    rs = np.random.RandomState(3423)
 
-    y = np.random.normal(size=100)
-    x = np.random.normal(size=(100, 2))
+    y = rs.normal(size=100)
+    x = rs.normal(size=(100, 2))
     groups = np.kron(np.arange(25), np.ones(4))
 
     model1 = QIF(y, x, groups=groups, cov_struct=cov_struct)

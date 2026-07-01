@@ -9,7 +9,7 @@ from statsmodels.stats.correlation_tools import (
 
 def test_kernel_covariance():
 
-    np.random.seed(342)
+    rs = np.random.RandomState(342)
 
     # Number of independent observations
     ng = 1000
@@ -30,7 +30,7 @@ def test_kernel_covariance():
         groups1 = j * np.ones(10)
 
         # The components are independent AR processes
-        ex1 = np.random.normal(size=(10, 3))
+        ex1 = rs.normal(size=(10, 3))
 
         ex1 = np.dot(qm, ex1)
         pos.append(pos1)

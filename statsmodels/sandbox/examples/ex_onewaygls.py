@@ -23,10 +23,10 @@ example_groups = ["2", "2-2"][1]
 
 # generate example
 # ----------------
-np.random.seed(87654589)
+rs = np.random.RandomState(87654589)
 nobs, nvars = example_size
-x1 = np.random.normal(size=(nobs, nvars))
-y1 = 10 + np.dot(x1, [15.0] * nvars) + 2 * np.random.normal(size=nobs)
+x1 = rs.normal(size=(nobs, nvars))
+y1 = 10 + np.dot(x1, [15.0] * nvars) + 2 * rs.normal(size=nobs)
 
 x1 = sm.add_constant(x1, prepend=False)
 # assert_almost_equal(x1, np.vander(x1[:,0],2), 16)
@@ -37,13 +37,13 @@ x1 = sm.add_constant(x1, prepend=False)
 # print res1.summary(xname=['x1','const1'])
 
 # regression 2
-x2 = np.random.normal(size=(nobs, nvars))
+x2 = rs.normal(size=(nobs, nvars))
 if example == "null":
     y2 = (
-        10 + np.dot(x2, [15.0] * nvars) + 2 * np.random.normal(size=nobs)
+        10 + np.dot(x2, [15.0] * nvars) + 2 * rs.normal(size=nobs)
     )  # if H0 is true
 else:
-    y2 = 19 + np.dot(x2, [17.0] * nvars) + 2 * np.random.normal(size=nobs)
+    y2 = 19 + np.dot(x2, [17.0] * nvars) + 2 * rs.normal(size=nobs)
 
 x2 = sm.add_constant(x2, prepend=False)
 

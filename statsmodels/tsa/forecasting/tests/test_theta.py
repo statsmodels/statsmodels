@@ -136,8 +136,9 @@ def test_forecast_seasonal_alignment(data, period):
 
 
 def test_auto(reset_randomstate):
+    rs = np.random.RandomState(232387289)
     m = 250
-    e = np.random.standard_normal(m)
+    e = rs.standard_normal(m)
     s = 10 * np.sin(np.linspace(0, np.pi, 12))
     s = np.tile(s, (m // 12 + 1))[:m]
     idx = pd.period_range("2000-01-01", freq="M", periods=m)

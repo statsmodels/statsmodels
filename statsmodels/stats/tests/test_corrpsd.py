@@ -501,9 +501,9 @@ class Test_Factor:
         # Construct a test matrix with exact factor structure
         X = np.zeros((d, dm), dtype=np.float64)
         x = np.linspace(0, 2 * np.pi, d)
-        np.random.seed(10)
+        rs = np.random.RandomState(10)
         for j in range(dm):
-            X[:, j] = np.sin(x * (j + 1)) + 1e-10 * np.random.randn(d)
+            X[:, j] = np.sin(x * (j + 1)) + 1e-10 * rs.randn(d)
 
         _project_correlation_factors(X)
         assert np.isfinite(X).all()

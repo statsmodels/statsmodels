@@ -334,12 +334,12 @@ class _TestKDEWPar(CheckKDEWeights):
 
 
 class TestKdeRefit:
-    np.random.seed(12345)
-    data1 = np.random.randn(100) * 100
+    rs = np.random.RandomState(12345)
+    data1 = rs.randn(100) * 100
     pdf = KDE(data1)
     pdf.fit()
 
-    data2 = np.random.randn(100) * 100
+    data2 = rs.randn(100) * 100
     pdf2 = KDE(data2)
     pdf2.fit()
 

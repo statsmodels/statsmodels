@@ -33,12 +33,12 @@ class TestCompareLogit(CheckGEEGLM):
     def setup_class(cls):
         vs = Independence()
         family = families.Binomial()
-        np.random.seed(987126)
-        Y = 1 * (np.random.normal(size=100) < 0)
-        X1 = np.random.normal(size=100)
-        X2 = np.random.normal(size=100)
-        X3 = np.random.normal(size=100)
-        groups = np.random.randint(0, 4, size=100)
+        rs = np.random.RandomState(987126)
+        Y = 1 * (rs.normal(size=100) < 0)
+        X1 = rs.normal(size=100)
+        X2 = rs.normal(size=100)
+        X3 = rs.normal(size=100)
+        groups = rs.randint(0, 4, size=100)
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
@@ -57,12 +57,12 @@ class TestComparePoisson(CheckGEEGLM):
     def setup_class(cls):
         vs = Independence()
         family = families.Poisson()
-        np.random.seed(987126)
-        Y = np.exp(1 + np.random.normal(size=100))
-        X1 = np.random.normal(size=100)
-        X2 = np.random.normal(size=100)
-        X3 = np.random.normal(size=100)
-        groups = np.random.randint(0, 4, size=100)
+        rs = np.random.RandomState(987126)
+        Y = np.exp(1 + rs.normal(size=100))
+        X1 = rs.normal(size=100)
+        X2 = rs.normal(size=100)
+        X3 = rs.normal(size=100)
+        groups = rs.randint(0, 4, size=100)
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
@@ -82,11 +82,11 @@ class TestCompareGaussian(CheckGEEGLM):
 
         vs = Independence()
         family = families.Gaussian()
-        np.random.seed(987126)
-        Y = np.random.normal(size=100)
-        X1 = np.random.normal(size=100)
-        X2 = np.random.normal(size=100)
-        X3 = np.random.normal(size=100)
+        rs = np.random.RandomState(987126)
+        Y = rs.normal(size=100)
+        X1 = rs.normal(size=100)
+        X2 = rs.normal(size=100)
+        X3 = rs.normal(size=100)
         groups = np.kron(np.arange(20), np.ones(5))
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
@@ -105,13 +105,13 @@ class TestCompareGamma(CheckGEEGLM):
         # adjusted for Gamma, not in test_gee.py
         vs = Independence()
         family = families.Gamma(link=links.Log())
-        np.random.seed(987126)
+        rs = np.random.RandomState(987126)
         # Y = np.random.normal(size=100)**2
-        Y = np.exp(0.1 + np.random.normal(size=100))   # log-normal
-        X1 = np.random.normal(size=100)
-        X2 = np.random.normal(size=100)
-        X3 = np.random.normal(size=100)
-        groups = np.random.randint(0, 4, size=100)
+        Y = np.exp(0.1 + rs.normal(size=100))   # log-normal
+        X1 = rs.normal(size=100)
+        X2 = rs.normal(size=100)
+        X3 = rs.normal(size=100)
+        groups = rs.randint(0, 4, size=100)
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 

@@ -20,8 +20,8 @@ except ImportError:
 def test_equi():
     # Test the structure of the equivariant knockoff construction.
 
-    np.random.seed(2342)
-    exog = np.random.normal(size=(10, 4))
+    rs = np.random.RandomState(2342)
+    exog = rs.normal(size=(10, 4))
 
     exog1, exog2, sl = _design_knockoff_equi(exog)
 
@@ -43,8 +43,8 @@ def test_sdp():
     if not has_cvxopt:
         return
 
-    np.random.seed(2342)
-    exog = np.random.normal(size=(10, 4))
+    rs = np.random.RandomState(2342)
+    exog = rs.normal(size=(10, 4))
 
     exog1, exog2, sl = _design_knockoff_sdp(exog)
 
@@ -76,11 +76,11 @@ def test_testers(p, tester, method):
     if method == "sdp" and not has_cvxopt:
         return
 
-    np.random.seed(2432)
+    rs = np.random.RandomState(2432)
     n = 200
 
-    y = np.random.normal(size=n)
-    x = np.random.normal(size=(n, p))
+    y = rs.normal(size=n)
+    x = rs.normal(size=(n, p))
 
     kn = RegressionFDR(y, x, tester, design_method=method)
     assert_equal(len(kn.stats), p)
@@ -103,7 +103,7 @@ def test_sim(method, tester, n, p, es):
     if method == "sdp" and not has_cvxopt:
         return
 
-    np.random.seed(43234)
+    rs = np.random.RandomState(43234)
 
     # Number of variables with a non-zero coefficient
     npos = 30
@@ -121,12 +121,12 @@ def test_sim(method, tester, n, p, es):
     for _ in range(nrep):
 
         # Generate the predictors
-        x = np.random.normal(size=(n, p))
+        x = rs.normal(size=(n, p))
         x /= np.sqrt(np.sum(x*x, 0))
 
         # Generate the response variable
         coeff = es * (-1)**np.arange(npos)
-        y = np.dot(x[:, 0:npos], coeff) + np.random.normal(size=n)
+        y = np.dot(x[:, 0:npos], coeff) + rs.normal(size=n)
 
         kn = RegressionFDR(y, x, tester)
 

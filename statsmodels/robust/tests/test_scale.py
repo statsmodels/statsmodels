@@ -104,8 +104,8 @@ class TestChem:
 class TestMad:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10))
 
     def test_mad(self):
         m = scale.mad(self.X)
@@ -134,8 +134,8 @@ class TestMad:
 class TestMadAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
 
     def test_axis0(self):
         m = scale.mad(self.X, axis=0)
@@ -157,8 +157,8 @@ class TestMadAxes:
 class TestIqr:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10))
 
     def test_iqr(self):
         m = scale.iqr(self.X)
@@ -179,8 +179,8 @@ class TestIqr:
 class TestIqrAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
 
     def test_axis0(self):
         m = scale.iqr(self.X, axis=0)
@@ -202,10 +202,10 @@ class TestIqrAxes:
 class TestQn:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
+        rs = np.random.RandomState(54321)
         cls.normal = standard_normal(size=40)
         cls.range = np.arange(0, 40)
-        cls.exponential = np.random.exponential(size=40)
+        cls.exponential = rs.exponential(size=40)
         cls.stackloss = sm.datasets.stackloss.load_pandas().data
         cls.sunspot = sm.datasets.sunspots.load_pandas().data.SUNACTIVITY
 
@@ -250,8 +250,8 @@ class TestQn:
 class TestQnAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
 
     def test_axis0(self):
         m = scale.qn_scale(self.X, axis=0)
@@ -273,8 +273,8 @@ class TestQnAxes:
 class TestHuber:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10))
 
     def test_huber_result_shape(self):
         h = scale.Huber(maxiter=100)
@@ -285,8 +285,8 @@ class TestHuber:
 class TestHuberAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
         cls.h = scale.Huber(maxiter=100, tol=1.0e-05)
 
     def test_default(self):
@@ -383,9 +383,9 @@ def test_tau_scale2():
 
 def test_scale_iter():
     # regression test, and approximately correct
-    np.random.seed(54321)
+    rs = np.random.RandomState(54321)
     v = np.array([1, 0.5, 0.4])
-    x = standard_normal((40, 3)) * np.sqrt(v)
+    x = rs.standard_normal((40, 3)) * np.sqrt(v)
     x[:2] = [2, 2, 2]
 
     x = x[:, 0]  # 1d only ?
@@ -416,9 +416,9 @@ def test_scale_iter():
 class TestMScale():
 
     def test_huber_equivalence(self):
-        np.random.seed(54321)
+        rs = np.random.RandomState(54321)
         nobs = 50
-        x = 1.5 * standard_normal(nobs)
+        x = 1.5 * rs.standard_normal(nobs)
 
         # test equivalence of HuberScale and TrimmedMean M-scale
         chi_tm = rnorms.TrimmedMean(c=2.5)
@@ -446,8 +446,8 @@ class TestMScale():
 def test_scale_trimmed_approx():
     scale_trimmed = scale.scale_trimmed  # shorthand
     nobs = 500
-    np.random.seed(965578)
-    x = 2*np.random.randn(nobs)
+    rs = np.random.RandomState(965578)
+    x = 2*rs.randn(nobs)
     x[:10] = 60
 
     alpha = 0.2

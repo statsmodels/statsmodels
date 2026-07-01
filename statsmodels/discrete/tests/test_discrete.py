@@ -2624,10 +2624,10 @@ def test_poisson_predict():
 def test_poisson_newton():
     # GH: 24, Newton does not work well sometimes
     nobs = 10000
-    np.random.seed(987689)
-    x = np.random.randn(nobs, 3)
+    rs = np.random.RandomState(987689)
+    x = rs.randn(nobs, 3)
     x = sm.add_constant(x, prepend=True)
-    y_count = np.random.poisson(np.exp(x.sum(1)))
+    y_count = rs.poisson(np.exp(x.sum(1)))
     mod = sm.Poisson(y_count, x)
     # this is not thread-safe
     with pytest.warns(ConvergenceWarning):
@@ -2757,11 +2757,12 @@ def test_mnlogit_factor_categorical():
 
 def test_formula_missing_exposure():
     # see 2083
+    rs = np.random.RandomState(473989724)
     d = {
         "Foo": [1, 2, 10, 149],
         "Bar": [1, 2, 3, np.nan],
         "constant": [1] * 4,
-        "exposure": np.random.uniform(size=4),
+        "exposure": rs.uniform(size=4),
         "x": [1, 3, 2, 1.5],
     }
     df = pd.DataFrame(d)
@@ -2771,7 +2772,7 @@ def test_formula_missing_exposure():
     assert_(type(mod1.exposure) is np.ndarray, msg="Exposure is not ndarray")
 
     # make sure this raises
-    exposure = pd.Series(np.random.uniform(size=5))
+    exposure = pd.Series(rs.uniform(size=5))
     df.loc[3, "Bar"] = 4  # nan not relevant for ValueError for shape mismatch
     with pytest.raises(ValueError):
         sm.Poisson(df.Foo, df[["constant", "Bar"]], exposure=exposure)
@@ -3495,11 +3496,12 @@ class TestGeneralizedPoissonNull(CheckNull):
 def test_null_options():
     # this is a "nice" case because we only check that options are used
     # correctly
+    rs = np.random.RandomState(332723492)
     nobs = 10
     exog = np.ones((20, 2))
     exog[: nobs // 2, 1] = 0
     mu = np.exp(exog.sum(1))
-    endog = np.random.poisson(mu)  # Note no size=nobs in np.random
+    endog = rs.poisson(mu)
     res = Poisson(endog, exog).fit(start_params=np.log([1, 1]), disp=0)
     llnull0 = res.llnull
     assert_(hasattr(res, "res_llnull") is False)

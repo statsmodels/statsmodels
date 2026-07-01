@@ -51,11 +51,11 @@ def get_domainvalue(link):
 def test_inverse():
     # Logic check that link.inverse(link) and link(link.inverse)
     # are the identity.
-    np.random.seed(3285)
+    rs = np.random.RandomState(3285)
 
     for link in Links:
         for _ in range(10):
-            p = np.random.uniform(0, 1)  # In domain for all families
+            p = rs.uniform(0, 1)  # In domain for all families
             d = link.inverse(link(p))
             assert_allclose(d, p, atol=1e-8, err_msg=str(link))
 
@@ -67,11 +67,11 @@ def test_inverse():
 def test_deriv():
     # Check link function derivatives using numeric differentiation.
 
-    np.random.seed(24235)
+    rs = np.random.RandomState(24235)
 
     for link in Links:
         for _ in range(10):
-            p = np.random.uniform(0, 1)
+            p = rs.uniform(0, 1)
             if isinstance(link, links.Cauchy):
                 p = np.clip(p, 0.03, 0.97)
             d = link.deriv(p)
@@ -88,11 +88,11 @@ def test_deriv():
 def test_deriv2():
     # Check link function second derivatives using numeric differentiation.
 
-    np.random.seed(24235)
+    rs = np.random.RandomState(24235)
 
     for link in Links:
         for _ in range(10):
-            p = np.random.uniform(0, 1)
+            p = rs.uniform(0, 1)
             p = np.clip(p, 0.01, 0.99)
             if isinstance(link, links.cauchy):
                 p = np.clip(p, 0.03, 0.97)
