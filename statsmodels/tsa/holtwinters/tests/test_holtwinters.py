@@ -35,7 +35,9 @@ from statsmodels.tsa.holtwinters._smoothers import (
 )
 
 # pandas 3.1 changes the return type of infer_freq - suppress its deprecation warning
-pytest.mark.filterwarnings("ignore:A future version of pandas will return a BaseOffset")
+pytestmark = [
+    pytest.mark.filterwarnings("ignore:A future version of pandas will return a BaseOffset")
+]
 
 base, _ = os.path.split(os.path.abspath(__file__))
 housing_data = pd.read_csv(
