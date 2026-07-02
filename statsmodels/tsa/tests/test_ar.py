@@ -788,7 +788,8 @@ def test_autoreg_roots():
 
 
 def test_equiv_dynamic(reset_randomstate):
-    e = np.random.standard_normal(1001)
+    rs = np.random.RandomState(42121221)
+    e = rs.standard_normal(1001)
     y = np.empty(1001)
     y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9**2))
     for i in range(1, 1001):
