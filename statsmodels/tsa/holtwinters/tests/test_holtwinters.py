@@ -5,6 +5,7 @@ Modified: Kevin Sheppard
 
 from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.pytest import pytest_warns
+from statsmodels.compat.pandas import infer_freq
 
 import os
 import re
@@ -33,11 +34,6 @@ from statsmodels.tsa.holtwinters._smoothers import (
     to_restricted,
     to_unrestricted,
 )
-
-# pandas 3.1 changes the return type of infer_freq - suppress its deprecation warning
-pytestmark = [
-    pytest.mark.filterwarnings("ignore:A future version of pandas will return a BaseOffset")
-]
 
 base, _ = os.path.split(os.path.abspath(__file__))
 housing_data = pd.read_csv(
@@ -104,7 +100,7 @@ index = [
     "2010-12-01 00:00:00",
 ]
 idx = pd.to_datetime(index)
-aust = pd.Series(data, index=pd.DatetimeIndex(idx, freq=pd.infer_freq(idx)))
+aust = pd.Series(data, index=pd.DatetimeIndex(idx, freq=infer_freq(idx)))
 
 
 @pytest.fixture(scope="module")
@@ -182,7 +178,7 @@ class TestHoltWinters:
         ]
         oildata_oil = pd.Series(data, index)
         oildata_oil.index = pd.DatetimeIndex(
-            oildata_oil.index, freq=pd.infer_freq(oildata_oil.index)
+            oildata_oil.index, freq=infer_freq(oildata_oil.index)
         )
         cls.oildata_oil = oildata_oil
 
@@ -224,7 +220,7 @@ class TestHoltWinters:
         ]
         air_ausair = pd.Series(data, index)
         air_ausair.index = pd.DatetimeIndex(
-            air_ausair.index, freq=pd.infer_freq(air_ausair.index)
+            air_ausair.index, freq=infer_freq(air_ausair.index)
         )
         cls.air_ausair = air_ausair
 
@@ -299,7 +295,7 @@ class TestHoltWinters:
         livestock2_livestock = pd.Series(data, index)
         livestock2_livestock.index = pd.DatetimeIndex(
             livestock2_livestock.index,
-            freq=pd.infer_freq(livestock2_livestock.index),
+            freq=infer_freq(livestock2_livestock.index),
         )
         cls.livestock2_livestock = livestock2_livestock
 
