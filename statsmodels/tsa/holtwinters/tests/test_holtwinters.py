@@ -34,6 +34,9 @@ from statsmodels.tsa.holtwinters._smoothers import (
     to_unrestricted,
 )
 
+# suppress pandas warning from pd.infer_freq
+pytest.mark.filterwarnings("ignore:A future version of pandas will return a BaseOffset")
+
 base, _ = os.path.split(os.path.abspath(__file__))
 housing_data = pd.read_csv(
     os.path.join(base, "results", "housing-data.csv"),
