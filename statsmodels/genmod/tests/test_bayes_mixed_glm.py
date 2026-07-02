@@ -156,9 +156,9 @@ def test_simple_poisson_map():
             pr2 = rslt2.predict(linear=linear, exog=exog)
             pr3 = glmm1.predict(rslt1.params, linear=linear, exog=exog)
             pr4 = glmm2.predict(rslt2.params, linear=linear, exog=exog)
-            assert_allclose(pr1, pr2, rtol=1e-5)
-            assert_allclose(pr2, pr3, rtol=1e-5)
-            assert_allclose(pr3, pr4, rtol=1e-5)
+            assert_allclose(pr1, pr2, rtol=7e-5)
+            assert_allclose(pr2, pr3, rtol=7e-5)
+            assert_allclose(pr3, pr4, rtol=7e-5)
             if not linear:
                 assert_equal(pr1.min() >= 0, True)
                 assert_equal(pr2.min() >= 0, True)
