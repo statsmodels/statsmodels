@@ -89,10 +89,13 @@ def infer_freq(index) -> str | None:
     try:
         with pd.option_context("future.infer_freq_returns_offset", True):
             freq = pd.infer_freq(index)
-            return freq.freqstr
     except pd.errors.OptionError:
         # in older versions the option is not available and a str is returned
-        return pd.infer_freq(index)
+        freq = pd.infer_freq(index)
+
+    if not isinstance(freq, str | None):
+        return freq.freqstr
+    return freq
 
 
 def is_int_index(index: pd.Index) -> bool:
