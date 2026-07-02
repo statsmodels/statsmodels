@@ -15,7 +15,7 @@ if __name__ == "__main__":
     xo = arma_generate_sample([1], [1], nsample=100)
     xo2 = np.round(xo * 1000).astype(int)
     rs = np.random.RandomState(10000)
-    rvs = rs.normal(size=100)
+    _ = rs.normal(size=100)
     rvs2 = np.round(xo * 1000).astype(int)
     assert (xo2 == rvs2).all()
 
