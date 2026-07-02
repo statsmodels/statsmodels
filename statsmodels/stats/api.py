@@ -70,6 +70,7 @@ from .multivariate import (
     test_mvmean,
     test_mvmean_2indep,
 )
+from .nonparametric import jonckheere_terpstra
 from .oaxaca import OaxacaBlinder
 from .oneway import (  # mean and scale; power; from stats; effect size
     anova_generic,
@@ -246,6 +247,7 @@ __all__ = [
     "het_goldfeldquandt",
     "het_white",
     "jarque_bera",
+    "jonckheere_terpstra",
     "lilliefors",
     "linear_harvey_collier",
     "linear_lm",
