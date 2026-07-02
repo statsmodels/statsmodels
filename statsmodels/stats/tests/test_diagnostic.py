@@ -62,6 +62,24 @@ def compare_to_reference(sp, sp_dict, decimal=(12, 12)):
     )
 
 
+def _pt_reference(actual, predicted):
+    actual = np.asarray(actual)
+    predicted = np.asarray(predicted)
+    realized_pos = (actual > 0).astype(float)
+    predicted_pos = (predicted > 0).astype(float)
+    nobs = actual.shape[0]
+    p_y = realized_pos.mean()
+    p_z = predicted_pos.mean()
+    p_hat = np.mean(realized_pos == predicted_pos)
+    p_ind = p_y * p_z + (1 - p_y) * (1 - p_z)
+    v_hat = p_ind * (1 - p_ind) / nobs
+    w_hat = (((2 * p_y - 1) ** 2) * p_z * (1 - p_z) +
+             ((2 * p_z - 1) ** 2) * p_y * (1 - p_y)) / nobs
+    variance = v_hat - w_hat
+    stat = (p_hat - p_ind) / np.sqrt(variance)
+    return stat, 2 * stats.norm.sf(np.abs(stat))
+
+
 def test_gq():
     d = macrodata.load().data
 
@@ -700,6 +718,63 @@ class TestDiagnosticG:
 
         _, _, store = smsdia.compare_cox(res, res2, store=True)
         assert isinstance(store, smsdia.ResultsStore)
+
+    def test_pesaran_timmermann_reference(self):
+        actual = np.r_[np.ones(50), -np.ones(50)]
+        predicted = actual.copy()
+
+        pt = smsdia.pesaran_timmermann(actual, predicted)
+        expected = (10.0, 1.5239706048321186e-23)
+        assert_allclose(pt, expected, rtol=1e-12)
+
+    def test_pesaran_timmermann_manual_formula(self):
+        actual = np.array([1.2, -0.4, 0.0, 0.9, -1.1, 0.5, -0.2, 0.3])
+        predicted = np.array([0.6, -0.2, -0.1, 1.0, 0.7, 0.2, -0.4, -0.6])
+
+        pt = smsdia.pesaran_timmermann(actual, predicted)
+        expected = _pt_reference(actual, predicted)
+        assert_allclose(pt, expected, rtol=1e-12)
+
+        pt_larger = smsdia.pesaran_timmermann(
+            actual, predicted, alternative="larger"
+        )
+        pt_smaller = smsdia.pesaran_timmermann(
+            actual, predicted, alternative="smaller"
+        )
+        assert_allclose(pt_larger[0], expected[0], rtol=1e-12)
+        assert_allclose(pt_smaller[0], expected[0], rtol=1e-12)
+        assert_allclose(
+            pt_larger[1], stats.norm.sf(expected[0]), rtol=1e-12
+        )
+        assert_allclose(
+            pt_smaller[1], stats.norm.cdf(expected[0]), rtol=1e-12
+        )
+
+    def test_pesaran_timmermann_store(self):
+        actual = np.r_[np.ones(10), -np.ones(10)]
+        predicted = actual.copy()
+
+        _, _, store = smsdia.pesaran_timmermann(actual, predicted, store=True)
+        assert isinstance(store, smsdia.ResultsStore)
+        assert store.nobs == actual.shape[0]
+        assert_allclose(store.p_hat, 1.0, rtol=1e-12)
+        assert_allclose(store.p_ind, 0.5, rtol=1e-12)
+
+    @pytest.mark.parametrize(
+        ("actual", "predicted", "kwargs", "message"),
+        [
+            ([1, -1], [1], {}, "same length"),
+            ([1], [1], {}, "at least 2 values"),
+            ([1, np.nan], [1, -1], {}, "finite"),
+            ([1, 1, 1], [1, 1, 1], {}, "variance is non-positive"),
+            ([1, -1], [1, -1], {"alternative": "bad"}, "alternative"),
+        ],
+    )
+    def test_pesaran_timmermann_invalid(
+        self, actual, predicted, kwargs, message
+    ):
+        with pytest.raises(ValueError, match=message):
+            smsdia.pesaran_timmermann(actual, predicted, **kwargs)
 
     def test_cusum_ols(self):
         # R library(strucchange)
