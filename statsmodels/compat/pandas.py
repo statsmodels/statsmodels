@@ -93,7 +93,7 @@ def infer_freq(index) -> str | None:
         # in older versions the option is not available and a str is returned
         freq = pd.infer_freq(index)
 
-    if not isinstance(freq, str | None):
+    if not isinstance(freq, (str, None)):
         return freq.freqstr
     return freq
 
