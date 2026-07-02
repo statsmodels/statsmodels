@@ -919,6 +919,42 @@ def test_power_solver():
             )
 
 
+def test_solve_power_no_solution_returns_nan():
+    # GH#9378: when the power equation has no solution (e.g. a one-sided test
+    # whose effect_size points into the wrong tail) the root finder cannot
+    # converge. Previously solve_power still returned the last value the solver
+    # evaluated -- a bracket bound such as 10 -- which masqueraded as a valid
+    # sample size. It should return nan instead, while still warning that it
+    # failed to converge.
+    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+    tt = smp.TTestPower()
+
+    # 'smaller' alternative but a positive effect size -> impossible
+    with pytest.warns(ConvergenceWarning):
+        val = tt.solve_power(
+            effect_size=0.5, nobs=None, alpha=0.05, power=0.8,
+            alternative="smaller",
+        )
+    assert np.isnan(val)
+    assert_equal(tt.cache_fit_res[0], 0)
+
+    # mirror case: 'larger' alternative but a negative effect size
+    with pytest.warns(ConvergenceWarning):
+        val = tt.solve_power(
+            effect_size=-0.5, nobs=None, alpha=0.05, power=0.8,
+            alternative="larger",
+        )
+    assert np.isnan(val)
+
+    # a solvable case is unaffected and still returns a finite sample size
+    val = tt.solve_power(
+        effect_size=0.5, nobs=None, alpha=0.05, power=0.8,
+        alternative="larger",
+    )
+    assert np.isfinite(val)
+
+
 # TODO: can something useful be made from this?
 @pytest.mark.xfail(reason="Known failure on modern SciPy >= 0.10", strict=True)
 def test_power_solver_warn():

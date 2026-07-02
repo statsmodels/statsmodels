@@ -548,6 +548,11 @@ class Power:
             )
 
             warnings.warn(convergence_doc, ConvergenceWarning, stacklevel=2)
+            # the root finder did not converge, so ``val`` is not a solution
+            # (it is the last point the solver evaluated, e.g. a bracket
+            # bound). Returning it would masquerade as a valid answer; return
+            # nan instead to signal that no solution was found.
+            val = np.nan
 
         # attach fit_res, for reading only, should be needed only for debugging
         fit_res.insert(0, success)
@@ -747,10 +752,10 @@ class TTestPower(Power):
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        alternative : str, 'two-sided' (default) or 'one-sided'
+        alternative : str, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
-            two-sided (default) or one sided test.
-            'one-sided' assumes we are in the relevant tail.
+            two-sided (default) or one sided test. The one-sided test can be
+            either 'larger', 'smaller'.
 
         Returns
         -------
