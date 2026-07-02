@@ -9,8 +9,8 @@ from statsmodels.stats.contrast import Contrast
 class TestContrast:
     @classmethod
     def setup_class(cls):
-        numpy.random.seed(54321)
-        cls.X = numpy.random.standard_normal((40, 10))
+        rs = numpy.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10))
 
     def test_contrast1(self):
         term = np.column_stack((self.X[:, 0], self.X[:, 2]))

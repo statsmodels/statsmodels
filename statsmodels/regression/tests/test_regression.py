@@ -770,8 +770,8 @@ class TestGLS_WLS_equivalence(TestOLS_GLS_WLS_equivalence):
         y = data.endog
         x = data.exog
         n = y.shape[0]
-        np.random.seed(5)
-        w = np.random.uniform(0.5, 1, n)
+        rs = np.random.RandomState(5)
+        w = rs.uniform(0.5, 1, n)
         w_inv = 1.0 / w
         cls.results = []
         cls.results.append(WLS(y, x, w).fit())
@@ -976,10 +976,10 @@ class TestYuleWalker:
 class TestDataDimensions(CheckRegressionResults):
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.endog_n_ = np.random.uniform(0, 20, size=30)
+        rs = np.random.RandomState(54321)
+        cls.endog_n_ = rs.uniform(0, 20, size=30)
         cls.endog_n_one = cls.endog_n_[:, None]
-        cls.exog_n_ = np.random.uniform(0, 20, size=30)
+        cls.exog_n_ = rs.uniform(0, 20, size=30)
         cls.exog_n_one = cls.exog_n_[:, None]
         cls.degen_exog = cls.exog_n_one[:-1]
         cls.mod1 = OLS(cls.endog_n_one, cls.exog_n_one)
@@ -1046,8 +1046,8 @@ class TestNxNxOne(TestDataDimensions):
 
 
 def test_bad_size():
-    np.random.seed(54321)
-    data = np.random.uniform(0, 20, 31)
+    rs = np.random.RandomState(54321)
+    data = rs.uniform(0, 20, 31)
     with pytest.raises(ValueError):
         OLS(data, data[1:])
 
@@ -1161,10 +1161,10 @@ class TestRegularizedFit:
     # Make sure there are no problems when no variables are selected.
     def test_empty_model(self):
 
-        np.random.seed(742)
+        rs = np.random.RandomState(742)
         n = 100
-        endog = np.random.normal(size=n)
-        exog = np.random.normal(size=(n, 3))
+        endog = rs.normal(size=n)
+        exog = rs.normal(size=(n, 3))
 
         for cls in OLS, WLS, GLS:
             model = cls(endog, exog)
@@ -1212,11 +1212,11 @@ class TestRegularizedFit:
 
     def test_regularized_weights(self):
 
-        np.random.seed(1432)
-        exog1 = np.random.normal(size=(100, 3))
-        endog1 = exog1[:, 0] + exog1[:, 1] + np.random.normal(size=100)
-        exog2 = np.random.normal(size=(100, 3))
-        endog2 = exog2[:, 0] + exog2[:, 1] + np.random.normal(size=100)
+        rs = np.random.RandomState(1432)
+        exog1 = rs.normal(size=(100, 3))
+        endog1 = exog1[:, 0] + exog1[:, 1] + rs.normal(size=100)
+        exog2 = rs.normal(size=(100, 3))
+        endog2 = exog2[:, 0] + exog2[:, 1] + rs.normal(size=100)
 
         exog_a = np.vstack((exog1, exog1, exog2))
         endog_a = np.concatenate((endog1, endog1, endog2))
@@ -1244,11 +1244,11 @@ class TestRegularizedFit:
 
     def test_regularized_weights_list(self):
 
-        np.random.seed(132)
-        exog1 = np.random.normal(size=(100, 3))
-        endog1 = exog1[:, 0] + exog1[:, 1] + np.random.normal(size=100)
-        exog2 = np.random.normal(size=(100, 3))
-        endog2 = exog2[:, 0] + exog2[:, 1] + np.random.normal(size=100)
+        rs = np.random.RandomState(132)
+        exog1 = rs.normal(size=(100, 3))
+        endog1 = exog1[:, 0] + exog1[:, 1] + rs.normal(size=100)
+        exog2 = rs.normal(size=(100, 3))
+        endog2 = exog2[:, 0] + exog2[:, 1] + rs.normal(size=100)
 
         exog_a = np.vstack((exog1, exog1, exog2))
         endog_a = np.concatenate((endog1, endog1, endog2))
@@ -1323,10 +1323,10 @@ def test_missing_formula_predict():
 def test_fvalue_implicit_constant():
     # if constant is implicit, return nan see #2444
     nobs = 100
-    np.random.seed(2)
-    x = np.random.randn(nobs, 1)
+    rs = np.random.RandomState(2)
+    x = rs.randn(nobs, 1)
     x = ((x > 0) == [True, False]).astype(int)
-    y = x.sum(1) + np.random.randn(nobs)
+    y = x.sum(1) + rs.randn(nobs)
 
     from statsmodels.regression.linear_model import OLS, WLS
 
@@ -1344,9 +1344,9 @@ def test_fvalue_implicit_constant():
 def test_fvalue_only_constant():
     # if only constant in model, return nan see #3642
     nobs = 20
-    np.random.seed(2)
+    rs = np.random.RandomState(2)
     x = np.ones(nobs)
-    y = np.random.randn(nobs)
+    y = rs.randn(nobs)
 
     from statsmodels.regression.linear_model import OLS, WLS
 
@@ -1364,9 +1364,9 @@ def test_fvalue_only_constant():
 def test_ridge():
     n = 100
     p = 5
-    np.random.seed(3132)
-    xmat = np.random.normal(size=(n, p))
-    yvec = xmat.sum(1) + np.random.normal(size=n)
+    rs = np.random.RandomState(3132)
+    xmat = rs.normal(size=(n, p))
+    yvec = xmat.sum(1) + rs.normal(size=n)
 
     v = np.ones(p)
     v[0] = 0
@@ -1390,10 +1390,10 @@ def test_ridge():
 def test_regularized_refit():
     n = 100
     p = 5
-    np.random.seed(3132)
-    xmat = np.random.normal(size=(n, p))
+    rs = np.random.RandomState(3132)
+    xmat = rs.normal(size=(n, p))
     # covariates 0 and 2 matter
-    yvec = xmat[:, 0] + xmat[:, 2] + np.random.normal(size=n)
+    yvec = xmat[:, 0] + xmat[:, 2] + rs.normal(size=n)
     model1 = OLS(yvec, xmat)
     result1 = model1.fit_regularized(alpha=2.0, L1_wt=0.5, refit=True)
     model2 = OLS(yvec, xmat[:, [0, 2]])
@@ -1407,10 +1407,10 @@ def test_regularized_predict():
     # this also compares WLS with GLS
     n = 100
     p = 5
-    np.random.seed(3132)
-    xmat = np.random.normal(size=(n, p))
-    yvec = xmat.sum(1) + np.random.normal(size=n)
-    wgt = np.random.uniform(1, 2, n)
+    rs = np.random.RandomState(3132)
+    xmat = rs.normal(size=(n, p))
+    yvec = xmat.sum(1) + rs.normal(size=n)
+    wgt = rs.uniform(1, 2, n)
     model_wls = WLS(yvec, xmat, weights=wgt)
     # TODO: params is not the same in GLS if sigma=1 / wgt, i.e 1-dim, #7755
     model_gls1 = GLS(yvec, xmat, sigma=np.diag(1 / wgt))
@@ -1442,9 +1442,9 @@ def test_regularized_predict():
 def test_regularized_options():
     n = 100
     p = 5
-    np.random.seed(3132)
-    xmat = np.random.normal(size=(n, p))
-    yvec = xmat.sum(1) + np.random.normal(size=n)
+    rs = np.random.RandomState(3132)
+    xmat = rs.normal(size=(n, p))
+    yvec = xmat.sum(1) + rs.normal(size=n)
     model1 = OLS(yvec - 1, xmat)
     result1 = model1.fit_regularized(alpha=1.0, L1_wt=0.5)
     model2 = OLS(yvec, xmat, offset=1)
@@ -1484,7 +1484,7 @@ def test_burg_errors():
 @pytest.mark.skipif(not has_cvxopt, reason="sqrt_lasso requires cvxopt")
 def test_sqrt_lasso():
 
-    np.random.seed(234923)
+    rs = np.random.RandomState(234923)
 
     # Based on the example in the Belloni paper
     n = 100
@@ -1493,7 +1493,7 @@ def test_sqrt_lasso():
     cx = 0.5 ** np.abs(np.subtract.outer(ii, ii))
     cxr = np.linalg.cholesky(cx)
 
-    x = np.dot(np.random.normal(size=(n, p)), cxr.T)
+    x = np.dot(rs.normal(size=(n, p)), cxr.T)
     b = np.zeros(p)
     b[0:5] = [1, 1, 1, 1, 1]
 
@@ -1502,7 +1502,7 @@ def test_sqrt_lasso():
     alpha = 1.1 * np.sqrt(n) * norm.ppf(1 - 0.05 / (2 * p))
 
     # Use very low noise level for a unit test
-    y = np.dot(x, b) + 0.25 * np.random.normal(size=n)
+    y = np.dot(x, b) + 0.25 * rs.normal(size=n)
 
     # At low noise levels, the sqrt lasso should be around a
     # factor of 3 from the oracle without refit, and should

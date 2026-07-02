@@ -25,12 +25,12 @@ class ConstrainedCompareMixin:
     @classmethod
     def setup_class(cls):
         nobs, k_exog = 100, 5
-        np.random.seed(987125)
-        x = np.random.randn(nobs, k_exog - 1)
+        rs = np.random.RandomState(987125)
+        x = rs.randn(nobs, k_exog - 1)
         x = add_constant(x)
 
         y_true = x.sum(1) / 2
-        y = y_true + 2 * np.random.randn(nobs)
+        y = y_true + 2 * rs.randn(nobs)
         cls.endog = y
         cls.exog = x
         cls.idx_uc = [0, 2, 3, 4]
@@ -114,13 +114,13 @@ class ConstrainedCompareWtdMixin(ConstrainedCompareMixin):
     @classmethod
     def setup_class(cls):
         nobs, k_exog = 100, 5
-        np.random.seed(987125)
-        x = np.random.randn(nobs, k_exog - 1)
+        rs = np.random.RandomState(987125)
+        x = rs.randn(nobs, k_exog - 1)
         x = add_constant(x)
-        cls.aweights = np.random.randint(1, 10, nobs)
+        cls.aweights = rs.randint(1, 10, nobs)
 
         y_true = x.sum(1) / 2
-        y = y_true + 2 * np.random.randn(nobs)
+        y = y_true + 2 * rs.randn(nobs)
         cls.endog = y
         cls.exog = x
         cls.idx_uc = [0, 2, 3, 4]

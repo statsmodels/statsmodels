@@ -74,6 +74,7 @@ def test_callable_deprecate_kwarg(x):
 def test_bad_deprecate_kwarg():
     msg = "mapping from old to new argument values must be dict or callable!"
     with pytest.raises(TypeError, match=msg):
+
         @deprecate_kwarg("old", "new", mapping=0)
         def f4(new=None):
             return new

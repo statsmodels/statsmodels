@@ -1289,8 +1289,8 @@ def test_influence_wrapped():
 def test_influence_dtype():
     # see #2148  bug when endog is integer
     y = np.ones(20)
-    np.random.seed(123)
-    x = np.random.randn(20, 3)
+    rs = np.random.RandomState(123)
+    x = rs.randn(20, 3)
     res1 = OLS(y, x).fit()
 
     res2 = OLS(y * 1.0, x).fit()

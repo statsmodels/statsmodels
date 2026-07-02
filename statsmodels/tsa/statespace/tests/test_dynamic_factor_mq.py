@@ -1663,14 +1663,14 @@ def check_standardized_results(res1, res2, check_diagnostics=True):
     # - Test simulation ------------------------------------------------------
 
     # Generate shocks
-    np.random.seed(1234)
+    rs = np.random.RandomState(1234)
     nsimulations = 100
-    initial_state = np.random.multivariate_normal(
+    initial_state = rs.multivariate_normal(
         res1.filter_results.initial_state,
         res1.filter_results.initial_state_cov)
-    raw_measurement_shocks = np.random.multivariate_normal(
+    raw_measurement_shocks = rs.multivariate_normal(
         np.zeros(mod1.k_endog), np.eye(mod1.k_endog), size=nsimulations)
-    state_shocks = np.random.multivariate_normal(
+    state_shocks = rs.multivariate_normal(
         np.zeros(mod1.ssm.k_posdef), mod1["state_cov"], size=nsimulations)
 
     L1 = np.diag(mod1["obs_cov"].diagonal()**0.5)

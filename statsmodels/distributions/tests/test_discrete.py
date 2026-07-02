@@ -411,7 +411,7 @@ class TestDiscretizedBurr12(CheckDiscretized):
         cls.start_params = (0.5, 1, 0.5)
 
 
-class TestDiscretizedGammaEx():
+class TestDiscretizedGammaEx:
     # strike outbreaks example from Ch... 2012
 
     def test_all(self):
@@ -454,8 +454,8 @@ class TestDiscretizedGammaEx():
         # smoke test for summary
         res.summary()
 
-        np.random.seed(987146)
-        res_boots = res.bootstrap()
+        rs = np.random.RandomState(987146)
+        res_boots = res.bootstrap(rng=rs)
         # only loose check, small default n_rep=100, agreement at around 3%
         assert_allclose(res.params, res_boots[0], rtol=0.05)
         assert_allclose(res.bse, res_boots[1], rtol=0.05)

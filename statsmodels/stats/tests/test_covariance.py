@@ -47,8 +47,8 @@ def test_corr_qu_ns_REGRESSION():
     mean = np.zeros(k_vars)
     cov = linalg.toeplitz(1. / np.arange(1, k_vars+1))
 
-    np.random.seed(187649)
-    x = np.random.multivariate_normal(mean, cov, size=nobs)
+    rs = np.random.RandomState(187649)
+    x = rs.multivariate_normal(mean, cov, size=nobs)
     x = np.round(x, 3)
 
     res_cns = np.array([[1.        , 0.39765225, 0.27222425],

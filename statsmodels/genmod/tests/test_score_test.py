@@ -93,18 +93,18 @@ class TestScoreTest(CheckScoreTest):
     def setup_class(cls):
         nobs, k_vars = 500, 5
 
-        np.random.seed(786452)
-        x = np.random.randn(nobs, k_vars)
+        rs = np.random.RandomState(786452)
+        x = rs.randn(nobs, k_vars)
         x[:, 0] = 1
-        x2 = np.random.randn(nobs, 2)
+        x2 = rs.randn(nobs, 2)
         xx = np.column_stack((x, x2))
 
         if cls.dispersed:
-            het = np.random.randn(nobs)
-            y = np.random.poisson(np.exp(x.sum(1) * 0.5 + het))
+            het = rs.randn(nobs)
+            y = rs.poisson(np.exp(x.sum(1) * 0.5 + het))
             # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
-            y = np.random.poisson(np.exp(x.sum(1) * 0.5))
+            y = rs.poisson(np.exp(x.sum(1) * 0.5))
 
         cls.exog_extra = x2
         cls.model_full = GLM(y, xx, family=families.Poisson())
@@ -170,18 +170,18 @@ class TestScoreTestPoisson(TestScoreTest):
         # copy-paste except for model
         nobs, k_vars = 500, 5
 
-        np.random.seed(786452)
-        x = np.random.randn(nobs, k_vars)
+        rs = np.random.RandomState(786452)
+        x = rs.randn(nobs, k_vars)
         x[:, 0] = 1
-        x2 = np.random.randn(nobs, 2)
+        x2 = rs.randn(nobs, 2)
         xx = np.column_stack((x, x2))
 
         if cls.dispersed:
-            het = np.random.randn(nobs)
-            y = np.random.poisson(np.exp(x.sum(1) * 0.5 + het))
+            het = rs.randn(nobs)
+            y = rs.poisson(np.exp(x.sum(1) * 0.5 + het))
             # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
-            y = np.random.poisson(np.exp(x.sum(1) * 0.5))
+            y = rs.poisson(np.exp(x.sum(1) * 0.5))
 
         cls.exog_extra = x2
         cls.model_full = Poisson(y, xx)
@@ -225,18 +225,18 @@ class TestScoreTestGaussian(CheckScoreTest):
     def setup_class(cls):
         nobs, k_vars = 500, 5
 
-        np.random.seed(786452)
-        x = np.random.randn(nobs, k_vars)
+        rs = np.random.RandomState(786452)
+        x = rs.randn(nobs, k_vars)
         x[:, 0] = 1
-        x2 = np.random.randn(nobs, 2)
+        x2 = rs.randn(nobs, 2)
         xx = np.column_stack((x, x2))
 
         if cls.dispersed:
-            het = np.random.randn(nobs)
-            y = np.random.randn(nobs) + x.sum(1) * 0.5 + het
+            het = rs.randn(nobs)
+            y = rs.randn(nobs) + x.sum(1) * 0.5 + het
             # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
-            y = np.random.randn(nobs) + x.sum(1) * 0.5
+            y = rs.randn(nobs) + x.sum(1) * 0.5
 
         cls.exog_extra = x2
         cls.model_full = GLM(y, xx, family=families.Gaussian())

@@ -1144,7 +1144,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         search_reps=0,
         search_iter=5,
         search_scale=1.0,
-        generator=None,
+        rng=None,
         **kwargs,
     ):
         """
@@ -1207,7 +1207,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             search parameter repetitions.
         search_scale : float or array, optional.
             Scale of variates for random start parameter search.
-        generator : np.random.Generator or np.random.RandomState, optional
+        rng : np.random.Generator or np.random.RandomState, optional
             The source of random variables to use in parameter initialization.
             If None, uses the singleton RandomState in np.random.
         **kwargs
@@ -1232,7 +1232,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 transformed=transformed,
                 em_iter=search_iter,
                 scale=search_scale,
-                generator=generator,
+                rng=rng,
             )
             transformed = True
 
@@ -1451,7 +1451,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         transformed=True,
         em_iter=5,
         scale=1.0,
-        generator=None,
+        rng=None,
     ):
         """
         Search for starting parameters as random permutations of a vector
@@ -1472,7 +1472,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             Scale of variates for random start parameter search. Can be given
             as an array of length equal to the number of parameters or as a
             single scalar.
-        generator : np.random.Generator or np.random.RandomState, optional
+        rng : np.random.Generator or np.random.RandomState, optional
             The source of random variables to use in parameter initialization.
             If None, uses the singleton RandomState in np.random.
 
@@ -1504,10 +1504,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Construct the random variates
         variates = np.zeros((reps, self.k_params))
-        if generator is None:
+        if rng is None:
             uniform_gen = np.random.uniform
         else:
-            uniform_gen = generator.uniform
+            uniform_gen = rng.uniform
         for i in range(self.k_params):
             variates[:, i] = scale[i] * uniform_gen(-0.5, 0.5, size=reps)
 

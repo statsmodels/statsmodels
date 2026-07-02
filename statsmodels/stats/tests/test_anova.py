@@ -477,11 +477,11 @@ class TestAnova3HC3(TestAnovaLM):
 def test_anova_lm_model_order_error():
     # Models passed in decreasing order of complexity should raise,
     # rather than silently producing NaN via negative df_diff.
-    np.random.seed(42)
+    rs = np.random.RandomState(42)
     df = pd.DataFrame({
-        "y": np.random.randn(50),
-        "x1": np.random.randn(50),
-        "x2": np.random.randn(50),
+        "y": rs.randn(50),
+        "x1": rs.randn(50),
+        "x2": rs.randn(50),
     })
 
     model_small = ols("y ~ x1", data=df).fit()
@@ -494,11 +494,11 @@ def test_anova_lm_model_order_error():
 
 def test_anova_lm_model_order_correct():
     # Correct order should not raise and should produce a real p-value.
-    np.random.seed(42)
+    rs = np.random.RandomState(42)
     df = pd.DataFrame({
-        "y": np.random.randn(50),
-        "x1": np.random.randn(50),
-        "x2": np.random.randn(50),
+        "y": rs.randn(50),
+        "x1": rs.randn(50),
+        "x2": rs.randn(50),
     })
 
     model_small = ols("y ~ x1", data=df).fit()

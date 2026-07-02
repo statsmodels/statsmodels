@@ -31,9 +31,9 @@ def test_arma_lfilter():
     # Tests of an ARMA model simulation against scipy.signal.lfilter
     # Note: the first elements of the generated SARIMAX datasets are based on
     # the initial state, so we do not include them in the comparisons
-    np.random.seed(10239)
+    rs = np.random.RandomState(10239)
     nobs = 100
-    eps = np.random.normal(size=nobs)
+    eps = rs.normal(size=nobs)
 
     # AR(1)
     mod = sarimax.SARIMAX([0], order=(1, 0, 0))
@@ -62,10 +62,10 @@ def test_arma_direct():
     # This is useful for e.g. trend components
     # Note: the first elements of the generated SARIMAX datasets are based on
     # the initial state, so we do not include them in the comparisons
-    np.random.seed(10239)
+    rs = np.random.RandomState(10239)
     nobs = 100
-    eps = np.random.normal(size=nobs)
-    exog = np.random.normal(size=nobs)
+    eps = rs.normal(size=nobs)
+    exog = rs.normal(size=nobs)
 
     # AR(1)
     mod = sarimax.SARIMAX([0], order=(1, 0, 0))
@@ -158,10 +158,10 @@ def test_arma_direct():
 
 
 def test_structural():
-    np.random.seed(38947)
+    rs = np.random.RandomState(38947)
     nobs = 100
-    eps = np.random.normal(size=nobs)
-    exog = np.random.normal(size=nobs)
+    eps = rs.normal(size=nobs)
+    exog = rs.normal(size=nobs)
 
     eps1 = np.zeros(nobs)
     eps2 = np.zeros(nobs)
@@ -339,10 +339,10 @@ def test_structural():
 
 
 def test_varmax():
-    np.random.seed(371934)
+    rs = np.random.RandomState(371934)
     nobs = 100
-    eps = np.random.normal(size=nobs)
-    exog = np.random.normal(size=(nobs, 1))
+    eps = rs.normal(size=nobs)
+    exog = rs.normal(size=(nobs, 1))
 
     eps1 = np.zeros(nobs)
     eps2 = np.zeros(nobs)
@@ -438,7 +438,7 @@ def test_varmax():
     # VMA(1)
     # TODO: This is just a smoke test
     mod = varmax.VARMAX(
-        np.random.normal(size=(nobs, 2)), order=(0, 1), trend="n")
+        rs.normal(size=(nobs, 2)), order=(0, 1), trend="n")
     mod.simulate(mod.start_params, nobs)
 
     # VARMA(2, 2) + trend + exog
@@ -447,16 +447,16 @@ def test_varmax():
     match = r"VARMA\(p,q\) models is not"
     with pytest.warns(warning, match=match):
         mod = varmax.VARMAX(
-            np.random.normal(size=(nobs, 2)), order=(2, 2), trend="c",
+            rs.normal(size=(nobs, 2)), order=(2, 2), trend="c",
             exog=exog)
     mod.simulate(mod.start_params, nobs)
 
 
 def test_dynamic_factor():
-    np.random.seed(93739)
+    rs = np.random.RandomState(93739)
     nobs = 100
-    eps = np.random.normal(size=nobs)
-    exog = np.random.normal(size=(nobs, 1))
+    eps = rs.normal(size=nobs)
+    exog = rs.normal(size=(nobs, 1))
 
     eps1 = np.zeros(nobs)
     eps2 = np.zeros(nobs)
@@ -491,7 +491,7 @@ def test_dynamic_factor():
 
     # DFM, 3 series, VAR(2) factor, exog, error VAR
     # TODO: This is just a smoke test
-    mod = dynamic_factor.DynamicFactor(np.random.normal(size=(nobs, 3)),
+    mod = dynamic_factor.DynamicFactor(rs.normal(size=(nobs, 3)),
                                        k_factors=2, factor_order=2, exog=exog,
                                        error_order=2, error_var=True)
     mod.simulate(mod.start_params, nobs)
@@ -500,9 +500,9 @@ def test_dynamic_factor():
 def test_known_initialization():
     # Need to test that "known" initialization is taken into account in
     # time series simulation
-    np.random.seed(38947)
+    rs = np.random.RandomState(38947)
     nobs = 100
-    eps = np.random.normal(size=nobs)
+    eps = rs.normal(size=nobs)
 
     eps1 = np.zeros(nobs)
     eps2 = np.zeros(nobs)

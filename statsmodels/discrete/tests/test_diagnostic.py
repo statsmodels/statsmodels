@@ -19,7 +19,7 @@ class TestCountDiagnostic:
     def setup_class(cls):
 
         expected_params = [1, 1, 0.5]
-        np.random.seed(987123)
+        rs = np.random.RandomState(987123)
         nobs = 500
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 0
@@ -31,7 +31,7 @@ class TestCountDiagnostic:
         offset = 0
         mu_true = np.exp(exog.dot(expected_params[:-1]) + offset)
 
-        endog_poi = np.random.poisson(mu_true / 5)
+        endog_poi = rs.poisson(mu_true / 5)
         # endog3 = distr.zigenpoisson.rvs(mu_true, 0,
         #                                2, 0.01, size=mu_true.shape)
 
@@ -76,7 +76,7 @@ class TestPoissonDiagnosticClass():
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(987125643)
+        rs = np.random.RandomState(987125643)
         nr = 1
         n_groups = 2
         labels = np.arange(n_groups)
@@ -88,7 +88,7 @@ class TestPoissonDiagnosticClass():
 
         linpred = exog @ beta
         mean = np.exp(linpred)
-        y = np.random.poisson(mean)
+        y = rs.poisson(mean)
 
         cls.endog = y
         cls.exog = exog

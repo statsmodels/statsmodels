@@ -11,17 +11,17 @@ from statsmodels.tools.numdiff import approx_fprime
 
 def test_poisson():
 
-    np.random.seed(43242)
+    rs = np.random.RandomState(43242)
 
     # Generate a non-orthogonal design matrix
-    xmat = np.random.normal(size=(500, 5))
+    xmat = rs.normal(size=(500, 5))
     xmat[:, 1] = 0.5*xmat[:, 0] + np.sqrt(1 - 0.5**2) * xmat[:, 1]
     xmat[:, 3] = 0.5*xmat[:, 2] + np.sqrt(1 - 0.5**2) * xmat[:, 3]
 
     b = np.r_[0, 1, -1, 0, 0.5]
     lpr = np.dot(xmat, b)
     ev = np.exp(lpr)
-    y = np.random.poisson(ev)
+    y = rs.poisson(ev)
 
     for method in range(6):
 
@@ -68,14 +68,14 @@ def test_sir_regularized_numdiff():
     # Use numeric gradients to check the analytic gradient
     # for the regularized SIRobjective function.
 
-    np.random.seed(93482)
+    rs = np.random.RandomState(93482)
 
     n = 1000
     p = 10
-    xmat = np.random.normal(size=(n, p))
+    xmat = rs.normal(size=(n, p))
     y1 = np.dot(xmat, np.linspace(-1, 1, p))
     y2 = xmat.sum(1)
-    y = y2 / (1 + y1**2) + np.random.normal(size=n)
+    y = y2 / (1 + y1**2) + rs.normal(size=n)
     model = SlicedInverseReg(y, xmat)
     _ = model.fit()
 
@@ -89,7 +89,7 @@ def test_sir_regularized_numdiff():
 
     # Compare the gradients to the numerical derivatives
     for _ in range(5):
-        pa = np.random.normal(size=(p, 2))
+        pa = rs.normal(size=(p, 2))
         pa, _, _ = np.linalg.svd(pa, 0)
         gn = approx_fprime(pa.ravel(), model._regularized_objective, 1e-7)
         gr = model._regularized_grad(pa.ravel())
@@ -101,12 +101,12 @@ def test_sir_regularized_1d():
     # regularization is compatible with the true parameters (i.e. there
     # is no regularization bias).
 
-    np.random.seed(93482)
+    rs = np.random.RandomState(93482)
 
     n = 1000
     p = 10
-    xmat = np.random.normal(size=(n, p))
-    y = np.dot(xmat[:, 0:4], np.r_[1, 1, -1, -1]) + np.random.normal(size=n)
+    xmat = rs.normal(size=(n, p))
+    y = np.dot(xmat[:, 0:4], np.r_[1, 1, -1, -1]) + rs.normal(size=n)
     model = SlicedInverseReg(y, xmat)
     rslt = model.fit()
 
@@ -143,14 +143,14 @@ def test_sir_regularized_2d():
     # Compare regularized SIR to traditional SIR when there is no penalty.
     # The two procedures should agree exactly.
 
-    np.random.seed(93482)
+    rs = np.random.RandomState(93482)
 
     n = 1000
     p = 10
-    xmat = np.random.normal(size=(n, p))
+    xmat = rs.normal(size=(n, p))
     y1 = np.dot(xmat[:, 0:4], np.r_[1, 1, -1, -1])
     y2 = np.dot(xmat[:, 4:8], np.r_[1, 1, -1, -1])
-    y = y1 + np.arctan(y2) + np.random.normal(size=n)
+    y = y1 + np.arctan(y2) + rs.normal(size=n)
     model = SlicedInverseReg(y, xmat)
     rslt1 = model.fit()
 
@@ -171,21 +171,21 @@ def test_sir_regularized_2d():
 
 def test_covreduce():
 
-    np.random.seed(34324)
+    rs = np.random.RandomState(34324)
 
     p = 4
     endog = []
     exog = []
     for k in range(3):
         c = np.eye(p)
-        x = np.random.normal(size=(2, 2))
+        x = rs.normal(size=(2, 2))
         # The differences between the covariance matrices
         # are all in the first 2 rows/columns.
         c[0:2, 0:2] = np.dot(x.T, x)
 
         cr = np.linalg.cholesky(c)
         m = 1000*k + 50*k
-        x = np.random.normal(size=(m, p))
+        x = rs.normal(size=(m, p))
         x = np.dot(x, cr.T)
         exog.append(x)
         endog.append(k * np.ones(m))
@@ -197,7 +197,7 @@ def test_covreduce():
 
         cr = CORE(endog, exog, dim)
 
-        pt = np.random.normal(size=(p, dim))
+        pt = rs.normal(size=(p, dim))
         pt, _, _ = np.linalg.svd(pt, 0)
         gn = approx_fprime(pt.ravel(), cr.loglike, 1e-7)
         g = cr.score(pt.ravel())

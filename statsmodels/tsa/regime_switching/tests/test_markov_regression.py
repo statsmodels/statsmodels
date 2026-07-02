@@ -3320,7 +3320,7 @@ class TestFedFundsConstL1Exog3(MarkovRegression):
     def test_fit(self, **kwargs):
         kwargs["search_reps"] = 20
         rs = np.random.RandomState(1234)
-        super().test_fit(generator=rs, **kwargs)
+        super().test_fit(rng=rs, **kwargs)
 
 
 class TestAreturnsConstL1Variance(MarkovRegression):

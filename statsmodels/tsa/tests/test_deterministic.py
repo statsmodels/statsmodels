@@ -346,7 +346,8 @@ def test_index_like():
 
 
 def test_calendar_fourier(reset_randomstate):
-    inc = np.abs(np.random.standard_normal(1000))
+    rs = np.random.RandomState(43437243)
+    inc = np.abs(rs.standard_normal(1000))
     inc = np.cumsum(inc)
     inc = 10 * inc / inc[-1]
     offset = (24 * 3600 * inc).astype(np.int64)
@@ -375,7 +376,8 @@ def test_calendar_fourier(reset_randomstate):
 
 
 def test_calendar_time_trend(reset_randomstate):
-    inc = np.abs(np.random.standard_normal(1000))
+    rs = np.random.RandomState(43437243)
+    inc = np.abs(rs.standard_normal(1000))
     inc = np.cumsum(inc)
     inc = 10 * inc / inc[-1]
     offset = (24 * 3600 * inc).astype(np.int64)
@@ -627,13 +629,14 @@ class DummyTerm(DeterministicTerm):
     def in_sample(self, index: pd.Index) -> pd.DataFrame:
         nobs = index.shape[0]
         terms = np.empty((index.shape[0], 12))
+        rs = np.random.RandomState(43437243)
         for i in range(0, 12, 2):
             if i == 0:
                 value = 1
             elif i == 2:
                 value = np.arange(nobs)
             elif i == 4:
-                value = np.random.standard_normal(nobs)
+                value = rs.standard_normal(nobs)
             elif i == 6:
                 value = np.zeros(nobs)
                 value[::2] = 1
@@ -652,7 +655,8 @@ class DummyTerm(DeterministicTerm):
         forecast_index: pd.Index = None,
     ) -> pd.DataFrame:
         fcast_index = self._extend_index(index, steps, forecast_index)
-        terms = np.random.standard_normal((steps, 12))
+        rs = np.random.RandomState(4343)
+        terms = rs.standard_normal((steps, 12))
 
         return pd.DataFrame(terms, columns=self.columns, index=fcast_index)
 

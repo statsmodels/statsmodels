@@ -177,15 +177,20 @@ class BernsteinDistribution:
         bpd_marginal = BernsteinDistribution(cdf_m)
         return bpd_marginal
 
-    def rvs(self, nobs):
+    def rvs(self, nobs, rng=None):
         """Generate random numbers from distribution.
 
         Parameters
         ----------
         nobs : int
             Number of random observations to generate.
+        rng : np.random.RandomState or np.random.Generator, optional
+            If not provided, uses the singleton RandomState provided by NumPy
         """
-        rvs_mnl = np.random.multinomial(nobs, self.prob_grid.flatten())
+        if rng is None:
+            rvs_mnl = np.random.multinomial(nobs, self.prob_grid.flatten())
+        else:
+            rvs_mnl = rng.multinomial(nobs, self.prob_grid.flatten())
         k_comp = self.k_dim
         rvs_m = []
         for i in range(len(rvs_mnl)):

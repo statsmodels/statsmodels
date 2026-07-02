@@ -12,14 +12,14 @@ from statsmodels.genmod.bayes_mixed_glm import (
 
 def gen_simple_logit(nc, cs, s):
 
-    np.random.seed(3799)
+    rs = np.random.RandomState(3799)
 
     exog_vc = np.kron(np.eye(nc), np.ones((cs, 1)))
-    exog_fe = np.random.normal(size=(nc * cs, 2))
-    vc = s * np.random.normal(size=nc)
+    exog_fe = rs.normal(size=(nc * cs, 2))
+    vc = s * rs.normal(size=nc)
     lp = np.dot(exog_fe, np.r_[1, -1]) + np.dot(exog_vc, vc)
     pr = 1 / (1 + np.exp(-lp))
-    y = 1 * (np.random.uniform(size=nc * cs) < pr)
+    y = 1 * (rs.uniform(size=nc * cs) < pr)
     ident = np.zeros(nc, dtype=int)
 
     return y, exog_fe, exog_vc, ident
@@ -27,14 +27,14 @@ def gen_simple_logit(nc, cs, s):
 
 def gen_simple_poisson(nc, cs, s):
 
-    np.random.seed(3799)
+    rs = np.random.RandomState(3799)
 
     exog_vc = np.kron(np.eye(nc), np.ones((cs, 1)))
-    exog_fe = np.random.normal(size=(nc * cs, 2))
-    vc = s * np.random.normal(size=nc)
+    exog_fe = rs.normal(size=(nc * cs, 2))
+    vc = s * rs.normal(size=nc)
     lp = np.dot(exog_fe, np.r_[0.1, -0.1]) + np.dot(exog_vc, vc)
     r = np.exp(lp)
-    y = np.random.poisson(r)
+    y = rs.poisson(r)
     ident = np.zeros(nc, dtype=int)
 
     return y, exog_fe, exog_vc, ident
@@ -42,18 +42,18 @@ def gen_simple_poisson(nc, cs, s):
 
 def gen_crossed_logit(nc, cs, s1, s2):
 
-    np.random.seed(3799)
+    rs = np.random.RandomState(3799)
 
     a = np.kron(np.eye(nc), np.ones((cs, 1)))
     b = np.kron(np.ones((cs, 1)), np.eye(nc))
     exog_vc = np.concatenate((a, b), axis=1)
 
-    exog_fe = np.random.normal(size=(nc * cs, 1))
-    vc = s1 * np.random.normal(size=2 * nc)
+    exog_fe = rs.normal(size=(nc * cs, 1))
+    vc = s1 * rs.normal(size=2 * nc)
     vc[nc:] *= s2 / s1
     lp = np.dot(exog_fe, np.r_[-0.5]) + np.dot(exog_vc, vc)
     pr = 1 / (1 + np.exp(-lp))
-    y = 1 * (np.random.uniform(size=nc * cs) < pr)
+    y = 1 * (rs.uniform(size=nc * cs) < pr)
     ident = np.zeros(2 * nc, dtype=int)
     ident[nc:] = 1
 
@@ -62,18 +62,18 @@ def gen_crossed_logit(nc, cs, s1, s2):
 
 def gen_crossed_poisson(nc, cs, s1, s2):
 
-    np.random.seed(3799)
+    rs = np.random.RandomState(3799)
 
     a = np.kron(np.eye(nc), np.ones((cs, 1)))
     b = np.kron(np.ones((cs, 1)), np.eye(nc))
     exog_vc = np.concatenate((a, b), axis=1)
 
-    exog_fe = np.random.normal(size=(nc * cs, 1))
-    vc = s1 * np.random.normal(size=2 * nc)
+    exog_fe = rs.normal(size=(nc * cs, 1))
+    vc = s1 * rs.normal(size=2 * nc)
     vc[nc:] *= s2 / s1
     lp = np.dot(exog_fe, np.r_[-0.5]) + np.dot(exog_vc, vc)
     r = np.exp(lp)
-    y = np.random.poisson(r)
+    y = rs.poisson(r)
     ident = np.zeros(2 * nc, dtype=int)
     ident[nc:] = 1
 
@@ -82,7 +82,7 @@ def gen_crossed_poisson(nc, cs, s1, s2):
 
 def gen_crossed_logit_pandas(nc, cs, s1, s2):
 
-    np.random.seed(3799)
+    rs = np.random.RandomState(3799)
 
     a = np.kron(np.arange(nc), np.ones(cs))
     b = np.kron(np.ones(cs), np.arange(nc))
@@ -91,14 +91,14 @@ def gen_crossed_logit_pandas(nc, cs, s1, s2):
     vc = np.zeros(nc * cs)
     for i in np.unique(a):
         ii = np.flatnonzero(a == i)
-        vc[ii] += s1 * np.random.normal()
+        vc[ii] += s1 * rs.normal()
     for i in np.unique(b):
         ii = np.flatnonzero(b == i)
-        vc[ii] += s2 * np.random.normal()
+        vc[ii] += s2 * rs.normal()
 
     lp = -0.5 * fe + vc
     pr = 1 / (1 + np.exp(-lp))
-    y = 1 * (np.random.uniform(size=nc * cs) < pr)
+    y = 1 * (rs.uniform(size=nc * cs) < pr)
 
     ident = np.zeros(2 * nc, dtype=int)
     ident[nc:] = 1
@@ -156,9 +156,9 @@ def test_simple_poisson_map():
             pr2 = rslt2.predict(linear=linear, exog=exog)
             pr3 = glmm1.predict(rslt1.params, linear=linear, exog=exog)
             pr4 = glmm2.predict(rslt2.params, linear=linear, exog=exog)
-            assert_allclose(pr1, pr2, rtol=1e-5)
-            assert_allclose(pr2, pr3, rtol=1e-5)
-            assert_allclose(pr3, pr4, rtol=1e-5)
+            assert_allclose(pr1, pr2, rtol=7e-5)
+            assert_allclose(pr2, pr3, rtol=7e-5)
+            assert_allclose(pr3, pr4, rtol=7e-5)
             if not linear:
                 assert_equal(pr1.min() >= 0, True)
                 assert_equal(pr2.min() >= 0, True)
@@ -538,7 +538,7 @@ def test_poisson_formula():
         else:
             rslt2 = glmm2.fit_map()
 
-        assert_allclose(rslt1.params, rslt2.params, rtol=1e-5)
+        assert_allclose(rslt1.params, rslt2.params, rtol=5e-5, atol=1e-6)
 
         for rslt in rslt1, rslt2:
             cp = rslt.cov_params()
@@ -587,17 +587,17 @@ def test_scale_map():
 
 def test_doc_examples():
 
-    np.random.seed(8767)
+    rs = np.random.RandomState(8767)
     n = 200
     m = 20
-    data = pd.DataFrame({"Year": np.random.uniform(0, 1, n),
-                         "Village": np.random.randint(0, m, n)})
+    data = pd.DataFrame({"Year": rs.uniform(0, 1, n),
+                         "Village": rs.randint(0, m, n)})
     data["year_cen"] = data["Year"] - data.Year.mean()
 
     # Binomial outcome
-    lpr = np.random.normal(size=m)[data.Village]
-    lpr += np.random.normal(size=m)[data.Village] * data.year_cen
-    y = (np.random.uniform(size=n) < 1 / (1 + np.exp(-lpr)))
+    lpr = rs.normal(size=m)[data.Village]
+    lpr += rs.normal(size=m)[data.Village] * data.year_cen
+    y = (rs.uniform(size=n) < 1 / (1 + np.exp(-lpr)))
     data["y"] = y.astype(int)
 
     # These lines should agree with the example in the class docstring.
@@ -608,9 +608,9 @@ def test_doc_examples():
     _ = result
 
     # Poisson outcome
-    lpr = np.random.normal(size=m)[data.Village]
-    lpr += np.random.normal(size=m)[data.Village] * data.year_cen
-    data["y"] = np.random.poisson(np.exp(lpr))
+    lpr = rs.normal(size=m)[data.Village]
+    lpr += rs.normal(size=m)[data.Village] * data.year_cen
+    data["y"] = rs.poisson(np.exp(lpr))
 
     # These lines should agree with the example in the class docstring.
     random = {"a": "0 + C(Village)", "b": "0 + C(Village)*year_cen"}

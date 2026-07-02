@@ -126,7 +126,6 @@ def test_gam_penalty():
 
 def test_gam_gradient():
     # test the gam gradient for the example polynomial
-    np.random.seed(1)
     pol, y = polynomial_sample_data()
 
     alpha = 1
@@ -134,7 +133,6 @@ def test_gam_gradient():
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=smoother)
 
     for _ in range(10):
-        params = np.random.uniform(-2, 2, 4)
         params = np.array([1, 1, 1, 1])
         gam_grad = gp.deriv(params)
         grd = grad(params)
@@ -144,14 +142,14 @@ def test_gam_gradient():
 
 def test_gam_hessian():
     # test the deriv2 method of the gam penalty
-    np.random.seed(1)
+    rs = np.random.RandomState(1)
     pol, y = polynomial_sample_data()
     univ_pol = pol.smoothers[0]
     alpha = 1
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_pol)
 
     for _ in range(10):
-        params = np.random.randint(-2, 2, 5)
+        params = rs.randint(-2, 2, 5)
         gam_der2 = gp.deriv2(params)
         hess = hessian(params)
         hess = np.flipud(hess)
@@ -160,11 +158,11 @@ def test_gam_hessian():
 
 
 def test_approximation():
-    np.random.seed(1)
+    rs = np.random.RandomState(1)
     poly, y = polynomial_sample_data()
     alpha = 1
     for _ in range(10):
-        params = np.random.uniform(-1, 1, 4)
+        params = rs.uniform(-1, 1, 4)
         cost, err, itg = cost_function(params, poly, y, alpha)
         glm_gam = GLMGam(y, smoother=poly, alpha=alpha)
         # TODO: why do we need pen_weight=1
@@ -247,8 +245,8 @@ def multivariate_sample_data(seed=1):
     x1 = np.linspace(-1, 1, n)
     x2 = np.linspace(-10, 10, n)
     x = np.vstack([x1, x2]).T
-    np.random.seed(seed)
-    y = x1 * x1 * x1 + x2 + np.random.normal(0, 0.01, n)
+    rs = np.random.RandomState(seed)
+    y = x1 * x1 * x1 + x2 + rs.normal(0, 0.01, n)
     degree1 = 4
     degree2 = 3
     degrees = [degree1, degree2]
@@ -259,7 +257,7 @@ def multivariate_sample_data(seed=1):
 def test_multivariate_penalty():
     alphas = [1, 2]
     weights = [1, 1]
-    np.random.seed(1)
+    rs = np.random.RandomState(1)
     x, y, pol = multivariate_sample_data()
 
     univ_pol1 = UnivariatePolynomialSmoother(x[:, 0], degree=pol.degrees[0])
@@ -272,8 +270,8 @@ def test_multivariate_penalty():
                                      weights=weights)
 
     for _ in range(10):
-        params1 = np.random.randint(-3, 3, pol.smoothers[0].dim_basis)
-        params2 = np.random.randint(-3, 3, pol.smoothers[1].dim_basis)
+        params1 = rs.randint(-3, 3, pol.smoothers[0].dim_basis)
+        params2 = rs.randint(-3, 3, pol.smoothers[1].dim_basis)
         params = np.concatenate([params1, params2])
         c1 = gp1.func(params1)
         c2 = gp2.func(params2)
@@ -453,8 +451,8 @@ def test_train_test_smoothers():
 
 def test_get_sqrt():
     n = 1000
-    np.random.seed(1)
-    x = np.random.normal(0, 1, (n, 3))
+    rs = np.random.RandomState(1)
+    x = rs.normal(0, 1, (n, 3))
     x2 = np.dot(x.T, x)
 
     sqrt_x2 = matrix_sqrt(x2)
@@ -464,12 +462,12 @@ def test_get_sqrt():
 
 
 def test_make_augmented_matrix():
-    np.random.seed(1)
+    rs = np.random.RandomState(1)
     n = 500
-    x = np.random.uniform(-1, 1, (n, 3))
+    x = rs.uniform(-1, 1, (n, 3))
     s = np.dot(x.T, x)
     y = np.array(list(range(n)))
-    w = np.random.uniform(0, 1, n)
+    w = rs.uniform(0, 1, n)
     nobs, n_columns = x.shape
 
     # matrix_sqrt removes redundant rows,
@@ -500,15 +498,15 @@ def test_make_augmented_matrix():
 
 
 def test_penalized_wls():
-    np.random.seed(1)
+    rs = np.random.RandomState(1)
     n = 20
     p = 3
-    x = np.random.normal(0, 1, (n, 3))
-    y = x[:, 1] - x[:, 2] + np.random.normal(0, .1, n)
+    x = rs.normal(0, 1, (n, 3))
+    y = x[:, 1] - x[:, 2] + rs.normal(0, .1, n)
     y -= y.mean()
 
     weights = np.ones(shape=(n,))
-    s = np.random.normal(0, 1, (p, p))
+    s = rs.normal(0, 1, (p, p))
 
     pen_wls_res = penalized_wls(y, x, 0 * s, weights)
     ls_res = lm.OLS(y, x).fit()
@@ -561,7 +559,7 @@ def test_cyclic_cubic_splines():
 
 
 def test_multivariate_cubic_splines():
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     from statsmodels.gam.smooth_basis import CubicSplines
 
     n = 500
@@ -573,7 +571,7 @@ def test_multivariate_cubic_splines():
     y2 = x2 * x2
     y0 = y1 + y2
     # need small enough noise variance to get good estimate for this test
-    y = y0 + np.random.normal(0, .3 / 2, n)
+    y = y0 + rs.normal(0, .3 / 2, n)
     y -= y.mean()
     y0 -= y0.mean()
 
@@ -602,17 +600,17 @@ def test_multivariate_cubic_splines():
 
 
 def test_glm_pirls_compatibility():
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
 
     n = 500
     x1 = np.linspace(-3, 3, n)
-    x2 = np.random.rand(n)
+    x2 = rs.rand(n)
 
     x = np.vstack([x1, x2]).T
     y1 = np.sin(x1) / x1
     y2 = x2 * x2
     y0 = y1 + y2
-    y = y0 + np.random.normal(0, .3, n)
+    y = y0 + rs.normal(0, .3, n)
     y -= y.mean()
     y0 -= y0.mean()
 
@@ -668,8 +666,8 @@ def test_spl_s():
                [0, 0, -0.001133333, 0.001666667, 0.002733333, 0.000200000],
                [0, 0, -0.001000000, -0.001133333, 0.000200000, 0.001400000]]
 
-    np.random.seed(1)
-    x = np.random.normal(0, 1, 10)
+    rs = np.random.RandomState(1)
+    x = rs.normal(0, 1, 10)
     xk = np.array([0.2, .4, .6, .8])
     cs = UnivariateCubicSplines(x, df=4)
     cs.knots = xk
@@ -679,11 +677,11 @@ def test_spl_s():
 
 
 def test_partial_values2():
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     n = 1000
-    x = np.random.uniform(0, 1, (n, 2))
+    x = rs.uniform(0, 1, (n, 2))
     x = x - x.mean()
-    y = x[:, 0] * x[:, 0] + np.random.normal(0, .01, n)
+    y = x[:, 0] * x[:, 0] + rs.normal(0, .01, n)
     y -= y.mean()
     alpha = 0.0
     # BUG: mask is incorrect if exog is not None, start_idx missing
@@ -784,11 +782,11 @@ def test_partial_plot(close_figures):
 
 def test_cov_params():
 
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     n = 1000
-    x = np.random.uniform(0, 1, (n, 2))
+    x = rs.uniform(0, 1, (n, 2))
     x = x - x.mean()
-    y = x[:, 0] * x[:, 0] + np.random.normal(0, .01, n)
+    y = x[:, 0] * x[:, 0] + rs.normal(0, .01, n)
     y -= y.mean()
 
     bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2, constraints="center")

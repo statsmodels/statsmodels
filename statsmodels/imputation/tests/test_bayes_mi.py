@@ -18,8 +18,8 @@ def test_pat():
 def test_2x2():
 
     # Generate correlated data with mean and variance
-    np.random.seed(3434)
-    x = np.random.normal(size=(1000, 2))
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(1000, 2))
     r = 0.5
     x[:, 1] = r*x[:, 0] + np.sqrt(1-r**2)*x[:, 1]
     x[:, 0] *= 2
@@ -28,9 +28,9 @@ def test_2x2():
     x[:, 1] -= 2
 
     # Introduce some missing values
-    u = np.random.normal(size=x.shape[0])
+    u = rs.normal(size=x.shape[0])
     x[u > 1, 0] = np.nan
-    u = np.random.normal(size=x.shape[0])
+    u = rs.normal(size=x.shape[0])
     x[u > 1, 1] = np.nan
 
     bm = BayesGaussMI(x)
@@ -63,8 +63,8 @@ def test_2x2():
 
 def test_MI():
 
-    np.random.seed(414)
-    x = np.random.normal(size=(200, 4))
+    rs = np.random.RandomState(414)
+    x = rs.normal(size=(200, 4))
     x[[1, 3, 9], 0] = np.nan
     x[[1, 4, 3], 1] = np.nan
     x[[2, 11, 21], 2] = np.nan
@@ -107,8 +107,8 @@ def test_MI_stat():
     # the first case the SE is 1/sqrt(500), in the second case the SE
     # is 1/sqrt(1000).
 
-    np.random.seed(414)
-    z = np.random.normal(size=(1000, 3))
+    rs = np.random.RandomState(414)
+    z = rs.normal(size=(1000, 3))
     z[:, 0] += 0.5*z[:, 1]
 
     # Control the degree to which x2 proxies for x1
@@ -141,8 +141,8 @@ def test_MI_stat():
 
 def test_mi_formula():
 
-    np.random.seed(414)
-    x = np.random.normal(size=(200, 4))
+    rs = np.random.RandomState(414)
+    x = rs.normal(size=(200, 4))
     x[[1, 3, 9], 0] = np.nan
     x[[1, 4, 3], 1] = np.nan
     x[[2, 11, 21], 2] = np.nan

@@ -3,6 +3,7 @@ Created on Tue Nov 08 22:28:48 2011
 
 @author: josef
 """
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pytest
@@ -43,9 +44,7 @@ def test_eval_measures():
 
     assert_almost_equal(
         rmse(x, y),
-        np.array(
-            [8.5732141, 9.35414347, 10.17349497, 11.02270384, 11.89537725]
-        ),
+        np.array([8.5732141, 9.35414347, 10.17349497, 11.02270384, 11.89537725]),
     )
     assert_almost_equal(
         rmse(x, y, axis=1),
@@ -56,10 +55,10 @@ def test_eval_measures():
     loc = np.where(x != 0)
     err[loc] /= x[loc]
     err[np.where(x == 0)] = np.nan
-    expected = np.sqrt(np.nanmean(err ** 2, 0) * 100)
+    expected = np.sqrt(np.nanmean(err**2, 0) * 100)
     assert_almost_equal(rmspe(x, y), expected)
     err[np.where(np.isnan(err))] = 0.0
-    expected = np.sqrt(np.nanmean(err ** 2, 0) * 100)
+    expected = np.sqrt(np.nanmean(err**2, 0) * 100)
     assert_almost_equal(rmspe(x, y, zeros=0), expected)
 
     assert_equal(maxabs(x, y), np.array([14.0, 15.0, 16.0, 17.0, 18.0]))

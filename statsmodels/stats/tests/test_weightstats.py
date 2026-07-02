@@ -97,9 +97,9 @@ class TestSim1(CheckExternalMixin):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(9876789)
-        cls.data = np.random.normal(size=20)
-        cls.weights = np.random.uniform(0, 3, size=20)
+        rs = np.random.RandomState(9876789)
+        cls.data = rs.normal(size=20)
+        cls.weights = rs.uniform(0, 3, size=20)
         cls.quantile_probs = np.r_[0, 0.1, 0.5, 0.75, 1]
         cls.get_descriptives()
 
@@ -116,11 +116,11 @@ class TestSim1t(CheckExternalMixin):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(9876789)
-        cls.data = np.random.randint(0, 10, size=20)
+        rs = np.random.RandomState(9876789)
+        cls.data = rs.randint(0, 10, size=20)
         cls.data[15:20] = cls.data[0:5]
         cls.data[18:20] = cls.data[15:17]
-        cls.weights = np.random.uniform(0, 3, size=20)
+        cls.weights = rs.uniform(0, 3, size=20)
         cls.quantile_probs = np.r_[0, 0.1, 0.5, 0.75, 1]
         cls.get_descriptives()
 
@@ -139,9 +139,9 @@ class TestSim1n(CheckExternalMixin):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(4342)
-        cls.data = np.random.normal(size=20)
-        cls.weights = np.random.uniform(0, 3, size=20)
+        rs = np.random.RandomState(4342)
+        cls.data = rs.normal(size=20)
+        cls.weights = rs.uniform(0, 3, size=20)
         cls.weights *= 20 / cls.weights.sum()
         cls.quantile_probs = np.r_[0, 0.1, 0.5, 0.75, 1]
         cls.get_descriptives(1)
@@ -161,9 +161,9 @@ class TestSim2(CheckExternalMixin):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(2249)
-        cls.data = np.random.normal(size=(20, 2))
-        cls.weights = np.random.uniform(0, 3, size=20)
+        rs = np.random.RandomState(2249)
+        cls.data = rs.normal(size=(20, 2))
+        cls.weights = rs.uniform(0, 3, size=20)
         cls.quantile_probs = np.r_[0, 0.1, 0.5, 0.75, 1]
         cls.get_descriptives()
 
@@ -172,15 +172,15 @@ class TestWeightstats:
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(9876789)
+        rs = np.random.RandomState(9876789)
         n1, n2 = 20, 20
         m1, m2 = 1, 1.2
-        x1 = m1 + np.random.randn(n1)
-        x2 = m2 + np.random.randn(n2)
-        x1_2d = m1 + np.random.randn(n1, 3)
-        x2_2d = m2 + np.random.randn(n2, 3)
-        w1 = np.random.randint(1, 4, n1)
-        w2 = np.random.randint(1, 4, n2)
+        x1 = m1 + rs.randn(n1)
+        x2 = m2 + rs.randn(n2)
+        x1_2d = m1 + rs.randn(n1, 3)
+        x2_2d = m2 + rs.randn(n2, 3)
+        w1 = rs.randint(1, 4, n1)
+        w2 = rs.randint(1, 4, n2)
         cls.x1, cls.x2 = x1, x2
         cls.w1, cls.w2 = w1, w2
         cls.x1_2d, cls.x2_2d = x1_2d, x2_2d
@@ -434,13 +434,13 @@ class TestWeightstats1d_ddof(CheckWeightstats1dMixin):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(9876789)
+        rs = np.random.RandomState(9876789)
         n1, n2 = 20, 20
         m1, m2 = 1, 1.2
-        x1 = m1 + np.random.randn(n1, 1)
-        x2 = m2 + np.random.randn(n2, 1)
-        w1 = np.random.randint(1, 4, n1)
-        w2 = np.random.randint(1, 4, n2)
+        x1 = m1 + rs.randn(n1, 1)
+        x2 = m2 + rs.randn(n2, 1)
+        w1 = rs.randint(1, 4, n1)
+        w2 = rs.randint(1, 4, n2)
 
         cls.x1, cls.x2 = x1, x2
         cls.w1, cls.w2 = w1, w2
@@ -454,13 +454,13 @@ class TestWeightstats2d(CheckWeightstats2dMixin):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(9876789)
+        rs = np.random.RandomState(9876789)
         n1, n2 = 20, 20
         m1, m2 = 1, 1.2
-        x1 = m1 + np.random.randn(n1, 3)
-        x2 = m2 + np.random.randn(n2, 3)
-        w1 = np.random.randint(1, 4, n1)
-        w2 = np.random.randint(1, 4, n2)
+        x1 = m1 + rs.randn(n1, 3)
+        x2 = m2 + rs.randn(n2, 3)
+        w1 = rs.randint(1, 4, n1)
+        w2 = rs.randint(1, 4, n2)
         cls.x1, cls.x2 = x1, x2
         cls.w1, cls.w2 = w1, w2
 
@@ -474,13 +474,13 @@ class TestWeightstats2d_ddof(CheckWeightstats2dMixin):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(9876789)
+        rs = np.random.RandomState(9876789)
         n1, n2 = 20, 20
         m1, m2 = 1, 1.2
-        x1 = m1 + np.random.randn(n1, 3)
-        x2 = m2 + np.random.randn(n2, 3)
-        w1 = np.random.randint(1, 4, n1)
-        w2 = np.random.randint(1, 4, n2)
+        x1 = m1 + rs.randn(n1, 3)
+        x2 = m2 + rs.randn(n2, 3)
+        w1 = rs.randint(1, 4, n1)
+        w2 = rs.randint(1, 4, n2)
 
         cls.x1, cls.x2 = x1, x2
         cls.w1, cls.w2 = w1, w2
@@ -494,13 +494,13 @@ class TestWeightstats2d_nobs(CheckWeightstats2dMixin):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(9876789)
+        rs = np.random.RandomState(9876789)
         n1, n2 = 20, 30
         m1, m2 = 1, 1.2
-        x1 = m1 + np.random.randn(n1, 3)
-        x2 = m2 + np.random.randn(n2, 3)
-        w1 = np.random.randint(1, 4, n1)
-        w2 = np.random.randint(1, 4, n2)
+        x1 = m1 + rs.randn(n1, 3)
+        x2 = m2 + rs.randn(n2, 3)
+        w1 = rs.randint(1, 4, n1)
+        w2 = rs.randint(1, 4, n2)
 
         cls.x1, cls.x2 = x1, x2
         cls.w1, cls.w2 = w1, w2

@@ -15,10 +15,10 @@ class TestInteractionPlot:
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(12345)
-        cls.weight = np.random.randint(1, 4, size=60)
-        cls.duration = np.random.randint(1, 3, size=60)
-        cls.days = np.log(np.random.randint(1, 30, size=60))
+        rs = np.random.RandomState(12345)
+        cls.weight = rs.randint(1, 4, size=60)
+        cls.duration = rs.randint(1, 3, size=60)
+        cls.days = np.log(rs.randint(1, 30, size=60))
 
     @pytest.mark.matplotlib
     def test_plot_both(self, close_figures):

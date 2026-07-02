@@ -334,10 +334,10 @@ class TestInfluencePoissonCompare(InfluenceCompareExact):
 
 
 def test_vif_instability():
-    np.random.seed(42)
+    rs = np.random.RandomState(42)
     n = 500
-    x1 = np.random.uniform(1000, 100000, n)
-    x2 = np.random.uniform(5, 50, n)
+    x1 = rs.uniform(1000, 100000, n)
+    x2 = rs.uniform(5, 50, n)
 
     exog = np.column_stack([
         np.ones(n),
@@ -361,7 +361,7 @@ def test_vif_instability():
     assert vif_legacy > 100
 
     # 3. Test that standardize=False computes perfectly on clean, well-conditioned data
-    clean_exog = np.column_stack([np.ones(100), np.random.normal(0, 1, (100, 2))])
+    clean_exog = np.column_stack([np.ones(100), rs.normal(0, 1, (100, 2))])
     vif_true = variance_inflation_factor(clean_exog, 1, standardize=True)
     vif_false = variance_inflation_factor(clean_exog, 1, standardize=False)
     assert_allclose(vif_true, vif_false, rtol=1e-7)

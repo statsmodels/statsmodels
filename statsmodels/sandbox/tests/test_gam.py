@@ -169,9 +169,9 @@ class TestAdditiveModel(BaseAM, CheckAM):
         nobs = cls.nobs
         y_true, x, exog = cls.y_true, cls.x, cls.exog
 
-        np.random.seed(8765993)
+        rs = np.random.RandomState(8765993)
         sigma_noise = 0.1
-        y = y_true + sigma_noise * np.random.randn(nobs)
+        y = y_true + sigma_noise * rs.randn(nobs)
 
         m = AdditiveModel(x)
         m.fit(y)

@@ -471,10 +471,10 @@ def test_incidence2():
     # Check that the cumulative incidence functions for all competing
     # risks sum to the complementary survival function.
 
-    np.random.seed(2423)
+    rs = np.random.RandomState(2423)
     n = 200
-    time = -np.log(np.random.uniform(size=n))
-    status = np.random.randint(0, 3, size=n)
+    time = -np.log(rs.uniform(size=n))
+    status = rs.randint(0, 3, size=n)
     ii = np.argsort(time)
     time = time[ii]
     status = status[ii]
@@ -489,10 +489,10 @@ def test_incidence2():
 def test_kernel_survfunc1():
     # Regression test
     n = 100
-    np.random.seed(3434)
-    x = np.random.normal(size=(n, 3))
-    time = np.random.uniform(size=n)
-    status = np.random.randint(0, 2, size=n)
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(n, 3))
+    time = rs.uniform(size=n)
+    status = rs.randint(0, 2, size=n)
 
     result = SurvfuncRight(time, status, exog=x)
 
@@ -509,10 +509,10 @@ def test_kernel_survfunc2():
     # perfectly when there are tied times).
 
     n = 100
-    np.random.seed(3434)
-    x = np.random.normal(size=(n, 3))
-    time = np.random.uniform(0, 10, size=n)
-    status = np.random.randint(0, 2, size=n)
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(n, 3))
+    time = rs.uniform(0, 10, size=n)
+    status = rs.randint(0, 2, size=n)
 
     resultkm = SurvfuncRight(time, status)
     result = SurvfuncRight(time, status, exog=x, bw_factor=10000)
@@ -526,10 +526,10 @@ def test_kernel_survfunc3():
     # cases with tied times
 
     n = 100
-    np.random.seed(3434)
-    x = np.random.normal(size=(n, 3))
-    time = np.random.randint(0, 10, size=n)
-    status = np.random.randint(0, 2, size=n)
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(n, 3))
+    time = rs.randint(0, 10, size=n)
+    status = rs.randint(0, 2, size=n)
     SurvfuncRight(time, status, exog=x, bw_factor=10000)
     SurvfuncRight(time, status, exog=x, bw_factor=np.r_[10000, 10000])
 
@@ -541,10 +541,10 @@ def test_kernel_cumincidence1():
     # there are tied times).
 
     n = 100
-    np.random.seed(3434)
-    x = np.random.normal(size=(n, 3))
-    time = np.random.uniform(0, 10, size=n)
-    status = np.random.randint(0, 3, size=n)
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(n, 3))
+    time = rs.uniform(0, 10, size=n)
+    status = rs.randint(0, 3, size=n)
 
     result1 = CumIncidenceRight(time, status)
 
@@ -562,8 +562,8 @@ def test_kernel_cumincidence2():
     # cases with tied times
 
     n = 100
-    np.random.seed(3434)
-    x = np.random.normal(size=(n, 3))
-    time = np.random.randint(0, 10, size=n)
-    status = np.random.randint(0, 3, size=n)
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(n, 3))
+    time = rs.randint(0, 10, size=n)
+    status = rs.randint(0, 3, size=n)
     CumIncidenceRight(time, status, exog=x, bw_factor=10000)
