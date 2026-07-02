@@ -931,7 +931,12 @@ def test_solve_power_no_solution_returns_nan():
     tt = smp.TTestPower()
 
     # 'smaller' alternative but a positive effect size -> impossible
-    with pytest.warns(ConvergenceWarning):
+    # the warning reports the (numeric) last value the solver evaluated,
+    # since it is no longer returned
+    with pytest.warns(
+        ConvergenceWarning,
+        match=r"last value evaluated by the root finder was \[?\d",
+    ):
         val = tt.solve_power(
             effect_size=0.5, nobs=None, alpha=0.05, power=0.8,
             alternative="smaller",
