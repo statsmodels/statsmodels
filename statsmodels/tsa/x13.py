@@ -328,7 +328,7 @@ def pandas_to_series_spec(x):
     try:
         period = _freq_to_period[x.index.freqstr]
     except (AttributeError, ValueError):
-        from pandas.tseries.api import infer_freq
+        from statsmodels.compat.pandas import infer_freq
 
         period = _freq_to_period[infer_freq(x.index)]
     start_date = x.index[0]

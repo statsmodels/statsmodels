@@ -12,12 +12,6 @@ from pandas.util._decorators import (
 
 from statsmodels.tools.docstring_helpers import Appender, Substitution
 
-try:
-    pd.set_option("future.infer_freq_returns_offset", True)
-except pd.errors.OptionError:
-    # Do nothing if key doesn't exist
-    pass
-
 if TYPE_CHECKING:
     try:
         from typing import TypeAlias
@@ -87,6 +81,21 @@ except ImportError:
 assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
+
+
+def infer_freq(index) -> str | None:
+
+    # pandas 3.1 changes the return value of infer_freq
+    try:
+        with pd.option_context("future.infer_freq_returns_offset", True):
+            freq = pd.infer_freq(index)
+    except pd.errors.OptionError:
+        # in older versions the option is not available and a str is returned
+        freq = pd.infer_freq(index)
+
+    if not isinstance(freq, (str, None)):
+        return freq.freqstr
+    return freq
 
 
 def is_int_index(index: pd.Index) -> bool:
