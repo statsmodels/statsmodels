@@ -1399,15 +1399,16 @@ class NegativeBinomial(Family):
         L.Log,
     ]
 
-    def __init__(self, link=None, alpha=1.0, check_link=True):
-        self.alpha = 1.0 * alpha  # make it at least float
-        if alpha is self.__init__.__defaults__[1]:  # `is` is intentional
+    def __init__(self, link=None, alpha=None, check_link=True):
+        if alpha is None:
+            alpha = 1.0
             warnings.warn(
                 "Negative binomial dispersion parameter alpha not "
                 f"set. Using default value alpha={alpha}.",
                 ValueWarning,
                 stacklevel=2,
             )
+        self.alpha = 1.0 * alpha  # make it at least float
         if link is None:
             link = L.Log()
         super().__init__(
