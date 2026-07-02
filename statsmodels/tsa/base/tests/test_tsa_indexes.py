@@ -1002,9 +1002,10 @@ def test_prediction_increment_pandas_dates_nanosecond():
 
 
 def test_range_index():
+    rs = np.random.RandomState(328389218)
     tsa_model.__warningregistry__ = {}
 
-    endog = pd.Series(np.random.normal(size=5))
+    endog = pd.Series(rs.normal(size=5))
     assert_equal(isinstance(endog.index, pd.RangeIndex), True)
     # Warning should not be given
     with warnings.catch_warnings(record=True) as w:
@@ -1117,9 +1118,10 @@ def test_prediction_rangeindex_withstep():
 
 
 def test_custom_index():
+    rs = np.random.RandomState(328392810)
     tsa_model.__warningregistry__ = {}
 
-    endog = pd.Series(np.random.normal(size=5), index=["a", "b", "c", "d", "e"])
+    endog = pd.Series(rs.normal(size=5), index=["a", "b", "c", "d", "e"])
     message = (
         "An unsupported index was provided. As a result, forecasts cannot be "
         "generated. To use the model for forecasting, use on the the "

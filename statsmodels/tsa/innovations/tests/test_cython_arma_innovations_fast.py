@@ -215,11 +215,11 @@ def test_brockwell_davis_ex534():
 def test_innovations_algo_filter_kalman_filter(ar_params, ma_params, sigma2):
     # Test the innovations algorithm and filter against the Kalman filter
     # for exact likelihood evaluation of an ARMA process
-
+    rs = np.random.RandomState(4212122)
     ar = np.r_[1, -ar_params]
     ma = np.r_[1, ma_params]
 
-    endog = np.random.normal(size=10)
+    endog = rs.normal(size=10)
     nobs = len(endog)
 
     # Innovations algorithm approach
@@ -266,8 +266,8 @@ def test_innovations_algo_direct_filter_kalman_filter(ar_params, ma_params,
     # Test the innovations algorithm and filter against the Kalman filter
     # for exact likelihood evaluation of an ARMA process, using the direct
     # function.
-
-    endog = np.random.normal(size=10)
+    rs = np.random.RandomState(4212122)
+    endog = rs.normal(size=10)
 
     # Innovations algorithm approach
     u, r = arma_innovations.arma_innovations(endog, ar_params, ma_params,
@@ -307,8 +307,8 @@ def test_integrated_process(ar_params, diff, ma_params, sigma2):
     # Test loglikelihood computation when model has integration
 
     nobs = 100
-
-    endog = np.cumsum(np.random.normal(size=nobs))
+    rs = np.random.RandomState(4212123)
+    endog = np.cumsum(rs.normal(size=nobs))
 
     # Innovations algorithm approach
     llf_obs = arma_innovations.arma_loglikeobs(
@@ -335,8 +335,9 @@ def test_regression_with_arma_errors(ar_params, ma_params, sigma2):
     # Test loglikelihood computation when model has regressors
     nobs = 100
 
-    eps = np.random.normal(nobs)
-    exog = np.c_[np.ones(nobs), np.random.uniform(size=nobs)]
+    rs = np.random.RandomState(4212127)
+    eps = rs.normal(nobs)
+    exog = np.c_[np.ones(nobs), rs.uniform(size=nobs)]
     beta = [5, -0.2]
     endog = np.dot(exog, beta) + eps
 
