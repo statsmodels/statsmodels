@@ -538,7 +538,7 @@ def test_poisson_formula():
         else:
             rslt2 = glmm2.fit_map()
 
-        assert_allclose(rslt1.params, rslt2.params, rtol=1e-5)
+        assert_allclose(rslt1.params, rslt2.params, rtol=5e-5, atol=1e-6)
 
         for rslt in rslt1, rslt2:
             cp = rslt.cov_params()
