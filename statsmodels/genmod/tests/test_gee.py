@@ -760,7 +760,6 @@ class TestGEE:
             mod.compare_score_test(res_sub)  # smoketest
 
         # Parent and submodel are the same dimension
-        w = rs.uniform(size=n)
         mod_sub = gee.GEE(endog, exog, group)
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group)

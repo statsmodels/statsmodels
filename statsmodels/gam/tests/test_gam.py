@@ -126,7 +126,6 @@ def test_gam_penalty():
 
 def test_gam_gradient():
     # test the gam gradient for the example polynomial
-    rs = np.random.RandomState(1)
     pol, y = polynomial_sample_data()
 
     alpha = 1
@@ -134,7 +133,6 @@ def test_gam_gradient():
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=smoother)
 
     for _ in range(10):
-        params = rs.uniform(-2, 2, 4)
         params = np.array([1, 1, 1, 1])
         gam_grad = gp.deriv(params)
         grd = grad(params)

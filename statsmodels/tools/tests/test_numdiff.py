@@ -18,7 +18,6 @@ from statsmodels.tools.numdiff import (
     _approx_fprime_scalar,
     approx_fprime,
     approx_fprime_cs,
-    approx_hess_cs,
 )
 
 DEC3 = 3
@@ -362,72 +361,3 @@ def test_vectorized():
     # assert_allclose(approx_fprime(p.T, f), desired, rtol=1e-8)
     # similar as used in MarkovSwitching unit test
     assert_allclose(approx_fprime_cs(p.T, f).squeeze(), desired, rtol=1e-8)
-
-
-if __name__ == "__main__":  # FIXME: turn into tests or move/remove
-
-    epsilon = 1e-6
-    nobs = 200
-    x = np.arange(nobs * 3).reshape(nobs, -1)
-    rs = np.random.RandomState(3123728)
-    x = rs.randn(nobs, 3)
-
-    xk = np.array([1, 2, 3])
-    xk = np.array([1.0, 1.0, 1.0])
-    # xk = np.zeros(3)
-    beta = xk
-    y = np.dot(x, beta) + 0.1 * rs.randn(nobs)
-    xkols = np.dot(np.linalg.pinv(x), y)
-
-    print(approx_fprime((1, 2, 3), fun, epsilon, x))
-    gradtrue = x.sum(0)
-    print(x.sum(0))
-    gradcs = approx_fprime_cs((1, 2, 3), fun, (x,), h=1.0e-20)
-    print(gradcs, maxabs(gradcs, gradtrue))
-    print(approx_hess_cs((1, 2, 3), fun, (x,), h=1.0e-20))  # this is correctly zero
-
-    print(approx_hess_cs((1, 2, 3), fun2, (y, x), h=1.0e-20) - 2 * np.dot(x.T, x))
-    print(numdiff.approx_hess(xk, fun2, 1e-3, (y, x))[0] - 2 * np.dot(x.T, x))
-
-    gt = -x * 2 * (y - np.dot(x, [1, 2, 3]))[:, None]
-    g = approx_fprime_cs(
-        (1, 2, 3), fun1, (y, x), h=1.0e-20
-    )  # .T - this should not be transposed
-    gd = numdiff.approx_fprime((1, 2, 3), fun1, epsilon, (y, x))
-    print(maxabs(g, gt))
-    print(maxabs(gd, gt))
-
-    data = sm.datasets.spector.load()
-    data.exog = sm.add_constant(data.exog, prepend=False)
-    # mod = sm.Probit(data.endog, data.exog)
-    mod = sm.Logit(data.endog, data.exog)
-    # res = mod.fit(method="newton")
-    test_params = [1, 0.25, 1.4, -7]
-    loglike = mod.loglike
-    score = mod.score
-    hess = mod.hessian
-
-    # cs does not work for Probit because special.ndtr does not support complex
-    # maybe calculating ndtr for real and imag parts separately, if we need it
-    # and if it still works in this case
-    print("sm", score(test_params))
-    print("fd", numdiff.approx_fprime(test_params, loglike, epsilon))
-    print("cs", numdiff.approx_fprime_cs(test_params, loglike))
-    print("sm", hess(test_params))
-    print("fd", numdiff.approx_fprime(test_params, score, epsilon))
-    print("cs", numdiff.approx_fprime_cs(test_params, score))
-
-    hesscs = numdiff.approx_hess_cs(test_params, loglike)
-    print("cs", hesscs)
-    print(maxabs(hess(test_params), hesscs))
-
-    data = sm.datasets.anes96.load()
-    exog = data.exog
-    exog = sm.add_constant(exog, prepend=False)
-    res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
-
-    datap = sm.datasets.randhie.load()
-    nobs = len(datap.endog)
-    exogp = sm.add_constant(datap.exog.view(float).reshape(nobs, -1), prepend=False)
-    modp = sm.Poisson(datap.endog, exogp)
-    resp = modp.fit(method="newton", disp=0)

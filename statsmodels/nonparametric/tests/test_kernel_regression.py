@@ -519,7 +519,6 @@ class TestKernelReg(KernelRegressionTestBase):
         # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
         seed = 12345
-        rs = np.random.RandomState(seed)
         with pytest.warns(FutureWarning, match="After 0.17"):
             model_0 = nparam.KernelReg(
                 endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw
