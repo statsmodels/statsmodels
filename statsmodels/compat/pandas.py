@@ -82,6 +82,7 @@ assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
 
+
 def infer_freq(index) -> str | None:
 
     # pandas 3.1 changes the return value of infer_freq
@@ -90,8 +91,8 @@ def infer_freq(index) -> str | None:
             freq = pd.infer_freq(index)
             return freq.freqstr
     except pd.errors.OptionError:
-        freq = pd.infer_freq(index)
-
+        # in older versions the option is not available and a str is returned
+        return pd.infer_freq(index)
 
 
 def is_int_index(index: pd.Index) -> bool:
