@@ -24,6 +24,7 @@ from statsmodels.tools.validation import (
     string_like,
 )
 from statsmodels.tsa.tsatools import freq_to_period
+from statsmodels.compat.pandas import _infer_freq_returns_offset
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Sequence
@@ -392,7 +393,8 @@ class Seasonality(DeterministicTerm):
         if isinstance(index, pd.PeriodIndex):
             freq = index.freq
         elif isinstance(index, pd.DatetimeIndex):
-            freq = index.freq if index.freq else index.inferred_freq
+            with _infer_freq_returns_offset():
+                freq = index.freq if index.freq else index.inferred_freq
         else:
             raise TypeError("index must be a DatetimeIndex or PeriodIndex")
         if freq is None:
@@ -1438,7 +1440,8 @@ differences can be extended when producing out-of-sample forecasts.
             self._index_freq = self._index.freq
             self._extendable = True
         elif isinstance(self._index, pd.DatetimeIndex):
-            self._index_freq = self._index.freq or self._index.inferred_freq
+            with _infer_freq_returns_offset():
+                self._index_freq = self._index.freq or self._index.inferred_freq
             self._extendable = self._index_freq is not None
         elif isinstance(self._index, pd.RangeIndex):
             self._extendable = True

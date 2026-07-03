@@ -2,7 +2,7 @@ from functools import wraps
 
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.tsatools import freq_to_period
-
+from statsmodels.compat.pandas import _infer_freq_returns_offset
 
 def _get_pandas_wrapper(X, trim_head=None, trim_tail=None, names=None):
     index = X.index
@@ -83,7 +83,8 @@ def pandas_wrapper_freq(func, trim_head=None, trim_tail=None,
         wrapper_func = _get_pandas_wrapper(X, trim_head, trim_tail,
                                            columns)
         index = X.index
-        freq = index.inferred_freq
+        with _infer_freq_returns_offset():
+            freq = index.inferred_freq
         kwargs.update({freq_kw : freq_to_period(freq)})
         ret = func(X, *args, **kwargs)
         ret = wrapper_func(ret)

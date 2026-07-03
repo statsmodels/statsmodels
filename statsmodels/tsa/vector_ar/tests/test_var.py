@@ -2,7 +2,7 @@
 Test VAR Model
 """
 
-from statsmodels.compat.pandas import QUARTER_END, assert_index_equal
+from statsmodels.compat.pandas import QUARTER_END, assert_index_equal, _infer_freq_returns_offset
 from statsmodels.compat.python import lrange
 
 from io import BytesIO
@@ -953,7 +953,8 @@ def test_correct_nobs():
     mdata = mdata[["realgdp", "realcons", "realinv"]]
     mdata.index = pd.DatetimeIndex(quarterly)
     data = np.log(mdata).diff().dropna()
-    data.index.freq = data.index.inferred_freq
+    with _infer_freq_returns_offset():
+        data.index.freq = data.index.inferred_freq
     data_exog = pd.DataFrame(index=data.index)
     rs = np.random.RandomState(238971)
     data_exog["exovar1"] = rs.normal(size=data_exog.shape[0])

@@ -4,6 +4,7 @@ from statsmodels.compat.pandas import (
     is_float_index,
     is_int_index,
     is_numeric_dtype,
+    _infer_freq_returns_offset,
 )
 
 import numbers
@@ -568,7 +569,8 @@ class TimeSeriesModel(base.LikelihoodModel):
             if isinstance(index, (DatetimeIndex, PeriodIndex)):
                 # If no frequency, try to get an inferred frequency
                 if freq is None and index.freq is None:
-                    freq = index.inferred_freq
+                    with _infer_freq_returns_offset():
+                        freq = index.inferred_freq
                     # If we got an inferred frequncy, alert the user
                     if freq is not None:
                         inferred_freq = True
