@@ -501,6 +501,9 @@ class Power:
         fit_kwds = self.start_bqexp[key]
         fit_res = []
         # print vars()
+        # ensure ``val`` is bound for the warning below even if the first
+        # solver raises before assigning it and no backup solver runs
+        val = np.nan
         try:
             val, res = brentq_expanding(func, full_output=True, **fit_kwds)
             failed = False
@@ -547,11 +550,18 @@ class Power:
                 convergence_doc,
             )
 
-            warnings.warn(convergence_doc, ConvergenceWarning, stacklevel=2)
             # the root finder did not converge, so ``val`` is not a solution
             # (it is the last point the solver evaluated, e.g. a bracket
-            # bound). Returning it would masquerade as a valid answer; return
-            # nan instead to signal that no solution was found.
+            # bound). Report it in the warning for diagnostics, but return
+            # nan instead so it cannot masquerade as a valid answer.
+            warnings.warn(
+                convergence_doc
+                + f"The last value evaluated by the root finder was {val}; "
+                "returning nan instead. Solver details are stored in the "
+                "``cache_fit_res`` attribute.",
+                ConvergenceWarning,
+                stacklevel=2,
+            )
             val = np.nan
 
         # attach fit_res, for reading only, should be needed only for debugging
