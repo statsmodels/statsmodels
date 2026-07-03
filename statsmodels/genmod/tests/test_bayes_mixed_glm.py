@@ -254,8 +254,8 @@ def test_elbo_grad():
                 glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
             else:
                 glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-
-            rslt1 = glmm1.fit_map()
+            rs = np.random.RandomState(0)
+            rslt1 = glmm1.fit_map(rng=rs)
 
             for k in range(3):
 

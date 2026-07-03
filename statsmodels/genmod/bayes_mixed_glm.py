@@ -400,10 +400,15 @@ class _BayesMixedGLM(base.Model):
 
         return np.concatenate(te)
 
-    def _get_start(self):
+    def _get_start(self, rng):
         start_fep = np.zeros(self.k_fep)
         start_vcp = np.ones(self.k_vcp)
-        start_vc = np.random.normal(size=self.k_vc)
+        if rng is None:
+            start_vc = np.random.normal(size=self.k_vc)
+        elif isinstance(rng, (np.random.Generator, np.random.RandomState)):
+            start_vc = rng.normal(size=self.k_vc)
+        else:
+            raise TypeError("rng must be None, a RandomState or a Generator")
         start = np.concatenate((start_fep, start_vcp, start_vc))
         return start
 
@@ -475,7 +480,7 @@ class _BayesMixedGLM(base.Model):
         """
         self.fit_map(method, minim_opts)
 
-    def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False):
+    def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False, rng=None):
         """
         Construct the Laplace approximation to the posterior distribution.
 
@@ -490,6 +495,9 @@ class _BayesMixedGLM(base.Model):
             are centered and scaled to unit variance before fitting
             the model.  The results are back-transformed so that the
             results are presented on the original scale.
+        rng : np.random.Generator or np.random.RandomState, optional
+            The generator to use for starting values. If None, uses
+            the singleton RandomState provided by NumPy.
 
         Returns
         -------
@@ -511,7 +519,7 @@ class _BayesMixedGLM(base.Model):
         def grad(params):
             return -self.logposterior_grad(params)
 
-        start = self._get_start()
+        start = self._get_start(rng)
 
         r = minimize(fun, start, method=method, jac=grad, options=minim_opts)
         if not r.success:
@@ -698,6 +706,7 @@ class _VariationalBayesMixedGLM:
         minim_opts=None,
         scale_fe=False,
         verbose=False,
+        rng=None,
     ):
         """
         Fit a model using the variational Bayes mean field approximation.
@@ -720,6 +729,10 @@ class _VariationalBayesMixedGLM:
         verbose : bool
             If True, print the gradient norm to the screen each time
             it is calculated.
+        rng : np.random.Generator or np.random.RandomState, optional
+            The generator to use for starting values. If None, uses
+            the singleton RandomState provided by NumPy. Only used
+            if sd is None.
 
         Notes
         -----
@@ -762,7 +775,12 @@ class _VariationalBayesMixedGLM:
                 )
             m = mean.copy()
         if sd is None:
-            s = -0.5 + 0.1 * np.random.normal(size=n)
+            if rng is None:
+                s = -0.5 + 0.1 * np.random.normal(size=n)
+            elif isinstance(rng, (np.random.Generator, np.random.RandomState)):
+                s = -0.5 + 0.1 * rng.normal(size=n)
+            else:
+                raise TypeError("rng must be None, a RandomState or a Generator")
         else:
             if len(sd) != ml:
                 raise ValueError("sd has incorrect length, %d != %d" % (len(sd), ml))
