@@ -534,7 +534,7 @@ def get_prediction_linear(
     row_labels : list of str or None
         If row_lables are provided, then they will replace the generated
         labels.
-    pred_kwargs :
+    pred_kwds :
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.
@@ -610,7 +610,7 @@ def get_prediction_monotonic(
     link : instance of link function
         If no link function is provided, then the ``mmodel.family.link` is
         used.
-    pred_kwargs :
+    pred_kwds :
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.
@@ -707,7 +707,7 @@ def get_prediction_delta(
     row_labels : list of str or None
         If row_lables are provided, then they will replace the generated
         labels.
-    pred_kwargs :
+    pred_kwds :
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.

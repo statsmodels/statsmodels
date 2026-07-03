@@ -170,7 +170,7 @@ class OriginResults(RegressionResults):
         b0_vals : 1darray
             The hypothesized value to be tested.
 
-        param_num : 1darray
+        param_nums : 1darray
             Which parameters to test.  Note this uses python
             indexing but the '0' parameter refers to the intercept term,
             which is assumed 0.  Therefore, param_num should be > 0.
