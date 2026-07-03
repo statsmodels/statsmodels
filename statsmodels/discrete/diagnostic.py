@@ -54,7 +54,7 @@ class CountDiagnostic:
 
         Parameters
         ----------
-        binedges : array_like or None
+        bin_edges : array_like or None
             This defines which counts are included in the test on frequencies
             and how counts are combined in bins.
             The default if bin_edges is None will change in future.
