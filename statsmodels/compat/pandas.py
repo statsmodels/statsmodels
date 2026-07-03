@@ -1,4 +1,5 @@
 from __future__ import annotations
+from contextlib import contextmanager
 
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, TypeVar
 
@@ -83,14 +84,21 @@ assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
 
 
-def infer_freq(index) -> str | None:
+@contextmanager
+def _infer_freq_returns_offset():
 
     # pandas 3.1 changes the return value of infer_freq
     try:
         with pd.option_context("future.infer_freq_returns_offset", True):
-            freq = pd.infer_freq(index)
+            yield
     except pd.errors.OptionError:
         # in older versions the option is not available and a str is returned
+        yield
+
+def infer_freq(index) -> str | None:
+
+    # pandas 3.1 changes the return value of infer_freq
+    with _infer_freq_returns_offset():
         freq = pd.infer_freq(index)
 
     # new pandas versions retuns BaseOffset
