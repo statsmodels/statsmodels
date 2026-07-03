@@ -319,7 +319,7 @@ def test_multivariate_gam_1d_data():
 
     # alpha is by manually adjustment to reduce discrepancy in fittedvalues
     alpha = [0.0168 * 0.0251 / 2 * 500]
-    gp = MultivariateGamPenalty(bsplines, alpha=alpha)  # noqa: F841
+    _ = MultivariateGamPenalty(bsplines, alpha=alpha)
 
     glm_gam = GLMGam(y, exog=np.ones((len(y), 1)), smoother=bsplines, alpha=alpha)
     # "nm" converges to a different params, "bfgs" params are close to pirls

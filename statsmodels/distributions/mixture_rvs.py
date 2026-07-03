@@ -233,8 +233,8 @@ def mv_mixture_rvs(prob, size, dist, nvars, rng=None, **kwargs):
     if not np.allclose(np.sum(prob), 1):
         raise ValueError("prob does not sum to 1")
 
-    if kwargs is None:
-        kwargs = ({},) * len(prob)
+    # if kwargs is None:
+    #     kwargs = ({},) * len(prob)
 
     idx = _make_index(prob, size, rng)
     sample = np.empty((size, nvars))

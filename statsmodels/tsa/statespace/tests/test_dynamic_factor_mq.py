@@ -1465,7 +1465,7 @@ def test_invalid_model_specification():
     with pytest.raises(ValueError, match=msg):
         dynamic_factor_mq.DynamicFactorMQ(dta, factor_orders=True)
     msg = (
-        "`factor_multiplicities` argument must either be an integer or a" " dictionary."
+        "`factor_multiplicities` argument must either be an integer or a dictionary."
     )
     with pytest.raises(ValueError, match=msg):
         dynamic_factor_mq.DynamicFactorMQ(dta, factor_multiplicities=True)
@@ -2155,7 +2155,7 @@ def test_invalid_standardize_1d():
         (pd.Series([10], index=["y"]), pd.Series([10, 1], index=["y1", "y2"])),
     ]
     msg = (
-        "Invalid value passed for `standardize`: if a Pandas Series, must" " have index"
+        "Invalid value passed for `standardize`: if a Pandas Series, must have index"
     )
     for standardize in options:
         with pytest.raises(ValueError, match=msg):
@@ -2175,7 +2175,7 @@ def test_invalid_standardize_1d():
         (pd.Series([10], index=["y"]), pd.Series([10, 1], index=["y1", "y2"])),
     ]
     msg = (
-        "Invalid value passed for `standardize`: if a Pandas Series, must" " have index"
+        "Invalid value passed for `standardize`: if a Pandas Series, must have index"
     )
     for standardize in options:
         with pytest.raises(ValueError, match=msg):

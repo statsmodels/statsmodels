@@ -736,7 +736,7 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
             0.0,
             "one-sided",
             ValueError,
-            "Ratio of reference group to treatment group must be" " strictly positive.",
+            "Ratio of reference group to treatment group must be strictly positive.",
         ),
         (
             np.array([1, 2, 3]),
@@ -746,7 +746,7 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
             -1.0,
             "one-sided",
             ValueError,
-            "Ratio of reference group to treatment group must be" " strictly positive.",
+            "Ratio of reference group to treatment group must be strictly positive.",
         ),
         # Invalid synthetic sample with missing values (NaN)
         (
@@ -781,7 +781,7 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
             0.5,
             False,
             ValueError,
-            "Alternative must be one of `two-sided`, `larger`," " or `smaller`.",
+            "Alternative must be one of `two-sided`, `larger`, or `smaller`.",
         ),
         # Invalid alternative value
         (
@@ -792,7 +792,7 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
             0.5,
             "invalid-alternative",
             ValueError,
-            "Alternative must be one of `two-sided`, `larger`," " or `smaller`.",
+            "Alternative must be one of `two-sided`, `larger`, or `smaller`.",
         ),
         # Relative effect > 0.5 but alternative is smaller
         (
