@@ -103,8 +103,7 @@ def test_arrays(noise):
     assert_allclose(f.params, epar, atol=0.3, rtol=0.3)
 
     # Test the fitted covariance matrix
-    cv = f.covariance(mod.time[0:5], mod.exog_scale[0:5, :],
-                      mod.exog_smooth[0:5, :])
+    cv = f.covariance(mod.time[0:5], mod.exog_scale[0:5, :], mod.exog_smooth[0:5, :])
     assert_allclose(cv, cv.T)  # Check symmetry
     a, _ = np.linalg.eig(cv)
     assert_equal(a > 0, True)  # Check PSD
@@ -125,19 +124,21 @@ def run_formula(n, get_model, noise):
 
     y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(n, get_model, noise)
 
-    df = pd.DataFrame({
-        "y": y,
-        "x1": x_mean[:, 0],
-        "x2": x_mean[:, 1],
-        "x3": x_mean[:, 2],
-        "x4": x_mean[:, 3],
-        "xsc1": x_sc[:, 0],
-        "xsc2": x_sc[:, 1],
-        "xsm1": x_sm[:, 0],
-        "xsm2": x_sm[:, 1],
-        "time": time,
-        "groups": groups
-    })
+    df = pd.DataFrame(
+        {
+            "y": y,
+            "x1": x_mean[:, 0],
+            "x2": x_mean[:, 1],
+            "x3": x_mean[:, 2],
+            "x4": x_mean[:, 3],
+            "xsc1": x_sc[:, 0],
+            "xsc2": x_sc[:, 1],
+            "xsm1": x_sm[:, 0],
+            "xsm2": x_sm[:, 1],
+            "time": time,
+            "groups": groups,
+        }
+    )
 
     if noise:
         df["xno1"] = x_no[:, 0]
@@ -159,7 +160,8 @@ def run_formula(n, get_model, noise):
         smooth_formula=smooth_formula,
         noise_formula=noise_formula,
         time="time",
-        groups="groups")
+        groups="groups",
+    )
     f = preg.fit()
 
     return f, df
@@ -182,10 +184,8 @@ def test_formulas(noise):
     assert_allclose(f.params, epar, atol=0.1, rtol=1)
 
     # Test the fitted covariance matrix
-    exog_scale = pd.DataFrame(mod.exog_scale[0:5, :],
-                              columns=["xsc1", "xsc2"])
-    exog_smooth = pd.DataFrame(mod.exog_smooth[0:5, :],
-                               columns=["xsm1", "xsm2"])
+    exog_scale = pd.DataFrame(mod.exog_scale[0:5, :], columns=["xsc1", "xsc2"])
+    exog_smooth = pd.DataFrame(mod.exog_smooth[0:5, :], columns=["xsm1", "xsm2"])
     cv = f.covariance(mod.time[0:5], exog_scale, exog_smooth)
     assert_allclose(cv, cv.T)
     a, _ = np.linalg.eig(cv)

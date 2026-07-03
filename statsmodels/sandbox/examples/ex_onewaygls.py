@@ -39,9 +39,7 @@ x1 = sm.add_constant(x1, prepend=False)
 # regression 2
 x2 = rs.normal(size=(nobs, nvars))
 if example == "null":
-    y2 = (
-        10 + np.dot(x2, [15.0] * nvars) + 2 * rs.normal(size=nobs)
-    )  # if H0 is true
+    y2 = 10 + np.dot(x2, [15.0] * nvars) + 2 * rs.normal(size=nobs)  # if H0 is true
 else:
     y2 = 19 + np.dot(x2, [17.0] * nvars) + 2 * rs.normal(size=nobs)
 

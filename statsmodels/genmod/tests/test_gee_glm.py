@@ -91,8 +91,9 @@ class TestCompareGaussian(CheckGEEGLM):
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
-        md = GEE.from_formula("Y ~ X1 + X2 + X3", groups, D,
-                              family=family, cov_struct=vs)
+        md = GEE.from_formula(
+            "Y ~ X1 + X2 + X3", groups, D, family=family, cov_struct=vs
+        )
         cls.result1 = md.fit()
 
         cls.result2 = GLM.from_formula("Y ~ X1 + X2 + X3", data=D).fit()
@@ -107,7 +108,7 @@ class TestCompareGamma(CheckGEEGLM):
         family = families.Gamma(link=links.Log())
         rs = np.random.RandomState(987126)
         # Y = np.random.normal(size=100)**2
-        Y = np.exp(0.1 + rs.normal(size=100))   # log-normal
+        Y = np.exp(0.1 + rs.normal(size=100))  # log-normal
         X1 = rs.normal(size=100)
         X2 = rs.normal(size=100)
         X3 = rs.normal(size=100)
@@ -115,8 +116,9 @@ class TestCompareGamma(CheckGEEGLM):
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
-        mod1 = GEE.from_formula("Y ~ X1 + X2 + X3", groups, D,
-                                family=family, cov_struct=vs)
+        mod1 = GEE.from_formula(
+            "Y ~ X1 + X2 + X3", groups, D, family=family, cov_struct=vs
+        )
         cls.result1 = mod1.fit()
 
         mod2 = GLM.from_formula("Y ~ X1 + X2 + X3", data=D, family=family)

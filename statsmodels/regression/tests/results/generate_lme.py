@@ -50,27 +50,31 @@ for pr in [1, 2]:
 
                 expval = np.dot(x_fe, params) + np.dot(x_re, re)
 
-                endog.append(expval + sig*rs.normal(size=n))
+                endog.append(expval + sig * rs.normal(size=n))
                 exog_fe.append(x_fe)
                 exog_re.append(x_re)
-                groups.append(i*np.ones(n))
+                groups.append(i * np.ones(n))
 
             endog = np.concatenate(endog)
             exog_fe = np.concatenate(exog_fe, axis=0)
             exog_re = np.concatenate(exog_re, axis=0)
             groups = np.concatenate(groups, axis=0)
 
-            data = np.concatenate((groups[:, None], endog[:, None],
-                                   exog_fe, exog_re), axis=1)
+            data = np.concatenate(
+                (groups[:, None], endog[:, None], exog_fe, exog_re), axis=1
+            )
 
-            header = (["groups,endog"] +
-                      ["exog_fe_%d" % k for k in range(pf)] +
-                      ["exog_re_%d" % k for k in range(pr)])
+            header = (
+                ["groups,endog"]
+                + ["exog_fe_%d" % k for k in range(pf)]
+                + ["exog_re_%d" % k for k in range(pr)]
+            )
             header = ",".join(header)
 
             cur_dir = os.path.dirname(os.path.abspath(__file__))
 
             fname = os.path.join(cur_dir, "lme%02d.csv" % dsix)
-            np.savetxt(fname, data, fmt="%.3f", header=header,
-                       delimiter=",", comments="")
+            np.savetxt(
+                fname, data, fmt="%.3f", header=header, delimiter=",", comments=""
+            )
             dsix += 1

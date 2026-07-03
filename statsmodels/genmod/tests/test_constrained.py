@@ -54,8 +54,12 @@ class ConstrainedCompareMixin:
         assert_equal(res1.df_resid, res2.df_resid)
         assert_allclose(res1.scale, res2.scale, rtol=1e-10)
         assert_allclose(res1.bse[self.idx_p_uc], res2.bse, rtol=1e-10)
-        assert_allclose(res1.cov_params()[self.idx_p_uc[:, None],
-                        self.idx_p_uc], res2.cov_params(), rtol=5e-9, atol=1e-15)
+        assert_allclose(
+            res1.cov_params()[self.idx_p_uc[:, None], self.idx_p_uc],
+            res2.cov_params(),
+            rtol=5e-9,
+            atol=1e-15,
+        )
 
     def test_resid(self):
         res1 = self.res1
@@ -68,8 +72,7 @@ class TestGLMGaussianOffset(ConstrainedCompareMixin):
     @classmethod
     def init(cls):
         cls.res2 = cls.mod2.fit()
-        mod = GLM(cls.endog, cls.exogc,
-                  offset=0.5 * cls.exog[:, cls.idx_c].squeeze())
+        mod = GLM(cls.endog, cls.exogc, offset=0.5 * cls.exog[:, cls.idx_c].squeeze())
         mod.exog_names[:] = ["const", "x2", "x3", "x4"]
         cls.res1 = mod.fit()
         cls.idx_p_uc = np.arange(cls.exogc.shape[1])
@@ -91,8 +94,7 @@ class TestGLMGaussianOffsetHC(ConstrainedCompareMixin):
     def init(cls):
         cov_type = "HC0"
         cls.res2 = cls.mod2.fit(cov_type=cov_type)
-        mod = GLM(cls.endog, cls.exogc,
-                  offset=0.5 * cls.exog[:, cls.idx_c].squeeze())
+        mod = GLM(cls.endog, cls.exogc, offset=0.5 * cls.exog[:, cls.idx_c].squeeze())
         mod.exog_names[:] = ["const", "x2", "x3", "x4"]
         cls.res1 = mod.fit(cov_type=cov_type)
         cls.idx_p_uc = np.arange(cls.exogc.shape[1])
@@ -138,9 +140,12 @@ class TestGLMWtdGaussianOffset(ConstrainedCompareWtdMixin):
     @classmethod
     def init(cls):
         cls.res2 = cls.mod2.fit()
-        mod = GLM(cls.endog, cls.exogc,
-                  offset=0.5 * cls.exog[:, cls.idx_c].squeeze(),
-                  var_weights=cls.aweights)
+        mod = GLM(
+            cls.endog,
+            cls.exogc,
+            offset=0.5 * cls.exog[:, cls.idx_c].squeeze(),
+            var_weights=cls.aweights,
+        )
         mod.exog_names[:] = ["const", "x2", "x3", "x4"]
         cls.res1 = mod.fit()
         cls.idx_p_uc = np.arange(cls.exogc.shape[1])
@@ -162,9 +167,12 @@ class TestGLMWtdGaussianOffsetHC(ConstrainedCompareWtdMixin):
     def init(cls):
         cov_type = "HC0"
         cls.res2 = cls.mod2.fit(cov_type=cov_type)
-        mod = GLM(cls.endog, cls.exogc,
-                  offset=0.5 * cls.exog[:, cls.idx_c].squeeze(),
-                  var_weights=cls.aweights)
+        mod = GLM(
+            cls.endog,
+            cls.exogc,
+            offset=0.5 * cls.exog[:, cls.idx_c].squeeze(),
+            var_weights=cls.aweights,
+        )
         mod.exog_names[:] = ["const", "x2", "x3", "x4"]
         cls.res1 = mod.fit(cov_type=cov_type)
         cls.idx_p_uc = np.arange(cls.exogc.shape[1])
@@ -194,11 +202,9 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
         exog = add_constant(data.exog, prepend=True)
         offset = np.ones(len(data.endog))
         exog_keep = exog[:, :-5]
-        cls.mod2 = GLM(data.endog, exog_keep, family=family.Binomial(),
-                       offset=offset)
+        cls.mod2 = GLM(data.endog, exog_keep, family=family.Binomial(), offset=offset)
 
-        cls.mod1 = GLM(data.endog, exog, family=family.Binomial(),
-                       offset=offset)
+        cls.mod1 = GLM(data.endog, exog, family=family.Binomial(), offset=offset)
         cls.init()
 
     @classmethod
@@ -216,10 +222,18 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
         assert_allclose(res1.resid_response, res2.resid_response, rtol=1e-8)
 
     def test_glm_attr(self):
-        for attr in ["llf", "null_deviance", "aic", "df_resid",
-                     "df_model", "pearson_chi2", "scale"]:
-            assert_allclose(getattr(self.res1, attr),
-                            getattr(self.res2, attr), rtol=1e-10)
+        for attr in [
+            "llf",
+            "null_deviance",
+            "aic",
+            "df_resid",
+            "df_model",
+            "pearson_chi2",
+            "scale",
+        ]:
+            assert_allclose(
+                getattr(self.res1, attr), getattr(self.res2, attr), rtol=1e-10
+            )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FutureWarning)
             # FutureWarning to silence BIC warning

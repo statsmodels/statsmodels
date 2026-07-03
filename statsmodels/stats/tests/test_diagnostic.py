@@ -8,6 +8,7 @@ License: BSD-3
 currently all tests are against R
 
 """
+
 import json
 import os
 
@@ -114,9 +115,7 @@ class TestDiagnosticG:
     def test_basic(self):
         # mainly to check I got the right regression
         # > mkarray(fm$coefficients, "params")
-        params = np.array(
-            [-9.48167277465485, 4.3742216647032, -0.613996969478989]
-        )
+        params = np.array([-9.48167277465485, 4.3742216647032, -0.613996969478989])
 
         assert_almost_equal(self.res.params, params, decimal=12)
 
@@ -490,9 +489,7 @@ class TestDiagnosticG:
             resid = res.resid[:30]
         else:
             resid = res.resid.iloc[:30]
-        df = smsdia.acorr_ljungbox(
-            resid, boxpierce=True, lags=13
-        )
+        df = smsdia.acorr_ljungbox(resid, boxpierce=True, lags=13)
         idx = df.index.max()
         compare_to_reference(
             [df.loc[idx, "lb_stat"], df.loc[idx, "lb_pvalue"]],
@@ -530,20 +527,12 @@ class TestDiagnosticG:
         res_y2 = smsdia.acorr_ljungbox(y2, 10)
         for i, loc in enumerate((1, 5, 10)):
             row = res_y1.loc[loc]
-            assert_allclose(
-                r_results_y1_lb[i][0], row.loc["lb_stat"], rtol=1e-3
-            )
-            assert_allclose(
-                r_results_y1_lb[i][2], row.loc["lb_pvalue"], rtol=1e-3
-            )
+            assert_allclose(r_results_y1_lb[i][0], row.loc["lb_stat"], rtol=1e-3)
+            assert_allclose(r_results_y1_lb[i][2], row.loc["lb_pvalue"], rtol=1e-3)
 
             row = res_y2.loc[loc]
-            assert_allclose(
-                r_results_y2_lb[i][0], row.loc["lb_stat"], rtol=1e-3
-            )
-            assert_allclose(
-                r_results_y2_lb[i][2], row.loc["lb_pvalue"], rtol=1e-3
-            )
+            assert_allclose(r_results_y2_lb[i][0], row.loc["lb_stat"], rtol=1e-3)
+            assert_allclose(r_results_y2_lb[i][2], row.loc["lb_pvalue"], rtol=1e-3)
 
         res = smsdia.acorr_ljungbox(y2, 10, boxpierce=True)
         assert_allclose(res.loc[10, "bp_stat"], 7.8935, rtol=1e-3)
@@ -727,9 +716,7 @@ class TestDiagnosticG:
         )
 
         bh = smsdia.breaks_hansen(self.res)
-        assert_almost_equal(
-            bh[0], breaks_nyblom_hansen["statistic"], decimal=12
-        )
+        assert_almost_equal(bh[0], breaks_nyblom_hansen["statistic"], decimal=12)
         # TODO: breaks_hansen does not return pvalues
 
     def test_recursive_residuals(self):
@@ -955,9 +942,7 @@ class TestDiagnosticG:
         ub0 = np.array(
             [13.37318571, 13.50758959, 13.64199346, 13.77639734, 13.91080121]
         )
-        ub1 = np.array(
-            [39.44753774, 39.58194162, 39.7163455, 39.85074937, 39.98515325]
-        )
+        ub1 = np.array([39.44753774, 39.58194162, 39.7163455, 39.85074937, 39.98515325])
         lb, ub = rr[6]
         assert_almost_equal(ub[:5], ub0, decimal=7)
         assert_almost_equal(lb[:5], -ub0, decimal=7)
@@ -1009,7 +994,7 @@ class TestDiagnosticG:
         )
 
         lf1 = smsdia.lilliefors(res.resid, pvalmethod="approx")
-        lf2 = smsdia.lilliefors(res.resid ** 2, pvalmethod="approx")
+        lf2 = smsdia.lilliefors(res.resid**2, pvalmethod="approx")
         if isinstance(res.resid, np.ndarray):
             resid = res.resid[:20]
         else:
@@ -1017,9 +1002,7 @@ class TestDiagnosticG:
         lf3 = smsdia.lilliefors(resid, pvalmethod="approx")
 
         compare_to_reference(lf1, lilliefors1, decimal=(12, 12))
-        compare_to_reference(
-            lf2, lilliefors2, decimal=(12, 12)
-        )  # pvalue very small
+        compare_to_reference(lf2, lilliefors2, decimal=(12, 12))  # pvalue very small
         assert_allclose(lf2[1], lilliefors2["pvalue"], rtol=1e-10)
         compare_to_reference(lf3, lilliefors3, decimal=(12, 1))
         # R uses different approximation for pvalue in last case
@@ -1047,7 +1030,7 @@ class TestDiagnosticG:
 
         ad1 = smsdia.normal_ad(res.resid)
         compare_to_reference(ad1, adr1, decimal=(11, 13))
-        ad2 = smsdia.normal_ad(res.resid ** 2)
+        ad2 = smsdia.normal_ad(res.resid**2)
         assert_(np.isinf(ad2[0]))
         ad3 = smsdia.normal_ad(resid)
         compare_to_reference(ad3, adr3, decimal=(11, 12))
@@ -1271,9 +1254,7 @@ def test_influence_wrapped():
     # slow:
     dffits, dffth = infl.dffits
     assert_almost_equal(dffits, lsdiag["dfits"], 12)
-    assert_almost_equal(
-        infl.resid_studentized_external, lsdiag["stud.res"], 12
-    )
+    assert_almost_equal(infl.resid_studentized_external, lsdiag["stud.res"], 12)
 
     fn = os.path.join(cur_dir, "results/influence_measures_R.csv")
     infl_r = pd.read_csv(fn, index_col=0)
@@ -1827,9 +1808,7 @@ def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
     x = np.hstack([x, x[:, 1:] ** 2])
     y = x @ np.ones((7, 1)) + e
     res = OLS(y, x[:, :4]).fit()
-    smsdia.linear_reset(
-        res, power=power, test_type=test_type, use_f=use_f, **cov
-    )
+    smsdia.linear_reset(res, power=power, test_type=test_type, use_f=use_f, **cov)
 
 
 @pytest.mark.smoke
@@ -1969,15 +1948,13 @@ def test_small_skip(reset_randomstate):
 # ---
 # Signif. codes:  0`***` 0.001`**` 0.01`*` 0.05`.` 0.1` ` 1
 
+
 @pytest.mark.smoke
 def test_diagnostics_pandas(reset_randomstate):
     # GH 8879
     n = 100
     df = pd.DataFrame(
-        {
-            "y": np.random.rand(n),
-            "x": np.random.rand(n),
-            "z": np.random.rand(n)}
+        {"y": np.random.rand(n), "x": np.random.rand(n), "z": np.random.rand(n)}
     )
     y, x = df["y"], add_constant(df["x"])
 
@@ -2004,18 +1981,14 @@ def test_diagnostics_pandas(reset_randomstate):
     smsdia.compare_encompassing(res, res_other)
     smsdia.compare_j(res, res_other)
     smsdia.recursive_olsresiduals(res)
-    smsdia.recursive_olsresiduals(
-        res, order_by=np.arange(y.shape[0] - 1, 0 - 1, -1)
-    )
+    smsdia.recursive_olsresiduals(res, order_by=np.arange(y.shape[0] - 1, 0 - 1, -1))
     smsdia.spec_white(res.resid, x)
 
 
 def test_deprecated_argument():
     x = np.random.randn(100)
     y = 2 * x + np.random.randn(100)
-    result = OLS(y, add_constant(x)).fit(
-        cov_type="HAC", cov_kwds={"maxlags": 2}
-    )
+    result = OLS(y, add_constant(x)).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
     with pytest.warns(FutureWarning, match="the "):
         smsdia.linear_reset(
             result,
@@ -2029,9 +2002,7 @@ def test_deprecated_argument():
 def test_diagnostics_hac(reset_randomstate):
     x = np.random.randn(100)
     y = 2 * x + np.random.randn(100)
-    result = OLS(y, add_constant(x)).fit(
-        cov_type="HAC", cov_kwds={"maxlags": 2}
-    )
+    result = OLS(y, add_constant(x)).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
     reset_test = smsdia.linear_reset(
         result,
         power=2,

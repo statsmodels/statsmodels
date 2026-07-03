@@ -38,9 +38,7 @@ class _ConditionalModel(base.LikelihoodModel):
         super().__init__(endog, exog, missing=missing, **kwargs)
 
         if self.data.const_idx is not None:
-            msg = (
-                "Conditional models should not have an intercept in the design matrix"
-            )
+            msg = "Conditional models should not have an intercept in the design matrix"
             raise ValueError(msg)
 
         exog = self.exog
@@ -559,7 +557,7 @@ class ConditionalMNLogit(_ConditionalModel):
         callback=None,
         retall=False,
         skip_hessian=False,
-        generator = None,
+        generator=None,
         **kwargs,
     ):
 

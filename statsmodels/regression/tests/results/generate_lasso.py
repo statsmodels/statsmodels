@@ -16,12 +16,12 @@ p = 5
 rs = np.random.RandomState(83423)
 
 exog = rs.normal(size=(n, p))
-params = (-1.)**np.arange(p)
+params = (-1.0) ** np.arange(p)
 params[::3] = 0
 expval = np.dot(exog, params)
 endog = expval + rs.normal(size=n)
 data = np.concatenate((endog[:, None], exog), axis=1)
-data = np.around(100*data)
+data = np.around(100 * data)
 
 fname = "lasso_data.csv"
 np.savetxt(fname, data, fmt="%.0f", delimiter=",")

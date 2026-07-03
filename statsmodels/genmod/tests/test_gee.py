@@ -665,9 +665,7 @@ class TestGEE:
         R = np.array([0.0])
         f = np.r_[1, -1]
         for i in range(10):
-            endog = (
-                exog[:, 0] + (0.5 + i / 10.0) * exog[:, 1] + rs.normal(size=n)
-            )
+            endog = exog[:, 0] + (0.5 + i / 10.0) * exog[:, 1] + rs.normal(size=n)
             family = families.Gaussian()
             va = cov_struct.Independence()
             mod0 = gee.GEE(endog, exog, group, family=family, cov_struct=va)
@@ -729,9 +727,7 @@ class TestGEE:
         endog = exog_sub.sum(1) + 3 * rs.normal(size=n)
 
         # Mismatched cov_struct
-        mod_sub = gee.GEE(
-            endog, exog_sub, group, cov_struct=cov_struct.Exchangeable()
-        )
+        mod_sub = gee.GEE(endog, exog_sub, group, cov_struct=cov_struct.Exchangeable())
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
         with pytest.warns(UserWarning, match="Model and submodel have"):
@@ -1588,9 +1584,7 @@ class TestGEE:
         offset = list(rs.uniform(1, 2, size=n))
         exposure = list(rs.uniform(1, 2, size=n))
         endog = [
-            rs.poisson(
-                0.1 * (exog_i[1] + exog_i[2]) + offset_i + np.log(exposure_i)
-            )
+            rs.poisson(0.1 * (exog_i[1] + exog_i[2]) + offset_i + np.log(exposure_i))
             for exog_i, offset_i, exposure_i in zip(exog, offset, exposure)
         ]
 

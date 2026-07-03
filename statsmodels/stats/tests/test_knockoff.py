@@ -12,6 +12,7 @@ from statsmodels.stats._knockoff import (
 
 try:
     import cvxopt  # noqa:F401
+
     has_cvxopt = True
 except ImportError:
     has_cvxopt = False
@@ -61,15 +62,17 @@ def test_sdp():
 
 
 @pytest.mark.parametrize("p", [49, 50])
-@pytest.mark.parametrize("tester", [
-                   kr.CorrelationEffects(),
-                   kr.ForwardEffects(pursuit=False),
-                   kr.ForwardEffects(pursuit=True),
-                   kr.OLSEffects(),
-                   kr.RegModelEffects(sm.OLS),
-                   kr.RegModelEffects(sm.OLS, True,
-                                      fit_kws={"L1_wt": 0, "alpha": 1}),
-                ])
+@pytest.mark.parametrize(
+    "tester",
+    [
+        kr.CorrelationEffects(),
+        kr.ForwardEffects(pursuit=False),
+        kr.ForwardEffects(pursuit=True),
+        kr.OLSEffects(),
+        kr.RegModelEffects(sm.OLS),
+        kr.RegModelEffects(sm.OLS, True, fit_kws={"L1_wt": 0, "alpha": 1}),
+    ],
+)
 @pytest.mark.parametrize("method", ["equi", "sdp"])
 def test_testers(p, tester, method):
 
@@ -90,12 +93,15 @@ def test_testers(p, tester, method):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("method", ["equi", "sdp"])
-@pytest.mark.parametrize("tester,n,p,es", [
-    (kr.CorrelationEffects(), 300, 100, 6),
-    (kr.ForwardEffects(pursuit=False), 300, 100, 3.5),
-    (kr.ForwardEffects(pursuit=True), 300, 100, 3.5),
-    (kr.OLSEffects(), 3000, 200, 3.5),
-])
+@pytest.mark.parametrize(
+    "tester,n,p,es",
+    [
+        (kr.CorrelationEffects(), 300, 100, 6),
+        (kr.ForwardEffects(pursuit=False), 300, 100, 3.5),
+        (kr.ForwardEffects(pursuit=True), 300, 100, 3.5),
+        (kr.OLSEffects(), 3000, 200, 3.5),
+    ],
+)
 def test_sim(method, tester, n, p, es):
     # This function assesses the performance of the knockoff approach
     # relative to its theoretical claims.
@@ -122,10 +128,10 @@ def test_sim(method, tester, n, p, es):
 
         # Generate the predictors
         x = rs.normal(size=(n, p))
-        x /= np.sqrt(np.sum(x*x, 0))
+        x /= np.sqrt(np.sum(x * x, 0))
 
         # Generate the response variable
-        coeff = es * (-1)**np.arange(npos)
+        coeff = es * (-1) ** np.arange(npos)
         y = np.dot(x[:, 0:npos], coeff) + rs.normal(size=n)
 
         kn = RegressionFDR(y, x, tester)
@@ -146,8 +152,7 @@ def test_sim(method, tester, n, p, es):
         power += np.mean(kn.stats[0:npos] >= tr)
 
         # The estimated FDR may never exceed the target FDR
-        estimated_fdr = (np.sum(kn.stats <= -tr) /
-                         (1 + np.sum(kn.stats >= tr)))
+        estimated_fdr = np.sum(kn.stats <= -tr) / (1 + np.sum(kn.stats >= tr))
         assert_equal(estimated_fdr < target_fdr, True)
 
     power /= nrep

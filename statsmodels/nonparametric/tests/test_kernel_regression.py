@@ -732,11 +732,11 @@ def test_invalid_kernel():
 
     with pytest.raises(ValueError):
         nparam.KernelCensoredReg(
-                x,
-                y,
-                reg_type="ll",
-                var_type="cc",
-                bw="cv_ls",
-                censor_val=0,
-                ckertype="silverman",
-            )
+            x,
+            y,
+            reg_type="ll",
+            var_type="cc",
+            bw="cv_ls",
+            censor_val=0,
+            ckertype="silverman",
+        )

@@ -16,7 +16,8 @@ from statsmodels.stats.inter_rater import (
 )
 from statsmodels.tools.testing import Holder
 
-table0 = np.asarray("""\
+table0 = np.asarray(
+    """\
 1 	0 	0 	0 	0 	14 	1.000
 2 	0 	2 	6 	4 	2 	0.253
 3 	0 	0 	3 	5 	6 	0.308
@@ -26,49 +27,89 @@ table0 = np.asarray("""\
 7 	3 	2 	6 	3 	0 	0.242
 8 	2 	5 	3 	2 	2 	0.176
 9 	6 	5 	2 	1 	0 	0.286
-10 	0 	2 	2 	3 	7 	0.286""".split(), float).reshape(10, -1)
+10 	0 	2 	2 	3 	7 	0.286""".split(),
+    float,
+).reshape(10, -1)
 
 table1 = table0[:, 1:-1]
 
-table10 = [[0, 4, 1],
-           [0, 8, 0],
-           [0, 1, 5]]
+table10 = [[0, 4, 1], [0, 8, 0], [0, 1, 5]]
 
 # Fleiss 1971, Fleiss has only the transformed table
-diagnoses = np.array([
-    [4, 4, 4, 4, 4, 4],
-    [2, 2, 2, 5, 5, 5],
-    [2, 3, 3, 3, 3, 5],
-    [5, 5, 5, 5, 5, 5],
-    [2, 2, 2, 4, 4, 4],
-    [1, 1, 3, 3, 3, 3],
-    [3, 3, 3, 3, 5, 5],
-    [1, 1, 3, 3, 3, 4],
-    [1, 1, 4, 4, 4, 4],
-    [5, 5, 5, 5, 5, 5],
-    [1, 4, 4, 4, 4, 4],
-    [1, 2, 4, 4, 4, 4],
-    [2, 2, 2, 3, 3, 3],
-    [1, 4, 4, 4, 4, 4],
-    [2, 2, 4, 4, 4, 5],
-    [3, 3, 3, 3, 3, 5],
-    [1, 1, 1, 4, 5, 5],
-    [1, 1, 1, 1, 1, 2],
-    [2, 2, 4, 4, 4, 4],
-    [1, 3, 3, 5, 5, 5],
-    [5, 5, 5, 5, 5, 5],
-    [2, 4, 4, 4, 4, 4],
-    [2, 2, 4, 5, 5, 5],
-    [1, 1, 4, 4, 4, 4],
-    [1, 4, 4, 4, 4, 5],
-    [2, 2, 2, 2, 2, 4],
-    [1, 1, 1, 1, 5, 5],
-    [2, 2, 4, 4, 4, 4],
-    [1, 3, 3, 3, 3, 3],
-    [5, 5, 5, 5, 5, 5]
-])
-diagnoses_rownames = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", ]
-diagnoses_colnames = ["rater1", "rater2", "rater3", "rater4", "rater5", "rater6", ]
+diagnoses = np.array(
+    [
+        [4, 4, 4, 4, 4, 4],
+        [2, 2, 2, 5, 5, 5],
+        [2, 3, 3, 3, 3, 5],
+        [5, 5, 5, 5, 5, 5],
+        [2, 2, 2, 4, 4, 4],
+        [1, 1, 3, 3, 3, 3],
+        [3, 3, 3, 3, 5, 5],
+        [1, 1, 3, 3, 3, 4],
+        [1, 1, 4, 4, 4, 4],
+        [5, 5, 5, 5, 5, 5],
+        [1, 4, 4, 4, 4, 4],
+        [1, 2, 4, 4, 4, 4],
+        [2, 2, 2, 3, 3, 3],
+        [1, 4, 4, 4, 4, 4],
+        [2, 2, 4, 4, 4, 5],
+        [3, 3, 3, 3, 3, 5],
+        [1, 1, 1, 4, 5, 5],
+        [1, 1, 1, 1, 1, 2],
+        [2, 2, 4, 4, 4, 4],
+        [1, 3, 3, 5, 5, 5],
+        [5, 5, 5, 5, 5, 5],
+        [2, 4, 4, 4, 4, 4],
+        [2, 2, 4, 5, 5, 5],
+        [1, 1, 4, 4, 4, 4],
+        [1, 4, 4, 4, 4, 5],
+        [2, 2, 2, 2, 2, 4],
+        [1, 1, 1, 1, 5, 5],
+        [2, 2, 4, 4, 4, 4],
+        [1, 3, 3, 3, 3, 3],
+        [5, 5, 5, 5, 5, 5],
+    ]
+)
+diagnoses_rownames = [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+    "21",
+    "22",
+    "23",
+    "24",
+    "25",
+    "26",
+    "27",
+    "28",
+    "29",
+    "30",
+]
+diagnoses_colnames = [
+    "rater1",
+    "rater2",
+    "rater3",
+    "rater4",
+    "rater5",
+    "rater6",
+]
 
 
 def test_fleiss_kappa():
@@ -118,8 +159,16 @@ class CheckCohens:
         res = self.res
         res2 = self.res2
 
-        res_ = [res.kappa, res.std_kappa, res.kappa_low, res.kappa_upp, res.std_kappa0,
-                res.z_value, res.pvalue_one_sided, res.pvalue_two_sided]
+        res_ = [
+            res.kappa,
+            res.std_kappa,
+            res.kappa_low,
+            res.kappa_upp,
+            res.std_kappa0,
+            res.z_value,
+            res.pvalue_one_sided,
+            res.pvalue_two_sided,
+        ]
 
         assert_almost_equal(res_, res2, decimal=4)
         assert_equal(str(res), self.res_string)
@@ -188,7 +237,7 @@ class TestWeightedCohens(CheckCohens):
 def test_cohenskappa_weights():
     # some tests for equivalent results with different options
     rs = np.random.RandomState(9743678)
-    table = rs.randint(0, 10, size=(5, 5)) + 5*np.eye(5)
+    table = rs.randint(0, 10, size=(5, 5)) + 5 * np.eye(5)
 
     # example aggregation, 2 groups of levels
     mat = np.array([[1, 1, 1, 0, 0], [0, 0, 0, 1, 1]])
@@ -199,8 +248,8 @@ def test_cohenskappa_weights():
     assert_almost_equal(res1.var_kappa, res2.var_kappa, decimal=14)
 
     # equivalence toeplitz with linear for special cases
-    res1 = cohens_kappa(table, weights=2*np.arange(5), wt="linear")
-    res2 = cohens_kappa(table, weights=2*np.arange(5), wt="toeplitz")
+    res1 = cohens_kappa(table, weights=2 * np.arange(5), wt="linear")
+    res2 = cohens_kappa(table, weights=2 * np.arange(5), wt="toeplitz")
     res3 = cohens_kappa(table, weights=res1.weights[0], wt="toeplitz")
     # 2-Dim weights
     res4 = cohens_kappa(table, weights=res1.weights)
@@ -215,19 +264,103 @@ def test_cohenskappa_weights():
     assert_almost_equal(res1.var_kappa, res4.var_kappa, decimal=14)
 
     # equivalence toeplitz with quadratic for special cases
-    res1 = cohens_kappa(table, weights=5*np.arange(5)**2, wt="toeplitz")
-    res2 = cohens_kappa(table, weights=5*np.arange(5), wt="quadratic")
+    res1 = cohens_kappa(table, weights=5 * np.arange(5) ** 2, wt="toeplitz")
+    res2 = cohens_kappa(table, weights=5 * np.arange(5), wt="quadratic")
     assert_almost_equal(res1.kappa, res2.kappa, decimal=14)
     assert_almost_equal(res1.var_kappa, res2.var_kappa, decimal=14)
 
 
-anxiety = np.array([
-     3, 3, 3, 4, 5, 5, 2, 3, 5, 2, 2, 6, 1, 5, 2, 2, 1, 2, 4, 3, 3, 6, 4,
-     6, 2, 4, 2, 4, 3, 3, 2, 3, 3, 3, 2, 2, 1, 3, 3, 4, 2, 1, 4, 4, 3, 2,
-     1, 6, 1, 1, 1, 2, 3, 3, 1, 1, 3, 3, 2, 2
-    ]).reshape(20, 3, order="F")
-anxiety_rownames = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", ]
-anxiety_colnames = ["rater1", "rater2", "rater3", ]
+anxiety = np.array(
+    [
+        3,
+        3,
+        3,
+        4,
+        5,
+        5,
+        2,
+        3,
+        5,
+        2,
+        2,
+        6,
+        1,
+        5,
+        2,
+        2,
+        1,
+        2,
+        4,
+        3,
+        3,
+        6,
+        4,
+        6,
+        2,
+        4,
+        2,
+        4,
+        3,
+        3,
+        2,
+        3,
+        3,
+        3,
+        2,
+        2,
+        1,
+        3,
+        3,
+        4,
+        2,
+        1,
+        4,
+        4,
+        3,
+        2,
+        1,
+        6,
+        1,
+        1,
+        1,
+        2,
+        3,
+        3,
+        1,
+        1,
+        3,
+        3,
+        2,
+        2,
+    ]
+).reshape(20, 3, order="F")
+anxiety_rownames = [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+]
+anxiety_colnames = [
+    "rater1",
+    "rater2",
+    "rater3",
+]
 
 
 def test_cohens_kappa_irr():
@@ -293,14 +426,16 @@ def test_cohens_kappa_irr():
     ck_w4.statistic = 1.223734
     ck_w4.p_value = 0.2210526
 
-    all_cases = [(ck_w1, None, None),
-                 (ck_w2, None, "linear"),
-                 (ck_w2, np.arange(5), None),
-                 (ck_w2, np.arange(5), "toeplitz"),
-                 (ck_w3, None, "quadratic"),
-                 (ck_w3, np.arange(5)**2, "toeplitz"),
-                 (ck_w3, 4*np.arange(5)**2, "toeplitz"),
-                 (ck_w4, [0, 0, 1, 1, 2], "toeplitz")]
+    all_cases = [
+        (ck_w1, None, None),
+        (ck_w2, None, "linear"),
+        (ck_w2, np.arange(5), None),
+        (ck_w2, np.arange(5), "toeplitz"),
+        (ck_w3, None, "quadratic"),
+        (ck_w3, np.arange(5) ** 2, "toeplitz"),
+        (ck_w3, 4 * np.arange(5) ** 2, "toeplitz"),
+        (ck_w4, [0, 0, 1, 1, 2], "toeplitz"),
+    ]
 
     # Note R:irr drops the missing category level 4 and uses the reduced matrix
     r = np.histogramdd(anxiety[:, 1:], ([1, 2, 3, 4, 6, 7], [1, 2, 3, 4, 6, 7]))
@@ -339,13 +474,13 @@ def test_to_table():
     res2 = to_table(data[:, :2])
     assert_equal(res2[0], res0)
 
-    bins = [0.5,  1.5,  2.5,  3.5,  4.5, 5.5]
+    bins = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5]
     res3 = to_table(data[:, :2], bins)
     assert_equal(res3[0], res0)
 
     # more than 2 columns
-    res4 = to_table(data[:, :3]-1, bins=[-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
-    res5 = to_table(data[:, :3]-1, bins=5)
+    res4 = to_table(data[:, :3] - 1, bins=[-0.5, 0.5, 1.5, 2.5, 3.5, 4.5])
+    res5 = to_table(data[:, :3] - 1, bins=5)
     assert_equal(res4[0].sum(-1), res0)
     assert_equal(res5[0].sum(-1), res0)
 

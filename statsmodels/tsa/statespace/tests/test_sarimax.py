@@ -4,6 +4,7 @@ Tests for SARIMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
+
 from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_WIN
 
@@ -643,7 +644,7 @@ class Friedman(SARIMAXStataTests):
         kwargs.setdefault("simple_differencing", True)
         kwargs.setdefault("hamilton_representation", True)
 
-        cls.model = sarimax.SARIMAX(endog,  *args, exog=exog, order=(1, 0, 1), **kwargs)
+        cls.model = sarimax.SARIMAX(endog, *args, exog=exog, order=(1, 0, 1), **kwargs)
 
         params = np.r_[
             true["params_exog"],
@@ -2110,7 +2111,9 @@ def test_misc_exog():
         assert isinstance(mod.start_params, np.ndarray)
         res = mod.fit(disp=False)
         assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
-        typ = pd.Series if isinstance(res.model.orig_endog, pd.DataFrame) else np.ndarray
+        typ = (
+            pd.Series if isinstance(res.model.orig_endog, pd.DataFrame) else np.ndarray
+        )
         assert isinstance(res.predict(), typ)
         assert isinstance(res.predict(dynamic=True), typ)
         assert isinstance(res.get_prediction().predicted_mean, typ)
@@ -2787,9 +2790,7 @@ def test_start_params_small_nobs():
 
     # Regular ARMA
     mod = sarimax.SARIMAX(endog[:4], order=(4, 0, 0))
-    match = (
-        "Too few observations to estimate starting parameters for ARMA and trend."
-    )
+    match = "Too few observations to estimate starting parameters for ARMA and trend."
     with pytest.warns(UserWarning, match=match):
         start_params = mod.start_params
     assert_allclose(start_params, [0, 0, 0, 0, np.var(endog[:4])])

@@ -28,43 +28,45 @@ def load_basic_data():
 
 
 def load_intermediate_data():
-    df = pd.DataFrame([
-        {"censored": True, "conc": 5.0, "det_limit_index": 1, "rank": 1},
-        {"censored": True, "conc": 5.0, "det_limit_index": 1, "rank": 2},
-        {"censored": True, "conc": 5.5, "det_limit_index": 2, "rank": 1},
-        {"censored": True, "conc": 5.75, "det_limit_index": 3, "rank": 1},
-        {"censored": True, "conc": 9.5, "det_limit_index": 4, "rank": 1},
-        {"censored": True, "conc": 9.5, "det_limit_index": 4, "rank": 2},
-        {"censored": True, "conc": 11.0, "det_limit_index": 5, "rank": 1},
-        {"censored": False, "conc": 2.0, "det_limit_index": 0, "rank": 1},
-        {"censored": False, "conc": 4.2, "det_limit_index": 0, "rank": 2},
-        {"censored": False, "conc": 4.62, "det_limit_index": 0, "rank": 3},
-        {"censored": False, "conc": 5.57, "det_limit_index": 2, "rank": 1},
-        {"censored": False, "conc": 5.66, "det_limit_index": 2, "rank": 2},
-        {"censored": False, "conc": 5.86, "det_limit_index": 3, "rank": 1},
-        {"censored": False, "conc": 6.65, "det_limit_index": 3, "rank": 2},
-        {"censored": False, "conc": 6.78, "det_limit_index": 3, "rank": 3},
-        {"censored": False, "conc": 6.79, "det_limit_index": 3, "rank": 4},
-        {"censored": False, "conc": 7.5, "det_limit_index": 3, "rank": 5},
-        {"censored": False, "conc": 7.5, "det_limit_index": 3, "rank": 6},
-        {"censored": False, "conc": 7.5, "det_limit_index": 3, "rank": 7},
-        {"censored": False, "conc": 8.63, "det_limit_index": 3, "rank": 8},
-        {"censored": False, "conc": 8.71, "det_limit_index": 3, "rank": 9},
-        {"censored": False, "conc": 8.99, "det_limit_index": 3, "rank": 10},
-        {"censored": False, "conc": 9.85, "det_limit_index": 4, "rank": 1},
-        {"censored": False, "conc": 10.82, "det_limit_index": 4, "rank": 2},
-        {"censored": False, "conc": 11.25, "det_limit_index": 5, "rank": 1},
-        {"censored": False, "conc": 11.25, "det_limit_index": 5, "rank": 2},
-        {"censored": False, "conc": 12.2, "det_limit_index": 5, "rank": 3},
-        {"censored": False, "conc": 14.92, "det_limit_index": 5, "rank": 4},
-        {"censored": False, "conc": 16.77, "det_limit_index": 5, "rank": 5},
-        {"censored": False, "conc": 17.81, "det_limit_index": 5, "rank": 6},
-        {"censored": False, "conc": 19.16, "det_limit_index": 5, "rank": 7},
-        {"censored": False, "conc": 19.19, "det_limit_index": 5, "rank": 8},
-        {"censored": False, "conc": 19.64, "det_limit_index": 5, "rank": 9},
-        {"censored": False, "conc": 20.18, "det_limit_index": 5, "rank": 10},
-        {"censored": False, "conc": 22.97, "det_limit_index": 5, "rank": 11}
-    ])
+    df = pd.DataFrame(
+        [
+            {"censored": True, "conc": 5.0, "det_limit_index": 1, "rank": 1},
+            {"censored": True, "conc": 5.0, "det_limit_index": 1, "rank": 2},
+            {"censored": True, "conc": 5.5, "det_limit_index": 2, "rank": 1},
+            {"censored": True, "conc": 5.75, "det_limit_index": 3, "rank": 1},
+            {"censored": True, "conc": 9.5, "det_limit_index": 4, "rank": 1},
+            {"censored": True, "conc": 9.5, "det_limit_index": 4, "rank": 2},
+            {"censored": True, "conc": 11.0, "det_limit_index": 5, "rank": 1},
+            {"censored": False, "conc": 2.0, "det_limit_index": 0, "rank": 1},
+            {"censored": False, "conc": 4.2, "det_limit_index": 0, "rank": 2},
+            {"censored": False, "conc": 4.62, "det_limit_index": 0, "rank": 3},
+            {"censored": False, "conc": 5.57, "det_limit_index": 2, "rank": 1},
+            {"censored": False, "conc": 5.66, "det_limit_index": 2, "rank": 2},
+            {"censored": False, "conc": 5.86, "det_limit_index": 3, "rank": 1},
+            {"censored": False, "conc": 6.65, "det_limit_index": 3, "rank": 2},
+            {"censored": False, "conc": 6.78, "det_limit_index": 3, "rank": 3},
+            {"censored": False, "conc": 6.79, "det_limit_index": 3, "rank": 4},
+            {"censored": False, "conc": 7.5, "det_limit_index": 3, "rank": 5},
+            {"censored": False, "conc": 7.5, "det_limit_index": 3, "rank": 6},
+            {"censored": False, "conc": 7.5, "det_limit_index": 3, "rank": 7},
+            {"censored": False, "conc": 8.63, "det_limit_index": 3, "rank": 8},
+            {"censored": False, "conc": 8.71, "det_limit_index": 3, "rank": 9},
+            {"censored": False, "conc": 8.99, "det_limit_index": 3, "rank": 10},
+            {"censored": False, "conc": 9.85, "det_limit_index": 4, "rank": 1},
+            {"censored": False, "conc": 10.82, "det_limit_index": 4, "rank": 2},
+            {"censored": False, "conc": 11.25, "det_limit_index": 5, "rank": 1},
+            {"censored": False, "conc": 11.25, "det_limit_index": 5, "rank": 2},
+            {"censored": False, "conc": 12.2, "det_limit_index": 5, "rank": 3},
+            {"censored": False, "conc": 14.92, "det_limit_index": 5, "rank": 4},
+            {"censored": False, "conc": 16.77, "det_limit_index": 5, "rank": 5},
+            {"censored": False, "conc": 17.81, "det_limit_index": 5, "rank": 6},
+            {"censored": False, "conc": 19.16, "det_limit_index": 5, "rank": 7},
+            {"censored": False, "conc": 19.19, "det_limit_index": 5, "rank": 8},
+            {"censored": False, "conc": 19.64, "det_limit_index": 5, "rank": 9},
+            {"censored": False, "conc": 20.18, "det_limit_index": 5, "rank": 10},
+            {"censored": False, "conc": 22.97, "det_limit_index": 5, "rank": 11},
+        ]
+    )
 
     return df
 
@@ -483,25 +485,75 @@ class Test__ros_sort:
 class Test_cohn_numbers:
     def setup_method(self):
         self.df = load_basic_data()
-        self.final_cols = ["lower_dl", "upper_dl", "nuncen_above", "nobs_below",
-                           "ncen_equal", "prob_exceedance"]
+        self.final_cols = [
+            "lower_dl",
+            "upper_dl",
+            "nuncen_above",
+            "nobs_below",
+            "ncen_equal",
+            "prob_exceedance",
+        ]
 
-        self.expected_baseline = pd.DataFrame([
-            {"lower_dl": 2.0, "ncen_equal": 0.0, "nobs_below": 0.0,
-             "nuncen_above": 3.0, "prob_exceedance": 1.0, "upper_dl": 5.0},
-            {"lower_dl": 5.0, "ncen_equal": 2.0, "nobs_below": 5.0,
-             "nuncen_above": 0.0, "prob_exceedance": 0.77757437070938218, "upper_dl": 5.5},
-            {"lower_dl": 5.5, "ncen_equal": 1.0, "nobs_below": 6.0,
-             "nuncen_above": 2.0, "prob_exceedance": 0.77757437070938218, "upper_dl": 5.75},
-            {"lower_dl": 5.75, "ncen_equal": 1.0, "nobs_below": 9.0,
-             "nuncen_above": 10.0, "prob_exceedance": 0.7034324942791762, "upper_dl": 9.5},
-            {"lower_dl": 9.5, "ncen_equal": 2.0, "nobs_below": 21.0,
-             "nuncen_above": 2.0, "prob_exceedance": 0.37391304347826088, "upper_dl": 11.0},
-            {"lower_dl": 11.0, "ncen_equal": 1.0, "nobs_below": 24.0,
-             "nuncen_above": 11.0, "prob_exceedance": 0.31428571428571428, "upper_dl": np.inf},
-            {"lower_dl": np.nan, "ncen_equal": np.nan, "nobs_below": np.nan,
-             "nuncen_above": np.nan, "prob_exceedance": 0.0, "upper_dl": np.nan}
-        ])[self.final_cols]
+        self.expected_baseline = pd.DataFrame(
+            [
+                {
+                    "lower_dl": 2.0,
+                    "ncen_equal": 0.0,
+                    "nobs_below": 0.0,
+                    "nuncen_above": 3.0,
+                    "prob_exceedance": 1.0,
+                    "upper_dl": 5.0,
+                },
+                {
+                    "lower_dl": 5.0,
+                    "ncen_equal": 2.0,
+                    "nobs_below": 5.0,
+                    "nuncen_above": 0.0,
+                    "prob_exceedance": 0.77757437070938218,
+                    "upper_dl": 5.5,
+                },
+                {
+                    "lower_dl": 5.5,
+                    "ncen_equal": 1.0,
+                    "nobs_below": 6.0,
+                    "nuncen_above": 2.0,
+                    "prob_exceedance": 0.77757437070938218,
+                    "upper_dl": 5.75,
+                },
+                {
+                    "lower_dl": 5.75,
+                    "ncen_equal": 1.0,
+                    "nobs_below": 9.0,
+                    "nuncen_above": 10.0,
+                    "prob_exceedance": 0.7034324942791762,
+                    "upper_dl": 9.5,
+                },
+                {
+                    "lower_dl": 9.5,
+                    "ncen_equal": 2.0,
+                    "nobs_below": 21.0,
+                    "nuncen_above": 2.0,
+                    "prob_exceedance": 0.37391304347826088,
+                    "upper_dl": 11.0,
+                },
+                {
+                    "lower_dl": 11.0,
+                    "ncen_equal": 1.0,
+                    "nobs_below": 24.0,
+                    "nuncen_above": 11.0,
+                    "prob_exceedance": 0.31428571428571428,
+                    "upper_dl": np.inf,
+                },
+                {
+                    "lower_dl": np.nan,
+                    "ncen_equal": np.nan,
+                    "nobs_below": np.nan,
+                    "nuncen_above": np.nan,
+                    "prob_exceedance": 0.0,
+                    "upper_dl": np.nan,
+                },
+            ]
+        )[self.final_cols]
 
     def test_baseline(self):
         result = ros.cohn_numbers(self.df, observations="conc", censorship="censored")
@@ -533,11 +585,13 @@ class Test__detection_limit_index:
 
 
 def test__ros_group_rank():
-    df = pd.DataFrame({
-        "dl_idx": [1] * 12,
-        "params": list("AABCCCDE") + list("DCBA"),
-        "values": list(range(12))
-    })
+    df = pd.DataFrame(
+        {
+            "dl_idx": [1] * 12,
+            "params": list("AABCCCDE") + list("DCBA"),
+            "values": list(range(12)),
+        }
+    )
 
     result = ros._ros_group_rank(df, "dl_idx", "params")
     expected = pd.Series([1, 2, 1, 1, 2, 3, 1, 1, 2, 4, 2, 3], name="rank")
@@ -571,7 +625,7 @@ class Test__ros_plot_pos:
 
 def test__norm_plot_pos():
     result = ros._norm_plot_pos([1, 2, 3, 4])
-    expected = np.array([0.159104,  0.385452,  0.614548,  0.840896])
+    expected = np.array([0.159104, 0.385452, 0.614548, 0.840896])
     npt.assert_array_almost_equal(result, expected)
 
 
@@ -580,30 +634,88 @@ def test_plotting_positions():
     cohn = load_basic_cohn()
 
     results = ros.plotting_positions(df, "censored", cohn)
-    expected = np.array([
-        0.07414188,  0.11121281,  0.14828375,  0.14828375,  0.20869565,
-        0.34285714,  0.4173913 ,  0.05560641,  0.11121281,  0.16681922,
-        0.24713959,  0.27185355,  0.32652382,  0.35648013,  0.38643645,
-        0.41639276,  0.44634907,  0.47630539,  0.5062617 ,  0.53621802,
-        0.56617433,  0.59613064,  0.64596273,  0.66583851,  0.71190476,
-        0.73809524,  0.76428571,  0.79047619,  0.81666667,  0.84285714,
-        0.86904762,  0.8952381 ,  0.92142857,  0.94761905,  0.97380952
-    ])
+    expected = np.array(
+        [
+            0.07414188,
+            0.11121281,
+            0.14828375,
+            0.14828375,
+            0.20869565,
+            0.34285714,
+            0.4173913,
+            0.05560641,
+            0.11121281,
+            0.16681922,
+            0.24713959,
+            0.27185355,
+            0.32652382,
+            0.35648013,
+            0.38643645,
+            0.41639276,
+            0.44634907,
+            0.47630539,
+            0.5062617,
+            0.53621802,
+            0.56617433,
+            0.59613064,
+            0.64596273,
+            0.66583851,
+            0.71190476,
+            0.73809524,
+            0.76428571,
+            0.79047619,
+            0.81666667,
+            0.84285714,
+            0.86904762,
+            0.8952381,
+            0.92142857,
+            0.94761905,
+            0.97380952,
+        ]
+    )
     npt.assert_array_almost_equal(results, expected)
 
 
 def test__impute():
-    expected = np.array([
-        3.11279729,   3.60634338,   4.04602788,   4.04602788,
-        4.71008116,   6.14010906,   6.97841457,   2.        ,
-        4.2       ,   4.62      ,   5.57      ,   5.66      ,
-        5.86      ,   6.65      ,   6.78      ,   6.79      ,
-        7.5       ,   7.5       ,   7.5       ,   8.63      ,
-        8.71      ,   8.99      ,   9.85      ,  10.82      ,
-        11.25      ,  11.25      ,  12.2       ,  14.92      ,
-        16.77      ,  17.81      ,  19.16      ,  19.19      ,
-        19.64      ,  20.18      ,  22.97
-    ])
+    expected = np.array(
+        [
+            3.11279729,
+            3.60634338,
+            4.04602788,
+            4.04602788,
+            4.71008116,
+            6.14010906,
+            6.97841457,
+            2.0,
+            4.2,
+            4.62,
+            5.57,
+            5.66,
+            5.86,
+            6.65,
+            6.78,
+            6.79,
+            7.5,
+            7.5,
+            7.5,
+            8.63,
+            8.71,
+            8.99,
+            9.85,
+            10.82,
+            11.25,
+            11.25,
+            12.2,
+            14.92,
+            16.77,
+            17.81,
+            19.16,
+            19.19,
+            19.64,
+            20.18,
+            22.97,
+        ]
+    )
     df = load_advanced_data()
     df = ros._impute(df, "conc", "censored", np.log, np.exp)
     result = df["final"].values
@@ -611,17 +723,45 @@ def test__impute():
 
 
 def test__do_ros():
-    expected = np.array([
-        3.11279729,   3.60634338,   4.04602788,   4.04602788,
-        4.71008116,   6.14010906,   6.97841457,   2.        ,
-        4.2       ,   4.62      ,   5.57      ,   5.66      ,
-        5.86      ,   6.65      ,   6.78      ,   6.79      ,
-        7.5       ,   7.5       ,   7.5       ,   8.63      ,
-        8.71      ,   8.99      ,   9.85      ,  10.82      ,
-        11.25      ,  11.25      ,  12.2       ,  14.92      ,
-        16.77      ,  17.81      ,  19.16      ,  19.19      ,
-        19.64      ,  20.18      ,  22.97
-    ])
+    expected = np.array(
+        [
+            3.11279729,
+            3.60634338,
+            4.04602788,
+            4.04602788,
+            4.71008116,
+            6.14010906,
+            6.97841457,
+            2.0,
+            4.2,
+            4.62,
+            5.57,
+            5.66,
+            5.86,
+            6.65,
+            6.78,
+            6.79,
+            7.5,
+            7.5,
+            7.5,
+            8.63,
+            8.71,
+            8.99,
+            9.85,
+            10.82,
+            11.25,
+            11.25,
+            12.2,
+            14.92,
+            16.77,
+            17.81,
+            19.16,
+            19.19,
+            19.64,
+            20.18,
+            22.97,
+        ]
+    )
 
     df = load_basic_data()
     df = ros._do_ros(df, "conc", "censored", np.log, np.exp)
@@ -633,24 +773,17 @@ class CheckROSMixin:
     def test_ros_df(self):
         result = ros.impute_ros(self.rescol, self.cencol, df=self.df)
         npt.assert_array_almost_equal(
-            sorted(result),
-            sorted(self.expected_final),
-            decimal=self.decimal
+            sorted(result), sorted(self.expected_final), decimal=self.decimal
         )
 
     def test_ros_arrays(self):
         result = ros.impute_ros(self.df[self.rescol], self.df[self.cencol], df=None)
         npt.assert_array_almost_equal(
-            sorted(result),
-            sorted(self.expected_final),
-            decimal=self.decimal
+            sorted(result), sorted(self.expected_final), decimal=self.decimal
         )
 
     def test_cohn(self):
-        cols = [
-            "nuncen_above", "nobs_below",
-            "ncen_equal", "prob_exceedance"
-        ]
+        cols = ["nuncen_above", "nobs_below", "ncen_equal", "prob_exceedance"]
         cohn = ros.cohn_numbers(self.df, self.rescol, self.cencol)
         # Use round in place of the deprecated check_less_precise arg
         assert_frame_equal(
@@ -665,30 +798,86 @@ class Test_ROS_HelselAppendixB(CheckROSMixin):
     Multiply Censored Water Quality Data", Water Resources Research,
     Vol 24, No 12, pp 1997 - 2004. December 1988.
     """
+
     decimal = 2
-    res = np.array([
-        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 10., 10., 10.,
-        3.0, 7.0, 9.0, 12., 15., 20., 27., 33., 50.
-    ])
-    cen = np.array([
-        True, True, True, True, True, True, True, True, True,
-        False, False, False, False, False, False, False,
-        False, False
-    ])
+    res = np.array(
+        [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            10.0,
+            10.0,
+            10.0,
+            3.0,
+            7.0,
+            9.0,
+            12.0,
+            15.0,
+            20.0,
+            27.0,
+            33.0,
+            50.0,
+        ]
+    )
+    cen = np.array(
+        [
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+        ]
+    )
     rescol = "obs"
     cencol = "cen"
     df = pd.DataFrame({rescol: res, cencol: cen})
-    expected_final = np.array([
-        0.47,  0.85, 1.11, 1.27, 1.76, 2.34, 2.50, 3.00, 3.03,
-        4.80, 7.00, 9.00, 12.0, 15.0, 20.0, 27.0, 33.0, 50.0
-    ])
+    expected_final = np.array(
+        [
+            0.47,
+            0.85,
+            1.11,
+            1.27,
+            1.76,
+            2.34,
+            2.50,
+            3.00,
+            3.03,
+            4.80,
+            7.00,
+            9.00,
+            12.0,
+            15.0,
+            20.0,
+            27.0,
+            33.0,
+            50.0,
+        ]
+    )
 
-    expected_cohn = pd.DataFrame({
-        "nuncen_above": np.array([3.0, 6.0, np.nan]),
-        "nobs_below": np.array([6.0, 12.0, np.nan]),
-        "ncen_equal": np.array([6.0, 3.0, np.nan]),
-        "prob_exceedance": np.array([0.55556, 0.33333, 0.0]),
-    })
+    expected_cohn = pd.DataFrame(
+        {
+            "nuncen_above": np.array([3.0, 6.0, np.nan]),
+            "nobs_below": np.array([6.0, 12.0, np.nan]),
+            "ncen_equal": np.array([6.0, 3.0, np.nan]),
+            "prob_exceedance": np.array([0.55556, 0.33333, 0.0]),
+        }
+    )
 
 
 class Test_ROS_HelselArsenic(CheckROSMixin):
@@ -700,34 +889,105 @@ class Test_ROS_HelselArsenic(CheckROSMixin):
     modeled data is what matters and (source data plot positions are
     not uniformly spaced, which seems weird)
     """
-    decimal = 2
-    res = np.array([
-        3.2, 2.8, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
-        2.0, 2.0, 1.7, 1.5, 1.0, 1.0, 1.0, 1.0,
-        0.9, 0.9, 0.7, 0.7, 0.6, 0.5, 0.5, 0.5
-    ])
 
-    cen = np.array([
-        False, False, True, True, True, True, True,
-        True, True, True, False, False, True, True,
-        True, True, False, True, False, False, False,
-        False, False, False
-    ])
+    decimal = 2
+    res = np.array(
+        [
+            3.2,
+            2.8,
+            2.0,
+            2.0,
+            2.0,
+            2.0,
+            2.0,
+            2.0,
+            2.0,
+            2.0,
+            1.7,
+            1.5,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.9,
+            0.9,
+            0.7,
+            0.7,
+            0.6,
+            0.5,
+            0.5,
+            0.5,
+        ]
+    )
+
+    cen = np.array(
+        [
+            False,
+            False,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            False,
+            False,
+            True,
+            True,
+            True,
+            True,
+            False,
+            True,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+        ]
+    )
     rescol = "obs"
     cencol = "cen"
     df = pd.DataFrame({rescol: res, cencol: cen})
-    expected_final = np.array([
-        3.20, 2.80, 1.42, 1.14, 0.95, 0.81, 0.68, 0.57,
-        0.46, 0.35, 1.70, 1.50, 0.98, 0.76, 0.58, 0.41,
-        0.90, 0.61, 0.70, 0.70, 0.60, 0.50, 0.50, 0.50
-    ])
+    expected_final = np.array(
+        [
+            3.20,
+            2.80,
+            1.42,
+            1.14,
+            0.95,
+            0.81,
+            0.68,
+            0.57,
+            0.46,
+            0.35,
+            1.70,
+            1.50,
+            0.98,
+            0.76,
+            0.58,
+            0.41,
+            0.90,
+            0.61,
+            0.70,
+            0.70,
+            0.60,
+            0.50,
+            0.50,
+            0.50,
+        ]
+    )
 
-    expected_cohn = pd.DataFrame({
-        "nuncen_above": np.array([6.0, 1.0, 2.0, 2.0, np.nan]),
-        "nobs_below": np.array([0.0, 7.0, 12.0, 22.0, np.nan]),
-        "ncen_equal": np.array([0.0, 1.0, 4.0, 8.0, np.nan]),
-        "prob_exceedance": np.array([1.0, 0.3125, 0.21429, 0.0833, 0.0]),
-    })
+    expected_cohn = pd.DataFrame(
+        {
+            "nuncen_above": np.array([6.0, 1.0, 2.0, 2.0, np.nan]),
+            "nobs_below": np.array([0.0, 7.0, 12.0, 22.0, np.nan]),
+            "ncen_equal": np.array([0.0, 1.0, 4.0, 8.0, np.nan]),
+            "prob_exceedance": np.array([1.0, 0.3125, 0.21429, 0.0833, 0.0]),
+        }
+    )
 
 
 class Test_ROS_RNADAdata(CheckROSMixin):
@@ -787,25 +1047,69 @@ class Test_ROS_RNADAdata(CheckROSMixin):
     rescol = "res"
     cencol = "cen"
     df = pd.read_csv(datastring, sep=r"\s+")
-    expected_final = np.array([
-        0.01907990,  0.03826254,  0.06080717,  0.10100000,  0.13600000,
-        0.34000000,  0.45700000,  0.51400000,  0.62900000,  0.63800000,
-        0.77400000,  0.78800000,  0.08745914,  0.25257575,  0.58544205,
-        0.01711153,  0.03373885,  0.05287083,  0.07506079,  0.10081573,
-        1.00000000,  0.13070334,  0.16539309,  0.20569039,  0.25257575,
-        0.30725491,  0.37122555,  0.44636843,  0.53507405,  0.64042242,
-        0.76644378,  0.91850581,  1.10390531,  1.10000000,  2.00000000,
-        2.00000000,  2.40400000,  2.86000000,  3.00000000,  3.00000000,
-        3.70500000,  4.00000000,  5.00000000,  5.96000000,  6.00000000,
-        7.21400000, 16.00000000, 17.71600000, 25.00000000, 51.00000000
-    ])
+    expected_final = np.array(
+        [
+            0.01907990,
+            0.03826254,
+            0.06080717,
+            0.10100000,
+            0.13600000,
+            0.34000000,
+            0.45700000,
+            0.51400000,
+            0.62900000,
+            0.63800000,
+            0.77400000,
+            0.78800000,
+            0.08745914,
+            0.25257575,
+            0.58544205,
+            0.01711153,
+            0.03373885,
+            0.05287083,
+            0.07506079,
+            0.10081573,
+            1.00000000,
+            0.13070334,
+            0.16539309,
+            0.20569039,
+            0.25257575,
+            0.30725491,
+            0.37122555,
+            0.44636843,
+            0.53507405,
+            0.64042242,
+            0.76644378,
+            0.91850581,
+            1.10390531,
+            1.10000000,
+            2.00000000,
+            2.00000000,
+            2.40400000,
+            2.86000000,
+            3.00000000,
+            3.00000000,
+            3.70500000,
+            4.00000000,
+            5.00000000,
+            5.96000000,
+            6.00000000,
+            7.21400000,
+            16.00000000,
+            17.71600000,
+            25.00000000,
+            51.00000000,
+        ]
+    )
 
-    expected_cohn = pd.DataFrame({
-        "nuncen_above": np.array([9., 0.0, 18., np.nan]),
-        "nobs_below": np.array([3., 15., 32., np.nan]),
-        "ncen_equal": np.array([3., 3., 17., np.nan]),
-        "prob_exceedance": np.array([0.84, 0.36, 0.36, 0]),
-    })
+    expected_cohn = pd.DataFrame(
+        {
+            "nuncen_above": np.array([9.0, 0.0, 18.0, np.nan]),
+            "nobs_below": np.array([3.0, 15.0, 32.0, np.nan]),
+            "ncen_equal": np.array([3.0, 3.0, 17.0, np.nan]),
+            "prob_exceedance": np.array([0.84, 0.36, 0.36, 0]),
+        }
+    )
 
 
 class Test_NoOp_ZeroND(CheckROSMixin):
@@ -817,110 +1121,309 @@ class Test_NoOp_ZeroND(CheckROSMixin):
     rescol = "obs"
     cencol = "cen"
     df = pd.DataFrame({rescol: res, cencol: cen})
-    expected_final = np.array([
-        0.38, 0.43, 0.81, 0.86, 0.90, 1.13, 1.15, 1.37, 1.40,
-        1.49, 1.51, 1.56, 2.14, 2.59, 2.66, 4.28, 4.46, 5.84,
-        6.47, 9.4
-    ])
+    expected_final = np.array(
+        [
+            0.38,
+            0.43,
+            0.81,
+            0.86,
+            0.90,
+            1.13,
+            1.15,
+            1.37,
+            1.40,
+            1.49,
+            1.51,
+            1.56,
+            2.14,
+            2.59,
+            2.66,
+            4.28,
+            4.46,
+            5.84,
+            6.47,
+            9.4,
+        ]
+    )
 
-    expected_cohn = pd.DataFrame({
-        "nuncen_above": np.array([]),
-        "nobs_below": np.array([]),
-        "ncen_equal": np.array([]),
-        "prob_exceedance": np.array([]),
-    })
+    expected_cohn = pd.DataFrame(
+        {
+            "nuncen_above": np.array([]),
+            "nobs_below": np.array([]),
+            "ncen_equal": np.array([]),
+            "prob_exceedance": np.array([]),
+        }
+    )
 
 
 class Test_ROS_OneND(CheckROSMixin):
     decimal = 3
-    res = np.array([
-        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 10., 10., 10.,
-        3.0, 7.0, 9.0, 12., 15., 20., 27., 33., 50.
-    ])
-    cen = np.array([
-        True, False, False, False, False, False, False, False, False,
-        False, False, False, False, False, False, False,
-        False, False
-    ])
+    res = np.array(
+        [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            10.0,
+            10.0,
+            10.0,
+            3.0,
+            7.0,
+            9.0,
+            12.0,
+            15.0,
+            20.0,
+            27.0,
+            33.0,
+            50.0,
+        ]
+    )
+    cen = np.array(
+        [
+            True,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+        ]
+    )
     rescol = "conc"
     cencol = "cen"
     df = pd.DataFrame({rescol: res, cencol: cen})
-    expected_final = np.array([
-        0.24, 1.0, 1.0, 1.0, 1.0, 1.0, 10., 10., 10.,
-        3.0 , 7.0, 9.0, 12., 15., 20., 27., 33., 50.
-    ])
+    expected_final = np.array(
+        [
+            0.24,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            10.0,
+            10.0,
+            10.0,
+            3.0,
+            7.0,
+            9.0,
+            12.0,
+            15.0,
+            20.0,
+            27.0,
+            33.0,
+            50.0,
+        ]
+    )
 
-    expected_cohn = pd.DataFrame({
-        "nuncen_above": np.array([17.0, np.nan]),
-        "nobs_below": np.array([1.0, np.nan]),
-        "ncen_equal": np.array([1.0, np.nan]),
-        "prob_exceedance": np.array([0.94444, 0.0]),
-    })
+    expected_cohn = pd.DataFrame(
+        {
+            "nuncen_above": np.array([17.0, np.nan]),
+            "nobs_below": np.array([1.0, np.nan]),
+            "ncen_equal": np.array([1.0, np.nan]),
+            "prob_exceedance": np.array([0.94444, 0.0]),
+        }
+    )
 
 
 class Test_HalfDLs_80pctNDs(CheckROSMixin):
     decimal = 3
-    res = np.array([
-        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 10., 10., 10.,
-        3.0, 7.0, 9.0, 12., 15., 20., 27., 33., 50.
-    ])
-    cen = np.array([
-        True, True, True, True, True, True, True, True,
-        True, True, True, True, True, True, True, False,
-        False, False
-    ])
+    res = np.array(
+        [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            10.0,
+            10.0,
+            10.0,
+            3.0,
+            7.0,
+            9.0,
+            12.0,
+            15.0,
+            20.0,
+            27.0,
+            33.0,
+            50.0,
+        ]
+    )
+    cen = np.array(
+        [
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            False,
+            False,
+            False,
+        ]
+    )
     rescol = "value"
     cencol = "qual"
     df = pd.DataFrame({rescol: res, cencol: cen})
-    expected_final = np.array([
-        0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 5.0, 5.0, 5.0,
-        1.5, 3.5, 4.5, 6.0, 7.5, 10., 27., 33., 50.
-    ])
+    expected_final = np.array(
+        [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            5.0,
+            5.0,
+            5.0,
+            1.5,
+            3.5,
+            4.5,
+            6.0,
+            7.5,
+            10.0,
+            27.0,
+            33.0,
+            50.0,
+        ]
+    )
 
-    expected_cohn = pd.DataFrame({
-        "nuncen_above": np.array([0., 0., 0., 0., 0., 0., 0., 3., np.nan]),
-        "nobs_below": np.array([6., 7., 8., 9., 12., 13., 14., 15., np.nan]),
-        "ncen_equal": np.array([6., 1., 1., 1., 3., 1., 1., 1., np.nan]),
-        "prob_exceedance": np.array([0.16667] * 8 + [0.]),
-    })
+    expected_cohn = pd.DataFrame(
+        {
+            "nuncen_above": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0, np.nan]),
+            "nobs_below": np.array(
+                [6.0, 7.0, 8.0, 9.0, 12.0, 13.0, 14.0, 15.0, np.nan]
+            ),
+            "ncen_equal": np.array([6.0, 1.0, 1.0, 1.0, 3.0, 1.0, 1.0, 1.0, np.nan]),
+            "prob_exceedance": np.array([0.16667] * 8 + [0.0]),
+        }
+    )
 
 
 class Test_HaflDLs_OneUncensored(CheckROSMixin):
     decimal = 3
-    res = np.array([1.0, 1.0, 12., 15., ])
+    res = np.array(
+        [
+            1.0,
+            1.0,
+            12.0,
+            15.0,
+        ]
+    )
     cen = np.array([True, True, True, False])
     rescol = "value"
     cencol = "qual"
     df = pd.DataFrame({rescol: res, cencol: cen})
-    expected_final = np.array([0.5,   0.5,   6. ,  15.])
+    expected_final = np.array([0.5, 0.5, 6.0, 15.0])
 
-    expected_cohn = pd.DataFrame({
-        "nuncen_above": np.array([0., 1., np.nan]),
-        "nobs_below": np.array([2., 3., np.nan]),
-        "ncen_equal": np.array([2., 1., np.nan]),
-        "prob_exceedance": np.array([0.25, 0.25, 0.]),
-    })
+    expected_cohn = pd.DataFrame(
+        {
+            "nuncen_above": np.array([0.0, 1.0, np.nan]),
+            "nobs_below": np.array([2.0, 3.0, np.nan]),
+            "ncen_equal": np.array([2.0, 1.0, np.nan]),
+            "prob_exceedance": np.array([0.25, 0.25, 0.0]),
+        }
+    )
 
 
 class Test_ROS_MaxCen_GT_MaxUncen(Test_ROS_HelselAppendixB):
-    res = np.array([
-        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 10., 10., 10.,
-        3.0, 7.0, 9.0, 12., 15., 20., 27., 33., 50.,
-        60, 70
-    ])
-    cen = np.array([
-        True, True, True, True, True, True, True, True, True,
-        False, False, False, False, False, False, False,
-        False, False, True, True
-    ])
+    res = np.array(
+        [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            10.0,
+            10.0,
+            10.0,
+            3.0,
+            7.0,
+            9.0,
+            12.0,
+            15.0,
+            20.0,
+            27.0,
+            33.0,
+            50.0,
+            60,
+            70,
+        ]
+    )
+    cen = np.array(
+        [
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+            True,
+            True,
+        ]
+    )
 
 
 class Test_ROS_OnlyDL_GT_MaxUncen(Test_NoOp_ZeroND):
     np.random.seed(0)
     N = 20
     res = [
-        0.38, 0.43, 0.81, 0.86, 0.90, 1.13, 1.15, 1.37, 1.40,
-        1.49, 1.51, 1.56, 2.14, 2.59, 2.66, 4.28, 4.46, 5.84,
-        6.47, 9.40, 10.0, 10.0
+        0.38,
+        0.43,
+        0.81,
+        0.86,
+        0.90,
+        1.13,
+        1.15,
+        1.37,
+        1.40,
+        1.49,
+        1.51,
+        1.56,
+        2.14,
+        2.59,
+        2.66,
+        4.28,
+        4.46,
+        5.84,
+        6.47,
+        9.40,
+        10.0,
+        10.0,
     ]
     cen = ([False] * N) + [True, True]
