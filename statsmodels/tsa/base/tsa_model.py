@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import (
+    _infer_freq_returns_offset,
     is_float_index,
     is_int_index,
     is_numeric_dtype,
-    _infer_freq_returns_offset,
 )
 
 import numbers

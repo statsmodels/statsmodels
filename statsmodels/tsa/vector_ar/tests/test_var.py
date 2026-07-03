@@ -2,7 +2,11 @@
 Test VAR Model
 """
 
-from statsmodels.compat.pandas import QUARTER_END, assert_index_equal, _infer_freq_returns_offset
+from statsmodels.compat.pandas import (
+    QUARTER_END,
+    _infer_freq_returns_offset,
+    assert_index_equal,
+)
 from statsmodels.compat.python import lrange
 
 from io import BytesIO

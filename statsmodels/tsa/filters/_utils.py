@@ -1,8 +1,10 @@
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 from functools import wraps
 
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.tsatools import freq_to_period
-from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 
 def _get_pandas_wrapper(X, trim_head=None, trim_tail=None, names=None):
     index = X.index

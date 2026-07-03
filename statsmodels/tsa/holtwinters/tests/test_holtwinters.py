@@ -3,9 +3,8 @@ Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
 
-from statsmodels.compat.pandas import MONTH_END
+from statsmodels.compat.pandas import MONTH_END, infer_freq
 from statsmodels.compat.pytest import pytest_warns
-from statsmodels.compat.pandas import infer_freq
 
 import os
 import re

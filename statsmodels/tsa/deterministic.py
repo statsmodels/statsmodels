@@ -3,6 +3,7 @@ from __future__ import annotations
 from statsmodels.compat.pandas import (
     PD_LT_2_2_0,
     PD_LT_3_1_0,
+    _infer_freq_returns_offset,
     is_int_index,
     to_numpy,
 )
@@ -24,7 +25,6 @@ from statsmodels.tools.validation import (
     string_like,
 )
 from statsmodels.tsa.tsatools import freq_to_period
-from statsmodels.compat.pandas import _infer_freq_returns_offset
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Sequence

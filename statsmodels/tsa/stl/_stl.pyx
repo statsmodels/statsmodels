@@ -86,10 +86,11 @@ import pandas as pd
 
 from libc.math cimport NAN, fabs, isnan, sqrt
 
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 from statsmodels.tools.validation import array_like
 from statsmodels.tsa.seasonal._seasonal import DecomposeResult
 from statsmodels.tsa.tsatools import freq_to_period
-from statsmodels.compat.pandas import _infer_freq_returns_offset
 
 
 def _is_pos_int(x, odd):

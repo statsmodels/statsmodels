@@ -1,6 +1,6 @@
 from __future__ import annotations
-from contextlib import contextmanager
 
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, TypeVar
 
 import numpy as np
@@ -94,6 +94,7 @@ def _infer_freq_returns_offset():
     except pd.errors.OptionError:
         # in older versions the option is not available and a str is returned
         yield
+
 
 def infer_freq(index) -> str | None:
 
