@@ -1113,6 +1113,8 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
 
     m = len(y)
     method = "fft" if fft else "direct"
+    # When y is shorter than x, the denominator counts must follow len(y)
+    # to match the actual number of overlapping observations at each lag.
     return correlate(xo, yo, "full", method=method)[m - 1 :] / d
 
 
