@@ -1111,8 +1111,9 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     else:
         d = n
 
+    m = len(y)
     method = "fft" if fft else "direct"
-    return correlate(xo, yo, "full", method=method)[n - 1 :] / d
+    return correlate(xo, yo, "full", method=method)[m - 1 :] / d
 
 
 @deprecate_kwarg("unbiased", "adjusted")
