@@ -221,29 +221,61 @@ def score_test(self, exog_extra=None, params_constrained=None,
             score = score_obs.sum(0)
         else:
             exog_extra = np.asarray(exog_extra)
-            k_constraints = 0
+            k_extra = 0
             ex = np.column_stack((model.exog, exog_extra))
             # this uses shape not matrix rank to determine k_constraints
             # requires nonsingular (no added perfect collinearity)
-            k_constraints += ex.shape[1] - model.exog.shape[1]
-            # TODO use diag instead of full np.eye
-            r_matrix = np.eye(len(self.params) + k_constraints
-                              )[-k_constraints:]
+            k_extra += ex.shape[1] - model.exog.shape[1]
 
             score_factor = model.score_factor(params_constrained)
-            if score_factor.ndim == 1:
-                score_obs = (score_factor[:, None] * ex)
-            else:
-                sf = score_factor
-                score_obs = np.column_stack((sf[:, :1] * ex, sf[:, 1:]))
-            score = score_obs.sum(0)
             hessian_factor = model.hessian_factor(params_constrained,
                                                   **hess_kwd)
             # see #4714
             from statsmodels.genmod.generalized_linear_model import GLM
             if isinstance(model, GLM):
                 hessian_factor *= -1
-            hessian = np.dot(ex.T * hessian_factor, ex)
+
+            if hessian_factor.ndim == 3:
+                # Multinomial-type model: score_factor is (n, J-1),
+                # hessian_factor is (n, J-1, J-1).
+                # Each extra exog column adds J-1 parameters.
+                n_eq = score_factor.shape[1]  # J-1
+                k_constraints = k_extra * n_eq
+                # r_matrix selects the last k_constraints parameters
+                # in the extended parameter vector of length
+                # (K + k_extra) * n_eq
+                n_params_ext = ex.shape[1] * n_eq
+                r_matrix = np.eye(n_params_ext)[-k_constraints:]
+                # score_obs: Kronecker product per observation
+                # (n, J-1, K_ext) -> (n, (J-1)*K_ext)
+                score_obs = (score_factor[:, :, None]
+                             * ex[:, None, :]).reshape(nobs, -1)
+                # Hessian: block matrix ((J-1)*K_ext, (J-1)*K_ext)
+                # H[(j*K_ext):((j+1)*K_ext), (l*K_ext):((l+1)*K_ext)]
+                #   = ex.T @ diag(hf[:, j, l]) @ ex
+                K_ext = ex.shape[1]
+                hessian = np.empty((n_eq * K_ext, n_eq * K_ext))
+                for j in range(n_eq):
+                    for l in range(n_eq):
+                        hessian[j*K_ext:(j+1)*K_ext,
+                                l*K_ext:(l+1)*K_ext] = (
+                            (ex.T * hessian_factor[:, j, l]) @ ex
+                        )
+            else:
+                # Scalar or two-parameter models
+                k_constraints = k_extra
+                # TODO use diag instead of full np.eye
+                r_matrix = np.eye(len(self.params) + k_constraints
+                                  )[-k_constraints:]
+                if score_factor.ndim == 1:
+                    score_obs = (score_factor[:, None] * ex)
+                else:
+                    sf = score_factor
+                    score_obs = np.column_stack(
+                        (sf[:, :1] * ex, sf[:, 1:]))
+                hessian = np.dot(ex.T * hessian_factor, ex)
+
+            score = score_obs.sum(0)
 
     if cov_type == "nonrobust":
         cov_score_test = -hessian
