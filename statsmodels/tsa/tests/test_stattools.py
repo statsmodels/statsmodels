@@ -1063,6 +1063,51 @@ def test_compare_acovf_vs_ccovf(demean, adjusted, fft, reset_randomstate):
     assert_almost_equal(F1, F2, decimal=7)
 
 
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("fft", [True, False])
+def test_ccovf_different_lengths(adjusted, fft):
+    # Regression test for GH#9565
+    # ccovf crashed when len(x) != len(y) and adjusted=True
+    rs = np.random.RandomState(98765)
+    x = rs.normal(size=200)
+    y = rs.normal(size=150)
+
+    result = ccovf(x, y, adjusted=adjusted, fft=fft)
+    # Output should always have length len(x)
+    assert result.shape == (200,)
+    assert np.all(np.isfinite(result))
+
+    # Also test when len(x) < len(y)
+    result2 = ccovf(y, x, adjusted=adjusted, fft=fft)
+    assert result2.shape == (150,)
+    assert np.all(np.isfinite(result2))
+
+
+def test_ccovf_different_lengths_known_lag():
+    # Verify that ccovf correctly identifies a known lag
+    # when the arrays have different lengths (GH#9565)
+    rs = np.random.RandomState(54321)
+    x = rs.normal(size=200)
+    # y is x shifted by 5 positions, but shorter
+    y = x[5:180] + rs.normal(size=175) * 0.05
+
+    result = ccovf(x, y, adjusted=False)
+    # Peak should be at lag 5
+    assert result.shape == (200,)
+    assert np.argmax(result[:50]) == 5
+
+
+def test_ccf_different_lengths():
+    # Regression test for GH#9565 (ccf calls ccovf)
+    rs = np.random.RandomState(11111)
+    x = rs.normal(size=100)
+    y = rs.normal(size=80)
+
+    result = ccf(x, y, adjusted=True, nlags=30)
+    assert result.shape == (30,)
+    assert np.all(np.isfinite(result))
+
+
 @pytest.mark.smoke
 @pytest.mark.slow
 def test_arma_order_select_ic():
