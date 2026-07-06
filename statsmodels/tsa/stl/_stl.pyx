@@ -86,6 +86,8 @@ import pandas as pd
 
 from libc.math cimport NAN, fabs, isnan, sqrt
 
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 from statsmodels.tools.validation import array_like
 from statsmodels.tsa.seasonal._seasonal import DecomposeResult
 from statsmodels.tsa.tsatools import freq_to_period
@@ -219,7 +221,8 @@ cdef class STL(object):
         if period is None:
             freq = None
             if isinstance(endog, (pd.Series, pd.DataFrame)):
-                freq = getattr(endog.index, 'inferred_freq', None)
+                with _infer_freq_returns_offset():
+                    freq = getattr(endog.index, 'inferred_freq', None)
             if freq is None:
                 raise ValueError('Unable to determine period from endog')
             period = freq_to_period(freq)

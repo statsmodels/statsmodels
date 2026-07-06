@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, TypeVar
 
 import numpy as np
@@ -11,12 +12,6 @@ from pandas.util._decorators import (
 )
 
 from statsmodels.tools.docstring_helpers import Appender, Substitution
-
-try:
-    pd.set_option("future.infer_freq_returns_offset", True)
-except pd.errors.OptionError:
-    # Do nothing if key doesn't exist
-    pass
 
 if TYPE_CHECKING:
     try:
@@ -87,6 +82,30 @@ except ImportError:
 assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
+
+
+@contextmanager
+def _infer_freq_returns_offset():
+
+    # pandas 3.1 changes the return value of infer_freq
+    try:
+        with pd.option_context("future.infer_freq_returns_offset", True):
+            yield
+    except pd.errors.OptionError:
+        # in older versions the option is not available and a str is returned
+        yield
+
+
+def infer_freq(index) -> str | None:
+
+    # pandas 3.1 changes the return value of infer_freq
+    with _infer_freq_returns_offset():
+        freq = pd.infer_freq(index)
+
+    # new pandas versions retuns BaseOffset
+    if not isinstance(freq, str) and freq is not None:
+        return freq.freqstr
+    return freq
 
 
 def is_int_index(index: pd.Index) -> bool:
