@@ -256,10 +256,10 @@ def score_test(self, exog_extra=None, params_constrained=None,
                 K_ext = ex.shape[1]
                 hessian = np.empty((n_eq * K_ext, n_eq * K_ext))
                 for j in range(n_eq):
-                    for l in range(n_eq):
+                    for ll in range(n_eq):
                         hessian[j*K_ext:(j+1)*K_ext,
-                                l*K_ext:(l+1)*K_ext] = (
-                            (ex.T * hessian_factor[:, j, l]) @ ex
+                                ll*K_ext:(ll+1)*K_ext] = (
+                            (ex.T * hessian_factor[:, j, ll]) @ ex
                         )
             else:
                 # Scalar or two-parameter models

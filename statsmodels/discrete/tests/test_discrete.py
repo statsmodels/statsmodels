@@ -3793,9 +3793,9 @@ class TestMNLogitScoreTest:
         n_eq = model.J - 1
         hessian_from_factor = np.empty((n_eq * K, n_eq * K))
         for j in range(n_eq):
-            for l in range(n_eq):
-                hessian_from_factor[j*K:(j+1)*K, l*K:(l+1)*K] = (
-                    (model.exog.T * hf[:, j, l]) @ model.exog
+            for ll in range(n_eq):
+                hessian_from_factor[j*K:(j+1)*K, ll*K:(ll+1)*K] = (
+                    (model.exog.T * hf[:, j, ll]) @ model.exog
                 )
         hessian = model.hessian(params)
         assert_allclose(hessian_from_factor, hessian, rtol=1e-10)
