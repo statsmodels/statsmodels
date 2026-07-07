@@ -403,7 +403,7 @@ cdef class {{prefix}}CFASimulationSmoother(object):
                                &self.posterior_cov_inv_chol[0, 0], &ld,
                                &self.posterior_mean[0, 0], &blas_order, &info)
 
-    cpdef simulate(self, variates=None):
+    cpdef simulate(self, variates=None, rng=None):
         cdef blas_int inc = 1
         cdef blas_int ld = self.lower_bandwidth + 1
         cdef blas_int blas_order = self.order
@@ -413,7 +413,14 @@ cdef class {{prefix}}CFASimulationSmoother(object):
 
         # Sample u from N(0, I)
         if variates is None:
-            u = np.random.normal(size=self.order).astype({{dtype}})
+            if rng is None:
+                u = np.random.normal(size=self.order).astype({{dtype}})
+            elif isinstance(rng, (np.random.Generator, np.random.RandomState)):
+                u = rng.normal(size=self.order).astype({{dtype}})
+            else:
+                raise ValueError(
+                    "rng must be a numpy.random.Generator or np.random.RandomState instance."
+                )
         else:
             u = variates
 

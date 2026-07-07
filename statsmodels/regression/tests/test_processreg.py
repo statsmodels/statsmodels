@@ -30,18 +30,18 @@ def model1(noise):
 
 
 def setup1(n, get_model, noise):
-
+    rs = np.random.RandomState(82341)
     mn_par, sc_par, sm_par, no_par = get_model(noise)
 
     groups = np.kron(np.arange(n // 5), np.ones(5))
     time = np.kron(np.ones(n // 5), np.arange(5))
     time_z = (time - time.mean()) / time.std()
 
-    x_mean = np.random.normal(size=(n, len(mn_par)))
-    x_sc = np.random.normal(size=(n, len(sc_par)))
+    x_mean = rs.normal(size=(n, len(mn_par)))
+    x_sc = rs.normal(size=(n, len(sc_par)))
     x_sc[:, 0] = 1
     x_sc[:, 1] = time_z
-    x_sm = np.random.normal(size=(n, len(sm_par)))
+    x_sm = rs.normal(size=(n, len(sm_par)))
     x_sm[:, 0] = 1
     x_sm[:, 1] = time_z
 
@@ -50,7 +50,7 @@ def setup1(n, get_model, noise):
     sm = np.exp(np.dot(x_sm, sm_par))
 
     if noise:
-        x_no = np.random.normal(size=(n, len(no_par)))
+        x_no = rs.normal(size=(n, len(no_par)))
         x_no[:, 0] = 1
         x_no[:, 1] = time_z
         no = np.exp(np.dot(x_no, no_par))
@@ -68,11 +68,11 @@ def setup1(n, get_model, noise):
     for ii in ix.values():
         c = gc.get_cov(time[ii], sc[ii], sm[ii])
         r = np.linalg.cholesky(c)
-        y[ii] += np.dot(r, np.random.normal(size=len(ii)))
+        y[ii] += np.dot(r, rs.normal(size=len(ii)))
 
     # Additive white noise
     if noise:
-        y += no * np.random.normal(size=y.shape)
+        y += no * rs.normal(size=y.shape)
 
     return y, x_mean, x_sc, x_sm, x_no, time, groups
 
@@ -90,8 +90,6 @@ def run_arrays(n, get_model, noise):
 @pytest.mark.high_memory
 @pytest.mark.parametrize("noise", [False, True])
 def test_arrays(noise):
-
-    np.random.seed(8234)
 
     f = run_arrays(1000, model1, noise)
     mod = f.model
@@ -171,8 +169,6 @@ def run_formula(n, get_model, noise):
 @pytest.mark.high_memory
 @pytest.mark.parametrize("noise", [False, True])
 def test_formulas(noise):
-
-    np.random.seed(8789)
 
     f, df = run_formula(1000, model1, noise)
     mod = f.model

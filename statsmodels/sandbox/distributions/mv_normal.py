@@ -1038,13 +1038,21 @@ class MVT(MVElliptical):
         self.extra_args = ["df"]  # overwrites extra_args of super
         self.df = df
 
-    def rvs(self, size=1):
+    def rvs(self, size=1, random_state=None):
         """random variables with Student T distribution
 
         Parameters
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
+        random_state : {None, int, Generator, RandomState}, optional
+            If `seed` is None (or `np.random`), the
+            class:``~numpy.random.RandomState`` singleton is used.
+            If `seed` is an int, a new class:``~numpy.random.RandomState``
+            instance is used, seeded with `seed`.
+            If `seed` is already a class:``~numpy.random.Generator`` or
+            class:``~numpy.random.RandomState`` instance then that instance is
+            used.
 
         Returns
         -------
@@ -1064,7 +1072,9 @@ class MVT(MVElliptical):
         """
         from .multivariate import multivariate_t_rvs
 
-        return multivariate_t_rvs(self.mean, self.sigma, df=self.df, n=size)
+        return multivariate_t_rvs(
+            self.mean, self.sigma, df=self.df, n=size, random_state=random_state
+        )
 
     def logpdf(self, x):
         """logarithm of probability density function

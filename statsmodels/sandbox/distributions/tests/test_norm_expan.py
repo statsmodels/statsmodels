@@ -19,7 +19,8 @@ class CheckDistribution:
 
     @pytest.mark.smoke
     def test_dist1(self):
-        self.dist1.rvs(size=10)
+        rs = np.random.RandomState(9989881)
+        self.dist1.rvs(size=10, random_state=rs)
         self.dist1.pdf(np.linspace(-4, 4, 11))
 
     def test_cdf_ppf_roundtrip(self):

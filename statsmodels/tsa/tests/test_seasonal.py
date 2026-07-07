@@ -418,8 +418,9 @@ class TestDecompose:
 
     def test_pandas_nofreq(self, reset_randomstate):
         # issue #3503
+        rs = np.random.RandomState(32132100)
         nobs = 100
-        dta = pd.Series([x % 3 for x in range(nobs)] + np.random.randn(nobs))
+        dta = pd.Series([x % 3 for x in range(nobs)] + rs.randn(nobs))
         res_np = seasonal_decompose(dta.values, period=3)
         res = seasonal_decompose(dta, period=3)
 

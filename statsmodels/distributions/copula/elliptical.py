@@ -6,6 +6,7 @@ Author: Pamphile Roy
 License: BSD-3
 
 """
+
 # scipy compat:
 from statsmodels.compat.scipy import multivariate_t
 
@@ -31,10 +32,13 @@ class EllipticalCopula(Copula):
     copulas.
 
     """
+
     def _handle_args(self, args):
         if args != () and args is not None:
-            msg = ("Methods in elliptical copulas use copula parameters in"
-                   " attributes. `arg` in the method is ignored")
+            msg = (
+                "Methods in elliptical copulas use copula parameters in"
+                " attributes. `arg` in the method is ignored"
+            )
             raise ValueError(msg)
         else:
             return args
@@ -51,10 +55,10 @@ class EllipticalCopula(Copula):
 
         return mv_pdf_ppf / np.prod(self.distr_uv.pdf(ppf), axis=-1)
 
-    def cdf(self, u, args=()):
+    def cdf(self, u, args=(), random_state=None):
         self._handle_args(args)
         ppf = self.distr_uv.ppf(u)
-        return self.distr_mv.cdf(ppf)
+        return self.distr_mv.cdf(ppf, rng=random_state)
 
     def tau(self, corr=None):
         """Bivariate kendall's tau based on correlation coefficient.
@@ -116,7 +120,7 @@ class EllipticalCopula(Copula):
             k = self.k_dim
             tau = np.eye(k)
             for i in range(k):
-                for j in range(i+1, k):
+                for j in range(i + 1, k):
                     tau_ij = stats.kendalltau(x[..., i], x[..., j])[0]
                     tau[i, j] = tau[j, i] = tau_ij
 
@@ -181,13 +185,14 @@ class GaussianCopula(EllipticalCopula):
         if corr is None:
             corr = np.eye(k_dim)
         elif k_dim == 2 and np.size(corr) == 1:
-            corr = np.array([[1., corr], [corr, 1.]])
+            corr = np.array([[1.0, corr], [corr, 1.0]])
 
         self.corr = np.asarray(corr)
         self.args = (self.corr,)
         self.distr_uv = stats.norm
         self.distr_mv = stats.multivariate_normal(
-            cov=corr, allow_singular=allow_singular)
+            cov=corr, allow_singular=allow_singular
+        )
 
     def dependence_tail(self, corr=None):
         """
@@ -249,7 +254,7 @@ class StudentTCopula(EllipticalCopula):
         if corr is None:
             corr = np.eye(k_dim)
         elif k_dim == 2 and np.size(corr) == 1:
-            corr = np.array([[1., corr], [corr, 1.]])
+            corr = np.array([[1.0, corr], [corr, 1.0]])
 
         self.df = df
         self.corr = np.asarray(corr)
@@ -312,7 +317,7 @@ class StudentTCopula(EllipticalCopula):
             corr = corr[0, 1]
 
         df = self.df
-        t = - np.sqrt((df + 1) * (1 - corr) / 1 + corr)
+        t = -np.sqrt((df + 1) * (1 - corr) / 1 + corr)
         # Note self.distr_uv is frozen, df cannot change, use stats.t instead
         lam = 2 * stats.t.cdf(t, df + 1)
         return lam, lam

@@ -354,7 +354,7 @@ y_count, x_const = get_data_simulated()
 def test_distr(case, close_figures):
     y, x = y_count, x_const
     nobs = len(y)
-    np.random.seed(987456348)
+    rs = np.random.RandomState(987456348)
 
     cls_model, kwds, params = case
     if issubclass(cls_model, BinaryModel):
@@ -366,9 +366,9 @@ def test_distr(case, close_figures):
     distr = mod.get_distribution(params_dgp)
     assert distr.pmf(1).ndim == 1
     try:
-        y2 = distr.rvs(size=(nobs, 1)).squeeze()
+        y2 = distr.rvs(size=(nobs, 1), random_state=rs).squeeze()
     except ValueError:
-        y2 = distr.rvs(size=nobs).squeeze()
+        y2 = distr.rvs(size=nobs, random_state=rs).squeeze()
 
     mod = cls_model(y2, x, **kwds)
     res = mod.fit(start_params=params_dgp, method="bfgs", maxiter=500)

@@ -24,7 +24,7 @@ def check_random_state(seed=None):
     """Turn `seed` into a `numpy.random.Generator` instance.
     Parameters
     ----------
-    seed : {None, int, Generator, RandomState}, optional
+    seed : {None, int, np.random.Generator, np.random.RandomState}, optional
         If `seed` is None (or `np.random`), the `numpy.random.RandomState`
         singleton is used.
         If `seed` is an int, a new ``numpy.random.RandomState`` instance

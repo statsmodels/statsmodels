@@ -922,14 +922,14 @@ def test_use_boxcox_fit_override():
     )
     res = mod.fit()
     # With use_boxcox=True at model level, Box-Cox is applied and lambda > 0
-    assert res.params["use_boxcox"] != 0.0, (
-        "Box-Cox lambda should not be 0 when use_boxcox=True at model init"
-    )
+    assert (
+        res.params["use_boxcox"] != 0.0
+    ), "Box-Cox lambda should not be 0 when use_boxcox=True at model init"
     # When use_boxcox=True at model init, Box-Cox IS applied
     # (lambda ~= 0.5 for this data, not False/0)
-    assert res.params["lamda"] is not None, (
-        f"Expected fitted lambda, got {res.params['lamda']}"
-    )
+    assert (
+        res.params["lamda"] is not None
+    ), f"Expected fitted lambda, got {res.params['lamda']}"
 
 
 @pytest.mark.parametrize("trend", TRENDS)
@@ -1581,16 +1581,16 @@ def test_simulate_keywords(austourists):
 
     # test anchor
     assert_almost_equal(
-        fit.simulate(4, anchor=0, random_state=0).values,
-        fit.simulate(4, anchor="start", random_state=0).values,
+        fit.simulate(4, anchor=0, rng=0).values,
+        fit.simulate(4, anchor="start", rng=0).values,
     )
     assert_almost_equal(
-        fit.simulate(4, anchor=-1, random_state=0).values,
-        fit.simulate(4, anchor="2015-12-01", random_state=0).values,
+        fit.simulate(4, anchor=-1, rng=0).values,
+        fit.simulate(4, anchor="2015-12-01", rng=0).values,
     )
     assert_almost_equal(
-        fit.simulate(4, anchor="end", random_state=0).values,
-        fit.simulate(4, anchor="2016-03-01", random_state=0).values,
+        fit.simulate(4, anchor="end", rng=0).values,
+        fit.simulate(4, anchor="2016-03-01", rng=0).values,
     )
 
     # test different random error options
@@ -1623,7 +1623,7 @@ def test_simulate_boxcox(austourists):
     ).fit()
     expected = fit.forecast(4).values
 
-    res = fit.simulate(4, repetitions=10, random_state=0).values
+    res = fit.simulate(4, repetitions=10, rng=0).values
     mean = np.mean(res, axis=1)
 
     assert np.all(np.abs(mean - expected) < 5)
@@ -1957,9 +1957,9 @@ def test_simulate(ses):
     res.simulate(10, error="additive", anchor=100)
     with pytest.raises(ValueError, match="Cannot anchor"):
         res.simulate(10, error="additive", anchor=2000)
-    with pytest.raises(ValueError, match="Argument random_state"):
+    with pytest.raises(TypeError, match="rng must be an int, RandomState or"):
         res.simulate(10, error="additive", anchor=100, random_state="bad_value")
-    with pytest.raises(ValueError, match="Argument random_errors"):
+    with pytest.raises(TypeError, match="rng must be an int, RandomState or"):
         res.simulate(10, error="additive", random_errors="bad_values")
 
 
@@ -1994,7 +1994,7 @@ def test_forecast_index_types(ses, index_typ):
             trend="add",
             seasonal="add",
             initialization_method="heuristic",
-            **kwargs
+            **kwargs,
         ).fit()
     with pytest_warns(forecast_warning):
         fcast = res.forecast(36)

@@ -106,10 +106,10 @@ class TestKernelsRplus(CheckKernels):
     def setup_class(cls):
         b = 2
         scale = 1.5
-        np.random.seed(1)
+        rs = np.random.RandomState(1)
         nobs = 1000
         distr0 = stats.gamma(b, scale=scale)
-        rvs = distr0.rvs(size=nobs)
+        rvs = distr0.rvs(size=nobs, random_state=rs)
         x_plot = np.linspace(0.5, 16, 51) + 1e-13
 
         cls.rvs = rvs
@@ -136,7 +136,6 @@ class TestKernelsUnit(CheckKernels):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(987456)
         nobs = 1000
         distr0 = stats.beta(2, 3)
         rvs = distr0.rvs(size=nobs)

@@ -46,11 +46,12 @@ class TestPlot:
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
-        x2 = 5 + 3 * np.random.randn(nsample)
+        rs = np.random.RandomState(98474361)
+        x2 = 5 + 3 * rs.randn(nsample)
         x = np.c_[x1, x2, np.sin(0.5 * x1), (x2 - 5) ** 2, np.ones(nsample)]
         beta = [0.5, 0.5, 1, -0.04, 5.0]
         y_true = np.dot(x, beta)
-        y = y_true + sig * np.random.normal(size=nsample)
+        y = y_true + sig * rs.normal(size=nsample)
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
 
         cls.res = sm.OLS(y, exog0).fit()
@@ -137,11 +138,12 @@ class TestPlotPandas(TestPlot):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
-        x2 = 5 + 3 * np.random.randn(nsample)
+        rs = np.random.RandomState(98474362)
+        x2 = 5 + 3 * rs.randn(nsample)
         X = np.c_[x1, x2, np.sin(0.5 * x1), (x2 - 5) ** 2, np.ones(nsample)]
         beta = [0.5, 0.5, 1, -0.04, 5.0]
         y_true = np.dot(X, beta)
-        y = y_true + sig * np.random.normal(size=nsample)
+        y = y_true + sig * rs.normal(size=nsample)
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
         exog0 = DataFrame(exog0, columns=["const", "var1", "var2"])
         y = Series(y, name="outcome")
@@ -397,11 +399,12 @@ def test_partregress_formula_env(close_figures):
     def lg(x):
         return np.log10(x) if x > 0 else 0
 
+    rs = np.random.RandomState(98474363)
     df = DataFrame(
         dict(
-            a=np.random.random(size=10),
-            b=np.random.random(size=10),
-            c=np.random.random(size=10),
+            a=rs.random(size=10),
+            b=rs.random(size=10),
+            c=rs.random(size=10),
         )
     )
     sm.graphics.plot_partregress(

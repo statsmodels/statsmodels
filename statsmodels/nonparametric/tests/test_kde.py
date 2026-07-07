@@ -29,12 +29,13 @@ KCDEResults = np.genfromtxt(open(rfname, "rb"), delimiter=",", names=True)
 
 # setup test data
 
-np.random.seed(12345)
+RANDOM_STATE = np.random.RandomState(12345)
 Xi = mixture_rvs(
     [0.25, 0.75],
     size=200,
     dist=[stats.norm, stats.norm],
     kwargs=(dict(loc=-1, scale=0.5), dict(loc=1, scale=0.5)),
+    rng=RANDOM_STATE,
 )
 
 
@@ -379,7 +380,8 @@ def test_kde_bw_positive():
 
 
 def test_fit_self(reset_randomstate):
-    x = np.random.standard_normal(100)
+    rs = np.random.RandomState(38923801)
+    x = rs.standard_normal(100)
     kde = KDE(x)
     assert isinstance(kde, KDE)
     assert isinstance(kde.fit(), KDE)

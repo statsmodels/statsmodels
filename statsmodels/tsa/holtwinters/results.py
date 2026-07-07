@@ -1,3 +1,5 @@
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 import pandas as pd
 from scipy.special import inv_boxcox
@@ -377,6 +379,7 @@ class HoltWintersResults(Results):
 
         return smry
 
+    @deprecate_kwarg("random_state", "rng")
     def simulate(
         self,
         nsimulations,
@@ -384,7 +387,8 @@ class HoltWintersResults(Results):
         repetitions=1,
         error="add",
         random_errors=None,
-        random_state=None,
+        *,
+        rng=None,
     ):
         r"""
         Random simulations using the state space formulation.
@@ -429,10 +433,12 @@ class HoltWintersResults(Results):
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        random_state : int or np.random.RandomState, optional
-            A seed for the random number generator or a
-            ``np.random.RandomState`` object. Only used if `random_errors` is
-            ``None``. Default is ``None``.
+        rng : int, np.random.Generator or np.random.RandomState, optional
+            A seed for a numpy.ranomd.RandomStte or a
+            ``np.random.RandomState`` or ``np.random.Generator`` object.
+            Only used if `random_errors` is ``None`` or ``"bootstrap"`` .
+            Default value of ``None`` used the singleton RandomState object
+            provided by NumPy.
 
         Returns
         -------
@@ -664,22 +670,27 @@ class HoltWintersResults(Results):
                 )
             eps = random_errors
         elif random_errors == "bootstrap":
-            eps = np.random.choice(
-                resid, size=(nsimulations, repetitions), replace=True
-            )
-        elif random_errors is None:
-            if random_state is None:
-                eps = np.random.randn(nsimulations, repetitions) * sigma
-            elif isinstance(random_state, int):
-                rng = np.random.RandomState(random_state)
-                eps = rng.randn(nsimulations, repetitions) * sigma
-            elif isinstance(random_state, np.random.RandomState):
-                eps = random_state.randn(nsimulations, repetitions) * sigma
-            else:
-                raise ValueError(
-                    "Argument random_state must be None, an integer, "
-                    "or an instance of np.random.RandomState"
+            if rng is None:
+                eps = np.random.choice(
+                    resid, size=(nsimulations, repetitions), replace=True
                 )
+            else:
+                if isinstance(rng, int):
+                    rng = np.random.RandomState(rng)
+                if not isinstance(rng, (np.random.RandomState, np.random.Generator)):
+                    raise TypeError(
+                        "random_state must be an int, RandomState or Generator"
+                    )
+                eps = rng.choice(resid, size=(nsimulations, repetitions), replace=True)
+        elif random_errors is None:
+            if rng is None:
+                eps = np.random.randn(nsimulations, repetitions) * sigma
+            else:
+                if isinstance(rng, int):
+                    rng = np.random.RandomState(rng)
+                if not isinstance(rng, (np.random.RandomState, np.random.Generator)):
+                    raise TypeError("rng must be an int, RandomState or Generator")
+                eps = rng.randn(nsimulations, repetitions) * sigma
         elif isinstance(random_errors, (rv_continuous, rv_discrete)):
             params = random_errors.fit(resid)
             eps = random_errors.rvs(*params, size=(nsimulations, repetitions))

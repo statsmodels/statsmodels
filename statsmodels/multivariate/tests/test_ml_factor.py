@@ -92,7 +92,8 @@ def test_fit_ml_em_random_state():
     # see #7357
 
     T = 10
-    epsilon = np.random.multivariate_normal(np.zeros(3), np.eye(3), size=T).T
+    rs = np.random.RandomState(34243291)
+    epsilon = rs.multivariate_normal(np.zeros(3), np.eye(3), size=T).T
     initial = np.random.get_state()
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="Fitting did not converge")

@@ -581,7 +581,8 @@ class Test_Factor:
         def project(x):
             return x
 
-        x = np.random.normal(size=dm)
+        rs = np.random.RandomState(5681932)
+        x = rs.normal(size=dm)
         rslt = _spg_optim(obj, grad, x, project)
         xnew = rslt.params
         assert rslt.Converged is True
@@ -591,15 +592,16 @@ class Test_Factor:
 
         d = 30
         dg = np.linspace(1, 2, d)
-        root = np.random.normal(size=(d, 4))
+        rs = np.random.RandomState(5681937)
+        root = rs.normal(size=(d, 4))
         fac = FactoredPSDMatrix(dg, root)
         mat = fac.to_matrix()
         rmat = np.linalg.cholesky(mat)
         dcr = fac.decorrelate(rmat)
         idm = np.dot(dcr, dcr.T)
         assert_almost_equal(idm, np.eye(d))
-
-        rhs = np.random.normal(size=(d, 5))
+        rs = np.random.RandomState(5681935)
+        rhs = rs.normal(size=(d, 5))
         mat2 = np.dot(rhs.T, np.linalg.solve(mat, rhs))
         mat3 = fac.decorrelate(rhs)
         mat3 = np.dot(mat3.T, mat3)
@@ -609,7 +611,8 @@ class Test_Factor:
 
         d = 30
         dg = np.linspace(1, 2, d)
-        root = np.random.normal(size=(d, 4))
+        rs = np.random.RandomState(5681938)
+        root = rs.normal(size=(d, 4))
         fac = FactoredPSDMatrix(dg, root)
         mat = fac.to_matrix()
 
@@ -622,9 +625,10 @@ class Test_Factor:
 
         d = 30
         dg = np.linspace(1, 2, d)
-        root = np.random.normal(size=(d, 2))
+        rs = np.random.RandomState(5681934)
+        root = rs.normal(size=(d, 2))
         fac = FactoredPSDMatrix(dg, root)
-        rhs = np.random.normal(size=(d, 5))
+        rhs = rs.normal(size=(d, 5))
         sr1 = fac.solve(rhs)
         mat = fac.to_matrix()
         sr2 = np.linalg.solve(mat, rhs)
@@ -676,7 +680,8 @@ class Test_Factor:
 
     def test_corr_thresholded(self, reset_randomstate):
 
-        X = np.random.normal(size=(2000, 10))
+        rs = np.random.RandomState(5681933)
+        X = rs.normal(size=(2000, 10))
         tcor = corr_thresholded(X, 0.2, max_elt=4e6)
 
         fcor = np.corrcoef(X)

@@ -158,7 +158,6 @@ class TestGEE:
         # Check marginal effects for a binomial GEE fit.  Comparison
         # comes from Stata.
 
-        np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
         exog = np.ones((8, 2))
         exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
@@ -178,7 +177,6 @@ class TestGEE:
         # which should be equivalent to logistic regression.  Comparison
         # comes from Stata.
 
-        np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
         exog = np.ones((8, 2))
         exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
@@ -196,7 +194,6 @@ class TestGEE:
     @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_nominal_plot(self, close_figures):
-        np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
         exog = np.ones((8, 2))
         exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
@@ -212,7 +209,6 @@ class TestGEE:
     def test_margins_poisson(self):
         # Check marginal effects for a Poisson GEE fit.
 
-        np.random.seed(34234)
         endog = np.r_[10, 15, 12, 13, 20, 18, 26, 29]
         exog = np.ones((8, 2))
         exog[:, 1] = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -233,7 +229,6 @@ class TestGEE:
         logistic regression.
         """
 
-        np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
         exog = np.ones((8, 2))
         exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]

@@ -205,7 +205,8 @@ def test_durbin_watson_pandas(reset_randomstate):
 class TestStattools:
     @classmethod
     def setup_class(cls):
-        x = np.random.standard_normal(1000)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(1000)
         e1, e2, e3, e4, e5, e6, e7 = np.percentile(
             x, (12.5, 25.0, 37.5, 50.0, 62.5, 75.0, 87.5)
         )
@@ -249,7 +250,8 @@ class TestStattools:
         assert_equal(mc1, mc2)
 
     def test_medcouple_symmetry(self, reset_randomstate):
-        x = np.random.standard_normal(100)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         mcp = medcouple(x)
         mcn = medcouple(-x)
         assert_almost_equal(mcp + mcn, 0)
@@ -260,20 +262,23 @@ class TestStattools:
         assert_almost_equal(mc, 1.0 / 6.0)
 
     def test_durbin_watson(self, reset_randomstate):
-        x = np.random.standard_normal(100)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         dw = sum(np.diff(x) ** 2.0) / np.dot(x, x)
         assert_almost_equal(dw, durbin_watson(x))
 
     def test_durbin_watson_2d(self, reset_randomstate):
         shape = (1, 10)
-        x = np.random.standard_normal(100)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         dw = sum(np.diff(x) ** 2.0) / np.dot(x, x)
         x = np.tile(x[:, None], shape)
         assert_almost_equal(np.squeeze(dw * np.ones(shape)), durbin_watson(x))
 
     def test_durbin_watson_3d(self, reset_randomstate):
         shape = (10, 1, 10)
-        x = np.random.standard_normal(100)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         dw = sum(np.diff(x) ** 2.0) / np.dot(x, x)
         x = np.tile(x[None, :, None], shape)
         assert_almost_equal(np.squeeze(dw * np.ones(shape)), durbin_watson(x, axis=1))
@@ -291,13 +296,15 @@ class TestStattools:
         assert_almost_equal(np.array(sk_x), np.array(sk_y))
 
     def test_robust_skewness_symmetric(self, reset_randomstate):
-        x = np.random.standard_normal(100)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         x = np.hstack([x, np.zeros(1), -x])
         sk = robust_skewness(x)
         assert_almost_equal(np.array(sk), np.zeros(4))
 
     def test_robust_skewness_3d(self, reset_randomstate):
-        x = np.random.standard_normal(100)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         x = np.hstack([x, np.zeros(1), -x])
         x = np.tile(x, (10, 10, 1))
         sk_3d = robust_skewness(x, axis=2)
@@ -306,7 +313,8 @@ class TestStattools:
             assert_almost_equal(sk, result)
 
     def test_robust_skewness_4(self, reset_randomstate):
-        x = np.random.standard_normal(1000)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(1000)
         x[x > 0] *= 3
         m = np.median(x)
         s = x.std(ddof=0)

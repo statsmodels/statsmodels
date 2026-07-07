@@ -11,6 +11,8 @@ import warnings
 import numpy as np
 from scipy import interpolate, stats
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 # helper functions to work on a grid of cdf and pdf, histogram
 
 
@@ -273,7 +275,9 @@ def frequencies_fromdata(data, k_bins, use_ranks=True):
     return freqr
 
 
-def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
+def approx_copula_pdf(
+    copula, k_bins=10, force_uniform=True, use_pdf=False, random_state=None
+):
     """Histogram probabilities as approximation to a copula density.
 
     Parameters
@@ -293,6 +297,9 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
         If true, then the density, ``pdf``, is used and cell probabilities
         are approximated by averaging the pdf of the cell corners. This is
         only useful if the cdf is not available.
+    random_state : int, np.random.RandomState or np.random.Generator, optional
+        The source of the random variables to use. If None, uses the singleton
+        RandomState provided by NumPy
 
     Returns
     -------
@@ -324,7 +331,8 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
             pdf_grid = ag / ag.sum()
     else:
         g = _Grid([k] * k_dim, eps=1e-6)
-        cdfg = copula.cdf(g.x_flat).reshape(*ks)
+        random_state = check_random_state(random_state)
+        cdfg = copula.cdf(g.x_flat, random_state=random_state).reshape(*ks)
         # correct for bin size
         pdf_grid = cdf2prob_grid(cdfg, prepend=None)
         # TODO: check boundary approximation, eg. undefined at zero

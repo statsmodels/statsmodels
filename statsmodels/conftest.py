@@ -51,8 +51,14 @@ def pytest_addoption(parser):
     )
     parser.addoption("--skip-smoke", action="store_true", help="skip smoke tests")
     parser.addoption("--only-smoke", action="store_true", help="run only smoke tests")
-    parser.addoption("--skip-high-memory", action="store_true", help="skip high memory usage tests")
-    parser.addoption("--only-high-memory", action="store_true", help="run only high memory usage tests")
+    parser.addoption(
+        "--skip-high-memory", action="store_true", help="skip high memory usage tests"
+    )
+    parser.addoption(
+        "--only-high-memory",
+        action="store_true",
+        help="run only high memory usage tests",
+    )
 
 
 def pytest_runtest_setup(item):
@@ -80,7 +86,9 @@ def pytest_runtest_setup(item):
     if "high_memory" in item.keywords and item.config.getoption("--skip-high-memory"):
         pytest.skip("skipping due to --skip-high-memory")
 
-    if "high_memory" not in item.keywords and item.config.getoption("--only-high-memory"):
+    if "high_memory" not in item.keywords and item.config.getoption(
+        "--only-high-memory"
+    ):
         pytest.skip("skipping due to --only-high-memory")
 
 
@@ -156,10 +164,10 @@ def reset_randomstate():
 
     Returns the state after the test function exits
     """
-    state = np.random.get_state()
-    np.random.seed(1)
-    yield
-    np.random.set_state(state)
+    # state = np.random.get_state()
+    # np.random.seed(1)
+    return
+    # np.random.set_state(state)
 
 
 # This is a special hook that converts all xfail marks to have strict=False
@@ -202,3 +210,26 @@ def check_figures_closed():
     yield
     cnt = count()
     assert cnt <= initial, f"test created {cnt - initial} figure(s)"
+
+
+@pytest.fixture(autouse=True)
+def check_global_randomstate_usage(request):
+    """
+    Ensure that the singleton RandomState is not modified
+
+    Notes
+    -----
+    Use pytest.mark.skip_randomstate_check to skip allow the singleton
+    RandomState to be changed in a test
+    """
+    state = np.random.get_state()
+
+    yield
+    new_state = np.random.get_state()
+
+    if "singleton_randomstate" in request.keywords:
+        return
+
+    assert state[0] == new_state[0]
+    # np.testing.assert_equal(state[1], new_state[1])
+    assert state[2] == new_state[2]

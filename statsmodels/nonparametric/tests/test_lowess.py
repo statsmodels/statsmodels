@@ -137,6 +137,7 @@ class TestLowess:
         )
 
     def test_options(self):
+        rs = np.random.RandomState(8437973)
         rfile = os.path.join(rpath, "test_lowess_simple.csv")
         test_data = np.genfromtxt(open(rfile, "rb"), delimiter=",", names=True)
         y, x = test_data["y"], test_data["x"]
@@ -178,7 +179,7 @@ class TestLowess:
 
         # Test specifying xvals explicitly
         perm_idx = np.arange(len(x) // 2)
-        np.random.shuffle(perm_idx)
+        rs.shuffle(perm_idx)
         actual_lowess2 = lowess(y, x, xvals=x[perm_idx], return_sorted=False)
         assert_almost_equal(actual_lowess[perm_idx, 1], actual_lowess2, decimal=13)
 
@@ -194,7 +195,7 @@ class TestLowess:
             lowess(y, x, missing="raise")
 
         perm_idx = np.arange(len(x))
-        np.random.shuffle(perm_idx)
+        rs.shuffle(perm_idx)
         yperm = y[perm_idx]
         xperm = x[perm_idx]
         actual_lowess2 = lowess(yperm, xperm, is_sorted=False)
@@ -219,8 +220,9 @@ class TestLowess:
     def test_duplicate_xs(self):
         # see 2449
         # Generate cases with many duplicate x values
+        rs = np.random.RandomState(8437972)
         x = [0] + [1] * 100 + [2] * 100 + [3]
-        y = x + np.random.normal(size=len(x)) * 1e-8
+        y = x + rs.normal(size=len(x)) * 1e-8
         result = lowess(y, x, frac=50 / len(x), it=1)
         # fit values should be approximately averages of values at
         # a particular fit, which in this case are just equal to x
@@ -238,6 +240,7 @@ class TestLowess:
         assert_(np.all(result[:, 1] < np.max(y) + 0.1))
 
     def test_exog_predict(self):
+        rs = np.random.RandomState(8437971)
         rfile = os.path.join(rpath, "test_lowess_simple.csv")
         test_data = np.genfromtxt(open(rfile, "rb"), delimiter=",", names=True)
         y, x = test_data["y"], test_data["x"]
@@ -245,7 +248,7 @@ class TestLowess:
 
         # Test specifying exog_predict explicitly
         perm_idx = np.arange(len(x) // 2)
-        np.random.shuffle(perm_idx)
+        rs.shuffle(perm_idx)
         actual_lowess = lowess(y, x, xvals=x[perm_idx], missing="none")
         assert_almost_equal(target[perm_idx, 1], actual_lowess, decimal=13)
 

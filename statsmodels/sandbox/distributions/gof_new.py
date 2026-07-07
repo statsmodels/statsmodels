@@ -25,6 +25,7 @@ from scipy.special import kolmogorov as ksprob
 from scipy.stats import distributions
 
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 # from scipy.stats unchanged
@@ -549,7 +550,9 @@ def asquare(cdfvals, axis=0):
 
 
 # def bootstrap(self, distr, args=(), kwds={}, nobs=200, nrep=1000,
-def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
+def bootstrap(
+    distr, args=(), nobs=200, nrep=100, value=None, batch_size=None, random_state=None
+):
     """Monte Carlo (or parametric bootstrap) p-values for gof
 
     currently hardcoded for A^2 only
@@ -570,13 +573,14 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
 
     # it will be better to build a separate batch function that calls bootstrap
     # keep batch if value is true, but batch iterate from outside if stat is returned
+    rng = check_random_state(random_state)
     if batch_size is not None:
         if value is None:
             raise ValueError("using batching requires a value")
         n_batch = int(np.ceil(nrep / float(batch_size)))
         count = 0
         for _ in range(n_batch):
-            rvs = distr.rvs(args, size=(batch_size, nobs))
+            rvs = distr.rvs(args, size=(batch_size, nobs), random_state=rng)
             params = distr.fit_vec(rvs, axis=1)
             params = lmap(lambda x: np.expand_dims(x, 1), params)
             cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
@@ -585,7 +589,7 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
         return count / float(n_batch * batch_size)
     else:
         # rvs = distr.rvs(args, **kwds)  # extension to distribution kwds ?
-        rvs = distr.rvs(args, size=(nrep, nobs))
+        rvs = distr.rvs(args, size=(nrep, nobs), random_state=rng)
         params = distr.fit_vec(rvs, axis=1)
         params = lmap(lambda x: np.expand_dims(x, 1), params)
         cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
@@ -634,10 +638,12 @@ class NewNorm:
     def cdf(self, x, args):
         return distributions.norm.cdf(x, loc=args[0], scale=args[1])
 
-    def rvs(self, args, size):
+    def rvs(self, args, size, random_state=None):
         loc = args[0]
         scale = args[1]
-        return loc + scale * distributions.norm.rvs(size=size)
+        return loc + scale * distributions.norm.rvs(
+            size=size, random_state=random_state
+        )
 
 
 if __name__ == "__main__":

@@ -15,7 +15,6 @@ hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
 
-
 import numpy as np
 
 from statsmodels.base import model
@@ -1764,7 +1763,7 @@ class rv_discrete_float:
         self.pk = pk
         self.cpk = np.cumsum(self.pk, axis=1)
 
-    def rvs(self, n=None):
+    def rvs(self, n=None, random_state=None):
         """
         Returns a random sample from the discrete distribution.
 
@@ -1778,7 +1777,18 @@ class rv_discrete_float:
         """
 
         n = self.xk.shape[0]
-        u = np.random.uniform(size=n)
+        if random_state is None:
+            u = np.random.uniform(size=n)
+        else:
+            if not isinstance(
+                random_state, (int, np.random.RandomState, np.random.Generator)
+            ):
+                raise TypeError(
+                    "random_state must be an integer, a RandomState or a Generator."
+                )
+            if isinstance(random_state, int):
+                random_state = np.random.RandomState(random_state)
+            u = random_state.uniform(size=n)
 
         ix = (self.cpk < u[:, None]).sum(1)
         ii = np.arange(n, dtype=np.int32)

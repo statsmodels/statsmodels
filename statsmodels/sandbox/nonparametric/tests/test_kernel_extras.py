@@ -248,7 +248,12 @@ class TestSemiLinear(KernelExtrasTestBase):
         b2 = -0.7
         Y = b1 * C1 + np.exp(b2 * C2) + e
         model = SemiLinear(
-            endog=[Y], exog=[C1], exog_nonparametric=[C2], var_type="c", k_linear=1
+            endog=[Y],
+            exog=[C1],
+            exog_nonparametric=[C2],
+            var_type="c",
+            k_linear=1,
+            rng=rs,
         )
         b_hat = np.squeeze(model.b)
         # Only tests for the linear part of the regression

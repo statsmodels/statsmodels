@@ -122,7 +122,8 @@ class TestTools:
         assert_almost_equal(Y, np.array([[0.5, 1], [-0.25, 0]]))
 
     def test_extendedpinv(self):
-        X = standard_normal((40, 10))
+        rs = np.random.RandomState(4783891)
+        X = rs.standard_normal((40, 10))
         np_inv = np.linalg.pinv(X)
         np_sing_vals = np.linalg.svd(X, 0, 0)
         sm_inv, sing_vals = pinv_extended(X)
@@ -130,7 +131,8 @@ class TestTools:
         assert_almost_equal(np_sing_vals, sing_vals)
 
     def test_extendedpinv_singular(self):
-        X = standard_normal((40, 10))
+        rs = np.random.RandomState(4783893)
+        X = rs.standard_normal((40, 10))
         X[:, 5] = X[:, 1] + X[:, 3]
         np_inv = np.linalg.pinv(X)
         np_sing_vals = np.linalg.svd(X, 0, 0)
@@ -141,9 +143,10 @@ class TestTools:
     def test_fullrank(self):
         import warnings
 
+        rs = np.random.RandomState(4783895)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            X = standard_normal((40, 10))
+            X = rs.standard_normal((40, 10))
             X[:, 0] = X[:, 1] + X[:, 2]
 
             Y = tools.fullrank(X)

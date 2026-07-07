@@ -118,9 +118,10 @@ def test_ic():
     assert_almost_equal(hqic(0, 10, 2), 2 * np.log(np.log(n)) * k, decimal=14)
 
 
-def test_iqr_axis(reset_randomstate):
-    x1 = np.random.standard_normal((100, 100))
-    x2 = np.random.standard_normal((100, 100))
+def test_iqr_axis():
+    rs = np.random.RandomState(32893190)
+    x1 = rs.standard_normal((100, 100))
+    x2 = rs.standard_normal((100, 100))
     ax_none = iqr(x1, x2, axis=None)
     ax_none_direct = iqr(x1.ravel(), x2.ravel())
     assert_equal(ax_none, ax_none_direct)

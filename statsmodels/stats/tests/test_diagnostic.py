@@ -1157,19 +1157,17 @@ def test_spec_white():
 
 
 def test_spec_white_error(reset_randomstate):
+    rs = np.random.RandomState(38342003)
     with pytest.raises(ValueError, match="White's specification test "):
-        smsdia.spec_white(
-            np.random.standard_normal(100), np.random.standard_normal((100, 1))
-        )
+        smsdia.spec_white(rs.standard_normal(100), rs.standard_normal((100, 1)))
     with pytest.raises(ValueError, match="White's specification test "):
-        smsdia.spec_white(
-            np.random.standard_normal(100), np.random.standard_normal((100, 2))
-        )
+        smsdia.spec_white(rs.standard_normal(100), rs.standard_normal((100, 2)))
 
 
 def test_linear_lm_direct(reset_randomstate):
-    endog = np.random.standard_normal(500)
-    exog = add_constant(np.random.standard_normal((500, 3)))
+    rs = np.random.RandomState(38342002)
+    endog = rs.standard_normal(500)
+    exog = add_constant(rs.standard_normal((500, 3)))
     res = OLS(endog, exog).fit()
     lm_res = smsdia.linear_lm(res.resid, exog)
     aug = np.hstack([exog, exog[:, 1:] ** 2])
@@ -1192,8 +1190,9 @@ def grangertest():
 
 @pytest.mark.smoke
 def test_outlier_influence_funcs(reset_randomstate):
-    x = add_constant(np.random.randn(10, 2))
-    y = x.sum(1) + np.random.randn(10)
+    rs = np.random.RandomState(38342002)
+    x = add_constant(rs.randn(10, 2))
+    y = x.sum(1) + rs.randn(10)
     res = OLS(y, x).fit()
     out_05 = oi.summary_table(res)
     # GH3344 : Check alpha has an effect
@@ -1269,8 +1268,8 @@ def test_influence_wrapped():
 
 def test_influence_dtype():
     # see #2148  bug when endog is integer
+    rs = np.random.RandomState(3834761)
     y = np.ones(20)
-    rs = np.random.RandomState(123)
     x = rs.randn(20, 3)
     res1 = OLS(y, x).fit()
 
@@ -1709,7 +1708,8 @@ def test_ljungbox_auto_lag_selection(reset_randomstate):
 
 
 def test_ljungbox_auto_lag_whitenoise(reset_randomstate):
-    data = np.random.randn(1000)  # white noise process
+    rs = np.random.RandomState(38342003)
+    data = rs.randn(1000)  # white noise process
     res = smsdia.acorr_ljungbox(data, auto_lag=True)
     # TODO: compare selected lags with Stata/ R to confirm
     # that correct auto_lag is selected
@@ -1739,10 +1739,11 @@ def test_ljungbox_period():
 
 @pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
 def test_encompasing_direct(cov_type, reset_randomstate):
-    x = np.random.standard_normal((500, 2))
-    e = np.random.standard_normal((500, 1))
-    x_extra = np.random.standard_normal((500, 2))
-    z_extra = np.random.standard_normal((500, 3))
+    rs = np.random.RandomState(38342002)
+    x = rs.standard_normal((500, 2))
+    e = rs.standard_normal((500, 1))
+    x_extra = rs.standard_normal((500, 2))
+    z_extra = rs.standard_normal((500, 3))
     y = x @ np.ones((2, 1)) + e
     x1 = np.hstack([x[:, :1], x_extra])
     z1 = np.hstack([x, z_extra])
@@ -1776,9 +1777,10 @@ def test_encompasing_direct(cov_type, reset_randomstate):
 
 
 def test_encompasing_error(reset_randomstate):
-    x = np.random.standard_normal((500, 2))
-    e = np.random.standard_normal((500, 1))
-    z_extra = np.random.standard_normal((500, 3))
+    rs = np.random.RandomState(38342001)
+    x = rs.standard_normal((500, 2))
+    e = rs.standard_normal((500, 1))
+    z_extra = rs.standard_normal((500, 3))
     y = x @ np.ones((2, 1)) + e
     z = np.hstack([x, z_extra])
     res1 = OLS(y, x).fit()
@@ -1803,8 +1805,9 @@ def test_encompasing_error(reset_randomstate):
     ],
 )
 def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
-    x = add_constant(np.random.standard_normal((1000, 3)))
-    e = np.random.standard_normal((1000, 1))
+    rs = np.random.RandomState(32320967 + power + int(use_f))
+    x = add_constant(rs.standard_normal((1000, 3)))
+    e = rs.standard_normal((1000, 1))
     x = np.hstack([x, x[:, 1:] ** 2])
     y = x @ np.ones((7, 1)) + e
     res = OLS(y, x[:, :4]).fit()
@@ -1822,15 +1825,21 @@ def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
     ],
 )
 def test_acorr_lm_smoke(store, ddof, cov, reset_randomstate):
-    e = np.random.standard_normal(250)
+    rs = np.random.RandomState(38342099)
+    e = rs.standard_normal(250)
     smsdia.acorr_lm(e, nlags=6, store=store, ddof=ddof, **cov)
 
     smsdia.acorr_lm(e, nlags=None, store=store, period=12, ddof=ddof, **cov)
 
 
 def test_acorr_lm_smoke_no_autolag(reset_randomstate):
-    e = np.random.standard_normal(250)
+    rs = np.random.RandomState(38342098)
+    e = rs.standard_normal(250)
     smsdia.acorr_lm(e, nlags=6, store=False, ddof=0)
+
+
+RS = np.random.RandomState(38342431)
+RANDOM_ARRAY = RS.choice(500, size=500, replace=False)
 
 
 @pytest.mark.parametrize("frac", [0.25, 0.5, 0.75])
@@ -1839,15 +1848,16 @@ def test_acorr_lm_smoke_no_autolag(reset_randomstate):
     [
         None,
         np.arange(500),
-        np.random.choice(500, size=500, replace=False),
+        RANDOM_ARRAY,
         "x0",
         ["x0", "x2"],
     ],
 )
 def test_rainbow_smoke_order_by(frac, order_by, reset_randomstate):
-    e = pd.DataFrame(np.random.standard_normal((500, 1)))
+    rs = np.random.RandomState(38342097)
+    e = pd.DataFrame(rs.standard_normal((500, 1)))
     x = pd.DataFrame(
-        np.random.standard_normal((500, 3)),
+        rs.standard_normal((500, 3)),
         columns=[f"x{i}" for i in range(3)],
     )
     y = x @ np.ones((3, 1)) + e
@@ -1857,9 +1867,10 @@ def test_rainbow_smoke_order_by(frac, order_by, reset_randomstate):
 
 @pytest.mark.parametrize("center", [None, 0.33, 300])
 def test_rainbow_smoke_centered(center, reset_randomstate):
-    e = pd.DataFrame(np.random.standard_normal((500, 1)))
+    rs = np.random.RandomState(38342096)
+    e = pd.DataFrame(rs.standard_normal((500, 1)))
     x = pd.DataFrame(
-        np.random.standard_normal((500, 3)),
+        rs.standard_normal((500, 3)),
         columns=[f"x{i}" for i in range(3)],
     )
     y = x @ np.ones((3, 1)) + e
@@ -1868,9 +1879,10 @@ def test_rainbow_smoke_centered(center, reset_randomstate):
 
 
 def test_rainbow_exception(reset_randomstate):
-    e = pd.DataFrame(np.random.standard_normal((500, 1)))
+    rs = np.random.RandomState(38342095)
+    e = pd.DataFrame(rs.standard_normal((500, 1)))
     x = pd.DataFrame(
-        np.random.standard_normal((500, 3)),
+        rs.standard_normal((500, 3)),
         columns=[f"x{i}" for i in range(3)],
     )
     y = x @ np.ones((3, 1)) + e
@@ -1883,8 +1895,9 @@ def test_rainbow_exception(reset_randomstate):
 
 
 def test_small_skip(reset_randomstate):
-    y = np.random.standard_normal(10)
-    x = np.random.standard_normal((10, 3))
+    rs = np.random.RandomState(38342094)
+    y = rs.standard_normal(10)
+    x = rs.standard_normal((10, 3))
     x[:3] = x[:1]
     with pytest.raises(ValueError, match="The initial regressor matrix,"):
         smsdia.recursive_olsresiduals(OLS(y, x).fit())
@@ -1953,9 +1966,8 @@ def test_small_skip(reset_randomstate):
 def test_diagnostics_pandas(reset_randomstate):
     # GH 8879
     n = 100
-    df = pd.DataFrame(
-        {"y": np.random.rand(n), "x": np.random.rand(n), "z": np.random.rand(n)}
-    )
+    rs = np.random.RandomState(38342093)
+    df = pd.DataFrame({"y": rs.rand(n), "x": rs.rand(n), "z": rs.rand(n)})
     y, x = df["y"], add_constant(df["x"])
 
     res = OLS(df["y"], add_constant(df[["x"]])).fit()
@@ -1986,8 +1998,9 @@ def test_diagnostics_pandas(reset_randomstate):
 
 
 def test_deprecated_argument():
-    x = np.random.randn(100)
-    y = 2 * x + np.random.randn(100)
+    rs = np.random.RandomState(38342092)
+    x = rs.randn(100)
+    y = 2 * x + rs.randn(100)
     result = OLS(y, add_constant(x)).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
     with pytest.warns(FutureWarning, match="the "):
         smsdia.linear_reset(
@@ -2000,8 +2013,9 @@ def test_deprecated_argument():
 
 
 def test_diagnostics_hac(reset_randomstate):
-    x = np.random.randn(100)
-    y = 2 * x + np.random.randn(100)
+    rs = np.random.RandomState(38342091)
+    x = rs.randn(100)
+    y = 2 * x + rs.randn(100)
     result = OLS(y, add_constant(x)).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
     reset_test = smsdia.linear_reset(
         result,

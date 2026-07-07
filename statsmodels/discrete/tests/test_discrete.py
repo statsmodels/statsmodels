@@ -538,12 +538,12 @@ class TestProbitBasinhopping(CheckBinaryResults):
         res2 = Spector.probit
         cls.res2 = res2
         fit = Probit(data.endog, data.exog).fit
-        np.random.seed(1)
         cls.res1 = fit(
             method="basinhopping",
             disp=0,
             niter=5,
             minimizer={"method": "L-BFGS-B", "tol": 1e-8},
+            seed=0,
         )
 
 
@@ -2566,15 +2566,17 @@ class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
 
 
 def test_mnlogit_basinhopping():
+    rs = np.random.RandomState(332723491)
+
     def callb(*args):
         return 1
 
-    x = np.random.randint(0, 100, 1000)
-    y = np.random.randint(0, 3, 1000)
+    x = rs.randint(0, 100, 1000)
+    y = rs.randint(0, 3, 1000)
     model = MNLogit(y, sm.add_constant(x))
     # smoke tests for basinhopping and callback #8665
-    model.fit(method="basinhopping")
-    model.fit(method="basinhopping", callback=callb)
+    model.fit(method="basinhopping", seed=rs)
+    model.fit(method="basinhopping", callback=callb, seed=rs)
 
 
 def test_perfect_prediction():
@@ -2689,28 +2691,31 @@ def test_negative_binomial_default_alpha_param():
 
 
 def test_iscount():
-    X = np.random.random((50, 10))
-    X[:, 2] = np.random.randint(1, 10, size=50)
-    X[:, 6] = np.random.randint(1, 10, size=50)
-    X[:, 4] = np.random.randint(0, 2, size=50)
-    X[:, 1] = np.random.randint(-10, 10, size=50)  # not integers
+    rs = np.random.RandomState(3228931)
+    X = rs.random((50, 10))
+    X[:, 2] = rs.randint(1, 10, size=50)
+    X[:, 6] = rs.randint(1, 10, size=50)
+    X[:, 4] = rs.randint(0, 2, size=50)
+    X[:, 1] = rs.randint(-10, 10, size=50)  # not integers
     count_ind = _iscount(X)
     assert_equal(count_ind, [2, 6])
 
 
 def test_isdummy():
-    X = np.random.random((50, 10))
-    X[:, 2] = np.random.randint(1, 10, size=50)
-    X[:, 6] = np.random.randint(0, 2, size=50)
-    X[:, 4] = np.random.randint(0, 2, size=50)
-    X[:, 1] = np.random.randint(-10, 10, size=50)  # not integers
+    rs = np.random.RandomState(3228935)
+    X = rs.random((50, 10))
+    X[:, 2] = rs.randint(1, 10, size=50)
+    X[:, 6] = rs.randint(0, 2, size=50)
+    X[:, 4] = rs.randint(0, 2, size=50)
+    X[:, 1] = rs.randint(-10, 10, size=50)  # not integers
     count_ind = _isdummy(X)
     assert_equal(count_ind, [4, 6])
 
 
 def test_non_binary():
+    rs = np.random.RandomState(3228933)
     y = [1, 2, 1, 2, 1, 2]
-    X = np.random.randn(6, 2)
+    X = rs.randn(6, 2)
     with pytest.raises(ValueError):
         Logit(y, X)
     y = [0, 1, 0, 0, 1, 0.5]
@@ -3005,13 +3010,17 @@ class TestGeneralizedPoisson_underdispersion:
     @classmethod
     def setup_class(cls):
         cls.expected_params = [1, -0.5, -0.05]
-        np.random.seed(1234)
+        rs = np.random.RandomState(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
         mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
         cls.endog = sm.distributions.genpoisson_p.rvs(
-            mu_true, cls.expected_params[-1], 1, size=len(mu_true)
+            mu_true,
+            cls.expected_params[-1],
+            1,
+            size=len(mu_true),
+            random_state=rs,
         )
         model_gp = sm.GeneralizedPoisson(cls.endog, exog, p=1)
         cls.res = model_gp.fit(
@@ -3328,7 +3337,7 @@ class TestNegativeBinomialPPredictProb:
 
     def test_predict_prob_p1(self):
         expected_params = [1, -0.5]
-        np.random.seed(1234)
+        rs = np.random.RandomState(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
@@ -3336,7 +3345,7 @@ class TestNegativeBinomialPPredictProb:
         alpha = 0.05
         size = 1.0 / alpha * mu_true
         prob = size / (size + mu_true)
-        endog = nbinom.rvs(size, prob, size=len(mu_true))
+        endog = nbinom.rvs(size, prob, size=len(mu_true), random_state=rs)
 
         res = sm.NegativeBinomialP(endog, exog).fit(disp=0)
 
@@ -3354,7 +3363,7 @@ class TestNegativeBinomialPPredictProb:
 
     def test_predict_prob_p2(self):
         expected_params = [1, -0.5]
-        np.random.seed(1234)
+        rs = np.random.RandomState(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
@@ -3362,7 +3371,7 @@ class TestNegativeBinomialPPredictProb:
         alpha = 0.05
         size = 1.0 / alpha
         prob = size / (size + mu_true)
-        endog = nbinom.rvs(size, prob, size=len(mu_true))
+        endog = nbinom.rvs(size, prob, size=len(mu_true), random_state=rs)
 
         res = sm.NegativeBinomialP(endog, exog, p=2).fit(disp=0)
 

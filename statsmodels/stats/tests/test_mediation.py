@@ -91,13 +91,13 @@ def test_framing_example():
         outcome_fit_kwargs={"atol": 1e-11},
     )
 
-    np.random.seed(4231)
-    para_rslt = med.fit(method="parametric", n_rep=100)
+    rs = np.random.RandomState(4231)
+    para_rslt = med.fit(method="parametric", n_rep=100, rng=rs)
     diff = np.asarray(para_rslt.summary() - framing_para_4231)
     assert_allclose(diff, 0, atol=1e-6)
 
-    np.random.seed(4231)
-    boot_rslt = med.fit(method="boot", n_rep=100)
+    rs = np.random.RandomState(4231)
+    boot_rslt = med.fit(method="boot", n_rep=100, rng=rs)
     diff = np.asarray(boot_rslt.summary() - framing_boot_4231)
     assert_allclose(diff, 0, atol=1e-6)
 
@@ -137,8 +137,8 @@ def test_framing_example_moderator():
     )
 
     # Just a smoke test
-    np.random.seed(4231)
-    med.fit(method="parametric", n_rep=100)
+    rs = np.random.RandomState(4231)
+    med.fit(method="parametric", n_rep=100, rng=rs)
 
 
 @pytest.mark.slow
@@ -164,13 +164,13 @@ def test_framing_example_formula():
         outcome_fit_kwargs={"atol": 1e-11},
     )
 
-    np.random.seed(4231)
-    med_rslt = med.fit(method="boot", n_rep=100)
+    rs = np.random.RandomState(4231)
+    med_rslt = med.fit(method="boot", n_rep=100, rng=rs)
     diff = np.asarray(med_rslt.summary() - framing_boot_4231)
     assert_allclose(diff, 0, atol=1e-6)
 
-    np.random.seed(4231)
-    med_rslt = med.fit(method="parametric", n_rep=100)
+    rs = np.random.RandomState(4231)
+    med_rslt = med.fit(method="parametric", n_rep=100, rng=rs)
     diff = np.asarray(med_rslt.summary() - framing_para_4231)
     assert_allclose(diff, 0, atol=1e-6)
 
@@ -195,8 +195,8 @@ def test_framing_example_moderator_formula():
         outcome_model, mediator_model, "treat", "emo", moderators=moderators
     )
 
-    np.random.seed(4231)
-    med_rslt = med.fit(method="parametric", n_rep=100)
+    rs = np.random.RandomState(4231)
+    med_rslt = med.fit(method="parametric", n_rep=100, rng=rs)
     diff = np.asarray(med_rslt.summary() - framing_moderated_4231)
     assert_allclose(diff, 0, atol=1e-6)
 
@@ -261,8 +261,8 @@ def t_est_mixedlm():
     mediator_model = sm.MixedLM.from_formula("med ~ x", groups="id", data=df)
     outcome_model = sm.MixedLM.from_formula("y ~ med + x", groups="id", data=df)
     me = Mediation(outcome_model, mediator_model, "x", "med")
-    np.random.seed(383628)
-    mr = me.fit(n_rep=100)
+    rs = np.random.RandomState(383628)
+    mr = me.fit(n_rep=100, rng=rs)
     st = mr.summary()
 
     # check model results unchanged, regression numbers

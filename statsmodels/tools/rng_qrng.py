@@ -15,14 +15,13 @@ rng = np.random.default_rng(seed)"
 """
 
 
-def check_random_state(seed=None):
+def check_random_state(seed=None, deprecated=False):
     """
     Turn `seed` into a random number generator.
 
     Parameters
     ----------
-    seed : {None, int, array_like[ints], `numpy.random.Generator`,
-            `numpy.random.RandomState`, `scipy.stats.qmc.QMCEngine`}, optional
+    seed : {None, int, array_like[ints], numpy.random.Generator, numpy.random.RandomState, scipy.stats.qmc.QMCEngine}, optional
 
         If `seed` is None fresh, unpredictable entropy will be pulled
         from the OS and `numpy.random.Generator` is used.
@@ -37,7 +36,7 @@ def check_random_state(seed=None):
 
     Returns
     -------
-    seed : {`numpy.random.Generator`, `numpy.random.RandomState`,
+    rng : {`numpy.random.Generator`, `numpy.random.RandomState`,
             `scipy.stats.qmc.QMCEngine`}
 
         Random number generator.
@@ -50,7 +49,21 @@ def check_random_state(seed=None):
     elif isinstance(seed, np.random.Generator):
         return seed
     elif seed is not None:
-        return np.random.default_rng(seed)
+        if deprecated:
+            import warnings
+
+            warnings.warn(
+                "After statsmodels 0.15 is released, passing an integer when creating "
+                "a random number generator will pass the value to np.random.default_rng, "
+                "rather than the current behavior of passing it to np.random.RandomState. "
+                "To continue using RandomState, directly pass a RandomState instance. ",
+                FutureWarning,
+                stacklevel=2,
+            )
+
+            return np.random.RandomState(seed)
+        else:
+            return np.random.default_rng(seed)
     else:
         import warnings
 

@@ -624,11 +624,12 @@ class TestGAMMPGBS(CheckGAMMixin):
 
     def test_crossval(self):
         # includes some checks that penalization in the model is unchanged
+        rs = np.random.RandomState(9832311)
         mod = self.res1.model
         assert_equal(mod.alpha, self.alpha)  # assert unchanged
         assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
 
-        alpha_aic = mod.select_penweight()[0]
+        alpha_aic = mod.select_penweight(rng=rs)[0]
         # regression number, but in the right ball park
         assert_allclose(alpha_aic, [112487.81362014, 129.89155677], rtol=1e-3)
         assert_equal(mod.alpha, self.alpha)  # assert unchanged
@@ -638,8 +639,8 @@ class TestGAMMPGBS(CheckGAMMixin):
         assert_equal(pm[:4, :], 0)
         assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
 
-        np.random.seed(987125)
-        alpha_cv, _ = mod.select_penweight_kfold(k_folds=3, k_grid=6)
+        rs = np.random.RandomState(987125)
+        alpha_cv, _ = mod.select_penweight_kfold(k_folds=3, k_grid=6, rng=rs)
         # regression number, but in the right ball park
         assert_allclose(alpha_cv, [10000000.0, 630.957344480193], rtol=1e-5)
         assert_equal(mod.alpha, self.alpha)  # assert unchanged
@@ -750,7 +751,8 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
     def test_select_alpha(self):
         res1 = self.res1
         alpha_mgcv = res1.model.alpha
-        res_s = res1.model.select_penweight()
+        rs = np.random.RandomState(48932091)
+        res_s = res1.model.select_penweight(rng=rs)
         assert_allclose(res_s[0], alpha_mgcv, rtol=5e-5)
 
 
@@ -831,7 +833,7 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
 
         assert_equal(res1a.fittedvalues.iloc[2:4].index.values, [2, 3])
         assert_equal(np.asarray(res1a.params.index), xnames)
-        assert (isinstance(res1a.params, pd.Series))
+        assert isinstance(res1a.params, pd.Series)
 
-        assert (isinstance(res1a, GLMGamResultsWrapper))
-        assert (isinstance(res1a._results, GLMGamResults))
+        assert isinstance(res1a, GLMGamResultsWrapper)
+        assert isinstance(res1a._results, GLMGamResults)

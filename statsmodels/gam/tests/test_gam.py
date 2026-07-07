@@ -108,13 +108,14 @@ def test_gam_penalty():
     test the func method of the gam penalty
     :return:
     """
+    rs = np.random.RandomState(9993431)
     pol, y = polynomial_sample_data()
     univ_pol = pol.smoothers[0]
     alpha = 1
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_pol)
 
     for _ in range(10):
-        params = np.random.randint(-2, 2, 4)
+        params = rs.randint(-2, 2, 4)
         gp_score = gp.func(params)
         itg = integral(params)
         assert_allclose(gp_score, itg, atol=1.0e-1)
@@ -397,10 +398,10 @@ def test_multivariate_gam_cv_path():
     gam = GLMGam
     alphas = [np.linspace(0, 2, 10)]
     k = 3
-    cv = KFold(k_folds=k, shuffle=True)
+    rs = np.random.RandomState(4212121)
+    cv = KFold(k_folds=k, shuffle=True, rng=rs)
 
     # Note: kfold cv uses random shuffle
-    np.random.seed(123)
     gam_cv = MultivariateGAMCVPath(
         smoother=bsplines,
         alphas=alphas,
@@ -427,8 +428,8 @@ def test_multivariate_gam_cv_path():
     assert_allclose(data_from_r.y_mgcv_gcv, y_est, atol=1.0e-1, rtol=1.0e-1)
 
     # Note: kfold cv uses random shuffle
-    np.random.seed(123)
-    alpha_cv, res_cv = glm_gam.select_penweight_kfold(alphas=alphas, k_folds=3)
+    rs = np.random.RandomState(123)
+    alpha_cv, res_cv = glm_gam.select_penweight_kfold(alphas=alphas, k_folds=3, rng=rs)
     assert_allclose(alpha_cv, gam_cv.alpha_cv, rtol=1e-12)
 
 

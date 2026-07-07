@@ -67,7 +67,7 @@ def mixture_rvs(prob, size, dist, kwargs=None, rng=None):
         scale = kwargs[i].get("scale", 1)
         args = kwargs[i].get("args", ())
         sample[sample_idx] = dist[i].rvs(
-            *args, **dict(loc=loc, scale=scale, size=sample_size)
+            *args, **dict(loc=loc, scale=scale, size=sample_size, random_state=rng)
         )
     return sample
 

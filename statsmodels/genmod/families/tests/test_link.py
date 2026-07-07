@@ -54,11 +54,11 @@ LinksISD = [
 ]
 
 
-def get_domainvalue(link):
+def get_domainvalue(link, rng):
     """
     Get a value in the domain for a given family.
     """
-    z = -np.log(np.random.uniform(0, 1))
+    z = -np.log(rng.uniform(0, 1))
     if isinstance(link, links.CLogLog):  # prone to overflow
         z = min(z, 3)
     elif isinstance(link, links.LogLog):
@@ -80,7 +80,7 @@ def test_inverse():
             d = link.inverse(link(p))
             assert_allclose(d, p, atol=1e-8, err_msg=str(link))
 
-            z = get_domainvalue(link)
+            z = get_domainvalue(link, rs)
             d = link(link.inverse(z))
             assert_allclose(d, z, atol=1e-8, err_msg=str(link))
 
@@ -123,12 +123,10 @@ def test_deriv2():
 
 def test_inverse_deriv():
     # Logic check that inverse_deriv equals 1/link.deriv(link.inverse)
-
-    np.random.seed(24235)
-
+    rs = np.random.RandomState(128192810)
     for link in Links:
         for _ in range(10):
-            z = get_domainvalue(link)
+            z = get_domainvalue(link, rs)
             d = link.inverse_deriv(z)
             f = 1 / link.deriv(link.inverse(z))
             assert_allclose(d, f, rtol=1e-8, atol=1e-10, err_msg=str(link))
@@ -137,11 +135,11 @@ def test_inverse_deriv():
 def test_inverse_deriv2():
     # Check second derivative of inverse link using numeric differentiation.
 
-    np.random.seed(24235)
+    rs = np.random.RandomState(24235)
 
     for link in LinksISD:
         for _ in range(10):
-            z = get_domainvalue(link)
+            z = get_domainvalue(link, rs)
             d2 = link.inverse_deriv2(z)
             d2a = nd.approx_fprime(np.r_[z], link.inverse_deriv)
             assert_allclose(d2, d2a, rtol=5e-6, atol=1e-6, err_msg=str(link))

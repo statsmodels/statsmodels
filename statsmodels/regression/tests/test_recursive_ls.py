@@ -143,7 +143,9 @@ def test_ols():
     assert_allclose(actual_bic, res_ols.bic)
 
 
-@pytest.mark.parametrize("constraints", [None, "m1 + unemp = 1"], ids=["No constraint", "Constrained"])
+@pytest.mark.parametrize(
+    "constraints", [None, "m1 + unemp = 1"], ids=["No constraint", "Constrained"]
+)
 def test_glm(constraints):
     # More comprehensive tests against GLM estimates (this is sort of redundant
     # given `test_ols`, but this is mostly to complement the tests in
@@ -368,7 +370,8 @@ def test_resid_recursive():
 def test_recursive_olsresiduals_bad_input(reset_randomstate):
     from statsmodels.tsa.arima.model import ARIMA
 
-    e = np.random.standard_normal(250)
+    rs = np.random.RandomState(9889821)
+    e = rs.standard_normal(250)
     y = e.copy()
     for i in range(1, y.shape[0]):
         y[i] += 0.1 + 0.8 * y[i - 1] + e[i]

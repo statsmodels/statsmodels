@@ -290,9 +290,10 @@ class TestOLS(CheckRegressionResults):
         # Test that if df_resid = 0, rsquared_adj = 0.
         # This is a regression test for user issue:
         # https://github.com/statsmodels/statsmodels/issues/868
+        rs = np.random.RandomState(323212)
         with warnings.catch_warnings(record=True):
-            x = np.random.randn(5)
-            y = np.random.randn(5, 6)
+            x = rs.randn(5)
+            y = rs.randn(5, 6)
             results = OLS(x, y).fit()
             rsquared_adj = results.rsquared_adj
             assert_equal(rsquared_adj, np.nan)
@@ -1000,8 +1001,9 @@ class TestGLS_large_data(TestDataDimensions):
     def setup_class(cls):
         super().setup_class()
         nobs = 1000
-        y = np.random.randn(nobs, 1)
-        x = np.random.randn(nobs, 20)
+        rs = np.random.RandomState(3232122)
+        y = rs.randn(nobs, 1)
+        x = rs.randn(nobs, 20)
         sigma = np.ones_like(y)
         cls.gls_res = GLS(y, x, sigma=sigma).fit()
         cls.gls_res_scalar = GLS(y, x, sigma=1).fit()
@@ -1079,7 +1081,8 @@ def test_fvalue_const_only():
 def test_conf_int_single_regressor():
     # GH#706 single-regressor model (i.e. no intercept) with 1D exog
     # should get passed to DataFrame for conf_int
-    y = pd.Series(np.random.randn(10))
+    rs = np.random.RandomState(3232121)
+    y = pd.Series(rs.randn(10))
     x = pd.Series(np.ones(10))
     res = OLS(y, x).fit()
     conf_int = res.conf_int()
@@ -1313,7 +1316,8 @@ def test_missing_formula_predict():
     null = np.array([np.nan])
     data = pd.DataFrame({"x": np.concatenate((data, null))})
     beta = np.array([1, 0.1])
-    e = np.random.normal(size=nsample + 1)
+    rs = np.random.RandomState(3232123)
+    e = rs.normal(size=nsample + 1)
     data["y"] = beta[0] + beta[1] * data["x"] + e
     model = OLS.from_formula("y ~ x", data=data)
     fit = model.fit()
@@ -1475,10 +1479,11 @@ def test_burg():
 def test_burg_errors():
     with pytest.raises(ValueError):
         burg(np.ones((100, 2)))
+    rs = np.random.RandomState(323211)
     with pytest.raises(ValueError):
-        burg(np.random.randn(100), 0)
+        burg(rs.randn(100), 0)
     with pytest.raises(ValueError):
-        burg(np.random.randn(100), "apple")
+        burg(rs.randn(100), "apple")
 
 
 @pytest.mark.skipif(not has_cvxopt, reason="sqrt_lasso requires cvxopt")
@@ -1533,16 +1538,18 @@ def test_sqrt_lasso():
         assert_allclose(rslt.params[0:5], expected_params[refit], rtol=1e-5, atol=1e-5)
 
 
-def test_bool_regressor(reset_randomstate):
-    exog = np.random.randint(0, 2, size=(100, 2)).astype(bool)
-    endog = np.random.standard_normal(100)
+def test_bool_regressor():
+    rs = np.random.RandomState(3232127)
+    exog = rs.randint(0, 2, size=(100, 2)).astype(bool)
+    endog = rs.standard_normal(100)
     bool_res = OLS(endog, exog).fit()
     res = OLS(endog, exog.astype(np.double)).fit()
     assert_allclose(bool_res.params, res.params)
 
 
-def test_ols_constant(reset_randomstate):
-    y = np.random.standard_normal(200)
+def test_ols_constant():
+    rs = np.random.RandomState(323219)
+    y = rs.standard_normal(200)
     x = np.ones((200, 1))
     res = OLS(y, x).fit()
     with warnings.catch_warnings(record=True) as recording:
@@ -1559,19 +1566,21 @@ def test_summary_no_constant():
     assert "R² is computed " in summary.as_text()
 
 
-def test_condition_number(reset_randomstate):
-    y = np.random.standard_normal(100)
-    x = np.random.standard_normal((100, 1))
-    x = x + np.random.standard_normal((100, 5))
+def test_condition_number():
+    rs = np.random.RandomState(323218)
+    y = rs.standard_normal(100)
+    x = rs.standard_normal((100, 1))
+    x = x + rs.standard_normal((100, 5))
     res = OLS(y, x).fit()
     assert_allclose(res.condition_number, np.sqrt(np.linalg.cond(x.T @ x)))
     assert_allclose(res.condition_number, np.linalg.cond(x))
 
 
-def test_slim_summary(reset_randomstate):
-    y = np.random.standard_normal(100)
-    x = np.random.standard_normal((100, 1))
-    x = x + np.random.standard_normal((100, 5))
+def test_slim_summary():
+    rs = np.random.RandomState(323217)
+    y = rs.standard_normal(100)
+    x = rs.standard_normal((100, 1))
+    x = x + rs.standard_normal((100, 5))
     res = OLS(y, x).fit()
     import copy
 
@@ -1583,7 +1592,7 @@ def test_slim_summary(reset_randomstate):
     assert slim_summ.tables[1].as_text() == summ.tables[1].as_text()
 
 
-def test_slim_summary_skips_diagnostics(reset_randomstate, monkeypatch):
+def test_slim_summary_skips_diagnostics(monkeypatch):
     # GH#9054 the slim summary omits the normality/residual diagnostics, so it
     # must not compute them. Make omni_normtest raise to prove the slim summary
     # never calls it, while the full summary still does.
@@ -1594,8 +1603,9 @@ def test_slim_summary_skips_diagnostics(reset_randomstate, monkeypatch):
 
     monkeypatch.setattr(stattools, "omni_normtest", _boom)
 
-    y = np.random.standard_normal(50)
-    x = add_constant(np.random.standard_normal((50, 2)))
+    rs = np.random.RandomState(323216)
+    y = rs.standard_normal(50)
+    x = add_constant(rs.standard_normal((50, 2)))
     res = OLS(y, x).fit()
 
     slim_summ = res.summary(slim=True)

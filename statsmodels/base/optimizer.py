@@ -1298,7 +1298,16 @@ def _fit_basinhopping(
     """
     check_kwargs(
         kwargs,
-        ("niter", "niter_success", "T", "stepsize", "interval", "minimizer", "seed"),
+        (
+            "niter",
+            "niter_success",
+            "T",
+            "stepsize",
+            "interval",
+            "minimizer",
+            "seed",
+            "rng",
+        ),
         "basinhopping",
     )
     kwargs = dict(kwargs.items())
