@@ -40,7 +40,7 @@ def test_2x2():
     u = rs.normal(size=x.shape[0])
     x[u > 1, 1] = np.nan
 
-    bm = BayesGaussMI(x)
+    bm = BayesGaussMI(x, rng=rs)
 
     # Burn-in
     for _ in range(500):
@@ -86,8 +86,8 @@ def test_MI():
             return (x.iloc[:, 0].values, x.iloc[:, 1:].values)
 
     for _ in (0, 1):
-        np.random.seed(2342)
-        imp = BayesGaussMI(x.copy())
+        rs = np.random.RandomState(2342)
+        imp = BayesGaussMI(x.copy(), rng=rs)
         mi = MI(imp, sm.OLS, model_args_fn, burn=0)
         r = mi.fit()
         r.summary()  # smoke test
@@ -135,8 +135,8 @@ def test_MI_stat():
             # Regress x1 on x2
             return (x[:, 0], x[:, 1])
 
-        np.random.seed(2342)
-        imp = BayesGaussMI(x.copy())
+        rs = np.random.RandomState(2342)
+        imp = BayesGaussMI(x.copy(), rng=rs)
         mi = MI(imp, sm.OLS, model_args, nrep=100, skip=10)
         r = mi.fit()
 
@@ -163,8 +163,8 @@ def test_mi_formula():
     def model_kwds_fn(x):
         return {"data": x}
 
-    np.random.seed(2342)
-    imp = BayesGaussMI(df.copy())
+    rs = np.random.RandomState(2342)
+    imp = BayesGaussMI(df.copy(), rng=rs)
     mi = MI(imp, sm.OLS, formula=fml, burn=0, model_kwds_fn=model_kwds_fn)
 
     def results_cb(x):

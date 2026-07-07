@@ -8,7 +8,6 @@ from statsmodels.compat.python import lrange
 import string
 
 import numpy as np
-from numpy.random import standard_normal
 from numpy.testing import (
     assert_almost_equal,
     assert_array_equal,

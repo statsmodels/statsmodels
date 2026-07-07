@@ -1400,7 +1400,7 @@ class Test_ROS_MaxCen_GT_MaxUncen(Test_ROS_HelselAppendixB):
 
 
 class Test_ROS_OnlyDL_GT_MaxUncen(Test_NoOp_ZeroND):
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     N = 20
     res = [
         0.38,
