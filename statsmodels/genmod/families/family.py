@@ -806,8 +806,8 @@ class Gamma(Family):
             (scale * \mu_i)) - (var\_weights_i * endog_i) /
             (scale * \mu_i)) - \ln \Gamma(var\_weights_i / scale) - \ln(\endog_i)
 
-        Note on weights parameterization
-        --------------------------------
+        **Note on weights parameterization**
+
         statsmodels follows the SPSS/SAS definition for variance weights:
         Var(endog_i) = scale * mu_i² / var_weights_i — i.e., the effective
         dispersion is scale / var_weights_i.
