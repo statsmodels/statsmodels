@@ -102,7 +102,7 @@ def infer_freq(index) -> str | None:
     with _infer_freq_returns_offset():
         freq = pd.infer_freq(index)
 
-    # new pandas versions retuns BaseOffset
+    # new pandas versions returns BaseOffset
     if not isinstance(freq, str) and freq is not None:
         return freq.freqstr
     return freq
@@ -174,7 +174,7 @@ except ImportError:
 
     def make_dataframe():
         """
-        Simple verion of pandas._testing.makeDataFrame
+        Simple version of pandas._testing.makeDataFrame
         """
         n = 30
         k = 4

@@ -95,7 +95,7 @@ class CountDiagnostic:
         In this case, edges are 0, ..., 9 which defines 9 bins for
         counts 0 to 8. The last bin is dropped, so the joint test hypothesis is
         that the observed aggregated frequencies for counts 0 to 7 correspond
-        to the model prediction for those frequencies. Predicted probabilites
+        to the model prediction for those frequencies. Predicted probabilities
         Prob(y_i = k | x) are aggregated over observations ``i``.
 
         """

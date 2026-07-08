@@ -535,7 +535,7 @@ def kdensityfft(
         curve estimators`. Journal of Computational and Graphical Statistics.
         3.1, 35-56.
     Jones, M.C. and H.W. Lotwick. (1984) `Remark AS R50: A Remark on Algorithm
-        AS 176. Kernal Density Estimation Using the Fast Fourier Transform`.
+        AS 176. Kernel Density Estimation Using the Fast Fourier Transform`.
         Journal of the Royal Statistical Society. Series C. 33.1, 120-2.
     Silverman, B.W. (1982) `Algorithm AS 176. Kernel density estimation using
         the Fast Fourier Transform. Journal of the Royal Statistical Society.

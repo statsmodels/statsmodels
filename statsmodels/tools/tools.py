@@ -461,7 +461,7 @@ class Bunch(dict):
     *args
         Arguments passed to dict constructor, tuples (key, value).
     **kwargs
-        Keyword agument passed to dict constructor, key=value.
+        Keyword argument passed to dict constructor, key=value.
 
     """
 
@@ -475,7 +475,7 @@ def _ensure_2d(x, ndarray=False):
     Parameters
     ----------
     x : ndarray, Series, DataFrame or None
-        Input to verify dimensions, and to transform as necesary
+        Input to verify dimensions, and to transform as necessary
     ndarray : bool
         Flag indicating whether to always return a NumPy array. Setting False
         will return an pandas DataFrame when the input is a Series or a

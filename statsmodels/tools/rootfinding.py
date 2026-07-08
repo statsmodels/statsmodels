@@ -46,7 +46,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         negative. If None, then it is set to -1.
     increasing : bool or None
         If None, then the function is evaluated at the initial bounds to
-        determine wether the function is increasing or not. If increasing is
+        determine whether the function is increasing or not. If increasing is
         True (False), then it is assumed that the function is monotonically
         increasing (decreasing).
     max_it : int
@@ -194,7 +194,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         if np.isnan(f_low) and np.isnan(f_upp):
             # can we still get here?
             raise ValueError("max_it reached"
-                             "\nthe function values at boths bounds are NaN"
+                             "\nthe function values at both bounds are NaN"
                              "\nchange the starting bounds, set bounds"
                              "or increase max_it")
 
