@@ -106,8 +106,8 @@ def test_oneparam():
 
 
 def test_summary_no_user_exog():
-    np.random.seed(0)
-    data = np.random.randn(200, 3)
+    rs = np.random.RandomState(0)
+    data = rs.randn(200, 3)
     B = np.asarray([[1, "E", "E"], [0, 1, "E"], [0, 0, 1]], dtype="U")
     results = SVAR(data, svar_type="B", B=B).fit(maxlags=2, solver="newton")
     assert results.k_exog_user == 0

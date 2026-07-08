@@ -503,9 +503,11 @@ class TestKernelReg(KernelRegressionTestBase):
         sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
         assert sig_var2 == "Not Significant"
 
+
+    @pytest.mark.singleton_randomstate
     @pytest.mark.thread_unsafe("Intentionally relies on global random state")
     @pytest.mark.slow
-    def test_significance_seed(self):
+    def test_significance_seed_legacy(self):
         nobs = 250
         rs = np.random.RandomState(1234561)
         C1 = rs.normal(size=(nobs,))
@@ -531,6 +533,38 @@ class TestKernelReg(KernelRegressionTestBase):
             bw=bw,
             seed=np.random.RandomState(seed),
         )
+
+        nboot = 45  # Number of bootstrap samples
+        # Test no longer the same since singleton random state has been removed
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            sig_var12_0 = model_0.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        assert sig_var12_0 in ("Not Significant", "*", "**")
+        sig_var12_1 = model_1.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        assert sig_var12_1 in ("Not Significant", "*", "**")
+
+    @pytest.mark.slow
+    def test_significance_seed(self):
+        nobs = 250
+        rs = np.random.RandomState(1234561)
+        C1 = rs.normal(size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
+        C3 = rs.beta(0.5, 0.2, size=(nobs,))
+        noise = rs.normal(size=(nobs,))
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        Y = b1 * C1 + b2 * C2 + noise
+
+        # This is the cv_ls bandwidth estimated earlier
+        bw = [11108137.1087194, 1333821.85150218]
+        seed = 1234561
+        model_1 = nparam.KernelReg(
+            endog=[Y],
+            exog=[C1, C3],
+            reg_type="ll",
+            var_type="cc",
+            bw=bw,
+            seed=np.random.RandomState(seed),
+        )
         model_2 = nparam.KernelReg(
             endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, seed=seed
         )
@@ -545,9 +579,6 @@ class TestKernelReg(KernelRegressionTestBase):
 
         nboot = 45  # Number of bootstrap samples
         # Test no longer the same since singleton random state has been removed
-        with pytest.warns(FutureWarning, match="After 0.17"):
-            sig_var12_0 = model_0.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
-        assert sig_var12_0 in ("Not Significant", "*", "**")
         sig_var12_1 = model_1.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
         assert sig_var12_1 in ("Not Significant", "*", "**")
 
@@ -607,17 +638,15 @@ class TestKernelReg(KernelRegressionTestBase):
         bw = [3.63473198e00, 1.21404803e06]
         # This is the cv_ls bandwidth estimated earlier
         # The cv_ls bandwidth was estimated earlier to save time
-        with pytest.warns(FutureWarning, match="After 0.17"):
-            model = nparam.KernelReg(
-                endog=[Y], exog=[ovals, C3], reg_type="ll", var_type="oc", bw=bw
-            )
+        seed = 8329321
+        model = nparam.KernelReg(
+            endog=[Y], exog=[ovals, C3], reg_type="ll", var_type="oc", bw=bw, seed=np.random.RandomState(seed)
+        )
         # This was also tested with local constant estimator
         nboot = 45  # Number of bootstrap samples
-        with pytest.warns(FutureWarning, match="After 0.17"):
-            sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
+        sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
         npt.assert_equal(sig_var1 == "Not Significant", False)
-        with pytest.warns(FutureWarning, match="After 0.17"):
-            sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
+        sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
         npt.assert_equal(sig_var2 == "Not Significant", True)
 
     def test_user_specified_kernel(self):

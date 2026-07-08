@@ -29,19 +29,18 @@ def model1(noise):
     return mn_par, sc_par, sm_par, no_par
 
 
-def setup1(n, get_model, noise):
-    rs = np.random.RandomState(82341)
+def setup1(n, get_model, noise, rng):
     mn_par, sc_par, sm_par, no_par = get_model(noise)
 
     groups = np.kron(np.arange(n // 5), np.ones(5))
     time = np.kron(np.ones(n // 5), np.arange(5))
     time_z = (time - time.mean()) / time.std()
 
-    x_mean = rs.normal(size=(n, len(mn_par)))
-    x_sc = rs.normal(size=(n, len(sc_par)))
+    x_mean = rng.normal(size=(n, len(mn_par)))
+    x_sc = rng.normal(size=(n, len(sc_par)))
     x_sc[:, 0] = 1
     x_sc[:, 1] = time_z
-    x_sm = rs.normal(size=(n, len(sm_par)))
+    x_sm = rng.normal(size=(n, len(sm_par)))
     x_sm[:, 0] = 1
     x_sm[:, 1] = time_z
 
@@ -50,7 +49,7 @@ def setup1(n, get_model, noise):
     sm = np.exp(np.dot(x_sm, sm_par))
 
     if noise:
-        x_no = rs.normal(size=(n, len(no_par)))
+        x_no = rng.normal(size=(n, len(no_par)))
         x_no[:, 0] = 1
         x_no[:, 1] = time_z
         no = np.exp(np.dot(x_no, no_par))
@@ -68,18 +67,18 @@ def setup1(n, get_model, noise):
     for ii in ix.values():
         c = gc.get_cov(time[ii], sc[ii], sm[ii])
         r = np.linalg.cholesky(c)
-        y[ii] += np.dot(r, rs.normal(size=len(ii)))
+        y[ii] += np.dot(r, rng.normal(size=len(ii)))
 
     # Additive white noise
     if noise:
-        y += no * rs.normal(size=y.shape)
+        y += no * rng.normal(size=y.shape)
 
     return y, x_mean, x_sc, x_sm, x_no, time, groups
 
 
-def run_arrays(n, get_model, noise):
+def run_arrays(n, get_model, noise, rng):
 
-    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(n, get_model, noise)
+    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(n, get_model, noise, rng)
 
     preg = ProcessMLE(y, x_mean, x_sc, x_sm, x_no, time, groups)
 
@@ -91,7 +90,9 @@ def run_arrays(n, get_model, noise):
 @pytest.mark.parametrize("noise", [False, True])
 def test_arrays(noise):
 
-    f = run_arrays(1000, model1, noise)
+    rs = np.random.RandomState(8234)
+
+    f = run_arrays(1000, model1, noise, rng=rs)
     mod = f.model
 
     f.summary()  # Smoke test
@@ -118,9 +119,9 @@ def test_arrays(noise):
     f.t_test(np.eye(len(f.params)))
 
 
-def run_formula(n, get_model, noise):
+def run_formula(n, get_model, noise, rng):
 
-    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(n, get_model, noise)
+    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(n, get_model, noise, rng)
 
     df = pd.DataFrame(
         {
@@ -170,7 +171,9 @@ def run_formula(n, get_model, noise):
 @pytest.mark.parametrize("noise", [False, True])
 def test_formulas(noise):
 
-    f, df = run_formula(1000, model1, noise)
+    rs = np.random.RandomState(8789)
+
+    f, df = run_formula(1000, model1, noise, rng=rs)
     mod = f.model
 
     f.summary()  # Smoke test
@@ -202,8 +205,8 @@ def test_formulas(noise):
 # Test the score functions using numerical derivatives.
 @pytest.mark.parametrize("noise", [False, True])
 def test_score_numdiff(noise):
-
-    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(1000, model1, noise)
+    rs = np.random.RandomState(3422121)
+    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(1000, model1, noise, rng=rs)
 
     preg = ProcessMLE(y, x_mean, x_sc, x_sm, x_no, time, groups)
 
