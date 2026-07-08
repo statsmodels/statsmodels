@@ -551,7 +551,7 @@ def asquare(cdfvals, axis=0):
 
 # def bootstrap(self, distr, args=(), kwds={}, nobs=200, nrep=1000,
 def bootstrap(
-    distr, args=(), nobs=200, nrep=100, value=None, batch_size=None, random_state=None
+    distr, args=(), nobs=200, nrep=100, value=None, batch_size=None, rng=None
 ):
     """Monte Carlo (or parametric bootstrap) p-values for gof
 
@@ -573,7 +573,7 @@ def bootstrap(
 
     # it will be better to build a separate batch function that calls bootstrap
     # keep batch if value is true, but batch iterate from outside if stat is returned
-    rng = check_random_state(random_state)
+    rng = check_random_state(rng)
     if batch_size is not None:
         if value is None:
             raise ValueError("using batching requires a value")

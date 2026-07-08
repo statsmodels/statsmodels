@@ -70,7 +70,7 @@ requires-python = ">=3.9"
 test = [
     # test
     "pytest>=8.4.1,<9",
-    "pytest-randomly",
+    # "pytest-randomly", <- Directly affects the global numpy random state
     "pytest-run-parallel",
     "pytest-xdist",
     "pytest-cov",

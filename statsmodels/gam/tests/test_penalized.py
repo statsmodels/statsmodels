@@ -5,6 +5,8 @@ Author: Josef Perktold
 
 """
 
+from statsmodels.compat.scipy import BASINHOPPING_RNG
+
 import os
 
 import numpy as np
@@ -629,7 +631,7 @@ class TestGAMMPGBS(CheckGAMMixin):
         assert_equal(mod.alpha, self.alpha)  # assert unchanged
         assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
 
-        alpha_aic = mod.select_penweight(rng=rs)[0]
+        alpha_aic = mod.select_penweight(**{BASINHOPPING_RNG: rs})[0]
         # regression number, but in the right ball park
         assert_allclose(alpha_aic, [112487.81362014, 129.89155677], rtol=1e-3)
         assert_equal(mod.alpha, self.alpha)  # assert unchanged
@@ -752,7 +754,7 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         res1 = self.res1
         alpha_mgcv = res1.model.alpha
         rs = np.random.RandomState(48932091)
-        res_s = res1.model.select_penweight(rng=rs)
+        res_s = res1.model.select_penweight(**{BASINHOPPING_RNG: rs})
         assert_allclose(res_s[0], alpha_mgcv, rtol=5e-5)
 
 

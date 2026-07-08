@@ -5,6 +5,7 @@ Modified: Kevin Sheppard
 
 from statsmodels.compat.pandas import MONTH_END, infer_freq
 from statsmodels.compat.pytest import pytest_warns
+from statsmodels.compat.scipy import BASINHOPPING_RNG
 
 import os
 import re
@@ -836,7 +837,10 @@ def test_start_params(trend, seasonal):
     res = mod.fit()
     res2 = mod.fit(
         method="basinhopping",
-        minimize_kwargs={"minimizer_kwargs": {"method": "L-BFGS-B"}, "rng": rs},
+        minimize_kwargs={
+            "minimizer_kwargs": {"method": "L-BFGS-B"},
+            BASINHOPPING_RNG: rs,
+        },
     )
     assert isinstance(res.summary().as_text(), str)
     assert res2.sse < 1.01 * res.sse
@@ -864,13 +868,13 @@ def test_basin_hopping():
         housing_data, trend="add", initialization_method="estimated"
     )
     res = mod.fit()
-    res2 = mod.fit(method="basinhopping", minimize_kwargs={"rng": rs})
+    res2 = mod.fit(method="basinhopping", minimize_kwargs={BASINHOPPING_RNG: rs})
     assert isinstance(res.summary().as_text(), str)
     assert isinstance(res2.summary().as_text(), str)
     # Basin hopping occasionally produces a slightly larger objective
     tol = 1e-5
     assert res2.sse <= res.sse + tol
-    res3 = mod.fit(method="basinhopping", minimize_kwargs={"rng": rs})
+    res3 = mod.fit(method="basinhopping", minimize_kwargs={BASINHOPPING_RNG: rs})
     assert_almost_equal(res2.sse, res3.sse, decimal=2)
 
 
@@ -1727,7 +1731,7 @@ def test_alternative_minimizers(method, ses):
     minimize_kwargs = {}
     if method == "basinhopping":
         rs = np.random.RandomState(32321831)
-        minimize_kwargs["rng"] = rs
+        minimize_kwargs[BASINHOPPING_RNG] = rs
     mod = ExponentialSmoothing(ses, initialization_method="estimated")
     res = mod.fit(method=method, start_params=sv, minimize_kwargs=minimize_kwargs)
     assert_allclose(res.params["smoothing_level"], 0.77232545, rtol=1e-3)
@@ -1743,10 +1747,10 @@ def test_minimizer_kwargs_error(ses):
     with pytest.raises(ValueError):
         mod.fit(method="least_squares", minimize_kwargs=kwargs)
     rs = np.random.RandomState(32321837)
-    kwargs = {"minimizer_kwargs": {"args": "anything"}, "rng": rs}
+    kwargs = {"minimizer_kwargs": {"args": "anything"}, BASINHOPPING_RNG: rs}
     with pytest.raises(ValueError):
         mod.fit(method="basinhopping", minimize_kwargs=kwargs)
-    kwargs = {"minimizer_kwargs": {"method": "SLSQP"}, "rng": rs}
+    kwargs = {"minimizer_kwargs": {"method": "SLSQP"}, BASINHOPPING_RNG: rs}
     res = mod.fit(method="basinhopping", minimize_kwargs=kwargs)
     assert isinstance(res.params, dict)
     assert isinstance(res.summary().as_text(), str)
