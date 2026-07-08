@@ -469,6 +469,33 @@ class Power:
                     "Cannot detect an effect-size of 0. Try changing your effect-size."
                 )
 
+        # GH#9378 intercept impossible one-sided cases before root finding:
+        # if the effect size points into the tail opposite to the
+        # alternative, the attained power is smaller than alpha for any
+        # sample size, so no solution exists unless the requested power is
+        # also smaller than alpha.
+        alternative = kwds.get("alternative")
+        if key in ("nobs", "nobs1", "ratio") and alternative in (
+            "larger",
+            "smaller",
+        ):
+            effect_size = kwds["effect_size"]
+            wrong_sign = (
+                effect_size < 0
+                if alternative == "larger"
+                else effect_size > 0
+            )
+            if wrong_sign and kwds["power"] >= kwds["alpha"]:
+                raise ValueError(
+                    f"No solution exists for {key}: with alternative="
+                    f"{alternative!r} the attained power is smaller than "
+                    f"alpha for any {key} because effect_size is "
+                    f"{'negative' if effect_size < 0 else 'positive'}. A "
+                    "one-sided alternative requires an effect size with "
+                    "matching sign: positive for 'larger', negative for "
+                    "'smaller'."
+                )
+
         self._counter = 0
 
         def func(x):
