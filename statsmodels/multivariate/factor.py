@@ -15,6 +15,7 @@ from statsmodels.tools.sm_exceptions import (
     SpecificationWarning,
 )
 
+from ..tools.rng_qrng import check_random_state
 from .factor_rotation import promax, rotate_factors
 
 _opt_defaults = {"gtol": 1e-7}
@@ -187,7 +188,14 @@ class Factor(Model):
             self._endog_names = None
 
     def fit(
-        self, maxiter=50, tol=1e-8, start=None, opt_method="BFGS", opt=None, em_iter=3
+        self,
+        maxiter=50,
+        tol=1e-8,
+        start=None,
+        opt_method="BFGS",
+        opt=None,
+        em_iter=3,
+        rng=None,
     ):
         """
         Estimate factor model parameters.
@@ -218,7 +226,8 @@ class Factor(Model):
         if method == "pa":
             return self._fit_pa(maxiter=maxiter, tol=tol)
         elif method == "ml":
-            return self._fit_ml(start, em_iter, opt_method, opt)
+            rng = check_random_state(rng)
+            return self._fit_ml(start, em_iter, opt_method, opt, rng)
         else:
             msg = "Unknown factor extraction approach '%s'" % self.method
             raise ValueError(msg)
@@ -409,12 +418,12 @@ class Factor(Model):
         return -np.concatenate((du, dl.T.flat)) / (2 * self.k_endog)
 
     # Maximum likelihood factor analysis.
-    def _fit_ml(self, start, em_iter, opt_method, opt):
+    def _fit_ml(self, start, em_iter, opt_method, opt, rng):
         """estimate Factor model using Maximum Likelihood"""
 
         # Starting values
         if start is None:
-            load, uniq = self._fit_ml_em(em_iter)
+            load, uniq = self._fit_ml_em(em_iter, rng)
             start = self._pack(load, uniq)
         elif len(start) == 2:
             if len(start[1]) != start[0].shape[0]:
@@ -454,12 +463,11 @@ class Factor(Model):
 
         return FactorResults(self)
 
-    def _fit_ml_em(self, iter, random_state=None):
+    def _fit_ml_em(self, iter, rng):
         """estimate Factor model using EM algorithm"""
         # Starting values
-        if random_state is None:
-            random_state = np.random.RandomState(3427)
-        load = 0.1 * random_state.standard_normal(size=(self.k_endog, self.n_factor))
+        rng = check_random_state(rng)
+        load = 0.1 * rng.standard_normal(size=(self.k_endog, self.n_factor))
         uniq = 0.5 * np.ones(self.k_endog)
 
         for _ in range(iter):
