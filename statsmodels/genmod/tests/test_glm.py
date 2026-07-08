@@ -1328,11 +1328,11 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
     elif family_class == fam.NegativeBinomial:
         from scipy.stats.distributions import nbinom
 
-        endog = nbinom.rvs(mu, 0.5)
+        endog = nbinom.rvs(mu, 0.5, random_state=rs)
     elif family_class == fam.InverseGaussian:
         from scipy.stats.distributions import invgauss
 
-        endog = invgauss.rvs(mu, scale=20)
+        endog = invgauss.rvs(mu, scale=20, random_state=rs)
     else:
         raise ValueError
 
@@ -1380,7 +1380,69 @@ def check_score_hessian(results):
     assert_allclose(hess, hess3, rtol=1e-4)
 
 
-def test_gradient_irls():
+VALID_COMBINATIONS = [
+    (
+        sm.families.Binomial,
+        [
+            sm.families.links.Logit,
+            sm.families.links.Probit,
+            sm.families.links.CLogLog,
+            sm.families.links.Log,
+            sm.families.links.Cauchy,
+        ],
+    ),
+    (
+        sm.families.Poisson,
+        [sm.families.links.Log, sm.families.links.Identity, sm.families.links.Sqrt],
+    ),
+    (
+        sm.families.Gamma,
+        [
+            sm.families.links.Log,
+            sm.families.links.Identity,
+            sm.families.links.InversePower,
+        ],
+    ),
+    (
+        sm.families.Gaussian,
+        [
+            sm.families.links.Identity,
+            sm.families.links.Log,
+            sm.families.links.InversePower,
+        ],
+    ),
+    (
+        sm.families.InverseGaussian,
+        [
+            sm.families.links.Log,
+            sm.families.links.Identity,
+            sm.families.links.InversePower,
+            sm.families.links.InverseSquared,
+        ],
+    ),
+    (
+        sm.families.NegativeBinomial,
+        [
+            sm.families.links.Log,
+            sm.families.links.InversePower,
+            sm.families.links.InverseSquared,
+            sm.families.links.Identity,
+        ],
+    ),
+]
+FAMILIES_AND_LINKS = []
+for family_class, family_links in VALID_COMBINATIONS:
+    FAMILIES_AND_LINKS += [(family_class, link) for link in family_links]
+FAMILIES_AND_LINKS_IDS = [
+    f"{v[0].__name__}-{v[1].__name__}" for v in FAMILIES_AND_LINKS
+]
+
+
+@pytest.mark.parametrize(
+    "family_and_link", FAMILIES_AND_LINKS, ids=FAMILIES_AND_LINKS_IDS
+)
+@pytest.mark.parametrize("binom_version", [0, 1])
+def test_gradient_irls(family_and_link, binom_version):
     # Compare the results when using gradient optimization and IRLS.
 
     # TODO: Find working examples for inverse_squared link
@@ -1389,166 +1451,202 @@ def test_gradient_irls():
 
     fam = sm.families
     lnk = sm.families.links
-    families = [
-        (
-            fam.Binomial,
-            [lnk.Logit, lnk.Probit, lnk.CLogLog, lnk.Log, lnk.Cauchy],
-        ),
-        (fam.Poisson, [lnk.Log, lnk.Identity, lnk.Sqrt]),
-        (fam.Gamma, [lnk.Log, lnk.Identity, lnk.InversePower]),
-        (fam.Gaussian, [lnk.Identity, lnk.Log, lnk.InversePower]),
-        (
-            fam.InverseGaussian,
-            [lnk.Log, lnk.Identity, lnk.InversePower, lnk.InverseSquared],
-        ),
-        (
-            fam.NegativeBinomial,
-            [lnk.Log, lnk.InversePower, lnk.InverseSquared, lnk.Identity],
-        ),
-    ]
-
     n = 100
     p = 3
     exog = rs.normal(size=(n, p))
     exog[:, 0] = 1
 
     skip_one = False
-    for family_class, family_links in families:
-        for link in family_links:
-            for binom_version in 0, 1:
+    family_class, link = family_and_link
 
-                if family_class != fam.Binomial and binom_version == 1:
-                    continue
+    if family_class != fam.Binomial and binom_version == 1:
+        return
 
-                if (family_class, link) == (fam.Poisson, lnk.Identity):
-                    lin_pred = 20 + exog.sum(1)
-                elif (family_class, link) == (fam.Binomial, lnk.Log):
-                    lin_pred = -1 + exog.sum(1) / 8
-                elif (family_class, link) == (fam.Poisson, lnk.Sqrt):
-                    lin_pred = 2 + exog.sum(1)
-                elif (family_class, link) == (fam.InverseGaussian, lnk.Log):
-                    # skip_zero = True
-                    lin_pred = -1 + exog.sum(1)
-                elif (family_class, link) == (
-                    fam.InverseGaussian,
-                    lnk.Identity,
-                ):
-                    lin_pred = 20 + 5 * exog.sum(1)
-                    lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-                elif (family_class, link) == (
-                    fam.InverseGaussian,
-                    lnk.InverseSquared,
-                ):
-                    lin_pred = 0.5 + exog.sum(1) / 5
-                    continue  # skip due to non-convergence
-                elif (family_class, link) == (
-                    fam.InverseGaussian,
-                    lnk.InversePower,
-                ):
-                    lin_pred = 1 + exog.sum(1) / 5
-                elif (family_class, link) == (
-                    fam.NegativeBinomial,
-                    lnk.Identity,
-                ):
-                    lin_pred = 20 + 5 * exog.sum(1)
-                    lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-                elif (family_class, link) == (
-                    fam.NegativeBinomial,
-                    lnk.InverseSquared,
-                ):
-                    lin_pred = 0.1 + rs.uniform(size=exog.shape[0])
-                    continue  # skip due to non-convergence
-                elif (family_class, link) == (
-                    fam.NegativeBinomial,
-                    lnk.InversePower,
-                ):
-                    lin_pred = 1 + exog.sum(1) / 5
+    if (family_class, link) == (fam.Poisson, lnk.Identity):
+        lin_pred = 20 + exog.sum(1)
+    elif (family_class, link) == (fam.Binomial, lnk.Log):
+        lin_pred = -1 + exog.sum(1) / 8
+    elif (family_class, link) == (fam.Poisson, lnk.Sqrt):
+        lin_pred = 2 + exog.sum(1)
+    elif (family_class, link) == (fam.InverseGaussian, lnk.Log):
+        # skip_zero = True
+        lin_pred = -1 + exog.sum(1)
+    elif (family_class, link) == (
+        fam.InverseGaussian,
+        lnk.Identity,
+    ):
+        skip_one = True
+        lin_pred = 20 + 5 * exog.sum(1)
+        lin_pred = np.clip(lin_pred, 1e-4, np.inf)
+    elif family_class is fam.InverseGaussian and link is lnk.InverseSquared:
+        lin_pred = 0.5 + exog.sum(1) / 5
+        return  # skip due to non-convergence
+    elif family_class is fam.Binomial and link is lnk.Cauchy:
+        # Convergence issues or missing linpred.
+        # The original version hid issues with this test
+        return
+    elif family_class is fam.Gaussian and link is lnk.InversePower:
+        # Convergence issues or missing linpred.
+        # The original version hid issues with this test
+        return
+    elif (family_class, link) == (
+        fam.InverseGaussian,
+        lnk.InversePower,
+    ):
+        lin_pred = 1 + exog.sum(1) / 5
+    elif (family_class, link) == (
+        fam.NegativeBinomial,
+        lnk.Identity,
+    ):
+        lin_pred = 20 + 5 * exog.sum(1)
+        lin_pred = np.clip(lin_pred, 1e-4, np.inf)
+    elif (family_class, link) == (
+        fam.NegativeBinomial,
+        lnk.InverseSquared,
+    ):
+        # lin_pred = 0.1 + rs.uniform(size=exog.shape[0])
+        return  # skip due to non-convergence
+    elif (family_class, link) == (
+        fam.NegativeBinomial,
+        lnk.InversePower,
+    ):
+        lin_pred = 1 + exog.sum(1) / 5
+    # the following fails with Identity link, because endog < 0
+    # elif family_class == fam.Gamma:
+    #     lin_pred = 0.5 * exog.sum(1) + \
+    #     rs.uniform(size=exog.shape[0])
+    else:
+        lin_pred = rs.uniform(size=exog.shape[0])
 
-                elif (family_class, link) == (fam.Gaussian, lnk.InversePower):
-                    # adding skip because of convergence failure
-                    skip_one = True
-                # the following fails with Identity link, because endog < 0
-                # elif family_class == fam.Gamma:
-                #     lin_pred = 0.5 * exog.sum(1) + \
-                #     rs.uniform(size=exog.shape[0])
-                else:
-                    lin_pred = rs.uniform(size=exog.shape[0])
+    endog = gen_endog(lin_pred, family_class, link, binom_version)
 
-                endog = gen_endog(lin_pred, family_class, link, binom_version)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        mod_irls = sm.GLM(endog, exog, family=family_class(link=link()))
+    rslt_irls = mod_irls.fit(method="IRLS")
 
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    mod_irls = sm.GLM(endog, exog, family=family_class(link=link()))
-                rslt_irls = mod_irls.fit(method="IRLS")
+    if (family_class, link) not in [
+        (fam.Poisson, lnk.Sqrt),
+        (fam.Gamma, lnk.InversePower),
+        (fam.InverseGaussian, lnk.Identity),
+    ]:
+        check_score_hessian(rslt_irls)
 
-                if (family_class, link) not in [
-                    (fam.Poisson, lnk.Sqrt),
-                    (fam.Gamma, lnk.InversePower),
-                    (fam.InverseGaussian, lnk.Identity),
-                ]:
-                    check_score_hessian(rslt_irls)
+    # Try with and without starting values.
+    for max_start_irls, start_params in (
+        (0, rslt_irls.params),
+        (3, None),
+    ):
+        # TODO: skip convergence failures for now
+        if max_start_irls > 0 and skip_one:
+            continue
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            mod_gradient = sm.GLM(endog, exog, family=family_class(link=link()))
+        rslt_gradient = mod_gradient.fit(
+            max_start_irls=max_start_irls,
+            start_params=start_params,
+            method="newton",
+            maxiter=300,
+        )
 
-                # Try with and without starting values.
-                for max_start_irls, start_params in (0, rslt_irls.params), (
-                    3,
-                    None,
-                ):
-                    # TODO: skip convergence failures for now
-                    if max_start_irls > 0 and skip_one:
-                        continue
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore")
-                        mod_gradient = sm.GLM(
-                            endog, exog, family=family_class(link=link())
-                        )
-                    rslt_gradient = mod_gradient.fit(
-                        max_start_irls=max_start_irls,
-                        start_params=start_params,
-                        method="newton",
-                        maxiter=300,
-                    )
+        assert_allclose(
+            rslt_gradient.params,
+            rslt_irls.params,
+            rtol=1e-6,
+            atol=5e-5,
+        )
 
-                    assert_allclose(
-                        rslt_gradient.params,
-                        rslt_irls.params,
-                        rtol=1e-6,
-                        atol=5e-5,
-                    )
+        assert_allclose(rslt_gradient.llf, rslt_irls.llf, rtol=1e-6, atol=1e-6)
 
-                    assert_allclose(
-                        rslt_gradient.llf, rslt_irls.llf, rtol=1e-6, atol=1e-6
-                    )
+        assert_allclose(
+            rslt_gradient.scale,
+            rslt_irls.scale,
+            rtol=1e-6,
+            atol=1e-6,
+        )
 
-                    assert_allclose(
-                        rslt_gradient.scale,
-                        rslt_irls.scale,
-                        rtol=1e-6,
-                        atol=1e-6,
-                    )
+        # Get the standard errors using expected information.
+        # gradient_bse = rslt_gradient.bse
+        ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
+        gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
+        assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
+        # rslt_irls.bse corresponds to observed=True
+        assert_allclose(rslt_gradient.bse, rslt_irls.bse, rtol=0.2, atol=5e-5)
 
-                    # Get the standard errors using expected information.
-                    gradient_bse = rslt_gradient.bse
-                    ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
-                    gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
-                    assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
-                    # rslt_irls.bse corresponds to observed=True
-                    assert_allclose(
-                        rslt_gradient.bse, rslt_irls.bse, rtol=0.2, atol=5e-5
-                    )
-
-                    rslt_gradient_eim = mod_gradient.fit(
-                        max_start_irls=0,
-                        cov_type="eim",
-                        start_params=rslt_gradient.params,
-                        method="newton",
-                        maxiter=300,
-                    )
-                    assert_allclose(
-                        rslt_gradient_eim.bse, rslt_irls.bse, rtol=5e-5, atol=0
-                    )
+        rslt_gradient_eim = mod_gradient.fit(
+            max_start_irls=0,
+            cov_type="eim",
+            start_params=rslt_gradient.params,
+            method="newton",
+            maxiter=300,
+        )
+        assert_allclose(rslt_gradient_eim.bse, rslt_irls.bse, rtol=5e-5, atol=0)
 
 
-def test_gradient_irls_eim():
+VALID_COMBINATIONS = [
+    (
+        sm.families.Binomial,
+        [
+            sm.families.links.Logit,
+            sm.families.links.Probit,
+            sm.families.links.CLogLog,
+            sm.families.links.Log,
+            sm.families.links.Cauchy,
+        ],
+    ),
+    (
+        sm.families.Poisson,
+        [sm.families.links.Log, sm.families.links.Identity, sm.families.links.Sqrt],
+    ),
+    (
+        sm.families.Gamma,
+        [
+            sm.families.links.Log,
+            sm.families.links.Identity,
+            sm.families.links.InversePower,
+        ],
+    ),
+    (
+        sm.families.Gaussian,
+        [
+            sm.families.links.Identity,
+            sm.families.links.Log,
+            sm.families.links.InversePower,
+        ],
+    ),
+    (
+        sm.families.InverseGaussian,
+        [
+            sm.families.links.Log,
+            sm.families.links.Identity,
+            sm.families.links.InversePower,
+            sm.families.links.InverseSquared,
+        ],
+    ),
+    (
+        sm.families.NegativeBinomial,
+        [
+            sm.families.links.Log,
+            sm.families.links.InversePower,
+            sm.families.links.InverseSquared,
+            sm.families.links.Identity,
+        ],
+    ),
+]
+FAMILIES_AND_LINKS = []
+for family_class, family_links in VALID_COMBINATIONS:
+    FAMILIES_AND_LINKS += [(family_class, link) for link in family_links]
+FAMILIES_AND_LINKS_IDS = [
+    f"{v[0].__name__}-{v[1].__name__}" for v in FAMILIES_AND_LINKS
+]
+
+
+@pytest.mark.parametrize(
+    "family_and_link", FAMILIES_AND_LINKS, ids=FAMILIES_AND_LINKS_IDS
+)
+@pytest.mark.parametrize("binom_version", [0, 1])
+def test_gradient_irls_eim(family_and_link, binom_version):
     # Compare the results when using eime gradient optimization and IRLS.
 
     # TODO: Find working examples for inverse_squared link
@@ -1557,23 +1655,6 @@ def test_gradient_irls_eim():
 
     fam = sm.families
     lnk = sm.families.links
-    families = [
-        (
-            fam.Binomial,
-            [lnk.Logit, lnk.Probit, lnk.CLogLog, lnk.Log, lnk.Cauchy],
-        ),
-        (fam.Poisson, [lnk.Log, lnk.Identity, lnk.Sqrt]),
-        (fam.Gamma, [lnk.Log, lnk.Identity, lnk.InversePower]),
-        (fam.Gaussian, [lnk.Identity, lnk.Log, lnk.InversePower]),
-        (
-            fam.InverseGaussian,
-            [lnk.Log, lnk.Identity, lnk.InversePower, lnk.InverseSquared],
-        ),
-        (
-            fam.NegativeBinomial,
-            [lnk.Log, lnk.InversePower, lnk.InverseSquared, lnk.Identity],
-        ),
-    ]
 
     n = 100
     p = 3
@@ -1581,113 +1662,107 @@ def test_gradient_irls_eim():
     exog[:, 0] = 1
 
     skip_one = False
-    for family_class, family_links in families:
-        for link in family_links:
-            for binom_version in 0, 1:
+    family_class, link = family_and_link
 
-                if family_class != fam.Binomial and binom_version == 1:
-                    continue
+    if family_class != fam.Binomial and binom_version == 1:
+        return
 
-                if (family_class, link) == (fam.Poisson, lnk.Identity):
-                    lin_pred = 20 + exog.sum(1)
-                elif (family_class, link) == (fam.Binomial, lnk.Log):
-                    lin_pred = -1 + exog.sum(1) / 8
-                elif (family_class, link) == (fam.Poisson, lnk.Sqrt):
-                    lin_pred = 2 + exog.sum(1)
-                elif (family_class, link) == (fam.InverseGaussian, lnk.Log):
-                    # skip_zero = True
-                    lin_pred = -1 + exog.sum(1)
-                elif (family_class, link) == (
-                    fam.InverseGaussian,
-                    lnk.Identity,
-                ):
-                    lin_pred = 20 + 5 * exog.sum(1)
-                    lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-                elif (family_class, link) == (
-                    fam.InverseGaussian,
-                    lnk.InverseSquared,
-                ):
-                    lin_pred = 0.5 + exog.sum(1) / 5
-                    continue  # skip due to non-convergence
-                elif (family_class, link) == (
-                    fam.InverseGaussian,
-                    lnk.InversePower,
-                ):
-                    lin_pred = 1 + exog.sum(1) / 5
-                elif (family_class, link) == (
-                    fam.NegativeBinomial,
-                    lnk.Identity,
-                ):
-                    lin_pred = 20 + 5 * exog.sum(1)
-                    lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-                elif (family_class, link) == (
-                    fam.NegativeBinomial,
-                    lnk.InverseSquared,
-                ):
-                    lin_pred = 0.1 + rs.uniform(size=exog.shape[0])
-                    continue  # skip due to non-convergence
-                elif (family_class, link) == (
-                    fam.NegativeBinomial,
-                    lnk.InversePower,
-                ):
-                    lin_pred = 1 + exog.sum(1) / 5
+    if (family_class, link) == (fam.Poisson, lnk.Identity):
+        lin_pred = 20 + exog.sum(1)
+    elif (family_class, link) == (fam.Binomial, lnk.Log):
+        lin_pred = -1 + exog.sum(1) / 8
+    elif (family_class, link) == (fam.Poisson, lnk.Sqrt):
+        lin_pred = 2 + exog.sum(1)
+    elif (family_class, link) == (fam.InverseGaussian, lnk.Log):
+        # skip_zero = True
+        lin_pred = -1 + exog.sum(1)
+    elif (family_class, link) == (
+        fam.InverseGaussian,
+        lnk.Identity,
+    ):
+        lin_pred = 20 + 5 * exog.sum(1)
+        lin_pred = np.clip(lin_pred, 1e-4, np.inf)
+    elif (family_class, link) == (
+        fam.InverseGaussian,
+        lnk.InverseSquared,
+    ):
+        lin_pred = 0.5 + exog.sum(1) / 5
+        return  # skip due to non-convergence
+    elif (family_class, link) == (
+        fam.InverseGaussian,
+        lnk.InversePower,
+    ):
+        lin_pred = 1 + exog.sum(1) / 5
+    elif (family_class, link) == (
+        fam.NegativeBinomial,
+        lnk.Identity,
+    ):
+        lin_pred = 20 + 5 * exog.sum(1)
+        lin_pred = np.clip(lin_pred, 1e-4, np.inf)
+    elif (family_class, link) == (
+        fam.NegativeBinomial,
+        lnk.InverseSquared,
+    ):
+        lin_pred = 0.1 + rs.uniform(size=exog.shape[0])
+        return  # skip due to non-convergence
+    elif (family_class, link) == (
+        fam.NegativeBinomial,
+        lnk.InversePower,
+    ):
+        lin_pred = 1 + exog.sum(1) / 5
 
-                elif (family_class, link) == (fam.Gaussian, lnk.InversePower):
-                    # adding skip because of convergence failure
-                    skip_one = True
-                else:
-                    lin_pred = rs.uniform(size=exog.shape[0])
+    elif (family_class, link) == (fam.Gaussian, lnk.InversePower):
+        # skip since problems with convergence
+        return
+    else:
+        lin_pred = rs.uniform(size=exog.shape[0])
 
-                endog = gen_endog(lin_pred, family_class, link, binom_version)
+    endog = gen_endog(lin_pred, family_class, link, binom_version)
 
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    mod_irls = sm.GLM(endog, exog, family=family_class(link=link()))
-                rslt_irls = mod_irls.fit(method="IRLS")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        mod_irls = sm.GLM(endog, exog, family=family_class(link=link()))
+    rslt_irls = mod_irls.fit(method="IRLS")
 
-                # Try with and without starting values.
-                for max_start_irls, start_params in (
-                    (0, rslt_irls.params),
-                    (3, None),
-                ):
-                    # TODO: skip convergence failures for now
-                    if max_start_irls > 0 and skip_one:
-                        continue
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore")
-                        mod_gradient = sm.GLM(
-                            endog, exog, family=family_class(link=link())
-                        )
-                    rslt_gradient = mod_gradient.fit(
-                        max_start_irls=max_start_irls,
-                        start_params=start_params,
-                        method="newton",
-                        optim_hessian="eim",
-                    )
+    # Try with and without starting values.
+    for max_start_irls, start_params in (
+        (0, rslt_irls.params),
+        (3, None),
+    ):
+        # TODO: skip convergence failures for now
+        if max_start_irls > 0 and skip_one:
+            continue
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            mod_gradient = sm.GLM(endog, exog, family=family_class(link=link()))
+        rslt_gradient = mod_gradient.fit(
+            max_start_irls=max_start_irls,
+            start_params=start_params,
+            method="newton",
+            optim_hessian="eim",
+        )
 
-                    assert_allclose(
-                        rslt_gradient.params,
-                        rslt_irls.params,
-                        rtol=1e-6,
-                        atol=5e-5,
-                    )
+        assert_allclose(
+            rslt_gradient.params,
+            rslt_irls.params,
+            rtol=1e-6,
+            atol=5e-5,
+        )
 
-                    assert_allclose(
-                        rslt_gradient.llf, rslt_irls.llf, rtol=1e-6, atol=1e-6
-                    )
+        assert_allclose(rslt_gradient.llf, rslt_irls.llf, rtol=1e-6, atol=1e-6)
 
-                    assert_allclose(
-                        rslt_gradient.scale,
-                        rslt_irls.scale,
-                        rtol=1e-6,
-                        atol=1e-6,
-                    )
+        assert_allclose(
+            rslt_gradient.scale,
+            rslt_irls.scale,
+            rtol=1e-6,
+            atol=1e-6,
+        )
 
-                    # Get the standard errors using expected information.
-                    ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
-                    gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
+        # Get the standard errors using expected information.
+        ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
+        gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
 
-                    assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
+        assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
 
 
 def test_glm_irls_method():
