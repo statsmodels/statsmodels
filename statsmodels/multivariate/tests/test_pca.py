@@ -433,7 +433,7 @@ def test_missing():
         PCA(data)
 
 
-def test_too_many_missing(reset_randomstate):
+def test_too_many_missing():
     rs = np.random.RandomState(83429421)
     data = rs.standard_normal((200, 50))
     data[0, :-3] = np.nan
@@ -443,7 +443,7 @@ def test_too_many_missing(reset_randomstate):
     assert max(p.factors.shape) == max(data.shape) - 1
 
 
-def test_gls_warning(reset_randomstate):
+def test_gls_warning():
     rs = np.random.RandomState(83429421)
     data = rs.standard_normal((400, 200))
     data[:, 1:] = data[:, :1] + 0.01 * data[:, 1:]

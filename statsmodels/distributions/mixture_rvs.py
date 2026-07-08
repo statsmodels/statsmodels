@@ -84,8 +84,8 @@ class MixtureDistribution:
 
     # def __init__(self, prob, size, dist, kwargs=None):
 
-    def rvs(self, prob, size, dist, kwargs=None):
-        return mixture_rvs(prob, size, dist, kwargs=kwargs)
+    def rvs(self, prob, size, dist, kwargs=None, random_state=None):
+        return mixture_rvs(prob, size, dist, kwargs=kwargs, rng=random_state)
 
     def pdf(self, x, prob, dist, kwargs=None):
         """
@@ -245,7 +245,7 @@ def mv_mixture_rvs(prob, size, dist, nvars, rng=None, **kwargs):
         # scale = kwargs[i].get('scale',1)
         # args = kwargs[i].get('args',())
         # use int to avoid numpy bug with np.random.multivariate_normal
-        sample[sample_idx] = dist[i].rvs(size=int(sample_size))
+        sample[sample_idx] = dist[i].rvs(size=int(sample_size), random_state=rng)
     return sample
 
 

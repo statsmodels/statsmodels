@@ -107,7 +107,6 @@ class TestCompareGamma(CheckGEEGLM):
         vs = Independence()
         family = families.Gamma(link=links.Log())
         rs = np.random.RandomState(987126)
-        # Y = np.random.normal(size=100)**2
         Y = np.exp(0.1 + rs.normal(size=100))  # log-normal
         X1 = rs.normal(size=100)
         X2 = rs.normal(size=100)

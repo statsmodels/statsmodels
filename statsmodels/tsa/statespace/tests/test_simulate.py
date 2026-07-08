@@ -775,16 +775,17 @@ def test_sarimax_simple_differencing_end_time_invariant_noshocks():
     assert_allclose(actual, res.forecast(nsimulations))
 
 
-def test_sarimax_time_invariant_shocks(reset_randomstate):
+def test_sarimax_time_invariant_shocks():
     # Test simulating values from the end of a time-invariant SARIMAX model,
     # with nonzero shocks
+    rs = np.random.RandomState(28312391)
     endog = np.arange(1, 11)
     mod = sarimax.SARIMAX(endog)
     res = mod.filter([0.5, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=nsimulations)
-    state_shocks = np.random.normal(size=nsimulations)
+    measurement_shocks = rs.normal(size=nsimulations)
+    state_shocks = rs.normal(size=nsimulations)
     initial_state = res.predicted_state[:1, -1]
 
     actual = res.simulate(
@@ -818,13 +819,14 @@ def test_sarimax_simple_differencing_end_time_invariant_shocks():
     # Test simulating values from the end of a time-invariant SARIMAX model
     # in which simple differencing is used.
     # In this test, we suppress randomness by setting the shocks to zeros
+    rs = np.random.RandomState(28312392)
     endog = np.cumsum(np.arange(0, 11))
     mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
     res = mod.filter([0.5, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=nsimulations)
-    state_shocks = np.random.normal(size=nsimulations)
+    measurement_shocks = rs.normal(size=nsimulations)
+    state_shocks = rs.normal(size=nsimulations)
     initial_state = res.predicted_state[:1, -1]
 
     actual = res.simulate(
@@ -939,16 +941,17 @@ def test_sarimax_simple_differencing_time_varying_trend_noshocks():
     assert_allclose(actual, res.forecast(nsimulations))
 
 
-def test_sarimax_time_varying_trend_shocks(reset_randomstate):
+def test_sarimax_time_varying_trend_shocks():
     # Test simulating values from the end of a time-varying SARIMAX model,
     # with nonzero shocks
+    rs = np.random.RandomState(28312393)
     endog = np.arange(1, 11)
     mod = sarimax.SARIMAX(endog, trend="t")
     res = mod.filter([1.0, 0.2, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=nsimulations)
-    state_shocks = np.random.normal(size=nsimulations)
+    measurement_shocks = rs.normal(size=nsimulations)
+    state_shocks = rs.normal(size=nsimulations)
     initial_state = res.predicted_state[:1, -1]
 
     actual = res.simulate(
@@ -976,17 +979,18 @@ def test_sarimax_time_varying_trend_shocks(reset_randomstate):
     assert_allclose(mod_actual, desired)
 
 
-def test_sarimax_simple_differencing_time_varying_trend_shocks(reset_randomstate):
+def test_sarimax_simple_differencing_time_varying_trend_shocks():
     # Test simulating values from the end of a time-varying SARIMAX model
     # in which simple differencing is used.
     # with nonzero shocks
+    rs = np.random.RandomState(28312394)
     endog = np.cumsum(np.arange(0, 11))
     mod = sarimax.SARIMAX(endog, order=(1, 1, 0), trend="t", simple_differencing=True)
     res = mod.filter([1.0, 0.2, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=nsimulations)
-    state_shocks = np.random.normal(size=nsimulations)
+    measurement_shocks = rs.normal(size=nsimulations)
+    state_shocks = rs.normal(size=nsimulations)
     initial_state = res.predicted_state[:1, -1]
     assert_allclose(initial_state, 12)
 
@@ -1109,17 +1113,19 @@ def test_sarimax_simple_differencing_time_varying_exog_noshocks():
     assert_allclose(actual, res.forecast(nsimulations, exog=exog[11:]))
 
 
-def test_sarimax_time_varying_exog_shocks(reset_randomstate):
+def test_sarimax_time_varying_exog_shocks():
     # Test simulating values from the end of a time-varying SARIMAX model,
     # with nonzero shocks
+    rs = np.random.RandomState(28312396)
     endog = np.arange(1, 11)
     exog = np.arange(1, 21) ** 2
     mod = sarimax.SARIMAX(endog, exog=exog[:10])
     res = mod.filter([1.0, 0.2, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=nsimulations)
-    state_shocks = np.random.normal(size=nsimulations)
+
+    measurement_shocks = rs.normal(size=nsimulations)
+    state_shocks = rs.normal(size=nsimulations)
     initial_state = res.predicted_state[:1, -1]
 
     actual = res.simulate(
@@ -1149,9 +1155,10 @@ def test_sarimax_time_varying_exog_shocks(reset_randomstate):
     assert_allclose(mod_actual, desired)
 
 
-def test_sarimax_simple_differencing_time_varying_exog_shocks(reset_randomstate):
+def test_sarimax_simple_differencing_time_varying_exog_shocks():
     # Test simulating values from the end of a time-varying SARIMAX model
     # Note that `exog` here has basically the same effect as measurement shocks
+    rs = np.random.RandomState(28312397)
     endog = np.cumsum(np.arange(0, 11))
     exog = np.cumsum(np.arange(0, 21) ** 2)
     mod = sarimax.SARIMAX(
@@ -1160,8 +1167,8 @@ def test_sarimax_simple_differencing_time_varying_exog_shocks(reset_randomstate)
     res = mod.filter([1.0, 0.2, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=nsimulations)
-    state_shocks = np.random.normal(size=nsimulations)
+    measurement_shocks = rs.normal(size=nsimulations)
+    state_shocks = rs.normal(size=nsimulations)
     initial_state = res.predicted_state[:1, -1]
 
     actual = res.simulate(
@@ -1234,16 +1241,17 @@ def test_unobserved_components_end_time_invariant_noshocks():
     assert_allclose(actual, res.forecast(nsimulations))
 
 
-def test_unobserved_components_end_time_invariant_shocks(reset_randomstate):
+def test_unobserved_components_end_time_invariant_shocks():
     # Test simulating values from the end of a time-invariant
     # UnobservedComponents model, with nonzero shocks
+    rs = np.random.RandomState(28312399)
     endog = np.arange(1, 11)
     mod = structural.UnobservedComponents(endog, "llevel")
     res = mod.filter([1.0, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=nsimulations)
-    state_shocks = np.random.normal(size=nsimulations)
+    measurement_shocks = rs.normal(size=nsimulations)
+    state_shocks = rs.normal(size=nsimulations)
     initial_state = res.predicted_state[:1, -1]
 
     actual = res.simulate(
@@ -1317,17 +1325,18 @@ def test_unobserved_components_end_time_varying_exog_noshocks():
     assert_allclose(actual, res.forecast(nsimulations, exog=exog[10:]))
 
 
-def test_unobserved_components_end_time_varying_exog_shocks(reset_randomstate):
+def test_unobserved_components_end_time_varying_exog_shocks():
     # Test simulating values from the end of a time-varying
     # UnobservedComponents model with exog
+    rs = np.random.RandomState(2831231)
     endog = np.arange(1, 11)
     exog = np.arange(1, 21) ** 2
     mod = structural.UnobservedComponents(endog, "llevel", exog=exog[:10])
     res = mod.filter([1.0, 1.0, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=nsimulations)
-    state_shocks = np.random.normal(size=nsimulations)
+    measurement_shocks = rs.normal(size=nsimulations)
+    state_shocks = rs.normal(size=nsimulations)
     initial_state = res.predicted_state[:1, -1]
 
     actual = res.simulate(
@@ -1401,16 +1410,17 @@ def test_varmax_end_time_invariant_noshocks():
     assert_allclose(actual, res.forecast(nsimulations))
 
 
-def test_varmax_end_time_invariant_shocks(reset_randomstate):
+def test_varmax_end_time_invariant_shocks():
     # Test simulating values from the end of a time-invariant VARMAX model,
     # with nonzero shocks
+    rs = np.random.RandomState(2831233)
     endog = np.arange(1, 21).reshape(10, 2)
     mod = varmax.VARMAX(endog, trend="n")
     res = mod.filter([1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=(nsimulations, mod.k_endog))
-    state_shocks = np.random.normal(size=(nsimulations, mod.k_states))
+    measurement_shocks = rs.normal(size=(nsimulations, mod.k_endog))
+    state_shocks = rs.normal(size=(nsimulations, mod.k_states))
     initial_state = res.predicted_state[:, -1]
 
     actual = res.simulate(
@@ -1491,16 +1501,17 @@ def test_varmax_end_time_varying_trend_noshocks():
     assert_allclose(actual, res.forecast(nsimulations))
 
 
-def test_varmax_end_time_varying_trend_shocks(reset_randomstate):
+def test_varmax_end_time_varying_trend_shocks():
     # Test simulating values from the end of a time-varying VARMAX model
     # with a trend
+    rs = np.random.RandomState(2831235)
     endog = np.arange(1, 21).reshape(10, 2)
     mod = varmax.VARMAX(endog, trend="ct")
     res = mod.filter([1.0, 1.0, 1.0, 1.0, 1, 1, 1.0, 1.0, 1.0, 0.5, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=(nsimulations, mod.k_endog))
-    state_shocks = np.random.normal(size=(nsimulations, mod.k_states))
+    measurement_shocks = rs.normal(size=(nsimulations, mod.k_endog))
+    state_shocks = rs.normal(size=(nsimulations, mod.k_states))
 
     # Need to set the final predicted state given the new trend
     with res._set_final_predicted_state(exog=None, out_of_sample=10):
@@ -1589,9 +1600,10 @@ def test_varmax_end_time_varying_exog_noshocks():
     assert_allclose(actual, res.forecast(nsimulations, exog=exog[10:]))
 
 
-def test_varmax_end_time_varying_exog_shocks(reset_randomstate):
+def test_varmax_end_time_varying_exog_shocks():
     # Test simulating values from the end of a time-varying VARMAX model
     # with exog
+    rs = np.random.RandomState(2831237)
     endog = np.arange(1, 23).reshape(11, 2)
     exog = np.arange(1, 21) ** 2
     mod = varmax.VARMAX(endog[:10], trend="n", exog=exog[:10])
@@ -1601,8 +1613,8 @@ def test_varmax_end_time_varying_exog_shocks(reset_randomstate):
     res2 = mod2.filter([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=(nsimulations, mod.k_endog))
-    state_shocks = np.random.normal(size=(nsimulations, mod.k_states))
+    measurement_shocks = rs.normal(size=(nsimulations, mod.k_endog))
+    state_shocks = rs.normal(size=(nsimulations, mod.k_states))
 
     # Need to set the final predicted state given the new exog
     tmp_exog = mod._validate_out_of_sample_exog(exog[10:], out_of_sample=10)
@@ -1696,16 +1708,17 @@ def test_dynamic_factor_end_time_invariant_noshocks():
     assert_allclose(actual, res.forecast(nsimulations))
 
 
-def test_dynamic_factor_end_time_invariant_shocks(reset_randomstate):
+def test_dynamic_factor_end_time_invariant_shocks():
     # Test simulating values from the end of a time-invariant dynamic factor
+    rs = np.random.RandomState(2831239)
     endog = np.arange(1, 21).reshape(10, 2)
     mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
     mod.ssm.filter_univariate = True
     res = mod.filter([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=(nsimulations, mod.k_endog))
-    state_shocks = np.random.normal(size=(nsimulations, mod.k_states))
+    measurement_shocks = rs.normal(size=(nsimulations, mod.k_endog))
+    state_shocks = rs.normal(size=(nsimulations, mod.k_states))
     initial_state = res.predicted_state[..., -1]
 
     # Simulation
@@ -1791,9 +1804,10 @@ def test_dynamic_factor_end_time_varying_exog_noshocks():
     assert_allclose(actual, res.forecast(nsimulations, exog=exog[10:]))
 
 
-def test_dynamic_factor_end_time_varying_exog_shocks(reset_randomstate):
+def test_dynamic_factor_end_time_varying_exog_shocks():
     # Test simulating values from the end of a time-varying dynamic factor
     # model with exogenous inputs
+    rs = np.random.RandomState(283121)
     endog = np.arange(1, 23).reshape(11, 2)
     exog = np.arange(1, 21) ** 2
     mod = dynamic_factor.DynamicFactor(
@@ -1809,8 +1823,8 @@ def test_dynamic_factor_end_time_varying_exog_shocks(reset_randomstate):
     res2 = mod2.filter([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
     nsimulations = 10
-    measurement_shocks = np.random.normal(size=(nsimulations, mod.k_endog))
-    state_shocks = np.random.normal(size=(nsimulations, mod.k_states))
+    measurement_shocks = rs.normal(size=(nsimulations, mod.k_endog))
+    state_shocks = rs.normal(size=(nsimulations, mod.k_states))
     initial_state = res.predicted_state[..., -1]
 
     # Simulations
@@ -2087,12 +2101,12 @@ def test_pandas_anchor():
 
 
 @pytest.mark.smoke
-def test_time_varying(reset_randomstate):
+def test_time_varying():
     mod = TVSS(np.zeros((10, 2)))
     mod.simulate([], 10)
 
 
-def test_time_varying_obs_cov(reset_randomstate):
+def test_time_varying_obs_cov():
     mod = TVSS(np.zeros((10, 2)))
     mod["obs_cov"] = np.zeros((mod.k_endog, mod.k_endog, mod.nobs))
     mod["obs_cov", ..., 9] = np.eye(mod.k_endog)
@@ -2106,7 +2120,7 @@ def test_time_varying_obs_cov(reset_randomstate):
     assert_allclose(sim[:9], mod["obs_intercept", :, :9].T)
 
 
-def test_time_varying_state_cov(reset_randomstate):
+def test_time_varying_state_cov():
     mod = TVSS(np.zeros((10, 2)))
     mod["obs_cov"] = mod["obs_cov", :, :, 0] * 0
     mod["selection"] = mod["selection", :, :, 0]
@@ -2120,7 +2134,7 @@ def test_time_varying_state_cov(reset_randomstate):
 
 
 @pytest.mark.smoke
-def test_time_varying_selection(reset_randomstate):
+def test_time_varying_selection():
     mod = TVSS(np.zeros((10, 2)))
     mod["obs_cov"] = mod["obs_cov", :, :, 0]
     mod["state_cov"] = mod["state_cov", :, :, 0]

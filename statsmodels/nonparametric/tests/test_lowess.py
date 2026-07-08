@@ -292,7 +292,7 @@ def test_returns_inputs():
     assert_almost_equal(result, np.column_stack((x, y)))
 
 
-def test_xvals_dtype(reset_randomstate):
+def test_xvals_dtype():
     y = [0] * 10 + [1] * 10
     x = np.arange(20)
     # Previously raised ValueError: Buffer dtype mismatch

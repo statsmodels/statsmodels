@@ -151,8 +151,8 @@ class TestExpandedNormal:
         check_cdf_sf(ne, arg=(), msg="")
 
         # generate rvs & run a KS test
-        np.random.seed(765456)
-        rvs = ne.rvs(size=500)
+        rs = np.random.RandomState(765456)
+        rvs = ne.rvs(size=500, random_state=rs)
         check_distribution_rvs(ne, args=(), alpha=0.01, rvs=rvs)
 
     def test_pdf_no_roots(self):

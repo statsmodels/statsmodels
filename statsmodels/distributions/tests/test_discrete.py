@@ -275,8 +275,6 @@ class CheckDiscretized:
         shapes = self.shapes
         start_params = self.start_params
 
-        np.random.seed(987146)
-
         dp = DiscretizedCount(ddistr, d_offset)
         assert dp.shapes == shapes
         xi = np.arange(5)
@@ -297,8 +295,8 @@ class CheckDiscretized:
         assert_allclose(sf, 1 - cdf, rtol=1e-13)
 
         nobs = 2000
-
-        xx = dp.rvs(*paramd, size=nobs)  # , random_state=987146)
+        rs = np.random.RandomState(987146)
+        xx = dp.rvs(*paramd, size=nobs, random_state=rs)
         # check that we go a non-trivial rvs
         assert len(xx) == nobs
         assert xx.var() > 0.001
@@ -330,7 +328,7 @@ class CheckDiscretized:
         # Todo results method
         dfr = mod.get_distr(res.params)
         nobs_rvs = 500
-        rvs = dfr.rvs(size=nobs_rvs)
+        rvs = dfr.rvs(size=nobs_rvs, random_state=rs)
         # TypeError: Cannot cast array data from dtype('int64') to
         # dtype('int32') according to the rule 'safe'.
         # To fix this, change the dtype of rvs to int32 so that it

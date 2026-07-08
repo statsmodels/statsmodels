@@ -60,10 +60,15 @@ def check_random_state(seed=None, deprecated=False):
                 FutureWarning,
                 stacklevel=2,
             )
-
-            return np.random.RandomState(seed)
+            try:
+                return np.random.RandomState(seed)
+            except Exception as e:
+                raise TypeError("seed must be an int or array-like of int") from e
         else:
-            return np.random.default_rng(seed)
+            try:
+                return np.random.default_rng(seed)
+            except Exception as e:
+                raise TypeError("seed must be an int or array-like of int") from e
     else:
         import warnings
 

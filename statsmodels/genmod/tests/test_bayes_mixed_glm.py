@@ -109,12 +109,12 @@ def gen_crossed_logit_pandas(nc, cs, s1, s2):
 
 
 def test_simple_logit_map():
-
+    rs = np.random.RandomState(327342)
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-    rslt = glmm.fit_map()
+    rslt = glmm.fit_map(rng=rs)
 
     assert_allclose(
         glmm.logposterior_grad(rslt.params), np.zeros_like(rslt.params), atol=1e-3
@@ -132,19 +132,19 @@ def test_simple_logit_map():
 
 
 def test_simple_poisson_map():
-
+    rs = np.random.RandomState(327341)
     y, exog_fe, exog_vc, ident = gen_simple_poisson(10, 10, 0.2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-    rslt1 = glmm1.fit_map()
+    rslt1 = glmm1.fit_map(rng=rs)
     assert_allclose(
         glmm1.logposterior_grad(rslt1.params), np.zeros_like(rslt1.params), atol=1e-3
     )
 
     # This should give the same answer as above
     glmm2 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-    rslt2 = glmm2.fit_map()
+    rslt2 = glmm2.fit_map(rng=rs)
     assert_allclose(rslt1.params, rslt2.params, atol=1e-4)
 
     # Test the predict method
@@ -171,12 +171,12 @@ def test_simple_poisson_map():
 
 
 def test_crossed_logit_map():
-
+    rs = np.random.RandomState(327345)
     y, exog_fe, exog_vc, ident = gen_crossed_logit(10, 10, 1, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-    rslt = glmm.fit_map()
+    rslt = glmm.fit_map(rng=rs)
 
     assert_allclose(
         glmm.logposterior_grad(rslt.params), np.zeros_like(rslt.params), atol=1e-4
@@ -190,12 +190,12 @@ def test_crossed_logit_map():
 
 
 def test_crossed_poisson_map():
-
+    rs = np.random.RandomState(327347)
     y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 1)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-    rslt = glmm.fit_map()
+    rslt = glmm.fit_map(rng=rs)
 
     assert_allclose(
         glmm.logposterior_grad(rslt.params), np.zeros_like(rslt.params), atol=1e-4
@@ -209,13 +209,13 @@ def test_crossed_poisson_map():
 
 
 def test_logit_map_crossed_formula():
-
+    rs = np.random.RandomState(327349)
     data = gen_crossed_logit_pandas(10, 10, 1, 0.5)
 
     fml = "y ~ fe"
     fml_vc = {"a": "0 + C(a)", "b": "0 + C(b)"}
     glmm = BinomialBayesMixedGLM.from_formula(fml, fml_vc, data, vcp_p=0.5)
-    rslt = glmm.fit_map()
+    rslt = glmm.fit_map(rng=rs)
 
     assert_allclose(
         glmm.logposterior_grad(rslt.params), np.zeros_like(rslt.params), atol=1e-4
@@ -266,8 +266,8 @@ def test_elbo_grad():
                     vb_mean = np.zeros(len(vb_mean))
                     vb_sd = np.ones_like(vb_mean)
                 else:
-                    vb_mean = np.random.normal(size=len(vb_mean))
-                    vb_sd = np.random.uniform(1, 2, size=len(vb_mean))
+                    vb_mean = rs.normal(size=len(vb_mean))
+                    vb_sd = rs.uniform(1, 2, size=len(vb_mean))
 
                 mean_grad, sd_grad = glmm1.vb_elbo_grad(vb_mean, vb_sd)
 
@@ -287,15 +287,15 @@ def test_elbo_grad():
 
 
 def test_simple_logit_vb():
-
+    rs = np.random.RandomState(32831312)
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5, fe_p=0.5)
-    rslt1 = glmm1.fit_map()
+    rslt1 = glmm1.fit_map(rng=rs)
 
     glmm2 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5, fe_p=0.5)
-    rslt2 = glmm2.fit_vb(rslt1.params)
+    rslt2 = glmm2.fit_vb(rslt1.params, rng=rs)
 
     rslt1.summary()
     rslt2.summary()
@@ -326,15 +326,15 @@ def test_simple_logit_vb():
 
 
 def test_simple_poisson_vb():
-
+    rs = np.random.RandomState(3237821)
     y, exog_fe, exog_vc, ident = gen_simple_poisson(10, 10, 1)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-    rslt1 = glmm1.fit_map()
+    rslt1 = glmm1.fit_map(rng=rs)
 
     glmm2 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-    rslt2 = glmm2.fit_vb(rslt1.params)
+    rslt2 = glmm2.fit_vb(rslt1.params, rng=rs)
 
     rslt1.summary()
     rslt2.summary()
@@ -379,14 +379,14 @@ def test_simple_poisson_vb():
 
 
 def test_crossed_logit_vb():
-
+    rs = np.random.RandomState(2378219)
     y, exog_fe, exog_vc, ident = gen_crossed_logit(10, 10, 1, 2)
 
     glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5, fe_p=0.5)
-    rslt1 = glmm1.fit_map()
+    rslt1 = glmm1.fit_map(rng=rs)
 
     glmm2 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5, fe_p=0.5)
-    rslt2 = glmm2.fit_vb(mean=rslt1.params)
+    rslt2 = glmm2.fit_vb(mean=rslt1.params, rng=rs)
 
     rslt1.summary()
     rslt2.summary()
@@ -443,18 +443,18 @@ def test_crossed_logit_vb():
 
 
 def test_crossed_logit_vb_formula():
-
+    rs = np.random.RandomState(38292781)
     data = gen_crossed_logit_pandas(10, 10, 1, 2)
 
     fml = "y ~ fe"
     fml_vc = {"a": "0 + C(a)", "b": "0 + C(b)"}
     glmm1 = BinomialBayesMixedGLM.from_formula(fml, fml_vc, data, vcp_p=0.5)
-    rslt1 = glmm1.fit_vb()
+    rslt1 = glmm1.fit_vb(rng=rs)
 
     glmm2 = BinomialBayesMixedGLM(
         glmm1.endog, glmm1.exog, glmm1.exog_vc, glmm1.ident, vcp_p=0.5
     )
-    rslt2 = glmm2.fit_vb()
+    rslt2 = glmm2.fit_vb(rng=rs)
 
     assert_allclose(rslt1.params, rslt2.params, atol=1e-4)
 
@@ -473,14 +473,14 @@ def test_crossed_logit_vb_formula():
 
 
 def test_crossed_poisson_vb():
-
+    rs = np.random.RandomState(32383291)
     y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 0.5)
 
     glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5, fe_p=0.5)
-    rslt1 = glmm1.fit_map()
+    rslt1 = glmm1.fit_map(rng=rs)
 
     glmm2 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5, fe_p=0.5)
-    rslt2 = glmm2.fit_vb(mean=rslt1.params)
+    rslt2 = glmm2.fit_vb(mean=rslt1.params, rng=rs)
 
     rslt1.summary()
     rslt2.summary()
@@ -515,12 +515,12 @@ def test_poisson_formula():
     y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 0.5)
 
     for vb in False, True:
-
+        rs = np.random.RandomState(32829182)
         glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident)
         if vb:
-            rslt1 = glmm1.fit_vb()
+            rslt1 = glmm1.fit_vb(rng=rs)
         else:
-            rslt1 = glmm1.fit_map()
+            rslt1 = glmm1.fit_map(rng=rs)
 
         # Build categorical variables that match exog_vc
         df = pd.DataFrame({"y": y, "x1": exog_fe[:, 0]})
@@ -539,9 +539,9 @@ def test_poisson_formula():
         vc_fml["z2"] = "0 + C(z2)"
         glmm2 = PoissonBayesMixedGLM.from_formula(fml, vc_fml, df)
         if vb:
-            rslt2 = glmm2.fit_vb()
+            rslt2 = glmm2.fit_vb(rng=rs)
         else:
-            rslt2 = glmm2.fit_map()
+            rslt2 = glmm2.fit_map(rng=rs)
 
         assert_allclose(rslt1.params, rslt2.params, rtol=5e-5, atol=1e-6)
 
@@ -557,7 +557,7 @@ def test_poisson_formula():
 
 
 def test_scale_vb():
-
+    rs = np.random.RandomState(3228171)
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
     exog_fe -= exog_fe.mean(0)
     exog_fe /= exog_fe.std(0)
@@ -566,7 +566,7 @@ def test_scale_vb():
     rslts = []
     for scale_fe in False, True:
         glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5, fe_p=0.5)
-        rslt = glmm.fit_vb(scale_fe=scale_fe)
+        rslt = glmm.fit_vb(scale_fe=scale_fe, rng=rs)
         rslts.append(rslt)
 
     assert_allclose(rslts[0].params, rslts[1].params, rtol=1e-4)
@@ -581,8 +581,9 @@ def test_scale_map():
 
     rslts = []
     for scale_fe in False, True:
+        rs = np.random.RandomState(322817)
         glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5, fe_p=0.5)
-        rslt = glmm.fit_map(scale_fe=scale_fe)
+        rslt = glmm.fit_map(scale_fe=scale_fe, rng=rs)
         rslts.append(rslt)
 
     assert_allclose(rslts[0].params, rslts[1].params, rtol=1e-4)
@@ -605,7 +606,7 @@ def test_doc_examples():
     # These lines should agree with the example in the class docstring.
     random = {"a": "0 + C(Village)", "b": "0 + C(Village)*year_cen"}
     model = BinomialBayesMixedGLM.from_formula("y ~ year_cen", random, data)
-    result = model.fit_vb()
+    result = model.fit_vb(rng=rs)
     _ = result
 
     # Poisson outcome
@@ -616,5 +617,5 @@ def test_doc_examples():
     # These lines should agree with the example in the class docstring.
     random = {"a": "0 + C(Village)", "b": "0 + C(Village)*year_cen"}
     model = PoissonBayesMixedGLM.from_formula("y ~ year_cen", random, data)
-    result = model.fit_vb()
+    result = model.fit_vb(rng=rs)
     _ = result

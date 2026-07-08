@@ -480,7 +480,8 @@ class Test_Factor:
 
         from scipy.sparse.linalg import svds
 
-        u, s, vt = svds(mat, dm)
+        rs = np.random.RandomState(32182181)
+        u, s, vt = svds(mat, dm, random_state=rs)
 
         # difference in sign
         dsign = np.sign(u[1]) * np.sign(u2[1])
@@ -512,7 +513,8 @@ class Test_Factor:
         np.fill_diagonal(mat, 1.0)
 
         # Try to recover the structure
-        rslt = corr_nearest_factor(mat, dm, maxiter=10000)
+        rs = np.random.RandomState(3280129)
+        rslt = corr_nearest_factor(mat, dm, maxiter=10000, rng=rs)
         err_msg = "rank=%d, niter=%d" % (dm, len(rslt.objective_values))
         assert_allclose(
             rslt.objective_values[:5], objvals[dm - 1], rtol=0.5, err_msg=err_msg
@@ -546,8 +548,10 @@ class Test_Factor:
         mat.flat[np.abs(mat.flat) < 0.35] = 0.0
         smat = sparse.csr_matrix(mat)
 
-        dense_rslt = corr_nearest_factor(mat, dm, maxiter=10000)
-        sparse_rslt = corr_nearest_factor(smat, dm, maxiter=10000)
+        rs = np.random.RandomState(843631)
+        dense_rslt = corr_nearest_factor(mat, dm, maxiter=10000, rng=rs)
+        rs = np.random.RandomState(843631)
+        sparse_rslt = corr_nearest_factor(smat, dm, maxiter=10000, rng=rs)
 
         mat_dense = dense_rslt.corr.to_matrix()
         mat_sparse = sparse_rslt.corr.to_matrix()
@@ -564,7 +568,7 @@ class Test_Factor:
 
     # Test on a quadratic function.
     @pytest.mark.skipif(PLATFORM_OSX, reason="Frequent random failure on OSX")
-    def test_spg_optim(self, reset_randomstate):
+    def test_spg_optim(self):
 
         dm = 100
 
@@ -588,7 +592,7 @@ class Test_Factor:
         assert rslt.Converged is True
         assert_almost_equal(obj(xnew), 0, decimal=3)
 
-    def test_decorrelate(self, reset_randomstate):
+    def test_decorrelate(self):
 
         d = 30
         dg = np.linspace(1, 2, d)
@@ -607,7 +611,7 @@ class Test_Factor:
         mat3 = np.dot(mat3.T, mat3)
         assert_almost_equal(mat2, mat3)
 
-    def test_logdet(self, reset_randomstate):
+    def test_logdet(self):
 
         d = 30
         dg = np.linspace(1, 2, d)
@@ -621,7 +625,7 @@ class Test_Factor:
 
         assert_almost_equal(ld, ld2)
 
-    def test_solve(self, reset_randomstate):
+    def test_solve(self):
 
         d = 30
         dg = np.linspace(1, 2, d)
@@ -648,7 +652,8 @@ class Test_Factor:
         np.fill_diagonal(mat, np.diag(mat) + 3.1)
 
         # Try to recover the structure
-        rslt = cov_nearest_factor_homog(mat, dm)
+        rs = np.random.RandomState(5681933)
+        rslt = cov_nearest_factor_homog(mat, dm, rng=rs)
         mat1 = rslt.to_matrix()
 
         assert_allclose(mat, mat1, rtol=0.25, atol=1e-3)
@@ -668,17 +673,19 @@ class Test_Factor:
         np.fill_diagonal(mat, np.diag(mat) + 3.1)
 
         # Fit to dense
-        rslt = cov_nearest_factor_homog(mat, dm)
+        rs = np.random.RandomState(5681931)
+        rslt = cov_nearest_factor_homog(mat, dm, rng=rs)
         mat1 = rslt.to_matrix()
 
         # Fit to sparse
+        rs = np.random.RandomState(5681931)
         smat = sparse.csr_matrix(mat)
-        rslt = cov_nearest_factor_homog(smat, dm)
+        rslt = cov_nearest_factor_homog(smat, dm, rng=rs)
         mat2 = rslt.to_matrix()
 
         assert_allclose(mat1, mat2, rtol=0.25, atol=1e-3)
 
-    def test_corr_thresholded(self, reset_randomstate):
+    def test_corr_thresholded(self):
 
         rs = np.random.RandomState(5681933)
         X = rs.normal(size=(2000, 10))

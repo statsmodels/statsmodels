@@ -2883,18 +2883,19 @@ def test_dynamic_str():
 
 
 @pytest.mark.matplotlib
-def test_plot_too_few_obs(reset_randomstate, close_figures):
+def test_plot_too_few_obs(close_figures):
     # GH 6173
     # SO https://stackoverflow.com/questions/55930880/
     #    arima-models-plot-diagnostics-share-error/58051895#58051895
+    rs = np.random.RandomState(758213)
     mod = sarimax.SARIMAX(
-        np.random.normal(size=10), order=(10, 0, 0), enforce_stationarity=False
+        rs.normal(size=10), order=(10, 0, 0), enforce_stationarity=False
     )
     with pytest.warns(UserWarning, match="Too few"):
         results = mod.fit()
     with pytest.raises(ValueError, match="Length of endogenous"):
         results.plot_diagnostics(figsize=(15, 5))
-    y = np.random.standard_normal(9)
+    y = rs.standard_normal(9)
     mod = sarimax.SARIMAX(
         y,
         order=(1, 1, 1),
@@ -2908,9 +2909,10 @@ def test_plot_too_few_obs(reset_randomstate, close_figures):
         results.plot_diagnostics(figsize=(30, 15))
 
 
-def test_sarimax_starting_values_few_obsevations(reset_randomstate):
+def test_sarimax_starting_values_few_obsevations():
     # GH 6396, 6801
-    y = np.random.standard_normal(17)
+    rs = np.random.RandomState(758217)
+    y = rs.standard_normal(17)
 
     sarimax_model = sarimax.SARIMAX(
         endog=y, order=(1, 1, 1), seasonal_order=(0, 1, 0, 12), trend="n"
@@ -2919,9 +2921,8 @@ def test_sarimax_starting_values_few_obsevations(reset_randomstate):
     assert np.all(np.isfinite(sarimax_model.predict(start=len(y), end=len(y) + 11)))
 
 
-def test_sarimax_starting_values_few_obsevations_long_ma(reset_randomstate):
+def test_sarimax_starting_values_few_obsevations_long_ma():
     # GH 8232
-    y = np.random.standard_normal(9)
     y = [
         3066.3,
         3260.2,
@@ -2949,7 +2950,7 @@ def test_sarimax_starting_values_few_obsevations_long_ma(reset_randomstate):
     assert np.all(np.isfinite(sarimax_model.predict(start=len(y), end=len(y) + 11)))
 
 
-def test_sarimax_forecast_exog_trend(reset_randomstate):
+def test_sarimax_forecast_exog_trend():
     # Test that an error is not raised that the given `exog` for the forecast
     # period is a constant when forecating with an intercept
     # GH 7019

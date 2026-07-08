@@ -367,7 +367,7 @@ def test_resid_recursive():
     assert_allclose(res.resid_recursive[2:], desired_resid_recursive)
 
 
-def test_recursive_olsresiduals_bad_input(reset_randomstate):
+def test_recursive_olsresiduals_bad_input():
     from statsmodels.tsa.arima.model import ARIMA
 
     rs = np.random.RandomState(9889821)

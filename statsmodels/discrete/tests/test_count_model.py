@@ -360,7 +360,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         t_test = self.res1.t_test(unit_matrix)
         assert_allclose(self.res1.tvalues, t_test.tvalue)
 
-    def test_minimize(self, reset_randomstate):
+    def test_minimize(self):
         # check additional optimizers using the `minimize` option
         model = self.res1.model
         # use the same start_params, but avoid recomputing
@@ -513,7 +513,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         assert_allclose(res_reg.params[2:], self.res1.params[2:], atol=1e-1, rtol=1e-1)
 
     # possibly slow, adds 25 seconds
-    def test_minimize(self, reset_randomstate):
+    def test_minimize(self):
         # check additional optimizers using the `minimize` option
         model = self.res1.model
         # use the same start_params, but avoid recomputing

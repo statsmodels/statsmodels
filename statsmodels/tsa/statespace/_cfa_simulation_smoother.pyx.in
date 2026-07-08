@@ -50,6 +50,9 @@ cimport scipy.linalg.cython_lapack as lapack
 include "statsmodels/tsa/statespace/_blas_int.pxi"
 cimport statsmodels.tsa.statespace._tools as tools
 
+from statsmodels.tools.rng_qrng import check_random_state
+
+
 cdef int FORTRAN = 1
 
 {{for prefix, types in TYPES.items()}}
@@ -413,14 +416,8 @@ cdef class {{prefix}}CFASimulationSmoother(object):
 
         # Sample u from N(0, I)
         if variates is None:
-            if rng is None:
-                u = np.random.normal(size=self.order).astype({{dtype}})
-            elif isinstance(rng, (np.random.Generator, np.random.RandomState)):
-                u = rng.normal(size=self.order).astype({{dtype}})
-            else:
-                raise ValueError(
-                    "rng must be a numpy.random.Generator or np.random.RandomState instance."
-                )
+            rng = check_random_state(rng)
+            u = rng.normal(size=self.order).astype({{dtype}})
         else:
             u = variates
 

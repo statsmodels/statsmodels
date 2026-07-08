@@ -149,27 +149,6 @@ def close_figures():
     close()
 
 
-@pytest.fixture
-def reset_randomstate():
-    """
-    Fixture that set the global RandomState to the fixed seed 1
-
-    Notes
-    -----
-    Used by passing as an argument to the function that uses the global
-    RandomState
-
-    def test_some_plot(reset_randomstate):
-        <test code>
-
-    Returns the state after the test function exits
-    """
-    # state = np.random.get_state()
-    # np.random.seed(1)
-    return
-    # np.random.set_state(state)
-
-
 # This is a special hook that converts all xfail marks to have strict=False
 # instead of strict=True. This is useful to have for Pyodide tests, where
 # some tests will consistently xfail due to missing functionality (such as
@@ -231,5 +210,5 @@ def check_global_randomstate_usage(request):
         return
 
     assert state[0] == new_state[0]
-    # np.testing.assert_equal(state[1], new_state[1])
+    np.testing.assert_equal(state[1], new_state[1])
     assert state[2] == new_state[2]

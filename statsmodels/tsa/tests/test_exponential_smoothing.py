@@ -456,7 +456,7 @@ def test_simulate_vs_R(setup_model):
     assert_allclose(expected, sim.values, rtol=1e-5, atol=1e-5)
 
 
-def test_fit_vs_R(setup_model, reset_randomstate):
+def test_fit_vs_R(setup_model):
     model, params, results_R = setup_model
 
     if PLATFORM_WIN and model.short_name == "AAdA":
@@ -600,26 +600,24 @@ def test_simulate_keywords(austourists_model_fit):
 
     # test anchor
     assert_almost_equal(
-        fit.simulate(4, anchor=-1, random_state=0).values,
-        fit.simulate(4, anchor="2015-12-31", random_state=0).values,
+        fit.simulate(4, anchor=-1, rng=0).values,
+        fit.simulate(4, anchor="2015-12-31", rng=0).values,
     )
     assert_almost_equal(
-        fit.simulate(4, anchor="end", random_state=0).values,
-        fit.simulate(4, anchor="2015-12-31", random_state=0).values,
+        fit.simulate(4, anchor="end", rng=0).values,
+        fit.simulate(4, anchor="2015-12-31", rng=0).values,
     )
     rs = np.random.RandomState(3232912)
     # test different random error options
-    fit.simulate(4, repetitions=10)
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm)
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm())
-    fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10))
-    fit.simulate(4, repetitions=10, random_errors="bootstrap")
+    fit.simulate(4, repetitions=10, rng=rs)
+    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm, rng=rs)
+    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=rs)
+    fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10), rng=rs)
+    fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=rs)
 
     # test seeding
-    res = fit.simulate(4, repetitions=10, random_state=10).values
-    res2 = fit.simulate(
-        4, repetitions=10, random_state=np.random.RandomState(10)
-    ).values
+    res = fit.simulate(4, repetitions=10, rng=10).values
+    res2 = fit.simulate(4, repetitions=10, rng=np.random.RandomState(10)).values
     assert np.all(res == res2)
 
 
@@ -859,7 +857,7 @@ def test_prediction_results_slow_AAN(oildata):
         start=40,
         end=55,
         simulate_repetitions=int(1e6),
-        random_state=11,
+        rng=11,
         method="simulated",
     )
     summary_sim = pred_sim.summary_frame()
@@ -924,7 +922,7 @@ def test_prediction_results_slow_AAdA(austourists):
         start=60,
         end=75,
         simulate_repetitions=int(1e6),
-        random_state=11,
+        rng=11,
         method="simulated",
     )
     summary_sim = pred_sim.summary_frame()
@@ -1025,6 +1023,7 @@ def test_exact_prediction_intervals(austourists_model_fit):
 
 
 def test_one_step_ahead(setup_model):
+    rs = np.random.RandomState(78437941)
     model, params, results_R = setup_model
     model2 = ETSModel(
         pd.Series(model.endog),
@@ -1041,9 +1040,11 @@ def test_one_step_ahead(setup_model):
     assert_allclose(fcast1.iloc[0], fcast2.iloc[0])
 
     pred1 = res.get_prediction(
-        start=model2.nobs, end=model2.nobs, simulate_repetitions=2
+        start=model2.nobs, end=model2.nobs, simulate_repetitions=2, rng=rs
     )
-    res.get_prediction(start=model2.nobs, end=model2.nobs + 1, simulate_repetitions=2)
+    res.get_prediction(
+        start=model2.nobs, end=model2.nobs + 1, simulate_repetitions=2, rng=rs
+    )
     df1 = pred1.summary_frame(alpha=0.05)
     df2 = pred1.summary_frame(alpha=0.05)
     assert_allclose(df1.iloc[0, 0], df2.iloc[0, 0])
@@ -1065,7 +1066,7 @@ def test_estimated_initialization_short_data(oildata, trend, seasonal, nobs):
 
 
 @pytest.mark.parametrize("method", ["estimated", "heuristic"])
-def test_seasonal_order(reset_randomstate, method):
+def test_seasonal_order(method):
     seasonal = np.arange(12.0)
     time_series = np.array(list(seasonal) * 100)
     res = ETSModel(

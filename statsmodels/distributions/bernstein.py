@@ -18,6 +18,7 @@ from statsmodels.distributions.tools import (
     prob2cdf_grid,
 )
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class BernsteinDistribution:
@@ -177,7 +178,7 @@ class BernsteinDistribution:
         bpd_marginal = BernsteinDistribution(cdf_m)
         return bpd_marginal
 
-    def rvs(self, nobs, rng=None):
+    def rvs(self, nobs, random_state=None):
         """Generate random numbers from distribution.
 
         Parameters
@@ -187,10 +188,8 @@ class BernsteinDistribution:
         rng : np.random.RandomState or np.random.Generator, optional
             If not provided, uses the singleton RandomState provided by NumPy
         """
-        if rng is None:
-            rvs_mnl = np.random.multinomial(nobs, self.prob_grid.flatten())
-        else:
-            rvs_mnl = rng.multinomial(nobs, self.prob_grid.flatten())
+        rng = check_random_state(random_state)
+        rvs_mnl = rng.multinomial(nobs, self.prob_grid.flatten())
         k_comp = self.k_dim
         rvs_m = []
         for i in range(len(rvs_mnl)):
@@ -203,7 +202,12 @@ class BernsteinDistribution:
                     # Note: x_marginal starts at 0
                     #       x_marginal ends with 1 but that is not used by idx
                     rvsi.append(
-                        stats.beta.rvs(n * xgi + 1, n * (1 - xgi) + 0, size=rvs_mnl[i])
+                        stats.beta.rvs(
+                            n * xgi + 1,
+                            n * (1 - xgi) + 0,
+                            size=rvs_mnl[i],
+                            random_state=rng,
+                        )
                     )
                 rvs_m.append(np.column_stack(rvsi))
 

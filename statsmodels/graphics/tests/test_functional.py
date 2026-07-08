@@ -181,7 +181,7 @@ def test_hdr_basic(close_figures):
 
 @pytest.mark.slow
 @pytest.mark.matplotlib
-def test_hdr_basic_brute(close_figures, reset_randomstate):
+def test_hdr_basic_brute(close_figures):
     try:
         _, hdr = hdrboxplot(
             data, ncomp=2, labels=labels, use_brute=True, kernel_seed=1234567

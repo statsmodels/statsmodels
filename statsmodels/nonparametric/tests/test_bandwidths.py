@@ -94,6 +94,6 @@ class TestAllBandwidthZero(BandwidthZero):
 
 
 class TestAnyBandwidthZero(BandwidthZero):
-
-    xx = np.random.normal(size=(100, 3))
+    rs = np.random.RandomState(328193821)
+    xx = rs.normal(size=(100, 3))
     xx[:, 0] = 1.0

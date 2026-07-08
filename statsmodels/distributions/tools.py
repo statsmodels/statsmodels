@@ -298,8 +298,8 @@ def approx_copula_pdf(
         are approximated by averaging the pdf of the cell corners. This is
         only useful if the cdf is not available.
     random_state : int, np.random.RandomState or np.random.Generator, optional
-        The source of the random variables to use. If None, uses the singleton
-        RandomState provided by NumPy
+        The source of the random variables to use in cdf calculation, if needed.
+        If None, uses the singleton RandomState provided by NumPy.
 
     Returns
     -------
@@ -332,7 +332,12 @@ def approx_copula_pdf(
     else:
         g = _Grid([k] * k_dim, eps=1e-6)
         random_state = check_random_state(random_state)
-        cdfg = copula.cdf(g.x_flat, random_state=random_state).reshape(*ks)
+        try:
+            # This is a hack because some copula CDFs are approximate and use
+            # random variates in their calculation, while most do not.
+            cdfg = copula.cdf(g.x_flat, random_state=random_state).reshape(*ks)
+        except TypeError:
+            cdfg = copula.cdf(g.x_flat).reshape(*ks)
         # correct for bin size
         pdf_grid = cdf2prob_grid(cdfg, prepend=None)
         # TODO: check boundary approximation, eg. undefined at zero

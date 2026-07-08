@@ -107,8 +107,9 @@ def test_mcnemar_chisquare():
     assert_allclose([res.statistic, res.pvalue], res3, rtol=1e-6)
 
 
-def test_mcnemar_vectorized(reset_randomstate):
-    ttk = np.random.randint(5, 15, size=(2, 2, 3))
+def test_mcnemar_vectorized():
+    rs = np.random.RandomState(2328979)
+    ttk = rs.randint(5, 15, size=(2, 2, 3))
     with pytest.warns(FutureWarning):
         res = sbmcnemar(ttk, exact=False)
     with pytest.warns(FutureWarning):
@@ -258,7 +259,7 @@ def test_cochransq3():
     assert_allclose([res.statistic, res.pvalue], [8.4706, 0.0145], atol=5e-5)
 
 
-def test_runstest(reset_randomstate):
+def test_runstest():
     # comparison numbers from R, tseries, runs.test
     # currently only 2-sided used
     x = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
@@ -277,8 +278,8 @@ def test_runstest(reset_randomstate):
     assert_almost_equal(
         runstest_1samp(x, correction=False), [z_twosided, pvalue_twosided], decimal=6
     )
-
-    x2 = x - 0.5 + np.random.uniform(-0.1, 0.1, size=len(x))
+    rs = np.random.RandomState(89038274)
+    x2 = x - 0.5 + rs.uniform(-0.1, 0.1, size=len(x))
     assert_almost_equal(
         runstest_1samp(x2, cutoff=0, correction=False),
         [z_twosided, pvalue_twosided],

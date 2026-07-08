@@ -107,7 +107,7 @@ class TestWLSPrediction:
     def setup_class(cls):
 
         # from example wls.py
-
+        rs = np.random.RandomState(3237219)
         nsample = 50
         x = np.linspace(0, 20, nsample)
         X = np.column_stack((x, (x - 5) ** 2))
@@ -119,7 +119,7 @@ class TestWLSPrediction:
         w = np.ones(nsample)
         w[int(nsample * 6.0 / 10) :] = 3
         y_true = np.dot(X, beta)
-        e = np.random.normal(size=nsample)
+        e = rs.normal(size=nsample)
         y = y_true + sig * w * e
         X = X[:, [0, 1]]
 

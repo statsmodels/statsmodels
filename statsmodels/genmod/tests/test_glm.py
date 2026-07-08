@@ -599,7 +599,7 @@ class TestGlmBinomial(CheckModelResultsMixin):
         res3 = GLM(endog, data.exog, family=sm.families.Binomial()).fit()
         assert_allclose(res3.params, self.res1.params)
 
-    def test_invalid_endog(self, reset_randomstate):
+    def test_invalid_endog(self):
         # GH2733 inspired check
         rs = np.random.RandomState(99846731)
         endog = rs.randint(0, 100, size=(1000, 3))
@@ -607,7 +607,7 @@ class TestGlmBinomial(CheckModelResultsMixin):
         with pytest.raises(ValueError, match="endog has more than 2 columns"):
             GLM(endog, exog, family=sm.families.Binomial())
 
-    def test_invalid_endog_formula(self, reset_randomstate):
+    def test_invalid_endog_formula(self):
         # GH2733
         rs = np.random.RandomState(32839021)
         n = 200
@@ -2956,7 +2956,7 @@ def test_glm_bic_warning(iris):
         assert isinstance(model.bic, float)
 
 
-def test_output_exposure_null(reset_randomstate):
+def test_output_exposure_null():
     # GH 6953
 
     x0 = [np.sin(i / 20) + 2 for i in range(1000)]

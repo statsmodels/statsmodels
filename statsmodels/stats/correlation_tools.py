@@ -13,6 +13,7 @@ from scipy import sparse
 from scipy.optimize import fminbound
 from scipy.sparse.linalg import svds
 
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import (
     IterationLimitWarning,
     SpecificationWarning,
@@ -300,7 +301,7 @@ def _nmono_linesearch(
 
         a1 = -0.5 * alpha**2 * gtd / (obval - last_obval - alpha * gtd)
 
-        if (sig1 <= a1 <= sig2 * alpha):
+        if sig1 <= a1 <= sig2 * alpha:
             alpha = a1
         else:
             alpha /= 2.0
@@ -383,7 +384,10 @@ def _spg_optim(
         df -= params
         if np.max(np.abs(df)) < ctol:
             return Bunch(
-                Converged=True, params=params, objective_values=obj_hist, Message="Converged successfully"
+                Converged=True,
+                params=params,
+                objective_values=obj_hist,
+                Message="Converged successfully",
             )
 
         # The line search direction
@@ -407,7 +411,10 @@ def _spg_optim(
 
         if alpha is None:
             return Bunch(
-                Converged=False, params=params, objective_values=obj_hist, Message="Failed in nmono_linesearch"
+                Converged=False,
+                params=params,
+                objective_values=obj_hist,
+                Message="Failed in nmono_linesearch",
             )
 
         obj_hist.append(fval)
@@ -425,7 +432,10 @@ def _spg_optim(
         gval = gval1
 
     return Bunch(
-        Converged=False, params=params, objective_values=obj_hist, Message="spg_optim did not converge"
+        Converged=False,
+        params=params,
+        objective_values=obj_hist,
+        Message="spg_optim did not converge",
     )
 
 
@@ -559,7 +569,7 @@ class FactoredPSDMatrix:
 
 
 def corr_nearest_factor(
-    corr, rank, ctol=1e-6, lam_min=1e-30, lam_max=1e30, maxiter=1000
+    corr, rank, ctol=1e-6, lam_min=1e-30, lam_max=1e30, maxiter=1000, *, rng=None
 ):
     """
     Find the nearest correlation matrix with factor structure to a
@@ -585,6 +595,9 @@ def corr_nearest_factor(
     maxiter : int
         Maximum number of iterations in spectral projected gradient
         optimization.
+    rng : int, np.random.RandomState or np.random.Generator, optional
+        The source of randomness to use in svds. If None, uses the
+        singleton RandomState provided by NumPy.
 
     Returns
     -------
@@ -647,7 +660,8 @@ def corr_nearest_factor(
     p, _ = corr.shape
 
     # Starting values (following the PCA method in BHR).
-    u, s, vt = svds(corr, rank)
+    rng = check_random_state(rng)
+    u, s, vt = svds(corr, rank, random_state=rng)
     X = u * np.sqrt(s)
     nm = np.sqrt((X**2).sum(1))
     ii = np.flatnonzero(nm > 1e-5)
@@ -717,7 +731,7 @@ def corr_nearest_factor(
     return rslt
 
 
-def cov_nearest_factor_homog(cov, rank):
+def cov_nearest_factor_homog(cov, rank, *, rng=None):
     """
     Approximate an arbitrary square matrix with a factor-structured
     matrix of the form k*I + XX'.
@@ -729,6 +743,9 @@ def cov_nearest_factor_homog(cov, rank):
         semidefinite
     rank : int
         The rank of the fitted factor structure
+    rng : int, np.random.RandomState or np.random.Generator, optional
+        The source of randomness to use in svds. If None, uses the
+        singleton RandomState provided by NumPy.
 
     Returns
     -------
@@ -771,8 +788,8 @@ def cov_nearest_factor_homog(cov, rank):
     """
 
     m, n = cov.shape
-
-    Q, Lambda, _ = svds(cov, rank)
+    rng = check_random_state(rng)
+    Q, Lambda, _ = svds(cov, rank, random_state=rng)
 
     if sparse.issparse(cov):
         QSQ = np.dot(Q.T, cov.dot(Q))

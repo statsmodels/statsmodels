@@ -826,6 +826,7 @@ def test_infer_freq():
 @pytest.mark.parametrize("trend", TRENDS)
 @pytest.mark.parametrize("seasonal", SEASONALS)
 def test_start_params(trend, seasonal):
+    rs = np.random.RandomState(98789431)
     mod = ExponentialSmoothing(
         housing_data,
         trend=trend,
@@ -835,7 +836,7 @@ def test_start_params(trend, seasonal):
     res = mod.fit()
     res2 = mod.fit(
         method="basinhopping",
-        minimize_kwargs={"minimizer_kwargs": {"method": "L-BFGS-B"}},
+        minimize_kwargs={"minimizer_kwargs": {"method": "L-BFGS-B"}, "rng": rs},
     )
     assert isinstance(res.summary().as_text(), str)
     assert res2.sse < 1.01 * res.sse
@@ -857,18 +858,19 @@ def test_invalid_start_param_length():
         mod.fit(start_params=np.array([0.5]))
 
 
-def test_basin_hopping(reset_randomstate):
+def test_basin_hopping():
+    rs = np.random.RandomState(98789437)
     mod = ExponentialSmoothing(
         housing_data, trend="add", initialization_method="estimated"
     )
     res = mod.fit()
-    res2 = mod.fit(method="basinhopping")
+    res2 = mod.fit(method="basinhopping", minimize_kwargs={"rng": rs})
     assert isinstance(res.summary().as_text(), str)
     assert isinstance(res2.summary().as_text(), str)
     # Basin hopping occasionally produces a slightly larger objective
     tol = 1e-5
     assert res2.sse <= res.sse + tol
-    res3 = mod.fit(method="basinhopping")
+    res3 = mod.fit(method="basinhopping", minimize_kwargs={"rng": rs})
     assert_almost_equal(res2.sse, res3.sse, decimal=2)
 
 
@@ -1019,7 +1021,7 @@ def test_direct_holt_add():
     assert isinstance(res.summary().as_text(), str)
 
 
-def test_integer_array(reset_randomstate):
+def test_integer_array():
     rs = np.random.RandomState(12345)
     e = 10 * rs.standard_normal((1000, 2))
     y_star = np.cumsum(e[:, 0])
@@ -1580,6 +1582,7 @@ def test_simulate_keywords(austourists):
     ).fit()
 
     # test anchor
+    rs = np.random.RandomState(1232131)
     assert_almost_equal(
         fit.simulate(4, anchor=0, rng=0).values,
         fit.simulate(4, anchor="start", rng=0).values,
@@ -1594,17 +1597,15 @@ def test_simulate_keywords(austourists):
     )
 
     # test different random error options
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm)
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm())
+    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm, rng=0)
+    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=0)
 
-    fit.simulate(4, repetitions=10, random_errors=np.random.randn(4, 10))
-    fit.simulate(4, repetitions=10, random_errors="bootstrap")
+    fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10), rng=0)
+    fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=0)
 
     # test seeding
-    res = fit.simulate(4, repetitions=10, random_state=10).values
-    res2 = fit.simulate(
-        4, repetitions=10, random_state=np.random.RandomState(10)
-    ).values
+    res = fit.simulate(4, repetitions=10, rng=10).values
+    res2 = fit.simulate(4, repetitions=10, rng=np.random.RandomState(10)).values
     assert np.all(res == res2)
 
 
@@ -1648,7 +1649,8 @@ def test_error_dampen():
 
 
 def test_error_boxcox():
-    y = np.random.standard_normal(100)
+    rs = np.random.RandomState(32321830)
+    y = rs.standard_normal(100)
     with pytest.raises(TypeError, match="use_boxcox must be True"):
         ExponentialSmoothing(y, use_boxcox="a", initialization_method="known")
 
@@ -1723,6 +1725,9 @@ def test_error_initialization(ses):
 def test_alternative_minimizers(method, ses):
     sv = np.array([0.77, 11.00])
     minimize_kwargs = {}
+    if method == "basinhopping":
+        rs = np.random.RandomState(32321831)
+        minimize_kwargs["rng"] = rs
     mod = ExponentialSmoothing(ses, initialization_method="estimated")
     res = mod.fit(method=method, start_params=sv, minimize_kwargs=minimize_kwargs)
     assert_allclose(res.params["smoothing_level"], 0.77232545, rtol=1e-3)
@@ -1737,10 +1742,11 @@ def test_minimizer_kwargs_error(ses):
         mod.fit(minimize_kwargs=kwargs)
     with pytest.raises(ValueError):
         mod.fit(method="least_squares", minimize_kwargs=kwargs)
-    kwargs = {"minimizer_kwargs": {"args": "anything"}}
+    rs = np.random.RandomState(32321837)
+    kwargs = {"minimizer_kwargs": {"args": "anything"}, "rng": rs}
     with pytest.raises(ValueError):
         mod.fit(method="basinhopping", minimize_kwargs=kwargs)
-    kwargs = {"minimizer_kwargs": {"method": "SLSQP"}}
+    kwargs = {"minimizer_kwargs": {"method": "SLSQP"}, "rng": rs}
     res = mod.fit(method="basinhopping", minimize_kwargs=kwargs)
     assert isinstance(res.params, dict)
     assert isinstance(res.summary().as_text(), str)
@@ -1951,16 +1957,16 @@ def test_simulate(ses):
     res = mod.fit()
     assert isinstance(res.summary().as_text(), str)
     with pytest.raises(ValueError, match="error must be"):
-        res.simulate(10, error="unknown")
+        res.simulate(10, error="unknown", rng=0)
     with pytest.raises(ValueError, match="If random"):
-        res.simulate(10, error="additive", random_errors=np.empty((20, 20)))
-    res.simulate(10, error="additive", anchor=100)
+        res.simulate(10, error="additive", random_errors=np.empty((20, 20)), rng=0)
+    res.simulate(10, error="additive", anchor=100, rng=0)
     with pytest.raises(ValueError, match="Cannot anchor"):
-        res.simulate(10, error="additive", anchor=2000)
-    with pytest.raises(TypeError, match="rng must be an int, RandomState or"):
-        res.simulate(10, error="additive", anchor=100, random_state="bad_value")
-    with pytest.raises(TypeError, match="rng must be an int, RandomState or"):
-        res.simulate(10, error="additive", random_errors="bad_values")
+        res.simulate(10, error="additive", anchor=2000, rng=0)
+    with pytest.raises(TypeError, match="seed must be an int or array-like of int"):
+        res.simulate(10, error="additive", anchor=100, rng="bad_value")
+    with pytest.raises(ValueError, match="Argument random_errors has unexpected value"):
+        res.simulate(10, error="additive", random_errors="bad_values", rng=0)
 
 
 @pytest.mark.parametrize("index_typ", ["date_range", "period", "range", "irregular"])
@@ -2030,12 +2036,12 @@ def test_forecast_1_simulation(austourists, random_errors, repetitions):
     ).fit()
 
     sim = fit.simulate(
-        1, anchor=0, random_errors=random_errors, repetitions=repetitions
+        1, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
     )
     expected_shape = (1,) if repetitions == 1 else (1, repetitions)
     assert sim.shape == expected_shape
     sim = fit.simulate(
-        10, anchor=0, random_errors=random_errors, repetitions=repetitions
+        10, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
     )
     expected_shape = (10,) if repetitions == 1 else (10, repetitions)
     assert sim.shape == expected_shape
@@ -2056,8 +2062,9 @@ def test_estimated_initialization_short_data(ses, trend, seasonal, nobs):
     assert res.mle_retvals.success
 
 
-def test_invalid_index(reset_randomstate):
-    y = np.random.standard_normal(12 * 200)
+def test_invalid_index():
+    rs = np.random.RandomState(32321830)
+    y = rs.standard_normal(12 * 200)
     df_y = pd.DataFrame(data=y)
     # Can't have a freq here
     df_y.index.freq = "d"
@@ -2075,7 +2082,7 @@ def test_invalid_index(reset_randomstate):
     assert fcast.shape[0] == 157200
 
     index = pd.date_range("2020-01-01", periods=2 * y.shape[0])
-    index = np.random.choice(index, size=df_y.shape[0], replace=False)
+    index = rs.choice(index, size=df_y.shape[0], replace=False)
     index = sorted(index)
     df_y.index = index
     assert isinstance(df_y.index, pd.DatetimeIndex)

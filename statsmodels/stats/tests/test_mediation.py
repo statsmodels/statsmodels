@@ -353,7 +353,7 @@ def test_surv():
             outcome_fit_kwargs={"method": "lbfgs"},
             mediator_fit_kwargs={"method": "lbfgs"},
         )
-        med_result = med.fit(n_rep=2)
+        med_result = med.fit(n_rep=2, rng=rs)
         dr = med_result.summary()
         pm = dr.loc["Prop. mediated (average)", "Estimate"]
         if mt == "no":

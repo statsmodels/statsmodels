@@ -108,7 +108,6 @@ class TestScoreTest(CheckScoreTest):
         if cls.dispersed:
             het = rs.randn(nobs)
             y = rs.poisson(np.exp(x.sum(1) * 0.5 + het))
-            # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
             y = rs.poisson(np.exp(x.sum(1) * 0.5))
 
@@ -189,7 +188,6 @@ class TestScoreTestPoisson(TestScoreTest):
         if cls.dispersed:
             het = rs.randn(nobs)
             y = rs.poisson(np.exp(x.sum(1) * 0.5 + het))
-            # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
             y = rs.poisson(np.exp(x.sum(1) * 0.5))
 

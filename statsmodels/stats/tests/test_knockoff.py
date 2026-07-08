@@ -24,7 +24,7 @@ def test_equi():
     rs = np.random.RandomState(2342)
     exog = rs.normal(size=(10, 4))
 
-    exog1, exog2, sl = _design_knockoff_equi(exog)
+    exog1, exog2, sl = _design_knockoff_equi(exog, rng=rs)
 
     exoga = np.concatenate((exog1, exog2), axis=1)
 
@@ -85,7 +85,7 @@ def test_testers(p, tester, method):
     y = rs.normal(size=n)
     x = rs.normal(size=(n, p))
 
-    kn = RegressionFDR(y, x, tester, design_method=method)
+    kn = RegressionFDR(y, x, tester, design_method=method, rng=rs)
     assert_equal(len(kn.stats), p)
     assert_equal(len(kn.fdr), p)
     kn.summary()  # smoke test
@@ -134,7 +134,7 @@ def test_sim(method, tester, n, p, es):
         coeff = es * (-1) ** np.arange(npos)
         y = np.dot(x[:, 0:npos], coeff) + rs.normal(size=n)
 
-        kn = RegressionFDR(y, x, tester)
+        kn = RegressionFDR(y, x, tester, rng=rs)
 
         # Threshold to achieve the target FDR
         tr = kn.threshold(target_fdr)

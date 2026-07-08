@@ -215,12 +215,12 @@ class BaseGAM(BaseAM, CheckGAM):
 
         cls.mu_true = mu_true = f.link.inverse(y_true)
 
-        np.random.seed(8765993)
+        rs = np.random.RandomState(8765993)
         # Discrete distributions do not take `scale`.
         try:
-            y_obs = cls.rvs(mu_true, scale=scale, size=nobs)
+            y_obs = cls.rvs(mu_true, scale=scale, size=nobs, random_state=rs)
         except TypeError:
-            y_obs = cls.rvs(mu_true, size=nobs)
+            y_obs = cls.rvs(mu_true, size=nobs, random_state=rs)
 
         m = GAM(y_obs, x, family=f)  # TODO: y_obs is twice __init__ and fit
         m.fit(y_obs, maxiter=100)

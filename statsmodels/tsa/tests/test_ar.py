@@ -682,7 +682,7 @@ def test_autoreg_info_criterion(lag):
 
 
 @pytest.mark.parametrize("old_names", [True, False])
-def test_autoreg_named_series(reset_randomstate, old_names):
+def test_autoreg_named_series(old_names):
     rs = np.random.RandomState(982738)
     warning = FutureWarning if old_names else None
     dates = period_range(start="2011-1", periods=72, freq="M")
@@ -789,7 +789,7 @@ def test_autoreg_roots():
     assert_almost_equal(res.roots, np.array([1.0 / res.params[-1]]))
 
 
-def test_equiv_dynamic(reset_randomstate):
+def test_equiv_dynamic():
     rs = np.random.RandomState(42121221)
     e = rs.standard_normal(1001)
     y = np.empty(1001)
@@ -992,7 +992,7 @@ def test_autoreg_start(start):
     assert pred.shape[0] == end - start + 1
 
 
-def test_deterministic(reset_randomstate):
+def test_deterministic():
     rs = np.random.RandomState(982737)
     y = pd.Series(rs.normal(size=200))
     terms = [TimeTrend(constant=True, order=1), Seasonality(12)]
@@ -1008,7 +1008,7 @@ def test_deterministic(reset_randomstate):
         AutoReg(y, 2, deterministic="ct")
 
 
-def test_autoreg_predict_forecast_equiv(reset_randomstate):
+def test_autoreg_predict_forecast_equiv():
     rs = np.random.RandomState(982735)
     e = rs.normal(size=1000)
     nobs = e.shape[0]
@@ -1222,7 +1222,7 @@ def test_autoreg_apply(ols_autoreg_result):
         assert not np.allclose(fcasts_refit, fcasts_apply)
 
 
-def test_autoreg_apply_exception(reset_randomstate):
+def test_autoreg_apply_exception():
     rs = np.random.RandomState(982732)
     y = rs.standard_normal(250)
     mod = AutoReg(y, lags=10)

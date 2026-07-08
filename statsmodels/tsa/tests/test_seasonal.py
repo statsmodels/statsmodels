@@ -416,7 +416,7 @@ class TestDecompose:
             res_mult.seasonal.values.squeeze(), res_mult_pi.seasonal.values.squeeze(), 4
         )
 
-    def test_pandas_nofreq(self, reset_randomstate):
+    def test_pandas_nofreq(self):
         # issue #3503
         rs = np.random.RandomState(32132100)
         nobs = 100
@@ -827,7 +827,7 @@ class TestDecompose:
             seasonal_decompose(x)
 
 
-def test_seasonal_decompose_too_short(reset_randomstate):
+def test_seasonal_decompose_too_short():
     rs = np.random.RandomState(43437241)
     dates = pd.date_range("2000-01-31", periods=4, freq=QUARTER_END)
     y = np.sin(np.arange(4) / 4 * 2 * np.pi)

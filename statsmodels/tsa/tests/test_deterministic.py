@@ -345,7 +345,7 @@ def test_index_like():
         DeterministicTerm._index_like(idx)
 
 
-def test_calendar_fourier(reset_randomstate):
+def test_calendar_fourier():
     rs = np.random.RandomState(43437243)
     inc = np.abs(rs.standard_normal(1000))
     inc = np.cumsum(inc)
@@ -375,7 +375,7 @@ def test_calendar_fourier(reset_randomstate):
     np.testing.assert_allclose(expected, terms.values)
 
 
-def test_calendar_time_trend(reset_randomstate):
+def test_calendar_time_trend():
     rs = np.random.RandomState(43437243)
     inc = np.abs(rs.standard_normal(1000))
     inc = np.cumsum(inc)

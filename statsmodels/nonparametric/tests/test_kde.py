@@ -379,7 +379,7 @@ def test_kde_bw_positive():
     assert kde.bw > 0
 
 
-def test_fit_self(reset_randomstate):
+def test_fit_self():
     rs = np.random.RandomState(38923801)
     x = rs.standard_normal(100)
     kde = KDE(x)

@@ -13,6 +13,7 @@ from statsmodels.base.wrapper import (
     populate_wrapper,
     union_dicts,
 )
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class HoltWintersResults(Results):
@@ -662,6 +663,7 @@ class HoltWintersResults(Results):
         sigma = np.sqrt(np.sum(resid**2) / (len(resid) - n_params))
 
         # get random error eps
+        rng = check_random_state(rng, deprecated=True)
         if isinstance(random_errors, np.ndarray):
             if random_errors.shape != (nsimulations, repetitions):
                 raise ValueError(
@@ -670,32 +672,16 @@ class HoltWintersResults(Results):
                 )
             eps = random_errors
         elif random_errors == "bootstrap":
-            if rng is None:
-                eps = np.random.choice(
-                    resid, size=(nsimulations, repetitions), replace=True
-                )
-            else:
-                if isinstance(rng, int):
-                    rng = np.random.RandomState(rng)
-                if not isinstance(rng, (np.random.RandomState, np.random.Generator)):
-                    raise TypeError(
-                        "random_state must be an int, RandomState or Generator"
-                    )
-                eps = rng.choice(resid, size=(nsimulations, repetitions), replace=True)
+            eps = rng.choice(resid, size=(nsimulations, repetitions), replace=True)
         elif random_errors is None:
-            if rng is None:
-                eps = np.random.randn(nsimulations, repetitions) * sigma
-            else:
-                if isinstance(rng, int):
-                    rng = np.random.RandomState(rng)
-                if not isinstance(rng, (np.random.RandomState, np.random.Generator)):
-                    raise TypeError("rng must be an int, RandomState or Generator")
-                eps = rng.randn(nsimulations, repetitions) * sigma
+            eps = rng.standard_normal((nsimulations, repetitions)) * sigma
         elif isinstance(random_errors, (rv_continuous, rv_discrete)):
             params = random_errors.fit(resid)
-            eps = random_errors.rvs(*params, size=(nsimulations, repetitions))
+            eps = random_errors.rvs(
+                *params, size=(nsimulations, repetitions), random_state=rng
+            )
         elif isinstance(random_errors, rv_frozen):
-            eps = random_errors.rvs(size=(nsimulations, repetitions))
+            eps = random_errors.rvs(size=(nsimulations, repetitions), random_state=rng)
         else:
             raise ValueError("Argument random_errors has unexpected value!")
 

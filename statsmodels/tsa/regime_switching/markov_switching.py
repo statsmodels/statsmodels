@@ -16,6 +16,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch, pinv_extended
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -1504,12 +1505,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Construct the random variates
         variates = np.zeros((reps, self.k_params))
-        if rng is None:
-            uniform_gen = np.random.uniform
-        else:
-            uniform_gen = rng.uniform
+        rng = check_random_state(rng)
         for i in range(self.k_params):
-            variates[:, i] = scale[i] * uniform_gen(-0.5, 0.5, size=reps)
+            variates[:, i] = scale[i] * rng.uniform(-0.5, 0.5, size=reps)
 
         llf = self.loglike(start_params, transformed=False)
         params = start_params

@@ -148,6 +148,7 @@ import numpy as np
 from scipy import special
 
 from statsmodels.sandbox.distributions.multivariate import mvstdtprob
+from statsmodels.tools.rng_qrng import check_random_state
 
 from .extras import mvnormcdf
 
@@ -842,13 +843,16 @@ class MVNormal(MVElliptical):
 
     __name__ = "Multivariate Normal Distribution"
 
-    def rvs(self, size=1):
+    def rvs(self, size=1, *, random_state=None):
         """random variable
 
         Parameters
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
+        random_state : int, np.random.RandomState, np.random.Generator, optional
+            The source of randomness used to produce the variates. If None,
+            uses the singleton RandomState provided by NumPy.
 
         Returns
         -------
@@ -862,7 +866,8 @@ class MVNormal(MVElliptical):
         uses numpy.random.multivariate_normal directly
 
         """
-        return np.random.multivariate_normal(self.mean, self.sigma, size=size)
+        rng = check_random_state(random_state)
+        return rng.multivariate_normal(self.mean, self.sigma, size=size)
 
     def logpdf(self, x):
         """logarithm of probability density function

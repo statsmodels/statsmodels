@@ -502,7 +502,7 @@ class TestDiagnosticG:
             decimal=(12, 12),
         )
 
-    def test_acorr_ljung_box_against_r(self, reset_randomstate):
+    def test_acorr_ljung_box_against_r(self):
         rs = np.random.RandomState(9876543)
         y1 = rs.standard_normal(100)
         e = rs.standard_normal(201)
@@ -1156,7 +1156,7 @@ def test_spec_white():
             assert_almost_equal(wsres, [8.462, 0.671, 11], decimal=3)
 
 
-def test_spec_white_error(reset_randomstate):
+def test_spec_white_error():
     rs = np.random.RandomState(38342003)
     with pytest.raises(ValueError, match="White's specification test "):
         smsdia.spec_white(rs.standard_normal(100), rs.standard_normal((100, 1)))
@@ -1164,7 +1164,7 @@ def test_spec_white_error(reset_randomstate):
         smsdia.spec_white(rs.standard_normal(100), rs.standard_normal((100, 2)))
 
 
-def test_linear_lm_direct(reset_randomstate):
+def test_linear_lm_direct():
     rs = np.random.RandomState(38342002)
     endog = rs.standard_normal(500)
     exog = add_constant(rs.standard_normal((500, 3)))
@@ -1189,7 +1189,7 @@ def grangertest():
 
 
 @pytest.mark.smoke
-def test_outlier_influence_funcs(reset_randomstate):
+def test_outlier_influence_funcs():
     rs = np.random.RandomState(38342002)
     x = add_constant(rs.randn(10, 2))
     y = x.sum(1) + rs.randn(10)
@@ -1268,8 +1268,8 @@ def test_influence_wrapped():
 
 def test_influence_dtype():
     # see #2148  bug when endog is integer
-    rs = np.random.RandomState(3834761)
     y = np.ones(20)
+    rs = np.random.RandomState(123)
     x = rs.randn(20, 3)
     res1 = OLS(y, x).fit()
 
@@ -1692,7 +1692,7 @@ def test_ljungbox_dof_adj():
     assert np.all(res2.iloc[4:, 1] <= res1.iloc[4:, 1])
 
 
-def test_ljungbox_auto_lag_selection(reset_randomstate):
+def test_ljungbox_auto_lag_selection():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     res = AutoReg(data, 4, old_names=False).fit()
     resid = res.resid
@@ -1707,7 +1707,7 @@ def test_ljungbox_auto_lag_selection(reset_randomstate):
     assert np.all(res2.iloc[4:, 1] <= res1.iloc[4:, 1])
 
 
-def test_ljungbox_auto_lag_whitenoise(reset_randomstate):
+def test_ljungbox_auto_lag_whitenoise():
     rs = np.random.RandomState(38342003)
     data = rs.randn(1000)  # white noise process
     res = smsdia.acorr_ljungbox(data, auto_lag=True)
@@ -1738,7 +1738,7 @@ def test_ljungbox_period():
 
 
 @pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
-def test_encompasing_direct(cov_type, reset_randomstate):
+def test_encompasing_direct(cov_type):
     rs = np.random.RandomState(38342002)
     x = rs.standard_normal((500, 2))
     e = rs.standard_normal((500, 1))
@@ -1776,7 +1776,7 @@ def test_encompasing_direct(cov_type, reset_randomstate):
     assert_allclose(np.asarray(df.loc["z"]), expected, atol=1e-8)
 
 
-def test_encompasing_error(reset_randomstate):
+def test_encompasing_error():
     rs = np.random.RandomState(38342001)
     x = rs.standard_normal((500, 2))
     e = rs.standard_normal((500, 1))
@@ -1804,7 +1804,7 @@ def test_encompasing_error(reset_randomstate):
         dict(cov_type="HC0", cov_kwds={}),
     ],
 )
-def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
+def test_reset_smoke(power, test_type, use_f, cov):
     rs = np.random.RandomState(32320967 + power + int(use_f))
     x = add_constant(rs.standard_normal((1000, 3)))
     e = rs.standard_normal((1000, 1))
@@ -1824,7 +1824,7 @@ def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
         dict(cov_type="HC0", cov_kwds={}),
     ],
 )
-def test_acorr_lm_smoke(store, ddof, cov, reset_randomstate):
+def test_acorr_lm_smoke(store, ddof, cov):
     rs = np.random.RandomState(38342099)
     e = rs.standard_normal(250)
     smsdia.acorr_lm(e, nlags=6, store=store, ddof=ddof, **cov)
@@ -1832,7 +1832,7 @@ def test_acorr_lm_smoke(store, ddof, cov, reset_randomstate):
     smsdia.acorr_lm(e, nlags=None, store=store, period=12, ddof=ddof, **cov)
 
 
-def test_acorr_lm_smoke_no_autolag(reset_randomstate):
+def test_acorr_lm_smoke_no_autolag():
     rs = np.random.RandomState(38342098)
     e = rs.standard_normal(250)
     smsdia.acorr_lm(e, nlags=6, store=False, ddof=0)
@@ -1853,7 +1853,7 @@ RANDOM_ARRAY = RS.choice(500, size=500, replace=False)
         ["x0", "x2"],
     ],
 )
-def test_rainbow_smoke_order_by(frac, order_by, reset_randomstate):
+def test_rainbow_smoke_order_by(frac, order_by):
     rs = np.random.RandomState(38342097)
     e = pd.DataFrame(rs.standard_normal((500, 1)))
     x = pd.DataFrame(
@@ -1866,7 +1866,7 @@ def test_rainbow_smoke_order_by(frac, order_by, reset_randomstate):
 
 
 @pytest.mark.parametrize("center", [None, 0.33, 300])
-def test_rainbow_smoke_centered(center, reset_randomstate):
+def test_rainbow_smoke_centered(center):
     rs = np.random.RandomState(38342096)
     e = pd.DataFrame(rs.standard_normal((500, 1)))
     x = pd.DataFrame(
@@ -1878,7 +1878,7 @@ def test_rainbow_smoke_centered(center, reset_randomstate):
     smsdia.linear_rainbow(res, use_distance=True, center=center)
 
 
-def test_rainbow_exception(reset_randomstate):
+def test_rainbow_exception():
     rs = np.random.RandomState(38342095)
     e = pd.DataFrame(rs.standard_normal((500, 1)))
     x = pd.DataFrame(
@@ -1894,7 +1894,7 @@ def test_rainbow_exception(reset_randomstate):
         smsdia.linear_rainbow(res, order_by=("x0",))
 
 
-def test_small_skip(reset_randomstate):
+def test_small_skip():
     rs = np.random.RandomState(38342094)
     y = rs.standard_normal(10)
     x = rs.standard_normal((10, 3))
@@ -1963,7 +1963,7 @@ def test_small_skip(reset_randomstate):
 
 
 @pytest.mark.smoke
-def test_diagnostics_pandas(reset_randomstate):
+def test_diagnostics_pandas():
     # GH 8879
     n = 100
     rs = np.random.RandomState(38342093)
@@ -2012,7 +2012,7 @@ def test_deprecated_argument():
         )
 
 
-def test_diagnostics_hac(reset_randomstate):
+def test_diagnostics_hac():
     rs = np.random.RandomState(38342091)
     x = rs.randn(100)
     y = 2 * x + rs.randn(100)

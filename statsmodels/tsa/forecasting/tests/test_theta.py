@@ -87,11 +87,12 @@ def test_alt_index(indexed_data):
 
 
 def test_no_freq():
+    rs = np.random.RandomState(3231298)
     idx = pd.date_range("2000-1-1", periods=300)
     locs = []
     for i in range(100):
         locs.append(2 * i + int((i % 2) == 1))
-    y = pd.Series(np.random.standard_normal(100), index=idx[locs])
+    y = pd.Series(rs.standard_normal(100), index=idx[locs])
     with pytest.raises(ValueError, match="You must specify a period or"):
         ThetaModel(y)
 
@@ -135,7 +136,7 @@ def test_forecast_seasonal_alignment(data, period):
     np.testing.assert_allclose(comp.seasonal, expected)
 
 
-def test_auto(reset_randomstate):
+def test_auto():
     rs = np.random.RandomState(232387289)
     m = 250
     e = rs.standard_normal(m)

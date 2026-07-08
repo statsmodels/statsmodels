@@ -57,6 +57,7 @@ import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod import families
 from statsmodels.iolib import summary2
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 # Gauss-Legendre weights
@@ -403,12 +404,7 @@ class _BayesMixedGLM(base.Model):
     def _get_start(self, rng):
         start_fep = np.zeros(self.k_fep)
         start_vcp = np.ones(self.k_vcp)
-        if rng is None:
-            start_vc = np.random.normal(size=self.k_vc)
-        elif isinstance(rng, (np.random.Generator, np.random.RandomState)):
-            start_vc = rng.normal(size=self.k_vc)
-        else:
-            raise TypeError("rng must be None, a RandomState or a Generator")
+        start_vc = rng.normal(size=self.k_vc)
         start = np.concatenate((start_fep, start_vcp, start_vc))
         return start
 
@@ -495,7 +491,7 @@ class _BayesMixedGLM(base.Model):
             are centered and scaled to unit variance before fitting
             the model.  The results are back-transformed so that the
             results are presented on the original scale.
-        rng : np.random.Generator or np.random.RandomState, optional
+        rng : int, np.random.Generator or np.random.RandomState, optional
             The generator to use for starting values. If None, uses
             the singleton RandomState provided by NumPy.
 
@@ -519,6 +515,7 @@ class _BayesMixedGLM(base.Model):
         def grad(params):
             return -self.logposterior_grad(params)
 
+        rng = check_random_state(rng)
         start = self._get_start(rng)
 
         r = minimize(fun, start, method=method, jac=grad, options=minim_opts)
@@ -729,7 +726,7 @@ class _VariationalBayesMixedGLM:
         verbose : bool
             If True, print the gradient norm to the screen each time
             it is calculated.
-        rng : np.random.Generator or np.random.RandomState, optional
+        rng : int, np.random.Generator or np.random.RandomState, optional
             The generator to use for starting values. If None, uses
             the singleton RandomState provided by NumPy. Only used
             if sd is None.
@@ -775,12 +772,8 @@ class _VariationalBayesMixedGLM:
                 )
             m = mean.copy()
         if sd is None:
-            if rng is None:
-                s = -0.5 + 0.1 * np.random.normal(size=n)
-            elif isinstance(rng, (np.random.Generator, np.random.RandomState)):
-                s = -0.5 + 0.1 * rng.normal(size=n)
-            else:
-                raise TypeError("rng must be None, a RandomState or a Generator")
+            rng = check_random_state(rng)
+            s = -0.5 + 0.1 * rng.normal(size=n)
         else:
             if len(sd) != ml:
                 raise ValueError("sd has incorrect length, %d != %d" % (len(sd), ml))

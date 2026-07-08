@@ -26,9 +26,10 @@ class TestContrast:
         assert_almost_equal(test_contrast, c.contrast_matrix)
 
     def test_contrast3(self):
+        rs = np.random.RandomState(5432111)
         P = np.dot(self.X, np.linalg.pinv(self.X))
         resid = np.identity(40) - P
-        noise = np.dot(resid, numpy.random.standard_normal((40, 5)))
+        noise = np.dot(resid, rs.standard_normal((40, 5)))
         term = np.column_stack((noise, self.X[:, 2]))
         c = Contrast(term, self.X)
         assert_equal(c.contrast_matrix.shape, (10,))

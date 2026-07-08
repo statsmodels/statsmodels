@@ -334,7 +334,7 @@ class Mediation:
                 if hasattr(mediator_result, "scale"):
                     kwargs["scale"] = mediator_result.scale
                 gen = self.mediator_model.get_distribution(mediation_params, **kwargs)
-                potential_mediator = gen.rvs(mex.shape[0])
+                potential_mediator = gen.rvs(mex.shape[0], random_state=rng)
 
                 for te in 0, 1:
                     oex = self._get_outcome_exog(te, potential_mediator)

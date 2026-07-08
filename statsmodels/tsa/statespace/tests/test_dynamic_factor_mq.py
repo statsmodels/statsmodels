@@ -1464,9 +1464,7 @@ def test_invalid_model_specification():
     msg = "`factor_orders` argument must either be an integer or a dictionary."
     with pytest.raises(ValueError, match=msg):
         dynamic_factor_mq.DynamicFactorMQ(dta, factor_orders=True)
-    msg = (
-        "`factor_multiplicities` argument must either be an integer or a dictionary."
-    )
+    msg = "`factor_multiplicities` argument must either be an integer or a dictionary."
     with pytest.raises(ValueError, match=msg):
         dynamic_factor_mq.DynamicFactorMQ(dta, factor_multiplicities=True)
 
@@ -1573,15 +1571,15 @@ def test_invalid_model_specification():
     ],
 )
 @pytest.mark.parametrize("freq_M", [MONTH_END, "MS"])
-def test_date_indexes(reset_randomstate, freq_M, freq_Q):
+def test_date_indexes(freq_M, freq_Q):
     # Test that using either PeriodIndex or DatetimeIndex for monthly or
     # quarterly data, with a variety of DatetimeIndex frequencies, works
-
+    rs = np.random.RandomState(328908)
     # Monthly datasets
     nobs_M = 10
     dates_M = pd.date_range(start="2000", periods=nobs_M, freq=freq_M)
     periods_M = pd.period_range(start="2000", periods=nobs_M, freq="M")
-    dta_M = np.random.normal(size=(nobs_M, 2))
+    dta_M = rs.normal(size=(nobs_M, 2))
     endog_period_M = pd.DataFrame(dta_M.copy(), index=periods_M)
     endog_date_M = pd.DataFrame(dta_M.copy(), index=dates_M)
 
@@ -1589,7 +1587,7 @@ def test_date_indexes(reset_randomstate, freq_M, freq_Q):
     nobs_Q = 3
     dates_Q = pd.date_range(start="2000", periods=nobs_Q, freq=freq_Q)
     periods_Q = pd.period_range(start="2000", periods=nobs_Q, freq="Q")
-    dta_Q = np.random.normal(size=(nobs_Q, 2))
+    dta_Q = rs.normal(size=(nobs_Q, 2))
     endog_period_Q = pd.DataFrame(dta_Q.copy(), index=periods_Q)
     endog_date_Q = pd.DataFrame(dta_Q.copy(), index=dates_Q)
 
@@ -1634,7 +1632,7 @@ def gen_dfm_data(k_endog=2, nobs=1000):
     return endog, loadings, phi, sigma2, idio_ar1, idio_var
 
 
-def test_results_factors(reset_randomstate):
+def test_results_factors():
     # Tests for the `factors` attribute in the results object
     endog, _, _, _, _, _ = gen_dfm_data(k_endog=2, nobs=1000)
 
@@ -1657,7 +1655,7 @@ def test_results_factors(reset_randomstate):
     )
 
 
-def test_coefficient_of_determination(reset_randomstate, close_figures):
+def test_coefficient_of_determination(close_figures):
     # Get simulated data, and add in some missing entries
     endog, _, _, _, _, _ = gen_dfm_data(k_endog=3, nobs=1000)
     endog.iloc[0, 10:20] = np.nan
@@ -1770,7 +1768,7 @@ def test_coefficient_of_determination(reset_randomstate, close_figures):
 
 
 @pytest.mark.filterwarnings("ignore:Log-likelihood decreased")
-def test_quasi_newton_fitting(reset_randomstate):
+def test_quasi_newton_fitting():
     # Test that the typical state space quasi-Newton fitting mechanisms work
     # here too, even if they aren't used much
     # Note: to match the quasi-Newton results, which use the stationary
@@ -1825,7 +1823,7 @@ def test_quasi_newton_fitting(reset_randomstate):
     assert_allclose(params_lbfgs, params_em, atol=5e-2, rtol=1e-5)
 
 
-def test_summary(reset_randomstate):
+def test_summary():
     # Smoke tests for summaries
     endog, _, _, _, _, _ = gen_dfm_data(k_endog=10, nobs=100)
 
@@ -1846,7 +1844,7 @@ def test_summary(reset_randomstate):
     res_dfm_ar1.summary()
 
 
-def test_append_extend_apply(reset_randomstate):
+def test_append_extend_apply():
     # Most of `append`, `extend`, and `apply` are tested in
     # `test_standardized_{monthly,MQ}`, but here we test a couple of minor
     # things
@@ -1895,7 +1893,7 @@ def test_append_extend_apply(reset_randomstate):
     assert_allclose(res6.filter_results.initial_state_cov, 1.0)
 
 
-def test_news_monthly(reset_randomstate):
+def test_news_monthly():
     # Most of `news` is tested in `test_standardized_{monthly,MQ}`, but here
     # we test a couple of minor things
     endog, _, _, _, _, _ = gen_dfm_data(k_endog=10, nobs=100)
@@ -1946,7 +1944,7 @@ def test_news_monthly(reset_randomstate):
             assert_frame_equal(w, x)
 
 
-def test_news_MQ(reset_randomstate):
+def test_news_MQ():
     # Most of `news` is tested in `test_standardized_{monthly,MQ}`, but here
     # we test a couple of minor things
     endog_M, endog_Q, f1 = test_dynamic_factor_mq_monte_carlo.gen_k_factor1(
@@ -2011,7 +2009,7 @@ def test_news_MQ(reset_randomstate):
             assert_frame_equal(w, x)
 
 
-def test_ar6_no_quarterly(reset_randomstate):
+def test_ar6_no_quarterly():
     # Test to make sure that an example with > 5 lags (which are the number of
     # lags that are always included in models with quarterly data) works,
     # for the case without quarterly data
@@ -2047,7 +2045,7 @@ def test_ar6_no_quarterly(reset_randomstate):
         assert_allclose(res_dfm.params[1:-1], params, atol=1e-2)
 
 
-def test_idiosyncratic_ar1_False(reset_randomstate):
+def test_idiosyncratic_ar1_False():
     # Test the case with idiosyncratic_ar1=False (which is not tested in
     # the test_dynamic_factor_mq_frbny_nowcast) by comparison to a model with
     # idiosyncratic_ar1=True but no actual serial correlation in the
@@ -2154,9 +2152,7 @@ def test_invalid_standardize_1d():
         (pd.Series(10, index=["y1"]), pd.Series(10, index=["y1"])),
         (pd.Series([10], index=["y"]), pd.Series([10, 1], index=["y1", "y2"])),
     ]
-    msg = (
-        "Invalid value passed for `standardize`: if a Pandas Series, must have index"
-    )
+    msg = "Invalid value passed for `standardize`: if a Pandas Series, must have index"
     for standardize in options:
         with pytest.raises(ValueError, match=msg):
             dynamic_factor_mq.DynamicFactorMQ(
@@ -2174,9 +2170,7 @@ def test_invalid_standardize_1d():
         (pd.Series(10, index=["y"]), pd.Series(10, index=["y"])),
         (pd.Series([10], index=["y"]), pd.Series([10, 1], index=["y1", "y2"])),
     ]
-    msg = (
-        "Invalid value passed for `standardize`: if a Pandas Series, must have index"
-    )
+    msg = "Invalid value passed for `standardize`: if a Pandas Series, must have index"
     for standardize in options:
         with pytest.raises(ValueError, match=msg):
             dynamic_factor_mq.DynamicFactorMQ(
@@ -2693,9 +2687,7 @@ def check_apply(res1, res2, endog_M, endog_Q):
 @pytest.mark.parametrize("use_pandas", [True, False])
 @pytest.mark.parametrize("k_endog", [1, 2])
 @pytest.mark.parametrize("idiosyncratic_ar1", [True, False])
-def test_standardized_monthly(
-    reset_randomstate, idiosyncratic_ar1, k_endog, use_pandas
-):
+def test_standardized_monthly(idiosyncratic_ar1, k_endog, use_pandas):
     nobs = 100
     k2 = 2
     _, _, f2 = test_dynamic_factor_mq_monte_carlo.gen_k_factor2(
@@ -2759,7 +2751,8 @@ def test_standardized_monthly(
 
 
 @pytest.mark.parametrize("idiosyncratic_ar1", [True, False])
-def test_standardized_MQ(reset_randomstate, idiosyncratic_ar1):
+def test_standardized_MQ(idiosyncratic_ar1):
+    rs = np.random.RandomState(328909)
     nobs = 100
     idiosyncratic_ar1 = False
     k1 = 2
@@ -2788,10 +2781,8 @@ def test_standardized_MQ(reset_randomstate, idiosyncratic_ar1):
 
     # - Actual ---------------------------------------------------------------
     # Baseline model
-    endog_mean = pd.Series(np.random.normal(size=len(factors)), index=factors.keys())
-    endog_std = pd.Series(
-        np.abs(np.random.normal(size=len(factors))), index=factors.keys()
-    )
+    endog_mean = pd.Series(rs.normal(size=len(factors)), index=factors.keys())
+    endog_std = pd.Series(np.abs(rs.normal(size=len(factors))), index=factors.keys())
 
     mod1 = dynamic_factor_mq.DynamicFactorMQ(
         endog_M1,
