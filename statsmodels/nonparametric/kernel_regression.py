@@ -93,7 +93,7 @@ class KernelReg(GenericKDE):
         The kernel used for the unordered discrete variables.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
-    seed : {int, Generator, RandomState}, optional
+    seed : {int, np.random.Generator, np.random.RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -1040,6 +1040,7 @@ class TestRegCoefD(TestRegCoefC):
             self.model.reg_type,
             self.bw,
             defaults=EstimatorSettings(efficient=False),
+            seed=self._generator,
         )
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0

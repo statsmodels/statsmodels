@@ -214,7 +214,7 @@ def test_mosaic_very_complex(close_figures):
 
 @pytest.mark.matplotlib
 def test_axes_labeling(close_figures):
-    from numpy.random import rand
+    rs = np.random.RandomState(8389231)
 
     key_set = (
         ["male", "female"],
@@ -225,7 +225,7 @@ def test_axes_labeling(close_figures):
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = dict(zip(keys, rand(len(keys))))
+    data = dict(zip(keys, rs.rand(len(keys))))
 
     def labelizer(k):
         return "".join(s[0] for s in k)

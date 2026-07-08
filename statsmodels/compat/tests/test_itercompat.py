@@ -4,6 +4,7 @@ Created on Wed Feb 29 10:34:00 2012
 
 Author: Josef Perktold
 """
+
 from itertools import combinations, zip_longest
 
 from numpy.testing import assert_

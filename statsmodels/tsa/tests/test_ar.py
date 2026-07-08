@@ -363,7 +363,9 @@ def plot_data(request):
     )
 
 
-@pytest.mark.thread_unsafe("MPL can fail under threaded runs if figs are created or destroyed")
+@pytest.mark.thread_unsafe(
+    "MPL can fail under threaded runs if figs are created or destroyed"
+)
 @pytest.mark.matplotlib
 @pytest.mark.smoke
 def test_autoreg_smoke_plots(plot_data, close_figures):
@@ -680,10 +682,11 @@ def test_autoreg_info_criterion(lag):
 
 
 @pytest.mark.parametrize("old_names", [True, False])
-def test_autoreg_named_series(reset_randomstate, old_names):
+def test_autoreg_named_series(old_names):
+    rs = np.random.RandomState(982738)
     warning = FutureWarning if old_names else None
     dates = period_range(start="2011-1", periods=72, freq="M")
-    y = Series(np.random.randn(72), name="foobar", index=dates)
+    y = Series(rs.randn(72), name="foobar", index=dates)
     with pytest_warns(warning):
         results = AutoReg(y, lags=2, old_names=old_names).fit()
 
@@ -786,8 +789,9 @@ def test_autoreg_roots():
     assert_almost_equal(res.roots, np.array([1.0 / res.params[-1]]))
 
 
-def test_equiv_dynamic(reset_randomstate):
-    e = np.random.standard_normal(1001)
+def test_equiv_dynamic():
+    rs = np.random.RandomState(42121221)
+    e = rs.standard_normal(1001)
     y = np.empty(1001)
     y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9**2))
     for i in range(1, 1001):
@@ -979,7 +983,8 @@ def test_forecast_start_end_equiv(dynamic):
 
 @pytest.mark.parametrize("start", [21, 25])
 def test_autoreg_start(start):
-    y_train = pd.Series(np.random.normal(size=20))
+    rs = np.random.RandomState(982731)
+    y_train = pd.Series(rs.normal(size=20))
     m = AutoReg(y_train, lags=2)
     mf = m.fit()
     end = start + 5
@@ -987,8 +992,9 @@ def test_autoreg_start(start):
     assert pred.shape[0] == end - start + 1
 
 
-def test_deterministic(reset_randomstate):
-    y = pd.Series(np.random.normal(size=200))
+def test_deterministic():
+    rs = np.random.RandomState(982737)
+    y = pd.Series(rs.normal(size=200))
     terms = [TimeTrend(constant=True, order=1), Seasonality(12)]
     dp = DeterministicProcess(y.index, additional_terms=terms)
     m = AutoReg(y, trend="n", seasonal=False, lags=2, deterministic=dp)
@@ -1002,8 +1008,9 @@ def test_deterministic(reset_randomstate):
         AutoReg(y, 2, deterministic="ct")
 
 
-def test_autoreg_predict_forecast_equiv(reset_randomstate):
-    e = np.random.normal(size=1000)
+def test_autoreg_predict_forecast_equiv():
+    rs = np.random.RandomState(982735)
+    e = rs.normal(size=1000)
     nobs = e.shape[0]
     idx = pd.date_range(dt.datetime(2020, 1, 1), freq="D", periods=nobs)
     for i in range(1, nobs):
@@ -1023,7 +1030,8 @@ def test_autoreg_predict_forecast_equiv(reset_randomstate):
 
 def test_autoreg_forecast_period_index():
     pi = pd.period_range("1990-1-1", periods=524, freq="M")
-    y = np.random.RandomState(0).standard_normal(500)
+    rs = np.random.RandomState(0)
+    y = rs.standard_normal(500)
     ys = pd.Series(y, index=pi[:500], name="y")
     mod = AutoReg(ys, 3, seasonal=True)
     res = mod.fit()
@@ -1034,7 +1042,8 @@ def test_autoreg_forecast_period_index():
 
 @pytest.mark.matplotlib
 def test_autoreg_plot_err(close_figures):
-    y = np.random.standard_normal(100)
+    rs = np.random.RandomState(982734)
+    y = rs.standard_normal(100)
     mod = AutoReg(y, lags=[1, 3])
     res = mod.fit()
     with pytest.raises(ValueError):
@@ -1043,7 +1052,7 @@ def test_autoreg_plot_err(close_figures):
 
 def test_autoreg_resids():
     idx = pd.date_range(dt.datetime(1900, 1, 1), periods=250, freq=MONTH_END)
-    rs = np.random.RandomState(0)
+    rs = np.random.RandomState(982733)
     idx_dates = sorted(rs.choice(idx, size=100, replace=False))
     e = rs.standard_normal(250)
     y = np.zeros(250)
@@ -1213,18 +1222,19 @@ def test_autoreg_apply(ols_autoreg_result):
         assert not np.allclose(fcasts_refit, fcasts_apply)
 
 
-def test_autoreg_apply_exception(reset_randomstate):
-    y = np.random.standard_normal(250)
+def test_autoreg_apply_exception():
+    rs = np.random.RandomState(982732)
+    y = rs.standard_normal(250)
     mod = AutoReg(y, lags=10)
     res = mod.fit()
     with pytest.raises(ValueError, match="An exception occured"):
         res.apply(y[:5])
 
-    x = np.random.standard_normal((y.shape[0], 3))
+    x = rs.standard_normal((y.shape[0], 3))
     res = AutoReg(y, lags=1, exog=x).fit()
     with pytest.raises(ValueError, match="exog must be provided"):
         res.apply(y[50:150])
-    x = np.random.standard_normal((y.shape[0], 3))
+    x = rs.standard_normal((y.shape[0], 3))
     res = AutoReg(y, lags=1, exog=x).fit()
     with pytest.raises(ValueError, match="The number of exog"):
         res.apply(y[50:150], exog=x[50:150, :2])

@@ -29,12 +29,13 @@ KCDEResults = np.genfromtxt(open(rfname, "rb"), delimiter=",", names=True)
 
 # setup test data
 
-np.random.seed(12345)
+RANDOM_STATE = np.random.RandomState(12345)
 Xi = mixture_rvs(
     [0.25, 0.75],
     size=200,
     dist=[stats.norm, stats.norm],
     kwargs=(dict(loc=-1, scale=0.5), dict(loc=1, scale=0.5)),
+    rng=RANDOM_STATE,
 )
 
 
@@ -334,12 +335,12 @@ class _TestKDEWPar(CheckKDEWeights):
 
 
 class TestKdeRefit:
-    np.random.seed(12345)
-    data1 = np.random.randn(100) * 100
+    rs = np.random.RandomState(12345)
+    data1 = rs.randn(100) * 100
     pdf = KDE(data1)
     pdf.fit()
 
-    data2 = np.random.randn(100) * 100
+    data2 = rs.randn(100) * 100
     pdf2 = KDE(data2)
     pdf2.fit()
 
@@ -378,8 +379,9 @@ def test_kde_bw_positive():
     assert kde.bw > 0
 
 
-def test_fit_self(reset_randomstate):
-    x = np.random.standard_normal(100)
+def test_fit_self():
+    rs = np.random.RandomState(38923801)
+    x = rs.standard_normal(100)
     kde = KDE(x)
     assert isinstance(kde, KDE)
     assert isinstance(kde.fit(), KDE)

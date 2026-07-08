@@ -416,10 +416,11 @@ class TestDecompose:
             res_mult.seasonal.values.squeeze(), res_mult_pi.seasonal.values.squeeze(), 4
         )
 
-    def test_pandas_nofreq(self, reset_randomstate):
+    def test_pandas_nofreq(self):
         # issue #3503
+        rs = np.random.RandomState(32132100)
         nobs = 100
-        dta = pd.Series([x % 3 for x in range(nobs)] + np.random.randn(nobs))
+        dta = pd.Series([x % 3 for x in range(nobs)] + rs.randn(nobs))
         res_np = seasonal_decompose(dta.values, period=3)
         res = seasonal_decompose(dta, period=3)
 
@@ -826,17 +827,18 @@ class TestDecompose:
             seasonal_decompose(x)
 
 
-def test_seasonal_decompose_too_short(reset_randomstate):
+def test_seasonal_decompose_too_short():
+    rs = np.random.RandomState(43437241)
     dates = pd.date_range("2000-01-31", periods=4, freq=QUARTER_END)
     y = np.sin(np.arange(4) / 4 * 2 * np.pi)
-    y += np.random.standard_normal(y.size)
+    y += rs.standard_normal(y.size)
     y = pd.Series(y, name="y", index=dates)
     with pytest.raises(ValueError):
         seasonal_decompose(y)
 
     dates = pd.date_range("2000-01-31", periods=12, freq=MONTH_END)
     y = np.sin(np.arange(12) / 12 * 2 * np.pi)
-    y += np.random.standard_normal(y.size)
+    y += rs.standard_normal(y.size)
     y = pd.Series(y, name="y", index=dates)
     with pytest.raises(ValueError):
         seasonal_decompose(y)

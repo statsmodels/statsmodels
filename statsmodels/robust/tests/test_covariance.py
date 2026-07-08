@@ -21,8 +21,8 @@ dta_hbk = pd.read_csv(file_path)
 
 
 def test_mahalanobis():
-    np.random.seed(987676453)
-    x = np.random.randn(10, 3)
+    rs = np.random.RandomState(987676453)
+    x = rs.randn(10, 3)
 
     d1 = (x**2).sum(1)
     d0 = robcov.mahalanobis(x, np.eye(3))
@@ -30,9 +30,9 @@ def test_mahalanobis():
     d2 = robcov.mahalanobis(x, cov_inv=np.eye(3))
     assert_allclose(d2, d1, rtol=1e-10)
 
-    d3 = robcov.mahalanobis(x, 2*np.eye(3))
+    d3 = robcov.mahalanobis(x, 2 * np.eye(3))
     assert_allclose(d3, 0.5 * d1, rtol=1e-10)
-    d4 = robcov.mahalanobis(x, cov_inv=2*np.eye(3))
+    d4 = robcov.mahalanobis(x, cov_inv=2 * np.eye(3))
     assert_allclose(d4, 2 * d1, rtol=1e-10)
 
 
@@ -40,18 +40,17 @@ def test_outliers_gy():
     # regression test and basic properties
     # no test for tie warnings
     seed = 567812  # 123
-    np.random.seed(seed)
+    rs = np.random.RandomState(seed)
 
     nobs = 1000
-    x = np.random.randn(nobs)
+    x = rs.randn(nobs)
     d = x**2
     d2 = d.copy()
     n_outl = 10
     d2[:n_outl] += 10
     res = robcov._outlier_gy(d2, distr=None, k_endog=1, trim_prob=0.975)
     # next is regression test
-    res1 = [0.017865444296085831, 8.4163674239050081, 17.0, 42.0,
-            5.0238861873148881]
+    res1 = [0.017865444296085831, 8.4163674239050081, 17.0, 42.0, 5.0238861873148881]
     assert_allclose(res, res1, rtol=1e-13)
     reject_thr = (d2 > res[1]).sum()
     reject_float = nobs * res[0]
@@ -71,8 +70,7 @@ def test_outliers_gy():
 
     res = robcov._outlier_gy(d3, distr=None, k_endog=3, trim_prob=0.975)
     # next is regression test
-    res1 = [0.0085980695527445583, 12.605802816238732, 2.0, 9.0,
-            9.3484036044961485]
+    res1 = [0.0085980695527445583, 12.605802816238732, 2.0, 9.0, 9.3484036044961485]
     assert_allclose(res, res1, rtol=1e-13)
     reject_thr = (d3 > res[1]).sum()
     reject_float = nobs * res[0]
@@ -84,7 +82,7 @@ def test_outliers_gy():
     # fixed cutoff at 0.975, + n_outl because not under Null
 
 
-class TestOGKMad():
+class TestOGKMad:
 
     @classmethod
     def setup_class(cls):
@@ -109,9 +107,9 @@ class TestOGKTau(TestOGKMad):
         def sfunc(x):
             return robscale.scale_tau(x, normalize=False, ddof=0)[1]
 
-        cls.res1 = robcov.cov_ogk(dta_hbk,
-                                  scale_func=sfunc,
-                                  rescale=False, ddof=0, reweight=0.9)
+        cls.res1 = robcov.cov_ogk(
+            dta_hbk, scale_func=sfunc, rescale=False, ddof=0, reweight=0.9
+        )
         cls.res2 = res_cov.results_ogk_tau
 
     def test(self):
@@ -137,27 +135,49 @@ def test_tyler():
     # print.it=TRUE)
     # [1] "convergence was reached after 55 iterations"
 
-    res2 = np.array([
-        [1.277856643343122, 0.298374848328023, 0.732491311584908,
-         0.232045093295329],
-        [0.298374848328023, 1.743589223324287, 1.220675037619406,
-         0.212549156887607],
-        [0.732491311584907, 1.220675037619407, 2.417486791841682,
-         0.295767635758891],
-        [0.232045093295329, 0.212549156887607, 0.295767635758891,
-         0.409157014373402]
-        ])
+    res2 = np.array(
+        [
+            [
+                1.277856643343122,
+                0.298374848328023,
+                0.732491311584908,
+                0.232045093295329,
+            ],
+            [
+                0.298374848328023,
+                1.743589223324287,
+                1.220675037619406,
+                0.212549156887607,
+            ],
+            [
+                0.732491311584907,
+                1.220675037619407,
+                2.417486791841682,
+                0.295767635758891,
+            ],
+            [
+                0.232045093295329,
+                0.212549156887607,
+                0.295767635758891,
+                0.409157014373402,
+            ],
+        ]
+    )
 
     # center is from an OGK version
     center = np.array(
-        [1.5583333333333333, 1.8033333333333335, 1.6599999999999999,
-         -0.0866666666666667]
-        )
+        [
+            1.5583333333333333,
+            1.8033333333333335,
+            1.6599999999999999,
+            -0.0866666666666667,
+        ]
+    )
     k_vars = len(center)
 
     res1 = robcov.cov_tyler(dta_hbk.to_numpy() - center, normalize="trace")
     assert_allclose(np.trace(res1.cov), k_vars, rtol=1e-13)
-    cov_det = res1.cov / np.linalg.det(res1.cov)**(1. / k_vars)
+    cov_det = res1.cov / np.linalg.det(res1.cov) ** (1.0 / k_vars)
     assert_allclose(cov_det, res2, rtol=1e-11)
     assert res1.n_iter == 56
 
@@ -167,12 +187,12 @@ def test_tyler():
     assert res1.n_iter == 56
 
     res1 = robcov.cov_tyler(dta_hbk.to_numpy() - center, normalize="normal")
-    cov_det = res1.cov / np.linalg.det(res1.cov)**(1. / k_vars)
+    cov_det = res1.cov / np.linalg.det(res1.cov) ** (1.0 / k_vars)
     assert_allclose(cov_det, res2, rtol=1e-11)
     assert res1.n_iter == 56
 
     res1 = robcov.cov_tyler(dta_hbk.to_numpy() - center)
-    cov_det = res1.cov / np.linalg.det(res1.cov)**(1. / k_vars)
+    cov_det = res1.cov / np.linalg.det(res1.cov) ** (1.0 / k_vars)
     assert_allclose(cov_det, res2, rtol=1e-11)
     assert res1.n_iter == 56
 
@@ -184,13 +204,15 @@ def test_cov_ms():
     # same result with > CovSest(x, method="sdet")
     # but scale difers with method="biweight"
     mean_r = np.array([1.53420879676, 1.82865741024, 1.65565146981])
-    cov_r = np.array([
-        [1.8090846049573, 0.0479283121828, 0.2446369025717],
-        [0.0479283121828, 1.8189886310494, 0.2513025527579],
-        [0.2446369025717, 0.2513025527579, 1.7287983150484],
-        ])
+    cov_r = np.array(
+        [
+            [1.8090846049573, 0.0479283121828, 0.2446369025717],
+            [0.0479283121828, 1.8189886310494, 0.2513025527579],
+            [0.2446369025717, 0.2513025527579, 1.7287983150484],
+        ]
+    )
 
-    scale2_r = np.linalg.det(cov_r) ** (1/3)
+    scale2_r = np.linalg.det(cov_r) ** (1 / 3)
     shape_r = cov_r / scale2_r
     scale_r = np.sqrt(scale2_r)
 
@@ -223,12 +245,15 @@ def test_covdetmcd():
     # results from rrcov
     # > cdet = CovMcd(x = hbk, raw.only = TRUE, nsamp = "deterministic",
     #                 use.correction=FALSE)
-    cov_dmcd_r = np.array("""
+    cov_dmcd_r = np.array(
+        """
     2.2059619213639   0.0223939863695   0.7898958050933   0.4060613360808
     0.0223939863695   1.1384166802155   0.4315534571891  -0.2344041030201
     0.7898958050933   0.4315534571891   1.8930117467493  -0.3292893001459
     0.4060613360808  -0.2344041030201  -0.3292893001459   0.6179686100845
-    """.split(), float).reshape(4, 4)
+    """.split(),
+        float,
+    ).reshape(4, 4)
 
     mean_dmcd_r = np.array([1.7725, 2.2050, 1.5375, -0.0575])
 
@@ -242,14 +267,18 @@ def test_covdetmcd():
     # iBest: 5; C-step iterations: 7, 7, 7, 4, 6, 6
     # Log(Det.):  -2.42931967153
 
-    mean_dmcdw_r = np.array([1.5338983050847, 1.8322033898305, 1.6745762711864,
-                            -0.0728813559322])
-    cov_dmcdw_r = np.array("""
+    mean_dmcdw_r = np.array(
+        [1.5338983050847, 1.8322033898305, 1.6745762711864, -0.0728813559322]
+    )
+    cov_dmcdw_r = np.array(
+        """
     1.5677744869295   0.09285770205078   0.252076010128   0.13873444408300
     0.0928577020508   1.56769177397171   0.224929617385  -0.00516128856542
     0.2520760101278   0.22492961738467   1.483829106079  -0.20275013775619
     0.1387344440830  -0.00516128856542  -0.202750137756   0.43326701543885
-    """.split(), float).reshape(4, 4)
+    """.split(),
+        float,
+    ).reshape(4, 4)
 
     mod = robcov.CovDetMCD(dta_hbk)
     res = mod.fit(40, maxiter_step=100)  # default is reweight=True
@@ -266,15 +295,19 @@ def test_covdetmm():
     # results from rrcov
     # CovMMest(x = hbk, eff.shape=FALSE,
     #          control=CovControlMMest(sest=CovControlSest(method="sdet")))
-    cov_dmm_r = np.array("""
+    cov_dmm_r = np.array(
+        """
         1.72174266670826 0.06925842715939 0.20781848922667 0.10749343153015
         0.06925842715939 1.74566218886362 0.22161135221404 -0.00517023660647
         0.20781848922667 0.22161135221404 1.63937749762534 -0.17217102475913
         0.10749343153015 -0.00517023660647 -0.17217102475913 0.48174480967136
-        """.split(), float).reshape(4, 4)
+        """.split(),
+        float,
+    ).reshape(4, 4)
 
-    mean_dmm_r = np.array([1.5388643420460, 1.8027582110408, 1.6811517253521,
-                           -0.0755069488908])
+    mean_dmm_r = np.array(
+        [1.5388643420460, 1.8027582110408, 1.6811517253521, -0.0755069488908]
+    )
 
     # using same c as rrcov
     c = 5.81031555752526
@@ -297,10 +330,10 @@ def test_robcov_SMOKE():
     nobs, k_vars = 100, 3
 
     mean = np.zeros(k_vars)
-    cov = linalg.toeplitz(1. / np.arange(1, k_vars+1))
+    cov = linalg.toeplitz(1.0 / np.arange(1, k_vars + 1))
 
-    np.random.seed(187649)
-    x = np.random.multivariate_normal(mean, cov, size=nobs)
+    rs = np.random.RandomState(187649)
+    x = rs.multivariate_normal(mean, cov, size=nobs)
     n_outliers = 1
     x[0, :2] = 50
 
@@ -321,11 +354,11 @@ def test_robcov_SMOKE():
     x2_ = np.rollaxis(x2, 1)
     robcov.cov_tyler_pairs_regularized(
         x2_,
-        start_cov=np.diag(robust.mad(x)**2),
+        start_cov=np.diag(robust.mad(x) ** 2),
         shrinkage_factor=0.1,
         nobs=x.shape[0],
         k_vars=x.shape[1],
-        )
+    )
 
     # others, M-, ...
 
@@ -335,8 +368,9 @@ def test_robcov_SMOKE():
     assert_allclose(r.cov, cov, rtol=0.5)
 
     # trimmed sample covariance
-    r = robcov._cov_iter(x, robcov.weights_quantile, weights_args=(0.50, ),
-                         rescale="med")
+    r = robcov._cov_iter(
+        x, robcov.weights_quantile, weights_args=(0.50,), rescale="med"
+    )
     # rough comparison with DGP cov
     assert_allclose(r.cov, cov, rtol=0.5)
 

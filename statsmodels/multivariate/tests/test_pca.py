@@ -433,8 +433,9 @@ def test_missing():
         PCA(data)
 
 
-def test_too_many_missing(reset_randomstate):
-    data = np.random.standard_normal((200, 50))
+def test_too_many_missing():
+    rs = np.random.RandomState(83429421)
+    data = rs.standard_normal((200, 50))
     data[0, :-3] = np.nan
     with pytest.raises(ValueError):
         PCA(data, ncomp=5, missing="drop-col")
@@ -442,8 +443,9 @@ def test_too_many_missing(reset_randomstate):
     assert max(p.factors.shape) == max(data.shape) - 1
 
 
-def test_gls_warning(reset_randomstate):
-    data = np.random.standard_normal((400, 200))
+def test_gls_warning():
+    rs = np.random.RandomState(83429421)
+    data = rs.standard_normal((400, 200))
     data[:, 1:] = data[:, :1] + 0.01 * data[:, 1:]
     with pytest.warns(EstimationWarning, match="Many series are being down weighted"):
         factors = PCA(data, ncomp=2, gls=True).factors

@@ -46,11 +46,12 @@ class TestPlot:
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
-        x2 = 5 + 3 * np.random.randn(nsample)
+        rs = np.random.RandomState(98474361)
+        x2 = 5 + 3 * rs.randn(nsample)
         x = np.c_[x1, x2, np.sin(0.5 * x1), (x2 - 5) ** 2, np.ones(nsample)]
         beta = [0.5, 0.5, 1, -0.04, 5.0]
         y_true = np.dot(x, beta)
-        y = y_true + sig * np.random.normal(size=nsample)
+        y = y_true + sig * rs.normal(size=nsample)
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
 
         cls.res = sm.OLS(y, exog0).fit()
@@ -137,11 +138,12 @@ class TestPlotPandas(TestPlot):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
-        x2 = 5 + 3 * np.random.randn(nsample)
+        rs = np.random.RandomState(98474362)
+        x2 = 5 + 3 * rs.randn(nsample)
         X = np.c_[x1, x2, np.sin(0.5 * x1), (x2 - 5) ** 2, np.ones(nsample)]
         beta = [0.5, 0.5, 1, -0.04, 5.0]
         y_true = np.dot(X, beta)
-        y = y_true + sig * np.random.normal(size=nsample)
+        y = y_true + sig * rs.normal(size=nsample)
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
         exog0 = DataFrame(exog0, columns=["const", "var1", "var2"])
         y = Series(y, name="outcome")
@@ -168,9 +170,9 @@ class TestABLine:
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(12345)
-        X = sm.add_constant(np.random.normal(0, 20, size=30))
-        y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
+        rs = np.random.RandomState(12345)
+        X = sm.add_constant(rs.normal(0, 20, size=30))
+        y = np.dot(X, [25, 3.5]) + rs.normal(0, 30, size=30)
         mod = sm.OLS(y, X).fit()
         cls.X = X
         cls.y = y
@@ -225,9 +227,9 @@ class TestABLine:
 class TestABLinePandas(TestABLine):
     @classmethod
     def setup_class(cls):
-        np.random.seed(12345)
-        X = sm.add_constant(np.random.normal(0, 20, size=30))
-        y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
+        rs = np.random.RandomState(12345)
+        X = sm.add_constant(rs.normal(0, 20, size=30))
+        y = np.dot(X, [25, 3.5]) + rs.normal(0, 30, size=30)
         cls.X = X
         cls.y = y
         X = DataFrame(X, columns=["const", "someX"])
@@ -240,12 +242,12 @@ class TestAddedVariablePlot:
 
     @pytest.mark.matplotlib
     def test_added_variable_ols(self, close_figures):
-        np.random.seed(3446)
+        rs = np.random.RandomState(3446)
         n = 100
         p = 3
-        exog = np.random.normal(size=(n, p))
+        exog = rs.normal(size=(n, p))
         lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1] ** 2
-        endog = lin_pred + np.random.normal(size=n)
+        endog = lin_pred + rs.normal(size=n)
 
         model = sm.OLS(endog, exog)
         results = model.fit()
@@ -258,14 +260,14 @@ class TestAddedVariablePlot:
     @pytest.mark.matplotlib
     def test_added_variable_poisson(self, close_figures):
 
-        np.random.seed(3446)
+        rs = np.random.RandomState(3446)
 
         n = 100
         p = 3
-        exog = np.random.normal(size=(n, p))
+        exog = rs.normal(size=(n, p))
         lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1] ** 2
         expval = np.exp(lin_pred)
-        endog = np.random.poisson(expval)
+        endog = rs.poisson(expval)
 
         model = sm.GLM(endog, exog, family=sm.families.Poisson())
         results = model.fit()
@@ -316,15 +318,15 @@ class TestPartialResidualPlot:
     @pytest.mark.matplotlib
     def test_partial_residual_poisson(self, close_figures):
 
-        np.random.seed(3446)
+        rs = np.random.RandomState(3446)
 
         n = 100
         p = 3
-        exog = np.random.normal(size=(n, p))
+        exog = rs.normal(size=(n, p))
         exog[:, 0] = 1
         lin_pred = 4 + exog[:, 1] + 0.2 * exog[:, 2] ** 2
         expval = np.exp(lin_pred)
-        endog = np.random.poisson(expval)
+        endog = rs.poisson(expval)
 
         model = sm.GLM(endog, exog, family=sm.families.Poisson())
         results = model.fit()
@@ -355,15 +357,15 @@ class TestCERESPlot:
     @pytest.mark.matplotlib
     def test_ceres_poisson(self, close_figures):
 
-        np.random.seed(3446)
+        rs = np.random.RandomState(3446)
 
         n = 100
         p = 3
-        exog = np.random.normal(size=(n, p))
+        exog = rs.normal(size=(n, p))
         exog[:, 0] = 1
         lin_pred = 4 + exog[:, 1] + 0.2 * exog[:, 2] ** 2
         expval = np.exp(lin_pred)
-        endog = np.random.poisson(expval)
+        endog = rs.poisson(expval)
 
         model = sm.GLM(endog, exog, family=sm.families.Poisson())
         results = model.fit()
@@ -397,11 +399,12 @@ def test_partregress_formula_env(close_figures):
     def lg(x):
         return np.log10(x) if x > 0 else 0
 
+    rs = np.random.RandomState(98474363)
     df = DataFrame(
         dict(
-            a=np.random.random(size=10),
-            b=np.random.random(size=10),
-            c=np.random.random(size=10),
+            a=rs.random(size=10),
+            b=rs.random(size=10),
+            c=rs.random(size=10),
         )
     )
     sm.graphics.plot_partregress(

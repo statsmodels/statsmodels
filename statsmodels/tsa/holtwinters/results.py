@@ -1,3 +1,5 @@
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 import pandas as pd
 from scipy.special import inv_boxcox
@@ -11,6 +13,7 @@ from statsmodels.base.wrapper import (
     populate_wrapper,
     union_dicts,
 )
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class HoltWintersResults(Results):
@@ -377,6 +380,7 @@ class HoltWintersResults(Results):
 
         return smry
 
+    @deprecate_kwarg("random_state", "rng")
     def simulate(
         self,
         nsimulations,
@@ -384,7 +388,8 @@ class HoltWintersResults(Results):
         repetitions=1,
         error="add",
         random_errors=None,
-        random_state=None,
+        *,
+        rng=None,
     ):
         r"""
         Random simulations using the state space formulation.
@@ -429,10 +434,12 @@ class HoltWintersResults(Results):
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        random_state : int or np.random.RandomState, optional
-            A seed for the random number generator or a
-            ``np.random.RandomState`` object. Only used if `random_errors` is
-            ``None``. Default is ``None``.
+        rng : int, np.random.Generator or np.random.RandomState, optional
+            A seed for a numpy.ranomd.RandomStte or a
+            ``np.random.RandomState`` or ``np.random.Generator`` object.
+            Only used if `random_errors` is ``None`` or ``"bootstrap"`` .
+            Default value of ``None`` used the singleton RandomState object
+            provided by NumPy.
 
         Returns
         -------
@@ -656,6 +663,7 @@ class HoltWintersResults(Results):
         sigma = np.sqrt(np.sum(resid**2) / (len(resid) - n_params))
 
         # get random error eps
+        rng = check_random_state(rng, deprecated=True)
         if isinstance(random_errors, np.ndarray):
             if random_errors.shape != (nsimulations, repetitions):
                 raise ValueError(
@@ -664,27 +672,16 @@ class HoltWintersResults(Results):
                 )
             eps = random_errors
         elif random_errors == "bootstrap":
-            eps = np.random.choice(
-                resid, size=(nsimulations, repetitions), replace=True
-            )
+            eps = rng.choice(resid, size=(nsimulations, repetitions), replace=True)
         elif random_errors is None:
-            if random_state is None:
-                eps = np.random.randn(nsimulations, repetitions) * sigma
-            elif isinstance(random_state, int):
-                rng = np.random.RandomState(random_state)
-                eps = rng.randn(nsimulations, repetitions) * sigma
-            elif isinstance(random_state, np.random.RandomState):
-                eps = random_state.randn(nsimulations, repetitions) * sigma
-            else:
-                raise ValueError(
-                    "Argument random_state must be None, an integer, "
-                    "or an instance of np.random.RandomState"
-                )
+            eps = rng.standard_normal((nsimulations, repetitions)) * sigma
         elif isinstance(random_errors, (rv_continuous, rv_discrete)):
             params = random_errors.fit(resid)
-            eps = random_errors.rvs(*params, size=(nsimulations, repetitions))
+            eps = random_errors.rvs(
+                *params, size=(nsimulations, repetitions), random_state=rng
+            )
         elif isinstance(random_errors, rv_frozen):
-            eps = random_errors.rvs(size=(nsimulations, repetitions))
+            eps = random_errors.rvs(size=(nsimulations, repetitions), random_state=rng)
         else:
             raise ValueError("Argument random_errors has unexpected value!")
 

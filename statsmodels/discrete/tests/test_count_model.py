@@ -253,12 +253,14 @@ class TestZeroInflatedPoisson_predict:
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5]
-        np.random.seed(999)
+        rs = np.random.RandomState(999)
         nobs = 2000
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
         mu_true = exog.dot(expected_params)
-        cls.endog = sm.distributions.zipoisson.rvs(mu_true, 0.05, size=mu_true.shape)
+        cls.endog = sm.distributions.zipoisson.rvs(
+            mu_true, 0.05, size=mu_true.shape, random_state=rs
+        )
         model = sm.ZeroInflatedPoisson(cls.endog, exog)
         cls.res = model.fit(method="bfgs", maxiter=5000, disp=False)
 
@@ -358,7 +360,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         t_test = self.res1.t_test(unit_matrix)
         assert_allclose(self.res1.tvalues, t_test.tvalue)
 
-    def test_minimize(self, reset_randomstate):
+    def test_minimize(self):
         # check additional optimizers using the `minimize` option
         model = self.res1.model
         # use the same start_params, but avoid recomputing
@@ -399,7 +401,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
             niter_success=None,
             disp=False,
             interval=1,
-            **seed
+            **seed,
         )
 
         assert_allclose(res_bh.params, self.res2.params, atol=1e-4, rtol=1e-4)
@@ -412,13 +414,13 @@ class TestZeroInflatedGeneralizedPoisson_predict:
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5, 0.5]
-        np.random.seed(999)
+        rs = np.random.RandomState(999)
         nobs = 2000
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
         mu_true = exog.dot(expected_params[:-1])
         cls.endog = sm.distributions.zigenpoisson.rvs(
-            mu_true, expected_params[-1], 2, 0.5, size=mu_true.shape
+            mu_true, expected_params[-1], 2, 0.5, size=mu_true.shape, random_state=rs
         )
         model = sm.ZeroInflatedGeneralizedPoisson(cls.endog, exog, p=2)
         cls.res = model.fit(method="bfgs", maxiter=5000, disp=False)
@@ -511,7 +513,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         assert_allclose(res_reg.params[2:], self.res1.params[2:], atol=1e-1, rtol=1e-1)
 
     # possibly slow, adds 25 seconds
-    def test_minimize(self, reset_randomstate):
+    def test_minimize(self):
         # check additional optimizers using the `minimize` option
         model = self.res1.model
         # use the same start_params, but avoid recomputing
@@ -541,12 +543,14 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         assert_allclose(res_dog.bse, self.res2.bse, atol=1e-3, rtol=7e-3)
         assert_(res_dog.mle_retvals["converged"] is True)
 
+        rs = np.random.RandomState(328390219)
         res_bh = model.fit(
             start_params=start_params,
             method="basinhopping",
             maxiter=500,
             niter_success=3,
             disp=False,
+            seed=rs,
         )
 
         assert_allclose(res_bh.params, self.res2.params, atol=1e-4, rtol=3e-4)
@@ -560,7 +564,7 @@ class TestZeroInflatedNegativeBinomialP_predict:
     def setup_class(cls):
 
         expected_params = [1, 1, 0.5]
-        np.random.seed(999)
+        rs = np.random.RandomState(999)
         nobs = 5000
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 0
@@ -568,7 +572,12 @@ class TestZeroInflatedNegativeBinomialP_predict:
         prob_infl = 0.15
         mu_true = np.exp(exog.dot(expected_params[:-1]))
         cls.endog = sm.distributions.zinegbin.rvs(
-            mu_true, expected_params[-1], 2, prob_infl, size=mu_true.shape
+            mu_true,
+            expected_params[-1],
+            2,
+            prob_infl,
+            size=mu_true.shape,
+            random_state=rs,
         )
         model = sm.ZeroInflatedNegativeBinomialP(cls.endog, exog, p=2)
         cls.res = model.fit(method="bfgs", maxiter=5000, disp=False)

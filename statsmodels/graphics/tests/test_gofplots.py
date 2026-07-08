@@ -25,7 +25,8 @@ class BaseProbplotMixin:
             self.fig, self.ax = plt.subplots()
         except ImportError:
             pass
-        self.other_array = np.random.normal(size=self.prbplt.data.shape)
+        rs = np.random.RandomState(988745672)
+        self.other_array = rs.normal(size=self.prbplt.data.shape)
         self.other_prbplot = ProbPlot(self.other_array)
         self.plot_options = dict(
             marker="d",
@@ -70,7 +71,6 @@ class BaseProbplotMixin:
             **self.plot_options,
         )
 
-    @pytest.mark.xfail(strict=True)
     @pytest.mark.matplotlib
     @pytest.mark.skipif(
         PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM/Pyodide"
@@ -79,7 +79,6 @@ class BaseProbplotMixin:
         self.prbplt.probplot(
             ax=self.ax,
             line=self.line,
-            other=self.other_array,
             **self.plot_options,
         )
 
@@ -101,7 +100,6 @@ class BaseProbplotMixin:
             **self.plot_options,
         )
 
-    @pytest.mark.xfail(strict=True)
     @pytest.mark.matplotlib
     @pytest.mark.skipif(
         PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM/Pyodide"
@@ -110,7 +108,6 @@ class BaseProbplotMixin:
         self.prbplt.probplot(
             ax=self.ax,
             line=self.line,
-            other=self.other_prbplot,
             **self.plot_options,
         )
 
@@ -187,7 +184,6 @@ class BaseProbplotMixin:
 )
 class TestProbPlotLongelyNoFit(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
@@ -200,7 +196,6 @@ class TestProbPlotLongelyNoFit(BaseProbplotMixin):
 
 class TestProbPlotLongelyWithFit(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
@@ -213,8 +208,8 @@ class TestProbPlotLongelyWithFit(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data)
         self.line = None
         super().setup_method()
@@ -222,8 +217,8 @@ class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, fit=True)
         self.line = "q"
         super().setup_method()
@@ -231,8 +226,8 @@ class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, dist=stats.norm(loc=8.5, scale=3.0))
         self.line = "45"
         super().setup_method()
@@ -260,9 +255,9 @@ class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
 
 class TestCompareSamplesDifferentSize:
     def setup_method(self):
-        np.random.seed(5)
-        self.data1 = ProbPlot(np.random.normal(loc=8.25, scale=3.25, size=37))
-        self.data2 = ProbPlot(np.random.normal(loc=8.25, scale=3.25, size=55))
+        rs = np.random.RandomState(973771)
+        self.data1 = ProbPlot(rs.normal(loc=8.25, scale=3.25, size=37))
+        self.data2 = ProbPlot(rs.normal(loc=8.25, scale=3.25, size=55))
 
     @pytest.mark.matplotlib
     def test_qqplot(self, close_figures):
@@ -278,8 +273,8 @@ class TestCompareSamplesDifferentSize:
 
 class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, loc=8, scale=3)
         self.line = "45"
         super().setup_method()
@@ -299,12 +294,13 @@ class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
 
 class TestTopLevel:
     def setup_method(self):
+        rs = np.random.RandomState(5885739)
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
         self.res = self.mod_fit.resid
         self.prbplt = ProbPlot(self.mod_fit.resid, dist=stats.t, distargs=(4,))
-        self.other_array = np.random.normal(size=self.prbplt.data.shape)
+        self.other_array = rs.normal(size=self.prbplt.data.shape)
         self.other_prbplot = ProbPlot(self.other_array)
 
     @pytest.mark.matplotlib
@@ -339,7 +335,6 @@ class TestTopLevel:
 
 def test_invalid_dist_config(close_figures):
     # GH 4226
-    np.random.seed(5)
     data = sm.datasets.longley.load()
     data.exog = sm.add_constant(data.exog, prepend=False)
     mod_fit = sm.OLS(data.endog, data.exog).fit()
@@ -472,9 +467,9 @@ class TestDoPlot:
 
 class TestQQLine:
     def setup_method(self):
-        np.random.seed(0)
-        self.x = np.sort(np.random.normal(loc=2.9, scale=1.2, size=37))
-        self.y = np.sort(np.random.normal(loc=3.0, scale=1.1, size=37))
+        rs = np.random.RandomState(0)
+        self.x = np.sort(rs.normal(loc=2.9, scale=1.2, size=37))
+        self.y = np.sort(rs.normal(loc=3.0, scale=1.1, size=37))
         try:
             import matplotlib.pyplot as plt
 
@@ -640,7 +635,7 @@ def test_param_unpacking():
 @pytest.mark.parametrize("x_size", [30, 50])
 @pytest.mark.parametrize("y_size", [30, 50])
 @pytest.mark.parametrize("line", [None, "45", "s", "r", "q"])
-def test_correct_labels(close_figures, reset_randomstate, line, x_size, y_size, labels):
+def test_correct_labels(close_figures, line, x_size, y_size, labels):
     rs = np.random.RandomState(9876554)
     x = rs.normal(loc=0, scale=0.1, size=x_size)
     y = rs.standard_t(3, size=y_size)
@@ -667,22 +662,23 @@ def test_correct_labels(close_figures, reset_randomstate, line, x_size, y_size, 
 
 @pytest.mark.matplotlib
 def test_axis_order(close_figures):
-    xx = np.random.normal(10, 1, (100,))
-    xy = np.random.normal(1, 0.01, (100,))
+    rs = np.random.RandomState(9876553)
+    xx = rs.normal(10, 1, (100,))
+    xy = rs.normal(1, 0.01, (100,))
     fig = qqplot_2samples(xx, xy, "x", "y")
     ax = fig.get_axes()[0]
     y_range = np.diff(ax.get_ylim())[0]
     x_range = np.diff(ax.get_xlim())[0]
     assert y_range < x_range
 
-    xx_long = np.random.normal(10, 1, (1000,))
+    xx_long = rs.normal(10, 1, (1000,))
     fig = qqplot_2samples(xx_long, xy, "x", "y")
     ax = fig.get_axes()[0]
     y_range = np.diff(ax.get_ylim())[0]
     x_range = np.diff(ax.get_xlim())[0]
     assert y_range < x_range
 
-    xy_long = np.random.normal(1, 0.01, (1000,))
+    xy_long = rs.normal(1, 0.01, (1000,))
     fig = qqplot_2samples(xx, xy_long, "x", "y")
     ax = fig.get_axes()[0]
     y_range = np.diff(ax.get_ylim())[0]
@@ -696,8 +692,9 @@ def test_qqplot_2samples_labels():
         import matplotlib.pyplot as plt
     except ImportError:
         pass
-    data1 = np.random.normal(0, 1, 100)
-    data2 = np.random.normal(0, 1, 100)
+    rs = np.random.RandomState(973772)
+    data1 = rs.normal(0, 1, 100)
+    data2 = rs.normal(0, 1, 100)
     fig = qqplot_2samples(data1, data2, xlabel="Sample 1", ylabel="Sample 2")
     ax = fig.get_axes()[0]
     assert ax.get_xlabel() == "Sample 1"
@@ -707,8 +704,9 @@ def test_qqplot_2samples_labels():
 
 @pytest.mark.matplotlib
 def test_qqplot_2samples_kwargs(close_figures):
-    data1 = np.random.normal(0, 1, 100)
-    data2 = np.random.normal(0, 1, 100)
+    rs = np.random.RandomState(97377)
+    data1 = rs.normal(0, 1, 100)
+    data2 = rs.normal(0, 1, 100)
     fig_with_kwarg = qqplot_2samples(data1, data2, color="cyan")
     ax = fig_with_kwarg.get_axes()[0]
     scatter = ax.get_children()[0]

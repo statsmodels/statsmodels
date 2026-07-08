@@ -3,6 +3,7 @@ Created on Tue Nov 08 22:28:48 2011
 
 @author: josef
 """
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pytest
@@ -43,9 +44,7 @@ def test_eval_measures():
 
     assert_almost_equal(
         rmse(x, y),
-        np.array(
-            [8.5732141, 9.35414347, 10.17349497, 11.02270384, 11.89537725]
-        ),
+        np.array([8.5732141, 9.35414347, 10.17349497, 11.02270384, 11.89537725]),
     )
     assert_almost_equal(
         rmse(x, y, axis=1),
@@ -56,10 +55,10 @@ def test_eval_measures():
     loc = np.where(x != 0)
     err[loc] /= x[loc]
     err[np.where(x == 0)] = np.nan
-    expected = np.sqrt(np.nanmean(err ** 2, 0) * 100)
+    expected = np.sqrt(np.nanmean(err**2, 0) * 100)
     assert_almost_equal(rmspe(x, y), expected)
     err[np.where(np.isnan(err))] = 0.0
-    expected = np.sqrt(np.nanmean(err ** 2, 0) * 100)
+    expected = np.sqrt(np.nanmean(err**2, 0) * 100)
     assert_almost_equal(rmspe(x, y, zeros=0), expected)
 
     assert_equal(maxabs(x, y), np.array([14.0, 15.0, 16.0, 17.0, 18.0]))
@@ -119,9 +118,10 @@ def test_ic():
     assert_almost_equal(hqic(0, 10, 2), 2 * np.log(np.log(n)) * k, decimal=14)
 
 
-def test_iqr_axis(reset_randomstate):
-    x1 = np.random.standard_normal((100, 100))
-    x2 = np.random.standard_normal((100, 100))
+def test_iqr_axis():
+    rs = np.random.RandomState(32893190)
+    x1 = rs.standard_normal((100, 100))
+    x2 = rs.standard_normal((100, 100))
     ax_none = iqr(x1, x2, axis=None)
     ax_none_direct = iqr(x1.ravel(), x2.ravel())
     assert_equal(ax_none, ax_none_direct)

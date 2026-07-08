@@ -34,7 +34,7 @@ DECIMAL_2 = 2
 
 
 @pytest.fixture
-def bivariate_var_data(reset_randomstate):
+def bivariate_var_data():
     """A bivariate dataset for VAR estimation"""
     rs = np.random.RandomState(2382178)
     e = rs.standard_normal((252, 2))
@@ -900,7 +900,7 @@ def test_var_cov_params_pandas(bivariate_var_data):
     assert_index_equal(cov.index, index)
 
 
-def test_summaries_exog(reset_randomstate):
+def test_summaries_exog():
     rs = np.random.RandomState(2182378)
     y = rs.standard_normal((500, 6))
     df = pd.DataFrame(y)
@@ -925,7 +925,7 @@ def test_summaries_exog(reset_randomstate):
     assert "exog_3" in summ
 
 
-def test_whiteness_nlag(reset_randomstate):
+def test_whiteness_nlag():
     # GH 6686
     rs = np.random.RandomState(233078)
     y = rs.standard_normal((200, 2))
@@ -934,7 +934,7 @@ def test_whiteness_nlag(reset_randomstate):
         res.test_whiteness(1)
 
 
-def test_var_maxlag(reset_randomstate):
+def test_var_maxlag():
     rs = np.random.RandomState(2382378)
     y = rs.standard_normal((22, 10))
     VAR(y).fit(maxlags=None, ic="aic")
@@ -983,7 +983,7 @@ def test_irf_err_bands():
     irf.errband_mc()
 
 
-def test_0_lag(reset_randomstate):
+def test_0_lag():
     # GH 9412
     rs = np.random.RandomState(20260112)
     y = rs.randn(500, 2)
@@ -993,7 +993,7 @@ def test_0_lag(reset_randomstate):
     assert_allclose(fcasts, np.ones((5, 1)) * results.params)
 
 
-def test_forecast_wrong_shape_params(reset_randomstate):
+def test_forecast_wrong_shape_params():
     # GH 9412
     rs = np.random.RandomState(233751)
     y = rs.rand(300, 2)

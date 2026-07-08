@@ -29,7 +29,7 @@ fit_funcs = {
 
 
 def dummy_func(x):
-    return x ** 2
+    return x**2
 
 
 def dummy_score(x):
@@ -62,77 +62,81 @@ def dummy_constraints():
 
 
 @pytest.mark.smoke
-def test_full_output_false(reset_randomstate):
+@pytest.mark.parametrize("method", fit_funcs.keys())
+def test_full_output_false(method):
     # newton needs f, score, start, fargs, kwargs
     # bfgs needs f, score start, fargs, kwargs
     # nm needs ""
     # cg ""
     # ncg ""
     # powell ""
-    for method, func in fit_funcs.items():
-        if method == "newton":
-            xopt, retvals = func(
-                dummy_func,
-                dummy_score,
-                [1.0],
-                (),
-                {},
-                hess=dummy_hess,
-                full_output=False,
-                disp=0,
-            )
+    func = fit_funcs[method]
+    kwargs = {"seed": 32839013} if method == "basinhopping" else {}
+    if method == "newton":
+        xopt, retvals = func(
+            dummy_func,
+            dummy_score,
+            [1.0],
+            (),
+            kwargs=kwargs,
+            hess=dummy_hess,
+            full_output=False,
+            disp=0,
+        )
 
-        else:
-            xopt, retvals = func(
-                dummy_func,
-                dummy_score,
-                [1.0],
-                (),
-                {},
-                full_output=False,
-                disp=0
-            )
-        assert_(retvals is None)
-        if method == "powell" and SP_LT_15:
-            # Fixed in SP 1.5
-            assert_(xopt.shape == () and xopt.size == 1)
-        else:
-            assert_(len(xopt) == 1)
+    else:
+        xopt, retvals = func(
+            dummy_func,
+            dummy_score,
+            [1.0],
+            (),
+            kwargs=kwargs,
+            full_output=False,
+            disp=0,
+        )
+    assert_(retvals is None)
+    if method == "powell" and SP_LT_15:
+        # Fixed in SP 1.5
+        assert_(xopt.shape == () and xopt.size == 1)
+    else:
+        assert_(len(xopt) == 1)
 
 
-def test_full_output(reset_randomstate):
-    for method, func in fit_funcs.items():
-        if method == "newton":
-            xopt, retvals = func(
-                dummy_func,
-                dummy_score,
-                [1.0],
-                (),
-                {},
-                hess=dummy_hess,
-                full_output=True,
-                disp=0,
-            )
+@pytest.mark.parametrize("method", fit_funcs.keys())
+def test_full_output(method):
+    func = fit_funcs[method]
+    kwargs = {"seed": 32839013} if method == "basinhopping" else {}
+    if method == "newton":
+        xopt, retvals = func(
+            dummy_func,
+            dummy_score,
+            [1.0],
+            (),
+            kwargs,
+            hess=dummy_hess,
+            full_output=True,
+            disp=0,
+        )
 
-        else:
-            xopt, retvals = func(
-                dummy_func,
-                dummy_score,
-                [1.0],
-                (),
-                {},
-                full_output=True,
-                disp=0
-            )
+    else:
+        xopt, retvals = func(
+            dummy_func,
+            dummy_score,
+            [1.0],
+            (),
+            kwargs,
+            full_output=True,
+            disp=0,
+        )
 
-        assert_(retvals is not None)
-        assert_("converged" in retvals)
+    assert_(retvals is not None)
+    assert_("converged" in retvals)
 
-        if method == "powell" and SP_LT_15:
-            # Fixed in SP 1.5
-            assert_(xopt.shape == () and xopt.size == 1)
-        else:
-            assert_(len(xopt) == 1)
+    if method == "powell" and SP_LT_15:
+        # Fixed in SP 1.5
+        assert_(xopt.shape == () and xopt.size == 1)
+    else:
+        assert_(len(xopt) == 1)
 
 
 def test_minimize_scipy_slsqp():

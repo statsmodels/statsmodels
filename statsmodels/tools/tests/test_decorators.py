@@ -22,21 +22,33 @@ def test_cache_readonly():
 
     b = ex.b
     assert_equal(b, 1)
-    assert_equal(ex.__dict__, dict(a=0, _cache=dict(b=1,)))
+    assert_equal(
+        ex.__dict__,
+        dict(
+            a=0,
+            _cache=dict(
+                b=1,
+            ),
+        ),
+    )
     # assert_equal(ex.__dict__, dict(a=0, b=1, _cache=dict(b=1)))
 
     with pytest.raises(AttributeError):
         ex.b = -1
 
-    assert_equal(ex._cache, dict(b=1,))
+    assert_equal(
+        ex._cache,
+        dict(
+            b=1,
+        ),
+    )
 
 
 def dummy_factory(msg, remove_version, warning):
     class Dummy:
-        y = deprecated_alias("y", "x",
-                             remove_version=remove_version,
-                             msg=msg,
-                             warning=warning)
+        y = deprecated_alias(
+            "y", "x", remove_version=remove_version, msg=msg, warning=warning
+        )
 
         def __init__(self, y):
             self.x = y
