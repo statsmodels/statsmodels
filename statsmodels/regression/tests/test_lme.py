@@ -1353,9 +1353,7 @@ def test_get_distribution():
 
     # Build a params vector that is comparable to
     # MixedLMResults.params
-    import statsmodels.regression.mixed_linear_model
-
-    mp = statsmodels.regression.mixed_linear_model.MixedLMParams
+    mp = MixedLMParams
     po = mp.from_components(fe_params=fe_params, cov_re=cov_re, vcomp=vcomp)
     pa = po.get_packed(has_fe=True, use_sqrt=False)
     pa[len(fe_params) :] /= scale
