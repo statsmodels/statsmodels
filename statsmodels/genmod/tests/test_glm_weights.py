@@ -543,7 +543,8 @@ def test_wtd_gradient_irls(family_and_link, binom_version):
     family_class, link = family_and_link
 
     method = "bfgs"
-
+    # Default value
+    lin_pred = rs.uniform(size=exog.shape[0])
     if family_class != fam.Binomial and binom_version == 1:
         return
     elif family_class == fam.Binomial and link == lnk.CLogLog:
@@ -575,15 +576,11 @@ def test_wtd_gradient_irls(family_and_link, binom_version):
         return
     elif (family_class, link) == (fam.InverseGaussian, lnk.Log):
         # Cannot get gradient to converage with var_weights here
-        lin_pred = -1 + exog.sum(1)
         return
     elif (family_class, link) == (fam.InverseGaussian, lnk.Identity):
         # Cannot get gradient to converage with var_weights here
-        lin_pred = 20 + 5 * exog.sum(1)
-        lin_pred = np.clip(lin_pred, 1e-4, np.inf)
         return
     elif (family_class, link) == (fam.InverseGaussian, lnk.InverseSquared):
-        lin_pred = 0.5 + exog.sum(1) / 5
         return  # skip due to non-convergence
     elif (family_class, link) == (fam.InverseGaussian, lnk.InversePower):
         lin_pred = 1 + exog.sum(1) / 5
@@ -593,18 +590,14 @@ def test_wtd_gradient_irls(family_and_link, binom_version):
         lin_pred = np.clip(lin_pred, 1e-3, np.inf)
         method = "newton"
     elif (family_class, link) == (fam.NegativeBinomial, lnk.InverseSquared):
-        lin_pred = 0.1 + rs.uniform(size=exog.shape[0])
         return  # skip due to non-convergence
     elif (family_class, link) == (fam.NegativeBinomial, lnk.InversePower):
         # Cannot get gradient to converage with var_weights here
-        lin_pred = 1 + exog.sum(1) / 5
         return
 
     elif (family_class, link) == (fam.Gaussian, lnk.InversePower):
         # adding skip because of convergence failure
         skip_one = True
-    else:
-        lin_pred = rs.uniform(size=exog.shape[0])
 
     endog = gen_endog(lin_pred, family_class, link, binom_version)
     if binom_version == 0:

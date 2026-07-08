@@ -503,7 +503,6 @@ class TestKernelReg(KernelRegressionTestBase):
         sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
         assert sig_var2 == "Not Significant"
 
-
     @pytest.mark.singleton_randomstate
     @pytest.mark.thread_unsafe("Intentionally relies on global random state")
     @pytest.mark.slow
@@ -640,7 +639,12 @@ class TestKernelReg(KernelRegressionTestBase):
         # The cv_ls bandwidth was estimated earlier to save time
         seed = 8329321
         model = nparam.KernelReg(
-            endog=[Y], exog=[ovals, C3], reg_type="ll", var_type="oc", bw=bw, seed=np.random.RandomState(seed)
+            endog=[Y],
+            exog=[ovals, C3],
+            reg_type="ll",
+            var_type="oc",
+            bw=bw,
+            seed=np.random.RandomState(seed),
         )
         # This was also tested with local constant estimator
         nboot = 45  # Number of bootstrap samples

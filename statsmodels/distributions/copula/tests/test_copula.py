@@ -270,7 +270,7 @@ def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True, rng=None):
         nobs = rvs.shape[0]
     freq = frequencies_fromdata(rvs, k, use_ranks=True)
     pdfg = approx_copula_pdf(
-        cop, k_bins=k, force_uniform=True, use_pdf=use_pdf, random_state=rng
+        cop, k_bins=k, force_uniform=True, use_pdf=use_pdf, rng=rng
     )
     count_pdf = pdfg * nobs
 

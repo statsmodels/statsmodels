@@ -1040,7 +1040,7 @@ class TestRegCoefD(TestRegCoefC):
             self.model.reg_type,
             self.bw,
             defaults=EstimatorSettings(efficient=False),
-            seed=self._generator
+            seed=self._generator,
         )
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0

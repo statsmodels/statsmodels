@@ -1479,7 +1479,6 @@ def test_gradient_irls(family_and_link, binom_version):
         lin_pred = 20 + 5 * exog.sum(1)
         lin_pred = np.clip(lin_pred, 1e-4, np.inf)
     elif family_class is fam.InverseGaussian and link is lnk.InverseSquared:
-        lin_pred = 0.5 + exog.sum(1) / 5
         return  # skip due to non-convergence
     elif family_class is fam.Binomial and link is lnk.Cauchy:
         # Convergence issues or missing linpred.
@@ -1504,17 +1503,13 @@ def test_gradient_irls(family_and_link, binom_version):
         fam.NegativeBinomial,
         lnk.InverseSquared,
     ):
-        # lin_pred = 0.1 + rs.uniform(size=exog.shape[0])
         return  # skip due to non-convergence
     elif (family_class, link) == (
         fam.NegativeBinomial,
         lnk.InversePower,
     ):
         lin_pred = 1 + exog.sum(1) / 5
-    # the following fails with Identity link, because endog < 0
-    # elif family_class == fam.Gamma:
-    #     lin_pred = 0.5 * exog.sum(1) + \
-    #     rs.uniform(size=exog.shape[0])
+    # fam.Gamma fails with Identity link, because endog < 0
     else:
         lin_pred = rs.uniform(size=exog.shape[0])
 
@@ -1686,7 +1681,6 @@ def test_gradient_irls_eim(family_and_link, binom_version):
         fam.InverseGaussian,
         lnk.InverseSquared,
     ):
-        lin_pred = 0.5 + exog.sum(1) / 5
         return  # skip due to non-convergence
     elif (family_class, link) == (
         fam.InverseGaussian,
@@ -1703,7 +1697,6 @@ def test_gradient_irls_eim(family_and_link, binom_version):
         fam.NegativeBinomial,
         lnk.InverseSquared,
     ):
-        lin_pred = 0.1 + rs.uniform(size=exog.shape[0])
         return  # skip due to non-convergence
     elif (family_class, link) == (
         fam.NegativeBinomial,

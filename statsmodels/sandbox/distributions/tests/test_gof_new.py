@@ -15,13 +15,12 @@ def test_loop_vectorized_batch_equivalence():
         nobs=nobs,
         nrep=100,
         value=0.576 / (1 + 4.0 / nobs - 25.0 / nobs**2),
-        random_state=rs,
+        rng=rs,
     )
 
     rs = np.random.RandomState(8765679)
     tmp = [
-        bootstrap(NewNorm(), args=(0, 1), nobs=nobs, nrep=1, random_state=rs)
-        for _ in range(100)
+        bootstrap(NewNorm(), args=(0, 1), nobs=nobs, nrep=1, rng=rs) for _ in range(100)
     ]
     resu2 = (np.array(tmp) > 0.576 / (1 + 4.0 / nobs - 25.0 / nobs**2)).mean()
 
@@ -34,7 +33,7 @@ def test_loop_vectorized_batch_equivalence():
             nrep=1,
             value=0.576 / (1 + 4.0 / nobs - 25.0 / nobs**2),
             batch_size=10,
-            random_state=rs,
+            rng=rs,
         )
         for _ in range(10)
     ]
