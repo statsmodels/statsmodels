@@ -9,13 +9,13 @@ from statsmodels.base.model import Model
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.iolib import summary2
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     EstimationWarning,
     SpecificationWarning,
 )
 
-from ..tools.rng_qrng import check_random_state
 from .factor_rotation import promax, rotate_factors
 
 _opt_defaults = {"gtol": 1e-7}

@@ -55,10 +55,14 @@ class EllipticalCopula(Copula):
 
         return mv_pdf_ppf / np.prod(self.distr_uv.pdf(ppf), axis=-1)
 
-    def cdf(self, u, args=()):
+    def cdf(self, u, args=(), random_state=None):
         self._handle_args(args)
         ppf = self.distr_uv.ppf(u)
-        return self.distr_mv.cdf(ppf)
+        try:
+            # Modern SciPy supports this and is needed to avoid global random state
+            return self.distr_mv.cdf(ppf, rng=random_state)
+        except TypeError:
+            return self.distr_mv.cdf(ppf)
 
     def tau(self, corr=None):
         """Bivariate kendall's tau based on correlation coefficient.
