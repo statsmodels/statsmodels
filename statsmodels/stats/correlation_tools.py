@@ -230,6 +230,7 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
                 "Diagonal elements below min_diag=%r have been raised to "
                 "min_diag; the corresponding variances are changed." % min_diag,
                 SpecificationWarning,
+                stacklevel=2,
             )
             cov = cov.copy()
             k = cov.shape[0]
