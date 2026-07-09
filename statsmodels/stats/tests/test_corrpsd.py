@@ -179,6 +179,45 @@ def test_corr_psd():
     assert_almost_equal(x2, y, decimal=14)
 
 
+@pytest.mark.parametrize("method", ["clipped", "nearest"])
+def test_cov_nearest_min_diag(method):
+    # GH#9675 cov_nearest returns nan for a zero or negative diagonal because
+    # the conversion to a correlation matrix divides by a zero standard
+    # deviation. min_diag raises such diagonal elements to a positive floor.
+    from statsmodels.tools.sm_exceptions import SpecificationWarning
+
+    # default behavior is unchanged: a zero on the diagonal still yields nan
+    mat = np.array([[2.0, 0.0], [0.0, 0.0]])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res_default = cov_nearest(mat, method=method)
+    assert np.isnan(res_default).any()
+
+    # min_diag clips the zero diagonal element and warns
+    with pytest.warns(SpecificationWarning):
+        res = cov_nearest(mat, method=method, min_diag=1e-8)
+    assert not np.isnan(res).any()
+    assert_allclose(res, [[2.0, 0.0], [0.0, 1e-8]], atol=1e-12)
+    # result is positive semi-definite and the input is not modified
+    assert np.linalg.eigvalsh(res).min() >= -1e-12
+    assert_allclose(mat, [[2.0, 0.0], [0.0, 0.0]])
+
+    # a negative diagonal element is also corrected
+    neg = np.array([[2.0, 0.0], [0.0, -1e-8]])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res_neg = cov_nearest(neg, method=method, min_diag=1e-8)
+    assert not np.isnan(res_neg).any()
+    assert np.diag(res_neg).min() >= 1e-8 - 1e-20
+
+    # no warning and no change when the diagonal is already above min_diag
+    good = np.array([[2.0, 0.1], [0.1, 1.0]])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SpecificationWarning)
+        res_good = cov_nearest(good, method=method, min_diag=1e-8)
+    assert not np.isnan(res_good).any()
+
+
 class CheckCorrPSDMixin:
 
     def test_nearest(self):
