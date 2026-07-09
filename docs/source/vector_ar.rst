@@ -182,7 +182,7 @@ Class Reference
 
 
 Post-estimation Analysis
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Several process properties and additional results after
 estimation are available for vector autoregressive processes.
@@ -193,14 +193,38 @@ estimation are available for vector autoregressive processes.
 
    LagOrderResults
 
+
+Normality
+~~~~~~~~~
+
+As pointed out in the beginning of this document, the white noise component
+:math:`u_t` is assumed to be normally distributed. While this assumption
+is not required for parameter estimates to be consistent or asymptotically
+normal, results are generally more reliable in finite samples when residuals
+are Gaussian white noise. To test whether this assumption is consistent with
+a data set, :class:`VARResults` offers the `test_normality` method.
+
+.. ipython:: python
+
+    results.test_normality()
+
+
+Whiteness of residuals
+~~~~~~~~~~~~~~~~~~~~~~
+
+To test the whiteness of the estimation residuals (this means absence of
+significant residual autocorrelations) one can use the `test_whiteness`
+method of :class:`VARResults`.
+
+
 .. currentmodule:: statsmodels.tsa.vector_ar.hypothesis_test_results
 .. autosummary::
    :toctree: generated/
 
    HypothesisTestResults
+   CausalityTestResults
    NormalityTestResults
    WhitenessTestResults
-
 
 Impulse Response Analysis
 -------------------------
@@ -314,37 +338,6 @@ F-test.
 .. ipython:: python
 
    results.test_causality('realgdp', ['realinv', 'realcons'], kind='f')
-
-Normality
-~~~~~~~~~
-
-As pointed out in the beginning of this document, the white noise component
-:math:`u_t` is assumed to be normally distributed. While this assumption
-is not required for parameter estimates to be consistent or asymptotically
-normal, results are generally more reliable in finite samples when residuals
-are Gaussian white noise. To test whether this assumption is consistent with
-a data set, :class:`VARResults` offers the `test_normality` method.
-
-.. ipython:: python
-
-    results.test_normality()
-
-Whiteness of residuals
-~~~~~~~~~~~~~~~~~~~~~~
-
-To test the whiteness of the estimation residuals (this means absence of
-significant residual autocorrelations) one can use the `test_whiteness`
-method of :class:`VARResults`.
-
-
-.. currentmodule:: statsmodels.tsa.vector_ar.hypothesis_test_results
-.. autosummary::
-   :toctree: generated/
-
-   HypothesisTestResults
-   CausalityTestResults
-   NormalityTestResults
-   WhitenessTestResults
 
 .. _svar:
 
