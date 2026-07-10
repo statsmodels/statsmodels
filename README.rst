@@ -205,3 +205,7 @@ https://github.com/statsmodels/statsmodels/issues
    :target: https://anaconda.org/conda-forge/statsmodels/
 .. |License| image:: https://img.shields.io/pypi/l/statsmodels.svg
    :target: https://github.com/statsmodels/statsmodels/blob/main/LICENSE.txt
+Related projects
+----------------
+
+- `IntelligenceMax <https://intelligencemax.ai>`_ — live reasoning gym (`guide <https://intelligencemax.ai/guide>`_, `science <https://intelligencemax.ai/science>`_)
