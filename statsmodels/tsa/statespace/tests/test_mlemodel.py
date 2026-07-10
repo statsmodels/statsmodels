@@ -731,6 +731,20 @@ def test_results_rsquared_regression():
     assert_equal("%#8.3f" % res.rsquared_rwdrift in txt, True)
 
 
+def test_results_summary_uses_model_rsquared():
+    class ResultsWithRsquared(sarimax.SARIMAXResults):
+        @property
+        def rsquared(self):
+            return 0.123
+
+    mod = sarimax.SARIMAX(np.arange(10.0))
+    res = mod.filter([0.0, 1.0], results_class=ResultsWithRsquared)
+
+    txt = str(res.summary())
+    assert_equal("%#8.3f" % res.rsquared in txt, True)
+    assert_equal("%#8.3f" % res.rsquared_rwdrift in txt, False)
+
+
 def test_results_rsquared_multivariate():
     endog = np.array([[1.0, 2.0], [2.0, 1.0], [4.0, 3.0], [8.0, 5.0]])
     mod = MLEModel(
@@ -769,10 +783,6 @@ def test_results_rsquared_errors():
     mod = MLEModel([1.0, 2.0, 4.0, 8.0], **kwargs)
     res = mod.filter([])
 
-    with pytest.raises(NotImplementedError):
-        res.rsquared
-    with pytest.raises(NotImplementedError):
-        res.rsquared_seasonal
     with pytest.raises(ValueError, match="seasonal argument is required"):
         res.get_rsquared(baseline="seasonal")
     with pytest.raises(ValueError, match="baseline must be one of"):

@@ -3398,6 +3398,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             and an array with one value per endogenous variable is returned
             for multivariate models.
 
+        See Also
+        --------
+        rsquared_mean
+        rsquared_rwdrift
+
         Notes
         -----
         The SSE is computed from finite prediction errors following Harvey
@@ -3470,24 +3475,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return rsquared[0] if self.model.k_endog == 1 else rsquared
 
     @cache_readonly
-    def rsquared(self):
-        """
-        Coefficient of determination.
-
-        Raises
-        ------
-        NotImplementedError
-            Always raised. State space models do not have a unique R-squared
-            comparison model.
-        """
-        raise NotImplementedError(
-            "State space models do not have a single comparison model that is "
-            "always appropriate for R-squared computation. Use "
-            "rsquared_rwdrift, rsquared_mean, or get_rsquared with an "
-            "explicit baseline."
-        )
-
-    @cache_readonly
     def rsquared_mean(self):
         """
         R-squared relative to a constant mean model.
@@ -3497,6 +3484,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         float or ndarray
             ``1 - SSE / SSM`` where SSM is the sum of squares around the
             sample mean.
+
+        See Also
+        --------
+        get_rsquared
+        rsquared_rwdrift
         """
         return self.get_rsquared(baseline="mean")
 
@@ -3510,23 +3502,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         float or ndarray
             ``1 - SSE / SSDM`` where SSDM is the sum of squares of first
             differences around their mean.
+
+        See Also
+        --------
+        get_rsquared
+        rsquared_mean
         """
         return self.get_rsquared(baseline="rwdrift")
-
-    @cache_readonly
-    def rsquared_seasonal(self):
-        """
-        R-squared relative to a seasonal random walk with drift.
-
-        Raises
-        ------
-        NotImplementedError
-            Always raised. Seasonal R-squared requires a seasonal period.
-        """
-        raise NotImplementedError(
-            "Seasonal R-squared requires a seasonal period. Use "
-            'get_rsquared(baseline="seasonal", seasonal=period).'
-        )
 
     @cache_readonly
     def zvalues(self):
@@ -5516,16 +5498,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ("No. Observations:", [self.nobs]),
             ("Log Likelihood", ["%#5.3f" % self.llf]),
         ]
-        try:
-            r2 = self.rsquared_rwdrift
-        except (AttributeError, NotImplementedError, ValueError):
-            r2 = None
-        if r2 is not None:
-            if np.ndim(r2) == 0:
-                r2 = "%#8.3f" % r2
-            else:
-                r2 = str(["%#8.3f" % value for value in r2])
-            top_right.append(("R-squared:", [r2]))
+        if hasattr(self, "rsquared"):
+            top_right.append(("R-squared:", ["%#8.3f" % self.rsquared]))
+        else:
+            try:
+                r2 = self.rsquared_rwdrift
+            except (AttributeError, NotImplementedError, ValueError):
+                r2 = None
+            if r2 is not None:
+                if np.ndim(r2) == 0:
+                    r2 = "%#8.3f" % r2
+                else:
+                    r2 = str(["%#8.3f" % value for value in r2])
+                top_right.append(("R-squared:", [r2]))
         top_right += [
             ("AIC", ["%#5.3f" % self.aic]),
             ("BIC", ["%#5.3f" % self.bic]),
