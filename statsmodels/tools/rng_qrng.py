@@ -49,6 +49,18 @@ def check_random_state(seed=None, deprecated=False):
     elif isinstance(seed, np.random.Generator):
         return seed
     elif seed is not None:
+        try:
+            seed = int(seed)
+        except ValueError:
+            try:
+                seed = np.array(seed)
+                if not np.issubdtype(seed.dtype, np.integer):
+                    raise TypeError("When seed is array-like it must contain integers")
+            except Exception as exc_1:
+                raise TypeError(
+                    "When creating a random number generator from a value, the seed "
+                    "must either be an integer or array-like of ints"
+                ) from exc_1
         if deprecated:
             import warnings
 

@@ -1587,28 +1587,37 @@ def test_simulate_keywords(austourists):
 
     # test anchor
     rs = np.random.RandomState(1232131)
-    assert_almost_equal(
-        fit.simulate(4, anchor=0, rng=0).values,
-        fit.simulate(4, anchor="start", rng=0).values,
-    )
-    assert_almost_equal(
-        fit.simulate(4, anchor=-1, rng=0).values,
-        fit.simulate(4, anchor="2015-12-01", rng=0).values,
-    )
-    assert_almost_equal(
-        fit.simulate(4, anchor="end", rng=0).values,
-        fit.simulate(4, anchor="2016-03-01", rng=0).values,
-    )
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_0 = fit.simulate(4, anchor=0, rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_1 = fit.simulate(4, anchor="start", rng=0).values
+    assert_almost_equal(sim_0, sim_1)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_2 = fit.simulate(4, anchor=-1, rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_3 = fit.simulate(4, anchor="2015-12-01", rng=0).values
+
+    assert_almost_equal(sim_2, sim_3)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_4 = fit.simulate(4, anchor="end", rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_5 = fit.simulate(4, anchor="2016-03-01", rng=0).values
+    assert_almost_equal(sim_4, sim_5)
 
     # test different random error options
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm, rng=0)
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=0)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm, rng=0)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=0)
 
-    fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10), rng=0)
-    fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=0)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10), rng=0)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=0)
 
     # test seeding
-    res = fit.simulate(4, repetitions=10, rng=10).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        res = fit.simulate(4, repetitions=10, rng=10).values
     res2 = fit.simulate(4, repetitions=10, rng=np.random.RandomState(10)).values
     assert np.all(res == res2)
 
@@ -1627,8 +1636,8 @@ def test_simulate_boxcox(austourists):
         use_boxcox=True,
     ).fit()
     expected = fit.forecast(4).values
-
-    res = fit.simulate(4, repetitions=10, rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        res = fit.simulate(4, repetitions=10, rng=0).values
     mean = np.mean(res, axis=1)
 
     assert np.all(np.abs(mean - expected) < 5)
@@ -1963,14 +1972,18 @@ def test_simulate(ses):
     with pytest.raises(ValueError, match="error must be"):
         res.simulate(10, error="unknown", rng=0)
     with pytest.raises(ValueError, match="If random"):
-        res.simulate(10, error="additive", random_errors=np.empty((20, 20)), rng=0)
-    res.simulate(10, error="additive", anchor=100, rng=0)
+        with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+            res.simulate(10, error="additive", random_errors=np.empty((20, 20)), rng=0)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        res.simulate(10, error="additive", anchor=100, rng=0)
     with pytest.raises(ValueError, match="Cannot anchor"):
         res.simulate(10, error="additive", anchor=2000, rng=0)
     with pytest.raises(TypeError, match="seed must be an int or array-like of int"):
-        res.simulate(10, error="additive", anchor=100, rng="bad_value")
+        with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+            res.simulate(10, error="additive", anchor=100, rng="bad_value")
     with pytest.raises(ValueError, match="Argument random_errors has unexpected value"):
-        res.simulate(10, error="additive", random_errors="bad_values", rng=0)
+        with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+            res.simulate(10, error="additive", random_errors="bad_values", rng=0)
 
 
 @pytest.mark.parametrize("index_typ", ["date_range", "period", "range", "irregular"])
@@ -2039,14 +2052,16 @@ def test_forecast_1_simulation(austourists, random_errors, repetitions):
         initialization_method="estimated",
     ).fit()
 
-    sim = fit.simulate(
-        1, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
-    )
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim = fit.simulate(
+            1, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
+        )
     expected_shape = (1,) if repetitions == 1 else (1, repetitions)
     assert sim.shape == expected_shape
-    sim = fit.simulate(
-        10, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
-    )
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim = fit.simulate(
+            10, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
+        )
     expected_shape = (10,) if repetitions == 1 else (10, repetitions)
     assert sim.shape == expected_shape
 

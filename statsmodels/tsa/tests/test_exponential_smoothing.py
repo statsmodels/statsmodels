@@ -599,14 +599,16 @@ def test_simulate_keywords(austourists_model_fit):
     fit = austourists_model_fit
 
     # test anchor
-    assert_almost_equal(
-        fit.simulate(4, anchor=-1, rng=0).values,
-        fit.simulate(4, anchor="2015-12-31", rng=0).values,
-    )
-    assert_almost_equal(
-        fit.simulate(4, anchor="end", rng=0).values,
-        fit.simulate(4, anchor="2015-12-31", rng=0).values,
-    )
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_0 = fit.simulate(4, anchor=-1, rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_1 = fit.simulate(4, anchor="2015-12-31", rng=0).values
+    assert_almost_equal(sim_0, sim_1)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_2 = fit.simulate(4, anchor="end", rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_3 = fit.simulate(4, anchor="2015-12-31", rng=0).values
+    assert_almost_equal(sim_2, sim_3)
     rs = np.random.RandomState(3232912)
     # test different random error options
     fit.simulate(4, repetitions=10, rng=rs)
@@ -616,7 +618,8 @@ def test_simulate_keywords(austourists_model_fit):
     fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=rs)
 
     # test seeding
-    res = fit.simulate(4, repetitions=10, rng=10).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        res = fit.simulate(4, repetitions=10, rng=10).values
     res2 = fit.simulate(4, repetitions=10, rng=np.random.RandomState(10)).values
     assert np.all(res == res2)
 
