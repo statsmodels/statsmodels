@@ -3393,10 +3393,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        float or ndarray
-            The R-squared value. A float is returned for univariate models,
-            and an array with one value per endogenous variable is returned
-            for multivariate models.
+        float
+            The R-squared value.
+
+        Raises
+        ------
+        NotImplementedError
+            If the model has more than one endogenous variable.
 
         See Also
         --------
@@ -3411,6 +3414,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         baseline = string_like(
             baseline, "baseline", options=("rwdrift", "mean", "seasonal")
         )
+
+        if self.model.k_endog > 1:
+            raise NotImplementedError(
+                "Harvey-style R-squared is currently only available for "
+                "univariate state space models."
+            )
 
         if self.standardized_forecasts_error is None:
             raise ValueError(
@@ -3472,7 +3481,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         with np.errstate(divide="ignore", invalid="ignore"):
             rsquared = 1 - sse / denominator
-        return rsquared[0] if self.model.k_endog == 1 else rsquared
+        return rsquared[0]
 
     @cache_readonly
     def rsquared_mean(self):

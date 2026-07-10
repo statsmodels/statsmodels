@@ -759,8 +759,10 @@ def test_results_rsquared_multivariate():
     mod.initialize_known([0.0], [[0.0]])
     res = mod.filter([])
 
-    assert_allclose(res.rsquared_rwdrift, _rwdrift_rsquared(res))
-    assert_equal(res.rsquared_rwdrift.shape, (2,))
+    with pytest.raises(NotImplementedError, match="only available for univariate"):
+        res.get_rsquared()
+
+    assert_equal("R-squared:" in str(res.summary()), False)
 
 
 def test_results_rsquared_missing_data():

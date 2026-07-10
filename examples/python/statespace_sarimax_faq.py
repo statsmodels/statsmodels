@@ -497,6 +497,7 @@ print(sarimax_res.summary())
 # ## R-squared measures
 #
 # State space models do not have a unique R-squared comparison model.
+# The measures below currently support univariate models only.
 # `rsquared_mean` compares the model's prediction errors against deviations
 # from a constant mean and is closest to the usual regression R-squared.
 # `rsquared_rwdrift` instead compares against changes around an average
