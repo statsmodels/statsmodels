@@ -1610,8 +1610,7 @@ def test_simulate_keywords(austourists):
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=0)
 
-    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
-        fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10), rng=0)
+    fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10))
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=0)
 
@@ -1972,15 +1971,15 @@ def test_simulate(ses):
     with pytest.raises(ValueError, match="error must be"):
         res.simulate(10, error="unknown", rng=0)
     with pytest.raises(ValueError, match="If random"):
-        with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
-            res.simulate(10, error="additive", random_errors=np.empty((20, 20)), rng=0)
+        res.simulate(10, error="additive", random_errors=np.empty((20, 20)), rng=0)
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         res.simulate(10, error="additive", anchor=100, rng=0)
     with pytest.raises(ValueError, match="Cannot anchor"):
         res.simulate(10, error="additive", anchor=2000, rng=0)
-    with pytest.raises(TypeError, match="seed must be an int or array-like of int"):
-        with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
-            res.simulate(10, error="additive", anchor=100, rng="bad_value")
+    with pytest.raises(
+        TypeError, match="When creating a random number generator from a"
+    ):
+        res.simulate(10, error="additive", anchor=100, rng="bad_value")
     with pytest.raises(ValueError, match="Argument random_errors has unexpected value"):
         with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
             res.simulate(10, error="additive", random_errors="bad_values", rng=0)

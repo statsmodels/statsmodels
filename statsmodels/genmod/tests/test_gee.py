@@ -1774,7 +1774,8 @@ class TestGEE:
 
         # Call this directly instead of letting init do it to get the
         # result before reindexing.
-        eq._pairs_from_labels()
+        rs = np.random.RandomState(4234)
+        eq._pairs_from_labels(rng=rs)
 
         # Make sure the size is correct to hold every element.
         for g in model1.group_labels:

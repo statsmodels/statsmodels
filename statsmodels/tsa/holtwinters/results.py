@@ -663,7 +663,6 @@ class HoltWintersResults(Results):
         sigma = np.sqrt(np.sum(resid**2) / (len(resid) - n_params))
 
         # get random error eps
-        rng = check_random_state(rng, deprecated=True)
         if isinstance(random_errors, np.ndarray):
             if random_errors.shape != (nsimulations, repetitions):
                 raise ValueError(
@@ -671,19 +670,23 @@ class HoltWintersResults(Results):
                     "(nsimulations, repetitions)"
                 )
             eps = random_errors
-        elif random_errors == "bootstrap":
-            eps = rng.choice(resid, size=(nsimulations, repetitions), replace=True)
-        elif random_errors is None:
-            eps = rng.standard_normal((nsimulations, repetitions)) * sigma
-        elif isinstance(random_errors, (rv_continuous, rv_discrete)):
-            params = random_errors.fit(resid)
-            eps = random_errors.rvs(
-                *params, size=(nsimulations, repetitions), random_state=rng
-            )
-        elif isinstance(random_errors, rv_frozen):
-            eps = random_errors.rvs(size=(nsimulations, repetitions), random_state=rng)
         else:
-            raise ValueError("Argument random_errors has unexpected value!")
+            rng = check_random_state(rng, deprecated=True)
+            if random_errors == "bootstrap":
+                eps = rng.choice(resid, size=(nsimulations, repetitions), replace=True)
+            elif random_errors is None:
+                eps = rng.standard_normal((nsimulations, repetitions)) * sigma
+            elif isinstance(random_errors, (rv_continuous, rv_discrete)):
+                params = random_errors.fit(resid)
+                eps = random_errors.rvs(
+                    *params, size=(nsimulations, repetitions), random_state=rng
+                )
+            elif isinstance(random_errors, rv_frozen):
+                eps = random_errors.rvs(
+                    size=(nsimulations, repetitions), random_state=rng
+                )
+            else:
+                raise ValueError("Argument random_errors has unexpected value!")
 
         for t in range(nsimulations):
             b0 = op_d(b[t - 1, :], phi)

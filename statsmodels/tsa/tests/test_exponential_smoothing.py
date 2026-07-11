@@ -1037,7 +1037,6 @@ def test_one_step_ahead(setup_model):
         damped_trend=model.damped_trend,
     )
     res = model2.smooth(params)
-
     fcast1 = res.forecast(steps=1)
     fcast2 = res.forecast(steps=2)
     assert_allclose(fcast1.iloc[0], fcast2.iloc[0])

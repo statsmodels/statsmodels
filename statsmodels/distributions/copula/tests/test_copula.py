@@ -589,16 +589,12 @@ class CheckCopula:
 
 class CheckModernCopula(CheckCopula):
 
-    @pytest.mark.singleton_randomstate
-    def test_seed_legacy(self):
-        seed1 = None
-        singleton = np.random.mtrand._rand
-        seed2 = np.random.RandomState()
-        seed2.set_state(singleton.get_state())
+    def test_seed_default_rng(self):
+        seed1 = np.random.default_rng()
+        seed2 = np.random.default_rng()
+        seed2.bit_generator.state = seed1.bit_generator.state
         nobs = 2000
-        expected_warn = None if seed1 is not None else FutureWarning
-        with pytest_warns(expected_warn):
-            rvs1 = self.copula.rvs(nobs, random_state=seed1)
+        rvs1 = self.copula.rvs(nobs, random_state=seed1)
         rvs2 = self.copula.rvs(nobs, random_state=seed2)
         assert_allclose(rvs1, rvs2)
 
