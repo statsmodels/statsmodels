@@ -2173,7 +2173,13 @@ class LikelihoodModelResults(Results):
         index = []
         for name, constraint in constraints + combined_constraints + extra_constraints:
             wt = result.wald_test(constraint, scalar=scalar)
-            row = [wt.statistic, wt.pvalue, constraint.shape[0]]
+            # Use rank-adjusted df from wald_test instead of
+            # constraint.shape[0] which ignores rank deficiency.
+            if use_t:
+                df_c = int(wt.df_num)
+            else:
+                df_c = int(wt.df_denom)
+            row = [wt.statistic, wt.pvalue, df_c]
             if use_t:
                 row.append(wt.df_denom)
             res_wald.append(row)
