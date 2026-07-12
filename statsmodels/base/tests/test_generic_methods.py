@@ -40,16 +40,15 @@ from statsmodels.tools.sm_exceptions import HessianInversionWarning
 
 class CheckGenericMixin:
 
-    @classmethod
-    def setup_class(cls):
+    def setup_method(self):
         nobs = 500
         rs = np.random.RandomState(987689)
         x = rs.randn(nobs, 3)
         x = sm.add_constant(x)
-        cls.exog = x
-        cls.xf = 0.25 * np.ones((2, 4))
-        cls.predict_kwds = {}
-        cls.transform_index = None
+        self.exog = x
+        self.xf = 0.25 * np.ones((2, 4))
+        self.predict_kwds = {}
+        self.transform_index = None
 
     def test_ttest_tvalues(self):
         # test that t_test has same results a params, bse, tvalues, ...
@@ -317,10 +316,67 @@ class CheckGenericMixin:
 # TODO: check if setup_class is faster than setup
 
 
+@pytest.fixture
+def data():
+    nobs = 500
+    rs = np.random.RandomState(987689)
+    x = rs.randn(nobs, 3)
+    x = sm.add_constant(x)
+    xf = 0.25 * np.ones((2, 4))
+    predict_kwds = {}
+    transform_index = None
+    return x, xf, predict_kwds, transform_index
+
+
+@pytest.fixture
+def fit_model(data):
+    x, _, _, _ = data
+    rs = np.random.RandomState(987689)
+    y = x.sum(axis=1) + rs.randn(x.shape[0])
+    res = sm.OLS(y, x).fit()
+    return res
+
+
+def test_ttest_tvalues(fit_model):
+    # test that t_test has same results a params, bse, tvalues, ...
+    smt.check_ttest_tvalues(fit_model)
+
+    res = fit_model
+    mat = np.eye(len(res.params))
+
+    tt = res.t_test(mat[0])
+
+    def string_confint(alpha):
+        return f"[{(alpha / 2):4.3F}      {(1 - alpha / 2):4.3F}]"
+
+    summ = tt.summary()  # smoke test for #1323
+    assert_allclose(tt.pvalue, res.pvalues[0], rtol=5e-10)
+    assert_(string_confint(0.05) in str(summ))
+
+    # issue #3116 alpha not used in column headers
+    summ = tt.summary(alpha=0.1)
+    ss = "[0.05       0.95]"  # different formatting
+    assert_(ss in str(summ))
+
+    summf = tt.summary_frame(alpha=0.1)
+    pvstring_use_t = "P>|z|" if res.use_t is False else "P>|t|"
+    tstring_use_t = "z" if res.use_t is False else "t"
+    cols = [
+        "coef",
+        "std err",
+        tstring_use_t,
+        pvstring_use_t,
+        "Conf. Int. Low",
+        "Conf. Int. Upp.",
+    ]
+    assert_array_equal(summf.columns.values, cols)
+
+
 class TestGenericOLS(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         x = self.exog
         rs = np.random.RandomState(987689)
         y = x.sum(axis=1) + rs.randn(x.shape[0])
@@ -332,6 +388,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         x = self.exog[:, 1]
         rs = np.random.RandomState(987689)
         y = x + rs.randn(x.shape[0])
@@ -346,6 +403,7 @@ class TestGenericWLS(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         x = self.exog
         rs = np.random.RandomState(987689)
         y = x.sum(axis=1) + rs.randn(x.shape[0])
@@ -356,6 +414,7 @@ class TestGenericPoisson(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         x = self.exog
         rs = np.random.RandomState(987689)
         y_count = rs.poisson(np.exp(x.sum(1) - x.mean()))
@@ -369,6 +428,7 @@ class TestGenericPoissonOffset(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         x = self.exog
         nobs = x.shape[0]
         rs = np.random.RandomState(987689)
@@ -388,6 +448,7 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         data = sm.datasets.randhie.load()
         data.exog = np.asarray(data.exog)
         data.endog = np.asarray(data.endog)
@@ -416,6 +477,7 @@ class TestGenericLogit(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         x = self.exog
         nobs = x.shape[0]
         rs = np.random.RandomState(987689)
@@ -434,6 +496,7 @@ class TestGenericRLM(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         x = self.exog
         rs = np.random.RandomState(987689)
         y = x.sum(axis=1) + rs.randn(x.shape[0])
@@ -444,6 +507,7 @@ class TestGenericGLM(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         x = self.exog
         rs = np.random.RandomState(987689)
         y = x.sum(axis=1) + rs.randn(x.shape[0])
@@ -454,6 +518,7 @@ class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         x = self.exog
         nobs = x.shape[0]
         rs = np.random.RandomState(987689)
@@ -477,7 +542,7 @@ class TestGenericGEEPoisson(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
-
+        super().setup_method()
         x = self.exog
         rs = np.random.RandomState(987689)
         y_count = rs.poisson(np.exp(x.sum(1) - x.mean()))
@@ -497,7 +562,7 @@ class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
-
+        super().setup_method()
         x = self.exog
         rs = np.random.RandomState(987689)
         # y_count = rs.poisson(np.exp(x.sum(1) - x.mean()))
@@ -519,6 +584,7 @@ class TestGenericGEEPoissonBC(CheckGenericMixin):
 
     def setup_method(self):
         # fit for each test, because results will be changed by test
+        super().setup_method()
         x = self.exog
         rs = np.random.RandomState(987689)
         # y_count = rs.poisson(np.exp(x.sum(1) - x.mean()))
@@ -539,15 +605,11 @@ class TestGenericGEEPoissonBC(CheckGenericMixin):
 
 class CheckAnovaMixin:
 
-    @classmethod
-    def setup_class(cls):
+    def setup_method(self):
         import statsmodels.stats.tests.test_anova as ttmod
 
-        test = ttmod.TestAnova3()
-        test.setup_class()
-
-        cls.data = test.data.drop([0, 1, 2])
-        cls.initialize()
+        self.data = ttmod.kidney_table.drop([0, 1, 2])
+        self.initialize()
 
     def test_combined(self):
         res = self.res
@@ -605,10 +667,9 @@ def compare_waldres(res, wa, constrasts):
 
 class TestWaldAnovaOLS(CheckAnovaMixin):
 
-    @classmethod
-    def initialize(cls):
-        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
-        cls.res = mod.fit(use_t=False)
+    def initialize(self):
+        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", self.data)
+        self.res = mod.fit(use_t=False)
 
     def test_noformula(self):
         # this verifies single and composite constraints against explicit
@@ -636,10 +697,9 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
 
 class TestWaldAnovaOLSF(CheckAnovaMixin):
 
-    @classmethod
-    def initialize(cls):
-        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
-        cls.res = mod.fit()  # default use_t=True
+    def initialize(self):
+        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", self.data)
+        self.res = mod.fit()  # default use_t=True
 
     def test_predict_missing(self):
         ex = self.data[:5].copy()
@@ -654,42 +714,38 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
 
 class TestWaldAnovaGLM(CheckAnovaMixin):
 
-    @classmethod
-    def initialize(cls):
-        mod = glm("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
-        cls.res = mod.fit(use_t=False)
+    def initialize(self):
+        mod = glm("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", self.data)
+        self.res = mod.fit(use_t=False)
 
 
 class TestWaldAnovaPoisson(CheckAnovaMixin):
 
-    @classmethod
-    def initialize(cls):
+    def initialize(self):
         from statsmodels.discrete.discrete_model import Poisson
 
-        mod = Poisson.from_formula("Days ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
-        cls.res = mod.fit(cov_type="HC0")
+        mod = Poisson.from_formula("Days ~ C(Duration, Sum)*C(Weight, Sum)", self.data)
+        self.res = mod.fit(cov_type="HC0")
 
 
 class TestWaldAnovaNegBin(CheckAnovaMixin):
 
-    @classmethod
-    def initialize(cls):
+    def initialize(self):
         from statsmodels.discrete.discrete_model import NegativeBinomial
 
         formula = "Days ~ C(Duration, Sum)*C(Weight, Sum)"
-        mod = NegativeBinomial.from_formula(formula, cls.data, loglike_method="nb2")
-        cls.res = mod.fit()
+        mod = NegativeBinomial.from_formula(formula, self.data, loglike_method="nb2")
+        self.res = mod.fit()
 
 
 class TestWaldAnovaNegBin1(CheckAnovaMixin):
 
-    @classmethod
-    def initialize(cls):
+    def initialize(self):
         from statsmodels.discrete.discrete_model import NegativeBinomial
 
         formula = "Days ~ C(Duration, Sum)*C(Weight, Sum)"
-        mod = NegativeBinomial.from_formula(formula, cls.data, loglike_method="nb1")
-        cls.res = mod.fit(cov_type="HC0")
+        mod = NegativeBinomial.from_formula(formula, self.data, loglike_method="nb1")
+        self.res = mod.fit(cov_type="HC0")
 
 
 class CheckPairwise:
@@ -706,19 +762,18 @@ class CheckPairwise:
 
 class TestTTestPairwiseOLS(CheckPairwise):
 
-    @classmethod
-    def setup_class(cls):
+    def setup_method(self):
         from statsmodels.formula.api import ols
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0, 1, 2])
+        self.data = test.data.drop([0, 1, 2])
 
-        mod = ols("np.log(Days+1) ~ C(Duration) + C(Weight)", cls.data)
-        cls.res = mod.fit()
-        cls.term_name = "C(Weight)"
-        cls.constraints = [
+        mod = ols("np.log(Days+1) ~ C(Duration) + C(Weight)", self.data)
+        self.res = mod.fit()
+        self.term_name = "C(Weight)"
+        self.constraints = [
             "C(Weight)[T.2]",
             "C(Weight)[T.3]",
             "C(Weight)[T.3] - C(Weight)[T.2]",
@@ -744,19 +799,18 @@ class TestTTestPairwiseOLS(CheckPairwise):
 
 class TestTTestPairwiseOLS2(CheckPairwise):
 
-    @classmethod
-    def setup_class(cls):
+    def setup_method(self):
         from statsmodels.formula.api import ols
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0, 1, 2])
+        self.data = test.data.drop([0, 1, 2])
 
-        mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration)", cls.data)
-        cls.res = mod.fit()
-        cls.term_name = "C(Weight)"
-        cls.constraints = [
+        mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration)", self.data)
+        self.res = mod.fit()
+        self.term_name = "C(Weight)"
+        self.constraints = [
             "C(Weight)[T.2]",
             "C(Weight)[T.3]",
             "C(Weight)[T.3] - C(Weight)[T.2]",
@@ -765,19 +819,18 @@ class TestTTestPairwiseOLS2(CheckPairwise):
 
 class TestTTestPairwiseOLS3(CheckPairwise):
 
-    @classmethod
-    def setup_class(cls):
+    def setup_method(self):
         from statsmodels.formula.api import ols
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0, 1, 2])
+        self.data = test.data.drop([0, 1, 2])
 
-        mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration) - 1", cls.data)
-        cls.res = mod.fit()
-        cls.term_name = "C(Weight)"
-        cls.constraints = [
+        mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration) - 1", self.data)
+        self.res = mod.fit()
+        self.term_name = "C(Weight)"
+        self.constraints = [
             "C(Weight)[2] - C(Weight)[1]",
             "C(Weight)[3] - C(Weight)[1]",
             "C(Weight)[3] - C(Weight)[2]",
@@ -786,19 +839,18 @@ class TestTTestPairwiseOLS3(CheckPairwise):
 
 class TestTTestPairwiseOLS4(CheckPairwise):
 
-    @classmethod
-    def setup_class(cls):
+    def setup_method(self):
         from statsmodels.formula.api import ols
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0, 1, 2])
+        self.data = test.data.drop([0, 1, 2])
 
-        mod = ols("np.log(Days+1) ~ C(Weight, Treatment(2)) + C(Duration)", cls.data)
-        cls.res = mod.fit()
-        cls.term_name = "C(Weight, Treatment(2))"
-        cls.constraints = [
+        mod = ols("np.log(Days+1) ~ C(Weight, Treatment(2)) + C(Duration)", self.data)
+        self.res = mod.fit()
+        self.term_name = "C(Weight, Treatment(2))"
+        self.constraints = [
             "-C(Weight, Treatment(2))[T.1]",
             "C(Weight, Treatment(2))[T.3] - C(Weight, Treatment(2))[T.1]",
             "C(Weight, Treatment(2))[T.3]",
@@ -807,19 +859,18 @@ class TestTTestPairwiseOLS4(CheckPairwise):
 
 class TestTTestPairwisePoisson(CheckPairwise):
 
-    @classmethod
-    def setup_class(cls):
+    def setup_method(self):
         from statsmodels.discrete.discrete_model import Poisson
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0, 1, 2])
+        self.data = test.data.drop([0, 1, 2])
 
-        mod = Poisson.from_formula("Days ~ C(Duration) + C(Weight)", cls.data)
-        cls.res = mod.fit(cov_type="HC0")
-        cls.term_name = "C(Weight)"
-        cls.constraints = [
+        mod = Poisson.from_formula("Days ~ C(Duration) + C(Weight)", self.data)
+        self.res = mod.fit(cov_type="HC0")
+        self.term_name = "C(Weight)"
+        self.constraints = [
             "C(Weight)[T.2]",
             "C(Weight)[T.3]",
             "C(Weight)[T.3] - C(Weight)[T.2]",

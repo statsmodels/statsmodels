@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
+import pytest
 
 from statsmodels.base.distributed_estimation import (
     DistributedModel,
@@ -296,6 +297,7 @@ def test_fit_sequential():
     )
 
 
+@pytest.mark.thread_unsafe
 def test_fit_joblib():
 
     # tests that the results of all the intermediate steps
