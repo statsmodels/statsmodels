@@ -395,7 +395,16 @@ def _fit_minimize(
     options["maxiter"] = maxiter
 
     # Use Hessian/Jacobian only if they're required by the method
-    no_hess = ["Nelder-Mead", "Powell", "CG", "BFGS", "COBYLA", "SLSQP"]
+    no_hess = [
+        "Nelder-Mead",
+        "Powell",
+        "CG",
+        "BFGS",
+        "L-BFGS-B",
+        "TNC",
+        "COBYLA",
+        "SLSQP",
+    ]
     no_jac = ["Nelder-Mead", "Powell", "COBYLA"]
     if kwargs["min_method"] in no_hess:
         hess = None
