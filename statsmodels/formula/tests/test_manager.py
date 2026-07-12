@@ -89,6 +89,7 @@ def check_type(arr, engine):
         return isinstance(arr, formulaic.ModelMatrix)
 
 
+@pytest.mark.thread_unsafe
 def test_engine_options_engine(engine):
     default = statsmodels.formula.options.formula_engine
     assert default in ("patsy", "formulaic")
@@ -108,6 +109,7 @@ def test_engine_options_engine(engine):
     statsmodels.formula.options.formula_engine = default
 
 
+@pytest.mark.thread_unsafe
 @pytest.mark.parametrize("ordering", ["degree", "sort", "none", "legacy"])
 def test_engine_options_order(ordering):
     default = statsmodels.formula.options.ordering

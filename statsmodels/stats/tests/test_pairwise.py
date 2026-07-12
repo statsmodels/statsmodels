@@ -8,6 +8,7 @@ Author: Josef Perktold
 from statsmodels.compat.python import asbytes
 
 from io import BytesIO
+import threading
 import warnings
 
 import numpy as np
@@ -22,6 +23,8 @@ import pytest
 
 from statsmodels.stats.libqsturng import qsturng
 from statsmodels.stats.multicomp import MultiComparison, pairwise_tukeyhsd, tukeyhsd
+
+MATPLOTLIB_LOCK = threading.Lock()
 
 ss = """\
   43.9  1   1
@@ -435,7 +438,8 @@ class CheckTuckeyHSDMixin:
     def test_plot_simultaneous_ci(self, close_figures):
         self.res._simultaneous_ci()
         reference = self.res.groupsunique[1]
-        self.res.plot_simultaneous(comparison_name=reference)
+        with MATPLOTLIB_LOCK:
+            self.res.plot_simultaneous(comparison_name=reference)
 
 
 class TestTuckeyHSD2(CheckTuckeyHSDMixin):
@@ -737,5 +741,6 @@ def test_plot(close_figures):
     mc = MultiComparison(cylinders_adj, cyl_labels)
     resth = mc.tukeyhsd(alpha=alpha, use_var="equal")
     resgh = mc.tukeyhsd(alpha=alpha, use_var="unequal")
-    resth.plot_simultaneous()
-    resgh.plot_simultaneous()
+    with MATPLOTLIB_LOCK:
+        resth.plot_simultaneous()
+        resgh.plot_simultaneous()

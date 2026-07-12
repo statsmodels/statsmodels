@@ -12,6 +12,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import statsmodels.api as sm
 
@@ -42,6 +43,7 @@ class RemoveDataPickle:
         cls.predict_kwds = {}
         cls.reduction_factor = 0.1
 
+    @pytest.mark.thread_unsafe
     def test_remove_data_pickle(self):
 
         results = self.results
@@ -90,6 +92,7 @@ class RemoveDataPickle:
     def test_remove_data_docstring(self):
         assert self.results.remove_data.__doc__ is not None
 
+    @pytest.mark.thread_unsafe
     def test_pickle_wrapper(self):
 
         fh = BytesIO()  # use pickle with binary content
