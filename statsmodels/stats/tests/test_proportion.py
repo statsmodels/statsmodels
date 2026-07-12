@@ -203,6 +203,30 @@ def test_confint_multinomial_proportions_zeros():
     assert_allclose(ci_01, ci_0, atol=5e-4)
 
 
+@pytest.mark.parametrize(
+    "counts",
+    [
+        [6, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+    ],
+)
+def test_confint_multinomial_proportions_sison_glaz_sparse(counts):
+    # GH#9587: the search for `c` used to fail for small or sparse counts,
+    # for which the approximated coverage nu(c) either exceeds 1 - alpha
+    # already at c = 1 or plateaus below 1 - alpha.
+    counts = np.asarray(counts)
+    cis = multinomial_proportions_confint(counts, 0.05, method="sison-glaz")
+    proportions = counts / counts.sum()
+    assert cis.shape == (len(counts), 2)
+    assert np.all(cis >= 0)
+    assert np.all(cis <= 1)
+    # intervals must contain the point estimates
+    assert np.all(cis[:, 0] <= proportions)
+    assert np.all(proportions <= cis[:, 1])
+
+
 class CheckProportionMixin:
     def test_proptest(self):
         # equality of k-samples
