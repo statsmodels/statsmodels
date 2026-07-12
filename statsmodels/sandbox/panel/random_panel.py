@@ -16,8 +16,9 @@ Notes
 
 import numpy as np
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 from . import correlation_structures as cs
-from ...tools.rng_qrng import check_random_state
 
 
 class PanelSample:
