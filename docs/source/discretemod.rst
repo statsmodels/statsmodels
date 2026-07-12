@@ -163,7 +163,7 @@ The specific result classes are:
    :toctree: generated/
 
    ConditionalResults
-   
+
 .. currentmodule:: statsmodels.miscmodels.ordinal_model
 
 .. autosummary::
