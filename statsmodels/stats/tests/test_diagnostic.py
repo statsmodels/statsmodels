@@ -1865,17 +1865,92 @@ def test_rainbow_smoke_order_by(frac, order_by):
     smsdia.linear_rainbow(res, frac=frac, order_by=order_by)
 
 
-@pytest.mark.parametrize("center", [None, 0.33, 300])
-def test_rainbow_smoke_centered(center):
+@pytest.mark.parametrize("add_const", [False, True])
+def test_rainbow_use_distance_order_invariant(add_const):
+    # GH#9103: with use_distance=True the observations are ordered by their
+    # Mahalanobis distance to the exog centroid (the multivariate mean), so
+    # the statistic must not depend on the order of the rows of the data.
+    # Prior to the fix the center was an arbitrary middle-indexed observation
+    # (exog[nobs // 2]), which made the result order dependent (and raised a
+    # LinAlgError when exog contained a constant column).
     rs = np.random.RandomState(38342096)
-    e = pd.DataFrame(rs.standard_normal((500, 1)))
-    x = pd.DataFrame(
-        rs.standard_normal((500, 3)),
-        columns=[f"x{i}" for i in range(3)],
-    )
-    y = x @ np.ones((3, 1)) + e
+    nobs = 500
+    x = rs.standard_normal((nobs, 3))
+    if add_const:
+        x = add_constant(x)
+    y = x @ np.ones(x.shape[1]) + 0.5 * x[:, -1] ** 2 + rs.standard_normal(nobs)
     res = OLS(y, x).fit()
-    smsdia.linear_rainbow(res, use_distance=True, center=center)
+    ref = smsdia.linear_rainbow(res, use_distance=True)
+
+    for seed in (0, 1, 2):
+        perm = np.random.RandomState(seed).permutation(nobs)
+        res_perm = OLS(y[perm], x[perm]).fit()
+        stat = smsdia.linear_rainbow(res_perm, use_distance=True)
+        assert_allclose(stat, ref)
+
+
+def test_rainbow_use_distance_order_invariant_discrete():
+    # GH#9103: with discrete / duplicated regressors many Mahalanobis
+    # distances tie. The non-stable argsort previously used to order the
+    # observations made which of the tied rows landed in the central subset
+    # depend on the input row order, so the statistic was still order
+    # dependent. The deterministic exog-based tie-break makes it invariant.
+    # Every exog row on this integer lattice is distinct, so there is no
+    # identical-exog / different-endog boundary residual.
+    vals = np.arange(-2, 3)
+    grid = np.array(
+        [(a, b, c) for a in vals for b in vals for c in vals], dtype=float
+    )
+    nobs = grid.shape[0]
+    rs = np.random.RandomState(7)
+    y = grid @ np.ones(3) + rs.standard_normal(nobs)
+    res = OLS(y, grid).fit()
+    ref = smsdia.linear_rainbow(res, use_distance=True)
+
+    for seed in range(10):
+        perm = np.random.RandomState(1000 + seed).permutation(nobs)
+        res_perm = OLS(y[perm], grid[perm]).fit()
+        stat = smsdia.linear_rainbow(res_perm, use_distance=True)
+        assert_allclose(stat, ref)
+
+
+def test_rainbow_use_distance_matches_manual_ordering():
+    # GH#9103: use_distance=True must be equivalent to ordering the data by
+    # the Mahalanobis distance to the exog centroid and running the standard
+    # order_by path. The centroid and covariance are recomputed here via an
+    # independent route (np.cov + einsum) as a reference.
+    rs = np.random.RandomState(11223344)
+    nobs = 400
+    x = rs.standard_normal((nobs, 3))
+    y = x @ np.ones(3) + rs.standard_normal(nobs)
+    res = OLS(y, x).fit()
+
+    exog = res.model.exog
+    centroid = exog.mean(0)
+    vi = np.linalg.pinv(np.cov(exog, rowvar=False, bias=True))
+    diff = exog - centroid
+    d2 = np.einsum("ij,jk,ik->i", diff, vi, diff)
+    order = np.argsort(d2)
+
+    manual = smsdia.linear_rainbow(res, order_by=order)
+    dist = smsdia.linear_rainbow(res, use_distance=True)
+    assert_allclose(dist, manual)
+
+
+def test_rainbow_center_deprecated():
+    # GH#9103: the center keyword no longer has any effect and is deprecated.
+    rs = np.random.RandomState(38342096)
+    x = rs.standard_normal((500, 3))
+    y = x @ np.ones(3) + rs.standard_normal(500)
+    res = OLS(y, x).fit()
+
+    ref = smsdia.linear_rainbow(res, use_distance=True)
+    for center in (0.33, 300):
+        with pytest.warns(FutureWarning, match="center keyword is deprecated"):
+            stat = smsdia.linear_rainbow(
+                res, use_distance=True, center=center
+            )
+        assert_allclose(stat, ref)
 
 
 def test_rainbow_exception():
