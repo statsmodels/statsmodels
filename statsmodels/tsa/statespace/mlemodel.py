@@ -778,9 +778,11 @@ class MLEModel(tsbase.TimeSeriesModel):
                 cov_kwds=cov_kwds,
             )
 
-            res.mlefit = mlefit
-            res.mle_retvals = mlefit.mle_retvals
-            res.mle_settings = mlefit.mle_settings
+            # Attach to the underlying results instance rather than the
+            # wrapper, so these attributes also show up in dir(res).
+            res._results.mlefit = mlefit
+            res._results.mle_retvals = mlefit.mle_retvals
+            res._results.mle_settings = mlefit.mle_settings
 
             # Reset memory conservation
             if low_memory:
