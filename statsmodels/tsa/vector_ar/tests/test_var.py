@@ -453,7 +453,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     @pytest.mark.matplotlib
     def test_plot_sim(self, close_figures):
-        self.res.plotsim(steps=100)
+        rs = np.random.RandomState(923298321)
+        self.res.plotsim(steps=100, seed=rs)
 
     @pytest.mark.matplotlib
     def test_plot(self, close_figures):
@@ -769,7 +770,8 @@ class TestVARExtras:
         fc20 = res0.forecast(res0.endog[-k_ar:], 20)
         irf = res0.irf()
 
-        res0.plotsim()
+        rs = np.random.RandomState(429238921)
+        res0.plotsim(seed=rs)
         res0.plot_acorr()
 
         fig = res0.plot_forecast(20)
@@ -781,7 +783,7 @@ class TestVARExtras:
         fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
         assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
 
-        fig_asym = irf.plot()
+        fig_asym = irf.plot(seed=rs)
         fig_mc = irf.plot(stderr_type="mc", repl=1000, seed=987128)
 
         for k in range(3):
@@ -977,10 +979,11 @@ def test_irf_err_bands():
     results = model.fit(maxlags=2)
     irf = results.irf()
     # Smoke tests only
-    irf.err_band_sz1()
-    irf.err_band_sz2()
-    irf.err_band_sz3()
-    irf.errband_mc()
+    rs = np.random.RandomState(2389711)
+    irf.err_band_sz1(seed=rs)
+    irf.err_band_sz2(seed=rs)
+    irf.err_band_sz3(seed=rs)
+    irf.errband_mc(seed=rs)
 
 
 def test_0_lag():

@@ -22,6 +22,7 @@ import statsmodels.base.model as base
 from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 _predict_docstring = """
@@ -1777,19 +1778,8 @@ class rv_discrete_float:
         """
 
         n = self.xk.shape[0]
-        if random_state is None:
-            u = np.random.uniform(size=n)
-        else:
-            if not isinstance(
-                random_state, (int, np.random.RandomState, np.random.Generator)
-            ):
-                raise TypeError(
-                    "random_state must be an integer, a RandomState or a Generator."
-                )
-            if isinstance(random_state, int):
-                random_state = np.random.RandomState(random_state)
-            u = random_state.uniform(size=n)
-
+        rng = check_random_state(random_state, deprecated=True)
+        u = rng.uniform(size=n)
         ix = (self.cpk < u[:, None]).sum(1)
         ii = np.arange(n, dtype=np.int32)
         return self.xk[(ii, ix)]

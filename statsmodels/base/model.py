@@ -27,6 +27,7 @@ from statsmodels.tools._decorators import (
 )
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.numdiff import approx_fprime
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import (
     HessianInversionWarning,
     ValueWarning,
@@ -2625,14 +2626,12 @@ class ResultMixin:
         results = []
         hascloneattr = True if hasattr(self.model, "cloneattr") else False
         for _ in range(nrep):
-            if rng is None:
-                rand_func = np.random.RandomState(8374462).randint
-            elif isinstance(rng, np.random.RandomState):
-                rand_func = rng.randint
+            rng = check_random_state(rng)
+            if isinstance(rng, np.random.Generator):
+                rvsind = rng.integers(self.nobs, size=self.nobs)
             else:
-                assert isinstance(rng, np.random.Generator)
-                rand_func = rng.integers
-            rvsind = rand_func(self.nobs, size=self.nobs)
+                assert isinstance(rng, np.random.RandomState)
+                rvsind = rng.randint(self.nobs, size=self.nobs)
             # this needs to set startparam and get other defining attributes
             # need a clone method on model
             if self.exog is not None:

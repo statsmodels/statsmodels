@@ -3,19 +3,8 @@
 import numpy as np
 from scipy import stats
 
-_future_warn = """\
-Passing `None` as the seed currently return the NumPy singleton RandomState
-(np.random.mtrand._rand). After release 0.13 this will change to using the
-default generator provided by NumPy (np.random.default_rng()). If you need
-reproducible draws, you should pass a seeded np.random.Generator, e.g.,
 
-import numpy as np
-seed = 32839283923801
-rng = np.random.default_rng(seed)"
-"""
-
-
-def check_random_state(seed=None, deprecated=False):
+def check_random_state(seed=None, deprecated=False, warn=True):
     """
     Turn `seed` into a random number generator.
 
@@ -33,6 +22,12 @@ def check_random_state(seed=None, deprecated=False):
 
         `scipy.stats.qmc.QMCEngine` requires SciPy >=1.7. It also means
         that the generator only have the method ``random``.
+    deprecated : bool, optional
+        If False, returns default_rng(seed). If True, returns RandomState(seed)
+        when seed an int or array-like of ints.
+    warn : bool, optional
+        Whether to issue a warning that the future behavior for integer or
+        array-like seesd will switch to calling default_rng(seed).
 
     Returns
     -------
@@ -49,28 +44,35 @@ def check_random_state(seed=None, deprecated=False):
     elif isinstance(seed, np.random.Generator):
         return seed
     elif seed is not None:
+        try:
+            seed = int(seed)
+        except ValueError:
+            try:
+                seed = np.array(seed)
+                if not np.issubdtype(seed.dtype, np.integer):
+                    raise TypeError(
+                        "When seed is array-like it must contain integers"
+                    ) from None
+            except Exception as exc_1:
+                raise TypeError(
+                    "When creating a random number generator from a value, the seed "
+                    "must either be an integer or array-like of ints"
+                ) from exc_1
         if deprecated:
-            import warnings
+            if warn:
+                import warnings
 
-            warnings.warn(
-                "After statsmodels 0.15 is released, passing an integer when creating "
-                "a random number generator will pass the value to np.random.default_rng, "
-                "rather than the current behavior of passing it to np.random.RandomState. "
-                "To continue using RandomState, directly pass a RandomState instance. ",
-                FutureWarning,
-                stacklevel=2,
-            )
-            try:
-                return np.random.RandomState(seed)
-            except Exception as e:
-                raise TypeError("seed must be an int or array-like of int") from e
+                warnings.warn(
+                    "After statsmodels 0.15 is released, passing an integer when"
+                    "creating a random number generator will pass the value to "
+                    "np.random.default_rng, rather than the current behavior of passing "
+                    "it to np.random.RandomState. To continue using RandomState, directly "
+                    "pass a RandomState instance.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+            return np.random.RandomState(seed)
         else:
-            try:
-                return np.random.default_rng(seed)
-            except Exception as e:
-                raise TypeError("seed must be an int or array-like of int") from e
+            return np.random.default_rng(seed)
     else:
-        import warnings
-
-        warnings.warn(_future_warn, FutureWarning, stacklevel=2)
-        return np.random.mtrand._rand
+        return np.random.default_rng()

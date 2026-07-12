@@ -291,7 +291,10 @@ class TestTheilPanel:
 
         dgp = PanelSample(nobs, k_vars, n_groups, seed=303305)
         # add random intercept, using same RandomState
-        dgp.group_means = 2 + dgp.random_state.randn(n_groups)
+        if isinstance(dgp.random_state, np.random.RandomState):
+            dgp.group_means = 2 + dgp.random_state.randn(n_groups)
+        else:
+            dgp.group_means = 2 + dgp.random_state.uniform(n_groups)
         print("seed", dgp.seed)
         y = dgp.generate_panel()
         x = np.column_stack(
