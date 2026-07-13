@@ -33,8 +33,8 @@ import pandas as pd
 import pytest
 
 import statsmodels.api as sm
-from statsmodels.formula.api import glm, ols
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.api import glm, ols
 import statsmodels.tools._testing as smt
 from statsmodels.tools.sm_exceptions import HessianInversionWarning
 
