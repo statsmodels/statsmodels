@@ -275,6 +275,8 @@ class OneWayLS:
         #            txt.append(fres.__str__())
         #            summarytable.append((group,(fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num)))
         pairs = np.triu_indices(len(self.unique), 1)
+        nvars = self.exog.shape[1]
+        contr_pair = np.c_[np.zeros((nvars, nvars)), np.eye(nvars)]
         for ind1, ind2 in zip(*pairs):  # replace with group1, group2 in sorted(keys)
             g1 = self.unique[ind1]
             g2 = self.unique[ind2]
@@ -283,7 +285,23 @@ class OneWayLS:
                 " %s and group %s" % (g1, g2)
             )
             group = (g1, g2)
-            fres = self.lsjoint.f_test(self.contrasts[group])
+            # Fit a separate 2-group joint model so that df_denom is based on
+            # the sum of the two group nobs, not the total sample size.
+            # See GH#9777: the full joint model df is too large for pairwise tests.
+            mask = (self.groupsint == ind1) | (self.groupsint == ind2)
+            endog_pair = self.endog[mask]
+            exog_base = self.exog[mask]
+            dummy = (self.groupsint[mask] == ind2).astype(float)[:, None]
+            exog_pair = np.c_[exog_base, dummy * exog_base]
+            if self.het:
+                if not hasattr(self, "weights"):
+                    self.fitbygroups()
+                res_pair = WLS(
+                    endog_pair, exog_pair, weights=self.weights[mask]
+                ).fit()
+            else:
+                res_pair = OLS(endog_pair, exog_pair).fit()
+            fres = res_pair.f_test(contr_pair)
             txt.append(fres.__str__())
             summarytable.append(
                 (group, (fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num))
