@@ -9,7 +9,9 @@ estimation differ among implementations and the results will not agree
 exactly.
 """
 
+import copy
 import os
+import threading
 import warnings
 
 import numpy as np
@@ -32,24 +34,7 @@ import statsmodels.genmod.generalized_estimating_equations as gee
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
-
-pdf_output = False
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_glm.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
+MATPLOTLIB_LOCK = threading.Lock()
 
 
 def load_data(fname, icept=True):
@@ -203,8 +188,11 @@ class TestGEE:
         model = gee.NominalGEE(endog, exog, groups)
         result = model.fit(cov_type="naive", start_params=[3.295837, -2.197225])
 
-        fig = result.plot_distribution()
-        assert_equal(isinstance(fig, plt.Figure), True)
+        import matplotlib.pyplot as plt
+
+        with MATPLOTLIB_LOCK:
+            fig = result.plot_distribution()
+            assert_equal(isinstance(fig, plt.Figure), True)
 
     def test_margins_poisson(self):
         # Check marginal effects for a Poisson GEE fit.
@@ -1067,6 +1055,8 @@ class TestGEE:
     @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_ordinal_plot(self, close_figures):
+        import matplotlib.pyplot as plt
+
         family = families.Binomial()
 
         endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
@@ -1076,8 +1066,9 @@ class TestGEE:
         mod = gee.OrdinalGEE(endog, exog, groups, None, family, va)
         rslt = mod.fit()
 
-        fig = rslt.plot_distribution()
-        assert_equal(isinstance(fig, plt.Figure), True)
+        with MATPLOTLIB_LOCK:
+            fig = rslt.plot_distribution()
+            assert_equal(isinstance(fig, plt.Figure), True)
 
     def test_nominal(self):
 
@@ -1806,7 +1797,9 @@ class CheckConsistency:
     start_params = None
 
     def test_cov_type(self):
-        mod = self.mod
+        # Use a copy to allow for threaded runs
+        # fit is not thread safe
+        mod = copy.deepcopy(self.mod)
         res_robust = mod.fit(start_params=self.start_params)
         res_naive = mod.fit(start_params=self.start_params, cov_type="naive")
         res_robust_bc = mod.fit(start_params=self.start_params, cov_type="bias_reduced")
@@ -2033,6 +2026,7 @@ def test_regularized_gaussian():
 @pytest.mark.smoke
 @pytest.mark.matplotlib
 def test_plots(close_figures):
+    import matplotlib.pyplot as plt
 
     rs = np.random.RandomState(378)
     exog = rs.normal(size=100)
@@ -2041,14 +2035,15 @@ def test_plots(close_figures):
 
     model = gee.GEE(exog, endog, groups)
     result = model.fit()
-    fig = result.plot_added_variable(1)
-    assert_equal(isinstance(fig, plt.Figure), True)
-    fig = result.plot_partial_residuals(1)
-    assert_equal(isinstance(fig, plt.Figure), True)
-    fig = result.plot_ceres_residuals(1)
-    assert_equal(isinstance(fig, plt.Figure), True)
-    fig = result.plot_isotropic_dependence()
-    assert_equal(isinstance(fig, plt.Figure), True)
+    with MATPLOTLIB_LOCK:
+        fig = result.plot_added_variable(1)
+        assert_equal(isinstance(fig, plt.Figure), True)
+        fig = result.plot_partial_residuals(1)
+        assert_equal(isinstance(fig, plt.Figure), True)
+        fig = result.plot_ceres_residuals(1)
+        assert_equal(isinstance(fig, plt.Figure), True)
+        fig = result.plot_isotropic_dependence()
+        assert_equal(isinstance(fig, plt.Figure), True)
 
 
 def test_missing():

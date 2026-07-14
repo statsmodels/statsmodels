@@ -5,6 +5,8 @@ Author: Josef Perktod
 License: BSD-3
 """
 
+import copy
+import threading
 import warnings
 
 import numpy as np
@@ -31,6 +33,8 @@ from statsmodels.tools.tools import add_constant
 
 from .results import results_predict as resp
 
+MATPLOTLIB_LOCK = threading.Lock()
+
 # copied from `test_gmm_poisson.TestGMMAddOnestep`
 XLISTEXOG2 = "aget aget2 educyr actlim totchr".split()
 endog_name = "docvis"
@@ -54,7 +58,7 @@ class CheckPredict:
         assert_allclose(params1[-1], np.exp(params2[-1]), rtol=self.rtol)
 
     def test_predict(self):
-        res1 = self.res1
+        res1 = copy.deepcopy(self.res1)
         res2 = self.res2
         ex = np.asarray(exog).mean(0)
 
@@ -155,8 +159,9 @@ class CheckPredict:
         res_chi2 = dia.test_chisquare_prob(bin_edges=np.arange(4))
         assert_equal(res_chi2.diff1.shape[1], 3)
         assert_equal(dia.probs_predicted.shape[1], 22)
-        # smoke test
-        dia.plot_probs(upp_xlim=20)
+        with MATPLOTLIB_LOCK:
+            # smoke test
+            dia.plot_probs(upp_xlim=20)
 
 
 class CheckExtras:
@@ -350,6 +355,7 @@ def get_data_simulated():
 y_count, x_const = get_data_simulated()
 
 
+@pytest.mark.matplotlib
 @pytest.mark.parametrize("case", models)
 def test_distr(case, close_figures):
     y, x = y_count, x_const
@@ -414,11 +420,8 @@ def test_distr(case, close_figures):
 
         f_sc = influ.d_fittedvalues_scaled  # requires se from get_prediction()
         assert f_sc.shape == (len(y2),)
-
-        try:
+        with MATPLOTLIB_LOCK:
             with warnings.catch_warnings():
                 # ZI models warn about missing hat_matrix_diag
                 warnings.simplefilter("ignore", category=UserWarning)
                 influ.plot_influence()
-        except ImportError:
-            pass

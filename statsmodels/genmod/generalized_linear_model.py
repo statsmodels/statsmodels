@@ -18,7 +18,6 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
 
-
 import warnings
 
 import numpy as np
@@ -1314,6 +1313,7 @@ class GLM(base.LikelihoodModel):
                 max_start_irls=max_start_irls,
                 **kwargs,
             )
+            # TODO: These make GLM not thread safe. Should be refactored to be unnecessary
             del self._optim_hessian
             del self._tmp_like_exog
             return fit_

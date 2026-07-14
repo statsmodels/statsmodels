@@ -206,6 +206,13 @@ def test_get_empty_eval_patsy(data):
     names = mgr.get_column_names(output[1])
     assert names == ["Intercept", "x", "g(z)"]
 
+
+@require_patsy
+@pytest.mark.thread_unsafe
+def test_get_empty_eval_patsy_errors(data):
+    # Threaded use causes call stack depth issues
+    mgr = FormulaManager(engine="patsy")
+    fmla = "y ~ 1 + x + g(z)"
     eval_env = mgr.get_empty_eval_env()
     with pytest.raises(patsy.PatsyError):
         mgr.get_matrices(fmla, data, eval_env=7)

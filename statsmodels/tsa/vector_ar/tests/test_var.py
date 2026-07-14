@@ -11,6 +11,7 @@ from statsmodels.compat.python import lrange
 
 from io import BytesIO
 import os
+import threading
 import warnings
 
 import numpy as np
@@ -24,6 +25,8 @@ from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.var_model import VAR, forecast, var_acf
+
+MATPLOTLIB_LOCK = threading.Lock()
 
 DECIMAL_12 = 12
 DECIMAL_6 = 6
@@ -193,35 +196,38 @@ class CheckIRF:
 
     @pytest.mark.matplotlib
     def test_plot_irf(self, close_figures):
-        self.irf.plot()
-        self.irf.plot(plot_stderr=False)
+        with MATPLOTLIB_LOCK:
+            self.irf.plot()
+            self.irf.plot(plot_stderr=False)
 
-        self.irf.plot(impulse=0, response=1)
-        self.irf.plot(impulse=0)
-        self.irf.plot(response=0)
+            self.irf.plot(impulse=0, response=1)
+            self.irf.plot(impulse=0)
+            self.irf.plot(response=0)
 
-        self.irf.plot(orth=True)
-        self.irf.plot(impulse=0, response=1, orth=True)
+            self.irf.plot(orth=True)
+            self.irf.plot(impulse=0, response=1, orth=True)
 
     @pytest.mark.matplotlib
     def test_plot_cum_effects(self, close_figures):
-        self.irf.plot_cum_effects()
-        self.irf.plot_cum_effects(plot_stderr=False)
-        self.irf.plot_cum_effects(impulse=0, response=1)
+        with MATPLOTLIB_LOCK:
+            self.irf.plot_cum_effects()
+            self.irf.plot_cum_effects(plot_stderr=False)
+            self.irf.plot_cum_effects(impulse=0, response=1)
 
-        self.irf.plot_cum_effects(orth=True)
-        self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
+            self.irf.plot_cum_effects(orth=True)
+            self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
 
     @pytest.mark.matplotlib
     def test_plot_figsizes(self, close_figures):
-        assert_equal(self.irf.plot().get_size_inches(), (10, 10))
-        assert_equal(self.irf.plot(figsize=(14, 10)).get_size_inches(), (14, 10))
+        with MATPLOTLIB_LOCK:
+            assert_equal(self.irf.plot().get_size_inches(), (10, 10))
+            assert_equal(self.irf.plot(figsize=(14, 10)).get_size_inches(), (14, 10))
 
-        assert_equal(self.irf.plot_cum_effects().get_size_inches(), (10, 10))
-        assert_equal(
-            self.irf.plot_cum_effects(figsize=(14, 10)).get_size_inches(),
-            (14, 10),
-        )
+            assert_equal(self.irf.plot_cum_effects().get_size_inches(), (10, 10))
+            assert_equal(
+                self.irf.plot_cum_effects(figsize=(14, 10)).get_size_inches(),
+                (14, 10),
+            )
 
 
 @pytest.mark.smoke
@@ -233,9 +239,10 @@ class CheckFEVD:
 
     @pytest.mark.matplotlib
     def test_fevd_plot(self, close_figures):
-        import matplotlib.pyplot as plt
+        with MATPLOTLIB_LOCK:
+            import matplotlib.pyplot as plt
 
-        assert isinstance(self.fevd.plot(), plt.Figure)
+            assert isinstance(self.fevd.plot(), plt.Figure)
 
     def test_fevd_repr(self):
         assert hasattr(self.fevd, "plot")
@@ -252,22 +259,22 @@ class CheckFEVD:
 
 
 class TestVARResults(CheckIRF, CheckFEVD):
-    @classmethod
-    def setup_class(cls):
-        cls.p = 2
 
-        cls.data = get_macrodata()
-        cls.model = VAR(cls.data)
-        cls.names = cls.model.endog_names
+    def setup_method(self):
+        self.p = 2
 
-        cls.ref = RResults()
-        cls.k = len(cls.ref.names)
-        cls.res = cls.model.fit(maxlags=cls.p)
+        self.data = get_macrodata()
+        self.model = VAR(self.data)
+        self.names = self.model.endog_names
 
-        cls.irf = cls.res.irf(cls.ref.nirfs)
-        cls.nahead = cls.ref.nahead
+        self.ref = RResults()
+        self.k = len(self.ref.names)
+        self.res = self.model.fit(maxlags=self.p)
 
-        cls.fevd = cls.res.fevd()
+        self.irf = self.res.irf(self.ref.nirfs)
+        self.nahead = self.ref.nahead
+
+        self.fevd = self.res.fevd()
 
     def test_constructor(self):
         # make sure this works with no names
@@ -454,19 +461,23 @@ class TestVARResults(CheckIRF, CheckFEVD):
     @pytest.mark.matplotlib
     def test_plot_sim(self, close_figures):
         rs = np.random.RandomState(923298321)
-        self.res.plotsim(steps=100, seed=rs)
+        with MATPLOTLIB_LOCK:
+            self.res.plotsim(steps=100, seed=rs)
 
     @pytest.mark.matplotlib
     def test_plot(self, close_figures):
-        self.res.plot()
+        with MATPLOTLIB_LOCK:
+            self.res.plot()
 
     @pytest.mark.matplotlib
     def test_plot_acorr(self, close_figures):
-        self.res.plot_acorr()
+        with MATPLOTLIB_LOCK:
+            self.res.plot_acorr()
 
     @pytest.mark.matplotlib
     def test_plot_forecast(self, close_figures):
-        self.res.plot_forecast(5)
+        with MATPLOTLIB_LOCK:
+            self.res.plot_forecast(5)
 
     def test_reorder(self):
         # manually reorder
@@ -492,14 +503,20 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(res2.bic, res3.bic)
         assert_almost_equal(res2.stderr, res3.stderr)
 
-    def test_pickle(self):
-        fh = BytesIO()
-        # test wrapped results load save pickle
-        del self.res.model.data.orig_endog
-        self.res.save(fh)
-        fh.seek(0, 0)
-        res_unpickled = self.res.__class__.load(fh)
-        assert type(res_unpickled) is type(self.res)
+
+def test_pickle():
+    # Removed from class to allow thread safe testing
+    fh = BytesIO()
+    p = 2
+    data = get_macrodata()
+    model = VAR(data)
+    res = model.fit(maxlags=p)
+    # test wrapped results load save pickle
+    del res.model.data.orig_endog
+    res.save(fh)
+    fh.seek(0, 0)
+    res_unpickled = res.__class__.load(fh)
+    assert type(res_unpickled) is type(res)
 
 
 class E1_Results:
@@ -771,27 +788,28 @@ class TestVARExtras:
         irf = res0.irf()
 
         rs = np.random.RandomState(429238921)
-        res0.plotsim(seed=rs)
-        res0.plot_acorr()
+        with MATPLOTLIB_LOCK:
+            res0.plotsim(seed=rs)
+            res0.plot_acorr()
 
-        fig = res0.plot_forecast(20)
-        fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
-        # Note values are equal, but keep rtol buffer
-        assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
-        fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
-        assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
-        fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
-        assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
+            fig = res0.plot_forecast(20)
+            fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
+            # Note values are equal, but keep rtol buffer
+            assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
+            fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
+            assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
+            fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
+            assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
 
-        fig_asym = irf.plot(seed=rs)
-        fig_mc = irf.plot(stderr_type="mc", repl=1000, seed=987128)
+            fig_asym = irf.plot(seed=rs)
+            fig_mc = irf.plot(stderr_type="mc", repl=1000, seed=987128)
 
-        for k in range(3):
-            a = fig_asym.axes[1].get_children()[k].get_ydata()
-            m = fig_mc.axes[1].get_children()[k].get_ydata()
-            # use m as desired because it is larger
-            # a is for some irf much smaller than m
-            assert_allclose(a, m, atol=0.1, rtol=0.9)
+            for k in range(3):
+                a = fig_asym.axes[1].get_children()[k].get_ydata()
+                m = fig_mc.axes[1].get_children()[k].get_ydata()
+                # use m as desired because it is larger
+                # a is for some irf much smaller than m
+                assert_allclose(a, m, atol=0.1, rtol=0.9)
 
     def test_forecast_cov(self):
         # forecast_cov can include parameter uncertainty if contant-only

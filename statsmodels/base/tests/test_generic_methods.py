@@ -38,7 +38,7 @@ import statsmodels.tools._testing as smt
 from statsmodels.tools.sm_exceptions import HessianInversionWarning
 
 
-class CheckGenericMixin:
+class CheckGenericMixinBase:
 
     def setup_method(self):
         nobs = 500
@@ -93,69 +93,6 @@ class CheckGenericMixin:
     def test_predict_types(self):
         smt.check_predict_types(self.results)
 
-    def test_zero_constrained(self):
-        # not completely generic yet
-        if isinstance(self.results.model, (sm.GEE)):
-            # GEE does not subclass LikelihoodModel
-            pytest.skip("GEE does not subclass LikelihoodModel")
-
-        use_start_params = not isinstance(self.results.model, (sm.RLM, sm.OLS, sm.WLS))
-        self.use_start_params = use_start_params  # attach for _get_constrained
-
-        keep_index = list(range(self.results.model.exog.shape[1]))
-        # index for params might include extra params
-        keep_index_p = list(range(self.results.params.shape[0]))
-        drop_index = [1]
-        for i in drop_index:
-            del keep_index[i]
-            del keep_index_p[i]
-
-        if use_start_params:
-            res1 = self.results.model._fit_zeros(
-                keep_index, maxiter=500, start_params=self.results.params
-            )
-        else:
-            res1 = self.results.model._fit_zeros(keep_index, maxiter=500)
-
-        res2 = self._get_constrained(keep_index, keep_index_p)
-
-        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10, atol=1e-10)
-        assert_equal(res1.params[drop_index], 0)
-        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10, atol=1e-10)
-        assert_equal(res1.bse[drop_index], 0)
-        # OSX has many slight failures on this test
-        tol = 1e-8 if PLATFORM_OSX else 1e-10
-        tvals1 = res1.tvalues[keep_index_p]
-        assert_allclose(tvals1, res2.tvalues, rtol=tol, atol=tol)
-
-        # See gh5993
-        if PLATFORM_LINUX32 or SCIPY_GT_14:
-            pvals1 = res1.pvalues[keep_index_p]
-        else:
-            pvals1 = res1.pvalues[keep_index_p]
-        assert_allclose(pvals1, res2.pvalues, rtol=tol, atol=tol)
-
-        if hasattr(res1, "resid"):
-            # discrete models, Logit do not have `resid` yet
-            # atol discussion at gh-5158
-            rtol = 1e-10
-            atol = 1e-12
-            if PLATFORM_OSX or PLATFORM_WIN32:
-                # GH 5628
-                rtol = 1e-8
-                atol = 1e-10
-            assert_allclose(res1.resid, res2.resid, rtol=rtol, atol=atol)
-
-        ex = self.results.model.exog.mean(0)
-        predicted1 = res1.predict(ex, **self.predict_kwds)
-        predicted2 = res2.predict(ex[keep_index], **self.predict_kwds)
-        assert_allclose(predicted1, predicted2, rtol=1e-10)
-
-        ex = self.results.model.exog[:5]
-        predicted1 = res1.predict(ex, **self.predict_kwds)
-        predicted2 = res2.predict(ex[:, keep_index], **self.predict_kwds)
-        assert_allclose(predicted1, predicted2, rtol=1e-10)
-
     def _get_constrained(self, keep_index, keep_index_p):
         # override in some test classes, no fit_kwds yet, e.g. cov_type
         mod2 = self.results.model
@@ -168,6 +105,7 @@ class CheckGenericMixin:
             res = mod.fit(maxiter=500)
         return res
 
+    @pytest.mark.thread_unsafe
     def test_zero_collinear(self):
         # not completely generic yet
         if isinstance(self.results.model, (sm.GEE)):
@@ -314,6 +252,71 @@ class CheckGenericMixin:
 
 # subclasses for individual models, unchanged from test_shrink_pickle
 # TODO: check if setup_class is faster than setup
+
+
+class CheckGenericMixin(CheckGenericMixinBase):
+    def test_zero_constrained(self):
+        # not completely generic yet
+        if isinstance(self.results.model, (sm.GEE)):
+            # GEE does not subclass LikelihoodModel
+            pytest.skip("GEE does not subclass LikelihoodModel")
+
+        use_start_params = not isinstance(self.results.model, (sm.RLM, sm.OLS, sm.WLS))
+        self.use_start_params = use_start_params  # attach for _get_constrained
+
+        keep_index = list(range(self.results.model.exog.shape[1]))
+        # index for params might include extra params
+        keep_index_p = list(range(self.results.params.shape[0]))
+        drop_index = [1]
+        for i in drop_index:
+            del keep_index[i]
+            del keep_index_p[i]
+
+        if use_start_params:
+            res1 = self.results.model._fit_zeros(
+                keep_index, maxiter=500, start_params=self.results.params
+            )
+        else:
+            res1 = self.results.model._fit_zeros(keep_index, maxiter=500)
+
+        res2 = self._get_constrained(keep_index, keep_index_p)
+
+        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10, atol=1e-10)
+        assert_equal(res1.params[drop_index], 0)
+        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10, atol=1e-10)
+        assert_equal(res1.bse[drop_index], 0)
+        # OSX has many slight failures on this test
+        tol = 1e-8 if PLATFORM_OSX else 1e-10
+        tvals1 = res1.tvalues[keep_index_p]
+        assert_allclose(tvals1, res2.tvalues, rtol=tol, atol=tol)
+
+        # See gh5993
+        if PLATFORM_LINUX32 or SCIPY_GT_14:
+            pvals1 = res1.pvalues[keep_index_p]
+        else:
+            pvals1 = res1.pvalues[keep_index_p]
+        assert_allclose(pvals1, res2.pvalues, rtol=tol, atol=tol)
+
+        if hasattr(res1, "resid"):
+            # discrete models, Logit do not have `resid` yet
+            # atol discussion at gh-5158
+            rtol = 1e-10
+            atol = 1e-12
+            if PLATFORM_OSX or PLATFORM_WIN32:
+                # GH 5628
+                rtol = 1e-8
+                atol = 1e-10
+            assert_allclose(res1.resid, res2.resid, rtol=rtol, atol=atol)
+
+        ex = self.results.model.exog.mean(0)
+        predicted1 = res1.predict(ex, **self.predict_kwds)
+        predicted2 = res2.predict(ex[keep_index], **self.predict_kwds)
+        assert_allclose(predicted1, predicted2, rtol=1e-10)
+
+        ex = self.results.model.exog[:5]
+        predicted1 = res1.predict(ex, **self.predict_kwds)
+        predicted2 = res2.predict(ex[:, keep_index], **self.predict_kwds)
+        assert_allclose(predicted1, predicted2, rtol=1e-10)
 
 
 @pytest.fixture
@@ -513,6 +516,10 @@ class TestGenericGLM(CheckGenericMixin):
         y = x.sum(axis=1) + rs.randn(x.shape[0])
         self.results = sm.GLM(y, self.exog).fit()
 
+    @pytest.mark.thread_unsafe(reason="Modifies the model object in test")
+    def test_zero_constrained(self):
+        super().test_zero_constrained()
+
 
 class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
@@ -536,6 +543,10 @@ class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
         self.predict_kwds_5 = dict(exposure=0.01 * np.ones(5), offset=np.ones(5))
         self.predict_kwds = dict(exposure=1, offset=0)
+
+    @pytest.mark.thread_unsafe(reason="Modifies the model object in test")
+    def test_zero_constrained(self):
+        super().test_zero_constrained()
 
 
 class TestGenericGEEPoisson(CheckGenericMixin):

@@ -1,6 +1,8 @@
 from statsmodels.compat.platform import PLATFORM_LINUX32
 from statsmodels.compat.scipy import SP_LT_116
 
+import copy
+
 import numpy as np
 from numpy.testing import (
     assert_,
@@ -140,7 +142,8 @@ class TestZeroInflatedModel_offset(CheckGeneric):
     def test_exposure(self):
         # This test mostly the equivalence of offset and exposure = exp(offset)
         # use data arrays from class model
-        model1 = self.res1.model
+        res1 = copy.deepcopy(self.res1)
+        model1 = res1.model
         offset = model1.offset
         model3 = sm.ZeroInflatedPoisson(
             model1.endog,
@@ -149,20 +152,18 @@ class TestZeroInflatedModel_offset(CheckGeneric):
             exposure=np.exp(offset),
         )
         res3 = model3.fit(
-            start_params=self.res1.params, method="newton", maxiter=500, disp=False
+            start_params=res1.params, method="newton", maxiter=500, disp=False
         )
 
-        assert_allclose(res3.params, self.res1.params, atol=1e-6, rtol=1e-6)
-        fitted1 = self.res1.predict()
+        assert_allclose(res3.params, res1.params, atol=1e-6, rtol=1e-6)
+        fitted1 = res1.predict()
         fitted3 = res3.predict()
         assert_allclose(fitted3, fitted1, atol=1e-6, rtol=1e-6)
 
         ex = model1.exog
         ex_infl = model1.exog_infl
         offset = model1.offset
-        fitted1_0 = self.res1.predict(
-            exog=ex, exog_infl=ex_infl, offset=offset.tolist()
-        )
+        fitted1_0 = res1.predict(exog=ex, exog_infl=ex_infl, offset=offset.tolist())
         fitted3_0 = res3.predict(exog=ex, exog_infl=ex_infl, exposure=np.exp(offset))
         assert_allclose(fitted3_0, fitted1_0, atol=1e-6, rtol=1e-6)
 
@@ -176,14 +177,14 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         # fitted3_1 = res3.predict(exog=ex, exog_infl=ex_infl)
         # assert_allclose(fitted3_1, fitted1_1, atol=1e-6, rtol=1e-6)
 
-        fitted1_2 = self.res1.predict(exog=ex, exog_infl=ex_infl, offset=offset)
+        fitted1_2 = res1.predict(exog=ex, exog_infl=ex_infl, offset=offset)
         fitted3_2 = res3.predict(exog=ex, exog_infl=ex_infl, exposure=np.exp(offset))
         assert_allclose(fitted3_2, fitted1_2, atol=1e-6, rtol=1e-6)
         assert_allclose(fitted1_2, fitted1[:10:2], atol=1e-6, rtol=1e-6)
         assert_allclose(fitted3_2, fitted1[:10:2], atol=1e-6, rtol=1e-6)
 
         # without specifying offset and exposure
-        fitted1_3 = self.res1.predict(exog=ex, exog_infl=ex_infl)
+        fitted1_3 = res1.predict(exog=ex, exog_infl=ex_infl)
         fitted3_3 = res3.predict(exog=ex, exog_infl=ex_infl)
         assert_allclose(fitted3_3, fitted1_3, atol=1e-6, rtol=1e-6)
 
@@ -280,8 +281,9 @@ class TestZeroInflatedPoisson_predict:
             return conf_intv_95
 
         conf_interval_95 = compute_conf_interval_95(*self.params_true)
+        res = copy.deepcopy(self.res)
         assert_allclose(
-            self.res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
+            res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
         )
 
     def test_var(self):
@@ -296,7 +298,7 @@ class TestZeroInflatedPoisson_predict:
             var -= (((1 - prob_infl) * mu).mean()) ** 2
             return var
 
-        res = self.res
+        res = copy.deepcopy(self.res)
         var_fitted = compute_mixture_var(
             res._dispersion_factor,
             res.predict(which="prob-main"),
@@ -306,7 +308,7 @@ class TestZeroInflatedPoisson_predict:
         assert_allclose(var_fitted.mean(), self.endog.var(), atol=5e-2, rtol=5e-2)
 
     def test_predict_prob(self):
-        res = self.res
+        res = copy.deepcopy(self.res)
 
         pr = res.predict(which="prob")
         pr2 = sm.distributions.zipoisson.pmf(
@@ -316,7 +318,7 @@ class TestZeroInflatedPoisson_predict:
 
     def test_predict_options(self):
         # check default exog_infl, see #4757
-        res = self.res
+        res = copy.deepcopy(self.res)
         n = 5
         pr1 = res.predict(which="prob")
         pr0 = res.predict(exog=res.model.exog[:n], which="prob")
@@ -442,8 +444,9 @@ class TestZeroInflatedGeneralizedPoisson_predict:
             return conf_intv_95
 
         conf_interval_95 = compute_conf_interval_95(*self.params_true)
+        res = copy.deepcopy(self.res)
         assert_allclose(
-            self.res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
+            res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
         )
 
     def test_var(self):
@@ -454,7 +457,7 @@ class TestZeroInflatedGeneralizedPoisson_predict:
             var -= (((1 - prob_infl) * mu).mean()) ** 2
             return var
 
-        res = self.res
+        res = copy.deepcopy(self.res)
         var_fitted = compute_mixture_var(
             res._dispersion_factor,
             res.predict(which="prob-main"),
@@ -464,7 +467,7 @@ class TestZeroInflatedGeneralizedPoisson_predict:
         assert_allclose(var_fitted.mean(), self.endog.var(), atol=0.05, rtol=0.1)
 
     def test_predict_prob(self):
-        res = self.res
+        res = copy.deepcopy(self.res)
 
         pr = res.predict(which="prob")
         pr2 = sm.distributions.zinegbin.pmf(
@@ -614,7 +617,7 @@ class TestZeroInflatedNegativeBinomialP_predict:
             var -= (((1 - prob_infl) * mu).mean()) ** 2
             return var
 
-        res = self.res
+        res = copy.deepcopy(self.res)
         var_fitted = compute_mixture_var(
             res._dispersion_factor,
             res.predict(which="prob-main"),
@@ -624,7 +627,7 @@ class TestZeroInflatedNegativeBinomialP_predict:
         assert_allclose(var_fitted.mean(), self.endog.var(), rtol=0.2)
 
     def test_predict_prob(self):
-        res = self.res
+        res = copy.deepcopy(self.res)
         endog = res.model.endog
 
         pr = res.predict(which="prob")
@@ -642,7 +645,7 @@ class TestZeroInflatedNegativeBinomialP_predict:
         # These tests do not use numbers from other packages.
         # Tests are on closeness of estimated to true/DGP values
         # and theoretical relationship between quantities
-        res = self.res
+        res = copy.deepcopy(self.res)
         endog = self.endog
         exog = self.res.model.exog
         prob_infl = self.prob_infl

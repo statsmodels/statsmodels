@@ -1,5 +1,7 @@
 from statsmodels.compat.pandas import MONTH_END
 
+import threading
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
@@ -16,6 +18,8 @@ from statsmodels.tsa.seasonal import STL, DecomposeResult
 from statsmodels.tsa.statespace.exponential_smoothing import (
     ExponentialSmoothing,
 )
+
+MATPLOTLIB_LOCK = threading.Lock()
 
 
 @pytest.fixture(scope="module")
@@ -46,10 +50,11 @@ def test_smoke(data):
 def test_sharex(data, close_figures):
     stlf = STLForecast(data, ARIMA, model_kwargs={"order": (2, 0, 0)})
     res = stlf.fit(fit_kwargs={})
-    plt = res.result.plot()
-    grouper_view = plt.axes[0].get_shared_x_axes()
-    sibs = grouper_view.get_siblings(plt.axes[1])
-    assert len(sibs) == 4
+    with MATPLOTLIB_LOCK:
+        plt = res.result.plot()
+        grouper_view = plt.axes[0].get_shared_x_axes()
+        sibs = grouper_view.get_siblings(plt.axes[1])
+        assert len(sibs) == 4
 
 
 MODELS = [
@@ -75,9 +80,7 @@ def test_equivalence_forecast(data, config, horizon, close_figures):
     if model is ETSModel:
         fit_kwarg["disp"] = False
     res = mod.fit(**fit_kwarg)
-    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(
-        fit_kwargs=fit_kwarg
-    )
+    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(fit_kwargs=fit_kwarg)
 
     seasonal = np.asarray(stl_fit.seasonal)[-12:]
     seasonal = np.tile(seasonal, 1 + horizon // 12)

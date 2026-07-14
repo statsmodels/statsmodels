@@ -27,6 +27,7 @@ TestGlmGaussianWLS                statsmodels.WLS        X      X               
 ================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
 """
 
+import copy
 import warnings
 
 import numpy as np
@@ -155,7 +156,9 @@ class CheckWeight:
             return None
 
         start_params = res1.params
-        res2 = self.res1.model.fit(
+        model_copy = copy.deepcopy(self.res1.model)
+        # Use a model copy to make test thread safe
+        res2 = model_copy.fit(
             start_params=start_params, method=method, optim_hessian=optim_hessian
         )
         assert_allclose(res1.params, res2.params, atol=1e-3, rtol=2e-3)
