@@ -1385,7 +1385,10 @@ class GLM(base.LikelihoodModel):
                 HessianInversionWarning,
                 stacklevel=2,
             )
-            cov_p = None
+            if rslt.normalized_cov_params is not None:
+                cov_p = rslt.normalized_cov_params / scale
+            else:
+                cov_p = None
 
         results_class = getattr(self, "_results_class", GLMResults)
         results_class_wrapper = getattr(
