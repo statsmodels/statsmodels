@@ -108,6 +108,7 @@ def test_stl_kwargs_smoke(data):
     mod.fit()
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot(data, data_pd, close_figures):
     mod = MSTL(endog=data, periods=5)

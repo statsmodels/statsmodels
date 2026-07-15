@@ -104,6 +104,7 @@ class CheckPowerMixin:
             # yield assert_allclose, result, value, 0.001, 0, key+' failed'
             kwds[key] = value  # reset dict
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_power_plot(self, close_figures):
         if self.cls in [smp.FTestPower, smp.FTestPowerF2]:

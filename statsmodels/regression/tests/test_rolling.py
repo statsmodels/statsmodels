@@ -221,7 +221,7 @@ def test_formula():
     ols_mod = RollingOLS.from_formula(fmla, window=100, data=data)
     ols_mod.fit()
 
-
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot(close_figures):
     import matplotlib.pyplot as plt

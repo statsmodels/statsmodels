@@ -133,6 +133,7 @@ class CheckGrouping:
         if len(self.grouping.group_names) > 1:
             self.grouping.dummies_groups(level=1)
 
+    @pytest.mark.thread_unsafe(reason="Modifies self.grouping in-place")
     def test_dummy_sparse(self):
         data = self.data
         self.grouping.dummy_sparse()

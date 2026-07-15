@@ -472,6 +472,7 @@ class TestZeroInflatedGeneralizedPoisson_predict:
 
         assert_allclose(var_fitted.mean(), self.endog.var(), atol=0.05, rtol=0.1)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_predict_prob(self):
         res = self.res
 

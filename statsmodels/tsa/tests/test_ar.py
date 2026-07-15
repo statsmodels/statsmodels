@@ -363,9 +363,7 @@ def plot_data(request):
     )
 
 
-@pytest.mark.thread_unsafe(
-    "MPL can fail under threaded runs if figs are created or destroyed"
-)
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
 def test_autoreg_smoke_plots(plot_data, close_figures):
