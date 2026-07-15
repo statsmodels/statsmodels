@@ -57,6 +57,7 @@ class TestPlot:
         cls.res = sm.OLS(y, exog0).fit()
         cls.res_true = sm.OLS(y, x).fit()
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_fit(self, close_figures):
         res = self.res
@@ -77,6 +78,7 @@ class TestPlot:
 
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_oth(self, close_figures):
         # just test that they run
@@ -94,6 +96,7 @@ class TestPlot:
 
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_influence(self, close_figures):
         infl = self.res.get_influence()
@@ -127,6 +130,7 @@ class TestPlot:
         with pytest.raises(ValueError):
             influence_plot(self.res, criterion="unknown")
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_leverage_resid2(self, close_figures):
         fig = plot_leverage_resid2(self.res)
@@ -156,6 +160,7 @@ class TestPlotPandas(TestPlot):
 
 class TestPlotFormula(TestPlotPandas):
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_one_column_exog(self, close_figures):
         from statsmodels.formula.api import ols
@@ -178,6 +183,7 @@ class TestABLine:
         cls.y = y
         cls.mod = mod
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_model(self, close_figures):
         fig = abline_plot(model_results=self.mod)
@@ -185,6 +191,7 @@ class TestABLine:
         ax.scatter(self.X[:, 1], self.y)
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_model_ax(self, close_figures):
         fig = plt.figure()
@@ -193,6 +200,7 @@ class TestABLine:
         fig = abline_plot(model_results=self.mod, ax=ax)
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_ab(self, close_figures):
         mod = self.mod
@@ -200,6 +208,7 @@ class TestABLine:
         fig = abline_plot(intercept=intercept, slope=slope)
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_ab_ax(self, close_figures):
         mod = self.mod
@@ -210,6 +219,7 @@ class TestABLine:
         fig = abline_plot(intercept=intercept, slope=slope, ax=ax)
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_remove(self, close_figures):
         mod = self.mod
@@ -240,6 +250,7 @@ class TestABLinePandas(TestABLine):
 
 class TestAddedVariablePlot:
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_added_variable_ols(self, close_figures):
         rs = np.random.RandomState(3446)
@@ -257,6 +268,7 @@ class TestAddedVariablePlot:
         close_or_save(pdf, fig)
         close_figures()
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_added_variable_poisson(self, close_figures):
 
@@ -315,6 +327,7 @@ class TestAddedVariablePlot:
 
 class TestPartialResidualPlot:
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_partial_residual_poisson(self, close_figures):
 
@@ -354,6 +367,7 @@ class TestPartialResidualPlot:
 
 class TestCERESPlot:
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ceres_poisson(self, close_figures):
 
@@ -391,6 +405,7 @@ class TestCERESPlot:
                 close_or_save(pdf, fig)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_partregress_formula_env(close_figures):
     # test that user function in formulas work, see #7672

@@ -29,6 +29,7 @@ from statsmodels.graphics.mosaicplot import (
 )
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_data_conversion(close_figures):
     # It will not reorder the elements
@@ -78,6 +79,7 @@ def test_data_conversion(close_figures):
     plt.suptitle("testing data conversion (plot 1 of 4)")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_mosaic_simple(close_figures):
     # display a simple plot of 4 categories of data, splitted in four
@@ -111,6 +113,7 @@ def test_mosaic_simple(close_figures):
     plt.suptitle("syntetic data, 4 categories (plot 2 of 4)")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_mosaic(close_figures):
     # make the same analysis on a known dataset
@@ -161,6 +164,7 @@ def test_mosaic(close_figures):
     plt.suptitle("extramarital affairs (plot 3 of 4)")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_mosaic_very_complex(close_figures):
     # make a scattermatrix of mosaic plots to show the correlations between
@@ -212,6 +216,7 @@ def test_mosaic_very_complex(close_figures):
     plt.suptitle("old males should look bright red,  (plot 4 of 4)")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_axes_labeling(close_figures):
     rs = np.random.RandomState(8389231)
@@ -243,6 +248,7 @@ def test_axes_labeling(close_figures):
 
 
 @pytest.mark.smoke
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_mosaic_empty_cells(close_figures):
     # GH#2286
@@ -511,6 +517,7 @@ def test_gap_split():
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_default_arg_index(close_figures):
     # 2116
@@ -524,6 +531,7 @@ def test_default_arg_index(close_figures):
         mosaic(data=df, title="foobar")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_missing_category(close_figures):
     # GH5639

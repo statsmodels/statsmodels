@@ -1,14 +1,11 @@
-import threading
-
 import numpy as np
 import pandas as pd
 import pytest
 
 from statsmodels.graphics.agreement import mean_diff_plot
 
-MATPLOTLIB_LOCK = threading.Lock()
 
-
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_mean_diff_plot(close_figures):
     import matplotlib.pyplot as plt
@@ -18,30 +15,27 @@ def test_mean_diff_plot(close_figures):
     rs = np.random.RandomState(11111)
     m1 = rs.random(20)
     m2 = rs.random(20)
-    with MATPLOTLIB_LOCK:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
 
-        # basic test.
-        mean_diff_plot(m1, m2, ax=ax)
+    # basic test.
+    mean_diff_plot(m1, m2, ax=ax)
 
-        # Test with pandas Series.
-        p1 = pd.Series(m1)
-        p2 = pd.Series(m2)
-        mean_diff_plot(p1, p2)
+    # Test with pandas Series.
+    p1 = pd.Series(m1)
+    p2 = pd.Series(m2)
+    mean_diff_plot(p1, p2)
 
-        # Test plotting on assigned axis.
-        fig, ax = plt.subplots(2)
-        mean_diff_plot(m1, m2, ax=ax[0])
+    # Test plotting on assigned axis.
+    fig, ax = plt.subplots(2)
+    mean_diff_plot(m1, m2, ax=ax[0])
 
-        # Test the setting of confidence intervals.
-        mean_diff_plot(m1, m2, sd_limit=0)
+    # Test the setting of confidence intervals.
+    mean_diff_plot(m1, m2, sd_limit=0)
 
-        # Test asethetic controls.
-        mean_diff_plot(m1, m2, scatter_kwds={"color": "green", "s": 10})
+    # Test asethetic controls.
+    mean_diff_plot(m1, m2, scatter_kwds={"color": "green", "s": 10})
 
-        mean_diff_plot(m1, m2, mean_line_kwds={"color": "green", "lw": 5})
+    mean_diff_plot(m1, m2, mean_line_kwds={"color": "green", "lw": 5})
 
-        mean_diff_plot(
-            m1, m2, limit_lines_kwds={"color": "green", "lw": 5, "ls": "dotted"}
-        )
+    mean_diff_plot(m1, m2, limit_lines_kwds={"color": "green", "lw": 5, "ls": "dotted"})

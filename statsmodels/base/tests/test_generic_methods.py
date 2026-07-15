@@ -105,7 +105,7 @@ class CheckGenericMixinBase:
             res = mod.fit(maxiter=500)
         return res
 
-    @pytest.mark.thread_unsafe
+    @pytest.mark.thread_unsafe(reason="Model is mutable including using del")
     def test_zero_collinear(self):
         # not completely generic yet
         if isinstance(self.results.model, (sm.GEE)):

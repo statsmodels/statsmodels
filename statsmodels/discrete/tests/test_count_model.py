@@ -281,6 +281,7 @@ class TestZeroInflatedPoisson_predict:
             return conf_intv_95
 
         conf_interval_95 = compute_conf_interval_95(*self.params_true)
+        # Use a local results class for thread safety
         res = copy.deepcopy(self.res)
         assert_allclose(
             res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
@@ -584,6 +585,8 @@ class TestZeroInflatedNegativeBinomialP_predict:
         )
         model = sm.ZeroInflatedNegativeBinomialP(cls.endog, exog, p=2)
         cls.res = model.fit(method="bfgs", maxiter=5000, disp=False)
+        # Created for use in threaded testing
+        cls.res_copy = copy.deepcopy(cls.res)
 
         # attach others
         cls.prob_infl = prob_infl
@@ -604,9 +607,9 @@ class TestZeroInflatedNegativeBinomialP_predict:
 
         conf_interval_95 = compute_conf_interval_95(*self.params_true)
         mean_true = ((1 - self.prob_infl) * self.params_true[0]).mean()
-        assert_allclose(
-            self.res.predict().mean(), mean_true, atol=conf_interval_95, rtol=0
-        )
+        # Use a local results class for thread safety
+        res = copy.deepcopy(self.res_copy)
+        assert_allclose(res.predict().mean(), mean_true, atol=conf_interval_95, rtol=0)
 
     def test_var(self):
         # todo check precision
@@ -748,11 +751,12 @@ class TestZeroInflatedNegativeBinomialP_predict2:
         res = mod.fit(
             start_params=start_params, method="bfgs", maxiter=1000, disp=False
         )
-
+        cls.res_copy = copy.deepcopy(res)
         cls.res = res
 
     def test_mean(self):
-        assert_allclose(self.res.predict().mean(), self.endog.mean(), atol=0.02)
+        res = copy.deepcopy(self.res_copy)
+        assert_allclose(res.predict().mean(), self.endog.mean(), atol=0.02)
 
     def test_zero_nonzero_mean(self):
         mean1 = self.endog.mean()

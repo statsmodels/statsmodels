@@ -76,7 +76,6 @@ Author: Chad Fulton
 License: BSD-3
 """
 
-import copy
 import os
 
 import numpy as np
@@ -290,11 +289,11 @@ class TestSESETSEstimated(CheckExponentialSmoothing):
 
         super().setup_class("oil_ets", res)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_mle_estimates(self):
         # Test that our fitted coefficients are at least as good as those from
         # `ets`
-        model = copy.deepcopy(self.res.model)
-        mle_res = model.fit(disp=0)
+        mle_res = self.res.model.fit(disp=0)
         assert_(self.res.llf <= mle_res.llf)
 
 
@@ -376,11 +375,11 @@ class TestHoltDampedETSEstimated(CheckExponentialSmoothing):
 
         super().setup_class("air_ets", res)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_mle_estimates(self):
         # Test that our fitted coefficients are at least as good as those from
         # `ets`
-        model = copy.deepcopy(self.res.model)
-        mle_res = model.fit(disp=0)
+        mle_res = self.res.model.fit(disp=0)
         assert_(self.res.llf <= mle_res.llf)
 
 
@@ -459,11 +458,11 @@ class TestHoltWintersDampedETSEstimated(CheckExponentialSmoothing):
 
         super().setup_class("aust_ets2", res)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_mle_estimates(self):
         # Test that our fitted coefficients are at least as good as those from
         # `ets`
-        model = copy.deepcopy(self.res.model)
-        mle_res = model.fit(disp=0, maxiter=100)
+        mle_res = self.res.model.fit(disp=0, maxiter=100)
         assert_(self.res.llf <= mle_res.llf)
 
 
@@ -504,12 +503,12 @@ class TestHoltWintersNoTrendETSEstimated(CheckExponentialSmoothing):
         se = (sigma2 * (1 + np.cumsum(c**2))) ** 0.5
         assert_allclose(self.forecast.se_mean, se)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_mle_estimates(self):
         # Test that our fitted coefficients are at least as good as those from
         # `ets`
         start_params = [0.5, 0.4, 4, 32, 2.3, -2, -9]
-        model = copy.deepcopy(self.res.model)
-        mle_res = model.fit(start_params, disp=0, maxiter=100)
+        mle_res = self.res.model.fit(start_params, disp=0, maxiter=100)
         assert_(self.res.llf <= mle_res.llf)
 
 
@@ -547,20 +546,18 @@ class CheckKnownInitialization:
             initial_seasonal=cls.initial_seasonal,
         )
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_given_params(self):
         # Test fixed initialization with given parameters
         # And filter with the given other parameters
-        known_mod = copy.deepcopy(self.known_mod)
-        known_res = known_mod.filter(self.params)
+        known_res = self.known_mod.filter(self.params)
 
         assert_allclose(known_res.llf, self.res.llf)
         assert_allclose(known_res.predicted_state, self.res.predicted_state)
         assert_allclose(known_res.predicted_state_cov, self.res.predicted_state_cov)
         assert_allclose(known_res.filtered_state, self.res.filtered_state)
 
-    @pytest.mark.thread_unsafe(
-        reason="Unknown issue affects models even when deepcopy-ed"
-    )
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_estimated_params(self):
         # Now fit the original model with a fixed initial_level and make sure
         # that it gives the same result as the fitted second model
@@ -821,27 +818,25 @@ class CheckConcentratedInitialization:
             drop += ["smoothing_seasonal"]
         cls.params.drop(drop, inplace=True)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_given_params(self):
         # First, fix the other parameters at a particular value
         # (for the non-concentrated model, we need to fit the inital values
         # directly by MLE)
-        mod = copy.deepcopy(self.mod)
-        res = mod.fit_constrained(self.params.to_dict(), disp=0)
-        conc_mod = copy.deepcopy(self.conc_mod)
-        conc_res = conc_mod.filter(self.params.values)
+        res = self.mod.fit_constrained(self.params.to_dict(), disp=0)
+        conc_res = self.conc_mod.filter(self.params.values)
 
         assert_allclose(conc_res.llf, res.llf, atol=self.atol, rtol=self.rtol)
         assert_allclose(
             conc_res.initial_state, res.initial_state, atol=self.atol, rtol=self.rtol
         )
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_estimated_params(self):
         # Alternatively, estimate the remaining parameters
-        mod = copy.deepcopy(self.mod)
-        res = mod.fit(self.start_params, disp=0, maxiter=100)
+        res = self.mod.fit(self.start_params, disp=0, maxiter=100)
         np.set_printoptions(suppress=True)
-        conc_mod = copy.deepcopy(self.conc_mod)
-        conc_res = conc_mod.fit(self.start_params[: len(self.params)], disp=0)
+        conc_res = self.conc_mod.fit(self.start_params[: len(self.params)], disp=0)
 
         assert_allclose(conc_res.llf, res.llf, atol=self.atol, rtol=self.rtol)
         assert_allclose(
@@ -926,7 +921,7 @@ class TestMultiIndex(CheckExponentialSmoothing):
 def test_invalid():
     # Tests for invalid model specifications that raise ValueErrors
     with pytest.raises(ValueError, match=r"Cannot have a seasonal period of 1."):
-        mod = ExponentialSmoothing(aust, seasonal=1)
+        ExponentialSmoothing(aust, seasonal=1)
 
     with pytest.raises(
         TypeError,
@@ -935,10 +930,10 @@ def test_invalid():
             r" \(int or np.integer, but not bool or timedelta64\) or None"
         ),
     ):
-        mod = ExponentialSmoothing(aust, seasonal=True)
+        ExponentialSmoothing(aust, seasonal=True)
 
     with pytest.raises(ValueError, match=r'Invalid initialization method "invalid".'):
-        mod = ExponentialSmoothing(aust, initialization_method="invalid")
+        ExponentialSmoothing(aust, initialization_method="invalid")
 
     with pytest.raises(
         ValueError,
@@ -948,7 +943,7 @@ def test_invalid():
             r' "known".'
         ),
     ):
-        mod = ExponentialSmoothing(aust, initialization_method="known")
+        ExponentialSmoothing(aust, initialization_method="known")
 
     with pytest.raises(
         ValueError,
@@ -958,7 +953,7 @@ def test_invalid():
             r' initialization method is set to "known".'
         ),
     ):
-        mod = ExponentialSmoothing(
+        ExponentialSmoothing(
             aust, trend=True, initialization_method="known", initial_level=0
         )
 
@@ -970,7 +965,7 @@ def test_invalid():
             r' initialization method is set to "known".'
         ),
     ):
-        mod = ExponentialSmoothing(
+        ExponentialSmoothing(
             aust, seasonal=4, initialization_method="known", initial_level=0
         )
 
@@ -987,7 +982,7 @@ def test_invalid():
             r" periods."
         ),
     ):
-        mod = ExponentialSmoothing(
+        ExponentialSmoothing(
             aust,
             seasonal=4,
             initialization_method="known",

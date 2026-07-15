@@ -4,10 +4,9 @@ Created on Thu May 31 15:39:15 2018
 Author: Josef Perktold
 """
 
-import copy
-
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.base._parameter_inference import score_test
 import statsmodels.discrete._diagnostics_count as diac
@@ -19,11 +18,12 @@ import statsmodels.stats._diagnostic_other as diao
 
 class CheckScoreTest:
 
+    @pytest.mark.thread_unsafe(reason="GLM.fit is not thread safe")
     def test_wald_score(self):
         # Copy to make tests thread sage. fit() method is not thread safe
         # because it sets/del attributes
-        mod_full = copy.deepcopy(self.model_full)
-        mod_drop = copy.deepcopy(self.model_drop)
+        mod_full = self.model_full
+        mod_drop = self.model_drop
         restriction = "x5=0, x6=0"
         res_full = mod_full.fit()
         res_constr = mod_full.fit_constrained("x5=0, x6=0")
@@ -119,11 +119,11 @@ class TestScoreTest(CheckScoreTest):
         cls.model_full = GLM(y, xx, family=families.Poisson())
         cls.model_drop = GLM(y, x, family=families.Poisson())
 
+    @pytest.mark.thread_unsafe(reason="GLM.fit is not thread safe")
     def test_dispersion(self):
         # Copy to make tests thread sage. fit() method is not thread safe
         # because it sets/del attributes
-        model_drop = copy.deepcopy(self.model_drop)
-        res_drop = model_drop.fit()
+        res_drop = self.model_drop.fit()
         res_test = diac.test_poisson_dispersion(res_drop)
         res_test_ = np.column_stack((res_test.statistic, res_test.pvalue))
         assert_allclose(res_test_, self.res_disptest, rtol=1e-6, atol=1e-14)

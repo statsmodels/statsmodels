@@ -9,7 +9,6 @@ estimation differ among implementations and the results will not agree
 exactly.
 """
 
-import copy
 import os
 import threading
 import warnings
@@ -1796,10 +1795,10 @@ class CheckConsistency:
 
     start_params = None
 
+    @pytest.mark.thread_unsafe("GEE.dit is not thread safe")
     def test_cov_type(self):
-        # Use a copy to allow for threaded runs
         # fit is not thread safe
-        mod = copy.deepcopy(self.mod)
+        mod = self.mod
         res_robust = mod.fit(start_params=self.start_params)
         res_naive = mod.fit(start_params=self.start_params, cov_type="naive")
         res_robust_bc = mod.fit(start_params=self.start_params, cov_type="bias_reduced")

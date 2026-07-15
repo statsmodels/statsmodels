@@ -1,9 +1,13 @@
+import threading
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import statsmodels.formula
 from statsmodels.formula._manager import FormulaManager, LinearConstraintValues
+
+PATSY_ERROR_LOCK = threading.Lock()
 
 HAS_FORMULAIC = HAS_PATSY = False
 try:
@@ -89,7 +93,7 @@ def check_type(arr, engine):
         return isinstance(arr, formulaic.ModelMatrix)
 
 
-@pytest.mark.thread_unsafe
+@pytest.mark.thread_unsafe("changes global formula_engine variable")
 def test_engine_options_engine(engine):
     default = statsmodels.formula.options.formula_engine
     assert default in ("patsy", "formulaic")
@@ -109,7 +113,7 @@ def test_engine_options_engine(engine):
     statsmodels.formula.options.formula_engine = default
 
 
-@pytest.mark.thread_unsafe
+@pytest.mark.thread_unsafe(reason="changes global ordering parameter")
 @pytest.mark.parametrize("ordering", ["degree", "sort", "none", "legacy"])
 def test_engine_options_order(ordering):
     default = statsmodels.formula.options.ordering
@@ -124,6 +128,7 @@ def test_engine_options_order(ordering):
 
 
 @require_formulaic
+@pytest.mark.thread_unsafe(reason="changes global ordering parameter")
 def test_engine_options_order_effect(data):
     default = statsmodels.formula.options.ordering
     statsmodels.formula.options.ordering = "degree"
@@ -208,18 +213,18 @@ def test_get_empty_eval_patsy(data):
 
 
 @require_patsy
-@pytest.mark.thread_unsafe
 def test_get_empty_eval_patsy_errors(data):
     # Threaded use causes call stack depth issues
     mgr = FormulaManager(engine="patsy")
     fmla = "y ~ 1 + x + g(z)"
     eval_env = mgr.get_empty_eval_env()
-    with pytest.raises(patsy.PatsyError):
-        mgr.get_matrices(fmla, data, eval_env=7)
+    with PATSY_ERROR_LOCK:
+        with pytest.raises(patsy.PatsyError):
+            mgr.get_matrices(fmla, data, eval_env=2)
 
-    with pytest.raises(patsy.PatsyError):
-        with pytest.warns(FutureWarning, match="EvalEnvironment is deprecate"):
-            mgr.get_matrices(fmla, data, eval_env=eval_env)
+        with pytest.raises(patsy.PatsyError):
+            with pytest.warns(FutureWarning, match="EvalEnvironment is deprecate"):
+                mgr.get_matrices(fmla, data, eval_env=eval_env)
 
 
 @require_formulaic
@@ -556,4 +561,4 @@ def test_get_term_name_alt(engine, data):
     names += ("c", "x", "z")
     for term, name in zip(terms, names):
         term_name = mgr.get_term_name(term)
-        assert term_name == name
+        assert term_name == name, (terms, names)

@@ -627,7 +627,7 @@ def test_simulate_keywords(austourists_model_fit):
     fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=rs)
 
 
-@pytest.mark.thread_unsafe
+@pytest.mark.thread_unsafe(reason="Issues and checks warnings")
 def test_simulate_keywords_warnings(austourists_model_fit):
     """
     check whether all keywords are accepted and work without throwing errors.

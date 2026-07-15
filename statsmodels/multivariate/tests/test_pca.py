@@ -166,7 +166,7 @@ class TestPCA:
         assert_allclose(np.abs(pc.coeff), np.abs(ref.coef.T))
         assert_allclose(pc.factors.dot(pc.coeff), ref.factors.dot(ref.coef.T))
 
-    @pytest.mark.thread_unsafe
+    @pytest.mark.thread_unsafe(reason="Issues and checks warnings")
     def test_warnings(self):
         with pytest.warns(ValueWarning, match="The requested number of components"):
             PCA(self.x, ncomp=300)

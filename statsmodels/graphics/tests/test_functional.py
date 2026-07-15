@@ -27,6 +27,7 @@ data = data.raw_data[:, 1:]
 @pytest.mark.skipif(
     PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM"
 )
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
     try:
@@ -180,6 +181,7 @@ def test_hdr_basic(close_figures):
 
 
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_basic_brute(close_figures):
     try:
@@ -211,6 +213,7 @@ def test_hdr_basic_brute(close_figures):
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_plot(close_figures):
     fig = plt.figure()
@@ -239,6 +242,7 @@ def test_hdr_plot(close_figures):
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_alpha(close_figures):
     try:
@@ -285,6 +289,7 @@ def test_hdr_alpha(close_figures):
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_multiple_alpha(close_figures):
     try:
@@ -357,6 +362,7 @@ def test_hdr_multiple_alpha(close_figures):
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_threshold(close_figures):
     try:
@@ -370,9 +376,11 @@ def test_hdr_threshold(close_figures):
         pytest.xfail("Multiprocess randomly crashes in Windows testing")
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_bw(close_figures):
     try:
@@ -401,6 +409,7 @@ def test_hdr_bw(close_figures):
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_ncomp(close_figures):
     try:
@@ -464,6 +473,7 @@ def test_banddepth_MBD(close_figures):
     assert_almost_equal(depth, expected_depth, decimal=4)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_fboxplot_rainbowplot(close_figures):
     # Test fboxplot and rainbowplot together, is much faster.
