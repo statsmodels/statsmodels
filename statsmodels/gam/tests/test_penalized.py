@@ -574,7 +574,7 @@ class TestGAMMPGBS(CheckGAMMixin):
         #     then exog_linear will also be transformed in predict.
         mgr = FormulaManager()
         cls.exog = np.asarray(mgr.get_matrices("fuel + drive", data=df_autos))
-        bs = BSplines(
+        cls.bs = BSplines(
             x_spline,
             df=[12, 10],
             degree=[3, 3],
@@ -583,9 +583,12 @@ class TestGAMMPGBS(CheckGAMMixin):
             include_intercept=True,
         )
         # TODO alpha needs to be list
-        alpha0 = 1 / s_scale * sp / 2
+        cls.alpha0 = 1 / s_scale * sp / 2
         gam_bs = GLMGam(
-            df_autos["city_mpg"], exog=cls.exog, smoother=bs, alpha=(alpha0).tolist()
+            df_autos["city_mpg"],
+            exog=cls.exog,
+            smoother=cls.bs,
+            alpha=(cls.alpha0).tolist(),
         )
         cls.res1a = gam_bs.fit(use_t=True)
 
@@ -598,6 +601,14 @@ class TestGAMMPGBS(CheckGAMMixin):
 
         # for checking that alpha model attribute is unchanged, same as alpha0
         cls.alpha = [169947.78222669504, 26767.58046340008]
+
+    def setup_model(self):
+        return GLMGam(
+            df_autos["city_mpg"],
+            exog=self.exog,
+            smoother=self.bs,
+            alpha=(self.alpha0).tolist(),
+        ).fit(use_t=True)
 
     @classmethod
     def _init(cls):
@@ -631,6 +642,8 @@ class TestGAMMPGBS(CheckGAMMixin):
         assert_equal(mod.alpha, self.alpha)  # assert unchanged
         assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
 
+        # Require a local model to avoid thread saftey issues
+        mod = self.setup_model().model
         alpha_aic = mod.select_penweight(**{BASINHOPPING_RNG: rs})[0]
         # regression number, but in the right ball park
         assert_allclose(alpha_aic, [112487.81362014, 129.89155677], rtol=1e-3)
@@ -750,6 +763,7 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         assert_allclose(wtt.pvalues[:2], res2.pTerms_pv, rtol=1e-6)
         assert_equal(wtt.df_constraints[:2], res2.pTerms_df)
 
+    @pytest.mark.thread_unsafe("Some results classes are mutable that affect run")
     def test_select_alpha(self):
         res1 = self.res1
         alpha_mgcv = res1.model.alpha

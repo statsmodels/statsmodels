@@ -4,6 +4,7 @@ Test functions for models.GLM
 
 from statsmodels.compat.scipy import SP_LT_17
 
+import copy
 import os
 import re
 import warnings
@@ -2838,10 +2839,12 @@ class TestConvergence:
         data.exog = add_constant(data.exog, prepend=False)
         cls.model = GLM(data.endog, data.exog, family=sm.families.Binomial())
 
-    def _when_converged(self, atol=1e-8, rtol=0, tol_criterion="deviance"):
-        for i, _ in enumerate(self.res.fit_history[tol_criterion]):
-            orig = self.res.fit_history[tol_criterion][i]
-            new = self.res.fit_history[tol_criterion][i + 1]
+    def _when_converged(
+        self, atol=1e-8, rtol=0, tol_criterion="deviance", *, result=None
+    ):
+        for i, _ in enumerate(result.fit_history[tol_criterion]):
+            orig = result.fit_history[tol_criterion][i]
+            new = result.fit_history[tol_criterion][i + 1]
             if np.allclose(orig, new, atol=atol, rtol=rtol):
                 return i
         raise ValueError("CONVERGENCE CHECK: It seems this doens't converge!")
@@ -2849,86 +2852,93 @@ class TestConvergence:
     def test_convergence_atol_only(self):
         atol = 1e-8
         rtol = 0
-        self.res = self.model.fit(atol=atol, rtol=rtol)
-        expected_iterations = self._when_converged(atol=atol, rtol=rtol)
-        actual_iterations = self.res.fit_history["iteration"]
+        result = self.model.fit(atol=atol, rtol=rtol)
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol, result=result)
+        actual_iterations = result.fit_history["iteration"]
         # Note the first value is the list is np.inf. The second value
         # is the initial guess based off of start_params or the
         # estimate thereof. The third value (index = 2) is the actual "first
         # iteration"
         assert_equal(expected_iterations, actual_iterations)
-        assert_equal(len(self.res.fit_history["deviance"]) - 2, actual_iterations)
+        assert_equal(len(result.fit_history["deviance"]) - 2, actual_iterations)
 
     def test_convergence_rtol_only(self):
         atol = 0
         rtol = 1e-8
-        self.res = self.model.fit(atol=atol, rtol=rtol)
-        expected_iterations = self._when_converged(atol=atol, rtol=rtol)
-        actual_iterations = self.res.fit_history["iteration"]
+        model = copy.copy(self.model)
+        result = model.fit(atol=atol, rtol=rtol)
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol, result=result)
+        actual_iterations = result.fit_history["iteration"]
         # Note the first value is the list is np.inf. The second value
         # is the initial guess based off of start_params or the
         # estimate thereof. The third value (index = 2) is the actual "first
         # iteration"
         assert_equal(expected_iterations, actual_iterations)
-        assert_equal(len(self.res.fit_history["deviance"]) - 2, actual_iterations)
+        assert_equal(len(result.fit_history["deviance"]) - 2, actual_iterations)
 
     def test_convergence_atol_rtol(self):
         atol = 1e-8
         rtol = 1e-8
-        self.res = self.model.fit(atol=atol, rtol=rtol)
-        expected_iterations = self._when_converged(atol=atol, rtol=rtol)
-        actual_iterations = self.res.fit_history["iteration"]
+        model = copy.copy(self.model)
+        result = model.fit(atol=atol, rtol=rtol)
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol, result=result)
+        actual_iterations = result.fit_history["iteration"]
         # Note the first value is the list is np.inf. The second value
         # is the initial guess based off of start_params or the
         # estimate thereof. The third value (index = 2) is the actual "first
         # iteration"
         assert_equal(expected_iterations, actual_iterations)
-        assert_equal(len(self.res.fit_history["deviance"]) - 2, actual_iterations)
+        assert_equal(len(result.fit_history["deviance"]) - 2, actual_iterations)
 
     def test_convergence_atol_only_params(self):
         atol = 1e-8
         rtol = 0
-        self.res = self.model.fit(atol=atol, rtol=rtol, tol_criterion="params")
+        # Copy model since fit is not thread-safe
+        model = copy.copy(self.model)
+        result = model.fit(atol=atol, rtol=rtol, tol_criterion="params")
         expected_iterations = self._when_converged(
-            atol=atol, rtol=rtol, tol_criterion="params"
+            atol=atol, rtol=rtol, tol_criterion="params", result=result
         )
-        actual_iterations = self.res.fit_history["iteration"]
+        actual_iterations = result.fit_history["iteration"]
         # Note the first value is the list is np.inf. The second value
         # is the initial guess based off of start_params or the
         # estimate thereof. The third value (index = 2) is the actual "first
         # iteration"
         assert_equal(expected_iterations, actual_iterations)
-        assert_equal(len(self.res.fit_history["deviance"]) - 2, actual_iterations)
+        assert_equal(len(result.fit_history["deviance"]) - 2, actual_iterations)
 
     def test_convergence_rtol_only_params(self):
         atol = 0
         rtol = 1e-8
-        self.res = self.model.fit(atol=atol, rtol=rtol, tol_criterion="params")
+        # Copy model since fit is not thread-safe
+        model = copy.copy(self.model)
+        result = model.fit(atol=atol, rtol=rtol, tol_criterion="params")
         expected_iterations = self._when_converged(
-            atol=atol, rtol=rtol, tol_criterion="params"
+            atol=atol, rtol=rtol, tol_criterion="params", result=result
         )
-        actual_iterations = self.res.fit_history["iteration"]
+        actual_iterations = result.fit_history["iteration"]
         # Note the first value is the list is np.inf. The second value
         # is the initial guess based off of start_params or the
         # estimate thereof. The third value (index = 2) is the actual "first
         # iteration"
         assert_equal(expected_iterations, actual_iterations)
-        assert_equal(len(self.res.fit_history["deviance"]) - 2, actual_iterations)
+        assert_equal(len(result.fit_history["deviance"]) - 2, actual_iterations)
 
     def test_convergence_atol_rtol_params(self):
         atol = 1e-8
         rtol = 1e-8
-        self.res = self.model.fit(atol=atol, rtol=rtol, tol_criterion="params")
+        model = copy.copy(self.model)
+        result = model.fit(atol=atol, rtol=rtol, tol_criterion="params")
         expected_iterations = self._when_converged(
-            atol=atol, rtol=rtol, tol_criterion="params"
+            atol=atol, rtol=rtol, tol_criterion="params", result=result
         )
-        actual_iterations = self.res.fit_history["iteration"]
+        actual_iterations = result.fit_history["iteration"]
         # Note the first value is the list is np.inf. The second value
         # is the initial guess based off of start_params or the
         # estimate thereof. The third value (index = 2) is the actual "first
         # iteration"
         assert_equal(expected_iterations, actual_iterations)
-        assert_equal(len(self.res.fit_history["deviance"]) - 2, actual_iterations)
+        assert_equal(len(result.fit_history["deviance"]) - 2, actual_iterations)
 
 
 def test_poisson_deviance():
@@ -3001,7 +3011,9 @@ def test_int_exog(dtype):
     assert isinstance(res.params, np.ndarray)
 
 
+@pytest.mark.thread_unsafe(reason="Sets global use_bic parameter")
 def test_glm_bic(iris):
+    # TODO: Before 0.15 release remove future warning and simplify test
     X = np.c_[np.ones(100), iris[50:, :4]]
     y = np.array(iris)[50:, 4].astype(np.int32)
     y -= 1

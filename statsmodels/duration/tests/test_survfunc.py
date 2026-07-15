@@ -212,9 +212,9 @@ def test_survdiff():
     assert_allclose(stat, 13.35259, atol=1e-4, rtol=1e-4)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_km(close_figures):
-
     if pdf_output:
         from matplotlib.backends.backend_pdf import PdfPages
 

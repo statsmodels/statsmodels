@@ -119,8 +119,9 @@ def setup_model(
     results_R = results[name]
     params = get_params_from_R(results_R)
 
-    model = ETSModel(
-        data,
+    model = ETSModel
+    model_args = (data,)
+    model_kwargs = dict(
         seasonal_periods=seasonal_periods,
         error=error,
         trend=trend,
@@ -128,7 +129,7 @@ def setup_model(
         damped_trend=damped,
     )
 
-    return model, params, results_R
+    return model, model_args, model_kwargs, params, results_R
 
 
 @pytest.fixture
@@ -144,8 +145,17 @@ def austourists_model(austourists):
 
 
 @pytest.fixture
-def austourists_model_fit(austourists_model):
-    return austourists_model.fit(disp=False)
+def austourists_model_fit(austourists):
+    mod = ETSModel
+    mod_args = (austourists,)
+    mod_kwargs = dict(
+        seasonal_periods=4,
+        error="add",
+        trend="add",
+        seasonal="add",
+        damped_trend=True,
+    )
+    return mod, mod_args, mod_kwargs
 
 
 @pytest.fixture
@@ -392,7 +402,8 @@ def get_states_from_R(results_R, k_states):
 
 
 def test_fit_model_austouritsts(setup_model):
-    model, params, results_R = setup_model
+    model_class, model_args, model_kwargs, params, results_R = setup_model
+    model = model_class(*model_args, **model_kwargs)
     model.fit(disp=False)
 
 
@@ -402,7 +413,8 @@ def test_fit_model_austouritsts(setup_model):
 
 
 def test_smooth_vs_R(setup_model):
-    model, params, results_R = setup_model
+    model_class, model_args, model_kwargs, params, results_R = setup_model
+    model = model_class(*model_args, **model_kwargs)
 
     yhat, xhat = model.smooth(params, return_raw=True)
 
@@ -414,7 +426,8 @@ def test_smooth_vs_R(setup_model):
 
 
 def test_residuals_vs_R(setup_model):
-    model, params, results_R = setup_model
+    model_class, model_args, model_kwargs, params, results_R = setup_model
+    model = model_class(*model_args, **model_kwargs)
 
     yhat = model.smooth(params, return_raw=True)[0]
 
@@ -423,7 +436,8 @@ def test_residuals_vs_R(setup_model):
 
 
 def test_loglike_vs_R(setup_model):
-    model, params, results_R = setup_model
+    model_class, model_args, model_kwargs, params, results_R = setup_model
+    model = model_class(*model_args, **model_kwargs)
 
     loglike = model.loglike(params)
     # the calculation of log likelihood in R is only up to a constant:
@@ -434,7 +448,8 @@ def test_loglike_vs_R(setup_model):
 
 
 def test_forecast_vs_R(setup_model):
-    model, params, results_R = setup_model
+    model_class, model_args, model_kwargs, params, results_R = setup_model
+    model = model_class(*model_args, **model_kwargs)
 
     fit = fit_austourists_with_R_params(model, results_R, set_state=True)
 
@@ -445,7 +460,8 @@ def test_forecast_vs_R(setup_model):
 
 
 def test_simulate_vs_R(setup_model):
-    model, params, results_R = setup_model
+    model_class, model_args, model_kwargs, params, results_R = setup_model
+    model = model_class(*model_args, **model_kwargs)
 
     fit = fit_austourists_with_R_params(model, results_R, set_state=True)
 
@@ -457,7 +473,8 @@ def test_simulate_vs_R(setup_model):
 
 
 def test_fit_vs_R(setup_model):
-    model, params, results_R = setup_model
+    model_class, model_args, model_kwargs, params, results_R = setup_model
+    model = model_class(*model_args, **model_kwargs)
 
     if PLATFORM_WIN and model.short_name == "AAdA":
         start = params
@@ -488,7 +505,9 @@ def test_fit_vs_R(setup_model):
 
 
 def test_predict_vs_R(setup_model):
-    model, params, results_R = setup_model
+    model_class, model_args, model_kwargs, params, results_R = setup_model
+    model = model_class(*model_args, **model_kwargs)
+
     fit = fit_austourists_with_R_params(model, results_R, set_state=True)
 
     n = fit.nobs
@@ -596,7 +615,25 @@ def test_simulate_keywords(austourists_model_fit):
     """
     check whether all keywords are accepted and work without throwing errors.
     """
-    fit = austourists_model_fit
+    model_class, model_args, model_kwargs = austourists_model_fit
+    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+
+    rs = np.random.RandomState(3232912)
+    # smoke test different random error options
+    fit.simulate(4, repetitions=10, rng=rs)
+    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm, rng=rs)
+    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=rs)
+    fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10), rng=rs)
+    fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=rs)
+
+
+@pytest.mark.thread_unsafe(reason="Issues and checks warnings")
+def test_simulate_keywords_warnings(austourists_model_fit):
+    """
+    check whether all keywords are accepted and work without throwing errors.
+    """
+    model_class, model_args, model_kwargs = austourists_model_fit
+    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
 
     # test anchor
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
@@ -609,13 +646,6 @@ def test_simulate_keywords(austourists_model_fit):
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         sim_3 = fit.simulate(4, anchor="2015-12-31", rng=0).values
     assert_almost_equal(sim_2, sim_3)
-    rs = np.random.RandomState(3232912)
-    # test different random error options
-    fit.simulate(4, repetitions=10, rng=rs)
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm, rng=rs)
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=rs)
-    fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10), rng=rs)
-    fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=rs)
 
     # test seeding
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
@@ -626,7 +656,8 @@ def test_simulate_keywords(austourists_model_fit):
 
 def test_predict_ranges(austourists_model_fit):
     # in total 68 observations
-    fit = austourists_model_fit
+    model_class, model_args, model_kwargs = austourists_model_fit
+    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
 
     # first prediction is 0, last is 10 -> 11 predictions
     pred = fit.predict(start=0, end=10)
@@ -649,25 +680,31 @@ def test_predict_ranges(austourists_model_fit):
     assert len(pred) == 5
 
 
-def test_summary(austourists_model):
+def test_summary(austourists_model_fit):
     # just try to run summary to see if it works
-    fit = austourists_model.fit(disp=False)
+    model_class, model_args, model_kwargs = austourists_model_fit
+    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
     fit.summary()
 
     # now without estimated initial states
-    austourists_model.set_initialization_method("heuristic")
-    fit = austourists_model.fit(disp=False)
+    ets_model = model_class(*model_args, **model_kwargs)
+    ets_model.set_initialization_method("heuristic")
+    fit = ets_model.fit(disp=False)
     fit.summary()
 
     # and with fixed params
-    fit = austourists_model.fit_constrained({"smoothing_trend": 0.9})
+    ets_model = model_class(*model_args, **model_kwargs)
+    fit = ets_model.fit_constrained({"smoothing_trend": 0.9})
     fit.summary()
 
 
 def test_score(austourists_model_fit):
-    score_cs = austourists_model_fit.model.score(austourists_model_fit.params)
-    score_fd = austourists_model_fit.model.score(
-        austourists_model_fit.params,
+    model_class, model_args, model_kwargs = austourists_model_fit
+    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+
+    score_cs = fit.model.score(fit.params)
+    score_fd = fit.model.score(
+        fit.params,
         approx_complex_step=False,
         approx_centered=True,
     )
@@ -677,9 +714,12 @@ def test_score(austourists_model_fit):
 def test_hessian(austourists_model_fit):
     # The hessian approximations are not very consistent, but the test makes
     # sure they run
-    austourists_model_fit.model.hessian(austourists_model_fit.params)
-    austourists_model_fit.model.hessian(
-        austourists_model_fit.params,
+    model_class, model_args, model_kwargs = austourists_model_fit
+    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+
+    fit.model.hessian(fit.params)
+    fit.model.hessian(
+        fit.params,
         approx_complex_step=False,
         approx_centered=True,
     )
@@ -687,7 +727,10 @@ def test_hessian(austourists_model_fit):
 
 def test_prediction_results(austourists_model_fit):
     # simple test case starting at 0
-    pred = austourists_model_fit.get_prediction(
+    model_class, model_args, model_kwargs = austourists_model_fit
+    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+
+    pred = fit.get_prediction(
         start=0,
         dynamic=30,
         end=40,
@@ -697,43 +740,43 @@ def test_prediction_results(austourists_model_fit):
     assert np.all(~np.isnan(summary["mean"]))
 
     # simple test case starting at not 0
-    pred = austourists_model_fit.get_prediction(start=10, dynamic=30, end=40)
+    pred = fit.get_prediction(start=10, dynamic=30, end=40)
     summary = pred.summary_frame()
     assert len(summary["mean"].values) == 31
     assert np.all(~np.isnan(summary["mean"]))
 
     # long out of sample prediction
-    pred = austourists_model_fit.get_prediction(start=0, dynamic=30, end=80)
+    pred = fit.get_prediction(start=0, dynamic=30, end=80)
     summary = pred.summary_frame()
     assert len(summary["mean"].values) == 81
     assert np.all(~np.isnan(summary["mean"]))
 
     # long out of sample, starting in-sample
-    pred = austourists_model_fit.get_prediction(start=67, end=80)
+    pred = fit.get_prediction(start=67, end=80)
     summary = pred.summary_frame()
     assert len(summary["mean"].values) == 14
     assert np.all(~np.isnan(summary["mean"]))
 
     # long out of sample, starting at end of sample
-    pred = austourists_model_fit.get_prediction(start=68, end=80)
+    pred = fit.get_prediction(start=68, end=80)
     summary = pred.summary_frame()
     assert len(summary["mean"].values) == 13
     assert np.all(~np.isnan(summary["mean"]))
 
     # long out of sample, starting just out of sample
-    pred = austourists_model_fit.get_prediction(start=69, end=80)
+    pred = fit.get_prediction(start=69, end=80)
     summary = pred.summary_frame()
     assert len(summary["mean"].values) == 12
     assert np.all(~np.isnan(summary["mean"]))
 
     # long out of sample, starting long out of sample
-    pred = austourists_model_fit.get_prediction(start=79, end=80)
+    pred = fit.get_prediction(start=79, end=80)
     summary = pred.summary_frame()
     assert len(summary["mean"].values) == 2
     assert np.all(~np.isnan(summary["mean"]))
 
     # long out of sample, `start`== `end`
-    pred = austourists_model_fit.get_prediction(start=80, end=80)
+    pred = fit.get_prediction(start=80, end=80)
     summary = pred.summary_frame()
     assert len(summary["mean"].values) == 1
     assert np.all(~np.isnan(summary["mean"]))
@@ -999,8 +1042,9 @@ def test_convergence_simple():
 
 
 def test_exact_prediction_intervals(austourists_model_fit):
-
-    fit = austourists_model_fit._results
+    model_class, model_args, model_kwargs = austourists_model_fit
+    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+    fit = fit._results
 
     class DummyModel:
         def __init__(self, short_name):
@@ -1027,7 +1071,9 @@ def test_exact_prediction_intervals(austourists_model_fit):
 
 def test_one_step_ahead(setup_model):
     rs = np.random.RandomState(78437941)
-    model, params, results_R = setup_model
+    model_class, model_args, model_kwargs, params, results_R = setup_model
+    model = model_class(*model_args, **model_kwargs)
+
     model2 = ETSModel(
         pd.Series(model.endog),
         seasonal_periods=model.seasonal_periods,

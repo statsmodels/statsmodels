@@ -297,7 +297,7 @@ def test_fit_sequential():
     )
 
 
-@pytest.mark.thread_unsafe
+@pytest.mark.thread_unsafe(reason="Uses joblib")
 def test_fit_joblib():
 
     # tests that the results of all the intermediate steps

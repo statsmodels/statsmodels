@@ -36,6 +36,7 @@ class TestPredFunc:
         if pdf_output:
             self.pdf.savefig(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_formula(self, close_figures):
 
@@ -62,7 +63,6 @@ class TestPredFunc:
         result = model.fit()
 
         summaries = {"x1": np.mean, "x3": pctl(0.75), "x5": np.mean}
-
         values = {"x4": "B"}
         pr1, ci1, fvals1 = predict_functional(result, "x2", summaries, values)
 
@@ -95,6 +95,7 @@ class TestPredFunc:
         plt.title("Linear model prediction")
         self.close_or_save(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_lm_contrast(self, close_figures):
 
@@ -131,6 +132,7 @@ class TestPredFunc:
         plt.title("Linear model contrast")
         self.close_or_save(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_glm_formula_contrast(self, close_figures):
 
@@ -168,6 +170,7 @@ class TestPredFunc:
         plt.title("Poisson regression contrast")
         self.close_or_save(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_scb(self, close_figures):
 
@@ -199,7 +202,6 @@ class TestPredFunc:
 
             # CB is for linear predictor or mean response
             for linear in False, True:
-
                 true = true_lp if linear else true_mean
 
                 values = {"const": 1, "x2": 0}
@@ -243,6 +245,7 @@ class TestPredFunc:
 
                 self.close_or_save(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_glm_formula(self, close_figures):
 
@@ -264,7 +267,6 @@ class TestPredFunc:
         summaries = {"x2": np.mean}
 
         for linear in False, True:
-
             values = {"x3": "B"}
             pr1, ci1, fvals1 = predict_functional(
                 result, "x1", summaries, values, linear=linear
@@ -316,6 +318,7 @@ class TestPredFunc:
             plt.title("Binomial GLM prediction")
             self.close_or_save(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_noformula_prediction(self, close_figures):
 

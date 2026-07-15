@@ -5,6 +5,7 @@ Author: Josef Perktod
 License: BSD-3
 """
 
+import copy
 import warnings
 
 import numpy as np
@@ -54,7 +55,7 @@ class CheckPredict:
         assert_allclose(params1[-1], np.exp(params2[-1]), rtol=self.rtol)
 
     def test_predict(self):
-        res1 = self.res1
+        res1 = copy.deepcopy(self.res1)
         res2 = self.res2
         ex = np.asarray(exog).mean(0)
 
@@ -146,6 +147,7 @@ class CheckPredict:
         assert_allclose(pmw.predicted, pm6.predicted, rtol=1e-13)
         assert_allclose(dfmw, dfm6, rtol=1e-6)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_diagnostic(self, close_figures):
         # smoke test for now
@@ -350,6 +352,8 @@ def get_data_simulated():
 y_count, x_const = get_data_simulated()
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
 @pytest.mark.parametrize("case", models)
 def test_distr(case, close_figures):
     y, x = y_count, x_const
@@ -414,11 +418,7 @@ def test_distr(case, close_figures):
 
         f_sc = influ.d_fittedvalues_scaled  # requires se from get_prediction()
         assert f_sc.shape == (len(y2),)
-
-        try:
-            with warnings.catch_warnings():
-                # ZI models warn about missing hat_matrix_diag
-                warnings.simplefilter("ignore", category=UserWarning)
-                influ.plot_influence()
-        except ImportError:
-            pass
+        with warnings.catch_warnings():
+            # ZI models warn about missing hat_matrix_diag
+            warnings.simplefilter("ignore", category=UserWarning)
+            influ.plot_influence()

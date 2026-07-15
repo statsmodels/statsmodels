@@ -78,6 +78,7 @@ def test_x13_arima_select_order(dataset, use_numpy):
     assert isinstance(res.sorder, tuple)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_x13_arima_plot(dataset, close_figures):
     res = x13_arima_analysis(dataset)

@@ -812,6 +812,7 @@ def test_2d_data():
         ExponentialSmoothing(pd.concat([housing_data, housing_data], axis=1)).fit()
 
 
+@pytest.mark.thread_unsafe(reason="Issues and checks warnings")
 def test_infer_freq():
     hd2 = housing_data.copy()
     hd2.index = list(hd2.index)

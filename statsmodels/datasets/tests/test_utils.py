@@ -38,7 +38,7 @@ def test_get_rdataset():
 
 
 @pytest.mark.smoke
-@pytest.mark.thread_unsafe
+@pytest.mark.thread_unsafe(reason="Disk access")
 def test_get_rdataset_write_read_cache():
     # test writing and reading cache
     try:

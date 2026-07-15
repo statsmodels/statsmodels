@@ -41,6 +41,7 @@ results_menenez = [
 ]
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("case", results_menenez)
 def test_eff(case):
     norm_cls, norm_kwargs, res2 = case

@@ -752,6 +752,7 @@ def test_partial_values():
     assert_allclose(se, se_from_mgcv * bug_fact, rtol=0, atol=0.008)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_partial_plot(close_figures):
     # verify that plot and partial_values method agree
@@ -775,6 +776,7 @@ def test_partial_plot(close_figures):
     alpha = 0.03
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(maxiter=10000, method="bfgs")
+
     fig = res_glm_gam.plot_partial(0)
     xp, yp = fig.axes[0].get_children()[0].get_data()
     # Note xp and yp are sorted by x

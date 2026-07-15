@@ -2,7 +2,6 @@
 
 from io import BytesIO
 from itertools import product
-import threading
 import warnings
 
 import numpy as np
@@ -13,8 +12,6 @@ import pytest
 from statsmodels import tools
 from statsmodels.regression.linear_model import WLS
 from statsmodels.regression.rolling import RollingOLS, RollingWLS
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 
 def gen_data(nobs, nvar, const, pandas=False, missing=0.0, weights=False):
@@ -225,37 +222,37 @@ def test_formula():
     ols_mod.fit()
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot(close_figures):
-    with MATPLOTLIB_LOCK:
-        import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
 
-        y, x, w = gen_data(250, 3, True, pandas=True)
-        fmla = "y ~ 1 + x0 + x1 + x2"
-        data = pd.concat([y, x], axis=1)
-        mod = RollingWLS.from_formula(fmla, window=100, data=data, weights=w)
-        res = mod.fit()
-        fig = res.plot_recursive_coefficient()
-        assert isinstance(fig, plt.Figure)
-        res.plot_recursive_coefficient(variables=2, alpha=None, figsize=(30, 7))
-        res.plot_recursive_coefficient(variables="x0", alpha=None, figsize=(30, 7))
-        res.plot_recursive_coefficient(variables=[0, 2], alpha=None, figsize=(30, 7))
-        plt.close("all")
-        res.plot_recursive_coefficient(variables=["x0"], alpha=None, figsize=(30, 7))
-        res.plot_recursive_coefficient(
-            variables=["x0", "x1", "x2"], alpha=None, figsize=(30, 7)
-        )
-        plt.close("all")
-        with pytest.raises(ValueError, match="variable x4 is not an integer"):
-            res.plot_recursive_coefficient(variables="x4")
+    y, x, w = gen_data(250, 3, True, pandas=True)
+    fmla = "y ~ 1 + x0 + x1 + x2"
+    data = pd.concat([y, x], axis=1)
+    mod = RollingWLS.from_formula(fmla, window=100, data=data, weights=w)
+    res = mod.fit()
+    fig = res.plot_recursive_coefficient()
+    assert isinstance(fig, plt.Figure)
+    res.plot_recursive_coefficient(variables=2, alpha=None, figsize=(30, 7))
+    res.plot_recursive_coefficient(variables="x0", alpha=None, figsize=(30, 7))
+    res.plot_recursive_coefficient(variables=[0, 2], alpha=None, figsize=(30, 7))
+    plt.close("all")
+    res.plot_recursive_coefficient(variables=["x0"], alpha=None, figsize=(30, 7))
+    res.plot_recursive_coefficient(
+        variables=["x0", "x1", "x2"], alpha=None, figsize=(30, 7)
+    )
+    plt.close("all")
+    with pytest.raises(ValueError, match="variable x4 is not an integer"):
+        res.plot_recursive_coefficient(variables="x4")
 
-        fig = plt.Figure()
-        # Just silence the warning
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            out = res.plot_recursive_coefficient(fig=fig)
-        assert out is fig
-        res.plot_recursive_coefficient(alpha=None, figsize=(30, 7))
+    fig = plt.Figure()
+    # Just silence the warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        out = res.plot_recursive_coefficient(fig=fig)
+    assert out is fig
+    res.plot_recursive_coefficient(alpha=None, figsize=(30, 7))
 
 
 @pytest.mark.parametrize("params_only", [True, False])

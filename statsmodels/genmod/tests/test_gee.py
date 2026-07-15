@@ -32,25 +32,6 @@ import statsmodels.genmod.generalized_estimating_equations as gee
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
-
-pdf_output = False
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_glm.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
-
 
 def load_data(fname, icept=True):
     """
@@ -192,6 +173,7 @@ class TestGEE:
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_nominal_plot(self, close_figures):
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -202,6 +184,8 @@ class TestGEE:
 
         model = gee.NominalGEE(endog, exog, groups)
         result = model.fit(cov_type="naive", start_params=[3.295837, -2.197225])
+
+        import matplotlib.pyplot as plt
 
         fig = result.plot_distribution()
         assert_equal(isinstance(fig, plt.Figure), True)
@@ -1065,8 +1049,11 @@ class TestGEE:
             model1.fit()
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ordinal_plot(self, close_figures):
+        import matplotlib.pyplot as plt
+
         family = families.Binomial()
 
         endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
@@ -1805,7 +1792,9 @@ class CheckConsistency:
 
     start_params = None
 
+    @pytest.mark.thread_unsafe("GEE.dit is not thread safe")
     def test_cov_type(self):
+        # fit is not thread safe
         mod = self.mod
         res_robust = mod.fit(start_params=self.start_params)
         res_naive = mod.fit(start_params=self.start_params, cov_type="naive")
@@ -2031,8 +2020,10 @@ def test_regularized_gaussian():
 
 
 @pytest.mark.smoke
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plots(close_figures):
+    import matplotlib.pyplot as plt
 
     rs = np.random.RandomState(378)
     exog = rs.normal(size=100)

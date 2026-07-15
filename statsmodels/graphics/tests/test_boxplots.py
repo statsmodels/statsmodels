@@ -32,6 +32,7 @@ def age_and_labels():
 # TODO: Remove once SciPy 1.5.0 is the minimum
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_violinplot(age_and_labels, close_figures):
     age, labels = age_and_labels
@@ -50,6 +51,7 @@ def test_violinplot(age_and_labels, close_figures):
     )
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_violinplot_bw_factor(age_and_labels, close_figures):
     age, labels = age_and_labels
@@ -69,6 +71,7 @@ def test_violinplot_bw_factor(age_and_labels, close_figures):
     )
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_beanplot(age_and_labels, close_figures):
     age, labels = age_and_labels
@@ -87,6 +90,7 @@ def test_beanplot(age_and_labels, close_figures):
     )
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_beanplot_jitter(age_and_labels, close_figures):
     rs = np.random.RandomState(2383013)
@@ -108,6 +112,7 @@ def test_beanplot_jitter(age_and_labels, close_figures):
     )
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_beanplot_side_right(age_and_labels, close_figures):
     rs = np.random.RandomState(2383015)
@@ -130,6 +135,7 @@ def test_beanplot_side_right(age_and_labels, close_figures):
     )
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_beanplot_side_left(age_and_labels, close_figures):
     rs = np.random.RandomState(2383013)
@@ -152,6 +158,7 @@ def test_beanplot_side_left(age_and_labels, close_figures):
     )
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_beanplot_legend_text(age_and_labels, close_figures):
     rs = np.random.RandomState(2383013)

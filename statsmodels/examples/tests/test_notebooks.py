@@ -60,6 +60,7 @@ if nbs:
 
     @pytest.mark.slow
     @pytest.mark.example
+    @pytest.mark.thread_unsafe(reason="notebooks use matplotlib")
     def test_notebook(notebook):
         fullfile = os.path.abspath(notebook)
         _, filename = os.path.split(fullfile)

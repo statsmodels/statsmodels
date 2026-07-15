@@ -7,7 +7,6 @@ Author: Josef Perktold
 from statsmodels.compat.pandas import testing as pdt
 
 import os.path
-import threading
 import warnings
 
 import numpy as np
@@ -19,8 +18,6 @@ from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.outliers_influence import MLEInfluence, variance_inflation_factor
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -87,30 +84,30 @@ class InfluenceCompareExact:
         )
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plots(self, close_figures):
-        with MATPLOTLIB_LOCK:
-            import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt
 
-            infl1 = self.infl1
-            infl0 = self.infl0
+        infl1 = self.infl1
+        infl0 = self.infl0
 
-            infl0.plot_influence(external=False)
-            infl1.plot_influence(external=False)
+        infl0.plot_influence(external=False)
+        infl1.plot_influence(external=False)
 
-            infl0.plot_index("resid", threshold=0.2, title="")
-            infl1.plot_index("resid", threshold=0.2, title="")
-            plt.close("all")
+        infl0.plot_index("resid", threshold=0.2, title="")
+        infl1.plot_index("resid", threshold=0.2, title="")
+        plt.close("all")
 
-            infl0.plot_index("dfbeta", idx=1, threshold=0.2, title="")
-            infl1.plot_index("dfbeta", idx=1, threshold=0.2, title="")
+        infl0.plot_index("dfbeta", idx=1, threshold=0.2, title="")
+        infl1.plot_index("dfbeta", idx=1, threshold=0.2, title="")
 
-            infl0.plot_index("cook", idx=1, threshold=0.2, title="")
-            infl1.plot_index("cook", idx=1, threshold=0.2, title="")
-            plt.close("all")
+        infl0.plot_index("cook", idx=1, threshold=0.2, title="")
+        infl1.plot_index("cook", idx=1, threshold=0.2, title="")
+        plt.close("all")
 
-            infl0.plot_index("hat", idx=1, threshold=0.2, title="")
-            infl1.plot_index("hat", idx=1, threshold=0.2, title="")
+        infl0.plot_index("hat", idx=1, threshold=0.2, title="")
+        infl1.plot_index("hat", idx=1, threshold=0.2, title="")
 
     def test_summary(self):
         infl1 = self.infl1

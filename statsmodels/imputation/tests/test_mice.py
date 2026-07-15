@@ -1,4 +1,3 @@
-import threading
 import warnings
 
 import numpy as np
@@ -15,8 +14,6 @@ except ImportError:
     pass
 
 pdf_output = False
-
-matplotlib_lock = threading.Lock()
 
 if pdf_output:
     from matplotlib.backends.backend_pdf import PdfPages
@@ -279,6 +276,7 @@ class TestMICEData:
             ("x5", "x4", "x3", "y", "x2", "x1"),
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_missing_pattern(self, close_figures):
         rs = np.random.RandomState(410223)
@@ -288,16 +286,16 @@ class TestMICEData:
         for row_order in "pattern", "raw":
             for hide_complete_rows in False, True:
                 for color_row_patterns in False, True:
-                    with matplotlib_lock:
-                        plt.clf()
-                        fig = imp_data.plot_missing_pattern(
-                            row_order=row_order,
-                            hide_complete_rows=hide_complete_rows,
-                            color_row_patterns=color_row_patterns,
-                        )
-                        close_or_save(pdf, fig)
-                        close_figures()
+                    plt.clf()
+                    fig = imp_data.plot_missing_pattern(
+                        row_order=row_order,
+                        hide_complete_rows=hide_complete_rows,
+                        color_row_patterns=color_row_patterns,
+                    )
+                    close_or_save(pdf, fig)
+                    close_figures()
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_bivariate(self, close_figures):
         rs = np.random.RandomState(810223)
@@ -305,14 +303,14 @@ class TestMICEData:
         imp_data = mice.MICEData(df, rng=rs)
         imp_data.update_all()
 
-        with matplotlib_lock:
-            plt.clf()
-            for plot_points in False, True:
-                fig = imp_data.plot_bivariate("x2", "x4", plot_points=plot_points)
-                fig.get_axes()[0].set_title("plot_bivariate")
-                close_or_save(pdf, fig)
-                close_figures()
+        plt.clf()
+        for plot_points in False, True:
+            fig = imp_data.plot_bivariate("x2", "x4", plot_points=plot_points)
+            fig.get_axes()[0].set_title("plot_bivariate")
+            close_or_save(pdf, fig)
+            close_figures()
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_fit_obs(self, close_figures):
         rs = np.random.RandomState(82144123)
@@ -320,14 +318,14 @@ class TestMICEData:
         imp_data = mice.MICEData(df, rng=rs)
         imp_data.update_all()
 
-        with matplotlib_lock:
-            plt.clf()
-            for plot_points in False, True:
-                fig = imp_data.plot_fit_obs("x4", plot_points=plot_points)
-                fig.get_axes()[0].set_title("plot_fit_scatterplot")
-                close_or_save(pdf, fig)
-                close_figures()
+        plt.clf()
+        for plot_points in False, True:
+            fig = imp_data.plot_fit_obs("x4", plot_points=plot_points)
+            fig.get_axes()[0].set_title("plot_fit_scatterplot")
+            close_or_save(pdf, fig)
+            close_figures()
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_imputed_hist(self, close_figures):
         rs = np.random.RandomState(821423)
@@ -335,13 +333,12 @@ class TestMICEData:
         imp_data = mice.MICEData(df, rng=rs)
         imp_data.update_all()
 
-        with matplotlib_lock:
-            plt.clf()
-            for _ in False, True:
-                fig = imp_data.plot_imputed_hist("x4")
-                fig.get_axes()[0].set_title("plot_imputed_hist")
-                close_or_save(pdf, fig)
-                close_figures()
+        plt.clf()
+        for _ in False, True:
+            fig = imp_data.plot_imputed_hist("x4")
+            fig.get_axes()[0].set_title("plot_imputed_hist")
+            close_or_save(pdf, fig)
+            close_figures()
 
 
 class TestMICE:

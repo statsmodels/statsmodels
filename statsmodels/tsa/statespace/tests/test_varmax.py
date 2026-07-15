@@ -36,6 +36,7 @@ class CheckVARMAX:
     equivalent log-likelihoods)
     """
 
+    @pytest.mark.thread_unsafe
     def test_mle(self):
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
@@ -53,6 +54,7 @@ class CheckVARMAX:
             assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and
         # lead to a well-defined model
@@ -196,10 +198,12 @@ class TestVAR(CheckLutkepohl):
             true, order=(1, 0), trend="n", error_cov_type="unstructured"
         )
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-4)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
@@ -252,10 +256,12 @@ class TestVAR_diagonal(CheckLutkepohl):
         ]
         super().setup_class(true, order=(1, 0), trend="n", error_cov_type="diagonal")
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-5)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
@@ -429,10 +435,12 @@ class TestVAR_obs_intercept(CheckLutkepohl):
             obs_intercept=true["obs_intercept"],
         )
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-4)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
@@ -483,11 +491,13 @@ class TestVAR_exog(CheckLutkepohl):
         # Stata's var calculates BIC differently
         pass
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse[:-6] ** 2, self.true["var_oim"], atol=1e-5)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_oim().diagonal() ** 0.5
@@ -500,6 +510,7 @@ class TestVAR_exog(CheckLutkepohl):
         # Stata's var cannot subsequently use dynamic
         pass
 
+    @pytest.mark.thread_unsafe
     def test_forecast(self):
         # Tests forecast
         exog = (np.arange(75, 75 + 16) + 2)[:, np.newaxis]
@@ -606,6 +617,7 @@ class TestVAR_exog2(CheckLutkepohl):
         # Stata's var cannot subsequently use dynamic
         pass
 
+    @pytest.mark.thread_unsafe
     def test_forecast(self):
         # Tests forecast
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75 + 16) + 2)[:, np.newaxis]]
@@ -630,11 +642,13 @@ class TestVAR2(CheckLutkepohl):
             included_vars=["dln_inv", "dln_inc"],
         )
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse[:-3] ** 2, self.true["var_oim"][:-3], atol=1e-5)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_oim().diagonal() ** 0.5

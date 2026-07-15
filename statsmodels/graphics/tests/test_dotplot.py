@@ -19,6 +19,7 @@ def close_or_save(pdf, fig):
     plt.close(fig)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_all(close_figures):
     rs = np.random.RandomState(49814031)

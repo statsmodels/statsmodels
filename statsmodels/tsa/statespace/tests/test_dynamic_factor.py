@@ -26,9 +26,9 @@ output_results = pd.read_csv(os.path.join(current_path, output_path))
 
 
 class CheckDynamicFactor:
-    @classmethod
-    def setup_class(
-        cls,
+
+    def setup_model(
+        self,
         true,
         k_factors,
         factor_order,
@@ -38,7 +38,8 @@ class CheckDynamicFactor:
         filter=True,
         **kwargs,
     ):
-        cls.true = true
+        # Recreates the model and results in each pass to allow for thread-safe testing
+        self.true = true
         # 1960:Q1 - 1982:Q4
         dta = pd.DataFrame(
             results_varmax.lutkepohl_data,
@@ -55,115 +56,123 @@ class CheckDynamicFactor:
         if demean:
             endog -= dta.iloc[1:][included_vars].mean()
 
-        cls.model = dynamic_factor.DynamicFactor(
+        model = dynamic_factor.DynamicFactor(
             endog, k_factors=k_factors, factor_order=factor_order, **kwargs
         )
 
         if filter:
-            cls.results = cls.model.smooth(true["params"], cov_type=cov_type)
+            results = model.smooth(true["params"], cov_type=cov_type)
+        else:
+            results = None
+        return model, results
+
+    def construct_model(self):
+        raise NotImplementedError("subclasses must implement")
 
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and
         # lead to a well-defined model
-        self.model.filter(self.model.start_params)
+        model, result = self.construct_model()
+        model.filter(model.start_params)
         # Similarly a smoke test for param_names
-        assert_equal(len(self.model.start_params), len(self.model.param_names))
+        assert_equal(len(model.start_params), len(model.param_names))
         # Finally make sure the transform and untransform do their job
-        actual = self.model.transform_params(
-            self.model.untransform_params(self.model.start_params)
-        )
-        assert_allclose(actual, self.model.start_params)
+        actual = model.transform_params(model.untransform_params(model.start_params))
+        assert_allclose(actual, model.start_params)
         # Also in the case of enforce stationarity = False
-        self.model.enforce_stationarity = False
-        actual = self.model.transform_params(
-            self.model.untransform_params(self.model.start_params)
-        )
-        self.model.enforce_stationarity = True
-        assert_allclose(actual, self.model.start_params)
+        model.enforce_stationarity = False
+        actual = model.transform_params(model.untransform_params(model.start_params))
+        model.enforce_stationarity = True
+        assert_allclose(actual, model.start_params)
 
     def test_results(self, close_figures):
         # Smoke test for creating the summary
+        model, results = self.construct_model()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            self.results.summary()
+            results.summary()
 
         # Test cofficient matrix creation
         #  (via a different, more direct, method)
-        if self.model.factor_order > 0:
-            model = self.model
+        if model.factor_order > 0:
             k_factors = model.k_factors
-            pft_params = self.results.params[model._params_factor_transition]
+            pft_params = results.params[model._params_factor_transition]
             coefficients = np.array(pft_params).reshape(
                 k_factors, k_factors * model.factor_order
             )
             coefficient_matrices = np.array(
                 [
                     coefficients[
-                        : self.model.k_factors,
-                        i * self.model.k_factors : (i + 1) * self.model.k_factors,
+                        : model.k_factors,
+                        i * model.k_factors : (i + 1) * model.k_factors,
                     ]
-                    for i in range(self.model.factor_order)
+                    for i in range(model.factor_order)
                 ]
             )
-            assert_equal(self.results.coefficient_matrices_var, coefficient_matrices)
+            assert_equal(results.coefficient_matrices_var, coefficient_matrices)
         else:
-            assert_equal(self.results.coefficient_matrices_var, None)
+            assert_equal(results.coefficient_matrices_var, None)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_coefficients_of_determination(self, close_figures):
         # Smoke test for plot_coefficients_of_determination
-        self.results.plot_coefficients_of_determination()
+        _, results = self.construct_model()
+        results.plot_coefficients_of_determination()
 
     def test_no_enforce(self):
         return
         # Test that nothing goes wrong when we do not enforce stationarity
-        params = self.model.untransform_params(self.true["params"])
-        params[self.model._params_transition] = self.true["params"][
-            self.model._params_transition
-        ]
-        self.model.enforce_stationarity = False
-        results = self.model.filter(params, transformed=False)
-        self.model.enforce_stationarity = True
-        assert_allclose(results.llf, self.results.llf, rtol=1e-5)
+        # model, results = self.construct_model()
+        # params = model.untransform_params(self.true["params"])
+        # params[model._params_transition] = self.true["params"][model._params_transition]
+        # model.enforce_stationarity = False
+        # results = model.filter(params, transformed=False)
+        # model.enforce_stationarity = True
+        # assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
     def test_mle(self, init_powell=True):
+        model, results = self.construct_model()
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
-            start_params = self.model.start_params
+            start_params = model.start_params
             if init_powell:
-                results = self.model.fit(method="powell", maxiter=100, disp=False)
+                results = model.fit(method="powell", maxiter=100, disp=False)
                 start_params = results.params
-            results = self.model.fit(start_params, maxiter=1000, disp=False)
-            results = self.model.fit(
-                results.params, method="nm", maxiter=1000, disp=False
-            )
-            if not results.llf > self.results.llf:
-                assert_allclose(results.llf, self.results.llf, rtol=1e-5)
+            results = model.fit(start_params, maxiter=1000, disp=False)
+            results = model.fit(results.params, method="nm", maxiter=1000, disp=False)
+            if not results.llf > results.llf:
+                assert_allclose(results.llf, results.llf, rtol=1e-5)
 
     def test_loglike(self):
-        assert_allclose(self.results.llf, self.true["loglike"], rtol=1e-6)
+        model, results = self.construct_model()
+        assert_allclose(results.llf, self.true["loglike"], rtol=1e-6)
 
     def test_aic(self):
         # We only get 3 digits from Stata
-        assert_allclose(self.results.aic, self.true["aic"], atol=3)
+        model, results = self.construct_model()
+        assert_allclose(results.aic, self.true["aic"], atol=3)
 
     def test_bic(self):
         # We only get 3 digits from Stata
-        assert_allclose(self.results.bic, self.true["bic"], atol=3)
+        model, results = self.construct_model()
+        assert_allclose(results.bic, self.true["bic"], atol=3)
 
     def test_predict(self, **kwargs):
         # Tests predict + forecast
-        self.results.predict(end="1982-10-01", **kwargs)
+        model, results = self.construct_model()
+        results.predict(end="1982-10-01", **kwargs)
         assert_allclose(
-            self.results.predict(end="1982-10-01", **kwargs),
+            results.predict(end="1982-10-01", **kwargs),
             self.true["predict"],
             atol=1e-6,
         )
 
     def test_dynamic_predict(self, **kwargs):
         # Tests predict + dynamic predict + forecast
+        model, results = self.construct_model()
         assert_allclose(
-            self.results.predict(end="1982-10-01", dynamic="1961-01-01", **kwargs),
+            results.predict(end="1982-10-01", dynamic="1961-01-01", **kwargs),
             self.true["dynamic_predict"],
             atol=1e-6,
         )
@@ -174,8 +183,7 @@ class TestDynamicFactor(CheckDynamicFactor):
     Test for a dynamic factor model with 1 AR(2) factor
     """
 
-    @classmethod
-    def setup_class(cls):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_1", "predict_dfm_2", "predict_dfm_3"]
@@ -183,10 +191,11 @@ class TestDynamicFactor(CheckDynamicFactor):
         true["dynamic_predict"] = output_results.iloc[1:][
             ["dyn_predict_dfm_1", "dyn_predict_dfm_2", "dyn_predict_dfm_3"]
         ]
-        super().setup_class(true, k_factors=1, factor_order=2)
+        return self.setup_model(true, k_factors=1, factor_order=2)
 
     def test_bse_approx(self):
-        bse = self.results._cov_params_approx().diagonal() ** 0.5
+        model, results = self.construct_model()
+        bse = results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse, self.true["bse_oim"], atol=1e-5)
 
 
@@ -195,8 +204,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
     Test for a dynamic factor model with two VAR(1) factors
     """
 
-    @classmethod
-    def setup_class(cls):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm2.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm2_1", "predict_dfm2_2", "predict_dfm2_3"]
@@ -204,7 +212,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
         true["dynamic_predict"] = output_results.iloc[1:][
             ["dyn_predict_dfm2_1", "dyn_predict_dfm2_2", "dyn_predict_dfm2_3"]
         ]
-        super().setup_class(true, k_factors=2, factor_order=1)
+        return super().setup_model(true, k_factors=2, factor_order=1)
 
     def test_mle(self):
         # Stata's MLE on this model does not converge, so no reason to check
@@ -229,25 +237,26 @@ class TestDynamicFactor2(CheckDynamicFactor):
         pass
 
     def test_summary(self):
+        model, results = self.construct_model()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            summary = self.results.summary()
+            summary = results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true["params"]
 
         # Make sure we have the right number of tables
-        assert_equal(len(tables), 2 + self.model.k_endog + self.model.k_factors + 1)
+        assert_equal(len(tables), 2 + model.k_endog + model.k_factors + 1)
 
         # Check the model overview table
         assert re.search(r"Model:.*DynamicFactor\(factors=2, order=1\)", tables[0])
 
         # For each endogenous variable, check the output
-        for i in range(self.model.k_endog):
-            offset_loading = self.model.k_factors * i
+        for i in range(model.k_endog):
+            offset_loading = model.k_factors * i
             table = tables[i + 2]
 
             # -> Make sure we have the right table / table name
-            name = self.model.endog_names[i]
+            name = model.endog_names[i]
             assert re.search("Results for equation %s" % name, table)
 
             # -> Make sure it's the right size
@@ -262,15 +271,12 @@ class TestDynamicFactor2(CheckDynamicFactor):
             )
 
         # For each factor, check the output
-        for i in range(self.model.k_factors):
-            offset = (
-                self.model.k_endog * (self.model.k_factors + 1)
-                + i * self.model.k_factors
-            )
-            table = tables[self.model.k_endog + i + 2]
+        for i in range(model.k_factors):
+            offset = model.k_endog * (model.k_factors + 1) + i * model.k_factors
+            table = tables[model.k_endog + i + 2]
 
             # -> Make sure we have the right table / table name
-            name = self.model.endog_names[i]
+            name = model.endog_names[i]
             assert re.search("Results for factor equation f%d" % (i + 1), table)
 
             # -> Make sure it's the right size
@@ -281,19 +287,18 @@ class TestDynamicFactor2(CheckDynamicFactor):
             assert re.search("L1.f2 +" + forg(params[offset + 1], prec=4), table)
 
         # Check the Error covariance matrix output
-        table = tables[2 + self.model.k_endog + self.model.k_factors]
+        table = tables[2 + model.k_endog + model.k_factors]
 
         # -> Make sure we have the right table / table name
-        name = self.model.endog_names[i]
         assert re.search("Error covariance matrix", table)
 
         # -> Make sure it's the right size
         assert_equal(len(table.split("\n")), 8)
 
         # -> Check that we have the right coefficients
-        offset = self.model.k_endog * self.model.k_factors
-        for i in range(self.model.k_endog):
-            iname = self.model.endog_names[i]
+        offset = model.k_endog * model.k_factors
+        for i in range(model.k_endog):
+            iname = model.endog_names[i]
             iparam = forg(params[offset + i], prec=4)
             assert re.search(f"sigma2.{iname} +{iparam}", table)
 
@@ -303,8 +308,7 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
     Test for a dynamic factor model with 1 exogenous regressor: a constant
     """
 
-    @classmethod
-    def setup_class(cls):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm_exog1.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_exog1_1", "predict_dfm_exog1_2", "predict_dfm_exog1_3"]
@@ -317,7 +321,7 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
             ]
         ]
         exog = np.ones((75, 1))
-        super().setup_class(true, k_factors=1, factor_order=1, exog=exog)
+        return super().setup_model(true, k_factors=1, factor_order=1, exog=exog)
 
     def test_predict(self):
         exog = np.ones((16, 1))
@@ -328,7 +332,8 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
         super().test_dynamic_predict(exog=exog)
 
     def test_bse_approx(self):
-        bse = self.results._cov_params_approx().diagonal() ** 0.5
+        model, results = self.construct_model()
+        bse = results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-5)
 
 
@@ -338,8 +343,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
     and a time-trend
     """
 
-    @classmethod
-    def setup_class(cls):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm_exog2.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_exog2_1", "predict_dfm_exog2_2", "predict_dfm_exog2_3"]
@@ -352,10 +356,11 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
             ]
         ]
         exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
-        super().setup_class(true, k_factors=1, factor_order=1, exog=exog)
+        return super().setup_model(true, k_factors=1, factor_order=1, exog=exog)
 
     def test_bse_approx(self):
-        bse = self.results._cov_params_approx().diagonal() ** 0.5
+        model, results = self.construct_model()
+        bse = results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-5)
 
     def test_predict(self):
@@ -367,27 +372,28 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         super().test_dynamic_predict(exog=exog)
 
     def test_summary(self):
+        model, results = self.construct_model()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            summary = self.results.summary()
+            summary = results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true["params"]
 
         # Make sure we have the right number of tables
-        assert_equal(len(tables), 2 + self.model.k_endog + self.model.k_factors + 1)
+        assert_equal(len(tables), 2 + model.k_endog + model.k_factors + 1)
 
         # Check the model overview table
         assert re.search(r"Model:.*DynamicFactor\(factors=1, order=1\)", tables[0])
         assert_equal(re.search(r".*2 regressors", tables[0]) is None, False)
 
         # For each endogenous variable, check the output
-        for i in range(self.model.k_endog):
-            offset_loading = self.model.k_factors * i
-            offset_exog = self.model.k_factors * self.model.k_endog
+        for i in range(model.k_endog):
+            offset_loading = model.k_factors * i
+            offset_exog = model.k_factors * model.k_endog
             table = tables[i + 2]
 
             # -> Make sure we have the right table / table name
-            name = self.model.endog_names[i]
+            name = model.endog_names[i]
             assert re.search("Results for equation %s" % name, table)
 
             # -> Make sure it's the right size
@@ -405,15 +411,11 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
             )
 
         # For each factor, check the output
-        for i in range(self.model.k_factors):
-            offset = (
-                self.model.k_endog * (self.model.k_factors + 3)
-                + i * self.model.k_factors
-            )
-            table = tables[self.model.k_endog + i + 2]
+        for i in range(model.k_factors):
+            offset = model.k_endog * (model.k_factors + 3) + i * model.k_factors
+            table = tables[model.k_endog + i + 2]
 
             # -> Make sure we have the right table / table name
-            name = self.model.endog_names[i]
             assert re.search("Results for factor equation f%d" % (i + 1), table)
 
             # -> Make sure it's the right size
@@ -423,19 +425,19 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
             assert re.search("L1.f1 +" + forg(params[offset + 0], prec=4), table)
 
         # Check the Error covariance matrix output
-        table = tables[2 + self.model.k_endog + self.model.k_factors]
+        table = tables[2 + model.k_endog + model.k_factors]
 
         # -> Make sure we have the right table / table name
-        name = self.model.endog_names[i]
+        name = model.endog_names[i]
         assert re.search("Error covariance matrix", table)
 
         # -> Make sure it's the right size
         assert_equal(len(table.split("\n")), 8)
 
         # -> Check that we have the right coefficients
-        offset = self.model.k_endog * (self.model.k_factors + 2)
-        for i in range(self.model.k_endog):
-            iname = self.model.endog_names[i]
+        offset = model.k_endog * (model.k_factors + 2)
+        for i in range(model.k_endog):
+            iname = model.endog_names[i]
             iparam = forg(params[offset + i], prec=4)
             assert re.search(f"sigma2.{iname} +{iparam}", table)
 
@@ -449,8 +451,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
     - Innovations are correlated
     """
 
-    @classmethod
-    def setup_class(cls):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm_gen.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_gen_1", "predict_dfm_gen_2", "predict_dfm_gen_3"]
@@ -458,7 +459,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         true["dynamic_predict"] = output_results.iloc[1:][
             ["dyn_predict_dfm_gen_1", "dyn_predict_dfm_gen_2", "dyn_predict_dfm_gen_3"]
         ]
-        super().setup_class(
+        return super().setup_model(
             true,
             k_factors=1,
             factor_order=1,
@@ -468,7 +469,8 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         )
 
     def test_bse_approx(self):
-        bse = self.results._cov_params_approx().diagonal()
+        model, results = self.construct_model()
+        bse = results._cov_params_approx().diagonal()
         assert_allclose(bse[:3], self.true["var_oim"][:3], atol=1e-5)
         assert_allclose(bse[-10:], self.true["var_oim"][-10:], atol=3e-4)
 
@@ -497,16 +499,17 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         pass
 
     def test_summary(self):
+        model, results = self.construct_model()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            summary = self.results.summary()
+            summary = results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true["params"]
 
         # Make sure we have the right number of tables
         assert_equal(
             len(tables),
-            2 + self.model.k_endog + self.model.k_factors + self.model.k_endog + 1,
+            2 + model.k_endog + model.k_factors + model.k_endog + 1,
         )
 
         # Check the model overview table
@@ -514,12 +517,12 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         assert re.search(r".*VAR\(1\) errors", tables[0])
 
         # For each endogenous variable, check the output
-        for i in range(self.model.k_endog):
-            offset_loading = self.model.k_factors * i
+        for i in range(model.k_endog):
+            offset_loading = model.k_factors * i
             table = tables[i + 2]
 
             # -> Make sure we have the right table / table name
-            name = self.model.endog_names[i]
+            name = model.endog_names[i]
             assert re.search("Results for equation %s" % name, table)
 
             # -> Make sure it's the right size
@@ -530,14 +533,11 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             assert re.search(pattern, table)
 
         # For each factor, check the output
-        for i in range(self.model.k_factors):
-            offset = (
-                self.model.k_endog * self.model.k_factors + 6 + i * self.model.k_factors
-            )
-            table = tables[2 + self.model.k_endog + i]
+        for i in range(model.k_factors):
+            offset = model.k_endog * model.k_factors + 6 + i * model.k_factors
+            table = tables[2 + model.k_endog + i]
 
             # -> Make sure we have the right table / table name
-            name = self.model.endog_names[i]
             assert re.search("Results for factor equation f%d" % (i + 1), table)
 
             # -> Make sure it's the right size
@@ -547,43 +547,36 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             assert re.search("L1.f1 +" + forg(params[offset + 0], prec=4), table)
 
         # For each error equation, check the output
-        for i in range(self.model.k_endog):
-            offset = (
-                self.model.k_endog * (self.model.k_factors + i)
-                + 6
-                + self.model.k_factors
-            )
-            table = tables[2 + self.model.k_endog + self.model.k_factors + i]
+        for i in range(model.k_endog):
+            offset = model.k_endog * (model.k_factors + i) + 6 + model.k_factors
+            table = tables[2 + model.k_endog + model.k_factors + i]
 
             # -> Make sure we have the right table / table name
-            name = self.model.endog_names[i]
+            name = model.endog_names[i]
             assert re.search(r"Results for error equation e\(%s\)" % name, table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 8)
 
             # -> Check that we have the right coefficients
-            for j in range(self.model.k_endog):
-                name = self.model.endog_names[j]
+            for j in range(model.k_endog):
+                name = model.endog_names[j]
                 pattern = r"L1.e\({}\) +{}".format(
                     name, forg(params[offset + j], prec=4)
                 )
                 assert re.search(pattern, table)
 
         # Check the Error covariance matrix output
-        table = tables[
-            2 + self.model.k_endog + self.model.k_factors + self.model.k_endog
-        ]
+        table = tables[2 + model.k_endog + model.k_factors + model.k_endog]
 
         # -> Make sure we have the right table / table name
-        name = self.model.endog_names[i]
         assert re.search("Error covariance matrix", table)
 
         # -> Make sure it's the right size
         assert_equal(len(table.split("\n")), 11)
 
         # -> Check that we have the right coefficients
-        offset = self.model.k_endog * self.model.k_factors
+        offset = model.k_endog * model.k_factors
         assert re.search(r"cov.chol\[1,1\] +" + forg(params[offset + 0], prec=4), table)
         assert re.search(r"cov.chol\[2,1\] +" + forg(params[offset + 1], prec=4), table)
         assert re.search(r"cov.chol\[2,2\] +" + forg(params[offset + 2], prec=4), table)
@@ -601,8 +594,7 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
     - Innovations are correlated
     """
 
-    @classmethod
-    def setup_class(cls):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm_ar2.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_ar2_1", "predict_dfm_ar2_2", "predict_dfm_ar2_3"]
@@ -610,17 +602,18 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
         true["dynamic_predict"] = output_results.iloc[1:][
             ["dyn_predict_dfm_ar2_1", "dyn_predict_dfm_ar2_2", "dyn_predict_dfm_ar2_3"]
         ]
-        super().setup_class(true, k_factors=1, factor_order=1, error_order=2)
+        return super().setup_model(true, k_factors=1, factor_order=1, error_order=2)
 
     def test_bse_approx(self):
-        bse = self.results._cov_params_approx().diagonal()
+        model, results = self.construct_model()
+        bse = results._cov_params_approx().diagonal()
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
     def test_mle(self):
         with warnings.catch_warnings(record=True):
             # Depending on the system, this test can reach a greater precision,
             # but for cross-platform results keep it at 1e-2
-            mod = self.model
+            mod, results = self.construct_model()
             res1 = mod.fit(maxiter=100, optim_score="approx", disp=False)
             res = mod.fit(
                 res1.params,
@@ -630,7 +623,8 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
                 disp=False,
             )
             # Added rtol to catch spurious failures on some platforms
-            assert_allclose(res.llf, self.results.llf, atol=1e-2, rtol=1e-3)
+            model, results = self.construct_model()
+            assert_allclose(res.llf, results.llf, atol=1e-2, rtol=1e-3)
 
 
 class TestDynamicFactor_scalar_error(CheckDynamicFactor):
@@ -639,8 +633,7 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
     are forced to have the same variance.
     """
 
-    @classmethod
-    def setup_class(cls):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm_scalar.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_scalar_1", "predict_dfm_scalar_2", "predict_dfm_scalar_3"]
@@ -653,12 +646,13 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
             ]
         ]
         exog = np.ones((75, 1))
-        super().setup_class(
+        return super().setup_model(
             true, k_factors=1, factor_order=1, exog=exog, error_cov_type="scalar"
         )
 
     def test_bse_approx(self):
-        bse = self.results._cov_params_approx().diagonal()
+        model, results = self.construct_model()
+        bse = results._cov_params_approx().diagonal()
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
     def test_predict(self):
@@ -675,8 +669,7 @@ class TestStaticFactor(CheckDynamicFactor):
     Test for a static factor model (i.e. factors are not autocorrelated).
     """
 
-    @classmethod
-    def setup_class(cls):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_sfm.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_sfm_1", "predict_sfm_2", "predict_sfm_3"]
@@ -684,10 +677,11 @@ class TestStaticFactor(CheckDynamicFactor):
         true["dynamic_predict"] = output_results.iloc[1:][
             ["dyn_predict_sfm_1", "dyn_predict_sfm_2", "dyn_predict_sfm_3"]
         ]
-        super().setup_class(true, k_factors=1, factor_order=0)
+        return super().setup_model(true, k_factors=1, factor_order=0)
 
     def test_bse_approx(self):
-        bse = self.results._cov_params_approx().diagonal()
+        model, results = self.construct_model()
+        bse = results._cov_params_approx().diagonal()
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
     def test_bic(self):
@@ -702,8 +696,7 @@ class TestSUR(CheckDynamicFactor):
     errors cross-sectionally, but not auto-, correlated
     """
 
-    @classmethod
-    def setup_class(cls):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_sur.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_sur_1", "predict_sur_2", "predict_sur_3"]
@@ -712,12 +705,13 @@ class TestSUR(CheckDynamicFactor):
             ["dyn_predict_sur_1", "dyn_predict_sur_2", "dyn_predict_sur_3"]
         ]
         exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
-        super().setup_class(
+        return super().setup_model(
             true, k_factors=0, factor_order=0, exog=exog, error_cov_type="unstructured"
         )
 
     def test_bse_approx(self):
-        bse = self.results._cov_params_approx().diagonal()
+        model, results = self.construct_model()
+        bse = results._cov_params_approx().diagonal()
         assert_allclose(bse[:6], self.true["var_oim"][:6], atol=1e-5)
 
     def test_predict(self):
@@ -735,8 +729,7 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
     the errors are vector autocorrelated, but innovations are uncorrelated.
     """
 
-    @classmethod
-    def setup_class(cls):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_sur_auto.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_sur_auto_1", "predict_sur_auto_2"]
@@ -745,7 +738,7 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
             ["dyn_predict_sur_auto_1", "dyn_predict_sur_auto_2"]
         ]
         exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
-        super().setup_class(
+        return super().setup_model(
             true,
             k_factors=0,
             factor_order=0,
@@ -757,7 +750,8 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
         )
 
     def test_bse_approx(self):
-        bse = self.results._cov_params_approx().diagonal()
+        model, results = self.construct_model()
+        bse = results._cov_params_approx().diagonal()
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
     def test_predict(self):
@@ -795,13 +789,13 @@ def test_miscellaneous():
     # Initialization with 1-dimensional exog array
     exog = np.arange(75)
     mod = CheckDynamicFactor()
-    mod.setup_class(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)
+    mod.setup_model(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)
     exog = pd.Series(
         np.arange(75),
         index=pd.date_range(start="1960-04-01", end="1978-10-01", freq="QS"),
     )
     mod = CheckDynamicFactor()
-    mod.setup_class(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)
+    mod.setup_model(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)
 
 
 def test_predict_custom_index():

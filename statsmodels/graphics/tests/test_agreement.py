@@ -4,21 +4,17 @@ import pytest
 
 from statsmodels.graphics.agreement import mean_diff_plot
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
-
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_mean_diff_plot(close_figures):
+    import matplotlib.pyplot as plt
 
     # Seed the random number generator.
     # This ensures that the results below are reproducible.
     rs = np.random.RandomState(11111)
     m1 = rs.random(20)
     m2 = rs.random(20)
-
     fig = plt.figure()
     ax = fig.add_subplot(111)
 

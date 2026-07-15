@@ -390,6 +390,7 @@ class SimulationSmoothResults:
         self._simulated_state = None
         self._simulated_measurement_disturbance = None
         self._simulated_state_disturbance = None
+        self._simulated_state_disturbance = None
 
     @property
     def simulation_output(self):
@@ -734,8 +735,8 @@ class SimulationSmoothResults:
             raise ValueError(
                 "The simulation smoother currently cannot replace"
                 " the underlying _{{prefix}}Representation model"
-                " object if it changes (which happens e.g. if the"
-                " dimensions of some system matrices change."
+                " object if it changes (which happens e.g., if the"
+                " dimensions of some system matrices change.)"
             )
 
         # Initialize the state

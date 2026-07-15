@@ -6,6 +6,7 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.base._parameter_inference import score_test
 import statsmodels.discrete._diagnostics_count as diac
@@ -17,7 +18,10 @@ import statsmodels.stats._diagnostic_other as diao
 
 class CheckScoreTest:
 
+    @pytest.mark.thread_unsafe(reason="GLM.fit is not thread safe")
     def test_wald_score(self):
+        # Copy to make tests thread sage. fit() method is not thread safe
+        # because it sets/del attributes
         mod_full = self.model_full
         mod_drop = self.model_drop
         restriction = "x5=0, x6=0"
@@ -115,7 +119,10 @@ class TestScoreTest(CheckScoreTest):
         cls.model_full = GLM(y, xx, family=families.Poisson())
         cls.model_drop = GLM(y, x, family=families.Poisson())
 
+    @pytest.mark.thread_unsafe(reason="GLM.fit is not thread safe")
     def test_dispersion(self):
+        # Copy to make tests thread sage. fit() method is not thread safe
+        # because it sets/del attributes
         res_drop = self.model_drop.fit()
         res_test = diac.test_poisson_dispersion(res_drop)
         res_test_ = np.column_stack((res_test.statistic, res_test.pvalue))

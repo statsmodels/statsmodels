@@ -135,6 +135,7 @@ class CheckWeight:
         resid_a1 = resid_all["resid_anscombe"] * np.sqrt(res1._var_weights)
         assert_allclose(resid_a, resid_a1, atol=1e-6, rtol=2e-6)
 
+    @pytest.mark.thread_unsafe("GLM.fit is not thread safe")
     def test_compare_optimizers(self):
         res1 = self.res1
         if isinstance(res1.model.family, sm.families.Tweedie):
@@ -155,6 +156,7 @@ class CheckWeight:
             return None
 
         start_params = res1.params
+        # model fit is not thread safe
         res2 = self.res1.model.fit(
             start_params=start_params, method=method, optim_hessian=optim_hessian
         )
