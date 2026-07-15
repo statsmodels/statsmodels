@@ -44,7 +44,7 @@ jobs:
         python_39:
           python.version: '3.9'
           python.architecture: 'x64'
-          USE_MATPLOTLIB_VERSION: false
+          USE_MATPLOTLIB: false
           USE_CVXOPT: false
           SCIPY_VERSION: 1.8.1
           PANDAS_VERSION: 1.5.3
@@ -73,6 +73,7 @@ jobs:
           python.architecture: 'x64'
           SM_FORMULA_ENGINE: "formulaic"
           PIP_UNINSTALL: "patsy"
+          USE_MATPLOTLIB: false
         python_312_no_formulaic:
           python.version: '3.12'
           python.architecture: 'x64'

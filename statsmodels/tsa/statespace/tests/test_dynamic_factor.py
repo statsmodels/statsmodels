@@ -276,7 +276,6 @@ class TestDynamicFactor2(CheckDynamicFactor):
             table = tables[model.k_endog + i + 2]
 
             # -> Make sure we have the right table / table name
-            name = model.endog_names[i]
             assert re.search("Results for factor equation f%d" % (i + 1), table)
 
             # -> Make sure it's the right size
@@ -428,7 +427,6 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         table = tables[2 + model.k_endog + model.k_factors]
 
         # -> Make sure we have the right table / table name
-        name = model.endog_names[i]
         assert re.search("Error covariance matrix", table)
 
         # -> Make sure it's the right size

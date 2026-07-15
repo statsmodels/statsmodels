@@ -287,14 +287,9 @@ def test_estimates():
 @pytest.mark.matplotlib
 def test_plots(close_figures):
     import matplotlib.pyplot as plt
+    from pandas.plotting import register_matplotlib_converters
 
-    # Basic plot
-    try:
-        from pandas.plotting import register_matplotlib_converters
-
-        register_matplotlib_converters()
-    except ImportError:
-        pass
+    register_matplotlib_converters()
 
     exog = add_constant(dta[["m1", "pop"]])
     mod = RecursiveLS(endog, exog)
