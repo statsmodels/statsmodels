@@ -8,7 +8,6 @@ Author: Josef Perktold
 from statsmodels.compat.python import asbytes
 
 from io import BytesIO
-import threading
 import warnings
 
 import numpy as np
@@ -23,8 +22,6 @@ import pytest
 
 from statsmodels.stats.libqsturng import qsturng
 from statsmodels.stats.multicomp import MultiComparison, pairwise_tukeyhsd, tukeyhsd
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 ss = """\
   43.9  1   1
@@ -434,12 +431,12 @@ class CheckTuckeyHSDMixin:
         assert_almost_equal(res.confint, self.res.confint, decimal=14)
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_simultaneous_ci(self, close_figures):
         self.res._simultaneous_ci()
         reference = self.res.groupsunique[1]
-        with MATPLOTLIB_LOCK:
-            self.res.plot_simultaneous(comparison_name=reference)
+        self.res.plot_simultaneous(comparison_name=reference)
 
 
 class TestTuckeyHSD2(CheckTuckeyHSDMixin):
@@ -731,6 +728,7 @@ class TestTuckeyHSD4(CheckTuckeyHSDMixin):
 
 
 @pytest.mark.smoke
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot(close_figures):
     # SMOKE test
@@ -741,6 +739,5 @@ def test_plot(close_figures):
     mc = MultiComparison(cylinders_adj, cyl_labels)
     resth = mc.tukeyhsd(alpha=alpha, use_var="equal")
     resgh = mc.tukeyhsd(alpha=alpha, use_var="unequal")
-    with MATPLOTLIB_LOCK:
-        resth.plot_simultaneous()
-        resgh.plot_simultaneous()
+    resth.plot_simultaneous()
+    resgh.plot_simultaneous()

@@ -11,7 +11,6 @@ from statsmodels.compat.python import lrange
 
 from io import BytesIO
 import os
-import threading
 import warnings
 
 import numpy as np
@@ -25,8 +24,6 @@ from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.var_model import VAR, forecast, var_acf
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 DECIMAL_12 = 12
 DECIMAL_6 = 6
@@ -194,40 +191,40 @@ class CheckIRF:
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_irf(self, close_figures):
-        with MATPLOTLIB_LOCK:
-            self.irf.plot()
-            self.irf.plot(plot_stderr=False)
+        self.irf.plot()
+        self.irf.plot(plot_stderr=False)
 
-            self.irf.plot(impulse=0, response=1)
-            self.irf.plot(impulse=0)
-            self.irf.plot(response=0)
+        self.irf.plot(impulse=0, response=1)
+        self.irf.plot(impulse=0)
+        self.irf.plot(response=0)
 
-            self.irf.plot(orth=True)
-            self.irf.plot(impulse=0, response=1, orth=True)
+        self.irf.plot(orth=True)
+        self.irf.plot(impulse=0, response=1, orth=True)
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_cum_effects(self, close_figures):
-        with MATPLOTLIB_LOCK:
-            self.irf.plot_cum_effects()
-            self.irf.plot_cum_effects(plot_stderr=False)
-            self.irf.plot_cum_effects(impulse=0, response=1)
+        self.irf.plot_cum_effects()
+        self.irf.plot_cum_effects(plot_stderr=False)
+        self.irf.plot_cum_effects(impulse=0, response=1)
 
-            self.irf.plot_cum_effects(orth=True)
-            self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
+        self.irf.plot_cum_effects(orth=True)
+        self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_figsizes(self, close_figures):
-        with MATPLOTLIB_LOCK:
-            assert_equal(self.irf.plot().get_size_inches(), (10, 10))
-            assert_equal(self.irf.plot(figsize=(14, 10)).get_size_inches(), (14, 10))
+        assert_equal(self.irf.plot().get_size_inches(), (10, 10))
+        assert_equal(self.irf.plot(figsize=(14, 10)).get_size_inches(), (14, 10))
 
-            assert_equal(self.irf.plot_cum_effects().get_size_inches(), (10, 10))
-            assert_equal(
-                self.irf.plot_cum_effects(figsize=(14, 10)).get_size_inches(),
-                (14, 10),
-            )
+        assert_equal(self.irf.plot_cum_effects().get_size_inches(), (10, 10))
+        assert_equal(
+            self.irf.plot_cum_effects(figsize=(14, 10)).get_size_inches(),
+            (14, 10),
+        )
 
 
 @pytest.mark.smoke
@@ -237,12 +234,12 @@ class CheckFEVD:
     # ---------------------------------------------------------------------------
     # FEVD tests
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_fevd_plot(self, close_figures):
-        with MATPLOTLIB_LOCK:
-            import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt
 
-            assert isinstance(self.fevd.plot(), plt.Figure)
+        assert isinstance(self.fevd.plot(), plt.Figure)
 
     def test_fevd_repr(self):
         assert hasattr(self.fevd, "plot")
@@ -458,26 +455,26 @@ class TestVARResults(CheckIRF, CheckFEVD):
         y = self.res.endog[: -self.p :]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_sim(self, close_figures):
         rs = np.random.RandomState(923298321)
-        with MATPLOTLIB_LOCK:
-            self.res.plotsim(steps=100, seed=rs)
+        self.res.plotsim(steps=100, seed=rs)
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot(self, close_figures):
-        with MATPLOTLIB_LOCK:
-            self.res.plot()
+        self.res.plot()
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_acorr(self, close_figures):
-        with MATPLOTLIB_LOCK:
-            self.res.plot_acorr()
+        self.res.plot_acorr()
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_forecast(self, close_figures):
-        with MATPLOTLIB_LOCK:
-            self.res.plot_forecast(5)
+        self.res.plot_forecast(5)
 
     def test_reorder(self):
         # manually reorder
@@ -779,6 +776,7 @@ class TestVARExtras:
         # Smoke test
         res0.irf()
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_process_plotting(self, close_figures):
         # Partially a smoke test
@@ -788,28 +786,27 @@ class TestVARExtras:
         irf = res0.irf()
 
         rs = np.random.RandomState(429238921)
-        with MATPLOTLIB_LOCK:
-            res0.plotsim(seed=rs)
-            res0.plot_acorr()
+        res0.plotsim(seed=rs)
+        res0.plot_acorr()
 
-            fig = res0.plot_forecast(20)
-            fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
-            # Note values are equal, but keep rtol buffer
-            assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
-            fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
-            assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
-            fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
-            assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
+        fig = res0.plot_forecast(20)
+        fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
+        # Note values are equal, but keep rtol buffer
+        assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
+        fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
+        assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
+        fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
+        assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
 
-            fig_asym = irf.plot(seed=rs)
-            fig_mc = irf.plot(stderr_type="mc", repl=1000, seed=987128)
+        fig_asym = irf.plot(seed=rs)
+        fig_mc = irf.plot(stderr_type="mc", repl=1000, seed=987128)
 
-            for k in range(3):
-                a = fig_asym.axes[1].get_children()[k].get_ydata()
-                m = fig_mc.axes[1].get_children()[k].get_ydata()
-                # use m as desired because it is larger
-                # a is for some irf much smaller than m
-                assert_allclose(a, m, atol=0.1, rtol=0.9)
+        for k in range(3):
+            a = fig_asym.axes[1].get_children()[k].get_ydata()
+            m = fig_mc.axes[1].get_children()[k].get_ydata()
+            # use m as desired because it is larger
+            # a is for some irf much smaller than m
+            assert_allclose(a, m, atol=0.1, rtol=0.9)
 
     def test_forecast_cov(self):
         # forecast_cov can include parameter uncertainty if contant-only

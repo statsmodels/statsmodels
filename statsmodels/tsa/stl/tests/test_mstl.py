@@ -1,13 +1,10 @@
 from pathlib import Path
-import threading
 
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
 from statsmodels.tsa.seasonal import MSTL
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 
 @pytest.fixture
@@ -115,13 +112,11 @@ def test_stl_kwargs_smoke(data):
 def test_plot(data, data_pd, close_figures):
     mod = MSTL(endog=data, periods=5)
     res = mod.fit()
-    with MATPLOTLIB_LOCK:
-        res.plot()
+    res.plot()
 
     mod = MSTL(endog=data_pd, periods=5)
     res = mod.fit()
-    with MATPLOTLIB_LOCK:
-        res.plot()
+    res.plot()
 
 
 def test_output_similar_to_R_implementation(data_pd, mstl_results):

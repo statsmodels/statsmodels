@@ -431,6 +431,7 @@ def test_autoreg_predict_smoke(ar_data):
         mod.predict(res.params, 0, 250, exog_oos=exog_oos)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_parameterless_autoreg(close_figures):
     data = gen_data(250, 0, False)
@@ -1040,6 +1041,7 @@ def test_autoreg_forecast_period_index():
     pd.testing.assert_index_equal(fcast.index, pi[-24:])
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_autoreg_plot_err(close_figures):
     rs = np.random.RandomState(982734)

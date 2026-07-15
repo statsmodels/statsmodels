@@ -1,7 +1,5 @@
 from statsmodels.compat.platform import PLATFORM_WIN32
 
-import threading
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
@@ -14,8 +12,6 @@ from statsmodels.multivariate.tests.results.datamlw import (
     princomp2,
 )
 from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 DECIMAL_5 = 0.00001
 
@@ -50,16 +46,16 @@ class TestPCA:
         cls.x_wide = f.dot(b) + e
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_smoke_plot_and_repr(self, close_figures):
         pc = PCA(self.x)
-        with MATPLOTLIB_LOCK:
-            pc.plot_scree()
-            pc.plot_scree(ncomp=10)
-            pc.plot_scree(log_scale=False)
-            pc.plot_scree(cumulative=True)
-            pc.plot_rsquare()
-            pc.plot_rsquare(ncomp=5)
+        pc.plot_scree()
+        pc.plot_scree(ncomp=10)
+        pc.plot_scree(log_scale=False)
+        pc.plot_scree(cumulative=True)
+        pc.plot_rsquare()
+        pc.plot_rsquare(ncomp=5)
         # Additional smoke test
         pc.__repr__()
         pc = PCA(self.x, standardize=False)
@@ -186,17 +182,17 @@ class TestPCA:
         with pytest.raises(ValueError):
             PCA(np.nan * np.ones((200, 100)), tol=2.0)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_pandas(self, close_figures):
         pc = PCA(pd.DataFrame(self.x))
         pc1 = PCA(self.x)
         assert_allclose(pc.factors.values, pc1.factors)
-        with MATPLOTLIB_LOCK:
-            pc.plot_scree()
-            pc.plot_scree(ncomp=10)
-            pc.plot_scree(log_scale=False)
-            pc.plot_rsquare()
-            pc.plot_rsquare(ncomp=5)
+        pc.plot_scree()
+        pc.plot_scree(ncomp=10)
+        pc.plot_scree(log_scale=False)
+        pc.plot_rsquare()
+        pc.plot_rsquare(ncomp=5)
         pc.project(2)
         PCA(pd.DataFrame(self.x), ncomp=4, gls=True)
         PCA(pd.DataFrame(self.x), ncomp=4, standardize=False)

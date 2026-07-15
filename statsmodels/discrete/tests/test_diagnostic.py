@@ -4,8 +4,6 @@ Created on Fri Sep 15 13:38:13 2017
 Author: Josef Perktold
 """
 
-import threading
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pytest
@@ -13,8 +11,6 @@ import pytest
 import statsmodels.discrete._diagnostics_count as dia
 from statsmodels.discrete.diagnostic import PoissonDiagnostic
 from statsmodels.discrete.discrete_model import Poisson
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 
 class TestCountDiagnostic:
@@ -61,6 +57,7 @@ class TestCountDiagnostic:
         assert_allclose(tzi3, tzi3_1, rtol=5e-4)
         assert_equal(tzi3.df, 2)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_probs(self, close_figures):
         nobs = self.nobs
@@ -71,9 +68,8 @@ class TestCountDiagnostic:
         # regression numbers
         tzi1 = (0.387770845, 0.5334734738)
         assert_allclose(tzi[:2], tzi1, rtol=5e-5)
-        with MATPLOTLIB_LOCK:
-            # smoke test for plot
-            dia.plot_probs(freq, probs.mean(0))
+        # smoke test for plot
+        dia.plot_probs(freq, probs.mean(0))
 
 
 class TestPoissonDiagnosticClass:

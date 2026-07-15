@@ -8,7 +8,6 @@ Created on 08/07/2015
 """
 
 import os
-import threading
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -40,8 +39,6 @@ from statsmodels.gam.smooth_basis import (
 from statsmodels.genmod.families.family import Gaussian
 from statsmodels.genmod.generalized_linear_model import GLM, lm
 from statsmodels.tools.linalg import matrix_sqrt
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 sigmoid = np.vectorize(lambda x: 1.0 / (1.0 + np.exp(-x)))
 
@@ -755,6 +752,7 @@ def test_partial_values():
     assert_allclose(se, se_from_mgcv * bug_fact, rtol=0, atol=0.008)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_partial_plot(close_figures):
     # verify that plot and partial_values method agree
@@ -778,15 +776,15 @@ def test_partial_plot(close_figures):
     alpha = 0.03
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(maxiter=10000, method="bfgs")
-    with MATPLOTLIB_LOCK:
-        fig = res_glm_gam.plot_partial(0)
-        xp, yp = fig.axes[0].get_children()[0].get_data()
-        # Note xp and yp are sorted by x
-        sort_idx = np.argsort(x)
-        hat_y, se = res_glm_gam.partial_values(0)
-        # assert that main plot line is the prediction
-        assert_allclose(xp, x[sort_idx])
-        assert_allclose(yp, hat_y[sort_idx])
+
+    fig = res_glm_gam.plot_partial(0)
+    xp, yp = fig.axes[0].get_children()[0].get_data()
+    # Note xp and yp are sorted by x
+    sort_idx = np.argsort(x)
+    hat_y, se = res_glm_gam.partial_values(0)
+    # assert that main plot line is the prediction
+    assert_allclose(xp, x[sort_idx])
+    assert_allclose(yp, hat_y[sort_idx])
 
     # Uncomment to visualize the plot
     # import matplotlib.pyplot as plt

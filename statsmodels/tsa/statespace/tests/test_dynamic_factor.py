@@ -7,7 +7,6 @@ License: Simplified-BSD
 
 import os
 import re
-import threading
 import warnings
 
 import numpy as np
@@ -20,7 +19,6 @@ from statsmodels.tsa.statespace import dynamic_factor
 
 from .results import results_dynamic_factor, results_varmax
 
-MATPLOTLIB_LOCK = threading.Lock()
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 output_path = os.path.join("results", "results_dynamic_factor_stata.csv")
@@ -112,12 +110,12 @@ class CheckDynamicFactor:
         else:
             assert_equal(results.coefficient_matrices_var, None)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_coefficients_of_determination(self, close_figures):
         # Smoke test for plot_coefficients_of_determination
         _, results = self.setup_model()
-        with MATPLOTLIB_LOCK:
-            results.plot_coefficients_of_determination()
+        results.plot_coefficients_of_determination()
 
     def test_no_enforce(self):
         return

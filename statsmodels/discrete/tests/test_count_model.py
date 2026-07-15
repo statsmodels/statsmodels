@@ -1,8 +1,6 @@
 from statsmodels.compat.platform import PLATFORM_LINUX32
 from statsmodels.compat.scipy import SP_LT_116
 
-import copy
-
 import numpy as np
 from numpy.testing import (
     assert_,
@@ -139,10 +137,11 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         res2 = RandHIE.zero_inflated_poisson_offset
         cls.res2 = res2
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_exposure(self):
         # This test mostly the equivalence of offset and exposure = exp(offset)
         # use data arrays from class model
-        res1 = copy.deepcopy(self.res1)
+        res1 = self.res1
         model1 = res1.model
         offset = model1.offset
         model3 = sm.ZeroInflatedPoisson(
@@ -267,6 +266,7 @@ class TestZeroInflatedPoisson_predict:
 
         cls.params_true = [mu_true, 0.05, nobs]
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_mean(self):
         def compute_conf_interval_95(mu, prob_infl, nobs):
             dispersion_factor = 1 + prob_infl * mu
@@ -282,11 +282,12 @@ class TestZeroInflatedPoisson_predict:
 
         conf_interval_95 = compute_conf_interval_95(*self.params_true)
         # Use a local results class for thread safety
-        res = copy.deepcopy(self.res)
+        res = self.res
         assert_allclose(
             res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
         )
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_var(self):
         def compute_mixture_var(dispersion_factor, prob_main, mu):
             # the variance of the mixture is the mixture of the variances plus
@@ -299,7 +300,7 @@ class TestZeroInflatedPoisson_predict:
             var -= (((1 - prob_infl) * mu).mean()) ** 2
             return var
 
-        res = copy.deepcopy(self.res)
+        res = self.res
         var_fitted = compute_mixture_var(
             res._dispersion_factor,
             res.predict(which="prob-main"),
@@ -308,8 +309,9 @@ class TestZeroInflatedPoisson_predict:
 
         assert_allclose(var_fitted.mean(), self.endog.var(), atol=5e-2, rtol=5e-2)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_predict_prob(self):
-        res = copy.deepcopy(self.res)
+        res = self.res
 
         pr = res.predict(which="prob")
         pr2 = sm.distributions.zipoisson.pmf(
@@ -317,9 +319,10 @@ class TestZeroInflatedPoisson_predict:
         ).T
         assert_allclose(pr, pr2, rtol=0.05, atol=0.05)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_predict_options(self):
         # check default exog_infl, see #4757
-        res = copy.deepcopy(self.res)
+        res = self.res
         n = 5
         pr1 = res.predict(which="prob")
         pr0 = res.predict(exog=res.model.exog[:n], which="prob")
@@ -430,6 +433,7 @@ class TestZeroInflatedGeneralizedPoisson_predict:
 
         cls.params_true = [mu_true, expected_params[-1], 2, 0.5, nobs]
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_mean(self):
         def compute_conf_interval_95(mu, alpha, p, prob_infl, nobs):
             p = p - 1
@@ -445,11 +449,12 @@ class TestZeroInflatedGeneralizedPoisson_predict:
             return conf_intv_95
 
         conf_interval_95 = compute_conf_interval_95(*self.params_true)
-        res = copy.deepcopy(self.res)
+        res = self.res
         assert_allclose(
             res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
         )
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_var(self):
         def compute_mixture_var(dispersion_factor, prob_main, mu):
             prob_infl = 1 - prob_main
@@ -458,7 +463,7 @@ class TestZeroInflatedGeneralizedPoisson_predict:
             var -= (((1 - prob_infl) * mu).mean()) ** 2
             return var
 
-        res = copy.deepcopy(self.res)
+        res = self.res
         var_fitted = compute_mixture_var(
             res._dispersion_factor,
             res.predict(which="prob-main"),
@@ -468,7 +473,7 @@ class TestZeroInflatedGeneralizedPoisson_predict:
         assert_allclose(var_fitted.mean(), self.endog.var(), atol=0.05, rtol=0.1)
 
     def test_predict_prob(self):
-        res = copy.deepcopy(self.res)
+        res = self.res
 
         pr = res.predict(which="prob")
         pr2 = sm.distributions.zinegbin.pmf(
@@ -585,13 +590,12 @@ class TestZeroInflatedNegativeBinomialP_predict:
         )
         model = sm.ZeroInflatedNegativeBinomialP(cls.endog, exog, p=2)
         cls.res = model.fit(method="bfgs", maxiter=5000, disp=False)
-        # Created for use in threaded testing
-        cls.res_copy = copy.deepcopy(cls.res)
 
         # attach others
         cls.prob_infl = prob_infl
         cls.params_true = [mu_true, expected_params[-1], 2, prob_infl, nobs]
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_mean(self):
         def compute_conf_interval_95(mu, alpha, p, prob_infl, nobs):
             dispersion_factor = 1 + alpha * mu ** (p - 1) + prob_infl * mu
@@ -608,9 +612,10 @@ class TestZeroInflatedNegativeBinomialP_predict:
         conf_interval_95 = compute_conf_interval_95(*self.params_true)
         mean_true = ((1 - self.prob_infl) * self.params_true[0]).mean()
         # Use a local results class for thread safety
-        res = copy.deepcopy(self.res_copy)
+        res = self.res
         assert_allclose(res.predict().mean(), mean_true, atol=conf_interval_95, rtol=0)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_var(self):
         # todo check precision
         def compute_mixture_var(dispersion_factor, prob_main, mu):
@@ -620,7 +625,7 @@ class TestZeroInflatedNegativeBinomialP_predict:
             var -= (((1 - prob_infl) * mu).mean()) ** 2
             return var
 
-        res = copy.deepcopy(self.res)
+        res = self.res
         var_fitted = compute_mixture_var(
             res._dispersion_factor,
             res.predict(which="prob-main"),
@@ -629,8 +634,9 @@ class TestZeroInflatedNegativeBinomialP_predict:
 
         assert_allclose(var_fitted.mean(), self.endog.var(), rtol=0.2)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_predict_prob(self):
-        res = copy.deepcopy(self.res)
+        res = self.res
         endog = res.model.endog
 
         pr = res.predict(which="prob")
@@ -644,11 +650,12 @@ class TestZeroInflatedNegativeBinomialP_predict:
         assert_allclose(((pr2m - prm) ** 2).mean(), 0, rtol=1e-10, atol=5e-4)
         assert_allclose(((prm - freq) ** 2).mean(), 0, rtol=1e-10, atol=1e-4)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_predict_generic_zi(self):
         # These tests do not use numbers from other packages.
         # Tests are on closeness of estimated to true/DGP values
         # and theoretical relationship between quantities
-        res = copy.deepcopy(self.res)
+        res = self.res
         endog = self.endog
         exog = self.res.model.exog
         prob_infl = self.prob_infl
@@ -751,11 +758,11 @@ class TestZeroInflatedNegativeBinomialP_predict2:
         res = mod.fit(
             start_params=start_params, method="bfgs", maxiter=1000, disp=False
         )
-        cls.res_copy = copy.deepcopy(res)
         cls.res = res
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_mean(self):
-        res = copy.deepcopy(self.res_copy)
+        res = self.res
         assert_allclose(res.predict().mean(), self.endog.mean(), atol=0.02)
 
     def test_zero_nonzero_mean(self):

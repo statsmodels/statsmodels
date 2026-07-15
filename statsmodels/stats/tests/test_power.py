@@ -12,7 +12,6 @@ Author: Josef Perktold
 from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
 
 import copy
-import threading
 import warnings
 
 import numpy as np
@@ -27,8 +26,6 @@ import pytest
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 try:
     import matplotlib.pyplot as plt
@@ -111,28 +108,27 @@ class CheckPowerMixin:
     def test_power_plot(self, close_figures):
         if self.cls in [smp.FTestPower, smp.FTestPowerF2]:
             pytest.skip("skip FTestPower plot_power")
-        with MATPLOTLIB_LOCK:
-            fig = plt.figure()
-            ax = fig.add_subplot(2, 1, 1)
-            fig = self.cls().plot_power(
-                dep_var="nobs",
-                nobs=np.arange(2, 100),
-                effect_size=np.array([0.1, 0.2, 0.3, 0.5, 1]),
-                # alternative='larger',
-                ax=ax,
-                title="Power of t-Test",
-                **self.kwds_extra,
-            )
-            ax = fig.add_subplot(2, 1, 2)
-            self.cls().plot_power(
-                dep_var="es",
-                nobs=np.array([10, 20, 30, 50, 70, 100]),
-                effect_size=np.linspace(0.01, 2, 51),
-                # alternative='larger',
-                ax=ax,
-                title="",
-                **self.kwds_extra,
-            )
+        fig = plt.figure()
+        ax = fig.add_subplot(2, 1, 1)
+        fig = self.cls().plot_power(
+            dep_var="nobs",
+            nobs=np.arange(2, 100),
+            effect_size=np.array([0.1, 0.2, 0.3, 0.5, 1]),
+            # alternative='larger',
+            ax=ax,
+            title="Power of t-Test",
+            **self.kwds_extra,
+        )
+        ax = fig.add_subplot(2, 1, 2)
+        self.cls().plot_power(
+            dep_var="es",
+            nobs=np.array([10, 20, 30, 50, 70, 100]),
+            effect_size=np.linspace(0.01, 2, 51),
+            # alternative='larger',
+            ax=ax,
+            title="",
+            **self.kwds_extra,
+        )
 
 
 # ''' test cases

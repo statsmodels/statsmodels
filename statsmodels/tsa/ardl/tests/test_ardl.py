@@ -406,6 +406,7 @@ def test_ardl_parameter_names(data):
     assert mod.exog_names == expected
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_diagnostics_plot(data, close_figures):
     import matplotlib.figure
@@ -570,6 +571,7 @@ def test_get_prediction(data):
     assert_allclose(pred.var_pred_mean, ar_pred.var_pred_mean)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
 @pytest.mark.parametrize("trend", ["n", "c", "ct"])

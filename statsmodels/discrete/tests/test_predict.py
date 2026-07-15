@@ -6,7 +6,6 @@ License: BSD-3
 """
 
 import copy
-import threading
 import warnings
 
 import numpy as np
@@ -32,8 +31,6 @@ from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
 from statsmodels.tools.tools import add_constant
 
 from .results import results_predict as resp
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 # copied from `test_gmm_poisson.TestGMMAddOnestep`
 XLISTEXOG2 = "aget aget2 educyr actlim totchr".split()
@@ -150,6 +147,7 @@ class CheckPredict:
         assert_allclose(pmw.predicted, pm6.predicted, rtol=1e-13)
         assert_allclose(dfmw, dfm6, rtol=1e-6)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_diagnostic(self, close_figures):
         # smoke test for now
@@ -159,9 +157,8 @@ class CheckPredict:
         res_chi2 = dia.test_chisquare_prob(bin_edges=np.arange(4))
         assert_equal(res_chi2.diff1.shape[1], 3)
         assert_equal(dia.probs_predicted.shape[1], 22)
-        with MATPLOTLIB_LOCK:
-            # smoke test
-            dia.plot_probs(upp_xlim=20)
+        # smoke test
+        dia.plot_probs(upp_xlim=20)
 
 
 class CheckExtras:
@@ -355,6 +352,7 @@ def get_data_simulated():
 y_count, x_const = get_data_simulated()
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("case", models)
 def test_distr(case, close_figures):
@@ -420,8 +418,7 @@ def test_distr(case, close_figures):
 
         f_sc = influ.d_fittedvalues_scaled  # requires se from get_prediction()
         assert f_sc.shape == (len(y2),)
-        with MATPLOTLIB_LOCK:
-            with warnings.catch_warnings():
-                # ZI models warn about missing hat_matrix_diag
-                warnings.simplefilter("ignore", category=UserWarning)
-                influ.plot_influence()
+        with warnings.catch_warnings():
+            # ZI models warn about missing hat_matrix_diag
+            warnings.simplefilter("ignore", category=UserWarning)
+            influ.plot_influence()

@@ -7,7 +7,6 @@ License: BSD-3
 """
 
 import io
-import threading
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -26,8 +25,6 @@ from statsmodels.stats.meta_analysis import (
 )
 
 from .results import results_meta
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 
 class TestEffectsizeBinom:
@@ -410,14 +407,14 @@ class TestMetaBinOR:
         res_glm = mod_glm.fit()
         assert_allclose(res_glm.params, res2.TE_random, rtol=1e-13)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot(self, close_figures):
         # smoke tests
         res1 = self.res1
         # `use_t=False` avoids warning about missing nobs for use_t is true
-        with MATPLOTLIB_LOCK:
-            res1.plot_forest(use_t=False)
-            res1.plot_forest(use_exp=True, use_t=False)
-            res1.plot_forest(alpha=0.01, use_t=False)
-            with pytest.raises(TypeError, match="unexpected keyword"):
-                res1.plot_forest(junk=5, use_t=False)
+        res1.plot_forest(use_t=False)
+        res1.plot_forest(use_exp=True, use_t=False)
+        res1.plot_forest(alpha=0.01, use_t=False)
+        with pytest.raises(TypeError, match="unexpected keyword"):
+            res1.plot_forest(junk=5, use_t=False)

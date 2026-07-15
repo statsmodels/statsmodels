@@ -7,7 +7,6 @@ from statsmodels.compat.scipy import SP_LT_17
 import copy
 import os
 import re
-import threading
 import warnings
 
 import numpy as np
@@ -40,8 +39,6 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import add_constant
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -1278,18 +1275,17 @@ def test_plots(close_figures):
 
     from statsmodels.graphics.regressionplots import add_lowess
 
-    with MATPLOTLIB_LOCK:
-        # array interface
-        for j in 0, 1:
-            fig = result.plot_added_variable(j)
-            add_lowess(fig.axes[0], frac=0.5)
-            close_or_save(pdf, fig)
-            fig = result.plot_partial_residuals(j)
-            add_lowess(fig.axes[0], frac=0.5)
-            close_or_save(pdf, fig)
-            fig = result.plot_ceres_residuals(j)
-            add_lowess(fig.axes[0], frac=0.5)
-            close_or_save(pdf, fig)
+    # array interface
+    for j in 0, 1:
+        fig = result.plot_added_variable(j)
+        add_lowess(fig.axes[0], frac=0.5)
+        close_or_save(pdf, fig)
+        fig = result.plot_partial_residuals(j)
+        add_lowess(fig.axes[0], frac=0.5)
+        close_or_save(pdf, fig)
+        fig = result.plot_ceres_residuals(j)
+        add_lowess(fig.axes[0], frac=0.5)
+        close_or_save(pdf, fig)
 
     # formula interface
     data = pd.DataFrame({"y": endog, "x1": exog[:, 0], "x2": exog[:, 1]})

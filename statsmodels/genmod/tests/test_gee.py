@@ -10,7 +10,6 @@ exactly.
 """
 
 import os
-import threading
 import warnings
 
 import numpy as np
@@ -32,8 +31,6 @@ from statsmodels.genmod import cov_struct, families
 import statsmodels.genmod.generalized_estimating_equations as gee
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import SpecificationWarning
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 
 def load_data(fname, icept=True):
@@ -176,6 +173,7 @@ class TestGEE:
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_nominal_plot(self, close_figures):
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -189,9 +187,8 @@ class TestGEE:
 
         import matplotlib.pyplot as plt
 
-        with MATPLOTLIB_LOCK:
-            fig = result.plot_distribution()
-            assert_equal(isinstance(fig, plt.Figure), True)
+        fig = result.plot_distribution()
+        assert_equal(isinstance(fig, plt.Figure), True)
 
     def test_margins_poisson(self):
         # Check marginal effects for a Poisson GEE fit.
@@ -1052,6 +1049,7 @@ class TestGEE:
             model1.fit()
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ordinal_plot(self, close_figures):
         import matplotlib.pyplot as plt
@@ -1065,9 +1063,8 @@ class TestGEE:
         mod = gee.OrdinalGEE(endog, exog, groups, None, family, va)
         rslt = mod.fit()
 
-        with MATPLOTLIB_LOCK:
-            fig = rslt.plot_distribution()
-            assert_equal(isinstance(fig, plt.Figure), True)
+        fig = rslt.plot_distribution()
+        assert_equal(isinstance(fig, plt.Figure), True)
 
     def test_nominal(self):
 
@@ -2023,6 +2020,7 @@ def test_regularized_gaussian():
 
 
 @pytest.mark.smoke
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plots(close_figures):
     import matplotlib.pyplot as plt
@@ -2034,15 +2032,14 @@ def test_plots(close_figures):
 
     model = gee.GEE(exog, endog, groups)
     result = model.fit()
-    with MATPLOTLIB_LOCK:
-        fig = result.plot_added_variable(1)
-        assert_equal(isinstance(fig, plt.Figure), True)
-        fig = result.plot_partial_residuals(1)
-        assert_equal(isinstance(fig, plt.Figure), True)
-        fig = result.plot_ceres_residuals(1)
-        assert_equal(isinstance(fig, plt.Figure), True)
-        fig = result.plot_isotropic_dependence()
-        assert_equal(isinstance(fig, plt.Figure), True)
+    fig = result.plot_added_variable(1)
+    assert_equal(isinstance(fig, plt.Figure), True)
+    fig = result.plot_partial_residuals(1)
+    assert_equal(isinstance(fig, plt.Figure), True)
+    fig = result.plot_ceres_residuals(1)
+    assert_equal(isinstance(fig, plt.Figure), True)
+    fig = result.plot_isotropic_dependence()
+    assert_equal(isinstance(fig, plt.Figure), True)
 
 
 def test_missing():

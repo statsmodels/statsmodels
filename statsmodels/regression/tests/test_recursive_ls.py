@@ -6,7 +6,6 @@ License: Simplified-BSD
 """
 
 import os
-import threading
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -21,8 +20,6 @@ from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from statsmodels.tools.eval_measures import aic, bic
-
-MATPLOTLIB_LOCK = threading.Lock()
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -288,55 +285,54 @@ def test_estimates():
 
 @pytest.mark.matplotlib
 def test_plots(close_figures):
-    with MATPLOTLIB_LOCK:
-        import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
 
-        # Basic plot
-        try:
-            from pandas.plotting import register_matplotlib_converters
+    # Basic plot
+    try:
+        from pandas.plotting import register_matplotlib_converters
 
-            register_matplotlib_converters()
-        except ImportError:
-            pass
+        register_matplotlib_converters()
+    except ImportError:
+        pass
 
-        exog = add_constant(dta[["m1", "pop"]])
-        mod = RecursiveLS(endog, exog)
-        res = mod.fit()
-        res.plot_recursive_coefficient()
+    exog = add_constant(dta[["m1", "pop"]])
+    mod = RecursiveLS(endog, exog)
+    res = mod.fit()
+    res.plot_recursive_coefficient()
 
-        # Specific variable
-        res.plot_recursive_coefficient(variables=["m1"])
+    # Specific variable
+    res.plot_recursive_coefficient(variables=["m1"])
 
-        # All variables
-        res.plot_recursive_coefficient(variables=[0, "m1", "pop"])
-        plt.close("all")
-        # Basic plot
-        res.plot_cusum()
+    # All variables
+    res.plot_recursive_coefficient(variables=[0, "m1", "pop"])
+    plt.close("all")
+    # Basic plot
+    res.plot_cusum()
 
-        # Other alphas
-        for alpha in [0.01, 0.10]:
-            res.plot_cusum(alpha=alpha)
+    # Other alphas
+    for alpha in [0.01, 0.10]:
+        res.plot_cusum(alpha=alpha)
 
-        # Invalid alpha
-        with pytest.raises(ValueError):
-            res.plot_cusum(alpha=0.123)
+    # Invalid alpha
+    with pytest.raises(ValueError):
+        res.plot_cusum(alpha=0.123)
 
-        # Basic plot
-        res.plot_cusum_squares()
-        plt.close("all")
+    # Basic plot
+    res.plot_cusum_squares()
+    plt.close("all")
 
-        # Numpy input (no dates)
-        mod = RecursiveLS(endog.values, exog.values)
-        res = mod.fit()
+    # Numpy input (no dates)
+    mod = RecursiveLS(endog.values, exog.values)
+    res = mod.fit()
 
-        # Basic plot
-        res.plot_recursive_coefficient()
+    # Basic plot
+    res.plot_recursive_coefficient()
 
-        # Basic plot
-        res.plot_cusum()
+    # Basic plot
+    res.plot_cusum()
 
-        # Basic plot
-        res.plot_cusum_squares()
+    # Basic plot
+    res.plot_cusum_squares()
 
 
 def test_from_formula():
