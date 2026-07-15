@@ -97,13 +97,12 @@ def pytest_configure(config):
         import matplotlib as mpl
 
         mpl.use("agg")
-        try:
-            from pandas.plotting import register_matplotlib_converters
 
-            register_matplotlib_converters()
-        except ImportError:
-            pass
+        from pandas.plotting import register_matplotlib_converters
+
+        register_matplotlib_converters()
     except ImportError:
+        # Tests are required to run without matplotlib
         pass
 
 

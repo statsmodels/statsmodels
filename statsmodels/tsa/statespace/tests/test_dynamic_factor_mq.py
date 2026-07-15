@@ -1748,13 +1748,10 @@ def test_coefficient_of_determination(close_figures):
     # Optional smoke test for plot_coefficient_of_determination
     try:
         import matplotlib.pyplot as plt
+        from pandas.plotting import register_matplotlib_converters
 
-        try:
-            from pandas.plotting import register_matplotlib_converters
+        register_matplotlib_converters()
 
-            register_matplotlib_converters()
-        except ImportError:
-            pass
         fig1 = plt.figure()
         res.plot_coefficients_of_determination(method="individual", fig=fig1)
         fig2 = plt.figure()
