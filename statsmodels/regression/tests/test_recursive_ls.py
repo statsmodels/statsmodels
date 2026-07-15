@@ -282,6 +282,7 @@ def test_estimates():
     res_ols = mod_ols.fit()
     assert_allclose(res.params, res_ols.params)
 
+
 @pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 def test_plots(close_figures):
