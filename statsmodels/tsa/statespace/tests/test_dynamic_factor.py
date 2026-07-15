@@ -66,10 +66,13 @@ class CheckDynamicFactor:
             results = None
         return model, results
 
+    def construct_model(self):
+        raise NotImplementedError("subclasses must implement")
+
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and
         # lead to a well-defined model
-        model, result = self.setup_model()
+        model, result = self.construct_model()
         model.filter(model.start_params)
         # Similarly a smoke test for param_names
         assert_equal(len(model.start_params), len(model.param_names))
@@ -84,7 +87,7 @@ class CheckDynamicFactor:
 
     def test_results(self, close_figures):
         # Smoke test for creating the summary
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             results.summary()
@@ -114,13 +117,13 @@ class CheckDynamicFactor:
     @pytest.mark.matplotlib
     def test_plot_coefficients_of_determination(self, close_figures):
         # Smoke test for plot_coefficients_of_determination
-        _, results = self.setup_model()
+        _, results = self.construct_model()
         results.plot_coefficients_of_determination()
 
     def test_no_enforce(self):
         return
         # Test that nothing goes wrong when we do not enforce stationarity
-        # model, results = self.setup_model()
+        # model, results = self.construct_model()
         # params = model.untransform_params(self.true["params"])
         # params[model._params_transition] = self.true["params"][model._params_transition]
         # model.enforce_stationarity = False
@@ -129,7 +132,7 @@ class CheckDynamicFactor:
         # assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
     def test_mle(self, init_powell=True):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             start_params = model.start_params
@@ -142,22 +145,22 @@ class CheckDynamicFactor:
                 assert_allclose(results.llf, results.llf, rtol=1e-5)
 
     def test_loglike(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         assert_allclose(results.llf, self.true["loglike"], rtol=1e-6)
 
     def test_aic(self):
         # We only get 3 digits from Stata
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         assert_allclose(results.aic, self.true["aic"], atol=3)
 
     def test_bic(self):
         # We only get 3 digits from Stata
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         assert_allclose(results.bic, self.true["bic"], atol=3)
 
     def test_predict(self, **kwargs):
         # Tests predict + forecast
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         results.predict(end="1982-10-01", **kwargs)
         assert_allclose(
             results.predict(end="1982-10-01", **kwargs),
@@ -167,7 +170,7 @@ class CheckDynamicFactor:
 
     def test_dynamic_predict(self, **kwargs):
         # Tests predict + dynamic predict + forecast
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         assert_allclose(
             results.predict(end="1982-10-01", dynamic="1961-01-01", **kwargs),
             self.true["dynamic_predict"],
@@ -180,7 +183,7 @@ class TestDynamicFactor(CheckDynamicFactor):
     Test for a dynamic factor model with 1 AR(2) factor
     """
 
-    def setup_model(self):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_1", "predict_dfm_2", "predict_dfm_3"]
@@ -188,10 +191,10 @@ class TestDynamicFactor(CheckDynamicFactor):
         true["dynamic_predict"] = output_results.iloc[1:][
             ["dyn_predict_dfm_1", "dyn_predict_dfm_2", "dyn_predict_dfm_3"]
         ]
-        return super().setup_model(true, k_factors=1, factor_order=2)
+        return self.setup_model(true, k_factors=1, factor_order=2)
 
     def test_bse_approx(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         bse = results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse, self.true["bse_oim"], atol=1e-5)
 
@@ -201,7 +204,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
     Test for a dynamic factor model with two VAR(1) factors
     """
 
-    def setup_model(self):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm2.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm2_1", "predict_dfm2_2", "predict_dfm2_3"]
@@ -234,7 +237,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
         pass
 
     def test_summary(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             summary = results.summary()
@@ -305,7 +308,7 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
     Test for a dynamic factor model with 1 exogenous regressor: a constant
     """
 
-    def setup_model(self):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm_exog1.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_exog1_1", "predict_dfm_exog1_2", "predict_dfm_exog1_3"]
@@ -329,7 +332,7 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
         super().test_dynamic_predict(exog=exog)
 
     def test_bse_approx(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         bse = results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-5)
 
@@ -340,7 +343,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
     and a time-trend
     """
 
-    def setup_model(self):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm_exog2.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_exog2_1", "predict_dfm_exog2_2", "predict_dfm_exog2_3"]
@@ -356,7 +359,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         return super().setup_model(true, k_factors=1, factor_order=1, exog=exog)
 
     def test_bse_approx(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         bse = results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-5)
 
@@ -369,7 +372,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         super().test_dynamic_predict(exog=exog)
 
     def test_summary(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             summary = results.summary()
@@ -449,7 +452,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
     - Innovations are correlated
     """
 
-    def setup_model(self):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm_gen.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_gen_1", "predict_dfm_gen_2", "predict_dfm_gen_3"]
@@ -467,7 +470,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         )
 
     def test_bse_approx(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         bse = results._cov_params_approx().diagonal()
         assert_allclose(bse[:3], self.true["var_oim"][:3], atol=1e-5)
         assert_allclose(bse[-10:], self.true["var_oim"][-10:], atol=3e-4)
@@ -497,7 +500,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         pass
 
     def test_summary(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             summary = results.summary()
@@ -593,7 +596,7 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
     - Innovations are correlated
     """
 
-    def setup_model(self):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm_ar2.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_ar2_1", "predict_dfm_ar2_2", "predict_dfm_ar2_3"]
@@ -604,7 +607,7 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
         return super().setup_model(true, k_factors=1, factor_order=1, error_order=2)
 
     def test_bse_approx(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         bse = results._cov_params_approx().diagonal()
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
@@ -612,7 +615,7 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
         with warnings.catch_warnings(record=True):
             # Depending on the system, this test can reach a greater precision,
             # but for cross-platform results keep it at 1e-2
-            mod, results = self.setup_model()
+            mod, results = self.construct_model()
             res1 = mod.fit(maxiter=100, optim_score="approx", disp=False)
             res = mod.fit(
                 res1.params,
@@ -622,7 +625,7 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
                 disp=False,
             )
             # Added rtol to catch spurious failures on some platforms
-            model, results = self.setup_model()
+            model, results = self.construct_model()
             assert_allclose(res.llf, results.llf, atol=1e-2, rtol=1e-3)
 
 
@@ -632,7 +635,7 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
     are forced to have the same variance.
     """
 
-    def setup_model(self):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_dfm_scalar.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_dfm_scalar_1", "predict_dfm_scalar_2", "predict_dfm_scalar_3"]
@@ -650,7 +653,7 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
         )
 
     def test_bse_approx(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         bse = results._cov_params_approx().diagonal()
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
@@ -668,7 +671,7 @@ class TestStaticFactor(CheckDynamicFactor):
     Test for a static factor model (i.e. factors are not autocorrelated).
     """
 
-    def setup_model(self):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_sfm.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_sfm_1", "predict_sfm_2", "predict_sfm_3"]
@@ -679,7 +682,7 @@ class TestStaticFactor(CheckDynamicFactor):
         return super().setup_model(true, k_factors=1, factor_order=0)
 
     def test_bse_approx(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         bse = results._cov_params_approx().diagonal()
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
@@ -695,7 +698,7 @@ class TestSUR(CheckDynamicFactor):
     errors cross-sectionally, but not auto-, correlated
     """
 
-    def setup_model(self):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_sur.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_sur_1", "predict_sur_2", "predict_sur_3"]
@@ -709,7 +712,7 @@ class TestSUR(CheckDynamicFactor):
         )
 
     def test_bse_approx(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         bse = results._cov_params_approx().diagonal()
         assert_allclose(bse[:6], self.true["var_oim"][:6], atol=1e-5)
 
@@ -728,7 +731,7 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
     the errors are vector autocorrelated, but innovations are uncorrelated.
     """
 
-    def setup_model(self):
+    def construct_model(self):
         true = results_dynamic_factor.lutkepohl_sur_auto.copy()
         true["predict"] = output_results.iloc[1:][
             ["predict_sur_auto_1", "predict_sur_auto_2"]
@@ -749,7 +752,7 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
         )
 
     def test_bse_approx(self):
-        model, results = self.setup_model()
+        model, results = self.construct_model()
         bse = results._cov_params_approx().diagonal()
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
