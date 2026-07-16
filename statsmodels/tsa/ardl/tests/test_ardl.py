@@ -568,6 +568,7 @@ def test_get_prediction(data):
     assert_allclose(pred.predicted_mean, ar_pred.predicted_mean)
     assert_allclose(pred.var_pred_mean, ar_pred.var_pred_mean)
 
+
 def test_apply_forecast_matches_ardl_order():
     """
     ARDLResults.apply() used to inherit AutoRegResults.apply(), which
@@ -592,6 +593,7 @@ def test_apply_forecast_matches_ardl_order():
     predicted = new_res.predict()
     assert predicted.shape[0] == y_apply.shape[0]
 
+
 def test_apply_design_matrix_matches_fresh_fit():
     """
     Beyond not crashing, the applied model's exog lag columns must be numerically
@@ -609,6 +611,7 @@ def test_apply_design_matrix_matches_fresh_fit():
     fresh = ARDL(y_apply, 3, x_apply, order=orig._order, trend="c")
     assert new_res.model._x.shape == fresh._x.shape
     assert_allclose(new_res.model._x, fresh._x)
+
 
 def test_append_matches_apply():
     """
@@ -629,6 +632,7 @@ def test_append_matches_apply():
         applied.forecast(steps=5, exog=x_oos),
         appended.forecast(steps=5, exog=x_oos)
     )
+
 
 @pytest.mark.matplotlib
 @pytest.mark.smoke
@@ -651,7 +655,6 @@ def test_ardl_smoke_plots(data, seasonal, trend, close_figures):
     fig = res.plot_predict(end=75, alpha=None, in_sample=False)
     assert isinstance(fig, Figure)
     assert isinstance(res.summary(), Summary)
-
 
 
 def test_uecm_model_init(

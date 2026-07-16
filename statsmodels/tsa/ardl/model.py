@@ -1133,7 +1133,7 @@ class ARDLResults(AutoRegResults):
                 if isinstance(endog, (pd.Series, pd.DataFrame)):
                     index = endog.index
                 else:
-                    index = np.arramge(endog.shape[0])
+                    index = np.arange(endog.shape[0])
                 deterministic = deterministic.apply(index)
             mod = ARDL(
                 endog,
@@ -1191,7 +1191,6 @@ class ARDLResults(AutoRegResults):
         res._summary_text = summary_text
 
         return ARDLResultsWrapper(res)
-
 
     def _lag_repr(self) -> np.ndarray:
         """Returns poly repr of an AR, (1  -phi1 L -phi2 L^2-...)"""
