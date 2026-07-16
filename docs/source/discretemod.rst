@@ -136,7 +136,9 @@ The specific result classes are:
    ProbitResults
    CountResults
    MultinomialResults
+   PoissonResults
    NegativeBinomialResults
+   NegativeBinomialPResults
    GeneralizedPoissonResults
 
 .. currentmodule:: statsmodels.discrete.count_model
