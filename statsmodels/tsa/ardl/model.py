@@ -1072,6 +1072,127 @@ class ARDLResults(AutoRegResults):
             start=start, end=end, dynamic=False, exog_oos=exog, fixed_oos=fixed
         )
 
+    def apply(
+        self,
+        endog,
+        exog=None,
+        fixed=None,
+        refit=None,
+        fit_kwargs=None,
+    ):
+        """
+        Apply the fitted parameters to new data unrelated to original data.
+        It creates a new result object by using the current fitted parameters.
+        Applied to a completely new dataset, assumed to be unrelated to the model's original data.
+
+        The new results can then be used for analysis or forecasting.
+
+        Parameters
+        -----------------
+
+        endog: array_like
+            New observations from the modeled time-series process.
+        exog: array_like, optional
+            New observations of exogenous regressors, if applicable. It must supply the same
+            un-lagged columns as the original ``exog``. The lag structure fitting the original data
+            is re-applied automatically.
+        fixed: array_like, optional
+            New observations of fixed regressors, if applicable.
+        refit: bool, optional
+            Whether to re-fit the parameters, using the new dataset. Deafult is False
+            (so, the parameters from the current results object are used to create the new results
+            object.)
+        fit_kwargs: dict, optional
+            Keyword arguemnts to pass to `fit` (if `refit=True`)
+
+        Returns
+        ------------------
+        ARDLResults
+            Updated results object containing results for the new dataset.
+
+        Additional
+        -------------------
+        ARDLResults.append
+        statsmodels.tsa.ar_model.AutoRegResults.apply
+
+        Notes
+        --------------------
+        The `endog` arguemnt given to this method should consist of new observations that are
+        not necessarily related to the original model's `endog` dataset.
+
+        One should be careful when using deterministic processes with cyclical components
+        such as seasonal dummies or Fourier series. These deterministic components will align to
+        the first observation in the data and so it is necessary that any new data should have the
+        same initial period.
+        """
+
+        existing = self.model
+        try:
+            deterministic = existing.deterministic
+            if deterministic is not None:
+                if isinstance(endog, (pd.Series, pd.DataFrame)):
+                    index = endog.index
+                else:
+                    index = np.arramge(endog.shape[0])
+                deterministic = deterministic.apply(index)
+            mod = ARDL(
+                endog,
+                lags=existing.ar_lags,
+                exog=exog,
+                order=existing._order,
+                trend=existing.trend,
+                fixed=fixed,
+                causal=existing.causal,
+                seasonal=existing.seasonal,
+                deterministic=deterministic,
+                hold_back=existing.hold_back,
+                period=existing.period,
+                missing="none",
+            )
+        except Exception as exc:
+            error = (
+                "An exception occured during the creation of the cloned "
+                "ARDL instance when applying the existing model "
+                "specification to the new data. The original traceback appears below"
+            )
+
+            exc.args = (error, ) + exc.args
+            raise exc.with_traceback(exc.__traceback__) from exc
+
+        if (mod.exog is None) != (existing.exog is None):
+            if existing.exog is not None:
+                raise ValueError(
+                    "exog must be provided when the original model contained "
+                    "exog variables"
+                )
+            raise ValueError(
+                "exog must be None when the original model did not contain "
+                "exog variables"
+            )
+        if existing.exog is not None and existing.exog.shape[1] != mod.exog.shape[1]:
+            raise ValueError(
+                "The number of exog variables passed must match the original "
+                f"Number of exog values ({existing.exog.shape[1]})"
+            )
+        if refit:
+            fit_kwargs = {} if fit_kwargs is None else fit_kwargs
+            return mod.fit(**fit_kwargs)
+        summary_text = (
+            "Parameters and standard errors were estimated using a different "
+            "dataset and then applied to this dataset"
+        )
+        res = ARDLResults(
+            mod,
+            self.params,
+            self.cov_params_default,
+            self.normalized_cov_params,
+            use_t=self.use_t,
+        )
+        res._summary_text = summary_text
+
+        return ARDLResultsWrapper(res)
+
+
     def _lag_repr(self) -> np.ndarray:
         """Returns poly repr of an AR, (1  -phi1 L -phi2 L^2-...)"""
         ar_lags = self._ar_lags if self._ar_lags is not None else []

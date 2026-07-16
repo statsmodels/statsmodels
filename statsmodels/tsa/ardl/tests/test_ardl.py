@@ -568,6 +568,67 @@ def test_get_prediction(data):
     assert_allclose(pred.predicted_mean, ar_pred.predicted_mean)
     assert_allclose(pred.var_pred_mean, ar_pred.var_pred_mean)
 
+def test_apply_forecast_matches_ardl_order():
+    """
+    ARDLResults.apply() used to inherit AutoRegResults.apply(), which
+    hardcodes a plain AutoReg(...) reconstruction and so silently drops the
+    exog lag structure ('order'). The applied model's design matrix ended up
+    narrower than the original params, abd any predict/forecast call raised a matmul shape mismatch
+    """
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    y_train, x_train = y.iloc[:45], x.iloc[:45]
+    sel_res = ardl_select_order(y_train, 3, x_train, 3, ic="aic", trend="c")
+    assert sel_res.model.ardl_order == (3, 0, 3, 3)
+    res = sel_res.model.fit()
+
+    y_apply, x_apply = y.iloc[:50], x.iloc[:50]
+    x_oos = x.iloc[50:55]
+    new_res = res.apply(endog=y_apply, exog=x_apply)
+    forecast = new_res.forecast(steps=5, exog=x_oos)
+    assert forecast.shape == (5, )
+    assert np.all(np.isfinite(forecast))
+
+    predicted = new_res.predict()
+    assert predicted.shape[0] == y_apply.shape[0]
+
+def test_apply_design_matrix_matches_fresh_fit():
+    """
+    Beyond not crashing, the applied model's exog lag columns must be numerically
+    identical to an independently constructed ARDL model fit directly on the new data
+    under the same order
+    """
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    orig = ARDL(y.iloc[:45], 3, x.iloc[:45], order=3, trend="c")
+    res = orig.fit()
+
+    y_apply, x_apply = y.iloc[:50], x.iloc[:50]
+    new_res = res.apply(endog=y_apply, exog=x_apply)
+
+    fresh = ARDL(y_apply, 3, x_apply, order=orig._order, trend="c")
+    assert new_res.model._x.shape == fresh._x.shape
+    assert_allclose(new_res.model._x, fresh._x)
+
+def test_append_matches_apply():
+    """
+    append()ing the tail of a series should give the same applied model as
+    apply()ing the full series, since both describe the same combined dataset under
+    the same order
+    """
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    res = ARDL(y.iloc[:45], 3, x.iloc[:45], order=3, trend="c").fit()
+
+    applied = res.apply(endog=y.iloc[:50], exog=x.iloc[:50])
+    appended = res.append(endog=y.iloc[45:50], exog=x.iloc[45:50])
+
+    assert_allclose(applied.model._x, appended.model._x)
+    x_oos = x.iloc[50:55]
+    assert_allclose(
+        applied.forecast(steps=5, exog=x_oos),
+        appended.forecast(steps=5, exog=x_oos)
+    )
 
 @pytest.mark.matplotlib
 @pytest.mark.smoke
@@ -590,6 +651,7 @@ def test_ardl_smoke_plots(data, seasonal, trend, close_figures):
     fig = res.plot_predict(end=75, alpha=None, in_sample=False)
     assert isinstance(fig, Figure)
     assert isinstance(res.summary(), Summary)
+
 
 
 def test_uecm_model_init(
