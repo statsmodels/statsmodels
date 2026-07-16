@@ -227,6 +227,31 @@ def test_confint_multinomial_proportions_sison_glaz_sparse(counts):
     assert np.all(proportions <= cis[:, 1])
 
 
+def test_confint_multinomial_proportions_sison_glaz_sparse_r_reference():
+    # GH#9587: check the fixed sison-glaz output for a sparse case against
+    # reference values computed from R's MultinomialCI (Sison-Glaz)
+    # algorithm.  For this vector nu(1) already exceeds 1 - alpha, so the
+    # search terminates at c = 0 (the branch added by the fix); R reaches
+    # the same solution by initialising pold = 0 before testing cc = 1.
+    # The counts are kept small enough that count + c never exceeds n, so
+    # the box upper bounds are not truncated and the two implementations
+    # are directly comparable.
+    ci_r = np.array(
+        [
+            0.5, 1.0,
+            0.5, 1.0,
+            0.0, 0.9655815875,
+            0.0, 0.9655815875,
+            0.0, 0.9655815875,
+            0.0, 0.9655815875,
+            0.0, 0.9655815875,
+        ]
+    ).reshape(-1, 2)
+    counts = [1, 1, 0, 0, 0, 0, 0]
+    cis = multinomial_proportions_confint(counts, 0.05, method="sison-glaz")
+    assert_allclose(cis, ci_r, atol=1e-6)
+
+
 class CheckProportionMixin:
     def test_proptest(self):
         # equality of k-samples
