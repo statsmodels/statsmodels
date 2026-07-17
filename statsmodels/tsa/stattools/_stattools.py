@@ -1078,7 +1078,8 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     x, y : array_like
        The time series data to use in the calculation.
     adjusted : bool, optional
-       If True, then denominators for cross-covariance are n-k, otherwise n.
+       If True, then denominators for cross-covariance are the number of
+       overlapping observations at each lag k, min(m, n-k), otherwise n.
     demean : bool, optional
         Flag indicating whether to demean x and y.
     fft : bool, default True
@@ -1100,6 +1101,7 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     fft = bool_like(fft, "fft", optional=False)
 
     n = len(x)
+    m = len(y)
     if demean:
         xo = x - x.mean()
         yo = y - y.mean()
@@ -1107,11 +1109,10 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
         xo = x
         yo = y
     if adjusted:
-        d = np.arange(n, 0, -1)
+        d = np.minimum(np.arange(n, 0, -1), m)
     else:
         d = n
 
-    m = len(y)
     method = "fft" if fft else "direct"
     # When y is shorter than x, the denominator counts must follow len(y)
     # to match the actual number of overlapping observations at each lag.
