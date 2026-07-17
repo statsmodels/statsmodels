@@ -1088,7 +1088,7 @@ class ARDLResults(AutoRegResults):
         The new results can then be used for analysis or forecasting.
 
         Parameters
-        -----------------
+        ----------
 
         endog: array_like
             New observations from the modeled time-series process.
@@ -1099,25 +1099,25 @@ class ARDLResults(AutoRegResults):
         fixed: array_like, optional
             New observations of fixed regressors, if applicable.
         refit: bool, optional
-            Whether to re-fit the parameters, using the new dataset. Deafult is False
+            Whether to re-fit the parameters, using the new dataset. Default is False
             (so, the parameters from the current results object are used to create the new results
             object.)
         fit_kwargs: dict, optional
-            Keyword arguemnts to pass to `fit` (if `refit=True`)
+            Keyword arguments to pass to `fit` (if `refit=True`)
 
         Returns
-        ------------------
+        -------
         ARDLResults
             Updated results object containing results for the new dataset.
 
-        Additional
-        -------------------
+        See Also
+        --------
         ARDLResults.append
         statsmodels.tsa.ar_model.AutoRegResults.apply
 
         Notes
-        --------------------
-        The `endog` arguemnt given to this method should consist of new observations that are
+        -----
+        The `endog` argument given to this method should consist of new observations that are
         not necessarily related to the original model's `endog` dataset.
 
         One should be careful when using deterministic processes with cyclical components
