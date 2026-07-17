@@ -5,7 +5,7 @@ from statsmodels.compat.python import lzip
 import numpy as np
 from scipy.stats import norm
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 # margeff helper functions ####
 # NOTE: todo marginal effects for group 2

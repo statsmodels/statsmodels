@@ -24,8 +24,8 @@ def test_univariate_polynomial_smoother():
 
 
 def test_multivariate_polynomial_basis():
-    np.random.seed(1)
-    x = np.random.normal(0, 1, (10, 2))
+    rs = np.random.RandomState(1)
+    x = rs.normal(0, 1, (10, 2))
     degrees = [3, 4]
     mps = PolynomialSmoother(x, degrees)
     for i, deg in enumerate(degrees):
@@ -36,13 +36,9 @@ def test_multivariate_polynomial_basis():
 @pytest.mark.parametrize(
     "x, df, degree",
     [
-        (
-            np.c_[np.linspace(0, 1, 100), np.linspace(0, 10, 100)],
-            [5, 6],
-            [3, 5]
-        ),
+        (np.c_[np.linspace(0, 1, 100), np.linspace(0, 10, 100)], [5, 6], [3, 5]),
         (np.linspace(0, 1, 100), 6, 3),
-    ]
+    ],
 )
 def test_bsplines(x, df, degree):
     bspline = BSplines(x, df, degree)

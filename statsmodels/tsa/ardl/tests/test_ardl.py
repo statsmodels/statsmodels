@@ -249,10 +249,11 @@ def test_ardl_holdback_exceptions(data):
 
 
 def test_ardl_fixed_exceptions(data):
-    fixed = np.random.standard_normal((2, 200))
+    rs = np.random.RandomState(992711)
+    fixed = rs.standard_normal((2, 200))
     with pytest.raises(ValueError, match="fixed must be an"):
         ARDL(data.y, 2, data.x, 2, fixed=fixed)
-    fixed = np.random.standard_normal((dane_data.lrm.shape[0], 2))
+    fixed = rs.standard_normal((dane_data.lrm.shape[0], 2))
     fixed[20, 0] = -np.inf
     with pytest.raises(ValueError, match="fixed must be an"):
         ARDL(data.y, 2, data.x, 2, fixed=fixed)
@@ -405,6 +406,7 @@ def test_ardl_parameter_names(data):
     assert mod.exog_names == expected
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_diagnostics_plot(data, close_figures):
     import matplotlib.figure
@@ -634,6 +636,7 @@ def test_append_matches_apply():
     )
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
 @pytest.mark.parametrize("trend", ["n", "c", "ct"])
@@ -900,3 +903,17 @@ def test_ardl_trend_ctt(data, y_lags, x_lags, causal):
     n_params += n_x * (int(not causal) + x_lags) if x_lags else 0
     assert res.params.shape[0] == n_params
     check_results(res)
+
+
+def test_uecm_resid():
+    """Test that UECMResults.resid is computed correctly using model._y."""
+    mod = UECM(
+        dane_data.lrm,
+        3,
+        dane_data[["lry", "ibo", "ide"]],
+        {"lry": 1, "ibo": 3, "ide": 2},
+    )
+    res = mod.fit()
+
+    # Assert that the override fix is working
+    np.testing.assert_allclose(res.resid, res.model._y - res.fittedvalues)

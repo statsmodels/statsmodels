@@ -14,7 +14,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import RegressionResultsWrapper
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 __docformat__ = "restructuredtext en"
 
@@ -446,7 +446,7 @@ class _MultivariateOLSResults(LikelihoodModelResults):
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then
-            an exception because of emtpy arrays may be raised. This can
+            an exception because of empty arrays may be raised. This can
             happen for the intercept if the data has been demeaned.
 
         Returns
@@ -602,7 +602,7 @@ class MultivariateLSResults(LikelihoodModelResults):
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then
-            an exception because of emtpy arrays may be raised. This can
+            an exception because of empty arrays may be raised. This can
             happen for the intercept if the data has been demeaned.
 
         Returns

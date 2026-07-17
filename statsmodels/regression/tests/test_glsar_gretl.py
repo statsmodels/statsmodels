@@ -1,4 +1,5 @@
-"""Tests of GLSAR and diagnostics against Gretl
+"""
+Tests of GLSAR and diagnostics against Gretl
 
 Created on Thu Feb 02 21:15:47 2012
 

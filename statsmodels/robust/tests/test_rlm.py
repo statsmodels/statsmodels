@@ -12,7 +12,7 @@ from scipy import stats
 import statsmodels.api as sm
 from statsmodels.robust import norms
 from statsmodels.robust.robust_linear_model import RLM
-from statsmodels.robust.scale import HuberScale
+from statsmodels.robust.scale import HuberScale, mad
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -387,3 +387,29 @@ def test_bad_criterion():
     mod = RLM(data.endog, data.exog, M=norms.HuberT())
     with pytest.raises(ValueError, match="Convergence argument unknown"):
         mod.fit(conv="unknown")
+
+
+def test_fit_history_scale():
+    # GH#9219 fit_history["scale"] recorded the inner WLS fit's scale rather
+    # than the robust scale estimate, so the recorded series did not match the
+    # robust scale recomputed from each iteration's parameters.
+    data = load_stackloss()
+    data.exog = sm.add_constant(np.asarray(data.exog), prepend=False)
+    res = RLM(np.asarray(data.endog), data.exog, M=norms.HuberT()).fit()
+    # Cross-checked against R MASS::rlm(stack.loss ~ ., data=stackloss,
+    # psi=psi.huber, k=1.345, scale.est="MAD"): robust scale s = 2.4407
+    # (statsmodels: 2.44054, agreeing to 4 significant figures).
+    assert_allclose(res.scale, 2.4405, atol=1e-3)
+    # Verify the full history, not just the last entry. fit_history["params"]
+    # is seeded with a convergence sentinel, so its tail aligns with
+    # fit_history["scale"]. At every iteration the recorded scale must equal the
+    # robust MAD scale recomputed from that iteration's parameters; the pre-fix
+    # code stored the inner WLS scale (~6.80) instead, so the whole series was
+    # wrong, not only the final entry.
+    endog, exog = res.model.endog, res.model.exog
+    hist_scale = res.fit_history["scale"]
+    hist_params = res.fit_history["params"][1:]
+    assert len(hist_scale) == len(hist_params)
+    for recorded, params in zip(hist_scale, hist_params):
+        assert_allclose(recorded, mad(endog - exog @ params, center=0))
+    assert_allclose(hist_scale[-1], res.scale)

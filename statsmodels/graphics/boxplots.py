@@ -6,6 +6,8 @@
 import numpy as np
 from scipy.stats import gaussian_kde
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 from . import utils
 
 __all__ = ["beanplot", "violinplot"]
@@ -251,6 +253,8 @@ def beanplot(
     side="both",
     jitter=False,
     plot_opts=None,
+    *,
+    rng=None,
 ):
     """
     Bean plot of each dataset in a sequence.
@@ -305,6 +309,11 @@ def beanplot(
           - 'jitter_marker_size', int.  Marker size.  Default is 4.
           - 'jitter_fc', MPL color.  Jitter marker face color.  Default is None.
           - 'bean_legend_text', str.  If given, add a legend with given text.
+    rng : int, np.random.RandomState or np.random.Generator, optional
+        Source of random variation for jittering.  If an int, it is used
+        to seed a new np.random.default_rng(). If None, uses the singleton
+        NumPy RandomState. If a RandomState or Generator, directly uses the
+        instance.
 
     Returns
     -------
@@ -376,7 +385,8 @@ def beanplot(
 
         if jitter:
             # Draw data points at random coordinates within violin envelope.
-            jitter_coord = pos + _jitter_envelope(pos_data, xvals, violin, side)
+            rng = check_random_state(rng)
+            jitter_coord = pos + _jitter_envelope(pos_data, xvals, violin, side, rng)
             ax.plot(
                 jitter_coord,
                 pos_data,
@@ -429,7 +439,7 @@ def beanplot(
     return fig
 
 
-def _jitter_envelope(pos_data, xvals, violin, side):
+def _jitter_envelope(pos_data, xvals, violin, side, rng):
     """Determine envelope for jitter markers."""
     if side == "both":
         low, high = (-1.0, 1.0)
@@ -441,9 +451,7 @@ def _jitter_envelope(pos_data, xvals, violin, side):
         raise ValueError("`side` input incorrect: %s" % side)
 
     jitter_envelope = np.interp(pos_data, xvals, violin)
-    jitter_coord = jitter_envelope * np.random.uniform(
-        low=low, high=high, size=pos_data.size
-    )
+    jitter_coord = jitter_envelope * rng.uniform(low=low, high=high, size=pos_data.size)
 
     return jitter_coord
 

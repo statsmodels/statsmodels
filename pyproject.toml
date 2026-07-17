@@ -70,7 +70,7 @@ requires-python = ">=3.9"
 test = [
     # test
     "pytest>=8.4.1,<9",
-    "pytest-randomly",
+    # "pytest-randomly", <- Directly affects the global numpy random state
     "pytest-run-parallel",
     "pytest-xdist",
     "pytest-cov",
@@ -83,7 +83,7 @@ doc = [
     "sphinx",
     # Avoid warnings which break Sphinx by pinning pandas
     "pandas>=2.2.2,!=2.1.0",
-    "sphinx-immaterial",
+    "pydata-sphinx-theme",
     "jupyter",
     "notebook",
     "nbsphinx",
@@ -93,12 +93,12 @@ doc = [
     "simplegeneric",
     "seaborn",
     "numpydoc",
-    "theano-pymc; os_name != 'nt'",
-    "pymc3; os_name != 'nt'",
+    # "theano-pymc; os_name != 'nt'", # disabled because it is not compatible with move recent Python version
+    "pymc; os_name != 'nt'",
     "arviz; os_name != 'nt'",
-    "jinja2==3.0.3",
+    "jinja2",
     "pickleshare",
-    "pytest>=8.4.1,<9",
+    "pytest>=8.4.1,<10",
 ]
 dev = [
     # build
@@ -285,6 +285,13 @@ filterwarnings = [
     "error:Conversion of an array with ndim:DeprecationWarning:",
     "error:the matrix subclass is not the recommended::",
     "error:The Dataframe Interchange Protocol::",
+    "error:Setting the shape:DeprecationWarning:",
+    "error:After 0.17 or January 2028:FutureWarning:",
+    "error:A future version of pandas:",
+    "error:The inplace keyword in::",
+    "error:Keyword arguments have been passed:FutureWarning:",
+    "error:After statsmodels 0.15 is released:FutureWarning:",
+    "error:Passing `None` as the seed currently:FutureWarning:"
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",
@@ -302,7 +309,8 @@ markers = [
     "smoke: mark a test as a smoke test",
     "high_memory: mark a test as a high memory utilization test",
     "low_precision: mark a test as low precision",
-    "todo: mark a test as incomplete"
+    "todo: mark a test as incomplete",
+    "singleton_randomstate: mark a test as changing the singleton RandomState",
 ]
 
 [tool.isort]
@@ -379,3 +387,8 @@ exclude_also = [
 
 [tool.coverage.html]
 directory = "coverage_html_report"
+
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]

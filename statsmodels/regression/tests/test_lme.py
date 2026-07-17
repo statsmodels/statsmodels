@@ -1,3 +1,5 @@
+"""Tests for linear mixed effects models."""
+
 from statsmodels.compat.platform import PLATFORM_OSX
 
 import csv
@@ -44,6 +46,7 @@ class R_Results:
         dependent random effects.
     ds_ix : int
         The number of the data set
+
     """
 
     def __init__(self, meth, irfs, ds_ix):
@@ -108,20 +111,20 @@ class TestMixedLM:
         k_fe = 3
         k_re = 2
 
-        np.random.seed(3558)
-        exog_fe = np.random.normal(size=(n_grp * grpsize, k_fe))
-        exog_re = np.random.normal(size=(n_grp * grpsize, k_re))
+        rs = np.random.RandomState(3558)
+        exog_fe = rs.normal(size=(n_grp * grpsize, k_fe))
+        exog_re = rs.normal(size=(n_grp * grpsize, k_re))
         exog_re[:, 0] = 1
-        exog_vc = np.random.normal(size=(n_grp * grpsize, 3))
-        slopes = np.random.normal(size=(n_grp, k_re))
+        exog_vc = rs.normal(size=(n_grp * grpsize, 3))
+        slopes = rs.normal(size=(n_grp, k_re))
         slopes[:, -1] *= 2
         slopes = np.kron(slopes, np.ones((grpsize, 1)))
-        slopes_vc = np.random.normal(size=(n_grp, 3))
+        slopes_vc = rs.normal(size=(n_grp, 3))
         slopes_vc = np.kron(slopes_vc, np.ones((grpsize, 1)))
         slopes_vc[:, -1] *= 2
         re_values = (slopes * exog_re).sum(1)
         vc_values = (slopes_vc * exog_vc).sum(1)
-        err = np.random.normal(size=n_grp * grpsize)
+        err = rs.normal(size=n_grp * grpsize)
         endog = exog_fe.sum(1) + re_values + vc_values + err
         groups = np.kron(range(n_grp), np.ones(grpsize))
 
@@ -142,10 +145,10 @@ class TestMixedLM:
         try:
             # Test the score at several points.
             for _ in range(5):
-                fe_params = np.random.normal(size=k_fe)
-                cov_re = np.random.normal(size=(k_re, k_re))
+                fe_params = rs.normal(size=k_fe)
+                cov_re = rs.normal(size=(k_re, k_re))
                 cov_re = np.dot(cov_re.T, cov_re)
-                vcomp = np.random.normal(size=2) ** 2
+                vcomp = rs.normal(size=2) ** 2
                 params = MixedLMParams.from_components(
                     fe_params, cov_re=cov_re, vcomp=vcomp
                 )
@@ -179,22 +182,22 @@ class TestMixedLM:
 
     def test_default_re(self):
 
-        np.random.seed(3235)
-        exog = np.random.normal(size=(300, 4))
+        rs = np.random.RandomState(3235)
+        exog = rs.normal(size=(300, 4))
         groups = np.kron(np.arange(100), [1, 1, 1])
-        g_errors = np.kron(np.random.normal(size=100), [1, 1, 1])
-        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        g_errors = np.kron(rs.normal(size=100), [1, 1, 1])
+        endog = exog.sum(1) + g_errors + rs.normal(size=300)
         mdf1 = MixedLM(endog, exog, groups).fit()
         mdf2 = MixedLM(endog, exog, groups, np.ones(300)).fit()
         assert_almost_equal(mdf1.params, mdf2.params, decimal=8)
 
     def test_history(self):
 
-        np.random.seed(3235)
-        exog = np.random.normal(size=(300, 4))
+        rs = np.random.RandomState(3235)
+        exog = rs.normal(size=(300, 4))
         groups = np.kron(np.arange(100), [1, 1, 1])
-        g_errors = np.kron(np.random.normal(size=100), [1, 1, 1])
-        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        g_errors = np.kron(rs.normal(size=100), [1, 1, 1])
+        endog = exog.sum(1) + g_errors + rs.normal(size=300)
         mod = MixedLM(endog, exog, groups)
         rslt = mod.fit(full_output=True)
         assert_equal(hasattr(rslt, "hist"), True)
@@ -202,23 +205,23 @@ class TestMixedLM:
     @pytest.mark.slow
     @pytest.mark.smoke
     def test_profile_inference(self):
-        np.random.seed(9814)
+        rs = np.random.RandomState(9814)
         k_fe = 2
         gsize = 3
         n_grp = 100
-        exog = np.random.normal(size=(n_grp * gsize, k_fe))
+        exog = rs.normal(size=(n_grp * gsize, k_fe))
         exog_re = np.ones((n_grp * gsize, 1))
         groups = np.kron(np.arange(n_grp), np.ones(gsize))
-        vca = np.random.normal(size=n_grp * gsize)
-        vcb = np.random.normal(size=n_grp * gsize)
+        vca = rs.normal(size=n_grp * gsize)
+        vcb = rs.normal(size=n_grp * gsize)
         errors = 0
-        g_errors = np.kron(np.random.normal(size=100), np.ones(gsize))
+        g_errors = np.kron(rs.normal(size=100), np.ones(gsize))
         errors += g_errors + exog_re[:, 0]
-        rc = np.random.normal(size=n_grp)
+        rc = rs.normal(size=n_grp)
         errors += np.kron(rc, np.ones(gsize)) * vca
-        rc = np.random.normal(size=n_grp)
+        rc = rs.normal(size=n_grp)
         errors += np.kron(rc, np.ones(gsize)) * vcb
-        errors += np.random.normal(size=n_grp * gsize)
+        errors += rs.normal(size=n_grp * gsize)
 
         endog = exog.sum(1) + errors
         vc = {"a": {}, "b": {}}
@@ -239,14 +242,14 @@ class TestMixedLM:
         # Fit the same model using constrained random effects and
         # variance components.
 
-        np.random.seed(4279)
-        exog = np.random.normal(size=(400, 1))
-        exog_re = np.random.normal(size=(400, 2))
+        rs = np.random.RandomState(4279)
+        exog = rs.normal(size=(400, 1))
+        exog_re = rs.normal(size=(400, 2))
         groups = np.kron(np.arange(100), np.ones(4))
-        slopes = np.random.normal(size=(100, 2))
+        slopes = rs.normal(size=(100, 2))
         slopes[:, 1] *= 2
         slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
-        errors = slopes.sum(1) + np.random.normal(size=400)
+        errors = slopes.sum(1) + rs.normal(size=400)
         endog = exog.sum(1) + errors
 
         free = MixedLMParams(1, 2, 0)
@@ -274,30 +277,30 @@ class TestMixedLM:
     def test_vcomp_2(self):
         # Simulated data comparison to R
 
-        np.random.seed(6241)
+        rs = np.random.RandomState(6241)
         n = 1600
-        exog = np.random.normal(size=(n, 2))
+        exog = rs.normal(size=(n, 2))
         groups = np.kron(np.arange(n / 16), np.ones(16))
 
         # Build up the random error vector
         errors = 0
 
         # The random effects
-        exog_re = np.random.normal(size=(n, 2))
-        slopes = np.random.normal(size=(n // 16, 2))
+        exog_re = rs.normal(size=(n, 2))
+        slopes = rs.normal(size=(n // 16, 2))
         slopes = np.kron(slopes, np.ones((16, 1))) * exog_re
         errors += slopes.sum(1)
 
         # First variance component
         subgroups1 = np.kron(np.arange(n / 4), np.ones(4))
-        errors += np.kron(2 * np.random.normal(size=n // 4), np.ones(4))
+        errors += np.kron(2 * rs.normal(size=n // 4), np.ones(4))
 
         # Second variance component
         subgroups2 = np.kron(np.arange(n / 2), np.ones(2))
-        errors += np.kron(2 * np.random.normal(size=n // 2), np.ones(2))
+        errors += np.kron(2 * rs.normal(size=n // 2), np.ones(2))
 
         # iid errors
-        errors += np.random.normal(size=n)
+        errors += rs.normal(size=n)
 
         endog = exog.sum(1) + errors
 
@@ -348,12 +351,12 @@ class TestMixedLM:
     def test_vcomp_3(self):
         # Test a model with vcomp but no other random effects, using formulas.
 
-        np.random.seed(4279)
-        x1 = np.random.normal(size=400)
+        rs = np.random.RandomState(4279)
+        x1 = rs.normal(size=400)
         groups = np.kron(np.arange(100), np.ones(4))
-        slopes = np.random.normal(size=100)
+        slopes = rs.normal(size=100)
         slopes = np.kron(slopes, np.ones(4)) * x1
-        y = slopes + np.random.normal(size=400)
+        y = slopes + rs.normal(size=400)
         vc_fml = {"a": "0 + x1"}
         df = pd.DataFrame({"y": y, "x1": x1, "groups": groups})
 
@@ -604,23 +607,23 @@ class TestMixedLM:
     @pytest.mark.slow
     def test_vcomp_formula(self):
 
-        np.random.seed(6241)
+        rs = np.random.RandomState(6241)
         n = 800
-        exog = np.random.normal(size=(n, 2))
+        exog = rs.normal(size=(n, 2))
         exog[:, 0] = 1
         ex_vc = []
         groups = np.kron(np.arange(n / 4), np.ones(4))
         errors = 0
-        exog_re = np.random.normal(size=(n, 2))
-        slopes = np.random.normal(size=(n // 4, 2))
+        exog_re = rs.normal(size=(n, 2))
+        slopes = rs.normal(size=(n // 4, 2))
         slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
         errors += slopes.sum(1)
-        ex_vc = np.random.normal(size=(n, 4))
-        slopes = np.random.normal(size=(n // 4, 4))
+        ex_vc = rs.normal(size=(n, 4))
+        slopes = rs.normal(size=(n // 4, 4))
         slopes[:, 2:] *= 2
         slopes = np.kron(slopes, np.ones((4, 1))) * ex_vc
         errors += slopes.sum(1)
-        errors += np.random.normal(size=n)
+        errors += rs.normal(size=n)
         endog = exog.sum(1) + errors
 
         exog_vc = {"a": {}, "b": {}}
@@ -657,12 +660,12 @@ class TestMixedLM:
         assert_allclose(result1.bse, result2.bse, rtol=1e-8)
 
     def test_formulas(self):
-        np.random.seed(2410)
-        exog = np.random.normal(size=(300, 4))
-        exog_re = np.random.normal(size=300)
+        rs = np.random.RandomState(2410)
+        exog = rs.normal(size=(300, 4))
+        exog_re = rs.normal(size=300)
         groups = np.kron(np.arange(100), [1, 1, 1])
-        g_errors = exog_re * np.kron(np.random.normal(size=100), [1, 1, 1])
-        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        g_errors = exog_re * np.kron(rs.normal(size=100), [1, 1, 1])
+        endog = exog.sum(1) + g_errors + rs.normal(size=300)
 
         mod1 = MixedLM(endog, exog, groups, exog_re)
         # test the names
@@ -718,14 +721,14 @@ class TestMixedLM:
     @pytest.mark.slow
     def test_regularized(self):
 
-        np.random.seed(3453)
-        exog = np.random.normal(size=(400, 5))
+        rs = np.random.RandomState(3453)
+        exog = rs.normal(size=(400, 5))
         groups = np.kron(np.arange(100), np.ones(4))
         expected_endog = exog[:, 0] - exog[:, 2]
         endog = (
             expected_endog
-            + np.kron(np.random.normal(size=100), np.ones(4))
-            + np.random.normal(size=400)
+            + np.kron(rs.normal(size=100), np.ones(4))
+            + rs.normal(size=400)
         )
 
         # L1 regularization
@@ -796,6 +799,12 @@ class TestMixedLMSummary:
         desired = ["const", "x1", "x2", "Random Effects"]
         actual = summ.tables[1].index.values  # Second table is summary of params
         assert_equal(np.asarray(actual), desired)
+
+    def test_summary_title(self):
+        # Test that the `title` argument is reflected in the summary.
+        title = "Custom MixedLM Summary"
+        summ = self.res.summary(title=title)
+        assert_equal(summ.title, title)
 
 
 # ------------------------------------------------------------------
@@ -897,12 +906,12 @@ def test_r(fname, reml, irf):
 
 def test_mixed_lm_wrapper():
     # a bit more complicated model to test
-    np.random.seed(2410)
-    exog = np.random.normal(size=(300, 4))
-    exog_re = np.random.normal(size=300)
+    rs = np.random.RandomState(2410)
+    exog = rs.normal(size=(300, 4))
+    exog_re = rs.normal(size=300)
     groups = np.kron(np.arange(100), [1, 1, 1])
-    g_errors = exog_re * np.kron(np.random.normal(size=100), [1, 1, 1])
-    endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+    g_errors = exog_re * np.kron(rs.normal(size=100), [1, 1, 1])
+    endog = exog.sum(1) + g_errors + rs.normal(size=300)
 
     # Fit with a formula, passing groups as the actual values.
     df = pd.DataFrame({"endog": endog})
@@ -948,16 +957,16 @@ def test_mixed_lm_wrapper():
 
 def test_random_effects():
 
-    np.random.seed(23429)
+    rs = np.random.RandomState(23429)
 
     # Default model (random effects only)
     ngrp = 100
     gsize = 10
     rsd = 2
     gsd = 3
-    mn = gsd * np.random.normal(size=ngrp)
+    mn = gsd * rs.normal(size=ngrp)
     gmn = np.kron(mn, np.ones(gsize))
-    y = gmn + rsd * np.random.normal(size=ngrp * gsize)
+    y = gmn + rsd * rs.normal(size=ngrp * gsize)
     gr = np.kron(np.arange(ngrp), np.ones(gsize))
     x = np.ones(ngrp * gsize)
     model = MixedLM(y, x, groups=gr)
@@ -978,7 +987,7 @@ def test_random_effects():
     assert_(len(re[0]) == 1)
 
     # Random intercept and slope
-    xr = np.random.normal(size=(ngrp * gsize, 2))
+    xr = rs.normal(size=(ngrp * gsize, 2))
     xr[:, 0] = 1
     qp = np.linspace(-1, 1, gsize)
     xr[:, 1] = np.kron(np.ones(ngrp), qp)
@@ -994,15 +1003,15 @@ def test_random_effects():
 @pytest.mark.slow
 def test_handle_missing():
 
-    np.random.seed(23423)
-    df = np.random.normal(size=(100, 6))
+    rs = np.random.RandomState(23423)
+    df = rs.normal(size=(100, 6))
     df = pd.DataFrame(df)
     df.columns = ["y", "g", "x1", "z1", "c1", "c2"]
     df["g"] = np.kron(np.arange(50), np.ones(2))
-    re = np.random.normal(size=(50, 4))
+    re = rs.normal(size=(50, 4))
     re = np.kron(re, np.ones((2, 1)))
     df["y"] = re[:, 0] + re[:, 1] * df.z1 + re[:, 2] * df.c1
-    df["y"] += re[:, 3] * df.c2 + np.random.normal(size=100)
+    df["y"] += re[:, 3] * df.c2 + rs.normal(size=100)
     df.loc[1, "y"] = np.nan
     df.loc[2, "g"] = np.nan
     df.loc[3, "x1"] = np.nan
@@ -1055,8 +1064,8 @@ def test_summary_col():
     x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     # hard coded simulated y
     # ids = np.asarray(ids)
-    # np.random.seed(123987)
-    # y = x + np.array([-1, 0, 1])[ids - 1] + 2 * np.random.randn(len(y))
+    # rs = np.random.RandomState(123987)
+    # y = x + np.array([-1, 0, 1])[ids - 1] + 2 * rs.randn(len(y))
     y = np.array(
         [
             1.727,
@@ -1110,7 +1119,7 @@ def test_random_effects_getters():
     # Simulation-based test to make sure that the BLUPs and actual
     # random effects line up.
 
-    np.random.seed(34234)
+    rs = np.random.RandomState(34234)
     ng = 500  # number of groups
     m = 10  # group size
 
@@ -1119,12 +1128,12 @@ def test_random_effects_getters():
     for i in range(ng):
 
         # Fixed effects
-        xx = np.random.normal(size=(m, 2))
-        yy = xx[:, 0] + 0.5 * np.random.normal(size=m)
+        xx = rs.normal(size=(m, 2))
+        yy = xx[:, 0] + 0.5 * rs.normal(size=m)
 
         # Random effects (re_formula)
-        zz = np.random.normal(size=(m, 2))
-        bb = np.random.normal(size=2)
+        zz = rs.normal(size=(m, 2))
+        bb = rs.normal(size=2)
         bb[0] *= 3
         bb[1] *= 1
         yy += np.dot(zz, bb).flat
@@ -1132,14 +1141,14 @@ def test_random_effects_getters():
 
         # First variance component
         vv0 = np.kron(np.r_[0, 1], np.ones(m // 2)).astype(int)
-        cc0 = np.random.normal(size=2)
+        cc0 = rs.normal(size=2)
         yy += cc0[vv0]
         v0.append(vv0)
         c0.append(cc0)
 
         # Second variance component
         vv1 = np.kron(np.ones(m // 2), np.r_[0, 1]).astype(int)
-        cc1 = np.random.normal(size=2)
+        cc1 = rs.normal(size=2)
         yy += cc1[vv1]
         v1.append(vv1)
         c1.append(cc1)
@@ -1203,19 +1212,20 @@ def test_random_effects_getters():
 def check_smw_solver(p, q, r, s):
     # Helper to check that _smw_solver results do in fact solve the desired
     # SMW equation
+    rs = np.random.RandomState(38213821)
     d = q - r
 
-    A = np.random.normal(size=(p, q))
+    A = rs.normal(size=(p, q))
     AtA = np.dot(A.T, A)
 
     B = np.zeros((q, q))
-    B[0:r, 0:r] = np.random.normal(size=(r, r))
-    di = np.random.uniform(size=d)
+    B[0:r, 0:r] = rs.normal(size=(r, r))
+    di = rs.uniform(size=d)
     B[r:q, r:q] = np.diag(1 / di)
     Qi = np.linalg.inv(B[0:r, 0:r])
     s = 0.5
 
-    x = np.random.normal(size=p)
+    x = rs.normal(size=p)
     y2 = np.linalg.solve(s * np.eye(p, p) + np.dot(A, np.dot(B, A.T)), x)
 
     f = _smw_solver(s, A, AtA, Qi, di)
@@ -1228,9 +1238,6 @@ def check_smw_solver(p, q, r, s):
 
 
 class TestSMWSolver:
-    @classmethod
-    def setup_class(cls):
-        np.random.seed(23)
 
     @pytest.mark.parametrize("p", [5, 10])
     @pytest.mark.parametrize("q", [4, 8])
@@ -1243,13 +1250,14 @@ class TestSMWSolver:
 def check_smw_logdet(p, q, r, s):
     # Helper to check that _smw_logdet results match non-optimized equivalent
     d = q - r
-    A = np.random.normal(size=(p, q))
+    rs = np.random.RandomState(98631)
+    A = rs.normal(size=(p, q))
     AtA = np.dot(A.T, A)
 
     B = np.zeros((q, q))
-    c = np.random.normal(size=(r, r))
+    c = rs.normal(size=(r, r))
     B[0:r, 0:r] = np.dot(c.T, c)
-    di = np.random.uniform(size=d)
+    di = rs.uniform(size=d)
     B[r:q, r:q] = np.diag(1 / di)
     Qi = np.linalg.inv(B[0:r, 0:r])
     s = 0.5
@@ -1264,10 +1272,6 @@ def check_smw_logdet(p, q, r, s):
 
 
 class TestSMWLogdet:
-    @classmethod
-    def setup_class(cls):
-        np.random.seed(23)
-
     @pytest.mark.parametrize("p", [5, 10])
     @pytest.mark.parametrize("q", [4, 8])
     @pytest.mark.parametrize("r", [2, 3])
@@ -1279,10 +1283,10 @@ class TestSMWLogdet:
 def test_singular():
     # Issue #7051
 
-    np.random.seed(3423)
+    rs = np.random.RandomState(3423)
     n = 100
 
-    data = np.random.randn(n, 2)
+    data = rs.randn(n, 2)
     df = pd.DataFrame(data, columns=["Y", "X"])
     df["class"] = pd.Series([i % 3 for i in df.index], index=df.index)
 
@@ -1294,7 +1298,7 @@ def test_singular():
 
 def test_get_distribution():
 
-    np.random.seed(234)
+    rs = np.random.RandomState(234)
 
     n = 100
     n_groups = 10
@@ -1303,25 +1307,25 @@ def test_get_distribution():
     vcomp = np.r_[0.5**2, 1.5**2]
     scale = 1.5
 
-    exog_fe = np.random.normal(size=(n, 2))
-    exog_re = np.random.normal(size=(n, 2))
-    exog_vca = np.random.normal(size=(n, 2))
-    exog_vcb = np.random.normal(size=(n, 2))
+    exog_fe = rs.normal(size=(n, 2))
+    exog_re = rs.normal(size=(n, 2))
+    exog_vca = rs.normal(size=(n, 2))
+    exog_vcb = rs.normal(size=(n, 2))
 
     groups = np.repeat(np.arange(n_groups, dtype=int), n / n_groups)
 
     ey = np.dot(exog_fe, fe_params)
 
-    u = np.random.normal(size=(n_groups, 2))
+    u = rs.normal(size=(n_groups, 2))
     u = np.dot(u, np.linalg.cholesky(cov_re).T)
 
-    u1 = np.sqrt(vcomp[0]) * np.random.normal(size=(n_groups, 2))
-    u2 = np.sqrt(vcomp[1]) * np.random.normal(size=(n_groups, 2))
+    u1 = np.sqrt(vcomp[0]) * rs.normal(size=(n_groups, 2))
+    u2 = np.sqrt(vcomp[1]) * rs.normal(size=(n_groups, 2))
 
     y = ey + (u[groups, :] * exog_re).sum(1)
     y += (u1[groups, :] * exog_vca).sum(1)
     y += (u2[groups, :] * exog_vcb).sum(1)
-    y += np.sqrt(scale) * np.random.normal(size=n)
+    y += np.sqrt(scale) * rs.normal(size=n)
 
     df = pd.DataFrame(
         {
@@ -1349,16 +1353,14 @@ def test_get_distribution():
 
     # Build a params vector that is comparable to
     # MixedLMResults.params
-    import statsmodels
-
-    mp = statsmodels.regression.mixed_linear_model.MixedLMParams
+    mp = MixedLMParams
     po = mp.from_components(fe_params=fe_params, cov_re=cov_re, vcomp=vcomp)
     pa = po.get_packed(has_fe=True, use_sqrt=False)
     pa[len(fe_params) :] /= scale
 
     # Get a realization
     dist = m.get_distribution(pa, scale, None)
-    yr = dist.rvs(0)
+    yr = dist.rvs(0, random_state=rs)
 
     # Check the overall variance
     v = (np.dot(exog_re, cov_re) * exog_re).sum(1).mean()

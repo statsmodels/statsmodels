@@ -109,27 +109,35 @@ class LeastSquares(RobustNorm):
         return np.inf
 
     def rho(self, z):
-        """
-        The least squares estimator rho function
+        r"""
+        The robust criterion function for the least squares estimator.
+
+        .. math::
+
+            \rho(z) = \frac{1}{2} z^2
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             1d array
 
         Returns
         -------
         rho : ndarray
-            rho(z) = (1/2.)*z**2
+            The value of the robust criterion function.
         """
 
         return z**2 * 0.5
 
     def psi(self, z):
-        """
-        The psi function for the least squares estimator
+        r"""
+        The psi function for the least squares estimator.
 
-        The analytic derivative of rho
+        The analytic derivative of rho.
+
+        .. math::
+
+            \psi(z) = z
 
         Parameters
         ----------
@@ -139,16 +147,20 @@ class LeastSquares(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z
+            The value of the psi function.
         """
 
         return np.asarray(z)
 
     def weights(self, z):
-        """
+        r"""
         The least squares estimator weighting function for the IRLS algorithm.
 
-        The psi function scaled by the input z
+        The psi function scaled by the input z.
+
+        .. math::
+
+            w(z) = 1
 
         Parameters
         ----------
@@ -158,20 +170,29 @@ class LeastSquares(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = np.ones(z.shape)
+            The value of the weighting function.
         """
 
         z = np.asarray(z)
         return np.ones(z.shape, np.float64)
 
     def psi_deriv(self, z):
-        """
+        r"""
         The derivative of the least squares psi function.
+
+        .. math::
+
+            \psi'(z) = 1
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
 
         Returns
         -------
         psi_deriv : ndarray
-            ones(z.shape)
+            The value of the derivative of the psi function.
 
         Notes
         -----
@@ -251,9 +272,16 @@ class HuberT(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function for Huber's t estimator
+        The psi function for Huber's t estimator.
 
-        The analytic derivative of rho
+        The analytic derivative of rho.
+
+        .. math::
+
+            \psi(z) = \begin{cases}
+            z & \text{for } |z| \le t \\
+            \text{sign}(z) \cdot t & \text{for } |z| > t
+            \end{cases}
 
         Parameters
         ----------
@@ -263,9 +291,7 @@ class HuberT(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z      for |z| <= t
-
-            psi(z) = sign(z)*t for |z| > t
+            The value of the psi function.
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -377,9 +403,13 @@ class RamsayE(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function for Ramsay's Ea estimator
+        The psi function for Ramsay's Ea estimator.
 
-        The analytic derivative of rho
+        The analytic derivative of rho.
+
+        .. math::
+
+            \psi(z) = z \exp(-a|z|)
 
         Parameters
         ----------
@@ -389,16 +419,20 @@ class RamsayE(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z*exp(-a*\|z\|)
+            The value of the psi function.
         """
         z = np.asarray(z)
         return z * np.exp(-self.a * np.abs(z))
 
     def weights(self, z):
         r"""
-        Ramsay's Ea weighting function for the IRLS algorithm
+        Ramsay's Ea weighting function for the IRLS algorithm.
 
-        The psi function scaled by z
+        The psi function scaled by z.
+
+        .. math::
+
+            w(z) = \exp(-a|z|)
 
         Parameters
         ----------
@@ -408,7 +442,7 @@ class RamsayE(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = exp(-a*\|z\|)
+            The value of the weighting function.
         """
 
         z = np.asarray(z)
@@ -502,9 +536,16 @@ class AndrewWave(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function for Andrew's wave
+        The psi function for Andrew's wave.
 
-        The analytic derivative of rho
+        The analytic derivative of rho.
+
+        .. math::
+
+            \psi(z) = \begin{cases}
+            a \sin(z/a) & \text{for } |z| \le a\pi \\
+            0 & \text{for } |z| > a\pi
+            \end{cases}
 
         Parameters
         ----------
@@ -514,9 +555,7 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = a * sin(z/a)   for \|z\| <= a*pi
-
-            psi(z) = 0              for \|z\| > a*pi
+            The value of the psi function.
         """
 
         a = self.a
@@ -526,9 +565,16 @@ class AndrewWave(RobustNorm):
 
     def weights(self, z):
         r"""
-        Andrew's wave weighting function for the IRLS algorithm
+        Andrew's wave weighting function for the IRLS algorithm.
 
-        The psi function scaled by z
+        The psi function scaled by z.
+
+        .. math::
+
+            w(z) = \begin{cases}
+            \sin(z/a) / (z/a) & \text{for } |z| \le a\pi \\
+            0 & \text{for } |z| > a\pi
+            \end{cases}
 
         Parameters
         ----------
@@ -538,9 +584,7 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = sin(z/a) / (z/a)     for \|z\| <= a*pi
-
-            weights(z) = 0                    for \|z\| > a*pi
+            The value of the weighting function.
         """
         a = self.a
         z = np.asarray(z)
@@ -640,9 +684,16 @@ class TrimmedMean(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function for least trimmed mean
+        The psi function for least trimmed mean.
 
-        The analytic derivative of rho
+        The analytic derivative of rho.
+
+        .. math::
+
+            \psi(z) = \begin{cases}
+            z & \text{for } |z| \le c \\
+            0 & \text{for } |z| > c
+            \end{cases}
 
         Parameters
         ----------
@@ -652,9 +703,7 @@ class TrimmedMean(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z              for \|z\| <= c
-
-            psi(z) = 0              for \|z\| > c
+            The value of the psi function.
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -662,9 +711,16 @@ class TrimmedMean(RobustNorm):
 
     def weights(self, z):
         r"""
-        Least trimmed mean weighting function for the IRLS algorithm
+        Least trimmed mean weighting function for the IRLS algorithm.
 
-        The psi function scaled by z
+        The psi function scaled by z.
+
+        .. math::
+
+            w(z) = \begin{cases}
+            1 & \text{for } |z| \le c \\
+            0 & \text{for } |z| > c
+            \end{cases}
 
         Parameters
         ----------
@@ -674,9 +730,7 @@ class TrimmedMean(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = 1             for \|z\| <= c
-
-            weights(z) = 0             for \|z\| > c
+            The value of the weighting function.
         """
         z = np.asarray(z)
         test = self._subset(z)

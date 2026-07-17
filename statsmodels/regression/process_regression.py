@@ -53,6 +53,7 @@ class ProcessCovariance:
         sm : array_like
             The smoothness parameters for the observation.  See class
             docstring for details.
+
         """
         raise NotImplementedError
 
@@ -70,6 +71,7 @@ class ProcessCovariance:
         jsm : list-like
             jsm[i] is the derivative of the covariance matrix
             with respect to the i^th smoothness parameter.
+
         """
         raise NotImplementedError
 
@@ -108,6 +110,7 @@ class GaussianCovariance(ProcessCovariance):
         a new class of nonstationary covariance functions. Environmetrics,
         17:483-506.
         https://papers.nips.cc/paper/2350-nonstationary-covariance-functions-for-gaussian-process-regression.pdf
+
     """
 
     def get_cov(self, time, sc, sm):
@@ -237,6 +240,7 @@ class ProcessMLE(base.LikelihoodModel):
         The group values.
     cov : a ProcessCovariance instance
         Defaults to GaussianCovariance.
+
     """
 
     def __init__(
@@ -412,7 +416,6 @@ class ProcessMLE(base.LikelihoodModel):
         """
         Split the packed parameter vector into blocks.
         """
-
         # Mean parameters
         pm = self.exog.shape[1]
         mnpar = z[0:pm]
@@ -461,8 +464,8 @@ class ProcessMLE(base.LikelihoodModel):
         -----
         The mean, scaling, and smoothing parameters are packed into
         a vector.  Use `unpack` to access the component vectors.
-        """
 
+        """
         mnpar, scpar, smpar, nopar = self.unpack(params)
 
         # Residuals
@@ -515,8 +518,8 @@ class ProcessMLE(base.LikelihoodModel):
         -----
         The mean, scaling, and smoothing parameters are packed into
         a vector.  Use `unpack` to access the component vectors.
-        """
 
+        """
         mnpar, scpar, smpar, nopar = self.unpack(params)
         pm, pv, ps = len(mnpar), len(scpar), len(smpar)
 
@@ -607,12 +610,14 @@ class ProcessMLE(base.LikelihoodModel):
             Method or sequence of methods for scipy optimize.
         maxiter : int
             The maximum number of iterations in the optimization.
+        **kwargs
+            Additional keyword arguments passed to the optimizer.
 
         Returns
         -------
         An instance of ProcessMLEResults.
-        """
 
+        """
         if "verbose" in kwargs:
             self.verbose = kwargs["verbose"]
 
@@ -666,7 +671,7 @@ class ProcessMLE(base.LikelihoodModel):
         hess = self.hessian(f.x)
         try:
             cov_params = -np.linalg.inv(hess)
-        except Exception:
+        except np.linalg.LinAlgError:
             cov_params = None
 
         class rslt:
@@ -718,8 +723,8 @@ class ProcessMLE(base.LikelihoodModel):
 
         The covariance is only for the Gaussian process and does not include
         the white noise variance.
-        """
 
+        """
         if not hasattr(self.data, "scale_model_spec"):
             sca = np.dot(scale_data, scale_params)
             smo = np.dot(smooth_data, smooth_params)
@@ -746,8 +751,12 @@ class ProcessMLE(base.LikelihoodModel):
         exog : array_like
             The design matrix for the mean structure.  If not provided,
             the model's design matrix is used.
-        """
+        *args
+            Additional positional arguments, accepted for API compatibility.
+        **kwargs
+            Additional keyword arguments, accepted for API compatibility.
 
+        """
         if exog is None:
             exog = self.exog
         elif hasattr(self.data, "model_spec"):
@@ -828,8 +837,8 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         respective scaling and smoothing formulas used to fit the model.
         Otherwise, `scale` and `smooth` should be data arrays whose
         columns align with the fitted scaling and smoothing parameters.
-        """
 
+        """
         return self.model.covariance(
             time, self.scale_params, self.smooth_params, scale, smooth
         )
@@ -873,7 +882,7 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
 
         try:
             df["std err"] = np.sqrt(np.diag(self.cov_params()))
-        except Exception:
+        except (AttributeError, TypeError, ValueError, np.linalg.LinAlgError):
             df["std err"] = np.nan
 
         from scipy.stats.distributions import norm

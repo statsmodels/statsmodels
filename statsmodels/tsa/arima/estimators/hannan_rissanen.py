@@ -11,10 +11,12 @@ from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tsa.statespace.tools import diff
 from statsmodels.tsa.tsatools import lagmat
 
 
-def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
+def hannan_rissanen(endog, ar_order=0, ma_order=0,
+                    seasonal_order=(0, 0, 0, 0), demean=True,
                     initial_ar_order=None, unbiased=None,
                     fixed_params=None):
     """
@@ -92,11 +94,25 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
        "Automatic Modeling Methods for Univariate Series."
        A Course in Time Series Analysis, 171-201.
     """
-    spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order)
+    spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order, seasonal_order=seasonal_order)
+
+    if spec.max_seasonal_ar_order > 0 or spec.max_seasonal_ma_order > 0:
+        raise ValueError(
+            "Hannan-Rissanen does not support seasonal MA or AR"
+        )
 
     fixed_params = _validate_fixed_params(fixed_params, spec.param_names)
 
     endog = spec.endog
+
+    if spec.is_integrated:
+        endog = diff(
+            endog,
+            k_diff=spec.diff,
+            k_seasonal_diff=spec.seasonal_diff,
+            seasonal_periods=spec.seasonal_periods,
+        )
+
     if demean:
         endog = endog - endog.mean()
 
@@ -110,6 +126,11 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     if initial_ar_order is None:
         initial_ar_order = max(np.floor(np.log(nobs)**2).astype(int),
                                2 * max(max_ar_order, max_ma_order))
+    try:
+        _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order)
+    except ValueError:
+        raise
+
     # Create a spec, just to validate the initial autoregressive order
     _ = SARIMAXSpecification(endog, ar_order=initial_ar_order)
 
@@ -327,6 +348,50 @@ def _validate_fixed_params(fixed_params, spec_param_names):
         )
 
     return fixed_params
+
+
+def _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order):
+    """
+    Validate order parameters for Hannan-Rissanen estimation.
+
+    Parameters
+    ----------
+    nobs : int
+        Number of observations.
+    max_ar_order : int
+        Maximum AR order.
+    max_ma_order : int
+        Maximum MA order.
+    initial_ar_order : int
+        Initial AR order used in the first step.
+
+    Raises
+    ------
+    ValueError
+        If `ar_order` or `ma_order` is greater than or equal to `nobs`.
+    ValueError
+        If `initial_ar_order` is greater than or equal to `nobs`.
+    ValueError
+        If `initial_ar_order` is less than or equal to `ar_order` or `ma_order`.
+    """
+    if max_ar_order >= nobs:
+        raise ValueError(
+            f"ar_order ({max_ar_order}) must be less than nobs ({nobs})."
+        )
+    if max_ma_order >= nobs:
+        raise ValueError(
+            f"ma_order ({max_ma_order}) must be less than nobs ({nobs})."
+        )
+    if initial_ar_order >= nobs:
+        raise ValueError(
+            f"initial_ar_order ({initial_ar_order}) must be less than"
+            f" nobs ({nobs})."
+        )
+    if initial_ar_order <= max(max_ar_order, max_ma_order):
+        raise ValueError(
+            f"initial_ar_order ({initial_ar_order}) must be greater than"
+            f" ar_order ({max_ar_order}) and ma_order ({max_ma_order})."
+        )
 
 
 def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,

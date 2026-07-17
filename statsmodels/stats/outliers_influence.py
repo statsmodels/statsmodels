@@ -6,7 +6,6 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
 from collections import defaultdict
@@ -17,7 +16,8 @@ import numpy as np
 from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multitest import multipletests
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import maybe_unwrap_results
 
@@ -158,7 +158,7 @@ def reset_ramsey(res, degree=5):
     return res_aux.f_test(r_matrix)  # , r_matrix, res_aux
 
 
-def variance_inflation_factor(exog, exog_idx):
+def variance_inflation_factor(exog, exog_idx, *, standardize=True):
     """
     Variance inflation factor, VIF, for one exogenous variable
 
@@ -179,6 +179,10 @@ def variance_inflation_factor(exog, exog_idx):
         regression
     exog_idx : int
         index of the exogenous variable in the columns of exog
+    standardize : bool, optional
+        If True, standardizes the design matrix columns to mean 0 and standard
+        deviation 1 before computing VIF. This ensures numerical stability
+        for non-linear transformations or micro-scale data. Default is True.
 
     Returns
     -------
@@ -197,13 +201,37 @@ def variance_inflation_factor(exog, exog_idx):
     ----------
     https://en.wikipedia.org/wiki/Variance_inflation_factor
     """
+    exog = np.asarray(exog, dtype=float)
     k_vars = exog.shape[1]
-    exog = np.asarray(exog)
-    x_i = exog[:, exog_idx]
+
+    if standardize:
+        stds = np.std(exog, axis=0)
+        means = np.mean(exog, axis=0)
+        safe_mask = stds > 1e-10
+        working = exog.copy()
+        working[:, safe_mask] = (exog[:, safe_mask] - means[safe_mask]) / stds[
+            safe_mask
+        ]
+    else:
+        working = exog
+
+    cond_num = np.linalg.cond(working)
+    if cond_num > 1e4:
+        warnings.warn(
+            f"The design matrix is poorly conditioned (condition number={cond_num:.2e}). "
+            "VIF calculations may be numerically unstable.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    x_i = working[:, exog_idx]
     mask = np.arange(k_vars) != exog_idx
-    x_noti = exog[:, mask]
-    r_squared_i = OLS(x_i, x_noti).fit().rsquared
-    vif = 1.0 / (1.0 - r_squared_i)
+    x_noti = working[:, mask]
+
+    r_sq = OLS(x_i, x_noti).fit().rsquared
+    r_sq = np.clip(r_sq, 0.0, 1.0 - 1e-15)
+    vif = 1.0 / (1.0 - r_sq)
+
     return vif
 
 

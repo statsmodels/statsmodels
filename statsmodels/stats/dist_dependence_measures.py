@@ -21,6 +21,7 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 from scipy.stats import norm
 
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 
@@ -33,7 +34,7 @@ class DistDependStat(NamedTuple):
     S: float
 
 
-def distance_covariance_test(x, y, B=None, method="auto"):
+def distance_covariance_test(x, y, B=None, method="auto", rng=None):
     r"""The Distance Covariance (dCov) test
 
     Apply the Distance Covariance (dCov) test of independence to `x` and `y`.
@@ -79,6 +80,10 @@ def distance_covariance_test(x, y, B=None, method="auto"):
     chosen_method : str
         The method that was used to obtain the p-value. Mostly relevant when
         the function is called with `method='auto'`.
+    rng : int, np.random.RandomState or np.random.Generator, optional
+        Random number generator or seed for constructing the empirical
+        distribution, if needed.  If None, the NumPy singleton RandomState instance
+        is used.
 
     Notes
     -----
@@ -121,7 +126,8 @@ def distance_covariance_test(x, y, B=None, method="auto"):
 
     if (method == "auto" and n <= 500) or method == "emp":
         chosen_method = "emp"
-        test_statistic, pval = _empirical_pvalue(x, y, B, n, stats)
+        rng = check_random_state(rng)
+        test_statistic, pval = _empirical_pvalue(x, y, B, n, stats, rng)
 
     elif (method == "auto" and n > 500) or method == "asym":
         chosen_method = "asym"
@@ -188,7 +194,7 @@ def _validate_and_tranform_x_and_y(x, y):
     return x, y
 
 
-def _empirical_pvalue(x, y, B, n, stats):
+def _empirical_pvalue(x, y, B, n, stats, rng):
     r"""Calculate the empirical p-value based on permutations of `y`'s rows
 
     Parameters
@@ -219,7 +225,7 @@ def _empirical_pvalue(x, y, B, n, stats):
 
     """
     B = int(B) if B else int(np.floor(200 + 5000 / n))
-    empirical_dist = _get_test_statistic_distribution(x, y, B)
+    empirical_dist = _get_test_statistic_distribution(x, y, B, rng)
     pval = 1 - np.searchsorted(sorted(empirical_dist), stats.test_statistic) / len(
         empirical_dist
     )
@@ -251,7 +257,7 @@ def _asymptotic_pvalue(stats):
     return test_statistic, pval
 
 
-def _get_test_statistic_distribution(x, y, B):
+def _get_test_statistic_distribution(x, y, B, rng):
     r"""
     Parameters
     ----------
@@ -279,9 +285,8 @@ def _get_test_statistic_distribution(x, y, B):
     y = y.copy()
     emp_dist = np.zeros(B)
     x_dist = squareform(pdist(x, "euclidean"))
-
     for i in range(B):
-        np.random.shuffle(y)
+        rng.shuffle(y)
         emp_dist[i] = distance_statistics(x, y, x_dist=x_dist).test_statistic
 
     return emp_dist

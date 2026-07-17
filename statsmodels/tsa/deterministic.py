@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from statsmodels.compat.pandas import (
     PD_LT_2_2_0,
-    Appender,
+    PD_LT_3_1_0,
+    _infer_freq_returns_offset,
     is_int_index,
     to_numpy,
 )
@@ -16,6 +17,7 @@ import pandas as pd
 from scipy.linalg import qr
 
 from statsmodels.iolib.summary import d_or_f
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import (
     bool_like,
     float_like,
@@ -131,9 +133,7 @@ class DeterministicTerm(ABC):
                 )
             return forecast_index
         if isinstance(index, pd.PeriodIndex):
-            return pd.period_range(
-                index[-1] + 1, periods=steps, freq=index.freq
-            )
+            return pd.period_range(index[-1] + 1, periods=steps, freq=index.freq)
         elif isinstance(index, pd.DatetimeIndex) and index.freq is not None:
             next_obs = pd.date_range(index[-1], freq=index.freq, periods=2)[1]
             return pd.date_range(next_obs, freq=index.freq, periods=steps)
@@ -291,9 +291,7 @@ class TimeTrend(TimeTrendDeterministicTerm):
         return cls(constant=constant, order=order)
 
     @Appender(DeterministicTerm.in_sample.__doc__)
-    def in_sample(
-        self, index: Union[Sequence[Hashable], pd.Index]
-    ) -> pd.DataFrame:
+    def in_sample(self, index: Union[Sequence[Hashable], pd.Index]) -> pd.DataFrame:
         index = self._index_like(index)
         nobs = index.shape[0]
         locs = np.arange(1, nobs + 1, dtype=np.double)[:, None]
@@ -358,9 +356,7 @@ class Seasonality(DeterministicTerm):
 
     def __init__(self, period: int, initial_period: int = 1) -> None:
         self._period = required_int_like(period, "period")
-        self._initial_period = required_int_like(
-            initial_period, "initial_period"
-        )
+        self._initial_period = required_int_like(initial_period, "initial_period")
         if period < 2:
             raise ValueError("period must be >= 2")
         if not 1 <= self._initial_period <= period:
@@ -397,7 +393,8 @@ class Seasonality(DeterministicTerm):
         if isinstance(index, pd.PeriodIndex):
             freq = index.freq
         elif isinstance(index, pd.DatetimeIndex):
-            freq = index.freq if index.freq else index.inferred_freq
+            with _infer_freq_returns_offset():
+                freq = index.freq if index.freq else index.inferred_freq
         else:
             raise TypeError("index must be a DatetimeIndex or PeriodIndex")
         if freq is None:
@@ -421,9 +418,7 @@ class Seasonality(DeterministicTerm):
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
-    def in_sample(
-        self, index: Union[Sequence[Hashable], pd.Index]
-    ) -> pd.DataFrame:
+    def in_sample(self, index: Union[Sequence[Hashable], pd.Index]) -> pd.DataFrame:
         index = self._index_like(index)
         nobs = index.shape[0]
         period = self._period
@@ -512,6 +507,7 @@ class Fourier(FourierDeterministicTerm):
     >>> fourier_gen = Fourier(11, order=2)
     >>> fourier_gen.in_sample(data.index)
     """
+
     _is_dummy = False
 
     def __init__(self, period: float, order: int):
@@ -536,9 +532,7 @@ class Fourier(FourierDeterministicTerm):
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
-    def in_sample(
-        self, index: Union[Sequence[Hashable], pd.Index]
-    ) -> pd.DataFrame:
+    def in_sample(self, index: Union[Sequence[Hashable], pd.Index]) -> pd.DataFrame:
         index = self._index_like(index)
         nobs = index.shape[0]
         terms = self._get_terms(np.arange(nobs) / self._period)
@@ -680,9 +674,7 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
-    def in_sample(
-        self, index: Union[Sequence[Hashable], pd.Index]
-    ) -> pd.DataFrame:
+    def in_sample(self, index: Union[Sequence[Hashable], pd.Index]) -> pd.DataFrame:
         index = self._index_like(index)
         index = self._check_index_type(index)
 
@@ -773,17 +765,11 @@ class CalendarSeasonality(CalendarDeterministicTerm):
 
     def __init__(self, freq: str, period: str) -> None:
         freq_options: set[str] = set()
-        freq_options.update(
-            *[list(val.keys()) for val in self._supported.values()]
-        )
+        freq_options.update(*[list(val.keys()) for val in self._supported.values()])
         period_options = tuple(self._supported.keys())
 
-        freq = string_like(
-            freq, "freq", options=tuple(freq_options), lower=False
-        )
-        period = string_like(
-            period, "period", options=period_options, lower=False
-        )
+        freq = string_like(freq, "freq", options=tuple(freq_options), lower=False)
+        period = string_like(period, "period", options=period_options, lower=False)
         if freq not in self._supported[period]:
             raise ValueError(
                 f"The combination of freq={freq} and "
@@ -807,16 +793,18 @@ class CalendarSeasonality(CalendarDeterministicTerm):
         self, index: Union[pd.DatetimeIndex, pd.PeriodIndex]
     ) -> np.ndarray:
         if self._freq.freqstr in ("h", "H"):
-            return index.hour + 24 * index.dayofweek
+            dow = index.dayofweek if PD_LT_3_1_0 else index.day_of_week
+            return index.hour + 24 * dow
         elif self._freq.freqstr == "D":
-            return index.dayofweek
+            return index.dayofweek if PD_LT_3_1_0 else index.day_of_week
         else:  # "B"
-            bdays = pd.bdate_range("2000-1-1", periods=10).dayofweek.unique()
-            loc = index.dayofweek
+            bday_range = pd.bdate_range("2000-1-1", periods=10)
+            dow = bday_range.dayofweek if PD_LT_3_1_0 else bday_range.day_of_week
+            bdays = dow.unique()
+            loc = index.dayofweek if PD_LT_3_1_0 else index.day_of_week
             if not loc.isin(bdays).all():
                 raise ValueError(
-                    "freq is B but index contains days that are not business "
-                    "days."
+                    "freq is B but index contains days that are not business days."
                 )
             return loc
 
@@ -838,9 +826,7 @@ class CalendarSeasonality(CalendarDeterministicTerm):
         else:  # "Q"
             return index.quarter - 1
 
-    def _get_terms(
-        self, index: Union[pd.DatetimeIndex, pd.PeriodIndex]
-    ) -> np.ndarray:
+    def _get_terms(self, index: Union[pd.DatetimeIndex, pd.PeriodIndex]) -> np.ndarray:
         if self._period == "D":
             locs = self._daily_to_loc(index)
         elif self._period == "W":
@@ -859,15 +845,11 @@ class CalendarSeasonality(CalendarDeterministicTerm):
         columns = []
         count = self._supported[self._period][self._freq_str]
         for i in range(count):
-            columns.append(
-                f"s({self._freq_str}={i + 1}, period={self._period})"
-            )
+            columns.append(f"s({self._freq_str}={i + 1}, period={self._period})")
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
-    def in_sample(
-        self, index: Union[Sequence[Hashable], pd.Index]
-    ) -> pd.DataFrame:
+    def in_sample(self, index: Union[Sequence[Hashable], pd.Index]) -> pd.DataFrame:
         index = self._index_like(index)
         index = self._check_index_type(index)
         terms = self._get_terms(index)
@@ -959,9 +941,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         base_period: Optional[Union[str, DateLike]] = None,
     ) -> None:
         super().__init__(freq)
-        TimeTrendDeterministicTerm.__init__(
-            self, constant=constant, order=order
-        )
+        TimeTrendDeterministicTerm.__init__(self, constant=constant, order=order)
         self._ref_i8 = 0
         if base_period is not None:
             pr = pd.period_range(base_period, periods=1, freq=self._freq)
@@ -1030,9 +1010,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         return pd.DataFrame(terms, columns=self._columns, index=index)
 
     @Appender(DeterministicTerm.in_sample.__doc__)
-    def in_sample(
-        self, index: Union[Sequence[Hashable], pd.Index]
-    ) -> pd.DataFrame:
+    def in_sample(self, index: Union[Sequence[Hashable], pd.Index]) -> pd.DataFrame:
         index = self._index_like(index)
         index = self._check_index_type(index)
         ratio = self._compute_ratio(index)
@@ -1196,11 +1174,9 @@ class DeterministicProcess:
         if constant or order:
             self._deterministic_terms.append(TimeTrend(constant, order))
         if seasonal and fourier:
-            raise ValueError(
-                """seasonal and fourier can be initialized through the \
+            raise ValueError("""seasonal and fourier can be initialized through the \
 constructor since these will be necessarily perfectly collinear. Instead, \
-you can pass additional components using the additional_terms input."""
-            )
+you can pass additional components using the additional_terms input.""")
         if (seasonal or fourier) and period is None:
             if period is None:
                 self._period = period = freq_to_period(self._index_freq)
@@ -1411,13 +1387,9 @@ you can pass additional components using the additional_terms input."""
         add_periods = value - (self._index.shape[0] - 1) + 1
         index = self._index
         if isinstance(self._index, pd.PeriodIndex):
-            pr = pd.period_range(
-                index[-1], freq=self._index_freq, periods=add_periods
-            )
+            pr = pd.period_range(index[-1], freq=self._index_freq, periods=add_periods)
             return pr[-1].to_timestamp()
-        dr = pd.date_range(
-            index[-1], freq=self._index_freq, periods=add_periods
-        )
+        dr = pd.date_range(index[-1], freq=self._index_freq, periods=add_periods)
         return dr[-1]
 
     def range(
@@ -1442,13 +1414,11 @@ you can pass additional components using the additional_terms input."""
             A data frame of deterministic terms
         """
         if not self._extendable:
-            raise TypeError(
-                """The index in the deterministic process does not \
+            raise TypeError("""The index in the deterministic process does not \
 support extension. Only PeriodIndex, DatetimeIndex with a frequency, \
 RangeIndex, and integral Indexes that start at 0 and have only unit \
 differences can be extended when producing out-of-sample forecasts.
-"""
-            )
+""")
         if type(self._index) in (pd.RangeIndex,) or is_int_index(self._index):
             start = required_int_like(start, "start")
             stop = required_int_like(stop, "stop")
@@ -1470,14 +1440,13 @@ differences can be extended when producing out-of-sample forecasts.
             self._index_freq = self._index.freq
             self._extendable = True
         elif isinstance(self._index, pd.DatetimeIndex):
-            self._index_freq = self._index.freq or self._index.inferred_freq
+            with _infer_freq_returns_offset():
+                self._index_freq = self._index.freq or self._index.inferred_freq
             self._extendable = self._index_freq is not None
         elif isinstance(self._index, pd.RangeIndex):
             self._extendable = True
         elif is_int_index(self._index):
-            self._extendable = self._index[0] == 0 and np.all(
-                np.diff(self._index) == 1
-            )
+            self._extendable = self._index[0] == 0 and np.all(np.diff(self._index) == 1)
 
     def apply(self, index):
         """

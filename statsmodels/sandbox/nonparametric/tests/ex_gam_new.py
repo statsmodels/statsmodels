@@ -21,7 +21,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.sandbox.gam import Model as GAM
 
 np.seterr(all="raise")
-np.random.seed(8765993)
+rs = np.random.RandomState(8765993)
 # seed is chosen for nice result, not randomly
 # other seeds are pretty off in the prediction or end in overflow
 
@@ -41,7 +41,7 @@ exog_reduced = exog[:, idx]  # remove duplicate constant
 y_true = exog.sum(1)  # / 4.
 z = y_true  # alias check
 d = x
-y = y_true + sigma_noise * np.random.randn(nobs)
+y = y_true + sigma_noise * rs.randn(nobs)
 
 example = 3
 

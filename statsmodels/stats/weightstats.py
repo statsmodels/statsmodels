@@ -35,7 +35,7 @@ compared yet.
 import numpy as np
 from scipy import stats
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class DescrStatsW:

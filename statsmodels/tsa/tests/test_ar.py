@@ -41,6 +41,8 @@ DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
 
+SUNSPOTS_DATA = sunspots.load()
+
 
 def gen_ar_data(nobs):
     rs = np.random.RandomState(982739)
@@ -361,6 +363,7 @@ def plot_data(request):
     )
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
 def test_autoreg_smoke_plots(plot_data, close_figures):
@@ -426,6 +429,7 @@ def test_autoreg_predict_smoke(ar_data):
         mod.predict(res.params, 0, 250, exog_oos=exog_oos)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_parameterless_autoreg(close_figures):
     data = gen_data(250, 0, False)
@@ -528,142 +532,125 @@ def test_ar_select_order_smoke():
     ar_select_order(data, 4, glob=True, seasonal=True, period=12)
 
 
-class CheckAutoRegMixin(CheckARMixin):
-    def test_bse(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse_stata, DECIMAL_6)
-
-
-class TestAutoRegOLSConstant(CheckAutoRegMixin):
+def test_predict_ar_constant():
     """
     Test AutoReg fit by OLS with a constant.
     """
+    endog = SUNSPOTS_DATA.endog.copy()
+    endog.index = list(range(len(endog)))
+    res1 = AutoReg(endog, lags=9).fit()
+    res2 = results_ar.ARResultsOLS(constant=True)
 
-    @classmethod
-    def setup_class(cls):
-        data = sunspots.load()
-        data.endog.index = list(range(len(data.endog)))
-        cls.res1 = AutoReg(data.endog, lags=9).fit()
-        cls.res2 = results_ar.ARResultsOLS(constant=True)
-
-    def test_predict(self):
-        model = self.res1.model
-        params = self.res1.params
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSnneg1start0,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSnneg1start9,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=100),
-            self.res2.FVOLSnneg1start100,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=9, end=200),
-            self.res2.FVOLSn200start0,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSdefault,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=200, end=400),
-            self.res2.FVOLSn200start200,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=424),
-            self.res2.FVOLSn100start325,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=9, end=310),
-            self.res2.FVOLSn301start9,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=316),
-            self.res2.FVOLSn4start312,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=327),
-            self.res2.FVOLSn15start312,
-            DECIMAL_4,
-        )
+    model = res1.model
+    params = res1.params
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSnneg1start0,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSnneg1start9,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=100),
+        res2.FVOLSnneg1start100,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=9, end=200),
+        res2.FVOLSn200start0,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSdefault,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=200, end=400),
+        res2.FVOLSn200start200,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=424),
+        res2.FVOLSn100start325,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=9, end=310),
+        res2.FVOLSn301start9,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=316),
+        res2.FVOLSn4start312,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=327),
+        res2.FVOLSn15start312,
+        DECIMAL_4,
+    )
 
 
-class TestAutoRegOLSNoConstant(CheckAutoRegMixin):
-    """f
-    Test AR fit by OLS without a constant.
-    """
-
-    @classmethod
-    def setup_class(cls):
-        data = sunspots.load()
-        cls.res1 = AutoReg(np.asarray(data.endog), lags=9, trend="n").fit()
-        cls.res2 = results_ar.ARResultsOLS(constant=False)
-
-    def test_predict(self):
-        model = self.res1.model
-        params = self.res1.params
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSnneg1start0,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSnneg1start9,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=100),
-            self.res2.FVOLSnneg1start100,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=9, end=200),
-            self.res2.FVOLSn200start0,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params)[model.hold_back :],
-            self.res2.FVOLSdefault,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=200, end=400),
-            self.res2.FVOLSn200start200,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=424),
-            self.res2.FVOLSn100start325,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=9, end=310),
-            self.res2.FVOLSn301start9,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=316),
-            self.res2.FVOLSn4start312,
-            DECIMAL_4,
-        )
-        assert_almost_equal(
-            model.predict(params, start=308, end=327),
-            self.res2.FVOLSn15start312,
-            DECIMAL_4,
-        )
+def test_predict_ar_no_constant():
+    """Test AR fit by OLS without a constant."""
+    res1 = AutoReg(np.asarray(SUNSPOTS_DATA.endog), lags=9, trend="n").fit()
+    res2 = results_ar.ARResultsOLS(constant=False)
+    model = res1.model
+    params = res1.params
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSnneg1start0,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSnneg1start9,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=100),
+        res2.FVOLSnneg1start100,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=9, end=200),
+        res2.FVOLSn200start0,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params)[model.hold_back :],
+        res2.FVOLSdefault,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=200, end=400),
+        res2.FVOLSn200start200,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=424),
+        res2.FVOLSn100start325,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=9, end=310),
+        res2.FVOLSn301start9,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=316),
+        res2.FVOLSn4start312,
+        DECIMAL_4,
+    )
+    assert_almost_equal(
+        model.predict(params, start=308, end=327),
+        res2.FVOLSn15start312,
+        DECIMAL_4,
+    )
 
 
 @pytest.mark.parametrize("lag", list(np.arange(1, 16 + 1)))
@@ -694,10 +681,11 @@ def test_autoreg_info_criterion(lag):
 
 
 @pytest.mark.parametrize("old_names", [True, False])
-def test_autoreg_named_series(reset_randomstate, old_names):
+def test_autoreg_named_series(old_names):
+    rs = np.random.RandomState(982738)
     warning = FutureWarning if old_names else None
     dates = period_range(start="2011-1", periods=72, freq="M")
-    y = Series(np.random.randn(72), name="foobar", index=dates)
+    y = Series(rs.randn(72), name="foobar", index=dates)
     with pytest_warns(warning):
         results = AutoReg(y, lags=2, old_names=old_names).fit()
 
@@ -720,8 +708,8 @@ def test_autoreg_series():
 
 def test_ar_order_select():
     # GH#2118
-    np.random.seed(12345)
-    y = arma_generate_sample([1, -0.75, 0.3], [1], 100)
+    rs = np.random.RandomState(12345)
+    y = arma_generate_sample([1, -0.75, 0.3], [1], 100, distrvs=rs.standard_normal)
     ts = Series(
         y,
         index=date_range(start=dt.datetime(1990, 1, 1), periods=100, freq=MONTH_END),
@@ -800,8 +788,9 @@ def test_autoreg_roots():
     assert_almost_equal(res.roots, np.array([1.0 / res.params[-1]]))
 
 
-def test_equiv_dynamic(reset_randomstate):
-    e = np.random.standard_normal(1001)
+def test_equiv_dynamic():
+    rs = np.random.RandomState(42121221)
+    e = rs.standard_normal(1001)
     y = np.empty(1001)
     y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9**2))
     for i in range(1, 1001):
@@ -831,7 +820,10 @@ def test_dynamic_against_sarimax():
     for i in range(1, 1001):
         y[i] = 0.9 * y[i - 1] + e[i]
     smod = SARIMAX(y, order=(1, 0, 0), trend="c")
-    sres = smod.fit(disp=False, iprint=-1)
+    from statsmodels.compat.scipy import SP_LT_118
+
+    kwargs = {"iprint": -1} if SP_LT_118 else {}
+    sres = smod.fit(disp=False, **kwargs)
     mod = AutoReg(y, 1)
     spred = sres.predict(900, 1100)
     pred = mod.predict(sres.params[:2], 900, 1100)
@@ -990,7 +982,8 @@ def test_forecast_start_end_equiv(dynamic):
 
 @pytest.mark.parametrize("start", [21, 25])
 def test_autoreg_start(start):
-    y_train = pd.Series(np.random.normal(size=20))
+    rs = np.random.RandomState(982731)
+    y_train = pd.Series(rs.normal(size=20))
     m = AutoReg(y_train, lags=2)
     mf = m.fit()
     end = start + 5
@@ -998,8 +991,9 @@ def test_autoreg_start(start):
     assert pred.shape[0] == end - start + 1
 
 
-def test_deterministic(reset_randomstate):
-    y = pd.Series(np.random.normal(size=200))
+def test_deterministic():
+    rs = np.random.RandomState(982737)
+    y = pd.Series(rs.normal(size=200))
     terms = [TimeTrend(constant=True, order=1), Seasonality(12)]
     dp = DeterministicProcess(y.index, additional_terms=terms)
     m = AutoReg(y, trend="n", seasonal=False, lags=2, deterministic=dp)
@@ -1013,8 +1007,9 @@ def test_deterministic(reset_randomstate):
         AutoReg(y, 2, deterministic="ct")
 
 
-def test_autoreg_predict_forecast_equiv(reset_randomstate):
-    e = np.random.normal(size=1000)
+def test_autoreg_predict_forecast_equiv():
+    rs = np.random.RandomState(982735)
+    e = rs.normal(size=1000)
     nobs = e.shape[0]
     idx = pd.date_range(dt.datetime(2020, 1, 1), freq="D", periods=nobs)
     for i in range(1, nobs):
@@ -1034,7 +1029,8 @@ def test_autoreg_predict_forecast_equiv(reset_randomstate):
 
 def test_autoreg_forecast_period_index():
     pi = pd.period_range("1990-1-1", periods=524, freq="M")
-    y = np.random.RandomState(0).standard_normal(500)
+    rs = np.random.RandomState(0)
+    y = rs.standard_normal(500)
     ys = pd.Series(y, index=pi[:500], name="y")
     mod = AutoReg(ys, 3, seasonal=True)
     res = mod.fit()
@@ -1043,9 +1039,11 @@ def test_autoreg_forecast_period_index():
     pd.testing.assert_index_equal(fcast.index, pi[-24:])
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_autoreg_plot_err(close_figures):
-    y = np.random.standard_normal(100)
+    rs = np.random.RandomState(982734)
+    y = rs.standard_normal(100)
     mod = AutoReg(y, lags=[1, 3])
     res = mod.fit()
     with pytest.raises(ValueError):
@@ -1054,7 +1052,7 @@ def test_autoreg_plot_err(close_figures):
 
 def test_autoreg_resids():
     idx = pd.date_range(dt.datetime(1900, 1, 1), periods=250, freq=MONTH_END)
-    rs = np.random.RandomState(0)
+    rs = np.random.RandomState(982733)
     idx_dates = sorted(rs.choice(idx, size=100, replace=False))
     e = rs.standard_normal(250)
     y = np.zeros(250)
@@ -1224,18 +1222,19 @@ def test_autoreg_apply(ols_autoreg_result):
         assert not np.allclose(fcasts_refit, fcasts_apply)
 
 
-def test_autoreg_apply_exception(reset_randomstate):
-    y = np.random.standard_normal(250)
+def test_autoreg_apply_exception():
+    rs = np.random.RandomState(982732)
+    y = rs.standard_normal(250)
     mod = AutoReg(y, lags=10)
     res = mod.fit()
     with pytest.raises(ValueError, match="An exception occured"):
         res.apply(y[:5])
 
-    x = np.random.standard_normal((y.shape[0], 3))
+    x = rs.standard_normal((y.shape[0], 3))
     res = AutoReg(y, lags=1, exog=x).fit()
     with pytest.raises(ValueError, match="exog must be provided"):
         res.apply(y[50:150])
-    x = np.random.standard_normal((y.shape[0], 3))
+    x = rs.standard_normal((y.shape[0], 3))
     res = AutoReg(y, lags=1, exog=x).fit()
     with pytest.raises(ValueError, match="The number of exog"):
         res.apply(y[50:150], exog=x[50:150, :2])

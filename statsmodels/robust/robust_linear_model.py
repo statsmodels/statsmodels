@@ -22,7 +22,7 @@ import statsmodels.base.wrapper as wrap
 import statsmodels.regression._tools as reg_tools
 import statsmodels.regression.linear_model as lm
 from statsmodels.robust import norms, scale
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 __all__ = ["RLM"]
@@ -166,7 +166,7 @@ class RLM(base.LikelihoodModel):
 
     def _update_history(self, tmp_results, history, conv):
         history["params"].append(tmp_results.params)
-        history["scale"].append(tmp_results.scale)
+        history["scale"].append(self.scale)
         if conv == "dev":
             history["deviance"].append(self.deviance(tmp_results))
         elif conv == "sresid":

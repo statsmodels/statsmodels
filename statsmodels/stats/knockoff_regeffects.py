@@ -92,7 +92,7 @@ class ForwardEffects(RegressionEffects):
                 for v in past:
                     x -= np.dot(x, v)*v
                 past.append(x)
-            rv -= np.dot(rv, x) * x
+            rv = rv - np.dot(rv, x) * x
         z1 = z[0:nvar//2]
         z2 = z[nvar//2:]
         st = np.where(z1 > z2, z1, z2) * np.sign(z1 - z2)

@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+"""Print installed dependency versions for diagnostics."""
+
 from functools import reduce
 import os
 from os.path import dirname
@@ -7,6 +9,7 @@ import sys
 
 
 def safe_version(module, attr="__version__", *others):
+    """Return a version attribute from a module, or a fallback message."""
     if not isinstance(attr, list):
         attr = [attr]
     try:
@@ -169,6 +172,7 @@ def show_versions(show_dirs=True):
     ----------
     show_dirs : bool
         Flag indicating to show module locations
+
     """
     if not show_dirs:
         _show_versions_only()

@@ -63,7 +63,8 @@ def test_bernstein_distribution_1d():
 
     # check rvs
     # currently smoke test
-    rvs = bpd.rvs(100)
+    rs = np.random.RandomState(3382910)
+    rvs = bpd.rvs(100, random_state=rs)
     assert len(rvs) == 100
 
 
@@ -160,7 +161,8 @@ class TestBernsteinBeta2d:
 
     def test_rvs(self):
         # currently smoke test
-        rvs = self.bpd.rvs(100)
+        rs = np.random.RandomState(3283271)
+        rvs = self.bpd.rvs(100, random_state=rs)
         assert len(rvs) == 100
 
 

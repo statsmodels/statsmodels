@@ -25,7 +25,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.genmod import families
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 LOGIT_LINK = families.links.Logit()
 LOG_LINK = families.links.Log()

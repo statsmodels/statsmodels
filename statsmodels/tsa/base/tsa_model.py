@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import (
+    _infer_freq_returns_offset,
     is_float_index,
     is_int_index,
     is_numeric_dtype,
@@ -10,6 +11,7 @@ import numbers
 import warnings
 
 import numpy as np
+import pandas as pd
 from pandas import (
     DatetimeIndex,
     Index,
@@ -567,14 +569,19 @@ class TimeSeriesModel(base.LikelihoodModel):
             if isinstance(index, (DatetimeIndex, PeriodIndex)):
                 # If no frequency, try to get an inferred frequency
                 if freq is None and index.freq is None:
-                    freq = index.inferred_freq
+                    with _infer_freq_returns_offset():
+                        freq = index.inferred_freq
                     # If we got an inferred frequncy, alert the user
                     if freq is not None:
                         inferred_freq = True
                         if freq is not None:
+                            if isinstance(freq, pd.tseries.offsets.BaseOffset):
+                                freqstr = freq.freqstr
+                            else:
+                                freqstr = str(freq)
                             warnings.warn(
                                 "No frequency information was provided, so inferred "
-                                f"frequency {freq} will be used.",
+                                f"frequency {freqstr} will be used.",
                                 ValueWarning,
                                 stacklevel=2,
                             )

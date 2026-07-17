@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+import string
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, TypeVar
 
 import numpy as np
 from packaging.version import Version, parse
 import pandas as pd
 from pandas.util._decorators import (
-    Appender,
-    Substitution,
     cache_readonly,
     deprecate_kwarg as pd_deprecate_kwarg,
 )
+
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 
 if TYPE_CHECKING:
     try:
@@ -28,6 +30,7 @@ __all__ = [
     "PD_LT_1_4",
     "PD_LT_2",
     "PD_LT_3",
+    "PD_LT_3_1_0",
     "QUARTER_END",
     "YEAR_END",
     "Appender",
@@ -52,6 +55,7 @@ __all__ = [
 
 version = parse(pd.__version__)
 
+PD_LT_3_1_0 = version < Version("3.0.99")
 PD_LT_2_2_0 = version < Version("2.1.99")
 PD_LT_2_1_0 = version < Version("2.0.99")
 PD_LT_1_0_0 = version < Version("0.99.0")
@@ -79,6 +83,30 @@ except ImportError:
 assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
+
+
+@contextmanager
+def _infer_freq_returns_offset():
+
+    # pandas 3.1 changes the return value of infer_freq
+    try:
+        with pd.option_context("future.infer_freq_returns_offset", True):
+            yield
+    except pd.errors.OptionError:
+        # in older versions the option is not available and a str is returned
+        yield
+
+
+def infer_freq(index) -> str | None:
+
+    # pandas 3.1 changes the return value of infer_freq
+    with _infer_freq_returns_offset():
+        freq = pd.infer_freq(index)
+
+    # new pandas versions returns BaseOffset
+    if not isinstance(freq, str) and freq is not None:
+        return freq.freqstr
+    return freq
 
 
 def is_int_index(index: pd.Index) -> bool:
@@ -123,41 +151,41 @@ def is_float_index(index: pd.Index) -> bool:
     )
 
 
-try:
-    from pandas._testing import makeDataFrame as make_dataframe
-except ImportError:
-    import string
+def rands_array(generator=None, nchars=10, size=10, dtype="O"):
+    """
+    Generate an array of byte strings.
+    """
+    if generator is None:
+        generator = np.random.default_rng()
+    rands_chars = np.array(
+        list(string.ascii_letters + string.digits), dtype=(np.str_, 1)
+    )
+    retval = (
+        generator.choice(rands_chars, size=nchars * np.prod(size))
+        .view((np.str_, nchars))
+        .reshape(size)
+    )
+    if dtype is None:
+        return retval
+    else:
+        return retval.astype(dtype)
 
-    def rands_array(nchars, size, dtype="O"):
-        """
-        Generate an array of byte strings.
-        """
-        rands_chars = np.array(
-            list(string.ascii_letters + string.digits), dtype=(np.str_, 1)
-        )
-        retval = (
-            np.random.choice(rands_chars, size=nchars * np.prod(size))
-            .view((np.str_, nchars))
-            .reshape(size)
-        )
-        if dtype is None:
-            return retval
-        else:
-            return retval.astype(dtype)
 
-    def make_dataframe():
-        """
-        Simple verion of pandas._testing.makeDataFrame
-        """
-        n = 30
-        k = 4
-        index = pd.Index(rands_array(nchars=10, size=n), name=None)
-        data = {
-            c: pd.Series(np.random.randn(n), index=index)
-            for c in string.ascii_uppercase[:k]
-        }
+def make_dataframe(generator=None):
+    """
+    Simple version of pandas._testing.makeDataFrame
+    """
+    if generator is None:
+        generator = np.random.default_rng()
+    n = 30
+    k = 4
+    index = pd.Index(rands_array(generator=generator, nchars=10, size=n), name=None)
+    data = {
+        c: pd.Series(generator.standard_normal(n), index=index)
+        for c in string.ascii_uppercase[:k]
+    }
 
-        return pd.DataFrame(data)
+    return pd.DataFrame(data)
 
 
 def to_numpy(po: pd.DataFrame) -> np.ndarray:
