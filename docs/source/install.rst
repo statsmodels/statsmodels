@@ -2,8 +2,8 @@
 
 .. _install:
 
-Installing statsmodels
-======================
+Installing
+==========
 
 The easiest way to install statsmodels is to install it as part of the `Anaconda <https://docs.continuum.io/anaconda/>`_
 distribution, a cross-platform distribution for data analysis and scientific

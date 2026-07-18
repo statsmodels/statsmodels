@@ -212,6 +212,9 @@
   - img: ../_static/images/statespace_seasonal.png
     target: notebooks/generated/statespace_seasonal.html
     text: Seasonality in Time Series Data
+  - img: ../_static/images/arima_seasonal.png
+    target: notebooks/generated/arima_alternative_estimators_seasonal_differencing.html
+    text: Seasonal Differencing for ARIMA Models
   - img: ../_static/images/statespace_fixed_params.png
     target: notebooks/generated/statespace_fixed_params.html
     text: Fixed / constrained parameters in state space models

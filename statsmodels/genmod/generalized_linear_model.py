@@ -18,7 +18,6 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
 
-
 import warnings
 
 import numpy as np
@@ -1030,7 +1029,7 @@ class GLM(base.LikelihoodModel):
         offset : array_like, optional
             Offset values.  See notes for details.
         which : 'mean', 'linear', 'var'(optional)
-            Statitistic to predict. Default is 'mean'.
+            Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
               i.e. inverse of the model's link function of linear predictor.
@@ -1278,7 +1277,7 @@ class GLM(base.LikelihoodModel):
                 scale = float(scale)
             except Exception as exc:
                 raise type(exc)(
-                    "scale must be a float if given and no a string."
+                    "scale must be a float if given and not a string."
                 ) from exc
         self.scaletype = scale
 
@@ -1314,6 +1313,7 @@ class GLM(base.LikelihoodModel):
                 max_start_irls=max_start_irls,
                 **kwargs,
             )
+            # TODO: These make GLM not thread safe. Should be refactored to be unnecessary
             del self._optim_hessian
             del self._tmp_like_exog
             return fit_

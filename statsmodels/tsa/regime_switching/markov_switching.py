@@ -16,6 +16,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch, pinv_extended
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -552,9 +553,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         if self.endog.ndim > 1 and self.endog.shape[1] > 1:
             raise ValueError("Must have univariate endogenous data.")
         if self.k_regimes < 2:
-            raise ValueError(
-                "Markov switching models must have at least two regimes."
-            )
+            raise ValueError("Markov switching models must have at least two regimes.")
         if not (self.exog_tvtp is None or self.exog_tvtp.shape[0] == self.nobs):
             raise ValueError(
                 "Time-varying transition probabilities exogenous"
@@ -1146,6 +1145,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         search_reps=0,
         search_iter=5,
         search_scale=1.0,
+        rng=None,
         **kwargs,
     ):
         """
@@ -1208,6 +1208,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             search parameter repetitions.
         search_scale : float or array, optional.
             Scale of variates for random start parameter search.
+        rng : np.random.Generator or np.random.RandomState, optional
+            The source of random variables to use in parameter initialization.
+            If None, uses the singleton RandomState in np.random.
         **kwargs
             Additional keyword arguments to pass to the optimizer.
 
@@ -1230,6 +1233,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 transformed=transformed,
                 em_iter=search_iter,
                 scale=search_scale,
+                rng=rng,
             )
             transformed = True
 
@@ -1364,9 +1368,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
             # Save the output
             if full_output:
-                em_retvals = Bunch(
-                    params=np.array(params), llf=np.array(llf), iter=i
-                )
+                em_retvals = Bunch(params=np.array(params), llf=np.array(llf), iter=i)
                 em_settings = Bunch(tolerance=tolerance, maxiter=maxiter)
             else:
                 em_retvals = None
@@ -1444,7 +1446,13 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         return regime_transition
 
     def _start_params_search(
-        self, reps, start_params=None, transformed=True, em_iter=5, scale=1.0
+        self,
+        reps,
+        start_params=None,
+        transformed=True,
+        em_iter=5,
+        scale=1.0,
+        rng=None,
     ):
         """
         Search for starting parameters as random permutations of a vector
@@ -1465,6 +1473,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             Scale of variates for random start parameter search. Can be given
             as an array of length equal to the number of parameters or as a
             single scalar.
+        rng : np.random.Generator or np.random.RandomState, optional
+            The source of random variables to use in parameter initialization.
+            If None, uses the singleton RandomState in np.random.
 
         Notes
         -----
@@ -1494,8 +1505,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Construct the random variates
         variates = np.zeros((reps, self.k_params))
+        rng = check_random_state(rng)
         for i in range(self.k_params):
-            variates[:, i] = scale[i] * np.random.uniform(-0.5, 0.5, size=reps)
+            variates[:, i] = scale[i] * rng.uniform(-0.5, 0.5, size=reps)
 
         llf = self.loglike(start_params, transformed=False)
         params = start_params
@@ -2337,6 +2349,4 @@ class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
     )
 
 
-wrap.populate_wrapper(
-    MarkovSwitchingResultsWrapper, MarkovSwitchingResults
-)
+wrap.populate_wrapper(MarkovSwitchingResultsWrapper, MarkovSwitchingResults)

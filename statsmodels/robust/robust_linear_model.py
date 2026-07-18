@@ -166,7 +166,7 @@ class RLM(base.LikelihoodModel):
 
     def _update_history(self, tmp_results, history, conv):
         history["params"].append(tmp_results.params)
-        history["scale"].append(tmp_results.scale)
+        history["scale"].append(self.scale)
         if conv == "dev":
             history["deviance"].append(self.deviance(tmp_results))
         elif conv == "sresid":

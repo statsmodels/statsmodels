@@ -27,6 +27,7 @@ data = data.raw_data[:, 1:]
 @pytest.mark.skipif(
     PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM"
 )
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
     try:
@@ -180,8 +181,9 @@ def test_hdr_basic(close_figures):
 
 
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
-def test_hdr_basic_brute(close_figures, reset_randomstate):
+def test_hdr_basic_brute(close_figures):
     try:
         _, hdr = hdrboxplot(
             data, ncomp=2, labels=labels, use_brute=True, kernel_seed=1234567
@@ -211,6 +213,7 @@ def test_hdr_basic_brute(close_figures, reset_randomstate):
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_plot(close_figures):
     fig = plt.figure()
@@ -239,6 +242,7 @@ def test_hdr_plot(close_figures):
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_alpha(close_figures):
     try:
@@ -285,6 +289,7 @@ def test_hdr_alpha(close_figures):
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_multiple_alpha(close_figures):
     try:
@@ -357,6 +362,7 @@ def test_hdr_multiple_alpha(close_figures):
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_threshold(close_figures):
     try:
@@ -370,9 +376,11 @@ def test_hdr_threshold(close_figures):
         pytest.xfail("Multiprocess randomly crashes in Windows testing")
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_bw(close_figures):
     try:
@@ -401,6 +409,7 @@ def test_hdr_bw(close_figures):
     PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
 )
 @pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_ncomp(close_figures):
     try:
@@ -464,17 +473,18 @@ def test_banddepth_MBD(close_figures):
     assert_almost_equal(depth, expected_depth, decimal=4)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_fboxplot_rainbowplot(close_figures):
     # Test fboxplot and rainbowplot together, is much faster.
-    def harmfunc(t):
+    def harmfunc(t, rs):
         """Test function, combination of a few harmonic terms."""
         # Constant, 0 with p=0.9, 1 with p=1 - for creating outliers
-        ci = int(np.random.random() > 0.9)
-        a1i = np.random.random() * 0.05
-        a2i = np.random.random() * 0.05
-        b1i = (0.15 - 0.1) * np.random.random() + 0.1
-        b2i = (0.15 - 0.1) * np.random.random() + 0.1
+        ci = int(rs.random() > 0.9)
+        a1i = rs.random() * 0.05
+        a2i = rs.random() * 0.05
+        b1i = (0.15 - 0.1) * rs.random() + 0.1
+        b2i = (0.15 - 0.1) * rs.random() + 0.1
 
         func = (1 - ci) * (a1i * np.sin(t) + a2i * np.cos(t)) + ci * (
             b1i * np.sin(t) + b2i * np.cos(t)
@@ -482,10 +492,10 @@ def test_fboxplot_rainbowplot(close_figures):
 
         return func
 
-    np.random.seed(1234567)
+    rs = np.random.RandomState(1234567)
     # Some basic test data, Model 6 from Sun and Genton.
     t = np.linspace(0, 2 * np.pi, 250)
-    data = [harmfunc(t) for _ in range(20)]
+    data = [harmfunc(t, rs) for _ in range(20)]
 
     # fboxplot test
     fig = plt.figure()
@@ -501,4 +511,4 @@ def test_fboxplot_rainbowplot(close_figures):
 
     # rainbowplot test (re-uses depth variable)
     xdata = np.arange(data[0].size)
-    fig = rainbowplot(data, xdata=xdata, depth=depth, cmap=plt.cm.rainbow)
+    _ = rainbowplot(data, xdata=xdata, depth=depth, cmap=plt.cm.rainbow)

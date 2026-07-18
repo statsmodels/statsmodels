@@ -13,6 +13,7 @@ Usage::
     $ ./validate_docstrings.py
     $ ./validate_docstrings.py pandas.DataFrame.head
 """
+
 import argparse
 import ast
 import collections
@@ -164,8 +165,7 @@ ERROR_MSGS = {
     "whitespace only",
     "GL06": 'Found unknown section "{section}". Allowed sections are: '
     "{allowed_sections}",
-    "GL07": "Sections are in the wrong order. "
-    "Correct order is: {correct_sections}",
+    "GL07": "Sections are in the wrong order. " "Correct order is: {correct_sections}",
     "GL08": "The object does not have a docstring",
     "GL09": "Deprecation warning should precede extended summary",
     "SS01": "No summary found (a short summary in a single line should be "
@@ -362,9 +362,7 @@ class Docstring:
                 continue
 
         if "obj" not in locals():
-            raise ImportError(
-                "No module can be imported " 'from "{}"'.format(name)
-            )
+            raise ImportError("No module can be imported " 'from "{}"'.format(name))
 
         for part in func_parts:
             obj = getattr(obj, part)
@@ -435,9 +433,7 @@ class Docstring:
     @property
     def github_url(self):
         url = "https://github.com/statsmodels/statsmodels/main/"
-        url += "{}#L{}".format(
-            self.source_file_name, self.source_file_def_line
-        )
+        url += "{}#L{}".format(self.source_file_name, self.source_file_def_line)
         return url
 
     @property
@@ -461,9 +457,7 @@ class Docstring:
     @property
     def single_line_docstring(self):
         return (
-            self.raw_doc
-            and "\n" not in self.raw_doc
-            and ALLOW_SINGLE_LINE_DOCSTRINGS
+            self.raw_doc and "\n" not in self.raw_doc and ALLOW_SINGLE_LINE_DOCSTRINGS
         )
 
     @property
@@ -551,16 +545,14 @@ class Docstring:
         varargs = [key for key in params if sig.parameters[key].kind == kind]
         if varargs:
             out_params = [
-                "*" + param if param == varargs[0] else param
-                for param in out_params
+                "*" + param if param == varargs[0] else param for param in out_params
             ]
 
         kind = inspect.Parameter.VAR_KEYWORD
         varkw = [key for key in params if sig.parameters[key].kind == kind]
         if varkw:
             out_params = [
-                "**" + param if param == varkw[0] else param
-                for param in out_params
+                "**" + param if param == varkw[0] else param for param in out_params
             ]
 
         params = tuple(out_params)
@@ -802,17 +794,13 @@ def get_validation_data(doc):
         errs.append(error("GL03"))
     mentioned_errs = doc.mentioned_private_classes
     if mentioned_errs:
-        errs.append(
-            error("GL04", mentioned_private_classes=", ".join(mentioned_errs))
-        )
+        errs.append(error("GL04", mentioned_private_classes=", ".join(mentioned_errs)))
     for line in doc.raw_doc.splitlines():
         if re.match("^ *\t", line):
             errs.append(error("GL05", line_with_tabs=line.lstrip()))
 
     unexpected_sections = [
-        section
-        for section in doc.section_titles
-        if section not in ALLOWED_SECTIONS
+        section for section in doc.section_titles if section not in ALLOWED_SECTIONS
     ]
     for section in unexpected_sections:
         errs.append(
@@ -824,16 +812,12 @@ def get_validation_data(doc):
         )
 
     correct_order = [
-        section
-        for section in ALLOWED_SECTIONS
-        if section in doc.section_titles
+        section for section in ALLOWED_SECTIONS if section in doc.section_titles
     ]
     if correct_order != doc.section_titles:
         errs.append(error("GL07", correct_sections=", ".join(correct_order)))
 
-    if doc.deprecated and not doc.extended_summary.startswith(
-        ".. deprecated:: "
-    ):
+    if doc.deprecated and not doc.extended_summary.startswith(".. deprecated:: "):
         errs.append(error("GL09"))
 
     if not doc.summary:
@@ -849,9 +833,7 @@ def get_validation_data(doc):
             errs.append(error("SS03"))
         if doc.summary != doc.summary.lstrip():
             errs.append(error("SS04"))
-        elif (
-            doc.is_function_or_method and doc.summary.split(" ")[0][-1] == "s"
-        ):
+        elif doc.is_function_or_method and doc.summary.split(" ")[0][-1] == "s":
             errs.append(error("SS05"))
         if doc.num_summary_lines > 1:
             errs.append(error("SS06"))
@@ -951,9 +933,7 @@ def get_validation_data(doc):
                     "EX03",
                     error_code=err.error_code,
                     error_message=err.message,
-                    times_happening=f" ({err.count} times)"
-                    if err.count > 1
-                    else "",
+                    times_happening=f" ({err.count} times)" if err.count > 1 else "",
                 )
             )
         examples_source_code = "".join(doc.examples_source_code)
@@ -1048,10 +1028,7 @@ def validate_all(prefix, ignore_deprecated=False):
     for class_name, class_ in API_CLASSES:
         for member in inspect.getmembers(class_):
             func_name = class_name + "." + member[0]
-            if (
-                not member[0].startswith("_")
-                and func_name not in api_item_names
-            ):
+            if not member[0].startswith("_") and func_name not in api_item_names:
                 if prefix and not func_name.startswith(prefix):
                     continue
                 doc_info = validate_one(func_name)
@@ -1094,9 +1071,7 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
                     "]{text}\n"
                 )
             else:
-                raise ValueError(
-                    f'Unknown output_format "{output_format}"'
-                )
+                raise ValueError(f'Unknown output_format "{output_format}"')
 
             output = []
             for name, res in result.items():
@@ -1125,9 +1100,7 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
         sys.stderr.write("{}\n".format(result["docstring"]))
         sys.stderr.write(header("Validation"))
         if result["errors"]:
-            sys.stderr.write(
-                "{} Errors found:\n".format(len(result["errors"]))
-            )
+            sys.stderr.write("{} Errors found:\n".format(len(result["errors"])))
             for err_code, err_desc in result["errors"]:
                 # Failing examples are printed at the end
                 if err_code == "EX02":
@@ -1135,16 +1108,12 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
                     continue
                 sys.stderr.write(f"\t{err_desc}\n")
         if result["warnings"]:
-            sys.stderr.write(
-                "{} Warnings found:\n".format(len(result["warnings"]))
-            )
+            sys.stderr.write("{} Warnings found:\n".format(len(result["warnings"])))
             for _, wrn_desc in result["warnings"]:
                 sys.stderr.write(f"\t{wrn_desc}\n")
 
         if not result["errors"]:
-            sys.stderr.write(
-                f'Docstring for "{func_name}" correct. :)\n'
-            )
+            sys.stderr.write(f'Docstring for "{func_name}" correct. :)\n')
 
         if result["examples_errors"]:
             sys.stderr.write(header("Doctests"))
@@ -1160,9 +1129,7 @@ if __name__ == "__main__":
         "if not provided, all docstrings are validated and returned "
         "as JSON"
     )
-    argparser = argparse.ArgumentParser(
-        description="validate pandas docstrings"
-    )
+    argparser = argparse.ArgumentParser(description="validate pandas docstrings")
     argparser.add_argument("function", nargs="?", default=None, help=func_help)
     argparser.add_argument(
         "--format",

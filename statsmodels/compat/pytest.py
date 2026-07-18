@@ -31,10 +31,10 @@ class NoWarningsChecker:
 
 
 def pytest_warns(
-    warning: type[Warning] | tuple[type[Warning], ...] | None
+    warning: type[Warning] | tuple[type[Warning], ...] | None,
 ) -> WarningsChecker | NoWarningsChecker:
     """
-    Shim for pytest warn compatability
+    Shim for pytest warn compatibility
 
     Parameters
     ----------

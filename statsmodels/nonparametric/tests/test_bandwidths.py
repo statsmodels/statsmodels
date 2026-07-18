@@ -15,13 +15,13 @@ from statsmodels.nonparametric.bandwidths import bw_normal_reference, select_ban
 from statsmodels.sandbox.nonparametric import kernels
 
 # setup test data
-
-np.random.seed(12345)
+RANDOM_STATE = np.random.RandomState(12345)
 Xi = mixture_rvs(
     [0.25, 0.75],
     size=200,
     dist=[stats.norm, stats.norm],
     kwargs=(dict(loc=-1, scale=0.5), dict(loc=1, scale=0.5)),
+    rng=RANDOM_STATE,
 )
 
 
@@ -94,6 +94,6 @@ class TestAllBandwidthZero(BandwidthZero):
 
 
 class TestAnyBandwidthZero(BandwidthZero):
-
-    xx = np.random.normal(size=(100, 3))
+    rs = np.random.RandomState(328193821)
+    xx = rs.normal(size=(100, 3))
     xx[:, 0] = 1.0

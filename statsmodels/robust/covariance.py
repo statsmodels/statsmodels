@@ -1607,7 +1607,7 @@ class CovDetMCD:
 
     preliminary version
 
-    reproducability:
+    reproducibility:
 
     This uses deterministic starting sets and there is no randomness in the
     estimator.
@@ -1857,11 +1857,11 @@ class CovDetS:
 
     Notes
     -----
-    Reproducability:
+    Reproducibility:
 
     This uses deterministic starting sets and there is no randomness in the
     estimator.
-    However, the estimates may not be reproducable across statsmodels versions
+    However, the estimates may not be reproducible across statsmodels versions
     when the methods for starting sets or default tuning parameters for the
     optimization change. With different starting sets, the estimate can
     converge to a different local optimum.

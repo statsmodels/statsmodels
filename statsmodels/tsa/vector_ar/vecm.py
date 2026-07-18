@@ -1814,7 +1814,7 @@ class VECMResults:
             If None, compute point forecast only.
             If float, compute confidence intervals too. In this case the
             argument stands for the confidence level.
-        exog : ndarray (steps x self.exog.shape[1])
+        exog_fc : ndarray (steps x self.exog.shape[1])
             If self.exog is not None, then information about the future values
             of exog have to be passed via this parameter. The ndarray may be
             larger in it's first dimension. In this case only the first steps

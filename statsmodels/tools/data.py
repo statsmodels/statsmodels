@@ -1,6 +1,7 @@
 """Compatibility tools for various data structure inputs."""
 
 from statsmodels.compat.numpy import NP_LT_2
+from statsmodels.compat.pandas import infer_freq
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,7 @@ def _check_period_index(x, freq="M"):
     if x.index.freq is not None:
         inferred_freq = x.index.freqstr
     else:
-        inferred_freq = pd.infer_freq(x.index)
+        inferred_freq = infer_freq(x.index)
         if isinstance(inferred_freq, pd.tseries.offsets.BaseOffset):
             inferred_freq = inferred_freq.freqstr
     if not inferred_freq.startswith(freq):

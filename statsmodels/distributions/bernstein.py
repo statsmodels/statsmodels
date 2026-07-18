@@ -18,6 +18,7 @@ from statsmodels.distributions.tools import (
     prob2cdf_grid,
 )
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class BernsteinDistribution:
@@ -44,7 +45,7 @@ class BernsteinDistribution:
         self.cdf_grid = cdf_grid = np.asarray(cdf_grid)
         self.k_dim = cdf_grid.ndim
         self.k_grid = cdf_grid.shape
-        self.k_grid_product = np.prod([i-1 for i in self.k_grid])
+        self.k_grid_product = np.prod([i - 1 for i in self.k_grid])
         self._grid = _Grid(self.k_grid)
 
     @classmethod
@@ -177,15 +178,18 @@ class BernsteinDistribution:
         bpd_marginal = BernsteinDistribution(cdf_m)
         return bpd_marginal
 
-    def rvs(self, nobs):
+    def rvs(self, nobs, random_state=None):
         """Generate random numbers from distribution.
 
         Parameters
         ----------
         nobs : int
             Number of random observations to generate.
+        rng : np.random.RandomState or np.random.Generator, optional
+            If not provided, uses the singleton RandomState provided by NumPy
         """
-        rvs_mnl = np.random.multinomial(nobs, self.prob_grid.flatten())
+        rng = check_random_state(random_state)
+        rvs_mnl = rng.multinomial(nobs, self.prob_grid.flatten())
         k_comp = self.k_dim
         rvs_m = []
         for i in range(len(rvs_mnl)):
@@ -197,8 +201,14 @@ class BernsteinDistribution:
                     xgi = self._grid.x_marginal[j][idx[j]]
                     # Note: x_marginal starts at 0
                     #       x_marginal ends with 1 but that is not used by idx
-                    rvsi.append(stats.beta.rvs(n * xgi + 1, n * (1-xgi) + 0,
-                                               size=rvs_mnl[i]))
+                    rvsi.append(
+                        stats.beta.rvs(
+                            n * xgi + 1,
+                            n * (1 - xgi) + 0,
+                            size=rvs_mnl[i],
+                            random_state=rng,
+                        )
+                    )
                 rvs_m.append(np.column_stack(rvsi))
 
         rvsm = np.concatenate(rvs_m)
@@ -226,6 +236,7 @@ class BernsteinDistributionUV(BernsteinDistribution):
 
     def pdf(self, x, method="binom"):
         # TODO: check usage of k_grid_product. Should this go into eval?
-        pdf_ = self.k_grid_product * _eval_bernstein_1d(x, self.prob_grid,
-                                                        method=method)
+        pdf_ = self.k_grid_product * _eval_bernstein_1d(
+            x, self.prob_grid, method=method
+        )
         return pdf_

@@ -158,6 +158,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools import data as data_tools
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     SingularMatrixWarning,
@@ -809,7 +810,7 @@ class MixedLM(base.LikelihoodModel):
         if not self.data._param_names:
             # HACK: could have been set in from_formula already
             # needs refactor
-            (param_names, exog_re_names, exog_re_names_full) = self._make_param_names(
+            param_names, exog_re_names, exog_re_names_full = self._make_param_names(
                 exog_re
             )
             self.data.param_names = param_names
@@ -1090,7 +1091,7 @@ class MixedLM(base.LikelihoodModel):
         mod = super().from_formula(formula, data, *args, **kwargs)
 
         # expand re names to account for pairs of RE
-        (param_names, exog_re_names, exog_re_names_full) = mod._make_param_names(
+        param_names, exog_re_names, exog_re_names_full = mod._make_param_names(
             exog_re_names
         )
 
@@ -2422,10 +2423,20 @@ class _mixedlm_distribution:
             group_idx[model.row_indices[g]] = k
         self.group_idx = group_idx
 
-    def rvs(self, n):
+    def rvs(self, n, random_state=None):
         """
         Return a vector of simulated values from a mixed linear
         model.
+
+        Parameters
+        ----------
+        n : int
+            Ignored
+        random_state : {None, int, `numpy.random.Generator`, `numpy.random.RandomState`}, optional
+            If `random_state` is None (or `np.random`), the `numpy.random.RandomState`
+            singleton is used. If `random_state` is an int, a new ``RandomState``
+            instance is used, seeded with `random_state`. If `random_state` is already
+            a ``Generator`` or ``RandomState`` instance, that instance is used.
 
         The parameter n is ignored, but required by the interface
         """
@@ -2435,7 +2446,8 @@ class _mixedlm_distribution:
         y = np.dot(self.exog, self.fe_params)
 
         # Random effects
-        u = np.random.normal(size=(model.n_groups, model.k_re))
+        rng = check_random_state(random_state)
+        u = rng.normal(size=(model.n_groups, model.k_re))
         u = np.dot(u, np.linalg.cholesky(self.cov_re).T)
         y += (u[self.group_idx, :] * model.exog_re).sum(1)
 
@@ -2446,11 +2458,11 @@ class _mixedlm_distribution:
             for i, g in enumerate(model.group_labels):
                 exg = ex[i]
                 ii = model.row_indices[g]
-                u = np.random.normal(size=exg.shape[1])
+                u = rng.normal(size=exg.shape[1])
                 y[ii] += np.sqrt(v) * np.dot(exg, u)
 
         # Residual variance
-        y += np.sqrt(self.scale) * np.random.normal(size=len(y))
+        y += np.sqrt(self.scale) * rng.normal(size=len(y))
 
         return y
 
@@ -3046,6 +3058,7 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
                 return rl.readline()
 
             return rlu
+
         lr = _line_reader(fml)
         g = tokenize.generate_tokens(lr)
         for tok in g:

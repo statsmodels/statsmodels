@@ -782,7 +782,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
             like dispersion parameter.
         mu : array_like
             Array of mean predictions for main model.
-        prob_inlf : array_like
+        prob_infl : array_like
             Array of predicted probabilities of zero-inflation `w`.
 
         Returns
@@ -956,7 +956,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
             like dispersion parameter.
         mu : array_like
             Array of mean predictions for main model.
-        prob_inlf : array_like
+        prob_infl : array_like
             Array of predicted probabilities of zero-inflation `w`.
 
         Returns
@@ -1093,7 +1093,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
             like dispersion parameter.
         mu : array_like
             Array of mean predictions for main model.
-        prob_inlf : array_like
+        prob_infl : array_like
             Array of predicted probabilities of zero-inflation `w`.
 
         Returns

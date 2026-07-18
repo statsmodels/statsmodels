@@ -7,7 +7,6 @@ docs:
 http://www.stata.com/manuals13/xtxtgee.pdf
 """
 
-
 from collections import defaultdict
 import warnings
 
@@ -17,6 +16,7 @@ from scipy import linalg as spl
 
 from statsmodels.stats.correlation_tools import cov_nearest
 from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     NotImplementedWarning,
@@ -1427,7 +1427,7 @@ class Equivalence(CovStruct):
 
         self.return_cov = return_cov
 
-    def _make_pairs(self, i, j):
+    def _make_pairs(self, i, j, rng):
         """
         Create arrays containing all unique ordered pairs of i, j.
 
@@ -1452,14 +1452,13 @@ class Equivalence(CovStruct):
         except TypeError:
             # workaround for old numpy that cannot call unique with complex
             # dtypes
-            rs = np.random.RandomState(4234)
-            bmat = np.dot(mat, rs.uniform(size=mat.shape[1]))
+            bmat = np.dot(mat, rng.uniform(size=mat.shape[1]))
             _, idx = np.unique(bmat, return_index=True)
         mat = mat[idx, :]
 
         return mat[:, 0], mat[:, 1]
 
-    def _pairs_from_labels(self):
+    def _pairs_from_labels(self, rng):
 
         from collections import defaultdict
 
@@ -1487,7 +1486,7 @@ class Equivalence(CovStruct):
                     except KeyError:
                         continue
 
-                    i1, i2 = self._make_pairs(i1, i2)
+                    i1, i2 = self._make_pairs(i1, i2, rng)
 
                     clabel = str(lb1) + "/" + str(lb2)
 
@@ -1506,7 +1505,7 @@ class Equivalence(CovStruct):
 
         self.pairs = pairs
 
-    def initialize(self, model):
+    def initialize(self, model, rng=None):
 
         super().initialize(model)
 
@@ -1519,7 +1518,8 @@ class Equivalence(CovStruct):
             )
 
         if not hasattr(self, "pairs"):
-            self._pairs_from_labels()
+            rng = check_random_state(rng)
+            self._pairs_from_labels(rng)
 
         # Initialize so that any equivalence class containing a
         # variance parameter has value 1.

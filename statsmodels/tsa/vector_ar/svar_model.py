@@ -579,6 +579,7 @@ class SVARResults(SVARProcess, VARResults):
             trendorder = None
         self.k_trend = k_trend
         self.k_exog = k_trend  # now (0.9) required by VARProcess
+        self.k_exog_user = 0
         self.trendorder = trendorder
 
         self.exog_names = util.make_lag_names(names, lag_order, k_trend)

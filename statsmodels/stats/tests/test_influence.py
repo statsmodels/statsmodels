@@ -3,6 +3,7 @@ Created on Tue Jun 12 13:18:12 2018
 
 Author: Josef Perktold
 """
+
 from statsmodels.compat.pandas import testing as pdt
 
 import os.path
@@ -35,8 +36,11 @@ def test_influence_glm_bernoulli():
     df = data_bin
     results_sas = np.asarray(results_sas_df)
 
-    res = GLM(df["constrict"], df[["const", "log_rate", "log_volumne"]],
-              family=families.Binomial()).fit(attach_wls=True, atol=1e-10)
+    res = GLM(
+        df["constrict"],
+        df[["const", "log_rate", "log_volumne"]],
+        family=families.Binomial(),
+    ).fit(attach_wls=True, atol=1e-10)
 
     infl = res.get_influence(observed=False)
 
@@ -57,24 +61,30 @@ class InfluenceCompareExact:
         infl1 = self.infl1
         infl0 = self.infl0
 
-        assert_allclose(infl0.hat_matrix_diag, infl1.hat_matrix_diag,
-                        rtol=1e-12)
+        assert_allclose(infl0.hat_matrix_diag, infl1.hat_matrix_diag, rtol=1e-12)
 
-        assert_allclose(infl0.resid_studentized,
-                        infl1.resid_studentized, rtol=1e-12, atol=1e-7)
+        assert_allclose(
+            infl0.resid_studentized, infl1.resid_studentized, rtol=1e-12, atol=1e-7
+        )
 
         cd_rtol = getattr(self, "cd_rtol", 1e-7)
-        assert_allclose(infl0.cooks_distance[0], infl1.cooks_distance[0],
-                        rtol=cd_rtol, atol=1e-14)  # very small values possible
+        assert_allclose(
+            infl0.cooks_distance[0], infl1.cooks_distance[0], rtol=cd_rtol, atol=1e-14
+        )  # very small values possible
         assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=1e-9, atol=5e-9)
         assert_allclose(infl0.d_params, infl1.d_params, rtol=1e-9, atol=5e-9)
-        assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues,
-                        rtol=5e-9, atol=1e-14)
-        assert_allclose(infl0.d_fittedvalues_scaled,
-                        infl1.d_fittedvalues_scaled,
-                        rtol=5e-9, atol=1e-14)
+        assert_allclose(
+            infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=5e-9, atol=1e-14
+        )
+        assert_allclose(
+            infl0.d_fittedvalues_scaled,
+            infl1.d_fittedvalues_scaled,
+            rtol=5e-9,
+            atol=1e-14,
+        )
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plots(self, close_figures):
         import matplotlib.pyplot as plt
@@ -174,10 +184,20 @@ class TestInfluenceBinomialGLMMLE(InfluenceCompareExact):
         # resid seem to be resid_deviance based and not resid_pearson
         # I did not compare cov.r
         infl1 = self.infl1
-        cooks_d = [0.25220202795934726, 0.26107981497746285, 1.28985614424132389,
-                   0.08449722285516942, 0.36362110845918005]
-        hat = [0.2594393406119333,  0.3696442663244837,  0.3535768402250521,
-               0.389209198535791057,  0.6281303543027403]
+        cooks_d = [
+            0.25220202795934726,
+            0.26107981497746285,
+            1.28985614424132389,
+            0.08449722285516942,
+            0.36362110845918005,
+        ]
+        hat = [
+            0.2594393406119333,
+            0.3696442663244837,
+            0.3535768402250521,
+            0.389209198535791057,
+            0.6281303543027403,
+        ]
 
         assert_allclose(infl1.hat_matrix_diag, hat, rtol=5e-6)
         assert_allclose(infl1.cooks_distance[0], cooks_d, rtol=1e-5)
@@ -230,25 +250,25 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
         infl1 = self.infl1
         infl0 = self.infl0
 
-        assert_allclose(infl0.hat_matrix_diag, infl1.hat_matrix_diag,
-                        rtol=1e-12)
-        assert_allclose(infl0.resid_studentized,
-                        infl1.resid_studentized, rtol=1e-12, atol=1e-7)
-        assert_allclose(infl0.cooks_distance, infl1.cooks_distance,
-                        rtol=1e-7, atol=1e-14)  # very small values possible
+        assert_allclose(infl0.hat_matrix_diag, infl1.hat_matrix_diag, rtol=1e-12)
+        assert_allclose(
+            infl0.resid_studentized, infl1.resid_studentized, rtol=1e-12, atol=1e-7
+        )
+        assert_allclose(
+            infl0.cooks_distance, infl1.cooks_distance, rtol=1e-7, atol=1e-14
+        )  # very small values possible
         assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=0.1)  # changed
         # OLSInfluence only has looo dfbeta/d_params
         assert_allclose(infl0.d_params, infl1.dfbeta, rtol=1e-9, atol=1e-14)
         # d_fittedvalues is not available in OLSInfluence, i.e. only scaled dffits
         # assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=1e-9)
-        assert_allclose(infl0.d_fittedvalues_scaled,
-                        infl1.dffits_internal[0], rtol=1e-9)
+        assert_allclose(
+            infl0.d_fittedvalues_scaled, infl1.dffits_internal[0], rtol=1e-9
+        )
 
         # specific to linear link
-        assert_allclose(infl0.d_linpred,
-                        infl0.d_fittedvalues, rtol=1e-12)
-        assert_allclose(infl0.d_linpred_scaled,
-                        infl0.d_fittedvalues_scaled, rtol=1e-12)
+        assert_allclose(infl0.d_linpred, infl0.d_fittedvalues, rtol=1e-12)
+        assert_allclose(infl0.d_linpred_scaled, infl0.d_fittedvalues_scaled, rtol=1e-12)
 
     def test_summary(self):
         infl1 = self.infl1
@@ -267,10 +287,14 @@ class TestInfluenceLogitCompare(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         df = data_bin
-        mod = GLM(df["constrict"], df[["const", "log_rate", "log_volumne"]],
-                  family=families.Binomial())
+        mod = GLM(
+            df["constrict"],
+            df[["const", "log_rate", "log_volumne"]],
+            family=families.Binomial(),
+        )
         res = mod.fit(method="newton", tol=1e-10)
         from statsmodels.discrete.discrete_model import Logit
+
         mod2 = Logit(df["constrict"], df[["const", "log_rate", "log_volumne"]])
         res2 = mod2.fit(method="newton", tol=1e-10)
 
@@ -283,10 +307,14 @@ class TestInfluenceProbitCompare(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         df = data_bin
-        mod = GLM(df["constrict"], df[["const", "log_rate", "log_volumne"]],
-                  family=families.Binomial(link=families.links.Probit()))
+        mod = GLM(
+            df["constrict"],
+            df[["const", "log_rate", "log_volumne"]],
+            family=families.Binomial(link=families.links.Probit()),
+        )
         res = mod.fit(method="newton", tol=1e-10)
         from statsmodels.discrete.discrete_model import Probit
+
         mod2 = Probit(df["constrict"], df[["const", "log_rate", "log_volumne"]])
         res2 = mod2.fit(method="newton", tol=1e-10)
 
@@ -321,12 +349,15 @@ class TestInfluencePoissonCompare(InfluenceCompareExact):
     @classmethod
     def setup_class(cls):
         df = data_bin
-        mod = GLM(df["constrict"], df[["const", "log_rate", "log_volumne"]],
-                  family=families.Poisson())
+        mod = GLM(
+            df["constrict"],
+            df[["const", "log_rate", "log_volumne"]],
+            family=families.Poisson(),
+        )
         res = mod.fit(attach_wls=True, atol=1e-10)
         from statsmodels.discrete.discrete_model import Poisson
-        mod2 = Poisson(df["constrict"],
-                       df[["const", "log_rate", "log_volumne"]])
+
+        mod2 = Poisson(df["constrict"], df[["const", "log_rate", "log_volumne"]])
         res2 = mod2.fit(tol=1e-10)
 
         cls.infl0 = res.get_influence()
@@ -334,18 +365,12 @@ class TestInfluencePoissonCompare(InfluenceCompareExact):
 
 
 def test_vif_instability():
-    np.random.seed(42)
+    rs = np.random.RandomState(42)
     n = 500
-    x1 = np.random.uniform(1000, 100000, n)
-    x2 = np.random.uniform(5, 50, n)
+    x1 = rs.uniform(1000, 100000, n)
+    x2 = rs.uniform(5, 50, n)
 
-    exog = np.column_stack([
-        np.ones(n),
-        np.log(x1),
-        1.0 / x2,
-        x1,
-        x2
-    ])
+    exog = np.column_stack([np.ones(n), np.log(x1), 1.0 / x2, x1, x2])
 
     # 1. Test happy path (standardize=True)
     vif_const = variance_inflation_factor(exog, 0, standardize=True)
@@ -361,7 +386,7 @@ def test_vif_instability():
     assert vif_legacy > 100
 
     # 3. Test that standardize=False computes perfectly on clean, well-conditioned data
-    clean_exog = np.column_stack([np.ones(100), np.random.normal(0, 1, (100, 2))])
+    clean_exog = np.column_stack([np.ones(100), rs.normal(0, 1, (100, 2))])
     vif_true = variance_inflation_factor(clean_exog, 1, standardize=True)
     vif_false = variance_inflation_factor(clean_exog, 1, standardize=False)
     assert_allclose(vif_true, vif_false, rtol=1e-7)

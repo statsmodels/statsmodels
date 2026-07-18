@@ -538,12 +538,12 @@ class TestProbitBasinhopping(CheckBinaryResults):
         res2 = Spector.probit
         cls.res2 = res2
         fit = Probit(data.endog, data.exog).fit
-        np.random.seed(1)
         cls.res1 = fit(
             method="basinhopping",
             disp=0,
             niter=5,
             minimizer={"method": "L-BFGS-B", "tol": 1e-8},
+            seed=0,
         )
 
 
@@ -2566,15 +2566,17 @@ class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
 
 
 def test_mnlogit_basinhopping():
+    rs = np.random.RandomState(332723491)
+
     def callb(*args):
         return 1
 
-    x = np.random.randint(0, 100, 1000)
-    y = np.random.randint(0, 3, 1000)
+    x = rs.randint(0, 100, 1000)
+    y = rs.randint(0, 3, 1000)
     model = MNLogit(y, sm.add_constant(x))
     # smoke tests for basinhopping and callback #8665
-    model.fit(method="basinhopping")
-    model.fit(method="basinhopping", callback=callb)
+    model.fit(method="basinhopping", seed=rs)
+    model.fit(method="basinhopping", callback=callb, seed=rs)
 
 
 def test_perfect_prediction():
@@ -2624,10 +2626,10 @@ def test_poisson_predict():
 def test_poisson_newton():
     # GH: 24, Newton does not work well sometimes
     nobs = 10000
-    np.random.seed(987689)
-    x = np.random.randn(nobs, 3)
+    rs = np.random.RandomState(987689)
+    x = rs.randn(nobs, 3)
     x = sm.add_constant(x, prepend=True)
-    y_count = np.random.poisson(np.exp(x.sum(1)))
+    y_count = rs.poisson(np.exp(x.sum(1)))
     mod = sm.Poisson(y_count, x)
     # this is not thread-safe
     with pytest.warns(ConvergenceWarning):
@@ -2667,6 +2669,9 @@ def test_issue_341():
     np.testing.assert_equal(res1.predict(x[None]).shape, (1, 7))
 
 
+@pytest.mark.thread_unsafe(
+    "Rethrowing warning can lead to spurious fails with threading"
+)
 def test_negative_binomial_default_alpha_param():
     with pytest.warns(
         UserWarning, match="Negative binomial dispersion parameter alpha not set"
@@ -2686,28 +2691,31 @@ def test_negative_binomial_default_alpha_param():
 
 
 def test_iscount():
-    X = np.random.random((50, 10))
-    X[:, 2] = np.random.randint(1, 10, size=50)
-    X[:, 6] = np.random.randint(1, 10, size=50)
-    X[:, 4] = np.random.randint(0, 2, size=50)
-    X[:, 1] = np.random.randint(-10, 10, size=50)  # not integers
+    rs = np.random.RandomState(3228931)
+    X = rs.random((50, 10))
+    X[:, 2] = rs.randint(1, 10, size=50)
+    X[:, 6] = rs.randint(1, 10, size=50)
+    X[:, 4] = rs.randint(0, 2, size=50)
+    X[:, 1] = rs.randint(-10, 10, size=50)  # not integers
     count_ind = _iscount(X)
     assert_equal(count_ind, [2, 6])
 
 
 def test_isdummy():
-    X = np.random.random((50, 10))
-    X[:, 2] = np.random.randint(1, 10, size=50)
-    X[:, 6] = np.random.randint(0, 2, size=50)
-    X[:, 4] = np.random.randint(0, 2, size=50)
-    X[:, 1] = np.random.randint(-10, 10, size=50)  # not integers
+    rs = np.random.RandomState(3228935)
+    X = rs.random((50, 10))
+    X[:, 2] = rs.randint(1, 10, size=50)
+    X[:, 6] = rs.randint(0, 2, size=50)
+    X[:, 4] = rs.randint(0, 2, size=50)
+    X[:, 1] = rs.randint(-10, 10, size=50)  # not integers
     count_ind = _isdummy(X)
     assert_equal(count_ind, [4, 6])
 
 
 def test_non_binary():
+    rs = np.random.RandomState(3228933)
     y = [1, 2, 1, 2, 1, 2]
-    X = np.random.randn(6, 2)
+    X = rs.randn(6, 2)
     with pytest.raises(ValueError):
         Logit(y, X)
     y = [0, 1, 0, 0, 1, 0.5]
@@ -2754,11 +2762,12 @@ def test_mnlogit_factor_categorical():
 
 def test_formula_missing_exposure():
     # see 2083
+    rs = np.random.RandomState(473989724)
     d = {
         "Foo": [1, 2, 10, 149],
         "Bar": [1, 2, 3, np.nan],
         "constant": [1] * 4,
-        "exposure": np.random.uniform(size=4),
+        "exposure": rs.uniform(size=4),
         "x": [1, 3, 2, 1.5],
     }
     df = pd.DataFrame(d)
@@ -2768,7 +2777,7 @@ def test_formula_missing_exposure():
     assert_(type(mod1.exposure) is np.ndarray, msg="Exposure is not ndarray")
 
     # make sure this raises
-    exposure = pd.Series(np.random.uniform(size=5))
+    exposure = pd.Series(rs.uniform(size=5))
     df.loc[3, "Bar"] = 4  # nan not relevant for ValueError for shape mismatch
     with pytest.raises(ValueError):
         sm.Poisson(df.Foo, df[["constant", "Bar"]], exposure=exposure)
@@ -3001,13 +3010,17 @@ class TestGeneralizedPoisson_underdispersion:
     @classmethod
     def setup_class(cls):
         cls.expected_params = [1, -0.5, -0.05]
-        np.random.seed(1234)
+        rs = np.random.RandomState(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
         mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
         cls.endog = sm.distributions.genpoisson_p.rvs(
-            mu_true, cls.expected_params[-1], 1, size=len(mu_true)
+            mu_true,
+            cls.expected_params[-1],
+            1,
+            size=len(mu_true),
+            random_state=rs,
         )
         model_gp = sm.GeneralizedPoisson(cls.endog, exog, p=1)
         cls.res = model_gp.fit(
@@ -3324,7 +3337,7 @@ class TestNegativeBinomialPPredictProb:
 
     def test_predict_prob_p1(self):
         expected_params = [1, -0.5]
-        np.random.seed(1234)
+        rs = np.random.RandomState(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
@@ -3332,7 +3345,7 @@ class TestNegativeBinomialPPredictProb:
         alpha = 0.05
         size = 1.0 / alpha * mu_true
         prob = size / (size + mu_true)
-        endog = nbinom.rvs(size, prob, size=len(mu_true))
+        endog = nbinom.rvs(size, prob, size=len(mu_true), random_state=rs)
 
         res = sm.NegativeBinomialP(endog, exog).fit(disp=0)
 
@@ -3350,7 +3363,7 @@ class TestNegativeBinomialPPredictProb:
 
     def test_predict_prob_p2(self):
         expected_params = [1, -0.5]
-        np.random.seed(1234)
+        rs = np.random.RandomState(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
@@ -3358,7 +3371,7 @@ class TestNegativeBinomialPPredictProb:
         alpha = 0.05
         size = 1.0 / alpha
         prob = size / (size + mu_true)
-        endog = nbinom.rvs(size, prob, size=len(mu_true))
+        endog = nbinom.rvs(size, prob, size=len(mu_true), random_state=rs)
 
         res = sm.NegativeBinomialP(endog, exog, p=2).fit(disp=0)
 
@@ -3492,11 +3505,12 @@ class TestGeneralizedPoissonNull(CheckNull):
 def test_null_options():
     # this is a "nice" case because we only check that options are used
     # correctly
+    rs = np.random.RandomState(332723492)
     nobs = 10
     exog = np.ones((20, 2))
     exog[: nobs // 2, 1] = 0
     mu = np.exp(exog.sum(1))
-    endog = np.random.poisson(mu)  # Note no size=nobs in np.random
+    endog = rs.poisson(mu)
     res = Poisson(endog, exog).fit(start_params=np.log([1, 1]), disp=0)
     llnull0 = res.llnull
     assert_(hasattr(res, "res_llnull") is False)
