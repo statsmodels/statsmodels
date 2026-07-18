@@ -1292,7 +1292,7 @@ you can pass additional components using the additional_terms input.""")
         forecast_index: Optional[Union[Sequence[Hashable], pd.Index]] = None,
     ) -> pd.DataFrame:
         steps = required_int_like(steps, "steps")
-        if self._drop and self._retain_cols is None:
+        if self._retain_cols is None:
             self.in_sample()
         index = self._index
         if not self._deterministic_terms:
