@@ -272,7 +272,7 @@ class KDEUnivariate:
         kern = self.kernel
 
         if kern.domain is not None:
-            a, b = self.domain
+            a, b = kern.domain
         else:
             a, b = -np.inf, np.inf
         endog = self.endog
