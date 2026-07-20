@@ -57,7 +57,7 @@ jobs:
     - name: Install graphviz
       uses: ts-graphviz/setup-graphviz@b1de5da23ed0a6d14e0aeee8ed52fdd87af2363c #v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 #v6
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 #v6
       with:
         python-version: ${{ matrix.python-version }}
         cache: "pip"
