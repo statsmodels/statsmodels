@@ -8,7 +8,6 @@ License: BSD-3
 
 import io
 
-import matplotlib.pyplot as plt
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
@@ -360,6 +359,8 @@ class TestMetaBinOR:
 
     @pytest.mark.matplotlib
     def test_plot(self, close_figures):
+        import matplotlib.pyplot as plt
+
         # smoke tests
         res1 = self.res1
         # `use_t=False` avoids warning about missing nobs for use_t is true
@@ -367,7 +368,10 @@ class TestMetaBinOR:
         res1.plot_forest(use_exp=True, use_t=False)
         res1.plot_forest(alpha=0.01, use_t=False)
         fig, ax = plt.subplots()
+        original_children = ax.get_children()
         fig_out = res1.plot_forest(ax=ax, use_t=False)
+        updated_children = ax.get_children(original_children)
+        assert len(updated_children) > len()
         assert fig_out is fig
         with pytest.raises(TypeError, match="unexpected keyword"):
             res1.plot_forest(junk=5, use_t=False)
