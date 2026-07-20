@@ -294,20 +294,20 @@ def test_fit_misc():
     assert_almost_equal(res_params, [0, 0], 5)
 
 
-def test_fit_attrs_in_dir():
+@pytest.mark.parametrize("name", ["mlefit", "mle_retvals", "mle_settings"])
+def test_fit_attrs_in_dir(name):
     # GH#9271: mlefit, mle_retvals and mle_settings were attached to the
     # results wrapper instead of the underlying results instance, so they
     # were reachable via attribute access but did not show up in dir(res)
     # (and therefore not in tab-completion).
     _, res = get_dummy_mod()
 
-    for name in ["mlefit", "mle_retvals", "mle_settings"]:
-        # Reachable as before (no regression in attribute access)
-        assert hasattr(res, name)
-        # Now discoverable via dir() / tab-completion
-        assert name in dir(res)
-        # Because they now live on the underlying results instance
-        assert name in dir(res._results)
+    # Reachable as before (no regression in attribute access)
+    assert hasattr(res, name)
+    # Now discoverable via dir() / tab-completion
+    assert name in dir(res)
+    # Because they now live on the underlying results instance
+    assert name in dir(res._results)
 
 
 @pytest.mark.smoke

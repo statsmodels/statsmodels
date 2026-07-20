@@ -1590,7 +1590,7 @@ class LikelihoodModelResults(Results):
 
         ``(scale) * (X.T X)^(-1)[column][:,column]`` if column is 1d
         """
-        if getattr(self, "mle_settings", None) is not None and self.mle_settings["optimizer"] in [
+        if getattr(self, "mle_settings", None) and self.mle_settings["optimizer"] in [
             "l1",
             "l1_cvxopt_cp",
         ]:
@@ -2018,7 +2018,7 @@ class LikelihoodModelResults(Results):
             # let caller override J by df_constraint
             J = df_constraints
 
-        if getattr(self, "mle_settings", None) is not None and self.mle_settings["optimizer"] in [
+        if getattr(self, "mle_settings", None) and self.mle_settings["optimizer"] in [
             "l1",
             "l1_cvxopt_cp",
         ]:
