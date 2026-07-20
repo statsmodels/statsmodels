@@ -790,6 +790,10 @@ class Autoregressive(CovStruct):
     dist_func : function from R^k x R^k to R^+, optional
         A function that computes the distance between the two
         observations based on their `time` values.
+    grid : bool, optional
+        If True, use the grid-based implementation for equally spaced data.
+        If False, estimate the dependence parameter using all available
+        pairs of observations.
 
     References
     ----------

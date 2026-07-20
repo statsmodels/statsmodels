@@ -79,7 +79,7 @@ class CheckWeight:
                 TestBinomial0RepeatedvsDuplicated,
             ),
         ):
-            # Loglikelihood, scale, deviance is different between repeated vs.
+            # Log-likelihood, scale, deviance is different between repeated vs.
             # exposure/average
             return None
         assert_allclose(res1.bse, corr_fact * res2.bse, atol=1e-6, rtol=2e-6)

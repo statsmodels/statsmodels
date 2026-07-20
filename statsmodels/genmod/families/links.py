@@ -76,7 +76,8 @@ class Link:
         return NotImplementedError
 
     def deriv2(self, p):
-        """Second derivative of the link function g''(p)
+        """
+        Second derivative of the link function g''(p)
 
         implemented through numerical differentiation
         """
@@ -497,13 +498,13 @@ class Log(Link):
 
         Parameters
         ----------
-        x : array_like
+        p : array_like
             Mean parameters
 
         Returns
         -------
         z : ndarray
-            log(x)
+            log(p)
 
         Notes
         -----
@@ -611,13 +612,13 @@ class LogC(Link):
 
         Parameters
         ----------
-        x : array_like
+        p : array_like
             Mean parameters
 
         Returns
         -------
         z : ndarray
-            log(1 - x)
+            log(1 - p)
 
         Notes
         -----

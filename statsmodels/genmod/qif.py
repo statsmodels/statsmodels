@@ -117,9 +117,13 @@ class QIF(base.Model):
         Labels indicating which group each observation belongs to.
         Observations in different groups should be independent.
     family : genmod family
-        An instance of a GLM family.
+        An instance of a GLM family.
     cov_struct : QIFCovariance instance
         An instance of a QIFCovariance.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised.
 
     References
     ----------

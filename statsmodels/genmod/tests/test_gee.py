@@ -1318,7 +1318,8 @@ class TestGEE:
         check_wrapper(rslt2)
 
     def test_formula_environment(self):
-        """Test that GEE uses the right environment for formulas."""
+        """
+        Test that GEE uses the right environment for formulas."""
 
         n = 100
         rng = np.random.default_rng(34234)

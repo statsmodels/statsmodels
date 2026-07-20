@@ -150,7 +150,7 @@ class Family:
         The deviance function evaluated at (endog, mu, var_weights,
         freq_weights, scale) for the distribution.
 
-        Deviance is usually defined as twice the loglikelihood ratio.
+        Deviance is usually defined as twice the log-likelihood ratio.
 
         Parameters
         ----------
@@ -281,7 +281,7 @@ class Family:
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -313,7 +313,7 @@ class Family:
         Returns
         -------
         ll : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, freq_weights, scale) as defined below.
 
         Notes
@@ -467,7 +467,7 @@ class Poisson(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -620,13 +620,13 @@ class Gaussian(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
         -----
         If the link is the identity link function then the
-        loglikelihood function is the same as the classical OLS model.
+        log-likelihood function is the same as the classical OLS model.
 
         .. math::
 
@@ -638,7 +638,7 @@ class Gaussian(Family):
 
            SSR = \sum_i (Y_i - g^{-1}(\mu_i))^2
 
-        If the links is not the identity link then the loglikelihood
+        If the link is not the identity link then the log-likelihood
         function is defined as
 
         .. math::
@@ -795,7 +795,7 @@ class Gamma(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -1052,7 +1052,7 @@ class Binomial(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -1271,7 +1271,7 @@ class InverseGaussian(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -1467,7 +1467,7 @@ class NegativeBinomial(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -1616,7 +1616,7 @@ class Tweedie(Family):
 
     Notes
     -----
-    Loglikelihood function not implemented because of the complexity of
+    Log-likelihood function not implemented because of the complexity of
     calculating an infinite series of summations. The variance power can be
     estimated using the ``estimate_tweedie_power`` function that is part of the
     statsmodels.genmod.generalized_linear_model.GLM class.
@@ -1724,7 +1724,7 @@ class Tweedie(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
