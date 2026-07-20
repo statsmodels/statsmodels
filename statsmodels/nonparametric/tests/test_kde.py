@@ -447,3 +447,20 @@ class TestKDECustomBandwidth:
 
         npt.assert_almost_equal(s1, kde.support, self.decimal_density)
         npt.assert_almost_equal(d1, kde.density, self.decimal_density)
+
+
+@pytest.mark.parametrize("kernel", ["epa", "tri", "uni", "cos", "biw", "triw"])
+def test_entropy_finite_domain_kernel(kernel):
+    # Kernels with a bounded domain used to read the integration limits off
+    # the KDE instead of the kernel, which has no such attribute. GH#9917
+    kde = KDE(Xi).fit(kernel=kernel, fft=False, bw="silverman")
+
+    entropy = kde.entropy
+
+    assert np.isfinite(entropy)
+
+
+def test_entropy_infinite_domain_kernel():
+    kde = KDE(Xi).fit(kernel="gau", fft=False, bw="silverman")
+
+    assert np.isfinite(kde.entropy)
