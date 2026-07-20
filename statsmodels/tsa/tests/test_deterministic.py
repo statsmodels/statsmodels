@@ -506,9 +506,7 @@ def test_out_of_sample_without_in_sample(drop):
     fresh = DeterministicProcess(idx, constant=True, order=1, drop=drop)
     primed = DeterministicProcess(idx, constant=True, order=1, drop=drop)
     primed.in_sample()
-    pd.testing.assert_frame_equal(
-        fresh.out_of_sample(5), primed.out_of_sample(5)
-    )
+    pd.testing.assert_frame_equal(fresh.out_of_sample(5), primed.out_of_sample(5))
     fresh2 = DeterministicProcess(idx, constant=True, order=1, drop=drop)
     pd.testing.assert_frame_equal(fresh2.range(10, 15), primed.range(10, 15))
 
