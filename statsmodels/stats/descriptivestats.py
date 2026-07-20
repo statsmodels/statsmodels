@@ -421,20 +421,8 @@ class Description:
         else:
             mode_values = df.apply(_mode).T
             if mode_values.size > 0:
-                if isinstance(mode_values, pd.DataFrame):
-                    # pandas 1.0 or later
-                    mode = np.asarray(mode_values[0], dtype=float)
-                    mode_counts = np.asarray(mode_values[1], dtype=np.int64)
-                else:
-                    # pandas before 1.0 returns a Series of 2-elem list
-                    mode = []
-                    mode_counts = []
-                    for idx in mode_values.index:
-                        val = mode_values.loc[idx]
-                        mode.append(val[0])
-                        mode_counts.append(val[1])
-                    mode = np.atleast_1d(mode)
-                    mode_counts = np.atleast_1d(mode_counts)
+                mode = np.asarray(mode_values[0], dtype=float)
+                mode_counts = np.asarray(mode_values[1], dtype=np.int64)
             else:
                 mode = mode_counts = np.empty(0)
         loc = count > 0
@@ -464,7 +452,7 @@ class Description:
                 return (np.nan,) * 4
             return jarque_bera(a)
 
-        if df.shape[0] > 0 and df.shape[1] > 0:
+        if df.size:
             jb = df.apply(
                 lambda x: list(_safe_jarque_bera(x.dropna())),
                 result_type="expand",
