@@ -17,7 +17,11 @@ import pytest
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.outliers_influence import GLMInfluence, MLEInfluence, variance_inflation_factor
+from statsmodels.stats.outliers_influence import (
+    GLMInfluence,
+    MLEInfluence,
+    variance_inflation_factor,
+)
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
