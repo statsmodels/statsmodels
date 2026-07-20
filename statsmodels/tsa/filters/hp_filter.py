@@ -7,7 +7,7 @@ from statsmodels.tools.validation import PandasWrapper, array_like
 
 def hpfilter(x, lamb=1600):
     """
-    Hodrick-Prescott filter.
+    Hodrick-Prescott filter
 
     Parameters
     ----------
@@ -39,7 +39,7 @@ def hpfilter(x, lamb=1600):
 
     Notes
     -----
-    The HP filter removes a smooth trend, `T`, from the data `x`. by solving
+    The HP filter removes a smooth trend, `T`, from the data `x` by solving
 
     min sum((x[t] - T[t])**2 + lamb*((T[t+1] - T[t]) - (T[t] - T[t-1]))**2)
      T   t

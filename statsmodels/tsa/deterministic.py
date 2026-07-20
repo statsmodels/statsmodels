@@ -53,7 +53,7 @@ class DeterministicTerm(ABC):
     @abstractmethod
     def in_sample(self, index: Sequence[Hashable]) -> pd.DataFrame:
         """
-        Produce deterministic trends for in-sample fitting.
+        Produce deterministic trends for in-sample fitting
 
         Parameters
         ----------

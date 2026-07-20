@@ -1,5 +1,5 @@
 """
-Hannan-Rissanen procedure for estimating ARMA(p,q) model parameters.
+Hannan-Rissanen procedure for estimating ARMA(p,q) model parameters
 
 Author: Chad Fulton
 License: BSD-3
@@ -20,7 +20,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
                     initial_ar_order=None, unbiased=None,
                     fixed_params=None):
     """
-    Estimate ARMA parameters using Hannan-Rissanen procedure.
+    Estimate ARMA parameters using Hannan-Rissanen procedure
 
     Parameters
     ----------
@@ -30,6 +30,12 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
         Autoregressive order
     ma_order : int or list of int
         Moving average order
+    seasonal_order : tuple, optional
+        The (P,D,Q,s) order of the seasonal component of the model for the
+        AR parameters, differences, and MA parameters. `D` and `s` are used
+        to seasonally difference the data prior to estimation; nonzero
+        seasonal AR or MA orders (`P` or `Q`) are not supported and raise a
+        ``ValueError``. Default is (0, 0, 0, 0).
     demean : bool, optional
         Whether to estimate and remove the mean from the process prior to
         fitting the ARMA coefficients. Default is True.
@@ -322,12 +328,13 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
 
 def _validate_fixed_params(fixed_params, spec_param_names):
     """
-    Check that keys in fixed_params are a subset of spec.param_names except
-    "sigma2"
+    Check that keys in fixed_params are a subset of spec_param_names except sigma2
 
     Parameters
     ----------
     fixed_params : dict
+        Dictionary of fixed parameter values keyed by parameter name, or
+        None.
     spec_param_names : list of string
         SARIMAXSpecification.param_names
     """
@@ -352,7 +359,7 @@ def _validate_fixed_params(fixed_params, spec_param_names):
 
 def _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order):
     """
-    Validate order parameters for Hannan-Rissanen estimation.
+    Validate order parameters for Hannan-Rissanen estimation
 
     Parameters
     ----------
@@ -397,9 +404,13 @@ def _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order):
 def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
                                         spec_ma_lags):
     """
+    Unpack fixed and free ar/ma lags, ix, and params (fixed only)
+
     Parameters
     ----------
     fixed_params : dict
+        Dictionary of fixed parameter values keyed by parameter name, or
+        None.
     spec_ar_lags : list of int
         SARIMAXSpecification.ar_lags
     spec_ma_lags : list of int
@@ -410,7 +421,7 @@ def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
     Bunch with
     (lags) fixed_ar_lags, fixed_ma_lags, free_ar_lags, free_ma_lags;
     (ix) fixed_ar_ix, fixed_ma_ix, free_ar_ix, free_ma_ix;
-    (params) fixed_ar_params, free_ma_params
+    (params) fixed_ar_params, fixed_ma_params
     """
     # unpack fixed lags and params
     fixed_ar_lags_and_params = []

@@ -40,7 +40,7 @@ __all__ = [
 
 def add_trend(x, trend="c", prepend=False, has_constant="skip"):
     """
-    Add a trend and/or constant to an array.
+    Add a trend and/or constant to an array
 
     Parameters
     ----------
@@ -171,7 +171,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
 
 def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """
-    Returns an array with lags included given an array.
+    Returns an array with lags included given an array
 
     Parameters
     ----------
@@ -194,19 +194,18 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     array : ndarray
         Array with lags
 
+    Notes
+    -----
+    Trims the array both forward and backward, so that the length of the
+    returned array is len(`X`) - lags. The lags are returned in increasing
+    order, i.e., t-1,t-2,...,t-lags
+
     Examples
     --------
-
     >>> import statsmodels.api as sm
     >>> data = sm.datasets.macrodata.load()
     >>> data = data.data[['year','quarter','realgdp','cpi']]
     >>> data = sm.tsa.add_lag(data, 'realgdp', lags=2)
-
-    Notes
-    -----
-    Trims the array both forward and backward, so that the array returned
-    so that the length of the returned array is len(`X`) - lags. The lags are
-    returned in increasing order, ie., t-1,t-2,...,t-lags
     """
     lags = int_like(lags, "lags")
     drop = bool_like(drop, "drop")
@@ -251,7 +250,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
 
 def detrend(x, order=1, axis=0):
     """
-    Detrend an array with a trend of given order along axis 0 or 1.
+    Detrend an array with a trend of given order along axis 0 or 1
 
     Parameters
     ----------
@@ -302,7 +301,7 @@ def lagmat(
     use_pandas: bool = False,
 ) -> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
     """
-    Create 2d array of lags.
+    Create 2d array of lags
 
     Parameters
     ----------
@@ -447,7 +446,7 @@ def lagmat(
 
 def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=False):
     """
-    Generate lagmatrix for 2d array, columns arranged by variables.
+    Generate lagmatrix for 2d array, columns arranged by variables
 
     Parameters
     ----------
@@ -577,9 +576,15 @@ def duplication_matrix(n):
     Create duplication matrix D_n which satisfies vec(S) = D_n vech(S) for
     symmetric matrix S
 
+    Parameters
+    ----------
+    n : int
+        The number of rows/columns of the symmetric matrix S.
+
     Returns
     -------
     D_n : ndarray
+        The duplication matrix.
     """
     n = int_like(n, "n")
     tmp = np.eye(n * (n + 1) // 2)
@@ -593,9 +598,13 @@ def elimination_matrix(n):
 
     Parameters
     ----------
+    n : int
+        The number of rows/columns of the matrix M.
 
     Returns
     -------
+    L_n : ndarray
+        The elimination matrix.
     """
     n = int_like(n, "n")
     vech_indices = vec(np.tril(np.ones((n, n))))
@@ -609,7 +618,9 @@ def commutation_matrix(p, q):
     Parameters
     ----------
     p : int
+        Number of rows of A.
     q : int
+        Number of columns of A.
 
     Returns
     -------
@@ -625,15 +636,15 @@ def commutation_matrix(p, q):
 
 def _ar_transparams(params):
     """
-    Transforms params to induce stationarity/invertability.
+    Transforms params to induce stationarity/invertibility
 
     Parameters
     ----------
     params : array_like
         The AR coefficients
 
-    Reference
-    ---------
+    References
+    ----------
     Jones(1980)
     """
     newparams = np.tanh(params / 2)
@@ -668,15 +679,15 @@ def _ar_invtransparams(params):
 
 def _ma_transparams(params):
     """
-    Transforms params to induce stationarity/invertability.
+    Transforms params to induce stationarity/invertibility
 
     Parameters
     ----------
     params : ndarray
-        The ma coeffecients of an (AR)MA model.
+        The ma coefficients of an (AR)MA model.
 
-    Reference
-    ---------
+    References
+    ----------
     Jones(1980)
     """
     newparams = ((1 - np.exp(-params)) / (1 + np.exp(-params))).copy()
@@ -697,7 +708,7 @@ def _ma_invtransparams(macoefs):
 
     Parameters
     ----------
-    params : ndarray
+    macoefs : ndarray
         The transformed MA coefficients
     """
     tmp = macoefs.copy()
@@ -712,7 +723,7 @@ def _ma_invtransparams(macoefs):
 
 def unintegrate_levels(x, d):
     """
-    Returns the successive differences needed to unintegrate the series.
+    Returns the successive differences needed to unintegrate the series
 
     Parameters
     ----------

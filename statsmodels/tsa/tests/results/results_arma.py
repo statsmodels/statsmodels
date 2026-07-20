@@ -1,6 +1,4 @@
-"""
-Results for ARMA models.  Produced by gretl.
-"""
+"""Results for ARMA models. Produced by gretl"""
 import os
 
 from numpy import genfromtxt

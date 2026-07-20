@@ -77,7 +77,7 @@ def get_index_loc(key, index):
 
     Notes
     -----
-    If `key` is past the end of of the given index, and the index is either
+    If `key` is past the end of the given index, and the index is either
     an Index with an integral dtype or a date index, this function extends
     the index up to and including key, and then returns the location in the
     new index.
@@ -294,7 +294,7 @@ def get_prediction_index(
     data=None,
 ) -> tuple[int, int, int, Index | None]:
     """
-    Get the location of a specific key in an index or model row labels
+    Get the location of the start and end of prediction, and the associated index
 
     Parameters
     ----------
@@ -310,14 +310,26 @@ def get_prediction_index(
         pd.Timestamp, or pd.Period object), or some other object in the
         model's row labels.
     nobs : int
+        The number of observations in the model.
     base_index : pd.Index
-
+        The base index of the model, against which `start` and `end` are
+        resolved.
     index : pd.Index, optional
         Optionally an index to associate the predicted results to. If None,
         an attempt is made to create an index for the predicted results
         from the model's index or model's row labels.
     silent : bool, optional
         Argument to silence warnings.
+    index_none : bool, optional
+        Whether the returned prediction index should be forced to None
+        even if a supported index would otherwise be available. Default
+        is False.
+    index_generated : bool, optional
+        Whether the model's underlying index was internally generated
+        rather than taken directly from `endog` / `exog`. Default is None.
+    data : statsmodels.base.data.ModelData
+        The model's data object, used to obtain row labels and to set the
+        `predict_start`, `predict_end`, and `predict_dates` attributes.
 
     Returns
     -------
@@ -483,7 +495,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         PeriodIndex.
 
         If Pandas objects, endog / exog may have any type of index. If it is
-        an NumericIndex with values 0, 1, ..., nobs-1 or if it is (coerceable to)
+        a NumericIndex with values 0, 1, ..., nobs-1 or if it is (coercible to)
         a DatetimeIndex or PeriodIndex *with an associated frequency*, then it
         is called a "supported" index. Otherwise it is called an "unsupported"
         index.
@@ -711,7 +723,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         key : label
             The key for which to find the location if the underlying index is
             a DateIndex or a location if the underlying index is a RangeIndex
-            or an NumericIndex.
+            or a NumericIndex.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -728,8 +740,8 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Notes
         -----
-        If `key` is past the end of of the given index, and the index is either
-        an NumericIndex or a date index, this function extends the index up to
+        If `key` is past the end of the given index, and the index is either
+        a NumericIndex or a date index, this function extends the index up to
         and including key, and then returns the location in the new index.
         """
 
@@ -746,7 +758,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         key : label
             The key for which to find the location if the underlying index is
             a DateIndex or is only being used as row labels, or a location if
-            the underlying index is a RangeIndex or an NumericIndex.
+            the underlying index is a RangeIndex or a NumericIndex.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -776,7 +788,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         self, start, end, index=None, silent=False
     ) -> tuple[int, int, int, Index | None]:
         """
-        Get the location of a specific key in an index or model row labels
+        Get the location of the start and end of prediction, and the associated index
 
         Parameters
         ----------

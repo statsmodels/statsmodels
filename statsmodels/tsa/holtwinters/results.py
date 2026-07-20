@@ -18,7 +18,7 @@ from statsmodels.tools.rng_qrng import check_random_state
 
 class HoltWintersResults(Results):
     """
-    Results from fitting Exponential Smoothing models.
+    Results from fitting Exponential Smoothing models
 
     Parameters
     ----------
@@ -103,37 +103,27 @@ class HoltWintersResults(Results):
 
     @property
     def aic(self):
-        """
-        The Akaike information criterion.
-        """
+        """The Akaike information criterion"""
         return self._aic
 
     @property
     def aicc(self):
-        """
-        AIC with a correction for finite sample sizes.
-        """
+        """AIC with a correction for finite sample sizes"""
         return self._aicc
 
     @property
     def bic(self):
-        """
-        The Bayesian information criterion.
-        """
+        """The Bayesian information criterion"""
         return self._bic
 
     @property
     def sse(self):
-        """
-        The sum of squared errors between the data and the fittted value.
-        """
+        """The sum of squared errors between the data and the fitted value"""
         return self._sse
 
     @property
     def model(self):
-        """
-        The model used to produce the results instance.
-        """
+        """The model used to produce the results instance"""
         return self._model
 
     @model.setter
@@ -142,30 +132,22 @@ class HoltWintersResults(Results):
 
     @property
     def level(self):
-        """
-        An array of the levels values that make up the fitted values.
-        """
+        """An array of the level values that make up the fitted values"""
         return self._level
 
     @property
     def optimized(self):
-        """
-        Flag indicating if model parameters were optimized to fit the data.
-        """
+        """Flag indicating if model parameters were optimized to fit the data"""
         return self._optimized
 
     @property
     def trend(self):
-        """
-        An array of the trend values that make up the fitted values.
-        """
+        """An array of the trend values that make up the fitted values"""
         return self._trend
 
     @property
     def season(self):
-        """
-        An array of the seasonal values that make up the fitted values.
-        """
+        """An array of the seasonal values that make up the fitted values"""
         return self._season
 
     @property
@@ -180,44 +162,32 @@ class HoltWintersResults(Results):
 
     @property
     def fittedvalues(self):
-        """
-        An array of the fitted values
-        """
+        """An array of the fitted values"""
         return self._fittedvalues
 
     @property
     def fittedfcast(self):
-        """
-        An array of both the fitted values and forecast values.
-        """
+        """An array of both the fitted values and forecast values"""
         return self._fittedfcast
 
     @property
     def fcastvalues(self):
-        """
-        An array of the forecast values
-        """
+        """An array of the forecast values"""
         return self._fcastvalues
 
     @property
     def resid(self):
-        """
-        An array of the residuals of the fittedvalues and actual values.
-        """
+        """An array of the residuals of the fittedvalues and actual values"""
         return self._resid
 
     @property
     def k(self):
-        """
-        The k parameter used to remove the bias in AIC, BIC etc.
-        """
+        """The k parameter used to remove the bias in AIC, BIC etc"""
         return self._k
 
     @property
     def mle_retvals(self):
-        """
-        Optimization results if the parameters were optimized to fit the data.
-        """
+        """Optimization results if the parameters were optimized to fit the data"""
         return self._mle_retvals
 
     @mle_retvals.setter
@@ -233,7 +203,7 @@ class HoltWintersResults(Results):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting, ie.,
             the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, ie.,
             the first forecast is start. Can also be a date string to
@@ -281,7 +251,7 @@ class HoltWintersResults(Results):
 
     def summary(self):
         """
-        Summarize the fitted Model
+        Summarize the fitted model
 
         Returns
         -------
@@ -392,7 +362,7 @@ class HoltWintersResults(Results):
         rng=None,
     ):
         r"""
-        Random simulations using the state space formulation.
+        Random simulations using the state space formulation
 
         Parameters
         ----------
@@ -435,10 +405,10 @@ class HoltWintersResults(Results):
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
         rng : int, np.random.Generator or np.random.RandomState, optional
-            A seed for a numpy.ranomd.RandomStte or a
+            A seed for a numpy.random.RandomState or a
             ``np.random.RandomState`` or ``np.random.Generator`` object.
-            Only used if `random_errors` is ``None`` or ``"bootstrap"`` .
-            Default value of ``None`` used the singleton RandomState object
+            Only used if `random_errors` is ``None`` or ``"bootstrap"``.
+            Default value of ``None`` uses the singleton RandomState object
             provided by NumPy.
 
         Returns
