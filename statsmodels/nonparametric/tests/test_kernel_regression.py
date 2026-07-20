@@ -508,7 +508,7 @@ class TestKernelReg(KernelRegressionTestBase):
     @pytest.mark.slow
     def test_significance_seed_legacy(self):
         nobs = 250
-        
+
         rs = np.random.RandomState(1234561)
         C1 = rs.normal(size=(nobs,))
         C2 = rs.normal(2, 1, size=(nobs,))
