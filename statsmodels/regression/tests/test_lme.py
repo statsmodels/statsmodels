@@ -1401,5 +1401,10 @@ def test_fit_unsupported_kwargs_warns():
 
     model = MixedLM.from_formula("y ~ x", groups="g", data=df)
 
-    with pytest.warns(RuntimeWarning, match="not used by MixedLM.fit"):
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
         model.fit(cov_type="hc1")
+
+    runtime_warnings = [x for x in w if issubclass(x.category, RuntimeWarning)]
+    assert len(runtime_warnings) == 1
+    assert "not used by MixedLM.fit" in str(runtime_warnings[0].message)
