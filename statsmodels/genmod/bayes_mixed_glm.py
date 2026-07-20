@@ -613,6 +613,20 @@ class _VariationalBayesMixedGLM:
             is a standard normal random variable.  This formulation
             can be achieved for any GLM with a canonical link
             function.
+        tm : array_like
+            Mean of the linear predictor.
+        fep_mean : array_like
+            Mean of the fixed effects parameters.
+        vcp_mean : array_like
+            Mean of the variance component parameters.
+        vc_mean : array_like
+            Mean of the random effects realizations.
+        fep_sd : array_like
+            Standard deviation of the fixed effects parameters.
+        vcp_sd : array_like
+            Standard deviation of the variance component parameters.
+        vc_sd : array_like
+            Standard deviation of the random effects realizations.
         """
 
         # p(y | vc) contributions

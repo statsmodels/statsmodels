@@ -149,7 +149,8 @@ def test_binomial_loglike_obs(mu, endog):
 
 
 def test_binomial_varfunc_deriv():
-    """Regression: Binomial.deriv should return 1 - 2*p where p = _clean(mu/n).
+    """
+    Regression: Binomial.deriv should return 1 - 2*p where p = _clean(mu/n).
 
     Prior to the fix, deriv returned 1 - 2*mu (correct only for n=1).
     For n > 1 the formula was wrong; this test covers the general case.

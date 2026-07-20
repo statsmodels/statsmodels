@@ -3125,7 +3125,8 @@ def test_tweedie_score():
 
 
 def test_names():
-    """Test the name properties if using a pandas series.
+    """
+    Test the name properties if using a pandas series.
 
     They should not be the defaults if the series has a name.
 
@@ -3156,7 +3157,8 @@ def test_names():
 
 
 def test_names_default():
-    """Test the name properties if using a numpy arrays.
+    """
+    Test the name properties if using a numpy arrays.
 
     Don't care about the data here, only testing the name properties.
     """
