@@ -1,4 +1,5 @@
-"""Distance dependence measure and the dCov test.
+"""
+Distance dependence measure and the dCov test
 
 Implementation of Székely et al. (2007) calculation of distance
 dependence statistics, including the Distance covariance (dCov) test
@@ -35,7 +36,8 @@ class DistDependStat(NamedTuple):
 
 
 def distance_covariance_test(x, y, B=None, method="auto", rng=None):
-    r"""The Distance Covariance (dCov) test
+    r"""
+    The Distance Covariance (dCov) test
 
     Apply the Distance Covariance (dCov) test of independence to `x` and `y`.
     This test was introduced in [1]_, and is based on the distance covariance
@@ -71,6 +73,11 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
         - `asym` : An asymptotic approximation of the distribution of the test
           statistic is used to find the p-value.
 
+    rng : int, np.random.RandomState or np.random.Generator, optional
+        Random number generator or seed for constructing the empirical
+        distribution, if needed.  If None, the NumPy singleton RandomState instance
+        is used.
+
     Returns
     -------
     test_statistic : float
@@ -80,10 +87,6 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
     chosen_method : str
         The method that was used to obtain the p-value. Mostly relevant when
         the function is called with `method='auto'`.
-    rng : int, np.random.RandomState or np.random.Generator, optional
-        Random number generator or seed for constructing the empirical
-        distribution, if needed.  If None, the NumPy singleton RandomState instance
-        is used.
 
     Notes
     -----
@@ -101,7 +104,7 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
     References
     ----------
     .. [1] Szekely, G.J., Rizzo, M.L., and Bakirov, N.K. (2007)
-       "Measuring and testing by correlation of distances".
+       "Measuring and testing dependence by correlation of distances".
        Annals of Statistics, Vol. 35 No. 6, pp. 2769-2794.
 
     Examples
@@ -151,8 +154,8 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
 
 
 def _validate_and_tranform_x_and_y(x, y):
-    r"""Ensure `x` and `y` have proper shape and transform/reshape them if
-    required.
+    r"""
+    Ensure `x` and `y` have proper shape and transform/reshape them if required
 
     Parameters
     ----------
@@ -195,7 +198,8 @@ def _validate_and_tranform_x_and_y(x, y):
 
 
 def _empirical_pvalue(x, y, B, n, stats, rng):
-    r"""Calculate the empirical p-value based on permutations of `y`'s rows
+    r"""
+    Calculate the empirical p-value based on permutations of `y`'s rows
 
     Parameters
     ----------
@@ -212,9 +216,13 @@ def _empirical_pvalue(x, y, B, n, stats, rng):
         the number of columns in `x`.
     B : int
         The number of iterations when evaluating the null distribution.
-    n : Number of observations found in each of `x` and `y`.
-    stats: namedtuple
+    n : int
+        Number of observations found in each of `x` and `y`.
+    stats : namedtuple
         The result obtained from calling ``distance_statistics(x, y)``.
+    rng : {None, int, numpy.random.Generator, numpy.random.RandomState}
+        Random number generator or seed used to permute `y`'s rows when
+        constructing the empirical distribution.
 
     Returns
     -------
@@ -235,12 +243,12 @@ def _empirical_pvalue(x, y, B, n, stats, rng):
 
 
 def _asymptotic_pvalue(stats):
-    r"""Calculate the p-value based on an approximation of the distribution of
-    the test statistic under the null.
+    r"""
+    Calculate the p-value using an asymptotic approximation of the null distribution
 
     Parameters
     ----------
-    stats: namedtuple
+    stats : namedtuple
         The result obtained from calling ``distance_statistics(x, y)``.
 
     Returns
@@ -259,6 +267,8 @@ def _asymptotic_pvalue(stats):
 
 def _get_test_statistic_distribution(x, y, B, rng):
     r"""
+    Compute the empirical distribution of the test statistic under permutation
+
     Parameters
     ----------
     x : array_like, 1-D or 2-D
@@ -275,6 +285,9 @@ def _get_test_statistic_distribution(x, y, B, rng):
     B : int
         The number of iterations to perform when evaluating the null
         distribution.
+    rng : {None, int, numpy.random.Generator, numpy.random.RandomState}
+        Random number generator or seed used to shuffle `y`'s rows when
+        constructing the empirical distribution.
 
     Returns
     -------
@@ -293,7 +306,8 @@ def _get_test_statistic_distribution(x, y, B, rng):
 
 
 def distance_statistics(x, y, x_dist=None, y_dist=None):
-    r"""Calculate various distance dependence statistics.
+    r"""
+    Calculate various distance dependence statistics
 
     Calculate several distance dependence statistics as described in [1]_.
 
@@ -390,7 +404,8 @@ def distance_statistics(x, y, x_dist=None, y_dist=None):
 
 
 def distance_covariance(x, y):
-    r"""Distance covariance.
+    r"""
+    Distance covariance
 
     Calculate the empirical distance covariance as described in [1]_.
 
@@ -432,7 +447,8 @@ def distance_covariance(x, y):
 
 
 def distance_variance(x):
-    r"""Distance variance.
+    r"""
+    Distance variance
 
     Calculate the empirical distance variance as described in [1]_.
 
@@ -469,7 +485,8 @@ def distance_variance(x):
 
 
 def distance_correlation(x, y):
-    r"""Distance correlation.
+    r"""
+    Distance correlation
 
     Calculate the empirical distance correlation as described in [1]_.
     This statistic is analogous to product-moment correlation and describes

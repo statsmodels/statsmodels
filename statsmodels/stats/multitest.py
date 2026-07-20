@@ -1,4 +1,5 @@
-"""Multiple Testing and P-Value Correction
+"""
+Multiple Testing and P-Value Correction
 
 
 Author: Josef Perktold
@@ -290,7 +291,7 @@ def multipletests(
 
 def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     """
-    pvalue correction for false discovery rate.
+    pvalue correction for false discovery rate
 
     This covers Benjamini/Hochberg for independent or positively correlated and
     Benjamini/Yekutieli for general or negatively correlated tests.
@@ -325,16 +326,16 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     If there is prior information on the fraction of true hypothesis, then alpha
     should be set to ``alpha * m/m_0`` where m is the number of tests,
     given by the p-values, and m_0 is an estimate of the true hypothesis.
-    (see Benjamini, Krieger and Yekuteli)
+    (see Benjamini, Krieger and Yekutieli)
 
-    The two-step method of Benjamini, Krieger and Yekutiel that estimates the number
+    The two-step method of Benjamini, Krieger and Yekutieli that estimates the number
     of false hypotheses will be available (soon).
 
     Both methods exposed via this function (Benjamini/Hochberg, Benjamini/Yekutieli)
     are also available in the function ``multipletests``, as ``method="fdr_bh"`` and
     ``method="fdr_by"``, respectively.
 
-    See also
+    See Also
     --------
     multipletests
 
@@ -381,10 +382,11 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
 def fdrcorrection_twostage(
     pvals, alpha=0.05, method="bky", maxiter=1, iter=None, is_sorted=False
 ):
-    """(iterated) two stage linear step-up procedure with estimation of number of true
-    hypotheses
+    """
+    (iterated) two stage linear step-up procedure with estimation of number
+    of true hypotheses
 
-    Benjamini, Krieger and Yekuteli, procedure in Definition 6
+    Benjamini, Krieger and Yekutieli, procedure in Definition 6
 
     Parameters
     ----------
@@ -392,11 +394,11 @@ def fdrcorrection_twostage(
         set of p-values of the individual tests.
     alpha : float
         error rate
-    method : {'bky', 'bh')
+    method : {'bky', 'bh'}
         see Notes for details
 
         * 'bky' - implements the procedure in Definition 6 of Benjamini, Krieger
-           and Yekuteli 2006
+           and Yekutieli 2006
         * 'bh' - the two stage method of Benjamini and Hochberg
 
     maxiter : int or bool
@@ -424,6 +426,11 @@ def fdrcorrection_twostage(
         .. deprecated:: 0.14
 
             Use ``maxiter`` instead of ``iter``.
+
+    is_sorted : bool
+        If False (default), the p_values will be sorted, but the corrected
+        pvalues are in the original order. If True, then it assumed that the
+        pvalues are already sorted in ascending order.
 
     Returns
     -------
@@ -534,7 +541,7 @@ def fdrcorrection_twostage(
 
 def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7, nbins=30, alpha=0):
     """
-    Calculate local FDR values for a list of Z-scores.
+    Calculate local FDR values for a list of Z-scores
 
     Parameters
     ----------
@@ -635,7 +642,7 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7, nbins=30, alph
 
 class NullDistribution:
     """
-    Estimate a Gaussian distribution for the null Z-scores.
+    Estimate a Gaussian distribution for the null Z-scores
 
     The observed Z-scores consist of both null and non-null values.
     The fitted distribution of null Z-scores is Gaussian, but may have
@@ -725,15 +732,21 @@ class NullDistribution:
 
         def fun(params):
             """
-            Negative log-likelihood of z-scores.
-
-            The function has three arguments, packed into a vector:
-
-            mean : location parameter
-            logscale : log of the scale parameter
-            logitprop : logit of the proportion of true nulls
+            Negative log-likelihood of z-scores
 
             The implementation follows section 4 from Efron 2008.
+
+            Parameters
+            ----------
+            params : ndarray
+                Vector of three parameters, packed as ``mean`` (the location
+                parameter), ``logscale`` (log of the scale parameter), and
+                ``logitprop`` (logit of the proportion of true nulls).
+
+            Returns
+            -------
+            float
+                The negative log-likelihood evaluated at `params`.
             """
 
             d, s, p = xform(params)
@@ -768,7 +781,7 @@ class NullDistribution:
     # The fitted null density function
     def pdf(self, zscores):
         """
-        Evaluates the fitted empirical null Z-score density.
+        Evaluates the fitted empirical null Z-score density
 
         Parameters
         ----------
@@ -778,8 +791,9 @@ class NullDistribution:
 
         Returns
         -------
-        The empirical null Z-score density evaluated at the given
-        points.
+        scalar or array_like
+            The empirical null Z-score density evaluated at the given
+            points.
         """
 
         zval = (zscores - self.mean) / self.sd

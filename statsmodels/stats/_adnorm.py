@@ -14,7 +14,7 @@ from statsmodels.tools.validation import array_like, bool_like, int_like
 
 def anderson_statistic(x, dist="norm", fit=True, params=(), axis=0):
     """
-    Calculate the Anderson-Darling a2 statistic.
+    Calculate the Anderson-Darling a2 statistic
 
     Parameters
     ----------
@@ -76,7 +76,7 @@ def anderson_statistic(x, dist="norm", fit=True, params=(), axis=0):
 
 def normal_ad(x, axis=0):
     """
-    Anderson-Darling test for normal distribution unknown mean and variance.
+    Anderson-Darling test for normal distribution unknown mean and variance
 
     Parameters
     ----------

@@ -1,12 +1,11 @@
 """
-The RegressionFDR class implements the 'Knockoff' approach for
-controlling false discovery rates (FDR) in regression analysis.
+Control false discovery rates (FDR) in regression analysis using the knockoff approach
 
 The knockoff approach does not require standard errors.  Thus one
 application is to provide inference for parameter estimates that are
 not smooth functions of the data.  For example, the knockoff approach
 can be used to do inference for parameter estimates obtained from the
-LASSO, of from stepwise variable selection.
+LASSO, or from stepwise variable selection.
 
 The knockoff approach controls FDR for parameter estimates that may be
 dependent, such as coefficient estimates in a multiple regression
@@ -16,8 +15,8 @@ The knockoff approach is applicable whenever the test statistic can be
 computed entirely from x'y and x'x, where x is the design matrix and y
 is the vector of responses.
 
-Reference
----------
+References
+----------
 Rina Foygel Barber, Emmanuel Candes (2015).  Controlling the False
 Discovery Rate via Knockoffs.  Annals of Statistics 43:5.
 https://candes.su.domains/publications/downloads/FDR_regression.pdf
@@ -32,7 +31,7 @@ from statsmodels.tools.rng_qrng import check_random_state
 
 class RegressionFDR:
     """
-    Control FDR in a regression procedure.
+    Control FDR in a regression procedure
 
     Parameters
     ----------
@@ -50,6 +49,10 @@ class RegressionFDR:
         Random number generator or seed for constructing the knockoff
         design matrix.  If None, the NumPy singleton RandomState instance
         is used.
+    **kwargs
+        Additional keyword arguments.  Currently supports
+        `design_method`, the approach used to construct the augmented
+        design matrix, either 'equi' (the default) or 'sdp'.
 
     Returns
     -------
@@ -58,7 +61,7 @@ class RegressionFDR:
 
     Notes
     -----
-    This class Implements the knockoff method of Barber and Candes.
+    This class implements the knockoff method of Barber and Candes.
     This is an approach for controlling the FDR of a variety of
     regression estimation procedures, including correlation
     coefficients, OLS regression, OLS with forward selection, and
@@ -134,7 +137,18 @@ class RegressionFDR:
 
     def threshold(self, tfdr):
         """
-        Returns the threshold statistic for a given target FDR.
+        Return the threshold statistic for a given target FDR
+
+        Parameters
+        ----------
+        tfdr : float
+            The target false discovery rate.
+
+        Returns
+        -------
+        float
+            The threshold statistic corresponding to `tfdr`, or
+            np.inf if no such threshold exists.
         """
 
         if np.min(self._ufdr) <= tfdr:
@@ -153,8 +167,7 @@ class RegressionFDR:
 
 def _design_knockoff_sdp(exog, rng):
     """
-    Use semidefinite programming to construct a knockoff design
-    matrix.
+    Use semidefinite programming to construct a knockoff design matrix
 
     Requires cvxopt to be installed.
     """
@@ -199,9 +212,9 @@ def _design_knockoff_sdp(exog, rng):
 
 def _design_knockoff_equi(exog, rng):
     """
-    Construct an equivariant design matrix for knockoff analysis.
+    Construct an equivariant design matrix for knockoff analysis
 
-    Follows the 'equi-correlated knockoff approach of equation 2.4 in
+    Follows the 'equi-correlated' knockoff approach of equation 2.4 in
     Barber and Candes.
 
     Constructs a pair of design matrices exogs, exogn such that exogs
