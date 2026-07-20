@@ -497,6 +497,22 @@ def test_deterministic_process(
     assert isinstance(terms, pd.DataFrame)
 
 
+@pytest.mark.parametrize("drop", [True, False])
+def test_out_of_sample_without_in_sample(drop):
+    # GH: out_of_sample()/range() on a fresh DeterministicProcess used to raise
+    # a bare ``AssertionError`` when drop=False, because the lazy in_sample()
+    # call that populates _retain_cols was gated on self._drop.
+    idx = pd.RangeIndex(0, 10)
+    fresh = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    primed = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    primed.in_sample()
+    pd.testing.assert_frame_equal(
+        fresh.out_of_sample(5), primed.out_of_sample(5)
+    )
+    fresh2 = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    pd.testing.assert_frame_equal(fresh2.range(10, 15), primed.range(10, 15))
+
+
 def test_deterministic_process_errors(time_index):
     with pytest.raises(ValueError, match="seasonal and fourier"):
         DeterministicProcess(time_index, seasonal=True, fourier=2, period=5)
