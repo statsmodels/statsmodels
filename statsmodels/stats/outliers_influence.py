@@ -1452,7 +1452,7 @@ class GLMInfluence(MLEInfluence):
         if hasattr(self, "_hat_matrix_diag"):
             return self._hat_matrix_diag
         else:
-            return self.results.get_hat_matrix()
+            return self.results.get_hat_matrix_diag()
 
     @cache_readonly
     def d_params(self):
