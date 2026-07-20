@@ -30,18 +30,18 @@ jobs:
         python-version: ["3.14"]
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       with:
         fetch-depth: 0
     - name: Checkout statsmodels.github.io without token
-      uses: actions/checkout@v7
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       with:
         fetch-depth: 1
         repository: statsmodels/statsmodels.github.io
         path: statsmodels.github.io
       if: ${{ github.event_name == 'pull_request' }}
     - name: Checkout statsmodels.github.io with token
-      uses: actions/checkout@v7
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       with:
         fetch-depth: 1
         repository: statsmodels/statsmodels.github.io
@@ -53,11 +53,11 @@ jobs:
       env:
         EVENT_TYPE: ${{ github.event_name }}
     - name: Install pandoc
-      uses: r-lib/actions/setup-pandoc@v2
+      uses: r-lib/actions/setup-pandoc@a51a8012b0aab7c32ef9d19bf54da93f3254335e #v2
     - name: Install graphviz
-      uses: ts-graphviz/setup-graphviz@v2
+      uses: ts-graphviz/setup-graphviz@b1de5da23ed0a6d14e0aeee8ed52fdd87af2363c #v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 #v6
       with:
         python-version: ${{ matrix.python-version }}
         cache: "pip"

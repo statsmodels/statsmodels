@@ -24,7 +24,7 @@ def check_random_state(seed=None):
     """Turn `seed` into a `numpy.random.Generator` instance.
     Parameters
     ----------
-    seed : {None, int, Generator, RandomState}, optional
+    seed : {None, int, np.random.Generator, np.random.RandomState}, optional
         If `seed` is None (or `np.random`), the `numpy.random.RandomState`
         singleton is used.
         If `seed` is an int, a new ``numpy.random.RandomState`` instance
@@ -390,6 +390,7 @@ class SimulationSmoothResults:
         self._simulated_state = None
         self._simulated_measurement_disturbance = None
         self._simulated_state_disturbance = None
+        self._simulated_state_disturbance = None
 
     @property
     def simulation_output(self):
@@ -734,8 +735,8 @@ class SimulationSmoothResults:
             raise ValueError(
                 "The simulation smoother currently cannot replace"
                 " the underlying _{{prefix}}Representation model"
-                " object if it changes (which happens e.g. if the"
-                " dimensions of some system matrices change."
+                " object if it changes (which happens e.g., if the"
+                " dimensions of some system matrices change.)"
             )
 
         # Initialize the state

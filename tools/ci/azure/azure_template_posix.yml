@@ -41,10 +41,10 @@ jobs:
           python.architecture: 'x64'
           test.install: true
           TEST_SDIST: true
-        python_39:
-          python.version: '3.9'
+        python_310:
+          python.version: '3.10'
           python.architecture: 'x64'
-          USE_MATPLOTLIB_VERSION: false
+          USE_MATPLOTLIB: false
           USE_CVXOPT: false
           SCIPY_VERSION: 1.8.1
           PANDAS_VERSION: 1.5.3
@@ -72,7 +72,8 @@ jobs:
           python.version: '3.12'
           python.architecture: 'x64'
           SM_FORMULA_ENGINE: "formulaic"
-          PIP_UNINSTALL: "patsy"
+          PIP_UNINSTALL: "patsy matplotlib"
+          USE_MATPLOTLIB: false
         python_312_no_formulaic:
           python.version: '3.12'
           python.architecture: 'x64'

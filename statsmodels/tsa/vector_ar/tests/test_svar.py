@@ -1,6 +1,7 @@
 """
 Test SVAR estimation
 """
+
 from statsmodels.compat.platform import PLATFORM_WIN
 
 import numpy as np
@@ -28,6 +29,7 @@ class TestSVAR:
         cls.res1 = results
         # cls.res2 = results_svar.SVARdataResults()
         from .results import results_svar_st
+
         cls.res2 = results_svar_st.results_svar1_small
 
     def _reformat(self, x):
@@ -64,13 +66,14 @@ class TestSVAR:
         # mostly SMOKE, API test
         # this only checks that the methods work and produce the same result
         res1 = self.res1
-        errband1 = res1.sirf_errband_mc(orth=False, repl=50, steps=10,
-                                        signif=0.05, seed=987123, burn=100,
-                                        cum=False)
+        errband1 = res1.sirf_errband_mc(
+            orth=False, repl=50, steps=10, signif=0.05, seed=987123, burn=100, cum=False
+        )
 
         irf = res1.irf()
-        errband2 = irf.errband_mc(orth=False, svar=True, repl=50,
-                                  signif=0.05, seed=987123, burn=100)
+        errband2 = irf.errband_mc(
+            orth=False, svar=True, repl=50, signif=0.05, seed=987123, burn=100
+        )
         # Windows precision limits require non-zero atol
         atol = 1e-6 if PLATFORM_WIN else 1e-8
         assert_allclose(errband1, errband2, rtol=1e-8, atol=atol)
@@ -83,7 +86,7 @@ def test_oneparam():
     nobs = 200
     y = rs.randn(nobs, 3)
     y[1:] += 0.5 * y[:-1]
-    A = np.asarray([[1, "E"], [0, 1.]])
+    A = np.asarray([[1, "E"], [0, 1.0]])
     # A_guess = np.asarray([[1, 0.2], [0, 1.]])
     B = np.eye(2, dtype=object)
 
@@ -106,8 +109,8 @@ def test_oneparam():
 
 
 def test_summary_no_user_exog():
-    np.random.seed(0)
-    data = np.random.randn(200, 3)
+    rs = np.random.RandomState(0)
+    data = rs.randn(200, 3)
     B = np.asarray([[1, "E", "E"], [0, 1, "E"], [0, 0, 1]], dtype="U")
     results = SVAR(data, svar_type="B", B=B).fit(maxlags=2, solver="newton")
     assert results.k_exog_user == 0

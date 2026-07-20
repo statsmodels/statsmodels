@@ -268,7 +268,7 @@ class TestKDEUnivariate(KDETestBase):
         npt.assert_allclose(kde_vals, kde_expected, atol=1e-6)
         npt.assert_allclose(kde_vals0, kde_expected, atol=1e-6)
 
-    def test_weighted_pdf_non_fft(self, reset_randomstate):
+    def test_weighted_pdf_non_fft(self):
 
         kde = nparam.KDEUnivariate(self.noise)
         weights = self.weights_orig.copy()
@@ -299,8 +299,9 @@ class TestKDEUnivariate(KDETestBase):
         with pytest.raises(RuntimeError, match="Selected KDE bandwidth is 0"):
             kde.fit()
 
-    def test_int(self, reset_randomstate):
-        x = np.random.randint(0, 100, size=1000)
+    def test_int(self):
+        rs = np.random.RandomState(3321839021)
+        x = rs.randint(0, 100, size=1000)
         kde = nparam.KDEUnivariate(x)
         kde.fit()
 
@@ -640,14 +641,14 @@ class TestKDEMultivariateConditional(KDETestBase):
         Y = b0 + b1 * C1 + b2 * ovals + noise
 
         dens_efficient = nparam.KDEMultivariateConditional(
-                endog=[Y],
-                exog=[C1],
-                dep_type="c",
-                indep_type="c",
-                bw="cv_ml",
-                defaults=nparam.EstimatorSettings(efficient=True, n_sub=50),
-                seed=12345,
-                )
+            endog=[Y],
+            exog=[C1],
+            dep_type="c",
+            indep_type="c",
+            bw="cv_ml",
+            defaults=nparam.EstimatorSettings(efficient=True, n_sub=50),
+            seed=12345,
+        )
 
         # dens = nparam.KDEMultivariateConditional(endog=[Y], exog=[C1],
         #                   dep_type='c', indep_type='c', bw='cv_ml')
@@ -674,8 +675,9 @@ class TestKDEMultivariateConditional(KDETestBase):
 
 
 @pytest.mark.parametrize("kernel", ["biw", "cos", "epa", "gau", "tri", "triw", "uni"])
-def test_all_kernels(kernel, reset_randomstate):
-    data = np.random.normal(size=200)
+def test_all_kernels(kernel):
+    rs = np.random.RandomState(32989053)
+    data = rs.normal(size=200)
     x_grid = np.linspace(min(data), max(data), 200)
     density = sm.nonparametric.KDEUnivariate(data)
     density.fit(kernel="gau", fft=False)

@@ -70,9 +70,7 @@ def default_kwargs_short():
     rw = np.ones(nobs)
     trend = np.zeros(nobs)
     season = np.zeros(nobs)
-    kwargs.update(
-        dict(y=y, n=nobs, rw=rw, trend=trend, season=season, work=work)
-    )
+    kwargs.update(dict(y=y, n=nobs, rw=rw, trend=trend, season=season, work=work))
     return kwargs
 
 
@@ -217,10 +215,7 @@ def test_parameter_checks_low_pass(default_kwargs):
     endog = class_kwargs["endog"]
     period = class_kwargs["period"]
 
-    match = (
-        "low_pass must be an odd positive integer >= 3 where"
-        " low_pass > period"
-    )
+    match = "low_pass must be an odd positive integer >= 3 where low_pass > period"
     with pytest.raises(ValueError, match=match):
         STL(endog=endog, period=period, low_pass=14)
     with pytest.raises(ValueError, match=match):
@@ -292,6 +287,7 @@ def test_no_period(default_kwargs):
         STL(**class_kwargs)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot(default_kwargs, close_figures):
     class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)

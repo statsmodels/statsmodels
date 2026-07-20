@@ -70,7 +70,7 @@ requires-python = ">=3.9"
 test = [
     # test
     "pytest>=8.4.1,<9",
-    "pytest-randomly",
+    # "pytest-randomly", <- Directly affects the global numpy random state
     "pytest-run-parallel",
     "pytest-xdist",
     "pytest-cov",
@@ -289,7 +289,9 @@ filterwarnings = [
     "error:After 0.17 or January 2028:FutureWarning:",
     "error:A future version of pandas:",
     "error:The inplace keyword in::",
-    "error:Keyword arguments have been passed:FutureWarning:"
+    "error:Keyword arguments have been passed:FutureWarning:",
+    "error:After statsmodels 0.15 is released:FutureWarning:",
+    "error:Passing `None` as the seed currently:FutureWarning:"
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",
@@ -307,7 +309,8 @@ markers = [
     "smoke: mark a test as a smoke test",
     "high_memory: mark a test as a high memory utilization test",
     "low_precision: mark a test as low precision",
-    "todo: mark a test as incomplete"
+    "todo: mark a test as incomplete",
+    "singleton_randomstate: mark a test as changing the singleton RandomState",
 ]
 
 [tool.isort]

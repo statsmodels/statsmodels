@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+import string
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, TypeVar
 
 import numpy as np
@@ -102,7 +103,7 @@ def infer_freq(index) -> str | None:
     with _infer_freq_returns_offset():
         freq = pd.infer_freq(index)
 
-    # new pandas versions retuns BaseOffset
+    # new pandas versions returns BaseOffset
     if not isinstance(freq, str) and freq is not None:
         return freq.freqstr
     return freq
@@ -150,41 +151,41 @@ def is_float_index(index: pd.Index) -> bool:
     )
 
 
-try:
-    from pandas._testing import makeDataFrame as make_dataframe
-except ImportError:
-    import string
+def rands_array(generator=None, nchars=10, size=10, dtype="O"):
+    """
+    Generate an array of byte strings.
+    """
+    if generator is None:
+        generator = np.random.default_rng()
+    rands_chars = np.array(
+        list(string.ascii_letters + string.digits), dtype=(np.str_, 1)
+    )
+    retval = (
+        generator.choice(rands_chars, size=nchars * np.prod(size))
+        .view((np.str_, nchars))
+        .reshape(size)
+    )
+    if dtype is None:
+        return retval
+    else:
+        return retval.astype(dtype)
 
-    def rands_array(nchars, size, dtype="O"):
-        """
-        Generate an array of byte strings.
-        """
-        rands_chars = np.array(
-            list(string.ascii_letters + string.digits), dtype=(np.str_, 1)
-        )
-        retval = (
-            np.random.choice(rands_chars, size=nchars * np.prod(size))
-            .view((np.str_, nchars))
-            .reshape(size)
-        )
-        if dtype is None:
-            return retval
-        else:
-            return retval.astype(dtype)
 
-    def make_dataframe():
-        """
-        Simple verion of pandas._testing.makeDataFrame
-        """
-        n = 30
-        k = 4
-        index = pd.Index(rands_array(nchars=10, size=n), name=None)
-        data = {
-            c: pd.Series(np.random.randn(n), index=index)
-            for c in string.ascii_uppercase[:k]
-        }
+def make_dataframe(generator=None):
+    """
+    Simple version of pandas._testing.makeDataFrame
+    """
+    if generator is None:
+        generator = np.random.default_rng()
+    n = 30
+    k = 4
+    index = pd.Index(rands_array(generator=generator, nchars=10, size=n), name=None)
+    data = {
+        c: pd.Series(generator.standard_normal(n), index=index)
+        for c in string.ascii_uppercase[:k]
+    }
 
-        return pd.DataFrame(data)
+    return pd.DataFrame(data)
 
 
 def to_numpy(po: pd.DataFrame) -> np.ndarray:

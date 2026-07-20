@@ -16,6 +16,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch, pinv_extended
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -1144,7 +1145,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         search_reps=0,
         search_iter=5,
         search_scale=1.0,
-        generator=None,
+        rng=None,
         **kwargs,
     ):
         """
@@ -1207,7 +1208,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             search parameter repetitions.
         search_scale : float or array, optional.
             Scale of variates for random start parameter search.
-        generator : np.random.Generator or np.random.RandomState, optional
+        rng : np.random.Generator or np.random.RandomState, optional
             The source of random variables to use in parameter initialization.
             If None, uses the singleton RandomState in np.random.
         **kwargs
@@ -1232,7 +1233,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 transformed=transformed,
                 em_iter=search_iter,
                 scale=search_scale,
-                generator=generator,
+                rng=rng,
             )
             transformed = True
 
@@ -1451,7 +1452,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         transformed=True,
         em_iter=5,
         scale=1.0,
-        generator=None,
+        rng=None,
     ):
         """
         Search for starting parameters as random permutations of a vector
@@ -1472,7 +1473,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             Scale of variates for random start parameter search. Can be given
             as an array of length equal to the number of parameters or as a
             single scalar.
-        generator : np.random.Generator or np.random.RandomState, optional
+        rng : np.random.Generator or np.random.RandomState, optional
             The source of random variables to use in parameter initialization.
             If None, uses the singleton RandomState in np.random.
 
@@ -1504,12 +1505,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Construct the random variates
         variates = np.zeros((reps, self.k_params))
-        if generator is None:
-            uniform_gen = np.random.uniform
-        else:
-            uniform_gen = generator.uniform
+        rng = check_random_state(rng)
         for i in range(self.k_params):
-            variates[:, i] = scale[i] * uniform_gen(-0.5, 0.5, size=reps)
+            variates[:, i] = scale[i] * rng.uniform(-0.5, 0.5, size=reps)
 
         llf = self.loglike(start_params, transformed=False)
         params = start_params

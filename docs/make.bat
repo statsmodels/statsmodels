@@ -32,15 +32,15 @@ if errorlevel 9009 (
 if "%1" == "html" (
     echo mkdir %BUILDDIR%\html\_static
     mkdir %BUILDDIR%\html\_static
-	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors --skip-existing
 	rem Black list notebooks from doc build here
+	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors --skip-existing --execution-blacklist statespace_custom_models
     python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors --skip-existing --execution-blacklist statespace_custom_models
     echo python %TOOLSPATH%/%DATASETBUILD%
     python %TOOLSPATH%/%DATASETBUILD%
 )
 
 echo %SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
-%SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+%SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O% -j auto
 goto end
 
 if "%1" == "html" (

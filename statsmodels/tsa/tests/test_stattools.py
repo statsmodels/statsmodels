@@ -68,8 +68,8 @@ CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 
 @pytest.fixture(scope="module")
 def acovf_data():
-    rnd = np.random.RandomState(12345)
-    return rnd.randn(250)
+    rs = np.random.RandomState(12345)
+    return rs.randn(250)
 
 
 @pytest.fixture(scope="module")
@@ -677,7 +677,7 @@ def test_coint_identical_series():
     with pytest.warns(CollinearityWarning):
         c = coint(y, y, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
-    assert (np.isneginf(c[0]))
+    assert np.isneginf(c[0])
 
 
 def test_coint_perfect_collinearity():
@@ -691,7 +691,7 @@ def test_coint_perfect_collinearity():
     with warnings.catch_warnings(record=True):
         c = coint(y, x, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
-    assert (np.isneginf(c[0]))
+    assert np.isneginf(c[0])
 
 
 class TestGrangerCausality:
@@ -723,8 +723,9 @@ class TestGrangerCausality:
         assert_almost_equal(gr[2][0]["ssr_ftest"], gr2[2][0]["ssr_ftest"], decimal=7)
         assert_almost_equal(gr[2][0]["params_ftest"], gr2[2][0]["ssr_ftest"], decimal=7)
 
-    def test_granger_fails_on_nobs_check(self, reset_randomstate):
+    def test_granger_fails_on_nobs_check(self):
         # Test that if maxlag is too large, Granger Test raises a clear error.
+        rs = np.random.RandomState(3239291)
         x = rs.rand(10, 2)
         with pytest.warns(FutureWarning, match="verbose is"):
             grangercausalitytests(x, 2, verbose=False)  # This should pass.
@@ -732,7 +733,7 @@ class TestGrangerCausality:
             with pytest.warns(FutureWarning, match="verbose is"):
                 grangercausalitytests(x, 3, verbose=False)
 
-    def test_granger_fails_on_finite_check(self, reset_randomstate):
+    def test_granger_fails_on_finite_check(self):
         rs = np.random.RandomState(1234)
         x = rs.rand(1000, 2)
         x[500, 0] = np.nan
@@ -740,7 +741,7 @@ class TestGrangerCausality:
         with pytest.raises(ValueError, match="x contains NaN"):
             grangercausalitytests(x, 2)
 
-    def test_granger_fails_on_zero_lag(self, reset_randomstate):
+    def test_granger_fails_on_zero_lag(self):
         rs = np.random.RandomState(388776)
         x = rs.rand(1000, 2)
         with pytest.raises(
@@ -766,12 +767,12 @@ class TestKPSS:
         self.data = macrodata.load_pandas()
         self.x = self.data.data["realgdp"].values
 
-    def test_fail_nonvector_input(self, reset_randomstate):
+    def test_fail_nonvector_input(self):
         # should be fine
         with pytest.warns(InterpolationWarning):
             kpss(self.x, nlags="legacy")
 
-        x = np.random.rand(20, 2)
+        x = rs.rand(20, 2)
         with pytest.raises(ValueError):
             kpss(x)
 
@@ -982,7 +983,7 @@ class TestRUR:
         else:
             return rur_stat, p_value, crit_dict
 
-    def test_fail_nonvector_input(self, reset_randomstate):
+    def test_fail_nonvector_input(self):
         with pytest.warns(InterpolationWarning):
             range_unit_root_test(self.x)
 
@@ -1016,7 +1017,7 @@ def test_pandasacovf():
     assert_almost_equal(acovf(s, fft=False), acovf(s.values, fft=False))
 
 
-def test_acovf2d(reset_randomstate):
+def test_acovf2d():
     dta = sunspots.load_pandas().data
     dta.index = date_range(start="1700", end="2009", freq=YEAR_END)[:309]
     del dta["YEAR"]
@@ -1030,7 +1031,7 @@ def test_acovf2d(reset_randomstate):
 
 @pytest.mark.parametrize("demean", [True, False])
 @pytest.mark.parametrize("adjusted", [True, False])
-def test_acovf_fft_vs_convolution(demean, adjusted, reset_randomstate):
+def test_acovf_fft_vs_convolution(demean, adjusted):
     rs = np.random.RandomState(83747)
     q = rs.normal(size=100)
 
@@ -1041,7 +1042,7 @@ def test_acovf_fft_vs_convolution(demean, adjusted, reset_randomstate):
 
 @pytest.mark.parametrize("demean", [True, False])
 @pytest.mark.parametrize("adjusted", [True, False])
-def test_ccovf_fft_vs_convolution(demean, adjusted, reset_randomstate):
+def test_ccovf_fft_vs_convolution(demean, adjusted):
     rs = np.random.RandomState(3843983)
     x = rs.normal(size=128)
     y = rs.normal(size=128)
@@ -1054,7 +1055,7 @@ def test_ccovf_fft_vs_convolution(demean, adjusted, reset_randomstate):
 @pytest.mark.parametrize("demean", [True, False])
 @pytest.mark.parametrize("adjusted", [True, False])
 @pytest.mark.parametrize("fft", [True, False])
-def test_compare_acovf_vs_ccovf(demean, adjusted, fft, reset_randomstate):
+def test_compare_acovf_vs_ccovf(demean, adjusted, fft):
     rs = np.random.RandomState(14523)
     x = rs.normal(size=128)
 
@@ -1146,10 +1147,10 @@ def test_arma_order_select_ic():
     assert_almost_equal(res.bic.values, bic.values, 5)
     assert_equal(res.aic_min_order, (1, 2))
     assert_equal(res.bic_min_order, (1, 2))
-    assert (res.aic.index.equals(aic.index))
-    assert (res.aic.columns.equals(aic.columns))
-    assert (res.bic.index.equals(bic.index))
-    assert (res.bic.columns.equals(bic.columns))
+    assert res.aic.index.equals(aic.index)
+    assert res.aic.columns.equals(aic.columns)
+    assert res.bic.index.equals(bic.index)
+    assert res.bic.columns.equals(bic.columns)
 
     index = pd.date_range("2000-1-1", freq=MONTH_END, periods=len(y))
     y_series = pd.Series(y, index=index)
@@ -1163,8 +1164,8 @@ def test_arma_order_select_ic():
 
     res = arma_order_select_ic(y, ic="aic", trend="n")
     assert_almost_equal(res.aic.values, aic.values, 5)
-    assert (res.aic.index.equals(aic.index))
-    assert (res.aic.columns.equals(aic.columns))
+    assert res.aic.index.equals(aic.index)
+    assert res.aic.columns.equals(aic.columns)
     assert_equal(res.aic_min_order, (1, 2))
 
 
@@ -1369,7 +1370,7 @@ def test_innovations_errors():
         innovations_algo(acovf, rtol="none")
 
 
-def test_innovations_filter_brockwell_davis(reset_randomstate):
+def test_innovations_filter_brockwell_davis():
     ma = -0.9
     acovf = np.array([1 + ma**2, ma])
     theta, _ = innovations_algo(acovf, nobs=4)
@@ -1384,7 +1385,7 @@ def test_innovations_filter_brockwell_davis(reset_randomstate):
     assert_allclose(resid, expected)
 
 
-def test_innovations_filter_pandas(reset_randomstate):
+def test_innovations_filter_pandas():
     ma = np.array([-0.9, 0.5])
     acovf = np.array([1 + (ma**2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
     theta, _ = innovations_algo(acovf, nobs=10)
@@ -1409,7 +1410,7 @@ def test_innovations_filter_errors():
         innovations_filter(pd.DataFrame(np.empty((1, 4))), theta)
 
 
-def test_innovations_algo_filter_kalman_filter(reset_randomstate):
+def test_innovations_algo_filter_kalman_filter():
     # Test the innovations algorithm and filter against the Kalman filter
     # for exact likelihood evaluation of an ARMA process
     ar_params = np.array([0.5])
@@ -1439,7 +1440,7 @@ def test_innovations_algo_filter_kalman_filter(reset_randomstate):
     assert_allclose(llf_obs, res.llf_obs, atol=atol)
 
 
-def test_adfuller_short_series(reset_randomstate):
+def test_adfuller_short_series():
     rs = np.random.RandomState(9374)
     y = rs.standard_normal(7)
     res = adfuller(y, store=True)
@@ -1452,7 +1453,7 @@ def test_adfuller_short_series(reset_randomstate):
         adfuller(y, regression="ct")
 
 
-def test_adfuller_maxlag_too_large(reset_randomstate):
+def test_adfuller_maxlag_too_large():
     rs = np.random.RandomState(3723)
     y = rs.standard_normal(100)
     with pytest.raises(ValueError, match="maxlag must be less than"):
@@ -1539,7 +1540,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         )
 
 
-def test_acf_conservate_nanops(reset_randomstate):
+def test_acf_conservate_nanops():
     # GH 6729
     rs = np.random.RandomState(32738493)
     e = rs.standard_normal(100)
@@ -1556,7 +1557,7 @@ def test_acf_conservate_nanops(reset_randomstate):
     assert_allclose(result, expected, rtol=1e-4, atol=1e-4)
 
 
-def test_pacf_nlags_error(reset_randomstate):
+def test_pacf_nlags_error():
     rs = np.random.RandomState(12487)
     e = rs.standard_normal(99)
     with pytest.raises(ValueError, match="Can only compute partial"):
@@ -1612,7 +1613,7 @@ def test_granger_causality_verbose(gc_data):
 
 
 @pytest.mark.parametrize("size", [3, 5, 7, 9])
-def test_pacf_small_sample(size, reset_randomstate):
+def test_pacf_small_sample(size):
     rs = np.random.RandomState(490203)
     y = rs.standard_normal(size)
     a = pacf(y)
@@ -1626,7 +1627,7 @@ def test_pacf_small_sample(size, reset_randomstate):
     assert isinstance(a, np.ndarray)
 
 
-def test_pacf_1_obs(reset_randomstate):
+def test_pacf_1_obs():
     rs = np.random.RandomState(34857549)
     y = rs.standard_normal(1)
     with pytest.raises(ValueError):
@@ -1638,7 +1639,7 @@ def test_pacf_1_obs(reset_randomstate):
     pacf_yw(y)
 
 
-def test_zivot_andrews_change_data(reset_randomstate):
+def test_zivot_andrews_change_data():
     # GH9307
     years = pd.date_range(start="1990-01-01", end="2023-12-31", freq="YS")
     df = pd.DataFrame(index=years)

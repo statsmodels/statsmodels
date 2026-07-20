@@ -50,6 +50,9 @@ cimport scipy.linalg.cython_lapack as lapack
 include "statsmodels/tsa/statespace/_blas_int.pxi"
 cimport statsmodels.tsa.statespace._tools as tools
 
+from statsmodels.tools.rng_qrng import check_random_state
+
+
 cdef int FORTRAN = 1
 
 {{for prefix, types in TYPES.items()}}
@@ -403,7 +406,7 @@ cdef class {{prefix}}CFASimulationSmoother(object):
                                &self.posterior_cov_inv_chol[0, 0], &ld,
                                &self.posterior_mean[0, 0], &blas_order, &info)
 
-    cpdef simulate(self, variates=None):
+    cpdef simulate(self, variates=None, rng=None):
         cdef blas_int inc = 1
         cdef blas_int ld = self.lower_bandwidth + 1
         cdef blas_int blas_order = self.order
@@ -413,7 +416,8 @@ cdef class {{prefix}}CFASimulationSmoother(object):
 
         # Sample u from N(0, I)
         if variates is None:
-            u = np.random.normal(size=self.order).astype({{dtype}})
+            rng = check_random_state(rng)
+            u = rng.normal(size=self.order).astype({{dtype}})
         else:
             u = variates
 

@@ -948,7 +948,13 @@ class GLMGam(PenalizedMixin, GLM):
         return alpha, fit_res, history
 
     def select_penweight_kfold(
-        self, alphas=None, cv_iterator=None, cost=None, k_folds=5, k_grid=11
+        self,
+        alphas=None,
+        cv_iterator=None,
+        cost=None,
+        k_folds=5,
+        k_grid=11,
+        rng=None,
     ):
         """find alphas by k-fold cross-validation
 
@@ -968,6 +974,10 @@ class GLMGam(PenalizedMixin, GLM):
         k_folds : int
             number of folds if default Kfold iterator is used.
             This is ignored if ``cv_iterator`` is not None.
+        rng : int, np.random.RandomState or np.random.Generator, optional
+            The rng to use during KFold cross-validation. If None, uses the singleton
+            RandomState provided by NumPy. If an int, uses the ``default_rng``.
+            If a RandomState instance or a Generator instance, uses this instance.
 
         Returns
         -------
@@ -991,7 +1001,7 @@ class GLMGam(PenalizedMixin, GLM):
             alphas = [np.logspace(0, 7, k_grid) for _ in range(self.k_smooths)]
 
         if cv_iterator is None:
-            cv_iterator = KFold(k_folds=k_folds, shuffle=True)
+            cv_iterator = KFold(k_folds=k_folds, shuffle=True, rng=rng)
 
         gam_cv = MultivariateGAMCVPath(
             smoother=self.smoother,
