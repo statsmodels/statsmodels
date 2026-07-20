@@ -41,7 +41,7 @@ def test_logit_1d():
 
 
 def test_logit_formula():
-    """Test that ConditionalLogit uses the right environment for formulas."""
+    """Test that ConditionalLogit uses the right environment for formulas"""
 
     def times_two(x):
         return 2 * x

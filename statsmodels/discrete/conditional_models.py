@@ -239,6 +239,10 @@ class ConditionalLogit(_ConditionalModel):
         in this array.
     groups : array_like
         Codes defining the groups. This is a required keyword parameter.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised.
     """
 
     def __init__(self, endog, exog, missing="none", **kwargs):
@@ -375,6 +379,10 @@ class ConditionalPoisson(_ConditionalModel):
         The covariates
     groups : array_like
         Codes defining the groups. This is a required keyword parameter.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised.
     """
 
     def loglike(self, params):
@@ -510,6 +518,10 @@ class ConditionalMNLogit(_ConditionalModel):
         The independent variables.
     groups : array_like
         Codes defining the groups. This is a required keyword parameter.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised.
 
     Notes
     -----
