@@ -4,7 +4,6 @@ Statespace Tools
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from statsmodels.compat.pandas import Appender
 
 import numpy as np
 import pandas as pd
@@ -12,6 +11,7 @@ from scipy.linalg import solve_sylvester
 from scipy.linalg.blas import find_best_blas_type
 
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.docstring_helpers import Appender
 
 from . import (
     _cfa_simulation_smoother,

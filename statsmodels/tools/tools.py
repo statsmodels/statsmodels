@@ -1,6 +1,4 @@
-"""
-Utility functions models code
-"""
+"""Utility functions used by statsmodels models."""
 import numpy as np
 import pandas as pd
 import scipy.linalg
@@ -10,6 +8,7 @@ from statsmodels.tools.validation import array_like
 
 
 def asstr2(s):
+    """Return s as a text string."""
     if isinstance(s, str):
         return s
     elif isinstance(s, bytes):
@@ -37,6 +36,7 @@ def drop_missing(Y, X=None, axis=1):
     Notes
     -----
     If either Y or X is 1d, it is reshaped to be 2d.
+
     """
     Y = np.asarray(Y)
     if Y.ndim == 1:
@@ -136,6 +136,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Or
 
     >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
+
     """
     raise NotImplementedError("categorical has been removed")
 
@@ -168,6 +169,7 @@ def add_constant(data, prepend=True, has_constant="skip"):
     -----
     When the input is a pandas Series or DataFrame, the added column's name
     is 'const'.
+
     """
     if _is_using_pandas(data, None):
         from statsmodels.tsa.tsatools import add_trend
@@ -229,6 +231,7 @@ def isestimable(c, d):
     False
     >>> isestimable([1, -1, 0], d)
     True
+
     """
     c = array_like(c, "c", maxdim=2)
     d = array_like(d, "d", ndim=2)
@@ -278,6 +281,7 @@ def recipr(x):
     -------
     ndarray
         The array with 0-filled reciprocals.
+
     """
     x = np.asarray(x)
     out = np.zeros_like(x, dtype=np.float64)
@@ -302,6 +306,7 @@ def recipr0(x):
     -------
     ndarray
         The array with 0-filled reciprocals.
+
     """
     x = np.asarray(x)
     out = np.zeros_like(x, dtype=np.float64)
@@ -326,6 +331,7 @@ def clean0(matrix):
     -------
     ndarray
         The cleaned array.
+
     """
     colsum = np.add.reduce(matrix**2, 0)
     val = [matrix[:, i] for i in np.flatnonzero(colsum)]
@@ -352,6 +358,7 @@ def fullrank(x, r=None):
     -----
     If the rank of x is known it can be specified as r -- no check
     is made to ensure that this really is the rank of x.
+
     """
     if r is None:
         r = np.linalg.matrix_rank(x)
@@ -395,6 +402,7 @@ def unsqueeze(data, axis, oldshape):
     >>> m.shape
     (3, 1, 5)
     >>>
+
     """
     newshape = list(oldshape)
     newshape[axis] = 1
@@ -403,12 +411,22 @@ def unsqueeze(data, axis, oldshape):
 
 def nan_dot(A, B):
     """
-    Returns np.dot(left_matrix, right_matrix) with the convention that
+    Return np.dot(A, B), preserving NaNs from nonzero products.
+
     nan * 0 = 0 and nan * x = nan if x != 0.
 
     Parameters
     ----------
-    A, B : ndarray
+    A : ndarray
+        Left-hand input array.
+    B : ndarray
+        Right-hand input array.
+
+    Returns
+    -------
+    ndarray
+        Dot product using the NaN convention.
+
     """
     # Find out who should be nan due to nan * nonzero
     should_be_nan_1 = np.dot(np.isnan(A), (B != 0))
@@ -443,8 +461,10 @@ class Bunch(dict):
     *args
         Arguments passed to dict constructor, tuples (key, value).
     **kwargs
-        Keyword agument passed to dict constructor, key=value.
+        Keyword argument passed to dict constructor, key=value.
+
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__dict__ = self
@@ -452,11 +472,10 @@ class Bunch(dict):
 
 def _ensure_2d(x, ndarray=False):
     """
-
     Parameters
     ----------
     x : ndarray, Series, DataFrame or None
-        Input to verify dimensions, and to transform as necesary
+        Input to verify dimensions, and to transform as necessary
     ndarray : bool
         Flag indicating whether to always return a NumPy array. Setting False
         will return an pandas DataFrame when the input is a Series or a
@@ -474,6 +493,7 @@ def _ensure_2d(x, ndarray=False):
     Notes
     -----
     Accepts None for simplicity
+
     """
     if x is None:
         return x
@@ -520,6 +540,7 @@ def matrix_rank(m, tol=None, method="qr"):
     When using a QR factorization, the rank is determined by the number of
     elements on the leading diagonal of the R matrix that are above tol
     in absolute value.
+
     """
     m = array_like(m, "m", ndim=2)
     if method == "ip":

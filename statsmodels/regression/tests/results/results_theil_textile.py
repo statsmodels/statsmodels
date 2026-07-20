@@ -1,3 +1,5 @@
+"""Reference results for Theil textile regression tests."""
+
 import numpy as np
 
 from statsmodels.tools.testing import ParamsTableTestBunch

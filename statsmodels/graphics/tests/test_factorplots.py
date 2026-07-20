@@ -15,11 +15,12 @@ class TestInteractionPlot:
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(12345)
-        cls.weight = np.random.randint(1, 4, size=60)
-        cls.duration = np.random.randint(1, 3, size=60)
-        cls.days = np.log(np.random.randint(1, 30, size=60))
+        rs = np.random.RandomState(12345)
+        cls.weight = rs.randint(1, 4, size=60)
+        cls.duration = rs.randint(1, 3, size=60)
+        cls.days = np.log(rs.randint(1, 30, size=60))
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_both(self, close_figures):
         interaction_plot(
@@ -31,12 +32,14 @@ class TestInteractionPlot:
             ms=10,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_rainbow(self, close_figures):
         interaction_plot(
             self.weight, self.duration, self.days, markers=["D", "^"], ms=10
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     @pytest.mark.parametrize("astype", ["str", "int"])
     def test_plot_pandas(self, astype, close_figures):
@@ -50,6 +53,7 @@ class TestInteractionPlot:
         assert_equal(ax.get_ylabel(), "mean of Days")
         assert_equal(ax.get_xlabel(), "Weight")
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_formatting(self, close_figures):
         fig = interaction_plot(
@@ -61,6 +65,7 @@ class TestInteractionPlot:
         )
         assert_equal(isinstance(fig, plt.Figure), True)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_formatting_errors(self, close_figures):
         with pytest.raises(ValueError):
@@ -74,6 +79,7 @@ class TestInteractionPlot:
                 self.weight, self.duration, self.days, linestyles=["--", "-.", ":"]
             )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plottype(self, close_figures):
         fig = interaction_plot(self.weight, self.duration, self.days, plottype="line")

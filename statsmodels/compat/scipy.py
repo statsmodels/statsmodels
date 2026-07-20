@@ -10,6 +10,8 @@ SP_LT_17 = SP_VERSION < Version("1.6.99")
 SP_LT_19 = SP_VERSION < Version("1.8.99")
 SP_LT_115 = SP_VERSION < Version("1.14.99")
 SP_LT_116 = SP_VERSION < Version("1.15.99")
+SP_LT_118 = SP_VERSION < Version("1.17.99")
+BASINHOPPING_RNG = "seed" if SP_LT_115 else "rng"
 
 
 def _next_regular(target):
@@ -140,6 +142,7 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
 
 
 __all__ = [
+    "BASINHOPPING_RNG",
     "SCIPY_GT_14",
     "SP_LT_15",
     "SP_LT_16",
@@ -147,6 +150,7 @@ __all__ = [
     "SP_LT_19",
     "SP_LT_115",
     "SP_LT_116",
+    "SP_LT_118",
     "SP_VERSION",
     "apply_where",
     "multivariate_t",

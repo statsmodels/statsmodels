@@ -410,7 +410,7 @@ class AFTResults(OptAFT):
         ----------
         b0_vals : list
             The value of parameters to be tested
-        param_num : list
+        param_nums : list
             Which parameters to be tested
         maxiter : int, optional
             How many iterations to use in the EM algorithm.  Default is 30

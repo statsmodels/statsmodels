@@ -5,6 +5,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+
 import numpy as np
 from scipy import stats
 
@@ -34,12 +35,13 @@ class IndependenceCopula(Copula):
     copulas.
 
     """
+
     def __init__(self, k_dim=2):
         super().__init__(k_dim=k_dim)
 
     def _handle_args(self, args):
         if args != () and args is not None:
-            msg = ("Independence copula does not use copula parameters.")
+            msg = "Independence copula does not use copula parameters."
             raise ValueError(msg)
         else:
             return args
@@ -64,7 +66,7 @@ class IndependenceCopula(Copula):
         raise NotImplementedError("PDF is constant over the domain.")
 
 
-def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False):
+def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False, rng=None):
     """Random sampling from empirical copula using Beta distribution
 
     Parameters
@@ -86,6 +88,10 @@ def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False):
         If this is False, then only the random sample will be returned.
         If true, then extra information is returned that is mainly of interest
         for verification.
+    rng : int, np.random.Generator or np.random.RandomState, optional
+        The rng to use when constructing the index. The rng(s) used in the dist
+        objects must be provided in initializing the dist objects. If None, uses
+        the singleton NumPy RandomState.
 
     Returns
     -------
@@ -101,7 +107,8 @@ def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False):
     n = sample.shape[0]
     if k_func is None:
         kfunc = _kernel_rvs_beta1
-    idx = np.random.randint(0, n, size=size)
+    rng = check_random_state(rng)
+    idx = rng.randint(0, n, size=size)
     xi = sample[idx]
     krvs = np.column_stack([kfunc(xii, bw) for xii in xi.T])
 

@@ -36,6 +36,7 @@ class Reader:
         ----------
         data : str
            String with lines separated by '\n'.
+
         """
         if isinstance(data, list):
             self._str = data
@@ -109,7 +110,8 @@ class Parameter(NamedTuple):
 
 
 class NumpyDocString(Mapping):
-    """Parses a numpydoc string to an abstract representation
+    """
+    Parses a numpydoc string to an abstract representation
 
     Instances define a mapping from section title to structured data.
     """
@@ -281,7 +283,6 @@ class NumpyDocString(Mapping):
         another_func_name : Descriptive text
         func_name1, func_name2, :meth:`func_name`, func_name3
         """
-
         items = []
 
         def parse_item_name(text):
@@ -330,7 +331,7 @@ class NumpyDocString(Mapping):
     def _parse_index(self, section, content):
         """
         .. index: default
-           :refguide: something, else, and more
+        :refguide: something, else, and more
         """
 
         def strip_each_in(lst):
@@ -565,6 +566,7 @@ class Docstring:
     ----------
     docstring : str
         The docstring to modify.
+
     """
 
     def __init__(self, docstring):
@@ -581,6 +583,7 @@ class Docstring:
         ----------
         parameters : str, list[str]
             The names of the parameters to remove.
+
         """
         if self._docstring is None:
             # Protection against -oo execution
@@ -605,6 +608,7 @@ class Docstring:
             docstring.
         parameters : Parameter, list[Parameter]
             A Parameter of a list of Parameters.
+
         """
         if self._docstring is None:
             # Protection against -oo execution
@@ -634,6 +638,7 @@ class Docstring:
         block : object
             The replacement block. The structure of the replacement block must
             match how the block is stored by NumpyDocString.
+
         """
         if self._docstring is None:
             # Protection against -oo execution
@@ -693,6 +698,7 @@ def remove_parameters(docstring, parameters):
     -------
     str
         The modified docstring.
+
     """
     if docstring is None:
         return

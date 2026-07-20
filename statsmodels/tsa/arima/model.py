@@ -4,7 +4,6 @@ ARIMA model class.
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -12,6 +11,7 @@ import numpy as np
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.gls import gls as estimate_gls
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen

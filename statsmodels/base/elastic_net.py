@@ -2,7 +2,7 @@ import numpy as np
 
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 """
 Elastic net regularization.

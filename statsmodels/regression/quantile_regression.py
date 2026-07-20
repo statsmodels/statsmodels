@@ -29,12 +29,13 @@ from statsmodels.regression.linear_model import (
     RegressionResults,
     RegressionResultsWrapper,
 )
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, IterationLimitWarning
 
 
 class QuantReg(RegressionModel):
-    """Quantile Regression
+    """
+    Quantile Regression
 
     Estimate a quantile regression model using iterative reweighted least
     squares.
@@ -76,6 +77,7 @@ class QuantReg(RegressionModel):
 
     Keywords: Least Absolute Deviation(LAD) Regression, Quantile Regression,
     Regression, Robust Estimation.
+
     """
 
     def __init__(self, endog, exog, **kwargs):
@@ -127,14 +129,20 @@ class QuantReg(RegressionModel):
             - hsheather: Hall-Sheather (1988)
             - bofinger: Bofinger (1975)
             - chamberlain: Chamberlain (1994)
-        """
+        max_iter : int
+            Maximum number of iterations.
+        p_tol : float
+            Convergence tolerance for the iterative parameter estimates.
+        **kwargs
+            Additional keyword arguments, accepted for API compatibility.
 
+        """
         if q <= 0 or q >= 1:
-            raise Exception("q must be strictly between 0 and 1")
+            raise ValueError("q must be strictly between 0 and 1")
 
         kern_names = ["biw", "cos", "epa", "gau", "par"]
         if kernel not in kern_names:
-            raise Exception("kernel must be one of " + ", ".join(kern_names))
+            raise ValueError("kernel must be one of " + ", ".join(kern_names))
         else:
             kernel = kernels[kernel]
 
@@ -145,7 +153,7 @@ class QuantReg(RegressionModel):
         elif bandwidth == "chamberlain":
             bandwidth = chamberlain
         else:
-            raise Exception(
+            raise ValueError(
                 "bandwidth must be in 'hsheather', 'bofinger', 'chamberlain'"
             )
 
@@ -230,7 +238,7 @@ class QuantReg(RegressionModel):
         elif vcov == "iid":
             vcov = (1.0 / fhat0) ** 2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
         else:
-            raise Exception("vcov must be 'robust' or 'iid'")
+            raise ValueError("vcov must be 'robust' or 'iid'")
 
         lfit = QuantRegResults(self, beta, normalized_cov_params=vcov)
 
@@ -365,7 +373,8 @@ class QuantRegResults(RegressionResults):
         raise NotImplementedError
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
-        """Summarize the Regression Results
+        """
+        Summarize the Regression Results
 
         Parameters
         ----------
@@ -390,6 +399,7 @@ class QuantRegResults(RegressionResults):
         See Also
         --------
         statsmodels.iolib.summary.Summary : class to hold summary results
+
         """
         eigvals = self.eigenvals
         condno = self.condition_number

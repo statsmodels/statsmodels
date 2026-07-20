@@ -19,7 +19,7 @@ from statsmodels.discrete._diagnostics_count import (
     test_poisson_zeros,
 )
 from statsmodels.stats.diagnostic_gen import test_chisquare_binning
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ModelWarning
 
 
@@ -50,11 +50,11 @@ class CountDiagnostic:
         return self.results.predict(which="prob", **kwds)
 
     def test_chisquare_prob(self, bin_edges=None, method=None):
-        """Moment test for binned probabilites using OPG.
+        """Moment test for binned probabilities using OPG.
 
-        Paramters
-        ---------
-        binedges : array_like or None
+        Parameters
+        ----------
+        bin_edges : array_like or None
             This defines which counts are included in the test on frequencies
             and how counts are combined in bins.
             The default if bin_edges is None will change in future.
@@ -95,7 +95,7 @@ class CountDiagnostic:
         In this case, edges are 0, ..., 9 which defines 9 bins for
         counts 0 to 8. The last bin is dropped, so the joint test hypothesis is
         that the observed aggregated frequencies for counts 0 to 7 correspond
-        to the model prediction for those frequencies. Predicted probabilites
+        to the model prediction for those frequencies. Predicted probabilities
         Prob(y_i = k | x) are aggregated over observations ``i``.
 
         """

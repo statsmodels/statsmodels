@@ -165,7 +165,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 # deprecated dispersion functions, moved to discrete._diagnostic_count
 

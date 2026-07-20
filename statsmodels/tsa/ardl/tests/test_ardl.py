@@ -249,10 +249,11 @@ def test_ardl_holdback_exceptions(data):
 
 
 def test_ardl_fixed_exceptions(data):
-    fixed = np.random.standard_normal((2, 200))
+    rs = np.random.RandomState(992711)
+    fixed = rs.standard_normal((2, 200))
     with pytest.raises(ValueError, match="fixed must be an"):
         ARDL(data.y, 2, data.x, 2, fixed=fixed)
-    fixed = np.random.standard_normal((dane_data.lrm.shape[0], 2))
+    fixed = rs.standard_normal((dane_data.lrm.shape[0], 2))
     fixed[20, 0] = -np.inf
     with pytest.raises(ValueError, match="fixed must be an"):
         ARDL(data.y, 2, data.x, 2, fixed=fixed)
@@ -405,6 +406,7 @@ def test_ardl_parameter_names(data):
     assert mod.exog_names == expected
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_diagnostics_plot(data, close_figures):
     import matplotlib.figure
@@ -569,6 +571,7 @@ def test_get_prediction(data):
     assert_allclose(pred.var_pred_mean, ar_pred.var_pred_mean)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
 @pytest.mark.parametrize("trend", ["n", "c", "ct"])

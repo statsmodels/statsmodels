@@ -38,9 +38,7 @@ class _ConditionalModel(base.LikelihoodModel):
         super().__init__(endog, exog, missing=missing, **kwargs)
 
         if self.data.const_idx is not None:
-            msg = (
-                "Conditional models should not have an intercept in the design matrix"
-            )
+            msg = "Conditional models should not have an intercept in the design matrix"
             raise ValueError(msg)
 
         exog = self.exog
@@ -559,13 +557,17 @@ class ConditionalMNLogit(_ConditionalModel):
         callback=None,
         retall=False,
         skip_hessian=False,
+        generator=None,
         **kwargs,
     ):
 
         if start_params is None:
             q = self.exog.shape[1]
             c = self.k_cat - 1
-            start_params = np.random.normal(size=q * c)
+            if isinstance(generator, (np.random.RandomState, np.random.Generator)):
+                start_params = generator.normal(size=q * c)
+            else:
+                start_params = np.random.normal(size=q * c)
 
         # Do not call super(...).fit because it cannot handle the 2d-params.
         rslt = base.LikelihoodModel.fit(

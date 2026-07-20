@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from statsmodels.compat.pandas import Appender, Substitution, call_cached_func
+from statsmodels.compat.pandas import call_cached_func
 
 from collections import defaultdict
 from collections.abc import Hashable, Mapping, Sequence
@@ -18,8 +18,9 @@ from statsmodels.base.data import PandasData
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import Summary, summary_params
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.validation import (
     array_like,

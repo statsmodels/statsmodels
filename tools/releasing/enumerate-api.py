@@ -12,7 +12,6 @@ python enumerate-api.py --diff statsmodels-legacy.json
 
 which produces a RST file that can be included in the docs or edited.
 """
-from setuptools import find_packages
 
 import argparse
 import importlib
@@ -22,6 +21,8 @@ import logging
 import os
 from pkgutil import iter_modules
 import sys
+
+from setuptools import find_packages
 
 
 def find_modules(path):
@@ -77,11 +78,7 @@ def walk_modules(path):
     for mod in modules:
         module = f"statsmodels.{mod}"
         logger.info(module)
-        if (
-            ".sandbox" in module
-            or module.endswith(".tests")
-            or ".tests." in module
-        ):
+        if ".sandbox" in module or module.endswith(".tests") or ".tests." in module:
             continue
         try:
             lib = importlib.import_module(module)
@@ -134,15 +131,13 @@ def generate_diff(api, other):
         removed = set(other_class.keys()).difference(current_class.keys())
         for meth in removed:
             removed_methods[meth] = tuple(other_class[meth])
-        common_methods = set(other_class.keys()).intersection(
-            current_class.keys()
-        )
+        common_methods = set(other_class.keys()).intersection(current_class.keys())
         for meth in common_methods:
             if current_class[meth] != tuple(other_class[meth]):
                 if set(current_class[meth]).issuperset(other_class[meth]):
-                    expanded_methods[key] = set(
-                        current_class[meth]
-                    ).difference(other_class[meth])
+                    expanded_methods[key] = set(current_class[meth]).difference(
+                        other_class[meth]
+                    )
                 else:
                     changed_methods[key] = {
                         "current": current_class[meth],
@@ -230,12 +225,10 @@ def generate_diff(api, other):
             rst.write(f"   * Old: ``{name}({args})``\n")
 
 
-parser = argparse.ArgumentParser(
-    description="""
+parser = argparse.ArgumentParser(description="""
 Store the current visible API as json, or read the API of any version into a
 JSON file, or compare the current API to a different version.
-"""
-)
+""")
 parser.add_argument(
     "--file-path",
     "-fp",
@@ -251,9 +244,7 @@ parser.add_argument(
     default=None,
     help="Name of output json file. Default is statsmodels-{version}-api.json",
 )
-parser.add_argument(
-    "--diff", "-d", type=str, default=None, help="json file to diff"
-)
+parser.add_argument("--diff", "-d", type=str, default=None, help="json file to diff")
 
 
 def main():

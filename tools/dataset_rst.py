@@ -31,8 +31,7 @@ for dataset in datasets:
         mtime = max(mtime, os.path.getmtime(f))
     last_mod_time[dataset] = mtime
 
-doc_template = Template(
-    """$TITLE
+doc_template = Template("""$TITLE
 $title_
 
 Description
@@ -52,8 +51,7 @@ Copyright
 ---------
 
 $COPYRIGHT\
-"""
-)
+""")
 
 if __name__ == "__main__":
 

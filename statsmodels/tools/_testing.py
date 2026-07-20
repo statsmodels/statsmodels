@@ -1,4 +1,5 @@
-"""Testing helper functions
+"""
+Testing helper functions.
 
 Warning: current status experimental, mostly copy paste
 
@@ -46,7 +47,8 @@ def check_ttest_tvalues(results):
 
 def check_ftest_pvalues(results):
     """
-    Check that the outputs of `res.wald_test` produces pvalues that
+    Check that the outputs of `res.wald_test` produces pvalues.
+
     match res.pvalues.
 
     Check that the string representations of `res.summary()` and (possibly)
@@ -54,11 +56,13 @@ def check_ftest_pvalues(results):
 
     Parameters
     ----------
-    results : Results
+    results : Results instance
+        Results object to check.
 
     Raises
     ------
     AssertionError
+
     """
     res = results
     use_t = res.use_t
@@ -114,16 +118,18 @@ def check_fitted(results):
 
 def check_predict_types(results):
     """
-    Check that the `predict` method of the given results object produces the
-    correct output type.
+    Check the output type produced by a results object's predict method.
 
     Parameters
     ----------
-    results : Results
+    results : Results instance
+        Results object to check.
 
     Raises
     ------
     AssertionError
+        If any prediction result has an unexpected type or value.
+
     """
     res = results
     # squeeze to make 1d for single regressor test case

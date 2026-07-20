@@ -12,11 +12,11 @@ from statsmodels.datasets.longley import load
 print("\nExample 1: Artificial Data")
 print("--------------------------\n")
 
-np.random.seed(54321)
-X = np.random.rand(40, 2)
+rs = np.random.RandomState(54321)
+X = rs.rand(40, 2)
 X = sm.add_constant(X, prepend=False)
 beta = np.array((3.5, 5.7, 150))
-Y = np.dot(X, beta) + np.random.standard_normal(40)
+Y = np.dot(X, beta) + rs.standard_normal(40)
 mod2 = sm.OLS(Y, X)
 res2 = mod2.fit()
 

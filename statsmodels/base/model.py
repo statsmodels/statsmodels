@@ -20,13 +20,14 @@ from statsmodels.stats.contrast import (
     WaldTestResults,
     t_test_pairwise,
 )
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tools.decorators import (
+from statsmodels.tools._decorators import (
     cache_readonly,
     cached_data,
     cached_value,
 )
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.numdiff import approx_fprime
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import (
     HessianInversionWarning,
     ValueWarning,
@@ -209,7 +210,7 @@ class Model:
             missing = "raise"
 
         tmp = handle_formula_data(data, None, formula, depth=eval_env, missing=missing)
-        ((endog, exog), missing_idx, model_spec) = tmp
+        (endog, exog), missing_idx, model_spec = tmp
         max_endog = cls._formula_max_endog
         if max_endog is not None and endog.ndim > 1 and endog.shape[1] > max_endog:
             raise ValueError(
@@ -535,6 +536,17 @@ class LikelihoodModel(Model):
                     documentation of `scipy.optimize.minimize`.
                     If no method is specified, then BFGS is used.
         """
+        if not full_output:
+            warnings.warn(
+                "full_output=False is deprecated and has no effect; fit always "
+                "computes the full optimizer output, which is required to know "
+                "whether the optimizer converged. This argument will be removed "
+                "in a future version.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            full_output = True
+
         Hinv = None  # JP error if full_output=0, Hinv not defined
 
         if start_params is None:
@@ -1450,7 +1462,7 @@ class LikelihoodModelResults(Results):
                 self.cov_type = "nonrobust"
                 self.cov_kwds = {
                     "description": "Standard Errors assume that the covariance matrix "
-                                   "of the errors is correctly specified."
+                    "of the errors is correctly specified."
                 }
             else:
                 from statsmodels.base.covtype import get_robustcov_results
@@ -1471,9 +1483,7 @@ class LikelihoodModelResults(Results):
         self, cov_type="nonrobust", use_self=True, use_t=None, **cov_kwds
     ):
         if use_self is False:
-            raise ValueError(
-                "use_self should have been removed long ago.  See GH#4401"
-            )
+            raise ValueError("use_self should have been removed long ago.  See GH#4401")
         from statsmodels.base.covtype import get_robustcov_results
 
         if cov_kwds is None:
@@ -1483,7 +1493,7 @@ class LikelihoodModelResults(Results):
             self.cov_type = "nonrobust"
             self.cov_kwds = {
                 "description": "Standard Errors assume that the covariance matrix "
-                               "of the errors is correctly specified."
+                "of the errors is correctly specified."
             }
         else:
             # TODO: we should not need use_t in get_robustcov_results
@@ -1747,9 +1757,7 @@ class LikelihoodModelResults(Results):
             and self.normalized_cov_params is None
             and not hasattr(self, "cov_params_default")
         ):
-            raise ValueError(
-                "Need covariance of parameters for computing T statistics"
-            )
+            raise ValueError("Need covariance of parameters for computing T statistics")
         params = self.params.ravel(order="F")
         if num_params != params.shape[0]:
             raise ValueError("r_matrix and params are not aligned")
@@ -1981,9 +1989,7 @@ class LikelihoodModelResults(Results):
             and invcov is None
             and not hasattr(self, "cov_params_default")
         ):
-            raise ValueError(
-                "need covariance of parameters for computing F statistics"
-            )
+            raise ValueError("need covariance of parameters for computing F statistics")
 
         cparams = np.dot(r_matrix, params[:, None])
         J = float(r_matrix.shape[0])  # number of restrictions
@@ -2590,7 +2596,7 @@ class ResultMixin:
         """standard deviation of parameter estimates based on covjac"""
         return np.sqrt(np.diag(self.covjac))
 
-    def bootstrap(self, nrep=100, method="nm", disp=0, store=1):
+    def bootstrap(self, nrep=100, method="nm", disp=0, store=1, rng=None):
         """simple bootstrap to get mean and variance of estimator
 
         see notes
@@ -2606,6 +2612,9 @@ class ResultMixin:
         store : bool
             If true, then parameter estimates for all bootstrap iterations
             are attached in self.bootstrap_results
+        rng : np.random.RandomState or np.random.Generator, optional
+            Random number generator to use in the bootstrap. If None, uses the
+            singleton RandomState provided by NumPy
 
         Returns
         -------
@@ -2628,7 +2637,12 @@ class ResultMixin:
         results = []
         hascloneattr = True if hasattr(self.model, "cloneattr") else False
         for _ in range(nrep):
-            rvsind = np.random.randint(self.nobs, size=self.nobs)
+            rng = check_random_state(rng)
+            if isinstance(rng, np.random.Generator):
+                rvsind = rng.integers(self.nobs, size=self.nobs)
+            else:
+                assert isinstance(rng, np.random.RandomState)
+                rvsind = rng.randint(self.nobs, size=self.nobs)
             # this needs to set startparam and get other defining attributes
             # need a clone method on model
             if self.exog is not None:

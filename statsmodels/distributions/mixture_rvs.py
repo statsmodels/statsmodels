@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def _make_index(prob, size):
+def _make_index(prob, size, rng=None):
     """
     Returns a boolean index for given probabilities.
 
@@ -11,12 +11,15 @@ def _make_index(prob, size):
     being True and a 25% chance of the second column being True. The
     columns are mutually exclusive.
     """
-    rv = np.random.uniform(size=(size, 1))
+    if rng is None:
+        rv = np.random.uniform(size=(size, 1))
+    else:
+        rv = rng.uniform(size=(size, 1))
     cumprob = np.cumsum(prob)
     return np.logical_and(np.r_[0, cumprob[:-1]] <= rv, rv < cumprob)
 
 
-def mixture_rvs(prob, size, dist, kwargs=None):
+def mixture_rvs(prob, size, dist, kwargs=None, rng=None):
     """
     Sample from a mixture of distributions.
 
@@ -32,6 +35,9 @@ def mixture_rvs(prob, size, dist, kwargs=None):
         A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
         args to be passed to the respective distribution in dist.  If not
         provided, the distribution defaults are used.
+    rng : np.random.Generator or np.random.RandomState, optional
+        The rng to use when constructing the index. The rng(s) used in the dist
+        objects must be provided in initializing the dist objects.
 
     Examples
     --------
@@ -50,9 +56,9 @@ def mixture_rvs(prob, size, dist, kwargs=None):
         raise ValueError("prob does not sum to 1")
 
     if kwargs is None:
-        kwargs = ({},)*len(prob)
+        kwargs = ({},) * len(prob)
 
-    idx = _make_index(prob, size)
+    idx = _make_index(prob, size, rng)
     sample = np.empty(size)
     for i in range(len(prob)):
         sample_idx = idx[..., i]
@@ -61,7 +67,7 @@ def mixture_rvs(prob, size, dist, kwargs=None):
         scale = kwargs[i].get("scale", 1)
         args = kwargs[i].get("args", ())
         sample[sample_idx] = dist[i].rvs(
-            *args, **dict(loc=loc, scale=scale, size=sample_size)
+            *args, **dict(loc=loc, scale=scale, size=sample_size, random_state=rng)
         )
     return sample
 
@@ -78,8 +84,8 @@ class MixtureDistribution:
 
     # def __init__(self, prob, size, dist, kwargs=None):
 
-    def rvs(self, prob, size, dist, kwargs=None):
-        return mixture_rvs(prob, size, dist, kwargs=kwargs)
+    def rvs(self, prob, size, dist, kwargs=None, random_state=None):
+        return mixture_rvs(prob, size, dist, kwargs=kwargs, rng=random_state)
 
     def pdf(self, x, prob, dist, kwargs=None):
         """
@@ -119,7 +125,7 @@ class MixtureDistribution:
             raise ValueError("prob does not sum to 1")
 
         if kwargs is None:
-            kwargs = ({},)*len(prob)
+            kwargs = ({},) * len(prob)
 
         for i in range(len(prob)):
             loc = kwargs[i].get("loc", 0)
@@ -145,6 +151,9 @@ class MixtureDistribution:
             The length of the returned sample.
         dist : array_like
             An iterable of distributions objects from scipy.stats.
+        rng : np.random.Generator or np.random.RandomState, optional
+            The rng to use when constructing the index. The rng(s) used in the dist
+            objects must be provided in initializing the dist objects.
         kwargs : tuple of dicts, optional
             A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
             args to be passed to the respective distribution in dist.  If not
@@ -171,7 +180,7 @@ class MixtureDistribution:
             raise ValueError("prob does not sum to 1")
 
         if kwargs is None:
-            kwargs = ({},)*len(prob)
+            kwargs = ({},) * len(prob)
 
         for i in range(len(prob)):
             loc = kwargs[i].get("loc", 0)
@@ -184,7 +193,7 @@ class MixtureDistribution:
         return cdf_
 
 
-def mv_mixture_rvs(prob, size, dist, nvars, **kwargs):
+def mv_mixture_rvs(prob, size, dist, nvars, rng=None, **kwargs):
     """
     Sample from a mixture of multivariate distributions.
 
@@ -224,10 +233,10 @@ def mv_mixture_rvs(prob, size, dist, nvars, **kwargs):
     if not np.allclose(np.sum(prob), 1):
         raise ValueError("prob does not sum to 1")
 
-    if kwargs is None:
-        kwargs = ({},)*len(prob)
+    # if kwargs is None:
+    #     kwargs = ({},) * len(prob)
 
-    idx = _make_index(prob, size)
+    idx = _make_index(prob, size, rng)
     sample = np.empty((size, nvars))
     for i in range(len(prob)):
         sample_idx = idx[..., i]
@@ -236,7 +245,7 @@ def mv_mixture_rvs(prob, size, dist, nvars, **kwargs):
         # scale = kwargs[i].get('scale',1)
         # args = kwargs[i].get('args',())
         # use int to avoid numpy bug with np.random.multivariate_normal
-        sample[sample_idx] = dist[i].rvs(size=int(sample_size))
+        sample[sample_idx] = dist[i].rvs(size=int(sample_size), random_state=rng)
     return sample
 
 

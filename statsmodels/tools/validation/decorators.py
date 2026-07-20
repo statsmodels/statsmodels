@@ -1,3 +1,5 @@
+"""Decorators for validating function arguments."""
+
 from functools import wraps
 
 import numpy as np
@@ -15,6 +17,29 @@ def array_like(
     order="C",
     contiguous=False,
 ):
+    """
+    Decorate a function argument with array_like validation.
+
+    Parameters
+    ----------
+    pos : int
+        Positional argument index to validate.
+    name : str
+        Argument name to use in exceptions and keyword lookup.
+    dtype : dtype
+        Required dtype.
+    ndim : int or None
+        Required number of dimensions.
+    maxdim : int or None
+        Maximum allowed number of dimensions.
+    shape : tuple or None
+        Required shape.
+    order : {"C", "F", None}
+        Required memory order.
+    contiguous : bool
+        Whether to require contiguous memory.
+
+    """
     def inner(func):
         @wraps(func)
         def wrapper(*args, **kwargs):

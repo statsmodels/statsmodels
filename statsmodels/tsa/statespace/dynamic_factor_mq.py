@@ -20,8 +20,8 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 from statsmodels.multivariate.pca import PCA
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, EstimationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import int_like, string_like

@@ -15,6 +15,7 @@ class Longley:
 
     Other results were obtained from Stata
     """
+
     def __init__(self):
         self.params = (
             15.0618722713733, -0.358191792925910E-01,
@@ -78,6 +79,7 @@ class LongleyGls:
     """
     The following results were obtained from running the test script with R.
     """
+
     def __init__(self):
         self.params = (6.73894832e-02, -4.74273904e-01, 9.48988771e+04)
         self.bse = (1.07033903e-02, 1.53385472e-01, 1.39447723e+04)

@@ -15,8 +15,8 @@ from statsmodels.stats._lilliefors import (
 class TestLilliefors:
 
     def test_normal(self):
-        np.random.seed(3975)
-        x_n = stats.norm.rvs(size=500)
+        rs = np.random.RandomState(3975)
+        x_n = stats.norm.rvs(size=500, random_state=rs)
 
         # R function call:
         # require(nortest)
@@ -30,8 +30,9 @@ class TestLilliefors:
         # require(KScorrect)
         # LcKS(x_n+abs(min(x_n))+0.001, 'pexp')
 
-        d_ks_exp, p_exp = lilliefors(x_n + np.abs(x_n.min()) + 0.001,
-                                     dist="exp", pvalmethod="approx")
+        d_ks_exp, p_exp = lilliefors(
+            x_n + np.abs(x_n.min()) + 0.001, dist="exp", pvalmethod="approx"
+        )
         # assert normal
         assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
         assert_almost_equal(p_norm, 0.64175, decimal=3)
@@ -40,8 +41,8 @@ class TestLilliefors:
         assert_almost_equal(p_exp, 0.001, decimal=3)
 
     def test_normal_table(self):
-        np.random.seed(3975)
-        x_n = stats.norm.rvs(size=500)
+        rs = np.random.RandomState(3975)
+        x_n = stats.norm.rvs(size=500, random_state=rs)
 
         d_ks_norm, p_norm = lilliefors(x_n, dist="norm", pvalmethod="table")
         # assert normal
@@ -49,8 +50,8 @@ class TestLilliefors:
         assert_almost_equal(p_norm, 0.64175, decimal=3)
 
     def test_expon(self):
-        np.random.seed(3975)
-        x_e = stats.expon.rvs(size=500)
+        rs = np.random.RandomState(3975)
+        x_e = stats.expon.rvs(size=500, random_state=rs)
         # R function call:
         # require(nortest)
         # lillie.test(x_n)
@@ -67,30 +68,31 @@ class TestLilliefors:
         assert_almost_equal(p_exp, 0.72540, decimal=3)
 
     def test_pval_bounds(self):
-        x = stats.norm.ppf((np.arange(10.) + 0.5) / 10)
+        x = stats.norm.ppf((np.arange(10.0) + 0.5) / 10)
         d_ks_n, p_n = lilliefors(x, dist="norm", pvalmethod="approx")
-        x = stats.expon.ppf((np.arange(10.) + 0.5) / 10)
+        x = stats.expon.ppf((np.arange(10.0) + 0.5) / 10)
         d_ks_e, p_e = lilliefors(x, dist="exp", pvalmethod="approx")
 
         assert_almost_equal(p_n, 0.99, decimal=7)
         assert_almost_equal(p_e, 0.99, decimal=7)
 
     def test_min_nobs(self):
-        x = np.arange(3.)
+        x = np.arange(3.0)
         with pytest.raises(ValueError):
             lilliefors(x, dist="norm", pvalmethod="approx")
-        x = np.arange(2.)
+        x = np.arange(2.0)
         with pytest.raises(ValueError):
             lilliefors(x, dist="exp", pvalmethod="approx")
 
     @pytest.mark.smoke
-    def test_large_sample(self, reset_randomstate):
-        x = np.random.randn(10000)
+    def test_large_sample(self):
+        rs = np.random.RandomState(32891032)
+        x = rs.randn(10000)
         lilliefors(x, pvalmethod="approx")
 
     def test_x_dims(self):
-        np.random.seed(3975)
-        x_n = stats.norm.rvs(size=500)
+        rs = np.random.RandomState(3975)
+        x_n = stats.norm.rvs(size=500, random_state=rs)
 
         # 1d array
         data = x_n
@@ -126,16 +128,17 @@ class TestLilliefors:
             lilliefors(data, dist="norm", pvalmethod="approx")
 
 
-def test_get_lilliefors_errors(reset_randomstate):
+def test_get_lilliefors_errors():
     with pytest.raises(ValueError):
         get_lilliefors_table(dist="unknown")
+    rs = np.random.RandomState(84390204)
     with pytest.raises(ValueError):
-        kstest_fit(np.random.standard_normal(100), dist="unknown",
-                   pvalmethod="table")
+        kstest_fit(rs.standard_normal(100), dist="unknown", pvalmethod="table")
 
 
-def test_ksstat(reset_randomstate):
-    x = np.random.uniform(0, 1, 100)
+def test_ksstat():
+    rs = np.random.RandomState(328903821)
+    x = rs.uniform(0, 1, 100)
     two_sided = ksstat(x, "uniform", alternative="two_sided")
     greater = ksstat(x, "uniform", alternative="greater")
     lower = ksstat(x, stats.uniform, alternative="lower")

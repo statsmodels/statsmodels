@@ -36,23 +36,24 @@ class TestPredFunc:
         if pdf_output:
             self.pdf.savefig(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_formula(self, close_figures):
 
-        np.random.seed(542)
+        rs = np.random.RandomState(542)
         n = 500
-        x1 = np.random.normal(size=n)
-        x2 = np.random.normal(size=n)
-        x3 = np.random.normal(size=n)
-        x4 = np.random.randint(0, 5, size=n)
+        x1 = rs.normal(size=n)
+        x2 = rs.normal(size=n)
+        x3 = rs.normal(size=n)
+        x4 = rs.randint(0, 5, size=n)
         x4 = np.asarray(["ABCDE"[i] for i in x4])
-        x5 = np.random.normal(size=n)
+        x5 = rs.normal(size=n)
         y = (
             0.3 * x2**2
             + (x4 == "B")
             + 0.1 * (x4 == "B") * x2**2
             + x5
-            + np.random.normal(size=n)
+            + rs.normal(size=n)
         )
 
         df = pd.DataFrame({"y": y, "x1": x1, "x2": x2, "x3": x3, "x4": x4, "x5": x5})
@@ -62,7 +63,6 @@ class TestPredFunc:
         result = model.fit()
 
         summaries = {"x1": np.mean, "x3": pctl(0.75), "x5": np.mean}
-
         values = {"x4": "B"}
         pr1, ci1, fvals1 = predict_functional(result, "x2", summaries, values)
 
@@ -95,15 +95,16 @@ class TestPredFunc:
         plt.title("Linear model prediction")
         self.close_or_save(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_lm_contrast(self, close_figures):
 
-        np.random.seed(542)
+        rs = np.random.RandomState(542)
         n = 200
-        x1 = np.random.normal(size=n)
-        x2 = np.random.normal(size=n)
-        x3 = np.random.normal(size=n)
-        y = x1 + 2 * x2 + x3 - x1 * x2 + x2 * x3 + np.random.normal(size=n)
+        x1 = rs.normal(size=n)
+        x2 = rs.normal(size=n)
+        x3 = rs.normal(size=n)
+        y = x1 + 2 * x2 + x3 - x1 * x2 + x2 * x3 + rs.normal(size=n)
 
         df = pd.DataFrame({"y": y, "x1": x1, "x2": x2, "x3": x3})
 
@@ -131,16 +132,17 @@ class TestPredFunc:
         plt.title("Linear model contrast")
         self.close_or_save(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_glm_formula_contrast(self, close_figures):
 
-        np.random.seed(542)
+        rs = np.random.RandomState(542)
         n = 50
-        x1 = np.random.normal(size=n)
-        x2 = np.random.normal(size=n)
-        x3 = np.random.normal(size=n)
+        x1 = rs.normal(size=n)
+        x2 = rs.normal(size=n)
+        x3 = rs.normal(size=n)
         mn = 5 + 0.1 * x1 + 0.1 * x2 + 0.1 * x3 - 0.1 * x1 * x2
-        y = np.random.poisson(np.exp(mn), size=len(mn))
+        y = rs.poisson(np.exp(mn), size=len(mn))
 
         df = pd.DataFrame({"y": y, "x1": x1, "x2": x2, "x3": x3})
 
@@ -168,28 +170,29 @@ class TestPredFunc:
         plt.title("Poisson regression contrast")
         self.close_or_save(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_scb(self, close_figures):
 
-        np.random.seed(473)
+        rs = np.random.RandomState(473)
         n = 100
-        x = np.random.normal(size=(n, 4))
+        x = rs.normal(size=(n, 4))
         x[:, 0] = 1
 
         for fam_name in "poisson", "binomial", "gaussian":
 
             if fam_name == "poisson":
-                y = np.random.poisson(20, size=n)
+                y = rs.poisson(20, size=n)
                 fam = sm.families.Poisson()
                 true_mean = 20
                 true_lp = np.log(20)
             elif fam_name == "binomial":
-                y = 1 * (np.random.uniform(size=n) < 0.5)
+                y = 1 * (rs.uniform(size=n) < 0.5)
                 fam = sm.families.Binomial()
                 true_mean = 0.5
                 true_lp = 0
             elif fam_name == "gaussian":
-                y = np.random.normal(size=n)
+                y = rs.normal(size=n)
                 fam = sm.families.Gaussian()
                 true_mean = 0
                 true_lp = 0
@@ -199,7 +202,6 @@ class TestPredFunc:
 
             # CB is for linear predictor or mean response
             for linear in False, True:
-
                 true = true_lp if linear else true_mean
 
                 values = {"const": 1, "x2": 0}
@@ -243,18 +245,19 @@ class TestPredFunc:
 
                 self.close_or_save(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_glm_formula(self, close_figures):
 
-        np.random.seed(542)
+        rs = np.random.RandomState(542)
         n = 500
-        x1 = np.random.normal(size=n)
-        x2 = np.random.normal(size=n)
-        x3 = np.random.randint(0, 3, size=n)
+        x1 = rs.normal(size=n)
+        x2 = rs.normal(size=n)
+        x3 = rs.randint(0, 3, size=n)
         x3 = np.asarray(["ABC"[i] for i in x3])
         lin_pred = -1 + 0.5 * x1**2 + (x3 == "B")
         prob = 1 / (1 + np.exp(-lin_pred))
-        y = 1 * (np.random.uniform(size=n) < prob)
+        y = 1 * (rs.uniform(size=n) < prob)
 
         df = pd.DataFrame({"y": y, "x1": x1, "x2": x2, "x3": x3})
 
@@ -264,7 +267,6 @@ class TestPredFunc:
         summaries = {"x2": np.mean}
 
         for linear in False, True:
-
             values = {"x3": "B"}
             pr1, ci1, fvals1 = predict_functional(
                 result, "x1", summaries, values, linear=linear
@@ -316,15 +318,16 @@ class TestPredFunc:
             plt.title("Binomial GLM prediction")
             self.close_or_save(fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_noformula_prediction(self, close_figures):
 
-        np.random.seed(6434)
+        rs = np.random.RandomState(6434)
         n = 200
-        x1 = np.random.normal(size=n)
-        x2 = np.random.normal(size=n)
-        x3 = np.random.normal(size=n)
-        y = x1 - x2 + np.random.normal(size=n)
+        x1 = rs.normal(size=n)
+        x2 = rs.normal(size=n)
+        x3 = rs.normal(size=n)
+        y = x1 - x2 + rs.normal(size=n)
 
         exog = np.vstack((x1, x2, x3)).T
 

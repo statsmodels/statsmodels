@@ -1111,8 +1111,11 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     else:
         d = n
 
+    m = len(y)
     method = "fft" if fft else "direct"
-    return correlate(xo, yo, "full", method=method)[n - 1 :] / d
+    # When y is shorter than x, the denominator counts must follow len(y)
+    # to match the actual number of overlapping observations at each lag.
+    return correlate(xo, yo, "full", method=method)[m - 1 :] / d
 
 
 @deprecate_kwarg("unbiased", "adjusted")

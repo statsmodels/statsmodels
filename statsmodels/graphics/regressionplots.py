@@ -11,11 +11,11 @@ update
 
 """
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
 import numpy as np
 import pandas as pd
+from scipy.stats import chi2
 
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.generalized_estimating_equations import GEE
@@ -24,6 +24,7 @@ from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.regression.linear_model import GLS, OLS, WLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import maybe_unwrap_results
 
 from ._regressionplots_doc import (
@@ -36,6 +37,7 @@ from ._regressionplots_doc import (
 
 __all__ = [
     "abline_plot",
+    "add_ellipse",
     "add_lowess",
     "added_variable_resids",
     "ceres_resids",
@@ -61,19 +63,23 @@ def _high_leverage(results):
     return 2.0 * (results.df_model + 1) / results.nobs
 
 
-def add_lowess(ax, lines_idx=0, frac=0.2, **lowess_kwargs):
+def add_lowess(ax, lines_idx=0, frac=0.2, *, exog=None, endog=None, **lowess_kwargs):
     """
     Add Lowess line to a plot.
 
     Parameters
     ----------
     ax : AxesSubplot
-        The Axes to which to add the plot
+        The Axes to which to add the plot.
     lines_idx : int
         This is the line on the existing plot to which you want to add
         a smoothed lowess line.
     frac : float
         The fraction of the points to use when doing the lowess fit.
+    exog : array_like, optional
+        Data for the x-axis. If None, it will be extracted from the axis lines.
+    endog : array_like, optional
+        Data for the y-axis. If None, it will be extracted from the axis lines.
     lowess_kwargs
         Additional keyword arguments are passes to lowess.
 
@@ -82,10 +88,74 @@ def add_lowess(ax, lines_idx=0, frac=0.2, **lowess_kwargs):
     Figure
         The figure that holds the instance.
     """
-    y0 = ax.get_lines()[lines_idx]._y
-    x0 = ax.get_lines()[lines_idx]._x
+    if exog is None and endog is None:
+        y0 = ax.get_lines()[lines_idx]._y
+        x0 = ax.get_lines()[lines_idx]._x
+    else:
+        y0 = np.asarray(endog)
+        x0 = np.asarray(exog)
+
     lres = lowess(y0, x0, frac=frac, **lowess_kwargs)
     ax.plot(lres[:, 0], lres[:, 1], "r", lw=1.5)
+    return ax.figure
+
+
+def add_ellipse(x, y, ax=None, alpha=0.95, **ellipse_kwargs):
+    """
+    Add a confidence ellipse to a plot axis.
+
+    Parameters
+    ----------
+    x : array_like, 1-dim
+        Data for the x-axis.
+    y : array_like, 1-dim
+        Data for the y-axis.
+    ax : AxesSubplot, optional
+        The ellipse patch will be added to this axis. If None, the current
+        matplotlib axis is used.
+    alpha : float
+        Confidence level (e.g., 0.95 for 95%).
+    ellipse_kwargs
+        Additional keyword arguments are passed to the Matplotlib `Ellipse` patch.
+
+    Returns
+    -------
+    Figure
+        The figure that holds the instance.
+    """
+    from matplotlib.patches import Ellipse
+
+    fig, ax = utils.create_mpl_ax(ax)
+
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    if x.size != y.size:
+        raise ValueError("x and y must be the same size")
+
+    cov = np.cov(x, y)
+    mean_x, mean_y = np.mean(x), np.mean(y)
+
+    # Eigen decomposition
+    vals, vecs = np.linalg.eigh(cov)
+    order = vals.argsort()[::-1]
+    vals, vecs = vals[order], vecs[:, order]
+
+    # Angle of ellipse
+    angle = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
+
+    # Chi-squared quantile for 2D
+    scale = np.sqrt(chi2.ppf(alpha, df=2))
+
+    # Width and height scaled by chi2 quantile
+    width, height = 2 * scale * np.sqrt(vals)
+
+    ellipse_kwds = dict(edgecolor="blue", facecolor="none", linewidth=1.5)
+    if ellipse_kwargs:
+        ellipse_kwds.update(ellipse_kwargs)
+
+    ellipse = Ellipse((mean_x, mean_y), width, height, angle=angle, **ellipse_kwds)
+    ax.add_patch(ellipse)
     return ax.figure
 
 
@@ -127,7 +197,6 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     `poverty` and `hs_grad` as variables and `murder` as the response
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
 
     >>> data = sm.datasets.statecrime.load_pandas().data
     >>> murder = data['murder']
@@ -221,7 +290,6 @@ def plot_regress_exog(results, exog_idx, fig=None):
     and CCPR plot for poverty rate.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 6))
@@ -373,7 +441,6 @@ def plot_partregress(
     are removed by OLS regression.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
 
     >>> crime_data = sm.datasets.statecrime.load_pandas()
     >>> sm.graphics.plot_partregress(endog='murder', exog_i='hs_grad',
@@ -530,7 +597,6 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     >>> from statsmodels.graphics.regressionplots import plot_partregress_grid
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 6))
@@ -636,7 +702,6 @@ def plot_ccpr(results, exog_idx, ax=None):
     of poverty ('poverty').
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> crime_data = sm.datasets.statecrime.load_pandas()
@@ -720,7 +785,6 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
     of all other variables in the model.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 8))
@@ -803,15 +867,14 @@ def abline_plot(
     >>> import numpy as np
     >>> import statsmodels.api as sm
 
-    >>> np.random.seed(12345)
-    >>> X = sm.add_constant(np.random.normal(0, 20, size=30))
-    >>> y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
+    >>> rs = np.random.default_rng(12345)
+    >>> X = sm.add_constant(rs.normal(0, 20, size=30))
+    >>> y = np.dot(X, [25, 3.5]) + rs.normal(0, 30, size=30)
     >>> mod = sm.OLS(y,X).fit()
     >>> fig = sm.graphics.abline_plot(model_results=mod)
     >>> ax = fig.axes[0]
     >>> ax.scatter(X[:,1], y)
     >>> ax.margins(.1)
-    >>> import matplotlib.pyplot as plt
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_abline.py
@@ -882,9 +945,9 @@ def abline_plot(
 @Appender(
     _plot_influence_doc.format(
         extra_params_doc="results: object\n"
-                         "        Results for a fitted regression model.\n"
-                         "    influence: instance\n"
-                         "        The instance of Influence for model."
+        "        Results for a fitted regression model.\n"
+        "    influence: instance\n"
+        "        The instance of Influence for model."
     )
 )
 def _influence_plot(
@@ -965,7 +1028,7 @@ def _influence_plot(
 @Appender(
     _plot_influence_doc.format(
         extra_params_doc="results : Results\n"
-                         "        Results for a fitted regression model."
+        "        Results for a fitted regression model."
     )
 )
 def influence_plot(

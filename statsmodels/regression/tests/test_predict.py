@@ -23,13 +23,13 @@ def test_predict_se():
     nsample = 50
     x1 = np.linspace(0, 20, nsample)
     x = np.c_[x1, (x1 - 5) ** 2, np.ones(nsample)]
-    np.random.seed(0)  # 9876789) #9876543)
+    rs = np.random.RandomState(0)  # 9876789) #9876543)
     beta = [0.5, -0.01, 5.0]
     y_true2 = np.dot(x, beta)
     w = np.ones(nsample)
     w[int(nsample * 6.0 / 10) :] = 3
     sig = 0.5
-    y2 = y_true2 + sig * w * np.random.normal(size=nsample)
+    y2 = y_true2 + sig * w * rs.normal(size=nsample)
     x2 = x[:, [0, 2]]
 
     # estimate OLS
@@ -107,7 +107,7 @@ class TestWLSPrediction:
     def setup_class(cls):
 
         # from example wls.py
-
+        rs = np.random.RandomState(3237219)
         nsample = 50
         x = np.linspace(0, 20, nsample)
         X = np.column_stack((x, (x - 5) ** 2))
@@ -119,7 +119,7 @@ class TestWLSPrediction:
         w = np.ones(nsample)
         w[int(nsample * 6.0 / 10) :] = 3
         y_true = np.dot(X, beta)
-        e = np.random.normal(size=nsample)
+        e = rs.normal(size=nsample)
         y = y_true + sig * w * e
         X = X[:, [0, 1]]
 
@@ -267,7 +267,8 @@ class TestWLSPrediction:
 
 def test_predict_remove_data():
     # GH6887
-    endog = [i + np.random.normal(scale=0.1) for i in range(100)]
+    rs = np.random.RandomState(3821010)
+    endog = [i + rs.normal(scale=0.1) for i in range(100)]
     exog = list(range(100))
     model = WLS(endog, exog, weights=[1 for _ in range(100)]).fit()
     # we need to compute scale before we remove wendog, wexog

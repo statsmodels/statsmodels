@@ -4,7 +4,6 @@ Linear exponential smoothing models
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import Appender
 
 import numpy as np
 import pandas as pd
@@ -15,6 +14,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
