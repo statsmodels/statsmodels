@@ -866,9 +866,9 @@ def abline_plot(
     >>> import numpy as np
     >>> import statsmodels.api as sm
 
-    >>> np.random.seed(12345)
-    >>> X = sm.add_constant(np.random.normal(0, 20, size=30))
-    >>> y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
+    >>> rs = np.random.default_rng(12345)
+    >>> X = sm.add_constant(rs.normal(0, 20, size=30))
+    >>> y = np.dot(X, [25, 3.5]) + rs.normal(0, 30, size=30)
     >>> mod = sm.OLS(y,X).fit()
     >>> fig = sm.graphics.abline_plot(model_results=mod)
     >>> ax = fig.axes[0]
@@ -944,9 +944,9 @@ def abline_plot(
 @Appender(
     _plot_influence_doc.format(
         extra_params_doc="results: object\n"
-                         "        Results for a fitted regression model.\n"
-                         "    influence: instance\n"
-                         "        The instance of Influence for model."
+        "        Results for a fitted regression model.\n"
+        "    influence: instance\n"
+        "        The instance of Influence for model."
     )
 )
 def _influence_plot(
@@ -1027,7 +1027,7 @@ def _influence_plot(
 @Appender(
     _plot_influence_doc.format(
         extra_params_doc="results : Results\n"
-                         "        Results for a fitted regression model."
+        "        Results for a fitted regression model."
     )
 )
 def influence_plot(

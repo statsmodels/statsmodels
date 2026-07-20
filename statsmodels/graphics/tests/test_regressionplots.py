@@ -429,23 +429,22 @@ def test_partregress_formula_env(close_figures):
     sm.graphics.plot_partregress("a", "lg(b)", ["c"], obs_labels=False, data=df)
 
 
-class TestAddEllipse:
-    @pytest.mark.matplotlib
-    def test_add_ellipse_and_lowess(self, close_figures):
-        fig, ax = plt.subplots()
-        np.random.seed(12345)
-        x = np.random.normal(size=100)
-        y = x + np.random.normal(size=100)
+@pytest.mark.matplotlib
+def test_add_ellipse_and_lowess(close_figures):
+    from statsmodels.graphics.regressionplots import add_ellipse, add_lowess
 
-        from statsmodels.graphics.regressionplots import add_ellipse, add_lowess
+    fig, ax = plt.subplots()
+    rs = np.random.RandomState(12345)
+    x = rs.normal(size=100)
+    y = x + rs.normal(size=100)
 
-        # Test add_ellipse
-        fig_out = add_ellipse(x, y, ax=ax)
-        assert_equal(isinstance(fig_out, plt.Figure), True)
-        assert len(ax.patches) > 0
+    # Test add_ellipse
+    fig_out = add_ellipse(x, y, ax=ax)
+    assert_equal(isinstance(fig_out, plt.Figure), True)
+    assert len(ax.patches) > 0
 
-        # Test add_lowess with new signature (exog, endog passed explicitly)
-        fig_out2 = add_lowess(ax, exog=x, endog=y)
-        assert_equal(isinstance(fig_out2, plt.Figure), True)
+    # Test add_lowess with new signature (exog, endog passed explicitly)
+    fig_out2 = add_lowess(ax, exog=x, endog=y)
+    assert_equal(isinstance(fig_out2, plt.Figure), True)
 
-        close_or_save(pdf, fig)
+    close_or_save(pdf, fig)
