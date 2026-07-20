@@ -202,6 +202,38 @@ def test_empty_columns(df):
     assert dropped.shape[0] == 2
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        pd.DataFrame({"a": pd.Series([], dtype="float64")}),
+        pd.DataFrame({"a": pd.Series([], dtype="category")}),
+        pd.DataFrame(
+            {
+                "a": pd.Series([], dtype="float64"),
+                "b": pd.Series([], dtype="category"),
+            }
+        ),
+    ],
+    ids=["numeric", "categorical", "mixed"],
+)
+def test_empty_rows(data):
+    # GH#9891: describe on a 0-row input used to raise an unhelpful error
+    # from deep inside pandas/numpy (ValueError for numeric columns, KeyError
+    # for categorical ones) instead of returning an empty/NaN summary.
+    res = describe(data)
+    assert isinstance(res, pd.DataFrame)
+    assert list(res.columns) == list(data.columns)
+    # No observations in any column
+    assert (res.loc["nobs"] == 0).all()
+    assert (res.loc["missing"] == 0).all()
+    # Undefined numeric statistics are NaN rather than raising
+    if "a" in data.select_dtypes("number").columns:
+        assert np.isnan(res.loc["mean", "a"])
+        assert np.isnan(res.loc["std", "a"])
+    # Description.frame agrees with the describe convenience wrapper
+    pd.testing.assert_frame_equal(res, Description(data).frame)
+
+
 @pytest.mark.skipif(not hasattr(pd, "NA"), reason="Must support NA")
 def test_extension_types(df):
     # Do not modify original df

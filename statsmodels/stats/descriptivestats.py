@@ -412,24 +412,19 @@ class Description:
                 return [float(np.squeeze(val)) for val in mode_res]
             return np.nan, np.nan
 
-        mode_values = df.apply(_mode).T
-        if mode_values.size > 0:
-            if isinstance(mode_values, pd.DataFrame):
-                # pandas 1.0 or later
+        if df.shape[0] == 0:
+            # No observations: the mode is undefined. Skip the apply since
+            # pandas' empty-result path mis-sizes the output, raising
+            # "Length of values (2) does not match length of index" (GH#9891).
+            mode = np.full(k, np.nan)
+            mode_counts = np.full(k, np.nan)
+        else:
+            mode_values = df.apply(_mode).T
+            if mode_values.size > 0:
                 mode = np.asarray(mode_values[0], dtype=float)
                 mode_counts = np.asarray(mode_values[1], dtype=np.int64)
             else:
-                # pandas before 1.0 returns a Series of 2-elem list
-                mode = []
-                mode_counts = []
-                for idx in mode_values.index:
-                    val = mode_values.loc[idx]
-                    mode.append(val[0])
-                    mode_counts.append(val[1])
-                mode = np.atleast_1d(mode)
-                mode_counts = np.atleast_1d(mode_counts)
-        else:
-            mode = mode_counts = np.empty(0)
+                mode = mode_counts = np.empty(0)
         loc = count > 0
         mode_freq = np.full(mode.shape[0], np.nan)
         mode_freq[loc] = mode_counts[loc] / count.loc[loc]
@@ -457,9 +452,17 @@ class Description:
                 return (np.nan,) * 4
             return jarque_bera(a)
 
-        jb = df.apply(
-            lambda x: list(_safe_jarque_bera(x.dropna())), result_type="expand"
-        ).T
+        if df.size:
+            jb = df.apply(
+                lambda x: list(_safe_jarque_bera(x.dropna())),
+                result_type="expand",
+            ).T
+        else:
+            # No observations (or no numeric columns): Jarque-Bera is
+            # undefined. Build a NaN frame with the expected four columns so
+            # the skew/kurtosis/JB lookups below do not raise KeyError
+            # (GH#9891).
+            jb = pd.DataFrame(np.nan, index=cols, columns=range(4))
         nan_mean = mean.copy()
         nan_mean.loc[nan_mean == 0] = np.nan
         coef_var = std / nan_mean
