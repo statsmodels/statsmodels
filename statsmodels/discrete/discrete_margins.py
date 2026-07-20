@@ -296,7 +296,7 @@ def margeff_cov_params(
         - 'zero', The marginal effects at zero for each regressor.
         - 'all', The marginal effects at each observation.
 
-        Only overall has any effect here.you
+        Only overall has any effect here.
 
     derivative : function or array_like
         If a function, it returns the marginal effects of the model with
@@ -431,7 +431,8 @@ class Margins:
 
 # class DiscreteMargins(Margins):
 class DiscreteMargins:
-    """Get marginal effects of a Discrete Choice model.
+    """
+    Get marginal effects of a Discrete Choice model
 
     Parameters
     ----------
@@ -471,13 +472,13 @@ class DiscreteMargins:
 
         Returns
         -------
-        frame : DataFrames
+        frame : DataFrame
             A DataFrame summarizing the marginal effects.
 
         Notes
         -----
         The dataframe is created on each call and not cached, as are the
-        tables build in `summary()`
+        tables built in `summary()`.
         """
         _check_at_is_all(self.margeff_options)
         results = self.results
@@ -688,7 +689,8 @@ class DiscreteMargins:
     def get_margeff(
         self, at="overall", method="dydx", atexog=None, dummy=False, count=False
     ):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
         Parameters
         ----------
@@ -716,7 +718,7 @@ class DiscreteMargins:
             - 'dyex' - estimate semi-elasticity -- dy/d(lnx)
             - 'eydx' - estimate semi-elasticity -- d(lny)/dx
 
-            Note that tranformations are done after each observation is
+            Note that transformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
             for discrete variables.
@@ -739,7 +741,7 @@ class DiscreteMargins:
         Returns
         -------
         effects : ndarray
-            the marginal effect corresponding to the input options
+            The marginal effect corresponding to the input options.
 
         Notes
         -----
