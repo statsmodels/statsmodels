@@ -13,7 +13,6 @@ update
 
 from statsmodels.compat.python import lrange, lzip
 
-from matplotlib.patches import Ellipse
 import numpy as np
 import pandas as pd
 from scipy.stats import chi2
@@ -124,6 +123,8 @@ def add_ellipse(x, y, ax=None, alpha=0.95, **ellipse_kwargs):
     Figure
         The figure that holds the instance.
     """
+    from matplotlib.patches import Ellipse
+
     fig, ax = utils.create_mpl_ax(ax)
 
     x = np.asarray(x)
