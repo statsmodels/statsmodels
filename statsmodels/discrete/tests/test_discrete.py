@@ -2672,6 +2672,24 @@ def test_issue_341():
 @pytest.mark.thread_unsafe(
     "Rethrowing warning can lead to spurious fails with threading"
 )
+def test_issue_8943():
+    # full_output=0 left mle_retvals unset, so DiscreteResults.converged and
+    # summary() raised TypeError: 'NoneType' object is not subscriptable.
+    # fit now warns and forces full_output=True so the retvals always exist.
+    data = load_spector()
+    with pytest.warns(FutureWarning, match="full_output=False is deprecated"):
+        res0 = sm.Logit(data.endog, data.exog).fit(full_output=0, disp=0)
+    res1 = sm.Logit(data.endog, data.exog).fit(full_output=1, disp=0)
+    assert res0.converged is True
+    assert res1.converged is True
+    np.testing.assert_allclose(res0.params, res1.params, rtol=1e-6)
+    # summary() reads mle_retvals["converged"] directly, so it used to crash too
+    res0.summary()
+
+
+@pytest.mark.thread_unsafe(
+    "Rethrowing warning can lead to spurious fails with threading"
+)
 def test_negative_binomial_default_alpha_param():
     with pytest.warns(
         UserWarning, match="Negative binomial dispersion parameter alpha not set"

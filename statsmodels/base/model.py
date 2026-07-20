@@ -536,6 +536,17 @@ class LikelihoodModel(Model):
                     documentation of `scipy.optimize.minimize`.
                     If no method is specified, then BFGS is used.
         """
+        if not full_output:
+            warnings.warn(
+                "full_output=False is deprecated and has no effect; fit always "
+                "computes the full optimizer output, which is required to know "
+                "whether the optimizer converged. This argument will be removed "
+                "in a future version.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            full_output = True
+
         Hinv = None  # JP error if full_output=0, Hinv not defined
 
         if start_params is None:
