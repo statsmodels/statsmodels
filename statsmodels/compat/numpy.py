@@ -45,46 +45,18 @@ from packaging.version import Version, parse
 __all__ = [
     "NP_LT_2",
     "NP_LT_24",
-    "NP_LT_114",
     "NP_LT_123",
     "inplace_reshape",
-    "lstsq",
     "np_matrix_rank",
     "np_new_unique",
 ]
 
-NP_LT_114 = parse(np.__version__) < Version("1.13.99")
 NP_LT_123 = parse(np.__version__) < Version("1.22.99")
 NP_LT_2 = parse(np.__version__) < Version("1.99.99")
 NP_LT_24 = parse(np.__version__) < Version("2.3.99")
 
 np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique
-
-
-def lstsq(a, b, rcond=None):
-    """
-    Shim that allows modern rcond setting with backward compat for NumPy
-    earlier than 1.14
-
-    Parameters
-    ----------
-    a : ndarray
-        Coefficient matrix.
-    b : ndarray
-        Ordinate or "dependent variable" values.
-    rcond : float, optional
-        Cutoff ratio for small singular values of `a`. If None, a
-        version-dependent default is used.
-
-    Returns
-    -------
-    tuple
-        The output of ``np.linalg.lstsq``.
-    """
-    if NP_LT_114 and rcond is None:
-        rcond = -1
-    return np.linalg.lstsq(a, b, rcond=rcond)
 
 
 def inplace_reshape(arr: np.ndarray, shape: tuple[int, ...]) -> np.ndarray:

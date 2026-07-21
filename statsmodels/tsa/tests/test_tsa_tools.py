@@ -819,8 +819,7 @@ class TestLagmat2DS:
 def test_grangercausality():
     rs = np.random.RandomState(66483)
     data = rs.rand(100, 2)
-    with pytest.warns(FutureWarning, match="verbose"):
-        out = stattools.grangercausalitytests(data, maxlag=2, verbose=False)
+    out = stattools.grangercausalitytests(data, maxlag=2)
     result, models = out[1]
     res2down, res2djoint, rconstr = models
     assert res2djoint.centered_tss is not res2djoint.uncentered_tss

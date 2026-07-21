@@ -6,10 +6,6 @@ The one parameter exponential family distributions used by GLM.
 # see
 # http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
 # for comparison to R, and McCullagh and Nelder
-
-
-from statsmodels.compat.scipy import SP_LT_17
-
 import inspect
 import warnings
 
@@ -1756,11 +1752,6 @@ class Tweedie(Family):
         if not self.eql:
             if p < 1 or p > 2:
                 # We have not yet implemented the actual likelihood
-                return np.nan
-
-            # scipy compat bessel_wright added in 1.7
-            if SP_LT_17:
-                # old return was nan
                 return np.nan
 
             # See: Dunn, Smyth (2004) "Series evaluation of Tweedie

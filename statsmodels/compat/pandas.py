@@ -26,8 +26,6 @@ F = TypeVar("F", bound=FuncType)
 __all__ = [
     "FUTURE_STACK",
     "MONTH_END",
-    "PD_LT_1_0_0",
-    "PD_LT_1_4",
     "PD_LT_2",
     "PD_LT_3",
     "PD_LT_3_1_0",
@@ -58,8 +56,6 @@ version = parse(pd.__version__)
 PD_LT_3_1_0 = version < Version("3.0.99")
 PD_LT_2_2_0 = version < Version("2.1.99")
 PD_LT_2_1_0 = version < Version("2.0.99")
-PD_LT_1_0_0 = version < Version("0.99.0")
-PD_LT_1_4 = version < Version("1.3.99")
 PD_LT_2 = version < Version("1.99.99")
 PD_LT_3 = version < Version("2.99.99")
 

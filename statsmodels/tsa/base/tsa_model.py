@@ -432,14 +432,7 @@ def get_prediction_index(
             prediction_index = data.row_labels[start : end + 1]
         # Otherwise, warn the user that they will get an NumericIndex
         else:
-            warnings.warn(
-                "No supported index is available. In the next"
-                " version, calling this method in a model"
-                " without a supported index will result in an"
-                " exception.",
-                FutureWarning,
-                stacklevel=2,
-            )
+            raise ValueError("No supported index is available.")
     elif index_none:
         prediction_index = None
 

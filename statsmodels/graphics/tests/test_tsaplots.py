@@ -375,7 +375,7 @@ def test_seasonal_plot(close_figures):
 @pytest.mark.matplotlib
 @pytest.mark.parametrize(
     "model_and_args",
-    [(AutoReg, dict(lags=2, old_names=False)), (ARIMA, dict(order=(2, 0, 0)))],
+    [(AutoReg, dict(lags=2)), (ARIMA, dict(order=(2, 0, 0)))],
 )
 @pytest.mark.parametrize("use_pandas", [True, False])
 @pytest.mark.parametrize("alpha", [None, 0.10])
