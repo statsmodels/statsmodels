@@ -7,7 +7,6 @@ multiplication.
 Copyright (c) 2019 Kevin Sheppard
 License: 3-clause BSD
 """
-from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import (
     cache_readonly,
     call_cached_func,
@@ -233,7 +232,7 @@ class RollingWLS:
             else:
                 _, wy, wx, _, _ = self._get_data(idx)
                 if method == "lstsq":
-                    params = lstsq(wx, wy)[0]
+                    params = np.linalg.lstsq(wx, wy)[0]
                 else:  # 'pinv'
                     wxpwxiwxp = np.linalg.pinv(wx)
                     params = wxpwxiwxp @ wy

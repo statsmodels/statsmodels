@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
@@ -900,14 +899,14 @@ def pacf_ols(
         xlags, x0 = lagmat(x, nlags, original="sep")
         xlags = add_constant(xlags)
         for k in range(1, nlags + 1):
-            params = lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
+            params = np.linalg.lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
             pacf[k] = np.squeeze(params[-1])
     else:
         x = x - np.mean(x)
         # Create a single set of lags for multivariate OLS
         xlags, x0 = lagmat(x, nlags, original="sep", trim="both")
         for k in range(1, nlags + 1):
-            params = lstsq(xlags[:, :k], x0, rcond=None)[0]
+            params = np.linalg.lstsq(xlags[:, :k], x0, rcond=None)[0]
             # Last coefficient corresponds to PACF value (see [1])
             pacf[k] = np.squeeze(params[-1])
     if adjusted:

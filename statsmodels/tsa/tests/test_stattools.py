@@ -1,4 +1,3 @@
-from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
@@ -338,7 +337,7 @@ class TestPACF(CheckCorrGram):
         direct[0] = 1.0
         for i in range(lag_len):
             lags[:, i] = x[5 - (i + 1) : -(i + 1)]
-            direct[i + 1] = lstsq(lags[:, : (i + 1)], lead, rcond=None)[0][-1]
+            direct[i + 1] = np.linalg.lstsq(lags[:, : (i + 1)], lead, rcond=None)[0][-1]
         assert_allclose(pacfols, direct, atol=1e-8)
 
     def test_yw(self):
