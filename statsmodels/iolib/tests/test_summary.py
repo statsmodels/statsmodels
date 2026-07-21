@@ -1,7 +1,4 @@
-"""examples to check summary, not converted to tests yet
-
-
-"""
+"""examples to check summary, not converted to tests yet"""
 
 import numpy as np
 from numpy.testing import assert_equal
@@ -15,7 +12,7 @@ from statsmodels.tools.tools import add_constant
 def test_escaped_variable_name():
     # Rename 'cpi' column to 'CPI_'
     data = macrodata.load().data
-    data.rename(columns={"cpi": "CPI_"}, inplace=True)
+    data = data.rename(columns={"cpi": "CPI_"})
 
     mod = OLS.from_formula("CPI_ ~ 1 + np.log(realgdp)", data=data)
     res = mod.fit()
@@ -23,9 +20,10 @@ def test_escaped_variable_name():
     assert "CPI_" in res.summary().as_text()
 
 
-def test_wrong_len_xname(reset_randomstate):
-    y = np.random.randn(100)
-    x = np.random.randn(100, 2)
+def test_wrong_len_xname():
+    rs = np.random.RandomState(8390293)
+    y = rs.randn(100)
+    x = rs.randn(100, 2)
     res = OLS(y, x).fit()
     with pytest.raises(ValueError):
         res.summary(xname=["x1"])

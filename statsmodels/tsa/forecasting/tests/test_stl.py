@@ -42,6 +42,7 @@ def test_smoke(data):
     assert hasattr(res.model_result, "forecast")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_sharex(data, close_figures):
     stlf = STLForecast(data, ARIMA, model_kwargs={"order": (2, 0, 0)})
@@ -75,9 +76,7 @@ def test_equivalence_forecast(data, config, horizon, close_figures):
     if model is ETSModel:
         fit_kwarg["disp"] = False
     res = mod.fit(**fit_kwarg)
-    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(
-        fit_kwargs=fit_kwarg
-    )
+    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(fit_kwargs=fit_kwarg)
 
     seasonal = np.asarray(stl_fit.seasonal)[-12:]
     seasonal = np.tile(seasonal, 1 + horizon // 12)

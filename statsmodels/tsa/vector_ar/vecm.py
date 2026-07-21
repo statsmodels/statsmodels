@@ -8,7 +8,7 @@ import scipy.stats
 
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -1814,7 +1814,7 @@ class VECMResults:
             If None, compute point forecast only.
             If float, compute confidence intervals too. In this case the
             argument stands for the confidence level.
-        exog : ndarray (steps x self.exog.shape[1])
+        exog_fc : ndarray (steps x self.exog.shape[1])
             If self.exog is not None, then information about the future values
             of exog have to be passed via this parameter. The ndarray may be
             larger in it's first dimension. In this case only the first steps

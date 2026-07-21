@@ -32,11 +32,11 @@ class GLMPenalized(PenalizedMixin, GLM):
 
 
 def _get_poisson_data():
-    np.random.seed(987865)
+    rs = np.random.RandomState(987865)
 
     nobs, k_vars = 100, 500
     k_nonzero = 5
-    x = (np.random.rand(nobs, k_vars) + 1.0 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+    x = (rs.rand(nobs, k_vars) + 1.0 * (rs.rand(nobs, 1) - 0.5)) * 2 - 1
     x *= 1.2
 
     x = (x - x.mean(0)) / x.std(0)
@@ -47,13 +47,11 @@ def _get_poisson_data():
     beta = np.sqrt(beta)  # make small coefficients larger
     linpred = x.dot(beta)
     mu = np.exp(linpred)
-    y = np.random.poisson(mu)
+    y = rs.poisson(mu)
     return y, x, idx_nonzero_true, beta
 
 
 def test_poisson_screening():
-
-    np.random.seed(987865)
 
     y, x, idx_nonzero_true, beta = _get_poisson_data()
     nobs = len(y)
@@ -91,13 +89,11 @@ def test_poisson_screening():
 
 
 def test_screen_iterated():
-    np.random.seed(987865)
+    rs = np.random.RandomState(987865)
 
     nobs, k_nonzero = 100, 5
 
-    x = (
-        np.random.rand(nobs, k_nonzero - 1) + 1.0 * (np.random.rand(nobs, 1) - 0.5)
-    ) * 2 - 1
+    x = (rs.rand(nobs, k_nonzero - 1) + 1.0 * (rs.rand(nobs, 1) - 0.5)) * 2 - 1
     x *= 1.2
     x = (x - x.mean(0)) / x.std(0)
     x = np.column_stack((np.ones(nobs), x))
@@ -106,7 +102,7 @@ def test_screen_iterated():
     beta = np.sqrt(beta)  # make small coefficients larger
     linpred = x.dot(beta)
     mu = np.exp(linpred)
-    y = np.random.poisson(mu)
+    y = rs.poisson(mu)
 
     common = x[:, 1:].sum(1)[:, None]
 
@@ -118,9 +114,7 @@ def test_screen_iterated():
         n_batches = 6
         for i in range(n_batches):
             x = (
-                0.05 * common
-                + np.random.rand(nobs, k_vars)
-                + 1.0 * (np.random.rand(nobs, 1) - 0.5)
+                0.05 * common + rs.rand(nobs, k_vars) + 1.0 * (rs.rand(nobs, 1) - 0.5)
             ) * 2 - 1
             x *= 1.2
             if i < k_nonzero - 1:
@@ -183,11 +177,11 @@ def test_glmpoisson_screening():
 
 
 def _get_logit_data():
-    np.random.seed(987865)
+    rs = np.random.RandomState(987865)
 
     nobs, k_vars = 300, 500
     k_nonzero = 5
-    x = (np.random.rand(nobs, k_vars) + 0.01 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+    x = (rs.rand(nobs, k_vars) + 0.01 * (rs.rand(nobs, 1) - 0.5)) * 2 - 1
     x *= 1.2
 
     x = (x - x.mean(0)) / x.std(0)
@@ -198,7 +192,7 @@ def _get_logit_data():
     beta = np.sqrt(beta)  # make small coefficients larger
     linpred = x.dot(beta)
     mu = 1 / (1 + np.exp(-linpred))
-    y = (np.random.rand(len(mu)) < mu).astype(int)
+    y = (rs.rand(len(mu)) < mu).astype(int)
     return y, x, idx_nonzero_true, beta
 
 
@@ -297,11 +291,11 @@ def test_glmlogit_screening():
 
 
 def _get_gaussian_data():
-    np.random.seed(987865)
+    rs = np.random.RandomState(987865)
 
     nobs, k_vars = 100, 500
     k_nonzero = 5
-    x = (np.random.rand(nobs, k_vars) + 0.01 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+    x = (rs.rand(nobs, k_vars) + 0.01 * (rs.rand(nobs, 1) - 0.5)) * 2 - 1
     x *= 1.2
 
     x = (x - x.mean(0)) / x.std(0)
@@ -311,7 +305,7 @@ def _get_gaussian_data():
     beta[idx_nonzero_true] = 1.0 / np.arange(1, k_nonzero + 1)
     beta = np.sqrt(beta)  # make small coefficients larger
     linpred = x.dot(beta)
-    y = linpred + 0.1 * np.random.randn(len(linpred))
+    y = linpred + 0.1 * rs.randn(len(linpred))
 
     return y, x, idx_nonzero_true, beta
 

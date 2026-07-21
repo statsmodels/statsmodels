@@ -15,14 +15,14 @@ hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
 
-from statsmodels.compat.pandas import Appender
-
 import numpy as np
 
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.formula.formulatools import advance_eval_env
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 _predict_docstring = """
@@ -1764,7 +1764,7 @@ class rv_discrete_float:
         self.pk = pk
         self.cpk = np.cumsum(self.pk, axis=1)
 
-    def rvs(self, n=None):
+    def rvs(self, n=None, random_state=None):
         """
         Returns a random sample from the discrete distribution.
 
@@ -1778,8 +1778,8 @@ class rv_discrete_float:
         """
 
         n = self.xk.shape[0]
-        u = np.random.uniform(size=n)
-
+        rng = check_random_state(random_state, deprecated=True)
+        u = rng.uniform(size=n)
         ix = (self.cpk < u[:, None]).sum(1)
         ii = np.arange(n, dtype=np.int32)
         return self.xk[(ii, ix)]

@@ -125,6 +125,7 @@ import pandas as pd
 from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.rng_qrng import check_random_state
 
 _mice_data_example_1 = """
     >>> imp = mice.MICEData(data)
@@ -183,12 +184,15 @@ class MICEData:
     `data`.  The variable named `x1` has a conditional mean structure
     that includes an additional term for x2^2.
     {_mice_data_example_1}
-    """.format(
-        _mice_data_example_1=_mice_data_example_1
-    )
+    """.format(_mice_data_example_1=_mice_data_example_1)
 
     def __init__(
-        self, data, perturbation_method="gaussian", k_pmm=20, history_callback=None
+        self,
+        data,
+        perturbation_method="gaussian",
+        k_pmm=20,
+        history_callback=None,
+        rng=None,
     ):
 
         def _is_string_dtype(dtype):
@@ -204,6 +208,7 @@ class MICEData:
             msg = "MICEData data column names should be string type"
             raise ValueError(msg)
 
+        self.rng = check_random_state(rng)
         self.regularized = {}
 
         # Drop observations where all variables are missing.  This
@@ -720,8 +725,8 @@ class MICEData:
         if jitter is not None:
             if np.isscalar(jitter):
                 jitter = (jitter, jitter)
-            vec1 += jitter[0] * np.random.normal(size=len(vec1))
-            vec2 += jitter[1] * np.random.normal(size=len(vec2))
+            vec1 += jitter[0] * self.rng.normal(size=len(vec1))
+            vec2 += jitter[1] * self.rng.normal(size=len(vec2))
 
         # Plot the points
         keys = ["oo", "io", "oi", "ii"]
@@ -834,8 +839,8 @@ class MICEData:
         if jitter is not None:
             if np.isscalar(jitter):
                 jitter = (jitter, jitter)
-            vec1 += jitter[0] * np.random.normal(size=len(vec1))
-            vec2 += jitter[1] * np.random.normal(size=len(vec2))
+            vec1 += jitter[0] * self.rng.normal(size=len(vec1))
+            vec2 += jitter[1] * self.rng.normal(size=len(vec2))
 
         # Plot the points
         keys = ["o", "i"]
@@ -985,7 +990,7 @@ class MICEData:
         endog, exog, init_kwds, fit_kwds = self.get_fitting_data(vname)
 
         m = len(endog)
-        rix = np.random.randint(0, m, m)
+        rix = self.rng.randint(0, m, m)
         endog = endog[rix]
         exog = exog[rix, :]
 
@@ -1019,7 +1024,7 @@ class MICEData:
 
         cov = self.results[vname].cov_params()
         mu = self.results[vname].params
-        self.params[vname] = np.random.multivariate_normal(mean=mu, cov=cov)
+        self.params[vname] = self.rng.multivariate_normal(mean=mu, cov=cov)
 
     def perturb_params(self, vname):
 
@@ -1115,7 +1120,7 @@ class MICEData:
         dxi = np.argsort(dx, 1)[:, 0:k_pmm]
 
         # Choose a column for each row.
-        ir = np.random.randint(0, k_pmm, len(pendog_miss))
+        ir = self.rng.randint(0, k_pmm, len(pendog_miss))
 
         # Unwind the indices
         jj = np.arange(dxi.shape[0])
@@ -1185,9 +1190,7 @@ class MICE:
     Obtain a sequence of fitted analysis models without combining
     to obtain summary::
     {mice_example_2}
-    """.format(
-        mice_example_1=_mice_example_1, mice_example_2=_mice_example_2
-    )
+    """.format(mice_example_1=_mice_example_1, mice_example_2=_mice_example_2)
 
     def __init__(
         self, model_formula, model_class, data, n_skip=3, init_kwds=None, fit_kwds=None

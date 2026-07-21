@@ -57,6 +57,7 @@ import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod import families
 from statsmodels.iolib import summary2
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 # Gauss-Legendre weights
@@ -400,10 +401,10 @@ class _BayesMixedGLM(base.Model):
 
         return np.concatenate(te)
 
-    def _get_start(self):
+    def _get_start(self, rng):
         start_fep = np.zeros(self.k_fep)
         start_vcp = np.ones(self.k_vcp)
-        start_vc = np.random.normal(size=self.k_vc)
+        start_vc = rng.normal(size=self.k_vc)
         start = np.concatenate((start_fep, start_vcp, start_vc))
         return start
 
@@ -475,7 +476,7 @@ class _BayesMixedGLM(base.Model):
         """
         self.fit_map(method, minim_opts)
 
-    def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False):
+    def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False, rng=None):
         """
         Construct the Laplace approximation to the posterior distribution.
 
@@ -490,6 +491,9 @@ class _BayesMixedGLM(base.Model):
             are centered and scaled to unit variance before fitting
             the model.  The results are back-transformed so that the
             results are presented on the original scale.
+        rng : int, np.random.Generator or np.random.RandomState, optional
+            The generator to use for starting values. If None, uses
+            the singleton RandomState provided by NumPy.
 
         Returns
         -------
@@ -511,7 +515,8 @@ class _BayesMixedGLM(base.Model):
         def grad(params):
             return -self.logposterior_grad(params)
 
-        start = self._get_start()
+        rng = check_random_state(rng)
+        start = self._get_start(rng)
 
         r = minimize(fun, start, method=method, jac=grad, options=minim_opts)
         if not r.success:
@@ -608,6 +613,20 @@ class _VariationalBayesMixedGLM:
             is a standard normal random variable.  This formulation
             can be achieved for any GLM with a canonical link
             function.
+        tm : array_like
+            Mean of the linear predictor.
+        fep_mean : array_like
+            Mean of the fixed effects parameters.
+        vcp_mean : array_like
+            Mean of the variance component parameters.
+        vc_mean : array_like
+            Mean of the random effects realizations.
+        fep_sd : array_like
+            Standard deviation of the fixed effects parameters.
+        vcp_sd : array_like
+            Standard deviation of the variance component parameters.
+        vc_sd : array_like
+            Standard deviation of the random effects realizations.
         """
 
         # p(y | vc) contributions
@@ -698,6 +717,7 @@ class _VariationalBayesMixedGLM:
         minim_opts=None,
         scale_fe=False,
         verbose=False,
+        rng=None,
     ):
         """
         Fit a model using the variational Bayes mean field approximation.
@@ -720,6 +740,10 @@ class _VariationalBayesMixedGLM:
         verbose : bool
             If True, print the gradient norm to the screen each time
             it is calculated.
+        rng : int, np.random.Generator or np.random.RandomState, optional
+            The generator to use for starting values. If None, uses
+            the singleton RandomState provided by NumPy. Only used
+            if sd is None.
 
         Notes
         -----
@@ -762,7 +786,8 @@ class _VariationalBayesMixedGLM:
                 )
             m = mean.copy()
         if sd is None:
-            s = -0.5 + 0.1 * np.random.normal(size=n)
+            rng = check_random_state(rng)
+            s = -0.5 + 0.1 * rng.normal(size=n)
         else:
             if len(sd) != ml:
                 raise ValueError("sd has incorrect length, %d != %d" % (len(sd), ml))

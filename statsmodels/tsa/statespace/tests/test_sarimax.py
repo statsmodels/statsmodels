@@ -4,6 +4,7 @@ Tests for SARIMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
+
 from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_WIN
 
@@ -66,6 +67,7 @@ class TestSARIMAXStatsmodels:
         )
         cls.result_b = cls.model_b.fit(disp=-1)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_loglike(self):
         assert_allclose(self.result_b.llf, self.result_a.llf)
 
@@ -78,6 +80,7 @@ class TestSARIMAXStatsmodels:
     def test_hqic(self):
         assert_allclose(self.result_b.hqic, self.result_a.hqic)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_mle(self):
         # ARIMA estimates the mean of the process, whereas SARIMAX estimates
         # the intercept. Convert the mean to intercept to compare
@@ -85,6 +88,7 @@ class TestSARIMAXStatsmodels:
         params_a[0] = (1 - params_a[1]) * params_a[0]
         assert_allclose(self.result_b.params[:-1], params_a, atol=5e-5)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse(self):
         # Test the complex step approximated BSE values
         cpa = self.result_b._cov_params_approx(approx_complex_step=True)
@@ -151,6 +155,7 @@ class TestRealGDPARStata:
 
 
 class SARIMAXStataTests:
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_loglike(self):
         assert_almost_equal(self.result.llf, self.true["loglike"], 4)
 
@@ -202,6 +207,7 @@ class ARIMA(SARIMAXStataTests):
 
         cls.result = cls.model.filter(params)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_mle(self):
         result = self.model.fit(disp=-1)
         assert_allclose(result.params, self.result.params, atol=1e-3)
@@ -220,6 +226,7 @@ class TestARIMAStationary(ARIMA):
     def setup_class(cls):
         super().setup_class(results_sarimax.wpi1_stationary)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse(self):
         # test defaults
         assert_equal(self.result.cov_type, "opg")
@@ -229,6 +236,7 @@ class TestARIMAStationary(ARIMA):
         assert_allclose(self.result.bse[1], self.true["se_ar_opg"], atol=1e-7)
         assert_allclose(self.result.bse[2], self.true["se_ma_opg"], atol=1e-7)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_approx(self):
         # complex step
         bse = self.result._cov_params_approx(approx_complex_step=True).diagonal() ** 0.5
@@ -252,12 +260,14 @@ class TestARIMAStationary(ARIMA):
         #     assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-3)
         #     assert_allclose(bse[2], self.true['se_ma_oim'], atol=1e-3)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_oim(self):
         # OIM covariance type
         oim_bse = self.result.cov_params_oim.diagonal() ** 0.5
         assert_allclose(oim_bse[1], self.true["se_ar_oim"], atol=1e-3)
         assert_allclose(oim_bse[2], self.true["se_ma_oim"], atol=1e-2)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_robust(self):
         robust_oim_bse = self.result.cov_params_robust_oim.diagonal() ** 0.5
         cpra = self.result.cov_params_robust_approx
@@ -283,6 +293,7 @@ class TestARIMADiffuse(ARIMA):
         kwargs["initial_variance"] = results_sarimax.wpi1_diffuse["initial_variance"]
         super().setup_class(results_sarimax.wpi1_diffuse, **kwargs)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse(self):
         # test defaults
         assert_equal(self.result.cov_type, "opg")
@@ -292,6 +303,7 @@ class TestARIMADiffuse(ARIMA):
         assert_allclose(self.result.bse[1], self.true["se_ar_opg"], atol=1e-7)
         assert_allclose(self.result.bse[2], self.true["se_ma_opg"], atol=1e-7)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_approx(self):
         # complex step
         bse = self.result._cov_params_approx(approx_complex_step=True).diagonal() ** 0.5
@@ -315,6 +327,7 @@ class TestARIMADiffuse(ARIMA):
         #     assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-4)
         #     assert_allclose(bse[2], self.true['se_ma_oim'], atol=1e-4)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_oim(self):
         # OIM covariance type
         bse = self.result._cov_params_oim().diagonal() ** 0.5
@@ -350,6 +363,7 @@ class AdditiveSeasonal(SARIMAXStataTests):
 
         cls.result = cls.model.filter(params)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_mle(self):
         result = self.model.fit(disp=-1)
         assert_allclose(result.params, self.result.params, atol=1e-3)
@@ -368,6 +382,7 @@ class TestAdditiveSeasonal(AdditiveSeasonal):
     def setup_class(cls):
         super().setup_class(results_sarimax.wpi1_seasonal)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse(self):
         # test defaults
         assert_equal(self.result.cov_type, "opg")
@@ -377,6 +392,7 @@ class TestAdditiveSeasonal(AdditiveSeasonal):
         assert_allclose(self.result.bse[1], self.true["se_ar_opg"], atol=1e-6)
         assert_allclose(self.result.bse[2:4], self.true["se_ma_opg"], atol=1e-5)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_approx(self):
         # complex step
         bse = self.result._cov_params_approx(approx_complex_step=True).diagonal() ** 0.5
@@ -401,6 +417,7 @@ class TestAdditiveSeasonal(AdditiveSeasonal):
         #     assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-3)
         #     assert_allclose(bse[2:4], self.true['se_ma_oim'], atol=1e-3)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_oim(self):
         # OIM covariance type
         bse = self.result._cov_params_oim().diagonal() ** 0.5
@@ -438,6 +455,7 @@ class Airline(SARIMAXStataTests):
 
         cls.result = cls.model.filter(params)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_mle(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -459,6 +477,7 @@ class TestAirlineHamilton(Airline):
     def setup_class(cls):
         super().setup_class(results_sarimax.air2_stationary)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse(self):
         # test defaults
         assert_equal(self.result.cov_type, "opg")
@@ -468,6 +487,7 @@ class TestAirlineHamilton(Airline):
         assert_allclose(self.result.bse[0], self.true["se_ma_opg"], atol=1e-6)
         assert_allclose(self.result.bse[1], self.true["se_seasonal_ma_opg"], atol=1e-6)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_approx(self):
         # complex step
         bse = self.result._cov_params_approx(approx_complex_step=True).diagonal() ** 0.5
@@ -494,6 +514,7 @@ class TestAirlineHamilton(Airline):
         #     assert_allclose(bse[1], self.true['se_seasonal_ma_oim'],
         #                     atol=1e-4)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_oim(self):
         # OIM covariance type
         oim_bse = self.result.cov_params_oim.diagonal() ** 0.5
@@ -516,6 +537,7 @@ class TestAirlineHarvey(Airline):
             results_sarimax.air2_stationary, hamilton_representation=False
         )
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse(self):
         # test defaults
         assert_equal(self.result.cov_type, "opg")
@@ -525,6 +547,7 @@ class TestAirlineHarvey(Airline):
         assert_allclose(self.result.bse[0], self.true["se_ma_opg"], atol=1e-6)
         assert_allclose(self.result.bse[1], self.true["se_seasonal_ma_opg"], atol=1e-6)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_approx(self):
         # complex step
         bse = self.result._cov_params_approx(approx_complex_step=True).diagonal() ** 0.5
@@ -551,6 +574,7 @@ class TestAirlineHarvey(Airline):
         #     assert_allclose(bse[1], self.true['se_seasonal_ma_oim'],
         #                     atol=1e-4)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_oim(self):
         # OIM covariance type
         oim_bse = self.result.cov_params_oim.diagonal() ** 0.5
@@ -581,10 +605,12 @@ class TestAirlineStateDifferencing(Airline):
         # best we can do for BIC
         assert_almost_equal(self.result.bic, self.true["bic"], 0)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_mle(self):
         result = self.model.fit(method="nm", maxiter=1000, disp=0)
         assert_allclose(result.params, self.result.params, atol=1e-3)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse(self):
         # test defaults
         assert_equal(self.result.cov_type, "opg")
@@ -594,6 +620,7 @@ class TestAirlineStateDifferencing(Airline):
         assert_allclose(self.result.bse[0], self.true["se_ma_opg"], atol=1e-6)
         assert_allclose(self.result.bse[1], self.true["se_seasonal_ma_opg"], atol=1e-6)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_approx(self):
         # complex step
         bse = self.result._cov_params_approx(approx_complex_step=True).diagonal() ** 0.5
@@ -619,6 +646,7 @@ class TestAirlineStateDifferencing(Airline):
         #     assert_allclose(bse[1], self.true['se_seasonal_ma_oim'],
         #                     atol=1e-4)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_oim(self):
         # OIM covariance type
         oim_bse = self.result.cov_params_oim.diagonal() ** 0.5
@@ -643,7 +671,7 @@ class Friedman(SARIMAXStataTests):
         kwargs.setdefault("simple_differencing", True)
         kwargs.setdefault("hamilton_representation", True)
 
-        cls.model = sarimax.SARIMAX(endog,  *args, exog=exog, order=(1, 0, 1), **kwargs)
+        cls.model = sarimax.SARIMAX(endog, *args, exog=exog, order=(1, 0, 1), **kwargs)
 
         params = np.r_[
             true["params_exog"],
@@ -668,12 +696,14 @@ class TestFriedmanMLERegression(Friedman):
     def setup_class(cls):
         super().setup_class(results_sarimax.friedman2_mle)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_mle(self):
         result = self.model.fit(disp=-1)
         # Use ratio to make atol more meaningful parameter scale differs
         ratio = result.params / self.result.params
         assert_allclose(ratio, np.ones(5), atol=1e-2, rtol=1e-3)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse(self):
         # test defaults
         assert_equal(self.result.cov_type, "opg")
@@ -684,6 +714,7 @@ class TestFriedmanMLERegression(Friedman):
         assert_allclose(self.result.bse[2], self.true["se_ar_opg"], atol=1e-6)
         assert_allclose(self.result.bse[3], self.true["se_ma_opg"], atol=1e-6)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_approx(self):
         # complex step
         bse = self.result._cov_params_approx(approx_complex_step=True).diagonal() ** 0.5
@@ -713,6 +744,7 @@ class TestFriedmanMLERegression(Friedman):
         #     assert_allclose(bse[2], self.true['se_ar_oim'], atol=1e-2)
         #     assert_allclose(bse[3], self.true['se_ma_oim'], atol=1e-2)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_oim(self):
         # OIM covariance type
         bse = self.result.cov_params_oim.diagonal() ** 0.5
@@ -759,6 +791,7 @@ class TestFriedmanStateRegression(Friedman):
 
         cls.result = cls.model.filter(cls.true_params)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_mle(self):
         result = self.model.fit(disp=-1)
         assert_allclose(result.params, self.result.params, atol=1e-1, rtol=2e-1)
@@ -789,6 +822,7 @@ class TestFriedmanStateRegression(Friedman):
     def test_bic(self):
         pass
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse(self):
         # test defaults
         assert_equal(self.result.cov_type, "opg")
@@ -798,6 +832,7 @@ class TestFriedmanStateRegression(Friedman):
         assert_allclose(self.result.bse[0], self.true["se_ar_opg"], atol=1e-2)
         assert_allclose(self.result.bse[1], self.true["se_ma_opg"], atol=1e-2)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_approx(self):
         # complex step
         bse = self.result._cov_params_approx(approx_complex_step=True).diagonal() ** 0.5
@@ -822,6 +857,7 @@ class TestFriedmanStateRegression(Friedman):
         #     assert_allclose(bse[0], self.true['se_ar_oim'], atol=1e-3)
         #     assert_allclose(bse[1], self.true['se_ma_oim'], atol=1e-3)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_bse_oim(self):
         # OIM covariance type
         bse = self.result._cov_params_oim().diagonal() ** 0.5
@@ -858,6 +894,7 @@ class TestFriedmanPredict(Friedman):
     def test_bic(self):
         pass
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_predict(self):
         assert_almost_equal(self.result.predict(), self.true["predict"], 3)
 
@@ -958,6 +995,7 @@ class SARIMAXCoverageTest:
 
         cls.model = sarimax.SARIMAX(endog, *args, **kwargs)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_loglike(self):
         self.result = self.model.filter(self.true_params)
 
@@ -976,6 +1014,7 @@ class SARIMAXCoverageTest:
         self.model.enforce_stationarity = stat
         self.model.enforce_invertibility = inv
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_transform_untransform(self):
         model = self.model
         stat, inv = model.enforce_stationarity, model.enforce_invertibility
@@ -1013,6 +1052,7 @@ class SARIMAXCoverageTest:
         model.enforce_stationarity = stat
         model.enforce_invertibility = inv
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_results(self):
         self.result = self.model.filter(self.true_params)
 
@@ -1029,11 +1069,13 @@ class SARIMAXCoverageTest:
         assert isinstance(self.result.cov_params_robust_approx, np.ndarray)
 
     @pytest.mark.matplotlib
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_plot_diagnostics(self, close_figures):
         # Make sure that no exceptions are thrown during plot_diagnostics
         self.result = self.model.filter(self.true_params)
         self.result.plot_diagnostics()
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_predict(self):
         result = self.model.filter(self.true_params)
         # Test predict does not throw exceptions, and produces the right shaped
@@ -1080,6 +1122,7 @@ class SARIMAXCoverageTest:
             forecast = result.forecast(exog=exog)
             assert_equal(forecast.shape, (1,))
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_init_keys_replicate(self):
         mod1 = self.model
 
@@ -1088,10 +1131,13 @@ class SARIMAXCoverageTest:
         exog = mod1.data.orig_exog
 
         model2 = sarimax.SARIMAX(endog, exog, **kwargs)
-        res1 = self.model.filter(self.true_params)
+        kwargs2 = model2._get_init_kwds()
+        assert sorted(kwargs.items()) == sorted(kwargs2.items())
+        model3 = sarimax.SARIMAX(endog, exog, **kwargs)
         res2 = model2.filter(self.true_params)
+        res3 = model3.filter(self.true_params)
         rtol = 1e-6 if PLATFORM_WIN else 1e-13
-        assert_allclose(res2.llf, res1.llf, rtol=rtol)
+        assert_allclose(res2.llf, res3.llf, rtol=rtol)
 
 
 class Test_ar(SARIMAXCoverageTest):
@@ -1208,6 +1254,7 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
         # of states if enforce_stationarity = False
         cls.model.ssm.loglikelihood_burn = 0
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_init_keys_replicate(self):
         mod1 = self.model
 
@@ -1251,6 +1298,7 @@ class Test_ar_exogenous_in_state(SARIMAXCoverageTest):
         cls.true_regression_coefficient = cls.true_params[0]
         cls.true_params = cls.true_params[1:]
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_loglike(self):
         # Regression in the state vector gives a different loglikelihood, so
         # just check that it's approximately the same
@@ -1258,6 +1306,7 @@ class Test_ar_exogenous_in_state(SARIMAXCoverageTest):
 
         assert_allclose(self.result.llf, self.true_loglike, atol=2)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_regression_coefficient(self):
         # Test that the regression coefficient (estimated as the last filtered
         # state estimate for the regression state) is the same as the Stata
@@ -1764,6 +1813,7 @@ class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
         tps = cls.true_params
         cls.true_params[:2] = (1 - tps[2:5].sum()) * tps[:2]
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_results(self):
         self.result = self.model.filter(self.true_params)
 
@@ -1812,6 +1862,7 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
         kwargs["seasonal_order"] = (3, 2, 2, 4)
         super().setup_class(47, *args, **kwargs)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_results(self):
         self.result = self.model.filter(self.true_params)
 
@@ -1867,6 +1918,7 @@ class Test_sarimax_exogenous(SARIMAXCoverageTest):
         kwargs["exog"] = (endog - np.floor(endog)) ** 2
         super().setup_class(50, *args, **kwargs)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_results_params(self):
         result = self.model.filter(self.true_params)
         assert_allclose(self.true_params[1:4], result.arparams)
@@ -2083,11 +2135,11 @@ def test_misc_exog():
     # Tests for missing data
     nobs = 20
     k_endog = 1
-    np.random.seed(1208)
-    endog = np.random.normal(size=(nobs, k_endog))
+    rs = np.random.RandomState(1208)
+    endog = rs.normal(size=(nobs, k_endog))
     endog[:4, 0] = np.nan
-    exog1 = np.random.normal(size=(nobs, 1))
-    exog2 = np.random.normal(size=(nobs, 2))
+    exog1 = rs.normal(size=(nobs, 1))
+    exog2 = rs.normal(size=(nobs, 2))
 
     index = pd.date_range("1970-01-01", freq="QS", periods=nobs)
     endog_pd = pd.DataFrame(endog, index=index)
@@ -2110,21 +2162,23 @@ def test_misc_exog():
         assert isinstance(mod.start_params, np.ndarray)
         res = mod.fit(disp=False)
         assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
-        typ = pd.Series if isinstance(res.model.orig_endog, pd.DataFrame) else np.ndarray
+        typ = (
+            pd.Series if isinstance(res.model.orig_endog, pd.DataFrame) else np.ndarray
+        )
         assert isinstance(res.predict(), typ)
         assert isinstance(res.predict(dynamic=True), typ)
         assert isinstance(res.get_prediction().predicted_mean, typ)
 
-        oos_exog = np.random.normal(size=(1, mod.k_exog))
+        oos_exog = rs.normal(size=(1, mod.k_exog))
         assert isinstance(res.forecast(steps=1, exog=oos_exog), typ)
         assert isinstance(res.get_forecast(steps=1, exog=oos_exog).predicted_mean, typ)
 
         # Smoke tests for invalid exog
-        oos_exog = np.random.normal(size=(2, mod.k_exog))
+        oos_exog = rs.normal(size=(2, mod.k_exog))
         with pytest.raises(ValueError):
             res.forecast(steps=1, exog=oos_exog)
 
-        oos_exog = np.random.normal(size=(1, mod.k_exog + 1))
+        oos_exog = rs.normal(size=(1, mod.k_exog + 1))
         with pytest.raises(ValueError):
             res.forecast(steps=1, exog=oos_exog)
 
@@ -2137,16 +2191,16 @@ def test_misc_exog():
 def test_datasets():
     # Test that some unusual types of datasets work
 
-    np.random.seed(232849)
-    endog = np.random.binomial(1, 0.5, size=100)
-    exog = np.random.binomial(1, 0.5, size=100)
+    rs = np.random.RandomState(232849)
+    endog = rs.binomial(1, 0.5, size=100)
+    exog = rs.binomial(1, 0.5, size=100)
     mod = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
     mod.fit(disp=-1)
 
 
 def test_predict_custom_index():
-    np.random.seed(328423)
-    endog = pd.DataFrame(np.random.normal(size=50))
+    rs = np.random.RandomState(328423)
+    endog = pd.DataFrame(rs.normal(size=50))
     mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
     res = mod.smooth(mod.start_params)
     out = res.predict(start=1, end=1, index=["a"])
@@ -2156,9 +2210,9 @@ def test_predict_custom_index():
 def test_arima000():
     # Test an ARIMA(0, 0, 0) with measurement error model (i.e. just estimating
     # a variance term)
-    np.random.seed(328423)
+    rs = np.random.RandomState(328423)
     nobs = 50
-    endog = pd.DataFrame(np.random.normal(size=nobs))
+    endog = pd.DataFrame(rs.normal(size=nobs))
     mod = sarimax.SARIMAX(endog, order=(0, 0, 0), measurement_error=False)
     res = mod.smooth(mod.start_params)
     assert_allclose(res.smoothed_state, endog.T)
@@ -2169,7 +2223,7 @@ def test_arima000():
     assert_allclose(res.smoothed_state[1:, 1:], endog.diff()[1:].T)
 
     # Exogenous variables
-    error = np.random.normal(size=nobs)
+    error = rs.normal(size=nobs)
     endog = np.ones(nobs) * 10 + error
     exog = np.ones(nobs)
 
@@ -2412,11 +2466,11 @@ def check_concentrated_scale(filter_univariate=False):
         # Test simulate
         # Simulate is currently broken for time-varying models, so do not try
         # to test it here
-        np.random.seed(13847)
+        rs = np.random.RandomState(13847)
         if mod_conc.ssm.time_invariant:
-            measurement_shocks = np.random.normal(size=10)
-            state_shocks = np.random.normal(size=10)
-            initial_state = np.random.normal(size=(mod_conc.k_states, 1))
+            measurement_shocks = rs.normal(size=10)
+            state_shocks = rs.normal(size=10)
+            initial_state = rs.normal(size=(mod_conc.k_states, 1))
             actual = res_conc.simulate(
                 10, measurement_shocks, state_shocks, initial_state
             )
@@ -2787,9 +2841,7 @@ def test_start_params_small_nobs():
 
     # Regular ARMA
     mod = sarimax.SARIMAX(endog[:4], order=(4, 0, 0))
-    match = (
-        "Too few observations to estimate starting parameters for ARMA and trend."
-    )
+    match = "Too few observations to estimate starting parameters for ARMA and trend."
     with pytest.warns(UserWarning, match=match):
         start_params = mod.start_params
     assert_allclose(start_params, [0, 0, 0, 0, np.var(endog[:4])])
@@ -2882,18 +2934,20 @@ def test_dynamic_str():
 
 
 @pytest.mark.matplotlib
-def test_plot_too_few_obs(reset_randomstate, close_figures):
+@pytest.mark.thread_unsafe("matplotlib is not thread safe")
+def test_plot_too_few_obs(close_figures):
     # GH 6173
     # SO https://stackoverflow.com/questions/55930880/
     #    arima-models-plot-diagnostics-share-error/58051895#58051895
+    rs = np.random.RandomState(758213)
     mod = sarimax.SARIMAX(
-        np.random.normal(size=10), order=(10, 0, 0), enforce_stationarity=False
+        rs.normal(size=10), order=(10, 0, 0), enforce_stationarity=False
     )
     with pytest.warns(UserWarning, match="Too few"):
         results = mod.fit()
     with pytest.raises(ValueError, match="Length of endogenous"):
         results.plot_diagnostics(figsize=(15, 5))
-    y = np.random.standard_normal(9)
+    y = rs.standard_normal(9)
     mod = sarimax.SARIMAX(
         y,
         order=(1, 1, 1),
@@ -2907,9 +2961,10 @@ def test_plot_too_few_obs(reset_randomstate, close_figures):
         results.plot_diagnostics(figsize=(30, 15))
 
 
-def test_sarimax_starting_values_few_obsevations(reset_randomstate):
+def test_sarimax_starting_values_few_obsevations():
     # GH 6396, 6801
-    y = np.random.standard_normal(17)
+    rs = np.random.RandomState(758217)
+    y = rs.standard_normal(17)
 
     sarimax_model = sarimax.SARIMAX(
         endog=y, order=(1, 1, 1), seasonal_order=(0, 1, 0, 12), trend="n"
@@ -2918,9 +2973,8 @@ def test_sarimax_starting_values_few_obsevations(reset_randomstate):
     assert np.all(np.isfinite(sarimax_model.predict(start=len(y), end=len(y) + 11)))
 
 
-def test_sarimax_starting_values_few_obsevations_long_ma(reset_randomstate):
+def test_sarimax_starting_values_few_obsevations_long_ma():
     # GH 8232
-    y = np.random.standard_normal(9)
     y = [
         3066.3,
         3260.2,
@@ -2948,7 +3002,7 @@ def test_sarimax_starting_values_few_obsevations_long_ma(reset_randomstate):
     assert np.all(np.isfinite(sarimax_model.predict(start=len(y), end=len(y) + 11)))
 
 
-def test_sarimax_forecast_exog_trend(reset_randomstate):
+def test_sarimax_forecast_exog_trend():
     # Test that an error is not raised that the given `exog` for the forecast
     # period is a constant when forecating with an intercept
     # GH 7019

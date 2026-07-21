@@ -86,7 +86,7 @@ def test_ols():
     # full OLS loglikelihood (i.e. without the scale concentrated out).
     desired = mod_ols.loglike(res_ols.params, scale=res_ols.scale)
     assert_allclose(res.llf_recursive, desired)
-    # Alternatively, we can constrcut the concentrated OLS loglikelihood
+    # Alternatively, we can construct the concentrated OLS loglikelihood
     # by computing the scale term with `nobs` in the denominator rather than
     # `nobs - d`.
     scale_alternative = (
@@ -143,7 +143,9 @@ def test_ols():
     assert_allclose(actual_bic, res_ols.bic)
 
 
-@pytest.mark.parametrize("constraints", [None, "m1 + unemp = 1"], ids=["No constraint", "Constrained"])
+@pytest.mark.parametrize(
+    "constraints", [None, "m1 + unemp = 1"], ids=["No constraint", "Constrained"]
+)
 def test_glm(constraints):
     # More comprehensive tests against GLM estimates (this is sort of redundant
     # given `test_ols`, but this is mostly to complement the tests in
@@ -281,17 +283,13 @@ def test_estimates():
     assert_allclose(res.params, res_ols.params)
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 def test_plots(close_figures):
     import matplotlib.pyplot as plt
+    from pandas.plotting import register_matplotlib_converters
 
-    # Basic plot
-    try:
-        from pandas.plotting import register_matplotlib_converters
-
-        register_matplotlib_converters()
-    except ImportError:
-        pass
+    register_matplotlib_converters()
 
     exog = add_constant(dta[["m1", "pop"]])
     mod = RecursiveLS(endog, exog)
@@ -365,10 +363,11 @@ def test_resid_recursive():
     assert_allclose(res.resid_recursive[2:], desired_resid_recursive)
 
 
-def test_recursive_olsresiduals_bad_input(reset_randomstate):
+def test_recursive_olsresiduals_bad_input():
     from statsmodels.tsa.arima.model import ARIMA
 
-    e = np.random.standard_normal(250)
+    rs = np.random.RandomState(9889821)
+    e = rs.standard_normal(250)
     y = e.copy()
     for i in range(1, y.shape[0]):
         y[i] += 0.1 + 0.8 * y[i - 1] + e[i]

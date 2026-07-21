@@ -345,8 +345,9 @@ def test_index_like():
         DeterministicTerm._index_like(idx)
 
 
-def test_calendar_fourier(reset_randomstate):
-    inc = np.abs(np.random.standard_normal(1000))
+def test_calendar_fourier():
+    rs = np.random.RandomState(43437243)
+    inc = np.abs(rs.standard_normal(1000))
     inc = np.cumsum(inc)
     inc = 10 * inc / inc[-1]
     offset = (24 * 3600 * inc).astype(np.int64)
@@ -374,8 +375,9 @@ def test_calendar_fourier(reset_randomstate):
     np.testing.assert_allclose(expected, terms.values)
 
 
-def test_calendar_time_trend(reset_randomstate):
-    inc = np.abs(np.random.standard_normal(1000))
+def test_calendar_time_trend():
+    rs = np.random.RandomState(43437243)
+    inc = np.abs(rs.standard_normal(1000))
     inc = np.cumsum(inc)
     inc = 10 * inc / inc[-1]
     offset = (24 * 3600 * inc).astype(np.int64)
@@ -493,6 +495,20 @@ def test_deterministic_process(
     pd.testing.assert_index_equal(terms.index, time_index)
     terms = dp.out_of_sample(23)
     assert isinstance(terms, pd.DataFrame)
+
+
+@pytest.mark.parametrize("drop", [True, False])
+def test_out_of_sample_without_in_sample(drop):
+    # GH: out_of_sample()/range() on a fresh DeterministicProcess used to raise
+    # a bare ``AssertionError`` when drop=False, because the lazy in_sample()
+    # call that populates _retain_cols was gated on self._drop.
+    idx = pd.RangeIndex(0, 10)
+    fresh = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    primed = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    primed.in_sample()
+    pd.testing.assert_frame_equal(fresh.out_of_sample(5), primed.out_of_sample(5))
+    fresh2 = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    pd.testing.assert_frame_equal(fresh2.range(10, 15), primed.range(10, 15))
 
 
 def test_deterministic_process_errors(time_index):
@@ -627,13 +643,14 @@ class DummyTerm(DeterministicTerm):
     def in_sample(self, index: pd.Index) -> pd.DataFrame:
         nobs = index.shape[0]
         terms = np.empty((index.shape[0], 12))
+        rs = np.random.RandomState(43437243)
         for i in range(0, 12, 2):
             if i == 0:
                 value = 1
             elif i == 2:
                 value = np.arange(nobs)
             elif i == 4:
-                value = np.random.standard_normal(nobs)
+                value = rs.standard_normal(nobs)
             elif i == 6:
                 value = np.zeros(nobs)
                 value[::2] = 1
@@ -652,7 +669,8 @@ class DummyTerm(DeterministicTerm):
         forecast_index: pd.Index = None,
     ) -> pd.DataFrame:
         fcast_index = self._extend_index(index, steps, forecast_index)
-        terms = np.random.standard_normal((steps, 12))
+        rs = np.random.RandomState(4343)
+        terms = rs.standard_normal((steps, 12))
 
         return pd.DataFrame(terms, columns=self.columns, index=fcast_index)
 

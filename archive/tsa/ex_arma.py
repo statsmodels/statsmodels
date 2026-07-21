@@ -5,12 +5,11 @@ works ok if noise variance is large
 '''
 
 import numpy as np
-import statsmodels.api as sm
-from statsmodels.tsa.arima_process import arma_generate_sample
-from statsmodels.tsa.arma_mle import Arma as Arma
-from statsmodels.tsa.arima_process import ARIMA as ARIMA_old
-from statsmodels.sandbox.tsa.garch import Arma as Armamle_old
 
+import statsmodels.api as sm
+from statsmodels.sandbox.tsa.garch import Arma as Armamle_old
+from statsmodels.tsa.arima_process import ARIMA as ARIMA_old, arma_generate_sample
+from statsmodels.tsa.arma_mle import Arma as Arma
 
 print("\nExample 1")
 ar = [1.0,  -0.6, 0.1]

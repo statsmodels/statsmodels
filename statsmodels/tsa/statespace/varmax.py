@@ -5,7 +5,6 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-from statsmodels.compat.pandas import Appender
 
 import contextlib
 from warnings import warn
@@ -15,6 +14,7 @@ import pandas as pd
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.vector_ar import var_model

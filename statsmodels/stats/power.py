@@ -1,5 +1,6 @@
 # pylint: disable-msg=W0142
-"""Statistical power, solving for nobs, ... - trial version
+"""
+Statistical power, solving for nobs, ... - trial version
 
 Created on Sat Jan 12 21:48:06 2013
 
@@ -58,7 +59,33 @@ def ncf_ppf(q, dfn, dfd, nc):
 
 
 def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
-    """Calculate power of a ttest"""
+    """
+    Calculate power of a ttest
+
+    Parameters
+    ----------
+    effect_size : float
+        Standardized effect size, mean divided by the standard deviation.
+    nobs : int or float
+        Sample size, number of observations.
+    alpha : float in interval (0,1)
+        Significance level, e.g. 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    df : int or float
+        Degrees of freedom. By default this is None, and ``df = nobs - 1``
+        is used.
+    alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        Extra argument to choose whether the power is calculated for a
+        two-sided (default) or one sided test. The one-sided test can be
+        either 'larger', 'smaller'.
+
+    Returns
+    -------
+    power : float
+        Power of the test, e.g. 0.8, is one minus the probability of a
+        type II error. Power is the probability that the test correctly
+        rejects the Null Hypothesis if the Alternative Hypothesis is true.
+    """
     d = effect_size
     if df is None:
         df = nobs - 1
@@ -96,14 +123,12 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
 
 
 def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
-    """Calculate power of a normal distributed test statistic
-
-    This is an generalization of `normal_power` when variance under Null and
-    Alternative differ.
+    """
+    Calculate power of a normal distributed test statistic
 
     Parameters
     ----------
-    effect size : float
+    effect_size : float
         difference in the estimated means or statistics under the alternative
         normalized by the standard deviation (without division by sqrt(nobs).
     nobs : float or int
@@ -115,6 +140,15 @@ def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
         extra argument to choose whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
         either 'larger', 'smaller'.
+    sigma : float
+        The standard deviation used to standardize the effect size.
+
+    Returns
+    -------
+    power : float
+        Power of the test, e.g. 0.8, is one minus the probability of a
+        type II error. Power is the probability that the test correctly
+        rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
 
     d = effect_size
@@ -141,9 +175,10 @@ def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
 def normal_power_het(
     diff, nobs, alpha, std_null=1.0, std_alternative=None, alternative="two-sided"
 ):
-    """Calculate power of a normal distributed test statistic
+    """
+    Calculate power of a normal distributed test statistic
 
-    This is an generalization of `normal_power` when variance under Null and
+    This is a generalization of `normal_power` when variance under Null and
     Alternative differ.
 
     Parameters
@@ -169,6 +204,9 @@ def normal_power_het(
     Returns
     -------
     power : float
+        Power of the test, e.g. 0.8, is one minus the probability of a
+        type II error. Power is the probability that the test correctly
+        rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
 
     d = diff
@@ -196,7 +234,8 @@ def normal_power_het(
 
 
 def normal_sample_size_one_tail(diff, power, alpha, std_null=1.0, std_alternative=None):
-    """explicit sample size computation if only one tail is relevant
+    """
+    Explicit sample size computation if only one tail is relevant
 
     The sample size is based on the power in one tail assuming that the
     alternative is in the tail where the test has power that increases
@@ -245,11 +284,34 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.0, std_alternativ
 
 
 def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
-    """power for ftest for one way anova with k equal sized groups
+    """
+    Power for ftest for one way anova with k equal sized groups
 
     nobs total sample size, sum over all groups
 
     should be general nobs observations, k_groups restrictions ???
+
+    Parameters
+    ----------
+    effect_size : float
+        Standardized effect size, according to Cohen's f definition.
+    nobs : int or float
+        Total sample size, sum over all groups.
+    alpha : float in interval (0,1)
+        Significance level, e.g. 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    k_groups : int
+        Number of groups in the one-way ANOVA. Default is 2.
+    df : None
+        Unused. Included for compatibility; degrees of freedom are
+        computed internally from ``nobs`` and ``k_groups``.
+
+    Returns
+    -------
+    power : float
+        Power of the test, e.g. 0.8, is one minus the probability of a
+        type II error. Power is the probability that the test correctly
+        rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
     df_num = k_groups - 1
     df_denom = nobs - k_groups
@@ -259,7 +321,8 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
 
 
 def ftest_power(effect_size, df2, df1, alpha, ncc=1):
-    """Calculate the power of a F-test.
+    """
+    Calculate the power of a F-test
 
     Parameters
     ----------
@@ -312,7 +375,8 @@ def ftest_power(effect_size, df2, df1, alpha, ncc=1):
 
 
 def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
-    """Calculate the power of a F-test.
+    """
+    Calculate the power of a F-test
 
     Based on Cohen's `f^2` effect size.
 
@@ -350,7 +414,7 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
     Notes
-
+    -----
     The sample size is given implicitly by ``df_denom`` with fixed number of
     constraints given by numerator degrees of freedom ``df_num``:
 
@@ -377,7 +441,8 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
 
 
 class Power:
-    """Statistical Power calculations, Base Class
+    """
+    Statistical Power calculations, Base Class
 
     so far this could all be class methods
     """
@@ -419,12 +484,27 @@ class Power:
         return self.power(*args, **kwds) - power_
 
     def solve_power(self, **kwds):
-        """solve for any one of the parameters of a t-test
+        """
+        Solve for any one of the parameters of a t-test
 
         for t-test the keywords are:
             effect_size, nobs, alpha, power
 
         exactly one needs to be ``None``, all others need numeric values
+
+        Parameters
+        ----------
+        **kwds
+            The keyword arguments of the power function for the specific
+            test, exactly one of which must be ``None``; the others must
+            be given numeric values.
+
+        Returns
+        -------
+        value : float
+            The value of the parameter that was set to None in the call.
+            The value solves the power equation given the remaining
+            parameters.
 
         *attaches*
 
@@ -434,7 +514,6 @@ class Power:
             The first element is the success indicator, one if successful.
             The remaining elements contain the return information of the up to
             three solvers that have been tried.
-
 
         """
         # TODO: maybe use explicit kwds,
@@ -501,6 +580,9 @@ class Power:
         fit_kwds = self.start_bqexp[key]
         fit_res = []
         # print vars()
+        # ensure ``val`` is bound for the warning below even if the first
+        # solver raises before assigning it and no backup solver runs
+        val = np.nan
         try:
             val, res = brentq_expanding(func, full_output=True, **fit_kwds)
             failed = False
@@ -547,7 +629,19 @@ class Power:
                 convergence_doc,
             )
 
-            warnings.warn(convergence_doc, ConvergenceWarning, stacklevel=2)
+            # the root finder did not converge, so ``val`` is not a solution
+            # (it is the last point the solver evaluated, e.g. a bracket
+            # bound). Report it in the warning for diagnostics, but return
+            # nan instead so it cannot masquerade as a valid answer.
+            warnings.warn(
+                convergence_doc
+                + f"The last value evaluated by the root finder was {val}; "
+                "returning nan instead. Solver details are stored in the "
+                "``cache_fit_res`` attribute.",
+                ConvergenceWarning,
+                stacklevel=2,
+            )
+            val = np.nan
 
         # attach fit_res, for reading only, should be needed only for debugging
         fit_res.insert(0, success)
@@ -590,10 +684,10 @@ class Power:
             title for the axis. Use an empty string, ``''``, to avoid a title.
         plt_kwds : {None, dict}
             not used yet
-        kwds : dict
+        **kwds
             These remaining keyword arguments are used as arguments to the
-            power function. Many power function support ``alternative`` as a
-            keyword argument, two-sample test support ``ratio``.
+            power function. Many power functions support ``alternative`` as
+            a keyword argument, two-sample tests support ``ratio``.
 
         Returns
         -------
@@ -680,7 +774,8 @@ class TTestPower(Power):
     """Statistical Power calculations for one sample or paired sample t-test"""
 
     def power(self, effect_size, nobs, alpha, df=None, alternative="two-sided"):
-        """Calculate the power of a t-test for one sample or paired samples.
+        """
+        Calculate the power of a t-test for one sample or paired samples
 
         Parameters
         ----------
@@ -699,7 +794,6 @@ class TTestPower(Power):
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
-            .
 
         Returns
         -------
@@ -722,7 +816,8 @@ class TTestPower(Power):
         power=None,
         alternative="two-sided",
     ):
-        """solve for any one parameter of the power of a one sample t-test
+        """
+        Solve for any one parameter of the power of a one sample t-test
 
         for the one sample t-test the keywords are:
             effect_size, nobs, alpha, power
@@ -736,8 +831,8 @@ class TTestPower(Power):
         Parameters
         ----------
         effect_size : float
-            Standardized effect size.The effect size is here Cohen's f, square
-            root of "f2".
+            Standardized effect size, mean divided by the standard
+            deviation.
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
@@ -747,10 +842,10 @@ class TTestPower(Power):
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        alternative : str, 'two-sided' (default) or 'one-sided'
+        alternative : str, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
-            two-sided (default) or one sided test.
-            'one-sided' assumes we are in the relevant tail.
+            two-sided (default) or one sided test. The one-sided test can be
+            either 'larger', 'smaller'.
 
         Returns
         -------
@@ -789,7 +884,8 @@ class TTestPower(Power):
 
 
 class TTestIndPower(Power):
-    """Statistical Power calculations for t-test for two independent sample
+    """
+    Statistical Power calculations for t-test for two independent sample
 
     currently only uses pooled variance
 
@@ -798,7 +894,8 @@ class TTestIndPower(Power):
     def power(
         self, effect_size, nobs1, alpha, ratio=1, df=None, alternative="two-sided"
     ):
-        """Calculate the power of a t-test for two independent sample
+        """
+        Calculate the power of a t-test for two independent sample
 
         Parameters
         ----------
@@ -853,7 +950,8 @@ class TTestIndPower(Power):
         ratio=1.0,
         alternative="two-sided",
     ):
-        """solve for any one parameter of the power of a two sample t-test
+        """
+        Solve for any one parameter of the power of a two sample t-test
 
         for t-test the keywords are:
             effect_size, nobs1, alpha, power, ratio
@@ -914,7 +1012,8 @@ class TTestIndPower(Power):
 
 
 class NormalIndPower(Power):
-    """Statistical Power calculations for z-test for two independent samples.
+    """
+    Statistical Power calculations for z-test for two independent samples
 
     currently only uses pooled variance
 
@@ -925,7 +1024,8 @@ class NormalIndPower(Power):
         super().__init__(**kwds)
 
     def power(self, effect_size, nobs1, alpha, ratio=1, alternative="two-sided"):
-        """Calculate the power of a z-test for two independent sample
+        """
+        Calculate the power of a z-test for two independent sample
 
         Parameters
         ----------
@@ -979,7 +1079,8 @@ class NormalIndPower(Power):
         ratio=1.0,
         alternative="two-sided",
     ):
-        """solve for any one parameter of the power of a two sample z-test
+        """
+        Solve for any one parameter of the power of a two sample z-test
 
         for z-test the keywords are:
             effect_size, nobs1, alpha, power, ratio
@@ -1009,7 +1110,7 @@ class NormalIndPower(Power):
         ratio : float
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ration given the other
+            The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
         alternative : str, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
@@ -1044,7 +1145,8 @@ class NormalIndPower(Power):
 
 
 class FTestPower(Power):
-    """Statistical Power calculations for generic F-test of a constraint
+    """
+    Statistical Power calculations for generic F-test of a constraint
 
     This class is not recommended, use `FTestPowerF2` with corrected interface.
 
@@ -1073,7 +1175,7 @@ class FTestPower(Power):
 
     >>> df1 = 1  # number of constraints in hypothesis test
     >>> df2 = FTestPower().solve_power(effect_size=f, alpha=0.1, power=0.9,
-                                       df_denom=df1)
+    ...                                df_denom=df1)
     >>> ncc = 1  # default
     >>> nobs = df2 + df1 + ncc
     >>> df2, nobs
@@ -1087,7 +1189,8 @@ class FTestPower(Power):
     """
 
     def power(self, effect_size, df_num, df_denom, alpha, ncc=1):
-        """Calculate the power of a F-test.
+        """
+        Calculate the power of a F-test
 
         The effect size is Cohen's ``f``, square root of ``f2``.
 
@@ -1149,7 +1252,8 @@ class FTestPower(Power):
         ncc=1,
         **kwargs,
     ):
-        """solve for any one parameter of the power of a F-test
+        """
+        Solve for any one parameter of the power of a F-test
 
         for the one sample F-test the keywords are:
             effect_size, df_num, df_denom, alpha, power
@@ -1186,7 +1290,7 @@ class FTestPower(Power):
         ncc : int
             degrees of freedom correction for non-centrality parameter.
             see Notes
-        kwargs : empty
+        **kwargs
             ``kwargs`` are not used and included for backwards compatibility.
             If ``nobs`` is used as keyword, then a warning is issued. All
             other keywords in ``kwargs`` raise a ValueError.
@@ -1224,7 +1328,8 @@ class FTestPower(Power):
 
 
 class FTestPowerF2(Power):
-    """Statistical Power calculations for generic F-test of a constraint
+    """
+    Statistical Power calculations for generic F-test of a constraint
 
     This is based on Cohen's f^2 as effect size measure.
 
@@ -1244,7 +1349,7 @@ class FTestPowerF2(Power):
 
     >>> df1 = 1  # number of constraints in hypothesis test
     >>> df2 = FTestPowerF2().solve_power(effect_size=f2, alpha=0.1, power=0.9,
-                                         df_num=df1)
+    ...                                  df_num=df1)
     >>> ncc = 1  # default
     >>> nobs = df2 + df1 + ncc
     >>> df2, nobs
@@ -1258,7 +1363,8 @@ class FTestPowerF2(Power):
     """
 
     def power(self, effect_size, df_num, df_denom, alpha, ncc=1):
-        """Calculate the power of a F-test.
+        """
+        Calculate the power of a F-test
 
         The effect size is Cohen's ``f^2``.
 
@@ -1313,7 +1419,8 @@ class FTestPowerF2(Power):
         power=None,
         ncc=1,
     ):
-        """Solve for any one parameter of the power of a F-test
+        """
+        Solve for any one parameter of the power of a F-test
 
         for the one sample F-test the keywords are:
             effect_size, df_num, df_denom, alpha, power
@@ -1376,7 +1483,8 @@ class FTestPowerF2(Power):
 
 
 class FTestAnovaPower(Power):
-    """Statistical Power calculations F-test for one factor balanced ANOVA
+    """
+    Statistical Power calculations F-test for one factor balanced ANOVA
 
     This is based on Cohen's f as effect size measure.
 
@@ -1387,7 +1495,8 @@ class FTestAnovaPower(Power):
     """
 
     def power(self, effect_size, nobs, alpha, k_groups=2):
-        """Calculate the power of a F-test for one factor ANOVA.
+        """
+        Calculate the power of a F-test for one factor ANOVA
 
         Parameters
         ----------
@@ -1416,7 +1525,8 @@ class FTestAnovaPower(Power):
     def solve_power(
         self, effect_size=None, nobs=None, alpha=None, power=None, k_groups=2
     ):
-        """solve for any one parameter of the power of a F-test
+        """
+        Solve for any one parameter of the power of a F-test
 
         for the one sample F-test the keywords are:
             effect_size, nobs, alpha, power
@@ -1438,6 +1548,8 @@ class FTestAnovaPower(Power):
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
+        k_groups : int or float
+            number of groups in the ANOVA or k-sample comparison. Default is 2.
 
         Returns
         -------
@@ -1505,7 +1617,8 @@ class GofChisquarePower(Power):
     def power(
         self, effect_size, nobs, alpha, n_bins, ddof=0
     ):  # alternative='two-sided'):
-        """Calculate the power of a chisquare test for one sample
+        """
+        Calculate the power of a chisquare test for one sample
 
         Only two-sided alternative is implemented
 
@@ -1521,6 +1634,8 @@ class GofChisquarePower(Power):
             error, that is wrong rejections if the Null Hypothesis is true.
         n_bins : int
             number of bins or cells in the distribution.
+        ddof : int
+            Degrees of freedom correction for the chisquare distribution.
 
         Returns
         -------
@@ -1538,7 +1653,8 @@ class GofChisquarePower(Power):
     def solve_power(
         self, effect_size=None, nobs=None, alpha=None, power=None, n_bins=2
     ):
-        """solve for any one parameter of the power of a one sample chisquare-test
+        """
+        Solve for any one parameter of the power of a one sample chisquare-test
 
         for the one sample chisquare-test the keywords are:
             effect_size, nobs, alpha, power
@@ -1588,7 +1704,8 @@ class GofChisquarePower(Power):
 
 
 class _GofChisquareIndPower(Power):
-    """Statistical Power calculations for chisquare goodness-of-fit test
+    """
+    Statistical Power calculations for chisquare goodness-of-fit test
 
     TODO: this is not working yet
           for 2sample case need two nobs in function
@@ -1597,7 +1714,8 @@ class _GofChisquareIndPower(Power):
     """
 
     def power(self, effect_size, nobs1, alpha, ratio=1, alternative="two-sided"):
-        """Calculate the power of a chisquare for two independent sample
+        """
+        Calculate the power of a chisquare for two independent sample
 
         Parameters
         ----------
@@ -1614,8 +1732,8 @@ class _GofChisquareIndPower(Power):
         ratio : float
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ration given the other
-            arguments it has to be explicitely set to None.
+            The default for ratio is 1; to solve for ratio given the other
+            arguments it has to be explicitly set to None.
         alternative : str, 'two-sided' (default) or 'one-sided'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.
@@ -1647,7 +1765,8 @@ class _GofChisquareIndPower(Power):
         ratio=1.0,
         alternative="two-sided",
     ):
-        """solve for any one parameter of the power of a two sample z-test
+        """
+        Solve for any one parameter of the power of a two sample z-test
 
         for z-test the keywords are:
             effect_size, nobs1, alpha, power, ratio
@@ -1673,8 +1792,8 @@ class _GofChisquareIndPower(Power):
         ratio : float
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ration given the other
-            arguments it has to be explicitely set to None.
+            The default for ratio is 1; to solve for ratio given the other
+            arguments it has to be explicitly set to None.
         alternative : str, 'two-sided' (default) or 'one-sided'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.

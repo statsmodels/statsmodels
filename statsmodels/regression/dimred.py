@@ -1,3 +1,5 @@
+"""Dimension reduction regression models."""
+
 import warnings
 
 import numpy as np
@@ -49,6 +51,7 @@ class SlicedInverseReg(_DimReductionRegression):
     ----------
     KC Li (1991).  Sliced inverse regression for dimension reduction.
     JASA 86, 316-342.
+
     """
 
     def fit(self, slice_n=20, **kwargs):
@@ -59,8 +62,10 @@ class SlicedInverseReg(_DimReductionRegression):
         ----------
         slice_n : int, optional
             Target number of observations per slice
-        """
+        **kwargs
+            Extra keyword arguments. These trigger a RuntimeWarning.
 
+        """
         # Sample size per slice
         if len(kwargs) > 0:
             msg = "SIR.fit does not take any extra keyword arguments"
@@ -182,6 +187,9 @@ class SlicedInverseReg(_DimReductionRegression):
         gtol : float
             If the norm of the gradient of the objective function
             falls below this value, the algorithm has converged.
+        **kwargs
+            Extra keyword arguments. These trigger a RuntimeWarning; ``start_params``
+            can provide starting values.
 
         Returns
         -------
@@ -200,8 +208,8 @@ class SlicedInverseReg(_DimReductionRegression):
         L. Ferre, A.F. Yao (2003).  Functional sliced inverse regression
         analysis.  Statistics: a journal of theoretical and applied
         statistics 37(6) 475-488.
-        """
 
+        """
         if len(kwargs) > 0:
             msg = "SIR.fit_regularized does not take keyword arguments"
             warnings.warn(msg, RuntimeWarning, stacklevel=2)
@@ -283,6 +291,7 @@ class PrincipalHessianDirections(_DimReductionRegression):
     KC Li (1992).  On Principal Hessian Directions for Data
     Visualization and Dimension Reduction: Another application
     of Stein's lemma. JASA 87:420.
+
     """
 
     def fit(self, **kwargs):
@@ -295,13 +304,15 @@ class PrincipalHessianDirections(_DimReductionRegression):
             If True, use least squares regression to remove the
             linear relationship between each covariate and the
             response, before conducting PHD.
+        **kwargs
+            Additional keyword arguments. May include ``resid``.
 
         Returns
         -------
         A results instance which can be used to access the estimated
         parameters.
-        """
 
+        """
         resid = kwargs.get("resid", False)
 
         y = self.endog - self.endog.mean()
@@ -350,6 +361,7 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
     Y Li, L-X Zhu (2007). Asymptotics for sliced average
     variance estimation.  The Annals of Statistics.
     https://arxiv.org/pdf/0708.0462.pdf
+
     """
 
     def __init__(self, endog, exog, **kwargs):
@@ -367,8 +379,10 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
         ----------
         slice_n : int
             Number of observations per slice
-        """
+        **kwargs
+            Additional keyword arguments. May include ``slice_n``.
 
+        """
         # Sample size per slice
         slice_n = kwargs.get("slice_n", 50)
 
@@ -436,6 +450,7 @@ class DimReductionResults(model.Results):
     methods produce a corresponding set of eigenvalues
     (`eigs`) that indicate how much information is contained
     in each basis direction.
+
     """
 
     def __init__(self, model, params, eigs):
@@ -489,8 +504,8 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
     A Edelman, TA Arias, ST Smith (1998).  The geometry of algorithms with
     orthogonality constraints. SIAM J Matrix Anal Appl.
     http://math.mit.edu/~edelman/publications/geometry_of_algorithms.pdf
-    """
 
+    """
     p, d = params.shape
     params = params.ravel()
 
@@ -572,6 +587,7 @@ class CovarianceReduction(_DimReductionRegression):
     A Edelman, TA Arias, ST Smith (1998).  The geometry of algorithms with
     orthogonality constraints. SIAM J Matrix Anal Appl.
     http://math.mit.edu/~edelman/publications/geometry_of_algorithms.pdf
+
     """
 
     def __init__(self, endog, exog, dim):
@@ -608,8 +624,8 @@ class CovarianceReduction(_DimReductionRegression):
             to 1d.
 
         Returns the log-likelihood.
-        """
 
+        """
         p = self.covm.shape[0]
         proj = params.reshape((p, self.dim))
 
@@ -635,8 +651,8 @@ class CovarianceReduction(_DimReductionRegression):
             flattened to 1d.
 
         Returns the score function evaluated at 'params'.
-        """
 
+        """
         p = self.covm.shape[0]
         proj = params.reshape((p, self.dim))
 
@@ -669,8 +685,8 @@ class CovarianceReduction(_DimReductionRegression):
         -------
         A results instance that can be used to access the
         fitted parameters.
-        """
 
+        """
         p = self.covm.shape[0]
         d = self.dim
 

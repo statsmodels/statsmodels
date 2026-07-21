@@ -1,4 +1,5 @@
-"""assert functions from numpy and pandas testing
+"""
+assert functions from numpy and pandas testing
 
 """
 from statsmodels.compat.pandas import testing as pdt
@@ -28,6 +29,7 @@ def bunch_factory(attribute, columns):
     After the class is initialized as a Bunch, the columne of attribute
     are split so that Bunch has the keys in columns and
     bunch[column[i]] = bunch[attribute][:, i]
+
     """
     class FactoryBunch(Bunch):
         def __init__(self, *args, **kwargs):
@@ -50,6 +52,7 @@ class Holder:
     """
     Test-focused class to simplify accessing values by attribute
     """
+
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
 

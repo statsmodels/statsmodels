@@ -3,6 +3,7 @@ Autoregressive Moving Average (ARMA) Model
 """
 import numpy as np
 import pandas as pd
+
 import statsmodels.api as sm
 
 # Generate some data from an ARMA process

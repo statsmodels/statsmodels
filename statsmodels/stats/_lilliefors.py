@@ -16,10 +16,10 @@ pvalues for Lilliefors test are based on formula and table in
 
 An Analytic Approximation to the Distribution of Lilliefors's Test Statistic
 for Normality
-Author(s): Gerard E. Dallal and Leland WilkinsonSource: The American
-Statistician, Vol. 40, No. 4 (Nov., 1986), pp. 294-296
+Author(s): Gerard E. Dallal and Leland Wilkinson
+Source: The American Statistician, Vol. 40, No. 4 (Nov., 1986), pp. 294-296
 Published by: American Statistical Association
-Stable URL: http://www.jstor.org/stable/2684607 .
+Stable URL: http://www.jstor.org/stable/2684607.
 
 On the Kolmogorov-Smirnov Test for Normality with Mean and Variance Unknown
 Hubert W. Lilliefors
@@ -55,7 +55,7 @@ from .tabledist import TableDist
 
 def _make_asymptotic_function(params):
     """
-    Generates an asymptotic distribution callable from a param matrix
+    Generate an asymptotic distribution callable from a param matrix
 
     Polynomial is a[0] * x**(-1/2) + a[1] * x**(-1) + a[2] * x**(-3/2)
 
@@ -63,7 +63,13 @@ def _make_asymptotic_function(params):
     ----------
     params : ndarray
         Array with shape (nalpha, 3) where nalpha is the number of
-        significance levels
+        significance levels.
+
+    Returns
+    -------
+    callable
+        Function of the sample size that evaluates the asymptotic
+        critical value approximation.
     """
 
     def f(n):
@@ -86,20 +92,20 @@ def ksstat(x, cdf, alternative="two_sided", args=()):
     Parameters
     ----------
     x : array_like, 1d
-        array of observations
+        Array of observations.
     cdf : str or callable
-        string: name of a distribution in scipy.stats
-        callable: function to evaluate cdf
-    alternative : 'two_sided' (default), 'less' or 'greater'
-        defines the alternative hypothesis (see explanation)
+        String: name of a distribution in scipy.stats.
+        Callable: function to evaluate cdf.
+    alternative : {'two_sided', 'less', 'greater'}, optional
+        Defines the alternative hypothesis (see explanation). Default is
+        'two_sided'.
     args : tuple, sequence
-        distribution parameters for call to cdf
-
+        Distribution parameters for call to cdf.
 
     Returns
     -------
     D : float
-        KS test statistic, either D, D+ or D-
+        KS test statistic, either D, D+ or D-.
 
     See Also
     --------
@@ -107,7 +113,6 @@ def ksstat(x, cdf, alternative="two_sided", args=()):
 
     Notes
     -----
-
     In the one-sided test, the alternative is that the empirical
     cumulative distribution function of the random variable is "less"
     or "greater" than the cumulative distribution function F(x) of the
@@ -146,13 +151,13 @@ def get_lilliefors_table(dist="norm"):
 
     Parameters
     ----------
-    dist : str
-        distribution being tested in set {'norm', 'exp'}.
+    dist : str, optional
+        Distribution being tested, one of {'norm', 'exp'}.
 
     Returns
     -------
-    lf : TableDist object.
-        table of critical values
+    lf : TableDist
+        Table of critical values.
     """
     # function just to keep things together
     # for this test alpha is sf probability, i.e. right tail probability
@@ -229,7 +234,7 @@ def pval_lf(d_max, n):
 
 def kstest_fit(x, dist="norm", pvalmethod="table"):
     """
-    Test assumed normal or exponential distribution using Lilliefors' test.
+    Test assumed normal or exponential distribution using Lilliefors' test
 
     Lilliefors' test is a Kolmogorov-Smirnov test with estimated parameters.
 
@@ -242,7 +247,7 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
     pvalmethod : {'approx', 'table'}, optional
         The method used to compute the p-value of the test statistic. In
         general, 'table' is preferred and makes use of a very large simulation.
-        'approx' is only valid for normality. if `dist = 'exp'` `table` is
+        'approx' is only valid for normality. If `dist = 'exp'`, `table` is
         always used. 'approx' uses the approximation formula of Dalal and
         Wilkinson, valid for pvalues < 0.1. If the pvalue is larger than 0.1,
         then the result of `table` is returned.
@@ -263,12 +268,12 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
     log(cv_alpha) = b_alpha + c[0] log(n) + c[1] log(n)**2
     where cv_alpha is the critical value for a test with size alpha,
     b_alpha is an alpha-specific intercept term and c[1] and c[2] are
-    coefficients that are shared all alphas.
+    coefficients that are shared across all alphas.
     Values in the table are linearly interpolated. Values outside the
-    range are be returned as bounds, 0.990 for large and 0.001 for small
+    range are returned as bounds, 0.990 for large and 0.001 for small
     pvalues.
 
-    For implementation details, see  lilliefors_critical_value_simulation.py in
+    For implementation details, see lilliefors_critical_value_simulation.py in
     the test directory.
     """
     pvalmethod = string_like(pvalmethod, "pvalmethod", options=("approx", "table"))

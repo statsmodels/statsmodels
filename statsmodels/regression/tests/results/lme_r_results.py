@@ -1,3 +1,5 @@
+"""Reference results for mixed linear model tests."""
+
 import numpy as np
 
 coef_ml_drf_0 = np.array([-0.9887517])

@@ -15,20 +15,22 @@ from statsmodels.tools.sm_exceptions import InvalidTestWarning, SingularMatrixWa
 
 
 def _combine_bins(edge_index, x):
-    """group columns into bins using sum
+    """
+    Group columns into bins using sums
 
     This is mainly a helper function for combining probabilities into cells.
-    It similar to `np.add.reduceat(x, edge_index, axis=-1)` except for the
+    It is similar to `np.add.reduceat(x, edge_index, axis=-1)` except for the
     treatment of the last index and last cell.
 
     Parameters
     ----------
     edge_index : array_like
-         This defines the (zero-based) indices for the columns that are be
+         This defines the (zero-based) indices for the columns that are to be
          combined. Each index in `edge_index` except the last is the starting
-         index for a bin. The largest index in a bin is the next edge_index-1.
+         index for a bin. The largest index in a bin is the next
+         ``edge_index - 1``.
     x : 1d or 2d array
-        array for which columns are combined. If x is 1-dimensional that it
+        Array for which columns are combined. If x is 1-dimensional, then it
         will be treated as a 2-d row vector.
 
     Returns
@@ -43,7 +45,7 @@ def _combine_bins(edge_index, x):
     >>> dia.combine_bins([0,1,5], np.arange(4))
     (array([0, 6]), array([1, 4]))
 
-    this aggregates to two bins with the sum of 1 and 4 elements
+    This aggregates to two bins with the sum of 1 and 4 elements.
     >>> np.arange(4)[0].sum()
     0
     >>> np.arange(4)[1:5].sum()
@@ -75,32 +77,32 @@ def _combine_bins(edge_index, x):
 
 
 def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None):
-    """diagnostic plots for comparing two lists of discrete probabilities
+    """
+    Diagnostic plots for comparing two lists of discrete probabilities
 
     Parameters
     ----------
-    freq, probs_predicted : nd_arrays
-        two arrays of probabilities, this can be any probabilities for
+    freq, probs_predicted : ndarrays
+        Two arrays of probabilities, this can be any probabilities for
         the same events, default is designed for comparing predicted
-        and observed probabilities
+        and observed probabilities.
     label : str or tuple
         If string, then it will be used as the label for probs_predicted and
         "freq" is used for the other probabilities.
-        If label is a tuple of strings, then the first is they are used as
-        label for both probabilities
-
+        If label is a tuple of strings, then its two elements are used as
+        labels for both probabilities.
     upp_xlim : None or int
         If it is not None, then the xlim of the first two plots are set to
-        (0, upp_xlim), otherwise the matplotlib default is used
+        (0, upp_xlim), otherwise the matplotlib default is used.
     fig : None or matplotlib figure instance
         If fig is provided, then the axes will be added to it in a (3,1)
-        subplots, otherwise a matplotlib figure instance is created
+        subplot grid, otherwise a matplotlib figure instance is created.
 
     Returns
     -------
     Figure
-        The figure contains 3 subplot with probabilities, cumulative
-        probabilities and a PP-plot
+        The figure contains 3 subplots with probabilities, cumulative
+        probabilities and a PP-plot.
     """
 
     if isinstance(label, list):
@@ -139,7 +141,7 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
 
 def test_chisquare_prob(results, probs, bin_edges=None):
     """
-    chisquare test for predicted probabilities using cmt-opg
+    Chi-square test for predicted probabilities using cmt-opg.
 
     Parameters
     ----------
@@ -156,7 +158,7 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     -------
     (api not stable, replace by test-results class)
     statistic : float
-        chisquare statistic for tes
+        Chi-square statistic for test.
     p-value : float
         p-value of test
     df : int
@@ -248,7 +250,8 @@ class DispersionResults(HolderTuple):
 
 
 def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
-    """Score/LM type tests for Poisson variance assumptions
+    """
+    Score/LM type tests for Poisson variance assumptions
 
     Null Hypothesis is
 
@@ -363,7 +366,8 @@ def _test_poisson_dispersion_generic(
     cov_kwds=None,
     use_t=False,
 ):
-    """A variable addition test for the variance function
+    """
+    A variable addition test for the variance function
 
     This uses an artificial regression to calculate a variant of an LM or
     generalized score test for the specification of the variance assumption
@@ -425,7 +429,8 @@ def _test_poisson_dispersion_generic(
 
 
 def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
-    """score test for zero inflation or deflation in Poisson
+    """
+    Score test for zero inflation or deflation in Poisson.
 
     This implements Jansakul and Hinde 2009 score test
     for excess zeros against a zero modified Poisson
@@ -434,12 +439,12 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
 
     Parameters
     ----------
-    results_poisson: results instance
+    results_poisson : results instance
         The test is only valid if the results instance is a Poisson
         model.
     exog_infl : ndarray
-        Explanatory variables for the zero inflated or zero modified
-        alternative. I exog_infl is None, then the inflation
+        Explanatory variables for the zero-inflated or zero-modified
+        alternative. If exog_infl is None, then the inflation
         probability is assumed to be constant.
 
     Returns
@@ -517,7 +522,8 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
 
 
 def test_poisson_zeroinflation_broek(results_poisson):
-    """score test for zero modification in Poisson, special case
+    """
+    Score test for zero modification in Poisson, special case.
 
     This assumes that the Poisson model has a constant and that
     the zero modification probability is constant.
@@ -563,10 +569,21 @@ def test_poisson_zeroinflation_broek(results_poisson):
 
 
 def test_poisson_zeros(results):
-    """Test for excess zeros in Poisson regression model.
+    """
+    Test for excess zeros in Poisson regression model.
 
     The test is implemented following Tang and Tang [1]_ equ. (12) which is
     based on the test derived in He et al 2019 [2]_.
+
+    Parameters
+    ----------
+    results : Poisson results instance
+        The results instance for the fitted Poisson model.
+
+    Returns
+    -------
+    HolderTuple
+        Test statistic, p-values and distribution information.
 
     References
     ----------

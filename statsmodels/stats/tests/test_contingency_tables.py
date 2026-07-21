@@ -22,14 +22,11 @@ tables = [None, None, None]
 
 tables[0] = np.asarray([[23, 15], [19, 31]])
 
-tables[1] = np.asarray([[144, 33, 84, 126],
-                        [2, 4, 14, 29],
-                        [0, 2, 6, 25],
-                        [0, 0, 1, 5]])
+tables[1] = np.asarray(
+    [[144, 33, 84, 126], [2, 4, 14, 29], [0, 2, 6, 25], [0, 0, 1, 5]]
+)
 
-tables[2] = np.asarray([[20, 10, 5],
-                        [3, 30, 15],
-                        [0, 5, 40]])
+tables[2] = np.asarray([[20, 10, 5], [3, 30, 15], [0, 5, 40]])
 
 
 def test_homogeneity():
@@ -47,25 +44,23 @@ def test_homogeneity():
 
 def test_SquareTable_from_data():
 
-    np.random.seed(434)
+    rs = np.random.RandomState(434)
     df = pd.DataFrame(index=range(100), columns=["v1", "v2"])
-    df["v1"] = np.random.randint(0, 5, 100)
-    df["v2"] = np.random.randint(0, 5, 100)
+    df["v1"] = rs.randint(0, 5, 100)
+    df["v2"] = rs.randint(0, 5, 100)
     table = pd.crosstab(df["v1"], df["v2"])
 
     rslt1 = ctab.SquareTable(table)
     rslt2 = ctab.SquareTable.from_data(df)
     rslt3 = ctab.SquareTable(np.asarray(table))
 
-    assert_equal(rslt1.summary().as_text(),
-                 rslt2.summary().as_text())
+    assert_equal(rslt1.summary().as_text(), rslt2.summary().as_text())
 
-    assert_equal(rslt2.summary().as_text(),
-                 rslt3.summary().as_text())
+    assert_equal(rslt2.summary().as_text(), rslt3.summary().as_text())
 
     s = str(rslt1)
     assert_equal(s.startswith("A 5x5 contingency table with counts:"), True)
-    assert_equal(rslt1.table[0, 0], 8.)
+    assert_equal(rslt1.table[0, 0], 8.0)
 
 
 def test_SquareTable_nonsquare():
@@ -75,8 +70,9 @@ def test_SquareTable_nonsquare():
 
     df2 = ctab.SquareTable(df, shift_zeros=False)
 
-    e = np.asarray([[1, 0, 0, 3], [2, 0, 1, 4], [0, 0, 0, 0], [3, 0, 0, 5]],
-                   dtype=np.float64)
+    e = np.asarray(
+        [[1, 0, 0, 3], [2, 0, 1, 4], [0, 0, 0, 0], [3, 0, 0, 5]], dtype=np.float64
+    )
 
     assert_equal(e, df2.table)
 
@@ -89,10 +85,10 @@ def test_cumulative_odds():
 
     cum_odds = tbl_obj.cumulative_oddsratios
     assert_allclose(cum_odds[0, 0], 28 / float(5 * 11))
-    assert_allclose(cum_odds[0, 1], (3 * 15) / float(3 * 24), atol=1e-5,
-                    rtol=1e-5)
-    assert_allclose(np.log(cum_odds), tbl_obj.cumulative_log_oddsratios,
-                    atol=1e-5, rtol=1e-5)
+    assert_allclose(cum_odds[0, 1], (3 * 15) / float(3 * 24), atol=1e-5, rtol=1e-5)
+    assert_allclose(
+        np.log(cum_odds), tbl_obj.cumulative_log_oddsratios, atol=1e-5, rtol=1e-5
+    )
 
 
 def test_local_odds():
@@ -102,11 +98,11 @@ def test_local_odds():
     tbl_obj = ctab.Table(table)
 
     loc_odds = tbl_obj.local_oddsratios
-    assert_allclose(loc_odds[0, 0], 5 / 8.)
-    assert_allclose(loc_odds[0, 1], 12 / float(15), atol=1e-5,
-                    rtol=1e-5)
-    assert_allclose(np.log(loc_odds), tbl_obj.local_log_oddsratios,
-                    atol=1e-5, rtol=1e-5)
+    assert_allclose(loc_odds[0, 0], 5 / 8.0)
+    assert_allclose(loc_odds[0, 1], 12 / float(15), atol=1e-5, rtol=1e-5)
+    assert_allclose(
+        np.log(loc_odds), tbl_obj.local_log_oddsratios, atol=1e-5, rtol=1e-5
+    )
 
 
 def test_shifting():
@@ -116,12 +112,8 @@ def test_shifting():
     assert_equal(ctab.Table(t, shift_zeros=False).table, t)
     assert_equal(ctab.Table(t, shift_zeros=True).table, result)
 
-    t = np.asarray([[0, 1, 2],
-                    [3, 0, 4],
-                    [5, 6, 0]], dtype=np.float64)
-    r = np.asarray([[0.5, 1, 2],
-                    [3, 0.5, 4],
-                    [5, 6, 0.5]], dtype=np.float64)
+    t = np.asarray([[0, 1, 2], [3, 0, 4], [5, 6, 0]], dtype=np.float64)
+    r = np.asarray([[0.5, 1, 2], [3, 0.5, 4], [5, 6, 0.5]], dtype=np.float64)
     assert_equal(ctab.Table(t).table, r)
     assert_equal(ctab.Table(t, shift_zeros=True).table, r)
 
@@ -146,20 +138,22 @@ def test_resids():
     table = [[12, 8, 31, 41], [307, 246, 439, 245]]
 
     # These results come from SAS
-    fit = [[22.083, 17.583, 32.536, 19.798],
-           [296.92, 236.42, 437.46, 266.2]]
-    c2 = [[4.6037, 5.223, 0.0725, 22.704],
-          [0.3424, 0.3885, 0.0054, 1.6886]]
+    fit = [[22.083, 17.583, 32.536, 19.798], [296.92, 236.42, 437.46, 266.2]]
+    c2 = [[4.6037, 5.223, 0.0725, 22.704], [0.3424, 0.3885, 0.0054, 1.6886]]
 
     # These are regression tests
-    pr = np.array([
-        [-2.14562121, -2.28538719, -0.26923882,  4.76491690],
-        [+0.58514314,  0.62325942,  0.07342547, -1.29946443]
-    ])
-    sr = np.array([
-        [-2.55112945, -2.6338782 , -0.34712127,  5.57510830],
-        [+2.55112945,  2.6338782 ,  0.34712127, -5.57510830]
-    ])
+    pr = np.array(
+        [
+            [-2.14562121, -2.28538719, -0.26923882, 4.76491690],
+            [+0.58514314, 0.62325942, 0.07342547, -1.29946443],
+        ]
+    )
+    sr = np.array(
+        [
+            [-2.55112945, -2.6338782, -0.34712127, 5.57510830],
+            [+2.55112945, 2.6338782, 0.34712127, -5.57510830],
+        ]
+    )
 
     tab = ctab.Table(table)
     assert_allclose(tab.fittedvalues, fit, atol=1e-4, rtol=1e-4)
@@ -176,29 +170,40 @@ def test_ordinal_association():
         col_scores = 1 + np.arange(table.shape[1])
 
         # First set of scores
-        rslt = ctab.Table(table, shift_zeros=False).test_ordinal_association(row_scores, col_scores)
+        rslt = ctab.Table(table, shift_zeros=False).test_ordinal_association(
+            row_scores, col_scores
+        )
         assert_allclose(rslt.statistic, r_results.loc[k, "lbl_stat"])
         assert_allclose(rslt.null_mean, r_results.loc[k, "lbl_expval"])
         assert_allclose(rslt.null_sd**2, r_results.loc[k, "lbl_var"])
-        assert_allclose(rslt.zscore**2, r_results.loc[k, "lbl_chi2"], rtol=1e-5, atol=1e-5)
-        assert_allclose(rslt.pvalue, r_results.loc[k, "lbl_pvalue"], rtol=1e-5, atol=1e-5)
+        assert_allclose(
+            rslt.zscore**2, r_results.loc[k, "lbl_chi2"], rtol=1e-5, atol=1e-5
+        )
+        assert_allclose(
+            rslt.pvalue, r_results.loc[k, "lbl_pvalue"], rtol=1e-5, atol=1e-5
+        )
 
         # Second set of scores
-        rslt = ctab.Table(table, shift_zeros=False).test_ordinal_association(row_scores, col_scores**2)
+        rslt = ctab.Table(table, shift_zeros=False).test_ordinal_association(
+            row_scores, col_scores**2
+        )
         assert_allclose(rslt.statistic, r_results.loc[k, "lbl2_stat"])
         assert_allclose(rslt.null_mean, r_results.loc[k, "lbl2_expval"])
         assert_allclose(rslt.null_sd**2, r_results.loc[k, "lbl2_var"])
         assert_allclose(rslt.zscore**2, r_results.loc[k, "lbl2_chi2"])
-        assert_allclose(rslt.pvalue, r_results.loc[k, "lbl2_pvalue"], rtol=1e-5, atol=1e-5)
+        assert_allclose(
+            rslt.pvalue, r_results.loc[k, "lbl2_pvalue"], rtol=1e-5, atol=1e-5
+        )
 
 
 def test_chi2_association():
 
-    np.random.seed(8743)
+    rs = np.random.RandomState(8743)
 
-    table = np.random.randint(10, 30, size=(4, 4))
+    table = rs.randint(10, 30, size=(4, 4))
 
     from scipy.stats import chi2_contingency
+
     rslt_scipy = chi2_contingency(table)
 
     b = ctab.Table(table).test_nominal_association()
@@ -238,8 +243,9 @@ def test_mcnemar():
 
 def test_from_data_stratified():
 
-    df = pd.DataFrame([[1, 1, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 0],
-                       [0, 0, 0, 0, 1, 1, 1, 1]]).T
+    df = pd.DataFrame(
+        [[1, 1, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 0], [0, 0, 0, 0, 1, 1, 1, 1]]
+    ).T
     e = np.asarray([[[0, 1], [1, 1]], [[2, 2], [1, 0]]])
 
     # Test pandas
@@ -288,30 +294,34 @@ def test_cochranq():
     #                   0, 0, 0, 0, 0), ncol=5, byrow=TRUE)
     # rslt2 = cochranq.test(table2)
 
-    table = [[1, 0, 1, 1],
-             [0, 1, 1, 1],
-             [1, 1, 1, 0],
-             [0, 1, 0, 0],
-             [0, 1, 0, 0],
-             [1, 0, 1, 0],
-             [0, 1, 0, 0],
-             [1, 1, 1, 1],
-             [0, 1, 0, 0]]
+    table = [
+        [1, 0, 1, 1],
+        [0, 1, 1, 1],
+        [1, 1, 1, 0],
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [1, 0, 1, 0],
+        [0, 1, 0, 0],
+        [1, 1, 1, 1],
+        [0, 1, 0, 0],
+    ]
     table = np.asarray(table)
 
     stat, pvalue, df = ctab.cochrans_q(table, return_object=False)
     assert_allclose(stat, 4.2)
     assert_allclose(df, 3)
 
-    table = [[0, 0, 1, 1, 0],
-             [0, 1, 0, 1, 0],
-             [0, 1, 1, 0, 1],
-             [1, 0, 0, 0, 1],
-             [1, 1, 0, 0, 0],
-             [1, 0, 1, 0, 0],
-             [0, 1, 0, 0, 0],
-             [0, 0, 1, 1, 0],
-             [0, 0, 0, 0, 0]]
+    table = [
+        [0, 0, 1, 1, 0],
+        [0, 1, 0, 1, 0],
+        [0, 1, 1, 0, 1],
+        [1, 0, 0, 0, 1],
+        [1, 1, 0, 0, 0],
+        [1, 0, 1, 0, 0],
+        [0, 1, 0, 0, 0],
+        [0, 0, 1, 1, 0],
+        [0, 0, 0, 0, 0],
+    ]
     table = np.asarray(table)
 
     stat, pvalue, df = ctab.cochrans_q(table, return_object=False)
@@ -341,12 +351,14 @@ class CheckStratifiedMixin:
         cls.rslt_pandas = ctab.StratifiedTable(tables_pandas)
 
     def test_oddsratio_pooled(self):
-        assert_allclose(self.rslt.oddsratio_pooled, self.oddsratio_pooled,
-                        rtol=1e-4, atol=1e-4)
+        assert_allclose(
+            self.rslt.oddsratio_pooled, self.oddsratio_pooled, rtol=1e-4, atol=1e-4
+        )
 
     def test_logodds_pooled(self):
-        assert_allclose(self.rslt.logodds_pooled, self.logodds_pooled,
-                        rtol=1e-4, atol=1e-4)
+        assert_allclose(
+            self.rslt.logodds_pooled, self.logodds_pooled, rtol=1e-4, atol=1e-4
+        )
 
     def test_null_odds(self):
         rslt = self.rslt.test_null_odds(correction=True)
@@ -360,10 +372,8 @@ class CheckStratifiedMixin:
 
     def test_logodds_pooled_confint(self):
         lcb, ucb = self.rslt.logodds_pooled_confint()
-        assert_allclose(lcb, np.log(self.or_lcb), rtol=1e-4,
-                        atol=1e-4)
-        assert_allclose(ucb, np.log(self.or_ucb), rtol=1e-4,
-                        atol=1e-4)
+        assert_allclose(lcb, np.log(self.or_lcb), rtol=1e-4, atol=1e-4)
+        assert_allclose(ucb, np.log(self.or_ucb), rtol=1e-4, atol=1e-4)
 
     def test_equal_odds(self):
 
@@ -382,20 +392,21 @@ class CheckStratifiedMixin:
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
-            assert_equal(self.rslt.summary().as_text(),
-                         self.rslt_pandas.summary().as_text())
+            assert_equal(
+                self.rslt.summary().as_text(), self.rslt_pandas.summary().as_text()
+            )
 
     def test_from_data(self):
 
-        np.random.seed(241)
+        rs = np.random.RandomState(241)
         df = pd.DataFrame(index=range(100), columns=("v1", "v2", "strat"))
-        df["v1"] = np.random.randint(0, 2, 100)
-        df["v2"] = np.random.randint(0, 2, 100)
+        df["v1"] = rs.randint(0, 2, 100)
+        df["v2"] = rs.randint(0, 2, 100)
         df["strat"] = np.kron(np.arange(10), np.ones(10))
 
         tables = []
         for k in range(10):
-            ii = np.arange(10*k, 10*(k+1))
+            ii = np.arange(10 * k, 10 * (k + 1))
             tables.append(pd.crosstab(df.loc[ii, "v1"], df.loc[ii, "v2"]))
 
         rslt1 = ctab.StratifiedTable(tables)
@@ -572,13 +583,13 @@ class Check2x2Mixin:
         assert_allclose(ucb1, ucb2)
 
     def test_from_data(self):
-        assert_equal(self.tbl_obj.summary().as_text(),
-                     self.tbl_data_obj.summary().as_text())
+        assert_equal(
+            self.tbl_obj.summary().as_text(), self.tbl_data_obj.summary().as_text()
+        )
 
     def test_summary(self):
 
-        assert_equal(self.tbl_obj.summary().as_text(),
-                     self.summary_string)
+        assert_equal(self.tbl_obj.summary().as_text(), self.summary_string)
 
 
 class Test2x2_1(Check2x2Mixin):
@@ -591,15 +602,15 @@ class Test2x2_1(Check2x2Mixin):
         cls.data = np.asarray(data)
         cls.table = np.asarray([[2, 2], [2, 2]])
 
-        cls.oddsratio = 1.
-        cls.log_oddsratio = 0.
+        cls.oddsratio = 1.0
+        cls.log_oddsratio = 0.0
         cls.log_oddsratio_se = np.sqrt(2)
         cls.oddsratio_confint = [0.062548836166112329, 15.987507702689751]
-        cls.oddsratio_pvalue = 1.
-        cls.riskratio = 1.
-        cls.log_riskratio = 0.
+        cls.oddsratio_pvalue = 1.0
+        cls.riskratio = 1.0
+        cls.log_riskratio = 0.0
         cls.log_riskratio_se = 1 / np.sqrt(2)
-        cls.riskratio_pvalue = 1.
+        cls.riskratio_pvalue = 1.0
         cls.riskratio_confint = [0.25009765325990629, 3.9984381579173824]
         cls.log_riskratio_confint = [-1.3859038243496782, 1.3859038243496782]
         ss = [
@@ -609,7 +620,7 @@ class Test2x2_1(Check2x2Mixin):
             "Log odds ratio    0.000 1.414 -2.772  2.772   1.000",
             "Risk ratio        1.000        0.250  3.998   1.000",
             "Log risk ratio    0.000 0.707 -1.386  1.386   1.000",
-            "---------------------------------------------------"
+            "---------------------------------------------------",
         ]
         cls.summary_string = "\n".join(ss)
         cls.initialize()

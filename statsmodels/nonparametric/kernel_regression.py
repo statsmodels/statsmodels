@@ -30,6 +30,7 @@ References
 
 # TODO: make default behavior efficient=True above a certain n_obs
 import copy
+import warnings
 
 import numpy as np
 from scipy import optimize
@@ -92,7 +93,7 @@ class KernelReg(GenericKDE):
         The kernel used for the unordered discrete variables.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
-    seed : {int, Generator, RandomState}, optional
+    seed : {int, np.random.Generator, np.random.RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -887,14 +888,19 @@ class TestRegCoefC:
         n = np.shape(X)[0]
         Y = _adjust_shape(Y, 1)
         X = _adjust_shape(X, self.k_vars)
-        b = KernelReg(
-            Y,
-            X,
-            self.var_type,
-            self.model.reg_type,
-            self.bw,
-            defaults=EstimatorSettings(efficient=False),
-        ).fit()[1]
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                category=FutureWarning,
+            )
+            b = KernelReg(
+                Y,
+                X,
+                self.var_type,
+                self.model.reg_type,
+                self.bw,
+                defaults=EstimatorSettings(efficient=False),
+            ).fit()[1]
 
         b = b[:, self.test_vars]
         b = np.reshape(b, (n, len(self.test_vars)))
@@ -936,14 +942,19 @@ class TestRegCoefC:
 
         X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)
         # Calculate the restricted mean. See p. 372 in [8]
-        M = KernelReg(
-            Y,
-            X,
-            self.var_type,
-            self.model.reg_type,
-            self.bw,
-            defaults=EstimatorSettings(efficient=False),
-        ).fit()[0]
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                category=FutureWarning,
+            )
+            M = KernelReg(
+                Y,
+                X,
+                self.var_type,
+                self.model.reg_type,
+                self.bw,
+                defaults=EstimatorSettings(efficient=False),
+            ).fit()[0]
         M = np.reshape(M, (n, 1))
         e = Y - M
         e = e - np.mean(e)  # recenter residuals
@@ -1029,6 +1040,7 @@ class TestRegCoefD(TestRegCoefC):
             self.model.reg_type,
             self.bw,
             defaults=EstimatorSettings(efficient=False),
+            seed=self._generator,
         )
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0

@@ -148,6 +148,7 @@ class TestIntercepts:
     def test_smoothed_states_cov(self):
         assert_allclose(self.results.det_smoothed_state_cov.T, self.desired[["detV"]])
 
+    @pytest.mark.thread_unsafe(reason="statespace is not thread safe")
     def test_smoothed_forecasts(self):
         assert_allclose(
             self.results.smoothed_forecasts.T,

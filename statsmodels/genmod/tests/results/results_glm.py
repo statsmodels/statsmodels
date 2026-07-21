@@ -1201,7 +1201,7 @@ class InvGauss:
         self.exog = add_constant(self.exog, prepend=False)
 
         # Results
-        # NOTE: loglikelihood difference in R vs. Stata vs. Models
+        # NOTE: log-likelihood difference in R vs. Stata vs. Models
         #  is the same situation as gamma
         self.params = (0.4519770, -0.2508288, 1.0359574)
         self.bse = (0.03148291, 0.02237211, 0.03429943)

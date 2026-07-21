@@ -19,7 +19,7 @@ from scipy import stats
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.tools.decorators import cache_readonly, deprecated_alias
+from statsmodels.tools._decorators import cache_readonly, deprecated_alias
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.validation import array_like
@@ -709,7 +709,6 @@ class VAR(TimeSeriesModel):
             x = util.get_var_endog(exog[-nobs:], 0, trend="n", has_constant="raise")
             x_inst = exog[-nobs:]
             x = np.column_stack((x, x_inst))
-            del x_inst  # free memory
             temp_z = z
             z = np.empty((x.shape[0], x.shape[1] + z.shape[1]))
             z[:, : self.k_trend] = temp_z[:, : self.k_trend]
@@ -1833,9 +1832,7 @@ class VARResults(VARProcess):
         irf : IRAnalysis
         """
         if var_order is not None:
-            raise NotImplementedError(
-                "alternate variable order not implemented (yet)"
-            )
+            raise NotImplementedError("alternate variable order not implemented (yet)")
 
         return IRAnalysis(self, P=var_decomp, periods=periods)
 

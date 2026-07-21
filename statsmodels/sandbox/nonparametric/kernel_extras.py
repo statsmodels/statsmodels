@@ -43,6 +43,8 @@ from statsmodels.nonparametric.api import KDEMultivariate, KernelReg
 
 __all__ = ["SemiLinear", "SingleIndexModel", "TestFForm"]
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 
 class TestFForm:
     """
@@ -202,7 +204,7 @@ class SingleIndexModel(KernelReg):
     some distribution of g() such as normal or logistic.
     """
 
-    def __init__(self, endog, exog, var_type):
+    def __init__(self, endog, exog, var_type, rng=None):
         self.var_type = var_type
         self.K = len(var_type)
         self.var_type = self.var_type[0]
@@ -214,11 +216,12 @@ class SingleIndexModel(KernelReg):
         self.okertype = "wangryzin"
         self.ukertype = "aitchisonaitken"
         self.func = self._est_loc_linear
+        self.rng = check_random_state(rng)
 
         self.b, self.bw = self._est_b_bw()
 
     def _est_b_bw(self):
-        params0 = np.random.uniform(size=(self.K + 1,))
+        params0 = self.rng.uniform(size=(self.K + 1,))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0 : self.K]
         bw = b_bw[self.K :]
@@ -329,7 +332,7 @@ class SemiLinear(KernelReg):
     See chapter on Semiparametric Models in [1]
     """
 
-    def __init__(self, endog, exog, exog_nonparametric, var_type, k_linear):
+    def __init__(self, endog, exog, exog_nonparametric, var_type, k_linear, rng=None):
         self.endog = _adjust_shape(endog, 1)
         self.exog = _adjust_shape(exog, k_linear)
         self.K = len(var_type)
@@ -342,6 +345,7 @@ class SemiLinear(KernelReg):
         self.okertype = "wangryzin"
         self.ukertype = "aitchisonaitken"
         self.func = self._est_loc_linear
+        self.rng = check_random_state(rng)
 
         self.b, self.bw = self._est_b_bw()
 
@@ -351,7 +355,7 @@ class SemiLinear(KernelReg):
 
         Minimizes ``cv_loo`` with respect to ``b`` and ``bw``.
         """
-        params0 = np.random.uniform(size=(self.k_linear + self.K,))
+        params0 = self.rng.uniform(size=(self.k_linear + self.K,))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0 : self.k_linear]
         bw = b_bw[self.k_linear :]

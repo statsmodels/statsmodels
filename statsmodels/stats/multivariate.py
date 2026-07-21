@@ -19,7 +19,8 @@ def _logdet(x):
 
 
 def test_mvmean(data, mean_null=0, return_results=True):
-    """Hotellings test for multivariate mean in one sample
+    """
+    Hotelling's test for multivariate mean in one sample
 
     Parameters
     ----------
@@ -62,7 +63,8 @@ def test_mvmean(data, mean_null=0, return_results=True):
 
 
 def test_mvmean_2indep(data1, data2):
-    """Hotellings test for multivariate mean in two independent samples
+    """
+    Hotelling's test for multivariate mean in two independent samples
 
     The null hypothesis is that both samples have the same mean.
     The alternative hypothesis is that means differ.
@@ -106,7 +108,8 @@ def test_mvmean_2indep(data1, data2):
 
 
 def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
-    """Confidence interval for linear transformation of a multivariate mean
+    """
+    Confidence interval for linear transformation of a multivariate mean
 
     Either pointwise or simultaneous confidence intervals are returned.
 
@@ -169,7 +172,8 @@ def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
 
 def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
                              simult=False):
-    """Confidence interval for linear transformation of a multivariate mean
+    """
+    Confidence interval for linear transformation of a multivariate mean
 
     Either pointwise or simultaneous confidence intervals are returned.
     Data is provided in the form of summary statistics, mean, cov, nobs.
@@ -177,8 +181,11 @@ def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
     Parameters
     ----------
     mean : ndarray
+        Mean of the multivariate data.
     cov : ndarray
+        Covariance matrix of the multivariate data.
     nobs : int
+        Number of observations used in the estimation of mean and cov.
     lin_transf : array_like or None
         The linear transformation or contrast matrix for transforming the
         vector of means. If this is None, then the identity matrix is used
@@ -192,6 +199,15 @@ def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
         Otherwise, a simultaneous confidence interval is returned.
         Warning: additional simultaneous confidence intervals might be added
         and the default for those might change.
+
+    Returns
+    -------
+    low : ndarray
+        lower confidence bound on the linear transformed
+    upp : ndarray
+        upper confidence bound on the linear transformed
+    values : ndarray
+        mean or their linear transformation, center of the confidence region
 
     Notes
     -----
@@ -258,7 +274,8 @@ to the formula collection in Bartlett 1954 for several of them.
 
 
 def test_cov(cov, nobs, cov_null):
-    """One sample hypothesis test for covariance equal to null covariance
+    """
+    One sample hypothesis test for covariance equal to null covariance
 
     The Null hypothesis is that cov = cov_null, against the alternative that
     it is not equal to cov_null
@@ -318,7 +335,8 @@ def test_cov(cov, nobs, cov_null):
 
 
 def test_cov_spherical(cov, nobs):
-    r"""One sample hypothesis test that covariance matrix is spherical
+    r"""
+    One sample hypothesis test that covariance matrix is spherical
 
     The Null and alternative hypotheses are
 
@@ -375,7 +393,8 @@ def test_cov_spherical(cov, nobs):
 
 
 def test_cov_diagonal(cov, nobs):
-    r"""One sample hypothesis test that covariance matrix is diagonal matrix.
+    r"""
+    One sample hypothesis test that covariance matrix is diagonal matrix
 
     The Null and alternative hypotheses are
 
@@ -425,7 +444,22 @@ def test_cov_diagonal(cov, nobs):
 
 
 def _get_blocks(mat, block_len):
-    """get diagonal blocks from matrix
+    """
+    Get diagonal blocks from matrix
+
+    Parameters
+    ----------
+    mat : ndarray
+        Square matrix.
+    block_len : list
+        List of length of each square diagonal block.
+
+    Returns
+    -------
+    blocks : list of ndarray
+        List of diagonal blocks extracted from mat.
+    idx_blocks : list of ndarray
+        List of arrays containing the indices for each block.
     """
     k = len(mat)
     idx = np.cumsum(block_len)
@@ -444,7 +478,8 @@ def _get_blocks(mat, block_len):
 
 
 def test_cov_blockdiagonal(cov, nobs, block_len):
-    r"""One sample hypothesis test that covariance is block diagonal.
+    r"""
+    One sample hypothesis test that covariance is block diagonal
 
     The Null and alternative hypotheses are
 
@@ -505,7 +540,8 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
 
 
 def test_cov_oneway(cov_list, nobs_list):
-    r"""Multiple sample hypothesis test that covariance matrices are equal.
+    r"""
+    Multiple sample hypothesis test that covariance matrices are equal
 
     This is commonly known as Box-M test.
 

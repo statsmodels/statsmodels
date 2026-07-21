@@ -9,7 +9,7 @@ import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.tools.decorators import deprecated_alias
+from statsmodels.tools._decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import util
@@ -579,6 +579,7 @@ class SVARResults(SVARProcess, VARResults):
             trendorder = None
         self.k_trend = k_trend
         self.k_exog = k_trend  # now (0.9) required by VARProcess
+        self.k_exog_user = 0
         self.trendorder = trendorder
 
         self.exog_names = util.make_lag_names(names, lag_order, k_trend)

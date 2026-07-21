@@ -1,9 +1,8 @@
 """
-
 Created on Mon Mar 18 15:48:23 2013
 Author: Josef Perktold
 
-TODO:
+Todo:
   - test behavior if nans or infs are encountered during the evaluation.
     now partially robust to nans, if increasing can be determined or is given.
   - rewrite core loop to use for...except instead of while.
@@ -22,7 +21,8 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                      start_low=None, start_upp=None, increasing=None,
                      max_it=100, maxiter_bq=100, factor=10,
                      full_output=False):
-    """find the root of a function in one variable by expanding and brentq
+    """
+    Find the root of a function in one variable by expanding and brentq
 
     Assumes function ``func`` is monotonic.
 
@@ -46,7 +46,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         negative. If None, then it is set to -1.
     increasing : bool or None
         If None, then the function is evaluated at the initial bounds to
-        determine wether the function is increasing or not. If increasing is
+        determine whether the function is increasing or not. If increasing is
         True (False), then it is assumed that the function is monotonically
         increasing (decreasing).
     max_it : int
@@ -194,7 +194,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         if np.isnan(f_low) and np.isnan(f_upp):
             # can we still get here?
             raise ValueError("max_it reached"
-                             "\nthe function values at boths bounds are NaN"
+                             "\nthe function values at both bounds are NaN"
                              "\nchange the starting bounds, set bounds"
                              "or increase max_it")
 
