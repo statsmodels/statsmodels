@@ -18,6 +18,19 @@ from statsmodels.tools.validation import (
 
 
 def _norm(x):
+    """
+    Compute the Euclidean (L2) norm of an array
+
+    Parameters
+    ----------
+    x : ndarray
+        Array whose norm is computed.
+
+    Returns
+    -------
+    float
+        The Euclidean norm of x.
+    """
     return np.sqrt(np.sum(x * x))
 
 
@@ -42,7 +55,7 @@ class PCA:
         components.  demean is ignored if standardize is True. Demeaning data
         but not standardizing is equivalent to computing principal components
         from the covariance matrix of data.
-    normalize : bool , optional
+    normalize : bool, optional
         Indicates whether to normalize the factors to have unit inner product.
         If False, the loadings will have unit inner product.
     gls : bool, optional
@@ -50,7 +63,7 @@ class PCA:
         in the first step principal components are used to estimate residuals,
         and then the inverse residual variance is used as a set of weights to
         estimate the final principal components.  Setting gls to True requires
-        ncomp to be less then the min of the number of rows or columns.
+        ncomp to be less than the min of the number of rows or columns.
     weights : ndarray, optional
         Series weights to use after transforming data according to standardize
         or demean when computing the principal components.
@@ -104,7 +117,7 @@ class PCA:
         of including the fist i principal components.  Note: values are
         calculated on the transformed data, not the original data
     ic : array or DataFrame
-        ncomp by 3 array containing the Bai and Ng (2003) Information
+        ncomp by 3 array containing the Bai and Ng (2002) Information
         criteria.  Each column is a different criteria, and each row
         represents the number of included factors.
     eigenvals : array or Series
@@ -130,7 +143,7 @@ class PCA:
     demean to False will not alter the data.
 
     Once the data have been transformed, the following relationships hold when
-    the number of components (ncomp) is the same as tne minimum of the number
+    the number of components (ncomp) is the same as the minimum of the number
     of observation or the number of variables.
 
     .. math:
@@ -432,7 +445,7 @@ estimates are based on only {eff_series} (effective) series."""
 
     def _prepare_data(self):
         """
-        Standardize or demean data.
+        Standardize or demean data
         """
         adj_data = self._adjusted_data
         if np.all(np.isnan(adj_data)):
@@ -670,9 +683,6 @@ estimates are based on only {eff_series} (effective) series."""
         -------
         array_like
             The nobs by nvar array of the projection onto ncomp factors.
-
-        Notes
-        -----
         """
         # Projection needs to be scaled/shifted based on inputs
         ncomp = self._ncomp if ncomp is None else ncomp
@@ -740,15 +750,15 @@ estimates are based on only {eff_series} (effective) series."""
         Parameters
         ----------
         ncomp : int, optional
-            Number of components ot include in the plot.  If None, will
+            Number of components to include in the plot.  If None, will
             included the same as the number of components computed
-        log_scale : boot, optional
-            Flag indicating whether ot use a log scale for the y-axis
+        log_scale : bool, optional
+            Flag indicating whether to use a log scale for the y-axis
         cumulative : bool, optional
             Flag indicating whether to plot the eigenvalues or cumulative
             eigenvalues
         ax : AxesSubplot, optional
-            An axes on which to draw the graph.  If omitted, new a figure
+            An axes on which to draw the graph.  If omitted, a new figure
             is created
 
         Returns
@@ -800,7 +810,7 @@ estimates are based on only {eff_series} (effective) series."""
         Parameters
         ----------
         ncomp : int, optional
-            Number of components ot include in the plot.  If None, will
+            Number of components to include in the plot.  If None, will
             plot the minimum of 10 or the number of computed components.
         ax : AxesSubplot, optional
             An axes on which to draw the graph.  If omitted, new a figure
@@ -848,15 +858,15 @@ def pca(
         Variables in columns, observations in rows.
     ncomp : int, optional
         Number of components to return.  If None, returns the as many as the
-        smaller to the number of rows or columns of data.
+        smaller of the number of rows or columns of data.
     standardize : bool, optional
         Flag indicating to use standardized data with mean 0 and unit
         variance.  standardized being True implies demean.
     demean : bool, optional
         Flag indicating whether to demean data before computing principal
         components.  demean is ignored if standardize is True.
-    normalize : bool , optional
-        Indicates whether th normalize the factors to have unit inner
+    normalize : bool, optional
+        Indicates whether to normalize the factors to have unit inner
         product.  If False, the loadings will have unit inner product.
     gls : bool, optional
         Flag indicating to implement a two-step GLS estimator where
@@ -867,8 +877,8 @@ def pca(
         Series weights to use after transforming data according to standardize
         or demean when computing the principal components.
     method : str, optional
-        Determines the linear algebra routine uses.  'eig', the default,
-        uses an eigenvalue decomposition. 'svd' uses a singular value
+        Determines the linear algebra routine used.  'svd', the default,
+        uses a singular value decomposition. 'eig' uses an eigenvalue
         decomposition.
 
     Returns
@@ -886,7 +896,7 @@ def pca(
         of including the fist i principal components.  The values are
         calculated on the transformed data, not the original data.
     ic : {ndarray, DataFrame}
-        Array (ncomp, 3) containing the Bai and Ng (2003) Information
+        Array (ncomp, 3) containing the Bai and Ng (2002) Information
         criteria.  Each column is a different criteria, and each row
         represents the number of included factors.
     eigenvals : {ndarray, Series}

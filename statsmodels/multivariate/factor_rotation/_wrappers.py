@@ -16,7 +16,8 @@ __all__ = []
 
 def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     r"""
-    Subroutine for orthogonal and oblique rotation of the matrix :math:`A`.
+    Subroutine for orthogonal and oblique rotation of the matrix :math:`A`
+
     For orthogonal rotations :math:`A` is rotated to :math:`L` according to
 
     .. math::
@@ -34,7 +35,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
     Parameters
     ----------
-    A : numpy matrix (default None)
+    A : numpy matrix
         non rotated factors
     method : str
         should be one of the methods listed below
@@ -65,7 +66,10 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
     Returns
     -------
-    The tuple :math:`(L,T)`
+    L : numpy matrix
+        The rotated factors.
+    T : numpy matrix
+        The rotation matrix.
 
     Notes
     -----
@@ -174,15 +178,14 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     parsimony : orthogonal rotation method
         minimizes the Crawford-Ferguson family objective with :math:`\kappa=1`
 
-    quartimin : oblique rotation method that minimizes
+    quartimin : oblique rotation method that
         minimizes the oblimin objective with :math:`\gamma=0`
 
-    quartimin : oblique rotation method that minimizes
+    biquartimin : oblique rotation method that
         minimizes the oblimin objective with :math:`\gamma=\frac{1}{2}`
 
     target : orthogonal or oblique rotation that rotates towards a target
-
-    matrix : math:`H` by minimizing the objective
+        matrix :math:`H` by minimizing the objective
 
         .. math::
 

@@ -91,7 +91,8 @@ class MANOVA(Model):
 
         Returns
         -------
-        results: MultivariateTestResults
+        results : MultivariateTestResults
+            The results of the multivariate hypotheses tests.
 
         Notes
         -----
@@ -102,7 +103,7 @@ class MANOVA(Model):
         where `params` is the regression coefficient matrix for the
         linear model y = x * params
 
-        If the model is not specified using the formula interfact, then the
+        If the model is not specified using the formula interface, then the
         hypotheses test each included exogenous variable, one at a time. In
         most applications with categorical variables, the ``from_formula``
         interface should be preferred when specifying a model since it

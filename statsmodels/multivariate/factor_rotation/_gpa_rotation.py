@@ -42,12 +42,12 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         non rotated factors
     T : numpy matrix (default identity matrix)
         initial guess of rotation matrix
-    ff : function (defualt None)
+    ff : function (default None)
         criterion :math:`\phi` to optimize. Should have A, T, L as keyword
         arguments
         and mapping to a float. Only used (and required) if vgQ is not
         provided.
-    vgQ : function (defualt None)
+    vgQ : function (default None)
         criterion :math:`\phi` to optimize and its derivative. Should have
          A, T, L as keyword arguments and mapping to a tuple containing a
         float and vector. Can be omitted if ff is provided.
@@ -58,6 +58,20 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
     tol : float
         stop criterion, algorithm stops if Frobenius norm of gradient is
         smaller then tol
+
+    Returns
+    -------
+    Lh : numpy matrix
+        rotated factors
+    Phi : numpy matrix
+        Factor correlation matrix. Equals the identity matrix if
+        `rotation_method` is 'orthogonal'.
+    Th : numpy matrix
+        rotation matrix satisfying :math:`Lh = A(Th^*)^{-1}` (or
+        :math:`Lh = A Th` for orthogonal rotations)
+    table : list
+        table with values of the objective function, gradient norm and
+        step size for each iteration, used for monitoring convergence
     """
     # pre processing
     if rotation_method not in ["orthogonal", "oblique"]:
@@ -148,7 +162,19 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
 
 def Gf(T, ff):
     """
-    Subroutine for the gradient of f using numerical derivatives.
+    Subroutine for the gradient of f using numerical derivatives
+
+    Parameters
+    ----------
+    T : numpy matrix
+        matrix at which the gradient is evaluated
+    ff : function
+        criterion function of a single matrix argument, mapping to a float
+
+    Returns
+    -------
+    numpy matrix
+        Numerical approximation of the gradient of `ff` at `T`.
     """
     k = T.shape[0]
     ep = 1e-4
@@ -163,11 +189,27 @@ def Gf(T, ff):
 
 def rotateA(A, T, rotation_method="orthogonal"):
     r"""
+    Rotate a matrix of non-rotated factors using a rotation matrix
+
     For orthogonal rotation methods :math:`L=AT`, where :math:`T` is an
     orthogonal matrix. For oblique rotation matrices :math:`L=A(T^*)^{-1}`,
     where :math:`T` is a normal matrix, i.e., :math:`TT^*=T^*T`. Oblique
     rotations relax the orthogonality constraint in order to gain simplicity
     in the interpretation.
+
+    Parameters
+    ----------
+    A : numpy matrix
+        non rotated factors
+    T : numpy matrix
+        rotation matrix
+    rotation_method : str
+        should be one of {orthogonal, oblique}
+
+    Returns
+    -------
+    numpy matrix
+        The rotated factors :math:`L`.
     """
     if rotation_method == "orthogonal":
         L = A.dot(T)
@@ -244,6 +286,14 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
         should be one of {orthogonal, oblique}
     return_gradient : bool (default True)
         toggles return of gradient
+
+    Returns
+    -------
+    phi : float
+        Value of the objective function.
+    Gphi : numpy matrix
+        Gradient of the objective function, only returned if
+        `return_gradient` is True.
     """
     if L is None:
         assert A is not None
@@ -308,6 +358,14 @@ def orthomax_objective(L=None, A=None, T=None, gamma=0, return_gradient=True):
         a parameter
     return_gradient : bool (default True)
         toggles return of gradient
+
+    Returns
+    -------
+    phi : float
+        Value of the objective function.
+    Gphi : numpy matrix
+        Gradient of the objective function, only returned if
+        `return_gradient` is True.
     """
     assert 0 <= gamma <= 1, "Gamma should be between 0 and 1"
     if L is None:
@@ -386,12 +444,20 @@ def CF_objective(L=None, A=None, T=None, kappa=0,
         non rotated factors
     T : numpy matrix (default None)
         rotation matrix
-    gamma : float (default 0)
+    kappa : float (default 0)
         a parameter
     rotation_method : str
         should be one of {orthogonal, oblique}
     return_gradient : bool (default True)
         toggles return of gradient
+
+    Returns
+    -------
+    phi : float
+        Value of the objective function.
+    Gphi : numpy matrix
+        Gradient of the objective function, only returned if
+        `return_gradient` is True.
     """
     assert 0 <= kappa <= 1, "Kappa should be between 0 and 1"
     if L is None:
@@ -459,6 +525,13 @@ def vgQ_target(H, L=None, A=None, T=None, rotation_method="orthogonal"):
         rotation matrix
     rotation_method : str
         should be one of {orthogonal, oblique}
+
+    Returns
+    -------
+    q : float
+        Value of the objective function.
+    Gq : numpy matrix
+        Gradient of the objective function.
     """
     if L is None:
         assert A is not None
@@ -503,6 +576,11 @@ def ff_target(H, L=None, A=None, T=None, rotation_method="orthogonal"):
         rotation matrix
     rotation_method : str
         should be one of {orthogonal, oblique}
+
+    Returns
+    -------
+    float
+        Value of the objective function.
     """
     if L is None:
         assert A is not None
@@ -548,6 +626,13 @@ def vgQ_partial_target(H, W=None, L=None, A=None, T=None):
         non rotated factors
     T : numpy matrix (default None)
         rotation matrix
+
+    Returns
+    -------
+    q : float
+        Value of the objective function.
+    Gq : numpy matrix
+        Gradient of the objective function.
     """
     if W is None:
         return vgQ_target(H, L=L, A=A, T=T)
@@ -562,7 +647,7 @@ def vgQ_partial_target(H, W=None, L=None, A=None, T=None):
 
 def ff_partial_target(H, W=None, L=None, A=None, T=None):
     r"""
-    Subroutine for the value of vgQ using orthogonal rotation towards a partial
+    Subroutine for the value of f using orthogonal rotation towards a partial
     target matrix, i.e., we minimize:
 
     .. math::
@@ -591,6 +676,11 @@ def ff_partial_target(H, W=None, L=None, A=None, T=None):
         non rotated factors
     T : numpy matrix (default None)
         rotation matrix
+
+    Returns
+    -------
+    float
+        Value of the objective function.
     """
     if W is None:
         return ff_target(H, L=L, A=A, T=T)

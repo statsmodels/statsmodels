@@ -1,6 +1,6 @@
 """
 Module of kernels that are able to handle continuous as well as categorical
-variables (both ordered and unordered).
+variables (both ordered and unordered)
 
 This is a slight deviation from the current approach in
 statsmodels.nonparametric.kernels where each kernel is a class object.
@@ -21,7 +21,7 @@ from scipy.special import erf
 
 def aitchison_aitken(h, Xi, x, num_levels=None):
     r"""
-    The Aitchison-Aitken kernel, used for unordered discrete random variables.
+    The Aitchison-Aitken kernel, used for unordered discrete random variables
 
     Parameters
     ----------
@@ -66,7 +66,7 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
 
 def wang_ryzin(h, Xi, x):
     r"""
-    The Wang-Ryzin kernel, used for ordered discrete random variables.
+    The Wang-Ryzin kernel, used for ordered discrete random variables
 
     Parameters
     ----------
@@ -107,6 +107,7 @@ def wang_ryzin(h, Xi, x):
 def gaussian(h, Xi, x):
     """
     Gaussian Kernel for continuous variables
+
     Parameters
     ----------
     h : 1-D ndarray, shape (K,)
@@ -127,6 +128,7 @@ def gaussian(h, Xi, x):
 def tricube(h, Xi, x):
     """
     Tricube Kernel for continuous variables
+
     Parameters
     ----------
     h : 1-D ndarray, shape (K,)
@@ -147,14 +149,49 @@ def tricube(h, Xi, x):
 
 
 def gaussian_convolution(h, Xi, x):
-    """Calculates the Gaussian Convolution Kernel"""
+    """
+    Calculates the Gaussian Convolution Kernel
+
+    Parameters
+    ----------
+    h : 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : 1-D ndarray, shape (K,)
+        The value of the training set.
+    x : 1-D ndarray, shape (K,)
+        The value at which the kernel density is being estimated.
+
+    Returns
+    -------
+    kernel_value : ndarray, shape (nobs, K)
+        The value of the kernel function at each training point for each var.
+    """
     return (1.0 / np.sqrt(4 * np.pi)) * np.exp(-((Xi - x) ** 2) / (h**2 * 4.0))
 
 
 def wang_ryzin_convolution(h, Xi, Xj):
-    # This is the equivalent of the convolution case with the Gaussian Kernel
-    # However it is not exactly convolution. Think of a better name
-    # References
+    """
+    Calculates the Wang-Ryzin convolution kernel
+
+    Parameters
+    ----------
+    h : scalar or 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : ndarray of ints, shape (nobs, K)
+        The value of the first training set.
+    Xj : ndarray of ints, shape (nobs, K)
+        The value of the second training set.
+
+    Returns
+    -------
+    ordered : ndarray
+        The value of the convolution kernel function for each observation.
+
+    Notes
+    -----
+    This is the equivalent of the convolution case with the Gaussian kernel.
+    However it is not exactly a convolution.
+    """
     ordered = np.zeros(Xi.size)
     for x in np.unique(Xi):
         ordered += wang_ryzin(h, Xi, x) * wang_ryzin(h, Xj, x)
@@ -163,6 +200,23 @@ def wang_ryzin_convolution(h, Xi, Xj):
 
 
 def aitchison_aitken_convolution(h, Xi, Xj):
+    """
+    Calculates the Aitchison-Aitken convolution kernel
+
+    Parameters
+    ----------
+    h : 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : 2-D ndarray of ints, shape (nobs, K)
+        The value of the first training set.
+    Xj : 2-D ndarray of ints, shape (nobs, K)
+        The value of the second training set.
+
+    Returns
+    -------
+    ordered : ndarray
+        The value of the convolution kernel function for each observation.
+    """
     Xi_vals = np.unique(Xi)
     ordered = np.zeros(Xi.size)
     num_levels = Xi_vals.size
@@ -175,10 +229,44 @@ def aitchison_aitken_convolution(h, Xi, Xj):
 
 
 def gaussian_cdf(h, Xi, x):
+    """
+    Calculates the Gaussian cumulative distribution function
+
+    Parameters
+    ----------
+    h : 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : 1-D ndarray, shape (K,)
+        The value of the training set.
+    x : 1-D ndarray, shape (K,)
+        The value at which the kernel cdf is being estimated.
+
+    Returns
+    -------
+    ndarray
+        The value of the kernel cdf at each training point.
+    """
     return 0.5 * h * (1 + erf((x - Xi) / (h * np.sqrt(2))))
 
 
 def aitchison_aitken_cdf(h, Xi, x_u):
+    """
+    Calculates the Aitchison-Aitken cumulative distribution function
+
+    Parameters
+    ----------
+    h : 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : 2-D ndarray of ints, shape (nobs, K)
+        The value of the training set.
+    x_u : scalar
+        The value at which the kernel cdf is being estimated.
+
+    Returns
+    -------
+    ordered : ndarray
+        The value of the kernel cdf for each observation.
+    """
     x_u = int(x_u)
     Xi_vals = np.unique(Xi)
     ordered = np.zeros(Xi.size)
@@ -191,6 +279,23 @@ def aitchison_aitken_cdf(h, Xi, x_u):
 
 
 def wang_ryzin_cdf(h, Xi, x_u):
+    """
+    Calculates the Wang-Ryzin cumulative distribution function
+
+    Parameters
+    ----------
+    h : scalar or 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : ndarray of ints, shape (nobs, K)
+        The value of the training set.
+    x_u : scalar
+        The value at which the kernel cdf is being estimated.
+
+    Returns
+    -------
+    ordered : ndarray
+        The value of the kernel cdf for each observation.
+    """
     ordered = np.zeros(Xi.size)
     for x in np.unique(Xi):
         if x <= x_u:
@@ -200,14 +305,47 @@ def wang_ryzin_cdf(h, Xi, x_u):
 
 
 def d_gaussian(h, Xi, x):
-    # The derivative of the Gaussian Kernel
+    """
+    Calculates the derivative of the Gaussian kernel
+
+    Parameters
+    ----------
+    h : 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : 1-D ndarray, shape (K,)
+        The value of the training set.
+    x : 1-D ndarray, shape (K,)
+        The value at which the kernel density is being estimated.
+
+    Returns
+    -------
+    ndarray
+        The value of the derivative of the Gaussian kernel at each
+        training point.
+    """
     return 2 * (Xi - x) * gaussian(h, Xi, x) / h**2
 
 
 def aitchison_aitken_reg(h, Xi, x):
     """
-    A version for the Aitchison-Aitken kernel for nonparametric regression.
+    A version for the Aitchison-Aitken kernel for nonparametric regression
 
+    Parameters
+    ----------
+    h : 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : 1-D ndarray, shape (K,)
+        The value of the training set.
+    x : 1-D ndarray, shape (K,)
+        The value at which the kernel density is being estimated.
+
+    Returns
+    -------
+    kernel_value : ndarray, shape (nobs, K)
+        The value of the kernel function at each training point for each var.
+
+    Notes
+    -----
     Suggested by Li and Racine.
     """
     kernel_value = np.ones(Xi.size)
@@ -219,8 +357,30 @@ def aitchison_aitken_reg(h, Xi, x):
 
 def wang_ryzin_reg(h, Xi, x):
     """
-    A version for the Wang-Ryzin kernel for nonparametric regression.
+    A version for the Wang-Ryzin kernel for nonparametric regression
 
-    Suggested by Li and Racine in [1] ch.4
+    Parameters
+    ----------
+    h : scalar or 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : ndarray of ints, shape (nobs, K)
+        The value of the training set.
+    x : scalar or 1-D ndarray of shape (K,)
+        The value at which the kernel density is being estimated.
+
+    Returns
+    -------
+    kernel_value : ndarray, shape (nobs, K)
+        The value of the kernel function at each training point for each var.
+
+    Notes
+    -----
+    Suggested by Li and Racine, Ch.4.
+
+    References
+    ----------
+    .. [*] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
+           and Trends in Econometrics: Vol 3: No 1, pp1-88., 2008.
+           http://dx.doi.org/10.1561/0800000009
     """
     return h ** abs(Xi - x)

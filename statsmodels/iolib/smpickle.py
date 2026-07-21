@@ -7,10 +7,12 @@ from statsmodels.iolib.openfile import get_file_obj
 
 def save_pickle(obj, fname):
     """
-    Save the object to file via pickling.
+    Save the object to file via pickling
 
     Parameters
     ----------
+    obj : object
+        Any object that can be pickled
     fname : {str, pathlib.Path}
         Filename to pickle to
     """
@@ -20,7 +22,7 @@ def save_pickle(obj, fname):
 
 class _CompatUnpickler(pickle.Unpickler):
     """
-    Unpickler that remaps module paths for backward compatibility.
+    Unpickler that remaps module paths for backward compatibility
 
     statsmodels.tools.decorators was renamed to
     statsmodels.tools._decorators. Pickle files created with older
