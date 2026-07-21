@@ -33,9 +33,6 @@ def asunicode(x, _):
 __all__ = [
     "PYTHON_IMPL_WASM",
     "asbytes",
-    "asstr",
-    "asunicode",
-    "lfilter",
     "lmap",
     "lrange",
     "lzip",
@@ -137,25 +134,6 @@ def lmap(*args, **kwargs):
         The values produced by ``map``.
     """
     return list(map(*args, **kwargs))
-
-
-def lfilter(*args, **kwargs):
-    """
-    A list-producing version of filter
-
-    Parameters
-    ----------
-    *args
-        Positional arguments passed to ``filter``.
-    **kwargs
-        Keyword arguments passed to ``filter``.
-
-    Returns
-    -------
-    list
-        The values produced by ``filter``.
-    """
-    return list(filter(*args, **kwargs))
 
 
 def with_metaclass(meta, *bases):
