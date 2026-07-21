@@ -5,7 +5,7 @@ to untie these from LikelihoodModel so that they may be re-used generally
 
 from __future__ import annotations
 
-from statsmodels.compat.scipy import SP_LT_15, SP_LT_17, SP_LT_115, SP_LT_118
+from statsmodels.compat.scipy import SP_LT_115, SP_LT_118
 
 from typing import TYPE_CHECKING, Any
 import warnings
@@ -418,13 +418,7 @@ def _fit_minimize(
         score = None
 
     # Use bounds/constraints only if they're allowed by the method
-    has_bounds = ["L-BFGS-B", "TNC", "SLSQP", "trust-constr"]
-    # Added in SP 1.5
-    if not SP_LT_15:
-        has_bounds += ["Powell"]
-    # Added in SP 1.7
-    if not SP_LT_17:
-        has_bounds += ["Nelder-Mead"]
+    has_bounds = ["L-BFGS-B", "Nelder-Mead", "Powell", "TNC", "SLSQP", "trust-constr"]
     has_constraints = ["COBYLA", "SLSQP", "trust-constr"]
 
     if "bounds" in kwargs.keys() and kwargs["min_method"] in has_bounds:

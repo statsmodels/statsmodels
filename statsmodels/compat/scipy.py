@@ -5,8 +5,6 @@ import scipy
 SP_VERSION = parse(scipy.__version__)
 SP_LT_15 = SP_VERSION < Version("1.4.99")
 SCIPY_GT_14 = not SP_LT_15
-SP_LT_16 = SP_VERSION < Version("1.5.99")
-SP_LT_17 = SP_VERSION < Version("1.6.99")
 SP_LT_19 = SP_VERSION < Version("1.8.99")
 SP_LT_115 = SP_VERSION < Version("1.14.99")
 SP_LT_116 = SP_VERSION < Version("1.15.99")
@@ -70,11 +68,7 @@ def _valarray(shape, value=np.nan, typecode=None):
     return out
 
 
-if SP_LT_16:
-    # copied from scipy, added to scipy in 1.6.0
-    from ._scipy_multivariate_t import multivariate_t
-else:
-    from scipy.stats import multivariate_t
+from scipy.stats import multivariate_t
 
 
 def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
@@ -145,8 +139,6 @@ __all__ = [
     "BASINHOPPING_RNG",
     "SCIPY_GT_14",
     "SP_LT_15",
-    "SP_LT_16",
-    "SP_LT_17",
     "SP_LT_19",
     "SP_LT_115",
     "SP_LT_116",

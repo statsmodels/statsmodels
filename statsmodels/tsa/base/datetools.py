@@ -159,11 +159,11 @@ def date_range_str(start, end=None, length=None):
     # tack on last year
     years = years + [(str(yr2))] * offset2
     if split != "a":
-        offset = np.tile(np.arange(1, annual_freq + 1), yr2 - yr1 - 1).astype("S2")
-        offset = np.r_[np.arange(offset1, annual_freq + 1).astype("S2"), offset]
-        offset = np.r_[offset, np.arange(1, offset2 + 1).astype("S2")]
-        date_arr_range = ["".join([i, split, str(j)])
-                          for i, j in zip(years, offset)]
+        offset = np.tile(np.arange(1, annual_freq + 1), yr2 - yr1 - 1).astype(str)
+        offset = np.r_[np.arange(offset1, annual_freq + 1).astype(str), offset]
+        offset = np.r_[offset, np.arange(1, offset2 + 1).astype(str)]
+
+        date_arr_range = [f"{i}{split}{j}" for i, j in zip(years, offset)]
     else:
         date_arr_range = years
     return date_arr_range
