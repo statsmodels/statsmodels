@@ -58,7 +58,7 @@ window : int
 weight_parameters = """
 weights : array_like, optional
     A 1d array of weights.  If you supply 1/W then the variables are
-    pre- multiplied by 1/sqrt(W).  If no weights are supplied the
+    pre-multiplied by 1/sqrt(W).  If no weights are supplied the
     default value is 1 and WLS results are the same as OLS.
 """
 
@@ -71,7 +71,7 @@ missing : str, default "drop"
     Available options are "drop", "skip" and "raise". If "drop", any
     observations with nans are dropped and the estimates are computed using
     only the non-missing values in each window. If 'skip' blocks containing
-    missing values are skipped and the corresponding results contains NaN.
+    missing values are skipped and the corresponding results contain NaN.
     If 'raise', an error is raised. Default is 'drop'.
 expanding : bool, default False
     If True, then the initial observations after min_nobs are filled using
@@ -294,12 +294,12 @@ class RollingWLS:
         params_only=False,
     ):
         """
-        Estimate model parameters.
+        Estimate model parameters
 
         Parameters
         ----------
         method : {'inv', 'lstsq', 'pinv'}
-            Method to use when computing the the model parameters.
+            Method to use when computing the model parameters.
 
             * 'inv' - use moving windows inner-products and matrix inversion.
               This method is the fastest, but may be less accurate than the
@@ -312,7 +312,7 @@ class RollingWLS:
 
             * nonrobust - The classic OLS covariance estimator
             * HCCM, HC0 - White heteroskedasticity robust covariance
-        cov_kwds : dict
+        cov_kwds : dict, optional
             Unused
         reset : int, optional
             Interval to recompute the moving window inner products used to
