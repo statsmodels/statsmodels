@@ -27,12 +27,11 @@ class TableDist:
     Parameters
     ----------
     alpha : array_like, 1d
-        probabiliy in the table, could be either sf (right tail) or cdf (left
+        probability in the table, could be either sf (right tail) or cdf (left
         tail)
     size : array_like, 1d
         The sample sizes for the table
     crit_table : array_like, 2d
-        The sample sizes in the table
         array with critical values for sample size in rows and probability in
         columns
     asymptotic : callable, optional
@@ -159,7 +158,7 @@ class TableDist:
 
     def prob(self, x, n):
         """
-        Find pvalues by interpolation, either cdf(x)
+        Find p-values by interpolation, for either cdf(x) or sf(x)
 
         Returns extreme probabilities, 0.001 and 0.2, for out of range
 

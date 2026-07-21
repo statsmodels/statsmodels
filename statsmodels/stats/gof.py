@@ -1,4 +1,5 @@
-'''extra statistical function and helper functions
+'''
+Extra statistical function and helper functions
 
 contains:
 
@@ -25,7 +26,8 @@ from scipy import stats
 
 # copied from regression/stats.utils
 def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
-    r"""Calculates power discrepancy, a class of goodness-of-fit tests
+    r"""
+    Calculates power discrepancy, a class of goodness-of-fit tests
     as a measure of discrepancy between observed and expected data.
 
     This contains several goodness-of-fit tests as special cases, see the
@@ -56,9 +58,10 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
     Returns
     -------
-    D_obs : Discrepancy of observed values
-    pvalue : pvalue
-
+    D_obs : float or ndarray
+        Discrepancy of observed values.
+    pvalue : float or ndarray
+        The p-value.
 
     References
     ----------
@@ -71,7 +74,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
     Nobuhiro Taneichi, Yuri Sekiya, Akio Suzukawa, Asymptotic Approximations
         for the Distributions of the Multinomial Goodness-of-Fit Statistics
-        under Local Alternatives, Journal of Multivariate Analysis 81, 335?359 (2002)
+        under Local Alternatives, Journal of Multivariate Analysis 81, 335-359 (2002)
     Steele, M. 1,2, C. Hurst 3 and J. Chaseling, Simulated Power of Discrete
         Goodness-of-Fit Tests for Likert Type Data
 
@@ -174,21 +177,33 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
 
 def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
-    """perform chisquare test for random sample of a discrete distribution
+    """
+    Perform chisquare test for random sample of a discrete distribution
 
     Parameters
     ----------
-    distname : str
-        name of distribution function
+    distfn : distribution instance
+        Discrete distribution function to be tested; needs ``a``, ``b`` and
+        ``cdf`` attributes/methods.
     arg : sequence
         parameters of distribution
+    rvs : array_like
+        random sample from the distribution to be tested
     alpha : float
         significance level, threshold for p-value
+    msg : str
+        identifying message that is included in the returned result string
 
     Returns
     -------
-    result : bool
-        0 if test passes, 1 if test fails
+    chis : float
+        chisquare statistic of the test
+    pval : float
+        p-value of the test based on the chisquare distribution
+    truefalse : bool
+        True if the test passes (``pval > alpha``), False if it fails
+    outstr : str
+        summary string describing the test and its result
 
     Notes
     -----
@@ -258,14 +273,16 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
 
 
 def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
-    """get bins for chisquare type gof tests for a discrete distribution
+    """
+    Get bins for chisquare type gof tests for a discrete distribution
 
     Parameters
     ----------
     rvs : ndarray
         sample data
-    distname : str
-        name of distribution function
+    distfn : distribution instance
+        Discrete distribution function to be tested; needs ``a``, ``b`` and
+        ``cdf`` attributes/methods.
     arg : sequence
         parameters of distribution
     nsupp : int
@@ -341,7 +358,8 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
 
 
 # -*- coding: utf-8 -*-
-"""Extension to chisquare goodness-of-fit test
+"""
+Extension to chisquare goodness-of-fit test
 
 Created on Mon Feb 25 13:46:53 2013
 
@@ -351,7 +369,8 @@ License: BSD-3
 
 
 def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
-    '''chisquare goodness-of-fit test
+    '''
+    chisquare goodness-of-fit test
 
     The null hypothesis is that the distance between the expected distribution
     and the observed frequencies is ``value``. The alternative hypothesis is
@@ -361,6 +380,27 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     The standard chisquare test has the null hypothesis that ``value=0``, that
     is the distributions are the same.
 
+    Parameters
+    ----------
+    f_obs : array_like
+        Observed frequencies.
+    f_exp : array_like, optional
+        Expected frequencies. If None, then the observed frequencies are
+        assumed to follow a uniform distribution over the bins.
+    value : float
+        Value of the effect size under the null hypothesis.
+    ddof : int
+        Degrees of freedom correction.
+    return_basic : bool
+        If True, return only the chisquare statistic and the p-value.
+
+    Returns
+    -------
+    chisq : float
+        The chisquare test statistic.
+    pvalue : float
+        The p-value based on the chisquare distribution if ``value`` is
+        zero, or on the noncentral chisquare distribution otherwise.
 
     Notes
     -----
@@ -405,7 +445,8 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
 
 
 def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
-    """power of chisquare goodness of fit test
+    """
+    Power of chisquare goodness of fit test
 
     effect size is sqrt of chisquare statistic divided by nobs
 
@@ -420,6 +461,8 @@ def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
         number of bins, or points in the discrete distribution
     alpha : float in (0,1)
         significance level of the test, default alpha=0.05
+    ddof : int
+        degrees of freedom correction, default 0
 
     Returns
     -------
@@ -451,7 +494,8 @@ def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
 
 
 def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
-    """effect size for a chisquare goodness-of-fit test
+    """
+    Effect size for a chisquare goodness-of-fit test
 
     Parameters
     ----------

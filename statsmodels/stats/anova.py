@@ -29,22 +29,20 @@ def _get_covariance(model, robust):
 
 def anova_single(model, **kwargs):
     """
-    Anova table for one fitted linear model.
+    Anova table for one fitted linear model
 
     Parameters
     ----------
     model : fitted linear model results instance
         A fitted linear model
-    typ : int or str {1,2,3} or {"I","II","III"}
-        Type of sum of squares to use.
-
-    **kwargs**
-
-    scale : float
-        Estimate of variance, If None, will be estimated from the largest
-    model. Default is None.
+    **kwargs
+        typ : int or str {1,2,3} or {"I","II","III"}
+            Type of sum of squares to use.
         test : str {"F", "Chisq", "Cp"} or None
-        Test statistics to provide. Default is "F".
+            Test statistics to provide. Default is "F".
+        robust : {None, "hc0", "hc1", "hc2", "hc3"}
+            Use heteroscedasticity-corrected coefficient covariance matrix.
+            If robust covariance is desired, it is recommended to use `hc3`.
 
     Notes
     -----
@@ -88,20 +86,38 @@ def anova_single(model, **kwargs):
 def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
                      pr_test, robust):
     """
-    Anova table for one fitted linear model.
+    Anova type I table for one fitted linear model
 
     Parameters
     ----------
     model : fitted linear model results instance
         A fitted linear model
+    endog : ndarray
+        The dependent variable array from `model`.
+    exog : ndarray
+        The design (independent variable) array from `model`.
+    nobs : int
+        Number of observations in `model`.
+    model_spec : ModelSpec
+        The model specification describing the terms of `model`.
+    table : DataFrame
+        Preallocated DataFrame to be filled in with the Anova results.
+    n_rows : int
+        Number of rows, including the residual row, in `table`.
+    test : str {"F", "Chisq", "Cp"} or None
+        Test statistic to provide.
+    pr_test : str
+        Name of the column holding the p-value for `test`, e.g. "PR(>F)".
+    robust : {None, "hc0", "hc1", "hc2", "hc3"}
+        Type of heteroscedasticity-robust covariance estimator; accepted
+        for interface consistency but not used for Type I sums of squares.
 
-    **kwargs**
-
-    scale : float
-        Estimate of variance, If None, will be estimated from the largest
-    model. Default is None.
-        test : str {"F", "Chisq", "Cp"} or None
-        Test statistics to provide. Default is "F".
+    Returns
+    -------
+    table : DataFrame
+        The Anova table with sum of squares, degrees of freedom, mean
+        squares and, if requested, the test statistic and p-value for
+        each term.
 
     Notes
     -----
@@ -148,20 +164,29 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
 
 def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     """
-    Anova type II table for one fitted linear model.
+    Anova type II table for one fitted linear model
 
     Parameters
     ----------
     model : fitted linear model results instance
         A fitted linear model
+    model_spec : ModelSpec
+        The model specification describing the terms of `model`.
+    n_rows : int
+        Number of rows, including the residual row, in the returned table.
+    test : str {"F", "Chisq", "Cp"} or None
+        Test statistic to provide.
+    pr_test : str
+        Name of the column holding the p-value for `test`, e.g. "PR(>F)".
+    robust : {None, "hc0", "hc1", "hc2", "hc3"}
+        Type of heteroscedasticity-robust covariance estimator to use, if
+        any.
 
-    **kwargs**
-
-    scale : float
-        Estimate of variance, If None, will be estimated from the largest
-    model. Default is None.
-        test : str {"F", "Chisq", "Cp"} or None
-        Test statistics to provide. Default is "F".
+    Returns
+    -------
+    table : DataFrame
+        The Anova table with sum of squares, degrees of freedom, and, if
+        requested, the test statistic and p-value for each term.
 
     Notes
     -----
@@ -291,11 +316,11 @@ def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
 
 def anova_lm(*args, **kwargs):
     """
-    Anova table for one or more fitted linear models.
+    Anova table for one or more fitted linear models
 
     Parameters
     ----------
-    args : fitted linear model results instance
+    *args : fitted linear model results instance
         One or more fitted linear models
     scale : float
         Estimate of variance, If None, will be estimated from the largest
@@ -412,6 +437,7 @@ def _not_slice(slices, slices_to_exclude, n):
 def _ssr_reduced_model(y, x, term_slices, params, keys):
     """
     Residual sum of squares of OLS model excluding factors in `keys`
+
     Assumes x matrix is orthogonal
 
     Parameters
@@ -449,7 +475,7 @@ class AnovaRM:
 
     The full model regression residual sum of squares is
     used to compare with the reduced model for calculating the
-    within-subject effect sum of squares [1].
+    within-subject effect sum of squares [1]_.
 
     Currently, only fully balanced within-subject designs are supported.
     Calculation of between-subject effects and corrections for violation of
@@ -458,6 +484,7 @@ class AnovaRM:
     Parameters
     ----------
     data : DataFrame
+        The data for the model.
     depvar : str
         The dependent variable in `data`
     subject : str
@@ -496,7 +523,7 @@ class AnovaRM:
 
     References
     ----------
-    .. [*] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
+    .. [1] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
     """
 
     def __init__(self, data, depvar, subject, within=None, between=None,
@@ -536,12 +563,18 @@ class AnovaRM:
                      .agg(self.aggregate_func))
 
     def _check_data_balanced(self):
-        """raise if data is not balanced
+        """
+        Raise if data is not balanced
 
         This raises a ValueError if the data is not balanced, and
-        returns None if it is balance
+        returns None if it is balanced.
 
         Return might change
+
+        Raises
+        ------
+        ValueError
+            If the data is not balanced.
         """
         factor_levels = 1
         for wi in self.within:
@@ -569,11 +602,13 @@ class AnovaRM:
                              " factors?")
 
     def fit(self):
-        """estimate the model and compute the Anova table
+        """
+        Estimate the model and compute the Anova table
 
         Returns
         -------
-        AnovaResults instance
+        AnovaResults
+            The results of the repeated measures Anova.
         """
         y = self.data[self.depvar].values
 
@@ -643,6 +678,7 @@ class AnovaResults:
     Attributes
     ----------
     anova_table : DataFrame
+        The Anova table.
     """
     def __init__(self, anova_table):
         self.anova_table = anova_table
@@ -651,11 +687,13 @@ class AnovaResults:
         return self.summary().__str__()
 
     def summary(self):
-        """create summary results
+        """
+        Create summary results
 
         Returns
         -------
-        summary : summary2.Summary instance
+        summary2.Summary
+            Summary instance containing the Anova table.
         """
         summ = summary2.Summary()
         summ.add_title("Anova")

@@ -12,18 +12,19 @@ from statsmodels.stats.base import Holder
 
 
 def _noncentrality_chisquare(chi2_stat, df, alpha=0.05):
-    """noncentrality parameter for chi-square statistic
+    """
+    Noncentrality parameter for chi-square statistic
 
     `nc` is zero-truncated umvue
 
     Parameters
     ----------
     chi2_stat : float
-        Chisquare-statistic, for example from a hypothesis test
+        Chisquare-statistic, for example from a hypothesis test.
     df : int or float
-        Degrees of freedom
+        Degrees of freedom.
     alpha : float in (0, 1)
-        Significance level for the confidence interval, covarage is 1 - alpha.
+        Significance level for the confidence interval, coverage is 1 - alpha.
 
     Returns
     -------
@@ -69,18 +70,21 @@ def _noncentrality_chisquare(chi2_stat, df, alpha=0.05):
 
 
 def _noncentrality_f(f_stat, df1, df2, alpha=0.05):
-    """noncentrality parameter for f statistic
+    """
+    Noncentrality parameter for f statistic
 
     `nc` is zero-truncated umvue
 
     Parameters
     ----------
-    fstat : float
-        f-statistic, for example from a hypothesis test
-        df : int or float
-        Degrees of freedom
+    f_stat : float
+        f-statistic, for example from a hypothesis test.
+    df1 : int or float
+        Numerator degrees of freedom.
+    df2 : int or float
+        Denominator degrees of freedom.
     alpha : float in (0, 1)
-        Significance level for the confidence interval, covarage is 1 - alpha.
+        Significance level for the confidence interval, coverage is 1 - alpha.
 
     Returns
     -------
@@ -118,16 +122,17 @@ def _noncentrality_f(f_stat, df1, df2, alpha=0.05):
 
 
 def _noncentrality_t(t_stat, df, alpha=0.05):
-    """noncentrality parameter for t statistic
+    """
+    Noncentrality parameter for t statistic
 
     Parameters
     ----------
-    fstat : float
-        f-statistic, for example from a hypothesis test
-        df : int or float
-        Degrees of freedom
+    t_stat : float
+        t-statistic, for example from a hypothesis test.
+    df : int or float
+        Degrees of freedom.
     alpha : float in (0, 1)
-        Significance level for the confidence interval, covarage is 1 - alpha.
+        Significance level for the confidence interval, coverage is 1 - alpha.
 
     Returns
     -------
@@ -141,8 +146,8 @@ def _noncentrality_t(t_stat, df, alpha=0.05):
 
     References
     ----------
-    .. [1] Hedges, Larry V. 2016. “Distribution Theory for Glass`s Estimator of
-       Effect Size and Related Estimators:”
+    .. [1] Hedges, Larry V. 2016. “Distribution Theory for Glass's Estimator of
+       Effect Size and Related Estimators.”
        Journal of Educational Statistics, November.
        https://doi.org/10.3102/10769986006002107.
 

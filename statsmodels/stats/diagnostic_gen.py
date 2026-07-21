@@ -24,7 +24,8 @@ def test_chisquare_binning(
     sort_method="quicksort",
     alpha_nc=0.05,
 ):
-    """chisquare gof test with binning of data, Hosmer-Lemeshow type
+    """
+    chisquare gof test with binning of data, Hosmer-Lemeshow type
 
     ``observed`` and ``expected`` are observation specific and should have
     observations in rows and choices in columns
@@ -43,16 +44,34 @@ def test_chisquare_binning(
         1-dimensional array for binning. Groups will be formed according to
         quantiles of the sorted array ``sort_var``, so that group sizes have
         equal or approximately equal sizes.
+    bins : int
+        Number of bins or groups to use for binning the data based on
+        ``sort_var``. Default is 10.
+    df : int
+        Degrees of freedom of the chisquare distribution used to compute
+        the p-value of the test. If None, then the degrees of freedom are
+        computed from the number of groups and choices, depending on
+        whether ``ordered`` is True or False.
+    ordered : bool
+        If True, the degrees of freedom for the ordinal case are used when
+        ``df`` is not provided. Default is False, i.e. the multinomial
+        (unordered) case.
+    sort_method : str
+        Sorting method used by ``numpy.argsort`` when binning by
+        ``sort_var``. Default is "quicksort".
+    alpha_nc : float
+        Significance level used in the computation of the noncentrality
+        parameter confidence interval. Default is 0.05.
 
     Returns
     -------
-    Holdertuple instance
+    HolderTuple instance
         This instance contains the results of the chisquare test and some
         information about the data
 
         - statistic : chisquare statistic of the goodness-of-fit test
         - pvalue : pvalue of the chisquare test
-        = df : degrees of freedom of the test
+        - df : degrees of freedom of the test
 
     Notes
     -----
@@ -132,14 +151,15 @@ def test_chisquare_binning(
 
 
 def prob_larger_ordinal_choice(prob):
-    """probability that observed category is larger than distribution prob
+    """
+    probability that observed category is larger than distribution prob
 
     This is a helper function for Ordinal models, where endog is a 1-dim
     categorical variable and predicted probabilities are 2-dimensional with
     observations in rows and choices in columns.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     prob : array_like
         Expected probabilities for ordinal choices, e.g. from prediction of
         an ordinal model with observations in rows and choices in columns.
@@ -147,20 +167,19 @@ def prob_larger_ordinal_choice(prob):
     Returns
     -------
     cdf_mid : ndarray
-        mid cdf, i.e ``P(x < y) + 0.5 P(x=y)``
+        mid cdf, i.e. ``P(x < y) + 0.5 P(x=y)``
     r : ndarray
         Probability residual ``P(x > y) - P(x < y)`` for all possible choices.
         Computed as ``r = cdf_mid * 2 - 1``
+
+    See Also
+    --------
+    statsmodels.stats.nonparametric.rank_compare_2ordinal
 
     References
     ----------
     .. [2] Li, Chun, and Bryan E. Shepherd. 2012. “A New Residual for Ordinal
        Outcomes.” Biometrika 99 (2): 473-80.
-
-    See Also
-    --------
-    `statsmodels.stats.nonparametric.rank_compare_2ordinal`
-
     """
     # similar to `nonparametric rank_compare_2ordinal`
 
@@ -177,13 +196,23 @@ def prob_larger_ordinal_choice(prob):
 
 
 def prob_larger_2ordinal(probs1, probs2):
-    """Stochastically large probability for two ordinal distributions
+    """
+    Stochastically large probability for two ordinal distributions
 
     Computes Pr(x1 > x2) + 0.5 * Pr(x1 = x2) for two ordered multinomial
     (ordinal) distributed random variables x1 and x2.
 
     This is vectorized with choices along last axis.
     Broadcasting if freq2 is 1-dim also seems to work correctly.
+
+    Parameters
+    ----------
+    probs1 : array_like
+        Probabilities of the choices for the first ordinal random variable
+        x1, with choices along the last axis.
+    probs2 : array_like
+        Probabilities of the choices for the second ordinal random variable
+        x2, with choices along the last axis.
 
     Returns
     -------
@@ -227,12 +256,23 @@ def prob_larger_2ordinal(probs1, probs2):
 
 
 def cov_multinomial(probs):
-    """covariance matrix of multinomial distribution
+    """
+    covariance matrix of multinomial distribution
 
     This is vectorized with choices along last axis.
 
     cov = diag(probs) - outer(probs, probs)
 
+    Parameters
+    ----------
+    probs : array_like
+        Probabilities of the choices, with choices along the last axis.
+
+    Returns
+    -------
+    ndarray
+        Covariance matrix of the multinomial distribution, with choices
+        along the last two axes.
     """
 
     k = probs.shape[-1]
@@ -244,10 +284,20 @@ def cov_multinomial(probs):
 
 
 def var_multinomial(probs):
-    """variance of multinomial distribution
+    """
+    variance of multinomial distribution
 
     var = probs * (1 - probs)
 
+    Parameters
+    ----------
+    probs : array_like
+        Probabilities of the choices.
+
+    Returns
+    -------
+    ndarray
+        Variance of the multinomial distribution for each choice.
     """
     var = probs * (1 - probs)
     return var

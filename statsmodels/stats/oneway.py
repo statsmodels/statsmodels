@@ -185,7 +185,8 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
 
 
 def convert_effectsize_fsqu(f2=None, eta2=None):
-    """Convert squared effect sizes in f family
+    """
+    Convert squared effect sizes in f family
 
     f2 is signal to noise ratio, var_explained / var_residual
 
@@ -220,7 +221,8 @@ def convert_effectsize_fsqu(f2=None, eta2=None):
 
 
 def _fstat2effectsize(f_stat, df):
-    """Compute anova effect size from F-statistic
+    """
+    Compute anova effect size from F-statistic
 
     This might be combined with convert_effectsize_fsqu
 
@@ -276,7 +278,8 @@ def _fstat2effectsize(f_stat, df):
 
 
 def wellek_to_f2(eps, n_groups):
-    """Convert Wellek's effect size (sqrt) to Cohen's f-squared
+    """
+    Convert Wellek's effect size (sqrt) to Cohen's f-squared
 
     This computes the following effect size :
 
@@ -291,7 +294,8 @@ def wellek_to_f2(eps, n_groups):
 
     Returns
     -------
-    f2 : effect size Cohen's f-squared
+    f2 : float or ndarray
+        Effect size Cohen's f-squared.
 
     """
     f2 = 1 / n_groups * eps**2
@@ -299,7 +303,8 @@ def wellek_to_f2(eps, n_groups):
 
 
 def f2_to_wellek(f2, n_groups):
-    """Convert Cohen's f-squared to Wellek's effect size (sqrt)
+    """
+    Convert Cohen's f-squared to Wellek's effect size (sqrt)
 
     This computes the following effect size :
 
@@ -322,7 +327,8 @@ def f2_to_wellek(f2, n_groups):
 
 
 def fstat_to_wellek(f_stat, n_groups, nobs_mean):
-    """Convert F statistic to wellek's effect size eps squared
+    """
+    Convert F statistic to wellek's effect size eps squared
 
     This computes the following effect size :
 
@@ -357,6 +363,7 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
     Parameters
     ----------
     f_stat : float
+        F-statistic for which the noncentrality parameter is inverted.
     df : tuple
         degrees of freedom ``df = (df1, df2)`` where
 
@@ -364,13 +371,18 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
         - df2 : denominator degrees of freedom, df_resid
 
     alpha : float, default 0.05
+        Significance level for the confidence interval.
     alternative : {"two-sided"}
-        Other alternatives have not been implements.
+        Other alternatives have not been implemented.
 
     Returns
     -------
     float
         The end point of the confidence interval.
+
+    See Also
+    --------
+    confint_effectsize_oneway
 
     Notes
     -----
@@ -384,10 +396,6 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
        Intervals and Tests of Close Fit in the Analysis of Variance and
        Contrast Analysis.” Psychological Methods 9 (2): 164-82.
        https://doi.org/10.1037/1082-989X.9.2.164.
-
-    See Also
-    --------
-    confint_effectsize_oneway
     """
 
     df1, df2 = df
@@ -410,6 +418,8 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     Parameters
     ----------
     f_stat : float
+        F-statistic for which the effect size confidence interval is
+        computed.
     df : tuple
         degrees of freedom ``df = (df1, df2)`` where
 
@@ -417,12 +427,19 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
         - df2 : denominator degrees of freedom, df_resid
 
     alpha : float, default 0.05
+        Significance level for the confidence interval.
     nobs : int, default None
+        Total number of observations. If None, then it is set to
+        ``df1 + df2 + 1``.
 
     Returns
     -------
     Holder
         Class with effect size and confidence attributes
+
+    See Also
+    --------
+    confint_noncentrality
 
     Notes
     -----
@@ -430,16 +447,11 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     inverting the cdf of the noncentral F distribution. Confidence intervals
     for other effect sizes are computed by endpoint transformation.
 
-
     R package ``effectsize`` does not compute the confidence intervals in the
     same way. Their confidence intervals can be replicated with
 
     >>> ci_nc = confint_noncentrality(f_stat, df1, df2, alpha=0.1)
     >>> ci_es = smo._fstat2effectsize(ci_nc / df1, df1, df2)
-
-    See Also
-    --------
-    confint_noncentrality
     """
 
     df1, df2 = df
@@ -568,7 +580,8 @@ def anova_generic(
 def anova_oneway(
     data, groups=None, use_var="unequal", welch_correction=True, trim_frac=0
 ):
-    """Oneway Anova
+    """
+    Oneway Anova
 
     This implements standard anova, Welch and Brown-Forsythe, and trimmed
     (Yuen) variants of those.
@@ -629,12 +642,16 @@ def anova_oneway(
         pvalue2 : float
             This is the p-value based on degrees of freedom as in
             Brown-Forsythe 1974 and is only available if ``use_var="bf"``.
-        df = (df_denom, df_num) : tuple of floats
-            Degreeds of freedom for the F-distribution depend on ``use_var``.
+        df = (df_num, df_denom) : tuple of floats
+            Degrees of freedom for the F-distribution depend on ``use_var``.
             If ``use_var="bf"``, then `df_denom` is for Mehrotra p-values
             `df_denom2` is available for Brown-Forsythe 1974 p-values.
             `df_num` is the same numerator degrees of freedom for both
             p-values.
+
+    See Also
+    --------
+    anova_generic
 
     Notes
     -----
@@ -642,7 +659,7 @@ def anova_oneway(
     samples if the distribution of the samples is not very far away from the
     normal distribution. The test can become liberal if the data is strongly
     skewed. Welch's Anova can also be correctly sized for discrete
-    distributions with finite support, like Lickert scale data.
+    distributions with finite support, like Likert scale data.
     The trimmed version is robust to many non-normal distributions, it stays
     correctly sized in many cases, and is more powerful in some cases with
     skewness or heavy tails.
@@ -650,11 +667,6 @@ def anova_oneway(
     Trimming is currently based on the integer part of ``nobs * trim_frac``.
     The default might change to including fractional observations as in the
     original articles by Yuen.
-
-
-    See Also
-    --------
-    anova_generic
 
     References
     ----------
@@ -706,7 +718,8 @@ def anova_oneway(
 def equivalence_oneway_generic(
     f_stat, n_groups, nobs, equiv_margin, df, alpha=0.05, margin_type="f2"
 ):
-    """Equivalence test for oneway anova (Wellek and extensions)
+    """
+    Equivalence test for oneway anova (Wellek and extensions)
 
     This is an helper function when summary statistics are available.
     Use `equivalence_oneway` instead.
@@ -823,7 +836,8 @@ def equivalence_oneway(
     trim_frac=0,
     margin_type="f2",
 ):
-    """equivalence test for oneway anova (Wellek's Anova)
+    """
+    Equivalence test for oneway anova (Wellek's Anova)
 
     The null hypothesis is that the means differ by more than `equiv_margin`
     in the anova distance measure.
@@ -853,7 +867,7 @@ def equivalence_oneway(
             This is the default.
         "equal" : Variances are assumed to be equal across samples.
             This is the standard Anova.
-        "bf: Variances are not assumed to be equal across samples.
+        "bf" : Variances are not assumed to be equal across samples.
             The method is Browne-Forsythe (1971) for testing equality of means
             with the corrected degrees of freedom by Merothra. The original BF
             degrees of freedom are available as additional attributes in the
@@ -912,7 +926,8 @@ def equivalence_oneway(
 
 
 def _power_equivalence_oneway_emp(f_stat, n_groups, nobs, eps, df, alpha=0.05):
-    """Empirical power of oneway equivalence test
+    """
+    Empirical power of oneway equivalence test
 
     This only returns post-hoc, empirical power.
 
@@ -957,7 +972,7 @@ def power_equivalence_oneway(
     f2_alt, equiv_margin, nobs_t, n_groups=None, df=None, alpha=0.05, margin_type="f2"
 ):
     """
-    Power of  oneway equivalence test
+    Power of oneway equivalence test
 
     Parameters
     ----------
@@ -1030,14 +1045,51 @@ def simulate_power_equivalence_oneway(
     margin_type="f2",
     rng=None,
 ):  # , anova_options=None):  # TODO
-    """Simulate Power for oneway equivalence test (Wellek's Anova)
+    """
+    Simulate Power for oneway equivalence test (Wellek's Anova)
 
     This function is experimental and written to evaluate asymptotic power
     function. This function will change without backwards compatibility
     constraints. The only part that is stable is `pvalue` attribute in results.
 
-    Effect size for equivalence margin
+    Effect size for equivalence margin.
 
+    Parameters
+    ----------
+    means : array_like
+        Mean of samples to be compared. Currently only four groups are
+        supported.
+    nobs : ndarray
+        Number of observations for the samples.
+    equiv_margin : float
+        Equivalence margin in terms of effect size. Effect size can be
+        chosen with `margin_type`. default is squared Cohen's f.
+    vars_ : array_like or None
+        Variances of the samples used to simulate the data. If None, then
+        unit variance, i.e. standard deviation equal to 1, is used for all
+        samples.
+    k_mc : int
+        Number of Monte Carlo replications.
+    trim_frac : float in [0, 0.5)
+        Optional trimming for Anova with trimmed mean and winsorized
+        variances, see `trim_frac` in `anova_oneway`.
+    options_var : list of str or None
+        List of `use_var` options that are used in the loop over Monte
+        Carlo replications. If None, then
+        ``["unequal", "equal", "bf"]`` is used.
+    margin_type : "f2" or "wellek"
+        Type of effect size used for equivalence margin.
+    rng : {None, int, `numpy.random.Generator`}
+        Random number generator or seed used to simulate the samples. See
+        `statsmodels.tools.rng_qrng.check_random_state`.
+
+    Returns
+    -------
+    res : Holder instance
+        Holder instance with Monte Carlo results in the attributes
+        `f_stat`, `other`, `pvalue` and `reject`, each an ndarray with one
+        row per Monte Carlo replication and one column per entry in
+        `options_var`.
     """
     if options_var is None:
         options_var = ["unequal", "equal", "bf"]
@@ -1103,7 +1155,8 @@ def test_scale_oneway(
     trim_frac_mean=0.1,
     trim_frac_anova=0.0,
 ):
-    """Oneway Anova test for equal scale, variance or dispersion
+    """
+    Oneway Anova test for equal scale, variance or dispersion
 
     This hypothesis test performs a oneway anova test on transformed data and
     includes Levene and Brown-Forsythe tests for equal variances as special
@@ -1141,7 +1194,7 @@ def test_scale_oneway(
         Transformation for the centered observations. If a callable, then this
         function is called on the centered data.
         Default is absolute value.
-    trim_frac_mean=0.1 : float in [0, 0.5)
+    trim_frac_mean : float in [0, 0.5)
         Trim fraction for the trimmed mean when `center` is "trimmed"
     trim_frac_anova : float in [0, 0.5)
         Optional trimming for Anova with trimmed mean and Winsorized variances.
@@ -1165,7 +1218,7 @@ def test_scale_oneway(
         pvalue2 : float
             This is the p-value based on degrees of freedom as in
             Brown-Forsythe 1974 and is only available if ``method="bf"``.
-        df : (df_denom, df_num)
+        df : (df_num, df_denom)
             Tuple containing degrees of freedom for the F-distribution depend
             on ``method``. If ``method="bf"``, then `df_denom` is for Mehrotra
             p-values `df_denom2` is available for Brown-Forsythe 1974 p-values.
@@ -1204,7 +1257,8 @@ def equivalence_scale_oneway(
     trim_frac_mean=0.0,
     trim_frac_anova=0.0,
 ):
-    """Oneway Anova test for equivalence of scale, variance or dispersion
+    """
+    Oneway Anova test for equivalence of scale, variance or dispersion
 
     This hypothesis test performs a oneway equivalence anova test on
     transformed data.

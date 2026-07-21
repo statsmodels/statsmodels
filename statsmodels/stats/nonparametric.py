@@ -24,7 +24,8 @@ from statsmodels.tools.testing import Holder
 
 
 def rankdata_2samp(x1, x2):
-    """Compute midranks for two samples
+    """
+    Compute midranks for two samples
 
     Parameters
     ----------
@@ -41,7 +42,6 @@ def rankdata_2samp(x1, x2):
         Internal midranks of the first sample.
     ranki2 : ndarray
         Internal midranks of the second sample.
-
     """
     x1 = np.asarray(x1)
     x2 = np.asarray(x2)
@@ -68,7 +68,8 @@ def rankdata_2samp(x1, x2):
 
 
 class RankCompareResult(HolderTuple):
-    """Results for rank comparison
+    """
+    Results for rank comparison
 
     This is a subclass of HolderTuple that includes results from intermediate
     computations, as well as methods for hypothesis tests, confidence intervals
@@ -122,7 +123,8 @@ class RankCompareResult(HolderTuple):
                                      alternative)
 
     def test_prob_superior(self, value=0.5, alternative="two-sided"):
-        """test for superiority probability
+        """
+        Test for superiority probability
 
         H0: P(x1 > x2) + 0.5 * P(x1 = x2) = value
 
@@ -175,7 +177,8 @@ class RankCompareResult(HolderTuple):
         return res
 
     def tost_prob_superior(self, low, upp):
-        """test of stochastic (non-)equivalence of p = P(x1 > x2)
+        """
+        Test of stochastic (non-)equivalence of p = P(x1 > x2)
 
         Null hypothesis:  p < low or p > upp
         Alternative hypothesis:  low < p < upp
@@ -208,10 +211,10 @@ class RankCompareResult(HolderTuple):
                 Test statistic of the one-sided test that has the larger
                 pvalue.
             results_larger : HolderTuple
-                Results instanc with test statistic, pvalue and degrees of
+                Results instance with test statistic, pvalue and degrees of
                 freedom for lower threshold test.
             results_smaller : HolderTuple
-                Results instanc with test statistic, pvalue and degrees of
+                Results instance with test statistic, pvalue and degrees of
                 freedom for upper threshold test.
 
         """
@@ -235,7 +238,8 @@ class RankCompareResult(HolderTuple):
 
     def confint_lintransf(self, const=-1, slope=2, alpha=0.05,
                           alternative="two-sided"):
-        """confidence interval of a linear transformation of prob1
+        """
+        Confidence interval of a linear transformation of prob1
 
         This computes the confidence interval for
 
@@ -277,14 +281,14 @@ class RankCompareResult(HolderTuple):
 
     def effectsize_normal(self, prob=None):
         """
-        Cohen's d, standardized mean difference under normality assumption.
+        Cohen's d, standardized mean difference under normality assumption
 
         This computes the standardized mean difference, Cohen's d, effect size
         that is equivalent to the rank based probability ``p`` of being
         stochastically larger if we assume that the data is normally
         distributed, given by
 
-            :math: `d = F^{-1}(p) * \\sqrt{2}`
+            :math:`d = F^{-1}(p) * \\sqrt{2}`
 
         where :math:`F^{-1}` is the inverse of the cdf of the normal
         distribution.
@@ -297,15 +301,17 @@ class RankCompareResult(HolderTuple):
 
         Returns
         -------
-        equivalent Cohen's d effect size under normality assumption.
-
+        float
+            Cohen's d effect size equivalent to the rank based probability
+            under the normality assumption.
         """
         if prob is None:
             prob = self.prob1
         return stats.norm.ppf(prob) * np.sqrt(2)
 
     def summary(self, alpha=0.05, xname=None):
-        """summary table for probability that random draw x1 is larger than x2
+        """
+        Summary table for probability that random draw x1 is larger than x2
 
         Parameters
         ----------
@@ -318,8 +324,8 @@ class RankCompareResult(HolderTuple):
 
         Returns
         -------
-        SimpleTable instance with methods to convert to different output
-        formats.
+        SimpleTable
+            Instance with methods to convert to different output formats.
         """
 
         yname = "None"
@@ -353,7 +359,7 @@ class RankCompareResult(HolderTuple):
 
 def rank_compare_2indep(x1, x2, use_t=True):
     """
-    Statistics and tests for the probability that x1 has larger values than x2.
+    Statistics and tests for the probability that x1 has larger values than x2
 
     p is the probability that a random draw from the population of
     the first sample has a larger value than a random draw from the
@@ -388,8 +394,8 @@ def rank_compare_2indep(x1, x2, use_t=True):
         statistic : float
             The Brunner-Munzel W statistic.
         pvalue : float
-            p-value assuming an t distribution. One-sided or
-            two-sided, depending on the choice of `alternative` and `use_t`.
+            P-value based on the t distribution if `use_t` is True,
+            otherwise based on the normal distribution.
 
     See Also
     --------
@@ -402,12 +408,12 @@ def rank_compare_2indep(x1, x2, use_t=True):
     Wilcoxon-Mann-Whitney assumes equal variance or equal distribution under
     the Null hypothesis. Fligner-Policello test allows for unequal variances
     but assumes continuous distribution, i.e. no ties.
-    Brunner-Munzel extend the test to allow for unequal variance and discrete
+    Brunner-Munzel extends the test to allow for unequal variance and discrete
     or ordered categorical random variables.
 
     Brunner and Munzel recommended to estimate the p-value by t-distribution
     when the size of data is 50 or less. If the size is lower than 10, it would
-    be better to use permuted Brunner Munzel test (see [2]_) for the test
+    be better to use permuted Brunner-Munzel test (see [2]_) for the test
     of stochastic equality.
 
     This measure has been introduced in the literature under many different
@@ -419,20 +425,20 @@ def rank_compare_2indep(x1, x2, use_t=True):
 
     WMW and related tests can only be interpreted as test of medians or tests
     of central location only under very restrictive additional assumptions
-    such as both distribution are identical under the equality null hypothesis
+    such as both distributions are identical under the equality null hypothesis
     (assumed by Mann-Whitney) or both distributions are symmetric (shown by
     Fligner-Policello). If the distribution of the two samples can differ in
     an arbitrary way, then the equality Null hypothesis corresponds to p=0.5
-    against an alternative p != 0.5.  see for example Conroy (2012) [4]_ and
-    Divine et al (2018) [5]_ .
+    against an alternative p != 0.5.  See for example Conroy (2012) [4]_ and
+    Divine et al (2018) [5]_.
 
     Note: Brunner-Munzel and related literature define the probability that x1
     is stochastically smaller than x2, while here we use stochastically larger.
-    This equivalent to switching x1 and x2 in the two sample case.
+    This is equivalent to switching x1 and x2 in the two sample case.
 
     References
     ----------
-    .. [1] Brunner, E. and Munzel, U. "The nonparametric Benhrens-Fisher
+    .. [1] Brunner, E. and Munzel, U. "The nonparametric Behrens-Fisher
            problem: Asymptotic theory and a small-sample approximation".
            Biometrical Journal. Vol. 42(2000): 17-25.
     .. [2] Neubert, K. and Brunner, E. "A studentized permutation test for the
@@ -442,7 +448,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
            Improvement of the CL Common Language Effect Size Statistics of
            McGraw and Wong.” Journal of Educational and Behavioral Statistics
            25 (2): 101-32. https://doi.org/10.3102/10769986025002101.
-    .. [4] Conroy, Ronán M. 2012. “What Hypotheses Do`Nonparametric` Two-Group
+    .. [4] Conroy, Ronán M. 2012. “What Hypotheses Do `Nonparametric` Two-Group
            Tests Actually Test?” The Stata Journal: Promoting Communications on
            Statistics and Stata 12 (2): 182-90.
            https://doi.org/10.1177/1536867X1201200202.
@@ -508,7 +514,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
 
 def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
     """
-    Stochastically larger probability for 2 independent ordinal samples.
+    Stochastically larger probability for 2 independent ordinal samples
 
     This is a special case of `rank_compare_2indep` when the data are given as
     counts of two independent ordinal, i.e. ordered multinomial, samples.
@@ -592,7 +598,7 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
 
 def prob_larger_continuous(distr1, distr2):
     """
-    Probability indicating that distr1 is stochastically larger than distr2.
+    Probability indicating that distr1 is stochastically larger than distr2
 
     This computes
 
@@ -609,8 +615,8 @@ def prob_larger_continuous(distr1, distr2):
 
     Returns
     -------
-    p : probability x1 is larger than x2
-
+    p : float
+        Probability that x1 is larger than x2.
 
     Notes
     -----
@@ -637,7 +643,7 @@ def prob_larger_continuous(distr1, distr2):
 
 def cohensd2problarger(d):
     """
-    Convert Cohen's d effect size to stochastically-larger-probability.
+    Convert Cohen's d effect size to stochastically-larger-probability
 
     This assumes observations are normally distributed.
 
@@ -667,7 +673,7 @@ def cohensd2problarger(d):
 
 def _compute_rank_placements(x1, x2) -> Holder:
     """
-    Compute ranks and placements for two samples.
+    Compute ranks and placements for two samples
 
     This helper is used by `samplesize_rank_compare_onetail`
     to calculate rank-based statistics for two input samples.
@@ -709,12 +715,12 @@ def _compute_rank_placements(x1, x2) -> Holder:
     (`x1` and `x2`) in ascending order, with ties averaged.
 
     * The within-group rank for each observation is determined
-    by ranking the data points within each sample separately,
+    by ranking the data points within each sample separately.
 
     * The placement of each observation is calculated by
     taking the difference between the overall rank and the
     within-group rank of the observation. Placements can be
-    thought of as measuress of the degree of overlap or
+    thought of as measures of the degree of overlap or
     separation between two samples.
     """
     n_1 = len(x1)
@@ -755,7 +761,7 @@ def samplesize_rank_compare_onetail(
     alternative="two-sided",
 ) -> Holder:
     """
-    Compute sample size for the non-parametric Mann-Whitney U test.
+    Compute sample size for the non-parametric Mann-Whitney U test
 
     This function implements the method of Happ et al (2019).
 
@@ -765,7 +771,7 @@ def samplesize_rank_compare_onetail(
         Generated `synthetic` data representing the treatment
         group under the research hypothesis.
     reference_sample : array_like
-        Advance information for the reference group.
+        Available information for the reference group.
     alpha : float
         The type I error rate for the test (two-sided).
     power : float
@@ -775,7 +781,7 @@ def samplesize_rank_compare_onetail(
         `nobs_treat`. This is the ratio of the reference
         group sample size to the treatment group sample
         size, by default 1 (balanced design). See Notes.
-    alternative : str,`two-sided` (default),`larger`, or`smaller`
+    alternative : {"two-sided", "larger", "smaller"}, optional
         Extra argument to choose whether the sample size is
         calculated for a two-sided (default) or one-sided test.
         See Notes.
@@ -809,7 +815,7 @@ def samplesize_rank_compare_onetail(
     is often determined in collaboration with subject matter
     experts to reflect a significant difference worth detecting.
     By comparing the reference and synthetic samples, this
-    function estimates the sample size needed to acheve the
+    function estimates the sample size needed to achieve the
     desired power at the specified Type-I error rate.
 
     Choosing between `one-sided` and `two-sided` tests has
@@ -820,7 +826,7 @@ def samplesize_rank_compare_onetail(
     (`relative_effect < 0.5`) one-sided test assumes the effect
     occurs only in one direction, leading to a smaller required
     sample size. However, if the true effect is in the opposite
-    direction, the `one-sided` test have virtually no power to
+    direction, the `one-sided` test has virtually no power to
     detect it. Additionally, if a two-sided test ends up being
     used instead of the planned one-sided test, the original
     sample size may be insufficient, resulting in an underpowered

@@ -81,9 +81,23 @@ MISSING = {
 
 def _kurtosis(a):
     """
-    wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
+    Wrapper for scipy.stats.kurtosis that returns nan instead of raising
+    Error
 
-    missing options
+    Parameters
+    ----------
+    a : array_like
+        Data for which the kurtosis is computed.
+
+    Returns
+    -------
+    float
+        The kurtosis of `a`, or nan if scipy.stats.kurtosis raises a
+        ValueError.
+
+    Notes
+    -----
+    Missing options.
     """
     try:
         res = stats.kurtosis(a)
@@ -94,9 +108,22 @@ def _kurtosis(a):
 
 def _skew(a):
     """
-    wrapper for scipy.stats.skew that returns nan instead of raising Error
+    Wrapper for scipy.stats.skew that returns nan instead of raising Error
 
-    missing options
+    Parameters
+    ----------
+    a : array_like
+        Data for which the skewness is computed.
+
+    Returns
+    -------
+    float
+        The skewness of `a`, or nan if scipy.stats.skew raises a
+        ValueError.
+
+    Notes
+    -----
+    Missing options.
     """
     try:
         res = stats.skew(a)
@@ -119,8 +146,10 @@ def sign_test(samp, mu0=0):
 
     Returns
     -------
-    M
-    p-value
+    M : float
+        The test statistic for the sign test.
+    p : float
+        The p-value for the test.
 
     Notes
     -----
@@ -193,9 +222,9 @@ class Description:
         Statistics to include. If not provided the full set of statistics is
         computed. This list may evolve across versions to reflect best
         practices. Supported options are:
-        "nobs", "missing", "mean", "std_err", "ci", "ci", "std", "iqr",
+        "nobs", "missing", "mean", "std_err", "ci", "std", "iqr",
         "iqr_normal", "mad", "mad_normal", "coef_var", "range", "max",
-        "min", "skew", "kurtosis", "jarque_bera", "mode", "freq",
+        "min", "skew", "kurtosis", "jarque_bera", "mode",
         "median", "percentiles", "distinct", "top", and "freq". See Notes for
         details.
     numeric : bool, default True
@@ -211,7 +240,7 @@ class Description:
         A distinct sequence of floating point values all between 0 and 100.
         The default percentiles are 1, 5, 10, 25, 50, 75, 90, 95, 99.
     ntop : int, default 5
-        The number of top categorical labels to report. Default is
+        The number of top categorical labels to report. Default is 5.
 
     Attributes
     ----------
@@ -252,14 +281,14 @@ class Description:
     * "kurtosis" - The kurtosis defined as the standardized 4th central moment
     * "jarque_bera" - The Jarque-Bera test statistic for normality based on
       the skewness and kurtosis. This option creates two entries, jarque_bera
-      and jarque_beta_pval.
+      and jarque_bera_pval.
     * "mode" - The mode of the data. This option creates two entries in all tables,
       mode and mode_freq which is the empirical frequency of the modal value.
     * "median" - The median of the data.
     * "percentiles" - The percentiles. Values included depend on the input value of
       ``percentiles``.
     * "distinct" - The number of distinct categories in a categorical.
-    * "top" - The mode common categories. Labeled top_n for n in 1, 2, ..., ``ntop``.
+    * "top" - The most common categories. Labeled top_n for n in 1, 2, ..., ``ntop``.
     * "freq" - The frequency of the common categories. Labeled freq_n for n in 1,
       2, ..., ``ntop``.
     """
@@ -666,9 +695,7 @@ def describe(
 
 
 class Describe:
-    """
-    Removed.
-    """
+    """Removed"""
 
     def __init__(self, dataset):
         raise NotImplementedError("Describe has been removed")
