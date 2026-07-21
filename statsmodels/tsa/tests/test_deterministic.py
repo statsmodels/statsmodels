@@ -1,6 +1,5 @@
 from statsmodels.compat.pandas import (
     MONTH_END,
-    PD_LT_1_0_0,
     QUARTER_END,
     YEAR_END,
     is_int_index,
@@ -338,7 +337,6 @@ def test_fourier(index):
     assert list(terms.columns) == cols
 
 
-@pytest.mark.skipif(PD_LT_1_0_0, reason="bug in old pandas")
 def test_index_like():
     idx = np.empty((100, 2))
     with pytest.raises(TypeError, match="index must be a pandas"):
