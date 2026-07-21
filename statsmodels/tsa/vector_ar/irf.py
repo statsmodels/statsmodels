@@ -220,7 +220,7 @@ class BaseIRAnalysis:
         """
 
         if orth:
-            title = "Cumulative responses responses (orthogonalized)"
+            title = "Cumulative responses (orthogonalized)"
             cum_effects = self.orth_cum_effects
             lr_effects = self.orth_lr_effects
         else:

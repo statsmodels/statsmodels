@@ -1227,7 +1227,7 @@ def test_autoreg_apply_exception():
     y = rs.standard_normal(250)
     mod = AutoReg(y, lags=10)
     res = mod.fit()
-    with pytest.raises(ValueError, match="An exception occured"):
+    with pytest.raises(ValueError, match="An exception occurred"):
         res.apply(y[:5])
 
     x = rs.standard_normal((y.shape[0], 3))

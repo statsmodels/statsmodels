@@ -573,7 +573,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # index below
                     if dates is not None:
                         raise ValueError(
-                            "Non-date index index provided to"
+                            "Non-date index provided to"
                             " `dates` argument."
                         ) from exc
             # Now, if we were given, or coerced, a date-based index, make sure

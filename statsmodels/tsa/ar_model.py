@@ -874,7 +874,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             if exog_oos is not None and exog_oos.shape[1] != self.exog.shape[1]:
                 msg = (
                     "The number of columns in exog_oos ({0}) must match "
-                    "the number of columns  in the exog variable used to "
+                    "the number of columns in the exog variable used to "
                     "create the model ({1})."
                 )
                 raise ValueError(msg.format(exog_oos.shape[1], self.exog.shape[1]))
@@ -1896,7 +1896,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             )
         except Exception as exc:
             error = (
-                "An exception occured during the creation of the cloned "
+                "An exception occurred during the creation of the cloned "
                 "AutoReg instance when applying the existing model "
                 "specification to the new data. The original traceback "
                 "appears below."
@@ -2109,8 +2109,8 @@ def ar_select_order(
     ic : {'aic', 'hqic', 'bic'}
         The information criterion to use in the selection.
     glob : bool
-        Flag indicating where to use a global search  across all combinations
-        of lags.  In practice, this option is not computational feasible when
+        Flag indicating whether to use a global search across all combinations
+        of lags.  In practice, this option is not computationally feasible when
         maxlag is larger than 15 (or perhaps 20) since the global search
         requires fitting 2**maxlag models.\n%(auto_reg_params)s
 

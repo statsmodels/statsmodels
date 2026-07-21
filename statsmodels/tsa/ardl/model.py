@@ -190,7 +190,7 @@ class ARDL(AutoReg):
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
     order : {int, sequence[int], dict}
-        If int, uses lags 0, 1, ..., order  for all exog variables. If
+        If int, uses lags 0, 1, ..., order for all exog variables. If
         sequence[int], uses the ``order`` for all variables. If a dict,
         applies the lags series by series. If ``exog`` is anything other
         than a DataFrame, the keys are the column index of exog (e.g., 0,
@@ -860,7 +860,7 @@ class ARDL(AutoReg):
             include lags 1 and 4 while lags=4 will include lags 1, 2, 3,
             and 4.
         order : {int, sequence[int], dict}
-            If int, uses lags 0, 1, ..., order  for all exog variables. If
+            If int, uses lags 0, 1, ..., order for all exog variables. If
             sequence[int], uses the ``order`` for all variables. If a dict,
             applies the lags series by series. If ``exog`` is anything other
             than a DataFrame, the keys are the column index of exog (e.g., 0,
@@ -1555,7 +1555,7 @@ lags_descr = textwrap.wrap(
 )
 lags_param = Parameter(name="lags", type="int", desc=lags_descr)
 order_descr = textwrap.wrap(
-    "If int, uses lags 0, 1, ..., order  for all exog variables. If a dict, "
+    "If int, uses lags 0, 1, ..., order for all exog variables. If a dict, "
     "applies the lags series by series. If ``exog`` is anything other than a "
     "DataFrame, the keys are the column index of exog (e.g., 0, 1, ...). If "
     "a DataFrame, keys are column names.",
@@ -1603,7 +1603,7 @@ class UECM(ARDL):
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
     order : {int, sequence[int], dict}
-        If int, uses lags 0, 1, ..., order  for all exog variables. If a
+        If int, uses lags 0, 1, ..., order for all exog variables. If a
         dict, applies the lags series by series. If ``exog`` is anything
         other than a DataFrame, the keys are the column index of exog
         (e.g., 0, 1, ...). If a DataFrame, keys are column names.
@@ -2296,7 +2296,7 @@ class UECMResults(ARDLResults):
         -------
         BoundsTestResult
             Named tuple containing ``stat``, ``crit_vals``, ``p_values``,
-            ``null` and ``alternative``. The statistic is the F-type
+            ``null`` and ``alternative``. The statistic is the F-type
             test statistic favored in PSS.
 
         Notes

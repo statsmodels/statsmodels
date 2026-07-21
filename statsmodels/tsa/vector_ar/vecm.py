@@ -304,14 +304,14 @@ def _endog_matrices(
     -------
     y_1_T : ndarray (neqs x nobs)
         The (transposed) data without the presample.
-        `.. math:: (y_1, \\ldots, y_T)
+        :math:`(y_1, \\ldots, y_T)`
     delta_y_1_T : ndarray (neqs x nobs)
         The first differences of endog.
-        `.. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
+        :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
     y_lag1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Endog of the previous period (lag 1).
-        `.. math:: (y_0, \\ldots, y_{T-1})
+        :math:`(y_0, \\ldots, y_{T-1})`
     delta_x : ndarray (k_ar_diff*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Lagged differenced endog, used as regressor for the short term
@@ -384,11 +384,11 @@ def _r_matrices(delta_y_1_T, y_lag1, delta_x):
     ----------
     delta_y_1_T : ndarray (neqs x nobs)
         The first differences of endog.
-        `.. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
+        :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
     y_lag1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Endog of the previous period (lag 1).
-        `.. math:: (y_0, \\ldots, y_{T-1})
+        :math:`(y_0, \\ldots, y_{T-1})`
     delta_x : ndarray (k_ar_diff*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Lagged differenced endog, used as regressor for the short term

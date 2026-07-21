@@ -253,8 +253,8 @@ def adfuller(
     .. [2] Hamilton, J.D.  "Time Series Analysis".  Princeton, 1994.
 
     .. [3] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
-        unit-root and cointegration tests.  `Journal of Business and Economic
-        Statistics` 12, 167-76.
+        unit-root and cointegration tests.  *Journal of Business and Economic
+        Statistics* 12, 167-76.
 
     .. [4] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
         University, Dept of Economics, Working Papers.  Available at
@@ -1858,7 +1858,7 @@ def kpss(
         Indicates the number of lags to be used. If "auto" (default), lags
         is calculated using the data-dependent method of Hobijn et al. (1998).
         See also Andrews (1991), Newey & West (1994), and Schwert (1989). If
-        set to "legacy",  uses int(12 * (n / 100)**(1 / 4)) , as outlined in
+        set to "legacy", uses int(12 * (n / 100)**(1 / 4)), as outlined in
         Schwert (1989).
     store : bool
         If True, then a result instance is returned additionally to

@@ -129,8 +129,8 @@ When using the multiplicative error model
                L_t\quad\text{else}
            \end{cases}
 
-When fitting an ETS model, the parameters :math:`\alpha, \beta`, \gamma,
-\phi` and the initial states `l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are
+When fitting an ETS model, the parameters :math:`\alpha, \beta, \gamma, \phi`
+and the initial states :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are
 selected as maximizers of log likelihood.
 
 References
@@ -398,9 +398,10 @@ class ETSModel(base.StateSpaceMLEModel):
                    L_t\quad\text{else}
                \end{cases}
 
-    When fitting an ETS model, the parameters :math:`\alpha, \beta`, \gamma,
-    \phi` and the initial states `l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are
-    selected as maximizers of log likelihood.
+    When fitting an ETS model, the parameters
+    :math:`\alpha, \beta, \gamma, \phi` and the initial states
+    :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are selected as
+    maximizers of log likelihood.
 
     References
     ----------
@@ -921,10 +922,11 @@ class ETSModel(base.StateSpaceMLEModel):
         r"""
         Fit an ETS model by maximizing log-likelihood
 
-        Log-likelihood is a function of the model parameters :math:`\alpha,
-        \beta, \gamma, \phi` (depending on the chosen model), and, if
-        `initialization_method` was set to `'estimated'` in the constructor,
-        also the initial states :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}`.
+        Log-likelihood is a function of the model parameters
+        :math:`\alpha, \beta, \gamma, \phi` (depending on the chosen model),
+        and, if `initialization_method` was set to `'estimated'` in the
+        constructor, also the initial states
+        :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}`.
 
         The fit is performed using the L-BFGS algorithm.
 
@@ -1166,8 +1168,8 @@ class ETSModel(base.StateSpaceMLEModel):
 
            s^2 = \frac{1}{n}\sum\limits_{t=1}^n \frac{(\hat{y}_t - y_t)^2}{k_t}
 
-        where :math:`k_t = 1` for the additive error model and :math:`k_t =
-        y_t` for the multiplicative error model.
+        where :math:`k_t = 1` for the additive error model and
+        :math:`k_t = y_t` for the multiplicative error model.
 
         References
         ----------
