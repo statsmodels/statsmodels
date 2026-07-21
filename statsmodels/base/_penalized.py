@@ -17,14 +17,18 @@ class PenalizedMixin:
 
     Parameters
     ----------
-    args and kwds for the model super class
+    *args
+        Positional arguments for the model super class.
     penal : None or instance of Penalized function class
         If penal is None, then NonePenalty is used.
     pen_weight : float or None
-        factor for weighting the penalization term.
+        Factor for weighting the penalization term.
         If None, then pen_weight is set to nobs.
+    **kwds
+        Keyword arguments for the model super class.
 
-
+    Notes
+    -----
     TODO: missing **kwds or explicit keywords
 
     TODO: do we adjust the inherited docstrings?
@@ -67,9 +71,7 @@ class PenalizedMixin:
         return scale
 
     def loglike(self, params, pen_weight=None, **kwds):
-        """
-        Log-likelihood of model at params
-        """
+        """Log-likelihood of model at params"""
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -81,9 +83,7 @@ class PenalizedMixin:
         return llf
 
     def loglikeobs(self, params, pen_weight=None, **kwds):
-        """
-        Log-likelihood of model observations at params
-        """
+        """Log-likelihood of model observations at params"""
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -97,8 +97,7 @@ class PenalizedMixin:
         return llf
 
     def score_numdiff(self, params, pen_weight=None, method="fd", **kwds):
-        """score based on finite difference derivative
-        """
+        """Score based on finite difference derivative"""
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -113,9 +112,7 @@ class PenalizedMixin:
             raise ValueError('method not recognized, should be "fd" or "cs"')
 
     def score(self, params, pen_weight=None, **kwds):
-        """
-        Gradient of model at params
-        """
+        """Gradient of model at params"""
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -127,9 +124,7 @@ class PenalizedMixin:
         return sc
 
     def score_obs(self, params, pen_weight=None, **kwds):
-        """
-        Gradient of model observations at params
-        """
+        """Gradient of model observations at params"""
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -142,8 +137,7 @@ class PenalizedMixin:
         return sc
 
     def hessian_numdiff(self, params, pen_weight=None, **kwds):
-        """hessian based on finite difference derivative
-        """
+        """Hessian based on finite difference derivative"""
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -154,9 +148,7 @@ class PenalizedMixin:
         return approx_hess(params, loglike)
 
     def hessian(self, params, pen_weight=None, **kwds):
-        """
-        Hessian of model at params
-        """
+        """Hessian of model at params"""
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -172,7 +164,7 @@ class PenalizedMixin:
         return hess
 
     def fit(self, method=None, trim=None, **kwds):
-        """minimize negative penalized log-likelihood
+        """Minimize negative penalized log-likelihood
 
         Parameters
         ----------

@@ -12,6 +12,8 @@ __all__ = ["pytest_warns"]
 
 
 class NoWarningsChecker:
+    """Context manager that asserts no warnings are raised in its block"""
+
     def __init__(self):
         self.cw = warnings.catch_warnings(record=True)
         self.rec = []
@@ -38,13 +40,14 @@ def pytest_warns(
 
     Parameters
     ----------
-    warning: {None, Warning, Tuple[Warning]}
-        None if no warning is produced, or a single or multiple Warnings
+    warning : {None, Warning, tuple[Warning, ...]}
+        None if no warning is produced, or a single or multiple Warnings.
 
     Returns
     -------
-    cm
-
+    WarningsChecker or NoWarningsChecker
+        A context manager that checks for the expected warning(s), or
+        that verifies no warnings are raised if `warning` is None.
     """
     if warning is None:
         return NoWarningsChecker()

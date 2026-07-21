@@ -87,7 +87,7 @@ assert_series_equal = testing.assert_series_equal
 
 @contextmanager
 def _infer_freq_returns_offset():
-
+    """Context manager that requests offset return values from infer_freq"""
     # pandas 3.1 changes the return value of infer_freq
     try:
         with pd.option_context("future.infer_freq_returns_offset", True):
@@ -98,7 +98,19 @@ def _infer_freq_returns_offset():
 
 
 def infer_freq(index) -> str | None:
+    """
+    Infer the frequency string of a datetime index
 
+    Parameters
+    ----------
+    index : pd.Index
+        An index to infer the frequency of.
+
+    Returns
+    -------
+    str or None
+        The inferred frequency string, or None if it cannot be inferred.
+    """
     # pandas 3.1 changes the return value of infer_freq
     with _infer_freq_returns_offset():
         freq = pd.infer_freq(index)
@@ -153,7 +165,25 @@ def is_float_index(index: pd.Index) -> bool:
 
 def rands_array(generator=None, nchars=10, size=10, dtype="O"):
     """
-    Generate an array of byte strings.
+    Generate an array of byte strings
+
+    Parameters
+    ----------
+    generator : Generator, optional
+        A NumPy random generator. If None, ``np.random.default_rng()`` is
+        used.
+    nchars : int, optional
+        The number of characters in each string.
+    size : int or tuple[int, ...], optional
+        The shape of the output array.
+    dtype : str or None, optional
+        The dtype to cast the output to. If None, the raw string array is
+        returned.
+
+    Returns
+    -------
+    ndarray
+        An array of random strings.
     """
     if generator is None:
         generator = np.random.default_rng()
@@ -174,6 +204,17 @@ def rands_array(generator=None, nchars=10, size=10, dtype="O"):
 def make_dataframe(generator=None):
     """
     Simple version of pandas._testing.makeDataFrame
+
+    Parameters
+    ----------
+    generator : Generator, optional
+        A NumPy random generator. If None, ``np.random.default_rng()`` is
+        used.
+
+    Returns
+    -------
+    DataFrame
+        A DataFrame with 30 rows and 4 columns of standard normal data.
     """
     if generator is None:
         generator = np.random.default_rng()
@@ -194,7 +235,8 @@ def to_numpy(po: pd.DataFrame) -> np.ndarray:
 
     Parameters
     ----------
-    po : Pandas obkect
+    po : DataFrame
+        A pandas object.
 
     Returns
     -------
@@ -208,6 +250,19 @@ def to_numpy(po: pd.DataFrame) -> np.ndarray:
 
 
 def get_cached_func(cached_prop):
+    """
+    Get the underlying function of a cached property
+
+    Parameters
+    ----------
+    cached_prop : cache_readonly
+        A cached property instance.
+
+    Returns
+    -------
+    callable
+        The wrapped function.
+    """
     try:
         return cached_prop.fget
     except AttributeError:
@@ -215,11 +270,41 @@ def get_cached_func(cached_prop):
 
 
 def call_cached_func(cached_prop, *args, **kwargs):
+    """
+    Call the underlying function of a cached property
+
+    Parameters
+    ----------
+    cached_prop : cache_readonly
+        A cached property instance.
+    *args
+        Positional arguments passed to the underlying function.
+    **kwargs
+        Keyword arguments passed to the underlying function.
+
+    Returns
+    -------
+    object
+        The result of calling the underlying function.
+    """
     f = get_cached_func(cached_prop)
     return f(*args, **kwargs)
 
 
 def get_cached_doc(cached_prop) -> Optional[str]:
+    """
+    Get the docstring of the underlying function of a cached property
+
+    Parameters
+    ----------
+    cached_prop : cache_readonly
+        A cached property instance.
+
+    Returns
+    -------
+    str or None
+        The docstring of the underlying function.
+    """
     return get_cached_func(cached_prop).__doc__
 
 
@@ -235,6 +320,29 @@ def deprecate_kwarg(
     mapping: Mapping[Any, Any] | Callable[[Any], Any] | None = None,
     stacklevel: int = 2,
 ) -> Callable[[F], F]:
+    """
+    Decorator to deprecate a keyword argument of a function
+
+    Parameters
+    ----------
+    old_arg_name : str
+        Name of argument in function to deprecate.
+    new_arg_name : str or None
+        Name of preferred argument in function. Use None to raise warning
+        that ``old_arg_name`` keyword is deprecated.
+    mapping : dict or callable, optional
+        If mapping is present, use it to translate old arguments to
+        new arguments. A callable must do its own value checking;
+        values not found in a dict will be raised as-is.
+    stacklevel : int, optional
+        How far up the stack the warning is to be logged.
+
+    Returns
+    -------
+    callable
+        A decorator that wraps the decorated function to warn on use of
+        the deprecated keyword.
+    """
     if PD_LT_3:
         return pd_deprecate_kwarg(
             old_arg_name=old_arg_name,

@@ -1,4 +1,4 @@
-"""US Capital Punishment dataset."""
+"""US Capital Punishment dataset"""
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"
@@ -7,7 +7,7 @@ COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
 TITLE = __doc__
 SOURCE = """
-Jeff Gill's `Generalized Linear Models: A Unified Approach`
+Jeff Gill's *Generalized Linear Models: A Unified Approach*
 
 http://jgill.wustl.edu/research/books.html
 """
@@ -35,9 +35,9 @@ NOTE = """::
         INCOME - Median per capita income in 1996 dollars
         PERPOVERTY - Percent of the population classified as living in poverty
         PERBLACK - Percent of black citizens in the population
-        VC100k96 - Rate of violent crimes per 100,00 residents for 1996
+        VC100k96 - Rate of violent crimes per 100,000 residents for 1996
         SOUTH - SOUTH == 1 indicates a state in the South
-        DEGREE - An esimate of the proportion of the state population with a
+        DEGREE - An estimate of the proportion of the state population with a
             college degree of some kind
 
     State names are included in the data file, though not returned by load.

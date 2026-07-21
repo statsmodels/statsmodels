@@ -1,6 +1,6 @@
 """
 Functions that are general enough to use for any model fitting. The idea is
-to untie these from LikelihoodModel so that they may be re-used generally.
+to untie these from LikelihoodModel so that they may be re-used generally
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ class Optimizer:
         retall=False,
     ):
         """
-        Fit function for any model with an objective function.
+        Fit function for any model with an objective function
 
         Parameters
         ----------
@@ -71,14 +71,15 @@ class Optimizer:
         kwargs : dict[str, Any]
             Extra keyword arguments passed to the objective function, i.e.
             objective(x,**kwargs)
-        hessian : str, optional
+        hessian : callable, optional
             Method for computing the Hessian matrix, if applicable.
-        method : str {'newton','nm','bfgs','powell','cg','ncg','basinhopping',
-            'minimize'}
+        method : str {'newton','nm','bfgs','lbfgs','powell','cg','ncg',
+            'basinhopping', 'minimize'}
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
-            'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
-            Powell's method, 'cg' for conjugate gradient, 'ncg' for Newton-
-            conjugate gradient, 'basinhopping' for global basin-hopping
+            'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'lbfgs' for
+            limited-memory BFGS with optional box constraints, 'powell' for
+            modified Powell's method, 'cg' for conjugate gradient, 'ncg' for
+            Newton-conjugate gradient, 'basinhopping' for global basin-hopping
             solver, if available or a generic 'minimize' which is a wrapper for
             scipy.optimize.minimize. `method` determines which solver from
             scipy.optimize is used. The explicit arguments in `fit` are passed
@@ -86,7 +87,7 @@ class Optimizer:
             solver has several optional arguments that are not the same across
             solvers. See the notes section below (or scipy.optimize) for the
             available arguments and for the list of explicit arguments that the
-            basin-hopping solver supports..
+            basin-hopping solver supports.
         maxiter : int
             The maximum number of iterations to perform.
         full_output : bool
@@ -307,6 +308,11 @@ class Optimizer:
         model_instance.add_constraint(func)
         model_instance.add_constraint("x1 + x2 = 2")
         result = model_instance.fit()
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters.
         """
         raise NotImplementedError
 
@@ -336,7 +342,7 @@ def _fit_minimize(
     hess=None,
 ):
     """
-    Fit using scipy minimize, where kwarg `min_method` defines the algorithm.
+    Fit using scipy minimize, where kwarg `min_method` defines the algorithm
 
     Parameters
     ----------
@@ -367,7 +373,7 @@ def _fit_minimize(
         Set to True to have all available output in the Results object's
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
-    hess : str, optional
+    hess : callable, optional
         Method for computing the Hessian matrix, if applicable.
 
     Returns
@@ -476,7 +482,7 @@ def _fit_newton(
     ridge_factor=1e-10,
 ):
     """
-    Fit using Newton-Raphson algorithm.
+    Fit using Newton-Raphson algorithm
 
     Parameters
     ----------
@@ -507,7 +513,7 @@ def _fit_newton(
         Set to True to have all available output in the Results object's
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
-    hess : str, optional
+    hess : callable, optional
         Method for computing the Hessian matrix, if applicable.
     ridge_factor : float
         Regularization factor for Hessian matrix.
@@ -596,7 +602,7 @@ def _fit_bfgs(
     hess=None,
 ):
     """
-    Fit using Broyden-Fletcher-Goldfarb-Shannon algorithm.
+    Fit using Broyden-Fletcher-Goldfarb-Shannon algorithm
 
     Parameters
     ----------
@@ -627,7 +633,7 @@ def _fit_bfgs(
         Set to True to have all available output in the Results object's
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
-    hess : str, optional
+    hess : callable, optional
         Method for computing the Hessian matrix, if applicable.
 
     Returns
@@ -695,7 +701,7 @@ def _fit_lbfgs(
     hess=None,
 ):
     """
-    Fit using Limited-memory Broyden-Fletcher-Goldfarb-Shannon algorithm.
+    Fit using Limited-memory Broyden-Fletcher-Goldfarb-Shannon algorithm
 
     Parameters
     ----------
@@ -726,7 +732,7 @@ def _fit_lbfgs(
         Set to True to have all available output in the Results object's
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
-    hess : str, optional
+    hess : callable, optional
         Method for computing the Hessian matrix, if applicable.
 
     Returns
@@ -871,7 +877,7 @@ def _fit_nm(
     hess=None,
 ):
     """
-    Fit using Nelder-Mead algorithm.
+    Fit using Nelder-Mead algorithm
 
     Parameters
     ----------
@@ -902,7 +908,7 @@ def _fit_nm(
         Set to True to have all available output in the Results object's
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
-    hess : str, optional
+    hess : callable, optional
         Method for computing the Hessian matrix, if applicable.
 
     Returns
@@ -967,7 +973,7 @@ def _fit_cg(
     hess=None,
 ):
     """
-    Fit using Conjugate Gradient algorithm.
+    Fit using Conjugate Gradient algorithm
 
     Parameters
     ----------
@@ -998,7 +1004,7 @@ def _fit_cg(
         Set to True to have all available output in the Results object's
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
-    hess : str, optional
+    hess : callable, optional
         Method for computing the Hessian matrix, if applicable.
 
     Returns
@@ -1064,7 +1070,7 @@ def _fit_ncg(
     hess=None,
 ):
     """
-    Fit using Newton Conjugate Gradient algorithm.
+    Fit using Newton Conjugate Gradient algorithm
 
     Parameters
     ----------
@@ -1095,7 +1101,7 @@ def _fit_ncg(
         Set to True to have all available output in the Results object's
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
-    hess : str, optional
+    hess : callable, optional
         Method for computing the Hessian matrix, if applicable.
 
     Returns
@@ -1163,7 +1169,7 @@ def _fit_powell(
     hess=None,
 ):
     """
-    Fit using Powell's conjugate direction algorithm.
+    Fit using Powell's conjugate direction algorithm
 
     Parameters
     ----------
@@ -1194,7 +1200,7 @@ def _fit_powell(
         Set to True to have all available output in the Results object's
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
-    hess : str, optional
+    hess : callable, optional
         Method for computing the Hessian matrix, if applicable.
 
     Returns
@@ -1262,7 +1268,7 @@ def _fit_basinhopping(
     hess=None,
 ):
     """
-    Fit using Basin-hopping algorithm.
+    Fit using Basin-hopping algorithm
 
     Parameters
     ----------
@@ -1293,7 +1299,7 @@ def _fit_basinhopping(
         Set to True to have all available output in the Results object's
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
-    hess : str, optional
+    hess : callable, optional
         Method for computing the Hessian matrix, if applicable.
 
     Returns

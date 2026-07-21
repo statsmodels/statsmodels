@@ -64,8 +64,23 @@ np_new_unique = np.unique
 
 def lstsq(a, b, rcond=None):
     """
-    Shim that allows modern rcond setting with backward compat for NumPY
+    Shim that allows modern rcond setting with backward compat for NumPy
     earlier than 1.14
+
+    Parameters
+    ----------
+    a : ndarray
+        Coefficient matrix.
+    b : ndarray
+        Ordinate or "dependent variable" values.
+    rcond : float, optional
+        Cutoff ratio for small singular values of `a`. If None, a
+        version-dependent default is used.
+
+    Returns
+    -------
+    tuple
+        The output of ``np.linalg.lstsq``.
     """
     if NP_LT_114 and rcond is None:
         rcond = -1
@@ -73,6 +88,21 @@ def lstsq(a, b, rcond=None):
 
 
 def inplace_reshape(arr: np.ndarray, shape: tuple[int, ...]) -> np.ndarray:
+    """
+    Reshape an array in place when possible, falling back to a copy
+
+    Parameters
+    ----------
+    arr : ndarray
+        The array to reshape.
+    shape : tuple[int, ...]
+        The new shape.
+
+    Returns
+    -------
+    ndarray
+        The reshaped array.
+    """
     try:
         return arr.reshape(shape, copy=False)
     except TypeError:

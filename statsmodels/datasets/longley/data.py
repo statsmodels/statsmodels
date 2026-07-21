@@ -13,7 +13,7 @@ http://www.itl.nist.gov/div898/strd/lls/data/Longley.shtml
 ::
 
     Longley, J.W. (1967) "An Appraisal of Least Squares Programs for the
-        Electronic Comptuer from the Point of View of the User."  Journal of
+        Electronic Computer from the Point of View of the User."  Journal of
         the American Statistical Association.  62.319, 819-41.
 """
 
