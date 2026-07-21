@@ -1450,7 +1450,7 @@ def breakvar_heteroskedasticity_test(
     return test_statistic, p_value
 
 
-def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
+def grangercausalitytests(x, maxlag, addconst=True):
     """
     Four tests for Granger non-causality of 2 time series
 
@@ -1468,12 +1468,6 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
         iterable, computes the tests only for the lags in maxlag.
     addconst : bool
         Include a constant in the model.
-    verbose : bool
-        Print results. Deprecated
-
-        .. deprecated:: 0.14
-
-           verbose is deprecated and will be removed after 0.15 is released
 
     Returns
     -------
@@ -1529,15 +1523,6 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
     if not np.isfinite(x).all():
         raise ValueError("x contains NaN or inf values.")
     addconst = bool_like(addconst, "addconst")
-    if verbose is not None:
-        verbose = bool_like(verbose, "verbose")
-        warnings.warn(
-            "verbose is deprecated since functions should not print results",
-            FutureWarning,
-            stacklevel=2,
-        )
-    else:
-        verbose = True  # old default
 
     try:
         maxlag = int_like(maxlag, "maxlag")
@@ -1562,9 +1547,6 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
 
     for mlg in lags:
         result = {}
-        if verbose:
-            print("\nGranger Causality")
-            print("number of lags (no zero)", mlg)
         mxlg = mlg
 
         # create lagmat of both time series
@@ -1618,17 +1600,6 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
             / mxlg
             * res2djoint.df_resid
         )
-        if verbose:
-            print(
-                "ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,"
-                " df_num=%d"
-                % (
-                    fgc1,
-                    stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
-                    res2djoint.df_resid,
-                    mxlg,
-                )
-            )
         result["ssr_ftest"] = (
             fgc1,
             stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
@@ -1638,20 +1609,10 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
 
         # Granger Causality test using ssr (ch2 statistic)
         fgc2 = res2down.nobs * (res2down.ssr - res2djoint.ssr) / res2djoint.ssr
-        if verbose:
-            print(
-                "ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, "
-                "df=%d" % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
-            )
         result["ssr_chi2test"] = (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
         # likelihood ratio test pvalue:
         lr = -2 * (res2down.llf - res2djoint.llf)
-        if verbose:
-            print(
-                "likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d"
-                % (lr, stats.chi2.sf(lr, mxlg), mxlg)
-            )
         result["lrtest"] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
@@ -1659,12 +1620,6 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
             (np.zeros((mxlg, mxlg)), np.eye(mxlg, mxlg), np.zeros((mxlg, 1)))
         )
         ftres = res2djoint.f_test(rconstr)
-        if verbose:
-            print(
-                "parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,"
-                " df_num=%d"
-                % (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
-            )
         result["params_ftest"] = (
             np.squeeze(ftres.fvalue)[()],
             np.squeeze(ftres.pvalue)[()],
