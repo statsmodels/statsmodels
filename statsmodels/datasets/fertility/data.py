@@ -1,4 +1,4 @@
-"""World Bank Fertility Data."""
+"""World Bank Fertility Data"""
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

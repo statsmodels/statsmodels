@@ -44,7 +44,7 @@ NOTE = """::
         Percent of population that is one race - white only. From 2009 American
         Community Survey
     single
-        Calculated from 2009 1-year American Community Survey obtained obtained
+        Calculated from 2009 1-year American Community Survey obtained
         from Census. Variable is Male householder, no wife present, family
         household combined with Female householder, no husband present, family
         household, divided by the total number of Family households.

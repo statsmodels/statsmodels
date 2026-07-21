@@ -4,7 +4,7 @@ from statsmodels.datasets import utils as du
 __docformat__ = "restructuredtext"
 
 COPYRIGHT = """Used with express permission of the original author, who
-retains all rights. """
+retains all rights."""
 TITLE = __doc__
 SOURCE = """
 http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm
