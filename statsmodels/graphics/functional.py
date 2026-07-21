@@ -1,4 +1,4 @@
-"""Module for functional boxplots."""
+"""Module for functional boxplots"""
 
 from statsmodels.compat.numpy import NP_LT_123
 
@@ -26,7 +26,7 @@ __all__ = ["banddepth", "fboxplot", "hdrboxplot", "rainbowplot"]
 
 
 class HdrResults:
-    """Wrap results and pretty print them."""
+    """Wrap results and pretty print them"""
 
     def __init__(self, kwds):
         self.__dict__.update(kwds)
@@ -54,7 +54,7 @@ class HdrResults:
 
 def _inverse_transform(pca, data):
     """
-    Inverse transform on PCA.
+    Inverse transform on PCA
 
     Use PCA's `project` method by temporary replacing its factors with
     `data`.
@@ -83,7 +83,8 @@ def _inverse_transform(pca, data):
 
 
 def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
-    """Find out if the curve is within the band.
+    """
+    Find out if the curve is within the band
 
     The curve value at :attr:`idx` for a given PDF is only returned if
     within bounds defined by the band. Otherwise, 1E6 is returned.
@@ -101,6 +102,7 @@ def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
     pca : statsmodels Principal Component Analysis instance
         The PCA object to use.
     ks_gaussian : KDEMultivariate instance
+        The kernel density estimate used to compute the PDF of the curve.
 
     Returns
     -------
@@ -118,13 +120,13 @@ def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
 
 def _min_max_band(args):
     """
-    Min and max values at `idx`.
+    Min and max values at `idx`
 
     Global optimization to find the extrema per component.
 
     Parameters
     ----------
-    args: list
+    args : list
         It is a list of an idx and other arguments as a tuple:
             idx : int
                 Index value of the components to compute
@@ -310,8 +312,8 @@ def hdrboxplot(
 
     References
     ----------
-    [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
-        Functional Data", vol. 19, pp. 29-45, 2010.
+    .. [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots
+           for Functional Data", vol. 19, pp. 29-45, 2010.
 
     Examples
     --------
@@ -406,7 +408,7 @@ def hdrboxplot(
 
     def _band_quantiles(band, use_brute=use_brute, seed=seed):
         """
-        Find extreme curves for a quantile band.
+        Find extreme curves for a quantile band
 
         From the `band` of quantiles, the associated PDF extrema values
         are computed. If `min_alpha` is not provided (single quantile value),
@@ -428,7 +430,6 @@ def hdrboxplot(
             Seed value to pass to scipy.optimize.differential_evolution. Can
             be an integer or RandomState instance. If None, then the default
             RandomState provided by np.random is used.
-
 
         Returns
         -------
@@ -542,7 +543,7 @@ def fboxplot(
     plot_opts=None,
 ):
     """
-    Plot functional boxplot.
+    Plot functional boxplot
 
     A functional boxplot is the analog of a boxplot for functional data.
     Functional data is any type of data that varies over a continuum, i.e.
@@ -622,10 +623,10 @@ def fboxplot(
 
     References
     ----------
-    [1] Y. Sun and M.G. Genton, "Functional Boxplots", Journal of Computational
-        and Graphical Statistics, vol. 20, pp. 1-19, 2011.
-    [2] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
-        Functional Data", vol. 19, pp. 29-45, 2010.
+    .. [1] Y. Sun and M.G. Genton, "Functional Boxplots", Journal of
+           Computational and Graphical Statistics, vol. 20, pp. 1-19, 2011.
+    .. [2] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots
+           for Functional Data", vol. 19, pp. 29-45, 2010.
 
     Examples
     --------
@@ -748,7 +749,7 @@ def fboxplot(
 
 def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
     """
-    Create a rainbow plot for a set of curves.
+    Create a rainbow plot for a set of curves
 
     A rainbow plot contains line plots of all curves in the dataset, colored in
     order of functional depth.  The median curve is shown in black.
@@ -790,8 +791,8 @@ def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
 
     References
     ----------
-    [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
-        Functional Data", vol. 19, pp. 29-25, 2010.
+    .. [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots
+           for Functional Data", vol. 19, pp. 29-45, 2010.
 
     Examples
     --------
@@ -853,7 +854,7 @@ def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
 
 def banddepth(data, method="MBD"):
     """
-    Calculate the band depth for a set of functional curves.
+    Calculate the band depth for a set of functional curves
 
     Band depth is an order statistic for functional data (see `fboxplot`), with
     a higher band depth indicating larger "centrality".  In analog to scalar
