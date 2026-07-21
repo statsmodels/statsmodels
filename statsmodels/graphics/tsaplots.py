@@ -1,4 +1,4 @@
-"""Correlation plot functions."""
+"""Correlation plot functions"""
 
 from statsmodels.compat.pandas import deprecate_kwarg
 
@@ -17,6 +17,29 @@ if TYPE_CHECKING:
 
 
 def _prepare_data_corr_plot(x, lags, zero):
+    """
+    Compute the lags to plot and whether they are regularly spaced
+
+    Parameters
+    ----------
+    x : array_like
+        Array of time-series values.
+    lags : {int, array_like, None}
+        An int or array of lag values, or None to use a sensible default
+        based on the number of observations in `x`.
+    zero : bool
+        Flag indicating whether to include the 0-lag value.
+
+    Returns
+    -------
+    lags : ndarray
+        The array of lag values to plot.
+    nlags : int
+        The maximum lag value.
+    irregular : bool
+        True if `lags` was given as an explicit, possibly non-contiguous,
+        array of lag values.
+    """
     zero = bool(zero)
     irregular = False if zero else True
     if lags is None:
@@ -47,6 +70,41 @@ def _plot_corr(
     skip_lag0_confint=True,
     **kwargs,
 ):
+    """
+    Plot the values in `acf_x`, optionally with vertical lines and a
+    confidence band
+
+    Parameters
+    ----------
+    ax : AxesSubplot
+        The subplot to plot in.
+    title : str
+        Title to place on plot.
+    acf_x : ndarray
+        The correlation values to plot, one per lag.
+    confint : ndarray, optional
+        The confidence interval bounds for each lag in `acf_x`, or None
+        if no confidence band should be drawn.
+    lags : ndarray
+        The lag values to use on the horizontal axis.
+    irregular : bool
+        If True, `acf_x` and `confint` are indexed with `lags` before
+        plotting (they contain values for a superset of the requested
+        lags).
+    use_vlines : bool
+        If True, vertical lines and markers are plotted. If False, only
+        markers are plotted.
+    vlines_kwargs : dict
+        Keyword arguments passed to ``ax.vlines``.
+    auto_ylims : bool, optional
+        If True, adjusts automatically the y-axis limits to the values
+        in `acf_x` and `confint`.
+    skip_lag0_confint : bool, optional
+        If True, the confidence interval is not drawn for the 0 lag.
+    **kwargs
+        Additional keyword arguments passed to ``ax.plot`` and
+        ``ax.axhline``.
+    """
     if irregular:
         acf_x = acf_x[lags]
         if confint is not None:
@@ -128,7 +186,7 @@ def plot_acf(
         If True, vertical lines and markers are plotted.
         If False, only markers are plotted.  The default marker is 'o'; it can
         be overridden with a ``marker`` kwarg.
-    adjusted : bool
+    adjusted : bool, optional
         If True, then denominators for autocovariance are n-k, otherwise n
     fft : bool, optional
         If True, computes the ACF via FFT.
@@ -279,12 +337,12 @@ def plot_pacf(
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         1/sqrt(len(x))
-    method : str
+    method : str, optional
         Specifies which method for the calculations to use:
 
         - "ywm" or "ywmle" : Yule-Walker without adjustment. Default.
         - "yw" or "ywadjusted" : Yule-Walker with sample-size adjustment in
-          denominator for acovf. Default.
+          denominator for acovf.
         - "ols" : regression of time series on lags of it and on constant.
         - "ols-inefficient" : regression of time series on lags using a single
           common sample to estimate all pacf coefficients.
@@ -411,7 +469,7 @@ def plot_ccf(
         An int or array of lag values, used on the horizontal axis. Uses
         ``np.arange(lags)`` when lags is an int.  If not provided,
         ``lags=np.arange(len(corr))`` is used.
-    negative_lags: bool, optional
+    negative_lags : bool, optional
         If True, negative lags are shown on the horizontal axis.
     alpha : scalar, optional
         If a number is given, the confidence intervals for the given level are
@@ -421,7 +479,7 @@ def plot_ccf(
         If True, shows vertical lines and markers for the correlation values.
         If False, only shows markers.  The default marker is 'o'; it can
         be overridden with a ``marker`` kwarg.
-    adjusted : bool
+    adjusted : bool, optional
         If True, then denominators for cross-correlations are n-k, otherwise n.
     fft : bool, optional
         If True, computes the CCF via FFT.
@@ -518,7 +576,7 @@ def plot_accf_grid(
     x : array_like
         2D array of time-series values: rows are observations,
         columns are variables.
-    varnames: sequence of str, optional
+    varnames : sequence of str, optional
         Variable names to use in plot titles. If ``x`` is a pandas dataframe
         and ``varnames`` is provided, it overrides the column names
         of the dataframe. If ``varnames`` is not provided and ``x`` is not
@@ -530,7 +588,7 @@ def plot_accf_grid(
         An int or array of lag values, used on horizontal axes. Uses
         ``np.arange(lags)`` when lags is an int.  If not provided,
         ``lags=np.arange(len(corr))`` is used.
-    negative_lags: bool, optional
+    negative_lags : bool, optional
         If True, negative lags are shown on the horizontal axes of plots
         below the main diagonal.
     alpha : scalar, optional
@@ -541,7 +599,7 @@ def plot_accf_grid(
         If True, shows vertical lines and markers for the correlation values.
         If False, only shows markers.  The default marker is 'o'; it can
         be overridden with a ``marker`` kwarg.
-    adjusted : bool
+    adjusted : bool, optional
         If True, then denominators for correlations are n-k, otherwise n.
     fft : bool, optional
         If True, computes the ACF via FFT.
@@ -652,7 +710,7 @@ def plot_accf_grid(
 def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
     """
     Consider using one of month_plot or quarter_plot unless you need
-    irregular plotting.
+    irregular plotting
 
     Parameters
     ----------
@@ -661,11 +719,17 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
         as DataFrames) with a DatetimeIndex or PeriodIndex
     xticklabels : list of str
         List of season labels, one for each group.
-    ylabel : str
-        Lable for y axis
+    ylabel : str, optional
+        Label for y axis
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
+
+    Returns
+    -------
+    Figure
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
     """
     fig, ax = utils.create_mpl_ax(ax)
     start = 0
@@ -689,7 +753,7 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
 
 def month_plot(x, dates=None, ylabel=None, ax=None):
     """
-    Seasonal plot of monthly data.
+    Seasonal plot of monthly data
 
     Parameters
     ----------
@@ -754,7 +818,7 @@ def quarter_plot(x, dates=None, ylabel=None, ax=None):
     ylabel : str, optional
         The label for the y-axis. Will attempt to use the `name` attribute
         of the Series.
-    ax : matplotlib.axes, optional
+    ax : Axes, optional
         Existing axes instance.
 
     Returns
@@ -802,6 +866,7 @@ def plot_predict(
     **predict_kwargs,
 ):
     """
+    Plot forecasts
 
     Parameters
     ----------
@@ -810,7 +875,7 @@ def plot_predict(
     start : int, str, or datetime, optional
         Zero-indexed observation number at which to start forecasting,
         i.e., the first forecast is start. Can also be a date string to
-        parse or a datetime type. Default is the the zeroth observation.
+        parse or a datetime type. Default is the zeroth observation.
     end : int, str, or datetime, optional
         Zero-indexed observation number at which to end forecasting, i.e.,
         the last forecast is end. Can also be a date string to
@@ -826,12 +891,12 @@ def plot_predict(
         prediction; starting with this observation and continuing through
         the end of prediction, forecasted endogenous values will be used
         instead.
-    alpha : {float, None}
+    alpha : {float, None}, optional
         The tail probability not covered by the confidence interval. Must
         be in (0, 1). Confidence interval is constructed assuming normally
         distributed shocks. If None, figure will not show the confidence
         interval.
-    ax : AxesSubplot
+    ax : AxesSubplot, optional
         matplotlib Axes instance to use
     **predict_kwargs
         Any additional keyword arguments to pass to ``result.get_prediction``.
@@ -879,7 +944,7 @@ def plot_predict(
 
 def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **kwargs):
     """
-    Seasonal-Diagnostic Plot, as described by [1]_.
+    Seasonal-Diagnostic Plot, as described by [1]_
 
     Parameters
     ----------
@@ -888,24 +953,25 @@ def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **k
     period : int
         The length of the period. Should match the `period` parameter used to
         decompose the series.
-    subplots : int or array of int
+    subplots : int or array of int, optional
         If `period` is large, `subplots` can be used to specify how many should
         be plotted. If `subplots` is an `int`, the periods are selected evenly
         from `range(period)`. If `subplots` is an array of `int`, the periods
         with those indices will be selected for the subplots. By default,
         `subplots=period`.
-    labels : array of str
+    labels : array of str, optional
         Labels for the displayed period subplots.
-    nrows : int
+    nrows : int, optional
         The number of rows on which to display the plots.
-
+    **kwargs
+        Additional keyword arguments passed to ``plt.subplots``, such as
+        ``figsize`` or ``ncols``.
 
     Returns
     -------
     fig : Figure
-        Returns an matplotlib object of type Figure with the
+        Returns a matplotlib object of type Figure with the
         Seasonal-Diagnostic Plot.
-
 
     Examples
     --------
@@ -922,11 +988,6 @@ def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **k
     >>> _ = seasonal_diagnostic_plot(res, period=52, subplots=6, nrows=2)
 
     .. plot:: plots/graphics_tsa_plot_sdp1.py
-
-    >>> from statsmodels.datasets import elnino
-    >>> from statsmodels.tsa.seasonal import STL
-    >>> from statsmodels.graphics.tsaplots import seasonal_diagnostic_plot
-    >>> import pandas as pdc
 
     >>> from statsmodels.datasets import elnino
     >>> from statsmodels.tsa.seasonal import STL
@@ -955,10 +1016,9 @@ def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **k
 
     References
     ----------
-    Cleveland, Robert B., William S. Cleveland, Jean E. McRage, Irma
-    Terpenning (1990) "STL: A Seasonal-Trend Decomposition Procedure
-    Based on Loess". Journal of Official Statistics, 6 (1), 3-33.
-
+    .. [1] Cleveland, Robert B., William S. Cleveland, Jean E. McRae, Irma
+       Terpenning (1990) "STL: A Seasonal-Trend Decomposition Procedure
+       Based on Loess". Journal of Official Statistics, 6 (1), 3-33.
     """
     plt = utils._import_mpl()
 
