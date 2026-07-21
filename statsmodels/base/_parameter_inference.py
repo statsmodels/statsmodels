@@ -206,7 +206,7 @@ def score_test(
 
         elif k_constraints is None:
             raise ValueError(
-                "if exog_extra is None, then k_constraints" "needs to be given"
+                "if exog_extra is None, then k_constraints needs to be given"
             )
 
         # we need to use results scale as additional parameter
