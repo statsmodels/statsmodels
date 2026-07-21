@@ -69,7 +69,8 @@ class KDEUnivariate:
     --------
     KDEMultivariate : Multivariate Kernel Density Estimator.
     kdensity : Kernel density estimator using direct evaluation.
-    kdensityfft : Kernel density estimator using FFT, faster than kdensity for large nobs.
+    kdensityfft : Kernel density estimator using FFT, faster than kdensity
+        for large nobs.
 
     Examples
     --------
@@ -99,7 +100,7 @@ class KDEUnivariate:
         clip=(-np.inf, np.inf),
     ):
         """
-        Attach the density estimate to the KDEUnivariate class.
+        Attach the density estimate to the KDEUnivariate class
 
         Parameters
         ----------
@@ -125,7 +126,7 @@ class KDEUnivariate:
               calculated from the kernel. Equivalent (up to 2 dp) to the
               "scott" bandwidth for gaussian kernels. See bandwidths.py
             - If a float is given, its value is used as the bandwidth.
-            - If a callable is given, it's return value is used.
+            - If a callable is given, its return value is used.
               The callable should take exactly two parameters, i.e.,
               fn(x, kern), and return a float, where:
 
@@ -137,19 +138,25 @@ class KDEUnivariate:
             computationally efficient. However, only the Gaussian kernel
             is implemented. If FFT is False, then a 'nobs' x 'gridsize'
             intermediate array is created.
+        weights : array_like, optional
+            Optional weights. Only used if `fft` is False.
         gridsize : int
             If gridsize is None, max(len(x), 50) is used.
+        adjust : float
+            An adjustment factor for the bw. Bandwidth becomes bw * adjust.
         cut : float
             Defines the length of the grid past the lowest and highest values
             of x so that the kernel goes to zero. The end points are
             ``min(x) - cut * adjust * bw`` and ``max(x) + cut * adjust * bw``.
-        adjust : float
-            An adjustment factor for the bw. Bandwidth becomes bw * adjust.
+        clip : tuple
+            Observations in `endog` that are outside of the range given by
+            clip are dropped. The number of observations in the `endog`
+            array used in the fit is then shortened.
 
         Returns
         -------
         KDEUnivariate
-            The instance fit,
+            The instance that was fit.
         """
         if isinstance(bw, str):
             self.bw_method = bw
@@ -203,7 +210,7 @@ class KDEUnivariate:
     @cache_readonly
     def cdf(self):
         """
-        Returns the cumulative distribution function evaluated at the support.
+        Returns the cumulative distribution function evaluated at the support
 
         Notes
         -----
@@ -232,7 +239,7 @@ class KDEUnivariate:
     @cache_readonly
     def cumhazard(self):
         """
-        Returns the hazard function evaluated at the support.
+        Returns the cumulative hazard function evaluated at the support
 
         Notes
         -----
@@ -244,7 +251,7 @@ class KDEUnivariate:
     @cache_readonly
     def sf(self):
         """
-        Returns the survival function evaluated at the support.
+        Returns the survival function evaluated at the support
 
         Notes
         -----
@@ -295,7 +302,7 @@ class KDEUnivariate:
 
     def evaluate(self, point):
         """
-        Evaluate density at a point or points.
+        Evaluate density at a point or points
 
         Parameters
         ----------
@@ -319,7 +326,7 @@ def kdensity(
     retgrid=True,
 ):
     """
-    Rosenblatt-Parzen univariate kernel density estimator.
+    Rosenblatt-Parzen univariate kernel density estimator
 
     Parameters
     ----------
@@ -345,7 +352,7 @@ def kdensity(
           calculated from the kernel. Equivalent (up to 2 dp) to the
           "scott" bandwidth for gaussian kernels. See bandwidths.py
         - If a float is given, its value is used as the bandwidth.
-        - If a callable is given, it's return value is used.
+        - If a callable is given, its return value is used.
           The callable should take exactly two parameters, i.e.,
           fn(x, kern), and return a float, where:
 
@@ -487,7 +494,7 @@ def kdensityfft(
           calculated from the kernel. Equivalent (up to 2 dp) to the
           "scott" bandwidth for gaussian kernels. See bandwidths.py
         - If a float is given, its value is used as the bandwidth.
-        - If a callable is given, it's return value is used.
+        - If a callable is given, its return value is used.
           The callable should take exactly two parameters, i.e.,
           fn(x, kern), and return a float, where:
 
@@ -503,7 +510,7 @@ def kdensityfft(
         number is rounded up to the next highest power of 2.
     adjust : float
         An adjustment factor for the bw. Bandwidth becomes bw * adjust.
-        clip : tuple
+    clip : tuple
         Observations in x that are outside of the range given by clip are
         dropped. The number of observations in x is then shortened.
     cut : float
