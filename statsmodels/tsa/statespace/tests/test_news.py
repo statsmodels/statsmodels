@@ -811,7 +811,7 @@ def test_comparison_types():
     with pytest.raises(ValueError, match=msg):
         res.news(res)
 
-    # Test that if the the comparison type is specified, the news can be
+    # Test that if the comparison type is specified, the news can be
     # computed from data that has the same shape and number of NaNs (this can
     # happen if there are only revisions but no updates)
     news = res.news(endog, comparison_type="previous")

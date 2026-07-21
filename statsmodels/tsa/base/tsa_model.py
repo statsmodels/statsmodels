@@ -661,7 +661,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             warnings.warn(
                 "An unsupported index was provided. As a result, forecasts "
                 "cannot be generated. To use the model for forecasting, use on the "
-                "the supported classes of index.",
+                "supported classes of index.",
                 ValueWarning,
                 stacklevel=2,
             )

@@ -251,8 +251,8 @@ class GLM(base.LikelihoodModel):
     reflect the new weights.
 
     Variance weights (referred to in other packages as analytic weights) are
-    used when ``endog`` represents an an average or mean. This relies on the
-    assumption that that the inverse variance scales proportionally to the
+    used when ``endog`` represents an average or mean. This relies on the
+    assumption that the inverse variance scales proportionally to the
     weight--an observation that is deemed more credible should have less
     variance and therefore have more weight. For the ``Poisson`` family--which
     assumes that occurrences scale proportionally with time--a natural practice

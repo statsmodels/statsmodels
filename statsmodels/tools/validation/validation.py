@@ -179,7 +179,7 @@ class PandasWrapper:
 
     Notes
     -----
-    Raises if ``orig`` is a pandas type but obj and and ``orig`` have
+    Raises if ``orig`` is a pandas type but obj and ``orig`` have
     different numbers of elements in axis 0. Also raises if the ndim of obj
     is larger than 2.
 
