@@ -14,7 +14,7 @@ from statsmodels.tools.validation import PandasWrapper, array_like
 # NOTE: uses a loop, could probably be sped-up for very large datasets
 def cffilter(x, low=6, high=32, drift=True):
     """
-    Christiano Fitzgerald asymmetric, random walk filter.
+    Christiano Fitzgerald asymmetric, random walk filter
 
     Parameters
     ----------

@@ -190,7 +190,7 @@ class ARDL(AutoReg):
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
     order : {int, sequence[int], dict}
-        If int, uses lags 0, 1, ..., order  for all exog variables. If
+        If int, uses lags 0, 1, ..., order for all exog variables. If
         sequence[int], uses the ``order`` for all variables. If a dict,
         applies the lags series by series. If ``exog`` is anything other
         than a DataFrame, the keys are the column index of exog (e.g., 0,
@@ -685,7 +685,7 @@ class ARDL(AutoReg):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -702,7 +702,7 @@ class ARDL(AutoReg):
             continuing through the end of prediction, forecasted endogenous
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
-            location of `dynamic` which is then used to to compute the offset.
+            location of `dynamic` which is then used to compute the offset.
         exog : array_like
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
@@ -860,7 +860,7 @@ class ARDL(AutoReg):
             include lags 1 and 4 while lags=4 will include lags 1, 2, 3,
             and 4.
         order : {int, sequence[int], dict}
-            If int, uses lags 0, 1, ..., order  for all exog variables. If
+            If int, uses lags 0, 1, ..., order for all exog variables. If
             sequence[int], uses the ``order`` for all variables. If a dict,
             applies the lags series by series. If ``exog`` is anything other
             than a DataFrame, the keys are the column index of exog (e.g., 0,
@@ -1074,7 +1074,7 @@ class ARDLResults(AutoRegResults):
         )
 
     def _lag_repr(self) -> np.ndarray:
-        """Returns poly repr of an AR, (1  -phi1 L -phi2 L^2-...)"""
+        """Returns poly repr of an AR, (1 -phi1 L -phi2 L^2-...)"""
         ar_lags = self._ar_lags if self._ar_lags is not None else []
         k_ar = len(ar_lags)
         ar_params = np.zeros(self._max_lag + 1)
@@ -1103,7 +1103,7 @@ class ARDLResults(AutoRegResults):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -1120,13 +1120,13 @@ class ARDLResults(AutoRegResults):
             continuing through the end of prediction, forecasted endogenous
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
-            location of `dynamic` which is then used to to compute the offset.
+            location of `dynamic` which is then used to compute the offset.
         exog : array_like
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
         exog_oos : array_like
             An array containing out-of-sample values of the exogenous variable.
-            Must has the same number of columns as the exog used when the
+            Must have the same number of columns as the exog used when the
             model was created, and at least as many rows as the number of
             out-of-sample forecasts.
         fixed : array_like
@@ -1382,7 +1382,7 @@ def ardl_select_order(
         or only if smaller order lags must be included if larger order
         lags are.  If ``True``, the number of model considered is of the
         order 2**(maxlag + k * maxorder) assuming maxorder is an int. This
-        can be very large unless k and maxorder are bot relatively small.
+        can be very large unless k and maxorder are both relatively small.
         If False, the number of model considered is of the order
         maxlag*maxorder**k which may also be substantial when k and maxorder
         are large.
@@ -1412,7 +1412,7 @@ def ardl_select_order(
 
     Returns
     -------
-    ARDLSelectionResults
+    ARDLOrderSelectionResults
         A results holder containing the selected model and the complete set
         of information criteria for all models fit.
     """
@@ -1555,7 +1555,7 @@ lags_descr = textwrap.wrap(
 )
 lags_param = Parameter(name="lags", type="int", desc=lags_descr)
 order_descr = textwrap.wrap(
-    "If int, uses lags 0, 1, ..., order  for all exog variables. If a dict, "
+    "If int, uses lags 0, 1, ..., order for all exog variables. If a dict, "
     "applies the lags series by series. If ``exog`` is anything other than a "
     "DataFrame, the keys are the column index of exog (e.g., 0, 1, ...). If "
     "a DataFrame, keys are column names.",
@@ -1590,7 +1590,7 @@ if fit_doc._ds is not None:
 
 class UECM(ARDL):
     r"""
-    Unconstrained Error Correlation Model(UECM)
+    Unconstrained Error Correction Model (UECM)
 
     Parameters
     ----------
@@ -1603,7 +1603,7 @@ class UECM(ARDL):
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
     order : {int, sequence[int], dict}
-        If int, uses lags 0, 1, ..., order  for all exog variables. If a
+        If int, uses lags 0, 1, ..., order for all exog variables. If a
         dict, applies the lags series by series. If ``exog`` is anything
         other than a DataFrame, the keys are the column index of exog
         (e.g., 0, 1, ...). If a DataFrame, keys are column names.
@@ -1648,7 +1648,7 @@ class UECM(ARDL):
 
     Notes
     -----
-    The full specification of an UECM is
+    The full specification of a UECM is
 
     .. math ::
 
@@ -1980,7 +1980,7 @@ class UECM(ARDL):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -1997,7 +1997,7 @@ class UECM(ARDL):
             continuing through the end of prediction, forecasted endogenous
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
-            location of `dynamic` which is then used to to compute the offset.
+            location of `dynamic` which is then used to compute the offset.
         exog : array_like
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
@@ -2103,9 +2103,7 @@ class UECMResults(ARDLResults):
 
     @property
     def resid(self):
-        """
-        The residuals of the model.
-        """
+        """The residuals of the model"""
         model = self.model
         return model._y - self.fittedvalues
 
@@ -2298,7 +2296,7 @@ class UECMResults(ARDLResults):
         -------
         BoundsTestResult
             Named tuple containing ``stat``, ``crit_vals``, ``p_values``,
-            ``null` and ``alternative``. The statistic is the F-type
+            ``null`` and ``alternative``. The statistic is the F-type
             test statistic favored in PSS.
 
         Notes

@@ -69,7 +69,7 @@ def correlation_sum(indicators, embedding_dim):
     """
     Calculate a correlation sum
 
-    Useful as an estimator of a correlation integral
+    Useful as an estimator of a correlation integral.
 
     Parameters
     ----------

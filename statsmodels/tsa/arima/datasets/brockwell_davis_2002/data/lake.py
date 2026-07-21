@@ -1,5 +1,5 @@
 """
-Lake level of Lake Huron in feet (reduced by 570), 1875--1972.
+Lake level of Lake Huron in feet (reduced by 570), 1875--1972
 
 Dataset described in [1]_ and included as a part of the ITSM2000 software [2]_.
 Downloaded on April 22, 2019 from:

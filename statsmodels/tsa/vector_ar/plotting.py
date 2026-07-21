@@ -29,9 +29,7 @@ class MPLConfigurator:
 # Plotting functions
 #
 def plot_mts(Y, names=None, index=None):
-    """
-    Plot multiple time series
-    """
+    """Plot multiple time series"""
     import matplotlib.pyplot as plt
 
     k = Y.shape[1]
@@ -94,8 +92,25 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt="k",
 
     Parameters
     ----------
-    y :
-    error : array or None
+    y : array_like
+        The data to plot.
+    error : array_like or None
+        The error used to plot error bars around `y`. If None, no error
+        bars are plotted.
+    x : array_like, optional
+        The x-axis values to use. If None, uses a range the same length
+        as `y`.
+    axes : AxesSubplot, optional
+        Matplotlib axes to plot on. If None, uses the current axes.
+    value_fmt : str
+        Matplotlib format string used to plot `y`.
+    error_fmt : str
+        Matplotlib format string used to plot the error bars.
+    alpha : float
+        The significance level to use when `stderr_type` is "asym".
+    stderr_type : str
+        The kind of error bars being plotted. One of "asym", "mc", "sz1",
+        "sz2", or "sz3".
     """
     import matplotlib.pyplot as plt
 
@@ -123,9 +138,26 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt="k",
 def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None,
                     err_bound=None):
     """
+    Plot the autocorrelations of a multivariate time series in a grid
 
     Parameters
     ----------
+    acorr : ndarray
+        Array of autocorrelations, shape (nlags, k, k).
+    fontsize : int
+        Font size used for the plot labels.
+    linewidth : int
+        Width of the lines used in the autocorrelation plots.
+    xlabel : array_like, optional
+        Labels to use for the x-axis of each subplot. If None, uses a
+        range the same length as `acorr`.
+    err_bound : float, optional
+        If provided, draws horizontal reference lines at +/- `err_bound`.
+
+    Returns
+    -------
+    Figure
+        The figure containing the grid of autocorrelation plots.
     """
     import matplotlib.pyplot as plt
 
@@ -192,11 +224,45 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
                   plot_params=None, figsize=(10, 10), stderr_type="asym"):
     """
     Reusable function to make flexible grid plots of impulse responses and
-    comulative effects
+    cumulative effects
 
-    values : (T + 1) x k x k
-    stderr : T x k x k
-    hlines : k x k
+    Parameters
+    ----------
+    values : ndarray
+        Array of values to plot, shape (T + 1, k, k).
+    stderr : ndarray or None
+        Array of standard errors used to plot error bands, shape (T, k, k).
+        If None, no error bands are plotted.
+    impcol : {int, str, None}
+        Column of the impulse variable to plot. If None, plots impulses
+        from all variables.
+    rescol : {int, str, None}
+        Column of the response variable to plot. If None, plots responses
+        of all variables.
+    names : list of str
+        Names of the variables in the system.
+    title : str
+        Title to use for the figure.
+    signif : float
+        Significance level used when plotting error bands.
+    hlines : ndarray, optional
+        Array of horizontal reference lines to draw on each subplot,
+        shape (k, k).
+    subplot_params : dict, optional
+        May contain a "fontsize" key controlling the subplot title font
+        size.
+    plot_params : dict, optional
+        Additional keyword arguments (currently unused).
+    figsize : tuple, optional
+        The size of the figure to create.
+    stderr_type : str
+        The kind of error bars being plotted. One of "asym", "mc", "sz1",
+        "sz2", or "sz3".
+
+    Returns
+    -------
+    Figure
+        The figure containing the grid of impulse response plots.
     """
     import matplotlib.pyplot as plt
 

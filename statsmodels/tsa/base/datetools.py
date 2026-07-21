@@ -1,6 +1,4 @@
-"""
-Tools for working with dates
-"""
+"""Tools for working with dates"""
 from statsmodels.compat.python import asstr, lmap, lrange, lzip
 
 import datetime
@@ -69,10 +67,27 @@ def _is_leap(year):
 
 def date_parser(timestr, parserinfo=None, **kwargs):
     """
-    Uses dateutil.parser.parse, but also handles monthly dates of the form
-    1999m4, 1999:m4, 1999:mIV, 1999mIV and the same for quarterly data
-    with q instead of m. It is not case sensitive. The default for annual
-    data is the end of the year, which also differs from dateutil.
+    Parse a date string, understanding statsmodels-specific date formats
+
+    Falls back to dateutil.parser.parse, but also handles monthly dates of
+    the form 1999m4, 1999:m4, 1999:mIV, 1999mIV and the same for quarterly
+    data with q instead of m. It is not case sensitive. The default for
+    annual data is the end of the year, which also differs from dateutil.
+
+    Parameters
+    ----------
+    timestr : str
+        The date string to parse.
+    parserinfo : dateutil.parser.parserinfo, optional
+        Not used by this function; retained for backwards compatibility.
+    **kwargs
+        Keyword arguments passed to ``pandas.to_datetime`` when `timestr`
+        does not match a recognized quarterly, monthly, or annual pattern.
+
+    Returns
+    -------
+    datetime.datetime or pandas.Timestamp
+        The parsed date.
     """
     flags = re.IGNORECASE | re.VERBOSE
     if re.search(_q_pattern, timestr, flags):
@@ -96,7 +111,7 @@ def date_parser(timestr, parserinfo=None, **kwargs):
 
 def date_range_str(start, end=None, length=None):
     """
-    Returns a list of abbreviated date strings.
+    Returns a list of abbreviated date strings
 
     Parameters
     ----------
@@ -105,7 +120,7 @@ def date_range_str(start, end=None, length=None):
     end : str, optional
         The last abbreviated date if length is None.
     length : int, optional
-        The length of the returned array of end is None.
+        The length of the returned array if end is None.
 
     Returns
     -------
@@ -156,7 +171,7 @@ def date_range_str(start, end=None, length=None):
 
 def dates_from_str(dates):
     """
-    Turns a sequence of date strings and returns a list of datetime.
+    Turns a sequence of date strings and returns a list of datetime
 
     Parameters
     ----------
@@ -175,7 +190,7 @@ def dates_from_str(dates):
 
 def dates_from_range(start, end=None, length=None):
     """
-    Turns a sequence of date strings and returns a list of datetime.
+    Turns a sequence of date strings and returns a list of datetime
 
     Parameters
     ----------
@@ -184,7 +199,12 @@ def dates_from_range(start, end=None, length=None):
     end : str, optional
         The last abbreviated date if length is None.
     length : int, optional
-        The length of the returned array of end is None.
+        The length of the returned array if end is None.
+
+    Returns
+    -------
+    date_list : ndarray
+        A list of datetime types.
 
     Examples
     --------
@@ -192,12 +212,6 @@ def dates_from_range(start, end=None, length=None):
     >>> import pandas as pd
     >>> nobs = 50
     >>> dates = pd.date_range('1960m1', length=nobs)
-
-
-    Returns
-    -------
-    date_list : ndarray
-        A list of datetime types.
     """
     dates = date_range_str(start, end, length)
     return dates_from_str(dates)

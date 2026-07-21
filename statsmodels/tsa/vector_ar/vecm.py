@@ -138,7 +138,8 @@ def _linear_trend(nobs, k_ar, coint=False):
 
 
 def _num_det_vars(det_string, seasons=0):
-    """Gives the number of deterministic variables specified by det_string and
+    """
+    Gives the number of deterministic variables specified by det_string and
     seasons.
 
     Parameters
@@ -239,7 +240,8 @@ def _deterministic_to_exog(
 
 
 def _mat_sqrt(_2darray):
-    """Calculates the square root of a matrix.
+    """
+    Calculates the square root of a matrix
 
     Parameters
     ----------
@@ -266,7 +268,7 @@ def _endog_matrices(
     first_season=0,
 ):
     """
-    Returns different matrices needed for parameter estimation.
+    Returns different matrices needed for parameter estimation
 
     Compare p. 186 in [1]_. The returned matrices consist of elements of the
     data as well as elements representing deterministic terms. A tuple of
@@ -302,14 +304,14 @@ def _endog_matrices(
     -------
     y_1_T : ndarray (neqs x nobs)
         The (transposed) data without the presample.
-        `.. math:: (y_1, \\ldots, y_T)
+        :math:`(y_1, \\ldots, y_T)`
     delta_y_1_T : ndarray (neqs x nobs)
         The first differences of endog.
-        `.. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
+        :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
     y_lag1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Endog of the previous period (lag 1).
-        `.. math:: (y_0, \\ldots, y_{T-1})
+        :math:`(y_0, \\ldots, y_{T-1})`
     delta_x : ndarray (k_ar_diff*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Lagged differenced endog, used as regressor for the short term
@@ -374,18 +376,19 @@ def _endog_matrices(
 
 
 def _r_matrices(delta_y_1_T, y_lag1, delta_x):
-    """Returns two ndarrays needed for parameter estimation as well as the
+    """
+    Returns two ndarrays needed for parameter estimation as well as the
     calculation of standard errors.
 
     Parameters
     ----------
     delta_y_1_T : ndarray (neqs x nobs)
         The first differences of endog.
-        `.. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
+        :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
     y_lag1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Endog of the previous period (lag 1).
-        `.. math:: (y_0, \\ldots, y_{T-1})
+        :math:`(y_0, \\ldots, y_{T-1})`
     delta_x : ndarray (k_ar_diff*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Lagged differenced endog, used as regressor for the short term
@@ -414,7 +417,8 @@ def _r_matrices(delta_y_1_T, y_lag1, delta_x):
 
 
 def _sij(delta_x, delta_y_1_T, y_lag1):
-    """Returns matrices and eigenvalues and -vectors used for parameter
+    """
+    Returns matrices and eigenvalues and -vectors used for parameter
     estimation and the calculation of a models loglikelihood.
 
     Parameters
@@ -460,7 +464,8 @@ def _sij(delta_x, delta_y_1_T, y_lag1):
 
 
 class CointRankResults:
-    """A class for holding the results from testing the cointegration rank.
+    """
+    A class for holding the results from testing the cointegration rank
 
     Parameters
     ----------
@@ -533,7 +538,8 @@ class CointRankResults:
 def select_coint_rank(
     endog, det_order, k_ar_diff, method="trace", signif=0.05
 ):
-    """Calculate the cointegration rank of a VECM.
+    """
+    Calculate the cointegration rank of a VECM
 
     Parameters
     ----------
@@ -771,7 +777,7 @@ class JohansenTestResult:
 
     @property
     def r0t(self):
-        """Residuals for :math:`\\Delta Y`."""
+        """Residuals for :math:`\\Delta Y`"""
         return self._r0t
 
     @property
@@ -1470,9 +1476,7 @@ class VECMResults:
 
     @cache_readonly
     def llf(self):  # Lutkepohl p. 295 (7.2.20)
-        """
-        Compute the VECM's loglikelihood.
-        """
+        """Compute the VECM's loglikelihood"""
         K = self.neqs
         T = self.nobs
         r = self.coint_rank

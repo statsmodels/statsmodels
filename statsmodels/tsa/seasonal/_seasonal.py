@@ -1,6 +1,4 @@
-"""
-Seasonal Decomposition by Moving Averages
-"""
+"""Seasonal Decomposition by Moving Averages"""
 
 import numpy as np
 import pandas as pd
@@ -21,6 +19,21 @@ def _extrapolate_trend(trend, npoints):
     """
     Replace nan values on trend's end-points with least-squares extrapolated
     values with regression considering npoints closest defined points.
+
+    Parameters
+    ----------
+    trend : ndarray
+        The trend series, which may contain NaN values at the start and/or
+        end that will be replaced.
+    npoints : int
+        The number of closest defined points on each end to use in the
+        extrapolating least-squares regression.
+
+    Returns
+    -------
+    ndarray
+        The trend array with NaN values at the endpoints replaced by
+        extrapolated values.
     """
     front = next(i for i, vals in enumerate(trend) if not np.any(np.isnan(vals)))
     back = (
@@ -56,9 +69,19 @@ def _extrapolate_trend(trend, npoints):
 
 def seasonal_mean(x, period):
     """
-    Return means for each period in x. period is an int that gives the
-    number of periods per cycle. E.g., 12 for monthly. NaNs are ignored
-    in the mean.
+    Return means for each period in x
+
+    Parameters
+    ----------
+    x : array_like
+        Time series values.
+    period : int
+        The number of periods per cycle, e.g., 12 for monthly data.
+
+    Returns
+    -------
+    ndarray
+        The mean value for each period, ignoring NaNs.
     """
     return np.array([pd_nanmean(x[i::period], axis=0) for i in range(period)])
 
@@ -104,7 +127,7 @@ def seasonal_decompose(
     Returns
     -------
     DecomposeResult
-        A object with seasonal, trend, and resid attributes.
+        An object with seasonal, trend, and resid attributes.
 
     See Also
     --------
@@ -305,7 +328,7 @@ class DecomposeResult:
         Returns
         -------
         matplotlib.figure.Figure
-            The figure instance that containing the plot.
+            The figure instance containing the plot.
         """
         from pandas.plotting import register_matplotlib_converters
 

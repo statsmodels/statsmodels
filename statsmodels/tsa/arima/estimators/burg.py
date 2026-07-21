@@ -1,5 +1,5 @@
 """
-Burg's method for estimating AR(p) model parameters.
+Burg's method for estimating AR(p) model parameters
 
 Author: Chad Fulton
 License: BSD-3
@@ -14,7 +14,7 @@ from statsmodels.tsa.arima.specification import SARIMAXSpecification
 
 def burg(endog, ar_order=0, demean=True):
     """
-    Estimate AR parameters using Burg technique.
+    Estimate AR parameters using Burg technique
 
     Parameters
     ----------
