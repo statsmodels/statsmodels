@@ -336,7 +336,6 @@ class ARDL(AutoReg):
             period=period,
             missing=missing,
             deterministic=deterministic,
-            old_names=False,
         )
         # Reset hold back which was set in AutoReg.__init__
         self._causal = bool_like(causal, "causal", strict=True)

@@ -1356,7 +1356,7 @@ def test_invalid_kwargs():
     # Make sure we can create basic SARIMAX
     sarimax.SARIMAX(endog)
     # Now check that it raises a warning if we add an invalid keyword argument
-    with pytest.warns(FutureWarning):
+    with pytest.raises(TypeError, match="Unknown keyword arguments"):
         sarimax.SARIMAX(endog, invalid_kwarg=True)
     # (Note: once deprectation is completed in v0.15, switch to checking for
     # a TypeError, as below)

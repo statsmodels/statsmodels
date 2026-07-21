@@ -6,7 +6,6 @@ License: BSD-3
 
 """
 
-import warnings
 
 import numpy as np
 from scipy import optimize, stats
@@ -861,18 +860,10 @@ def test_poisson_2indep(
             method = "score"
 
         if ratio_null is not None:
-            warnings.warn(
-                "'ratio_null' is deprecated, use 'value' keyword",
-                FutureWarning,
-                stacklevel=2,
-            )
-            value = ratio_null
-        if ratio_null is None and value is None:
+            raise TypeError("'ratio_null' is no longer valid, use 'value' keyword")
+        if value is None:
             # default value
             value = ratio_null = 1
-        else:
-            # for results holder instance, it still contains ratio_null
-            ratio_null = value
 
         r = value
         r_d = r / d  # r1 * n1 / (r2 * n2)
@@ -1001,7 +992,6 @@ def test_poisson_2indep(
         diff=diff,
         value=value,
         rates_cmle=rates_cmle,
-        ratio_null=ratio_null,
     )
     return res
 
@@ -1162,16 +1152,11 @@ def etest_poisson_2indep(
     eps = 1e-20  # avoid zero division in stat_func
 
     if compare == "ratio":
-        if ratio_null is None and value is None:
+        if ratio_null is not None:
+            raise TypeError("'ratio_null' is no longer valid, use 'value' keyword")
+        if value is None:
             # default value
             value = 1
-        elif ratio_null is not None:
-            warnings.warn(
-                "'ratio_null' is deprecated, use 'value' keyword",
-                FutureWarning,
-                stacklevel=2,
-            )
-            value = ratio_null
 
         r = value  # rate1 / rate2
         r_d = r / d
@@ -1232,9 +1217,7 @@ def etest_poisson_2indep(
     stat_sample = stat_func(y1, y2)
 
     if ygrid is not None:
-        warnings.warn("ygrid is deprecated, use y_grid", FutureWarning, stacklevel=2)
-    y_grid = y_grid if y_grid is not None else ygrid
-
+        raise TypeError("ygrid is no longer valid, use y_grid")
     # The following uses a fixed truncation for evaluating the probabilities
     # It will currently only work for small counts, so that sf at truncation
     # point is small

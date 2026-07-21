@@ -158,7 +158,6 @@ press, 2010.
 
 """
 
-import warnings
 
 import numpy as np
 from scipy import stats
@@ -201,15 +200,10 @@ def dispersion_poisson(results):
        Each test has two strings a descriptive name and a string for the
        alternative hypothesis.
     """
-    msg = (
+    raise NotImplementedError(
         "dispersion_poisson here is deprecated, use the version in "
         "discrete._diagnostic_count"
     )
-    warnings.warn(msg, FutureWarning, stacklevel=2)
-
-    from statsmodels.discrete._diagnostics_count import test_poisson_dispersion
-
-    return test_poisson_dispersion(results, _old=True)
 
 
 def dispersion_poisson_generic(
@@ -264,27 +258,10 @@ def dispersion_poisson_generic(
         computed using the t distribution instead of the normal
         distribution.
     """
-    msg = (
+    raise NotImplementedError(
         "dispersion_poisson_generic here is deprecated, use the version in "
         "discrete._diagnostic_count"
     )
-    warnings.warn(msg, FutureWarning, stacklevel=2)
-
-    from statsmodels.discrete._diagnostics_count import (
-        _test_poisson_dispersion_generic,
-    )
-
-    res_test = _test_poisson_dispersion_generic(
-        results,
-        exog_new_test,
-        exog_new_control=exog_new_control,
-        include_score=include_score,
-        use_endog=use_endog,
-        cov_type=cov_type,
-        cov_kwds=cov_kwds,
-        use_t=use_t,
-    )
-    return res_test
 
 
 class ResultsGeneric:

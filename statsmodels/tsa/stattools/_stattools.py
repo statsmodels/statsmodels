@@ -1893,18 +1893,15 @@ def kpss(
         resids = x - x.mean()
         crit = [0.347, 0.463, 0.574, 0.739]
 
+    if nlags is None:
+        raise ValueError(
+            "None is not a valid value for nlags. nlags must be an integer, 'auto' "
+            "or 'legacy'."
+        )
     if nlags == "legacy":
         nlags = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
         nlags = min(nlags, nobs - 1)
-    elif nlags == "auto" or nlags is None:
-        if nlags is None:
-            # TODO: Remove before 0.14 is released
-            warnings.warn(
-                "None is not a valid value for nlags. It must be an integer, "
-                "'auto' or 'legacy'. None will raise starting in 0.14",
-                FutureWarning,
-                stacklevel=2,
-            )
+    elif nlags == "auto":
         # autolag method of Hobijn et al. (1998)
         nlags = _kpss_autolag(resids, nobs)
         nlags = min(nlags, nobs - 1)

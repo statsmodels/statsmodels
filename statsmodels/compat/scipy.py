@@ -68,9 +68,6 @@ def _valarray(shape, value=np.nan, typecode=None):
     return out
 
 
-from scipy.stats import multivariate_t
-
-
 def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
     cond, args, f1, f2=None, /, *, fill_value=None
 ):
@@ -145,5 +142,4 @@ __all__ = [
     "SP_LT_118",
     "SP_VERSION",
     "apply_where",
-    "multivariate_t",
 ]

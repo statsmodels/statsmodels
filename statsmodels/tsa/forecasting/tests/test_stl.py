@@ -56,7 +56,7 @@ def test_sharex(data, close_figures):
 MODELS = [
     (ARIMA, {"order": (2, 0, 0), "trend": "c"}),
     (ExponentialSmoothing, {"trend": True}),
-    (AutoReg, {"lags": 2, "old_names": False}),
+    (AutoReg, {"lags": 2}),
     (ETSModel, {}),
 ]
 MODELS = MODELS[-1:]

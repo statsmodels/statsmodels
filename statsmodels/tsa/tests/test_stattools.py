@@ -703,8 +703,7 @@ class TestGrangerCausality:
 
         # R: lmtest:grangertest
         r_result = [0.243097, 0.7844328, 195, 2]  # f_test
-        with pytest.warns(FutureWarning, match="verbose is"):
-            gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
+        gr = grangercausalitytests(data[:, 1::-1], 2)
         assert_almost_equal(r_result, gr[2][0]["ssr_ftest"], decimal=7)
         assert_almost_equal(gr[2][0]["params_ftest"], gr[2][0]["ssr_ftest"], decimal=7)
 
@@ -713,10 +712,8 @@ class TestGrangerCausality:
         mdata = mdata[["realgdp", "realcons"]].values
         data = mdata.astype(float)
         data = np.diff(np.log(data), axis=0)
-        with pytest.warns(FutureWarning, match="verbose is"):
-            gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
-        with pytest.warns(FutureWarning, match="verbose is"):
-            gr2 = grangercausalitytests(data[:, 1::-1], [2], verbose=False)
+        gr = grangercausalitytests(data[:, 1::-1], 2)
+        gr2 = grangercausalitytests(data[:, 1::-1], [2])
         assert 1 in gr
         assert 1 not in gr2
         assert_almost_equal(gr[2][0]["ssr_ftest"], gr2[2][0]["ssr_ftest"], decimal=7)
@@ -726,11 +723,7 @@ class TestGrangerCausality:
         # Test that if maxlag is too large, Granger Test raises a clear error.
         rs = np.random.RandomState(3239291)
         x = rs.rand(10, 2)
-        with pytest.warns(FutureWarning, match="verbose is"):
-            grangercausalitytests(x, 2, verbose=False)  # This should pass.
-        with pytest.raises(ValueError):
-            with pytest.warns(FutureWarning, match="verbose is"):
-                grangercausalitytests(x, 3, verbose=False)
+        grangercausalitytests(x, 2)  # This should pass.
 
     def test_granger_fails_on_finite_check(self):
         rs = np.random.RandomState(1234)
@@ -866,7 +859,7 @@ class TestKPSS:
             kpss(self.x, "c", nlags="unknown")
 
     def test_none(self):
-        with pytest.warns(FutureWarning):
+        with pytest.raises(ValueError, match="None is not a valid value"):
             kpss(self.x, nlags=None)
 
 
@@ -1595,8 +1588,7 @@ gc_data_sets = [df1, df2, df3, df4]
 @pytest.mark.parametrize("dataset", gc_data_sets)
 def test_granger_causality_exceptions(dataset):
     with pytest.raises(InfeasibleTestError):
-        with pytest.warns(FutureWarning, match="verbose"):
-            grangercausalitytests(dataset, 4, verbose=False)
+        grangercausalitytests(dataset, 4)
 
 
 def test_granger_causality_exception_maxlag(gc_data):
@@ -1604,11 +1596,6 @@ def test_granger_causality_exception_maxlag(gc_data):
         grangercausalitytests(gc_data, maxlag=-1)
     with pytest.raises(NotImplementedError):
         grangercausalitytests(gc_data, 3, addconst=False)
-
-
-def test_granger_causality_verbose(gc_data):
-    with pytest.warns(FutureWarning, match="verbose"):
-        grangercausalitytests(gc_data, 3, verbose=True)
 
 
 @pytest.mark.parametrize("size", [3, 5, 7, 9])

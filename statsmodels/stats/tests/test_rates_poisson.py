@@ -1,8 +1,6 @@
 # we cannot import test_poisson_2indep directly, pytest treats that as test
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
-import warnings
-
 import numpy as np
 from numpy import arange
 from numpy.testing import assert_allclose, assert_equal
@@ -360,9 +358,9 @@ def test_twosample_poisson():
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.7056, atol=0, rtol=5e-4)
 
-    with pytest.warns(FutureWarning):
-        s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
-                                          method="score-log", ratio_null=1.5)
+    s2, pv2 = smr.test_poisson_2indep(
+        count1, n1, count2, n2, method="score-log", value=1.5
+    )
     pv2r = 0.2303
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.7380, atol=0, rtol=5e-4)
@@ -506,13 +504,13 @@ def test_twosample_poisson_r():
     res1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="exact-cond")
     assert_allclose(res1.pvalue, res2.p_value, rtol=1e-13)
     assert_allclose(res1.ratio, res2.estimate, rtol=1e-13)
-    assert_equal(res1.ratio_null, res2.null_value)
+    assert_equal(res1.value, res2.null_value)
 
     res2 = res_pexact_cond_midp
     res1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="cond-midp")
     assert_allclose(res1.pvalue, res2.p_value, rtol=0, atol=5e-6)
     assert_allclose(res1.ratio, res2.estimate, rtol=1e-13)
-    assert_equal(res1.ratio_null, res2.null_value)
+    assert_equal(res1.value, res2.null_value)
 
     # one-sided
     # > pe = poisson.exact(c(60, 30), c(51477.5, 54308.7), r=1.2,
@@ -829,14 +827,6 @@ def test_y_grid_regression():
 
 
 def test_invalid_y_grid():
-    # check ygrid deprecation
-    warnings.simplefilter("always")
-    with warnings.catch_warnings(record=True) as w:
-        etest_poisson_2indep(1, 1, 1, 1, ygrid=[1])
-    assert len(w) == 1
-    assert issubclass(w[0].category, FutureWarning)
-    assert "ygrid" in str(w[0].message)
-
     # check y_grid validity
     with pytest.raises(ValueError) as e:
         etest_poisson_2indep(1, 1, 1, 1, y_grid=1)

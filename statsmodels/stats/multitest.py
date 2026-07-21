@@ -411,22 +411,6 @@ def fdrcorrection_twostage(
         deprecated ``iter`` keyword.
         maxiter=False is two-stage fdr (maxiter=1)
         maxiter=True is full iteration (maxiter=-1 or maxiter=len(pvals))
-
-        .. versionadded:: 0.14
-
-            Replacement for ``iter`` with additional features.
-
-    iter : bool
-        ``iter`` is deprecated use ``maxiter`` instead.
-        If iter is True, then only one iteration step is used, this is the
-        two-step method.
-        If iter is False, then iterations are stopped at convergence which
-        occurs in a finite number of steps (at most len(pvals) steps).
-
-        .. deprecated:: 0.14
-
-            Use ``maxiter`` instead of ``iter``.
-
     is_sorted : bool
         If False (default), the p_values will be sorted, but the corrected
         pvalues are in the original order. If True, then it assumed that the
@@ -466,16 +450,13 @@ def fdrcorrection_twostage(
     pvals = np.asarray(pvals)
 
     if iter is not None:
-        import warnings
+        raise TypeError(
+            "iter keyword is not longer allowed, use maxiter keyword instead."
+        )
 
-        msg = "iter keyword is deprecated, use maxiter keyword instead."
-        warnings.warn(msg, FutureWarning, stacklevel=2)
-
-    if iter is False:
-        maxiter = 1
-    elif iter is True or maxiter in [-1, None]:
+    if maxiter in [-1, None]:
         maxiter = len(pvals)
-    # otherwise we use maxiter
+    # otherwise we use maxiter unchanged
 
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)

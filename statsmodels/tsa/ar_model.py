@@ -147,14 +147,6 @@ class AutoReg(tsa_model.TimeSeriesModel):
     deterministic : DeterministicProcess
         A deterministic process.  If provided, trend and seasonal are ignored.
         A warning is raised if trend is not "n" or seasonal is not False.
-    old_names : bool
-        Flag indicating whether to use the v0.11 names or the v0.12+ names.
-
-        .. deprecated:: 0.13.0
-
-           old_names is deprecated and will be removed after 0.14 is
-           released. You must update any code reliant on the old variable
-           names to use the new names.
 
     See Also
     --------
@@ -207,7 +199,6 @@ class AutoReg(tsa_model.TimeSeriesModel):
         missing: str = "none",
         *,
         deterministic: DeterministicProcess | None = None,
-        old_names: bool = False,
     ):
         super().__init__(endog, exog, None, None, missing=missing)
         self._trend = cast(
@@ -238,19 +229,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
             self._deterministics = DeterministicProcess(index, additional_terms=terms)
         self._exog_names: list[str] = []
         self._k_ar = 0
-        self._old_names = bool_like(old_names, "old_names", optional=False)
         if deterministic is not None and (self._trend != "n" or self._seasonal):
             warnings.warn(
                 'When using deterministic, trend must be "n" and '
                 "seasonal must be False.",
                 SpecificationWarning,
-                stacklevel=2,
-            )
-        if self._old_names:
-            warnings.warn(
-                "old_names will be removed after the 0.14 release. You should "
-                "stop setting this parameter and use the new names.",
-                FutureWarning,
                 stacklevel=2,
             )
         self._lags, self._hold_back = self._check_lags(
@@ -355,21 +338,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         deterministic = self._deterministics.in_sample()
         if deterministic.shape[1]:
             x = np.c_[to_numpy(deterministic), x]
-            if self._old_names:
-                deterministic_names = []
-                if "c" in self._trend:
-                    deterministic_names.append("intercept")
-                if "t" in self._trend:
-                    deterministic_names.append("trend")
-                if self._seasonal:
-                    period = self._period
-                    assert isinstance(period, int)
-                    names = [f"seasonal.{i}" for i in range(period)]
-                    if "c" in self._trend:
-                        names = names[1:]
-                    deterministic_names.extend(names)
-            else:
-                deterministic_names = list(deterministic.columns)
+            deterministic_names = list(deterministic.columns)
             exog_names = deterministic_names + exog_names
         if self.exog is not None:
             x = np.c_[x, self.exog]
@@ -1892,7 +1861,6 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 hold_back=existing.hold_back,
                 period=existing.period,
                 deterministic=deterministic,
-                old_names=False,
             )
         except Exception as exc:
             error = (
@@ -2077,7 +2045,6 @@ _auto_reg_params = doc.extract_parameters(
         "hold_back",
         "period",
         "missing",
-        "old_names",
     ],
     4,
 )
@@ -2095,7 +2062,6 @@ def ar_select_order(
     hold_back=None,
     period=None,
     missing="none",
-    old_names=False,
 ):
     """
     Autoregressive AR-X(p) model order selection
@@ -2152,7 +2118,6 @@ def ar_select_order(
         hold_back=hold_back,
         period=period,
         missing=missing,
-        old_names=old_names,
     )
     nexog = full_mod.exog.shape[1] if full_mod.exog is not None else 0
     y, x = full_mod._y, full_mod._x
@@ -2223,7 +2188,6 @@ def ar_select_order(
         hold_back=hold_back,
         period=period,
         missing=missing,
-        old_names=old_names,
     )
     return AROrderSelectionResults(mod, ics, trend, seasonal, period)
 

@@ -7,9 +7,6 @@ License: BSD-3
 
 """
 
-# scipy compat:
-from statsmodels.compat.scipy import multivariate_t
-
 import numpy as np
 from scipy import stats
 
@@ -265,7 +262,7 @@ class StudentTCopula(EllipticalCopula):
         self.args = (corr, df)
         # both uv and mv are frozen distributions
         self.distr_uv = stats.t(df=df)
-        self.distr_mv = multivariate_t(shape=corr, df=df)
+        self.distr_mv = stats.multivariate_t(shape=corr, df=df)
 
     def cdf(self, u, args=()):
         raise NotImplementedError("CDF not available in closed form.")

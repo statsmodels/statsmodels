@@ -6,8 +6,6 @@ License: Simplified-BSD
 """
 from statsmodels.compat.numpy import inplace_reshape
 
-import warnings
-
 import numpy as np
 
 from . import tools
@@ -388,12 +386,7 @@ class Representation:
         if kwargs:
             # raise TypeError(f'{__class__} constructor got unexpected keyword'
             #                 f' argument(s): {kwargs}.')
-            msg = (
-                f"Unknown keyword arguments: {kwargs.keys()}."
-                "Passing unknown keyword arguments will raise a TypeError"
-                " beginning in version 0.15."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
+            raise TypeError(f"Unknown keyword arguments: {list(kwargs.keys())}.")
 
         # Matrix representations storage
         self._representations = {}
