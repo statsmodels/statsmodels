@@ -1,7 +1,7 @@
 from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 
 import numpy as np
-from numpy.testing import assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 from scipy import sparse
@@ -732,7 +732,7 @@ def test_group_sums():
 
 
 def test_group_sums_orientation_consistent():
-    """Both use_bincount paths return (n_groups, n_features) (#9921)."""
+    """Both use_bincount paths return (n_groups, n_features) (GH9921)."""
     g = np.array([0, 0, 1, 2, 1, 1, 2, 0])
     x = np.arange(len(g) * 3).reshape(len(g), 3, order="F")
     a = group_sums(x, g, use_bincount=True)
@@ -742,7 +742,7 @@ def test_group_sums_orientation_consistent():
 
 
 def test_group_demean_default():
-    """group_demean works with default use_bincount and demeans by group size (#9921)."""
+    """group_demean works with default use_bincount and demeans by group size (GH9921)."""
     g = np.array([0, 0, 1, 1, 1, 2, 2, 2])
     x = np.array([1.0, 3.0, 1.0, 2.0, 3.0, 10.0, 20.0, 30.0])
     demeaned, means = Group(g).group_demean(x)

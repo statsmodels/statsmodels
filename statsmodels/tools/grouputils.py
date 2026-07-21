@@ -98,7 +98,7 @@ def group_sums(x, group, use_bincount=True):
     -----
     Both code paths previously disagreed on orientation (``use_bincount``
     returned ``(n_features, n_groups)``). They now both return
-    ``(n_groups, n_features)`` so indexing by group id works (#9921).
+    ``(n_groups, n_features)`` so indexing by group id works (GH9921).
     """
     x = np.asarray(x)
     group = np.asarray(group).squeeze()
