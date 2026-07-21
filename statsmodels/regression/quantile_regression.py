@@ -42,10 +42,10 @@ class QuantReg(RegressionModel):
 
     Parameters
     ----------
-    endog : array or dataframe
-        endogenous/response variable
-    exog : array or dataframe
-        exogenous/explanatory variable(s)
+    endog : array_like or dataframe
+        Endogenous/response variable.
+    exog : array_like or dataframe
+        Exogenous/explanatory variable(s).
 
     Notes
     -----
@@ -60,10 +60,10 @@ class QuantReg(RegressionModel):
     ----------
     General:
 
-    * Birkes, D. and Y. Dodge(1993). Alternative Methods of Regression, John Wiley and Sons.
-    * Green,W. H. (2008). Econometric Analysis. Sixth Edition. International Student Edition.
+    * Birkes, D. and Y. Dodge (1993). Alternative Methods of Regression, John Wiley and Sons.
+    * Green, W. H. (2008). Econometric Analysis. Sixth Edition. International Student Edition.
     * Koenker, R. (2005). Quantile Regression. New York: Cambridge University Press.
-    * LeSage, J. P.(1999). Applied Econometrics Using MATLAB,
+    * LeSage, J. P. (1999). Applied Econometrics Using MATLAB,
 
     Kernels (used by the fit method):
 
@@ -85,9 +85,7 @@ class QuantReg(RegressionModel):
         super().__init__(endog, exog, **kwargs)
 
     def whiten(self, data):
-        """
-        QuantReg model whitener does nothing: returns data.
-        """
+        """QuantReg model whitener does nothing: returns data"""
         return data
 
     def fit(
@@ -106,23 +104,26 @@ class QuantReg(RegressionModel):
         Parameters
         ----------
         q : float
-            Quantile must be strictly between 0 and 1
-        vcov : str, method used to calculate the variance-covariance matrix
+            Quantile must be strictly between 0 and 1.
+        vcov : str
+            Method used to calculate the variance-covariance matrix
             of the parameters. Default is ``robust``:
 
             - robust : heteroskedasticity robust standard errors (as suggested
               in Greene 6th edition)
             - iid : iid errors (as in Stata 12)
 
-        kernel : str, kernel to use in the kernel density estimation for the
+        kernel : str
+            Kernel to use in the kernel density estimation for the
             asymptotic covariance matrix:
 
             - epa: Epanechnikov
             - cos: Cosine
             - gau: Gaussian
-            - par: Parzene
+            - par: Parzen
 
-        bandwidth : str, Bandwidth selection method in kernel density
+        bandwidth : str
+            Bandwidth selection method in kernel density
             estimation for asymptotic covariance estimate (full
             references in QuantReg docstring):
 
@@ -136,6 +137,12 @@ class QuantReg(RegressionModel):
         **kwargs
             Additional keyword arguments, accepted for API compatibility.
 
+        Returns
+        -------
+        RegressionResultsWrapper
+            Results instance for the fitted quantile regression, with
+            additional ``q``, ``iterations``, ``sparsity``, ``bandwidth``,
+            and ``history`` attributes.
         """
         if q <= 0 or q >= 1:
             raise ValueError("q must be strictly between 0 and 1")
@@ -379,27 +386,26 @@ class QuantRegResults(RegressionResults):
         Parameters
         ----------
         yname : str, optional
-            Default is `y`
+            Default is `y`.
         xname : list[str], optional
             Names for the exogenous variables. Default is `var_##` for ## in
             the number of regressors. Must match the number of parameters
-            in the model
+            in the model.
         title : str, optional
             Title for the top table. If not None, then this replaces the
-            default title
+            default title.
         alpha : float
-            significance level for the confidence intervals
+            Significance level for the confidence intervals.
 
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which can be printed or
+            This holds the summary tables and text, which can be printed or
             converted to various output formats.
 
         See Also
         --------
         statsmodels.iolib.summary.Summary : class to hold summary results
-
         """
         eigvals = self.eigenvals
         condno = self.condition_number

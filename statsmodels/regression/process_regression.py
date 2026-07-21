@@ -30,7 +30,7 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning, ValueWarning
 
 class ProcessCovariance:
     r"""
-    A covariance model for a process indexed by a real parameter.
+    A covariance model for a process indexed by a real parameter
 
     An implementation of this class is based on a positive definite
     correlation function h that maps real numbers to the interval [0,
@@ -41,7 +41,7 @@ class ProcessCovariance:
 
     def get_cov(self, time, sc, sm):
         """
-        Returns the covariance matrix for given time values.
+        Returns the covariance matrix for given time values
 
         Parameters
         ----------
@@ -54,14 +54,27 @@ class ProcessCovariance:
             The smoothness parameters for the observation.  See class
             docstring for details.
 
+        Returns
+        -------
+        ndarray
+            The pxp covariance matrix for the given time values.
         """
         raise NotImplementedError
 
     def jac(self, time, sc, sm):
         """
-        The Jacobian of the covariance with respect to the parameters.
+        The Jacobian of the covariance with respect to the parameters
 
-        See get_cov for parameters.
+        Parameters
+        ----------
+        time : array_like
+            The time points for the observations.  If len(time) = p,
+            a pxp covariance matrix is returned.
+        sc : array_like
+            The scaling parameters for the observations.
+        sm : array_like
+            The smoothness parameters for the observation.  See class
+            docstring for details.
 
         Returns
         -------
@@ -71,14 +84,13 @@ class ProcessCovariance:
         jsm : list-like
             jsm[i] is the derivative of the covariance matrix
             with respect to the i^th smoothness parameter.
-
         """
         raise NotImplementedError
 
 
 class GaussianCovariance(ProcessCovariance):
     r"""
-    An implementation of ProcessCovariance using the Gaussian kernel.
+    An implementation of ProcessCovariance using the Gaussian kernel
 
     This class represents a parametric covariance model for a Gaussian
     process as described in the work of Paciorek et al. cited below.
@@ -192,16 +204,16 @@ def _check_args(endog, exog, exog_scale, exog_smooth, exog_noise, time, groups):
 
 class ProcessMLE(base.LikelihoodModel):
     """
-    Fit a Gaussian mean/variance regression model.
+    Fit a Gaussian mean/variance regression model
 
     This class fits a one-dimensional Gaussian process model with
     parametrized mean and covariance structures to grouped data.  For
     each group, there is an independent realization of a latent
     Gaussian process indexed by an observed real-valued time
-    variable..  The data consist of the Gaussian process observed at a
+    variable.  The data consist of the Gaussian process observed at a
     finite number of `time` values.
 
-    The process mean and variance can be lined to covariates.  The
+    The process mean and variance can be linked to covariates.  The
     mean structure is linear in the covariates.  The covariance
     structure is non-stationary, and is defined parametrically through
     'scaling', and 'smoothing' parameters.  The covariance of the
@@ -240,6 +252,8 @@ class ProcessMLE(base.LikelihoodModel):
         The group values.
     cov : a ProcessCovariance instance
         Defaults to GaussianCovariance.
+    **kwargs
+        Additional keyword arguments passed to the model constructor.
 
     """
 
@@ -414,7 +428,24 @@ class ProcessMLE(base.LikelihoodModel):
 
     def unpack(self, z):
         """
-        Split the packed parameter vector into blocks.
+        Split the packed parameter vector into blocks
+
+        Parameters
+        ----------
+        z : array_like
+            The packed parameter vector.
+
+        Returns
+        -------
+        mnpar : ndarray
+            The mean parameters.
+        scpar : ndarray
+            The scaling parameters.
+        smpar : ndarray
+            The smoothness parameters.
+        nopar : ndarray
+            The white noise standard deviation parameters. Empty if the
+            model does not include additive white noise.
         """
         # Mean parameters
         pm = self.exog.shape[1]
@@ -449,7 +480,7 @@ class ProcessMLE(base.LikelihoodModel):
 
     def loglike(self, params):
         """
-        Calculate the log-likelihood function for the model.
+        Calculate the log-likelihood function for the model
 
         Parameters
         ----------
@@ -458,7 +489,8 @@ class ProcessMLE(base.LikelihoodModel):
 
         Returns
         -------
-        The log-likelihood value at the given parameter point.
+        float
+            The log-likelihood value at the given parameter point.
 
         Notes
         -----
@@ -503,7 +535,7 @@ class ProcessMLE(base.LikelihoodModel):
 
     def score(self, params):
         """
-        Calculate the score function for the model.
+        Calculate the score function for the model
 
         Parameters
         ----------
@@ -512,7 +544,8 @@ class ProcessMLE(base.LikelihoodModel):
 
         Returns
         -------
-        The score vector at the given parameter point.
+        ndarray
+            The score vector at the given parameter point.
 
         Notes
         -----
@@ -600,7 +633,7 @@ class ProcessMLE(base.LikelihoodModel):
 
     def fit(self, start_params=None, method=None, maxiter=None, **kwargs):
         """
-        Fit a grouped Gaussian process regression using MLE.
+        Fit a grouped Gaussian process regression using MLE
 
         Parameters
         ----------
@@ -615,8 +648,8 @@ class ProcessMLE(base.LikelihoodModel):
 
         Returns
         -------
-        An instance of ProcessMLEResults.
-
+        ProcessMLEResults
+            The fitted results instance.
         """
         if "verbose" in kwargs:
             self.verbose = kwargs["verbose"]
@@ -689,7 +722,7 @@ class ProcessMLE(base.LikelihoodModel):
 
     def covariance(self, time, scale_params, smooth_params, scale_data, smooth_data):
         """
-        Returns a Gaussian process covariance matrix.
+        Returns a Gaussian process covariance matrix
 
         Parameters
         ----------
@@ -711,7 +744,8 @@ class ProcessMLE(base.LikelihoodModel):
 
         Returns
         -------
-        A covariance matrix.
+        ndarray
+            The covariance matrix.
 
         Notes
         -----
@@ -741,7 +775,7 @@ class ProcessMLE(base.LikelihoodModel):
 
     def predict(self, params, exog=None, *args, **kwargs):
         """
-        Obtain predictions of the mean structure.
+        Obtain predictions of the mean structure
 
         Parameters
         ----------
@@ -756,6 +790,10 @@ class ProcessMLE(base.LikelihoodModel):
         **kwargs
             Additional keyword arguments, accepted for API compatibility.
 
+        Returns
+        -------
+        ndarray
+            The predicted values of the mean structure.
         """
         if exog is None:
             exog = self.exog
@@ -771,9 +809,7 @@ class ProcessMLE(base.LikelihoodModel):
 
 
 class ProcessMLEResults(base.GenericLikelihoodModelResults):
-    """
-    Results class for Gaussian process regression models.
-    """
+    """Results class for Gaussian process regression models"""
 
     def __init__(self, model, mlefit):
 
@@ -812,7 +848,7 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
 
     def covariance(self, time, scale, smooth):
         """
-        Returns a fitted covariance matrix.
+        Returns a fitted covariance matrix
 
         Parameters
         ----------
@@ -828,7 +864,8 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
 
         Returns
         -------
-        A covariance matrix.
+        ndarray
+            The covariance matrix.
 
         Notes
         -----
