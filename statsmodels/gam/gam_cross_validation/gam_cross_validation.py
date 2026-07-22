@@ -17,9 +17,33 @@ from statsmodels.gam.smooth_basis import GenericSmoothers, UnivariateGenericSmoo
 
 class BaseCV(with_metaclass(ABCMeta)):
     """
-    BaseCV class. It computes the cross validation error of a given model.
-    All the cross validation classes can be derived by this one
-    (e.g. GamCV, LassoCV,...)
+    Base class for cross validation over a given model
+
+    Computes the cross validation error of a given model. All the cross
+    validation classes can be derived from this one (e.g. GamCV, LassoCV,...)
+
+    Parameters
+    ----------
+    cv_iterator : instance of cross-validation iterator
+        Iterator used to split the data into train and test indices.
+    endog : ndarray
+        dependent (response) variable of the model
+    exog : ndarray
+        design matrix, used only to determine the number of observations
+        passed to ``cv_iterator.split``
+
+    Attributes
+    ----------
+    cv_iterator : instance of cross-validation iterator
+        Iterator used to split the data into train and test indices.
+    endog : ndarray
+        dependent (response) variable of the model
+    exog : ndarray
+        design matrix, used only to determine the number of observations
+        passed to ``cv_iterator.split``
+    train_test_cv_indices : generator
+        generator of (train_index, test_index) pairs produced by
+        ``cv_iterator.split``
     """
 
     def __init__(self, cv_iterator, endog, exog):
@@ -32,9 +56,20 @@ class BaseCV(with_metaclass(ABCMeta)):
                                                             label=None)
 
     def fit(self, **kwargs):
-        # kwargs are the input values for the fit method of the
-        # cross-validated object
+        """
+        Compute the cross validation error over all train/test splits
 
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments passed to the ``fit`` method of the
+            cross-validated model.
+
+        Returns
+        -------
+        cv_err : ndarray
+            array of the errors computed on each test fold
+        """
         cv_err = []
 
         for train_index, test_index in self.train_test_cv_indices:
@@ -44,15 +79,52 @@ class BaseCV(with_metaclass(ABCMeta)):
 
     @abstractmethod
     def _error(self, train_index, test_index, **kwargs):
-        # train the model on the train set
-        #   and returns the error on the test set
+        """
+        Train the model on the train set and return the error on the test set
+
+        Parameters
+        ----------
+        train_index : ndarray
+            index or boolean mask selecting the training observations
+        test_index : ndarray
+            index or boolean mask selecting the test observations
+        **kwargs
+            Keyword arguments passed to the ``fit`` method of the
+            cross-validated model.
+
+        Returns
+        -------
+        error : float
+            prediction error evaluated on the test set
+        """
         pass
 
 
 def _split_train_test_smoothers(x, smoothers, train_index, test_index):
-    """split smoothers in test and train sets and create GenericSmoothers
+    """
+    Split smoothers in test and train sets and create GenericSmoothers
 
-    Note: this does not take exog_linear into account
+    Parameters
+    ----------
+    x : ndarray
+        values of the independent variables for all the smoothers
+    smoothers : instance
+        additive smoother instance whose components are split
+    train_index : ndarray
+        index or boolean mask selecting the training observations
+    test_index : ndarray
+        index or boolean mask selecting the test observations
+
+    Returns
+    -------
+    train_multivariate_smoothers : GenericSmoothers
+        smoothers evaluated on the training observations
+    test_multivariate_smoothers : GenericSmoothers
+        smoothers evaluated on the test observations
+
+    Notes
+    -----
+    This does not take exog_linear into account.
     """
     train_smoothers = []
     test_smoothers = []
@@ -89,6 +161,42 @@ def _split_train_test_smoothers(x, smoothers, train_index, test_index):
 
 
 class MultivariateGAMCV(BaseCV):
+    """
+    Cross validation error of a multivariate additive model
+
+    Parameters
+    ----------
+    smoother : additive smoother instance
+        smoother providing the basis for the smooth terms of the model
+    alphas : list of float
+        penalty weights, one for each smooth term
+    gam : model class
+        model class for creating a model with the training data
+    cost : function
+        cost function used to compute the prediction error
+    endog : ndarray
+        dependent (response) variable of the model
+    exog : ndarray or None
+        design matrix of the linear (non-smooth) terms of the model
+    cv_iterator : instance of cross-validation iterator
+        iterator used to split the data into train and test indices
+
+    Attributes
+    ----------
+    cost : function
+        cost function used to compute the prediction error
+    gam : model class
+        model class for creating a model with the training data
+    smoother : additive smoother instance
+        smoother providing the basis for the smooth terms of the model
+    exog_linear : ndarray or None
+        design matrix of the linear (non-smooth) terms of the model
+    alphas : list of float
+        penalty weights, one for each smooth term
+    cv_iterator : instance of cross-validation iterator
+        iterator used to split the data into train and test indices
+    """
+
     def __init__(self, smoother, alphas, gam, cost, endog, exog, cv_iterator):
         self.cost = cost
         self.gam = gam
@@ -104,6 +212,23 @@ class MultivariateGAMCV(BaseCV):
         )
 
     def _error(self, train_index, test_index, **kwargs):
+        """
+        Train the model on the train set and return the error on the test set
+
+        Parameters
+        ----------
+        train_index : ndarray
+            index or boolean mask selecting the training observations
+        test_index : ndarray
+            index or boolean mask selecting the test observations
+        **kwargs
+            Keyword arguments passed to the ``fit`` method of the gam model.
+
+        Returns
+        -------
+        error : float
+            prediction error, evaluated with ``cost``, on the test set
+        """
         train_smoother, test_smoother = _split_train_test_smoothers(
             self.smoother.x, self.smoother, train_index, test_index)
 
@@ -129,11 +254,30 @@ class MultivariateGAMCV(BaseCV):
 
 class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
     """
-    Base class for cross validation over a grid of parameters.
+    Base class for cross validation over a grid of parameters
 
-    The best parameter is saved in alpha_cv
+    The best parameter is saved in ``alpha_cv``.
 
-    This class is currently not used
+    Parameters
+    ----------
+    alphas : list of float
+        grid of penalty weights to search over
+
+    Attributes
+    ----------
+    alphas : list of float
+        grid of penalty weights to search over
+    alpha_cv : float or None
+        best penalty weight found by cross-validation
+    cv_error : ndarray or None
+        cross-validation error for each value in ``alphas``
+    cv_std : ndarray or None
+        standard deviation of the cross-validation error for each value in
+        ``alphas``
+
+    Notes
+    -----
+    This class is currently not used.
     """
 
     def __init__(self, alphas):
@@ -143,6 +287,7 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
         self.cv_std = None
 
     def plot_path(self):
+        """Plot the cross validation error and standard deviation over the alphas grid"""
         from statsmodels.graphics.utils import _import_mpl
         plt = _import_mpl()
         plt.plot(self.alphas, self.cv_error, c="black")
@@ -161,23 +306,56 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
 
 
 class MultivariateGAMCVPath:
-    """k-fold cross-validation for GAM
-
-    Warning: The API of this class is preliminary and will change.
+    """
+    K-fold cross-validation for GAM
 
     Parameters
     ----------
     smoother : additive smoother instance
-    alphas : list of iteratables
+        smoother providing the basis for the smooth terms of the model
+    alphas : list of iterables
         list of alpha for smooths. The product space will be used as alpha
         grid for cross-validation
     gam : model class
-        model class for creating a model with k-fole training data
+        model class for creating a model with k-fold training data
     cost : function
         cost function for the prediction error
     endog : ndarray
         dependent (response) variable of the model
+    exog : ndarray or None
+        design matrix of the linear (non-smooth) terms of the model
     cv_iterator : instance of cross-validation iterator
+        iterator used to split the data into train and test indices
+
+    Attributes
+    ----------
+    cost : function
+        cost function for the prediction error
+    smoother : additive smoother instance
+        smoother providing the basis for the smooth terms of the model
+    gam : model class
+        model class for creating a model with k-fold training data
+    alphas : list of iterables
+        list of alpha for smooths
+    alphas_grid : list of tuples
+        product space of ``alphas`` searched during cross-validation
+    endog : ndarray
+        dependent (response) variable of the model
+    exog : ndarray or None
+        design matrix of the linear (non-smooth) terms of the model
+    cv_iterator : instance of cross-validation iterator
+        iterator used to split the data into train and test indices
+    cv_error : ndarray
+        mean cross-validation error for each element of ``alphas_grid``
+    cv_std : ndarray
+        standard deviation of the cross-validation error for each element
+        of ``alphas_grid``
+    alpha_cv : tuple or None
+        element of ``alphas_grid`` with the smallest cross-validation error
+
+    Warnings
+    --------
+    The API of this class is preliminary and will change.
     """
 
     def __init__(self, smoother, alphas, gam, cost, endog, exog, cv_iterator):
@@ -194,6 +372,19 @@ class MultivariateGAMCVPath:
         self.alpha_cv = None
 
     def fit(self, **kwargs):
+        """
+        Perform the cross-validation search over the alphas grid
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments passed to the ``fit`` method of the gam model.
+
+        Returns
+        -------
+        self : MultivariateGAMCVPath
+            instance with ``cv_error``, ``cv_std`` and ``alpha_cv`` set
+        """
         for i, alphas_i in enumerate(self.alphas_grid):
             gam_cv = MultivariateGAMCV(smoother=self.smoother,
                                        alphas=alphas_i,
