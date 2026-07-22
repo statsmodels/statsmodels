@@ -44,7 +44,6 @@ from ._kernel_base import (
 __all__ = ["EstimatorSettings", "KDEMultivariate", "KDEMultivariateConditional"]
 
 from ..compat import pytest
-
 from ..compat.pandas import deprecate_kwarg
 
 

@@ -289,13 +289,13 @@ class TestTheilPanel:
 
         from statsmodels.sandbox.panel.random_panel import PanelSample
 
-        dgp = PanelSample(nobs, k_vars, n_groups, seed=303305)
+        dgp = PanelSample(nobs, k_vars, n_groups, rng=303305)
         # add random intercept, using same RandomState
         if isinstance(dgp.random_state, np.random.RandomState):
             dgp.group_means = 2 + dgp.random_state.randn(n_groups)
         else:
             dgp.group_means = 2 + dgp.random_state.uniform(n_groups)
-        print("seed", dgp.seed)
+        print("rng", dgp.rng)
         y = dgp.generate_panel()
         x = np.column_stack(
             (dgp.exog[:, 1:], dgp.groups[:, None] == np.arange(n_groups))

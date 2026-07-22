@@ -1,6 +1,7 @@
 """Module for functional boxplots"""
 
 from statsmodels.compat.numpy import NP_LT_123
+from statsmodels.compat.pandas import deprecate_kwarg
 
 import numpy as np
 from scipy.special import comb
@@ -144,21 +145,21 @@ def _min_max_band(args):
     band : tuple of float
         ``(max, min)`` curve values at `idx`
     """
-    idx, (band, pca, bounds, ks_gaussian, use_brute, seed) = args
+    idx, (band, pca, bounds, ks_gaussian, use_brute, rng) = args
     if have_de_optim and not use_brute:
         max_ = differential_evolution(
             _curve_constrained,
             bounds=bounds,
             args=(idx, -1, band, pca, ks_gaussian),
             maxiter=7,
-            seed=seed,
+            seed=rng,
         ).x
         min_ = differential_evolution(
             _curve_constrained,
             bounds=bounds,
             args=(idx, 1, band, pca, ks_gaussian),
             maxiter=7,
-            seed=seed,
+            seed=rng,
         ).x
     else:
         max_ = brute(
@@ -182,6 +183,8 @@ def _min_max_band(args):
     return band
 
 
+@deprecate_kwarg("seed", "rng")
+@deprecate_kwarg("kernel_seed", "kernel_rng")
 def hdrboxplot(
     data,
     ncomp=2,
@@ -192,9 +195,9 @@ def hdrboxplot(
     labels=None,
     ax=None,
     use_brute=False,
-    seed=None,
+    rng=None,
     *,
-    kernel_seed=None,
+    kernel_rng=None,
 ):
     """
     High Density Region boxplot
@@ -236,11 +239,16 @@ def hdrboxplot(
     use_brute : bool
         Use the brute force optimizer instead of the default differential
         evolution to find the curves. Default is False.
-    seed : {None, int, np.random.RandomState}
-        Seed value to pass to scipy.optimize.differential_evolution. Can be an
-        integer or RandomState instance. If None, then the default RandomState
-        provided by np.random is used.
-    kernel_seed : {int, Generator, RandomState}, optional
+    rng : {None, int, np.random.RandomState}
+        Value to pass to scipy.optimize.differential_evolution as its `seed`
+        argument. Can be an integer or RandomState instance. If None, then
+        the default RandomState provided by np.random is used.
+    seed : {None, int, np.random.RandomState}, optional
+        .. deprecated:: 0.15
+
+           seed has been deprecated. In-line with SPEC-007, use
+           rng for passing a random number generator or seed.
+    kernel_rng : {int, Generator, RandomState}, optional
         A seed to use for the kernel density. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -248,6 +256,11 @@ def hdrboxplot(
             In release 0.17.0 or after January 2028, whichever comes sooner,
             using None will initialize a new numpy.random.default_rng using
             system entropy.
+    kernel_seed : {int, Generator, RandomState}, optional
+        .. deprecated:: 0.15
+
+           kernel_seed has been deprecated. In-line with SPEC-007, use
+           kernel_rng for passing a random number generator or seed.
 
     Returns
     -------
@@ -365,7 +378,7 @@ def hdrboxplot(
 
     # Create gaussian kernel
     ks_gaussian = KDEMultivariate(
-        data_r, bw=bw, var_type="c" * data_r.shape[1], seed=kernel_seed
+        data_r, bw=bw, var_type="c" * data_r.shape[1], rng=kernel_rng
     )
 
     # Boundaries of the n-variate space
@@ -395,7 +408,7 @@ def hdrboxplot(
     # Find mean, outliers curves
     if have_de_optim and not use_brute:
         median = differential_evolution(
-            lambda x: -ks_gaussian.pdf(x), bounds=bounds, maxiter=5, seed=seed
+            lambda x: -ks_gaussian.pdf(x), bounds=bounds, maxiter=5, seed=rng
         ).x
     else:
         median = brute(lambda x: -ks_gaussian.pdf(x), ranges=bounds, finish=fmin)
@@ -406,7 +419,7 @@ def hdrboxplot(
 
     # Find HDR given some quantiles
 
-    def _band_quantiles(band, use_brute=use_brute, seed=seed):
+    def _band_quantiles(band, use_brute=use_brute, rng=rng):
         """
         Find extreme curves for a quantile band
 
@@ -426,10 +439,10 @@ def hdrboxplot(
         use_brute : bool
             Use the brute force optimizer instead of the default differential
             evolution to find the curves. Default is False.
-        seed : {None, int, np.random.RandomState}
-            Seed value to pass to scipy.optimize.differential_evolution. Can
-            be an integer or RandomState instance. If None, then the default
-            RandomState provided by np.random is used.
+        rng : {None, int, np.random.RandomState}
+            Value to pass to scipy.optimize.differential_evolution as its
+            `seed` argument. Can be an integer or RandomState instance. If
+            None, then the default RandomState provided by np.random is used.
 
         Returns
         -------
@@ -446,7 +459,7 @@ def hdrboxplot(
         pool = Pool()
         data = zip(
             range(dim),
-            itertools.repeat((band, pca, bounds, ks_gaussian, seed, use_brute)),
+            itertools.repeat((band, pca, bounds, ks_gaussian, use_brute, rng)),
         )
         band_quantiles = pool.map(_min_max_band, data)
         pool.terminate()
@@ -461,15 +474,15 @@ def hdrboxplot(
         extra_quantiles = []
         for x in extra_alpha:
             extra_quantiles.extend(
-                list(_band_quantiles([x], use_brute=use_brute, seed=seed))
+                list(_band_quantiles([x], use_brute=use_brute, rng=rng))
             )
     else:
         extra_quantiles = []
 
     # Inverse transform from n-variate plot to dataset dataset's shape
     median = _inverse_transform(pca, median)[0]
-    hdr_90 = _band_quantiles([0.9, 0.5], use_brute=use_brute, seed=seed)
-    hdr_50 = _band_quantiles([0.5], use_brute=use_brute, seed=seed)
+    hdr_90 = _band_quantiles([0.9, 0.5], use_brute=use_brute, rng=rng)
+    hdr_50 = _band_quantiles([0.5], use_brute=use_brute, rng=rng)
 
     hdr_res = HdrResults(
         {

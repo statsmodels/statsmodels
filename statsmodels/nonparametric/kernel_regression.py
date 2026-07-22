@@ -501,9 +501,9 @@ class KernelReg(GenericKDE):
             if np.any(ix_ord[var_pos]) or np.any(ix_unord[var_pos]):
                 raise ValueError("Discrete variable in hypothesis. Must be continuous")
 
-            Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot, seed=self.seed)
+            Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot, rng=self.rng)
         else:
-            Sig = TestRegCoefD(self, var_pos, nboot, seed=self.seed)
+            Sig = TestRegCoefD(self, var_pos, nboot, rng=self.rng)
 
         return Sig.sig
 
@@ -1095,7 +1095,7 @@ class TestRegCoefD(TestRegCoefC):
             self.model.reg_type,
             self.bw,
             defaults=EstimatorSettings(efficient=False),
-            seed=self._generator,
+            rng=self._generator,
         )
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0

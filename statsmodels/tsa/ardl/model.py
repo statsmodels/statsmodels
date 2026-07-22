@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from statsmodels.compat.pandas import call_cached_func
+from statsmodels.compat.pandas import call_cached_func, deprecate_kwarg
 
 from collections import defaultdict
 from collections.abc import Hashable, Mapping, Sequence
@@ -2226,6 +2226,7 @@ class UECMResults(ARDLResults):
         """Returns poly repr of an AR, (1  -phi1 L -phi2 L^2-...)"""
         # TODO
 
+    @deprecate_kwarg("seed", "rng")
     def bounds_test(
         self,
         case: Literal[1, 2, 3, 4, 5],
@@ -2234,7 +2235,7 @@ class UECMResults(ARDLResults):
         use_t: bool = True,
         asymptotic: bool = True,
         nsim: int = 100_000,
-        seed: (
+        rng: (
             int | Sequence[int] | np.random.RandomState | np.random.Generator | None
         ) = None,
     ):
@@ -2286,10 +2287,15 @@ class UECMResults(ARDLResults):
         nsim : int
             Number of simulations to run when computing exact critical values.
             Only used if ``asymptotic`` is ``True``.
+        rng : {None, int, sequence[int], RandomState, Generator}, optional
+            Random number generator or seed to use when simulating critical
+            values. Must be provided if reproducible critical value and
+            p-values are required when ``asymptotic`` is ``False``.
         seed : {None, int, sequence[int], RandomState, Generator}, optional
-            Seed to use when simulating critical values. Must be provided if
-            reproducible critical value and p-values are required when
-            ``asymptotic`` is ``False``.
+            .. deprecated:: 0.15
+
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -2392,7 +2398,7 @@ class UECMResults(ARDLResults):
         else:
             nobs = res.resid.shape[0]
             crit_vals, p_values = _pss_simulate(
-                stat, k, case, nobs=nobs, nsim=nsim, seed=seed
+                stat, k, case, nobs=nobs, nsim=nsim, rng=rng
             )
 
         return BoundsTestResult(
@@ -2421,14 +2427,14 @@ def _pss_simulate(
     case: Literal[1, 2, 3, 4, 5],
     nobs: int,
     nsim: int,
-    seed: int | Sequence[int] | np.random.RandomState | np.random.Generator | None,
+    rng: int | Sequence[int] | np.random.RandomState | np.random.Generator | None,
 ) -> tuple[pd.DataFrame, pd.Series]:
     rs: np.random.RandomState | np.random.Generator
-    if not isinstance(seed, np.random.RandomState):
-        rs = np.random.default_rng(seed)
+    if not isinstance(rng, np.random.RandomState):
+        rs = np.random.default_rng(rng)
     else:
-        assert isinstance(seed, np.random.RandomState)
-        rs = seed
+        assert isinstance(rng, np.random.RandomState)
+        rs = rng
 
     def _vectorized_ols_resid(rhs, lhs):
         rhs_t = np.transpose(rhs, [0, 2, 1])
