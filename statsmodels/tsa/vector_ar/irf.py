@@ -167,47 +167,46 @@ class BaseIRAnalysis:
         else:
             title = "Impulse responses"
 
-        if plot_stderr is False:
-            stderr = None
-
-        elif stderr_type not in ["asym", "mc", "sz1", "sz2", "sz3"]:
+        if stderr_type not in ["asym", "mc", "sz1", "sz2", "sz3"]:
             raise ValueError(
                 "Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'"
             )
-        else:
-            if stderr_type == "asym":
-                stderr = self.cov(orth=orth)
-            if stderr_type == "mc":
-                stderr = self.errband_mc(
-                    orth=orth, svar=svar, repl=repl, signif=signif, rng=rng
-                )
-            if stderr_type == "sz1":
-                stderr = self.err_band_sz1(
-                    orth=orth,
-                    svar=svar,
-                    repl=repl,
-                    signif=signif,
-                    rng=rng,
-                    component=component,
-                )
-            if stderr_type == "sz2":
-                stderr = self.err_band_sz2(
-                    orth=orth,
-                    svar=svar,
-                    repl=repl,
-                    signif=signif,
-                    rng=rng,
-                    component=component,
-                )
-            if stderr_type == "sz3":
-                stderr = self.err_band_sz3(
-                    orth=orth,
-                    svar=svar,
-                    repl=repl,
-                    signif=signif,
-                    rng=rng,
-                    component=component,
-                )
+
+        if plot_stderr is False:
+            stderr = None
+        elif stderr_type == "asym":
+            stderr = self.cov(orth=orth)
+        elif stderr_type == "mc":
+            stderr = self.errband_mc(
+                orth=orth, svar=svar, repl=repl, signif=signif, rng=rng
+            )
+        elif stderr_type == "sz1":
+            stderr = self.err_band_sz1(
+                orth=orth,
+                svar=svar,
+                repl=repl,
+                signif=signif,
+                rng=rng,
+                component=component,
+            )
+        elif stderr_type == "sz2":
+            stderr = self.err_band_sz2(
+                orth=orth,
+                svar=svar,
+                repl=repl,
+                signif=signif,
+                rng=rng,
+                component=component,
+            )
+        else:  # stderr_type == "sz3":
+            stderr = self.err_band_sz3(
+                orth=orth,
+                svar=svar,
+                repl=repl,
+                signif=signif,
+                rng=rng,
+                component=component,
+            )
 
         fig = plotting.irf_grid_plot(
             irfs,
@@ -287,15 +286,13 @@ class BaseIRAnalysis:
 
         if stderr_type not in ["asym", "mc"]:
             raise ValueError("`stderr_type` must be one of 'asym', 'mc'")
-        else:
-            if stderr_type == "asym":
-                stderr = self.cum_effect_cov(orth=orth)
-            if stderr_type == "mc":
-                stderr = self.cum_errband_mc(
-                    orth=orth, repl=repl, signif=signif, rng=rng
-                )
+
         if not plot_stderr:
             stderr = None
+        elif stderr_type == "asym":
+            stderr = self.cum_effect_cov(orth=orth)
+        else:  # stderr_type == "mc"
+            stderr = self.cum_errband_mc(orth=orth, repl=repl, signif=signif, rng=rng)
 
         fig = plotting.irf_grid_plot(
             cum_effects,
