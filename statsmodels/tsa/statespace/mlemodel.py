@@ -6,7 +6,7 @@ License: Simplified-BSD
 """
 
 from statsmodels.compat.numpy import inplace_reshape
-from statsmodels.compat.pandas import is_int_index
+from statsmodels.compat.pandas import deprecate_kwarg, is_int_index
 
 import contextlib
 import datetime as dt
@@ -2217,6 +2217,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         return kwargs
 
+    @deprecate_kwarg("random_state", "rng")
     def simulate(
         self,
         params,
@@ -2234,7 +2235,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         pretransformed_measurement_shocks=True,
         pretransformed_state_shocks=True,
         pretransformed_initial_state=True,
-        random_state=None,
+        rng=None,
         **kwargs,
     ):
         r"""
@@ -2320,7 +2321,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        random_state : {None, int, Generator, RandomState}, optional
+        rng : {None, int, Generator, RandomState}, optional
             If `seed` is None (or `np.random`), the
             class:``~numpy.random.RandomState`` singleton is used.
             If `seed` is an int, a new class:``~numpy.random.RandomState``
@@ -2425,7 +2426,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                 pretransformed_initial_state=pretransformed_initial_state,
                 simulator=simulator,
                 return_simulator=True,
-                random_state=random_state,
+                rng=rng,
             )
 
             sim[:, :, i] = out
@@ -4103,7 +4104,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         pretransformed_measurement_shocks=True,
         pretransformed_state_shocks=True,
         pretransformed_initial_state=True,
-        random_state=None,
+        rng=None,
         **kwargs,
     ):
         r"""
@@ -4174,7 +4175,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        random_state : {None, int, Generator, RandomState}, optional
+        rng : {None, int, Generator, RandomState}, optional
             If `seed` is None (or `np.random`), the
             class:``~numpy.random.RandomState`` singleton is used.
             If `seed` is an int, a new class:``~numpy.random.RandomState``
@@ -4219,7 +4220,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # GH 9162
         from statsmodels.tsa.statespace import simulation_smoother
 
-        random_state = simulation_smoother.check_random_state(random_state)
+        rng = simulation_smoother.check_random_state(rng)
 
         # Setup the initial state
         if initial_state is None:
@@ -4230,7 +4231,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
             _repetitions = 1 if repetitions is None else repetitions
 
-            initial_state = random_state.multivariate_normal(
+            initial_state = rng.multivariate_normal(
                 *initial_state_moments, size=_repetitions
             ).T
 
@@ -4252,7 +4253,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 pretransformed_measurement_shocks=(pretransformed_measurement_shocks),
                 pretransformed_state_shocks=pretransformed_state_shocks,
                 pretransformed_initial_state=pretransformed_initial_state,
-                random_state=random_state,
+                rng=rng,
                 **kwargs,
             )
 

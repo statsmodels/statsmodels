@@ -5,6 +5,8 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import contextlib
 from warnings import warn
 
@@ -1037,13 +1039,14 @@ class KalmanFilter(Representation):
 
         return llf_obs
 
+    @deprecate_kwarg("random_state", "rng")
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None,
                  pretransformed_measurement_shocks=True,
                  pretransformed_state_shocks=True,
                  pretransformed_initial_state=True,
                  simulator=None, return_simulator=False,
-                 random_state=None):
+                 rng=None):
         r"""
         Simulate a new time series following the state space model
 
@@ -1099,7 +1102,7 @@ class KalmanFilter(Representation):
             Whether or not to return the simulator object. Typically used to
             improve performance when performing repeated sampling. Default is
             False.
-        random_state : {None, int, Generator, RandomState}, optional
+        rng : {None, int, Generator, RandomState}, optional
             If `seed` is None (or `np.random`), the `numpy.random.RandomState`
             singleton is used.
             If `seed` is an int, a new ``RandomState`` instance is used,
@@ -1136,9 +1139,9 @@ class KalmanFilter(Representation):
             pretransformed_initial_state_variates=(
                 pretransformed_initial_state),
             simulator=simulator, return_simulator=return_simulator,
-            random_state=random_state)
+            rng=rng)
 
-    def _simulate(self, nsimulations, simulator=None, random_state=None,
+    def _simulate(self, nsimulations, simulator=None, rng=None,
                   **kwargs):
         raise NotImplementedError("Simulation only available through"
                                   " the simulation smoother.")

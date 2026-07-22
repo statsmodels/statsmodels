@@ -18,6 +18,7 @@ References
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import lmap
 
 import numpy as np
@@ -638,12 +639,11 @@ class NewNorm:
     def cdf(self, x, args):
         return distributions.norm.cdf(x, loc=args[0], scale=args[1])
 
-    def rvs(self, args, size, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, args, size, rng=None):
         loc = args[0]
         scale = args[1]
-        return loc + scale * distributions.norm.rvs(
-            size=size, random_state=random_state
-        )
+        return loc + scale * distributions.norm.rvs(size=size, random_state=rng)
 
 
 if __name__ == "__main__":

@@ -389,17 +389,19 @@ class HoltWintersResults(Results):
 
             * ``None``: Random normally distributed values with variance
               estimated from the fit errors drawn from numpy's standard
-              RNG (can be seeded with the `random_state` argument). This is the
+              RNG (can be seeded with the `rng` argument). This is the
               default option.
             * A distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm``: Fits the distribution function to the fit
               errors and draws from the fitted distribution.
               Note the difference between ``scipy.stats.norm`` and
               ``scipy.stats.norm()``, the latter one is a frozen distribution
-              function.
+              function. The method ``rvs`` is called on the distribution function
+              to draw the random errors.
             * A frozen distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
-              function.
+              function. The method ``rvs`` is called on the distribution function
+              to draw the random errors.
             * A ``np.ndarray`` with shape (`nsimulations`, `repetitions`): Uses
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
@@ -648,13 +650,21 @@ class HoltWintersResults(Results):
                 eps = rng.standard_normal((nsimulations, repetitions)) * sigma
             elif isinstance(random_errors, (rv_continuous, rv_discrete)):
                 params = random_errors.fit(resid)
-                eps = random_errors.rvs(
-                    *params, size=(nsimulations, repetitions), random_state=rng
-                )
+                try:
+                    eps = random_errors.rvs(
+                        *params, size=(nsimulations, repetitions), rng=rng
+                    )
+                except TypeError:
+                    eps = random_errors.rvs(
+                        *params, size=(nsimulations, repetitions), random_state=rng
+                    )
             elif isinstance(random_errors, rv_frozen):
-                eps = random_errors.rvs(
-                    size=(nsimulations, repetitions), random_state=rng
-                )
+                try:
+                    eps = random_errors.rvs(size=(nsimulations, repetitions), rng=rng)
+                except TypeError:
+                    eps = random_errors.rvs(
+                        size=(nsimulations, repetitions), random_state=rng
+                    )
             else:
                 raise ValueError("Argument random_errors has unexpected value!")
 

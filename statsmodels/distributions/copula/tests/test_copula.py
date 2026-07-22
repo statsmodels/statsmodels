@@ -622,8 +622,9 @@ class CheckModernCopula(CheckCopula):
         nobs = 2000
         expected_warn = None if seed1 is not None else FutureWarning
         with pytest_warns(expected_warn):
-            rvs1 = self.copula.rvs(nobs, random_state=seed1)
-        rvs2 = self.copula.rvs(nobs, random_state=seed2)
+            rvs1 = self.copula.rvs(nobs, rng=seed1)
+        with pytest_warns(FutureWarning):
+            rvs2 = self.copula.rvs(nobs, random_state=seed2)
         assert_allclose(rvs1, rvs2)
 
 

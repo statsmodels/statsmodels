@@ -35,7 +35,7 @@ def simulate_k_factor1(nobs=1000, rng=None):
         [0.0] * mod_sim.k_endog,
     ]
     ix = pd.period_range(start="1935-01", periods=nobs, freq="M")
-    endog = pd.DataFrame(mod_sim.simulate(p, nobs, random_state=rng), index=ix)
+    endog = pd.DataFrame(mod_sim.simulate(p, nobs, rng=rng), index=ix)
 
     true = pd.Series(p, index=mod_sim.param_names)
 

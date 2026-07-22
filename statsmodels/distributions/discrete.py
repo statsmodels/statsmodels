@@ -1,3 +1,4 @@
+from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.scipy import apply_where
 
 import numpy as np
@@ -339,12 +340,13 @@ class DiscretizedCount(rv_discrete):
             scale = 1
         return args, scale
 
-    def _rvs(self, *args, size=None, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def _rvs(self, *args, size=None, rng=None):
         args, scale = self._unpack_args(args)
         if size is None:
             size = getattr(self, "_size", 1)
         rv = np.trunc(
-            self.distr.rvs(*args, scale=scale, size=size, random_state=random_state)
+            self.distr.rvs(*args, scale=scale, size=size, random_state=rng)
             + self.d_offset
         )
         return rv

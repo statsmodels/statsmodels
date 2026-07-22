@@ -79,7 +79,7 @@ if __name__ == "__main__":
         for lp in (2, 3):
             for cut in range(40, data.shape[0] - 40):
                 for log in (True, False):
-                    cv = KFold(shuffle=True, random_state=20210903)
+                    cv = KFold(shuffle=True, rng=20210903)
                     x, y = setup_regressors(data, lp, hp, cut, log)
                     k = (lp, hp, cut, log)
                     score[k] = cross_val_score(
@@ -162,7 +162,5 @@ crit_vals = {crit_vals}
     fm = FileMode(target_versions=targets, line_length=79)
     formatted_code = format_file_contents(raw_code, fast=False, mode=fm)
 
-    with open(
-            "../pss_critical_values.py", "w", newline="\n", encoding="utf-8"
-    ) as out:
+    with open("../pss_critical_values.py", "w", newline="\n", encoding="utf-8") as out:
         out.write(formatted_code)

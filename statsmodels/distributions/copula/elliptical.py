@@ -7,6 +7,8 @@ License: BSD-3
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import stats
 
@@ -40,9 +42,10 @@ class EllipticalCopula(Copula):
         else:
             return args
 
-    def rvs(self, nobs=1, args=(), random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
         self._handle_args(args)
-        x = self.distr_mv.rvs(size=nobs, random_state=random_state)
+        x = self.distr_mv.rvs(size=nobs, random_state=rng)
         return self.distr_uv.cdf(x)
 
     def pdf(self, u, args=()):
@@ -52,12 +55,13 @@ class EllipticalCopula(Copula):
 
         return mv_pdf_ppf / np.prod(self.distr_uv.pdf(ppf), axis=-1)
 
-    def cdf(self, u, args=(), random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def cdf(self, u, args=(), rng=None):
         self._handle_args(args)
         ppf = self.distr_uv.ppf(u)
         try:
             # Modern SciPy supports this and is needed to avoid global random state
-            return self.distr_mv.cdf(ppf, rng=random_state)
+            return self.distr_mv.cdf(ppf, rng=rng)
         except TypeError:
             return self.distr_mv.cdf(ppf)
 

@@ -143,6 +143,8 @@ the Newton-Raphson algorithm cannot be used for model fitting.
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 from io import StringIO
 import tokenize
 import warnings
@@ -2541,7 +2543,8 @@ class _mixedlm_distribution:
             group_idx[model.row_indices[g]] = k
         self.group_idx = group_idx
 
-    def rvs(self, n, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, n, rng=None):
         """
         Return a vector of simulated values from a mixed linear
         model
@@ -2550,10 +2553,10 @@ class _mixedlm_distribution:
         ----------
         n : int
             Ignored, but required by the interface.
-        random_state : {None, int, `numpy.random.Generator`, `numpy.random.RandomState`}, optional
-            If `random_state` is None (or `np.random`), the `numpy.random.RandomState`
-            singleton is used. If `random_state` is an int, a new ``RandomState``
-            instance is used, seeded with `random_state`. If `random_state` is already
+        rng : {None, int, `numpy.random.Generator`, `numpy.random.RandomState`}, optional
+            If `rng` is None (or `np.random`), the `numpy.random.RandomState`
+            singleton is used. If `rng` is an int, a new ``RandomState``
+            instance is used, seeded with `rng`. If `rng` is already
             a ``Generator`` or ``RandomState`` instance, that instance is used.
 
         Returns
@@ -2567,7 +2570,7 @@ class _mixedlm_distribution:
         y = np.dot(self.exog, self.fe_params)
 
         # Random effects
-        rng = check_random_state(random_state)
+        rng = check_random_state(rng)
         u = rng.normal(size=(model.n_groups, model.k_re))
         u = np.dot(u, np.linalg.cholesky(self.cov_re).T)
         y += (u[self.group_idx, :] * model.exog_re).sum(1)

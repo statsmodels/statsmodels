@@ -1,3 +1,5 @@
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 
 
@@ -84,8 +86,9 @@ class MixtureDistribution:
 
     # def __init__(self, prob, size, dist, kwargs=None):
 
-    def rvs(self, prob, size, dist, kwargs=None, random_state=None):
-        return mixture_rvs(prob, size, dist, kwargs=kwargs, rng=random_state)
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, prob, size, dist, kwargs=None, rng=None):
+        return mixture_rvs(prob, size, dist, kwargs=kwargs, rng=rng)
 
     def pdf(self, x, prob, dist, kwargs=None):
         """
