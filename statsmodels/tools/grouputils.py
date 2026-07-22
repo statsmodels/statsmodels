@@ -82,11 +82,16 @@ def group_sums(x, group, use_bincount=True):
     Parameters
     ----------
     x : array_like
-        Data of shape ``(nobs,)`` or ``(nobs, n_features)``.
-    group : array_like, integer
-        Group labels of shape ``(nobs,)``.
+        Data of shape ``(nobs,)`` or ``(nobs, n_features)``. Higher-dimensional
+        ``x`` is only supported when ``use_bincount=False``.
+    group : array_like of non-negative int
+        Non-negative integer group labels of shape ``(nobs,)``. For predictable
+        indexing (e.g. ``result[group]``), groups should be coded as
+        ``0, 1, ..., n_groups-1``.
     use_bincount : bool, default True
         Use ``np.bincount`` when True, otherwise a pure-Python group loop.
+        The bincount path expects non-negative, reasonably consecutive codes
+        and may re-label via ``pd.factorize`` when ``max(group)`` is large.
 
     Returns
     -------
@@ -271,7 +276,8 @@ class Group:
         sums_g = group_sums(x, self.group_int, use_bincount=use_bincount)
         # group_sums returns (n_groups, n_features)
         counts = np.bincount(self.group_int)
-        # avoid divide-by-zero for empty labels
+        # Defensive: bincount may include zero-count bins for sparse codes.
+        # group_int from combine_indices should not contain empty labels.
         counts = np.maximum(counts, 1)
         means_g = sums_g / counts[:, None]
         x_demeaned = x - means_g[self.group_int]
