@@ -272,12 +272,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         ----------
         endog : array_like
             The observed time-series process :math:`y`
-        k_states : int
-            The dimension of the unobserved state process.
         exog : array_like, optional
             Array of exogenous regressors, shaped nobs x k. Default is no
             exogenous regressors.
-        kwargs
+        **kwargs
             Keyword arguments to pass to the new model class to change the
             model specification.
 
@@ -560,7 +558,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         **kwargs,
     ):
         """
-        Fits the model by maximum likelihood via Kalman filter.
+        Fits the model by maximum likelihood via Kalman filter
 
         Parameters
         ----------
@@ -873,6 +871,14 @@ class MLEModel(tsbase.TimeSeriesModel):
             function.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not to compute the filtered output using complex step
+            differentiation. Default is False.
         return_ssm : bool,optional
             Whether or not to return only the state space output or a full
             results object. Default is to return a full results object.
@@ -882,6 +888,12 @@ class MLEModel(tsbase.TimeSeriesModel):
         cov_kwds : dict or None, optional
             See `MLEResults.get_robustcov_results` for a description required
             keywords for alternative covariance estimators
+        results_class : type, optional
+            A results class to use for results object. Default is
+            `MLEResults`.
+        results_wrapper_class : type, optional
+            A results wrapper class to use for the results object. Default is
+            `MLEResultsWrapper`.
         low_memory : bool, optional
             If set to True, techniques are applied to substantially reduce
             memory usage. If used, some features of the results object will
@@ -945,6 +957,14 @@ class MLEModel(tsbase.TimeSeriesModel):
             function.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not to compute the smoothed output using complex step
+            differentiation. Default is False.
         return_ssm : bool,optional
             Whether or not to return only the state space output or a full
             results object. Default is to return a full results object.
@@ -954,6 +974,12 @@ class MLEModel(tsbase.TimeSeriesModel):
         cov_kwds : dict or None, optional
             See `MLEResults.get_robustcov_results` for a description required
             keywords for alternative covariance estimators
+        results_class : type, optional
+            A results class to use for results object. Default is
+            `MLEResults`.
+        results_wrapper_class : type, optional
+            A results wrapper class to use for the results object. Default is
+            `MLEResultsWrapper`.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -999,6 +1025,14 @@ class MLEModel(tsbase.TimeSeriesModel):
             function.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not to compute the loglikelihood using complex step
+            differentiation. Default is False.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -1061,6 +1095,14 @@ class MLEModel(tsbase.TimeSeriesModel):
             function.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not to compute the loglikelihood using complex step
+            differentiation. Default is False.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -1255,6 +1297,21 @@ class MLEModel(tsbase.TimeSeriesModel):
         params : array_like, optional
             Array of parameters at which to evaluate the loglikelihood
             function.
+        transformed : bool, optional
+            Whether or not `params` is already transformed. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        approx_complex_step : bool, optional
+            Whether or not to approximate the derivatives of the loglikelihood
+            using complex step differentiation. Default is True if
+            `transformed` is True.
+        approx_centered : bool, optional
+            Whether or not to use a centered approximation for finite
+            difference derivatives, when `approx_complex_step` is False.
+            Default is False.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -1365,6 +1422,17 @@ class MLEModel(tsbase.TimeSeriesModel):
         params : array_like, optional
             Array of parameters at which to evaluate the loglikelihood
             function.
+        transformed : bool, optional
+            Whether or not `params` is already transformed. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        approx_complex_step : bool, optional
+            Whether or not to approximate the derivatives of the loglikelihood
+            using complex step differentiation. Default is True if
+            `transformed` is True.
         **kwargs
             Additional arguments to the `loglikeobs` method.
 
@@ -1432,6 +1500,18 @@ class MLEModel(tsbase.TimeSeriesModel):
         params : array_like, optional
             Array of parameters at which to evaluate the loglikelihood
             function.
+        approx_complex_step : bool, optional
+            Whether or not to approximate the derivatives of the loglikelihood
+            using complex step differentiation. Default is True.
+        approx_centered : bool, optional
+            Whether or not to use a centered approximation for finite
+            difference derivatives, when `approx_complex_step` is False.
+            Default is False.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -1518,7 +1598,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     def score(self, params, *args, **kwargs):
         """
-        Compute the score function at params.
+        Compute the score function at params
 
         Parameters
         ----------
@@ -1619,6 +1699,22 @@ class MLEModel(tsbase.TimeSeriesModel):
         ----------
         params : array_like
             Array of parameters at which to evaluate the score.
+        method : {'approx', 'harvey'}, optional
+            The method by which the score is calculated. Default is 'approx'.
+        transformed : bool, optional
+            Whether or not `params` is already transformed. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        approx_complex_step : bool, optional
+            Whether or not to approximate the derivatives of the loglikelihood
+            using complex step differentiation. Default is True.
+        approx_centered : bool, optional
+            Whether or not to use a centered approximation for finite
+            difference derivatives, when `approx_complex_step` is False.
+            Default is False.
         **kwargs
             Additional arguments to the `loglike` method.
 
@@ -1809,7 +1905,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     def _hessian_complex_step(self, params, **kwargs):
         """
         Hessian matrix computed by second-order complex-step differentiation
-        on the `loglike` function.
+        on the `loglike` function
         """
         # the default epsilon can be too small
         epsilon = _get_epsilon(params, 3.0, None, len(params))
@@ -1821,9 +1917,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     @property
     def start_params(self):
-        """
-        (array) Starting parameters for maximum likelihood estimation.
-        """
+        """(array) Starting parameters for maximum likelihood estimation"""
         if hasattr(self, "_start_params"):
             return self._start_params
         else:
@@ -1833,7 +1927,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     def param_names(self):
         """
         (list of str) List of human readable parameter names (for parameters
-        actually included in the model).
+        actually included in the model)
         """
         if hasattr(self, "_param_names"):
             return self._param_names
@@ -1846,9 +1940,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     @property
     def state_names(self):
-        """
-        (list of str) List of human readable names for unobserved states.
-        """
+        """(list of str) List of human readable names for unobserved states"""
         if hasattr(self, "_state_names"):
             return self._state_names
         else:
@@ -1863,6 +1955,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         ----------
         unconstrained : array_like
             Array of unconstrained parameters used by the optimizer.
+        approx_centered : bool, optional
+            Whether or not to use a centered approximation for the finite
+            difference derivatives. Default is False.
 
         Returns
         -------
@@ -1979,6 +2074,14 @@ class MLEModel(tsbase.TimeSeriesModel):
         transformed : bool, optional
             Whether or not `params` is already transformed. If set to False,
             `transform_params` is called. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not the update is part of a complex-step differentiation
+            approximation. Default is False.
 
         Returns
         -------
@@ -2183,6 +2286,16 @@ class MLEModel(tsbase.TimeSeriesModel):
             Number of simulated paths to generate. Default is 1 simulated path.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
+        extend_model : bool, optional
+            Whether or not to extend the model to accommodate simulating
+            periods outside of the sample. Default is to extend the model if
+            a new `exog` array is provided or if the model is time-varying.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. For example, for an SARIMAX state space model, this
+            could be used to pass the `concentrate_scale=True` keyword
+            argument. Any arguments that are not explicitly set in this
+            dictionary will be copied from the current model instance.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is
             True.
@@ -2380,7 +2493,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             shaped `k_posdef x 1`.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
-            Note that this will also affect custum `impulse` vectors. Default
+            Note that this will also affect custom `impulse` vectors. Default
             is False.
         cumulative : bool, optional
             Whether or not to return cumulative impulse responses. Default is
@@ -2395,8 +2508,19 @@ class MLEModel(tsbase.TimeSeriesModel):
             to the model, then this argument can be a date string to parse or a
             datetime type. Default is 'start'.
         exog : array_like, optional
-            New observations of exogenous regressors for our-of-sample periods,
+            New observations of exogenous regressors for out-of-sample periods,
             if applicable.
+        extend_model : bool, optional
+            Whether or not to extend the model to accommodate calculating
+            impulse responses in periods outside of the sample. Default is to
+            extend the model if a new `exog` array is provided or if the model
+            is time-varying.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. For example, for an SARIMAX state space model, this
+            could be used to pass the `concentrate_scale=True` keyword
+            argument. Any arguments that are not explicitly set in this
+            dictionary will be copied from the current model instance.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is
             True.
@@ -2556,15 +2680,13 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     @classmethod
     def from_formula(cls, formula, data, subset=None):
-        """
-        Not implemented for state space models
-        """
+        """Not implemented for state space models"""
         raise NotImplementedError
 
 
 class MLEResults(tsbase.TimeSeriesModelResults):
     r"""
-    Class to hold results from fitting a state space model.
+    Class to hold results from fitting a state space model
 
     Parameters
     ----------
@@ -2572,8 +2694,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         The fitted model instance
     params : ndarray
         Fitted parameters
-    filter_results : KalmanFilter instance
+    results : KalmanFilter instance
         The underlying state space model and Kalman filter output
+    cov_type : str, optional
+        The `cov_type` keyword governs the method for calculating the
+        covariance matrix of parameter estimates. See `MLEModel.fit` for a
+        description of available options. Default is None, in which case the
+        `cov_type` is chosen based on whether or not `memory_no_likelihood`
+        is set on `results`.
+    cov_kwds : dict or None, optional
+        A dictionary of arguments affecting covariance matrix computation.
+        See `MLEModel.fit` for details. Default is None.
+    **kwargs
+        Additional keyword arguments used to initialize the results object.
 
     Attributes
     ----------
@@ -3271,7 +3404,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     @cache_readonly
     def fittedvalues(self):
         """
-        (array) The predicted values of the model. An (nobs x k_endog) array.
+        (array) The predicted values of the model. An (nobs x k_endog) array
         """
         # This is a (k_endog x nobs array; do not want to squeeze in case of
         # the corner case where nobs = 1 (mostly a concern in the predict or
@@ -3296,23 +3429,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def llf_obs(self):
-        """
-        (float) The value of the log-likelihood function evaluated at `params`.
-        """
+        """(float) The value of the log-likelihood function evaluated at `params`"""
         return self.filter_results.llf_obs
 
     @cache_readonly
     def llf(self):
-        """
-        (float) The value of the log-likelihood function evaluated at `params`.
-        """
+        """(float) The value of the log-likelihood function evaluated at `params`"""
         return self.filter_results.llf
 
     @cache_readonly
     def loglikelihood_burn(self):
         """
         (float) The number of observations during which the likelihood is not
-        evaluated.
+        evaluated
         """
         return self.filter_results.loglikelihood_burn
 
@@ -3335,7 +3464,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The p-values associated with the z-statistics of the
         coefficients. Note that the coefficients are assumed to have a Normal
-        distribution.
+        distribution
         """
         pvalues = np.zeros_like(self.zvalues) * np.nan
         mask = np.ones_like(pvalues, dtype=bool)
@@ -3347,7 +3476,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     @cache_readonly
     def resid(self):
         """
-        (array) The model residuals. An (nobs x k_endog) array.
+        (array) The model residuals. An (nobs x k_endog) array
         """
         # This is a (k_endog x nobs array; do not want to squeeze in case of
         # the corner case where nobs = 1 (mostly a concern in the predict or
@@ -3382,7 +3511,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     @cache_readonly
     def zvalues(self):
         """
-        (array) The z-statistics for the coefficients.
+        (array) The z-statistics for the coefficients
         """
         return self.params / self.bse
 
@@ -3569,6 +3698,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             value is usually p+q where p is the AR order and q is the MA order.
             When using df_adjust, it is not possible to use tests based on
             fewer than model_df lags.
+
         Returns
         -------
         output : ndarray
@@ -3695,6 +3825,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             True, then predictions of the "signal" :math:`Z \alpha_t` will be
             returned. Otherwise, the default is for predictions of :math:`y_t`
             to be returned.
+        index : array_like, optional
+            Optional index to use for the new results object.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable.
+        extend_model : bool, optional
+            Whether or not to extend the model to accommodate out-of-sample
+            forecasting. Default is to extend the model if a new `exog` array
+            is provided or if the model is time-varying.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. For example, for an SARIMAX state space model, this
+            could be used to pass the `concentrate_scale=True` keyword
+            argument. Any arguments that are not explicitly set in this
+            dictionary will be copied from the current model instance.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3797,7 +3941,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             PredictionResults instance containing out-of-sample forecasts and
             results including confidence intervals.
 
-        See also
+        See Also
         --------
         forecast
             Out-of-sample forecasts.
@@ -3972,7 +4116,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             The number of observations to simulate. If the model is
             time-invariant this can be any number. If the model is
             time-varying, then this number must be less than or equal to the
-            number
+            number of observations.
         measurement_shocks : array_like, optional
             If specified, these are the shocks to the measurement equation,
             :math:`\varepsilon_t`. If unspecified, these are automatically
@@ -4004,6 +4148,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Number of simulated paths to generate. Default is 1 simulated path.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
+        extend_model : bool, optional
+            Whether or not to extend the model to accommodate simulating
+            periods outside of the sample. Default is to extend the model if
+            a new `exog` array is provided or if the model is time-varying.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. For example, for an SARIMAX state space model, this
+            could be used to pass the `concentrate_scale=True` keyword
+            argument. Any arguments that are not explicitly set in this
+            dictionary will be copied from the current model instance.
         pretransformed_measurement_shocks : bool, optional
             If `measurement_shocks` is provided, this flag indicates whether it
             should be directly used as the shocks. If False, then it is assumed
@@ -4126,7 +4280,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             shaped `k_posdef x 1`.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
-            Note that this will also affect custum `impulse` vectors. Default
+            Note that this will also affect custom `impulse` vectors. Default
             is False.
         cumulative : bool, optional
             Whether or not to return cumulative impulse responses. Default is
@@ -4453,7 +4607,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             or dataset. If not specified, then an attempt is made to determine
             the comparison type.
         revisions_details_start : bool, int, str, or datetime, optional
-            The period at which to beging computing the detailed impacts of
+            The period at which to begin computing the detailed impacts of
             data revisions. Any revisions prior to this period will have their
             impacts grouped together. If a negative integer, interpreted as
             an offset from the end of the dataset. If set to True, detailed
@@ -4473,6 +4627,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         tolerance : float, optional
             The numerical threshold for determining zero impact. Default is
             that any impact less than 1e-10 is assumed to be zero.
+        **kwargs
+            Keyword arguments to pass to the `apply` method when constructing
+            a new results object from `comparison`, if `comparison` is given
+            as a dataset rather than a results object.
 
         Returns
         -------
@@ -4796,7 +4954,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         fit_kwargs : dict, optional
             Keyword arguments to pass to `fit` (if `refit=True`) or `filter` /
             `smooth`.
-        copy_initialization : bool, optional
         **kwargs
             Keyword arguments may be used to modify model specification
             arguments when created the new model object.
@@ -5053,7 +5210,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         See Also
         --------
         statsmodels.tsa.statespace.mlemodel.MLEResults.append
-        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
+        statsmodels.tsa.statespace.mlemodel.MLEResults.extend
 
         Notes
         -----
@@ -5135,6 +5292,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         figsize : tuple, optional
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
+        truncate_endog_names : int, optional
+            The number of characters to which to truncate the name of the
+            endogenous variable when used in plot titles. Default is 24.
         auto_ylims : bool, optional
             If True, adjusts automatically the y-axis limits to ACF values.
         bartlett_confint : bool, default True
@@ -5155,7 +5315,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             case, a moving average model is assumed for the data and the
             standard errors for the confidence intervals should be
             generated using Bartlett's formula. For more details on
-            Bartlett formula result, see section 7.2 in [1].+
+            Bartlett formula result, see section 7.2 in [1].
         acf_kwargs : dict, optional
             Optional dictionary of keyword arguments that are directly passed
             on to the correlogram Matplotlib plot produced by plot_acf().
@@ -5183,9 +5343,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         References
         ----------
-        [1] Brockwell and Davis, 1987. Time Series Theory and Methods
-        [2] Brockwell and Davis, 2010. Introduction to Time Series and
-        Forecasting, 2nd edition.
+        .. [1] Brockwell and Davis, 1987. Time Series Theory and Methods
+        .. [2] Brockwell and Davis, 2010. Introduction to Time Series and
+           Forecasting, 2nd edition.
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 
@@ -5290,8 +5450,29 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Significance level for the confidence intervals. Default is 0.05.
         start : int, optional
             Integer of the start observation. Default is 0.
+        title : str, optional
+            The title used for the summary table. Default is "Statespace
+            Model Results".
         model_name : str
             The name of the model used. Default is to use model class name.
+        display_params : bool, optional
+            Whether or not to display the table of estimated parameters.
+            Default is True.
+        display_diagnostics : bool, optional
+            Whether or not to display the table of residual diagnostic tests.
+            Default is True.
+        truncate_endog_names : int or bool, optional
+            The number of characters to which to truncate the names of the
+            endogenous variables. Default is False for univariate models and
+            24 for multivariate models.
+        display_max_endog : int, optional
+            The maximum number of endogenous variables to display in the
+            summary tables. Default is to always display all endogenous
+            variables.
+        extra_top_left : list, optional
+            Additional elements to add to the top left table of the summary.
+        extra_top_right : list, optional
+            Additional elements to add to the top right table of the summary.
 
         Returns
         -------

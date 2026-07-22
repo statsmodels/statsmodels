@@ -114,6 +114,18 @@ class SARIMAX(MLEModel):
         Whether or not to use exact diffuse initialization for non-stationary
         states. Default is False (in which case approximate diffuse
         initialization is used).
+    dates : array_like of datetime, optional
+        If no index is given by `endog` or `exog`, an array-like object of
+        datetime objects can be provided.
+    freq : str, optional
+        If no index is given by `endog` or `exog`, the frequency of the
+        time-series may be specified here as a Pandas offset or offset string.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
+    validate_specification : bool, optional
+        Whether or not to validate the model specification. Default is True.
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -594,7 +606,7 @@ class SARIMAX(MLEModel):
 
     def initialize(self):
         """
-        Initialize the SARIMAX model.
+        Initialize the SARIMAX model
 
         Notes
         -----
@@ -915,9 +927,7 @@ class SARIMAX(MLEModel):
 
     @property
     def start_params(self):
-        """
-        Starting parameters for maximum likelihood estimation
-        """
+        """Starting parameters for maximum likelihood estimation"""
 
         # Perform differencing if necessary (i.e. if simple differencing is
         # false so that the state-space model will use the entire dataset)
@@ -1101,9 +1111,11 @@ class SARIMAX(MLEModel):
     @property
     def param_terms(self):
         """
-        List of parameters actually included in the model, in sorted order.
+        List of parameters actually included in the model, in sorted order
 
-        TODO Make this an dict with slice or indices as the values.
+        Notes
+        -----
+        TODO: Make this a dict with slice or indices as the values.
         """
         model_orders = self.model_orders
         # Get basic list from model orders
@@ -1122,7 +1134,7 @@ class SARIMAX(MLEModel):
     def param_names(self):
         """
         List of human readable parameter names (for parameters actually
-        included in the model).
+        included in the model)
         """
         params_sort_order = self.param_terms
         model_names = self.model_names
@@ -1150,9 +1162,7 @@ class SARIMAX(MLEModel):
 
     @property
     def model_orders(self):
-        """
-        The orders of each of the polynomials in the model.
-        """
+        """The orders of each of the polynomials in the model"""
         return {
             "trend": self._k_trend,
             "exog": self._k_exog,
@@ -1170,16 +1180,12 @@ class SARIMAX(MLEModel):
 
     @property
     def model_names(self):
-        """
-        The plain text names of all possible model parameters.
-        """
+        """The plain text names of all possible model parameters"""
         return self._get_model_names(latex=False)
 
     @property
     def model_latex_names(self):
-        """
-        The latex names of all possible model parameters.
-        """
+        """The latex names of all possible model parameters"""
         return self._get_model_names(latex=True)
 
     def _get_model_names(self, latex=False):
@@ -1299,7 +1305,7 @@ class SARIMAX(MLEModel):
     def transform_params(self, unconstrained):
         """
         Transform unconstrained parameters used by the optimizer to constrained
-        parameters used in likelihood evaluation.
+        parameters used in likelihood evaluation
 
         Used primarily to enforce stationarity of the autoregressive lag
         polynomial, invertibility of the moving average lag polynomial, and
@@ -1416,7 +1422,7 @@ class SARIMAX(MLEModel):
 
         Returns
         -------
-        constrained : array_like
+        unconstrained : array_like
             Unconstrained parameters used by the optimizer.
 
         Notes
@@ -1541,7 +1547,15 @@ class SARIMAX(MLEModel):
             Array of new parameters.
         transformed : bool, optional
             Whether or not `params` is already transformed. If set to False,
-            `transform_params` is called. Default is True..
+            `transform_params` is called. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not to compute derivatives via a complex-step
+            approximation. Default is False.
 
         Returns
         -------
@@ -1724,6 +1738,30 @@ class SARIMAX(MLEModel):
         """
         Get time-varying state space system matrices for extended model
 
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters used to construct the time-varying system
+            matrices.
+        exog : array_like or None
+            New observations of exogenous regressors, if applicable.
+        out_of_sample : int
+            Number of new observations required.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. Any arguments that are not explicitly set in this
+            dictionary will be copied from the current model instance.
+        transformed : bool, optional
+            Whether or not `params` is already transformed. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        **kwargs
+            Additional keyword arguments, containing possibly pre-computed
+            time-varying matrices.
+
         Notes
         -----
         We need to override this method for SARIMAX because we need some
@@ -1776,7 +1814,7 @@ class SARIMAX(MLEModel):
 
 class SARIMAXResults(MLEResults):
     """
-    Class to hold results from fitting an SARIMAX model.
+    Class to hold results from fitting an SARIMAX model
 
     Parameters
     ----------
@@ -1807,7 +1845,7 @@ class SARIMAXResults(MLEResults):
         Array containing trend polynomial coefficients, ordered from lowest
         degree to highest. Initialized with ones, unless a coefficient is
         constrained to be zero (in which case it is zero).
-    model_orders : list of int
+    model_orders : dict
         The orders of each of the polynomials in the model.
     param_terms : list of str
         List of parameters actually included in the model, in sorted order.
@@ -1904,16 +1942,12 @@ class SARIMAXResults(MLEResults):
 
     @cache_readonly
     def arroots(self):
-        """
-        (array) Roots of the reduced form autoregressive lag polynomial
-        """
+        """(array) Roots of the reduced form autoregressive lag polynomial"""
         return np.roots(self.polynomial_reduced_ar)**-1
 
     @cache_readonly
     def maroots(self):
-        """
-        (array) Roots of the reduced form moving average lag polynomial
-        """
+        """(array) Roots of the reduced form moving average lag polynomial"""
         return np.roots(self.polynomial_reduced_ma)**-1
 
     @cache_readonly
@@ -1941,7 +1975,8 @@ class SARIMAXResults(MLEResults):
     @cache_readonly
     def arparams(self):
         """
-        (array) Autoregressive parameters actually estimated in the model.
+        (array) Autoregressive parameters actually estimated in the model
+
         Does not include seasonal autoregressive parameters (see
         `seasonalarparams`) or parameters whose values are constrained to be
         zero.
@@ -1952,7 +1987,9 @@ class SARIMAXResults(MLEResults):
     def seasonalarparams(self):
         """
         (array) Seasonal autoregressive parameters actually estimated in the
-        model. Does not include nonseasonal autoregressive parameters (see
+        model
+
+        Does not include nonseasonal autoregressive parameters (see
         `arparams`) or parameters whose values are constrained to be zero.
         """
         return self._params_seasonal_ar
@@ -1960,7 +1997,8 @@ class SARIMAXResults(MLEResults):
     @cache_readonly
     def maparams(self):
         """
-        (array) Moving average parameters actually estimated in the model.
+        (array) Moving average parameters actually estimated in the model
+
         Does not include seasonal moving average parameters (see
         `seasonalmaparams`) or parameters whose values are constrained to be
         zero.
@@ -1971,7 +2009,9 @@ class SARIMAXResults(MLEResults):
     def seasonalmaparams(self):
         """
         (array) Seasonal moving average parameters actually estimated in the
-        model. Does not include nonseasonal moving average parameters (see
+        model
+
+        Does not include nonseasonal moving average parameters (see
         `maparams`) or parameters whose values are constrained to be zero.
         """
         return self._params_seasonal_ma
