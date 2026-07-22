@@ -295,9 +295,13 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False, rng=
         If true, then the density, ``pdf``, is used and cell probabilities
         are approximated by averaging the pdf of the cell corners. This is
         only useful if the cdf is not available.
-    rng : int, np.random.RandomState or np.random.Generator, optional
-        The source of the random variables to use in cdf calculation, if needed.
-        If None, uses the singleton RandomState provided by NumPy.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        The source of the random variables to use in cdf calculation, if
+        needed. If `rng` is None, a new ``Generator`` is created using
+        fresh entropy from the operating system. If `rng` is an int or
+        array of ints, a new ``Generator`` is created, seeded with `rng`.
+        If `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------

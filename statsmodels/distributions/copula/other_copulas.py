@@ -50,6 +50,26 @@ class IndependenceCopula(Copula):
 
     @deprecate_kwarg("random_state", "rng")
     def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple
+            Arguments for copula parameters. Not used by ``IndependenceCopula``.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+
+        Returns
+        -------
+        sample : array_like (nobs, k_dim)
+            Sample from the copula.
+        """
         self._handle_args(args)
         rng = check_random_state(rng)
         x = rng.random((nobs, self.k_dim))
@@ -91,10 +111,12 @@ def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False, rng=None):
         If this is False, then only the random sample will be returned.
         If true, then extra information is returned that is mainly of interest
         for verification.
-    rng : int, np.random.Generator or np.random.RandomState, optional
-        The rng to use when constructing the index. The rng(s) used in the dist
-        objects must be provided in initializing the dist objects. If None, uses
-        the singleton NumPy RandomState.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
@@ -111,7 +133,10 @@ def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False, rng=None):
     if k_func is None:
         kfunc = _kernel_rvs_beta1
     rng = check_random_state(rng)
-    idx = rng.randint(0, n, size=size)
+    if isinstance(rng, np.random.RandomState):
+        idx = rng.randint(0, n, size=size)
+    else:
+        idx = rng.integers(0, n, size=size)
     xi = sample[idx]
     krvs = np.column_stack([kfunc(xii, bw) for xii in xi.T])
 

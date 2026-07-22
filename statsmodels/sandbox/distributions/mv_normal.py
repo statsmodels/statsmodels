@@ -853,9 +853,12 @@ class MVNormal(MVElliptical):
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
-        rng : int, np.random.RandomState, np.random.Generator, optional
-            The source of randomness used to produce the variates. If None,
-            uses the singleton RandomState provided by NumPy.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------
@@ -1054,14 +1057,12 @@ class MVT(MVElliptical):
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
-        rng : {None, int, Generator, RandomState}, optional
-            If `rng` is None (or `np.random`), the
-            class:``~numpy.random.RandomState`` singleton is used.
-            If `rng` is an int, a new class:``~numpy.random.RandomState``
-            instance is used, seeded with `rng`.
-            If `rng` is already a class:``~numpy.random.Generator`` or
-            class:``~numpy.random.RandomState`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------

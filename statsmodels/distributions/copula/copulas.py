@@ -70,15 +70,12 @@ class CopulaDistribution:
             to be a list of tuples with the same length has the number of
             marginal distributions. The list can contain empty tuples for
             marginal distributions that do not take parameter arguments.
-        rng : {None, int, numpy.random.Generator}, optional
-            If `seed` is None then the legacy singleton NumPy generator.
-            This will change after 0.13 to use a fresh NumPy ``Generator``,
-            so you should explicitly pass a seeded ``Generator`` if you
-            need reproducible results.
-            If `seed` is an int, a new ``Generator`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------
@@ -284,15 +281,12 @@ class Copula(ABC):
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
-        rng : {None, int, numpy.random.Generator}, optional
-            If `seed` is None then the legacy singleton NumPy generator.
-            This will change after 0.13 to use a fresh NumPy ``Generator``,
-            so you should explicitly pass a seeded ``Generator`` if you
-            need reproducible results.
-            If `seed` is an int, a new ``Generator`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------
@@ -378,15 +372,12 @@ class Copula(ABC):
             is generated.
         nobs : int, optional
             Number of samples to generate from the copula.
-        rng : {None, int, numpy.random.Generator}, optional
-            If `rng` is None then the legacy singleton NumPy generator.
-            This will change after 0.13 to use a fresh NumPy ``Generator``,
-            so you should explicitly pass a seeded ``Generator`` if you
-            need reproducible results.
-            If `rng` is an int, a new ``Generator`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
         ax : AxesSubplot, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -482,6 +473,17 @@ class Copula(ABC):
 
     def tau_simulated(self, nobs=1024, rng=None):
         """Kendall's tau based on simulated samples.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------

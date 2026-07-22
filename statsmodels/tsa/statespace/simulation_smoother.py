@@ -28,13 +28,11 @@ def check_random_state(seed=None):
 
     Parameters
     ----------
-    seed : {None, int, np.random.Generator, np.random.RandomState}, optional
-        If `seed` is None (or `np.random`), the `numpy.random.RandomState`
-        singleton is used.
-        If `seed` is an int, a new ``numpy.random.RandomState`` instance
-        is used, seeded with `seed`.
-        If `seed` is already a ``numpy.random.Generator`` or
-        ``numpy.random.RandomState`` instance then that instance is used.
+    seed : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        If `seed` is None or an int, a new ``Generator`` is created
+        (seeded with `seed` if an int is given). If `seed` is already a
+        ``Generator`` or ``RandomState`` instance, that instance is
+        used.
 
     Returns
     -------
@@ -184,6 +182,28 @@ class SimulationSmoother(KalmanSmoother):
         return_simulator=False,
         **kwargs,
     ):
+        """
+        Simulate observations and states using the simulation smoother
+
+        Parameters
+        ----------
+        nsimulations : int
+            The number of observations to simulate.
+        simulator : SimulationSmoothResults, optional
+            An existing simulator to reuse. If not specified, a new
+            simulator is created using `rng`.
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None or an int, a new ``Generator`` is created
+            (seeded with `rng` if an int is given). If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
+            used. Only used if `simulator` is not provided.
+        return_simulator : bool, optional
+            Whether or not to also return the underlying simulator instance.
+            Default is False.
+        **kwargs
+            Additional keyword arguments, passed to the simulator's
+            `simulate` method.
+        """
         # Create the simulator, if necessary
         if simulator is None:
             simulator = self.simulator(nsimulations, rng=rng)
@@ -201,6 +221,24 @@ class SimulationSmoother(KalmanSmoother):
         return out
 
     def simulator(self, nsimulations, rng=None):
+        """
+        Retrieve a simulator for the statespace model
+
+        Parameters
+        ----------
+        nsimulations : int
+            The number of observations to simulate.
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None or an int, a new ``Generator`` is created
+            (seeded with `rng` if an int is given). If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
+            used.
+
+        Returns
+        -------
+        SimulationSmoothResults
+            Object holding the output of the simulation smoother.
+        """
         return self.simulation_smoother(
             simulation_output=0,
             method="kfs",
@@ -246,13 +284,11 @@ class SimulationSmoother(KalmanSmoother):
             smoothing will not be performed), so that only the `generated_obs`
             and `generated_state` attributes will be available. Default is -1,
             which uses the number of observations in the model.
-        rng : {None, int, Generator, RandomState}, optional
-            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
-            singleton is used.
-            If `seed` is an int, a new ``numpy.random.RandomState`` instance
-            is used, seeded with `seed`.
-            If `seed` is already a ``numpy.random.Generator`` or
-            ``numpy.random.RandomState`` instance then that instance is used.
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None or an int, a new ``Generator`` is created
+            (seeded with `rng` if an int is given). If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
+            used.
         **kwargs
             Additional keyword arguments, used to set the simulation output.
             See `set_simulation_output` for more details.
@@ -339,13 +375,11 @@ class SimulationSmoothResults:
         A Statespace representation
     simulation_smoother : {{prefix}}SimulationSmoother object
         The Cython simulation smoother object with which to simulation smooth.
-    rng : {None, int, Generator, RandomState}, optional
-        If `seed` is None (or `np.random`), the `numpy.random.RandomState`
-        singleton is used.
-        If `seed` is an int, a new ``numpy.random.RandomState`` instance
-        is used, seeded with `seed`.
-        If `seed` is already a ``numpy.random.Generator`` or
-        ``numpy.random.RandomState`` instance then that instance is used.
+    rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None or an int, a new ``Generator`` is created
+        (seeded with `rng` if an int is given). If `rng` is already a
+        ``Generator`` or ``RandomState`` instance, that instance is
+        used.
 
     Attributes
     ----------
@@ -646,13 +680,11 @@ class SimulationSmoothResults:
             then it is assumed to contain draws from the standard Normal
             distribution that must be transformed using the `initial_state_cov`
             covariance matrix. Default is False.
-        rng : {None, int, Generator, RandomState}, optional
-            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
-            singleton is used.
-            If `seed` is an int, a new ``numpy.random.RandomState`` instance
-            is used, seeded with `seed`.
-            If `seed` is already a ``numpy.random.Generator`` or
-            ``numpy.random.RandomState`` instance then that instance is used.
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None or an int, a new ``Generator`` is created
+            (seeded with `rng` if an int is given). If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
+            used.
         disturbance_variates : bool, optional
             Deprecated, please use pretransformed_measurement_shocks and
             pretransformed_state_shocks instead.

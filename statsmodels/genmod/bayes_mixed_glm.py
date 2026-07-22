@@ -491,9 +491,12 @@ class _BayesMixedGLM(base.Model):
             are centered and scaled to unit variance before fitting
             the model.  The results are back-transformed so that the
             results are presented on the original scale.
-        rng : int, np.random.Generator or np.random.RandomState, optional
-            The generator to use for starting values. If None, uses
-            the singleton RandomState provided by NumPy.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------
@@ -740,10 +743,12 @@ class _VariationalBayesMixedGLM:
         verbose : bool
             If True, print the gradient norm to the screen each time
             it is calculated.
-        rng : int, np.random.Generator or np.random.RandomState, optional
-            The generator to use for starting values. If None, uses
-            the singleton RandomState provided by NumPy. Only used
-            if sd is None.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used. Only used if sd is None.
 
         Notes
         -----

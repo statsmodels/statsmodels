@@ -157,12 +157,12 @@ class MICEData:
         cycle.  The return value is appended to `history`.  The
         MICEData object is passed as the sole argument to
         `history_callback`.
-    rng : {{None, int, array_like[ints], Generator, RandomState}}, optional
-        If `rng` is None, fresh, unpredictable entropy is pulled from
-        the OS and a `numpy.random.Generator` is used. If `rng` is an
-        int or array_like[ints], a new Generator instance is used,
-        seeded with `rng`. If `rng` is already a Generator or
-        RandomState instance, then that instance is used.
+    rng : {{None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Notes
     -----
@@ -989,7 +989,10 @@ class MICEData:
         endog, exog, init_kwds, fit_kwds = self.get_fitting_data(vname)
 
         m = len(endog)
-        rix = self.rng.randint(0, m, m)
+        if isinstance(self.rng, np.random.RandomState):
+            rix = self.rng.randint(0, m, m)
+        else:
+            rix = self.rng.integers(0, m, size=m)
         endog = endog[rix]
         exog = exog[rix, :]
 
@@ -1119,7 +1122,10 @@ class MICEData:
         dxi = np.argsort(dx, 1)[:, 0:k_pmm]
 
         # Choose a column for each row.
-        ir = self.rng.randint(0, k_pmm, len(pendog_miss))
+        if isinstance(self.rng, np.random.RandomState):
+            ir = self.rng.randint(0, k_pmm, len(pendog_miss))
+        else:
+            ir = self.rng.integers(0, k_pmm, len(pendog_miss))
 
         # Unwind the indices
         jj = np.arange(dxi.shape[0])

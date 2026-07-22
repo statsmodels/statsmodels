@@ -2321,13 +2321,10 @@ class MLEModel(tsbase.TimeSeriesModel):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        rng : {None, int, Generator, RandomState}, optional
-            If `seed` is None (or `np.random`), the
-            class:``~numpy.random.RandomState`` singleton is used.
-            If `seed` is an int, a new class:``~numpy.random.RandomState``
-            instance is used, seeded with `seed`.
-            If `seed` is already a class:``~numpy.random.Generator`` or
-            class:``~numpy.random.RandomState`` instance then that instance is
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None or an int, a new ``Generator`` is created
+            (seeded with `rng` if an int is given). If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
             used.
 
         Returns
@@ -4175,13 +4172,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        rng : {None, int, Generator, RandomState}, optional
-            If `seed` is None (or `np.random`), the
-            class:``~numpy.random.RandomState`` singleton is used.
-            If `seed` is an int, a new class:``~numpy.random.RandomState``
-            instance is used, seeded with `seed`.
-            If `seed` is already a class:``~numpy.random.Generator`` or
-            class:``~numpy.random.RandomState`` instance then that instance is
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None or an int, a new ``Generator`` is created
+            (seeded with `rng` if an int is given). If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
             used.
 
         Returns

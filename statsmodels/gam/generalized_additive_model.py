@@ -1079,10 +1079,12 @@ class GLMGam(PenalizedMixin, GLM):
         k_grid : int
             number of points in the default grid of alpha values for each
             smooth term. This is ignored if ``alphas`` is not None.
-        rng : int, np.random.RandomState or np.random.Generator, optional
-            The rng to use during KFold cross-validation. If None, uses the singleton
-            RandomState provided by NumPy. If an int, uses the ``default_rng``.
-            If a RandomState instance or a Generator instance, uses this instance.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------

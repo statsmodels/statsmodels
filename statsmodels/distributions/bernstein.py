@@ -188,8 +188,12 @@ class BernsteinDistribution:
         ----------
         nobs : int
             Number of random observations to generate.
-        rng : np.random.RandomState or np.random.Generator, optional
-            If not provided, uses the singleton RandomState provided by NumPy
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
         """
         rng = check_random_state(rng)
         rvs_mnl = rng.multinomial(nobs, self.prob_grid.flatten())

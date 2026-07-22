@@ -2,10 +2,23 @@ from statsmodels.compat.pandas import deprecate_kwarg
 
 import numpy as np
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 
 def _make_index(prob, size, rng=None):
     """
     Returns a boolean index for given probabilities.
+
+    Parameters
+    ----------
+    prob : array_like
+        Probability of sampling from each distribution in dist.
+    size : int
+        The length of the returned sample.
+    rng : {None, numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, the global (legacy) NumPy random state is
+        used. If `rng` is already a ``Generator`` or ``RandomState``
+        instance, that instance is used.
 
     Notes
     -----
@@ -13,10 +26,8 @@ def _make_index(prob, size, rng=None):
     being True and a 25% chance of the second column being True. The
     columns are mutually exclusive.
     """
-    if rng is None:
-        rv = np.random.uniform(size=(size, 1))
-    else:
-        rv = rng.uniform(size=(size, 1))
+    rng = check_random_state(rng)
+    rv = rng.uniform(size=(size, 1))
     cumprob = np.cumsum(prob)
     return np.logical_and(np.r_[0, cumprob[:-1]] <= rv, rv < cumprob)
 
@@ -37,9 +48,10 @@ def mixture_rvs(prob, size, dist, kwargs=None, rng=None):
         A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
         args to be passed to the respective distribution in dist.  If not
         provided, the distribution defaults are used.
-    rng : np.random.Generator or np.random.RandomState, optional
-        The rng to use when constructing the index. The rng(s) used in the dist
-        objects must be provided in initializing the dist objects.
+    rng : {None, numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, the global (legacy) NumPy random state is
+        used. If `rng` is already a ``Generator`` or ``RandomState``
+        instance, that instance is used.
 
     Examples
     --------
@@ -88,6 +100,31 @@ class MixtureDistribution:
 
     @deprecate_kwarg("random_state", "rng")
     def rvs(self, prob, size, dist, kwargs=None, rng=None):
+        """
+        Sample from a mixture of distributions.
+
+        Parameters
+        ----------
+        prob : array_like
+            Probability of sampling from each distribution in dist
+        size : int
+            The length of the returned sample.
+        dist : array_like
+            An iterable of distributions objects from scipy.stats.
+        kwargs : tuple of dicts, optional
+            A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
+            args to be passed to the respective distribution in dist.  If not
+            provided, the distribution defaults are used.
+        rng : {None, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, the global (legacy) NumPy random state is
+            used. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
+
+        Returns
+        -------
+        ndarray
+            Sample from the mixture distribution.
+        """
         return mixture_rvs(prob, size, dist, kwargs=kwargs, rng=rng)
 
     def pdf(self, x, prob, dist, kwargs=None):
@@ -150,13 +187,8 @@ class MixtureDistribution:
             Array containing locations where the CDF should be evaluated
         prob : array_like
             Probability of sampling from each distribution in dist
-        size : int
-            The length of the returned sample.
         dist : array_like
             An iterable of distributions objects from scipy.stats.
-        rng : np.random.Generator or np.random.RandomState, optional
-            The rng to use when constructing the index. The rng(s) used in the dist
-            objects must be provided in initializing the dist objects.
         kwargs : tuple of dicts, optional
             A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
             args to be passed to the respective distribution in dist.  If not
@@ -210,6 +242,10 @@ def mv_mixture_rvs(prob, size, dist, nvars, rng=None, **kwargs):
         An iterable of distributions instances with callable method rvs.
     nvargs : int
         dimension of the multivariate distribution, could be inferred instead
+    rng : {None, numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, the global (legacy) NumPy random state is
+        used. If `rng` is already a ``Generator`` or ``RandomState``
+        instance, that instance is used.
     kwargs : tuple of dicts, optional
         ignored
 

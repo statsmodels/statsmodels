@@ -421,15 +421,16 @@ class TestKernelReg(KernelRegressionTestBase):
         b2 = 3.7  # regression coefficients
         Y = b0 + b1 * C1 + b2 * C2
 
-        model_efficient = nparam.KernelReg(
-            endog=[Y],
-            exog=[C1],
-            reg_type="lc",
-            var_type="c",
-            bw="cv_ls",
-            defaults=nparam.EstimatorSettings(efficient=True, n_sub=100),
-            seed=20260111,
-        )
+        with pytest.warns(FutureWarning, match="After 0.17"):
+            model_efficient = nparam.KernelReg(
+                endog=[Y],
+                exog=[C1],
+                reg_type="lc",
+                var_type="c",
+                bw="cv_ls",
+                defaults=nparam.EstimatorSettings(efficient=True, n_sub=100),
+                seed=20260111,
+            )
         with pytest.warns(FutureWarning, match="After 0.17"):
             model = nparam.KernelReg(
                 endog=[Y], exog=[C1], reg_type="ll", var_type="c", bw="cv_ls"

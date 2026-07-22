@@ -22,7 +22,7 @@ from statsmodels.distributions.copula.api import (
     IndependenceCopula,
 )
 from statsmodels.distributions.copula.extreme_value import ExtremeValueCopula
-
+import pytest
 
 class CopulaModel(GenericLikelihoodModel):
 
@@ -62,7 +62,7 @@ def get_data(nobs):
     # TODO: setting seed doesn't work for copula,
     # copula creates new randomly initialized random state, see #7650
     rng = np.random.RandomState(98645713)
-    rvs = cd_f.rvs(nobs, random_state=rng)
+    rvs = cd_f.rvs(nobs, rng=rng)
     assert_allclose(rvs.mean(0), [-0.02936002, 0.06658304], atol=1e-7)
     return rvs
 
@@ -239,3 +239,12 @@ class TestIndependence(CheckEVfit0):
         cls.cop_args = ()
         cls.k_copparams = 0
         cls.copula_fixed = IndependenceCopula(*cls.cop_args)
+
+
+@pytest.mark.parametrize("rng", [None, 0, np.random.RandomState(0), np.random.default_rng(0)])
+def test_rng_types(rng):
+    cop_f = FrankCopula(theta=2)
+    cd_f = CopulaDistribution(cop_f, [stats.norm, stats.norm])
+    rvs = cd_f.rvs(50, rng=rng)
+    assert isinstance(rvs, np.ndarray)
+    assert np.issubdtype(rvs.dtype, np.float64)

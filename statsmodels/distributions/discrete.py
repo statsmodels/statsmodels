@@ -342,6 +342,28 @@ class DiscretizedCount(rv_discrete):
 
     @deprecate_kwarg("random_state", "rng")
     def _rvs(self, *args, size=None, rng=None):
+        """Generate random variates.
+
+        Parameters
+        ----------
+        *args
+            Shape parameters and scale forwarded to the underlying
+            continuous distribution.
+        size : int or tuple of ints, optional
+            Number of random variates to generate.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            Passed directly to the underlying SciPy distribution as its
+            ``random_state`` argument. If `rng` is None, the global NumPy
+            singleton random state is used. If `rng` is an int or array of
+            ints, a new ``RandomState`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+
+        Returns
+        -------
+        rv : ndarray
+            Random variates from the discretized distribution.
+        """
         args, scale = self._unpack_args(args)
         if size is None:
             size = getattr(self, "_size", 1)

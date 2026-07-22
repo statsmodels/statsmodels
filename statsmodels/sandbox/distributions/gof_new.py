@@ -565,6 +565,14 @@ def bootstrap(
 
     this works also with nrep=1
 
+    Parameters
+    ----------
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
     """
     # signature similar to kstest ?
     # delegate to fn ?
@@ -641,6 +649,28 @@ class NewNorm:
 
     @deprecate_kwarg("random_state", "rng")
     def rvs(self, args, size, rng=None):
+        """
+        Random variates of the underlying normal distribution
+
+        Parameters
+        ----------
+        args : tuple
+            ``(loc, scale)`` parameters of the normal distribution.
+        size : int or tuple of ints
+            Output shape of the random sample.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            Passed directly to the underlying SciPy distribution as its
+            ``random_state`` argument. If `rng` is None, the global NumPy
+            singleton random state is used. If `rng` is an int or array of
+            ints, a new ``RandomState`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+
+        Returns
+        -------
+        ndarray
+            Random sample from the normal distribution.
+        """
         loc = args[0]
         scale = args[1]
         return loc + scale * distributions.norm.rvs(size=size, random_state=rng)
