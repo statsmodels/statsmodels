@@ -7,6 +7,7 @@ parameters:
   # defaults for any parameters that are not specified
   name: ''
   vmImage: ''
+  PYTEST_PATTERN: 'not slow and not joblib'
 
 
 jobs:
@@ -59,7 +60,6 @@ jobs:
           SCIPY_VERSION: 1.13.0
           CYTHON_VERSION: 3.0.12
           BLAS: "nomkl blas=*=openblas"
-          PYTEST_OPTIONS: ''
         python_313_copy_on_write:
           python.version: '3.13'
           python.architecture: 'x64'
@@ -72,7 +72,7 @@ jobs:
           python.version: '3.12'
           python.architecture: 'x64'
           SM_FORMULA_ENGINE: "formulaic"
-          PIP_UNINSTALL: "patsy matplotlib"
+          PIP_UNINSTALL: "patsy matplotlib joblib"
           USE_MATPLOTLIB: false
         python_312_no_formulaic:
           python.version: '3.12'

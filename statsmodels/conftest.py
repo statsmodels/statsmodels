@@ -52,6 +52,12 @@ def pytest_addoption(parser):
     parser.addoption("--skip-smoke", action="store_true", help="skip smoke tests")
     parser.addoption("--only-smoke", action="store_true", help="run only smoke tests")
     parser.addoption(
+        "--skip-joblib", action="store_true", help="skip tests that use joblib"
+    )
+    parser.addoption(
+        "--only-joblib", action="store_true", help="run only tests that use joblib"
+    )
+    parser.addoption(
         "--skip-high-memory", action="store_true", help="skip high memory usage tests"
     )
     parser.addoption(
@@ -82,6 +88,12 @@ def pytest_runtest_setup(item):
 
     if "smoke" not in item.keywords and item.config.getoption("--only-smoke"):
         pytest.skip("skipping due to --only-smoke")
+
+    if "joblib" in item.keywords and item.config.getoption("--skip-joblib"):
+        pytest.skip("skipping due to --skip-joblib")
+
+    if "joblib" not in item.keywords and item.config.getoption("--only-joblib"):
+        pytest.skip("skipping due to --only-joblib")
 
     if "high_memory" in item.keywords and item.config.getoption("--skip-high-memory"):
         pytest.skip("skipping due to --skip-high-memory")

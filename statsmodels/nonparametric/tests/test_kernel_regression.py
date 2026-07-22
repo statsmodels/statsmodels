@@ -409,6 +409,7 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_allclose(sm_mfx[:, 0], mfx1, rtol=2e-1)
         npt.assert_allclose(sm_mfx[0:10, 1], mfx2[0:10], rtol=2e-1)
 
+    @pytest.mark.joblib
     @pytest.mark.slow
     def test_continuous_cvls_efficient(self):
         nobs = 500

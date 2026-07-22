@@ -7,6 +7,7 @@ import pytest
 from statsmodels.tools.parallel import parallel_func
 
 
+@pytest.mark.joblib
 @pytest.mark.thread_unsafe(reason="uses joblib which is not thread safe")
 def test_parallel():
     x = arange(10.0)
