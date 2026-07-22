@@ -140,7 +140,7 @@ def _compute_subset(
 
         var_type = class_vars[0]
         sub_model = KDEMultivariate(
-            sub_data, var_type, bw=bw, defaults=EstimatorSettings(efficient=False)
+            sub_data, var_type, bw=bw, defaults=EstimatorSettings(efficient=False), rng=generator
         )
     elif class_type == "KDEMultivariateConditional":
         from .kernel_density import KDEMultivariateConditional
@@ -155,6 +155,7 @@ def _compute_subset(
             indep_type,
             bw=bw,
             defaults=EstimatorSettings(efficient=False),
+            rng=generator,
         )
     elif class_type == "KernelReg":
         from .kernel_regression import KernelReg
@@ -169,6 +170,7 @@ def _compute_subset(
             var_type=var_type,
             bw=bw,
             defaults=EstimatorSettings(efficient=False),
+            rng=generator,
         )
 
     else:
@@ -772,7 +774,7 @@ def initialize_generator(
 
     Parameters
     ----------
-    seed : {int, Generator, RandomState, None}, optional
+    entropy : {int, Generator, RandomState, None}, optional
         If an initialized NumPy random Generator or an initialized RandomState,
         the object is returned unchanged. If it is an integer, the value is
         passed ot numpy.random.default_rng. If None, the functions will continue

@@ -50,6 +50,8 @@ from ._kernel_base import (
 
 __all__ = ["KernelCensoredReg", "KernelReg"]
 
+from ..compat.pandas import deprecate_kwarg
+
 
 class KernelReg(GenericKDE):
     """
@@ -93,7 +95,7 @@ class KernelReg(GenericKDE):
         The kernel used for the unordered discrete variables.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
-    seed : {int, np.random.Generator, np.random.RandomState}, optional
+    rng : {int, np.random.Generator, np.random.RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -108,6 +110,7 @@ class KernelReg(GenericKDE):
         The bandwidth parameters.
     """
 
+    @deprecate_kwarg("seed", "rng")
     def __init__(
         self,
         endog,
@@ -120,7 +123,7 @@ class KernelReg(GenericKDE):
         ukertype="aitchisonaitken",
         defaults=None,
         *,
-        seed=None,
+        rng=None,
     ):
         self.var_type = var_type
         self.data_type = var_type
@@ -146,8 +149,9 @@ class KernelReg(GenericKDE):
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
-        self.seed = seed
-        self._generator = initialize_generator(seed)
+        self.seed = rng
+        self.rng = rng
+        self._generator = initialize_generator(rng)
         if not isinstance(bw, str):
             bw = np.asarray(bw)
             if len(bw) != self.k_vars:
@@ -587,7 +591,7 @@ class KernelCensoredReg(KernelReg):
         Value at which the dependent variable is censored. Default is 0.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
-    seed : {int, Generator, RandomState}, optional
+    rng : {int, Generator, RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -602,6 +606,7 @@ class KernelCensoredReg(KernelReg):
         The bandwidth parameters
     """
 
+    @deprecate_kwarg("seed", "rng")
     def __init__(
         self,
         endog,
@@ -615,7 +620,7 @@ class KernelCensoredReg(KernelReg):
         censor_val=0,
         defaults=None,
         *,
-        seed=None,
+        rng=None,
     ):
         self.var_type = var_type
         self.data_type = var_type
@@ -639,7 +644,7 @@ class KernelCensoredReg(KernelReg):
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
-        self._generator = initialize_generator(seed)
+        self._generator = initialize_generator(rng)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
         self.censor_val = censor_val
@@ -861,7 +866,7 @@ class TestRegCoefC:
         Significantly increases computational time. But pivot statistics
         have more desirable properties
         (See references). Default is False.
-    seed : {int, Generator, RandomState}, optional
+    rng : {int, Generator, RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -896,8 +901,9 @@ class TestRegCoefC:
     # Significance of continuous vars in nonparametric regression
     # Racine: Consistent Significance Testing for Nonparametric Regression
     # Journal of Business & Economics Statistics
+    @deprecate_kwarg("seed", "rng")
     def __init__(
-        self, model, test_vars, nboot=400, nested_res=400, pivot=False, seed=None
+        self, model, test_vars, nboot=400, nested_res=400, pivot=False, rng=None
     ):
         self.nboot = nboot
         self.nres = nested_res
@@ -911,7 +917,7 @@ class TestRegCoefC:
         self.gx = model.est[model.reg_type]
         self.test_vars = test_vars
         self.pivot = pivot
-        self._generator = initialize_generator(seed)
+        self._generator = initialize_generator(rng)
         self.run()
 
     def run(self):
