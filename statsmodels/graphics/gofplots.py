@@ -5,7 +5,7 @@ from scipy import stats
 
 from statsmodels.distributions import ECDF
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.tools import add_constant
 
 from . import utils
@@ -23,33 +23,49 @@ class ProbPlot:
     Parameters
     ----------
     data : array_like
-        A 1d data array
-    dist : callable
+        A 1d data array.
+    dist : callable, optional
         Compare x against dist. A scipy.stats or statsmodels distribution. The
         default is scipy.stats.distributions.norm (a standard normal). Can be
         a SciPy frozen distribution.
-    fit : bool
+    fit : bool, optional
         If fit is false, loc, scale, and distargs are passed to the
         distribution. If fit is True then the parameters for dist are fit
         automatically using dist.fit. The quantiles are formed from the
         standardized data, after subtracting the fitted loc and dividing by
         the fitted scale. fit cannot be used if dist is a SciPy frozen
         distribution.
-    distargs : tuple
+    distargs : tuple, optional
         A tuple of arguments passed to dist to specify it fully so dist.ppf
         may be called. distargs must not contain loc or scale. These values
         must be passed using the loc or scale inputs. distargs cannot be used
         if dist is a SciPy frozen distribution.
-    a : float
+    a : float, optional
         Offset for the plotting position of an expected order statistic, for
         example. The plotting positions are given by
-        (i - a)/(nobs - 2*a + 1) for i in range(0,nobs+1)
-    loc : float
+        (i - a)/(nobs - 2*a + 1) for i in range(0,nobs+1).
+    loc : float, optional
         Location parameter for dist. Cannot be used if dist is a SciPy frozen
         distribution.
-    scale : float
+    scale : float, optional
         Scale parameter for dist. Cannot be used if dist is a SciPy frozen
         distribution.
+
+    Attributes
+    ----------
+    theoretical_percentiles : ndarray
+        The theoretical percentiles used to compute the theoretical
+        quantiles.
+    theoretical_quantiles : ndarray
+        The quantiles corresponding to `theoretical_percentiles` given `dist`.
+    sorted_data : ndarray
+        The sorted `data` array.
+    sample_quantiles : ndarray
+        The sorted `data`, standardized if `fit` is True.
+    sample_percentiles : ndarray
+        The percentiles corresponding to `sample_quantiles` given `dist`.
+    fit_params : ndarray
+        The shape, location, and scale parameters used for `dist`.
 
     See Also
     --------
@@ -266,14 +282,14 @@ class ProbPlot:
 
     @cache_readonly
     def sorted_data(self):
-        """sorted data"""
+        """Sorted data"""
         sorted_data = np.sort(np.array(self.data))
         sorted_data.sort()
         return sorted_data
 
     @cache_readonly
     def sample_quantiles(self):
-        """sample quantiles"""
+        """Sample quantiles"""
         if self.fit and self.loc != 0 and self.scale != 1:
             return (self.sorted_data - self.loc) / self.scale
         else:
@@ -298,7 +314,7 @@ class ProbPlot:
         **plotkwargs,
     ):
         """
-        Plot of the percentiles of x versus the percentiles of a distribution.
+        Plot of the percentiles of x versus the percentiles of a distribution
 
         Parameters
         ----------
@@ -308,7 +324,7 @@ class ProbPlot:
         ylabel : str or None, optional
             User-provided labels for the y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-        line : {None, "45", "s", "r", q"}, optional
+        line : {None, "45", "s", "r", "q"}, optional
             Options for the reference line to which the data is compared:
 
             - "45": 45-degree line
@@ -325,8 +341,8 @@ class ProbPlot:
             distribution function estimated from `other` and
             p(x) = 0.5/n, 1.5/n, ..., (n-0.5)/n where n is the number of
             samples in `self`. If an array-object is provided, it will be
-            turned into a `ProbPlot` instance default parameters. If not
-            provided (default), `self.dist(x)` is be plotted against p(x).
+            turned into a `ProbPlot` instance using default parameters. If
+            not provided (default), `self.dist(x)` is plotted against p(x).
 
         ax : AxesSubplot, optional
             If given, this subplot is used to plot in instead of a new figure
@@ -388,20 +404,20 @@ class ProbPlot:
         **plotkwargs,
     ):
         """
-        Plot of the quantiles of x versus the quantiles/ppf of a distribution.
+        Plot of the quantiles of x versus the quantiles/ppf of a distribution
 
         Can also be used to plot against the quantiles of another `ProbPlot`
         instance.
 
         Parameters
         ----------
-        xlabel : {None, str}
+        xlabel : {None, str}, optional
             User-provided labels for the x-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-        ylabel : {None, str}
+        ylabel : {None, str}, optional
             User-provided labels for the y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-        line : {None, "45", "s", "r", q"}, optional
+        line : {None, "45", "s", "r", "q"}, optional
             Options for the reference line to which the data is compared:
 
             - "45" - 45-degree line
@@ -494,7 +510,7 @@ class ProbPlot:
         **plotkwargs,
     ):
         """
-        Plot of unscaled quantiles of x against the prob of a distribution.
+        Plot of unscaled quantiles of x against the prob of a distribution
 
         The x-axis is scaled linearly with the quantiles, but the probabilities
         are used to label the axis.
@@ -503,11 +519,12 @@ class ProbPlot:
         ----------
         xlabel : {None, str}, optional
             User-provided labels for the x-axis. If None (default),
-            other values are used depending on the status of the kwarg `other`.
+            "Non-exceedance Probability (%)" or "Probability of Exceedance
+            (%)" is used, depending on `exceed`.
         ylabel : {None, str}, optional
             User-provided labels for the y-axis. If None (default),
-            other values are used depending on the status of the kwarg `other`.
-        line : {None, "45", "s", "r", q"}, optional
+            "Sample Quantiles" is used.
+        line : {None, "45", "s", "r", "q"}, optional
             Options for the reference line to which the data is compared:
 
             - "45" - 45-degree line
@@ -520,8 +537,8 @@ class ProbPlot:
 
         exceed : bool, optional
             If False (default) the raw sample quantiles are plotted against
-            the theoretical quantiles, show the probability that a sample will
-            not exceed a given value. If True, the theoretical quantiles are
+            the theoretical quantiles, showing the probability that a sample
+            will not exceed a given value. If True, the theoretical quantiles are
             flipped such that the figure displays the probability that a
             sample will exceed a given value.
         ax : AxesSubplot, optional
@@ -583,7 +600,7 @@ def qqplot(
     **plotkwargs,
 ):
     """
-    Q-Q plot of the quantiles of x versus the quantiles/ppf of a distribution.
+    Q-Q plot of the quantiles of x versus the quantiles/ppf of a distribution
 
     Can take arguments specifying the parameters for dist or fit them
     automatically. (See fit under Parameters.)
@@ -592,27 +609,27 @@ def qqplot(
     ----------
     data : array_like
         A 1d data array.
-    dist : callable
+    dist : callable, optional
         Comparison distribution. The default is
         scipy.stats.distributions.norm (a standard normal).
-    distargs : tuple
+    distargs : tuple, optional
         A tuple of arguments passed to dist to specify it fully
         so dist.ppf may be called.
-    a : float
+    a : float, optional
         Offset for the plotting position of an expected order statistic, for
         example. The plotting positions are given by (i - a)/(nobs - 2*a + 1)
-        for i in range(0,nobs+1)
-    loc : float
-        Location parameter for dist
-    scale : float
-        Scale parameter for dist
-    fit : bool
+        for i in range(0,nobs+1).
+    loc : float, optional
+        Location parameter for dist.
+    scale : float, optional
+        Scale parameter for dist.
+    fit : bool, optional
         If fit is false, loc, scale, and distargs are passed to the
         distribution. If fit is True then the parameters for dist
         are fit automatically using dist.fit. The quantiles are formed
         from the standardized data, after subtracting the fitted loc
         and dividing by the fitted scale.
-    line : {None, "45", "s", "r", "q"}
+    line : {None, "45", "s", "r", "q"}, optional
         Options for the reference line to which the data is compared:
 
         - "45" - 45-degree line
@@ -688,7 +705,7 @@ def qqplot_2samples(
     data1, data2, xlabel=None, ylabel=None, line=None, ax=None, **kwargs
 ):
     """
-    Q-Q Plot of two samples' quantiles.
+    Q-Q Plot of two samples' quantiles
 
     Can take either two `ProbPlot` instances or two array-like objects. In the
     case of the latter, both inputs will be converted to `ProbPlot` instances
@@ -704,13 +721,13 @@ def qqplot_2samples(
         Data to plot along y axis. Does not need to have the same number of
         observations as data 1. If the sample sizes are unequal, the longer
         series is always plotted along the x-axis.
-    xlabel : {None, str}
+    xlabel : {None, str}, optional
         User-provided labels for the x-axis. If None (default),
         other values are used.
-    ylabel : {None, str}
+    ylabel : {None, str}, optional
         User-provided labels for the y-axis. If None (default),
         other values are used.
-    line : {None, "45", "s", "r", q"}
+    line : {None, "45", "s", "r", "q"}, optional
         Options for the reference line to which the data is compared:
 
         - "45" - 45-degree line
@@ -788,28 +805,27 @@ def qqplot_2samples(
 
 def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
     """
-    Plot a reference line for a qqplot.
+    Plot a reference line for a qqplot
 
     Parameters
     ----------
     ax : matplotlib axes instance
         The axes on which to plot the line
-    line : str {"45","r","s","q"}
-        Options for the reference line to which the data is compared.:
+    line : {"45", "r", "s", "q"}
+        Options for the reference line to which the data is compared:
 
-        - "45" - 45-degree line
+        - "45"  - 45-degree line
         - "s"  - standardized line, the expected order statistics are scaled by
                  the standard deviation of the given sample and have the mean
                  added to them
         - "r"  - A regression line is fit
         - "q"  - A line is fit through the quartiles.
-        - None - By default no reference line is added to the plot.
 
-    x : ndarray
+    x : ndarray, optional
         X data for plot. Not needed if line is "45".
-    y : ndarray
+    y : ndarray, optional
         Y data for plot. Not needed if line is "45".
-    dist : scipy.stats.distribution
+    dist : scipy.stats.distribution, optional
         A scipy.stats distribution, needed if line is "q".
     fmt : str, optional
         Line format string passed to `plot`.
@@ -952,21 +968,21 @@ def plotting_pos(nobs, a=0.0, b=None):
 def _fmt_probplot_axis(ax, dist, nobs):
     """
     Formats a theoretical quantile axis to display the corresponding
-    probabilities on the quantiles' scale.
+    probabilities on the quantiles' scale
 
     Parameters
     ----------
-    ax : AxesSubplot, optional
-        The axis to be formatted
-    nobs : scalar
-        Number of observations in the sample
+    ax : AxesSubplot
+        The axis to be formatted.
     dist : scipy.stats.distribution
         A scipy.stats distribution sufficiently specified to implement its
         ppf() method.
+    nobs : scalar
+        Number of observations in the sample.
 
-    Returns
-    -------
-    There is no return value. This operates on `ax` in place
+    Notes
+    -----
+    There is no return value. This operates on `ax` in place.
     """
     _check_for(dist, "ppf")
     axis_probs = np.linspace(10, 90, 9, dtype=float)
@@ -1009,7 +1025,7 @@ def _do_plot(x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs)
         created.
     fmt : str, optional
         matplotlib-compatible formatting string for the data markers
-    kwargs : keywords
+    **kwargs
         These are passed to matplotlib.plot
 
     Returns
@@ -1054,5 +1070,6 @@ def _do_plot(x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs)
 
 
 def _check_for(dist, attr="ppf"):
+    """Raise if `dist` does not implement the method named `attr`"""
     if not hasattr(dist, attr):
         raise AttributeError(f"distribution must have a {attr} method")

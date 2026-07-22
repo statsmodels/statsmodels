@@ -196,7 +196,7 @@ class TestPsturng:
             assert_almost_equal(1.0 - p, psturng(q, r, v), 5)
 
     @pytest.mark.slow
-    def test_100_random_values(self, reset_randomstate):
+    def test_100_random_values(self):
         n = 100
         random_state = np.random.RandomState(12345)
         ps = random_state.random_sample(n) * (0.999 - 0.1) + 0.1

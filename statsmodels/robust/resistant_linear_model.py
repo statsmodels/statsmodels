@@ -17,8 +17,29 @@ from statsmodels.tools.testing import Holder
 
 
 class RLMDetS(Model):
-    """S-estimator for linear model with deterministic starts.
+    """
+    S-estimator for linear model with deterministic starts.
 
+    Parameters
+    ----------
+    endog : array-like, 1-dim
+        Dependent, endogenous variable.
+    exog : array-like, 1-dim
+        Independent, exogenous regressor variables.
+    norm : robust norm
+        Redescending robust norm used for S-estimation.
+        Default is TukeyBiweight.
+    breakdown_point : float in (0, 0.5)
+        Breakdown point of the S-estimator.
+    col_indices : None or array-like of ints
+        Index of columns of exog to use in the mahalanobis distance
+        computation for the starting sets of the S-estimator.
+        Default is all exog except first column (constant). Todo: will
+        change when we autodetect the constant column.
+    include_endog : bool
+        If true, then the endog variable is combined with the exog
+        variables to compute the mahalanobis distances for the starting
+        sets of the S-estimator.
 
     Notes
     -----
@@ -26,10 +47,8 @@ class RLMDetS(Model):
     et al 2006) using starting sets similar to the deterministic estimation of
     multivariate location and scatter DetS and DetMM of Hubert et al (2012).
 
-
     References
     ----------
-
     .. [1] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
        Computational and Graphical Statistics 21 (3): 618-37.
@@ -47,8 +66,6 @@ class RLMDetS(Model):
     .. [4] Salibian-Barrera, Matías, and Víctor J. Yohai. 2006. “A Fast
        Algorithm for S-Regression Estimates.” Journal of Computational and
        Graphical Statistics 15 (2): 414-27.
-
-
     """
 
     def __init__(self, endog, exog, norm=None, breakdown_point=0.5,
@@ -132,14 +149,15 @@ class RLMDetS(Model):
 
 
 class RLMDetSMM(RLMDetS):
-    """MM-estimator with S-estimator starting values.
+    """
+    MM-estimator with S-estimator starting values.
 
     Parameters
     ----------
     endog : array-like, 1-dim
         Dependent, endogenous variable.
-    exog array-like, 1-dim
-        Inependent, exogenous regressor variables.
+    exog : array-like, 1-dim
+        Independent, exogenous regressor variables.
     norm : robust norm
         Redescending robust norm used for S- and MM-estimation.
         Default is TukeyBiweight.
@@ -151,12 +169,11 @@ class RLMDetSMM(RLMDetS):
         Index of columns of exog to use in the mahalanobis distance computation
         for the starting sets of the S-estimator.
         Default is all exog except first column (constant). Todo: will change
-        when we autodetect the constant column
+        when we autodetect the constant column.
     include_endog : bool
         If true, then the endog variable is combined with the exog variables
-        to compute the the mahalanobis distances for the starting sets of the
+        to compute the mahalanobis distances for the starting sets of the
         S-estimator.
-
     """
     def __init__(self, endog, exog, norm=None, efficiency=0.95,
                  breakdown_point=0.5, col_indices=None, include_endog=False):
@@ -178,26 +195,26 @@ class RLMDetSMM(RLMDetS):
         self.norm_mean = norm
 
     def fit(self, h=None, scale_binding=False, start=None):
-        """Estimate the model
+        """
+        Estimate the model
 
         Parameters
         ----------
         h : int
             The size of the initial sets for the S-estimator.
-            Default is ....  (todo)
+            Default is ... (todo).
         scale_binding : bool
             If true, then the scale is fixed in the second stage M-estimation,
             i.e. this is the MM-estimator.
             If false, then the high breakdown point M-scale is used also in the
             second stage M-estimation if that estimated scale is smaller than
-            the scale of the preliminary, first stage S-estimato.
+            the scale of the preliminary, first stage S-estimator.
         start : tuple or None
             If None, then the starting parameters and scale for the second
-            stage M-estimation are taken from the fist stage S-estimator.
+            stage M-estimation are taken from the first stage S-estimator.
             Alternatively, the starting parameters and starting scale can be
             provided by the user as tuple (start_params, start_scale). In this
-            case the first stage S-estimation in skipped.
-        maxiter, other optimization parameters are still missing (todo)
+            case the first stage S-estimation is skipped.
 
         Returns
         -------
@@ -205,6 +222,8 @@ class RLMDetSMM(RLMDetS):
 
         Notes
         -----
+        maxiter and other optimization parameters are still missing (todo).
+
         If scale_binding is false, then the estimator is a standard
         MM-estimator with fixed scale in the second stage M-estimation.
         If scale_binding is true, then the estimator will try to find an
@@ -212,8 +231,6 @@ class RLMDetSMM(RLMDetS):
         first stage S-estimator. If the estimated scale, is not smaller than
         then the scale estimated in the first stage S-estimator, then the
         fixed scale MM-estimator is returned.
-
-
         """
         norm_m = self.norm_mean
         if start is None:

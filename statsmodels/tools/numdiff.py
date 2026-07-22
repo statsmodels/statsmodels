@@ -1,4 +1,5 @@
-"""numerical differentiation function, gradient, Jacobian, and Hessian
+"""
+Numerical differentiation functions: gradient, Jacobian, and Hessian.
 
 Author : josef-pkt
 License : BSD
@@ -11,9 +12,8 @@ without dependencies.
 * Jacobian should be faster than numdifftools because it does not use loop over
   observations.
 * numerical precision will vary and depend on the choice of stepsizes
-"""
 
-from statsmodels.compat.pandas import Appender, Substitution
+"""
 
 # TODO:
 # * some cleanup
@@ -46,6 +46,8 @@ from statsmodels.compat.pandas import Appender, Substitution
 # in example: if J = d x*beta / d beta then J'J == X'X
 #    similar to https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
 import numpy as np
+
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 
 # NOTE: we only do double precision internally so far
 EPS = np.finfo(float).eps
@@ -138,6 +140,7 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs=None, centered=False):
     by f (e.g., with a value for each observation), it returns a 3d array
     with the Jacobian of each observation with shape xk x nobs x xk. I.e.,
     the Jacobian of the first observation would be [:, 0, :]
+
     """
     n = len(x)
     kwargs = {} if kwargs is None else kwargs
@@ -195,6 +198,7 @@ def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs=None, centered=Fal
     -------
     grad : ndarray
         Array of derivatives, gradient evaluated at parameters ``x``.
+
     """
     x = np.asarray(x)
     n = 1
@@ -241,6 +245,7 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs=None):
     truncation error can be eliminated by choosing epsilon to be very small.
     The complex-step derivative avoids the problem of round-off error with
     small epsilon because there is no subtraction.
+
     """
     # From Guilherme P. de Freitas, numpy mailing list
     # May 04 2010 thread "Improvement of performance"
@@ -291,6 +296,7 @@ def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs=None):
     truncation error can be eliminated by choosing epsilon to be very small.
     The complex-step derivative avoids the problem of round-off error with
     small epsilon because there is no subtraction.
+
     """
     # From Guilherme P. de Freitas, numpy mailing list
     # May 04 2010 thread "Improvement of performance"
@@ -307,7 +313,8 @@ def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs=None):
 
 
 def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
-    """Calculate Hessian with complex-step derivative approximation
+    """
+    Calculate Hessian with complex-step derivative approximation.
 
     Parameters
     ----------
@@ -317,6 +324,10 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
        function of one array f(x)
     epsilon : float
        stepsize, if None, then stepsize is automatically chosen
+    args : tuple
+        Arguments for function `f`.
+    kwargs : dict
+        Keyword arguments for function `f`.
 
     Returns
     -------
@@ -330,6 +341,7 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
     of Numerical Differentiation, University of Kent, Canterbury, Kent, U.K.
 
     The stepsize is the same for the complex and the finite difference part.
+
     """
     # TODO: might want to consider lowering the step for pure derivatives
     kwargs = {} if kwargs is None else kwargs

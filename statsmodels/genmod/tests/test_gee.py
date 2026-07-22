@@ -32,25 +32,6 @@ import statsmodels.genmod.generalized_estimating_equations as gee
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
-
-pdf_output = False
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_glm.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
-
 
 def load_data(fname, icept=True):
     """
@@ -98,12 +79,12 @@ class TestGEE:
         # effects and ordinary effects should be equal.
 
         n = 40
-        np.random.seed(34234)
-        exog = np.random.normal(size=(n, 3))
+        rs = np.random.RandomState(34234)
+        exog = rs.normal(size=(n, 3))
         exog[:, 0] = 1
 
         groups = np.kron(np.arange(n / 4), np.r_[1, 1, 1, 1])
-        endog = exog[:, 1] + np.random.normal(size=n)
+        endog = exog[:, 1] + rs.normal(size=n)
 
         model = gee.GEE(endog, exog, groups)
         result = model.fit(start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
@@ -121,12 +102,12 @@ class TestGEE:
         # tuples. Marginal effects and ordinary effects should be equal.
 
         n = 40
-        np.random.seed(34234)
-        exog_arr = np.random.normal(size=(n, 3))
+        rs = np.random.RandomState(34234)
+        exog_arr = rs.normal(size=(n, 3))
         exog_arr[:, 0] = 1
 
         groups_arr = np.kron(np.arange(n / 4), np.r_[1, 1, 1, 1])
-        endog_arr = exog_arr[:, 1] + np.random.normal(size=n)
+        endog_arr = exog_arr[:, 1] + rs.normal(size=n)
 
         # check that GEE accepts lists
         exog_list = [list(row) for row in exog_arr]
@@ -158,7 +139,6 @@ class TestGEE:
         # Check marginal effects for a binomial GEE fit.  Comparison
         # comes from Stata.
 
-        np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
         exog = np.ones((8, 2))
         exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
@@ -178,7 +158,6 @@ class TestGEE:
         # which should be equivalent to logistic regression.  Comparison
         # comes from Stata.
 
-        np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
         exog = np.ones((8, 2))
         exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
@@ -194,9 +173,9 @@ class TestGEE:
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_nominal_plot(self, close_figures):
-        np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
         exog = np.ones((8, 2))
         exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
@@ -206,13 +185,14 @@ class TestGEE:
         model = gee.NominalGEE(endog, exog, groups)
         result = model.fit(cov_type="naive", start_params=[3.295837, -2.197225])
 
+        import matplotlib.pyplot as plt
+
         fig = result.plot_distribution()
         assert_equal(isinstance(fig, plt.Figure), True)
 
     def test_margins_poisson(self):
         # Check marginal effects for a Poisson GEE fit.
 
-        np.random.seed(34234)
         endog = np.r_[10, 15, 12, 13, 20, 18, 26, 29]
         exog = np.ones((8, 2))
         exog[:, 1] = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -233,7 +213,6 @@ class TestGEE:
         logistic regression.
         """
 
-        np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
         exog = np.ones((8, 2))
         exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
@@ -323,9 +302,9 @@ class TestGEE:
         # Test missing data handling for calling from the api.  Missing
         # data handling does not currently work for formulas.
 
-        np.random.seed(34234)
-        endog = np.random.normal(size=100)
-        exog = np.random.normal(size=(100, 3))
+        rs = np.random.RandomState(34234)
+        endog = rs.normal(size=100)
+        exog = rs.normal(size=(100, 3))
         exog[:, 0] = 1
         groups = np.kron(lrange(20), np.ones(5))
 
@@ -350,11 +329,11 @@ class TestGEE:
     def test_missing_formula(self):
         # Test missing data handling for formulas.
 
-        np.random.seed(34234)
-        endog = np.random.normal(size=100)
-        exog1 = np.random.normal(size=100)
-        exog2 = np.random.normal(size=100)
-        exog3 = np.random.normal(size=100)
+        rs = np.random.RandomState(34234)
+        endog = rs.normal(size=100)
+        exog1 = rs.normal(size=100)
+        exog2 = rs.normal(size=100)
+        exog3 = rs.normal(size=100)
         groups = np.kron(lrange(20), np.ones(5))
 
         endog[0] = np.nan
@@ -568,7 +547,7 @@ class TestGEE:
             [1.05370439, 0.96084864, 0.93923374],
         ]
 
-        np.random.seed(342837482)
+        rs = np.random.RandomState(342837482)
 
         num_group = 100
         ar_param = 0.5
@@ -587,10 +566,10 @@ class TestGEE:
             exog = []
             groups = []
             for i in range(num_group):
-                x = np.random.normal(size=(gsize, k))
+                x = rs.normal(size=(gsize, k))
                 exog.append(x)
                 expval = x.sum(1)
-                errors = np.dot(cmat_r, np.random.normal(size=gsize))
+                errors = np.dot(cmat_r, rs.normal(size=gsize))
                 endog.append(expval + errors)
                 groups.append(i * np.ones(gsize))
 
@@ -620,11 +599,11 @@ class TestGEE:
     def test_scoretest(self):
         # Regression tests
 
-        np.random.seed(6432)
+        rs = np.random.RandomState(6432)
         n = 200  # Must be divisible by 4
-        exog = np.random.normal(size=(n, 4))
+        exog = rs.normal(size=(n, 4))
         endog = exog[:, 0] + exog[:, 1] + exog[:, 2]
-        endog += 3 * np.random.normal(size=n)
+        endog += 3 * rs.normal(size=n)
         group = np.kron(np.arange(n / 4), np.ones(4))
 
         # Test under the null.
@@ -660,14 +639,12 @@ class TestGEE:
         assert_almost_equal(res2.score_test()["p-value"], 0.0616991659)
 
         # Compare to Wald tests
-        exog = np.random.normal(size=(n, 2))
+        exog = rs.normal(size=(n, 2))
         L = np.array([[1, -1]])
         R = np.array([0.0])
         f = np.r_[1, -1]
         for i in range(10):
-            endog = (
-                exog[:, 0] + (0.5 + i / 10.0) * exog[:, 1] + np.random.normal(size=n)
-            )
+            endog = exog[:, 0] + (0.5 + i / 10.0) * exog[:, 1] + rs.normal(size=n)
             family = families.Gaussian()
             va = cov_struct.Independence()
             mod0 = gee.GEE(endog, exog, group, family=family, cov_struct=va)
@@ -689,13 +666,13 @@ class TestGEE:
     )
     def test_compare_score_test(self, cov_struct):
 
-        np.random.seed(6432)
+        rs = np.random.RandomState(6432)
         n = 200  # Must be divisible by 4
-        exog = np.random.normal(size=(n, 4))
+        exog = rs.normal(size=(n, 4))
         group = np.kron(np.arange(n / 4), np.ones(4))
 
         exog_sub = exog[:, [0, 3]]
-        endog = exog_sub.sum(1) + 3 * np.random.normal(size=n)
+        endog = exog_sub.sum(1) + 3 * rs.normal(size=n)
 
         L = np.asarray([[0, 1, 0, 0], [0, 0, 1, 0]])
         R = np.zeros(2)
@@ -721,17 +698,15 @@ class TestGEE:
 
     def test_compare_score_test_warnings(self):
 
-        np.random.seed(6432)
+        rs = np.random.RandomState(6432)
         n = 200  # Must be divisible by 4
-        exog = np.random.normal(size=(n, 4))
+        exog = rs.normal(size=(n, 4))
         group = np.kron(np.arange(n / 4), np.ones(4))
         exog_sub = exog[:, [0, 3]]
-        endog = exog_sub.sum(1) + 3 * np.random.normal(size=n)
+        endog = exog_sub.sum(1) + 3 * rs.normal(size=n)
 
         # Mismatched cov_struct
-        mod_sub = gee.GEE(
-            endog, exog_sub, group, cov_struct=cov_struct.Exchangeable()
-        )
+        mod_sub = gee.GEE(endog, exog_sub, group, cov_struct=cov_struct.Exchangeable())
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
         with pytest.warns(UserWarning, match="Model and submodel have"):
@@ -752,7 +727,7 @@ class TestGEE:
             mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched weights
-        w = np.random.uniform(size=n)
+        w = rs.uniform(size=n)
         mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group)
@@ -760,7 +735,6 @@ class TestGEE:
             mod.compare_score_test(res_sub)  # smoketest
 
         # Parent and submodel are the same dimension
-        w = np.random.uniform(size=n)
         mod_sub = gee.GEE(endog, exog, group)
         res_sub = mod_sub.fit()
         mod = gee.GEE(endog, exog, group)
@@ -769,11 +743,11 @@ class TestGEE:
 
     def test_constraint_covtype(self):
         # Test constraints with different cov types
-        np.random.seed(6432)
+        rs = np.random.RandomState(6432)
         n = 200
-        exog = np.random.normal(size=(n, 4))
+        exog = rs.normal(size=(n, 4))
         endog = exog[:, 0] + exog[:, 1] + exog[:, 2]
-        endog += 3 * np.random.normal(size=n)
+        endog += 3 * rs.normal(size=n)
         group = np.kron(np.arange(n / 4), np.ones(4))
         L = np.array([[1.0, -1, 0, 0]])
         R = np.array(
@@ -879,10 +853,10 @@ class TestGEE:
 
         family = families.Gaussian()
 
-        np.random.seed(34234)
-        exog = np.random.normal(size=(300, 4))
+        rs = np.random.RandomState(34234)
+        exog = rs.normal(size=(300, 4))
         exog[:, 0] = 1
-        endog = np.dot(exog, np.r_[1, 1, 0, 0.2]) + np.random.normal(size=300)
+        endog = np.dot(exog, np.r_[1, 1, 0, 0.2]) + rs.normal(size=300)
         group = np.kron(np.arange(100), np.r_[1, 1, 1])
 
         vi = cov_struct.Independence()
@@ -945,7 +919,7 @@ class TestGEE:
 
     def test_nested_pandas(self):
 
-        np.random.seed(4234)
+        rs = np.random.RandomState(4234)
         n = 10000
 
         # Outer groups
@@ -956,12 +930,12 @@ class TestGEE:
         groups2 = np.kron(np.arange(n // 10), np.ones(10)).astype(int)
 
         # Group effects
-        groups_e = np.random.normal(size=n // 100)
-        groups1_e = 2 * np.random.normal(size=n // 50)
-        groups2_e = 3 * np.random.normal(size=n // 10)
+        groups_e = rs.normal(size=n // 100)
+        groups1_e = 2 * rs.normal(size=n // 50)
+        groups2_e = 3 * rs.normal(size=n // 10)
 
         y = groups_e[groups] + groups1_e[groups1] + groups2_e[groups2]
-        y += 0.5 * np.random.normal(size=n)
+        y += 0.5 * rs.normal(size=n)
 
         df = pd.DataFrame(
             {"y": y, "TheGroups": groups, "groups1": groups1, "groups2": groups2}
@@ -1029,12 +1003,12 @@ class TestGEE:
     @pytest.mark.smoke
     def test_ordinal_formula(self):
 
-        np.random.seed(434)
+        rs = np.random.RandomState(434)
         n = 40
-        y = np.random.randint(0, 3, n)
+        y = rs.randint(0, 3, n)
         groups = np.arange(n)
-        x1 = np.random.normal(size=n)
-        x2 = np.random.normal(size=n)
+        x1 = rs.normal(size=n)
+        x2 = rs.normal(size=n)
 
         df = pd.DataFrame({"y": y, "groups": groups, "x1": x1, "x2": x2})
 
@@ -1049,11 +1023,11 @@ class TestGEE:
     @pytest.mark.smoke
     def test_ordinal_independence(self):
 
-        np.random.seed(434)
+        rs = np.random.RandomState(434)
         n = 40
-        y = np.random.randint(0, 3, n)
+        y = rs.randint(0, 3, n)
         groups = np.kron(np.arange(n / 2), np.r_[1, 1])
-        x = np.random.normal(size=(n, 1))
+        x = rs.normal(size=(n, 1))
 
         odi = cov_struct.OrdinalIndependence()
         model1 = gee.OrdinalGEE(y, x, groups, cov_struct=odi)
@@ -1062,11 +1036,11 @@ class TestGEE:
     @pytest.mark.smoke
     def test_nominal_independence(self):
 
-        np.random.seed(434)
+        rs = np.random.RandomState(434)
         n = 40
-        y = np.random.randint(0, 3, n)
+        y = rs.randint(0, 3, n)
         groups = np.kron(np.arange(n / 2), np.r_[1, 1])
-        x = np.random.normal(size=(n, 1))
+        x = rs.normal(size=(n, 1))
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -1075,8 +1049,11 @@ class TestGEE:
             model1.fit()
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ordinal_plot(self, close_figures):
+        import matplotlib.pyplot as plt
+
         family = families.Binomial()
 
         endog, exog, groups = load_data("gee_ordinal_1.csv", icept=False)
@@ -1219,10 +1196,10 @@ class TestGEE:
         # Test various group structures (nonconsecutive, different
         # group sizes, not ordered, string labels)
 
-        np.random.seed(234)
+        rs = np.random.RandomState(234)
         n = 40
-        x = np.random.normal(size=(n, 2))
-        y = np.random.normal(size=n)
+        x = rs.normal(size=(n, 2))
+        y = rs.normal(size=n)
 
         # groups with unequal group sizes
         groups = np.kron(np.arange(n / 4), np.ones(4))
@@ -1233,7 +1210,7 @@ class TestGEE:
         result1 = model1.fit()
 
         # Unordered groups
-        ix = np.random.permutation(n)
+        ix = rs.permutation(n)
         y1 = y[ix]
         x1 = x[ix, :]
         groups1 = groups[ix]
@@ -1266,11 +1243,11 @@ class TestGEE:
         vs = cov_struct.Independence()
         family = families.Gaussian()
 
-        np.random.seed(34234)
-        Y = np.random.normal(size=100)
-        X1 = np.random.normal(size=100)
-        X2 = np.random.normal(size=100)
-        X3 = np.random.normal(size=100)
+        rs = np.random.RandomState(34234)
+        Y = rs.normal(size=100)
+        X1 = rs.normal(size=100)
+        X2 = rs.normal(size=100)
+        X3 = rs.normal(size=100)
         groups = np.kron(lrange(20), np.ones(5))
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
@@ -1298,11 +1275,11 @@ class TestGEE:
         # variable names or arrays.
 
         n = 100
-        np.random.seed(34234)
-        Y = np.random.normal(size=n)
-        X1 = np.random.normal(size=n)
+        rs = np.random.RandomState(34234)
+        Y = rs.normal(size=n)
+        X1 = rs.normal(size=n)
         mat = np.concatenate((np.ones((n, 1)), X1[:, None]), axis=1)
-        Time = np.random.uniform(size=n)
+        Time = rs.uniform(size=n)
         groups = np.kron(lrange(20), np.ones(5))
 
         data = pd.DataFrame({"Y": Y, "X1": X1, "Time": Time, "groups": groups})
@@ -1341,7 +1318,8 @@ class TestGEE:
         check_wrapper(rslt2)
 
     def test_formula_environment(self):
-        """Test that GEE uses the right environment for formulas."""
+        """
+        Test that GEE uses the right environment for formulas."""
 
         n = 100
         rng = np.random.default_rng(34234)
@@ -1385,12 +1363,12 @@ class TestGEE:
         vs = cov_struct.Independence()
         family = families.Binomial()
 
-        np.random.seed(34234)
-        Y = 1 * (np.random.normal(size=100) < 0)
-        X1 = np.random.normal(size=100)
-        X2 = np.random.normal(size=100)
-        X3 = np.random.normal(size=100)
-        groups = np.random.randint(0, 4, size=100)
+        rs = np.random.RandomState(34234)
+        Y = 1 * (rs.normal(size=100) < 0)
+        X1 = rs.normal(size=100)
+        X2 = rs.normal(size=100)
+        X3 = rs.normal(size=100)
+        groups = rs.randint(0, 4, size=100)
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
@@ -1409,12 +1387,12 @@ class TestGEE:
         vs = cov_struct.Independence()
         family = families.Poisson()
 
-        np.random.seed(34234)
-        Y = np.ceil(-np.log(np.random.uniform(size=100)))
-        X1 = np.random.normal(size=100)
-        X2 = np.random.normal(size=100)
-        X3 = np.random.normal(size=100)
-        groups = np.random.randint(0, 4, size=100)
+        rs = np.random.RandomState(34234)
+        Y = np.ceil(-np.log(rs.uniform(size=100)))
+        X1 = rs.normal(size=100)
+        X2 = rs.normal(size=100)
+        X3 = rs.normal(size=100)
+        groups = rs.randint(0, 4, size=100)
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
@@ -1431,12 +1409,12 @@ class TestGEE:
     def test_predict(self):
 
         n = 50
-        np.random.seed(4324)
-        X1 = np.random.normal(size=n)
-        X2 = np.random.normal(size=n)
+        rs = np.random.RandomState(4324)
+        X1 = rs.normal(size=n)
+        X2 = rs.normal(size=n)
         groups = np.kron(np.arange(n / 2), np.r_[1, 1])
-        offset = np.random.uniform(1, 2, size=n)
-        Y = np.random.normal(0.1 * (X1 + X2) + offset, size=n)
+        offset = rs.uniform(1, 2, size=n)
+        Y = rs.normal(0.1 * (X1 + X2) + offset, size=n)
         data = pd.DataFrame(
             {"Y": Y, "X1": X1, "X2": X2, "groups": groups, "offset": offset}
         )
@@ -1459,8 +1437,8 @@ class TestGEE:
         assert_allclose(pred1, pred4 + data.offset)
         assert_allclose(pred1, pred5 + data.offset)
 
-        x1_new = np.random.normal(size=10)
-        x2_new = np.random.normal(size=10)
+        x1_new = rs.normal(size=10)
+        x2_new = rs.normal(size=10)
         new_exog = pd.DataFrame({"X1": x1_new, "X2": x2_new})
         pred6 = result.predict(exog=new_exog)
         params = np.asarray(result.params)
@@ -1528,13 +1506,13 @@ class TestGEE:
     def test_predict_exposure(self):
 
         n = 50
-        np.random.seed(34234)
-        X1 = np.random.normal(size=n)
-        X2 = np.random.normal(size=n)
+        rs = np.random.RandomState(34234)
+        X1 = rs.normal(size=n)
+        X2 = rs.normal(size=n)
         groups = np.kron(np.arange(25), np.r_[1, 1])
-        offset = np.random.uniform(1, 2, size=n)
-        exposure = np.random.uniform(1, 2, size=n)
-        Y = np.random.poisson(0.1 * (X1 + X2) + offset + np.log(exposure), size=n)
+        offset = rs.uniform(1, 2, size=n)
+        exposure = rs.uniform(1, 2, size=n)
+        Y = rs.poisson(0.1 * (X1 + X2) + offset + np.log(exposure), size=n)
         data = pd.DataFrame(
             {
                 "Y": Y,
@@ -1583,15 +1561,13 @@ class TestGEE:
     def test_predict_exposure_lists(self):
 
         n = 50
-        np.random.seed(34234)
-        exog = [[1, np.random.normal(), np.random.normal()] for _ in range(n)]
+        rs = np.random.RandomState(34234)
+        exog = [[1, rs.normal(), rs.normal()] for _ in range(n)]
         groups = list(np.kron(np.arange(25), np.r_[1, 1]))
-        offset = list(np.random.uniform(1, 2, size=n))
-        exposure = list(np.random.uniform(1, 2, size=n))
+        offset = list(rs.uniform(1, 2, size=n))
+        exposure = list(rs.uniform(1, 2, size=n))
         endog = [
-            np.random.poisson(
-                0.1 * (exog_i[1] + exog_i[2]) + offset_i + np.log(exposure_i)
-            )
+            rs.poisson(0.1 * (exog_i[1] + exog_i[2]) + offset_i + np.log(exposure_i))
             for exog_i, offset_i, exposure_i in zip(exog, offset, exposure)
         ]
 
@@ -1614,13 +1590,13 @@ class TestGEE:
         # Test various ways of passing offset and exposure to `from_formula`.
 
         n = 50
-        np.random.seed(34234)
-        X1 = np.random.normal(size=n)
-        X2 = np.random.normal(size=n)
+        rs = np.random.RandomState(34234)
+        X1 = rs.normal(size=n)
+        X2 = rs.normal(size=n)
         groups = np.kron(np.arange(25), np.r_[1, 1])
-        offset = np.random.uniform(1, 2, size=n)
+        offset = rs.uniform(1, 2, size=n)
         exposure = np.exp(offset)
-        Y = np.random.poisson(0.1 * (X1 + X2) + 2 * offset, size=n)
+        Y = rs.poisson(0.1 * (X1 + X2) + 2 * offset, size=n)
         data = pd.DataFrame(
             {
                 "Y": Y,
@@ -1683,11 +1659,11 @@ class TestGEE:
         va = cov_struct.Exchangeable()
         family = families.Gaussian()
 
-        np.random.seed(34234)
+        rs = np.random.RandomState(34234)
         n = 100
-        Y = np.random.normal(size=n)
-        X1 = np.random.normal(size=n)
-        X2 = np.random.normal(size=n)
+        Y = rs.normal(size=n)
+        X1 = rs.normal(size=n)
+        X2 = rs.normal(size=n)
         groups = np.kron(np.arange(50), np.r_[1, 1])
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2})
@@ -1713,9 +1689,9 @@ class TestGEE:
         results are identical using the two approaches.
         """
 
-        np.random.seed(3424)
-        endog = np.random.normal(size=20)
-        exog = np.random.normal(size=(20, 2))
+        rs = np.random.RandomState(3424)
+        endog = rs.normal(size=20)
+        exog = rs.normal(size=(20, 2))
         exog[:, 0] = 1
         groups = np.kron(np.arange(5), np.ones(4))
         groups[12:] = 3  # Create unequal size groups
@@ -1770,23 +1746,24 @@ class TestGEE:
 
     def test_equivalence_from_pairs(self):
 
-        np.random.seed(3424)
-        endog = np.random.normal(size=50)
-        exog = np.random.normal(size=(50, 2))
+        rs = np.random.RandomState(3424)
+        endog = rs.normal(size=50)
+        exog = rs.normal(size=(50, 2))
         exog[:, 0] = 1
         groups = np.kron(np.arange(5), np.ones(10))
         groups[30:] = 3  # Create unequal size groups
 
         # Set up labels.
         labels = np.kron(np.arange(5), np.ones(10)).astype(np.int32)
-        labels = labels[np.random.permutation(len(labels))]
+        labels = labels[rs.permutation(len(labels))]
 
         eq = cov_struct.Equivalence(labels=labels, return_cov=True)
         model1 = gee.GEE(endog, exog, groups, cov_struct=eq)
 
         # Call this directly instead of letting init do it to get the
         # result before reindexing.
-        eq._pairs_from_labels()
+        rs = np.random.RandomState(4234)
+        eq._pairs_from_labels(rng=rs)
 
         # Make sure the size is correct to hold every element.
         for g in model1.group_labels:
@@ -1816,7 +1793,9 @@ class CheckConsistency:
 
     start_params = None
 
+    @pytest.mark.thread_unsafe("GEE.dit is not thread safe")
     def test_cov_type(self):
+        # fit is not thread safe
         mod = self.mod
         res_robust = mod.fit(start_params=self.start_params)
         res_naive = mod.fit(start_params=self.start_params, cov_type="naive")
@@ -1988,16 +1967,16 @@ class TestGEEMultinomialCovType(CheckConsistency):
 
 def test_regularized_poisson():
 
-    np.random.seed(8735)
+    rs = np.random.RandomState(8735)
 
     ng, gs, p = 1000, 5, 5
 
-    x = np.random.normal(size=(ng * gs, p))
+    x = rs.normal(size=(ng * gs, p))
     r = 0.5
     x[:, 2] = r * x[:, 1] + np.sqrt(1 - r**2) * x[:, 2]
     lpr = 0.7 * (x[:, 1] - x[:, 3])
     mean = np.exp(lpr)
-    y = np.random.poisson(mean)
+    y = rs.poisson(mean)
 
     groups = np.kron(np.arange(ng), np.ones(gs))
 
@@ -2011,23 +1990,23 @@ def test_regularized_gaussian():
 
     # Example 1 from Wang et al.
 
-    np.random.seed(8735)
+    rs = np.random.RandomState(8735)
 
     ng, gs, p = 200, 4, 200
 
     groups = np.kron(np.arange(ng), np.ones(gs))
 
     x = np.zeros((ng * gs, p))
-    x[:, 0] = 1 * (np.random.uniform(size=ng * gs) < 0.5)
-    x[:, 1] = np.random.normal(size=ng * gs)
+    x[:, 0] = 1 * (rs.uniform(size=ng * gs) < 0.5)
+    x[:, 1] = rs.normal(size=ng * gs)
     r = 0.5
     for j in range(2, p):
-        eps = np.random.normal(size=ng * gs)
+        eps = rs.normal(size=ng * gs)
         x[:, j] = r * x[:, j - 1] + np.sqrt(1 - r**2) * eps
     lpr = np.dot(x[:, 0:4], np.r_[2, 3, 1.5, 2])
     s = 0.4
-    e = np.sqrt(s) * np.kron(np.random.normal(size=ng), np.ones(gs))
-    e += np.sqrt(1 - s) * np.random.normal(size=ng * gs)
+    e = np.sqrt(s) * np.kron(rs.normal(size=ng), np.ones(gs))
+    e += np.sqrt(1 - s) * rs.normal(size=ng * gs)
 
     y = lpr + e
 
@@ -2042,12 +2021,14 @@ def test_regularized_gaussian():
 
 
 @pytest.mark.smoke
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plots(close_figures):
+    import matplotlib.pyplot as plt
 
-    np.random.seed(378)
-    exog = np.random.normal(size=100)
-    endog = np.random.normal(size=(100, 2))
+    rs = np.random.RandomState(378)
+    exog = rs.normal(size=100)
+    endog = rs.normal(size=(100, 2))
     groups = np.kron(np.arange(50), np.r_[1, 1])
 
     model = gee.GEE(exog, endog, groups)
@@ -2234,12 +2215,12 @@ def test_qic_warnings():
 @pytest.mark.parametrize("reg", [False, True])
 def test_quasipoisson(reg):
 
-    np.random.seed(343)
+    rs = np.random.RandomState(343)
 
     n = 1000
-    x = np.random.normal(size=(n, 3))
-    g = np.random.gamma(1, 1, size=n)
-    y = np.random.poisson(g)
+    x = rs.normal(size=(n, 3))
+    g = rs.gamma(1, 1, size=n)
+    y = rs.poisson(g)
     grp = np.kron(np.arange(100), np.ones(n // 100))
 
     model1 = gee.GEE(
@@ -2277,7 +2258,7 @@ def test_quasipoisson(reg):
 
 def test_grid_ar():
 
-    np.random.seed(243)
+    rs = np.random.RandomState(243)
 
     r = 0.5
     m = 10
@@ -2286,13 +2267,13 @@ def test_grid_ar():
     cov = r ** np.abs(np.subtract.outer(ii, ii))
     covr = np.linalg.cholesky(cov)
 
-    e = [np.dot(covr, np.random.normal(size=m)) for k in range(ng)]
+    e = [np.dot(covr, rs.normal(size=m)) for k in range(ng)]
     e = 2 * np.concatenate(e)
 
     grps = [[k] * m for k in range(ng)]
     grps = np.concatenate(grps)
 
-    x = np.random.normal(size=(ng * m, 3))
+    x = rs.normal(size=(ng * m, 3))
     y = np.dot(x, np.r_[1, -1, 0]) + e
 
     model1 = gee.GEE(
@@ -2318,13 +2299,13 @@ def test_grid_ar():
 
 def test_unstructured_complete():
 
-    np.random.seed(43)
+    rs = np.random.RandomState(43)
     ngrp = 400
     cov = np.asarray([[1, 0.7, 0.2], [0.7, 1, 0.5], [0.2, 0.5, 1]])
     covr = np.linalg.cholesky(cov)
-    e = np.random.normal(size=(ngrp, 3))
+    e = rs.normal(size=(ngrp, 3))
     e = np.dot(e, covr.T)
-    xmat = np.random.normal(size=(3 * ngrp, 3))
+    xmat = rs.normal(size=(3 * ngrp, 3))
     par = np.r_[1, -2, 0.1]
     ey = np.dot(xmat, par)
     y = ey + e.ravel()
@@ -2340,13 +2321,13 @@ def test_unstructured_complete():
 
 def test_unstructured_incomplete():
 
-    np.random.seed(43)
+    rs = np.random.RandomState(43)
     ngrp = 400
     cov = np.asarray([[1, 0.7, 0.2], [0.7, 1, 0.5], [0.2, 0.5, 1]])
     covr = np.linalg.cholesky(cov)
-    e = np.random.normal(size=(ngrp, 3))
+    e = rs.normal(size=(ngrp, 3))
     e = np.dot(e, covr.T)
-    xmat = np.random.normal(size=(3 * ngrp, 3))
+    xmat = rs.normal(size=(3 * ngrp, 3))
     par = np.r_[1, -2, 0.1]
     ey = np.dot(xmat, par)
 
@@ -2379,7 +2360,7 @@ def test_unstructured_incomplete():
 
 def test_ar_covsolve():
 
-    np.random.seed(123)
+    rs = np.random.RandomState(123)
 
     c = cov_struct.Autoregressive(grid=True)
     c.dep_params = 0.4
@@ -2389,12 +2370,12 @@ def test_ar_covsolve():
 
             ii = np.arange(d)
             mat = 0.4 ** np.abs(np.subtract.outer(ii, ii))
-            sd = np.random.uniform(size=d)
+            sd = rs.uniform(size=d)
 
             if q == 1:
-                z = np.random.normal(size=d)
+                z = rs.normal(size=d)
             else:
-                z = np.random.normal(size=(d, q))
+                z = rs.normal(size=(d, q))
 
             sm = np.diag(sd)
             z1 = np.linalg.solve(sm, np.linalg.solve(mat, np.linalg.solve(sm, z)))
@@ -2407,7 +2388,7 @@ def test_ar_covsolve():
 
 def test_ex_covsolve():
 
-    np.random.seed(123)
+    rs = np.random.RandomState(123)
 
     c = cov_struct.Exchangeable()
     c.dep_params = 0.4
@@ -2416,12 +2397,12 @@ def test_ex_covsolve():
         for q in 1, 4:
 
             mat = 0.4 * np.ones((d, d)) + 0.6 * np.eye(d)
-            sd = np.random.uniform(size=d)
+            sd = rs.uniform(size=d)
 
             if q == 1:
-                z = np.random.normal(size=d)
+                z = rs.normal(size=d)
             else:
-                z = np.random.normal(size=(d, q))
+                z = rs.normal(size=(d, q))
 
             sm = np.diag(sd)
             z1 = np.linalg.solve(sm, np.linalg.solve(mat, np.linalg.solve(sm, z)))
@@ -2434,7 +2415,7 @@ def test_ex_covsolve():
 
 def test_stationary_covsolve():
 
-    np.random.seed(123)
+    rs = np.random.RandomState(123)
 
     c = cov_struct.Stationary(grid=True)
     c.time = np.arange(10, dtype=int)
@@ -2445,12 +2426,12 @@ def test_stationary_covsolve():
             c.dep_params = 2.0 ** (-np.arange(d))
             c.max_lag = d - 1
             mat, _ = c.covariance_matrix(np.zeros(d), np.arange(d, dtype=int))
-            sd = np.random.uniform(size=d)
+            sd = rs.uniform(size=d)
 
             if q == 1:
-                z = np.random.normal(size=d)
+                z = rs.normal(size=d)
             else:
-                z = np.random.normal(size=(d, q))
+                z = rs.normal(size=(d, q))
 
             sm = np.diag(sd)
             z1 = np.linalg.solve(sm, np.linalg.solve(mat, np.linalg.solve(sm, z)))

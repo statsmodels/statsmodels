@@ -27,20 +27,20 @@ jobs:
       OPENLAS_NUM_THREADS: 1
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           submodules: recursive
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 #v6
         with:
           python-version: '3.x'
 
-      - uses: pypa/cibuildwheel@v3.4.1
+      - uses: pypa/cibuildwheel@294735312765b09d24a2fbec22660ce817587d55 #v4.1.0
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_BEFORE_BUILD: python -m pip install pip --upgrade
           CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['--skip-slow','-n','auto','--skip-examples'])"
-          CIBW_TEST_REQUIRES: pytest pytest-xdist  pytest-cov matplotlib numpy scipy pandas seaborn
+          CIBW_TEST_REQUIRES: pytest pytest-xdist  pytest-cov pytest-run-parallel matplotlib numpy scipy pandas seaborn
           CIBW_SKIP: "pp* *-musllinux_* *-win32"
           CIBW_ARCHS_LINUX: "x86_64"

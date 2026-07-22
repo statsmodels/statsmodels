@@ -78,7 +78,7 @@ class Clark1987:
         cls.model.selection = np.eye(cls.model.k_states)
 
         # Update matrices with given parameters
-        (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(cls.true["parameters"])
+        sigma_v, sigma_e, sigma_w, phi_1, phi_2 = np.array(cls.true["parameters"])
         cls.model.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
         cls.model.state_cov[
             np.diag_indices(k_states) + (np.zeros(k_states, dtype=int),)
@@ -1099,7 +1099,8 @@ def test_simulate():
     nsimulations = 10
     sigma2 = 2
     measurement_shocks = np.zeros(nsimulations)
-    state_shocks = np.random.normal(scale=sigma2**0.5, size=nsimulations)
+    rs = np.random.RandomState(9991617)
+    state_shocks = rs.normal(scale=sigma2**0.5, size=nsimulations)
 
     # Random walk model, so simulated series is just the cumulative sum of
     # the shocks

@@ -11,6 +11,30 @@ from numpy.testing import assert_allclose
 
 def _mover_confint(stat1, stat2, ci1, ci2, contrast="diff"):
     """
+    Compute a MOVER confidence interval for a contrast of two statistics
+
+    The "Method of Variance Estimates Recovery" (MOVER) combines the
+    confidence intervals of two statistics to obtain a confidence
+    interval for their difference, sum or ratio.
+
+    Parameters
+    ----------
+    stat1 : float
+        First statistic.
+    stat2 : float
+        Second statistic.
+    ci1 : tuple
+        Lower and upper confidence limits for `stat1`.
+    ci2 : tuple
+        Lower and upper confidence limits for `stat2`.
+    contrast : {"diff", "sum", "ratio"}
+        The contrast between `stat1` and `stat2` for which the
+        confidence interval is computed.
+
+    Returns
+    -------
+    ci : tuple
+        Lower and upper confidence limits for the contrast.
 
     References
     ----------

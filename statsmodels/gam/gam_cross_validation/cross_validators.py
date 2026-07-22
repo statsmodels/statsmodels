@@ -11,12 +11,15 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 
 class BaseCrossValidator(with_metaclass(ABCMeta)):
     """
     The BaseCrossValidator class is a base class for all the iterators that
     split the data in train and test as for example KFolds or LeavePOut
     """
+
     def __init__(self):
         pass
 
@@ -37,6 +40,11 @@ class KFold(BaseCrossValidator):
     shuffle : bool
         If true, then the index is shuffled before splitting into train and
         test indices.
+    rng : int, np.random.RandomState or np.random.Generator, optional
+        The rng to use during KFold cross-validation if shuffling. If None, uses
+        the singleton RandomState provided by NumPy. If an int, uses the
+        ``default_rng``. If a RandomState instance or a Generator instance,
+        uses this instance.
 
     Notes
     -----
@@ -44,21 +52,21 @@ class KFold(BaseCrossValidator):
     the remainder.
     """
 
-    def __init__(self, k_folds, shuffle=False):
+    def __init__(self, k_folds, shuffle=False, rng=None):
         self.nobs = None
         self.k_folds = k_folds
         self.shuffle = shuffle
+        self.rng = check_random_state(rng)
 
     def split(self, X, y=None, label=None):
-        """yield index split into train and test sets
-        """
+        """yield index split into train and test sets"""
         # TODO: X and y are redundant, we only need nobs
 
         nobs = X.shape[0]
         index = np.array(range(nobs))
 
         if self.shuffle:
-            np.random.shuffle(index)
+            self.rng.shuffle(index)
 
         folds = np.array_split(index, self.k_folds)
         for fold in folds:

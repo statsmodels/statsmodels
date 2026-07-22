@@ -23,7 +23,6 @@ LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
 from collections import defaultdict
@@ -60,7 +59,8 @@ from statsmodels.graphics._regressionplots_doc import (
 
 # used for wrapper:
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     DomainWarning,
@@ -139,7 +139,7 @@ class ParameterConstraint:
         Parameters
         ----------
         exog : array_like
-           The exogeneous data for the model.
+           The exogenous data for the model.
         """
 
         return self._offset_increment
@@ -152,7 +152,7 @@ class ParameterConstraint:
         Parameters
         ----------
         exog : array_like
-           The exogeneous data for the model.
+           The exogenous data for the model.
         """
         return self.exog_fulltrans[:, 0 : self.lhs0.shape[1]]
 
@@ -193,7 +193,7 @@ _gee_init_doc = """
         1d array of endogenous values (i.e. responses, outcomes,
         dependent variables, or 'Y' values).
     exog : array_like
-        2d array of exogeneous values (i.e. covariates, predictors,
+        2d array of exogenous values (i.e. covariates, predictors,
         independent variables, regressors, or 'X' values). A `nobs x
         k` array where `nobs` is the number of observations and `k` is
         the number of regressors. An intercept is not included by
@@ -1045,7 +1045,7 @@ class GEE(GLM):
         Parameters
         ----------
         exog : array_like
-           The exogeneous data at which the derivative is computed.
+           The exogenous data at which the derivative is computed.
         lin_pred : array_like
            The values of the linear predictor.
 
@@ -2003,7 +2003,7 @@ class GEEResults(GLMResults):
 
         Returns
         -------
-        Adictionary containing the p-value, the test statistic,
+        A dictionary containing the p-value, the test statistic,
         and the degrees of freedom for the score test.
 
         Notes
@@ -2031,7 +2031,7 @@ class GEEResults(GLMResults):
     @cache_readonly
     def resid_split(self):
         """
-        Returns the residuals, the endogeneous data minus the fitted
+        Returns the residuals, the endogenous data minus the fitted
         values from the model.  The residuals are returned as a list
         of arrays containing the residuals for each cluster.
         """
@@ -2192,12 +2192,6 @@ class GEEResults(GLMResults):
             the default title
         alpha : float
             significance level for the confidence intervals
-        cov_type : str
-            The covariance type used to compute the standard errors;
-            one of 'robust' (the usual robust sandwich-type covariance
-            estimate), 'naive' (ignores dependence), and 'bias
-            reduced' (the Mancl/DeRouen estimate).
-
         Returns
         -------
         smry : Summary instance
@@ -2292,7 +2286,8 @@ class GEEResults(GLMResults):
     def get_margeff(
         self, at="overall", method="dydx", atexog=None, dummy=False, count=False
     ):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
         Parameters
         ----------
@@ -2320,7 +2315,7 @@ class GEEResults(GLMResults):
             - 'dyex' - estimate semi-elasticity -- dy/d(lnx)
             - 'eydx' - estimate semi-elasticity -- d(lny)/dx
 
-            Note that tranformations are done after each observation is
+            Note that transformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
             for discrete variables.
@@ -2342,8 +2337,8 @@ class GEEResults(GLMResults):
 
         Returns
         -------
-        effects : ndarray
-            the marginal effect corresponding to the input options
+        GEEMargins
+            The marginal effects instance corresponding to the input options.
 
         Notes
         -----
@@ -2693,7 +2688,7 @@ class OrdinalGEEResults(GEEResults):
             not included in a dictionary are held fixed at the mean
             value.
 
-        Example:
+        Examples
         --------
         We have a model with covariates 'age' and 'sex', and wish to
         plot the probabilities P(endog=y | exog) for males (sex=0) and
@@ -2968,7 +2963,7 @@ class NominalGEE(GEE):
         Parameters
         ----------
         exog : array_like
-           The exogeneous data at which the derivative is computed,
+           The exogenous data at which the derivative is computed,
            number of rows must be a multiple of `ncut`.
         lin_pred : array_like
            The values of the linear predictor, length must be multiple
@@ -3011,11 +3006,12 @@ class NominalGEE(GEE):
         Parameters
         ----------
         exog : array_like
-           The exogeneous data at which the derivative is computed,
+           The exogenous data at which the derivative is computed,
            number of rows must be a multiple of `ncut`.
-        lpr : array_like
-           The linear predictor values, length must be multiple of
-           `ncut`.
+        params : array_like
+           Parameter values at which the derivative is computed.
+        offset_exposure : None
+           Offset and exposure are ignored for the multinomial family.
 
         Returns
         -------
@@ -3131,7 +3127,7 @@ class NominalGEEResults(GEEResults):
             not included in a dictionary are held fixed at the mean
             value.
 
-        Example:
+        Examples
         --------
         We have a model with covariates 'age' and 'sex', and wish to
         plot the probabilities P(endog=y | exog) for males (sex=0) and

@@ -7,10 +7,7 @@ multiplication.
 Copyright (c) 2019 Kevin Sheppard
 License: 3-clause BSD
 """
-from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import (
-    Appender,
-    Substitution,
     cache_readonly,
     call_cached_func,
     get_cached_doc,
@@ -29,6 +26,7 @@ from statsmodels.regression.linear_model import (
     RegressionModel,
     RegressionResults,
 )
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.validation import array_like, int_like, string_like
 
 
@@ -60,7 +58,7 @@ window : int
 weight_parameters = """
 weights : array_like, optional
     A 1d array of weights.  If you supply 1/W then the variables are
-    pre- multiplied by 1/sqrt(W).  If no weights are supplied the
+    pre-multiplied by 1/sqrt(W).  If no weights are supplied the
     default value is 1 and WLS results are the same as OLS.
 """
 
@@ -73,7 +71,7 @@ missing : str, default "drop"
     Available options are "drop", "skip" and "raise". If "drop", any
     observations with nans are dropped and the estimates are computed using
     only the non-missing values in each window. If 'skip' blocks containing
-    missing values are skipped and the corresponding results contains NaN.
+    missing values are skipped and the corresponding results contain NaN.
     If 'raise', an error is raised. Default is 'drop'.
 expanding : bool, default False
     If True, then the initial observations after min_nobs are filled using
@@ -234,7 +232,7 @@ class RollingWLS:
             else:
                 _, wy, wx, _, _ = self._get_data(idx)
                 if method == "lstsq":
-                    params = lstsq(wx, wy)[0]
+                    params = np.linalg.lstsq(wx, wy)[0]
                 else:  # 'pinv'
                     wxpwxiwxp = np.linalg.pinv(wx)
                     params = wxpwxiwxp @ wy
@@ -296,12 +294,12 @@ class RollingWLS:
         params_only=False,
     ):
         """
-        Estimate model parameters.
+        Estimate model parameters
 
         Parameters
         ----------
         method : {'inv', 'lstsq', 'pinv'}
-            Method to use when computing the the model parameters.
+            Method to use when computing the model parameters.
 
             * 'inv' - use moving windows inner-products and matrix inversion.
               This method is the fastest, but may be less accurate than the
@@ -314,7 +312,7 @@ class RollingWLS:
 
             * nonrobust - The classic OLS covariance estimator
             * HCCM, HC0 - White heteroskedasticity robust covariance
-        cov_kwds : dict
+        cov_kwds : dict, optional
             Unused
         reset : int, optional
             Interval to recompute the moving window inner products used to
@@ -331,6 +329,7 @@ class RollingWLS:
         -------
         RollingRegressionResults
             Estimation results where all pre-sample values are nan-filled.
+
         """
         method = string_like(
             method, "method", options=("inv", "lstsq", "pinv")
@@ -477,6 +476,7 @@ class RollingRegressionResults:
         p-values.
     cov_type : str
         Name of covariance estimator
+
     """
 
     _data_in_cache = tuple()
@@ -637,6 +637,7 @@ class RollingRegressionResults:
             the returned covariance is a DataFrame with a MultiIndex with
             key (observation, variable), so that the covariance for
             observation with index i is cov.loc[i].
+
         """
         return self._wrap(self._cov_params)
 
@@ -785,6 +786,7 @@ class RollingRegressionResults:
         -------
         Figure
             The matplotlib Figure object.
+
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 

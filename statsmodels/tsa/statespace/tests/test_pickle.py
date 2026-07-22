@@ -58,10 +58,10 @@ def test_unobserved_components_pickle():
     # Tests for missing data
     nobs = 20
     k_endog = 1
-    np.random.seed(1208)
-    endog = np.random.normal(size=(nobs, k_endog))
+    rg = np.random.RandomState(1208)
+    endog = rg.normal(size=(nobs, k_endog))
     endog[:4, 0] = np.nan
-    exog2 = np.random.normal(size=(nobs, 2))
+    exog2 = rg.normal(size=(nobs, 2))
 
     index = pd.date_range("1970-01-01", freq="QS", periods=nobs)
     endog_pd = pd.DataFrame(endog, index=index)

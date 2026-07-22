@@ -12,8 +12,8 @@ from functools import reduce
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series, isnull
 
+from statsmodels.tools._decorators import cache_readonly, cache_writable
 import statsmodels.tools.data as data_util
-from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import MissingDataError
 
 
@@ -200,8 +200,31 @@ class ModelData:
     @classmethod
     def handle_missing(cls, endog, exog, missing, **kwargs):
         """
+        Handle missing data in endog, exog and any extra arrays
+
         This returns a dictionary with keys endog, exog and the keys of
         kwargs. It preserves Nones.
+
+        Parameters
+        ----------
+        endog : array_like
+            The dependent variable data.
+        exog : array_like or None
+            The independent variable data.
+        missing : str
+            How to handle missing data, either "raise" or "drop".
+        **kwargs
+            Extra arrays to be checked for missing data alongside endog
+            and exog.
+
+        Returns
+        -------
+        combined : dict
+            Dictionary with keys endog, exog and the keys of kwargs, with
+            missing rows dropped if `missing` is "drop".
+        missing_idx : list[int]
+            The row indices that contained missing values and were
+            dropped, or an empty list if there was no missing data.
         """
         none_array_names = []
 
@@ -672,7 +695,20 @@ def handle_missing(endog, exog=None, missing="none", **kwargs):
 
 def handle_data_class_factory(endog, exog):
     """
-    Given inputs
+    Given the inputs, select the appropriate data handling class
+
+    Parameters
+    ----------
+    endog : array_like
+        The dependent variable data.
+    exog : array_like or None
+        The independent variable data.
+
+    Returns
+    -------
+    ModelData
+        The data handling class appropriate for the type of `endog` and
+        `exog`, e.g. `PandasData` if either is a pandas object.
     """
     if data_util._is_using_ndarray_type(endog, exog):
         klass = ModelData

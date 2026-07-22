@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.numpy import inplace_reshape
 from statsmodels.compat.pandas import is_int_index
 
 import contextlib
@@ -18,7 +19,7 @@ from scipy.stats import norm
 
 from statsmodels.base.data import PandasData
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
 from statsmodels.tools.numdiff import (
     _get_epsilon,
@@ -176,7 +177,8 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Base class may allow 1-dim data, whereas we need 2-dim
         if endog.ndim == 1:
-            endog.shape = (endog.shape[0], 1)  # this will be C-contiguous
+            # this will be C-contiguous
+            endog = inplace_reshape(endog, (endog.shape[0], 1))
 
         return endog, exog
 
@@ -776,9 +778,11 @@ class MLEModel(tsbase.TimeSeriesModel):
                 cov_kwds=cov_kwds,
             )
 
-            res.mlefit = mlefit
-            res.mle_retvals = mlefit.mle_retvals
-            res.mle_settings = mlefit.mle_settings
+            # Attach to the underlying results instance rather than the
+            # wrapper, so these attributes also show up in dir(res).
+            res._results.mlefit = mlefit
+            res._results.mle_retvals = mlefit.mle_retvals
+            res._results.mle_settings = mlefit.mle_settings
 
             # Reset memory conservation
             if low_memory:

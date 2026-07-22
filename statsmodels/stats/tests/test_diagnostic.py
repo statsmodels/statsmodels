@@ -8,6 +8,7 @@ License: BSD-3
 currently all tests are against R
 
 """
+
 import json
 import os
 
@@ -114,9 +115,7 @@ class TestDiagnosticG:
     def test_basic(self):
         # mainly to check I got the right regression
         # > mkarray(fm$coefficients, "params")
-        params = np.array(
-            [-9.48167277465485, 4.3742216647032, -0.613996969478989]
-        )
+        params = np.array([-9.48167277465485, 4.3742216647032, -0.613996969478989])
 
         assert_almost_equal(self.res.params, params, decimal=12)
 
@@ -490,9 +489,7 @@ class TestDiagnosticG:
             resid = res.resid[:30]
         else:
             resid = res.resid.iloc[:30]
-        df = smsdia.acorr_ljungbox(
-            resid, boxpierce=True, lags=13
-        )
+        df = smsdia.acorr_ljungbox(resid, boxpierce=True, lags=13)
         idx = df.index.max()
         compare_to_reference(
             [df.loc[idx, "lb_stat"], df.loc[idx, "lb_pvalue"]],
@@ -505,7 +502,7 @@ class TestDiagnosticG:
             decimal=(12, 12),
         )
 
-    def test_acorr_ljung_box_against_r(self, reset_randomstate):
+    def test_acorr_ljung_box_against_r(self):
         rs = np.random.RandomState(9876543)
         y1 = rs.standard_normal(100)
         e = rs.standard_normal(201)
@@ -530,20 +527,12 @@ class TestDiagnosticG:
         res_y2 = smsdia.acorr_ljungbox(y2, 10)
         for i, loc in enumerate((1, 5, 10)):
             row = res_y1.loc[loc]
-            assert_allclose(
-                r_results_y1_lb[i][0], row.loc["lb_stat"], rtol=1e-3
-            )
-            assert_allclose(
-                r_results_y1_lb[i][2], row.loc["lb_pvalue"], rtol=1e-3
-            )
+            assert_allclose(r_results_y1_lb[i][0], row.loc["lb_stat"], rtol=1e-3)
+            assert_allclose(r_results_y1_lb[i][2], row.loc["lb_pvalue"], rtol=1e-3)
 
             row = res_y2.loc[loc]
-            assert_allclose(
-                r_results_y2_lb[i][0], row.loc["lb_stat"], rtol=1e-3
-            )
-            assert_allclose(
-                r_results_y2_lb[i][2], row.loc["lb_pvalue"], rtol=1e-3
-            )
+            assert_allclose(r_results_y2_lb[i][0], row.loc["lb_stat"], rtol=1e-3)
+            assert_allclose(r_results_y2_lb[i][2], row.loc["lb_pvalue"], rtol=1e-3)
 
         res = smsdia.acorr_ljungbox(y2, 10, boxpierce=True)
         assert_allclose(res.loc[10, "bp_stat"], 7.8935, rtol=1e-3)
@@ -727,9 +716,7 @@ class TestDiagnosticG:
         )
 
         bh = smsdia.breaks_hansen(self.res)
-        assert_almost_equal(
-            bh[0], breaks_nyblom_hansen["statistic"], decimal=12
-        )
+        assert_almost_equal(bh[0], breaks_nyblom_hansen["statistic"], decimal=12)
         # TODO: breaks_hansen does not return pvalues
 
     def test_recursive_residuals(self):
@@ -955,9 +942,7 @@ class TestDiagnosticG:
         ub0 = np.array(
             [13.37318571, 13.50758959, 13.64199346, 13.77639734, 13.91080121]
         )
-        ub1 = np.array(
-            [39.44753774, 39.58194162, 39.7163455, 39.85074937, 39.98515325]
-        )
+        ub1 = np.array([39.44753774, 39.58194162, 39.7163455, 39.85074937, 39.98515325])
         lb, ub = rr[6]
         assert_almost_equal(ub[:5], ub0, decimal=7)
         assert_almost_equal(lb[:5], -ub0, decimal=7)
@@ -1009,7 +994,7 @@ class TestDiagnosticG:
         )
 
         lf1 = smsdia.lilliefors(res.resid, pvalmethod="approx")
-        lf2 = smsdia.lilliefors(res.resid ** 2, pvalmethod="approx")
+        lf2 = smsdia.lilliefors(res.resid**2, pvalmethod="approx")
         if isinstance(res.resid, np.ndarray):
             resid = res.resid[:20]
         else:
@@ -1017,9 +1002,7 @@ class TestDiagnosticG:
         lf3 = smsdia.lilliefors(resid, pvalmethod="approx")
 
         compare_to_reference(lf1, lilliefors1, decimal=(12, 12))
-        compare_to_reference(
-            lf2, lilliefors2, decimal=(12, 12)
-        )  # pvalue very small
+        compare_to_reference(lf2, lilliefors2, decimal=(12, 12))  # pvalue very small
         assert_allclose(lf2[1], lilliefors2["pvalue"], rtol=1e-10)
         compare_to_reference(lf3, lilliefors3, decimal=(12, 1))
         # R uses different approximation for pvalue in last case
@@ -1047,7 +1030,7 @@ class TestDiagnosticG:
 
         ad1 = smsdia.normal_ad(res.resid)
         compare_to_reference(ad1, adr1, decimal=(11, 13))
-        ad2 = smsdia.normal_ad(res.resid ** 2)
+        ad2 = smsdia.normal_ad(res.resid**2)
         assert_(np.isinf(ad2[0]))
         ad3 = smsdia.normal_ad(resid)
         compare_to_reference(ad3, adr3, decimal=(11, 12))
@@ -1173,20 +1156,18 @@ def test_spec_white():
             assert_almost_equal(wsres, [8.462, 0.671, 11], decimal=3)
 
 
-def test_spec_white_error(reset_randomstate):
+def test_spec_white_error():
+    rs = np.random.RandomState(38342003)
     with pytest.raises(ValueError, match="White's specification test "):
-        smsdia.spec_white(
-            np.random.standard_normal(100), np.random.standard_normal((100, 1))
-        )
+        smsdia.spec_white(rs.standard_normal(100), rs.standard_normal((100, 1)))
     with pytest.raises(ValueError, match="White's specification test "):
-        smsdia.spec_white(
-            np.random.standard_normal(100), np.random.standard_normal((100, 2))
-        )
+        smsdia.spec_white(rs.standard_normal(100), rs.standard_normal((100, 2)))
 
 
-def test_linear_lm_direct(reset_randomstate):
-    endog = np.random.standard_normal(500)
-    exog = add_constant(np.random.standard_normal((500, 3)))
+def test_linear_lm_direct():
+    rs = np.random.RandomState(38342002)
+    endog = rs.standard_normal(500)
+    exog = add_constant(rs.standard_normal((500, 3)))
     res = OLS(endog, exog).fit()
     lm_res = smsdia.linear_lm(res.resid, exog)
     aug = np.hstack([exog, exog[:, 1:] ** 2])
@@ -1208,9 +1189,10 @@ def grangertest():
 
 
 @pytest.mark.smoke
-def test_outlier_influence_funcs(reset_randomstate):
-    x = add_constant(np.random.randn(10, 2))
-    y = x.sum(1) + np.random.randn(10)
+def test_outlier_influence_funcs():
+    rs = np.random.RandomState(38342002)
+    x = add_constant(rs.randn(10, 2))
+    y = x.sum(1) + rs.randn(10)
     res = OLS(y, x).fit()
     out_05 = oi.summary_table(res)
     # GH3344 : Check alpha has an effect
@@ -1271,9 +1253,7 @@ def test_influence_wrapped():
     # slow:
     dffits, dffth = infl.dffits
     assert_almost_equal(dffits, lsdiag["dfits"], 12)
-    assert_almost_equal(
-        infl.resid_studentized_external, lsdiag["stud.res"], 12
-    )
+    assert_almost_equal(infl.resid_studentized_external, lsdiag["stud.res"], 12)
 
     fn = os.path.join(cur_dir, "results/influence_measures_R.csv")
     infl_r = pd.read_csv(fn, index_col=0)
@@ -1289,8 +1269,8 @@ def test_influence_wrapped():
 def test_influence_dtype():
     # see #2148  bug when endog is integer
     y = np.ones(20)
-    np.random.seed(123)
-    x = np.random.randn(20, 3)
+    rs = np.random.RandomState(123)
+    x = rs.randn(20, 3)
     res1 = OLS(y, x).fit()
 
     res2 = OLS(y * 1.0, x).fit()
@@ -1703,7 +1683,7 @@ def test_outlier_test():
 
 def test_ljungbox_dof_adj():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
-    res = AutoReg(data, 4, old_names=False).fit()
+    res = AutoReg(data, 4).fit()
     resid = res.resid
     res1 = smsdia.acorr_ljungbox(resid, lags=10)
     res2 = smsdia.acorr_ljungbox(resid, lags=10, model_df=4)
@@ -1712,9 +1692,9 @@ def test_ljungbox_dof_adj():
     assert np.all(res2.iloc[4:, 1] <= res1.iloc[4:, 1])
 
 
-def test_ljungbox_auto_lag_selection(reset_randomstate):
+def test_ljungbox_auto_lag_selection():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
-    res = AutoReg(data, 4, old_names=False).fit()
+    res = AutoReg(data, 4).fit()
     resid = res.resid
     res1 = smsdia.acorr_ljungbox(resid, auto_lag=True)
     res2 = smsdia.acorr_ljungbox(resid, model_df=4, auto_lag=True)
@@ -1727,8 +1707,9 @@ def test_ljungbox_auto_lag_selection(reset_randomstate):
     assert np.all(res2.iloc[4:, 1] <= res1.iloc[4:, 1])
 
 
-def test_ljungbox_auto_lag_whitenoise(reset_randomstate):
-    data = np.random.randn(1000)  # white noise process
+def test_ljungbox_auto_lag_whitenoise():
+    rs = np.random.RandomState(38342003)
+    data = rs.randn(1000)  # white noise process
     res = smsdia.acorr_ljungbox(data, auto_lag=True)
     # TODO: compare selected lags with Stata/ R to confirm
     # that correct auto_lag is selected
@@ -1750,18 +1731,19 @@ def test_ljungbox_errors_warnings():
 
 def test_ljungbox_period():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
-    ar_res = AutoReg(data, 4, old_names=False).fit()
+    ar_res = AutoReg(data, 4).fit()
     res = smsdia.acorr_ljungbox(ar_res.resid, period=13)
     res2 = smsdia.acorr_ljungbox(ar_res.resid, lags=26)
     assert_frame_equal(res, res2)
 
 
 @pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
-def test_encompasing_direct(cov_type, reset_randomstate):
-    x = np.random.standard_normal((500, 2))
-    e = np.random.standard_normal((500, 1))
-    x_extra = np.random.standard_normal((500, 2))
-    z_extra = np.random.standard_normal((500, 3))
+def test_encompasing_direct(cov_type):
+    rs = np.random.RandomState(38342002)
+    x = rs.standard_normal((500, 2))
+    e = rs.standard_normal((500, 1))
+    x_extra = rs.standard_normal((500, 2))
+    z_extra = rs.standard_normal((500, 3))
     y = x @ np.ones((2, 1)) + e
     x1 = np.hstack([x[:, :1], x_extra])
     z1 = np.hstack([x, z_extra])
@@ -1794,10 +1776,11 @@ def test_encompasing_direct(cov_type, reset_randomstate):
     assert_allclose(np.asarray(df.loc["z"]), expected, atol=1e-8)
 
 
-def test_encompasing_error(reset_randomstate):
-    x = np.random.standard_normal((500, 2))
-    e = np.random.standard_normal((500, 1))
-    z_extra = np.random.standard_normal((500, 3))
+def test_encompasing_error():
+    rs = np.random.RandomState(38342001)
+    x = rs.standard_normal((500, 2))
+    e = rs.standard_normal((500, 1))
+    z_extra = rs.standard_normal((500, 3))
     y = x @ np.ones((2, 1)) + e
     z = np.hstack([x, z_extra])
     res1 = OLS(y, x).fit()
@@ -1821,15 +1804,14 @@ def test_encompasing_error(reset_randomstate):
         dict(cov_type="HC0", cov_kwds={}),
     ],
 )
-def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
-    x = add_constant(np.random.standard_normal((1000, 3)))
-    e = np.random.standard_normal((1000, 1))
+def test_reset_smoke(power, test_type, use_f, cov):
+    rs = np.random.RandomState(32320967 + power + int(use_f))
+    x = add_constant(rs.standard_normal((1000, 3)))
+    e = rs.standard_normal((1000, 1))
     x = np.hstack([x, x[:, 1:] ** 2])
     y = x @ np.ones((7, 1)) + e
     res = OLS(y, x[:, :4]).fit()
-    smsdia.linear_reset(
-        res, power=power, test_type=test_type, use_f=use_f, **cov
-    )
+    smsdia.linear_reset(res, power=power, test_type=test_type, use_f=use_f, **cov)
 
 
 @pytest.mark.smoke
@@ -1842,16 +1824,22 @@ def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
         dict(cov_type="HC0", cov_kwds={}),
     ],
 )
-def test_acorr_lm_smoke(store, ddof, cov, reset_randomstate):
-    e = np.random.standard_normal(250)
+def test_acorr_lm_smoke(store, ddof, cov):
+    rs = np.random.RandomState(38342099)
+    e = rs.standard_normal(250)
     smsdia.acorr_lm(e, nlags=6, store=store, ddof=ddof, **cov)
 
     smsdia.acorr_lm(e, nlags=None, store=store, period=12, ddof=ddof, **cov)
 
 
-def test_acorr_lm_smoke_no_autolag(reset_randomstate):
-    e = np.random.standard_normal(250)
+def test_acorr_lm_smoke_no_autolag():
+    rs = np.random.RandomState(38342098)
+    e = rs.standard_normal(250)
     smsdia.acorr_lm(e, nlags=6, store=False, ddof=0)
+
+
+RS = np.random.RandomState(38342431)
+RANDOM_ARRAY = RS.choice(500, size=500, replace=False)
 
 
 @pytest.mark.parametrize("frac", [0.25, 0.5, 0.75])
@@ -1860,15 +1848,16 @@ def test_acorr_lm_smoke_no_autolag(reset_randomstate):
     [
         None,
         np.arange(500),
-        np.random.choice(500, size=500, replace=False),
+        RANDOM_ARRAY,
         "x0",
         ["x0", "x2"],
     ],
 )
-def test_rainbow_smoke_order_by(frac, order_by, reset_randomstate):
-    e = pd.DataFrame(np.random.standard_normal((500, 1)))
+def test_rainbow_smoke_order_by(frac, order_by):
+    rs = np.random.RandomState(38342097)
+    e = pd.DataFrame(rs.standard_normal((500, 1)))
     x = pd.DataFrame(
-        np.random.standard_normal((500, 3)),
+        rs.standard_normal((500, 3)),
         columns=[f"x{i}" for i in range(3)],
     )
     y = x @ np.ones((3, 1)) + e
@@ -1877,10 +1866,11 @@ def test_rainbow_smoke_order_by(frac, order_by, reset_randomstate):
 
 
 @pytest.mark.parametrize("center", [None, 0.33, 300])
-def test_rainbow_smoke_centered(center, reset_randomstate):
-    e = pd.DataFrame(np.random.standard_normal((500, 1)))
+def test_rainbow_smoke_centered(center):
+    rs = np.random.RandomState(38342096)
+    e = pd.DataFrame(rs.standard_normal((500, 1)))
     x = pd.DataFrame(
-        np.random.standard_normal((500, 3)),
+        rs.standard_normal((500, 3)),
         columns=[f"x{i}" for i in range(3)],
     )
     y = x @ np.ones((3, 1)) + e
@@ -1888,10 +1878,11 @@ def test_rainbow_smoke_centered(center, reset_randomstate):
     smsdia.linear_rainbow(res, use_distance=True, center=center)
 
 
-def test_rainbow_exception(reset_randomstate):
-    e = pd.DataFrame(np.random.standard_normal((500, 1)))
+def test_rainbow_exception():
+    rs = np.random.RandomState(38342095)
+    e = pd.DataFrame(rs.standard_normal((500, 1)))
     x = pd.DataFrame(
-        np.random.standard_normal((500, 3)),
+        rs.standard_normal((500, 3)),
         columns=[f"x{i}" for i in range(3)],
     )
     y = x @ np.ones((3, 1)) + e
@@ -1903,9 +1894,10 @@ def test_rainbow_exception(reset_randomstate):
         smsdia.linear_rainbow(res, order_by=("x0",))
 
 
-def test_small_skip(reset_randomstate):
-    y = np.random.standard_normal(10)
-    x = np.random.standard_normal((10, 3))
+def test_small_skip():
+    rs = np.random.RandomState(38342094)
+    y = rs.standard_normal(10)
+    x = rs.standard_normal((10, 3))
     x[:3] = x[:1]
     with pytest.raises(ValueError, match="The initial regressor matrix,"):
         smsdia.recursive_olsresiduals(OLS(y, x).fit())
@@ -1969,16 +1961,13 @@ def test_small_skip(reset_randomstate):
 # ---
 # Signif. codes:  0`***` 0.001`**` 0.01`*` 0.05`.` 0.1` ` 1
 
+
 @pytest.mark.smoke
-def test_diagnostics_pandas(reset_randomstate):
+def test_diagnostics_pandas():
     # GH 8879
     n = 100
-    df = pd.DataFrame(
-        {
-            "y": np.random.rand(n),
-            "x": np.random.rand(n),
-            "z": np.random.rand(n)}
-    )
+    rs = np.random.RandomState(38342093)
+    df = pd.DataFrame({"y": rs.rand(n), "x": rs.rand(n), "z": rs.rand(n)})
     y, x = df["y"], add_constant(df["x"])
 
     res = OLS(df["y"], add_constant(df[["x"]])).fit()
@@ -2004,18 +1993,15 @@ def test_diagnostics_pandas(reset_randomstate):
     smsdia.compare_encompassing(res, res_other)
     smsdia.compare_j(res, res_other)
     smsdia.recursive_olsresiduals(res)
-    smsdia.recursive_olsresiduals(
-        res, order_by=np.arange(y.shape[0] - 1, 0 - 1, -1)
-    )
+    smsdia.recursive_olsresiduals(res, order_by=np.arange(y.shape[0] - 1, 0 - 1, -1))
     smsdia.spec_white(res.resid, x)
 
 
 def test_deprecated_argument():
-    x = np.random.randn(100)
-    y = 2 * x + np.random.randn(100)
-    result = OLS(y, add_constant(x)).fit(
-        cov_type="HAC", cov_kwds={"maxlags": 2}
-    )
+    rs = np.random.RandomState(38342092)
+    x = rs.randn(100)
+    y = 2 * x + rs.randn(100)
+    result = OLS(y, add_constant(x)).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
     with pytest.warns(FutureWarning, match="the "):
         smsdia.linear_reset(
             result,
@@ -2026,12 +2012,11 @@ def test_deprecated_argument():
         )
 
 
-def test_diagnostics_hac(reset_randomstate):
-    x = np.random.randn(100)
-    y = 2 * x + np.random.randn(100)
-    result = OLS(y, add_constant(x)).fit(
-        cov_type="HAC", cov_kwds={"maxlags": 2}
-    )
+def test_diagnostics_hac():
+    rs = np.random.RandomState(38342091)
+    x = rs.randn(100)
+    y = 2 * x + rs.randn(100)
+    result = OLS(y, add_constant(x)).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
     reset_test = smsdia.linear_reset(
         result,
         power=2,

@@ -4,8 +4,7 @@ State Space Representation
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import warnings
+from statsmodels.compat.numpy import inplace_reshape
 
 import numpy as np
 
@@ -387,12 +386,7 @@ class Representation:
         if kwargs:
             # raise TypeError(f'{__class__} constructor got unexpected keyword'
             #                 f' argument(s): {kwargs}.')
-            msg = (
-                f"Unknown keyword arguments: {kwargs.keys()}."
-                "Passing unknown keyword arguments will raise a TypeError"
-                " beginning in version 0.15."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
+            raise TypeError(f"Unknown keyword arguments: {list(kwargs.keys())}.")
 
         # Matrix representations storage
         self._representations = {}
@@ -822,10 +816,10 @@ class Representation:
         if endog.ndim == 1:
             # In the case of nobs x 0 arrays
             if self.k_endog == 1:
-                endog.shape = (endog.shape[0], 1)
+                endog = inplace_reshape(endog, (endog.shape[0], 1))
             # In the case of k_endog x 0 arrays
             else:
-                endog.shape = (1, endog.shape[0])
+                endog = inplace_reshape(endog, (1, endog.shape[0]))
         if not endog.ndim == 2:
             raise ValueError(
                 "Invalid endogenous array provided; must be 2-dimensional."

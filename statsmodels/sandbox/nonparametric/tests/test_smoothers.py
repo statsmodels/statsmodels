@@ -45,8 +45,8 @@ class BasePolySmoother:
         cls.x = x = np.linspace(lb, ub, nobs)
         cls.exog = exog = x[:, None] ** np.arange(order + 1)
         y_true = exog.sum(1)
-        np.random.seed(987567)
-        cls.y = y_true + sigma_noise * np.random.randn(nobs)
+        rs = np.random.RandomState(987567)
+        cls.y = y_true + sigma_noise * rs.randn(nobs)
 
 
 class TestPolySmoother1(BasePolySmoother, CheckSmoother):

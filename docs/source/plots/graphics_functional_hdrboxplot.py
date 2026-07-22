@@ -16,7 +16,10 @@ data = sm.datasets.elnino.load()
 fig = plt.figure()
 ax = fig.add_subplot(111)
 fig, res = sm.graphics.hdrboxplot(
-    data.raw_data.iloc[:, 1:], labels=data.raw_data.iloc[:, 0].astype(int), ax=ax
+    data.raw_data.iloc[:, 1:],
+    labels=data.raw_data.iloc[:, 0].astype(int),
+    ax=ax,
+    kernel_seed=20260709,
 )
 
 ax.plot([0, 10], [25, 25])

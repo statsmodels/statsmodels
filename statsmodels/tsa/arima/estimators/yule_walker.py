@@ -29,7 +29,7 @@ def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
     adjusted : bool, optional
         Whether to use the adjusted autocovariance estimator, which uses
         n - h degrees of freedom rather than n. For some processes this option
-        may  result in a non-positive definite autocovariance matrix. Default
+        may result in a non-positive definite autocovariance matrix. Default
         is False.
 
     Returns

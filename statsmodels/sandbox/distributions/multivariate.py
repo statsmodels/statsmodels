@@ -21,6 +21,8 @@ from scipy import integrate, special, stats
 from scipy.special import gamma as sps_gamma, gammaln as sps_gammaln
 from scipy.stats import chi
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 from .extras import mvstdnormcdf
 
 
@@ -103,7 +105,7 @@ def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
 
 # written by Enzo Michelangeli, style changes by josef-pktd
 # Student's T random variable
-def multivariate_t_rvs(m, S, df=np.inf, n=1):
+def multivariate_t_rvs(m, S, df=np.inf, n=1, random_state=None):
     """generate random variables of multivariate t distribution
 
     Parameters
@@ -116,6 +118,8 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1):
         degrees of freedom
     n : int
         number of observations, return random array will be (n, len(m))
+    random_state : int, np.random.RandomState or np.random.Generator, optional
+        TODO
 
     Returns
     -------
@@ -125,13 +129,14 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1):
 
 
     """
+    rng = check_random_state(random_state)
     m = np.asarray(m)
     d = len(m)
     if df == np.inf:
         x = np.ones(n)
     else:
-        x = np.random.chisquare(df, n) / df
-    z = np.random.multivariate_normal(np.zeros(d), S, (n,))
+        x = rng.chisquare(df, n) / df
+    z = rng.multivariate_normal(np.zeros(d), S, (n,))
     return (
         m + z / np.sqrt(x)[:, None]
     )  # same output format as random.multivariate_normal

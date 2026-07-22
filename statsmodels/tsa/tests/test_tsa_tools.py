@@ -87,22 +87,25 @@ def test_yule_walker_inter():
     regression.yule_walker(x, 3)
 
 
-def test_duplication_matrix(reset_randomstate):
+def test_duplication_matrix():
+    rs = np.random.RandomState(664831)
     for k in range(2, 10):
-        m = tools.unvech(np.random.randn(k * (k + 1) // 2))
+        m = tools.unvech(rs.randn(k * (k + 1) // 2))
         Dk = tools.duplication_matrix(k)
         assert np.array_equal(vec(m), np.dot(Dk, vech(m)))
 
 
-def test_elimination_matrix(reset_randomstate):
+def test_elimination_matrix():
+    rs = np.random.RandomState(664832)
     for k in range(2, 10):
-        m = np.random.randn(k, k)
+        m = rs.randn(k, k)
         Lk = tools.elimination_matrix(k)
         assert np.array_equal(vech(m), np.dot(Lk, vec(m)))
 
 
-def test_commutation_matrix(reset_randomstate):
-    m = np.random.randn(4, 3)
+def test_commutation_matrix():
+    rs = np.random.RandomState(664833)
+    m = rs.randn(4, 3)
     K = tools.commutation_matrix(4, 3)
     assert np.array_equal(vec(m.T), np.dot(K, vec(m)))
 
@@ -130,8 +133,8 @@ class TestLagmat:
         cols = list(cls.macro_df.columns)
         cls.realgdp_loc = cols.index("realgdp")
         cls.cpi_loc = cols.index("cpi")
-        np.random.seed(12345)
-        cls.random_data = np.random.randn(100)
+        rs = np.random.RandomState(12345)
+        cls.random_data = rs.randn(100)
 
         index = [
             str(int(yr)) + "-Q" + str(int(qu))
@@ -640,16 +643,22 @@ class TestAddTrend:
         expected = np.vstack((self.c, self.c, self.t)).T
         assert_equal(added, expected)
 
-        with pytest.raises(ValueError, match=r"x contains one or more constant "
-                           r"columns. Column\(s\) col_1 are constant. Adding"
-                           r" a constant with trend='c' is not allowed."):
+        with pytest.raises(
+            ValueError,
+            match=r"x contains one or more constant "
+            r"columns. Column\(s\) col_1 are constant. Adding"
+            r" a constant with trend='c' is not allowed.",
+        ):
             add_trend_to = pd.DataFrame([self.t, self.c]).T
             add_trend_to.columns = ["col_0", "col_1"]
             tools.add_trend(x=add_trend_to, trend="c", has_constant="raise")
 
-        with pytest.raises(ValueError, match=r"x contains one or more constant "
-                           r"columns. Column\(s\) 1 are constant. Adding"
-                           r" a constant with trend='ct' is not allowed."):
+        with pytest.raises(
+            ValueError,
+            match=r"x contains one or more constant "
+            r"columns. Column\(s\) 1 are constant. Adding"
+            r" a constant with trend='ct' is not allowed.",
+        ):
             add_trend_to = pd.DataFrame([self.t, self.c]).T
             tools.add_trend(x=add_trend_to, trend="ct", has_constant="raise")
 
@@ -700,8 +709,8 @@ class TestLagmat2DS:
     def setup_class(cls):
         data = macrodata.load_pandas()
         cls.macro_df = data.data[["year", "quarter", "realgdp", "cpi"]]
-        np.random.seed(12345)
-        cls.random_data = np.random.randn(100)
+        rs = np.random.RandomState(12345)
+        cls.random_data = rs.randn(100)
         index = [
             str(int(yr)) + "-Q" + str(int(qu))
             for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)
@@ -808,9 +817,9 @@ class TestLagmat2DS:
 
 
 def test_grangercausality():
-    data = np.random.rand(100, 2)
-    with pytest.warns(FutureWarning, match="verbose"):
-        out = stattools.grangercausalitytests(data, maxlag=2, verbose=False)
+    rs = np.random.RandomState(66483)
+    data = rs.rand(100, 2)
+    out = stattools.grangercausalitytests(data, maxlag=2)
     result, models = out[1]
     res2down, res2djoint, rconstr = models
     assert res2djoint.centered_tss is not res2djoint.uncentered_tss

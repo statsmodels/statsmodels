@@ -157,17 +157,16 @@ def _manual_arma_generate_sample(ar, ma, eta):
 
 @pytest.mark.parametrize("ar", arlist)
 @pytest.mark.parametrize("ma", malist)
-@pytest.mark.parametrize("dist", [np.random.standard_normal])
-def test_arma_generate_sample(dist, ar, ma):
+def test_arma_generate_sample(ar, ma):
     # Test that this generates a true ARMA process
     # (amounts to just a test that scipy.signal.lfilter does what we want)
     T = 100
-    np.random.seed(1234)
-    eta = dist(T)
+    rg = np.random.RandomState(1234)
+    eta = rg.standard_normal(T)
 
     # rep1: from module function
-    np.random.seed(1234)
-    rep1 = arma_generate_sample(ar, ma, T, distrvs=dist)
+    rg2 = np.random.RandomState(1234)
+    rep1 = arma_generate_sample(ar, ma, T, distrvs=rg2.standard_normal)
     # rep2: "manually" create the ARMA process
     ar_params = -1 * np.array(ar[1:])
     ma_params = np.array(ma[1:])
@@ -354,12 +353,12 @@ class TestArmaProcess:
         process1 = ArmaProcess.from_coeffs([0.9], [0.2])
         out = process1.__str__()
         print(out)
-        assert (out.find("AR: [1.0, -0.9]") != -1)
-        assert (out.find("MA: [1.0, 0.2]") != -1)
+        assert out.find("AR: [1.0, -0.9]") != -1
+        assert out.find("MA: [1.0, 0.2]") != -1
 
         out = process1.__repr__()
-        assert (out.find("nobs=100") != -1)
-        assert (out.find("at " + str(hex(id(process1)))) != -1)
+        assert out.find("nobs=100") != -1
+        assert out.find("at " + str(hex(id(process1)))) != -1
 
     def test_acf(self):
         process1 = ArmaProcess.from_coeffs([0.9])
@@ -368,7 +367,7 @@ class TestArmaProcess:
         assert_array_almost_equal(acf, expected)
 
         acf = process1.acf()
-        assert (acf.shape[0] == process1.nobs)
+        assert acf.shape[0] == process1.nobs
 
     def test_pacf(self):
         process1 = ArmaProcess.from_coeffs([0.9])
@@ -377,7 +376,7 @@ class TestArmaProcess:
         assert_array_almost_equal(pacf, expected)
 
         pacf = process1.pacf()
-        assert (pacf.shape[0] == process1.nobs)
+        assert pacf.shape[0] == process1.nobs
 
     def test_isstationary(self):
         process1 = ArmaProcess.from_coeffs([1.1])
@@ -411,36 +410,36 @@ class TestArmaProcess:
 
     def test_generate_sample(self):
         process = ArmaProcess.from_coeffs([0.9])
-        np.random.seed(12345)
-        sample = process.generate_sample()
-        np.random.seed(12345)
-        expected = np.random.randn(100)
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(distrvs=rs.standard_normal)
+        rs = np.random.RandomState(12345)
+        expected = rs.randn(100)
         for i in range(1, 100):
             expected[i] = 0.9 * expected[i - 1] + expected[i]
         assert_almost_equal(sample, expected)
 
         process = ArmaProcess.from_coeffs([1.6, -0.9])
-        np.random.seed(12345)
-        sample = process.generate_sample()
-        np.random.seed(12345)
-        expected = np.random.randn(100)
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(distrvs=rs.standard_normal)
+        rs = np.random.RandomState(12345)
+        expected = rs.randn(100)
         expected[1] = 1.6 * expected[0] + expected[1]
         for i in range(2, 100):
             expected[i] = 1.6 * expected[i - 1] - 0.9 * expected[i - 2] + expected[i]
         assert_almost_equal(sample, expected)
 
         process = ArmaProcess.from_coeffs([1.6, -0.9])
-        np.random.seed(12345)
-        sample = process.generate_sample(burnin=100)
-        np.random.seed(12345)
-        expected = np.random.randn(200)
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(burnin=100, distrvs=rs.standard_normal)
+        rs = np.random.RandomState(12345)
+        expected = rs.randn(200)
         expected[1] = 1.6 * expected[0] + expected[1]
         for i in range(2, 200):
             expected[i] = 1.6 * expected[i - 1] - 0.9 * expected[i - 2] + expected[i]
         assert_almost_equal(sample, expected[100:])
 
-        np.random.seed(12345)
-        sample = process.generate_sample(nsample=(100, 5))
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(nsample=(100, 5), distrvs=rs.standard_normal)
         assert_equal(sample.shape, (100, 5))
 
     def test_impulse_response(self):
@@ -462,7 +461,8 @@ def test_from_estimation(d, seasonal):
     ma = [0.4] if not seasonal else [0.4, 0, 0, 0.2, -0.08]
     ap = ArmaProcess.from_coeffs(ar, ma, 500)
     idx = pd.date_range(dt.datetime(1900, 1, 1), periods=500, freq=QUARTER_END)
-    data = ap.generate_sample(500)
+    rs = np.random.RandomState(12345111)
+    data = ap.generate_sample(500, distrvs=rs.standard_normal)
     if d == 1:
         data = np.cumsum(data)
     data = pd.Series(data, index=idx)

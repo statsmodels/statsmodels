@@ -88,12 +88,8 @@ class TestChem:
         n = scale.norms.HuberT()
         n.t = 1.5
         h = scale.Huber(norm=n)
-        assert_almost_equal(
-            scale.huber(self.chem)[0], h(self.chem)[0], DECIMAL
-        )
-        assert_almost_equal(
-            scale.huber(self.chem)[1], h(self.chem)[1], DECIMAL
-        )
+        assert_almost_equal(scale.huber(self.chem)[0], h(self.chem)[0], DECIMAL)
+        assert_almost_equal(scale.huber(self.chem)[1], h(self.chem)[1], DECIMAL)
 
     def test_huber_Hampel(self):
         hh = scale.Huber(norm=scale.norms.Hampel())
@@ -104,8 +100,8 @@ class TestChem:
 class TestMad:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10))
 
     def test_mad(self):
         m = scale.mad(self.X)
@@ -134,8 +130,8 @@ class TestMad:
 class TestMadAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
 
     def test_axis0(self):
         m = scale.mad(self.X, axis=0)
@@ -157,8 +153,8 @@ class TestMadAxes:
 class TestIqr:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10))
 
     def test_iqr(self):
         m = scale.iqr(self.X)
@@ -179,8 +175,8 @@ class TestIqr:
 class TestIqrAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
 
     def test_axis0(self):
         m = scale.iqr(self.X, axis=0)
@@ -202,10 +198,10 @@ class TestIqrAxes:
 class TestQn:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
+        rs = np.random.RandomState(54321)
         cls.normal = standard_normal(size=40)
         cls.range = np.arange(0, 40)
-        cls.exponential = np.random.exponential(size=40)
+        cls.exponential = rs.exponential(size=40)
         cls.stackloss = sm.datasets.stackloss.load_pandas().data
         cls.sunspot = sm.datasets.sunspots.load_pandas().data.SUNACTIVITY
 
@@ -231,9 +227,7 @@ class TestQn:
             DECIMAL,
         )
         # sunspot.year from datasets in R only goes up to 289
-        assert_almost_equal(
-            scale.qn_scale(self.sunspot[0:289]), 33.50901, DECIMAL
-        )
+        assert_almost_equal(scale.qn_scale(self.sunspot[0:289]), 33.50901, DECIMAL)
 
     def test_qn_empty(self):
         empty = np.empty(0)
@@ -250,8 +244,8 @@ class TestQn:
 class TestQnAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
 
     def test_axis0(self):
         m = scale.qn_scale(self.X, axis=0)
@@ -273,8 +267,8 @@ class TestQnAxes:
 class TestHuber:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10))
 
     def test_huber_result_shape(self):
         h = scale.Huber(maxiter=100)
@@ -285,8 +279,8 @@ class TestHuber:
 class TestHuberAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
         cls.h = scale.Huber(maxiter=100, tol=1.0e-05)
 
     def test_default(self):
@@ -338,6 +332,7 @@ def test_tau_scale1():
 
 def test_tau_scale2():
     import pandas as pd
+
     cur_dir = os.path.abspath(os.path.dirname(__file__))
     file_name = "hbk.csv"
     file_path = os.path.join(cur_dir, "results", file_name)
@@ -353,12 +348,14 @@ def test_tau_scale2():
     # > scaleTau2(hbk[,4], mu.too = TRUE, consistency = FALSE)
     # [1] -0.0443521228044396  0.8343974588144727
 
-    res2 = np.array([
-        [1.55545438650723, 1.93522607240954],
-        [1.87924505206092, 1.72121373687210],
-        [1.74163126730520, 1.81045973143159],
-        [-0.0443521228044396, 0.8343974588144727]
-        ])
+    res2 = np.array(
+        [
+            [1.55545438650723, 1.93522607240954],
+            [1.87924505206092, 1.72121373687210],
+            [1.74163126730520, 1.81045973143159],
+            [-0.0443521228044396, 0.8343974588144727],
+        ]
+    )
     res1 = scale_tau(dta_hbk, normalize=False, ddof=0)
     assert_allclose(np.asarray(res1).T, res2, rtol=1e-13)
 
@@ -371,21 +368,23 @@ def test_tau_scale2():
     # > scaleTau2(hbk[,4], mu.too = TRUE, consistency = TRUE)
     # [1] -0.0443521228044396  0.8676986653327993
 
-    res2 = np.array([
-        [1.55545438650723, 2.01246188181448],
-        [1.87924505206092, 1.78990821036102],
-        [1.74163126730520, 1.88271605576794],
-        [-0.0443521228044396, 0.8676986653327993]
-        ])
+    res2 = np.array(
+        [
+            [1.55545438650723, 2.01246188181448],
+            [1.87924505206092, 1.78990821036102],
+            [1.74163126730520, 1.88271605576794],
+            [-0.0443521228044396, 0.8676986653327993],
+        ]
+    )
     res1 = scale_tau(dta_hbk, ddof=0)
     assert_allclose(np.asarray(res1).T, res2, rtol=1e-13)
 
 
 def test_scale_iter():
     # regression test, and approximately correct
-    np.random.seed(54321)
+    rs = np.random.RandomState(54321)
     v = np.array([1, 0.5, 0.4])
-    x = standard_normal((40, 3)) * np.sqrt(v)
+    x = rs.standard_normal((40, 3)) * np.sqrt(v)
     x[:2] = [2, 2, 2]
 
     x = x[:, 0]  # 1d only ?
@@ -413,12 +412,12 @@ def test_scale_iter():
     assert_allclose(s_biw, 1.0326176662, rtol=1e-9)  # regression test number
 
 
-class TestMScale():
+class TestMScale:
 
     def test_huber_equivalence(self):
-        np.random.seed(54321)
+        rs = np.random.RandomState(54321)
         nobs = 50
-        x = 1.5 * standard_normal(nobs)
+        x = 1.5 * rs.standard_normal(nobs)
 
         # test equivalence of HuberScale and TrimmedMean M-scale
         chi_tm = rnorms.TrimmedMean(c=2.5)
@@ -439,23 +438,23 @@ class TestMScale():
         scale_bias = 0.19959963130721095
         mscale_biw = scale.MScale(chi, scale_bias)
         scale0 = mscale_biw(ry)
-        scale1 = 0.817260483784376   # from R RobStatTM scaleM
+        scale1 = 0.817260483784376  # from R RobStatTM scaleM
         assert_allclose(scale0, scale1, rtol=1e-6)
 
 
 def test_scale_trimmed_approx():
     scale_trimmed = scale.scale_trimmed  # shorthand
     nobs = 500
-    np.random.seed(965578)
-    x = 2*np.random.randn(nobs)
+    rs = np.random.RandomState(965578)
+    x = 2 * rs.randn(nobs)
     x[:10] = 60
 
     alpha = 0.2
     res = scale_trimmed(x, alpha)
     assert_allclose(res.scale, 2, rtol=1e-1)
-    s = scale_trimmed(np.column_stack((x, 2*x)), alpha).scale
+    s = scale_trimmed(np.column_stack((x, 2 * x)), alpha).scale
     assert_allclose(s, [2, 4], rtol=1e-1)
-    s = scale_trimmed(np.column_stack((x, 2*x)).T, alpha, axis=1).scale
+    s = scale_trimmed(np.column_stack((x, 2 * x)).T, alpha, axis=1).scale
     assert_allclose(s, [2, 4], rtol=1e-1)
     s = scale_trimmed(np.column_stack((x, x)).T, alpha, axis=None).scale
     assert_allclose(s, [2], rtol=1e-1)

@@ -5,6 +5,8 @@ Author: Josef Perktold
 
 """
 
+from statsmodels.compat.scipy import BASINHOPPING_RNG
+
 import os
 
 import numpy as np
@@ -572,7 +574,7 @@ class TestGAMMPGBS(CheckGAMMixin):
         #     then exog_linear will also be transformed in predict.
         mgr = FormulaManager()
         cls.exog = np.asarray(mgr.get_matrices("fuel + drive", data=df_autos))
-        bs = BSplines(
+        cls.bs = BSplines(
             x_spline,
             df=[12, 10],
             degree=[3, 3],
@@ -581,9 +583,12 @@ class TestGAMMPGBS(CheckGAMMixin):
             include_intercept=True,
         )
         # TODO alpha needs to be list
-        alpha0 = 1 / s_scale * sp / 2
+        cls.alpha0 = 1 / s_scale * sp / 2
         gam_bs = GLMGam(
-            df_autos["city_mpg"], exog=cls.exog, smoother=bs, alpha=(alpha0).tolist()
+            df_autos["city_mpg"],
+            exog=cls.exog,
+            smoother=cls.bs,
+            alpha=(cls.alpha0).tolist(),
         )
         cls.res1a = gam_bs.fit(use_t=True)
 
@@ -596,6 +601,14 @@ class TestGAMMPGBS(CheckGAMMixin):
 
         # for checking that alpha model attribute is unchanged, same as alpha0
         cls.alpha = [169947.78222669504, 26767.58046340008]
+
+    def setup_model(self):
+        return GLMGam(
+            df_autos["city_mpg"],
+            exog=self.exog,
+            smoother=self.bs,
+            alpha=(self.alpha0).tolist(),
+        ).fit(use_t=True)
 
     @classmethod
     def _init(cls):
@@ -624,11 +637,14 @@ class TestGAMMPGBS(CheckGAMMixin):
 
     def test_crossval(self):
         # includes some checks that penalization in the model is unchanged
+        rs = np.random.RandomState(9832311)
         mod = self.res1.model
         assert_equal(mod.alpha, self.alpha)  # assert unchanged
         assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
 
-        alpha_aic = mod.select_penweight()[0]
+        # Require a local model to avoid thread saftey issues
+        mod = self.setup_model().model
+        alpha_aic = mod.select_penweight(**{BASINHOPPING_RNG: rs})[0]
         # regression number, but in the right ball park
         assert_allclose(alpha_aic, [112487.81362014, 129.89155677], rtol=1e-3)
         assert_equal(mod.alpha, self.alpha)  # assert unchanged
@@ -638,8 +654,8 @@ class TestGAMMPGBS(CheckGAMMixin):
         assert_equal(pm[:4, :], 0)
         assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
 
-        np.random.seed(987125)
-        alpha_cv, _ = mod.select_penweight_kfold(k_folds=3, k_grid=6)
+        rs = np.random.RandomState(987125)
+        alpha_cv, _ = mod.select_penweight_kfold(k_folds=3, k_grid=6, rng=rs)
         # regression number, but in the right ball park
         assert_allclose(alpha_cv, [10000000.0, 630.957344480193], rtol=1e-5)
         assert_equal(mod.alpha, self.alpha)  # assert unchanged
@@ -747,10 +763,12 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         assert_allclose(wtt.pvalues[:2], res2.pTerms_pv, rtol=1e-6)
         assert_equal(wtt.df_constraints[:2], res2.pTerms_df)
 
+    @pytest.mark.thread_unsafe("Some results classes are mutable that affect run")
     def test_select_alpha(self):
         res1 = self.res1
         alpha_mgcv = res1.model.alpha
-        res_s = res1.model.select_penweight()
+        rs = np.random.RandomState(48932091)
+        res_s = res1.model.select_penweight(**{BASINHOPPING_RNG: rs})
         assert_allclose(res_s[0], alpha_mgcv, rtol=5e-5)
 
 
@@ -831,7 +849,7 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
 
         assert_equal(res1a.fittedvalues.iloc[2:4].index.values, [2, 3])
         assert_equal(np.asarray(res1a.params.index), xnames)
-        assert (isinstance(res1a.params, pd.Series))
+        assert isinstance(res1a.params, pd.Series)
 
-        assert (isinstance(res1a, GLMGamResultsWrapper))
-        assert (isinstance(res1a._results, GLMGamResults))
+        assert isinstance(res1a, GLMGamResultsWrapper)
+        assert isinstance(res1a._results, GLMGamResults)

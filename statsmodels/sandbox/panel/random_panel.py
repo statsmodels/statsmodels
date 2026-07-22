@@ -16,6 +16,8 @@ Notes
 
 import numpy as np
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 from . import correlation_structures as cs
 
 
@@ -106,10 +108,10 @@ class PanelSample:
         self.beta = None
 
         if seed is None:
-            seed = np.random.randint(0, 999999)
+            seed = np.random.default_rng().integers(0, 999999)
 
         self.seed = seed
-        self.random_state = np.random.RandomState(seed)
+        self.random_state = check_random_state(seed, deprecated=True, warn=False)
 
         # this makes overwriting difficult, move to method?
         self.std = scale * np.ones(nobs_i)

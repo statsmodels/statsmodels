@@ -1,4 +1,4 @@
-"""Nile River Flows."""
+"""Nile River Flows"""
 import pandas as pd
 
 from statsmodels.datasets import utils as du
@@ -27,7 +27,7 @@ NOTE = """::
     Variable name definitions:
 
         year - the year of the observations
-        volumne - the discharge at Aswan in 10^8, m^3
+        volume - the discharge at Aswan in 10^8, m^3
 """
 
 

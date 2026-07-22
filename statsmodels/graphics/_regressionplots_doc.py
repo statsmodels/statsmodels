@@ -1,9 +1,10 @@
-_plot_added_variable_doc = """\
-    Create an added variable plot for a fitted regression model.
+_plot_added_variable_doc = """
+    Create an added variable plot for a fitted regression model
 
     Parameters
     ----------
-    %(extra_params_doc)sfocus_exog : int or string
+    %(extra_params_doc)s
+    focus_exog : int or string
         The column index of exog, or a variable name, indicating the
         variable whose role in the regression is to be assessed.
     resid_type : str
@@ -17,7 +18,7 @@ _plot_added_variable_doc = """\
     fit_kwargs : dict, optional
         Keyword arguments to be passed to fit when refitting the
         model.
-    ax: Axes
+    ax : Axes
         Matplotlib Axes instance
 
     Returns
@@ -26,16 +27,17 @@ _plot_added_variable_doc = """\
         A matplotlib figure instance.
 """
 
-_plot_partial_residuals_doc = """\
+_plot_partial_residuals_doc = """
     Create a partial residual, or 'component plus residual' plot for a
-    fitted regression model.
+    fitted regression model
 
     Parameters
     ----------
-    %(extra_params_doc)sfocus_exog : int or string
+    %(extra_params_doc)s
+    focus_exog : int or string
         The column index of exog, or variable name, indicating the
         variable whose role in the regression is to be assessed.
-    ax: Axes
+    ax : Axes
         Matplotlib Axes instance
 
     Returns
@@ -44,8 +46,8 @@ _plot_partial_residuals_doc = """\
         A matplotlib figure instance.
 """
 
-_plot_ceres_residuals_doc = """\
-    Conditional Expectation Partial Residuals (CERES) plot.
+_plot_ceres_residuals_doc = """
+    Conditional Expectation Partial Residuals (CERES) plot
 
     Produce a CERES plot for a fitted regression model.
 
@@ -122,8 +124,8 @@ _plot_ceres_residuals_doc = """\
 """
 
 
-_plot_influence_doc = """\
-    Plot of influence in regression. Plots studentized resids vs. leverage.
+_plot_influence_doc = """
+    Plot of influence in regression. Plots studentized resids vs. leverage
 
     Parameters
     ----------
@@ -180,13 +182,12 @@ _plot_influence_doc = """\
     """
 
 
-_plot_leverage_resid2_doc = """\
+_plot_leverage_resid2_doc = """
     Plot leverage statistics vs. normalized residuals squared
 
     Parameters
     ----------
-    results : results instance
-        A regression results instance
+    {extra_params_doc}
     alpha : float
         Specifies the cut-off for large-standardized residuals. Residuals
         are assumed to be distributed N(0, 1) with alpha=alpha.

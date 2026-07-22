@@ -1,5 +1,5 @@
 """
-SARIMAX specification class.
+SARIMAX specification class
 
 Author: Chad Fulton
 License: BSD-3
@@ -22,7 +22,7 @@ from statsmodels.tsa.statespace.tools import (
 
 class SARIMAXSpecification:
     """
-    SARIMAX specification.
+    SARIMAX specification
 
     Parameters
     ----------
@@ -71,6 +71,14 @@ class SARIMAXSpecification:
     seasonal_periods : int
         Number of periods in a season. May not be used in combination with
         `seasonal_order`.
+    trend : str{'n','c','t','ct'} or iterable, optional
+        Parameter controlling the deterministic trend polynomial :math:`A(t)`.
+        Can be specified as a string where 'c' indicates a constant (i.e. a
+        degree zero component of the trend polynomial), 't' indicates a
+        linear trend with time, and 'ct' is both. Can also be specified as an
+        iterable defining the polynomial as in `numpy.poly1d`, where
+        `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is to not
+        include a trend component.
     enforce_stationarity : bool, optional
         Whether or not to require the autoregressive parameters to correspond
         to a stationarity process. This is only possible in estimation by
@@ -84,6 +92,10 @@ class SARIMAXSpecification:
         out of the likelihood. This reduces the number of parameters by one.
         This is only applicable when considering estimation by numerical
         maximum likelihood.
+    trend_offset : int, optional
+        The offset at which to start time trend values. Default is 1, so that
+        if `trend='t'` the trend is equal to 1, 2, ..., nobs. Typically is
+        only set when the model created by extending a previous dataset.
     dates : array_like of datetime, optional
         If no index is given by `endog` or `exog`, an array-like object of
         datetime objects can be provided.
@@ -94,6 +106,12 @@ class SARIMAXSpecification:
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
+    validate_specification : bool, optional
+        Whether or not to validate the model specification, e.g. that there
+        is no overlap between the given AR and seasonal AR terms, that the
+        differencing orders and seasonal periodicity are not invalid, and
+        that the trend does not duplicate a constant column already present
+        in `exog`. Default is True.
 
     Attributes
     ----------
@@ -463,7 +481,7 @@ class SARIMAXSpecification:
     @property
     def is_ar_consecutive(self):
         """
-        (bool) Is autoregressive lag polynomial consecutive.
+        (bool) Is autoregressive lag polynomial consecutive
 
         I.e. does it include all lags up to and including the maximum lag.
         """
@@ -473,7 +491,7 @@ class SARIMAXSpecification:
     @property
     def is_ma_consecutive(self):
         """
-        (bool) Is moving average lag polynomial consecutive.
+        (bool) Is moving average lag polynomial consecutive
 
         I.e. does it include all lags up to and including the maximum lag.
         """
@@ -483,7 +501,7 @@ class SARIMAXSpecification:
     @property
     def is_integrated(self):
         """
-        (bool) Is the model integrated.
+        (bool) Is the model integrated
 
         I.e. does it have a nonzero `diff` or `seasonal_diff`.
         """
@@ -491,37 +509,37 @@ class SARIMAXSpecification:
 
     @property
     def is_seasonal(self):
-        """(bool) Does the model include a seasonal component."""
+        """(bool) Does the model include a seasonal component"""
         return self.seasonal_periods != 0
 
     @property
     def k_exog_params(self):
-        """(int) Number of parameters associated with exogenous variables."""
+        """(int) Number of parameters associated with exogenous variables"""
         return len(self.exog_names)
 
     @property
     def k_ar_params(self):
-        """(int) Number of autoregressive (non-seasonal) parameters."""
+        """(int) Number of autoregressive (non-seasonal) parameters"""
         return len(self.ar_lags)
 
     @property
     def k_ma_params(self):
-        """(int) Number of moving average (non-seasonal) parameters."""
+        """(int) Number of moving average (non-seasonal) parameters"""
         return len(self.ma_lags)
 
     @property
     def k_seasonal_ar_params(self):
-        """(int) Number of seasonal autoregressive parameters."""
+        """(int) Number of seasonal autoregressive parameters"""
         return len(self.seasonal_ar_lags)
 
     @property
     def k_seasonal_ma_params(self):
-        """(int) Number of seasonal moving average parameters."""
+        """(int) Number of seasonal moving average parameters"""
         return len(self.seasonal_ma_lags)
 
     @property
     def k_params(self):
-        """(int) Total number of model parameters."""
+        """(int) Total number of model parameters"""
         k_params = (self.k_exog_params + self.k_ar_params + self.k_ma_params +
                     self.k_seasonal_ar_params + self.k_seasonal_ma_params)
         if not self.concentrate_scale:
@@ -530,35 +548,35 @@ class SARIMAXSpecification:
 
     @property
     def exog_names(self):
-        """(list of str) Names associated with exogenous parameters."""
+        """(list of str) Names associated with exogenous parameters"""
         exog_names = self._model.exog_names
         return [] if exog_names is None else exog_names
 
     @property
     def ar_names(self):
-        """(list of str) Names of (non-seasonal) autoregressive parameters."""
+        """(list of str) Names of (non-seasonal) autoregressive parameters"""
         return ["ar.L%d" % i for i in self.ar_lags]
 
     @property
     def ma_names(self):
-        """(list of str) Names of (non-seasonal) moving average parameters."""
+        """(list of str) Names of (non-seasonal) moving average parameters"""
         return ["ma.L%d" % i for i in self.ma_lags]
 
     @property
     def seasonal_ar_names(self):
-        """(list of str) Names of seasonal autoregressive parameters."""
+        """(list of str) Names of seasonal autoregressive parameters"""
         s = self.seasonal_periods
         return ["ar.S.L%d" % (i * s) for i in self.seasonal_ar_lags]
 
     @property
     def seasonal_ma_names(self):
-        """(list of str) Names of seasonal moving average parameters."""
+        """(list of str) Names of seasonal moving average parameters"""
         s = self.seasonal_periods
         return ["ma.S.L%d" % (i * s) for i in self.seasonal_ma_lags]
 
     @property
     def param_names(self):
-        """(list of str) Names of all model parameters."""
+        """(list of str) Names of all model parameters"""
         names = (self.exog_names + self.ar_names + self.ma_names +
                  self.seasonal_ar_names + self.seasonal_ma_names)
         if not self.concentrate_scale:
@@ -568,9 +586,9 @@ class SARIMAXSpecification:
     @property
     def valid_estimators(self):
         """
-        (list of str) Estimators that could be used with specification.
+        (list of str) Estimators that could be used with specification
 
-        Note: does not consider the presense of `exog` in determining valid
+        Note: does not consider the presence of `exog` in determining valid
         estimators. If there are exogenous variables, then feasible Generalized
         Least Squares should be used through the `gls` estimator, and the
         `valid_estimators` are the estimators that could be passed as the
@@ -612,21 +630,21 @@ class SARIMAXSpecification:
 
     def validate_estimator(self, estimator):
         """
-        Validate an SARIMA estimator.
+        Validate a SARIMA estimator
 
         Parameters
         ----------
         estimator : str
             Name of the estimator to validate against the current state of
             the specification. Possible values are: 'yule_walker', 'burg',
-            'innovations', 'hannan_rissanen', 'innovoations_mle', 'statespace'.
+            'innovations', 'hannan_rissanen', 'innovations_mle', 'statespace'.
 
         Notes
         -----
         This method will raise a `ValueError` if an invalid method is passed,
         and otherwise will return None.
 
-        This method does not consider the presense of `exog` in determining
+        This method does not consider the presence of `exog` in determining
         valid estimators. If there are exogenous variables, then feasible
         Generalized Least Squares should be used through the `gls` estimator,
         and a "valid" estimator is one that could be passed as the
@@ -662,7 +680,6 @@ class SARIMAXSpecification:
         """
         has_ar = self.max_ar_order != 0
         has_ma = self.max_ma_order != 0
-        has_seasonal = self.seasonal_periods != 0
         has_missing = self._has_missing
 
         titles = {
@@ -693,10 +710,13 @@ class SARIMAXSpecification:
                                  % titles[estimator])
 
         # Now go through specific disqualifications for each estimator
+        has_seasonal_ar_or_ma = (self.max_seasonal_ar_order > 0
+                                 or self.max_seasonal_ma_order > 0)
+
         if estimator in ["yule_walker", "burg"]:
-            if has_seasonal:
+            if has_seasonal_ar_or_ma:
                 raise ValueError("%s estimator does not support seasonal"
-                                 " components." % titles[estimator])
+                                 " AR or MA components." % titles[estimator])
             if not self.is_ar_consecutive:
                 raise ValueError("%s estimator does not support"
                                  " non-consecutive autoregressive lags."
@@ -705,9 +725,9 @@ class SARIMAXSpecification:
                 raise ValueError("%s estimator does not support moving average"
                                  " components." % titles[estimator])
         elif estimator == "innovations":
-            if has_seasonal:
+            if has_seasonal_ar_or_ma:
                 raise ValueError("Innovations estimator does not support"
-                                 " seasonal components.")
+                                 " seasonal AR or MA components.")
             if not self.is_ma_consecutive:
                 raise ValueError("Innovations estimator does not support"
                                  " non-consecutive moving average lags.")
@@ -715,9 +735,9 @@ class SARIMAXSpecification:
                 raise ValueError("Innovations estimator does not support"
                                  " autoregressive components.")
         elif estimator == "hannan_rissanen":
-            if has_seasonal:
+            if has_seasonal_ar_or_ma:
                 raise ValueError("Hannan-Rissanen estimator does not support"
-                                 " seasonal components.")
+                                 " seasonal AR or MA components.")
         elif estimator == "innovations_mle":
             if self.enforce_stationarity is False:
                 raise ValueError("Innovations MLE estimator does not support"
@@ -735,7 +755,7 @@ class SARIMAXSpecification:
 
     def split_params(self, params, allow_infnan=False):
         """
-        Split parameter array by type into dictionary.
+        Split parameter array by type into dictionary
 
         Parameters
         ----------
@@ -787,7 +807,7 @@ class SARIMAXSpecification:
                     seasonal_ar_params=None, seasonal_ma_params=None,
                     sigma2=None):
         """
-        Join parameters into a single vector.
+        Join parameters into a single vector
 
         Parameters
         ----------
@@ -851,7 +871,7 @@ class SARIMAXSpecification:
 
     def validate_params(self, params):
         """
-        Validate parameter vector by raising ValueError on invalid values.
+        Validate parameter vector by raising ValueError on invalid values
 
         Parameters
         ----------
@@ -910,7 +930,7 @@ class SARIMAXSpecification:
 
     def constrain_params(self, unconstrained):
         """
-        Constrain parameter values to be valid through transformations.
+        Constrain parameter values to be valid through transformations
 
         Parameters
         ----------
@@ -972,7 +992,7 @@ class SARIMAXSpecification:
 
     def unconstrain_params(self, constrained):
         """
-        Reverse transformations used to constrain parameter values to be valid.
+        Reverse transformations used to constrain parameter values to be valid
 
         Parameters
         ----------
@@ -982,7 +1002,7 @@ class SARIMAXSpecification:
         Returns
         -------
         unconstrained : ndarray
-            Array of parameters with constraining transformions reversed.
+            Array of parameters with constraining transformations reversed.
 
         Notes
         -----
@@ -1051,7 +1071,7 @@ class SARIMAXSpecification:
         return names
 
     def __repr__(self):
-        """Represent SARIMAXSpecification object as a string."""
+        """Represent SARIMAXSpecification object as a string"""
         components = []
         if self.endog is not None:
             components.append("endog=%s" % self._model.endog_names)

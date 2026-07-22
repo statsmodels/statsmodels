@@ -1,6 +1,4 @@
-"""
-Linear Algebra solvers and other helpers
-"""
+"""Linear algebra solvers and other helpers."""
 
 import numpy as np
 
@@ -17,11 +15,14 @@ def logdet_symm(m, check_symm=False):
     ----------
     m : array_like
         2d array that is positive-definite (and symmetric)
+    check_symm : bool
+        If True, check that `m` is symmetric before factorizing.
 
     Returns
     -------
     logdet : float
         The log-determinant of m.
+
     """
     from scipy import linalg
 
@@ -51,8 +52,8 @@ def stationary_solve(r, b):
     Returns
     -------
     The solution to the linear system.
-    """
 
+    """
     db = r[0:1]
 
     dim = b.ndim
@@ -81,7 +82,8 @@ def stationary_solve(r, b):
 
 
 def transf_constraints(constraints):
-    """use QR to get transformation matrix to impose constraint
+    """
+    Use QR to get transformation matrix to impose constraint
 
     Parameters
     ----------
@@ -106,8 +108,8 @@ def transf_constraints(constraints):
     --------
     statsmodels.base._constraints.TransformRestriction : class to impose
         constraints by reparameterization used by `_fit_constrained`.
-    """
 
+    """
     from scipy import linalg
 
     m = constraints.shape[0]
@@ -117,7 +119,8 @@ def transf_constraints(constraints):
 
 
 def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15):
-    """matrix square root for symmetric matrices
+    """
+    Matrix square root for symmetric matrices
 
     Usage is for decomposing a covariance function S into a square root R
     such that
@@ -151,6 +154,7 @@ def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15
     -------
     msqrt : ndarray
         matrix square root or square root of inverse matrix.
+
     """
     # see also scipy.linalg null_space
     u, s, v = np.linalg.svd(mat)

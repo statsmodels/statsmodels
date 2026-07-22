@@ -1,4 +1,5 @@
-"""Descriptive Statistics for Time Series
+"""
+Descriptive Statistics for Time Series
 
 Created on Sat Oct 30 14:24:08 2010
 
@@ -11,9 +12,7 @@ from . import stattools as stt
 
 # TODO: check subclassing for descriptive stats classes
 class TsaDescriptive:
-    """collection of descriptive statistical methods for time series
-
-    """
+    """Collection of descriptive statistical methods for time series"""
 
     def __init__(self, data, label=None, name=""):
         self.data = data

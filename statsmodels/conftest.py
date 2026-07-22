@@ -51,8 +51,14 @@ def pytest_addoption(parser):
     )
     parser.addoption("--skip-smoke", action="store_true", help="skip smoke tests")
     parser.addoption("--only-smoke", action="store_true", help="run only smoke tests")
-    parser.addoption("--skip-high-memory", action="store_true", help="skip high memory usage tests")
-    parser.addoption("--only-high-memory", action="store_true", help="run only high memory usage tests")
+    parser.addoption(
+        "--skip-high-memory", action="store_true", help="skip high memory usage tests"
+    )
+    parser.addoption(
+        "--only-high-memory",
+        action="store_true",
+        help="run only high memory usage tests",
+    )
 
 
 def pytest_runtest_setup(item):
@@ -69,7 +75,7 @@ def pytest_runtest_setup(item):
         pytest.skip("skipping due to --skip-matplotlib")
 
     if "matplotlib" in item.keywords and not HAVE_MATPLOTLIB:
-        pytest.skip("skipping since matplotlib is not intalled")
+        pytest.skip("skipping since matplotlib is not installed")
 
     if "smoke" in item.keywords and item.config.getoption("--skip-smoke"):
         pytest.skip("skipping due to --skip-smoke")
@@ -80,7 +86,9 @@ def pytest_runtest_setup(item):
     if "high_memory" in item.keywords and item.config.getoption("--skip-high-memory"):
         pytest.skip("skipping due to --skip-high-memory")
 
-    if "high_memory" not in item.keywords and item.config.getoption("--only-high-memory"):
+    if "high_memory" not in item.keywords and item.config.getoption(
+        "--only-high-memory"
+    ):
         pytest.skip("skipping due to --only-high-memory")
 
 
@@ -89,13 +97,12 @@ def pytest_configure(config):
         import matplotlib as mpl
 
         mpl.use("agg")
-        try:
-            from pandas.plotting import register_matplotlib_converters
 
-            register_matplotlib_converters()
-        except ImportError:
-            pass
+        from pandas.plotting import register_matplotlib_converters
+
+        register_matplotlib_converters()
     except ImportError:
+        # Tests are required to run without matplotlib
         pass
 
 
@@ -141,27 +148,6 @@ def close_figures():
     close()
 
 
-@pytest.fixture
-def reset_randomstate():
-    """
-    Fixture that set the global RandomState to the fixed seed 1
-
-    Notes
-    -----
-    Used by passing as an argument to the function that uses the global
-    RandomState
-
-    def test_some_plot(reset_randomstate):
-        <test code>
-
-    Returns the state after the test function exits
-    """
-    state = np.random.get_state()
-    np.random.seed(1)
-    yield
-    np.random.set_state(state)
-
-
 # This is a special hook that converts all xfail marks to have strict=False
 # instead of strict=True. This is useful to have for Pyodide tests, where
 # some tests will consistently xfail due to missing functionality (such as
@@ -202,3 +188,26 @@ def check_figures_closed():
     yield
     cnt = count()
     assert cnt <= initial, f"test created {cnt - initial} figure(s)"
+
+
+@pytest.fixture(autouse=True)
+def check_global_randomstate_usage(request):
+    """
+    Ensure that the singleton RandomState is not modified
+
+    Notes
+    -----
+    Use pytest.mark.skip_randomstate_check to skip allow the singleton
+    RandomState to be changed in a test
+    """
+    state = np.random.get_state()
+
+    yield
+    new_state = np.random.get_state()
+
+    if "singleton_randomstate" in request.keywords:
+        return
+
+    assert state[0] == new_state[0]
+    np.testing.assert_equal(state[1], new_state[1])
+    assert state[2] == new_state[2]

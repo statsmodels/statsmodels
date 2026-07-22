@@ -114,9 +114,9 @@ class STLForecast:
 
     * ``fit`` is used to estimate parameters and returns a results instance,
       ``results``.
-    * ``results`` must exposes a method ``forecast(steps, **kwargs)`` that
+    * ``results`` must expose a method ``forecast(steps, **kwargs)`` that
       produces out-of-sample forecasts.
-    * ``results`` may also exposes a method ``get_prediction`` that produces
+    * ``results`` may also expose a method ``get_prediction`` that produces
       both in- and out-of-sample predictions.
 
     See the notebook `Seasonal Decomposition
@@ -191,7 +191,7 @@ class STLForecast:
     @Substitution(fit_params=indent(_fit_params, " " * 8))
     def fit(self, *, inner_iter=None, outer_iter=None, fit_kwargs=None):
         """
-        Estimate STL and forecasting model parameters.
+        Estimate STL and forecasting model parameters
 
         Parameters
         ----------\n%(fit_params)s
@@ -281,7 +281,7 @@ class STLForecastResults:
 
     def summary(self) -> Summary:
         """
-        Summary of both the STL decomposition and the model fit.
+        Summary of both the STL decomposition and the model fit
 
         Returns
         -------
@@ -340,14 +340,14 @@ class STLForecastResults:
         dynamic: Union[bool, DateLike],
     ) -> np.ndarray:
         """
-        Get STLs seasonal in- and out-of-sample predictions
+        Get STL's seasonal in- and out-of-sample predictions
 
         Parameters
         ----------
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -367,7 +367,7 @@ class STLForecastResults:
         Returns
         -------
         ndarray
-            Array containing the seasibak predictions.
+            Array containing the seasonal predictions.
         """
         data = PandasData(pd.Series(self._endog), index=self._index)
         if start is None:
@@ -444,11 +444,11 @@ class STLForecastResults:
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
         **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. These arguments are passed into the time series
-            model results' ``forecast`` method.
+            Additional arguments may be required for forecasting beyond the
+            end of the sample. These arguments are passed into the time
+            series model results' ``forecast`` method.
 
         Returns
         -------
@@ -474,7 +474,7 @@ class STLForecastResults:
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -491,9 +491,9 @@ class STLForecastResults:
             the end of prediction, forecasted endogenous values will be used
             instead.
         **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. These arguments are passed into the time series
-            model results' ``get_prediction`` method.
+            Additional arguments may be required for forecasting beyond the
+            end of the sample. These arguments are passed into the time
+            series model results' ``get_prediction`` method.
 
         Returns
         -------

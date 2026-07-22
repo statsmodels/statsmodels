@@ -1076,9 +1076,9 @@ class DescStatMV(_OptFuncts):
 
         Parameters
         ----------
-        m1_low : float
+        mu1_low : float
             Minimum value of the mean for variable 1
-        m1_upp : float
+        mu1_upp : float
             Maximum value of the mean for variable 1
         mu2_low : float
             Minimum value of the mean for variable 2

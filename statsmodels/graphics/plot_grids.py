@@ -1,4 +1,5 @@
-"""create scatterplot with confidence ellipsis
+"""
+Create scatterplot with confidence ellipsis
 
 Author: Josef Perktold
 License: BSD-3
@@ -20,7 +21,24 @@ __all__ = ["scatter_ellipse"]
 
 
 def _make_ellipse(mean, cov, ax, level=0.95, color=None):
-    """Support function for scatter_ellipse."""
+    """
+    Support function for scatter_ellipse
+
+    Parameters
+    ----------
+    mean : array_like
+        The mean of the data, used as the center of the ellipse.
+    cov : array_like
+        The covariance matrix of the data, used to determine the shape of
+        the ellipse.
+    ax : Axes
+        The matplotlib axes to draw the ellipse on.
+    level : float, optional
+        The confidence level of the ellipse.  Default is 0.95.
+    color : str, optional
+        The color used for the edge of the ellipse.  If None, the default
+        matplotlib color is used.
+    """
     from matplotlib.patches import Ellipse
 
     v, w = np.linalg.eigh(cov)
@@ -40,25 +58,24 @@ def _make_ellipse(mean, cov, ax, level=0.95, color=None):
 def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
                     plot_kwds=None, add_titles=False, keep_ticks=False,
                     fig=None):
-    """Create a grid of scatter plots with confidence ellipses.
-
-    ell_kwds, plot_kdes not used yet
-
-    looks ok with 5 or 6 variables, too crowded with 8, too empty with 1
+    """
+    Create a grid of scatter plots with confidence ellipses
 
     Parameters
     ----------
     data : array_like
         Input data.
-    level : scalar, optional
-        Default is 0.9.
+    level : float or list of float, optional
+        The confidence level(s) of the ellipses to draw.  Default is 0.9.
     varnames : list[str], optional
         Variable names.  Used for y-axis labels, and if `add_titles` is True
         also for titles.  If not given, integers 1..data.shape[1] are used.
     ell_kwds : dict, optional
-        UNUSED
+        Additional keyword arguments passed to the ellipse patches drawn on
+        each subplot.
     plot_kwds : dict, optional
-        UNUSED
+        Additional keyword arguments passed to the scatter points plotted on
+        each subplot.
     add_titles : bool, optional
         Whether or not to add titles to each subplot.  Default is False.
         Titles are constructed from `varnames`.
@@ -72,6 +89,11 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
     -------
     Figure
         If `fig` is None, the created figure.  Otherwise `fig` itself.
+
+    Notes
+    -----
+    Looks reasonable with 5 or 6 variables, becomes too crowded with 8 and
+    too sparse with 1.
 
     Examples
     --------

@@ -78,7 +78,7 @@ class TestL2Constraints1(CheckPenalty):
         pen = self.pen
         x = self.params
         r = pen.restriction
-        f = (r.dot(x.T)**2).sum(0)
+        f = (r.dot(x.T) ** 2).sum(0)
         assert_allclose(pen.func(x.T), f, rtol=1e-7, atol=1e-8)
 
 

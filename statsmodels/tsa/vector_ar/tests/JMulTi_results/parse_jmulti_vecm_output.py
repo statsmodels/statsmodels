@@ -49,12 +49,12 @@ def dt_s_tup_to_string(dt_s_tup):
 
 
 def sublists(lst, min_elmts=0, max_elmts=None):
-    """Build a list of all possible sublists of a given list. Restrictions
-    on the length of the sublists can be posed via the min_elmts and max_elmts
-    parameters.
-    All sublists
-    have will have at least min_elmts elements and not more than max_elmts
-    elements.
+    """
+    Build a list of all possible sublists of a given list
+
+    Restrictions on the length of the sublists can be posed via the
+    min_elmts and max_elmts parameters. All sublists will have at least
+    min_elmts elements and not more than max_elmts elements.
 
     Parameters
     ----------
@@ -86,11 +86,15 @@ def sublists(lst, min_elmts=0, max_elmts=None):
 
 def stringify_var_names(var_list, delimiter=""):
     """
+    Join variable names into a single, lowercased string
 
     Parameters
     ----------
     var_list : list[str]
         Each list element is the name of a variable.
+    delimiter : str
+        String used to join consecutive variable names. Default is the
+        empty string.
 
     Returns
     -------
@@ -105,15 +109,13 @@ def stringify_var_names(var_list, delimiter=""):
 
 def load_results_jmulti(dataset):
     """
+    Load and parse JMulTi VECM output results for a dataset
 
     Parameters
     ----------
     dataset : module
         A data module in the statsmodels/datasets directory that defines a
         __str__() method returning the dataset's name.
-    dt_s_list : list
-        A list of strings where each string represents a combination of
-        deterministic terms.
 
     Returns
     -------

@@ -1,4 +1,6 @@
 """
+Holt-Winters exponential smoothing models
+
 Notes
 -----
 Code written using below textbook as a reference.
@@ -115,7 +117,7 @@ class _OptConfig:
 
 class ExponentialSmoothing(TimeSeriesModel):
     """
-    Holt Winter's Exponential Smoothing
+    Holt Winters' Exponential Smoothing
 
     Parameters
     ----------
@@ -171,7 +173,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         Should the Box-Cox transform be applied to the data first? If 'log'
         then apply the log. If float then use the value as lambda.
     bounds : dict[str, tuple[float, float]], optional
-        An dictionary containing bounds for the parameters in the model,
+        A dictionary containing bounds for the parameters in the model,
         excluding the initial values if estimated. The keys of the dictionary
         are the variable names, e.g., smoothing_level or initial_slope.
         The initial seasonal variables are labeled initial_seasonal.<j>
@@ -338,7 +340,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     @contextlib.contextmanager
     def fix_params(self, values):
         """
-        Temporarily fix parameters for estimation.
+        Temporarily fix parameters for estimation
 
         Parameters
         ----------
@@ -469,7 +471,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def predict(self, params, start=None, end=None):
         """
-        In-sample and out-of-sample prediction.
+        In-sample and out-of-sample prediction
 
         Parameters
         ----------
@@ -481,7 +483,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             parse or a datetime type.
         end : int, str, or datetime
             Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
+            the last forecast is end. Can also be a date string to
             parse or a datetime type.
 
         Returns
@@ -943,7 +945,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         smoothing_level : float, optional
             The alpha value of the simple exponential smoothing, if the value
             is set then this value will be used as the value.
-        smoothing_trend :  float, optional
+        smoothing_trend : float, optional
             The beta value of the Holt's trend method, if the value is
             set then this value will be used as the value.
         smoothing_seasonal : float, optional
@@ -1017,7 +1019,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         Notes
         -----
         This is a full implementation of the holt winters exponential smoothing
-        as per [1]. This includes all the unstable methods as well as the
+        as per [1]_. This includes all the unstable methods as well as the
         stable methods. The implementation of the library covers the
         functionality of the R library as much as possible whilst still
         being Pythonic.
@@ -1038,7 +1040,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         References
         ----------
-        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+        .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
             and practice. OTexts, 2014.
         """
         # Variable renames to alpha,beta, etc as this helps with following the
@@ -1160,7 +1162,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def initial_values(self, initial_level=None, initial_trend=None, force=False):
         """
-        Compute initial values used in the exponential smoothing recursions.
+        Compute initial values used in the exponential smoothing recursions
 
         Parameters
         ----------
@@ -1255,6 +1257,31 @@ class ExponentialSmoothing(TimeSeriesModel):
         ----------
         h : int, optional
             The number of time steps to forecast ahead.
+        smoothing_level : float, optional
+            The alpha value of the simple exponential smoothing.
+        smoothing_trend : float, optional
+            The beta value of the Holt's trend method.
+        smoothing_seasonal : float, optional
+            The gamma value of the holt winters seasonal method.
+        initial_level : float, optional
+            The initial value used for the level component.
+        initial_trend : float, optional
+            The initial value used for the trend component.
+        damping_trend : float, optional
+            The phi value of the damped method.
+        initial_seasons : array_like, optional
+            The initial values used for the seasonal components.
+        use_boxcox : {True, False, 'log', float}, optional
+            Should the Box-Cox transform be applied to the data first? If
+            'log' then apply the log. If float then use the value as lambda.
+        lamda : float, optional
+            The Box-Cox transformation parameter to use if `use_boxcox` is
+            a float.
+        remove_bias : bool, optional
+            Remove bias from forecast values and fitted values by enforcing
+            that the average residual is equal to zero.
+        is_optimized : ndarray, optional
+            Boolean array indicating which parameters were optimized.
         """
         # Variable renames to alpha, beta, etc as this helps with following the
         # mathematical notation in general
@@ -1578,11 +1605,11 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         Notes
         -----
         This is a full implementation of the simple exponential smoothing as
-        per [1].
+        per [1]_.
 
         References
         ----------
-        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+        .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
             and practice. OTexts, 2014.
         """
         return super().fit(
@@ -1708,7 +1735,7 @@ class Holt(ExponentialSmoothing):
         smoothing_level : float, optional
             The alpha value of the simple exponential smoothing, if the value
             is set then this value will be used as the value.
-        smoothing_trend :  float, optional
+        smoothing_trend : float, optional
             The beta value of the Holt's trend method, if the value is
             set then this value will be used as the value.
         damping_trend : float, optional
@@ -1764,11 +1791,11 @@ class Holt(ExponentialSmoothing):
         Notes
         -----
         This is a full implementation of the Holt's exponential smoothing as
-        per [1].
+        per [1]_.
 
         References
         ----------
-        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+        .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
             and practice. OTexts, 2014.
         """
         return super().fit(

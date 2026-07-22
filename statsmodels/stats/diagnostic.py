@@ -7,7 +7,7 @@ License: BSD-3
 Notes
 -----
 Almost fully verified against R or Gretl, not all options are the same.
-In many cases of Lagrange multiplier tests both the LM test and the F test is
+In many cases of Lagrange multiplier tests both the LM test and the F test are
 returned. In some but not all cases, R has the option to choose the test
 statistic. Some alternative test statistic results have not been verified.
 
@@ -148,7 +148,7 @@ def compare_cox(results_x, results_z, store=False):
     -----
     Tests of non-nested hypothesis might not provide unambiguous answers.
     The test should be performed in both directions and it is possible
-    that both or neither test rejects. see [1]_ for more information.
+    that both or neither test rejects. See [1]_ for more information.
 
     Formulas from [1]_, section 8.3.4 translated to code
 
@@ -222,7 +222,7 @@ def compare_j(results_x, results_z, store=False):
 
     Tests of non-nested hypothesis might not provide unambiguous answers.
     The test should be performed in both directions and it is possible
-    that both or neither test rejects. see Greene for more information.
+    that both or neither test rejects. See Greene for more information.
 
     References
     ----------
@@ -261,8 +261,8 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         result instance of first model
     results_z : Result instance
         result instance of second model
-    cov_type : str, default "nonrobust
-        Covariance type. The default is "nonrobust` which uses the classic
+    cov_type : str, default "nonrobust"
+        Covariance type. The default is "nonrobust" which uses the classic
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
@@ -299,7 +299,7 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
     :math:`X`. The null is :math:`H_0:\gamma=0`. When testing whether z is
     encompassed, the roles of :math:`X` and :math:`Z` are reversed.
 
-    Implementation of  Davidson and MacKinnon (1993)'s encompassing test.
+    Implementation of Davidson and MacKinnon (1993)'s encompassing test.
     Performs two Wald tests where models x and z are compared to a model
     that nests the two. The Wald tests are performed by using an OLS
     regression.
@@ -340,7 +340,7 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
 def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
                    return_df=True, auto_lag=False):
     """
-    Ljung-Box test of autocorrelation in residuals.
+    Ljung-Box test of autocorrelation in residuals
 
     Parameters
     ----------
@@ -369,6 +369,10 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
         be >= 2.
+    return_df : bool, default True
+        Flag indicating whether to return the results as a DataFrame. This
+        parameter is retained for backward compatibility; a DataFrame is
+        always returned.
     auto_lag : bool, default False
         Flag indicating whether to automatically determine the optimal lag
         length based on threshold of maximum correlation value.
@@ -402,14 +406,14 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     Notes
     -----
     Ljung-Box and Box-Pierce statistic differ in their scaling of the
-    autocorrelation function. Ljung-Box test is has better finite-sample
+    autocorrelation function. Ljung-Box test has better finite-sample
     properties.
 
     References
     ----------
-    .. [*] Green, W. "Econometric Analysis," 5th ed., Pearson, 2003.
+    .. [*] Greene, W. "Econometric Analysis," 5th ed., Pearson, 2003.
     .. [*] J. Carlos Escanciano, Ignacio N. Lobato
-          "An automatic Portmanteau test for serial correlation".,
+          "An automatic Portmanteau test for serial correlation".
           Volume 151, 2009.
 
     Examples
@@ -497,7 +501,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
 def acorr_lm(resid, nlags=None, store=False, *, period=None,
              ddof=0, cov_type="nonrobust", cov_kwds=None):
     """
-    Lagrange Multiplier tests for autocorrelation.
+    Lagrange Multiplier tests for autocorrelation
 
     This is a generic Lagrange Multiplier test for autocorrelation. Returns
     Engle's ARCH test if resid is the squared residual array. Breusch-Godfrey
@@ -511,7 +515,7 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
         Highest lag to use.
     store : bool, default False
         If true then the intermediate results are also returned.
-    period : int, default none
+    period : int, default None
         The period of a Seasonal time series.  Used to compute the max lag
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
@@ -520,7 +524,7 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
         The number of degrees of freedom consumed by the model used to
         produce resid. The default value is 0.
     cov_type : str, default "nonrobust"
-        Covariance type. The default is "nonrobust` which uses the classic
+        Covariance type. The default is "nonrobust" which uses the classic
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
@@ -548,7 +552,7 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
         Conditional heteroskedasticity testing.
     acorr_breusch_godfrey
         Breusch-Godfrey test for serial correlation.
-    acorr_ljung_box
+    acorr_ljungbox
         Ljung-Box test for serial correlation.
 
     Notes
@@ -601,7 +605,7 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
 @deprecate_kwarg("maxlag", "nlags")
 def het_arch(resid, nlags=None, store=False, ddof=0):
     """
-    Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH).
+    Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
 
     Parameters
     ----------
@@ -641,7 +645,7 @@ def het_arch(resid, nlags=None, store=False, ddof=0):
 @deprecate_kwarg("results", "res")
 def acorr_breusch_godfrey(res, nlags=None, store=False):
     """
-    Breusch-Godfrey Lagrange Multiplier tests for residual autocorrelation.
+    Breusch-Godfrey Lagrange Multiplier tests for residual autocorrelation
 
     Parameters
     ----------
@@ -827,7 +831,7 @@ def het_breuschpagan(resid, exog_het, robust=True):
 
 def het_white(resid, exog, interaction_terms=True):
     """
-    White's Lagrange Multiplier Test for Heteroscedasticity.
+    White's Lagrange Multiplier Test for Heteroscedasticity
 
     Parameters
     ----------
@@ -883,7 +887,7 @@ def het_white(resid, exog, interaction_terms=True):
 def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
                        alternative="increasing", store=False):
     """
-    Goldfeld-Quandt homoskedasticity test.
+    Goldfeld-Quandt homoskedasticity test
 
     This test examines whether the residual variance is the same in 2
     subsamples.
@@ -902,7 +906,7 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
         If a float in 0<split<1 then split is interpreted as fraction
         of the observations in the first sample. If None, uses nobs//2.
     drop : {int, float}, default None
-        If this is not None, then observation are dropped from the middle
+        If this is not None, then observations are dropped from the middle
         part of the sorted series. If 0<split<1 then split is interpreted
         as fraction of the number of observations to be dropped.
         Note: Currently, observations are dropped between split and
@@ -934,7 +938,7 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
     in the second sample is larger than in the first, or decreasing or
     two-sided.
 
-    Results are identical R, but the drop option is defined differently.
+    Results are identical to R, but the drop option is defined differently.
     (sorting by idx not tested yet)
     """
     x = np.asarray(x)
@@ -1021,8 +1025,8 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     use_f : bool, default False
         Flag indicating whether an F-test should be used (True) or a
         chi-square test (False).
-    cov_type : str, default "nonrobust
-        Covariance type. The default is "nonrobust` which uses the classic
+    cov_type : str, default "nonrobust"
+        Covariance type. The default is "nonrobust" which uses the classic
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
@@ -1139,7 +1143,7 @@ def linear_harvey_collier(res, order_by=None, skip=None):
 
     See Also
     --------
-    statsmodels.stats.diadnostic.recursive_olsresiduals
+    statsmodels.stats.diagnostic.recursive_olsresiduals
         Recursive OLS residual calculation used in the test.
 
     Notes
@@ -1161,7 +1165,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
     Rainbow test for linearity
 
     The null hypothesis is the fit of the model using full sample is the same
-    as using a central subset. The alternative is that the fits are difference.
+    as using a central subset. The alternative is that the fits are different.
     The rainbow test has power against many different forms of nonlinearity.
 
     Parameters
@@ -1289,7 +1293,7 @@ def linear_lm(resid, exog, func=None):
     lm : float
        Lagrange multiplier test statistic
     lm_pval : float
-       p-value of Lagrange multiplier tes
+       p-value of Lagrange multiplier test
     ftest : ContrastResult instance
        the results from the F test variant of this test
 
@@ -1429,10 +1433,10 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
     rypred : ndarray
         The recursive prediction of endogenous variable.
     rresid_standardized : ndarray
-        The recursive residuals standardized so that N(0,sigma2) distributed,
-        where sigma2 is the error variance.
+        The recursive residuals standardized so that N(0,1) distributed.
     rresid_scaled : ndarray
-        The recursive residuals normalize so that N(0,1) distributed.
+        The recursive residuals scaled so that N(0,sigma2) distributed,
+        where sigma2 is the error variance.
     rcusum : ndarray
         The cumulative residuals for cusum test.
     rcusumci : ndarray
@@ -1589,7 +1593,7 @@ def breaks_hansen(olsresults):
 
 def breaks_cusumolsresid(resid, ddof=0):
     """
-    Cusum test for parameter stability based on ols residuals.
+    Cusum test for parameter stability based on ols residuals
 
     Parameters
     ----------

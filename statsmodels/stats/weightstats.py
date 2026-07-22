@@ -1,11 +1,21 @@
-"""Tests and descriptive statistics with weights
-
+"""
+Tests and descriptive statistics with weights
 
 Created on 2010-09-18
 
 Author: josef-pktd
 License: BSD (3-clause)
 
+Notes
+-----
+This has potential problems with ddof, I started to follow numpy with ddof=0
+by default and users can change it, but this might still mess up the t-tests,
+since the estimates for the standard deviation will be based on the ddof that
+the user chooses.
+- fixed ddof for the meandiff ttest, now matches scipy.stats.ttest_ind
+
+Note: scipy has now a separate, pooled variance option in ttest, but I have not
+compared yet.
 
 References
 ----------
@@ -17,25 +27,12 @@ the SAS manual with different, simpler notation.
 
 Freq, Weight in SAS seems redundant since they always show up as product, SPSS
 has only weights.
-
-Notes
------
-
-This has potential problems with ddof, I started to follow numpy with ddof=0
-by default and users can change it, but this might still mess up the t-tests,
-since the estimates for the standard deviation will be based on the ddof that
-the user chooses.
-- fixed ddof for the meandiff ttest, now matches scipy.stats.ttest_ind
-
-Note: scipy has now a separate, pooled variance option in ttest, but I have not
-compared yet.
-
 """
 
 import numpy as np
 from scipy import stats
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class DescrStatsW:
@@ -120,8 +117,7 @@ class DescrStatsW:
 
     @cache_readonly
     def nobs(self):
-        """alias for number of observations/cases, equal to sum of weights
-        """
+        """alias for number of observations/cases, equal to sum of weights"""
         return self.sum_weights
 
     @cache_readonly
@@ -146,7 +142,8 @@ class DescrStatsW:
 
     # need memoize instead of cache decorator
     def var_ddof(self, ddof=0):
-        """variance of data given ddof
+        """
+        variance of data given ddof
 
         Parameters
         ----------
@@ -161,7 +158,8 @@ class DescrStatsW:
         return self.sumsquares / (self.sum_weights - ddof)
 
     def std_ddof(self, ddof=0):
-        """standard deviation of data with given ddof
+        """
+        standard deviation of data with given ddof
 
         Parameters
         ----------
@@ -177,13 +175,13 @@ class DescrStatsW:
 
     @cache_readonly
     def var(self):
-        """variance with default degrees of freedom correction
-        """
+        """variance with default degrees of freedom correction"""
         return self.sumsquares / (self.sum_weights - self.ddof)
 
     @cache_readonly
     def _var(self):
-        """variance without degrees of freedom correction
+        """
+        variance without degrees of freedom correction
 
         used for statistical tests with controlled ddof
         """
@@ -191,13 +189,13 @@ class DescrStatsW:
 
     @cache_readonly
     def std(self):
-        """standard deviation with default degrees of freedom correction
-        """
+        """standard deviation with default degrees of freedom correction"""
         return np.sqrt(self.var)
 
     @cache_readonly
     def cov(self):
-        """weighted covariance of data if data is 2 dimensional
+        """
+        weighted covariance of data if data is 2 dimensional
 
         assumes variables in columns and observations in rows
         uses default ddof
@@ -208,7 +206,8 @@ class DescrStatsW:
 
     @cache_readonly
     def corrcoef(self):
-        """weighted correlation with default ddof
+        """
+        weighted correlation with default ddof
 
         assumes variables in columns and observations in rows
         """
@@ -216,8 +215,7 @@ class DescrStatsW:
 
     @cache_readonly
     def std_mean(self):
-        """standard deviation of weighted mean
-        """
+        """standard deviation of weighted mean"""
         std = self.std
         if self.ddof != 0:
             # ddof correction,   (need copy of std)
@@ -229,7 +227,7 @@ class DescrStatsW:
 
     def quantile(self, probs, return_pandas=True):
         """
-        Compute quantiles for a weighted sample.
+        Compute quantiles for a weighted sample
 
         Parameters
         ----------
@@ -324,7 +322,8 @@ class DescrStatsW:
         return rslt
 
     def tconfint_mean(self, alpha=0.05, alternative="two-sided"):
-        """two-sided confidence interval for weighted mean of data
+        """
+        two-sided confidence interval for weighted mean of data
 
         If the data is 2d, then these are separate confidence intervals
         for each column.
@@ -361,7 +360,8 @@ class DescrStatsW:
         return ci
 
     def zconfint_mean(self, alpha=0.05, alternative="two-sided"):
-        """two-sided confidence interval for weighted mean of data
+        """
+        two-sided confidence interval for weighted mean of data
 
         Confidence interval is based on normal distribution.
         If the data is 2d, then these are separate confidence intervals
@@ -395,7 +395,8 @@ class DescrStatsW:
         return _zconfint_generic(self.mean, self.std_mean, alpha, alternative)
 
     def ttest_mean(self, value=0, alternative="two-sided"):
-        """ttest of Null hypothesis that mean is equal to value.
+        """
+        ttest of Null hypothesis that mean is equal to value
 
         The alternative hypothesis H1 is defined by the following
 
@@ -421,6 +422,7 @@ class DescrStatsW:
         pvalue : float
             pvalue of the t-test
         df : int or float
+            degrees of freedom of the t-test
 
         """
         # TODO: check direction with R, smaller=less, larger=greater
@@ -439,7 +441,8 @@ class DescrStatsW:
         return tstat, pvalue, dof
 
     def ttost_mean(self, low, upp):
-        """test of (non-)equivalence of one sample
+        """
+        test of (non-)equivalence of one sample
 
         TOST: two one-sided t tests
 
@@ -475,7 +478,8 @@ class DescrStatsW:
         return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
     def ztest_mean(self, value=0, alternative="two-sided"):
-        """z-test of Null hypothesis that mean is equal to value.
+        """
+        z-test of Null hypothesis that mean is equal to value
 
         The alternative hypothesis H1 is defined by the following
         'two-sided': H1: mean not equal to value
@@ -522,7 +526,7 @@ class DescrStatsW:
         This differs from the proportions_ztest because of the degrees of
         freedom correction:
         >>> sm.stats.proportions_ztest(15, 20.0, value=0.5)
-        (2.5819888974716112, 0.009823274507519247).
+        (2.5819888974716112, 0.009823274507519247)
 
         We can replicate the results from ``proportions_ztest`` if we increase
         the weights to have artificially one more observation:
@@ -542,7 +546,8 @@ class DescrStatsW:
         return tstat, pvalue
 
     def ztost_mean(self, low, upp):
-        """test of (non-)equivalence of one sample, based on z-test
+        """
+        test of (non-)equivalence of one sample, based on z-test
 
         TOST: two one-sided z-tests
 
@@ -576,7 +581,8 @@ class DescrStatsW:
         return np.maximum(pv1, pv2), (t1, pv1), (t2, pv2)
 
     def get_compare(self, other, weights=None):
-        """return an instance of CompareMeans with self and other
+        """
+        return an instance of CompareMeans with self and other
 
         Parameters
         ----------
@@ -603,17 +609,18 @@ class DescrStatsW:
         return CompareMeans(self, d2)
 
     def asrepeats(self):
-        """get array that has repeats given by floor(weights)
+        """
+        get array that has repeats given by floor(weights)
 
         observations with weight=0 are dropped
-
         """
         w_int = np.floor(self.weights).astype(int)
         return np.repeat(self.data, w_int, axis=0)
 
 
 def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
-    """generic ttest based on summary statistic
+    """
+    generic ttest based on summary statistic
 
     The test statistic is :
         tstat = (value1 - value2 - diff) / std_diff
@@ -662,7 +669,8 @@ def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
 
 
 def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
-    """generic t-confint based on summary statistic
+    """
+    generic t-confint based on summary statistic
 
     Parameters
     ----------
@@ -711,7 +719,8 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
 
 
 def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
-    """generic (normal) z-test based on summary statistic
+    """
+    generic (normal) z-test based on summary statistic
 
     The test statistic is :
         tstat = (value1 - value2 - diff) / std_diff
@@ -758,7 +767,8 @@ def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
 
 
 def _zstat_generic2(value, std, alternative):
-    """generic (normal) z-test based on summary statistic
+    """
+    generic (normal) z-test based on summary statistic
 
     The test statistic is :
         zstat = value / std
@@ -769,8 +779,6 @@ def _zstat_generic2(value, std, alternative):
     ----------
     value : float or ndarray
         Value of a sample statistic, for example mean.
-    value2 : float or ndarray
-        Value, for example mean, of the second sample.
     std : float or ndarray
         Standard error of the sample statistic value.
     alternative : str
@@ -802,7 +810,8 @@ def _zstat_generic2(value, std, alternative):
 
 
 def _zconfint_generic(mean, std_mean, alpha, alternative):
-    """generic normal-confint based on summary statistic
+    """
+    generic normal-confint based on summary statistic
 
     Parameters
     ----------
@@ -849,7 +858,8 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
 
 
 class CompareMeans:
-    """class for two sample comparison
+    """
+    class for two sample comparison
 
     The tests and the confidence interval work for multi-endpoint comparison:
     If d1 and d2 have the same number of rows, then each column of the data
@@ -870,9 +880,7 @@ class CompareMeans:
     """
 
     def __init__(self, d1, d2):
-        """assume d1, d2 hold the relevant attributes
-
-        """
+        """assume d1, d2 hold the relevant attributes"""
         self.d1 = d1
         self.d2 = d2
         # assume nobs is available
@@ -885,7 +893,8 @@ class CompareMeans:
     def from_data(
         cls, data1, data2, weights1=None, weights2=None, ddof1=0, ddof2=0
     ):
-        """construct a CompareMeans object from data
+        """
+        construct a CompareMeans object from data
 
         Parameters
         ----------
@@ -900,8 +909,8 @@ class CompareMeans:
 
         Returns
         -------
-        A CompareMeans instance.
-
+        CompareMeans
+            A CompareMeans instance.
         """
         return cls(
             DescrStatsW(data1, weights=weights1, ddof=ddof1),
@@ -909,7 +918,8 @@ class CompareMeans:
         )
 
     def summary(self, use_t=True, alpha=0.05, usevar="pooled", value=0):
-        """summarize the results of the hypothesis test
+        """
+        summarize the results of the hypothesis test
 
         Parameters
         ----------
@@ -930,7 +940,7 @@ class CompareMeans:
         Returns
         -------
         smry : SimpleTable
-
+            Summary table of the hypothesis test results.
         """
 
         d1 = self.d1
@@ -980,9 +990,7 @@ class CompareMeans:
 
     @cache_readonly
     def std_meandiff_pooledvar(self):
-        """variance assuming equal variance in both data sets
-
-        """
+        """standard deviation of the mean difference assuming pooled variance"""
         # this uses ``_var`` to use ddof=0 for formula
 
         d1 = self.d1
@@ -997,8 +1005,7 @@ class CompareMeans:
         return np.sqrt(var_pooled * (1.0 / d1.nobs + 1.0 / d2.nobs))
 
     def dof_satt(self):
-        """degrees of freedom of Satterthwaite for unequal variance
-        """
+        """degrees of freedom of Satterthwaite for unequal variance"""
         d1 = self.d1
         d2 = self.d2
         # this follows blindly the SPSS manual
@@ -1012,16 +1019,13 @@ class CompareMeans:
         return dof
 
     def ttest_ind(self, alternative="two-sided", usevar="pooled", value=0):
-        """ttest for the null hypothesis of identical means
+        """
+        ttest for the null hypothesis of identical means
 
         this should also be the same as onewaygls, except for ddof differences
 
         Parameters
         ----------
-        x1 : array_like, 1-D or 2-D
-            first of the two independent samples, see notes for 2-D case
-        x2 : array_like, 1-D or 2-D
-            second of the two independent samples, see notes for 2-D case
         alternative : str
             The alternative hypothesis, H1, has to be one of the following
             'two-sided': H1: difference in means not equal to value (default)
@@ -1069,14 +1073,11 @@ class CompareMeans:
         return tstat, pval, dof
 
     def ztest_ind(self, alternative="two-sided", usevar="pooled", value=0):
-        """z-test for the null hypothesis of identical means
+        """
+        z-test for the null hypothesis of identical means
 
         Parameters
         ----------
-        x1 : array_like, 1-D or 2-D
-            first of the two independent samples, see notes for 2-D case
-        x2 : array_like, 1-D or 2-D
-            second of the two independent samples, see notes for 2-D case
         alternative : str
             The alternative hypothesis, H1, has to be one of the following
             'two-sided': H1: difference in means not equal to value (default)
@@ -1117,7 +1118,8 @@ class CompareMeans:
     def tconfint_diff(
         self, alpha=0.05, alternative="two-sided", usevar="pooled"
     ):
-        """confidence interval for the difference in means
+        """
+        confidence interval for the difference in means
 
         Parameters
         ----------
@@ -1146,7 +1148,6 @@ class CompareMeans:
         Notes
         -----
         The result is independent of the user specified ddof.
-
         """
         d1 = self.d1
         d2 = self.d2
@@ -1168,7 +1169,8 @@ class CompareMeans:
     def zconfint_diff(
         self, alpha=0.05, alternative="two-sided", usevar="pooled"
     ):
-        """confidence interval for the difference in means
+        """
+        confidence interval for the difference in means
 
         Parameters
         ----------
@@ -1197,7 +1199,6 @@ class CompareMeans:
         Notes
         -----
         The result is independent of the user specified ddof.
-
         """
         d1 = self.d1
         d2 = self.d2
@@ -1290,7 +1291,8 @@ def ttest_ind(
     weights=(None, None),
     value=0,
 ):
-    """ttest independent sample
+    """
+    ttest independent sample
 
     Convenience function that uses the classes and throws away the intermediate
     results,
@@ -1320,7 +1322,6 @@ def ttest_ind(
     value : float
         difference between the means under the Null hypothesis.
 
-
     Returns
     -------
     tstat : float
@@ -1329,7 +1330,6 @@ def ttest_ind(
         pvalue of the t-test
     df : int or float
         degrees of freedom used in the t-test
-
     """
     cm = CompareMeans(
         DescrStatsW(x1, weights=weights[0], ddof=0),
@@ -1345,7 +1345,8 @@ def ttest_ind(
 def ttost_ind(
     x1, x2, low, upp, usevar="pooled", weights=(None, None), transform=None
 ):
-    """test of (non-)equivalence for two independent samples
+    """
+    test of (non-)equivalence for two independent samples
 
     TOST: two one-sided t tests
 
@@ -1423,7 +1424,8 @@ def ttost_ind(
 
 
 def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
-    """test of (non-)equivalence for two dependent, paired sample
+    """
+    test of (non-)equivalence for two dependent, paired sample
 
     TOST: two one-sided t tests
 
@@ -1485,7 +1487,8 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
 def ztest(
     x1, x2=None, value=0, alternative="two-sided", usevar="pooled", ddof=1.0
 ):
-    """test for mean based on normal distribution, one or two samples
+    """
+    test for mean based on normal distribution, one or two samples
 
     In the case of two samples, the samples are assumed to be independent.
 
@@ -1571,7 +1574,8 @@ def zconfint(
     usevar="pooled",
     ddof=1.0,
 ):
-    """confidence interval based on normal distribution z-test
+    """
+    confidence interval based on normal distribution z-test
 
     Parameters
     ----------
@@ -1585,6 +1589,18 @@ def zconfint(
         In the two sample case, value is the difference between mean of x1 and
         mean of x2 under the Null hypothesis. The test statistic is
         `x1_mean - x2_mean - value`.
+    alpha : float
+        significance level for the confidence interval, coverage is
+        ``1-alpha``
+    alternative : str
+        This specifies the alternative hypothesis for the test that
+        corresponds to the confidence interval.
+        The alternative hypothesis, H1, has to be one of the following
+
+           'two-sided': H1: difference in means not equal to value (default)
+           'larger' :   H1: difference in means larger than value
+           'smaller' :  H1: difference in means smaller than value
+
     usevar : str, 'pooled'
         Currently, only 'pooled' is implemented.
         If ``pooled``, then the standard deviation of the samples is assumed to be
@@ -1594,6 +1610,11 @@ def zconfint(
         estimate. In the case of comparing means this is one, however it can
         be adjusted for testing other statistics (proportion, correlation)
 
+    See Also
+    --------
+    ztest
+    CompareMeans
+
     Notes
     -----
     checked only for 1 sample case
@@ -1602,12 +1623,6 @@ def zconfint(
 
     ``value`` shifts the confidence interval so it is centered at
     `x1_mean - x2_mean - value`
-
-    See Also
-    --------
-    ztest
-    CompareMeans
-
     """
     # usevar is not used, always pooled
     # mostly duplicate code from ztest
@@ -1638,7 +1653,8 @@ def zconfint(
 
 
 def ztost(x1, low, upp, x2=None, usevar="pooled", ddof=1.0):
-    """Equivalence test based on normal distribution
+    """
+    Equivalence test based on normal distribution
 
     Parameters
     ----------
@@ -1646,12 +1662,17 @@ def ztost(x1, low, upp, x2=None, usevar="pooled", ddof=1.0):
         one sample or first sample for 2 independent samples
     low, upp : float
         equivalence interval low < m1 - m2 < upp
-    x1 : array_like or None
+    x2 : array_like or None
         second sample for 2 independent samples test. If None, then a
         one-sample test is performed.
     usevar : str, 'pooled'
         If `pooled`, then the standard deviation of the samples is assumed to be
         the same. Only `pooled` is currently implemented.
+    ddof : int
+        Degrees of freedom used in the calculation of the variance of the
+        mean estimate. In the case of comparing means this is one, however
+        it can be adjusted for testing other statistics (proportion,
+        correlation).
 
     Returns
     -------

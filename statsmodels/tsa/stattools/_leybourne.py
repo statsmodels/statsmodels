@@ -7,9 +7,7 @@ from statsmodels.tsa.stattools._stattools import lagmat, pacf
 
 
 class LeybourneMcCabeStationarity:
-    """
-    Class wrapper for Leybourne-McCabe stationarity test
-    """
+    """Class wrapper for Leybourne-McCabe stationarity test"""
 
     def __init__(self):
         """
@@ -83,11 +81,11 @@ class LeybourneMcCabeStationarity:
 
         Returns
         -------
-        arparams : int
+        arparams : ndarray
             AR(1) coefficient plus constant
-        theta : int
+        theta : float
             MA(1) coefficient
-        olsfit.resid : ndarray
+        resid : ndarray
             residuals from second-stage regression
         """
         endog = np.diff(x, axis=0)
@@ -113,9 +111,9 @@ class LeybourneMcCabeStationarity:
 
     def _autolag(self, x):
         """
-        Empirical method for Leybourne-McCabe auto AR lag detection.
+        Empirical method for Leybourne-McCabe auto AR lag detection
         Set number of AR lags equal to the first PACF falling within the
-        95% confidence interval. Maximum nuber of AR lags is limited to
+        95% confidence interval. Maximum number of AR lags is limited to
         the smaller of 10 or 1/2 series length. Minimum is zero lags.
 
         Parameters
@@ -146,8 +144,10 @@ class LeybourneMcCabeStationarity:
         ----------
         x : array_like
             data series
-        arlags : int
-            number of autoregressive terms to include, default=None
+        arlags : int, optional
+            Number of autoregressive terms to include. If None, the number
+            of lags is selected using the empirical autolag procedure.
+            Default is 1.
         regression : {'c','ct'}
             Constant and trend order to include in regression
 
@@ -157,8 +157,8 @@ class LeybourneMcCabeStationarity:
         method : {'mle','ols'}
             Method used to estimate ARIMA(p, 1, 1) filter model
 
-            * 'mle' : condition sum of squares maximum likelihood
-            * 'ols' : two-stage least squares (default)
+            * 'mle' : condition sum of squares maximum likelihood (default)
+            * 'ols' : two-stage least squares
 
         varest : {'var94','var99'}
             Method used for residual variance estimation
@@ -185,7 +185,7 @@ class LeybourneMcCabeStationarity:
 
         Basic process is to create a filtered series which removes the AR(p)
         effects from the series under test followed by an auxiliary regression
-        similar to that of Kwiatkowski et. al. (1992). The AR(p) coefficients
+        similar to that of Kwiatkowski et al. (1992). The AR(p) coefficients
         are obtained by estimating an ARIMA(p, 1, 1) model. Two methods are
         provided for ARIMA estimation: MLE and two-stage least squares.
 
@@ -197,9 +197,9 @@ class LeybourneMcCabeStationarity:
 
         An empirical autolag procedure is provided. In this context, the number
         of lags is equal to the number of AR(p) terms used in the filtering
-        step. The number of AR(p) terms is set equal to the to the first PACF
-        falling within the 95% confidence interval. Maximum nuber of AR lags is
-        limited to 1/2 series length.
+        step. The number of AR(p) terms is set equal to the first PACF
+        falling within the 95% confidence interval. Maximum number of AR lags
+        is limited to 1/2 series length.
 
         References
         ----------
