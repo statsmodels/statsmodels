@@ -765,7 +765,7 @@ def test_bounds_test_simulation(case):
     )
     res = mod.fit()
     bounds_result = res.bounds_test(
-        case=case, asymptotic=False, seed=[1, 2, 3, 4], nsim=10_000
+        case=case, asymptotic=False, rng=[1, 2, 3, 4], nsim=10_000
     )
     assert (bounds_result.p_values >= 0.0).all()
     assert (bounds_result.p_values <= 1.0).all()
@@ -773,10 +773,10 @@ def test_bounds_test_simulation(case):
 
 
 @pytest.mark.parametrize(
-    "seed",
+    "rng",
     [None, np.random.RandomState(0), 0, [1, 2], np.random.default_rng([1, 2])],
 )
-def test_bounds_test_seed(seed):
+def test_bounds_test_rng(rng):
     mod = UECM(
         dane_data.lrm,
         3,
@@ -784,7 +784,7 @@ def test_bounds_test_seed(seed):
         {"lry": 1, "ibo": 3, "ide": 2},
     )
     res = mod.fit()
-    bounds_result = res.bounds_test(case=3, asymptotic=False, seed=seed, nsim=10_000)
+    bounds_result = res.bounds_test(case=3, asymptotic=False, rng=rng, nsim=10_000)
     assert (bounds_result.p_values >= 0.0).all()
     assert (bounds_result.p_values <= 1.0).all()
     assert (bounds_result.crit_vals > 0.0).all().all()
@@ -800,9 +800,7 @@ def test_bounds_test_simulate_order():
     res = mod.fit()
     bounds_result = res.bounds_test(3)
     assert "BoundsTestResult" in str(bounds_result)
-    bounds_result_sim = res.bounds_test(
-        3, asymptotic=False, nsim=10_000, seed=[1, 2, 3]
-    )
+    bounds_result_sim = res.bounds_test(3, asymptotic=False, nsim=10_000, rng=[1, 2, 3])
     assert_allclose(bounds_result.stat, bounds_result_sim.stat)
     assert (bounds_result_sim.p_values > bounds_result.p_values).all()
 

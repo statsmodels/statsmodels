@@ -565,6 +565,14 @@ def bootstrap(
 
     this works also with nrep=1
 
+    Parameters
+    ----------
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
     """
     # signature similar to kstest ?
     # delegate to fn ?
@@ -581,7 +589,11 @@ def bootstrap(
         n_batch = int(np.ceil(nrep / float(batch_size)))
         count = 0
         for _ in range(n_batch):
-            rvs = distr.rvs(args, size=(batch_size, nobs), random_state=rng)
+            try:
+                rvs = distr.rvs(args, size=(batch_size, nobs), rng=rng)
+            except TypeError:
+                # SciPy fallback path until SPEC-007
+                rvs = distr.rvs(args, size=(batch_size, nobs), random_state=rng)
             params = distr.fit_vec(rvs, axis=1)
             params = lmap(lambda x: np.expand_dims(x, 1), params)
             cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
@@ -590,7 +602,7 @@ def bootstrap(
         return count / float(n_batch * batch_size)
     else:
         # rvs = distr.rvs(args, **kwds)  # extension to distribution kwds ?
-        rvs = distr.rvs(args, size=(nrep, nobs), random_state=rng)
+        rvs = distr.rvs(args, size=(nrep, nobs), rng=rng)
         params = distr.fit_vec(rvs, axis=1)
         params = lmap(lambda x: np.expand_dims(x, 1), params)
         cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
@@ -641,6 +653,33 @@ class NewNorm:
 
     @deprecate_kwarg("random_state", "rng")
     def rvs(self, args, size, rng=None):
+        """
+        Random variates of the underlying normal distribution
+
+        Parameters
+        ----------
+        args : tuple
+            ``(loc, scale)`` parameters of the normal distribution.
+        size : int or tuple of ints
+            Output shape of the random sample.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            Passed directly to the underlying SciPy distribution as its
+            ``random_state`` argument. If `rng` is None, the global NumPy
+            singleton random state is used. If `rng` is an int or array of
+            ints, a new ``RandomState`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        ndarray
+            Random sample from the normal distribution.
+        """
         loc = args[0]
         scale = args[1]
         return loc + scale * distributions.norm.rvs(size=size, random_state=rng)

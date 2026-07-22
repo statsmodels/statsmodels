@@ -67,12 +67,12 @@ class TestSVAR:
         # this only checks that the methods work and produce the same result
         res1 = self.res1
         errband1 = res1.sirf_errband_mc(
-            orth=False, repl=50, steps=10, signif=0.05, seed=987123, burn=100, cum=False
+            orth=False, repl=50, steps=10, signif=0.05, rng=987123, burn=100, cum=False
         )
 
         irf = res1.irf()
         errband2 = irf.errband_mc(
-            orth=False, svar=True, repl=50, signif=0.05, seed=987123, burn=100
+            orth=False, svar=True, repl=50, signif=0.05, rng=987123, burn=100
         )
         # Windows precision limits require non-zero atol
         atol = 1e-6 if PLATFORM_WIN else 1e-8

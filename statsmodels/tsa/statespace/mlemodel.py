@@ -27,6 +27,7 @@ from statsmodels.tools.numdiff import (
     approx_fprime_cs,
     approx_hess_cs,
 )
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ModelWarning, PrecisionWarning, ValueWarning
 from statsmodels.tools.tools import Bunch, pinv_extended
 import statsmodels.tsa.base.prediction as pred
@@ -2321,14 +2322,16 @@ class MLEModel(tsbase.TimeSeriesModel):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        rng : {None, int, Generator, RandomState}, optional
-            If `seed` is None (or `np.random`), the
-            class:``~numpy.random.RandomState`` singleton is used.
-            If `seed` is an int, a new class:``~numpy.random.RandomState``
-            instance is used, seeded with `seed`.
-            If `seed` is already a class:``~numpy.random.Generator`` or
-            class:``~numpy.random.RandomState`` instance then that instance is
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None or an int, a new ``Generator`` is created
+            (seeded with `rng` if an int is given). If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
             used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -4175,13 +4178,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        rng : {None, int, Generator, RandomState}, optional
-            If `seed` is None (or `np.random`), the
-            class:``~numpy.random.RandomState`` singleton is used.
-            If `seed` is an int, a new class:``~numpy.random.RandomState``
-            instance is used, seeded with `seed`.
-            If `seed` is already a class:``~numpy.random.Generator`` or
-            class:``~numpy.random.RandomState`` instance then that instance is
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None or an int, a new ``Generator`` is created
+            (seeded with `rng` if an int is given). If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
             used.
 
         Returns
@@ -4217,10 +4217,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if iloc > self.nobs:
             raise ValueError("Cannot anchor simulation outside of the sample.")
 
-        # GH 9162
-        from statsmodels.tsa.statespace import simulation_smoother
-
-        rng = simulation_smoother.check_random_state(rng)
+        rng = check_random_state(rng)
 
         # Setup the initial state
         if initial_state is None:

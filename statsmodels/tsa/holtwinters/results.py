@@ -406,12 +406,20 @@ class HoltWintersResults(Results):
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        rng : int, np.random.Generator or np.random.RandomState, optional
-            A seed for a numpy.random.RandomState or a
-            ``np.random.RandomState`` or ``np.random.Generator`` object.
-            Only used if `random_errors` is ``None`` or ``"bootstrap"``.
-            Default value of ``None`` uses the singleton RandomState object
-            provided by NumPy.
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int, a new
+            ``RandomState`` instance is created, seeded with `rng`; this
+            integer-seeding behavior is deprecated and will change to
+            creating a ``Generator`` in a future release. If `rng` is
+            already a ``Generator`` or ``RandomState`` instance, that
+            instance is used. Only used if `random_errors` is ``None`` or
+            ``"bootstrap"``.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------

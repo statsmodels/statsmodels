@@ -1360,7 +1360,7 @@ def test_get_distribution():
 
     # Get a realization
     dist = m.get_distribution(pa, scale, None)
-    yr = dist.rvs(0, random_state=rs)
+    yr = dist.rvs(0, rng=rs)
 
     # Check the overall variance
     v = (np.dot(exog_re, cov_re) * exog_re).sum(1).mean()

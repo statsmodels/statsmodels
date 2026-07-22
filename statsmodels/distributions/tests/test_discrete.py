@@ -2,6 +2,7 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 from scipy import stats
 from scipy.stats import nbinom, poisson
 
@@ -296,7 +297,9 @@ class CheckDiscretized:
 
         nobs = 2000
         rs = np.random.RandomState(987146)
-        xx = dp.rvs(*paramd, size=nobs, random_state=rs)
+        # scipy method, so use random_state until they implement SPEC-007
+        with pytest.warns(FutureWarning):
+            xx = dp.rvs(*paramd, size=nobs, random_state=rs)
         # check that we go a non-trivial rvs
         assert len(xx) == nobs
         assert xx.var() > 0.001
@@ -328,7 +331,8 @@ class CheckDiscretized:
         # Todo results method
         dfr = mod.get_distr(res.params)
         nobs_rvs = 500
-        rvs = dfr.rvs(size=nobs_rvs, random_state=rs)
+        with pytest.warns(FutureWarning):
+            rvs = dfr.rvs(size=nobs_rvs, random_state=rs)
         # TypeError: Cannot cast array data from dtype('int64') to
         # dtype('int32') according to the rule 'safe'.
         # To fix this, change the dtype of rvs to int32 so that it

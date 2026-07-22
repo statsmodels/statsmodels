@@ -45,10 +45,12 @@ class RegressionFDR:
     method : str
         The approach used to assess and control FDR, currently
         must be 'knockoff'.
-    rng : int, np.random.RandomState or np.random.Generator, optional
-        Random number generator or seed for constructing the knockoff
-        design matrix.  If None, the NumPy singleton RandomState instance
-        is used.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
     **kwargs
         Additional keyword arguments.  Currently supports
         `design_method`, the approach used to construct the augmented

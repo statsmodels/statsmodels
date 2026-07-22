@@ -1510,7 +1510,21 @@ class Equivalence(CovStruct):
         self.pairs = pairs
 
     def initialize(self, model, rng=None):
+        """
+        Called by GEE, used by implementations that need additional
+        setup prior to running `fit`.
 
+        Parameters
+        ----------
+        model : GEE class
+            A reference to the parent GEE class instance.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        """
         super().initialize(model)
 
         if self.model.weights is not None:

@@ -244,6 +244,32 @@ class ClaytonCopula(ArchimedeanCopula):
 
     @deprecate_kwarg("random_state", "rng")
     def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        sample : array_like (nobs, k_dim)
+            Sample from the copula.
+        """
         rng = check_random_state(rng)
         (th,) = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
@@ -315,6 +341,32 @@ class FrankCopula(ArchimedeanCopula):
 
     @deprecate_kwarg("random_state", "rng")
     def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        sample : array_like (nobs, k_dim)
+            Sample from the copula.
+        """
         rng = check_random_state(rng)
         (th,) = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
@@ -443,6 +495,32 @@ class GumbelCopula(ArchimedeanCopula):
 
     @deprecate_kwarg("random_state", "rng")
     def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        sample : array_like (nobs, k_dim)
+            Sample from the copula.
+        """
         rng = check_random_state(rng)
         (th,) = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))

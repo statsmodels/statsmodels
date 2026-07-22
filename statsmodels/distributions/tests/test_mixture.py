@@ -23,7 +23,7 @@ class TestMixtureDistributions:
                 dict(loc=-1, scale=0.5, random_state=rs),
                 dict(loc=1, scale=0.5, random_state=rs),
             ),
-            random_state=rs,
+            rng=rs,
         )
         npt.assert_almost_equal(
             np.array([res.std(), res.mean(), res.var()]),
@@ -110,7 +110,7 @@ class TestMixtureDistributions:
                 dict(loc=1, scale=0.5, random_state=rs),
                 dict(loc=-1, scale=0.5, random_state=rs),
             ),
-            random_state=rs,
+            rng=rs,
         )
         npt.assert_almost_equal(
             res,

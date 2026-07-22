@@ -853,9 +853,17 @@ class MVNormal(MVElliptical):
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
-        rng : int, np.random.RandomState, np.random.Generator, optional
-            The source of randomness used to produce the variates. If None,
-            uses the singleton RandomState provided by NumPy.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -1054,14 +1062,17 @@ class MVT(MVElliptical):
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
-        rng : {None, int, Generator, RandomState}, optional
-            If `rng` is None (or `np.random`), the
-            class:``~numpy.random.RandomState`` singleton is used.
-            If `rng` is an int, a new class:``~numpy.random.RandomState``
-            instance is used, seeded with `rng`.
-            If `rng` is already a class:``~numpy.random.Generator`` or
-            class:``~numpy.random.RandomState`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -1081,9 +1092,7 @@ class MVT(MVElliptical):
         """
         from .multivariate import multivariate_t_rvs
 
-        return multivariate_t_rvs(
-            self.mean, self.sigma, df=self.df, n=size, random_state=rng
-        )
+        return multivariate_t_rvs(self.mean, self.sigma, df=self.df, n=size, rng=rng)
 
     def logpdf(self, x):
         """logarithm of probability density function

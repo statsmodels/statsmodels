@@ -1079,9 +1079,12 @@ def simulate_power_equivalence_oneway(
         ``["unequal", "equal", "bf"]`` is used.
     margin_type : "f2" or "wellek"
         Type of effect size used for equivalence margin.
-    rng : {None, int, `numpy.random.Generator`}
-        Random number generator or seed used to simulate the samples. See
-        `statsmodels.tools.rng_qrng.check_random_state`.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
@@ -1107,7 +1110,7 @@ def simulate_power_equivalence_oneway(
     rng = check_random_state(rng)
     for _ in range(k_mc):
         y0, y1, y2, y3 = (
-            m + std * rng.randn(n) for (n, m, std) in zip(nobs, means, stds)
+            m + std * rng.standard_normal(n) for (n, m, std) in zip(nobs, means, stds)
         )
 
         res_i = []

@@ -1943,7 +1943,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
         denom = np.sum(W, axis)
         if np.any(denom <= 0):
             return mu
-        nmu = np.sum(W * a, axis) / denom   
+        nmu = np.sum(W * a, axis) / denom
         if np.all(np.less(np.abs(mu - nmu), scale * tol)):
             return nmu
         else:

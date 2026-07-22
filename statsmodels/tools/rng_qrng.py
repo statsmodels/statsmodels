@@ -10,7 +10,7 @@ def check_random_state(seed=None, deprecated=False, warn=True):
 
     Parameters
     ----------
-    seed : {None, int, array_like[ints], numpy.random.Generator, numpy.random.RandomState, scipy.stats.qmc.QMCEngine}, optional
+    seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState, scipy.stats.qmc.QMCEngine}, optional
         If `seed` is None fresh, unpredictable entropy will be pulled
         from the OS and `numpy.random.Generator` is used.
         If `seed` is an int or ``array_like[ints]``, a new ``Generator``
@@ -37,25 +37,18 @@ def check_random_state(seed=None, deprecated=False, warn=True):
     """
     if hasattr(stats, "qmc") and isinstance(seed, stats.qmc.QMCEngine):
         return seed
-    elif isinstance(seed, np.random.RandomState):
-        return seed
-    elif isinstance(seed, np.random.Generator):
+    elif isinstance(seed, (np.random.RandomState, np.random.Generator)):
         return seed
     elif seed is not None:
         try:
             seed = int(seed)
-        except ValueError:
-            try:
-                seed = np.array(seed)
-                if not np.issubdtype(seed.dtype, np.integer):
-                    raise TypeError(
-                        "When seed is array-like it must contain integers"
-                    ) from None
-            except Exception as exc_1:
+        except (TypeError, ValueError):
+            seed = np.asarray(seed)
+            if not np.issubdtype(seed.dtype, np.integer):
                 raise TypeError(
-                    "When creating a random number generator from a value, the seed "
-                    "must either be an integer or array-like of ints"
-                ) from exc_1
+                    "When creating a random number generator from a value, the "
+                    "seed must either be an integer or array-like of ints"
+                ) from None
         if deprecated:
             if warn:
                 import warnings

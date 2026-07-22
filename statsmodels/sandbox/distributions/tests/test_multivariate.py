@@ -163,7 +163,7 @@ class TestMVDistributions:
         mvt1 = MVT((0, 0), 1, 1)
         mvt1.logpdf(np.array([1.0, 1.0])) - (-3.48579549941151)  # decimal=16
 
-        rvs = mvt.rvs(100000, random_state=rs)
+        rvs = mvt.rvs(100000, rng=rs)
         assert_almost_equal(np.cov(rvs, rowvar=False), mvt.cov, decimal=1)
 
         mvt31 = MVT(mu3, cov3, 1)

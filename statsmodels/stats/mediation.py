@@ -306,7 +306,10 @@ class Mediation:
         endog = model.endog
         exog = model.exog
         if boot:
-            ii = rng.randint(0, len(endog), len(endog))
+            if isinstance(rng, np.random.RandomState):
+                ii = rng.randint(0, len(endog), len(endog))
+            else:
+                ii = rng.integers(0, len(endog), len(endog))
             endog = endog[ii]
             exog = exog[ii, :]
         outcome_model = klass(endog, exog, **init_kwargs)
@@ -322,11 +325,12 @@ class Mediation:
             Either 'parametric' or 'bootstrap'.
         n_rep : int
             The number of simulation replications.
-        rng : int, np.random.RandomState or np.random.Generator, optional
-            The rng to use during parameter simulation. If None, uses
-            the singleton RandomState provided by NumPy. If an int, uses the
-            ``default_rng``. If a RandomState instance or a Generator instance,
-            uses this instance.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------
@@ -378,7 +382,10 @@ class Mediation:
                 if hasattr(mediator_result, "scale"):
                     kwargs["scale"] = mediator_result.scale
                 gen = self.mediator_model.get_distribution(mediation_params, **kwargs)
-                potential_mediator = gen.rvs(mex.shape[0], random_state=rng)
+                try:
+                    potential_mediator = gen.rvs(mex.shape[0], rng=rng)
+                except TypeError:
+                    potential_mediator = gen.rvs(mex.shape[0], random_state=rng)
 
                 for te in 0, 1:
                     oex = self._get_outcome_exog(te, potential_mediator)

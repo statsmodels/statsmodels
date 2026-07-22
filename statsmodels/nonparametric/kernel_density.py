@@ -29,6 +29,8 @@ References
 """
 
 # TODO: make default behavior efficient=True above a certain n_obs
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 
 from . import kernels
@@ -79,7 +81,7 @@ class KDEMultivariate(GenericKDE):
 
     defaults : EstimatorSettings instance, optional
         The default values for (efficient) bandwidth estimation.
-    seed : {int, Generator, RandomState}, optional
+    rng : {int, Generator, RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -114,7 +116,8 @@ class KDEMultivariate(GenericKDE):
     array([ 0.39967419,  0.38423292])
     """
 
-    def __init__(self, data, var_type, bw=None, defaults=None, *, seed=None):
+    @deprecate_kwarg("seed", "rng")
+    def __init__(self, data, var_type, bw=None, defaults=None, *, rng=None):
         self.var_type = var_type
         self.k_vars = len(self.var_type)
         self.data = _adjust_shape(data, self.k_vars)
@@ -127,7 +130,7 @@ class KDEMultivariate(GenericKDE):
             )
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
-        self._generator = initialize_generator(seed)
+        self._generator = initialize_generator(rng)
         if not self.efficient:
             self.bw = self._compute_bw(bw)
         else:
@@ -412,7 +415,7 @@ class KDEMultivariateConditional(GenericKDE):
 
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
-    seed : {int, Generator, RandomState}, optional
+    rng : {int, Generator, RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -447,8 +450,9 @@ class KDEMultivariateConditional(GenericKDE):
     array([ 0.41223484,  0.40976931])
     """
 
+    @deprecate_kwarg("seed", "rng")
     def __init__(
-        self, endog, exog, dep_type, indep_type, bw, defaults=None, *, seed=None
+        self, endog, exog, dep_type, indep_type, bw, defaults=None, *, rng=None
     ):
         self.dep_type = dep_type
         self.indep_type = indep_type
@@ -460,7 +464,7 @@ class KDEMultivariateConditional(GenericKDE):
         self.nobs, self.k_dep = np.shape(self.endog)
         self.data = np.column_stack((self.endog, self.exog))
         self.k_vars = np.shape(self.data)[1]
-        self._generator = initialize_generator(seed)
+        self._generator = initialize_generator(rng)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
         if not self.efficient:

@@ -34,12 +34,12 @@ class BayesGaussMI:
     cov_prior_df : positive float
         The degrees of freedom of the inverse Wishart prior
         distribution for the covariance matrix.  Defaults to 1.
-    rng : {None, int, array_like[int], Generator, RandomState}, optional
-        If `rng` is None, fresh, unpredictable entropy is pulled from
-        the OS and a `numpy.random.Generator` is used. If `rng` is an
-        int or array_like[ints], a new Generator instance is used,
-        seeded with `rng`. If `rng` is already a Generator or
-        RandomState instance, then that instance is used.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Examples
     --------

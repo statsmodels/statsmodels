@@ -44,6 +44,33 @@ class EllipticalCopula(Copula):
 
     @deprecate_kwarg("random_state", "rng")
     def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple
+            Arguments for copula parameters. Not used by elliptical copulas,
+            which take their parameters as attributes.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            Passed directly to the underlying SciPy distribution as its
+            ``random_state`` argument. If `rng` is None, the global NumPy
+            singleton random state is used. If `rng` is an int or array of
+            ints, a new ``RandomState`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        sample : array_like (nobs, k_dim)
+            Sample from the copula.
+        """
         self._handle_args(args)
         x = self.distr_mv.rvs(size=nobs, random_state=rng)
         return self.distr_uv.cdf(x)
@@ -57,6 +84,34 @@ class EllipticalCopula(Copula):
 
     @deprecate_kwarg("random_state", "rng")
     def cdf(self, u, args=(), rng=None):
+        """Evaluate the cdf of the copula.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+        args : tuple
+            Arguments for copula parameters. Not used by elliptical copulas,
+            which take their parameters as attributes.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            Passed directly to the underlying SciPy distribution as its
+            ``random_state``/``rng`` argument, if supported. If `rng` is
+            None, the global NumPy singleton random state is used. If `rng`
+            is an int or array of ints, a new ``RandomState`` is created,
+            seeded with `rng`. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        cdf : ndarray
+            Copula cdf evaluated at points ``u``.
+        """
         self._handle_args(args)
         ppf = self.distr_uv.ppf(u)
         try:

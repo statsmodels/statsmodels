@@ -85,10 +85,12 @@ class OaxacaBlinder:
         See linear_model.RegressionResults.get_robustcov_results for a
         description of the required keywords for alternative covariance
         estimators.
-    rng : int, np.random.RandomState, np.random.Generator, optional
-        The source of randomness to use in variable calculation. If None,
-        uses the singleton RandomState provided by NumPy. If an int,
-        creates a new Generator.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Notes
     -----
@@ -234,7 +236,10 @@ class OaxacaBlinder:
             exog = self.exog
             amount = len(endog)
 
-            samples = self.rng.randint(0, high=amount, size=amount)
+            if isinstance(self.rng, np.random.RandomState):
+                samples = self.rng.randint(0, high=amount, size=amount)
+            else:
+                samples = self.rng.integers(0, high=amount, size=amount)
             endog = endog[samples]
             exog = exog[samples]
             neumark = np.delete(exog, bifurcate, axis=1)
