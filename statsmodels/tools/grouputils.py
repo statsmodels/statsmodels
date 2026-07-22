@@ -77,16 +77,33 @@ def combine_indices(groups, prefix="", sep=".", return_labels=False):
 # written for and used in try_covariance_grouploop.py
 def group_sums(x, group, use_bincount=True):
     """
-    Simple bincount version, again
+    Sum ``x`` within integer groups.
 
-    group : ndarray, integer
-        assumed to be consecutive integers
+    Parameters
+    ----------
+    x : array_like
+        Data of shape ``(nobs,)`` or ``(nobs, n_features)``. Higher-dimensional
+        ``x`` is only supported when ``use_bincount=False``.
+    group : array_like of non-negative int
+        Non-negative integer group labels of shape ``(nobs,)``. For predictable
+        indexing (e.g. ``result[group]``), groups should be coded as
+        ``0, 1, ..., n_groups-1``.
+    use_bincount : bool, default True
+        Use ``np.bincount`` when True, otherwise a pure-Python group loop.
+        The bincount path expects non-negative, reasonably consecutive codes
+        and may re-label via ``pd.factorize`` when ``max(group)`` is large.
 
-    no dtype checking because I want to raise in that case
+    Returns
+    -------
+    ndarray
+        Shape ``(n_groups, n_features)``. 1-d ``x`` is treated as one feature
+        and returns shape ``(n_groups, 1)``.
 
-    uses loop over columns of x
-
-    for comparison, simple python loop
+    Notes
+    -----
+    Both code paths previously disagreed on orientation (``use_bincount``
+    returned ``(n_features, n_groups)``). They now both return
+    ``(n_groups, n_features)`` so indexing by group id works (GH9921).
     """
     x = np.asarray(x)
     group = np.asarray(group).squeeze()
@@ -101,12 +118,13 @@ def group_sums(x, group, use_bincount=True):
         if np.max(group) > 2 * x.shape[0]:
             group = pd.factorize(group)[0]
 
+        # column-wise bincount yields (n_features, n_groups); transpose
         return np.array(
             [
                 np.bincount(group, weights=x[:, col])
                 for col in range(x.shape[1])
             ]
-        )
+        ).T
     else:
         uniques = np.unique(group)
         result = np.zeros([len(uniques)] + list(x.shape[1:]))
@@ -251,10 +269,21 @@ class Group:
         return group_sums(x, self.group_int, use_bincount=use_bincount)
 
     def group_demean(self, x, use_bincount=True):
-        nobs = float(len(x))
-        means_g = group_sums(x / nobs, self.group_int,
-                             use_bincount=use_bincount)
-        x_demeaned = x - means_g[self.group_int]  # check reverse_index?
+        x = np.asarray(x)
+        was_1d = x.ndim == 1
+        if was_1d:
+            x = x[:, None]
+        sums_g = group_sums(x, self.group_int, use_bincount=use_bincount)
+        # group_sums returns (n_groups, n_features)
+        counts = np.bincount(self.group_int)
+        # Defensive: bincount may include zero-count bins for sparse codes.
+        # group_int from combine_indices should not contain empty labels.
+        counts = np.maximum(counts, 1)
+        means_g = sums_g / counts[:, None]
+        x_demeaned = x - means_g[self.group_int]
+        if was_1d:
+            x_demeaned = x_demeaned[:, 0]
+            means_g = means_g[:, 0]
         return x_demeaned, means_g
 
 

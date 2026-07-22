@@ -580,7 +580,7 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
     """
     # needs groupsums
 
-    x_group_sums = group_sums(x, time).T  # TODO: transpose return in grou_sum
+    x_group_sums = group_sums(x, time)  # (n_groups, n_features)
 
     return S_hac_simple(x_group_sums, nlags=nlags, weights_func=weights_func)
 
@@ -606,7 +606,7 @@ def S_crosssection(x, group):
     S : ndarray, (k_vars, k_vars)
         inner covariance matrix for sandwich
     """
-    x_group_sums = group_sums(x, group).T  # TODO: why transposed
+    x_group_sums = group_sums(x, group)  # (n_groups, n_features)
 
     return S_white_simple(x_group_sums)
 

@@ -1,7 +1,7 @@
 from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 
 import numpy as np
-from numpy.testing import assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 from scipy import sparse
@@ -718,7 +718,7 @@ def test_group_sums():
     assert isinstance(
         group_sums(
             np.arange(len(g) * 3 * 2).reshape(len(g), 3, 2), g, use_bincount=False
-        ).T,
+        ),
         np.ndarray,
     )
     assert isinstance(
@@ -729,6 +729,27 @@ def test_group_sums():
         group_sums(np.arange(len(g) * 3 * 2).reshape(len(g), 3, 2)[:, :, 1], g),
         np.ndarray,
     )
+
+
+def test_group_sums_orientation_consistent():
+    """Both use_bincount paths return (n_groups, n_features) (GH9921)."""
+    g = np.array([0, 0, 1, 2, 1, 1, 2, 0])
+    x = np.arange(len(g) * 3).reshape(len(g), 3, order="F")
+    a = group_sums(x, g, use_bincount=True)
+    b = group_sums(x, g, use_bincount=False)
+    assert a.shape == b.shape == (3, 3)  # 3 groups (0,1,2), 3 features
+    assert_allclose(a, b)
+
+
+def test_group_demean_default():
+    """group_demean works with default use_bincount and demeans by group size (GH9921)."""
+    g = np.array([0, 0, 1, 1, 1, 2, 2, 2])
+    x = np.array([1.0, 3.0, 1.0, 2.0, 3.0, 10.0, 20.0, 30.0])
+    demeaned, means = Group(g).group_demean(x)
+    # group means: 0->2, 1->2, 2->20
+    expected = x - np.array([2, 2, 2, 2, 2, 20, 20, 20])
+    assert_allclose(demeaned, expected)
+    assert_allclose(means, [2.0, 2.0, 20.0])
 
 
 @pytest.mark.smoke
