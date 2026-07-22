@@ -239,24 +239,27 @@ def hdrboxplot(
     use_brute : bool
         Use the brute force optimizer instead of the default differential
         evolution to find the curves. Default is False.
-    rng : {None, int, np.random.RandomState}
+    rng : {None, int, np.random.Generator, np.random.RandomState}, optional
         Value to pass to scipy.optimize.differential_evolution as its `seed`
-        argument. Can be an integer or RandomState instance. If None, then
-        the default RandomState provided by np.random is used.
-    seed : {None, int, np.random.RandomState}, optional
+        argument. If an int, a new Generator seeded with that value is used
+        by scipy. If a Generator or RandomState instance, that instance is
+        used directly. If None, then the default RandomState provided by
+        np.random is used.
+    seed : {None, int, np.random.Generator, np.random.RandomState}, optional
         .. deprecated:: 0.15
 
            seed has been deprecated. In-line with SPEC-007, use
            rng for passing a random number generator or seed.
-    kernel_rng : {int, Generator, RandomState}, optional
-        A seed to use for the kernel density. If None, will use the global RandomState.
+    kernel_rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        A random number generator or seed to use for the kernel density. If
+        None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
 
             In release 0.17.0 or after January 2028, whichever comes sooner,
             using None will initialize a new numpy.random.default_rng using
             system entropy.
-    kernel_seed : {int, Generator, RandomState}, optional
+    kernel_seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
         .. deprecated:: 0.15
 
            kernel_seed has been deprecated. In-line with SPEC-007, use
@@ -439,10 +442,12 @@ def hdrboxplot(
         use_brute : bool
             Use the brute force optimizer instead of the default differential
             evolution to find the curves. Default is False.
-        rng : {None, int, np.random.RandomState}
+        rng : {None, int, np.random.Generator, np.random.RandomState}, optional
             Value to pass to scipy.optimize.differential_evolution as its
-            `seed` argument. Can be an integer or RandomState instance. If
-            None, then the default RandomState provided by np.random is used.
+            `seed` argument. If an int, a new Generator seeded with that
+            value is used by scipy. If a Generator or RandomState instance,
+            that instance is used directly. If None, then the default
+            RandomState provided by np.random is used.
 
         Returns
         -------

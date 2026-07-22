@@ -48,10 +48,10 @@ class PanelSample:
         arguments for the corr_structure
     scale : float
         scale of noise, standard deviation of normal distribution
-    rng : None or int
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
         If `rng` is given, then this is used to create the random numbers for
         the sample.
-    seed : None or int, optional
+    seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
         .. deprecated:: 0.15
 
            seed has been deprecated. In-line with SPEC-007, use

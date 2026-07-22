@@ -29,6 +29,8 @@ References
 """
 
 # TODO: make default behavior efficient=True above a certain n_obs
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 
 from . import kernels
@@ -42,9 +44,6 @@ from ._kernel_base import (
 )
 
 __all__ = ["EstimatorSettings", "KDEMultivariate", "KDEMultivariateConditional"]
-
-from ..compat import pytest
-from ..compat.pandas import deprecate_kwarg
 
 
 class KDEMultivariate(GenericKDE):

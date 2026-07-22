@@ -21,6 +21,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
 from statsmodels.tools.docstring_helpers import Appender, Substitution
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.validation import (
     array_like,
@@ -2429,12 +2430,7 @@ def _pss_simulate(
     nsim: int,
     rng: int | Sequence[int] | np.random.RandomState | np.random.Generator | None,
 ) -> tuple[pd.DataFrame, pd.Series]:
-    rs: np.random.RandomState | np.random.Generator
-    if not isinstance(rng, np.random.RandomState):
-        rs = np.random.default_rng(rng)
-    else:
-        assert isinstance(rng, np.random.RandomState)
-        rs = rng
+    rs: np.random.RandomState | np.random.Generator = check_random_state(rng)
 
     def _vectorized_ols_resid(rhs, lhs):
         rhs_t = np.transpose(rhs, [0, 2, 1])

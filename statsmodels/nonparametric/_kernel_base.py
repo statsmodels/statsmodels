@@ -11,6 +11,8 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 try:
     import joblib
 
@@ -140,7 +142,11 @@ def _compute_subset(
 
         var_type = class_vars[0]
         sub_model = KDEMultivariate(
-            sub_data, var_type, bw=bw, defaults=EstimatorSettings(efficient=False), rng=generator
+            sub_data,
+            var_type,
+            bw=bw,
+            defaults=EstimatorSettings(efficient=False),
+            rng=generator,
         )
     elif class_type == "KDEMultivariateConditional":
         from .kernel_density import KDEMultivariateConditional
@@ -767,18 +773,19 @@ def gpke(
 
 
 def initialize_generator(
-    seed: None | int | np.random.RandomState | np.random.Generator,
+    entropy: None | int | np.random.RandomState | np.random.Generator,
 ) -> np.random.Generator | np.random.RandomState:
     """
     Handle seed transformation to a NumPy random generator object
 
     Parameters
     ----------
-    entropy : {int, Generator, RandomState, None}, optional
+    entropy : {None, int, array_like[int], Generator, RandomState}, optional
         If an initialized NumPy random Generator or an initialized RandomState,
-        the object is returned unchanged. If it is an integer, the value is
-        passed ot numpy.random.default_rng. If None, the functions will continue
-        to use the legacy singleton RandomState.
+        the object is returned unchanged. If it is an integer or array_like of
+        integers, the value is used to seed a new numpy.random.default_rng. If
+        None, the functions will continue to use the legacy singleton
+        RandomState.
 
         .. deprecated:: 0.15.0
 
@@ -786,14 +793,12 @@ def initialize_generator(
             using None will initialize a new numpy.random.default_rng using
             system entropy.
 
-
     Returns
     -------
-    generator: {RandomState, BitGenerator}
-
+    generator: {Generator, RandomState}
         The object that is used for random number generation.
     """
-    if seed is None:
+    if entropy is None:
         import warnings
 
         warnings.warn(
@@ -804,8 +809,4 @@ def initialize_generator(
             stacklevel=3,
         )
         return np.random.mtrand._rand
-    elif isinstance(seed, int):
-        return np.random.default_rng(seed)
-    elif not isinstance(seed, (np.random.Generator, np.random.RandomState)):
-        raise TypeError("Seed must be a Generator, RandomState, integer or None ")
-    return seed
+    return check_random_state(entropy)

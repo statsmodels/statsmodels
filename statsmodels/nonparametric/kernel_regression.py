@@ -29,6 +29,8 @@ References
 """
 
 # TODO: make default behavior efficient=True above a certain n_obs
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import copy
 import warnings
 
@@ -49,8 +51,6 @@ from ._kernel_base import (
 )
 
 __all__ = ["KernelCensoredReg", "KernelReg"]
-
-from ..compat.pandas import deprecate_kwarg
 
 
 class KernelReg(GenericKDE):

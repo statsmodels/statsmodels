@@ -4,13 +4,13 @@ State Space Representation, Kalman Filter, Smoother, and Simulation Smoother
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
 from statsmodels.compat.pandas import deprecate_kwarg
 
-import numbers
 import warnings
 
 import numpy as np
+
+from statsmodels.tools.rng_qrng import check_random_state
 
 from . import tools
 from .cfa_simulation_smoother import CFASimulationSmoother
@@ -19,34 +19,6 @@ from .kalman_smoother import KalmanSmoother
 SIMULATION_STATE = 0x01
 SIMULATION_DISTURBANCE = 0x04
 SIMULATION_ALL = SIMULATION_STATE | SIMULATION_DISTURBANCE
-
-
-# Based on scipy.states._qmc.check_random_state
-def check_random_state(seed=None):
-    """
-    Turn `seed` into a `numpy.random.Generator` instance
-
-    Parameters
-    ----------
-    seed : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
-        If `seed` is None or an int, a new ``Generator`` is created
-        (seeded with `seed` if an int is given). If `seed` is already a
-        ``Generator`` or ``RandomState`` instance, that instance is
-        used.
-
-    Returns
-    -------
-    seed : {`numpy.random.Generator`, `numpy.random.RandomState`}
-        Random number generator.
-    """
-    if seed is None or isinstance(seed, (numbers.Integral, np.integer)):
-        return np.random.default_rng(seed)
-    elif isinstance(seed, (np.random.RandomState, np.random.Generator)):
-        return seed
-    else:
-        raise ValueError(
-            f"{seed!r} cannot be used to seed a numpy.random.Generator instance"
-        )
 
 
 class SimulationSmoother(KalmanSmoother):

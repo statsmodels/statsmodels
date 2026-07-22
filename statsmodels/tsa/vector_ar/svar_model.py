@@ -532,12 +532,12 @@ class SVAR(tsbase.TimeSeriesModel):
 
     def check_order(self, J):
         if np.size(J, axis=0) < np.size(J, axis=1):
-            raise ValueError("Order condition not met: " "solution may not be unique")
+            raise ValueError("Order condition not met: solution may not be unique")
 
     def check_rank(self, J):
         rank = np.linalg.matrix_rank(J)
         if rank < np.size(J, axis=1):
-            raise ValueError("Rank condition not met: " "solution may not be unique.")
+            raise ValueError("Rank condition not met: solution may not be unique.")
 
 
 class SVARProcess(VARProcess):

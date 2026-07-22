@@ -27,6 +27,7 @@ from statsmodels.tools.numdiff import (
     approx_fprime_cs,
     approx_hess_cs,
 )
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ModelWarning, PrecisionWarning, ValueWarning
 from statsmodels.tools.tools import Bunch, pinv_extended
 import statsmodels.tsa.base.prediction as pred
@@ -4216,10 +4217,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if iloc > self.nobs:
             raise ValueError("Cannot anchor simulation outside of the sample.")
 
-        # GH 9162
-        from statsmodels.tsa.statespace import simulation_smoother
-
-        rng = simulation_smoother.check_random_state(rng)
+        rng = check_random_state(rng)
 
         # Setup the initial state
         if initial_state is None:

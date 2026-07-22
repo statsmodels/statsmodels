@@ -588,7 +588,7 @@ class TestKernelReg(KernelRegressionTestBase):
         sig_var12_3 = model_3.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
         assert sig_var12_2 == sig_var12_3
 
-        with pytest.raises(TypeError, match="Seed must be a"):
+        with pytest.raises(TypeError, match="must either be an integer"):
             nparam.KernelReg(
                 endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, rng="a"
             )
