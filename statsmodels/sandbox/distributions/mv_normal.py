@@ -1082,9 +1082,7 @@ class MVT(MVElliptical):
         """
         from .multivariate import multivariate_t_rvs
 
-        return multivariate_t_rvs(
-            self.mean, self.sigma, df=self.df, n=size, random_state=rng
-        )
+        return multivariate_t_rvs(self.mean, self.sigma, df=self.df, n=size, rng=rng)
 
     def logpdf(self, x):
         """logarithm of probability density function

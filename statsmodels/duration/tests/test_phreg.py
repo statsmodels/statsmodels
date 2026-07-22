@@ -396,7 +396,7 @@ class TestPHReg:
         dist.mean()
         dist.var()
         dist.std()
-        dist.rvs(random_state=rs)
+        dist.rvs(rng=rs)
 
     def test_fit_regularized(self):
 

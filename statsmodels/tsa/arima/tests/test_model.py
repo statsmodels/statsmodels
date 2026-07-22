@@ -464,7 +464,7 @@ def test_alternative_estimators_seasonal_differencing():
         mod_hr.fit(method="hannan_rissanen")
     except Exception as exc:
         pytest.fail(
-            f"hannan_rissanen failed on seasonal-differencing-only model:" f" {exc}"
+            f"hannan_rissanen failed on seasonal-differencing-only model: {exc}"
         )
 
     # yule_walker: AR-only model with seasonal differencing

@@ -337,7 +337,7 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False, rng=
         try:
             # This is a hack because some copula CDFs are approximate and use
             # random variates in their calculation, while most do not.
-            cdfg = copula.cdf(g.x_flat, random_state=rng).reshape(*ks)
+            cdfg = copula.cdf(g.x_flat, rng=rng).reshape(*ks)
         except TypeError:
             cdfg = copula.cdf(g.x_flat).reshape(*ks)
         # correct for bin size

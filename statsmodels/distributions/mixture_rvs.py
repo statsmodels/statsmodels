@@ -284,7 +284,10 @@ def mv_mixture_rvs(prob, size, dist, nvars, rng=None, **kwargs):
         # scale = kwargs[i].get('scale',1)
         # args = kwargs[i].get('args',())
         # use int to avoid numpy bug with np.random.multivariate_normal
-        sample[sample_idx] = dist[i].rvs(size=int(sample_size), random_state=rng)
+        try:
+            sample[sample_idx] = dist[i].rvs(size=int(sample_size), rng=rng)
+        except TypeError:
+            sample[sample_idx] = dist[i].rvs(size=int(sample_size), random_state=rng)
     return sample
 
 

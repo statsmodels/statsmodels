@@ -9,6 +9,7 @@ import numpy as np
 
 # import matplotlib.pyplot as plt
 from numpy.testing import assert_allclose
+import pytest
 from scipy import stats
 
 from statsmodels.base.model import GenericLikelihoodModel
@@ -22,7 +23,7 @@ from statsmodels.distributions.copula.api import (
     IndependenceCopula,
 )
 from statsmodels.distributions.copula.extreme_value import ExtremeValueCopula
-import pytest
+
 
 class CopulaModel(GenericLikelihoodModel):
 

@@ -194,6 +194,11 @@ class BernsteinDistribution:
             of ints, a new ``Generator`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
         """
         rng = check_random_state(rng)
         rvs_mnl = rng.multinomial(nobs, self.prob_grid.flatten())

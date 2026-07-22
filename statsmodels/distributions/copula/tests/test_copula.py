@@ -265,7 +265,7 @@ gev_list = [
 
 def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True, rng=None):
     if rvs is None:
-        rvs = cop.rvs(nobs, random_state=rng)
+        rvs = cop.rvs(nobs, rng=rng)
     else:
         nobs = rvs.shape[0]
     freq = frequencies_fromdata(rvs, k, use_ranks=True)
@@ -561,7 +561,7 @@ class CheckCopula:
     def test_rvs(self):
         nobs = 2000
         rng = np.random.RandomState(27658622)
-        self.rvs = rvs = self.copula.rvs(nobs, random_state=rng)
+        self.rvs = rvs = self.copula.rvs(nobs, rng=rng)
         assert rvs.shape == (nobs, 2)
         assert_array_almost_equal(
             np.mean(rvs, axis=0), np.repeat(0.5, self.dim), decimal=2
@@ -594,11 +594,13 @@ class CheckModernCopula(CheckCopula):
         seed2 = np.random.default_rng()
         seed2.bit_generator.state = seed1.bit_generator.state
         nobs = 2000
-        rvs1 = self.copula.rvs(nobs, random_state=seed1)
-        rvs2 = self.copula.rvs(nobs, random_state=seed2)
+        rvs1 = self.copula.rvs(nobs, rng=seed1)
+        rvs2 = self.copula.rvs(nobs, rng=seed2)
         assert_allclose(rvs1, rvs2)
 
-    @pytest.mark.parametrize("rng", [None, 0, np.random.RandomState(0), np.random.default_rng(0)])
+    @pytest.mark.parametrize(
+        "rng", [None, 0, np.random.RandomState(0), np.random.default_rng(0)]
+    )
     def test_rng_types(self, rng):
         nobs = 2000
         rvs = self.copula.rvs(nobs, rng=rng)
@@ -682,7 +684,9 @@ class CheckRvsDim:
         # specific to archimedean
         assert_allclose(theta_est, self.copula.args[0], rtol=0.1, atol=atol)
 
-    @pytest.mark.parametrize("rng", [0, np.random.RandomState(0), np.random.default_rng(0)])
+    @pytest.mark.parametrize(
+        "rng", [0, np.random.RandomState(0), np.random.default_rng(0)]
+    )
     def test_rng_types(self, rng):
         nobs = 2000
         rvs = self.copula.rvs(nobs, rng=rng)

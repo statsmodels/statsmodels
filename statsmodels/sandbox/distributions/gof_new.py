@@ -589,7 +589,11 @@ def bootstrap(
         n_batch = int(np.ceil(nrep / float(batch_size)))
         count = 0
         for _ in range(n_batch):
-            rvs = distr.rvs(args, size=(batch_size, nobs), random_state=rng)
+            try:
+                rvs = distr.rvs(args, size=(batch_size, nobs), rng=rng)
+            except TypeError:
+                # SciPy fallback path until SPEC-007
+                rvs = distr.rvs(args, size=(batch_size, nobs), random_state=rng)
             params = distr.fit_vec(rvs, axis=1)
             params = lmap(lambda x: np.expand_dims(x, 1), params)
             cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
@@ -598,7 +602,7 @@ def bootstrap(
         return count / float(n_batch * batch_size)
     else:
         # rvs = distr.rvs(args, **kwds)  # extension to distribution kwds ?
-        rvs = distr.rvs(args, size=(nrep, nobs), random_state=rng)
+        rvs = distr.rvs(args, size=(nrep, nobs), rng=rng)
         params = distr.fit_vec(rvs, axis=1)
         params = lmap(lambda x: np.expand_dims(x, 1), params)
         cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
