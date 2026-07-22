@@ -1,4 +1,4 @@
-"""Random number generator helpers."""
+"""Random number generator helpers"""
 
 import numpy as np
 from scipy import stats
@@ -6,12 +6,11 @@ from scipy import stats
 
 def check_random_state(seed=None, deprecated=False, warn=True):
     """
-    Turn `seed` into a random number generator.
+    Turn `seed` into a random number generator
 
     Parameters
     ----------
     seed : {None, int, array_like[ints], numpy.random.Generator, numpy.random.RandomState, scipy.stats.qmc.QMCEngine}, optional
-
         If `seed` is None fresh, unpredictable entropy will be pulled
         from the OS and `numpy.random.Generator` is used.
         If `seed` is an int or ``array_like[ints]``, a new ``Generator``
@@ -27,13 +26,12 @@ def check_random_state(seed=None, deprecated=False, warn=True):
         when seed an int or array-like of ints.
     warn : bool, optional
         Whether to issue a warning that the future behavior for integer or
-        array-like seesd will switch to calling default_rng(seed).
+        array-like seed will switch to calling default_rng(seed).
 
     Returns
     -------
     rng : {`numpy.random.Generator`, `numpy.random.RandomState`,
             `scipy.stats.qmc.QMCEngine`}
-
         Random number generator.
 
     """

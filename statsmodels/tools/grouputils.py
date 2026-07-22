@@ -5,7 +5,6 @@ This provides several functions to work with groups and a Group class that
 keeps track of the different representations and has methods to work more
 easily with groups.
 
-
 Author: Josef Perktold,
 Author: Nathaniel Smith, recipe for sparse_dummies on scipy user mailing list
 
@@ -15,19 +14,17 @@ changes: add Group class
 
 Notes
 -----
-~~~~~
-
 This reverses the class I used before, where the class was for the data and
 the group was auxiliary. Here, it is only the group, no data is kept.
 
 sparse_dummies needs checking for corner cases, e.g.
 what if a category level has zero elements? This can happen with subset
-    selection even if the original groups where defined as arange.
+selection even if the original groups were defined as arange.
 
-Not all methods and options have been tried out yet after refactoring
+Not all methods and options have been tried out yet after refactoring.
 
-need more efficient loop if groups are sorted -> see GroupSorted.group_iter
-
+Need a more efficient loop if groups are sorted -> see
+GroupSorted.group_iter.
 """
 from statsmodels.compat.python import lrange, lzip
 
@@ -41,6 +38,37 @@ import statsmodels.tools.data as data_util
 def combine_indices(groups, prefix="", sep=".", return_labels=False):
     """
     Use np.unique to get integer group indices for product, intersection
+
+    Parameters
+    ----------
+    groups : array_like or tuple
+        If a tuple, the elements are stacked column-wise to form a 2d
+        array of groups to combine. Otherwise treated as an existing 1d
+        or 2d array of group values.
+    prefix : str
+        Prefix prepended to each label. Only used if ``return_labels``
+        is True.
+    sep : str
+        Separator used to join the columns of a 2d group array when
+        building labels. Only used if ``return_labels`` is True.
+    return_labels : bool
+        If True, also return a list of string labels for each unique
+        group.
+
+    Returns
+    -------
+    uni_inv : ndarray
+        Integer codes into `uni` that reconstruct the original `groups`
+        array, i.e. the group index of each observation.
+    uni_idx : ndarray
+        Indices of the first occurrence of each unique group in the
+        input.
+    uni : ndarray
+        Sorted unique groups, or unique group combinations if `groups`
+        was 2d or a tuple.
+    label : list[str]
+        String label for each unique group in `uni`. Only returned if
+        ``return_labels`` is True.
     """
     if isinstance(groups, tuple):
         groups = np.column_stack(groups)
@@ -77,7 +105,7 @@ def combine_indices(groups, prefix="", sep=".", return_labels=False):
 # written for and used in try_covariance_grouploop.py
 def group_sums(x, group, use_bincount=True):
     """
-    Sum ``x`` within integer groups.
+    Sum ``x`` within integer groups
 
     Parameters
     ----------
@@ -137,7 +165,19 @@ def group_sums_dummy(x, group_dummy):
     """
     Sum by groups given group dummy variable
 
-    group_dummy can be either ndarray or sparse matrix
+    Parameters
+    ----------
+    x : array_like
+        Data of shape ``(nobs, k)`` whose columns are summed within each
+        group.
+    group_dummy : ndarray or sparse matrix
+        Indicator/dummy matrix of shape ``(nobs, n_groups)`` with a 1 in
+        the column of the group each observation belongs to.
+
+    Returns
+    -------
+    ndarray
+        Group sums of shape ``(k, n_groups)``.
     """
     if data_util._is_using_ndarray_type(group_dummy, None):
         return np.dot(x.T, group_dummy)
@@ -204,7 +244,37 @@ def dummy_sparse(groups):
 
 
 class Group:
-    """Represent grouping labels and derived encodings."""
+    """
+    Represent grouping labels and derived encodings
+
+    Parameters
+    ----------
+    group : array_like or tuple
+        Group labels for each observation. A tuple of arrays is combined
+        into a single set of group labels representing the intersection
+        of the individual groupings.
+    name : str
+        Name used as a prefix when constructing string group labels.
+
+    Attributes
+    ----------
+    name : str
+        Name of the grouping variable.
+    group_int : ndarray
+        Integer codes giving the group membership of each observation.
+    uni_idx : ndarray
+        Indices of the first occurrence of each unique group.
+    uni : ndarray
+        Unique group values, or unique combinations if `group` was a
+        tuple or 2d array.
+    n_groups : int
+        Number of unique groups.
+    separator : str
+        Separator used to join columns when building labels for a
+        multi-column (intersection) grouping.
+    prefix : str
+        Prefix, derived from `name`, prepended to each group label.
+    """
 
     def __init__(self, group, name=""):
 
@@ -225,10 +295,28 @@ class Group:
 
     # cache decorator
     def counts(self):
+        """
+        Return the number of observations in each group
+
+        Returns
+        -------
+        ndarray
+            Count of observations for each integer group code in
+            `group_int`.
+        """
         return np.bincount(self.group_int)
 
     # cache_decorator
     def labels(self):
+        """
+        Return string labels for each unique group
+
+        Returns
+        -------
+        list[str]
+            Labels built from `prefix`, `separator` and the unique group
+            values in `uni`.
+        """
         # is this only needed for product of groups (intersection)?
         prefix = self.prefix
         uni = self.uni
@@ -243,9 +331,24 @@ class Group:
 
     def dummy(self, drop_idx=None, sparse=False, dtype=int):
         """
-        drop_idx is only available if sparse=False
+        Return a dummy/indicator matrix for the groups
 
-        drop_idx is supposed to index into uni
+        Parameters
+        ----------
+        drop_idx : int, optional
+            Index into `uni` of a group level to drop from the returned
+            matrix. Only available if ``sparse`` is False.
+        sparse : bool
+            If True, return a sparse indicator matrix instead of a dense
+            array.
+        dtype : type
+            The dtype of the returned dense indicator matrix.
+
+        Returns
+        -------
+        ndarray or sparse matrix
+            Indicator matrix of shape ``(nobs, n_groups)``, or with one
+            fewer column if `drop_idx` is given.
         """
         uni = self.uni
         if drop_idx is not None:
@@ -261,14 +364,65 @@ class Group:
             return dummy_sparse(self.group_int)
 
     def interaction(self, other):
+        """
+        Return a new Group formed from the intersection with another grouping
+
+        Parameters
+        ----------
+        other : Group or array_like
+            The other grouping to intersect with. If a `Group` instance,
+            its underlying group labels are used.
+
+        Returns
+        -------
+        Group
+            A new instance of the same class representing the
+            intersection of the two groupings.
+        """
         if isinstance(other, self.__class__):
             other = other.group
         return self.__class__((self, other))
 
     def group_sums(self, x, use_bincount=True):
+        """
+        Sum `x` within each group
+
+        Parameters
+        ----------
+        x : array_like
+            Data of shape ``(nobs,)`` or ``(nobs, n_features)``.
+        use_bincount : bool
+            Use ``np.bincount`` when True, otherwise a pure-Python group
+            loop. See :func:`group_sums`.
+
+        Returns
+        -------
+        ndarray
+            Group sums of shape ``(n_groups, n_features)``.
+        """
         return group_sums(x, self.group_int, use_bincount=use_bincount)
 
     def group_demean(self, x, use_bincount=True):
+        """
+        Demean `x` by subtracting the group means
+
+        Parameters
+        ----------
+        x : array_like
+            Data of shape ``(nobs,)`` or ``(nobs, n_features)``.
+        use_bincount : bool
+            Use ``np.bincount`` when True, otherwise a pure-Python group
+            loop. See :func:`group_sums`.
+
+        Returns
+        -------
+        x_demeaned : ndarray
+            `x` with the group mean subtracted from each observation.
+            Same shape as `x`.
+        means_g : ndarray
+            Group means, of shape ``(n_groups,)`` for 1d `x` or
+            ``(n_groups, n_features)`` for 2d `x`.
+        """
         x = np.asarray(x)
         was_1d = x.ndim == 1
         if was_1d:
@@ -288,7 +442,24 @@ class Group:
 
 
 class GroupSorted(Group):
-    """Represent grouping labels that are already sorted by group."""
+    """
+    Represent grouping labels that are already sorted by group
+
+    Parameters
+    ----------
+    group : array_like
+        Group labels for each observation. Must already be sorted so
+        that all observations belonging to the same group are
+        contiguous.
+    name : str
+        Name used as a prefix when constructing string group labels.
+
+    Attributes
+    ----------
+    groupidx : list[tuple[int, int]]
+        List of ``(start, stop)`` index pairs giving the slice bounds of
+        each contiguous group.
+    """
 
     def __init__(self, group, name=""):
         super(self.__class__, self).__init__(group, name=name)
@@ -297,6 +468,14 @@ class GroupSorted(Group):
         self.groupidx = lzip([0] + idx, idx + [len(group)])
 
     def group_iter(self):
+        """
+        Iterate over slices for each contiguous group
+
+        Yields
+        ------
+        slice
+            Slice selecting the observations belonging to one group.
+        """
         for low, upp in self.groupidx:
             yield slice(low, upp)
 
@@ -304,17 +483,30 @@ class GroupSorted(Group):
         """
         Return the index array for lagged values
 
-        Warning: if k is larger then the number of observations for an
-        individual, then no values for that individual are returned.
+        Parameters
+        ----------
+        lag : int
+            Number of periods to lag.
 
-        TODO: for the unbalanced case, I should get the same truncation for
-        the array with lag=0. From the return of lag_idx we would not know
-        which individual is missing.
+        Returns
+        -------
+        ndarray
+            Indices into the sorted array selecting the lagged
+            observations.
 
-        TODO: do I want the full equivalent of lagmat in tsa?
-        maxlag or lag or lags.
+        Warnings
+        --------
+        If `lag` is larger than the number of observations for an
+        individual, no values for that individual are returned.
 
-        not tested yet
+        Notes
+        -----
+        For the unbalanced case, this does not apply the same
+        truncation to the ``lag=0`` array, so it is not directly
+        obvious from the return value which individual is missing.
+        This has not been extensively tested. It is also not the full
+        equivalent of ``lagmat`` in ``tsa``, which supports multiple
+        lags at once.
         """
         lag_idx = np.asarray(self.groupidx)[:, 1] - lag  # asarray or already?
         mask_ok = (lag <= lag_idx)
@@ -325,8 +517,19 @@ class GroupSorted(Group):
 
 def _is_hierarchical(x):
     """
-    Checks if the first item of an array-like object is also array-like
-    If so, we have a MultiIndex and returns True. Else returns False.
+    Check if the first item of an array-like object is also array-like
+
+    Parameters
+    ----------
+    x : array_like
+        Array-like object to check.
+
+    Returns
+    -------
+    bool
+        True if `x` appears to represent hierarchical (MultiIndex-style)
+        groups, i.e. its first element is itself list-like. False
+        otherwise.
     """
     item = x[0]
     # is there a better way to do this?
@@ -337,34 +540,79 @@ def _is_hierarchical(x):
 
 
 def _make_hierarchical_index(index, names):
+    """
+    Build a MultiIndex from an array-like of row-wise group tuples
+
+    Parameters
+    ----------
+    index : array_like
+        Array-like where each row is a tuple of group values.
+    names : list[str]
+        Names to assign to the levels of the resulting MultiIndex.
+
+    Returns
+    -------
+    MultiIndex
+        MultiIndex constructed from the rows of `index`.
+    """
     return MultiIndex.from_tuples(*[index], names=names)
 
 
 def _make_generic_names(index):
+    """
+    Create generic zero-padded level names for an index
+
+    Parameters
+    ----------
+    index : Index or MultiIndex
+        Index whose number of levels (``len(index.names)``) determines
+        how many generic names are generated.
+
+    Returns
+    -------
+    list[str]
+        Names of the form ``"group0"``, ``"group1"``, ... , zero-padded
+        to a consistent width.
+    """
     n_names = len(index.names)
     pad = str(len(str(n_names)))  # number of digits
     return [("group{0:0"+pad+"}").format(i) for i in range(n_names)]
 
 
 class Grouping:
-    """Represent a pandas-style grouping index and related transformations."""
+    """
+    Represent a pandas-style grouping index and related transformations
+
+    Parameters
+    ----------
+    index : index-like
+        Can be a pandas MultiIndex, Index, or array-like. If array-like
+        and hierarchical (more than one grouping variable), groups are
+        expected to be given as a tuple in each row, e.g. ``[('red', 1),
+        ('red', 2), ('green', 1), ('green', 2)]``.
+    names : list or str, optional
+        The names to use for the groups. Should be a str if only one
+        grouping variable is used.
+
+    Attributes
+    ----------
+    index : Index or MultiIndex
+        The (possibly constructed) pandas index representing the
+        groups.
+    nobs : int
+        Number of observations, i.e. ``len(index)``.
+    nlevels : int
+        Number of grouping levels.
+    slices : list or None
+        Cached slices of observations for each group of the first
+        index level, set by :meth:`get_slices`.
+
+    Notes
+    -----
+    If `index` is already a pandas Index then there is no copy.
+    """
 
     def __init__(self, index, names=None):
-        """
-        Index : index-like
-            Can be pandas MultiIndex or Index or array-like. If array-like
-            and is a MultipleIndex (more than one grouping variable),
-            groups are expected to be in each row. E.g., [('red', 1),
-            ('red', 2), ('green', 1), ('green', 2)]
-        names : list or str, optional
-            The names to use for the groups. Should be a str if only
-            one grouping variable is used.
-
-        Notes
-        -----
-        If index is already a pandas Index then there is no copy.
-
-        """
         if isinstance(index, (Index, MultiIndex)):
             if names is not None:
                 if hasattr(index, "set_names"):  # newer pandas
@@ -390,6 +638,15 @@ class Grouping:
 
     @property
     def index_shape(self):
+        """
+        Shape of the underlying (Multi)Index
+
+        Returns
+        -------
+        tuple
+            ``levshape`` if the index defines it (a MultiIndex), else
+            the plain index ``shape``.
+        """
         if hasattr(self.index, "levshape"):
             return self.index.levshape
         else:
@@ -397,6 +654,15 @@ class Grouping:
 
     @property
     def levels(self):
+        """
+        Unique values for each grouping level
+
+        Returns
+        -------
+        FrozenList or Index
+            ``levels`` of the underlying MultiIndex, or the categories
+            of the index treated as a single-level Categorical.
+        """
         if hasattr(self.index, "levels"):
             return self.index.levels
         else:
@@ -404,6 +670,16 @@ class Grouping:
 
     @property
     def labels(self):
+        """
+        Integer codes for each grouping level
+
+        Returns
+        -------
+        ndarray or FrozenList
+            Integer codes for the index. For a MultiIndex, these are
+            the per-level ``codes``; otherwise the Categorical codes
+            for the single level, wrapped in a length-1 sequence.
+        """
         # this was index_int, but that's not a very good name...
         codes = getattr(self.index, "codes", None)
         if codes is None:
@@ -415,11 +691,27 @@ class Grouping:
 
     @property
     def group_names(self):
+        """
+        Names of the grouping levels
+
+        Returns
+        -------
+        FrozenList
+            The names of the underlying index.
+        """
         return self.index.names
 
     def reindex(self, index=None, names=None):
         """
-        Resets the index in-place.
+        Reset the index in-place
+
+        Parameters
+        ----------
+        index : index-like, optional
+            The new index to use.
+        names : list or str, optional
+            The names to use for the groups. Defaults to the current
+            `group_names` if not provided.
         """
         # NOTE: this is not of much use if the rest of the data does not change
         # This needs to reset cache
@@ -430,9 +722,19 @@ class Grouping:
 
     def get_slices(self, level=0):
         """
-        Sets the slices attribute to be a list of indices of the sorted
-        groups for the first index level. I.e., self.slices[0] is the
-        index where each observation is in the first (sorted) group.
+        Set `slices` to a list of indices of the sorted groups
+
+        Parameters
+        ----------
+        level : int
+            Index level to group by.
+
+        Notes
+        -----
+        Sets the `slices` attribute to be a list of indices of the
+        sorted groups for the given index level. I.e., ``self.slices[0]``
+        is the index where each observation is in the first (sorted)
+        group.
         """
         # TODO: refactor this
         groups = self.index.get_level_values(level).unique()
@@ -445,14 +747,40 @@ class Grouping:
 
     def count_categories(self, level=0):
         """
-        Sets the attribute counts to equal the bincount of the (integer-valued)
-        labels.
+        Set `counts` to the bincount of the labels at the given level
+
+        Parameters
+        ----------
+        level : int
+            Index level to count.
+
+        Notes
+        -----
+        Sets the `counts` attribute to equal the bincount of the
+        (integer-valued) labels for `level`.
         """
         # TODO: refactor this not to set an attribute. Why would we do this?
         self.counts = np.bincount(self.labels[level])
 
     def check_index(self, is_sorted=True, unique=True, index=None):
-        """Sanity checks"""
+        """
+        Sanity check that the index is sorted and/or unique
+
+        Parameters
+        ----------
+        is_sorted : bool
+            If True, check that `index` is sorted.
+        unique : bool
+            If True, check that `index` has no duplicate entries.
+        index : index-like, optional
+            Index to check. Defaults to `self.index`.
+
+        Raises
+        ------
+        Exception
+            If `is_sorted` is True and the index is not sorted, or if
+            `unique` is True and the index has duplicate entries.
+        """
         if not index:
             index = self.index
         if is_sorted:
@@ -466,10 +794,34 @@ class Grouping:
 
     def sort(self, data, index=None):
         """
-        Applies a (potentially hierarchical) sort operation on a numpy array
-        or pandas series/dataframe based on the grouping index or a
-        user-supplied index.  Returns an object of the same type as the
-        original data as well as the matching (sorted) Pandas index.
+        Sort data based on the grouping index or a user-supplied index
+
+        Parameters
+        ----------
+        data : ndarray or Series or DataFrame
+            The data to sort.
+        index : index-like, optional
+            Index used to determine the sort order. Defaults to
+            `self.index`.
+
+        Returns
+        -------
+        out : ndarray or Series or DataFrame
+            Sorted `data`, same type as the input.
+        out_index : Index
+            The matching sorted pandas index.
+
+        Raises
+        ------
+        ValueError
+            If `data` is neither a NumPy array nor a pandas
+            Series/DataFrame.
+
+        Notes
+        -----
+        Applies a (potentially hierarchical) sort operation on a numpy
+        array or pandas series/dataframe based on the grouping index or
+        a user-supplied index.
         """
         if index is None:
             index = self.index
@@ -493,7 +845,30 @@ class Grouping:
     def transform_dataframe(self, dataframe, function, level=0, **kwargs):
         """
         Apply function to each column, by group
-        Assumes that the dataframe already has a proper index
+
+        Parameters
+        ----------
+        dataframe : DataFrame
+            Data to transform. Assumed to already have a proper index
+            matching `self.index`.
+        function : callable
+            Function applied to each group of each column via
+            ``groupby(...).apply``.
+        level : int
+            Index level to group by.
+        **kwargs
+            Additional keyword arguments passed to `function`.
+
+        Returns
+        -------
+        ndarray
+            Result of applying `function` by group, raveled to 1d if
+            one of the output dimensions is 1.
+
+        Raises
+        ------
+        Exception
+            If `dataframe` does not have `self.nobs` rows.
         """
         if dataframe.shape[0] != self.nobs:
             raise Exception("dataframe does not have the same shape as index")
@@ -506,6 +881,27 @@ class Grouping:
     def transform_array(self, array, function, level=0, **kwargs):
         """
         Apply function to each column, by group
+
+        Parameters
+        ----------
+        array : array_like
+            Data to transform, with `self.nobs` rows.
+        function : callable
+            Function applied to each group of each column.
+        level : int
+            Index level to group by.
+        **kwargs
+            Additional keyword arguments passed to `function`.
+
+        Returns
+        -------
+        ndarray
+            Result of applying `function` by group.
+
+        Raises
+        ------
+        Exception
+            If `array` does not have `self.nobs` rows.
         """
         if array.shape[0] != self.nobs:
             raise Exception("array does not have the same shape as index")
@@ -515,9 +911,36 @@ class Grouping:
 
     def transform_slices(self, array, function, level=0, **kwargs):
         """
-        Apply function to each group. Similar to transform_array but does
-        not coerce array to a DataFrame and back and only works on a 1D or 2D
-        numpy array. function is called function(group, group_idx, **kwargs).
+        Apply function to each group
+
+        Similar to `transform_array` but does not coerce `array` to a
+        DataFrame and back, and only works on a 1d or 2d numpy array.
+        `function` is called as ``function(group, group_idx, **kwargs)``.
+
+        Parameters
+        ----------
+        array : array_like
+            1d or 2d data to transform, with `self.nobs` rows.
+        function : callable
+            Function called as ``function(subset, group_idx, **kwargs)``
+            for each group, where `subset` is the group's rows of
+            `array` and `group_idx` is the index/slice used to select
+            them.
+        level : int
+            Index level to group by.
+        **kwargs
+            Additional keyword arguments passed to `function`.
+
+        Returns
+        -------
+        ndarray
+            Results of `function` stacked across groups, reshaped to
+            2d.
+
+        Raises
+        ------
+        Exception
+            If `array` does not have `self.nobs` rows.
         """
         array = np.asarray(array)
         if array.shape[0] != self.nobs:
@@ -536,16 +959,39 @@ class Grouping:
 
     # TODO: this is not general needs to be a PanelGrouping object
     def dummies_time(self):
+        """
+        Return a sparse time-indicator matrix, using level 1 of the index
+
+        Returns
+        -------
+        ndarray or sparse matrix
+            Sparse indicator matrix for the second (time) index level,
+            as created by :meth:`dummy_sparse`.
+        """
         self.dummy_sparse(level=1)
         return self._dummies
 
     def dummies_groups(self, level=0):
+        """
+        Return a sparse group-indicator matrix for the given level
+
+        Parameters
+        ----------
+        level : int
+            Grouping level used to form the sparse indicator.
+
+        Returns
+        -------
+        ndarray or sparse matrix
+            Sparse indicator matrix for `level`, as created by
+            :meth:`dummy_sparse`.
+        """
         self.dummy_sparse(level=level)
         return self._dummies
 
     def dummy_sparse(self, level=0):
         """
-        Create a sparse indicator from a group array with integer labels.
+        Create a sparse indicator from a group array with integer labels
 
         Parameters
         ----------

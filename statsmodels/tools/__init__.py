@@ -1,4 +1,4 @@
-"""Utility functions and testing helpers for statsmodels."""
+"""Utility functions and testing helpers for statsmodels"""
 
 from statsmodels.tools._test_runner import PytestTester
 
