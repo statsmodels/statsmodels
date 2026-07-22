@@ -140,29 +140,25 @@ class SimpleTable(list):
     Produce a simple ASCII, CSV, HTML, or LaTeX table
 
     Constructed from a *rectangular* (2d!) array of data, not necessarily
-    numerical. Directly supports at most one header row,
-    which should be the length of data[0].
-    Directly supports at most one stubs column,
-    which must be the length of data.
-    (But see `insert_stubs` method.)
+    numerical. Directly supports at most one header row, which should be
+    the length of data[0]. Directly supports at most one stubs column,
+    which must be the length of data. (But see `insert_stubs` method.)
     See globals `default_txt_fmt`, `default_csv_fmt`, `default_html_fmt`,
     and `default_latex_fmt` for formatting options.
 
     Examples
     --------
-
-        mydata = [[11,12],[21,22]]  # data MUST be 2-dimensional
-        myheaders = [ "Column 1", "Column 2" ]
-        mystubs = [ "Row 1", "Row 2" ]
-        tbl = text.SimpleTable(mydata, myheaders, mystubs, title="Title")
-        print( tbl )
-        print( tbl.as_html() )
+    >>> mydata = [[11,12],[21,22]]  # data MUST be 2-dimensional
+    >>> myheaders = [ "Column 1", "Column 2" ]
+    >>> mystubs = [ "Row 1", "Row 2" ]
+    >>> tbl = text.SimpleTable(mydata, myheaders, mystubs, title="Title")
+    >>> print( tbl )
+    >>> print( tbl.as_html() )
         # set column specific data formatting
-        tbl = text.SimpleTable(mydata, myheaders, mystubs,
-            data_fmts=["%3.2f","%d"])
-        print( tbl.as_csv() )
-        with open('c:/temp/temp.tex','w') as fh:
-            fh.write( tbl.as_latex_tabular() )
+    >>> tbl = text.SimpleTable(mydata, myheaders, mystubs, data_fmts=["%3.2f","%d"])
+    >>> print( tbl.as_csv() )
+    >>> with open('c:/temp/temp.tex','w') as fh:
+    ...    fh.write( tbl.as_latex_tabular() )
     """
     def __init__(self, data, headers=None, stubs=None, title="",
                  datatypes=None, csv_fmt=None, txt_fmt=None, ltx_fmt=None,
