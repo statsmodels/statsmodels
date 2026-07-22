@@ -2823,6 +2823,133 @@ class TestRegularized:
                 llf_sm = plf(sm_result.params, model, endog, alpha, L1_wt)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
+    @staticmethod
+    def _load_enet_data(dtype):
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        data = np.loadtxt(
+            os.path.join(cur_dir, "results", "enet_%s.csv" % dtype),
+            delimiter=",",
+        )
+        return data[:, 0], data[:, 1:]
+
+    def test_regularized_l1_slsqp_vs_discrete(self):
+        # The l1_slsqp method uses the same solver as the L1
+        # fit_regularized of the discrete models, so the results
+        # should agree closely.  The discrete models penalize the
+        # total log-likelihood while GLM penalizes the average
+        # log-likelihood, so alpha is rescaled by nobs.
+
+        for dtype in "binomial", "poisson":
+            endog, exog = self._load_enet_data(dtype)
+            nobs = len(endog)
+
+            fam = {
+                "binomial": sm.families.Binomial,
+                "poisson": sm.families.Poisson,
+            }[dtype]
+            disc_model = {
+                "binomial": discrete.Logit,
+                "poisson": discrete.Poisson,
+            }[dtype]
+
+            for alpha in 0.01, 0.1:
+                model = GLM(endog, exog, family=fam())
+                sm_result = model.fit_regularized(
+                    method="l1_slsqp", alpha=alpha
+                )
+
+                disc_result = disc_model(endog, exog).fit_regularized(
+                    method="l1", alpha=alpha * nobs, disp=0
+                )
+
+                assert_allclose(
+                    sm_result.params, disc_result.params, atol=1e-5, rtol=1e-4
+                )
+
+    def test_regularized_l1_slsqp_vs_elastic_net(self):
+        # elastic_net with L1_wt=1 minimizes the same objective
+        # function as l1_slsqp, so the two methods should give
+        # similar results.
+
+        for dtype in "binomial", "poisson":
+            endog, exog = self._load_enet_data(dtype)
+
+            fam = {
+                "binomial": sm.families.Binomial,
+                "poisson": sm.families.Poisson,
+            }[dtype]
+
+            for alpha in 0.01, 0.1:
+                result_l1 = GLM(endog, exog, family=fam()).fit_regularized(
+                    method="l1_slsqp", alpha=alpha
+                )
+                result_enet = GLM(endog, exog, family=fam()).fit_regularized(
+                    method="elastic_net", L1_wt=1.0, alpha=alpha
+                )
+
+                assert_allclose(
+                    result_l1.params, result_enet.params, atol=1e-4, rtol=1e-3
+                )
+
+    def test_regularized_l1_slsqp_gaussian(self):
+        # Check a family where the scale parameter is estimated, using
+        # OLS as the reference, for which coordinate descent lasso is
+        # exact.
+        from statsmodels.regression.linear_model import OLS
+
+        rs = np.random.RandomState(3423)
+        n = 200
+        exog = rs.normal(size=(n, 4))
+        exog[:, 0] = 1
+        lin_pred = np.dot(exog, np.r_[1.0, 0.5, 0.0, -0.5])
+        endog = lin_pred + rs.normal(size=n)
+
+        for alpha in 0.01, 0.1:
+            result_glm = GLM(endog, exog).fit_regularized(
+                method="l1_slsqp", alpha=alpha
+            )
+            result_ols = OLS(endog, exog).fit_regularized(
+                L1_wt=1.0, alpha=alpha
+            )
+
+            assert_allclose(
+                result_glm.params, result_ols.params, atol=1e-5, rtol=1e-4
+            )
+
+    def test_regularized_l1_slsqp_refit(self):
+        # refit=True returns an unregularized fit restricted to the
+        # variables with non-zero coefficients in the regularized fit.
+        endog, exog = self._load_enet_data("binomial")
+
+        result = GLM(endog, exog, family=sm.families.Binomial()).fit_regularized(
+            method="l1_slsqp", alpha=0.1, refit=True
+        )
+        ii = np.flatnonzero(result.params)
+        assert 0 < len(ii) < exog.shape[1]
+
+        expected = GLM(
+            endog, exog[:, ii], family=sm.families.Binomial()
+        ).fit()
+        assert_allclose(result.params[ii], expected.params, rtol=1e-8)
+
+    def test_regularized_l1_slsqp_no_convergence_warns(self):
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+        endog, exog = self._load_enet_data("binomial")
+
+        model = GLM(endog, exog, family=sm.families.Binomial())
+        with pytest.warns(ConvergenceWarning):
+            model.fit_regularized(method="l1_slsqp", alpha=0.1, maxiter=1)
+
+    def test_regularized_method_errors(self):
+        endog, exog = self._load_enet_data("binomial")
+
+        model = GLM(endog, exog, family=sm.families.Binomial())
+        with pytest.raises(ValueError, match="method for fit_regularized"):
+            model.fit_regularized(method="l1", alpha=0.1)
+        with pytest.raises(ValueError, match="L1_wt must be 1"):
+            model.fit_regularized(method="l1_slsqp", L1_wt=0.5, alpha=0.1)
+
 
 class TestConvergence:
     @classmethod
