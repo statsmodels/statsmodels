@@ -6,6 +6,8 @@ License: BSD-3
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import stats
 
@@ -178,7 +180,8 @@ class BernsteinDistribution:
         bpd_marginal = BernsteinDistribution(cdf_m)
         return bpd_marginal
 
-    def rvs(self, nobs, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs, rng=None):
         """Generate random numbers from distribution.
 
         Parameters
@@ -188,7 +191,7 @@ class BernsteinDistribution:
         rng : np.random.RandomState or np.random.Generator, optional
             If not provided, uses the singleton RandomState provided by NumPy
         """
-        rng = check_random_state(random_state)
+        rng = check_random_state(rng)
         rvs_mnl = rng.multinomial(nobs, self.prob_grid.flatten())
         k_comp = self.k_dim
         rvs_m = []

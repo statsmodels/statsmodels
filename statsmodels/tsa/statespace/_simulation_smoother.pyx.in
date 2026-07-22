@@ -284,16 +284,16 @@ cdef class {{prefix}}SimulationSmoother(object):
         self._tmp1 = &self.tmp1[0,0]
         self._tmp2 = &self.tmp2[0,0]
 
-    cpdef draw_measurement_disturbance_variates(self, random_state):
-        self.measurement_disturbance_variates = random_state.normal(size=self.n_measurement_disturbance_variates)
+    cpdef draw_measurement_disturbance_variates(self, rng):
+        self.measurement_disturbance_variates = rng.normal(size=self.n_measurement_disturbance_variates)
         self.pretransformed_measurement_disturbance_variates = False
 
-    cpdef draw_state_disturbance_variates(self, random_state):
-        self.state_disturbance_variates = random_state.normal(size=self.n_state_disturbance_variates)
+    cpdef draw_state_disturbance_variates(self, rng):
+        self.state_disturbance_variates = rng.normal(size=self.n_state_disturbance_variates)
         self.pretransformed_state_disturbance_variates = False
 
-    cpdef draw_initial_state_variates(self, random_state):
-        self.initial_state_variates = random_state.normal(size=self.n_initial_state_variates)
+    cpdef draw_initial_state_variates(self, rng):
+        self.initial_state_variates = rng.normal(size=self.n_initial_state_variates)
         self.pretransformed_initial_state_variates = False
         self.fixed_initial_state = False
 

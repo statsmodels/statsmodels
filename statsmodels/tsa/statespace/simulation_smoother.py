@@ -5,6 +5,8 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numbers
 import warnings
 
@@ -175,13 +177,13 @@ class SimulationSmoother(KalmanSmoother):
         self,
         nsimulations,
         simulator=None,
-        random_state=None,
+        rng=None,
         return_simulator=False,
         **kwargs,
     ):
         # Create the simulator, if necessary
         if simulator is None:
-            simulator = self.simulator(nsimulations, random_state=random_state)
+            simulator = self.simulator(nsimulations, rng=rng)
 
         # Perform simulation smoothing
         simulator.simulate(**kwargs)
@@ -195,14 +197,15 @@ class SimulationSmoother(KalmanSmoother):
             out = out + (simulator,)
         return out
 
-    def simulator(self, nsimulations, random_state=None):
+    def simulator(self, nsimulations, rng=None):
         return self.simulation_smoother(
             simulation_output=0,
             method="kfs",
             nobs=nsimulations,
-            random_state=random_state,
+            rng=rng,
         )
 
+    @deprecate_kwarg("random_state", "rng")
     def simulation_smoother(
         self,
         simulation_output=None,
@@ -210,7 +213,7 @@ class SimulationSmoother(KalmanSmoother):
         results_class=None,
         prefix=None,
         nobs=-1,
-        random_state=None,
+        rng=None,
         **kwargs,
     ):
         r"""
@@ -239,7 +242,7 @@ class SimulationSmoother(KalmanSmoother):
             than -1, only simulation will be performed (i.e. simulation
             smoothing will not be performed), so that only the `generated_obs`
             and `generated_state` attributes will be available.
-        random_state : {None, int, Generator, RandomState}, optional
+        rng : {None, int, Generator, RandomState}, optional
             If `seed` is None (or `np.random`), the `numpy.random.RandomState`
             singleton is used.
             If `seed` is an int, a new ``numpy.random.RandomState`` instance
@@ -315,7 +318,7 @@ class SimulationSmoother(KalmanSmoother):
         )
 
         # Create results object
-        results = results_class(self, simulation_smoother, random_state=random_state)
+        results = results_class(self, simulation_smoother, rng=rng)
 
         return results
 
@@ -331,7 +334,7 @@ class SimulationSmoothResults:
         A Statespace representation
     simulation_smoother : {{prefix}}SimulationSmoother object
         The Cython simulation smoother object with which to simulation smooth.
-    random_state : {None, int, Generator, RandomState}, optional
+    rng : {None, int, Generator, RandomState}, optional
         If `seed` is None (or `np.random`), the `numpy.random.RandomState`
         singleton is used.
         If `seed` is an int, a new ``numpy.random.RandomState`` instance
@@ -375,12 +378,13 @@ class SimulationSmoothResults:
         Simulated state disturbance.
     """
 
-    def __init__(self, model, simulation_smoother, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def __init__(self, model, simulation_smoother, rng=None):
         self.model = model
         self.prefix = model.prefix
         self.dtype = model.dtype
         self._simulation_smoother = simulation_smoother
-        self.random_state = check_random_state(random_state)
+        self.rng = check_random_state(rng)
 
         # Output
         self._generated_measurement_disturbance = None
@@ -575,6 +579,7 @@ class SimulationSmoothResults:
             )
         return self._simulated_state_disturbance
 
+    @deprecate_kwarg("random_state", "rng")
     def simulate(
         self,
         simulation_output=-1,
@@ -586,7 +591,7 @@ class SimulationSmoothResults:
         pretransformed_measurement_disturbance_variates=None,
         pretransformed_state_disturbance_variates=None,
         pretransformed_initial_state_variates=False,
-        random_state=None,
+        rng=None,
     ):
         r"""
         Perform simulation smoothing
@@ -638,7 +643,7 @@ class SimulationSmoothResults:
             then it is assumed to contain draws from the standard Normal
             distribution that must be transformed using the `initial_state_cov`
             covariance matrix. Default is False.
-        random_state : {None, int, Generator, RandomState}, optional
+        rng : {None, int, Generator, RandomState}, optional
             If `seed` is None (or `np.random`), the `numpy.random.RandomState`
             singleton is used.
             If `seed` is an int, a new ``numpy.random.RandomState`` instance
@@ -722,10 +727,10 @@ class SimulationSmoothResults:
         self._simulated_state_disturbance = None
 
         # Handle the random state
-        if random_state is None:
-            random_state = self.random_state
+        if rng is None:
+            rng = self.rng
         else:
-            random_state = check_random_state(random_state)
+            rng = check_random_state(rng)
 
         # Re-initialize the _statespace representation
         prefix, dtype, create_smoother, create_filter, create_statespace = (
@@ -750,9 +755,7 @@ class SimulationSmoothResults:
                 pretransformed=pretransformed_measurement_disturbance_variates,
             )
         else:
-            self._simulation_smoother.draw_measurement_disturbance_variates(
-                random_state
-            )
+            self._simulation_smoother.draw_measurement_disturbance_variates(rng)
 
         # Draw the (independent) random variates for disturbances in the
         # simulation
@@ -762,7 +765,7 @@ class SimulationSmoothResults:
                 pretransformed=pretransformed_state_disturbance_variates,
             )
         else:
-            self._simulation_smoother.draw_state_disturbance_variates(random_state)
+            self._simulation_smoother.draw_state_disturbance_variates(rng)
 
         # Draw the (independent) random variates for the initial states in the
         # simulation
@@ -782,7 +785,7 @@ class SimulationSmoothResults:
             # initial state cov, but still adds the initial state mean. It's
             # not clear when this would be useful...
         else:
-            self._simulation_smoother.draw_initial_state_variates(random_state)
+            self._simulation_smoother.draw_initial_state_variates(rng)
 
         # Perform simulation smoothing
         self._simulation_smoother.simulate(simulation_output)

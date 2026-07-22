@@ -15,6 +15,8 @@ hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 
 from statsmodels.base import model
@@ -1866,7 +1868,8 @@ class rv_discrete_float:
         self.pk = pk
         self.cpk = np.cumsum(self.pk, axis=1)
 
-    def rvs(self, n=None, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, n=None, rng=None):
         """
         Returns a random sample from the discrete distribution
 
@@ -1877,7 +1880,7 @@ class rv_discrete_float:
         ----------
         n : not used
             Present for signature compatibility.
-        random_state : {None, int, array_like, BitGenerator, Generator, RandomState}, optional
+        rng : {None, int, array_like, BitGenerator, Generator, RandomState}, optional
             If an int, array_like, or BitGenerator, a new Generator is
             used with the seed provided. If a Generator or RandomState
             is provided, it is used directly. If None (or np.random),
@@ -1890,7 +1893,7 @@ class rv_discrete_float:
         """
 
         n = self.xk.shape[0]
-        rng = check_random_state(random_state, deprecated=True)
+        rng = check_random_state(rng, deprecated=True)
         u = rng.uniform(size=n)
         ix = (self.cpk < u[:, None]).sum(1)
         ii = np.arange(n, dtype=np.int32)

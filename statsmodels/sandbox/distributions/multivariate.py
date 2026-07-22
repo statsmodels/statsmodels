@@ -15,6 +15,8 @@ Genz and Bretz for formula
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from numpy import exp as np_exp, log as np_log
 from scipy import integrate, special, stats
@@ -105,7 +107,8 @@ def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
 
 # written by Enzo Michelangeli, style changes by josef-pktd
 # Student's T random variable
-def multivariate_t_rvs(m, S, df=np.inf, n=1, random_state=None):
+@deprecate_kwarg("random_state", "rng")
+def multivariate_t_rvs(m, S, df=np.inf, n=1, rng=None):
     """generate random variables of multivariate t distribution
 
     Parameters
@@ -118,8 +121,14 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1, random_state=None):
         degrees of freedom
     n : int
         number of observations, return random array will be (n, len(m))
-    random_state : int, np.random.RandomState or np.random.Generator, optional
-        TODO
+    rng : int, np.random.RandomState or np.random.Generator, optional
+        If `rng` is None (or `np.random`), the
+        class:``~numpy.random.RandomState`` singleton is used.
+        If `rng` is an int, a new class:``~numpy.random.RandomState``
+        instance is used, seeded with `rng`.
+        If `rng` is already a class:``~numpy.random.Generator`` or
+        class:``~numpy.random.RandomState`` instance then that instance is
+        used.
 
     Returns
     -------
@@ -129,7 +138,7 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1, random_state=None):
 
 
     """
-    rng = check_random_state(random_state)
+    rng = check_random_state(rng)
     m = np.asarray(m)
     d = len(m)
     if df == np.inf:

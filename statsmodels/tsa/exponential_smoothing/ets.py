@@ -1768,11 +1768,21 @@ class ETSResults(base.StateSpaceMLEResults):
             eps = rng.standard_normal((nsimulations, repetitions)) * sigma
         elif isinstance(random_errors, (rv_continuous, rv_discrete)):
             params = random_errors.fit(self.resid)
-            eps = random_errors.rvs(
-                *params, size=(nsimulations, repetitions), random_state=rng
-            )
+            try:
+                eps = random_errors.rvs(
+                    *params, size=(nsimulations, repetitions), rng=rng
+                )
+            except TypeError:
+                eps = random_errors.rvs(
+                    *params, size=(nsimulations, repetitions), random_state=rng
+                )
         elif isinstance(random_errors, rv_frozen):
-            eps = random_errors.rvs(size=(nsimulations, repetitions), random_state=rng)
+            try:
+                eps = random_errors.rvs(size=(nsimulations, repetitions), rng=rng)
+            except TypeError:
+                eps = random_errors.rvs(
+                    size=(nsimulations, repetitions), random_state=rng
+                )
         else:
             raise ValueError("Argument random_errors has unexpected value!")
 

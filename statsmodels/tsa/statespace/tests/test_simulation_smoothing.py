@@ -681,7 +681,7 @@ def test_misc():
     n_disturbance_variates = mod.nobs * (mod.k_endog + mod.k_states)
     variates = rs.normal(size=n_disturbance_variates)
     rs = np.random.RandomState(1234)
-    sim.simulate(random_state=rs)
+    sim.simulate(rng=rs)
     assert_allclose(sim.generated_measurement_disturbance[:, 0], variates[: mod.nobs])
     assert_allclose(sim.generated_state_disturbance[:, 0], variates[mod.nobs :])
 
@@ -917,7 +917,7 @@ def test_nan():
     res = mod.smooth([0, 0.5, 1.0])
 
     rs = np.random.RandomState(1234)
-    sim = mod.simulation_smoother(random_state=rs)
+    sim = mod.simulation_smoother(rng=rs)
 
     n = 1000000
     out = np.zeros((n, mod.nobs))

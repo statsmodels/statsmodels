@@ -3,6 +3,7 @@ Non-linear least squares
 
 Author: Josef Perktold based on scipy.optimize.curve_fit
 """
+
 import numpy as np
 from scipy import optimize
 
@@ -47,6 +48,7 @@ class Results:
 # def _weighted_general_function(params, xdata, ydata, function, weights):
 #    return weights * (function(xdata, *params) - ydata)
 #
+
 
 class NonlinearLS(Model):  # or subclass a model
     r"""
@@ -123,6 +125,7 @@ class NonlinearLS(Model):  # or subclass a model
         myres.bse
         myres.tvalues
     """
+
     # NOTE: This needs to call super for data checking
     def __init__(self, endog=None, exog=None, weights=None, sigma=None, missing="none"):
         self.endog = endog
@@ -167,7 +170,6 @@ class NonlinearLS(Model):  # or subclass a model
         params : array_like
             The parameters at which to evaluate the prediction function.
         """
-        pass
 
     def start_value(self):
         """
@@ -220,7 +222,7 @@ class NonlinearLS(Model):  # or subclass a model
         float
             The sum of squared residuals.
         """
-        return (self.geterrors(params)**2).sum()
+        return (self.geterrors(params) ** 2).sum()
 
     def fit(self, start_value=None, nparams=None, **kw):
         """
@@ -263,7 +265,7 @@ class NonlinearLS(Model):  # or subclass a model
 
         func = self.geterrors
         res = optimize.leastsq(func, p0, full_output=1, **kw)
-        (popt, pcov, infodict, errmsg, ier) = res
+        popt, pcov, infodict, errmsg, ier = res
 
         if ier not in [1, 2, 3, 4]:
             msg = "Optimal parameters not found: " + errmsg
@@ -275,12 +277,12 @@ class NonlinearLS(Model):  # or subclass a model
         if (len(ydata) > len(p0)) and pcov is not None:
             # this can use the returned errors instead of recalculating
 
-            s_sq = (err**2).sum()/(len(ydata)-len(p0))
+            s_sq = (err**2).sum() / (len(ydata) - len(p0))
             pcov = pcov * s_sq
         else:
             pcov = None
 
-        self.df_resid = len(ydata)-len(p0)
+        self.df_resid = len(ydata) - len(p0)
         self.df_model = len(p0)
         fitres = Results()
         fitres.params = popt
@@ -305,7 +307,7 @@ class NonlinearLS(Model):  # or subclass a model
             self, beta, normalized_cov_params=self.normalized_cov_params
         )
 
-        lfit.fitres = fitres   # mainly for testing
+        lfit.fitres = fitres  # mainly for testing
         self._results = lfit
         return lfit
 
@@ -362,7 +364,7 @@ class NonlinearLS(Model):  # or subclass a model
         else:
             rvs = rvs_generator(size=(ntries, nparams))
 
-        results = np.array([np.r_[self.fit_minimal(rv),  rv] for rv in rvs])
+        results = np.array([np.r_[self.fit_minimal(rv), rv] for rv in rvs])
         # selct best results and check how many solutions are within 1e-6 of best
         # not sure what leastsq returns
         return results
@@ -405,30 +407,31 @@ class Myfunc(NonlinearLS):
     def _predict(self, params):
         x = self.exog
         a, b, c = params
-        return a*np.exp(-b*x) + c
+        return a * np.exp(-b * x) + c
 
 
 if __name__ == "__main__":
+
     def func0(x, a, b, c):
-        return a*np.exp(-b*x) + c
+        return a * np.exp(-b * x) + c
 
     def func(params, x):
         a, b, c = params
-        return a*np.exp(-b*x) + c
+        return a * np.exp(-b * x) + c
 
     def error(params, x, y):
         return y - func(params, x)
 
     def error2(params, x, y):
-        return (y - func(params, x))**2
+        return (y - func(params, x)) ** 2
 
     x = np.linspace(0, 4, 50)
     params = np.array([2.5, 1.3, 0.5])
     y0 = func(params, x)
-    y = y0 + 0.2*np.random.normal(size=len(x))
+    y = y0 + 0.2 * np.random.normal(size=len(x))
 
     res = optimize.leastsq(error, params, args=(x, y), full_output=True)
-#    r, R, c = getjaccov(res[1:], 3)
+    #    r, R, c = getjaccov(res[1:], 3)
 
     mod = Myfunc(y, x)
     resmy = mod.fit(nparams=3)

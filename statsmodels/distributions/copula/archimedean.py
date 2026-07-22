@@ -6,6 +6,8 @@ License: BSD-3
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import sys
 
 import numpy as np
@@ -240,8 +242,9 @@ class ClaytonCopula(ArchimedeanCopula):
                 raise ValueError("Theta must be > -1 and !=0")
         self.theta = theta
 
-    def rvs(self, nobs=1, args=(), random_state=None):
-        rng = check_random_state(random_state)
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
+        rng = check_random_state(rng)
         (th,) = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
         v = stats.gamma(1.0 / th).rvs(size=(nobs, 1), random_state=rng)
@@ -310,8 +313,9 @@ class FrankCopula(ArchimedeanCopula):
                 raise ValueError("Theta must be !=0")
         self.theta = theta
 
-    def rvs(self, nobs=1, args=(), random_state=None):
-        rng = check_random_state(random_state)
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
+        rng = check_random_state(rng)
         (th,) = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
         v = stats.logser.rvs(1.0 - np.exp(-th), size=(nobs, 1), random_state=rng)
@@ -437,8 +441,9 @@ class GumbelCopula(ArchimedeanCopula):
                 raise ValueError("Theta must be > 1")
         self.theta = theta
 
-    def rvs(self, nobs=1, args=(), random_state=None):
-        rng = check_random_state(random_state)
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
+        rng = check_random_state(rng)
         (th,) = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
         v = stats.levy_stable.rvs(

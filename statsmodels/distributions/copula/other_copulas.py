@@ -6,6 +6,8 @@ License: BSD-3
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import stats
 
@@ -46,9 +48,10 @@ class IndependenceCopula(Copula):
         else:
             return args
 
-    def rvs(self, nobs=1, args=(), random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
         self._handle_args(args)
-        rng = check_random_state(random_state)
+        rng = check_random_state(rng)
         x = rng.random((nobs, self.k_dim))
         return x
 

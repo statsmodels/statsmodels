@@ -144,6 +144,8 @@ What's currently there?
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import special
 
@@ -843,14 +845,15 @@ class MVNormal(MVElliptical):
 
     __name__ = "Multivariate Normal Distribution"
 
-    def rvs(self, size=1, *, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, size=1, *, rng=None):
         """random variable
 
         Parameters
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
-        random_state : int, np.random.RandomState, np.random.Generator, optional
+        rng : int, np.random.RandomState, np.random.Generator, optional
             The source of randomness used to produce the variates. If None,
             uses the singleton RandomState provided by NumPy.
 
@@ -866,7 +869,7 @@ class MVNormal(MVElliptical):
         uses numpy.random.multivariate_normal directly
 
         """
-        rng = check_random_state(random_state)
+        rng = check_random_state(rng)
         return rng.multivariate_normal(self.mean, self.sigma, size=size)
 
     def logpdf(self, x):
@@ -1043,19 +1046,20 @@ class MVT(MVElliptical):
         self.extra_args = ["df"]  # overwrites extra_args of super
         self.df = df
 
-    def rvs(self, size=1, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, size=1, rng=None):
         """random variables with Student T distribution
 
         Parameters
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
-        random_state : {None, int, Generator, RandomState}, optional
-            If `seed` is None (or `np.random`), the
+        rng : {None, int, Generator, RandomState}, optional
+            If `rng` is None (or `np.random`), the
             class:``~numpy.random.RandomState`` singleton is used.
-            If `seed` is an int, a new class:``~numpy.random.RandomState``
-            instance is used, seeded with `seed`.
-            If `seed` is already a class:``~numpy.random.Generator`` or
+            If `rng` is an int, a new class:``~numpy.random.RandomState``
+            instance is used, seeded with `rng`.
+            If `rng` is already a class:``~numpy.random.Generator`` or
             class:``~numpy.random.RandomState`` instance then that instance is
             used.
 
@@ -1078,7 +1082,7 @@ class MVT(MVElliptical):
         from .multivariate import multivariate_t_rvs
 
         return multivariate_t_rvs(
-            self.mean, self.sigma, df=self.df, n=size, random_state=random_state
+            self.mean, self.sigma, df=self.df, n=size, random_state=rng
         )
 
     def logpdf(self, x):
