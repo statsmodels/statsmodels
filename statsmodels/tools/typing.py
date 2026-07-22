@@ -1,4 +1,4 @@
-"""Typing aliases used by statsmodels."""
+"""Typing aliases used by statsmodels"""
 
 from __future__ import annotations
 

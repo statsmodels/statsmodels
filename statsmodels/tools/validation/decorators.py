@@ -1,4 +1,4 @@
-"""Decorators for validating function arguments."""
+"""Decorators for validating function arguments"""
 
 from functools import wraps
 
@@ -18,7 +18,7 @@ def array_like(
     contiguous=False,
 ):
     """
-    Decorate a function argument with array_like validation.
+    Decorate a function argument with array_like validation
 
     Parameters
     ----------

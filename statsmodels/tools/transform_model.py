@@ -11,7 +11,7 @@ import numpy as np
 
 class StandardizeTransform:
     """
-    class to reparameterize a model for standardized exog
+    Class to reparameterize a model for standardized exog
 
     Parameters
     ----------
@@ -64,9 +64,7 @@ class StandardizeTransform:
         self.const_idx = const_idx
 
     def transform(self, data):
-        """
-        Standardize the data using the stored transformation
-        """
+        """Standardize the data using the stored transformation"""
         # could use scipy.stats.zscore instead
         if self.mean is None:
             return np.asarray(data) / self.scale

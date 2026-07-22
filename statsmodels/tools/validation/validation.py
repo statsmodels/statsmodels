@@ -1,4 +1,4 @@
-"""Validation helpers for array-like and scalar inputs."""
+"""Validation helpers for array-like and scalar inputs"""
 
 from __future__ import annotations
 
@@ -191,6 +191,8 @@ class PandasWrapper:
 
     def wrap(self, obj, columns=None, append=None, trim_start=0, trim_end=0):
         """
+        Wrap array_like using the index from the original input
+
         Parameters
         ----------
         obj : {array_like}
@@ -249,7 +251,7 @@ class PandasWrapper:
 
 def bool_like(value, name, optional=False, strict=False):
     """
-    Convert to bool or raise if not bool_like.
+    Convert to bool or raise if not bool_like
 
     Parameters
     ----------
@@ -293,7 +295,7 @@ def int_like(
     value: Any, name: str, optional: bool = False, strict: bool = False
 ) -> Optional[int]:
     """
-    Convert to int or raise if not int_like.
+    Convert to int or raise if not int_like
 
     Parameters
     ----------
@@ -337,7 +339,7 @@ def int_like(
 
 def required_int_like(value: Any, name: str, strict: bool = False) -> int:
     """
-    Convert to int or raise if not int_like.
+    Convert to int or raise if not int_like, requiring a value (not optional)
 
     Parameters
     ----------
@@ -362,7 +364,7 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
 
 def float_like(value, name, optional=False, strict=False):
     """
-    Convert to float or raise if not float_like.
+    Convert to float or raise if not float_like
 
     Parameters
     ----------
@@ -413,7 +415,7 @@ def float_like(value, name, optional=False, strict=False):
 
 def string_like(value, name, optional=False, options=None, lower=True):
     """
-    Check if object is string-like and raise if not.
+    Check if object is string-like and raise if not
 
     Parameters
     ----------
@@ -460,7 +462,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
 
 def dict_like(value, name, optional=False, strict=True):
     """
-    Check if dict_like (dict, Mapping) or raise if not.
+    Check if dict_like (dict, Mapping) or raise if not
 
     Parameters
     ----------

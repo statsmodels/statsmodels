@@ -1,5 +1,5 @@
 """
-some measures for evaluation of prediction, tests and model selection
+Some measures for evaluation of prediction, tests and model selection
 
 Created on Tue Nov 08 15:23:20 2011
 Updated on Wed Jun 03 10:42:20 2020
@@ -252,17 +252,17 @@ def medianbias(x1, x2, axis=0):
 
 def vare(x1, x2, ddof=0, axis=0):
     """
-    Variance of error.
+    Variance of error
 
     Parameters
     ----------
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
-       axis along which the summary statistic is calculated
     ddof : int
        Delta degrees of freedom used in the variance calculation.
+    axis : int
+       axis along which the summary statistic is calculated
 
     Returns
     -------
@@ -283,17 +283,17 @@ def vare(x1, x2, ddof=0, axis=0):
 
 def stde(x1, x2, ddof=0, axis=0):
     """
-    Standard deviation of error.
+    Standard deviation of error
 
     Parameters
     ----------
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
-       axis along which the summary statistic is calculated
     ddof : int
        Delta degrees of freedom used in the standard deviation calculation.
+    axis : int
+       axis along which the summary statistic is calculated
 
     Returns
     -------
@@ -327,7 +327,7 @@ def iqr(x1, x2, axis=0):
 
     Returns
     -------
-    irq : {float, ndarray}
+    iqr : {float, ndarray}
        Interquartile range along given axis.
 
     Notes
@@ -473,7 +473,7 @@ def hqic(llf, nobs, df_modelwc):
 
 def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
     r"""
-    Akaike information criterion.
+    Akaike information criterion
 
     Parameters
     ----------
@@ -514,12 +514,7 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
     Note: In our definition we do not divide by n in the log-likelihood
     version.
 
-    TODO: Latex math
-
-    reference for example lecture notes by Herman Bierens
-
-    See Also
-    --------
+    See, for example, lecture notes by Herman Bierens.
 
     References
     ----------
@@ -533,7 +528,7 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
     """
-    Akaike information criterion (AIC) with small sample correction.
+    Akaike information criterion (AIC) with small sample correction
 
     Parameters
     ----------
@@ -571,7 +566,7 @@ def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
     """
-    Bayesian information criterion (BIC) or Schwarz criterion.
+    Bayesian information criterion (BIC) or Schwarz criterion
 
     Parameters
     ----------
@@ -609,7 +604,7 @@ def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
     """
-    Hannan-Quinn information criterion (HQC).
+    Hannan-Quinn information criterion (HQC)
 
     Parameters
     ----------

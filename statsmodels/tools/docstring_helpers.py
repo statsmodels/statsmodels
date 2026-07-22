@@ -1,9 +1,11 @@
 """
-Vendored docstring decorators — previously imported from pandas.util._decorators.
-No longer depend on pandas internals.
+Vendored docstring decorators
 
-Originally derived from matplotlib.docstring (1.1.0).
-Vendored to remove statsmodels' dependency on pandas private API.
+Previously imported from pandas.util._decorators. No longer depend on
+pandas internals.
+
+Originally derived from matplotlib.docstring (1.1.0). Vendored to remove
+statsmodels' dependency on pandas private API.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ def deprecate_kwarg(
     stacklevel: int = 2,
 ) -> Callable[[F], F]:
     """
-    Decorator to deprecate a keyword argument of a function.
+    Decorator to deprecate a keyword argument of a function
 
     Vendored from pandas.util._decorators to remove dependency on
     pandas private API.
@@ -108,7 +110,7 @@ def deprecate_kwarg(
 class Appender:
     """
     A function decorator that will append an addendum to the docstring
-    of the target function.
+    of the target function
 
     This decorator is robust even if func.__doc__ is None
     (for example, if -OO was passed to the interpreter).
@@ -159,7 +161,7 @@ class Appender:
 class Substitution:
     """
     A decorator to take a function's docstring and perform string
-    substitution on it.
+    substitution on it
 
     This decorator is robust even if func.__doc__ is None
     (for example, if -OO was passed to the interpreter).
@@ -206,7 +208,7 @@ class Substitution:
 
     def update(self, *args: object, **kwargs: object) -> None:
         """
-        Update self.params with supplied args.
+        Update self.params with supplied args
 
         Only valid when Substitution was constructed with keyword arguments
         (i.e. self.params is a dict). No-op for positional (tuple) params.
@@ -217,7 +219,7 @@ class Substitution:
 
 def indent(text: str | None, indents: int = 1) -> str:
     """
-    Add indentation to each line of text.
+    Add indentation to each line of text
 
     Uses 4-space blocks per indent level, matching pandas' original behavior.
 
@@ -232,7 +234,6 @@ def indent(text: str | None, indents: int = 1) -> str:
     -------
     str
         Indented text, or "" if input was None/empty.
-
     """
     if not text or not isinstance(text, str):
         return ""

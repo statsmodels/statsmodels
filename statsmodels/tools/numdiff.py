@@ -1,5 +1,5 @@
 """
-Numerical differentiation functions: gradient, Jacobian, and Hessian.
+Numerical differentiation functions: gradient, Jacobian, and Hessian
 
 Author : josef-pkt
 License : BSD
@@ -86,14 +86,41 @@ _hessian_docs = """
     d[i] is epsilon[i].
 
     References
-    ----------:
-
+    ----------
     Ridout, M.S. (2009) Statistical applications of the complex-step method
         of numerical differentiation. The American Statistician, 63, 66-74
 """
 
 
 def _get_epsilon(x, s, epsilon, n):
+    """
+    Compute stepsizes for finite-difference or complex-step derivatives
+
+    Parameters
+    ----------
+    x : ndarray
+        Parameters at which the derivative is evaluated.
+    s : int
+        Scale exponent used to construct the default stepsize,
+        ``EPS**(1/s) * max(|x|, 0.1)``.
+    epsilon : float, array_like or None
+        Stepsize to use. If None, the default stepsize based on `x`
+        and `s` is used. If a scalar, it is broadcast to length `n`.
+        Otherwise it must have the same shape as `x`.
+    n : int
+        Number of parameters; used to size the default or broadcast
+        stepsize array.
+
+    Returns
+    -------
+    ndarray
+        Array of stepsizes, one per parameter.
+
+    Raises
+    ------
+    ValueError
+        If `epsilon` is array_like and its shape does not match `x`.
+    """
     if epsilon is None:
         h = EPS ** (1.0 / s) * np.maximum(np.abs(np.asarray(x)), 0.1)
     elif np.isscalar(epsilon):
@@ -171,7 +198,7 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs=None, centered=False):
 
 def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs=None, centered=False):
     """
-    Gradient of function vectorized for scalar parameter.
+    Gradient of function vectorized for scalar parameter
 
     This assumes that the function ``f`` is vectorized for a scalar parameter.
     The function value ``f(x)`` has then the same shape as the input ``x``.
@@ -265,7 +292,7 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs=None):
 
 def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs=None):
     """
-    Calculate gradient for scalar parameter with complex step derivatives.
+    Calculate gradient for scalar parameter with complex step derivatives
 
     This assumes that the function ``f`` is vectorized for a scalar parameter.
     The function value ``f(x)`` has then the same shape as the input ``x``.
@@ -314,7 +341,7 @@ def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs=None):
 
 def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
     """
-    Calculate Hessian with complex-step derivative approximation.
+    Calculate Hessian with complex-step derivative approximation
 
     Parameters
     ----------
@@ -372,11 +399,12 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
     extra_params="""return_grad : bool
         Whether or not to also return the gradient
 """,
-    extra_returns="""grad : nparray
+    extra_returns="""grad : ndarray
         Gradient if return_grad == True
 """,
     equation_number="7",
-    equation="""1/(d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])))
+    equation="""1/(d_j*d_k) * (f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])
+                 - f(x + d[k]*e[k]) + f(x))
 """,
 )
 @Appender(_hessian_docs)
@@ -418,7 +446,7 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs=None, return_grad=False):
     equation_number="8",
     equation="""1/(2*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])) -
                  (f(x + d[k]*e[k]) - f(x)) +
-                 (f(x - d[j]*e[j] - d[k]*e[k]) - f(x + d[j]*e[j])) -
+                 (f(x - d[j]*e[j] - d[k]*e[k]) - f(x - d[j]*e[j])) -
                  (f(x - d[k]*e[k]) - f(x)))
 """,
 )

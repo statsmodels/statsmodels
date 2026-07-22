@@ -9,7 +9,7 @@ from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 def logdet_symm(m, check_symm=False):
     """
-    Return log(det(m)) asserting positive definiteness of m.
+    Return log(det(m)) asserting positive definiteness of m
 
     Parameters
     ----------
@@ -35,7 +35,7 @@ def logdet_symm(m, check_symm=False):
 
 def stationary_solve(r, b):
     """
-    Solve a linear system for a Toeplitz correlation matrix.
+    Solve a linear system for a Toeplitz correlation matrix
 
     A Toeplitz correlation matrix represents the covariance of a
     stationary series with unit variance.
@@ -51,7 +51,8 @@ def stationary_solve(r, b):
 
     Returns
     -------
-    The solution to the linear system.
+    x : ndarray
+        The solution to the linear system.
 
     """
     db = r[0:1]
@@ -88,7 +89,7 @@ def transf_constraints(constraints):
     Parameters
     ----------
     constraints : ndarray, 2-D
-        restriction matrix with one constraints in rows
+        restriction matrix with one constraint per row
 
     Returns
     -------
@@ -98,7 +99,7 @@ def transf_constraints(constraints):
 
     Notes
     -----
-    This is currently and internal helper function for GAM.
+    This is currently an internal helper function for GAM.
     API not stable and will most likely change.
 
     The code for this function was taken from patsy spline handling, and
