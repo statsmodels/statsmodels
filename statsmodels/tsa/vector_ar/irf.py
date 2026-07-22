@@ -1,12 +1,10 @@
-"""
-Impulse reponse-related code
-"""
+"""Impulse response-related code"""
 
 import numpy as np
 import numpy.linalg as la
 import scipy.linalg as L
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 import statsmodels.tsa.tsatools as tsa
 from statsmodels.tsa.vector_ar import plotting, util
 
@@ -15,8 +13,26 @@ mat = np.array
 
 class BaseIRAnalysis:
     """
-    Base class for plotting and computing IRF-related statistics, want to be
-    able to handle known and estimated processes
+    Base class for plotting and computing IRF-related statistics, designed
+    to handle both known and estimated processes
+
+    Parameters
+    ----------
+    model : VAR, SVAR, or VECM instance
+        The fitted model used to compute impulse responses.
+    P : ndarray, optional
+        The matrix used for orthogonalization, satisfying sigma_u = P P'.
+        If None, computed as the Cholesky decomposition of the model's
+        residual covariance matrix.
+    periods : int, default 10
+        Number of periods to compute the impulse responses for.
+    order : sequence, optional
+        Alternate variable order for the Cholesky decomposition. Not
+        currently implemented.
+    svar : bool, default False
+        Flag indicating whether the model is a structural VAR.
+    vecm : bool, default False
+        Flag indicating whether the model is a VECM.
     """
 
     def __init__(self, model, P=None, periods=10, order=None, svar=False,
@@ -102,22 +118,22 @@ class BaseIRAnalysis:
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
         subplot_params : dict
-            To pass to subplot plotting funcions. Example: if fonts are too big,
+            To pass to subplot plotting functions. Example: if fonts are too big,
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
-
+            Keyword arguments to pass to the individual plotting functions.
         figsize : (float, float), default (10, 10)
             Figure size (width, height in inches)
         plot_stderr : bool, default True
             Plot standard impulse response error bands
         stderr_type : str
             'asym': default, computes asymptotic standard errors
-            'mc': monte carlo standard errors (use rpl)
+            'mc': Monte Carlo standard errors (use repl)
         repl : int, default 1000
             Number of replications for Monte Carlo and Sims-Zha standard errors
         seed : int
             np.random.seed for Monte Carlo replications
-        component: array or vector of principal component indices
+        component : array or vector of principal component indices
         """
         svar = self.svar
 
@@ -186,25 +202,25 @@ class BaseIRAnalysis:
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
         subplot_params : dict
-            To pass to subplot plotting funcions. Example: if fonts are too big,
+            To pass to subplot plotting functions. Example: if fonts are too big,
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
-
-        figsize: (float, float), default (10, 10)
+            Keyword arguments to pass to the individual plotting functions.
+        figsize : (float, float), default (10, 10)
             Figure size (width, height in inches)
         plot_stderr : bool, default True
             Plot standard impulse response error bands
         stderr_type : str
             'asym': default, computes asymptotic standard errors
-            'mc': monte carlo standard errors (use rpl)
+            'mc': Monte Carlo standard errors (use repl)
         repl : int, default 1000
-            Number of replications for monte carlo standard errors
+            Number of replications for Monte Carlo standard errors
         seed : int
             np.random.seed for Monte Carlo replications
         """
 
         if orth:
-            title = "Cumulative responses responses (orthogonalized)"
+            title = "Cumulative responses (orthogonalized)"
             cum_effects = self.orth_cum_effects
             lr_effects = self.orth_lr_effects
         else:
@@ -240,7 +256,21 @@ class IRAnalysis(BaseIRAnalysis):
 
     Parameters
     ----------
-    model : VAR instance
+    model : VAR, SVAR, or VECM instance
+        The fitted model used to compute impulse responses.
+    P : ndarray, optional
+        The matrix used for orthogonalization, satisfying sigma_u = P P'.
+        If None, computed as the Cholesky decomposition of the model's
+        residual covariance matrix.
+    periods : int, default 10
+        Number of periods to compute the impulse responses for.
+    order : sequence, optional
+        Alternate variable order for the Cholesky decomposition. Not
+        currently implemented.
+    svar : bool, default False
+        Flag indicating whether the model is a structural VAR.
+    vecm : bool, default False
+        Flag indicating whether the model is a VECM.
 
     Notes
     -----
@@ -264,12 +294,21 @@ class IRAnalysis(BaseIRAnalysis):
         """
         Compute asymptotic standard errors for impulse response coefficients
 
-        Notes
-        -----
-        Lütkepohl eq 3.7.5
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
 
         Returns
         -------
+        ndarray
+            Array of shape (periods + 1, neqs ** 2, neqs ** 2) containing
+            the covariance matrix of the impulse response coefficients for
+            each period.
+
+        Notes
+        -----
+        Lütkepohl eq 3.7.5
         """
         if orth:
             return self._orth_cov()
@@ -286,6 +325,21 @@ class IRAnalysis(BaseIRAnalysis):
                    signif=0.05, seed=None, burn=100):
         """
         IRF Monte Carlo integrated error bands
+
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+        svar : bool, default False
+            Compute structural impulse responses
+        repl : int, default 1000
+            Number of MC replications
+        signif : float (0 < signif < 1)
+            Significance level for error bars, defaults to 95% CI
+        seed : int, default None
+            np.random seed
+        burn : int, default 100
+            Number of initial simulated obs to discard
         """
         model = self.model
         periods = self.periods
@@ -319,7 +373,7 @@ class IRAnalysis(BaseIRAnalysis):
         component : neqs x neqs array, default to largest for each
             Index of column of eigenvector/value to use for each error band
             Note: period of impulse (t=0) is not included when computing
-            principle component
+            principal component
 
         References
         ----------
@@ -358,9 +412,9 @@ class IRAnalysis(BaseIRAnalysis):
     def err_band_sz2(self, orth=False, svar=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
-        IRF Sims-Zha error band method 2.
+        IRF Sims-Zha error band method 2
 
-        This method Does not assume symmetric error bands around mean.
+        This method does not assume symmetric error bands around mean.
 
         Parameters
         ----------
@@ -377,7 +431,7 @@ class IRAnalysis(BaseIRAnalysis):
         component : neqs x neqs array, default to largest for each
             Index of column of eigenvector/value to use for each error band
             Note: period of impulse (t=0) is not included when computing
-            principle component
+            principal component
 
         References
         ----------
@@ -422,7 +476,8 @@ class IRAnalysis(BaseIRAnalysis):
     def err_band_sz3(self, orth=False, svar=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
-        IRF Sims-Zha error band method 3. Does not assume symmetric error bands around mean.
+        IRF Sims-Zha error band method 3. Does not assume symmetric error
+        bands around mean.
 
         Parameters
         ----------
@@ -439,7 +494,7 @@ class IRAnalysis(BaseIRAnalysis):
         component : vector length neqs, default to largest for each
             Index of column of eigenvector/value to use for each error band
             Note: period of impulse (t=0) is not included when computing
-            principle component
+            principal component
 
         References
         ----------
@@ -501,11 +556,23 @@ class IRAnalysis(BaseIRAnalysis):
 
     def _eigval_decomp_SZ(self, irf_resim):
         """
+        Eigenvalue decomposition of the covariance matrix of the resimulated
+        impulse responses
+
+        Parameters
+        ----------
+        irf_resim : ndarray
+            Monte Carlo resimulated impulse responses.
+
         Returns
         -------
-        W: array of eigenvectors
-        eigva: list of eigenvalues
-        k: matrix indicating column # of largest eigenvalue for each c_i,j
+        W : ndarray
+            Array of eigenvectors.
+        eigva : ndarray
+            Array of eigenvalues.
+        k : ndarray
+            Matrix indicating the column number of the largest eigenvalue
+            for each c_i,j.
         """
         neqs = self.neqs
         periods = self.periods
@@ -585,14 +652,19 @@ class IRAnalysis(BaseIRAnalysis):
 
         Parameters
         ----------
-        orth : bool
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+
+        Returns
+        -------
+        ndarray
+            Array of shape (periods + 1, neqs ** 2, neqs ** 2) containing
+            the covariance matrix of the cumulative impulse response
+            coefficients for each period.
 
         Notes
         -----
         eq. 3.7.7 (non-orth), 3.7.10 (orth)
-
-        Returns
-        -------
         """
         Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
@@ -627,6 +699,19 @@ class IRAnalysis(BaseIRAnalysis):
                        signif=0.05, seed=None, burn=100):
         """
         IRF Monte Carlo integrated error bands of cumulative effect
+
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+        repl : int, default 1000
+            Number of MC replications
+        signif : float (0 < signif < 1)
+            Significance level for error bars, defaults to 95% CI
+        seed : int, default None
+            np.random seed
+        burn : int, default 100
+            Number of initial simulated obs to discard
         """
         model = self.model
         periods = self.periods
@@ -636,8 +721,17 @@ class IRAnalysis(BaseIRAnalysis):
 
     def lr_effect_cov(self, orth=False):
         """
+        Compute asymptotic standard errors for long-run effects
+
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+
         Returns
         -------
+        ndarray
+            The covariance matrix of the long-run effects.
         """
         lre = self.lr_effects
         Finfty = np.kron(np.tile(lre.T, self.lags), lre)

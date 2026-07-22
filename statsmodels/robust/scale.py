@@ -96,7 +96,8 @@ def iqr(a, c=GAUSSIAN_IQR, axis=0):
 
     Returns
     -------
-    The normalized interquartile range
+    float or ndarray
+        The normalized interquartile range.
     """
     a = array_like(a, "a", ndim=None)
     c = float_like(c, "c")
@@ -134,8 +135,8 @@ def qn_scale(a, c=ONE_OVER_SQRT2_GAUSSIAN_5_8, axis=0):
 
     Returns
     -------
-    {float, ndarray}
-        The Qn robust estimator of scale
+    float or ndarray
+        The Qn robust estimator of scale.
     """
     a = array_like(a, "a", ndim=None, dtype=np.float64, contiguous=True, order="C")
     c = float_like(c, "c")
@@ -166,7 +167,8 @@ def _qn_naive(a, c=ONE_OVER_SQRT2_GAUSSIAN_5_8):
 
     Returns
     -------
-    The Qn robust estimator of scale
+    float
+        The Qn robust estimator of scale.
     """
     a = np.squeeze(a)
     n = a.shape[0]
@@ -184,7 +186,7 @@ def _qn_naive(a, c=ONE_OVER_SQRT2_GAUSSIAN_5_8):
 
 class Huber:
     """
-    Huber's proposal 2 for estimating location and scale jointly.
+    Huber's proposal 2 for estimating location and scale jointly
 
     Parameters
     ----------
@@ -192,13 +194,15 @@ class Huber:
         Threshold used in threshold for chi=psi**2.  Default value is 1.5.
     tol : float, optional
         Tolerance for convergence.  Default value is 1e-08.
-    maxiter : int, optional0
+    maxiter : int, optional
         Maximum number of iterations.  Default value is 30.
     norm : statsmodels.robust.norms.RobustNorm, optional
         A robust norm used in M estimator of location. If None,
         the location estimator defaults to a one-step
         fixed point version of the M-estimator using Huber's T.
 
+    Methods
+    -------
     call
         Return joint estimates of Huber's scale and location.
 
@@ -223,9 +227,10 @@ class Huber:
 
     def __call__(self, a, mu=None, initscale=None, axis=0):
         """
-        Compute Huber's proposal 2 estimate of scale, using an optional
-        initial value of scale and an optional estimate of mu. If mu
-        is supplied, it is not reestimated.
+        Compute Huber's proposal 2 estimate of scale
+
+        Uses an optional initial value of scale and an optional estimate
+        of mu. If mu is supplied, it is not reestimated.
 
         Parameters
         ----------
@@ -237,6 +242,8 @@ class Huber:
         initscale : float or None, optional
             A first guess on scale.  If initscale is None then the standardized
             median absolute deviation of a is used.
+        axis : int, optional
+            Axis along which to estimate location and scale. Default is 0.
 
         Notes
         -----
@@ -267,14 +274,41 @@ class Huber:
 
     def _estimate_both(self, a, scale, mu, axis, est_mu, n):
         """
-        Estimate scale and location simultaneously with the following
-        pseudo_loop:
+        Estimate scale and location simultaneously
 
-        while not_converged:
-            mu, scale = estimate_location(a, scale, mu), estimate_scale(a, scale, mu)
+        Parameters
+        ----------
+        a : ndarray
+            1d array.
+        scale : ndarray
+            Initial estimate of scale, broadcastable to the shape of `a`.
+        mu : ndarray
+            Initial estimate of location, broadcastable to the shape of `a`.
+        axis : int
+            Axis along which to estimate location and scale.
+        est_mu : bool
+            Whether to reestimate mu at each iteration. If False, mu is
+            held fixed at its initial value.
+        n : int
+            Effective number of observations used in the scale update.
 
-        where estimate_location is an M-estimator and estimate_scale implements
-        the check used in Section 5.5 of Venables & Ripley
+        Returns
+        -------
+        mu : ndarray
+            The estimated location.
+        scale : ndarray
+            The estimated scale.
+
+        Notes
+        -----
+        Uses the following pseudo loop::
+
+            while not_converged:
+                mu, scale = estimate_location(a, scale, mu), \
+estimate_scale(a, scale, mu)
+
+        where estimate_location is an M-estimator and estimate_scale
+        implements the check used in Section 5.5 of Venables & Ripley.
         """
         for _ in range(self.maxiter):
             # Estimate the mean along a given axis
@@ -323,7 +357,7 @@ huber = Huber()
 
 class HuberScale:
     r"""
-    Huber's scaling for fitting robust linear models.
+    Huber's scaling for fitting robust linear models
 
     Huber's scale is intended to be used as the scale estimate in the
     IRLS algorithm and is slightly different than the `Huber` class.
@@ -334,13 +368,13 @@ class HuberScale:
         d is the tuning constant for Huber's scale.  Default is 2.5
     tol : float, optional
         The convergence tolerance
-    maxiter : int, optiona
+    maxiter : int, optional
         The maximum number of iterations.  The default is 30.
 
     Methods
     -------
     call
-        Return's Huber's scale computed as below
+        Returns Huber's scale computed as below
 
     Notes
     -----
@@ -400,9 +434,8 @@ hubers_scale = HuberScale()
 
 
 class MScale:
-    """M-scale estimation.
-
-    experimental interface, arguments and options will still change.
+    """
+    M-scale estimation
 
     Parameters
     ----------
@@ -411,6 +444,10 @@ class MScale:
     scale_bias : float
         Factor in moment condition to obtain fisher consistency of the scale
         estimate at the normal distribution.
+
+    Notes
+    -----
+    Experimental interface, arguments and options will still change.
     """
 
     def __init__(self, chi_func, scale_bias):
@@ -425,13 +462,13 @@ class MScale:
 
     def fit(self, data, start_scale="mad", maxiter=100, rtol=1e-6, atol=1e-8):
         """
-        Estimate M-scale using iteration.
+        Estimate M-scale using iteration
 
         Parameters
         ----------
         data : array-like
             Data, currently assumed to be 1-dimensional.
-        start_scale : string or float.
+        start_scale : string or float
             Starting value of scale or method to compute the starting value.
             Default is using 'mad', no other string options are available.
         maxiter : int
@@ -439,13 +476,16 @@ class MScale:
         rtol : float
             Relative convergence tolerance.
         atol : float
-            Absolute onvergence tolerance.
+            Absolute convergence tolerance.
 
         Returns
         -------
-        float : Scale estimate. The estimated variance is scale squared.
-        Todo: switch to Holder instance with more information.
+        float
+            Scale estimate. The estimated variance is scale squared.
 
+        Notes
+        -----
+        TODO: switch to Holder instance with more information.
         """
 
         scale = _scale_iter(
@@ -462,7 +502,8 @@ class MScale:
 
 
 def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=None):
-    """scale estimate based on symmetrically trimmed sample
+    """
+    Scale estimate based on symmetrically trimmed sample
 
     The scale estimate is robust to a fraction alpha of outliers on each
     tail.
@@ -493,7 +534,7 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
         Note: This cannot be a frozen instance, since it does not have an
         `expect` method.
         If distr is 'raw', then the scale is not normalized.
-    distargs :
+    distargs : tuple, optional
         Arguments for the distribution.
 
     Returns
@@ -511,8 +552,9 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
     1.7479516739879672
 
     for t distribution
+    >>> alpha = 0.1
     >>> xt = stats.t.rvs(3, size=1000, scale=2)
-    >>> print scale_trimmed(xt, alpha, distr=stats.t, distargs=(3,))
+    >>> print(scale_trimmed(xt, alpha, distr=stats.t, distargs=(3,)))
     2.06574778599
 
     compare to standard deviation of sample
@@ -579,7 +621,8 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
 
 
 def _weight_mean(x, c):
-    """Tukey-biweight, bisquare weights used in tau scale.
+    """
+    Tukey-biweight, bisquare weights used in tau scale
 
     Parameters
     ----------
@@ -590,7 +633,8 @@ def _weight_mean(x, c):
 
     Returns
     -------
-    ndarray : weights
+    ndarray
+        Weights.
     """
     x = np.asarray(x)
     w = (1 - (x / c) ** 2) ** 2 * (np.abs(x) <= c)
@@ -598,7 +642,8 @@ def _weight_mean(x, c):
 
 
 def _winsor(x, c):
-    """Winsorized squared data used in tau scale.
+    """
+    Winsorized squared data used in tau scale
 
     Parameters
     ----------
@@ -609,7 +654,8 @@ def _winsor(x, c):
 
     Returns
     -------
-    winsorized squared data, ``np.minimum(x**2, c**2)``
+    ndarray
+        Winsorized squared data, ``np.minimum(x**2, c**2)``.
     """
     return np.minimum(x**2, c**2)
 
@@ -623,7 +669,8 @@ def scale_tau(
     normalize=True,
     ddof=0,
 ):
-    """Tau estimator of univariate scale.
+    """
+    Tau estimator of univariate scale
 
     Experimental, API will change
 
@@ -644,12 +691,15 @@ def scale_tau(
         rescale the scale estimate so it is consistent when the data is
         normally distributed. The computation assumes winsorized (truncated)
         variance.
+    ddof : int
+        Degrees of freedom used in the denominator of the variance
+        computation. Default is 0.
 
     Returns
     -------
-    mean : nd_array
+    mean : ndarray
         robust mean
-    std : nd_array
+    std : ndarray
         robust estimate of scale (standard deviation)
 
     Notes
@@ -698,7 +748,40 @@ def _scale_iter(
     iter_method="rho",
     ddof=0,
 ):
-    """iterative scale estimate base on "rho" function"""
+    """
+    Iterative scale estimate based on a "rho" function
+
+    Parameters
+    ----------
+    data : array_like
+        Data, currently assumed to be 1-dimensional.
+    scale0 : {"mad", float}
+        Starting value of scale or method to compute the starting value.
+        Default is using 'mad', no other string options are available.
+    maxiter : int
+        Maximum number of iterations.
+    rtol : float
+        Relative convergence tolerance.
+    atol : float
+        Absolute convergence tolerance.
+    meef_scale : callable
+        Function that computes the moment condition (rho or weight
+        function) used for estimating scale.
+    scale_bias : float
+        Factor in moment condition to obtain fisher consistency of the
+        scale estimate at the normal distribution.
+    iter_method : {"rho", "weights"}
+        Method used in the iteration. "rho" uses the rho function
+        directly, otherwise a weighted sum of squares is used.
+    ddof : int
+        Degrees of freedom used in the denominator of the variance
+        computation. Default is 0.
+
+    Returns
+    -------
+    float
+        The estimated scale.
+    """
     x = np.asarray(data)
     nobs = x.shape[0]
     if scale0 == "mad":

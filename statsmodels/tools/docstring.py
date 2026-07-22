@@ -1,6 +1,4 @@
-"""
-Substantially copied from NumpyDoc 1.0pre.
-"""
+"""Substantially copied from NumpyDoc 1.0pre"""
 from collections.abc import Mapping
 import copy
 import inspect
@@ -12,12 +10,36 @@ from statsmodels.tools.sm_exceptions import ParseError
 
 
 def dedent_lines(lines):
-    """Deindent a list of lines maximally"""
+    """
+    Deindent a list of lines maximally
+
+    Parameters
+    ----------
+    lines : list[str]
+        The lines to dedent.
+
+    Returns
+    -------
+    list[str]
+        The dedented lines.
+    """
     return textwrap.dedent("\n".join(lines)).split("\n")
 
 
 def strip_blank_lines(line):
-    """Remove leading and trailing blank lines from a list of lines"""
+    """
+    Remove leading and trailing blank lines from a list of lines
+
+    Parameters
+    ----------
+    line : list[str]
+        The lines to strip. Modified and returned in place.
+
+    Returns
+    -------
+    list[str]
+        The lines with leading and trailing blank lines removed.
+    """
     while line and not line[0].strip():
         del line[0]
     while line and not line[-1].strip():
@@ -26,16 +48,14 @@ def strip_blank_lines(line):
 
 
 class Reader:
-    """
-    A line-based string reader.
-    """
+    """A line-based string reader"""
 
     def __init__(self, data):
         """
         Parameters
         ----------
-        data : str
-           String with lines separated by '\n'.
+        data : str or list[str]
+           String with lines separated by '\n', or a list of lines.
         """
         if isinstance(data, list):
             self._str = data
@@ -103,15 +123,34 @@ class Reader:
 
 
 class Parameter(NamedTuple):
+    """
+    A single parameter, return value, or attribute entry
+
+    Attributes
+    ----------
+    name : str
+        The name of the parameter.
+    type : str
+        The type description of the parameter, as written in the docstring.
+    desc : list[str]
+        The description lines for the parameter.
+    """
+
     name: str
     type: type
     desc: str
 
 
 class NumpyDocString(Mapping):
-    """Parses a numpydoc string to an abstract representation
+    """
+    Parses a numpydoc string to an abstract representation
 
     Instances define a mapping from section title to structured data.
+
+    Parameters
+    ----------
+    docstring : str
+        The numpydoc-formatted docstring to parse.
     """
 
     sections = {
@@ -281,11 +320,10 @@ class NumpyDocString(Mapping):
         another_func_name : Descriptive text
         func_name1, func_name2, :meth:`func_name`, func_name3
         """
-
         items = []
 
         def parse_item_name(text):
-            """Match ':role:`name`' or 'name'."""
+            """Match ':role:`name`' or 'name'"""
             m = self._func_rgx.match(text)
             if not m:
                 raise ParseError(f"{text} is not a item name")
@@ -330,7 +368,7 @@ class NumpyDocString(Mapping):
     def _parse_index(self, section, content):
         """
         .. index: default
-           :refguide: something, else, and more
+        :refguide: something, else, and more
         """
 
         def strip_each_in(lst):
@@ -559,7 +597,7 @@ class NumpyDocString(Mapping):
 
 class Docstring:
     """
-    Docstring modification.
+    Docstring modification
 
     Parameters
     ----------
@@ -577,6 +615,8 @@ class Docstring:
 
     def remove_parameters(self, parameters):
         """
+        Remove parameters from the Parameters section of the docstring
+
         Parameters
         ----------
         parameters : str, list[str]
@@ -598,13 +638,16 @@ class Docstring:
 
     def insert_parameters(self, after, parameters):
         """
+        Insert parameters into the Parameters section of the docstring
+
         Parameters
         ----------
         after : {None, str}
-            If None, inset the parameters before the first parameter in the
-            docstring.
+            If None, insert the parameters before the first parameter in the
+            docstring. Otherwise, the name of the existing parameter after
+            which the new parameters are inserted.
         parameters : Parameter, list[Parameter]
-            A Parameter of a list of Parameters.
+            A Parameter or a list of Parameters.
         """
         if self._docstring is None:
             # Protection against -oo execution
@@ -627,6 +670,8 @@ class Docstring:
 
     def replace_block(self, block_name, block):
         """
+        Replace a block of the docstring with a new block
+
         Parameters
         ----------
         block_name : str
@@ -650,6 +695,22 @@ class Docstring:
         self._ds[block_name] = block
 
     def extract_parameters(self, parameters, indent=0):
+        """
+        Extract a subset of parameters into a standalone docstring
+
+        Parameters
+        ----------
+        parameters : str, list[str]
+            The names of the parameters to extract.
+        indent : int, optional
+            Number of spaces to indent every line of the output. Default is
+            0, which does not indent the output.
+
+        Returns
+        -------
+        str
+            A docstring fragment containing only the requested parameters.
+        """
         if self._docstring is None:
             # Protection against -oo execution
             return
@@ -682,6 +743,8 @@ class Docstring:
 
 def remove_parameters(docstring, parameters):
     """
+    Remove parameters from a numpydoc docstring
+
     Parameters
     ----------
     docstring : str
@@ -719,7 +782,8 @@ def indent(text, prefix, predicate=None):
 
     Returns
     -------
-
+    str
+        The indented text, or an empty string if `text` is None.
     """
     if text is None:
         return ""

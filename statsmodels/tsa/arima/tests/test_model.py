@@ -435,7 +435,8 @@ def test_hannan_rissanen_with_fixed_params(ar_order, ma_order, fixed_params):
     "random_state_type", [7, np.random.RandomState, np.random.default_rng]
 )
 def test_reproducible_simulation(random_state_type):
-    x = np.random.randn(100)
+    rg = np.random.RandomState(12345)
+    x = rg.randn(100)
     res = ARIMA(x, order=(1, 0, 0)).fit()
 
     def get_random_state(val):
@@ -448,3 +449,37 @@ def test_reproducible_simulation(random_state_type):
     random_state = get_random_state(random_state_type)
     sim2 = res.simulate(1, random_state=random_state)
     assert_allclose(sim1, sim2)
+
+
+def test_alternative_estimators_seasonal_differencing():
+    # Seasonal differencing only (P=0, D=1, Q=0) should be accepted by
+    # non-seasonal estimators; seasonal AR or MA terms should be rejected.
+    rg = np.random.RandomState(12345)
+    endog = rg.standard_normal(48)
+
+    order = (1, 0, 1)
+    seasonal_order = (0, 1, 0, 12)
+
+    # hannan_rissanen should accept seasonal-differencing-only models
+    mod_hr = ARIMA(endog, order=order, seasonal_order=seasonal_order)
+    try:
+        mod_hr.fit(method="hannan_rissanen")
+    except Exception as exc:
+        pytest.fail(
+            f"hannan_rissanen failed on seasonal-differencing-only model:"
+            f" {exc}"
+        )
+
+    # yule_walker: AR-only model with seasonal differencing
+    mod_yw = ARIMA(endog, order=(2, 0, 0), seasonal_order=seasonal_order)
+    try:
+        mod_yw.fit(method="yule_walker")
+    except Exception as exc:
+        pytest.fail(
+            f"yule_walker failed on seasonal-differencing-only model: {exc}"
+        )
+
+    # Seasonal AR term (P=1) should still be rejected by hannan_rissanen
+    with pytest.raises(ValueError, match="seasonal"):
+        ARIMA(endog, order=(1, 0, 0),
+              seasonal_order=(1, 0, 0, 12)).fit(method="hannan_rissanen")

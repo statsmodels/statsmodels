@@ -1,8 +1,7 @@
-"""
-Compatibility tools for various data structure inputs
-"""
+"""Compatibility tools for various data structure inputs"""
 
 from statsmodels.compat.numpy import NP_LT_2
+from statsmodels.compat.pandas import infer_freq
 
 import numpy as np
 import pandas as pd
@@ -23,20 +22,25 @@ def _check_period_index(x, freq="M"):
     if x.index.freq is not None:
         inferred_freq = x.index.freqstr
     else:
-        inferred_freq = pd.infer_freq(x.index)
+        inferred_freq = infer_freq(x.index)
+        if isinstance(inferred_freq, pd.tseries.offsets.BaseOffset):
+            inferred_freq = inferred_freq.freqstr
     if not inferred_freq.startswith(freq):
         raise ValueError("Expected frequency {}. Got {}".format(freq, inferred_freq))
 
 
 def is_series(obj):
+    """Return whether obj is a pandas Series"""
     return isinstance(obj, pd.Series)
 
 
 def is_data_frame(obj):
+    """Return whether obj is a pandas DataFrame"""
     return isinstance(obj, pd.DataFrame)
 
 
 def is_design_matrix(obj):
+    """Return whether obj is a patsy DesignMatrix"""
     try:
         from patsy import DesignMatrix
     except ImportError:
@@ -46,6 +50,7 @@ def is_design_matrix(obj):
 
 
 def is_model_matrix(obj):
+    """Return whether obj is a formulaic ModelMatrix"""
     try:
         from formulaic import ModelMatrix
     except ImportError:
@@ -60,18 +65,22 @@ def _is_structured_ndarray(obj):
 
 def interpret_data(data, colnames=None, rownames=None):
     """
-    Convert passed data structure to form required by estimation classes
+    Convert a data structure to the form required by estimation classes
 
     Parameters
     ----------
     data : array_like
+        Data to convert.
     colnames : sequence or None
-        May be part of data structure
+        Column names. May be part of the data structure.
     rownames : sequence or None
+        Row names. May be part of the data structure.
 
     Returns
     -------
     (values, colnames, rownames) : (homogeneous ndarray, list)
+        Converted values, column names, and row names.
+
     """
     if isinstance(data, np.ndarray):
         values = np.asarray(data)
@@ -105,6 +114,7 @@ def interpret_data(data, colnames=None, rownames=None):
 
 
 def struct_to_ndarray(arr):
+    """Convert a structured ndarray to a homogeneous ndarray view"""
     return arr.view((float, (len(arr.dtype.names),)), type=np.ndarray)
 
 
@@ -143,9 +153,7 @@ def _is_using_formulaic(endog, exog):
 
 
 def _is_recarray(data):
-    """
-    Returns true if data is a recarray
-    """
+    """Return whether data is a recarray"""
     if NP_LT_2:
         return isinstance(data, np.core.recarray)
     else:
@@ -154,20 +162,21 @@ def _is_recarray(data):
 
 def _as_array_with_name(obj, default_name):
     """
-    Call np.asarray() on obj and attempt to get the name if its a Series.
+    Call np.asarray() on obj and attempt to get the name if it is a Series
 
     Parameters
     ----------
-    obj: pd.Series
-        Series to convert to an array
-    default_name: str
+    obj : array_like
+        Array, or pandas Series, to convert to an array.
+    default_name : str
         The default name to return in case the object isn't a pd.Series or has
         no name attribute.
 
     Returns
     -------
-    array_and_name: tuple[np.ndarray, str]
-        The data casted to np.ndarra and the series name or None
+    array_and_name : tuple[np.ndarray, str]
+        The data cast to an ndarray and the series name or None.
+
     """
     if is_series(obj):
         return (np.asarray(obj), obj.name)

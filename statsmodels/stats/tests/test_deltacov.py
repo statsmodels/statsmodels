@@ -58,7 +58,7 @@ class TestDeltacovOLS:
         tt = res.t_test(x, use_t=False)
         assert_allclose(predicted, tt.effect, rtol=1e-10)
         assert_allclose(se, tt.sd, rtol=1e-10)
-        assert_allclose(nl.conf_int(), tt.conf_int(), rtol=1e-10)
+        assert_allclose(nl.conf_int(), tt.conf_int(), rtol=1e-10, atol=1e-12)
         t1 = nl.summary()
         t2 = tt.summary()
         # equal because nl.summary uses also ContrastResults

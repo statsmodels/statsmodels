@@ -14,7 +14,7 @@ joblib
 
 # test
 pytest>=8.4.1,<9
-pytest-randomly
+# pytest-randomly  <- Conflicts with np.random.seed() in tests, so we disable it for now
 pytest-run-parallel
 pytest-xdist
 pytest-cov

@@ -222,7 +222,7 @@ z_ctt_largep *= z_large_scaling
 # TODO: finish this and then integrate them into adf function
 def mackinnonp(teststat, regression="c", N=1, lags=None):
     """
-    Returns MacKinnon's approximate p-value for teststat.
+    Return MacKinnon's approximate p-value for teststat
 
     Parameters
     ----------
@@ -235,23 +235,25 @@ def mackinnonp(teststat, regression="c", N=1, lags=None):
     N : int
         The number of series believed to be I(1).  For (Augmented) Dickey-
         Fuller N = 1.
+    lags : int, optional
+        The number of lags used in the regression.  Not currently used.
 
     Returns
     -------
     p-value : float
         The p-value for the ADF statistic estimated using MacKinnon 1994.
 
-    References
-    ----------
-    .. [*] MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions
-        for Unit-Root and Cointegration Tests." Journal of Business & Economics
-        Statistics, 12.2, 167-76.
-
     Notes
     -----
     For (A)DF
     H_0: AR coefficient = 1
     H_a: AR coefficient < 1
+
+    References
+    ----------
+    .. [*] MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions
+        for Unit-Root and Cointegration Tests." Journal of Business & Economics
+        Statistics, 12.2, 167-76.
     """
     maxstat = _tau_maxs[regression]
     minstat = _tau_mins[regression]
@@ -406,7 +408,7 @@ tau_2010s = {
 
 def mackinnoncrit(N=1, regression="c", nobs=inf):
     """
-    Returns the critical values for cointegrating and the ADF test.
+    Return the critical values for cointegrating and the ADF test
 
     In 2010 MacKinnon updated the values of his 1994 paper with critical values
     for the augmented Dickey-Fuller tests.  These new values are to be
@@ -415,13 +417,13 @@ def mackinnoncrit(N=1, regression="c", nobs=inf):
     Parameters
     ----------
     N : int
-        The number of series of I(1) series for which the null of
+        The number of series of I(1) variables for which the null of
         non-cointegration is being tested.  For N > 12, the critical values
         are linearly interpolated (not yet implemented).  For the ADF test,
         N = 1.
-    reg : str {'c', 'tc', 'ctt', 'n'}
+    regression : str {'c', 'ct', 'ctt', 'n'}
         Following MacKinnon (1996), these stand for the type of regression run.
-        'c' for constant and no trend, 'tc' for constant with a linear trend,
+        'c' for constant and no trend, 'ct' for constant with a linear trend,
         'ctt' for constant with a linear and quadratic trend, and 'n' for
         no constant.  The values for the no constant case are taken from the
         1996 paper, as they were not updated for 2010 due to the unrealistic

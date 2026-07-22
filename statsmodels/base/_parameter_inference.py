@@ -11,9 +11,10 @@ from scipy import stats
 # this is a copy from stats._diagnostic_other to avoid circular imports
 def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
                cov_params=None):
-    """general formula for score/LM test
+    """
+    General formula for score/LM test
 
-    generalized score or lagrange multiplier test for implicit constraints
+    Generalized score or lagrange multiplier test for implicit constraints
 
     `r(params) = 0`, with gradient `R = d r / d params`
 
@@ -21,35 +22,34 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
 
     It is assumed that all arrays are evaluated at the constrained estimates.
 
-
     Parameters
     ----------
     score : ndarray, 1-D
-        derivative of objective function at estimated parameters
-        of constrained model
-    constraint_matrix R : ndarray
-        Linear restriction matrix or Jacobian of nonlinear constraints
-    score_deriv_inv, Ainv : ndarray, symmetric, square
-        inverse of second derivative of objective function
+        Derivative of objective function at estimated parameters
+        of constrained model.
+    constraint_matrix : ndarray
+        Linear restriction matrix or Jacobian of nonlinear constraints,
+        denoted R.
+    score_deriv_inv : ndarray, symmetric, square
+        Inverse of second derivative of objective function, denoted Ainv.
         TODO: could be inverse of OPG or any other estimator if information
-        matrix equality holds
-    cov_score B :  ndarray, symmetric, square
-        covariance matrix of the score. This is the inner part of a sandwich
-        estimator.
-    cov_params V :  ndarray, symmetric, square
-        covariance of full parameter vector evaluated at constrained parameter
-        estimate. This can be specified instead of cov_score B.
+        matrix equality holds.
+    cov_score : ndarray, symmetric, square
+        Covariance matrix of the score, denoted B. This is the inner part
+        of a sandwich estimator.
+    cov_params : ndarray, symmetric, square, optional
+        Covariance of full parameter vector evaluated at constrained
+        parameter estimate, denoted V. This can be specified instead of
+        cov_score.
 
     Returns
     -------
     lm_stat : float
-        score/lagrange multiplier statistic
-    p-value : float
-        p-value of the LM test based on chisquare distribution
-
-    Notes
-    -----
-
+        Score/lagrange multiplier statistic.
+    pvalue : float
+        P-value of the LM test based on chisquare distribution.
+    k_constraints : int
+        Number of constraints used in the test.
     """
     # shorthand alias
     R, Ainv, B, V = constraint_matrix, score_deriv_inv, cov_score, cov_params
@@ -79,7 +79,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
 def score_test(self, exog_extra=None, params_constrained=None,
                hypothesis="joint", cov_type=None, cov_kwds=None,
                k_constraints=None, r_matrix=None, scale=None, observed=True):
-    """score test for restrictions or for omitted variables
+    """Score test for restrictions or for omitted variables
 
     Null Hypothesis : constraints are satisfied
 
@@ -116,7 +116,7 @@ def score_test(self, exog_extra=None, params_constrained=None,
     hypothesis : str, 'joint' (default) or 'separate'
         If hypothesis is 'joint', then the chisquare test results for the
         joint hypothesis that all constraints hold is returned.
-        If hypothesis is 'joint', then z-test results for each constraint
+        If hypothesis is 'separate', then z-test results for each constraint
         is returned.
         This is currently only implemented for cov_type="nonrobust".
     cov_type : str
@@ -126,11 +126,21 @@ def score_test(self, exog_extra=None, params_constrained=None,
         tests is used.
         If the cov_type argument is not None, then it will be used instead of
         the Wald cov_type given in fit.
+    cov_kwds : dict or None
+        Additional keyword arguments used in the covariance specified by
+        cov_type.
     k_constraints : int or None
         Number of constraints that were used in the estimation of params
         restricted relative to the number of exog in the model.
         This must be provided if no exog_extra are given. If exog_extra is
         not None, then k_constraints is assumed to be zero if it is None.
+    r_matrix : ndarray or None
+        Restriction matrix for the constraints. This is only used if
+        exog_extra is provided as a tuple, or if cov_type requires it.
+    scale : float or None
+        Optional scale to use in the score and Hessian computation, for
+        example to correct for a known scale in the covariance of the
+        restricted model.
     observed : bool
         If True, then the observed Hessian is used in calculating the
         covariance matrix of the score. If false then the expected
@@ -151,7 +161,7 @@ def score_test(self, exog_extra=None, params_constrained=None,
     Notes
     -----
     Status: experimental, several options are not implemented yet or are not
-    verified yet. Currently available ptions might also still change.
+    verified yet. Currently available options might also still change.
 
     cov_type is 'nonrobust':
 
@@ -288,11 +298,38 @@ def score_test(self, exog_extra=None, params_constrained=None,
 
 def _scorehess_extra(self, params=None, exog_extra=None,
                      exog2_extra=None, hess_kwds=None):
-    """Experimental helper function for variable addition score test.
+    """Experimental helper function for variable addition score test
 
     This uses score and hessian factor at the params which should be the
     params of the restricted model.
 
+    Parameters
+    ----------
+    self : Results instance
+        Results instance of the restricted model.
+    params : array_like or None
+        Parameters of the restricted model. If None, then `self.params`
+        is used.
+    exog_extra : array_like or None
+        Additional explanatory variables to add to the mean component of
+        the model.
+    exog2_extra : array_like or None
+        Additional explanatory variables to add to the second (e.g.
+        precision or scale) component of the model.
+    hess_kwds : dict or None
+        Keyword arguments to be passed to the model's hessian/score
+        factor methods.
+
+    Returns
+    -------
+    score_obs : ndarray
+        Observation-wise score contributions for the extended model.
+    hessian : ndarray
+        Hessian of the extended model.
+    k_constraints : int
+        Number of added constraints.
+    r_matrix : ndarray
+        Restriction matrix corresponding to the added constraints.
     """
     if hess_kwds is None:
         hess_kwds = {}
@@ -361,6 +398,19 @@ def _scorehess_extra(self, params=None, exog_extra=None,
 
 
 def im_ratio(results):
+    """Compute the information matrix ratio for a misspecified model
+
+    Parameters
+    ----------
+    results : Results instance
+        Results instance of a fitted model.
+
+    Returns
+    -------
+    ndarray
+        The information matrix ratio, the product of the inverse negative
+        Hessian and the covariance of the score (or ``cov_params``).
+    """
     res = getattr(results, "_results", results)  # shortcut
     hess = res.model.hessian(res.params)
     if res.cov_type == "nonrobust":
@@ -376,6 +426,15 @@ def im_ratio(results):
 def tic(results):
     """Takeuchi information criterion for misspecified models
 
+    Parameters
+    ----------
+    results : Results instance
+        Results instance of a fitted model.
+
+    Returns
+    -------
+    float
+        The Takeuchi information criterion.
     """
     imr = getattr(results, "im_ratio", im_ratio(results))
     tic = - 2 * results.llf + 2 * np.trace(imr)
@@ -383,14 +442,28 @@ def tic(results):
 
 
 def gbic(results, gbicp=False):
-    """generalized BIC for misspecified models
+    """Generalized BIC for misspecified models
+
+    Parameters
+    ----------
+    results : Results instance
+        Results instance of a fitted model.
+    gbicp : bool
+        Currently unused, reserved for selecting the plug-in variant of
+        the generalized BIC.
+
+    Returns
+    -------
+    gbic : float
+        The generalized BIC.
+    gbicp : float
+        The plug-in variant of the generalized BIC.
 
     References
     ----------
     Lv, Jinchi, and Jun S. Liu. 2014. "Model Selection Principles in
     Misspecified Models." Journal of the Royal Statistical Society.
     Series B (Statistical Methodology) 76 (1): 141-67.
-
     """
     self = getattr(results, "_results", results)
     k_params = self.df_model + 1

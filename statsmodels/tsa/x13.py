@@ -1,6 +1,5 @@
 """
-Run x12/x13-arima specs in a subprocess from Python and curry results back
-into python.
+Run x12/x13-arima specs in a subprocess and curry results back into Python
 
 Notes
 -----
@@ -53,10 +52,27 @@ def _bool_to_yes_no(x):
 
 def _find_x12(x12path=None, prefer_x13=True):
     """
+    Locate the x12 or x13 binary
+
     If x12path is not given, then either x13as[.exe] or x12a[.exe] must
     be found on the PATH. Otherwise, the environmental variable X12PATH or
     X13PATH must be defined. If prefer_x13 is True, only X13PATH is searched
-    for. If it is false, only X12PATH is searched for.
+    for. If it is False, only X12PATH is searched for.
+
+    Parameters
+    ----------
+    x12path : str, optional
+        The path to the x12 or x13 binary, or to the directory containing
+        it. If None, the X12PATH or X13PATH environmental variable is used.
+    prefer_x13 : bool
+        If True, search for x13as (and the X13PATH environmental variable)
+        first. If False, search for x12a (and the X12PATH environmental
+        variable) first.
+
+    Returns
+    -------
+    str or bool
+        The full path to the located binary, or False if none was found.
     """
     _binary_names = BINARY_NAMES
     if x12path is not None and x12path.endswith(_binary_names):
@@ -99,8 +115,21 @@ def _check_x12(x12path=None):
 
 def _clean_order(order):
     """
-    Takes something like (1 1 0)(0 1 1) and returns a arma order, sarma
-    order tuple. Also accepts (1 1 0) and return arma order and (0, 0, 0)
+    Takes something like (1 1 0)(0 1 1) and returns an arma order, sarma
+    order tuple. Also accepts (1 1 0) and returns arma order and (0, 0, 0)
+
+    Parameters
+    ----------
+    order : str
+        The regular and, optionally, seasonal ARMA order as returned by
+        X12/X13, e.g. ``"(1 1 0)(0 1 1)"`` or ``"(1 1 0)"``.
+
+    Returns
+    -------
+    order : tuple
+        The regular ARMA order.
+    sorder : tuple
+        The seasonal ARMA order. (0, 0, 0) if not given in `order`.
     """
     order = re.findall(r"\([0-9 ]*?\)", order)
 
@@ -199,8 +228,22 @@ def _check_errors(errors, rawspec_text):
 
 def _convert_out_to_series(x, dates, name):
     """
-    Convert x to a DataFrame where x is a string in the format given by
-    x-13arima-seats output.
+    Convert x to a Series where x is a string in the format given by
+    x-13arima-seats output
+
+    Parameters
+    ----------
+    x : str
+        The tab-delimited string containing the x-13arima-seats output.
+    dates : array_like
+        The index to use for the resulting Series.
+    name : str
+        The name to give to the resulting Series.
+
+    Returns
+    -------
+    Series
+        The parsed series, indexed by `dates`.
     """
     from io import StringIO
 
@@ -239,32 +282,53 @@ class Spec:
 
 class SeriesSpec(Spec):
     """
+    Parameters for building a X12/X13 series spec
+
     Parameters
     ----------
-    data
+    data : array_like
+        The data to use in the spec.
+    name : str
+        The name of the series.
     appendbcst : bool
+        Whether or not to append the backcasts to the series.
     appendfcst : bool
-    comptype
-    compwt
-    decimals
-    modelspan
-    name
-    period
-    precision
-    to_print
-    to_save
-    span
-    start
-    title
-    series_type
+        Whether or not to append the forecasts to the series.
+    comptype : str
+        The type of composite series.
+    compwt : int
+        The weight for the composite series.
+    decimals : int
+        The number of decimals to use in the output.
+    modelspan : tuple
+        The span of the data to use for modeling.
+    period : int
+        The period of the series, 12 for monthly, 4 for quarterly.
+    precision : int
+        The precision to use in the output.
+    to_print : tuple
+        Optional list of tables to print.
+    to_save : tuple
+        Optional list of tables to save.
+    span : tuple
+        The span of the data to use.
+    start : tuple
+        The start date, as a (year, period) tuple.
+    title : str
+        The title of the series.
+    series_type : str
+        The type of the series.
+    divpower : int
+        The power of 10 by which the data are divided.
+    missingcode : int
+        The code that identifies a missing observation.
+    missingval : int
+        The value substituted for missing observations.
 
     Notes
     -----
     Rarely used arguments
 
-    divpower
-    missingcode
-    missingval
     saveprecision
     trimzero
     """
@@ -328,7 +392,7 @@ def pandas_to_series_spec(x):
     try:
         period = _freq_to_period[x.index.freqstr]
     except (AttributeError, ValueError):
-        from pandas.tseries.api import infer_freq
+        from statsmodels.compat.pandas import infer_freq
 
         period = _freq_to_period[infer_freq(x.index)]
     start_date = x.index[0]
@@ -376,7 +440,7 @@ def x13_arima_analysis(
     tempdir=None,
 ):
     """
-    Perform x13-arima analysis for monthly or quarterly data.
+    Perform x13-arima analysis for monthly or quarterly data
 
     Parameters
     ----------
@@ -422,7 +486,7 @@ def x13_arima_analysis(
         Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
-        Must be givein if ``endog`` does not have date information in its
+        Must be given if ``endog`` does not have date information in its
         index. Anything accepted by pandas.DatetimeIndex for the freq value.
     rawspec : str or Path
         As this wrapper does not provide all the available parameter
@@ -479,7 +543,6 @@ def x13_arima_analysis(
     -----
     This works by creating a specification file, writing it to a temporary
     directory, invoking X12/X13 in a subprocess, and reading the output
-    directory, invoking exog12/X13 in a subprocess, and reading the output
     back in.
     """
     x12path = _check_x12(x12path)
@@ -664,7 +727,7 @@ def x13_arima_select_order(
     tempdir=None,
 ):
     """
-    Perform automatic seasonal ARIMA order identification using x12/x13 ARIMA.
+    Perform automatic seasonal ARIMA order identification using x12/x13 ARIMA
 
     Parameters
     ----------
@@ -704,7 +767,7 @@ def x13_arima_select_order(
         Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
-        Must be givein if ``endog`` does not have date information in its
+        Must be given if ``endog`` does not have date information in its
         index. Anything accepted by pandas.DatetimeIndex for the freq value.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this

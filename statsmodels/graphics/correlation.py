@@ -1,11 +1,11 @@
-"""correlation plots
+"""
+Correlation plots
 
 Author: Josef Perktold
 License: BSD-3
 
 example for usage with different options in
 statsmodels/sandbox/examples/thirdparty/ex_ratereturn.py
-
 """
 import numpy as np
 
@@ -14,7 +14,8 @@ from . import utils
 
 def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
               ax=None, cmap="RdYlBu_r"):
-    """Plot correlation of many variables in a tight color grid.
+    """
+    Plot correlation of many variables in a tight color grid
 
     Parameters
     ----------
@@ -124,7 +125,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
 def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None,
                    ynames=None, fig=None, cmap="RdYlBu_r"):
     """
-    Create a grid of correlation plots.
+    Create a grid of correlation plots
 
     The individual correlation plots are assumed to all have the same
     variables, axis labels can be specified only once.
@@ -160,8 +161,8 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
     Returns
     -------
     Figure
-        If `ax` is None, the created figure.  Otherwise the figure to which
-        `ax` is connected.
+        If `fig` is None, the created figure.  Otherwise the figure that was
+        passed in.
 
     Examples
     --------

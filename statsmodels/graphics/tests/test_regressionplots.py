@@ -46,16 +46,18 @@ class TestPlot:
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
-        x2 = 5 + 3 * np.random.randn(nsample)
+        rs = np.random.RandomState(98474361)
+        x2 = 5 + 3 * rs.randn(nsample)
         x = np.c_[x1, x2, np.sin(0.5 * x1), (x2 - 5) ** 2, np.ones(nsample)]
         beta = [0.5, 0.5, 1, -0.04, 5.0]
         y_true = np.dot(x, beta)
-        y = y_true + sig * np.random.normal(size=nsample)
+        y = y_true + sig * rs.normal(size=nsample)
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
 
         cls.res = sm.OLS(y, exog0).fit()
         cls.res_true = sm.OLS(y, x).fit()
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_fit(self, close_figures):
         res = self.res
@@ -76,6 +78,7 @@ class TestPlot:
 
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_oth(self, close_figures):
         # just test that they run
@@ -93,6 +96,7 @@ class TestPlot:
 
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_influence(self, close_figures):
         infl = self.res.get_influence()
@@ -126,6 +130,7 @@ class TestPlot:
         with pytest.raises(ValueError):
             influence_plot(self.res, criterion="unknown")
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_leverage_resid2(self, close_figures):
         fig = plot_leverage_resid2(self.res)
@@ -137,11 +142,12 @@ class TestPlotPandas(TestPlot):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
-        x2 = 5 + 3 * np.random.randn(nsample)
+        rs = np.random.RandomState(98474362)
+        x2 = 5 + 3 * rs.randn(nsample)
         X = np.c_[x1, x2, np.sin(0.5 * x1), (x2 - 5) ** 2, np.ones(nsample)]
         beta = [0.5, 0.5, 1, -0.04, 5.0]
         y_true = np.dot(X, beta)
-        y = y_true + sig * np.random.normal(size=nsample)
+        y = y_true + sig * rs.normal(size=nsample)
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
         exog0 = DataFrame(exog0, columns=["const", "var1", "var2"])
         y = Series(y, name="outcome")
@@ -154,6 +160,7 @@ class TestPlotPandas(TestPlot):
 
 class TestPlotFormula(TestPlotPandas):
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_one_column_exog(self, close_figures):
         from statsmodels.formula.api import ols
@@ -168,14 +175,15 @@ class TestABLine:
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(12345)
-        X = sm.add_constant(np.random.normal(0, 20, size=30))
-        y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
+        rs = np.random.RandomState(12345)
+        X = sm.add_constant(rs.normal(0, 20, size=30))
+        y = np.dot(X, [25, 3.5]) + rs.normal(0, 30, size=30)
         mod = sm.OLS(y, X).fit()
         cls.X = X
         cls.y = y
         cls.mod = mod
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_model(self, close_figures):
         fig = abline_plot(model_results=self.mod)
@@ -183,6 +191,7 @@ class TestABLine:
         ax.scatter(self.X[:, 1], self.y)
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_model_ax(self, close_figures):
         fig = plt.figure()
@@ -191,6 +200,7 @@ class TestABLine:
         fig = abline_plot(model_results=self.mod, ax=ax)
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_ab(self, close_figures):
         mod = self.mod
@@ -198,6 +208,7 @@ class TestABLine:
         fig = abline_plot(intercept=intercept, slope=slope)
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_ab_ax(self, close_figures):
         mod = self.mod
@@ -208,6 +219,7 @@ class TestABLine:
         fig = abline_plot(intercept=intercept, slope=slope, ax=ax)
         close_or_save(pdf, fig)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_remove(self, close_figures):
         mod = self.mod
@@ -225,9 +237,9 @@ class TestABLine:
 class TestABLinePandas(TestABLine):
     @classmethod
     def setup_class(cls):
-        np.random.seed(12345)
-        X = sm.add_constant(np.random.normal(0, 20, size=30))
-        y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
+        rs = np.random.RandomState(12345)
+        X = sm.add_constant(rs.normal(0, 20, size=30))
+        y = np.dot(X, [25, 3.5]) + rs.normal(0, 30, size=30)
         cls.X = X
         cls.y = y
         X = DataFrame(X, columns=["const", "someX"])
@@ -238,14 +250,15 @@ class TestABLinePandas(TestABLine):
 
 class TestAddedVariablePlot:
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_added_variable_ols(self, close_figures):
-        np.random.seed(3446)
+        rs = np.random.RandomState(3446)
         n = 100
         p = 3
-        exog = np.random.normal(size=(n, p))
+        exog = rs.normal(size=(n, p))
         lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1] ** 2
-        endog = lin_pred + np.random.normal(size=n)
+        endog = lin_pred + rs.normal(size=n)
 
         model = sm.OLS(endog, exog)
         results = model.fit()
@@ -255,17 +268,18 @@ class TestAddedVariablePlot:
         close_or_save(pdf, fig)
         close_figures()
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_added_variable_poisson(self, close_figures):
 
-        np.random.seed(3446)
+        rs = np.random.RandomState(3446)
 
         n = 100
         p = 3
-        exog = np.random.normal(size=(n, p))
+        exog = rs.normal(size=(n, p))
         lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1] ** 2
         expval = np.exp(lin_pred)
-        endog = np.random.poisson(expval)
+        endog = rs.poisson(expval)
 
         model = sm.GLM(endog, exog, family=sm.families.Poisson())
         results = model.fit()
@@ -313,18 +327,19 @@ class TestAddedVariablePlot:
 
 class TestPartialResidualPlot:
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_partial_residual_poisson(self, close_figures):
 
-        np.random.seed(3446)
+        rs = np.random.RandomState(3446)
 
         n = 100
         p = 3
-        exog = np.random.normal(size=(n, p))
+        exog = rs.normal(size=(n, p))
         exog[:, 0] = 1
         lin_pred = 4 + exog[:, 1] + 0.2 * exog[:, 2] ** 2
         expval = np.exp(lin_pred)
-        endog = np.random.poisson(expval)
+        endog = rs.poisson(expval)
 
         model = sm.GLM(endog, exog, family=sm.families.Poisson())
         results = model.fit()
@@ -352,18 +367,19 @@ class TestPartialResidualPlot:
 
 class TestCERESPlot:
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ceres_poisson(self, close_figures):
 
-        np.random.seed(3446)
+        rs = np.random.RandomState(3446)
 
         n = 100
         p = 3
-        exog = np.random.normal(size=(n, p))
+        exog = rs.normal(size=(n, p))
         exog[:, 0] = 1
         lin_pred = 4 + exog[:, 1] + 0.2 * exog[:, 2] ** 2
         expval = np.exp(lin_pred)
-        endog = np.random.poisson(expval)
+        endog = rs.poisson(expval)
 
         model = sm.GLM(endog, exog, family=sm.families.Poisson())
         results = model.fit()
@@ -389,6 +405,7 @@ class TestCERESPlot:
                 close_or_save(pdf, fig)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_partregress_formula_env(close_figures):
     # test that user function in formulas work, see #7672
@@ -397,11 +414,12 @@ def test_partregress_formula_env(close_figures):
     def lg(x):
         return np.log10(x) if x > 0 else 0
 
+    rs = np.random.RandomState(98474363)
     df = DataFrame(
         dict(
-            a=np.random.random(size=10),
-            b=np.random.random(size=10),
-            c=np.random.random(size=10),
+            a=rs.random(size=10),
+            b=rs.random(size=10),
+            c=rs.random(size=10),
         )
     )
     sm.graphics.plot_partregress(
@@ -409,3 +427,24 @@ def test_partregress_formula_env(close_figures):
     )
 
     sm.graphics.plot_partregress("a", "lg(b)", ["c"], obs_labels=False, data=df)
+
+
+@pytest.mark.matplotlib
+def test_add_ellipse_and_lowess(close_figures):
+    from statsmodels.graphics.regressionplots import add_ellipse, add_lowess
+
+    fig, ax = plt.subplots()
+    rs = np.random.RandomState(12345)
+    x = rs.normal(size=100)
+    y = x + rs.normal(size=100)
+
+    # Test add_ellipse
+    fig_out = add_ellipse(x, y, ax=ax)
+    assert_equal(isinstance(fig_out, plt.Figure), True)
+    assert len(ax.patches) > 0
+
+    # Test add_lowess with new signature (exog, endog passed explicitly)
+    fig_out2 = add_lowess(ax, exog=x, endog=y)
+    assert_equal(isinstance(fig_out2, plt.Figure), True)
+
+    close_or_save(pdf, fig)

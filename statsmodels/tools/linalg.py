@@ -1,6 +1,4 @@
-"""
-Linear Algebra solvers and other helpers
-"""
+"""Linear algebra solvers and other helpers."""
 
 import numpy as np
 
@@ -11,17 +9,20 @@ from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 def logdet_symm(m, check_symm=False):
     """
-    Return log(det(m)) asserting positive definiteness of m.
+    Return log(det(m)) asserting positive definiteness of m
 
     Parameters
     ----------
     m : array_like
         2d array that is positive-definite (and symmetric)
+    check_symm : bool
+        If True, check that `m` is symmetric before factorizing.
 
     Returns
     -------
     logdet : float
         The log-determinant of m.
+
     """
     from scipy import linalg
 
@@ -34,7 +35,7 @@ def logdet_symm(m, check_symm=False):
 
 def stationary_solve(r, b):
     """
-    Solve a linear system for a Toeplitz correlation matrix.
+    Solve a linear system for a Toeplitz correlation matrix
 
     A Toeplitz correlation matrix represents the covariance of a
     stationary series with unit variance.
@@ -50,9 +51,10 @@ def stationary_solve(r, b):
 
     Returns
     -------
-    The solution to the linear system.
-    """
+    x : ndarray
+        The solution to the linear system.
 
+    """
     db = r[0:1]
 
     dim = b.ndim
@@ -81,12 +83,13 @@ def stationary_solve(r, b):
 
 
 def transf_constraints(constraints):
-    """use QR to get transformation matrix to impose constraint
+    """
+    Use QR to get transformation matrix to impose constraint
 
     Parameters
     ----------
     constraints : ndarray, 2-D
-        restriction matrix with one constraints in rows
+        restriction matrix with one constraint per row
 
     Returns
     -------
@@ -96,7 +99,7 @@ def transf_constraints(constraints):
 
     Notes
     -----
-    This is currently and internal helper function for GAM.
+    This is currently an internal helper function for GAM.
     API not stable and will most likely change.
 
     The code for this function was taken from patsy spline handling, and
@@ -106,8 +109,8 @@ def transf_constraints(constraints):
     --------
     statsmodels.base._constraints.TransformRestriction : class to impose
         constraints by reparameterization used by `_fit_constrained`.
-    """
 
+    """
     from scipy import linalg
 
     m = constraints.shape[0]
@@ -117,7 +120,8 @@ def transf_constraints(constraints):
 
 
 def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15):
-    """matrix square root for symmetric matrices
+    """
+    Matrix square root for symmetric matrices
 
     Usage is for decomposing a covariance function S into a square root R
     such that
@@ -151,6 +155,7 @@ def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15
     -------
     msqrt : ndarray
         matrix square root or square root of inverse matrix.
+
     """
     # see also scipy.linalg null_space
     u, s, v = np.linalg.svd(mat)

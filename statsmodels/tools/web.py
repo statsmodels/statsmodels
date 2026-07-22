@@ -1,7 +1,4 @@
-"""
-Provides a function to open the system browser to either search or go directly
-to a function's reference
-"""
+"""Open the system browser to search or view online documentation"""
 from urllib.parse import urlencode
 import webbrowser
 
@@ -12,8 +9,28 @@ BASE_URL = "https://www.statsmodels.org/"
 
 def _generate_url(func, stable):
     """
-    Parse inputs and return a correctly formatted URL or raises ValueError
-    if the input is not understandable
+    Return a documentation URL for func or raise ValueError
+
+    Parameters
+    ----------
+    func : {None, str, callable}
+        Either None to get the base documentation URL, a string to search
+        the documentation, or a statsmodels function to link to its
+        generated API documentation.
+    stable : bool
+        Flag indicating whether to use the stable documentation (True) or
+        the development documentation (False).
+
+    Returns
+    -------
+    str
+        The documentation URL.
+
+    Raises
+    ------
+    ValueError
+        If func is a callable that is not part of statsmodels, or if func
+        is not a str, callable, or None.
     """
     url = BASE_URL
     if stable:
@@ -42,7 +59,7 @@ def _generate_url(func, stable):
 
 def webdoc(func=None, stable=None):
     """
-    Opens a browser and displays online documentation
+    Open a browser and display online documentation
 
     Parameters
     ----------
@@ -76,6 +93,7 @@ def webdoc(func=None, stable=None):
     statsmodels is a release.  Otherwise opens the development documentation.
 
     Uses the default system browser.
+
     """
     stable = __version__ if "dev" not in __version__ else stable
     url_or_error = _generate_url(func, stable)

@@ -5,7 +5,6 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-from statsmodels.compat.pandas import Appender
 
 import contextlib
 from warnings import warn
@@ -15,6 +14,7 @@ import pandas as pd
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.vector_ar import var_model
@@ -40,7 +40,7 @@ class VARMAX(MLEModel):
     Parameters
     ----------
     endog : array_like
-        The observed time-series process :math:`y`, , shaped nobs x k_endog.
+        The observed time-series process :math:`y`, shaped nobs x k_endog.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
     order : iterable
@@ -314,6 +314,24 @@ class VARMAX(MLEModel):
                             "enforce_invertibility"] + list(kwargs.keys())
 
     def clone(self, endog, exog=None, **kwargs):
+        """
+        Clone state space model with new data and optionally new specification
+
+        Parameters
+        ----------
+        endog : array_like
+            The observed time-series process :math:`y`.
+        exog : array_like, optional
+            Array of exogenous regressors, shaped nobs x k.
+        **kwargs
+            Keyword arguments to pass to the new model constructor. Those
+            that are not specified are copied from the specification of the
+            current model.
+
+        Returns
+        -------
+        VARMAX
+        """
         return self._clone_from_init_kwds(endog, exog=exog, **kwargs)
 
     @property
@@ -601,7 +619,7 @@ class VARMAX(MLEModel):
     def untransform_params(self, constrained):
         """
         Transform constrained parameters used in likelihood evaluation
-        to unconstrained parameters used by the optimizer.
+        to unconstrained parameters used by the optimizer
 
         Parameters
         ----------
@@ -707,6 +725,27 @@ class VARMAX(MLEModel):
 
     def update(self, params, transformed=True, includes_fixed=False,
                complex_step=False):
+        """
+        Update the parameters of the model
+
+        Updates the representation matrices to fill in the new parameter
+        values.
+
+        Parameters
+        ----------
+        params : array_like
+            Array of new parameters.
+        transformed : bool, optional
+            Whether or not `params` is already transformed. Default is
+            True.
+        includes_fixed : bool, optional
+            Whether or not `params` includes the fixed parameters in their
+            location in the parameter vector, in addition to the free
+            parameters. Default is False.
+        complex_step : bool, optional
+            Whether or not the current run is because of a complex step
+            differentiation. Default is False.
+        """
         params = self.handle_params(params, transformed=transformed,
                                     includes_fixed=includes_fixed)
 
@@ -783,8 +822,6 @@ class VARMAX(MLEModel):
             Out-of-sample `exog` values, usually produced by
             `_validate_out_of_sample_exog` to ensure the correct shape (this
             method does not do any additional validation of its own).
-        out_of_sample : int
-            Number of out-of-sample periods.
 
         Notes
         -----
@@ -832,7 +869,7 @@ class VARMAX(MLEModel):
 
 class VARMAXResults(MLEResults):
     """
-    Class to hold results from fitting an VARMAX model.
+    Class to hold results from fitting a VARMAX model
 
     Parameters
     ----------
@@ -895,6 +932,24 @@ class VARMAXResults(MLEResults):
             ).reshape(k_endog, k_endog, k_ma).T
 
     def extend(self, endog, exog=None, **kwargs):
+        """
+        Recreate the results object for new data that extends the original data
+
+        Parameters
+        ----------
+        endog : array_like
+            New observations from the modeled time-series process.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable.
+        **kwargs
+            Keyword arguments to pass to the new model constructor. Those
+            that are not specified are copied from the specification of the
+            current model.
+
+        Returns
+        -------
+        results : VARMAXResults
+        """
         # If we have exog, then the last element of predicted_state and
         # predicted_state_cov are nan (since they depend on the exog associated
         # with the first out-of-sample point), so we need to compute them here
@@ -932,8 +987,6 @@ class VARMAXResults(MLEResults):
             Out-of-sample `exog` values, usually produced by
             `_validate_out_of_sample_exog` to ensure the correct shape (this
             method does not do any additional validation of its own).
-        out_of_sample : int
-            Number of out-of-sample periods.
 
         Notes
         -----

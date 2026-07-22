@@ -16,7 +16,7 @@ The model's autoregressive parameters (ar_params) indicate that the process
 def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
                      normalize=False, prefix=None):
     """
-    Compute innovations using a given ARMA process.
+    Compute innovations using a given ARMA process
 
     Parameters
     ----------
@@ -110,7 +110,7 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
 
 def arma_loglike(endog, ar_params=None, ma_params=None, sigma2=1, prefix=None):
     """
-    Compute the log-likelihood of the given data assuming an ARMA process.
+    Compute the log-likelihood of the given data assuming an ARMA process
 
     Parameters
     ----------
@@ -140,7 +140,7 @@ def arma_loglike(endog, ar_params=None, ma_params=None, sigma2=1, prefix=None):
 def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
                     prefix=None):
     """
-    Compute the log-likelihood for each observation assuming an ARMA process.
+    Compute the log-likelihood for each observation assuming an ARMA process
 
     Parameters
     ----------
@@ -183,7 +183,7 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
 def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
                prefix=None):
     """
-    Compute the score (gradient of the log-likelihood function).
+    Compute the score (gradient of the log-likelihood function)
 
     Parameters
     ----------
@@ -231,7 +231,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
 def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
                   prefix=None):
     """
-    Compute the score (gradient) per observation.
+    Compute the score (gradient) per observation
 
     Parameters
     ----------

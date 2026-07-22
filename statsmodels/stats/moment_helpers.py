@@ -1,9 +1,10 @@
-"""helper functions conversion between moments
+"""
+Helper functions for conversion between moments
 
-contains:
+Contains:
 
 * conversion between central and non-central moments, skew, kurtosis and
-  cummulants
+  cumulants
 * cov2corr : convert covariance matrix to correlation matrix
 
 
@@ -34,8 +35,20 @@ def _convert_from_multidim(x, totype=list):
 
 
 def mc2mnc(mc):
-    """convert central to non-central moments, uses recursive formula
-    optionally adjusts first moment to return mean
+    """
+    Convert central to non-central moments, uses recursive formula
+
+    Optionally adjusts first moment to return mean.
+
+    Parameters
+    ----------
+    mc : array_like
+        Central moments, with the first element equal to the mean.
+
+    Returns
+    -------
+    mnc : ndarray or list
+        Non-central moments.
     """
     x = _convert_to_multidim(mc)
 
@@ -57,8 +70,23 @@ def mc2mnc(mc):
 
 
 def mnc2mc(mnc, wmean=True):
-    """convert non-central to central moments, uses recursive formula
-    optionally adjusts first moment to return mean
+    """
+    Convert non-central to central moments, uses recursive formula
+
+    Optionally adjusts first moment to return mean.
+
+    Parameters
+    ----------
+    mnc : array_like
+        Non-central moments, with the first element equal to the mean.
+    wmean : bool
+        If True (default), the first returned moment is the mean instead
+        of zero.
+
+    Returns
+    -------
+    mu : ndarray or list
+        Central moments.
     """
     X = _convert_to_multidim(mnc)
 
@@ -81,8 +109,20 @@ def mnc2mc(mnc, wmean=True):
 
 
 def cum2mc(kappa):
-    """convert non-central moments to cumulants
-    recursive formula produces as many cumulants as moments
+    """
+    Convert cumulants to central moments
+
+    Recursive formula produces as many central moments as cumulants.
+
+    Parameters
+    ----------
+    kappa : array_like
+        Cumulants.
+
+    Returns
+    -------
+    mc : ndarray or list
+        Central moments.
 
     References
     ----------
@@ -108,9 +148,23 @@ def cum2mc(kappa):
 
 
 def mnc2cum(mnc):
-    """convert non-central moments to cumulants
-    recursive formula produces as many cumulants as moments
+    """
+    Convert non-central moments to cumulants
 
+    Recursive formula produces as many cumulants as moments.
+
+    Parameters
+    ----------
+    mnc : array_like
+        Non-central moments.
+
+    Returns
+    -------
+    kappa : ndarray or list
+        Cumulants.
+
+    References
+    ----------
     https://en.wikipedia.org/wiki/Cumulant#Cumulants_and_moments
     """
     X = _convert_to_multidim(mnc)
@@ -133,7 +187,19 @@ def mnc2cum(mnc):
 
 def mc2cum(mc):
     """
-    just chained because I have still the test case
+    Convert central moments to cumulants
+
+    Just chained because there is still a test case for it.
+
+    Parameters
+    ----------
+    mc : array_like
+        Central moments.
+
+    Returns
+    -------
+    kappa : ndarray or list
+        Cumulants.
     """
     first_step = mc2mnc(mc)
     if isinstance(first_step, np.ndarray):
@@ -143,7 +209,20 @@ def mc2cum(mc):
 
 
 def mvsk2mc(args):
-    """convert mean, variance, skew, kurtosis to central moments"""
+    """
+    Convert mean, variance, skew, kurtosis to central moments
+
+    Parameters
+    ----------
+    args : array_like
+        Sequence containing the mean, variance, skew, and kurtosis, in
+        that order.
+
+    Returns
+    -------
+    mc : tuple or ndarray
+        Central moments (mean, variance, 3rd and 4th central moments).
+    """
     X = _convert_to_multidim(args)
 
     def _local_counts(args):
@@ -161,7 +240,20 @@ def mvsk2mc(args):
 
 
 def mvsk2mnc(args):
-    """convert mean, variance, skew, kurtosis to non-central moments"""
+    """
+    Convert mean, variance, skew, kurtosis to non-central moments
+
+    Parameters
+    ----------
+    args : array_like
+        Sequence containing the mean, variance, skew, and kurtosis, in
+        that order.
+
+    Returns
+    -------
+    mnc : tuple or ndarray
+        Non-central moments.
+    """
     X = _convert_to_multidim(args)
 
     def _local_counts(args):
@@ -180,7 +272,20 @@ def mvsk2mnc(args):
 
 
 def mc2mvsk(args):
-    """convert central moments to mean, variance, skew, kurtosis"""
+    """
+    Convert central moments to mean, variance, skew, kurtosis
+
+    Parameters
+    ----------
+    args : array_like
+        Sequence containing the central moments (mean, variance, 3rd and
+        4th central moments), in that order.
+
+    Returns
+    -------
+    res : tuple or ndarray
+        Mean, variance, skew, and kurtosis.
+    """
     X = _convert_to_multidim(args)
 
     def _local_counts(args):
@@ -195,7 +300,18 @@ def mc2mvsk(args):
 
 
 def mnc2mvsk(args):
-    """convert central moments to mean, variance, skew, kurtosis
+    """
+    Convert non-central moments to mean, variance, skew, kurtosis
+
+    Parameters
+    ----------
+    args : array_like
+        Sequence containing the non-central moments, in order.
+
+    Returns
+    -------
+    res : tuple or ndarray
+        Mean, variance, skew, and kurtosis.
     """
     X = _convert_to_multidim(args)
 
@@ -227,20 +343,23 @@ def mnc2mvsk(args):
 
 def cov2corr(cov, return_std=False):
     """
-    convert covariance matrix to correlation matrix
+    Convert covariance matrix to correlation matrix
 
     Parameters
     ----------
     cov : array_like, 2d
-        covariance matrix, see Notes
+        Covariance matrix, see Notes.
+    return_std : bool
+        If this is true then the standard deviation is also returned.
+        By default only the correlation matrix is returned.
 
     Returns
     -------
     corr : ndarray (subclass)
-        correlation matrix
-    return_std : bool
-        If this is true then the standard deviation is also returned.
-        By default only the correlation matrix is returned.
+        Correlation matrix.
+    std_ : ndarray
+        Standard deviation from the diagonal of cov, returned only if
+        return_std is True.
 
     Notes
     -----
@@ -258,19 +377,19 @@ def cov2corr(cov, return_std=False):
 
 def corr2cov(corr, std):
     """
-    convert correlation matrix to covariance matrix given standard deviation
+    Convert correlation matrix to covariance matrix given standard deviation
 
     Parameters
     ----------
     corr : array_like, 2d
-        correlation matrix, see Notes
+        Correlation matrix, see Notes.
     std : array_like, 1d
-        standard deviation
+        Standard deviation.
 
     Returns
     -------
     cov : ndarray (subclass)
-        covariance matrix
+        Covariance matrix.
 
     Notes
     -----
@@ -286,18 +405,18 @@ def corr2cov(corr, std):
 
 def se_cov(cov):
     """
-    get standard deviation from covariance matrix
+    Get standard deviation from covariance matrix
 
-    just a shorthand function np.sqrt(np.diag(cov))
+    Just a shorthand function np.sqrt(np.diag(cov)).
 
     Parameters
     ----------
     cov : array_like, square
-        covariance matrix
+        Covariance matrix.
 
     Returns
     -------
     std : ndarray
-        standard deviation from diagonal of cov
+        Standard deviation from diagonal of cov.
     """
     return np.sqrt(np.diag(cov))

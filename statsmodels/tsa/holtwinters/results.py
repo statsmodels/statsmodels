@@ -1,3 +1,5 @@
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 import pandas as pd
 from scipy.special import inv_boxcox
@@ -11,11 +13,12 @@ from statsmodels.base.wrapper import (
     populate_wrapper,
     union_dicts,
 )
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class HoltWintersResults(Results):
     """
-    Results from fitting Exponential Smoothing models.
+    Results from fitting Exponential Smoothing models
 
     Parameters
     ----------
@@ -100,37 +103,27 @@ class HoltWintersResults(Results):
 
     @property
     def aic(self):
-        """
-        The Akaike information criterion.
-        """
+        """The Akaike information criterion"""
         return self._aic
 
     @property
     def aicc(self):
-        """
-        AIC with a correction for finite sample sizes.
-        """
+        """AIC with a correction for finite sample sizes"""
         return self._aicc
 
     @property
     def bic(self):
-        """
-        The Bayesian information criterion.
-        """
+        """The Bayesian information criterion"""
         return self._bic
 
     @property
     def sse(self):
-        """
-        The sum of squared errors between the data and the fittted value.
-        """
+        """The sum of squared errors between the data and the fitted value"""
         return self._sse
 
     @property
     def model(self):
-        """
-        The model used to produce the results instance.
-        """
+        """The model used to produce the results instance"""
         return self._model
 
     @model.setter
@@ -139,30 +132,22 @@ class HoltWintersResults(Results):
 
     @property
     def level(self):
-        """
-        An array of the levels values that make up the fitted values.
-        """
+        """An array of the level values that make up the fitted values"""
         return self._level
 
     @property
     def optimized(self):
-        """
-        Flag indicating if model parameters were optimized to fit the data.
-        """
+        """Flag indicating if model parameters were optimized to fit the data"""
         return self._optimized
 
     @property
     def trend(self):
-        """
-        An array of the trend values that make up the fitted values.
-        """
+        """An array of the trend values that make up the fitted values"""
         return self._trend
 
     @property
     def season(self):
-        """
-        An array of the seasonal values that make up the fitted values.
-        """
+        """An array of the seasonal values that make up the fitted values"""
         return self._season
 
     @property
@@ -177,44 +162,32 @@ class HoltWintersResults(Results):
 
     @property
     def fittedvalues(self):
-        """
-        An array of the fitted values
-        """
+        """An array of the fitted values"""
         return self._fittedvalues
 
     @property
     def fittedfcast(self):
-        """
-        An array of both the fitted values and forecast values.
-        """
+        """An array of both the fitted values and forecast values"""
         return self._fittedfcast
 
     @property
     def fcastvalues(self):
-        """
-        An array of the forecast values
-        """
+        """An array of the forecast values"""
         return self._fcastvalues
 
     @property
     def resid(self):
-        """
-        An array of the residuals of the fittedvalues and actual values.
-        """
+        """An array of the residuals of the fittedvalues and actual values"""
         return self._resid
 
     @property
     def k(self):
-        """
-        The k parameter used to remove the bias in AIC, BIC etc.
-        """
+        """The k parameter used to remove the bias in AIC, BIC etc"""
         return self._k
 
     @property
     def mle_retvals(self):
-        """
-        Optimization results if the parameters were optimized to fit the data.
-        """
+        """Optimization results if the parameters were optimized to fit the data"""
         return self._mle_retvals
 
     @mle_retvals.setter
@@ -230,7 +203,7 @@ class HoltWintersResults(Results):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting, ie.,
             the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, ie.,
             the first forecast is start. Can also be a date string to
@@ -278,7 +251,7 @@ class HoltWintersResults(Results):
 
     def summary(self):
         """
-        Summarize the fitted Model
+        Summarize the fitted model
 
         Returns
         -------
@@ -377,6 +350,7 @@ class HoltWintersResults(Results):
 
         return smry
 
+    @deprecate_kwarg("random_state", "rng")
     def simulate(
         self,
         nsimulations,
@@ -384,10 +358,11 @@ class HoltWintersResults(Results):
         repetitions=1,
         error="add",
         random_errors=None,
-        random_state=None,
+        *,
+        rng=None,
     ):
         r"""
-        Random simulations using the state space formulation.
+        Random simulations using the state space formulation
 
         Parameters
         ----------
@@ -429,10 +404,12 @@ class HoltWintersResults(Results):
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        random_state : int or np.random.RandomState, optional
-            A seed for the random number generator or a
-            ``np.random.RandomState`` object. Only used if `random_errors` is
-            ``None``. Default is ``None``.
+        rng : int, np.random.Generator or np.random.RandomState, optional
+            A seed for a numpy.random.RandomState or a
+            ``np.random.RandomState`` or ``np.random.Generator`` object.
+            Only used if `random_errors` is ``None`` or ``"bootstrap"``.
+            Default value of ``None`` uses the singleton RandomState object
+            provided by NumPy.
 
         Returns
         -------
@@ -663,30 +640,23 @@ class HoltWintersResults(Results):
                     "(nsimulations, repetitions)"
                 )
             eps = random_errors
-        elif random_errors == "bootstrap":
-            eps = np.random.choice(
-                resid, size=(nsimulations, repetitions), replace=True
-            )
-        elif random_errors is None:
-            if random_state is None:
-                eps = np.random.randn(nsimulations, repetitions) * sigma
-            elif isinstance(random_state, int):
-                rng = np.random.RandomState(random_state)
-                eps = rng.randn(nsimulations, repetitions) * sigma
-            elif isinstance(random_state, np.random.RandomState):
-                eps = random_state.randn(nsimulations, repetitions) * sigma
-            else:
-                raise ValueError(
-                    "Argument random_state must be None, an integer, "
-                    "or an instance of np.random.RandomState"
-                )
-        elif isinstance(random_errors, (rv_continuous, rv_discrete)):
-            params = random_errors.fit(resid)
-            eps = random_errors.rvs(*params, size=(nsimulations, repetitions))
-        elif isinstance(random_errors, rv_frozen):
-            eps = random_errors.rvs(size=(nsimulations, repetitions))
         else:
-            raise ValueError("Argument random_errors has unexpected value!")
+            rng = check_random_state(rng, deprecated=True)
+            if random_errors == "bootstrap":
+                eps = rng.choice(resid, size=(nsimulations, repetitions), replace=True)
+            elif random_errors is None:
+                eps = rng.standard_normal((nsimulations, repetitions)) * sigma
+            elif isinstance(random_errors, (rv_continuous, rv_discrete)):
+                params = random_errors.fit(resid)
+                eps = random_errors.rvs(
+                    *params, size=(nsimulations, repetitions), random_state=rng
+                )
+            elif isinstance(random_errors, rv_frozen):
+                eps = random_errors.rvs(
+                    size=(nsimulations, repetitions), random_state=rng
+                )
+            else:
+                raise ValueError("Argument random_errors has unexpected value!")
 
         for t in range(nsimulations):
             b0 = op_d(b[t - 1, :], phi)

@@ -5,7 +5,7 @@
 Author: Austin Adams
 
 This class implements Oaxaca-Blinder Decomposition. It returns
-a OaxacaResults Class:
+an OaxacaResults Class:
 
 OaxacaBlinder:
 Two-Fold (two_fold)
@@ -25,7 +25,7 @@ but the method has since been applied to numerous other
 topics." (Wikipedia)
 
 The model is designed to accept two endogenous response variables
-and two exogenous explanitory variables. They are then fit using
+and two exogenous explanatory variables. They are then fit using
 the specific type of decomposition that you want.
 
 The method was famously used in Card and Krueger's paper
@@ -44,17 +44,19 @@ Journal of the American Statistical Association, 1955.
 A. S. Blinder "Wage Discrimination: Reduced Form and Structural
 Estimates," The Journal of Human Resources, 1973.
 """
+
 from textwrap import dedent
 
 import numpy as np
 
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.tools import add_constant
 
 
 class OaxacaBlinder:
     """
-    Class to perform Oaxaca-Blinder Decomposition.
+    Class to perform Oaxaca-Blinder Decomposition
 
     Parameters
     ----------
@@ -75,17 +77,22 @@ class OaxacaBlinder:
         at the start. If nothing is supplied, then True is assumed.
     swap : bool, optional
         Imitates the STATA Oaxaca command by allowing users to choose to swap
-        groups. Unlike STATA, this is assumed to be True instead of False
+        groups. Unlike STATA, this is assumed to be True instead of False.
     cov_type : str, optional
         See regression.linear_model.RegressionResults for a description of the
-        available covariance estimators
+        available covariance estimators.
     cov_kwds : dict, optional
         See linear_model.RegressionResults.get_robustcov_results for a
-        description required keywords for alternative covariance estimators
+        description of the required keywords for alternative covariance
+        estimators.
+    rng : int, np.random.RandomState, np.random.Generator, optional
+        The source of randomness to use in variable calculation. If None,
+        uses the singleton RandomState provided by NumPy. If an int,
+        creates a new Generator.
 
     Notes
     -----
-    Please check if your data includes at constant. This will still run, but
+    Please check if your data includes a constant. This will still run, but
     will return incorrect values if set incorrectly.
 
     You can access the models by using their code as an attribute, e.g.,
@@ -125,6 +132,7 @@ class OaxacaBlinder:
         swap=True,
         cov_type="nonrobust",
         cov_kwds=None,
+        rng=None,
     ):
         if str(type(exog)).find("pandas") != -1:
             bifurcate = exog.columns.get_loc(bifurcate)
@@ -141,6 +149,7 @@ class OaxacaBlinder:
         endog = np.column_stack((bi_col, endog))
         bi = np.unique(bi_col)
         self.bi_col = bi_col
+        self.rng = check_random_state(rng)
 
         # split the data along the bifurcate axis, the issue is you need to
         # delete it after you fit the model for the total model.
@@ -174,17 +183,35 @@ class OaxacaBlinder:
         self.exog_f_mean = np.mean(exog_f, axis=0)
         self.exog_s_mean = np.mean(exog_s, axis=0)
 
-        self._f_model = OLS(endog_f, exog_f).fit(
-            cov_type=cov_type, cov_kwds=cov_kwds
-        )
-        self._s_model = OLS(endog_s, exog_s).fit(
-            cov_type=cov_type, cov_kwds=cov_kwds
-        )
+        self._f_model = OLS(endog_f, exog_f).fit(cov_type=cov_type, cov_kwds=cov_kwds)
+        self._s_model = OLS(endog_s, exog_s).fit(cov_type=cov_type, cov_kwds=cov_kwds)
 
     def variance(self, decomp_type, n=5000, conf=0.99):
         """
-        A helper function to calculate the variance/std. Used to keep
-        the decomposition functions cleaner
+        A helper function to calculate the variance/std
+
+        Used to keep the decomposition functions cleaner.
+
+        Parameters
+        ----------
+        decomp_type : int
+            The type of decomposition being bootstrapped. Use 2 for the
+            two-fold decomposition or 3 for the three-fold decomposition.
+        n : int, optional
+            The number of bootstrap iterations to use to calculate the
+            standard errors. This defaults to 5000, but is overridden by
+            ``self.submitted_n`` when it is not None.
+        conf : float, optional
+            The confidence level used when trimming the bootstrap
+            distribution before computing the standard deviation. This
+            defaults to 0.99, but is overridden by ``self.submitted_conf``
+            when it is not None.
+
+        Returns
+        -------
+        list of float
+            The bootstrapped standard errors for each effect of the
+            requested decomposition.
         """
         if self.submitted_n is not None:
             n = self.submitted_n
@@ -207,7 +234,7 @@ class OaxacaBlinder:
             exog = self.exog
             amount = len(endog)
 
-            samples = np.random.randint(0, high=amount, size=amount)
+            samples = self.rng.randint(0, high=amount, size=amount)
             endog = endog[samples]
             exog = exog[samples]
             neumark = np.delete(exog, bifurcate, axis=1)
@@ -308,15 +335,15 @@ class OaxacaBlinder:
 
         Parameters
         ----------
-        std: boolean, optional
+        std : bool, optional
             If true, bootstrapped standard errors will be calculated.
-        n: int, optional
-            A amount of iterations to calculate the bootstrapped
+        n : int, optional
+            The number of iterations to use to calculate the bootstrapped
             standard errors. This defaults to 5000.
-        conf: float, optional
+        conf : float, optional
             This is the confidence required for the standard error
             calculation. Defaults to .99, but could be anything less
-            than or equal to one. One is heavy discouraged, due to the
+            than or equal to one. One is heavily discouraged, due to the
             extreme outliers inflating the variance.
 
         Returns
@@ -328,12 +355,8 @@ class OaxacaBlinder:
         self.submitted_conf = conf
         self.submitted_weight = None
         std_val = None
-        self.endow_eff = (
-            self.exog_f_mean - self.exog_s_mean
-        ) @ self._s_model.params
-        self.coef_eff = self.exog_s_mean @ (
-            self._f_model.params - self._s_model.params
-        )
+        self.endow_eff = (self.exog_f_mean - self.exog_s_mean) @ self._s_model.params
+        self.coef_eff = self.exog_s_mean @ (self._f_model.params - self._s_model.params)
         self.int_eff = (self.exog_f_mean - self.exog_s_mean) @ (
             self._f_model.params - self._s_model.params
         )
@@ -358,17 +381,16 @@ class OaxacaBlinder:
         """
         Calculates the two-fold or pooled Oaxaca Blinder Decompositions
 
-        Methods
-        -------
-        std: boolean, optional
+        Parameters
+        ----------
+        std : bool, optional
             If true, bootstrapped standard errors will be calculated.
-
-        two_fold_type: string, optional
+        two_fold_type : str, optional
             This method allows for the specific calculation of the
             non-discriminatory model. There are four different types
-            available at this time. pooled, cotton, reimers, self_submitted.
+            available at this time: pooled, cotton, reimers, self_submitted.
             Pooled is assumed and if a non-viable parameter is given,
-            pooled will be ran.
+            pooled will be run.
 
             pooled - This type assumes that the pooled model's parameters
             (a normal regression) is the non-discriminatory model.
@@ -379,10 +401,10 @@ class OaxacaBlinder:
             nuemark - This is similar to the pooled type, but the regression
             is not done including the indicator variable.
 
-            cotton - This type uses the adjusted in Cotton (1988), which
+            cotton - This type uses the adjustment in Cotton (1988), which
             accounts for the undervaluation of one group causing the
-            overevalution of another. It uses the sample size weights for
-            a linear combination of the two model parameters
+            overvaluation of another. It uses the sample size weights for
+            a linear combination of the two model parameters.
 
             reimers - This type uses a linear combination of the two
             models with both parameters being 50% of the
@@ -392,19 +414,18 @@ class OaxacaBlinder:
             own weights. Please be sure to put the weight of the larger mean
             group only. This should be submitted in the
             submitted_weights variable.
-
-        submitted_weight: int/float, required only for self_submitted,
-            This is the submitted weight for the larger mean. If the
-            weight for the larger mean is p, then the weight for the
-            other mean is 1-p. Only submit the first value.
-
-        n: int, optional
-            A amount of iterations to calculate the bootstrapped
+        submitted_weight : int or float, optional
+            Required only for self_submitted. This is the submitted weight
+            for the larger mean. If the weight for the larger mean is p,
+            then the weight for the other mean is 1-p. Only submit the
+            first value.
+        n : int, optional
+            The number of iterations to use to calculate the bootstrapped
             standard errors. This defaults to 5000.
-        conf: float, optional
+        conf : float, optional
             This is the confidence required for the standard error
             calculation. Defaults to .99, but could be anything less
-            than or equal to one. One is heavy discouraged, due to the
+            than or equal to one. One is heavily discouraged, due to the
             extreme outliers inflating the variance.
 
         Returns
@@ -462,8 +483,26 @@ class OaxacaBlinder:
 
 class OaxacaResults:
     """
-    This class summarizes the fit of the OaxacaBlinder model.
+    This class summarizes the fit of the OaxacaBlinder model
 
+    Parameters
+    ----------
+    results : tuple of float
+        The estimated effects. For a two-fold decomposition this is
+        (unexplained, explained, gap); for a three-fold decomposition
+        this is (endowment effect, coefficient effect, interaction
+        effect, gap).
+    model_type : int
+        The type of decomposition that produced ``results``. 2 indicates
+        a two-fold decomposition and 3 indicates a three-fold
+        decomposition.
+    std_val : tuple of float or None, optional
+        The bootstrapped standard errors corresponding to each value in
+        ``results``, in the same order. None if standard errors were not
+        requested.
+
+    Notes
+    -----
     Use .summary() to get a table of the fitted values or
     use .params to receive a list of the values
     use .std to receive a list of the standard errors
@@ -516,20 +555,14 @@ class OaxacaResults:
         self.model_type = model_type
 
     def summary(self):
-        """
-        Print a summary table with the Oaxaca-Blinder effects
-        """
+        """Print a summary table with the Oaxaca-Blinder effects"""
         if self.model_type == 2:
             if self.std is None:
-                print(
-                    dedent(
-                        f"""\
+                print(dedent(f"""\
                 Oaxaca-Blinder Two-fold Effects
                 Unexplained Effect: {self.params[0]:.5f}
                 Explained Effect: {self.params[1]:.5f}
-                Gap: {self.params[2]:.5f}"""
-                    )
-                )
+                Gap: {self.params[2]:.5f}"""))
             else:
                 print(
                     dedent(
@@ -550,20 +583,14 @@ class OaxacaResults:
                 )
         if self.model_type == 3:
             if self.std is None:
-                print(
-                    dedent(
-                        f"""\
+                print(dedent(f"""\
                 Oaxaca-Blinder Three-fold Effects
                 Endowment Effect: {self.params[0]:.5f}
                 Coefficient Effect: {self.params[1]:.5f}
                 Interaction Effect: {self.params[2]:.5f}
-                Gap: {self.params[3]:.5f}"""
-                    )
-                )
+                Gap: {self.params[3]:.5f}"""))
             else:
-                print(
-                    dedent(
-                        f"""\
+                print(dedent(f"""\
                 Oaxaca-Blinder Three-fold Effects
                 Endowment Effect: {self.params[0]:.5f}
                 Endowment Standard Error: {self.std[0]:.5f}
@@ -571,6 +598,4 @@ class OaxacaResults:
                 Coefficient Standard Error: {self.std[1]:.5f}
                 Interaction Effect: {self.params[2]:.5f}
                 Interaction Standard Error: {self.std[2]:.5f}
-                Gap: {self.params[3]:.5f}"""
-                    )
-                )
+                Gap: {self.params[3]:.5f}"""))

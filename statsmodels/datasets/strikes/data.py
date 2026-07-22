@@ -12,7 +12,7 @@ published by the Bureau of Labor Statistics.
 ::
 
     Kennan, J. 1985. "The duration of contract strikes in US manufacturing.
-        `Journal of Econometrics` 28.1, 5-28.
+        *Journal of Econometrics* 28.1, 5-28.
 """
 
 DESCRSHORT = """Contains data on the length of strikes in US manufacturing and

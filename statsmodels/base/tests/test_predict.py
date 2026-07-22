@@ -1,6 +1,7 @@
 """
 Tests for Results.predict
 """
+
 from statsmodels.compat.pandas import testing as pdt
 
 import numpy as np
@@ -69,9 +70,11 @@ class CheckPredictReturns:
         assert_allclose(pred, fitted.values, rtol=1e-13)
 
         # pandas DataFrame
-        x = pd.DataFrame(res.model.exog[1:10:2],
-                         index=data.index[1:10:2],
-                         columns=res.model.exog_names)
+        x = pd.DataFrame(
+            res.model.exog[1:10:2],
+            index=data.index[1:10:2],
+            columns=res.model.exog_names,
+        )
         pred = res.predict(x)
         pdt.assert_index_equal(pred.index, fitted.index)
         assert_allclose(pred.values, fitted.values, rtol=1e-13)
@@ -91,14 +94,16 @@ class TestPredictOLS(CheckPredictReturns):
     @classmethod
     def setup_class(cls):
         nobs = 30
-        np.random.seed(987128)
-        x = np.random.randn(nobs, 3)
-        y = x.sum(1) + np.random.randn(nobs)
+        rs = np.random.RandomState(987128)
+        x = rs.randn(nobs, 3)
+        y = x.sum(1) + rs.randn(nobs)
         index = ["obs%02d" % i for i in range(nobs)]
         # add one extra column to check that it does not matter
-        cls.data = pd.DataFrame(np.round(np.column_stack((y, x)), 4),
-                                columns="y var1 var2 var3".split(),
-                                index=index)
+        cls.data = pd.DataFrame(
+            np.round(np.column_stack((y, x)), 4),
+            columns="y var1 var2 var3".split(),
+            index=index,
+        )
 
         cls.res = OLS.from_formula("y ~ var1 + var2", data=cls.data).fit()
 
@@ -108,14 +113,16 @@ class TestPredictGLM(CheckPredictReturns):
     @classmethod
     def setup_class(cls):
         nobs = 30
-        np.random.seed(987128)
-        x = np.random.randn(nobs, 3)
-        y = x.sum(1) + np.random.randn(nobs)
+        rs = np.random.RandomState(987128)
+        x = rs.randn(nobs, 3)
+        y = x.sum(1) + rs.randn(nobs)
         index = ["obs%02d" % i for i in range(nobs)]
         # add one extra column to check that it does not matter
-        cls.data = pd.DataFrame(np.round(np.column_stack((y, x)), 4),
-                                columns="y var1 var2 var3".split(),
-                                index=index)
+        cls.data = pd.DataFrame(
+            np.round(np.column_stack((y, x)), 4),
+            columns="y var1 var2 var3".split(),
+            index=index,
+        )
 
         cls.res = GLM.from_formula("y ~ var1 + var2", data=cls.data).fit()
 

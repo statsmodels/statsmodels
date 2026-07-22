@@ -26,6 +26,7 @@ def print_debug_output(results, dt):
 
 def dt_s_tup_to_string(dt_s_tup):
     """
+    Convert a deterministic term / seasonal tuple to a JMulTi file-name string
 
     Parameters
     ----------
@@ -56,6 +57,7 @@ def dt_s_tup_to_string(dt_s_tup):
 
 def load_results_jmulti(dataset, dt_s_list):
     """
+    Load JMulTi VAR estimation results for a dataset
 
     Parameters
     ----------

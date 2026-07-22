@@ -1,10 +1,12 @@
-"""Variations on boxplots."""
+"""Variations on boxplots"""
 
 # Author: Ralf Gommers
 # Based on code by Flavio Coelho and Teemu Ikonen.
 
 import numpy as np
 from scipy.stats import gaussian_kde
+
+from statsmodels.tools.rng_qrng import check_random_state
 
 from . import utils
 
@@ -21,7 +23,7 @@ def violinplot(
     plot_opts=None,
 ):
     """
-    Make a violin plot of each dataset in the `data` sequence.
+    Make a violin plot of each dataset in the `data` sequence
 
     A violin plot is a boxplot combined with a kernel density estimate of the
     probability density function per point.
@@ -52,7 +54,7 @@ def violinplot(
           - 'violin_fc', MPL color.  Fill color for violins.  Default is 'y'.
           - 'violin_ec', MPL color.  Edge color for violins.  Default is 'k'.
           - 'violin_lw', scalar.  Edge linewidth for violins.  Default is 1.
-          - 'violin_alpha', float.  Transparancy of violins.  Default is 0.5.
+          - 'violin_alpha', float.  Transparency of violins.  Default is 0.5.
           - 'cutoff', bool.  If True, limit violin range to data range.
                 Default is False.
           - 'cutoff_val', scalar.  Where to cut off violins if `cutoff` is
@@ -165,11 +167,11 @@ def violinplot(
 
 
 def _single_violin(ax, pos, pos_data, width, side, plot_opts):
-    """"""
+    """Draw a single violin onto `ax` at position `pos`"""
     bw_factor = plot_opts.get("bw_factor", None)
 
     def _violin_range(pos_data, plot_opts):
-        """Return array with correct range, with which violins can be plotted."""
+        """Return array with correct range, with which violins can be plotted"""
         cutoff = plot_opts.get("cutoff", False)
         cutoff_type = plot_opts.get("cutoff_type", "std")
         cutoff_val = plot_opts.get("cutoff_val", 1.5)
@@ -219,7 +221,7 @@ def _single_violin(ax, pos, pos_data, width, side, plot_opts):
 
 
 def _set_ticks_labels(ax, data, labels, positions, plot_opts):
-    """Set ticks and labels on horizontal axis."""
+    """Set ticks and labels on horizontal axis"""
 
     # Set xticks and limits.
     ax.set_xlim([np.min(positions) - 0.5, np.max(positions) + 0.5])
@@ -251,9 +253,11 @@ def beanplot(
     side="both",
     jitter=False,
     plot_opts=None,
+    *,
+    rng=None,
 ):
     """
-    Bean plot of each dataset in a sequence.
+    Bean plot of each dataset in a sequence
 
     A bean plot is a combination of a `violinplot` (kernel density estimate of
     the probability density function per point) with a line-scatter plot of all
@@ -263,7 +267,7 @@ def beanplot(
     ----------
     data : sequence[array_like]
         Data arrays, one array per value in `positions`.
-    ax : AxesSubplot
+    ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
     labels : list[str], optional
@@ -305,6 +309,11 @@ def beanplot(
           - 'jitter_marker_size', int.  Marker size.  Default is 4.
           - 'jitter_fc', MPL color.  Jitter marker face color.  Default is None.
           - 'bean_legend_text', str.  If given, add a legend with given text.
+    rng : int, np.random.RandomState or np.random.Generator, optional
+        Source of random variation for jittering.  If an int, it is used
+        to seed a new np.random.default_rng(). If None, uses the singleton
+        NumPy RandomState. If a RandomState or Generator, directly uses the
+        instance.
 
     Returns
     -------
@@ -376,7 +385,8 @@ def beanplot(
 
         if jitter:
             # Draw data points at random coordinates within violin envelope.
-            jitter_coord = pos + _jitter_envelope(pos_data, xvals, violin, side)
+            rng = check_random_state(rng)
+            jitter_coord = pos + _jitter_envelope(pos_data, xvals, violin, side, rng)
             ax.plot(
                 jitter_coord,
                 pos_data,
@@ -429,8 +439,8 @@ def beanplot(
     return fig
 
 
-def _jitter_envelope(pos_data, xvals, violin, side):
-    """Determine envelope for jitter markers."""
+def _jitter_envelope(pos_data, xvals, violin, side, rng):
+    """Determine envelope for jitter markers"""
     if side == "both":
         low, high = (-1.0, 1.0)
     elif side == "right":
@@ -441,15 +451,13 @@ def _jitter_envelope(pos_data, xvals, violin, side):
         raise ValueError("`side` input incorrect: %s" % side)
 
     jitter_envelope = np.interp(pos_data, xvals, violin)
-    jitter_coord = jitter_envelope * np.random.uniform(
-        low=low, high=high, size=pos_data.size
-    )
+    jitter_coord = jitter_envelope * rng.uniform(low=low, high=high, size=pos_data.size)
 
     return jitter_coord
 
 
 def _show_legend(ax):
-    """Utility function to show legend."""
+    """Utility function to show legend"""
     leg = ax.legend(loc=1, shadow=True, fancybox=True, labelspacing=0.2, borderpad=0.15)
     ltext = leg.get_texts()
     llines = leg.get_lines()

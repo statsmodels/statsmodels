@@ -1,5 +1,5 @@
 """
-Hannan-Rissanen procedure for estimating ARMA(p,q) model parameters.
+Hannan-Rissanen procedure for estimating ARMA(p,q) model parameters
 
 Author: Chad Fulton
 License: BSD-3
@@ -11,14 +11,16 @@ from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tsa.statespace.tools import diff
 from statsmodels.tsa.tsatools import lagmat
 
 
-def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
+def hannan_rissanen(endog, ar_order=0, ma_order=0,
+                    seasonal_order=(0, 0, 0, 0), demean=True,
                     initial_ar_order=None, unbiased=None,
                     fixed_params=None):
     """
-    Estimate ARMA parameters using Hannan-Rissanen procedure.
+    Estimate ARMA parameters using Hannan-Rissanen procedure
 
     Parameters
     ----------
@@ -28,6 +30,12 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         Autoregressive order
     ma_order : int or list of int
         Moving average order
+    seasonal_order : tuple, optional
+        The (P,D,Q,s) order of the seasonal component of the model for the
+        AR parameters, differences, and MA parameters. `D` and `s` are used
+        to seasonally difference the data prior to estimation; nonzero
+        seasonal AR or MA orders (`P` or `Q`) are not supported and raise a
+        ``ValueError``. Default is (0, 0, 0, 0).
     demean : bool, optional
         Whether to estimate and remove the mean from the process prior to
         fitting the ARMA coefficients. Default is True.
@@ -92,11 +100,25 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
        "Automatic Modeling Methods for Univariate Series."
        A Course in Time Series Analysis, 171-201.
     """
-    spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order)
+    spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order, seasonal_order=seasonal_order)
+
+    if spec.max_seasonal_ar_order > 0 or spec.max_seasonal_ma_order > 0:
+        raise ValueError(
+            "Hannan-Rissanen does not support seasonal MA or AR"
+        )
 
     fixed_params = _validate_fixed_params(fixed_params, spec.param_names)
 
     endog = spec.endog
+
+    if spec.is_integrated:
+        endog = diff(
+            endog,
+            k_diff=spec.diff,
+            k_seasonal_diff=spec.seasonal_diff,
+            seasonal_periods=spec.seasonal_periods,
+        )
+
     if demean:
         endog = endog - endog.mean()
 
@@ -110,6 +132,11 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     if initial_ar_order is None:
         initial_ar_order = max(np.floor(np.log(nobs)**2).astype(int),
                                2 * max(max_ar_order, max_ma_order))
+    try:
+        _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order)
+    except ValueError:
+        raise
+
     # Create a spec, just to validate the initial autoregressive order
     _ = SARIMAXSpecification(endog, ar_order=initial_ar_order)
 
@@ -301,12 +328,13 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
 
 def _validate_fixed_params(fixed_params, spec_param_names):
     """
-    Check that keys in fixed_params are a subset of spec.param_names except
-    "sigma2"
+    Check that keys in fixed_params are a subset of spec_param_names except sigma2
 
     Parameters
     ----------
     fixed_params : dict
+        Dictionary of fixed parameter values keyed by parameter name, or
+        None.
     spec_param_names : list of string
         SARIMAXSpecification.param_names
     """
@@ -329,12 +357,60 @@ def _validate_fixed_params(fixed_params, spec_param_names):
     return fixed_params
 
 
+def _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order):
+    """
+    Validate order parameters for Hannan-Rissanen estimation
+
+    Parameters
+    ----------
+    nobs : int
+        Number of observations.
+    max_ar_order : int
+        Maximum AR order.
+    max_ma_order : int
+        Maximum MA order.
+    initial_ar_order : int
+        Initial AR order used in the first step.
+
+    Raises
+    ------
+    ValueError
+        If `ar_order` or `ma_order` is greater than or equal to `nobs`.
+    ValueError
+        If `initial_ar_order` is greater than or equal to `nobs`.
+    ValueError
+        If `initial_ar_order` is less than or equal to `ar_order` or `ma_order`.
+    """
+    if max_ar_order >= nobs:
+        raise ValueError(
+            f"ar_order ({max_ar_order}) must be less than nobs ({nobs})."
+        )
+    if max_ma_order >= nobs:
+        raise ValueError(
+            f"ma_order ({max_ma_order}) must be less than nobs ({nobs})."
+        )
+    if initial_ar_order >= nobs:
+        raise ValueError(
+            f"initial_ar_order ({initial_ar_order}) must be less than"
+            f" nobs ({nobs})."
+        )
+    if initial_ar_order <= max(max_ar_order, max_ma_order):
+        raise ValueError(
+            f"initial_ar_order ({initial_ar_order}) must be greater than"
+            f" ar_order ({max_ar_order}) and ma_order ({max_ma_order})."
+        )
+
+
 def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
                                         spec_ma_lags):
     """
+    Unpack fixed and free ar/ma lags, ix, and params (fixed only)
+
     Parameters
     ----------
     fixed_params : dict
+        Dictionary of fixed parameter values keyed by parameter name, or
+        None.
     spec_ar_lags : list of int
         SARIMAXSpecification.ar_lags
     spec_ma_lags : list of int
@@ -345,7 +421,7 @@ def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
     Bunch with
     (lags) fixed_ar_lags, fixed_ma_lags, free_ar_lags, free_ma_lags;
     (ix) fixed_ar_ix, fixed_ma_ix, free_ar_ix, free_ma_ix;
-    (params) fixed_ar_params, free_ma_params
+    (params) fixed_ar_params, fixed_ma_params
     """
     # unpack fixed lags and params
     fixed_ar_lags_and_params = []

@@ -3,7 +3,7 @@ import numpy as np
 
 def rainbow(n):
     """
-    Returns a list of colors sampled at equal intervals over the spectrum.
+    Return a list of colors sampled at equal intervals over the spectrum
 
     Parameters
     ----------
@@ -13,7 +13,7 @@ def rainbow(n):
     Returns
     -------
     R : (n,3) array
-        An of rows of RGB color values
+        An array of rows of RGB color values
 
     Notes
     -----

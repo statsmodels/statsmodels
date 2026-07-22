@@ -36,7 +36,7 @@ def gls(
     arma_estimator_kwargs=None,
 ):
     """
-    Estimate ARMAX parameters by GLS.
+    Estimate ARMAX parameters by GLS
 
     Parameters
     ----------
@@ -57,15 +57,15 @@ def gls(
         mean of the process. Default is True if the specified model does not
         include integration and False otherwise.
     n_iter : int, optional
-        Optionally iterate feasible GSL a specific number of times. Default is
+        Optionally iterate feasible GLS a specific number of times. Default is
         to iterate to convergence. If set, this argument overrides the
         `max_iter` and `tolerance` arguments.
     max_iter : int, optional
         Maximum number of feasible GLS iterations. Default is 50. If `n_iter`
         is set, it overrides this argument.
     tolerance : float, optional
-        Tolerance for determining convergence of feasible GSL iterations. If
-        `iter` is set, this argument has no effect.
+        Tolerance for determining convergence of feasible GLS iterations. If
+        `n_iter` is set, this argument has no effect.
         Default is 1e-8.
     arma_estimator : str, optional
         The estimator used for estimating the ARMA model. This option should
@@ -90,9 +90,21 @@ def gls(
     parameters : SARIMAXParams object
         Contains the parameter estimates from the final iteration.
     other_results : Bunch
-        Includes eight components: `spec`, `params`, `converged`,
-        `differences`, `iterations`, `arma_estimator`, 'arma_estimator_kwargs',
-        and `arma_results`.
+        Additional estimation results with the following components:
+
+        * `spec` - SARIMAXSpecification instance for the input arguments.
+        * `params` - SARIMAXParams estimates from each GLS iteration,
+          including the initial OLS estimates.
+        * `converged` - whether the feasible GLS iterations converged. This is
+          None when `n_iter` is specified.
+        * `differences` - absolute changes in the exogenous coefficient
+          estimates at each iteration.
+        * `iterations` - number of feasible GLS iterations performed.
+        * `arma_estimator` - estimator used for the ARMA error process.
+        * `arma_estimator_kwargs` - keyword arguments passed to the ARMA
+          estimator.
+        * `arma_results` - ancillary result objects returned by the ARMA
+          estimator at each iteration.
 
     Notes
     -----
@@ -198,6 +210,13 @@ def gls(
     parameters = [p]
     converged = False if n_iter is None else None
     i = 0
+
+    if arma_estimator in ["hannan_rissanen", "yule_walker", "burg", "innovations"]:
+        if spec.max_seasonal_ar_order > 0 or spec.max_seasonal_ma_order > 0:
+            raise ValueError(
+                f"The selected ARMA estimator '{arma_estimator}' does not support "
+                f"seasonal AR or MA structures."
+            )
 
     def _check_arma_estimator_kwargs(kwargs, method):
         if kwargs:

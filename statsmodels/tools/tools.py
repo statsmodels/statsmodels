@@ -1,6 +1,4 @@
-"""
-Utility functions models code
-"""
+"""Utility functions used by statsmodels models"""
 import numpy as np
 import pandas as pd
 import scipy.linalg
@@ -10,6 +8,20 @@ from statsmodels.tools.validation import array_like
 
 
 def asstr2(s):
+    """
+    Return s as a text string
+
+    Parameters
+    ----------
+    s : str, bytes or object
+        Value to convert to a text string. Bytes are decoded using the
+        latin1 codec; any other type is converted with ``str``.
+
+    Returns
+    -------
+    str
+        `s` as a text string.
+    """
     if isinstance(s, str):
         return s
     elif isinstance(s, bytes):
@@ -20,10 +32,16 @@ def asstr2(s):
 
 def drop_missing(Y, X=None, axis=1):
     """
-    Returns views on the arrays Y and X where missing observations are dropped.
+    Return views on the arrays Y and X where missing observations are dropped
 
+    Parameters
+    ----------
     Y : array_like
+        Data with observations possibly containing NaN values.
     X : array_like, optional
+        Additional data with observations possibly containing NaN
+        values. If provided, an observation is dropped if it is
+        missing in either `Y` or `X`.
     axis : int
         Axis along which to look for missing observations.  Default is 1, ie.,
         observations in rows.
@@ -31,12 +49,16 @@ def drop_missing(Y, X=None, axis=1):
     Returns
     -------
     Y : ndarray
-        All Y where the
+        `Y` with the rows (or columns) containing missing observations
+        removed.
     X : ndarray
+        `X` with the rows (or columns) containing missing observations
+        removed. Only returned if `X` is not None.
 
     Notes
     -----
     If either Y or X is 1d, it is reshaped to be 2d.
+
     """
     Y = np.asarray(Y)
     if Y.ndim == 1:
@@ -93,9 +115,9 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Notes
     -----
     This returns a dummy variable for *each* distinct variable.  If a
-    a DaataFrame is provided, the names for the new variable is the
-    old variable name - underscore - category name.  So if the a variable
-    'vote' had answers as 'yes' or 'no' then the returned array would have to
+    DataFrame is provided, the names for the new variable is the
+    old variable name - underscore - category name.  So if the variable
+    'vote' had answers as 'yes' or 'no' then the returned array would have two
     new variables-- 'vote_yes' and 'vote_no'.  There is currently
     no name checking.
 
@@ -136,6 +158,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Or
 
     >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
+
     """
     raise NotImplementedError("categorical has been removed")
 
@@ -143,7 +166,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
 # TODO: add an axis argument to this for sysreg
 def add_constant(data, prepend=True, has_constant="skip"):
     """
-    Add a column of ones to an array.
+    Add a column of ones to an array
 
     Parameters
     ----------
@@ -168,6 +191,7 @@ def add_constant(data, prepend=True, has_constant="skip"):
     -----
     When the input is a pandas Series or DataFrame, the added column's name
     is 'const'.
+
     """
     if _is_using_pandas(data, None):
         from statsmodels.tsa.tsatools import add_trend
@@ -201,7 +225,7 @@ def add_constant(data, prepend=True, has_constant="skip"):
 
 def isestimable(c, d):
     """
-    True if (Q, P) contrast `c` is estimable for (N, P) design `d`.
+    True if (Q, P) contrast `c` is estimable for (N, P) design `d`
 
     From an Q x P contrast matrix `C` and an N x P design matrix `D`, checks if
     the contrast `C` is estimable by looking at the rank of ``vstack([C,D])``
@@ -229,6 +253,7 @@ def isestimable(c, d):
     False
     >>> isestimable([1, -1, 0], d)
     True
+
     """
     c = array_like(c, "c", maxdim=2)
     d = array_like(d, "d", ndim=2)
@@ -243,9 +268,25 @@ def isestimable(c, d):
 
 def pinv_extended(x, rcond=1e-15):
     """
-    Return the pinv of an array X as well as the singular values
-    used in computation.
+    Return the pinv of an array x as well as the singular values used in computation
 
+    Parameters
+    ----------
+    x : array_like
+        The array to invert, 2d.
+    rcond : float
+        Singular values below ``rcond * max(singular values)`` are
+        treated as zero.
+
+    Returns
+    -------
+    ndarray
+        The pseudo-inverse of `x`.
+    ndarray
+        The singular values of `x` used in computing the pseudo-inverse.
+
+    Notes
+    -----
     Code adapted from numpy.
     """
     x = np.asarray(x)
@@ -267,7 +308,7 @@ def pinv_extended(x, rcond=1e-15):
 
 def recipr(x):
     """
-    Reciprocal of an array with entries less than or equal to 0 set to 0.
+    Reciprocal of an array with entries less than or equal to 0 set to 0
 
     Parameters
     ----------
@@ -278,6 +319,7 @@ def recipr(x):
     -------
     ndarray
         The array with 0-filled reciprocals.
+
     """
     x = np.asarray(x)
     out = np.zeros_like(x, dtype=np.float64)
@@ -291,7 +333,7 @@ def recipr(x):
 
 def recipr0(x):
     """
-    Reciprocal of an array with entries less than 0 set to 0.
+    Reciprocal of an array with entries less than 0 set to 0
 
     Parameters
     ----------
@@ -302,6 +344,7 @@ def recipr0(x):
     -------
     ndarray
         The array with 0-filled reciprocals.
+
     """
     x = np.asarray(x)
     out = np.zeros_like(x, dtype=np.float64)
@@ -315,7 +358,7 @@ def recipr0(x):
 
 def clean0(matrix):
     """
-    Erase columns of zeros: can save some time in pseudoinverse.
+    Erase columns of zeros: can save some time in pseudoinverse
 
     Parameters
     ----------
@@ -326,6 +369,7 @@ def clean0(matrix):
     -------
     ndarray
         The cleaned array.
+
     """
     colsum = np.add.reduce(matrix**2, 0)
     val = [matrix[:, i] for i in np.flatnonzero(colsum)]
@@ -334,7 +378,7 @@ def clean0(matrix):
 
 def fullrank(x, r=None):
     """
-    Return an array whose column span is the same as x.
+    Return an array whose column span is the same as x
 
     Parameters
     ----------
@@ -352,6 +396,7 @@ def fullrank(x, r=None):
     -----
     If the rank of x is known it can be specified as r -- no check
     is made to ensure that this really is the rank of x.
+
     """
     if r is None:
         r = np.linalg.matrix_rank(x)
@@ -367,7 +412,7 @@ def fullrank(x, r=None):
 
 def unsqueeze(data, axis, oldshape):
     """
-    Unsqueeze a collapsed array.
+    Unsqueeze a collapsed array
 
     Parameters
     ----------
@@ -395,6 +440,7 @@ def unsqueeze(data, axis, oldshape):
     >>> m.shape
     (3, 1, 5)
     >>>
+
     """
     newshape = list(oldshape)
     newshape[axis] = 1
@@ -403,12 +449,22 @@ def unsqueeze(data, axis, oldshape):
 
 def nan_dot(A, B):
     """
-    Returns np.dot(left_matrix, right_matrix) with the convention that
+    Return np.dot(A, B), preserving NaNs from nonzero products
+
     nan * 0 = 0 and nan * x = nan if x != 0.
 
     Parameters
     ----------
-    A, B : ndarray
+    A : ndarray
+        Left-hand input array.
+    B : ndarray
+        Right-hand input array.
+
+    Returns
+    -------
+    ndarray
+        Dot product using the NaN convention.
+
     """
     # Find out who should be nan due to nan * nonzero
     should_be_nan_1 = np.dot(np.isnan(A), (B != 0))
@@ -426,25 +482,38 @@ def nan_dot(A, B):
 
 def maybe_unwrap_results(results):
     """
-    Gets raw results back from wrapped results.
+    Get raw results back from wrapped results
 
     Can be used in plotting functions or other post-estimation type
     routines.
+
+    Parameters
+    ----------
+    results : Results or ResultsWrapper
+        A results instance, possibly wrapped in a ResultsWrapper.
+
+    Returns
+    -------
+    Results
+        The underlying (unwrapped) results instance, or `results`
+        itself if it was not wrapped.
     """
     return getattr(results, "_results", results)
 
 
 class Bunch(dict):
     """
-    Returns a dict-like object with keys accessible via attribute lookup.
+    Returns a dict-like object with keys accessible via attribute lookup
 
     Parameters
     ----------
     *args
         Arguments passed to dict constructor, tuples (key, value).
     **kwargs
-        Keyword agument passed to dict constructor, key=value.
+        Keyword argument passed to dict constructor, key=value.
+
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__dict__ = self
@@ -452,11 +521,12 @@ class Bunch(dict):
 
 def _ensure_2d(x, ndarray=False):
     """
+    Ensure that an input is 2 dimensional, converting or reshaping as needed
 
     Parameters
     ----------
     x : ndarray, Series, DataFrame or None
-        Input to verify dimensions, and to transform as necesary
+        Input to verify dimensions, and to transform as necessary
     ndarray : bool
         Flag indicating whether to always return a NumPy array. Setting False
         will return an pandas DataFrame when the input is a Series or a
@@ -465,7 +535,7 @@ def _ensure_2d(x, ndarray=False):
     Returns
     -------
     out : ndarray, DataFrame or None
-        array or DataFrame with 2 dimensiona.  One dimensional arrays are
+        array or DataFrame with 2 dimensions.  One dimensional arrays are
         returned as nobs by 1. None is returned if x is None.
     names : list of str or None
         list containing variables names when the input is a pandas datatype.
@@ -474,6 +544,7 @@ def _ensure_2d(x, ndarray=False):
     Notes
     -----
     Accepts None for simplicity
+
     """
     if x is None:
         return x
@@ -520,6 +591,7 @@ def matrix_rank(m, tol=None, method="qr"):
     When using a QR factorization, the rank is determined by the number of
     elements on the leading diagonal of the R matrix that are above tol
     in absolute value.
+
     """
     m = array_like(m, "m", ndim=2)
     if method == "ip":

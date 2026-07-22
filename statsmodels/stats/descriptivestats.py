@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from statsmodels.compat.pandas import PD_LT_2, Appender, is_numeric_dtype
+from statsmodels.compat.pandas import PD_LT_2, is_numeric_dtype
 from statsmodels.compat.scipy import SP_LT_19
 
 from typing import TYPE_CHECKING, Union
@@ -19,8 +19,9 @@ from scipy import stats
 
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.stats.stattools import jarque_bera
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -80,9 +81,23 @@ MISSING = {
 
 def _kurtosis(a):
     """
-    wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
+    Wrapper for scipy.stats.kurtosis that returns nan instead of raising
+    Error
 
-    missing options
+    Parameters
+    ----------
+    a : array_like
+        Data for which the kurtosis is computed.
+
+    Returns
+    -------
+    float
+        The kurtosis of `a`, or nan if scipy.stats.kurtosis raises a
+        ValueError.
+
+    Notes
+    -----
+    Missing options.
     """
     try:
         res = stats.kurtosis(a)
@@ -93,9 +108,22 @@ def _kurtosis(a):
 
 def _skew(a):
     """
-    wrapper for scipy.stats.skew that returns nan instead of raising Error
+    Wrapper for scipy.stats.skew that returns nan instead of raising Error
 
-    missing options
+    Parameters
+    ----------
+    a : array_like
+        Data for which the skewness is computed.
+
+    Returns
+    -------
+    float
+        The skewness of `a`, or nan if scipy.stats.skew raises a
+        ValueError.
+
+    Notes
+    -----
+    Missing options.
     """
     try:
         res = stats.skew(a)
@@ -118,8 +146,10 @@ def sign_test(samp, mu0=0):
 
     Returns
     -------
-    M
-    p-value
+    M : float
+        The test statistic for the sign test.
+    p : float
+        The p-value for the test.
 
     Notes
     -----
@@ -192,9 +222,9 @@ class Description:
         Statistics to include. If not provided the full set of statistics is
         computed. This list may evolve across versions to reflect best
         practices. Supported options are:
-        "nobs", "missing", "mean", "std_err", "ci", "ci", "std", "iqr",
+        "nobs", "missing", "mean", "std_err", "ci", "std", "iqr",
         "iqr_normal", "mad", "mad_normal", "coef_var", "range", "max",
-        "min", "skew", "kurtosis", "jarque_bera", "mode", "freq",
+        "min", "skew", "kurtosis", "jarque_bera", "mode",
         "median", "percentiles", "distinct", "top", and "freq". See Notes for
         details.
     numeric : bool, default True
@@ -210,7 +240,7 @@ class Description:
         A distinct sequence of floating point values all between 0 and 100.
         The default percentiles are 1, 5, 10, 25, 50, 75, 90, 95, 99.
     ntop : int, default 5
-        The number of top categorical labels to report. Default is
+        The number of top categorical labels to report. Default is 5.
 
     Attributes
     ----------
@@ -251,14 +281,14 @@ class Description:
     * "kurtosis" - The kurtosis defined as the standardized 4th central moment
     * "jarque_bera" - The Jarque-Bera test statistic for normality based on
       the skewness and kurtosis. This option creates two entries, jarque_bera
-      and jarque_beta_pval.
+      and jarque_bera_pval.
     * "mode" - The mode of the data. This option creates two entries in all tables,
       mode and mode_freq which is the empirical frequency of the modal value.
     * "median" - The median of the data.
     * "percentiles" - The percentiles. Values included depend on the input value of
       ``percentiles``.
     * "distinct" - The number of distinct categories in a categorical.
-    * "top" - The mode common categories. Labeled top_n for n in 1, 2, ..., ``ntop``.
+    * "top" - The most common categories. Labeled top_n for n in 1, 2, ..., ``ntop``.
     * "freq" - The frequency of the common categories. Labeled freq_n for n in 1,
       2, ..., ``ntop``.
     """
@@ -411,24 +441,19 @@ class Description:
                 return [float(np.squeeze(val)) for val in mode_res]
             return np.nan, np.nan
 
-        mode_values = df.apply(_mode).T
-        if mode_values.size > 0:
-            if isinstance(mode_values, pd.DataFrame):
-                # pandas 1.0 or later
+        if df.shape[0] == 0:
+            # No observations: the mode is undefined. Skip the apply since
+            # pandas' empty-result path mis-sizes the output, raising
+            # "Length of values (2) does not match length of index" (GH#9891).
+            mode = np.full(k, np.nan)
+            mode_counts = np.full(k, np.nan)
+        else:
+            mode_values = df.apply(_mode).T
+            if mode_values.size > 0:
                 mode = np.asarray(mode_values[0], dtype=float)
                 mode_counts = np.asarray(mode_values[1], dtype=np.int64)
             else:
-                # pandas before 1.0 returns a Series of 2-elem list
-                mode = []
-                mode_counts = []
-                for idx in mode_values.index:
-                    val = mode_values.loc[idx]
-                    mode.append(val[0])
-                    mode_counts.append(val[1])
-                mode = np.atleast_1d(mode)
-                mode_counts = np.atleast_1d(mode_counts)
-        else:
-            mode = mode_counts = np.empty(0)
+                mode = mode_counts = np.empty(0)
         loc = count > 0
         mode_freq = np.full(mode.shape[0], np.nan)
         mode_freq[loc] = mode_counts[loc] / count.loc[loc]
@@ -456,9 +481,17 @@ class Description:
                 return (np.nan,) * 4
             return jarque_bera(a)
 
-        jb = df.apply(
-            lambda x: list(_safe_jarque_bera(x.dropna())), result_type="expand"
-        ).T
+        if df.size:
+            jb = df.apply(
+                lambda x: list(_safe_jarque_bera(x.dropna())),
+                result_type="expand",
+            ).T
+        else:
+            # No observations (or no numeric columns): Jarque-Bera is
+            # undefined. Build a NaN frame with the expected four columns so
+            # the skew/kurtosis/JB lookups below do not raise KeyError
+            # (GH#9891).
+            jb = pd.DataFrame(np.nan, index=cols, columns=range(4))
         nan_mean = mean.copy()
         nan_mean.loc[nan_mean == 0] = np.nan
         coef_var = std / nan_mean
@@ -662,9 +695,7 @@ def describe(
 
 
 class Describe:
-    """
-    Removed.
-    """
+    """Removed"""
 
     def __init__(self, dataset):
         raise NotImplementedError("Describe has been removed")

@@ -14,7 +14,7 @@ from statsmodels.tools.sm_exceptions import ValueWarning
 
 def durbin_watson(resids, axis=0):
     r"""
-    Calculates the Durbin-Watson statistic.
+    Calculates the Durbin-Watson statistic
 
     Parameters
     ----------
@@ -58,13 +58,17 @@ def omni_normtest(resids, axis=0):
 
     Parameters
     ----------
-    resid : array_like
+    resids : array_like
+        Data to test for normality.
     axis : int, optional
-        Default is 0
+        Axis to use if data has more than 1 dimension. Default is 0.
 
     Returns
     -------
-    Chi^2 score, two-tail probability
+    statistic : float or array_like
+        The Chi^2 test statistic.
+    pvalue : float or array_like
+        The two-tailed p-value for the hypothesis test.
     """
     # TODO: change to exception in summary branch and catch in summary()
     #   behavior changed between scipy 0.9 and 0.10
@@ -81,7 +85,7 @@ def omni_normtest(resids, axis=0):
 
 def jarque_bera(resids, axis=0):
     r"""
-    The Jarque-Bera test of normality.
+    The Jarque-Bera test of normality
 
     Parameters
     ----------
@@ -177,6 +181,8 @@ def robust_skewness(y, axis=0):
 
         SK_{4}=\\frac{\\mu-\\hat{q}_{0.5}}{\\hat{\\sigma}}
 
+    References
+    ----------
     .. [*] Tae-Hwan Kim and Halbert White, "On more robust estimation of
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
@@ -220,7 +226,7 @@ def _kr3(y, alpha=5.0, beta=50.0):
         Data to compute use in the estimator.
     alpha : float, optional
         Lower cut-off for measuring expectation in tail.
-    beta :  float, optional
+    beta : float, optional
         Lower cut-off for measuring expectation in center.
 
     Returns
@@ -229,8 +235,8 @@ def _kr3(y, alpha=5.0, beta=50.0):
         Robust kurtosis estimator based on standardized lower- and upper-tail
         expected values
 
-    Notes
-    -----
+    References
+    ----------
     .. [*] Tae-Hwan Kim and Halbert White, "On more robust estimation of
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
@@ -249,7 +255,7 @@ def _kr3(y, alpha=5.0, beta=50.0):
 def expected_robust_kurtosis(ab=(5.0, 50.0), dg=(2.5, 25.0)):
     """
     Calculates the expected value of the robust kurtosis measures in Kim and
-    White assuming the data are normally distributed.
+    White assuming the data are normally distributed
 
     Parameters
     ----------
@@ -257,10 +263,10 @@ def expected_robust_kurtosis(ab=(5.0, 50.0), dg=(2.5, 25.0)):
         Contains 100*(alpha, beta) in the kr3 measure where alpha is the tail
         quantile cut-off for measuring the extreme tail and beta is the central
         quantile cutoff for the standardization of the measure
-    db : iterable, optional
+    dg : iterable, optional
         Contains 100*(delta, gamma) in the kr4 measure where delta is the tail
         quantile for measuring extreme values and gamma is the central quantile
-        used in the the standardization of the measure
+        used in the standardization of the measure
 
     Returns
     -------
@@ -302,14 +308,14 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     axis : int or None, optional
         Axis along which the kurtosis are computed.  If `None`, the
         entire array is used.
-    a iterable, optional
+    ab : iterable, optional
         Contains 100*(alpha, beta) in the kr3 measure where alpha is the tail
         quantile cut-off for measuring the extreme tail and beta is the central
         quantile cutoff for the standardization of the measure
-    db : iterable, optional
+    dg : iterable, optional
         Contains 100*(delta, gamma) in the kr4 measure where delta is the tail
         quantile for measuring extreme values and gamma is the central quantile
-        used in the the standardization of the measure
+        used in the standardization of the measure
     excess : bool, optional
         If true (default), computed values are excess of those for a standard
         normal distribution.
@@ -349,6 +355,8 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
 
     where :math:`\\hat{q}_{p}` is the estimated quantile at :math:`p`.
 
+    References
+    ----------
     .. [*] Tae-Hwan Kim and Halbert White, "On more robust estimation of
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
@@ -382,7 +390,7 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
 
 def _medcouple_1d(y):
     """
-    Calculates the medcouple robust measure of skew.
+    Calculates the medcouple robust measure of skew
 
     Parameters
     ----------
@@ -399,6 +407,8 @@ def _medcouple_1d(y):
     The current algorithm requires a O(N**2) memory allocations, and so may
     not work for very large arrays (N>10000).
 
+    References
+    ----------
     .. [*] M. Hubert and E. Vandervieren, "An adjusted boxplot for skewed
        distributions" Computational Statistics & Data Analysis, vol. 52, pp.
        5186-5201, August 2008.
@@ -444,7 +454,7 @@ def _medcouple_1d(y):
 
 def medcouple(y, axis=0):
     """
-    Calculate the medcouple robust measure of skew.
+    Calculate the medcouple robust measure of skew
 
     Parameters
     ----------
@@ -465,6 +475,8 @@ def medcouple(y, axis=0):
     The current algorithm requires a O(N**2) memory allocations, and so may
     not work for very large arrays (N>10000).
 
+    References
+    ----------
     .. [*] M. Hubert and E. Vandervieren, "An adjusted boxplot for skewed
        distributions" Computational Statistics & Data Analysis, vol. 52, pp.
        5186-5201, August 2008.

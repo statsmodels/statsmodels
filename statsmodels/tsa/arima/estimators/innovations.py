@@ -22,7 +22,7 @@ from statsmodels.tsa.stattools import acovf, innovations_algo
 
 def innovations(endog, ma_order=0, demean=True):
     """
-    Estimate MA parameters using innovations algorithm.
+    Estimate MA parameters using innovations algorithm
 
     Parameters
     ----------
@@ -102,7 +102,7 @@ def innovations_mle(
     minimize_kwargs=None,
 ):
     """
-    Estimate SARIMA parameters by MLE using innovations algorithm.
+    Estimate SARIMA parameters by MLE using innovations algorithm
 
     Parameters
     ----------
@@ -124,7 +124,7 @@ def innovations_mle(
     start_params : array_like, optional
         Initial guess of the solution for the loglikelihood maximization. The
         AR polynomial must be stationary. If `enforce_invertibility=True` the
-        MA poylnomial must be invertible. If not provided, default starting
+        MA polynomial must be invertible. If not provided, default starting
         parameters are computed using the Hannan-Rissanen method.
     minimize_kwargs : dict, optional
         Arguments to pass to scipy.optimize.minimize.

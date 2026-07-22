@@ -1,6 +1,6 @@
 """
-Robust linear models with support for the M-estimators  listed under
-:ref:`norms <norms>`.
+Robust linear models with support for the M-estimators listed under
+:ref:`norms <norms>`
 
 References
 ----------
@@ -22,7 +22,7 @@ import statsmodels.base.wrapper as wrap
 import statsmodels.regression._tools as reg_tools
 import statsmodels.regression.linear_model as lm
 from statsmodels.robust import norms, scale
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 __all__ = ["RLM"]
@@ -50,7 +50,6 @@ class RLM(base.LikelihoodModel):
 
     Attributes
     ----------
-
     df_model : float
         The degrees of freedom of the model.  The number of regressors p less
         one for the intercept.  Note that the reported model degrees
@@ -116,7 +115,7 @@ class RLM(base.LikelihoodModel):
 
     def _initialize(self):
         """
-        Initializes the model for the IRLS fit.
+        Initialize the model for the IRLS fit
 
         Resets the history and number of iterations.
         """
@@ -136,18 +135,19 @@ class RLM(base.LikelihoodModel):
 
     def predict(self, params, exog=None):
         """
-        Return linear predicted values from a design matrix.
+        Return linear predicted values from a design matrix
 
         Parameters
         ----------
         params : array_like
             Parameters of a linear model
-        exog : array_like, optional.
+        exog : array_like, optional
             Design / exogenous data. Model exog is used if None.
 
         Returns
         -------
-        An array of fitted values
+        ndarray
+            The predicted values.
         """
         # copied from linear_model  # TODO: then is it needed?
         if exog is None:
@@ -159,14 +159,25 @@ class RLM(base.LikelihoodModel):
 
     def deviance(self, tmp_results):
         """
-        Returns the (unnormalized) log-likelihood from the M estimator.
+        Return the (unnormalized) log-likelihood from the M estimator
+
+        Parameters
+        ----------
+        tmp_results : Results
+            Results from intermediate fit containing ``fittedvalues`` and
+            ``scale`` used to compute the residuals.
+
+        Returns
+        -------
+        float
+            The value of the deviance.
         """
         tmp_resid = self.endog - tmp_results.fittedvalues
         return self.M(tmp_resid / tmp_results.scale).sum()
 
     def _update_history(self, tmp_results, history, conv):
         history["params"].append(tmp_results.params)
-        history["scale"].append(tmp_results.scale)
+        history["scale"].append(self.scale)
         if conv == "dev":
             history["deviance"].append(self.deviance(tmp_results))
         elif conv == "sresid":
@@ -177,7 +188,17 @@ class RLM(base.LikelihoodModel):
 
     def _estimate_scale(self, resid):
         """
-        Estimates the scale based on the option provided to the fit method.
+        Estimate the scale based on the option provided to the fit method
+
+        Parameters
+        ----------
+        resid : ndarray
+            The residuals used to estimate the scale.
+
+        Returns
+        -------
+        float
+            The estimated scale.
         """
         if isinstance(self.scale_est, str):
             if self.scale_est.lower() == "mad":
@@ -205,7 +226,7 @@ class RLM(base.LikelihoodModel):
         start_scale=None,
     ):
         """
-        Fits the model using iteratively reweighted least squares.
+        Fit the model using iteratively reweighted least squares
 
         The IRLS routine runs until the specified objective converges to `tol`
         or `maxiter` has been reached.
@@ -254,7 +275,7 @@ class RLM(base.LikelihoodModel):
 
         Returns
         -------
-        results : statsmodels.rlm.RLMresults
+        results : statsmodels.robust.robust_linear_model.RLMResults
             Results instance
         """
         if cov.upper() not in ["H1", "H2", "H3"]:
@@ -355,7 +376,6 @@ class RLMResults(base.LikelihoodModelResults):
 
     Attributes
     ----------
-
     bcov_scaled : ndarray
         p x p scaled covariance matrix specified in the model fit method.
         The default is H1. H1 is defined as
@@ -387,9 +407,9 @@ class RLMResults(base.LikelihoodModelResults):
         argument to fit.
     chisq : ndarray
         An array of the chi-squared values of the parameter estimates.
-    df_model
+    df_model : float
         See RLM.df_model
-    df_resid
+    df_resid : float
         See RLM.df_resid
     fit_history : dict
         Contains information about the iterations. Its keys are `deviance`,
@@ -399,7 +419,7 @@ class RLMResults(base.LikelihoodModelResults):
         Contains the options given to fit.
     fittedvalues : ndarray
         The linear predicted values.  dot(exog, params)
-    model : statsmodels.rlm.RLM
+    model : statsmodels.robust.robust_linear_model.RLM
         A reference to the model instance
     nobs : float
         The number of observations n
@@ -527,7 +547,29 @@ class RLMResults(base.LikelihoodModelResults):
 
     def summary(self, yname=None, xname=None, title=0, alpha=0.05, return_fmt="text"):
         """
-        This is for testing the new summary setup
+        Summarize the fitted model
+
+        Parameters
+        ----------
+        yname : str, optional
+            Name of the dependent variable (optional)
+        xname : list[str], optional
+            Names for the exogenous variables. Default is `var_##` for ## in
+            the number of regressors. Must match the number of parameters
+            in the model
+        title : str, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            Significance level for the confidence intervals
+        return_fmt : str
+            Unused
+
+        Returns
+        -------
+        Summary
+            Instance holding the summary tables and text, which can be
+            printed or converted to various output formats.
         """
         top_left = [
             ("Dep. Variable:", None),
@@ -582,28 +624,29 @@ class RLMResults(base.LikelihoodModelResults):
     def summary2(
         self, xname=None, yname=None, title=None, alpha=0.05, float_format="%.4f"
     ):
-        """Experimental summary function for regression results
+        """
+        Experimental summary function for regression results
 
         Parameters
         ----------
-        yname : str
-            Name of the dependent variable (optional)
         xname : list[str], optional
             Names for the exogenous variables. Default is `var_##` for ## in
             the number of regressors. Must match the number of parameters
             in the model
+        yname : str, optional
+            Name of the dependent variable (optional)
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
-            significance level for the confidence intervals
+            Significance level for the confidence intervals
         float_format : str
-            print format for floats in parameters summary
+            Print format for floats in parameters summary
 
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which can be printed or
+            This holds the summary tables and text, which can be printed or
             converted to various output formats.
 
         See Also

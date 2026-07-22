@@ -1,5 +1,7 @@
-"""this script builds the T table and A table for the upper
-   quantile stundentized range algorithm"""
+"""
+This script builds the T table and A table for the upper
+quantile studentized range algorithm
+"""
 from statsmodels.compat.python import lmap, lrange
 
 import math

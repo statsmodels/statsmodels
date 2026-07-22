@@ -16,7 +16,7 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 # pylint: disable-msg=W0142
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
-from statsmodels.compat.python import lfilter, lzip
+from statsmodels.compat.python import lzip
 
 import numpy as np
 from numpy import divide, exp, inf, multiply, square, subtract
@@ -41,7 +41,7 @@ class NdKernel:
     mahalanobis distance defined by H.
 
     In the case of the Gaussian these are both equivalent, and the second constructiong
-    is prefered.
+    is preferred.
     """
 
     def __init__(self, n, kernels=None, H=None):
@@ -181,7 +181,8 @@ class CustomKernel:
         if self.domain is None:
             return (xs, ys)
         else:
-            filtered = lfilter(isInDomain, lzip(xs, ys))
+            filtered = filter(isInDomain, lzip(xs, ys))
+            filtered = list(filtered)
             if len(filtered) > 0:
                 xs, ys = lzip(*filtered)
                 return (xs, ys)

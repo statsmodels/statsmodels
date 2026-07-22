@@ -1,4 +1,5 @@
-"""Helper and filter functions for VAR and VARMA, and basic VAR class
+"""
+Helper and filter functions for VAR and VARMA, and basic VAR class
 
 Created on Mon Jan 11 11:04:23 2010
 Author: josef-pktd
@@ -35,7 +36,8 @@ from statsmodels.tsa.tsatools import lagmat
 
 
 def varfilter(x, a):
-    """apply an autoregressive filter to a series x
+    """
+    Apply an autoregressive filter to a series x
 
     Warning: I just found out that convolve does not work as I
        thought, this likely does not work correctly for
@@ -130,7 +132,8 @@ def varfilter(x, a):
 
 
 def varinversefilter(ar, nobs, version=1):
-    """creates inverse ar filter (MA representation) recursively
+    """
+    Creates inverse ar filter (MA representation) recursively
 
     The VAR lag polynomial is defined by ::
 
@@ -141,22 +144,23 @@ def varinversefilter(ar, nobs, version=1):
 
         y_t = arinv(L) u_t
 
-
-
     Parameters
     ----------
     ar : ndarray, (nlags,nvars,nvars)
         matrix lagpolynomial, currently no exog
         first row should be identity
+    nobs : int
+        Number of observations (time points) for which to compute the
+        inverse filter.
+    version : int, optional
+        Selects the implementation to use. If 1 (the default), the
+        inverse filter is computed recursively. If 0, the alternative
+        implementation is not yet finished and raises NotImplementedError.
 
     Returns
     -------
     arinv : ndarray, (nobs,nvars,nvars)
-
-
-    Notes
-    -----
-
+        The inverse (MA representation) lag polynomial array.
     """
     nlags, nvars, nvarsex = ar.shape
     if nvars != nvarsex:
@@ -182,7 +186,8 @@ def varinversefilter(ar, nobs, version=1):
 
 
 def vargenerate(ar, u, initvalues=None):
-    """generate an VAR process with errors u
+    """
+    Generate a VAR process with errors u
 
     similar to gauss
     uses loop
@@ -193,6 +198,9 @@ def vargenerate(ar, u, initvalues=None):
         matrix lagpolynomial
     u : array (nobs,nvars)
         exogenous variable, error term for VAR
+    initvalues : array_like, optional
+        Initial (presample) values for the process. If None, the initial
+        values are set to zero.
 
     Returns
     -------
@@ -243,10 +251,30 @@ def vargenerate(ar, u, initvalues=None):
 
 
 def padone(x, front=0, back=0, axis=0, fillvalue=0):
-    """pad with zeros along one axis, currently only axis=0
+    """
+    Pad with zeros along one axis
 
+    Can be used sequentially to pad several axes.
 
-    can be used sequentially to pad several axis
+    Parameters
+    ----------
+    x : array_like
+        Array to pad.
+    front : int, optional
+        Number of `fillvalue` elements to add before the array along
+        `axis`.
+    back : int, optional
+        Number of `fillvalue` elements to add after the array along
+        `axis`.
+    axis : int, optional
+        Axis along which to pad.
+    fillvalue : scalar, optional
+        Value used to fill the padded elements.
+
+    Returns
+    -------
+    ndarray
+        The padded array.
 
     Examples
     --------
@@ -278,8 +306,24 @@ def padone(x, front=0, back=0, axis=0, fillvalue=0):
 
 
 def trimone(x, front=0, back=0, axis=0):
-    """trim number of array elements along one axis
+    """
+    Trim a number of array elements along one axis
 
+    Parameters
+    ----------
+    x : array_like
+        Array to trim.
+    front : int, optional
+        Number of elements to remove from the front along `axis`.
+    back : int, optional
+        Number of elements to remove from the back along `axis`.
+    axis : int, optional
+        Axis along which to trim.
+
+    Returns
+    -------
+    ndarray
+        The trimmed array.
 
     Examples
     --------
@@ -305,22 +349,23 @@ def trimone(x, front=0, back=0, axis=0):
 
 
 def ar2full(ar):
-    """make reduced lagpolynomial into a right side lagpoly array"""
+    """Make reduced lagpolynomial into a right side lagpoly array"""
     nlags, nvar, nvarex = ar.shape
     return np.r_[np.eye(nvar, nvarex)[None, :, :], -ar]
 
 
 def ar2lhs(ar):
-    """convert full (rhs) lagpolynomial into a reduced, left side lagpoly array
+    """
+    Convert full (rhs) lagpolynomial into a reduced, left side lagpoly array
 
-    this is mainly a reminder about the definition
+    This is mainly a reminder about the definition.
     """
     return -ar[1:]
 
 
 class _Var:
-    """obsolete VAR class, use tsa.VAR instead, for internal use only
-
+    """
+    Obsolete VAR class, use tsa.VAR instead, for internal use only
 
     Examples
     --------
@@ -341,7 +386,8 @@ class _Var:
         self.nobs, self.nvars = y.shape
 
     def fit(self, nlags):
-        """estimate parameters using ols
+        """
+        Estimate parameters using OLS
 
         Parameters
         ----------
@@ -350,22 +396,22 @@ class _Var:
 
         Returns
         -------
-        None, but attaches
+        None
+            Nothing is returned, but the following are attached to the
+            instance:
 
-        arhat : array (nlags, nvar, nvar)
-            full lag polynomial array
-        arlhs : array (nlags-1, nvar, nvar)
-            reduced lag polynomial for left hand side
-        other statistics as returned by linalg.lstsq : need to be completed
+            arhat : array (nlags, nvar, nvar)
+                full lag polynomial array
+            arlhs : array (nlags-1, nvar, nvar)
+                reduced lag polynomial for left hand side
+            other statistics as returned by linalg.lstsq : need to be completed
 
-
-
+        Notes
+        -----
         This currently assumes all parameters are estimated without restrictions.
-        In this case SUR is identical to OLS
+        In this case SUR is identical to OLS.
 
-        estimation results are attached to the class instance
-
-
+        Estimation results are attached to the class instance.
         """
         self.nlags = nlags  # without current period
         nvars = self.nvars
@@ -382,16 +428,23 @@ class _Var:
         self.xredrank = res[2]
 
     def predict(self):
-        """calculate estimated timeseries (yhat) for sample"""
+        """Calculate estimated timeseries (yhat) for sample"""
 
         if not hasattr(self, "yhat"):
             self.yhat = varfilter(self.y, self.arhat)
         return self.yhat
 
     def covmat(self):
-        """covariance matrix of estimate
-        # not sure it's correct, need to check orientation everywhere
-        # looks ok, display needs getting used to
+        """
+        Covariance matrix of estimate
+
+        Notes
+        -----
+        Not sure it's correct, need to check orientation everywhere.
+        Looks ok, display needs getting used to.
+
+        Examples
+        --------
         >>> v.rss[None,None,:]*np.linalg.inv(np.dot(v.xred.T,v.xred))[:,:,None]
         array([[[ 0.37247445,  0.32210609],
                 [ 0.1002642 ,  0.08670584]],
@@ -414,7 +467,8 @@ class _Var:
         )
 
     def forecast(self, horiz=1, u=None):
-        """calculates forcast for horiz number of periods at end of sample
+        """
+        Calculates forecast for horiz number of periods at end of sample
 
         Parameters
         ----------
@@ -434,8 +488,8 @@ class _Var:
 
 
 class VarmaPoly:
-    """class to keep track of Varma polynomial format
-
+    """
+    Class to keep track of Varma polynomial format
 
     Examples
     --------
@@ -475,7 +529,7 @@ class VarmaPoly:
 
     # @property
     def vstack(self, a=None, name="ar"):
-        """stack lagpolynomial vertically in 2d array"""
+        """Stack lagpolynomial vertically in 2d array"""
         if a is not None:
             _a = a
         elif name == "ar":
@@ -488,7 +542,7 @@ class VarmaPoly:
 
     # @property
     def hstack(self, a=None, name="ar"):
-        """stack lagpolynomial horizontally in 2d array"""
+        """Stack lagpolynomial horizontally in 2d array"""
         if a is not None:
             _a = a
         elif name == "ar":
@@ -501,7 +555,7 @@ class VarmaPoly:
 
     # @property
     def stacksquare(self, a=None, name="ar", orientation="vertical"):
-        """stack lagpolynomial vertically in 2d square array with eye"""
+        """Stack lagpolynomial vertically in 2d square array with eye"""
         if a is not None:
             _a = a
         elif name == "ar":
@@ -518,35 +572,38 @@ class VarmaPoly:
 
     # @property
     def vstackarma_minus1(self):
-        """stack ar and lagpolynomial vertically in 2d array"""
+        """Stack ar and lagpolynomial vertically in 2d array"""
         a = np.concatenate((self.ar[1:], self.ma[1:]), 0)
         return a.reshape(-1, self.nvarall)
 
     # @property
     def hstackarma_minus1(self):
-        """stack ar and lagpolynomial vertically in 2d array
+        """
+        Stack ar and lagpolynomial vertically in 2d array
 
-        this is the Kalman Filter representation, I think
+        This is the Kalman Filter representation, I think.
         """
         a = np.concatenate((self.ar[1:], self.ma[1:]), 0)
         return a.swapaxes(1, 2).reshape(-1, self.nvarall)
 
     def getisstationary(self, a=None):
-        """check whether the auto-regressive lag-polynomial is stationary
+        """
+        Check whether the auto-regressive lag-polynomial is stationary
 
         Returns
         -------
         isstationary : bool
+            True if all eigenvalues of the lag-polynomial are less than one
+            in absolute value.
 
-        *attaches*
-
-        areigenvalues : complex array
-            eigenvalues sorted by absolute value
+        Notes
+        -----
+        Attaches ``areigenvalues``, the eigenvalues sorted by absolute
+        value, as a complex array.
 
         References
         ----------
-        formula taken from NAG manual
-
+        Formula taken from NAG manual.
         """
         if a is not None:
             _a = a
@@ -560,21 +617,23 @@ class VarmaPoly:
         return (np.abs(ev) < 1).all()
 
     def getisinvertible(self, a=None):
-        """check whether the auto-regressive lag-polynomial is stationary
+        """
+        Check whether the moving-average lag-polynomial is invertible
 
         Returns
         -------
         isinvertible : bool
+            True if all eigenvalues of the lag-polynomial are less than one
+            in absolute value.
 
-        *attaches*
-
-        maeigenvalues : complex array
-            eigenvalues sorted by absolute value
+        Notes
+        -----
+        Attaches ``maeigenvalues``, the eigenvalues sorted by absolute
+        value, as a complex array.
 
         References
         ----------
-        formula taken from NAG manual
-
+        Formula taken from NAG manual.
         """
         if a is not None:
             _a = a
@@ -593,11 +652,7 @@ class VarmaPoly:
         return (np.abs(ev) < 1).all()
 
     def reduceform(self, apoly):
-        """
-
-        this assumes no exog, todo
-
-        """
+        """This assumes no exog, todo"""
         if apoly.ndim != 3:
             raise ValueError("apoly needs to be 3d")
         nlags, nvarsex, nvars = apoly.shape

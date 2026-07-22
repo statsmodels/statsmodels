@@ -29,12 +29,13 @@ KCDEResults = np.genfromtxt(open(rfname, "rb"), delimiter=",", names=True)
 
 # setup test data
 
-np.random.seed(12345)
+RANDOM_STATE = np.random.RandomState(12345)
 Xi = mixture_rvs(
     [0.25, 0.75],
     size=200,
     dist=[stats.norm, stats.norm],
     kwargs=(dict(loc=-1, scale=0.5), dict(loc=1, scale=0.5)),
+    rng=RANDOM_STATE,
 )
 
 
@@ -100,10 +101,12 @@ class CheckKDE:
 class TestKDEGauss(CheckKDE):
     @classmethod
     def setup_class(cls):
-        res1 = KDE(Xi)
-        res1.fit(kernel="gau", fft=False, bw="silverman")
-        cls.res1 = res1
+        cls.res1 = cls.result_factory()
         cls.res_density = KDEResults["gau_d"]
+
+    @classmethod
+    def result_factory(cls):
+        return KDE(Xi).fit(kernel="gau", fft=False, bw="silverman")
 
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
@@ -140,37 +143,45 @@ class TestKDEGauss(CheckKDE):
 class TestKDEGaussPandas(TestKDEGauss):
     @classmethod
     def setup_class(cls):
-        res1 = KDE(pd.Series(Xi))
-        res1.fit(kernel="gau", fft=False, bw="silverman")
-        cls.res1 = res1
+        cls.res1 = cls.result_factory()
         cls.res_density = KDEResults["gau_d"]
+
+    @classmethod
+    def result_factory(cls):
+        return KDE(pd.Series(Xi)).fit(kernel="gau", fft=False, bw="silverman")
 
 
 class TestKDEEpanechnikov(CheckKDE):
     @classmethod
     def setup_class(cls):
-        res1 = KDE(Xi)
-        res1.fit(kernel="epa", fft=False, bw="silverman")
-        cls.res1 = res1
+        cls.res1 = cls.result_factory()
         cls.res_density = KDEResults["epa2_d"]
+
+    @classmethod
+    def result_factory(cls):
+        return KDE(Xi).fit(kernel="epa", fft=False, bw="silverman")
 
 
 class TestKDETriangular(CheckKDE):
     @classmethod
     def setup_class(cls):
-        res1 = KDE(Xi)
-        res1.fit(kernel="tri", fft=False, bw="silverman")
-        cls.res1 = res1
+        cls.res1 = cls.result_factory()
         cls.res_density = KDEResults["tri_d"]
+
+    @classmethod
+    def result_factory(cls):
+        return KDE(Xi).fit(kernel="tri", fft=False, bw="silverman")
 
 
 class TestKDEBiweight(CheckKDE):
     @classmethod
     def setup_class(cls):
-        res1 = KDE(Xi)
-        res1.fit(kernel="biw", fft=False, bw="silverman")
-        cls.res1 = res1
+        cls.res1 = cls.result_factory()
         cls.res_density = KDEResults["biw_d"]
+
+    @classmethod
+    def result_factory(cls):
+        return KDE(Xi).fit(kernel="biw", fft=False, bw="silverman")
 
 
 # FIXME: enable/xfail/skip or delete
@@ -189,12 +200,16 @@ class TestKdeWeights(CheckKDE):
 
     @classmethod
     def setup_class(cls):
-        res1 = KDE(Xi)
-        weights = np.linspace(1, 100, 200)
-        res1.fit(kernel="gau", gridsize=50, weights=weights, fft=False, bw="silverman")
-        cls.res1 = res1
+        cls.res1 = cls.result_factory()
         fname = os.path.join(curdir, "results", "results_kde_weights.csv")
         cls.res_density = np.genfromtxt(open(fname, "rb"), skip_header=1)
+
+    @classmethod
+    def result_factory(cls):
+        weights = np.linspace(1, 100, 200)
+        return KDE(Xi).fit(
+            kernel="gau", gridsize=50, weights=weights, fft=False, bw="silverman"
+        )
 
     def test_evaluate(self):
         # kde_vals = self.res1.evaluate(self.res1.support)
@@ -210,24 +225,31 @@ class TestKDEGaussFFT(CheckKDE):
     @classmethod
     def setup_class(cls):
         cls.decimal_density = 2  # low accuracy because binning is different
-        res1 = KDE(Xi)
-        res1.fit(kernel="gau", fft=True, bw="silverman")
-        cls.res1 = res1
+        cls.res1 = cls.result_factory()
         rfname2 = os.path.join(curdir, "results", "results_kde_fft.csv")
         cls.res_density = np.genfromtxt(open(rfname2, "rb"))
 
+    @classmethod
+    def result_factory(cls):
+        return KDE(Xi).fit(kernel="gau", fft=True, bw="silverman")
+
 
 class CheckKDEWeights:
+    kernel_name = "dummy_kernel"
 
     @classmethod
     def setup_class(cls):
-        cls.x = x = KDEWResults["x"]
-        weights = KDEWResults["weights"]
-        res1 = KDE(x)
-        # default kernel was scott when reference values computed
-        res1.fit(kernel=cls.kernel_name, weights=weights, fft=False, bw="scott")
-        cls.res1 = res1
+        cls.x = KDEWResults["x"]
+        cls.res1 = cls.result_factory()
         cls.res_density = KDEWResults[cls.res_kernel_name]
+
+    @classmethod
+    def result_factory(cls):
+        weights = KDEWResults["weights"]
+        # default kernel was scott when reference values computed
+        return KDE(cls.x).fit(
+            kernel=cls.kernel_name, weights=weights, fft=False, bw="scott"
+        )
 
     decimal_density = 7
 
@@ -270,7 +292,8 @@ class CheckKDEWeights:
         npt.assert_allclose(hw, crit * np.sqrt(v), rtol=1e-10)
 
     def test_kernel_constants(self):
-        kern = self.res1.kernel
+        # Copy the kernel since attributes are set in the test
+        kern = self.result_factory().kernel
 
         nc = kern.norm_const
         # trigger numerical integration
@@ -334,12 +357,12 @@ class _TestKDEWPar(CheckKDEWeights):
 
 
 class TestKdeRefit:
-    np.random.seed(12345)
-    data1 = np.random.randn(100) * 100
+    rs = np.random.RandomState(12345)
+    data1 = rs.randn(100) * 100
     pdf = KDE(data1)
     pdf.fit()
 
-    data2 = np.random.randn(100) * 100
+    data2 = rs.randn(100) * 100
     pdf2 = KDE(data2)
     pdf2.fit()
 
@@ -378,8 +401,9 @@ def test_kde_bw_positive():
     assert kde.bw > 0
 
 
-def test_fit_self(reset_randomstate):
-    x = np.random.standard_normal(100)
+def test_fit_self():
+    rs = np.random.RandomState(38923801)
+    x = rs.standard_normal(100)
     kde = KDE(x)
     assert isinstance(kde, KDE)
     assert isinstance(kde.fit(), KDE)
@@ -423,3 +447,20 @@ class TestKDECustomBandwidth:
 
         npt.assert_almost_equal(s1, kde.support, self.decimal_density)
         npt.assert_almost_equal(d1, kde.density, self.decimal_density)
+
+
+@pytest.mark.parametrize("kernel", ["epa", "tri", "uni", "cos", "biw", "triw"])
+def test_entropy_finite_domain_kernel(kernel):
+    # Kernels with a bounded domain used to read the integration limits off
+    # the KDE instead of the kernel, which has no such attribute. GH#9917
+    kde = KDE(Xi).fit(kernel=kernel, fft=False, bw="silverman")
+
+    entropy = kde.entropy
+
+    assert np.isfinite(entropy)
+
+
+def test_entropy_infinite_domain_kernel():
+    kde = KDE(Xi).fit(kernel="gau", fft=False, bw="silverman")
+
+    assert np.isfinite(kde.entropy)

@@ -48,7 +48,7 @@ def arma_order_select_ic(
     y, max_ar=4, max_ma=2, ic="bic", trend="c", model_kw=None, fit_kw=None
 ):
     """
-    Compute information criteria for many ARMA models.
+    Compute information criteria for many ARMA models
 
     Parameters
     ----------

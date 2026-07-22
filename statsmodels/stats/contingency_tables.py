@@ -33,14 +33,27 @@ from scipy import stats
 
 from statsmodels import iolib
 from statsmodels.tools import sm_exceptions
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 def _make_df_square(table):
     """
-    Reindex a pandas DataFrame so that it becomes square, meaning that
-    the row and column indices contain the same values, in the same
+    Reindex a pandas DataFrame so that it becomes square
+
+    The row and column indices contain the same values, in the same
     order.  The row and column index are extended to achieve this.
+
+    Parameters
+    ----------
+    table : array_like
+        A contingency table. If not a DataFrame, it is returned
+        unchanged.
+
+    Returns
+    -------
+    table : array_like
+        The reindexed, square DataFrame, or the original `table` if it
+        is not a DataFrame.
     """
 
     if not isinstance(table, pd.DataFrame):
@@ -76,7 +89,7 @@ class _Bunch:
 
 class Table:
     """
-    A two-way contingency table.
+    A two-way contingency table
 
     Parameters
     ----------
@@ -125,7 +138,7 @@ class Table:
     @classmethod
     def from_data(cls, data, shift_zeros=True):
         """
-        Construct a Table object from data.
+        Construct a Table object from data
 
         Parameters
         ----------
@@ -150,7 +163,7 @@ class Table:
 
     def test_nominal_association(self):
         """
-        Assess independence for nominal factors.
+        Assess independence for nominal factors
 
         Assessment of independence between rows and columns using
         chi^2 testing.  The rows and columns are treated as nominal
@@ -179,7 +192,7 @@ class Table:
 
     def test_ordinal_association(self, row_scores=None, col_scores=None):
         """
-        Assess independence between two ordinal variables.
+        Assess independence between two ordinal variables
 
         This is the 'linear by linear' association test, which uses
         weights or scores to target the test to have more power
@@ -266,7 +279,7 @@ class Table:
     @cache_readonly
     def marginal_probabilities(self):
         """
-        Estimate marginal probability distributions for the rows and columns.
+        Estimate marginal probability distributions for the rows and columns
 
         Returns
         -------
@@ -289,7 +302,7 @@ class Table:
     @cache_readonly
     def independence_probabilities(self):
         """
-        Returns fitted joint probabilities under independence.
+        Returns fitted joint probabilities under independence
 
         The returned table is outer(row, column), where row and
         column are the estimated marginal distributions
@@ -307,7 +320,7 @@ class Table:
     @cache_readonly
     def fittedvalues(self):
         """
-        Returns fitted cell counts under independence.
+        Returns fitted cell counts under independence
 
         The returned cell counts are estimates under a model
         where the rows and columns of the table are independent.
@@ -320,7 +333,7 @@ class Table:
     @cache_readonly
     def resid_pearson(self):
         """
-        Returns Pearson residuals.
+        Returns Pearson residuals
 
         The Pearson residuals are calculated under a model where
         the rows and columns of the table are independent.
@@ -332,9 +345,7 @@ class Table:
 
     @cache_readonly
     def standardized_resids(self):
-        """
-        Returns standardized residuals under independence.
-        """
+        """Returns standardized residuals under independence"""
 
         row, col = self.marginal_probabilities
         sresids = self.resid_pearson / np.sqrt(np.outer(1 - row, 1 - col))
@@ -343,7 +354,7 @@ class Table:
     @cache_readonly
     def chi2_contribs(self):
         """
-        Returns the contributions to the chi^2 statistic for independence.
+        Returns the contributions to the chi^2 statistic for independence
 
         The returned table contains the contribution of each cell to the chi^2
         test statistic for the null hypothesis that the rows and columns
@@ -355,7 +366,7 @@ class Table:
     @cache_readonly
     def local_log_oddsratios(self):
         """
-        Returns local log odds ratios.
+        Returns local log odds ratios
 
         The local log odds ratios are the log odds ratios
         calculated for contiguous 2x2 sub-tables.
@@ -381,7 +392,7 @@ class Table:
     @cache_readonly
     def local_oddsratios(self):
         """
-        Returns local odds ratios.
+        Returns local odds ratios
 
         See documentation for local_log_oddsratios.
         """
@@ -391,7 +402,7 @@ class Table:
     @cache_readonly
     def cumulative_log_oddsratios(self):
         """
-        Returns cumulative log odds ratios.
+        Returns cumulative log odds ratios
 
         The cumulative log odds ratios for a contingency table
         with ordered rows and columns are calculated by collapsing
@@ -422,9 +433,9 @@ class Table:
     @cache_readonly
     def cumulative_oddsratios(self):
         """
-        Returns the cumulative odds ratios for a contingency table.
+        Returns the cumulative odds ratios for a contingency table
 
-        See documentation for cumulative_log_oddsratio.
+        See documentation for cumulative_log_oddsratios.
         """
 
         return np.exp(self.cumulative_log_oddsratios)
@@ -432,7 +443,7 @@ class Table:
 
 class SquareTable(Table):
     """
-    Methods for analyzing a square contingency table.
+    Methods for analyzing a square contingency table
 
     Parameters
     ----------
@@ -464,14 +475,20 @@ class SquareTable(Table):
 
     def symmetry(self, method="bowker"):
         """
-        Test for symmetry of a joint distribution.
+        Test for symmetry of a joint distribution
 
         This procedure tests the null hypothesis that the joint
         distribution is symmetric around the main diagonal, that is
 
         .. math::
 
-        p_{i, j} = p_{j, i}  for all i, j
+           p_{i, j} = p_{j, i}  for all i, j
+
+        Parameters
+        ----------
+        method : str
+            The method for testing symmetry. Currently must be 'bowker'
+            for Bowker's test.
 
         Returns
         -------
@@ -485,6 +502,11 @@ class SquareTable(Table):
             * df : int
                 degrees of freedom of the chisquare distribution
 
+        See Also
+        --------
+        mcnemar
+        homogeneity
+
         Notes
         -----
         The implementation is based on the SAS documentation. R includes
@@ -496,11 +518,6 @@ class SquareTable(Table):
         that the sample size is not very small to be a good approximation
         of the true distribution. For 2x2 contingency tables the exact
         distribution can be obtained with `mcnemar`
-
-        See Also
-        --------
-        mcnemar
-        homogeneity
         """
 
         if method.lower() != "bowker":
@@ -525,7 +542,7 @@ class SquareTable(Table):
 
     def homogeneity(self, method="stuart_maxwell"):
         """
-        Compare row and column marginal distributions.
+        Compare row and column marginal distributions
 
         Parameters
         ----------
@@ -618,7 +635,7 @@ class SquareTable(Table):
 
     def summary(self, alpha=0.05, float_format="%.3f"):
         """
-        Produce a summary of the analysis.
+        Produce a summary of the analysis
 
         Parameters
         ----------
@@ -626,9 +643,6 @@ class SquareTable(Table):
             `1 - alpha` is the nominal coverage probability of the interval.
         float_format : str
             Used to format numeric values in the table.
-        method : str
-            The method for producing the confidence interval.  Currently
-            must be 'normal' which uses the normal approximation.
         """
 
         fmt = float_format
@@ -650,7 +664,7 @@ class SquareTable(Table):
 
 class Table2x2(SquareTable):
     """
-    Analyses that can be performed on a 2x2 contingency table.
+    Analyses that can be performed on a 2x2 contingency table
 
     Parameters
     ----------
@@ -686,7 +700,7 @@ class Table2x2(SquareTable):
     @classmethod
     def from_data(cls, data, shift_zeros=True):
         """
-        Construct a Table object from data.
+        Construct a Table object from data
 
         Parameters
         ----------
@@ -706,18 +720,14 @@ class Table2x2(SquareTable):
 
     @cache_readonly
     def log_oddsratio(self):
-        """
-        Returns the log odds ratio for a 2x2 table.
-        """
+        """Returns the log odds ratio for a 2x2 table"""
 
         f = self.table.flatten()
         return np.dot(np.log(f), np.r_[1, -1, -1, 1])
 
     @cache_readonly
     def oddsratio(self):
-        """
-        Returns the odds ratio for a 2x2 table.
-        """
+        """Returns the odds ratio for a 2x2 table"""
 
         return (
             self.table[0, 0] * self.table[1, 1] / (self.table[0, 1] * self.table[1, 0])
@@ -725,15 +735,13 @@ class Table2x2(SquareTable):
 
     @cache_readonly
     def log_oddsratio_se(self):
-        """
-        Returns the standard error for the log odds ratio.
-        """
+        """Returns the standard error for the log odds ratio"""
 
         return np.sqrt(np.sum(1 / self.table))
 
     def oddsratio_pvalue(self, null=1):
         """
-        P-value for a hypothesis test about the odds ratio.
+        P-value for a hypothesis test about the odds ratio
 
         Parameters
         ----------
@@ -745,7 +753,7 @@ class Table2x2(SquareTable):
 
     def log_oddsratio_pvalue(self, null=0):
         """
-        P-value for a hypothesis test about the log odds ratio.
+        P-value for a hypothesis test about the log odds ratio
 
         Parameters
         ----------
@@ -759,7 +767,7 @@ class Table2x2(SquareTable):
 
     def log_oddsratio_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence level for the log odds ratio.
+        A confidence level for the log odds ratio
 
         Parameters
         ----------
@@ -780,7 +788,7 @@ class Table2x2(SquareTable):
 
     def oddsratio_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence interval for the odds ratio.
+        A confidence interval for the odds ratio
 
         Parameters
         ----------
@@ -797,7 +805,7 @@ class Table2x2(SquareTable):
     @cache_readonly
     def riskratio(self):
         """
-        Returns the risk ratio for a 2x2 table.
+        Returns the risk ratio for a 2x2 table
 
         The risk ratio is calculated with respect to the rows.
         """
@@ -807,17 +815,13 @@ class Table2x2(SquareTable):
 
     @cache_readonly
     def log_riskratio(self):
-        """
-        Returns the log of the risk ratio.
-        """
+        """Returns the log of the risk ratio"""
 
         return np.log(self.riskratio)
 
     @cache_readonly
     def log_riskratio_se(self):
-        """
-        Returns the standard error of the log of the risk ratio.
-        """
+        """Returns the standard error of the log of the risk ratio"""
 
         n = self.table.sum(1)
         p = self.table[:, 0] / n
@@ -826,7 +830,7 @@ class Table2x2(SquareTable):
 
     def riskratio_pvalue(self, null=1):
         """
-        p-value for a hypothesis test about the risk ratio.
+        p-value for a hypothesis test about the risk ratio
 
         Parameters
         ----------
@@ -838,7 +842,7 @@ class Table2x2(SquareTable):
 
     def log_riskratio_pvalue(self, null=0):
         """
-        p-value for a hypothesis test about the log risk ratio.
+        p-value for a hypothesis test about the log risk ratio
 
         Parameters
         ----------
@@ -852,7 +856,7 @@ class Table2x2(SquareTable):
 
     def log_riskratio_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence interval for the log risk ratio.
+        A confidence interval for the log risk ratio
 
         Parameters
         ----------
@@ -872,7 +876,7 @@ class Table2x2(SquareTable):
 
     def riskratio_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence interval for the risk ratio.
+        A confidence interval for the risk ratio
 
         Parameters
         ----------
@@ -888,7 +892,7 @@ class Table2x2(SquareTable):
 
     def summary(self, alpha=0.05, float_format="%.3f", method="normal"):
         """
-        Summarizes results for a 2x2 table analysis.
+        Summarizes results for a 2x2 table analysis
 
         Parameters
         ----------
@@ -946,7 +950,7 @@ class Table2x2(SquareTable):
 
 class StratifiedTable:
     """
-    Analyses for a collection of 2x2 contingency tables.
+    Analyses for a collection of 2x2 contingency tables
 
     Such a collection may arise by stratifying a single 2x2 table with
     respect to another factor.  This class implements the
@@ -1008,7 +1012,7 @@ class StratifiedTable:
     @classmethod
     def from_data(cls, var1, var2, strata, data):
         """
-        Construct a StratifiedTable object from data.
+        Construct a StratifiedTable object from data
 
         Parameters
         ----------
@@ -1056,7 +1060,7 @@ class StratifiedTable:
 
     def test_null_odds(self, correction=False):
         """
-        Test that all tables have odds ratio equal to 1.
+        Test that all tables have odds ratio equal to 1
 
         This is the 'Mantel-Haenszel' test.
 
@@ -1094,7 +1098,7 @@ class StratifiedTable:
     @cache_readonly
     def oddsratio_pooled(self):
         """
-        The pooled odds ratio.
+        The pooled odds ratio
 
         The value is an estimate of a common odds ratio across all of the
         stratified tables.
@@ -1105,7 +1109,7 @@ class StratifiedTable:
     @cache_readonly
     def logodds_pooled(self):
         """
-        Returns the logarithm of the pooled odds ratio.
+        Returns the logarithm of the pooled odds ratio
 
         See oddsratio_pooled for more information.
         """
@@ -1113,9 +1117,7 @@ class StratifiedTable:
 
     @cache_readonly
     def riskratio_pooled(self):
-        """
-        Estimate of the pooled risk ratio.
-        """
+        """Estimate of the pooled risk ratio"""
 
         acd = self.table[0, 0, :] * self._cpd
         cab = self.table[1, 0, :] * self._apb
@@ -1150,7 +1152,7 @@ class StratifiedTable:
 
     def logodds_pooled_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence interval for the pooled log odds ratio.
+        A confidence interval for the pooled log odds ratio
 
         Parameters
         ----------
@@ -1181,7 +1183,7 @@ class StratifiedTable:
 
     def oddsratio_pooled_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence interval for the pooled odds ratio.
+        A confidence interval for the pooled odds ratio
 
         Parameters
         ----------
@@ -1207,7 +1209,7 @@ class StratifiedTable:
 
     def test_equal_odds(self, adjust=False):
         """
-        Test that all odds ratios are identical.
+        Test that all odds ratios are identical
 
         This is the 'Breslow-Day' testing procedure.
 
@@ -1265,7 +1267,7 @@ class StratifiedTable:
 
     def summary(self, alpha=0.05, float_format="%.3f", method="normal"):
         """
-        A summary of all the main results.
+        A summary of all the main results
 
         Parameters
         ----------
@@ -1327,7 +1329,7 @@ class StratifiedTable:
 
 def mcnemar(table, exact=True, correction=True):
     """
-    McNemar test of homogeneity.
+    McNemar test of homogeneity
 
     Parameters
     ----------
@@ -1388,7 +1390,7 @@ def mcnemar(table, exact=True, correction=True):
 
 def cochrans_q(x, return_object=True):
     """
-    Cochran's Q test for identical binomial proportions.
+    Cochran's Q test for identical binomial proportions
 
     Parameters
     ----------

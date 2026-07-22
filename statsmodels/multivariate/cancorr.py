@@ -25,6 +25,26 @@ class CanCorr(Model):
 
     and the correlation between x1 and y1 is maximized.
 
+    Parameters
+    ----------
+    endog : array_like
+        The endogenous (left-hand-side) variables.
+    exog : array_like
+        The exogenous (right-hand-side) variables.
+    tolerance : float
+        Eigenvalue tolerance, values smaller than which are considered 0.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
+    hasconst : None or bool
+        Indicates whether the RHS includes a user-supplied constant. If True,
+        a constant is assumed. If False, no constant is checked for. If
+        None, the code checks for a constant.
+    **kwargs
+        Extra arguments that are used to set model properties when using the
+        formula interface.
+
     Attributes
     ----------
     endog : ndarray
@@ -52,7 +72,8 @@ class CanCorr(Model):
         self._fit(tolerance)
 
     def _fit(self, tolerance=1e-8):
-        """Fit the model
+        """
+        Fit the model
 
         A ValueError is raised if there are singular values smaller than the
         tolerance. The treatment of singular arrays might change in future.
@@ -60,7 +81,7 @@ class CanCorr(Model):
         Parameters
         ----------
         tolerance : float
-            eigenvalue tolerance, values smaller than which is considered 0
+            Eigenvalue tolerance, values smaller than which are considered 0.
         """
         nobs, k_yvar = self.endog.shape
         nobs, k_xvar = self.exog.shape
@@ -94,7 +115,9 @@ class CanCorr(Model):
         self.y_cancoef = vy_ds.dot(v.T[:, :k])
 
     def corr_test(self):
-        """Approximate F test
+        """
+        Approximate F test
+
         Perform multivariate statistical tests of the hypothesis that
         there is no canonical correlation between endog and exog.
         For each canonical correlation, testing its significance based on
@@ -102,7 +125,8 @@ class CanCorr(Model):
 
         Returns
         -------
-        CanCorrTestResults instance
+        CanCorrTestResults
+            Instance holding the canonical correlation test results.
         """
         nobs, k_yvar = self.endog.shape
         nobs, k_xvar = self.exog.shape
@@ -155,12 +179,19 @@ class CanCorrTestResults:
     """
     Canonical correlation results class
 
+    Parameters
+    ----------
+    stats : DataFrame
+        Contains statistical test results for each canonical correlation.
+    stats_mv : DataFrame
+        Contains the multivariate statistical test results.
+
     Attributes
     ----------
     stats : DataFrame
-        Contain statistical tests results for each canonical correlation
+        Contains statistical test results for each canonical correlation.
     stats_mv : DataFrame
-        Contain the multivariate statistical tests results
+        Contains the multivariate statistical test results.
     """
     def __init__(self, stats, stats_mv):
         self.stats = stats

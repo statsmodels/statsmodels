@@ -17,7 +17,7 @@ import numpy as np
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.gam import AdditiveModel
 
-np.random.seed(8765993)
+rs = np.random.RandomState(8765993)
 # seed is chosen for nice result, not randomly
 # other seeds are pretty off in the prediction
 
@@ -36,7 +36,7 @@ exog_reduced = exog[:, idx]  # remove duplicate constant
 y_true = exog.sum(1) / 2.0
 z = y_true  # alias check
 d = x
-y = y_true + sigma_noise * np.random.randn(nobs)
+y = y_true + sigma_noise * rs.randn(nobs)
 
 example = 1
 

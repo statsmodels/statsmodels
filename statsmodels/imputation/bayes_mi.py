@@ -2,11 +2,12 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.base.model import LikelihoodModelResults
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class BayesGaussMI:
     """
-    Bayesian Imputation using a Gaussian model.
+    Bayesian Imputation using a Gaussian model
 
     The approach is Bayesian.  The goal is to sample from the joint
     distribution of the mean vector, covariance matrix, and missing
@@ -33,6 +34,12 @@ class BayesGaussMI:
     cov_prior_df : positive float
         The degrees of freedom of the inverse Wishart prior
         distribution for the covariance matrix.  Defaults to 1.
+    rng : {None, int, array_like[int], Generator, RandomState}, optional
+        If `rng` is None, fresh, unpredictable entropy is pulled from
+        the OS and a `numpy.random.Generator` is used. If `rng` is an
+        int or array_like[ints], a new Generator instance is used,
+        seeded with `rng`. If `rng` is already a Generator or
+        RandomState instance, then that instance is used.
 
     Examples
     --------
@@ -53,7 +60,7 @@ class BayesGaussMI:
     >>> mi = sm.MI(imp, sm.OLS, model_args_fn)
     """
 
-    def __init__(self, data, mean_prior=None, cov_prior=None, cov_prior_df=1):
+    def __init__(self, data, mean_prior=None, cov_prior=None, cov_prior_df=1, rng=None):
 
         self.exog_names = None
         if type(data) is pd.DataFrame:
@@ -65,6 +72,7 @@ class BayesGaussMI:
         self.mask = np.isnan(data)
         self.nobs = self.mask.shape[0]
         self.nvar = self.mask.shape[1]
+        self.rng = check_random_state(rng)
 
         # Identify all distinct missing data patterns
         z = 1 + np.log(1 + np.arange(self.mask.shape[1]))
@@ -106,9 +114,7 @@ class BayesGaussMI:
         self.cov_prior_df = cov_prior_df
 
     def update(self):
-        """
-        Cycle through all Gibbs updates.
-        """
+        """Cycle through all Gibbs updates"""
 
         self.update_data()
 
@@ -117,9 +123,7 @@ class BayesGaussMI:
         self.update_cov()
 
     def update_data(self):
-        """
-        Gibbs update of the missing data values.
-        """
+        """Gibbs update of the missing data values"""
 
         for ix in self.patterns:
 
@@ -139,29 +143,27 @@ class BayesGaussMI:
             cv = vmm - np.dot(vmo, np.linalg.solve(voo, vmo.T))
 
             cs = np.linalg.cholesky(cv)
-            u = np.random.normal(size=(len(ix), len(ix_miss)))
+            u = self.rng.normal(size=(len(ix), len(ix_miss)))
             self._data[np.ix_(ix, ix_miss)] = cm + np.dot(u, cs.T)
 
         # Set the user-visible data set.
         if self.exog_names is not None:
-            self.data = pd.DataFrame(
-                           self._data,
-                           columns=self.exog_names,
-                           copy=False)
+            self.data = pd.DataFrame(self._data, columns=self.exog_names, copy=False)
         else:
             self.data = self._data
 
     def update_mean(self):
         """
-        Gibbs update of the mean vector.
+        Gibbs update of the mean vector
 
         Do not call until update_data has been called once.
         """
         # https://stats.stackexchange.com/questions/28744/multivariate-normal-posterior
 
         # Posterior covariance matrix of the mean
-        cm = np.linalg.solve(self.cov/self.nobs + self.mean_prior,
-                             self.mean_prior / self.nobs)
+        cm = np.linalg.solve(
+            self.cov / self.nobs + self.mean_prior, self.mean_prior / self.nobs
+        )
         cm = np.dot(self.cov, cm)
 
         # Posterior mean of the mean
@@ -170,11 +172,11 @@ class BayesGaussMI:
 
         # Sample
         r = np.linalg.cholesky(cm)
-        self.mean = vm + np.dot(r, np.random.normal(0, 1, self.nvar))
+        self.mean = vm + np.dot(r, self.rng.normal(0, 1, self.nvar))
 
     def update_cov(self):
         """
-        Gibbs update of the covariance matrix.
+        Gibbs update of the covariance matrix
 
         Do not call until update_data has been called once.
         """
@@ -186,14 +188,14 @@ class BayesGaussMI:
         df = int(np.ceil(self.nobs + self.cov_prior_df))
 
         r = np.linalg.cholesky(np.linalg.inv(a))
-        x = np.dot(np.random.normal(size=(df, self.nvar)), r.T)
+        x = np.dot(self.rng.normal(size=(df, self.nvar)), r.T)
         ma = np.dot(x.T, x)
         self.cov = np.linalg.inv(ma)
 
 
 class MI:
     """
-    MI performs multiple imputation using a provided imputer object.
+    MI performs multiple imputation using a provided imputer object
 
     Parameters
     ----------
@@ -237,9 +239,20 @@ class MI:
     to 0/1.
     """
 
-    def __init__(self, imp, model, model_args_fn=None, model_kwds_fn=None,
-                 formula=None, fit_args=None, fit_kwds=None, xfunc=None,
-                 burn=100, nrep=20, skip=10):
+    def __init__(
+        self,
+        imp,
+        model,
+        model_args_fn=None,
+        model_kwds_fn=None,
+        formula=None,
+        fit_args=None,
+        fit_kwds=None,
+        xfunc=None,
+        burn=100,
+        nrep=20,
+        skip=10,
+    ):
 
         # The imputer
         self.imp = imp
@@ -253,26 +266,34 @@ class MI:
         self.formula = formula
 
         if model_args_fn is None:
+
             def f(x):
                 return []
+
             model_args_fn = f
         self.model_args_fn = model_args_fn
 
         if model_kwds_fn is None:
+
             def f(x):
                 return {}
+
             model_kwds_fn = f
         self.model_kwds_fn = model_kwds_fn
 
         if fit_args is None:
+
             def f(x):
                 return []
+
             fit_args = f
         self.fit_args = fit_args
 
         if fit_kwds is None:
+
             def f(x):
                 return {}
+
             fit_kwds = f
         self.fit_kwds = fit_kwds
 
@@ -286,7 +307,7 @@ class MI:
 
     def fit(self, results_cb=None):
         """
-        Impute datasets, fit models, and pool results.
+        Impute datasets, fit models, and pool results
 
         Parameters
         ----------
@@ -298,7 +319,9 @@ class MI:
 
         Returns
         -------
-        A MIResults object.
+        MIResults
+            The results of the multiple imputation analysis, including
+            the pooled parameter estimates and covariance matrix.
         """
 
         par, cov = [], []
@@ -306,7 +329,7 @@ class MI:
 
         for _ in range(self.nrep):
 
-            for __ in range(self.skip+1):
+            for __ in range(self.skip + 1):
                 self.imp.update()
 
             da = self.imp.data
@@ -315,12 +338,11 @@ class MI:
                 da = self.xfunc(da)
 
             if self.formula is None:
-                model = self.model(*self.model_args_fn(da),
-                                   **self.model_kwds_fn(da))
+                model = self.model(*self.model_args_fn(da), **self.model_kwds_fn(da))
             else:
                 model = self.model.from_formula(
-                          self.formula, *self.model_args_fn(da),
-                          **self.model_kwds_fn(da))
+                    self.formula, *self.model_args_fn(da), **self.model_kwds_fn(da)
+                )
 
             result = model.fit(*self.fit_args(da), **self.fit_kwds(da))
 
@@ -358,17 +380,17 @@ class MI:
         bcov = np.atleast_2d(bcov)
 
         # Overall covariance
-        covp = wcov + (1 + 1/float(m))*bcov
+        covp = wcov + (1 + 1 / float(m)) * bcov
 
         # Fraction of missing information
-        fmi = (1 + 1/float(m)) * np.diag(bcov) / np.diag(covp)
+        fmi = (1 + 1 / float(m)) * np.diag(bcov) / np.diag(covp)
 
         return params, covp, fmi
 
 
 class MIResults(LikelihoodModelResults):
     """
-    A results class for multiple imputation (MI).
+    A results class for multiple imputation (MI)
 
     Parameters
     ----------
@@ -390,9 +412,9 @@ class MIResults(LikelihoodModelResults):
         self.mi = mi
         self._model = model
 
-    def summary(self, title=None, alpha=.05):
+    def summary(self, title=None, alpha=0.05):
         """
-        Summarize the results of running multiple imputation.
+        Summarize the results of running multiple imputation
 
         Parameters
         ----------
