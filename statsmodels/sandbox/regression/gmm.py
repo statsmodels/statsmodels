@@ -190,7 +190,7 @@ class IV2SLS(LikelihoodModel):
 
 class IVRegressionResults(RegressionResults):
     """
-    Results class for for an OLS model.
+    Results class for an OLS model.
 
     Most of the methods and attributes are inherited from RegressionResults.
     The special methods that are only available for OLS are:
@@ -609,7 +609,7 @@ class GMM(Model):
             obtained with maxiter=0 or 1. If maxiter is large, then the
             iteration will stop either at maxiter or on convergence of the
             parameters (TODO: no options for convergence criteria yet.)
-            If `maxiter == 'cue'`, the the continuously updated GMM is
+            If `maxiter == 'cue'`, the continuously updated GMM is
             calculated which updates the weight matrix during the minimization
             of the GMM objective function. The CUE estimation uses the onestep
             parameters as starting values.

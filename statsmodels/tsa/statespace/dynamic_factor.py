@@ -427,7 +427,7 @@ class DynamicFactor(MLEModel):
         idx_diag = idx_diag[:, np.lexsort((idx_diag[1], idx_diag[0]))]
         self._idx_error_diag = (idx_diag[0], idx_diag[1])
 
-        # Finally, we want to fill the entries in in the correct order, which
+        # Finally, we want to fill the entries in the correct order, which
         # is to say we want to fill in lexicographically, first by row then by
         # column
         idx = idx[:, np.lexsort((idx[1], idx[0]))]

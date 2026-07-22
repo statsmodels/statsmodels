@@ -41,7 +41,7 @@ class NdKernel:
     mahalanobis distance defined by H.
 
     In the case of the Gaussian these are both equivalent, and the second constructiong
-    is prefered.
+    is preferred.
     """
 
     def __init__(self, n, kernels=None, H=None):

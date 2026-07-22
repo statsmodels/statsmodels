@@ -106,7 +106,7 @@ _plot_ceres_residuals_doc = """
 
     Examples
     --------
-    Using a model built from the the state crime dataset, make a CERES plot with
+    Using a model built from the state crime dataset, make a CERES plot with
     the rate of Poverty as the focus variable.
 
     >>> import statsmodels.api as sm
@@ -164,7 +164,7 @@ _plot_influence_doc = """
 
     Examples
     --------
-    Using a model built from the the state crime dataset, plot the influence in
+    Using a model built from the state crime dataset, plot the influence in
     regression.  Observations with high leverage, or large residuals will be
     labeled in the plot to show potential influence points.
 
@@ -203,7 +203,7 @@ _plot_leverage_resid2_doc = """
 
     Examples
     --------
-    Using a model built from the the state crime dataset, plot the leverage
+    Using a model built from the state crime dataset, plot the leverage
     statistics vs. normalized residuals squared.  Observations with
     Large-standardized Residuals will be labeled in the plot.
 
