@@ -289,6 +289,11 @@ class SimulationSmoother(KalmanSmoother):
             (seeded with `rng` if an int is given). If `rng` is already a
             ``Generator`` or ``RandomState`` instance, that instance is
             used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
         **kwargs
             Additional keyword arguments, used to set the simulation output.
             See `set_simulation_output` for more details.
@@ -380,6 +385,11 @@ class SimulationSmoothResults:
         (seeded with `rng` if an int is given). If `rng` is already a
         ``Generator`` or ``RandomState`` instance, that instance is
         used.
+    random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        .. deprecated:: 0.15
+
+           random_state has been deprecated. In-line with SPEC-007, use
+           rng for passing a random number generator or seed.
 
     Attributes
     ----------
@@ -685,6 +695,11 @@ class SimulationSmoothResults:
             (seeded with `rng` if an int is given). If `rng` is already a
             ``Generator`` or ``RandomState`` instance, that instance is
             used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
         disturbance_variates : bool, optional
             Deprecated, please use pretransformed_measurement_shocks and
             pretransformed_state_shocks instead.
