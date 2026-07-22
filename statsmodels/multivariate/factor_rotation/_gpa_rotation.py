@@ -226,7 +226,7 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
                       return_gradient=True):
     r"""
     Objective function for the oblimin family for orthogonal or
-    oblique rotation wich minimizes:
+    oblique rotation which minimizes:
 
     .. math::
         \phi(L) = \frac{1}{4}(L\circ L,(I-\gamma C)(L\circ L)N),
@@ -318,7 +318,7 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
 def orthomax_objective(L=None, A=None, T=None, gamma=0, return_gradient=True):
     r"""
     Objective function for the orthomax family for orthogonal
-    rotation wich minimizes the following objective:
+    rotation which minimizes the following objective:
 
     .. math::
         \phi(L) = -\frac{1}{4}(L\circ L,(I-\gamma C)(L\circ L)),
@@ -392,7 +392,7 @@ def CF_objective(L=None, A=None, T=None, kappa=0,
                  return_gradient=True):
     r"""
     Objective function for the Crawford-Ferguson family for orthogonal
-    and oblique rotation wich minimizes the following objective:
+    and oblique rotation which minimizes the following objective:
 
     .. math::
         \phi(L) =\frac{1-\kappa}{4} (L\circ L,(L\circ L)N)

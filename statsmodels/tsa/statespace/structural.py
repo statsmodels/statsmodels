@@ -1300,7 +1300,7 @@ class UnobservedComponentsResults(MLEResults):
     @property
     def trend(self):
         """
-        Estimates of of unobserved trend component
+        Estimates of unobserved trend component
 
         Returns
         -------

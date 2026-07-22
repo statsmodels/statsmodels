@@ -434,7 +434,7 @@ def test_instantiation_valid():
         message = (
             "An unsupported index was provided. As a result, forecasts "
             "cannot be generated. To use the model for forecasting, use "
-            "on the the supported classes of index."
+            "on the supported classes of index."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -1103,7 +1103,7 @@ def test_custom_index():
     endog = pd.Series(rs.normal(size=5), index=["a", "b", "c", "d", "e"])
     message = (
         "An unsupported index was provided. As a result, forecasts cannot be "
-        "generated. To use the model for forecasting, use on the the "
+        "generated. To use the model for forecasting, use on the "
         "supported classes of index."
     )
     with warnings.catch_warnings(record=True) as w:

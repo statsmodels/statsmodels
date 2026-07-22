@@ -2170,7 +2170,7 @@ def _interpolate_p(p, r, v):
 
 
 def _select_vs(v, p):
-    # This one is is about 30 times faster than
+    # This one is about 30 times faster than
     # the generic algorithm it is replacing.
     """Returns the points to use for interpolating v"""
 

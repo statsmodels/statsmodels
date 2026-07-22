@@ -1590,7 +1590,7 @@ def test_news_invalid(missing, filter_univariate, tvp):
         with pytest.raises(RuntimeError, match=msg):
             res2_smoothed.news(res, t=mod.nobs + 2)
 
-    # Test that news won't work when the calling model is is smaller
+    # Test that news won't work when the calling model is smaller
     mod, res = get_acov_model(missing, filter_univariate, tvp)
     params = [] if tvp else mod.start_params
 

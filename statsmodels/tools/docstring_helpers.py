@@ -115,16 +115,6 @@ class Appender:
     This decorator is robust even if func.__doc__ is None
     (for example, if -OO was passed to the interpreter).
 
-    Usage: construct an Appender with a string to be joined to
-    the original docstring. An optional 'join' parameter may be supplied
-    which will be used to join the docstring and addendum. e.g.
-
-        add_copyright = Appender("Copyright (c) 2009", join='\n')
-
-        @add_copyright
-        def my_dog(has='fleas'):
-            "This docstring will have a copyright below"
-            pass
 
     Parameters
     ----------
@@ -136,6 +126,19 @@ class Appender:
     indents : int, optional
         Number of indents (4-space blocks) added to all lines of the
         addendum. Default is 0.
+
+    Examples
+    --------
+    Usage: construct an Appender with a string to be joined to
+    the original docstring. An optional 'join' parameter may be supplied
+    which will be used to join the docstring and addendum. e.g.
+
+    >>> add_copyright = Appender("Copyright (c) 2009", join='\n')
+
+    >>> @add_copyright
+    ... def my_dog(has='fleas'):
+    ...     "This docstring will have a copyright below"
+    ...     pass
     """
 
     addendum: str | None
@@ -163,26 +166,6 @@ class Substitution:
     This decorator is robust even if func.__doc__ is None
     (for example, if -OO was passed to the interpreter).
 
-    Usage: construct a Substitution with a sequence or dictionary
-    suitable for performing substitution; then decorate a suitable
-    function with the constructed object. e.g.
-
-        sub_author_name = Substitution(author='Jason')
-
-        @sub_author_name
-        def some_function(x):
-            "%(author)s wrote this function"
-
-        # note that some_function.__doc__ is now "Jason wrote this function"
-
-    One can also use positional arguments:
-
-        sub_first_last_names = Substitution('Edgar Allen', 'Poe')
-
-        @sub_first_last_names
-        def some_function(x):
-            "%s %s wrote the Raven"
-
     Parameters
     ----------
     *args : str
@@ -190,6 +173,28 @@ class Substitution:
     **kwargs : str
         Keyword arguments for %(name)s-style substitution.
         Cannot be combined with positional args.
+
+    Examples
+    --------
+    Usage: construct a Substitution with a sequence or dictionary
+    suitable for performing substitution; then decorate a suitable
+    function with the constructed object. e.g.
+
+    >>> sub_author_name = Substitution(author='Jason')
+
+    >>> @sub_author_name
+    >>> def some_function(x):
+    ...    "%(author)s wrote this function"
+
+    Note that some_function.__doc__ is now "Jason wrote this function"
+
+    One can also use positional arguments:
+
+    >>> sub_first_last_names = Substitution('Edgar Allen', 'Poe')
+
+    >>> @sub_first_last_names
+    >>> def some_function(x):
+    ...    "%s %s wrote the Raven"
     """
 
     def __init__(self, *args: object, **kwargs: object) -> None:

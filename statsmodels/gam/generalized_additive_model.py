@@ -42,9 +42,31 @@ from statsmodels.tools.sm_exceptions import (
 
 
 def _transform_predict_exog(model, exog, model_spec=None):
-    """transform exog for predict using the formula's model_spec
+    """
+    Transform exog for predict using the formula's model_spec
 
-    Note: this is copied from base.model.Results.predict and converted to
+    Parameters
+    ----------
+    model : Model instance
+        The model instance whose ``data`` (and, optionally, ``model_spec``)
+        attribute is used to transform ``exog``.
+    exog : array_like
+        The values for which you want to predict.
+    model_spec : ModelSpec instance, optional
+        The model_spec used to transform ``exog``. If None, the model_spec
+        attached to ``model.data`` is used, if available.
+
+    Returns
+    -------
+    exog : ndarray
+        The transformed explanatory variables.
+    exog_index : array_like or None
+        The index of the transformed ``exog`` if it is a pandas object,
+        otherwise None.
+
+    Notes
+    -----
+    This is copied from base.model.Results.predict and converted to a
     standalone function with additional options.
     """
 
@@ -95,35 +117,34 @@ def _transform_predict_exog(model, exog, model_spec=None):
 
 
 class GLMGamResults(GLMResults):
-    """Results class for generalized additive models, GAM.
+    """
+    Results class for generalized additive models, GAM
 
     This inherits from GLMResults.
 
-    Warning: some inherited methods might not correctly take account of the
-    penalization
-
-    GLMGamResults inherits from GLMResults
     All methods related to the loglikelihood function return the penalized
     values.
 
     Attributes
     ----------
-
-    edf
+    edf : ndarray
         list of effective degrees of freedom for each column of the design
         matrix.
-    hat_matrix_diag
+    hat_matrix_diag : ndarray
         diagonal of hat matrix
-    gcv
+    gcv : float
         generalized cross-validation criterion computed as
         ``gcv = scale / (1. - hat_matrix_trace / self.nobs)**2``
-    cv
+    cv : float
         cross-validation criterion computed as
         ``cv = ((resid_pearson / (1 - hat_matrix_diag))**2).sum() / nobs``
 
     Notes
     -----
     status: experimental
+
+    Warning: some inherited methods might not correctly take account of the
+    penalization.
     """
 
     def __init__(self, model, params, normalized_cov_params, scale, **kwds):
@@ -148,7 +169,8 @@ class GLMGamResults(GLMResults):
         super().__init__(model, params, normalized_cov_params, scale, **kwds)
 
     def _tranform_predict_exog(self, exog=None, exog_smooth=None, transform=True):
-        """Transform original explanatory variables for prediction
+        """
+        Transform original explanatory variables for prediction
 
         Parameters
         ----------
@@ -202,7 +224,7 @@ class GLMGamResults(GLMResults):
 
     def predict(self, exog=None, exog_smooth=None, transform=True, **kwargs):
         """
-        compute prediction
+        Compute prediction
 
         Parameters
         ----------
@@ -213,7 +235,7 @@ class GLMGamResults(GLMResults):
         transform : bool, optional
             If transform is True, then the basis representation of the smooth
             term will be constructed from the provided ``exog``.
-        kwargs :
+        **kwargs
             Some models can take additional arguments or keywords, see the
             predict method of the model for the details.
 
@@ -235,7 +257,8 @@ class GLMGamResults(GLMResults):
             return predict_results
 
     def get_prediction(self, exog=None, exog_smooth=None, transform=True, **kwargs):
-        """compute prediction results
+        """
+        Compute prediction results
 
         Parameters
         ----------
@@ -245,8 +268,8 @@ class GLMGamResults(GLMResults):
             values for the variables in the smooth terms
         transform : bool, optional
             If transform is True, then the basis representation of the smooth
-            term will be constructed from the provided ``x``.
-        kwargs :
+            term will be constructed from the provided ``exog``.
+        **kwargs
             Some models can take additional arguments or keywords, see the
             predict method of the model for the details.
 
@@ -264,9 +287,8 @@ class GLMGamResults(GLMResults):
         return super().get_prediction(ex, transform=False, **kwargs)
 
     def partial_values(self, smooth_index, include_constant=True):
-        """contribution of a smooth term to the linear prediction
-
-        Warning: This will be replaced by a predict method
+        """
+        Contribution of a smooth term to the linear prediction
 
         Parameters
         ----------
@@ -280,12 +302,16 @@ class GLMGamResults(GLMResults):
 
         Returns
         -------
-        predicted : nd_array
+        predicted : ndarray
             predicted value of linear term.
             This is not the expected response if the link function is not
             linear.
-        se_pred : nd_array
+        se_pred : ndarray
             standard error of linear prediction
+
+        Notes
+        -----
+        This will be replaced by a predict method.
         """
         variable = smooth_index
         smoother = self.model.smoother
@@ -315,7 +341,8 @@ class GLMGamResults(GLMResults):
     def plot_partial(
         self, smooth_index, plot_se=True, cpr=False, include_constant=True, ax=None
     ):
-        """plot the contribution of a smooth term to the linear prediction
+        """
+        Plot the contribution of a smooth term to the linear prediction
 
         Parameters
         ----------
@@ -373,7 +400,8 @@ class GLMGamResults(GLMResults):
         return fig
 
     def test_significance(self, smooth_index):
-        """hypothesis test that a smooth component is zero.
+        """
+        Hypothesis test that a smooth component is zero
 
         This calls `wald_test` to compute the hypothesis test, but uses
         effective degrees of freedom.
@@ -489,8 +517,8 @@ class GLMGam(PenalizedMixin, GLM):
     endog : array_like
         The response variable.
     exog : array_like or None
-        This explanatory variables are treated as linear. The model in this
-        case is a partial linear model.
+        These explanatory variables are treated as linear. The model in
+        this case is a partial linear model.
     smoother : instance of additive smoother class
         Examples of smoother instances include Bsplines or CyclicCubicSplines.
     alpha : float or list of floats
@@ -502,8 +530,9 @@ class GLMGam(PenalizedMixin, GLM):
         See GLM.
     exposure : None or array_like
         See GLM.
-    missing : 'none'
-        Missing value handling is not supported in this class.
+    missing : str
+        Missing value handling is not supported in this class, and the
+        value must be 'none'.
     **kwargs
         Extra keywords are used in call to the super classes.
 
@@ -611,7 +640,8 @@ class GLMGam(PenalizedMixin, GLM):
             del self.formula
 
     def _check_alpha(self, alpha):
-        """check and convert alpha to required list format
+        """
+        Check and convert alpha to required list format
 
         Parameters
         ----------
@@ -646,15 +676,51 @@ class GLMGam(PenalizedMixin, GLM):
         max_start_irls=3,
         **kwargs,
     ):
-        """estimate parameters and create instance of GLMGamResults class
+        """
+        Estimate parameters and create instance of GLMGamResults class
+
+        Most parameters are the same as for GLM and are only used to
+        create the results instance.
 
         Parameters
         ----------
-        most parameters are the same as for GLM
-        method : optimization method
-            The special optimization method is "pirls" which uses a penalized
-            version of IRLS. Other methods are gradient optimizers as used in
-            base.model.LikelihoodModel.
+        start_params : array_like, optional
+            Initial guess of the solution for the loglikelihood
+            maximization. If None, then the default for ``method="pirls"``
+            uses the family-specific starting mu, otherwise it is passed
+            through to the underlying optimizer.
+        maxiter : int, optional
+            Maximum number of iterations. Default is 1000.
+        method : str
+            The special optimization method is "pirls" which uses a
+            penalized version of IRLS. This is the default. Other methods
+            are gradient optimizers as used in
+            base.model.LikelihoodModel.fit that are called on the
+            penalized log-likelihood.
+        tol : float
+            Convergence tolerance for "pirls". Default is 1e-8.
+        scale : str or float, optional
+            `scale` can be 'X2', 'dev', or a float. See GLM.fit for details.
+        cov_type : str
+            The type of parameter estimate covariance matrix to compute.
+        cov_kwds : dict-like
+            Extra arguments for calculating the covariance of the parameter
+            estimates.
+        use_t : bool
+            If True, the Student t-distribution is used for inference.
+        full_output : bool, optional
+            Set to True to have all available output in the Results
+            object's mle_retvals attribute. Not used if method is "pirls".
+        disp : bool, optional
+            Set to True to print convergence messages. Not used if method
+            is "pirls".
+        max_start_irls : int
+            The number of PIRLS iterations used to obtain starting values
+            for gradient optimization. Only relevant if `method` is set to
+            something other than "pirls".
+        **kwargs
+            Additional keyword arguments used in the call to the
+            underlying optimizer.
 
         Returns
         -------
@@ -726,7 +792,39 @@ class GLMGam(PenalizedMixin, GLM):
         use_t=None,
         weights=None,
     ):
-        """fit model with penalized reweighted least squares"""
+        """
+        Fit model with penalized reweighted least squares
+
+        Parameters
+        ----------
+        alpha : list of float
+            Penalization weights for smooth terms, one per smooth term.
+        start_params : array_like, optional
+            Initial guess of the solution. If None, then the family
+            specific ``starting_mu`` is used to initialize the fit.
+        maxiter : int, optional
+            Maximum number of PIRLS iterations. Default is 100.
+        tol : float
+            Convergence tolerance. Default is 1e-8.
+        scale : str or float, optional
+            `scale` can be 'X2', 'dev', or a float. See GLM.fit for
+            details.
+        cov_type : str
+            The type of parameter estimate covariance matrix to compute.
+        cov_kwds : dict-like
+            Extra arguments for calculating the covariance of the
+            parameter estimates.
+        use_t : bool
+            If True, the Student t-distribution is used for inference.
+        weights : array_like, optional
+            Case weights to be used in the WLS updates. If None, then
+            unit weights are used.
+
+        Returns
+        -------
+        res : instance of GLMGamResultsWrapper
+            The wrapped results of the PIRLS fit.
+        """
         # TODO: this currently modifies several attributes
         # self.scale, self.scaletype, self.mu, self.weights
         # self.data_weights,
@@ -836,7 +934,8 @@ class GLMGam(PenalizedMixin, GLM):
         method="basinhopping",
         **fit_kwds,
     ):
-        """find alpha by minimizing results criterion
+        """
+        Find alpha by minimizing results criterion
 
         The objective for the minimization can be results attributes like
         ``gcv``, ``aic`` or ``bic`` where the latter are based on effective
@@ -848,7 +947,7 @@ class GLMGam(PenalizedMixin, GLM):
 
         Parameters
         ----------
-        criterion='aic'
+        criterion : str
             name of results attribute to be minimized.
             Default is 'aic', other options are 'gcv', 'cv' or 'bic'.
         start_params : None or array
@@ -861,7 +960,7 @@ class GLMGam(PenalizedMixin, GLM):
             'basinhopping' and 'nm' directly use the underlying scipy.optimize
             functions `basinhopping` and `fmin`. 'minimize' provides access
             to the high level interface, `scipy.optimize.minimize`.
-        fit_kwds : keyword arguments
+        **fit_kwds
             additional keyword arguments will be used in the call to the
             scipy optimizer. Which keywords are supported depends on the
             scipy optimization function.
@@ -956,7 +1055,8 @@ class GLMGam(PenalizedMixin, GLM):
         k_grid=11,
         rng=None,
     ):
-        """find alphas by k-fold cross-validation
+        """
+        Find alphas by k-fold cross-validation
 
         Warning: This estimates ``k_folds`` models for each point in the
             grid of alphas.
@@ -964,6 +1064,8 @@ class GLMGam(PenalizedMixin, GLM):
         Parameters
         ----------
         alphas : None or list of arrays
+            Grid of alpha values to search over, one array per smooth
+            term. If None, a default grid is constructed, see Notes.
         cv_iterator : instance
             instance of a cross-validation iterator, by default this is a
             KFold instance
@@ -974,6 +1076,9 @@ class GLMGam(PenalizedMixin, GLM):
         k_folds : int
             number of folds if default Kfold iterator is used.
             This is ignored if ``cv_iterator`` is not None.
+        k_grid : int
+            number of points in the default grid of alpha values for each
+            smooth term. This is ignored if ``alphas`` is not None.
         rng : int, np.random.RandomState or np.random.Generator, optional
             The rng to use during KFold cross-validation. If None, uses the singleton
             RandomState provided by NumPy. If an int, uses the ``default_rng``.
@@ -1018,14 +1123,31 @@ class GLMGam(PenalizedMixin, GLM):
 
 
 class LogitGam(PenalizedMixin, Logit):
-    """Generalized Additive model for discrete Logit
+    """
+    Generalized Additive model for discrete Logit
 
     This subclasses discrete_model Logit.
 
-    Warning: not all inherited methods might take correctly account of the
-    penalization
+    Parameters
+    ----------
+    endog : array_like
+        The response variable.
+    smoother : instance of additive smoother class
+        Examples of smoother instances include Bsplines or
+        CyclicCubicSplines.
+    alpha : float or list of floats
+        Penalization weights for smooth terms. The length of the list
+        needs to be the same as the number of smooth terms in the
+        ``smoother``.
+    *args
+        Extra positional arguments used in call to the super classes.
+    **kwargs
+        Extra keywords used in call to the super classes.
 
-    not verified yet.
+    Notes
+    -----
+    Warning: not all inherited methods might take correctly account of the
+    penalization, and this class has not been verified yet.
     """
 
     def __init__(self, endog, smoother, alpha, *args, **kwargs):
@@ -1041,7 +1163,8 @@ class LogitGam(PenalizedMixin, Logit):
 
 
 def penalized_wls(endog, exog, penalty_matrix, weights):
-    """weighted least squares with quadratic penalty
+    """
+    Weighted least squares with quadratic penalty
 
     Parameters
     ----------
@@ -1050,7 +1173,7 @@ def penalized_wls(endog, exog, penalty_matrix, weights):
     exog : ndarray
         design matrix, matrix of exogenous or explanatory variables
     penalty_matrix : ndarray, 2-Dim square
-        penality matrix for quadratic penalization. Note, the penalty_matrix
+        penalty matrix for quadratic penalization. Note, the penalty_matrix
         is multiplied by two to match non-pirls fitting methods.
     weights : ndarray
         weights for WLS
@@ -1074,7 +1197,8 @@ def penalized_wls(endog, exog, penalty_matrix, weights):
 
 
 def make_augmented_matrix(endog, exog, penalty_matrix, weights):
-    """augment endog, exog and weights with stochastic restriction matrix
+    """
+    Augment endog, exog and weights with stochastic restriction matrix
 
     Parameters
     ----------
@@ -1083,7 +1207,7 @@ def make_augmented_matrix(endog, exog, penalty_matrix, weights):
     exog : ndarray
         design matrix, matrix of exogenous or explanatory variables
     penalty_matrix : ndarray, 2-Dim square
-        penality matrix for quadratic penalization
+        penalty matrix for quadratic penalization
     weights : ndarray
         weights for WLS
 

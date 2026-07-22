@@ -3659,7 +3659,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -5208,7 +5208,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if resid.shape[0] < max(d, lags):
             raise ValueError(
-                "Length of endogenous variable must be larger the the number "
+                "Length of endogenous variable must be larger the number "
                 "of lags used in the model and the number of observations "
                 "burned in the log-likelihood calculation."
             )

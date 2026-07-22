@@ -2679,7 +2679,7 @@ class RegressionResults(base.LikelihoodModelResults):
             df_correction = kwargs.get("df_correction", None)
             # TODO: check also use_correction, do I need all combinations?
             if df_correction is not False:  # i.e. in [None, True]:
-                # user did not explicitely set it to False
+                # user did not explicitly set it to False
                 adjust_df = True
 
         res.cov_kwds["adjust_df"] = adjust_df

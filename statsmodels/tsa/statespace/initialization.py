@@ -88,7 +88,7 @@ class Initialization:
     If a block is initialized as known, then a known (possibly degenerate)
     distribution is used; in particular, the block of states is understood to
     be distributed
-    :math:`\alpha_1^{(i)} \sim N(a^{(i)}, Q_0^{(i)})`. Here, is is possible to
+    :math:`\alpha_1^{(i)} \sim N(a^{(i)}, Q_0^{(i)})`. Here, it is possible to
     set :math:`a^{(i)} = 0`, and it is also possible that
     :math:`Q_0^{(i)}` is only positive-semidefinite; i.e.
     :math:`\alpha_1^{(i)}` may be degenerate. One particular example is

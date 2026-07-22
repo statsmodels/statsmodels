@@ -2,12 +2,11 @@
 Empirical Likelihood Linear Regression Inference
 
 The script contains the function that is optimized over nuisance parameters to
- conduct inference on linear regression parameters.  It is called by eltest
+conduct inference on linear regression parameters.  It is called by eltest
 in OLSResults.
 
-
-General References
------------------
+References
+----------
 
 Owen, A.B.(2001). Empirical Likelihood. Chapman and Hall
 
@@ -19,15 +18,14 @@ from statsmodels.emplike.descriptive import _OptFuncts
 
 class _ELRegOpts(_OptFuncts):
     """
-
     A class that holds functions to be optimized over when conducting
-    hypothesis tests and calculating confidence intervals.
+    hypothesis tests and calculating confidence intervals
 
-    Parameters
-    ----------
-
-    OLSResults : Results instance
-        A fitted OLS result.
+    Notes
+    -----
+    Methods on this class operate on a fitted OLS result (an
+    ``OLSResults`` instance) that is passed in through their own
+    arguments; the constructor itself takes no arguments.
     """
     def __init__(self):
         pass
@@ -46,12 +44,32 @@ class _ELRegOpts(_OptFuncts):
     ):
         """
         A function that is optimized over nuisance parameters to conduct a
-        hypothesis test for the parameters of interest.
+        hypothesis test for the parameters of interest
 
         Parameters
         ----------
-        nuisance_params: 1darray
+        nuisance_params : 1darray
             Parameters to be optimized over.
+        param_nums : 1darray
+            The index locations of the parameters of interest in
+            `params`.
+        endog : ndarray
+            The endogenous (response) variable.
+        exog : ndarray
+            The exogenous (regressor) variables.
+        nobs : int
+            The number of observations.
+        nvar : int
+            The number of exogenous regressors.
+        params : ndarray
+            The full parameter vector, with the parameters of
+            interest set to their hypothesized values and the
+            remaining entries filled in with `nuisance_params`.
+        b0_vals : 1darray
+            The hypothesized values for the parameters of interest.
+        stochastic_exog : bool
+            If True, the exogenous variables are assumed to be
+            stochastic and moment conditions are not placed on them.
 
         Returns
         -------
