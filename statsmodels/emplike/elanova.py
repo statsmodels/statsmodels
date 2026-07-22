@@ -1,11 +1,11 @@
 """
-This script contains empirical likelihood ANOVA.
+This script contains empirical likelihood ANOVA
 
 Currently the script only contains one feature that allows the user to compare
 means of multiple groups.
 
-General References
-------------------
+References
+----------
 
 Owen, A. B. (2001). Empirical Likelihood. Chapman and Hall.
 """
@@ -19,15 +19,14 @@ from .descriptive import _OptFuncts
 
 class _ANOVAOpt(_OptFuncts):
     """
-
     Class containing functions that are optimized over when
-    conducting ANOVA.
+    conducting ANOVA
     """
 
     def _opt_common_mu(self, mu):
         """
         Optimizes the likelihood under the null hypothesis that all groups have
-        mean mu.
+        mean mu
 
         Parameters
         ----------
@@ -59,11 +58,10 @@ class _ANOVAOpt(_OptFuncts):
 
 class ANOVA(_ANOVAOpt):
     """
-    A class for ANOVA and comparing means.
+    A class for ANOVA and comparing means
 
     Parameters
     ----------
-
     endog : list of arrays
         endog should be a list containing 1 dimensional arrays.  Each array
         is the data collected from a certain group.
@@ -79,29 +77,25 @@ class ANOVA(_ANOVAOpt):
     def compute_ANOVA(self, mu=None, mu_start=0, return_weights=False):
         """
         Returns -2 log likelihood, the pvalue and the maximum likelihood
-        estimate for a common mean.
+        estimate for a common mean
 
         Parameters
         ----------
-
         mu : float
             If a mu is specified, ANOVA is conducted with mu as the
             common mean.  Otherwise, the common mean is the maximum
             empirical likelihood estimate of the common mean.
             Default is None.
-
         mu_start : float
-            Starting value for commean mean if specific mu is not specified.
+            Starting value for common mean if specific mu is not specified.
             Default = 0.
-
         return_weights : bool
             if TRUE, returns the weights on observations that maximize the
             likelihood.  Default is FALSE.
 
         Returns
         -------
-
-        res: tuple
+        res : tuple
             The log-likelihood, p-value and estimate for the common mean.
         """
         if mu is not None:
