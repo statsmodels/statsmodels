@@ -311,6 +311,7 @@ markers = [
     "low_precision: mark a test as low precision",
     "todo: mark a test as incomplete",
     "singleton_randomstate: mark a test as changing the singleton RandomState",
+    "joblib: mark a test as using joblib for parallel computation",
 ]
 
 [tool.isort]
