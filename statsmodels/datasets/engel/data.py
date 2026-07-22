@@ -1,4 +1,4 @@
-"""Name of dataset."""
+"""Engel (1857) food expenditure data"""
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"

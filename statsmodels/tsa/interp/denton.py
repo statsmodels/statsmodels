@@ -83,7 +83,7 @@ from numpy.linalg import solve
 
 def dentonm(indicator, benchmark, freq="aq", **kwargs):
     """
-    Modified Denton's method to convert low-frequency to high-frequency data.
+    Modified Denton's method to convert low-frequency to high-frequency data
 
     Uses proportionate first-differences as the penalty function.  See notes.
 
@@ -91,7 +91,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     ----------
     indicator : array_like
         A low-frequency indicator series.  It is assumed that there are no
-        pre-sample indicators.  Ie., the first indicators line up with
+        pre-sample indicators.  I.e., the first indicators line up with
         the first benchmark.
     benchmark : array_like
         The higher frequency benchmark.  A 1d or 2d data series in columns.
@@ -103,7 +103,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         * "mq" - Benchmarking a quarterly series to monthly.
         * "other" - Custom stride.  A kwarg, k, must be supplied.
     **kwargs
-        Additional keyword argument. For example:
+        Additional keyword arguments. For example:
 
         * k, an int, the number of high-frequency observations that sum to make
           an aggregate low-frequency observation. `k` is used with
@@ -127,7 +127,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     indicator series subject to the condition that the sum of the benchmarked
     series is equal to the benchmark. The modification allows that the first
     value not be pre-determined as is the case with Denton's original method.
-    If the there is no benchmark provided for the last few indicator
+    If there is no benchmark provided for the last few indicator
     observations, then extrapolation is performed using the last
     benchmark-indicator ratio of the previous period.
 

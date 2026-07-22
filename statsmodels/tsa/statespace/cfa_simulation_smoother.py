@@ -18,6 +18,11 @@ class CFASimulationSmoother:
     ----------
     model : Representation
         The state space model.
+    cfa_simulation_smoother_classes : dict, optional
+        Dictionary with keys equal to the prefix (i.e. the Numpy data type
+        prefix ("s", "d", "c", or "z")) and values equal to the corresponding
+        Cython CFA simulation smoother class. See `tools.py` for more
+        information.
 
     Notes
     -----
@@ -67,7 +72,6 @@ class CFASimulationSmoother:
       model (i.e. it cannot produce simulations for a subset of the model
       observations or for observations outside the model).
 
-
     References
     ----------
     .. [1] McCausland, William J., Shirley Miller, and Denis Pelletier.
@@ -111,7 +115,6 @@ class CFASimulationSmoother:
 
         Notes
         -----
-
         .. math::
 
             \hat \alpha_t = E[\alpha_t \mid Y^n ]
@@ -149,14 +152,16 @@ class CFASimulationSmoother:
         r"""
         Posterior covariance of the states conditional on the data
 
-        Notes
-        -----
-        **Warning**: the matrix computed when accessing this property can be
-        extremely large: it is shaped `(nobs * k_states, nobs * k_states)`. In
-        most cases, it is better to use the `posterior_cov_inv_chol_sparse`
+        Warnings
+        --------
+        The matrix computed when accessing this property can be extremely
+        large: it is shaped `(nobs * k_states, nobs * k_states)`. In most
+        cases, it is better to use the `posterior_cov_inv_chol_sparse`
         property if possible, which holds in sparse diagonal banded storage
         the Cholesky factor of the inverse of the posterior covariance matrix.
 
+        Notes
+        -----
         .. math::
 
             Var[\alpha \mid Y^n ]
@@ -189,6 +194,12 @@ class CFASimulationSmoother:
             specified if results are to be replicated (e.g. to enforce a seed)
             or for testing. If not specified, random variates are drawn. Must
             be shaped (nobs, k_states).
+        update_posterior : bool, optional
+            Whether to update the posterior mean and covariance matrix (held
+            in the `posterior_mean` and `posterior_cov_inv_chol_sparse`
+            attributes) prior to performing the simulation. Default is True.
+            Can be set to False if the posterior moments have already been
+            computed and only a new simulated draw is desired.
 
         Notes
         -----
@@ -222,7 +233,6 @@ class CFASimulationSmoother:
           accessing this property. In most cases, it will be preferred to make
           use of the `posterior_cov_inv_chol` attribute rather than the
           `posterior_cov` attribute.
-
         """
         # (Re) initialize the _statespace representation
         prefix, dtype, create = self.model._initialize_representation()

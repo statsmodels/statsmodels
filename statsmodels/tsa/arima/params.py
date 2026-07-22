@@ -1,5 +1,5 @@
 """
-SARIMAX parameters class.
+SARIMAX parameters class
 
 Author: Chad Fulton
 License: BSD-3
@@ -14,7 +14,7 @@ from statsmodels.tsa.statespace.tools import is_invertible
 
 class SARIMAXParams:
     """
-    SARIMAX parameters.
+    SARIMAX parameters
 
     Parameters
     ----------
@@ -35,7 +35,7 @@ class SARIMAXParams:
         Names associated with seasonal autoregressive parameters.
     seasonal_ma_names : list of str
         Names associated with seasonal moving average parameters.
-    param_names :list of str
+    param_names : list of str
         Names of all model parameters.
     k_exog_params : int
         Number of parameters associated with exogenous variables.
@@ -78,7 +78,7 @@ class SARIMAXParams:
 
     @property
     def exog_params(self):
-        """(array) Parameters associated with exogenous variables."""
+        """(array) Parameters associated with exogenous variables"""
         return self._params_split["exog_params"]
 
     @exog_params.setter
@@ -91,7 +91,7 @@ class SARIMAXParams:
 
     @property
     def ar_params(self):
-        """(array) Autoregressive (non-seasonal) parameters."""
+        """(array) Autoregressive (non-seasonal) parameters"""
         return self._params_split["ar_params"]
 
     @ar_params.setter
@@ -104,7 +104,7 @@ class SARIMAXParams:
 
     @property
     def ar_poly(self):
-        """(Polynomial) Autoregressive (non-seasonal) lag polynomial."""
+        """(Polynomial) Autoregressive (non-seasonal) lag polynomial"""
         coef = np.zeros(self.spec.max_ar_order + 1)
         coef[0] = 1
         ix = self.spec.ar_lags
@@ -132,7 +132,7 @@ class SARIMAXParams:
 
     @property
     def ma_params(self):
-        """(array) Moving average (non-seasonal) parameters."""
+        """(array) Moving average (non-seasonal) parameters"""
         return self._params_split["ma_params"]
 
     @ma_params.setter
@@ -145,7 +145,7 @@ class SARIMAXParams:
 
     @property
     def ma_poly(self):
-        """(Polynomial) Moving average (non-seasonal) lag polynomial."""
+        """(Polynomial) Moving average (non-seasonal) lag polynomial"""
         coef = np.zeros(self.spec.max_ma_order + 1)
         coef[0] = 1
         ix = self.spec.ma_lags
@@ -173,7 +173,7 @@ class SARIMAXParams:
 
     @property
     def seasonal_ar_params(self):
-        """(array) Seasonal autoregressive parameters."""
+        """(array) Seasonal autoregressive parameters"""
         return self._params_split["seasonal_ar_params"]
 
     @seasonal_ar_params.setter
@@ -186,7 +186,7 @@ class SARIMAXParams:
 
     @property
     def seasonal_ar_poly(self):
-        """(Polynomial) Seasonal autoregressive lag polynomial."""
+        """(Polynomial) Seasonal autoregressive lag polynomial"""
         # Need to expand the polynomial according to the season
         s = self.spec.seasonal_periods
         coef = [1]
@@ -221,7 +221,7 @@ class SARIMAXParams:
 
     @property
     def seasonal_ma_params(self):
-        """(array) Seasonal moving average parameters."""
+        """(array) Seasonal moving average parameters"""
         return self._params_split["seasonal_ma_params"]
 
     @seasonal_ma_params.setter
@@ -234,7 +234,7 @@ class SARIMAXParams:
 
     @property
     def seasonal_ma_poly(self):
-        """(Polynomial) Seasonal moving average lag polynomial."""
+        """(Polynomial) Seasonal moving average lag polynomial"""
         # Need to expand the polynomial according to the season
         s = self.spec.seasonal_periods
         coef = np.array([1])
@@ -269,7 +269,7 @@ class SARIMAXParams:
 
     @property
     def sigma2(self):
-        """(float) Innovation variance."""
+        """(float) Innovation variance"""
         return self._params_split["sigma2"]
 
     @sigma2.setter
@@ -281,17 +281,17 @@ class SARIMAXParams:
 
     @property
     def reduced_ar_poly(self):
-        """(Polynomial) Reduced form autoregressive lag polynomial."""
+        """(Polynomial) Reduced form autoregressive lag polynomial"""
         return self.ar_poly * self.seasonal_ar_poly
 
     @property
     def reduced_ma_poly(self):
-        """(Polynomial) Reduced form moving average lag polynomial."""
+        """(Polynomial) Reduced form moving average lag polynomial"""
         return self.ma_poly * self.seasonal_ma_poly
 
     @property
     def params(self):
-        """(array) Complete parameter vector."""
+        """(array) Complete parameter vector"""
         if self._params is None:
             self._params = self.spec.join_params(**self._params_split)
         return self._params.copy()
@@ -303,12 +303,12 @@ class SARIMAXParams:
 
     @property
     def is_complete(self):
-        """(bool) Are current parameter values all filled in (i.e. not NaN)."""
+        """(bool) Are current parameter values all filled in (i.e. not NaN)"""
         return not np.any(np.isnan(self.params))
 
     @property
     def is_valid(self):
-        """(bool) Are current parameter values valid (e.g. variance > 0)."""
+        """(bool) Are current parameter values valid (e.g. variance > 0)"""
         valid = True
         try:
             self.spec.validate_params(self.params)
@@ -318,7 +318,7 @@ class SARIMAXParams:
 
     @property
     def is_stationary(self):
-        """(bool) Is the reduced autoregressive lag poylnomial stationary."""
+        """(bool) Is the reduced autoregressive lag polynomial stationary"""
         validate_basic(self.ar_params, self.k_ar_params,
                        title="AR coefficients")
         validate_basic(self.seasonal_ar_params, self.k_seasonal_ar_params,
@@ -335,7 +335,7 @@ class SARIMAXParams:
 
     @property
     def is_invertible(self):
-        """(bool) Is the reduced moving average lag poylnomial invertible."""
+        """(bool) Is the reduced moving average lag polynomial invertible"""
         # Short-circuit if there is no MA component
         validate_basic(self.ma_params, self.k_ma_params,
                        title="MA coefficients")
@@ -353,7 +353,7 @@ class SARIMAXParams:
 
     def to_dict(self):
         """
-        Return the parameters split by type into a dictionary.
+        Return the parameters split by type into a dictionary
 
         Returns
         -------
@@ -367,7 +367,7 @@ class SARIMAXParams:
 
     def to_pandas(self):
         """
-        Return the parameters as a Pandas series.
+        Return the parameters as a Pandas series
 
         Returns
         -------
@@ -377,7 +377,7 @@ class SARIMAXParams:
         return pd.Series(self.params, index=self.param_names)
 
     def __repr__(self):
-        """Represent SARIMAXParams object as a string."""
+        """Represent SARIMAXParams object as a string"""
         components = []
         if self.k_exog_params:
             components.append("exog=%s" % str(self.exog_params))

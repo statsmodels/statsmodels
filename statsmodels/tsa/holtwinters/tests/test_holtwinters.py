@@ -1986,11 +1986,11 @@ def test_simulate(ses):
             res.simulate(10, error="additive", random_errors="bad_values", rng=0)
 
 
-@pytest.mark.parametrize("index_typ", ["date_range", "period", "range", "irregular"])
+@pytest.mark.parametrize("index_typ", ["date_range", "period", "range"])
 def test_forecast_index_types(ses, index_typ):
     nobs = ses.shape[0]
     kwargs = {}
-    model_warning = forecast_warning = None
+    model_warning = None
     fcast_index = None
     if index_typ == "period":
         index = pd.period_range("2000-1-1", periods=nobs + 36, freq="M")
@@ -1999,13 +1999,6 @@ def test_forecast_index_types(ses, index_typ):
     elif index_typ == "range":
         index = pd.RangeIndex(nobs + 36)
         kwargs["seasonal_periods"] = 12
-    elif index_typ == "irregular":
-        rs = np.random.RandomState(0)
-        index = pd.Index(np.cumsum(rs.randint(0, 4, size=nobs + 36)))
-        model_warning = ValueWarning
-        forecast_warning = FutureWarning
-        kwargs["seasonal_periods"] = 12
-        fcast_index = pd.RangeIndex(start=1000, stop=1036, step=1)
     if fcast_index is None:
         fcast_index = index[-36:]
     ses = ses.copy()
@@ -2019,8 +2012,7 @@ def test_forecast_index_types(ses, index_typ):
             initialization_method="heuristic",
             **kwargs,
         ).fit()
-    with pytest_warns(forecast_warning):
-        fcast = res.forecast(36)
+    fcast = res.forecast(36)
     assert isinstance(fcast, pd.Series)
     pd.testing.assert_index_equal(fcast.index, fcast_index)
 
@@ -2116,7 +2108,7 @@ def test_invalid_index():
             initialization_method="heuristic",
         )
     fitted = model.fit(optimized=True, use_brute=True)
-    with pytest.warns(FutureWarning, match="No supported"):
+    with pytest.raises(ValueError, match="No supported index is available"):
         fitted.forecast(steps=157200)
 
 

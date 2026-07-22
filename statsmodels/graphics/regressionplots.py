@@ -1,5 +1,5 @@
-"""Partial Regression plot and residual plots to find misspecification
-
+"""
+Partial Regression plot and residual plots to find misspecification
 
 Author: Josef Perktold
 License: BSD-3
@@ -8,7 +8,6 @@ Created: 2011-01-23
 update
 2011-06-05 : start to convert example to usable functions
 2011-10-27 : docstrings
-
 """
 
 from statsmodels.compat.python import lrange, lzip
@@ -65,7 +64,7 @@ def _high_leverage(results):
 
 def add_lowess(ax, lines_idx=0, frac=0.2, *, exog=None, endog=None, **lowess_kwargs):
     """
-    Add Lowess line to a plot.
+    Add Lowess line to a plot
 
     Parameters
     ----------
@@ -102,7 +101,7 @@ def add_lowess(ax, lines_idx=0, frac=0.2, *, exog=None, endog=None, **lowess_kwa
 
 def add_ellipse(x, y, ax=None, alpha=0.95, **ellipse_kwargs):
     """
-    Add a confidence ellipse to a plot axis.
+    Add a confidence ellipse to a plot axis
 
     Parameters
     ----------
@@ -161,7 +160,7 @@ def add_ellipse(x, y, ax=None, alpha=0.95, **ellipse_kwargs):
 
 def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     """
-    Plot fit against one regressor.
+    Plot fit against one regressor
 
     This creates one graph with the scatterplot of observed values
     compared to fitted values.
@@ -173,14 +172,14 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
         attributes.
     exog_idx : {int, str}
         Name or index of regressor in exog matrix.
-    y_true : array_like. optional
+    y_true : array_like, optional
         If this is not None, then the array is added to the plot.
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
     vlines : bool, optional
-        If this not True, then the uncertainty (pointwise prediction intervals) of the fit is not
-        plotted.
+        If this is not True, then the uncertainty (pointwise prediction intervals) of
+        the fit is not plotted.
     **kwargs
         The keyword arguments are passed to the plot command for the fitted
         values points.
@@ -257,7 +256,8 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
 
 
 def plot_regress_exog(results, exog_idx, fig=None):
-    """Plot regression results against one regressor.
+    """
+    Plot regression results against one regressor
 
     This plots four graphs in a 2 by 2 figure: 'endog versus exog',
     'residuals versus exog', 'fitted versus exog' and
@@ -372,19 +372,20 @@ def plot_partregress(
     eval_env=1,
     **kwargs,
 ):
-    """Plot partial regression for a single regressor.
+    """
+    Plot partial regression for a single regressor
 
     Parameters
     ----------
     endog : {ndarray, str}
-       The endogenous or response variable. If string is given, you can use a
-       arbitrary translations as with a formula.
+        The endogenous or response variable. If string is given, you can use
+        arbitrary translations as with a formula.
     exog_i : {ndarray, str}
-        The exogenous, explanatory variable. If string is given, you can use a
+        The exogenous, explanatory variable. If string is given, you can use
         arbitrary translations as with a formula.
     exog_others : {ndarray, list[str]}
         Any other exogenous, explanatory variables. If a list of strings is
-        given, each item is a term in formula. You can use a arbitrary
+        given, each item is a term in formula. You can use arbitrary
         translations as with a formula. The effect of these variables will be
         removed by OLS regression.
     data : {DataFrame, dict}
@@ -549,14 +550,14 @@ def plot_partregress(
 
 def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     """
-    Plot partial regression for a set of regressors.
+    Plot partial regression for a set of regressors
 
     Parameters
     ----------
     results : Results instance
         A regression model results instance.
     exog_idx : {None, list[int], list[str]}
-        The indices  or column names of the exog used in the plot, default is
+        The indices or column names of the exog used in the plot, default is
         all.
     grid : {None, tuple[int]}
         If grid is given, then it is used for the arrangement of the subplots.
@@ -653,7 +654,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
 def plot_ccpr(results, exog_idx, ax=None):
     """
-    Plot CCPR against one regressor.
+    Plot CCPR against one regressor
 
     Generates a component and component-plus-residual (CCPR) plot.
 
@@ -736,7 +737,7 @@ def plot_ccpr(results, exog_idx, ax=None):
 
 def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
     """
-    Generate CCPR plots against a set of regressors, plot in a grid.
+    Generate CCPR plots against a set of regressors, plot in a grid
 
     Generates a grid of component and component-plus-residual (CCPR) plots.
 
@@ -837,7 +838,7 @@ def abline_plot(
     **kwargs,
 ):
     """
-    Plot a line given an intercept and slope.
+    Plot a line given an intercept and slope
 
     Parameters
     ----------
@@ -847,8 +848,8 @@ def abline_plot(
         The slope of the line.
     horiz : float or array_like
         Data for horizontal lines on the y-axis.
-    vert : array_like
-        Data for verterical lines on the x-axis.
+    vert : float or array_like
+        Data for vertical lines on the x-axis.
     model_results : statsmodels results instance
         Any object that has a two-value `params` attribute. Assumed that it
         is (intercept, slope).
@@ -944,9 +945,9 @@ def abline_plot(
 
 @Appender(
     _plot_influence_doc.format(
-        extra_params_doc="results: object\n"
+        extra_params_doc="results : object\n"
         "        Results for a fitted regression model.\n"
-        "    influence: instance\n"
+        "    influence : instance\n"
         "        The instance of Influence for model."
     )
 )
@@ -1059,12 +1060,10 @@ def influence_plot(
 
 @Appender(
     _plot_leverage_resid2_doc.format(
-        {
-            "extra_params_doc": "results: object\n"
-            "    Results for a fitted regression model\n"
-            "influence: instance\n"
-            "    instance of Influence for model"
-        }
+        extra_params_doc="results : object\n"
+        "        Results for a fitted regression model\n"
+        "    influence : instance\n"
+        "        Instance of Influence for model"
     )
 )
 def _plot_leverage_resid2(results, influence, alpha=0.05, ax=None, **kwargs):
@@ -1105,10 +1104,8 @@ def _plot_leverage_resid2(results, influence, alpha=0.05, ax=None, **kwargs):
 
 @Appender(
     _plot_leverage_resid2_doc.format(
-        {
-            "extra_params_doc": "results : object\n"
-            "    Results for a fitted regression model"
-        }
+        extra_params_doc="results : object\n"
+        "        Results for a fitted regression model"
     )
 )
 def plot_leverage_resid2(results, alpha=0.05, ax=None, **kwargs):
@@ -1121,7 +1118,7 @@ def plot_leverage_resid2(results, alpha=0.05, ax=None, **kwargs):
     _plot_added_variable_doc
     % {
         "extra_params_doc": "results : object\n"
-        "    Results for a fitted regression model"
+        "        Results for a fitted regression model"
     }
 )
 def plot_added_variable(
@@ -1158,7 +1155,7 @@ def plot_added_variable(
     _plot_partial_residuals_doc
     % {
         "extra_params_doc": "results : object\n"
-        "    Results for a fitted regression model"
+        "        Results for a fitted regression model"
     }
 )
 def plot_partial_residuals(results, focus_exog, ax=None):
@@ -1218,14 +1215,15 @@ def plot_ceres_residuals(results, focus_exog, frac=0.66, cond_means=None, ax=Non
 def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
     """
     Calculate the CERES residuals (Conditional Expectation Partial
-    Residuals) for a fitted model.
+    Residuals) for a fitted model
 
     Parameters
     ----------
     results : model results instance
         The fitted model for which the CERES residuals are calculated.
-    focus_exog : int
-        The column of results.model.exog used as the 'focus variable'.
+    focus_exog : {int, str}
+        The column index of results.model.exog, or the variable name,
+        used as the 'focus variable'.
     frac : float, optional
         Lowess smoothing parameter for estimating the conditional
         means.  Not used if `cond_means` is provided.
@@ -1239,7 +1237,8 @@ def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
 
     Returns
     -------
-    An array containing the CERES residuals.
+    ndarray
+        The CERES residuals.
 
     Notes
     -----
@@ -1308,26 +1307,27 @@ def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
 
 def partial_resids(results, focus_exog):
     """
-    Returns partial residuals for a fitted model with respect to a
-    'focus predictor'.
+    Return partial residuals for a fitted model with respect to a
+    'focus predictor'
 
     Parameters
     ----------
     results : results instance
         A fitted regression model.
-    focus col : int
-        The column index of model.exog with respect to which the
-        partial residuals are calculated.
+    focus_exog : {int, str}
+        The column index of model.exog, or the variable name, with
+        respect to which the partial residuals are calculated.
 
     Returns
     -------
-    An array of partial residuals.
+    ndarray
+        The partial residuals.
 
     References
     ----------
-    RD Cook and R Croos-Dabrera (1998).  Partial residual plots in
-    generalized linear models.  Journal of the American Statistical
-    Association, 93:442.
+    .. [1] RD Cook and R Croos-Dabrera (1998).  Partial residual plots in
+       generalized linear models.  Journal of the American Statistical
+       Association, 93:442.
     """
 
     # TODO: could be a method of results
@@ -1359,7 +1359,7 @@ def added_variable_resids(
 ):
     """
     Residualize the endog variable and a 'focus' exog variable in a
-    regression model with respect to the other exog variables.
+    regression model with respect to the other exog variables
 
     Parameters
     ----------

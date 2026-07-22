@@ -1,6 +1,4 @@
-"""
-See statsmodels.tsa.arima.model.ARIMA and statsmodels.tsa.SARIMAX.
-"""
+"""See statsmodels.tsa.arima.model.ARIMA and statsmodels.tsa.SARIMAX"""
 
 ARIMA_DEPRECATION_ERROR = """
 statsmodels.tsa.arima_model.ARMA and statsmodels.tsa.arima_model.ARIMA have

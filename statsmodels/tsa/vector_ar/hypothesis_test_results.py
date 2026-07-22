@@ -5,17 +5,20 @@ from statsmodels.iolib.table import SimpleTable
 
 class HypothesisTestResults:
     """
-    Results class for hypothesis tests.
+    Results class for hypothesis tests
 
     Parameters
     ----------
     test_statistic : float
+        The test's test statistic.
     crit_value : float
-    pvalue : float, 0 <= `pvalue` <= 1
+        The test's critical value.
+    pvalue : float
+        The test's p-value. Must be between 0 and 1.
     df : int
         Degrees of freedom.
-    signif : float, 0 < `signif` < 1
-        Significance level.
+    signif : float
+        Significance level. Must be between 0 and 1.
     method : str
         The kind of test (e.g. ``"f"`` for F-test, ``"wald"`` for Wald-test).
     title : str
@@ -77,7 +80,7 @@ class HypothesisTestResults:
 
 class CausalityTestResults(HypothesisTestResults):
     """
-    Results class for Granger-causality and instantaneous causality.
+    Results class for Granger-causality and instantaneous causality
 
     Parameters
     ----------
@@ -144,7 +147,7 @@ class CausalityTestResults(HypothesisTestResults):
 
 class NormalityTestResults(HypothesisTestResults):
     """
-    Results class for the Jarque-Bera-test for nonnormality.
+    Results class for the Jarque-Bera-test for nonnormality
 
     Parameters
     ----------
@@ -170,7 +173,7 @@ class NormalityTestResults(HypothesisTestResults):
 
 class WhitenessTestResults(HypothesisTestResults):
     """
-    Results class for the Portmanteau-test for residual autocorrelation.
+    Results class for the Portmanteau-test for residual autocorrelation
 
     Parameters
     ----------
@@ -186,6 +189,9 @@ class WhitenessTestResults(HypothesisTestResults):
         Significance level.
     nlags : int
         Number of lags tested.
+    adjusted : bool
+        Whether the test statistic is adjusted for the number of
+        observations used to estimate the autocorrelations.
     """
     def __init__(self, test_statistic, crit_value, pvalue, df, signif, nlags,
                  adjusted):

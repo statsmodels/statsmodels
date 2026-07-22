@@ -1,9 +1,6 @@
 """
 Test functions for genmod.families.family
 """
-
-from statsmodels.compat.scipy import SP_LT_17
-
 import warnings
 
 import numpy as np
@@ -122,7 +119,6 @@ def test_family_link_check(family, links):
         assert family(Hugo(), check_link=False)
 
 
-@pytest.mark.skipif(SP_LT_17, reason="Scipy too old, function not available")
 @pytest.mark.parametrize("power", [1.1, 1.5, 1.9])
 def test_tweedie_loglike_obs(power):
     """Test that Tweedie loglike is normalized to 1."""

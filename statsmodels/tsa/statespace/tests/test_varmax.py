@@ -446,12 +446,12 @@ class TestVAR_obs_intercept(CheckLutkepohl):
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
 
     def test_aic(self):
-        # Since the obs_intercept is added in in an ad-hoc way here, the number
+        # Since the obs_intercept is added in an ad-hoc way here, the number
         # of parameters, and hence the aic and bic, will be off
         pass
 
     def test_bic(self):
-        # Since the obs_intercept is added in in an ad-hoc way here, the number
+        # Since the obs_intercept is added in an ad-hoc way here, the number
         # of parameters, and hence the aic and bic, will be off
         pass
 

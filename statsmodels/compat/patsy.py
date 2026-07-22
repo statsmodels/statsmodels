@@ -6,6 +6,7 @@ import numpy as np
 
 
 def _safe_is_pandas_categorical_dtype(dt):
+    """Check whether a dtype is a pandas categorical dtype across versions"""
     import pandas as pd
 
     if PD_LT_2:
@@ -14,6 +15,7 @@ def _safe_is_pandas_categorical_dtype(dt):
 
 
 def monkey_patch_cat_dtype():
+    """Patch patsy to use a version-compatible categorical dtype check"""
     try:
         import patsy.util
 
@@ -27,22 +29,37 @@ def monkey_patch_cat_dtype():
 def get_all_sorted_knots(
     x, n_inner_knots=None, inner_knots=None, lower_bound=None, upper_bound=None
 ):
-    """Gets all knots locations with lower and upper exterior knots included.
+    """
+    Get all knots locations with lower and upper exterior knots included
 
     If needed, inner knots are computed as equally spaced quantiles of the
     input data falling between given lower and upper bounds.
 
-    :param x: The 1-d array data values.
-    :param n_inner_knots: Number of inner knots to compute.
-    :param inner_knots: Provided inner knots if any.
-    :param lower_bound: The lower exterior knot location. If unspecified, the
-     minimum of ``x`` values is used.
-    :param upper_bound: The upper exterior knot location. If unspecified, the
-     maximum of ``x`` values is used.
-    :return: The array of ``n_inner_knots + 2`` distinct knots.
+    Parameters
+    ----------
+    x : ndarray
+        The 1-d array data values.
+    n_inner_knots : int, optional
+        Number of inner knots to compute.
+    inner_knots : array_like, optional
+        Provided inner knots if any.
+    lower_bound : float, optional
+        The lower exterior knot location. If unspecified, the
+        minimum of ``x`` values is used.
+    upper_bound : float, optional
+        The upper exterior knot location. If unspecified, the
+        maximum of ``x`` values is used.
 
-    :raise ValueError: for various invalid parameters sets or if unable to
-     compute ``n_inner_knots + 2`` distinct knots.
+    Returns
+    -------
+    ndarray
+        The array of ``n_inner_knots + 2`` distinct knots.
+
+    Raises
+    ------
+    ValueError
+        For various invalid parameter sets or if unable to compute
+        ``n_inner_knots + 2`` distinct knots.
     """
     if lower_bound is None and x.size == 0:
         raise ValueError(
@@ -122,6 +139,7 @@ def get_all_sorted_knots(
 
 @functools.cache
 def ensure_patsy_compat():
+    """Apply the patsy categorical dtype compatibility patch, if possible"""
     try:
         import patsy.util  # noqa: F401
     except ImportError:

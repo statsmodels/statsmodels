@@ -1,5 +1,3 @@
-from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
-
 import warnings
 
 import numpy as np
@@ -98,11 +96,7 @@ def test_full_output_false(method):
             disp=0,
         )
     assert_(retvals is None)
-    if method == "powell" and SP_LT_15:
-        # Fixed in SP 1.5
-        assert_(xopt.shape == () and xopt.size == 1)
-    else:
-        assert_(len(xopt) == 1)
+    assert_(len(xopt) == 1)
 
 
 @pytest.mark.parametrize("method", fit_funcs.keys())
@@ -134,12 +128,7 @@ def test_full_output(method):
 
     assert_(retvals is not None)
     assert_("converged" in retvals)
-
-    if method == "powell" and SP_LT_15:
-        # Fixed in SP 1.5
-        assert_(xopt.shape == () and xopt.size == 1)
-    else:
-        assert_(len(xopt) == 1)
+    assert_(len(xopt) == 1)
 
 
 def test_minimize_scipy_slsqp():
@@ -161,7 +150,6 @@ def test_minimize_scipy_slsqp():
     assert_almost_equal(xopt, [1.4, 1.7], 4)
 
 
-@pytest.mark.skipif(SP_LT_15, reason="Powell bounds support added in SP 1.5")
 def test_minimize_scipy_powell():
     func = fit_funcs["minimize"]
     xopt, _ = func(
@@ -180,7 +168,6 @@ def test_minimize_scipy_powell():
     assert_almost_equal(xopt, [2, 3.5], 4)
 
 
-@pytest.mark.skipif(SP_LT_17, reason="NM bounds support added in SP 1.7")
 def test_minimize_scipy_nm():
     func = fit_funcs["minimize"]
     xopt, _ = func(

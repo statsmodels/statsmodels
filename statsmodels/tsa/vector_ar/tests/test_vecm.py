@@ -1431,7 +1431,7 @@ def test_lag_order_selection():
             # "co" is not in exog in any test case
             if "co" in deterministic:
                 deterministic_outside_exog += "co"
-            # "lo" is is in exog only in test cases with seasons>0
+            # "lo" is in exog only in test cases with seasons>0
             if "lo" in deterministic and dt[1] == 0:
                 deterministic_outside_exog += "lo"
 

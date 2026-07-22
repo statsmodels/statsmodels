@@ -1,9 +1,7 @@
-"""Non-linear least squares
-
-
+"""
+Non-linear least squares
 
 Author: Josef Perktold based on scipy.optimize.curve_fit
-
 """
 import numpy as np
 from scipy import optimize
@@ -12,8 +10,10 @@ from statsmodels.base.model import Model
 
 
 class Results:
-    """just a dummy placeholder for now
-    most results from RegressionResults can be used here
+    """
+    Just a dummy placeholder for now
+
+    Most results from RegressionResults can be used here.
     """
 
 
@@ -49,7 +49,8 @@ class Results:
 #
 
 class NonlinearLS(Model):  # or subclass a model
-    r"""Base class for estimation of a non-linear model with least squares
+    r"""
+    Base class for estimation of a non-linear model with least squares
 
     This class is supposed to be subclassed, and the subclass has to provide a method
     `_predict` that defines the non-linear function `f(params) that is predicting the endogenous
@@ -65,46 +66,62 @@ class NonlinearLS(Model):  # or subclass a model
     should be accessed as attributes of the class instance, and can be given as arguments
     when the instance is created.
 
-    Warning:
+    Similar to scipy.optimize.curve_fit. The main API difference is that
+    `params` are array_like and not split up, so `n_params` information is
+    needed. This also includes weights similar to curve_fit, but there is
+    no general sigma yet (OLS and WLS, but no GLS).
+
+    This is currently holding on to intermediate results that are not
+    necessary but useful for testing.
+
+    ``fit`` returns an instance of RegressionResults, in contrast to the
+    linear model, results in this case are based on a local approximation,
+    essentially y = f(X, params) is replaced by y = grad * params where grad
+    is the Gradient or Jacobian with the shape (nobs, nparams). See for
+    example Greene.
+
+    Parameters
+    ----------
+    endog : array_like, optional
+        The dependent (endogenous) variable.
+    exog : array_like, optional
+        The independent (exogenous) variable(s) used by `_predict`.
+    weights : array_like, optional
+        Weights used when computing the errors. Currently unused directly
+        in `__init__`; see `sigma`.
+    sigma : array_like, optional
+        1-d array of standard deviations used to construct `weights` as
+        ``1 / sigma``. Correlated errors (2-d `sigma`) are not supported.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. Currently not
+        used in `__init__`.
+
+    Warnings
+    --------
     Weights are not correctly handled yet in the results statistics,
-    but included when estimating the parameters.
-
-    similar to scipy.optimize.curve_fit
-    API difference: params are array_like not split up, need n_params information
-
-    includes now weights similar to curve_fit
-    no general sigma yet (OLS and WLS, but no GLS)
-
-    This is currently holding on to intermediate results that are not necessary
-    but useful for testing.
-
-    Fit returns and instance of RegressionResult, in contrast to the linear
-    model, results in this case are based on a local approximation, essentially
-    y = f(X, params) is replaced by y = grad * params where grad is the Gradient
-    or Jacobian with the shape (nobs, nparams). See for example Greene
+    but are included when estimating the parameters.
 
     Examples
     --------
+    ::
 
-    class Myfunc(NonlinearLS):
+        class Myfunc(NonlinearLS):
 
-        def _predict(self, params):
-            x = self.exog
-            a, b, c = params
-            return a*np.exp(-b*x) + c
+            def _predict(self, params):
+                x = self.exog
+                a, b, c = params
+                return a*np.exp(-b*x) + c
 
-    Ff we have data (y, x), we can create an instance and fit it with
+    If we have data (y, x), we can create an instance and fit it with::
 
-    mymod = Myfunc(y, x)
-    myres = mymod.fit(nparams=3)
+        mymod = Myfunc(y, x)
+        myres = mymod.fit(nparams=3)
 
-    and use the non-linear regression results, for example
+    and use the non-linear regression results, for example::
 
-    myres.params
-    myres.bse
-    myres.tvalues
-
-
+        myres.params
+        myres.bse
+        myres.tvalues
     """
     # NOTE: This needs to call super for data checking
     def __init__(self, endog=None, exog=None, weights=None, sigma=None, missing="none"):
@@ -121,16 +138,67 @@ class NonlinearLS(Model):  # or subclass a model
             self.weights = None
 
     def predict(self, exog, params=None):
+        """
+        Return the predicted values for `params`
+
+        Parameters
+        ----------
+        exog : array_like
+            Not used directly, present for signature compatibility with
+            `Model.predict`. The exogenous data stored on the instance is
+            used instead.
+        params : array_like, optional
+            The parameters at which to evaluate the prediction function.
+
+        Returns
+        -------
+        ndarray
+            The predicted values from `_predict`.
+        """
         # copied from GLS, Model has different signature
         return self._predict(params)
 
     def _predict(self, params):
+        """
+        Non-linear prediction function, to be defined by a subclass
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters at which to evaluate the prediction function.
+        """
         pass
 
     def start_value(self):
+        """
+        Return starting values for the parameters
+
+        Returns
+        -------
+        None
+            The base class does not provide starting values; subclasses
+            can override this method to do so.
+        """
         return None
 
     def geterrors(self, params, weights=None):
+        """
+        Return the (optionally weighted) residuals at `params`
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters at which to evaluate the prediction function.
+        weights : array_like, optional
+            Weights to apply to the residuals. If None, `self.weights` is
+            used when available.
+
+        Returns
+        -------
+        ndarray
+            The residuals, ``endog - predict(params)``, optionally
+            weighted.
+        """
         if weights is None:
             if self.weights is None:
                 return self.endog - self._predict(params)
@@ -139,9 +207,44 @@ class NonlinearLS(Model):  # or subclass a model
         return weights * (self.endog - self._predict(params))
 
     def errorsumsquares(self, params):
+        """
+        Return the sum of squared (weighted) residuals at `params`
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters at which to evaluate the prediction function.
+
+        Returns
+        -------
+        float
+            The sum of squared residuals.
+        """
         return (self.geterrors(params)**2).sum()
 
     def fit(self, start_value=None, nparams=None, **kw):
+        """
+        Estimate the parameters of the model by non-linear least squares
+
+        Parameters
+        ----------
+        start_value : array_like, optional
+            Starting values for the optimization. If None, `start_value`
+            (the method) is used, falling back to an array of 0.1s of
+            length `nparams` if that also returns None.
+        nparams : int, optional
+            Number of parameters, only used to construct default starting
+            values when `start_value` is not provided.
+        **kw
+            Additional keyword arguments passed through to
+            `scipy.optimize.leastsq`.
+
+        Returns
+        -------
+        RegressionResults
+            The fitted regression results, based on a local linear
+            approximation using the Jacobian of `_predict`.
+        """
         # if hasattr(self, 'start_value'):
         # I added start_value even if it's empty, not sure about it
         # but it makes a visible placeholder
@@ -207,16 +310,49 @@ class NonlinearLS(Model):  # or subclass a model
         return lfit
 
     def fit_minimal(self, start_value, **kwargs):
-        """minimal fitting with no extra calculations"""
+        """
+        Minimal fitting with no extra calculations
+
+        Parameters
+        ----------
+        start_value : array_like
+            Starting values for the optimization.
+        **kwargs
+            Additional keyword arguments passed through to
+            `scipy.optimize.leastsq`.
+
+        Returns
+        -------
+        tuple
+            The raw return value of `scipy.optimize.leastsq`.
+        """
         func = self.geterrors
         res = optimize.leastsq(func, start_value, full_output=0, **kwargs)
         return res
 
     def fit_random(self, ntries=10, rvs_generator=None, nparams=None):
-        """fit with random starting values
+        """
+        Fit with random starting values
 
-        this could be replaced with a global fitter
+        This could be replaced with a global fitter.
 
+        Parameters
+        ----------
+        ntries : int
+            Number of random starting values to try.
+        rvs_generator : callable, optional
+            Function to generate random starting values given a `size`
+            keyword. If None, `numpy.random.uniform` with low=-10, high=10
+            is used.
+        nparams : int, optional
+            Number of parameters. If None, `self.nparams` is used.
+
+        Returns
+        -------
+        ndarray
+            Array with one row per try, containing the fitted parameters,
+            residual, and other `leastsq` output concatenated with the
+            random starting values used.
         """
 
         if nparams is None:
@@ -232,11 +368,22 @@ class NonlinearLS(Model):  # or subclass a model
         return results
 
     def jac_predict(self, params):
-        """jacobian of prediction function using complex step derivative
+        """
+        Jacobian of prediction function using complex step derivative
 
         This assumes that the predict function does not use complex variable
         but is designed to do so.
 
+        Parameters
+        ----------
+        params : array_like
+            The parameters at which to evaluate the Jacobian.
+
+        Returns
+        -------
+        ndarray
+            The Jacobian of `_predict` with respect to `params`, with shape
+            (nobs, nparams).
         """
         from statsmodels.tools.numdiff import approx_fprime_cs
 

@@ -13,8 +13,8 @@ http://www.rand.org/health/projects/hie.html
 
 This data was used in::
 
-    Cameron, A.C. amd Trivedi, P.K. 2005.  `Microeconometrics: Methods
-        and Applications,` Cambridge: New York.
+    Cameron, A.C. and Trivedi, P.K. 2005.  *Microeconometrics: Methods
+        and Applications*, Cambridge: New York.
 
 And was obtained from: <http://cameron.econ.ucdavis.edu/mmabook/mmadata.html>
 

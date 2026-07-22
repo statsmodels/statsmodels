@@ -16,8 +16,10 @@ from statsmodels.tools.rng_qrng import check_random_state
 
 class BaseCrossValidator(with_metaclass(ABCMeta)):
     """
-    The BaseCrossValidator class is a base class for all the iterators that
-    split the data in train and test as for example KFolds or LeavePOut
+    Base class for cross-validation iterators
+
+    Subclasses split the data into train and test sets, for example
+    ``KFold`` or ``LeavePOut``.
     """
 
     def __init__(self):
@@ -30,13 +32,14 @@ class BaseCrossValidator(with_metaclass(ABCMeta)):
 
 class KFold(BaseCrossValidator):
     """
-    K-Folds cross validation iterator:
-    Provides train/test indexes to split data in train test sets
+    K-Folds cross validation iterator
+
+    Provides train/test indexes to split data in train and test sets.
 
     Parameters
     ----------
-    k: int
-        number of folds
+    k_folds : int
+        Number of folds.
     shuffle : bool
         If true, then the index is shuffled before splitting into train and
         test indices.
@@ -59,7 +62,25 @@ class KFold(BaseCrossValidator):
         self.rng = check_random_state(rng)
 
     def split(self, X, y=None, label=None):
-        """yield index split into train and test sets"""
+        """
+        Yield index splits into train and test sets
+
+        Parameters
+        ----------
+        X : array_like
+            Data used only to determine the number of observations.
+        y : array_like, optional
+            Unused, present for signature compatibility.
+        label : array_like, optional
+            Unused, present for signature compatibility.
+
+        Yields
+        ------
+        train_index : ndarray
+            Boolean index array selecting the training observations.
+        test_index : ndarray
+            Boolean index array selecting the test observations.
+        """
         # TODO: X and y are redundant, we only need nobs
 
         nobs = X.shape[0]

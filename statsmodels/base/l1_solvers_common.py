@@ -33,12 +33,10 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
     -------
     passed : bool
         True if QC check passed
-    qc_dict : Dictionary
-        Keys are fprime, alpha, params, passed_array
 
-    Prints
-    ------
-    Warning message if QC check fails.
+    Notes
+    -----
+    A warning message is printed if the QC check fails.
     """
     # Check for fatal errors
     assert not np.isnan(params).max()
@@ -123,14 +121,14 @@ def do_trim_params(
         If not 'off', trim (set to zero) parameters that would have been zero
             if the solver reached the theoretical minimum.
         If 'auto', trim params using the Theory above.
-        If 'size', trim params if they have very small absolute value
+        If 'size', trim params if they have very small absolute value.
     size_trim_tol : float or 'auto' (default = 'auto')
-        For use when trim_mode === 'size'
+        Threshold below which a parameter is trimmed. Used when
+        trim_mode == 'size'.
     auto_trim_tol : float
-        For sue when trim_mode == 'auto'.  Use
-    qc_tol : float
-        Print warning and do not allow auto trim when (ii) in "Theory" (above)
-        is violated by this much.
+        Threshold used to decide whether the theoretical condition (ii)
+        above holds closely enough to trim a parameter. Used when
+        trim_mode == 'auto'.
 
     Returns
     -------

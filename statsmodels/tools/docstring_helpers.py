@@ -1,9 +1,11 @@
 """
-Vendored docstring decorators — previously imported from pandas.util._decorators.
-No longer depend on pandas internals.
+Vendored docstring decorators
 
-Originally derived from matplotlib.docstring (1.1.0).
-Vendored to remove statsmodels' dependency on pandas private API.
+Previously imported from pandas.util._decorators. No longer depend on
+pandas internals.
+
+Originally derived from matplotlib.docstring (1.1.0). Vendored to remove
+statsmodels' dependency on pandas private API.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ def deprecate_kwarg(
     stacklevel: int = 2,
 ) -> Callable[[F], F]:
     """
-    Decorator to deprecate a keyword argument of a function.
+    Decorator to deprecate a keyword argument of a function
 
     Vendored from pandas.util._decorators to remove dependency on
     pandas private API.
@@ -108,21 +110,11 @@ def deprecate_kwarg(
 class Appender:
     """
     A function decorator that will append an addendum to the docstring
-    of the target function.
+    of the target function
 
     This decorator is robust even if func.__doc__ is None
     (for example, if -OO was passed to the interpreter).
 
-    Usage: construct an Appender with a string to be joined to
-    the original docstring. An optional 'join' parameter may be supplied
-    which will be used to join the docstring and addendum. e.g.
-
-        add_copyright = Appender("Copyright (c) 2009", join='\n')
-
-        @add_copyright
-        def my_dog(has='fleas'):
-            "This docstring will have a copyright below"
-            pass
 
     Parameters
     ----------
@@ -135,6 +127,18 @@ class Appender:
         Number of indents (4-space blocks) added to all lines of the
         addendum. Default is 0.
 
+    Examples
+    --------
+    Usage: construct an Appender with a string to be joined to
+    the original docstring. An optional 'join' parameter may be supplied
+    which will be used to join the docstring and addendum. e.g.
+
+    >>> add_copyright = Appender("Copyright (c) 2009", join='\n')
+
+    >>> @add_copyright
+    ... def my_dog(has='fleas'):
+    ...     "This docstring will have a copyright below"
+    ...     pass
     """
 
     addendum: str | None
@@ -157,30 +161,10 @@ class Appender:
 class Substitution:
     """
     A decorator to take a function's docstring and perform string
-    substitution on it.
+    substitution on it
 
     This decorator is robust even if func.__doc__ is None
     (for example, if -OO was passed to the interpreter).
-
-    Usage: construct a Substitution with a sequence or dictionary
-    suitable for performing substitution; then decorate a suitable
-    function with the constructed object. e.g.
-
-        sub_author_name = Substitution(author='Jason')
-
-        @sub_author_name
-        def some_function(x):
-            "%(author)s wrote this function"
-
-        # note that some_function.__doc__ is now "Jason wrote this function"
-
-    One can also use positional arguments:
-
-        sub_first_last_names = Substitution('Edgar Allen', 'Poe')
-
-        @sub_first_last_names
-        def some_function(x):
-            "%s %s wrote the Raven"
 
     Parameters
     ----------
@@ -190,6 +174,27 @@ class Substitution:
         Keyword arguments for %(name)s-style substitution.
         Cannot be combined with positional args.
 
+    Examples
+    --------
+    Usage: construct a Substitution with a sequence or dictionary
+    suitable for performing substitution; then decorate a suitable
+    function with the constructed object. e.g.
+
+    >>> sub_author_name = Substitution(author='Jason')
+
+    >>> @sub_author_name
+    >>> def some_function(x):
+    ...    "%(author)s wrote this function"
+
+    Note that some_function.__doc__ is now "Jason wrote this function"
+
+    One can also use positional arguments:
+
+    >>> sub_first_last_names = Substitution('Edgar Allen', 'Poe')
+
+    >>> @sub_first_last_names
+    >>> def some_function(x):
+    ...    "%s %s wrote the Raven"
     """
 
     def __init__(self, *args: object, **kwargs: object) -> None:
@@ -203,7 +208,7 @@ class Substitution:
 
     def update(self, *args: object, **kwargs: object) -> None:
         """
-        Update self.params with supplied args.
+        Update self.params with supplied args
 
         Only valid when Substitution was constructed with keyword arguments
         (i.e. self.params is a dict). No-op for positional (tuple) params.
@@ -214,7 +219,7 @@ class Substitution:
 
 def indent(text: str | None, indents: int = 1) -> str:
     """
-    Add indentation to each line of text.
+    Add indentation to each line of text
 
     Uses 4-space blocks per indent level, matching pandas' original behavior.
 
@@ -229,7 +234,6 @@ def indent(text: str | None, indents: int = 1) -> str:
     -------
     str
         Indented text, or "" if input was None/empty.
-
     """
     if not text or not isinstance(text, str):
         return ""

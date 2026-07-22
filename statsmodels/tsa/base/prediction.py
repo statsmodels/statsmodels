@@ -17,7 +17,7 @@ class PredictionResults:
         The distribution to use when constructing prediction intervals.
         Default is normal.
     df : int, optional
-        The degree of freedom parameter for the t. Not used if dist is None,
+        The degrees of freedom parameter for the t. Not used if dist is None,
         "norm" or a callable.
     row_labels : {Sequence[Hashable], pd.Index}
         Row labels to use for the summary frame. If None, attempts to read the
@@ -64,7 +64,7 @@ class PredictionResults:
 
     @property
     def row_labels(self):
-        """The row labels used in pandas-types."""
+        """The row labels used in pandas-types"""
         return self._row_labels
 
     @property
@@ -134,7 +134,7 @@ class PredictionResults:
 
     def conf_int(self, alpha=0.05):
         """
-        Confidence interval construction for the predicted mean.
+        Confidence interval construction for the predicted mean
 
         This is currently only available for t and z tests.
 
@@ -161,7 +161,13 @@ class PredictionResults:
 
     def summary_frame(self, alpha=0.05):
         """
-        Summary frame of mean, variance and confidence interval.
+        Summary frame of mean, variance and confidence interval
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for the confidence interval. The default
+            `alpha` = .05 returns a 95% confidence interval.
 
         Returns
         -------
@@ -172,11 +178,6 @@ class PredictionResults:
             * mean_se
             * mean_ci_lower
             * mean_ci_upper
-
-        Notes
-        -----
-        Fixes alpha to 0.05 so that the confidence interval should have 95%
-        coverage.
         """
         ci_mean = np.asarray(self.conf_int(alpha=alpha))
         lower, upper = ci_mean[:, 0], ci_mean[:, 1]

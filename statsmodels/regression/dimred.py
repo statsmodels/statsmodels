@@ -1,4 +1,4 @@
-"""Dimension reduction regression models."""
+"""Dimension reduction regression models"""
 
 import warnings
 
@@ -11,9 +11,7 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 
 class _DimReductionRegression(model.Model):
-    """
-    A base class for dimension reduction regression methods.
-    """
+    """A base class for dimension reduction regression methods"""
 
     def __init__(self, endog, exog, **kwargs):
         super().__init__(endog, exog, **kwargs)
@@ -51,12 +49,11 @@ class SlicedInverseReg(_DimReductionRegression):
     ----------
     KC Li (1991).  Sliced inverse regression for dimension reduction.
     JASA 86, 316-342.
-
     """
 
     def fit(self, slice_n=20, **kwargs):
         """
-        Estimate the EDR space using Sliced Inverse Regression.
+        Estimate the EDR space using Sliced Inverse Regression
 
         Parameters
         ----------
@@ -65,6 +62,11 @@ class SlicedInverseReg(_DimReductionRegression):
         **kwargs
             Extra keyword arguments. These trigger a RuntimeWarning.
 
+        Returns
+        -------
+        DimReductionResultsWrapper
+            Results instance that can be used to access the estimated
+            EDR space and corresponding eigenvalues.
         """
         # Sample size per slice
         if len(kwargs) > 0:
@@ -168,7 +170,7 @@ class SlicedInverseReg(_DimReductionRegression):
         self, ndim=1, pen_mat=None, slice_n=20, maxiter=100, gtol=1e-3, **kwargs
     ):
         """
-        Estimate the EDR space using regularized SIR.
+        Estimate the EDR space using regularized SIR
 
         Parameters
         ----------
@@ -176,12 +178,12 @@ class SlicedInverseReg(_DimReductionRegression):
             The number of EDR directions to estimate
         pen_mat : array_like
             A 2d array such that the squared Frobenius norm of
-            `dot(pen_mat, dirs)`` is added to the objective function,
+            ``dot(pen_mat, dirs)`` is added to the objective function,
             where `dirs` is an orthogonal array whose columns span
             the estimated EDR space.
         slice_n : int, optional
             Target number of observations per slice
-        maxiter :int
+        maxiter : int
             The maximum number of iterations for estimating the EDR
             space.
         gtol : float
@@ -193,7 +195,9 @@ class SlicedInverseReg(_DimReductionRegression):
 
         Returns
         -------
-        A results class instance.
+        DimReductionResultsWrapper
+            Results instance that can be used to access the estimated
+            EDR space.
 
         Notes
         -----
@@ -208,7 +212,6 @@ class SlicedInverseReg(_DimReductionRegression):
         L. Ferre, A.F. Yao (2003).  Functional sliced inverse regression
         analysis.  Statistics: a journal of theoretical and applied
         statistics 37(6) 475-488.
-
         """
         if len(kwargs) > 0:
             msg = "SIR.fit_regularized does not take keyword arguments"
@@ -281,9 +284,9 @@ class PrincipalHessianDirections(_DimReductionRegression):
     exog : array_like (2d)
         The covariates
 
-    Returns
-    -------
-    A model instance.  Call `fit` to obtain a results instance,
+    Notes
+    -----
+    Call `fit` on the model instance to obtain a results instance,
     from which the estimated parameters can be obtained.
 
     References
@@ -291,12 +294,11 @@ class PrincipalHessianDirections(_DimReductionRegression):
     KC Li (1992).  On Principal Hessian Directions for Data
     Visualization and Dimension Reduction: Another application
     of Stein's lemma. JASA 87:420.
-
     """
 
     def fit(self, **kwargs):
         """
-        Estimate the EDR space using PHD.
+        Estimate the EDR space using PHD
 
         Parameters
         ----------
@@ -309,9 +311,9 @@ class PrincipalHessianDirections(_DimReductionRegression):
 
         Returns
         -------
-        A results instance which can be used to access the estimated
-        parameters.
-
+        DimReductionResultsWrapper
+            Results instance that can be used to access the estimated
+            parameters.
         """
         resid = kwargs.get("resid", False)
 
@@ -361,7 +363,6 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
     Y Li, L-X Zhu (2007). Asymptotics for sliced average
     variance estimation.  The Annals of Statistics.
     https://arxiv.org/pdf/0708.0462.pdf
-
     """
 
     def __init__(self, endog, exog, **kwargs):
@@ -373,7 +374,7 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
 
     def fit(self, **kwargs):
         """
-        Estimate the EDR space.
+        Estimate the EDR space
 
         Parameters
         ----------
@@ -382,6 +383,11 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
         **kwargs
             Additional keyword arguments. May include ``slice_n``.
 
+        Returns
+        -------
+        DimReductionResultsWrapper
+            Results instance that can be used to access the estimated
+            EDR space and corresponding eigenvalues.
         """
         # Sample size per slice
         slice_n = kwargs.get("slice_n", 50)
@@ -441,16 +447,17 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
 
 class DimReductionResults(model.Results):
     """
-    Results class for a dimension reduction regression.
+    Results class for a dimension reduction regression
 
-    Notes
-    -----
-    The `params` attribute is a matrix whose columns span
-    the effective dimension reduction (EDR) space.  Some
-    methods produce a corresponding set of eigenvalues
-    (`eigs`) that indicate how much information is contained
-    in each basis direction.
-
+    Attributes
+    ----------
+    params : ndarray
+        A matrix whose columns span the effective dimension reduction
+        (EDR) space.
+    eigs : ndarray or None
+        A set of eigenvalues associated with the columns of `params`
+        that indicate how much information is contained in each basis
+        direction, if available for the fitting method used.
     """
 
     def __init__(self, model, params, eigs):
@@ -470,7 +477,7 @@ wrap.populate_wrapper(DimReductionResultsWrapper, DimReductionResults)
 
 def _grass_opt(params, fun, grad, maxiter, gtol):
     """
-    Minimize a function on a Grassmann manifold.
+    Minimize a function on a Grassmann manifold
 
     Parameters
     ----------
@@ -496,15 +503,14 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
 
     Notes
     -----
-    `params` is 2-d, but `fun` and `grad` should take 1-d arrays
-    `params.ravel()` as arguments.
+    `params` is 2-d, but `fun` and `grad` should take the 1-d array
+    `params.ravel()` as their argument.
 
-    Reference
-    ---------
+    References
+    ----------
     A Edelman, TA Arias, ST Smith (1998).  The geometry of algorithms with
     orthogonality constraints. SIAM J Matrix Anal Appl.
     http://math.mit.edu/~edelman/publications/geometry_of_algorithms.pdf
-
     """
     p, d = params.shape
     params = params.ravel()
@@ -551,7 +557,7 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
 
 class CovarianceReduction(_DimReductionRegression):
     """
-    Dimension reduction for covariance matrices (CORE).
+    Dimension reduction for covariance matrices (CORE)
 
     Parameters
     ----------
@@ -563,13 +569,11 @@ class CovarianceReduction(_DimReductionRegression):
         The dimension of the subspace onto which the covariance
         matrices are projected.
 
-    Returns
-    -------
-    A model instance.  Call `fit` on the model instance to obtain
-    a results instance, which contains the fitted model parameters.
-
     Notes
     -----
+    Call `fit` on the model instance to obtain a results instance,
+    which contains the fitted model parameters.
+
     This is a likelihood-based dimension reduction procedure based
     on Wishart models for sample covariance matrices.  The goal
     is to find a projection matrix P so that C_i | P'C_iP and
@@ -577,7 +581,7 @@ class CovarianceReduction(_DimReductionRegression):
     the C_i are the within-group covariance matrices.
 
     The model and methodology are as described in Cook and Forzani.
-    The optimization method follows Edelman et. al.
+    The optimization method follows Edelman et al.
 
     References
     ----------
@@ -587,7 +591,6 @@ class CovarianceReduction(_DimReductionRegression):
     A Edelman, TA Arias, ST Smith (1998).  The geometry of algorithms with
     orthogonality constraints. SIAM J Matrix Anal Appl.
     http://math.mit.edu/~edelman/publications/geometry_of_algorithms.pdf
-
     """
 
     def __init__(self, endog, exog, dim):
@@ -623,8 +626,10 @@ class CovarianceReduction(_DimReductionRegression):
             The projection matrix used to reduce the covariances, flattened
             to 1d.
 
-        Returns the log-likelihood.
-
+        Returns
+        -------
+        float
+            The log-likelihood value.
         """
         p = self.covm.shape[0]
         proj = params.reshape((p, self.dim))
@@ -642,7 +647,7 @@ class CovarianceReduction(_DimReductionRegression):
 
     def score(self, params):
         """
-        Evaluate the score function.
+        Evaluate the score function
 
         Parameters
         ----------
@@ -650,8 +655,10 @@ class CovarianceReduction(_DimReductionRegression):
             The projection matrix used to reduce the covariances,
             flattened to 1d.
 
-        Returns the score function evaluated at 'params'.
-
+        Returns
+        -------
+        ndarray
+            The score function evaluated at `params`, flattened to 1d.
         """
         p = self.covm.shape[0]
         proj = params.reshape((p, self.dim))
@@ -669,13 +676,14 @@ class CovarianceReduction(_DimReductionRegression):
 
     def fit(self, start_params=None, maxiter=200, gtol=1e-4):
         """
-        Fit the covariance reduction model.
+        Fit the covariance reduction model
 
         Parameters
         ----------
-        start_params : array_like
+        start_params : array_like, optional
             Starting value for the projection matrix. May be
-            rectangular, or flattened.
+            rectangular, or flattened. If None, an identity-based
+            starting value is used.
         maxiter : int
             The maximum number of gradient steps to take.
         gtol : float
@@ -683,9 +691,9 @@ class CovarianceReduction(_DimReductionRegression):
 
         Returns
         -------
-        A results instance that can be used to access the
-        fitted parameters.
-
+        DimReductionResultsWrapper
+            Results instance that can be used to access the fitted
+            parameters.
         """
         p = self.covm.shape[0]
         d = self.dim

@@ -1,6 +1,4 @@
-"""
-Handle file opening for read/write
-"""
+"""Handle file opening for read/write"""
 from pathlib import Path
 
 from numpy.lib._iotools import _is_string_like
@@ -8,8 +6,8 @@ from numpy.lib._iotools import _is_string_like
 
 class EmptyContextManager:
     """
-    This class is needed to allow file-like object to be used as
-    context manager, but without getting closed.
+    This class is needed to allow a file-like object to be used as a
+    context manager without being closed on exit
     """
 
     def __init__(self, obj):
@@ -38,10 +36,10 @@ def _open(fname, mode, encoding):
 
 def get_file_obj(fname, mode="r", encoding=None):
     """
-    Light wrapper to handle strings, path objects and let files (anything else)
-    pass through.
+    Light wrapper to handle strings, path objects and let files (anything
+    else) pass through
 
-    It also handle '.gz' files.
+    It also handles '.gz' files.
 
     Parameters
     ----------
@@ -54,9 +52,10 @@ def get_file_obj(fname, mode="r", encoding=None):
 
     Returns
     -------
-    A file-like object that is always a context-manager. If the `fname` was
-    already a file-like object, the returned context manager *will not
-    close the file*.
+    file-like object
+        A file-like object that is always a context-manager. If the `fname`
+        was already a file-like object, the returned context manager *will
+        not close the file*.
     """
 
     if _is_string_like(fname):

@@ -29,7 +29,7 @@ random_state : {None, int, np.random.RandomState, np.random.Generator}, optional
 def _squeeze_output(out):
     """
     Remove single-dimensional entries from array and convert to scalar,
-    if necessary.
+    if necessary
 
     """
     out = out.squeeze()
@@ -40,7 +40,7 @@ def _squeeze_output(out):
 
 def _eigvalsh_to_eps(spectrum, cond=None, rcond=None):
     """
-    Determine which eigenvalues are "small" given the spectrum.
+    Determine which eigenvalues are "small" given the spectrum
 
     This is for compatibility across various linear algebra functions
     that should agree about whether or not a Hermitian matrix is numerically
@@ -75,7 +75,7 @@ def _eigvalsh_to_eps(spectrum, cond=None, rcond=None):
 
 def _pinv_1d(v, eps=1e-5):
     """
-    A helper function for computing the pseudoinverse.
+    A helper function for computing the pseudoinverse
 
     Parameters
     ----------
@@ -95,7 +95,7 @@ def _pinv_1d(v, eps=1e-5):
 
 class _PSD:
     """
-    Compute coordinated functions of a symmetric positive semidefinite matrix.
+    Compute coordinated functions of a symmetric positive semidefinite matrix
 
     This class addresses two issues.  Firstly it allows the pseudoinverse,
     the logarithm of the pseudo-determinant, and the rank of the matrix
@@ -174,7 +174,7 @@ class _PSD:
 class multi_rv_generic:
     """
     Class which encapsulates common functionality between all multivariate
-    distributions.
+    distributions
 
     """
 
@@ -184,7 +184,8 @@ class multi_rv_generic:
 
     @property
     def random_state(self):
-        """Get or set the RandomState object for generating random variates.
+        """
+        Get or set the RandomState object for generating random variates
 
         This can be either None, int, a RandomState instance, or a
         np.random.Generator instance.
@@ -211,7 +212,7 @@ class multi_rv_generic:
 class multi_rv_frozen:
     """
     Class which encapsulates common functionality between all frozen
-    multivariate distributions.
+    multivariate distributions
     """
 
     @property
@@ -260,7 +261,7 @@ mvn_docdict_noparams = {
 
 class multivariate_normal_gen(multi_rv_generic):
     r"""
-    A multivariate normal random variable.
+    A multivariate normal random variable
 
     The `mean` keyword specifies the mean. The `cov` keyword specifies the
     covariance matrix.
@@ -349,7 +350,7 @@ class multivariate_normal_gen(multi_rv_generic):
 
     def __call__(self, mean=None, cov=1, allow_singular=False, seed=None):
         """
-        Create a frozen multivariate normal distribution.
+        Create a frozen multivariate normal distribution
 
         See `multivariate_normal_frozen` for more information.
 
@@ -361,7 +362,7 @@ class multivariate_normal_gen(multi_rv_generic):
     def _process_parameters(self, dim, mean, cov):
         """
         Infer dimensionality from mean or covariance matrix, ensure that
-        mean and covariance are full vector resp. matrix.
+        mean and covariance are full vector resp. matrix
 
         """
 
@@ -427,7 +428,7 @@ class multivariate_normal_gen(multi_rv_generic):
     def _process_quantiles(self, x, dim):
         """
         Adjust quantiles array so that last axis labels the components of
-        each data point.
+        each data point
 
         """
         x = np.asarray(x, dtype=float)
@@ -471,7 +472,7 @@ class multivariate_normal_gen(multi_rv_generic):
 
     def logpdf(self, x, mean=None, cov=1, allow_singular=False):
         """
-        Log of the multivariate normal probability density function.
+        Log of the multivariate normal probability density function
 
         Parameters
         ----------
@@ -497,7 +498,7 @@ class multivariate_normal_gen(multi_rv_generic):
 
     def pdf(self, x, mean=None, cov=1, allow_singular=False):
         """
-        Multivariate normal probability density function.
+        Multivariate normal probability density function
 
         Parameters
         ----------
@@ -531,11 +532,11 @@ class multivariate_normal_gen(multi_rv_generic):
             Mean of the distribution
         cov : array_like
             Covariance matrix of the distribution
-        maxpts: integer
+        maxpts : int
             The maximum number of points to use for integration
-        abseps: float
+        abseps : float
             Absolute error tolerance
-        releps: float
+        releps : float
             Relative error tolerance
 
         Notes
@@ -566,19 +567,19 @@ class multivariate_normal_gen(multi_rv_generic):
         releps=1e-5,
     ):
         """
-        Log of the multivariate normal cumulative distribution function.
+        Log of the multivariate normal cumulative distribution function
 
         Parameters
         ----------
         x : array_like
             Quantiles, with the last axis of `x` denoting the components.
         %(_mvn_doc_default_callparams)s
-        maxpts: integer, optional
+        maxpts : int, optional
             The maximum number of points to use for integration
             (default `1000000*dim`)
-        abseps: float, optional
+        abseps : float, optional
             Absolute error tolerance (default 1e-5)
-        releps: float, optional
+        releps : float, optional
             Relative error tolerance (default 1e-5)
 
         Returns
@@ -613,19 +614,19 @@ class multivariate_normal_gen(multi_rv_generic):
         releps=1e-5,
     ):
         """
-        Multivariate normal cumulative distribution function.
+        Multivariate normal cumulative distribution function
 
         Parameters
         ----------
         x : array_like
             Quantiles, with the last axis of `x` denoting the components.
         %(_mvn_doc_default_callparams)s
-        maxpts: integer, optional
+        maxpts : int, optional
             The maximum number of points to use for integration
             (default `1000000*dim`)
-        abseps: float, optional
+        abseps : float, optional
             Absolute error tolerance (default 1e-5)
-        releps: float, optional
+        releps : float, optional
             Relative error tolerance (default 1e-5)
 
         Returns
@@ -651,12 +652,12 @@ class multivariate_normal_gen(multi_rv_generic):
 
     def rvs(self, mean=None, cov=1, size=1, random_state=None):
         """
-        Draw random samples from a multivariate normal distribution.
+        Draw random samples from a multivariate normal distribution
 
         Parameters
         ----------
         %(_mvn_doc_default_callparams)s
-        size : integer, optional
+        size : int, optional
             Number of samples to draw (default 1).
         %(_doc_random_state)s
 
@@ -679,7 +680,7 @@ class multivariate_normal_gen(multi_rv_generic):
 
     def entropy(self, mean=None, cov=1):
         """
-        Compute the differential entropy of the multivariate normal.
+        Compute the differential entropy of the multivariate normal
 
         Parameters
         ----------
@@ -715,7 +716,7 @@ class multivariate_normal_frozen(multi_rv_frozen):
         releps=1e-5,
     ):
         """
-        Create a frozen multivariate normal distribution.
+        Create a frozen multivariate normal distribution
 
         Parameters
         ----------
@@ -735,13 +736,13 @@ class multivariate_normal_frozen(multi_rv_frozen):
             If `seed` is already a ``RandomState`` or ``Generator`` instance,
             then that object is used.
             Default is None.
-        maxpts: integer, optional
+        maxpts : int, optional
             The maximum number of points to use for integration of the
             cumulative distribution function (default `1000000*dim`)
-        abseps: float, optional
+        abseps : float, optional
             Absolute error tolerance for the cumulative distribution function
             (default 1e-5)
-        releps: float, optional
+        releps : float, optional
             Relative error tolerance for the cumulative distribution function
             (default 1e-5)
 
@@ -792,7 +793,7 @@ class multivariate_normal_frozen(multi_rv_frozen):
 
     def entropy(self):
         """
-        Computes the differential entropy of the multivariate normal.
+        Compute the differential entropy of the multivariate normal
 
         Returns
         -------
@@ -817,6 +818,16 @@ allow_singular : bool, optional
     Whether to allow a singular matrix. (default ``False``)
 """
 
+_mvt_doc_default_callparams_no_singular = """
+loc : array_like, optional
+    Location of the distribution. (default ``0``)
+shape : array_like, optional
+    Positive semidefinite matrix of the distribution. (default ``1``)
+df : float, optional
+    Degrees of freedom of the distribution; must be greater than zero.
+    If ``np.inf`` then results are multivariate normal. The default is ``1``.
+"""
+
 _mvt_doc_callparams_note = """\
 Setting the parameter `loc` to ``None`` is equivalent to having `loc`
 be the zero-vector. The parameter `shape` can be a scalar, in which case
@@ -831,12 +842,16 @@ _mvt_doc_frozen_callparams_note = (
 
 mvt_docdict_params = {
     "_mvt_doc_default_callparams": _mvt_doc_default_callparams,
+    "_mvt_doc_default_callparams_no_singular": (
+        _mvt_doc_default_callparams_no_singular
+    ),
     "_mvt_doc_callparams_note": _mvt_doc_callparams_note,
     "_doc_random_state": _doc_random_state,
 }
 
 mvt_docdict_noparams = {
     "_mvt_doc_default_callparams": "",
+    "_mvt_doc_default_callparams_no_singular": "",
     "_mvt_doc_callparams_note": _mvt_doc_frozen_callparams_note,
     "_doc_random_state": _doc_random_state,
 }
@@ -844,7 +859,7 @@ mvt_docdict_noparams = {
 
 class multivariate_t_gen(multi_rv_generic):
     r"""
-    A multivariate t-distributed random variable.
+    A multivariate t-distributed random variable
 
     The `loc` parameter specifies the location. The `shape` parameter specifies
     the positive semidefinite shape matrix. The `df` parameter specifies the
@@ -909,11 +924,12 @@ class multivariate_t_gen(multi_rv_generic):
 
     def __init__(self, seed=None):
         """
-        Initialize a multivariate t-distributed random variable.
+        Initialize a multivariate t-distributed random variable
 
         Parameters
         ----------
-        seed : Random state.
+        seed : {None, int, `~np.random.RandomState`, `~np.random.Generator`}, optional
+            Random state used to draw random variates.
 
         """
         super().__init__(seed)
@@ -922,8 +938,9 @@ class multivariate_t_gen(multi_rv_generic):
 
     def __call__(self, loc=None, shape=1, df=1, allow_singular=False, seed=None):
         """
-        Create a frozen multivariate t-distribution. See
-        `multivariate_t_frozen` for parameters.
+        Create a frozen multivariate t-distribution
+
+        See `multivariate_t_frozen` for parameters.
 
         """
         if df == np.inf:
@@ -936,7 +953,7 @@ class multivariate_t_gen(multi_rv_generic):
 
     def pdf(self, x, loc=None, shape=1, df=1, allow_singular=False):
         """
-        Multivariate t-distribution probability density function.
+        Multivariate t-distribution probability density function
 
         Parameters
         ----------
@@ -946,7 +963,8 @@ class multivariate_t_gen(multi_rv_generic):
 
         Returns
         -------
-        pdf : Probability density function evaluated at `x`.
+        pdf : ndarray or scalar
+            Probability density function evaluated at `x`.
 
         Examples
         --------
@@ -969,18 +987,19 @@ class multivariate_t_gen(multi_rv_generic):
 
     def logpdf(self, x, loc=None, shape=1, df=1):
         """
-        Log of the multivariate t-distribution probability density function.
+        Log of the multivariate t-distribution probability density function
 
         Parameters
         ----------
         x : array_like
             Points at which to evaluate the log of the probability density
             function.
-        %(_mvt_doc_default_callparams)s
+        %(_mvt_doc_default_callparams_no_singular)s
 
         Returns
         -------
-        logpdf : Log of the probability density function evaluated at `x`.
+        logpdf : ndarray or scalar
+            Log of the probability density function evaluated at `x`.
 
         Examples
         --------
@@ -1005,7 +1024,8 @@ class multivariate_t_gen(multi_rv_generic):
         )
 
     def _logpdf(self, x, loc, prec_U, log_pdet, df, dim, rank):
-        """Utility method `pdf`, `logpdf` for parameters.
+        """
+        Utility method for `pdf`, `logpdf` calculations
 
         Parameters
         ----------
@@ -1049,12 +1069,12 @@ class multivariate_t_gen(multi_rv_generic):
 
     def rvs(self, loc=None, shape=1, df=1, size=1, random_state=None):
         """
-        Draw random samples from a multivariate t-distribution.
+        Draw random samples from a multivariate t-distribution
 
         Parameters
         ----------
-        %(_mvt_doc_default_callparams)s
-        size : integer, optional
+        %(_mvt_doc_default_callparams_no_singular)s
+        size : int, optional
             Number of samples to draw (default 1).
         %(_doc_random_state)s
 
@@ -1098,7 +1118,7 @@ class multivariate_t_gen(multi_rv_generic):
     def _process_quantiles(self, x, dim):
         """
         Adjust quantiles array so that last axis labels the components of
-        each data point.
+        each data point
 
         """
         x = np.asarray(x, dtype=float)
@@ -1114,7 +1134,7 @@ class multivariate_t_gen(multi_rv_generic):
     def _process_parameters(self, loc, shape, df):
         """
         Infer dimensionality from location array and shape matrix, handle
-        defaults, and ensure compatible dimensions.
+        defaults, and ensure compatible dimensions
 
         """
         if loc is None and shape is None:
@@ -1182,11 +1202,13 @@ class multivariate_t_frozen(multi_rv_frozen):
 
     def __init__(self, loc=None, shape=1, df=1, allow_singular=False, seed=None):
         """
-        Create a frozen multivariate t distribution.
+        Create a frozen multivariate t distribution
 
         Parameters
         ----------
         %(_mvt_doc_default_callparams)s
+        seed : {None, int, `~np.random.RandomState`, `~np.random.Generator`}, optional
+            Random state used to draw random variates.
 
         Examples
         --------

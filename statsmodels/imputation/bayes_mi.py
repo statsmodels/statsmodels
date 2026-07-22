@@ -7,7 +7,7 @@ from statsmodels.tools.rng_qrng import check_random_state
 
 class BayesGaussMI:
     """
-    Bayesian Imputation using a Gaussian model.
+    Bayesian Imputation using a Gaussian model
 
     The approach is Bayesian.  The goal is to sample from the joint
     distribution of the mean vector, covariance matrix, and missing
@@ -34,6 +34,12 @@ class BayesGaussMI:
     cov_prior_df : positive float
         The degrees of freedom of the inverse Wishart prior
         distribution for the covariance matrix.  Defaults to 1.
+    rng : {None, int, array_like[int], Generator, RandomState}, optional
+        If `rng` is None, fresh, unpredictable entropy is pulled from
+        the OS and a `numpy.random.Generator` is used. If `rng` is an
+        int or array_like[ints], a new Generator instance is used,
+        seeded with `rng`. If `rng` is already a Generator or
+        RandomState instance, then that instance is used.
 
     Examples
     --------
@@ -108,9 +114,7 @@ class BayesGaussMI:
         self.cov_prior_df = cov_prior_df
 
     def update(self):
-        """
-        Cycle through all Gibbs updates.
-        """
+        """Cycle through all Gibbs updates"""
 
         self.update_data()
 
@@ -119,9 +123,7 @@ class BayesGaussMI:
         self.update_cov()
 
     def update_data(self):
-        """
-        Gibbs update of the missing data values.
-        """
+        """Gibbs update of the missing data values"""
 
         for ix in self.patterns:
 
@@ -152,7 +154,7 @@ class BayesGaussMI:
 
     def update_mean(self):
         """
-        Gibbs update of the mean vector.
+        Gibbs update of the mean vector
 
         Do not call until update_data has been called once.
         """
@@ -174,7 +176,7 @@ class BayesGaussMI:
 
     def update_cov(self):
         """
-        Gibbs update of the covariance matrix.
+        Gibbs update of the covariance matrix
 
         Do not call until update_data has been called once.
         """
@@ -193,7 +195,7 @@ class BayesGaussMI:
 
 class MI:
     """
-    MI performs multiple imputation using a provided imputer object.
+    MI performs multiple imputation using a provided imputer object
 
     Parameters
     ----------
@@ -305,7 +307,7 @@ class MI:
 
     def fit(self, results_cb=None):
         """
-        Impute datasets, fit models, and pool results.
+        Impute datasets, fit models, and pool results
 
         Parameters
         ----------
@@ -317,7 +319,9 @@ class MI:
 
         Returns
         -------
-        A MIResults object.
+        MIResults
+            The results of the multiple imputation analysis, including
+            the pooled parameter estimates and covariance matrix.
         """
 
         par, cov = [], []
@@ -386,7 +390,7 @@ class MI:
 
 class MIResults(LikelihoodModelResults):
     """
-    A results class for multiple imputation (MI).
+    A results class for multiple imputation (MI)
 
     Parameters
     ----------
@@ -410,7 +414,7 @@ class MIResults(LikelihoodModelResults):
 
     def summary(self, title=None, alpha=0.05):
         """
-        Summarize the results of running multiple imputation.
+        Summarize the results of running multiple imputation
 
         Parameters
         ----------

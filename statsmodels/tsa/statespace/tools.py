@@ -119,6 +119,21 @@ prefix_compute_smoothed_state_weights_map = {
 
 
 def set_mode(compatibility=None):
+    """
+    Set the compatibility mode
+
+    Parameters
+    ----------
+    compatibility : bool, optional
+        Whether or not to enable compatibility mode. Compatibility mode is
+        only available in statsmodels <= 0.9, so passing a truthy value
+        always raises `NotImplementedError`.
+
+    Raises
+    ------
+    NotImplementedError
+        If `compatibility` is truthy.
+    """
     if compatibility:
         raise NotImplementedError("Compatibility mode is only available in"
                                   " statsmodels <= 0.9")
@@ -247,7 +262,7 @@ def companion_matrix(polynomial):
 
 def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     r"""
-    Difference a series simply and/or seasonally along the zero-th axis.
+    Difference a series simply and/or seasonally along the zero-th axis
 
     Given a series (denoted :math:`y_t`), performs the differencing operation
 
@@ -303,7 +318,7 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
 
 def concat(series, axis=0, allow_mix=False):
     """
-    Concatenate a set of series.
+    Concatenate a set of series
 
     Parameters
     ----------
@@ -382,7 +397,7 @@ def concat(series, axis=0, allow_mix=False):
 
 def is_invertible(polynomial, threshold=1 - 1e-10):
     r"""
-    Determine if a polynomial is invertible.
+    Determine if a polynomial is invertible
 
     Requires all roots of the polynomial lie inside the unit circle.
 
@@ -453,7 +468,25 @@ def is_invertible(polynomial, threshold=1 - 1e-10):
 
 def solve_discrete_lyapunov(a, q, complex_step=False):
     r"""
-    Solves the discrete Lyapunov equation using a bilinear transformation.
+    Solve the discrete Lyapunov equation using a bilinear transformation
+
+    Parameters
+    ----------
+    a : array_like
+        The matrix on the left-hand side, usually the transition matrix.
+    q : array_like
+        The matrix on the right-hand side, usually the selected state
+        covariance matrix.
+    complex_step : bool, optional
+        Whether or not the function is being used as part of a complex-step
+        differentiation approximation. If so, the matrix `a` is allowed to
+        contain complex numbers, and the transpose used in the computation
+        is a non-conjugating transpose. Default is False.
+
+    Returns
+    -------
+    solution : ndarray
+        The solution to the discrete Lyapunov equation.
 
     Notes
     -----
@@ -974,7 +1007,7 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
 
 def _compute_multivariate_sample_acovf(endog, maxlag):
     r"""
-    Computer multivariate sample autocovariances
+    Compute multivariate sample autocovariances
 
     Parameters
     ----------
@@ -1137,7 +1170,7 @@ def _compute_multivariate_acovf_from_coefficients(
 
 def _compute_multivariate_sample_pacf(endog, maxlag):
     """
-    Computer multivariate sample partial autocorrelations
+    Compute multivariate sample partial autocorrelations
 
     Parameters
     ----------
@@ -1162,7 +1195,7 @@ def _compute_multivariate_sample_pacf(endog, maxlag):
 def _compute_multivariate_pacf_from_autocovariances(autocovariances,
                                                     order=None, k_endog=None):
     """
-    Compute multivariate partial autocorrelations from autocovariances.
+    Compute multivariate partial autocorrelations from autocovariances
 
     Parameters
     ----------
@@ -1356,8 +1389,6 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     Corresponds to the inverse of Lemma 2.1 in Ansley and Kohn (1986). See
     `unconstrain_stationary_multivariate` for more details.
 
-    Notes
-    -----
     Coefficients are assumed to be provided from the VAR model:
 
     .. math::
@@ -1835,6 +1866,25 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
 
 
 def prepare_exog(exog):
+    """
+    Standardize the shape of an exog array and compute its number of columns
+
+    Parameters
+    ----------
+    exog : array_like or None
+        Exogenous regressor array, or None if there are no exogenous
+        regressors.
+
+    Returns
+    -------
+    k_exog : int
+        The number of exogenous regressors (columns of `exog`). Zero if
+        `exog` is None.
+    exog : array_like or None
+        The `exog` array, coerced to a two-dimensional array (or
+        `pandas.DataFrame`, if `exog` was a pandas object) if it was not
+        already. None if `exog` is None.
+    """
     k_exog = 0
     if exog is not None:
         exog_is_using_pandas = _is_using_pandas(exog, None)
@@ -1853,6 +1903,31 @@ def prepare_exog(exog):
 
 
 def prepare_trend_spec(trend):
+    """
+    Translate a trend specification into a polynomial trend and its order
+
+    Parameters
+    ----------
+    trend : {str, array_like, None}
+        The trend specification. Can be a string, in which case it must be
+        one of 'n' (no trend), 'c' (constant), 't' (linear trend in time),
+        'ct' (both constant and linear trend), or 'ctt' (constant, linear
+        trend, and squared trend). Alternatively, can be an iterable defining
+        a polynomial, e.g., `[1, 1, 0, 1]` corresponds to a constant, a
+        linear trend, and a trend of degree three (but not a squared trend).
+        None is equivalent to 'n'.
+
+    Returns
+    -------
+    polynomial_trend : ndarray
+        Array containing the coefficients of the polynomial, where non-zero
+        entries indicate that the associated degree term is included in the
+        model, in order of increasing degree.
+    k_trend : int
+        The number of distinct trend elements (i.e. the number of non-zero
+        entries of `polynomial_trend`). Note that this is not the same as
+        the degree of the trend polynomial.
+    """
     # Trend
     if trend is None or trend == "n":
         polynomial_trend = np.ones(0)
@@ -1886,6 +1961,30 @@ def prepare_trend_spec(trend):
 
 
 def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
+    """
+    Construct the trend data array associated with a given trend polynomial
+
+    Parameters
+    ----------
+    polynomial_trend : array_like
+        Array containing the coefficients of the polynomial, where non-zero
+        entries indicate that the associated degree term should be included
+        in the trend data, in order of increasing degree. See
+        `prepare_trend_spec`.
+    k_trend : int
+        The number of distinct trend elements (i.e. the number of non-zero
+        entries of `polynomial_trend`).
+    nobs : int
+        The number of observations for which to construct trend data.
+    offset : int, optional
+        The time period associated with the first observation. Default is 1.
+
+    Returns
+    -------
+    trend_data : ndarray
+        Array shaped `(nobs, k_trend)` containing the trend regressors
+        associated with `polynomial_trend`.
+    """
     # Cache the arrays for calculating the intercept from the trend
     # components
     time_trend = np.arange(offset, nobs + offset)
@@ -1914,6 +2013,49 @@ def _safe_cond(a):
 
 def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
                                     compute_prior_weights=None, scale=1.0):
+    """
+    Construct the weights of observations and the prior on the smoothed state
+
+    Parameters
+    ----------
+    ssm : KalmanSmoother
+        The `statespace.kalman_smoother.KalmanSmoother` object (or a
+        subclass, e.g. `statespace.simulation_smoother.SimulationSmoother`)
+        with an underlying Cython state space, Kalman filter, and Kalman
+        smoother that have already been run so that the required attributes
+        are available.
+    compute_t : array_like, optional
+        An explicit list of periods `t` of the smoothed state vector to
+        compute weights for. Default is to compute weights for all periods.
+    compute_j : array_like, optional
+        An explicit list of periods `j` of observations to compute weights
+        for. Default is to compute weights for all periods.
+    compute_prior_weights : bool, optional
+        Whether or not to compute the weight matrices associated with the
+        prior mean. Default is True if 0 is in `compute_j`, and False
+        otherwise.
+    scale : float, optional
+        The scale of the model, as computed e.g. by the Kalman filter. Used
+        to scale the weights appropriately. Default is 1.0.
+
+    Returns
+    -------
+    weights : ndarray
+        Weight matrices that can be used to construct the smoothed state
+        from the observations. See `compute_smoothed_state_weights` for more
+        details.
+    state_intercept_weights : ndarray
+        Weight matrices describing the impact of the state intercept on the
+        smoothed state vector.
+    prior_weights : ndarray
+        Weight matrices that describe the impact of the prior on the
+        smoothed state vector. See `compute_smoothed_state_weights` for more
+        details.
+
+    See Also
+    --------
+    compute_smoothed_state_weights
+    """
     # Get references to the Cython objects
     _model = ssm._statespace
     _kfilter = ssm._kalman_filter
@@ -2028,6 +2170,10 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
         this matrix contains the weight of the `p`-th element of the
         observation vector at time `j` in constructing the `m`-th element of
         the smoothed state vector at time `t`.
+    state_intercept_weights : array_like
+        Weight matrices describing the impact of the state intercept on the
+        smoothed state vector. The returned matrix is always shaped
+        `(nobs, nobs, k_states, k_states)`.
     prior_weights : array_like
         Weight matrices that describe the impact of the prior (also called the
         initialization) on the smoothed state vector. The returned matrix is
@@ -2205,6 +2351,19 @@ def _atleast_1d(*arys):
     with the following modifications:
 
     1. It allows for `None` arguments, and passes them directly through
+
+    Parameters
+    ----------
+    *arys : array_like or None
+        One or more input arrays (or None) to be converted to arrays with
+        at least one dimension.
+
+    Returns
+    -------
+    ret : ndarray or None or list
+        An array (or None, if the corresponding input was None) with
+        `a.ndim >= 1`. A list of arrays (or None values) is returned if
+        more than one input was given.
     """
     res = []
     for ary in arys:
@@ -2231,6 +2390,19 @@ def _atleast_2d(*arys):
 
     1. It allows for `None` arguments, and passes them directly through
     2. Instead of creating new axis at the beginning, it creates it at the end
+
+    Parameters
+    ----------
+    *arys : array_like or None
+        One or more input arrays (or None) to be converted to arrays with
+        at least two dimensions.
+
+    Returns
+    -------
+    ret : ndarray or None or list
+        An array (or None, if the corresponding input was None) with
+        `a.ndim >= 2`. A list of arrays (or None values) is returned if
+        more than one input was given.
     """
     res = []
     for ary in arys:

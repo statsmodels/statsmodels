@@ -65,7 +65,8 @@ _extra_param_doc = """
 
 class Model:
     __doc__ = """
-    A (predictive) statistical model. Intended to be subclassed not used.
+    A (predictive) statistical model. Intended to be subclassed, not used
+    directly
 
     {params_doc}
     {extra_params_doc}
@@ -116,7 +117,7 @@ class Model:
             self._init_keys.append("hasconst")
 
     def _get_init_kwds(self):
-        """return dictionary with extra keys used in model.__init__"""
+        """Return dictionary with extra keys used in model.__init__"""
         kwds = {key: getattr(self, key, None) for key in self._init_keys}
 
         return kwds
@@ -157,7 +158,7 @@ class Model:
     @classmethod
     def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
         """
-        Create a Model from a formula and dataframe.
+        Create a Model from a formula and dataframe
 
         Parameters
         ----------
@@ -250,37 +251,40 @@ class Model:
 
     @property
     def endog_names(self):
-        """
-        Names of endogenous variables.
-        """
+        """Names of endogenous variables"""
         return self.data.ynames
 
     @property
     def exog_names(self) -> list[str] | None:
-        """
-        Names of exogenous variables.
-        """
+        """Names of exogenous variables"""
         return self.data.xnames
 
     def fit(self):
-        """
-        Fit a model to data.
-        """
+        """Fit a model to data"""
         raise NotImplementedError
 
     def predict(self, params, exog=None, *args, **kwargs):
         """
-        After a model has been fit predict returns the fitted values.
+        After a model has been fit, predict returns the fitted values
 
         This is a placeholder intended to be overwritten by individual models.
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters.
+        exog : array_like, optional
+            The values for which you want to predict.
+        *args
+            Additional positional arguments to pass to the model.
+        **kwargs
+            Additional keyword arguments to pass to the model.
         """
         raise NotImplementedError
 
 
 class LikelihoodModel(Model):
-    """
-    Likelihood model is a subclass of Model.
-    """
+    """Likelihood model is a subclass of Model"""
 
     def __init__(self, endog, exog=None, **kwargs):
         super().__init__(endog, exog, **kwargs)
@@ -288,10 +292,10 @@ class LikelihoodModel(Model):
 
     def initialize(self):
         """
-        Initialize (possibly re-initialize) a Model instance.
+        Initialize (possibly re-initialize) a Model instance
 
-        For example, if the the design matrix of a linear model changes then
-        initialized can be used to recompute values using the modified design
+        For example, if the design matrix of a linear model changes then
+        initialize can be used to recompute values using the modified design
         matrix.
         """
 
@@ -300,7 +304,7 @@ class LikelihoodModel(Model):
 
     def loglike(self, params):
         """
-        Log-likelihood of model.
+        Log-likelihood of model
 
         Parameters
         ----------
@@ -315,7 +319,7 @@ class LikelihoodModel(Model):
 
     def score(self, params):
         """
-        Score vector of model.
+        Score vector of model
 
         The gradient of logL with respect to each parameter.
 
@@ -333,7 +337,7 @@ class LikelihoodModel(Model):
 
     def information(self, params):
         """
-        Fisher information matrix of model.
+        Fisher information matrix of model
 
         Returns -1 * Hessian of the log-likelihood evaluated at params.
 
@@ -346,7 +350,7 @@ class LikelihoodModel(Model):
 
     def hessian(self, params):
         """
-        The Hessian matrix of the model.
+        The Hessian matrix of the model
 
         Parameters
         ----------
@@ -670,7 +674,8 @@ class LikelihoodModel(Model):
         k_params=None,
         **fit_kwds,
     ):
-        """experimental, fit the model subject to zero constraints
+        """
+        Experimental, fit the model subject to zero constraints
 
         Intended for internal use cases until we know what we need.
         API will need to change to handle models with two exog.
@@ -693,6 +698,8 @@ class LikelihoodModel(Model):
             starting values for the optimization. `start_params` needs to be
             given in the original parameter space and are internally
             transformed.
+        return_auxiliary : bool
+            If True, then return the auxiliary results. Currently not used.
         k_params : int or None
             If None, then we try to infer from start_params or model.
         **fit_kwds : keyword arguments
@@ -819,12 +826,28 @@ class LikelihoodModel(Model):
         return res
 
     def _fit_collinear(self, atol=1e-14, rtol=1e-13, **kwds):
-        """experimental, fit of the model without collinear variables
+        """
+        Experimental, fit of the model without collinear variables
 
         This currently uses QR to drop variables based on the given
         sequence.
         Options will be added in future, when the supporting functions
         to identify collinear variables become available.
+
+        Parameters
+        ----------
+        atol : float
+            Absolute tolerance to use when comparing the diagonal of R to
+            zero to determine collinearity.
+        rtol : float
+            Relative tolerance to use when comparing the diagonal of R to
+            zero to determine collinearity.
+        **kwds
+            Keyword arguments passed to `_fit_zeros`.
+
+        Returns
+        -------
+        Results instance
         """
 
         # ------ copied from PR #2380 remove when merged
@@ -841,7 +864,7 @@ class LikelihoodModel(Model):
 # TODO: the below is unfinished
 class GenericLikelihoodModel(LikelihoodModel):
     """
-    Allows the fitting of any likelihood function via maximum likelihood.
+    Allows the fitting of any likelihood function via maximum likelihood
 
     A subclass needs to specify at least the log-likelihood
     If the log-likelihood is specified for each observation, then results that
@@ -869,21 +892,21 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     Examples
     --------
-    see also subclasses in directory miscmodels
+    See also subclasses in directory miscmodels
 
-    import statsmodels.api as sm
-    data = sm.datasets.spector.load()
-    data.exog = sm.add_constant(data.exog)
-    # in this dir
-    from model import GenericLikelihoodModel
-    probit_mod = sm.Probit(data.endog, data.exog)
-    probit_res = probit_mod.fit()
-    loglike = probit_mod.loglike
-    score = probit_mod.score
-    mod = GenericLikelihoodModel(data.endog, data.exog, loglike, score)
-    res = mod.fit(method="nm", maxiter = 500)
-    import numpy as np
-    np.allclose(res.params, probit_res.params)
+    >>> import numpy as np
+    >>> import statsmodels.api as sm
+    >>> data = sm.datasets.spector.load()
+    >>> data.exog = sm.add_constant(data.exog)
+    >>> # in this dir
+    >>> from model import GenericLikelihoodModel
+    >>> probit_mod = sm.Probit(data.endog, data.exog)
+    >>> probit_res = probit_mod.fit()
+    >>> loglike = probit_mod.loglike
+    >>> score = probit_mod.score
+    >>> mod = GenericLikelihoodModel(data.endog, data.exog, loglike, score)
+    >>> res = mod.fit(method="nm", maxiter=500)
+    >>> np.allclose(res.params, probit_res.params)
     """
 
     def __init__(
@@ -941,7 +964,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         """
         Initialize (possibly re-initialize) a Model instance. For
         instance, the design matrix of a linear model may change
-        and some things must be recomputed.
+        and some things must be recomputed
         """
         if not self.score:  # right now score is not optional
             self.score = lambda x: approx_fprime(x, self.loglike)
@@ -964,17 +987,17 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     def expandparams(self, params):
         """
-        expand to full parameter array when some parameters are fixed
+        Expand to full parameter array when some parameters are fixed
 
         Parameters
         ----------
         params : ndarray
-            reduced parameter array
+            Reduced parameter array.
 
         Returns
         -------
         paramsfull : ndarray
-            expanded parameter array where fixed parameters are included
+            Expanded parameter array where fixed parameters are included.
 
         Notes
         -----
@@ -985,7 +1008,7 @@ class GenericLikelihoodModel(LikelihoodModel):
 
         This can be used in the log-likelihood to ...
 
-        this could also be replaced by a more general parameter
+        This could also be replaced by a more general parameter
         transformation.
         """
         paramsfull = self.fixed_params.copy()
@@ -1006,7 +1029,7 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     def loglikeobs(self, params):
         """
-        Log-likelihood of the model for all observations at params.
+        Log-likelihood of the model for all observations at params
 
         Parameters
         ----------
@@ -1021,9 +1044,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         return -self.nloglikeobs(params)
 
     def score(self, params):
-        """
-        Gradient of log-likelihood evaluated at params
-        """
+        """Gradient of log-likelihood evaluated at params"""
         kwds = {}
         kwds.setdefault("centered", True)
         return approx_fprime(params, self.loglike, **kwds).ravel()
@@ -1031,28 +1052,27 @@ class GenericLikelihoodModel(LikelihoodModel):
     def score_obs(self, params, **kwds):
         """
         Jacobian/Gradient of log-likelihood evaluated at params for each
-        observation.
+        observation
         """
         # kwds.setdefault('epsilon', 1e-4)
         kwds.setdefault("centered", True)
         return approx_fprime(params, self.loglikeobs, **kwds)
 
     def hessian(self, params):
-        """
-        Hessian of log-likelihood evaluated at params
-        """
+        """Hessian of log-likelihood evaluated at params"""
         from statsmodels.tools.numdiff import approx_hess
 
         # need options for hess (epsilon)
         return approx_hess(params, self.loglike)
 
     def hessian_factor(self, params, scale=None, observed=True):
-        """Weights for calculating Hessian
+        """
+        Weights for calculating Hessian
 
         Parameters
         ----------
         params : ndarray
-            parameter at which Hessian is evaluated
+            Parameter at which Hessian is evaluated.
         scale : None or float
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
@@ -1081,7 +1101,37 @@ class GenericLikelihoodModel(LikelihoodModel):
         retall=0,
         **kwargs,
     ):
+        """
+        Fit the model via maximum likelihood
 
+        Parameters
+        ----------
+        start_params : array_like, optional
+            Initial guess of the solution for the loglikelihood maximization.
+            The default is an array of 0.1 for each parameter.
+        method : str, optional
+            The `method` determines which solver from `scipy.optimize`
+            is used. See `LikelihoodModel.fit` for the available methods.
+        maxiter : int, optional
+            The maximum number of iterations to perform.
+        full_output : bool, optional
+            Set to True to have all available output in the Results object's
+            mle_retvals attribute.
+        disp : bool, optional
+            Set to True to print convergence messages.
+        callback : callable callback(xk), optional
+            Called after each iteration, as callback(xk), where xk is the
+            current parameter vector.
+        retall : bool, optional
+            Set to True to return list of solutions at each iteration.
+        **kwargs
+            Additional keyword arguments passed to `LikelihoodModel.fit`.
+
+        Returns
+        -------
+        GenericLikelihoodModelResults
+            The fitted model results.
+        """
         if start_params is None:
             if hasattr(self, "start_params"):
                 start_params = self.start_params
@@ -1128,9 +1178,9 @@ class Results:
     Parameters
     ----------
     model : class instance
-        the previously specified model instance
+        The previously specified model instance.
     params : ndarray
-        parameter estimates from the fit model
+        Parameter estimates from the fit model.
     """
 
     def __init__(self, model, params, **kwd):
@@ -1142,7 +1192,7 @@ class Results:
 
     def initialize(self, model, params, **kwargs):
         """
-        Initialize (possibly re-initialize) a Results instance.
+        Initialize (possibly re-initialize) a Results instance
 
         Parameters
         ----------
@@ -1220,7 +1270,7 @@ class Results:
 
     def predict(self, exog=None, transform=True, *args, **kwargs):
         """
-        Call self.model.predict with self.params as the first argument.
+        Call self.model.predict with self.params as the first argument
 
         Parameters
         ----------
@@ -1276,11 +1326,7 @@ class Results:
             return predict_results
 
     def summary(self):
-        """
-        Summary
-
-        Not implemented
-        """
+        """Summary of Results, not implemented"""
         raise NotImplementedError
 
 
@@ -1294,12 +1340,12 @@ class LikelihoodModelResults(Results):
     model : LikelihoodModel instance or subclass instance
         LikelihoodModelResults holds a reference to the model that is fit.
     params : 1d array_like
-        parameter estimates from estimated model
+        Parameter estimates from estimated model.
     normalized_cov_params : 2d array
-       Normalized (before scaling) covariance of params. (dot(X.T,X))**-1
+        Normalized (before scaling) covariance of params. (dot(X.T,X))**-1
     scale : float
         For (some subset of models) scale will typically be the
-        mean square error from the estimated model (sigma^2)
+        mean square error from the estimated model (sigma^2).
 
     Attributes
     ----------
@@ -1503,7 +1549,7 @@ class LikelihoodModelResults(Results):
 
     @property
     def use_t(self):
-        """Flag indicating to use the Student's distribution in inference."""
+        """Flag indicating to use the Student's distribution in inference"""
         return self._use_t
 
     @use_t.setter
@@ -1517,7 +1563,7 @@ class LikelihoodModelResults(Results):
 
     @cached_value
     def bse(self):
-        """The standard errors of the parameter estimates."""
+        """The standard errors of the parameter estimates"""
         # Issue 3299
         if (not hasattr(self, "cov_params_default")) and (
             self.normalized_cov_params is None
@@ -1532,16 +1578,14 @@ class LikelihoodModelResults(Results):
 
     @cached_value
     def tvalues(self):
-        """
-        Return the t-statistic for a given parameter estimate.
-        """
+        """Return the t-statistic for a given parameter estimate"""
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             return self.params / self.bse
 
     @cached_value
     def pvalues(self):
-        """The two-tailed p values for the t-stats of the params."""
+        """The two-tailed p values for the t-stats of the params"""
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             if self.use_t:
@@ -1554,7 +1598,7 @@ class LikelihoodModelResults(Results):
         self, r_matrix=None, column=None, scale=None, cov_p=None, other=None
     ):
         """
-        Compute the variance/covariance matrix.
+        Compute the variance/covariance matrix
 
         The variance/covariance matrix can be of a linear contrast of the
         estimated parameters or all params multiplied by scale which will
@@ -1654,7 +1698,7 @@ class LikelihoodModelResults(Results):
     # TODO: make sure this works as needed for GLMs
     def t_test(self, r_matrix, cov_p=None, use_t=None):
         """
-        Compute a t-test for a each linear hypothesis of the form Rb = q.
+        Compute a t-test for each linear hypothesis of the form Rb = q
 
         Parameters
         ----------
@@ -1800,7 +1844,7 @@ class LikelihoodModelResults(Results):
 
     def f_test(self, r_matrix, cov_p=None, invcov=None):
         """
-        Compute the F-test for a joint linear hypothesis.
+        Compute the F-test for a joint linear hypothesis
 
         This is a special case of `wald_test` that always uses the F
         distribution.
@@ -1907,7 +1951,7 @@ class LikelihoodModelResults(Results):
         scalar=None,
     ):
         """
-        Compute a Wald-test for a joint linear hypothesis.
+        Compute a Wald-test for a joint linear hypothesis
 
         Parameters
         ----------
@@ -1939,7 +1983,7 @@ class LikelihoodModelResults(Results):
             constraints is determined from r_matrix.
         scalar : bool, optional
             Flag indicating whether the Wald test statistic should be returned
-            as a sclar float. The current behavior is to return an array.
+            as a scalar float. The current behavior is to return an array.
             This will switch to a scalar float after 0.14 is released. To
             get the future behavior now, set scalar to True. To silence
             the warning and retain the legacy behavior, set scalar to
@@ -2063,7 +2107,7 @@ class LikelihoodModelResults(Results):
         self, skip_single=False, extra_constraints=None, combine_terms=None, scalar=None
     ):
         """
-        Compute a sequence of Wald tests for terms over multiple columns.
+        Compute a sequence of Wald tests for terms over multiple columns
 
         This computes joined Wald tests for the hypothesis that all
         coefficients corresponding to a `term` are zero.
@@ -2084,7 +2128,7 @@ class LikelihoodModelResults(Results):
             includes that string are combined in one joint test.
         scalar : bool, optional
             Flag indicating whether the Wald test statistic should be returned
-            as a sclar float. The current behavior is to return an array.
+            as a scalar float. The current behavior is to return an array.
             This will switch to a scalar float after 0.14 is released. To
             get the future behavior now, set scalar to True. To silence
             the warning and retain the legacy behavior, set scalar to
@@ -2205,7 +2249,7 @@ class LikelihoodModelResults(Results):
 
     def t_test_pairwise(self, term_name, method="hs", alpha=0.05, factor_labels=None):
         """
-        Perform pairwise t_test with multiple testing corrected p-values.
+        Perform pairwise t_test with multiple testing corrected p-values
 
         This uses the formula's model_spec encoding contrast matrix and should
         work for all encodings of a main effect.
@@ -2265,15 +2309,16 @@ class LikelihoodModelResults(Results):
         return res
 
     def _get_wald_nonlinear(self, func, deriv=None):
-        """Experimental method for nonlinear prediction and tests
+        """
+        Experimental method for nonlinear prediction and tests
 
         Parameters
         ----------
         func : callable, f(params)
-            nonlinear function of the estimation parameters. The return of
-            the function can be vector valued, i.e. a 1-D array
+            Nonlinear function of the estimation parameters. The return of
+            the function can be vector valued, i.e. a 1-D array.
         deriv : function or None
-            first derivative or Jacobian of func. If deriv is None, then a
+            First derivative or Jacobian of func. If deriv is None, then a
             numerical derivative will be used. If func returns a 1-D array,
             then the `deriv` should have rows corresponding to the elements
             of the return of func.
@@ -2295,7 +2340,7 @@ class LikelihoodModelResults(Results):
 
     def conf_int(self, alpha=0.05, cols=None):
         """
-        Construct confidence interval for the fitted parameters.
+        Construct confidence interval for the fitted parameters
 
         Parameters
         ----------
@@ -2305,7 +2350,7 @@ class LikelihoodModelResults(Results):
         cols : array_like, optional
             Specifies which confidence intervals to return.
 
-        .. deprecated: 0.13
+        .. deprecated:: 0.13
 
            cols is deprecated and will be removed after 0.14 is released.
            cols only works when inputs are NumPy arrays and will fail
@@ -2375,7 +2420,7 @@ class LikelihoodModelResults(Results):
 
     def save(self, fname, remove_data=False):
         """
-        Save a pickle of this instance.
+        Save a pickle of this instance
 
         Parameters
         ----------
@@ -2428,7 +2473,7 @@ class LikelihoodModelResults(Results):
 
     def remove_data(self):
         """
-        Remove data arrays, all nobs arrays from result and model.
+        Remove data arrays, all nobs arrays from result and model
 
         This reduces the size of the instance, so it can be pickled with less
         memory. Currently tested for use with predict from an unpickled
@@ -2551,18 +2596,18 @@ class ResultMixin:
 
     @cache_readonly
     def score_obsv(self):
-        """cached Jacobian of log-likelihood"""
+        """Cached Jacobian of log-likelihood"""
         return self.model.score_obs(self.params)
 
     @cache_readonly
     def hessv(self):
-        """cached Hessian of log-likelihood"""
+        """Cached Hessian of log-likelihood"""
         return self.model.hessian(self.params)
 
     @cache_readonly
     def covjac(self):
         """
-        covariance of parameters based on outer product of jacobian of
+        Covariance of parameters based on outer product of jacobian of
         log-likelihood
         """
         #  if not hasattr(self, '_results'):
@@ -2574,7 +2619,8 @@ class ResultMixin:
 
     @cache_readonly
     def covjhj(self):
-        """covariance of parameters based on HJJH
+        """
+        Covariance of parameters based on HJJH
 
         dot product of Hessian, Jacobian, Jacobian, Hessian of likelihood
 
@@ -2588,41 +2634,44 @@ class ResultMixin:
 
     @cache_readonly
     def bsejhj(self):
-        """standard deviation of parameter estimates based on covHJH"""
+        """Standard deviation of parameter estimates based on covHJH"""
         return np.sqrt(np.diag(self.covjhj))
 
     @cache_readonly
     def bsejac(self):
-        """standard deviation of parameter estimates based on covjac"""
+        """Standard deviation of parameter estimates based on covjac"""
         return np.sqrt(np.diag(self.covjac))
 
     def bootstrap(self, nrep=100, method="nm", disp=0, store=1, rng=None):
-        """simple bootstrap to get mean and variance of estimator
+        """
+        Simple bootstrap to get mean and variance of estimator
 
-        see notes
+        See notes
 
         Parameters
         ----------
         nrep : int
-            number of bootstrap replications
+            Number of bootstrap replications.
         method : str
-            optimization method to use
+            Optimization method to use.
         disp : bool
-            If true, then optimization prints results
+            If true, then optimization prints results.
         store : bool
             If true, then parameter estimates for all bootstrap iterations
-            are attached in self.bootstrap_results
+            are attached in self.bootstrap_results.
         rng : np.random.RandomState or np.random.Generator, optional
             Random number generator to use in the bootstrap. If None, uses the
-            singleton RandomState provided by NumPy
+            singleton RandomState provided by NumPy.
 
         Returns
         -------
         mean : ndarray
-            mean of parameter estimates over bootstrap replications
+            Mean of parameter estimates over bootstrap replications.
         std : ndarray
-            standard deviation of parameter estimates over bootstrap
-            replications
+            Standard deviation of parameter estimates over bootstrap
+            replications.
+        results : ndarray
+            Parameter estimates for each bootstrap replication.
 
         Notes
         -----
@@ -2666,11 +2715,7 @@ class ResultMixin:
         return results.mean(0), results.std(0), results
 
     def get_nlfun(self, fun):
-        """
-        get_nlfun
-
-        This is not Implemented
-        """
+        """Get delta-method function for nonlinear tests, not implemented"""
         # I think this is supposed to get the delta method that is currently
         # in miscmodels count (as part of Poisson example)
         raise NotImplementedError
@@ -2682,9 +2727,7 @@ class _LLRMixin:
     # methods copied from DiscreteResults, adjusted pseudo R2
 
     def pseudo_rsquared(self, kind="mcf"):
-        """
-        McFadden's pseudo-R-squared. `1 - (llf / llnull)`
-        """
+        """McFadden's pseudo-R-squared. `1 - (llf / llnull)`"""
         kind = kind.lower()
         if kind.startswith("mcf"):
             prsq = 1 - self.llf / self.llnull
@@ -2696,9 +2739,7 @@ class _LLRMixin:
 
     @cache_readonly
     def llr(self):
-        """
-        Likelihood ratio chi-squared statistic; `-2*(llnull - llf)`
-        """
+        """Likelihood ratio chi-squared statistic; `-2*(llnull - llf)`"""
         return -2 * (self.llnull - self.llf)
 
     @cache_readonly
@@ -2706,7 +2747,7 @@ class _LLRMixin:
         """
         The chi-squared probability of getting a log-likelihood ratio
         statistic greater than llr.  llr has a chi-squared distribution
-        with degrees of freedom `df_model`.
+        with degrees of freedom `df_model`
         """
         # see also RegressionModel compare_lr_test
         llr = self.llr
@@ -2718,7 +2759,7 @@ class _LLRMixin:
 
     def set_null_options(self, llnull=None, attach_results=True, **kwargs):
         """
-        Set the fit options for the Null (constant-only) model.
+        Set the fit options for the Null (constant-only) model
 
         This resets the cache for related attributes which is potentially
         fragile. This only sets the option, the null model is estimated
@@ -2732,7 +2773,7 @@ class _LLRMixin:
         attach_results : bool
             Sets an internal flag whether the results instance of the null
             model should be attached. By default without calling this method,
-            thenull model results are not attached and only the loglikelihood
+            the null model results are not attached and only the loglikelihood
             value llnull is stored.
         **kwargs
             Additional keyword arguments used as fit keyword arguments for the
@@ -2743,7 +2784,7 @@ class _LLRMixin:
         Modifies attributes of this instance, and so has no return.
         """
         # reset cache, note we need to add here anything that depends on
-        # llnullor the null model. If something is missing, then the attribute
+        # llnull or the null model. If something is missing, then the attribute
         # might be incorrect.
         self._cache.pop("llnull", None)
         self._cache.pop("llr", None)
@@ -2759,9 +2800,7 @@ class _LLRMixin:
 
     @cache_readonly
     def llnull(self):
-        """
-        Value of the constant-only loglikelihood
-        """
+        """Value of the constant-only loglikelihood"""
         model = self.model
         kwds = model._get_init_kwds().copy()
         for key in getattr(model, "_null_drop_keys", []):
@@ -2815,20 +2854,20 @@ class _LLRMixin:
 
 class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
     """
-    A results class for the discrete dependent variable models.
+    A results class for the discrete dependent variable models
 
-    ..Warning :
+    .. warning::
 
-    The following description has not been updated to this version/class.
-    Where are AIC, BIC, ....? docstring looks like copy from discretemod
+       The following description has not been updated to this version/class.
+       Where are AIC, BIC, ....? docstring looks like copy from discretemod
 
     Parameters
     ----------
-    model : A DiscreteModel instance
+    model : DiscreteModel instance
+        The fitted model instance.
     mlefit : instance of LikelihoodResults
         This contains the numerical optimization results as returned by
-        LikelihoodModel.fit(), in a superclass of GnericLikelihoodModels
-
+        LikelihoodModel.fit(), in a superclass of GenericLikelihoodModels.
 
     Attributes
     ----------
@@ -2911,12 +2950,16 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         **kwargs,
     ):
         """
-        Compute prediction results when endpoint transformation is valid.
+        Compute prediction results when endpoint transformation is valid
 
         Parameters
         ----------
         exog : array_like, optional
             The values for which you want to predict.
+        which : str
+            Which statistic is to be predicted. Default is "mean".
+            The available statistics and options depend on the model.
+            see the model.predict docstring
         transform : bool, optional
             If the model was fit via a formula, do you want to pass
             exog through the formula. Default is True. E.g., if you fit
@@ -2924,10 +2967,6 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             you can pass a data structure that contains x1 and x2 in
             their original form. Otherwise, you'd need to log the data
             first.
-        which : str
-            Which statistic is to be predicted. Default is "mean".
-            The available statistics and options depend on the model.
-            see the model.predict docstring
         row_labels : list of str or None
             If row_lables are provided, then they will replace the generated
             labels.
@@ -2974,7 +3013,8 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         return res
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
-        """Summarize the Regression Results
+        """
+        Summarize the Regression Results
 
         Parameters
         ----------

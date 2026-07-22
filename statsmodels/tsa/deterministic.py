@@ -53,7 +53,7 @@ class DeterministicTerm(ABC):
     @abstractmethod
     def in_sample(self, index: Sequence[Hashable]) -> pd.DataFrame:
         """
-        Produce deterministic trends for in-sample fitting.
+        Produce deterministic trends for in-sample fitting
 
         Parameters
         ----------
@@ -231,7 +231,7 @@ class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
 
 class TimeTrend(TimeTrendDeterministicTerm):
     """
-    Constant and time trend determinstic terms
+    Constant and time trend deterministic terms
 
     Parameters
     ----------
@@ -880,7 +880,7 @@ class CalendarSeasonality(CalendarDeterministicTerm):
 
 class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     r"""
-    Constant and time trend determinstic terms based on calendar time
+    Constant and time trend deterministic terms based on calendar time
 
     Parameters
     ----------
@@ -1102,7 +1102,7 @@ class DeterministicProcess:
     >>> from pandas import date_range
     >>> index = date_range("2000-1-1", freq="M", periods=240)
 
-    First a determinstic process with a constant and quadratic time trend.
+    First a deterministic process with a constant and quadratic time trend.
 
     >>> dp = DeterministicProcess(index, constant=True, order=2)
     >>> dp.in_sample().head(3)
@@ -1450,7 +1450,7 @@ differences can be extended when producing out-of-sample forecasts.
 
     def apply(self, index):
         """
-        Create an identical determinstic process with a different index
+        Create an identical deterministic process with a different index
 
         Parameters
         ----------

@@ -1,4 +1,4 @@
-"""Decorators and descriptors used for cached attributes."""
+"""Decorators and descriptors used for cached attributes"""
 
 import warnings
 
@@ -15,10 +15,10 @@ __all__ = [
 
 
 class ResettableCache(dict):
-    """Dictionary cache retained for backward compatibility."""
+    """Dictionary cache retained for backward compatibility"""
 
     def __init__(self, *args, **kwargs):
-        """Initialize the cache."""
+        """Initialize the cache"""
         super().__init__(*args, **kwargs)
         self.__dict__ = self
 
@@ -27,7 +27,7 @@ def deprecated_alias(
     old_name, new_name, remove_version=None, msg=None, warning=FutureWarning
 ):
     """
-    Deprecate attribute in favor of alternative name.
+    Deprecate attribute in favor of alternative name
 
     Parameters
     ----------
@@ -49,8 +49,8 @@ def deprecated_alias(
     conventions.  `deprecated_alias` lets us bring them into conformance
     without breaking backward-compatibility.
 
-    Example
-    -------
+    Examples
+    --------
     Instances of the `Foo` class have a `nvars` attribute, but it _should_
     be called `neqs`:
 
@@ -83,7 +83,7 @@ def deprecated_alias(
 
 
 class CachedAttribute:
-    """Descriptor that caches a read-only attribute on first access."""
+    """Descriptor that caches a read-only attribute on first access"""
 
     def __init__(self, func, cachename=None):
         self.fget = func
@@ -114,7 +114,7 @@ class CachedAttribute:
 
 
 class CachedWritableAttribute(CachedAttribute):
-    """Descriptor that caches an attribute and permits reassignment."""
+    """Descriptor that caches an attribute and permits reassignment"""
 
     def __set__(self, obj, value):
         _cache = getattr(obj, self.cachename)
@@ -123,7 +123,7 @@ class CachedWritableAttribute(CachedAttribute):
 
 
 class _cache_readonly(property):
-    """Decorate a method as a CachedAttribute."""
+    """Decorate a method as a CachedAttribute"""
 
     def __init__(self, cachename=None):
         self.func = None
@@ -134,16 +134,16 @@ class _cache_readonly(property):
 
 
 class cache_writable(_cache_readonly):
-    """Decorate a method as a CachedWritableAttribute."""
+    """Decorate a method as a CachedWritableAttribute"""
 
     def __call__(self, func):
-        """Return a writable cached descriptor for func."""
+        """Return a writable cached descriptor for func"""
         return CachedWritableAttribute(func, cachename=self.cachename)
 
 
 class cache_readonly:
     """
-    Decorator for read-only, cached properties.
+    Decorator for read-only, cached properties
 
     Acts as a property that is computed once and then stored in the
     instance's ``_cache`` dictionary. This allows ``remove_data``

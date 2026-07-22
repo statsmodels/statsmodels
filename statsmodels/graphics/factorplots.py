@@ -27,12 +27,7 @@ def interaction_plot(
     **kwargs,
 ):
     """
-    Interaction plot for factor level statistics.
-
-    Note. If categorial factors are supplied levels will be internally
-    recoded to integers. This ensures matplotlib compatibility. Uses
-    a DataFrame to calculate an `aggregate` statistic for each level of the
-    factor or group given by `trace`.
+    Interaction plot for factor level statistics
 
     Parameters
     ----------
@@ -44,14 +39,14 @@ def interaction_plot(
         If `trace` is a `pandas.Series` its name will be used as the
         `legendtitle` if `legendtitle` is None.
     response : array_like
-        The reponse or dependent variable. If a `pandas.Series` is given
+        The response or dependent variable. If a `pandas.Series` is given
         its name will be used in `ylabel` if `ylabel` is None.
-    func : function
+    func : str or callable
         Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
         the response variable grouped by the trace levels.
     ax : axes, optional
         Matplotlib axes instance
-    plottype : str {'line', 'scatter', 'both'}, optional
+    plottype : {'b', 'both', 'l', 'line', 's', 'scatter'}, optional
         The type of plot to return. Can be 'l', 's', or 'b'
     xlabel : str, optional
         Label to use for `x`. Default is 'X'. If `x` is a `pandas.Series` it
@@ -77,6 +72,13 @@ def interaction_plot(
     -------
     Figure
         The figure given by `ax.figure` or a new instance.
+
+    Notes
+    -----
+    If categorical factors are supplied levels will be internally
+    recoded to integers. This ensures matplotlib compatibility. Uses
+    a DataFrame to calculate an `aggregate` statistic for each level of the
+    factor or group given by `trace`.
 
     Examples
     --------
@@ -191,19 +193,22 @@ def interaction_plot(
 
 
 def _recode(x, levels):
-    """Recode categorial data to int factor.
+    """
+    Recode categorical data to int factor
 
     Parameters
     ----------
     x : array_like
-        array like object supporting with numpy array methods of categorially
-        coded data.
+        Array-like object of categorically coded data, supporting numpy
+        array methods.
     levels : dict
-        mapping of labels to integer-codings
+        Mapping of labels to integer codings.
 
     Returns
     -------
-    out : instance numpy.ndarray
+    out : ndarray or Series
+        The recoded data as an ndarray, or as a Series with the same name
+        and index as `x` if `x` was a `pandas.Series`.
     """
     from pandas import Series
 

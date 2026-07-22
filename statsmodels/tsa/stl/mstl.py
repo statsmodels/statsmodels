@@ -11,7 +11,7 @@ This implementation has the following differences with the original algorithm:
 seasonality. This implementation assumes that there is at least one seasonal
 component.
 
-[1] K. Bandura, R.J. Hyndman, and C. Bergmeir (2021)
+[1] K. Bandara, R.J. Hyndman, and C. Bergmeir (2021)
 MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with Multiple
 Seasonal Patterns
 https://arxiv.org/pdf/2107.13462.pdf
@@ -40,7 +40,7 @@ class MSTL:
     MSTL(endog, periods=None, windows=None, lmbda=None, iterate=2,
          stl_kwargs=None)
 
-    Season-Trend decomposition using LOESS for multiple seasonalities.
+    Season-Trend decomposition using LOESS for multiple seasonalities
 
     .. versionadded:: 0.14.0
 
@@ -63,7 +63,7 @@ class MSTL:
         value will be estimated that maximizes the log-likelihood function.
     iterate : int, optional
         Number of iterations to use to refine the seasonal component.
-    stl_kwargs: dict, optional
+    stl_kwargs : dict, optional
         Arguments to pass to STL.
 
     See Also
@@ -72,7 +72,7 @@ class MSTL:
 
     References
     ----------
-    .. [1] K. Bandura, R.J. Hyndman, and C. Bergmeir (2021)
+    .. [1] K. Bandara, R.J. Hyndman, and C. Bergmeir (2021)
         MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with
         Multiple Seasonal Patterns. arXiv preprint arXiv:2107.13462.
 

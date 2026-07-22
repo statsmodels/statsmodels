@@ -1,11 +1,11 @@
-"""Utilities for adding independent columns to design matrices."""
+"""Utilities for adding independent columns to design matrices"""
 
 import numpy as np
 
 
 def add_indep(x, varnames, dtype=None):
     """
-    Construct an array with independent columns.
+    Construct an array with independent columns
 
     Parameters
     ----------
@@ -25,9 +25,11 @@ def add_indep(x, varnames, dtype=None):
     varnames_new : list[str]
         Names of the retained columns.
 
-    x is either iterable (list, tuple) or instance of ndarray or a subclass
-    of it.  If x is an ndarray, then each column is assumed to represent a
-    variable with observations in rows.
+    Notes
+    -----
+    `x` is either iterable (list, tuple) or instance of ndarray or a
+    subclass of it.  If `x` is an ndarray, then each column is assumed to
+    represent a variable with observations in rows.
 
     """
     # TODO: this needs tests for subclasses

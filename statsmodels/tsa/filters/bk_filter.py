@@ -6,18 +6,18 @@ from statsmodels.tools.validation import PandasWrapper, array_like
 
 def bkfilter(x, low=6, high=32, K=12):
     """
-    Filter a time series using the Baxter-King bandpass filter.
+    Filter a time series using the Baxter-King bandpass filter
 
     Parameters
     ----------
     x : array_like
         A 1 or 2d ndarray. If 2d, variables are assumed to be in columns.
     low : float
-        Minimum period for oscillations, ie., Baxter and King suggest that
+        Minimum period for oscillations, i.e., Baxter and King suggest that
         the Burns-Mitchell U.S. business cycle has 6 for quarterly data and
         1.5 for annual data.
     high : float
-        Maximum period for oscillations BK suggest that the U.S.
+        Maximum period for oscillations. BK suggest that the U.S.
         business cycle has 32 for quarterly data and 8 for annual data.
     K : int
         Lead-lag length of the filter. Baxter and King propose a truncation

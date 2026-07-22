@@ -5,7 +5,6 @@ Test AR Model
 from __future__ import annotations
 
 from statsmodels.compat.pandas import MONTH_END
-from statsmodels.compat.pytest import pytest_warns
 
 import datetime as dt
 from itertools import product
@@ -680,19 +679,12 @@ def test_autoreg_info_criterion(lag):
     assert_allclose(r.fpe, r2.fpe)
 
 
-@pytest.mark.parametrize("old_names", [True, False])
-def test_autoreg_named_series(old_names):
+def test_autoreg_named_series():
     rs = np.random.RandomState(982738)
-    warning = FutureWarning if old_names else None
     dates = period_range(start="2011-1", periods=72, freq="M")
     y = Series(rs.randn(72), name="foobar", index=dates)
-    with pytest_warns(warning):
-        results = AutoReg(y, lags=2, old_names=old_names).fit()
-
-    if old_names:
-        idx = Index(["intercept", "foobar.L1", "foobar.L2"])
-    else:
-        idx = Index(["const", "foobar.L1", "foobar.L2"])
+    results = AutoReg(y, lags=2).fit()
+    idx = Index(["const", "foobar.L1", "foobar.L2"])
     assert results.params.index.equals(idx)
 
 
@@ -747,25 +739,18 @@ def test_autoreg_constant_column_trend():
         AutoReg(sample, lags=7, trend="n")
 
 
-@pytest.mark.parametrize("old_names", [True, False])
-def test_autoreg_summary_corner(old_names):
+def test_autoreg_summary_corner():
     data = macrodata.load_pandas().data["cpi"].diff().dropna()
     dates = period_range(start="1959Q1", periods=len(data), freq="Q")
     data.index = dates
-    warning = FutureWarning if old_names else None
-    with pytest_warns(warning):
-        res = AutoReg(data, lags=4, old_names=old_names).fit()
+    res = AutoReg(data, lags=4).fit()
     summ = res.summary().as_text()
     assert "AutoReg(4)" in summ
     assert "cpi.L4" in summ
     assert "03-31-1960" in summ
-    with pytest_warns(warning):
-        res = AutoReg(data, lags=0, old_names=old_names).fit()
+    res = AutoReg(data, lags=0).fit()
     summ = res.summary().as_text()
-    if old_names:
-        assert "intercept" in summ
-    else:
-        assert "const" in summ
+    assert "const" in summ
     assert "AutoReg(0)" in summ
 
 
@@ -1145,16 +1130,11 @@ def test_exog_prediction(ar2):
     assert_allclose(dyn_base, dyn_repl)
 
 
-def test_old_names(ar2):
-    with pytest.warns(FutureWarning):
-        mod = AutoReg(ar2, 2, trend="ct", seasonal=True, old_names=True)
-    new = AutoReg(ar2, 2, trend="ct", seasonal=True, old_names=False)
+def test_new_names(ar2):
+    new = AutoReg(ar2, 2, trend="ct", seasonal=True)
 
     assert new.trend == "ct"
     assert new.period == 12
-
-    assert "intercept" in mod.exog_names
-    assert "seasonal.1" in mod.exog_names
 
     assert "const" in new.exog_names
     assert "s(2,12)" in new.exog_names
@@ -1227,7 +1207,7 @@ def test_autoreg_apply_exception():
     y = rs.standard_normal(250)
     mod = AutoReg(y, lags=10)
     res = mod.fit()
-    with pytest.raises(ValueError, match="An exception occured"):
+    with pytest.raises(ValueError, match="An exception occurred"):
         res.apply(y[:5])
 
     x = rs.standard_normal((y.shape[0], 3))

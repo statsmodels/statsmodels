@@ -21,7 +21,9 @@ SIMULATION_ALL = SIMULATION_STATE | SIMULATION_DISTURBANCE
 
 # Based on scipy.states._qmc.check_random_state
 def check_random_state(seed=None):
-    """Turn `seed` into a `numpy.random.Generator` instance.
+    """
+    Turn `seed` into a `numpy.random.Generator` instance
+
     Parameters
     ----------
     seed : {None, int, np.random.Generator, np.random.RandomState}, optional
@@ -31,6 +33,7 @@ def check_random_state(seed=None):
         is used, seeded with `seed`.
         If `seed` is already a ``numpy.random.Generator`` or
         ``numpy.random.RandomState`` instance then that instance is used.
+
     Returns
     -------
     seed : {`numpy.random.Generator`, `numpy.random.RandomState`}
@@ -49,7 +52,7 @@ def check_random_state(seed=None):
 class SimulationSmoother(KalmanSmoother):
     r"""
     State space representation of a time series process, with Kalman filter
-    and smoother, and with simulation smoother.
+    and smoother, and with simulation smoother
 
     Parameters
     ----------
@@ -196,6 +199,26 @@ class SimulationSmoother(KalmanSmoother):
         return out
 
     def simulator(self, nsimulations, random_state=None):
+        """
+        Retrieve a simulator for the statespace model
+
+        Parameters
+        ----------
+        nsimulations : int
+            The number of observations to simulate.
+        random_state : {None, int, Generator, RandomState}, optional
+            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
+            singleton is used.
+            If `seed` is an int, a new ``numpy.random.RandomState`` instance
+            is used, seeded with `seed`.
+            If `seed` is already a ``numpy.random.Generator`` or
+            ``numpy.random.RandomState`` instance then that instance is used.
+
+        Returns
+        -------
+        SimulationSmoothResults
+            Object holding the output of the simulator.
+        """
         return self.simulation_smoother(
             simulation_output=0,
             method="kfs",
@@ -232,13 +255,14 @@ class SimulationSmoother(KalmanSmoother):
             Default results class to use to save output of simulation
             smoothing. Default is `SimulationSmoothResults`. If specified,
             class must extend from `SimulationSmoothResults`.
-        prefix : str
+        prefix : str, optional
             The prefix of the datatype. Usually only used internally.
-        nobs : int
+        nobs : int, optional
             The number of observations to simulate. If set to anything other
             than -1, only simulation will be performed (i.e. simulation
             smoothing will not be performed), so that only the `generated_obs`
-            and `generated_state` attributes will be available.
+            and `generated_state` attributes will be available. Default is -1,
+            which uses the number of observations in the model.
         random_state : {None, int, Generator, RandomState}, optional
             If `seed` is None (or `np.random`), the `numpy.random.RandomState`
             singleton is used.
@@ -253,6 +277,7 @@ class SimulationSmoother(KalmanSmoother):
         Returns
         -------
         SimulationSmoothResults
+            Object holding the output of the simulation smoother.
         """
         method = method.lower()
 
@@ -357,10 +382,10 @@ class SimulationSmoothResults:
     simulate_all : bool
         Flag for if simulation output should include everything.
     generated_measurement_disturbance : ndarray
-        Measurement disturbance variates used to genereate the observation
+        Measurement disturbance variates used to generate the observation
         vector.
     generated_state_disturbance : ndarray
-        State disturbance variates used to genereate the state and
+        State disturbance variates used to generate the state and
         observation vectors.
     generated_obs : ndarray
         Generated observation vector produced as a byproduct of simulation
@@ -559,7 +584,7 @@ class SimulationSmoothResults:
     @property
     def simulated_state_disturbance(self):
         r"""
-        Random draw of the state disturbanc e vector from its conditional
+        Random draw of the state disturbance vector from its conditional
         distribution.
 
         Notes
@@ -615,11 +640,9 @@ class SimulationSmoothResults:
             If specified, this is the state vector at time zero, which should
             be shaped (`k_states` x 1), where `k_states` is the same as in the
             state space model. If unspecified, but the model has been
-            initialized, then that initialization is used.
-        initial_state_variates : array_likes, optional
-            Random values to use as initial state variates. Usually only
+            initialized, then that initialization is used. Usually only
             specified if results are to be replicated (e.g. to enforce a seed)
-            or for testing. If not specified, random variates are drawn.
+            or for testing; if not specified, random variates are drawn.
         pretransformed_measurement_disturbance_variates : bool, optional
             If `measurement_disturbance_variates` is provided, this flag
             indicates whether it should be directly used as the shocks. If
@@ -663,7 +686,7 @@ class SimulationSmoothResults:
                Use ``pretransformed_measurement_disturbance_variates`` and
                ``pretransformed_state_disturbance_variates`` as replacements.
         """
-        # Handle deprecated argumennts
+        # Handle deprecated arguments
         if disturbance_variates is not None:
             msg = (
                 "`disturbance_variates` keyword is deprecated, use"

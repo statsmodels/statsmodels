@@ -80,7 +80,7 @@ __all__ = [
 dtrtri = get_lapack_funcs("trtri", dtype="float64", ilp64="preferred")
 
 _fit_regularized_doc = r"""
-        Return a regularized fit to a linear regression model.
+        Return a regularized fit to a linear regression model
 
         Parameters
         ----------
@@ -159,8 +159,8 @@ _fit_regularized_doc = r"""
         zero_tol : float
             Coefficients below this threshold are treated as zero.
 
-        The cvxopt module is required to estimate model using the square root
-        lasso.
+        The cvxopt module is required to estimate a model using the square
+        root lasso.
 
         References
         ----------
@@ -176,10 +176,27 @@ _fit_regularized_doc = r"""
 
 def _get_sigma(sigma, nobs):
     """
-    Returns sigma (matrix, nobs by nobs) for GLS and the inverse of its
-    Cholesky decomposition.  Handles dimensions and checks integrity.
+    Validate sigma and compute the inverse of its Cholesky decomposition
+
+    Handles dimensions and checks integrity of `sigma` for use in GLS.
     If sigma is None, returns None, None. Otherwise returns sigma,
     cholsigmainv.
+
+    Parameters
+    ----------
+    sigma : None, scalar, 1d array_like or 2d array_like
+        The weighting matrix of the covariance. See GLS for a description.
+    nobs : int
+        The number of observations.
+
+    Returns
+    -------
+    sigma : ndarray or None
+        The array or matrix `sigma` used to define the covariance, or None
+        if `sigma` is None.
+    cholsigmainv : ndarray or None
+        The inverse of the Cholesky decomposition of `sigma`, or None if
+        `sigma` is None.
     """
     if sigma is None:
         return None, None
@@ -224,7 +241,7 @@ class RegressionModel(base.LikelihoodModel):
         self._data_attr.extend(["pinv_wexog", "wendog", "wexog", "weights"])
 
     def initialize(self):
-        """Initialize model components."""
+        """Initialize model components"""
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
@@ -506,11 +523,10 @@ class GLS(RegressionModel):
     ----------
     pinv_wexog : ndarray
         `pinv_wexog` is the p x n Moore-Penrose pseudoinverse of `wexog`.
-    cholsimgainv : ndarray
+    cholsigmainv : ndarray
         The transpose of the Cholesky decomposition of the pseudoinverse.
     df_model : float
         p - 1, where p is the number of regressors including the intercept.
-        of freedom.
     df_resid : float
         Number of observations n less the number of parameters p.
     llf : float
@@ -519,8 +535,6 @@ class GLS(RegressionModel):
         The number of observations n.
     normalized_cov_params : ndarray
         p x p array :math:`(X^{{T}}\Sigma^{{-1}}X)^{{-1}}`
-    results : RegressionResults instance
-        A property that returns the RegressionResults class if fit.
     sigma : ndarray
         `sigma` is the n x n covariance structure of the error terms.
     wexog : ndarray
@@ -862,7 +876,7 @@ class WLS(RegressionModel):
                   -\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)
                   +\frac{1}{2}\log\left(\left|W\right|\right)
 
-        where :math:`W` is a diagonal weight matrix matrix,
+        where :math:`W` is a diagonal weight matrix,
         :math:`\left|W\right|` is its determinant, and
         :math:`SSR=\left(Y-\hat{Y}\right)^\prime W \left(Y-\hat{Y}\right)` is
         the sum of the squared weighted residuals.
@@ -1797,12 +1811,12 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def nobs(self):
-        """Number of observations n."""
+        """Number of observations n"""
         return float(self.model.wexog.shape[0])
 
     @cache_readonly
     def fittedvalues(self):
-        """The predicted values for the original (unwhitened) design."""
+        """The predicted values for the original (unwhitened) design"""
         return self.model.predict(self.params, self.model.exog)
 
     @cache_readonly
@@ -1814,7 +1828,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid(self):
-        """The residuals of the model."""
+        """The residuals of the model"""
         return self.model.endog - self.model.predict(self.params, self.model.exog)
 
     # TODO: fix writable example
@@ -1831,13 +1845,13 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def ssr(self):
-        """Sum of squared (whitened) residuals."""
+        """Sum of squared (whitened) residuals"""
         wresid = self.wresid
         return np.dot(wresid, wresid)
 
     @cache_readonly
     def centered_tss(self):
-        """The total (weighted) sum of squares centered about the mean."""
+        """The total (weighted) sum of squares centered about the mean"""
         model = self.model
         weights = getattr(model, "weights", None)
         sigma = getattr(model, "sigma", None)
@@ -1985,7 +1999,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def f_pvalue(self):
-        """The p-value of the F-statistic."""
+        """The p-value of the F-statistic"""
         # Special case for df_model 0
         if self.df_model == 0:
             return np.full_like(self.fvalue, np.nan)
@@ -1993,7 +2007,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def bse(self):
-        """The standard errors of the parameter estimates."""
+        """The standard errors of the parameter estimates"""
         return np.sqrt(np.diag(self.cov_params()))
 
     @cache_readonly
@@ -2032,7 +2046,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Returns
         -------
-        Value of information criterion.
+        float
+            Value of information criterion.
 
         References
         ----------
@@ -2226,6 +2241,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
     def _is_nested(self, restricted):
         """
+        Check whether the restricted model is nested in the current model.
+
         Parameters
         ----------
         restricted : Result instance
@@ -2241,7 +2258,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Notes
         -----
-        A most nests another model if the regressors in the smaller
+        A model nests another model if the regressors in the smaller
         model are spanned by the regressors in the larger model and
         the regressand is identical.
 
@@ -2275,13 +2292,13 @@ class RegressionResults(base.LikelihoodModelResults):
             is required to have two attributes, residual sum of
             squares, `ssr`, residual degrees of freedom, `df_resid`.
         demean : bool
-            Flag indicating whether the demean the scores based on the
+            Flag indicating whether to demean the scores based on the
             residuals from the restricted model.  If True, the covariance of
             the scores are used and the LM test is identical to the large
             sample version of the LR test.
         use_lr : bool
             A flag indicating whether to estimate the covariance of the model
-            scores using the unrestricted model. Setting the to True improves
+            scores using the unrestricted model. Setting this to True improves
             the power of the test.
 
         Returns
@@ -2472,20 +2489,6 @@ class RegressionResults(base.LikelihoodModelResults):
         without taking unspecified heteroscedasticity or correlation
         into account.
 
-        This test compares the loglikelihood of the two models.  This
-        may not be a valid test, if there is unspecified
-        heteroscedasticity or correlation. This method will issue a
-        warning if this is detected but still return the results
-        without taking unspecified heteroscedasticity or correlation
-        into account.
-
-        is the average score of the model evaluated using the
-        residuals from null model and the regressors from the
-        alternative model and :math:`S` is the covariance of the
-        scores, :math:`s_{i}`.  The covariance of the scores is
-        estimated using the same estimator as in the alternative
-        model.
-
         """
         # TODO: put into separate function, needs tests
 
@@ -2589,7 +2592,7 @@ class RegressionResults(base.LikelihoodModelResults):
             adjusted. When `use_t` is also True, then pvalues are
             computed using the Student's t distribution using the
             corrected values. These may differ substantially from
-            p-values based on the normal is the number of groups is
+            p-values based on the normal if the number of groups is
             small.
             If False, then `df_resid` of the results instance is not
             adjusted.
@@ -2606,7 +2609,7 @@ class RegressionResults(base.LikelihoodModelResults):
             The available kernels are ['bartlett', 'uniform']. The default is
             Bartlett.
           ``use_correction`` : {False, 'hac', 'cluster'}, optional
-            If False the the sandwich covariance is calculated without small
+            If False the sandwich covariance is calculated without small
             sample correction. If `use_correction = 'cluster'` (default),
             then the same small sample correction as in the case of
             `covtype='cluster'` is used.
@@ -2676,7 +2679,7 @@ class RegressionResults(base.LikelihoodModelResults):
             df_correction = kwargs.get("df_correction", None)
             # TODO: check also use_correction, do I need all combinations?
             if df_correction is not False:  # i.e. in [None, True]:
-                # user did not explicitely set it to False
+                # user did not explicitly set it to False
                 adjust_df = True
 
         res.cov_kwds["adjust_df"] = adjust_df
@@ -3157,7 +3160,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
 class OLSResults(RegressionResults):
     """
-    Results class for for an OLS model.
+    Results class for an OLS model.
 
     Parameters
     ----------
@@ -3181,7 +3184,7 @@ class OLSResults(RegressionResults):
     See Also
     --------
     RegressionResults
-        Results store for WLS and GLW models.
+        Results store for WLS and GLS models.
 
     Notes
     -----

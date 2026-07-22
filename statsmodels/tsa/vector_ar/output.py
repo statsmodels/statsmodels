@@ -74,9 +74,7 @@ class VARSummary:
         return self.summary
 
     def make(self, endog_names=None, exog_names=None):
-        """
-        Summary of VAR model
-        """
+        """Summary of VAR model"""
         buf = StringIO()
 
         buf.write(self._header_table() + "\n")
