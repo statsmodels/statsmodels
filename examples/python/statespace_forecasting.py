@@ -441,12 +441,11 @@ endog3 = pd.Series([1, 2, 3, 4], index=index)
 print(endog3.index)
 
 
-# In fact, if your data has an associated date/time index, it is best to
-# use that even if does not have a defined frequency. An example of that
-# kind of index is as follows - notice that it has `freq=None`:
+# If your data has an irregular frequency, you must replace the index with
+# something that can be cleanly extrapolated.
 
 
-index = pd.DatetimeIndex(
+original_index = pd.DatetimeIndex(
     [
         "2000-01-01 10:08am",
         "2000-01-01 11:32am",
@@ -454,55 +453,30 @@ index = pd.DatetimeIndex(
         "2000-01-02 6:15am",
     ]
 )
-endog4 = pd.Series([0.2, 0.5, -0.1, 0.1], index=index)
+new_index = np.arange(4)
+endog4 = pd.Series([0.2, 0.5, -0.1, 0.1], index=new_index)
 print(endog4.index)
 
 
-# You can still pass this data to statsmodels' model classes, but you will
-# get the following warning, that no frequency data was found:
+# You can then pass this data to statsmodels' model classes and you will
+# get predictable forecast indexing.
 
 
 mod = sm.tsa.SARIMAX(endog4)
 res = mod.fit()
 
 
-# What this means is that you cannot specify forecasting steps by dates,
-# and the output of the `forecast` and `get_forecast` methods will not have
-# associated dates. The reason is that without a given frequency, there is
-# no way to determine what date each forecast should be assigned to. In the
-# example above, there is no pattern to the date/time stamps of the index,
-# so there is no way to determine what the next date/time should be (should
-# it be in the morning of 2000-01-02? the afternoon? or maybe not until
-# 2000-01-03?).
-#
 # For example, if we forecast one-step-ahead:
 
 
 res.forecast(1)
 
 
-# The index associated with the new forecast is `4`, because if the given
-# data had an integer index, that would be the next value. A warning is
-# given letting the user know that the index is not a date/time index.
-#
-# If we try to specify the steps of the forecast using a date, we will get
-# the following exception:
-#
-#     KeyError: 'The `end` argument could not be matched to a location
-# related to the index of the data.'
-#
+# The index associated with the new forecast is `4`, because the given
+# data had an integer index, and this is the next value.
 
-
-# Here we'll catch the exception to prevent printing too much of
-# the exception trace output in this notebook
-try:
-    res.forecast("2000-01-03")
-except KeyError as e:
-    print(e)
-
-
-# Ultimately there is nothing wrong with using data that does not have an
-# associated date/time frequency, or even using data that has no index at
-# all, like a Numpy array. However, if you can use a Pandas series with an
-# associated frequency, you'll have more options for specifying your
-# forecasts and get back results with a more useful index.
+# Ultimately you must use data with a well-defined frequency or an integer
+# dequence, or even data without an index, like a Numpy array. However, if
+# you can use a Pandas series with an associated frequency, you'll have more
+# options for specifying your forecasts and get back results with a more
+# useful index.

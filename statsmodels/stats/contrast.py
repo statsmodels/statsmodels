@@ -163,14 +163,14 @@ class ContrastResults:
             return summ
         elif hasattr(self, "fvalue"):
             # TODO: create something nicer for these casee
-            return "<F test: F=%s, p=%s, df_denom=%.3g, df_num=%.3g>" % (
+            return "<F test: F={}, p={}, df_denom={:.3g}, df_num={:.3g}>".format(
                 repr(self.fvalue),
                 self.pvalue,
                 self.df_denom,
                 self.df_num,
             )
         elif self.distribution == "chi2":
-            return "<Wald test (%s): statistic=%s, p-value=%s, df_denom=%.3g>" % (
+            return "<Wald test ({}): statistic={}, p-value={}, df_denom={:.3g}>".format(
                 self.distribution,
                 self.statistic,
                 self.pvalue,
@@ -178,7 +178,7 @@ class ContrastResults:
             )
         else:
             # generic
-            return "<Wald test: statistic=%s, p-value=%s>" % (
+            return "<Wald test: statistic={}, p-value={}>".format(
                 self.statistic,
                 self.pvalue,
             )

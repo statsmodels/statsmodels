@@ -686,7 +686,7 @@ class Docstring:
         block_name = " ".join(map(str.capitalize, block_name.split(" ")))
         if block_name not in self._ds:
             raise ValueError(
-                "{} is not a block in the docstring".format(block_name)
+                f"{block_name} is not a block in the docstring"
             )
         if not isinstance(block, list) and isinstance(
             self._ds[block_name], list

@@ -133,7 +133,7 @@ from statsmodels.base.model import GenericLikelihoodModel
 
 class NBin(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):
-        super(NBin, self).__init__(endog, exog, **kwds)
+        super().__init__(endog, exog, **kwds)
 
     def nloglikeobs(self, params):
         alph = params[-1]
@@ -149,7 +149,7 @@ class NBin(GenericLikelihoodModel):
             start_params = np.append(np.zeros(self.exog.shape[1]), 0.5)
             # intercept
             start_params[-2] = np.log(self.endog.mean())
-        return super(NBin, self).fit(
+        return super().fit(
             start_params=start_params, maxiter=maxiter, maxfun=maxfun, **kwds
         )
 

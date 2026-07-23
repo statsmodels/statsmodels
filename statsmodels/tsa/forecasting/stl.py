@@ -3,7 +3,7 @@ from __future__ import annotations
 from statsmodels.compat.pandas import Substitution, is_int_index
 
 import datetime as dt
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -335,9 +335,9 @@ class STLForecastResults:
 
     def _get_seasonal_prediction(
         self,
-        start: Optional[DateLike],
-        end: Optional[DateLike],
-        dynamic: Union[bool, DateLike],
+        start: DateLike | None,
+        end: DateLike | None,
+        dynamic: bool | DateLike,
     ) -> np.ndarray:
         """
         Get STL's seasonal in- and out-of-sample predictions
@@ -401,8 +401,8 @@ class STLForecastResults:
         return predictions
 
     def _seasonal_forecast(
-        self, steps: int, index: Optional[pd.Index], offset=None
-    ) -> Union[pd.Series, np.ndarray]:
+        self, steps: int, index: pd.Index | None, offset=None
+    ) -> pd.Series | np.ndarray:
         """
         Get the seasonal component of the forecast
 
@@ -434,7 +434,7 @@ class STLForecastResults:
 
     def forecast(
         self, steps: int = 1, **kwargs: dict[str, Any]
-    ) -> Union[np.ndarray, pd.Series]:
+    ) -> np.ndarray | pd.Series:
         """
         Out-of-sample forecasts
 
@@ -461,9 +461,9 @@ class STLForecastResults:
 
     def get_prediction(
         self,
-        start: Optional[DateLike] = None,
-        end: Optional[DateLike] = None,
-        dynamic: Union[bool, DateLike] = False,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        dynamic: bool | DateLike = False,
         **kwargs: dict[str, Any],
     ):
         """

@@ -434,7 +434,7 @@ class TVPVAR(sm.tsa.statespace.MLEModel):
         for i in range(self.k_endog):
             endog_name = self.endog_names[i]
             state_names[i] = ["intercept.%s" % endog_name] + [
-                "L1.%s->%s" % (other_name, endog_name)
+                "L1.{}->{}".format(other_name, endog_name)
                 for other_name in self.endog_names
             ]
         return state_names.ravel().tolist()
@@ -669,7 +669,7 @@ az_obs_cov = az.convert_to_inference_data(
         (
             "Var[%s]" % mod.endog_names[i]
             if i == j
-            else "Cov[%s, %s]" % (mod.endog_names[i], mod.endog_names[j])
+            else "Cov[{}, {}]".format(mod.endog_names[i], mod.endog_names[j])
         ): store_obs_cov[nburn + 1 :, i, j]
         for i in range(mod.k_endog)
         for j in range(i, mod.k_endog)

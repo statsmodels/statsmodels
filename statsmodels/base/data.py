@@ -727,7 +727,7 @@ def handle_data_class_factory(endog, exog):
         klass = ModelData
     else:
         raise ValueError(
-            "unrecognized data structures: %s / %s" % (type(endog), type(exog))
+            "unrecognized data structures: {} / {}".format(type(endog), type(exog))
         )
     return klass
 

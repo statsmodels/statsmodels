@@ -835,7 +835,7 @@ class TestKPSS:
         # clear error
         # GH5925
         nobs = len(self.x)
-        msg = r"lags \({}\) must be < number of observations \({}\)".format(nobs, nobs)
+        msg = fr"lags \({nobs}\) must be < number of observations \({nobs}\)"
         with pytest.raises(ValueError, match=msg):
             kpss(self.x, "c", nlags=nobs)
 

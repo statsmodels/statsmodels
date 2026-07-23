@@ -40,7 +40,7 @@
 # state equations
 # + Model 2: time-varying parameters with non identity transition matrix
 # + Model 3: multiple observation and multiple state equations
-# + Bonus: pymc3 for Bayesian estimation
+# + Bonus: PyMC for Bayesian estimation
 
 
 from collections import OrderedDict
@@ -110,9 +110,7 @@ class TVRegression(sm.tsa.statespace.MLEModel):
     def __init__(self, y_t, x_t, w_t):
         exog = np.c_[x_t, w_t]  # shaped nobs x 2
 
-        super(TVRegression, self).__init__(
-            endog=y_t, exog=exog, k_states=2, initialization="diffuse"
-        )
+        super().__init__(endog=y_t, exog=exog, k_states=2, initialization="diffuse")
 
         # Since the design matrix is time-varying, it must be
         # shaped k_endog x k_states x nobs
@@ -165,7 +163,7 @@ class TVRegression(sm.tsa.statespace.MLEModel):
         return unconstrained
 
     def update(self, params, **kwargs):
-        params = super(TVRegression, self).update(params, **kwargs)
+        params = super().update(params, **kwargs)
 
         self["obs_intercept", 0, 0] = params[0]
         self["obs_cov", 0, 0] = params[1]
@@ -741,10 +739,10 @@ res = mod.fit()
 print(res.summary())
 
 
-# ## Bonus: pymc3 for fast Bayesian estimation
+# ## Bonus: PyMC for fast Bayesian estimation
 #
 # In this section I'll show how you can take your custom state space model
-# and easily plug it to `pymc3` and estimate it with Bayesian methods. In
+# and easily plug it into PyMC and estimate it with Bayesian methods. In
 # particular, this example will show you an estimation with a version of
 # Hamiltonian Monte Carlo called the No-U-Turn Sampler (NUTS).
 #
@@ -754,18 +752,18 @@ print(res.summary())
 
 
 # Extra requirements
-import pymc3 as pm
-import theano
-import theano.tensor as tt
+import pymc as pm
+import pytensor.tensor as pt
+from pytensor.graph.op import Op
 
-# We need to define some helper functions to connect theano to the
+# We need to define some helper functions to connect PyTensor to the
 # likelihood function that is implied in our model
 
 
-class Loglike(tt.Op):
+class Loglike(Op):
 
-    itypes = [tt.dvector]  # expects a vector of parameter values when called
-    otypes = [tt.dscalar]  # outputs a single scalar value (the log likelihood)
+    itypes = [pt.dvector]  # expects a vector of parameter values when called
+    otypes = [pt.dscalar]  # outputs a single scalar value (the log likelihood)
 
     def __init__(self, model):
         self.model = model
@@ -784,9 +782,9 @@ class Loglike(tt.Op):
         return out
 
 
-class Score(tt.Op):
-    itypes = [tt.dvector]
-    otypes = [tt.dvector]
+class Score(Op):
+    itypes = [pt.dvector]
+    otypes = [pt.dvector]
 
     def __init__(self, model):
         self.model = model
@@ -821,8 +819,8 @@ ndraws = 3000  #  3000 number of draws from the distribution
 nburn = 600  # 600 number of "burn-in points" (which will be discarded)
 
 
-# Construct an instance of the Theano wrapper defined above, which
-# will allow PyMC3 to compute the likelihood and Jacobian in a way
+# Construct an instance of the PyTensor wrapper defined above, which
+# will allow PyMC to compute the likelihood and Jacobian in a way
 # that it can make use of. Here we are using the same model instance
 # created earlier for MLE analysis (we could also create a new model
 # instance if we preferred)
@@ -836,16 +834,15 @@ with pm.Model():
     var_w_coeff = pm.InverseGamma("var.w.coeff", 2.3, 0.1)
 
     # convert variables to tensor vectors
-    theta = tt.as_tensor_variable([intercept, var_e, var_x_coeff, var_w_coeff])
+    theta = pt.as_tensor_variable([intercept, var_e, var_x_coeff, var_w_coeff])
 
-    # use a DensityDist (use a lamdba function to "call" the Op)
-    pm.DensityDist("likelihood", loglike, observed=theta)
+    # use a Potential to add the statsmodels log-likelihood to the model
+    pm.Potential("likelihood", loglike(theta))
 
     # Draw samples
     trace = pm.sample(
         ndraws,
         tune=nburn,
-        return_inferencedata=True,
         cores=1,
         compute_convergence_checks=False,
     )
@@ -856,16 +853,4 @@ with pm.Model():
 # The clearly peak around the MLE estimate.
 
 
-results_dict = {
-    "intercept": res_mle.params[0],
-    "var.e": res_mle.params[1],
-    "var.x.coeff": res_mle.params[2],
-    "var.w.coeff": res_mle.params[3],
-}
-plt.tight_layout()
-_ = pm.plot_trace(
-    trace,
-    lines=[(k, {}, [v]) for k, v in dict(results_dict).items()],
-    combined=True,
-    figsize=(12, 12),
-)
+_ = pm.plot_trace(trace)

@@ -52,7 +52,10 @@ plt.rc("font", size=14)
 
 
 # First we'll simulate the synthetic data
-def simulate_seasonal_term(periodicity, total_cycles, noise_std=1.0, harmonics=None):
+def simulate_seasonal_term(
+    periodicity, total_cycles, noise_std=1.0, harmonics=None, rng=None
+):
+    rng = np.random.default_rng(rng)
     duration = periodicity * total_cycles
     assert duration == int(duration)
     duration = int(duration)
@@ -60,8 +63,8 @@ def simulate_seasonal_term(periodicity, total_cycles, noise_std=1.0, harmonics=N
 
     lambda_p = 2 * np.pi / float(periodicity)
 
-    gamma_jt = noise_std * np.random.randn((harmonics))
-    gamma_star_jt = noise_std * np.random.randn((harmonics))
+    gamma_jt = noise_std * rng.standard_normal(harmonics)
+    gamma_star_jt = noise_std * rng.standard_normal(harmonics)
 
     total_timesteps = 100 * duration  # Pad for burn in
     series = np.zeros(total_timesteps)
@@ -74,12 +77,12 @@ def simulate_seasonal_term(periodicity, total_cycles, noise_std=1.0, harmonics=N
             gamma_jtp1[j - 1] = (
                 gamma_jt[j - 1] * cos_j
                 + gamma_star_jt[j - 1] * sin_j
-                + noise_std * np.random.randn()
+                + noise_std * rng.standard_normal()
             )
             gamma_star_jtp1[j - 1] = (
                 -gamma_jt[j - 1] * sin_j
                 + gamma_star_jt[j - 1] * cos_j
-                + noise_std * np.random.randn()
+                + noise_std * rng.standard_normal()
             )
         series[t] = np.sum(gamma_jtp1)
         gamma_jt = gamma_jtp1
@@ -93,7 +96,6 @@ duration = 100 * 3
 periodicities = [10, 100]
 num_harmonics = [3, 2]
 std = np.array([2, 3])
-np.random.seed(8678309)
 
 terms = []
 for ix, _ in enumerate(periodicities):
@@ -102,6 +104,7 @@ for ix, _ in enumerate(periodicities):
         duration / periodicities[ix],
         harmonics=num_harmonics[ix],
         noise_std=std[ix],
+        rng=8678309,
     )
     terms.append(s)
 terms.append(np.ones_like(terms[0]) * 10.0)
@@ -404,7 +407,8 @@ plt.legend(
     loc=1,
 )
 plt.title("Seasonal components combined")
-plt.tight_layout(pad=1.0)
+plt.tight_layout()
+plt.show()
 
 
 # ##### Conclusions

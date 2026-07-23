@@ -3,7 +3,7 @@ from __future__ import annotations
 from statsmodels.compat.pandas import PD_LT_2, is_numeric_dtype
 from statsmodels.compat.scipy import SP_LT_19
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -300,14 +300,14 @@ class Description:
 
     def __init__(
         self,
-        data: Union[np.ndarray, pd.Series, pd.DataFrame],
+        data: np.ndarray | pd.Series | pd.DataFrame,
         stats: Sequence[str] = None,
         *,
         numeric: bool = True,
         categorical: bool = True,
         alpha: float = 0.05,
         use_t: bool = False,
-        percentiles: Sequence[Union[int, float]] = PERCENTILES,
+        percentiles: Sequence[int | float] = PERCENTILES,
         ntop: bool = 5,
     ):
         data_arr = data
@@ -672,14 +672,14 @@ ds.replace_block(
 
 @Appender(str(ds))
 def describe(
-    data: Union[np.ndarray, pd.Series, pd.DataFrame],
+    data: np.ndarray | pd.Series | pd.DataFrame,
     stats: Sequence[str] = None,
     *,
     numeric: bool = True,
     categorical: bool = True,
     alpha: float = 0.05,
     use_t: bool = False,
-    percentiles: Sequence[Union[int, float]] = PERCENTILES,
+    percentiles: Sequence[int | float] = PERCENTILES,
     ntop: bool = 5,
 ) -> pd.DataFrame:
     return Description(

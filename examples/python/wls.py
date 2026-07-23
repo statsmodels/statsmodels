@@ -136,5 +136,5 @@ resid2 = res_ols.resid[w != 1.0]
 var2 = resid2.var(ddof=int(res_ols.df_model) + 1)
 w_est = w.copy()
 w_est[w != 1.0] = np.sqrt(var2) / np.sqrt(var1)
-res_fwls = sm.WLS(y, X, 1.0 / ((w_est**2))).fit()
+res_fwls = sm.WLS(y, X, 1.0 / (w_est**2)).fit()
 print(res_fwls.summary())

@@ -79,13 +79,13 @@ def get_all_sorted_knots(
 
     if upper_bound < lower_bound:
         raise ValueError(
-            "lower_bound > upper_bound (%r > %r)" % (lower_bound, upper_bound)
+            "lower_bound > upper_bound ({!r} > {!r})".format(lower_bound, upper_bound)
         )
 
     if inner_knots is None and n_inner_knots is not None:
         if n_inner_knots < 0:
             raise ValueError(
-                "Invalid requested number of inner knots: %r" % (n_inner_knots,)
+                "Invalid requested number of inner knots: {!r}".format(n_inner_knots)
             )
 
         x = x[(lower_bound <= x) & (x <= upper_bound)]

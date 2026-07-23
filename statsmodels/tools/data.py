@@ -20,7 +20,7 @@ def _check_period_index(x, freq="M"):
         if isinstance(inferred_freq, pd.tseries.offsets.BaseOffset):
             inferred_freq = inferred_freq.freqstr
     if not inferred_freq.startswith(freq):
-        raise ValueError("Expected frequency {}. Got {}".format(freq, inferred_freq))
+        raise ValueError(f"Expected frequency {freq}. Got {inferred_freq}")
 
 
 def is_series(obj):
@@ -89,7 +89,7 @@ def interpret_data(data, colnames=None, rownames=None):
         rownames = data.index
     else:  # pragma: no cover
         raise TypeError(
-            "Cannot handle input type {typ}".format(typ=type(data).__name__)
+            f"Cannot handle input type {type(data).__name__}"
         )
 
     if not isinstance(colnames, list):

@@ -18,7 +18,7 @@ https://arxiv.org/pdf/2107.13462.pdf
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 import warnings
 
 import numpy as np
@@ -111,11 +111,11 @@ class MSTL:
         self,
         endog: ArrayLike1D,
         *,
-        periods: Optional[Union[int, Sequence[int]]] = None,
-        windows: Optional[Union[int, Sequence[int]]] = None,
-        lmbda: Optional[Union[float, str]] = None,
+        periods: int | Sequence[int] | None = None,
+        windows: int | Sequence[int] | None = None,
+        lmbda: float | str | None = None,
         iterate: int = 2,
-        stl_kwargs: Optional[dict[str, Union[int, bool, None]]] = None,
+        stl_kwargs: dict[str, int | bool | None] | None = None,
     ):
         self.endog = endog
         self._y = self._to_1d_array(endog)
@@ -199,8 +199,8 @@ class MSTL:
 
     def _process_periods_and_windows(
         self,
-        periods: Union[int, Sequence[int], None],
-        windows: Union[int, Sequence[int], None],
+        periods: int | Sequence[int] | None,
+        windows: int | Sequence[int] | None,
     ) -> tuple[Sequence[int], Sequence[int]]:
         periods = self._process_periods(periods)
 
@@ -228,7 +228,7 @@ class MSTL:
         return periods, windows
 
     def _process_periods(
-        self, periods: Union[int, Sequence[int], None]
+        self, periods: int | Sequence[int] | None
     ) -> Sequence[int]:
         if periods is None:
             periods = (self._infer_period(),)
@@ -240,7 +240,7 @@ class MSTL:
 
     def _process_windows(
         self,
-        windows: Union[int, Sequence[int], None],
+        windows: int | Sequence[int] | None,
         num_seasons: int,
     ) -> Sequence[int]:
         if windows is None:

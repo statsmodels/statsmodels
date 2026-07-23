@@ -134,7 +134,7 @@ class LocalLinearTrend(sm.tsa.statespace.MLEModel):
         k_states = k_posdef = 2
 
         # Initialize the statespace
-        super(LocalLinearTrend, self).__init__(
+        super().__init__(
             endog,
             k_states=k_states,
             k_posdef=k_posdef,
@@ -165,7 +165,7 @@ class LocalLinearTrend(sm.tsa.statespace.MLEModel):
         return constrained**0.5
 
     def update(self, params, *args, **kwargs):
-        params = super(LocalLinearTrend, self).update(params, *args, **kwargs)
+        params = super().update(params, *args, **kwargs)
 
         # Observation covariance
         self.ssm["obs_cov", 0, 0] = params[0]

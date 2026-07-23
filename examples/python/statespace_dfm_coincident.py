@@ -668,9 +668,7 @@ from statsmodels.tsa.statespace import tools
 class ExtendedDFM(sm.tsa.DynamicFactor):
     def __init__(self, endog, **kwargs):
         # Setup the model as if we had a factor order of 4
-        super(ExtendedDFM, self).__init__(
-            endog, k_factors=1, factor_order=4, error_order=2, **kwargs
-        )
+        super().__init__(endog, k_factors=1, factor_order=4, error_order=2, **kwargs)
 
         # Note: `self.parameters` is an ordered dict with the
         # keys corresponding to parameter types, and the values
@@ -693,19 +691,19 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
         # Add three new loading parameters to the end of the parameter
         # vector, initialized to zeros (for simplicity; they could
         # be initialized any way you like)
-        return np.r_[super(ExtendedDFM, self).start_params, 0, 0, 0]
+        return np.r_[super().start_params, 0, 0, 0]
 
     @property
     def param_names(self):
         # Add the corresponding names for the new loading parameters
         #  (the name can be anything you like)
-        return super(ExtendedDFM, self).param_names + [
+        return super().param_names + [
             "loading.L%d.f1.%s" % (i, self.endog_names[3]) for i in range(1, 4)
         ]
 
     def transform_params(self, unconstrained):
         # Perform the typical DFM transformation (w/o the new parameters)
-        constrained = super(ExtendedDFM, self).transform_params(unconstrained[:-3])
+        constrained = super().transform_params(unconstrained[:-3])
 
         # Redo the factor AR constraint, since we only want an AR(2),
         # and the previous constraint was for an AR(4)
@@ -738,7 +736,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
         params[self._params_factor_zero] = 0
 
         # Now perform the usual DFM update, but exclude our new parameters
-        super(ExtendedDFM, self).update(params[:-3], transformed=True, **kwargs)
+        super().update(params[:-3], transformed=True, **kwargs)
 
         # Finally, set our new parameters in the design matrix
         self.ssm["design", 3, 1:4] = params[-3:]

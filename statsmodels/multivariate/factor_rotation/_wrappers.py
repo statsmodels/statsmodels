@@ -302,7 +302,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
         else:
             raise ValueError(
-                "Algorithm %s is not possible for %s rotation" % (algorithm, method)
+                "Algorithm {} is not possible for {} rotation".format(algorithm, method)
             )
     elif method == "CF":
         assert len(method_args) == 2, (
@@ -343,7 +343,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
         else:
             raise ValueError(
-                "Algorithm %s is not possible for %s rotation" % (algorithm, method)
+                "Algorithm {} is not possible for {} rotation".format(algorithm, method)
             )
     elif method == "quartimax":
         return rotate_factors(A, "orthomax", 0, **algorithm_kwargs)
@@ -414,7 +414,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             vgQ = None
         else:
             raise ValueError(
-                "Algorithm %s is not possible for %s rotation" % (algorithm, method)
+                "Algorithm {} is not possible for {} rotation".format(algorithm, method)
             )
     else:
         raise ValueError("Invalid method")

@@ -14,7 +14,7 @@ The optimized theta method. arXiv preprint arXiv:1503.03529.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -131,7 +131,7 @@ class ThetaModel:
         self,
         endog,
         *,
-        period: Optional[int] = None,
+        period: int | None = None,
         deseasonalize: bool = True,
         use_test: bool = True,
         method: str = "auto",
@@ -198,7 +198,7 @@ class ThetaModel:
 
     def fit(
         self, use_mle: bool = False, disp: bool = False
-    ) -> "ThetaModelResults":
+    ) -> ThetaModelResults:
         r"""
         Estimate model parameters
 
@@ -319,7 +319,7 @@ class ThetaModelResults:
         self,
         b0: float,
         alpha: float,
-        sigma2: Optional[float],
+        sigma2: float | None,
         one_step: float,
         seasonal: np.ndarray,
         use_mle: bool,
@@ -598,11 +598,11 @@ class ThetaModelResults:
         self,
         steps: int = 1,
         theta: float = 2,
-        alpha: Optional[float] = 0.05,
+        alpha: float | None = 0.05,
         in_sample: bool = False,
-        fig: Optional["matplotlib.figure.Figure"] = None,
+        fig: matplotlib.figure.Figure | None = None,
         figsize: tuple[float, float] = None,
-    ) -> "matplotlib.figure.Figure":
+    ) -> matplotlib.figure.Figure:
         r"""
         Plot forecasts, prediction intervals and in-sample values
 

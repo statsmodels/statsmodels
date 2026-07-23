@@ -75,7 +75,7 @@ def cumulant_from_moments(momt, n):
         raise ValueError("Expected a positive integer. Got %s instead." % n)
     if len(momt) < n:
         raise ValueError(
-            "%s-th cumulant requires %s moments, only got %s." % (n, n, len(momt))
+            "{}-th cumulant requires {} moments, only got {}.".format(n, n, len(momt))
         )
     kappa = 0.0
     for p in _faa_di_bruno_partitions(n):
