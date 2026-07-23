@@ -251,9 +251,9 @@ class OneWayLS:
         summarytable : list of tuples
            contains (pair, (fvalue, pvalue,df_denom, df_num)) for each f-test
 
-        Note
-        ----
-        This are the raw results and not formatted for nice printing.
+        Notes
+        -----
+        These are the raw results and not formatted for nice printing.
 
         """
         if not hasattr(self, "lsjoint"):

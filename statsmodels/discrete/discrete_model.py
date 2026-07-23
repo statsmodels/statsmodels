@@ -5,7 +5,7 @@ Includes binary outcomes, count data, (ordered) ordinal data and limited
 dependent variables.
 
 General References
---------------------
+------------------
 
 A.C. Cameron and P.K. Trivedi.  `Regression Analysis of Count Data`.
     Cambridge, 1998
@@ -113,7 +113,7 @@ This is a preliminary estimator used as start_params.
 Returns
 -------
 params : ndarray
-    parameter estimate based one one-step moment matching
+    parameter estimate based on one-step moment matching
 
 """
 
@@ -566,7 +566,7 @@ class BinaryModel(DiscreteModel):
 
             .. deprecated: 0.14
 
-               The ``linear` keyword is deprecated and will be removed,
+               The ``linear`` keyword is deprecated and will be removed,
                use ``which`` keyword instead.
 
         Returns
@@ -828,7 +828,7 @@ class MultinomialModel(BinaryModel):
 
             .. deprecated: 0.14
 
-               The ``linear` keyword is deprecated and will be removed,
+               The ``linear`` keyword is deprecated and will be removed,
                use ``which`` keyword instead.
 
         Notes
@@ -1149,7 +1149,7 @@ class CountModel(DiscreteModel):
 
             .. deprecated: 0.14
 
-               The ``linear` keyword is deprecated and will be removed,
+               The ``linear`` keyword is deprecated and will be removed,
                use ``which`` keyword instead.
 
 
@@ -1850,14 +1850,14 @@ class Poisson(CountModel):
                argument.
 
         linear : bool
-            The ``linear` keyword is deprecated and will be removed,
+            The ``linear`` keyword is deprecated and will be removed,
             use ``which`` keyword instead.
             If True, returns the linear predicted values.  If False or None,
             then the statistic specified by ``which`` will be returned.
 
             .. deprecated: 0.14
 
-               The ``linear` keyword is deprecated and will be removed,
+               The ``linear`` keyword is deprecated and will be removed,
                use ``which`` keyword instead.
 
         y_values : array_like

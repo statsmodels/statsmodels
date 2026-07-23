@@ -212,7 +212,7 @@ class GaussianCopula(EllipticalCopula):
     ----------
     corr : scalar or array_like
         Correlation or scatter matrix for the elliptical copula. In the
-        bivariate case, ``corr` can be a scalar and is then considered as
+        bivariate case, ``corr`` can be a scalar and is then considered as
         the correlation coefficient. If ``corr`` is None, then the scatter
         matrix is the identity matrix.
     k_dim : int
@@ -220,8 +220,8 @@ class GaussianCopula(EllipticalCopula):
     allow_singular : bool
         Allow singular correlation matrix.
         The behavior when the correlation matrix is singular is determined by
-        `scipy.stats.multivariate_normal`` and might not be appropriate for
-        all copula or copula distribution metnods. Behavior might change in
+        ``scipy.stats.multivariate_normal`` and might not be appropriate for
+        all copula or copula distribution methods. Behavior might change in
         future versions.
 
     Notes
@@ -286,7 +286,7 @@ class StudentTCopula(EllipticalCopula):
     ----------
     corr : scalar or array_like
         Correlation or scatter matrix for the elliptical copula. In the
-        bivariate case, ``corr` can be a scalar and is then considered as
+        bivariate case, ``corr`` can be a scalar and is then considered as
         the correlation coefficient. If ``corr`` is None, then the scatter
         matrix is the identity matrix.
     df : float (optional)

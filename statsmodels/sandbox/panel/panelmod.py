@@ -2,7 +2,7 @@
 Sandbox Panel Estimators
 
 References
------------
+----------
 
 Baltagi, Badi H. `Econometric Analysis of Panel Data.` 4th ed. Wiley, 2008.
 """
@@ -45,7 +45,7 @@ def repanel_cov(groups, sigmas):
     ----------
     groups : ndarray, (nobs, nre) or (nobs,)
         array of group/category observations
-    sigma : ndarray, (nre+1,)
+    sigmas : ndarray, (nre+1,)
         array of standard deviations of random effects,
         last element is the standard deviation of the
         idiosyncratic error

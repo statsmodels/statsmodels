@@ -637,7 +637,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
        IEEE Transactions on Signal Processing 62 (20): 5251-59.
        doi:10.1109/TSP.2014.2348951.
     .. [3] Ollila, Esa, Daniel P. Palomar, and Frederic Pascal.
-       “Affine Equivariant Tyler`s M-Estimator Applied to Tail Parameter
+       “Affine Equivariant Tyler's M-Estimator Applied to Tail Parameter
        Learning of Elliptical Distributions.” arXiv, May 7, 2023.
        https://doi.org/10.48550/arXiv.2305.04330.
     """

@@ -4,7 +4,7 @@ This models contains the Kernels for Kernel smoothing.
 Hopefully in the future they may be reused/extended for other kernel based
 method
 
-References:
+References
 ----------
 
 Pointwise Kernel Confidence Bounds

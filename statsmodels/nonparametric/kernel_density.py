@@ -505,7 +505,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Notes
         -----
-        Similar to ``KDE.loo_likelihood`, but substitute ``f(y|x)=f(x,y)/f(x)``
+        Similar to ``KDE.loo_likelihood``, but substitute ``f(y|x)=f(x,y)/f(x)``
         for ``f(x)``.
         """
         yLOO = LeaveOneOut(self.data)

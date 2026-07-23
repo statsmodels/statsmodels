@@ -240,8 +240,8 @@ class Copula(ABC):
 
     1. Sample :math:`V \sim F = LS^{−1}(\phi)`.
     2. Sample i.i.d. :math:`X_i \sim U[0,1], i \in \{1,...,d\}`.
-    3. Return:math:`(U_1,..., U_d)`, where :math:`U_i = \phi(−\log(X_i)/V), i
-       \in \{1, ...,d\}`.
+    3. Return :math:`(U_1,..., U_d)`, where
+       :math:`U_i = \phi(−\log(X_i)/V), i \in \{1, ...,d\}`.
 
     Detailed properties of each copula can be found in [3]_.
 

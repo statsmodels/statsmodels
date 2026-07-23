@@ -24,8 +24,8 @@ main changes
 * added separate example and tests (2010-05-09)
 * collect transformation function into classes
 
-Example
--------
+Examples
+--------
 
 >>> logtg = Transf_gen(stats.t, np.exp, np.log,
                 numargs = 1, a=0, name = 'lnnorm',

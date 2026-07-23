@@ -347,7 +347,7 @@ class DensityOrthoPoly:
 
                 currently only checks that density integrates to 1
 
-        `       non-negativity - NotImplementedYet
+                non-negativity - NotImplementedYet
         """
         # watch out for circular/recursive usage
 

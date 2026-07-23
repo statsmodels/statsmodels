@@ -90,8 +90,8 @@ import numpy as np
 class JumpDiffusionMerton:
     """
 
-    Example
-    -------
+    Examples
+    --------
     mu=.00     # deterministic drift
     sig=.20 # Gaussian component
     l=3.45 # Poisson process arrival rate

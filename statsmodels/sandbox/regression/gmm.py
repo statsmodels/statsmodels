@@ -631,7 +631,7 @@ class GMM(Model):
             - `cluster` : not connected yet
             - others from robust_covariance
 
-        wargs` : tuple or dict,
+        wargs : tuple or dict,
             required and optional arguments for weights_method
 
             - `centered` : bool,
