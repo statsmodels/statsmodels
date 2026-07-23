@@ -1592,16 +1592,17 @@ def test_slim_summary():
     assert slim_summ.tables[1].as_text() == summ.tables[1].as_text()
 
 
-def test_ols_wls_fixed_scale(reset_randomstate):
-    X = add_constant(np.random.rand(50, 2))
-    y = np.dot(X, [1, 2, 3]) + np.random.randn(50)
+def test_ols_wls_fixed_scale():
+    rs = np.random.RandomState(3293829)
+    X = add_constant(rs.rand(50, 2))
+    y = np.dot(X, [1, 2, 3]) + n.randn(50)
     expected_scale = 5.0
 
     res1 = OLS(y, X).fit(cov_type='fixed scale', cov_kwds={'scale': expected_scale})
     assert_allclose(res1.scale, expected_scale)
     assert_allclose(res1.resid_pearson, res1.resid / np.sqrt(expected_scale))
 
-    weights = np.random.uniform(0.5, 2.0, 50)
+    weights = rs.uniform(0.5, 2.0, 50)
     res2 = WLS(y, X, weights=weights).fit(
         cov_type='fixed_scale',
         cov_kwds={'scale': expected_scale}
