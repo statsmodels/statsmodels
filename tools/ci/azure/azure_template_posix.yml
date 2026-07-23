@@ -33,6 +33,7 @@ jobs:
           python.architecture: 'x64'
           coverage: true
           lint: true
+          PYTEST_PATTERN: '(not slow or slow) and not joblib'
         python_311_wheel:
           python.version: '3.11'
           python.architecture: 'x64'

@@ -18,8 +18,8 @@ jobs:
     matrix:
       # Windows keeps sentinel coverage for the oldest supported Python,
       # the newest supported Python, and free-threaded Python.
-      python39_win_compat:
-        python.version: '3.9'
+      python310_win_compat:
+        python.version: '3.10'
         python.architecture: 'x64'
       python313_win_latest:
         python.version: '3.13'
