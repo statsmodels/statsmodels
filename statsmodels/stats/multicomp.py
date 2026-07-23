@@ -33,7 +33,16 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var="equal"):
     -------
     results : TukeyHSDResults instance
         A results class containing relevant data and some post-hoc
-        calculations, including adjusted p-value
+        calculations, including adjusted p-value.
+
+        The boolean reject decisions and numeric adjusted p-values are
+        available as attributes (and via ``summary_frame()``)::
+
+            res = pairwise_tukeyhsd(endog, groups)
+            res.reject     # boolean array: True if that pair is significant
+            res.pvalues    # adjusted p-values (float array) for each pair
+            res.summary()  # printable table (includes the reject column)
+            res.summary_frame()  # DataFrame with group_t/group_c/meandiff/p-adj/reject
 
     Notes
     -----
