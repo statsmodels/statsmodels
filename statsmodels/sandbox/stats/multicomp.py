@@ -626,7 +626,8 @@ class TukeyHSDResults:
     std_pairs : standard deviation of pairwise mean differences
     q_crit : critical value of studentized range statistic at given alpha
     halfwidths : half widths of simultaneous confidence interval
-    pvalues : adjusted p-values from the HSD test
+    pvalues : adjusted p-values from the HSD test (numeric floats; use this
+        when you need the p-values rather than only the boolean reject flags)
 
     Notes
     -----
