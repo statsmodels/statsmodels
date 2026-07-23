@@ -337,6 +337,7 @@ class CombineResults:
             intervals=hw,
             lines=res_df.index,
             line_order=res_df.index,
+            ax=ax,
             **kwds,
         )
         return fig
