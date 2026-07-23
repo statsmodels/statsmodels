@@ -155,6 +155,19 @@ def innovations_mle(
     Note: we do not include `enforce_stationarity` as an argument, because this
     function requires stationarity.
 
+    The innovations algorithm requires the process to be stationary, and by
+    default also requires the MA polynomial to be invertible (this can be
+    relaxed with ``enforce_invertibility=False``). When `fixed_params` is
+    used, be aware that stationarity (and invertibility) are enforced by
+    transforming an unconstrained parameter vector into one that satisfies
+    the constraint, and the fixed values are substituted in after this
+    transformation. As a result, the final parameter vector is not
+    guaranteed to satisfy stationarity/invertibility. One way to avoid this:
+    fix the entire AR set or the entire MA set (rather than a partial
+    subset), so that the transformation itself only touches the block you're
+    not fixing, and stationarity/invertibility of that block is still
+    guaranteed.
+
     TODO: support concentrating out the scale (should be easy: use sigma2=1
           and then compute sigma2=np.sum(u**2 / v) / len(u); would then need to
           redo llf computation in the Cython function).
