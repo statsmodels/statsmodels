@@ -991,7 +991,7 @@ class MVNormal(MVElliptical):
         ----------
         indices : array_like, int
             list of indices of variables in the marginal distribution
-        given : array_like
+        values : array_like
             values of the conditioning variables
 
         Returns

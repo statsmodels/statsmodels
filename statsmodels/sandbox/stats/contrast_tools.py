@@ -210,7 +210,7 @@ def dummy_1d(x, varname=None):
 
     Notes
     -----
-    use tools.categorical instead for more more options
+    use tools.categorical instead for more options
 
     See Also
     --------

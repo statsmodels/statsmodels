@@ -245,7 +245,7 @@ def mv_mixture_rvs(prob, size, dist, nvars, rng=None, **kwargs):
         The length of the returned sample.
     dist : array_like
         An iterable of distributions instances with callable method rvs.
-    nvargs : int
+    nvars : int
         dimension of the multivariate distribution, could be inferred instead
     rng : {None, numpy.random.Generator, numpy.random.RandomState}, optional
         If `rng` is None, the global (legacy) NumPy random state is

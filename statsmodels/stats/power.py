@@ -6,7 +6,8 @@ Created on Sat Jan 12 21:48:06 2013
 
 Author: Josef Perktold
 
-Example
+Examples
+--------
 roundtrip - root with respect to all variables
 
        calculated, desired

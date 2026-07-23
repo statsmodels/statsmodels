@@ -103,7 +103,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         * :math:`\gamma=1` corresponds to varimax,
         * :math:`\gamma=\frac{1}{p}` corresponds to equamax.
 
-        For oblique rotations rotations:
+        For oblique rotations:
 
         * :math:`\gamma=0` corresponds to quartimin,
         * :math:`\gamma=\frac{1}{2}` corresponds to biquartimin.

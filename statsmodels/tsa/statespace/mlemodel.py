@@ -3618,7 +3618,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             H(h) = \sum_{t=T-h+1}^T  \tilde v_t^2
             \Bigg / \sum_{t=d+1}^{d+1+h} \tilde v_t^2
 
-        where :math:`d` = max(loglikelihood_burn, nobs_diffuse)` (usually
+        where :math:`d` = max(loglikelihood_burn, nobs_diffuse) (usually
         corresponding to diffuse initialization under either the approximate
         or exact approach).
 

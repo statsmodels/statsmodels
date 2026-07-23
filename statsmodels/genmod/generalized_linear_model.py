@@ -1047,7 +1047,7 @@ class GLM(base.LikelihoodModel):
               This does not include scale or var_weights.
 
         linear : bool
-            The ``linear` keyword is deprecated and will be removed,
+            The ``linear`` keyword is deprecated and will be removed,
             use ``which`` keyword instead.
             If True, returns the linear predicted values.  If False or None,
             then the statistic specified by ``which`` will be returned.
@@ -2304,7 +2304,7 @@ class GLMResults(base.LikelihoodModelResults):
               This does not include scale or var_weights.
 
         linear : bool
-            The ``linear` keyword is deprecated and will be removed,
+            The ``linear`` keyword is deprecated and will be removed,
             use ``which`` keyword instead.
             If which is None, then the linear keyword is used, otherwise it will
             be ignored.

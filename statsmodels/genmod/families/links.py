@@ -321,7 +321,7 @@ class Power(Link):
 
         Notes
         -----
-        g^(-1)(z`) = `z`**(1/`power`)
+        g^(-1)(z) = `z`**(1/`power`)
         """
         if self.power == 1:
             return z

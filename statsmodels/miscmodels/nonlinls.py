@@ -55,14 +55,14 @@ class NonlinearLS(Model):  # or subclass a model
     Base class for estimation of a non-linear model with least squares
 
     This class is supposed to be subclassed, and the subclass has to provide a method
-    `_predict` that defines the non-linear function `f(params) that is predicting the endogenous
+    `_predict` that defines the non-linear function `f(params)` that is predicting the endogenous
     variable. The model is assumed to be
 
-    :math: y = f(params) + error
+    :math:`y = f(params) + error`
 
     and the estimator minimizes the sum of squares of the estimated error.
 
-    :math: min_parmas \sum (y - f(params))**2
+    :math:`min_parmas \sum (y - f(params))**2`
 
     f has to return the prediction for each observation. Exogenous or explanatory variables
     should be accessed as attributes of the class instance, and can be given as arguments

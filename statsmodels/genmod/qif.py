@@ -22,7 +22,7 @@ class QIFCovariance:
 
     Subclasses should set the number of basis matrices `num_terms`,
     so that `mat(d, j)` for j=0, ..., num_terms-1 gives the basis
-    of dimension d.`
+    of dimension d.
     """
 
     def mat(self, dim, term):
