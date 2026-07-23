@@ -49,8 +49,8 @@ class GenericZeroInflated(CountModel):
     __doc__ = """
     Generic Zero-Inflated Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -60,10 +60,10 @@ class GenericZeroInflated(CountModel):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params + base._missing_param_doc,
-    }
+    """.format(
+        params=base._model_params_doc,
+        extra_params=_doc_zi_params + base._missing_param_doc,
+    )
 
     def __init__(
         self,
@@ -664,8 +664,8 @@ class ZeroInflatedPoisson(GenericZeroInflated):
     __doc__ = """
     Poisson Zero-Inflated Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -675,10 +675,10 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params + base._missing_param_doc,
-    }
+    """.format(
+        params=base._model_params_doc,
+        extra_params=_doc_zi_params + base._missing_param_doc,
+    )
 
     def __init__(
         self,
@@ -859,8 +859,8 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     __doc__ = """
     Zero-Inflated Generalized Poisson Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -872,15 +872,15 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         A reference to the zero-inflated exogenous design.
     p : scalar
         P denotes parameterizations for ZIGP regression.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params
+    """.format(
+        params=base._model_params_doc,
+        extra_params=_doc_zi_params
         + """p : float
         dispersion power parameter for the GeneralizedPoisson model.  p=1 for
         ZIGP-1 and p=2 for ZIGP-2. Default is p=2
     """
         + base._missing_param_doc,
-    }
+    )
 
     def __init__(
         self,
@@ -999,8 +999,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     __doc__ = """
     Zero-Inflated Generalized Negative Binomial Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -1013,15 +1013,15 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     p : scalar
         P denotes parameterizations for ZINB regression. p=1 for ZINB-1 and
     p=2 for ZINB-2. Default is p=2
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params
+    """.format(
+        params=base._model_params_doc,
+        extra_params=_doc_zi_params
         + """p : float
         dispersion power parameter for the NegativeBinomialP model.  p=1 for
         ZINB-1 and p=2 for ZINM-2. Default is p=2
     """
         + base._missing_param_doc,
-    }
+    )
 
     def __init__(
         self,

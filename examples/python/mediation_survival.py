@@ -25,7 +25,7 @@ from statsmodels.stats.mediation import Mediation
 # Make the notebook reproducible.
 
 
-np.random.seed(3424)
+rs = np.random.default_rng(3424)
 
 
 # Specify a sample size.
@@ -37,7 +37,7 @@ n = 1000
 # Generate an exposure variable.
 
 
-exp = np.random.normal(size=n)
+exp = rs.normal(size=n)
 
 
 # Generate a mediator variable.
@@ -45,8 +45,8 @@ exp = np.random.normal(size=n)
 
 def gen_mediator():
     mn = np.exp(exp)
-    mtime0 = -mn * np.log(np.random.uniform(size=n))
-    ctime = -2 * mn * np.log(np.random.uniform(size=n))
+    mtime0 = -mn * np.log(rs.uniform(size=n))
+    ctime = -2 * mn * np.log(rs.uniform(size=n))
     mstatus = (ctime >= mtime0).astype(int)
     mtime = np.where(mtime0 <= ctime, mtime0, ctime)
     return mtime0, mtime, mstatus
@@ -63,8 +63,8 @@ def gen_outcome(otype, mtime0):
     else:
         lp = exp + mtime0
     mn = np.exp(-lp)
-    ytime0 = -mn * np.log(np.random.uniform(size=n))
-    ctime = -2 * mn * np.log(np.random.uniform(size=n))
+    ytime0 = -mn * np.log(rs.uniform(size=n))
+    ctime = -2 * mn * np.log(rs.uniform(size=n))
     ystatus = (ctime >= ytime0).astype(int)
     ytime = np.where(ytime0 <= ctime, ytime0, ctime)
     return ytime, ystatus
@@ -108,7 +108,7 @@ def run(otype):
         "mtime",
         outcome_predict_kwargs={"pred_only": True},
     )
-    med_result = med.fit(n_rep=20)
+    med_result = med.fit(n_rep=20, rng=rs)
     print(med_result.summary())
 
 

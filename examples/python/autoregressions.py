@@ -99,7 +99,7 @@ ax = housing.plot(ax=ax)
 # data, it demonstrates the basic use of the API.
 
 
-mod = AutoReg(housing, 3, old_names=False)
+mod = AutoReg(housing, 3)
 res = mod.fit()
 print(res.summary())
 
@@ -114,7 +114,7 @@ res = mod.fit(cov_type="HC0")
 print(res.summary())
 
 
-sel = ar_select_order(housing, 13, old_names=False)
+sel = ar_select_order(housing, 13)
 sel.ar_lags
 res = sel.model.fit()
 print(res.summary())
@@ -142,7 +142,7 @@ fig = res.plot_diagnostics(fig=fig, lags=30)
 # AR(2).
 
 
-sel = ar_select_order(housing, 13, seasonal=True, old_names=False)
+sel = ar_select_order(housing, 13, seasonal=True)
 sel.ar_lags
 res = sel.model.fit()
 print(res.summary())
@@ -192,7 +192,7 @@ ax = yoy_housing.plot(ax=ax)
 # We see that all 13 lags are selected.
 
 
-sel = ar_select_order(yoy_housing, 13, old_names=False)
+sel = ar_select_order(yoy_housing, 13)
 sel.ar_lags
 
 
@@ -208,7 +208,7 @@ sel.ar_lags
 # dynamics in the data.
 
 
-sel = ar_select_order(yoy_housing, 13, glob=True, old_names=False)
+sel = ar_select_order(yoy_housing, 13, glob=True)
 sel.ar_lags
 res = sel.model.fit()
 print(res.summary())
@@ -222,7 +222,7 @@ fig = res.plot_diagnostics(fig=fig, lags=30)
 # the model is using year-over-year changes.
 
 
-sel = ar_select_order(yoy_housing, 13, glob=True, seasonal=True, old_names=False)
+sel = ar_select_order(yoy_housing, 13, glob=True, seasonal=True)
 sel.ar_lags
 res = sel.model.fit()
 print(res.summary())
@@ -249,7 +249,7 @@ _ = ind_prod.plot(ax=ax)
 # insignificant.
 
 
-sel = ar_select_order(ind_prod, 13, "bic", old_names=False)
+sel = ar_select_order(ind_prod, 13, "bic")
 res = sel.model.fit()
 print(res.summary())
 
@@ -259,7 +259,7 @@ print(res.summary())
 # The model indicates there may be some seasonality in the data.
 
 
-sel = ar_select_order(ind_prod, 13, "bic", glob=True, old_names=False)
+sel = ar_select_order(ind_prod, 13, "bic", glob=True)
 sel.ar_lags
 res_glob = sel.model.fit()
 print(res.summary())
@@ -280,7 +280,7 @@ fig = res_glob.plot_predict(start=714, end=732)
 # similar. I also include an AR(5) which has very different dynamics
 
 
-res_ar5 = AutoReg(ind_prod, 5, old_names=False).fit()
+res_ar5 = AutoReg(ind_prod, 5).fit()
 predictions = pd.DataFrame(
     {
         "AR(5)": res_ar5.predict(start=714, end=726),

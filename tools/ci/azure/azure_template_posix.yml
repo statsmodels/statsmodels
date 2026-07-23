@@ -7,7 +7,6 @@ parameters:
   # defaults for any parameters that are not specified
   name: ''
   vmImage: ''
-  PYTEST_PATTERN: 'not slow and not joblib'
 
 
 jobs:
@@ -15,6 +14,8 @@ jobs:
 - job: ${{ parameters.name }}Test
   pool:
     vmImage: ${{ parameters.vmImage }}
+  variables:
+    PYTEST_PATTERN: 'not slow and not joblib'
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
@@ -33,6 +34,7 @@ jobs:
           python.architecture: 'x64'
           coverage: true
           lint: true
+          PYTEST_PATTERN: '(not slow or slow) and not joblib'
         python_311_wheel:
           python.version: '3.11'
           python.architecture: 'x64'

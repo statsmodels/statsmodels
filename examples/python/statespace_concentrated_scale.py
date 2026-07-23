@@ -84,7 +84,7 @@ class LocalLevel(sm.tsa.statespace.MLEModel):
     _param_names = ["var.level", "var.irregular"]
 
     def __init__(self, endog):
-        super(LocalLevel, self).__init__(endog, k_states=1, initialization="diffuse")
+        super().__init__(endog, k_states=1, initialization="diffuse")
 
         self["design", 0, 0] = 1
         self["transition", 0, 0] = 1
@@ -97,7 +97,7 @@ class LocalLevel(sm.tsa.statespace.MLEModel):
         return unconstrained**0.5
 
     def update(self, params, **kwargs):
-        params = super(LocalLevel, self).update(params, **kwargs)
+        params = super().update(params, **kwargs)
 
         self["state_cov", 0, 0] = params[0]
         self["obs_cov", 0, 0] = params[1]
@@ -159,9 +159,7 @@ class LocalLevelConcentrated(sm.tsa.statespace.MLEModel):
     _param_names = ["ratio.irregular"]
 
     def __init__(self, endog):
-        super(LocalLevelConcentrated, self).__init__(
-            endog, k_states=1, initialization="diffuse"
-        )
+        super().__init__(endog, k_states=1, initialization="diffuse")
 
         self["design", 0, 0] = 1
         self["transition", 0, 0] = 1
@@ -177,7 +175,7 @@ class LocalLevelConcentrated(sm.tsa.statespace.MLEModel):
         return unconstrained**0.5
 
     def update(self, params, **kwargs):
-        params = super(LocalLevelConcentrated, self).update(params, **kwargs)
+        params = super().update(params, **kwargs)
         self["obs_cov", 0, 0] = params[0]
 
 

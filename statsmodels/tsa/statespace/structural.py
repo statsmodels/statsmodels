@@ -1440,7 +1440,7 @@ class UnobservedComponentsResults(MLEResults):
                     smoothed=None,
                     smoothed_cov=None,
                     offset=offset,
-                    pretty_name="seasonal {p}({h})".format(p=repr(period), h=repr(h)),
+                    pretty_name=f"seasonal {period!r}({h!r})",
                 )
                 if self.smoothed_state is not None:
                     item.smoothed = np.sum(

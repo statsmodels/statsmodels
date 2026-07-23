@@ -47,14 +47,14 @@ def _normalize_split(proportion):
             proportion = array([1.0, 0.0])
         elif proportion < 0:
             raise ValueError(
-                "proportions should be positive,given value: {}".format(proportion)
+                f"proportions should be positive,given value: {proportion}"
             )
         else:
             proportion = array([proportion, 1.0 - proportion])
     proportion = np.asarray(proportion, dtype=float)
     if np.any(proportion < 0):
         raise ValueError(
-            "proportions should be positive,given value: {}".format(proportion)
+            f"proportions should be positive,given value: {proportion}"
         )
     if np.allclose(proportion, 0):
         raise ValueError(
@@ -107,7 +107,7 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
     x, y, w, h = float(x), float(y), float(width), float(height)
     if (w < 0) or (h < 0):
         raise ValueError(
-            "dimension of the square less thanzero w={} h={}".format(w, h)
+            f"dimension of the square less thanzero w={w} h={h}"
         )
     proportions = _normalize_split(proportion)
 

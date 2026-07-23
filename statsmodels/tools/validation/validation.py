@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -293,7 +293,7 @@ def bool_like(value, name, optional=False, strict=False):
 
 def int_like(
     value: Any, name: str, optional: bool = False, strict: bool = False
-) -> Optional[int]:
+) -> int | None:
     """
     Convert to int or raise if not int_like
 

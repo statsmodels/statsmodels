@@ -1333,8 +1333,8 @@ class Poisson(CountModel):
     __doc__ = """
     Poisson Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -1342,9 +1342,9 @@ class Poisson(CountModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": """offset : array_like
+    """.format(
+        params=base._model_params_doc,
+        extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
@@ -1352,7 +1352,7 @@ class Poisson(CountModel):
         """
         + base._missing_param_doc
         + _check_rank_doc,
-    }
+    )
 
     @cache_readonly
     def family(self):
@@ -1962,8 +1962,8 @@ class GeneralizedPoisson(CountModel):
     __doc__ = """
     Generalized Poisson Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -1971,9 +1971,9 @@ class GeneralizedPoisson(CountModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": """
+    """.format(
+        params=base._model_params_doc,
+        extra_params="""
     p : scalar
         P denotes parameterizations for GP regression. p=1 for GP-1 and
         p=2 for GP-2. Default is p=1.
@@ -1984,7 +1984,7 @@ class GeneralizedPoisson(CountModel):
         equal to 1."""
         + base._missing_param_doc
         + _check_rank_doc,
-    }
+    )
 
     def __init__(
         self,
@@ -3602,8 +3602,8 @@ class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -3618,9 +3618,9 @@ class NegativeBinomial(CountModel):
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": """loglike_method : str
+    """.format(
+        params=base._model_params_doc,
+        extra_params="""loglike_method : str
         Log-likelihood type. 'nb2','nb1', or 'geometric'.
         Fitted value :math:`\\mu`
         Heterogeneity parameter :math:`\\alpha`
@@ -3636,7 +3636,7 @@ class NegativeBinomial(CountModel):
     """
         + base._missing_param_doc
         + _check_rank_doc,
-    }
+    )
 
     def __init__(
         self,
@@ -4229,8 +4229,8 @@ class NegativeBinomialP(CountModel):
     __doc__ = """
     Generalized Negative Binomial (NB-P) Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -4241,9 +4241,9 @@ class NegativeBinomialP(CountModel):
     p : scalar
         P denotes parameterizations for NB-P regression. p=1 for NB-1 and
         p=2 for NB-2. Default is p=1.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": """p : scalar
+    """.format(
+        params=base._model_params_doc,
+        extra_params="""p : scalar
         P denotes parameterizations for NB regression. p=1 for NB-1 and
         p=2 for NB-2. Default is p=2.
     offset : array_like
@@ -4254,7 +4254,7 @@ class NegativeBinomialP(CountModel):
         """
         + base._missing_param_doc
         + _check_rank_doc,
-    }
+    )
 
     def __init__(
         self,

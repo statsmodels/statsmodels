@@ -698,7 +698,7 @@ class VAR(TimeSeriesModel):
             selections = self.select_order(maxlags=maxlags)
             if not hasattr(selections, ic):
                 raise ValueError(
-                    "%s not recognized, must be among %s" % (ic, sorted(selections))
+                    "{} not recognized, must be among {}".format(ic, sorted(selections))
                 )
             lags = getattr(selections, ic)
             if verbose:

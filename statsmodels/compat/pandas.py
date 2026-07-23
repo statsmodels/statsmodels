@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from contextlib import contextmanager
 import string
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import numpy as np
 from packaging.version import Version, parse
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
     try:
         from typing import TypeAlias
     except ImportError:
-        from typing_extensions import TypeAlias
+        from typing import TypeAlias
 
 
 FuncType: TypeAlias = Callable[..., Any]
@@ -287,7 +288,7 @@ def call_cached_func(cached_prop, *args, **kwargs):
     return f(*args, **kwargs)
 
 
-def get_cached_doc(cached_prop) -> Optional[str]:
+def get_cached_doc(cached_prop) -> str | None:
     """
     Get the docstring of the underlying function of a cached property
 

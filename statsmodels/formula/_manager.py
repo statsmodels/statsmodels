@@ -4,8 +4,9 @@ from statsmodels.compat.pandas import PD_LT_3
 from statsmodels.compat.patsy import ensure_patsy_compat
 
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 import os
-from typing import Any, Literal, Mapping, NamedTuple, Sequence
+from typing import Any, Literal, NamedTuple
 import warnings
 
 import numpy as np

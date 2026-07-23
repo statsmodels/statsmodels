@@ -8,7 +8,7 @@ from statsmodels.compat.pandas import MONTH_END
 
 import datetime as dt
 from itertools import product
-from typing import NamedTuple, Union
+from typing import NamedTuple
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
@@ -286,8 +286,8 @@ def gen_data(nobs, nexog, pandas, seed=92874765):
             exog = pd.DataFrame(exog, columns=cols, index=index)
 
     class DataSet(NamedTuple):
-        endog: Union[np.ndarray, pd.Series]
-        exog: Union[np.ndarray, pd.DataFrame]
+        endog: np.ndarray | pd.Series
+        exog: np.ndarray | pd.DataFrame
 
     return DataSet(endog=endog, exog=exog)
 

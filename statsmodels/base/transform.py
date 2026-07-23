@@ -134,7 +134,7 @@ class BoxCox:
         method = method.lower()
 
         if len(bounds) != 2:
-            raise ValueError("Bounds of length {} not understood.".format(len(bounds)))
+            raise ValueError(f"Bounds of length {len(bounds)} not understood.")
         elif bounds[0] >= bounds[1]:
             raise ValueError("Lower bound exceeds upper bound.")
 
