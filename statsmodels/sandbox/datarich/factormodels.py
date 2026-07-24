@@ -7,9 +7,10 @@ License: BSD (3-clause)
 
 import numpy as np
 
-import statsmodels.api as sm
+from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.tools import pca
 from statsmodels.sandbox.tools.cross_val import LeaveOneOut
+from statsmodels.tools import add_constant
 
 # converting example Principal Component Regression to a class
 # from sandbox/example_pca_regression.py
@@ -43,8 +44,9 @@ class FactorModelUnivariate:
         xred, fact, evals, evecs = pca(x, keepdim=keepdim, normalize=1)
         self.exog_reduced = xred
         # self.factors = fact
+
         if addconst:
-            self.factors = sm.add_constant(fact, prepend=True)
+            self.factors = add_constant(fact, prepend=True)
             self.hasconst = 1  # needs to be int
         else:
             self.factors = fact
@@ -54,9 +56,10 @@ class FactorModelUnivariate:
         self.evecs = evecs
 
     def fit_fixed_nfact(self, nfact):
+
         if not hasattr(self, "factors_wconst"):
             self.calc_factors()
-        return sm.OLS(self.endog, self.factors[:, : nfact + 1]).fit()
+        return OLS(self.endog, self.factors[:, : nfact + 1]).fit()
 
     def fit_find_nfact(self, maxfact=None, skip_crossval=True, cv_iter=None):
         """estimate the model and selection criteria for up to maxfact factors
@@ -99,7 +102,7 @@ class FactorModelUnivariate:
             # xred, fact, eva, eve  = pca(x0, keepdim=k, normalize=1)
             # this is faster and same result
             fact = self.factors[:, :k]
-            res = sm.OLS(y0, fact).fit()
+            res = OLS(y0, fact).fit()
             #    print 'k =', k
             #    print res.params
             #    print 'aic:  ', res.aic
@@ -113,7 +116,7 @@ class FactorModelUnivariate:
                     cv_iter = LeaveOneOut(len(y0))
                 prederr2 = 0.0
                 for inidx, outidx in cv_iter:
-                    res_l1o = sm.OLS(y0[inidx], fact[inidx, :]).fit()
+                    res_l1o = OLS(y0[inidx], fact[inidx, :]).fit()
                     # print data.endog[outidx], res.model.predict(data.exog[outidx,:]),
                     prederr2 += (
                         y0[outidx]
