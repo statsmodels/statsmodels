@@ -596,6 +596,164 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
     return res
 
 
+def jonckheere_terpstra(samples, alternative="larger"):
+    """
+    Jonckheere-Terpstra test for ordered k-sample alternatives.
+
+    The order of `samples` defines the ordered alternative. Under the
+    ``"larger"`` alternative, later samples tend to take larger values than
+    earlier samples. Under the ``"smaller"`` alternative, later samples tend
+    to take smaller values.
+
+    Parameters
+    ----------
+    samples : sequence of array_like
+        Sequence containing at least two one-dimensional samples in the order
+        implied by the alternative hypothesis.
+    alternative : {"two-sided", "larger", "smaller"}
+        Defines the alternative hypothesis. The following options are
+        available:
+
+        * ``"two-sided"``: the ordered trend is non-zero
+        * ``"larger"``: later samples tend to have larger values
+        * ``"smaller"``: later samples tend to have smaller values
+
+    Returns
+    -------
+    res : HolderTuple
+        HolderTuple instance with the following main attributes
+
+        statistic : float
+            The Jonckheere-Terpstra J statistic.
+        zstat : float
+            Standardized normal approximation for the test statistic.
+        pvalue : float
+            P-value based on the asymptotic normal approximation.
+
+    Notes
+    -----
+    The Jonckheere-Terpstra statistic is the sum of pairwise Mann-Whitney type
+    counts over all ordered pairs of groups. Ties between groups contribute
+    one half to the raw statistic.
+
+    The p-value is computed from the asymptotic normal approximation, which is
+    equivalent to the large-sample Kendall trend test applied to the pooled
+    observations and their ordered group labels.
+
+    References
+    ----------
+    .. [1] Terpstra, T. J. "The asymptotic normality and consistency of
+       Kendall's test against trend, when ties are present in one ranking."
+       Indagationes Mathematicae 14 (1952): 327-333.
+    .. [2] Jonckheere, A. R. "A distribution-free k-sample test against
+       ordered alternatives." Biometrika 41 (1954): 133-145.
+    """
+    samples = list(samples)
+    if len(samples) < 2:
+        raise ValueError("`samples` must contain at least two ordered samples.")
+    if alternative not in ("two-sided", "larger", "smaller"):
+        raise ValueError(
+            "alternative must be one of 'two-sided', 'larger', or 'smaller'."
+        )
+
+    arrays = []
+    for idx, sample in enumerate(samples):
+        sample_arr = np.asarray(sample, dtype=float)
+        if sample_arr.ndim != 1:
+            sample_arr = np.ravel(sample_arr)
+        if sample_arr.size == 0:
+            raise ValueError(f"sample at position {idx} has zero length.")
+        if not np.all(np.isfinite(sample_arr)):
+            raise ValueError("all observations must be finite.")
+        arrays.append(sample_arr)
+
+    counts = np.array([sample_arr.size for sample_arr in arrays], dtype=np.int64)
+    n_groups = len(arrays)
+    nobs = int(counts.sum())
+    if nobs < 2:
+        raise ValueError("`samples` must contain at least two observations.")
+
+    group_labels = np.repeat(np.arange(n_groups, dtype=np.int64), counts)
+    pooled = np.concatenate(arrays)
+    sort_idx = np.argsort(pooled, kind="mergesort")
+    pooled_sorted = pooled[sort_idx]
+    groups_sorted = group_labels[sort_idx]
+
+    prev_counts = np.zeros(n_groups, dtype=np.int64)
+    statistic = 0.0
+    ytie = 0
+    y0 = 0
+    y1 = 0
+
+    start = 0
+    while start < nobs:
+        stop = start + 1
+        while stop < nobs and pooled_sorted[stop] == pooled_sorted[start]:
+            stop += 1
+
+        block_counts = np.bincount(groups_sorted[start:stop], minlength=n_groups)
+        prev_lower = np.cumsum(prev_counts, dtype=np.int64)[:-1]
+        block_lower = np.cumsum(block_counts, dtype=np.int64)[:-1]
+        statistic += np.dot(block_counts[1:], prev_lower)
+        statistic += 0.5 * np.dot(block_counts[1:], block_lower)
+
+        block_size = stop - start
+        if block_size > 1:
+            ytie += block_size * (block_size - 1) // 2
+            y0 += block_size * (block_size - 1) * (block_size - 2)
+            y1 += block_size * (block_size - 1) * (2 * block_size + 5)
+
+        prev_counts += block_counts
+        start = stop
+
+    total_pairs_between = int(np.dot(counts[1:], np.cumsum(counts)[:-1]))
+    mean_null = total_pairs_between / 2.0
+    con_minus_dis = 2.0 * statistic - total_pairs_between
+
+    xtie = int((counts * (counts - 1) // 2).sum())
+    x0 = int((counts * (counts - 1) * (counts - 2)).sum())
+    x1 = int((counts * (counts - 1) * (2 * counts + 5)).sum())
+
+    m = nobs * (nobs - 1.0)
+    var_s = (m * (2 * nobs + 5) - x1 - y1) / 18.0
+    var_s += (2.0 * xtie * ytie) / m
+    if nobs > 2:
+        var_s += (x0 * y0) / (9.0 * m * (nobs - 2.0))
+
+    if var_s <= 0:
+        raise ValueError(
+            "the asymptotic variance is zero; the test is undefined for "
+            "completely tied samples."
+        )
+
+    zstat = con_minus_dis / np.sqrt(var_s)
+    if alternative == "two-sided":
+        pvalue = 2 * stats.norm.sf(np.abs(zstat))
+    elif alternative == "larger":
+        pvalue = stats.norm.sf(zstat)
+    else:
+        pvalue = stats.norm.cdf(zstat)
+
+    total_pairs = nobs * (nobs - 1.0) / 2.0
+    tau_denom = np.sqrt((total_pairs - xtie) * (total_pairs - ytie))
+    tau = con_minus_dis / tau_denom if tau_denom > 0 else np.nan
+
+    return HolderTuple(
+        statistic=statistic,
+        pvalue=pvalue,
+        zstat=zstat,
+        distribution="normal",
+        alternative=alternative,
+        nobs=nobs,
+        k_groups=n_groups,
+        counts=counts,
+        mean_null=mean_null,
+        var_null=var_s / 4.0,
+        concordant_minus_discordant=con_minus_dis,
+        tau=tau,
+    )
+
+
 def prob_larger_continuous(distr1, distr2):
     """
     Probability indicating that distr1 is stochastically larger than distr2
