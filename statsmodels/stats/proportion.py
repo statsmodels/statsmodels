@@ -578,10 +578,18 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
             )
 
         # Find the value of `c` that will give us the confidence intervals
-        # (solving nu(c) <= 1 - alpha < nu(c + 1).
-        c = 1.0
-        nuc = nu(c)
-        nucp1 = nu(c + 1)
+        # (solving nu(c) <= 1 - alpha < nu(c + 1)).
+        # The coverage of the degenerate box (`c` = 0) is taken to be zero,
+        # following the reference implementation in R's MultinomialCI, so
+        # that `c` = 0 is a valid solution when nu(1) already exceeds
+        # 1 - alpha (possible for very small `n`).  Once `c` >= `n`, the box
+        # [count - c, count + c] contains the full support {0, ..., n} of
+        # every cell, so its coverage is exactly one; the Edgeworth-based
+        # approximation `nu` is not used there, as it can plateau below
+        # 1 - alpha for small or sparse counts (see GH#9587).
+        c = 0.0
+        nuc = 0.0
+        nucp1 = nu(c + 1) if c + 1 < n else 1.0
         while not (nuc <= (1 - alpha) < nucp1):
             if c > n:
                 raise Exception(
@@ -590,7 +598,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
                 )
             c += 1
             nuc = nucp1
-            nucp1 = nu(c + 1)
+            nucp1 = nu(c + 1) if c + 1 < n else 1.0
 
         # Compute gamma and the corresponding confidence intervals.
         g = (1 - alpha - nuc) / (nucp1 - nuc)
