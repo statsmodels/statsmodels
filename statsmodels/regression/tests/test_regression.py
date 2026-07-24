@@ -39,6 +39,38 @@ DECIMAL_1 = 1
 DECIMAL_7 = 7
 DECIMAL_0 = 0
 
+
+def _evalue_from_f_stat(fvalue, df_num, df_denom, nobs, g):
+    g_ratio = g / (g + nobs)
+    stat_ratio = df_num / df_denom * fvalue
+    log_evalue = (
+        df_num / 2 * np.log(g_ratio)
+        - (df_denom + df_num) / 2
+        * (np.log1p(g_ratio * stat_ratio) - np.log1p(stat_ratio))
+    )
+    return np.exp(log_evalue)
+
+
+def _gaussian_evalue(qvalue, df_num, nobs, g):
+    g_ratio = g / (g + nobs)
+    log_evalue = (
+        df_num / 2 * np.log(g_ratio)
+        + 0.5 * nobs / (g + nobs) * qvalue
+    )
+    return np.exp(log_evalue)
+
+
+def _savi_confidence_radius(alpha, g, nobs, df_num, df_denom):
+    g_ratio = g / (g + nobs)
+    boundary = (alpha ** (2 / df_num) * g_ratio) ** (
+        df_num / (df_denom + df_num)
+    )
+    denom = boundary - g_ratio
+    if denom <= 0:
+        return np.inf
+    return df_denom / df_num * (1 - boundary) / denom
+
+
 try:
     import cvxopt  # noqa:F401
 
@@ -514,6 +546,261 @@ class TestTtest2:
 
     def test_effect(self):
         assert_almost_equal(self.Ttest1.effect, -1829.2025687186533, DECIMAL_4)
+
+
+class TestEValueInference:
+    @classmethod
+    def setup_class(cls):
+        rng = np.random.default_rng(987654321)
+        nobs = 200
+        x = np.column_stack((np.ones(nobs), rng.normal(size=(nobs, 3))))
+        scale = 1 + np.abs(x[:, 1])
+        beta = np.array([1.0, 0.75, 0.0, -0.5])
+        y = x @ beta + scale * rng.standard_normal(nobs)
+        cls.res = OLS(y, x).fit()
+        cls.res_wls = WLS(y, x, weights=1 / scale**2).fit()
+        cls.res_hc1 = OLS(y, x).fit(cov_type="HC1", use_t=True)
+        cls.res_hc1_z = OLS(y, x).fit(cov_type="HC1", use_t=False)
+
+    @pytest.mark.parametrize("g", [1.0, 2.5])
+    def test_e_values_from_tvalues(self, g):
+        res = self.res
+        expected = _evalue_from_f_stat(
+            res.tvalues**2, 1, res.df_resid, res.nobs, g
+        )
+        expected_pvalues = np.minimum(1, 1 / expected)
+        assert_allclose(res.e_values(g=g), expected)
+        assert_allclose(res.p_values(savi=True, g=g), expected_pvalues)
+        assert_allclose(res.sequential_p_values(g=g), expected_pvalues)
+        assert_allclose(res.p_values(), res.pvalues)
+        assert_(np.all(res.p_values(savi=True, g=g) <= 1))
+        assert_(np.all(res.sequential_p_values(g=g) >= res.pvalues))
+
+    def test_e_values_from_f_test(self):
+        res = self.res
+        r_matrix = np.eye(len(res.params))[1:3]
+        ft = res.f_test(r_matrix)
+        expected = _evalue_from_f_stat(
+            ft.fvalue, ft.df_num, ft.df_denom, res.nobs, 2.0
+        )
+        expected_pvalue = np.minimum(1, 1 / expected)
+        assert_allclose(res.e_values(r_matrix, g=2.0), expected)
+        assert_allclose(
+            res.p_values(r_matrix, savi=True, g=2.0), expected_pvalue
+        )
+        assert_allclose(
+            res.sequential_p_values(r_matrix, g=2.0), expected_pvalue
+        )
+        assert_allclose(res.p_values(r_matrix), ft.pvalue)
+        assert_(res.p_values(r_matrix, savi=True, g=2.0) <= 1)
+        assert_(res.sequential_p_values(r_matrix, g=2.0) >= ft.pvalue)
+
+    @pytest.mark.parametrize("df_num", [1, 3])
+    def test_e_values_converge_to_gaussian_e_process(self, df_num):
+        g = 2.5
+        qvalue = 8.0
+        fvalue = qvalue / df_num
+        df_offset = 10
+        nobs = 10_000_000
+        df_denom = nobs - df_offset
+
+        evalue = _evalue_from_f_stat(fvalue, df_num, df_denom, nobs, g)
+        gaussian_evalue = _gaussian_evalue(qvalue, df_num, nobs, g)
+        assert_allclose(evalue, gaussian_evalue, rtol=1e-5)
+
+    @pytest.mark.parametrize("res_attr", ["res", "res_wls", "res_hc1"])
+    @pytest.mark.parametrize("g", [1.0, 2.5])
+    def test_savi_conf_ints_contain_classical_conf_int(self, res_attr, g):
+        res = getattr(self, res_attr)
+        alpha = 0.05
+        cs = res.conf_int(alpha=alpha, savi=True, g=g)
+        ci = res.conf_int(alpha=alpha)
+        radius = _savi_confidence_radius(alpha, g, res.nobs, 1, res.df_resid)
+        expected = np.column_stack(
+            (
+                res.params - np.sqrt(radius) * res.bse,
+                res.params + np.sqrt(radius) * res.bse,
+            )
+        )
+        assert_allclose(cs, expected)
+        assert_allclose(res.confidence_sequences(alpha=alpha, g=g), expected)
+        assert_(np.all(cs[:, 0] <= ci[:, 0]))
+        assert_(np.all(cs[:, 1] >= ci[:, 1]))
+
+    def test_e_values_use_robust_covariance(self):
+        res = self.res_hc1
+        r_matrix = np.eye(len(res.params))[1:3]
+        ft = res.f_test(r_matrix)
+        expected = _evalue_from_f_stat(
+            ft.fvalue, ft.df_num, ft.df_denom, res.nobs, 1.0
+        )
+        assert_allclose(
+            res.e_values(r_matrix),
+            expected,
+        )
+        assert_allclose(
+            res.e_values(),
+            _evalue_from_f_stat(res.tvalues**2, 1, res.df_resid, res.nobs, 1.0),
+        )
+
+    @pytest.mark.parametrize(
+        "method", ["e_values", "sequential_p_values"]
+    )
+    def test_e_value_g_validation(self, method):
+        with pytest.raises(ValueError, match="g must be positive"):
+            getattr(self.res, method)(g=0)
+
+    def test_p_values_savi_g_validation(self):
+        with pytest.raises(ValueError, match="g must be positive"):
+            self.res.p_values(savi=True, g=0)
+
+    @pytest.mark.parametrize(
+        "res_attr, pvalue_header",
+        [("res", "P>|t|"), ("res_hc1_z", "P>|z|")],
+    )
+    def test_summary_savi_replaces_classical_inference(
+        self, res_attr, pvalue_header
+    ):
+        res = getattr(self, res_attr)
+        g = 2.5
+        default_summ = res.summary()
+        summ = res.summary(savi=True, g=g)
+        default_top_table = default_summ.tables[0]
+        default_coef_table = default_summ.tables[1]
+        top_table = summ.tables[0]
+        coef_table = summ.tables[1]
+        default_top_text = default_top_table.as_text()
+        default_coef_text = default_coef_table.as_text()
+        top_text = top_table.as_text()
+        coef_text = coef_table.as_text()
+        assert "Prob (F-statistic):" in default_top_text
+        assert "Prob (F-statistic):" not in top_text
+        assert "e (F-statistic):" in top_text
+        df_denom = getattr(res, "df_resid_inference", res.df_resid)
+        expected_f_evalue = _evalue_from_f_stat(
+            res.fvalue, res.df_model, df_denom, res.nobs, g
+        )
+        assert "%#6.3g" % expected_f_evalue in top_text
+        assert_(
+            float(default_top_table[3][3].data)
+            != float(top_table[3][3].data)
+        )
+        assert f" {pvalue_header} " in default_coef_text
+        assert f" {pvalue_header} " not in coef_text
+        assert " e " in coef_text
+        default_values = np.array(
+            [float(row[4].data) for row in default_coef_table[1:]]
+        )
+        savi_values = np.array([float(row[4].data) for row in coef_table[1:]])
+        assert_(not np.allclose(default_values, savi_values))
+        assert_allclose(
+            savi_values,
+            res.e_values(g=g),
+            rtol=5e-3,
+        )
+        default_intervals = np.array(
+            [
+                [float(row[5].data), float(row[6].data)]
+                for row in default_coef_table[1:]
+            ]
+        )
+        savi_intervals = np.array(
+            [[float(row[5].data), float(row[6].data)] for row in coef_table[1:]]
+        )
+        assert_(not np.allclose(default_intervals, savi_intervals))
+        assert_allclose(
+            savi_intervals,
+            res.conf_int(savi=True, g=g),
+            rtol=5e-3,
+            atol=5e-4,
+        )
+
+    def test_summary_savi_does_not_change_default_summary(self):
+        summ = self.res.summary()
+        assert "Prob (F-statistic):" in summ.tables[0].as_text()
+        assert " P>|t| " in summ.tables[1].as_text()
+
+    def test_summary_savi_g_validation(self):
+        with pytest.raises(ValueError, match="g must be positive"):
+            self.res.summary(savi=True, g=0)
+
+    def test_savi_matches_avlm_longley(self):
+        data = longley.load_pandas().data
+        # Expected values are from the avlm CRAN package, using R's longley
+        # data and the JASA paper's g-prior approximation.
+        # https://cran.r-project.org/web/packages/avlm/index.html
+        # https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
+        # Scale the statsmodels copy to R's units before fitting the same
+        # model.
+        endog = data["TOTEMP"].to_numpy() / 1000
+        exog = np.column_stack(
+            (data["GNP"].to_numpy() / 1000, data["UNEMP"].to_numpy() / 10)
+        )
+        res = OLS(endog, add_constant(exog, prepend=True)).fit()
+        g = 2.5
+
+        avlm_pvalues = np.array(
+            [
+                2.3994985366968640e-06,
+                6.5452796798514853e-06,
+                1.3043518743909294e-01,
+            ]
+        )
+        avlm_conf_int = np.array(
+            [
+                [50.301901821972919038, 54.4624322783199232845],
+                [0.031635798521018964, 0.0440448555138813133],
+                [-0.012035233090925803, 0.0011637464493843685],
+            ]
+        )
+        avlm_f_pvalue = 5.3726884577847966e-06
+
+        assert_allclose(res.p_values(savi=True, g=g), avlm_pvalues)
+        assert_allclose(res.conf_int(savi=True, g=g), avlm_conf_int)
+        f_evalue = _evalue_from_f_stat(
+            res.fvalue, res.df_model, res.df_resid, res.nobs, g
+        )
+        assert_allclose(np.minimum(1, 1 / f_evalue), avlm_f_pvalue)
+
+    def test_savi_hc0_coefficients_match_avlm_longley(self):
+        data = longley.load_pandas().data
+        # Expected values are from the avlm CRAN package, using R's longley
+        # data and the JASA paper's g-prior approximation.
+        # https://cran.r-project.org/web/packages/avlm/index.html
+        # https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
+        # Scale the statsmodels copy to R's units before fitting the same
+        # model.
+        endog = data["TOTEMP"].to_numpy() / 1000
+        exog = np.column_stack(
+            (data["GNP"].to_numpy() / 1000, data["UNEMP"].to_numpy() / 10)
+        )
+        res = OLS(endog, add_constant(exog, prepend=True)).fit(
+            cov_type="HC0", use_t=True
+        )
+        g = 2.5
+
+        avlm_pvalues = np.array(
+            [
+                2.3258728655056687e-06,
+                4.3782614065014952e-06,
+                4.8523079107576070e-02,
+            ]
+        )
+        avlm_conf_int = np.array(
+            [
+                [50.840615331130983634, 53.923718769161859],
+                [0.033030806719240489, 0.042649847315659788],
+                [-0.010841212821887157, -0.000030273819654277542],
+            ]
+        )
+
+        assert_allclose(res.p_values(savi=True, g=g), avlm_pvalues)
+        assert_allclose(res.conf_int(savi=True, g=g), avlm_conf_int)
+
+    @pytest.mark.parametrize("alpha", [0, 1])
+    def test_savi_conf_int_alpha_validation(self, alpha):
+        with pytest.raises(ValueError, match="alpha must be between 0 and 1"):
+            self.res.conf_int(alpha=alpha, savi=True)
 
 
 class TestGLS:

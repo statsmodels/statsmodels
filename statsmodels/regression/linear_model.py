@@ -79,6 +79,50 @@ __all__ = [
 
 dtrtri = get_lapack_funcs("trtri", dtype="float64", ilp64="preferred")
 
+
+def _check_evalue_g(g):
+    g = float_like(g, "g")
+    if g <= 0:
+        raise ValueError("g must be positive")
+    return g
+
+
+def _evalue_from_f_stat(fvalue, df_num, df_denom, nobs, g):
+    fvalue = np.asarray(fvalue)
+    df_num = float_like(df_num, "df_num")
+    df_denom = float_like(df_denom, "df_denom")
+    nobs = float_like(nobs, "nobs")
+    g = _check_evalue_g(g)
+
+    g_ratio = g / (g + nobs)
+    stat_ratio = df_num / df_denom * fvalue
+    log_evalue = (
+        df_num / 2 * np.log(g_ratio)
+        - (df_denom + df_num) / 2
+        * (np.log1p(g_ratio * stat_ratio) - np.log1p(stat_ratio))
+    )
+    return np.exp(log_evalue)
+
+
+def _savi_confidence_radius(alpha, g, nobs, df_num, df_denom):
+    alpha = float_like(alpha, "alpha")
+    if alpha <= 0 or alpha >= 1:
+        raise ValueError("alpha must be between 0 and 1")
+    df_num = float_like(df_num, "df_num")
+    df_denom = float_like(df_denom, "df_denom")
+    nobs = float_like(nobs, "nobs")
+    g = _check_evalue_g(g)
+
+    g_ratio = g / (g + nobs)
+    boundary = (alpha ** (2 / df_num) * g_ratio) ** (
+        df_num / (df_denom + df_num)
+    )
+    denom = boundary - g_ratio
+    if denom <= 0:
+        return np.inf
+    return df_denom / df_num * (1 - boundary) / denom
+
+
 _fit_regularized_doc = r"""
         Return a regularized fit to a linear regression model
 
@@ -1783,7 +1827,7 @@ class RegressionResults(base.LikelihoodModelResults):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def conf_int(self, alpha=0.05, cols=None):
+    def conf_int(self, alpha=0.05, cols=None, savi=False, g=1.0):
         """
         Compute the confidence interval of the fitted parameters.
 
@@ -1794,6 +1838,15 @@ class RegressionResults(base.LikelihoodModelResults):
             `alpha` = .05 returns a 95% confidence interval.
         cols : array_like, optional
             Columns to include in returned confidence intervals.
+        savi : bool, optional
+            If True, compute safe anytime-valid inference confidence
+            intervals by inverting e-values. Default is False.
+        g : float, optional
+            Positive tuning parameter used when ``savi`` is True. The default
+            is 1. See Remark 4.8 ("Practical choice of g") in Lindon et al.
+            (2026) for Bayesian, frequentist minimum detectable effect, and
+            width-optimal calibrations; larger ``g`` values lengthen the
+            infinite-width delayed start of confidence sequences.
 
         Returns
         -------
@@ -1802,12 +1855,215 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Notes
         -----
-        The confidence interval is based on Student's t-distribution.
+        The fixed-n confidence interval uses Student's t or normal inference
+        according to ``use_t``. If ``savi`` is True, the interval is obtained
+        by inverting e-values.
 
         """
-        # keep method for docstring for now
-        ci = super().conf_int(alpha=alpha, cols=cols)
+        savi = bool_like(savi, "savi", optional=False, strict=True)
+        if cols is not None:
+            warnings.warn(
+                "cols is deprecated and will be removed after 0.14 is "
+                "released. cols only works when inputs are NumPy arrays and "
+                "will fail when using pandas Series or DataFrames as input. "
+                "Subsets of confidence intervals can be selected using slices "
+                "of the full confidence interval array.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            cols = np.asarray(cols)
+        if savi:
+            ci = self._savi_conf_int(alpha=alpha, g=g)
+        else:
+            ci = super().conf_int(alpha=alpha)
+        if cols is not None:
+            ci = ci[cols]
         return ci
+
+    def _savi_conf_int(self, alpha=0.05, g=1.0):
+        df_denom = getattr(self, "df_resid_inference", self.df_resid)
+        radius = _savi_confidence_radius(
+            alpha, g, self.nobs, 1.0, df_denom
+        )
+        q = np.sqrt(radius)
+        bse = self.bse
+        err = q * bse
+        err = np.where(bse == 0, 0, err)
+        lower = self.params - err
+        upper = self.params + err
+        return np.asarray(lzip(lower, upper))
+
+    def e_values(self, r_matrix=None, g=1.0, cov_p=None, invcov=None):
+        """
+        Compute asymptotic e-values for linear hypotheses.
+
+        Parameters
+        ----------
+        r_matrix : {array_like, str, tuple}, optional
+            Linear restriction passed to ``f_test``. If None, returns
+            parameter-wise e-values using the squared t-statistics.
+        g : float, optional
+            Positive tuning parameter for the mixture. The default is 1. See
+            Remark 4.8 ("Practical choice of g") in Lindon et al. (2026) for
+            Bayesian, frequentist minimum detectable effect, and width-optimal
+            calibrations; larger ``g`` values lengthen the infinite-width
+            delayed start of confidence sequences.
+        cov_p : array_like, optional
+            Alternative estimate for the parameter covariance matrix passed
+            to ``f_test`` when ``r_matrix`` is not None.
+        invcov : array_like, optional
+            Inverse covariance matrix passed to ``f_test`` when ``r_matrix``
+            is not None.
+
+        Returns
+        -------
+        float or ndarray
+            E-value for the requested test. Returns one value per parameter if
+            ``r_matrix`` is None.
+
+        Notes
+        -----
+        The calculation implements the ``g``-prior approximation
+        ``G_n`` in Equation (17) of Lindon et al. (2026), rather than the
+        exact ``E_n`` in Equation (9). If robust covariance is active on the
+        results instance, the same t or F statistic plug-in corresponds to
+        the heteroskedastic asymptotic e-process in Equation (22), which
+        recovers Equation (17) when ``Q_n / r`` is the usual F statistic.
+
+        References
+        ----------
+        .. [1] Lindon et al. (2026). Anytime-Valid Inference in Linear Models
+           with Applications to Regression-Adjusted Causal Inference.
+           Journal of the American Statistical Association.
+           https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
+
+        .. [2] Lindon, M. avlm: Anytime-Valid Linear Models. CRAN.
+           https://cran.r-project.org/web/packages/avlm/index.html
+        """
+        df_denom = getattr(self, "df_resid_inference", self.df_resid)
+        if r_matrix is None:
+            fvalue = self.tvalues**2
+            df_num = 1.0
+        else:
+            fres = self.f_test(r_matrix, cov_p=cov_p, invcov=invcov)
+            fvalue = fres.fvalue
+            df_num = fres.df_num
+            df_denom = fres.df_denom
+        return _evalue_from_f_stat(fvalue, df_num, df_denom, self.nobs, g)
+
+    def p_values(
+        self, r_matrix=None, savi=False, g=1.0, cov_p=None, invcov=None
+    ):
+        """
+        Compute p-values for linear hypotheses.
+
+        Parameters
+        ----------
+        r_matrix : {array_like, str, tuple}, optional
+            Linear restriction passed to ``f_test``. If None, returns
+            parameter-wise p-values.
+        savi : bool, optional
+            If True, compute safe anytime-valid p-values from reciprocal
+            e-values. Default is False.
+        g : float, optional
+            Positive tuning parameter used when ``savi`` is True. The default
+            is 1. See Remark 4.8 ("Practical choice of g") in Lindon et al.
+            (2026) for Bayesian, frequentist minimum detectable effect, and
+            width-optimal calibrations; larger ``g`` values lengthen the
+            infinite-width delayed start of confidence sequences.
+        cov_p : array_like, optional
+            Alternative estimate for the parameter covariance matrix passed
+            to ``f_test`` or ``e_values`` when ``r_matrix`` is not None.
+        invcov : array_like, optional
+            Inverse covariance matrix passed to ``f_test`` or ``e_values``
+            when ``r_matrix`` is not None.
+
+        Returns
+        -------
+        float or ndarray
+            Classical p-values when ``savi`` is False. Reciprocal e-values
+            clipped at one when ``savi`` is True.
+        """
+        savi = bool_like(savi, "savi", optional=False, strict=True)
+        if not savi:
+            if r_matrix is None:
+                return self.pvalues
+            return self.f_test(r_matrix, cov_p=cov_p, invcov=invcov).pvalue
+        return np.minimum(
+            1,
+            1 / self.e_values(
+                r_matrix=r_matrix, g=g, cov_p=cov_p, invcov=invcov
+            ),
+        )
+
+    def sequential_p_values(self, r_matrix=None, g=1.0, cov_p=None, invcov=None):
+        """
+        Compute anytime-valid p-values from reciprocal e-values.
+
+        Parameters
+        ----------
+        r_matrix : {array_like, str, tuple}, optional
+            Linear restriction passed to ``f_test``. If None, returns
+            parameter-wise p-values using the squared t-statistics.
+        g : float, optional
+            Positive tuning parameter for the mixture. The default is 1. See
+            Remark 4.8 ("Practical choice of g") in Lindon et al. (2026) for
+            Bayesian, frequentist minimum detectable effect, and width-optimal
+            calibrations; larger ``g`` values lengthen the infinite-width
+            delayed start of confidence sequences.
+        cov_p : array_like, optional
+            Alternative estimate for the parameter covariance matrix passed
+            to ``f_test`` when ``r_matrix`` is not None.
+        invcov : array_like, optional
+            Inverse covariance matrix passed to ``f_test`` when ``r_matrix``
+            is not None.
+
+        Returns
+        -------
+        float or ndarray
+            Reciprocal of the e-value, clipped at one.
+
+        Notes
+        -----
+        Classical p-values control Type I error at a fixed sample size.
+        Sequential p-values are valid under continuous monitoring:
+
+        ``P_H0(exists n such that p_n <= alpha) <= alpha``.
+        """
+        return self.p_values(
+            r_matrix=r_matrix, savi=True, g=g, cov_p=cov_p, invcov=invcov
+        )
+
+    def confidence_sequences(self, alpha=0.05, g=1.0):
+        """
+        Compute parameter-wise asymptotic confidence sequences.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for the confidence sequences. The default
+            `alpha` = .05 returns 95% confidence sequences.
+        g : float, optional
+            Positive tuning parameter for the mixture. The default is 1. See
+            Remark 4.8 ("Practical choice of g") in Lindon et al. (2026) for
+            Bayesian, frequentist minimum detectable effect, and width-optimal
+            calibrations; larger ``g`` values lengthen the infinite-width
+            delayed start of confidence sequences.
+
+        Returns
+        -------
+        array_like
+            Each row contains [lower, upper] limits for the corresponding
+            parameter at the current sample size.
+
+        Notes
+        -----
+        Classical confidence intervals cover the parameter at a fixed sample
+        size. Confidence sequences provide time-uniform coverage:
+
+        ``P(theta in C_n^alpha for all n) >= 1 - alpha``.
+        """
+        return self._savi_conf_int(alpha=alpha, g=g)
 
     @cache_readonly
     def nobs(self):
@@ -2852,6 +3108,8 @@ class RegressionResults(base.LikelihoodModelResults):
         title: str | None = None,
         alpha: float = 0.05,
         slim: bool = False,
+        savi: bool = False,
+        g: float = 1.0,
     ):
         """
         Summarize the Regression Results.
@@ -2868,10 +3126,21 @@ class RegressionResults(base.LikelihoodModelResults):
             Title for the top table. If not None, then this replaces the
             default title.
         alpha : float, optional
-            The significance level for the confidence intervals.
+            The significance level for the confidence intervals, or
+            confidence sequences when ``savi`` is True.
         slim : bool, optional
             Flag indicating to produce reduced set or diagnostic information.
             Default is False.
+        savi : bool, optional
+            If True, replace classical p-values with e-values and coefficient
+            confidence intervals with confidence sequences computed from the
+            fitted model's t and F statistics. Default is False.
+        g : float, optional
+            Positive tuning parameter used when ``savi`` is True. The default
+            is 1. See Remark 4.8 ("Practical choice of g") in Lindon et al.
+            (2026) for Bayesian, frequentist minimum detectable effect, and
+            width-optimal calibrations; larger ``g`` values lengthen the
+            infinite-width delayed start of confidence sequences.
 
         Returns
         -------
@@ -2897,6 +3166,9 @@ class RegressionResults(base.LikelihoodModelResults):
 
         alpha = float_like(alpha, "alpha", optional=False)
         slim = bool_like(slim, "slim", optional=False, strict=True)
+        savi = bool_like(savi, "savi", optional=False, strict=True)
+        if savi:
+            g = _check_evalue_g(g)
 
         eigvals = self.eigenvals
         condno = self.condition_number
@@ -2927,11 +3199,24 @@ class RegressionResults(base.LikelihoodModelResults):
             top_left.append(("Covariance Type:", [self.cov_type]))
 
         rsquared_type = "" if self.k_constant else " (uncentered)"
+        fvalue = self.fvalue
+        if savi:
+            if self.df_model > 0 and not np.isnan(fvalue):
+                df_denom = getattr(self, "df_resid_inference", self.df_resid)
+                f_significance = _evalue_from_f_stat(
+                    fvalue, self.df_model, df_denom, self.nobs, g
+                )
+            else:
+                f_significance = np.nan
+            f_significance_label = "e (F-statistic):"
+        else:
+            f_significance = self.f_pvalue
+            f_significance_label = "Prob (F-statistic):"
         top_right = [
             ("R-squared" + rsquared_type + ":", ["%#8.3f" % self.rsquared]),
             ("Adj. R-squared" + rsquared_type + ":", ["%#8.3f" % self.rsquared_adj]),
-            ("F-statistic:", ["%#8.4g" % self.fvalue]),
-            ("Prob (F-statistic):", ["%#6.3g" % self.f_pvalue]),
+            ("F-statistic:", ["%#8.4g" % fvalue]),
+            (f_significance_label, ["%#6.3g" % f_significance]),
             ("Log-Likelihood:", None),
             ("AIC:", ["%#8.4g" % self.aic]),
             ("BIC:", ["%#8.4g" % self.bic]),
@@ -2946,7 +3231,7 @@ class RegressionResults(base.LikelihoodModelResults):
                 "R-squared:",
                 "Adj. R-squared:",
                 "F-statistic:",
-                "Prob (F-statistic):",
+                f_significance_label,
             ]
             diagn_left = diagn_right = []
             top_left = [elem for elem in top_left if elem[0] in slimlist]
@@ -2983,7 +3268,7 @@ class RegressionResults(base.LikelihoodModelResults):
             title = self.model.__class__.__name__ + " " + "Regression Results"
 
         # create summary table instance
-        from statsmodels.iolib.summary import Summary
+        from statsmodels.iolib.summary import Summary, forg, summary_params
 
         smry = Summary()
         smry.add_table_2cols(
@@ -2994,9 +3279,32 @@ class RegressionResults(base.LikelihoodModelResults):
             xname=xname,
             title=title,
         )
-        smry.add_table_params(
-            self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t
-        )
+        if savi:
+            evalues = self.e_values(g=g)
+            savi_results = (
+                self,
+                self.params,
+                self.bse,
+                self.tvalues,
+                evalues,
+                self.conf_int(alpha, savi=True, g=g),
+            )
+            table = summary_params(
+                savi_results,
+                yname=yname,
+                xname=xname,
+                alpha=alpha,
+                use_t=self.use_t,
+            )
+            if np.size(evalues):
+                table[0][4].data = "e"
+                for row, evalue in zip(table[1:], np.asarray(evalues).ravel()):
+                    row[4].data = forg(evalue)
+            smry.tables.append(table)
+        else:
+            smry.add_table_params(
+                self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t
+            )
         if not slim:
             smry.add_table_2cols(
                 self,
