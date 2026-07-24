@@ -7,12 +7,11 @@ Review of Economics and Statistics, 100(5), 831-843.
 """
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
-from numpy.testing import assert_allclose
 
 from statsmodels.tsa.filters.hamilton_filter import hamilton_filter
-
 
 # ---------------------------------------------------------------------------
 # DGP helpers
@@ -114,17 +113,16 @@ def test_matches_direct_ols():
     T = len(x)
     n_obs = T - p - h + 1
 
-    Y = x[p + h - 1:]
+    Y = x[p + h - 1 :]
     cols = [x[p - 1 - j : T - h - j] for j in range(p)]
     cols.append(np.ones(n_obs))
     X = np.column_stack(cols)
     params, _, _, _ = np.linalg.lstsq(X, Y, rcond=None)
     ols_cycle = Y - X @ params
 
-    _, cycle, _ = (None, *hamilton_filter(x, h=h, p=p))
     # hamilton_filter returns (cycle, trend)
     ham_cycle, _ = hamilton_filter(x, h=h, p=p)
-    assert_allclose(ham_cycle[p + h - 1:], ols_cycle, atol=1e-10)
+    assert_allclose(ham_cycle[p + h - 1 :], ols_cycle, atol=1e-10)
 
 
 # ---------------------------------------------------------------------------
@@ -175,16 +173,21 @@ def test_raises_p_zero():
 
 
 def test_raises_too_short():
-    with pytest.raises(ValueError, match="at least p \\+ h"):
-        hamilton_filter(np.ones(5), h=8, p=4)  # 5 < 4+8
+    with pytest.raises(ValueError, match="x must have at least 2p \\+ h"):
+        hamilton_filter(np.ones(5), h=8, p=4)
 
 
-def test_minimum_length_works():
-    """Exactly p+h observations — one valid data point."""
-    h, p = 3, 2
-    x = RNG.standard_normal(p + h)  # = 5 obs
+@pytest.mark.parametrize("h", [3, 7])
+@pytest.mark.parametrize("p", [2, 5, 7, 11])
+def test_minimum_length_works(h, p):
+    # There are p+1 regressors, so require at least p+1 observations
+    # Requires at least 2 * p + h observations
+    x = RNG.standard_normal(2 * p + h)
     cycle, trend = hamilton_filter(x, h=h, p=p)
-    assert np.sum(np.isfinite(cycle)) == 1
+    # Minimum number of non-nan values is the same as the number of regressors
+    assert np.sum(np.isfinite(cycle)) == (p + 1), np.sum(np.isfinite(cycle))
+    with pytest.raises(ValueError, match="x must have at least 2p \\+ h"):
+        hamilton_filter(x[:-1], h=h, p=p)
 
 
 # ---------------------------------------------------------------------------
@@ -220,11 +223,13 @@ def test_annual_settings():
 
 def test_accessible_via_tsa_filters():
     from statsmodels.tsa.filters.hamilton_filter import hamilton_filter as hf
+
     assert callable(hf)
 
 
 def test_importable_from_api():
     from statsmodels.tsa.filters.api import hamilton_filter as hf
+
     assert callable(hf)
 
 

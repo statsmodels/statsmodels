@@ -52,7 +52,6 @@ __all__ = [
     "plot_partregress",
     "plot_partregress_grid",
     "plot_regress_exog",
-    "plot_regress_exog",
 ]
 
 

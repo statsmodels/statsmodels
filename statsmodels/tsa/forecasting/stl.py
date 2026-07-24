@@ -25,8 +25,10 @@ ds.insert_parameters(
         "model",
         "Model",
         [
-            "The model used to forecast endog after the seasonality has been "
-            "removed using STL"
+            (
+                "The model used to forecast endog after the seasonality has been "
+                "removed using STL"
+            )
         ],
     ),
 )
@@ -36,8 +38,10 @@ ds.insert_parameters(
         "model_kwargs",
         "dict[str, Any]",
         [
-            "Any additional arguments needed to initialized the model using "
-            "the residuals produced by subtracting the seasonality."
+            (
+                "Any additional arguments needed to initialized the model using "
+                "the residuals produced by subtracting the seasonality."
+            )
         ],
     ),
 )
@@ -67,88 +71,88 @@ _fit_params = ds.extract_parameters(["inner_iter", "outer_iter"])
 @Substitution(stl_forecast_params=indent(_stl_forecast_params, "    "))
 class STLForecast:
     r"""
-    Model-based forecasting using STL to remove seasonality
+        Model-based forecasting using STL to remove seasonality
 
-    Forecasts are produced by first subtracting the seasonality
-    estimated using STL, then forecasting the deseasonalized
-    data using a time-series model, for example, ARIMA.
+        Forecasts are produced by first subtracting the seasonality
+        estimated using STL, then forecasting the deseasonalized
+        data using a time-series model, for example, ARIMA.
 
-    Parameters
-    ----------
-%(stl_forecast_params)s
+        Parameters
+        ----------
+    %(stl_forecast_params)s
 
-    See Also
-    --------
-    statsmodels.tsa.arima.model.ARIMA
-        ARIMA modeling.
-    statsmodels.tsa.ar_model.AutoReg
-        Autoregressive modeling supporting complex deterministics.
-    statsmodels.tsa.exponential_smoothing.ets.ETSModel
-        Additive and multiplicative exponential smoothing with trend.
-    statsmodels.tsa.statespace.exponential_smoothing.ExponentialSmoothing
-        Additive exponential smoothing with trend.
+        See Also
+        --------
+        statsmodels.tsa.arima.model.ARIMA
+            ARIMA modeling.
+        statsmodels.tsa.ar_model.AutoReg
+            Autoregressive modeling supporting complex deterministics.
+        statsmodels.tsa.exponential_smoothing.ets.ETSModel
+            Additive and multiplicative exponential smoothing with trend.
+        statsmodels.tsa.statespace.exponential_smoothing.ExponentialSmoothing
+            Additive exponential smoothing with trend.
 
-    Notes
-    -----
-    If :math:`\hat{S}_t` is the seasonal component, then the deseasonalize
-    series is constructed as
+        Notes
+        -----
+        If :math:`\hat{S}_t` is the seasonal component, then the deseasonalize
+        series is constructed as
 
-    .. math::
+        .. math::
 
-        Y_t - \hat{S}_t
+            Y_t - \hat{S}_t
 
-    The trend component is not removed, and so the time series model should
-    be capable of adequately fitting and forecasting the trend if present. The
-    out-of-sample forecasts of the seasonal component are produced as
+        The trend component is not removed, and so the time series model should
+        be capable of adequately fitting and forecasting the trend if present. The
+        out-of-sample forecasts of the seasonal component are produced as
 
-    .. math::
+        .. math::
 
-        \hat{S}_{T + h} = \hat{S}_{T - k}
+            \hat{S}_{T + h} = \hat{S}_{T - k}
 
-    where :math:`k = m - h + m \lfloor (h-1)/m \rfloor` tracks the period
-    offset in the full cycle of 1, 2, ..., m where m is the period length.
+        where :math:`k = m - h + m \lfloor (h-1)/m \rfloor` tracks the period
+        offset in the full cycle of 1, 2, ..., m where m is the period length.
 
-    This class is mostly a convenience wrapper around ``STL`` and a
-    user-specified model. The model is assumed to follow the standard
-    statsmodels pattern:
+        This class is mostly a convenience wrapper around ``STL`` and a
+        user-specified model. The model is assumed to follow the standard
+        statsmodels pattern:
 
-    * ``fit`` is used to estimate parameters and returns a results instance,
-      ``results``.
-    * ``results`` must expose a method ``forecast(steps, **kwargs)`` that
-      produces out-of-sample forecasts.
-    * ``results`` may also expose a method ``get_prediction`` that produces
-      both in- and out-of-sample predictions.
+        * ``fit`` is used to estimate parameters and returns a results instance,
+          ``results``.
+        * ``results`` must expose a method ``forecast(steps, **kwargs)`` that
+          produces out-of-sample forecasts.
+        * ``results`` may also expose a method ``get_prediction`` that produces
+          both in- and out-of-sample predictions.
 
-    See the notebook `Seasonal Decomposition
-    <../examples/notebooks/generated/stl_decomposition.html>`__ for an
-    overview.
+        See the notebook `Seasonal Decomposition
+        <../examples/notebooks/generated/stl_decomposition.html>`__ for an
+        overview.
 
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> from statsmodels.tsa.api import STLForecast
-    >>> from statsmodels.tsa.arima.model import ARIMA
-    >>> from statsmodels.datasets import macrodata
-    >>> ds = macrodata.load_pandas()
-    >>> data = np.log(ds.data.m1)
-    >>> base_date = f"{int(ds.data.year[0])}-{3*int(ds.data.quarter[0])+1}-1"
-    >>> data.index = pd.date_range(base_date, periods=data.shape[0], freq="QS")
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from statsmodels.tsa.api import STLForecast
+        >>> from statsmodels.tsa.arima.model import ARIMA
+        >>> from statsmodels.datasets import macrodata
+        >>> ds = macrodata.load_pandas()
+        >>> data = np.log(ds.data.m1)
+        >>> base_date = f"{int(ds.data.year[0])}-{3*int(ds.data.quarter[0])+1}-1"
+        >>> data.index = pd.date_range(base_date, periods=data.shape[0], freq="QS")
 
-    Generate forecasts from an ARIMA
+        Generate forecasts from an ARIMA
 
-    >>> stlf = STLForecast(data, ARIMA, model_kwargs={"order": (2, 1, 0)})
-    >>> res = stlf.fit()
-    >>> forecasts = res.forecast(12)
+        >>> stlf = STLForecast(data, ARIMA, model_kwargs={"order": (2, 1, 0)})
+        >>> res = stlf.fit()
+        >>> forecasts = res.forecast(12)
 
-    Generate forecasts from an Exponential Smoothing model with trend
+        Generate forecasts from an Exponential Smoothing model with trend
 
-    >>> from statsmodels.tsa.statespace import exponential_smoothing
-    >>> ES = exponential_smoothing.ExponentialSmoothing
-    >>> config = {"trend": True}
-    >>> stlf = STLForecast(data, ES, model_kwargs=config)
-    >>> res = stlf.fit()
-    >>> forecasts = res.forecast(12)
+        >>> from statsmodels.tsa.statespace import exponential_smoothing
+        >>> ES = exponential_smoothing.ExponentialSmoothing
+        >>> config = {"trend": True}
+        >>> stlf = STLForecast(data, ES, model_kwargs=config)
+        >>> res = stlf.fit()
+        >>> forecasts = res.forecast(12)
     """
 
     def __init__(
@@ -206,9 +210,7 @@ class STLForecast:
         """
         fit_kwargs = {} if fit_kwargs is None else fit_kwargs
         stl = STL(self._endog, **self._stl_kwargs)
-        stl_fit: DecomposeResult = stl.fit(
-            inner_iter=inner_iter, outer_iter=outer_iter
-        )
+        stl_fit: DecomposeResult = stl.fit(inner_iter=inner_iter, outer_iter=outer_iter)
         model_endog = stl_fit.trend + stl_fit.resid
         mod = self._model(model_endog, **self._model_kwargs)
         res = mod.fit(**fit_kwargs)
@@ -294,17 +296,11 @@ class STLForecastResults:
         returns a ``Summary`` object.
         """
         if not hasattr(self._model_result, "summary"):
-            raise AttributeError(
-                "The model result does not have a summary attribute."
-            )
+            raise AttributeError("The model result does not have a summary attribute.")
         summary: Summary = self._model_result.summary()
         if not isinstance(summary, Summary):
-            raise TypeError(
-                "The model result's summary is not a Summary object."
-            )
-        summary.tables[0].title = (
-            "STL Decomposition and " + summary.tables[0].title
-        )
+            raise TypeError("The model result's summary is not a Summary object.")
+        summary.tables[0].title = "STL Decomposition and " + summary.tables[0].title
         config = self._stl.config
         left_keys = ("period", "seasonal", "robust")
         left_data = []
@@ -326,9 +322,7 @@ class STLForecastResults:
             else:
                 right_stubs.append(" " * 6 + stub)
                 right_data.append([val])
-        tab = SimpleTable(
-            left_data, stubs=tuple(left_stubs), title="STL Configuration"
-        )
+        tab = SimpleTable(left_data, stubs=tuple(left_stubs), title="STL Configuration")
         tab.extend_right(SimpleTable(right_data, stubs=right_stubs))
         summary.tables.append(tab)
         return summary
@@ -372,7 +366,7 @@ class STLForecastResults:
         data = PandasData(pd.Series(self._endog), index=self._index)
         if start is None:
             start = 0
-        (start, end, out_of_sample, prediction_index) = get_prediction_index(
+        start, end, out_of_sample, prediction_index = get_prediction_index(
             start, end, self._nobs, self._index, data=data
         )
 
@@ -504,9 +498,7 @@ class STLForecastResults:
         pred = self._model_result.get_prediction(
             start=start, end=end, dynamic=dynamic, **kwargs
         )
-        seasonal_prediction = self._get_seasonal_prediction(
-            start, end, dynamic
-        )
+        seasonal_prediction = self._get_seasonal_prediction(start, end, dynamic)
         mean = pred.predicted_mean + seasonal_prediction
         try:
             var_pred_mean = pred.var_pred_mean

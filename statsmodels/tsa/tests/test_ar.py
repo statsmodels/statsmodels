@@ -20,7 +20,11 @@ import pytest
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.sm_exceptions import SpecificationWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import (
+    EstimationWarning,
+    SpecificationWarning,
+    ValueWarning,
+)
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.ar_model import (
     AutoReg,
@@ -1339,3 +1343,13 @@ def test_autoreg_append_deterministic(append_data):
         deterministic=dp.apply(y_both.index),
     ).fit()
     assert_allclose(res_append.params, res_direct.params)
+
+
+def test_no_obs_for_adjustment():
+    # Ensure model work when there are insufficient observations to
+    # apply a small sample adjustment
+    rs = np.random.RandomState(0)
+    x = rs.standard_normal(7)
+    mod = AutoReg(x, lags=3, trend="c")
+    with pytest.warns(EstimationWarning, match="The adjusted number of observations"):
+        mod.fit()

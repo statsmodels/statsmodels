@@ -9,12 +9,13 @@ Hamilton, J. D. (2018). Why You Should Never Use the Hodrick-Prescott Filter.
 
 import numpy as np
 
-from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tools.validation import PandasWrapper, array_like, int_like
+from statsmodels.tsa.ar_model import AutoReg
 
 
 def hamilton_filter(x, h=8, p=4):
     r"""
-    Hamilton (2018) regression-based trend-cycle decomposition.
+    Hamilton (2018) regression-based trend-cycle decomposition [Hamilton2018]_.
 
     Decomposes a time series into trend and cycle components by projecting
     ``h``-period-ahead values on the ``p`` most recent lags and a constant:
@@ -75,8 +76,8 @@ def hamilton_filter(x, h=8, p=4):
 
     References
     ----------
-    Hamilton, J. D. (2018). Why You Should Never Use the Hodrick-Prescott
-    Filter. *Review of Economics and Statistics*, 100(5), 831-843.
+    .. [Hamilton2018] Hamilton, J. D. (2018). Why You Should Never Use the
+       Hodrick-Prescott Filter. *Review of Economics and Statistics*, 100(5), 831-843.
 
     Examples
     --------
@@ -89,38 +90,30 @@ def hamilton_filter(x, h=8, p=4):
     """
     pw = PandasWrapper(x)
     x = array_like(x, "x", ndim=1)
+    h = int_like(h, "h", strict=True, optional=False)
+    p = int_like(p, "p", strict=True, optional=False)
     T = len(x)
 
     if h < 1:
         raise ValueError("h must be a positive integer.")
     if p < 1:
         raise ValueError("p must be a positive integer.")
-    if T < p + h:
+    if T < (2 * p + h):
         raise ValueError(
-            f"x must have at least p + h = {p + h} observations; "
-            f"got {T}."
+            f"x must have at least 2p + h = {2 * p + h} observations; got {T}."
         )
 
-    n_obs = T - p - h + 1
+    _lags = np.arange(h, h + p)
+    mod = AutoReg(x, lags=_lags, trend="c")
+    res = mod.fit()
 
-    # Dependent variable: y_{t+h} for t = p-1, p, ..., T-h-1
-    Y = x[p + h - 1:]          # shape (n_obs,)
-
-    # Regressors: [y_t, y_{t-1}, ..., y_{t-p+1}, 1]
-    cols = [x[p - 1 - j : T - h - j] for j in range(p)]
-    cols.append(np.ones(n_obs))
-    X = np.column_stack(cols)   # shape (n_obs, p+1)
-
-    # OLS estimate
-    params, _, _, _ = np.linalg.lstsq(X, Y, rcond=None)
-
-    fitted = X @ params         # trend values at t+h
-    resid = Y - fitted          # cycle values at t+h
+    fitted = res.fittedvalues  # trend values at t+h
+    resid = res.resid  # cycle values at t+h
 
     # Place results at the correct positions in output arrays
     trend = np.full(T, np.nan)
     cycle = np.full(T, np.nan)
-    trend[p + h - 1:] = fitted
-    cycle[p + h - 1:] = resid
+    trend[p + h - 1 :] = fitted
+    cycle[p + h - 1 :] = resid
 
     return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
