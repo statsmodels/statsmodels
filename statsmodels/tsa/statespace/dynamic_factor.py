@@ -454,7 +454,7 @@ class DynamicFactor(MLEModel):
         # 1. Factor loadings (estimated via PCA)
         if self.k_factors > 0:
             # Use principal components + OLS as starting values
-            res_pca = PCA(endog, ncomp=self.k_factors)
+            res_pca = PCA(endog, ncomp=self.k_factors, normalize=False)
             mod_ols = OLS(endog, res_pca.factors)
             res_ols = mod_ols.fit()
 
