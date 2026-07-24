@@ -1,0 +1,363 @@
+Metadata-Version: 1.1
+Name: statsmodels
+Version: 0.5.0
+Summary: Statistical computations and models for use with SciPy
+Home-page: http://statsmodels.sourceforge.net/
+Author: Skipper Seabold, Josef Perktold
+Author-email: pystatsmodels@googlegroups.com
+License: BSD License
+Description: What Statsmodels is
+        ===================
+        What it is
+        ==========
+        
+        Statsmodels is a Python package that provides a complement to scipy for statistical computations including descriptive statistics and estimation and inference for statistical models.
+        
+        Main Features
+        =============
+        
+        * linear regression models: Generalized least squares (including weighted least squares and
+          least squares with autoregressive errors), ordinary least squares.
+        * glm: Generalized linear models with support for all of the one-parameter
+          exponential family distributions.
+        * discrete: regression with discrete dependent variables, including Logit, Probit, MNLogit, Poisson, based on maximum likelihood estimators
+        * rlm: Robust linear models with support for several M-estimators.
+        * tsa: models for time series analysis
+          - univariate time series analysis: AR, ARIMA
+          - vector autoregressive models, VAR and structural VAR
+          - descriptive statistics and process models for time series analysis
+        * nonparametric : (Univariate) kernel density estimators
+        * datasets: Datasets to be distributed and used for examples and in testing.
+        * stats: a wide range of statistical tests
+          - diagnostics and specification tests
+          - goodness-of-fit and normality tests
+          - functions for multiple testing
+          - various additional statistical tests
+        * iolib
+          - Tools for reading Stata .dta files into numpy arrays.
+          - printing table output to ascii, latex, and html
+        * miscellaneous models
+        * sandbox: statsmodels contains a sandbox folder with code in various stages of
+          developement and testing which is not considered "production ready".
+          This covers among others Mixed (repeated measures) Models, GARCH models, general method
+          of moments (GMM) estimators, kernel regression, various extensions to scipy.stats.distributions,
+          panel data models, generalized additive models and information theoretic measures.
+        
+        
+        Where to get it
+        ===============
+        
+        The master branch on GitHub is the most up to date code
+        
+            https://www.github.com/statsmodels/statsmodels
+        
+        Source download of release tags are available on GitHub
+        
+            https://github.com/statsmodels/statsmodels/tags
+        
+        Binaries and source distributions are available from PyPi
+        
+            http://pypi.python.org/pypi/statsmodels/
+        
+        
+        Installation from sources
+        =========================
+        
+        See INSTALL.txt for requirements or see the documentation
+        
+            http://statsmodels.sf.net/devel/install.html
+        
+        
+        License
+        =======
+        
+        Modified BSD (3-clause)
+        
+        
+        Documentation
+        =============
+        
+        The official documentation is hosted on SourceForge
+        
+            http://statsmodels.sf.net/
+        
+        
+        Windows Help
+        ============
+        The source distribution for Windows includes a htmlhelp file (statsmodels.chm).
+        This can be opened from the python interpreter ::
+        
+            >>> import statsmodels.api as sm
+            >>> sm.open_help()
+        
+        
+        Discussion and Development
+        ==========================
+        
+        Discussions take place on our mailing list. 
+        
+            http://groups.google.com/group/pystatsmodels
+        
+        We are very interested in feedback about usability and suggestions for improvements. 
+        
+        
+        Bug Reports
+        ===========
+        
+        Bug reports can be submitted to the issue tracker at
+        
+            https://github.com/statsmodels/statsmodels/issues
+        
+        
+        Release History
+        ===============
+        
+        0.5.0
+        -----
+        *Main Changes and Additions*
+        * Add patsy dependency
+        
+        *Compatibility and Deprecation*
+        
+        * cleanup of import paths (lowess)
+        *
+        
+        *Bug Fixes*
+        
+        * input shapes of tools.isestimable
+        *
+        
+        *Enhancements and Additions*
+        
+        * formula integration based on patsy (new dependency)
+        * Time series analysis
+          - ARIMA modeling
+          - enhanced forecasting based on pandas datetime handling
+        * expanded margins for discrete models
+        * OLS outlier test
+        
+        * empirical likelihood - Google Summer of Code 2012 project
+          - inference for descriptive statistics
+          - inference for regression models
+          - accelerated failure time models
+        
+        * expanded probability plots
+        * improved graphics
+          - plotcorr
+          - acf and pacf
+        * new datasets
+        * new and improved tools
+          - numdiff numerical differentiation
+        
+        
+        
+        0.4.3
+        -----
+        
+        The only change compared to 0.4.2 is for compatibility with python 3.2.3
+        (changed behavior of 2to3)
+        
+        
+        0.4.2
+        -----
+        
+        This is a bug-fix release, that affects mainly Big-Endian machines.
+        
+        *Bug Fixes*
+        
+        * discrete_model.MNLogit fix summary method
+        * tsa.filters.hp_filter don't use umfpack on Big-Endian machine (scipy bug)
+        * the remaining fixes are in the test suite, either precision problems
+          on some machines or incorrect testing on Big-Endian machines.
+        
+        
+        
+        0.4.1
+        -----
+        
+        This is a backwards compatible (according to our test suite) release with
+        bug fixes and code cleanup.
+        
+        *Bug Fixes*
+        
+        * build and distribution fixes
+        * lowess correct distance calculation
+        * genmod correction CDFlink derivative
+        * adfuller _autolag correct calculation of optimal lag
+        * het_arch, het_lm : fix autolag and store options
+        * GLSAR: incorrect whitening for lag>1
+        
+        *Other Changes*
+        
+        * add lowess and other functions to api and documentation
+        * rename lowess module (old import path will be removed at next release)
+        * new robust sandwich covariance estimators, moved out of sandbox
+        * compatibility with pandas 0.8
+        * new plots in statsmodels.graphics
+          - ABLine plot
+          - interaction plot
+        
+        
+        0.4.0
+        -----
+        
+        *Main Changes and Additions*
+        
+        * Added pandas dependency.
+        * Cython source is built automatically if cython and compiler are present
+        * Support use of dates in timeseries models
+        * Improved plots
+          - Violin plots
+          - Bean Plots
+          - QQ Plots
+        * Added lowess function
+        * Support for pandas Series and DataFrame objects. Results instances return
+          pandas objects if the models are fit using pandas objects.
+        * Full Python 3 compatibility
+        * Fix bugs in genfromdta. Convert Stata .dta format to structured array
+          preserving all types. Conversion is much faster now.
+        * Improved documentation
+        * Models and results are pickleable via save/load, optionally saving the model
+          data.
+        * Kernel Density Estimation now uses Cython and is considerably faster.
+        * Diagnostics for outlier and influence statistics in OLS
+        * Added El Nino Sea Surface Temperatures dataset
+        * Numerous bug fixes
+        * Internal code refactoring
+        * Improved documentation including examples as part of HTML
+        
+        *Changes that break backwards compatibility*
+        
+        * Deprecated scikits namespace. The recommended import is now::
+        
+              import statsmodels.api as sm
+        
+        * model.predict methods signature is now (params, exog, ...) where before
+          it assumed that the model had been fit and omitted the params argument.
+        * For consistency with other multi-equation models, the parameters of MNLogit
+          are now transposed.
+        * tools.tools.ECDF -> distributions.ECDF
+        * tools.tools.monotone_fn_inverter -> distributions.monotone_fn_inverter
+        * tools.tools.StepFunction -> distributions.StepFunction
+        
+        
+        0.3.1
+        -----
+        
+        * Removed academic-only WFS dataset.
+        * Fix easy_install issue on Windows.
+        
+        0.3.0
+        -----
+        
+        *Changes that break backwards compatibility*
+        
+        Added api.py for importing. So the new convention for importing is::
+        
+            import statsmodels.api as sm
+        
+        Importing from modules directly now avoids unnecessary imports and increases
+        the import speed if a library or user only needs specific functions.
+        
+        * sandbox/output.py -> iolib/table.py
+        * lib/io.py -> iolib/foreign.py (Now contains Stata .dta format reader)
+        * family -> families
+        * families.links.inverse -> families.links.inverse_power
+        * Datasets' Load class is now load function.
+        * regression.py -> regression/linear_model.py
+        * discretemod.py -> discrete/discrete_model.py
+        * rlm.py -> robust/robust_linear_model.py
+        * glm.py -> genmod/generalized_linear_model.py
+        * model.py -> base/model.py
+        * t() method -> tvalues attribute (t() still exists but raises a warning)
+        
+        *Main changes and additions*
+        
+        * Numerous bugfixes.
+        * Time Series Analysis model (tsa)
+        
+          - Vector Autoregression Models VAR (tsa.VAR)
+          - Autogressive Models AR (tsa.AR)
+          - Autoregressive Moving Average Models ARMA (tsa.ARMA)
+            optionally uses Cython for Kalman Filtering
+            use setup.py install with option --with-cython
+          - Baxter-King band-pass filter (tsa.filters.bkfilter)
+          - Hodrick-Prescott filter (tsa.filters.hpfilter)
+          - Christiano-Fitzgerald filter (tsa.filters.cffilter)
+        
+        * Improved maximum likelihood framework uses all available scipy.optimize solvers
+        * Refactor of the datasets sub-package.
+        * Added more datasets for examples.
+        * Removed RPy dependency for running the test suite.
+        * Refactored the test suite.
+        * Refactored codebase/directory structure.
+        * Support for offset and exposure in GLM.
+        * Removed data_weights argument to GLM.fit for Binomial models.
+        * New statistical tests, especially diagnostic and specification tests
+        * Multiple test correction
+        * General Method of Moment framework in sandbox
+        * Improved documentation
+        * and other additions
+        
+        
+        0.2.0
+        -----
+        
+        *Main changes*
+        
+         * renames for more consistency
+           RLM.fitted_values -> RLM.fittedvalues
+           GLMResults.resid_dev -> GLMResults.resid_deviance
+         * GLMResults, RegressionResults:
+           lazy calculations, convert attributes to properties with _cache
+         * fix tests to run without rpy
+         * expanded examples in examples directory
+         * add PyDTA to lib.io -- functions for reading Stata .dta binary files
+           and converting
+           them to numpy arrays
+         * made tools.categorical much more robust
+         * add_constant now takes a prepend argument
+         * fix GLS to work with only a one column design
+        
+        *New*
+        
+         * add four new datasets
+        
+           - A dataset from the American National Election Studies (1996)
+           - Grunfeld (1950) investment data
+           - Spector and Mazzeo (1980) program effectiveness data
+           - A US macroeconomic dataset
+         * add four new Maximum Likelihood Estimators for models with a discrete
+           dependent variables with examples
+        
+           - Logit
+           - Probit
+           - MNLogit (multinomial logit)
+           - Poisson
+        
+        *Sandbox*
+        
+         * add qqplot in sandbox.graphics
+         * add sandbox.tsa (time series analysis) and sandbox.regression (anova)
+         * add principal component analysis in sandbox.tools
+         * add Seemingly Unrelated Regression (SUR) and Two-Stage Least Squares
+           for systems of equations in sandbox.sysreg.Sem2SLS
+         * add restricted least squares (RLS)
+        
+        
+        0.1.0b1
+        -------
+         * initial release
+        
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Programming Language :: Python :: 2.5
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3.2
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Topic :: Scientific/Engineering
