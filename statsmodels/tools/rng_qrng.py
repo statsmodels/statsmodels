@@ -19,7 +19,7 @@ def check_random_state(seed=None, deprecated=False, warn=True):
         `scipy.stats.qmc.QMCEngine` instance then that instance is used.
     deprecated : bool, optional
         If False, returns default_rng(seed). If True, returns RandomState(seed)
-        when seed an int or array-like of ints.
+        when seed is an int or array-like of ints.
     warn : bool, optional
         Whether to issue a warning that the future behavior for integer or
         array-like seed will switch to calling default_rng(seed).

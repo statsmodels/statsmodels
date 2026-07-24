@@ -455,9 +455,10 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 cov_params /= scale
             else:
                 warnings.warn(
-                    f"The adjusted number of observations (nobs - k) is {nobs - k} "
-                    f"is non-positive where k is the number of parameters in the model. "
-                    f"Covariance matrix has not been adjusted for the sample size.",
+                    f"The adjusted number of observations (nobs - k) is "
+                    f"{nobs - k}, which is non-positive, where k is the "
+                    f"number of parameters in the model. Covariance matrix "
+                    f"has not been adjusted for the sample size.",
                     EstimationWarning,
                     stacklevel=2,
                 )

@@ -134,9 +134,10 @@ def innovations_mle(
         Arguments to pass to scipy.optimize.minimize.
     fixed_params : dict, optional
         Dictionary of parameter names and fixed values. Keys must be valid
-        AR or MA parameter names as returned by ``SARIMAXSpecification
-        .param_names`` (e.g. ``{"ar.L1": 0.5}``). ``sigma2`` may not be
-        fixed. Default is None, which fixes no parameters.
+        AR or MA parameter names as returned by
+        ``SARIMAXSpecification.param_names`` (e.g. ``{"ar.L1": 0.5}``).
+        ``sigma2`` may not be fixed. Default is None, which fixes no
+        parameters.
 
     Returns
     -------
