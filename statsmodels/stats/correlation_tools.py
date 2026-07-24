@@ -152,11 +152,13 @@ def corr_clipped(corr, threshold=1e-15):
     return x_new
 
 
-def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=False):
+def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
+                return_all=False, min_diag=None):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
 
-    This leaves the diagonal, i.e. the variance, unchanged
+    This leaves the diagonal, i.e. the variance, unchanged, unless ``min_diag``
+    is used to enforce a strictly positive diagonal (see below).
 
     Parameters
     ----------
@@ -174,6 +176,15 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
         if False (default), then only the covariance matrix is returned.
         If True, then correlation matrix and standard deviation are
         additionally returned.
+    min_diag : None or float
+        If None (default), the diagonal of ``cov`` is left unchanged. This
+        function converts the covariance matrix to a correlation matrix, which
+        is not defined if a diagonal element (variance) is zero or negative and
+        results in a matrix that contains ``nan``. If ``min_diag`` is a positive
+        float, then diagonal elements that are smaller than ``min_diag`` are
+        raised to ``min_diag`` before the conversion, and a ``SpecificationWarning``
+        is issued. This makes it possible to correct matrices with a zero or
+        negative diagonal, at the cost of changing those variances.
 
     Returns
     -------
@@ -205,6 +216,20 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
     """
 
     from statsmodels.stats.moment_helpers import corr2cov, cov2corr
+
+    cov = np.asarray(cov)
+    if min_diag is not None:
+        diag = np.diag(cov)
+        if np.any(diag < min_diag):
+            warnings.warn(
+                "Diagonal elements below min_diag=%r have been raised to "
+                "min_diag; the corresponding variances are changed." % min_diag,
+                SpecificationWarning,
+                stacklevel=2,
+            )
+            cov = cov.copy()
+            k = cov.shape[0]
+            cov[np.arange(k), np.arange(k)] = np.maximum(diag, min_diag)
 
     cov_, std_ = cov2corr(cov, return_std=True)
     if method == "clipped":
