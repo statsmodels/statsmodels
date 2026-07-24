@@ -3712,3 +3712,138 @@ def test_mlogit_t_test():
     wt = res1.wald_test("y1_logpopul, y2_logpopul", scalar=True)
     # regression test
     assert_allclose(wt.statistic, 5.68660562, rtol=1e-8)
+
+
+class TestMNLogitScoreTest:
+    """Tests for MNLogit score_test with exog_extra (GH#9273).
+
+    The score_test variable addition test previously crashed because MNLogit
+    did not implement score_factor or hessian_factor. This test class verifies
+    that the fix works correctly.
+    """
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(789)
+        n = 500
+        X = np.random.randn(n, 3)
+        X = sm.add_constant(X)
+        x_extra = np.random.randn(n, 2)
+        X_full = np.column_stack((X, x_extra))
+
+        # Generate y from the restricted model (no effect of extra vars)
+        beta = np.array([[0.5, -0.3], [0.2, 0.1], [-0.1, 0.4], [0.3, -0.2]])
+        linpred = X @ beta
+        pr = np.exp(np.column_stack((np.zeros(n), linpred)))
+        pr = pr / pr.sum(axis=1, keepdims=True)
+        y = np.array([np.random.choice(3, p=p) for p in pr])
+
+        cls.model_drop = sm.MNLogit(y, X)
+        cls.model_full = sm.MNLogit(y, X_full)
+        cls.exog_extra = x_extra
+        cls.nobs = n
+
+    def test_score_test_smoke(self):
+        """score_test with exog_extra should not crash (GH#9273)."""
+        res_drop = self.model_drop.fit(disp=0)
+        stat, pval, df = res_drop.score_test(exog_extra=self.exog_extra)
+        assert np.isfinite(stat.item())
+        assert 0 <= pval.item() <= 1
+        # 2 extra columns * (J-1=2) equations = 4 constraints
+        assert df == 4
+
+    def test_score_test_df(self):
+        """k_constraints should equal k_extra * (J-1)."""
+        res_drop = self.model_drop.fit(disp=0)
+        # Single extra column
+        _, _, df1 = res_drop.score_test(
+            exog_extra=self.exog_extra[:, :1])
+        assert df1 == 2
+        # Two extra columns
+        _, _, df2 = res_drop.score_test(exog_extra=self.exog_extra)
+        assert df2 == 4
+
+    def test_score_wald_equivalence(self):
+        """Score test should be close to Wald test from the full model."""
+        res_drop = self.model_drop.fit(disp=0)
+        res_full = self.model_full.fit(disp=0)
+
+        lm_stat, lm_pval, lm_df = res_drop.score_test(
+            exog_extra=self.exog_extra)
+
+        # Build restriction matrix for Wald test on full model
+        K_full = self.model_full.exog.shape[1]  # 6
+        n_eq = self.model_full.J - 1  # 2
+        k_extra = self.exog_extra.shape[1]  # 2
+        r_matrix = np.zeros((k_extra * n_eq, K_full * n_eq))
+        for eq in range(n_eq):
+            for k in range(k_extra):
+                row = eq * k_extra + k
+                col = eq * K_full + (K_full - k_extra + k)
+                r_matrix[row, col] = 1.0
+
+        wald = res_full.wald_test(r_matrix, scalar=True)
+        wald_stat = float(wald.statistic)
+
+        # Under correct specification, LM and Wald should be close
+        assert_allclose(lm_stat.item(), wald_stat, rtol=0.3)
+
+    def test_score_test_hc0(self):
+        """HC0 robust covariance should work for MNLogit score_test."""
+        res_drop = self.model_drop.fit(disp=0)
+        res = res_drop.score_test(
+            exog_extra=self.exog_extra, cov_type="HC0")
+        stat, pval, df = res
+        assert np.isfinite(np.asarray(stat).item())
+        assert 0 <= np.asarray(pval).item() <= 1
+        assert df == 4
+
+    def test_score_factor_consistency(self):
+        """score_factor should reproduce score_obs via Kronecker product."""
+        res = self.model_drop.fit(disp=0)
+        params = np.asarray(res.params).ravel("F")
+        model = res.model
+
+        sf = model.score_factor(params)
+        score_obs_from_factor = (
+            sf[:, :, None] * model.exog[:, None, :]
+        ).reshape(self.nobs, -1)
+        score_obs = model.score_obs(params)
+        assert_allclose(score_obs_from_factor, score_obs, rtol=1e-10)
+
+    def test_hessian_factor_consistency(self):
+        """hessian_factor should reproduce hessian via block structure."""
+        res = self.model_drop.fit(disp=0)
+        params = np.asarray(res.params).ravel("F")
+        model = res.model
+
+        hf = model.hessian_factor(params)
+        K = model.K
+        n_eq = model.J - 1
+        hessian_from_factor = np.empty((n_eq * K, n_eq * K))
+        for j in range(n_eq):
+            for ll in range(n_eq):
+                hessian_from_factor[j*K:(j+1)*K, ll*K:(ll+1)*K] = (
+                    (model.exog.T * hf[:, j, ll]) @ model.exog
+                )
+        hessian = model.hessian(params)
+        assert_allclose(hessian_from_factor, hessian, rtol=1e-10)
+
+    def test_score_test_4_categories(self):
+        """score_test should work with J=4 categories."""
+        np.random.seed(456)
+        n = 300
+        X = np.random.randn(n, 2)
+        X = sm.add_constant(X)
+        y_probs = np.random.dirichlet([1, 1, 1, 1], size=n)
+        y = np.array([np.random.choice(4, p=p) for p in y_probs])
+
+        model = sm.MNLogit(y, X)
+        result = model.fit(disp=0)
+
+        exog_extra = np.random.randn(n, 1)
+        stat, pval, df = result.score_test(exog_extra=exog_extra)
+        assert np.isfinite(stat.item())
+        assert 0 <= pval.item() <= 1
+        # 1 extra column * (J-1=3) equations = 3 constraints
+        assert df == 3

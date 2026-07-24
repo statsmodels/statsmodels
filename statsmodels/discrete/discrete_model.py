@@ -3537,6 +3537,65 @@ class MNLogit(MultinomialModel):
         )
         return H
 
+    def score_factor(self, params):
+        """
+        Multinomial logit score factor for each observation.
+
+        The score factor is the residual (observed minus predicted probability)
+        for each non-reference category. It has shape (nobs, J-1) where J is
+        the number of outcome categories.
+
+        The full per-observation score is computed from the score factor as:
+            score_obs[i] = kron(score_factor[i], exog[i])
+        which produces a vector of length K * (J-1) per observation.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model, flattened in column-major order
+            with shape (K * (J-1),).
+
+        Returns
+        -------
+        score_factor : ndarray, shape (nobs, J-1)
+            The residual for each observation and non-reference category.
+        """
+        params = np.asarray(params).reshape(self.K, -1, order="F")
+        pr = self.cdf(np.dot(self.exog, params))
+        return self.wendog[:, 1:] - pr[:, 1:]
+
+    def hessian_factor(self, params):
+        """
+        Multinomial logit Hessian weights for each observation.
+
+        For MNLogit the Hessian has a block structure that cannot be reduced
+        to a single scalar weight per observation. Instead, each observation
+        contributes a (J-1, J-1) weight matrix, so the full Hessian for
+        design matrix X is:
+            H[j,l] = sum_i w[i,j,l] * X[i] @ X[i].T
+
+        The weight for observation i is:
+            w[i,j,l] = -pr[i,j] * (1(j==l) - pr[i,l])
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model, flattened in column-major order
+            with shape (K * (J-1),).
+
+        Returns
+        -------
+        hessian_factor : ndarray, shape (nobs, J-1, J-1)
+            The per-observation weight matrix for the Hessian.
+        """
+        params = np.asarray(params).reshape(self.K, -1, order="F")
+        pr = self.cdf(np.dot(self.exog, params))
+        pr_nr = pr[:, 1:]  # (nobs, J-1)
+        # w[i,j,l] = -pr_j*(delta_jl - pr_l) = pr_j*pr_l - delta_jl*pr_j
+        hf = np.einsum("ij,ik->ijk", pr_nr, pr_nr)
+        hf -= np.einsum("ij,jk->ijk", pr_nr, np.eye(self.J - 1))
+        return hf
+
 
 # TODO: Weibull can replaced by a survival analsysis function
 # like stat's streg (The cox model as well)
