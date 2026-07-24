@@ -56,6 +56,7 @@ __all__ = [
     "anderson_statistic",
     "compare_cox",
     "compare_j",
+    "pesaran_timmermann",
     "het_arch",
     "het_breuschpagan",
     "het_goldfeldquandt",
@@ -247,6 +248,143 @@ def compare_j(results_x, results_z, store=False):
         return tstat, pval, res
 
     return tstat, pval
+
+
+def pesaran_timmermann(actual, predicted, alternative="two-sided",
+                       store=False):
+    r"""
+    Pesaran-Timmermann test of directional predictive accuracy.
+
+    Parameters
+    ----------
+    actual : array_like
+        Realized values. The direction is classified by ``actual > 0``.
+    predicted : array_like
+        Forecasted or predicted values. The direction is classified by
+        ``predicted > 0``.
+    alternative : {"two-sided", "larger", "smaller"}
+        Alternative hypothesis for the directional accuracy statistic.
+    store : bool, default False
+        If true, then the intermediate results are returned.
+
+    Returns
+    -------
+    statistic : float
+        Normal test statistic.
+    pvalue : float
+        P-value for the chosen alternative.
+    res_store : ResultsStore, optional
+        Intermediate results. Returned if ``store`` is True.
+
+    Notes
+    -----
+    The Pesaran-Timmermann test evaluates whether the realized and predicted
+    signs are independent. Let
+
+    .. math::
+
+       \hat{p} = n^{-1}\sum_{t=1}^n 1\{\operatorname{sign}(y_t)
+       = \operatorname{sign}(\hat{y}_t)\}
+
+    be the observed success rate, and let
+
+    .. math::
+
+       \hat{p}_* = \hat{p}_y \hat{p}_z +
+       (1 - \hat{p}_y)(1 - \hat{p}_z)
+
+    denote the success rate implied by independence, where
+    :math:`\hat{p}_y` and :math:`\hat{p}_z` are the sample proportions of
+    positive realizations and positive predictions. The test statistic is
+
+    .. math::
+
+       S_n = \frac{\hat{p} - \hat{p}_*}
+       {\sqrt{\hat{v} - \hat{w}}},
+
+    where
+
+    .. math::
+
+       \hat{v} = \hat{p}_* (1 - \hat{p}_*) / n
+
+    and
+
+    .. math::
+
+       \hat{w} = \left[(2\hat{p}_y - 1)^2 \hat{p}_z (1 - \hat{p}_z)
+       + (2\hat{p}_z - 1)^2 \hat{p}_y (1 - \hat{p}_y)\right] / n.
+
+    Under the null of no directional predictive ability, the statistic is
+    asymptotically standard normal.
+
+    References
+    ----------
+    .. [1] Pesaran, M. H., and Timmermann, A. "A Simple Nonparametric Test
+       of Predictive Performance." Journal of Business & Economic Statistics
+       10, no. 4 (1992): 461-465.
+    """
+    actual = array_like(actual, "actual", ndim=1)
+    predicted = array_like(predicted, "predicted", ndim=1)
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+    )
+    store = bool_like(store, "store")
+
+    if actual.shape[0] != predicted.shape[0]:
+        raise ValueError("actual and predicted must have the same length")
+    if actual.shape[0] < 2:
+        raise ValueError("actual and predicted must contain at least 2 values")
+    if not np.all(np.isfinite(actual)) or not np.all(np.isfinite(predicted)):
+        raise ValueError("actual and predicted must contain only finite values")
+
+    nobs = actual.shape[0]
+    realized_pos = (actual > 0).astype(float)
+    predicted_pos = (predicted > 0).astype(float)
+
+    p_y = realized_pos.mean()
+    p_z = predicted_pos.mean()
+    p_hat = np.mean(realized_pos == predicted_pos)
+    p_ind = p_y * p_z + (1 - p_y) * (1 - p_z)
+
+    v_hat = p_ind * (1 - p_ind) / nobs
+    w_hat = (((2 * p_y - 1) ** 2) * p_z * (1 - p_z) +
+             ((2 * p_z - 1) ** 2) * p_y * (1 - p_y)) / nobs
+    variance = v_hat - w_hat
+
+    if variance <= 0:
+        raise ValueError(
+            "Pesaran-Timmermann test is undefined when the estimated "
+            "variance is non-positive."
+        )
+
+    statistic = (p_hat - p_ind) / np.sqrt(variance)
+    if alternative == "two-sided":
+        pvalue = 2 * stats.norm.sf(np.abs(statistic))
+    elif alternative == "larger":
+        pvalue = stats.norm.sf(statistic)
+    else:
+        pvalue = stats.norm.cdf(statistic)
+
+    if store:
+        res = ResultsStore()
+        res.statistic = statistic
+        res.pvalue = pvalue
+        res.dist = stats.norm
+        res.alternative = alternative
+        res.nobs = nobs
+        res.p_hat = p_hat
+        res.p_ind = p_ind
+        res.p_y = p_y
+        res.p_z = p_z
+        res.v_hat = v_hat
+        res.w_hat = w_hat
+        res.variance = variance
+        return statistic, pvalue, res
+
+    return statistic, pvalue
 
 
 @deprecate_kwarg("cov_kwargs", "cov_kwds")
