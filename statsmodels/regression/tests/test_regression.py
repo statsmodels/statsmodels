@@ -1598,30 +1598,27 @@ def test_ols_wls_fixed_scale():
     y = np.dot(X, [1, 2, 3]) + rs.standard_normal(50)
     expected_scale = 5.0
 
-    res1 = OLS(y, X).fit(cov_type='fixed scale', cov_kwds={'scale': expected_scale})
+    res1 = OLS(y, X).fit(cov_type="fixed scale", cov_kwds={"scale": expected_scale})
     assert_allclose(res1.scale, expected_scale)
     assert_allclose(res1.resid_pearson, res1.resid / np.sqrt(expected_scale))
 
     weights = rs.uniform(0.5, 2.0, 50)
     res2 = WLS(y, X, weights=weights).fit(
-        cov_type='fixed_scale',
-        cov_kwds={'scale': expected_scale}
+        cov_type="fixed_scale", cov_kwds={"scale": expected_scale}
     )
     assert_allclose(res2.scale, expected_scale)
     assert_allclose(res2.resid_pearson, res2.wresid / np.sqrt(expected_scale))
 
     res3 = OLS(y, X).fit()
     res3_robust = res3.get_robustcov_results(
-        cov_type="fixed scale",
-        scale=expected_scale
+        cov_type="fixed scale", scale=expected_scale
     )
     assert_allclose(res3_robust.scale, expected_scale)
     assert_allclose(
-        res3_robust.resid_pearson,
-        res3_robust.wresid / np.sqrt(expected_scale)
+        res3_robust.resid_pearson, res3_robust.wresid / np.sqrt(expected_scale)
     )
 
-    
+
 def test_slim_summary_skips_diagnostics(monkeypatch):
     # GH#9054 the slim summary omits the normality/residual diagnostics, so it
     # must not compute them. Make omni_normtest raise to prove the slim summary
