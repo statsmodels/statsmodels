@@ -209,6 +209,8 @@ ignore = [
   "PLR0912", # 217
   # Too many statements
   "PLR0915", # 220
+  # Too many positional arguments
+  "PLR0917", # 620
   # Redefined loop name
   "PLW2901", # 55
   # incorrect-dict-iterator, flags valid Series.items usage

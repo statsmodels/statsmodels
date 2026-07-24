@@ -23,7 +23,7 @@ from statsmodels.tools import eval_measures
 from statsmodels.tools._decorators import cache_readonly, cache_writable
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.docstring_helpers import Appender, Substitution
-from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.sm_exceptions import EstimationWarning, SpecificationWarning
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -450,8 +450,17 @@ class AutoReg(tsa_model.TimeSeriesModel):
         if cov_type == "nonrobust" and not use_t:
             nobs = self._y.shape[0]
             k = self._x.shape[1]
-            scale = nobs / (nobs - k)
-            cov_params /= scale
+            if (nobs - k) > 0:
+                scale = nobs / (nobs - k)
+                cov_params /= scale
+            else:
+                warnings.warn(
+                    f"The adjusted number of observations (nobs - k) is {nobs - k} "
+                    f"is non-positive where k is the number of parameters in the model. "
+                    f"Covariance matrix has not been adjusted for the sample size.",
+                    EstimationWarning,
+                    stacklevel=2,
+                )
         res = AutoRegResults(
             self,
             ols_res.params,
@@ -2006,9 +2015,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         no_exog = existing.exog is None
         if no_exog != (exog is None):
             if no_exog:
-                err = (
-                    "Original model does not contain exog data but exog data passed"
-                )
+                err = "Original model does not contain exog data but exog data passed"
             else:
                 err = "Original model has exog data but not exog data passed"
             raise ValueError(err)

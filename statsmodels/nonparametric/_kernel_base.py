@@ -773,7 +773,7 @@ def gpke(
 
 
 def initialize_generator(
-    entropy: None | int | np.random.RandomState | np.random.Generator,
+    entropy: int | np.random.RandomState | np.random.Generator | None,
 ) -> np.random.Generator | np.random.RandomState:
     """
     Handle seed transformation to a NumPy random generator object

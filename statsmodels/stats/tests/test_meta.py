@@ -422,7 +422,7 @@ class TestMetaBinOR:
         original_children = ax.get_children()
         fig_out = res1.plot_forest(ax=ax, use_t=False)
         updated_children = ax.get_children()
-        assert len(updated_children) > len()
+        assert len(updated_children) > len(original_children)
         assert fig_out is fig
         with pytest.raises(TypeError, match="unexpected keyword"):
             res1.plot_forest(junk=5, use_t=False)

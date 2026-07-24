@@ -1,4 +1,5 @@
 """Substantially copied from NumpyDoc 1.0pre"""
+
 from collections.abc import Mapping
 import copy
 import inspect
@@ -138,7 +139,7 @@ class Parameter(NamedTuple):
 
     name: str
     type: type
-    desc: str
+    desc: list[str]
 
 
 class NumpyDocString(Mapping):
@@ -423,14 +424,12 @@ class NumpyDocString(Mapping):
             msg = "Docstring contains a Receives section but not Yields."
             raise ValueError(msg)
 
-        for (section, content) in sections:
+        for section, content in sections:
             if not section.startswith(".."):
                 section = (s.capitalize() for s in section.split(" "))
                 section = " ".join(section)
                 if self.get(section):
-                    self._error_location(
-                        "The section %s appears twice" % section
-                    )
+                    self._error_location("The section %s appears twice" % section)
 
             if section in (
                 "Parameters",
@@ -463,9 +462,7 @@ class NumpyDocString(Mapping):
                 filename = inspect.getsourcefile(self._obj)
             except TypeError:
                 filename = None
-            msg = msg + (
-                f" in the docstring of {self._obj} in {filename}."
-            )
+            msg = msg + (f" in the docstring of {self._obj} in {filename}.")
 
         raise ValueError(msg)
 
@@ -628,9 +625,7 @@ class Docstring:
         if isinstance(parameters, str):
             parameters = [parameters]
         repl = [
-            param
-            for param in self._ds["Parameters"]
-            if param.name not in parameters
+            param for param in self._ds["Parameters"] if param.name not in parameters
         ]
         if len(repl) + len(parameters) != len(self._ds["Parameters"]):
             raise ValueError("One or more parameters were not found.")
@@ -685,12 +680,8 @@ class Docstring:
             return
         block_name = " ".join(map(str.capitalize, block_name.split(" ")))
         if block_name not in self._ds:
-            raise ValueError(
-                f"{block_name} is not a block in the docstring"
-            )
-        if not isinstance(block, list) and isinstance(
-            self._ds[block_name], list
-        ):
+            raise ValueError(f"{block_name} is not a block in the docstring")
+        if not isinstance(block, list) and isinstance(self._ds[block_name], list):
             block = [block]
         self._ds[block_name] = block
 
@@ -720,8 +711,7 @@ class Docstring:
         missing = set(parameters).difference(ds_params.keys())
         if missing:
             raise ValueError(
-                "{} were not found in the "
-                "docstring".format(",".join(missing))
+                "{} were not found in the docstring".format(",".join(missing))
             )
         final = [ds_params[param] for param in parameters]
         ds = copy.deepcopy(self._ds)

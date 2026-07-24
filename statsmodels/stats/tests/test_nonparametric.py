@@ -758,8 +758,10 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
             0.5,
             "one-sided",
             ValueError,
-            "All elements of `synthetic_sample` and `reference_sample`"
-            " must be finite; check for missing values.",
+            (
+                "All elements of `synthetic_sample` and `reference_sample`"
+                " must be finite; check for missing values."
+            ),
         ),
         # Empty reference sample
         (
@@ -770,8 +772,10 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
             0.5,
             "one-sided",
             ValueError,
-            "Both `synthetic_sample` and `reference_sample` must have"
-            " at least one element",
+            (
+                "Both `synthetic_sample` and `reference_sample` must have"
+                " at least one element"
+            ),
         ),
         # Invalid alternative type
         (

@@ -25,8 +25,10 @@ ds.insert_parameters(
         "model",
         "Model",
         [
-            "The model used to forecast endog after the seasonality has been "
-            "removed using STL"
+            (
+                "The model used to forecast endog after the seasonality has been "
+                "removed using STL"
+            )
         ],
     ),
 )
@@ -36,8 +38,10 @@ ds.insert_parameters(
         "model_kwargs",
         "dict[str, Any]",
         [
-            "Any additional arguments needed to initialized the model using "
-            "the residuals produced by subtracting the seasonality."
+            (
+                "Any additional arguments needed to initialized the model using "
+                "the residuals produced by subtracting the seasonality."
+            )
         ],
     ),
 )
@@ -206,9 +210,7 @@ class STLForecast:
         """
         fit_kwargs = {} if fit_kwargs is None else fit_kwargs
         stl = STL(self._endog, **self._stl_kwargs)
-        stl_fit: DecomposeResult = stl.fit(
-            inner_iter=inner_iter, outer_iter=outer_iter
-        )
+        stl_fit: DecomposeResult = stl.fit(inner_iter=inner_iter, outer_iter=outer_iter)
         model_endog = stl_fit.trend + stl_fit.resid
         mod = self._model(model_endog, **self._model_kwargs)
         res = mod.fit(**fit_kwargs)
@@ -294,17 +296,11 @@ class STLForecastResults:
         returns a ``Summary`` object.
         """
         if not hasattr(self._model_result, "summary"):
-            raise AttributeError(
-                "The model result does not have a summary attribute."
-            )
+            raise AttributeError("The model result does not have a summary attribute.")
         summary: Summary = self._model_result.summary()
         if not isinstance(summary, Summary):
-            raise TypeError(
-                "The model result's summary is not a Summary object."
-            )
-        summary.tables[0].title = (
-            "STL Decomposition and " + summary.tables[0].title
-        )
+            raise TypeError("The model result's summary is not a Summary object.")
+        summary.tables[0].title = "STL Decomposition and " + summary.tables[0].title
         config = self._stl.config
         left_keys = ("period", "seasonal", "robust")
         left_data = []
@@ -326,9 +322,7 @@ class STLForecastResults:
             else:
                 right_stubs.append(" " * 6 + stub)
                 right_data.append([val])
-        tab = SimpleTable(
-            left_data, stubs=tuple(left_stubs), title="STL Configuration"
-        )
+        tab = SimpleTable(left_data, stubs=tuple(left_stubs), title="STL Configuration")
         tab.extend_right(SimpleTable(right_data, stubs=right_stubs))
         summary.tables.append(tab)
         return summary
@@ -372,7 +366,7 @@ class STLForecastResults:
         data = PandasData(pd.Series(self._endog), index=self._index)
         if start is None:
             start = 0
-        (start, end, out_of_sample, prediction_index) = get_prediction_index(
+        start, end, out_of_sample, prediction_index = get_prediction_index(
             start, end, self._nobs, self._index, data=data
         )
 
@@ -504,9 +498,7 @@ class STLForecastResults:
         pred = self._model_result.get_prediction(
             start=start, end=end, dynamic=dynamic, **kwargs
         )
-        seasonal_prediction = self._get_seasonal_prediction(
-            start, end, dynamic
-        )
+        seasonal_prediction = self._get_seasonal_prediction(start, end, dynamic)
         mean = pred.predicted_mean + seasonal_prediction
         try:
             var_pred_mean = pred.var_pred_mean

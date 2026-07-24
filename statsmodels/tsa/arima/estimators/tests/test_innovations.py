@@ -17,9 +17,7 @@ from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 from statsmodels.tsa.statespace import sarimax
 
 
-@pytest.mark.low_precision(
-    "Test against Example 5.1.5 in Brockwell and Davis (2016)"
-)
+@pytest.mark.low_precision("Test against Example 5.1.5 in Brockwell and Davis (2016)")
 def test_brockwell_davis_example_515():
     # Difference and demean the series
     endog = dowj.diff().iloc[1:]
@@ -104,9 +102,7 @@ def test_innovations_ma_invalid():
         innovations(endog, ma_order=[1, 3])
 
 
-@pytest.mark.low_precision(
-    "Test against Example 5.2.4 in Brockwell and Davis (2016)"
-)
+@pytest.mark.low_precision("Test against Example 5.2.4 in Brockwell and Davis (2016)")
 def test_brockwell_davis_example_524():
     # Difference and demean the series
     endog = dowj.diff().iloc[1:]
@@ -122,12 +118,8 @@ def test_brockwell_davis_example_524():
     assert_allclose(p.ar_params, 0.4471, atol=1e-4)
 
 
-@pytest.mark.low_precision(
-    "Test against Example 5.2.4 in Brockwell and Davis (2016)"
-)
-@pytest.mark.xfail(
-    reason="Suspicious result reported in Brockwell and Davis (2016)."
-)
+@pytest.mark.low_precision("Test against Example 5.2.4 in Brockwell and Davis (2016)")
+@pytest.mark.xfail(reason="Suspicious result reported in Brockwell and Davis (2016).")
 def test_brockwell_davis_example_524_variance():
     # See `test_brockwell_davis_example_524` for the main test
     # TODO: the test for sigma2 fails, but the value reported by BD (0.02117)
@@ -149,9 +141,7 @@ def test_brockwell_davis_example_524_variance():
     assert_allclose(p.sigma2, 0.02117, atol=1e-4)
 
 
-@pytest.mark.low_precision(
-    "Test against Example 5.2.5 in Brockwell and Davis (2016)"
-)
+@pytest.mark.low_precision("Test against Example 5.2.5 in Brockwell and Davis (2016)")
 def test_brockwell_davis_example_525():
     # Difference and demean the series
     endog = lake.copy()
@@ -172,9 +162,7 @@ def test_brockwell_davis_example_525():
     assert_allclose(p.params, [0.7446, 0.3213, 0.4750], atol=1e-4)
 
 
-@pytest.mark.low_precision(
-    "Test against Example 5.4.1 in Brockwell and Davis (2016)"
-)
+@pytest.mark.low_precision("Test against Example 5.4.1 in Brockwell and Davis (2016)")
 def test_brockwell_davis_example_541():
     # Difference and demean the series
     endog = oshorts.copy()
@@ -345,14 +333,14 @@ def test_innovations_mle_misc():
     # Check that when Hannan-Rissanen estimates non-stationary starting
     # parameters, innovations_mle sets it to zero
     hr, _ = hannan_rissanen(endog, ar_order=1, demean=False)
-    assert (hr.ar_params[0] > 1)
+    assert hr.ar_params[0] > 1
     _, res = innovations_mle(endog, order=(1, 0, 0))
     assert_allclose(res.start_params[0], 0)
 
     # Check that when Hannan-Rissanen estimates non-invertible starting
     # parameters, innovations_mle sets it to zero
     hr, _ = hannan_rissanen(endog, ma_order=1, demean=False)
-    assert (hr.ma_params[0] > 1)
+    assert hr.ma_params[0] > 1
     _, res = innovations_mle(endog, order=(0, 0, 1))
     assert_allclose(res.start_params[0], 0)
 
@@ -432,7 +420,8 @@ def test_innovations_mle_fixed_params_both():
 
     assert_allclose(p_fixed.ar_params[0], 0.5)
     assert_allclose(p_fixed.ma_params[0], 0.0)
-    assert np.isfinite(p_fixed.sigma2) and p_fixed.sigma2 > 0
+    assert np.isfinite(p_fixed.sigma2)
+    assert p_fixed.sigma2 > 0
 
 
 def test_innovations_mle_fixed_params_statespace():

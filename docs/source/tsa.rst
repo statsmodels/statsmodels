@@ -327,6 +327,13 @@ Time Series Filters
 
    cffilter
 
+.. currentmodule:: statsmodels.tsa.filters.hamilton_filter
+.. autosummary::
+   :toctree: generated/
+
+   hamilton_filter
+
+
 .. currentmodule:: statsmodels.tsa.filters.filtertools
 .. autosummary::
    :toctree: generated/
