@@ -42,12 +42,14 @@ import statsmodels.base._parameter_inference as pinfer
 from statsmodels.base.data import handle_data  # for mnlogit
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 import statsmodels.base.model as base
+from statsmodels.base.model import LikelihoodModel
 import statsmodels.base.wrapper as wrap
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
 from statsmodels.tools._decorators import cache_readonly
-from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.docstring import Docstring, indent
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.numdiff import approx_fprime_cs
 from statsmodels.tools.sm_exceptions import (
     PerfectSeparationError,
@@ -600,9 +602,7 @@ class BinaryModel(DiscreteModel):
             var_ = mu * (1 - mu)
             return var_
         else:
-            raise ValueError(
-                '`which` must be one of "mean", "linear", or "var"'
-            )
+            raise ValueError('`which` must be one of "mean", "linear", or "var"')
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(
@@ -1349,9 +1349,7 @@ class Poisson(CountModel):
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-        """
-        + base._missing_param_doc
-        + _check_rank_doc,
+        """ + base._missing_param_doc + _check_rank_doc,
     )
 
     @cache_readonly
@@ -1981,9 +1979,7 @@ class GeneralizedPoisson(CountModel):
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
-        equal to 1."""
-        + base._missing_param_doc
-        + _check_rank_doc,
+        equal to 1.""" + base._missing_param_doc + _check_rank_doc,
     )
 
     def __init__(
@@ -2109,16 +2105,14 @@ class GeneralizedPoisson(CountModel):
         a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu ** (-q)).sum() / df_resid
         return a
 
-    @Appender(
-        """
+    @Appender("""
         use_transparams : bool
             This parameter enables internal transformation to impose
             non-negativity. True to enable. Default is False.
             use_transparams=True imposes the no underdispersion (alpha > 0)
             constraint. In case use_transparams=True and method="newton" or
             "ncg" transformation is ignored.
-        """
-    )
+        """)
     @Appender(DiscreteModel.fit.__doc__)
     def fit(
         self,
@@ -3297,9 +3291,7 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """.format(
-        extra_params=base._missing_param_doc + _check_rank_doc
-    )
+    """.format(extra_params=base._missing_param_doc + _check_rank_doc)
 
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         super().__init__(endog, exog, check_rank=check_rank, **kwargs)
@@ -3633,9 +3625,7 @@ class NegativeBinomial(CountModel):
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-    """
-        + base._missing_param_doc
-        + _check_rank_doc,
+    """ + base._missing_param_doc + _check_rank_doc,
     )
 
     def __init__(
@@ -4225,6 +4215,13 @@ class NegativeBinomial(CountModel):
         return distr
 
 
+_lm_fit_docstring = Docstring(LikelihoodModel.fit.__doc__)
+
+_nbo_fit_params = _lm_fit_docstring.extract_parameters(
+    ["start_params", "method", "maxiter", "full_output", "disp", "callback"]
+)
+
+
 class NegativeBinomialP(CountModel):
     __doc__ = """
     Generalized Negative Binomial (NB-P) Model
@@ -4251,9 +4248,7 @@ class NegativeBinomialP(CountModel):
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-        """
-        + base._missing_param_doc
-        + _check_rank_doc,
+        """ + base._missing_param_doc + _check_rank_doc,
     )
 
     def __init__(
@@ -4646,7 +4641,7 @@ class NegativeBinomialP(CountModel):
         a = ((resid**2 / mu - 1) * mu ** (-q)).sum() / df_resid
         return a
 
-    @Appender(DiscreteModel.fit.__doc__)
+    @Substitution(fit_params=indent(_nbo_fit_params, ""))
     def fit(
         self,
         start_params=None,
@@ -4667,6 +4662,7 @@ class NegativeBinomialP(CountModel):
 
         Parameters
         ----------
+        %(fit_params)s
         use_transparams : bool
             If True, use an internal transformation to impose the
             no-underdispersion constraint, alpha > 0. Default is False.
@@ -4946,7 +4942,7 @@ class DiscreteResults(base.LikelihoodModelResults):
                 self.cov_type = "nonrobust"
                 self.cov_kwds = {
                     "description": "Standard Errors assume that the covariance matrix "
-                                   "of the errors is correctly specified."
+                    "of the errors is correctly specified."
                 }
             else:
                 if cov_kwds is None:

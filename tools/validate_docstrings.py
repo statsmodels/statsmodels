@@ -39,8 +39,6 @@ from numpydoc.docscrape import NumpyDocString
 import pandas
 from pandas.io.formats.printing import pprint_thing
 
-import statsmodels.api
-
 # Template backend makes matplotlib to not plot anything. This is useful
 # to avoid that plot windows are open from the doctests while running the
 # script. Setting here before matplotlib is loaded.
@@ -688,6 +686,8 @@ class Docstring:
 
     @property
     def examples_errors(self):
+        import statsmodels.api
+
         flags = doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
         finder = doctest.DocTestFinder()
         runner = doctest.DocTestRunner(optionflags=flags)
