@@ -665,6 +665,154 @@ def test_summary():
         res.summary()
 
 
+def _finite_sse(res):
+    d = np.maximum(res.loglikelihood_burn, res.nobs_diffuse)
+    srss = np.sum(res.standardized_forecasts_error[:, d:] ** 2, axis=1)
+    f_t = np.diagonal(res.forecasts_error_cov[:, :, -1])
+    return f_t * srss
+
+
+def _demeaned_sumsquares(data, k_endog, empty=np.nan):
+    valid = ~np.isnan(data)
+    count = valid.sum(axis=0)
+    total = np.nansum(data, axis=0)
+    mean = np.divide(total, count, out=np.zeros(k_endog), where=count > 0)
+    ss = np.nansum((data - mean) ** 2, axis=0)
+    ss[count == 0] = empty
+    return ss, count
+
+
+def _mean_rsquared(res):
+    ssm = _demeaned_sumsquares(res.model.endog, res.model.k_endog)[0]
+    return 1 - _finite_sse(res) / ssm
+
+
+def _autoreg_ssr(endog, seasonal=False, period=None):
+    from statsmodels.tsa.ar_model import AutoReg
+
+    ssr = np.zeros(endog.shape[1])
+    for i in range(endog.shape[1]):
+        mod = AutoReg(
+            endog[:, i],
+            0,
+            trend="c",
+            seasonal=seasonal,
+            period=period,
+            missing="drop",
+        )
+        ssr[i] = mod.fit().ssr
+    return ssr
+
+
+def _rwdrift_rsquared(res):
+    diff_endog = np.diff(res.model.endog, axis=0)
+    ssdm = _autoreg_ssr(diff_endog)
+    return 1 - _finite_sse(res) / ssdm
+
+
+def _seasonal_rsquared(res, seasonal):
+    diff_endog = np.diff(res.model.endog, axis=0)
+    ssdsm = _autoreg_ssr(diff_endog, seasonal=True, period=seasonal)
+    return 1 - _finite_sse(res) / ssdsm
+
+
+def test_results_rsquared_regression():
+    from statsmodels.regression.linear_model import OLS
+    from statsmodels.tools.tools import add_constant
+
+    endog = np.array([1.0, 2.0, 4.0, 8.0, 16.0, 23.0])
+    exog = add_constant(np.arange(endog.shape[0]))
+    benchmark = OLS(endog, exog).fit()
+
+    mod = sarimax.SARIMAX(
+        endog,
+        exog=exog,
+        order=(0, 0, 0),
+        trend="n",
+        concentrate_scale=True,
+    )
+    res = mod.smooth(benchmark.params)
+
+    assert_allclose(res.rsquared_mean, benchmark.rsquared)
+    assert_allclose(res.get_rsquared(baseline="mean"), benchmark.rsquared)
+    assert_allclose(res.rsquared_rwdrift, _rwdrift_rsquared(res)[0])
+    assert_allclose(res.get_rsquared(), res.rsquared_rwdrift)
+    assert_allclose(
+        res.get_rsquared(baseline="seasonal", seasonal=2),
+        _seasonal_rsquared(res, 2)[0],
+    )
+
+    txt = str(res.summary())
+    assert_equal(re.search(r"R-squared:", txt) is not None, True)
+    assert_equal("%#8.3f" % res.rsquared_rwdrift in txt, True)
+
+
+def test_results_summary_uses_model_rsquared():
+    class ResultsWithRsquared(sarimax.SARIMAXResults):
+        @property
+        def rsquared(self):
+            return 0.123
+
+    mod = sarimax.SARIMAX(np.arange(10.0))
+    res = mod.filter([0.0, 1.0], results_class=ResultsWithRsquared)
+
+    txt = str(res.summary())
+    assert_equal("%#8.3f" % res.rsquared in txt, True)
+    assert_equal("%#8.3f" % res.rsquared_rwdrift in txt, False)
+
+
+def test_results_rsquared_multivariate():
+    endog = np.array([[1.0, 2.0], [2.0, 1.0], [4.0, 3.0], [8.0, 5.0]])
+    mod = MLEModel(
+        endog,
+        k_states=1,
+        design=np.zeros((2, 1)),
+        transition=np.zeros((1, 1)),
+        selection=np.zeros((1, 1)),
+        state_cov=np.zeros((1, 1)),
+        obs_cov=np.eye(2),
+    )
+    mod.initialize_known([0.0], [[0.0]])
+    res = mod.filter([])
+
+    with pytest.raises(NotImplementedError, match="only available for univariate"):
+        res.get_rsquared()
+
+    assert_equal("R-squared:" in str(res.summary()), False)
+
+
+def test_results_rsquared_missing_data():
+    endog = np.array([1.0, 2.0, np.nan, 5.0, 8.0, 13.0])
+    mod = sarimax.SARIMAX(
+        endog, order=(0, 0, 0), trend="c", concentrate_scale=True
+    )
+    res = mod.smooth([np.nanmean(endog)])
+
+    assert_allclose(res.rsquared_mean, _mean_rsquared(res)[0])
+    assert_allclose(res.rsquared_rwdrift, _rwdrift_rsquared(res)[0])
+    assert_allclose(
+        res.get_rsquared(baseline="seasonal", seasonal=2),
+        _seasonal_rsquared(res, 2)[0],
+    )
+    assert_equal(np.isfinite(res.rsquared_rwdrift), True)
+
+
+def test_results_rsquared_errors():
+    mod = MLEModel([1.0, 2.0, 4.0, 8.0], **kwargs)
+    res = mod.filter([])
+
+    with pytest.raises(ValueError, match="seasonal argument is required"):
+        res.get_rsquared(baseline="seasonal")
+    with pytest.raises(ValueError, match="baseline must be one of"):
+        res.get_rsquared(baseline="invalid")
+    with pytest.raises(TypeError, match="baseline must be a string"):
+        res.get_rsquared(baseline=1)
+    with pytest.raises(TypeError, match="seasonal must be integer_like"):
+        res.get_rsquared(baseline="seasonal", seasonal="month")
+    with pytest.raises(ValueError, match="integer greater than 1"):
+        res.get_rsquared(baseline="seasonal", seasonal=1)
+
+
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # create the model
     mod = MLEModel(endog, **kwargs)

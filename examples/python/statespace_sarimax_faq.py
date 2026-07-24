@@ -17,6 +17,7 @@
 # `AutoReg`
 # * Reconstructing residuals, fitted values and forecasts in `SARIMAX` and
 # `ARIMA`
+# * Choosing an R-squared measure for state space models
 # * Initial residuals in `SARIMAX` and `ARIMA`
 
 # ## Comparing trends and exogenous variables in `SARIMAX`, `ARIMA` and
@@ -492,6 +493,40 @@ print(arx_res.summary())
 
 print(sarimax_res.summary())
 
+
+# ## R-squared measures
+#
+# State space models do not have a unique R-squared comparison model.
+# The measures below currently support univariate models only.
+# `rsquared_mean` compares the model's prediction errors against deviations
+# from a constant mean and is closest to the usual regression R-squared.
+# `rsquared_rwdrift` instead compares against changes around an average
+# drift, making it more informative for nonstationary series with a
+# stochastic trend. For seasonal series, `get_rsquared` can use changes
+# around a drift and seasonal means; the seasonal period must be supplied
+# explicitly.
+
+
+seasonal_period = 12  # For example, monthly observations
+
+pd.Series(
+    {
+        "Mean": sarimax_res.rsquared_mean,
+        "Random walk with drift": sarimax_res.rsquared_rwdrift,
+        "Seasonal random walk with drift": sarimax_res.get_rsquared(
+            baseline="seasonal", seasonal=seasonal_period
+        ),
+    },
+    name="R-squared",
+)
+
+
+# The random-walk-with-drift measure is the default displayed in state
+# space summaries when the model does not define its own R-squared. The
+# seasonal variant should only be used when the data have a known seasonal
+# frequency. Since each measure uses a different baseline, values should not
+# be compared across baselines; a value can also be negative when the fitted
+# model has larger prediction errors than its baseline.
 
 # ## Initial residuals `SARIMAX` and `ARIMA`
 #

@@ -30,6 +30,7 @@ from statsmodels.tools.numdiff import (
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ModelWarning, PrecisionWarning, ValueWarning
 from statsmodels.tools.tools import Bunch, pinv_extended
+from statsmodels.tools.validation import int_like, string_like
 import statsmodels.tsa.base.prediction as pred
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.stattools._stattools import breakvar_heteroskedasticity_test
@@ -3511,6 +3512,148 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return np.sum(self.resid**2)
 
+    def get_rsquared(self, baseline="rwdrift", seasonal=None):
+        """
+        Compute a Harvey-style coefficient of determination.
+
+        Parameters
+        ----------
+        baseline : {"rwdrift", "mean", "seasonal"}, default "rwdrift"
+            The comparison model used in the denominator. "mean" compares
+            against a constant mean model, "rwdrift" compares against a random
+            walk with drift, and "seasonal" compares against a random walk with
+            drift and seasonal dummies.
+        seasonal : int, optional
+            The seasonal periodicity. Required when ``baseline="seasonal"``.
+
+        Returns
+        -------
+        float
+            The R-squared value.
+
+        Raises
+        ------
+        NotImplementedError
+            If the model has more than one endogenous variable.
+
+        See Also
+        --------
+        rsquared_mean
+        rsquared_rwdrift
+
+        Notes
+        -----
+        The SSE is computed from finite prediction errors following Harvey
+        (1989), section 5.5.5.
+        """
+        baseline = string_like(
+            baseline, "baseline", options=("rwdrift", "mean", "seasonal")
+        )
+
+        if self.model.k_endog > 1:
+            raise NotImplementedError(
+                "Harvey-style R-squared is currently only available for "
+                "univariate state space models."
+            )
+
+        if self.standardized_forecasts_error is None:
+            raise ValueError(
+                "Cannot compute R-squared when standardized forecast errors "
+                "have not been computed."
+            )
+        if self.forecasts_error_cov is None:
+            raise ValueError(
+                "Cannot compute R-squared when forecast error covariances "
+                "have not been computed."
+            )
+
+        d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+        srss = np.sum(self.standardized_forecasts_error[:, d:] ** 2, axis=1)
+        f_t = np.diagonal(self.forecasts_error_cov[:, :, -1])
+        sse = f_t * srss
+
+        endog = np.asarray(self.model.endog)
+
+        def demeaned_sumsquares(data, empty=np.nan):
+            valid = ~np.isnan(data)
+            count = valid.sum(axis=0)
+            total = np.nansum(data, axis=0)
+            mean = np.divide(
+                total, count, out=np.zeros(self.model.k_endog), where=count > 0
+            )
+            ss = np.nansum((data - mean) ** 2, axis=0)
+            ss[count == 0] = empty
+            return ss, count
+
+        if baseline == "mean":
+            denominator = demeaned_sumsquares(endog)[0]
+        else:
+            diff_endog = np.diff(endog, axis=0)
+            if baseline == "rwdrift":
+                denominator = demeaned_sumsquares(diff_endog)[0]
+            else:
+                if seasonal is None:
+                    raise ValueError(
+                        'The seasonal argument is required when '
+                        'baseline="seasonal".'
+                    )
+                seasonal = int_like(seasonal, "seasonal")
+                if seasonal < 2:
+                    raise ValueError(
+                        "seasonal must be an integer greater than 1."
+                    )
+                denominator = np.zeros(self.model.k_endog)
+                count = np.zeros(self.model.k_endog)
+                for i in range(seasonal):
+                    seasonal_diff = diff_endog[i::seasonal]
+                    if seasonal_diff.shape[0] > 0:
+                        ss_i, count_i = demeaned_sumsquares(
+                            seasonal_diff, empty=0
+                        )
+                        denominator += ss_i
+                        count += count_i
+                denominator[count == 0] = np.nan
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            rsquared = 1 - sse / denominator
+        return rsquared[0]
+
+    @cache_readonly
+    def rsquared_mean(self):
+        """
+        R-squared relative to a constant mean model.
+
+        Returns
+        -------
+        float or ndarray
+            ``1 - SSE / SSM`` where SSM is the sum of squares around the
+            sample mean.
+
+        See Also
+        --------
+        get_rsquared
+        rsquared_rwdrift
+        """
+        return self.get_rsquared(baseline="mean")
+
+    @cache_readonly
+    def rsquared_rwdrift(self):
+        """
+        R-squared relative to a random walk with drift.
+
+        Returns
+        -------
+        float or ndarray
+            ``1 - SSE / SSDM`` where SSDM is the sum of squares of first
+            differences around their mean.
+
+        See Also
+        --------
+        get_rsquared
+        rsquared_mean
+        """
+        return self.get_rsquared(baseline="rwdrift")
+
     @cache_readonly
     def zvalues(self):
         """
@@ -5547,6 +5690,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ]
         if hasattr(self, "rsquared"):
             top_right.append(("R-squared:", ["%#8.3f" % self.rsquared]))
+        else:
+            try:
+                r2 = self.rsquared_rwdrift
+            except (AttributeError, NotImplementedError, ValueError):
+                r2 = None
+            if r2 is not None:
+                if np.ndim(r2) == 0:
+                    r2 = "%#8.3f" % r2
+                else:
+                    r2 = str(["%#8.3f" % value for value in r2])
+                top_right.append(("R-squared:", [r2]))
         top_right += [
             ("AIC", ["%#5.3f" % self.aic]),
             ("BIC", ["%#5.3f" % self.bic]),
