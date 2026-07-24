@@ -2,7 +2,7 @@
   :alt: Statsmodels logo
 
 |PyPI Version| |Conda Version| |License| |Azure CI Build Status|
-|Codecov Coverage| |Coveralls Coverage| |PyPI downloads| |Conda downloads|
+|Codecov Coverage| |Coveralls Coverage| |PyPI downloads| |Conda downloads| |Gurubase|
 
 About statsmodels
 =================
@@ -205,3 +205,5 @@ https://github.com/statsmodels/statsmodels/issues
    :target: https://anaconda.org/conda-forge/statsmodels/
 .. |License| image:: https://img.shields.io/pypi/l/statsmodels.svg
    :target: https://github.com/statsmodels/statsmodels/blob/main/LICENSE.txt
+.. |Gurubase| image:: https://img.shields.io/badge/Gurubase-Ask%20Statsmodels%20Guru-006BFF
+   :target: https://gurubase.io/g/statsmodels
