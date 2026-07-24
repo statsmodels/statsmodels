@@ -20,7 +20,7 @@ def hamilton_filter(x, h=8, p=4):
     Parameters
     ----------
     x : array_like
-        The time series to decompose, 1-d with at least ``2 p + h`` observations.
+        The time series to decompose, 1-d or 2-d with at least ``2 p + h`` observations
     h : int, optional
         Forecast horizon used in the projection.  Hamilton recommends:
 
@@ -100,31 +100,65 @@ def hamilton_filter(x, h=8, p=4):
     >>> cycle, trend = sm.tsa.filters.hamilton_filter(dta['realgdp'], h=8, p=4)
     """
     pw = PandasWrapper(x)
-    x = array_like(x, "x", ndim=1)
+    x = array_like(x, "x", maxdim=2)
     h = int_like(h, "h", strict=True, optional=False)
     p = int_like(p, "p", strict=True, optional=False)
-    T = len(x)
+    t = len(x)
 
     if h < 1:
         raise ValueError("h must be a positive integer.")
     if p < 1:
         raise ValueError("p must be a positive integer.")
-    if T < (2 * p + h):
+    if t < (2 * p + h):
         raise ValueError(
-            f"x must have at least 2p + h = {2 * p + h} observations; got {T}."
+            f"x must have at least 2p + h = {2 * p + h} observations; got {t}."
         )
 
-    _lags = np.arange(h, h + p)
-    mod = AutoReg(x, lags=_lags, trend="c")
-    res = mod.fit(use_t=True)
+    if x.ndim == 1:
+        cycle, trend = _single_hamilton_filter(x, h, p)
+    else:
+        cycles = []
+        trends = []
+        for i in range(x.shape[1]):
+            _cycle, _trend = _single_hamilton_filter(x[:, i], h, p)
+            cycles.append(_cycle)
+            trends.append(_trend)
+        cycle = np.column_stack(cycles)
+        trend = np.column_stack(trends)
+
+    return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+
+
+def _single_hamilton_filter(x: np.ndarray, h: int, p: int):
+    """
+    Compute Hamilton's filter for a single series stored as a NumPy array
+
+    Parameters
+    ----------
+    x : np.ndarray
+        1-d array of time series values
+    h : int
+        Number of leads to use
+    p : int
+        Number of lags to use
+
+    Returns
+    -------
+    cycle : np.ndarray
+        The extracted cycle (nobs, ).
+    trend : np.ndarray
+        The extracted trend (nobs, ).
+    """
+    t = x.shape[0]
+    lags = list(range(h, h + p))
+    res = AutoReg(x, lags=lags, trend="c").fit(use_t=True)
 
     fitted = res.fittedvalues  # trend values at t+h
     resid = res.resid  # cycle values at t+h
 
     # Place results at the correct positions in output arrays
-    trend = np.full(T, np.nan)
-    cycle = np.full(T, np.nan)
+    trend = np.full(t, np.nan)
+    cycle = np.full(t, np.nan)
     trend[p + h - 1 :] = fitted
     cycle[p + h - 1 :] = resid
-
-    return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+    return cycle, trend

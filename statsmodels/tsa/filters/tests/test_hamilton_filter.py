@@ -6,6 +6,8 @@ Hamilton, J. D. (2018). Why You Should Never Use the Hodrick-Prescott Filter.
 Review of Economics and Statistics, 100(5), 831-843.
 """
 
+from statsmodels.compat.pandas import QUARTER_END
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
@@ -144,7 +146,7 @@ def test_pandas_name_suffix():
 
 
 def test_pandas_index_preserved():
-    idx = pd.date_range("2000Q1", periods=len(_QUARTERLY), freq="QE")
+    idx = pd.date_range("2000Q1", periods=len(_QUARTERLY), freq=QUARTER_END)
     s = pd.Series(_QUARTERLY, index=idx, name="gdp")
     cycle, _ = hamilton_filter(s)
     assert (cycle.index == idx).all()
@@ -240,10 +242,50 @@ def test_importable_from_api():
 def test_stationary_cycle_from_random_walk():
     """Hamilton filter produces stationary cycle from a random walk."""
     T = 500
-    rw = np.cumsum(RNG.standard_normal(T))
+    rs = np.random.RandomState(43894202)
+    rw = np.cumsum(1 + rs.standard_normal(T))
     cycle, _ = hamilton_filter(rw)
-    c = cycle[~np.isnan(cycle)]
+    loc = ~np.isnan(cycle)
+    c = cycle[loc]
     # Rough stationarity check: variance of first half ≈ variance of second half
     n = len(c) // 2
-    ratio = np.var(c[:n]) / np.var(c[n:])
+    ratio = (c[n:] ** 2).sum() / (c[:n] ** 2).sum()
     assert 0.3 < ratio < 3.0  # generous: just not trending wildly
+    rw = rw[loc]
+    ratio_rw = (rw[n:] ** 2).sum() / (rw[:n] ** 2).sum()
+    assert not 0.3 < ratio_rw < 3.0  # generous: just not trending wildly
+
+
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_hamilton_filter_2d(use_pandas):
+    T = 500
+    rs = np.random.RandomState(43894202)
+    rw_0 = np.cumsum(rs.standard_normal(T))
+    rw_1 = np.cumsum(rs.standard_normal(T))
+    rw_2d = np.column_stack([rw_0, rw_0, rw_1])
+    if use_pandas:
+        rw_2d = pd.DataFrame(rw_2d, columns=["Apple", "Banana", "Cherry"])
+    cycle, trend = hamilton_filter(rw_2d, 8, 4)
+
+    assert cycle.ndim == 2
+    assert cycle.shape == (500, 3)
+    assert trend.ndim == 2
+    assert trend.shape == (500, 3)
+
+    if use_pandas:
+        assert isinstance(cycle, pd.DataFrame)
+        assert list(cycle.columns) == ["Apple_cycle", "Banana_cycle", "Cherry_cycle"]
+        assert isinstance(trend, pd.DataFrame)
+        assert list(trend.columns) == ["Apple_trend", "Banana_trend", "Cherry_trend"]
+        # Skip remainder of tests for pandas due to difference methods for indexing
+        cycle = cycle.to_numpy()
+        trend = trend.to_numpy()
+
+    assert np.all(np.isnan(cycle[:11, :]))
+    assert np.all(np.isfinite(cycle[11:, :]))
+    assert np.all(np.isnan(trend[:11, :]))
+    assert np.all(np.isfinite(trend[11:, :]))
+    assert_allclose(cycle[:, 0], cycle[:, 1])
+    assert_allclose(trend[:, 0], trend[:, 1])
+    assert not np.allclose(cycle[:, 0], cycle[:, 2])
+    assert not np.allclose(trend[:, 0], trend[:, 2])
