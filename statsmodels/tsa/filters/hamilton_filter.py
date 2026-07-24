@@ -1,8 +1,8 @@
 """
 Hamilton (2018) filter — regression-based trend-cycle decomposition.
 
-Reference
----------
+References
+----------
 Hamilton, J. D. (2018). Why You Should Never Use the Hodrick-Prescott Filter.
 *Review of Economics and Statistics*, 100(5), 831-843.
 """
@@ -17,21 +17,10 @@ def hamilton_filter(x, h=8, p=4):
     r"""
     Hamilton (2018) regression-based trend-cycle decomposition [Hamilton2018]_.
 
-    Decomposes a time series into trend and cycle components by projecting
-    ``h``-period-ahead values on the ``p`` most recent lags and a constant:
-
-    .. math::
-
-        y_{t+h} = \alpha_0 + \alpha_1 y_t + \alpha_2 y_{t-1}
-                  + \cdots + \alpha_p y_{t-p+1} + v_{t+h}
-
-    The cycle at time ``t + h`` is the residual :math:`\hat{v}_{t+h}` from
-    this OLS regression.  The trend is the corresponding fitted value.
-
     Parameters
     ----------
     x : array_like
-        The time series to decompose, 1-d with at least ``p + h`` observations.
+        The time series to decompose, 1-d with at least ``2 p + h`` observations.
     h : int, optional
         Forecast horizon used in the projection.  Hamilton recommends:
 
@@ -41,8 +30,9 @@ def hamilton_filter(x, h=8, p=4):
 
     p : int, optional
         Number of lagged values of ``x`` to include as regressors.
-        Hamilton recommends **4** for quarterly data (one year of lags) and
-        **12** for monthly data.
+        Hamilton recommends **4** for quarterly data (one year of lags),
+        **12** for monthly data (one year of lags), and **1** for annual
+        data (following the same one-year-of-lags rule).
 
     Returns
     -------
@@ -61,9 +51,22 @@ def hamilton_filter(x, h=8, p=4):
         Baxter-King bandpass filter.
     statsmodels.tsa.filters.cf_filter.cffilter
         Christiano-Fitzgerald asymmetric filter.
+    statsmodels.tsa.ar_model.AutoReg
+        Autoregression estimation using OLS.
 
     Notes
     -----
+    Decomposes a time series into trend and cycle components by projecting
+    ``h``-period-ahead values on the ``p`` most recent lags and a constant:
+
+    .. math::
+
+        y_{t+h} = \alpha_0 + \alpha_1 y_t + \alpha_2 y_{t-1}
+                  + \cdots + \alpha_p y_{t-p+1} + v_{t+h}
+
+    The cycle at time ``t + h`` is the residual :math:`\hat{v}_{t+h}` from
+    this OLS regression.  The trend is the corresponding fitted value.
+
     Unlike the HP filter, the Hamilton filter uses only lagged information and
     produces stationary residuals when the underlying series is I(1) or I(2).
     Hamilton (2018) shows that the HP filter introduces spurious cyclical
@@ -73,6 +76,14 @@ def hamilton_filter(x, h=8, p=4):
     is *not* a rolling regression).  With ``h = 8`` and ``p = 4`` (the
     quarterly defaults), the first ``11`` observations of the output are
     ``NaN``.
+
+    ``x`` must have at least ``2 * p + h`` observations so that the
+    regression has at least ``p + 1`` usable observations (one per
+    parameter, including the constant).  At exactly this minimum length,
+    the regression is exactly determined and produces a degenerate,
+    zero-residual fit -- the returned ``cycle`` is identically zero and
+    ``trend`` equals ``x`` over the non-``NaN`` range.  Provide more
+    observations than this bare minimum for a meaningful decomposition.
 
     References
     ----------
@@ -105,7 +116,7 @@ def hamilton_filter(x, h=8, p=4):
 
     _lags = np.arange(h, h + p)
     mod = AutoReg(x, lags=_lags, trend="c")
-    res = mod.fit()
+    res = mod.fit(use_t=True)
 
     fitted = res.fittedvalues  # trend values at t+h
     resid = res.resid  # cycle values at t+h

@@ -1,7 +1,7 @@
 """Tests for the Hamilton (2018) regression-based trend-cycle filter.
 
-Reference
----------
+References
+----------
 Hamilton, J. D. (2018). Why You Should Never Use the Hodrick-Prescott Filter.
 Review of Economics and Statistics, 100(5), 831-843.
 """
@@ -19,7 +19,6 @@ from statsmodels.tsa.filters.hamilton_filter import hamilton_filter
 
 RNG = np.random.default_rng(0)
 _QUARTERLY = RNG.standard_normal(200)  # 200 quarters
-_SHORT = RNG.standard_normal(15)
 
 
 # ---------------------------------------------------------------------------
