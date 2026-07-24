@@ -1282,7 +1282,7 @@ def _pccf_ols(x, y, nlags):
                 )
             )
             targets = np.column_stack([x[indices], y[indices + h]])
-            coeffs = lstsq(carriers, targets, rcond=None)[0]
+            coeffs = np.linalg.lstsq(carriers, targets, rcond=None)[0]
             resids = targets - carriers.dot(coeffs)
             resid_x = resids[:, 0]
             resid_y = resids[:, 1]
@@ -1315,7 +1315,7 @@ def pccf(
     alpha: float | None = None,
 ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
     """
-    Partial Cross-Correlation Function.
+    Partial Cross-Correlation Function
 
     Computes the (1,2) element of the partial lag correlation
     matrix P(s) for the bivariate series (x, y) at lags
@@ -1730,6 +1730,7 @@ def breakvar_heteroskedasticity_test(
 
         def pval_upper(test_statistics):
             return f.sf(test_statistics, numer_dof, denom_dof)
+
     else:
         from scipy.stats import chi2
 
