@@ -1594,8 +1594,8 @@ def test_slim_summary():
 
 def test_ols_wls_fixed_scale():
     rs = np.random.RandomState(3293829)
-    X = add_constant(rs.rand(50, 2))
-    y = np.dot(X, [1, 2, 3]) + n.randn(50)
+    X = add_constant(rs.uniform(size=(50, 2)))
+    y = np.dot(X, [1, 2, 3]) + rs.standard_normal(50)
     expected_scale = 5.0
 
     res1 = OLS(y, X).fit(cov_type='fixed scale', cov_kwds={'scale': expected_scale})
