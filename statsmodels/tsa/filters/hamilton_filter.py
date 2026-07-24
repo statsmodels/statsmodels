@@ -15,7 +15,7 @@ from statsmodels.tsa.ar_model import AutoReg
 
 def hamilton_filter(x, h=8, p=4):
     r"""
-    Hamilton (2018) regression-based trend-cycle decomposition [Hamilton2018]_.
+    Hamilton (2018) regression-based trend-cycle decomposition.
 
     Parameters
     ----------
@@ -69,7 +69,7 @@ def hamilton_filter(x, h=8, p=4):
 
     Unlike the HP filter, the Hamilton filter uses only lagged information and
     produces stationary residuals when the underlying series is I(1) or I(2).
-    Hamilton (2018) shows that the HP filter introduces spurious cyclical
+    [Hamilton2018]_ shows that the HP filter introduces spurious cyclical
     dynamics; the regression-based filter avoids this by construction.
 
     The regression is estimated once on all available observations (i.e. this
