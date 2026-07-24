@@ -1368,3 +1368,43 @@ def test_get_distribution():
     v += vcomp[1] * (exog_vcb**2).sum(1).mean()
     v += scale
     assert_allclose(np.var(yr - ey), v, rtol=1e-2, atol=1e-4)
+
+
+def test_fit_unsupported_kwargs_ignored():
+    # GH#9677 - passing cov_type to MixedLM.fit should warn but not crash
+    rs = np.random.RandomState(123)
+    n = 100
+    groups = np.repeat(np.arange(10), 10)
+    x = rs.normal(size=n)
+    y = x + rs.normal(size=n)
+    df = pd.DataFrame({"y": y, "x": x, "g": groups})
+
+    model = MixedLM.from_formula("y ~ x", groups="g", data=df)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        result = model.fit(cov_type="hc1")
+
+    # Should complete without AttributeError and return valid results
+    assert result.fe_params is not None
+    assert len(result.fe_params) == 2
+
+
+def test_fit_unsupported_kwargs_warns():
+    # GH#9677 - unsupported kwargs should emit RuntimeWarning
+    rs = np.random.RandomState(456)
+    n = 50
+    groups = np.repeat(np.arange(5), 10)
+    x = rs.normal(size=n)
+    y = x + rs.normal(size=n)
+    df = pd.DataFrame({"y": y, "x": x, "g": groups})
+
+    model = MixedLM.from_formula("y ~ x", groups="g", data=df)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        model.fit(cov_type="hc1")
+
+    runtime_warnings = [x for x in w if issubclass(x.category, RuntimeWarning)]
+    assert len(runtime_warnings) == 1
+    assert "not used by MixedLM.fit" in str(runtime_warnings[0].message)

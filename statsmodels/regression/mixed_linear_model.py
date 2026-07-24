@@ -2309,13 +2309,16 @@ class MixedLM(base.LikelihoodModel):
             "disp",
             "maxls",
         ]
-        for x in fit_kwargs.keys():
-            if x not in _allowed_kwargs:
-                warnings.warn(
-                    "Argument %s not used by MixedLM.fit" % x,
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+        disallowed_kwargs = sorted(set(fit_kwargs).difference(_allowed_kwargs))
+        if disallowed_kwargs:
+            warnings.warn(
+                "Argument(s) %s not used by MixedLM.fit"
+                % ", ".join(disallowed_kwargs),
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            fit_kwargs = {k: v for k, v in fit_kwargs.items()
+                          if k in _allowed_kwargs}
 
         if method is None:
             method = ["bfgs", "lbfgs", "cg"]
