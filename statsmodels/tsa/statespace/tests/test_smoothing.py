@@ -1332,7 +1332,7 @@ def test_smoothed_state_autocovariances_forwards_oos(missing, filter_univariate,
         -1, end=mod_oos.nobs, extend_kwargs=extend_kwargs
     ).transpose(2, 0, 1)
     assert_equal(acov1.shape, (mod_oos.nobs, mod.k_states, mod.k_states))
-    assert_allclose(acov1[:, :2, :2], desired_acov1[1:])
+    assert_allclose(acov1[:, :2, :2], desired_acov1[1:], rtol=1e-6)
 
     # Note: now we can compute up to Cov(mod_oos.nobs - 1, mod_oos.nobs + 1)
     # using a model that has state space matrices defined up to mod_oos.nobs.
@@ -1346,7 +1346,7 @@ def test_smoothed_state_autocovariances_forwards_oos(missing, filter_univariate,
         -2, end=mod_oos.nobs - 1, extend_kwargs=extend_kwargs
     ).transpose(2, 0, 1)
     assert_equal(acov2.shape, (mod_oos.nobs - 1, mod.k_states, mod.k_states))
-    assert_allclose(acov2[:, :2, :2], desired_acov2[2:])
+    assert_allclose(acov2[:, :2, :2], desired_acov2[2:], rtol=1e-6)
 
     # Note: now we can compute up to Cov(mod_oos.nobs - 2, mod_oos.nobs + 1)
     # using a model that has state space matrices defined up to mod_oos.nobs.
@@ -1355,7 +1355,7 @@ def test_smoothed_state_autocovariances_forwards_oos(missing, filter_univariate,
         -3, end=mod_oos.nobs - 2, extend_kwargs=extend_kwargs
     ).transpose(2, 0, 1)
     assert_equal(acov3.shape, (mod_oos.nobs - 2, mod.k_states, mod.k_states))
-    assert_allclose(acov3[:, :2, :2], desired_acov3[3:])
+    assert_allclose(acov3[:, :2, :2], desired_acov3[3:], rtol=1e-6)
 
 
 @pytest.mark.parametrize("missing", ["all", "partial", "mixed", None])

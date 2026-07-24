@@ -20,6 +20,8 @@ pytest-xdist
 pytest-cov
 coverage[toml]
 jinja2
+polars>=1.0.0; python_version < '3.14' and sys_platform != 'darwin'
+pyarrow>=14.0.0; python_version < '3.14' and sys_platform != 'darwin'
 
 # Pin on Win32
 pywinpty; os_name == "nt"

@@ -12,6 +12,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from statsmodels.tools.data import _to_pandas
+
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
 
@@ -454,6 +456,8 @@ class FormulaManager:
             If pandas is True, returns one or more DataFrames. If False,
             returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
         """
+        # Convert Polars objects to pandas
+        data = _to_pandas(data)
         _check_data(data)
         data = _maybe_convert_data(data)
         if isinstance(eval_env, (int, np.integer)):

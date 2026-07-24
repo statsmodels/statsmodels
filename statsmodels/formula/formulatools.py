@@ -1,7 +1,7 @@
 import numpy as np
-import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.tools.data import _to_pandas
 
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
@@ -55,8 +55,8 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
         # Objects that support the dataframe API should be converted to a
         # dataframe to avoid problems with patsy. (This also works for
         # dataframes themselves.)
-        if isinstance(Y, pd.DataFrame) or hasattr(Y, "__dataframe__"):
-            Y = pd.DataFrame(Y)
+        # _to_pandas converts Polars DataFrames/Series to pandas
+        Y = _to_pandas(Y)
         result = mgr.get_matrices(
             formula,
             Y,
