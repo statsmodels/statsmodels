@@ -56,8 +56,7 @@ class TestPHReg:
     @staticmethod
     def load_file(fname):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
-        data = np.genfromtxt(os.path.join(cur_dir, "results", fname),
-                             delimiter=" ")
+        data = np.genfromtxt(os.path.join(cur_dir, "results", fname), delimiter=" ")
         time = data[:, 0]
         status = data[:, 1]
         entry = data[:, 2]
@@ -114,10 +113,10 @@ class TestPHReg:
 
     def test_missing(self):
 
-        np.random.seed(34234)
-        time = 50 * np.random.uniform(size=200)
-        status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200, 4))
+        rs = np.random.RandomState(34234)
+        time = 50 * rs.uniform(size=200)
+        status = rs.randint(0, 2, 200).astype(np.float64)
+        exog = rs.normal(size=(200, 4))
 
         time[0:5] = np.nan
         status[5:10] = np.nan
@@ -130,29 +129,34 @@ class TestPHReg:
 
     def test_formula(self):
 
-        np.random.seed(34234)
-        time = 50 * np.random.uniform(size=200)
-        status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200, 4))
+        rs = np.random.RandomState(34234)
+        time = 50 * rs.uniform(size=200)
+        status = rs.randint(0, 2, 200).astype(np.float64)
+        exog = rs.normal(size=(200, 4))
         entry = np.zeros_like(time)
         entry[0:10] = time[0:10] / 2
 
-        df = pd.DataFrame({"time": time, "status": status,
-                           "exog1": exog[:, 0], "exog2": exog[:, 1],
-                           "exog3": exog[:, 2], "exog4": exog[:, 3],
-                           "entry": entry})
+        df = pd.DataFrame(
+            {
+                "time": time,
+                "status": status,
+                "exog1": exog[:, 0],
+                "exog2": exog[:, 1],
+                "exog3": exog[:, 2],
+                "exog4": exog[:, 3],
+                "entry": entry,
+            }
+        )
 
         mod1 = PHReg(time, exog, status, entry=entry)
         rslt1 = mod1.fit()
 
         # works with "0 +" on RHS but issues warning
         fml = "time ~ exog1 + exog2 + exog3 + exog4"
-        mod2 = PHReg.from_formula(fml, df, status=status,
-                                  entry=entry)
+        mod2 = PHReg.from_formula(fml, df, status=status, entry=entry)
         rslt2 = mod2.fit()
 
-        mod3 = PHReg.from_formula(fml, df, status="status",
-                                  entry="entry")
+        mod3 = PHReg.from_formula(fml, df, status="status", entry="entry")
         rslt3 = mod3.fit()
 
         assert_allclose(rslt1.params, rslt2.params)
@@ -185,23 +189,24 @@ class TestPHReg:
         status = np.r_[1, 1, 0, 0, 1, 0, 1, 1, 1]
         x1 = np.r_[1, 1, 1, 2, 2, 2, 3, 3, 3]
         x2 = np.r_[1, 2, 3, 1, 2, 3, 1, 2, 3]
-        df = pd.DataFrame({"time": time, "status": status,
-                           "x1": x1, "x2": x2})
+        df = pd.DataFrame({"time": time, "status": status, "x1": x1, "x2": x2})
 
-        model1 = PHReg.from_formula("time ~ C(x1) + C(x2) + C(x1)*C(x2)", status="status",
-                                    data=df)
+        model1 = PHReg.from_formula(
+            "time ~ C(x1) + C(x2) + C(x1)*C(x2)", status="status", data=df
+        )
         assert_equal(model1.exog.shape, [9, 8])
 
     def test_predict_formula(self):
 
         n = 100
-        np.random.seed(34234)
-        time = 50 * np.random.uniform(size=n)
-        status = np.random.randint(0, 2, n).astype(np.float64)
-        exog = np.random.uniform(1, 2, size=(n, 2))
+        rs = np.random.RandomState(34234)
+        time = 50 * rs.uniform(size=n)
+        status = rs.randint(0, 2, n).astype(np.float64)
+        exog = rs.uniform(1, 2, size=(n, 2))
 
-        df = pd.DataFrame({"time": time, "status": status,
-                           "exog1": exog[:, 0], "exog2": exog[:, 1]})
+        df = pd.DataFrame(
+            {"time": time, "status": status, "exog1": exog[:, 0], "exog2": exog[:, 1]}
+        )
 
         # Works with "0 +" on RHS but issues warning
         fml = "time ~ 0 + exog1 + np.log(exog2) + exog1*exog2"
@@ -214,15 +219,12 @@ class TestPHReg:
         pr1 = result1.predict()
         pr2 = result1.predict(exog=df)
         pr3 = model1.predict(result1.params, exog=dfp)  # No standard errors
-        pr4 = model1.predict(result1.params,
-                             cov_params=result1.cov_params(),
-                             exog=dfp)
+        pr4 = model1.predict(result1.params, cov_params=result1.cov_params(), exog=dfp)
 
         prl = (pr1, pr2, pr3, pr4)
         for i in range(4):
             for j in range(i):
-                assert_allclose(prl[i].predicted_values,
-                                prl[j].predicted_values)
+                assert_allclose(prl[i].predicted_values, prl[j].predicted_values)
 
         prl = (pr1, pr2, pr4)
         for i in range(3):
@@ -231,31 +233,45 @@ class TestPHReg:
 
     def test_formula_args(self):
 
-        np.random.seed(34234)
+        rs = np.random.RandomState(34234)
         n = 200
-        time = 50 * np.random.uniform(size=n)
-        status = np.random.randint(0, 2, size=n).astype(np.float64)
-        exog = np.random.normal(size=(200, 2))
-        offset = np.random.uniform(size=n)
-        entry = np.random.uniform(0, 1, size=n) * time
+        time = 50 * rs.uniform(size=n)
+        status = rs.randint(0, 2, size=n).astype(np.float64)
+        exog = rs.normal(size=(200, 2))
+        offset = rs.uniform(size=n)
+        entry = rs.uniform(0, 1, size=n) * time
 
-        df = pd.DataFrame({"time": time, "status": status, "x1": exog[:, 0],
-                           "x2": exog[:, 1], "offset": offset, "entry": entry})
-        model1 = PHReg.from_formula("time ~ x1 + x2", status="status", offset="offset",
-                                    entry="entry", data=df)
+        df = pd.DataFrame(
+            {
+                "time": time,
+                "status": status,
+                "x1": exog[:, 0],
+                "x2": exog[:, 1],
+                "offset": offset,
+                "entry": entry,
+            }
+        )
+        model1 = PHReg.from_formula(
+            "time ~ x1 + x2", status="status", offset="offset", entry="entry", data=df
+        )
         result1 = model1.fit()
-        model2 = PHReg.from_formula("time ~ x1 + x2", status=df.status, offset=df.offset,
-                                    entry=df.entry, data=df)
+        model2 = PHReg.from_formula(
+            "time ~ x1 + x2",
+            status=df.status,
+            offset=df.offset,
+            entry=df.entry,
+            data=df,
+        )
         result2 = model2.fit()
         assert_allclose(result1.params, result2.params)
         assert_allclose(result1.bse, result2.bse)
 
     def test_offset(self):
 
-        np.random.seed(34234)
-        time = 50 * np.random.uniform(size=200)
-        status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200, 4))
+        rs = np.random.RandomState(34234)
+        time = 50 * rs.uniform(size=200)
+        status = rs.randint(0, 2, 200).astype(np.float64)
+        exog = rs.normal(size=(200, 4))
 
         for ties in "breslow", "efron":
             mod1 = PHReg(time, exog, status)
@@ -270,10 +286,10 @@ class TestPHReg:
 
     def test_post_estimation(self):
         # All regression tests
-        np.random.seed(34234)
-        time = 50 * np.random.uniform(size=200)
-        status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200, 4))
+        rs = np.random.RandomState(34234)
+        time = 50 * rs.uniform(size=200)
+        status = rs.randint(0, 2, 200).astype(np.float64)
+        exog = rs.normal(size=(200, 4))
 
         mod = PHReg(time, exog, status)
         rslt = mod.fit()
@@ -283,13 +299,12 @@ class TestPHReg:
         w_avg = rslt.weighted_covariate_averages
         assert_allclose(
             np.abs(w_avg[0]).sum(0),
-            np.r_[7.31008415, 9.77608674, 10.89515885, 13.1106801]
+            np.r_[7.31008415, 9.77608674, 10.89515885, 13.1106801],
         )
 
         bc_haz = rslt.baseline_cumulative_hazard
         v = [np.mean(np.abs(x)) for x in bc_haz[0]]
-        w = np.r_[23.482841556421608, 0.44149255358417017,
-                  0.68660114081275281]
+        w = np.r_[23.482841556421608, 0.44149255358417017, 0.68660114081275281]
         assert_allclose(v, w)
 
         score_resid = rslt.score_residuals
@@ -297,7 +312,7 @@ class TestPHReg:
         w = np.abs(score_resid).mean(0)
         assert_allclose(v, w)
 
-        groups = np.random.randint(0, 3, 200)
+        groups = rs.randint(0, 3, 200)
         mod = PHReg(time, exog, status)
         rslt = mod.fit(groups=groups)
         robust_cov = rslt.cov_params()
@@ -313,10 +328,10 @@ class TestPHReg:
 
     @pytest.mark.smoke
     def test_summary(self):
-        np.random.seed(34234)
-        time = 50 * np.random.uniform(size=200)
-        status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200, 4))
+        rs = np.random.RandomState(34234)
+        time = 50 * rs.uniform(size=200)
+        status = rs.randint(0, 2, 200).astype(np.float64)
+        exog = rs.normal(size=(200, 4))
 
         mod = PHReg(time, exog, status)
         rslt = mod.fit()
@@ -334,7 +349,7 @@ class TestPHReg:
         rslt = mod.fit(groups=groups)
         smry = rslt.summary()
 
-        entry = np.random.uniform(0.1, 0.8, 200) * time
+        entry = rs.uniform(0.1, 0.8, 200) * time
         mod = PHReg(time, exog, status, entry=entry)
         rslt = mod.fit()
         smry = rslt.summary()
@@ -347,10 +362,10 @@ class TestPHReg:
         # tests into real tests against R.  There are many options to
         # this function that may interact in complicated ways.  Only a
         # few key combinations are tested here.
-        np.random.seed(34234)
-        endog = 50 * np.random.uniform(size=200)
-        status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200, 4))
+        rs = np.random.RandomState(34234)
+        endog = 50 * rs.uniform(size=200)
+        status = rs.randint(0, 2, 200).astype(np.float64)
+        exog = rs.normal(size=(200, 4))
 
         mod = PHReg(endog, exog, status)
         rslt = mod.fit()
@@ -358,17 +373,16 @@ class TestPHReg:
         for pred_type in "lhr", "hr", "cumhaz", "surv":
             rslt.predict(pred_type=pred_type)
             rslt.predict(endog=endog[0:10], pred_type=pred_type)
-            rslt.predict(endog=endog[0:10], exog=exog[0:10, :],
-                         pred_type=pred_type)
+            rslt.predict(endog=endog[0:10], exog=exog[0:10, :], pred_type=pred_type)
 
     @pytest.mark.smoke
     def test_get_distribution(self):
-        np.random.seed(34234)
+        rs = np.random.RandomState(34234)
         n = 200
-        exog = np.random.normal(size=(n, 2))
+        exog = rs.normal(size=(n, 2))
         lin_pred = exog.sum(1)
         elin_pred = np.exp(-lin_pred)
-        time = -elin_pred * np.log(np.random.uniform(size=n))
+        time = -elin_pred * np.log(rs.uniform(size=n))
         status = np.ones(n)
         status[0:20] = 0
         strata = np.kron(range(5), np.ones(n // 5))
@@ -382,7 +396,7 @@ class TestPHReg:
         dist.mean()
         dist.var()
         dist.std()
-        dist.rvs()
+        dist.rvs(rng=rs)
 
     def test_fit_regularized(self):
 
@@ -412,7 +426,10 @@ class TestPHReg:
                 def plf(params, model, time, s):
                     llf = model.loglike(params) / len(time)
                     L1_wt = 1
-                    llf = llf - s * ((1 - L1_wt)*np.sum(params**2) / 2 + L1_wt*np.sum(np.abs(params)))
+                    llf = llf - s * (
+                        (1 - L1_wt) * np.sum(params**2) / 2
+                        + L1_wt * np.sum(np.abs(params))
+                    )
                     return llf
 
                 # Confirm that we are doing better than glmnet.
@@ -424,15 +441,16 @@ class TestPHReg:
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 rdir = os.path.join(cur_dir, "results")
 fnames = os.listdir(rdir)
-fnames = [x for x in fnames if x.startswith("survival")
-          and x.endswith(".csv")]
+fnames = [x for x in fnames if x.startswith("survival") and x.endswith(".csv")]
 
 ties = ("breslow", "efron")
 entry_f = (False, True)
 strata_f = (False, True)
 
 
-@pytest.mark.parametrize("fname,ties,entry_f,strata_f",
-                         list(itertools.product(fnames, ties, entry_f, strata_f)))
+@pytest.mark.parametrize(
+    "fname,ties,entry_f,strata_f",
+    list(itertools.product(fnames, ties, entry_f, strata_f)),
+)
 def test_r(fname, ties, entry_f, strata_f):
     TestPHReg.do1(fname, ties, entry_f, strata_f)

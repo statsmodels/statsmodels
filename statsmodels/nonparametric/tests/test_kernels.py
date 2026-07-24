@@ -4,6 +4,7 @@ Created on Sat Dec 14 17:23:25 2013
 
 Author: Josef Perktold
 """
+
 import os
 
 import numpy as np
@@ -89,10 +90,15 @@ class CheckKernelMixin:
         res_upp = res_fitted + crit * res_se
         res_low = res_fitted - crit * res_se
         self.res_fittedg = np.column_stack((res_low, res_fitted, res_upp))
-        assert_allclose(fittedg[se_valid, 2], res_upp[se_valid],
-                        rtol=self.upp_rtol, atol=0.2)
-        assert_allclose(fittedg[se_valid, 0], res_low[se_valid],
-                        rtol=self.low_rtol, atol=self.low_atol)
+        assert_allclose(
+            fittedg[se_valid, 2], res_upp[se_valid], rtol=self.upp_rtol, atol=0.2
+        )
+        assert_allclose(
+            fittedg[se_valid, 0],
+            res_low[se_valid],
+            rtol=self.low_rtol,
+            atol=self.low_atol,
+        )
 
         # assert_allclose(fitted, res_fitted, rtol=0, atol=1e-6)
 
@@ -137,8 +143,7 @@ class TestCosine(CheckKernelMixin):
     kern_name = "cos"
     kern = kernels.Cosine2()
 
-    @pytest.mark.xfail(reason="NaN mismatch",
-                       raises=AssertionError, strict=True)
+    @pytest.mark.xfail(reason="NaN mismatch", raises=AssertionError, strict=True)
     def test_smoothconf(self):
         super().test_smoothconf()
 
@@ -157,10 +162,16 @@ def test_tricube():
     # > res$kx
 
     res_kx = [
-        0.0000000000000000, 0.1669853116259163, 0.5789448302469136,
-        0.8243179321289062, 0.8641975308641975, 0.8243179321289062,
-        0.5789448302469136, 0.1669853116259163, 0.0000000000000000
-        ]
+        0.0000000000000000,
+        0.1669853116259163,
+        0.5789448302469136,
+        0.8243179321289062,
+        0.8641975308641975,
+        0.8243179321289062,
+        0.5789448302469136,
+        0.1669853116259163,
+        0.0000000000000000,
+    ]
     xx = np.linspace(-1, 1, 9)
     kx = kernels.Tricube()(xx)
     assert_allclose(kx, res_kx, rtol=1e-10)

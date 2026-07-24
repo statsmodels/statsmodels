@@ -37,7 +37,7 @@ SMOOTH_UNIVARIATE = 0x08
 class KalmanSmoother(KalmanFilter):
     r"""
     State space representation of a time series process, with Kalman filter
-    and smoother.
+    and smoother
 
     Parameters
     ----------
@@ -54,6 +54,9 @@ class KalmanSmoother(KalmanFilter):
         Default results class to use to save filtering output. Default is
         `SmootherResults`. If specified, class must extend from
         `SmootherResults`.
+    kalman_smoother_classes : dict, optional
+        Dictionary with BLAS prefixes as keys and Cython Kalman smoother
+        classes as values. Default is `tools.prefix_kalman_smoother_map`.
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices, for Kalman filtering options, or for Kalman smoothing
@@ -83,21 +86,13 @@ class KalmanSmoother(KalmanFilter):
     ]
 
     smooth_conventional = OptionWrapper("smooth_method", SMOOTH_CONVENTIONAL)
-    """
-    (bool) Flag for conventional (Durbin and Koopman, 2012) Kalman smoothing.
-    """
+    """(bool) Flag for conventional (Durbin and Koopman, 2012) Kalman smoothing"""
     smooth_alternative = OptionWrapper("smooth_method", SMOOTH_ALTERNATIVE)
-    """
-    (bool) Flag for alternative (modified Bryson-Frazier) smoothing.
-    """
+    """(bool) Flag for alternative (modified Bryson-Frazier) smoothing"""
     smooth_classical = OptionWrapper("smooth_method", SMOOTH_CLASSICAL)
-    """
-    (bool) Flag for classical (see e.g. Anderson and Moore, 1979) smoothing.
-    """
+    """(bool) Flag for classical (see e.g. Anderson and Moore, 1979) smoothing"""
     smooth_univariate = OptionWrapper("smooth_method", SMOOTH_UNIVARIATE)
-    """
-    (bool) Flag for univariate smoothing (uses modified Bryson-Frazier timing).
-    """
+    """(bool) Flag for univariate smoothing (uses modified Bryson-Frazier timing)"""
 
     # Default smoother options
     smoother_output = SMOOTHER_ALL
@@ -383,8 +378,12 @@ class KalmanSmoother(KalmanFilter):
         Parameters
         ----------
         smoother_output : int, optional
-            Determines which Kalman smoother output calculate. Default is all
-            (including state, disturbances, and all covariances).
+            Determines which Kalman smoother output to calculate. Default is
+            all (including state, disturbances, and all covariances).
+        smooth_method : int, optional
+            Determines which Kalman smoothing approach to use. Default is
+            the smoother method specified by `smooth_method` in the current
+            state space model.
         results : class or object, optional
             If a class, then that class is instantiated and returned with the
             result of both filtering and smoothing.
@@ -396,6 +395,21 @@ class KalmanSmoother(KalmanFilter):
             is True.
         prefix : str
             The prefix of the datatype. Usually only used internally.
+        complex_step : bool, optional
+            Whether or not to compute the complex-step derivative. Default is
+            False.
+        update_representation : bool, optional
+            Whether or not to update the state space representation with the
+            current model's parameters. Default is True.
+        update_filter : bool, optional
+            Whether or not to update the filter results in the results object
+            with the output of the Kalman filter. Default is True.
+        update_smoother : bool, optional
+            Whether or not to update the smoother results in the results
+            object with the output of the Kalman smoother. Default is True.
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
 
         Returns
         -------
@@ -484,9 +498,9 @@ class SmootherResults(FilterResults):
     initialization : str
         Kalman filter initialization method.
     initial_state : array_like
-        The state vector used to initialize the Kalamn filter.
+        The state vector used to initialize the Kalman filter.
     initial_state_cov : array_like
-        The state covariance matrix used to initialize the Kalamn filter.
+        The state covariance matrix used to initialize the Kalman filter.
     filter_method : int
         Bitmask representing the Kalman filtering method
     inversion_method : int
@@ -550,7 +564,7 @@ class SmootherResults(FilterResults):
     smoothed_state_cov : ndarray
         The smoothed state covariance matrices at each time period.
     smoothed_state_autocov : ndarray
-        The smoothed state lago-one autocovariance matrices at each time
+        The smoothed state lag-one autocovariance matrices at each time
         period: :math:`Cov(\alpha_{t+1}, \alpha_t)`.
     smoothed_measurement_disturbance : ndarray
         The smoothed measurement at each time period.
@@ -611,7 +625,8 @@ class SmootherResults(FilterResults):
         Parameters
         ----------
         smoother : KalmanSmoother
-            The model object from which to take the updated values.
+            The KalmanSmoother object from which to take the updated
+            smoothing values.
 
         Notes
         -----
@@ -750,10 +765,10 @@ class SmootherResults(FilterResults):
             The number of period to shift forwards when computing the
             autocovariance. This has the opposite sign as `lag` from the
             `smoothed_state_autocovariance` method.
-        start : int, optional
+        start : int
             The start of the interval (inclusive) of autocovariances to compute
             and return.
-        end : int, optional
+        end : int
             The end of the interval (exclusive) autocovariances to compute and
             return. Note that since it is an exclusive endpoint, the returned
             autocovariances do not include the value at this index.
@@ -762,6 +777,11 @@ class SmootherResults(FilterResults):
             for handling out-of-sample autocovariance computations in
             time-varying state space models.
 
+        Returns
+        -------
+        acov : ndarray
+            Array of autocovariance matrices, shaped `(n, k_states, k_states)`
+            where `n = end - start`.
         """
         if extend_kwargs is None:
             extend_kwargs = {}
@@ -858,18 +878,18 @@ class SmootherResults(FilterResults):
             A specific period for which to compute and return the
             autocovariance. Cannot be used in combination with `start` or
             `end`. See the Returns section for details on how this
-            parameter affects what is what is returned.
+            parameter affects what is returned.
         start : int, optional
             The start of the interval (inclusive) of autocovariances to compute
             and return. Cannot be used in combination with the `t` argument.
             See the Returns section for details on how this parameter affects
-            what is what is returned. Default is 0.
+            what is returned. Default is 0.
         end : int, optional
             The end of the interval (exclusive) autocovariances to compute and
             return. Note that since it is an exclusive endpoint, the returned
             autocovariances do not include the value at this index. Cannot be
             used in combination with the `t` argument. See the Returns section
-            for details on how this parameter affects what is what is returned
+            for details on how this parameter affects what is returned
             and what the default value is.
         extend_kwargs : dict, optional
             Keyword arguments containing updated state space system matrices
@@ -1083,12 +1103,12 @@ class SmootherResults(FilterResults):
             the value at this index. Cannot be used in combination with the `t`
             argument.
         revisions_details_start : bool or int, optional
-            The period at which to beging computing the detailed impacts of
+            The period at which to begin computing the detailed impacts of
             data revisions. Any revisions prior to this period will have their
             impacts grouped together. If a negative integer, interpreted as
             an offset from the end of the dataset. If set to True, detailed
             impacts are computed for all revisions, while if set to False, all
-            revisions are grouped together. Default is False. Note that for
+            revisions are grouped together. Default is True. Note that for
             large models, setting this to be near the beginning of the sample
             can cause this function to be slow.
         design : array, optional
@@ -1138,19 +1158,19 @@ class SmootherResults(FilterResults):
               construct the news, y^u.
             - `revised`: revised observations of the periods that were revised
               and for which detailed impacts were computed
-            - `revised`: revised observations of the periods that were revised
+            - `revised_all`: revised observations of the periods that were
+              revised
             - `revised_prev`: previous observations of the periods that were
               revised and for which detailed impacts were computed
             - `revised_prev_all`: previous observations of the periods that
-              were revised and for which detailed impacts were computed
+              were revised
             - `prev_impacted_forecasts`: previous forecast of the periods of
               interest, E[y^i | previous].
             - `post_impacted_forecasts`: forecast of the periods of interest
               after taking into account both revisions and updates,
               E[y^i | post].
             - `revision_results`: results object that updates the `previous`
-              results to take into account data revisions.
-            - `revision_results`: results object associated with the revisions
+              results to take into account data revisions
             - `revision_impacts`: total impacts from all revisions (both
               grouped and detailed)
             - `revisions_ix`: list of `(t, i)` positions of revisions in endog
@@ -1590,14 +1610,36 @@ class SmootherResults(FilterResults):
         r"""
         Cov(\tilde \alpha_{t}, I) Var(I, I)^{-1}
 
-        where I is a vector of forecast errors associated with
-        `update_indices`.
+        where I is a vector of forecast errors associated with `updates_ix`.
 
         Parameters
         ----------
         updates_ix : list
             List of indices `(t, i)`, where `t` denotes a zero-indexed time
             location and `i` denotes a zero-indexed endog variable.
+        t : int, optional
+            A specific period for which to compute the gain. Cannot be used
+            in combination with `start` or `end`.
+        start : int, optional
+            The start of the interval (inclusive) of gains to compute and
+            return. Cannot be used in combination with the `t` argument.
+            Default is `nobs - 1`.
+        end : int, optional
+            The end of the interval (exclusive) of gains to compute and
+            return. Cannot be used in combination with the `t` argument.
+            Default is `nobs`.
+        extend_kwargs : dict, optional
+            Keyword arguments containing updated state space system matrices
+            for handling out-of-sample computations in time-varying state
+            space models.
+
+        Returns
+        -------
+        gain : ndarray
+            Array of gain matrices. If the argument `t` is not provided, then
+            it is shaped `(end - start, k_states, len(updates_ix))`, while if
+            `t` is given then the first axis is dropped and the array is
+            shaped `(k_states, len(updates_ix))`.
         """
         # Handle `t`
         if t is not None and (start is not None or end is not None):

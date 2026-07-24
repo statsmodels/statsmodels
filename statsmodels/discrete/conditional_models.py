@@ -7,6 +7,7 @@ import itertools
 import warnings
 
 import numpy as np
+from scipy.special import logsumexp
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -38,9 +39,7 @@ class _ConditionalModel(base.LikelihoodModel):
         super().__init__(endog, exog, missing=missing, **kwargs)
 
         if self.data.const_idx is not None:
-            msg = (
-                "Conditional models should not have an intercept in the design matrix"
-            )
+            msg = "Conditional models should not have an intercept in the design matrix"
             raise ValueError(msg)
 
         exog = self.exog
@@ -241,6 +240,10 @@ class ConditionalLogit(_ConditionalModel):
         in this array.
     groups : array_like
         Codes defining the groups. This is a required keyword parameter.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised.
     """
 
     def __init__(self, endog, exog, missing="none", **kwargs):
@@ -377,6 +380,10 @@ class ConditionalPoisson(_ConditionalModel):
         The covariates
     groups : array_like
         Codes defining the groups. This is a required keyword parameter.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised.
     """
 
     def loglike(self, params):
@@ -512,6 +519,10 @@ class ConditionalMNLogit(_ConditionalModel):
         The independent variables.
     groups : array_like
         Codes defining the groups. This is a required keyword parameter.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised.
 
     Notes
     -----
@@ -559,13 +570,17 @@ class ConditionalMNLogit(_ConditionalModel):
         callback=None,
         retall=False,
         skip_hessian=False,
+        generator=None,
         **kwargs,
     ):
 
         if start_params is None:
             q = self.exog.shape[1]
             c = self.k_cat - 1
-            start_params = np.random.normal(size=q * c)
+            if isinstance(generator, (np.random.RandomState, np.random.Generator)):
+                start_params = generator.normal(size=q * c)
+            else:
+                start_params = np.random.normal(size=q * c)
 
         # Do not call super(...).fit because it cannot handle the 2d-params.
         rslt = base.LikelihoodModel.fit(
@@ -598,14 +613,15 @@ class ConditionalMNLogit(_ConditionalModel):
         lpr = np.dot(self.exog, pmat)
 
         ll = 0.0
+
+        # denom - immediately calculate the sums for the selected elements
+
         for ii in self._grp_ix:
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
-            denom = 0.0
-            for p in itertools.permutations(y):
-                denom += np.exp(x[(jj, p)].sum())
-            ll += x[(jj, y)].sum() - np.log(denom)
+            denom = np.sum(x[jj, list(itertools.permutations(y))], axis=1)
+            ll += x[(jj, y)].sum() - logsumexp(denom)
 
         return ll
 
@@ -623,14 +639,28 @@ class ConditionalMNLogit(_ConditionalModel):
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
-            denom = 0.0
-            denomg = np.zeros((q, c))
-            for p in itertools.permutations(y):
-                v = np.exp(x[(jj, p)].sum())
-                denom += v
-                for i, r in enumerate(p):
-                    if r != 0:
-                        denomg[:, r - 1] += v * self.exog[ii[i], :]
+            denomg = np.zeros((q, c)).T
+
+            # Extract itertools.permutations(y) to the list
+            iter_ = np.array(list(itertools.permutations(y)))
+
+            # Instead of iterative exponential value of sums of
+            # selected elements and their product by selected
+            # elements from self.exog, we calculate them at
+            # once (exp_sum, exog_exp_multy).
+            exp_sum = np.exp(np.sum(x[jj, iter_], axis=1))
+            denom = np.sum(exp_sum)
+
+            ind_exog = np.arange(iter_.shape[1], dtype=np.int32)
+            hist = len(iter_)
+            mask = iter_ != 0
+            iexog = np.take(ind_exog, mask.nonzero()[1])
+            iexog = iexog.reshape((hist, int(len(iexog) / hist)))
+            ii_ = np.take(ii, iexog)
+            exog_exp_multy = self.exog[ii_, :] * exp_sum[:, np.newaxis, np.newaxis]
+            ind_iter = iter_[mask].reshape((hist, int(len(iter_[mask]) / hist))) - 1
+            np.add.at(denomg, ind_iter, exog_exp_multy)
+            denomg = denomg.T
 
             for i, r in enumerate(y):
                 if r != 0:

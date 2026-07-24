@@ -2,6 +2,7 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 from scipy import stats
 from scipy.stats import nbinom, poisson
 
@@ -51,6 +52,7 @@ class TestTruncatedPoisson:
     """
     Test Truncated Poisson distribution
     """
+
     def test_pmf_zero(self):
         poisson_pmf = poisson.pmf(2, 2) / poisson.sf(0, 2)
         tpoisson_pmf = truncatedpoisson.pmf(2, 2, 0)
@@ -259,7 +261,7 @@ class TestZiNBP:
         assert_allclose(nb_m2, zinb_m2, rtol=1e-10)
 
 
-class CheckDiscretized():
+class CheckDiscretized:
 
     def convert_params(self, params):
         args = params.tolist()
@@ -273,8 +275,6 @@ class CheckDiscretized():
         paramd = self.paramd
         shapes = self.shapes
         start_params = self.start_params
-
-        np.random.seed(987146)
 
         dp = DiscretizedCount(ddistr, d_offset)
         assert dp.shapes == shapes
@@ -296,8 +296,10 @@ class CheckDiscretized():
         assert_allclose(sf, 1 - cdf, rtol=1e-13)
 
         nobs = 2000
-
-        xx = dp.rvs(*paramd, size=nobs)  # , random_state=987146)
+        rs = np.random.RandomState(987146)
+        # scipy method, so use random_state until they implement SPEC-007
+        with pytest.warns(FutureWarning):
+            xx = dp.rvs(*paramd, size=nobs, random_state=rs)
         # check that we go a non-trivial rvs
         assert len(xx) == nobs
         assert xx.var() > 0.001
@@ -329,7 +331,8 @@ class CheckDiscretized():
         # Todo results method
         dfr = mod.get_distr(res.params)
         nobs_rvs = 500
-        rvs = dfr.rvs(size=nobs_rvs)
+        with pytest.warns(FutureWarning):
+            rvs = dfr.rvs(size=nobs_rvs, random_state=rs)
         # TypeError: Cannot cast array data from dtype('int64') to
         # dtype('int32') according to the rule 'safe'.
         # To fix this, change the dtype of rvs to int32 so that it
@@ -345,7 +348,7 @@ class CheckDiscretized():
 
         # round trip cdf-ppf
         q = dfr.ppf(dfr.cdf(np.arange(-1, 5) + 1e-6))
-        q1 = np.array([-1.,  1.,  2.,  3.,  4.,  5.])
+        q1 = np.array([-1.0, 1.0, 2.0, 3.0, 4.0, 5.0])
         assert_equal(q, q1)
         p = np.maximum(dfr.cdf(np.arange(-1, 5)) - 1e-6, 0)
         q = dfr.ppf(p)
@@ -355,7 +358,7 @@ class CheckDiscretized():
         q1 = np.arange(0, 5)
         assert_equal(q, q1)
         q = dfr.isf(1 - dfr.cdf(np.arange(-1, 5) + 1e-6))
-        q1 = np.array([-1.,  1.,  2.,  3.,  4.,  5.])
+        q1 = np.array([-1.0, 1.0, 2.0, 3.0, 4.0, 5.0])
         assert_equal(q, q1)
 
 
@@ -382,7 +385,7 @@ class TestDiscretizedExponential(CheckDiscretized):
         cls.paramd = (5,)
         cls.shapes = "s"
 
-        cls.start_params = (0.5)
+        cls.start_params = 0.5
 
 
 class TestDiscretizedLomax(CheckDiscretized):
@@ -392,7 +395,10 @@ class TestDiscretizedLomax(CheckDiscretized):
         cls.d_offset = 0
         cls.ddistr = stats.lomax  # instead of pareto to avoid p(y=0) = 0
         cls.paramg = (2, 0, 1.5)  # include constant so we can use args
-        cls.paramd = (2, 1.5,)
+        cls.paramd = (
+            2,
+            1.5,
+        )
         cls.shapes = "c, s"
 
         cls.start_params = (0.5, 0.5)
@@ -411,7 +417,7 @@ class TestDiscretizedBurr12(CheckDiscretized):
         cls.start_params = (0.5, 1, 0.5)
 
 
-class TestDiscretizedGammaEx():
+class TestDiscretizedGammaEx:
     # strike outbreaks example from Ch... 2012
 
     def test_all(self):
@@ -426,7 +432,8 @@ class TestDiscretizedGammaEx():
             df_model=0,
             p=0.4272,  # p-value for chi2
             aic=378.938,
-            probs=[46.48, 73.72, 27.88, 6.5, 1.42])
+            probs=[46.48, 73.72, 27.88, 6.5, 1.42],
+        )
 
         dp = DiscretizedCount(stats.gamma)
         mod = DiscretizedModel(y, distr=dp)
@@ -439,13 +446,12 @@ class TestDiscretizedGammaEx():
         assert_equal(res.df_model, res1.df_model)
 
         probs = mod.predict(res.params, which="probs")
-        probs_trunc = probs[:len(res1.probs)]
+        probs_trunc = probs[: len(res1.probs)]
         probs_trunc[-1] += 1 - probs_trunc.sum()
         assert_allclose(probs_trunc * nobs, res1.probs, atol=6e-2)
 
         assert_allclose(np.sum(freq), (probs_trunc * nobs).sum(), rtol=1e-10)
-        res_chi2 = stats.chisquare(freq, probs_trunc * nobs,
-                                   ddof=len(res.params))
+        res_chi2 = stats.chisquare(freq, probs_trunc * nobs, ddof=len(res.params))
         # regression test, numbers from running test
         # close but not identical to article
         assert_allclose(res_chi2.statistic, 1.70409356, rtol=1e-7)
@@ -454,18 +460,18 @@ class TestDiscretizedGammaEx():
         # smoke test for summary
         res.summary()
 
-        np.random.seed(987146)
-        res_boots = res.bootstrap()
+        rs = np.random.RandomState(987146)
+        res_boots = res.bootstrap(rng=rs)
         # only loose check, small default n_rep=100, agreement at around 3%
         assert_allclose(res.params, res_boots[0], rtol=0.05)
         assert_allclose(res.bse, res_boots[1], rtol=0.05)
 
 
-class TestGeometric():
+class TestGeometric:
 
     def test_all(self):
         p_geom = 0.6
-        scale_dexpon = -1 / np.log(1-p_geom)
+        scale_dexpon = -1 / np.log(1 - p_geom)
         dgeo = stats.geom(p_geom, loc=-1)
         dpg = DiscretizedCount(stats.expon)(scale_dexpon)
 
@@ -515,6 +521,7 @@ class TestTruncatedNBP:
     """
     Test Truncated Poisson distribution
     """
+
     def test_pmf_zero(self):
         n, p = truncatednegbin.convert_params(5, 0.1, 2)
         nb_pmf = nbinom.pmf(1, n, p) / nbinom.sf(0, n, p)

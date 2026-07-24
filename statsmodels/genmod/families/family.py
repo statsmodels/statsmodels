@@ -6,10 +6,6 @@ The one parameter exponential family distributions used by GLM.
 # see
 # http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
 # for comparison to R, and McCullagh and Nelder
-
-
-from statsmodels.compat.scipy import SP_LT_17
-
 import inspect
 import warnings
 
@@ -74,8 +70,7 @@ class Family:
             if not isinstance(link, L.Link):
                 raise TypeError("The input should be a valid Link object.")
             if hasattr(self, "links"):
-                validlink = max([isinstance(link, _) for _ in self.links])
-                if not validlink:
+                if not any(isinstance(link, _) for _ in self.links):
                     msg = "Invalid link for family, should be in %s. (got %s)"
                     raise ValueError(msg % (repr(self.links), link))
 
@@ -151,7 +146,7 @@ class Family:
         The deviance function evaluated at (endog, mu, var_weights,
         freq_weights, scale) for the distribution.
 
-        Deviance is usually defined as twice the loglikelihood ratio.
+        Deviance is usually defined as twice the log-likelihood ratio.
 
         Parameters
         ----------
@@ -282,7 +277,7 @@ class Family:
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -314,7 +309,7 @@ class Family:
         Returns
         -------
         ll : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, freq_weights, scale) as defined below.
 
         Notes
@@ -468,7 +463,7 @@ class Poisson(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -621,13 +616,13 @@ class Gaussian(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
         -----
         If the link is the identity link function then the
-        loglikelihood function is the same as the classical OLS model.
+        log-likelihood function is the same as the classical OLS model.
 
         .. math::
 
@@ -639,7 +634,7 @@ class Gaussian(Family):
 
            SSR = \sum_i (Y_i - g^{-1}(\mu_i))^2
 
-        If the links is not the identity link then the loglikelihood
+        If the link is not the identity link then the log-likelihood
         function is defined as
 
         .. math::
@@ -796,7 +791,7 @@ class Gamma(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -807,8 +802,8 @@ class Gamma(Family):
             (scale * \mu_i)) - (var\_weights_i * endog_i) /
             (scale * \mu_i)) - \ln \Gamma(var\_weights_i / scale) - \ln(\endog_i)
 
-        Note on weights parameterization
-        --------------------------------
+        **Note on weights parameterization**
+
         statsmodels follows the SPSS/SAS definition for variance weights:
         Var(endog_i) = scale * mu_i² / var_weights_i — i.e., the effective
         dispersion is scale / var_weights_i.
@@ -1053,7 +1048,7 @@ class Binomial(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -1272,7 +1267,7 @@ class InverseGaussian(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -1400,15 +1395,16 @@ class NegativeBinomial(Family):
         L.Log,
     ]
 
-    def __init__(self, link=None, alpha=1.0, check_link=True):
-        self.alpha = 1.0 * alpha  # make it at least float
-        if alpha is self.__init__.__defaults__[1]:  # `is` is intentional
+    def __init__(self, link=None, alpha=None, check_link=True):
+        if alpha is None:
+            alpha = 1.0
             warnings.warn(
                 "Negative binomial dispersion parameter alpha not "
                 f"set. Using default value alpha={alpha}.",
                 ValueWarning,
                 stacklevel=2,
             )
+        self.alpha = 1.0 * alpha  # make it at least float
         if link is None:
             link = L.Log()
         super().__init__(
@@ -1467,7 +1463,7 @@ class NegativeBinomial(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -1616,7 +1612,7 @@ class Tweedie(Family):
 
     Notes
     -----
-    Loglikelihood function not implemented because of the complexity of
+    Log-likelihood function not implemented because of the complexity of
     calculating an infinite series of summations. The variance power can be
     estimated using the ``estimate_tweedie_power`` function that is part of the
     statsmodels.genmod.generalized_linear_model.GLM class.
@@ -1724,7 +1720,7 @@ class Tweedie(Family):
         Returns
         -------
         ll_i : float
-            The value of the loglikelihood evaluated at
+            The value of the log-likelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
@@ -1756,11 +1752,6 @@ class Tweedie(Family):
         if not self.eql:
             if p < 1 or p > 2:
                 # We have not yet implemented the actual likelihood
-                return np.nan
-
-            # scipy compat bessel_wright added in 1.7
-            if SP_LT_17:
-                # old return was nan
                 return np.nan
 
             # See: Dunn, Smyth (2004) "Series evaluation of Tweedie

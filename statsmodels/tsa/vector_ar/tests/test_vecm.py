@@ -1431,7 +1431,7 @@ def test_lag_order_selection():
             # "co" is not in exog in any test case
             if "co" in deterministic:
                 deterministic_outside_exog += "co"
-            # "lo" is is in exog only in test cases with seasons>0
+            # "lo" is in exog only in test cases with seasons>0
             if "lo" in deterministic and dt[1] == 0:
                 deterministic_outside_exog += "lo"
 
@@ -1773,12 +1773,12 @@ def test_select_coint_rank():  # This is only a smoke test.
 
 def test_VECM_seasonal_forecast():
     # timing of seasonal dummies, VAR forecast horizon
-    np.random.seed(964255)
+    rs = np.random.RandomState(964255)
     nobs = 200
     seasons = 6
-    fact = np.cumsum(0.1 + np.random.randn(nobs, 2), 0)
+    fact = np.cumsum(0.1 + rs.randn(nobs, 2), 0)
 
-    xx = np.random.randn(nobs + 2, 3)
+    xx = rs.randn(nobs + 2, 3)
     xx = xx[2:] + 0.6 * xx[1:-1] + 0.25 * xx[:-2]
     xx[:, :2] += fact[:, 0][:, None]
     xx[:, 2:] += fact[:, 1][:, None]

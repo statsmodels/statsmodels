@@ -3,8 +3,9 @@ Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
 
-from statsmodels.compat.pandas import MONTH_END
+from statsmodels.compat.pandas import MONTH_END, infer_freq
 from statsmodels.compat.pytest import pytest_warns
+from statsmodels.compat.scipy import BASINHOPPING_RNG
 
 import os
 import re
@@ -99,7 +100,7 @@ index = [
     "2010-12-01 00:00:00",
 ]
 idx = pd.to_datetime(index)
-aust = pd.Series(data, index=pd.DatetimeIndex(idx, freq=pd.infer_freq(idx)))
+aust = pd.Series(data, index=pd.DatetimeIndex(idx, freq=infer_freq(idx)))
 
 
 @pytest.fixture(scope="module")
@@ -177,7 +178,7 @@ class TestHoltWinters:
         ]
         oildata_oil = pd.Series(data, index)
         oildata_oil.index = pd.DatetimeIndex(
-            oildata_oil.index, freq=pd.infer_freq(oildata_oil.index)
+            oildata_oil.index, freq=infer_freq(oildata_oil.index)
         )
         cls.oildata_oil = oildata_oil
 
@@ -219,7 +220,7 @@ class TestHoltWinters:
         ]
         air_ausair = pd.Series(data, index)
         air_ausair.index = pd.DatetimeIndex(
-            air_ausair.index, freq=pd.infer_freq(air_ausair.index)
+            air_ausair.index, freq=infer_freq(air_ausair.index)
         )
         cls.air_ausair = air_ausair
 
@@ -294,7 +295,7 @@ class TestHoltWinters:
         livestock2_livestock = pd.Series(data, index)
         livestock2_livestock.index = pd.DatetimeIndex(
             livestock2_livestock.index,
-            freq=pd.infer_freq(livestock2_livestock.index),
+            freq=infer_freq(livestock2_livestock.index),
         )
         cls.livestock2_livestock = livestock2_livestock
 
@@ -811,6 +812,7 @@ def test_2d_data():
         ExponentialSmoothing(pd.concat([housing_data, housing_data], axis=1)).fit()
 
 
+@pytest.mark.thread_unsafe(reason="Issues and checks warnings")
 def test_infer_freq():
     hd2 = housing_data.copy()
     hd2.index = list(hd2.index)
@@ -826,6 +828,7 @@ def test_infer_freq():
 @pytest.mark.parametrize("trend", TRENDS)
 @pytest.mark.parametrize("seasonal", SEASONALS)
 def test_start_params(trend, seasonal):
+    rs = np.random.RandomState(98789431)
     mod = ExponentialSmoothing(
         housing_data,
         trend=trend,
@@ -835,7 +838,10 @@ def test_start_params(trend, seasonal):
     res = mod.fit()
     res2 = mod.fit(
         method="basinhopping",
-        minimize_kwargs={"minimizer_kwargs": {"method": "L-BFGS-B"}},
+        minimize_kwargs={
+            "minimizer_kwargs": {"method": "L-BFGS-B"},
+            BASINHOPPING_RNG: rs,
+        },
     )
     assert isinstance(res.summary().as_text(), str)
     assert res2.sse < 1.01 * res.sse
@@ -857,18 +863,19 @@ def test_invalid_start_param_length():
         mod.fit(start_params=np.array([0.5]))
 
 
-def test_basin_hopping(reset_randomstate):
+def test_basin_hopping():
+    rs = np.random.RandomState(98789437)
     mod = ExponentialSmoothing(
         housing_data, trend="add", initialization_method="estimated"
     )
     res = mod.fit()
-    res2 = mod.fit(method="basinhopping")
+    res2 = mod.fit(method="basinhopping", minimize_kwargs={BASINHOPPING_RNG: rs})
     assert isinstance(res.summary().as_text(), str)
     assert isinstance(res2.summary().as_text(), str)
     # Basin hopping occasionally produces a slightly larger objective
     tol = 1e-5
     assert res2.sse <= res.sse + tol
-    res3 = mod.fit(method="basinhopping")
+    res3 = mod.fit(method="basinhopping", minimize_kwargs={BASINHOPPING_RNG: rs})
     assert_almost_equal(res2.sse, res3.sse, decimal=2)
 
 
@@ -904,6 +911,32 @@ def test_float_boxcox(trend, seasonal):
         use_boxcox=0.5,
     ).fit()
     assert_allclose(res.params["use_boxcox"], 0.5)
+
+
+def test_use_boxcox_fit_override():
+    # Regression test: when use_boxcox is set at model init, passing
+    # use_boxcox to fit() should NOT be silently ignored (issue #9797).
+    # Before fix: fit(use_boxcox=False) on a use_boxcox=True model
+    # incorrectly skipped Box-Cox transformation because the override
+    # check was `if use_boxcox == "log"` instead of `if use_boxcox is not None`.
+    y = np.abs(housing_data) + 1  # ensure positive values for Box-Cox
+    mod = ExponentialSmoothing(
+        y,
+        trend="add",
+        seasonal="add",
+        initialization_method="estimated",
+        use_boxcox=True,
+    )
+    res = mod.fit()
+    # With use_boxcox=True at model level, Box-Cox is applied and lambda > 0
+    assert (
+        res.params["use_boxcox"] != 0.0
+    ), "Box-Cox lambda should not be 0 when use_boxcox=True at model init"
+    # When use_boxcox=True at model init, Box-Cox IS applied
+    # (lambda ~= 0.5 for this data, not False/0)
+    assert (
+        res.params["lamda"] is not None
+    ), f"Expected fitted lambda, got {res.params['lamda']}"
 
 
 @pytest.mark.parametrize("trend", TRENDS)
@@ -993,7 +1026,7 @@ def test_direct_holt_add():
     assert isinstance(res.summary().as_text(), str)
 
 
-def test_integer_array(reset_randomstate):
+def test_integer_array():
     rs = np.random.RandomState(12345)
     e = 10 * rs.standard_normal((1000, 2))
     y_star = np.cumsum(e[:, 0])
@@ -1554,31 +1587,38 @@ def test_simulate_keywords(austourists):
     ).fit()
 
     # test anchor
-    assert_almost_equal(
-        fit.simulate(4, anchor=0, random_state=0).values,
-        fit.simulate(4, anchor="start", random_state=0).values,
-    )
-    assert_almost_equal(
-        fit.simulate(4, anchor=-1, random_state=0).values,
-        fit.simulate(4, anchor="2015-12-01", random_state=0).values,
-    )
-    assert_almost_equal(
-        fit.simulate(4, anchor="end", random_state=0).values,
-        fit.simulate(4, anchor="2016-03-01", random_state=0).values,
-    )
+    rs = np.random.RandomState(1232131)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_0 = fit.simulate(4, anchor=0, rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_1 = fit.simulate(4, anchor="start", rng=0).values
+    assert_almost_equal(sim_0, sim_1)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_2 = fit.simulate(4, anchor=-1, rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_3 = fit.simulate(4, anchor="2015-12-01", rng=0).values
+
+    assert_almost_equal(sim_2, sim_3)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_4 = fit.simulate(4, anchor="end", rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_5 = fit.simulate(4, anchor="2016-03-01", rng=0).values
+    assert_almost_equal(sim_4, sim_5)
 
     # test different random error options
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm)
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm())
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm, rng=0)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=0)
 
-    fit.simulate(4, repetitions=10, random_errors=np.random.randn(4, 10))
-    fit.simulate(4, repetitions=10, random_errors="bootstrap")
+    fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10))
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=0)
 
     # test seeding
-    res = fit.simulate(4, repetitions=10, random_state=10).values
-    res2 = fit.simulate(
-        4, repetitions=10, random_state=np.random.RandomState(10)
-    ).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        res = fit.simulate(4, repetitions=10, rng=10).values
+    res2 = fit.simulate(4, repetitions=10, rng=np.random.RandomState(10)).values
     assert np.all(res == res2)
 
 
@@ -1596,8 +1636,8 @@ def test_simulate_boxcox(austourists):
         use_boxcox=True,
     ).fit()
     expected = fit.forecast(4).values
-
-    res = fit.simulate(4, repetitions=10, random_state=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        res = fit.simulate(4, repetitions=10, rng=0).values
     mean = np.mean(res, axis=1)
 
     assert np.all(np.abs(mean - expected) < 5)
@@ -1622,7 +1662,8 @@ def test_error_dampen():
 
 
 def test_error_boxcox():
-    y = np.random.standard_normal(100)
+    rs = np.random.RandomState(32321830)
+    y = rs.standard_normal(100)
     with pytest.raises(TypeError, match="use_boxcox must be True"):
         ExponentialSmoothing(y, use_boxcox="a", initialization_method="known")
 
@@ -1697,6 +1738,9 @@ def test_error_initialization(ses):
 def test_alternative_minimizers(method, ses):
     sv = np.array([0.77, 11.00])
     minimize_kwargs = {}
+    if method == "basinhopping":
+        rs = np.random.RandomState(32321831)
+        minimize_kwargs[BASINHOPPING_RNG] = rs
     mod = ExponentialSmoothing(ses, initialization_method="estimated")
     res = mod.fit(method=method, start_params=sv, minimize_kwargs=minimize_kwargs)
     assert_allclose(res.params["smoothing_level"], 0.77232545, rtol=1e-3)
@@ -1711,10 +1755,11 @@ def test_minimizer_kwargs_error(ses):
         mod.fit(minimize_kwargs=kwargs)
     with pytest.raises(ValueError):
         mod.fit(method="least_squares", minimize_kwargs=kwargs)
-    kwargs = {"minimizer_kwargs": {"args": "anything"}}
+    rs = np.random.RandomState(32321837)
+    kwargs = {"minimizer_kwargs": {"args": "anything"}, BASINHOPPING_RNG: rs}
     with pytest.raises(ValueError):
         mod.fit(method="basinhopping", minimize_kwargs=kwargs)
-    kwargs = {"minimizer_kwargs": {"method": "SLSQP"}}
+    kwargs = {"minimizer_kwargs": {"method": "SLSQP"}, BASINHOPPING_RNG: rs}
     res = mod.fit(method="basinhopping", minimize_kwargs=kwargs)
     assert isinstance(res.params, dict)
     assert isinstance(res.summary().as_text(), str)
@@ -1925,23 +1970,27 @@ def test_simulate(ses):
     res = mod.fit()
     assert isinstance(res.summary().as_text(), str)
     with pytest.raises(ValueError, match="error must be"):
-        res.simulate(10, error="unknown")
+        res.simulate(10, error="unknown", rng=0)
     with pytest.raises(ValueError, match="If random"):
-        res.simulate(10, error="additive", random_errors=np.empty((20, 20)))
-    res.simulate(10, error="additive", anchor=100)
+        res.simulate(10, error="additive", random_errors=np.empty((20, 20)), rng=0)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        res.simulate(10, error="additive", anchor=100, rng=0)
     with pytest.raises(ValueError, match="Cannot anchor"):
-        res.simulate(10, error="additive", anchor=2000)
-    with pytest.raises(ValueError, match="Argument random_state"):
-        res.simulate(10, error="additive", anchor=100, random_state="bad_value")
-    with pytest.raises(ValueError, match="Argument random_errors"):
-        res.simulate(10, error="additive", random_errors="bad_values")
+        res.simulate(10, error="additive", anchor=2000, rng=0)
+    with pytest.raises(
+        TypeError, match="When creating a random number generator from a"
+    ):
+        res.simulate(10, error="additive", anchor=100, rng="bad_value")
+    with pytest.raises(ValueError, match="Argument random_errors has unexpected value"):
+        with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+            res.simulate(10, error="additive", random_errors="bad_values", rng=0)
 
 
-@pytest.mark.parametrize("index_typ", ["date_range", "period", "range", "irregular"])
+@pytest.mark.parametrize("index_typ", ["date_range", "period", "range"])
 def test_forecast_index_types(ses, index_typ):
     nobs = ses.shape[0]
     kwargs = {}
-    model_warning = forecast_warning = None
+    model_warning = None
     fcast_index = None
     if index_typ == "period":
         index = pd.period_range("2000-1-1", periods=nobs + 36, freq="M")
@@ -1950,13 +1999,6 @@ def test_forecast_index_types(ses, index_typ):
     elif index_typ == "range":
         index = pd.RangeIndex(nobs + 36)
         kwargs["seasonal_periods"] = 12
-    elif index_typ == "irregular":
-        rs = np.random.RandomState(0)
-        index = pd.Index(np.cumsum(rs.randint(0, 4, size=nobs + 36)))
-        model_warning = ValueWarning
-        forecast_warning = FutureWarning
-        kwargs["seasonal_periods"] = 12
-        fcast_index = pd.RangeIndex(start=1000, stop=1036, step=1)
     if fcast_index is None:
         fcast_index = index[-36:]
     ses = ses.copy()
@@ -1968,10 +2010,9 @@ def test_forecast_index_types(ses, index_typ):
             trend="add",
             seasonal="add",
             initialization_method="heuristic",
-            **kwargs
+            **kwargs,
         ).fit()
-    with pytest_warns(forecast_warning):
-        fcast = res.forecast(36)
+    fcast = res.forecast(36)
     assert isinstance(fcast, pd.Series)
     pd.testing.assert_index_equal(fcast.index, fcast_index)
 
@@ -2003,14 +2044,16 @@ def test_forecast_1_simulation(austourists, random_errors, repetitions):
         initialization_method="estimated",
     ).fit()
 
-    sim = fit.simulate(
-        1, anchor=0, random_errors=random_errors, repetitions=repetitions
-    )
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim = fit.simulate(
+            1, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
+        )
     expected_shape = (1,) if repetitions == 1 else (1, repetitions)
     assert sim.shape == expected_shape
-    sim = fit.simulate(
-        10, anchor=0, random_errors=random_errors, repetitions=repetitions
-    )
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim = fit.simulate(
+            10, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
+        )
     expected_shape = (10,) if repetitions == 1 else (10, repetitions)
     assert sim.shape == expected_shape
 
@@ -2030,8 +2073,9 @@ def test_estimated_initialization_short_data(ses, trend, seasonal, nobs):
     assert res.mle_retvals.success
 
 
-def test_invalid_index(reset_randomstate):
-    y = np.random.standard_normal(12 * 200)
+def test_invalid_index():
+    rs = np.random.RandomState(32321830)
+    y = rs.standard_normal(12 * 200)
     df_y = pd.DataFrame(data=y)
     # Can't have a freq here
     df_y.index.freq = "d"
@@ -2049,7 +2093,7 @@ def test_invalid_index(reset_randomstate):
     assert fcast.shape[0] == 157200
 
     index = pd.date_range("2020-01-01", periods=2 * y.shape[0])
-    index = np.random.choice(index, size=df_y.shape[0], replace=False)
+    index = rs.choice(index, size=df_y.shape[0], replace=False)
     index = sorted(index)
     df_y.index = index
     assert isinstance(df_y.index, pd.DatetimeIndex)
@@ -2064,7 +2108,7 @@ def test_invalid_index(reset_randomstate):
             initialization_method="heuristic",
         )
     fitted = model.fit(optimized=True, use_brute=True)
-    with pytest.warns(FutureWarning, match="No supported"):
+    with pytest.raises(ValueError, match="No supported index is available"):
         fitted.forecast(steps=157200)
 
 

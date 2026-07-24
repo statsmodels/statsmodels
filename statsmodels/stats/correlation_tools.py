@@ -1,5 +1,4 @@
 """
-
 Created on Fri Aug 17 13:10:52 2012
 
 Author: Josef Perktold
@@ -13,6 +12,7 @@ from scipy import sparse
 from scipy.optimize import fminbound
 from scipy.sparse.linalg import svds
 
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import (
     IterationLimitWarning,
     SpecificationWarning,
@@ -30,7 +30,7 @@ def clip_evals(x, value=0):  # threshold=0, value=0):
 
 def corr_nearest(corr, threshold=1e-15, n_fact=100):
     """
-    Find the nearest correlation matrix that is positive semi-definite.
+    Find the nearest correlation matrix that is positive semi-definite
 
     The function iteratively adjust the correlation matrix by clipping the
     eigenvalues of a difference matrix. The diagonal elements are set to one.
@@ -51,6 +51,11 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
     corr_new : ndarray, (optional)
         corrected correlation matrix
 
+    See Also
+    --------
+    corr_clipped
+    cov_nearest
+
     Notes
     -----
     The smallest eigenvalue of the corrected correlation matrix is
@@ -65,12 +70,6 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
     semi-definite or positive definite, so that smallest eigenvalue is above
     threshold. In this case, the returned array is not the original, but
     is equal to it within numerical precision.
-
-    See Also
-    --------
-    corr_clipped
-    cov_nearest
-
     """
     k_vars = corr.shape[0]
     if k_vars != corr.shape[1]:
@@ -118,6 +117,10 @@ def corr_clipped(corr, threshold=1e-15):
     corr_new : ndarray, (optional)
         corrected correlation matrix
 
+    See Also
+    --------
+    corr_nearest
+    cov_nearest
 
     Notes
     -----
@@ -138,12 +141,6 @@ def corr_clipped(corr, threshold=1e-15):
 
     ``cov_clipped`` is 40 or more times faster than ``cov_nearest`` in simple
     example, but has a slightly larger approximation error.
-
-    See Also
-    --------
-    corr_nearest
-    cov_nearest
-
     """
     x_new, clipped = clip_evals(corr, value=threshold)
     if not clipped:
@@ -167,7 +164,7 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
         initial covariance matrix
     method : str
         if "clipped", then the faster but less accurate ``corr_clipped`` is
-        used.if "nearest", then ``corr_nearest`` is used
+        used. If "nearest", then ``corr_nearest`` is used
     threshold : float
         clipping threshold for smallest eigen value, see Notes
     n_fact : int or float
@@ -187,6 +184,10 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
     std_ : ndarray, (optional)
         standard deviation
 
+    See Also
+    --------
+    corr_nearest
+    corr_clipped
 
     Notes
     -----
@@ -201,11 +202,6 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
     range of -1e-16.
 
     Assumes input covariance matrix is symmetric.
-
-    See Also
-    --------
-    corr_nearest
-    corr_clipped
     """
 
     from statsmodels.stats.moment_helpers import corr2cov, cov2corr
@@ -253,18 +249,18 @@ def _nmono_linesearch(
     gam : real
         Tuning parameter, see references for details.
     maxiter : int
-        The maximum number of iterations; returns Nones if convergence
-        does not occur by this point
+        The maximum number of iterations; returns None for all outputs
+        if convergence does not occur by this point
 
     Returns
     -------
     alpha : real
         The step value
-    x : Array_like
+    x : array_like
         The function argument at the final step
-    obval : Real
+    obval : real
         The function value at the final step
-    g : Array_like
+    g : array_like
         The gradient at the final step
 
     Notes
@@ -300,7 +296,7 @@ def _nmono_linesearch(
 
         a1 = -0.5 * alpha**2 * gtd / (obval - last_obval - alpha * gtd)
 
-        if (sig1 <= a1 <= sig2 * alpha):
+        if sig1 <= a1 <= sig2 * alpha:
             alpha = a1
         else:
             alpha /= 2.0
@@ -340,7 +336,29 @@ def _spg_optim(
     project : function
         In-place projection of the argument to the domain
         of func.
-    ... See notes regarding additional arguments
+    maxiter : scalar, optional
+        The maximum number of iterations.
+    M : positive int, optional
+        Number of previous function values to consider in the
+        nonmonotone line search (passed to `_nmono_linesearch`).
+    ctol : positive real, optional
+        Convergence tolerance for the projected gradient.
+    maxiter_nmls : int, optional
+        The maximum number of iterations allowed in the nonmonotone
+        line search.
+    lam_min : real, optional
+        The smallest allowed spectral step length.
+    lam_max : real, optional
+        The largest allowed spectral step length.
+    sig1 : real, optional
+        Tuning parameter for the nonmonotone line search, see
+        references for details.
+    sig2 : real, optional
+        Tuning parameter for the nonmonotone line search, see
+        references for details.
+    gam : real, optional
+        Tuning parameter for the nonmonotone line search, see
+        references for details.
 
     Returns
     -------
@@ -358,8 +376,8 @@ def _spg_optim(
     `ctol` (small positive real).  See the Birgin et al reference for
     more information about the tuning parameters.
 
-    Reference
-    ---------
+    References
+    ----------
     E. Birgin, J.M. Martinez, and M. Raydan. Spectral projected
     gradient methods: Review and perspectives. Journal of Statistical
     Software (preprint).  Available at:
@@ -383,7 +401,10 @@ def _spg_optim(
         df -= params
         if np.max(np.abs(df)) < ctol:
             return Bunch(
-                Converged=True, params=params, objective_values=obj_hist, Message="Converged successfully"
+                Converged=True,
+                params=params,
+                objective_values=obj_hist,
+                Message="Converged successfully",
             )
 
         # The line search direction
@@ -407,7 +428,10 @@ def _spg_optim(
 
         if alpha is None:
             return Bunch(
-                Converged=False, params=params, objective_values=obj_hist, Message="Failed in nmono_linesearch"
+                Converged=False,
+                params=params,
+                objective_values=obj_hist,
+                Message="Failed in nmono_linesearch",
             )
 
         obj_hist.append(fval)
@@ -425,7 +449,10 @@ def _spg_optim(
         gval = gval1
 
     return Bunch(
-        Converged=False, params=params, objective_values=obj_hist, Message="spg_optim did not converge"
+        Converged=False,
+        params=params,
+        objective_values=obj_hist,
+        Message="spg_optim did not converge",
     )
 
 
@@ -435,6 +462,11 @@ def _project_correlation_factors(X):
     of squares are less than or equal to 1.
 
     The input matrix is modified in-place.
+
+    Parameters
+    ----------
+    X : array_like
+        The matrix to be projected in-place.
     """
     nm = np.sqrt((X * X).sum(1))
     ii = np.flatnonzero(nm > 1)
@@ -444,7 +476,7 @@ def _project_correlation_factors(X):
 
 class FactoredPSDMatrix:
     """
-    Representation of a positive semidefinite matrix in factored form.
+    Representation of a positive semidefinite matrix in factored form
 
     The representation is constructed based on a vector `diag` and
     rectangular matrix `root`, such that the PSD matrix represented by
@@ -482,7 +514,7 @@ class FactoredPSDMatrix:
 
     def decorrelate(self, rhs):
         """
-        Decorrelate the columns of `rhs`.
+        Decorrelate the columns of `rhs`
 
         Parameters
         ----------
@@ -492,8 +524,9 @@ class FactoredPSDMatrix:
 
         Returns
         -------
-        C^{-1/2} * rhs, where C is the covariance matrix represented
-        by this class instance.
+        ndarray
+            C^{-1/2} * rhs, where C is the covariance matrix represented
+            by this class instance.
 
         Notes
         -----
@@ -530,8 +563,9 @@ class FactoredPSDMatrix:
 
         Returns
         -------
-        C^{-1} * rhs, where C is the covariance matrix represented
-        by this class instance.
+        ndarray
+            C^{-1} * rhs, where C is the covariance matrix represented
+            by this class instance.
 
         Notes
         -----
@@ -559,7 +593,7 @@ class FactoredPSDMatrix:
 
 
 def corr_nearest_factor(
-    corr, rank, ctol=1e-6, lam_min=1e-30, lam_max=1e30, maxiter=1000
+    corr, rank, ctol=1e-6, lam_min=1e-30, lam_max=1e30, maxiter=1000, *, rng=None
 ):
     """
     Find the nearest correlation matrix with factor structure to a
@@ -585,6 +619,12 @@ def corr_nearest_factor(
     maxiter : int
         Maximum number of iterations in spectral projected gradient
         optimization.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
@@ -608,7 +648,7 @@ def corr_nearest_factor(
     tasks to be done without constructing any n x n matrices.
 
     This is a non-convex problem with no known guaranteed globally
-    convergent algorithm for computing the solution.  Borsdof, Higham
+    convergent algorithm for computing the solution.  Borsdorf, Higham
     and Raydan (2010) compared several methods for this problem and
     found the spectral projected gradient (SPG) method (used here) to
     perform best.
@@ -622,7 +662,7 @@ def corr_nearest_factor(
 
     References
     ----------
-    .. [*] R Borsdof, N Higham, M Raydan (2010).  Computing a nearest
+    .. [*] R Borsdorf, N Higham, M Raydan (2010).  Computing a nearest
        correlation matrix with factor structure. SIAM J Matrix Anal Appl,
        31:5, 2603-2622.
        http://eprints.ma.man.ac.uk/1523/01/covered/MIMS_ep2009_87.pdf
@@ -647,7 +687,8 @@ def corr_nearest_factor(
     p, _ = corr.shape
 
     # Starting values (following the PCA method in BHR).
-    u, s, vt = svds(corr, rank)
+    rng = check_random_state(rng)
+    u, s, vt = svds(corr, rank, random_state=rng)
     X = u * np.sqrt(s)
     nm = np.sqrt((X**2).sum(1))
     ii = np.flatnonzero(nm > 1e-5)
@@ -717,7 +758,7 @@ def corr_nearest_factor(
     return rslt
 
 
-def cov_nearest_factor_homog(cov, rank):
+def cov_nearest_factor_homog(cov, rank, *, rng=None):
     """
     Approximate an arbitrary square matrix with a factor-structured
     matrix of the form k*I + XX'.
@@ -729,10 +770,17 @@ def cov_nearest_factor_homog(cov, rank):
         semidefinite
     rank : int
         The rank of the fitted factor structure
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
-    A FactoredPSDMatrix instance containing the fitted matrix
+    FactoredPSDMatrix
+        A FactoredPSDMatrix instance containing the fitted matrix.
 
     Notes
     -----
@@ -771,8 +819,8 @@ def cov_nearest_factor_homog(cov, rank):
     """
 
     m, n = cov.shape
-
-    Q, Lambda, _ = svds(cov, rank)
+    rng = check_random_state(rng)
+    Q, Lambda, _ = svds(cov, rank, random_state=rng)
 
     if sparse.issparse(cov):
         QSQ = np.dot(Q.T, cov.dot(Q))
@@ -812,6 +860,9 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
         The threshold value; correlation coefficients smaller in
         magnitude than minabs are set to zero.  If None, defaults
         to 1 / sqrt(n), see Notes for more information.
+    max_elt : scalar, optional
+        The maximum number of data values that can be processed in one
+        pass; used to control memory use for very tall data matrices.
 
     Returns
     -------
@@ -892,7 +943,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
 
 class MultivariateKernel:
     """
-    Base class for multivariate kernels.
+    Base class for multivariate kernels
 
     An instance of MultivariateKernel implements a `call` method having
     signature `call(x, loc)`, returning the kernel weights comparing `x`
@@ -904,7 +955,7 @@ class MultivariateKernel:
 
     def set_bandwidth(self, bw):
         """
-        Set the bandwidth to the given vector.
+        Set the bandwidth to the given vector
 
         Parameters
         ----------
@@ -923,7 +974,7 @@ class MultivariateKernel:
 
     def set_default_bw(self, loc, bwm=None):
         """
-        Set default bandwiths based on domain values.
+        Set default bandwidths based on domain values
 
         Parameters
         ----------
@@ -951,9 +1002,7 @@ class MultivariateKernel:
 
 
 class GaussianMultivariateKernel(MultivariateKernel):
-    """
-    The Gaussian (squared exponential) multivariate kernel.
-    """
+    """The Gaussian (squared exponential) multivariate kernel"""
 
     def call(self, x, loc):
         return np.exp(-((x - loc) ** 2) / (2 * self.bw2)).sum(1) / self.bwk
@@ -961,7 +1010,7 @@ class GaussianMultivariateKernel(MultivariateKernel):
 
 def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
     """
-    Use kernel averaging to estimate a multivariate covariance function.
+    Use kernel averaging to estimate a multivariate covariance function
 
     The goal is to estimate a covariance function C(x, y) =
     cov(Z(x), Z(y)) where x, y are vectors in R^p (e.g. representing
@@ -995,8 +1044,9 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
 
     Returns
     -------
-    A real-valued function C(x, y) that returns an estimate of the covariance
-    between values of the process located at x and y.
+    callable
+        A real-valued function C(x, y) that returns an estimate of the
+        covariance between values of the process located at x and y.
 
     References
     ----------

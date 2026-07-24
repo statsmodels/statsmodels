@@ -7,7 +7,6 @@ functional regression in which the role of x is modeled with b-splines
 or other basis functions.
 """
 
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -15,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 _predict_functional_doc = """

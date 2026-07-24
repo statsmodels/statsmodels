@@ -1,9 +1,10 @@
-"""Create a mosaic plot from a contingency table.
+"""
+Create a mosaic plot from a contingency table
 
 It allows to visualize multivariate categorical data in a rigorous
 and informative way.
 
-see the docstring of the mosaic function for more informations.
+See the docstring of the mosaic function for more information.
 """
 # Author: Enrico Giampieri - 21 Jan 2013
 
@@ -22,8 +23,22 @@ __all__ = ["mosaic"]
 
 def _normalize_split(proportion):
     """
-    return a list of proportions of the available space given the division
-    if only a number is given, it will assume a split in two pieces
+    Return a list of proportions of the available space given the division
+
+    If only a number is given, it will assume a split in two pieces.
+
+    Parameters
+    ----------
+    proportion : scalar or array_like
+        The proportion (or proportions) used to divide the space. If a
+        single scalar is given, the space is split into two pieces using
+        that scalar and its complement.
+
+    Returns
+    -------
+    ndarray
+        The cumulative proportions, normalized to sum to 1, that define
+        the boundaries of each piece of the split.
     """
     if not iterable(proportion):
         if proportion == 0:
@@ -32,14 +47,14 @@ def _normalize_split(proportion):
             proportion = array([1.0, 0.0])
         elif proportion < 0:
             raise ValueError(
-                "proportions should be positive,given value: {}".format(proportion)
+                f"proportions should be positive,given value: {proportion}"
             )
         else:
             proportion = array([proportion, 1.0 - proportion])
     proportion = np.asarray(proportion, dtype=float)
     if np.any(proportion < 0):
         raise ValueError(
-            "proportions should be positive,given value: {}".format(proportion)
+            f"proportions should be positive,given value: {proportion}"
         )
     if np.allclose(proportion, 0):
         raise ValueError(
@@ -58,15 +73,41 @@ def _normalize_split(proportion):
 def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
     """
     Split the given rectangle in n segments whose proportion is specified
-    along the given axis if a gap is inserted, they will be separated by a
-    certain amount of space, retaining the relative proportion between them
-    a gap of 1 correspond to a plot that is half void and the remaining half
-    space is proportionally divided among the pieces.
+
+    The split is performed along the given axis. If a gap is inserted,
+    the resulting segments will be separated by a certain amount of
+    space, retaining the relative proportion between them. A gap of 1
+    corresponds to a plot that is half void, with the remaining half
+    space proportionally divided among the pieces.
+
+    Parameters
+    ----------
+    x : float
+        The x coordinate of the lower left corner of the rectangle.
+    y : float
+        The y coordinate of the lower left corner of the rectangle.
+    width : float
+        The width of the rectangle.
+    height : float
+        The height of the rectangle.
+    proportion : scalar or array_like
+        The proportion (or proportions) used to divide the rectangle.
+    horizontal : bool, optional
+        If True (default), split along the horizontal axis. Otherwise
+        split along the vertical axis.
+    gap : float, optional
+        The fraction of space to insert between the resulting segments.
+
+    Returns
+    -------
+    list[tuple]
+        A list of 4-tuples ``(x, y, width, height)``, one for each of the
+        resulting segments.
     """
     x, y, w, h = float(x), float(y), float(width), float(height)
     if (w < 0) or (h < 0):
         raise ValueError(
-            "dimension of the square less thanzero w={} h={}".format(w, h)
+            f"dimension of the square less thanzero w={w} h={h}"
         )
     proportions = _normalize_split(proportion)
 
@@ -105,8 +146,22 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
 
 def _reduce_dict(count_dict, partial_key):
     """
-    Make partial sum on a counter dict.
-    Given a match for the beginning of the category, it will sum each value.
+    Make partial sum on a counter dict
+
+    Given a match for the beginning of the category, it will sum each
+    value.
+
+    Parameters
+    ----------
+    count_dict : dict
+        A dictionary whose keys are tuples and whose values are counts.
+    partial_key : tuple
+        The beginning of the category keys to match against.
+
+    Returns
+    -------
+    scalar
+        The sum of the values whose keys start with `partial_key`.
     """
     L = len(partial_key)
     count = sum(v for k, v in count_dict.items() if k[:L] == partial_key)
@@ -115,10 +170,34 @@ def _reduce_dict(count_dict, partial_key):
 
 def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
     """
-    Given a dictionary where each entry  is a rectangle, a list of key and
-    value (count of elements in each category) it split each rect accordingly,
-    as long as the key start with the tuple key_subset.  The other keys are
-    returned without modification.
+    Split each rectangle whose key starts with a given subset of keys
+
+    Given a dictionary where each entry is a rectangle, a list of keys
+    and values (count of elements in each category), it splits each rect
+    accordingly, as long as the key starts with the tuple `key_subset`.
+    The other keys are returned without modification.
+
+    Parameters
+    ----------
+    rect_dict : dict
+        Dictionary mapping tuples of keys to 4-tuples of rectangle
+        coordinates ``(x, y, width, height)``.
+    keys : list
+        The keys to append to `key_subset` for each new split segment.
+    values : array_like
+        The proportions used to split the matching rectangles.
+    key_subset : tuple
+        The beginning of the keys that should be split.
+    horizontal : bool
+        Whether to split along the horizontal axis.
+    gap : float
+        The fraction of space to insert between the resulting segments.
+
+    Returns
+    -------
+    dict
+        A dictionary with the same structure as `rect_dict`, but where
+        the matching rectangles have been split into sub-rectangles.
     """
     result = {}
     L = len(key_subset)
@@ -134,8 +213,21 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
 
 
 def _tuplify(obj):
-    """convert an object in a tuple of strings (even if it is not iterable,
-    like a single integer number, but keep the string healthy)
+    """
+    Convert an object into a tuple of strings
+
+    Works even if the object is not iterable, like a single integer
+    number, while keeping strings intact (not split into characters).
+
+    Parameters
+    ----------
+    obj : object
+        The object to convert.
+
+    Returns
+    -------
+    tuple[str]
+        A tuple of strings representing `obj`.
     """
     if np.iterable(obj) and not isinstance(obj, str):
         res = tuple(str(o) for o in obj)
@@ -145,9 +237,23 @@ def _tuplify(obj):
 
 
 def _categories_level(keys):
-    """use the Ordered dict to implement a simple ordered set
-    return each level of each category
-    [[key_1_level_1,key_2_level_1],[key_1_level_2,key_2_level_2]]
+    """
+    Use an ordered dict to implement a simple ordered set
+
+    Returns each level of each category, e.g.
+    ``[[key_1_level_1, key_2_level_1], [key_1_level_2, key_2_level_2]]``.
+
+    Parameters
+    ----------
+    keys : list[tuple]
+        The list of tuples of keys for which the levels should be
+        extracted.
+
+    Returns
+    -------
+    list[list]
+        A list containing, for each level, the ordered list of unique
+        values found at that level across all keys.
     """
     res = []
     for i in zip(*(keys)):
@@ -158,7 +264,7 @@ def _categories_level(keys):
 
 def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     """
-    Split a square in a hierarchical way given a contingency table.
+    Split a square in a hierarchical way given a contingency table
 
     Hierarchically split the unit square in alternate directions
     in proportion to the subdivision contained in the contingency table
@@ -175,10 +281,10 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
         with a tuple as index.  It expects that all the combination
         of keys to be represents; if that is not true, will
         automatically consider the missing values as 0
-    horizontal : bool
+    horizontal : bool, optional
         The starting direction of the split (by default along
         the horizontal axis)
-    gap : float or array of floats
+    gap : float or array of floats, optional
         The list of gaps to be applied on each subdivision.
         If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
@@ -244,18 +350,44 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
 
 
 def _single_hsv_to_rgb(hsv):
-    """Transform a color from the hsv space to the rgb."""
+    """
+    Transform a color from the hsv space to the rgb
+
+    Parameters
+    ----------
+    hsv : array_like
+        A 3-element sequence of hue, saturation and value.
+
+    Returns
+    -------
+    ndarray
+        A 3-element array with the equivalent red, green and blue
+        values.
+    """
     from matplotlib.colors import hsv_to_rgb
     return hsv_to_rgb(array(hsv).reshape(1, 1, 3)).reshape(3)
 
 
 def _create_default_properties(data):
-    """ "Create the default properties of the mosaic given the data
-    first it will varies the color hue (first category) then the color
-    saturation (second category) and then the color value
-    (third category).  If a fourth category is found, it will put
-    decoration on the rectangle.  Does not manage more than four
-    level of categories
+    """
+    Create the default properties of the mosaic given the data
+
+    It first varies the color hue (first category), then the color
+    saturation (second category) and then the color value (third
+    category). If a fourth category is found, it will put decoration on
+    the rectangle. Does not manage more than four levels of categories.
+
+    Parameters
+    ----------
+    data : dict
+        The normalized contingency table, keyed by tuples of category
+        values.
+
+    Returns
+    -------
+    dict
+        A dictionary mapping each key of `data` to a dictionary of
+        Rectangle properties (color, hatch, lw).
     """
     categories_levels = _categories_level(list(data.keys()))
     Nlevels = len(categories_levels)
@@ -301,14 +433,31 @@ def _create_default_properties(data):
 
 
 def _normalize_data(data, index):
-    """normalize the data to a dict with tuples of strings as keys
-    right now it works with:
+    """
+    Normalize the data to a dict with tuples of strings as keys
+
+    Right now it works with:
 
         0 - dictionary (or equivalent mappable)
         1 - pandas.Series with simple or hierarchical indexes
         2 - numpy.ndarrays
         3 - everything that can be converted to a numpy array
         4 - pandas.DataFrame (via the _normalize_dataframe function)
+
+    Parameters
+    ----------
+    data : {dict, Series, ndarray, DataFrame}
+        The contingency table to normalize.
+    index : list, optional
+        The preferred order for the category ordering. If None, the
+        order in which the keys were found is used.
+
+    Returns
+    -------
+    dict
+        A dictionary with tuples of strings as keys and the
+        corresponding counts as values, with every combination of
+        category levels present (missing combinations filled with 0).
     """
     # if data is a dataframe we need to take a completely new road
     # before coming back here. Use the hasattr to avoid importing
@@ -349,8 +498,24 @@ def _normalize_data(data, index):
 
 
 def _normalize_dataframe(dataframe, index):
-    """Take a pandas DataFrame and count the element present in the
-    given columns, return a hierarchical index on those columns
+    """
+    Take a pandas DataFrame and count the elements present in the given
+    columns
+
+    Returns a hierarchical index on those columns.
+
+    Parameters
+    ----------
+    dataframe : DataFrame
+        The DataFrame containing the data.
+    index : list[str]
+        The names of the columns to group and count on.
+
+    Returns
+    -------
+    Series
+        A Series with a hierarchical index built from `index`, whose
+        values are the (averaged) counts for each combination of levels.
     """
     # groupby the given keys, extract the same columns and count the element
     # then collapse them with a mean
@@ -364,8 +529,23 @@ def _normalize_dataframe(dataframe, index):
 
 
 def _statistical_coloring(data):
-    """evaluate colors from the indipendence properties of the matrix
-    It will encounter problem if one category has all zeros
+    """
+    Evaluate colors from the independence properties of the matrix
+
+    This will encounter problems if one category has all zeros.
+
+    Parameters
+    ----------
+    data : {dict, Series, ndarray, DataFrame}
+        The contingency table to color.
+
+    Returns
+    -------
+    dict
+        A dictionary mapping each key of the normalized data to a
+        dictionary of Rectangle properties (color and hatch), based on
+        the standardized deviation from the expected value under the
+        hypothesis of independence.
     """
     data = _normalize_data(data, None)
     categories_levels = _categories_level(list(data.keys()))
@@ -407,18 +587,55 @@ def _statistical_coloring(data):
 
 
 def _get_position(x, w, h, W):
+    """
+    Compute the area-weighted position of a tile along one axis
+
+    Parameters
+    ----------
+    x : float
+        The coordinate of the tile along the axis of interest.
+    w : float
+        The width of the tile along the axis of interest.
+    h : float
+        The extent of the tile along the other axis.
+    W : float
+        The total weighted extent used to normalize the position.
+
+    Returns
+    -------
+    float
+        The weighted contribution of this tile to the label position,
+        or `x` unchanged if `W` is zero.
+    """
     if W == 0:
         return x
     return (x + w / 2.0) * w * h / W
 
 
 def _create_labels(rects, horizontal, ax, rotation):
-    """find the position of the label for each value of each category
+    """
+    Find the position of the label for each value of each category
 
-    right now it supports only up to the four categories
+    Right now it supports only up to four categories.
 
-    ax: the axis on which the label should be applied
-    rotation: the rotation list for each side
+    Parameters
+    ----------
+    rects : dict
+        A dictionary containing the coordinates of the tiles, keyed by
+        tuples of category values.
+    horizontal : bool
+        The starting direction of the split used to create `rects`.
+    ax : Axes
+        The axis on which the label should be applied.
+    rotation : list[float]
+        The rotation to apply to the labels of each of the (up to four)
+        sides.
+
+    Returns
+    -------
+    dict
+        An (empty) labels dictionary; the tick positions and labels are
+        set directly on `ax` (and its twin axes) as a side effect.
     """
     categories = _categories_level(list(rects.keys()))
     if len(categories) > 4:
@@ -496,7 +713,8 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
            properties=lambda key: None, labelizer=None,
            title="", statistic=False, axes_label=True,
            label_rotation=0.0):
-    """Create a mosaic plot from a contingency table.
+    """
+    Create a mosaic plot from a contingency table
 
     It allows to visualize multivariate categorical data in a rigorous
     and informative way.
@@ -525,24 +743,24 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     horizontal : bool, optional
         The starting direction of the split (by default along
         the horizontal axis)
-    gap : {float, sequence[float]}
+    gap : {float, sequence[float]}, optional
         The list of gaps to be applied on each subdivision.
         If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
         it with exponentially decreasing gaps
-    properties : dict[str, callable], optional
-        A function that for each tile in the mosaic take the key
+    properties : callable or dict, optional
+        A function that for each tile in the mosaic takes the key
         of the tile and returns the dictionary of properties
         of the generated Rectangle, like color, hatch or similar.
-        A default properties set will be provided fot the keys whose
+        A default properties set will be provided for the keys whose
         color has not been defined, and will use color variation to help
-        visually separates the various categories. It should return None
+        visually separate the various categories. It should return None
         to indicate that it should use the default property for the tile.
-        A dictionary of the properties for each key can be passed,
+        A dictionary of the properties for each key can be passed instead,
         and it will be internally converted to the correct function
-    labelizer : dict[str, callable], optional
-        A function that generate the text to display at the center of
-        each tile base on the key of that tile
+    labelizer : callable, optional
+        A function that generates the text to display at the center of
+        each tile based on the key of that tile
     title : str, optional
         The title of the axis
     statistic : bool, optional
@@ -554,7 +772,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     axes_label : bool, optional
         Show the name of each value of each category
         on the axis (default) or hide them.
-    label_rotation : {float, list[float]}
+    label_rotation : {float, list[float]}, optional
         The rotation of the axis label (if present). If a list is given
         each axis can have a different rotation
 

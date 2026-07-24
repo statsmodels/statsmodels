@@ -1,4 +1,4 @@
-"""Star98 Educational Testing dataset."""
+"""Star98 Educational Testing dataset"""
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"
@@ -7,7 +7,7 @@ COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
 TITLE = "Star98 Educational Dataset"
 SOURCE = """
-Jeff Gill's `Generalized Linear Models: A Unified Approach`
+Jeff Gill's *Generalized Linear Models: A Unified Approach*
 
 http://jgill.wustl.edu/research/books.html
 """
@@ -17,7 +17,7 @@ DESCRLONG = """
 This data is on the California education policy and outcomes (STAR program
 results for 1998.  The data measured standardized testing by the California
 Department of Education that required evaluation of 2nd - 11th grade students
-by the the Stanford 9 test on a variety of subjects.  This dataset is at
+by the Stanford 9 test on a variety of subjects.  This dataset is at
 the level of the unified school district and consists of 303 cases.  The
 binary response variable represents the number of 9th graders scoring
 over the national median value on the mathematics exam.
@@ -72,8 +72,8 @@ def load():
 
     Returns
     -------
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
+    Dataset
+        A class of the data with array attributes 'endog' and 'exog'.
     """
     return load_pandas()
 

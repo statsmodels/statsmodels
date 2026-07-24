@@ -15,11 +15,15 @@ Genz and Bretz for formula
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from numpy import exp as np_exp, log as np_log
 from scipy import integrate, special, stats
 from scipy.special import gamma as sps_gamma, gammaln as sps_gammaln
 from scipy.stats import chi
+
+from statsmodels.tools.rng_qrng import check_random_state
 
 from .extras import mvstdnormcdf
 
@@ -103,7 +107,8 @@ def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
 
 # written by Enzo Michelangeli, style changes by josef-pktd
 # Student's T random variable
-def multivariate_t_rvs(m, S, df=np.inf, n=1):
+@deprecate_kwarg("random_state", "rng")
+def multivariate_t_rvs(m, S, df=np.inf, n=1, rng=None):
     """generate random variables of multivariate t distribution
 
     Parameters
@@ -116,6 +121,17 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1):
         degrees of freedom
     n : int
         number of observations, return random array will be (n, len(m))
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
+    random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        .. deprecated:: 0.15
+
+           random_state has been deprecated. In-line with SPEC-007, use
+           rng for passing a random number generator or seed.
 
     Returns
     -------
@@ -125,13 +141,14 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1):
 
 
     """
+    rng = check_random_state(rng)
     m = np.asarray(m)
     d = len(m)
     if df == np.inf:
         x = np.ones(n)
     else:
-        x = np.random.chisquare(df, n) / df
-    z = np.random.multivariate_normal(np.zeros(d), S, (n,))
+        x = rng.chisquare(df, n) / df
+    z = rng.multivariate_normal(np.zeros(d), S, (n,))
     return (
         m + z / np.sqrt(x)[:, None]
     )  # same output format as random.multivariate_normal

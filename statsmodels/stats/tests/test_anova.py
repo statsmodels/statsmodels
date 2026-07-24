@@ -1,7 +1,9 @@
 from io import StringIO
 
 import numpy as np
+import pandas as pd
 from pandas import read_csv
+import pytest
 
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
@@ -139,28 +141,15 @@ class TestAnovaLMNoconstant:
 
 class TestAnovaLMCompare(TestAnovaLM):
     def test_results(self):
-        new_model = ols("np.log(Days+1) ~ C(Duration) + C(Weight)",
-                        self.data).fit()
+        new_model = ols("np.log(Days+1) ~ C(Duration) + C(Weight)", self.data).fit()
         results = anova_lm(new_model, self.kidney_lm)
 
-        Res_Df = np.array([
-             56, 54
-            ])
-        RSS = np.array([
-             29.62486, 28.9892
-            ])
-        Df = np.array([
-             0, 2
-            ])
-        Sum_of_Sq = np.array([
-             np.nan, 0.6356584
-            ])
-        F = np.array([
-             np.nan, 0.5920404
-            ])
-        PrF = np.array([
-             np.nan, 0.5567479
-            ])
+        Res_Df = np.array([56, 54])
+        RSS = np.array([29.62486, 28.9892])
+        Df = np.array([0, 2])
+        Sum_of_Sq = np.array([np.nan, 0.6356584])
+        F = np.array([np.nan, 0.5920404])
+        PrF = np.array([np.nan, 0.5567479])
 
         np.testing.assert_equal(results["df_resid"].values, Res_Df)
         np.testing.assert_almost_equal(results["ssr"].values, RSS, 4)
@@ -172,28 +161,15 @@ class TestAnovaLMCompare(TestAnovaLM):
 
 class TestAnovaLMCompareNoconstant(TestAnovaLM):
     def test_results(self):
-        new_model = ols("np.log(Days+1) ~ C(Duration) + C(Weight) - 1",
-                        self.data).fit()
+        new_model = ols("np.log(Days+1) ~ C(Duration) + C(Weight) - 1", self.data).fit()
         results = anova_lm(new_model, self.kidney_lm)
 
-        Res_Df = np.array([
-             56, 54
-            ])
-        RSS = np.array([
-             29.62486, 28.9892
-            ])
-        Df = np.array([
-             0, 2
-            ])
-        Sum_of_Sq = np.array([
-             np.nan, 0.6356584
-            ])
-        F = np.array([
-             np.nan, 0.5920404
-            ])
-        PrF = np.array([
-             np.nan, 0.5567479
-            ])
+        Res_Df = np.array([56, 54])
+        RSS = np.array([29.62486, 28.9892])
+        Df = np.array([0, 2])
+        Sum_of_Sq = np.array([np.nan, 0.6356584])
+        F = np.array([np.nan, 0.5920404])
+        PrF = np.array([np.nan, 0.5567479])
 
         np.testing.assert_equal(results["df_resid"].values, Res_Df)
         np.testing.assert_almost_equal(results["ssr"].values, RSS, 4)
@@ -470,3 +446,41 @@ class TestAnova3HC3(TestAnovaLM):
 
         np.testing.assert_almost_equal(results["F"].values, F, 4)
         np.testing.assert_almost_equal(results["PR(>F)"].values, PrF)
+
+
+def test_anova_lm_model_order_error():
+    # Models passed in decreasing order of complexity should raise,
+    # rather than silently producing NaN via negative df_diff.
+    rs = np.random.RandomState(42)
+    df = pd.DataFrame(
+        {
+            "y": rs.randn(50),
+            "x1": rs.randn(50),
+            "x2": rs.randn(50),
+        }
+    )
+
+    model_small = ols("y ~ x1", data=df).fit()
+    model_large = ols("y ~ x1 + x2", data=df).fit()
+
+    error_msg = "Models must be passed in order of increasing complexity"
+    with pytest.raises(ValueError, match=error_msg):
+        anova_lm(model_large, model_small)
+
+
+def test_anova_lm_model_order_correct():
+    # Correct order should not raise and should produce a real p-value.
+    rs = np.random.RandomState(42)
+    df = pd.DataFrame(
+        {
+            "y": rs.randn(50),
+            "x1": rs.randn(50),
+            "x2": rs.randn(50),
+        }
+    )
+
+    model_small = ols("y ~ x1", data=df).fit()
+    model_large = ols("y ~ x1 + x2", data=df).fit()
+
+    result = anova_lm(model_small, model_large)
+    assert not np.isnan(result["Pr(>F)"].iloc[-1])

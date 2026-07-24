@@ -7,13 +7,13 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-from statsmodels.compat.pandas import Appender
 
 from warnings import warn
 
 import numpy as np
 
 import statsmodels.base.wrapper as wrap
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import OutputWarning, SpecificationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.filters.hp_filter import hpfilter
@@ -54,7 +54,6 @@ class UnobservedComponents(MLEModel):
 
     Parameters
     ----------
-
     endog : array_like
         The observed time-series process :math:`y`
     level : {bool, str}, optional
@@ -122,7 +121,6 @@ class UnobservedComponents(MLEModel):
 
     Notes
     -----
-
     These models take the general form (see [1]_ Chapter 3.2 for all details)
 
     .. math::
@@ -694,9 +692,7 @@ class UnobservedComponents(MLEModel):
         return kwds
 
     def setup(self):
-        """
-        Setup the structural time series representation
-        """
+        """Setup the structural time series representation"""
         # Initialize the ordered sets of parameters
         self.parameters = {}
         self.parameters_obs_intercept = {}
@@ -1093,9 +1089,7 @@ class UnobservedComponents(MLEModel):
         return constrained
 
     def untransform_params(self, constrained):
-        """
-        Reverse the transformation
-        """
+        """Reverse the transformation"""
         constrained = np.array(constrained, ndmin=1)
         unconstrained = np.zeros(constrained.shape, dtype=constrained.dtype)
 
@@ -1197,7 +1191,7 @@ class UnobservedComponents(MLEModel):
 
 class UnobservedComponentsResults(MLEResults):
     """
-    Class to hold results from fitting an unobserved components model.
+    Class to hold results from fitting an unobserved components model
 
     Parameters
     ----------
@@ -1265,7 +1259,7 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out: Bunch
+        out : Bunch
             Has the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
@@ -1300,11 +1294,11 @@ class UnobservedComponentsResults(MLEResults):
     @property
     def trend(self):
         """
-        Estimates of of unobserved trend component
+        Estimates of unobserved trend component
 
         Returns
         -------
-        out: Bunch
+        out : Bunch
             Has the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
@@ -1344,7 +1338,7 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out: Bunch
+        out : Bunch
             Has the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
@@ -1386,7 +1380,7 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out: list of Bunch instances
+        out : list of Bunch instances
             Each item has the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
@@ -1446,7 +1440,7 @@ class UnobservedComponentsResults(MLEResults):
                     smoothed=None,
                     smoothed_cov=None,
                     offset=offset,
-                    pretty_name="seasonal {p}({h})".format(p=repr(period), h=repr(h)),
+                    pretty_name=f"seasonal {period!r}({h!r})",
                 )
                 if self.smoothed_state is not None:
                     item.smoothed = np.sum(
@@ -1471,7 +1465,7 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out: Bunch
+        out : Bunch
             Has the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
@@ -1520,7 +1514,7 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out: Bunch
+        out : Bunch
             Has the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
@@ -1568,7 +1562,7 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out: Bunch
+        out : Bunch
             Has the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
@@ -1640,7 +1634,7 @@ class UnobservedComponentsResults(MLEResults):
         figsize=None,
     ):
         """
-        Plot the estimated components of the model.
+        Plot the estimated components of the model
 
         Parameters
         ----------
@@ -1671,6 +1665,9 @@ class UnobservedComponentsResults(MLEResults):
         autoregressive : bool, optional
             Whether or not to plot the autoregressive state, if applicable.
             Default is True.
+        legend_loc : str, optional
+            The location of the legend in the plot. Default is 'upper right'.
+            See Matplotlib documentation for other options.
         fig : Figure, optional
             If given, subplots are created in this figure instead of in a new
             figure. Note that the grid will be created in the provided

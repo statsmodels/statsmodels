@@ -145,7 +145,8 @@ class TestMVDistributions:
         r_val = [0.02914269740502042, 0.02269635555984291, 0.01767593948287269]
         assert_allclose(mvn3b.pdf(cov3), r_val, rtol=1e-13)
 
-    def test_mvt_pdf(self, reset_randomstate):
+    def test_mvt_pdf(self):
+        rs = np.random.RandomState(38909894)
         cov3 = self.cov3
         mu3 = self.mu3
 
@@ -162,7 +163,7 @@ class TestMVDistributions:
         mvt1 = MVT((0, 0), 1, 1)
         mvt1.logpdf(np.array([1.0, 1.0])) - (-3.48579549941151)  # decimal=16
 
-        rvs = mvt.rvs(100000)
+        rvs = mvt.rvs(100000, rng=rs)
         assert_almost_equal(np.cov(rvs, rowvar=False), mvt.cov, decimal=1)
 
         mvt31 = MVT(mu3, cov3, 1)

@@ -1,6 +1,6 @@
 """
 Multivariate Conditional and Unconditional Kernel Density Estimation
-with Mixed Data Types.
+with Mixed Data Types
 
 References
 ----------
@@ -27,7 +27,10 @@ References
         Models", 2006, Econometric Reviews 25, 523-544
 
 """
+
 # TODO: make default behavior efficient=True above a certain n_obs
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 
 from . import kernels
@@ -37,6 +40,7 @@ from ._kernel_base import (
     LeaveOneOut,
     _adjust_shape,
     gpke,
+    initialize_generator,
 )
 
 __all__ = ["EstimatorSettings", "KDEMultivariate", "KDEMultivariateConditional"]
@@ -44,7 +48,7 @@ __all__ = ["EstimatorSettings", "KDEMultivariate", "KDEMultivariateConditional"]
 
 class KDEMultivariate(GenericKDE):
     """
-    Multivariate kernel density estimator.
+    Multivariate kernel density estimator
 
     This density estimator can handle univariate as well as multivariate data,
     including mixed continuous / ordered discrete / unordered discrete data.
@@ -77,6 +81,15 @@ class KDEMultivariate(GenericKDE):
 
     defaults : EstimatorSettings instance, optional
         The default values for (efficient) bandwidth estimation.
+    rng : {int, Generator, RandomState}, optional
+        A seed to use. If None, will use the global RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
+
 
     Attributes
     ----------
@@ -102,24 +115,29 @@ class KDEMultivariate(GenericKDE):
     >>> dens_u.bw
     array([ 0.39967419,  0.38423292])
     """
-    def __init__(self, data, var_type, bw=None, defaults=None):
+
+    @deprecate_kwarg("seed", "rng")
+    def __init__(self, data, var_type, bw=None, defaults=None, *, rng=None):
         self.var_type = var_type
         self.k_vars = len(self.var_type)
         self.data = _adjust_shape(data, self.k_vars)
         self.data_type = var_type
         self.nobs, self.k_vars = np.shape(self.data)
         if self.nobs <= self.k_vars:
-            raise ValueError("The number of observations must be larger "
-                             "than the number of variables.")
+            raise ValueError(
+                "The number of observations must be larger "
+                "than the number of variables."
+            )
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
+        self._generator = initialize_generator(rng)
         if not self.efficient:
             self.bw = self._compute_bw(bw)
         else:
             self.bw = self._compute_efficient(bw)
 
     def __repr__(self):
-        """Provide something sane to print."""
+        """Provide something sane to print"""
         rpr = "KDE instance\n"
         rpr += "Number of variables: k_vars = " + str(self.k_vars) + "\n"
         rpr += "Number of samples:   nobs = " + str(self.nobs) + "\n"
@@ -129,7 +147,7 @@ class KDEMultivariate(GenericKDE):
 
     def loo_likelihood(self, bw, func=lambda x: x):
         r"""
-        Returns the leave-one-out likelihood function.
+        Returns the leave-one-out likelihood function
 
         The leave-one-out likelihood function for the unconditional KDE.
 
@@ -140,6 +158,11 @@ class KDEMultivariate(GenericKDE):
         func : callable, optional
             Function to transform the likelihood values (before summing); for
             the log likelihood, use ``func=np.log``.  Default is ``f(x) = x``.
+
+        Returns
+        -------
+        L : float
+            The value of the leave-one-out function for the data.
 
         Notes
         -----
@@ -157,15 +180,16 @@ class KDEMultivariate(GenericKDE):
         LOO = LeaveOneOut(self.data)
         L = 0
         for i, X_not_i in enumerate(LOO):
-            f_i = gpke(bw, data=-X_not_i, data_predict=-self.data[i, :],
-                       var_type=self.var_type)
+            f_i = gpke(
+                bw, data=-X_not_i, data_predict=-self.data[i, :], var_type=self.var_type
+            )
             L += func(f_i)
 
         return -L
 
     def pdf(self, data_predict=None):
         r"""
-        Evaluate the probability density function.
+        Evaluate the probability density function
 
         Parameters
         ----------
@@ -192,16 +216,22 @@ class KDEMultivariate(GenericKDE):
 
         pdf_est = []
         for i in range(np.shape(data_predict)[0]):
-            pdf_est.append(gpke(self.bw, data=self.data,
-                                data_predict=data_predict[i, :],
-                                var_type=self.var_type) / self.nobs)
+            pdf_est.append(
+                gpke(
+                    self.bw,
+                    data=self.data,
+                    data_predict=data_predict[i, :],
+                    var_type=self.var_type,
+                )
+                / self.nobs
+            )
 
         pdf_est = np.squeeze(pdf_est)
         return pdf_est
 
     def cdf(self, data_predict=None):
         r"""
-        Evaluate the cumulative distribution function.
+        Evaluate the cumulative distribution function
 
         Parameters
         ----------
@@ -237,19 +267,25 @@ class KDEMultivariate(GenericKDE):
 
         cdf_est = []
         for i in range(np.shape(data_predict)[0]):
-            cdf_est.append(gpke(self.bw, data=self.data,
-                                data_predict=data_predict[i, :],
-                                var_type=self.var_type,
-                                ckertype="gaussian_cdf",
-                                ukertype="aitchisonaitken_cdf",
-                                okertype="wangryzin_cdf") / self.nobs)
+            cdf_est.append(
+                gpke(
+                    self.bw,
+                    data=self.data,
+                    data_predict=data_predict[i, :],
+                    var_type=self.var_type,
+                    ckertype="gaussian_cdf",
+                    ukertype="aitchisonaitken_cdf",
+                    okertype="wangryzin_cdf",
+                )
+                / self.nobs
+            )
 
         cdf_est = np.squeeze(cdf_est)
         return cdf_est
 
     def imse(self, bw):
         r"""
-        Returns the Integrated Mean Square Error for the unconditional KDE.
+        Returns the Integrated Mean Square Error for the unconditional KDE
 
         Parameters
         ----------
@@ -299,9 +335,11 @@ class KDEMultivariate(GenericKDE):
         # about 20% faster due to some code being moved outside the for-loops
         # and shared by gpke() and loo_likelihood().
         F = 0
-        kertypes = dict(c=kernels.gaussian_convolution,
-                        o=kernels.wang_ryzin_convolution,
-                        u=kernels.aitchison_aitken_convolution)
+        kertypes = dict(
+            c=kernels.gaussian_convolution,
+            o=kernels.wang_ryzin_convolution,
+            u=kernels.aitchison_aitken_convolution,
+        )
         nobs = self.nobs
         data = -self.data
         var_type = self.var_type
@@ -310,41 +348,37 @@ class KDEMultivariate(GenericKDE):
         Kval = np.empty(data.shape)
         for i in range(nobs):
             for ii, vtype in enumerate(var_type):
-                Kval[:, ii] = kertypes[vtype](bw[ii],
-                                              data[:, ii],
-                                              data[i, ii])
+                Kval[:, ii] = kertypes[vtype](bw[ii], data[:, ii], data[i, ii])
 
             dens = Kval.prod(axis=1) / _bw_cont_product
             k_bar_sum = dens.sum(axis=0)
             F += k_bar_sum  # sum of prod kernel over nobs
 
-        kertypes = dict(c=kernels.gaussian,
-                        o=kernels.wang_ryzin,
-                        u=kernels.aitchison_aitken)
+        kertypes = dict(
+            c=kernels.gaussian, o=kernels.wang_ryzin, u=kernels.aitchison_aitken
+        )
         LOO = LeaveOneOut(self.data)
-        L = 0   # leave-one-out likelihood
-        Kval = np.empty((data.shape[0]-1, data.shape[1]))
+        L = 0  # leave-one-out likelihood
+        Kval = np.empty((data.shape[0] - 1, data.shape[1]))
         for i, X_not_i in enumerate(LOO):
             for ii, vtype in enumerate(var_type):
-                Kval[:, ii] = kertypes[vtype](bw[ii],
-                                              -X_not_i[:, ii],
-                                              data[i, ii])
+                Kval[:, ii] = kertypes[vtype](bw[ii], -X_not_i[:, ii], data[i, ii])
             dens = Kval.prod(axis=1) / _bw_cont_product
             L += dens.sum(axis=0)
 
         # CV objective function, eq. (2.4) of Ref. [3]
-        return (F / nobs**2 - 2 * L / (nobs * (nobs - 1)))
+        return F / nobs**2 - 2 * L / (nobs * (nobs - 1))
 
     def _get_class_vars_type(self):
-        """Helper method to be able to pass needed vars to _compute_subset."""
+        """Helper method to be able to pass needed vars to _compute_subset"""
         class_type = "KDEMultivariate"
-        class_vars = (self.var_type, )
+        class_vars = (self.var_type,)
         return class_type, class_vars
 
 
 class KDEMultivariateConditional(GenericKDE):
     """
-    Conditional multivariate kernel density estimator.
+    Conditional multivariate kernel density estimator
 
     Calculates ``P(Y_1,Y_2,...Y_n | X_1,X_2...X_m) =
     P(X_1, X_2,...X_n, Y_1, Y_2,..., Y_m)/P(X_1, X_2,..., X_m)``.
@@ -363,9 +397,9 @@ class KDEMultivariateConditional(GenericKDE):
     dep_type : str
         The type of the dependent variables:
 
-            c : Continuous
-            u : Unordered (Discrete)
-            o : Ordered (Discrete)
+            - c : Continuous
+            - u : Unordered (Discrete)
+            - o : Ordered (Discrete)
 
         The string should contain a type specifier for each variable, so for
         example ``dep_type='ccuo'``.
@@ -379,8 +413,16 @@ class KDEMultivariateConditional(GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
-    defaults : Instance of class EstimatorSettings
+    defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
+    rng : {int, Generator, RandomState}, optional
+        A seed to use. If None, will use the global RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
 
     Attributes
     ----------
@@ -408,8 +450,10 @@ class KDEMultivariateConditional(GenericKDE):
     array([ 0.41223484,  0.40976931])
     """
 
-    def __init__(self, endog, exog, dep_type, indep_type, bw,
-                 defaults=None):
+    @deprecate_kwarg("seed", "rng")
+    def __init__(
+        self, endog, exog, dep_type, indep_type, bw, defaults=None, *, rng=None
+    ):
         self.dep_type = dep_type
         self.indep_type = indep_type
         self.data_type = dep_type + indep_type
@@ -420,6 +464,7 @@ class KDEMultivariateConditional(GenericKDE):
         self.nobs, self.k_dep = np.shape(self.endog)
         self.data = np.column_stack((self.endog, self.exog))
         self.k_vars = np.shape(self.data)[1]
+        self._generator = initialize_generator(rng)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
         if not self.efficient:
@@ -428,12 +473,10 @@ class KDEMultivariateConditional(GenericKDE):
             self.bw = self._compute_efficient(bw)
 
     def __repr__(self):
-        """Provide something sane to print."""
+        """Provide something sane to print"""
         rpr = "KDEMultivariateConditional instance\n"
-        rpr += "Number of independent variables: k_indep = " + \
-               str(self.k_indep) + "\n"
-        rpr += "Number of dependent variables: k_dep = " + \
-               str(self.k_dep) + "\n"
+        rpr += "Number of independent variables: k_indep = " + str(self.k_indep) + "\n"
+        rpr += "Number of dependent variables: k_dep = " + str(self.k_dep) + "\n"
         rpr += "Number of observations: nobs = " + str(self.nobs) + "\n"
         rpr += "Independent variable types:      " + self.indep_type + "\n"
         rpr += "Dependent variable types:      " + self.dep_type + "\n"
@@ -442,7 +485,7 @@ class KDEMultivariateConditional(GenericKDE):
 
     def loo_likelihood(self, bw, func=lambda x: x):
         """
-        Returns the leave-one-out conditional likelihood of the data.
+        Returns the leave-one-out conditional likelihood of the data
 
         If `func` is not equal to the default, what's calculated is a function
         of the leave-one-out conditional likelihood.
@@ -462,7 +505,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Notes
         -----
-        Similar to ``KDE.loo_likelihood`, but substitute ``f(y|x)=f(x,y)/f(x)``
+        Similar to ``KDE.loo_likelihood``, but substitute ``f(y|x)=f(x,y)/f(x)``
         for ``f(x)``.
         """
         yLOO = LeaveOneOut(self.data)
@@ -470,11 +513,18 @@ class KDEMultivariateConditional(GenericKDE):
         L = 0
         for i, Y_j in enumerate(yLOO):
             X_not_i = next(xLOO)
-            f_yx = gpke(bw, data=-Y_j, data_predict=-self.data[i, :],
-                        var_type=(self.dep_type + self.indep_type))
-            f_x = gpke(bw[self.k_dep:], data=-X_not_i,
-                       data_predict=-self.exog[i, :],
-                       var_type=self.indep_type)
+            f_yx = gpke(
+                bw,
+                data=-Y_j,
+                data_predict=-self.data[i, :],
+                var_type=(self.dep_type + self.indep_type),
+            )
+            f_x = gpke(
+                bw[self.k_dep :],
+                data=-X_not_i,
+                data_predict=-self.exog[i, :],
+                var_type=self.indep_type,
+            )
             f_i = f_yx / f_x
             L += func(f_i)
 
@@ -482,7 +532,7 @@ class KDEMultivariateConditional(GenericKDE):
 
     def pdf(self, endog_predict=None, exog_predict=None):
         r"""
-        Evaluate the probability density function.
+        Evaluate the probability density function
 
         Parameters
         ----------
@@ -522,19 +572,25 @@ class KDEMultivariateConditional(GenericKDE):
         pdf_est = []
         data_predict = np.column_stack((endog_predict, exog_predict))
         for i in range(np.shape(data_predict)[0]):
-            f_yx = gpke(self.bw, data=self.data,
-                        data_predict=data_predict[i, :],
-                        var_type=(self.dep_type + self.indep_type))
-            f_x = gpke(self.bw[self.k_dep:], data=self.exog,
-                       data_predict=exog_predict[i, :],
-                       var_type=self.indep_type)
+            f_yx = gpke(
+                self.bw,
+                data=self.data,
+                data_predict=data_predict[i, :],
+                var_type=(self.dep_type + self.indep_type),
+            )
+            f_x = gpke(
+                self.bw[self.k_dep :],
+                data=self.exog,
+                data_predict=exog_predict[i, :],
+                var_type=self.indep_type,
+            )
             pdf_est.append(f_yx / f_x)
 
         return np.squeeze(pdf_est)
 
     def cdf(self, endog_predict=None, exog_predict=None):
         r"""
-        Cumulative distribution function for the conditional density.
+        Cumulative distribution function for the conditional density
 
         Parameters
         ----------
@@ -585,20 +641,34 @@ class KDEMultivariateConditional(GenericKDE):
         N_data_predict = np.shape(exog_predict)[0]
         cdf_est = np.empty(N_data_predict)
         for i in range(N_data_predict):
-            mu_x = gpke(self.bw[self.k_dep:], data=self.exog,
-                        data_predict=exog_predict[i, :],
-                        var_type=self.indep_type) / self.nobs
+            mu_x = (
+                gpke(
+                    self.bw[self.k_dep :],
+                    data=self.exog,
+                    data_predict=exog_predict[i, :],
+                    var_type=self.indep_type,
+                )
+                / self.nobs
+            )
             mu_x = np.squeeze(mu_x)
-            cdf_endog = gpke(self.bw[0:self.k_dep], data=self.endog,
-                             data_predict=endog_predict[i, :],
-                             var_type=self.dep_type,
-                             ckertype="gaussian_cdf",
-                             ukertype="aitchisonaitken_cdf",
-                             okertype="wangryzin_cdf", tosum=False)
+            cdf_endog = gpke(
+                self.bw[0 : self.k_dep],
+                data=self.endog,
+                data_predict=endog_predict[i, :],
+                var_type=self.dep_type,
+                ckertype="gaussian_cdf",
+                ukertype="aitchisonaitken_cdf",
+                okertype="wangryzin_cdf",
+                tosum=False,
+            )
 
-            cdf_exog = gpke(self.bw[self.k_dep:], data=self.exog,
-                            data_predict=exog_predict[i, :],
-                            var_type=self.indep_type, tosum=False)
+            cdf_exog = gpke(
+                self.bw[self.k_dep :],
+                data=self.exog,
+                data_predict=exog_predict[i, :],
+                var_type=self.indep_type,
+                tosum=False,
+            )
             S = (cdf_endog * cdf_exog).sum(axis=0)
             cdf_est[i] = S / (self.nobs * mu_x)
 
@@ -606,7 +676,7 @@ class KDEMultivariateConditional(GenericKDE):
 
     def imse(self, bw):
         r"""
-        The integrated mean square error for the conditional KDE.
+        The integrated mean square error for the conditional KDE
 
         Parameters
         ----------
@@ -656,36 +726,61 @@ class KDEMultivariateConditional(GenericKDE):
         nobs = float(self.nobs)
         expander = np.ones((self.nobs - 1, 1))
         for ii, Z in enumerate(zLOO):
-            X = Z[:, self.k_dep:]
-            Y = Z[:, :self.k_dep]
+            X = Z[:, self.k_dep :]
+            Y = Z[:, : self.k_dep]
             Ye_L = np.kron(Y, expander)
             Ye_R = np.kron(expander, Y)
             Xe_L = np.kron(X, expander)
             Xe_R = np.kron(expander, X)
-            K_Xi_Xl = gpke(bw[self.k_dep:], data=Xe_L,
-                           data_predict=self.exog[ii, :],
-                           var_type=self.indep_type, tosum=False)
-            K_Xj_Xl = gpke(bw[self.k_dep:], data=Xe_R,
-                           data_predict=self.exog[ii, :],
-                           var_type=self.indep_type, tosum=False)
-            K2_Yi_Yj = gpke(bw[0:self.k_dep], data=Ye_L,
-                            data_predict=Ye_R, var_type=self.dep_type,
-                            ckertype="gauss_convolution",
-                            okertype="wangryzin_convolution",
-                            ukertype="aitchisonaitken_convolution",
-                            tosum=False)
+            K_Xi_Xl = gpke(
+                bw[self.k_dep :],
+                data=Xe_L,
+                data_predict=self.exog[ii, :],
+                var_type=self.indep_type,
+                tosum=False,
+            )
+            K_Xj_Xl = gpke(
+                bw[self.k_dep :],
+                data=Xe_R,
+                data_predict=self.exog[ii, :],
+                var_type=self.indep_type,
+                tosum=False,
+            )
+            K2_Yi_Yj = gpke(
+                bw[0 : self.k_dep],
+                data=Ye_L,
+                data_predict=Ye_R,
+                var_type=self.dep_type,
+                ckertype="gauss_convolution",
+                okertype="wangryzin_convolution",
+                ukertype="aitchisonaitken_convolution",
+                tosum=False,
+            )
             G = (K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj).sum() / nobs**2
-            f_X_Y = gpke(bw, data=-Z, data_predict=-self.data[ii, :],
-                         var_type=(self.dep_type + self.indep_type)) / nobs
-            m_x = gpke(bw[self.k_dep:], data=-X,
-                       data_predict=-self.exog[ii, :],
-                       var_type=self.indep_type) / nobs
-            CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
+            f_X_Y = (
+                gpke(
+                    bw,
+                    data=-Z,
+                    data_predict=-self.data[ii, :],
+                    var_type=(self.dep_type + self.indep_type),
+                )
+                / nobs
+            )
+            m_x = (
+                gpke(
+                    bw[self.k_dep :],
+                    data=-X,
+                    data_predict=-self.exog[ii, :],
+                    var_type=self.indep_type,
+                )
+                / nobs
+            )
+            CV += (G / m_x**2) - 2 * (f_X_Y / m_x)
 
         return CV / nobs
 
     def _get_class_vars_type(self):
-        """Helper method to be able to pass needed vars to _compute_subset."""
+        """Helper method to be able to pass needed vars to _compute_subset"""
         class_type = "KDEMultivariateConditional"
         class_vars = (self.k_dep, self.dep_type, self.indep_type)
         return class_type, class_vars

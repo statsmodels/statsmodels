@@ -8,7 +8,7 @@ import scipy.stats
 
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -138,7 +138,8 @@ def _linear_trend(nobs, k_ar, coint=False):
 
 
 def _num_det_vars(det_string, seasons=0):
-    """Gives the number of deterministic variables specified by det_string and
+    """
+    Gives the number of deterministic variables specified by det_string and
     seasons.
 
     Parameters
@@ -239,7 +240,8 @@ def _deterministic_to_exog(
 
 
 def _mat_sqrt(_2darray):
-    """Calculates the square root of a matrix.
+    """
+    Calculates the square root of a matrix
 
     Parameters
     ----------
@@ -266,7 +268,7 @@ def _endog_matrices(
     first_season=0,
 ):
     """
-    Returns different matrices needed for parameter estimation.
+    Returns different matrices needed for parameter estimation
 
     Compare p. 186 in [1]_. The returned matrices consist of elements of the
     data as well as elements representing deterministic terms. A tuple of
@@ -302,14 +304,14 @@ def _endog_matrices(
     -------
     y_1_T : ndarray (neqs x nobs)
         The (transposed) data without the presample.
-        `.. math:: (y_1, \\ldots, y_T)
+        :math:`(y_1, \\ldots, y_T)`
     delta_y_1_T : ndarray (neqs x nobs)
         The first differences of endog.
-        `.. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
+        :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
     y_lag1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Endog of the previous period (lag 1).
-        `.. math:: (y_0, \\ldots, y_{T-1})
+        :math:`(y_0, \\ldots, y_{T-1})`
     delta_x : ndarray (k_ar_diff*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Lagged differenced endog, used as regressor for the short term
@@ -374,18 +376,19 @@ def _endog_matrices(
 
 
 def _r_matrices(delta_y_1_T, y_lag1, delta_x):
-    """Returns two ndarrays needed for parameter estimation as well as the
+    """
+    Returns two ndarrays needed for parameter estimation as well as the
     calculation of standard errors.
 
     Parameters
     ----------
     delta_y_1_T : ndarray (neqs x nobs)
         The first differences of endog.
-        `.. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
+        :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
     y_lag1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Endog of the previous period (lag 1).
-        `.. math:: (y_0, \\ldots, y_{T-1})
+        :math:`(y_0, \\ldots, y_{T-1})`
     delta_x : ndarray (k_ar_diff*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Lagged differenced endog, used as regressor for the short term
@@ -402,18 +405,20 @@ def _r_matrices(delta_y_1_T, y_lag1, delta_x):
     .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
 
-    # todo: rewrite m such that a big (TxT) matrix is avoided
-    nobs = y_lag1.shape[1]
-    m = np.identity(nobs) - (
-        delta_x.T.dot(inv(delta_x.dot(delta_x.T))).dot(delta_x)
-    )  # p. 291
-    r0 = delta_y_1_T.dot(m)  # p. 292
-    r1 = y_lag1.dot(m)
+    delta_x_t = delta_x.T
+    xx_inv = inv(delta_x.dot(delta_x_t))
+
+    def _residualize(mat):
+        return mat - mat.dot(delta_x_t).dot(xx_inv).dot(delta_x)
+
+    r0 = _residualize(delta_y_1_T)  # p. 292
+    r1 = _residualize(y_lag1)
     return r0, r1
 
 
 def _sij(delta_x, delta_y_1_T, y_lag1):
-    """Returns matrices and eigenvalues and -vectors used for parameter
+    """
+    Returns matrices and eigenvalues and -vectors used for parameter
     estimation and the calculation of a models loglikelihood.
 
     Parameters
@@ -459,7 +464,8 @@ def _sij(delta_x, delta_y_1_T, y_lag1):
 
 
 class CointRankResults:
-    """A class for holding the results from testing the cointegration rank.
+    """
+    A class for holding the results from testing the cointegration rank
 
     Parameters
     ----------
@@ -532,7 +538,8 @@ class CointRankResults:
 def select_coint_rank(
     endog, det_order, k_ar_diff, method="trace", signif=0.05
 ):
-    """Calculate the cointegration rank of a VECM.
+    """
+    Calculate the cointegration rank of a VECM
 
     Parameters
     ----------
@@ -770,7 +777,7 @@ class JohansenTestResult:
 
     @property
     def r0t(self):
-        """Residuals for :math:`\\Delta Y`."""
+        """Residuals for :math:`\\Delta Y`"""
         return self._r0t
 
     @property
@@ -1469,9 +1476,7 @@ class VECMResults:
 
     @cache_readonly
     def llf(self):  # Lutkepohl p. 295 (7.2.20)
-        """
-        Compute the VECM's loglikelihood.
-        """
+        """Compute the VECM's loglikelihood"""
         K = self.neqs
         T = self.nobs
         r = self.coint_rank
@@ -1813,7 +1818,7 @@ class VECMResults:
             If None, compute point forecast only.
             If float, compute confidence intervals too. In this case the
             argument stands for the confidence level.
-        exog : ndarray (steps x self.exog.shape[1])
+        exog_fc : ndarray (steps x self.exog.shape[1])
             If self.exog is not None, then information about the future values
             of exog have to be passed via this parameter. The ndarray may be
             larger in it's first dimension. In this case only the first steps

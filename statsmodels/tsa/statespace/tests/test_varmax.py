@@ -36,6 +36,7 @@ class CheckVARMAX:
     equivalent log-likelihoods)
     """
 
+    @pytest.mark.thread_unsafe
     def test_mle(self):
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
@@ -53,6 +54,7 @@ class CheckVARMAX:
             assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and
         # lead to a well-defined model
@@ -196,10 +198,12 @@ class TestVAR(CheckLutkepohl):
             true, order=(1, 0), trend="n", error_cov_type="unstructured"
         )
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-4)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
@@ -252,10 +256,12 @@ class TestVAR_diagonal(CheckLutkepohl):
         ]
         super().setup_class(true, order=(1, 0), trend="n", error_cov_type="diagonal")
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-5)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
@@ -429,21 +435,23 @@ class TestVAR_obs_intercept(CheckLutkepohl):
             obs_intercept=true["obs_intercept"],
         )
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-4)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
 
     def test_aic(self):
-        # Since the obs_intercept is added in in an ad-hoc way here, the number
+        # Since the obs_intercept is added in an ad-hoc way here, the number
         # of parameters, and hence the aic and bic, will be off
         pass
 
     def test_bic(self):
-        # Since the obs_intercept is added in in an ad-hoc way here, the number
+        # Since the obs_intercept is added in an ad-hoc way here, the number
         # of parameters, and hence the aic and bic, will be off
         pass
 
@@ -483,11 +491,13 @@ class TestVAR_exog(CheckLutkepohl):
         # Stata's var calculates BIC differently
         pass
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse[:-6] ** 2, self.true["var_oim"], atol=1e-5)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_oim().diagonal() ** 0.5
@@ -500,6 +510,7 @@ class TestVAR_exog(CheckLutkepohl):
         # Stata's var cannot subsequently use dynamic
         pass
 
+    @pytest.mark.thread_unsafe
     def test_forecast(self):
         # Tests forecast
         exog = (np.arange(75, 75 + 16) + 2)[:, np.newaxis]
@@ -606,6 +617,7 @@ class TestVAR_exog2(CheckLutkepohl):
         # Stata's var cannot subsequently use dynamic
         pass
 
+    @pytest.mark.thread_unsafe
     def test_forecast(self):
         # Tests forecast
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75 + 16) + 2)[:, np.newaxis]]
@@ -630,11 +642,13 @@ class TestVAR2(CheckLutkepohl):
             included_vars=["dln_inv", "dln_inc"],
         )
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse[:-3] ** 2, self.true["var_oim"][:-3], atol=1e-5)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_oim().diagonal() ** 0.5
@@ -903,12 +917,12 @@ def test_misc_exog():
     # Tests for missing data
     nobs = 20
     k_endog = 2
-    np.random.seed(1208)
-    endog = np.random.normal(size=(nobs, k_endog))
+    rs = np.random.RandomState(1208)
+    endog = rs.normal(size=(nobs, k_endog))
     endog[:4, 0] = np.nan
     endog[2:6, 1] = np.nan
-    exog1 = np.random.normal(size=(nobs, 1))
-    exog2 = np.random.normal(size=(nobs, 2))
+    exog1 = rs.normal(size=(nobs, 1))
+    exog2 = rs.normal(size=(nobs, 2))
 
     index = pd.date_range("1970-01-01", freq="QS", periods=nobs)
     endog_pd = pd.DataFrame(endog, index=index)
@@ -927,21 +941,25 @@ def test_misc_exog():
         assert isinstance(mod.start_params, np.ndarray)
         res = mod.fit(disp=False)
         assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
-        typ = pd.DataFrame if isinstance(mod.data.orig_endog, pd.DataFrame) else np.ndarray
+        typ = (
+            pd.DataFrame
+            if isinstance(mod.data.orig_endog, pd.DataFrame)
+            else np.ndarray
+        )
         assert isinstance(res.predict(), typ)
         assert isinstance(res.predict(dynamic=True), typ)
         assert isinstance(res.get_prediction().predicted_mean, typ)
 
-        oos_exog = np.random.normal(size=(1, mod.k_exog))
+        oos_exog = rs.normal(size=(1, mod.k_exog))
         assert isinstance(res.forecast(steps=1, exog=oos_exog), typ)
         assert isinstance(res.get_forecast(steps=1, exog=oos_exog).predicted_mean, typ)
 
         # Smoke tests for invalid exog
-        oos_exog = np.random.normal(size=(2, mod.k_exog))
+        oos_exog = rs.normal(size=(2, mod.k_exog))
         with pytest.raises(ValueError):
             res.forecast(steps=1, exog=oos_exog)
 
-        oos_exog = np.random.normal(size=(1, mod.k_exog + 1))
+        oos_exog = rs.normal(size=(1, mod.k_exog + 1))
         with pytest.raises(ValueError):
             res.forecast(steps=1, exog=oos_exog)
 
@@ -951,8 +969,8 @@ def test_misc_exog():
 
 
 def test_predict_custom_index():
-    np.random.seed(328423)
-    endog = pd.DataFrame(np.random.normal(size=(50, 2)))
+    rs = np.random.RandomState(328423)
+    endog = pd.DataFrame(rs.normal(size=(50, 2)))
     mod = varmax.VARMAX(endog, order=(1, 0))
     res = mod.smooth(mod.start_params)
     out = res.predict(start=1, end=1, index=["a"])

@@ -5,6 +5,9 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import stats
 
@@ -34,19 +37,46 @@ class IndependenceCopula(Copula):
     copulas.
 
     """
+
     def __init__(self, k_dim=2):
         super().__init__(k_dim=k_dim)
 
     def _handle_args(self, args):
         if args != () and args is not None:
-            msg = ("Independence copula does not use copula parameters.")
+            msg = "Independence copula does not use copula parameters."
             raise ValueError(msg)
         else:
             return args
 
-    def rvs(self, nobs=1, args=(), random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple
+            Arguments for copula parameters. Not used by ``IndependenceCopula``.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        sample : array_like (nobs, k_dim)
+            Sample from the copula.
+        """
         self._handle_args(args)
-        rng = check_random_state(random_state)
+        rng = check_random_state(rng)
         x = rng.random((nobs, self.k_dim))
         return x
 
@@ -64,7 +94,7 @@ class IndependenceCopula(Copula):
         raise NotImplementedError("PDF is constant over the domain.")
 
 
-def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False):
+def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False, rng=None):
     """Random sampling from empirical copula using Beta distribution
 
     Parameters
@@ -86,6 +116,12 @@ def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False):
         If this is False, then only the random sample will be returned.
         If true, then extra information is returned that is mainly of interest
         for verification.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
@@ -101,7 +137,11 @@ def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False):
     n = sample.shape[0]
     if k_func is None:
         kfunc = _kernel_rvs_beta1
-    idx = np.random.randint(0, n, size=size)
+    rng = check_random_state(rng)
+    if isinstance(rng, np.random.RandomState):
+        idx = rng.randint(0, n, size=size)
+    else:
+        idx = rng.integers(0, n, size=size)
     xi = sample[idx]
     krvs = np.column_stack([kfunc(xii, bw) for xii in xi.T])
 

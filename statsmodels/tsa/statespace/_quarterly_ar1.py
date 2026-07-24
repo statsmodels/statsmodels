@@ -1,5 +1,5 @@
 """
-(Internal) AR(1) model for monthly growth rates aggregated to quarterly freq.
+(Internal) AR(1) model for monthly growth rates aggregated to quarterly freq
 
 Author: Chad Fulton
 License: BSD-3
@@ -51,7 +51,6 @@ class QuarterlyAR1(mlemodel.MLEModel):
 
     It supports fitting via the usual quasi-Newton methods, as well as using
     the EM algorithm.
-
     """
     def __init__(self, endog):
         super().__init__(endog, k_states=5, k_posdef=1,
@@ -62,13 +61,35 @@ class QuarterlyAR1(mlemodel.MLEModel):
 
     @property
     def param_names(self):
+        """(list of str) Names of the model parameters"""
         return ["phi", "sigma2"]
 
     @property
     def start_params(self):
+        """(array) Starting parameters for maximum likelihood estimation"""
         return np.array([0, np.nanvar(self.endog) / 19])
 
     def fit(self, *args, **kwargs):
+        """
+        Fit the model by maximum likelihood via Kalman filter
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to the `MLEModel.fit` method.
+        **kwargs
+            Keyword arguments passed to the `MLEModel.fit` method.
+
+        Returns
+        -------
+        MLEResults
+            See `MLEModel.fit` for details.
+
+        Notes
+        -----
+        This is a thin wrapper around `MLEModel.fit` that suppresses any
+        warnings raised during the fit.
+        """
         # Don't show warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -79,6 +100,59 @@ class QuarterlyAR1(mlemodel.MLEModel):
                cov_kwds=None, maxiter=500, tolerance=1e-6,
                em_initialization=True, mstep_method=None, full_output=True,
                return_params=False, low_memory=False):
+        """
+        Fit the model by maximum likelihood via the EM algorithm
+
+        Parameters
+        ----------
+        start_params : array_like, optional
+            Initial guess of the solution for the loglikelihood maximization.
+            If None, the default is given by `start_params`.
+        transformed : bool, optional
+            Whether or not `start_params` is already transformed. Default is
+            True.
+        cov_type : str, optional
+            The `cov_type` keyword governs the method for calculating the
+            covariance matrix of parameter estimates. Default is 'none', in
+            which case no covariance matrix is estimated.
+        cov_kwds : dict or None, optional
+            A dictionary of arguments affecting covariance matrix computation.
+        maxiter : int, optional
+            The maximum number of EM iterations to perform. Default is 500.
+        tolerance : float, optional
+            Parameter governing convergence of the EM algorithm, based on the
+            relative change in the loglikelihood between iterations. Default
+            is 1e-6.
+        em_initialization : bool, optional
+            Whether or not to also update the Kalman filter initialization
+            using the results of the EM algorithm. Default is True.
+        mstep_method : str, optional
+            Method to use for the M step of the EM algorithm, passed through
+            to `_em_maximization_step`.
+        full_output : bool, optional
+            Whether or not to also return the loglikelihood values obtained
+            during the EM iterations, in the `mle_retvals` attribute of the
+            returned results object. Default is True.
+        return_params : bool, optional
+            Whether or not to return only the array of maximizing parameters.
+            Default is False.
+        low_memory : bool, optional
+            This option is not supported by this model, and passing True
+            will raise a `ValueError`.
+
+        Returns
+        -------
+        MLEResults or ndarray
+            The fitted results object, or, if `return_params=True`, the
+            array of fitted parameters.
+
+        Raises
+        ------
+        NotImplementedError
+            If some parameters are held fixed via `fix_params`.
+        ValueError
+            If `low_memory=True` is passed.
+        """
         if self._has_fixed_params:
             raise NotImplementedError("Cannot fit using the EM algorithm while"
                                       " holding some parameters fixed.")
@@ -143,6 +217,27 @@ class QuarterlyAR1(mlemodel.MLEModel):
         return result
 
     def _em_iteration(self, params0, init=None, mstep_method=None):
+        """
+        Perform one EM iteration
+
+        Parameters
+        ----------
+        params0 : ndarray
+            Parameter vector at the start of this iteration.
+        init : Initialization, optional
+            State initialization to use for the expectation step. If None,
+            the model's existing initialization is used.
+        mstep_method : str, optional
+            Method to use for the M step, passed to
+            `_em_maximization_step`.
+
+        Returns
+        -------
+        res : SmootherResults
+            Results object returned from the expectation step.
+        params1 : ndarray
+            Updated parameter vector produced by the maximization step.
+        """
         # (E)xpectation step
         res = self._em_expectation_step(params0, init=init)
 
@@ -153,6 +248,23 @@ class QuarterlyAR1(mlemodel.MLEModel):
         return res, params1
 
     def _em_expectation_step(self, params0, init=None):
+        """
+        Perform the expectation step of the EM algorithm
+
+        Parameters
+        ----------
+        params0 : ndarray
+            Parameter vector at which to evaluate the smoothed states.
+        init : Initialization, optional
+            State initialization to use for smoothing. If None, the model's
+            existing initialization is used.
+
+        Returns
+        -------
+        SmootherResults
+            Smoother results, with the `llf_obs` attribute added, containing
+            the observation-wise loglikelihood values.
+        """
         # (E)xpectation step
         self.update(params0)
         # Re-initialize state, if new initialization is given
@@ -172,6 +284,26 @@ class QuarterlyAR1(mlemodel.MLEModel):
         return res
 
     def _em_maximization_step(self, res, params0, mstep_method=None):
+        """
+        Perform the maximization step of the EM algorithm
+
+        Parameters
+        ----------
+        res : SmootherResults
+            Smoother results object produced by `_em_expectation_step`.
+        params0 : ndarray
+            Parameter vector at the start of this iteration, used only to
+            determine the shape and dtype of the returned array.
+        mstep_method : str, optional
+            Unused. Present for compatibility with other models' EM
+            maximization steps.
+
+        Returns
+        -------
+        ndarray
+            Updated parameter vector `[phi, sigma2]` that maximizes the
+            expected complete-data loglikelihood.
+        """
         a = res.smoothed_state.T[..., None]
         cov_a = res.smoothed_state_cov.transpose(2, 0, 1)
         acov_a = res.smoothed_state_autocov.transpose(2, 0, 1)
@@ -196,18 +328,60 @@ class QuarterlyAR1(mlemodel.MLEModel):
         return params1
 
     def transform_params(self, unconstrained):
+        """
+        Transform unconstrained parameters used by the optimizer to
+        constrained parameters used in likelihood evaluation
+
+        Parameters
+        ----------
+        unconstrained : array_like
+            Array of unconstrained parameters `[phi, sigma2]` used by the
+            optimizer, to be transformed.
+
+        Returns
+        -------
+        ndarray
+            Array of constrained parameters `[phi, sigma2]` which may be
+            used in likelihood evaluation.
+        """
         # array no longer accepts inhomogeneous inputs
         return np.hstack([
             constrain_stationary_univariate(unconstrained[:1]),
             unconstrained[1]**2])
 
     def untransform_params(self, constrained):
+        """
+        Transform constrained parameters used in likelihood evaluation to
+        unconstrained parameters used by the optimizer
+
+        Parameters
+        ----------
+        constrained : array_like
+            Array of constrained parameters `[phi, sigma2]` used in
+            likelihood evaluation, to be transformed.
+
+        Returns
+        -------
+        ndarray
+            Array of unconstrained parameters `[phi, sigma2]` used by the
+            optimizer.
+        """
         # array no longer accepts inhomogeneous inputs
         return np.hstack([
             unconstrain_stationary_univariate(constrained[:1]),
             constrained[1] ** 0.5])
 
     def update(self, params, **kwargs):
+        """
+        Update the parameters of the model
+
+        Parameters
+        ----------
+        params : array_like
+            Array of new parameters `[phi, sigma2]`.
+        **kwargs
+            Keyword arguments passed to the parent `update` method.
+        """
         super().update(params, **kwargs)
 
         self["transition", 0, 0] = params[0]

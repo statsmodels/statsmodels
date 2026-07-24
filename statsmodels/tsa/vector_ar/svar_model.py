@@ -5,11 +5,14 @@ References
 ----------
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
+
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.tools.decorators import deprecated_alias
+from statsmodels.tools._decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import util
@@ -34,17 +37,24 @@ class SVAR(tsbase.TimeSeriesModel):
     Parameters
     ----------
     endog : array_like
-        1-d endogenous response variable. The independent variable.
-    dates : array_like
-        must match number of rows of endog
+        2-d endogenous response variable. The independent variable.
     svar_type : str
         "A" - estimate structural parameters of A matrix, B assumed = I
         "B" - estimate structural parameters of B matrix, A assumed = I
         "AB" - estimate structural parameters indicated in both A and B matrix
+    dates : array_like
+        must match number of rows of endog
+    freq : str, optional
+        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
+        'M', 'A', or 'Q'. This is optional if dates are given.
     A : array_like
         neqs x neqs with unknown parameters marked with 'E' for estimate
     B : array_like
         neqs x neqs with unknown parameters marked with 'E' for estimate
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
 
     References
     ----------
@@ -53,8 +63,9 @@ class SVAR(tsbase.TimeSeriesModel):
 
     y = deprecated_alias("y", "endog", remove_version="0.11.0")
 
-    def __init__(self, endog, svar_type, dates=None,
-                 freq=None, A=None, B=None, missing="none"):
+    def __init__(
+        self, endog, svar_type, dates=None, freq=None, A=None, B=None, missing="none"
+    ):
         super().__init__(endog, None, dates, freq, missing=missing)
         # (self.endog, self.names,
         # self.dates) = data_util.interpret_data(endog, names, dates)
@@ -63,8 +74,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         types = ["A", "B", "AB"]
         if svar_type not in types:
-            raise ValueError("SVAR type not recognized, must be in "
-                             + str(types))
+            raise ValueError("SVAR type not recognized, must be in " + str(types))
         self.svar_type = svar_type
 
         svar_ckerr(svar_type, A, B)
@@ -106,9 +116,21 @@ class SVAR(tsbase.TimeSeriesModel):
 
         # super().__init__(endog)
 
-    def fit(self, A_guess=None, B_guess=None, maxlags=None, method="ols",
-            ic=None, trend="c", verbose=False, s_method="mle",
-            solver="bfgs", override=False, maxiter=500, maxfun=500):
+    def fit(
+        self,
+        A_guess=None,
+        B_guess=None,
+        maxlags=None,
+        method="ols",
+        ic=None,
+        trend="c",
+        verbose=False,
+        s_method="mle",
+        solver="bfgs",
+        override=False,
+        maxiter=500,
+        maxfun=500,
+    ):
         """
         Fit the SVAR model and solve for structural parameters
 
@@ -133,7 +155,7 @@ class SVAR(tsbase.TimeSeriesModel):
             bic : Bayesian a.k.a. Schwarz
         verbose : bool, default False
             Print order selection output to the screen
-        trend, str {"c", "ct", "ctt", "n"}
+        trend : str {"c", "ct", "ctt", "n"}
             "c" - add constant
             "ct" - constant and trend
             "ctt" - constant, linear and quadratic trend
@@ -152,21 +174,22 @@ class SVAR(tsbase.TimeSeriesModel):
         maxfun : int
             Number of function evaluations to perform
 
+        Returns
+        -------
+        est : SVARResults
+
         Notes
         -----
         Lütkepohl pp. 146-153
         Hamilton pp. 324-336
-
-        Returns
-        -------
-        est : SVARResults
         """
         lags = maxlags
         if ic is not None:
             selections = self.select_order(maxlags=maxlags, verbose=verbose)
             if ic not in selections:
-                raise ValueError("%s not recognized, must be among %s"
-                                 % (ic, sorted(selections)))
+                raise ValueError(
+                    "{} not recognized, must be among {}".format(ic, sorted(selections))
+                )
             lags = selections[ic]
             if verbose:
                 print("Using %d based on %s criterion" % (lags, ic))
@@ -178,21 +201,25 @@ class SVAR(tsbase.TimeSeriesModel):
         # initialize starting parameters
         start_params = self._get_init_params(A_guess, B_guess)
 
-        return self._estimate_svar(start_params, lags, trend=trend,
-                                   solver=solver, override=override,
-                                   maxiter=maxiter, maxfun=maxfun)
+        return self._estimate_svar(
+            start_params,
+            lags,
+            trend=trend,
+            solver=solver,
+            override=override,
+            maxiter=maxiter,
+            maxfun=maxfun,
+        )
 
     def _get_init_params(self, A_guess, B_guess):
-        """
-        Returns either the given starting or .1 if none are given.
-        """
+        """Returns either the given starting values or .1 if none are given"""
 
         var_type = self.svar_type.lower()
 
         n_masked_a = self.A_mask.sum()
         if var_type in ["ab", "a"]:
             if A_guess is None:
-                A_guess = np.array([.1]*n_masked_a)
+                A_guess = np.array([0.1] * n_masked_a)
             elif len(A_guess) != n_masked_a:
                 msg = "len(A_guess) = %s, there are %s parameters in A"
                 raise ValueError(msg % (len(A_guess), n_masked_a))
@@ -202,7 +229,7 @@ class SVAR(tsbase.TimeSeriesModel):
         n_masked_b = self.B_mask.sum()
         if var_type in ["ab", "b"]:
             if B_guess is None:
-                B_guess = np.array([.1]*n_masked_b)
+                B_guess = np.array([0.1] * n_masked_b)
             elif len(B_guess) != n_masked_b:
                 msg = "len(B_guess) = %s, there are %s parameters in B"
                 raise ValueError(msg % (len(B_guess), n_masked_b))
@@ -211,12 +238,36 @@ class SVAR(tsbase.TimeSeriesModel):
 
         return np.r_[A_guess, B_guess]
 
-    def _estimate_svar(self, start_params, lags, maxiter, maxfun,
-                       trend="c", solver="nm", override=False):
+    def _estimate_svar(
+        self,
+        start_params,
+        lags,
+        maxiter,
+        maxfun,
+        trend="c",
+        solver="nm",
+        override=False,
+    ):
         """
+        Estimate the reduced-form VAR and then solve for structural params
+
+        Parameters
+        ----------
+        start_params : array_like
+            Starting values for the parameters to be estimated.
         lags : int
+            Number of lags in the VAR.
+        maxiter : int
+            Number of iterations to perform in solution method.
+        maxfun : int
+            Number of function evaluations to perform.
         trend : {str, None}
             As per above
+        solver : str
+            Solution method
+        override : bool, default False
+            If True, returns estimates of A and B without checking
+            order or rank condition
         """
         k_trend = util.get_trendorder(trend)
         y = self.endog
@@ -244,20 +295,36 @@ class SVAR(tsbase.TimeSeriesModel):
         omega = sse / df_resid
         self.sigma_u = omega
 
-        A, B = self._solve_AB(start_params, override=override,
-                              solver=solver,
-                              maxiter=maxiter)
+        A, B = self._solve_AB(
+            start_params, override=override, solver=solver, maxiter=maxiter
+        )
         A_mask = self.A_mask
         B_mask = self.B_mask
 
-        return SVARResults(y, z, var_params, omega, lags,
-                           names=self.endog_names, trend=trend,
-                           dates=self.data.dates, model=self,
-                           A=A, B=B, A_mask=A_mask, B_mask=B_mask)
+        return SVARResults(
+            y,
+            z,
+            var_params,
+            omega,
+            lags,
+            names=self.endog_names,
+            trend=trend,
+            dates=self.data.dates,
+            model=self,
+            A=A,
+            B=B,
+            A_mask=A_mask,
+            B_mask=B_mask,
+        )
 
     def loglike(self, params):
         """
         Loglikelihood for SVAR model
+
+        Parameters
+        ----------
+        params : array_like
+            The concatenated unknown parameters of the A and B matrices.
 
         Notes
         -----
@@ -277,7 +344,7 @@ class SVAR(tsbase.TimeSeriesModel):
         if A is not None:
             A[A_mask] = params[:A_len]
         if B is not None:
-            B[B_mask] = params[A_len:A_len+B_len]
+            B[B_mask] = params[A_len : A_len + B_len]
 
         nobs = self.nobs
         neqs = self.neqs
@@ -288,19 +355,27 @@ class SVAR(tsbase.TimeSeriesModel):
         sign, b_logdet = slogdet(B**2)  # numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
-        likl = -nobs/2. * (neqs * np.log(2 * np.pi) -
-                           np.log(npl.det(A)**2) + b_slogdet +
-                           np.trace(trc_in))
+        likl = (
+            -nobs
+            / 2.0
+            * (
+                neqs * np.log(2 * np.pi)
+                - np.log(npl.det(A) ** 2)
+                + b_slogdet
+                + np.trace(trc_in)
+            )
+        )
 
         return likl
 
     def score(self, AB_mask):
         """
-        Return the gradient of the loglike at AB_mask.
+        Return the gradient of the loglike at AB_mask
 
         Parameters
         ----------
-        AB_mask : unknown values of A and B matrix concatenated
+        AB_mask : array_like
+            Concatenated unknown values of the A and B matrices.
 
         Notes
         -----
@@ -318,7 +393,12 @@ class SVAR(tsbase.TimeSeriesModel):
 
     def hessian(self, AB_mask):
         """
-        Returns numerical hessian.
+        Returns numerical hessian
+
+        Parameters
+        ----------
+        AB_mask : array_like
+            Concatenated unknown values of the A and B matrices.
         """
         loglike = self.loglike
         if AB_mask.ndim > 1:
@@ -331,7 +411,10 @@ class SVAR(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-
+        start_params : array_like
+            Starting values for the parameters to be estimated.
+        maxiter : int, optional
+            The maximum number of iterations. Default is 500.
         override : bool, default False
             If True, returns estimates of A and B without checking
             order or rank condition
@@ -339,12 +422,13 @@ class SVAR(tsbase.TimeSeriesModel):
             Solver to be used. The default is 'nm' (Nelder-Mead). Other
             choices are 'bfgs', 'newton' (Newton-Raphson), 'cg'
             conjugate, 'ncg' (non-conjugate gradient), and 'powell'.
-        maxiter : int, optional
-            The maximum number of iterations. Default is 500.
 
         Returns
         -------
-        A_solve, B_solve: ML solutions for A, B matrices
+        A_solve : ndarray
+            ML solution for the A matrix.
+        B_solve : ndarray
+            ML solution for the B matrix.
         """
         # TODO: this could stand a refactor
         A_mask = self.A_mask
@@ -367,9 +451,17 @@ class SVAR(tsbase.TimeSeriesModel):
             kwargs = {"gtol": 1e-5}
         else:
             kwargs = {}
-        retvals = super().fit(start_params=start_params,
-                              method=solver, maxiter=maxiter,
-                              disp=False, **kwargs).params
+        retvals = (
+            super()
+            .fit(
+                start_params=start_params,
+                method=solver,
+                maxiter=maxiter,
+                disp=False,
+                **kwargs,
+            )
+            .params
+        )
 
         if retvals.ndim > 1:
             retvals = retvals.ravel()
@@ -398,13 +490,13 @@ class SVAR(tsbase.TimeSeriesModel):
         for j in range(neqs):
             i = j
             while j <= i < neqs:
-                u = np.zeros([int((1.0/2)*neqs*(neqs+1)), 1])
+                u = np.zeros([int((1.0 / 2) * neqs * (neqs + 1)), 1])
                 u[int(j * neqs + (i + 1) - (1.0 / 2) * (j + 1) * j - 1)] = 1
                 Tij = np.zeros([neqs, neqs])
                 Tij[i, j] = 1
                 Tij[j, i] = 1
-                D_nT = D_nT+np.dot(u, (Tij.ravel("F")[:, None]).T)
-                i = i+1
+                D_nT = D_nT + np.dot(u, (Tij.ravel("F")[:, None]).T)
+                i = i + 1
 
         D_n = D_nT.T
         D_pl = npl.pinv(D_n)
@@ -440,14 +532,12 @@ class SVAR(tsbase.TimeSeriesModel):
 
     def check_order(self, J):
         if np.size(J, axis=0) < np.size(J, axis=1):
-            raise ValueError("Order condition not met: "
-                             "solution may not be unique")
+            raise ValueError("Order condition not met: solution may not be unique")
 
     def check_rank(self, J):
         rank = np.linalg.matrix_rank(J)
         if rank < np.size(J, axis=1):
-            raise ValueError("Rank condition not met: "
-                             "solution may not be unique.")
+            raise ValueError("Rank condition not met: solution may not be unique.")
 
 
 class SVARProcess(VARProcess):
@@ -459,14 +549,14 @@ class SVARProcess(VARProcess):
     coefs : ndarray (p x k x k)
     intercept : ndarray (length k)
     sigma_u : ndarray (k x k)
+    A_solve : ndarray
+        neqs x neqs np.ndarray with unknown parameters marked with 'E'
+    B_solve : ndarray
+        neqs x neqs np.ndarray with unknown parameters marked with 'E'
     names : sequence (length k)
-    A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
-    A_mask : neqs x neqs mask array with known parameters masked
-    B : neqs x neqs np.ndarry with unknown parameters marked with 'E'
-    B_mask : neqs x neqs mask array with known parameters masked
     """
-    def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve,
-                 names=None):
+
+    def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve, names=None):
         self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
         self.coefs = coefs
@@ -477,17 +567,26 @@ class SVARProcess(VARProcess):
         self.names = names
 
     def orth_ma_rep(self, maxn=10, P=None):
-        """
-
-        Unavailable for SVAR
-        """
+        """Unavailable for SVAR"""
         raise NotImplementedError
 
     def svar_ma_rep(self, maxn=10, P=None):
         """
+        Compute Structural MA coefficient matrices using MLE of A, B
 
-        Compute Structural MA coefficient matrices using MLE
-        of A, B
+        Parameters
+        ----------
+        maxn : int, optional
+            Number of MA matrices to compute.
+        P : ndarray, optional
+            Solved A^{-1}B coefficient matrix used to orthogonalize the MA
+            representation. If not provided, it is computed from the
+            estimated A and B matrices.
+
+        Returns
+        -------
+        ndarray
+            The structural MA coefficient matrices.
         """
         if P is None:
             A_solve = self.A_solve
@@ -509,6 +608,10 @@ class SVARResults(SVARProcess, VARResults):
     params : ndarray
     sigma_u : ndarray
     lag_order : int
+    A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
+    B : neqs x neqs np.ndarray with unknown parameters marked with 'E'
+    A_mask : neqs x neqs mask array with known parameters masked
+    B_mask : neqs x neqs mask array with known parameters masked
     model : VAR model instance
     trend : str {'n', 'c', 'ct'}
     names : array_like
@@ -534,36 +637,46 @@ class SVARResults(SVARProcess, VARResults):
     intercept
     info_criteria
     k_ar : int
+        Order of VAR process
     k_trend : int
     llf
     model
-    names
+    names : list
+        variables names
     neqs : int
         Number of variables (equations)
     nobs : int
     n_totobs : int
-    params
-    k_ar : int
-        Order of VAR process
     params : ndarray (Kp + 1) x K
         A_i matrices and intercept in stacked form [int A_1 ... A_p]
-    pvalue
-    names : list
-        variables names
+    pvalues
     resid
     sigma_u : ndarray (K x K)
         Estimate of white noise process variance Var[u_t]
     sigma_u_mle
     stderr
-    trenorder
+    trendorder
     tvalues
     """
 
     _model_type = "SVAR"
 
-    def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
-                 A=None, B=None, A_mask=None, B_mask=None, model=None,
-                 trend="c", names=None, dates=None):
+    def __init__(
+        self,
+        endog,
+        endog_lagged,
+        params,
+        sigma_u,
+        lag_order,
+        A=None,
+        B=None,
+        A_mask=None,
+        B_mask=None,
+        model=None,
+        trend="c",
+        names=None,
+        dates=None,
+    ):
 
         self.model = model
         self.endog = endog
@@ -579,6 +692,7 @@ class SVARResults(SVARProcess, VARResults):
             trendorder = None
         self.k_trend = k_trend
         self.k_exog = k_trend  # now (0.9) required by VARProcess
+        self.k_exog_user = 0
         self.trendorder = trendorder
 
         self.exog_names = util.make_lag_names(names, lag_order, k_trend)
@@ -586,7 +700,7 @@ class SVARResults(SVARProcess, VARResults):
         self.sigma_u = sigma_u
 
         # Each matrix needs to be transposed
-        reshaped = self.params[self.k_trend:]
+        reshaped = self.params[self.k_trend :]
         reshaped = reshaped.reshape((lag_order, self.neqs, self.neqs))
 
         # Need to transpose each coefficient matrix
@@ -610,6 +724,8 @@ class SVARResults(SVARProcess, VARResults):
         Parameters
         ----------
         periods : int
+        var_order : sequence
+            Alternate variable order for Cholesky decomposition
 
         Returns
         -------
@@ -621,8 +737,17 @@ class SVARResults(SVARProcess, VARResults):
 
         return IRAnalysis(self, P=P, periods=periods, svar=True)
 
-    def sirf_errband_mc(self, orth=False, repl=1000, steps=10,
-                        signif=0.05, seed=None, burn=100, cum=False):
+    @deprecate_kwarg("seed", "rng")
+    def sirf_errband_mc(
+        self,
+        orth=False,
+        repl=1000,
+        steps=10,
+        signif=0.05,
+        rng=None,
+        burn=100,
+        cum=False,
+    ):
         """
         Compute Monte Carlo integrated error bands assuming normally
         distributed for impulse response functions
@@ -637,20 +762,25 @@ class SVARResults(SVARProcess, VARResults):
             number of impulse response periods
         signif : float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
-        seed : int
-            np.random.seed for replications
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            np.random seed for replications
+        seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
         burn : int
             number of initial observations to discard for simulation
         cum : bool, default False
             produce cumulative irf error bands
 
-        Notes
-        -----
-        Lütkepohl (2005) Appendix D
-
         Returns
         -------
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
+
+        Notes
+        -----
+        Lütkepohl (2005) Appendix D
         """
         neqs = self.neqs
         k_ar = self.k_ar
@@ -679,8 +809,7 @@ class SVARResults(SVARProcess, VARResults):
         opt_B = B[B_mask]
         for i in range(repl):
             # discard first hundred to correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u, seed=seed,
-                              steps=nobs + burn)
+            sim = util.varsim(coefs, intercept, sigma_u, rng=rng, steps=nobs + burn)
             sim = sim[burn:]
 
             smod = SVAR(sim, svar_type=s_type, A=A_pass, B=B_pass)
@@ -695,13 +824,16 @@ class SVARResults(SVARProcess, VARResults):
 
             if i < 10:
                 # save estimates for starting val if in first 10
-                g_list.append(np.append(sres.A[A_mask].tolist(),
-                                        sres.B[B_mask].tolist()))
+                g_list.append(
+                    np.append(sres.A[A_mask].tolist(), sres.B[B_mask].tolist())
+                )
             ma_coll[i] = agg(sres.svar_ma_rep(maxn=steps))
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
-        index = (int(round(signif / 2 * repl) - 1),
-                 int(round((1 - signif / 2) * repl) - 1))
+        index = (
+            int(round(signif / 2 * repl) - 1),
+            int(round((1 - signif / 2) * repl) - 1),
+        )
         lower = ma_sort[index[0], :, :, :]
         upper = ma_sort[index[1], :, :, :]
         return lower, upper

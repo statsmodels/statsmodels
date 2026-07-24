@@ -1,10 +1,9 @@
 """
-ARIMA model class.
+ARIMA model class
 
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -12,6 +11,7 @@ import numpy as np
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.gls import gls as estimate_gls
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
@@ -50,7 +50,7 @@ class ARIMA(sarimax.SARIMAX):
         moving average components. d is always an integer, while p and q may
         either be integers or lists of integers specifying exactly which lag
         orders are included. The order of differences is to achieve
-        stationnarity in the context of a sochastic trend or seasonality.
+        stationarity in the context of a stochastic trend or seasonality.
         The default is (0, 0, 0).
     seasonal_order : tuple, optional
         The (P,D,Q,s) order of the seasonal component of the model for the
@@ -94,6 +94,8 @@ class ARIMA(sarimax.SARIMAX):
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
+    validate_specification : bool, optional
+        Whether or not to validate the model specification. Default is True.
 
     Notes
     -----
@@ -230,7 +232,7 @@ class ARIMA(sarimax.SARIMAX):
             cov_type=None, cov_kwds=None, return_params=False,
             low_memory=False):
         """
-        Fit (estimate) the parameters of the model.
+        Fit (estimate) the parameters of the model
 
         Parameters
         ----------

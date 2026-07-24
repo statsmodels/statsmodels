@@ -4,7 +4,6 @@ Linear exponential smoothing models
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import Appender
 
 import numpy as np
 import pandas as pd
@@ -15,6 +14,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -74,6 +74,12 @@ class ExponentialSmoothing(MLEModel):
     concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
         out of the likelihood.
+    dates : array_like of datetime, optional
+        An array-like object of datetime objects. If a Pandas object is given
+        for endog, it is assumed to have a DateIndex.
+    freq : str, optional
+        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
+        'M', 'A', or 'Q'. This is optional if dates are given.
 
     Notes
     -----
@@ -143,9 +149,9 @@ class ExponentialSmoothing(MLEModel):
 
     References
     ----------
-    [1] Hyndman, Rob, Anne B. Koehler, J. Keith Ord, and Ralph D. Snyder.
-        Forecasting with exponential smoothing: the state space approach.
-        Springer Science & Business Media, 2008.
+    .. [1] Hyndman, Rob, Anne B. Koehler, J. Keith Ord, and Ralph D. Snyder.
+       Forecasting with exponential smoothing: the state space approach.
+       Springer Science & Business Media, 2008.
     """
     def __init__(self, endog, trend=False, damped_trend=False, seasonal=None,
                  initialization_method="estimated", initial_level=None,
@@ -672,9 +678,7 @@ class ExponentialSmoothing(MLEModel):
 
 
 class ExponentialSmoothingResults(MLEResults):
-    """
-    Results from fitting a linear exponential smoothing model
-    """
+    """Results from fitting a linear exponential smoothing model"""
     def __init__(self, model, params, filter_results, cov_type=None,
                  **kwargs):
         super().__init__(model, params, filter_results, cov_type, **kwargs)

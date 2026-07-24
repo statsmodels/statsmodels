@@ -10,7 +10,7 @@ try:
     import nbformat
 
     plat_win = sys.platform.startswith("win")
-    if plat_win and sys.version_info >= (3, 8):  # pragma: no cover
+    if plat_win and (3, 8) <= sys.version_info < (3, 14):  # pragma: no cover
         import asyncio
 
         try:
@@ -60,6 +60,7 @@ if nbs:
 
     @pytest.mark.slow
     @pytest.mark.example
+    @pytest.mark.thread_unsafe(reason="notebooks use matplotlib")
     def test_notebook(notebook):
         fullfile = os.path.abspath(notebook)
         _, filename = os.path.split(fullfile)

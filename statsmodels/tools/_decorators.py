@@ -1,16 +1,24 @@
-from statsmodels.compat.pandas import cache_readonly as PandasCacheReadonly
+"""Decorators and descriptors used for cached attributes"""
 
 import warnings
 
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
 
-__all__ = ["ResettableCache", "cache_readonly", "cache_writable", "deprecated_alias"]
+__all__ = [
+    "ResettableCache",
+    "cache_readonly",
+    "cache_writable",
+    "cached_data",
+    "cached_value",
+    "deprecated_alias",
+]
 
 
 class ResettableCache(dict):
-    """DO NOT USE. BACKWARD COMPAT ONLY"""
+    """Dictionary cache retained for backward compatibility"""
 
     def __init__(self, *args, **kwargs):
+        """Initialize the cache"""
         super().__init__(*args, **kwargs)
         self.__dict__ = self
 
@@ -19,7 +27,7 @@ def deprecated_alias(
     old_name, new_name, remove_version=None, msg=None, warning=FutureWarning
 ):
     """
-    Deprecate attribute in favor of alternative name.
+    Deprecate attribute in favor of alternative name
 
     Parameters
     ----------
@@ -41,8 +49,8 @@ def deprecated_alias(
     conventions.  `deprecated_alias` lets us bring them into conformance
     without breaking backward-compatibility.
 
-    Example
-    -------
+    Examples
+    --------
     Instances of the `Foo` class have a `nvars` attribute, but it _should_
     be called `neqs`:
 
@@ -55,8 +63,8 @@ def deprecated_alias(
     >>> foo.nvars
     __main__:1: FutureWarning: nvars is a deprecated alias for neqs
     3
-    """
 
+    """
     if msg is None:
         msg = f"{old_name} is a deprecated alias for {new_name}"
         if remove_version is not None:
@@ -75,6 +83,7 @@ def deprecated_alias(
 
 
 class CachedAttribute:
+    """Descriptor that caches a read-only attribute on first access"""
 
     def __init__(self, func, cachename=None):
         self.fget = func
@@ -105,6 +114,8 @@ class CachedAttribute:
 
 
 class CachedWritableAttribute(CachedAttribute):
+    """Descriptor that caches an attribute and permits reassignment"""
+
     def __set__(self, obj, value):
         _cache = getattr(obj, self.cachename)
         name = self.name
@@ -112,9 +123,7 @@ class CachedWritableAttribute(CachedAttribute):
 
 
 class _cache_readonly(property):
-    """
-    Decorator for CachedAttribute
-    """
+    """Decorate a method as a CachedAttribute"""
 
     def __init__(self, cachename=None):
         self.func = None
@@ -125,27 +134,69 @@ class _cache_readonly(property):
 
 
 class cache_writable(_cache_readonly):
-    """
-    Decorator for CachedWritableAttribute
-    """
+    """Decorate a method as a CachedWritableAttribute"""
 
     def __call__(self, func):
+        """Return a writable cached descriptor for func"""
         return CachedWritableAttribute(func, cachename=self.cachename)
 
 
-# Use pandas since it works with docs correctly
-cache_readonly = PandasCacheReadonly
+class cache_readonly:
+    """
+    Decorator for read-only, cached properties
+
+    Acts as a property that is computed once and then stored in the
+    instance's ``_cache`` dictionary. This allows ``remove_data``
+    to identify and clear cached values.
+
+    Vendored to replace pandas._libs.properties.cache_readonly
+    which is a private C extension.
+
+    Parameters
+    ----------
+    func : callable
+        The function to cache.
+
+    Examples
+    --------
+    >>> class Foo:
+    ...     @cache_readonly
+    ...     def bar(self):
+    ...         return 42
+    >>> f = Foo()
+    >>> f.bar
+    42
+    """
+
+    def __init__(self, func):
+        self.func = func
+        self.fget = func
+        self.__doc__ = getattr(func, "__doc__", None)
+        self.__name__ = func.__name__
+        self.__module__ = func.__module__
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        # Use _cache dict — same as pandas implementation
+        # This is required for remove_data() to work correctly
+        try:
+            cache = obj._cache
+        except AttributeError:
+            cache = obj._cache = {}
+        val = cache.get(self.__name__, None)
+        if val is None:
+            val = self.func(obj)
+            cache[self.__name__] = val
+        return val
+
+    def __set__(self, obj, values):
+        raise AttributeError(f"The attribute '{self.__name__}' cannot be set.")
+
+
 # cached_value and cached_data behave identically to cache_readonly, but
 # are used by `remove_data` to
 #   a) identify array-like attributes to remove (cached_data)
 #   b) make sure certain values are evaluated before caching (cached_value)
-# TODO: Disabled since the subclasses break doc strings
-# class cached_data(PandasCacheReadonly):
-#     pass
-
-cached_data = PandasCacheReadonly
-
-# class cached_value(PandasCacheReadonly):
-#     pass
-
-cached_value = PandasCacheReadonly
+cached_data = cache_readonly
+cached_value = cache_readonly

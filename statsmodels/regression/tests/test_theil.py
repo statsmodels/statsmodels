@@ -133,12 +133,12 @@ class CheckEquivalenceMixin:
 
     @classmethod
     def get_sample(cls):
-        np.random.seed(987456)
+        rs = np.random.RandomState(987456)
         nobs, k_vars = 200, 5
         beta = 0.5 * np.array([0.1, 1, 1, 0, 0])
-        x = np.random.randn(nobs, k_vars)
+        x = rs.randn(nobs, k_vars)
         x[:, 0] = 1
-        y = np.dot(x, beta) + 2 * np.random.randn(nobs)
+        y = np.dot(x, beta) + 2 * rs.randn(nobs)
         return y, x
 
     def test_attributes(self):
@@ -289,10 +289,13 @@ class TestTheilPanel:
 
         from statsmodels.sandbox.panel.random_panel import PanelSample
 
-        dgp = PanelSample(nobs, k_vars, n_groups, seed=303305)
+        dgp = PanelSample(nobs, k_vars, n_groups, rng=303305)
         # add random intercept, using same RandomState
-        dgp.group_means = 2 + dgp.random_state.randn(n_groups)
-        print("seed", dgp.seed)
+        if isinstance(dgp.random_state, np.random.RandomState):
+            dgp.group_means = 2 + dgp.random_state.randn(n_groups)
+        else:
+            dgp.group_means = 2 + dgp.random_state.uniform(n_groups)
+        print("rng", dgp.rng)
         y = dgp.generate_panel()
         x = np.column_stack(
             (dgp.exog[:, 1:], dgp.groups[:, None] == np.arange(n_groups))
@@ -405,9 +408,9 @@ class TestTheilPanel:
         nobs = len(endog)
 
         n05 = nobs // 2
-        np.random.seed(987125)
+        rs = np.random.RandomState(987125)
         # shuffle to get random subsamples
-        shuffle_idx = np.random.permutation(np.arange(nobs))
+        shuffle_idx = rs.permutation(np.arange(nobs))
         ys = endog[shuffle_idx]
         xs = exog[shuffle_idx]
         k = 10

@@ -14,86 +14,90 @@ jobs:
 - job: ${{ parameters.name }}Test
   pool:
     vmImage: ${{ parameters.vmImage }}
+  variables:
+    PYTEST_PATTERN: 'not slow and not joblib'
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
+        # Linux carries the Python/dependency compatibility grid. Other
+        # platforms keep sentinel jobs for OS-specific coverage.
+        python_314t_parallel:
+          python.version: '3.14'
+          python.architecture: 'x64-freethreaded'
+          parallel: true
+        python_314t_latest:
+          python.version: '3.14'
+          python.architecture: 'x64-freethreaded'
+          PANDAS_VERSION: 3
         python_312_latest:
           python.version: '3.12'
+          python.architecture: 'x64'
           coverage: true
           lint: true
-        python_311_latest:
-          python.version: '3.11'
-          lint: true
-          CYTHON_VERSION: 3.0.12
-          coverage: true
+          PYTEST_PATTERN: '(not slow or slow) and not joblib'
         python_311_wheel:
           python.version: '3.11'
+          python.architecture: 'x64'
           test.install: true
         python_312_sdist:
           python.version: '3.12'
+          python.architecture: 'x64'
           test.install: true
           TEST_SDIST: true
-        python_39:
-          python.version: '3.9'
-          USE_MATPLOTLIB_VERSION: false
+        python_310:
+          python.version: '3.10'
+          python.architecture: 'x64'
+          USE_MATPLOTLIB: false
           USE_CVXOPT: false
           SCIPY_VERSION: 1.8.1
           PANDAS_VERSION: 1.5.3
           NUMPY_VERSION: 1.23.5
           CYTHON_VERSION: 3.0.10
-          coverage: true
-          lint: true
         python_310_legacy_blas:
           python.version: '3.10'
+          python.architecture: 'x64'
           use.conda: true
-          coverage: true
           NUMPY_VERSION: 2.0.0
           PANDAS_VERSION: 2.2.2
           SCIPY_VERSION: 1.13.0
           CYTHON_VERSION: 3.0.12
           BLAS: "nomkl blas=*=openblas"
-          PYTEST_OPTIONS: ''
-          lint: true
-        python310_numpy124:
-          python.version: '3.10'
-          NUMPY_VERSION: 1.24.4
-          SCIPY_VERSION: 1.9.3
-          PANDAS_VERSION: 1.5.3
-          MATPLOTLIB_VERSION: 3.6.0
         python_313_copy_on_write:
           python.version: '3.13'
+          python.architecture: 'x64'
           SM_TEST_COPY_ON_WRITE: 1
-          lint: true
         python_312_pre:
           python.version: '3.12'
+          python.architecture: 'x64'
           pip.pre: true
-        python_312_formulaic:
+        python_312_formulaic_no_patsy:
           python.version: '3.12'
+          python.architecture: 'x64'
           SM_FORMULA_ENGINE: "formulaic"
-        python_312_no_patsy:
-          python.version: '3.12'
-          PIP_UNINSTALL: "patsy"
+          PIP_UNINSTALL: "patsy matplotlib joblib"
+          USE_MATPLOTLIB: false
         python_312_no_formulaic:
           python.version: '3.12'
+          python.architecture: 'x64'
           PIP_UNINSTALL: "formulaic"
       ${{ if eq(parameters.name, 'macOS') }}:
-        python310_macos_latest:
+        # macOS keeps one editable install on an older Python and one package
+        # install on the newest supported Python.
+        python310_macos_compat:
           python.version: '3.10'
-        python311_macos_latest:
-          python.version: '3.11'
-        python312_macos_latest:
-          python.version: '3.12'
+          python.architecture: 'x64'
         python313_macos_latest_install:
           python.version: '3.13'
+          python.architecture: 'x64'
           test.install: true
-    maxParallel: 10
+    maxParallel: 20
 
   steps:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '$(python.version)'
-      architecture: 'x64'
-    displayName: 'Use Python $(python.version)'
+      architecture: '$(python.architecture)'
+    displayName: 'Use Python $(python.version) $(python.architecture)'
 
   - bash: |
       echo "##vso[task.prependpath]$CONDA/bin"
@@ -137,7 +141,7 @@ jobs:
         python -m pip uninstall ${PIP_UNINSTALL} -y
       fi
     displayName: 'Optionally Uninstall Packages'
-    condition: eq(variables['use.conda'], 'true')
+    condition: ne(variables['PIP_UNINSTALL'], '')
 
   - script: python -m pip list
     displayName: 'List Configuration (PyPI)'
@@ -159,7 +163,7 @@ jobs:
       exit ${LAST_EXIT_CODE}
       popd
     displayName: 'Run tests (site-packages)'
-    condition: eq(variables['test.install'], 'true')
+    condition: and(eq(variables['test.install'], 'true'), ne(variables['parallel'], 'true'))
 
   - script: |
       echo "Testing editable install"
@@ -169,7 +173,16 @@ jobs:
       echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
       pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
     displayName: 'Run tests (editable)'
-    condition: and(ne(variables['test.install'], 'true'), ne(variables['pip.pre'], 'true'))
+    condition: and(ne(variables['test.install'], 'true'), ne(variables['pip.pre'], 'true'), ne(variables['parallel'], 'true'))
+
+  - script: |
+      echo "Testing in parallel mode"
+      export PYTHON_GIL="0"
+      # joblib creates difficult to debug exceptions during parallel runs
+      python -m pip uninstall joblib -y
+      pytest statsmodels/nonparametric/tests/ --parallel-threads 4 --junitxml=junit/test-results.xml
+    displayName: 'Run tests (parallel)'
+    condition: eq(variables['parallel'], 'true')
 
   - script: |
       echo "Testing pip-pre"

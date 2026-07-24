@@ -13,9 +13,9 @@ check: instead of bound checking I could use the fill-value of the
 interpolators
 """
 import numpy as np
-from scipy.interpolate import Rbf, interp1d, interp2d
+from scipy.interpolate import Rbf, interp1d
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class TableDist:
@@ -27,12 +27,11 @@ class TableDist:
     Parameters
     ----------
     alpha : array_like, 1d
-        probabiliy in the table, could be either sf (right tail) or cdf (left
+        probability in the table, could be either sf (right tail) or cdf (left
         tail)
     size : array_like, 1d
         The sample sizes for the table
     crit_table : array_like, 2d
-        The sample sizes in the table
         array with critical values for sample size in rows and probability in
         columns
     asymptotic : callable, optional
@@ -115,13 +114,6 @@ class TableDist:
         return polyn
 
     @cache_readonly
-    def poly2d(self):
-        # check for monotonicity ?
-        # fix this, interp needs increasing
-        poly2d = interp2d(self.size, self.alpha, self.crit_table)
-        return poly2d
-
-    @cache_readonly
     def polyrbf(self):
         xs, xa = np.meshgrid(self.size.astype(float), self.alpha)
         polyrbf = Rbf(xs.ravel(), xa.ravel(), self.crit_table.T.ravel(),
@@ -166,7 +158,7 @@ class TableDist:
 
     def prob(self, x, n):
         """
-        Find pvalues by interpolation, either cdf(x)
+        Find p-values by interpolation, for either cdf(x) or sf(x)
 
         Returns extreme probabilities, 0.001 and 0.2, for out of range
 

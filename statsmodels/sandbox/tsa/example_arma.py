@@ -78,7 +78,7 @@ def detrend_linear(y):
 
 
 def acovf_explicit(ar, ma, nobs):
-    """add correlation of MA representation explicitely"""
+    """add correlation of MA representation explicitly"""
     ir = arma_impulse_response(ar, ma)
     acovfexpl = [np.dot(ir[: nobs - t], ir[t:nobs]) for t in range(10)]
     return acovfexpl

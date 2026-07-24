@@ -249,10 +249,11 @@ def test_ardl_holdback_exceptions(data):
 
 
 def test_ardl_fixed_exceptions(data):
-    fixed = np.random.standard_normal((2, 200))
+    rs = np.random.RandomState(992711)
+    fixed = rs.standard_normal((2, 200))
     with pytest.raises(ValueError, match="fixed must be an"):
         ARDL(data.y, 2, data.x, 2, fixed=fixed)
-    fixed = np.random.standard_normal((dane_data.lrm.shape[0], 2))
+    fixed = rs.standard_normal((dane_data.lrm.shape[0], 2))
     fixed[20, 0] = -np.inf
     with pytest.raises(ValueError, match="fixed must be an"):
         ARDL(data.y, 2, data.x, 2, fixed=fixed)
@@ -405,6 +406,7 @@ def test_ardl_parameter_names(data):
     assert mod.exog_names == expected
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_diagnostics_plot(data, close_figures):
     import matplotlib.figure
@@ -569,6 +571,7 @@ def test_get_prediction(data):
     assert_allclose(pred.var_pred_mean, ar_pred.var_pred_mean)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
 @pytest.mark.parametrize("trend", ["n", "c", "ct"])
@@ -762,7 +765,7 @@ def test_bounds_test_simulation(case):
     )
     res = mod.fit()
     bounds_result = res.bounds_test(
-        case=case, asymptotic=False, seed=[1, 2, 3, 4], nsim=10_000
+        case=case, asymptotic=False, rng=[1, 2, 3, 4], nsim=10_000
     )
     assert (bounds_result.p_values >= 0.0).all()
     assert (bounds_result.p_values <= 1.0).all()
@@ -770,10 +773,10 @@ def test_bounds_test_simulation(case):
 
 
 @pytest.mark.parametrize(
-    "seed",
+    "rng",
     [None, np.random.RandomState(0), 0, [1, 2], np.random.default_rng([1, 2])],
 )
-def test_bounds_test_seed(seed):
+def test_bounds_test_rng(rng):
     mod = UECM(
         dane_data.lrm,
         3,
@@ -781,7 +784,7 @@ def test_bounds_test_seed(seed):
         {"lry": 1, "ibo": 3, "ide": 2},
     )
     res = mod.fit()
-    bounds_result = res.bounds_test(case=3, asymptotic=False, seed=seed, nsim=10_000)
+    bounds_result = res.bounds_test(case=3, asymptotic=False, rng=rng, nsim=10_000)
     assert (bounds_result.p_values >= 0.0).all()
     assert (bounds_result.p_values <= 1.0).all()
     assert (bounds_result.crit_vals > 0.0).all().all()
@@ -797,9 +800,7 @@ def test_bounds_test_simulate_order():
     res = mod.fit()
     bounds_result = res.bounds_test(3)
     assert "BoundsTestResult" in str(bounds_result)
-    bounds_result_sim = res.bounds_test(
-        3, asymptotic=False, nsim=10_000, seed=[1, 2, 3]
-    )
+    bounds_result_sim = res.bounds_test(3, asymptotic=False, nsim=10_000, rng=[1, 2, 3])
     assert_allclose(bounds_result.stat, bounds_result_sim.stat)
     assert (bounds_result_sim.p_values > bounds_result.p_values).all()
 
@@ -835,3 +836,17 @@ def test_ardl_trend_ctt(data, y_lags, x_lags, causal):
     n_params += n_x * (int(not causal) + x_lags) if x_lags else 0
     assert res.params.shape[0] == n_params
     check_results(res)
+
+
+def test_uecm_resid():
+    """Test that UECMResults.resid is computed correctly using model._y."""
+    mod = UECM(
+        dane_data.lrm,
+        3,
+        dane_data[["lry", "ibo", "ide"]],
+        {"lry": 1, "ibo": 3, "ide": 2},
+    )
+    res = mod.fit()
+
+    # Assert that the override fix is working
+    np.testing.assert_allclose(res.resid, res.model._y - res.fittedvalues)

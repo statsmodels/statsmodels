@@ -1,5 +1,5 @@
 """
-SARIMAX tools.
+SARIMAX tools
 
 Author: Chad Fulton
 License: BSD-3
@@ -9,7 +9,7 @@ import numpy as np
 
 def standardize_lag_order(order, title=None):
     """
-    Standardize lag order input.
+    Standardize lag order input
 
     Parameters
     ----------
@@ -110,7 +110,7 @@ def standardize_lag_order(order, title=None):
 
 def validate_basic(params, length, allow_infnan=False, title=None):
     """
-    Validate parameter vector for basic correctness.
+    Validate parameter vector for basic correctness
 
     Parameters
     ----------
@@ -119,8 +119,8 @@ def validate_basic(params, length, allow_infnan=False, title=None):
     length : int
         Expected length of the parameter vector.
     allow_infnan : bool, optional
-            Whether or not to allow `params` to contain -np.inf, np.inf, and
-            np.nan. Default is False.
+        Whether or not to allow `params` to contain -np.inf, np.inf, and
+        np.nan. Default is False.
     title : str, optional
         Description of the parameters (e.g. "autoregressive") to use in error
         messages.

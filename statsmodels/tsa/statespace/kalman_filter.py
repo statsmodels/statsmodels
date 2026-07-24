@@ -5,6 +5,8 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import contextlib
 from warnings import warn
 
@@ -83,6 +85,9 @@ class KalmanFilter(Representation):
     results_class : class, optional
         Default results class to use to save filtering output. Default is
         `FilterResults`. If specified, class must extend from `FilterResults`.
+    kalman_filter_classes : dict, optional
+        Dictionary mapping BLAS prefixes to Cython Kalman filter classes.
+        Default is the classes defined in `statsmodels.tsa.statespace.tools`.
     **kwargs
         Keyword arguments may be used to provide values for the filter,
         inversion, and stability methods. See `set_filter_method`,
@@ -147,45 +152,25 @@ class KalmanFilter(Representation):
     ]
 
     filter_conventional = OptionWrapper("filter_method", FILTER_CONVENTIONAL)
-    """
-    (bool) Flag for conventional Kalman filtering.
-    """
+    """(bool) Flag for conventional Kalman filtering"""
     filter_exact_initial = OptionWrapper("filter_method", FILTER_EXACT_INITIAL)
-    """
-    (bool) Flag for exact initial Kalman filtering. Not implemented.
-    """
+    """(bool) Flag for exact initial Kalman filtering. Not implemented"""
     filter_augmented = OptionWrapper("filter_method", FILTER_AUGMENTED)
-    """
-    (bool) Flag for augmented Kalman filtering. Not implemented.
-    """
+    """(bool) Flag for augmented Kalman filtering. Not implemented"""
     filter_square_root = OptionWrapper("filter_method", FILTER_SQUARE_ROOT)
-    """
-    (bool) Flag for square-root Kalman filtering. Not implemented.
-    """
+    """(bool) Flag for square-root Kalman filtering. Not implemented"""
     filter_univariate = OptionWrapper("filter_method", FILTER_UNIVARIATE)
-    """
-    (bool) Flag for univariate filtering of multivariate observation vector.
-    """
+    """(bool) Flag for univariate filtering of multivariate observation vector"""
     filter_collapsed = OptionWrapper("filter_method", FILTER_COLLAPSED)
-    """
-    (bool) Flag for Kalman filtering with collapsed observation vector.
-    """
+    """(bool) Flag for Kalman filtering with collapsed observation vector"""
     filter_extended = OptionWrapper("filter_method", FILTER_EXTENDED)
-    """
-    (bool) Flag for extended Kalman filtering. Not implemented.
-    """
+    """(bool) Flag for extended Kalman filtering. Not implemented"""
     filter_unscented = OptionWrapper("filter_method", FILTER_UNSCENTED)
-    """
-    (bool) Flag for unscented Kalman filtering. Not implemented.
-    """
+    """(bool) Flag for unscented Kalman filtering. Not implemented"""
     filter_concentrated = OptionWrapper("filter_method", FILTER_CONCENTRATED)
-    """
-    (bool) Flag for Kalman filtering with concentrated log-likelihood.
-    """
+    """(bool) Flag for Kalman filtering with concentrated log-likelihood"""
     filter_chandrasekhar = OptionWrapper("filter_method", FILTER_CHANDRASEKHAR)
-    """
-    (bool) Flag for filtering with Chandrasekhar recursions.
-    """
+    """(bool) Flag for filtering with Chandrasekhar recursions"""
 
     inversion_methods = [
         "invert_univariate", "solve_lu", "invert_lu", "solve_cholesky",
@@ -193,34 +178,22 @@ class KalmanFilter(Representation):
     ]
 
     invert_univariate = OptionWrapper("inversion_method", INVERT_UNIVARIATE)
-    """
-    (bool) Flag for univariate inversion method (recommended).
-    """
+    """(bool) Flag for univariate inversion method (recommended)"""
     solve_lu = OptionWrapper("inversion_method", SOLVE_LU)
-    """
-    (bool) Flag for LU and linear solver inversion method.
-    """
+    """(bool) Flag for LU and linear solver inversion method"""
     invert_lu = OptionWrapper("inversion_method", INVERT_LU)
-    """
-    (bool) Flag for LU inversion method.
-    """
+    """(bool) Flag for LU inversion method"""
     solve_cholesky = OptionWrapper("inversion_method", SOLVE_CHOLESKY)
-    """
-    (bool) Flag for Cholesky and linear solver inversion method (recommended).
-    """
+    """(bool) Flag for Cholesky and linear solver inversion method (recommended)"""
     invert_cholesky = OptionWrapper("inversion_method", INVERT_CHOLESKY)
-    """
-    (bool) Flag for Cholesky inversion method.
-    """
+    """(bool) Flag for Cholesky inversion method"""
 
     stability_methods = ["stability_force_symmetry"]
 
     stability_force_symmetry = (
         OptionWrapper("stability_method", STABILITY_FORCE_SYMMETRY)
     )
-    """
-    (bool) Flag for enforcing covariance matrix symmetry
-    """
+    """(bool) Flag for enforcing covariance matrix symmetry"""
 
     memory_options = [
         "memory_store_all", "memory_no_forecast_mean",
@@ -233,24 +206,16 @@ class KalmanFilter(Representation):
     ]
 
     memory_store_all = OptionWrapper("conserve_memory", MEMORY_STORE_ALL)
-    """
-    (bool) Flag for storing all intermediate results in memory (default).
-    """
+    """(bool) Flag for storing all intermediate results in memory (default)"""
     memory_no_forecast_mean = OptionWrapper(
         "conserve_memory", MEMORY_NO_FORECAST_MEAN)
-    """
-    (bool) Flag to prevent storing forecasts and forecast errors.
-    """
+    """(bool) Flag to prevent storing forecasts and forecast errors"""
     memory_no_forecast_cov = OptionWrapper(
         "conserve_memory", MEMORY_NO_FORECAST_COV)
-    """
-    (bool) Flag to prevent storing forecast error covariance matrices.
-    """
+    """(bool) Flag to prevent storing forecast error covariance matrices"""
     @property
     def memory_no_forecast(self):
-        """
-        (bool) Flag to prevent storing all forecast-related output.
-        """
+        """(bool) Flag to prevent storing all forecast-related output"""
         return self.memory_no_forecast_mean or self.memory_no_forecast_cov
 
     @memory_no_forecast.setter
@@ -264,19 +229,13 @@ class KalmanFilter(Representation):
 
     memory_no_predicted_mean = OptionWrapper(
         "conserve_memory", MEMORY_NO_PREDICTED_MEAN)
-    """
-    (bool) Flag to prevent storing predicted states.
-    """
+    """(bool) Flag to prevent storing predicted states"""
     memory_no_predicted_cov = OptionWrapper(
         "conserve_memory", MEMORY_NO_PREDICTED_COV)
-    """
-    (bool) Flag to prevent storing predicted state covariance matrices.
-    """
+    """(bool) Flag to prevent storing predicted state covariance matrices"""
     @property
     def memory_no_predicted(self):
-        """
-        (bool) Flag to prevent storing predicted state and covariance matrices.
-        """
+        """(bool) Flag to prevent storing predicted state and covariance matrices"""
         return self.memory_no_predicted_mean or self.memory_no_predicted_cov
 
     @memory_no_predicted.setter
@@ -290,19 +249,13 @@ class KalmanFilter(Representation):
 
     memory_no_filtered_mean = OptionWrapper(
         "conserve_memory", MEMORY_NO_FILTERED_MEAN)
-    """
-    (bool) Flag to prevent storing filtered states.
-    """
+    """(bool) Flag to prevent storing filtered states"""
     memory_no_filtered_cov = OptionWrapper(
         "conserve_memory", MEMORY_NO_FILTERED_COV)
-    """
-    (bool) Flag to prevent storing filtered state covariance matrices.
-    """
+    """(bool) Flag to prevent storing filtered state covariance matrices"""
     @property
     def memory_no_filtered(self):
-        """
-        (bool) Flag to prevent storing filtered state and covariance matrices.
-        """
+        """(bool) Flag to prevent storing filtered state and covariance matrices"""
         return self.memory_no_filtered_mean or self.memory_no_filtered_cov
 
     @memory_no_filtered.setter
@@ -317,61 +270,37 @@ class KalmanFilter(Representation):
     memory_no_likelihood = (
         OptionWrapper("conserve_memory", MEMORY_NO_LIKELIHOOD)
     )
-    """
-    (bool) Flag to prevent storing likelihood values for each observation.
-    """
+    """(bool) Flag to prevent storing likelihood values for each observation"""
     memory_no_gain = OptionWrapper("conserve_memory", MEMORY_NO_GAIN)
-    """
-    (bool) Flag to prevent storing the Kalman gain matrices.
-    """
+    """(bool) Flag to prevent storing the Kalman gain matrices"""
     memory_no_smoothing = OptionWrapper("conserve_memory", MEMORY_NO_SMOOTHING)
-    """
-    (bool) Flag to prevent storing likelihood values for each observation.
-    """
+    """(bool) Flag to prevent storing values required for smoothing"""
     memory_no_std_forecast = (
         OptionWrapper("conserve_memory", MEMORY_NO_STD_FORECAST))
-    """
-    (bool) Flag to prevent storing standardized forecast errors.
-    """
+    """(bool) Flag to prevent storing standardized forecast errors"""
     memory_conserve = OptionWrapper("conserve_memory", MEMORY_CONSERVE)
-    """
-    (bool) Flag to conserve the maximum amount of memory.
-    """
+    """(bool) Flag to conserve the maximum amount of memory"""
 
     timing_options = [
         "timing_init_predicted", "timing_init_filtered"
     ]
     timing_init_predicted = OptionWrapper("filter_timing",
                                           TIMING_INIT_PREDICTED)
-    """
-    (bool) Flag for the default timing convention (Durbin and Koopman, 2012).
-    """
+    """(bool) Flag for the default timing convention (Durbin and Koopman, 2012)"""
     timing_init_filtered = OptionWrapper("filter_timing", TIMING_INIT_FILTERED)
-    """
-    (bool) Flag for the alternate timing convention (Kim and Nelson, 2012).
-    """
+    """(bool) Flag for the alternate timing convention (Kim and Nelson, 2012)"""
 
     # Default filter options
     filter_method = FILTER_CONVENTIONAL
-    """
-    (int) Filtering method bitmask.
-    """
+    """(int) Filtering method bitmask"""
     inversion_method = INVERT_UNIVARIATE | SOLVE_CHOLESKY
-    """
-    (int) Inversion method bitmask.
-    """
+    """(int) Inversion method bitmask"""
     stability_method = STABILITY_FORCE_SYMMETRY
-    """
-    (int) Stability method bitmask.
-    """
+    """(int) Stability method bitmask"""
     conserve_memory = MEMORY_STORE_ALL
-    """
-    (int) Memory conservation bitmask.
-    """
+    """(int) Memory conservation bitmask"""
     filter_timing = TIMING_INIT_PREDICTED
-    """
-    (int) Filter timing.
-    """
+    """(int) Filter timing"""
 
     def __init__(self, k_endog, k_states, k_posdef=None,
                  loglikelihood_burn=0, tolerance=1e-19, results_class=None,
@@ -867,8 +796,6 @@ class KalmanFilter(Representation):
     @contextlib.contextmanager
     def fixed_scale(self, scale):
         """
-        fixed_scale(scale)
-
         Context manager for fixing the scale when FILTER_CONCENTRATED is set
 
         Parameters
@@ -931,7 +858,7 @@ class KalmanFilter(Representation):
                stability_method=None, conserve_memory=None, filter_timing=None,
                tolerance=None, loglikelihood_burn=None, complex_step=False):
         r"""
-        Apply the Kalman filter to the statespace model.
+        Apply the Kalman filter to the statespace model
 
         Parameters
         ----------
@@ -985,7 +912,7 @@ class KalmanFilter(Representation):
 
     def loglike(self, **kwargs):
         r"""
-        Calculate the loglikelihood associated with the statespace model.
+        Calculate the loglikelihood associated with the statespace model
 
         Parameters
         ----------
@@ -1039,7 +966,7 @@ class KalmanFilter(Representation):
     def loglikeobs(self, **kwargs):
         r"""
         Calculate the loglikelihood for each observation associated with the
-        statespace model.
+        statespace model
 
         Parameters
         ----------
@@ -1112,13 +1039,14 @@ class KalmanFilter(Representation):
 
         return llf_obs
 
+    @deprecate_kwarg("random_state", "rng")
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None,
                  pretransformed_measurement_shocks=True,
                  pretransformed_state_shocks=True,
                  pretransformed_initial_state=True,
                  simulator=None, return_simulator=False,
-                 random_state=None):
+                 rng=None):
         r"""
         Simulate a new time series following the state space model
 
@@ -1128,7 +1056,7 @@ class KalmanFilter(Representation):
             The number of observations to simulate. If the model is
             time-invariant this can be any number. If the model is
             time-varying, then this number must be less than or equal to the
-            number
+            number of observations.
         measurement_shocks : array_like, optional
             If specified, these are the shocks to the measurement equation,
             :math:`\varepsilon_t`. If unspecified, these are automatically
@@ -1166,17 +1094,24 @@ class KalmanFilter(Representation):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
+        simulator : SimulationSmoothResults, optional
+            A simulator object to use to perform the simulation, e.g. as
+            returned by a prior call with `return_simulator=True`. If not
+            specified, a new simulator is created.
         return_simulator : bool, optional
             Whether or not to return the simulator object. Typically used to
             improve performance when performing repeated sampling. Default is
             False.
-        random_state : {None, int, Generator, RandomState}, optionall
-            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
-            singleton is used.
-            If `seed` is an int, a new ``RandomState`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` or ``RandomState`` instance
-            then that instance is used.
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None or an int, a new ``Generator`` is created
+            (seeded with `rng` if an int is given). If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
+            used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -1207,9 +1142,9 @@ class KalmanFilter(Representation):
             pretransformed_initial_state_variates=(
                 pretransformed_initial_state),
             simulator=simulator, return_simulator=return_simulator,
-            random_state=random_state)
+            rng=rng)
 
-    def _simulate(self, nsimulations, simulator=None, random_state=None,
+    def _simulate(self, nsimulations, simulator=None, rng=None,
                   **kwargs):
         raise NotImplementedError("Simulation only available through"
                                   " the simulation smoother.")
@@ -1343,7 +1278,7 @@ class KalmanFilter(Representation):
 
 class FilterResults(FrozenRepresentation):
     """
-    Results from applying the Kalman filter to a state space model.
+    Results from applying the Kalman filter to a state space model
 
     Parameters
     ----------
@@ -1401,11 +1336,11 @@ class FilterResults(FrozenRepresentation):
     initialization : str
         Kalman filter initialization method.
     initial_state : array_like
-        The state vector used to initialize the Kalamn filter.
+        The state vector used to initialize the Kalman filter.
     initial_state_cov : array_like
-        The state covariance matrix used to initialize the Kalamn filter.
+        The state covariance matrix used to initialize the Kalman filter.
     initial_diffuse_state_cov : array_like
-        Diffuse state covariance matrix used to initialize the Kalamn filter.
+        Diffuse state covariance matrix used to initialize the Kalman filter.
     filter_method : int
         Bitmask representing the Kalman filtering method
     inversion_method : int
@@ -1831,9 +1766,7 @@ class FilterResults(FrozenRepresentation):
 
     @property
     def kalman_gain(self):
-        """
-        Kalman gain matrices
-        """
+        """Kalman gain matrices"""
         if self._kalman_gain is None:
             # k x n
             self._kalman_gain = np.zeros(
@@ -2237,7 +2170,7 @@ class PredictionResults(FilterResults):
     def __getattr__(self, attr):
         """
         Provide access to the representation and filtered output in the
-        appropriate range (`start` - `end`).
+        appropriate range (`start` - `end`)
         """
         # Prevent infinite recursive lookups
         if attr[0] == "_":

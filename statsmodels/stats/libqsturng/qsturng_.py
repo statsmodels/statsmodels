@@ -1908,10 +1908,7 @@ v_keys = lrange(2, 21) + [24, 30, 40, 60, 120, inf]
 
 
 def _isfloat(x):
-    """
-    returns True if x is a float,
-    returns False otherwise
-    """
+    """Returns True if x is a float, returns False otherwise"""
     try:
         float(x)
     except Exception:
@@ -1944,6 +1941,18 @@ def _phi(p):
     and the result has a relative error whose absolute value is less
     than 1.15e-9.
 
+    Parameters
+    ----------
+    p : float
+        Probability, in the open interval (0, 1).
+
+    Returns
+    -------
+    float
+        The approximate standard normal quantile corresponding to `p`.
+
+    Notes
+    -----
     Author:      Peter John Acklam
     Time-stamp:  2000-07-19 18:26:14
     E-mail:      pjacklam@online.no
@@ -2014,15 +2023,12 @@ def _phi(p):
 
 
 def _ptransform(p):
-    """function for p-value abcissa transformation"""
+    """Function for p-value abscissa transformation"""
     return -1.0 / (1.0 + 1.5 * _phi((1.0 + p) / 2.0))
 
 
 def _func(a, p, r, v):
-    """
-    calculates f-hat for the coefficients in a, probability p,
-    sample mean difference r, and degrees of freedom v.
-    """
+    """Calculates f-hat for the coefficients in a, probability p, sample mean difference r, and degrees of freedom v"""
     # eq. 2.3
     f = (
         a[0] * math.log(r - 1.0)
@@ -2054,7 +2060,7 @@ def _select_ps(p):
     # it is possible that different break points could yield
     # better estimates, but the function this is refactoring
     # just used linear distance.
-    """returns the points to use for interpolating p"""
+    """Returns the points to use for interpolating p"""
     if p >= 0.99:
         return 0.990, 0.995, 0.999
     elif p >= 0.975:
@@ -2078,10 +2084,7 @@ def _select_ps(p):
 
 
 def _interpolate_p(p, r, v):
-    """
-    interpolates p based on the values in the A table for the
-    scalar value of r and the scalar value of v
-    """
+    """Interpolates p based on the values in the A table for the scalar value of r and the scalar value of v"""
 
     # interpolate p (v should be in table)
     # if .5 < p < .75 use linear interpolation in q
@@ -2167,9 +2170,9 @@ def _interpolate_p(p, r, v):
 
 
 def _select_vs(v, p):
-    # This one is is about 30 times faster than
+    # This one is about 30 times faster than
     # the generic algorithm it is replacing.
-    """returns the points to use for interpolating v"""
+    """Returns the points to use for interpolating v"""
 
     if v >= 120.0:
         return 60, 120, inf
@@ -2195,10 +2198,7 @@ def _select_vs(v, p):
 
 
 def _interpolate_v(p, r, v):
-    """
-    interpolates v based on the values in the A table for the
-    scalar value of r and th
-    """
+    """Interpolates v based on the values in the A table for the scalar values of p and r"""
     # interpolate v (p should be in table)
     # ordinate: y**2
     # abcissa:  1./v
@@ -2241,7 +2241,7 @@ def _interpolate_v(p, r, v):
 
 
 def _qsturng(p, r, v):
-    """scalar version of qsturng"""
+    """Scalar version of qsturng"""
     #    print 'q',p
     # r is interpolated through the q to y here we only need to
     # account for when p and/or v are not found in the table.
@@ -2334,13 +2334,14 @@ def _qsturng(p, r, v):
 
 # make a qsturng functinon that will accept list-like objects
 _vqsturng = np.vectorize(_qsturng)
-_vqsturng.__doc__ = """vector version of qsturng"""
+_vqsturng.__doc__ = """Vector version of qsturng"""
 
 
 def qsturng(p, r, v):
-    """Approximates the quantile p for a studentized range
-       distribution having v degrees of freedom and r samples
-       for probability p.
+    """
+    Approximates the quantile p for a studentized range
+    distribution having v degrees of freedom and r samples
+    for probability p
 
     Parameters
     ----------
@@ -2397,7 +2398,7 @@ def qsturng(p, r, v):
 
 
 def _psturng(q, r, v):
-    """scalar version of psturng"""
+    """Scalar version of psturng"""
     if q < 0.0:
         raise ValueError("q should be >= 0")
 
@@ -2425,12 +2426,13 @@ def _psturng_scalar(q, r, v):
 
 
 _vpsturng = np.vectorize(_psturng_scalar)
-_vpsturng.__doc__ = """vector version of psturng"""
+_vpsturng.__doc__ = """Vector version of psturng"""
 
 
 def psturng(q, r, v):
-    """Evaluates the probability from 0 to q for a studentized
-       range having v degrees of freedom and r samples.
+    """
+    Evaluates the probability from 0 to q for a studentized
+    range having v degrees of freedom and r samples
 
     Parameters
     ----------

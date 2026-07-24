@@ -6,6 +6,11 @@ RET=0
 
 echo "Running ruff check"
 ruff check statsmodels
+ruff check docs/source/plots
+if [ $? -ne "0" ]; then
+    echo "ruff checks failed"
+    RET=1
+fi
 
 if [ "$LINT" == true ]; then
     echo "Running flake8 linting"
@@ -41,5 +46,6 @@ fi
 
 echo "Running isort"
 isort --check-only statsmodels
+isort --check-only docs/source/plots
 
 exit "$RET"

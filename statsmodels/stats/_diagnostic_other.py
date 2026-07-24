@@ -1,4 +1,5 @@
-"""Score, lagrange multiplier and conditional moment tests
+"""
+Score, lagrange multiplier and conditional moment tests
 robust to misspecification or without specification of higher moments
 
 Created on Thu Oct 30 00:42:38 2014
@@ -12,18 +13,16 @@ Notes
 This module is a mixture of very general and very specific functions for
 hypothesis testing in general models, targeted mainly to non-normal models.
 
-Some of the options or versions of these tests are mainly intented for
+Some of the options or versions of these tests are mainly intended for
 cross-checking and to replicate different examples in references.
 
 We need clean versions with good defaults for those functions that are
 intended for the user.
 
-
-
 References
 ----------
 
-The following references are collected after my intitial implementation and is
+The following references are collected after my initial implementation and is
 most likely not exactly what I used.
 
 The main articles on which the functions are directly based upon, are Boos 1992,
@@ -45,7 +44,7 @@ and Vella.
 Boos, Dennis D. 1992. “On Generalized Score Tests.” The American Statistician 46
 (4): 327-33. https://doi.org/10.2307/2685328.
 
-Breslow, Norman. 1989. “Score Tests in Overdispersed GLM`s.” In Statistical
+Breslow, Norman. 1989. “Score Tests in Overdispersed GLM's.” In Statistical
 Modelling, edited by Adriano Decarli, Brian J. Francis, Robert Gilchrist, and
 Gilg U. H. Seeber, 64-74. Lecture Notes in Statistics 57. Springer New York.
 http://link.springer.com/chapter/10.1007/978-1-4612-3680-1_8.
@@ -159,19 +158,19 @@ press, 2010.
 
 """
 
-import warnings
 
 import numpy as np
 from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 # deprecated dispersion functions, moved to discrete._diagnostic_count
 
 
 def dispersion_poisson(results):
-    """Score/LM type tests for Poisson variance assumptions
+    """
+    Score/LM type tests for Poisson variance assumptions
 
     .. deprecated:: 0.14
 
@@ -201,15 +200,10 @@ def dispersion_poisson(results):
        Each test has two strings a descriptive name and a string for the
        alternative hypothesis.
     """
-    msg = (
+    raise NotImplementedError(
         "dispersion_poisson here is deprecated, use the version in "
         "discrete._diagnostic_count"
     )
-    warnings.warn(msg, FutureWarning, stacklevel=2)
-
-    from statsmodels.discrete._diagnostics_count import test_poisson_dispersion
-
-    return test_poisson_dispersion(results, _old=True)
 
 
 def dispersion_poisson_generic(
@@ -222,7 +216,8 @@ def dispersion_poisson_generic(
     cov_kwds=None,
     use_t=False,
 ):
-    """A variable addition test for the variance function
+    """
+    A variable addition test for the variance function
 
     .. deprecated:: 0.14
 
@@ -234,28 +229,39 @@ def dispersion_poisson_generic(
     of the `exog_new_test`.
 
     Warning: insufficiently tested, especially for options
+
+    Parameters
+    ----------
+    results : results instance
+        Results instance of a fitted Poisson model.
+    exog_new_test : array_like
+        Additional exogenous variables to test, for the variable addition
+        test.
+    exog_new_control : array_like, optional
+        Additional exogenous variables to control for, in addition to the
+        `exog_new_test` variables.
+    include_score : bool, optional
+        If True, then the score of the mean function is added to the
+        control variables.
+    use_endog : bool, optional
+        If True (default), then the endog is used together with the
+        residuals to construct the dependent variable of the artificial
+        regression. If False, then the fitted values are used instead.
+    cov_type : str, optional
+        Covariance type used in the artificial OLS regression, passed to
+        the ``fit`` method. Default is "HC3".
+    cov_kwds : dict, optional
+        Keyword arguments for the covariance estimator specified by
+        `cov_type`.
+    use_t : bool, optional
+        If True, then the p-values for the artificial regression are
+        computed using the t distribution instead of the normal
+        distribution.
     """
-    msg = (
+    raise NotImplementedError(
         "dispersion_poisson_generic here is deprecated, use the version in "
         "discrete._diagnostic_count"
     )
-    warnings.warn(msg, FutureWarning, stacklevel=2)
-
-    from statsmodels.discrete._diagnostics_count import (
-        _test_poisson_dispersion_generic,
-    )
-
-    res_test = _test_poisson_dispersion_generic(
-        results,
-        exog_new_test,
-        exog_new_control=exog_new_control,
-        include_score=include_score,
-        use_endog=use_endog,
-        cov_type=cov_type,
-        cov_kwds=cov_kwds,
-        use_t=use_t,
-    )
-    return res_test
 
 
 class ResultsGeneric:
@@ -285,13 +291,14 @@ class TestResults(ResultsGeneric):
 
 
 def lm_test_glm(result, exog_extra, mean_deriv=None):
-    """score/lagrange multiplier test for GLM
+    """
+    Score/Lagrange multiplier test for GLM
 
     Wooldridge procedure for test of mean function in GLM
 
     Parameters
     ----------
-    results : GLMResults instance
+    result : GLMResults instance
         results instance with the constrained model
     exog_extra : ndarray or None
         additional exogenous variables for variable addition test
@@ -326,7 +333,6 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
     Handbook of Applied Econometrics 2: 352-406.
 
     and other articles and text book by Wooldridge
-
     """
 
     if hasattr(result, "_result"):
@@ -401,7 +407,8 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
 
 
 def cm_test_robust(resid, resid_deriv, instruments, weights=1):
-    """score/lagrange multiplier of Wooldridge
+    """
+    Score/lagrange multiplier of Wooldridge
 
     generic version of Wooldridge procedure for test of conditional moments
 
@@ -418,7 +425,7 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
     resid_deriv : ndarray, (nobs, k_params)
         derivative of conditional moment restriction with respect to parameters
     instruments : ndarray, (nobs, k_instruments)
-        indicator variables of Wooldridge, multiplies the conditional momen
+        indicator variables of Wooldridge, multiplies the conditional moment
         restriction
     weights : ndarray
         This is a weights function as used in WLS. The moment
@@ -427,8 +434,14 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
 
     Returns
     -------
-    test_results : Results instance
-        ???  TODO
+    stat : float
+        Test statistic robust to heteroskedasticity and any general
+        covariance structure implied by `weights`.
+    pval : float
+        p-value based on the chi-square distribution.
+    stat2 : float
+        Test statistic computed as nobs times R-squared of the auxiliary
+        regression, provided for comparison and checking purposes.
 
     Notes
     -----
@@ -443,7 +456,6 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
     Wooldridge
     Wooldridge
     and more Wooldridge
-
     """
     # notation: Wooldridge uses too mamny Greek letters
     # instruments is capital lambda
@@ -481,7 +493,8 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
 
 
 def lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=None):
-    """general formula for score/LM test
+    """
+    General formula for score/LM test
 
     generalized score or lagrange multiplier test for implicit constraints
 
@@ -496,27 +509,26 @@ def lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=N
     score : ndarray, 1-D
         derivative of objective function at estimated parameters
         of constrained model
-    constraint_matrix R : ndarray
-        Linear restriction matrix or Jacobian of nonlinear constraints
-    hessian_inv, Ainv : ndarray, symmetric, square
-        inverse of second derivative of objective function
+    constraint_matrix : ndarray
+        Linear restriction matrix, denoted `R`, or Jacobian of nonlinear
+        constraints.
+    score_deriv_inv : ndarray, symmetric, square
+        Inverse of the second derivative of objective function, denoted
+        `Ainv`.
         TODO: could be OPG or any other estimator if information matrix
         equality holds
-    cov_score B :  ndarray, symmetric, square
-        covariance matrix of the score. This is the inner part of a sandwich
-        estimator.
-    cov_params V :  ndarray, symmetric, square
-        covariance of full parameter vector evaluated at constrained parameter
-        estimate. This can be specified instead of cov_score B.
+    cov_score : ndarray, symmetric, square
+        Covariance matrix of the score, denoted `B`. This is the inner
+        part of a sandwich estimator.
+    cov_params : ndarray, symmetric, square, optional
+        Covariance of full parameter vector evaluated at constrained
+        parameter estimate, denoted `V`. This can be specified instead
+        of `cov_score`.
 
     Returns
     -------
     lm_stat : float
         score/lagrange multiplier statistic
-
-    Notes
-    -----
-
     """
     # shorthand alias
     R, Ainv, B, V = constraint_matrix, score_deriv_inv, cov_score, cov_params
@@ -543,7 +555,8 @@ def lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=N
 
 
 def lm_robust_subset(score, k_constraints, score_deriv_inv, cov_score):
-    """general formula for score/LM test
+    """
+    General formula for score/LM test
 
     generalized score or lagrange multiplier test for constraints on a subset
     of parameters
@@ -558,31 +571,27 @@ def lm_robust_subset(score, k_constraints, score_deriv_inv, cov_score):
     score : ndarray, 1-D
         derivative of objective function at estimated parameters
         of constrained model
-    k_constraint : int
+    k_constraints : int
         number of constraints
     score_deriv_inv : ndarray, symmetric, square
         inverse of second derivative of objective function
         TODO: could be OPG or any other estimator if information matrix
         equality holds
-    cov_score B :  ndarray, symmetric, square
+    cov_score : ndarray, symmetric, square
         covariance matrix of the score. This is the inner part of a sandwich
         estimator.
-    not cov_params V :  ndarray, symmetric, square
-        covariance of full parameter vector evaluated at constrained parameter
-        estimate. This can be specified instead of cov_score B.
 
     Returns
     -------
     lm_stat : float
         score/lagrange multiplier statistic
-    p-value : float
+    pval : float
         p-value of the LM test based on chisquare distribution
 
     Notes
     -----
     The implementation is based on Boos 1992 section 4.1. The same derivation
     is also in other articles and in text books.
-
     """
 
     # Notation in Boos
@@ -635,7 +644,8 @@ def lm_robust_subset_parts(
     cov_score_cu,
     cov_score_uu,
 ):
-    """robust generalized score tests on subset of parameters
+    """
+    Robust generalized score tests on subset of parameters
 
     This is the same as lm_robust_subset with arguments in parts of
     partitioned matrices.
@@ -648,10 +658,10 @@ def lm_robust_subset_parts(
     ----------
     score : ndarray, 1-D
         derivative of objective function at estimated parameters
-        of constrained model. These is the score component for the restricted
+        of constrained model. This is the score component for the restricted
         part under hypothesis. The unconstrained part of the score is assumed
         to be zero.
-    k_constraint : int
+    k_constraints : int
         number of constraints
     score_deriv_uu : ndarray, symmetric, square
         first derivative of moment equation or second derivative of objective
@@ -674,7 +684,7 @@ def lm_robust_subset_parts(
     -------
     lm_stat : float
         score/lagrange multiplier statistic
-    p-value : float
+    pval : float
         p-value of the LM test based on chisquare distribution
 
     Notes
@@ -701,7 +711,8 @@ def lm_robust_subset_parts(
 
 
 def lm_robust_reparameterized(score, params_deriv, score_deriv, cov_score):
-    """robust generalized score test for transformed parameters
+    """
+    Robust generalized score test for transformed parameters
 
     The parameters are given by a nonlinear transformation of the estimated
     reduced parameters
@@ -716,12 +727,12 @@ def lm_robust_reparameterized(score, params_deriv, score_deriv, cov_score):
         derivative of objective function at estimated parameters
         of constrained model
     params_deriv : ndarray
-        Jacobian G of the parameter trasnformation
+        Jacobian G of the parameter transformation
     score_deriv : ndarray, symmetric, square
         second derivative of objective function
         TODO: could be OPG or any other estimator if information matrix
         equality holds
-    cov_score B :  ndarray, symmetric, square
+    cov_score : ndarray, symmetric, square
         covariance matrix of the score. This is the inner part of a sandwich
         estimator.
 
@@ -729,7 +740,7 @@ def lm_robust_reparameterized(score, params_deriv, score_deriv, cov_score):
     -------
     lm_stat : float
         score/lagrange multiplier statistic
-    p-value : float
+    pval : float
         p-value of the LM test based on chisquare distribution
 
     Notes
@@ -764,7 +775,8 @@ def conditional_moment_test_generic(
     cov_type="OPG",
     cov_kwds=None,
 ):
-    """generic conditional moment test
+    """
+    Generic conditional moment test
 
     This is mainly intended as internal function in support of diagnostic
     and specification tests. It has no conversion and checking of correct
@@ -791,10 +803,18 @@ def conditional_moment_test_generic(
         I think: This is the Hessian of the extended or alternative model
         under full MLE and score test assuming information matrix identity
         holds.
+    cov_type : str
+        Type of covariance estimator for the joint moments. Currently only
+        "OPG" (outer product of gradients) is implemented.
+    cov_kwds : dict or None
+        Not used yet. Reserved for keyword arguments for alternative
+        covariance estimators once they are implemented.
 
     Returns
     -------
-    results
+    res : ResultsGeneric instance
+        Instance with attributes ``var_cm``, ``stat_cmt``, ``pval_cmt``,
+        ``tvalues`` and ``pvalues``.
 
     Notes
     -----
@@ -865,7 +885,8 @@ def conditional_moment_test_regression(
     cov_type="OPG",
     cov_kwds=None,
 ):
-    """generic conditional moment test based artificial regression
+    """
+    Generic conditional moment test based artificial regression
 
     this is very experimental, no options implemented yet
 
@@ -875,8 +896,44 @@ def conditional_moment_test_regression(
 
     The latter is (as far as I can see) the same as an overidentifying test
     in GMM where the test statistic is the value of the GMM objective function
-    and it is assumed that parameters were estimated with optimial GMM, i.e.
+    and it is assumed that parameters were estimated with optimal GMM, i.e.
     the weight matrix equal to the expectation of the score variance.
+
+    Parameters
+    ----------
+    mom_test : ndarray, 2-D (nobs, k_constraints)
+        moment conditions that will be tested to be zero
+    mom_test_deriv : ndarray, optional
+        Not used yet. Reserved for the derivative of moment conditions
+        under test with respect to the parameters of the model.
+    mom_incl : ndarray, 2-D (nobs, k_params), optional
+        moment conditions that were used in estimation, assumed to be
+        zero. This is score_obs in the case of (Q)MLE.
+    mom_incl_deriv : ndarray, optional
+        Not used yet. Reserved for the derivative of moment conditions
+        of the estimator.
+    var_mom_all : ndarray, optional
+        Not used yet. Reserved for the joint covariance of the moment
+        conditions.
+    demean : bool
+        If True, then the columns of the combined moment conditions are
+        demeaned before running the artificial regression.
+    cov_type : str
+        Covariance type used in the artificial regression. If "OPG",
+        then the outer-product-of-gradients regression is used and the
+        test statistic is `nobs` times R-squared. Otherwise, a robust
+        Wald test on the coefficients of the artificial regression is
+        used.
+    cov_kwds : dict or None
+        Keyword arguments for the covariance estimator specified by
+        `cov_type`, used only if `cov_type` is not "OPG".
+
+    Returns
+    -------
+    statistic : float
+        Test statistic.
+    pval : float
+        p-value of the test based on the chi-square distribution.
     """
     # so far coded from memory
     nobs, k_constraints = mom_test.shape
@@ -903,7 +960,8 @@ def conditional_moment_test_regression(
 
 
 class CMTNewey:
-    """generic moment test for GMM
+    """
+    Generic moment test for GMM
 
     This is a class to calculate and hold the various results
 
@@ -921,13 +979,13 @@ class CMTNewey:
     moments : ndarray, 1-D
         moments that are tested to be zero. They do not need to be derived
         from a likelihood function.
-    moments_deriv : ndarray
-        derivative of the moment function with respect to the parameters that
-        are estimated
     cov_moments : ndarray
         An estimate for the joint (expected) covariance of all moments. This
         can be a heteroscedasticity or correlation robust covariance estimate,
         i.e. the inner part of a sandwich covariance.
+    moments_deriv : ndarray
+        derivative of the moment function with respect to the parameters that
+        are estimated
     weights : ndarray
         Weights used in the GMM estimation.
     transf_mt : ndarray
@@ -1012,6 +1070,7 @@ class CMTNewey:
     @cache_readonly
     def asy_cov_moments(self):
         """
+        Asymptotic covariance of the moments
 
         `sqrt(T) * g_T(b_0) asy N(K delta, V)`
 
@@ -1034,10 +1093,20 @@ class CMTNewey:
         return np.linalg.matrix_rank(self.cov_mom_constraints)
 
     def ztest(self):
-        """statistic, p-value and degrees of freedom of separate moment test
+        """
+        Statistic and p-value of separate moment test
 
         currently two sided test only
 
+        Returns
+        -------
+        stat : ndarray
+            z-statistics for each moment.
+        pval : ndarray
+            two-sided p-values based on the normal distribution.
+
+        Notes
+        -----
         TODO: This can use generic ztest/ttest features and return
         ContrastResults
         """
@@ -1063,7 +1132,8 @@ class CMTNewey:
 
 
 class CMTTauchen:
-    """generic moment tests or conditional moment tests for Quasi-MLE
+    """
+    Generic moment tests or conditional moment tests for Quasi-MLE
 
     This is a generic class based on Tauchen 1985
 
@@ -1123,10 +1193,20 @@ class CMTTauchen:
 
     # TODO: not DRY, just copied from CMTNewey
     def ztest(self):
-        """statistic, p-value and degrees of freedom of separate moment test
+        """
+        Statistic and p-value of separate moment test
 
         currently two sided test only
 
+        Returns
+        -------
+        stat : ndarray
+            z-statistics for each moment.
+        pval : ndarray
+            two-sided p-values based on the normal distribution.
+
+        Notes
+        -----
         TODO: This can use generic ztest/ttest features and return
         ContrastResults
         """

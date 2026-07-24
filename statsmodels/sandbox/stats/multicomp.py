@@ -1109,12 +1109,12 @@ class MultiComparison:
                 ],
             )
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
-        results_table.title = "Test Multiple Comparison %s \n%s%4.2f method=%s" % (
+        results_table.title = "Test Multiple Comparison {} \n{}{:4.2f} method={}".format(
             testfunc.__name__,
             "FWER=",
             alpha,
             method,
-        ) + "\nalphacSidak=%4.2f, alphacBonf=%5.3f" % (alphacSidak, alphacBonf)
+        ) + "\nalphacSidak={:4.2f}, alphacBonf={:5.3f}".format(alphacSidak, alphacBonf)
 
         return (
             results_table,

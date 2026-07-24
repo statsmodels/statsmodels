@@ -8,7 +8,7 @@ __all__ = [
     "bandwidths",
     "cdf_kernel_asym",
     "lowess",
-    "pdf_kernel_asym"
+    "pdf_kernel_asym",
 ]
 from . import bandwidths
 from .kde import KDEUnivariate

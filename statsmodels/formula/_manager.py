@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import PD_LT_3
+from statsmodels.compat.patsy import ensure_patsy_compat
 
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 import os
-from typing import Any, Literal, Mapping, NamedTuple, Sequence
+from typing import Any, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -16,6 +18,9 @@ HAVE_FORMULAIC = False
 DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
 if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
     raise ValueError(f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}")
+
+
+ensure_patsy_compat()
 
 try:
     import patsy
@@ -474,11 +479,11 @@ class FormulaManager:
                 or formula.strip().startswith("~")
             ):
                 output = patsy.dmatrix(
-                    formula, data, eval_env=eval_env, return_type=return_type, **kwargs
+                    formula, data, eval_env=_eval_env, return_type=return_type, **kwargs
                 )
             else:  # "~" in formula:
                 output = patsy.dmatrices(
-                    formula, data, eval_env=eval_env, return_type=return_type, **kwargs
+                    formula, data, eval_env=_eval_env, return_type=return_type, **kwargs
                 )
             if isinstance(output, tuple):
                 self._spec = output[1].design_info

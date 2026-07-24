@@ -1,3 +1,5 @@
+from statsmodels.compat.numpy import inplace_reshape
+
 import numpy as np
 from scipy import stats
 from scipy.stats import f as fdist, t as student_t
@@ -10,7 +12,7 @@ from statsmodels.tools.tools import clean0, fullrank
 # TODO: should this be public if it's just a container?
 class ContrastResults:
     """
-    Class for results of tests of linear restrictions on coefficients in a model.
+    Class for results of tests of linear restrictions on coefficients in a model
 
     This class functions mainly as a container for `t_test`, `f_test` and
     `wald_test` for the parameters of a model.
@@ -72,7 +74,7 @@ class ContrastResults:
 
     def conf_int(self, alpha=0.05):
         """
-        Returns the confidence interval of the value, `effect` of the constraint.
+        Return the confidence interval of the value, `effect` of the constraint
 
         This is currently only available for t and z tests.
 
@@ -104,18 +106,19 @@ class ContrastResults:
         return str(self.__class__) + "\n" + self.__str__()
 
     def summary(self, xname=None, alpha=0.05, title=None):
-        """Summarize the Results of the hypothesis test
+        """
+        Summarize the results of the hypothesis test
 
         Parameters
         ----------
         xname : list[str], optional
-            Default is `c_##` for ## in the number of regressors
+            Default is `c_##` for ## in the number of regressors.
         alpha : float
-            significance level for the confidence intervals. Default is
+            Significance level for the confidence intervals. Default is
             alpha = 0.05 which implies a confidence level of 95%.
         title : str, optional
             Title for the params table. If not None, then this replaces the
-            default title
+            default title.
 
         Returns
         -------
@@ -160,14 +163,14 @@ class ContrastResults:
             return summ
         elif hasattr(self, "fvalue"):
             # TODO: create something nicer for these casee
-            return "<F test: F=%s, p=%s, df_denom=%.3g, df_num=%.3g>" % (
+            return "<F test: F={}, p={}, df_denom={:.3g}, df_num={:.3g}>".format(
                 repr(self.fvalue),
                 self.pvalue,
                 self.df_denom,
                 self.df_num,
             )
         elif self.distribution == "chi2":
-            return "<Wald test (%s): statistic=%s, p-value=%s, df_denom=%.3g>" % (
+            return "<Wald test ({}): statistic={}, p-value={}, df_denom={:.3g}>".format(
                 self.distribution,
                 self.statistic,
                 self.pvalue,
@@ -175,15 +178,29 @@ class ContrastResults:
             )
         else:
             # generic
-            return "<Wald test: statistic=%s, p-value=%s>" % (
+            return "<Wald test: statistic={}, p-value={}>".format(
                 self.statistic,
                 self.pvalue,
             )
 
     def summary_frame(self, xname=None, alpha=0.05):
-        """Return the parameter table as a pandas DataFrame
+        """
+        Return the parameter table as a pandas DataFrame
 
-        This is only available for t and normal tests
+        This is only available for t and normal tests.
+
+        Parameters
+        ----------
+        xname : list[str], optional
+            Default is `c_##` for ## in the number of regressors.
+        alpha : float
+            Significance level for the confidence intervals. Default is
+            alpha = 0.05 which implies a confidence level of 95%.
+
+        Returns
+        -------
+        DataFrame
+            The parameter results table as a pandas DataFrame.
         """
         if self.effect is not None:
             # we have everything for a params table
@@ -215,7 +232,7 @@ class ContrastResults:
 
 class Contrast:
     """
-    This class is used to construct contrast matrices in regression models.
+    This class is used to construct contrast matrices in regression models
 
     They are specified by a (term, design) pair.  The term, T, is a linear
     combination of columns of the design matrix. The matrix attribute of
@@ -237,11 +254,14 @@ class Contrast:
     Parameters
     ----------
     term : array_like
+        The term, T, a linear combination of columns of the design matrix.
     design : array_like
+        The design matrix, D.
 
     Attributes
     ----------
-    contrast_matrix
+    contrast_matrix : ndarray
+        The contrast matrix, C.
 
     Examples
     --------
@@ -279,9 +299,7 @@ class Contrast:
     True
     """
     def _get_matrix(self):
-        """
-        Gets the contrast_matrix property
-        """
+        """Get the contrast_matrix property"""
         if not hasattr(self, "_contrast_matrix"):
             self.compute_matrix()
         return self._contrast_matrix
@@ -344,7 +362,19 @@ def contrastfromcols(L, D, pseudo=None):
     Parameters
     ----------
     L : array_like
+        Matrix used to determine the contrast, either representing columns
+        in the column space of D (if L.shape[0] == n) or a contrast matrix
+        (if L.shape[1] == p).
     D : array_like
+        The n x p design matrix.
+    pseudo : ndarray, optional
+        The generalized inverse of D. If not provided, it is computed from
+        D.
+
+    Returns
+    -------
+    ndarray
+        The p x q contrast matrix C.
     """
     L = np.asarray(L)
     D = np.asarray(D)
@@ -366,7 +396,7 @@ def contrastfromcols(L, D, pseudo=None):
     Lp = np.dot(D, C.T)
 
     if len(Lp.shape) == 1:
-        Lp.shape = (n, 1)
+        Lp = inplace_reshape(Lp, (n, 1))
 
     if np.linalg.matrix_rank(Lp) != Lp.shape[1]:
         Lp = fullrank(Lp)
@@ -415,8 +445,7 @@ class WaldTestResults:
 
     @property
     def col_names(self):
-        """column names for summary table
-        """
+        """column names for summary table"""
 
         pr_test = "P>%s" % self.distribution
         col_names = [self.distribution, pr_test, "df constraint"]
@@ -444,7 +473,20 @@ class WaldTestResults:
 
 
 def _get_pairs_labels(k_level, level_names):
-    """helper function for labels for pairwise comparisons
+    """
+    Helper function for labels for pairwise comparisons
+
+    Parameters
+    ----------
+    k_level : int
+        Number of levels or categories.
+    level_names : list[str]
+        Names of the levels or categories.
+
+    Returns
+    -------
+    list[str]
+        Labels for the pairwise comparisons of the levels.
     """
     idx_pairs_all = np.triu_indices(k_level, 1)
     labels = [f"{level_names[name[1]]}-{level_names[name[0]]}"
@@ -453,12 +495,12 @@ def _get_pairs_labels(k_level, level_names):
 
 
 def _contrast_pairs(k_params, k_level, idx_start):
-    """create pairwise contrast for reference coding
+    """
+    Create pairwise contrast for reference coding
 
-    currently not used,
-    using encoding contrast matrix is more general, but requires requires
+    Currently not used,
+    using encoding contrast matrix is more general, but requires
     factor information from a formula's model_spec.
-
 
     Parameters
     ----------
@@ -496,20 +538,21 @@ def _contrast_pairs(k_params, k_level, idx_start):
 
 def t_test_multi(result, contrasts, method="hs", alpha=0.05, ci_method=None,
                  contrast_names=None):
-    """perform t_test and add multiplicity correction to results dataframe
+    """
+    Perform t_test and add multiplicity correction to results dataframe
 
     Parameters
     ----------
-    result results instance
-        results of an estimated model
+    result : results instance
+        Results of an estimated model.
     contrasts : ndarray
-        restriction matrix for t_test
+        Restriction matrix for t_test.
     method : str or list of strings
-        method for multiple testing p-value correction, default is'hs'.
+        Method for multiple testing p-value correction, default is 'hs'.
     alpha : float
-        significance level for multiple testing reject decision.
+        Significance level for multiple testing reject decision.
     ci_method : None
-        not used yet, will be for multiplicity corrected confidence intervals
+        Not used yet, will be for multiplicity corrected confidence intervals.
     contrast_names : {list[str], None}
         If contrast_names are provided, then they are used in the index of the
         returned dataframe, otherwise some generic default names are created.
@@ -534,23 +577,25 @@ def t_test_multi(result, contrasts, method="hs", alpha=0.05, ci_method=None,
 
 
 class MultiCompResult:
-    """class to hold return of t_test_pairwise
+    """
+    Class to hold return of t_test_pairwise
 
-    currently just a minimal class to hold attributes.
+    Currently just a minimal class to hold attributes.
     """
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
 
 def _embed_constraints(contrasts, k_params, idx_start, index=None):
-    """helper function to expand constraints to a full restriction matrix
+    """
+    Helper function to expand constraints to a full restriction matrix
 
     Parameters
     ----------
     contrasts : ndarray
-        restriction matrix for t_test
+        Restriction matrix for t_test.
     k_params : int
-        number of parameters
+        Number of parameters.
     idx_start : int
         Index of the first parameter of this factor. The restrictions on the
         factor are inserted as a block in the full restriction matrix starting
@@ -564,7 +609,7 @@ def _embed_constraints(contrasts, k_params, idx_start, index=None):
     Returns
     -------
     contrasts : ndarray
-        restriction matrix with k_params columns and number of rows equal to
+        Restriction matrix with k_params columns and number of rows equal to
         the number of restrictions.
     """
 
@@ -579,12 +624,13 @@ def _embed_constraints(contrasts, k_params, idx_start, index=None):
 
 def _constraints_factor(encoding_matrix, comparison="pairwise", k_params=None,
                         idx_start=None):
-    """helper function to create constraints based on encoding matrix
+    """
+    Helper function to create constraints based on encoding matrix
 
     Parameters
     ----------
     encoding_matrix : ndarray
-        contrast matrix for the encoding of a factor as defined by patsy.
+        Contrast matrix for the encoding of a factor as defined by patsy.
         The number of rows should be equal to the number of levels or categories
         of the factor, the number of columns should be equal to the number
         of parameters for this factor.
@@ -593,7 +639,7 @@ def _constraints_factor(encoding_matrix, comparison="pairwise", k_params=None,
         can be used for testing the hypothesis that all pairwise differences
         are zero.
     k_params : int
-        number of parameters
+        Number of parameters.
     idx_start : int
         Index of the first parameter of this factor. The restrictions on the
         factor are inserted as a block in the full restriction matrix starting
@@ -627,7 +673,7 @@ def _constraints_factor(encoding_matrix, comparison="pairwise", k_params=None,
 def t_test_pairwise(result, term_name, method="hs", alpha=0.05,
                     factor_labels=None, ignore=False):
     """
-    Perform pairwise t_test with multiple testing corrected p-values.
+    Perform pairwise t_test with multiple testing corrected p-values
 
     This uses the formula's model_spec encoding contrast matrix and should
     work for all encodings of a main effect.
@@ -665,7 +711,6 @@ def t_test_pairwise(result, term_name, method="hs", alpha=0.05,
 
     Notes
     -----
-
     Status: experimental. Currently only checked for treatment coding with
     and without specified reference level.
 
@@ -711,7 +756,8 @@ def t_test_pairwise(result, term_name, method="hs", alpha=0.05,
 
 
 def _offset_constraint(r_matrix, params_est, params_alt):
-    """offset to the value of a linear constraint for new params
+    """
+    Offset to the value of a linear constraint for new params
 
     usage:
     (cm, v) is original constraint
@@ -720,6 +766,20 @@ def _offset_constraint(r_matrix, params_est, params_alt):
     fs = res2.wald_test((cm, v + vo))
     nc = fs.statistic * fs.df_num
 
+    Parameters
+    ----------
+    r_matrix : ndarray
+        Restriction matrix or contrasts for the linear constraint.
+    params_est : ndarray
+        Estimated parameters of the model.
+    params_alt : ndarray
+        Parameters under the alternative for which the offset is computed.
+
+    Returns
+    -------
+    ndarray
+        The offset, i.e. the difference between the value of the linear
+        constraint at `params_est` and at `params_alt`.
     """
     diff_est = r_matrix @ params_est
     diff_alt = r_matrix @ params_alt
@@ -727,45 +787,45 @@ def _offset_constraint(r_matrix, params_est, params_alt):
 
 
 def wald_test_noncent(params, r_matrix, value, results, diff=None, joint=True):
-    """Moncentrality parameter for a wald test in model results
+    """
+    Noncentrality parameter for a wald test in model results
 
     The null hypothesis is ``diff = r_matrix @ params - value = 0``
 
     Parameters
     ----------
     params : ndarray
-        parameters of the model at which to evaluate noncentrality. This can
+        Parameters of the model at which to evaluate noncentrality. This can
         be estimated parameters or parameters under an alternative.
     r_matrix : ndarray
-        Restriction matrix or contrasts for the Null hypothesis
+        Restriction matrix or contrasts for the Null hypothesis.
     value : None or ndarray
         Value of the linear combination of parameters under the null
         hypothesis. If value is None, then it will be replaced by zero.
     results : Results instance of a model
         The results instance is used to compute the covariance matrix of the
-        linear constraints using `cov_params.
+        linear constraints using `cov_params`.
     diff : None or ndarray
         If diff is not None, then it will be used instead of
-        ``diff = r_matrix @ params - value``
+        ``diff = r_matrix @ params - value``.
     joint : bool
         If joint is True, then the noncentrality parameter for the joint
         hypothesis will be returned.
         If joint is True, then an array of noncentrality parameters will be
         returned, where elements correspond to rows of the restriction matrix.
-        This correspond to the `t_test` in models and is not a quadratic form.
+        This corresponds to the `t_test` in models and is not a quadratic
+        form.
 
     Returns
     -------
     nc : float or ndarray
-        Noncentrality parameter for Wald tests, correspondig to `wald_test`
+        Noncentrality parameter for Wald tests, corresponding to `wald_test`
         or `t_test` depending on whether `joint` is true or not.
         It needs to be divided by nobs to obtain effect size.
-
 
     Notes
     -----
     Status : experimental, API will likely change
-
     """
     if diff is None:
         diff = r_matrix @ params - value  # at parameter under alternative
@@ -780,40 +840,40 @@ def wald_test_noncent(params, r_matrix, value, results, diff=None, joint=True):
 
 def wald_test_noncent_generic(params, r_matrix, value, cov_params, diff=None,
                               joint=True):
-    """noncentrality parameter for a wald test
+    """
+    Noncentrality parameter for a wald test
 
     The null hypothesis is ``diff = r_matrix @ params - value = 0``
 
     Parameters
     ----------
     params : ndarray
-        parameters of the model at which to evaluate noncentrality. This can
+        Parameters of the model at which to evaluate noncentrality. This can
         be estimated parameters or parameters under an alternative.
     r_matrix : ndarray
-        Restriction matrix or contrasts for the Null hypothesis
-
+        Restriction matrix or contrasts for the Null hypothesis.
     value : None or ndarray
         Value of the linear combination of parameters under the null
-        hypothesis. If value is None, then it will be replace by zero.
+        hypothesis. If value is None, then it will be replaced by zero.
     cov_params : ndarray
-        covariance matrix of the parameter estimates
+        Covariance matrix of the parameter estimates.
     diff : None or ndarray
         If diff is not None, then it will be used instead of
-        ``diff = r_matrix @ params - value``
+        ``diff = r_matrix @ params - value``.
     joint : bool
         If joint is True, then the noncentrality parameter for the joint
         hypothesis will be returned.
         If joint is True, then an array of noncentrality parameters will be
         returned, where elements correspond to rows of the restriction matrix.
-        This correspond to the `t_test` in models and is not a quadratic form.
+        This corresponds to the `t_test` in models and is not a quadratic
+        form.
 
     Returns
     -------
     nc : float or ndarray
-        Noncentrality parameter for Wald tests, correspondig to `wald_test`
+        Noncentrality parameter for Wald tests, corresponding to `wald_test`
         or `t_test` depending on whether `joint` is true or not.
         It needs to be divided by nobs to obtain effect size.
-
 
     Notes
     -----

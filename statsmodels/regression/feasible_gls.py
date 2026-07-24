@@ -1,5 +1,4 @@
 """
-
 Created on Tue Dec 20 20:24:20 2011
 
 Author: Josef Perktold
@@ -20,14 +19,17 @@ def atleast_2dcols(x):
 
 
 class GLSHet2(GLS):
-    """WLS with heteroscedasticity that depends on explanatory variables
+    """
+    WLS with heteroscedasticity that depends on explanatory variables
 
-    note: mixing GLS sigma and weights for heteroscedasticity might not make
-    sense
+    Notes
+    -----
+    Mixing GLS sigma and weights for heteroscedasticity might not make
+    sense.
 
-    I think rewriting following the pattern of GLSAR is better
-    stopping criteria: improve in GLSAR also, e.g. change in rho
-
+    This should probably be rewritten following the pattern of GLSAR;
+    the stopping criteria could also be improved in GLSAR, e.g. change
+    in rho.
     """
 
     def __init__(self, endog, exog, exog_var, sigma=None):
@@ -60,76 +62,79 @@ class GLSHet(WLS):
     Parameters
     ----------
     endog : array_like
+        The dependent variable.
     exog : array_like
+        The independent variables.
     exog_var : array_like, 1d or 2d
-        regressors, explanatory variables for the variance
+        Regressors, explanatory variables for the variance.
     weights : array_like or None
-        If weights are given, then they are used in the first step estimation.
+        If weights are given, then they are used in the first step
+        estimation.
     link : link function or None
         If None, then the variance is assumed to be a linear combination of
-        the exog_var. If given, then ...  not tested yet
+        the exog_var. If given, then ... not tested yet.
 
-    *extra attributes*
-
+    Attributes
+    ----------
     history : dict
-       contains the parameter estimates in both regression for each iteration
-
-    result instance has
-
-    results_residual_regression : OLS result instance
-        result of heteroscedasticity estimation
-
-    except for fit_iterative all methods are inherited from WLS.
+        Contains the parameter estimates in both regressions for each
+        iteration, populated after calling `iterative_fit`.
 
     Notes
     -----
+    Except for `iterative_fit`, all methods are inherited from WLS.
+
+    The results instance additionally has a
+    ``results_residual_regression`` attribute, an OLS result instance
+    from the heteroscedasticity estimation.
+
     GLSHet is considered to be experimental.
 
-    `fit` is just standard WLS fit for fixed weights
-    `fit_iterative` updates the estimate for weights, see its docstring
+    `fit` is just standard WLS fit for fixed weights.
+    `iterative_fit` updates the estimate for weights, see its docstring.
 
-    The two alternative for handling heteroscedasticity in the data are to
-    use heteroscedasticity robust standard errors or estimating the
-    heteroscedasticity
+    The two alternatives for handling heteroscedasticity in the data are to
+    use heteroscedasticity robust standard errors or estimate the
+    heteroscedasticity directly.
     Estimating heteroscedasticity and using weighted least squares produces
-    smaller confidence intervals for the estimated parameters then the
+    smaller confidence intervals for the estimated parameters than the
     heteroscedasticity robust standard errors if the heteroscedasticity is
     correctly specified. If the heteroscedasticity is incorrectly specified
     then the estimated covariance is inconsistent.
 
-    Stock and Watson for example argue in favor of using OLS with
-    heteroscedasticity robust standard errors instead of GLSHet sind we are
+    Stock and Watson, for example, argue in favor of using OLS with
+    heteroscedasticity robust standard errors instead of GLSHet since we are
     seldom sure enough about the correct specification (in economics).
 
     GLSHet has asymptotically the same distribution as WLS if the true
-    weights are know. In both cases the asymptotic distribution of the
+    weights are known. In both cases the asymptotic distribution of the
     parameter estimates is the normal distribution.
 
-    The assumption of the model:
+    The assumption of the model::
 
-    y = X*beta + u,
-    with E(u) = 0, E(X*u)=0, var(u_i) = z_i*gamma
-    or for vector of all observations Sigma = diag(Z*gamma)
+        y = X*beta + u,
+        with E(u) = 0, E(X*u) = 0, var(u_i) = z_i*gamma
+        or for vector of all observations Sigma = diag(Z*gamma)
 
-    where
-    y : endog (nobs)
-    X : exog  (nobs, k_vars)
-    Z : exog_var (nobs, k_vars2)
-    beta, gamma estimated parameters
+    where::
 
-    If a link is specified, then the heteroscedasticity is
+        y : endog (nobs)
+        X : exog  (nobs, k_vars)
+        Z : exog_var (nobs, k_vars2)
+        beta, gamma estimated parameters
 
-    var(u_i) = link.inverse(z_i*gamma), or
-    link(var(u_i)) = z_i*gamma
+    If a link is specified, then the heteroscedasticity is::
 
-    for example for log-linkg
-    var(u_i) = exp(z_i*gamma)
+        var(u_i) = link.inverse(z_i*gamma), or
+        link(var(u_i)) = z_i*gamma
 
+    for example for the log-link::
 
-    Usage : see example ....
+        var(u_i) = exp(z_i*gamma)
 
-    TODO: test link option
+    The link option is not tested yet.
     """
+
     def __init__(self, endog, exog, exog_var=None, weights=None, link=None):
         self.exog_var = atleast_2dcols(exog_var)
         if weights is None:
@@ -145,7 +150,7 @@ class GLSHet(WLS):
 
     def iterative_fit(self, maxiter=3):
         """
-        Perform an iterative two-step procedure to estimate a WLS model.
+        Perform an iterative two-step procedure to estimate a WLS model
 
         The model is assumed to have heteroskedastic errors.
         The variance is estimated by OLS regression of the link transformed
@@ -156,23 +161,29 @@ class GLSHet(WLS):
         Parameters
         ----------
         maxiter : int, optional
-            the number of iterations
+            The number of iterations.
+
+        Returns
+        -------
+        RegressionResults
+            The results of the final WLS fit, with the OLS result instance
+            from the last heteroscedasticity estimation attached as the
+            ``results_residual_regression`` attribute.
 
         Notes
         -----
-        maxiter=1: returns the estimated based on given weights
+        maxiter=1: returns the estimate based on the given weights
         maxiter=2: performs a second estimation with the updated weights,
                    this is 2-step estimation
         maxiter>2: iteratively estimate and update the weights
 
-        TODO: possible extension stop iteration if change in parameter
-            estimates is smaller than x_tol
+        Possible extension: stop iteration if the change in parameter
+        estimates is smaller than some tolerance.
 
-        Repeated calls to fit_iterative, will do one redundant pinv_wexog
-        calculation. Calling fit_iterative(maxiter) ones does not do any
+        Repeated calls to iterative_fit will do one redundant pinv_wexog
+        calculation. Calling iterative_fit(maxiter) once does not do any
         redundant recalculations (whitening or calculating pinv_wexog).
         """
-
         import collections
         self.history = collections.defaultdict(list)  # not really necessary
         res_resid = None  # if maxiter < 2 no updating

@@ -199,17 +199,17 @@ def test_low_memory():
     assert_equal(mod.ssm.memory_conserve, 0)
 
     # Check that low memory was actually used (just check a couple)
-    assert (res2.llf_obs is None)
-    assert (res2.predicted_state is None)
-    assert (res2.filtered_state is None)
-    assert (res2.smoothed_state is None)
+    assert res2.llf_obs is None
+    assert res2.predicted_state is None
+    assert res2.filtered_state is None
+    assert res2.smoothed_state is None
 
 
 def check_cloned(mod, endog, exog=None):
     mod_c = mod.clone(endog, exog=exog)
 
     assert_allclose(mod.nobs, mod_c.nobs)
-    assert (mod._index.equals(mod_c._index))
+    assert mod._index.equals(mod_c._index)
     assert_equal(mod.k_params, mod_c.k_params)
     assert_allclose(mod.start_params, mod_c.start_params)
     p = mod.start_params
@@ -361,8 +361,7 @@ def test_cov_type_none():
 def test_nonstationary_gls_error():
     # GH-6540
     endog = pd.read_csv(
-        io.StringIO(
-            """\
+        io.StringIO("""\
 data\n
 9.112\n9.102\n9.103\n9.099\n9.094\n9.090\n9.108\n9.088\n9.091\n9.083\n9.095\n
 9.090\n9.098\n9.093\n9.087\n9.088\n9.083\n9.095\n9.077\n9.082\n9.082\n9.081\n
@@ -382,8 +381,7 @@ data\n
 9.058\n9.074\n9.063\n9.057\n9.062\n9.058\n9.049\n9.047\n9.062\n9.052\n9.052\n
 9.044\n9.060\n9.062\n9.055\n9.058\n9.054\n9.044\n9.047\n9.050\n9.048\n9.041\n
 9.055\n9.051\n9.028\n9.030\n9.029\n9.027\n9.016\n9.023\n9.031\n9.042\n9.035\n
-"""
-        ),
+"""),
         index_col=None,
     )
     mod = ARIMA(
@@ -435,7 +433,8 @@ def test_hannan_rissanen_with_fixed_params(ar_order, ma_order, fixed_params):
     "random_state_type", [7, np.random.RandomState, np.random.default_rng]
 )
 def test_reproducible_simulation(random_state_type):
-    x = np.random.randn(100)
+    rg = np.random.RandomState(12345)
+    x = rg.randn(100)
     res = ARIMA(x, order=(1, 0, 0)).fit()
 
     def get_random_state(val):
@@ -443,8 +442,40 @@ def test_reproducible_simulation(random_state_type):
             return 7
         return random_state_type(7)
 
-    random_state = get_random_state(random_state_type)
-    sim1 = res.simulate(1, random_state=random_state)
-    random_state = get_random_state(random_state_type)
-    sim2 = res.simulate(1, random_state=random_state)
+    rng = get_random_state(random_state_type)
+    sim1 = res.simulate(1, rng=rng)
+    rng = get_random_state(random_state_type)
+    sim2 = res.simulate(1, rng=rng)
     assert_allclose(sim1, sim2)
+
+
+def test_alternative_estimators_seasonal_differencing():
+    # Seasonal differencing only (P=0, D=1, Q=0) should be accepted by
+    # non-seasonal estimators; seasonal AR or MA terms should be rejected.
+    rg = np.random.RandomState(12345)
+    endog = rg.standard_normal(48)
+
+    order = (1, 0, 1)
+    seasonal_order = (0, 1, 0, 12)
+
+    # hannan_rissanen should accept seasonal-differencing-only models
+    mod_hr = ARIMA(endog, order=order, seasonal_order=seasonal_order)
+    try:
+        mod_hr.fit(method="hannan_rissanen")
+    except Exception as exc:
+        pytest.fail(
+            f"hannan_rissanen failed on seasonal-differencing-only model: {exc}"
+        )
+
+    # yule_walker: AR-only model with seasonal differencing
+    mod_yw = ARIMA(endog, order=(2, 0, 0), seasonal_order=seasonal_order)
+    try:
+        mod_yw.fit(method="yule_walker")
+    except Exception as exc:
+        pytest.fail(f"yule_walker failed on seasonal-differencing-only model: {exc}")
+
+    # Seasonal AR term (P=1) should still be rejected by hannan_rissanen
+    with pytest.raises(ValueError, match="seasonal"):
+        ARIMA(endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 12)).fit(
+            method="hannan_rissanen"
+        )

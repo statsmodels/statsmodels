@@ -1,7 +1,7 @@
-'''
+"""
 Create Q-Q Plot of two samples quanitiles of randomnly generated data.
 
-'''
+"""
 
 import matplotlib.pyplot as plt
 import numpy as np

@@ -12,25 +12,25 @@
 # serve to show the default.
 
 import contextlib
-from packaging.version import parse
 import os
 from os.path import dirname, join
 import sys
-from jinja2 import FileSystemLoader, Environment
 
-import yaml
+from jinja2 import Environment, FileSystemLoader
 from numpydoc.xref import DEFAULT_LINKS
+from packaging.version import parse
+import yaml
 
 from statsmodels import __version__
 
 # -- Monkey Patch ----------------------------------------------------------
 #  Monkey patch contextlib.contextmanager.__doc__ to avoid noise
-contextlib.contextmanager.__doc__ = ''
+contextlib.contextmanager.__doc__ = ""
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../sphinxext'))
+sys.path.insert(0, os.path.abspath("../sphinxext"))
 
 # -- General configuration -----------------------------------------------------
 
@@ -38,57 +38,57 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc',
-              # numpydoc or sphinx.ext.napoleon, but not both
-              'numpydoc',
-              'sphinx.ext.doctest',
-              'sphinx.ext.extlinks',
-              'sphinx.ext.intersphinx',
-              'sphinx.ext.todo',
-              'sphinx.ext.autosectionlabel',
-              # One of mathjax or imgmath
-              'nbsphinx',
-              'sphinx.ext.mathjax',
-              'sphinx.ext.viewcode',
-              # 'sphinx.ext.autosummary',
-              'sphinx.ext.inheritance_diagram',
-              'matplotlib.sphinxext.plot_directive',
-              'IPython.sphinxext.ipython_console_highlighting',
-              'IPython.sphinxext.ipython_directive',
-              "sphinx_immaterial",
-              ]
+extensions = [
+    "sphinx.ext.autodoc",
+    # numpydoc or sphinx.ext.napoleon, but not both
+    "numpydoc",
+    "sphinx.ext.doctest",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx.ext.autosectionlabel",
+    # One of mathjax or imgmath
+    "nbsphinx",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.viewcode",
+    # 'sphinx.ext.autosummary',
+    "sphinx.ext.inheritance_diagram",
+    "matplotlib.sphinxext.plot_directive",
+    "IPython.sphinxext.ipython_console_highlighting",
+    "IPython.sphinxext.ipython_directive",
+]
 
 try:
     import sphinxcontrib.spelling  # noqa: F401
 except ImportError as err:  # noqa: F841
     pass
 else:
-    extensions.append('sphinxcontrib.spelling')
+    extensions.append("sphinxcontrib.spelling")
 
 # nbsphinx options
 nbsphinx_allow_errors = True
 # sphinxcontrib-spelling options
-spelling_word_list_filename = ['spelling_wordlist.txt', 'names_wordlist.txt']
+spelling_word_list_filename = ["spelling_wordlist.txt", "names_wordlist.txt"]
 spelling_ignore_pypi_package_names = True
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = {".rst": "restructuredtext"}
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # General information about the project.
-project = 'statsmodels'
-copyright = '2009-2025, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+project = "statsmodels"
+copyright = "2009-2025, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers"
 
 autosummary_generate = True
-autoclass_content = 'class'
+autoclass_content = "class"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -98,12 +98,12 @@ autoclass_content = 'class'
 release = __version__
 
 parsed_version = parse(release)
-commit = ''
+commit = ""
 full_version = short_version = version = release
 if parsed_version.is_devrelease:
     short_version = parsed_version.base_version
     commit = parsed_version.dev
-    version = short_version + f' (+{commit})'
+    version = short_version + f" (+{commit})"
 project = f"{project} {version}"
 # Remove release to prevent it triggering a conf change
 del release
@@ -114,8 +114,7 @@ del release
 # and graphviz dot documentation http://www.graphviz.org/content/attrs
 # NOTE: giving the empty string to size allows graphviz to figure out
 # the size
-inheritance_graph_attrs = dict(size='""', ratio='compress', fontsize=14,
-                               rankdir='LR')
+inheritance_graph_attrs = dict(size='""', ratio="compress", fontsize=14, rankdir="LR")
 
 # inheritance_node_attrs = dict(shape='ellipse', fontsize=14, height=0.75,
 #                              color='dodgerblue1', style='filled')
@@ -132,8 +131,13 @@ inheritance_graph_attrs = dict(size='""', ratio='compress', fontsize=14,
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build', '**.ipynb_checkpoints', '*/autosummary/*.rst',
-                    'Thumbs.db', '.DS_Store']
+exclude_patterns = [
+    "_build",
+    "**.ipynb_checkpoints",
+    "*/autosummary/*.rst",
+    "Thumbs.db",
+    ".DS_Store",
+]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -151,7 +155,7 @@ add_function_parentheses = False
 # show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'default'
+pygments_style = "default"
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
@@ -162,46 +166,64 @@ pygments_style = 'default'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 
-html_theme = 'sphinx_immaterial'
+html_theme = "pydata_sphinx_theme"
 html_title = project
 html_short_title = project
-html_extra_path = ['version_info/versions-v3.json']
-# material theme options (see theme.conf for more information)
+html_extra_path = [
+    "version_info/versions-v3.json",
+    "version_info/versions-pydata.json",
+]
 
-site_url = 'https://statsmodels.org/'
-site_url += 'stable/' if full_version == version else 'devel/'
+site_url = "https://www.statsmodels.org/"
+site_url += "stable/" if full_version == version else "devel/"
+html_baseurl = site_url
 
-# sphinx_immaterial theme options
+switcher_version_match = "devel" if parsed_version.is_devrelease else "stable"
+
+# PyData theme options
 html_theme_options = {
-    "icon": {"repo": "fontawesome/brands/github"},
-    "site_url": site_url,
-    "repo_url": "https://github.com/statsmodels/statsmodels/",
-    "repo_name": "statsmodels",
-    "palette": {"primary": "indigo", "accent": "blue"},
-    "globaltoc_collapse": True,
-    "toc_title": "Contents",
-    "version_dropdown": True,
-    "version_json": "../versions-v3.json",
-    "toc_title_is_page_title": True,
-    "social": [
+    "logo": {
+        "text": "statsmodels",
+        "image_light": "images/statsmodels-logo-v2-no-text.svg",
+        "image_dark": "images/statsmodels-logo-v3-no-text-light.svg",
+    },
+    "navbar_start": ["navbar-logo"],
+    "navbar_center": ["navbar-nav"],
+    "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
+    "header_links_before_dropdown": 4,
+    "secondary_sidebar_items": ["page-toc", "sourcelink"],
+    "show_nav_level": 1,
+    "navigation_depth": 4,
+    "collapse_navigation": True,
+    "switcher": {
+        "json_url": "https://www.statsmodels.org/versions-pydata.json",
+        "version_match": switcher_version_match,
+    },
+    "check_switcher": False,
+    "icon_links": [
         {
-            "icon": "fontawesome/brands/github",
-            "link": "https://github.com/statsmodels/statsmodels/",
-            "name": "Source on github.com",
+            "name": "GitHub",
+            "url": "https://github.com/statsmodels/statsmodels/",
+            "icon": "fa-brands fa-github",
+            "type": "fontawesome",
         },
         {
-            "icon": "fontawesome/brands/python",
-            "link": "https://pypi.org/project/statsmodels/",
+            "name": "PyPI",
+            "url": "https://pypi.org/project/statsmodels/",
+            "icon": "fa-brands fa-python",
+            "type": "fontawesome",
         },
         {
-            "icon": "fontawesome/solid/quote-left",
-            "link": "https://doi.org/10.5281/zenodo.593847",
+            "name": "DOI",
+            "url": "https://doi.org/10.5281/zenodo.593847",
+            "icon": "fa-solid fa-quote-left",
+            "type": "fontawesome",
         },
     ],
 }
 
-language = 'en'
-html_last_updated_fmt = ''
+language = "en"
+html_last_updated_fmt = ""
 
 # Disable typehints
 autodoc_typehints = "none"
@@ -225,17 +247,23 @@ autodoc_typehints = "none"
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'images/statsmodels-logo-v2-bw.svg'
+html_logo = "images/statsmodels-logo-v2-no-text.svg"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = 'images/favicon.ico'
+html_favicon = "images/favicon.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named 'default.css' will overwrite the builtin 'default.css'.
-html_static_path = ['_static']
+html_static_path = ["_static"]
+
+html_css_files = [
+    "stylesheets/landing.css",
+    "stylesheets/examples.css",
+    "stylesheets/deprecation.css",
+]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -246,9 +274,7 @@ html_static_path = ['_static']
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {
-    "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
-}
+html_sidebars = {"**": ["sidebar-collapse", "sidebar-nav-bs"]}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
@@ -281,7 +307,7 @@ html_domain_indices = True
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'statsmodelsdoc'
+htmlhelp_basename = "statsmodelsdoc"
 
 # Options for LaTeX output
 
@@ -295,8 +321,13 @@ htmlhelp_basename = 'statsmodelsdoc'
 # (source start file, target name, title, author,
 # documentclass [howto/manual]).
 latex_documents = [
-    ('index', 'statsmodels.tex', 'statsmodels Documentation',
-     'Josef Perktold, Skipper Seabold', 'manual'),
+    (
+        "index",
+        "statsmodels.tex",
+        "statsmodels Documentation",
+        "Josef Perktold, Skipper Seabold",
+        "manual",
+    ),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -323,8 +354,8 @@ latex_documents = [
 # latex_domain_indices = True
 
 # imgmath options
-imgmath_image_format = 'png'
-imgmath_latex_preamble = r'\usepackage[active]{preview}'
+imgmath_image_format = "png"
+imgmath_latex_preamble = r"\usepackage[active]{preview}"
 imgmath_use_preview = True
 
 # Options for manual page output
@@ -332,18 +363,25 @@ imgmath_use_preview = True
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'statsmodels', 'statsmodels Documentation',
-     ['Josef Perktold, Skipper Seabold, Jonathan Taylor'], 1)
+    (
+        "index",
+        "statsmodels",
+        "statsmodels Documentation",
+        ["Josef Perktold, Skipper Seabold, Jonathan Taylor"],
+        1,
+    )
 ]
 
 # Options for Epub output
 
 # Bibliographic Dublin Core info.
-epub_title = 'statsmodels'
-epub_author = 'Josef Perktold, Skipper Seabold'
-epub_publisher = 'Josef Perktold, Skipper Seabold'
-epub_copyright = '2009-2023, Josef Perktold, Skipper Seabold, ' \
-                 'Jonathan Taylor, statsmodels-developers'
+epub_title = "statsmodels"
+epub_author = "Josef Perktold, Skipper Seabold"
+epub_publisher = "Josef Perktold, Skipper Seabold"
+epub_copyright = (
+    "2009-2023, Josef Perktold, Skipper Seabold, "
+    "Jonathan Taylor, statsmodels-developers"
+)
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.
@@ -385,14 +423,16 @@ epub_copyright = '2009-2023, Josef Perktold, Skipper Seabold, ' \
 numpydoc_xref_param_type = True
 numpydoc_class_members_toctree = False
 numpydoc_xref_aliases = DEFAULT_LINKS.copy()
-numpydoc_xref_aliases.update({
-    'Figure': 'matplotlib.figure.Figure',
-    'Axes': 'matplotlib.axes.Axes',
-    'AxesSubplot': 'matplotlib.axes.Axes',
-    'DataFrame': 'pandas.DataFrame',
-    'Series': 'pandas.Series',
-    'MLEResults': 'statsmodels.tsa.statespace.mlemodel.MLEResults'
-})
+numpydoc_xref_aliases.update(
+    {
+        "Figure": "matplotlib.figure.Figure",
+        "Axes": "matplotlib.axes.Axes",
+        "AxesSubplot": "matplotlib.axes.Axes",
+        "DataFrame": "pandas.DataFrame",
+        "Series": "pandas.Series",
+        "MLEResults": "statsmodels.tsa.statespace.mlemodel.MLEResults",
+    }
+)
 
 # NBSphinx options
 nbsphinx_execute = "never"
@@ -400,20 +440,20 @@ nbsphinx_execute = "never"
 # Example configuration for intersphinx: refer to the Python standard library.
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
-    'python': ('https://docs.python.org/3/', None),
-    'pydagogue': ('https://matthew-brett.github.io/pydagogue/', None),
-    'matplotlib': ('https://matplotlib.org/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
-    'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
+    "numpy": ("https://docs.scipy.org/doc/numpy/", None),
+    "python": ("https://docs.python.org/3/", None),
+    "pydagogue": ("https://matthew-brett.github.io/pydagogue/", None),
+    "matplotlib": ("https://matplotlib.org/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
 }
 
-plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
+plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), "source")
 
 # ghissue config
-github_project_url = 'https://github.com/statsmodels/statsmodels'
+github_project_url = "https://github.com/statsmodels/statsmodels"
 
-example_context = yaml.safe_load(open('examples/landing.yml', encoding="utf-8"))
+example_context = yaml.safe_load(open("examples/landing.yml", encoding="utf-8"))
 
 example_loader = FileSystemLoader("examples")
 example_env = Environment(loader=example_loader)
@@ -429,18 +469,18 @@ import statsmodels.api as sm
 import statsmodels.tsa.api as tsa
 import statsmodels.formula.api as smf
 import numpy as np
-import scipy.stats as stats
+from scipy import stats
 import matplotlib.pyplot as plt
 import pandas as pd
 """
 
-extlinks = {'pr': ('https://github.com/statsmodels/statsmodels/pull/%s',
-                   'PR #%s'),
-            'issue': ('https://github.com/statsmodels/statsmodels/issues/%s',
-                      'Issue #%s')
-            }
+extlinks = {
+    "pr": ("https://github.com/statsmodels/statsmodels/pull/%s", "PR #%s"),
+    "issue": ("https://github.com/statsmodels/statsmodels/issues/%s", "Issue #%s"),
+}
 
 autosectionlabel_prefix_document = True
+
 
 def rstjinja(app, docname, source):
     """
@@ -452,14 +492,14 @@ def rstjinja(app, docname, source):
         return
     src = source[0]
     # Skip converted notebooks
-    if 'nbconvert_exporter' in src:
+    if "nbconvert_exporter" in src:
         return
     try:
-        rendered = app.builder.templates.render_string(src,
-                                                       app.config.html_context)
+        rendered = app.builder.templates.render_string(src, app.config.html_context)
         source[0] = rendered
     except Exception as exc:
         from sphinx.util import logging
+
         logger = logging.getLogger(__name__)
         logger.warning(exc)
         logger.warning(source[0])
@@ -467,5 +507,4 @@ def rstjinja(app, docname, source):
 
 def setup(app):
     app.connect("source-read", rstjinja)
-    return {'parallel_read_safe': True,
-            'parallel_write_safe': True}
+    return {"parallel_read_safe": True, "parallel_write_safe": True}

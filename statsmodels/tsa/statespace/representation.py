@@ -4,8 +4,7 @@ State Space Representation
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import warnings
+from statsmodels.compat.numpy import inplace_reshape
 
 import numpy as np
 
@@ -214,17 +213,11 @@ class Representation:
     """
 
     endog = None
-    r"""
-    (array) The observation vector, alias for `obs`.
-    """
+    r"""(array) The observation vector, alias for `obs`"""
     design = MatrixWrapper("design", "design")
-    r"""
-    (array) Design matrix: :math:`Z~(k\_endog \times k\_states \times nobs)`
-    """
+    r"""(array) Design matrix: :math:`Z~(k\_endog \times k\_states \times nobs)`"""
     obs_intercept = MatrixWrapper("observation intercept", "obs_intercept")
-    r"""
-    (array) Observation intercept: :math:`d~(k\_endog \times nobs)`
-    """
+    r"""(array) Observation intercept: :math:`d~(k\_endog \times nobs)`"""
     obs_cov = MatrixWrapper("observation covariance matrix", "obs_cov")
     r"""
     (array) Observation covariance matrix:
@@ -236,9 +229,7 @@ class Representation:
     :math:`T~(k\_states \times k\_states \times nobs)`
     """
     state_intercept = MatrixWrapper("state intercept", "state_intercept")
-    r"""
-    (array) State intercept: :math:`c~(k\_states \times nobs)`
-    """
+    r"""(array) State intercept: :math:`c~(k\_states \times nobs)`"""
     selection = MatrixWrapper("selection", "selection")
     r"""
     (array) Selection matrix:
@@ -387,12 +378,7 @@ class Representation:
         if kwargs:
             # raise TypeError(f'{__class__} constructor got unexpected keyword'
             #                 f' argument(s): {kwargs}.')
-            msg = (
-                f"Unknown keyword arguments: {kwargs.keys()}."
-                "Passing unknown keyword arguments will raise a TypeError"
-                " beginning in version 0.15."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
+            raise TypeError(f"Unknown keyword arguments: {list(kwargs.keys())}.")
 
         # Matrix representations storage
         self._representations = {}
@@ -702,6 +688,29 @@ class Representation:
         return self.clone(endog, **kwargs)
 
     def diff_endog(self, new_endog, tolerance=1e-10):
+        """
+        Compute indices of revised and newly added observations
+
+        Parameters
+        ----------
+        new_endog : array_like
+            New observation data to compare against the currently bound
+            endogenous data.
+        tolerance : float, optional
+            Tolerance used when comparing values to determine whether a
+            change represents a revision. Default is 1e-10.
+
+        Returns
+        -------
+        revision_ix : list of tuple
+            List of (row, column) indices indicating which values in
+            `new_endog` represent a revision to a previously observed
+            (non-missing) value.
+        new_ix : list of tuple
+            List of (row, column) indices indicating which values in
+            `new_endog` represent a newly observed value (i.e. one that
+            was previously missing).
+        """
         # TODO: move this function to tools?
         endog = self.endog.T
         if len(new_endog) < len(endog):
@@ -730,9 +739,7 @@ class Representation:
 
     @property
     def prefix(self):
-        """
-        (str) BLAS prefix of currently active representation matrices
-        """
+        """(str) BLAS prefix of currently active representation matrices"""
         arrays = (
             self._design,
             self._obs_intercept,
@@ -748,9 +755,7 @@ class Representation:
 
     @property
     def dtype(self):
-        """
-        (dtype) Datatype of currently active representation matrices
-        """
+        """(dtype) Datatype of currently active representation matrices"""
         return tools.prefix_dtype_map[self.prefix]
 
     @property
@@ -781,9 +786,7 @@ class Representation:
 
     @property
     def obs(self):
-        r"""
-        (array) Observation vector: :math:`y~(k\_endog \times nobs)`
-        """
+        r"""(array) Observation vector: :math:`y~(k\_endog \times nobs)`"""
         return self.endog
 
     def bind(self, endog):
@@ -822,10 +825,10 @@ class Representation:
         if endog.ndim == 1:
             # In the case of nobs x 0 arrays
             if self.k_endog == 1:
-                endog.shape = (endog.shape[0], 1)
+                endog = inplace_reshape(endog, (endog.shape[0], 1))
             # In the case of k_endog x 0 arrays
             else:
-                endog.shape = (1, endog.shape[0])
+                endog = inplace_reshape(endog, (1, endog.shape[0]))
         if not endog.ndim == 2:
             raise ValueError(
                 "Invalid endogenous array provided; must be 2-dimensional."
@@ -886,7 +889,44 @@ class Representation:
         R0=None,
         Q0=None,
     ):
-        """Create an Initialization object if necessary"""
+        """
+        Create an Initialization object if necessary
+
+        Parameters
+        ----------
+        initialization : str or Initialization
+            Initialization method for the initial state. If a string, must
+            be one of {'known', 'components', 'approximate_diffuse',
+            'stationary', 'diffuse'}. Otherwise, may be an already-created
+            Initialization object, which is used directly.
+        approximate_diffuse_variance : float, optional
+            Initial variance used when `initialization='approximate_diffuse'`
+            is specified. Default is `self.initial_variance`.
+        constant : array_like, optional
+            Known mean of the initial state vector, used when
+            `initialization='known'`.
+        stationary_cov : array_like, optional
+            Known covariance matrix of the initial state vector, used when
+            `initialization='known'`.
+        a : array_like, optional
+            Vector of constant values describing the mean of the stationary
+            component of the initial state, used when
+            `initialization='components'`.
+        Pstar : array_like, optional
+            Stationary component of the initial state covariance matrix,
+            used when `initialization='components'`.
+        Pinf : array_like, optional
+            Diffuse component of the initial state covariance matrix, used
+            when `initialization='components'`.
+        A : array_like, optional
+            Diffuse selection matrix, used when `initialization='components'`.
+        R0 : array_like, optional
+            Stationary selection matrix, used when
+            `initialization='components'`.
+        Q0 : array_like, optional
+            Covariance matrix associated with stationary initial states,
+            used when `initialization='components'`.
+        """
         if initialization == "known":
             initialization = Initialization(
                 self.k_states, "known", constant=constant, stationary_cov=stationary_cov
@@ -916,8 +956,8 @@ class Representation:
 
     def initialize_known(self, constant, stationary_cov):
         """
-        Initialize the statespace model with known distribution for initial
-        state.
+        Initialize the statespace model with a known distribution for the
+        initial state
 
         These values are assumed to be known with certainty or else
         filled with parameters during, for example, maximum likelihood
@@ -949,7 +989,7 @@ class Representation:
 
     def initialize_approximate_diffuse(self, variance=None):
         """
-        Initialize the statespace model with approximate diffuse values.
+        Initialize the statespace model with approximate diffuse values
 
         Rather than following the exact diffuse treatment (which is developed
         for the case that the variance becomes infinitely large), this assigns
@@ -1028,15 +1068,11 @@ class Representation:
         self.initialize("components", a=a, Pstar=Pstar, Pinf=Pinf, A=A, R0=R0, Q0=Q0)
 
     def initialize_stationary(self):
-        """
-        Initialize the statespace model as stationary.
-        """
+        """Initialize the statespace model as stationary"""
         self.initialize("stationary")
 
     def initialize_diffuse(self):
-        """
-        Initialize the statespace model as diffuse.
-        """
+        """Initialize the statespace model as diffuse"""
         self.initialize("diffuse")
 
     def _initialize_representation(self, prefix=None):
@@ -1186,9 +1222,17 @@ class FrozenRepresentation:
     initialization : Initialization object
         Kalman filter initialization method.
     initial_state : array_like
-        The state vector used to initialize the Kalamn filter.
+        The state vector used to initialize the Kalman filter.
     initial_state_cov : array_like
-        The state covariance matrix used to initialize the Kalamn filter.
+        The state covariance matrix used to initialize the Kalman filter.
+    initial_diffuse_state_cov : array_like
+        The diffuse part of the state covariance matrix used to initialize
+        the Kalman filter.
+    initial_variance : float
+        Initial variance used for approximate diffuse initialization.
+    model : Representation
+        The Statespace representation model from which this snapshot was
+        taken.
     """
 
     _model_attributes = [
@@ -1227,7 +1271,14 @@ class FrozenRepresentation:
         self.update_representation(model)
 
     def update_representation(self, model):
-        """Update model Representation"""
+        """
+        Update the snapshot to reflect the current state of the model
+
+        Parameters
+        ----------
+        model : Representation
+            A Statespace representation
+        """
         # Model
         self.model = model
 

@@ -12,7 +12,10 @@ from scipy.optimize import minimize
 
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import Bunch
-from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
+from statsmodels.tsa.arima.estimators.hannan_rissanen import (
+    _validate_fixed_params,
+    hannan_rissanen,
+)
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.innovations import arma_innovations
@@ -22,7 +25,7 @@ from statsmodels.tsa.stattools import acovf, innovations_algo
 
 def innovations(endog, ma_order=0, demean=True):
     """
-    Estimate MA parameters using innovations algorithm.
+    Estimate MA parameters using innovations algorithm
 
     Parameters
     ----------
@@ -38,8 +41,8 @@ def innovations(endog, ma_order=0, demean=True):
     -------
     parameters : list of SARIMAXParams objects
         List elements correspond to estimates at different `ma_order`. For
-        example, parameters[0] is an `SARIMAXParams` instance corresponding to
-        `ma_order=0`.
+        example, parameters[0] is an `SARIMAXParams` instance corresponding
+        to `ma_order=0`.
     other_results : Bunch
         Includes one component, `spec`, containing the `SARIMAXSpecification`
         instance corresponding to the input arguments.
@@ -100,9 +103,10 @@ def innovations_mle(
     enforce_invertibility=True,
     start_params=None,
     minimize_kwargs=None,
+    fixed_params=None,
 ):
     """
-    Estimate SARIMA parameters by MLE using innovations algorithm.
+    Estimate SARIMA parameters by MLE using innovations algorithm
 
     Parameters
     ----------
@@ -124,10 +128,15 @@ def innovations_mle(
     start_params : array_like, optional
         Initial guess of the solution for the loglikelihood maximization. The
         AR polynomial must be stationary. If `enforce_invertibility=True` the
-        MA poylnomial must be invertible. If not provided, default starting
+        MA polynomial must be invertible. If not provided, default starting
         parameters are computed using the Hannan-Rissanen method.
     minimize_kwargs : dict, optional
         Arguments to pass to scipy.optimize.minimize.
+    fixed_params : dict, optional
+        Dictionary of parameter names and fixed values. Keys must be valid
+        AR or MA parameter names as returned by ``SARIMAXSpecification
+        .param_names`` (e.g. ``{"ar.L1": 0.5}``). ``sigma2`` may not be
+        fixed. Default is None, which fixes no parameters.
 
     Returns
     -------
@@ -146,11 +155,22 @@ def innovations_mle(
     Note: we do not include `enforce_stationarity` as an argument, because this
     function requires stationarity.
 
+    The innovations algorithm requires the process to be stationary, and by
+    default also requires the MA polynomial to be invertible (this can be
+    relaxed with ``enforce_invertibility=False``). When `fixed_params` is
+    used, be aware that stationarity (and invertibility) are enforced by
+    transforming an unconstrained parameter vector into one that satisfies
+    the constraint, and the fixed values are substituted in after this
+    transformation. As a result, the final parameter vector is not
+    guaranteed to satisfy stationarity/invertibility. One way to avoid this:
+    fix the entire AR set or the entire MA set (rather than a partial
+    subset), so that the transformation itself only touches the block you're
+    not fixing, and stationarity/invertibility of that block is still
+    guaranteed.
+
     TODO: support concentrating out the scale (should be easy: use sigma2=1
           and then compute sigma2=np.sum(u**2 / v) / len(u); would then need to
           redo llf computation in the Cython function).
-
-    TODO: add support for fixed parameters
 
     TODO: add support for secondary optimization that does not enforce
           stationarity / invertibility, starting from first step's parameters
@@ -168,6 +188,19 @@ def innovations_mle(
         enforce_invertibility=enforce_invertibility,
     )
     endog = spec.endog
+
+    fixed_params = _validate_fixed_params(fixed_params, spec.param_names)
+    param_names = spec.param_names
+    fixed_ix = np.array(
+        [i for i, name in enumerate(param_names) if name in fixed_params],
+        dtype=int,
+    )
+    free_ix = np.array(
+        [i for i, name in enumerate(param_names) if name not in fixed_params],
+        dtype=int,
+    )
+    fixed_vals = np.array([fixed_params[param_names[i]] for i in fixed_ix])
+
     if spec.is_integrated:
         warnings.warn(
             "Provided `endog` series has been differenced to"
@@ -247,7 +280,11 @@ def innovations_mle(
             )
 
     def obj(params):
-        p.params = spec.constrain_params(params)
+        full = np.zeros(len(param_names))
+        full[free_ix] = params
+        constrained = spec.constrain_params(full)
+        constrained[fixed_ix] = fixed_vals
+        p.params = constrained
 
         return -arma_innovations.arma_loglike(
             endog,
@@ -256,8 +293,8 @@ def innovations_mle(
             sigma2=p.sigma2,
         )
 
-    # Untransform the starting parameters
-    unconstrained_start_params = spec.unconstrain_params(start_params)
+    # Untransform the starting parameters, retaining only the free indices
+    unconstrained_start_params = spec.unconstrain_params(start_params)[free_ix]
 
     # Perform the minimization
     if minimize_kwargs is None:
@@ -270,7 +307,11 @@ def innovations_mle(
     # TODO: show warning if convergence failed.
 
     # Reverse the transformation to get the optimal parameters
-    p.params = spec.constrain_params(minimize_results.x)
+    full = np.zeros(len(param_names))
+    full[free_ix] = minimize_results.x
+    constrained = spec.constrain_params(full)
+    constrained[fixed_ix] = fixed_vals
+    p.params = constrained
 
     # Construct other results
     other_results = Bunch(

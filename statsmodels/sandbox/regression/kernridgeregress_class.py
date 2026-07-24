@@ -46,8 +46,8 @@ class GaussProcess:
     summary statistics for interpretation, but this is a problem with
     non-parametric, non-linear methods.
 
-    Reference
-    ---------
+    References
+    ----------
 
     Rasmussen, C.E. and C.K.I. Williams, 2006, Gaussian Processes for Machine
     Learning, the MIT Press, www.GaussianProcess.org/gpal, chapter 2

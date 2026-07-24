@@ -10,10 +10,9 @@ confidence region plots as well as mean-variance contour plots.
 See _OptFuncts docstring for technical details and optimization variable
 definitions.
 
-General References:
-------------------
+References
+----------
 Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
-
 """
 
 import itertools
@@ -28,8 +27,9 @@ from statsmodels.graphics import utils
 
 def DescStat(endog):
     """
-    Returns an instance to conduct inference on descriptive statistics
-    via empirical likelihood.  See DescStatUV and DescStatMV for more
+    Return an instance to conduct inference on descriptive statistics
+
+    Uses empirical likelihood.  See DescStatUV and DescStatMV for more
     information.
 
     Parameters
@@ -37,21 +37,31 @@ def DescStat(endog):
     endog : ndarray
          Array of data
 
-    Returns : DescStat instance
+    Returns
+    -------
+    DescStat
         If k=1, the function returns a univariate instance, DescStatUV.
         If k>1, the function returns a multivariate instance, DescStatMV.
     """
-    if endog.ndim == 1:
+    endog = np.asarray(endog)
+
+    if endog.size == 0:
+        raise ValueError("endog must contain data")
+    if endog.ndim == 0:
+        endog = endog.reshape(1, 1)
+    elif endog.ndim == 1:
         endog = endog.reshape(len(endog), 1)
+    elif endog.ndim > 2:
+        raise ValueError("endog must be 1D or 2D")
+
     if endog.shape[1] == 1:
         return DescStatUV(endog)
-    if endog.shape[1] > 1:
-        return DescStatMV(endog)
+    return DescStatMV(endog)
 
 
 class _OptFuncts:
     """
-    A class that holds functions that are optimized/solved.
+    A class that holds functions that are optimized/solved
 
     The general setup of the class is simple.  Any method that starts with
     _opt_ creates a vector of estimating equations named est_vect such that
@@ -72,8 +82,10 @@ class _OptFuncts:
 
     def _log_star(self, eta, est_vect, weights, nobs):
         """
-        Transforms the log of observation probabilities in terms of the
-        Lagrange multiplier to the log 'star' of the probabilities.
+        Transform the log of observation probabilities
+
+        In terms of the Lagrange multiplier to the log 'star' of the
+        probabilities.
 
         Parameters
         ----------
@@ -83,13 +95,16 @@ class _OptFuncts:
         est_vect : ndarray (n,k)
             Estimating equations vector
 
-        wts : nx1 array
+        weights : nx1 array
             Observation weights
 
+        nobs : int
+            Number of observations
+
         Returns
-        ------
+        -------
         data_star : ndarray
-            The weighted logstar of the estimting equations
+            The weighted logstar of the estimating equations
 
         Notes
         -----
@@ -107,8 +122,7 @@ class _OptFuncts:
 
     def _hess(self, eta, est_vect, weights, nobs):
         """
-        Calculates the hessian of a weighted empirical likelihood
-        problem.
+        Calculate the hessian of a weighted empirical likelihood problem
 
         Parameters
         ----------
@@ -121,10 +135,13 @@ class _OptFuncts:
         weights : 1darray
             Observation weights
 
+        nobs : int
+            Number of observations
+
         Returns
         -------
         hess : m x m array
-            Weighted hessian used in _wtd_modif_newton
+            Weighted hessian used in _modif_newton
         """
         # eta = np.squeeze(eta)
         data_star_doub_prime = np.sum(weights) + np.dot(est_vect, eta)
@@ -137,8 +154,7 @@ class _OptFuncts:
 
     def _grad(self, eta, est_vect, weights, nobs):
         """
-        Calculates the gradient of a weighted empirical likelihood
-        problem
+        Calculate the gradient of a weighted empirical likelihood problem
 
         Parameters
         ----------
@@ -151,10 +167,13 @@ class _OptFuncts:
         weights : 1darray
             Observation weights
 
+        nobs : int
+            Number of observations
+
         Returns
         -------
         gradient : ndarray (m,1)
-            The gradient used in _wtd_modif_newton
+            The gradient used in _modif_newton
         """
         # eta = np.squeeze(eta)
         data_star_prime = np.sum(weights) + np.dot(est_vect, eta)
@@ -166,8 +185,9 @@ class _OptFuncts:
 
     def _modif_newton(self, eta, est_vect, weights):
         """
-        Modified Newton's method for maximizing the log 'star' equation.  This
-        function calls _fit_newton to find the optimal values of eta.
+        Modified Newton's method for maximizing the log 'star' equation
+
+        This function calls _fit_newton to find the optimal values of eta.
 
         Parameters
         ----------
@@ -203,8 +223,9 @@ class _OptFuncts:
 
     def _find_eta(self, eta):
         """
-        Finding the root of sum(xi-h0)/(1+eta(xi-mu)) solves for
-        eta when computing ELR for univariate mean.
+        Find the root of sum(xi-h0)/(1+eta(xi-mu))
+
+        Solves for eta when computing ELR for univariate mean.
 
         Parameters
         ----------
@@ -213,15 +234,17 @@ class _OptFuncts:
 
         Returns
         -------
-        llr : float
-            n times the log likelihood value for a given value of eta
+        diff : float
+            The value of the estimating equation at eta.  The root of
+            this function with respect to eta is used to construct the
+            likelihood ratio for the mean.
         """
         return np.sum((self.endog - self.mu0) / (1.0 + eta * (self.endog - self.mu0)))
 
     def _ci_limits_mu(self, mu):
         """
-        Calculates the difference between the log likelihood of mu_test and a
-        specified critical value.
+        Calculate the difference between the log likelihood of mu_test and a
+        specified critical value
 
         Parameters
         ----------
@@ -251,7 +274,7 @@ class _OptFuncts:
         Returns
         -------
         diff : float
-            The difference between the log-liklihood when the Lagrange
+            The difference between the log-likelihood when the Lagrange
             multiplier is gamma and a pre-specified value
         """
         denom = np.sum((self.endog - gamma) ** -1)
@@ -268,11 +291,17 @@ class _OptFuncts:
         nuisance_mu : float
             Value of a nuisance mean parameter
 
+        pval : bool
+            If True, return the p-value for the likelihood ratio instead
+            of the -2 x log-likelihood ratio.  Used for contour plotting.
+            Default is False.
+
         Returns
         -------
         llr : float
-            Log likelihood of a pre-specified variance holding the nuisance
-            parameter constant
+            -2 x log likelihood of a pre-specified variance holding the
+            nuisance parameter constant.  If pval is True, the p-value of
+            this statistic is returned instead.
         """
         endog = self.endog
         nobs = self.nobs
@@ -292,19 +321,20 @@ class _OptFuncts:
 
     def _ci_limits_var(self, var):
         """
-        Used to determine the confidence intervals for the variance.
+        Used to determine the confidence intervals for the variance
+
         It calls test_var and when called by an optimizer,
         finds the value of sig2_0 that is chi2.ppf(significance-level)
 
         Parameters
         ----------
-        var_test : float
+        var : float
             Hypothesized value of the variance
 
         Returns
         -------
         diff : float
-            The difference between the log likelihood ratio at var_test and a
+            The difference between the log likelihood ratio at var and a
             pre-specified value.
         """
         return self.test_var(var)[0] - self.r0
@@ -356,7 +386,7 @@ class _OptFuncts:
         Returns
         -------
         llr : float
-            The log likelihood ratio of a pre-speified kurtosis holding the
+            The log likelihood ratio of a pre-specified kurtosis holding the
             nuisance parameters constant
         """
         endog = self.endog
@@ -388,9 +418,9 @@ class _OptFuncts:
             An array with a nuisance mean and variance parameter
 
         Returns
-        ------
+        -------
         llr : float
-            The log likelihood ratio of a pre-speified skewness and
+            The log likelihood ratio of a pre-specified skewness and
             kurtosis holding the nuisance parameters constant.
         """
         endog = self.endog
@@ -416,9 +446,12 @@ class _OptFuncts:
 
     def _ci_limits_skew(self, skew):
         """
+        Calculate the difference between the log likelihood ratio at skew
+        and a pre-specified critical value
+
         Parameters
         ----------
-        skew0 : float
+        skew : float
             Hypothesized value of skewness
 
         Returns
@@ -431,9 +464,12 @@ class _OptFuncts:
 
     def _ci_limits_kurt(self, kurt):
         """
+        Calculate the difference between the log likelihood ratio at kurt
+        and a pre-specified critical value
+
         Parameters
         ----------
-        skew0 : float
+        kurt : float
             Hypothesized value of kurtosis
 
         Returns
@@ -446,10 +482,30 @@ class _OptFuncts:
 
     def _opt_correl(self, nuis_params, corr0, endog, nobs, x0, weights0):
         """
+        Calculate the log-likelihood ratio of the correlation coefficient
+
+        Called by test_corr.  This function is optimized over nuisance
+        parameters mu1, sigma1, mu2 and sigma2.
+
         Parameters
         ----------
         nuis_params : 1darray
             Array containing two nuisance means and two nuisance variances
+
+        corr0 : float
+            Hypothesized value of the correlation coefficient
+
+        endog : ndarray
+            Data with two columns, one for each variable
+
+        nobs : int
+            Number of observations
+
+        x0 : 1darray
+            Starting values for the Lagrange multiplier in _modif_newton
+
+        weights0 : 1darray
+            Starting values for the observation weights in _modif_newton
 
         Returns
         -------
@@ -473,6 +529,21 @@ class _OptFuncts:
         return -2 * llr
 
     def _ci_limits_corr(self, corr):
+        """
+        Calculate the difference between the log likelihood ratio at corr
+        and a pre-specified critical value
+
+        Parameters
+        ----------
+        corr : float
+            Hypothesized value of the correlation coefficient
+
+        Returns
+        -------
+        diff : float
+            The difference between the log likelihood ratio at corr and a
+            pre-specified value.
+        """
         return self.test_corr(corr)[0] - self.r0
 
 
@@ -541,12 +612,12 @@ class DescStatUV(_OptFuncts):
         gamma_high=10**10,
     ):
         """
-        Returns the confidence interval for the mean.
+        Returns the confidence interval for the mean
 
         Parameters
         ----------
         sig : float
-            significance level. Default is .05
+            Significance level. Default is .05
 
         method : str
             Root finding method,  Can be 'nested-brent' or
@@ -555,13 +626,13 @@ class DescStatUV(_OptFuncts):
             'gamma' Tries to solve for the gamma parameter in the
             Lagrange (see Owen pg 22) and then determine the weights.
 
-            'nested brent' uses brents method to find the confidence
+            'nested brent' uses Brent's method to find the confidence
             intervals but must maximize the likelihood ratio on every
             iteration.
 
-            gamma is generally much faster.  If the optimizations does not
+            gamma is generally much faster.  If the optimization does not
             converge, try expanding the gamma_high and gamma_low
-            variable.
+            variables.
 
         gamma_low : float
             Lower bound for gamma when finding lower limit.
@@ -659,7 +730,7 @@ class DescStatUV(_OptFuncts):
 
     def ci_var(self, lower_bound=None, upper_bound=None, sig=0.05):
         """
-        Returns the confidence interval for the variance.
+        Returns the confidence interval for the variance
 
         Parameters
         ----------
@@ -866,7 +937,7 @@ class DescStatUV(_OptFuncts):
 
     def ci_skew(self, sig=0.05, upper_bound=None, lower_bound=None):
         """
-        Returns the confidence interval for skewness.
+        Returns the confidence interval for skewness
 
         Parameters
         ----------
@@ -920,11 +991,10 @@ class DescStatUV(_OptFuncts):
 
     def ci_kurt(self, sig=0.05, upper_bound=None, lower_bound=None):
         """
-        Returns the confidence interval for kurtosis.
+        Returns the confidence interval for kurtosis
 
         Parameters
         ----------
-
         sig : float
             The significance level.  Default is .05
 
@@ -986,7 +1056,7 @@ class DescStatUV(_OptFuncts):
 
 class DescStatMV(_OptFuncts):
     """
-    A class for conducting inference on multivariate means and correlation.
+    A class for conducting inference on multivariate means and correlation
 
     Parameters
     ----------
@@ -1068,9 +1138,9 @@ class DescStatMV(_OptFuncts):
 
         Parameters
         ----------
-        m1_low : float
+        mu1_low : float
             Minimum value of the mean for variable 1
-        m1_upp : float
+        mu1_upp : float
             Maximum value of the mean for variable 1
         mu2_low : float
             Minimum value of the mean for variable 2
@@ -1085,7 +1155,7 @@ class DescStatMV(_OptFuncts):
             Default =  (.001, .01, .05, .1, .2)
         plot_dta : bool
             If True, makes a scatter plot of the data on
-            top of the contour plot. Defaultis False.
+            top of the contour plot. Default is False.
         var1_name : str
             Name of variable 1 to be plotted on the x-axis
         var2_name : str
@@ -1145,6 +1215,11 @@ class DescStatMV(_OptFuncts):
         return_weights : bool
             If true, returns the weights that maximize
             the log-likelihood at the hypothesized value
+
+        Returns
+        -------
+        test_results : tuple
+            The log-likelihood ratio and p-value of corr0
         """
         nobs = self.nobs
         endog = self.endog

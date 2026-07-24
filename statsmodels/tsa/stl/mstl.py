@@ -11,14 +11,14 @@ This implementation has the following differences with the original algorithm:
 seasonality. This implementation assumes that there is at least one seasonal
 component.
 
-[1] K. Bandura, R.J. Hyndman, and C. Bergmeir (2021)
+[1] K. Bandara, R.J. Hyndman, and C. Bergmeir (2021)
 MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with Multiple
 Seasonal Patterns
 https://arxiv.org/pdf/2107.13462.pdf
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 import warnings
 
 import numpy as np
@@ -40,7 +40,7 @@ class MSTL:
     MSTL(endog, periods=None, windows=None, lmbda=None, iterate=2,
          stl_kwargs=None)
 
-    Season-Trend decomposition using LOESS for multiple seasonalities.
+    Season-Trend decomposition using LOESS for multiple seasonalities
 
     .. versionadded:: 0.14.0
 
@@ -63,7 +63,7 @@ class MSTL:
         value will be estimated that maximizes the log-likelihood function.
     iterate : int, optional
         Number of iterations to use to refine the seasonal component.
-    stl_kwargs: dict, optional
+    stl_kwargs : dict, optional
         Arguments to pass to STL.
 
     See Also
@@ -72,7 +72,7 @@ class MSTL:
 
     References
     ----------
-    .. [1] K. Bandura, R.J. Hyndman, and C. Bergmeir (2021)
+    .. [1] K. Bandara, R.J. Hyndman, and C. Bergmeir (2021)
         MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with
         Multiple Seasonal Patterns. arXiv preprint arXiv:2107.13462.
 
@@ -111,11 +111,11 @@ class MSTL:
         self,
         endog: ArrayLike1D,
         *,
-        periods: Optional[Union[int, Sequence[int]]] = None,
-        windows: Optional[Union[int, Sequence[int]]] = None,
-        lmbda: Optional[Union[float, str]] = None,
+        periods: int | Sequence[int] | None = None,
+        windows: int | Sequence[int] | None = None,
+        lmbda: float | str | None = None,
         iterate: int = 2,
-        stl_kwargs: Optional[dict[str, Union[int, bool, None]]] = None,
+        stl_kwargs: dict[str, int | bool | None] | None = None,
     ):
         self.endog = endog
         self._y = self._to_1d_array(endog)
@@ -199,8 +199,8 @@ class MSTL:
 
     def _process_periods_and_windows(
         self,
-        periods: Union[int, Sequence[int], None],
-        windows: Union[int, Sequence[int], None],
+        periods: int | Sequence[int] | None,
+        windows: int | Sequence[int] | None,
     ) -> tuple[Sequence[int], Sequence[int]]:
         periods = self._process_periods(periods)
 
@@ -228,7 +228,7 @@ class MSTL:
         return periods, windows
 
     def _process_periods(
-        self, periods: Union[int, Sequence[int], None]
+        self, periods: int | Sequence[int] | None
     ) -> Sequence[int]:
         if periods is None:
             periods = (self._infer_period(),)
@@ -240,7 +240,7 @@ class MSTL:
 
     def _process_windows(
         self,
-        windows: Union[int, Sequence[int], None],
+        windows: int | Sequence[int] | None,
         num_seasons: int,
     ) -> Sequence[int]:
         if windows is None:

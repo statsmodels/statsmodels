@@ -1,6 +1,5 @@
 """
-Overview
---------
+Multiple Imputation through Chained Equations (MICE)
 
 This module implements the Multiple Imputation through Chained
 Equations (MICE) approach to handling missing data in statistical data
@@ -44,8 +43,9 @@ MICE instance and running it, the results are combined using the
 `combine` method.  Results and various summary plots are then
 available.
 
-Terminology
------------
+Notes
+-----
+**Terminology**
 
 The primary goal of the analysis is usually to fit and perform
 inference using an 'analysis model'. If an analysis model is not
@@ -66,8 +66,7 @@ the fit.  The 'bootstrap' perturbation method sets the parameter
 vector equal to a fitted parameter vector obtained when fitting the
 conditional model to a bootstrapped version of the data set.
 
-Class structure
----------------
+**Class structure**
 
 There are two main classes in the module:
 
@@ -85,9 +84,6 @@ There are two main classes in the module:
   models, and combines the results to produce a `MICEResults` object.
   The summary method of this results object can be used to see the key
   estimands and inferential quantities.
-
-Notes
------
 
 By default, to conserve memory 'MICEData' saves very little
 information from one iteration to the next.  The data set passed by
@@ -125,6 +121,7 @@ import pandas as pd
 from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.rng_qrng import check_random_state
 
 _mice_data_example_1 = """
     >>> imp = mice.MICEData(data)
@@ -135,9 +132,7 @@ _mice_data_example_1 = """
 
 
 class PatsyFormula:
-    """
-    A simple wrapper for a string to be interpreted as a Patsy formula.
-    """
+    """A simple wrapper for a string to be interpreted as a Patsy formula"""
 
     def __init__(self, formula):
         self.formula = "0 + " + formula
@@ -146,22 +141,28 @@ class PatsyFormula:
 class MICEData:
 
     __doc__ = """\
-    Wrap a data set to allow missing data handling with MICE.
+    Wrap a data set to allow missing data handling with MICE
 
     Parameters
     ----------
     data : Pandas data frame
         The data set, which is copied internally.
-    perturbation_method : str
+    perturbation_method : str, optional
         The default perturbation method
-    k_pmm : int
+    k_pmm : int, optional
         The number of nearest neighbors to use during predictive mean
         matching.  Can also be specified in `fit`.
-    history_callback : function
+    history_callback : function, optional
         A function that is called after each complete imputation
         cycle.  The return value is appended to `history`.  The
         MICEData object is passed as the sole argument to
         `history_callback`.
+    rng : {{None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Notes
     -----
@@ -183,18 +184,19 @@ class MICEData:
     `data`.  The variable named `x1` has a conditional mean structure
     that includes an additional term for x2^2.
     {_mice_data_example_1}
-    """.format(
-        _mice_data_example_1=_mice_data_example_1
-    )
+    """.format(_mice_data_example_1=_mice_data_example_1)
 
     def __init__(
-        self, data, perturbation_method="gaussian", k_pmm=20, history_callback=None
+        self,
+        data,
+        perturbation_method="gaussian",
+        k_pmm=20,
+        history_callback=None,
+        rng=None,
     ):
 
         def _is_string_dtype(dtype):
-            """
-            Check if dtype is a string dtype.
-            """
+            """Check if dtype is a string dtype"""
             is_string_dt = dtype == np.dtype("O")
             if not PD_LT_3:
                 is_string_dt = is_string_dt or isinstance(dtype, pd.StringDtype)
@@ -204,6 +206,7 @@ class MICEData:
             msg = "MICEData data column names should be string type"
             raise ValueError(msg)
 
+        self.rng = check_random_state(rng)
         self.regularized = {}
 
         # Drop observations where all variables are missing.  This
@@ -264,7 +267,7 @@ class MICEData:
 
     def next_sample(self):
         """
-        Returns the next imputed dataset in the imputation process.
+        Return the next imputed dataset in the imputation process
 
         Returns
         -------
@@ -286,7 +289,7 @@ class MICEData:
 
     def _initial_imputation(self):
         """
-        Use a PMM-like procedure for initial imputed values.
+        Use a PMM-like procedure for initial imputed values
 
         For each variable, missing values are imputed as the observed
         value that is closest to the mean over all observed values.
@@ -322,38 +325,37 @@ class MICEData:
         regularized=False,
     ):
         """
-        Specify the imputation process for a single variable.
+        Specify the imputation process for a single variable
 
         Parameters
         ----------
         endog_name : str
             Name of the variable to be imputed.
-        formula : str
+        formula : str, optional
             Conditional formula for imputation. Defaults to a formula
             with main effects for all other variables in dataset.  The
             formula should only include an expression for the mean
             structure, e.g. use 'x1 + x2' not 'x4 ~ x1 + x2'.
-        model_class : statsmodels model
+        model_class : statsmodels model, optional
             Conditional model for imputation. Defaults to OLS.  See below
             for more information.
-        init_kwds : dit-like
+        init_kwds : dict-like, optional
             Keyword arguments passed to the model init method.
-        fit_kwds : dict-like
+        fit_kwds : dict-like, optional
             Keyword arguments passed to the model fit method.
-        predict_kwds : dict-like
+        predict_kwds : dict-like, optional
             Keyword arguments passed to the model predict method.
-        k_pmm : int
+        k_pmm : int, optional
             Determines number of neighboring observations from which
             to randomly sample when using predictive mean matching.
-        perturbation_method : str
+        perturbation_method : str, optional
             Either 'gaussian' or 'bootstrap'. Determines the method
             for perturbing parameters in the imputation model.  If
             None, uses the default specified at class initialization.
-        regularized : dict
-            If regularized[name]=True, `fit_regularized` rather than
-            `fit` is called when fitting imputation models for this
-            variable.  When regularized[name]=True for any variable,
-            perturbation_method must be set to boot.
+        regularized : bool, optional
+            If True, `fit_regularized` rather than `fit` is called
+            when fitting the imputation model for this variable.  If
+            True, perturbation_method must be set to boot.
 
         Notes
         -----
@@ -396,7 +398,7 @@ class MICEData:
 
     def _store_changes(self, col, vals):
         """
-        Fill in dataset with imputed values.
+        Fill in dataset with imputed values
 
         Parameters
         ----------
@@ -412,11 +414,11 @@ class MICEData:
 
     def update_all(self, n_iter=1):
         """
-        Perform a specified number of MICE iterations.
+        Perform a specified number of MICE iterations
 
         Parameters
         ----------
-        n_iter : int
+        n_iter : int, optional
             The number of updates to perform.  Only the result of the
             final update will be available.
 
@@ -435,7 +437,7 @@ class MICEData:
 
     def get_split_data(self, vname):
         """
-        Return endog and exog for imputation of a given variable.
+        Return endog and exog for imputation of a given variable
 
         Parameters
         ----------
@@ -500,7 +502,7 @@ class MICEData:
 
     def get_fitting_data(self, vname):
         """
-        Return the data needed to fit a model for imputation.
+        Return the data needed to fit a model for imputation
 
         The data is used to impute variable `vname`, and therefore
         only includes cases for which `vname` is observed.
@@ -553,29 +555,30 @@ class MICEData:
         color_row_patterns=True,
     ):
         """
-        Generate an image showing the missing data pattern.
+        Generate an image showing the missing data pattern
 
         Parameters
         ----------
-        ax : AxesSubplot
-            Axes on which to draw the plot.
-        row_order : str
+        ax : AxesSubplot, optional
+            Axes on which to draw the plot. Created if not provided.
+        row_order : str, optional
             The method for ordering the rows.  Must be one of 'pattern',
             'proportion', or 'raw'.
-        column_order : str
+        column_order : str, optional
             The method for ordering the columns.  Must be one of 'pattern',
             'proportion', or 'raw'.
-        hide_complete_rows : bool
+        hide_complete_rows : bool, optional
             If True, rows with no missing values are not drawn.
-        hide_complete_columns : bool
+        hide_complete_columns : bool, optional
             If True, columns with no missing values are not drawn.
-        color_row_patterns : bool
+        color_row_patterns : bool, optional
             If True, color the unique row patterns, otherwise use grey
             and white as colors.
 
         Returns
         -------
-        A figure containing a plot of the missing data pattern.
+        Figure
+            A figure containing a plot of the missing data pattern.
         """
 
         # Create an indicator matrix for missing values.
@@ -659,7 +662,7 @@ class MICEData:
         ax=None,
     ):
         """
-        Plot observed and imputed values for two variables.
+        Plot observed and imputed values for two variables
 
         Displays a scatterplot of one variable against another.  The
         points are colored according to whether the values are
@@ -671,24 +674,25 @@ class MICEData:
             The variable to be plotted on the horizontal axis.
         col2_name : str
             The variable to be plotted on the vertical axis.
-        lowess_args : dictionary
+        lowess_args : dictionary, optional
             A dictionary of dictionaries, keys are 'ii', 'io', 'oi'
             and 'oo', where 'o' denotes 'observed' and 'i' denotes
             imputed.  See Notes for details.
-        lowess_min_n : int
+        lowess_min_n : int, optional
             Minimum sample size to plot a lowess fit
-        jitter : float or tuple
+        jitter : float or tuple, optional
             Standard deviation for jittering points in the plot.
             Either a single scalar applied to both axes, or a tuple
             containing x-axis jitter and y-axis jitter, respectively.
-        plot_points : bool
+        plot_points : bool, optional
             If True, the data points are plotted.
-        ax : AxesSubplot
+        ax : AxesSubplot, optional
             Axes on which to plot, created if not provided.
 
         Returns
         -------
-        The matplotlib figure on which the plot id drawn.
+        Figure
+            The matplotlib figure on which the plot is drawn.
         """
 
         from statsmodels.graphics import utils as gutils
@@ -720,8 +724,8 @@ class MICEData:
         if jitter is not None:
             if np.isscalar(jitter):
                 jitter = (jitter, jitter)
-            vec1 += jitter[0] * np.random.normal(size=len(vec1))
-            vec2 += jitter[1] * np.random.normal(size=len(vec2))
+            vec1 += jitter[0] * self.rng.normal(size=len(vec1))
+            vec2 += jitter[1] * self.rng.normal(size=len(vec2))
 
         # Plot the points
         keys = ["oo", "io", "oi", "ii"]
@@ -779,30 +783,31 @@ class MICEData:
         ax=None,
     ):
         """
-        Plot fitted versus imputed or observed values as a scatterplot.
+        Plot fitted versus imputed or observed values as a scatterplot
 
         Parameters
         ----------
         col_name : str
             The variable to be plotted on the horizontal axis.
-        lowess_args : dict-like
+        lowess_args : dict-like, optional
             Keyword arguments passed to lowess fit.  A dictionary of
             dictionaries, keys are 'o' and 'i' denoting 'observed' and
             'imputed', respectively.
-        lowess_min_n : int
+        lowess_min_n : int, optional
             Minimum sample size to plot a lowess fit
-        jitter : float or tuple
+        jitter : float or tuple, optional
             Standard deviation for jittering points in the plot.
             Either a single scalar applied to both axes, or a tuple
             containing x-axis jitter and y-axis jitter, respectively.
-        plot_points : bool
+        plot_points : bool, optional
             If True, the data points are plotted.
-        ax : AxesSubplot
+        ax : AxesSubplot, optional
             Axes on which to plot, created if not provided.
 
         Returns
         -------
-        The matplotlib figure on which the plot is drawn.
+        Figure
+            The matplotlib figure on which the plot is drawn.
         """
 
         from statsmodels.graphics import utils as gutils
@@ -834,8 +839,8 @@ class MICEData:
         if jitter is not None:
             if np.isscalar(jitter):
                 jitter = (jitter, jitter)
-            vec1 += jitter[0] * np.random.normal(size=len(vec1))
-            vec2 += jitter[1] * np.random.normal(size=len(vec2))
+            vec1 += jitter[0] * self.rng.normal(size=len(vec1))
+            vec2 += jitter[1] * self.rng.normal(size=len(vec2))
 
         # Plot the points
         keys = ["o", "i"]
@@ -888,28 +893,29 @@ class MICEData:
         all_hist_args=None,
     ):
         """
-        Display imputed values for one variable as a histogram.
+        Display imputed values for one variable as a histogram
 
         Parameters
         ----------
         col_name : str
             The name of the variable to be plotted.
-        ax : AxesSubplot
+        ax : AxesSubplot, optional
             An axes on which to draw the histograms.  If not provided,
             one is created.
-        imp_hist_args : dict
+        imp_hist_args : dict, optional
             Keyword arguments to be passed to pyplot.hist when
             creating the histogram for imputed values.
-        obs_hist_args : dict
+        obs_hist_args : dict, optional
             Keyword arguments to be passed to pyplot.hist when
             creating the histogram for observed values.
-        all_hist_args : dict
+        all_hist_args : dict, optional
             Keyword arguments to be passed to pyplot.hist when
             creating the histogram for all values.
 
         Returns
         -------
-        The matplotlib figure on which the histograms were drawn
+        Figure
+            The matplotlib figure on which the histograms were drawn.
         """
 
         from statsmodels.graphics import utils as gutils
@@ -978,14 +984,15 @@ class MICEData:
         return kwds
 
     def _perturb_bootstrap(self, vname):
-        """
-        Perturbs the model's parameters using a bootstrap.
-        """
+        """Perturb the model's parameters using a bootstrap"""
 
         endog, exog, init_kwds, fit_kwds = self.get_fitting_data(vname)
 
         m = len(endog)
-        rix = np.random.randint(0, m, m)
+        if isinstance(self.rng, np.random.RandomState):
+            rix = self.rng.randint(0, m, m)
+        else:
+            rix = self.rng.integers(0, m, size=m)
         endog = endog[rix]
         exog = exog[rix, :]
 
@@ -1004,7 +1011,7 @@ class MICEData:
 
     def _perturb_gaussian(self, vname):
         """
-        Gaussian perturbation of model parameters.
+        Gaussian perturbation of model parameters
 
         The normal approximation to the sampling distribution of the
         parameter estimates is used to define the mean and covariance
@@ -1019,7 +1026,7 @@ class MICEData:
 
         cov = self.results[vname].cov_params()
         mu = self.results[vname].params
-        self.params[vname] = np.random.multivariate_normal(mean=mu, cov=cov)
+        self.params[vname] = self.rng.multivariate_normal(mean=mu, cov=cov)
 
     def perturb_params(self, vname):
 
@@ -1037,7 +1044,7 @@ class MICEData:
 
     def update(self, vname):
         """
-        Impute missing values for a single variable.
+        Impute missing values for a single variable
 
         This is a two-step process in which first the parameters are
         perturbed, then the missing values are re-imputed.
@@ -1065,7 +1072,7 @@ class MICEData:
 
     def impute_pmm(self, vname):
         """
-        Use predictive mean matching to impute missing values.
+        Use predictive mean matching to impute missing values
 
         Notes
         -----
@@ -1115,7 +1122,10 @@ class MICEData:
         dxi = np.argsort(dx, 1)[:, 0:k_pmm]
 
         # Choose a column for each row.
-        ir = np.random.randint(0, k_pmm, len(pendog_miss))
+        if isinstance(self.rng, np.random.RandomState):
+            ir = self.rng.randint(0, k_pmm, len(pendog_miss))
+        else:
+            ir = self.rng.integers(0, k_pmm, len(pendog_miss))
 
         # Unwind the indices
         jj = np.arange(dxi.shape[0])
@@ -1150,11 +1160,11 @@ _mice_example_2 = """
 class MICE:
 
     __doc__ = """\
-    Multiple Imputation with Chained Equations.
+    Multiple Imputation with Chained Equations
 
     This class can be used to fit most statsmodels models to data sets
     with missing values using the 'multiple imputation with chained
-    equations' (MICE) approach..
+    equations' (MICE) approach.
 
     Parameters
     ----------
@@ -1163,17 +1173,17 @@ class MICE:
         formula is for the 'analysis model'.
     model_class : statsmodels model
         The model to be fit to the imputed data sets.  This model
-        class if for the 'analysis model'.
+        class is for the 'analysis model'.
     data : MICEData instance
         MICEData object containing the data set for which
         missing values will be imputed
-    n_skip : int
+    n_skip : int, optional
         The number of imputed datasets to skip between consecutive
         imputed datasets that are used for analysis.
-    init_kwds : dict-like
+    init_kwds : dict-like, optional
         Dictionary of keyword arguments passed to the init method
         of the analysis model.
-    fit_kwds : dict-like
+    fit_kwds : dict-like, optional
         Dictionary of keyword arguments passed to the fit method
         of the analysis model.
 
@@ -1185,9 +1195,7 @@ class MICE:
     Obtain a sequence of fitted analysis models without combining
     to obtain summary::
     {mice_example_2}
-    """.format(
-        mice_example_1=_mice_example_1, mice_example_2=_mice_example_2
-    )
+    """.format(mice_example_1=_mice_example_1, mice_example_2=_mice_example_2)
 
     def __init__(
         self, model_formula, model_class, data, n_skip=3, init_kwds=None, fit_kwds=None
@@ -1204,7 +1212,7 @@ class MICE:
 
     def next_sample(self):
         """
-        Perform one complete MICE iteration.
+        Perform one complete MICE iteration
 
         A single MICE iteration updates all missing values using their
         respective imputation models, then fits the analysis model to
@@ -1212,20 +1220,21 @@ class MICE:
 
         Returns
         -------
-        params : array_like
-            The model parameters for the analysis model.
+        result
+            The results instance for the analysis model, obtained by
+            fitting the analysis model to one imputed data set.
 
         Notes
         -----
-        This function fits the analysis model and returns its
-        parameter estimate.  The parameter vector is not stored by the
-        class and is not used in any subsequent calls to `combine`.
-        Use `fit` to run all MICE steps together and obtain summary
-        results.
+        This function fits the analysis model and returns the
+        results instance obtained from the fit.  The result is not
+        stored by the class and is not used in any subsequent calls to
+        `combine`.  Use `fit` to run all MICE steps together and
+        obtain summary results.
 
         The complete cycle of missing value imputation followed by
         fitting the analysis model is repeated `n_skip + 1` times and
-        the analysis model parameters from the final fit are returned.
+        the results from the final fit are returned.
         """
 
         # Impute missing values
@@ -1245,14 +1254,21 @@ class MICE:
 
     def fit(self, n_burnin=10, n_imputations=10):
         """
-        Fit a model using MICE.
+        Fit a model using MICE
 
         Parameters
         ----------
-        n_burnin : int
+        n_burnin : int, optional
             The number of burn-in cycles to skip.
-        n_imputations : int
+        n_imputations : int, optional
             The number of data sets to impute
+
+        Returns
+        -------
+        MICEResults
+            The results of the MICE analysis, obtained by pooling the
+            results of the analysis model fit to each imputed data
+            set.
         """
 
         # Run without fitting the analysis model
@@ -1269,13 +1285,18 @@ class MICE:
 
     def combine(self):
         """
-        Pools MICE imputation results.
+        Pool MICE imputation results
 
-        This method can only be used after the `run` method has been
+        This method can only be used after the `fit` method has been
         called.  Returns estimates and standard errors of the analysis
         model parameters.
 
-        Returns a MICEResults instance.
+        Returns
+        -------
+        MICEResults
+            The pooled parameter estimates and covariance matrix,
+            along with the fraction of missing information for each
+            parameter.
         """
 
         # Extract a few things from the models that were fit to
@@ -1327,7 +1348,7 @@ class MICEResults(LikelihoodModelResults):
 
     def summary(self, title=None, alpha=0.05):
         """
-        Summarize the results of running MICE.
+        Summarize the results of running MICE
 
         Parameters
         ----------

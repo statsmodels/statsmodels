@@ -16,18 +16,18 @@ jobs:
     vmImage: ${{ parameters.vmImage }}
   strategy:
     matrix:
-      python39_win_latest:
-        python.version: '3.9'
-        python.architecture: 'x64'
-      python310_win_latest:
+      # Windows keeps sentinel coverage for the oldest supported Python,
+      # the newest supported Python, and free-threaded Python.
+      python310_win_compat:
         python.version: '3.10'
-        python.architecture: 'x64'
-      python312_win_latest:
-        python.version: '3.12'
         python.architecture: 'x64'
       python313_win_latest:
         python.version: '3.13'
         python.architecture: 'x64'
+        lint: true
+      python314t_win_latest:
+        python.version: '3.14'
+        python.architecture: 'x64-freethreaded'
     maxParallel: 10
 
   steps:
@@ -35,7 +35,7 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
       architecture: '$(python.architecture)'
-    displayName: 'Use Python $(python.version)'
+    displayName: 'Use Python $(python.version) $(python.architecture)'
 
   - script: |
       python -m pip install --upgrade pip setuptools wheel
@@ -58,9 +58,10 @@ jobs:
       ruff check statsmodels
       isort --check-only statsmodels
     displayName: "Lint"
+    condition: eq(variables['lint'], 'true')
 
   - pwsh: |
-      pytest statsmodels --skip-examples --junitxml=junit/test-results.xml -n 2 --durations=50
+      pytest statsmodels --skip-examples --skip-high-memory --junitxml=junit/test-results.xml -n 2 --durations=50
     displayName: 'Run pytest'
 
   - task: PublishTestResults@2

@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
+import pytest
 from scipy import stats
 
 from statsmodels.distributions.bernstein import (
@@ -62,8 +63,12 @@ def test_bernstein_distribution_1d():
 
     # check rvs
     # currently smoke test
-    rvs = bpd.rvs(100)
+    rs = np.random.RandomState(3382910)
+    rvs = bpd.rvs(100, rng=rs)
     assert len(rvs) == 100
+
+    with pytest.warns(FutureWarning):
+        bpd.rvs(100, random_state=rs)
 
 
 def test_bernstein_distribution_2d():
@@ -134,6 +139,7 @@ class TestBernsteinBeta2d:
         cls.distr = cad
         cls.bpd = BernsteinDistributionBV(cdf_g)
 
+    @pytest.mark.high_memory
     def test_basic(self):
         bpd = self.bpd
         grid = self.grid
@@ -158,7 +164,8 @@ class TestBernsteinBeta2d:
 
     def test_rvs(self):
         # currently smoke test
-        rvs = self.bpd.rvs(100)
+        rs = np.random.RandomState(3283271)
+        rvs = self.bpd.rvs(100, rng=rs)
         assert len(rvs) == 100
 
 

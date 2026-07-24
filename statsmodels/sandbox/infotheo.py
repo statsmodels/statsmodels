@@ -175,7 +175,7 @@ def shannonentropy(px, logbase=2):
         or a sequence of probabilities.
 
     Returns
-    -----
+    -------
     For log base 2 (bits) given a discrete distribution
         H(p) = sum(px * log2(1/px) = -sum(pk*log2(px)) = E[log2(1/p(X))]
 

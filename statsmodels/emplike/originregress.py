@@ -1,6 +1,6 @@
 """
 This module implements empirical likelihood regression that is forced through
-the origin.
+the origin
 
 This is different than regression not forced through the origin because the
 maximum empirical likelihood estimate is calculated with a vector of ones in
@@ -11,8 +11,8 @@ parameter estimates.
 For notes on regression not forced through the origin, see empirical likelihood
 methods in the OLSResults class.
 
-General References
-------------------
+References
+----------
 Owen, A.B. (2001). Empirical Likelihood.  Chapman and Hall. p. 82.
 
 """
@@ -29,27 +29,23 @@ from statsmodels.tools.tools import add_constant
 class ELOriginRegress:
     """
     Empirical Likelihood inference and estimation for linear regression
-    through the origin.
+    through the origin
 
     Parameters
     ----------
-    endog: nx1 array
+    endog : nx1 array
         Array of response variables.
-
-    exog: nxk array
+    exog : nxk array
         Array of exogenous variables.  Assumes no array of ones
 
     Attributes
     ----------
     endog : nx1 array
         Array of response variables
-
     exog : nxk array
         Array of exogenous variables.  Assumes no array of ones.
-
-    nobs : float
+    nobs : int
         Number of observations.
-
     nvar : float
         Number of exogenous regressors.
     """
@@ -64,12 +60,12 @@ class ELOriginRegress:
 
     def fit(self):
         """
-        Fits the model and provides regression results.
+        Fits the model and provides regression results
 
         Returns
         -------
-        Results : class
-            Empirical likelihood regression class.
+        OriginResults
+            Empirical likelihood regression results class.
         """
         exog_with = add_constant(self.exog, prepend=True)
         restricted_model = OLS(self.endog, exog_with)
@@ -83,6 +79,23 @@ class ELOriginRegress:
         return OriginResults(restricted_model, params, beta_hat_llr, llf)
 
     def predict(self, params, exog=None):
+        """
+        Return fitted values for a regression through the origin
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameters, including the (fixed at 0) intercept term,
+            as returned by `fit`.
+        exog : ndarray, optional
+            Exogenous variables to use for the prediction.  If None,
+            the exog attached to the model is used.
+
+        Returns
+        -------
+        ndarray
+            The predicted values, exog @ params.
+        """
         if exog is None:
             exog = self.exog
         return np.dot(add_constant(exog, prepend=True), params)
@@ -90,21 +103,18 @@ class ELOriginRegress:
 
 class OriginResults(RegressionResults):
     """
-    A Results class for empirical likelihood regression through the origin.
+    A Results class for empirical likelihood regression through the origin
 
     Parameters
     ----------
     model : class
         An OLS model with an intercept.
-
     params : 1darray
         Fitted parameters.
-
     est_llr : float
         The log likelihood ratio of the model with the intercept restricted to
         0 at the maximum likelihood estimates of the parameters.
         llr_restricted/llr_unrestricted
-
     llf_el : float
         The log likelihood of the fitted model with the intercept restricted to 0.
 
@@ -112,13 +122,10 @@ class OriginResults(RegressionResults):
     ----------
     model : class
         An OLS model with an intercept.
-
     params : 1darray
         Fitted parameter.
-
     llr : float
         The log likelihood ratio of the maximum empirical likelihood estimate.
-
     llf_el : float
         The log likelihood of the fitted model with the intercept restricted to 0.
 
@@ -163,38 +170,39 @@ class OriginResults(RegressionResults):
     ):
         """
         Returns the llr and p-value for a hypothesized parameter value
-        for a regression that goes through the origin.
+        for a regression that goes through the origin
 
         Parameters
         ----------
         b0_vals : 1darray
             The hypothesized value to be tested.
-
-        param_num : 1darray
+        param_nums : 1darray
             Which parameters to test.  Note this uses python
             indexing but the '0' parameter refers to the intercept term,
             which is assumed 0.  Therefore, param_num should be > 0.
-
-        return_weights : bool
-            If true, returns the weights that optimize the likelihood
-            ratio at b0_vals.  Default is False.
-
         method : str
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             Default is 'nm'.
-
         stochastic_exog : bool
             When TRUE, the exogenous variables are assumed to be stochastic.
             When the regressors are nonstochastic, moment conditions are
             placed on the exogenous variables.  Confidence intervals for
             stochastic regressors are at least as large as non-stochastic
             regressors.  Default is TRUE.
+        return_weights : bool
+            If true, returns the weights that optimize the likelihood
+            ratio at b0_vals.  Default is False.
 
         Returns
         -------
-        res : tuple
-            pvalue and likelihood ratio.
+        llr : float
+            The log likelihood ratio for the hypothesized values.
+        pval : float
+            The p-value corresponding to `llr`.
+        weights : ndarray, optional
+            The observation weights that optimize the likelihood
+            ratio.  Only returned if `return_weights` is True.
         """
         b0_vals = np.hstack((0, b0_vals))
         param_nums = np.hstack((0, param_nums))
@@ -224,32 +232,35 @@ class OriginResults(RegressionResults):
     ):
         """
         Returns the confidence interval for a regression parameter when the
-        regression is forced through the origin.
+        regression is forced through the origin
 
         Parameters
         ----------
         param_num : int
             The parameter number to be tested.  Note this uses python
             indexing but the '0' parameter refers to the intercept term.
-        upper_bound : float
+        upper_bound : float, optional
             The maximum value the upper confidence limit can be.  The
             closer this is to the confidence limit, the quicker the
-            computation.  Default is .00001 confidence limit under normality.
-        lower_bound : float
+            computation.  Default is the .00001 confidence limit under
+            normality.
+        lower_bound : float, optional
             The minimum value the lower confidence limit can be.
-            Default is .00001 confidence limit under normality.
+            Default is the .00001 confidence limit under normality.
         sig : float, optional
             The significance level.  Default .05.
         method : str, optional
-             Algorithm to optimize of nuisance params.  Can be 'nm' or
+            Algorithm to optimize over nuisance params.  Can be 'nm' or
             'powell'.  Default is 'nm'.
-        stochastic_exog : bool
+        stochastic_exog : bool, optional
             Default is True.
 
         Returns
         -------
-        ci: tuple
-            The confidence interval for the parameter 'param_num'.
+        lowerl : float
+            The lower confidence limit.
+        upperl : float
+            The upper confidence limit.
         """
         r0 = chi2.ppf(1 - sig, 1)
         param_num = np.array([param_num])

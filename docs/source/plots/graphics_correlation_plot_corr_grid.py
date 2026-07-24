@@ -1,9 +1,10 @@
-'''
-    In this example we just reuse the same correlation matrix several times.
-    Of course in reality one would show a different correlation (measuring a
-    another type of correlation, for example Pearson (linear) and Spearman,
-    Kendall (nonlinear) correlations) for the same variables.
-'''
+"""
+In this example we just reuse the same correlation matrix several times.
+Of course in reality one would show a different correlation (measuring a
+another type of correlation, for example Pearson (linear) and Spearman,
+Kendall (nonlinear) correlations) for the same variables.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 

@@ -1,9 +1,9 @@
-'''
+"""
 Using the state crime dataset separately plot the effect of the each
 variable on the on the outcome, murder rate while accounting for the effect
 of all other variables in the model.
 
-'''
+"""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,5 +17,5 @@ mod = sm.OLS(y, X).fit()
 fig = sm.graphics.abline_plot(model_results=mod)
 ax = fig.axes[0]
 ax.scatter(X[:, 1], y)
-ax.margins(.1)
+ax.margins(0.1)
 plt.show()

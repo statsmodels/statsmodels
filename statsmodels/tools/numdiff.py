@@ -1,4 +1,5 @@
-"""numerical differentiation function, gradient, Jacobian, and Hessian
+"""
+Numerical differentiation functions: gradient, Jacobian, and Hessian
 
 Author : josef-pkt
 License : BSD
@@ -11,9 +12,8 @@ without dependencies.
 * Jacobian should be faster than numdifftools because it does not use loop over
   observations.
 * numerical precision will vary and depend on the choice of stepsizes
-"""
 
-from statsmodels.compat.pandas import Appender, Substitution
+"""
 
 # TODO:
 # * some cleanup
@@ -46,6 +46,8 @@ from statsmodels.compat.pandas import Appender, Substitution
 # in example: if J = d x*beta / d beta then J'J == X'X
 #    similar to https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
 import numpy as np
+
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 
 # NOTE: we only do double precision internally so far
 EPS = np.finfo(float).eps
@@ -84,14 +86,41 @@ _hessian_docs = """
     d[i] is epsilon[i].
 
     References
-    ----------:
-
+    ----------
     Ridout, M.S. (2009) Statistical applications of the complex-step method
         of numerical differentiation. The American Statistician, 63, 66-74
 """
 
 
 def _get_epsilon(x, s, epsilon, n):
+    """
+    Compute stepsizes for finite-difference or complex-step derivatives
+
+    Parameters
+    ----------
+    x : ndarray
+        Parameters at which the derivative is evaluated.
+    s : int
+        Scale exponent used to construct the default stepsize,
+        ``EPS**(1/s) * max(|x|, 0.1)``.
+    epsilon : float, array_like or None
+        Stepsize to use. If None, the default stepsize based on `x`
+        and `s` is used. If a scalar, it is broadcast to length `n`.
+        Otherwise it must have the same shape as `x`.
+    n : int
+        Number of parameters; used to size the default or broadcast
+        stepsize array.
+
+    Returns
+    -------
+    ndarray
+        Array of stepsizes, one per parameter.
+
+    Raises
+    ------
+    ValueError
+        If `epsilon` is array_like and its shape does not match `x`.
+    """
     if epsilon is None:
         h = EPS ** (1.0 / s) * np.maximum(np.abs(np.asarray(x)), 0.1)
     elif np.isscalar(epsilon):
@@ -138,6 +167,7 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs=None, centered=False):
     by f (e.g., with a value for each observation), it returns a 3d array
     with the Jacobian of each observation with shape xk x nobs x xk. I.e.,
     the Jacobian of the first observation would be [:, 0, :]
+
     """
     n = len(x)
     kwargs = {} if kwargs is None else kwargs
@@ -168,7 +198,7 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs=None, centered=False):
 
 def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs=None, centered=False):
     """
-    Gradient of function vectorized for scalar parameter.
+    Gradient of function vectorized for scalar parameter
 
     This assumes that the function ``f`` is vectorized for a scalar parameter.
     The function value ``f(x)`` has then the same shape as the input ``x``.
@@ -195,6 +225,7 @@ def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs=None, centered=Fal
     -------
     grad : ndarray
         Array of derivatives, gradient evaluated at parameters ``x``.
+
     """
     x = np.asarray(x)
     n = 1
@@ -241,6 +272,7 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs=None):
     truncation error can be eliminated by choosing epsilon to be very small.
     The complex-step derivative avoids the problem of round-off error with
     small epsilon because there is no subtraction.
+
     """
     # From Guilherme P. de Freitas, numpy mailing list
     # May 04 2010 thread "Improvement of performance"
@@ -260,7 +292,7 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs=None):
 
 def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs=None):
     """
-    Calculate gradient for scalar parameter with complex step derivatives.
+    Calculate gradient for scalar parameter with complex step derivatives
 
     This assumes that the function ``f`` is vectorized for a scalar parameter.
     The function value ``f(x)`` has then the same shape as the input ``x``.
@@ -291,6 +323,7 @@ def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs=None):
     truncation error can be eliminated by choosing epsilon to be very small.
     The complex-step derivative avoids the problem of round-off error with
     small epsilon because there is no subtraction.
+
     """
     # From Guilherme P. de Freitas, numpy mailing list
     # May 04 2010 thread "Improvement of performance"
@@ -307,7 +340,8 @@ def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs=None):
 
 
 def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
-    """Calculate Hessian with complex-step derivative approximation
+    """
+    Calculate Hessian with complex-step derivative approximation
 
     Parameters
     ----------
@@ -317,6 +351,10 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
        function of one array f(x)
     epsilon : float
        stepsize, if None, then stepsize is automatically chosen
+    args : tuple
+        Arguments for function `f`.
+    kwargs : dict
+        Keyword arguments for function `f`.
 
     Returns
     -------
@@ -330,6 +368,7 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
     of Numerical Differentiation, University of Kent, Canterbury, Kent, U.K.
 
     The stepsize is the same for the complex and the finite difference part.
+
     """
     # TODO: might want to consider lowering the step for pure derivatives
     kwargs = {} if kwargs is None else kwargs
@@ -360,11 +399,12 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
     extra_params="""return_grad : bool
         Whether or not to also return the gradient
 """,
-    extra_returns="""grad : nparray
+    extra_returns="""grad : ndarray
         Gradient if return_grad == True
 """,
     equation_number="7",
-    equation="""1/(d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])))
+    equation="""1/(d_j*d_k) * (f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])
+                 - f(x + d[k]*e[k]) + f(x))
 """,
 )
 @Appender(_hessian_docs)
@@ -406,7 +446,7 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs=None, return_grad=False):
     equation_number="8",
     equation="""1/(2*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])) -
                  (f(x + d[k]*e[k]) - f(x)) +
-                 (f(x - d[j]*e[j] - d[k]*e[k]) - f(x + d[j]*e[j])) -
+                 (f(x - d[j]*e[j] - d[k]*e[k]) - f(x - d[j]*e[j])) -
                  (f(x - d[k]*e[k]) - f(x)))
 """,
 )

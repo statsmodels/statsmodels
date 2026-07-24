@@ -1,5 +1,5 @@
 """
-Input/Output tools for working with binary data.
+Input/Output tools for working with binary data
 
 See Also
 --------
@@ -12,7 +12,7 @@ from statsmodels.iolib.openfile import get_file_obj
 
 def savetxt(fname, X, names=None, fmt="%.18e", delimiter=" "):
     """
-    Save an array to a text file.
+    Save an array to a text file
 
     This is just a copy of numpy.savetxt patched to support structured arrays
     or a header of names.  Does not include py3 support now in savetxt.

@@ -7,7 +7,7 @@ from statsmodels.tools.validation import PandasWrapper, array_like
 
 def hpfilter(x, lamb=1600):
     """
-    Hodrick-Prescott filter.
+    Hodrick-Prescott filter
 
     Parameters
     ----------
@@ -39,7 +39,7 @@ def hpfilter(x, lamb=1600):
 
     Notes
     -----
-    The HP filter removes a smooth trend, `T`, from the data `x`. by solving
+    The HP filter removes a smooth trend, `T`, from the data `x` by solving
 
     min sum((x[t] - T[t])**2 + lamb*((T[t+1] - T[t]) - (T[t] - T[t-1]))**2)
      T   t
@@ -62,11 +62,11 @@ def hpfilter(x, lamb=1600):
     References
     ----------
     Hodrick, R.J, and E. C. Prescott. 1980. "Postwar U.S. Business Cycles: An
-        Empirical Investigation." `Carnegie Mellon University discussion
-        paper no. 451`.
+        Empirical Investigation." *Carnegie Mellon University discussion
+        paper no. 451*.
     Ravn, M.O and H. Uhlig. 2002. "Notes On Adjusted the Hodrick-Prescott
-        Filter for the Frequency of Observations." `The Review of Economics and
-        Statistics`, 84(2), 371-80.
+        Filter for the Frequency of Observations." *The Review of Economics
+        and Statistics*, 84(2), 371-80.
 
     Examples
     --------

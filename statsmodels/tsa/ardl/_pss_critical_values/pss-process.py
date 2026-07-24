@@ -79,7 +79,7 @@ if __name__ == "__main__":
         for lp in (2, 3):
             for cut in range(40, data.shape[0] - 40):
                 for log in (True, False):
-                    cv = KFold(shuffle=True, random_state=20210903)
+                    cv = KFold(shuffle=True, rng=20210903)
                     x, y = setup_regressors(data, lp, hp, cut, log)
                     k = (lp, hp, cut, log)
                     score[k] = cross_val_score(
@@ -124,15 +124,15 @@ are the point estimates for the respective quantiles. The simulation code
 is contained in pss.py. The output files from this function are then
 transformed using pss-process.py.
 
-The format of the keys are (k, case, I1) where
+The format of the keys is (k, case, I1) where
 
-* k is is the number of x variables included in the model (0 is an ADF)
+* k is the number of x variables included in the model (0 is an ADF)
 * case is 1, 2, 3, 4 or 5 and corresponds to the PSS paper
 * I1 is True if X contains I1 variables and False if X is stationary
 
 The parameters are for polynomials of order 3 (large) or 2 (small).
 stat_star is the value where the switch between large and small occurs.
-Stat values less then stat_star use large_p, while values above use
+Stat values less than stat_star use large_p, while values above use
 small_p. In all cases the stat is logged prior to computing the p-value
 so that the p-value is
 
@@ -140,9 +140,9 @@ so that the p-value is
 
 where x = np.log(stat) and Phi() is the normal cdf.
 
-When this the models, the polynomial is evaluated at the natural log of the
-test statistic and then the normal CDF of this value is computed to produce
-the p-value.
+When evaluating the models, the polynomial is evaluated at the natural log
+of the test statistic and then the normal CDF of this value is computed to
+produce the p-value.
 \"\"\"
 
 __all__ = ["large_p", "small_p", "crit_vals", "crit_percentiles", "stat_star"]
@@ -162,7 +162,5 @@ crit_vals = {crit_vals}
     fm = FileMode(target_versions=targets, line_length=79)
     formatted_code = format_file_contents(raw_code, fast=False, mode=fm)
 
-    with open(
-            "../pss_critical_values.py", "w", newline="\n", encoding="utf-8"
-    ) as out:
+    with open("../pss_critical_values.py", "w", newline="\n", encoding="utf-8") as out:
         out.write(formatted_code)
