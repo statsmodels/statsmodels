@@ -25,6 +25,7 @@ missing:
 from statsmodels.compat.pandas import deprecate_kwarg
 
 from collections.abc import Iterable
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -1180,12 +1181,14 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
         as column name(s) which are then used to lexicographically sort the
         data.
     use_distance : bool, default False
-        Flag indicating whether data should be ordered by the Mahalanobis
-        distance to the center.
+        Flag indicating whether the data should be ordered by the Mahalanobis
+        distance to the exog centroid (the multivariate mean). This makes the
+        test invariant to the order of the observations; see the Notes for the
+        precise statement.
     center : {float, int}, default None
-        If a float, the value must be in [0, 1] and the center is center *
-        nobs of the ordered data.  If an integer, must be in [0, nobs) and
-        is interpreted as the observation of the ordered data to use.
+        Deprecated and ignored. The center used to order the observations
+        when ``use_distance`` is True is always the exog centroid (the
+        multivariate mean). Passing a value emits a ``FutureWarning``.
 
     Returns
     -------
@@ -1198,6 +1201,25 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
     -----
     This test assumes residuals are homoskedastic and may reject a correct
     linear specification if the residuals are heteroskedastic.
+
+    When ``use_distance`` is True the observations are ordered by their
+    Mahalanobis distance to the centroid of ``exog``. Using the centroid (the
+    multivariate mean) as the center follows Utts (1982) [1]_; the subset used
+    is the middle band of the distance ranks (the same slicing as the
+    ``order_by`` path), not the "closest ``frac``" subset of Utts. Because the
+    centroid is order invariant and exact ties in distance are broken
+    deterministically using the exog values, the returned statistic does not
+    depend on the order of the rows of the data. The one exception is a pair of
+    observations with identical exog rows but different ``endog`` values that
+    fall on opposite sides of the subset boundary: resolving such a tie would
+    require ordering by the response, which would make the subset depend on
+    ``endog``, so these are left in their input order.
+
+    References
+    ----------
+    .. [1] Utts, J. M. (1982). The rainbow test for lack of fit in
+       regression. Communications in Statistics - Theory and Methods,
+       11(24), 2801-2815.
     """
     if not isinstance(res, RegressionResultsWrapper):
         raise TypeError("res must be a results instance from a linear model.")
@@ -1231,25 +1253,28 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
         endog = endog[order_by]
         exog = exog[order_by]
     if use_distance:
-        center = int(nobs) // 2 if center is None else center
-        if isinstance(center, float):
-            if not 0.0 <= center <= 1.0:
-                raise ValueError("center must be in (0, 1) when a float.")
-            center = int(center * (nobs-1))
-        else:
-            center = int_like(center, "center")
-            if not 0 < center < nobs - 1:
-                raise ValueError("center must be in [0, nobs) when an int.")
-        center_obs = exog[center:center+1]
+        if center is not None:
+            warnings.warn(
+                "The center keyword is deprecated and no longer has any "
+                "effect. The Mahalanobis distances used to order the "
+                "observations are now measured from the exog centroid (the "
+                "multivariate mean) rather than from an individual "
+                "observation, so that the rainbow test no longer depends on "
+                "the order of the observations (Utts, 1982).",
+                FutureWarning,
+                stacklevel=2,
+            )
         from scipy.spatial.distance import cdist
-        try:
-            err = exog - center_obs
-            vi = np.linalg.inv(err.T @ err / nobs)
-        except np.linalg.LinAlgError:
-            err = exog - exog.mean(0)
-            vi = np.linalg.inv(err.T @ err / nobs)
+        center_obs = exog.mean(0, keepdims=True)
+        err = exog - center_obs
+        vi = np.linalg.pinv(err.T @ err / nobs)
         dist = cdist(exog, center_obs, metric="mahalanobis", VI=vi)
-        idx = np.argsort(dist.ravel())
+        # Order by distance, breaking exact ties deterministically using the
+        # exog values (never endog, which would make the subset depend on the
+        # response) so that the ordering, and hence the statistic, does not
+        # depend on the input row order even when distances tie (e.g. discrete
+        # or duplicated regressors). lexsort uses the last key as primary.
+        idx = np.lexsort((*exog.T[::-1], dist.ravel()))
         endog = endog[idx]
         exog = exog[idx]
 
