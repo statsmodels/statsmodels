@@ -31,13 +31,14 @@ class CheckScoreTest:
 
         wald = res_full.wald_test(restriction, scalar=True)
         # note: need to use method for res_constr for correct df_resid
-        lm_constr = np.hstack(res_constr.score_test())
-        lm_extra = np.hstack(score_test(res_drop, exog_extra=self.exog_extra))
-        lm_full = np.hstack(
-            res_full.score_test(
-                params_constrained=res_constr.params, k_constraints=res_constr.k_constr
-            )
+        res = res_constr.score_test()
+        lm_constr = np.hstack([res.statistic, res.pvalue, res.df])
+        res = score_test(res_drop, exog_extra=self.exog_extra)
+        lm_extra = np.hstack([res.statistic, res.pvalue, res.df])
+        res = res_full.score_test(
+            params_constrained=res_constr.params, k_constraints=res_constr.k_constr
         )
+        lm_full = np.hstack([res.statistic, res.pvalue, res.df])
 
         res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
         assert_allclose(lm_constr, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
@@ -50,10 +51,10 @@ class CheckScoreTest:
         cov_type = "HC0"
         res_full_hc = mod_full.fit(cov_type=cov_type, start_params=res_full.params)
         wald = res_full_hc.wald_test(restriction, scalar=True)
-        lm_constr = np.hstack(score_test(res_constr, cov_type=cov_type))
-        lm_extra = np.hstack(
-            score_test(res_drop, exog_extra=self.exog_extra, cov_type=cov_type)
-        )
+        _res = score_test(res_constr, cov_type=cov_type)
+        lm_constr = np.hstack([_res.statistic, _res.pvalue, _res.df])
+        _res = score_test(res_drop, exog_extra=self.exog_extra, cov_type=cov_type)
+        lm_extra = np.hstack([_res.statistic, _res.pvalue, _res.df])
 
         res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
         assert_allclose(lm_constr, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
