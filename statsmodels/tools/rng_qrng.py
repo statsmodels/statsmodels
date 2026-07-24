@@ -6,21 +6,17 @@ from scipy import stats
 
 def check_random_state(seed=None, deprecated=False, warn=True):
     """
-    Turn `seed` into a random number generator
+    Turn a seed into a random number generator
 
     Parameters
     ----------
     seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState, scipy.stats.qmc.QMCEngine}, optional
-        If `seed` is None fresh, unpredictable entropy will be pulled
-        from the OS and `numpy.random.Generator` is used.
-        If `seed` is an int or ``array_like[ints]``, a new ``Generator``
-        instance is used, seeded with `seed`.
+        If `seed` is None fresh, unpredictable entropy will be pulled from the
+        OS and `numpy.random.Generator` is used.
+        If `seed` is an int or ``array_like[ints]``, a new ``Generator`` instance
+        is used, seeded with `seed`.
         If `seed` is already a ``Generator``, ``RandomState`` or
-        `scipy.stats.qmc.QMCEngine` instance then
-        that instance is used.
-
-        `scipy.stats.qmc.QMCEngine` requires SciPy >=1.7. It also means
-        that the generator only have the method ``random``.
+        `scipy.stats.qmc.QMCEngine` instance then that instance is used.
     deprecated : bool, optional
         If False, returns default_rng(seed). If True, returns RandomState(seed)
         when seed an int or array-like of ints.
@@ -30,10 +26,13 @@ def check_random_state(seed=None, deprecated=False, warn=True):
 
     Returns
     -------
-    rng : {`numpy.random.Generator`, `numpy.random.RandomState`,
-            `scipy.stats.qmc.QMCEngine`}
+    rng : {`numpy.random.Generator`, `numpy.random.RandomState`, `scipy.stats.qmc.QMCEngine`}
         Random number generator.
 
+    Notes
+    -----
+    `scipy.stats.qmc.QMCEngine` requires SciPy >=1.7. It also means that the
+    generator only has the method ``random``.
     """
     if hasattr(stats, "qmc") and isinstance(seed, stats.qmc.QMCEngine):
         return seed

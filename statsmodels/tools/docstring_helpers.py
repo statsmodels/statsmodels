@@ -39,11 +39,11 @@ class Appender:
     the original docstring. An optional 'join' parameter may be supplied
     which will be used to join the docstring and addendum. e.g.
 
-    >>> add_copyright = Appender("Copyright (c) 2009", join="\n")
+    >>> add_copyright = Appender("Copyright (c) 2009", join=" ")
 
     >>> @add_copyright
     ... def my_dog(has='fleas'):
-    ...     "This docstring will have a copyright below"
+    ...     "This docstring will have a copyright notice appended to it."
     ...     pass
     """
 
