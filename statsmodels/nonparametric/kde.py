@@ -201,9 +201,10 @@ class KDEUnivariate:
         self.kernel = kernel_switch[kernel](h=bw)  # we instantiate twice,
         # should this passed to funcs?
         # put here to ensure empty cache after re-fit with new options
-        self.kernel.weights = weights
         if weights is not None:
-            self.kernel.weights /= weights.sum()
+            weights = np.asarray(weights)
+            weights = weights / weights.sum()
+        self.kernel.weights = weights
         self._cache = {}
         return self
 
