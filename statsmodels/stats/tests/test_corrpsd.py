@@ -695,3 +695,98 @@ class Test_Factor:
         fcor *= np.abs(fcor) >= 0.2
 
         assert_allclose(tcor.todense(), fcor, rtol=0.25, atol=1e-3)
+
+
+class TestCorrelationAdjoint:
+    """Tests for adjoint differentiation of correlation matrix operations.
+
+    Reference: arXiv:2109.04913 (Goloubentsev, Goloubentsev, Lakshtanov 2021).
+    """
+
+    def test_clip_evals_adjoint_basic(self):
+        from statsmodels.stats.correlation_tools import (
+            clip_evals, clip_evals_adjoint
+        )
+        np.random.seed(42)
+        n = 5
+        A = np.random.randn(n, n)
+        A = A + A.T - 2 * np.eye(n)
+        x_bar = np.random.randn(n, n)
+        x_bar = 0.5 * (x_bar + x_bar.T)
+        A_bar = clip_evals_adjoint(A, x_bar, value=0)
+        h = 1e-7
+        A_bar_fd = np.zeros_like(A)
+        for i in range(n):
+            for j in range(n):
+                Ap = A.copy(); Ap[i, j] += h; Ap = 0.5 * (Ap + Ap.T)
+                Am = A.copy(); Am[i, j] -= h; Am = 0.5 * (Am + Am.T)
+                xp, _ = clip_evals(Ap, value=0)
+                xm, _ = clip_evals(Am, value=0)
+                A_bar_fd[i, j] = np.sum(x_bar * (xp - xm)) / (2 * h)
+        assert_allclose(A_bar, A_bar_fd, atol=1e-5)
+
+    def test_clip_evals_adjoint_no_clipping(self):
+        from statsmodels.stats.correlation_tools import clip_evals_adjoint
+        A = np.eye(4) * 2
+        x_bar = np.random.randn(4, 4)
+        x_bar = 0.5 * (x_bar + x_bar.T)
+        assert_allclose(clip_evals_adjoint(A, x_bar), x_bar, atol=1e-12)
+
+    def test_corr_clipped_adjoint_basic(self):
+        from statsmodels.stats.correlation_tools import (
+            corr_clipped, corr_clipped_adjoint
+        )
+        np.random.seed(42)
+        n = 6
+        C = np.random.randn(n, n)
+        C = C + C.T - np.eye(n)
+        np.fill_diagonal(C, 1.0)
+        C_bar = np.random.randn(n, n)
+        C_bar = 0.5 * (C_bar + C_bar.T)
+        adj = corr_clipped_adjoint(C, C_bar)
+        h = 1e-7
+        adj_fd = np.zeros_like(C)
+        for i in range(n):
+            for j in range(n):
+                Cp = C.copy(); Cp[i, j] += h; Cp = 0.5 * (Cp + Cp.T)
+                Cm = C.copy(); Cm[i, j] -= h; Cm = 0.5 * (Cm + Cm.T)
+                adj_fd[i, j] = np.sum(
+                    C_bar * (corr_clipped(Cp) - corr_clipped(Cm))
+                ) / (2 * h)
+        assert_allclose(adj, adj_fd, atol=1e-5)
+
+    def test_corr_clipped_adjoint_already_psd(self):
+        from statsmodels.stats.correlation_tools import (
+            corr_clipped, corr_clipped_adjoint
+        )
+        C = np.eye(5) * 0.5 + np.ones((5, 5)) * 0.1
+        np.fill_diagonal(C, 1.0)
+        C_bar = np.random.randn(5, 5)
+        C_bar = 0.5 * (C_bar + C_bar.T)
+        adj = corr_clipped_adjoint(C, C_bar)
+        # Already PSD with unit diagonal: corr_clipped = identity
+        assert_allclose(adj, C_bar, atol=1e-10)
+
+    def test_corr_clipped_adjoint_large(self):
+        from statsmodels.stats.correlation_tools import (
+            corr_clipped, corr_clipped_adjoint
+        )
+        np.random.seed(42)
+        n = 50
+        C = np.random.randn(n, n)
+        C = C + C.T - np.eye(n)
+        np.fill_diagonal(C, 1.0)
+        C_bar = np.random.randn(n, n)
+        C_bar = 0.5 * (C_bar + C_bar.T)
+        adj = corr_clipped_adjoint(C, C_bar)
+        h = 1e-7
+        # Check a subset of elements
+        for i in range(5):
+            for j in range(5):
+                Cp = C.copy(); Cp[i, j] += h; Cp = 0.5 * (Cp + Cp.T)
+                Cm = C.copy(); Cm[i, j] -= h; Cm = 0.5 * (Cm + Cm.T)
+                fd = np.sum(
+                    C_bar * (corr_clipped(Cp) - corr_clipped(Cm))
+                ) / (2 * h)
+                assert abs(adj[i, j] - fd) < 1e-4 * max(abs(fd), 1e-10), \
+                    f"adj[{i},{j}]={adj[i,j]:.6e} vs fd={fd:.6e}"
