@@ -14,6 +14,8 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
 
+import inspect
+
 import numpy as np
 from scipy import stats
 
@@ -210,6 +212,20 @@ class RLM(base.LikelihoodModel):
         elif isinstance(self.scale_est, scale.HuberScale):
             return self.scale_est(self.df_resid, self.nobs, resid)
         else:
+            try:
+                parameters = inspect.signature(self.scale_est).parameters.values()
+            except (TypeError, ValueError):
+                parameters = ()
+            n_args = sum(
+                parameter.kind
+                in (
+                    inspect.Parameter.POSITIONAL_ONLY,
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                )
+                for parameter in parameters
+            )
+            if n_args > 1:
+                return self.scale_est(self, resid)
             # use df correction to match HuberScale
             return self.scale_est(resid) * np.sqrt(self.nobs / self.df_resid)
 
@@ -250,14 +266,17 @@ class RLM(base.LikelihoodModel):
             Deprecated and will be removed. There is no choice here.
         maxiter : int
             The maximum number of iterations to try. Default is 50.
-        scale_est : str or HuberScale()
-            'mad' or HuberScale()
+        scale_est : {'mad'} or HuberScale or callable
             Indicates the estimate to use for scaling the weights in the IRLS.
             The default is 'mad' (median absolute deviation.  Other options are
             'HuberScale' for Huber's proposal 2. Huber's proposal 2 has
             optional keyword arguments d, tol, and maxiter for specifying the
             tuning constant, the convergence tolerance, and the maximum number
-            of iterations. See statsmodels.robust.scale for more information.
+            of iterations. Custom callables can accept either ``resid`` or
+            ``(model, resid)`` and must return the scale estimate. Single-
+            argument callables use the same degrees-of-freedom correction as
+            the built-in non-Huber scale estimators. See
+            statsmodels.robust.scale for more information.
         tol : float
             The convergence tolerance of the estimate.  Default is 1e-8.
         update_scale : Bool
