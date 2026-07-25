@@ -2151,8 +2151,6 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         White's (1980) heteroskedasticity robust standard errors.
 
-        Notes
-        -----
         Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
         where e_i = resid[i].
 
@@ -2168,8 +2166,6 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         MacKinnon and White's (1985) heteroskedasticity robust standard errors.
 
-        Notes
-        -----
         Defined as sqrt(diag(n/(n-p)*HC_0).
 
         When HC1_se or cov_HC1 is called the RegressionResults instance will
@@ -2184,8 +2180,6 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         MacKinnon and White's (1985) heteroskedasticity robust standard errors.
 
-        Notes
-        -----
         Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)) X(X.T X)^(-1)
         where h_ii = x_i(X.T X)^(-1)x_i.T
 
@@ -2201,8 +2195,6 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         MacKinnon and White's (1985) heteroskedasticity robust standard errors.
 
-        Notes
-        -----
         Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)^(2)) X(X.T X)^(-1)
         where h_ii = x_i(X.T X)^(-1)x_i.T.
 

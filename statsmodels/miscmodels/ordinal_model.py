@@ -730,8 +730,8 @@ class OrderedResults(GenericLikelihoodModelResults):
         observed choice and ``y`` is a random variable corresponding to the
         predicted distribution.
 
-        References
-        ----------
+        Calculations based on work by:
+
         Shepherd BE, Li C, Liu Q (2016) Probability-scale residuals for
         continuous, discrete, and censored data.
         The Canadian Journal of Statistics. 44:463-476.

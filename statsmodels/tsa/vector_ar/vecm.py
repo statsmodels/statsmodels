@@ -1556,6 +1556,11 @@ class VECMResults:
         Standard errors of beta and deterministic terms inside the
         cointegration relation.
 
+        Returns
+        -------
+        ndarray
+            Standard errors of beta and deterministic terms
+
         Notes
         -----
         See p. 297 in [1]_. Using the rule

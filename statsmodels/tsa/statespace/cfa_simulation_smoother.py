@@ -113,8 +113,6 @@ class CFASimulationSmoother:
         r"""
         Posterior mean of the states conditional on the data
 
-        Notes
-        -----
         .. math::
 
             \hat \alpha_t = E[\alpha_t \mid Y^n ]
@@ -131,16 +129,6 @@ class CFASimulationSmoother:
     def posterior_cov_inv_chol_sparse(self):
         r"""
         Sparse Cholesky factor of inverse posterior covariance matrix
-
-        Notes
-        -----
-        This attribute holds in sparse diagonal banded storage the Cholesky
-        factor of the inverse of the posterior covariance matrix. If we denote
-        :math:`P = Var[\alpha \mid Y^n ]`, then the this attribute holds the
-        lower Cholesky factor :math:`L`, defined from :math:`L L' = P^{-1}`.
-        This attribute uses the sparse diagonal banded storage described in the
-        documentation of, for example, the SciPy function
-        `scipy.linalg.solveh_banded`.
         """
         if self._posterior_cov_inv_chol is None:
             self._posterior_cov_inv_chol = np.array(
@@ -159,18 +147,6 @@ class CFASimulationSmoother:
         cases, it is better to use the `posterior_cov_inv_chol_sparse`
         property if possible, which holds in sparse diagonal banded storage
         the Cholesky factor of the inverse of the posterior covariance matrix.
-
-        Notes
-        -----
-        .. math::
-
-            Var[\alpha \mid Y^n ]
-
-        This posterior covariance matrix is *not* identical to the
-        `smoothed_state_cov` attribute produced by the Kalman smoother, because
-        it additionally contains all cross-covariance terms. Instead,
-        `smoothed_state_cov` contains the `(k_states, k_states)` block
-        diagonal entries of this posterior covariance matrix.
         """
         if self._posterior_cov is None:
             from scipy.linalg import cho_solve_banded

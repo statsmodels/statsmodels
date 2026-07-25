@@ -1110,13 +1110,9 @@ class SARIMAX(MLEModel):
 
     @property
     def param_terms(self):
-        """
-        List of parameters actually included in the model, in sorted order
+        """List of parameters actually included in the model, in sorted order"""
+        # TODO: Make this a dict with slice or indices as the values.
 
-        Notes
-        -----
-        TODO: Make this a dict with slice or indices as the values.
-        """
         model_orders = self.model_orders
         # Get basic list from model orders
         params = [

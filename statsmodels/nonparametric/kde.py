@@ -213,9 +213,7 @@ class KDEUnivariate:
         """
         Returns the cumulative distribution function evaluated at the support
 
-        Notes
-        -----
-        Will not work if fit has not been called.
+        Note: Will not work if fit has not been called.
         """
         _checkisfit(self)
         kern = self.kernel
@@ -242,9 +240,7 @@ class KDEUnivariate:
         """
         Returns the cumulative hazard function evaluated at the support
 
-        Notes
-        -----
-        Will not work if fit has not been called.
+        Note: Will not work if fit has not been called.
         """
         _checkisfit(self)
         return -np.log(self.sf)
@@ -254,9 +250,7 @@ class KDEUnivariate:
         """
         Returns the survival function evaluated at the support
 
-        Notes
-        -----
-        Will not work if fit has not been called.
+        Note: Will not work if fit has not been called.
         """
         _checkisfit(self)
         return 1 - self.cdf
@@ -266,10 +260,8 @@ class KDEUnivariate:
         """
         Returns the differential entropy evaluated at the support
 
-        Notes
-        -----
-        Will not work if fit has not been called. 1e-12 is added to each
-        probability to ensure that log(0) is not called.
+        Note: Will not work if fit has not been called. 1e-12 is added
+        to each probability to ensure that log(0) is not called.
         """
         _checkisfit(self)
 
@@ -292,9 +284,7 @@ class KDEUnivariate:
         """
         Inverse Cumulative Distribution (Quantile) Function
 
-        Notes
-        -----
-        Will not work if fit has not been called. Uses
+        Note: Will not work if fit has not been called. Uses
         `scipy.stats.mstats.mquantiles`.
         """
         _checkisfit(self)

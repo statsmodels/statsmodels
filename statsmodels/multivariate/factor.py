@@ -1142,8 +1142,6 @@ class FactorResults:
         kurt : float
             Excess kurtosis
 
-        Notes
-        -----
         If excess kurtosis is known, provide as `kurt`.  Standard
         errors are only available if the model was fit using maximum
         likelihood.  If `endog` is not provided, `nobs` must be

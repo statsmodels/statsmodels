@@ -3351,22 +3351,18 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         Returns
         -------
         out : Bunch
-            Has the following attributes shown in Notes.
+            A bunch with the following attributes:
 
-        Notes
-        -----
-        The output is a bunch of the following format:
-
-        - `filtered`: a time series array with the filtered estimate of
-          the component
-        - `filtered_cov`: a time series array with the filtered estimate of
-          the variance/covariance of the component
-        - `smoothed`: a time series array with the smoothed estimate of
-          the component
-        - `smoothed_cov`: a time series array with the smoothed estimate of
-          the variance/covariance of the component
-        - `offset`: an integer giving the offset in the state vector where
-          this component begins
+            - `filtered`: a time series array with the filtered estimate of
+              the component
+            - `filtered_cov`: a time series array with the filtered estimate
+              of the variance/covariance of the component
+            - `smoothed`: a time series array with the smoothed estimate of
+              the component
+            - `smoothed_cov`: a time series array with the smoothed estimate
+              of the variance/covariance of the component
+            - `offset`: an integer giving the offset in the state vector
+              where this component begins
         """
         out = None
         if self.model.k_factors > 0:
@@ -3490,17 +3486,6 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             `coefficients_of_determination[i, j]` represents the :math:`R^2`
             value from a regression of factor `j` and a constant on endogenous
             variable `i`.
-
-        Notes
-        -----
-        Although it can be difficult to interpret the estimated factor loadings
-        and factors, it is often helpful to use the coefficients of
-        determination from univariate regressions to assess the importance of
-        each factor in explaining the variation in each endogenous variable.
-
-        In models with many variables and factors, this can sometimes lend
-        interpretation to the factors (for example sometimes one factor will
-        load primarily on real variables and another on nominal variables).
 
         See Also
         --------

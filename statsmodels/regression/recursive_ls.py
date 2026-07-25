@@ -357,8 +357,6 @@ class RecursiveLSResults(MLEResults):
             An array of length `nobs` holding the recursive
             residuals.
 
-        Notes
-        -----
         These quantities are defined in, for example, Harvey (1989)
         section 5.4. In fact, there he defines the standardized innovations in
         equation 5.4.1, but in his version they have non-unit variance, whereas
@@ -381,14 +379,7 @@ class RecursiveLSResults(MLEResults):
         r"""
         Cumulative sum of standardized recursive residuals statistics
 
-        Returns
-        -------
-        cusum : array_like
-            An array of length `nobs - k_exog` holding the
-            CUSUM statistics.
-
-        Notes
-        -----
+        An array of length `nobs - k_exog` holding the CUSUM statistics.
         The CUSUM statistic takes the form:
 
         .. math::
@@ -432,8 +423,6 @@ class RecursiveLSResults(MLEResults):
             An array of length `nobs - k_exog` holding the
             CUSUM of squares statistics.
 
-        Notes
-        -----
         The CUSUM of squares statistic takes the form:
 
         .. math::
@@ -445,14 +434,13 @@ class RecursiveLSResults(MLEResults):
 
         Excludes the first `k_exog` datapoints.
 
-        References
-        ----------
-        .. [*] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
+        Based on the work of:
+
+        Brown, R. L., J. Durbin, and J. M. Evans. 1975.
            "Techniques for Testing the Constancy of
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
-
         """
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         numer = np.cumsum(self.resid_recursive[d:]**2)

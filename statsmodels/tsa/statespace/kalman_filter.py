@@ -1810,8 +1810,6 @@ class FilterResults(FrozenRepresentation):
         r"""
         Standardized forecast errors
 
-        Notes
-        -----
         The forecast errors produced by the Kalman filter are
 
         .. math::

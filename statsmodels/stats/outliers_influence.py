@@ -722,8 +722,6 @@ class MLEInfluence(_BaseInfluenceMixin):
         Local change of expected mean given the change in the parameters as
         computed in d_params.
 
-        Notes
-        -----
         This uses the one-step approximation of the parameter change to
         deleting one observation ``d_params``.
         """
@@ -850,13 +848,8 @@ class OLSInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def hat_matrix_diag(self):
-        """
-        Diagonal of the hat_matrix for OLS
-
-        Notes
-        -----
-        temporarily calculated here, this should go to model class
-        """
+        """Diagonal of the hat_matrix for OLS"""
+        # TODO: temporarily calculated here, this should go to model class
         return (self.exog * self.results.model.pinv_wexog.T).sum(1)
 
     @cache_readonly
@@ -968,11 +961,11 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         Uses original results, no nobs loop
 
-        References
-        ----------
-        .. [*] Eubank, R. L. (1999). Nonparametric regression and spline
+        Based on:
+
+        Eubank, R. L. (1999). Nonparametric regression and spline
             smoothing. CRC press.
-        .. [*] Cook's distance. (n.d.). In Wikipedia. July 2019, from
+        Cook's distance. (n.d.). In Wikipedia. July 2019, from
             https://en.wikipedia.org/wiki/Cook%27s_distance
         """
         hii = self.hat_matrix_diag
@@ -1009,21 +1002,23 @@ class OLSInfluence(_BaseInfluenceMixin):
         """
         dffits measure for influence of an observation
 
-        based on resid_studentized_external,
-        uses results from leave-one-observation-out loop
+        Returns
+        -------
+        dffits : float
+            The dffits measure for each observation, which is a measure of the
+            influence of a single data point on the predicted value of a model.
+        dffits_threshold : float
+            The threshold to determine if the influence of an observation is large.
+            The threshold is 2 * sqrt(k / n).
+
+        based on resid_studentized_external, uses results from
+        leave-one-observation-out loop.
 
         It is recommended that observations with dffits large than a
         threshold of 2 sqrt{k / n} where k is the number of parameters, should
         be investigated.
 
-        Returns
-        -------
-        dffits : float
-        dffits_threshold : float
-
-        References
-        ----------
-        `Wikipedia <https://en.wikipedia.org/wiki/DFFITS>`_
+        Based on `Wikipedia <https://en.wikipedia.org/wiki/DFFITS>`_
         """
         # TODO: do I want to use different sigma estimate in
         #      resid_studentized_external
@@ -1118,9 +1113,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         """
         estimate of standard deviation of the residuals
 
-        See Also
-        --------
-        resid_var
+        See also ``resid_var``.
         """
         return np.sqrt(self.resid_var)
 
@@ -1515,8 +1508,6 @@ class GLMInfluence(MLEInfluence):
         """
         Diagonal of the hat_matrix for GLM
 
-        Notes
-        -----
         This returns the diagonal of the hat matrix that was provided as
         argument to GLMInfluence or computes it using the results method
         `get_hat_matrix`.
@@ -1531,8 +1522,6 @@ class GLMInfluence(MLEInfluence):
         """
         Change in parameter estimates
 
-        Notes
-        -----
         This uses one-step approximation of the parameter change to deleting
         one observation.
         """
@@ -1547,8 +1536,6 @@ class GLMInfluence(MLEInfluence):
         """
         Internally studentized pearson residuals
 
-        Notes
-        -----
         residuals / sqrt( scale * (1 - hii))
 
         where residuals are those provided to GLMInfluence which are
@@ -1564,8 +1551,6 @@ class GLMInfluence(MLEInfluence):
         """
         Cook's distance
 
-        Notes
-        -----
         Based on one step approximation using resid_studentized and
         hat_matrix_diag for the computation.
 

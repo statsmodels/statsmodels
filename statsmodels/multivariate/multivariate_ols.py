@@ -597,12 +597,8 @@ class MultivariateLSResults(LikelihoodModelResults):
 
     @cache_readonly
     def _hat_matrix_diag(self):
-        """Diagonal of the hat_matrix for OLS
-
-        Notes
-        -----
-        temporarily calculated here, this should go to model or influence class
-        """
+        """Diagonal of the hat_matrix for OLS"""
+        # TODO: temporarily calcu here, should go to model or influence class
         # computation base on OLSInfluence method
         exog = self.model.exog
         pinv_wexog = np.linalg.pinv(exog)
