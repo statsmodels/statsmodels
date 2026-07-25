@@ -152,6 +152,168 @@ def corr_clipped(corr, threshold=1e-15):
     return x_new
 
 
+
+
+def _matrix_func_adjoint(A, func, deriv, C_bar):
+    """Adjoint of C = f(A) for symmetric matrix A.
+
+    Given the output C = V f(D) V^T (eigendecomposition A = V D V^T,
+    f applied to eigenvalues), and the cotangent dL/dC = C_bar,
+    computes dL/dA.
+
+    Parameters
+    ----------
+    A : ndarray (n, n)
+        Symmetric input matrix.
+    func : callable
+        Scalar function applied to eigenvalues.
+    deriv : callable
+        Derivative of func.
+    C_bar : ndarray (n, n)
+        Cotangent of the output.
+
+    Returns
+    -------
+    A_bar : ndarray (n, n)
+        Cotangent of the input.
+
+    References
+    ----------
+    Goloubentsev, Goloubentsev, Lakshtanov (2021).
+    "Adjoint Differentiation for generic matrix functions",
+    arXiv:2109.04913, Section 2.
+    """
+    evals, V = np.linalg.eigh(A)
+    n = len(evals)
+    f_evals = np.array([func(l) for l in evals])
+    F = np.empty((n, n))
+    for i in range(n):
+        F[i, i] = deriv(evals[i])
+        for j in range(i + 1, n):
+            denom = evals[i] - evals[j]
+            if abs(denom) < 1e-12:
+                F[i, j] = F[j, i] = deriv(evals[i])
+            else:
+                F[i, j] = F[j, i] = (f_evals[i] - f_evals[j]) / denom
+    inner = V.T @ C_bar @ V
+    A_bar = V @ (F * inner) @ V.T
+    return 0.5 * (A_bar + A_bar.T)
+
+
+def clip_evals_adjoint(x, x_bar, value=0):
+    """Adjoint of clip_evals (eigenvalue clipping / PSD projection).
+
+    Given x_new, _ = clip_evals(x, value) and the cotangent dL/dx_new = x_bar,
+    computes dL/dx.
+
+    Parameters
+    ----------
+    x : ndarray (n, n)
+        Symmetric input matrix.
+    x_bar : ndarray (n, n)
+        Cotangent of the output.
+    value : float
+        Clipping threshold (default 0).
+
+    Returns
+    -------
+    adjoint : ndarray (n, n)
+        Cotangent of the input.
+
+    See Also
+    --------
+    clip_evals
+
+    References
+    ----------
+    Goloubentsev, Goloubentsev, Lakshtanov (2021).
+    "Adjoint Differentiation for generic matrix functions",
+    arXiv:2109.04913, Section 3.2 (spectrum cut-off).
+    """
+    func = lambda l: max(l, value)
+    deriv = lambda l: 1.0 if l >= value else 0.0
+    return _matrix_func_adjoint(x, func, deriv, x_bar)
+
+
+def corr_nearest_adjoint(corr, corr_bar, threshold=1e-15, n_fact=100):
+    """Adjoint of corr_nearest (Higham alternating projections).
+
+    Given X* = corr_nearest(corr) and the cotangent dL/dX* = corr_bar,
+    computes dL/dcorr by backpropagating through the Higham iteration.
+
+    Each Higham step consists of:
+    1. Dykstra correction:  Y = X - dS
+    2. PSD projection:      X' = clip_evals(Y)
+    3. Correction update:   dS = X' - Y
+    4. Diagonal reset:      X_new = X' with diag = 1
+
+    The adjoint of the PSD projection (step 2) uses the spectral
+    formula from arXiv:2109.04913.
+
+    Parameters
+    ----------
+    corr : ndarray (n, n)
+        Input correlation matrix.
+    corr_bar : ndarray (n, n)
+        Cotangent of the output.
+    threshold : float
+        Eigenvalue clipping threshold.
+    n_fact : int
+        Max iterations factor.
+
+    Returns
+    -------
+    adjoint : ndarray (n, n)
+        Cotangent of the input.
+
+    See Also
+    --------
+    corr_nearest
+
+    References
+    ----------
+    Goloubentsev, Goloubentsev, Lakshtanov (2021).
+    "Adjoint Differentiation for generic matrix functions",
+    arXiv:2109.04913, Section 4 (nearest correlation matrix).
+    """
+    n = corr.shape[0]
+    diag_idx = np.arange(n)
+
+    # Forward: replay Higham iteration, store Y at each step
+    dS = np.zeros_like(corr)
+    X = corr.copy()
+    tape = []
+    for _ in range(int(n * n_fact)):
+        Y = X - dS
+        evals, evecs = np.linalg.eigh(Y)
+        clipped = np.any(evals < threshold)
+        Xp = evecs @ np.diag(np.maximum(evals, threshold)) @ evecs.T
+        if not clipped:
+            tape.append((Y.copy(), False))
+            break
+        tape.append((Y.copy(), True))
+        dS = Xp - Y
+        X = Xp.copy()
+        X[diag_idx, diag_idx] = 1.0
+
+    # Backward through iterations
+    X_bar = corr_bar.copy()
+    dS_bar = np.zeros_like(corr)
+    for k in range(len(tape) - 1, -1, -1):
+        Y_k, was_clipped = tape[k]
+        if not was_clipped:
+            Xp_bar = X_bar
+        else:
+            Xp_bar = X_bar.copy()
+            Xp_bar[diag_idx, diag_idx] = 0.0
+        Xp_bar = Xp_bar + dS_bar
+        Y_bar = -dS_bar + clip_evals_adjoint(Y_k, Xp_bar, value=threshold)
+        X_bar = Y_bar
+        dS_bar = -Y_bar
+
+    return X_bar + X_bar.T - np.diag(np.diag(X_bar))
+
+
 def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=False):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
