@@ -2152,8 +2152,6 @@ class GLMResults(base.LikelihoodModelResults):
             log-likelihood. This is not consistent with the AIC definition,
             and after 0.13 both will make use of the log-likelihood definition.
 
-        Notes
-        -----
         The log-likelihood version is defined
         -2 * `llf` + (`df_model` + 1)*log(n)
         """

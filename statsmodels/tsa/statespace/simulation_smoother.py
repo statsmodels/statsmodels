@@ -465,9 +465,6 @@ class SimulationSmoothResults:
 
         Used to construct `generated_obs`.
 
-        Notes
-        -----
-
         .. math::
 
            \varepsilon_t^+ ~ N(0, H_t)
@@ -487,9 +484,6 @@ class SimulationSmoothResults:
         r"""
         Randomly drawn state disturbance variates, used to construct
         `generated_state` and `generated_obs`.
-
-        Notes
-        -----
 
         .. math::
 
@@ -512,9 +506,6 @@ class SimulationSmoothResults:
         transition equations, given a random initial state draw and random
         disturbance draws.
 
-        Notes
-        -----
-
         .. math::
 
             y_t^+ = d_t + Z_t \alpha_t^+ + \varepsilon_t^+
@@ -531,9 +522,6 @@ class SimulationSmoothResults:
         Generated vector of states by iterating on the transition equation,
         given a random initial state draw and random disturbance draws.
 
-        Notes
-        -----
-
         .. math::
 
             \alpha_{t+1}^+ = c_t + T_t \alpha_t^+ + \eta_t^+
@@ -548,9 +536,6 @@ class SimulationSmoothResults:
     def simulated_state(self):
         r"""
         Random draw of the state vector from its conditional distribution.
-
-        Notes
-        -----
 
         .. math::
 
@@ -568,9 +553,6 @@ class SimulationSmoothResults:
         Random draw of the measurement disturbance vector from its conditional
         distribution.
 
-        Notes
-        -----
-
         .. math::
 
             \varepsilon ~ N(\hat \varepsilon, Var(\hat \varepsilon \mid Y_n))
@@ -586,9 +568,6 @@ class SimulationSmoothResults:
         r"""
         Random draw of the state disturbance vector from its conditional
         distribution.
-
-        Notes
-        -----
 
         .. math::
 

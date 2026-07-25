@@ -294,10 +294,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     @property
     def start_params(self):
         """
-        (array) Starting parameters for maximum likelihood estimation
+        Starting parameters for maximum likelihood estimation
 
-        Notes
-        -----
         These are not very sophisticated and / or good. We set equal transition
         probabilities and interpolate regression coefficients between zero and
         the OLS estimates, where the interpolation is based on the regime

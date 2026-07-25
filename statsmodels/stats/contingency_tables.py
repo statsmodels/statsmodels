@@ -1130,8 +1130,8 @@ class StratifiedTable:
         """
         Estimated standard error of the pooled log odds ratio
 
-        References
-        ----------
+        Based on work by:
+
         J. Robins, N. Breslow, S. Greenland. "Estimators of the
         Mantel-Haenszel Variance Consistent in Both Sparse Data and
         Large-Strata Limiting Models." Biometrics 42, no. 2 (1986): 311-23.

@@ -5545,8 +5545,6 @@ class CountResults(DiscreteResults):
         """
         Residuals
 
-        Notes
-        -----
         The residuals for Count models are defined as
 
         .. math:: y - p
@@ -5692,8 +5690,6 @@ class PoissonResults(CountResults):
         """
         Pearson residuals
 
-        Notes
-        -----
         Pearson residuals are defined to be
 
         .. math:: r_j = \\frac{(y - M_jp_j)}{\\sqrt{M_jp_j(1-p_j)}}
@@ -5825,8 +5821,6 @@ class BinaryResults(DiscreteResults):
         """
         Deviance residuals
 
-        Notes
-        -----
         Deviance residuals are defined
 
         .. math:: d_j = \\pm\\left(2\\left[Y_j\\ln\\left(\\frac{Y_j}{M_jp_j}\\right) + (M_j - Y_j\\ln\\left(\\frac{M_j-Y_j}{M_j(1-p_j)} \\right) \\right] \\right)^{1/2}
@@ -5859,8 +5853,6 @@ class BinaryResults(DiscreteResults):
         """
         Pearson residuals
 
-        Notes
-        -----
         Pearson residuals are defined to be
 
         .. math:: r_j = \\frac{(y - M_jp_j)}{\\sqrt{M_jp_j(1-p_j)}}
@@ -5886,8 +5878,6 @@ class BinaryResults(DiscreteResults):
         """
         The response residuals
 
-        Notes
-        -----
         Response residuals are defined to be
 
         .. math:: y - p
@@ -5908,8 +5898,6 @@ class LogitResults(BinaryResults):
         """
         Generalized residuals
 
-        Notes
-        -----
         The generalized residuals for the Logit model are defined
 
         .. math:: y - p
@@ -5950,8 +5938,6 @@ class ProbitResults(BinaryResults):
         """
         Generalized residuals
 
-        Notes
-        -----
         The generalized residuals for the Probit model are defined
 
         .. math:: y\\frac{\\phi(X\\beta)}{\\Phi(X\\beta)}-(1-y)\\frac{\\phi(X\\beta)}{1-\\Phi(X\\beta)}
@@ -6078,8 +6064,6 @@ class MultinomialResults(DiscreteResults):
         """
         Residuals indicating which observations are misclassified.
 
-        Notes
-        -----
         The residuals for the multinomial model are defined as
 
         .. math:: argmax(y_i) \\neq argmax(p_i)

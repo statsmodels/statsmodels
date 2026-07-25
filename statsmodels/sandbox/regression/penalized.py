@@ -325,10 +325,7 @@ class TheilRegressionResults(RegressionResults):
 
         where xpxi = (X'X + sigma2_e * lambd * sigma_prior)^{-1}
 
-        Notes
-        -----
-
-        uses wexog, so this includes weights or sigma - check this case
+        Uses wexog, so this includes weights or sigma - check this case
 
         not clear whether I need to multiply by sigmahalf, i.e.
 

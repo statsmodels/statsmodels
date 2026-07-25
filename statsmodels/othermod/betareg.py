@@ -880,8 +880,6 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
         """
         Cox-Snell Likelihood-Ratio pseudo-R-squared
 
-        Notes
-        -----
         Computed as ``1 - exp((llnull - llf) * (2 / nobs))``.
         """
         return self.pseudo_rsquared(kind="lr")

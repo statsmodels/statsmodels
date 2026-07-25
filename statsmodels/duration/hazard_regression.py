@@ -1674,8 +1674,6 @@ class PHRegResults(base.LikelihoodModelResults):
         """
         A matrix containing the Schoenfeld residuals
 
-        Notes
-        -----
         Schoenfeld residuals for censored observations are set to zero.
         """
 
