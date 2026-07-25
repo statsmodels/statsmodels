@@ -695,3 +695,96 @@ class Test_Factor:
         fcor *= np.abs(fcor) >= 0.2
 
         assert_allclose(tcor.todense(), fcor, rtol=0.25, atol=1e-3)
+
+
+class TestCorrelationAdjoint:
+    """Tests for adjoint differentiation of correlation matrix operations.
+
+    Verifies clip_evals_adjoint and corr_nearest_adjoint against
+    central finite differences.
+
+    Reference: Goloubentsev, Goloubentsev, Lakshtanov (2021),
+    arXiv:2109.04913.
+    """
+
+    def test_clip_evals_adjoint(self):
+        from statsmodels.stats.correlation_tools import (
+            clip_evals, clip_evals_adjoint
+        )
+        np.random.seed(42)
+        n = 5
+        A = np.random.randn(n, n)
+        A = A + A.T
+        A -= 2 * np.eye(n)  # ensure some negative eigenvalues
+
+        x_bar = np.random.randn(n, n)
+        x_bar = 0.5 * (x_bar + x_bar.T)
+
+        A_bar_ad = clip_evals_adjoint(A, x_bar, value=0)
+
+        h = 1e-7
+        A_bar_fd = np.zeros_like(A)
+        for i in range(n):
+            for j in range(n):
+                Ap = A.copy(); Ap[i, j] += h
+                Ap = 0.5 * (Ap + Ap.T)
+                Am = A.copy(); Am[i, j] -= h
+                Am = 0.5 * (Am + Am.T)
+                xp, _ = clip_evals(Ap, value=0)
+                xm, _ = clip_evals(Am, value=0)
+                A_bar_fd[i, j] = np.sum(x_bar * (xp - xm)) / (2 * h)
+
+        assert_allclose(A_bar_ad, A_bar_fd, atol=1e-6,
+                        err_msg="clip_evals_adjoint does not match FD")
+
+    def test_clip_evals_adjoint_no_clipping(self):
+        from statsmodels.stats.correlation_tools import clip_evals_adjoint
+        # PSD matrix: no eigenvalues clipped, adjoint = identity
+        A = np.eye(4) * 2
+        x_bar = np.random.randn(4, 4)
+        x_bar = 0.5 * (x_bar + x_bar.T)
+        A_bar = clip_evals_adjoint(A, x_bar, value=0)
+        assert_allclose(A_bar, x_bar, atol=1e-12,
+                        err_msg="adjoint should be identity when no clipping")
+
+    def test_corr_nearest_adjoint(self):
+        from statsmodels.stats.correlation_tools import (
+            corr_nearest, corr_nearest_adjoint
+        )
+        np.random.seed(42)
+        n = 4
+        C = np.random.randn(n, n)
+        C = C + C.T
+        C /= np.max(np.abs(C))
+        np.fill_diagonal(C, 1.0)
+
+        C_bar = np.random.randn(n, n)
+        C_bar = 0.5 * (C_bar + C_bar.T)
+
+        adj_ad = corr_nearest_adjoint(C, C_bar, threshold=1e-15)
+
+        h = 1e-7
+        adj_fd = np.zeros_like(C)
+        for i in range(n):
+            for j in range(n):
+                Cp = C.copy(); Cp[i, j] += h
+                Cp = 0.5 * (Cp + Cp.T)
+                Cm = C.copy(); Cm[i, j] -= h
+                Cm = 0.5 * (Cm + Cm.T)
+                rp = corr_nearest(Cp, threshold=1e-15)
+                rm = corr_nearest(Cm, threshold=1e-15)
+                adj_fd[i, j] = np.sum(C_bar * (rp - rm)) / (2 * h)
+
+        assert_allclose(adj_ad, adj_fd, atol=1e-5,
+                        err_msg="corr_nearest_adjoint does not match FD")
+
+    def test_corr_nearest_adjoint_already_psd(self):
+        from statsmodels.stats.correlation_tools import corr_nearest_adjoint
+        # Already valid correlation matrix: adjoint = identity (off-diag)
+        C = np.array([[1.0, 0.5], [0.5, 1.0]])
+        C_bar = np.array([[0.1, 0.3], [0.3, 0.2]])
+        adj = corr_nearest_adjoint(C, C_bar)
+        # Off-diagonal should pass through, diagonal should be zero
+        # (output diagonal is always 1, independent of input)
+        assert_allclose(adj[0, 1], C_bar[0, 1], atol=1e-10)
+        assert_allclose(adj[1, 0], C_bar[1, 0], atol=1e-10)
