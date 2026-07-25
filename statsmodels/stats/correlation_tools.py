@@ -152,6 +152,144 @@ def corr_clipped(corr, threshold=1e-15):
     return x_new
 
 
+
+
+def _matrix_func_adjoint(A, func, deriv, C_bar):
+    """Adjoint of C = f(A) for symmetric A via spectral decomposition.
+
+    Given C = V f(D) V^T where A = V D V^T, and cotangent C_bar = dL/dC,
+    computes A_bar = dL/dA.
+
+    Formula (arXiv:2109.04913, Section 2):
+        A_bar = V @ (F * (V^T @ C_bar @ V)) @ V^T
+    where F_ij = (f(l_i) - f(l_j)) / (l_i - l_j), F_ii = f'(l_i).
+
+    Parameters
+    ----------
+    A : ndarray (n, n)
+        Symmetric input matrix.
+    func : callable
+        Scalar function applied to eigenvalues.
+    deriv : callable
+        Derivative of func.
+    C_bar : ndarray (n, n)
+        Cotangent of the output.
+
+    Returns
+    -------
+    A_bar : ndarray (n, n)
+        Cotangent of the input.
+
+    References
+    ----------
+    .. [1] Goloubentsev, Goloubentsev, Lakshtanov (2021).
+       "Adjoint Differentiation for generic matrix functions",
+       arXiv:2109.04913, Section 2.
+    """
+    evals, V = np.linalg.eigh(A)
+    n = len(evals)
+    f_evals = np.array([func(l) for l in evals])
+    F = np.empty((n, n))
+    for i in range(n):
+        F[i, i] = deriv(evals[i])
+        for j in range(i + 1, n):
+            denom = evals[i] - evals[j]
+            if abs(denom) < 1e-12:
+                F[i, j] = F[j, i] = deriv(evals[i])
+            else:
+                F[i, j] = F[j, i] = (f_evals[i] - f_evals[j]) / denom
+    inner = V.T @ C_bar @ V
+    A_bar = V @ (F * inner) @ V.T
+    return 0.5 * (A_bar + A_bar.T)
+
+
+def clip_evals_adjoint(x, x_bar, value=0):
+    """Adjoint of clip_evals (eigenvalue clipping / PSD projection).
+
+    Given x_new, _ = clip_evals(x, value) and cotangent x_bar = dL/dx_new,
+    computes dL/dx.
+
+    Parameters
+    ----------
+    x : ndarray (n, n)
+        Symmetric input matrix.
+    x_bar : ndarray (n, n)
+        Cotangent of the output.
+    value : float
+        Clipping threshold (default 0).
+
+    Returns
+    -------
+    adjoint : ndarray (n, n)
+        Cotangent of the input.
+
+    See Also
+    --------
+    clip_evals
+
+    References
+    ----------
+    .. [1] Goloubentsev, Goloubentsev, Lakshtanov (2021).
+       "Adjoint Differentiation for generic matrix functions",
+       arXiv:2109.04913, Section 3.2 (spectrum cut-off).
+    """
+    func = lambda l: max(l, value)
+    deriv = lambda l: 1.0 if l >= value else 0.0
+    return _matrix_func_adjoint(x, func, deriv, x_bar)
+
+
+def corr_clipped_adjoint(corr, corr_bar, threshold=1e-15):
+    """Adjoint of corr_clipped (nearest correlation via eigenvalue clipping).
+
+    Given X = corr_clipped(corr) and cotangent corr_bar = dL/dX,
+    computes dL/dcorr.
+
+    corr_clipped clips negative eigenvalues and rescales the diagonal to 1.
+    The adjoint chains through both steps using the spectral formula for
+    the eigenvalue clipping and standard chain rule for the rescaling.
+
+    Parameters
+    ----------
+    corr : ndarray (n, n)
+        Input correlation matrix (symmetric, may be non-PSD).
+    corr_bar : ndarray (n, n)
+        Cotangent of the output.
+    threshold : float
+        Eigenvalue clipping threshold.
+
+    Returns
+    -------
+    adjoint : ndarray (n, n)
+        Cotangent of the input.
+
+    See Also
+    --------
+    corr_clipped
+
+    References
+    ----------
+    .. [1] Goloubentsev, Goloubentsev, Lakshtanov (2021).
+       "Adjoint Differentiation for generic matrix functions",
+       arXiv:2109.04913, Section 4 (nearest correlation matrix).
+    """
+    x_clip, clipped = clip_evals(corr, value=threshold)
+
+    if not clipped:
+        return corr_bar.copy()
+
+    d = np.sqrt(np.diag(x_clip))
+    x_out = x_clip / np.outer(d, d)
+
+    x_clip_bar = corr_bar / np.outer(d, d)
+    for k in range(len(d)):
+        dL_ddk = -np.sum(
+            corr_bar[k, :] * x_out[k, :] + corr_bar[:, k] * x_out[:, k]
+        ) / d[k]
+        x_clip_bar[k, k] += dL_ddk / (2 * d[k])
+
+    return clip_evals_adjoint(corr, x_clip_bar, value=threshold)
+
+
 def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=False):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
