@@ -506,7 +506,7 @@ class _BayesMixedGLM(base.Model):
         if scale_fe:
             mn = self.exog.mean(0)
             sc = self.exog.std(0)
-            self._exog_save = self.exog
+            exog_save = self.exog
             self.exog = self.exog.copy()
             ixs = np.flatnonzero(sc > 1e-8)
             self.exog[:, ixs] -= mn[ixs]
@@ -536,8 +536,7 @@ class _BayesMixedGLM(base.Model):
         params = r.x
 
         if scale_fe:
-            self.exog = self._exog_save
-            del self._exog_save
+            self.exog = exog_save
             params[ixs] /= sc[ixs]
             cov[ixs, :][:, ixs] /= np.outer(sc[ixs], sc[ixs])
 
@@ -774,7 +773,7 @@ class _VariationalBayesMixedGLM:
         if scale_fe:
             mn = self.exog.mean(0)
             sc = self.exog.std(0)
-            self._exog_save = self.exog
+            exog_save = self.exog
             self.exog = self.exog.copy()
             ixs = np.flatnonzero(sc > 1e-8)
             self.exog[:, ixs] -= mn[ixs]
@@ -833,8 +832,7 @@ class _VariationalBayesMixedGLM:
         va = np.exp(2 * mm.x[n:])
 
         if scale_fe:
-            self.exog = self._exog_save
-            del self._exog_save
+            self.exog = exog_save
             params[ixs] /= sc[ixs]
             va[ixs] /= sc[ixs] ** 2
 

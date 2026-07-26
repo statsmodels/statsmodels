@@ -314,7 +314,7 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     exogp_st = transf.reduce(exog)
 
     offset = exog.dot(transf.constant.squeeze())
-    if hasattr(self, "offset"):
+    if getattr(self, "offset", None) is not None:
         offset += self.offset
 
     if start_params is not None:
