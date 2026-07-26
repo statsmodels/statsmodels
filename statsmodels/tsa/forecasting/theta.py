@@ -601,7 +601,7 @@ class ThetaModelResults:
         alpha: float | None = 0.05,
         in_sample: bool = False,
         fig: matplotlib.figure.Figure | None = None,
-        figsize: tuple[float, float] = None,
+        figsize: tuple[float, float] | None = None,
     ) -> matplotlib.figure.Figure:
         r"""
         Plot forecasts, prediction intervals and in-sample values

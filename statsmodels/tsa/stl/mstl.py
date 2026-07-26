@@ -121,6 +121,7 @@ class MSTL:
         self._y = self._to_1d_array(endog)
         self.nobs = self._y.shape[0]
         self.lmbda = lmbda
+        self.est_lmbda = None
         self.periods, self.windows = self._process_periods_and_windows(periods, windows)
         self.iterate = iterate
         self._stl_kwargs = self._remove_overloaded_stl_kwargs(

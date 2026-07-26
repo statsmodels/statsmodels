@@ -444,7 +444,7 @@ class Representation:
             dtype = np.array(value).dtype
             matrix = getattr(self, "_" + name)
             valid_types = ["f", "d", "F", "D"]
-            if not matrix.dtype == dtype and dtype.char in valid_types:
+            if matrix.dtype != dtype and dtype.char in valid_types:
                 matrix = getattr(self, "_" + name).real.astype(dtype)
 
             # Since the model can support time-varying arrays, but often we
@@ -497,7 +497,7 @@ class Representation:
         # Get defaults for time-invariant system matrices, if not otherwise
         # provided
         # Time-varying matrices must be replaced.
-        for name in self.shapes.keys():
+        for name in self.shapes:
             if name == "obs":
                 continue
 
@@ -1085,7 +1085,7 @@ class Representation:
         if prefix not in self._representations:
             # Copy the statespace representation matrices
             self._representations[prefix] = {}
-            for matrix in self.shapes.keys():
+            for matrix in self.shapes:
                 if matrix == "obs":
                     self._representations[prefix][matrix] = self.obs.astype(dtype)
                 else:
@@ -1095,7 +1095,7 @@ class Representation:
                     ).astype(dtype)
         # If they do exist, update them
         else:
-            for matrix in self.shapes.keys():
+            for matrix in self.shapes:
                 existing = self._representations[prefix][matrix]
                 if matrix == "obs":
                     # existing[:] = self.obs.astype(dtype)
@@ -1112,14 +1112,14 @@ class Representation:
         if prefix in self._statespaces:
             ss = self._statespaces[prefix]
             create = (
-                not ss.obs.shape[1] == self.endog.shape[1]
-                or not ss.design.shape[2] == self.design.shape[2]
-                or not ss.obs_intercept.shape[1] == self.obs_intercept.shape[1]
-                or not ss.obs_cov.shape[2] == self.obs_cov.shape[2]
-                or not ss.transition.shape[2] == self.transition.shape[2]
-                or not (ss.state_intercept.shape[1] == self.state_intercept.shape[1])
-                or not ss.selection.shape[2] == self.selection.shape[2]
-                or not ss.state_cov.shape[2] == self.state_cov.shape[2]
+                ss.obs.shape[1] != self.endog.shape[1]
+                or ss.design.shape[2] != self.design.shape[2]
+                or ss.obs_intercept.shape[1] != self.obs_intercept.shape[1]
+                or ss.obs_cov.shape[2] != self.obs_cov.shape[2]
+                or ss.transition.shape[2] != self.transition.shape[2]
+                or ss.state_intercept.shape[1] != self.state_intercept.shape[1]
+                or ss.selection.shape[2] != self.selection.shape[2]
+                or ss.state_cov.shape[2] != self.state_cov.shape[2]
             )
         else:
             create = True
@@ -1308,7 +1308,7 @@ class FrozenRepresentation:
 
         # Save the final shapes of the matrices
         self.shapes = dict(model.shapes)
-        for name in self.shapes.keys():
+        for name in self.shapes:
             if name == "obs":
                 continue
             self.shapes[name] = getattr(self, name).shape

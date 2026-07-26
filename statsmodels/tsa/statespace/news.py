@@ -1184,9 +1184,9 @@ class NewsResults:
                 if key in details:
                     args = (
                         # mark_ones
-                        True if key in ["weight"] else False,
+                        key in ["weight"],
                         # mark_zeroes
-                        True if key in ["weight", "impact"] else False)
+                        key in ["weight", "impact"])
                     details[key] = details[key].apply(str_format, args=args)
             for key in [columns["update date"], "impact date"]:
                 if key in details:

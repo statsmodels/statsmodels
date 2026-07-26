@@ -490,7 +490,7 @@ class SARIMAX(MLEModel):
             kwargs.setdefault("initial_variance", 1e10)
 
         # Handle non-default loglikelihood burn
-        self._loglikelihood_burn = kwargs.get("loglikelihood_burn", None)
+        self._loglikelihood_burn = kwargs.get("loglikelihood_burn")
 
         # Number of parameters
         self.k_params = (
@@ -1703,7 +1703,7 @@ class SARIMAX(MLEModel):
         # Transition matrix
         if self.k_ar > 0 or self.k_seasonal_ar > 0:
             self.ssm[self.transition_ar_params_idx] = reduced_polynomial_ar[1:]
-        elif not self.ssm.transition.dtype == params.dtype:
+        elif self.ssm.transition.dtype != params.dtype:
             # This is required if the transition matrix is not really in use
             # (e.g. for an MA(q) process) so that it's dtype never changes as
             # the parameters' dtype changes. This changes the dtype manually.
@@ -1793,7 +1793,7 @@ class SARIMAX(MLEModel):
 
         # Retrieve the extensions to the time-varying system matrices and
         # put them in kwargs
-        for name in self.ssm.shapes.keys():
+        for name in self.ssm.shapes:
             if name == "obs" or name in kwargs:
                 continue
             original = getattr(self.ssm, name)
@@ -2060,7 +2060,7 @@ class SARIMAXResults(MLEResults):
                               (str(order_seasonal_ar), k_seasonal_diff,
                                str(order_seasonal_ma),
                                self.model.seasonal_periods))
-            if not order == "":
+            if order != "":
                 order += "x"
         model_name = f"{self.model.__class__.__name__}{order}{seasonal_order}"
 

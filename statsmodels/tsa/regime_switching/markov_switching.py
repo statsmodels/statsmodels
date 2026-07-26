@@ -480,9 +480,9 @@ class MarkovSwitchingParams:
                 offset = 0
                 indices = []
                 for k, v in self.relative_index_regime_purpose[j].items():
-                    v = (np.r_[v] + offset).tolist()
-                    self.index_regime_purpose[j][k] = v
-                    indices.append(v)
+                    abs_v = (np.r_[v] + offset).tolist()
+                    self.index_regime_purpose[j][k] = abs_v
+                    indices.append(abs_v)
                     offset += self.k_parameters[k]
                 self.index_regime[j] = np.concatenate(indices).astype(int)
         else:
@@ -2278,10 +2278,10 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         if not isinstance(model_name, list):
             model_name = [model_name]
 
-        top_left = [("Dep. Variable:", None)]
-        top_left.append(("Model:", [model_name[0]]))
-        for i in range(1, len(model_name)):
-            top_left.append(("", ["+ " + model_name[i]]))
+        top_left = [("Dep. Variable:", None), ("Model:", [model_name[0]])]
+        top_left.extend(
+            ("", ["+ " + model_name[i]]) for i in range(1, len(model_name))
+        )
         top_left += [
             ("Date:", None),
             ("Time:", None),
@@ -2355,7 +2355,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                 summary.tables.append(table)
 
         mask = []
-        for _key, _mask in other_masks.items():
+        for _mask in other_masks.values():
             mask.extend(_mask)
         if len(mask) > 0:
             table = make_table(self, mask, "Non-switching parameters")

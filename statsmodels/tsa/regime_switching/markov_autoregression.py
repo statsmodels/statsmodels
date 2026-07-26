@@ -109,7 +109,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         # Switching options
         if self.switching_ar is True or self.switching_ar is False:
             self.switching_ar = [self.switching_ar] * order
-        elif not len(self.switching_ar) == order:
+        elif len(self.switching_ar) != order:
             raise ValueError("Invalid iterable passed to `switching_ar`.")
 
         # Initialize the base model

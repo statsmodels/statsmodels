@@ -406,7 +406,7 @@ class DynamicFactorMQStates(dict):
         block_loading_counts = {
             block: np.atleast_1d(
                 self.loading_counts.loc[list(block), "count"]).mean(axis=0)
-            for block in factor_orders.keys()}
+            for block in factor_orders}
         ix = pd.Index(block_loading_counts.keys(), tupleize_cols=False,
                       name="block")
         self.block_loading_counts = pd.Series(
@@ -537,10 +537,9 @@ class DynamicFactorMQStates(dict):
         # Expand the factor orders to account for the multiplicities
         new_factor_orders = {}
         for block, factor_order in factor_orders.items():
-            if not isinstance(block, tuple):
-                block = (block,)
+            block_tuple = block if isinstance(block, tuple) else (block,)
             new_block = []
-            for factor_name in block:
+            for factor_name in block_tuple:
                 n = factor_multiplicities.get(factor_name, 1)
                 if n > 1:
                     new_block += [f"{factor_name}.{i + 1}"
@@ -623,9 +622,10 @@ class DynamicFactorMQStates(dict):
     def factors_L1_5_ix(self):
         """Factors plus any lags, index shaped (5, k_factors)"""
         ix = np.arange(self.k_states_factors)
-        iloc = []
-        for block in self.factor_blocks:
-            iloc.append(ix[block.factors_L1_5].reshape(5, block.k_factors))
+        iloc = [
+            ix[block.factors_L1_5].reshape(5, block.k_factors)
+            for block in self.factor_blocks
+        ]
         return np.concatenate(iloc, axis=1)
 
     @property
@@ -677,9 +677,10 @@ class DynamicFactorMQStates(dict):
         # i.e. endog_factor_iloc[i] is a list of integer locations of the
         # factors that load on the ith observed variable
         if self._endog_factor_iloc is None:
-            ilocs = []
-            for i in range(self.k_endog):
-                ilocs.append(np.where(self.endog_factor_map.iloc[i])[0])
+            ilocs = [
+                np.where(self.endog_factor_map.iloc[i])[0]
+                for i in range(self.k_endog)
+            ]
             self._endog_factor_iloc = ilocs
         return self._endog_factor_iloc
 
@@ -1715,10 +1716,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         model_name = self._model_name
 
         # - Top summary table ------------------------------------------------
-        top_left = []
-        top_left.append(("Model:", [model_name[0]]))
-        for i in range(1, len(model_name)):
-            top_left.append(("", ["+ " + model_name[i]]))
+        top_left = [("Model:", [model_name[0]])]
+        top_left.extend(
+            ("", ["+ " + model_name[i]]) for i in range(1, len(model_name))
+        )
         top_left += [
             ("Sample:", [sample[0]]),
             ("", [sample[1]])]
@@ -1830,10 +1831,11 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         endog_names = self._get_endog_names(as_string=False)
         for endog_name in endog_names:
             for block in self._s.factor_blocks:
-                for factor_name in block.factor_names:
-                    if self.endog_factor_map.loc[endog_name, factor_name]:
-                        param_names.append(
-                            f"loading.{factor_name}->{endog_name}")
+                param_names.extend(
+                    f"loading.{factor_name}->{endog_name}"
+                    for factor_name in block.factor_names
+                    if self.endog_factor_map.loc[endog_name, factor_name]
+                )
 
         # Factor VAR
         for block in self._s.factor_blocks:
@@ -3214,10 +3216,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                     sim = (sim.multiply(self._endog_std, axis=1, level=0)
                               .add(self._endog_mean, axis=1, level=0))
             # 1-dim array (k_endog=1, replications=None)
-            elif len(shape) == 1:
-                sim = sim * self._endog_std + self._endog_mean
-            # 2-dim array (k_endog > 1, replications=None)
-            elif len(shape) == 2:
+            elif len(shape) == 1 or len(shape) == 2:
                 sim = sim * self._endog_std + self._endog_mean
             # 3-dim array with MultiIndex (replications > 0)
             else:
@@ -3326,10 +3325,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 elif len(shape) == 2:
                     irfs = irfs.multiply(self._endog_std, axis=1, level=0)
             # 1-dim array (k_endog=1)
-            elif len(shape) == 1:
-                irfs = irfs * self._endog_std
-            # 2-dim array (k_endog > 1)
-            elif len(shape) == 2:
+            elif len(shape) == 1 or len(shape) == 2:
                 irfs = irfs * self._endog_std
 
         return irfs

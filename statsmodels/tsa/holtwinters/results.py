@@ -286,7 +286,7 @@ class HoltWintersResults(Results):
             None: "None",
         }
         transform = self.params["use_boxcox"]
-        box_cox_transform = True if transform else False
+        box_cox_transform = bool(transform)
         box_cox_coeff = (
             transform if isinstance(transform, str) else self.params["lamda"]
         )

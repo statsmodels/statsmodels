@@ -564,7 +564,7 @@ class UnobservedComponents(MLEModel):
         if self.trend_specification is None:
             # trend specification may be none, e.g. if the model is only
             # a stochastic cycle, etc.
-            self.trend_specification = _mask_map.get(self.trend_mask, None)
+            self.trend_specification = _mask_map.get(self.trend_mask)
 
         # Exogenous component
         (self.k_exog, exog) = prepare_exog(exog)
@@ -604,7 +604,7 @@ class UnobservedComponents(MLEModel):
         )
 
         # Handle non-default loglikelihood burn
-        self._loglikelihood_burn = kwargs.get("loglikelihood_burn", None)
+        self._loglikelihood_burn = kwargs.get("loglikelihood_burn")
 
         # We can still estimate the model with just the irregular component,
         # just need to have one state that does nothing.
@@ -973,7 +973,7 @@ class UnobservedComponents(MLEModel):
 
         # Create the starting parameter list
         start_params = []
-        for key in self.parameters.keys():
+        for key in self.parameters:
             if np.isscalar(_start_params[key]):
                 start_params.append(_start_params[key])
             else:
@@ -985,7 +985,7 @@ class UnobservedComponents(MLEModel):
         if not hasattr(self, "parameters"):
             return []
         param_names = []
-        for key in self.parameters.keys():
+        for key in self.parameters:
             if key == "irregular_var":
                 param_names.append("sigma2.irregular")
             elif key == "level_var":
@@ -1011,8 +1011,9 @@ class UnobservedComponents(MLEModel):
             elif key == "cycle_damp":
                 param_names.append("damping.cycle")
             elif key == "ar_coeff":
-                for i in range(self.ar_order):
-                    param_names.append("ar.L%d" % (i + 1))
+                param_names.extend(
+                    "ar.L%d" % (i + 1) for i in range(self.ar_order)
+                )
             elif key == "ar_var":
                 param_names.append("sigma2.ar")
             elif key == "reg_coeff":

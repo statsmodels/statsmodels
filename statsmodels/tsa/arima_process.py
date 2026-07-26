@@ -657,9 +657,9 @@ def deconvolve(num, den, n=None):
     else:
         if n is None:
             n = N - D + 1
-        input = np.zeros(n, float)
-        input[0] = 1
-        quot = signal.lfilter(num, den, input)
+        impulse = np.zeros(n, float)
+        impulse[0] = 1
+        quot = signal.lfilter(num, den, impulse)
         num_approx = signal.convolve(den, quot, mode="full")
         if len(num) < len(num_approx):  # 1d only ?
             num = np.concatenate((num, np.zeros(len(num_approx) - len(num))))
@@ -961,10 +961,7 @@ class ArmaProcess:
         bool
              True if autoregressive roots are outside unit circle.
         """
-        if np.all(np.abs(self.arroots) > 1.0):
-            return True
-        else:
-            return False
+        return bool(np.all(np.abs(self.arroots) > 1.0))
 
     @property
     def isinvertible(self):
@@ -976,10 +973,7 @@ class ArmaProcess:
         bool
              True if moving average roots are outside unit circle.
         """
-        if np.all(np.abs(self.maroots) > 1):
-            return True
-        else:
-            return False
+        return bool(np.all(np.abs(self.maroots) > 1))
 
     def invertroots(self, retnew=False):
         """

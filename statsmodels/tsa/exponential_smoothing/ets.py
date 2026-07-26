@@ -827,10 +827,11 @@ class ETSModel(base.StateSpaceMLEModel):
         This should not be called directly, but by calling
         ``self.start_params``.
         """
-        params = []
-        for p in self._smoothing_param_names:
-            if p in self.param_names:
-                params.append(self._default_start_params[p])
+        params = [
+            self._default_start_params[p]
+            for p in self._smoothing_param_names
+            if p in self.param_names
+        ]
 
         if self.initialization_method == "estimated":
             lvl_idx = len(params)

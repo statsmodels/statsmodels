@@ -1305,11 +1305,11 @@ class DynamicFactorResults(MLEResults):
 
             # Add a table for all other parameters
             masks = []
-            for m in (loading_masks, exog_masks, factor_masks,
-                      error_masks, [error_cov_mask]):
-                m = np.array(m).flatten()
-                if len(m) > 0:
-                    masks.append(m)
+            for group in (loading_masks, exog_masks, factor_masks,
+                          error_masks, [error_cov_mask]):
+                flat_mask = np.array(group).flatten()
+                if len(flat_mask) > 0:
+                    masks.append(flat_mask)
             masks = np.concatenate(masks)
             inverse_mask = np.array(list(set(indices).difference(set(masks))))
             if len(inverse_mask) > 0:

@@ -858,14 +858,14 @@ class SARIMAXSpecification:
                 if params is None:
                     raise ValueError("Specification includes %s, but no"
                                      " parameters were provided." % title)
-                params = np.atleast_1d(np.squeeze(params))
-                if not params.shape == (k,):
+                params_arr = np.atleast_1d(np.squeeze(params))
+                if not params_arr.shape == (k,):
                     raise ValueError("Specification included %d %s, but"
                                      " parameters with shape %s were provided."
-                                     % (k, title, params.shape))
+                                     % (k, title, params_arr.shape))
 
                 # Otherwise add to the list
-                params_list.append(params)
+                params_list.append(params_arr)
 
         return np.concatenate(params_list)
 

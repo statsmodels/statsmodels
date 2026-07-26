@@ -1989,13 +1989,11 @@ def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
     # components
     time_trend = np.arange(offset, nobs + offset)
     trend_data = np.zeros((nobs, k_trend))
-    i = 0
-    for k in polynomial_trend.nonzero()[0]:
+    for i, k in enumerate(polynomial_trend.nonzero()[0]):
         if k == 0:
             trend_data[:, i] = np.ones(nobs,)
         else:
             trend_data[:, i] = time_trend**k
-        i += 1
 
     return trend_data
 
@@ -2370,11 +2368,11 @@ def _atleast_1d(*arys):
         if ary is None:
             result = None
         else:
-            ary = np.asanyarray(ary)
-            if ary.ndim == 0:
-                result = ary.reshape(1)
+            arr = np.asanyarray(ary)
+            if arr.ndim == 0:
+                result = arr.reshape(1)
             else:
-                result = ary
+                result = arr
         res.append(result)
     if len(res) == 1:
         return res[0]
@@ -2409,13 +2407,13 @@ def _atleast_2d(*arys):
         if ary is None:
             result = None
         else:
-            ary = np.asanyarray(ary)
-            if ary.ndim == 0:
-                result = ary.reshape(1, 1)
-            elif ary.ndim == 1:
-                result = ary[:, np.newaxis]
+            arr = np.asanyarray(ary)
+            if arr.ndim == 0:
+                result = arr.reshape(1, 1)
+            elif arr.ndim == 1:
+                result = arr[:, np.newaxis]
             else:
-                result = ary
+                result = arr
         res.append(result)
     if len(res) == 1:
         return res[0]

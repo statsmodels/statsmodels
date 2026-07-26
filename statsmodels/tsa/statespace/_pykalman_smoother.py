@@ -46,6 +46,7 @@ class _KalmanSmoother:
         self.kfilter = kfilter
         self._kfilter = model._kalman_filter
         self.smoother_output = smoother_output
+        self.t = -1
 
         # Create storage
         self.scaled_smoothed_estimator = None

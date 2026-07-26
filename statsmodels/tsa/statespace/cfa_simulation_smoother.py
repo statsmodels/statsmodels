@@ -99,7 +99,7 @@ class CFASimulationSmoother:
         self._posterior_mean = None
         self._posterior_cov_inv_chol = None
         self._posterior_cov = None
-        self._simulated_state = None
+        self.simulated_state = None
 
     @property
     def _simulation_smoother(self):

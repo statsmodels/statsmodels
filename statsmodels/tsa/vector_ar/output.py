@@ -8,45 +8,45 @@ from statsmodels.iolib import SimpleTable
 
 mat = np.array
 
-_default_table_fmt = dict(
-    empty_cell="",
-    colsep="  ",
-    row_pre="",
-    row_post="",
-    table_dec_above="=",
-    table_dec_below="=",
-    header_dec_below="-",
-    header_fmt="%s",
-    stub_fmt="%s",
-    title_align="c",
-    header_align="r",
-    data_aligns="r",
-    stubs_align="l",
-    fmt="txt"
-)
+_default_table_fmt = {
+    "empty_cell": "",
+    "colsep": "  ",
+    "row_pre": "",
+    "row_post": "",
+    "table_dec_above": "=",
+    "table_dec_below": "=",
+    "header_dec_below": "-",
+    "header_fmt": "%s",
+    "stub_fmt": "%s",
+    "title_align": "c",
+    "header_align": "r",
+    "data_aligns": "r",
+    "stubs_align": "l",
+    "fmt": "txt"
+}
 
 
 class VARSummary:
-    default_fmt = dict(
+    default_fmt = {
         # data_fmts=["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
         # data_fmts=["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
-        data_fmts=["%#15.6F", "%#15.6F", "%#15.3F", "%#14.3F"],
-        empty_cell="",
+        "data_fmts": ["%#15.6F", "%#15.6F", "%#15.3F", "%#14.3F"],
+        "empty_cell": "",
         # colwidths=10,
-        colsep="  ",
-        row_pre="",
-        row_post="",
-        table_dec_above="=",
-        table_dec_below="=",
-        header_dec_below="-",
-        header_fmt="%s",
-        stub_fmt="%s",
-        title_align="c",
-        header_align="r",
-        data_aligns="r",
-        stubs_align="l",
-        fmt="txt"
-    )
+        "colsep": "  ",
+        "row_pre": "",
+        "row_post": "",
+        "table_dec_above": "=",
+        "table_dec_below": "=",
+        "header_dec_below": "-",
+        "header_fmt": "%s",
+        "stub_fmt": "%s",
+        "title_align": "c",
+        "header_align": "r",
+        "data_aligns": "r",
+        "stubs_align": "l",
+        "fmt": "txt"
+    }
 
     part1_fmt = dict(
         default_fmt,

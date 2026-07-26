@@ -417,8 +417,8 @@ class KalmanFilter(Representation):
             kalman_filter = self._kalman_filters[prefix]
 
             create_filter = (
-                not kalman_filter.conserve_memory == conserve_memory or
-                not kalman_filter.loglikelihood_burn == loglikelihood_burn
+                kalman_filter.conserve_memory != conserve_memory or
+                kalman_filter.loglikelihood_burn != loglikelihood_burn
             )
 
         # If the dtype-specific _kalman_filter does not exist (or if we need
