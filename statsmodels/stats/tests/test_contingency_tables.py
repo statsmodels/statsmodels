@@ -251,6 +251,10 @@ def test_mcnemar_non_2x2():
     with pytest.raises(ValueError, match="2x2"):
         ctab.mcnemar(table, exact=False)
 
+    table_3d = np.ones((2, 2, 2))
+    with pytest.raises(ValueError, match="two-dimensional"):
+        ctab.mcnemar(table_3d)
+
     # A genuine 2x2 table must still work.
     b = ctab.mcnemar(tables[0], exact=False, correction=False)
     assert np.isfinite(b.statistic)
