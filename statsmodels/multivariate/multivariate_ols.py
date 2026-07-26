@@ -431,6 +431,10 @@ class _MultivariateOLS(Model):
         idx = pd.MultiIndex.from_product((self.endog_names, self.exog_names))
         self.data.cov_names = idx
 
+        # Populated by `fit`; declared here so it exists (as None) even
+        # before `fit` has been called.
+        self._fittedmod = None
+
     def fit(self, method="svd"):
         self._fittedmod = _multivariate_ols_fit(
             self.endog, self.exog, method=method)
@@ -533,6 +537,12 @@ class MultivariateLS(_MultivariateOLS):
         default)
     """
 
+    def __init__(self, endog, exog, missing="none", hasconst=None, **kwargs):
+        super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
+        # Populated by `fit`; declared here so it exists (as None) even
+        # before `fit` has been called.
+        self.df_resid = None
+
     def fit(self, method="svd", use_t=True):
         _fittedmod = _multivariate_ols_fit(
             self.endog, self.exog, method=method)
@@ -549,11 +559,9 @@ class MultivariateLS(_MultivariateOLS):
             # extra kwargs are currently ignored
             )
 
-        res.df_resid = self.df_resid = df_resid
         res._fittedmod = _fittedmod
         res.cov_resid = sscpr / df_resid
         return MultivariateLSResultsWrapper(res)
-        return res
 
     def predict(self, params, exog=None):
         if exog is None:
@@ -574,6 +582,13 @@ class MultivariateLSResults(LikelihoodModelResults):
                          **kwargs)
 
         self.method = "Least Squares"
+        # model.df_resid is set by `fit` before this is constructed.
+        self.df_resid = model.df_resid
+        # used in generic part of io summary; computed here (rather than
+        # only when `summary` is called) since they depend only on the
+        # model, not on any argument to `summary`.
+        self.nobs = model.nobs
+        self.df_model = model.k_endog * (model.k_exog - 1)
 
     @cache_readonly
     def bse(self):
@@ -709,10 +724,6 @@ class MultivariateLSResults(LikelihoodModelResults):
         --------
         statsmodels.iolib.summary.Summary : Class that hold summary results.
         """
-        # used in generic part of io summary
-        self.nobs = self.model.nobs
-        self.df_model = self.model.k_endog * (self.model.k_exog - 1)
-
         top_left = [
             ("Dep. Variable:", None),
             ("Model:", [self.model.__class__.__name__]),

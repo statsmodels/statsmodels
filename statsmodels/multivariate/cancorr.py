@@ -69,6 +69,11 @@ class CanCorr(Model):
         self, endog, exog, tolerance=1e-8, missing="none", hasconst=None, **kwargs
     ):
         super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
+        # Declared before `_fit` populates them, for a consistent attribute
+        # set even if an exception occurs during fitting.
+        self.cancorr = None
+        self.x_cancoef = None
+        self.y_cancoef = None
         self._fit(tolerance)
 
     def _fit(self, tolerance=1e-8):

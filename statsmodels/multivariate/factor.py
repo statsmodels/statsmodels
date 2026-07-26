@@ -180,6 +180,14 @@ class Factor(Model):
         self.corr = corr
         self.k_endog = k_endog
 
+        # Populated by `fit` (via `_fit_pa`/`_fit_ml`, depending on
+        # `method`); declared here so they exist (as None) even before
+        # `fit` has been called.
+        self.n_comp = None
+        self.eigenvals = None
+        self.uniqueness = None
+        self.mle_retvals = None
+
         if endog_names is None:
             if hasattr(corr, "index"):
                 endog_names = corr.index
@@ -659,7 +667,7 @@ class FactorResults:
         self.model = factor
         self.endog_names = factor.endog_names
         self.loadings_no_rot = factor.loadings
-        if hasattr(factor, "eigenvals"):
+        if factor.eigenvals is not None:
             self.eigenvals = factor.eigenvals
 
         self.communality = factor.communality
@@ -669,7 +677,7 @@ class FactorResults:
         self.n_comp = factor.loadings.shape[1]
         self.nobs = factor.nobs
         self._factor = factor
-        if hasattr(factor, "mle_retvals"):
+        if factor.mle_retvals is not None:
             self.mle_retvals = factor.mle_retvals
 
         p, k = self.loadings_no_rot.shape
