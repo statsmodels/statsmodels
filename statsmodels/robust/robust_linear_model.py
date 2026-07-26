@@ -113,6 +113,13 @@ class RLM(base.LikelihoodModel):
         # things to remove_data
         self._data_attr.extend(["weights", "pinv_wexog"])
 
+        # Populated by `fit`; declared here so they exist (as None) even
+        # before `fit` has been called.
+        self.cov = None
+        self.scale_est = None
+        self.scale = None
+        self.weights = None
+
     def _initialize(self):
         """
         Initialize the model for the IRLS fit
@@ -186,7 +193,7 @@ class RLM(base.LikelihoodModel):
             history["weights"].append(tmp_results.model.weights)
         return history
 
-    def _estimate_scale(self, resid):
+    def _estimate_scale(self, resid, scale_est):
         """
         Estimate the scale based on the option provided to the fit method
 
@@ -194,24 +201,26 @@ class RLM(base.LikelihoodModel):
         ----------
         resid : ndarray
             The residuals used to estimate the scale.
+        scale_est : str or HuberScale()
+            The scale estimator requested in the call to `fit`.
 
         Returns
         -------
         float
             The estimated scale.
         """
-        if isinstance(self.scale_est, str):
-            if self.scale_est.lower() == "mad":
+        if isinstance(scale_est, str):
+            if scale_est.lower() == "mad":
                 return scale.mad(resid, center=0)
             else:
                 raise ValueError(
-                    "Option %s for scale_est not understood" % self.scale_est
+                    "Option %s for scale_est not understood" % scale_est
                 )
-        elif isinstance(self.scale_est, scale.HuberScale):
-            return self.scale_est(self.df_resid, self.nobs, resid)
+        elif isinstance(scale_est, scale.HuberScale):
+            return scale_est(self.df_resid, self.nobs, resid)
         else:
             # use df correction to match HuberScale
-            return self.scale_est(resid) * np.sqrt(self.nobs / self.df_resid)
+            return scale_est(resid) * np.sqrt(self.nobs / self.df_resid)
 
     def fit(
         self,
@@ -280,12 +289,10 @@ class RLM(base.LikelihoodModel):
         """
         if cov.upper() not in ["H1", "H2", "H3"]:
             raise ValueError("Covariance matrix %s not understood" % cov)
-        else:
-            self.cov = cov.upper()
+        cov = cov.upper()
         conv = conv.lower()
         if conv not in ["weights", "coefs", "dev", "sresid"]:
             raise ValueError("Convergence argument %s not understood" % conv)
-        self.scale_est = scale_est
 
         if start_params is None:
             wls_results = lm.WLS(self.endog, self.exog).fit()
@@ -306,11 +313,11 @@ class RLM(base.LikelihoodModel):
             wls_results = fake_wls.results(start_params)
 
         if not init and not start_scale:
-            self.scale = self._estimate_scale(wls_results.resid)
+            self.scale = self._estimate_scale(wls_results.resid, scale_est)
         elif start_scale:
             self.scale = start_scale
             if not update_scale:
-                self.scale_est = scale_est = "fixed"
+                scale_est = "fixed"
 
         history = dict(params=[np.inf], scale=[])
         if conv == "coefs":
@@ -346,27 +353,28 @@ class RLM(base.LikelihoodModel):
                 self.endog, self.exog, weights=self.weights, check_weights=True
             ).fit()
             if update_scale is True:
-                self.scale = self._estimate_scale(wls_results.resid)
+                self.scale = self._estimate_scale(wls_results.resid, scale_est)
             history = self._update_history(wls_results, history, conv)
             iteration += 1
             converged = _check_convergence(criterion, iteration, tol, maxiter)
         results = RLMResults(
-            self, wls_results.params, self.normalized_cov_params, self.scale
+            self,
+            wls_results.params,
+            self.normalized_cov_params,
+            self.scale,
+            cov=cov,
         )
 
         history["iteration"] = iteration
         results.fit_history = history
         results.fit_options = dict(
-            cov=cov.upper(),
+            cov=cov,
             scale_est=scale_est,
             norm=self.M.__class__.__name__,
             conv=conv,
         )
         # norm is not changed in fit, no old state
 
-        # doing the next causes exception
-        # self.cov = self.scale_est = None # reset for additional fits
-        # iteration and history could contain wrong state with repeated fit
         return RLMResultsWrapper(results)
 
 
@@ -455,15 +463,21 @@ class RLMResults(base.LikelihoodModelResults):
     statsmodels.base.model.LikelihoodModelResults
     """
 
-    def __init__(self, model, params, normalized_cov_params, scale):
+    def __init__(self, model, params, normalized_cov_params, scale, cov="H1"):
         super().__init__(model, params, normalized_cov_params, scale)
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.nobs = model.nobs
+        self.cov = cov
+        # Snapshot the final IRLS weights now, rather than deferring to
+        # model.weights, so this result is unaffected by any later fit()
+        # call on the same model instance.
+        self.weights = model.weights
         self._cache = {}
         # for remove_data
         self._data_in_cache.extend(["sresid"])
+        self._data_attr.extend(["weights"])
 
         self.cov_params_default = self.bcov_scaled
         # TODO: "pvals" should come from chisq on bse?
@@ -489,17 +503,13 @@ class RLMResults(base.LikelihoodModelResults):
         return self.normalized_cov_params
 
     @cache_readonly
-    def weights(self):
-        return self.model.weights
-
-    @cache_readonly
     def bcov_scaled(self):
         model = self.model
         m = np.mean(model.M.psi_deriv(self.sresid))
         var_psiprime = np.var(model.M.psi_deriv(self.sresid))
         k = 1 + (self.df_model + 1) / self.nobs * var_psiprime / m**2
 
-        if model.cov == "H1":
+        if self.cov == "H1":
             ss_psi = np.sum(model.M.psi(self.sresid) ** 2)
             s_psi_deriv = np.sum(model.M.psi_deriv(self.sresid))
             return (
@@ -513,7 +523,7 @@ class RLMResults(base.LikelihoodModelResults):
             W_inv = np.linalg.inv(W)
             # [W_jk]^-1 = [SUM(psi_deriv(Sr_i)*x_ij*x_jk)]^-1
             # where Sr are the standardized residuals
-            if model.cov == "H2":
+            if self.cov == "H2":
                 # These are correct, based on Huber (1973) 8.13
                 return (
                     k
@@ -523,7 +533,7 @@ class RLMResults(base.LikelihoodModelResults):
                     / ((1 / self.nobs) * np.sum(model.M.psi_deriv(self.sresid)))
                     * W_inv
                 )
-            elif model.cov == "H3":
+            elif self.cov == "H3":
                 return (
                     k**-1
                     * 1
