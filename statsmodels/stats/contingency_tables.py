@@ -1365,6 +1365,13 @@ def mcnemar(table, exact=True, correction=True):
 
     table = _make_df_square(table)
     table = np.asarray(table, dtype=np.float64)
+    if table.shape != (2, 2):
+        raise ValueError(
+            "mcnemar requires a 2x2 contingency table, but the input has "
+            f"shape {table.shape}. For a larger square table, use "
+            "SquareTable.symmetry (Bowker's test of symmetry), which "
+            "generalizes McNemar's test to k x k tables."
+        )
     n1, n2 = table[0, 1], table[1, 0]
 
     if exact:

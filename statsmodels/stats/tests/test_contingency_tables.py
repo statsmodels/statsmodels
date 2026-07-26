@@ -8,6 +8,7 @@ import warnings
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
+import pytest
 
 import statsmodels.api as sm
 import statsmodels.stats.contingency_tables as ctab
@@ -239,6 +240,20 @@ def test_mcnemar():
     # Use binomial reference distribution
     b4 = ctab.mcnemar(tables[0], exact=True)
     assert_allclose(b4.pvalue, r_results.loc[0, "homog_binom_p"])
+
+
+def test_mcnemar_non_2x2():
+    # GH#9485: mcnemar only uses the [0, 1] and [1, 0] cells, so a table
+    # that is not 2x2 must raise instead of silently ignoring the rest.
+    table = np.asarray([[10, 5, 1], [3, 12, 2], [4, 6, 20]])
+    with pytest.raises(ValueError, match="2x2"):
+        ctab.mcnemar(table)
+    with pytest.raises(ValueError, match="2x2"):
+        ctab.mcnemar(table, exact=False)
+
+    # A genuine 2x2 table must still work.
+    b = ctab.mcnemar(tables[0], exact=False, correction=False)
+    assert np.isfinite(b.statistic)
 
 
 def test_from_data_stratified():
