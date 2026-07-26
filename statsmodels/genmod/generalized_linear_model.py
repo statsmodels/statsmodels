@@ -2662,6 +2662,30 @@ class GLMResults(base.LikelihoodModelResults):
     def remove_data(self):
         # GLM has alias/reference in result instance
         self._data_attr.extend([i for i in self.model._data_attr if "_data." not in i])
+
+        # GH#9147: summary() and pseudo_rsquared() rely on scalar likelihood
+        # and information statistics that are computed lazily from the data
+        # and stored in ``self._cache``. ``remove_data`` blanks the whole
+        # cache, so these scalars would be lost and could not be recomputed
+        # once the data arrays are gone (e.g. after ``save(remove_data=True)``
+        # and reload). Evaluate them now, while the data is still present, and
+        # restore the cached scalars after the base class clears the cache.
+        preserved_stats = {}
+        for name in (
+            "llf",
+            "llnull",
+            "deviance",
+            "null_deviance",
+            "pearson_chi2",
+            "aic",
+            "bic_llf",
+            "bic_deviance",
+        ):
+            try:
+                preserved_stats[name] = getattr(self, name)
+            except (AttributeError, NotImplementedError):
+                pass
+
         super(self.__class__, self).remove_data()
 
         # TODO: what are these in results?
@@ -2670,6 +2694,9 @@ class GLMResults(base.LikelihoodModelResults):
         self._var_weights = None
         self._iweights = None
         self._n_trials = None
+
+        # Keep the precomputed scalar statistics available (see above).
+        self._cache.update(preserved_stats)
 
     @Appender(_plot_added_variable_doc % {"extra_params_doc": ""})
     def plot_added_variable(

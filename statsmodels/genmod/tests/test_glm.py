@@ -1353,6 +1353,49 @@ def test_summary():
         rslt.summary()
 
 
+def test_summary_after_remove_data(tmp_path):
+    # GH#9147: saving with remove_data=True must not break summary() (and
+    # pseudo_rsquared) on the reloaded results. The scalar likelihood and
+    # information statistics that summary() needs are computed lazily from
+    # the data and cached; remove_data used to blank them, so they could not
+    # be recomputed once the data arrays were gone.
+    rs = np.random.RandomState(4323)
+    n = 100
+    exog = rs.normal(size=(n, 2))
+    exog[:, 0] = 1
+    endog = exog @ np.array([1.0, -0.5]) + rs.normal(size=n)
+
+    res = sm.GLM(endog, exog, family=sm.families.Gaussian()).fit()
+    expected = {
+        "llf": res.llf,
+        "llnull": res.llnull,
+        "deviance": res.deviance,
+        "pearson_chi2": res.pearson_chi2,
+        "aic": res.aic,
+        "prsquared": res.pseudo_rsquared(kind="cs"),
+    }
+
+    path = os.path.join(str(tmp_path), "glm_results.pickle")
+    res.save(path, remove_data=True)
+    loaded = sm.load(path)
+
+    # The data arrays are still removed.
+    assert loaded._endog is None
+    assert loaded.model.endog is None
+
+    # summary() and pseudo_rsquared() work on the reloaded results.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        assert "Generalized Linear Model" in str(loaded.summary())
+
+    assert_allclose(loaded.llf, expected["llf"])
+    assert_allclose(loaded.llnull, expected["llnull"])
+    assert_allclose(loaded.deviance, expected["deviance"])
+    assert_allclose(loaded.pearson_chi2, expected["pearson_chi2"])
+    assert_allclose(loaded.aic, expected["aic"])
+    assert_allclose(loaded.pseudo_rsquared(kind="cs"), expected["prsquared"])
+
+
 def check_score_hessian(results):
     # compare models core and hessian with numerical derivatives
 
