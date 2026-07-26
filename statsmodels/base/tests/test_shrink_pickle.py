@@ -246,7 +246,7 @@ class TestRemoveDataPickleRLM(RemoveDataPickle):
         self.results = sm.RLM(y, self.exog).fit()
         self.model_class = sm.RLM
         self.model_args = (y, self.exog)
-
+        self.reduction_factor = 0.2
 
 class TestRemoveDataPickleGLM(RemoveDataPickle):
 
