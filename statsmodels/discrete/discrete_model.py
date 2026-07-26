@@ -2149,7 +2149,11 @@ class GeneralizedPoisson(CountModel):
                 kwds_prelim.update(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g. filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
             start_params = res_poi.params
             a = self._estimate_dispersion(
@@ -2220,7 +2224,11 @@ class GeneralizedPoisson(CountModel):
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g. filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
                     start_params=start_params,
                     method=method,
@@ -4069,7 +4077,11 @@ class NegativeBinomial(CountModel):
                 kwds_prelim.update(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g. filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
             start_params = res_poi.params
             if self.loglike_method.startswith("nb"):
@@ -4156,7 +4168,11 @@ class NegativeBinomial(CountModel):
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g. filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
                     start_params=start_params,
                     method=method,
@@ -4696,7 +4712,11 @@ class NegativeBinomialP(CountModel):
                 kwds_prelim.update(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g. filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
             start_params = res_poi.params
             a = self._estimate_dispersion(
@@ -4767,7 +4787,11 @@ class NegativeBinomialP(CountModel):
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g. filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
                     start_params=start_params,
                     method=method,

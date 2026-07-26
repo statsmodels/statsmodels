@@ -2638,6 +2638,45 @@ def test_poisson_newton():
     assert_(not res.mle_retvals["converged"])
 
 
+def test_l1_regularized_respects_warning_filters():
+    # GH#9179: an internal preliminary fit (used only to compute start_params)
+    # forced ``simplefilter("always")``, which overrode the caller's warning
+    # filters. As a result a ConvergenceWarning raised while fitting with
+    # ``fit_regularized(method="l1", ...)`` could not be silenced.
+    rng = np.random.RandomState(0)
+    endog = rng.negative_binomial(1, 0.5, size=(100,))
+    exog = rng.normal(size=(100, 5))
+
+    # When the caller silences warnings, none must escape.
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("ignore")
+        NegativeBinomial(endog, exog).fit_regularized(
+            method="l1",
+            alpha=1e-12,
+            trim_mode="off",
+            method_kwargs={"warn_convergence": False},
+            qc_verbose=False,
+            disp=False,
+        )
+    convergence = [
+        w for w in caught if issubclass(w.category, ConvergenceWarning)
+    ]
+    assert convergence == []
+
+    # Sanity check that the warning is genuinely produced (so the assertion
+    # above is not passing trivially): with default filters the main fit still
+    # warns. The fix only stops the internal preliminary fit from overriding
+    # the caller's filters.
+    with pytest.warns(ConvergenceWarning):
+        NegativeBinomial(endog, exog).fit_regularized(
+            method="l1",
+            alpha=1e-12,
+            trim_mode="off",
+            qc_verbose=False,
+            disp=False,
+        )
+
+
 def test_issue_339():
     # make sure MNLogit summary works for J != K.
     data = load_anes96()
