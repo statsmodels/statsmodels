@@ -368,10 +368,11 @@ class GLM(base.LikelihoodModel):
             self.freq_weights,
             self.var_weights,
         )
-        if offset is None:
-            del self.offset
-        if exposure is None:
-            del self.exposure
+        # Track whether offset/exposure were actually provided, since
+        # `self.offset`/`self.exposure` are always set (possibly to None)
+        # by the base class's generic kwargs handling.
+        self._has_offset = offset is not None
+        self._has_exposure = exposure is not None
 
         self.nobs = self.endog.shape[0]
 
@@ -385,6 +386,7 @@ class GLM(base.LikelihoodModel):
                 "iweights",
                 "_offset_exposure",
                 "n_trials",
+                "_tmp_like_exog",
             ]
         )
         # register kwds for __init__, offset and exposure are added by super
@@ -398,13 +400,19 @@ class GLM(base.LikelihoodModel):
         # Construct a combined offset/exposure term.  Note that
         # exposure has already been logged if present.
         offset_exposure = 0.0
-        if hasattr(self, "offset"):
+        if self._has_offset:
             offset_exposure = self.offset
-        if hasattr(self, "exposure"):
+        if self._has_exposure:
             offset_exposure = offset_exposure + self.exposure
         self._offset_exposure = offset_exposure
 
         self.scaletype = None
+
+        # Scratch state used by `hessian` when fitting with a gradient-based
+        # optimizer (see `fit`/`_fit_gradient`). Initialized here so that
+        # `fit` never needs to delete them afterwards.
+        self._optim_hessian = None
+        self._tmp_like_exog = np.empty_like(self.exog, dtype=float)
 
     def initialize(self):
         """
@@ -658,12 +666,12 @@ class GLM(base.LikelihoodModel):
             Hessian, i.e. observed information, or expected information matrix.
         """
         if observed is None:
-            if getattr(self, "_optim_hessian", None) == "eim":
+            if self._optim_hessian == "eim":
                 observed = False
             else:
                 observed = True
         scale = float_like(scale, "scale", optional=True)
-        tmp = getattr(self, "_tmp_like_exog", np.empty_like(self.exog, dtype=float))
+        tmp = self._tmp_like_exog
 
         factor = self.hessian_factor(params, scale=scale, observed=observed)
         np.multiply(self.exog.T, factor, out=tmp.T)
@@ -1073,7 +1081,7 @@ class GLM(base.LikelihoodModel):
                 which = "linear"
 
         # Use fit offset if appropriate
-        if offset is None and exog is None and hasattr(self, "offset"):
+        if offset is None and exog is None and self._has_offset:
             offset = self.offset
         elif offset is None:
             offset = 0.0
@@ -1084,7 +1092,7 @@ class GLM(base.LikelihoodModel):
             raise ValueError("exposure can only be used with the log link function")
 
         # Use fit exposure if appropriate
-        if exposure is None and exog is None and hasattr(self, "exposure"):
+        if exposure is None and exog is None and self._has_exposure:
             # Already logged
             exposure = self.exposure
         elif exposure is None:
@@ -1322,9 +1330,11 @@ class GLM(base.LikelihoodModel):
                 max_start_irls=max_start_irls,
                 **kwargs,
             )
-            # TODO: These make GLM not thread safe. Should be refactored to be unnecessary
-            del self._optim_hessian
-            del self._tmp_like_exog
+            # NOTE: `_optim_hessian`/`_tmp_like_exog` are reset (not deleted)
+            # to their __init__ defaults so `hessian` behaves consistently
+            # for anyone calling it directly after this fit() call.
+            self._optim_hessian = None
+            self._tmp_like_exog = np.empty_like(self.exog, dtype=float)
             return fit_
 
     def _fit_gradient(
