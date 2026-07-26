@@ -1567,6 +1567,10 @@ class PHRegResults(base.LikelihoodModelResults):
         self.covariance_type = covariance_type
         self.df_resid = model.df_resid
         self.df_model = model.df_model
+        # Snapshot now, rather than reading through to model.groups later,
+        # so this result is unaffected by any later fit() call that passes
+        # a different `groups` argument on the same model instance.
+        self.groups = model.groups
 
         super().__init__(model, params, scale=1.0, normalized_cov_params=cov_params)
 
@@ -1780,8 +1784,8 @@ class PHRegResults(base.LikelihoodModelResults):
         info["Sample size:"] = str(self.model.surv.n_obs)
         info["Num. events:"] = str(int(sum(self.model.status)))
 
-        if self.model.groups is not None:
-            mn, mx, avg, num = self._group_stats(self.model.groups)
+        if self.groups is not None:
+            mn, mx, avg, num = self._group_stats(self.groups)
             info["Num groups:"] = "%.0f" % num
             info["Min group size:"] = "%.0f" % mn
             info["Max group size:"] = "%.0f" % mx
@@ -1823,7 +1827,7 @@ class PHRegResults(base.LikelihoodModelResults):
             else:
                 smry.add_text("%d observations have positive entry times" % n_entry)
 
-        if self.model.groups is not None:
+        if self.groups is not None:
             smry.add_text("Standard errors account for dependence within groups")
 
         if hasattr(self, "regularized"):

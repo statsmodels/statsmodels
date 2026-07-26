@@ -1274,6 +1274,10 @@ class MICE:
         # Run without fitting the analysis model
         self.data.update_all(n_burnin)
 
+        # Reset so that repeated calls to fit do not pool results across
+        # calls (results_list would otherwise keep growing).
+        self.results_list = []
+
         for _ in range(n_imputations):
             result = self.next_sample()
             self.results_list.append(result)
