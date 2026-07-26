@@ -563,7 +563,6 @@ class MultivariateLS(_MultivariateOLS):
         res.cov_resid = sscpr / df_resid
         return MultivariateLSResultsWrapper(res)
 
-
     def predict(self, params, exog=None):
         if exog is None:
             exog = self.exog
