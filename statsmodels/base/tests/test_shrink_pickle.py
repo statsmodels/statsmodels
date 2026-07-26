@@ -248,6 +248,7 @@ class TestRemoveDataPickleRLM(RemoveDataPickle):
         self.model_args = (y, self.exog)
         self.reduction_factor = 0.2
 
+
 class TestRemoveDataPickleGLM(RemoveDataPickle):
 
     def setup_method(self):
