@@ -1075,12 +1075,14 @@ class VARMAXResults(MLEResults):
                 self.model.trend_offset + self.nobs)
 
         # Get the prediction
-        with self._set_final_exog(exog):
-            with self._set_final_predicted_state(exog, out_of_sample):
-                out = super().get_prediction(
-                    start=start, end=end, dynamic=dynamic,
-                    information_set=information_set, index=index, exog=exog,
-                    extend_kwargs=extend_kwargs, **kwargs)
+        with (
+            self._set_final_exog(exog),
+            self._set_final_predicted_state(exog, out_of_sample),
+        ):
+            out = super().get_prediction(
+                start=start, end=end, dynamic=dynamic,
+                information_set=information_set, index=index, exog=exog,
+                extend_kwargs=extend_kwargs, **kwargs)
         return out
 
     @Appender(MLEResults.simulate.__doc__)
@@ -1259,10 +1261,10 @@ class VARMAXResults(MLEResults):
 
             # Add a table for all other parameters
             masks = []
-            for m in (endog_masks, [state_cov_mask]):
-                m = np.array(m).flatten()
-                if len(m) > 0:
-                    masks.append(m)
+            for group in (endog_masks, [state_cov_mask]):
+                flat_mask = np.array(group).flatten()
+                if len(flat_mask) > 0:
+                    masks.append(flat_mask)
             masks = np.concatenate(masks)
             inverse_mask = np.array(list(set(indices).difference(set(masks))))
             if len(inverse_mask) > 0:

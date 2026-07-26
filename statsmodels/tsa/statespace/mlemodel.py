@@ -43,7 +43,6 @@ from .tools import _safe_cond, concat, get_impact_dates, prepare_exog
 
 
 def _handle_args(names, defaults, *args, **kwargs):
-    output_args = []
     # We need to handle positional arguments in two ways, in case this was
     # called by a Scipy optimization routine
     if len(args) > 0:
@@ -53,17 +52,15 @@ def _handle_args(names, defaults, *args, **kwargs):
         # otherwise, a user may have just used positional arguments...
         else:
             flags = dict(zip(names, args))
-        for i in range(len(names)):
-            output_args.append(flags.get(names[i], defaults[i]))
+        output_args = [flags.get(names[i], defaults[i]) for i in range(len(names))]
 
-        for name in flags.keys():
+        for name in flags:
             if name in kwargs:
                 raise TypeError(
                     "loglike() got multiple values for keyword argument '%s'" % name
                 )
     else:
-        for i in range(len(names)):
-            output_args.append(kwargs.pop(names[i], defaults[i]))
+        output_args = [kwargs.pop(names[i], defaults[i]) for i in range(len(names))]
 
     return tuple(output_args) + (kwargs,)
 
@@ -301,7 +298,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         use_kwargs.update(kwargs)
 
         # Check for `exog`
-        if getattr(self, "k_exog", 0) > 0 and kwargs.get("exog", None) is None:
+        if getattr(self, "k_exog", 0) > 0 and kwargs.get("exog") is None:
             raise ValueError(
                 "Cloning a model with an exogenous component"
                 " requires specifying a new exogenous array using"
@@ -523,7 +520,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Update associated values
         self._has_fixed_params = True
         self._fixed_params_index = [
-            self._params_index[key] for key in self._fixed_params.keys()
+            self._params_index[key] for key in self._fixed_params
         ]
         self._free_params_index = list(
             set(np.arange(k_params)).difference(self._fixed_params_index)
@@ -2202,7 +2199,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Retrieve the extensions to the time-varying system matrices and
         # put them in kwargs
-        for name in self.ssm.shapes.keys():
+        for name in self.ssm.shapes:
             if name == "obs" or name in kwargs:
                 continue
             original = getattr(self.ssm, name)
@@ -5530,10 +5527,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if not isinstance(model_name, list):
             model_name = [model_name]
 
-        top_left = [("Dep. Variable:", None)]
-        top_left.append(("Model:", [model_name[0]]))
-        for i in range(1, len(model_name)):
-            top_left.append(("", ["+ " + model_name[i]]))
+        top_left = [("Dep. Variable:", None), ("Model:", [model_name[0]])]
+        top_left.extend(
+            ("", ["+ " + model_name[i]]) for i in range(1, len(model_name))
+        )
         top_left += [
             ("Date:", None),
             ("Time:", None),

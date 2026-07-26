@@ -82,6 +82,10 @@ class SVAR(tsbase.TimeSeriesModel):
         self.A_original = A
         self.B_original = B
 
+        # Set by fit()/_estimate_svar(), once the lag order is known
+        self.nobs = None
+        self.sigma_u = None
+
         # initialize A, B as I if not given
         # Initialize SVAR masks
         if A is None:

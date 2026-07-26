@@ -1287,9 +1287,7 @@ def _pccf_ols(x, y, nlags):
             resid_x = resids[:, 0]
             resid_y = resids[:, 1]
 
-        if resid_x.size < 2:
-            pccf_vals.append(np.nan)
-        elif np.ptp(resid_x) == 0 or np.ptp(resid_y) == 0:
+        if resid_x.size < 2 or np.ptp(resid_x) == 0 or np.ptp(resid_y) == 0:
             pccf_vals.append(np.nan)
         else:
             pccf_vals.append(np.corrcoef(resid_x, resid_y)[0, 1])

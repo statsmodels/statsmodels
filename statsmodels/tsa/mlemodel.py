@@ -8,12 +8,10 @@ Created on Sun Oct 10 15:00:47 2010
 Author: josef-pktd
 License: BSD
 """
+import contextlib
 
-
-try:
+with contextlib.suppress(ImportError):
     import numdifftools as ndt
-except ImportError:
-    pass
 
 from statsmodels.base.model import LikelihoodModel
 

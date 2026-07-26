@@ -16,6 +16,7 @@ class MPLConfigurator:
 
     def set_fontsize(self, size):
         import matplotlib as mpl
+
         old_size = mpl.rcParams["font.size"]
         mpl.rcParams["font.size"] = size
 
@@ -40,7 +41,7 @@ def plot_mts(Y, names=None, index=None):
     for j in range(k):
         ts = Y[:, j]
 
-        ax = fig.add_subplot(rows, cols, j+1)
+        ax = fig.add_subplot(rows, cols, j + 1)
         if index is not None:
             ax.plot(index, ts)
         else:
@@ -52,9 +53,16 @@ def plot_mts(Y, names=None, index=None):
     return fig
 
 
-def plot_var_forc(prior, forc, err_upper, err_lower,
-                  index=None, names=None, plot_stderr=True,
-                  legend_options=None):
+def plot_var_forc(
+    prior,
+    forc,
+    err_upper,
+    err_lower,
+    index=None,
+    names=None,
+    plot_stderr=True,
+    legend_options=None,
+):
     import matplotlib.pyplot as plt
 
     n, k = prior.shape
@@ -67,7 +75,7 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
     rng_err = np.arange(n, n + len(forc))
 
     for j in range(k):
-        ax = plt.subplot(rows, cols, j+1)
+        ax = plt.subplot(rows, cols, j + 1)
 
         ax.plot(prange, prior[:, j], "k", label="Observed")
         ax.plot(rng_f, np.r_[prior[-1:, j], forc[:, j]], "k--", label="Forecast")
@@ -85,8 +93,16 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
     return fig
 
 
-def plot_with_error(y, error, x=None, axes=None, value_fmt="k",
-                    error_fmt="k--", alpha=0.05, stderr_type="asym"):
+def plot_with_error(
+    y,
+    error,
+    x=None,
+    axes=None,
+    value_fmt="k",
+    error_fmt="k--",
+    alpha=0.05,
+    stderr_type="asym",
+):
     """
     Make plot with optional error bars
 
@@ -135,8 +151,7 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt="k",
             plot_action(error[1], error_fmt)
 
 
-def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None,
-                    err_bound=None):
+def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None, err_bound=None):
     """
     Plot the autocorrelations of a multivariate time series in a grid
 
@@ -170,8 +185,7 @@ def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None,
     for i in range(k):
         for j in range(k):
             ax = axes[i][j]
-            acorr_plot(acorr[:, i, j], linewidth=linewidth,
-                       xlabel=xlabel, ax=ax)
+            acorr_plot(acorr[:, i, j], linewidth=linewidth, xlabel=xlabel, ax=ax)
 
             if err_bound is not None:
                 ax.axhline(err_bound, color="k", linestyle="--")
@@ -208,9 +222,13 @@ def plot_acorr_with_error():
 def adjust_subplots(**kwds):
     import matplotlib.pyplot as plt
 
-    passed_kwds = dict(bottom=0.05, top=0.925,
-                       left=0.05, right=0.95,
-                       hspace=0.2)
+    passed_kwds = {
+        "bottom": 0.05,
+        "top": 0.925,
+        "left": 0.05,
+        "right": 0.95,
+        "hspace": 0.2,
+    }
     passed_kwds.update(kwds)
     plt.subplots_adjust(**passed_kwds)
 
@@ -219,9 +237,21 @@ def adjust_subplots(**kwds):
 # Multiple impulse response (cum_effects, etc.) cplots
 #
 
-def irf_grid_plot(values, stderr, impcol, rescol, names, title,
-                  signif=0.05, hlines=None, subplot_params=None,
-                  plot_params=None, figsize=(10, 10), stderr_type="asym"):
+
+def irf_grid_plot(
+    values,
+    stderr,
+    impcol,
+    rescol,
+    names,
+    title,
+    signif=0.05,
+    hlines=None,
+    subplot_params=None,
+    plot_params=None,
+    figsize=(10, 10),
+    stderr_type="asym",
+):
     """
     Reusable function to make flexible grid plots of impulse responses and
     cumulative effects
@@ -273,8 +303,9 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
 
     nrows, ncols, to_plot = _get_irf_plot_config(names, impcol, rescol)
 
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True,
-                             squeeze=False, figsize=figsize)
+    fig, axes = plt.subplots(
+        nrows=nrows, ncols=ncols, sharex=True, squeeze=False, figsize=figsize
+    )
 
     # fill out space
     adjust_subplots()
@@ -286,22 +317,35 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
     k = len(names)
 
     rng = lrange(len(values))
-    for (j, i, ai, aj) in to_plot:
+    for j, i, ai, aj in to_plot:
         ax = axes[ai][aj]
 
         # HACK?
         if stderr is not None:
             if stderr_type == "asym":
                 sig = np.sqrt(stderr[:, j * k + i, j * k + i])
-                plot_with_error(values[:, i, j], sig, x=rng, axes=ax,
-                                alpha=signif, value_fmt="b", stderr_type=stderr_type)
+                plot_with_error(
+                    values[:, i, j],
+                    sig,
+                    x=rng,
+                    axes=ax,
+                    alpha=signif,
+                    value_fmt="b",
+                    stderr_type=stderr_type,
+                )
             if stderr_type in ("mc", "sz1", "sz2", "sz3"):
                 errs = stderr[0][:, i, j], stderr[1][:, i, j]
-                plot_with_error(values[:, i, j], errs, x=rng, axes=ax,
-                                alpha=signif, value_fmt="b", stderr_type=stderr_type)
+                plot_with_error(
+                    values[:, i, j],
+                    errs,
+                    x=rng,
+                    axes=ax,
+                    alpha=signif,
+                    value_fmt="b",
+                    stderr_type=stderr_type,
+                )
         else:
-            plot_with_error(values[:, i, j], None, x=rng, axes=ax,
-                            value_fmt="b")
+            plot_with_error(values[:, i, j], None, x=rng, axes=ax, value_fmt="b")
 
         ax.axhline(0, color="k")
 
@@ -337,6 +381,7 @@ def _get_irf_plot_config(names, impcol, rescol):
         to_plot = [(j, i, i, j) for i in range(k) for j in range(k)]
 
     return nrows, ncols, to_plot
+
 
 #
 # Forecast error variance decomposition

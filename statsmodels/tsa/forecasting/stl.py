@@ -174,19 +174,19 @@ class STLForecast:
         low_pass_jump=1,
     ):
         self._endog = endog
-        self._stl_kwargs = dict(
-            period=period,
-            seasonal=seasonal,
-            trend=trend,
-            low_pass=low_pass,
-            seasonal_deg=seasonal_deg,
-            trend_deg=trend_deg,
-            low_pass_deg=low_pass_deg,
-            robust=robust,
-            seasonal_jump=seasonal_jump,
-            trend_jump=trend_jump,
-            low_pass_jump=low_pass_jump,
-        )
+        self._stl_kwargs = {
+            "period": period,
+            "seasonal": seasonal,
+            "trend": trend,
+            "low_pass": low_pass,
+            "seasonal_deg": seasonal_deg,
+            "trend_deg": trend_deg,
+            "low_pass_deg": low_pass_deg,
+            "robust": robust,
+            "seasonal_jump": seasonal_jump,
+            "trend_jump": trend_jump,
+            "low_pass_jump": low_pass_jump,
+        }
         self._model = model
         self._model_kwargs = {} if model_kwargs is None else model_kwargs
         if not hasattr(model, "fit"):

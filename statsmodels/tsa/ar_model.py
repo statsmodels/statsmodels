@@ -247,7 +247,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
     def ar_lags(self) -> list[int] | None:
         """The autoregressive lags included in the model"""
         lags = list(self._lags)
-        return None if not lags else lags
+        return lags if lags else None
 
     @property
     def hold_back(self) -> int | None:
@@ -2165,7 +2165,7 @@ def ar_select_order(
                 continue
             res = OLS(y, x[:, sel]).fit()
             lags = tuple(j for j in range(1, i + 1))
-            lags = 0 if not lags else lags
+            lags = lags if lags else 0
             ics.append((lags, compute_ics(res)))
     else:
         bits = np.arange(2**maxlag, dtype=np.int32)[:, None]
@@ -2181,7 +2181,7 @@ def ar_select_order(
                 continue
             res = OLS(y, x[:, sel]).fit()
             lags = tuple(np.where(mask)[0] + 1)
-            lags = 0 if not lags else lags
+            lags = lags if lags else 0
             ics.append((lags, compute_ics(res)))
 
     key_loc = {"aic": 0, "bic": 1, "hqic": 2}[ic]

@@ -404,9 +404,9 @@ class ARDL(AutoReg):
         """The order of the ARDL(p,q)"""
         ar_order = 0 if not self._lags else int(max(self._lags))
         ardl_order = [ar_order]
-        for lags in self._order.values():
-            if lags is not None:
-                ardl_order.append(int(max(lags)))
+        ardl_order.extend(
+            int(max(lags)) for lags in self._order.values() if lags is not None
+        )
         return tuple(ardl_order)
 
     def _setup_regressors(self) -> None:
@@ -447,7 +447,7 @@ class ARDL(AutoReg):
     def _fit(
         self,
         cov_type: str = "nonrobust",
-        cov_kwds: dict[str, Any] = None,
+        cov_kwds: Optional[dict[str, Any]] = None,
         use_t: bool = True,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         if self._x.shape[1] == 0:
@@ -468,7 +468,7 @@ class ARDL(AutoReg):
         self,
         *,
         cov_type: str = "nonrobust",
-        cov_kwds: dict[str, Any] = None,
+        cov_kwds: Optional[dict[str, Any]] = None,
         use_t: bool = True,
     ) -> ARDLResults:
         """
@@ -1798,8 +1798,7 @@ class UECM(ARDL):
                     x_name = f"x{key}.L1"
                 x_names.append(x_name)
                 lag_base = x_name[:-1]
-                for lag in val[:-1]:
-                    dexog_names.append(f"D.{lag_base}{lag}")
+                dexog_names.extend(f"D.{lag_base}{lag}" for lag in val[:-1])
         # 3. Lagged endog
         y_lags = max(self._lags) if self._lags else 0
         dendog_names = [f"{y_name}.L{lag}" for lag in range(1, y_lags)]
@@ -1844,8 +1843,8 @@ class UECM(ARDL):
             dexog[1:] = np.diff(orig_exog, axis=0)
         adj_order = {}
         for key, val in self._order.items():
-            val = None if (val is None or val == [1]) else val[:-1]
-            adj_order[key] = val
+            adj_val = None if (val is None or val == [1]) else val[:-1]
+            adj_order[key] = adj_val
         self._exog = self._format_exog(dexog, adj_order)
 
         self._blocks = {
@@ -1860,8 +1859,7 @@ class UECM(ARDL):
             if key != "exog":
                 blocks.append(np.asarray(val))
             else:
-                for subval in val.values():
-                    blocks.append(np.asarray(subval))
+                blocks.extend(np.asarray(subval) for subval in val.values())
         y = blocks[0]
         reg = np.column_stack(blocks[1:])
         exog_maxlag = 0
@@ -1892,7 +1890,7 @@ class UECM(ARDL):
         self,
         *,
         cov_type: str = "nonrobust",
-        cov_kwds: dict[str, Any] = None,
+        cov_kwds: Optional[dict[str, Any]] = None,
         use_t: bool = True,
     ) -> UECMResults:
         params, cov_params, norm_cov_params = self._fit(
@@ -2232,7 +2230,7 @@ class UECMResults(ARDLResults):
         self,
         case: Literal[1, 2, 3, 4, 5],
         cov_type: str = "nonrobust",
-        cov_kwds: dict[str, Any] = None,
+        cov_kwds: Optional[dict[str, Any]] = None,
         use_t: bool = True,
         asymptotic: bool = True,
         nsim: int = 100_000,

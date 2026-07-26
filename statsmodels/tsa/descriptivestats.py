@@ -18,6 +18,8 @@ class TsaDescriptive:
         self.data = data
         self.label = label
         self.name = name
+        self.mod = None
+        self.res = None
 
     def filter(self, num, den):
         from scipy.signal import lfilter

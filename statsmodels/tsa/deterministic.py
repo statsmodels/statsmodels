@@ -412,9 +412,7 @@ class Seasonality(DeterministicTerm):
     @property
     def _columns(self) -> list[str]:
         period = self._period
-        columns = []
-        for i in range(1, period + 1):
-            columns.append(f"s({i},{period})")
+        columns = [f"s({i},{period})" for i in range(1, period + 1)]
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
@@ -525,10 +523,11 @@ class Fourier(FourierDeterministicTerm):
     def _columns(self) -> list[str]:
         period = self._period
         fmt_period = d_or_f(period).strip()
-        columns = []
-        for i in range(1, self._order + 1):
-            for typ in ("sin", "cos"):
-                columns.append(f"{typ}({i},{fmt_period})")
+        columns = [
+            f"{typ}({i},{fmt_period})"
+            for i in range(1, self._order + 1)
+            for typ in ("sin", "cos")
+        ]
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
@@ -667,10 +666,11 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
 
     @property
     def _columns(self) -> list[str]:
-        columns = []
-        for i in range(1, self._order + 1):
-            for typ in ("sin", "cos"):
-                columns.append(f"{typ}({i},freq={self._freq.freqstr})")
+        columns = [
+            f"{typ}({i},freq={self._freq.freqstr})"
+            for i in range(1, self._order + 1)
+            for typ in ("sin", "cos")
+        ]
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
@@ -842,10 +842,11 @@ class CalendarSeasonality(CalendarDeterministicTerm):
 
     @property
     def _columns(self) -> list[str]:
-        columns = []
         count = self._supported[self._period][self._freq_str]
-        for i in range(count):
-            columns.append(f"s({self._freq_str}={i + 1}, period={self._period})")
+        columns = [
+            f"s({self._freq_str}={i + 1}, period={self._period})"
+            for i in range(count)
+        ]
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
@@ -1251,9 +1252,7 @@ you can pass additional components using the additional_terms input.""")
         index = self._index
         if not self._deterministic_terms:
             return pd.DataFrame(np.empty((index.shape[0], 0)), index=index)
-        raw_terms = []
-        for term in self._deterministic_terms:
-            raw_terms.append(term.in_sample(index))
+        raw_terms = [term.in_sample(index) for term in self._deterministic_terms]
 
         raw_terms = self._adjust_dummies(raw_terms)
         terms: pd.DataFrame = pd.concat(raw_terms, axis=1)
@@ -1297,9 +1296,10 @@ you can pass additional components using the additional_terms input.""")
         index = self._index
         if not self._deterministic_terms:
             return pd.DataFrame(np.empty((index.shape[0], 0)), index=index)
-        raw_terms = []
-        for term in self._deterministic_terms:
-            raw_terms.append(term.out_of_sample(steps, index, forecast_index))
+        raw_terms = [
+            term.out_of_sample(steps, index, forecast_index)
+            for term in self._deterministic_terms
+        ]
         terms: pd.DataFrame = pd.concat(raw_terms, axis=1)
         assert self._retain_cols is not None
         if terms.shape[1] != len(self._retain_cols):

@@ -622,61 +622,65 @@ def x13_arima_analysis(
 
     # write it to a tempfile
     # TODO: make this more robust - give the user some control?
-    ftempin = tempfile.NamedTemporaryFile(delete=False, suffix=".spc", dir=tempdir)
-    ftempout = tempfile.NamedTemporaryFile(delete=False, dir=tempdir)
-    try:
-        ftempin.write(spec.encode("utf8"))
-        ftempin.close()
-        ftempout.close()
-        # call x12 arima
-        p = run_spec(x12path, ftempin.name[:-4], ftempout.name)
-        p.wait()
-        stdout = p.stdout.read()
-        if print_stdout:
-            print(p.stdout.read())
-        # check for errors
-        errors = _open_and_read(ftempout.name + ".err")
-        _check_errors(errors, rawspec)
+    with (
+        tempfile.NamedTemporaryFile(
+            delete=False, suffix=".spc", dir=tempdir
+        ) as ftempin,
+        tempfile.NamedTemporaryFile(delete=False, dir=tempdir) as ftempout,
+    ):
+        try:
+            ftempin.write(spec.encode("utf8"))
+            ftempin.close()
+            ftempout.close()
+            # call x12 arima
+            p = run_spec(x12path, ftempin.name[:-4], ftempout.name)
+            p.wait()
+            stdout = p.stdout.read()
+            if print_stdout:
+                print(p.stdout.read())
+            # check for errors
+            errors = _open_and_read(ftempout.name + ".err")
+            _check_errors(errors, rawspec)
 
-        # read in results
-        results = _open_and_read(ftempout.name + ".out")
-        seasadj = _open_and_read(ftempout.name + ".d11")
-        trend = _open_and_read(ftempout.name + ".d12")
-        irregular = _open_and_read(ftempout.name + ".d13")
+            # read in results
+            results = _open_and_read(ftempout.name + ".out")
+            seasadj = _open_and_read(ftempout.name + ".d11")
+            trend = _open_and_read(ftempout.name + ".d12")
+            irregular = _open_and_read(ftempout.name + ".d13")
 
-        if log_diagnostics:
-            # read f8d m7 and q diagnostics from log
-            x13_logs = _open_and_read(ftempout.name + ".log")
-            x13_diagnostic = {
-                "F-D8": float(re.search(r"D8 table\s*:\s*([\d.]+)", x13_logs).group(1)),
-                "M07": float(re.search(r"M07\s*:\s*([\d.]+)", x13_logs).group(1)),
-                "Q": float(re.search(r"Q\s*:\s*([\d.]+)", x13_logs).group(1)),
-            }
-        else:
-            x13_diagnostic = {
-                "F-D8": "Log diagnostics not retrieved.",
-                "M07": "Log diagnostics not retrieved.",
-                "Q": "Log diagnostics not retrieved.",
-            }
+            if log_diagnostics:
+                # read f8d m7 and q diagnostics from log
+                x13_logs = _open_and_read(ftempout.name + ".log")
+                x13_diagnostic = {
+                    "F-D8": float(re.search(r"D8 table\s*:\s*([\d.]+)", x13_logs).group(1)),
+                    "M07": float(re.search(r"M07\s*:\s*([\d.]+)", x13_logs).group(1)),
+                    "Q": float(re.search(r"Q\s*:\s*([\d.]+)", x13_logs).group(1)),
+                }
+            else:
+                x13_diagnostic = {
+                    "F-D8": "Log diagnostics not retrieved.",
+                    "M07": "Log diagnostics not retrieved.",
+                    "Q": "Log diagnostics not retrieved.",
+                }
 
-    finally:
-        try:  # sometimes this gives a permission denied error?
-            #   not sure why. no process should have these open
-            os.remove(ftempin.name)
-            os.remove(ftempout.name)
-        except OSError:
-            if os.path.exists(ftempin.name):
-                warn(
-                    f"Failed to delete resource {ftempin.name}",
-                    IOWarning,
-                    stacklevel=2
-                )
-            if os.path.exists(ftempout.name):
-                warn(
-                    f"Failed to delete resource {ftempout.name}",
-                    IOWarning,
-                    stacklevel=2
-                )
+        finally:
+            try:  # sometimes this gives a permission denied error?
+                #   not sure why. no process should have these open
+                os.remove(ftempin.name)
+                os.remove(ftempout.name)
+            except OSError:
+                if os.path.exists(ftempin.name):
+                    warn(
+                        f"Failed to delete resource {ftempin.name}",
+                        IOWarning,
+                        stacklevel=2
+                    )
+                if os.path.exists(ftempout.name):
+                    warn(
+                        f"Failed to delete resource {ftempout.name}",
+                        IOWarning,
+                        stacklevel=2
+                    )
 
     seasadj = _convert_out_to_series(seasadj, endog.index, "seasadj")
     trend = _convert_out_to_series(trend, endog.index, "trend")

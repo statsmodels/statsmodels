@@ -570,6 +570,9 @@ class VAR(TimeSeriesModel):
             raise ValueError("Only gave one variable to VAR")
         self.neqs = self.endog.shape[1]
         self.n_totobs = len(endog)
+        # Set by fit()/_estimate_var(), once the lag order is known
+        self.nobs = None
+        self.k_trend = None
 
     def predict(self, params, start=None, end=None, lags=1, trend="c"):
         """

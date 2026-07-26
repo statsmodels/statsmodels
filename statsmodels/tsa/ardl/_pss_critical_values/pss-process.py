@@ -35,9 +35,7 @@ if __name__ == "__main__":
     ordered_keys = sorted(groups.keys())
     for key in ordered_keys:
         final[key] = pd.concat(groups[key], axis=1)
-        cv = []
-        for q in quantiles:
-            cv.append(final[key].loc[int(100 * q)].mean())
+        cv = [final[key].loc[int(100 * q)].mean() for q in quantiles]
         crit_vals[key] = cv
     df = pd.DataFrame(crit_vals).T
     df.index.names = ("k", "case", "I1")

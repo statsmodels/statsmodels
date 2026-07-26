@@ -1240,7 +1240,7 @@ class SmootherResults(FilterResults):
             raise ValueError(error_ss % "different state space dimensions than"
                              " `previous`")
 
-        for key in self.model.shapes.keys():
+        for key in self.model.shapes:
             if key == "obs":
                 continue
             tv = getattr(self, key).shape[-1] > 1
@@ -1265,7 +1265,7 @@ class SmootherResults(FilterResults):
 
         # For time-varying case, figure out extension kwargs
         extend_kwargs = {}
-        for key in self.model.shapes.keys():
+        for key in self.model.shapes:
             if key == "obs":
                 continue
             mat = getattr(self, key)
@@ -1357,7 +1357,7 @@ class SmootherResults(FilterResults):
 
             # Copy time-varying matrices (required by clone)
             clone_kwargs = {}
-            for key in self.model.shapes.keys():
+            for key in self.model.shapes:
                 if key == "obs":
                     continue
                 mat = getattr(self, key)

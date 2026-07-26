@@ -77,6 +77,11 @@ class HypothesisTestResults:
             and np.allclose(self.pvalue, other.pvalue) \
             and np.allclose(self.signif, other.signif)
 
+    # Equality is based on np.allclose, which is not compatible with a
+    # hash based on field values, so instances remain unhashable (this
+    # matches the implicit behavior of defining __eq__ without __hash__).
+    __hash__ = None
+
 
 class CausalityTestResults(HypothesisTestResults):
     """
@@ -143,6 +148,8 @@ class CausalityTestResults(HypothesisTestResults):
             variables = (self.causing == other.caused and
                          self.caused == other.causing)
         return test and variables
+
+    __hash__ = None
 
 
 class NormalityTestResults(HypothesisTestResults):

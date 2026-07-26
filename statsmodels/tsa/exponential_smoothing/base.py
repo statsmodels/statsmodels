@@ -123,7 +123,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         # Update associated values
         self._has_fixed_params = True
         self._fixed_params_index = [
-            self._params_index[key] for key in self._fixed_params.keys()
+            self._params_index[key] for key in self._fixed_params
         ]
         self._free_params_index = list(
             set(np.arange(self.k_params)).difference(self._fixed_params_index)
@@ -883,10 +883,10 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         if not isinstance(model_name, list):
             model_name = [model_name]
 
-        top_left = [("Dep. Variable:", None)]
-        top_left.append(("Model:", [model_name[0]]))
-        for i in range(1, len(model_name)):
-            top_left.append(("", ["+ " + model_name[i]]))
+        top_left = [("Dep. Variable:", None), ("Model:", [model_name[0]])]
+        top_left.extend(
+            ("", ["+ " + model_name[i]]) for i in range(1, len(model_name))
+        )
         top_left += [
             ("Date:", None),
             ("Time:", None),

@@ -187,7 +187,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
     n = k*m  # number of indicator series with a benchmark for back-series
     # if k*m != n, then we are going to extrapolate q observations
-    if N > n:
+    if n < N:
         q = N - n
     else:
         q = 0
