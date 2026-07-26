@@ -1366,6 +1366,12 @@ def test_summary_after_remove_data(tmp_path):
     endog = exog @ np.array([1.0, -0.5]) + rs.normal(size=n)
 
     res = sm.GLM(endog, exog, family=sm.families.Gaussian()).fit()
+    # remove_data retains statistics that were already requested, but must not
+    # force all lazy statistics to be evaluated during serialization.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        res.summary()
+
     expected = {
         "llf": res.llf,
         "llnull": res.llnull,

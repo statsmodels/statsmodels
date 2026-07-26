@@ -2663,28 +2663,24 @@ class GLMResults(base.LikelihoodModelResults):
         # GLM has alias/reference in result instance
         self._data_attr.extend([i for i in self.model._data_attr if "_data." not in i])
 
-        # GH#9147: summary() and pseudo_rsquared() rely on scalar likelihood
-        # and information statistics that are computed lazily from the data
-        # and stored in ``self._cache``. ``remove_data`` blanks the whole
-        # cache, so these scalars would be lost and could not be recomputed
-        # once the data arrays are gone (e.g. after ``save(remove_data=True)``
-        # and reload). Evaluate them now, while the data is still present, and
-        # restore the cached scalars after the base class clears the cache.
-        preserved_stats = {}
-        for name in (
-            "llf",
-            "llnull",
-            "deviance",
-            "null_deviance",
-            "pearson_chi2",
-            "aic",
-            "bic_llf",
-            "bic_deviance",
-        ):
-            try:
-                preserved_stats[name] = getattr(self, name)
-            except (AttributeError, NotImplementedError):
-                pass
+        # GH#9147: preserve summary statistics that have already been computed.
+        # ``remove_data`` must not force lazy statistics to be evaluated, but it
+        # must retain cached scalar values so a previously generated summary can
+        # still be rendered after the data arrays are removed.
+        preserved_stats = {
+            name: self._cache[name]
+            for name in (
+                "llf",
+                "llnull",
+                "deviance",
+                "null_deviance",
+                "pearson_chi2",
+                "aic",
+                "bic_llf",
+                "bic_deviance",
+            )
+            if self._cache.get(name) is not None
+        }
 
         super(self.__class__, self).remove_data()
 
@@ -2695,7 +2691,7 @@ class GLMResults(base.LikelihoodModelResults):
         self._iweights = None
         self._n_trials = None
 
-        # Keep the precomputed scalar statistics available (see above).
+        # Keep already computed scalar statistics available (see above).
         self._cache.update(preserved_stats)
 
     @Appender(_plot_added_variable_doc % {"extra_params_doc": ""})
