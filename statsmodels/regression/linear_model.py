@@ -365,40 +365,27 @@ class RegressionModel(base.LikelihoodModel):
         to solve the least squares minimization.
 
         """
+        # NOTE: pinv_wexog, normalized_cov_params, wexog_singular_values and
+        # rank are recomputed from self.wexog on every call (rather than
+        # cached based on whether they already exist) so that the model's
+        # state after fit() depends only on the current data, never on
+        # which `method` a previous fit() call happened to use.
         if method == "pinv":
-            if not (
-                hasattr(self, "pinv_wexog")
-                and hasattr(self, "normalized_cov_params")
-                and hasattr(self, "rank")
-            ):
-
-                self.pinv_wexog, singular_values = pinv_extended(self.wexog)
-                self.normalized_cov_params = np.dot(
-                    self.pinv_wexog, np.transpose(self.pinv_wexog)
-                )
-
-                # Cache these singular values for use later.
-                self.wexog_singular_values = singular_values
-                self.rank = np.linalg.matrix_rank(np.diag(singular_values))
+            pinv_wexog, singular_values = pinv_extended(self.wexog)
+            self.pinv_wexog = pinv_wexog
+            self.normalized_cov_params = np.dot(
+                pinv_wexog, np.transpose(pinv_wexog)
+            )
+            self.wexog_singular_values = singular_values
+            self.rank = np.linalg.matrix_rank(np.diag(singular_values))
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
         elif method == "qr":
-            if not (
-                hasattr(self, "exog_Q")
-                and hasattr(self, "exog_R")
-                and hasattr(self, "normalized_cov_params")
-                and hasattr(self, "rank")
-            ):
-                Q, R = np.linalg.qr(self.wexog)
-                self.exog_Q, self.exog_R = Q, R
-                self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
-
-                # Cache singular values from R.
-                self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-                self.rank = np.linalg.matrix_rank(R)
-            else:
-                Q, R = self.exog_Q, self.exog_R
+            Q, R = np.linalg.qr(self.wexog)
+            self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
+            self.wexog_singular_values = np.linalg.svd(R, 0, 0)
+            self.rank = np.linalg.matrix_rank(R)
             # Needed for some covariance estimators, see GH #8157
             self.pinv_wexog = np.linalg.pinv(self.wexog)
             # used in ANOVA
@@ -1440,8 +1427,6 @@ class GLSAR(GLS):
         i = -1  # need to initialize for maxiter < 1 (skip loop)
         history = {"params": [], "rho": [self.rho]}
         for i in range(maxiter - 1):
-            if hasattr(self, "pinv_wexog"):
-                del self.pinv_wexog
             self.initialize()
             results = self.fit()
             history["params"].append(results.params)
@@ -1460,8 +1445,6 @@ class GLSAR(GLS):
         # Use kwarg to insert history
         if not converged and maxiter > 0:
             # maxiter <= 0 just does OLS
-            if hasattr(self, "pinv_wexog"):
-                del self.pinv_wexog
             self.initialize()
 
         # if converged then this is a duplicate fit, because we did not
