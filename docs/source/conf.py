@@ -13,13 +13,13 @@
 
 import contextlib
 import os
-import sys
 from os.path import dirname, join
+import sys
 
-import yaml
 from jinja2 import Environment, FileSystemLoader
 from numpydoc.xref import DEFAULT_LINKS
 from packaging.version import parse
+import yaml
 
 from statsmodels import __version__
 
@@ -458,7 +458,7 @@ example_context = yaml.safe_load(open("examples/landing.yml", encoding="utf-8"))
 example_loader = FileSystemLoader("examples")
 # Rendering RST, not HTML, so autoescape must stay off (escaping RST
 # special characters here would corrupt the generated docs).
-example_env = Environment(loader=example_loader, autoescape=False)
+example_env = Environment(loader=example_loader, autoescape=False)  # noqa: S701
 example_tmpl = example_env.get_template("index.jinja2")
 with open("examples/index.rst", "w") as example_index:
     example_index.write(example_tmpl.render(examples=example_context))

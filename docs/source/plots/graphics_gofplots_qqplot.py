@@ -6,8 +6,8 @@ editted by: Paul Hobson (2012-08-19)
 """
 
 # example with the new ProbPlot class
-import numpy as np
 from matplotlib import pyplot as plt
+import numpy as np
 from scipy import stats
 
 import statsmodels.api as sm

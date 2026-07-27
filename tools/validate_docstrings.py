@@ -22,6 +22,7 @@ import functools
 import glob
 import importlib
 import inspect
+from io import StringIO
 import json
 import os
 import pydoc
@@ -30,13 +31,12 @@ import string
 import sys
 import tempfile
 import textwrap
-from io import StringIO
 
 import flake8.main.application
 import matplotlib as mpl
 import numpy as np
-import pandas as pd
 from numpydoc.docscrape import NumpyDocString
+import pandas as pd
 from pandas.io.formats.printing import pprint_thing
 
 # Template backend makes matplotlib to not plot anything. This is useful

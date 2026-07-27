@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+from functools import partial
 import hashlib
 import json
 import os
 import shutil
 import sys
-from functools import partial
 
-import nbformat
 from colorama import Fore, init
 from nbconvert import HTMLExporter, RSTExporter
 from nbconvert.preprocessors import ExecutePreprocessor
+import nbformat
 
 try:
     from concurrent import futures

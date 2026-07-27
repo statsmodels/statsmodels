@@ -1801,8 +1801,6 @@ class UnobservedComponentsResults(MLEResults):
             if which not in component_bunch:
                 raise ValueError("Invalid type of state estimate.")
 
-            which_cov = f"{which}_cov"
-
             # Get the predicted values
             value = component_bunch[which]
 
@@ -1810,15 +1808,17 @@ class UnobservedComponentsResults(MLEResults):
             state_label = f"{title} ({which})"
             ax.plot(dates[llb:], value[llb:], label=state_label)
 
+            # TODO: This has been unused for some time. Investigate why.
             # Get confidence intervals
-            if which_cov in component_bunch:
-                std_errors = np.sqrt(component_bunch[f"{which}_cov"])
-                ci_lower = value - critical_value * std_errors
-                ci_upper = value + critical_value * std_errors
-                ci_poly = ax.fill_between(
-                    dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
-                )
-                ci_label = f"${(1 - alpha) * 100:.3g} \\%$ confidence interval"
+            # which_cov = f"{which}_cov"
+            # if which_cov in component_bunch:
+            #     std_errors = np.sqrt(component_bunch[f"{which}_cov"])
+            #     ci_lower = value - critical_value * std_errors
+            #     ci_upper = value + critical_value * std_errors
+            #     ci_poly = ax.fill_between(
+            #         dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
+            #     )
+            #     ci_label = f"${(1 - alpha) * 100:.3g} \\%$ confidence interval"
 
             # Legend
             ax.legend(loc=legend_loc)

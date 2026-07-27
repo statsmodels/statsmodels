@@ -343,8 +343,6 @@ print(clogit.fit())
 
 tree0 = ("top", [("Fly", ["Air"]), ("Ground", ["Train", "Car", "Bus"])])
 
-datadict = dict(zip(["Air", "Train", "Bus", "Car"], [xifloat[i] for i in range(4)], strict=True))
-
 # for testing only (mock that returns it's own name
 datadict = dict(
     zip(["Air", "Train", "Bus", "Car"], ["Airdata", "Traindata", "Busdata", "Cardata"], strict=True)
